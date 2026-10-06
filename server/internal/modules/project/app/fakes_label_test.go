@@ -21,10 +21,13 @@ var webBug, webUI, webFeature, opsDocs = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(
 
 // fakeLabels is the project store's labels as the label operations' tests
 // hold them, by id, beside fakeStore's projects, whose log, failures,
-// reads of a row by its id and changedAs it shares.
+// reads of a row by its id and changedAs it shares. failsFor, when set, is
+// the label whose read fails (errDisk), the others read as they are: how a
+// test fails the read of a parent and not the label's own.
 type fakeLabels struct {
 	*fakeStore
-	labels map[uuid.UUID]domain.Label
+	labels   map[uuid.UUID]domain.Label
+	failsFor uuid.UUID
 }
 
 // newLabels is newWrites with web's labels, Bug at the top with UI under
@@ -94,10 +97,64 @@ func (f *fakeLabels) CreateLabel(ctx context.Context, r app.LabelRow) (domain.La
 }
 
 // LabelByID is the label id; the reads after the first, under the locks,
-// answer as f.reread says (readRow).
+// answer as f.reread says (readRow); the read of f.failsFor fails.
 func (f *fakeLabels) LabelByID(ctx context.Context, id uuid.UUID) (domain.Label, bool, error) {
+	stored, ok := f.labels[id]
+	l, found, err := readRow(ctx, f.fakeStore, "LabelByID", id, stored, ok,
+		func(l *domain.Label) (*uuid.UUID, *uuid.UUID) { return &l.ProjectID, &l.ID })
+	if err == nil && f.failsFor != (uuid.UUID{}) && id == f.failsFor {
+		return domain.Label{}, false, fmt.Errorf("LabelByID %s: %w", id, errDisk)
+	}
+	return l, found, err
+}
+
+// HasChildren reports whether a label has id as its parent.
+func (f *fakeLabels) HasChildren(ctx context.Context, id uuid.UUID) (bool, error) {
+	f.log.add(ctx, "HasChildren %s", id)
+	if err := f.fail("HasChildren"); err != nil {
+		return false, err
+	}
+	for _, l := range f.labels {
+		if l.ParentID != nil && *l.ParentID == id {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// UpdateLabel changes the fields p gives of the label id, as stored,
+// unless another label of its project has the name p gives, in any case:
+// domain.ErrLabelNameTaken.
+func (f *fakeLabels) UpdateLabel(ctx context.Context, id uuid.UUID, p domain.LabelPatch, by uuid.UUID, now time.Time) (domain.Label, error) {
+	f.log.add(ctx, "UpdateLabel %s %s by %s at %s", id, labelPatch(p), by, now.Format(timeFormat))
+	if err := f.fail("UpdateLabel"); err != nil {
+		return domain.Label{}, err
+	}
 	l, ok := f.labels[id]
-	return readRow(ctx, f.fakeStore, "LabelByID", id, l, ok, func(l *domain.Label) (*uuid.UUID, *uuid.UUID) { return &l.ProjectID, &l.ID })
+	if !ok {
+		return domain.Label{}, fmt.Errorf("UpdateLabel: no label %s", id)
+	}
+	if p.Name != nil {
+		if f.taken(l.ProjectID, id, *p.Name) {
+			return domain.Label{}, domain.ErrLabelNameTaken
+		}
+		l.Name = *p.Name
+	}
+	if p.Color != nil {
+		l.Color = *p.Color
+	}
+	if p.SetParent {
+		l.ParentID = p.ParentID
+	}
+	if p.SortOrder != nil {
+		l.SortOrder = *p.SortOrder
+	}
+	l.UpdatedAt = now.Truncate(time.Microsecond)
+	f.labels[id] = l
+	if f.changedAs != (uuid.UUID{}) {
+		l.ID = f.changedAs
+	}
+	return l, nil
 }
 
 // taken reports whether a label of project but except has name, in any
@@ -111,6 +168,25 @@ func (f *fakeLabels) taken(project, except uuid.UUID, name string) bool {
 func labelRow(r app.LabelRow) string {
 	return fmt.Sprintf("%s/%s %q %q under %s at %v by %s at %s", r.WorkspaceID, r.ProjectID, r.Name, r.Color, parentOf(r.ParentID), r.SortOrder,
 		r.CreatedBy, r.Now.Format(timeFormat))
+}
+
+// labelPatch is p as UpdateLabel logs it: the fields it gives, the parent
+// "none" for a label moved to the top.
+func labelPatch(p domain.LabelPatch) string {
+	out := "{"
+	if p.Name != nil {
+		out += fmt.Sprintf(" name %q", *p.Name)
+	}
+	if p.Color != nil {
+		out += fmt.Sprintf(" color %q", *p.Color)
+	}
+	if p.SetParent {
+		out += " parent " + parentOf(p.ParentID)
+	}
+	if p.SortOrder != nil {
+		out += fmt.Sprintf(" sort order %v", *p.SortOrder)
+	}
+	return out + " }"
 }
 
 // labelJSON is l as the tests compare labels: its parent by its id, not by

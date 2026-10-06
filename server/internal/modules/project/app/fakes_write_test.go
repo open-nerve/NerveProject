@@ -136,7 +136,7 @@ type fakeStore struct {
 	// and answersAs, when set, the id each answers for the one asked;
 	// changedAs, when set, is the id the write of the row answers for the
 	// one it wrote (UpdateMemberRole, CreateState, UpdateState,
-	// CreateLabel).
+	// CreateLabel, UpdateLabel).
 	rowReadCount int
 	reread       rowReads
 	answersAs    uuid.UUID

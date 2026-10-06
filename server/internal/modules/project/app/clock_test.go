@@ -131,6 +131,11 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			_, err := uc.Execute(as(bob), webID, underBug)
 			return f.log.calls, err
 		}, labelCreated(bob, webID, underBug, 95535)},
+		{"updateLabel", func() ([]string, error) {
+			uc, f, _ := newUpdateLabel()
+			_, err := uc.Execute(as(bob), webFeature, domain.LabelPatch{SetParent: true, ParentID: &webBug})
+			return f.log.calls, err
+		}, labelUpdated(bob, webFeature, webID, domain.LabelPatch{SetParent: true, ParentID: &webBug})},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {
