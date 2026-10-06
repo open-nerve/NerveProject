@@ -193,14 +193,16 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
     [projectId]
   );
   expect(project, `the project ${projectId}`).toEqual({ deleted: true, by: adminEmail });
+  // Both lists sort their names under "C": a regclass's text would sort under the database's collation and an
+  // information_schema name under "C", two orders that differ (issues, issue_views).
   const tables = await db.query<{ name: string }>(
-    `SELECT DISTINCT c.conrelid::regclass::text AS name FROM pg_constraint c
+    `SELECT DISTINCT c.conrelid::regclass::text COLLATE "C" AS name FROM pg_constraint c
       WHERE c.contype = 'f' AND c.confrelid = 'projects'::regclass ORDER BY 1`
   );
   expect(tables.length, "the tables under projects").toBeGreaterThan(0);
   // Every table with a project_id is read: a table left out of the list above fails here.
   const withProjectId = await db.query<{ name: string }>(
-    `SELECT DISTINCT c.table_name::text AS name FROM information_schema.columns c
+    `SELECT DISTINCT c.table_name::text COLLATE "C" AS name FROM information_schema.columns c
       WHERE c.table_schema = current_schema() AND c.column_name = 'project_id' ORDER BY 1`
   );
   expect(tables, "the tables under projects, as their project_id columns name them").toEqual(withProjectId);

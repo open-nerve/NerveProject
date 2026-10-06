@@ -109,7 +109,7 @@ test("P7 (API): an admin of a project creates Bug and Feature, each after the la
   ];
   await expectLabels(db, web.id, labels);
 
-  // ann drags UI under Bug, as the settings page does: its parent changes, its name, color and place kept.
+  // ann drags UI under Bug, as the settings page does: its parent changes, its name and place kept.
   expect(await update(ann.token, ui.id, { parent_id: bug.id }), "ann puts UI under Bug").toEqual({ status: 200 });
   labels = changed(labels, "UI", { parent: "Bug", by: ann.email });
   await expectLabels(db, web.id, labels);
@@ -142,8 +142,8 @@ test("P7 (API): an admin of a project creates Bug and Feature, each after the la
   // Refused, each changing nothing of what was just read: ann's creation of QA with a color of 256 characters, one
   // more than a color has; her creation of bug, Bug in another case, and the admin's renaming of Feature WIDGETS;
   // ann's creation of Icons under Widgets, a third level; her moves of Feature under Ops's Bug, of another project,
-  // and under itself; her move of Bug, which has Widgets under it, under Feature; mem's change of Feature and his
-  // creation of QA, a member's.
+  // and under itself; her move of Bug, which has Widgets under it, under Feature; mem's change of Feature, his
+  // creation of QA and his deletion of Feature, a member's.
   expect(
     [
       await create(ann.token, web.id, { name: "QA", color: "#".repeat(256) }),
@@ -155,6 +155,7 @@ test("P7 (API): an admin of a project creates Bug and Feature, each after the la
       await update(ann.token, bug.id, { parent_id: feature.id }),
       await update(mem.token, feature.id, { name: "Story" }),
       await create(mem.token, web.id, { name: "QA" }),
+      await remove(mem.token, feature.id),
     ],
     "a long color, bug, WIDGETS, Icons under Widgets, Feature under Ops's Bug and under itself, Bug under Feature, mem's writes"
   ).toEqual([
@@ -165,6 +166,7 @@ test("P7 (API): an admin of a project creates Bug and Feature, each after the la
     parentRefused,
     parentRefused,
     parentRefused,
+    { status: 403, code: "forbidden" },
     { status: 403, code: "forbidden" },
     { status: 403, code: "forbidden" },
   ]);

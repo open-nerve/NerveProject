@@ -178,6 +178,9 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
       [old.id, memberEmail]
     )
   ).toEqual([{ sort_order: 75535, by: memberEmail }]);
+  await expectLabels(db, old.id, [
+    { name: "Bug", color: "", parent: null, sort_order: 65535, deleted: false, by: memberEmail },
+  ]);
   const oldDeleted = await api.DELETE("/api/v0/projects/{project_id}", {
     params: { path: { project_id: old.id } },
     headers: bearer(admin),
@@ -188,6 +191,19 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   expect(deleted.response.status).toBe(204);
   await expectWorkspaceDeleted(db, slug, adminEmail, deletedAloneTables);
   await expectLabels(db, acmeWeb.id, webLabels(true));
+  // Each of Web's labels carries Acme's deletion, its moment and its author: expectWorkspaceDeleted's counts cannot
+  // tell a label stamped earlier, as Old's Bug, deleted before, gives the labels an earlier row.
+  expect(
+    await db.query(
+      `SELECT l.name, l.deleted_at = w.deleted_at AS at_acmes_moment, l.updated_by_id = w.updated_by_id AS by_acmes_deleter
+         FROM labels l JOIN workspaces w ON w.id = l.workspace_id WHERE l.project_id = $1 ORDER BY l.sort_order`,
+      [acmeWeb.id]
+    ),
+    "when and by whom Web's labels were deleted"
+  ).toEqual([
+    { name: "Bug", at_acmes_moment: true, by_acmes_deleter: true },
+    { name: "UI", at_acmes_moment: true, by_acmes_deleter: true },
+  ]);
   // Old and every row under it keep its deletion: its moment and its author, the admin.
   await expectProjectDeleted(db, old.id, adminEmail);
   // The invitations accepted before keep the moment they were answered; the declined one goes with the pending
