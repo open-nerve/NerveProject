@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `labels` 表（迁移 `00014`）和它的两个连带（删除项目、删除工作区，`deleteProjects` 的最后一步），标签的全部操作（`listLabels`、`createLabel`、`updateLabel`、`deleteLabel`）和 3.16 的规则：两层（父标签是同一项目、未删除、没有父标签的标签；有子标签的标签不能有父标签；不能做自己的父标签，各 422 `parent_id` `not_allowed`）；名称在项目内唯一、不分大小写（`lower(name)` 的部分唯一索引，409 `project.label_name_taken`）；新标签的 `sort_order` 是给的，或者项目未删除的标签的最大值加 10000，没有标签时 65535；删除一个标签同时删除它下面的标签，一条语句。每个标签的写：工作区 `FOR SHARE` → 项目 `FOR NO KEY UPDATE` → 判定 → 层级的检查 → 时钟 → 写；`updateLabel`、`deleteLabel` 经 P7a 的共用路径（锁下重读，各答 `project.label_not_found`）。交错 11 和同名的并发创建两种顺序串行，删除父标签与往它下面放标签的最坏交错由探测展示（约定五的分析）；故事 P7 的接口版本通过，W2、W3、P4 断言标签。
+**Goal:** `labels` 表（迁移 `00014`）和它的两个连带（删除项目、删除工作区，`deleteProjects` 的最后一步），标签的全部操作（`listLabels`、`createLabel`、`updateLabel`、`deleteLabel`）和 3.16 的规则：两层（父标签是同一项目、未删除、没有父标签的标签；有子标签的标签不能有父标签；不能做自己的父标签，各 422 `parent_id` `not_allowed`）；名称在项目内唯一、不分大小写（`lower(name)` 的部分唯一索引，409 `project.label_name_taken`）；新标签的 `sort_order` 是项目未删除的标签的最大值加 10000，没有标签时 65535（M3 设计 4.10；`createLabel` 不收 `sort_order`，位置由 `updateLabel` 改）；删除一个标签同时删除它下面的标签，一条语句。每个标签的写：工作区 `FOR SHARE` → 项目 `FOR NO KEY UPDATE` → 判定 → 层级的检查 → 时钟 → 写；`updateLabel`、`deleteLabel` 经 P7a 的共用路径（锁下重读，各答 `project.label_not_found`）。交错 11 和同名的并发创建两种顺序串行，删除父标签与往它下面放标签的最坏交错由探测展示（约定五的分析）；故事 P7 的接口版本通过，W2、W3、P4 断言标签。
 
 **Architecture:** `server/migrations`：`00014_project_labels.sql`。`project/domain`：`label.go`（`Label`、`Place`、`CheckNewLabel`、`CheckLabelPatch`、`SortOrderAfter`、`CheckParent`），两个标签码；名称的检查与状态共用（`checkRequiredText`、`checkMaxLength`）。`project/adapter/postgres`：`queries/labels.sql` 的七条语句和存储方法，`cascade.sql` 的 `DeleteLabels`。`project/app`：`label_ports.go`（`LabelRow`、`LabelFinder`、`labelWrite`、四个端口）、`label_parent.go`（`checkParent`）、四个用例；`deletion.go` 加标签一步。`project/adapter/http`：四个处理函数。`access`：四行规则。`bootstrap`：矩阵的标签种子和行（已归档项目的小表随每个操作），最先锁工作区的测试、盖戳、连接各加标签的写，按资源寻址的竞争和锁强度推广到标签的行，交错 11，每个标签的写只写它的行。不加 Go 模块、npm 包；跨模块的端口不变。
 
@@ -19,7 +19,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断，不按大小比较；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/project.yaml`（1350 行）、`api/modules/workspace.yaml`（871 行）不受约 400 行的限制（spec 第 3 节第 1 条）。本 plan 的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `server/migrations/schema_test.go`（399 行，本 plan 只改三处数字和表名）、`bootstrap/permission_matrix_test.go`（392 行）、`bootstrap/project_write_locks_test.go`（382 行）、`e2e/fixtures/assert/workspace.ts`（380 行）、`bootstrap/project_writes_test.go`（377 行）、`e2e/fixtures/assert/project.ts`（372 行）、`bootstrap/permission_matrix_columns_test.go`（360 行）、`project/app/ports.go`（352 行）、`bootstrap/project_row_races_test.go`（343 行）、`project/adapter/postgres/states_test.go`（334 行）、`bootstrap/permission_matrix_seeded_test.go`（331 行）、`bootstrap/workspace_deletion_test.go`（327 行）、`server/migrations/project_schema_test.go`（315 行）、`project/adapter/postgres/cascade_test.go`（314 行）、`project/adapter/http/handler_test.go`（306 行）。`bootstrap/permission_matrix_seed_test.go`（389 行）本 plan 不改：标签的种子写在新的 `permission_matrix_labels_test.go` 里（spec 第 3 节第 12 条）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断，不按大小比较；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/project.yaml`（1348 行）、`api/modules/workspace.yaml`（871 行）不受约 400 行的限制（spec 第 3 节第 1 条）。本 plan 的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `server/migrations/schema_test.go`（399 行，本 plan 只改三处数字和表名）、`bootstrap/permission_matrix_test.go`（392 行）、`bootstrap/project_write_locks_test.go`（382 行）、`e2e/fixtures/assert/workspace.ts`（380 行）、`bootstrap/project_writes_test.go`（377 行）、`e2e/fixtures/assert/project.ts`（379 行）、`bootstrap/permission_matrix_columns_test.go`（360 行）、`project/app/ports.go`（352 行）、`bootstrap/project_row_races_test.go`（343 行）、`project/adapter/postgres/states_test.go`（334 行）、`bootstrap/permission_matrix_seeded_test.go`（331 行）、`bootstrap/workspace_deletion_test.go`（327 行）、`server/migrations/project_schema_test.go`（315 行）、`project/adapter/postgres/cascade_test.go`（314 行）、`project/adapter/http/handler_test.go`（306 行）。`bootstrap/permission_matrix_seed_test.go`（389 行）本 plan 不改：标签的种子写在新的 `permission_matrix_labels_test.go` 里（spec 第 3 节第 12 条）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；迁移的注释和中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -29,7 +29,7 @@
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `0deb8c34` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
 - **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：契约 `api/modules/project.yaml`、`api/openapi.yaml`，`project/app/label_ports.go`、`fakes_label_test.go`、`fakes_write_test.go`、`clock_test.go`，`project/adapter/http/handler.go`、`handler_test.go`、`labels.go`、`labels_test.go`，`project/module.go`、`project/domain/actions.go`，`access/domain/rules.go`、`rules_test.go`，`bootstrap/permission_matrix_labels_test.go`、`permission_matrix_columns_test.go`、`project_write_locks_test.go`、`project_writes_test.go`、`project_connection_test.go`，前端的三个文案文件，`e2e/fixtures/assert/project.ts`（Task 1 暂时排除 `labels`，Task 11 删去，spec 第 3 节第 11 条）。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；结构：迁移的测试；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事 P7、P4、W3）。它们在最终的原型上逐个跑过（`$M3TMP/p7btools/mutants_p7b.py`，由 `mutlevels.py` 在它写的每一层各跑一次；spec 附录 A：105 个变异，105 个被发现；只在单元一层被发现的 11 个，都是按性质的（附录 A））；一个变异列在它改的代码第一次出现的 Task（它的锚点从那个 Task 起在每一份快照上恰好出现一次，`mutanchors.py` 核对）。实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试从那个 Task 起才发现这个变异：单元、结构、存储一层的，是测试在那个 Task 才有或才改成最终的样子；组合一层的，是把变异放在各个 Task 的快照上跑这个测试量出来的（`markers.py`：`bootstrap` 的测试的行常在函数之外，例如矩阵的行，只看函数体会漏标）；端到端的故事都从 Task 11 起。没有标的测试在这一行所在的 Task 的树上就失败。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外（"按性质只在单元一层"）写在 spec 附录 A。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；结构：迁移的测试；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事 P7、P4、W3）。它们在最终的原型上逐个跑过（`$M3TMP/p7btools/mutants_p7b.py`，由 `mutlevels.py` 在它写的每一层各跑一次；spec 附录 A：108 个变异，108 个被发现；只在单元一层被发现的 11 个，都是按性质的（附录 A））；一个变异列在它改的代码第一次出现的 Task（它的锚点从那个 Task 起在每一份快照上恰好出现一次，`mutanchors.py` 核对）。实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试从那个 Task 起才发现这个变异：单元、结构、存储一层的，是那一层跑的包里这个名字的测试在那个 Task 才有或才改成最终的样子（同名的测试按包分开：存储的 `TestUpdateLabel` 是 Task 3 的，用例的是 Task 6 的，HTTP 的是 Task 7 的）；组合一层的，是把变异放在各个 Task 的快照上跑这个测试量出来的（`markers.py`：`bootstrap` 的测试的行常在函数之外，例如矩阵的行，只看函数体会漏标）；端到端的故事都从 Task 11 起。没有标的测试在这一行所在的 Task 的树上就失败。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外（"按性质只在单元一层"）写在 spec 附录 A。
 - **评审敏感**（M3 设计 12 节约束 3）：两层的规则只在领域，它在并发下由项目行的 `FOR NO KEY UPDATE` 保证：每个设父标签的写都在这把锁下读父标签和这个标签的子标签（`checkParent`）；`deleteLabel` 一条语句删除这个标签和它下面的标签，它们都是这个项目的，项目的锁覆盖这一批行，约定五的例外不适用（spec 第 3 节第 4 条）；新表进入删除项目、删除工作区的连带。改动这些锁、检查、规则或测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
@@ -47,13 +47,13 @@
 | `server/internal/modules/project/adapter/postgres/gen/cascade.sql.go`、`server/internal/modules/project/adapter/postgres/gen/models.go`（生成） | | 1 |
 | `server/internal/modules/project/adapter/postgres/cascade_test.go`（修改） | 种子和核对的表加标签；五步 | 1 |
 | `server/internal/modules/project/app/ports.go`、`server/internal/modules/project/app/deletion.go`（修改） | `ProjectsDeleter.DeleteLabels`；`deleteProjects` 的最后一步 | 1 |
-| `server/internal/modules/project/app/fakes_write_test.go`（修改） | `fakeStore.DeleteLabels`（Task 1）；标签的假实现接进 `writeFixture`（Task 4、6） | 1、4、6 |
+| `server/internal/modules/project/app/fakes_write_test.go`（修改） | `fakeStore.DeleteLabels`（Task 1）；`readRow`：按 id 读项目下的一行，状态和标签的假实现共用，标签的假实现接进 `writeFixture`（Task 4、6） | 1、4、6 |
 | `server/internal/modules/project/app/cascade_test.go`、`server/internal/modules/project/app/delete_project_test.go`（修改） | 五步的次序；标签一步的失败 | 1 |
 | `server/internal/bootstrap/project_deletion_test.go`、`server/internal/bootstrap/workspace_deletion_test.go`（修改） | `seedLabels`；最后一步（标签）失败时整个回滚 | 1 |
 | `api/modules/workspace.yaml`（修改） | `deleteWorkspace` 的描述加标签 | 1 |
 | `api/modules/project.yaml`、`api/openapi.yaml`（修改） | `deleteProject` 的描述加标签（Task 1）；四个操作、`LabelID`、`Label`、`LabelCreate`、`LabelUpdate`、`LabelList`（Task 5、7、8、9） | 1、5、7、8、9（`openapi.yaml`：5、7） |
 | `api/dist/openapi.yaml`、`web/packages/api-client/src/schema.gen.ts`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`（生成） | | 1、5、7、8、9（`server.gen.go`：5、7、8、9；`bodyshape.gen.go`：5、7） |
-| `e2e/fixtures/assert/project.ts`（修改） | Task 1：`expectProjectDeleted` 暂时排除 `labels`；Task 11：删去排除，只数之前未删除的行，`LabelRow`、`expectLabels` | 1、11 |
+| `e2e/fixtures/assert/project.ts`（修改） | Task 1：`expectProjectDeleted` 暂时排除 `labels`；Task 11：删去排除，只数之前未删除的行，核对目录的表就是有 `project_id` 列的每张表，`LabelRow`、`expectLabels` | 1、11 |
 | `server/internal/modules/project/domain/label.go`、`server/internal/modules/project/domain/label_test.go` | 标签、`Place`、`CheckNewLabel`、`CheckLabelPatch`、`SortOrderAfter`、`CheckParent` | 2 |
 | `server/internal/modules/project/domain/errors.go`、`server/internal/modules/project/domain/project.go`、`server/internal/modules/project/domain/state.go`、`server/internal/modules/project/domain/state_test.go`（修改） | 两个标签码；`checkMaxLength`、`checkRequiredText`，状态改用它 | 2 |
 | `server/internal/modules/project/adapter/postgres/queries/labels.sql`、`server/internal/modules/project/adapter/postgres/labels.go` | 七条语句和存储方法 | 3 |
@@ -63,19 +63,20 @@
 | `server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/domain/actions.go`（修改） | `label.create`（Task 4）、`label.update`（Task 6）、`label.delete`（Task 8）、`label.list`（Task 9） | 4、6、8、9 |
 | `server/internal/modules/project/app/label_parent.go` | `checkParent`：在项目的锁下读父标签并检查 | 4 |
 | `server/internal/modules/project/app/create_label.go`、`server/internal/modules/project/app/create_label_test.go` | `createLabel` | 4 |
-| `server/internal/modules/project/app/fakes_label_test.go`；`server/internal/modules/project/app/fakes_state_test.go`（修改） | 标签的假实现（`fakeLabels`）；`stateSince` 的说明 | 4、6、8、9（`fakes_state_test.go`：4） |
+| `server/internal/modules/project/app/fakes_label_test.go`；`server/internal/modules/project/app/fakes_state_test.go`（修改） | 标签的假实现（`fakeLabels`）；`StateByID` 改用 `readRow`，`stateSince` 的说明 | 4、6、8、9（`fakes_state_test.go`：4） |
 | `server/internal/modules/project/app/clock_test.go`（修改） | 每个标签的写在锁之后读时钟的一行 | 4、6、8 |
 | `server/internal/modules/project/adapter/http/labels.go`、`server/internal/modules/project/adapter/http/labels_test.go`；`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`（修改） | 四个处理函数和它们的测试；`UseCases` 的四个字段 | 5、7、8、9 |
 | `server/internal/modules/project/module.go`（修改） | 四个用例的接线；包说明 | 5、7、8、9 |
 | `web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`（修改） | 两个标签码的文案 | 5、7 |
 | `server/internal/bootstrap/permission_matrix_labels_test.go` | 标签的矩阵行（已归档项目的小表随每个操作）、它们的核对，标签的种子（`matrixLabels`、`labels`、`seededLabels`） | 5、7、8、9 |
 | `server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_test.go`（修改） | `seeded.label`；`prepareMatrix` 种下并读回标签，矩阵加标签的行 | 5 |
+| `server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/permission_matrix_states_test.go`（修改） | `rowsByID`：按 id 指名项目下一行的写的格子和请求，`stateRows` 代替 `ofState`、`ofArchivedState`、`toState`，标签的是 `labelRows` | 7 |
 | `server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`（修改） | 标签从不在 `seeded` 的成员关系里；瞄准标签行的格子（`{label_id}`） | 5、7（`targets`：7） |
 | `server/internal/bootstrap/project_write_locks_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/bootstrap/project_connection_test.go`（修改） | 最先锁工作区的测试、盖戳、连接各加标签的写（`labelNamed`、`rowPaths` 加 `/api/v0/labels/`、`labelID`） | 5、7、8 |
 | `server/internal/modules/project/app/update_label.go`、`server/internal/modules/project/app/update_label_test.go` | `updateLabel` | 6 |
 | `server/internal/modules/project/app/delete_label.go`、`server/internal/modules/project/app/delete_label_test.go` | `deleteLabel` | 8 |
 | `server/internal/modules/project/app/list_labels.go`、`server/internal/modules/project/app/list_labels_test.go` | `listLabels` | 9 |
-| `server/internal/bootstrap/interleaving_labels_test.go`、`server/internal/bootstrap/label_rows_test.go`；`server/internal/bootstrap/project_row_races_test.go`（修改） | 交错 11 和标签的其余六对（约定五的探测在其中）；每个标签的写只写它的行；按资源寻址的竞争和锁强度加标签的行 | 10 |
+| `server/internal/bootstrap/interleaving_labels_test.go`、`server/internal/bootstrap/label_rows_test.go`；`server/internal/bootstrap/project_row_races_test.go`（修改） | 交错 11 和标签的其余六对（约定五的探测在其中），每一对之后 Web 的标签各在自己的 `sort_order`；每个标签的写只写它的行；按资源寻址的竞争和锁强度加标签的行 | 10 |
 | `e2e/stories/project/p7-labels.spec.ts`；`e2e/stories/project/p4-archive.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`（修改） | 故事 P7 的接口版本；P4、W2、W3 的标签 | 11 |
 | `e2e/fixtures/api.ts`、`e2e/fixtures/assert/workspace.ts`（修改） | `Label*` 类型、`createLabel`；`workspaceTables`、`deletedAloneTables` 加 `labels` | 11 |
 | `server/internal/bootstrap/workspace_deletion_catalog_test.go`（修改） | `keysTo` 的说明：指向自己的外键 | 11 |
@@ -703,11 +704,12 @@ Expected: 通过。
 | `s1-idx-case` | 名称的唯一索引区分大小写（`name` 代替 `lower(name)`） | `TestProjectUniqueKeysHoldAmongUndeletedRowsOnly`、`TestCreateLabelNameTaken`（Task 3 起）、`TestUpdateLabelNameTaken`（Task 3 起）、`TestPermissionMatrix`（Task 5 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 结构；存储；组合；端到端 |
 | `s1-idx-deleted` | 名称的唯一索引去掉 `WHERE deleted_at IS NULL` | `TestConstraintAndIndexNames`、`TestProjectUniqueKeysHoldAmongUndeletedRowsOnly`、`TestCreateLabelNameTaken`（Task 3 起）、`TestUpdateLabelNameTaken`（Task 3 起）、P7（Task 11 起） | 结构；存储；端到端 |
 | `s1-check-own-parent` | 迁移去掉 `labels_not_own_parent_check` | `TestConstraintAndIndexNames`、`TestProjectChecksRejectCounterexamples`、`TestCreateLabelBreakingAnotherConstraintIsInternal`（Task 3 起） | 结构；存储 |
+| `s1-check-name` | 迁移去掉 `CHECK (name <> '')` | `TestConstraintAndIndexNames`、`TestProjectChecksRejectCounterexamples`、`TestCreateLabelBreakingAnotherConstraintIsInternal`（Task 3 起） | 结构；存储 |
 | `s14-cl-keeps-writer` | `DeleteLabels` 保留原来的 `updated_by_id` | `TestDeletingAProjectSoftDeletesItsRowsAlone`、`TestDeletingAWorkspaceSoftDeletesItsProjects`、`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`、W3（Task 11 起） | 存储；组合；端到端 |
 | `s3-cl-keeps-moment` | `DeleteLabels` 保留原来的 `updated_at` | `TestDeletingAProjectSoftDeletesItsRowsAlone`、`TestDeletingAWorkspaceSoftDeletesItsProjects`、P4（Task 11 起）、W3（Task 11 起） | 存储；端到端 |
 | `s8-cascade` | `Store.DeleteLabels` 在连接池上执行 | `TestADeletionRefusedAtItsCommitChangesNoRow`、`TestAProjectDeletionRefusedAtItsCommitChangesNoRow`、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection` | 组合 |
-| `s19-cascade` | `Store.DeleteLabels` 的失败答成成功 | `TestAFailedWriteIsAnError` | 存储 |
-| `k-no-labels-step` | `deleteProjects` 去掉标签一步（删除项目、工作区留下标签） | `TestDeleteProject`、`TestDeleteWorkspaceProjects`、`TestEachWriteReadsTheClockUnderItsLock`、`TestDeleteProjectReturnsEachFailure`、`TestAFailedProjectsStepRollsTheDeletionBack`、`TestAProjectDeletionRefusedAtItsCommitChangesNoRow`、`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt` 等 8 个、P4（Task 11 起）、W3（Task 11 起） | 单元；组合；端到端 |
+| `s19-cascade` | `Store.DeleteLabels` 的失败答成成功 | `TestAFailedWriteIsAnError`（Task 3 起） | 存储 |
+| `k-no-labels-step` | `deleteProjects` 去掉标签一步（删除项目、工作区留下标签） | `TestDeleteProject`、`TestDeleteWorkspaceProjects`、`TestDeleteProjectReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`（Task 8 起）、`TestAFailedProjectsStepRollsTheDeletionBack`、`TestAProjectDeletionRefusedAtItsCommitChangesNoRow`、`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt` 等 8 个、P4（Task 11 起）、W3（Task 11 起） | 单元；组合；端到端 |
 
 ---
 
@@ -719,12 +721,12 @@ Expected: 通过。
 
 **Interfaces:**
 - Produces（spec 2.4；M3 设计 3.16、4.10、5.2、5.3）：
-  - `project/domain/label.go`（新）：`Label{ID, WorkspaceID, ProjectID, ParentID *uuid.UUID, Name, Color, SortOrder, CreatedAt, UpdatedAt}`、`Label.Place()`；`LabelCreate{Name, Color, ParentID *uuid.UUID, SortOrder *float64}`；`LabelPatch{Name, Color *string; SetParent bool; ParentID *uuid.UUID; SortOrder *float64}`（`SetParent` 说父标签给了没有，给了且 `ParentID == nil` 是移到顶层）；`CheckNewLabel(LabelCreate) error`、`CheckLabelPatch(LabelPatch) error`（名称 1–255 个字符、不空白、不含 NUL；颜色至多 255 个字符、不含 NUL、可以为空；有问题的字段一次全部报告）；`SortOrderAfter(greatest *float64) float64`（加 10000；`nil` 时 65535）；`CheckParent(id, project uuid.UUID, parent *Label, hasChildren bool) error`（依次：不是这个项目的标签、是它自己、父标签有父标签、这个标签有子标签，各一个 422 `parent_id` `not_allowed`，说明各不相同）。
+  - `project/domain/label.go`（新）：`Label{ID, WorkspaceID, ProjectID, ParentID *uuid.UUID, Name, Color, SortOrder, CreatedAt, UpdatedAt}`、`Label.Place()`；`LabelCreate{Name, Color, ParentID *uuid.UUID}`（没有 `sort_order`：位置由项目给，M3 设计 4.10）；`LabelPatch{Name, Color *string; SetParent bool; ParentID *uuid.UUID; SortOrder *float64}`（`SetParent` 说父标签给了没有，给了且 `ParentID == nil` 是移到顶层）；`CheckNewLabel(LabelCreate) error`、`CheckLabelPatch(LabelPatch) error`（名称 1–255 个字符、不空白、不含 NUL；颜色至多 255 个字符、不含 NUL、可以为空；有问题的字段一次全部报告）；`SortOrderAfter(greatest *float64) float64`（加 10000；`nil` 时 65535）；`CheckParent(id, project uuid.UUID, parent *Label, hasChildren bool) error`（依次：不是这个项目的标签、是它自己、父标签有父标签、这个标签有子标签，各一个 422 `parent_id` `not_allowed`，说明各不相同）。
   - `project/domain/errors.go`：`ErrLabelNotFound`（404 `project.label_not_found`）、`ErrLabelNameTaken`（409 `project.label_name_taken`）。它们进契约在 Task 5、7。
   - `project.go`：`checkLength` 拆出 `checkMaxLength`（只看长度，标签的颜色用它），加 `checkRequiredText(field, s, limit)`（`checkLength` 再 `checkText`，第一个问题）；`state.go` 的 `checkStateText` 删去，状态的名称和颜色改用 `checkRequiredText(…, maxStateText)`（第一次运行的 T9 与 P7a 的 T2-d 的手工合并，spec 附录 A：没有第二个长度检查）。
 
 **Tests:**
-- `TestLabelPlace`（id、工作区、项目各在它的位置）、`TestCheckNewLabelAcceptsValidLabels`（1 个和 255 个字符的名称、空的和 255 个字符的颜色；父标签和 `sort_order` 不在这里查）、`TestCheckLabelReportsEveryField`（名称空、空白、256 个字符、含 NUL；颜色 256 个字符、含 NUL；两个问题的字段报第一个：太长先于 NUL；`CheckLabelPatch` 只查给了的字段：空补丁、只给 `sort_order`、给父标签或移到顶层都通过）、`TestSortOrderAfter`（10000 之后；没有时 65535）、`TestCheckParent`（顶层的标签做新标签、没有子标签的标签的父标签；四种拒绝，各一个 422 `parent_id not_allowed`，按切片的顺序）。
+- `TestLabelPlace`（id、工作区、项目各在它的位置）、`TestCheckNewLabelAcceptsValidLabels`（1 个和 255 个字符的名称、空的和 255 个字符的颜色；父标签不在这里查）、`TestCheckLabelReportsEveryField`（名称空、空白、256 个字符、含 NUL；颜色 256 个字符、含 NUL；两个问题的字段报第一个：太长先于 NUL；`CheckLabelPatch` 只查给了的字段：空补丁、只给 `sort_order`、给父标签或移到顶层都通过）、`TestSortOrderAfter`（10000 之后；没有时 65535）、`TestCheckParent`（顶层的标签做新标签、没有子标签的标签的父标签；四种拒绝，各一个 422 `parent_id not_allowed`，按切片的顺序）。
 - `state_test.go` 的说明：状态的检查与标签共用名称的检查；`TestCheckNewStateReportsEveryField` 等照旧通过（行为不变）。
 
 - [ ] **Step 1: 规则、码和测试**
@@ -808,7 +810,7 @@ func checkStateText(field, s string) *shared.FieldError {
 
 ````
 
-`server/internal/modules/project/domain/label.go`（新文件，129 行）：
+`server/internal/modules/project/domain/label.go`（新文件，128 行）：
 
 ````file server/internal/modules/project/domain/label.go
 package domain
@@ -842,13 +844,12 @@ func (l Label) Place() (id, workspaceID, projectID uuid.UUID) {
 }
 
 // LabelCreate is what the caller asks for when creating a label (M3 design
-// 5.1): its parent nil for a label at the top, its sort order nil for the
-// project's to give (SortOrderAfter).
+// 5.1): its parent nil for a label at the top. Its place is the project's
+// to give (SortOrderAfter; M3 design 4.10).
 type LabelCreate struct {
-	Name      string
-	Color     string
-	ParentID  *uuid.UUID
-	SortOrder *float64
+	Name     string
+	Color    string
+	ParentID *uuid.UUID
 }
 
 // LabelPatch is what updateLabel changes (M3 design 5.1): each field nil
@@ -984,13 +985,13 @@ func TestLabelPlace(t *testing.T) {
 }
 
 // CheckNewLabel accepts a name of one and of 255 characters, a color empty
-// or of 255 characters, and leaves the parent and the sort order to others.
+// or of 255 characters, and leaves the parent to others.
 func TestCheckNewLabelAcceptsValidLabels(t *testing.T) {
 	parent := uuid.NewV7()
 	for _, l := range []LabelCreate{
 		{Name: "Bug", Color: "#FF0000"},
 		{Name: "B"},
-		{Name: strings.Repeat("标", 255), Color: strings.Repeat("c", 255), ParentID: &parent, SortOrder: ptr(-1.0)},
+		{Name: strings.Repeat("标", 255), Color: strings.Repeat("c", 255), ParentID: &parent},
 	} {
 		if err := CheckNewLabel(l); err != nil {
 			t.Errorf("CheckNewLabel(%+v) = %v, want nil", l, err)
@@ -1135,7 +1136,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `r-parent-self` | `CheckParent` 收下标签自己做父标签 | `TestCheckParent`、`TestUpdateLabelRefuses`（Task 6 起）、P7（Task 11 起） | 单元；端到端 |
 | `r-parent-third-level` | `CheckParent` 收下有父标签的标签做父标签（第三层） | `TestCheckParent`、`TestCreateLabelRefuses`（Task 4 起）、`TestUpdateLabelRefuses`（Task 6 起）、`TestPermissionMatrix`（Task 5 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 5 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
 | `r-parent-children` | `CheckParent` 让有子标签的标签有父标签 | `TestCheckParent`、`TestUpdateLabelRefuses`（Task 6 起）、`TestPermissionMatrix`（Task 7 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
-| `q-step` | 新标签在最大值之后 15000 | `TestEachWriteReadsTheClockUnderItsLock`、`TestSortOrderAfter`、`TestCreateLabel`（Task 4 起）、`TestCreateLabelRefuses`（Task 4 起） 等 5 个、`TestPermissionMatrix`（Task 5 起）、P7（Task 11 起） | 单元；组合；端到端 |
+| `q-step` | 新标签在最大值之后 15000 | `TestSortOrderAfter`、`TestCreateLabel`（Task 4 起）、`TestCreateLabelRefuses`（Task 4 起）、`TestCreateLabelReturnsEachFailure`（Task 4 起） 等 5 个、`TestPermissionMatrix`（Task 5 起）、P7（Task 11 起） | 单元；组合；端到端 |
 | `q-first` | 项目的第一个标签在 0 | `TestSortOrderAfter`、`TestCreateLabel`（Task 4 起）、P7（Task 11 起） | 单元；端到端 |
 | `v-color-unchecked` | `CheckNewLabel` 不查颜色 | `TestCheckLabelReportsEveryField`、P7（Task 11 起） | 单元；端到端 |
 | `v-patch-name-unchecked` | `CheckLabelPatch` 不查名称 | `TestCheckLabelReportsEveryField`、`TestUpdateLabelRefuses`（Task 6 起）、`TestPermissionMatrix`（Task 7 起） | 单元；组合 |
@@ -1956,34 +1957,35 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
-| `s1-lb-id` | `LabelByID` 去掉 `id`（读到任意一个标签） | `TestLabelByID`、`TestUpdateLabel`（Task 6 起）、`TestPermissionMatrix`（Task 5 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 5 起）、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 7 起）、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 10 起） 等 7 个、P7（Task 11 起） | 存储；组合；端到端 |
+| `s1-lb-id` | `LabelByID` 去掉 `id`（读到任意一个标签） | `TestLabelByID`、`TestUpdateLabel`、`TestPermissionMatrix`（Task 5 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 5 起）、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 7 起）、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 10 起） 等 7 个、P7（Task 11 起） | 存储；组合；端到端 |
 | `s1-lb-deleted` | `LabelByID` 去掉 `deleted_at IS NULL` | `TestLabelByID`、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s1-ll-project` | `ListLabels` 去掉 `project_id`（列出每个项目的标签） | `TestListLabels`（Task 9 起）、`TestPermissionMatrix`（Task 9 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s1-ll-deleted` | `ListLabels` 去掉 `deleted_at IS NULL` | `TestListLabels`（Task 9 起）、P7（Task 11 起） | 存储；端到端 |
-| `s1-ll-order` | `ListLabels` 只按 id 排 | `TestListLabels`（Task 9 起）、P7（Task 11 起） | 存储；端到端 |
+| `s1-ll-project` | `ListLabels` 去掉 `project_id`（列出每个项目的标签） | `TestListLabels`、`TestPermissionMatrix`（Task 9 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s1-ll-deleted` | `ListLabels` 去掉 `deleted_at IS NULL` | `TestListLabels`、P7（Task 11 起） | 存储；端到端 |
+| `s1-ll-order` | `ListLabels` 只按 id 排 | `TestListLabels`、P7（Task 11 起） | 存储；端到端 |
 | `s1-gs-project` | `GreatestSortOrder` 去掉 `project_id` | `TestGreatestSortOrder`、P7（Task 11 起） | 存储；端到端 |
 | `s1-gs-deleted` | `GreatestSortOrder` 去掉 `deleted_at IS NULL` | `TestGreatestSortOrder`、P7（Task 11 起） | 存储；端到端 |
-| `s1-gs-asc` | `GreatestSortOrder` 取最小的 | `TestGreatestSortOrder`、`TestPermissionMatrix`（Task 5 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s1-gs-asc` | `GreatestSortOrder` 取最小的 | `TestGreatestSortOrder`、`TestPermissionMatrix`（Task 5 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
 | `s1-hc-parent` | `HasChildren` 去掉 `parent_id`（有任何子标签就答有） | `TestHasChildren`、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
 | `s1-hc-deleted` | `HasChildren` 去掉 `deleted_at IS NULL` | `TestHasChildren`、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起） | 存储；组合 |
-| `s1-ul-id` | `UpdateLabel` 去掉 `id`（写每个标签） | `TestUpdateLabelNameTaken`、`TestUpdateLabel`（Task 6 起）、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 7 起）、`TestPermissionMatrix`（Task 7 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起） 等 6 个、P7（Task 11 起） | 存储；组合；端到端 |
+| `s1-ul-id` | `UpdateLabel` 去掉 `id`（写每个标签） | `TestUpdateLabel`、`TestUpdateLabelNameTaken`、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 7 起）、`TestPermissionMatrix`（Task 7 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起） 等 6 个、P7（Task 11 起） | 存储；组合；端到端 |
 | `s1-ul-deleted` | `UpdateLabel` 去掉 `deleted_at IS NULL` | `TestUpdateLabelWritesNoDeletedLabel` | 存储 |
-| `s1-dl-id` | `DeleteLabel` 去掉 `id` 和 `parent_id`（删除每个标签） | `TestDeleteLabel`（Task 8 起）、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 8 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s1-dl-children` | `DeleteLabel` 去掉 `parent_id`（下面的标签留下） | `TestDeleteLabel`（Task 8 起）、`TestTheWritesOnAProjectStampTheirRequest`（Task 8 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s1-dl-deleted` | `DeleteLabel` 去掉 `deleted_at IS NULL`（已删除的再删一次） | `TestDeleteLabel`（Task 8 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起） | 存储；组合 |
-| `s3-ul-created` | `UpdateLabel` 改写 `created_at` | `TestUpdateLabel`（Task 6 起） | 存储 |
-| `s14-ul-keeps-writer` | `UpdateLabel` 保留原来的 `updated_by_id` | `TestUpdateLabel`（Task 6 起）、`TestTheWritesOnAProjectStampTheirRequest`（Task 7 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s3-ul-keeps-moment` | `UpdateLabel` 保留原来的 `updated_at` | `TestUpdateLabel`（Task 6 起）、`TestTheWritesOnAProjectStampTheirRequest`（Task 7 起）、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 存储；组合 |
-| `s26-ul-name-kept` | `UpdateLabel` 从不写给的名称（`coalesce` 的次序反了） | `TestUpdateLabelNameTaken`、`TestUpdateLabel`（Task 6 起）、`TestPermissionMatrix`（Task 7 起）、`TestTheWritesOnAProjectStampTheirRequest`（Task 7 起）、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 8 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s26-ul-color-empty` | `UpdateLabel` 把没给的颜色写成空 | `TestUpdateLabel`（Task 6 起）、P7（Task 11 起） | 存储；端到端 |
-| `s26-ul-sort-zero` | `UpdateLabel` 把没给的 `sort_order` 写成 0 | `TestUpdateLabel`（Task 6 起）、`TestPermissionMatrix`（Task 7 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s26-ul-parent-top` | `UpdateLabel` 在没给父标签时移到顶层 | `TestUpdateLabel`（Task 6 起）、P7（Task 11 起） | 存储；端到端 |
-| `s26-ul-null-kept` | `UpdateLabel` 把给成 null 的父标签当作没给 | `TestUpdateLabel`（Task 6 起）、P7（Task 11 起） | 存储；端到端 |
-| `s14-dl-keeps-writer` | `DeleteLabel` 保留原来的 `updated_by_id` | `TestDeleteLabel`（Task 8 起）、`TestTheWritesOnAProjectStampTheirRequest`（Task 8 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s3-dl-keeps-moment` | `DeleteLabel` 保留原来的 `updated_at` | `TestDeleteLabel`（Task 8 起）、`TestTheWritesOnAProjectStampTheirRequest`（Task 8 起）、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s26-cr-sort` | `Store.CreateLabel` 写 65535，不写给的 `sort_order` | `TestGreatestSortOrder`、`TestCreateLabel`（Task 4 起）、`TestListLabels`（Task 9 起）、`TestListingProjectsIsReadingEach`（Task 5 起）、`TestListingWorkspaceStatesIsListingEachProjects`（Task 5 起）、`TestPermissionMatrix`（Task 5 起）、`TestTheInvitationLinkAnswersEveryCallerAlike`（Task 5 起）、P7（Task 11 起） | 存储；组合；端到端 |
-| `s26-cr-parent` | `Store.CreateLabel` 丢掉父标签 | `TestCreateLabelBreakingAnotherConstraintIsInternal`、`TestHasChildren`、`TestCreateLabel`（Task 4 起）、`TestDeleteLabel`（Task 8 起） 等 5 个、`TestListingProjectsIsReadingEach`（Task 5 起）、`TestListingWorkspaceStatesIsListingEachProjects`（Task 5 起）、`TestPermissionMatrix`（Task 5 起）、`TestTheInvitationLinkAnswersEveryCallerAlike`（Task 5 起） 等 9 个、P7（Task 11 起） | 存储；组合；端到端 |
-| `s26-cr-color` | `Store.CreateLabel` 丢掉颜色 | `TestCreateLabel`（Task 4 起）、`TestPermissionMatrix`（Task 5 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s1-dl-id` | `DeleteLabel` 去掉 `id` 和 `parent_id`（删除每个标签） | `TestDeleteLabel`、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 8 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s1-dl-children` | `DeleteLabel` 去掉 `parent_id`（下面的标签留下） | `TestDeleteLabel`、`TestTheWritesOnAProjectStampTheirRequest`（Task 8 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s1-dl-deleted` | `DeleteLabel` 去掉 `deleted_at IS NULL`（已删除的再删一次） | `TestDeleteLabel`、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起） | 存储；组合 |
+| `s1-ll-tiebreak` | `ListLabels` 只按 `sort_order` 排，同值的次序不定 | `TestListLabels` | 存储 |
+| `s3-ul-created` | `UpdateLabel` 改写 `created_at` | `TestUpdateLabel` | 存储 |
+| `s14-ul-keeps-writer` | `UpdateLabel` 保留原来的 `updated_by_id` | `TestUpdateLabel`、`TestTheWritesOnAProjectStampTheirRequest`（Task 7 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s3-ul-keeps-moment` | `UpdateLabel` 保留原来的 `updated_at` | `TestUpdateLabel`、`TestTheWritesOnAProjectStampTheirRequest`（Task 7 起）、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 存储；组合 |
+| `s26-ul-name-kept` | `UpdateLabel` 从不写给的名称（`coalesce` 的次序反了） | `TestUpdateLabel`、`TestUpdateLabelNameTaken`、`TestPermissionMatrix`（Task 7 起）、`TestTheWritesOnAProjectStampTheirRequest`（Task 7 起）、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 8 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s26-ul-color-empty` | `UpdateLabel` 把没给的颜色写成空 | `TestUpdateLabel`、P7（Task 11 起） | 存储；端到端 |
+| `s26-ul-sort-zero` | `UpdateLabel` 把没给的 `sort_order` 写成 0 | `TestUpdateLabel`、`TestPermissionMatrix`（Task 7 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s26-ul-parent-top` | `UpdateLabel` 在没给父标签时移到顶层 | `TestUpdateLabel`、P7（Task 11 起） | 存储；端到端 |
+| `s26-ul-null-kept` | `UpdateLabel` 把给成 null 的父标签当作没给 | `TestUpdateLabel`、P7（Task 11 起） | 存储；端到端 |
+| `s14-dl-keeps-writer` | `DeleteLabel` 保留原来的 `updated_by_id` | `TestDeleteLabel`、`TestTheWritesOnAProjectStampTheirRequest`（Task 8 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s3-dl-keeps-moment` | `DeleteLabel` 保留原来的 `updated_at` | `TestDeleteLabel`、`TestTheWritesOnAProjectStampTheirRequest`（Task 8 起）、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 存储；组合；端到端 |
+| `s26-cr-sort` | `Store.CreateLabel` 写 65535，不写给的 `sort_order` | `TestCreateLabel`、`TestGreatestSortOrder`、`TestListLabels`、`TestListingProjectsIsReadingEach`（Task 5 起）、`TestListingWorkspaceStatesIsListingEachProjects`（Task 5 起）、`TestPermissionMatrix`（Task 5 起）、`TestTheInvitationLinkAnswersEveryCallerAlike`（Task 5 起） 等 5 个、P7（Task 11 起） | 存储；组合；端到端 |
+| `s26-cr-parent` | `Store.CreateLabel` 丢掉父标签 | `TestCreateLabel`、`TestCreateLabelBreakingAnotherConstraintIsInternal`、`TestDeleteLabel`、`TestHasChildren` 等 5 个、`TestListingProjectsIsReadingEach`（Task 5 起）、`TestListingWorkspaceStatesIsListingEachProjects`（Task 5 起）、`TestPermissionMatrix`（Task 5 起）、`TestTheInvitationLinkAnswersEveryCallerAlike`（Task 5 起） 等 9 个、P7（Task 11 起） | 存储；组合；端到端 |
+| `s26-cr-color` | `Store.CreateLabel` 丢掉颜色 | `TestCreateLabel`、`TestPermissionMatrix`（Task 5 起）、P7（Task 11 起） | 存储；组合；端到端 |
 | `s8-create` | `Store.CreateLabel` 在连接池上执行，不在事务的连接上 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 5 起） | 组合 |
 | `s8-byid` | `Store.LabelByID` 在连接池上执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 5 起） | 组合 |
 | `s8-greatest` | `Store.GreatestSortOrder` 在连接池上执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 5 起） | 组合 |
@@ -2015,15 +2017,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces（spec 2.6；M3 设计 3.6、3.16、3.19）：
   - `label_ports.go` 加 `LabelFinder`（`LabelByID`：一个写指名的标签，先不加锁读出它的项目和工作区、再在锁下读，以及一个写指名的父标签，在项目的锁下读）和 `LabelCreator`（`LabelFinder`、`GreatestSortOrder`、`CreateLabel`）。
   - `label_parent.go`（新）：`checkParent(ctx, labels, id, project, parentID, hasChildren) error`：在项目的 `FOR NO KEY UPDATE` 下读父标签（每个标签的写都拿这把锁，读到的标签保持到提交），读到的不是问的 id 是错误；再 `domain.CheckParent`。
-  - `create_label.go`（新）：`NewCreateLabel(locks, labels LabelCreator, tx, clock)`、`Execute(ctx, projectID, domain.LabelCreate) (domain.Label, error)`：调用者 → `CheckNewLabel`（事务之前）→ 一个事务：`lockAndDecide`（工作区 `FOR SHARE`、项目 `FOR NO KEY UPDATE`、`label.create` 的判定；已归档的项目照常，3.19）→ 给了父标签时 `checkParent(…, uuid.Nil(), projectID, parent, false)` → `sort_order`：给的，否则 `SortOrderAfter(GreatestSortOrder)` → 时钟 → `CreateLabel`（由调用者、在那个时刻）；回答的 id 不是插入的是错误。
+  - `create_label.go`（新）：`NewCreateLabel(locks, labels LabelCreator, tx, clock)`、`Execute(ctx, projectID, domain.LabelCreate) (domain.Label, error)`：调用者 → `CheckNewLabel`（事务之前）→ 一个事务：`lockAndDecide`（工作区 `FOR SHARE`、项目 `FOR NO KEY UPDATE`、`label.create` 的判定；已归档的项目照常，3.19）→ 给了父标签时 `checkParent(…, uuid.Nil(), projectID, parent, false)` → `sort_order`：`SortOrderAfter(GreatestSortOrder)`（每次都读，M3 设计 4.10）→ 时钟 → `CreateLabel`（由调用者、在那个时刻）；回答的 id 不是插入的是错误。
   - `label.create`：项目级、只有管理员（同 `state.create`，M3 设计 9.2）；`domain.ActionLabelCreate`、`Actions()` 加它。
-  - `fakes_label_test.go`（新）：`fakeLabels`（Web 的 Bug、它下面的 UI、Feature，已归档的 Ops 的 Docs；`answersAs`、`changedAs`、`failsFor`、`errs`，调用记在 `writeFixture` 的日志里）、`newCreateLabel`、`labelCreated`；`fakes_write_test.go` 的 `writeFixture` 接上它。
+  - `fakes_label_test.go`（新）：`fakeLabels`（Web 的 Bug、它下面的 UI、Feature，已归档的 Ops 的 Docs；和 `fakeStore` 共用日志、`errs`、`changedAs`）、`newCreateLabel`、`labelCreated`；`fakes_write_test.go` 的 `writeFixture` 接上它。
+  - `fakes_write_test.go` 加 `readRow[R]`：按 id 读项目下的一行（记日志、按 `errs` 失败、锁下的重读照 `reread` 失败、消失或换项目，回答 `answersAs`），`fakeLabels.LabelByID` 用它，P7a 的 `fakeStates.StateByID` 改用它（`fakes_state_test.go`）；`of`、`GreatestSortOrder` 两份各自留着（合起来要为两种不相干的行各传取值的函数，比两段循环难读）。
 
 **Tests:**
-- `TestCreateLabel`：Web 的顶层（95535：Feature 85535 之后）、Bug 下面（同）、给的 `sort_order`（-1.5，不读最大值）、已归档的 Ops（75535）、没有标签的 Ops（65535）；每一行核对调用的次序（锁、判定、父标签、最大值、时钟、插入）和存下的每一列。
+- `TestCreateLabel`：Web 的顶层（95535：Feature 85535 之后）、Bug 下面（同）、已归档的 Ops（75535）、没有标签的 Ops（65535）；每一行核对调用的次序（锁、判定、父标签、最大值、时钟、插入）和存下的每一列。
 - `TestCreateLabelRefuses`（14 行）：没有调用者、空白的名称（事务之前，什么都不调用）；没有项目、工作区或项目在锁等待期间删除、项目移到别的工作区、看不见 Web 的调用者，各 `project.not_found`；成员 403（判定在锁之后）；父标签不是标签、是 Ops 的 Docs、是 Bug 下面的 UI，各 422 `parent_id not_allowed`（在判定之后，`lockedDecision` 之后读父标签）；父标签读成另一个 id、插入回答另一个 id 是这个写自己的错误；Bug 的名称换大小写是存储的 409。每一行之后标签不变。
 - `TestCreateLabelReturnsEachFailure`：每个端口的失败（项目的工作区、两把锁、判定、父标签、最大值、插入、提交）原样返回，之前的调用都在、之后的都不在。
 - `TestEachWriteReadsTheClockUnderItsLock` 加 `createLabel` 一行（时钟在父标签和最大值之后、插入之前）；`TestEveryRuleDecidesItsCells` 加 `label.create` 的 17 格；`TestAnActionWithoutARowHasNoRule` 照旧通过（`Actions()` 的每个动作都有规则）。
+- P7a 的状态的测试不改，照旧通过：`StateByID` 换成 `readRow`，子测试、名称和断言都同前（spec 附录 A 的 PF-L3 一节有 P7a 的变异前后的结果）。
 
 - [ ] **Step 1: 规则和动作**
 
@@ -2159,7 +2163,7 @@ func checkParent(ctx context.Context, labels LabelFinder, id, project, parentID 
 }
 ````
 
-`server/internal/modules/project/app/create_label.go`（新文件，84 行）：
+`server/internal/modules/project/app/create_label.go`（新文件，71 行）：
 
 ````file server/internal/modules/project/app/create_label.go
 package app
@@ -2192,9 +2196,9 @@ func NewCreateLabel(locks Locks, labels LabelCreator, tx shared.TxManager, clock
 // project FOR NO KEY UPDATE, which every write of its labels takes) and the
 // decision on label.create; an archived project's labels are created as
 // any other's (3.19). Then, under the locks, the parent given
-// (checkParent); the sort order given, or one after the greatest of the
-// project's labels (domain.SortOrderAfter); the clock; and the label, by
-// the caller at that time. The answer is the label as stored.
+// (checkParent); the sort order after the greatest of the project's
+// labels (domain.SortOrderAfter; 4.10); the clock; and the label, by the
+// caller at that time. The answer is the label as stored.
 func (u *CreateLabel) Execute(ctx context.Context, projectID uuid.UUID, in domain.LabelCreate) (domain.Label, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -2214,12 +2218,12 @@ func (u *CreateLabel) Execute(ctx context.Context, projectID uuid.UUID, in domai
 				return err
 			}
 		}
-		sortOrder, err := u.sortOrder(ctx, projectID, in.SortOrder)
+		greatest, err := u.labels.GreatestSortOrder(ctx, projectID)
 		if err != nil {
 			return err
 		}
 		row := LabelRow{ID: uuid.NewV7(), WorkspaceID: h.project.WorkspaceID, ProjectID: projectID, ParentID: in.ParentID, Name: in.Name,
-			Color: in.Color, SortOrder: sortOrder, CreatedBy: actor.UserID, Now: u.clock.Now()}
+			Color: in.Color, SortOrder: domain.SortOrderAfter(greatest), CreatedBy: actor.UserID, Now: u.clock.Now()}
 		if created, err = u.labels.CreateLabel(ctx, row); err != nil {
 			return err
 		}
@@ -2233,24 +2237,11 @@ func (u *CreateLabel) Execute(ctx context.Context, projectID uuid.UUID, in domai
 	}
 	return created, nil
 }
-
-// sortOrder is a new label's sort order: the one given, or one after the
-// greatest of projectID's labels.
-func (u *CreateLabel) sortOrder(ctx context.Context, projectID uuid.UUID, given *float64) (float64, error) {
-	if given != nil {
-		return *given, nil
-	}
-	greatest, err := u.labels.GreatestSortOrder(ctx, projectID)
-	if err != nil {
-		return 0, err
-	}
-	return domain.SortOrderAfter(greatest), nil
-}
 ````
 
 - [ ] **Step 3: 假实现和测试**
 
-`server/internal/modules/project/app/fakes_label_test.go`（新文件，151 行）：
+`server/internal/modules/project/app/fakes_label_test.go`（新文件，133 行）：
 
 ````file server/internal/modules/project/app/fakes_label_test.go
 package app_test
@@ -2349,28 +2340,10 @@ func (f *fakeLabels) CreateLabel(ctx context.Context, r app.LabelRow) (domain.La
 }
 
 // LabelByID is the label id; the reads after the first, under the locks,
-// answer as f.reread says.
+// answer as f.reread says (readRow).
 func (f *fakeLabels) LabelByID(ctx context.Context, id uuid.UUID) (domain.Label, bool, error) {
-	f.log.add(ctx, "LabelByID %s", id)
-	f.rowReadCount++
-	again := f.rowReadCount > 1
-	if err := f.fail("LabelByID"); err != nil {
-		return domain.Label{}, false, err
-	}
-	if again && f.reread.err != nil {
-		return domain.Label{}, false, fmt.Errorf("LabelByID: %w", f.reread.err)
-	}
 	l, ok := f.labels[id]
-	if !ok || (again && f.reread.gone) {
-		return domain.Label{}, false, nil
-	}
-	if again && f.reread.project != (uuid.UUID{}) {
-		l.ProjectID = f.reread.project
-	}
-	if f.answersAs != (uuid.UUID{}) {
-		l.ID = f.answersAs
-	}
-	return l, true, nil
+	return readRow(ctx, f.fakeStore, "LabelByID", id, l, ok, func(l *domain.Label) (*uuid.UUID, *uuid.UUID) { return &l.ProjectID, &l.ID })
 }
 
 // taken reports whether a label of project but except has name, in any
@@ -2406,7 +2379,7 @@ func parentOf(id *uuid.UUID) string {
 }
 ````
 
-`server/internal/modules/project/app/fakes_state_test.go`（修改，1 处）：
+`server/internal/modules/project/app/fakes_state_test.go`（修改，3 处）：
 
 ````old server/internal/modules/project/app/fakes_state_test.go
 // stateSince is when the fakes' states were made, as stored: no clock's
@@ -2417,7 +2390,42 @@ func parentOf(id *uuid.UUID) string {
 // clock's time.
 ````
 
-`server/internal/modules/project/app/fakes_write_test.go`（修改，1 处）：
+````old server/internal/modules/project/app/fakes_state_test.go
+// StateByID is the state id, read again under the locks as f.reread says.
+func (f *fakeStates) StateByID(ctx context.Context, id uuid.UUID) (domain.State, bool, error) {
+	f.log.add(ctx, "StateByID %s", id)
+	f.rowReadCount++
+	again := f.rowReadCount > 1
+	if err := f.fail("StateByID"); err != nil {
+		return domain.State{}, false, err
+	}
+	if again && f.reread.err != nil {
+		return domain.State{}, false, fmt.Errorf("StateByID: %w", f.reread.err)
+	}
+````
+````new server/internal/modules/project/app/fakes_state_test.go
+// StateByID is the state id, read again under the locks as f.reread says
+// (readRow).
+func (f *fakeStates) StateByID(ctx context.Context, id uuid.UUID) (domain.State, bool, error) {
+````
+
+````old server/internal/modules/project/app/fakes_state_test.go
+	if !ok || (again && f.reread.gone) {
+		return domain.State{}, false, nil
+	}
+	if again && f.reread.project != (uuid.UUID{}) {
+		s.ProjectID = f.reread.project
+	}
+	if f.answersAs != (uuid.UUID{}) {
+		s.ID = f.answersAs
+	}
+	return s, true, nil
+````
+````new server/internal/modules/project/app/fakes_state_test.go
+	return readRow(ctx, f.fakeStore, "StateByID", id, s, ok, func(s *domain.State) (*uuid.UUID, *uuid.UUID) { return &s.ProjectID, &s.ID })
+````
+
+`server/internal/modules/project/app/fakes_write_test.go`（修改，2 处）：
 
 ````old server/internal/modules/project/app/fakes_write_test.go
 	// (fakes_member_test.go) or a state's (fakes_state_test.go): how many
@@ -2435,7 +2443,45 @@ func parentOf(id *uuid.UUID) string {
 	// CreateLabel).
 ````
 
-`server/internal/modules/project/app/create_label_test.go`（新文件，192 行）：
+````old server/internal/modules/project/app/fakes_write_test.go
+	ended   bool
+````
+````new server/internal/modules/project/app/fakes_write_test.go
+	ended   bool
+}
+
+// readRow is a read by its id of a row under a project that a write
+// addresses by row, as the fakes of a state and of a label answer it
+// (StateByID, LabelByID): logged as name with the id; failing as f.errs
+// says; row and ok as stored; the reads after the first, under the locks,
+// as f.reread says (err, gone, project); and answering for f.answersAs
+// when set. at points into the row at its project and its id.
+func readRow[R any](ctx context.Context, f *fakeStore, name string, id uuid.UUID, row R, ok bool,
+	at func(*R) (project, rowID *uuid.UUID)) (R, bool, error) {
+	var none R
+	f.log.add(ctx, "%s %s", name, id)
+	f.rowReadCount++
+	again := f.rowReadCount > 1
+	if err := f.fail(name); err != nil {
+		return none, false, err
+	}
+	if again && f.reread.err != nil {
+		return none, false, fmt.Errorf("%s: %w", name, f.reread.err)
+	}
+	if !ok || (again && f.reread.gone) {
+		return none, false, nil
+	}
+	project, rowID := at(&row)
+	if again && f.reread.project != (uuid.UUID{}) {
+		*project = f.reread.project
+	}
+	if f.answersAs != (uuid.UUID{}) {
+		*rowID = f.answersAs
+	}
+	return row, true, nil
+````
+
+`server/internal/modules/project/app/create_label_test.go`（新文件，187 行）：
 
 ````file server/internal/modules/project/app/create_label_test.go
 package app_test
@@ -2467,28 +2513,24 @@ var (
 
 // labelCreated are the calls of user's creation of in in project at
 // sortOrder: its locks and decision; the parent's read, when in gives one;
-// the greatest sort order, when in gives none; the clock; the insert of the
-// label, by user at that time.
+// the greatest sort order; the clock; the insert of the label, by user at
+// that time.
 func labelCreated(user, project uuid.UUID, in domain.LabelCreate, sortOrder float64) []string {
 	calls := lockedDecision(user, project, domain.ActionLabelCreate)
 	if in.ParentID != nil {
 		calls = append(calls, "LabelByID "+in.ParentID.String())
 	}
-	if in.SortOrder == nil {
-		calls = append(calls, "GreatestSortOrder "+project.String())
-	}
-	return append(calls, "Now", "CreateLabel "+labelRow(app.LabelRow{WorkspaceID: acme.ID, ProjectID: project, ParentID: in.ParentID,
+	return append(calls, "GreatestSortOrder "+project.String(), "Now", "CreateLabel "+labelRow(app.LabelRow{WorkspaceID: acme.ID, ProjectID: project, ParentID: in.ParentID,
 		Name: in.Name, Color: in.Color, SortOrder: sortOrder, CreatedBy: user, Now: clockNow}))
 }
 
 // CreateLabel, in one transaction and in the order of M3 design 3.6, locks
 // the project, decides, reads the parent given, the greatest sort order of
-// its labels when none is given, and the clock, then inserts the label by
-// the caller at that time; it answers the label as stored, the time to the
-// microsecond: web's at the top after its Feature, 95535; under its Bug,
-// the same; at the sort order given, without the greatest read; archived
-// ops's, as any other's (3.19), after its Docs, 75535; and ops's, its
-// labels gone, at 65535. The use case makes each label's id: a second
+// its labels and the clock, then inserts the label by the caller at that
+// time; it answers the label as stored, the time to the microsecond:
+// web's at the top after its Feature, 95535; under its Bug, the same;
+// archived ops's, as any other's (3.19), after its Docs, 75535; and ops's,
+// its labels gone, at 65535. The use case makes each label's id: a second
 // label's differs from the first's, and neither is the nil id, the
 // project's, or a label's the fixture had.
 func TestCreateLabel(t *testing.T) {
@@ -2501,7 +2543,6 @@ func TestCreateLabel(t *testing.T) {
 	}{
 		{"web, at the top", webID, qa, nil, 95535},
 		{"under web's Bug", webID, underBug, nil, 95535},
-		{"at its sort order", webID, domain.LabelCreate{Name: "QA", SortOrder: ptr(-1.5)}, nil, -1.5},
 		{"archived ops", opsID, qa, nil, 75535},
 		{"ops without labels", opsID, qa, func(l *fakeLabels) { delete(l.labels, opsDocs) }, 65535},
 	} {
@@ -2686,8 +2727,9 @@ and the project FOR NO KEY UPDATE, which every write of its labels
 takes, and decides label.create, an admin's; an archived project's
 labels are created as any other's. Under the lock it reads the parent
 given and checks it: a label of the project at the top. The sort order
-is the one given, or 10000 after the greatest of the project's labels,
-or 65535; the time is the clock's under the lock.
+is 10000 after the greatest of the project's labels, or 65535; the time
+is the clock's under the lock. The fakes read a state and a label by
+its id through one helper, readRow.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -2702,11 +2744,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `s22-created-id` | `createLabel` 收下回答为另一个 id 的标签 | `TestCreateLabelRefuses` | 单元（按性质只在单元一层：真实的存储回答不了别的键（裁定 S6）） |
 | `s22-parent-id` | `checkParent` 收下读成另一个 id 的父标签 | `TestCreateLabelRefuses` | 单元（按性质只在单元一层：真实的存储回答不了别的键（裁定 S6）） |
 | `p-create-share-project` | `createLabel` 对项目只加 `FOR SHARE`（清扫 13、41：O3） | `TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 组合 |
-| `c-create-early` | `createLabel` 在锁之前读时钟 | `TestEachWriteReadsTheClockUnderItsLock`、`TestCreateLabel`、`TestCreateLabelRefuses`、`TestCreateLabelReturnsEachFailure`、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 单元；组合 |
-| `r-create-unchecked` | `createLabel` 收下任何父标签（不调用 `checkParent`） | `TestEachWriteReadsTheClockUnderItsLock`、`TestCreateLabel`、`TestCreateLabelRefuses`、`TestCreateLabelReturnsEachFailure`、`TestPermissionMatrix`（Task 5 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 5 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
-| `q-given-ignored` | `createLabel` 不理给的 `sort_order` | `TestCreateLabel`、P7（Task 11 起） | 单元；端到端 |
-| `q-greatest-ignored` | `createLabel` 不理最大的 `sort_order`（每个新标签都在 65535） | `TestEachWriteReadsTheClockUnderItsLock`、`TestCreateLabel`、`TestCreateLabelRefuses`、`TestCreateLabelReturnsEachFailure`、`TestPermissionMatrix`（Task 5 起）、P7（Task 11 起） | 单元；组合；端到端 |
+| `c-create-early` | `createLabel` 在锁之前读时钟 | `TestCreateLabel`、`TestCreateLabelRefuses`、`TestCreateLabelReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`（Task 8 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 单元；组合 |
+| `r-create-unchecked` | `createLabel` 收下任何父标签（不调用 `checkParent`） | `TestCreateLabel`、`TestCreateLabelRefuses`、`TestCreateLabelReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`（Task 8 起）、`TestPermissionMatrix`（Task 5 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 5 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
+| `q-greatest-ignored` | `createLabel` 不理最大的 `sort_order`（每个新标签都在 65535） | `TestCreateLabel`、`TestCreateLabelRefuses`、`TestCreateLabelReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`（Task 8 起）、`TestPermissionMatrix`（Task 5 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
+| `r-parent-same-workspace` | `createLabel` 收下同一工作区里另一个项目的顶层标签做父标签（只看工作区） | `TestCreateLabelRefuses`、`TestCreateLabelReturnsEachFailure`、`TestPermissionMatrix`（Task 5 起） | 单元；组合 |
 | `s25-create-parent-unlocked` | `createLabel` 在锁之前读父标签并检查 | `TestPermissionMatrix`（Task 5 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 组合 |
+| `s25-create-greatest-unlocked` | `createLabel` 在锁之前读最大的 `sort_order`，新标签照它放 | `TestCreateLabel`、`TestCreateLabelRefuses`、`TestCreateLabelReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`（Task 8 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 单元；组合 |
 | `s5-create-members` | 规则表：`label.create` 给成员 | `TestEveryRuleDecidesItsCells`、`TestPermissionMatrix`（Task 5 起）、P7（Task 11 起） | 单元；组合；端到端 |
 
 ---
@@ -2721,13 +2764,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces（spec 2.7、2.10；M3 设计 4.10、5.3、9.2）：
   - 契约（`api/modules/project.yaml`）：`POST /api/v0/projects/{project_id}/labels`（`createLabel`，201 `Label`；`x-problem-codes: [validation_failed, project.not_found, forbidden, project.label_name_taken]`）；`Label`（9 个字段都必有，`parent_id` 可以为 null，`additionalProperties: false`）、`LabelCreate`（只有 `name` 必有）；`api/openapi.yaml` 的路径和码 `project.label_name_taken`（409）。
-  - `adapter/http/labels.go`（新）：`CreateLabel`（颜色没给时为空，父标签、`sort_order` 没给时 `nil`）、`label`（顶层的父标签答 null）；`handler.go` 的 `UseCases` 加 `CreateLabel`；`module.go` 接上 `app.NewCreateLabel(locks, store, d.Tx, d.Clock)`。
+  - `adapter/http/labels.go`（新）：`CreateLabel`（颜色没给时为空，父标签没给时 `nil`；`LabelCreate` 没有 `sort_order`，给了是多余的字段）、`label`（顶层的父标签答 null）；`handler.go` 的 `UseCases` 加 `CreateLabel`；`module.go` 接上 `app.NewCreateLabel(locks, store, d.Tx, d.Clock)`。
   - 前端：`PROBLEM_MESSAGES` 和两份 `auth.json` 加 `project.label_name_taken`。
-  - 矩阵：`permission_matrix_labels_test.go`（新）：`matrixLabels`（每个项目的 Bug、Feature 在顶层，UI 在 Bug 下，`sort_order` 65535、75535、85535；gone 的随它删除）、`projectSeed.labels`（经项目的存储，由工作区的管理员）、`seededLabels`（按名称读回、核对父标签和 `sort_order`）、`ofLabel`、`ofArchivedLabel`、`toLabel`（Task 7 起用）、`withParent`；`createLabel` 的 5 行：QA 在顶层（`createsTheLabel`：在 Feature 之后，95535）、名称被占用（`bug`，409）、父标签有父标签（UI，422）、父标签是另一个项目的（422）、已归档的项目。`seeded.label`、`newSeeded` 给每个项目的每个标签一个 id；`prepareMatrix` 种下、读回。
+  - 矩阵：`permission_matrix_labels_test.go`（新）：`matrixLabels`（每个项目的 Bug、Feature 在顶层，UI 在 Bug 下，`sort_order` 65535、75535、85535；gone 的随它删除）、`projectSeed.labels`（经项目的存储，由工作区的管理员）、`seededLabels`（按名称读回、核对父标签和 `sort_order`）、`withParent`；`createLabel` 的 5 行：QA 在顶层（`createsTheLabel`：在 Feature 之后，95535）、名称被占用（`bug`，409）、父标签有父标签（UI，422）、父标签是同一工作区另一个项目的（已归档的项目的 Bug，422：查的是父标签的项目，不只是工作区）、已归档的项目。`seeded.label`、`newSeeded` 给每个项目的每个标签一个 id；`prepareMatrix` 种下、读回。
   - 组合：最先锁工作区的测试（`writesOnAProject` 加 `createLabel`）、盖戳（`createLabel` 在 Web 归档期间：`created_by_id`、`updated_by_id` 是 bob，`updated_at = created_at`）、连接（alice 建 Bug、它下面的 UI，在 UI 下建 Icons 被拒绝 422）。
 
 **Tests:**
-- 处理函数：`TestCreateLabel`（给全部字段和只给名称两种，用例收到的值和 201 的回答）、`TestCreateLabelHoldsTheBodyToItsStructure`（没有名称、多余的字段、类型不对、`parent_id` 为 null 或不是 id：400 `bad_request`，不调用用例）、`TestCreateLabelRefusals`（422、404、403、409、500 各按契约答）；`apitest.Main` 核对契约的每个操作在处理函数的测试里都有。
+- 处理函数：`TestCreateLabel`（给全部字段和只给名称两种，用例收到的值和 201 的回答）、`TestCreateLabelHoldsTheBodyToItsStructure`（没有名称、多余的字段（叫 `parent` 的父标签，和项目给的 `sort_order`）、类型不对、`parent_id` 为 null 或不是 id：400 `bad_request`，不调用用例）、`TestCreateLabelRefusals`（422、404、403、409、500 各按契约答）；`apitest.Main` 核对契约的每个操作在处理函数的测试里都有。
 - 矩阵：`TestPermissionMatrix` 的 5 个 `createLabel` 行；`TestThePermissionMatrixCoversEveryOperation`（新操作有行）；`TestEveryColumnCallsAsARegisteredAccount`（从未种下的标签让测试立即失败）。
 - 组合：`TestWritesOnAProjectAreEachShape`、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`、`TestTheWritesOnAProjectStampTheirRequest`、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`。
 
@@ -2758,10 +2801,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
         (validation_failed). The values are checked before the project is
         looked at. The parent, when it is given, is a label of the project
         at the top, not one under another: labels have two levels
-        (parent_id not_allowed). The sort order is the one given, or the
-        greatest of the project's labels plus 10000, or 65535 when the
-        project has none. The name may not be another undeleted label's of
-        the project, in any case (project.label_name_taken). A project that
+        (parent_id not_allowed). The new label comes after the project's
+        others: its sort order is the greatest of theirs plus 10000, or
+        65535 when the project has none; updateLabel moves it. The name may
+        not be another undeleted label's of the project, in any case
+        (project.label_name_taken). A project that
         does not exist, is deleted, or that the caller does not see answers
         project.not_found; one he sees but may not change, forbidden. The
         role is decided after the workspace and project rows are locked, and
@@ -2846,9 +2890,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
           description: A label of the project at the top, which the new label goes under; left out for a label at the top.
           type: string
           format: uuid
-        sort_order:
-          description: The label's place among the project's labels; after the others when left out.
-          type: number
 
 ````
 
@@ -2875,10 +2916,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `34ac00ffb1dc033ccff7e9fd4e842242bbecbae2f4351a4f63d7aa12523a5457` | 2846 | `api/dist/openapi.yaml` |
-| `a18c31a8c113e3e9b3917c0548c85f57c49d7811c0b10ef1935b54fed9787d99` | 80 | `server/internal/modules/project/adapter/http/gen/bodyshape.gen.go` |
-| `0f10629d92ecc82ea082211739f25eb533bf73622679adce0261caefd17cb102` | 3165 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `a474bef282c82734e75712821ad98458034d5bacfb1e2dab63bd1c017e1e1f8c` | 3146 | `web/packages/api-client/src/schema.gen.ts` |
+| `8b7fcb768f27cafd70ccfbfe50dc3894e6e92271b1a5b54f4869ad95b60e4ab6` | 2843 | `api/dist/openapi.yaml` |
+| `32165352e7085deb7833ea23b61e4038ce3209554e0bb2787805de887f8515f6` | 79 | `server/internal/modules/project/adapter/http/gen/bodyshape.gen.go` |
+| `cb40296aee8381648c4ca272665b20816b214d8501d9a7ff9a487f338bbc0bea` | 3162 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `5a38e70d6f8db021684fe5698bc746b36f64e95ff7d67b608dc35af3d0c211b8` | 3144 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -2898,9 +2939,9 @@ import (
 )
 
 // CreateLabel serves POST /api/v0/projects/{project_id}/labels: the color
-// empty when not given, the parent and the sort order nil when not given.
+// empty and the parent nil when not given.
 func (h handler) CreateLabel(ctx context.Context, req gen.CreateLabelRequestObject) (gen.CreateLabelResponseObject, error) {
-	in := domain.LabelCreate{Name: req.Body.Name, ParentID: req.Body.ParentID, SortOrder: req.Body.SortOrder}
+	in := domain.LabelCreate{Name: req.Body.Name, ParentID: req.Body.ParentID}
 	if req.Body.Color != nil {
 		in.Color = *req.Body.Color
 	}
@@ -2944,7 +2985,7 @@ type CreateLabelUseCase interface {
 	CreateLabel         CreateLabelUseCase
 ````
 
-`server/internal/modules/project/adapter/http/labels_test.go`（新文件，126 行）：
+`server/internal/modules/project/adapter/http/labels_test.go`（新文件，127 行）：
 
 ````file server/internal/modules/project/adapter/http/labels_test.go
 package httpadapter_test
@@ -3006,9 +3047,9 @@ var parentRefused = shared.Invalid(shared.FieldError{Field: "parent_id", Code: s
 	Message: "must be a label without a parent: labels have two levels"})
 
 // POST goes to the use case for the caller and the path's project, with
-// the body's fields: the color empty, the parent and the sort order nil,
-// when not given; the answer is 201 with the label the use case answers,
-// its parent's id, or null at the top.
+// the body's fields: the color empty and the parent nil when not given;
+// the answer is 201 with the label the use case answers, its parent's id,
+// or null at the top.
 func TestCreateLabel(t *testing.T) {
 	path := "/api/v0/projects/" + webID.String() + "/labels"
 	for _, tt := range []struct {
@@ -3017,8 +3058,8 @@ func TestCreateLabel(t *testing.T) {
 		answer domain.Label
 		json   string
 	}{
-		{`{"name":"UI","color":"#F59E0B","parent_id":"0199a2b4-0000-7000-8000-0000000000d1","sort_order":-2.5}`,
-			domain.LabelCreate{Name: "UI", Color: "#F59E0B", ParentID: &webBugLabel.ID, SortOrder: ptr(-2.5)}, webUILabel, webUILabelJSON},
+		{`{"name":"UI","color":"#F59E0B","parent_id":"0199a2b4-0000-7000-8000-0000000000d1"}`,
+			domain.LabelCreate{Name: "UI", Color: "#F59E0B", ParentID: &webBugLabel.ID}, webUILabel, webUILabelJSON},
 		{`{"name":"Bug"}`, domain.LabelCreate{Name: "Bug"}, webBugLabel, webBugLabelJSON},
 	} {
 		create := &fakeCreateLabel{answer: tt.answer}
@@ -3033,14 +3074,15 @@ func TestCreateLabel(t *testing.T) {
 	}
 }
 
-// A body without its name, with a field it may not have, a field of
-// another type, or a parent that is null or no id: refused as bad_request
-// before the use case.
+// A body without its name, with a field it may not have (a parent named
+// so, or a sort order, which the project gives: M3 design 4.10), a field
+// of another type, or a parent that is null or no id: refused as
+// bad_request before the use case.
 func TestCreateLabelHoldsTheBodyToItsStructure(t *testing.T) {
 	create := &fakeCreateLabel{}
 	h := newServer(t, fakes{createLabel: create})
 	for _, body := range []string{`{}`, `{"color":"#000"}`, `{"name":"A","parent":"0199a2b4-0000-7000-8000-0000000000d1"}`, `{"name":1}`,
-		`{"name":"A","sort_order":"1"}`, `{"name":"A","parent_id":null}`, `{"name":"A","parent_id":"Bug"}`} {
+		`{"name":"A","sort_order":1}`, `{"name":"A","parent_id":null}`, `{"name":"A","parent_id":"Bug"}`} {
 		res, got := do(t, h, request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/labels", "alice", body))
 		var problem struct{ Code string }
 		if err := json.Unmarshal([]byte(got), &problem); err != nil || res.StatusCode != http.StatusBadRequest || problem.Code != "bad_request" {
@@ -3173,7 +3215,7 @@ func TestCreateLabelRefusals(t *testing.T) {
 
 - [ ] **Step 3: 矩阵**
 
-`server/internal/bootstrap/permission_matrix_labels_test.go`（新文件，150 行）：
+`server/internal/bootstrap/permission_matrix_labels_test.go`（新文件，151 行）：
 
 ````file server/internal/bootstrap/permission_matrix_labels_test.go
 package bootstrap
@@ -3241,9 +3283,10 @@ func labelMatrixRows() []matrixRow {
 			request: withParent(func(c caller, s seeded) uuid.UUID { return s.label(projectOf(c), "UI") }),
 			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "parent_id not_allowed"},
-		// other's project's Bug, a label of a project of another workspace.
+		// The archived project's Bug, a label of another project of the same
+		// workspace: the parent's project is checked, not only its workspace.
 		{op: "createLabel", variant: "a parent of another project", write: true, columns: projectColumns,
-			request: withParent(func(_ caller, s seeded) uuid.UUID { return s.label("other/project", "Bug") }),
+			request: withParent(func(_ caller, s seeded) uuid.UUID { return s.label("acme/archived", "Bug") }),
 			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "parent_id not_allowed"},
 		// An archived project's labels are created as any other's (M3 design
@@ -3611,10 +3654,11 @@ git commit -m "feat(M3/P7b): POST /api/v0/projects/{project_id}/labels creates a
 
 The contract declares createLabel and the label: its parent null at the
 top. The handler hands the body's fields to the use case, the color
-empty and the parent and the sort order nil when left out. The
-permission matrix seeds three labels in each project and asks each
-column to create one, with a name taken, under a parent with a parent,
-under another project's label, and in the archived project; the writes
+empty and the parent nil when left out; a sort order given is a field
+the body may not have. The permission matrix seeds three labels in
+each project and asks each column to create one, with a name taken,
+under a parent with a parent, under a label of another project of the
+workspace, and in the archived project; the writes
 on a project share its workspace first, stamp their request and run on
 their transaction's connection with createLabel among them.
 
@@ -3630,9 +3674,8 @@ Expected: 通过。
 |---|---|---|---|
 | `s4-create-frozen-clock` | `createLabel` 接上停在 2001 年的时钟 | `TestTheWritesOnAProjectStampTheirRequest` | 组合 |
 | `s4-create-drops-parent` | `POST …/labels` 丢掉父标签 | `TestCreateLabel`、`TestPermissionMatrix`、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`、P7（Task 11 起） | 单元；组合；端到端 |
-| `s4-create-drops-sort` | `POST …/labels` 丢掉 `sort_order` | `TestCreateLabel`、P7（Task 11 起） | 单元；端到端 |
 | `s4-create-drops-color` | `POST …/labels` 丢掉颜色 | `TestCreateLabel`、`TestPermissionMatrix`、P7（Task 11 起） | 单元；组合；端到端 |
-| `s4-label-parent-null` | 回答的标签一律在顶层（`parent_id` 为 null） | `TestCreateLabel`、`TestUpdateLabel`（Task 6 起）、`TestListLabels`（Task 9 起）、`TestPermissionMatrix`（Task 9 起）、P7（Task 11 起） | 单元；组合；端到端 |
+| `s4-label-parent-null` | 回答的标签一律在顶层（`parent_id` 为 null） | `TestCreateLabel`、`TestUpdateLabel`（Task 7 起）、`TestListLabels`（Task 9 起）、`TestPermissionMatrix`（Task 9 起）、P7（Task 11 起） | 单元；组合；端到端 |
 | `s18-create-no-taken` | `createLabel` 的契约不声明 `project.label_name_taken` | `TestCreateLabelRefusals`、`TestPermissionMatrix`、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起） | 单元；组合 |
 
 ---
@@ -3649,7 +3692,7 @@ Expected: 通过。
   - `label_ports.go`：`labelWrite(id, action, labels LabelFinder) rowWrite[domain.Label]`（`find` 是 `labels.LabelByID`，404 是 `project.label_not_found`）；`LabelUpdater`（`LabelFinder`、`HasChildren`、`UpdateLabel`）；`LabelFinder` 的说明写明两种读。
   - `update_label.go`（新）：`NewUpdateLabel(locks, labels LabelUpdater, tx, clock)`、`Execute(ctx, id, domain.LabelPatch) (domain.Label, error)`：调用者 → `CheckLabelPatch`（事务之前）→ 一个事务：`lockRowAndDecide(…, labelWrite(id, ActionLabelUpdate, labels))`（读标签得到项目和工作区、工作区 `FOR SHARE`、项目 `FOR NO KEY UPDATE`、锁下重读、`label.update` 的判定；已归档的项目照常）→ 给了父标签（不是 null）时 `HasChildren`，再 `checkParent(…, l.ID, l.ProjectID, parent, hasChildren)`；移到顶层两者都不需要 → 时钟 → `UpdateLabel`；回答的 id 不是这个标签的是错误。
   - `label.update`：同 `label.create`。
-  - `fakeLabels` 加 `HasChildren`、`UpdateLabel`、`newUpdateLabel`、`labelLocked`、`labelUpdated`；`writeFixture` 的重读（`reread`）也答标签。
+  - `fakeLabels` 加 `HasChildren`、`UpdateLabel`、`failsFor`（只让这一个标签的读失败：父标签的读失败而标签自己的照常）、`newUpdateLabel`、`labelLocked`、`labelUpdated`；标签的重读照 Task 4 的 `readRow`。
 
 **Tests:**
 - `TestUpdateLabel`：Feature 改名、改色；Feature 放到 Bug 下；给 `sort_order`；Bug 换大小写改名；UI 移到顶层；已归档的 Ops 的 Docs 改名。每一行核对调用的次序（给了父标签才读子标签和父标签）和存下的标签。
@@ -3859,23 +3902,19 @@ func (u *UpdateLabel) Execute(ctx context.Context, id uuid.UUID, p domain.LabelP
 ````
 
 ````old server/internal/modules/project/app/fakes_label_test.go
-		return domain.Label{}, false, err
-	}
+// answer as f.reread says (readRow).
+func (f *fakeLabels) LabelByID(ctx context.Context, id uuid.UUID) (domain.Label, bool, error) {
 ````
 ````new server/internal/modules/project/app/fakes_label_test.go
-		return domain.Label{}, false, err
-	}
-	if f.failsFor != (uuid.UUID{}) && id == f.failsFor {
+// answer as f.reread says (readRow); the read of f.failsFor fails.
+func (f *fakeLabels) LabelByID(ctx context.Context, id uuid.UUID) (domain.Label, bool, error) {
+	stored, ok := f.labels[id]
+	l, found, err := readRow(ctx, f.fakeStore, "LabelByID", id, stored, ok,
+		func(l *domain.Label) (*uuid.UUID, *uuid.UUID) { return &l.ProjectID, &l.ID })
+	if err == nil && f.failsFor != (uuid.UUID{}) && id == f.failsFor {
 		return domain.Label{}, false, fmt.Errorf("LabelByID %s: %w", id, errDisk)
 	}
-````
-
-````old server/internal/modules/project/app/fakes_label_test.go
-}
-
-// taken reports whether a label of project but except has name, in any
-````
-````new server/internal/modules/project/app/fakes_label_test.go
+	return l, found, err
 }
 
 // HasChildren reports whether a label has id as its parent.
@@ -3900,7 +3939,12 @@ func (f *fakeLabels) UpdateLabel(ctx context.Context, id uuid.UUID, p domain.Lab
 	if err := f.fail("UpdateLabel"); err != nil {
 		return domain.Label{}, err
 	}
-	l, ok := f.labels[id]
+````
+
+````old server/internal/modules/project/app/fakes_label_test.go
+	return readRow(ctx, f.fakeStore, "LabelByID", id, l, ok, func(l *domain.Label) (*uuid.UUID, *uuid.UUID) { return &l.ProjectID, &l.ID })
+````
+````new server/internal/modules/project/app/fakes_label_test.go
 	if !ok {
 		return domain.Label{}, fmt.Errorf("UpdateLabel: no label %s", id)
 	}
@@ -3925,9 +3969,6 @@ func (f *fakeLabels) UpdateLabel(ctx context.Context, id uuid.UUID, p domain.Lab
 		l.ID = f.changedAs
 	}
 	return l, nil
-}
-
-// taken reports whether a label of project but except has name, in any
 ````
 
 ````old server/internal/modules/project/app/fakes_label_test.go
@@ -4207,9 +4248,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `s2-update-update` | `updateLabel` 吞掉 `UpdateLabel` 的失败 | `TestUpdateLabelRefuses`、`TestUpdateLabelReturnsEachFailure` | 单元（按性质只在单元一层：真实的存储在这一步不失败） |
 | `s22-updated-id` | `updateLabel` 收下回答为另一个标签的修改 | `TestUpdateLabelRefuses` | 单元（按性质只在单元一层：真实的存储回答不了别的键（裁定 S6）） |
 | `p-label-404-state` | 标签的 404 答 `project.state_not_found`（`labelWrite` 的 `notFound`） | `TestUpdateLabelRefuses`、`TestDeleteLabelRefuses`（Task 8 起）、`TestBodiesThatBreakTheStructureAnswer400`（Task 7 起）、`TestPermissionMatrix`（Task 7 起）、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
-| `c-update-early` | `updateLabel` 在锁之前读时钟 | `TestEachWriteReadsTheClockUnderItsLock`、`TestUpdateLabel`、`TestUpdateLabelRefuses`、`TestUpdateLabelReturnsEachFailure`、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 单元；组合 |
+| `c-update-early` | `updateLabel` 在锁之前读时钟 | `TestUpdateLabel`、`TestUpdateLabelRefuses`、`TestUpdateLabelReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`（Task 8 起）、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 单元；组合 |
 | `r-update-children-unread` | `updateLabel` 不看这个标签有没有子标签 | `TestUpdateLabelRefuses`、`TestPermissionMatrix`（Task 7 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
-| `r-update-unchecked` | `updateLabel` 收下任何父标签（不调用 `checkParent`） | `TestEachWriteReadsTheClockUnderItsLock`、`TestUpdateLabel`、`TestUpdateLabelRefuses`、`TestUpdateLabelReturnsEachFailure`、`TestPermissionMatrix`（Task 7 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
+| `r-update-unchecked` | `updateLabel` 收下任何父标签（不调用 `checkParent`） | `TestUpdateLabel`、`TestUpdateLabelRefuses`、`TestUpdateLabelReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`（Task 8 起）、`TestPermissionMatrix`（Task 7 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起）、`TestEachLabelWriteChangesItsRowsAlone`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起）、P7（Task 11 起） | 单元；组合；端到端 |
 | `s21-patch-checked-late` | `updateLabel` 在找到标签之后才查值 | `TestUpdateLabelRefuses`、`TestPermissionMatrix`（Task 7 起） | 单元；组合 |
 | `s25-update-parent-unlocked` | `updateLabel` 在锁之前读子标签和父标签并检查 | `TestPermissionMatrix`（Task 7 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 组合 |
 | `s5-update-members` | 规则表：`label.update` 给成员 | `TestEveryRuleDecidesItsCells`、`TestPermissionMatrix`（Task 7 起）、P7（Task 11 起） | 单元；组合；端到端 |
@@ -4219,7 +4260,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 7: `updateLabel` 的接口：契约、处理函数、文案、矩阵和组合的测试
 
 **Files:**
-- Modify: `api/modules/project.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_labels_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/project_connection_test.go`、`server/internal/bootstrap/project_write_locks_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/labels.go`、`server/internal/modules/project/adapter/http/labels_test.go`、`server/internal/modules/project/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
+- Modify: `api/modules/project.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_labels_test.go`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/permission_matrix_states_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/project_connection_test.go`、`server/internal/bootstrap/project_write_locks_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/labels.go`、`server/internal/modules/project/adapter/http/labels_test.go`、`server/internal/modules/project/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
@@ -4227,6 +4268,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - 契约：`PATCH /api/v0/labels/{label_id}`（`updateLabel`，200 `Label`；`x-problem-codes: [validation_failed, project.label_not_found, forbidden, project.label_name_taken]`）、参数 `LabelID`、`LabelUpdate`（四个字段都可选，只有 `parent_id` 可以为 null：移到顶层）；`api/openapi.yaml` 的码 `project.label_not_found`（404）。
   - 处理函数 `UpdateLabel`：给了的字段交给用例，null 的父标签是"给了、为顶层"（`SetParent: true, ParentID: nil`）；`UseCases.UpdateLabel`；`module.go` 接上 `app.NewUpdateLabel`。
   - 前端：`project.label_not_found` 的文案。
+  - 矩阵的行：`permission_matrix_project_test.go` 加 `rowsByID{path, notFound, find}`：按 id 指名项目下一行的写的格子（`of`：六列；`ofArchived`：已归档的项目的列）和请求（`to`）；P7a 的 `ofState`、`ofArchivedState`、`toState` 换成 `stateRows` 的方法（`permission_matrix_states_test.go`，行、格子和断言同前），标签的是 `labelRows`（404 是 `project.label_not_found`，`seeded.label`）。
   - 矩阵：`updateLabel` 的 5 行（Feature 改名 Story：`renamesTheLabel`；名称被占用；有子标签的 Bug 设父标签：422；值被拒绝：空的名称，每一列都是 422 `name too_short`，在看项目之前；已归档的项目）；`permission_matrix_targets_test.go` 的 `{label_id}`；`permission_matrix_columns_test.go` 的瞄准标签行的列。
   - 组合：`rowPaths` 加 `/api/v0/labels/`；`labelNamed`；`writesOnAProject` 加 `updateLabel`（Task 5 建的 QA 改名 Checked）；盖戳加 `updateLabel`（`labelID`）；连接加三个 PATCH（Bug 移到 UI 下被拒绝，UI 改名 Widgets 到顶层，再放回 Bug 下）。
 
@@ -4234,6 +4276,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - 处理函数：`TestUpdateLabel`（各字段、null 的父标签、空的补丁）、`TestUpdateLabelHoldsTheBodyToItsStructure`（多余的字段、类型不对、父标签之外的 null、不是 id 的父标签：400 `bad_request`，不调用用例）、`TestUpdateLabelRefusals`（422、404、403、409、500）。
 - 矩阵：`TestPermissionMatrix` 的 5 个 `updateLabel` 行；`TestThePermissionMatrixCoversEveryOperation`；`TestMatrixViolationsCatchesEachColumnGap`（瞄准标签行的格子必须是那一列的项目的标签）。
 - 组合：同 Task 5 的四个测试，加标签的行写。
+- P7a 的状态的矩阵行换成 `stateRows` 之后，`TestPermissionMatrix` 的子测试和格子同前。
 
 - [ ] **Step 1: 契约**
 
@@ -4306,12 +4349,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 
 ````old api/modules/project.yaml
-          description: The label's place among the project's labels; after the others when left out.
-          type: number
+          description: A label of the project at the top, which the new label goes under; left out for a label at the top.
+          type: string
+          format: uuid
+
 ````
 ````new api/modules/project.yaml
-          description: The label's place among the project's labels; after the others when left out.
-          type: number
+          description: A label of the project at the top, which the new label goes under; left out for a label at the top.
+          type: string
+          format: uuid
     LabelUpdate:
       description: >-
         Changes the fields it names; a field left out keeps its value. Only
@@ -4332,6 +4378,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
         sort_order:
           description: The label's place among the project's labels, the lowest first.
           type: number
+
 ````
 
 `api/openapi.yaml`（修改，1 处）：
@@ -4350,10 +4397,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `ac72c911c49efa46c06df2b35dc22d8e91b0a007221cf6d80f8014c2add928a0` | 2905 | `api/dist/openapi.yaml` |
-| `9059accc72257d17cffc8b84cee51a8d1179e6e308e6eb360a046299dcd9aacf` | 86 | `server/internal/modules/project/adapter/http/gen/bodyshape.gen.go` |
-| `e7dd9ccff491058ad7b9cace9065d08a1c352df0ce3403d6b2b6d93f8d4bd0ca` | 3299 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `a17594b28aa10eb0802946cf018da4b63561663247691f09de93728d59766cc8` | 3215 | `web/packages/api-client/src/schema.gen.ts` |
+| `7230a3a23962c0db194c5380ab966acf01dc3a74dd099c5c64bd4e937db302c5` | 2902 | `api/dist/openapi.yaml` |
+| `416d209c2982dc56a261b8f33dc71baa2268795dccb42d1721c60bffe1f26f83` | 85 | `server/internal/modules/project/adapter/http/gen/bodyshape.gen.go` |
+| `2e0c795e7a2ac76068f437995ed5ffdcf0c25fcd3429e8ffc07bf305c52936d8` | 3296 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `b34abd978d0a77c4d5b81548efcc2bca22702c67551536a3879d9dbff1116898` | 3213 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -4617,6 +4664,182 @@ func TestUpdateLabelRefusals(t *testing.T) {
 
 - [ ] **Step 3: 矩阵**
 
+`server/internal/bootstrap/permission_matrix_project_test.go`（修改，1 处）：
+
+````old server/internal/bootstrap/permission_matrix_project_test.go
+		return method, "/api/v0/projects/" + s.project(projectOf(c)).String() + path, body
+````
+````new server/internal/bootstrap/permission_matrix_project_test.go
+		return method, "/api/v0/projects/" + s.project(projectOf(c)).String() + path, body
+	}
+}
+
+// rowsByID is a kind of row under a project that the writes of the matrix
+// name by its id, /api/v0/<path>/{id}: a state (stateRows), a label
+// (labelRows). notFound answers a caller who does not see the row's
+// project, and find is the seeded row of a project by its name.
+type rowsByID struct {
+	path     string
+	notFound cell
+	find     func(s seeded, project, name string) uuid.UUID
+}
+
+// of are the cells of a row of a write on one: the answers of PA, PM, PG,
+// PM+WA, WA- and WM-公, and notFound for the columns that do not see their
+// project: WM-私, WG-, P-前 and X, whose row in gone's project is deleted
+// with it.
+func (k rowsByID) of(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
+	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
+		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: k.notFound, callerGuestOnly: k.notFound,
+		callerBefore: k.notFound, callerNever: k.notFound, callerRemoved: k.notFound, callerDeleted: k.notFound}
+}
+
+// ofArchived are the cells of a row of a write on one of the archived
+// project: the answers of PA and of the workspace's member, who sees the
+// project, and notFound for X, who does not.
+func (k rowsByID) ofArchived(pa, wm cell) map[caller]cell {
+	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: k.notFound}
+}
+
+// to is the request of a row whose callers each send method, with body,
+// to the row name of their column's project, after its id.
+func (k rowsByID) to(method, after, name, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return method, "/api/v0/" + k.path + "/" + k.find(s, projectOf(c), name).String() + after, body
+````
+
+`server/internal/bootstrap/permission_matrix_states_test.go`（修改，11 处）：
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+// ofState are the cells of a row of a write on a state: the answers of PA,
+// PM, PG, PM+WA, WA- and WM-公, and project.state_not_found for the
+// columns that do not see their project: WM-私, WG-, P-前 and X, whose
+// state in gone's project is deleted with it.
+func ofState(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
+	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
+		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: cellStateNotFound, callerGuestOnly: cellStateNotFound,
+		callerBefore: cellStateNotFound, callerNever: cellStateNotFound, callerRemoved: cellStateNotFound, callerDeleted: cellStateNotFound}
+}
+
+// ofArchivedState are the cells of a row of a write on a state of the
+// archived project: the answers of PA and of the workspace's member, who
+// sees the project, and project.state_not_found for X, who does not.
+func ofArchivedState(pa, wm cell) map[caller]cell {
+	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: cellStateNotFound}
+}
+
+// toState is the request of a row whose callers each send method, with
+// body, to the state name of their column's project, after its id.
+func toState(method, after, name, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return method, "/api/v0/states/" + s.state(projectOf(c), name).String() + after, body
+	}
+}
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+// stateRows are the states the writes of the matrix name by id: a column
+// that does not see its project answers project.state_not_found.
+var stateRows = rowsByID{path: "states", notFound: cellStateNotFound, find: seeded.state}
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "updateState", write: true, columns: projectColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Next"}`),
+			cells: ofState(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: renamesTheState},
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "updateState", write: true, columns: projectColumns, request: stateRows.to(http.MethodPatch, "", "Todo", `{"name":"Next"}`),
+			cells: stateRows.of(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: renamesTheState},
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+			request: toState(http.MethodPatch, "", "Todo", `{"group":"started"}`),
+			cells:   ofState(cellStateLastInGroup, cellForbidden, cellForbidden, cellStateLastInGroup, cellForbidden, cellForbidden)},
+		{op: "updateState", variant: "a name taken", write: true, columns: projectColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Done"}`),
+			cells: ofState(cellStateNameTaken, cellForbidden, cellForbidden, cellStateNameTaken, cellForbidden, cellForbidden)},
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+			request: stateRows.to(http.MethodPatch, "", "Todo", `{"group":"started"}`),
+			cells:   stateRows.of(cellStateLastInGroup, cellForbidden, cellForbidden, cellStateLastInGroup, cellForbidden, cellForbidden)},
+		{op: "updateState", variant: "a name taken", write: true, columns: projectColumns, request: stateRows.to(http.MethodPatch, "", "Todo", `{"name":"Done"}`),
+			cells: stateRows.of(cellStateNameTaken, cellForbidden, cellForbidden, cellStateNameTaken, cellForbidden, cellForbidden)},
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+			request: toState(http.MethodPatch, "", "Triage", `{"name":"Next"}`), cells: ofState(cellStateNotFound, cellStateNotFound,
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+			request: stateRows.to(http.MethodPatch, "", "Triage", `{"name":"Next"}`), cells: stateRows.of(cellStateNotFound, cellStateNotFound,
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+			request: toState(http.MethodPatch, "", "Triage", `{"name":""}`), cells: func() map[caller]cell {
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+			request: stateRows.to(http.MethodPatch, "", "Triage", `{"name":""}`), cells: func() map[caller]cell {
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "updateState", variant: "archived", write: true, columns: archivedColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Next"}`),
+			cells: ofArchivedState(cellOK, cellForbidden), check: renamesTheState},
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "updateState", variant: "archived", write: true, columns: archivedColumns, request: stateRows.to(http.MethodPatch, "", "Todo", `{"name":"Next"}`),
+			cells: stateRows.ofArchived(cellOK, cellForbidden), check: renamesTheState},
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "deleteState", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Review", ""),
+			cells: ofState(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "deleteState", write: true, columns: projectColumns, request: stateRows.to(http.MethodDelete, "", "Review", ""),
+			cells: stateRows.of(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "deleteState", variant: "the default", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Backlog", ""),
+			cells: ofState(cellStateDefault, cellForbidden, cellForbidden, cellStateDefault, cellForbidden, cellForbidden)},
+		{op: "deleteState", variant: "the last of its group", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Done", ""),
+			cells: ofState(cellStateLastInGroup, cellForbidden, cellForbidden, cellStateLastInGroup, cellForbidden, cellForbidden)},
+		{op: "deleteState", variant: "the triage state", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Triage", ""),
+			cells: ofState(cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound)},
+		{op: "deleteState", variant: "archived", write: true, columns: archivedColumns, request: toState(http.MethodDelete, "", "Review", ""),
+			cells: ofArchivedState(cellNoContent, cellForbidden)},
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "deleteState", variant: "the default", write: true, columns: projectColumns, request: stateRows.to(http.MethodDelete, "", "Backlog", ""),
+			cells: stateRows.of(cellStateDefault, cellForbidden, cellForbidden, cellStateDefault, cellForbidden, cellForbidden)},
+		{op: "deleteState", variant: "the last of its group", write: true, columns: projectColumns, request: stateRows.to(http.MethodDelete, "", "Done", ""),
+			cells: stateRows.of(cellStateLastInGroup, cellForbidden, cellForbidden, cellStateLastInGroup, cellForbidden, cellForbidden)},
+		{op: "deleteState", variant: "the triage state", write: true, columns: projectColumns, request: stateRows.to(http.MethodDelete, "", "Triage", ""),
+			cells: stateRows.of(cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound)},
+		{op: "deleteState", variant: "archived", write: true, columns: archivedColumns, request: stateRows.to(http.MethodDelete, "", "Review", ""),
+			cells: stateRows.ofArchived(cellNoContent, cellForbidden)},
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "markDefaultState", write: true, columns: projectColumns, request: toState(http.MethodPost, "/mark-default", "Todo", ""),
+			cells: ofState(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+		{op: "markDefaultState", write: true, columns: projectColumns, request: stateRows.to(http.MethodPost, "/mark-default", "Todo", ""),
+			cells: stateRows.of(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+			request: toState(http.MethodPost, "/mark-default", "Triage", ""), cells: ofState(cellStateNotFound, cellStateNotFound, cellStateNotFound,
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+			request: stateRows.to(http.MethodPost, "/mark-default", "Triage", ""), cells: stateRows.of(cellStateNotFound, cellStateNotFound, cellStateNotFound,
+````
+
+````old server/internal/bootstrap/permission_matrix_states_test.go
+			request: toState(http.MethodPost, "/mark-default", "Todo", ""), cells: ofArchivedState(cellNoContent, cellForbidden)},
+````
+````new server/internal/bootstrap/permission_matrix_states_test.go
+			request: stateRows.to(http.MethodPost, "/mark-default", "Todo", ""), cells: stateRows.ofArchived(cellNoContent, cellForbidden)},
+````
+
 `server/internal/bootstrap/permission_matrix_labels_test.go`（修改，4 处）：
 
 ````old server/internal/bootstrap/permission_matrix_labels_test.go
@@ -4644,30 +4867,9 @@ var (
 	cellLabelNotFound  = cell{http.StatusNotFound, "project.label_not_found"}
 )
 
-// ofLabel are the cells of a row of a write on a label: the answers of PA,
-// PM, PG, PM+WA, WA- and WM-公, and project.label_not_found for the
-// columns that do not see their project: WM-私, WG-, P-前 and X, whose
-// label in gone's project is deleted with it.
-func ofLabel(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
-	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
-		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: cellLabelNotFound, callerGuestOnly: cellLabelNotFound,
-		callerBefore: cellLabelNotFound, callerNever: cellLabelNotFound, callerRemoved: cellLabelNotFound, callerDeleted: cellLabelNotFound}
-}
-
-// ofArchivedLabel are the cells of a row of a write on a label of the
-// archived project: the answers of PA and of the workspace's member, who
-// sees the project, and project.label_not_found for X, who does not.
-func ofArchivedLabel(pa, wm cell) map[caller]cell {
-	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: cellLabelNotFound}
-}
-
-// toLabel is the request of a row whose callers each send method, with
-// body, to the label name of their column's project.
-func toLabel(method, name, body string) func(caller, seeded) (string, string, string) {
-	return func(c caller, s seeded) (string, string, string) {
-		return method, "/api/v0/labels/" + s.label(projectOf(c), name).String(), body
-	}
-}
+// labelRows are the labels the writes of the matrix name by id: a column
+// that does not see its project answers project.label_not_found.
+var labelRows = rowsByID{path: "labels", notFound: cellLabelNotFound, find: seeded.label}
 ````
 
 ````old server/internal/bootstrap/permission_matrix_labels_test.go
@@ -4676,23 +4878,23 @@ func toLabel(method, name, body string) func(caller, seeded) (string, string, st
 ````new server/internal/bootstrap/permission_matrix_labels_test.go
 			cells: ofArchived(cellCreated, cellForbidden), check: createsTheLabel},
 		// As createLabel: Feature renamed.
-		{op: "updateLabel", write: true, columns: projectColumns, request: toLabel(http.MethodPatch, "Feature", `{"name":"Story"}`),
-			cells: ofLabel(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: renamesTheLabel},
+		{op: "updateLabel", write: true, columns: projectColumns, request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"Story"}`),
+			cells: labelRows.of(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: renamesTheLabel},
 		{op: "updateLabel", variant: "a name taken", write: true, columns: projectColumns,
-			request: toLabel(http.MethodPatch, "Feature", `{"name":"bug"}`),
-			cells:   ofLabel(cellLabelNameTaken, cellForbidden, cellForbidden, cellLabelNameTaken, cellForbidden, cellForbidden)},
+			request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"bug"}`),
+			cells:   labelRows.of(cellLabelNameTaken, cellForbidden, cellForbidden, cellLabelNameTaken, cellForbidden, cellForbidden)},
 		// Bug, which has UI under it, under Feature: the parent is checked
 		// after the decision.
 		{op: "updateLabel", variant: "a label with labels under it given a parent", write: true, columns: projectColumns,
 			request: func(c caller, s seeded) (string, string, string) {
-				return toLabel(http.MethodPatch, "Bug", `{"parent_id":"`+s.label(projectOf(c), "Feature").String()+`"}`)(c, s)
+				return labelRows.to(http.MethodPatch, "", "Bug", `{"parent_id":"`+s.label(projectOf(c), "Feature").String()+`"}`)(c, s)
 			},
-			cells:   ofLabel(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
+			cells:   labelRows.of(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "parent_id not_allowed"},
 		// A value refused before the label is looked at: the same 422 in
 		// every column.
 		{op: "updateLabel", variant: "a value refused", write: true, columns: projectColumns,
-			request: toLabel(http.MethodPatch, "Feature", `{"name":""}`), cells: func() map[caller]cell {
+			request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":""}`), cells: func() map[caller]cell {
 				cells := map[caller]cell{}
 				for _, c := range projectColumns {
 					cells[c] = cellValidationFailed
@@ -4700,7 +4902,7 @@ func toLabel(method, name, body string) func(caller, seeded) (string, string, st
 				return cells
 			}(), refusal: "name too_short"},
 		{op: "updateLabel", variant: "archived", write: true, columns: archivedColumns,
-			request: toLabel(http.MethodPatch, "Feature", `{"name":"Story"}`), cells: ofArchivedLabel(cellOK, cellForbidden),
+			request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"Story"}`), cells: labelRows.ofArchived(cellOK, cellForbidden),
 			check: renamesTheLabel},
 ````
 
@@ -4947,7 +5149,7 @@ Expected: 通过。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_columns_test.go server/internal/bootstrap/permission_matrix_labels_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/bootstrap/project_connection_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/labels.go server/internal/modules/project/adapter/http/labels_test.go server/internal/modules/project/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_columns_test.go server/internal/bootstrap/permission_matrix_labels_test.go server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/permission_matrix_states_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/bootstrap/project_connection_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/labels.go server/internal/modules/project/adapter/http/labels_test.go server/internal/modules/project/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P7b): PATCH /api/v0/labels/{label_id} changes a label
@@ -4957,7 +5159,9 @@ parent moves the label to the top. The permission matrix asks each
 column to rename its project's Feature, to take Bug's name, to give Bug,
 which has a label under it, a parent, to send a blank name, and to
 change the archived project's; the writes on a project rename a label
-among them, the row read again by its own path.
+among them, the row read again by its own path. The rows of a write on
+a state and on a label name their cells and requests through one
+helper, rowsByID.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -5339,9 +5543,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `7df50b7b62a2f1a1cd68fab099ab0c15f00d4eb03a3014bdbfc2106675e9ca9f` | 2921 | `api/dist/openapi.yaml` |
-| `b2044622d4d0f4f59f7fbf3410a744480bc8d411287ff6e31816bc277f0bf4c0` | 3398 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `1a31360a0bc8e63bfa09e03770a18fc0be8f4e0428a3f46a87415fe273bae62e` | 3241 | `web/packages/api-client/src/schema.gen.ts` |
+| `aff01ae9c36404a4dc2d2c77ee28d3ba7ee76fb11f54e02b6c423a94ec6c8f4c` | 2918 | `api/dist/openapi.yaml` |
+| `9fcf44918a02ac31ed9f2b984c56e04a1aabb43e3eda721193f83d5d4b6e36d8` | 3395 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `e53bb098460731d6575f84c5c6e7d1176b44beed75bcfc82a1235c1e0fbc6c6e` | 3239 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -5501,10 +5705,10 @@ func TestDeleteLabel(t *testing.T) {
 ````new server/internal/bootstrap/permission_matrix_labels_test.go
 			check: renamesTheLabel},
 		// As createLabel: Bug deleted, and UI under it with it.
-		{op: "deleteLabel", write: true, columns: projectColumns, request: toLabel(http.MethodDelete, "Bug", ""),
-			cells: ofLabel(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
-		{op: "deleteLabel", variant: "archived", write: true, columns: archivedColumns, request: toLabel(http.MethodDelete, "Bug", ""),
-			cells: ofArchivedLabel(cellNoContent, cellForbidden)},
+		{op: "deleteLabel", write: true, columns: projectColumns, request: labelRows.to(http.MethodDelete, "", "Bug", ""),
+			cells: labelRows.of(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		{op: "deleteLabel", variant: "archived", write: true, columns: archivedColumns, request: labelRows.to(http.MethodDelete, "", "Bug", ""),
+			cells: labelRows.ofArchived(cellNoContent, cellForbidden)},
 ````
 
 `server/internal/bootstrap/project_write_locks_test.go`（修改，1 处）：
@@ -5623,7 +5827,7 @@ Expected: 通过。
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
 | `s2-delete-delete` | `deleteLabel` 吞掉 `DeleteLabel` 的失败 | `TestDeleteLabelReturnsEachFailure` | 单元（按性质只在单元一层：真实的存储在这一步不失败） |
-| `c-delete-early` | `deleteLabel` 在锁之前读时钟 | `TestEachWriteReadsTheClockUnderItsLock`、`TestDeleteLabel`、`TestDeleteLabelRefuses`、`TestDeleteLabelReturnsEachFailure`、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 单元；组合 |
+| `c-delete-early` | `deleteLabel` 在锁之前读时钟 | `TestDeleteLabel`、`TestDeleteLabelRefuses`、`TestDeleteLabelReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起）、`TestLabelWritesOnOneProjectSerialize`（Task 10 起） | 单元；组合 |
 | `s4-delete-frozen-clock` | `deleteLabel` 接上停在 2001 年的时钟 | `TestTheWritesOnAProjectStampTheirRequest`、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（Task 10 起） | 组合 |
 | `s5-delete-guests` | 规则表：`label.delete` 给访客 | `TestEveryRuleDecidesItsCells`、`TestPermissionMatrix` | 单元；组合 |
 | `s18-delete-no-not-found` | `deleteLabel` 的契约不声明 `project.label_not_found` | `TestDeleteLabel`、`TestPermissionMatrix`、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 10 起） | 单元；组合 |
@@ -5934,9 +6138,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `51386f7a5b38de50e767fa685f4f0c8ccc84f8ba81481c0e81c96772e2cd3c49` | 2951 | `api/dist/openapi.yaml` |
-| `5898a2d94b8ebb9914d562f697efb6b02f749e25158314e12e497627084910c6` | 3508 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `ea2fe0baf614ed579977772a4a7e57e1c430de5d48a354cbdae7a1232c425fa4` | 3273 | `web/packages/api-client/src/schema.gen.ts` |
+| `2121eb45fdb1f8f9258ec299808800cc1ea0be40fb936c8073a85b893ecd5e7b` | 2948 | `api/dist/openapi.yaml` |
+| `ebe8a510ccb70b2adfcbf015ec80d4d36b1b3bc991378fb6a29b5ff294b56613` | 3505 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `ff4b54143b36e583ffd6a305ffe13bb88891b6691ea244fb1e045d8d5ea149bc` | 3271 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -6149,10 +6353,10 @@ func TestListLabels(t *testing.T) {
 ````
 
 ````old server/internal/bootstrap/permission_matrix_labels_test.go
-			cells: ofArchivedLabel(cellNoContent, cellForbidden)},
+			cells: labelRows.ofArchived(cellNoContent, cellForbidden)},
 ````
 ````new server/internal/bootstrap/permission_matrix_labels_test.go
-			cells: ofArchivedLabel(cellNoContent, cellForbidden)},
+			cells: labelRows.ofArchived(cellNoContent, cellForbidden)},
 	}
 }
 
@@ -6196,7 +6400,7 @@ Run: `go -C server test -count=1 ./internal/modules/project/... ./internal/modul
 Expected: 全部 `ok`。
 
 Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation$' ./internal/bootstrap/`
-Expected: `ok`（矩阵 853 格：P7a 结束时 721 格，P7b 的 14 行加 132 格；原型上 1.50 秒）。
+Expected: `ok`（矩阵 853 格：P7a 结束时 721 格，P7b 的 14 行加 132 格；原型上 1.53 秒）。
 
 Run: `make lint-go`
 Expected: 两段都是 `0 issues.`
@@ -6259,7 +6463,7 @@ Expected: 通过。
     5. 删除 Bug 与把 Feature 移到 Bug 下（约定五的探测：先删，Bug 不再是项目的标签，422；后删，删除的一条语句把刚放到 Bug 下的 Feature 和 Bug、UI 一起带走）；
     6. 删除 Bug 与在 Bug 下建 Icons（同上）；
     7. 在顶层建 QA 与在 Bug 下建 Icons（都成功：后一个的时刻是它拿到锁之后时钟给的）。
-    之后 Web 的标签是先到的写留下的（后到的成功时也加上它的），时刻不早于闸门打开；Ops 的不变。
+    之后 Web 的标签是先到的写留下的（后到的成功时也加上它的），时刻不早于闸门打开；Web 未删除的标签各在自己的 `sort_order`（新标签的位置在项目的锁下读，M3 设计 4.10：在锁之前读最大值的实现让第 7 对的 QA 和 Icons 同在 95535）；Ops 的不变。
   - `label_rows_test.go`（新）：`TestEachLabelWriteChangesItsRowsAlone`：bob 依次建 QA、在 Feature 下建 Icons、在 Docs 下建 Fonts、Feature 改名、UI 移到顶层、删除 Fonts、把 Docs（它下面唯一的标签已删除）放到 Bug 下、删除 Feature（Icons 一起）、删除 Docs（之前删除的 Fonts 保留它的删除）；其间有子标签的 Bug 设父标签（422）、建 bug（409）什么都不写；每个写之后，它写的行之外的每一行每一列不变，已删除的行也在内。
   - `project_row_races_test.go`：`rowWrite` 加 `label`；`rowWrites` 加 `updateLabel`、`deleteLabel`（bob 改 Web 的 Feature）和按项目寻址的 `createLabel`（同 `createState`：没有自己的行可等，由 `creates` 跳过）；`row` 回答 `labels` 的行；`labelsFor` 给写标签的行种下 `seedLabelsOf`。
 
@@ -6268,7 +6472,7 @@ Expected: 通过。
 
 - [ ] **Step 1: 交错**
 
-`server/internal/bootstrap/interleaving_labels_test.go`（新文件，277 行）：
+`server/internal/bootstrap/interleaving_labels_test.go`（新文件，284 行）：
 
 ````file server/internal/bootstrap/interleaving_labels_test.go
 package bootstrap
@@ -6485,8 +6689,9 @@ func sameLabelOutcome(err, want error) bool {
 //     at the time its clock gives once it holds the lock.
 //
 // Web's labels are then as the first left them, and the second's too when
-// it succeeded, at a moment no earlier than the gate's opening; Ops's as
-// they were.
+// it succeeded, at a moment no earlier than the gate's opening, each at a
+// sort order of its own: a new label's place is read under the project's
+// lock (M3 design 4.10). Ops's are as they were.
 func TestLabelWritesOnOneProjectSerialize(t *testing.T) {
 	ofTheProject := parentRefused("must be a label of the project")
 	withoutParent := parentRefused("must be a label without a parent: labels have two levels")
@@ -6543,6 +6748,12 @@ func TestLabelWritesOnOneProjectSerialize(t *testing.T) {
 				}
 				if got := w.labelsOf(t, w.ops); !maps.Equal(got, ops) {
 					t.Errorf("Ops's labels after both: %v; want them as they were, %v", got, ops)
+				}
+				var sharing int
+				if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT count(*) - count(DISTINCT sort_order) FROM labels
+					WHERE project_id = $1 AND deleted_at IS NULL`, w.web).Scan(&sharing); err != nil || sharing != 0 {
+					t.Errorf("%d of Web's labels share a sort order (%v); want each its own: a new label's is read under the project's lock",
+						sharing, err)
 				}
 			})
 		}
@@ -6795,7 +7006,7 @@ func (m rowWrite) labelsFor(t *testing.T, w memberWorld) {
 - [ ] **Step 3: 测试和 lint**
 
 Run: `go -C server test -count=5 -race -run 'TestLabelWritesOnOneProjectSerialize$|TestStateWritesOnOneProjectSerialize$|TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile$|TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength$|TestEachWriteOnAProjectSharesItsWorkspaceFirst$|TestEachLabelWriteChangesItsRowsAlone$' ./internal/bootstrap/`
-Expected: `ok`，输出里没有 `40P01`（原型上 `race5.sh` 跑这六个和另外八个，各 5 次全部通过：670 个子测试，233 秒）。
+Expected: `ok`，输出里没有 `40P01`（原型上 `race5.sh` 跑这六个和另外八个，各 5 次全部通过：670 个子测试，245 秒）。
 
 Run: `make lint-go`
 Expected: 两段都是 `0 issues.`
@@ -6816,7 +7027,8 @@ either order: two labels each moved under the other leave two levels
 (interleaving 11), a label moved under another and a label created
 under it, two labels of one name in different cases, a label moved
 twice, and two labels created, the second at its clock's time under the
-lock. A parent deleted while a label is moved or created under it is no
+lock and after the first: no two of the project's labels share a sort
+order. A parent deleted while a label is moved or created under it is no
 label any more, or takes the label with it in its one statement, under
 the lock every write of the project's labels takes. The races and
 lock strengths of the writes on a row under a project take the label
@@ -6838,15 +7050,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces（spec 2.11；M3 设计 2、11.5）：
   - `e2e/fixtures/api.ts`：`Label`、`LabelCreate`、`LabelUpdate` 类型（来自 `schema.gen.ts`）、`createLabel(api, token, projectId, body)`。
-  - `e2e/fixtures/assert/project.ts`：删去 Task 1 的排除：`expectProjectDeleted` 照旧读外键指向 `projects` 的每个表（目录的列表），只是不数项目之前已经删除的行（如故事删除的标签）；`LabelRow`、`expectLabels(db, projectId, want)`（删除的也在内，按 `sort_order`、再按名称：名称、颜色、父标签的名称、`sort_order`、是否删除、最后写它的账户；每一行在它的项目的工作区、父标签是同一个项目的，删除的行在它最后一次写的时刻删除）。
+  - `e2e/fixtures/assert/project.ts`：删去 Task 1 的排除：`expectProjectDeleted` 照旧读外键指向 `projects` 的每个表（目录的列表），只是不数项目之前已经删除的行（如故事删除的标签）；再核对这个列表就是有 `project_id` 列的每张表（说明里写明）：留着排除或少读一张表的检查在这里失败，排除不能悄悄留下（M3 设计 12 的 P4a："不为它加豁免"）；`LabelRow`、`expectLabels(db, projectId, want)`（删除的也在内，按 `sort_order`、再按名称：名称、颜色、父标签的名称、`sort_order`、是否删除、最后写它的账户；每一行在它的项目的工作区、父标签是同一个项目的，删除的行在它最后一次写的时刻删除）。
   - `e2e/fixtures/assert/workspace.ts`：`workspaceTables`（随工作区删除的表）、`deletedAloneTables`（项目删除时随它删除的表）加 `labels`。
-  - `p7-labels.spec.ts`（新）：故事 P7 的接口版本（项目的管理员建 Bug、Feature，各在之前的之后；另一个管理员建 UI，前者把它放到 Bug 下；后者把它改名 Widgets、把 Feature 移到 Bug 之前；bug 被占用；颜色太长、第三层、另一个项目的父标签、自己的父标签、有子标签的标签设父标签、成员的写，各被拒绝、什么都不改；Bug 和 Widgets 在同一时刻删除，之后都找不到，bug 又可以用，在 Feature 之后：删除了的标签的位置不再算；成员按次序列出；另一个项目有自己的 Bug；已归档的项目的标签照常列出、创建（也在给的位置）、修改）。页面版本随 P11 的标签设置页。
+  - `p7-labels.spec.ts`（新）：故事 P7 的接口版本（项目的管理员建 Bug、Feature，各在之前的之后；另一个管理员建 UI，前者把它放到 Bug 下；后者把它改名 Widgets、把 Feature 移到 Bug 之前；bug 被占用；颜色太长、第三层、另一个项目的父标签、自己的父标签、有子标签的标签设父标签、成员的写，各被拒绝、什么都不改；Bug 和 Widgets 在同一时刻删除，之后都找不到，bug 又可以用，在 Feature 之后：删除了的标签的位置不再算；成员按次序列出；另一个项目有自己的 Bug；已归档的项目的标签照常列出、创建（在它的标签之后：Ops 的 Bug 在 65535，Runbook 在 75535）、修改）。页面版本随 P11 的标签设置页。
   - P4：已归档的 Web 加标签（Bug、Bug 下的 UI、Feature），Feature 先删；Web 删除时 Bug、UI 随它在同一时刻删除，Feature 保留它的时刻。W2：First 的 Web 有标签 Bug，First 的删除连带它。W3：成员（Web 的负责人，因此是它的管理员）给 Acme 和 Other 的 Web 各加 Bug、Bug 下的 UI，给 Old 加 Bug；Acme 删除时它的 Web 的标签由管理员删除，Old 的标签保留 Old 删除的时刻，Other 的不变。
   - `workspace_deletion_catalog_test.go`：`keysTo` 的说明：指向自己的外键（如 `labels.parent_id`）与别的外键一样跟随。
-  - `docs/v0/v0-design.md` 5.3 的标签行；`docs/v0/plane-diff.md`：二·按表的 `labels`、第四节的 P7b 行（3.20）。
+  - `docs/v0/v0-design.md` 5.3 的标签行；`docs/v0/plane-diff.md`：二·按表的 `labels`（"新建标签的顺序"一行：Plane 让第一个标签用给的 `sort_order`，Nerve 的请求不给它、给了答 400，一律放在最后，位置用 `updateLabel` 改）、第四节的 P7b 行（3.20）。
 
 **Tests:**
-- `make e2e`：70 个故事全部通过，P7 和标签的 P4、W2、W3 在内。
+- `make e2e`：70 个故事全部通过，P7 和标签的 P4、W2、W3 在内；`expectProjectDeleted` 的自查在 P4、W3 里跑（项目删除）。
 - `TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt` 等照旧通过（`keysTo` 只改说明）。
 
 - [ ] **Step 1: 端到端的夹具**
@@ -6892,7 +7104,7 @@ export async function createLabel(api: Api, token: string, projectId: string, bo
  * Runs make, which makes a story's projects, between two projects of another workspace of the caller of token, one
 ````
 
-`e2e/fixtures/assert/project.ts`（修改，5 处）：
+`e2e/fixtures/assert/project.ts`（修改，6 处）：
 
 ````old e2e/fixtures/assert/project.ts
  * same account, every row under it: of each table whose foreign key names projects (the catalog's list, so a table a
@@ -6900,8 +7112,9 @@ export async function createLabel(api: Api, token: string, projectId: string, bo
 ````
 ````new e2e/fixtures/assert/project.ts
  * same account, every row under it that was not deleted before: of each table whose foreign key names projects (the
- * catalog's list, so a table a later phase adds is read too), by its project_id. Each table has such a row, and none
- * is left undeleted; a row deleted before the project, as a label a story deleted, is not counted.
+ * catalog's list, so a table a later phase adds is read too, and the list is every table with a project_id column),
+ * by its project_id. Each table has such a row, and none is left undeleted; a row deleted before the project, as a
+ * label a story deleted, is not counted.
 ````
 
 ````old e2e/fixtures/assert/project.ts
@@ -6918,6 +7131,19 @@ export async function createLabel(api: Api, token: string, projectId: string, bo
 ````
 ````new e2e/fixtures/assert/project.ts
       WHERE c.contype = 'f' AND c.confrelid = 'projects'::regclass ORDER BY 1`
+````
+
+````old e2e/fixtures/assert/project.ts
+  expect(tables.length, "the tables under projects").toBeGreaterThan(0);
+````
+````new e2e/fixtures/assert/project.ts
+  expect(tables.length, "the tables under projects").toBeGreaterThan(0);
+  // Every table with a project_id is read: a table left out of the list above fails here.
+  const withProjectId = await db.query<{ name: string }>(
+    `SELECT DISTINCT c.table_name::text AS name FROM information_schema.columns c
+      WHERE c.table_schema = current_schema() AND c.column_name = 'project_id' ORDER BY 1`
+  );
+  expect(tables, "the tables under projects, as their project_id columns name them").toEqual(withProjectId);
 ````
 
 ````old e2e/fixtures/assert/project.ts
@@ -7043,7 +7269,7 @@ export async function expectLabels(db: Database, projectId: string, want: LabelR
 
 - [ ] **Step 2: 故事**
 
-`e2e/stories/project/p7-labels.spec.ts`（新文件，250 行）：
+`e2e/stories/project/p7-labels.spec.ts`（新文件，246 行）：
 
 ````file e2e/stories/project/p7-labels.spec.ts
 import {
@@ -7116,7 +7342,7 @@ function changed(rows: LabelRow[], name: string, to: Partial<LabelRow>): LabelRo
 /** The refusal of a parent_id that 3.16's rules do not allow. */
 const parentRefused = { status: 422, code: "validation_failed", errors: [{ field: "parent_id", code: "not_allowed" }] };
 
-test("P7 (API): an admin of a project creates Bug and Feature, each after the labels before it; another admin creates UI, which the first puts under Bug; the other renames it Widgets and moves Feature before Bug; bug, in another case, is taken, and a color too long, a third level, a parent of another project, a label its own parent, a parent for a label with a label under it and a member's writes are refused, each changing nothing; Bug is deleted with Widgets at one moment, after which neither is found, and bug is free again, after Feature, the deleted labels' places no longer counted; a member lists the labels by their order, another project has a Bug of its own, and an archived project's labels are listed, created, at a place given too, and changed as any other's", async ({
+test("P7 (API): an admin of a project creates Bug and Feature, each after the labels before it; another admin creates UI, which the first puts under Bug; the other renames it Widgets and moves Feature before Bug; bug, in another case, is taken, and a color too long, a third level, a parent of another project, a label its own parent, a parent for a label with a label under it and a member's writes are refused, each changing nothing; Bug is deleted with Widgets at one moment, after which neither is found, and bug is free again, after Feature, the deleted labels' places no longer counted; a member lists the labels by their order, another project has a Bug of its own, and an archived project's labels are listed, created after its labels, and changed as any other's", async ({
   api,
   db,
 }, testInfo) => {
@@ -7260,8 +7486,8 @@ test("P7 (API): an admin of a project creates Bug and Feature, each after the la
     "Web's labels as mem lists them, Bug deleted"
   ).toEqual(["Feature", "bug"]);
 
-  // ann archives Ops: its labels are listed, created, Runbook at the place she gives, and changed, Runbook moved to the
-  // top at last, as any other project's (M3 design 3.19).
+  // ann archives Ops: its labels are listed, created, Runbook after Bug, and changed, Runbook moved to the top at
+  // last, as any other project's (M3 design 3.19).
   const archived = await api.POST("/api/v0/projects/{project_id}/archive", {
     params: { path: { project_id: ops.id } },
     headers: bearer(ann.token),
@@ -7271,15 +7497,11 @@ test("P7 (API): an admin of a project creates Bug and Feature, each after the la
     (await listLabels(api, ann.token, ops.id)).map((l) => l.name),
     "the labels of Ops, archived"
   ).toEqual(["Bug"]);
-  const runbook = await createLabel(api, ann.token, ops.id, {
-    name: "Runbook",
-    parent_id: opsBug.id,
-    sort_order: 70000.5,
-  });
+  const runbook = await createLabel(api, ann.token, ops.id, { name: "Runbook", parent_id: opsBug.id });
   expect(await update(ann.token, opsBug.id, { name: "Incident" }), "ann renames Ops's Bug").toEqual({ status: 200 });
   const archivedOps: LabelRow[] = [
     { name: "Incident", color: "", parent: null, sort_order: 65535, deleted: false, by: ann.email },
-    { name: "Runbook", color: "", parent: "Incident", sort_order: 70000.5, deleted: false, by: ann.email },
+    { name: "Runbook", color: "", parent: "Incident", sort_order: 75535, deleted: false, by: ann.email },
   ];
   await expectLabels(db, ops.id, archivedOps);
   expect(await update(ann.token, runbook.id, { parent_id: null }), "ann moves Runbook to the top").toEqual({
@@ -7569,7 +7791,7 @@ import { expectLabels, expectProjectCreated, expectProjectDeleted, type LabelRow
 | 标签的层级 | 服务端不检查：接口能建三层、把有子标签的标签放到别的标签下、以别的项目的标签做父标签 | 服务端执行页面的两层规则：父标签须是同一项目、未删除、没有父标签的标签，有子标签的标签不能有父标签，标签不能做自己的父标签，否则 422（`parent_id`，`not_allowed`）；每个标签的写都先锁项目行，并发下规则仍成立（M3 设计 3.16） |
 | 工作区级标签 | 模型允许（`project_id` 可空） | 没有：`project_id` 非空（M3 设计 3.16） |
 | 列出标签 | 任何工作区成员都得到 200，已离开的成员仍能列出 | 项目的有效成员，访客也能；已归档的项目照常列出（M3 设计 3.4、3.19） |
-| 新建标签的顺序 | 项目已有标签时一律是它们的最大值加 10000，请求给的 `sort_order` 被忽略；没有标签时是请求给的，或者 65535 | 请求给了 `sort_order` 就用它；没给时是项目未删除的标签的最大值加 10000，没有标签时 65535 |
+| 新建标签的顺序 | 请求可以给 `sort_order`：项目还没有标签时用它，否则忽略，一律是最大值加 10000；没给、没有标签时 65535 | 请求不给 `sort_order`（给了答 400，同"请求中的未知字段"）：一律是项目未删除的标签的最大值加 10000，没有标签时 65535（M3 设计 4.10）；位置用 `updateLabel` 改 |
 ````
 
 - [ ] **Step 4: 测试和 lint**
@@ -7606,9 +7828,15 @@ project's as any other's. P4 labels the archived project before its
 deletion, W2 and W3 label the projects their deletions take: each label
 is deleted with its project at its moment, by its account, and a label
 deleted before keeps its own. The end-to-end check of a deleted project
-counts labels again.
+counts labels again, and checks that the tables it reads are every
+table with a project_id column.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**：本 Task 没有产品代码；它的测试在别的 Task 的变异表里（"（Task 11 起）"）。
+**变异**（spec 附录 A；`mutants_p7b.py` 的编号；"层"是它被发现的每一层，端到端是单独运行的故事）：
+
+| 变异 | 改坏 | 必须失败的测试 | 层 |
+|---|---|---|---|
+| `e2e-exclusion-kept` | `expectProjectDeleted` 的目录查询留着 Task 1 的 `AND c.conrelid <> 'labels'::regclass` | P4、W3 | 端到端 |
+| `k-no-labels-step` | `deleteProjects` 去掉标签一步（删除项目、工作区留下标签）（Task 1 的变异，这里是它在故事里的一层） | P4、W3 | 端到端 |
