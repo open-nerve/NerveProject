@@ -23,11 +23,18 @@ func labelsListed(user, project uuid.UUID) []string {
 }
 
 // ListLabels decides label.list on the project, then answers the store's
-// list as it is, in the store's order, which no sort by sort order, either
-// way, nor by id gives: a use case that sorted the labels would answer
-// another. ops, archived, has its labels listed as any other's (3.19). A
-// read opens no transaction.
+// list as it is, in the store's order, which no sort by sort order, id or
+// name, either way, nor one putting the labels at the top first gives: a
+// use case that sorted the labels so would answer another. ops, archived,
+// has its labels listed as any other's (3.19). A read opens no
+// transaction.
 func TestListLabels(t *testing.T) {
+	under := func(l domain.Label) int {
+		if l.ParentID == nil {
+			return 0
+		}
+		return 1
+	}
 	for _, project := range []uuid.UUID{webID, opsID} {
 		f, l := newLabels()
 		want := l.of(project)
@@ -39,6 +46,10 @@ func TestListLabels(t *testing.T) {
 				{"the sort order's", func(a, b domain.Label) int { return cmp.Compare(a.SortOrder, b.SortOrder) }},
 				{"the sort order's, reversed", func(a, b domain.Label) int { return cmp.Compare(b.SortOrder, a.SortOrder) }},
 				{"the id's", func(a, b domain.Label) int { return slices.Compare(a.ID[:], b.ID[:]) }},
+				{"the id's, reversed", func(a, b domain.Label) int { return slices.Compare(b.ID[:], a.ID[:]) }},
+				{"the name's", func(a, b domain.Label) int { return cmp.Compare(a.Name, b.Name) }},
+				{"the name's, reversed", func(a, b domain.Label) int { return cmp.Compare(b.Name, a.Name) }},
+				{"the one putting the labels at the top first", func(a, b domain.Label) int { return cmp.Compare(under(a), under(b)) }},
 			} {
 				if slices.IsSortedFunc(want, by.order) {
 					t.Fatalf("the store's order %v is %s: a use case that sorted so would pass", want, by.name)

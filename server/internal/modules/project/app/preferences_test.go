@@ -25,10 +25,12 @@ func newPreferences() *writeFixture {
 }
 
 // refusedAs reports whether err is want: errDisk itself, a port's failure
-// come back, or the same refusal (sameError).
+// come back with no *shared.Error in its chain, which the API would answer
+// as a refusal; or the same refusal (sameError).
 func refusedAs(err, want error) bool {
 	if want == errDisk {
-		return errors.Is(err, errDisk)
+		var se *shared.Error
+		return errors.Is(err, errDisk) && !errors.As(err, &se)
 	}
 	return sameError(err, want)
 }

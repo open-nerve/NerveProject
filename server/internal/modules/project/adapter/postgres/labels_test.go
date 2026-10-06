@@ -25,15 +25,6 @@ func (w stateWorld) addLabel(t *testing.T, project, id uuid.UUID, name string, p
 	return got
 }
 
-// labelNames are the names of labels, in order.
-func labelNames(labels []domain.Label) []string {
-	out := make([]string, len(labels))
-	for i, l := range labels {
-		out[i] = l.Name
-	}
-	return out
-}
-
 // CreateLabel stores the row with its values, its parent too, by the
 // account and at the moment given, never deleted, and answers it as
 // stored; every other label keeps every column.
@@ -145,16 +136,18 @@ func TestLabelByID(t *testing.T) {
 // alike, by sort order, then id: Wiki, added last at UI's sort order with
 // an id below its and a name after its, comes before it, which neither the
 // order the rows lie in nor the names give; not the deleted Old, nor
-// another project's labels. An archived project lists its labels as any
-// other (M3 design 3.19).
+// another project's labels. Each label is listed whole, every field as
+// CreateLabel answered it: its workspace, its parent, its color (not the
+// column's empty default) and its sort order (not 65535) among them. An
+// archived project lists its labels as any other (M3 design 3.19).
 func TestListLabels(t *testing.T) {
 	w := newStateWorld(t)
 	bug := w.addLabel(t, w.web, uuid.NewV7(), "Bug", nil, 3)
-	w.addLabel(t, w.web, uuid.NewV7(), "UI", &bug.ID, 2)
-	w.addLabel(t, w.web, w.early, "Wiki", nil, 2)
+	ui := w.addLabel(t, w.web, uuid.NewV7(), "UI", &bug.ID, 2)
+	wiki := w.addLabel(t, w.web, w.early, "Wiki", nil, 2)
 	old := w.addLabel(t, w.web, uuid.NewV7(), "Old", nil, 1)
 	exec(t, w.pool, "UPDATE labels SET deleted_at = $2 WHERE id = $1", old.ID, earlier)
-	w.addLabel(t, w.ops, uuid.NewV7(), "Docs", nil, 1)
+	docs := w.addLabel(t, w.ops, uuid.NewV7(), "Docs", nil, 1)
 	var heap []string
 	if err := w.pool.QueryRow(context.Background(), "SELECT array_agg(name ORDER BY ctid) FROM labels WHERE project_id = $1 AND sort_order = 2",
 		w.web).Scan(&heap); err != nil || !slices.Equal(heap, []string{"UI", "Wiki"}) {
@@ -162,15 +155,12 @@ func TestListLabels(t *testing.T) {
 	}
 
 	got, err := w.s.ListLabels(context.Background(), w.web)
-	if want := []string{"Wiki", "UI", "Bug"}; err != nil || !slices.Equal(labelNames(got), want) {
-		t.Errorf("ListLabels(Web) = %q, %v; want %q", labelNames(got), err, want)
-	}
-	if len(got) > 1 && (got[1].ParentID == nil || *got[1].ParentID != bug.ID) {
-		t.Errorf("Web's UI listed as %+v; want it under Bug", got[1])
+	if want := []domain.Label{wiki, ui, bug}; err != nil || jsonOf(t, got) != jsonOf(t, want) {
+		t.Errorf("ListLabels(Web) = %s, %v; want %s", jsonOf(t, got), err, jsonOf(t, want))
 	}
 	exec(t, w.pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", w.ops, now)
-	if got, err := w.s.ListLabels(context.Background(), w.ops); err != nil || !slices.Equal(labelNames(got), []string{"Docs"}) {
-		t.Errorf("ListLabels(Ops, archived) = %q, %v; want Docs", labelNames(got), err)
+	if got, err := w.s.ListLabels(context.Background(), w.ops); err != nil || jsonOf(t, got) != jsonOf(t, []domain.Label{docs}) {
+		t.Errorf("ListLabels(Ops, archived) = %s, %v; want %s", jsonOf(t, got), err, jsonOf(t, []domain.Label{docs}))
 	}
 	if got, err := w.s.ListLabels(context.Background(), w.site); err != nil || got == nil || len(got) != 0 {
 		t.Errorf("ListLabels(Site) = %+v, %v; want an empty list", got, err)

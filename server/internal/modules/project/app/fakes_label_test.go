@@ -48,9 +48,11 @@ func newLabels() (*writeFixture, *fakeLabels) {
 	return f, l
 }
 
-// of are the labels of project, in the store's order: by name, which
-// neither a sort by sort order, either way, nor one by id gives, so that a
-// use case that sorted them would answer another.
+// of are the labels of project, in the store's order: by the name's
+// length, then the name; web's UI, Bug, Feature, which no sort by sort
+// order, id or name, either way, nor one putting the labels at the top
+// first gives (TestListLabels), so that a use case that sorted them so
+// would answer another.
 func (f *fakeLabels) of(project uuid.UUID) []domain.Label {
 	var out []domain.Label
 	for _, l := range f.labels {
@@ -58,7 +60,9 @@ func (f *fakeLabels) of(project uuid.UUID) []domain.Label {
 			out = append(out, l)
 		}
 	}
-	slices.SortFunc(out, func(a, b domain.Label) int { return cmp.Compare(a.Name, b.Name) })
+	slices.SortFunc(out, func(a, b domain.Label) int {
+		return cmp.Or(cmp.Compare(len(a.Name), len(b.Name)), cmp.Compare(a.Name, b.Name))
+	})
 	return out
 }
 
