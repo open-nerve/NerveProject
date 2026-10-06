@@ -189,6 +189,12 @@ func readRow[R any](ctx context.Context, f *fakeStore, name string, id uuid.UUID
 	return row, true, nil
 }
 
+// rowLocked are the calls of lockRowAndDecide by caller on the row id of project, read by read, up to its decision.
+func rowLocked(read string, id, project, caller uuid.UUID, action shared.Action) []string {
+	return []string{"Begin", read + " " + id.String(), "ShareWorkspaceByID " + acme.ID.String(), "LockProject " + project.String(),
+		read + " " + id.String(), fmt.Sprintf("Authorize %s %s on %s/%s", caller, action, acme.ID, project)}
+}
+
 func (f *fakeStore) fail(name string) error {
 	if err := f.errs[name]; err != nil {
 		return fmt.Errorf("%s: %w", name, err)

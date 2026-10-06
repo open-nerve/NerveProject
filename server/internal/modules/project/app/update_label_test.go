@@ -24,8 +24,7 @@ func newUpdateLabel() (*app.UpdateLabel, *writeFixture, *fakeLabels) {
 // acme's row FOR SHARE, the project FOR NO KEY UPDATE, the label read
 // again, the decision.
 func labelLocked(id, project, caller uuid.UUID, action shared.Action) []string {
-	return []string{"Begin", "LabelByID " + id.String(), "ShareWorkspaceByID " + acme.ID.String(), "LockProject " + project.String(),
-		"LabelByID " + id.String(), fmt.Sprintf("Authorize %s %s on %s/%s", caller, action, acme.ID, project)}
+	return rowLocked("LabelByID", id, project, caller, action)
 }
 
 // labelUpdated are the calls of user's change p of the label id of
@@ -44,11 +43,11 @@ func labelUpdated(user, id, project uuid.UUID, p domain.LabelPatch) []string {
 // the label's project, decides, reads whether the label has labels under
 // it and the parent when a parent is given, reads the clock, then changes
 // the fields given, by the caller at that time; it answers the label as
-// stored, the time to the microsecond. Feature is renamed and recolored,
-// moved under Bug, and given a sort order; Bug is renamed in another case,
-// its own name; UI goes to the top, which reads neither its children nor a
-// parent; and ops's Docs, of an archived project, changes as any other
-// (3.19).
+// stored, the time to the microsecond. Feature is renamed and its color
+// set to none, moved under Bug, and given a sort order; Bug is renamed in
+// another case, its own name; UI goes to the top, which reads neither its
+// children nor a parent; and ops's Docs, of an archived project, is renamed
+// and recolored as any other (3.19).
 func TestUpdateLabel(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -63,7 +62,8 @@ func TestUpdateLabel(t *testing.T) {
 		{"Feature given a sort order", webFeature, domain.LabelPatch{SortOrder: ptr(-0.5)}, func(l *domain.Label) { l.SortOrder = -0.5 }},
 		{"Bug renamed in another case", webBug, domain.LabelPatch{Name: ptr("BUG")}, func(l *domain.Label) { l.Name = "BUG" }},
 		{"UI to the top", webUI, domain.LabelPatch{SetParent: true}, func(l *domain.Label) { l.ParentID = nil }},
-		{"archived ops's Docs", opsDocs, domain.LabelPatch{Name: ptr("Guides")}, func(l *domain.Label) { l.Name = "Guides" }},
+		{"archived ops's Docs", opsDocs, domain.LabelPatch{Name: ptr("Guides"), Color: ptr("#FF0000")},
+			func(l *domain.Label) { l.Name, l.Color = "Guides", "#FF0000" }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f, l := newUpdateLabel()
@@ -97,9 +97,8 @@ func TestUpdateLabelRefuses(t *testing.T) {
 	upTo := func(n int) []string { return labelLocked(webFeature, webID, bob, domain.ActionLabelUpdate)[:n] }
 	rename := domain.LabelPatch{Name: ptr("Story")}
 	under := func(parent uuid.UUID) domain.LabelPatch { return domain.LabelPatch{SetParent: true, ParentID: &parent} }
-	parentRead := func(id, parent uuid.UUID) []string {
-		return append(labelLocked(id, webID, bob, domain.ActionLabelUpdate), "HasChildren "+id.String(), "LabelByID "+parent.String())
-	}
+	// parentRead are the calls of the move of id under parent up to the parent's read.
+	parentRead := func(id, parent uuid.UUID) []string { return labelUpdated(bob, id, webID, under(parent))[:8] }
 	parentRefused := shared.Invalid(shared.FieldError{Field: "parent_id", Code: shared.FieldNotAllowed})
 	none := uuid.NewV7()
 	for _, tt := range []struct {
