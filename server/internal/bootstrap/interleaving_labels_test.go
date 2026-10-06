@@ -180,10 +180,19 @@ func parentRefused(why string) error {
 	return shared.Invalid(shared.FieldError{Field: "parent_id", Code: shared.FieldNotAllowed, Message: why})
 }
 
+// fieldsOf is the refused fields of err's first problem in its chain, the
+// one the API would answer; none when err has no problem.
+func fieldsOf(err error) []shared.FieldError {
+	var problem *shared.Error
+	if errors.As(err, &problem) {
+		return problem.Fields
+	}
+	return nil
+}
+
 // sameLabelOutcome is sameOutcome, the refused fields too.
 func sameLabelOutcome(err, want error) bool {
-	var got, refused *shared.Error
-	return sameOutcome(err, want) && (want == nil || errors.As(err, &got) && errors.As(want, &refused) && slices.Equal(got.Fields, refused.Fields))
+	return sameOutcome(err, want) && slices.Equal(fieldsOf(err), fieldsOf(want))
 }
 
 // Two writes on Web's labels at once serialize on Web's row (M3 design
@@ -205,9 +214,8 @@ func sameLabelOutcome(err, want error) bool {
 //     put it, to where it asks;
 //   - Bug deleted, and Feature moved or Icons created under it (convention
 //     5's probe): deleted first, Bug is no label of the project any more;
-//     the other first, the deletion's one statement takes the label just
-//     put under Bug with Bug and UI, under the lock that every write of
-//     Web's labels takes;
+//     the other first, the deletion, under the lock every write of Web's
+//     labels takes, takes the label just put under Bug with Bug and UI;
 //   - QA created at the top and Icons under Bug: both are made, the second
 //     at the time its clock gives once it holds the lock.
 //
@@ -255,7 +263,7 @@ func TestLabelWritesOnOneProjectSerialize(t *testing.T) {
 					t.Errorf("%s = %v, want it done", first.name, err)
 				}
 				if err := result(t, ctx, answered, "the second write"); !sameLabelOutcome(err, want) {
-					t.Errorf("%s = %v, want %v as its first problem", second.name, err, want)
+					t.Errorf("%s = %v, fields %#v; want %v, fields %#v, as its first problem", second.name, err, fieldsOf(err), want, fieldsOf(want))
 				}
 				first.apply(labels)
 				if want == nil {
