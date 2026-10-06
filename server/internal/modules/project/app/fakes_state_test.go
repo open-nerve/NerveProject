@@ -12,8 +12,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 )
 
-// stateSince is when the fakes' states were made, as stored: no clock's
-// time.
+// stateSince is when the fakes' states and labels were made, as stored: no
+// clock's time.
 var stateSince = time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
 
 // The states of web and ops, by id, the same in every fixture: made in
@@ -116,28 +116,11 @@ func (f *fakeStates) CreateState(ctx context.Context, r app.StateRow) (domain.St
 	return s, nil
 }
 
-// StateByID is the state id, read again under the locks as f.reread says.
+// StateByID is the state id, read again under the locks as f.reread says
+// (readRow).
 func (f *fakeStates) StateByID(ctx context.Context, id uuid.UUID) (domain.State, bool, error) {
-	f.log.add(ctx, "StateByID %s", id)
-	f.rowReadCount++
-	again := f.rowReadCount > 1
-	if err := f.fail("StateByID"); err != nil {
-		return domain.State{}, false, err
-	}
-	if again && f.reread.err != nil {
-		return domain.State{}, false, fmt.Errorf("StateByID: %w", f.reread.err)
-	}
 	s, ok := f.states[id]
-	if !ok || (again && f.reread.gone) {
-		return domain.State{}, false, nil
-	}
-	if again && f.reread.project != (uuid.UUID{}) {
-		s.ProjectID = f.reread.project
-	}
-	if f.answersAs != (uuid.UUID{}) {
-		s.ID = f.answersAs
-	}
-	return s, true, nil
+	return readRow(ctx, f.fakeStore, "StateByID", id, s, ok, func(s *domain.State) (*uuid.UUID, *uuid.UUID) { return &s.ProjectID, &s.ID })
 }
 
 func (f *fakeStates) CountGroupStates(ctx context.Context, projectID uuid.UUID, group domain.StateGroup) (int, error) {

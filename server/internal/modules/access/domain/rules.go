@@ -117,6 +117,8 @@ var rules = map[shared.Action]Rule{
 	"state.update":       {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 	"state.delete":       {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 	"state.mark_default": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// As state.create (M3 design 3.4, 9.2).
+	"label.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

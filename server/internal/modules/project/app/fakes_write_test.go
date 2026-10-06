@@ -131,11 +131,12 @@ type fakeStore struct {
 	moved    uuid.UUID
 	deleted  bool // each project's lock finds nothing, as if it was deleted while the lock waited
 	// The reads of a row under a project by its id, a membership's
-	// (fakes_member_test.go) or a state's (fakes_state_test.go): how many
-	// ran, how the second one answers, and answersAs, when set, the id each
-	// answers for the one asked; changedAs, when set, is the id the write of
-	// the row answers for the one it wrote (UpdateMemberRole, CreateState,
-	// UpdateState).
+	// (fakes_member_test.go), a state's (fakes_state_test.go) or a label's
+	// (fakes_label_test.go): how many ran, how those after the first answer,
+	// and answersAs, when set, the id each answers for the one asked;
+	// changedAs, when set, is the id the write of the row answers for the
+	// one it wrote (UpdateMemberRole, CreateState, UpdateState,
+	// CreateLabel).
 	rowReadCount int
 	reread       rowReads
 	answersAs    uuid.UUID
@@ -155,6 +156,37 @@ type rowReads struct {
 	id      uuid.UUID
 	role    shared.Role
 	ended   bool
+}
+
+// readRow is a read by its id of a row under a project that a write
+// addresses by row, as the fakes of a state and of a label answer it
+// (StateByID, LabelByID): logged as name with the id; failing as f.errs
+// says; row and ok as stored; the reads after the first, under the locks,
+// as f.reread says (err, gone, project); and answering for f.answersAs
+// when set. at points into the row at its project and its id.
+func readRow[R any](ctx context.Context, f *fakeStore, name string, id uuid.UUID, row R, ok bool,
+	at func(*R) (project, rowID *uuid.UUID)) (R, bool, error) {
+	var none R
+	f.log.add(ctx, "%s %s", name, id)
+	f.rowReadCount++
+	again := f.rowReadCount > 1
+	if err := f.fail(name); err != nil {
+		return none, false, err
+	}
+	if again && f.reread.err != nil {
+		return none, false, fmt.Errorf("%s: %w", name, f.reread.err)
+	}
+	if !ok || (again && f.reread.gone) {
+		return none, false, nil
+	}
+	project, rowID := at(&row)
+	if again && f.reread.project != (uuid.UUID{}) {
+		*project = f.reread.project
+	}
+	if f.answersAs != (uuid.UUID{}) {
+		*rowID = f.answersAs
+	}
+	return row, true, nil
 }
 
 func (f *fakeStore) fail(name string) error {
