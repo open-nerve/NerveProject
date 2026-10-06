@@ -26,6 +26,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -246,6 +247,18 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	}
 	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"parent_id":"`+bug.ID.String()+`"}`, http.StatusOK)
 	send(http.MethodDelete, "/api/v0/labels/"+bug.ID.String(), r.alice, "", http.StatusNoContent)
+	// Bug and Widgets, which the move put back under it, deleted together,
+	// at one moment.
+	var bugDeleted, widgetsDeleted, widgetsParent string
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(b.deleted_at::text, 'undeleted'), coalesce(w.deleted_at::text, 'undeleted'),
+		coalesce(w.parent_id::text, 'none') FROM labels b, labels w WHERE b.id = $1 AND w.id = $2`, bug.ID, ui.ID).Scan(&bugDeleted,
+		&widgetsDeleted, &widgetsParent); err != nil {
+		t.Fatal(err)
+	}
+	if bugDeleted == "undeleted" || widgetsDeleted != bugDeleted || widgetsParent != bug.ID.String() {
+		t.Errorf("Bug deleted at %s, Widgets at %s, under %s; want both deleted at one moment, Widgets under Bug, %s", bugDeleted,
+			widgetsDeleted, widgetsParent, bug.ID)
+	}
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)
