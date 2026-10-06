@@ -315,7 +315,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		}
 		projects.preconditions(s)
 		projects.seededStates(pool)
-		projects.seededLabels(pool)
+		projects.seededLabels(pool, s)
 	})
 	if !prepared {
 		t.FailNow()

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -176,9 +177,22 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	one := poolOfOne(t, r.pool.Config().ConnString())
 	route := newProjectRoute(t, one, authorizerOn(one), workspace.Provide(one).WorkspaceMembers)
 	contract := apitest.Load(t)
+	// refusal, when set, is the problem the next request is answered with:
+	// its code, and its errors, messages and all. send checks that answer
+	// against it, then clears it, so it names one refusal of the story.
+	var refusal *httpserver.Problem
 	send := func(method, path string, caller uuid.UUID, body string, want int) string {
 		t.Helper()
-		return route.answerWithin(t, contract, method, path, caller, body, want)
+		answer := route.answerWithin(t, contract, method, path, caller, body, want)
+		if refusal != nil {
+			var p httpserver.Problem
+			decodeAnswer(t, answer, &p)
+			if p.Code != refusal.Code || !slices.Equal(p.Errors, refusal.Errors) {
+				t.Errorf("%s %s = %s; want %s, errors %+v", method, path, answer, refusal.Code, refusal.Errors)
+			}
+			refusal = nil
+		}
+		return answer
 	}
 
 	var created struct {
@@ -200,6 +214,7 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		ID uuid.UUID `json:"id"`
 	}
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"QA","color":"#0EA5E9","group":"completed"}`, http.StatusCreated), &qa)
+	refusal = &httpserver.Problem{Code: "project.state_last_in_group"}
 	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict)
 	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"name":"Checked"}`, http.StatusOK)
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"Done","color":"#46A758","group":"completed"}`, http.StatusCreated),
@@ -211,6 +226,8 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	}
 	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Bug"}`, http.StatusCreated), &bug)
 	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"UI","parent_id":"`+bug.ID.String()+`"}`, http.StatusCreated), &ui)
+	refusal = &httpserver.Problem{Code: "validation_failed", Errors: []httpserver.FieldError{{Field: "parent_id", Code: "not_allowed",
+		Message: "must be a label without a parent: labels have two levels"}}}
 	send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)

@@ -26,7 +26,11 @@ var cellLabelNameTaken = cell{http.StatusConflict, "project.label_name_taken"}
 // matrixLabels are the labels prepareMatrix seeds in each project of
 // matrixProjects, by its workspace's admin, at the sort orders createLabel
 // gives labels created one after another: Bug and Feature at the top, UI
-// under Bug. gone's are deleted with it.
+// under Bug. gone's are deleted with it. Their writer in acme, as for the
+// projects and states the matrix seeds, is its admin, WA-'s account, a
+// member of none of its projects, so no column that may write a label
+// calls as him: nothing reads the labels' writers, and a check that a
+// write made its caller a label's writer cannot pass on the seed's.
 var matrixLabels = []struct {
 	name, parent string // parent: the name of the label it is under, "" at the top
 	sortOrder    float64
@@ -114,29 +118,38 @@ func (s projectSeed) labels(sd seeded) {
 }
 
 // seededLabel is a label of a matrix project as seededLabels reads it: its
-// parent by name, "" at the top.
+// parent's id, uuid.Nil at the top.
 type seededLabel struct {
-	Name, Parent string
-	SortOrder    float64
-	Deleted      bool
+	ID, WorkspaceID, ParentID uuid.UUID
+	Name                      string
+	SortOrder                 float64
+	Deleted                   bool
 }
 
 // seededLabels checks the labels the cells of each matrix project rest on,
-// read back by name: those of matrixLabels exactly, each under its parent,
-// at its sort order; undeleted, but gone's, deleted with gone. A label
-// missing or seeded otherwise would let a cell answer as it wants for
-// another reason.
-func (s projectSeed) seededLabels(pool *pgxpool.Pool) {
+// read back by name: those of matrixLabels exactly, each with the id sd
+// names for it, in its project's workspace, under the label sd names for
+// its parent in its project, at its sort order; undeleted, but gone's,
+// deleted with gone. A label missing or seeded otherwise would let a cell
+// answer as it wants for another reason: a row names its parent by the id
+// sd names, and a parent that is no label, or another project's, is
+// refused as one under another is (parent_id not_allowed).
+func (s projectSeed) seededLabels(pool *pgxpool.Pool, sd seeded) {
 	s.t.Helper()
 	for _, p := range matrixProjects {
-		gone := strings.HasPrefix(p.key, "gone/")
+		slug, _, _ := strings.Cut(p.key, "/")
 		var want []seededLabel
 		for _, l := range matrixLabels {
-			want = append(want, seededLabel{Name: l.name, Parent: l.parent, SortOrder: l.sortOrder, Deleted: gone})
+			parent := uuid.Nil()
+			if l.parent != "" {
+				parent = sd.label(p.key, l.parent)
+			}
+			want = append(want, seededLabel{ID: sd.label(p.key, l.name), WorkspaceID: sd.workspace(slug), ParentID: parent, Name: l.name,
+				SortOrder: l.sortOrder, Deleted: slug == "gone"})
 		}
 		slices.SortFunc(want, func(a, b seededLabel) int { return strings.Compare(a.Name, b.Name) })
-		rows, err := pool.Query(context.Background(), `SELECT l.name, coalesce(p.name, ''), l.sort_order, l.deleted_at IS NOT NULL
-			FROM labels l LEFT JOIN labels p ON p.id = l.parent_id WHERE l.project_id = $1 ORDER BY l.name COLLATE "C"`, s.projects[p.key])
+		rows, err := pool.Query(context.Background(), `SELECT id, workspace_id, coalesce(parent_id, $2), name, sort_order, deleted_at IS NOT NULL
+			FROM labels WHERE project_id = $1 ORDER BY name COLLATE "C"`, sd.project(p.key), uuid.Nil())
 		if err != nil {
 			s.t.Fatal(err)
 		}
