@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 会话分代的基础：`RootStore.dispose()` 释放 `project_filter` 的反应，`sessionGuard()`，带 `loginId` 的 SWR 键只有一种写法（`sessionKey`、`useSessionSWR`）。problem 码的文案表移到 `core/lib/error-messages.ts` 和 `errors` 命名空间。系统内接受删除。工作区一侧的类型、service、store（工作区、成员、邀请、邀请链接的查看与接受、工作区的显示设置、权限 store 的工作区一半）迁到 `/api/v0`，按会话分代，修改一个接一个。落点函数和 `AuthenticationWrapper`；`RESTRICTED_URLS`、设置 store 删除，保留名单前后端一份。两个包装层和顶部导航中 M6、M7 的挂载时取数删除，工作区一侧的挂载时取数改调新 store、按权限启用。使用方改到能编译、行为不变（spec 第 3 节列出的除外）。
+**Goal:** 会话分代的基础：`RootStore.dispose()` 释放 `project_filter` 的反应，`sessionGuard()`，带 `loginId` 的 SWR 键只有一种写法（`sessionKey`、`useSessionSWR`）。problem 码的文案表移到 `core/lib/error-messages.ts` 和 `errors` 命名空间。系统内接受删除。工作区一侧的类型、service、store（工作区、成员、邀请、邀请链接的查看与接受、工作区的显示设置、权限 store 的工作区一半）迁到 `/api/v0`，按会话分代，修改一个接一个。落点：`landingPath` 算出地址，`useLanding` 做出全部判断，`AuthenticationWrapper` 照它渲染；`RESTRICTED_URLS`、设置 store 删除，保留名单前后端一份。两个包装层和顶部导航中 M6、M7 的挂载时取数删除，工作区一侧的挂载时取数改调新 store、按权限启用。使用方改到能编译、行为不变（spec 第 3 节列出的除外）。
 
-**Architecture:** 只改 web（另有 `server/.../reserved_slugs.txt` 一个文本文件）。`core/lib`：`session-key.ts`、`use-session-swr.ts`、`in-session.ts`、`error-messages.ts`、`landing.ts`，测试用的 `fake-session-swr.ts`。`core/services/workspace/`：`workspaces`、`workspace-members`、`workspace-invitations`、`workspace-preferences` 四个 service，每个都是生成的客户端之上的薄封装，由 store 用这一代的 `ApiClient` 构造；`invitation-preview.service.ts` 是一个函数，调用方传 `publicClient`。store：`WorkspaceRootStore`（重写，带子 store `WorkspacePreferencesStore`）、`WorkspaceMemberStore`（成员和邀请，重写）、`UserPermissionStore` 的工作区一半、`ThemeStore` 接过设置的侧边栏。挂载时的取数：`useWorkspaceFetch`（工作区包装层）、`useMembersSettingsFetch`（成员页）、`useInvitationPreview`（登录、注册、邀请页）。测试的共用部分：`fake-queue.ts`、`fake-root.ts`、`fake-workspaces.ts`、`fake-members.ts`、`FakeNerve.replacedSessionClient`。契约不变；不加 npm 包，`@nerve/types`、`@nerve/utils` 加工作区内的依赖 `@nerve/api-client`（Task 4，锁文件两处）。
+**Architecture:** 只改 web（另有 `server/.../reserved_slugs.txt` 一个文本文件）。`core/lib`：`session-key.ts`、`use-session-swr.ts`、`in-session.ts`、`error-messages.ts`、`landing.ts`、`use-landing.ts`，测试用的 `fake-session-swr.ts`。`core/services/workspace/`：`workspaces`、`workspace-members`、`workspace-invitations`、`workspace-preferences` 四个 service，每个都是生成的客户端之上的薄封装，由 store 用这一代的 `ApiClient` 构造；`invitation-preview.service.ts` 是一个函数，调用方传 `publicClient`。store：`WorkspaceRootStore`（重写，带子 store `WorkspacePreferencesStore`）、`WorkspaceMemberStore`（成员和邀请，重写）、`UserPermissionStore` 的工作区一半、`ThemeStore` 接过设置的侧边栏。挂载时的取数：`useLanding`（登录、注册、引导页的落点）、`useWorkspaceFetch`（工作区包装层）、`useMembersSettingsFetch`（成员页）、`useInvitationPreview`（登录、注册、邀请页），按权限的条件都由 hook 自己从 store 算出。测试的共用部分：`fake-queue.ts`、`fake-root.ts`、`fake-workspaces.ts`、`fake-members.ts`、`FakeNerve.replacedSessionClient`。静态检查：根目录 `.oxlintrc.json` 的 `overrides`（Task 8）不让 P8a 的会话取数绕过 `useSessionSWR`，也不让 P8a 的 M3 路径用非空断言；web 应用的 TypeScript `lib` 改为 ES2023（Task 7，`toSorted`）。契约不变；不加 npm 包，`@nerve/types`、`@nerve/utils` 加工作区内的依赖 `@nerve/api-client`（Task 4，锁文件两处）。
 
 **Tech Stack:** React 19.2.8、React Router 8.3.0、MobX 6.12.0、SWR 2.4.2、openapi-fetch 0.17.0、TypeScript 5.8.3、vitest 4.1.11、oxlint 1.51.0、oxfmt 0.35.0、knip 6.37.0、turbo 2.10.11；Node 24、pnpm 11.10.0、Playwright 1.63.0；Go 1.27.1（Go 代码不变）。版本都由 `pnpm-lock.yaml` 固定。
 
@@ -18,8 +18,8 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：store 每个资源一个，按会话分代，由 `RootStore` 用这一代的 `ApiClient` 建；没有模块级的 service 实例（只调公开操作的 `previewInvitation` 由调用方传 `publicClient`）；修改经 `oneAtATime()` 排队，取数不排队；修改不乐观，store 写入 nerve 的回答；取数遇到 `SessionChangedError` 给出 `undefined`、不改本代的状态。挂载时的取数都经 `useSessionSWR`（键带 `loginId`，fetcher 交回 store 的 Promise），没有权限时键为 `null`；唯一的例外是公开的邀请查看（`useInvitationPreview`，键只有链接，spec 第 3 节）。类型只来自生成的客户端：不写重述契约的类型，不留旧名字的别名，不写把新接口映射成 Plane 形状的适配层。删除的代码删干净（路由、入口、store 和 service 的方法、两种语言的文案、常量、它们的测试），不加 knip 的忽略、开关或桩。新的 `as`、`any`、`!` 只有 spec 第 3 节写明的一处（`fake-root.ts`）。本 plan 写或重写的文件都在约 400 行以内（最终原型上量的：最长的是 `core/store/member/workspace/workspace-member.store.ts` 358 行、`core/store/workspace/index.test.ts` 291 行、`core/store/user/permissions.store.ts` 277 行）；只为使用方改到的 Plane 文件不拆，也不变长：超过 400 行的五个都变短了（`module.store.ts` 613 → 573、`project-member.store.ts` 497 → 491、`favorite.store.ts` 441 → 412、`workspace-draft/issue.store.ts` 422 → 408、`workspace-notifications.store.ts` 402 → 401）。
-- **oxlint**（M3 设计 7.9，裁定 R3）：有手改的文件（每个有块的 TS 文件）在它的 Task 提交时没有 oxlint 警告；只经本 plan 的机械步骤改到的文件（Task 2、4、7 的 Step 1 的文件中没有块的那些）不在此列，它们的警告留给 P11 的第 4 个任务，spec 附录 A 列出它们。web 应用的上限在改变条数的 Task 里调到新的条数：452 → 451（Task 4）→ 448（Task 6）→ 445（Task 7）→ 444（Task 8）→ 442（Task 9）→ 435（Task 11）；`types` 0、`constants` 1、`utils` 12 不变。
+- **规则**：store 每个资源一个，按会话分代，由 `RootStore` 用这一代的 `ApiClient` 建；没有模块级的 service 实例（只调公开操作的 `previewInvitation` 由调用方传 `publicClient`）；修改经 `oneAtATime()` 排队，取数不排队；修改不乐观，store 写入 nerve 的回答；取数遇到 `SessionChangedError` 给出 `undefined`、不改本代的状态。会话的每个取数都经 `useSessionSWR`（键 `[取数的名称, loginId, ...取数的参数]`，fetcher 交回 store 的 Promise），没有权限时键为 `null`，权限的条件由取数的 hook 自己从 store 算出、不由调用方传入；唯一的例外是经 `publicClient` 的公开操作（`useInvitationPreview`，键只有链接，spec 第 3 节）。这一条有静态检查：根目录 `.oxlintrc.json` 的 `no-restricted-imports` 不让范围内的文件从 `swr` 导入值（只能导入类型；Task 8，范围和它在 P8b 之前的限制见 spec 附录 A.6）。类型只来自生成的客户端：不写重述契约的类型，不留旧名字的别名，不写把新接口映射成 Plane 形状的适配层。删除的代码删干净（路由、入口、store 和 service 的方法、两种语言的文案、常量、它们的测试），不加 knip 的忽略、开关或桩。新的 `as`、`any` 只有 spec 第 3 节写明的一处（`fake-root.ts`）；没有新的 `!`，P8a 的 M3 路径上 `typescript/no-non-null-assertion` 是错误（Task 8 的同一组 `overrides`）。本 plan 写或重写的文件都在约 400 行以内（最终原型上量的：最长的是 `core/store/member/workspace/workspace-member.store.ts` 358 行、`core/store/workspace/index.test.ts` 293 行、`core/store/user/permissions.store.ts` 277 行）；只为使用方改到的 Plane 文件不拆，也不变长：有手改的、超过 400 行的五个都变短了（`module.store.ts` 613 → 573、`project-member.store.ts` 497 → 491、`favorite.store.ts` 441 → 412、`workspace-draft/issue.store.ts` 422 → 408、`workspace-notifications.store.ts` 402 → 401）；只经机械步骤改到的、超过 400 行的三个中，`use-work-item-filters-config.tsx` 404 行不变，`power-k/config/navigation/commands.ts` 464 → 465、`project/form.tsx` 461 → 462 各多一行：`rename_type.py` 能把新类型并进已有的 `import type` 时就并进（不加行），这两个文件原来没有从 `@nerve/api-client` 的导入，生成的 `Workspace` 只能另起一行导入。
+- **oxlint**（M3 设计 7.9，裁定 R3）：有手改的文件（每个有块的 TS 文件）在它的 Task 提交时没有 oxlint 警告；只经本 plan 的机械步骤改到的文件（Task 2、4、7 的 Step 1 的文件中没有块的那些）不在此列，它们的警告留给 P11 的第 4 个任务，spec 附录 A 列出它们。没有新的 oxlint 抑制，删去四处（Task 7、8 各一处 `promise/always-return`，Task 7 两处 `unicorn/no-array-sort`，改为 `toSorted`）。web 应用的上限在改变条数的 Task 里调到新的条数：452 → 451（Task 4）→ 448（Task 6）→ 445（Task 7）→ 444（Task 8）→ 442（Task 9）→ 435（Task 11）；`types` 0、`constants` 1、`utils` 12 不变。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -30,8 +30,8 @@
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `7cf3a286` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
 - **机械步骤**（brief 的规则）：Task 2、4、7 的 Step 1 只改导入路径或类型名，由命令对写明的文件列表执行，不写成块：`Run（机械步骤）:` 的命令照原样从仓库根执行，它们用的两个一次性脚本在下面"一次性脚本"一节全文给出，写到 `$P8ATMP`（实现者自己的临时目录，在仓库之外；每条命令之前 `export P8ATMP=<那个目录>`）。步骤之后 `git diff --numstat` 必须恰好是步骤给出的那几行，`shasum -a 256` 的结果与表中的散列和行数相同；对不上时停下来：说明某个输入与本 plan 不一致。Task 4、7 的块写在机械步骤之后的文件上（Task 7 有几个文件既经机械步骤改名、又有手改）。
 - **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：`tools/keywords.json`（Task 3–10 各加本 Task 的规则）、旧的 `core/services/workspace.service.ts`（Task 3–11 逐个删去搬走的方法）、`core/layouts/auth-layout/workspace-wrapper.tsx` 和 `use-workspace-fetch.ts`、`use-workspace-fetch.test.ts`（Task 6 取列表，Task 8 加成员，Task 10 加显示设置）、`core/store/workspace/index.ts`、`index.test.ts`（Task 4、5、9、10）、`workspaces.service.ts`（Task 4、5、9）、`workspace-member.store.ts`（Task 7、8）、`permissions.store.ts`（Task 5、6）、`packages/constants/src/fetch-keys.ts`、`packages/types/src/workspace.ts`、`web/apps/web/package.json` 的上限，以及 spec 第 2 节逐个列出的使用方。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint 的上限、关键词守卫，和 `make knip`；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p8tools/mutants_p8a.py`，`mut.py` 在它写的每个检查上各跑一次；spec 附录 A：108 个变异，105 个被发现，3 个由之后的 Phase 发现，各写明由谁）；一个变异列在它改的代码第一次出现的 Task。实现者可以照表抽查，改坏之后必须恢复。表中"（之后的 Task 起）"标出的检查在这一行所在的 Task 还不发现它（那个测试在之后的 Task 才有或才改成最终的样子）；没有标的在这一行所在的 Task 的树上就失败。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief 的缺陷类别）：表中每一条这类性质都有一个会失败的检查，例外写在 spec 附录 A。
-- **评审敏感**（M3 设计 12 节 P8a 的评审重点）：换代之后旧的一代不再写、它的反应已释放（Task 1）；页面只取调用者有权读的（成员页的邀请只为工作区管理员取，工作区的子资源只在列表说明它是调用者的工作区之后才取，Task 6、8、10）；落点只认此刻工作区列表中的工作区（Task 5）。改动这些取数的条件、键或 store 的会话处理之前，先照"变异"表确认它在所说的性质去掉之后失败。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫、i18n 的 `check:sync`，和 `make knip`；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p8tools/mutants_p8a.py`，`mut.py` 在它写的每个检查上各跑一次；spec 附录 A：125 个变异，123 个被发现，2 个由之后的 Phase 发现，各写明由谁）；一个变异列在它改的代码第一次出现的 Task。实现者可以照表抽查，改坏之后必须恢复。表中"（之后的 Task 起）"标出的检查在这一行所在的 Task 还不发现它（那个测试在之后的 Task 才有或才改成最终的样子）；没有标的在这一行所在的 Task 的树上就失败。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief 的缺陷类别）：表中每一条这类性质都有一个会失败的检查，例外写在 spec 附录 A。
+- **评审敏感**（M3 设计 12 节 P8a 的评审重点）：换代之后旧的一代不再写、它的反应已释放（Task 1）；页面只取调用者有权读的（成员页的邀请只为工作区管理员取，工作区的子资源只在列表说明它是调用者的工作区之后才取，条件由 hook 自己从工作区列表算出，Task 6、8、10）；落点只认此刻工作区列表中的工作区，判断的每一项都在 `useLanding` 里（Task 5）。改动这些取数的条件、键或 store 的会话处理之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
 
@@ -152,7 +152,7 @@ print(f'{old} -> {new} in {len(results)} files')
 | `web/apps/web/core/store/root.store.ts` | `dispose()`（Task 1）；工作区 store 用这一代的客户端建（Task 4）；成员 store 同样（Task 7） | 1、4、7 |
 | `web/apps/web/core/components/appearance/theme-switcher.tsx` | 改用 `sessionGuard()`（Task 1）；错误文案的导入（Task 2 机械） | 1、2 机械 |
 | `web/apps/web/core/components/api-token/token-list.tsx` | 改用 `useSessionSWR` | 1 |
-| `web/apps/web/core/lib/wrappers/authentication-wrapper.tsx` | 改用 `useSessionSWR`（Task 1）；落点、取工作区列表、四处 `fetchCurrentUserSettings` 删除（Task 5） | 1、5 |
+| `web/apps/web/core/lib/wrappers/authentication-wrapper.tsx` | 改用 `useSessionSWR`（Task 1）；照 `useLanding` 渲染落点，四处 `fetchCurrentUserSettings` 删除（Task 5） | 1、5 |
 | `web/apps/web/core/lib/error-messages.ts`、`web/apps/web/core/lib/error-messages.test.ts` | `PROBLEM_MESSAGES`、`FIELD_ERROR_MESSAGES`、`errorMessageKey`、`fieldErrorKeys`、`needsErrorBanner` 和它们与契约一致的测试，从登录的辅助文件移来 | 2 |
 | `web/apps/web/helpers/authentication.helper.ts`、`web/apps/web/helpers/authentication.helper.test.ts` | 只留 `EAuthModes`、`EPageTypes`（整个文件）；测试随表移走（删除） | 2 |
 | `web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`、`web/packages/i18n/src/constants/namespaces.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json` | `errors` 命名空间：problem 码和字段错误的文案从 `auth` 移来 | 2 |
@@ -172,7 +172,7 @@ print(f'{old} -> {new} in {len(results)} files')
 | `web/apps/web/core/services/workspace.service.ts` | 旧 `WorkspaceService`：M3 的方法逐个删去，只留 M4、M7 的（搜索、视图、草稿） | 3–11 |
 | `web/apps/web/core/services/workspace/workspaces.service.ts` | 工作区：列出、创建、修改、删除（Task 4）；离开、slug 检查（Task 5）；接受、忽略邀请（Task 9） | 4、5、9 |
 | `web/apps/web/core/store/workspace/index.ts`、`web/apps/web/core/store/workspace/index.test.ts` | `WorkspaceRootStore`：重写（Task 4）；slug 检查、离开（Task 5）；接受、忽略（Task 9）；显示设置的子 store（Task 10） | 4、5、9、10 |
-| `web/apps/web/core/store/fake-queue.ts`、`web/apps/web/core/store/fake-root.ts`、`web/apps/web/core/store/workspace/fake-workspaces.ts` | store 测试的共用部分：`inTurn`、`fakeRoot`、`workspaceOf`、`loadWorkspaces` | 4 |
+| `web/apps/web/core/store/fake-queue.ts`、`web/apps/web/core/store/fake-root.ts`、`web/apps/web/core/store/workspace/fake-workspaces.ts` | store 测试的共用部分：`inTurn`、`fetchedWhileChangeIsOut`、`fakeRoot`、`workspaceOf`、`loadWorkspaces` | 4 |
 | `web/apps/web/core/lib/auth/fake-nerve.ts` | `replacedSessionClient()`：会话已换的客户端 | 4 |
 | `web/apps/web/core/components/core/modals/workspace-image-upload-modal.tsx`、`web/apps/web/core/services/file.service.ts`、`web/packages/constants/src/file.ts`、`web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json` | 工作区图标的上传删除（`WorkspaceUpdate` 没有 `logo_url`，spec 第 3 节）；general 页改用新 store | 4 |
 | `web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/core/components/workspace/delete-workspace-form.tsx`、`web/apps/web/core/components/power-k/ui/pages/open-entity/workspaces-menu.tsx`、`web/apps/web/core/store/user/profile.store.ts` | `Workspace`、新 store 的使用方 | 4 |
@@ -184,6 +184,8 @@ print(f'{old} -> {new} in {len(results)} files')
 | `web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/packages/types/src/search.ts`、`web/packages/types/src/project/projects.ts` | `IWorkspace` → `Workspace`（Task 4）；`IUserLite` → `MemberUser`（Task 7） | 4 机械、7 机械 |
 | `web/apps/web/package.json` | oxlint 的上限 | 4、6、7、8、9、11 |
 | `web/apps/web/core/lib/landing.ts`、`web/apps/web/core/lib/landing.test.ts` | `landingPath`：上次的工作区、最早创建的、没有时 `/create-workspace` | 5 |
+| `web/apps/web/core/lib/use-landing.ts`、`web/apps/web/core/lib/use-landing.test.ts` | `useLanding`：已登录账户的落点的全部判断（谁落、取列表、列表失败、上次的工作区），`AuthenticationWrapper` 照它渲染 | 5 |
+| `web/apps/web/core/lib/fake-session-swr.ts` | 测试取数的 hook 时代替 `use-session-swr.ts`（`handed`、`response`） | 5 |
 | `web/apps/web/core/store/user/settings.store.ts`、`web/apps/web/core/hooks/store/user/user-user-settings.ts`、`web/apps/web/core/hooks/store/user/index.ts`、`web/apps/web/core/store/user/index.ts`、`web/apps/web/core/services/user.service.ts` | 设置 store、`currentUserSettings`、`leaveWorkspace` 删除 | 5 |
 | `web/packages/types/src/users.ts` | `IUserSettings` 删除（Task 5）；`IUserLite` 删除（Task 7） | 5、7 |
 | `web/apps/web/core/store/theme.store.ts`、`web/apps/web/core/components/settings/mobile/nav.tsx` | 设置页的侧边栏状态移到 `ThemeStore`（R4） | 5 |
@@ -192,7 +194,6 @@ print(f'{old} -> {new} in {len(results)} files')
 | `web/packages/constants/src/navigation.test.ts` | `RESTRICTED_URLS` 的测试随它删除 | 5 |
 | `e2e/stories/identity/a3-sign-in.spec.ts` | 登录之后的落点：没有工作区时去 `/create-workspace`（3.14） | 5 |
 | `web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts` | 工作区包装层挂载时的取数：列表（Task 6），成员（Task 8），显示设置（Task 10），后两者只在列表说明它是调用者的工作区之后 | 6、8、10 |
-| `web/apps/web/core/lib/fake-session-swr.ts` | 测试取数的 hook 时代替 `use-session-swr.ts` | 6 |
 | `web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx` | 邀请的链接（Task 3）；改用 `useWorkspaceFetch`、`Workspace.role`（Task 6、8、10）；取收藏的 SWR 删除（Task 11） | 3、6、8、10、11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx` | 页面读调用者的角色：`workspaceInfoBySlug` 改为 `getWorkspaceRoleByWorkspaceSlug` | 6 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx` | 同上（Task 6）；成员页的取数改用 `useMembersSettingsFetch`（Task 8） | 6、8 |
@@ -201,12 +202,14 @@ print(f'{old} -> {new} in {len(results)} files')
 | `web/apps/web/core/services/workspace/workspace-members.service.ts` | 工作区成员：列出、改角色、移出 | 7 |
 | `web/apps/web/core/store/member/workspace/workspace-member.store.ts` | 成员（Task 7）、邀请（Task 8），按会话分代，修改经 `oneAtATime()` | 7、8 |
 | `web/apps/web/core/store/member/workspace/workspace-member.store.test.ts`、`web/apps/web/core/store/member/workspace/fake-members.ts` | 成员 store 的测试；`membershipOf`、`memberStore` | 7 |
-| `web/apps/web/core/store/member/index.ts`、`web/apps/web/core/store/member/utils.ts`、`web/apps/web/core/store/member/workspace/workspace-member-filters.store.ts`、`web/apps/web/core/store/member/project/project-member.store.ts` | 成员的公开资料（`MemberUser`）、按角色和加入时间排序；没有读者的 `getMemberIds` 删除 | 7 机械、7 |
+| `web/apps/web/core/store/member/index.ts`、`web/apps/web/core/store/member/utils.ts`、`web/apps/web/core/store/member/workspace/workspace-member-filters.store.ts`、`web/apps/web/core/store/member/project/project-member.store.ts` | 成员的公开资料（`MemberUser`）、按角色和加入时间排序（`toSorted`）；没有读者的 `getMemberIds` 删除 | 7 机械、7 |
+| `web/packages/typescript-config/react-router.json`、`web/apps/web/core/components/navigation/use-navigation-items.ts`、`web/apps/web/core/components/navigation/tab-navigation-root.tsx` | web 应用的 TypeScript `lib` 改为 ES2023；导航的两处排序改为 `toSorted`，抑制删除（裁定 A3） | 7 |
 | `web/apps/web/core/components/profile/use-profile-member.ts` | `MemberUser`（Task 7 机械、Task 7）；成员的取数（Task 8） | 7 机械、7、8 |
 | `web/apps/web/core/components/modules/links/list-item.tsx`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/project/add-project-members-modal.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/projects/settings/useProjectColumns.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/notification-card/content.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/packages/utils/src/file.ts` | `MemberUser` 的使用方：可空的 `avatar_url`、`email` 按 `null` 处理（W20） | 7 |
 | `web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/dropdowns/member/member-options.tsx`、`web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx`、`web/apps/web/core/store/issue/root.store.ts`、`web/apps/web/core/store/member/project/project-member-filters.store.ts`、`web/apps/web/core/store/notifications/notification.ts`、`web/packages/utils/src/rich-filters/factories/configs/properties/shared.ts`、`web/packages/types/src/workspace-notifications.ts` | `IUserLite` → `MemberUser`（`root.store.ts` 另有 `IWorkspaceMembership` → `WorkspaceMember`） | 7 机械 |
 | `web/apps/web/core/services/workspace/workspace-invitations.service.ts`、`web/apps/web/core/store/member/workspace/workspace-invitations.test.ts` | 邀请：列出、批量创建、改角色、删除；它们的 store 测试 | 8 |
-| `web/apps/web/core/components/workspace/settings/use-members-settings-fetch.ts`、`web/apps/web/core/components/workspace/settings/use-members-settings-fetch.test.ts`、`web/apps/web/core/components/workspace/settings/members-list.tsx` | 成员页的取数：成员给每个人，邀请只给管理员（7.1） | 8 |
+| `web/apps/web/core/components/workspace/settings/use-members-settings-fetch.ts`、`web/apps/web/core/components/workspace/settings/use-members-settings-fetch.test.ts`、`web/apps/web/core/components/workspace/settings/members-list.tsx` | 成员页的取数：成员给每个人，邀请只给管理员（7.1；角色由 hook 从工作区列表读） | 8 |
+| `.oxlintrc.json` | `overrides`：P8a 的会话取数不从 `swr` 导入值（`no-restricted-imports`）；P8a 的 M3 路径没有非空断言（`typescript/no-non-null-assertion`）（裁定 A6、L4） | 8 |
 | `web/apps/web/core/components/workspace/members/invite-modal.tsx`、`web/apps/web/core/components/onboarding/steps/team/root.tsx` | 邀请的创建改调新 store | 8 |
 | `web/apps/web/core/services/workspace/invitation-preview.service.ts`、`web/apps/web/core/services/workspace/invitation-preview.service.test.ts`、`web/apps/web/core/hooks/use-invitation-preview.ts` | 公开的邀请查看（`publicClient`） | 9 |
 | `web/apps/web/app/(all)/workspace-invitations/page.tsx`、`web/apps/web/core/components/account/auth-forms/auth-header.tsx`、`web/apps/web/core/components/account/auth-forms/auth-root.tsx` | 邀请页（整个文件）和登录、注册页读查看的结果；接受、忽略经 `WorkspaceRootStore` | 9 |
@@ -215,7 +218,7 @@ print(f'{old} -> {new} in {len(results)} files')
 | `web/apps/web/core/components/home/home-body.tsx`、`web/apps/web/core/components/home/widgets/index.ts`、`web/apps/web/core/components/home/widgets/empty-states/index.ts`、`web/apps/web/core/components/home/widgets/loaders/index.ts`、`web/apps/web/core/components/home/widgets/recents/filters.tsx`、`web/apps/web/core/components/home/widgets/recents/index.tsx`、`web/apps/web/core/components/home/widgets/recents/issue.tsx`、`web/apps/web/core/components/home/widgets/recents/project.tsx`、`web/apps/web/core/components/home/widgets/empty-states/recents.tsx`、`web/apps/web/core/components/home/widgets/loaders/recent-activity.tsx`、`web/apps/web/core/components/core/content-overflow-HOC.tsx`、`web/packages/types/src/home.ts`、`web/packages/types/src/index.ts`、`web/packages/i18n/src/locales/en/home.json`、`web/packages/i18n/src/locales/zh-CN/home.json` | 首页的"最近"小部件删除（3.1，M7 加回） | 11 |
 | `web/apps/web/core/components/navigation/top-navigation-root.tsx`、`web/apps/web/core/layouts/auth-layout/project-wrapper.tsx` | 未读通知数（M7）和迭代、模块、视图、分诊状态（M6、M7）的挂载时取数删除 | 11 |
 | `web/apps/web/core/store/favorite.store.ts`、`web/apps/web/core/services/favorite/favorite.service.ts`、`web/apps/web/core/store/module.store.ts`、`web/apps/web/core/store/project-view.store.ts`、`web/apps/web/core/services/view.service.ts`、`web/apps/web/core/store/notifications/workspace-notifications.store.ts`、`web/apps/web/core/components/core/list/list-item.tsx` | 上面的删除留下的、没有调用方的方法和 prop 一并删除（M3 设计 3.2 的写法，M6、M7 加回）；两个 store 和列表项的 oxlint 警告清零 | 11 |
-| `docs/v0/v0-design.md`、`docs/v0/frontend-changes.md` | 3.20 中 P8a 的行：总体设计 7.7；前端改动清单的 M3 行和四行新的差异 | 12 |
+| `docs/v0/v0-design.md`、`docs/v0/frontend-changes.md` | 3.20 中 P8a 的行：总体设计 7.7（取数的原则、例外和静态检查，problem 码的文案表）；前端改动清单的 M3 行和五行新的差异 | 12 |
 
 ---
 
@@ -684,7 +687,7 @@ out of the theme switcher into core/lib/in-session.ts.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
@@ -716,7 +719,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `core/lib/error-messages.ts`：`PROBLEM_MESSAGES`（契约的每个 `x-problem-codes` 的码 → `errors.<名>`）、`FIELD_ERROR_MESSAGES`（`FieldError.code` → `errors.field.<名>`）、`errorMessageKey(error)`、`fieldErrorKeys(error)`、`needsErrorBanner(error, fields)`，与原来在 `helpers/authentication.helper.ts` 的写法和行为相同，只是文案的键从 `auth.errors.*` 改为 `errors.*`。
   - `errors` 命名空间（`namespaces.ts` 加 `"errors"`）：`en`、`zh-CN` 两份 `errors.json`，内容是原来两份 `auth.json` 的 `errors` 对象，原样移来（P6 的两条 `sole_admin` 文案不变，P6 spec 第 3 节第 17 条）；`auth.json` 删去这个对象。
   - `helpers/authentication.helper.ts` 只留 `EPageTypes`、`EAuthModes`。
-  - 之后的 Phase 声明新码时，把它加进 `core/lib/error-messages.ts` 和两份 `errors.json`（3.20 中这一条由 Task 12 写进总体设计）。
+  - 之后的 Phase 声明新码时，把它加进 `core/lib/error-messages.ts` 和两份 `errors.json`。M3 设计第 12 节约束 4 已在 P8a 的修订（spec 和 plan 的同一个提交）中改指这里；Task 12 写进总体设计 7.7 的一条也写明这张表在 `core/lib/error-messages.ts`。
 - Consumes：生成的 `FieldError`、`ApiError`、`SessionUnavailableError`（M2）。
 
 **Tests:**（vitest）`core/lib/error-messages.test.ts`，即原来的 `helpers/authentication.helper.test.ts` 随表移来，16 个标题不变：`the message tables`（`read the contract: both lists are found in openapi.yaml`、`have a message for every problem code of the contract, and no other`、`have a message for every FieldError.code of the contract, and no other`、`point at messages that exist in English (sync-check keeps zh-CN the same)`）、`errorMessageKey`、`fieldErrorKeys`、`needsErrorBanner` 各组。表与契约在两个方向上都核对（少一个码、多一个码各失败，W14）。
@@ -1339,14 +1342,14 @@ modes.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
 | `t2-code-missing` | `PROBLEM_MESSAGES` 少一个契约里的码 | `error-messages.test.ts` | vitest |
 | `t2-code-extra` | `PROBLEM_MESSAGES` 多一个契约没有的码 | `error-messages.test.ts` | vitest |
 | `t2-message-missing` | 一个码指向 `errors` 命名空间没有的文案 | `error-messages.test.ts` | vitest |
-| `t2-zh-missing` | `zh-CN` 少一条 `en` 有的文案 | `` | vitest |
+| `t2-zh-missing` | `zh-CN` 少一条 `en` 有的文案 | i18n 的 `check:sync` | 静态 |
 | `t2-old-home` | 一个使用方又从登录的 helper 导入文案表 | `tsc` | 静态 |
 
 ---
@@ -1951,6 +1954,8 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 70 个全部通过。
 
+完成时：本 Task 删除的 14 个文案键（上面 Interfaces 中列出的 `common.json` 13 条和 `power-k.json` 的 `power_k.account_actions.workspace_invites`）在 `en`、`zh-CN` 中都已不在（spec 附录 A.7 的键表；`check:sync` 只核对两种语言一致，两种语言都留下的键要评审照键表核对）。
+
 - [ ] **Step 5: 提交**
 
 ```bash
@@ -1969,7 +1974,7 @@ keyword rule keeps them out.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
@@ -1995,11 +2000,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `@nerve/types`、`@nerve/utils` 依赖 `@nerve/api-client`（`workspace:*`），锁文件随之两处。
   - 工作区图标的上传删除（spec 第 3 节：`WorkspaceUpdate` 没有 `logo_url`，3.2 的规则 2）：`workspace-image-upload-modal.tsx`、general 页的上传按钮、`FileService.deleteWorkspaceAsset`、`ACCEPTED_AVATAR_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE` 和两条文案；显示图标的地方不改（没有图标时显示首字母）。
   - 旧 `WorkspaceService` 删去 `userWorkspaces`、`getWorkspace`、`createWorkspace`、`updateWorkspace`、`deleteWorkspace`、`getLastActiveWorkspaceAndProjects`。
-  - 测试的共用部分：`core/store/fake-queue.ts` 的 `inTurn(nerve, k, [method, path], answer)`（第 k 个请求是这次修改，前面的请求有了回答它才发出）；`core/store/fake-root.ts` 的 `fakeRoot(siblings)`（被测 store 读了没给的兄弟 store 时测试失败；它的一处 `as` 见 spec 第 3 节）；`core/store/workspace/fake-workspaces.ts` 的 `workspaceOf(slug, fields)`、`loadWorkspaces(nerve, store, workspaces)`；`FakeNerve.replacedSessionClient()`：每个请求在发出之前以 `SessionChangedError` 失败。
+  - 测试的共用部分：`core/store/fake-queue.ts` 的 `inTurn(nerve, k, [method, path], answer)`（第 k 个请求是这次修改，前面的请求有了回答它才发出）和 `fetchedWhileChangeIsOut(nerve, change, fetch, [method, path], answer)`（一个修改发出、还没有回答时取数：取数紧跟着发出、先得到回答，之后那个修改被拒绝；工作区、成员（Task 7）、显示设置（Task 10）三个 store 的"取数不排队"都用它）；`core/store/fake-root.ts` 的 `fakeRoot(siblings)`（被测 store 读了没给的兄弟 store 时测试失败；它的一处 `as` 见 spec 第 3 节）；`core/store/workspace/fake-workspaces.ts` 的 `workspaceOf(slug, fields)`、`loadWorkspaces(nerve, store, workspaces)`；`FakeNerve.replacedSessionClient()`：每个请求在发出之前以 `SessionChangedError` 失败。
 - Adds：关键词规则 `plane-workspace-urls`（7.10），只写到本 Phase 换掉的地址为止；不命中样例有项目一侧的地址（P8b 换掉时补进模式）和 `/search-issues/`。
 
 **Tests:**（vitest）`core/store/workspace/index.test.ts`：
-- `WorkspaceRootStore, the list`：`lists the caller's workspaces as nerve gives them, and finds them by slug and by the address`；`fails when nerve cannot list them, keeping the list it had`；`fetches the list while a change is out: a fetch does not wait for it`；`gives nothing, and does not fail, when the session changes as it fetches`（`replacedSessionClient`）。
+- `WorkspaceRootStore, the list`：`lists the caller's workspaces as nerve gives them, and finds them by slug and by the address`；`fails when nerve cannot list them, keeping the list it had`；`fetches the list while a change is out: a fetch does not wait for it`（`fetchedWhileChangeIsOut`）；`gives nothing, and does not fail, when the session changes as it fetches`（`replacedSessionClient`）。
 - `WorkspaceRootStore, the changes`：`adds a created workspace to the list it has, and to none it has not fetched`；`puts nerve's answer to a change in the list, in the changed workspace's place`（回答与请求不同，store 存回答）；`takes a deleted workspace off the list`；`fails, changing nothing, when nerve refuses $change`（创建、修改、删除各一，`it.each`）；`sends each change once nerve has answered the one before it, refused or not`（`inTurn`）。
 
 - [ ] **Step 1: 机械步骤：其余 11 个文件的 `IWorkspace` 换成 `Workspace`**
@@ -2342,7 +2347,7 @@ export class WorkspacesService {
 }
 ````
 
-`web/apps/web/core/store/fake-queue.ts`（新文件，20 行）：
+`web/apps/web/core/store/fake-queue.ts`（新文件，45 行）：
 
 ````file web/apps/web/core/store/fake-queue.ts
 /**
@@ -2355,7 +2360,8 @@ export class WorkspacesService {
 
 import { expect, vi } from "vitest";
 import type { FakeNerve } from "@/lib/auth/fake-nerve";
-import { until } from "@/lib/auth/fake-time";
+import { problem } from "@/lib/auth/fake-nerve";
+import { track, until } from "@/lib/auth/fake-time";
 
 /** The k-th request is the change sent, the last one out until nerve gives it this answer. */
 export async function inTurn(nerve: FakeNerve, k: number, [method, path]: [string, string], answer: Response) {
@@ -2364,6 +2370,30 @@ export async function inTurn(nerve: FakeNerve, k: number, [method, path]: [strin
   expect(nerve.calls).toHaveLength(k + 1);
   expect(nerve.calls[k]).toMatchObject({ method, path });
   nerve.calls[k]?.answer(answer);
+}
+
+/**
+ * A fetch while a change is out (fetches do not queue): the change is sent and left unanswered, the fetch is sent,
+ * checked against [method, path] and given answer, and only then is the change refused. The test then checks what the
+ * store holds: the fetch's answer.
+ */
+export async function fetchedWhileChangeIsOut(
+  nerve: FakeNerve,
+  change: () => Promise<unknown>,
+  fetch: () => Promise<unknown>,
+  [method, path]: [string, string],
+  answer: Response
+) {
+  const at = nerve.calls.length;
+  const changed = track(change());
+  await until(() => nerve.calls.length === at + 1, "the change");
+  const fetched = track(fetch());
+  await until(() => nerve.calls.length === at + 2, "the fetch");
+  expect(nerve.calls[at + 1]).toMatchObject({ method, path });
+  nerve.calls[at + 1]?.answer(answer);
+  await until(() => fetched.settled, "the fetch");
+  nerve.calls[at]?.answer(problem(403, "forbidden"));
+  await until(() => changed.settled, "the refusal");
 }
 ````
 
@@ -2453,7 +2483,7 @@ export async function loadWorkspaces(nerve: FakeNerve, store: IWorkspaceRootStor
 }
 ````
 
-`web/apps/web/core/store/workspace/index.test.ts`（新文件，199 行）：
+`web/apps/web/core/store/workspace/index.test.ts`（新文件，197 行）：
 
 ````file web/apps/web/core/store/workspace/index.test.ts
 /**
@@ -2466,7 +2496,7 @@ import type { WorkspaceCreate } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
-import { inTurn } from "@/store/fake-queue";
+import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
 import { fakeRoot } from "@/store/fake-root";
 import { RouterStore } from "@/store/router.store";
 import { WorkspaceRootStore } from "@/store/workspace";
@@ -2540,15 +2570,13 @@ describe("WorkspaceRootStore, the list", () => {
 
   it("fetches the list while a change is out: a fetch does not wait for it", async () => {
     const { nerve, store } = await loaded();
-    const updated = track(store.updateWorkspace("acme", { name: "Acme Inc" }));
-    await until(() => nerve.calls.length === 2, "the change");
-    const refetched = track(store.fetchWorkspaces());
-    await until(() => nerve.calls.length === 3, "the refetch");
-    expect(nerve.calls[2]).toMatchObject({ method: "GET", path: LIST });
-    nerve.calls[2]?.answer(json(200, { data: [acme, beta] }));
-    await until(() => refetched.settled, "the refetch");
-    nerve.calls[1]?.answer(problem(403, "forbidden"));
-    await until(() => updated.settled, "the refusal");
+    await fetchedWhileChangeIsOut(
+      nerve,
+      () => store.updateWorkspace("acme", { name: "Acme Inc" }),
+      () => store.fetchWorkspaces(),
+      ["GET", LIST],
+      json(200, { data: [acme, beta] })
+    );
     expect(store.workspaces).toEqual([acme, beta]);
   });
 
@@ -3483,6 +3511,8 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 70 个全部通过（W1、W10 建工作区之后进入它，W3 的 general 页改名）。
 
+完成时：本 Task 删除的两个文案键（`workspace-settings.json` 的 `workspace_settings.settings.general.edit_logo`、`upload_logo`）在 `en`、`zh-CN` 中都已不在（spec 附录 A.7 的键表；`check:sync` 只核对两种语言一致，两种语言都留下的键要评审照键表核对）。
+
 - [ ] **Step 7: 提交**
 
 ```bash
@@ -3503,7 +3533,7 @@ out.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
@@ -3524,14 +3554,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 5: 落点、设置 store 删除、保留名单一份、离开工作区；设置页的侧边栏移到 `ThemeStore`
 
 **Files:**
-- Create: `web/apps/web/core/lib/landing.test.ts`、`web/apps/web/core/lib/landing.ts`
+- Create: `web/apps/web/core/lib/fake-session-swr.ts`、`web/apps/web/core/lib/landing.test.ts`、`web/apps/web/core/lib/landing.ts`、`web/apps/web/core/lib/use-landing.test.ts`、`web/apps/web/core/lib/use-landing.ts`
 - Modify: `e2e/stories/identity/a3-sign-in.spec.ts`、`server/internal/modules/workspace/domain/reserved_slugs.txt`、`tools/keywords.json`、`web/apps/web/app/routes/navigation.test.ts`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/settings/mobile/nav.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/hooks/store/user/index.ts`、`web/apps/web/core/lib/wrappers/authentication-wrapper.tsx`、`web/apps/web/core/services/user.service.ts`、`web/apps/web/core/services/workspace.service.ts`、`web/apps/web/core/services/workspace/workspaces.service.ts`、`web/apps/web/core/store/theme.store.ts`、`web/apps/web/core/store/user/index.ts`、`web/apps/web/core/store/user/permissions.store.ts`、`web/apps/web/core/store/workspace/index.test.ts`、`web/apps/web/core/store/workspace/index.ts`、`web/packages/constants/src/navigation.test.ts`、`web/packages/constants/src/workspace.ts`、`web/packages/types/src/users.ts`
 - Delete: `web/apps/web/core/hooks/store/user/user-user-settings.ts`、`web/apps/web/core/store/user/settings.store.ts`
 
 **Interfaces:**
 - Produces（spec 2.5；M3 设计 3.10、3.14、7.4、7.8；裁定 R4）：
   - `core/lib/landing.ts`：`landingPath(workspaces: readonly Workspace[], lastWorkspaceId: string | null): string`：上次的工作区仍在列表中 → `/<它的 slug>`；否则最早创建的（`created_at` 按时刻比较，同一时刻取列表中靠前的，即 nerve 的顺序）；一个都没有 → `/create-workspace`。
-  - `AuthenticationWrapper`：已完成引导、没有有效的 `next_path`、停在登录页或引导页的账户需要落点时（`landing`），经 `useSessionSWR(landing ? ["WORKSPACES"] : null, …)` 取列表，取到之后 `<Navigate to={landingPath(workspaces, currentProfile.last_workspace_id)} replace />`；取列表失败时显示 `SessionUnavailable`（不自动重试，按钮重取）；M2 为"完成引导的用户直接去 `/create-workspace`"写的两个分支改为这条规则。
+  - `core/lib/use-landing.ts`：`useLanding(pageType: EPageTypes, validNextPath: string | undefined): Landing`，落点的全部判断（裁定 A4）：从 store 读资料和工作区列表，资料已到、已完成引导（`isOnboarded`，从包装层移来并导出）、没有有效的 `next_path`、停在登录页或引导页时（`lands`）经 `useSessionSWR(lands ? ["WORKSPACES"] : null, () => fetchWorkspaces(), …)` 取列表，给出 `{ kind: "none" }`（不落）、`{ kind: "loading" }`（列表未到）、`{ kind: "unavailable", retry }`（取列表失败，`retry` 重取）或 `{ kind: "go", to: landingPath(workspaces, profile.last_workspace_id) }`。
+  - `AuthenticationWrapper` 只照 `useLanding` 的结果渲染：`unavailable` 显示 `SessionUnavailable`（不自动重试，按钮调 `retry`），`loading` 显示加载，`go` 是 `<Navigate to={landing.to} replace />`；M2 为"完成引导的用户直接去 `/create-workspace`"写的两个分支改为这条规则。
+  - `core/lib/fake-session-swr.ts`：测试取数的 hook 时用 `vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"))` 代替 `useSessionSWR`：`handed` 记下每次交给它的取数、fetcher 和配置，`response.current` 是每次调用交回的（默认 `{}`，即还没有数据）。本 Task 的 `use-landing.test.ts` 第一个用它，Task 6、8 的 hook 测试照用。
   - `WorkspacesService.leave(slug)`、`checkSlug(slug): Promise<SlugAvailability>`；`IWorkspaceRootStore.checkWorkspaceSlug(slug)`（不排队，是读）、`leaveWorkspace(slug)`（经 `changes`，成功之后把这个工作区移出列表）。成员页的"离开"改调 `useWorkspace().leaveWorkspace`；`UserPermissionStore.leaveWorkspace` 和 `UserService.leaveWorkspace` 删除（M2 交接第 11 节）。
   - 创建工作区的两处表单（`create-workspace-form.tsx`、新手引导的 `create.tsx`）改问 `checkWorkspaceSlug`，不再查 `RESTRICTED_URLS`；`create-workspace-form.tsx` 没有调用方传的 `secondaryButton`、`primaryButtonText` 删除（M3 设计 7.9，按钮照默认的文案）。
   - 删除（3.14、7.8）：`RESTRICTED_URLS` 和它的测试、`IUserSettings`、`UserSettingsStore`（`settings.store.ts`）、`useUserSettings`、`UserService.currentUserSettings`、四处 `await fetchCurrentUserSettings()`（`join-invites.tsx` 的一处随它在 Task 3 删除，删除工作区和离开工作区之后的两处在 Task 4 随 `getWorkspaceRedirectionUrl` 删去、改为跳到 `/` 由落点决定，这里是新手引导建工作区之后的一处）。
@@ -3541,11 +3573,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Tests:**
 - vitest：`landing.test.ts`：`goes to the workspace opened last, while it is still one of the caller's`；`goes to the workspace created first when the last one is not listed, or there is none`；`goes to the page that creates a workspace when the caller has none`；`takes, of the workspaces created first at the same moment, the first in nerve's order`；`compares the moments, not their text`（时区不同的同一时刻）。
+- vitest：`use-landing.test.ts`（`fake-session-swr.ts` 代替 `useSessionSWR`，资料和工作区列表的 store 换成桩）：`sends an onboarded account on the sign-in page where its workspaces decide, the one it opened last first`；`lands an onboarded account on the onboarding page the same way`；`it.each` 的 `leaves $who to the wrapper's other rules, and fetches nothing`（资料未到、仍在引导、有有效的 `next_path`、需要登录的页面、公开页面，5 行）；`waits for the caller's workspaces, and says when nerve cannot give them, with a retry`。每一项判断各有一个变异（`t5-auth-*`），都由它发现。
 - vitest：`index.test.ts` 加 `asks nerve whether a slug is free, and fails when nerve cannot say`；`takes a deleted workspace off the list, and one the caller left`（原来的 `takes a deleted workspace off the list` 改成这个）；拒绝的 `it.each` 加离开一行。
 - vitest：`navigation.test.ts` 的 `the reserved workspace addresses` / `reserve, in the app's section, the first static segment of every page and each directory of public/`；`constants/src/navigation.test.ts` 中 `RESTRICTED_URLS` 的测试随它删除。
 - 端到端：A3 的说明改写，断言不变（没有工作区的账户落到 `/create-workspace`，落点取列表时不请求旧接口）。
 
-- [ ] **Step 1: 落点函数和 `AuthenticationWrapper`**
+- [ ] **Step 1: 落点函数、`useLanding` 和 `AuthenticationWrapper`**
 
 `e2e/stories/identity/a3-sign-in.spec.ts`（修改，1 处）：
 
@@ -3558,6 +3591,40 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   // A next_path that could lead elsewhere is dropped: the landing instead, which for an account with no
   // workspace is /create-workspace (M3 design 3.14). Neither the landing nor that page asks an older API as
   // it mounts (M2 design 3.1): the landing asks nerve for the account's workspaces.
+````
+
+`web/apps/web/core/lib/fake-session-swr.ts`（新文件，29 行）：
+
+````file web/apps/web/core/lib/fake-session-swr.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+// A stand-in for use-session-swr.ts, for the tests of the hooks that make a page's fetches (M3 design 7.1): a test
+// file mocks that module with this one, vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr")), and
+// reads what its hook handed over. The hooks then run as plain functions, outside React. How a fetch is keyed is
+// use-session-swr.test.ts.
+
+import type { SessionFetch } from "./use-session-swr";
+
+/** What a hook handed useSessionSWR: the fetch, and the fetcher of its arguments. */
+export type HandedFetch = [
+  fetch: SessionFetch | null,
+  fetcher: (...args: string[]) => Promise<unknown>,
+  config?: unknown,
+];
+
+/** Every fetch handed over so far, in order; a test empties it before each case. */
+export const handed: HandedFetch[] = [];
+
+/** What each call gives back, as SWR would (by default, nothing yet); a test that sets it resets it before each case. */
+export const response: { current: object } = { current: {} };
+
+export function useSessionSWR(...call: HandedFetch): object {
+  handed.push(call);
+  return response.current;
+}
 ````
 
 `web/apps/web/core/lib/landing.test.ts`（新文件，48 行）：
@@ -3641,21 +3708,219 @@ export function landingPath(workspaces: readonly Workspace[], lastWorkspaceId: s
 }
 ````
 
-`web/apps/web/core/lib/wrappers/authentication-wrapper.tsx`（修改，8 处）：
+`web/apps/web/core/lib/use-landing.test.ts`（新文件，120 行）：
 
-````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
-// hooks
+````file web/apps/web/core/lib/use-landing.test.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OnboardingSteps, Profile, Workspace } from "@nerve/api-client";
+import { EPageTypes } from "@/helpers/authentication.helper";
+import { handed, response } from "@/lib/fake-session-swr";
+import { workspaceOf } from "@/store/workspace/fake-workspaces";
+
+// The landing of a signed-in account (M3 design 3.14) as AuthenticationWrapper is told it, with fake-session-swr.ts's
+// stand-in for useSessionSWR and stand-ins for the stores. Where the landing goes, of the caller's workspaces, is
+// landing.test.ts.
+
+vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"));
+const stores = vi.hoisted(
+  (): { profile: Profile | undefined; workspaces: Workspace[] | undefined; calls: string[] } => ({
+    profile: undefined,
+    workspaces: undefined,
+    calls: [],
+  })
+);
+vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: stores.profile }) }));
+vi.mock("@/hooks/store/use-workspace", () => ({
+  useWorkspace: () => ({
+    workspaces: stores.workspaces,
+    fetchWorkspaces: () => Promise.resolve(stores.calls.push("the workspaces")),
+  }),
+}));
+
+const { useLanding } = await import("./use-landing");
+
+const done: OnboardingSteps = {
+  profile_complete: true,
+  workspace_create: true,
+  workspace_invite: true,
+  workspace_join: true,
+};
+
+/** The caller's profile as nerve gives it: onboarded, and the workspace he opened last is beta, unless fields say not. */
+function profileOf(fields: Partial<Profile> = {}): Profile {
+  return {
+    theme: "system",
+    language: "en",
+    start_of_the_week: 0,
+    onboarding_step: done,
+    is_onboarded: true,
+    is_tour_completed: false,
+    last_workspace_id: "id-beta",
+    updated_at: "2026-10-01T09:00:00Z",
+    ...fields,
+  };
+}
+const acme = workspaceOf("acme", { created_at: "2026-09-01T09:00:00Z" });
+const beta = workspaceOf("beta", { created_at: "2026-09-02T09:00:00Z" });
+const { AUTHENTICATED, NON_AUTHENTICATED, ONBOARDING, PUBLIC } = EPageTypes;
+
+beforeEach(() => {
+  handed.length = 0;
+  response.current = {};
+  stores.profile = profileOf();
+  stores.workspaces = [acme, beta];
+  stores.calls = [];
+});
+
+describe("useLanding", () => {
+  it("sends an onboarded account on the sign-in page where its workspaces decide, the one it opened last first", async () => {
+    expect(useLanding(NON_AUTHENTICATED, undefined)).toEqual({ kind: "go", to: "/beta" });
+    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"]]);
+    await Promise.all(handed.map(([, fetcher]) => fetcher()));
+    expect(stores.calls).toEqual(["the workspaces"]);
+
+    stores.profile = profileOf({ last_workspace_id: null });
+    expect(useLanding(NON_AUTHENTICATED, undefined)).toEqual({ kind: "go", to: "/acme" });
+  });
+
+  it("lands an onboarded account on the onboarding page the same way", () => {
+    expect(useLanding(ONBOARDING, undefined)).toEqual({ kind: "go", to: "/beta" });
+  });
+
+  it.each([
+    {
+      who: "an account whose profile has not come",
+      pageType: NON_AUTHENTICATED,
+      nextPath: undefined,
+      profile: undefined,
+    },
+    {
+      who: "an account still onboarding",
+      pageType: NON_AUTHENTICATED,
+      nextPath: undefined,
+      profile: profileOf({ is_onboarded: false, onboarding_step: { ...done, workspace_create: false } }),
+    },
+    {
+      who: "an account with a valid next_path",
+      pageType: NON_AUTHENTICATED,
+      nextPath: "/acme/projects",
+      profile: profileOf(),
+    },
+    { who: "an account on a page that needs one", pageType: AUTHENTICATED, nextPath: undefined, profile: profileOf() },
+    { who: "an account on a public page", pageType: PUBLIC, nextPath: undefined, profile: profileOf() },
+  ])("leaves $who to the wrapper's other rules, and fetches nothing", ({ pageType, nextPath, profile }) => {
+    stores.profile = profile;
+    expect(useLanding(pageType, nextPath)).toEqual({ kind: "none" });
+    expect(handed.map(([fetch]) => fetch)).toEqual([null]);
+  });
+
+  it("waits for the caller's workspaces, and says when nerve cannot give them, with a retry", () => {
+    stores.workspaces = undefined;
+    expect(useLanding(NON_AUTHENTICATED, undefined)).toEqual({ kind: "loading" });
+
+    const mutate = vi.fn(() => Promise.resolve(undefined));
+    response.current = { error: new Error("nerve cannot be reached"), mutate };
+    const landing = useLanding(NON_AUTHENTICATED, undefined);
+    expect(landing.kind).toBe("unavailable");
+    if (landing.kind === "unavailable") landing.retry();
+    expect(mutate).toHaveBeenCalledOnce();
+  });
+});
 ````
-````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
+
+`web/apps/web/core/lib/use-landing.ts`（新文件，55 行）：
+
+````file web/apps/web/core/lib/use-landing.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { Profile } from "@nerve/api-client";
+// helpers
+import { EPageTypes } from "@/helpers/authentication.helper";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useUserProfile } from "@/hooks/store/user";
+// lib
+import { landingPath } from "@/lib/landing";
+import { useSessionSWR } from "@/lib/use-session-swr";
+
+/** Whether the account is done with onboarding (M2 design 7.4): its profile says so, or every step is done. */
+export const isOnboarded = (profile: Profile) =>
+  profile.is_onboarded ||
+  (profile.onboarding_step.profile_complete &&
+    profile.onboarding_step.workspace_create &&
+    profile.onboarding_step.workspace_invite &&
+    profile.onboarding_step.workspace_join);
+
+/**
+ * What AuthenticationWrapper does about the landing: nothing, where the page does not land the account; wait for the
+ * caller's workspaces; say nerve cannot be reached, with a retry; or go to the landing.
+ */
+export type Landing =
+  | { kind: "none" }
+  | { kind: "loading" }
+  | { kind: "unavailable"; retry: () => void }
+  | { kind: "go"; to: string };
+
+/**
+ * The landing of a signed-in account (M3 design 3.14), the whole decision: an onboarded account that the sign-in or
+ * sign-up page, or the onboarding page, sends on without a valid next_path goes where its workspaces decide, the one
+ * it opened last first (landingPath). The caller's workspaces are fetched, for the session, only then.
+ */
+export function useLanding(pageType: EPageTypes, validNextPath: string | undefined): Landing {
+  const { data: profile } = useUserProfile();
+  const { workspaces, fetchWorkspaces } = useWorkspace();
+  const lands =
+    profile !== undefined &&
+    isOnboarded(profile) &&
+    !validNextPath &&
+    (pageType === EPageTypes.NON_AUTHENTICATED || pageType === EPageTypes.ONBOARDING);
+  const listed = useSessionSWR(lands ? ["WORKSPACES"] : null, () => fetchWorkspaces(), {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  });
+  if (!lands) return { kind: "none" };
+  if (listed.error) return { kind: "unavailable", retry: () => void listed.mutate() };
+  if (!workspaces) return { kind: "loading" };
+  return { kind: "go", to: landingPath(workspaces, profile.last_workspace_id) };
+}
+````
+
+`web/apps/web/core/lib/wrappers/authentication-wrapper.tsx`（修改，10 处）：
+
+````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
+// nerve imports
+import type { Profile } from "@nerve/api-client";
+````
+````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
+// nerve imports
 ````
 ````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
 import { useSession } from "@/lib/auth/use-session";
 ````
 ````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
 import { useSession } from "@/lib/auth/use-session";
-import { landingPath } from "@/lib/landing";
+import { isOnboarded, useLanding } from "@/lib/use-landing";
+````
+````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
+};
+
+const isOnboarded = (profile: Profile) =>
+  profile.is_onboarded ||
+  (profile.onboarding_step.profile_complete &&
+    profile.onboarding_step.workspace_create &&
+    profile.onboarding_step.workspace_invite &&
+    profile.onboarding_step.workspace_join);
+````
+````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
+};
 ````
 ````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
  * to a valid next_path, else to /onboarding until onboarded, else to /create-workspace. While nerve cannot
@@ -3663,45 +3928,40 @@ import { landingPath } from "@/lib/landing";
 ````
 ````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
  * to a valid next_path, else to /onboarding until onboarded, else to the landing (M3 design 3.14), as from
- * the onboarding page once onboarded. While nerve cannot be reached the session is kept, and the page says so
- * instead of moving.
+ * the onboarding page once onboarded: useLanding decides it, and the wrapper renders what it says. While nerve
+ * cannot be reached the session is kept, and the page says so instead of moving.
 ````
 ````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
   const { data: currentProfile } = useUserProfile();
 ````
 ````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
   const { data: currentProfile } = useUserProfile();
-  const { workspaces, fetchWorkspaces } = useWorkspace();
   // derived values
   const validNextPath = nextPath && isValidNextPath(nextPath) ? nextPath : undefined;
   const onboarded = currentProfile !== undefined && isOnboarded(currentProfile);
-  // An onboarded account that this page sends on without a next_path lands where its workspaces decide (3.14).
-  const landing =
-    onboarded && !validNextPath && (pageType === EPageTypes.NON_AUTHENTICATED || pageType === EPageTypes.ONBOARDING);
 ````
 ````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
   // renders again for the new session, with its new stores.
-  const { error, mutate } = useSessionSWR(["CURRENT_USER"], () => fetchCurrentUser(), {
 ````
 ````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
   // renders again for the new session, with its new stores. The workspaces are fetched the same way, when the
-  // landing needs them.
-  const { error, mutate } = useSessionSWR(["CURRENT_USER"], () => fetchCurrentUser(), {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
+  // landing needs them (useLanding).
+````
+````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
   });
-  const listed = useSessionSWR(landing ? ["WORKSPACES"] : null, () => fetchWorkspaces(), {
+````
+````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
+  });
+  const landing = useLanding(pageType, validNextPath);
 ````
 ````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
   const validNextPath = nextPath && isValidNextPath(nextPath) ? nextPath : undefined;
   const onboarded = isOnboarded(currentProfile);
 ````
 ````new web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
-  if (landing) {
-    if (listed.error) return <SessionUnavailable autoRetry={false} onRetry={() => void listed.mutate()} />;
-    if (!workspaces) return <Loading />;
-    return <Navigate to={landingPath(workspaces, currentProfile.last_workspace_id)} replace />;
-  }
+  if (landing.kind === "unavailable") return <SessionUnavailable autoRetry={false} onRetry={landing.retry} />;
+  if (landing.kind === "loading") return <Loading />;
+  if (landing.kind === "go") return <Navigate to={landing.to} replace />;
 ````
 ````old web/apps/web/core/lib/wrappers/authentication-wrapper.tsx
       return <Navigate to={validNextPath ?? (onboarded ? "/create-workspace" : "/onboarding")} replace />;
@@ -4576,15 +4836,16 @@ Expected: 70 个全部通过（A3、A10 的落点；W1、W10 建工作区之后�
 - [ ] **Step 7: 提交**
 
 ```bash
-git add e2e/stories/identity/a3-sign-in.spec.ts server/internal/modules/workspace/domain/reserved_slugs.txt tools/keywords.json web/apps/web/app/routes/navigation.test.ts web/apps/web/core/components/onboarding/steps/workspace/create.tsx web/apps/web/core/components/settings/mobile/nav.tsx web/apps/web/core/components/workspace/create-workspace-form.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/hooks/store/user/index.ts web/apps/web/core/hooks/store/user/user-user-settings.ts web/apps/web/core/lib/landing.test.ts web/apps/web/core/lib/landing.ts web/apps/web/core/lib/wrappers/authentication-wrapper.tsx web/apps/web/core/services/user.service.ts web/apps/web/core/services/workspace.service.ts web/apps/web/core/services/workspace/workspaces.service.ts web/apps/web/core/store/theme.store.ts web/apps/web/core/store/user/index.ts web/apps/web/core/store/user/permissions.store.ts web/apps/web/core/store/user/settings.store.ts web/apps/web/core/store/workspace/index.test.ts web/apps/web/core/store/workspace/index.ts web/packages/constants/src/navigation.test.ts web/packages/constants/src/workspace.ts web/packages/types/src/users.ts
+git add e2e/stories/identity/a3-sign-in.spec.ts server/internal/modules/workspace/domain/reserved_slugs.txt tools/keywords.json web/apps/web/app/routes/navigation.test.ts web/apps/web/core/components/onboarding/steps/workspace/create.tsx web/apps/web/core/components/settings/mobile/nav.tsx web/apps/web/core/components/workspace/create-workspace-form.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/hooks/store/user/index.ts web/apps/web/core/hooks/store/user/user-user-settings.ts web/apps/web/core/lib/fake-session-swr.ts web/apps/web/core/lib/landing.test.ts web/apps/web/core/lib/landing.ts web/apps/web/core/lib/use-landing.test.ts web/apps/web/core/lib/use-landing.ts web/apps/web/core/lib/wrappers/authentication-wrapper.tsx web/apps/web/core/services/user.service.ts web/apps/web/core/services/workspace.service.ts web/apps/web/core/services/workspace/workspaces.service.ts web/apps/web/core/store/theme.store.ts web/apps/web/core/store/user/index.ts web/apps/web/core/store/user/permissions.store.ts web/apps/web/core/store/user/settings.store.ts web/apps/web/core/store/workspace/index.test.ts web/apps/web/core/store/workspace/index.ts web/packages/constants/src/navigation.test.ts web/packages/constants/src/workspace.ts web/packages/types/src/users.ts
 ```
 ```bash
 git commit -m "feat(M3/P8a): the landing comes from the caller's workspaces; one reserved list
 
 An onboarded account with no page asked for lands on the workspace it
 opened last while that is still one of its own, else on the one created
-first, else on /create-workspace: landingPath computes it from the list
-the authentication wrapper fetches by the session. The user settings
+first, else on /create-workspace: useLanding makes the whole decision,
+fetching the list by the session, landingPath computes the address, and
+the authentication wrapper renders what useLanding says. The user settings
 go, with the four awaits of them; the settings' mobile navigation state
 moves to the theme store. The forms ask nerve whether a slug is free,
 RESTRICTED_URLS goes, and a vitest keeps the server's reserved list
@@ -4594,7 +4855,7 @@ goes through the workspaces store.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
@@ -4604,8 +4865,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `t5-landing-no-last` | 落点不看上次的工作区 | `landing.test.ts` | vitest |
 | `t5-landing-first-listed` | 落点取列表的第一个，不是最早建的 | `landing.test.ts` | vitest |
 | `t5-landing-none` | 没有工作区时落点是根路径 | `landing.test.ts`、故事 A3 | vitest；端到端 |
-| `t5-auth-m2-landing` | 包装层照 M2 把完成引导的账户一律送到 `/create-workspace` | 本 Phase 没有（P9 的 W2 页面版本（`watchPage` 断言落点）） | 存活 |
+| `t5-auth-m2-landing` | 落点照 M2 把完成引导的账户一律送到 `/create-workspace` | `use-landing.test.ts` | vitest |
 | `t5-auth-drops` | 落点的 fetcher 丢掉 store 的 Promise | `tsc` | 静态 |
+| `t5-auth-no-hint` | 落点不看账户上次打开的工作区 | `use-landing.test.ts` | vitest |
+| `t5-auth-onboarding-page` | 引导页上已完成引导的账户不再被送去落点 | `use-landing.test.ts` | vitest |
+| `t5-auth-list-error` | nerve 给不出列表时落点一直停在加载 | `use-landing.test.ts` | vitest |
+| `t5-auth-next-path` | 带合法 `next_path` 的账户也被送去落点 | `use-landing.test.ts` | vitest |
+| `t5-auth-no-profile` | 资料还没到就送去落点 | `use-landing.test.ts` | vitest |
+| `t5-auth-still-onboarding` | 仍在引导的账户也被送去落点 | `use-landing.test.ts` | vitest |
+| `t5-auth-any-page` | 任何页面都送去落点，不只登录页和引导页 | `use-landing.test.ts` | vitest |
 | `t5-store-leave-stays` | 离开的工作区留在列表里 | `index.test.ts` | vitest |
 | `t5-store-leave-unqueued` | 离开不等待前一个修改 | `index.test.ts` | vitest |
 | `t5-reserved-route-added` | 加一个顶层页面，保留名单没有它的名字 | `navigation.test.ts` | vitest |
@@ -4615,7 +4883,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `t5-settings-back` | 用户设置的取数回到 user service | 关键词守卫 | 静态 |
 | `t5-slug-old` | slug 的检查又发往 Plane 的地址 | 关键词守卫 | 静态 |
 | `t5-leave-old` | 离开又发往 Plane 的地址 | 关键词守卫 | 静态 |
-| `t5-slug-ignored` | 创建表单不管 nerve 对 slug 的回答都创建 | oxlint 的上限 | 静态 |
+| `t5-slug-ignored` | 创建表单不管 nerve 对 slug 的回答都创建 | oxlint（`check:lint`） | 静态 |
 | `t5-slug-unread` | service 不读 nerve 的 problem：答不出的 slug 检查给出空，不失败 | `index.test.ts` | vitest |
 | `t5-leave-unread` | service 不读 nerve 的 problem：被拒绝的离开当作成功 | `index.test.ts` | vitest |
 
@@ -4624,7 +4892,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 6: 权限 store 的工作区一半；工作区包装层取列表
 
 **Files:**
-- Create: `web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`、`web/apps/web/core/lib/fake-session-swr.ts`、`web/apps/web/core/store/user/permissions.store.test.ts`
+- Create: `web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`、`web/apps/web/core/store/user/permissions.store.test.ts`
 - Modify: `tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/core/components/workspace/invite-modal/fields.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/apps/web/core/services/workspace.service.ts`、`web/apps/web/core/store/issue/workspace-draft/issue.store.ts`、`web/apps/web/core/store/user/permissions.store.ts`、`web/apps/web/package.json`、`web/packages/constants/src/fetch-keys.ts`、`web/packages/types/src/workspace.ts`
 
 **Interfaces:**
@@ -4633,7 +4901,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - 读调用者角色的使用方：`invite-modal/fields.tsx`、`invitations-list-item.tsx` 的 `workspaceInfoBySlug(slug)?.role` 改为 `getWorkspaceRoleByWorkspaceSlug(slug)`，原来的 `as` 随之消失。12 个页面（工作区设置的布局、10 个设置页、个人主页的页头）原来以 `workspaceUserInfo && …` 守着无权限的界面（页头是 `if (!workspaceUserInfo) return null`）：`workspaceUserInfo` 是一个对象，恒为真，这一层删去，行为不变。`workspace-draft/issue.store.ts` 往 `workspaceUserInfo` 写草稿数的一段（没有读者）删除。
   - `core/layouts/auth-layout/use-workspace-fetch.ts`：`useWorkspaceFetch(): SWRResponse<Workspace[] | undefined>`：`useSessionSWR(["WORKSPACES"], () => fetchWorkspaces(), { revalidateIfStale: false, revalidateOnFocus: false, shouldRetryOnError: false })`。Task 8、10 在这里加上成员和显示设置。
   - `WorkspaceAuthWrapper`：调用 `useWorkspaceFetch()`；`listed.error` 时显示 `SessionUnavailable`（按钮重取）；列表未到时加载中；路由的 slug 不在调用者的列表中时显示"找不到工作区"（不存在与不是成员同一个界面，8.3），Plane 的"Not Authorized"分支随 `workspaceInfoBySlug` 删除。项目一侧的取数（项目角色、项目列表、工作区的状态）不变，属于 P8b。
-  - `core/lib/fake-session-swr.ts`：测试取数的 hook 时用 `vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"))` 代替 `useSessionSWR`：`handed` 记下每次交给它的取数、fetcher 和配置。
+- Consumes：Task 5 的 `core/lib/fake-session-swr.ts`（`use-workspace-fetch.test.ts` 用它代替 `useSessionSWR`）。
 - Adds：`plane-workspace-urls` 加 `workspace-members/me`；不命中样例加 `project-members/me`（P8b）。
 
 **Tests:**（vitest）
@@ -5179,37 +5447,6 @@ import { useWorkspaceFetch } from "./use-workspace-fetch";
 
 ````
 
-`web/apps/web/core/lib/fake-session-swr.ts`（新文件，26 行）：
-
-````file web/apps/web/core/lib/fake-session-swr.ts
-/**
- * Copyright (c) 2026-present OpenNerve
- * SPDX-License-Identifier: AGPL-3.0-only
- */
-
-// A stand-in for use-session-swr.ts, for the tests of the hooks that make a page's fetches (M3 design 7.1): a test
-// file mocks that module with this one, vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr")), and
-// reads what its hook handed over. The hooks then run as plain functions, outside React. How a fetch is keyed is
-// use-session-swr.test.ts.
-
-import type { SessionFetch } from "./use-session-swr";
-
-/** What a hook handed useSessionSWR: the fetch, and the fetcher of its arguments. */
-export type HandedFetch = [
-  fetch: SessionFetch | null,
-  fetcher: (...args: string[]) => Promise<unknown>,
-  config?: unknown,
-];
-
-/** Every fetch handed over so far, in order; a test empties it before each case. */
-export const handed: HandedFetch[] = [];
-
-export function useSessionSWR(...call: HandedFetch): object {
-  handed.push(call);
-  return {};
-}
-````
-
 - [ ] **Step 3: 读角色的使用方**
 
 `web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`（修改，2 处）：
@@ -5574,7 +5811,7 @@ Expected: 70 个全部通过（工作区的页面现在能显示：W1、W3、W10
 - [ ] **Step 6: 提交**
 
 ```bash
-git add tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/layout.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx' web/apps/web/core/components/workspace/invite-modal/fields.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx web/apps/web/core/lib/fake-session-swr.ts web/apps/web/core/services/workspace.service.ts web/apps/web/core/store/issue/workspace-draft/issue.store.ts web/apps/web/core/store/user/permissions.store.test.ts web/apps/web/core/store/user/permissions.store.ts web/apps/web/package.json web/packages/constants/src/fetch-keys.ts web/packages/types/src/workspace.ts
+git add tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/layout.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx' web/apps/web/core/components/workspace/invite-modal/fields.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx web/apps/web/core/services/workspace.service.ts web/apps/web/core/store/issue/workspace-draft/issue.store.ts web/apps/web/core/store/user/permissions.store.test.ts web/apps/web/core/store/user/permissions.store.ts web/apps/web/package.json web/packages/constants/src/fetch-keys.ts web/packages/types/src/workspace.ts
 ```
 ```bash
 git commit -m "feat(M3/P8a): the caller's role in a workspace is Workspace.role; the wrapper fetches the list
@@ -5591,7 +5828,7 @@ workspaceUserInfo, an object, which never failed.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
@@ -5610,7 +5847,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/services/workspace/workspace-members.service.ts`、`web/apps/web/core/store/member/workspace/fake-members.ts`、`web/apps/web/core/store/member/workspace/workspace-member.store.test.ts`
-- Modify: `tools/keywords.json`、`web/apps/web/core/components/modules/links/list-item.tsx`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/profile/use-profile-member.ts`、`web/apps/web/core/components/project/add-project-members-modal.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/projects/settings/useProjectColumns.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/notification-card/content.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/apps/web/core/services/workspace.service.ts`、`web/apps/web/core/store/member/index.ts`、`web/apps/web/core/store/member/project/project-member.store.ts`、`web/apps/web/core/store/member/utils.ts`、`web/apps/web/core/store/member/workspace/workspace-member-filters.store.ts`、`web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/apps/web/core/store/root.store.ts`、`web/apps/web/package.json`、`web/packages/types/src/users.ts`、`web/packages/types/src/workspace.ts`、`web/packages/utils/src/file.ts`
+- Modify: `tools/keywords.json`、`web/apps/web/core/components/modules/links/list-item.tsx`、`web/apps/web/core/components/navigation/tab-navigation-root.tsx`、`web/apps/web/core/components/navigation/use-navigation-items.ts`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/profile/use-profile-member.ts`、`web/apps/web/core/components/project/add-project-members-modal.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/projects/settings/useProjectColumns.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/notification-card/content.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/apps/web/core/services/workspace.service.ts`、`web/apps/web/core/store/member/index.ts`、`web/apps/web/core/store/member/project/project-member.store.ts`、`web/apps/web/core/store/member/utils.ts`、`web/apps/web/core/store/member/workspace/workspace-member-filters.store.ts`、`web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/apps/web/core/store/root.store.ts`、`web/apps/web/package.json`、`web/packages/types/src/users.ts`、`web/packages/types/src/workspace.ts`、`web/packages/typescript-config/react-router.json`、`web/packages/utils/src/file.ts`
 - 机械步骤（Step 1）改到：`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/dropdowns/member/member-options.tsx`、`web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx`、`web/apps/web/core/store/issue/root.store.ts`、`web/apps/web/core/store/member/project/project-member-filters.store.ts`、`web/apps/web/core/store/notifications/notification.ts`、`web/packages/types/src/project/projects.ts`、`web/packages/types/src/search.ts`、`web/packages/types/src/workspace-notifications.ts`、`web/packages/utils/src/rich-filters/factories/configs/properties/shared.ts`
 
 **Interfaces:**
@@ -5622,12 +5859,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `MemberRootStore(rootStore, api)`：没有读者的 `getMemberIds` 删除；`RootStore` 传这一代的客户端。
   - 旧 `WorkspaceService` 删去 `fetchWorkspaceMembers`、`updateWorkspaceMember`、`deleteWorkspaceMember`。
   - 测试的共用部分：`core/store/member/workspace/fake-members.ts` 的 `membershipOf(name, fields?)`（`acme` 的一条成员关系，名字给出账户和资料，默认是在职的成员）、`memberStore(client?)`（地址指向 `acme` 的一个标签页的成员 store 和共用的用户表；`client` 从假 nerve 建客户端，默认 `nerve.client()`，会话已换的测试传 `replacedSessionClient()`）。
-  - 本 Task 唯一新的 oxlint 抑制：`member/utils.ts` 排序的是副本（`[...members].sort`），web 应用的 `lib` 是 ES2022，没有 `toSorted`（spec 第 3 节）。
+  - web 应用的 TypeScript `lib` 改为 ES2023（`web/packages/typescript-config/react-router.json`，只有 `web/apps/web/tsconfig.json` 继承它；`target` 不变；裁定 A3）：`member/utils.ts` 用 `members.toSorted(…)` 排序，不改 store 交出的数组；导航的两处排序（`use-navigation-items.ts`、`tab-navigation-root.tsx`，排的都是 `filter` 新给的数组）同样改为 `toSorted`，它们的 `oxlint-disable-next-line unicorn/no-array-sort` 删除。本 Task 没有新的 oxlint 抑制。
 - Adds：`plane-workspace-urls` 的模式扩到 `/api/workspaces/${…}/members/` 下的全部地址；不命中样例加项目成员的地址（P8b）和新的成员地址。
 
 **Tests:**（vitest）`core/store/member/workspace/workspace-member.store.test.ts`：
 - `WorkspaceMemberStore, the members`：`keeps a workspace's memberships as nerve lists them, ended ones too, and shares the members' profiles`；`lists the caller first, then the others by display name`；`fails when nerve cannot list them, keeping the members it had`；`gives nothing, and does not fail, when the session changes as it fetches`。
-- `WorkspaceMemberStore, the changes`：`changes a member's role to nerve's answer, once nerve gives it`；`keeps a removed member's membership, ended, as nerve lists it`；`fails, changing nothing, when nerve refuses $change`；`fails, asking nerve nothing, for $change of a member it has not listed`；`sends each change once nerve has answered the one before it, refused or not`。
+- `WorkspaceMemberStore, the changes`：`changes a member's role to nerve's answer, once nerve gives it`；`keeps a removed member's membership, ended, as nerve lists it`；`fails, changing nothing, when nerve refuses $change`；`fails, asking nerve nothing, for $change of a member it has not listed`；`sends each change once nerve has answered the one before it, refused or not`；`fetches the members while a change is out: a fetch does not wait for it`（Task 4 的 `fetchedWhileChangeIsOut`）。
 
 - [ ] **Step 1: 机械步骤：`IUserLite` 换成 `MemberUser`，issue 一侧的 `IWorkspaceMembership` 换成 `WorkspaceMember`**
 
@@ -5695,7 +5932,38 @@ Expected: 每个文件的散列和行数与下表相同：
 | `a5a5af0b7a295ebedfe2dc09ff10177fe8f25c836be7b2e105a6a2f8c1f15f86` | 106 | `web/packages/types/src/workspace-notifications.ts` |
 | `7e7eac28e83ed9199f4e0e6545bfa6106ccc810dbe18263674f2af18403ccb67` | 111 | `web/packages/types/src/project/projects.ts` |
 
-- [ ] **Step 2: 成员的 service 和 store**
+- [ ] **Step 2: `lib` 改为 ES2023，导航的两处排序改为 `toSorted`**
+
+`web/apps/web/core/components/navigation/tab-navigation-root.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/navigation/tab-navigation-root.tsx
+    // oxlint-disable-next-line unicorn/no-array-sort
+    .sort((a: TNavigationItem, b: TNavigationItem) => a.sortOrder - b.sortOrder);
+````
+````new web/apps/web/core/components/navigation/tab-navigation-root.tsx
+    .toSorted((a: TNavigationItem, b: TNavigationItem) => a.sortOrder - b.sortOrder);
+````
+
+`web/apps/web/core/components/navigation/use-navigation-items.ts`（修改，1 处）：
+
+````old web/apps/web/core/components/navigation/use-navigation-items.ts
+    // oxlint-disable-next-line unicorn/no-array-sort
+    return filteredItems.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+````
+````new web/apps/web/core/components/navigation/use-navigation-items.ts
+    return filteredItems.toSorted((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+````
+
+`web/packages/typescript-config/react-router.json`（修改，1 处）：
+
+````old web/packages/typescript-config/react-router.json
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+````
+````new web/packages/typescript-config/react-router.json
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+````
+
+- [ ] **Step 3: 成员的 service 和 store**
 
 `web/apps/web/core/services/workspace.service.ts`（修改，3 处）：
 
@@ -5926,14 +6194,10 @@ const getMemberSortKey = (
   getJoinedAt: (member: T) => string | null,
 ````
 ````old web/apps/web/core/store/member/utils.ts
-  const { field, direction } = parseOrderKey(orderBy);
-
+  return [...members].sort((a, b) => {
 ````
 ````new web/apps/web/core/store/member/utils.ts
-  const { field, direction } = parseOrderKey(orderBy);
-
-  // a copy is sorted: the web app's library (ES2022) has no toSorted
-  // oxlint-disable-next-line unicorn/no-array-sort
+  return members.toSorted((a, b) => {
 ````
 ````old web/apps/web/core/store/member/utils.ts
     const aValue = getMemberSortKey(aMemberDetails, field, aRole);
@@ -6064,7 +6328,7 @@ import { sortWorkspaceMembers } from "../utils";
       getMemberKey: (member: WorkspaceMember) => string
 ````
 
-`web/apps/web/core/store/member/workspace/workspace-member.store.test.ts`（新文件，189 行）：
+`web/apps/web/core/store/member/workspace/workspace-member.store.test.ts`（新文件，201 行）：
 
 ````file web/apps/web/core/store/member/workspace/workspace-member.store.test.ts
 /**
@@ -6079,7 +6343,7 @@ import { ApiError } from "@/lib/api-error";
 import type { FakeNerve } from "@/lib/auth/fake-nerve";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
-import { inTurn } from "@/store/fake-queue";
+import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
 import { memberStore, membershipOf } from "@/store/member/workspace/fake-members";
 import type { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
 
@@ -6254,6 +6518,18 @@ describe("WorkspaceMemberStore, the changes", () => {
     expect(promoted.error).toBeInstanceOf(ApiError);
     expect(changed.value).toEqual(demoted);
     expect(store.workspaceMemberMap.acme?.["u-bob"]).toEqual({ ...demoted, is_active: false });
+  });
+
+  it("fetches the members while a change is out: a fetch does not wait for it", async () => {
+    const { nerve, store } = await loaded();
+    await fetchedWhileChangeIsOut(
+      nerve,
+      () => store.updateMember("acme", "u-bob", { role: 5 }),
+      () => store.fetchWorkspaceMembers("acme"),
+      ["GET", MEMBERS],
+      json(200, { data: [ann, bob] })
+    );
+    expect(store.workspaceMemberMap).toEqual({ acme: { "u-ann": ann, "u-bob": bob } });
   });
 });
 ````
@@ -6571,7 +6847,7 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
     this.memberRoot = new MemberRootStore(this, api);
 ````
 
-- [ ] **Step 3: `MemberUser`、`WorkspaceMember` 的使用方**
+- [ ] **Step 4: `MemberUser`、`WorkspaceMember` 的使用方**
 
 `web/apps/web/core/components/modules/links/list-item.tsx`（修改，1 处）：
 
@@ -6963,7 +7239,7 @@ export const getFileURL = (path: string): string | undefined => path || undefine
 export const getFileURL = (path: string | null): string | undefined => path || undefined;
 ````
 
-- [ ] **Step 4: 上限、关键词规则**
+- [ ] **Step 5: 上限、关键词规则**
 
 `tools/keywords.json`（修改，3 处）：
 
@@ -6999,7 +7275,7 @@ export const getFileURL = (path: string | null): string | undefined => path || u
     "check:lint": "node ../../../tools/lint-cap.mjs 445",
 ````
 
-- [ ] **Step 5: 运行检查**
+- [ ] **Step 6: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则，没有命中；web 的 oxlint 445 条，等于新的上限。
@@ -7013,10 +7289,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 70 个全部通过（W4 的成员接口版本照旧）。
 
-- [ ] **Step 6: 提交**
+- [ ] **Step 7: 提交**
 
 ```bash
-git add tools/keywords.json web/apps/web/core/components/dropdowns/member/base.tsx web/apps/web/core/components/dropdowns/member/member-options.tsx web/apps/web/core/components/modules/links/list-item.tsx web/apps/web/core/components/profile/sidebar.tsx web/apps/web/core/components/profile/use-profile-member.ts web/apps/web/core/components/project/add-project-members-modal.tsx web/apps/web/core/components/project/confirm-project-member-remove.tsx web/apps/web/core/components/project/project-settings-member-defaults.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/projects/settings/useProjectColumns.tsx web/apps/web/core/components/workspace-notifications/sidebar/notification-card/content.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/components/workspace/settings/useMemberColumns.tsx web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx web/apps/web/core/services/workspace.service.ts web/apps/web/core/services/workspace/workspace-members.service.ts web/apps/web/core/store/issue/root.store.ts web/apps/web/core/store/member/index.ts web/apps/web/core/store/member/project/project-member-filters.store.ts web/apps/web/core/store/member/project/project-member.store.ts web/apps/web/core/store/member/utils.ts web/apps/web/core/store/member/workspace/fake-members.ts web/apps/web/core/store/member/workspace/workspace-member-filters.store.ts web/apps/web/core/store/member/workspace/workspace-member.store.test.ts web/apps/web/core/store/member/workspace/workspace-member.store.ts web/apps/web/core/store/notifications/notification.ts web/apps/web/core/store/root.store.ts web/apps/web/package.json web/packages/types/src/project/projects.ts web/packages/types/src/search.ts web/packages/types/src/users.ts web/packages/types/src/workspace-notifications.ts web/packages/types/src/workspace.ts web/packages/utils/src/file.ts web/packages/utils/src/rich-filters/factories/configs/properties/shared.ts
+git add tools/keywords.json web/apps/web/core/components/dropdowns/member/base.tsx web/apps/web/core/components/dropdowns/member/member-options.tsx web/apps/web/core/components/modules/links/list-item.tsx web/apps/web/core/components/navigation/tab-navigation-root.tsx web/apps/web/core/components/navigation/use-navigation-items.ts web/apps/web/core/components/profile/sidebar.tsx web/apps/web/core/components/profile/use-profile-member.ts web/apps/web/core/components/project/add-project-members-modal.tsx web/apps/web/core/components/project/confirm-project-member-remove.tsx web/apps/web/core/components/project/project-settings-member-defaults.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/projects/settings/useProjectColumns.tsx web/apps/web/core/components/workspace-notifications/sidebar/notification-card/content.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/components/workspace/settings/useMemberColumns.tsx web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx web/apps/web/core/services/workspace.service.ts web/apps/web/core/services/workspace/workspace-members.service.ts web/apps/web/core/store/issue/root.store.ts web/apps/web/core/store/member/index.ts web/apps/web/core/store/member/project/project-member-filters.store.ts web/apps/web/core/store/member/project/project-member.store.ts web/apps/web/core/store/member/utils.ts web/apps/web/core/store/member/workspace/fake-members.ts web/apps/web/core/store/member/workspace/workspace-member-filters.store.ts web/apps/web/core/store/member/workspace/workspace-member.store.test.ts web/apps/web/core/store/member/workspace/workspace-member.store.ts web/apps/web/core/store/notifications/notification.ts web/apps/web/core/store/root.store.ts web/apps/web/package.json web/packages/types/src/project/projects.ts web/packages/types/src/search.ts web/packages/types/src/users.ts web/packages/types/src/workspace-notifications.ts web/packages/types/src/workspace.ts web/packages/typescript-config/react-router.json web/packages/utils/src/file.ts web/packages/utils/src/rich-filters/factories/configs/properties/shared.ts
 ```
 ```bash
 git commit -m "feat(M3/P8a): a workspace's members come from /api/v0; MemberUser replaces IUserLite
@@ -7028,19 +7304,20 @@ and removals go one at a time, take nerve's answer, and ask nothing for
 a member the store has not listed. MemberUser replaces IUserLite in
 every consumer, eighteen files by a mechanical rename: the nullable
 avatar and email read as null, and a member joined when his membership
-began.
+began. The web app's TypeScript library is ES2023, so the members' sort
+and the two navigation sorts are toSorted, with no suppression.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
 | `t7-members-unqueued` | 成员的修改不互相等待 | `workspace-member.store.test.ts` | vitest |
 | `t7-members-merged` | 取数把成员关系并进 store 原有的，不是换成 nerve 给的列表 | `workspace-member.store.test.ts` | vitest |
 | `t7-members-no-users` | 成员的公开资料不进各 store 共用的用户表 | `workspace-member.store.test.ts` | vitest |
-| `t7-members-session` | 成员加载时换了会话，取数失败 | oxlint 的上限、`workspace-member.store.test.ts` | 静态；vitest |
+| `t7-members-session` | 成员加载时换了会话，取数失败 | oxlint（`check:lint`）、`workspace-member.store.test.ts` | 静态；vitest |
 | `t7-role-early` | 成员的角色在 nerve 应答之前就改了 | `workspace-member.store.test.ts` | vitest |
 | `t7-remove-kept` | 移出的成员在 store 里仍是有效成员 | `workspace-member.store.test.ts` | vitest |
 | `t7-remove-early` | 成员在 nerve 应答之前就移出了 | `workspace-member.store.test.ts` | vitest |
@@ -7048,6 +7325,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `t7-caller-not-first` | 成员只按名字排列，调用者混在其中 | `workspace-member.store.test.ts` | vitest |
 | `t7-members-back` | 旧 service 又列出工作区的成员 | 关键词守卫 | 静态 |
 | `t7-null-email` | 成员的 `email`（调用者无权看时是 `null`）原样交给图片的 `alt` | `tsc` | 静态 |
+| `t7-members-fetch-queued` | 成员的取数等待正在发出的修改 | `workspace-member.store.test.ts` | vitest |
+| `t7-sort-shared` | 成员排序就地排 store 交出的数组（`sort`，不是 `toSorted`） | oxlint（`check:lint`） | 静态 |
 | `t7-members-swallows` | 工作区成员的列表取不到时给出 `undefined`，不失败 | `workspace-member.store.test.ts` | vitest |
 
 ---
@@ -7056,21 +7335,25 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/workspace/settings/use-members-settings-fetch.test.ts`、`web/apps/web/core/components/workspace/settings/use-members-settings-fetch.ts`、`web/apps/web/core/services/workspace/workspace-invitations.service.ts`、`web/apps/web/core/store/member/workspace/workspace-invitations.test.ts`
-- Modify: `tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/core/components/onboarding/steps/team/root.tsx`、`web/apps/web/core/components/profile/use-profile-member.ts`、`web/apps/web/core/components/workspace/members/invite-modal.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list.tsx`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/apps/web/core/services/workspace.service.ts`、`web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/apps/web/package.json`、`web/packages/constants/src/fetch-keys.ts`、`web/packages/types/src/workspace.ts`
+- Modify: `.oxlintrc.json`、`tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/core/components/onboarding/steps/team/root.tsx`、`web/apps/web/core/components/profile/use-profile-member.ts`、`web/apps/web/core/components/workspace/members/invite-modal.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list.tsx`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/apps/web/core/services/workspace.service.ts`、`web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/apps/web/package.json`、`web/packages/constants/src/fetch-keys.ts`、`web/packages/types/src/workspace.ts`
 
 **Interfaces:**
 - Produces（spec 2.8；M3 设计 3.8、5.1、7.1、7.3；决策点 4）：
   - `core/services/workspace/workspace-invitations.service.ts`：`class WorkspaceInvitationsService { list(slug); create(slug, data: WorkspaceInvitationsCreate): Promise<WorkspaceInvitation[]>; update(invitationId, data: WorkspaceInvitationUpdate); delete(invitationId) }`。
   - `WorkspaceMemberStore` 的邀请：`workspaceMemberInvitations[slug]` 是 nerve 列给管理员的邀请（待接受的和已忽略的，最新的在前），每次取数整份换掉，只在 store 的类里，不在接口上（没有组件读它）；`fetchWorkspaceMemberInvitations(slug): Promise<WorkspaceInvitation[] | undefined>`（`SessionChangedError` 给出 `undefined`；被拒绝时原样失败，不留任何邀请）；`inviteMembersToWorkspace(slug, data: WorkspaceInvitationsCreate): Promise<WorkspaceInvitation[]>`（全部或全不，回答的新邀请放在已取的列表最前，没有取过时不建列表）、`updateMemberInvitation(slug, id, data: WorkspaceInvitationUpdate): Promise<WorkspaceInvitation>`（写入回答）、`deleteMemberInvitation(slug, id)`（移出列表）：都经同一个 `changes = oneAtATime()`，被拒绝时什么都不改。`IWorkspaceMemberInvitation`、`IWorkspaceBulkInviteFormData` 删除（7.2），旧 `WorkspaceService` 的四个邀请方法删除。
-  - `core/components/workspace/settings/use-members-settings-fetch.ts`：`useMembersSettingsFetch(workspaceSlug, isAdmin)`：`useSessionSWR(["WORKSPACE_MEMBERS", slug], …)` 给每个看得到这一页的人；`useSessionSWR(isAdmin ? ["WORKSPACE_INVITATIONS", slug] : null, …)` 只给工作区管理员（7.1；`members-list.tsx` 原来不分角色先取邀请）。成员页（`members/page.tsx`）用它，`members-list.tsx` 只显示。
-  - `useWorkspaceFetch(workspaceSlug, isMember)`（整个文件）：列表之外，`isMember` 为真（列表说明这是调用者的工作区）时才取它的成员（`["WORKSPACE_MEMBERS", slug]`，与成员页同一个键）；`WorkspaceAuthWrapper` 传 `currentWorkspace !== null`，它原来按 slug 取成员的 SWR 删除。
+  - `core/components/workspace/settings/use-members-settings-fetch.ts`：`useMembersSettingsFetch(workspaceSlug)`：`useSessionSWR(["WORKSPACE_MEMBERS", slug], …)` 给每个看得到这一页的人；`useSessionSWR(isAdmin ? ["WORKSPACE_INVITATIONS", slug] : null, …)` 只给工作区管理员（7.1；`members-list.tsx` 原来不分角色先取邀请）。`isAdmin` 由 hook 自己算出：`useWorkspace().getWorkspaceBySlug(slug)?.role === EUserWorkspaceRoles.ADMIN`，即调用者的工作区列表给出的角色（H1：条件不由调用方传入，写错的调用方不能绕过它）。`members-list.tsx` 调用 `useMembersSettingsFetch(workspaceSlug)`，它的 `isAdmin` prop 只决定显示。
+  - `useWorkspaceFetch(workspaceSlug)`（整个文件）：列表之外，列表说明这是调用者的工作区时（hook 自己算出 `isMember = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug) !== null`）才取它的成员（`["WORKSPACE_MEMBERS", slug]`，与成员页同一个键）；`WorkspaceAuthWrapper` 调用 `useWorkspaceFetch(workspaceSlug)`，它原来按 slug 取成员的 SWR 删除。
+  - 根目录 `.oxlintrc.json` 的 `overrides`（裁定 A6、L4；路径都从仓库根写起，oxlint 按根配置所在的目录匹配，从 `web/apps/web` 写起的路径什么都不匹配）：
+    - 会话的取数只经 `useSessionSWR`：`no-restricted-imports` 禁止从 `swr` 导入值（`allowTypeImports: true`，`use-workspace-fetch.ts` 的 `import type { SWRResponse }` 照旧），范围是工作区一侧的 store（`core/store/workspace/**`、`core/store/member/workspace/**`）、`core/components/workspace/settings/**`、`use-profile-member.ts`、`use-workspace-fetch.ts`、`core/lib/use-landing.ts` 和 `core/lib/wrappers/authentication-wrapper.tsx`（`core/lib/wrappers/` 按文件列，`instance-wrapper.tsx` 取公开的实例信息）。不在范围内的：`use-session-swr.ts` 本身、`fake-session-swr.ts`、唯一的例外 `use-invitation-preview.ts`（公开操作，键只有链接，Task 9），以及仍用 `useSWR` 取项目一侧的 `workspace-wrapper.tsx`、`project-wrapper.tsx`（P8b 把它们加进来，spec 附录 A.6）。
+    - P8a 的 M3 路径不用非空断言：`typescript/no-non-null-assertion` 为 `error`，范围是上面的 store 和组件，加上 `core/store/user/permissions.store.ts`、`core/services/workspace/**`、`use-workspace-fetch.ts` 和它的测试、`core/lib` 中 P8a 新写的 13 个文件（逐个列出；`core/lib/**` 不行：M2 的 `token-manager.tabs.test.ts` 有 25 处）。
+    - 这一步放在 Task 8，因为这里出现最后一个在范围内的文件（`use-members-settings-fetch.ts`、成员一侧的取数）；两条规则在同一个 `overrides` 数组里，各有自己的文件列表（`use-session-swr.ts` 在第二条的范围内、不在第一条的）。
   - 使用方：邀请弹窗（`invite-modal.tsx`）、新手引导的邀请一步（`team/root.tsx`）改调 `inviteMembersToWorkspace`，`invitations-list-item.tsx` 用 `WorkspaceInvitation`；个人主页的成员（`use-profile-member.ts`）改用会话的键取成员。
 - Adds：`plane-workspace-urls` 加工作区邀请的旧地址；不命中样例加新的邀请地址和项目邀请（P8b）。
 
 **Tests:**（vitest）
 - `core/store/member/workspace/workspace-invitations.test.ts`，`WorkspaceMemberStore, the invitations`：`keeps a workspace's invitations as nerve lists them to an admin, declined ones too`；`fails when nerve refuses the list, keeping none`；`gives nothing, and does not fail, when the session changes as it fetches`；`puts the new invitations first in the list it has, once nerve gives them, and in none it has not fetched`；`changes an invitation's role to nerve's answer, and takes a deleted one off the list`；`fails, changing nothing, when nerve refuses $change`；`sends each change once nerve has answered the one before it, refused or not`。
-- `use-members-settings-fetch.test.ts`（9.5 的成员页的取数条件）：`fetches an admin the members and the invitations`；`fetches a member or a guest the members alone`（W5）。
-- `use-workspace-fetch.test.ts`：`fetches the caller's workspaces and, in one of his, its members`；`fetches only the caller's workspaces where the address names none of his`（原来的 `fetches the caller's workspaces` 改成这两个）。
+- `use-members-settings-fetch.test.ts`（9.5 的成员页的取数条件；工作区 store 换成桩，`acme` 的角色是列表给的）：`fetches an admin the members and the invitations`；`it.each` 的 `fetches $who the members alone`（成员、访客、列表中没有这个工作区的调用者，3 行）（W5）。
+- `use-workspace-fetch.test.ts`（桩的列表只有 `acme`）：`fetches the caller's workspaces and, in one of his, its members`（`acme`）；`fetches only the caller's workspaces where the address names none of his`（`elsewhere`）（原来的 `fetches the caller's workspaces` 改成这两个）。
 
 - [ ] **Step 1: 邀请的 service 和 store**
 
@@ -7741,7 +8024,7 @@ import { useMembersSettingsFetch } from "./use-members-settings-fetch";
   );
 ````
 ````new web/apps/web/core/components/workspace/settings/members-list.tsx
-  useMembersSettingsFetch(workspaceSlug, isAdmin);
+  useMembersSettingsFetch(workspaceSlug);
 ````
 ````old web/apps/web/core/components/workspace/settings/members-list.tsx
   const memberDetails = searchedMemberIds
@@ -7767,7 +8050,7 @@ import { useMembersSettingsFetch } from "./use-members-settings-fetch";
         {searchedMemberIds?.length !== 0 && <WorkspaceMembersListItem memberDetails={memberDetails} />}
 ````
 
-`web/apps/web/core/components/workspace/settings/use-members-settings-fetch.test.ts`（新文件，45 行）：
+`web/apps/web/core/components/workspace/settings/use-members-settings-fetch.test.ts`（新文件，59 行）：
 
 ````file web/apps/web/core/components/workspace/settings/use-members-settings-fetch.test.ts
 /**
@@ -7776,18 +8059,25 @@ import { useMembersSettingsFetch } from "./use-members-settings-fetch";
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EUserWorkspaceRoles } from "@nerve/types";
 import { handed } from "@/lib/fake-session-swr";
 
 // The members settings fetch what the caller may read (M3 design 7.1, 9.5), with fake-session-swr.ts's stand-in for
-// useSessionSWR and a stand-in for the store.
+// useSessionSWR and stand-ins for the stores: the caller's role in acme is the one his workspaces list gives.
 
 vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"));
-const fetched = vi.hoisted((): { calls: string[] } => ({ calls: [] }));
+const state = vi.hoisted((): { calls: string[]; role: number | undefined } => ({ calls: [], role: undefined }));
+vi.mock("@/hooks/store/use-workspace", () => ({
+  useWorkspace: () => ({
+    getWorkspaceBySlug: (slug: string) =>
+      slug === "acme" && state.role !== undefined ? { slug, role: state.role } : null,
+  }),
+}));
 vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({
     workspace: {
-      fetchWorkspaceMembers: (slug: string) => Promise.resolve(fetched.calls.push(`members of ${slug}`)),
-      fetchWorkspaceMemberInvitations: (slug: string) => Promise.resolve(fetched.calls.push(`invitations of ${slug}`)),
+      fetchWorkspaceMembers: (slug: string) => Promise.resolve(state.calls.push(`members of ${slug}`)),
+      fetchWorkspaceMemberInvitations: (slug: string) => Promise.resolve(state.calls.push(`invitations of ${slug}`)),
     },
   }),
 }));
@@ -7796,28 +8086,35 @@ const { useMembersSettingsFetch } = await import("./use-members-settings-fetch")
 
 beforeEach(() => {
   handed.length = 0;
-  fetched.calls = [];
+  state.calls = [];
+  state.role = undefined;
 });
 
 describe("useMembersSettingsFetch", () => {
   it("fetches an admin the members and the invitations", async () => {
-    useMembersSettingsFetch("acme", true);
+    state.role = EUserWorkspaceRoles.ADMIN;
+    useMembersSettingsFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([
       ["WORKSPACE_MEMBERS", "acme"],
       ["WORKSPACE_INVITATIONS", "acme"],
     ]);
     await Promise.all(handed.map(([, fetcher]) => fetcher("acme")));
-    expect(fetched.calls).toEqual(["members of acme", "invitations of acme"]);
+    expect(state.calls).toEqual(["members of acme", "invitations of acme"]);
   });
 
-  it("fetches a member or a guest the members alone", () => {
-    useMembersSettingsFetch("acme", false);
+  it.each([
+    { who: "a member", role: EUserWorkspaceRoles.MEMBER },
+    { who: "a guest", role: EUserWorkspaceRoles.GUEST },
+    { who: "a caller whose list does not have the workspace", role: undefined },
+  ])("fetches $who the members alone", ({ role }) => {
+    state.role = role;
+    useMembersSettingsFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACE_MEMBERS", "acme"], null]);
   });
 });
 ````
 
-`web/apps/web/core/components/workspace/settings/use-members-settings-fetch.ts`（新文件，23 行）：
+`web/apps/web/core/components/workspace/settings/use-members-settings-fetch.ts`（新文件，28 行）：
 
 ````file web/apps/web/core/components/workspace/settings/use-members-settings-fetch.ts
 /**
@@ -7825,19 +8122,24 @@ describe("useMembersSettingsFetch", () => {
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { EUserWorkspaceRoles } from "@nerve/types";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
 
 /**
  * The fetches of a workspace's members settings (M3 design 7.1: a page fetches what its caller may read): the
  * members, for anyone the page is shown to; the invitations for an admin alone, as nerve shows them to no one else.
+ * The caller's role is the one his workspaces list gives (Workspace.role).
  */
-export function useMembersSettingsFetch(workspaceSlug: string | undefined, isAdmin: boolean): void {
+export function useMembersSettingsFetch(workspaceSlug: string | undefined): void {
+  const { getWorkspaceBySlug } = useWorkspace();
   const {
     workspace: { fetchWorkspaceMembers, fetchWorkspaceMemberInvitations },
   } = useMember();
+  const isAdmin = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug)?.role === EUserWorkspaceRoles.ADMIN;
   useSessionSWR(["WORKSPACE_MEMBERS", workspaceSlug], (slug) => fetchWorkspaceMembers(slug));
   useSessionSWR(isAdmin ? ["WORKSPACE_INVITATIONS", workspaceSlug] : null, (slug) =>
     fetchWorkspaceMemberInvitations(slug)
@@ -7851,13 +8153,14 @@ export function useMembersSettingsFetch(workspaceSlug: string | undefined, isAdm
 // useSessionSWR and a stand-in for the store.
 ````
 ````new web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts
-// useSessionSWR and stand-ins for the stores.
+// useSessionSWR and stand-ins for the stores: the caller's list has acme alone.
 ````
 ````old web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts
     fetchWorkspaces: () => Promise.resolve(fetched.calls.push("the workspaces")),
 ````
 ````new web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts
     fetchWorkspaces: () => Promise.resolve(fetched.calls.push("the workspaces")),
+    getWorkspaceBySlug: (slug: string) => (slug === "acme" ? { slug } : null),
   }),
 }));
 vi.mock("@/hooks/store/use-member", () => ({
@@ -7875,18 +8178,18 @@ vi.mock("@/hooks/store/use-member", () => ({
 ````
 ````new web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts
   it("fetches the caller's workspaces and, in one of his, its members", async () => {
-    useWorkspaceFetch("acme", true);
+    useWorkspaceFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"], ["WORKSPACE_MEMBERS", "acme"]]);
     await Promise.all(handed.map(([, fetcher]) => fetcher("acme")));
     expect(fetched.calls).toEqual(["the workspaces", "the members of acme"]);
   });
 
   it("fetches only the caller's workspaces where the address names none of his", () => {
-    useWorkspaceFetch("elsewhere", false);
+    useWorkspaceFetch("elsewhere");
     expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"], null]);
 ````
 
-`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`（整个文件，33 行）：
+`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`（整个文件，32 行）：
 
 ````whole web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts
 /**
@@ -7907,17 +8210,16 @@ const ONCE = { revalidateIfStale: false, revalidateOnFocus: false };
 
 /**
  * The workspace side of what a page of a workspace fetches as it mounts (M3 design 3.1, 7.1): the caller's
- * workspaces, which decide whether he may see the address's one; once it is one of his (isMember), its members.
- * Gives the list's response, whose failure the page shows.
+ * workspaces, which decide whether he may see the address's one; once his list has it, its members. Gives the
+ * list's response, whose failure the page shows.
  */
-export function useWorkspaceFetch(
-  workspaceSlug: string | undefined,
-  isMember: boolean
-): SWRResponse<Workspace[] | undefined> {
-  const { fetchWorkspaces } = useWorkspace();
+export function useWorkspaceFetch(workspaceSlug: string | undefined): SWRResponse<Workspace[] | undefined> {
+  const { fetchWorkspaces, getWorkspaceBySlug } = useWorkspace();
   const {
     workspace: { fetchWorkspaceMembers },
   } = useMember();
+  // the address's workspace is the caller's once his list has it
+  const isMember = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug) !== null;
   const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces(), { ...ONCE, shouldRetryOnError: false });
   useSessionSWR(isMember ? ["WORKSPACE_MEMBERS", workspaceSlug] : null, (slug) => fetchWorkspaceMembers(slug), ONCE);
   return listed;
@@ -7953,7 +8255,7 @@ import { useFavorite } from "@/hooks/store/use-favorite";
   const listed = useWorkspaceFetch();
 ````
 ````new web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx
-  const listed = useWorkspaceFetch(workspaceSlug, currentWorkspace !== null);
+  const listed = useWorkspaceFetch(workspaceSlug);
 ````
 ````old web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx
     workspaceSlug && currentWorkspace ? () => fetchPartialProjects(workspaceSlug) : null,
@@ -8070,7 +8372,75 @@ import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
       icon: LinkOutline,
 ````
 
-- [ ] **Step 4: 上限、关键词规则**
+- [ ] **Step 4: 取数和非空断言的静态检查**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+    ]
+  }
+````
+````new .oxlintrc.json
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "web/apps/web/core/store/workspace/**",
+        "web/apps/web/core/store/member/workspace/**",
+        "web/apps/web/core/components/workspace/settings/**",
+        "web/apps/web/core/components/profile/use-profile-member.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts",
+        "web/apps/web/core/lib/use-landing.ts",
+        "web/apps/web/core/lib/wrappers/authentication-wrapper.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "swr",
+                "allowTypeImports": true,
+                "message": "A fetch of the session goes through useSessionSWR, whose key carries the loginId (v0 design 7.7)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "web/apps/web/core/store/workspace/**",
+        "web/apps/web/core/store/member/workspace/**",
+        "web/apps/web/core/store/user/permissions.store.ts",
+        "web/apps/web/core/services/workspace/**",
+        "web/apps/web/core/components/workspace/settings/**",
+        "web/apps/web/core/components/profile/use-profile-member.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts",
+        "web/apps/web/core/lib/error-messages.test.ts",
+        "web/apps/web/core/lib/error-messages.ts",
+        "web/apps/web/core/lib/fake-session-swr.ts",
+        "web/apps/web/core/lib/in-session.test.ts",
+        "web/apps/web/core/lib/in-session.ts",
+        "web/apps/web/core/lib/landing.test.ts",
+        "web/apps/web/core/lib/landing.ts",
+        "web/apps/web/core/lib/session-key.test.ts",
+        "web/apps/web/core/lib/session-key.ts",
+        "web/apps/web/core/lib/use-landing.test.ts",
+        "web/apps/web/core/lib/use-landing.ts",
+        "web/apps/web/core/lib/use-session-swr.test.ts",
+        "web/apps/web/core/lib/use-session-swr.ts"
+      ],
+      "rules": {
+        "typescript/no-non-null-assertion": "error"
+      }
+    }
+  ]
+````
+
+- [ ] **Step 5: 上限、关键词规则**
 
 `tools/keywords.json`（修改，3 处）：
 
@@ -8107,7 +8477,7 @@ import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
     "check:lint": "node ../../../tools/lint-cap.mjs 444",
 ````
 
-- [ ] **Step 5: 运行检查**
+- [ ] **Step 6: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则，没有命中；web 的 oxlint 444 条，等于新的上限。
@@ -8121,10 +8491,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 70 个全部通过（A9 的邀请链接、W4 的邀请接口版本照旧）。
 
-- [ ] **Step 6: 提交**
+- [ ] **Step 7: 提交**
 
 ```bash
-git add tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' web/apps/web/core/components/onboarding/steps/team/root.tsx web/apps/web/core/components/profile/use-profile-member.ts web/apps/web/core/components/workspace/members/invite-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/members-list.tsx web/apps/web/core/components/workspace/settings/use-members-settings-fetch.test.ts web/apps/web/core/components/workspace/settings/use-members-settings-fetch.ts web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx web/apps/web/core/services/workspace.service.ts web/apps/web/core/services/workspace/workspace-invitations.service.ts web/apps/web/core/store/member/workspace/workspace-invitations.test.ts web/apps/web/core/store/member/workspace/workspace-member.store.ts web/apps/web/package.json web/packages/constants/src/fetch-keys.ts web/packages/types/src/workspace.ts
+git add .oxlintrc.json tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' web/apps/web/core/components/onboarding/steps/team/root.tsx web/apps/web/core/components/profile/use-profile-member.ts web/apps/web/core/components/workspace/members/invite-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/members-list.tsx web/apps/web/core/components/workspace/settings/use-members-settings-fetch.test.ts web/apps/web/core/components/workspace/settings/use-members-settings-fetch.ts web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx web/apps/web/core/services/workspace.service.ts web/apps/web/core/services/workspace/workspace-invitations.service.ts web/apps/web/core/store/member/workspace/workspace-invitations.test.ts web/apps/web/core/store/member/workspace/workspace-member.store.ts web/apps/web/package.json web/packages/constants/src/fetch-keys.ts web/packages/types/src/workspace.ts
 ```
 ```bash
 git commit -m "feat(M3/P8a): invitations come from /api/v0; the members page fetches them for admins alone
@@ -8135,12 +8505,15 @@ creating, changing and deleting them go one at a time with the
 members' changes and take nerve's answer. The members page fetches the
 members for anyone it shows them to and the invitations for an admin
 alone. A workspace's pages fetch its members by the session, and only
-once the caller's list says the workspace is his.
+once the caller's list says the workspace is his. Both hooks work out
+these conditions from the caller's list themselves. The root oxlint
+config keeps P8a's session fetches off SWR itself, type imports aside,
+and P8a's M3 paths free of non-null assertions.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
@@ -8150,13 +8523,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `t8-invitation-early` | 邀请的角色在 nerve 应答之前就改了 | `workspace-invitations.test.ts` | vitest |
 | `t8-delete-kept` | 删除的邀请留在列表里 | `workspace-invitations.test.ts` | vitest |
 | `t8-invitations-session` | 邀请加载时换了会话，取数失败 | `workspace-invitations.test.ts` | vitest |
-| `t8-invitations-for-all` | 成员页对成员、访客也取邀请 | oxlint 的上限、`use-members-settings-fetch.test.ts` | 静态；vitest |
+| `t8-invitations-for-all` | 成员页对成员、访客也取邀请 | oxlint（`check:lint`）、`use-members-settings-fetch.test.ts` | 静态；vitest |
 | `t8-members-for-admins` | 成员页只对管理员取成员 | `use-members-settings-fetch.test.ts` | vitest |
 | `t8-settings-fetcher-drops` | 成员页的 fetcher 丢掉 store 的 Promise | `tsc` | 静态 |
 | `t8-invitations-back` | 旧 service 又列出工作区的邀请 | 关键词守卫 | 静态 |
 | `t8-profile-drops` | 个人主页取成员的 fetcher 丢掉 store 的 Promise | `tsc` | 静态 |
 | `t8-wrapper-members-ungated` | 工作区的页面在列表说明它是调用者的工作区之前就取成员 | `use-workspace-fetch.test.ts` | vitest |
 | `t8-wrapper-members-drops` | 工作区的页面取成员的 fetcher 丢掉 store 的 Promise | `tsc` | 静态 |
+| `t8-settings-any-role` | 成员页对任何角色都取邀请（`role` 有值即可） | oxlint（`check:lint`）、`use-members-settings-fetch.test.ts` | 静态；vitest |
+| `t8-settings-member-up` | 成员页对成员也取邀请（成员及以上） | `use-members-settings-fetch.test.ts` | vitest |
+| `t8-wrapper-any-slug` | 工作区的页面对任何地址都取成员和显示设置，不看列表里有没有这个工作区 | oxlint（`check:lint`）、`use-workspace-fetch.test.ts` | 静态；vitest |
+| `t8-raw-swr-hook` | `useWorkspaceFetch` 绕过 `useSessionSWR`，直接用 SWR 本身 | oxlint（`check:lint`）、`use-workspace-fetch.test.ts` | 静态；vitest |
+| `t8-raw-swr-profile` | 个人主页取成员时绕过 `useSessionSWR`，直接用 SWR 本身 | oxlint（`check:lint`） | 静态 |
+| `t8-nonnull-email` | 成员列的图片 `alt` 用 `email!` 断言非空 | oxlint（`check:lint`） | 静态 |
 | `t8-invitations-swallows` | 邀请的列表被拒绝时给出 `undefined`，不失败 | `workspace-invitations.test.ts` | vitest |
 | `t8-invitations-pending` | store 只留待接受的邀请，丢掉 nerve 列出的已忽略的 | `workspace-invitations.test.ts` | vitest |
 | `t8-invite-unread` | service 不读 nerve 的 problem：被拒绝的邀请当作没有发出 | `workspace-invitations.test.ts` | vitest |
@@ -8174,7 +8553,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces（spec 2.9；M3 设计 3.8、5.1、7.1、7.4；决策点 1、2）：
   - `core/services/workspace/invitation-preview.service.ts`：`previewInvitation(client: ApiClient, invitationId, token): Promise<InvitationPreview>`（`GET /api/v0/workspace-invitations/{id}?token=`）。它是公开的操作，调用方传 `publicClient`，所以是一个函数，不是按会话建的 service（7.1："只调公开操作的可以用 `publicClient`"）。
-  - `core/hooks/use-invitation-preview.ts`：`useInvitationPreview(invitationId: string | null, token: string | null)`：`useSWR(["INVITATION_PREVIEW", id, token] | null, …)`。它是 P8a 写的唯一不带 `loginId` 的键：回答对任何会话、没有会话都一样，只由链接决定（spec 第 3 节）。
+  - `core/hooks/use-invitation-preview.ts`：`useInvitationPreview(invitationId: string | null, token: string | null)`：`useSWR(["INVITATION_PREVIEW", id, token] | null, …)`。它是 P8a 写的唯一不带 `loginId` 的键，也是"会话的取数只经 `useSessionSWR`"的唯一例外：它是公开操作，回答对任何会话、没有会话都一样，只由链接决定（spec 第 3 节）。所以它不在 Task 8 的 `no-restricted-imports` 的范围内。
   - `WorkspacesService.accept(invitationId, token): Promise<Workspace>`、`decline(invitationId, token): Promise<void>`；`IWorkspaceRootStore.acceptInvitation(id, token)`：经 `changes`，回答的工作区加入已取的列表，调用者本来就是成员时换掉列表中它的那一项（角色不变，3.8）；`declineInvitation(id, token)`：经 `changes`，列表不变。被拒绝（发给另一个邮箱的 403、已忽略、已不存在）时什么都不改。
   - 邀请页 `/workspace-invitations?invitation_id=…&token=…`（整个文件）：用 `useInvitationPreview` 查看，接受、忽略经 `WorkspaceRootStore`；Plane 按 `slug` 和 `email` 的查看、"已接受"一支和它的 `joinWorkspace` 删除（P9 照 7.4 重写这一页的行为）。登录、注册页的标题（`auth-header.tsx`、`auth-root.tsx`）读 `invitation_id` 和 `token`，用同一个 hook 取工作区名。
   - 删除：旧 `WorkspaceService` 的 `joinWorkspace`、`getWorkspaceInvitation`、取数键 `WORKSPACE_INVITATION`、`types/src/workspace.ts` 中最后的邀请类型。之后旧 `WorkspaceService` 中 M3 的方法只剩显示设置的两个（Task 10），模块级的实例在工作区一侧都已消失（M2 交接第 3 节的 `git grep`）。
@@ -8182,7 +8561,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Tests:**（vitest）
 - `invitation-preview.service.test.ts`：`previewInvitation` / `asks nerve, without a token of a session, what the link shows, and fails for a link that names none`（请求没有 `Authorization`，路径和 `token` 照链接；404 时失败）。
-- `index.test.ts` 加 `adds an accepted invitation's workspace to the list it has, in its own place when listed, and to none it has not fetched`；`declines an invitation, the caller's workspaces staying as they are`；拒绝的 `it.each` 加接受、忽略两行。
+- `index.test.ts` 加 `adds an accepted invitation's workspace to the list it has, in its own place when listed, and to none it has not fetched`；`declines an invitation, the caller's workspaces staying as they are`；拒绝的 `it.each` 加接受、忽略两行；`sends each change once nerve has answered the one before it, refused or not` 加上接受和忽略（第 5、6 个修改），核对接受的回答和忽略的成功。
 
 - [ ] **Step 1: 公开的查看**
 
@@ -8421,19 +8800,23 @@ export async function previewInvitation(
 ````new web/apps/web/core/store/workspace/index.test.ts
     const left = track(store.leaveWorkspace("acme"));
     const accepted = track(store.acceptInvitation("i-delta", "nrv_inv_delta"));
+    const declined = track(store.declineInvitation("i-gamma", "nrv_inv_gamma"));
 ````
 ````old web/apps/web/core/store/workspace/index.test.ts
     await until(() => left.settled, "the last change");
 ````
 ````new web/apps/web/core/store/workspace/index.test.ts
     await inTurn(nerve, 5, ["POST", "/api/v0/workspace-invitations/i-delta/accept"], json(200, delta));
-    await until(() => accepted.settled, "the last change");
+    await inTurn(nerve, 6, ["POST", "/api/v0/workspace-invitations/i-gamma/decline"], noContent());
+    await until(() => declined.settled, "the last change");
 ````
 ````old web/apps/web/core/store/workspace/index.test.ts
     expect(store.workspaces).toEqual([gamma]);
 ````
 ````new web/apps/web/core/store/workspace/index.test.ts
     expect(left.error).toBeUndefined();
+    expect(accepted.value).toEqual(delta);
+    expect(declined.error).toBeUndefined();
     expect(store.workspaces).toEqual([gamma, delta]);
 ````
 
@@ -8851,13 +9234,14 @@ in its own place when the caller was a member already.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
 | `t9-accept-made-up` | 没有取过列表时，接受的邀请的工作区自成一个列表 | `index.test.ts` | vitest |
 | `t9-accept-twice` | 调用者已有的工作区，接受之后又加一次 | `index.test.ts` | vitest |
 | `t9-accept-unqueued` | 接受不等待前一个修改 | `index.test.ts` | vitest |
+| `t9-decline-unqueued` | 忽略不等待前一个修改 | `index.test.ts` | vitest |
 | `t9-preview-no-token` | 查看邀请时不带链接的令牌 | `invitation-preview.service.test.ts` | vitest |
 | `t9-join-back` | 旧 service 又查看邀请的链接 | 关键词守卫 | 静态 |
 | `t9-accept-unread` | service 不读 nerve 的 problem：被拒绝的接受当作成功 | `index.test.ts` | vitest |
@@ -8876,13 +9260,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces（spec 2.10；M3 设计 3.18、7.1、7.2、7.3）：
   - `core/services/workspace/workspace-preferences.service.ts`：`class WorkspacePreferencesService { get(slug): Promise<WorkspacePreferences>; update(slug, data: WorkspacePreferencesUpdate): Promise<WorkspacePreferences> }`（`/api/v0/me/workspaces/{slug}/preferences`）。
   - `core/store/workspace/preferences.store.ts`：`IWorkspacePreferencesStore { getPreferences(slug); fetchPreferences(slug): Promise<WorkspacePreferences | undefined>; updatePreferences(slug, data): Promise<WorkspacePreferences> }`；`WorkspacePreferencesStore(api)` 把每个工作区的设置存在类的 `preferencesMap`（不在接口上），取数遇到 `SessionChangedError` 给出 `undefined`，被拒绝时原样失败、不存任何设置；修改经 `changes = oneAtATime()`，写入 nerve 的回答，不乐观（Plane 先改再回滚，spec 第 3 节）。它是 `WorkspaceRootStore` 的子 store `preferences`；`WorkspaceRootStore` 的三个显示设置的方法、`projectNavigationPreferencesMap` 和它对旧 `WorkspaceService` 的引用删除。
-  - `useWorkspaceFetch`：`isMember` 为真时再取调用者在这个工作区的显示设置（`["WORKSPACE_PREFERENCES", slug]`）；`WorkspaceAuthWrapper` 原来取显示设置的 SWR 删除。
+  - `useWorkspaceFetch`：hook 算出的 `isMember` 为真（列表中有这个工作区，Task 8）时再取调用者在这个工作区的显示设置（`["WORKSPACE_PREFERENCES", slug]`）；`WorkspaceAuthWrapper` 原来取显示设置的 SWR 删除。
   - `core/hooks/use-navigation-preferences.ts`（整个文件）：侧边栏的项目导航读 `preferences.getPreferences(slug)`、写 `updatePreferences`；视图模型 `TProjectNavigationPreferences`（`navigationMode: NavigationControlPreference`、`limitedProjectsCount`、`showLimitedProjects`：`limit > 0`）留在 `packages/types`，模式的类型改用生成的 `NavigationControlPreference`，`TProjectNavigationMode` 删除（spec 第 3 节）。
   - 删除：旧 `WorkspaceService` 的 `fetchWorkspaceFilters`、`patchWorkspaceFilters`，`IWorkspaceUserPropertiesResponse`，取数键 `WORKSPACE_PROJECT_NAVIGATION_PREFERENCES`，`issue_filter.service.ts` 中注释掉的同一组方法。
 - Adds：`plane-workspace-urls` 加工作区的 `user-properties/`（只到工作区一级：`/api/workspaces/${…}/user-properties/`）；不命中样例加迭代的 `user-properties`（M6）和新的显示设置地址。项目的 `user-properties/` 由 P8b 加进模式，连同 M4 的例外（7.10）。
 
 **Tests:**（vitest）
-- `preferences.store.test.ts`，`WorkspacePreferencesStore`：`keeps the caller's settings in a workspace as nerve gives them`；`fails when nerve refuses them, keeping none`；`gives nothing, and does not fail, when the session changes as it fetches`；`has nerve's answer to a change, not the change, and only once nerve answers`（回答与请求不同）；`fails, changing nothing, when nerve refuses a change`；`sends each change once nerve has answered the one before it, refused or not`。
+- `preferences.store.test.ts`，`WorkspacePreferencesStore`：`keeps the caller's settings in a workspace as nerve gives them`；`fails when nerve refuses them, keeping none`；`gives nothing, and does not fail, when the session changes as it fetches`；`has nerve's answer to a change, not the change, and only once nerve answers`（回答与请求不同）；`fails, changing nothing, when nerve refuses a change`；`sends each change once nerve has answered the one before it, refused or not`；`fetches the settings while a change is out: a fetch does not wait for it`（Task 4 的 `fetchedWhileChangeIsOut`）。
 - `use-workspace-fetch.test.ts`：`fetches the caller's workspaces and, in one of his, its members and his settings`（取代 Task 8 的同名测试）；`fetches only the caller's workspaces where the address names none of his` 照旧（W5）。
 
 - [ ] **Step 1: 显示设置的 service 和 store**
@@ -9075,7 +9459,7 @@ import { WorkspacePreferencesStore } from "./preferences.store";
   }
 ````
 
-`web/apps/web/core/store/workspace/preferences.store.test.ts`（新文件，114 行）：
+`web/apps/web/core/store/workspace/preferences.store.test.ts`（新文件，126 行）：
 
 ````file web/apps/web/core/store/workspace/preferences.store.test.ts
 /**
@@ -9088,7 +9472,7 @@ import type { ApiClient, WorkspacePreferences } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
-import { inTurn } from "@/store/fake-queue";
+import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
 import { WorkspacePreferencesStore } from "@/store/workspace/preferences.store";
 
 // The caller's navigation settings in his workspaces (M3 design 3.18, 7.3), against a fake nerve that answers each
@@ -9190,6 +9574,18 @@ describe("WorkspacePreferencesStore", () => {
     await until(() => second.settled, "the last change");
     expect(first.error).toBeInstanceOf(ApiError);
     expect(store.getPreferences("acme")).toEqual(tabbed);
+  });
+
+  it("fetches the settings while a change is out: a fetch does not wait for it", async () => {
+    const { nerve, store } = await loaded();
+    await fetchedWhileChangeIsOut(
+      nerve,
+      () => store.updatePreferences("acme", { navigation_project_limit: 3 }),
+      () => store.fetchPreferences("acme"),
+      ["GET", PREFERENCES],
+      json(200, elsewhere)
+    );
+    expect(store.getPreferences("acme")).toEqual(elsewhere);
   });
 });
 ````
@@ -9365,10 +9761,10 @@ export const useProjectNavigationPreferences = () => {
 `web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts`（修改，5 处）：
 
 ````old web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts
-    fetchWorkspaces: () => Promise.resolve(fetched.calls.push("the workspaces")),
+    getWorkspaceBySlug: (slug: string) => (slug === "acme" ? { slug } : null),
 ````
 ````new web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts
-    fetchWorkspaces: () => Promise.resolve(fetched.calls.push("the workspaces")),
+    getWorkspaceBySlug: (slug: string) => (slug === "acme" ? { slug } : null),
     preferences: {
       fetchPreferences: (slug: string) => Promise.resolve(fetched.calls.push(`the settings in ${slug}`)),
     },
@@ -9405,19 +9801,20 @@ export const useProjectNavigationPreferences = () => {
 `web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`（修改，3 处）：
 
 ````old web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts
- * workspaces, which decide whether he may see the address's one; once it is one of his (isMember), its members.
- * Gives the list's response, whose failure the page shows.
+ * workspaces, which decide whether he may see the address's one; once his list has it, its members. Gives the
+ * list's response, whose failure the page shows.
 ````
 ````new web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts
- * workspaces, which decide whether he may see the address's one; once it is one of his (isMember), its members and
- * his navigation settings in it. Gives the list's response, whose failure the page shows.
+ * workspaces, which decide whether he may see the address's one; once his list has it, its members and his
+ * navigation settings in it. Gives the list's response, whose failure the page shows.
 ````
 ````old web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts
-  const { fetchWorkspaces } = useWorkspace();
+  const { fetchWorkspaces, getWorkspaceBySlug } = useWorkspace();
 ````
 ````new web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts
   const {
     fetchWorkspaces,
+    getWorkspaceBySlug,
     preferences: { fetchPreferences },
   } = useWorkspace();
 ````
@@ -9622,7 +10019,7 @@ caller's, and the sidebar's project navigation reads and writes them.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
@@ -9630,7 +10027,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `t10-prefs-request` | 显示设置保留请求的值，不是 nerve 的应答 | `preferences.store.test.ts` | vitest |
 | `t10-prefs-unqueued` | 显示设置的修改不等待前一个 | `preferences.store.test.ts` | vitest |
 | `t10-prefs-session` | 显示设置加载时换了会话，取数失败 | `preferences.store.test.ts` | vitest |
-| `t10-prefs-swallows` | 显示设置被拒绝时给出 `undefined`，不失败 | oxlint 的上限、`preferences.store.test.ts` | 静态；vitest |
+| `t10-prefs-swallows` | 显示设置被拒绝时给出 `undefined`，不失败 | oxlint（`check:lint`）、`preferences.store.test.ts` | 静态；vitest |
+| `t10-prefs-fetch-queued` | 显示设置的取数等待正在发出的修改 | `preferences.store.test.ts` | vitest |
 | `t10-wrapper-prefs-ungated` | 工作区的页面在列表说明它是调用者的工作区之前就取他在其中的显示设置 | `use-workspace-fetch.test.ts` | vitest |
 | `t10-wrapper-prefs-drops` | 工作区的页面取显示设置的 fetcher 丢掉 store 的 Promise | `tsc` | 静态 |
 | `t10-user-properties-back` | 旧 service 又读调用者在工作区的显示设置 | 关键词守卫 | 静态 |
@@ -9650,7 +10048,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - 首页的"最近"小部件：`HomeBody` 不再渲染它，`home/widgets/recents/` 四个文件、只为它存在的空状态和骨架、`content-overflow-HOC.tsx`（knip 报未使用）、`packages/types/src/home.ts`、旧 `WorkspaceService.fetchWorkspaceRecents`、两种语言的 `home.recents.*`（7 条）和 `show_all`、`show_less`。首页在 M7 之前只有问候和"还没有项目"的引导（P9）。
   - 上面的删除留下的、没有调用方的代码一并删除（M3 设计 3.2 的写法：`favoriteProjectIds` 没有读者，删除，M7 加回）：`FavoriteStore.fetchFavorite`、`FavoriteService.getFavorites`、`ModulesStore.fetchModulesSlim`、`ProjectViewStore.fetchViews`、`ViewService.getViews`，`IWorkspaceNotificationStore.getUnreadNotificationsCount`（类里的方法留下：取通知列表时它自己调用），`ListItem` 只有"最近"小部件传的 `id`、`disableLink`、`itemClassName`、`preventDefaultProgress`；旧 `WorkspaceService` 没有调用方的 `updateWorkspaceView`。
   - 这些文件因此有了手改，按 7.9 清零：`module.store.ts` 的两条 `no-useless-catch`、三条 `always-return`，`project-view.store.ts` 的一条 `always-return`（`then` 回调改为 `await`，`.catch` 改为 `try`，行为不变），`list-item.tsx` 的一条 `const-comparisons`（`{quickActionElement && quickActionElement}` 即 `{quickActionElement}`）。web 的上限 442 → 435。
-- 本 Task 不加关键词规则：收藏、通知、迭代、模块、视图、分诊状态的地址是 M6、M7 的，它们重回挂载路径由 P8b 改写的 S2 发现（`watchPage` 断言没有发往旧接口的请求，spec 附录 A 的两个存活的变异）。
+- 本 Task 不加关键词规则：收藏、通知、迭代、模块、视图、分诊状态、"最近"的地址是 M6、M7 的，取它们的方法（例如 `fetchModules`）多数仍在 store 上。它们中任何一个重回挂载路径都由 P8b 改写的 S2 发现：S2 断言每个账户的每张挂载清单上都没有 M6、M7 的地址（spec 第 5 节；附录 A 的两个存活的变异是这一类的样例）。
 
 **Tests:** 没有新的 vitest：删除的是取数和代码，`make lint-web`（`tsc`、oxlint 的上限）、`make knip` 发现漏删的使用方；`make e2e` 的工作区页面（W1、W3、W10）照旧通过，挂载时不再有这些请求（spec 附录 A 的 W2 清单）。
 
@@ -10465,6 +10863,8 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 70 个全部通过。
 
+完成时：本 Task 删除的 9 个文案键（`home.json` 的 `home.recents.title`、`home.recents.filters.all`、`.issues`、`.projects`、`home.recents.empty.default`、`.issue`、`.project`，`common.json` 的 `show_all`、`show_less`）在 `en`、`zh-CN` 中都已不在（spec 附录 A.7 的键表；`check:sync` 只核对两种语言一致，两种语言都留下的键要评审照键表核对）。
+
 - [ ] **Step 5: 提交**
 
 ```bash
@@ -10483,12 +10883,12 @@ project ids, and the files that lose it end with no oxlint warning.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint 的上限和关键词守卫，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
+**变异**（spec 附录 A；`mutants_p8a.py` 的编号；"层"是发现它的检查所在的层：静态是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫和 i18n 的 `check:sync`，以及 `make knip`；vitest 是 `make test-web`；端到端是 `make e2e` 的故事）：
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
-| `t11-cycles-back` | 项目包装层又取项目的迭代（M6 的，每个项目页都取） | 本 Phase 没有（P8b 改写的 S2（`watchPage`：没有发往旧接口的请求）） | 存活 |
-| `t11-unread-back` | 顶部导航又取未读通知数（M7 的，每一页都取），通知 store 的接口加回这个方法 | 本 Phase 没有（P8b 改写的 S2（`watchPage`：没有发往旧接口的请求）） | 存活 |
+| `t11-cycles-back` | 项目包装层又取项目的迭代（M6 的，每个项目页都取） | 本 Phase 没有（P8b 改写的 S2：每张挂载清单上都没有 M6、M7 的地址） | 存活 |
+| `t11-unread-back` | 顶部导航又取未读通知数（M7 的，每一页都取），通知 store 的接口加回这个方法 | 本 Phase 没有（P8b 改写的 S2：每张挂载清单上都没有 M6、M7 的地址） | 存活 |
 
 ---
 
@@ -10498,8 +10898,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `docs/v0/frontend-changes.md`、`docs/v0/v0-design.md`
 
 **Interfaces:**
-- 总体设计 7.7（3.20 中 P8a 的行）：SWR 键一条改写为 `useSessionSWR`、`sessionKey` 的唯一写法（fetcher 收到参数、返回 store 的 Promise）；加一条"页面按权限决定取数，不只决定显示"（7.1）；释放一条改写为 `RootStore.dispose()` 和 `store-context.tsx` 的调用；`inSession()` 的引用改为 `core/lib/in-session.ts` 的 `sessionGuard()`；代码列表加 `session-key.ts`、`use-session-swr.ts`、`in-session.ts`。
-- 前端改动清单（3.20 中 P8a–P11 的行在 P8a 的部分）：3.1 中 M3 一行改为"进行中"（工作区一侧在 P8a，项目一侧在 P8b）；错误格式一行的文案位置改为 `core/lib/error-messages.ts`；3.2 加五行：系统内接受、slug 检查与 `RESTRICTED_URLS`、用户设置和落点、挂载时的取数（M6、M7 加回）、工作区图标的上传（M5 加回）。
+- 总体设计 7.7（3.20 中 P8a 的行）：SWR 键一条改写为原则（裁定 A6）：会话的每个取数都经 `useSessionSWR`，键只有 `sessionKey` 一种写法 `[取数的名称, loginId, ...取数的参数]`（fetcher 收到参数、返回 store 的 Promise）；唯一的例外是经 `publicClient` 的公开操作，键只由它的输入组成（`useInvitationPreview`）；静态检查是根目录 `.oxlintrc.json` 的 `no-restricted-imports`（Task 8），之后的 M 把接上新接口的取数文件加进它的范围。加一条"页面按权限决定取数，不只决定显示"（7.1）；释放一条改写为 `RootStore.dispose()` 和 `store-context.tsx` 的调用；`inSession()` 的引用改为 `core/lib/in-session.ts` 的 `sessionGuard()`；加一条 problem 码的文案表：`PROBLEM_MESSAGES` 在 `core/lib/error-messages.ts`，新码与两份 `errors.json` 同一个提交加入（M3 设计第 12 节约束 4，Task 2）；代码列表加 `session-key.ts`、`use-session-swr.ts`、`in-session.ts`。
+- 前端改动清单（3.20 中 P8a–P11 的行在 P8a 的部分）：3.1 中 M3 一行改为"进行中"（工作区一侧在 P8a，项目一侧在 P8b）；错误格式一行的文案位置改为 `core/lib/error-messages.ts`；3.2 加五行：系统内接受、slug 检查与 `RESTRICTED_URLS`、用户设置和落点（`useLanding`、`landingPath`）、挂载时的取数（M6、M7 加回）、工作区图标的上传（M5 加回）。
 
 **Tests:** 没有代码改动。每一句与它描述的代码或测试核对过（扫描 50，spec 附录 A）。
 
@@ -10526,7 +10926,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 迭代和模块的归属 | 通过工作项的 `cycle_id`、`module_ids` 字段修改，不再调用单独的接口 | 接口设计 | 计划中 | |
 | 系统内接受邀请 | `/invitations` 页、它的入口和路由、新手引导的"加入工作区"一步、按邮箱列出和批量接受的 service、store 方法删除；邀请只凭链接接受（`/workspace-invitations`） | [M3 设计](M3-workspace-project/M3-design.md) 决策点 2 | 已完成 | M3/P8a |
 | 创建工作区的 slug 检查 | `RESTRICTED_URLS` 删除，创建表单改问 nerve（`GET /api/v0/workspace-slugs/{slug}`）；保留名单"应用"一段由 vitest 核对与路由一致 | M3 设计 3.10 | 已完成 | M3/P8a |
-| 用户设置和落点 | `settings.store.ts`、`IUserSettings`、`currentUserSettings` 删除；登录后的落点由纯函数按工作区列表算出（`core/lib/landing.ts`） | M3 设计 3.14 | 已完成 | M3/P8a |
+| 用户设置和落点 | `settings.store.ts`、`IUserSettings`、`currentUserSettings` 删除；登录后的落点由 `useLanding`（`core/lib/use-landing.ts`）决定，落到哪个工作区由纯函数按工作区列表算出（`core/lib/landing.ts`） | M3 设计 3.14 | 已完成 | M3/P8a |
 | 挂载时的取数 | 工作区包装层取收藏、顶部导航取未读通知数、首页的"最近"小部件、项目包装层取迭代、模块、视图、分诊状态，全部删除，各自的 M 随新接口加回 | M3 设计 3.1 | 已完成（M6、M7 加回） | M3/P8a |
 | 工作区图标的上传 | 工作区设置 general 页的图标上传弹窗删除：接口不能设置 `logo_url`，它恒为 `null`，显示图标的地方照旧显示首字母；M5 随文件的接口加回 | M3 设计 3.2 | 已完成（M5 加回） | M3/P8a |
 ````
@@ -10538,7 +10938,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - **一代退役时释放它的反应**：注册在跨代沿用的对象（`router` 等）上的 `reaction`、`autorun` 不会随旧的一代回收。M2 结束时 `RootStore` 还没有释放的方法：第一个接上这类 store 的 M 给 `RootStore` 加上它，由 `store-context.tsx` 在换代时调用，之后的 M 照做（要释放的反应列在各 M 的交接里）。只观察本代对象的反应不用释放。
 ````
 ````new docs/v0/v0-design.md
-- **填充 stores 的 SWR 键带上 `loginId`**：组件经 `useSessionSWR`（`core/lib/use-session-swr.ts`）取数，键只有 `sessionKey`（`core/lib/session-key.ts`）一种写法：取数的名称、`loginId`、取数的参数（例如 `["WORKSPACE_MEMBERS", loginId, slug]`）；没有会话或有参数未知时是 `null`，不取。换了会话，新的一代取自己的数据。fetcher 收到键的参数，返回 store 的 Promise：取数失败是 SWR 的 `error`，不是未处理的拒绝（M3/P8a）。
+- **填充 stores 的 SWR 键带上 `loginId`**：会话的每个取数都经 `useSessionSWR`（`core/lib/use-session-swr.ts`），键只有 `sessionKey`（`core/lib/session-key.ts`）一种写法：`[取数的名称, loginId, ...取数的参数]`（例如 `["WORKSPACE_MEMBERS", loginId, slug]`）；没有会话或有参数未知时是 `null`，不取。换了会话，新的一代取自己的数据。fetcher 收到键的参数，返回 store 的 Promise：取数失败是 SWR 的 `error`，不是未处理的拒绝（M3/P8a）。唯一的例外是不属于会话的公开操作：经 `publicClient` 调用，键只由它的输入组成（查看邀请的链接，`core/hooks/use-invitation-preview.ts`，M3 设计 7.1）。根目录 `.oxlintrc.json` 的 `overrides` 静态地看住这一条：列出的文件不能从 `swr` 导入值，只能导入类型（M3/P8a 起是工作区一侧的 store、取数的 hook、`use-landing.ts` 和 `authentication-wrapper.tsx`）；之后的 M 把接上新接口的取数文件加进去（M3/P8b 加上工作区和项目的包装层）。
 - **页面按权限决定取数，不只决定显示**：页面只请求调用者有权读的资源；按权限隐藏的区域，它的取数同样按权限启用（没有权限时 `useSessionSWR` 的取数是 `null`）。例如工作区设置的成员页只在调用者是工作区的管理员时取邀请列表（M3 设计 7.1）。
 - **一代退役时释放它的反应**：注册在跨代沿用的对象（`router` 等）上的 `reaction`、`autorun` 不会随旧的一代回收。`RootStore.dispose()` 释放它们，`store-context.tsx` 在换代时对退役的一代调用它（M3/P8a 起：`project_filter` 跟随 `router` 的反应）；之后注册这类反应的 store 把它的释放加进 `dispose()`。只观察本代对象的反应不用释放。
 ````
@@ -10552,6 +10952,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - 代码在 `web/apps/web/core/lib/store-context.tsx`、`core/store/root.store.ts`、`core/lib/auth/api-client.ts`、`core/lib/auth/auth-middleware.ts`（`SessionChangedError`）和 `core/lib/wrappers/store-wrapper.tsx`；照这些规则写的 store 可以看 `core/store/user/api-token.store.ts`；测试和变异见 M2/P4 spec 2.8、M2/P5 spec 2.4。
 ````
 ````new docs/v0/v0-design.md
+- **nerve 的 problem 码的文案只有一张表**：`PROBLEM_MESSAGES`（`core/lib/error-messages.ts`，M3/P8a 起）把每个码对到 `errors` 命名空间的文案键，`en`、`zh-CN` 两份 `errors.json` 各有这条文案。接口新声明一个码（3.5 的 `x-problem-codes`）时，同一个提交把它加进这三处：`error-messages.test.ts` 对照 `api/dist/openapi.yaml` 核对表中的码不缺不多、每个文案键都在，i18n 的 `check:sync` 核对两种语言的键相同（M3 设计第 12 节约束 4）。
 - 代码在 `web/apps/web/core/lib/store-context.tsx`、`core/store/root.store.ts`、`core/lib/session-key.ts`、`core/lib/use-session-swr.ts`、`core/lib/in-session.ts`、`core/lib/auth/api-client.ts`、`core/lib/auth/auth-middleware.ts`（`SessionChangedError`）和 `core/lib/wrappers/store-wrapper.tsx`；照这些规则写的 store 可以看 `core/store/user/api-token.store.ts`；测试和变异见 M2/P4 spec 2.8、M2/P5 spec 2.4。
 ````
 
@@ -10577,9 +10978,12 @@ git add docs/v0/frontend-changes.md docs/v0/v0-design.md
 ```bash
 git commit -m "docs(M3/P8a): the overall design's session rules and the front-end change list follow P8a
 
-Overall design 7.7 names the one way to key a session's fetch, adds that
-a page's permissions decide what it fetches, and points at
-RootStore.dispose() and sessionGuard(). The front-end change list marks
+Overall design 7.7 says every fetch of the session goes through
+useSessionSWR, keyed one way, with the public preview as its one
+exception and the root oxlint config as its check; adds that a page's
+permissions decide what it fetches and where the problem codes'
+messages live; and points at RootStore.dispose() and sessionGuard(). The
+front-end change list marks
 M3 in progress and records the in-app accept, the reserved slugs, the
 user settings and landing, the mount-time fetches and the workspace
 icon's upload.
