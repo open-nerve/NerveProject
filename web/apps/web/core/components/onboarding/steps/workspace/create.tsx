@@ -13,8 +13,7 @@ import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { User } from "@nerve/api-client";
-import type { IWorkspace } from "@nerve/types";
+import type { User, WorkspaceCreate } from "@nerve/api-client";
 import { Spinner } from "@nerve/ui";
 import { cn, validateWorkspaceName, validateSlug } from "@nerve/utils";
 // hooks
@@ -53,16 +52,15 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
     control,
     setValue,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<IWorkspace>({
+  } = useForm<WorkspaceCreate>({
     defaultValues: {
       name: "",
       slug: "",
-      organization_size: "",
     },
     mode: "onChange",
   });
 
-  const handleCreateWorkspace = async (formData: IWorkspace) => {
+  const handleCreateWorkspace = async (formData: WorkspaceCreate) => {
     if (isSubmitting) return;
 
     try {

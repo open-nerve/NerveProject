@@ -4,10 +4,11 @@
  * See the LICENSE file for details.
  */
 
+import type { OrganizationSize } from "@nerve/api-client";
 import type { TStaticViewTypes, IWorkspaceSearchResults } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
 
-export const ORGANIZATION_SIZE: string[] = ["Just myself", "2-10", "11-50", "51-200", "201-500", "500+"];
+export const ORGANIZATION_SIZE: OrganizationSize[] = ["Just myself", "2-10", "11-50", "51-200", "201-500", "500+"];
 
 export const RESTRICTED_URLS: string[] = [
   "404",

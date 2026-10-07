@@ -18,7 +18,8 @@ import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-ico
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { EFileAssetType } from "@nerve/types";
-import type { IProject, IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
+import type { IProject } from "@nerve/types";
 import { CustomSelect } from "@nerve/ui";
 import { renderFormattedDate } from "@nerve/utils";
 import { CoverImage } from "@/components/common/cover-image";
@@ -65,7 +66,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
   } = useForm<IProject>({
     defaultValues: {
       ...project,
-      workspace: (project.workspace as IWorkspace).id,
+      workspace: (project.workspace as Workspace).id,
     },
   });
   // derived values
@@ -76,7 +77,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     if (project && projectId !== getValues("id")) {
       reset({
         ...project,
-        workspace: (project.workspace as IWorkspace).id,
+        workspace: (project.workspace as Workspace).id,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

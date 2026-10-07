@@ -13,7 +13,8 @@ import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IProject, IUserLite, IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
+import type { IProject, IUserLite } from "@nerve/types";
 import { Switch } from "@makeplane/propel/components/switch";
 import { Loader } from "@nerve/ui";
 // constants
@@ -85,7 +86,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
       default_assignee:
         (currentProjectDetails.default_assignee as IUserLite)?.id ?? currentProjectDetails.default_assignee,
       project_lead: (currentProjectDetails.project_lead as IUserLite)?.id ?? currentProjectDetails.project_lead,
-      workspace: (currentProjectDetails.workspace as IWorkspace).id,
+      workspace: (currentProjectDetails.workspace as Workspace).id,
     });
   }, [currentProjectDetails, reset]);
 

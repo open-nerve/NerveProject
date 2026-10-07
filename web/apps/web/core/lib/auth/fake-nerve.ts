@@ -8,6 +8,7 @@
 
 import { createClient } from "@nerve/api-client";
 import type { AuthTokens } from "@nerve/api-client";
+import { SessionChangedError } from "./token-manager";
 
 /** A request the fake received and has not answered yet. */
 export type Call = {
@@ -57,6 +58,20 @@ export class FakeNerve {
   /** A client of this fake, as the app makes one. */
   client() {
     return createClient({ baseUrl: BASE_URL, fetch: this.fetch });
+  }
+
+  /**
+   * A client of this fake for a session another has replaced as the tab's: each request fails before it is sent,
+   * with SessionChangedError, as the session's middleware fails it then (auth-middleware.ts).
+   */
+  replacedSessionClient() {
+    const api = this.client();
+    api.use({
+      onRequest: () => {
+        throw new SessionChangedError();
+      },
+    });
+    return api;
   }
 
   /** The requests to path so far. */

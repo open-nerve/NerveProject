@@ -17,8 +17,7 @@ import { ConfirmWorkspaceMemberRemove } from "@/components/workspace/confirm-wor
 import type { RowData } from "@/components/workspace/settings/member-columns";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
-import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUser, useUserPermissions, useUserSettings } from "@/hooks/store/user";
+import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 // components
 import { useMemberColumns } from "@/components/workspace/settings/useMemberColumns";
@@ -38,8 +37,6 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
     workspace: { removeMemberFromWorkspace },
   } = useMember();
   const { leaveWorkspace } = useUserPermissions();
-  const { getWorkspaceRedirectionUrl } = useWorkspace();
-  const { fetchCurrentUserSettings } = useUserSettings();
   const { t } = useTranslation();
   // derived values
 
@@ -48,8 +45,8 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
 
     try {
       await leaveWorkspace(workspaceSlug);
-      await fetchCurrentUserSettings();
-      navigate(getWorkspaceRedirectionUrl());
+      // the root lands the caller where his workspaces, as they are now, say (M3 design 3.14)
+      navigate("/");
     } catch (err: unknown) {
       const error = err as { error?: string };
       setToast({

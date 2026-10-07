@@ -19,6 +19,9 @@
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt ."
   },
+  "dependencies": {
+    "@nerve/api-client": "workspace:*"
+  },
   "devDependencies": {
     "@nerve/typescript-config": "workspace:*",
     "@types/node": "catalog:",

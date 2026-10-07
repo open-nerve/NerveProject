@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import type { IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
@@ -15,7 +15,7 @@ import { DeleteWorkspaceForm } from "@/components/workspace/delete-workspace-for
 
 type Props = {
   isOpen: boolean;
-  data: IWorkspace | null;
+  data: Workspace | null;
   onClose: () => void;
 };
 

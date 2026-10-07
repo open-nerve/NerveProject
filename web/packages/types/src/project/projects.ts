@@ -8,7 +8,7 @@ import type { TLogoProps } from "../common";
 import type { TUserPermissions } from "../enums";
 import type { TStateGroups } from "../state";
 import type { IUserLite } from "../users";
-import type { IWorkspace } from "../workspace";
+import type { Workspace } from "@nerve/api-client";
 
 export enum EUserProjectRoles {
   ADMIN = 20,
@@ -24,7 +24,7 @@ export interface IPartialProject {
   logo_props: TLogoProps;
   member_role?: TUserPermissions | EUserProjectRoles | null;
   archived_at: string | null;
-  workspace: IWorkspace | string;
+  workspace: Workspace | string;
   cycle_view: boolean;
   issue_views_view: boolean;
   module_view: boolean;

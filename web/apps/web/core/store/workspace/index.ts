@@ -4,13 +4,18 @@
  * See the LICENSE file for details.
  */
 
-import { clone, set } from "lodash-es";
+import { clone } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
-// types
 import { computedFn } from "mobx-utils";
-import type { IWorkspace, IWorkspaceUserPropertiesResponse } from "@nerve/types";
+// nerve imports
+import type { ApiClient, Workspace, WorkspaceCreate, WorkspaceUpdate } from "@nerve/api-client";
+import type { IWorkspaceUserPropertiesResponse } from "@nerve/types";
+// lib
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { oneAtATime } from "@/lib/one-at-a-time";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
+import { WorkspacesService } from "@/services/workspace/workspaces.service";
 // store
 import type { RootStore } from "@/store/root.store";
 // sub-stores
@@ -18,22 +23,18 @@ import type { IWebhookStore } from "./webhook.store";
 import { WebhookStore } from "./webhook.store";
 
 export interface IWorkspaceRootStore {
-  loader: boolean;
-  // observables
-  workspaces: Record<string, IWorkspace>;
-  // computed
-  currentWorkspace: IWorkspace | null;
-  workspacesCreatedByCurrentUser: IWorkspace[] | null;
+  /** The caller's workspaces, in nerve's order (by name, then id); undefined until fetched. */
+  workspaces: Workspace[] | undefined;
   projectNavigationPreferencesMap: Record<string, IWorkspaceUserPropertiesResponse>;
-  getWorkspaceRedirectionUrl: () => string;
+  // computed
+  currentWorkspace: Workspace | null;
   // computed actions
-  getWorkspaceBySlug: (workspaceSlug: string) => IWorkspace | null;
+  getWorkspaceBySlug: (workspaceSlug: string) => Workspace | null;
   // fetch actions
-  fetchWorkspaces: () => Promise<IWorkspace[]>;
+  fetchWorkspaces: () => Promise<Workspace[] | undefined>;
   // crud actions
-  createWorkspace: (data: Partial<IWorkspace>) => Promise<IWorkspace>;
-  updateWorkspace: (workspaceSlug: string, data: Partial<IWorkspace>) => Promise<IWorkspace>;
-  updateWorkspaceLogo: (workspaceSlug: string, logoURL: string) => void;
+  createWorkspace: (data: WorkspaceCreate) => Promise<Workspace>;
+  updateWorkspace: (workspaceSlug: string, data: WorkspaceUpdate) => Promise<Workspace>;
   deleteWorkspace: (workspaceSlug: string) => Promise<void>;
   getProjectNavigationPreferences: (workspaceSlug: string) => IWorkspaceUserPropertiesResponse | undefined;
   fetchProjectNavigationPreferences: (workspaceSlug: string) => Promise<void>;
@@ -45,35 +46,34 @@ export interface IWorkspaceRootStore {
   webhook: IWebhookStore;
 }
 
+/**
+ * The workspaces of the account of a session (M3 design 7.3): its service sends with the session's client, which
+ * the RootStore of the session hands down. Changes go one at a time (v0 design 7.7); fetches do not queue.
+ */
 export class WorkspaceRootStore implements IWorkspaceRootStore {
-  loader: boolean = false;
-  // observables
-  workspaces: Record<string, IWorkspace> = {};
+  workspaces: Workspace[] | undefined = undefined;
   projectNavigationPreferencesMap: Record<string, IWorkspaceUserPropertiesResponse> = {};
   // services
   workspaceService;
+  private readonly service: WorkspacesService;
+  /** The changes of the workspaces, sent one at a time. */
+  private readonly changes = oneAtATime();
   // root store
   router;
-  user;
   // sub-stores
   webhook: IWebhookStore;
 
-  constructor(_rootStore: RootStore) {
+  constructor(_rootStore: RootStore, api: ApiClient) {
     makeObservable(this, {
-      loader: observable.ref,
       // observables
-      workspaces: observable,
+      workspaces: observable.ref,
       projectNavigationPreferencesMap: observable,
       // computed
       currentWorkspace: computed,
-      workspacesCreatedByCurrentUser: computed,
-      // computed actions
-      getWorkspaceBySlug: action,
       // actions
       fetchWorkspaces: action,
       createWorkspace: action,
       updateWorkspace: action,
-      updateWorkspaceLogo: action,
       deleteWorkspace: action,
       fetchProjectNavigationPreferences: action,
       updateProjectNavigationPreferences: action,
@@ -81,139 +81,80 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
 
     // services
     this.workspaceService = new WorkspaceService();
+    this.service = new WorkspacesService(api);
     // root store
     this.router = _rootStore.router;
-    this.user = _rootStore.user;
     // sub-stores
     this.webhook = new WebhookStore(_rootStore);
   }
 
-  /**
-   * get the workspace redirection url based on the last and fallback workspace_slug
-   */
-  getWorkspaceRedirectionUrl = () => {
-    let redirectionRoute = "/create-workspace";
-    // validate the last and fallback workspace_slug
-    const currentWorkspaceSlug =
-      this.user.userSettings?.data?.workspace?.last_workspace_slug ||
-      this.user.userSettings?.data?.workspace?.fallback_workspace_slug;
-
-    // validate the current workspace_slug is available in the user's workspace list
-    const isCurrentWorkspaceValid = Object.values(this.workspaces || {}).findIndex(
-      (workspace) => workspace.slug === currentWorkspaceSlug
-    );
-
-    if (isCurrentWorkspaceValid >= 0) redirectionRoute = `/${currentWorkspaceSlug}`;
-    return redirectionRoute;
-  };
-
-  /**
-   * computed value of current workspace based on workspace slug saved in the query store
-   */
+  /** The workspace the address names, when the caller is a member of it. */
   get currentWorkspace() {
     const workspaceSlug = this.router.workspaceSlug;
-    if (!workspaceSlug) return null;
-    const workspaceDetails = Object.values(this.workspaces ?? {})?.find((w) => w.slug === workspaceSlug);
-    return workspaceDetails || null;
+    return workspaceSlug ? this.getWorkspaceBySlug(workspaceSlug) : null;
   }
 
-  /**
-   * computed value of all the workspaces created by the current logged in user
-   */
-  get workspacesCreatedByCurrentUser() {
-    if (!this.workspaces) return null;
-    const user = this.user.data;
-    if (!user) return null;
-    const userWorkspaces = Object.values(this.workspaces ?? {})?.filter((w) => w.created_by === user?.id);
-    return userWorkspaces || null;
-  }
-
-  /**
-   * get workspace info from the array of workspaces in the store using workspace slug
-   * @param workspaceSlug
-   */
+  /** The workspace of the caller's that slug names, or null. */
   getWorkspaceBySlug = (workspaceSlug: string) =>
-    Object.values(this.workspaces ?? {})?.find((w) => w.slug == workspaceSlug) || null;
+    this.workspaces?.find((workspace) => workspace.slug === workspaceSlug) ?? null;
 
   /**
-   * fetch user workspaces from API
+   * @description fetches the caller's workspaces and gives them; a change of session while they load is no failure:
+   * the new session's store fetches its own (store-context.tsx), and this one gives undefined
+   * @returns {Promise<Workspace[] | undefined>}
    */
-  fetchWorkspaces = async () => {
-    this.loader = true;
+  fetchWorkspaces = async (): Promise<Workspace[] | undefined> => {
     try {
-      const workspaceResponse = await this.workspaceService.userWorkspaces();
+      const workspaces = await this.service.list();
       runInAction(() => {
-        workspaceResponse.forEach((workspace) => {
-          set(this.workspaces, [workspace.id], workspace);
-        });
+        this.workspaces = workspaces;
       });
-      return workspaceResponse;
-    } finally {
-      this.loader = false;
-    }
-  };
-
-  /**
-   * create workspace using the workspace data
-   * @param data
-   */
-  createWorkspace = async (data: Partial<IWorkspace>) =>
-    await this.workspaceService.createWorkspace(data).then((response) => {
-      runInAction(() => {
-        this.workspaces = set(this.workspaces, response.id, response);
-      });
-      return response;
-    });
-
-  /**
-   * update workspace using the workspace slug and new workspace data
-   * @param workspaceSlug
-   * @param data
-   */
-  updateWorkspace = async (workspaceSlug: string, data: Partial<IWorkspace>) =>
-    await this.workspaceService.updateWorkspace(workspaceSlug, data).then((res) => {
-      if (res && res.id) {
-        runInAction(() => {
-          Object.keys(data).forEach((key) => {
-            set(this.workspaces, [res.id, key], data[key as keyof IWorkspace]);
-          });
-        });
-      }
-      return res;
-    });
-
-  /**
-   * update workspace using the workspace slug and new workspace data
-   * @param {string} workspaceSlug
-   * @param {string} logoURL
-   */
-  updateWorkspaceLogo = (workspaceSlug: string, logoURL: string) => {
-    const workspaceId = this.getWorkspaceBySlug(workspaceSlug)?.id;
-    if (!workspaceId) {
-      throw new Error("Workspace not found");
-    }
-    runInAction(() => {
-      set(this.workspaces[workspaceId], ["logo_url"], logoURL);
-    });
-  };
-
-  /**
-   * delete workspace using the workspace slug
-   * @param workspaceSlug
-   */
-  deleteWorkspace = async (workspaceSlug: string) => {
-    try {
-      await this.workspaceService.deleteWorkspace(workspaceSlug);
-      const updatedWorkspacesList = this.workspaces;
-      const workspaceId = this.getWorkspaceBySlug(workspaceSlug)?.id;
-      delete updatedWorkspacesList[`${workspaceId}`];
-      runInAction(() => {
-        this.workspaces = updatedWorkspacesList;
-      });
+      return workspaces;
     } catch (error) {
-      console.error("Failed to delete workspace:", error);
+      if (error instanceof SessionChangedError) return undefined;
+      throw error;
     }
   };
+
+  /**
+   * @description creates a workspace, with the caller as its admin; once the list is fetched it has the new one
+   * last, until the next fetch puts it in nerve's order. Fails, changing nothing, when nerve refuses.
+   * @returns {Promise<Workspace>}
+   */
+  createWorkspace = (data: WorkspaceCreate): Promise<Workspace> =>
+    this.changes(async () => {
+      const workspace = await this.service.create(data);
+      runInAction(() => {
+        if (this.workspaces) this.workspaces = [...this.workspaces, workspace];
+      });
+      return workspace;
+    });
+
+  /**
+   * @description changes a workspace's name, organization size or time zone; the list then has nerve's answer.
+   * Fails, changing nothing, when nerve refuses.
+   * @returns {Promise<Workspace>}
+   */
+  updateWorkspace = (workspaceSlug: string, data: WorkspaceUpdate): Promise<Workspace> =>
+    this.changes(async () => {
+      const workspace = await this.service.update(workspaceSlug, data);
+      runInAction(() => {
+        this.workspaces = this.workspaces?.map((w) => (w.id === workspace.id ? workspace : w));
+      });
+      return workspace;
+    });
+
+  /**
+   * @description deletes a workspace, which then leaves the list; fails, changing nothing, when nerve refuses
+   * @returns {Promise<void>}
+   */
+  deleteWorkspace = (workspaceSlug: string): Promise<void> =>
+    this.changes(async () => {
+      await this.service.delete(workspaceSlug);
+      runInAction(() => {
+        this.workspaces = this.workspaces?.filter((workspace) => workspace.slug !== workspaceSlug);
+      });
+    });
 
   getProjectNavigationPreferences = computedFn(
     (workspaceSlug: string): IWorkspaceUserPropertiesResponse | undefined =>

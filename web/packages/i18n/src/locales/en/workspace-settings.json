@@ -8,8 +8,6 @@
     "settings": {
       "general": {
         "title": "General",
-        "upload_logo": "Upload logo",
-        "edit_logo": "Edit logo",
         "name": "Workspace name",
         "company_size": "Company size",
         "url": "Workspace URL",

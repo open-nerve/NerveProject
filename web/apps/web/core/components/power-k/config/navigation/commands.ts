@@ -19,7 +19,8 @@ import {
 } from "@makeplane/propel/icons";
 // nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
-import type { ICycle, IModule, IPartialProject, IProjectView, IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
+import type { ICycle, IModule, IPartialProject, IProjectView } from "@nerve/types";
 import { EUserProjectRoles, EUserWorkspaceRoles } from "@nerve/types";
 // components
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
@@ -94,7 +95,7 @@ export const usePowerKNavigationCommandsRecord = (): Record<TPowerKNavigationCom
       keySequence: "ow",
       page: "open-workspace",
       onSelect: (data, ctx) => {
-        const workspaceDetails = data as IWorkspace;
+        const workspaceDetails = data as Workspace;
         handlePowerKNavigate(ctx, [workspaceDetails.slug]);
       },
       isEnabled: (ctx) => baseWorkspaceConditions(ctx),

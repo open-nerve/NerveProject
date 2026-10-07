@@ -9,14 +9,14 @@ import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 // local imports
 import { DeleteWorkspaceModal } from "./delete-workspace-modal";
 
 type TDeleteWorkspace = {
-  workspace: IWorkspace | null;
+  workspace: Workspace | null;
 };
 
 export const DeleteWorkspaceSection = observer(function DeleteWorkspaceSection(props: TDeleteWorkspace) {

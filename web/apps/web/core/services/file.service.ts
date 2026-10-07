@@ -59,14 +59,6 @@ export class FileService extends APIService {
       });
   }
 
-  async deleteWorkspaceAsset(workspaceSlug: string, assetId: string): Promise<void> {
-    return this.delete(`/api/assets/v2/workspaces/${workspaceSlug}/${assetId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   private async updateProjectAssetUploadStatus(
     workspaceSlug: string,
     projectId: string,

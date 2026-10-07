@@ -29,7 +29,7 @@ export const OnboardingRoot = observer(function OnboardingRoot() {
   const { data: userProfile, updateUserProfile, finishUserOnboarding } = useUserProfile();
   const { workspaces } = useWorkspace();
 
-  const workspacesList = Object.values(workspaces ?? {});
+  const hasWorkspaces = (workspaces?.length ?? 0) > 0;
 
   // complete onboarding; a failure says why, by the problem's code
   const finishOnboarding = useCallback(async () => {
@@ -59,7 +59,7 @@ export const OnboardingRoot = observer(function OnboardingRoot() {
     (step: EOnboardingSteps, skipInvites?: boolean) => {
       switch (step) {
         case EOnboardingSteps.PROFILE_SETUP:
-          if (workspacesList.length > 0) finishOnboarding();
+          if (hasWorkspaces) finishOnboarding();
           else {
             stepChange({ profile_complete: true });
             setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
@@ -77,7 +77,7 @@ export const OnboardingRoot = observer(function OnboardingRoot() {
           break;
       }
     },
-    [stepChange, finishOnboarding, workspacesList]
+    [stepChange, finishOnboarding, hasWorkspaces]
   );
 
   const updateCurrentStep = (step: EOnboardingSteps) => setCurrentStep(step);

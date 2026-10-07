@@ -5,7 +5,8 @@
  */
 
 // nerve imports
-import type { IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
 
-export const orderWorkspacesList = (workspaces: IWorkspace[]): IWorkspace[] =>
-  workspaces.sort((a, b) => a.name.localeCompare(b.name));
+/** The workspaces by name, as the sidebar lists them: a new list, the one given unchanged. */
+export const orderWorkspacesList = (workspaces: readonly Workspace[]): Workspace[] =>
+  workspaces.toSorted((a, b) => a.name.localeCompare(b.name));

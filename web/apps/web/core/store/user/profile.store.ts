@@ -85,7 +85,7 @@ export class ProfileStore implements IUserProfileStore {
    * @returns {Promise<void>}
    */
   finishUserOnboarding = async (): Promise<void> => {
-    const firstWorkspace = Object.values(this.store.workspaceRoot.workspaces ?? {})[0];
+    const firstWorkspace = this.store.workspaceRoot.workspaces?.[0];
     await this.updateUserProfile({
       onboarding_step: {
         profile_complete: true,

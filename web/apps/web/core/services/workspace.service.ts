@@ -5,11 +5,9 @@
  */
 
 import type {
-  IWorkspace,
   IWorkspaceMemberMe,
   IWorkspaceMember,
   IWorkspaceMemberInvitation,
-  ILastActiveWorkspaceDetails,
   IWorkspaceSearchResults,
   IWorkspaceBulkInviteFormData,
   IWorkspaceViewProps,
@@ -25,46 +23,6 @@ import type {
 import { APIService } from "@/services/api.service";
 
 export class WorkspaceService extends APIService {
-  async userWorkspaces(): Promise<IWorkspace[]> {
-    return this.get("/api/users/me/workspaces/")
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getWorkspace(workspaceSlug: string): Promise<IWorkspace> {
-    return this.get(`/api/workspaces/${workspaceSlug}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async createWorkspace(data: Partial<IWorkspace>): Promise<IWorkspace> {
-    return this.post("/api/workspaces/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async updateWorkspace(workspaceSlug: string, data: Partial<IWorkspace>): Promise<IWorkspace> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async deleteWorkspace(workspaceSlug: string): Promise<any> {
-    return this.delete(`/api/workspaces/${workspaceSlug}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async inviteWorkspace(workspaceSlug: string, data: IWorkspaceBulkInviteFormData): Promise<any> {
     return this.post(`/api/workspaces/${workspaceSlug}/invitations/`, data)
       .then((response) => response?.data)
@@ -77,14 +35,6 @@ export class WorkspaceService extends APIService {
     return this.post(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/join/`, data, {
       headers: {},
     })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getLastActiveWorkspaceAndProjects(): Promise<ILastActiveWorkspaceDetails> {
-    return this.get("/api/users/last-visited-workspace/")
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

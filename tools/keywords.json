@@ -2036,6 +2036,46 @@
           ]
         }
       }
+    },
+    {
+      "id": "plane-workspace-urls",
+      "phase": "M3/P8a",
+      "why": "M3 换掉的 Plane 地址（M3 设计 7.10）：工作区一侧的 store 改调 /api/v0 之后，旧 service 中这些地址的方法都已删除。模式只写到 P8a 已换掉的地址为止；项目一侧的地址（项目、项目成员、项目角色、状态、标签、显示设置）P8b 换掉时补进来，在那之前它们不命中。/search-issues/ 不是 M3 的地址",
+      "files": {
+        "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(\"/api/users/me/workspaces/\")",
+          "    return this.post(\"/api/workspaces/\", data)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/`)",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/`, data)",
+          "    return this.delete(`/api/workspaces/${workspaceSlug}/`)",
+          "    return this.get(\"/api/users/last-visited-workspace/\")"
+        ],
+        "miss": [
+          "    return unwrap(await this.api.GET(\"/api/v0/workspaces\"));",
+          "    return unwrap(await this.api.DELETE(\"/api/v0/workspaces/{slug}\", { params: { path: { slug } } }));",
+          "    return this.get(`/api/users/me/workspaces/${workspaceSlug}/project-roles/`)",
+          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/search-issues/`, {",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/states/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/views/`)"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/workspace.service.ts"],
+          "miss": ["docs/v0/M3-workspace-project/M3-design.md", "web/apps/web/core/store/workspace/index.test.ts"]
+        }
+      }
     }
   ],
   "exceptions": [

@@ -8,8 +8,6 @@
     "settings": {
       "general": {
         "title": "常规",
-        "upload_logo": "上传标志",
-        "edit_logo": "编辑标志",
         "name": "工作区名称",
         "company_size": "公司规模",
         "url": "工作区网址",

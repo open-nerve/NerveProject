@@ -5,7 +5,6 @@
  */
 
 import type { TUserPermissions } from "./enums";
-import type { TProjectMembership } from "./project";
 import type { IUserLite } from "./users";
 import type { IWorkspaceViewProps } from "./view-props";
 
@@ -13,24 +12,6 @@ export enum EUserWorkspaceRoles {
   ADMIN = 20,
   MEMBER = 15,
   GUEST = 5,
-}
-
-export interface IWorkspace {
-  readonly id: string;
-  readonly owner: IUserLite;
-  readonly created_at: Date;
-  readonly updated_at: Date;
-  name: string;
-  url: string;
-  logo_url: string | null;
-  readonly total_members: number;
-  readonly slug: string;
-  readonly created_by: string;
-  readonly updated_by: string;
-  organization_size: string;
-  total_projects?: number;
-  role: number;
-  timezone: string;
 }
 
 export interface IWorkspaceMemberInvitation {
@@ -81,11 +62,6 @@ export interface IWorkspaceMemberMe {
   view_props: IWorkspaceViewProps;
   workspace: string;
   draft_issue_count: number;
-}
-
-export interface ILastActiveWorkspaceDetails {
-  workspace_details: IWorkspace;
-  project_details?: TProjectMembership[];
 }
 
 export interface IWorkspaceDefaultSearchResult {

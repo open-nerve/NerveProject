@@ -14,7 +14,7 @@ import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkspace } from "@nerve/types";
+import type { Workspace, WorkspaceCreate } from "@nerve/api-client";
 // ui
 import { CustomSelect } from "@nerve/ui";
 import { validateWorkspaceName, validateSlug } from "@nerve/utils";
@@ -25,13 +25,9 @@ import { useNavigate } from "react-router";
 import { WorkspaceService } from "@/services/workspace.service";
 
 type Props = {
-  onSubmit?: (res: IWorkspace) => Promise<void>;
-  defaultValues: {
-    name: string;
-    slug: string;
-    organization_size: string;
-  };
-  setDefaultValues: Dispatch<SetStateAction<Pick<IWorkspace, "name" | "slug" | "organization_size">>>;
+  onSubmit?: (res: Workspace) => Promise<void>;
+  defaultValues: Pick<WorkspaceCreate, "name" | "slug" | "organization_size">;
+  setDefaultValues: Dispatch<SetStateAction<Pick<WorkspaceCreate, "name" | "slug" | "organization_size">>>;
   secondaryButton?: React.ReactNode;
   primaryButtonText?: {
     loading: string;
@@ -67,9 +63,9 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
     setValue,
     getValues,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<IWorkspace>({ defaultValues, mode: "onChange" });
+  } = useForm<WorkspaceCreate>({ defaultValues, mode: "onChange" });
 
-  const handleCreateWorkspace = async (formData: IWorkspace) => {
+  const handleCreateWorkspace = async (formData: WorkspaceCreate) => {
     try {
       const res = (await workspaceService.workspaceSlugCheck(formData.slug)) as { status: boolean };
       if (res.status === true && !RESTRICTED_URLS.includes(formData.slug)) {

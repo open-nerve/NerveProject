@@ -9,7 +9,8 @@ import { useParams } from "react-router";
 // types
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWebhook, IWorkspace, TWebhookEventTypes } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
+import type { IWebhook, TWebhookEventTypes } from "@nerve/types";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // helpers
@@ -23,7 +24,7 @@ import { GeneratedHookDetails } from "./generated-hook-details";
 import { getCurrentHookAsCSV } from "./utils";
 
 interface ICreateWebhookModal {
-  currentWorkspace: IWorkspace | null;
+  currentWorkspace: Workspace | null;
   isOpen: boolean;
   clearSecretKey: () => void;
   createWebhook: (
