@@ -6,7 +6,7 @@
 // The workspace members' store, for the tests of its members and of its invitations, against a fake nerve. A test
 // file that uses it mocks @/lib/auth/api-client: the account's store, which it builds, imports the tab's session.
 
-import type { ApiClient, MemberUser, WorkspaceMember } from "@nerve/api-client";
+import type { ApiClient, MemberUser, WorkspaceInvitation, WorkspaceMember } from "@nerve/api-client";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
 import { fakeRoot } from "@/store/fake-root";
 import { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
@@ -33,6 +33,29 @@ export function membershipOf(name: string, fields: Partial<WorkspaceMember> = {}
     is_active: true,
     created_at: "2026-10-01T09:00:00Z",
     member,
+    ...fields,
+  };
+}
+
+/**
+ * An invitation of the workspace slug names (acme unless it says) as nerve lists it to an admin: the name names the
+ * address and the invitation; pending, unless fields say not.
+ */
+export function invitationOf(
+  name: string,
+  fields: Partial<WorkspaceInvitation> = {},
+  slug = "acme"
+): WorkspaceInvitation {
+  return {
+    id: `i-${name}`,
+    workspace_id: `id-${slug}`,
+    email: `${name}@example.com`,
+    role: 15,
+    accepted: false,
+    responded_at: null,
+    created_at: "2026-10-02T09:00:00Z",
+    created_by_id: "u-ann",
+    token: `nrv_inv_${name}`,
     ...fields,
   };
 }

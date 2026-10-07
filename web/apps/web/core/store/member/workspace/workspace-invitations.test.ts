@@ -6,12 +6,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceInvitation, WorkspaceInvitationsCreate } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
-import type { FakeNerve } from "@/lib/auth/fake-nerve";
-import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
-import { SessionChangedError } from "@/lib/auth/token-manager";
 import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
-import { memberStore } from "@/store/member/workspace/fake-members";
+import { invitationOf, memberStore } from "@/store/member/workspace/fake-members";
 import type { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
 
 // A workspace's invitations, as its admins manage them (M3 design 7.3), against a fake nerve that answers each
@@ -22,24 +20,6 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }))
 
 const INVITATIONS = "/api/v0/workspaces/acme/invitations";
 
-/**
- * An invitation of the workspace slug names (acme unless it says) as nerve lists it to an admin: the name names the
- * address and the invitation; pending, unless fields say not.
- */
-function invitationOf(name: string, fields: Partial<WorkspaceInvitation> = {}, slug = "acme"): WorkspaceInvitation {
-  return {
-    id: `i-${name}`,
-    workspace_id: `id-${slug}`,
-    email: `${name}@example.com`,
-    role: 15,
-    accepted: false,
-    responded_at: null,
-    created_at: "2026-10-02T09:00:00Z",
-    created_by_id: "u-ann",
-    token: `nrv_inv_${name}`,
-    ...fields,
-  };
-}
 const dan = invitationOf("dan");
 /** An invitation its address declined: nerve lists it until an admin deletes it. */
 const eve = invitationOf("eve", { role: 5, responded_at: "2026-10-03T09:00:00Z" });
@@ -47,13 +27,10 @@ const eve = invitationOf("eve", { role: 5, responded_at: "2026-10-03T09:00:00Z" 
 const promoted = invitationOf("dan", { role: 20, created_by_id: null });
 
 /** The store fetches the invitations of the workspace slug names (acme unless it says), and nerve lists these. */
-async function load(nerve: FakeNerve, store: WorkspaceMemberStore, invitations: WorkspaceInvitation[], slug = "acme") {
-  const at = nerve.calls.length;
-  const fetched = store.fetchWorkspaceMemberInvitations(slug);
-  await until(() => nerve.calls.length === at + 1, "the invitations");
-  expect(nerve.calls[at]).toMatchObject({ method: "GET", path: `/api/v0/workspaces/${slug}/invitations` });
-  nerve.calls[at]?.answer(json(200, { data: invitations }));
-  return settle(fetched, "the invitations");
+function load(nerve: FakeNerve, store: WorkspaceMemberStore, invitations: WorkspaceInvitation[], slug = "acme") {
+  const fetch = () => store.fetchWorkspaceMemberInvitations(slug);
+  const listed = { data: invitations };
+  return answered(nerve, fetch, ["GET", `/api/v0/workspaces/${slug}/invitations`], listed, "the invitations");
 }
 
 /** A store whose invitations of acme nerve gave as dan's and eve's. */
@@ -109,12 +86,7 @@ describe("WorkspaceMemberStore, the invitations", () => {
 
   it("keeps the invitations it had when the session changes as it fetches them again", async () => {
     const { nerve, api, store } = await loaded();
-    // from now on the session's middleware fails each request before it is sent (auth-middleware.ts)
-    api.use({
-      onRequest: () => {
-        throw new SessionChangedError();
-      },
-    });
+    FakeNerve.replaceSession(api);
     const fetched = await settle(store.fetchWorkspaceMemberInvitations("acme"), "the refetch");
     expect(fetched).toEqual({ settled: true, value: undefined });
     expect(nerve.calls).toHaveLength(1);

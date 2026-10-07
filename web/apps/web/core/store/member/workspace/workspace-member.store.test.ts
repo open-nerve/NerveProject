@@ -7,10 +7,8 @@ import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceMember } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
-import type { FakeNerve } from "@/lib/auth/fake-nerve";
-import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
-import { SessionChangedError } from "@/lib/auth/token-manager";
 import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
 import { memberStore, membershipOf } from "@/store/member/workspace/fake-members";
 import type { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
@@ -35,13 +33,9 @@ const cat = membershipOf("cat", { role: 5, is_active: false });
 const demoted = renamed(membershipOf("bob", { role: 5 }), "Robert");
 
 /** The store fetches the members of the workspace slug names (acme unless it says), and nerve lists these. */
-async function load(nerve: FakeNerve, store: WorkspaceMemberStore, memberships: WorkspaceMember[], slug = "acme") {
-  const at = nerve.calls.length;
-  const fetched = store.fetchWorkspaceMembers(slug);
-  await until(() => nerve.calls.length === at + 1, "the members");
-  expect(nerve.calls[at]).toMatchObject({ method: "GET", path: `/api/v0/workspaces/${slug}/members` });
-  nerve.calls[at]?.answer(json(200, { data: memberships }));
-  return settle(fetched, "the members");
+function load(nerve: FakeNerve, store: WorkspaceMemberStore, memberships: WorkspaceMember[], slug = "acme") {
+  const fetch = () => store.fetchWorkspaceMembers(slug);
+  return answered(nerve, fetch, ["GET", `/api/v0/workspaces/${slug}/members`], { data: memberships }, "the members");
 }
 
 /** A store whose members of acme nerve gave as ann, bob and cat. */
@@ -130,12 +124,7 @@ describe("WorkspaceMemberStore, the members", () => {
 
   it("keeps the members it had when the session changes as it fetches them again", async () => {
     const { nerve, api, users, store } = await loaded();
-    // from now on the session's middleware fails each request before it is sent (auth-middleware.ts)
-    api.use({
-      onRequest: () => {
-        throw new SessionChangedError();
-      },
-    });
+    FakeNerve.replaceSession(api);
     const fetched = await settle(store.fetchWorkspaceMembers("acme"), "the refetch");
     expect(fetched).toEqual({ settled: true, value: undefined });
     expect(nerve.calls).toHaveLength(1);

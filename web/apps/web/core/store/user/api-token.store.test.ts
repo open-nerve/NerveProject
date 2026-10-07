@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiToken, ApiTokenCreated } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
-import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { ApiTokenStore } from "@/store/user/api-token.store";
 
@@ -144,11 +144,7 @@ describe("ApiTokenStore", () => {
 
 /** Fetches the list, and nerve answers it with one page of tokens. */
 async function loadList(nerve: FakeNerve, store: ApiTokenStore, tokens: ApiToken[]) {
-  const at = nerve.calls.length;
-  const fetched = track(store.fetchTokens());
-  await until(() => nerve.calls.length === at + 1, "the list");
-  nerve.calls[at]?.answer(json(200, { data: tokens, next_cursor: null }));
-  await until(() => fetched.settled, "the list");
+  await answered(nerve, () => store.fetchTokens(), ["GET", LIST], { data: tokens, next_cursor: null }, "the list");
   expect(store.tokens).toEqual(tokens);
 }
 

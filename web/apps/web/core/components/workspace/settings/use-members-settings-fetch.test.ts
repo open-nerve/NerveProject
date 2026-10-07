@@ -5,58 +5,47 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EUserWorkspaceRoles } from "@nerve/types";
+import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
 import { handed } from "@/lib/fake-session-swr";
+import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // The members settings fetch what the caller may read (M3 design 7.1, 9.5), with fake-session-swr.ts's stand-in for
-// useSessionSWR and stand-ins for the stores: the caller's role in acme is the one his workspaces list gives.
+// useSessionSWR and fake-store-hooks.ts's for the stores: the caller's role in acme is the one his workspaces list gives.
 
 vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"));
-const state = vi.hoisted((): { calls: string[]; role: number | undefined } => ({ calls: [], role: undefined }));
-vi.mock("@/hooks/store/use-workspace", () => ({
-  useWorkspace: () => ({
-    getWorkspaceBySlug: (slug: string) =>
-      slug === "acme" && state.role !== undefined ? { slug, role: state.role } : null,
-  }),
-}));
-vi.mock("@/hooks/store/use-member", () => ({
-  useMember: () => ({
-    workspace: {
-      fetchWorkspaceMembers: (slug: string) => Promise.resolve(state.calls.push(`members of ${slug}`)),
-      fetchWorkspaceMemberInvitations: (slug: string) => Promise.resolve(state.calls.push(`invitations of ${slug}`)),
-    },
-  }),
-}));
+vi.mock("@/hooks/store/use-workspace", () => import("@/hooks/store/fake-store-hooks"));
+vi.mock("@/hooks/store/use-member", () => import("@/hooks/store/fake-store-hooks"));
 
 const { useMembersSettingsFetch } = await import("./use-members-settings-fetch");
 
 beforeEach(() => {
   handed.length = 0;
-  state.calls = [];
-  state.role = undefined;
+  emptyStores();
 });
 
 describe("useMembersSettingsFetch", () => {
   it("fetches an admin the members and the invitations", async () => {
-    state.role = EUserWorkspaceRoles.ADMIN;
+    stores.workspaces = [workspaceOf("acme", { role: EUserWorkspaceRoles.ADMIN })];
     useMembersSettingsFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([
       ["WORKSPACE_MEMBERS", "acme"],
       ["WORKSPACE_INVITATIONS", "acme"],
     ]);
     await Promise.all(handed.map(([, fetcher]) => fetcher("acme")));
-    expect(state.calls).toEqual(["members of acme", "invitations of acme"]);
+    expect(stores.fetched).toEqual(["the members of acme", "the invitations of acme"]);
   });
 
   it.each([
     { who: "a member", role: EUserWorkspaceRoles.MEMBER },
     { who: "a guest", role: EUserWorkspaceRoles.GUEST },
   ])("fetches $who the members alone", ({ role }) => {
-    state.role = role;
+    stores.workspaces = [workspaceOf("acme", { role })];
     useMembersSettingsFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACE_MEMBERS", "acme"], null]);
   });
 
   it("fetches nothing for a caller whose list does not have the workspace", () => {
+    stores.workspaces = [workspaceOf("beta", { role: EUserWorkspaceRoles.ADMIN })];
     useMembersSettingsFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([null, null]);
   });

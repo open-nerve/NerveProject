@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// A test double of nerve's API behind fetch, for the auth tests: every request waits until the test
-// answers it or fails it, so the tests set the order of events themselves.
+// A test double of nerve's API behind fetch, for the auth tests and the stores' tests: every request waits until
+// the test answers it or fails it, so the tests set the order of events themselves.
 
+import { expect } from "vitest";
 import { createClient } from "@nerve/api-client";
-import type { AuthTokens } from "@nerve/api-client";
+import type { ApiClient, AuthTokens } from "@nerve/api-client";
+import { settle, until } from "./fake-time";
 import { SessionChangedError } from "./token-manager";
 
 /** A request the fake received and has not answered yet. */
@@ -61,17 +63,21 @@ export class FakeNerve {
   }
 
   /**
-   * A client of this fake for a session another has replaced as the tab's: each request fails before it is sent,
-   * with SessionChangedError, as the session's middleware fails it then (auth-middleware.ts).
+   * The client api from now on as a session another has replaced as the tab's: each request fails before it is
+   * sent, with SessionChangedError, as the session's middleware fails it then (auth-middleware.ts).
    */
-  replacedSessionClient() {
-    const api = this.client();
+  static replaceSession(api: ApiClient): ApiClient {
     api.use({
       onRequest: () => {
         throw new SessionChangedError();
       },
     });
     return api;
+  }
+
+  /** A client of this fake for a session another has replaced as the tab's (replaceSession). */
+  replacedSessionClient() {
+    return FakeNerve.replaceSession(this.client());
   }
 
   /** The requests to path so far. */
@@ -104,3 +110,25 @@ export function problem(status: number, code: string, headers: Record<string, st
 }
 
 export const noContent = () => new Response(null, { status: 204 });
+
+/** A request as the tests name it: its method and its path. */
+export type Endpoint = [method: string, path: string];
+
+/**
+ * A store's fetch, which nerve answers: the fetch is made, its request is checked against [method, path] and given
+ * body (200), and what the fetch gave is returned once it settles. The one loader of the stores' tests.
+ */
+export async function answered<T>(
+  nerve: FakeNerve,
+  fetch: () => Promise<T>,
+  [method, path]: Endpoint,
+  body: unknown,
+  what: string
+) {
+  const at = nerve.calls.length;
+  const fetched = fetch();
+  await until(() => nerve.calls.length === at + 1, what);
+  expect(nerve.calls[at]).toMatchObject({ method, path });
+  nerve.calls[at]?.answer(json(200, body));
+  return settle(fetched, what);
+}

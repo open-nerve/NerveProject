@@ -4,30 +4,19 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { OnboardingSteps, Profile, Workspace } from "@nerve/api-client";
+import type { OnboardingSteps, Profile } from "@nerve/api-client";
 import { EPageTypes } from "@/helpers/authentication.helper";
+import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
 import { handed, response } from "@/lib/fake-session-swr";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // The landing of a signed-in account (M3 design 3.14) as AuthenticationWrapper is told it, with fake-session-swr.ts's
-// stand-in for useSessionSWR and stand-ins for the stores. Where the landing goes, of the caller's workspaces, is
-// landing.test.ts.
+// stand-in for useSessionSWR and fake-store-hooks.ts's for the stores. Where the landing goes, of the caller's
+// workspaces, is landing.test.ts.
 
 vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"));
-const stores = vi.hoisted(
-  (): { profile: Profile | undefined; workspaces: Workspace[] | undefined; calls: string[] } => ({
-    profile: undefined,
-    workspaces: undefined,
-    calls: [],
-  })
-);
-vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: stores.profile }) }));
-vi.mock("@/hooks/store/use-workspace", () => ({
-  useWorkspace: () => ({
-    workspaces: stores.workspaces,
-    fetchWorkspaces: () => Promise.resolve(stores.calls.push("the workspaces")),
-  }),
-}));
+vi.mock("@/hooks/store/user", () => import("@/hooks/store/fake-store-hooks"));
+vi.mock("@/hooks/store/use-workspace", () => import("@/hooks/store/fake-store-hooks"));
 
 const { useLanding } = await import("./use-landing");
 
@@ -59,9 +48,9 @@ const { AUTHENTICATED, NON_AUTHENTICATED, ONBOARDING, PUBLIC } = EPageTypes;
 beforeEach(() => {
   handed.length = 0;
   response.current = {};
+  emptyStores();
   stores.profile = profileOf();
   stores.workspaces = [acme, beta];
-  stores.calls = [];
 });
 
 describe("useLanding", () => {
@@ -69,7 +58,7 @@ describe("useLanding", () => {
     expect(useLanding(NON_AUTHENTICATED, undefined)).toEqual({ kind: "go", to: "/beta" });
     expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"]]);
     await Promise.all(handed.map(([, fetcher]) => fetcher()));
-    expect(stores.calls).toEqual(["the workspaces"]);
+    expect(stores.fetched).toEqual(["the workspaces"]);
 
     stores.profile = profileOf({ last_workspace_id: null });
     expect(useLanding(NON_AUTHENTICATED, undefined)).toEqual({ kind: "go", to: "/acme" });

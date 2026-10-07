@@ -4,35 +4,23 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
 import { handed } from "@/lib/fake-session-swr";
+import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // A page of a workspace fetches what its caller may read (M3 design 3.1, 7.1), with fake-session-swr.ts's stand-in for
-// useSessionSWR and stand-ins for the stores: the caller's list has acme alone.
+// useSessionSWR and fake-store-hooks.ts's for the stores: the caller's list has acme alone.
 
 vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"));
-const fetched = vi.hoisted((): { calls: string[] } => ({ calls: [] }));
-vi.mock("@/hooks/store/use-workspace", () => ({
-  useWorkspace: () => ({
-    fetchWorkspaces: () => Promise.resolve(fetched.calls.push("the workspaces")),
-    getWorkspaceBySlug: (slug: string) => (slug === "acme" ? { slug } : null),
-    preferences: {
-      fetchPreferences: (slug: string) => Promise.resolve(fetched.calls.push(`the settings in ${slug}`)),
-    },
-  }),
-}));
-vi.mock("@/hooks/store/use-member", () => ({
-  useMember: () => ({
-    workspace: {
-      fetchWorkspaceMembers: (slug: string) => Promise.resolve(fetched.calls.push(`the members of ${slug}`)),
-    },
-  }),
-}));
+vi.mock("@/hooks/store/use-workspace", () => import("@/hooks/store/fake-store-hooks"));
+vi.mock("@/hooks/store/use-member", () => import("@/hooks/store/fake-store-hooks"));
 
 const { useWorkspaceFetch } = await import("./use-workspace-fetch");
 
 beforeEach(() => {
   handed.length = 0;
-  fetched.calls = [];
+  emptyStores();
+  stores.workspaces = [workspaceOf("acme")];
 });
 
 describe("useWorkspaceFetch", () => {
@@ -44,7 +32,7 @@ describe("useWorkspaceFetch", () => {
       ["WORKSPACE_PREFERENCES", "acme"],
     ]);
     await Promise.all(handed.map(([, fetcher]) => fetcher("acme")));
-    expect(fetched.calls).toEqual(["the workspaces", "the members of acme", "the settings in acme"]);
+    expect(stores.fetched).toEqual(["the workspaces", "the members of acme", "the settings in acme"]);
   });
 
   it("fetches only the caller's workspaces where the address names none of his", () => {

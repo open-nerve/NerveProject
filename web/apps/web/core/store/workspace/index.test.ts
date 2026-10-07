@@ -48,7 +48,6 @@ describe("WorkspaceRootStore, the list", () => {
     expect(store.workspaces).toBeUndefined();
 
     const fetched = await loadWorkspaces(nerve, store, [acme, beta]);
-    expect(nerve.calls[0]).toMatchObject({ method: "GET", path: LIST });
     expect(fetched.value).toEqual([acme, beta]);
     expect(store.workspaces).toEqual([acme, beta]);
     expect(store.getWorkspaceBySlug("beta")).toEqual(beta);

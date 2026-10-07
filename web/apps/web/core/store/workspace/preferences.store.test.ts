@@ -6,9 +6,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient, WorkspacePreferences } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
-import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
-import { SessionChangedError } from "@/lib/auth/token-manager";
 import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
 import { WorkspacePreferencesStore } from "@/store/workspace/preferences.store";
 
@@ -32,18 +31,9 @@ function preferencesStore(client: (nerve: FakeNerve) => ApiClient = (nerve) => n
 }
 
 /** The store fetches the caller's settings in the workspace slug names (acme unless it says), and nerve gives these. */
-async function load(
-  nerve: FakeNerve,
-  store: WorkspacePreferencesStore,
-  preferences: WorkspacePreferences,
-  slug = "acme"
-) {
-  const at = nerve.calls.length;
-  const fetched = store.fetchPreferences(slug);
-  await until(() => nerve.calls.length === at + 1, "the settings");
-  expect(nerve.calls[at]).toMatchObject({ method: "GET", path: `/api/v0/me/workspaces/${slug}/preferences` });
-  nerve.calls[at]?.answer(json(200, preferences));
-  return settle(fetched, "the settings");
+function load(nerve: FakeNerve, store: WorkspacePreferencesStore, preferences: WorkspacePreferences, slug = "acme") {
+  const fetch = () => store.fetchPreferences(slug);
+  return answered(nerve, fetch, ["GET", `/api/v0/me/workspaces/${slug}/preferences`], preferences, "the settings");
 }
 
 /** A store whose settings in acme nerve gave as its defaults. */
@@ -104,12 +94,7 @@ describe("WorkspacePreferencesStore", () => {
 
   it("keeps the settings it had when the session changes as it fetches them again", async () => {
     const { nerve, api, store } = await loaded();
-    // another session has replaced the store's: its requests fail before they are sent (auth-middleware.ts)
-    api.use({
-      onRequest: () => {
-        throw new SessionChangedError();
-      },
-    });
+    FakeNerve.replaceSession(api);
     const fetched = await settle(store.fetchPreferences("acme"), "the fetch");
     expect(fetched).toEqual({ settled: true, value: undefined });
     expect(nerve.calls).toHaveLength(1);

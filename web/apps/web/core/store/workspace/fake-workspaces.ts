@@ -7,8 +7,7 @@
 
 import type { Workspace } from "@nerve/api-client";
 import type { FakeNerve } from "@/lib/auth/fake-nerve";
-import { json } from "@/lib/auth/fake-nerve";
-import { settle, until } from "@/lib/auth/fake-time";
+import { answered } from "@/lib/auth/fake-nerve";
 import type { IWorkspaceRootStore } from "@/store/workspace";
 
 /** A workspace of the caller's, as nerve lists it: the slug names it; a member's, unless fields say otherwise. */
@@ -29,10 +28,12 @@ export function workspaceOf(slug: string, fields: Partial<Workspace> = {}): Work
 }
 
 /** The store fetches the caller's workspaces, and nerve lists these. */
-export async function loadWorkspaces(nerve: FakeNerve, store: IWorkspaceRootStore, workspaces: Workspace[]) {
-  const at = nerve.calls.length;
-  const fetched = store.fetchWorkspaces();
-  await until(() => nerve.calls.length === at + 1, "the list");
-  nerve.calls[at]?.answer(json(200, { data: workspaces }));
-  return settle(fetched, "the list");
+export function loadWorkspaces(nerve: FakeNerve, store: IWorkspaceRootStore, workspaces: Workspace[]) {
+  return answered(
+    nerve,
+    () => store.fetchWorkspaces(),
+    ["GET", "/api/v0/workspaces"],
+    { data: workspaces },
+    "the list"
+  );
 }
