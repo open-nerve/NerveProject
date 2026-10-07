@@ -7,7 +7,6 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-import useSWR from "swr";
 // nerve imports
 import { Collapsible } from "@makeplane/propel/components/collapsible";
 import { useTranslation } from "@nerve/i18n";
@@ -19,6 +18,7 @@ import { useMember } from "@/hooks/store/use-member";
 // local imports
 import { WorkspaceInvitationsListItem } from "./invitations-list-item";
 import { WorkspaceMembersListItem } from "./members-list-item";
+import { useMembersSettingsFetch } from "./use-members-settings-fetch";
 
 export const WorkspaceMembersList = observer(function WorkspaceMembersList(props: {
   searchQuery: string;
@@ -32,8 +32,6 @@ export const WorkspaceMembersList = observer(function WorkspaceMembersList(props
   // store hooks
   const {
     workspace: {
-      fetchWorkspaceMembers,
-      fetchWorkspaceMemberInvitations,
       workspaceMemberIds,
       getFilteredWorkspaceMemberIds,
       getSearchedWorkspaceMemberIds,
@@ -43,16 +41,7 @@ export const WorkspaceMembersList = observer(function WorkspaceMembersList(props
     },
   } = useMember();
   const { t } = useTranslation();
-  // fetching workspace invitations
-  useSWR(
-    workspaceSlug ? `WORKSPACE_MEMBERS_AND_MEMBER_INVITATIONS_${workspaceSlug}` : null,
-    workspaceSlug
-      ? async () => {
-          await fetchWorkspaceMemberInvitations(workspaceSlug);
-          await fetchWorkspaceMembers(workspaceSlug);
-        }
-      : null
-  );
+  useMembersSettingsFetch(workspaceSlug);
 
   if (!workspaceMemberIds && !workspaceMemberInvitationIds) return <MembersSettingsLoader />;
 
@@ -60,18 +49,17 @@ export const WorkspaceMembersList = observer(function WorkspaceMembersList(props
   const filteredMemberIds = workspaceSlug ? getFilteredWorkspaceMemberIds(workspaceSlug) : [];
   const searchedMemberIds = searchQuery ? getSearchedWorkspaceMemberIds(searchQuery) : filteredMemberIds;
   const searchedInvitationsIds = getSearchedWorkspaceInvitationIds(searchQuery);
-  const memberDetails = searchedMemberIds
-    ?.map((memberId) => getWorkspaceMemberDetails(memberId))
-    .sort((a, b) => {
-      if (a?.is_active && !b?.is_active) return -1;
-      if (!a?.is_active && b?.is_active) return 1;
-      return 0;
-    });
+  const searchedMembers = searchedMemberIds?.map((memberId) => getWorkspaceMemberDetails(memberId)) ?? [];
+  // the active members first, then those whose membership ended, each in the order the filters give
+  const memberDetails = [
+    ...searchedMembers.filter((member) => member?.is_active),
+    ...searchedMembers.filter((member) => !member?.is_active),
+  ];
 
   return (
     <>
       <div className="divide-y-[0.5px] divide-subtle overflow-scroll">
-        {searchedMemberIds?.length !== 0 && <WorkspaceMembersListItem memberDetails={memberDetails ?? []} />}
+        {searchedMemberIds?.length !== 0 && <WorkspaceMembersListItem memberDetails={memberDetails} />}
         {searchedInvitationsIds?.length === 0 && searchedMemberIds?.length === 0 && (
           <h4 className="mt-16 text-center text-body-xs-regular text-placeholder">{t("no_matching_members")}</h4>
         )}

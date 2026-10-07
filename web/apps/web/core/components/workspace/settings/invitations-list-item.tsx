@@ -76,7 +76,9 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
 
   const handleCopyText = async () => {
     try {
-      const inviteLink = new URL(invitationDetails.invite_link, window.location.origin).href;
+      // the invitation's link (M3 design 7.4): its id and the token nerve gives an admin with it
+      const path = `/workspace-invitations?invitation_id=${invitationDetails.id}&token=${invitationDetails.token}`;
+      const inviteLink = new URL(path, window.location.origin).href;
       await copyTextToClipboard(inviteLink);
       setToast({
         type: TOAST_TYPE.SUCCESS,
@@ -94,7 +96,6 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
       action: () => void handleCopyText(),
       title: t("common.actions.copy_link"),
       icon: LinkOutline,
-      shouldRender: !!invitationDetails.invite_link,
     },
     {
       key: "remove",

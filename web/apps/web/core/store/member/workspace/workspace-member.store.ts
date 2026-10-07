@@ -8,13 +8,19 @@ import { set, sortBy } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { ApiClient, WorkspaceMember, WorkspaceMemberUpdate } from "@nerve/api-client";
-import type { IWorkspaceBulkInviteFormData, IWorkspaceMemberInvitation } from "@nerve/types";
+import type {
+  ApiClient,
+  WorkspaceInvitation,
+  WorkspaceInvitationUpdate,
+  WorkspaceInvitationsCreate,
+  WorkspaceMember,
+  WorkspaceMemberUpdate,
+} from "@nerve/api-client";
 // lib
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { oneAtATime } from "@/lib/one-at-a-time";
 // services
-import { WorkspaceService } from "@/services/workspace.service";
+import { WorkspaceInvitationsService } from "@/services/workspace/workspace-invitations.service";
 import { WorkspaceMembersService } from "@/services/workspace/workspace-members.service";
 // types
 import type { IRouterStore } from "@/store/router.store";
@@ -29,7 +35,6 @@ export interface IWorkspaceMemberStore {
   // observables
   /** Each workspace's memberships by the member's account id, those that ended too (is_active false). */
   workspaceMemberMap: Record<string, Record<string, WorkspaceMember>>;
-  workspaceMemberInvitations: Record<string, IWorkspaceMemberInvitation[]>;
   // filters store
   filtersStore: IWorkspaceMemberFiltersStore;
   // computed
@@ -42,32 +47,34 @@ export interface IWorkspaceMemberStore {
   getSearchedWorkspaceMemberIds: (searchQuery: string) => string[] | null;
   getSearchedWorkspaceInvitationIds: (searchQuery: string) => string[] | null;
   getWorkspaceMemberDetails: (userId: string) => WorkspaceMember | null;
-  getWorkspaceInvitationDetails: (invitationId: string) => IWorkspaceMemberInvitation | null;
+  getWorkspaceInvitationDetails: (invitationId: string) => WorkspaceInvitation | null;
   // fetch actions
   fetchWorkspaceMembers: (workspaceSlug: string) => Promise<WorkspaceMember[] | undefined>;
-  fetchWorkspaceMemberInvitations: (workspaceSlug: string) => Promise<IWorkspaceMemberInvitation[]>;
+  fetchWorkspaceMemberInvitations: (workspaceSlug: string) => Promise<WorkspaceInvitation[] | undefined>;
   // crud actions
   updateMember: (workspaceSlug: string, userId: string, data: WorkspaceMemberUpdate) => Promise<WorkspaceMember>;
   removeMemberFromWorkspace: (workspaceSlug: string, userId: string) => Promise<void>;
   // invite actions
-  inviteMembersToWorkspace: (workspaceSlug: string, data: IWorkspaceBulkInviteFormData) => Promise<void>;
+  inviteMembersToWorkspace: (workspaceSlug: string, data: WorkspaceInvitationsCreate) => Promise<WorkspaceInvitation[]>;
   updateMemberInvitation: (
     workspaceSlug: string,
     invitationId: string,
-    data: Partial<IWorkspaceMemberInvitation>
-  ) => Promise<void>;
+    data: WorkspaceInvitationUpdate
+  ) => Promise<WorkspaceInvitation>;
   deleteMemberInvitation: (workspaceSlug: string, invitationId: string) => Promise<void>;
   isUserSuspended: (userId: string, workspaceSlug: string | undefined) => boolean;
 }
 
 /**
- * The members of the workspaces of a session (M3 design 7.3): its service sends with the session's client, which
- * the RootStore of the session hands down. Changes go one at a time (v0 design 7.7); fetches do not queue.
+ * The members and the invitations of the workspaces of a session (M3 design 7.3): its services send with the
+ * session's client, which the RootStore of the session hands down. Changes go one at a time (v0 design 7.7);
+ * fetches do not queue.
  */
 export class WorkspaceMemberStore implements IWorkspaceMemberStore {
   // observables
   workspaceMemberMap: Record<string, Record<string, WorkspaceMember>> = {};
-  workspaceMemberInvitations: Record<string, IWorkspaceMemberInvitation[]> = {}; // { workspaceSlug: [invitations] }
+  /** Each workspace's invitations, pending and declined, newest first: an admin's to fetch, whom nerve shows them. */
+  workspaceMemberInvitations: Record<string, WorkspaceInvitation[]> = {};
   // filters store
   filtersStore: IWorkspaceMemberFiltersStore;
   // stores
@@ -76,9 +83,9 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
   /** The users the stores read, which the members' profiles join. */
   memberRoot: Pick<IMemberRootStore, "memberMap">;
   // services
-  workspaceService;
   private readonly service: WorkspaceMembersService;
-  /** The changes of the memberships, sent one at a time. */
+  private readonly invitationsService: WorkspaceInvitationsService;
+  /** The changes of the memberships and the invitations, sent one at a time. */
   private readonly changes = oneAtATime();
 
   constructor(_memberRoot: Pick<IMemberRootStore, "memberMap">, _rootStore: RootStore, api: ApiClient) {
@@ -105,8 +112,8 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
     this.userStore = _rootStore.user;
     this.memberRoot = _memberRoot;
     // services
-    this.workspaceService = new WorkspaceService();
     this.service = new WorkspaceMembersService(api);
+    this.invitationsService = new WorkspaceInvitationsService(api);
   }
 
   /**
@@ -271,73 +278,77 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
   }
 
   /**
-   * @description fetch all the member invitations of a workspace
-   * @param workspaceSlug
+   * @description fetches a workspace's invitations and gives them: an admin's to fetch, as nerve refuses anyone
+   * else. A change of session while they load is no failure: the new session's store fetches its own
+   * (store-context.tsx), and this one gives undefined.
+   * @returns {Promise<WorkspaceInvitation[] | undefined>}
    */
-  fetchWorkspaceMemberInvitations = async (workspaceSlug: string) =>
-    await this.workspaceService.workspaceInvitations(workspaceSlug).then((response) => {
-      runInAction(() => {
-        set(this.workspaceMemberInvitations, workspaceSlug, response);
-      });
-      return response;
-    });
-
-  /**
-   * @description bulk invite members to a workspace
-   * @param workspaceSlug
-   * @param data
-   */
-  inviteMembersToWorkspace = async (workspaceSlug: string, data: IWorkspaceBulkInviteFormData) => {
-    const response = await this.workspaceService.inviteWorkspace(workspaceSlug, data);
-    await this.fetchWorkspaceMemberInvitations(workspaceSlug);
-    return response;
-  };
-
-  /**
-   * @description update the role of a member invitation
-   * @param workspaceSlug
-   * @param invitationId
-   * @param data
-   */
-  updateMemberInvitation = async (
-    workspaceSlug: string,
-    invitationId: string,
-    data: Partial<IWorkspaceMemberInvitation>
-  ) => {
-    const originalMemberInvitations = [...(this.workspaceMemberInvitations?.[workspaceSlug] ?? [])]; // in case of error, we will revert back to original members
+  fetchWorkspaceMemberInvitations = async (workspaceSlug: string): Promise<WorkspaceInvitation[] | undefined> => {
     try {
-      const memberInvitations = originalMemberInvitations?.map((invitation) => ({
-        ...invitation,
-        ...(invitation.id === invitationId && data),
-      }));
-      // optimistic update
+      const invitations = await this.invitationsService.list(workspaceSlug);
       runInAction(() => {
-        set(this.workspaceMemberInvitations, workspaceSlug, memberInvitations);
+        this.workspaceMemberInvitations[workspaceSlug] = invitations;
       });
-      await this.workspaceService.updateWorkspaceInvitation(workspaceSlug, invitationId, data);
+      return invitations;
     } catch (error) {
-      // revert back to original members in case of error
-      runInAction(() => {
-        set(this.workspaceMemberInvitations, workspaceSlug, originalMemberInvitations);
-      });
+      if (error instanceof SessionChangedError) return undefined;
       throw error;
     }
   };
 
   /**
-   * @description delete a member invitation
-   * @param workspaceSlug
-   * @param memberId
+   * @description invites the addresses data lists, all of them or none; the new invitations go first in the list
+   * the store has, until the next fetch puts them in nerve's order. Fails, changing nothing, when nerve refuses.
+   * @returns {Promise<WorkspaceInvitation[]>}
    */
-  deleteMemberInvitation = async (workspaceSlug: string, invitationId: string) =>
-    // oxlint-disable-next-line promise/always-return
-    await this.workspaceService.deleteWorkspaceInvitations(workspaceSlug, invitationId).then(() => {
-      runInAction(() => {
-        this.workspaceMemberInvitations[workspaceSlug] = this.workspaceMemberInvitations[workspaceSlug].filter(
-          (inv) => inv.id !== invitationId
-        );
-      });
+  inviteMembersToWorkspace = (
+    workspaceSlug: string,
+    data: WorkspaceInvitationsCreate
+  ): Promise<WorkspaceInvitation[]> =>
+    this.changes(async () => {
+      const created = await this.invitationsService.create(workspaceSlug, data);
+      this.changeInvitations(workspaceSlug, (invitations) => [...created, ...invitations]);
+      return created;
     });
+
+  /**
+   * @description changes an invitation's role; the store then has nerve's answer. Fails, changing nothing, when
+   * nerve refuses (a declined invitation, 409).
+   * @returns {Promise<WorkspaceInvitation>}
+   */
+  updateMemberInvitation = (
+    workspaceSlug: string,
+    invitationId: string,
+    data: WorkspaceInvitationUpdate
+  ): Promise<WorkspaceInvitation> =>
+    this.changes(async () => {
+      const changed = await this.invitationsService.update(invitationId, data);
+      this.changeInvitations(workspaceSlug, (invitations) =>
+        invitations.map((i) => (i.id === changed.id ? changed : i))
+      );
+      return changed;
+    });
+
+  /**
+   * @description deletes an invitation, which then leaves the list; fails, changing nothing, when nerve refuses
+   * @returns {Promise<void>}
+   */
+  deleteMemberInvitation = (workspaceSlug: string, invitationId: string): Promise<void> =>
+    this.changes(async () => {
+      await this.invitationsService.delete(invitationId);
+      this.changeInvitations(workspaceSlug, (invitations) => invitations.filter((i) => i.id !== invitationId));
+    });
+
+  /** The workspace's invitations as change makes them, when the store has fetched them: it makes up no list. */
+  private changeInvitations(
+    workspaceSlug: string,
+    change: (invitations: WorkspaceInvitation[]) => WorkspaceInvitation[]
+  ): void {
+    runInAction(() => {
+      const listed = this.workspaceMemberInvitations[workspaceSlug];
+      if (listed) this.workspaceMemberInvitations[workspaceSlug] = change(listed);
+    });
+  }
 
   isUserSuspended = computedFn((userId: string, workspaceSlug: string | undefined) => {
     if (!workspaceSlug) return false;

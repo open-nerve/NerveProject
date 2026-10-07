@@ -24,7 +24,6 @@ import { LogoSpinner } from "@/components/common/logo-spinner";
 import { NerveLogo } from "@/components/common/nerve-logo";
 // constants
 import {
-  WORKSPACE_MEMBERS,
   WORKSPACE_PARTIAL_PROJECTS,
   WORKSPACE_PROJECTS_ROLES_INFORMATION,
   WORKSPACE_FAVORITE,
@@ -33,7 +32,6 @@ import {
 } from "@nerve/constants";
 // hooks
 import { useFavorite } from "@/hooks/store/use-favorite";
-import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
@@ -56,9 +54,6 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   const { signOut, data: currentUser } = useUser();
   const { fetchPartialProjects } = useProject();
   const { fetchFavorite } = useFavorite();
-  const {
-    workspace: { fetchWorkspaceMembers },
-  } = useMember();
   const { workspaces, getWorkspaceBySlug, fetchProjectNavigationPreferences } = useWorkspace();
   const { isMobile } = usePlatformOS();
   const { fetchUserProjectPermissions, allowPermissions } = useUserPermissions();
@@ -72,7 +67,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   const currentWorkspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
 
   // the workspace side of what every page of a workspace fetches (M3 design 7.1)
-  const listed = useWorkspaceFetch();
+  const listed = useWorkspaceFetch(workspaceSlug);
   useSWR(
     workspaceSlug && currentWorkspace ? WORKSPACE_PROJECTS_ROLES_INFORMATION(workspaceSlug) : null,
     workspaceSlug && currentWorkspace ? () => fetchUserProjectPermissions(workspaceSlug) : null,
@@ -83,12 +78,6 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   useSWR(
     workspaceSlug && currentWorkspace ? WORKSPACE_PARTIAL_PROJECTS(workspaceSlug) : null,
     workspaceSlug && currentWorkspace ? () => fetchPartialProjects(workspaceSlug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-  // fetch workspace members
-  useSWR(
-    workspaceSlug && currentWorkspace ? WORKSPACE_MEMBERS(workspaceSlug) : null,
-    workspaceSlug && currentWorkspace ? () => fetchWorkspaceMembers(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   // fetch workspace favorite

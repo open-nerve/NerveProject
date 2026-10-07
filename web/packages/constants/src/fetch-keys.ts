@@ -56,8 +56,6 @@ const paramsToKey = (params: any) => {
 export const WORKSPACE_PARTIAL_PROJECTS = (workspaceSlug: string) =>
   `WORKSPACE_PARTIAL_PROJECTS_${workspaceSlug.toUpperCase()}`;
 
-export const WORKSPACE_MEMBERS = (workspaceSlug: string) => `WORKSPACE_MEMBERS_${workspaceSlug.toUpperCase()}`;
-
 export const WORKSPACE_MODULES = (workspaceSlug: string) => `WORKSPACE_MODULES_${workspaceSlug.toUpperCase()}`;
 
 export const WORKSPACE_CYCLES = (workspaceSlug: string) => `WORKSPACE_CYCLES_${workspaceSlug.toUpperCase()}`;

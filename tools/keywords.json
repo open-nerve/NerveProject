@@ -2046,7 +2046,7 @@
         "flags": ""
       },
       "content": {
-        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/",
+        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/|/api/workspaces/\\$\\{[^}]+\\}/invitations/(?:`|\\$\\{[^}]+\\}/`)",
         "flags": ""
       },
       "samples": {
@@ -2061,7 +2061,9 @@
           "    return this.post(`/api/workspaces/${workspaceSlug}/members/leave/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/workspace-members/me/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/members/`)",
-          "    return this.patch(`/api/workspaces/${workspaceSlug}/members/${memberId}/`, data)"
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/members/${memberId}/`, data)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/invitations/`, data)",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/`, data)"
         ],
         "miss": [
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces\"));",
@@ -2080,7 +2082,10 @@
           "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/leave/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/project-members/me/`)",
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/members\", { params: { path: { slug } } })).data;",
-          "    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`, data)"
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`, data)",
+          "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/invitations\", { params: { path: { slug } } })).data;",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/invitations/`, data)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/join/`, { headers: {} })"
         ],
         "files": {
           "hit": ["web/apps/web/core/services/workspace.service.ts"],

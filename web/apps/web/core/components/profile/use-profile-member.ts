@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import useSWR from "swr";
 // nerve imports
-import { WORKSPACE_MEMBERS } from "@nerve/constants";
 import type { MemberUser } from "@nerve/api-client";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+// lib
+import { useSessionSWR } from "@/lib/use-session-swr";
 
 type TProfileMember =
   | { status: "loading"; member: undefined }
@@ -25,9 +25,9 @@ export const useProfileMember = (workspaceSlug: string, userId: string): TProfil
   // The workspace wrapper already fetches the members under this key, so SWR serves the same request;
   // subscribing here is what tells whether the members are still loading or failed to load: a failed load
   // leaves the request settled without a list.
-  const { data: members, isLoading } = useSWR(
-    workspaceSlug ? WORKSPACE_MEMBERS(workspaceSlug) : null,
-    workspaceSlug ? () => fetchWorkspaceMembers(workspaceSlug) : null,
+  const { data: members, isLoading } = useSessionSWR(
+    workspaceSlug ? ["WORKSPACE_MEMBERS", workspaceSlug] : null,
+    (slug) => fetchWorkspaceMembers(slug),
     {
       revalidateIfStale: false,
       revalidateOnFocus: false,

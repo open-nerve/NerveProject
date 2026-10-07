@@ -29,9 +29,8 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EOnboardingSteps } from "@nerve/types";
 import { Spinner } from "@nerve/ui";
 // hooks
+import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
 // components
 import { CommonOnboardingHeader } from "../common";
 
@@ -63,8 +62,6 @@ type InviteMemberFormProps = {
   setIsInvitationDisabled: (value: boolean) => void;
 };
 
-// services
-const workspaceService = new WorkspaceService();
 const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
 const placeholderEmails = [
@@ -268,6 +265,9 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
   const [isInvitationDisabled, setIsInvitationDisabled] = useState(true);
 
   const { workspaces } = useWorkspace();
+  const {
+    workspace: { inviteMembersToWorkspace },
+  } = useMember();
   const workspacesList = Object.values(workspaces ?? {});
   const workspace = workspacesList[0];
 
@@ -295,13 +295,12 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
     let payload = { ...formData };
     payload = { emails: payload.emails.filter((email) => email.email !== "") };
 
-    await workspaceService
-      .inviteWorkspace(workspace.slug, {
-        emails: payload.emails.map((email) => ({
-          email: email.email,
-          role: email.role,
-        })),
-      })
+    await inviteMembersToWorkspace(workspace.slug, {
+      invitations: payload.emails.map((email) => ({
+        email: email.email,
+        role: email.role,
+      })),
+    })
       .then(async () => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

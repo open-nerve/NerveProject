@@ -109,5 +109,60 @@
         "ignoreRestSiblings": true
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "web/apps/web/core/store/workspace/**",
+        "web/apps/web/core/store/member/workspace/**",
+        "web/apps/web/core/components/workspace/settings/**",
+        "web/apps/web/core/components/profile/use-profile-member.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts",
+        "web/apps/web/core/lib/use-landing.ts",
+        "web/apps/web/core/lib/wrappers/authentication-wrapper.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "swr",
+                "allowTypeImports": true,
+                "message": "A fetch of the session goes through useSessionSWR, whose key carries the loginId (v0 design 7.7)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "web/apps/web/core/store/workspace/**",
+        "web/apps/web/core/store/member/workspace/**",
+        "web/apps/web/core/store/user/permissions.store.ts",
+        "web/apps/web/core/services/workspace/**",
+        "web/apps/web/core/components/workspace/settings/**",
+        "web/apps/web/core/components/profile/use-profile-member.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts",
+        "web/apps/web/core/lib/error-messages.test.ts",
+        "web/apps/web/core/lib/error-messages.ts",
+        "web/apps/web/core/lib/fake-session-swr.ts",
+        "web/apps/web/core/lib/in-session.test.ts",
+        "web/apps/web/core/lib/in-session.ts",
+        "web/apps/web/core/lib/landing.test.ts",
+        "web/apps/web/core/lib/landing.ts",
+        "web/apps/web/core/lib/session-key.test.ts",
+        "web/apps/web/core/lib/session-key.ts",
+        "web/apps/web/core/lib/use-landing.test.ts",
+        "web/apps/web/core/lib/use-landing.ts",
+        "web/apps/web/core/lib/use-session-swr.test.ts",
+        "web/apps/web/core/lib/use-session-swr.ts"
+      ],
+      "rules": {
+        "typescript/no-non-null-assertion": "error"
+      }
+    }
+  ]
 }

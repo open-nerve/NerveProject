@@ -6,6 +6,7 @@
 import type { SWRResponse } from "swr";
 import type { Workspace } from "@nerve/api-client";
 // hooks
+import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -15,10 +16,17 @@ const ONCE = { revalidateIfStale: false, revalidateOnFocus: false };
 
 /**
  * The workspace side of what a page of a workspace fetches as it mounts (M3 design 3.1, 7.1): the caller's
- * workspaces, which decide whether he may see the address's one. Gives the list's response, whose failure the page
- * shows.
+ * workspaces, which decide whether he may see the address's one; once his list has it, its members. Gives the
+ * list's response, whose failure the page shows.
  */
-export function useWorkspaceFetch(): SWRResponse<Workspace[] | undefined> {
-  const { fetchWorkspaces } = useWorkspace();
-  return useSessionSWR(["WORKSPACES"], () => fetchWorkspaces(), { ...ONCE, shouldRetryOnError: false });
+export function useWorkspaceFetch(workspaceSlug: string | undefined): SWRResponse<Workspace[] | undefined> {
+  const { fetchWorkspaces, getWorkspaceBySlug } = useWorkspace();
+  const {
+    workspace: { fetchWorkspaceMembers },
+  } = useMember();
+  // the address's workspace is the caller's once his list has it
+  const isMember = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug) !== null;
+  const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces(), { ...ONCE, shouldRetryOnError: false });
+  useSessionSWR(isMember ? ["WORKSPACE_MEMBERS", workspaceSlug] : null, (slug) => fetchWorkspaceMembers(slug), ONCE);
+  return listed;
 }

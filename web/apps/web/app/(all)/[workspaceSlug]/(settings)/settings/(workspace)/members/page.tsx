@@ -12,7 +12,6 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { SearchOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkspaceBulkInviteFormData } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // components
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
@@ -26,6 +25,7 @@ import { SendWorkspaceInvitationModal } from "@/components/workspace/members";
 import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
+import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
 // local imports
 import type { Route } from "./+types/page";
 import { MembersWorkspaceSettingsHeader } from "./header";
@@ -51,9 +51,9 @@ const WorkspaceMembersSettingsPage = observer(function WorkspaceMembersSettingsP
     EUserPermissionsLevel.WORKSPACE
   );
 
-  const handleWorkspaceInvite = async (data: IWorkspaceBulkInviteFormData) => {
+  const handleWorkspaceInvite = async (data: InvitationFormValues) => {
     try {
-      await inviteMembersToWorkspace(workspaceSlug, data);
+      await inviteMembersToWorkspace(workspaceSlug, { invitations: data.emails });
 
       setInviteModal(false);
 

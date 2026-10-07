@@ -29,10 +29,6 @@ export interface IWorkspaceMemberInvitation {
   };
 }
 
-export interface IWorkspaceBulkInviteFormData {
-  emails: { email: string; role: TUserPermissions }[];
-}
-
 export interface IWorkspaceDefaultSearchResult {
   id: string;
   name: string;
