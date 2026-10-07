@@ -14,7 +14,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EOnboardingSteps } from "@nerve/types";
 import { cn, getFileURL } from "@nerve/utils";
 // helpers
-import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 // hooks
 import { useUser } from "@/hooks/store/user";
 // local components

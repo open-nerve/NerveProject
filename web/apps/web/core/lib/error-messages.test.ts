@@ -13,14 +13,14 @@ import {
   errorMessageKey,
   fieldErrorKeys,
   needsErrorBanner,
-} from "./authentication.helper";
+} from "./error-messages";
 
 // The message tables against the API's contract (M2 design 3.11, 7.3, 9.4): api/dist/openapi.yaml is the
 // bundled description the server is checked against, so a code added there fails here until it has a message.
 
-const spec = readFileSync(new URL("../../../../api/dist/openapi.yaml", import.meta.url), "utf8").split("\n");
+const spec = readFileSync(new URL("../../../../../api/dist/openapi.yaml", import.meta.url), "utf8").split("\n");
 const en = JSON.parse(
-  readFileSync(new URL("../../../packages/i18n/src/locales/en/auth.json", import.meta.url), "utf8")
+  readFileSync(new URL("../../../../packages/i18n/src/locales/en/errors.json", import.meta.url), "utf8")
 ) as Record<string, unknown>;
 
 /** The items of every list under a line that matches `key` (block lists: "- item", deeper than the key). */
@@ -53,7 +53,7 @@ const fieldCodes = (() => {
   return new Set(codes);
 })();
 
-/** The value at a dotted i18n key of en's auth namespace, or undefined. */
+/** The value at a dotted i18n key of en's errors namespace, or undefined. */
 function english(key: string): unknown {
   return key.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], en);
 }
@@ -75,7 +75,7 @@ describe("the message tables", () => {
 
   it("point at messages that exist in English (sync-check keeps zh-CN the same)", () => {
     const keys = [...Object.values(PROBLEM_MESSAGES), ...Object.values(FIELD_ERROR_MESSAGES)];
-    for (const key of [...keys, "auth.errors.unknown", "auth.errors.unreachable"]) {
+    for (const key of [...keys, "errors.unknown", "errors.unreachable"]) {
       expect(typeof english(key), key).toBe("string");
     }
   });
@@ -85,19 +85,19 @@ const problem = (code: string) => ({ status: 400, code, title: "" });
 
 describe("errorMessageKey", () => {
   it("gives the message of the problem's code", () => {
-    expect(errorMessageKey(new ApiError(409, problem("identity.email_taken")))).toBe("auth.errors.email_taken");
-    expect(errorMessageKey(new ApiError(429, problem("rate_limited")))).toBe("auth.errors.rate_limited");
+    expect(errorMessageKey(new ApiError(409, problem("identity.email_taken")))).toBe("errors.email_taken");
+    expect(errorMessageKey(new ApiError(429, problem("rate_limited")))).toBe("errors.rate_limited");
   });
 
   it("gives the general message for a code it does not know, or an answer without a problem", () => {
-    expect(errorMessageKey(new ApiError(418, problem("teapot")))).toBe("auth.errors.unknown");
-    expect(errorMessageKey(new ApiError(502, undefined))).toBe("auth.errors.unknown");
-    expect(errorMessageKey(new TypeError("Failed to fetch"))).toBe("auth.errors.unknown");
-    expect(errorMessageKey(new SessionChangedError())).toBe("auth.errors.unknown");
+    expect(errorMessageKey(new ApiError(418, problem("teapot")))).toBe("errors.unknown");
+    expect(errorMessageKey(new ApiError(502, undefined))).toBe("errors.unknown");
+    expect(errorMessageKey(new TypeError("Failed to fetch"))).toBe("errors.unknown");
+    expect(errorMessageKey(new SessionChangedError())).toBe("errors.unknown");
   });
 
   it("says the server cannot be reached when the session is unavailable", () => {
-    expect(errorMessageKey(new SessionUnavailableError(0))).toBe("auth.errors.unreachable");
+    expect(errorMessageKey(new SessionUnavailableError(0))).toBe("errors.unreachable");
   });
 });
 
@@ -113,8 +113,8 @@ describe("fieldErrorKeys", () => {
       ],
     });
     expect(fieldErrorKeys(error)).toEqual({
-      password: "auth.errors.field.common_password",
-      email: "auth.errors.field.required",
+      password: "errors.field.common_password",
+      email: "errors.field.required",
     });
   });
 

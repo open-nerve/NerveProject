@@ -13,7 +13,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWorkspaceMemberInvitation, TOnboardingStep } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
 // helpers
-import { errorMessageKey } from "@/helpers/authentication.helper";
+import { errorMessageKey } from "@/lib/error-messages";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";

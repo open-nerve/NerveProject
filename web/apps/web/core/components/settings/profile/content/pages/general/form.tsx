@@ -22,7 +22,7 @@ import { DeactivateAccountModal } from "@/components/account/deactivate-account-
 import { CoverImage } from "@/components/common/cover-image";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 // helpers
-import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 // hooks
 import { useUser } from "@/hooks/store/user";
 

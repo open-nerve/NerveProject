@@ -21,7 +21,7 @@ import { getPasswordStrength } from "@nerve/utils";
 import { ApiTokenList } from "@/components/api-token/token-list";
 import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 // helpers
-import { errorMessageKey, fieldErrorKeys } from "@/helpers/authentication.helper";
+import { errorMessageKey, fieldErrorKeys } from "@/lib/error-messages";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";

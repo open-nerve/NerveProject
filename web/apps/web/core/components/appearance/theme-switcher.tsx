@@ -16,7 +16,7 @@ import { setPromiseToast } from "@nerve/propel/toast";
 import { ThemeSwitch } from "@/components/core/theme/theme-switch";
 import { SettingsControlItem } from "@/components/settings/control-item";
 // helpers
-import { errorMessageKey } from "@/helpers/authentication.helper";
+import { errorMessageKey } from "@/lib/error-messages";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 // lib

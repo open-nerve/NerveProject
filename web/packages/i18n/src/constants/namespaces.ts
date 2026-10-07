@@ -10,6 +10,7 @@ export const NAMESPACES = [
   "common",
   "cycle",
   "empty-state",
+  "errors",
   "home",
   "inbox",
   "module",
