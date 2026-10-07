@@ -14,7 +14,6 @@ import { WorkspaceMenuRoot } from "@/components/workspace/sidebar/workspace-menu
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
 import { InboxOutline } from "@makeplane/propel/icons";
-import useSWR from "swr";
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 
 export const TopNavigationRoot = observer(function TopNavigationRoot() {
@@ -22,14 +21,8 @@ export const TopNavigationRoot = observer(function TopNavigationRoot() {
   const { workspaceSlug } = useParams();
   const isNotificationsPath = useMatch("/:workspaceSlug/notifications") !== null;
 
-  // store hooks
-  const { unreadNotificationsCount, getUnreadNotificationsCount } = useWorkspaceNotifications();
-
-  // Fetch notification count
-  useSWR(
-    workspaceSlug ? "WORKSPACE_UNREAD_NOTIFICATION_COUNT" : null,
-    workspaceSlug ? () => getUnreadNotificationsCount(workspaceSlug) : null
-  );
+  // store hooks: no page M3 reaches fetches the unread count until M7 (M3 design 3.1), so the button has no dot
+  const { unreadNotificationsCount } = useWorkspaceNotifications();
 
   // Calculate notification count
   const isMentionsEnabled = unreadNotificationsCount.mention_unread_notifications_count > 0;

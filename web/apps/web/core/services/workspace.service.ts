@@ -6,26 +6,16 @@
 
 import type {
   IWorkspaceSearchResults,
-  IWorkspaceViewProps,
   IUserProjectsRole,
   IWorkspaceView,
   TIssuesResponse,
   TSearchResponse,
   TSearchEntityRequestPayload,
-  TActivityEntityData,
 } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 
 export class WorkspaceService extends APIService {
-  async updateWorkspaceView(workspaceSlug: string, data: { view_props: IWorkspaceViewProps }): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/workspace-views/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async searchWorkspace(
     workspaceSlug: string,
     params: {
@@ -117,19 +107,6 @@ export class WorkspaceService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
-      });
-  }
-
-  // recents
-  async fetchWorkspaceRecents(workspaceSlug: string, entity_name?: string): Promise<TActivityEntityData[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/recent-visits/`, {
-      params: {
-        entity_name,
-      },
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
       });
   }
 }

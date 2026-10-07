@@ -10,7 +10,6 @@ import { useParams, Link } from "react-router";
 import useSWR from "swr";
 // ui
 import { LogOutOutline } from "@makeplane/propel/icons";
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { getButtonStyling } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -23,14 +22,8 @@ import { SessionUnavailable } from "@/components/account/session-unavailable";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { NerveLogo } from "@/components/common/nerve-logo";
 // constants
-import {
-  WORKSPACE_PARTIAL_PROJECTS,
-  WORKSPACE_PROJECTS_ROLES_INFORMATION,
-  WORKSPACE_FAVORITE,
-  WORKSPACE_STATES,
-} from "@nerve/constants";
+import { WORKSPACE_PARTIAL_PROJECTS, WORKSPACE_PROJECTS_ROLES_INFORMATION, WORKSPACE_STATES } from "@nerve/constants";
 // hooks
-import { useFavorite } from "@/hooks/store/use-favorite";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
@@ -52,16 +45,10 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   // store hooks
   const { signOut, data: currentUser } = useUser();
   const { fetchPartialProjects } = useProject();
-  const { fetchFavorite } = useFavorite();
   const { workspaces, getWorkspaceBySlug } = useWorkspace();
   const { isMobile } = usePlatformOS();
-  const { fetchUserProjectPermissions, allowPermissions } = useUserPermissions();
+  const { fetchUserProjectPermissions } = useUserPermissions();
   const { fetchWorkspaceStates } = useProjectState();
-  // derived values
-  const canPerformWorkspaceMemberActions = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
-  );
   // The caller's workspaces decide whether he may see this one, and his role in it (M3 design 7.2).
   const currentWorkspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
 
@@ -77,12 +64,6 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   useSWR(
     workspaceSlug && currentWorkspace ? WORKSPACE_PARTIAL_PROJECTS(workspaceSlug) : null,
     workspaceSlug && currentWorkspace ? () => fetchPartialProjects(workspaceSlug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-  // fetch workspace favorite
-  useSWR(
-    workspaceSlug && currentWorkspace && canPerformWorkspaceMemberActions ? WORKSPACE_FAVORITE(workspaceSlug) : null,
-    workspaceSlug && currentWorkspace && canPerformWorkspaceMemberActions ? () => fetchFavorite(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   // fetch workspace states

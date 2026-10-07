@@ -23,8 +23,6 @@ export interface IFavoriteStore {
   // computed actions
   existingFolders: string[];
   groupedFavorites: { [favoriteId: string]: IFavorite };
-  // actions
-  fetchFavorite: (workspaceSlug: string) => Promise<IFavorite[]>;
   // CRUD actions
   addFavorite: (workspaceSlug: string, data: Partial<IFavorite>) => Promise<IFavorite>;
   updateFavorite: (workspaceSlug: string, favoriteId: string, data: Partial<IFavorite>) => Promise<IFavorite>;
@@ -69,8 +67,6 @@ export class FavoriteStore implements IFavoriteStore {
       currentWorkspaceFavorites: computed,
       existingFolders: computed,
       groupedFavorites: computed,
-      // action
-      fetchFavorite: action,
       // CRUD actions
       addFavorite: action,
       fetchGroupedFavorites: action,
@@ -410,31 +406,6 @@ export class FavoriteStore implements IFavoriteStore {
       return response;
     } catch (error) {
       console.error("Failed to get grouped favorites from favorite store");
-      throw error;
-    }
-  };
-
-  /**
-   * get Workspace favorite using workspace slug
-   * @param workspaceSlug
-   * @returns Promise<IFavorite[]>
-   *
-   */
-  fetchFavorite = async (workspaceSlug: string) => {
-    try {
-      const favorites = await this.favoriteService.getFavorites(workspaceSlug);
-      runInAction(() => {
-        favorites.forEach((favorite) => {
-          set(this.favoriteMap, [favorite.id], favorite);
-          this.favoriteIds.push(favorite.id);
-          if (favorite.entity_identifier) {
-            set(this.entityMap, [favorite.entity_identifier], favorite);
-          }
-        });
-      });
-      return favorites;
-    } catch (error) {
-      console.error("Failed to fetch favorites from workspace store");
       throw error;
     }
   };

@@ -5,4 +5,3 @@
  */
 
 export * from "./home-loader";
-export * from "./recent-activity";

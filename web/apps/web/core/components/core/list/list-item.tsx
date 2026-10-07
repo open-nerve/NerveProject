@@ -14,7 +14,6 @@ import { cn } from "@nerve/utils";
 import { useNavigate } from "react-router";
 
 interface IListItemProps {
-  id?: string;
   title: string;
   itemLink: string;
   onItemClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
@@ -23,20 +22,16 @@ interface IListItemProps {
   actionableItems?: React.ReactNode;
   isMobile?: boolean;
   parentRef: React.RefObject<HTMLDivElement | null>;
-  disableLink?: boolean;
   className?: string;
-  itemClassName?: string;
   actionItemContainerClassName?: string;
   isSidebarOpen?: boolean;
   quickActionElement?: React.ReactNode;
-  preventDefaultProgress?: boolean;
   leftElementClassName?: string;
   rightElementClassName?: string;
 }
 
 export function ListItem(props: IListItemProps) {
   const {
-    id,
     title,
     prependTitleElement,
     appendTitleElement,
@@ -45,13 +40,10 @@ export function ListItem(props: IListItemProps) {
     onItemClick,
     isMobile = false,
     parentRef,
-    disableLink = false,
     className = "",
     actionItemContainerClassName = "",
     isSidebarOpen = false,
     quickActionElement,
-    itemClassName = "",
-    preventDefaultProgress = false,
     leftElementClassName = "",
     rightElementClassName = "",
   } = props;
@@ -74,15 +66,12 @@ export function ListItem(props: IListItemProps) {
           className
         )}
       >
-        <div className={cn("relative flex w-full items-center justify-between gap-3 truncate", itemClassName)}>
+        <div className="relative flex w-full items-center justify-between gap-3 truncate">
           <ControlLink
-            id={id}
             className="relative flex w-full items-center gap-3 overflow-hidden"
             href={itemLink}
             target="_self"
             onClick={handleControlLinkClick}
-            disabled={disableLink}
-            data-prevent-progress={preventDefaultProgress}
           >
             <div className={cn("flex items-center gap-4 truncate", leftElementClassName)}>
               {prependTitleElement && <span className="flex flex-shrink-0 items-center">{prependTitleElement}</span>}
@@ -94,7 +83,7 @@ export function ListItem(props: IListItemProps) {
               <span className={cn("flex flex-shrink-0 items-center", rightElementClassName)}>{appendTitleElement}</span>
             )}
           </ControlLink>
-          {quickActionElement && quickActionElement}
+          {quickActionElement}
         </div>
         {actionableItems && (
           <div

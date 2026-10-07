@@ -19,19 +19,12 @@ import {
   PROJECT_MEMBERS,
   PROJECT_MEMBER_PREFERENCES,
   PROJECT_STATES,
-  PROJECT_ALL_CYCLES,
-  PROJECT_MODULES,
-  PROJECT_VIEWS,
-  PROJECT_INTAKE_STATE,
 } from "@nerve/constants";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
-import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useProjectView } from "@/hooks/store/use-project-view";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 
 interface IProjectAuthWrapper {
@@ -48,13 +41,10 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const { fetchUserProjectInfo, allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const { fetchProjectDetails } = useProject();
   const { joinProject } = useUserPermissions();
-  const { fetchAllCycles } = useCycle();
-  const { fetchModulesSlim, fetchModules } = useModule();
-  const { fetchViews } = useProjectView();
   const {
     project: { fetchProjectMembers, fetchProjectUserProperties },
   } = useMember();
-  const { fetchProjectStates, fetchProjectIntakeState } = useProjectState();
+  const { fetchProjectStates } = useProjectState();
   const { data: currentUserData } = useUser();
   const { fetchProjectLabels } = useLabel();
   // derived values
@@ -91,29 +81,6 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   });
   // fetching project states
   useSWR(PROJECT_STATES(projectId, currentProjectRole), () => fetchProjectStates(workspaceSlug, projectId), {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
-  // fetching project intake state
-  useSWR(PROJECT_INTAKE_STATE(projectId, currentProjectRole), () => fetchProjectIntakeState(workspaceSlug, projectId), {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
-  // fetching project cycles
-  useSWR(PROJECT_ALL_CYCLES(projectId, currentProjectRole), () => fetchAllCycles(workspaceSlug, projectId), {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
-  // fetching project modules
-  useSWR(
-    PROJECT_MODULES(projectId, currentProjectRole),
-    async () => {
-      await Promise.all([fetchModulesSlim(workspaceSlug, projectId), fetchModules(workspaceSlug, projectId)]);
-    },
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-  // fetching project views
-  useSWR(PROJECT_VIEWS(projectId, currentProjectRole), () => fetchViews(workspaceSlug, projectId), {
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
