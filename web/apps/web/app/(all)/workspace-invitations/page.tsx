@@ -6,23 +6,18 @@
 
 import { observer } from "mobx-react";
 import { useNavigate, useSearchParams } from "react-router";
-import useSWR from "swr";
 import { BoxesOutline, CloseOutline, TickOutline, UserOutline } from "@makeplane/propel/icons";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { EmptySpace, EmptySpaceItem } from "@/components/ui/empty-space";
-// constants
-import { WORKSPACE_INVITATION } from "@nerve/constants";
 // helpers
 import { EPageTypes } from "@/helpers/authentication.helper";
 // hooks
+import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
+import { useInvitationPreview } from "@/hooks/use-invitation-preview";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
-import { WorkspaceService } from "@/services/workspace.service";
-
-// service initialization
-const workspaceService = new WorkspaceService();
 
 function WorkspaceInvitationPage() {
   // router
@@ -30,84 +25,63 @@ function WorkspaceInvitationPage() {
   // query params
   const [searchParams] = useSearchParams();
   const invitation_id = searchParams.get("invitation_id");
-  const slug = searchParams.get("slug");
   const token = searchParams.get("token");
   // store hooks
   const { data: currentUser } = useUser();
+  const { acceptInvitation, declineInvitation } = useWorkspace();
 
-  const { data: invitationDetail, error } = useSWR(
-    invitation_id && slug && WORKSPACE_INVITATION(invitation_id),
-    invitation_id && slug ? () => workspaceService.getWorkspaceInvitation(slug, invitation_id) : null
-  );
+  const { data: invitationDetail, error } = useInvitationPreview(invitation_id, token);
 
-  const handleAccept = () => {
-    if (!invitationDetail) return;
-    workspaceService
-      .joinWorkspace(invitationDetail.workspace.slug, invitationDetail.id, {
-        accepted: true,
-        token: token,
-      })
-      .then(() => {
-        if (invitationDetail.email === currentUser?.email) {
-          navigate(`/${invitationDetail.workspace.slug}`);
-        } else {
-          navigate("/");
-        }
-      })
-      .catch((err: unknown) => console.error(err));
+  const handleAccept = async () => {
+    if (!invitationDetail || !token) return;
+    try {
+      // nerve accepts the invitation of the caller's own address alone
+      await acceptInvitation(invitationDetail.id, token);
+      navigate(`/${invitationDetail.workspace_slug}`);
+    } catch (err: unknown) {
+      console.error(err);
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!invitationDetail || !token) return;
-    void workspaceService
-      .joinWorkspace(invitationDetail.workspace.slug, invitationDetail.id, {
-        accepted: false,
-        token: token,
-      })
-      .then(() => {
-        navigate("/");
-      })
-      .catch((err: unknown) => console.error(err));
+    try {
+      await declineInvitation(invitationDetail.id, token);
+      navigate("/");
+    } catch (err: unknown) {
+      console.error(err);
+    }
   };
 
   return (
     <AuthenticationWrapper pageType={EPageTypes.PUBLIC}>
       <div className="flex h-full w-full flex-col items-center justify-center px-3">
-        {invitationDetail && !invitationDetail.responded_at ? (
+        {invitationDetail && !invitationDetail.declined ? (
           error ? (
             <div className="shadow-2xl flex w-full flex-col space-y-4 rounded-sm border border-subtle bg-surface-1 px-4 py-8 text-center md:w-1/3">
               <h2 className="text-18 uppercase">INVITATION NOT FOUND</h2>
             </div>
           ) : (
             <EmptySpace
-              title={`You have been invited to ${invitationDetail.workspace.name}`}
+              title={`You have been invited to ${invitationDetail.workspace_name}`}
               description="Your workspace is where you'll create projects, collaborate on your work items, and organize different streams of work in your Nerve account."
             >
               <EmptySpaceItem Icon={TickOutline} title="Accept" action={handleAccept} />
               <EmptySpaceItem Icon={CloseOutline} title="Ignore" action={handleReject} />
             </EmptySpace>
           )
-        ) : error || invitationDetail?.responded_at ? (
-          invitationDetail?.accepted ? (
-            <EmptySpace
-              title={`You are already a member of ${invitationDetail.workspace.name}`}
-              description="Your workspace is where you'll create projects, collaborate on your work items, and organize different streams of work in your Nerve account."
-            >
+        ) : error || invitationDetail?.declined ? (
+          <EmptySpace
+            title="This invitation link is not active anymore."
+            description="Your workspace is where you'll create projects, collaborate on your work items, and organize different streams of work in your Nerve account."
+            link={{ text: "Or start from an empty project", href: "/" }}
+          >
+            {!currentUser ? (
+              <EmptySpaceItem Icon={UserOutline} title="Sign in to continue" href="/" />
+            ) : (
               <EmptySpaceItem Icon={BoxesOutline} title="Continue to home" href="/" />
-            </EmptySpace>
-          ) : (
-            <EmptySpace
-              title="This invitation link is not active anymore."
-              description="Your workspace is where you'll create projects, collaborate on your work items, and organize different streams of work in your Nerve account."
-              link={{ text: "Or start from an empty project", href: "/" }}
-            >
-              {!currentUser ? (
-                <EmptySpaceItem Icon={UserOutline} title="Sign in to continue" href="/" />
-              ) : (
-                <EmptySpaceItem Icon={BoxesOutline} title="Continue to home" href="/" />
-              )}
-            </EmptySpace>
-          )
+            )}
+          </EmptySpace>
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <LogoSpinner />

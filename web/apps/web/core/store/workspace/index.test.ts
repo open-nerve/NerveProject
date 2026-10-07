@@ -197,6 +197,53 @@ describe("WorkspaceRootStore, the changes", () => {
     expect(store.workspaces).toEqual([]);
   });
 
+  it("adds an accepted invitation's workspace to the list it has, in its own place when listed, and to none it has not fetched", async () => {
+    const { nerve, store } = await loaded();
+    const gamma = workspaceOf("gamma");
+    const accepted = track(store.acceptInvitation("i-gamma", "nrv_inv_gamma"));
+    await until(() => nerve.calls.length === 2, "the acceptance");
+    expect(nerve.calls[1]).toMatchObject({
+      method: "POST",
+      path: "/api/v0/workspace-invitations/i-gamma/accept",
+      body: { token: "nrv_inv_gamma" },
+    });
+    expect(store.workspaces).toEqual([acme, beta]);
+    nerve.calls[1]?.answer(json(200, gamma));
+    await until(() => accepted.settled, "the workspace");
+    expect(accepted.value).toEqual(gamma);
+    expect(store.workspaces).toEqual([acme, beta, gamma]);
+
+    // a member accepts too, his role as it was (M3 design 3.8)
+    const renamed = { ...beta, name: "Beta Inc" };
+    const again = track(store.acceptInvitation("i-beta", "nrv_inv_beta"));
+    await until(() => nerve.calls.length === 3, "the acceptance");
+    nerve.calls[2]?.answer(json(200, renamed));
+    await until(() => again.settled, "the workspace");
+    expect(store.workspaces).toEqual([acme, renamed, gamma]);
+
+    const fresh = setUp();
+    const alone = track(fresh.store.acceptInvitation("i-gamma", "nrv_inv_gamma"));
+    await until(() => fresh.nerve.calls.length === 1, "the acceptance");
+    fresh.nerve.calls[0]?.answer(json(200, gamma));
+    await until(() => alone.settled, "the workspace");
+    expect(fresh.store.workspaces).toBeUndefined();
+  });
+
+  it("declines an invitation, the caller's workspaces staying as they are", async () => {
+    const { nerve, store } = await loaded();
+    const declined = track(store.declineInvitation("i-gamma", "nrv_inv_gamma"));
+    await until(() => nerve.calls.length === 2, "the decline");
+    expect(nerve.calls[1]).toMatchObject({
+      method: "POST",
+      path: "/api/v0/workspace-invitations/i-gamma/decline",
+      body: { token: "nrv_inv_gamma" },
+    });
+    nerve.calls[1]?.answer(noContent());
+    await until(() => declined.settled, "the decline");
+    expect(declined.error).toBeUndefined();
+    expect(store.workspaces).toEqual([acme, beta]);
+  });
+
   const refusals: { change: string; send: (store: WorkspaceRootStore) => Promise<unknown>; refusal: Response }[] = [
     {
       change: "a creation",
@@ -214,6 +261,16 @@ describe("WorkspaceRootStore, the changes", () => {
       send: (store) => store.leaveWorkspace("acme"),
       refusal: problem(409, "workspace.sole_admin"),
     },
+    {
+      change: "an acceptance",
+      send: (store) => store.acceptInvitation("i-gamma", "nrv_inv_gamma"),
+      refusal: problem(403, "workspace.invitation_email_mismatch"),
+    },
+    {
+      change: "a decline",
+      send: (store) => store.declineInvitation("i-gamma", "nrv_inv_gamma"),
+      refusal: problem(409, "workspace.invitation_responded"),
+    },
   ];
   it.each(refusals)("fails, changing nothing, when nerve refuses $change", async ({ send, refusal }) => {
     const { nerve, store } = await loaded();
@@ -228,18 +285,26 @@ describe("WorkspaceRootStore, the changes", () => {
   it("sends each change once nerve has answered the one before it, refused or not", async () => {
     const { nerve, store } = await loaded();
     const gamma = workspaceOf("gamma", { role: 20 });
+    const delta = workspaceOf("delta");
     const updated = track(store.updateWorkspace("acme", { timezone: "Asia/Shanghai" }));
     const created = track(store.createWorkspace({ name: "gamma", slug: "gamma" }));
     const deleted = track(store.deleteWorkspace("beta"));
     const left = track(store.leaveWorkspace("acme"));
+    const accepted = track(store.acceptInvitation("i-delta", "nrv_inv_delta"));
+    const declined = track(store.declineInvitation("i-gamma", "nrv_inv_gamma"));
     await inTurn(nerve, 1, ["PATCH", "/api/v0/workspaces/acme"], problem(503, "server_busy"));
     await inTurn(nerve, 2, ["POST", LIST], json(201, gamma));
     await inTurn(nerve, 3, ["DELETE", "/api/v0/workspaces/beta"], noContent());
     await inTurn(nerve, 4, ["POST", "/api/v0/workspaces/acme/leave"], noContent());
-    await until(() => left.settled, "the last change");
+    await inTurn(nerve, 5, ["POST", "/api/v0/workspace-invitations/i-delta/accept"], json(200, delta));
+    await inTurn(nerve, 6, ["POST", "/api/v0/workspace-invitations/i-gamma/decline"], noContent());
+    await until(() => declined.settled, "the last change");
     expect(updated.error).toBeInstanceOf(ApiError);
     expect(created.value).toEqual(gamma);
     expect(deleted.error).toBeUndefined();
-    expect(store.workspaces).toEqual([gamma]);
+    expect(left.error).toBeUndefined();
+    expect(accepted.value).toEqual(delta);
+    expect(declined.error).toBeUndefined();
+    expect(store.workspaces).toEqual([gamma, delta]);
   });
 });

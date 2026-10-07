@@ -4,29 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import type { TUserPermissions } from "./enums";
-
 export enum EUserWorkspaceRoles {
   ADMIN = 20,
   MEMBER = 15,
   GUEST = 5,
-}
-
-export interface IWorkspaceMemberInvitation {
-  accepted: boolean;
-  email: string;
-  id: string;
-  message: string;
-  responded_at: Date;
-  role: TUserPermissions;
-  token: string;
-  invite_link: string;
-  workspace: {
-    id: string;
-    logo_url: string;
-    name: string;
-    slug: string;
-  };
 }
 
 export interface IWorkspaceDefaultSearchResult {

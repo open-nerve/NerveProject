@@ -38,6 +38,8 @@ export interface IWorkspaceRootStore {
   updateWorkspace: (workspaceSlug: string, data: WorkspaceUpdate) => Promise<Workspace>;
   deleteWorkspace: (workspaceSlug: string) => Promise<void>;
   leaveWorkspace: (workspaceSlug: string) => Promise<void>;
+  acceptInvitation: (invitationId: string, token: string) => Promise<Workspace>;
+  declineInvitation: (invitationId: string, token: string) => Promise<void>;
   getProjectNavigationPreferences: (workspaceSlug: string) => IWorkspaceUserPropertiesResponse | undefined;
   fetchProjectNavigationPreferences: (workspaceSlug: string) => Promise<void>;
   updateProjectNavigationPreferences: (
@@ -78,6 +80,8 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
       updateWorkspace: action,
       deleteWorkspace: action,
       leaveWorkspace: action,
+      acceptInvitation: action,
+      declineInvitation: action,
       fetchProjectNavigationPreferences: action,
       updateProjectNavigationPreferences: action,
     });
@@ -173,6 +177,31 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
       await this.service.leave(workspaceSlug);
       this.drop(workspaceSlug);
     });
+
+  /**
+   * @description accepts an invitation sent to the caller's address: its workspace joins the list, or takes its own
+   * place there when the caller was a member already (his role stays). Fails, changing nothing, when nerve refuses
+   * (another address's invitation, 403; one declined, or no longer there).
+   * @returns {Promise<Workspace>}
+   */
+  acceptInvitation = (invitationId: string, token: string): Promise<Workspace> =>
+    this.changes(async () => {
+      const workspace = await this.service.accept(invitationId, token);
+      runInAction(() => {
+        const listed = this.workspaces?.some((w) => w.id === workspace.id);
+        if (listed) this.workspaces = this.workspaces?.map((w) => (w.id === workspace.id ? workspace : w));
+        else if (this.workspaces) this.workspaces = [...this.workspaces, workspace];
+      });
+      return workspace;
+    });
+
+  /**
+   * @description declines an invitation sent to the caller's address; his workspaces stay as they are. Fails when
+   * nerve refuses.
+   * @returns {Promise<void>}
+   */
+  declineInvitation = (invitationId: string, token: string): Promise<void> =>
+    this.changes(() => this.service.decline(invitationId, token));
 
   /** The workspace leaves the caller's list: it was deleted, or he is no longer a member. */
   private drop(workspaceSlug: string): void {

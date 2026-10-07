@@ -5,7 +5,6 @@
  */
 
 import type {
-  IWorkspaceMemberInvitation,
   IWorkspaceSearchResults,
   IWorkspaceViewProps,
   IUserProjectsRole,
@@ -20,26 +19,8 @@ import type {
 import { APIService } from "@/services/api.service";
 
 export class WorkspaceService extends APIService {
-  async joinWorkspace(workspaceSlug: string, invitationId: string, data: any): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/join/`, data, {
-      headers: {},
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async updateWorkspaceView(workspaceSlug: string, data: { view_props: IWorkspaceViewProps }): Promise<any> {
     return this.post(`/api/workspaces/${workspaceSlug}/workspace-views/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getWorkspaceInvitation(workspaceSlug: string, invitationId: string): Promise<IWorkspaceMemberInvitation> {
-    return this.get(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/join/`, { headers: {} })
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

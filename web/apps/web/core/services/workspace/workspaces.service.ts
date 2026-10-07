@@ -39,4 +39,24 @@ export class WorkspacesService {
   async checkSlug(slug: string): Promise<SlugAvailability> {
     return unwrap(await this.api.GET("/api/v0/workspace-slugs/{slug}", { params: { path: { slug } } }));
   }
+
+  /** Accepts an invitation sent to the caller's address; the answer is its workspace, with the caller's role. */
+  async accept(invitationId: string, token: string): Promise<Workspace> {
+    return unwrap(
+      await this.api.POST("/api/v0/workspace-invitations/{invitation_id}/accept", {
+        params: { path: { invitation_id: invitationId } },
+        body: { token },
+      })
+    );
+  }
+
+  /** Declines an invitation sent to the caller's address: its link shows so from then on. */
+  async decline(invitationId: string, token: string): Promise<void> {
+    unwrap(
+      await this.api.POST("/api/v0/workspace-invitations/{invitation_id}/decline", {
+        params: { path: { invitation_id: invitationId } },
+        body: { token },
+      })
+    );
+  }
 }
