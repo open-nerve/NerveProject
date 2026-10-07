@@ -83,24 +83,8 @@ export class WorkspaceService extends APIService {
       });
   }
 
-  async joinWorkspaces(data: any): Promise<any> {
-    return this.post("/api/users/me/workspaces/invitations/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async getLastActiveWorkspaceAndProjects(): Promise<ILastActiveWorkspaceDetails> {
     return this.get("/api/users/last-visited-workspace/")
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async userWorkspaceInvitations(): Promise<IWorkspaceMemberInvitation[]> {
-    return this.get("/api/users/me/workspaces/invitations/")
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

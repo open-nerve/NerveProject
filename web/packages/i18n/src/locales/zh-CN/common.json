@@ -48,7 +48,6 @@
   "old_password": "旧密码",
   "general_settings": "常规设置",
   "sign_out": "退出登录",
-  "workspace_invites": "工作区邀请",
   "workspace_logo": "工作区标志",
   "your_work": "我的工作",
   "drafts": "草稿",
@@ -115,14 +114,6 @@
   "documentation": "文档",
   "keyboard_shortcuts": "键盘快捷键",
   "version": "版本",
-  "please_select_at_least_one_invitation": "请至少选择一个邀请。",
-  "we_see_that_someone_has_invited_you_to_join_a_workspace": "我们看到有人邀请您加入工作区",
-  "join_a_workspace": "加入工作区",
-  "accept_and_join": "接受并加入",
-  "go_home": "返回首页",
-  "no_pending_invites": "没有待处理的邀请",
-  "you_can_see_here_if_someone_invites_you_to_a_workspace": "如果有人邀请您加入工作区，您可以在这里看到",
-  "back_to_home": "返回首页",
   "deactivate_your_account": "停用您的账户",
   "deactivate_your_account_description": "您将在所有地方退出登录，密码和个人访问令牌都将无法使用。数据不会被删除，也不会发送邮件：如需再次使用此账户，请联系这台服务器的管理员重新启用。",
   "deactivating": "正在停用",
@@ -508,11 +499,7 @@
     "workspace": {
       "description": "所有工作，汇于一处。",
       "name_placeholder": "输入工作区名称",
-      "join_existing": "加入已有的工作区",
-      "creation_disabled": "您似乎还没有收到任何工作区的邀请，而实例管理员限制了创建新工作区。请先请工作区的所有者或管理员邀请您加入工作区，再回到这里加入。",
-      "join_title": "接受邀请，或创建工作区",
-      "create_new": "创建新工作区",
-      "no_invitations": "没有找到邀请"
+      "creation_disabled": "您似乎还没有收到任何工作区的邀请，而实例管理员限制了创建新工作区。请先请工作区的所有者或管理员邀请您加入工作区，再回到这里加入。"
     },
     "invite": {
       "title": "邀请您的队友",

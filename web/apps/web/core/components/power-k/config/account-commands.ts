@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { LogOutOutline, MailOutline } from "@makeplane/propel/icons";
+import { LogOutOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
@@ -13,14 +13,11 @@ import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks
 import { useUser } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
 
 /**
  * Account commands - Account related commands
  */
 export const usePowerKAccountCommands = (): TPowerKCommandConfig[] => {
-  // navigation
-  const navigate = useNavigate();
   // store
   const { signOut } = useUser();
   // translation
@@ -38,17 +35,6 @@ export const usePowerKAccountCommands = (): TPowerKCommandConfig[] => {
   }, [signOut]);
 
   return [
-    {
-      id: "workspace_invites",
-      type: "action",
-      group: "account",
-      i18n_title: "power_k.account_actions.workspace_invites",
-      icon: MailOutline,
-      action: () => navigate("/invitations"),
-      isEnabled: () => true,
-      isVisible: () => true,
-      closeOnSelect: true,
-    },
     {
       id: "sign_out",
       type: "action",

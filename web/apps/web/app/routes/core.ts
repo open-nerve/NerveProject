@@ -24,9 +24,6 @@ export const coreRoutes: RouteConfigEntry[] = [
   // Onboarding
   layout("./(all)/onboarding/layout.tsx", [route("onboarding", "./(all)/onboarding/page.tsx")]),
 
-  // Invitations
-  layout("./(all)/invitations/layout.tsx", [route("invitations", "./(all)/invitations/page.tsx")]),
-
   // Workspace Invitations
   layout("./(all)/workspace-invitations/layout.tsx", [
     route("workspace-invitations", "./(all)/workspace-invitations/page.tsx"),

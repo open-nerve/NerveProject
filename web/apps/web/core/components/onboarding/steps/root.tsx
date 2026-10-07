@@ -6,7 +6,6 @@
 
 import { useEffect, useRef } from "react";
 // nerve imports
-import type { IWorkspaceMemberInvitation } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
 // local components
 import { ProfileSetupStep } from "./profile";
@@ -15,16 +14,15 @@ import { WorkspaceSetupStep } from "./workspace";
 
 type Props = {
   currentStep: EOnboardingSteps;
-  invitations: IWorkspaceMemberInvitation[];
   handleStepChange: (step: EOnboardingSteps, skipInvites?: boolean) => void;
 };
 
-function OnboardingStepContent({ currentStep, invitations, handleStepChange }: Props) {
+function OnboardingStepContent({ currentStep, handleStepChange }: Props) {
   switch (currentStep) {
     case EOnboardingSteps.PROFILE_SETUP:
       return <ProfileSetupStep handleStepChange={handleStepChange} />;
     case EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN:
-      return <WorkspaceSetupStep invitations={invitations ?? []} handleStepChange={handleStepChange} />;
+      return <WorkspaceSetupStep handleStepChange={handleStepChange} />;
     case EOnboardingSteps.INVITE_MEMBERS:
       return <InviteTeamStep handleStepChange={handleStepChange} />;
     default:

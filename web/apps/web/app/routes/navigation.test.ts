@@ -174,4 +174,12 @@ describe("internal navigation", () => {
     // what the disabled feature pages used to link to
     expect(reaches("/*/settings/projects/*/features")).toBe(false);
   });
+
+  it("gives /invitations, the in-app accept's page that is gone, to the workspace of that name", () => {
+    // decision 2 (M3 design 7.8): no page of the app is /invitations any more; like /login, it is a workspace's
+    // address (3.10), which the workspace's pages answer
+    const leaf = (url: string) => matchRoutes(table, url)?.at(-1)?.route.path;
+    expect(leaf("/invitations")).toBe(":workspaceSlug");
+    expect(leaf("/login")).toBe(":workspaceSlug");
+  });
 });

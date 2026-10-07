@@ -29,18 +29,11 @@ import { CommonOnboardingHeader } from "../common";
 type Props = {
   user: User | undefined;
   onComplete: (skipInvites?: boolean) => void;
-  handleCurrentViewChange: () => void;
-  hasInvitations?: boolean;
 };
 
 const workspaceService = new WorkspaceService();
 
-export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
-  user,
-  onComplete,
-  handleCurrentViewChange,
-  hasInvitations = false,
-}: Props) {
+export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user, onComplete }: Props) {
   // states
   const [slugError, setSlugError] = useState(false);
   const [invalidSlug, setInvalidSlug] = useState(false);
@@ -288,16 +281,9 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-4">
-        <Button variant="primary" type="submit" size="xl" className="w-full" disabled={isButtonDisabled}>
-          {isSubmitting ? <Spinner height="20px" width="20px" /> : t("workspace_creation.button.default")}
-        </Button>
-        {hasInvitations && (
-          <Button variant="ghost" size="xl" className="w-full" onClick={handleCurrentViewChange}>
-            {t("onboarding.workspace.join_existing")}
-          </Button>
-        )}
-      </div>
+      <Button variant="primary" type="submit" size="xl" className="w-full" disabled={isButtonDisabled}>
+        {isSubmitting ? <Spinner height="20px" width="20px" /> : t("workspace_creation.button.default")}
+      </Button>
     </form>
   );
 });

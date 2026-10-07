@@ -1994,6 +1994,44 @@
           "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/modules/instance/app/list_timezones.go"]
         }
       }
+    },
+    {
+      "id": "in-system-invitations",
+      "phase": "M3/P8a",
+      "why": "系统内接受邀请（决策点 2，M3 设计 7.8）：/invitations 页、它的路由和入口、新手引导的\"加入工作区\"一步，以及按邮箱列出、批量接受邀请的旧接口和方法都已删除；接受邀请只经邀请链接 /workspace-invitations。/workspace-invitations 和工作区的邀请接口不在其内",
+      "files": {
+        "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "[\"'`]/invitations(?![\\w-])|route\\(\"invitations\"|\\b(?:joinWorkspaces|userWorkspaceInvitations|getUserWorkspaceInvitations|WorkspaceJoinInvitesStep|ECreateOrJoinWorkspaceViews)\\b|/api/users/me/workspaces/invitations/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "              <Link to=\"/invitations\">",
+          "      action: () => navigate(\"/invitations\"),",
+          "  layout(\"./(all)/invitations/layout.tsx\", [route(\"invitations\", \"./(all)/invitations/page.tsx\")]),",
+          "  async joinWorkspaces(data: any): Promise<any> {",
+          "    return this.get(\"/api/users/me/workspaces/invitations/\")",
+          "import { WorkspaceCreateStep, WorkspaceJoinInvitesStep } from \"./\";"
+        ],
+        "miss": [
+          "    route(\"workspace-invitations\", \"./(all)/workspace-invitations/page.tsx\"),",
+          "  return `/workspace-invitations?invitation_id=${id}&token=${token}`;",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/invitations/`, data)",
+          "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/invitations\", { params: { path: { slug } } }));",
+          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })"
+        ],
+        "files": {
+          "hit": ["web/apps/web/app/routes/core.ts", "web/apps/web/core/components/power-k/config/account-commands.ts"],
+          "miss": [
+            "docs/v0/M3-workspace-project/M3-design.md",
+            "server/internal/modules/workspace/domain/reserved_slugs.txt",
+            "web/apps/web/app/routes/navigation.test.ts"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [

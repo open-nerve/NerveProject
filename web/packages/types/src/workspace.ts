@@ -135,8 +135,3 @@ export enum EOnboardingSteps {
 }
 
 export type TOnboardingStep = EOnboardingSteps;
-
-export enum ECreateOrJoinWorkspaceViews {
-  WORKSPACE_CREATE = "WORKSPACE_CREATE",
-  WORKSPACE_JOIN = "WORKSPACE_JOIN",
-}

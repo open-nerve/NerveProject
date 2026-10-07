@@ -83,8 +83,7 @@
       "nav_project_settings": "转到项目设置"
     },
     "account_actions": {
-      "sign_out": "退出登录",
-      "workspace_invites": "工作区邀请"
+      "sign_out": "退出登录"
     },
     "miscellaneous_actions": {
       "toggle_app_sidebar": "切换应用侧边栏",

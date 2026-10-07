@@ -8,7 +8,7 @@ import { Fragment, useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
 // icons
-import { ChevronDownOutline, LogOutOutline, MailOutline, PlusCircleOutline } from "@makeplane/propel/icons";
+import { ChevronDownOutline, LogOutOutline, PlusCircleOutline } from "@makeplane/propel/icons";
 // ui
 import { Menu, Transition } from "@headlessui/react";
 // nerve imports
@@ -200,16 +200,6 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
                         </Menu.Item>
                       </Link>
                     )}
-
-                    <Link to="/invitations" className="w-full" onClick={handleItemClick}>
-                      <Menu.Item
-                        as="div"
-                        className="flex items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
-                      >
-                        <MailOutline className="h-4 w-4 flex-shrink-0" />
-                        {t("workspace_invites")}
-                      </Menu.Item>
-                    </Link>
 
                     <div className="w-full">
                       <Menu.Item
