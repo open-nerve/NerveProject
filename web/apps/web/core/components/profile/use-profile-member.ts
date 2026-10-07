@@ -6,7 +6,7 @@
 import useSWR from "swr";
 // nerve imports
 import { WORKSPACE_MEMBERS } from "@nerve/constants";
-import type { IUserLite } from "@nerve/types";
+import type { MemberUser } from "@nerve/api-client";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 
@@ -14,7 +14,7 @@ type TProfileMember =
   | { status: "loading"; member: undefined }
   | { status: "load-failed"; member: undefined }
   | { status: "not-a-member"; member: undefined }
-  | { status: "member"; member: IUserLite };
+  | { status: "member"; member: MemberUser; joinedAt: string };
 
 // Which workspace member a profile page is about (M1 design 3.2). The page header and the user card both
 // read it here, so they cannot disagree about a user, for instance one who has left the workspace.
@@ -23,9 +23,8 @@ export const useProfileMember = (workspaceSlug: string, userId: string): TProfil
     workspace: { fetchWorkspaceMembers, getWorkspaceMemberDetails },
   } = useMember();
   // The workspace wrapper already fetches the members under this key, so SWR serves the same request;
-  // subscribing here is what tells whether the members are still loading or failed to load. A failed load
-  // shows as a settled request without a list, not as SWR's `error`: the service rethrows only the response
-  // body, which is undefined when the request got no response at all.
+  // subscribing here is what tells whether the members are still loading or failed to load: a failed load
+  // leaves the request settled without a list.
   const { data: members, isLoading } = useSWR(
     workspaceSlug ? WORKSPACE_MEMBERS(workspaceSlug) : null,
     workspaceSlug ? () => fetchWorkspaceMembers(workspaceSlug) : null,
@@ -36,9 +35,9 @@ export const useProfileMember = (workspaceSlug: string, userId: string): TProfil
   );
   const memberDetails = userId ? getWorkspaceMemberDetails(userId) : null;
   // A member removed from the workspace stays in the store, marked inactive: it is no longer a member.
-  const member = memberDetails?.is_active === false ? undefined : memberDetails?.member;
+  const membership = memberDetails?.is_active === false ? undefined : memberDetails;
 
-  if (member) return { status: "member", member };
+  if (membership) return { status: "member", member: membership.member, joinedAt: membership.created_at };
   if (isLoading) return { status: "loading", member: undefined };
   if (!members) return { status: "load-failed", member: undefined };
   return { status: "not-a-member", member: undefined };

@@ -20,17 +20,6 @@ export enum EStartOfTheWeek {
   SATURDAY = 6,
 }
 
-export interface IUserLite {
-  avatar_url: string;
-  display_name: string;
-  email?: string;
-  first_name: string;
-  id: string;
-  is_bot: boolean;
-  last_name: string;
-  joining_date?: string;
-}
-
 export interface IUserProjectsRole {
   [projectId: string]: TUserPermissions;
 }

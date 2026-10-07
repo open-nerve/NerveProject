@@ -9,11 +9,11 @@ import { action, computed, makeObservable, observable, runInAction } from "mobx"
 import { computedFn } from "mobx-utils";
 // nerve imports
 import { EUserPermissions } from "@nerve/constants";
+import type { MemberUser } from "@nerve/api-client";
 import type {
   EUserProjectRoles,
   IProjectBulkAddFormData,
   IProjectUserPropertiesResponse,
-  IUserLite,
   TProjectMembership,
 } from "@nerve/types";
 // store
@@ -31,7 +31,7 @@ import type { IProjectMemberFiltersStore } from "./project-member-filters.store"
 import { ProjectMemberFiltersStore } from "./project-member-filters.store";
 
 export interface IProjectMemberDetails extends Omit<TProjectMembership, "member"> {
-  member: IUserLite;
+  member: MemberUser;
 }
 
 export interface IProjectMemberStore {
@@ -221,10 +221,7 @@ export class ProjectMemberStore implements IProjectMemberStore {
       id: projectMember.id,
       role: projectMember.role,
       original_role: projectMember.original_role,
-      member: {
-        ...userDetails,
-        joining_date: projectMember.created_at ?? undefined,
-      },
+      member: userDetails,
       created_at: projectMember.created_at,
     };
     return memberDetails;
@@ -274,10 +271,7 @@ export class ProjectMemberStore implements IProjectMemberStore {
       id: projectMember.id,
       role: projectMember.role,
       original_role: projectMember.original_role,
-      member: {
-        ...userDetails,
-        joining_date: projectMember.created_at ?? undefined,
-      },
+      member: userDetails,
       created_at: projectMember.created_at,
     };
     return memberDetails;

@@ -7,13 +7,12 @@
 import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
-import type { ApiClient } from "@nerve/api-client";
-import type { ICycle, IIssueLabel, IModule, IProject, IState, IUserLite } from "@nerve/types";
+import type { ApiClient, MemberUser, WorkspaceMember } from "@nerve/api-client";
+import type { ICycle, IIssueLabel, IModule, IProject, IState } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueDetail } from "@/store/issue/issue-details/root.store";
 import type { RootStore } from "@/store/root.store";
-import type { IWorkspaceMembership } from "@/store/member/workspace/workspace-member.store";
 // issues data store
 import type { IArchivedIssuesFilter, IArchivedIssues } from "./archived";
 import { ArchivedIssuesFilter, ArchivedIssues } from "./archived";
@@ -53,8 +52,8 @@ export interface IIssueRootStore {
   stateDetails: IState[] | undefined;
   workspaceStateDetails: IState[] | undefined;
   labelMap: Record<string, IIssueLabel> | undefined;
-  workSpaceMemberRolesMap: Record<string, IWorkspaceMembership> | undefined;
-  memberMap: Record<string, IUserLite> | undefined;
+  workSpaceMemberRolesMap: Record<string, WorkspaceMember> | undefined;
+  memberMap: Record<string, MemberUser> | undefined;
   projectMap: Record<string, IProject> | undefined;
   moduleMap: Record<string, IModule> | undefined;
   cycleMap: Record<string, ICycle> | undefined;
@@ -106,8 +105,8 @@ export class IssueRootStore implements IIssueRootStore {
   stateDetails: IState[] | undefined = undefined;
   workspaceStateDetails: IState[] | undefined = undefined;
   labelMap: Record<string, IIssueLabel> | undefined = undefined;
-  workSpaceMemberRolesMap: Record<string, IWorkspaceMembership> | undefined = undefined;
-  memberMap: Record<string, IUserLite> | undefined = undefined;
+  workSpaceMemberRolesMap: Record<string, WorkspaceMember> | undefined = undefined;
+  memberMap: Record<string, MemberUser> | undefined = undefined;
   projectMap: Record<string, IProject> | undefined = undefined;
   moduleMap: Record<string, IModule> | undefined = undefined;
   cycleMap: Record<string, ICycle> | undefined = undefined;

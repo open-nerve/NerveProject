@@ -5,7 +5,6 @@
  */
 
 import type {
-  IWorkspaceMember,
   IWorkspaceMemberInvitation,
   IWorkspaceSearchResults,
   IWorkspaceBulkInviteFormData,
@@ -48,34 +47,6 @@ export class WorkspaceService extends APIService {
       });
   }
 
-  async fetchWorkspaceMembers(workspaceSlug: string): Promise<IWorkspaceMember[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/members/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async updateWorkspaceMember(
-    workspaceSlug: string,
-    memberId: string,
-    data: Partial<IWorkspaceMember>
-  ): Promise<IWorkspaceMember> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/members/${memberId}/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async deleteWorkspaceMember(workspaceSlug: string, memberId: string): Promise<any> {
-    return this.delete(`/api/workspaces/${workspaceSlug}/members/${memberId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async workspaceInvitations(workspaceSlug: string): Promise<IWorkspaceMemberInvitation[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/invitations/`)
       .then((response) => response?.data)
@@ -95,7 +66,7 @@ export class WorkspaceService extends APIService {
   async updateWorkspaceInvitation(
     workspaceSlug: string,
     invitationId: string,
-    data: Partial<IWorkspaceMember>
+    data: Partial<IWorkspaceMemberInvitation>
   ): Promise<any> {
     return this.patch(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/`, data)
       .then((response) => response?.data)

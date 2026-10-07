@@ -14,8 +14,7 @@ import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants"
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { User } from "@nerve/api-client";
-import type { IWorkspaceMember } from "@nerve/types";
+import type { User, WorkspaceMember } from "@nerve/api-client";
 // nerve ui
 import { CustomSelect, PopoverMenu } from "@nerve/ui";
 // helpers
@@ -24,22 +23,16 @@ import { getFileURL } from "@nerve/utils";
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 
-export interface RowData {
-  member: IWorkspaceMember;
-  role: EUserPermissions;
-  is_active: boolean;
-}
-
 type NameProps = {
-  rowData: RowData;
+  rowData: WorkspaceMember;
   workspaceSlug: string;
   isAdmin: boolean;
   currentUser: User | undefined;
-  setRemoveMemberModal: (rowData: RowData) => void;
+  setRemoveMemberModal: (rowData: WorkspaceMember) => void;
 };
 
 type AccountTypeProps = {
-  rowData: RowData;
+  rowData: WorkspaceMember;
   workspaceSlug: string;
 };
 
@@ -65,7 +58,7 @@ export function NameColumn(props: NameProps) {
                     <img
                       src={getFileURL(avatar_url)}
                       className="absolute top-0 left-0 h-full w-full rounded-full object-cover"
-                      alt={display_name || email}
+                      alt={display_name || (email ?? undefined)}
                     />
                   </span>
                 </Link>

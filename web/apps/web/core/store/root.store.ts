@@ -99,7 +99,7 @@ export class RootStore {
     this.theme = before?.theme ?? new ThemeStore();
     this.workspaceRoot = new WorkspaceRootStore(this, api);
     this.projectRoot = new ProjectRootStore(this);
-    this.memberRoot = new MemberRootStore(this);
+    this.memberRoot = new MemberRootStore(this, api);
     this.cycle = new CycleStore(this);
     this.cycleFilter = new CycleFilterStore(this);
     this.module = new ModulesStore(this);

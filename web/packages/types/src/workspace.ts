@@ -5,7 +5,6 @@
  */
 
 import type { TUserPermissions } from "./enums";
-import type { IUserLite } from "./users";
 
 export enum EUserWorkspaceRoles {
   ADMIN = 20,
@@ -32,20 +31,6 @@ export interface IWorkspaceMemberInvitation {
 
 export interface IWorkspaceBulkInviteFormData {
   emails: { email: string; role: TUserPermissions }[];
-}
-
-export interface IWorkspaceMember {
-  id: string;
-  member: IUserLite;
-  role: TUserPermissions | EUserWorkspaceRoles;
-  created_at?: string;
-  avatar_url?: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  joining_date?: string;
-  display_name?: string;
-  is_active?: boolean;
 }
 
 export interface IWorkspaceDefaultSearchResult {

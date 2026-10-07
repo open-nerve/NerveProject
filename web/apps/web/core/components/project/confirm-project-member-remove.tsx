@@ -10,7 +10,7 @@ import { useParams } from "react-router";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // types
 import { Button } from "@nerve/propel/button";
-import type { IUserLite } from "@nerve/types";
+import type { MemberUser } from "@nerve/api-client";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
@@ -18,7 +18,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
 
 type Props = {
-  data: Partial<IUserLite>;
+  data: Partial<MemberUser>;
   onSubmit: () => Promise<void>;
   isOpen: boolean;
   onClose: () => void;

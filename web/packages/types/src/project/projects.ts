@@ -7,8 +7,7 @@
 import type { TLogoProps } from "../common";
 import type { TUserPermissions } from "../enums";
 import type { TStateGroups } from "../state";
-import type { IUserLite } from "../users";
-import type { Workspace } from "@nerve/api-client";
+import type { Workspace, MemberUser } from "@nerve/api-client";
 
 export enum EUserProjectRoles {
   ADMIN = 20,
@@ -30,7 +29,7 @@ export interface IPartialProject {
   module_view: boolean;
   inbox_view: boolean;
   guest_view_all_features?: boolean;
-  project_lead?: IUserLite | string | null;
+  project_lead?: MemberUser | string | null;
   network?: number;
   // Timestamps
   created_at?: Date;
@@ -48,7 +47,7 @@ export interface IProject extends IPartialProject {
   cover_image?: string;
   // only for rendering the cover image
   readonly cover_image_url?: string;
-  default_assignee?: IUserLite | string | null;
+  default_assignee?: MemberUser | string | null;
   description?: string;
   is_favorite?: boolean;
   members?: string[];

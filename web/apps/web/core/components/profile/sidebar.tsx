@@ -114,7 +114,7 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
         </div>
         <div className="mt-6 flex items-center gap-4 text-13">
           <div className="w-2/5 flex-shrink-0 text-secondary">{t("profile.details.joined_on")}</div>
-          <div className="w-3/5 font-medium break-words">{renderFormattedDate(userData.joining_date ?? "")}</div>
+          <div className="w-3/5 font-medium break-words">{renderFormattedDate(profileMember.joinedAt)}</div>
         </div>
       </div>
     );

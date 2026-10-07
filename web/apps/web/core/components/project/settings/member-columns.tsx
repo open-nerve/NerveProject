@@ -12,16 +12,16 @@ import { Disclosure } from "@headlessui/react";
 // nerve imports
 import { ROLE, EUserPermissions } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { User } from "@nerve/api-client";
-import type { EUserProjectRoles, IWorkspaceMember, TProjectMembership } from "@nerve/types";
+import type { MemberUser, User } from "@nerve/api-client";
+import type { EUserProjectRoles, TProjectMembership } from "@nerve/types";
 import { CustomMenu, CustomSelect } from "@nerve/ui";
 import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 
-interface RowData extends Pick<TProjectMembership, "original_role"> {
-  member: IWorkspaceMember;
+interface RowData extends Pick<TProjectMembership, "original_role" | "created_at"> {
+  member: MemberUser;
 }
 
 type NameProps = {
@@ -56,7 +56,7 @@ export function NameColumn(props: NameProps) {
                     <img
                       src={getFileURL(avatar_url)}
                       className="absolute top-0 left-0 h-full w-full rounded-full object-cover"
-                      alt={display_name || email}
+                      alt={display_name || (email ?? undefined)}
                     />
                   </span>
                 </Link>

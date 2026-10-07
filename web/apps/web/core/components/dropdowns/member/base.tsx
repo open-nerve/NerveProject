@@ -10,7 +10,7 @@ import type { ComponentType, SVGProps } from "react";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
 // nerve imports
-import type { IUserLite } from "@nerve/types";
+import type { MemberUser } from "@nerve/api-client";
 import { ComboDropDown } from "@nerve/ui";
 // helpers
 import { cn } from "@nerve/utils";
@@ -24,7 +24,7 @@ import { MemberOptions } from "./member-options";
 import type { MemberDropdownProps } from "./types";
 
 type TMemberDropdownBaseProps = {
-  getUserDetails: (userId: string) => IUserLite | undefined;
+  getUserDetails: (userId: string) => MemberUser | undefined;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
   memberIds?: string[];
   onClose?: () => void;

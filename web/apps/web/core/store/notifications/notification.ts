@@ -7,7 +7,8 @@
 /* eslint-disable no-useless-catch */
 import { set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
-import type { IUserLite, TNotification, TNotificationData } from "@nerve/types";
+import type { MemberUser } from "@nerve/api-client";
+import type { TNotification, TNotificationData } from "@nerve/types";
 // services
 import workspaceNotificationService from "@/services/workspace-notification.service";
 // store
@@ -43,7 +44,7 @@ export class Notification implements INotification {
   sender: string | undefined = undefined;
   receiver: string | undefined = undefined;
   triggered_by: string | undefined = undefined;
-  triggered_by_details: IUserLite | undefined = undefined;
+  triggered_by_details: MemberUser | undefined = undefined;
   read_at: string | undefined = undefined;
   archived_at: string | undefined = undefined;
   snoozed_till: string | undefined = undefined;

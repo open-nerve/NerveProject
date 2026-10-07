@@ -8,15 +8,14 @@ import type { ICycle } from "./cycle";
 import type { TIssue } from "./issues/issue";
 import type { IModule } from "./module";
 import type { IProject } from "./project";
-import type { IUserLite } from "./users";
-import type { Workspace } from "@nerve/api-client";
+import type { Workspace, MemberUser } from "@nerve/api-client";
 
 export type TSearchEntities = "user_mention" | "issue" | "project" | "cycle" | "module";
 
 export type TUserSearchResponse = {
-  member__avatar_url: IUserLite["avatar_url"];
-  member__display_name: IUserLite["display_name"];
-  member__id: IUserLite["id"];
+  member__avatar_url: MemberUser["avatar_url"];
+  member__display_name: MemberUser["display_name"];
+  member__id: MemberUser["id"];
 };
 
 type TProjectSearchResponse = {

@@ -83,22 +83,20 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
 
     const payload = { ...formData };
 
-    await bulkAddMembersToProject(workspaceSlug, projectId, payload)
-      .then(() => {
-        if (onSuccess) onSuccess();
-        onClose();
-        setToast({
-          title: "Success!",
-          type: TOAST_TYPE.SUCCESS,
-          message: "Members added successfully.",
-        });
-      })
-      .catch((error) => {
-        console.error(error);
-      })
-      .finally(() => {
-        reset(defaultValues);
+    try {
+      await bulkAddMembersToProject(workspaceSlug, projectId, payload);
+      if (onSuccess) onSuccess();
+      onClose();
+      setToast({
+        title: "Success!",
+        type: TOAST_TYPE.SUCCESS,
+        message: "Members added successfully.",
       });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      reset(defaultValues);
+    }
   };
 
   const handleClose = () => {
@@ -173,7 +171,7 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     );
 
     return Object.fromEntries(
-      Object.entries(ROLE).filter(([key]) => !isGuestOROwner || [currentMemberWorkspaceRole].includes(parseInt(key)))
+      Object.entries(ROLE).filter(([key]) => !isGuestOROwner || parseInt(key) === currentMemberWorkspaceRole)
     );
   };
 
@@ -249,12 +247,14 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                       name={`members.${index}.role`}
                       control={control}
                       rules={{ required: "Select Role" }}
-                      render={({ field }) => (
+                      render={({ field: roleField }) => (
                         <CustomSelect
-                          {...field}
+                          {...roleField}
                           customButton={
                             <div className="shadow-sm flex w-24 items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2.5 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
-                              <span className="capitalize">{field.value ? ROLE[field.value] : "Select role"}</span>
+                              <span className="capitalize">
+                                {roleField.value ? ROLE[roleField.value] : "Select role"}
+                              </span>
                               <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
                             </div>
                           }

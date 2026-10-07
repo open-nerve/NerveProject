@@ -7,28 +7,19 @@
 import { action, makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
-import type { EUserPermissions } from "@nerve/constants";
-import type { IUserLite } from "@nerve/types";
+import type { MemberUser, WorkspaceMember } from "@nerve/api-client";
 // local imports
 import type { IMemberFilters } from "../utils";
 import { sortWorkspaceMembers } from "../utils";
-
-// Workspace membership interface matching the store structure
-interface IWorkspaceMembership {
-  id: string;
-  member: string;
-  role: EUserPermissions;
-  is_active?: boolean;
-}
 
 export interface IWorkspaceMemberFiltersStore {
   // observables
   filters: IMemberFilters;
   // computed actions
   getFilteredMemberIds: (
-    members: IWorkspaceMembership[],
-    memberDetailsMap: Record<string, IUserLite>,
-    getMemberKey: (member: IWorkspaceMembership) => string
+    members: WorkspaceMember[],
+    memberDetailsMap: Record<string, MemberUser>,
+    getMemberKey: (member: WorkspaceMember) => string
   ) => string[];
   // actions
   updateFilters: (filters: Partial<IMemberFilters>) => void;
@@ -55,9 +46,9 @@ export class WorkspaceMemberFiltersStore implements IWorkspaceMemberFiltersStore
    */
   getFilteredMemberIds = computedFn(
     (
-      members: IWorkspaceMembership[],
-      memberDetailsMap: Record<string, IUserLite>,
-      getMemberKey: (member: IWorkspaceMembership) => string
+      members: WorkspaceMember[],
+      memberDetailsMap: Record<string, MemberUser>,
+      getMemberKey: (member: WorkspaceMember) => string
     ): string[] => {
       if (!members || members.length === 0) return [];
 

@@ -7,11 +7,15 @@
 import { set, sortBy } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// types
-import type { EUserPermissions } from "@nerve/constants";
-import type { IWorkspaceBulkInviteFormData, IWorkspaceMember, IWorkspaceMemberInvitation } from "@nerve/types";
+// nerve imports
+import type { ApiClient, WorkspaceMember, WorkspaceMemberUpdate } from "@nerve/api-client";
+import type { IWorkspaceBulkInviteFormData, IWorkspaceMemberInvitation } from "@nerve/types";
+// lib
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { oneAtATime } from "@/lib/one-at-a-time";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
+import { WorkspaceMembersService } from "@/services/workspace/workspace-members.service";
 // types
 import type { IRouterStore } from "@/store/router.store";
 import type { IUserStore } from "@/store/user";
@@ -21,35 +25,29 @@ import type { IWorkspaceMemberFiltersStore } from "./workspace-member-filters.st
 import { WorkspaceMemberFiltersStore } from "./workspace-member-filters.store";
 import type { RootStore } from "@/store/root.store";
 
-export interface IWorkspaceMembership {
-  id: string;
-  member: string;
-  role: EUserPermissions;
-  is_active?: boolean;
-}
-
 export interface IWorkspaceMemberStore {
   // observables
-  workspaceMemberMap: Record<string, Record<string, IWorkspaceMembership>>;
+  /** Each workspace's memberships by the member's account id, those that ended too (is_active false). */
+  workspaceMemberMap: Record<string, Record<string, WorkspaceMember>>;
   workspaceMemberInvitations: Record<string, IWorkspaceMemberInvitation[]>;
   // filters store
   filtersStore: IWorkspaceMemberFiltersStore;
   // computed
   workspaceMemberIds: string[] | null;
   workspaceMemberInvitationIds: string[] | null;
-  memberMap: Record<string, IWorkspaceMembership> | null;
+  memberMap: Record<string, WorkspaceMember> | null;
   // computed actions
   getWorkspaceMemberIds: (workspaceSlug: string) => string[];
   getFilteredWorkspaceMemberIds: (workspaceSlug: string) => string[];
   getSearchedWorkspaceMemberIds: (searchQuery: string) => string[] | null;
   getSearchedWorkspaceInvitationIds: (searchQuery: string) => string[] | null;
-  getWorkspaceMemberDetails: (workspaceMemberId: string) => IWorkspaceMember | null;
+  getWorkspaceMemberDetails: (userId: string) => WorkspaceMember | null;
   getWorkspaceInvitationDetails: (invitationId: string) => IWorkspaceMemberInvitation | null;
   // fetch actions
-  fetchWorkspaceMembers: (workspaceSlug: string) => Promise<IWorkspaceMember[]>;
+  fetchWorkspaceMembers: (workspaceSlug: string) => Promise<WorkspaceMember[] | undefined>;
   fetchWorkspaceMemberInvitations: (workspaceSlug: string) => Promise<IWorkspaceMemberInvitation[]>;
   // crud actions
-  updateMember: (workspaceSlug: string, userId: string, data: { role: EUserPermissions }) => Promise<void>;
+  updateMember: (workspaceSlug: string, userId: string, data: WorkspaceMemberUpdate) => Promise<WorkspaceMember>;
   removeMemberFromWorkspace: (workspaceSlug: string, userId: string) => Promise<void>;
   // invite actions
   inviteMembersToWorkspace: (workspaceSlug: string, data: IWorkspaceBulkInviteFormData) => Promise<void>;
@@ -62,22 +60,28 @@ export interface IWorkspaceMemberStore {
   isUserSuspended: (userId: string, workspaceSlug: string | undefined) => boolean;
 }
 
+/**
+ * The members of the workspaces of a session (M3 design 7.3): its service sends with the session's client, which
+ * the RootStore of the session hands down. Changes go one at a time (v0 design 7.7); fetches do not queue.
+ */
 export class WorkspaceMemberStore implements IWorkspaceMemberStore {
   // observables
-  workspaceMemberMap: {
-    [workspaceSlug: string]: Record<string, IWorkspaceMembership>;
-  } = {}; // { workspaceSlug: { userId: userDetails } }
+  workspaceMemberMap: Record<string, Record<string, WorkspaceMember>> = {};
   workspaceMemberInvitations: Record<string, IWorkspaceMemberInvitation[]> = {}; // { workspaceSlug: [invitations] }
   // filters store
   filtersStore: IWorkspaceMemberFiltersStore;
   // stores
   routerStore: IRouterStore;
   userStore: IUserStore;
-  memberRoot: IMemberRootStore;
+  /** The users the stores read, which the members' profiles join. */
+  memberRoot: Pick<IMemberRootStore, "memberMap">;
   // services
   workspaceService;
+  private readonly service: WorkspaceMembersService;
+  /** The changes of the memberships, sent one at a time. */
+  private readonly changes = oneAtATime();
 
-  constructor(_memberRoot: IMemberRootStore, _rootStore: RootStore) {
+  constructor(_memberRoot: Pick<IMemberRootStore, "memberMap">, _rootStore: RootStore, api: ApiClient) {
     makeObservable(this, {
       // observables
       workspaceMemberMap: observable,
@@ -102,6 +106,7 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
     this.memberRoot = _memberRoot;
     // services
     this.workspaceService = new WorkspaceService();
+    this.service = new WorkspaceMembersService(api);
   }
 
   /**
@@ -127,34 +132,24 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
   }
 
   getWorkspaceMemberIds = computedFn((workspaceSlug: string) => {
-    let members = Object.values(this.workspaceMemberMap?.[workspaceSlug] ?? {});
-    members = sortBy(members, [
-      (m) => m.member !== this.userStore?.data?.id,
-      (m) => this.memberRoot?.memberMap?.[m.member]?.display_name?.toLowerCase(),
+    const members = sortBy(Object.values(this.workspaceMemberMap?.[workspaceSlug] ?? {}), [
+      (m) => m.member.id !== this.userStore?.data?.id,
+      (m) => m.member.display_name.toLowerCase(),
     ]);
-    //filter out bots
-    const memberIds = members.filter((m) => !this.memberRoot?.memberMap?.[m.member]?.is_bot).map((m) => m.member);
-    return memberIds;
+    return members.map((m) => m.member.id);
   });
 
   /**
    * @description get the filtered and sorted list of all the user ids of all the members of the workspace
    * @param workspaceSlug
    */
-  getFilteredWorkspaceMemberIds = computedFn((workspaceSlug: string) => {
-    let members = Object.values(this.workspaceMemberMap?.[workspaceSlug] ?? {});
-    //filter out bots and inactive members
-    members = members.filter((m) => !this.memberRoot?.memberMap?.[m.member]?.is_bot);
-
-    // Use filters store to get filtered member ids
-    const memberIds = this.filtersStore.getFilteredMemberIds(
-      members,
+  getFilteredWorkspaceMemberIds = computedFn((workspaceSlug: string) =>
+    this.filtersStore.getFilteredMemberIds(
+      Object.values(this.workspaceMemberMap?.[workspaceSlug] ?? {}),
       this.memberRoot?.memberMap || {},
-      (member) => member.member
-    );
-
-    return memberIds;
-  });
+      (member) => member.member.id
+    )
+  );
 
   /**
    * @description get the list of all the user ids that match the search query of all the members of the current workspace
@@ -201,16 +196,7 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
   getWorkspaceMemberDetails = computedFn((userId: string) => {
     const workspaceSlug = this.routerStore.workspaceSlug;
     if (!workspaceSlug) return null;
-    const workspaceMember = this.workspaceMemberMap?.[workspaceSlug]?.[userId];
-    if (!workspaceMember) return null;
-
-    const memberDetails: IWorkspaceMember = {
-      id: workspaceMember.id,
-      role: workspaceMember.role,
-      member: this.memberRoot?.memberMap?.[workspaceMember.member],
-      is_active: workspaceMember.is_active,
-    };
-    return memberDetails;
+    return this.workspaceMemberMap?.[workspaceSlug]?.[userId] ?? null;
   });
 
   /**
@@ -229,65 +215,60 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
   });
 
   /**
-   * @description fetch all the members of a workspace
-   * @param workspaceSlug
+   * @description fetches a workspace's memberships, those that ended too, and gives them; each member's profile
+   * joins the users the other stores read (memberRoot.memberMap). A change of session while they load is no
+   * failure: the new session's store fetches its own (store-context.tsx), and this one gives undefined.
+   * @returns {Promise<WorkspaceMember[] | undefined>}
    */
-  fetchWorkspaceMembers = async (workspaceSlug: string) =>
-    await this.workspaceService.fetchWorkspaceMembers(workspaceSlug).then((response) => {
-      runInAction(() => {
-        response.forEach((member) => {
-          set(this.memberRoot?.memberMap, member.member.id, { ...member.member, joining_date: member.created_at });
-          set(this.workspaceMemberMap, [workspaceSlug, member.member.id], {
-            id: member.id,
-            member: member.member.id,
-            role: member.role,
-            is_active: member.is_active,
-          });
-        });
-      });
-      return response;
-    });
-
-  /**
-   * @description update the role of a workspace member
-   * @param workspaceSlug
-   * @param userId
-   * @param data
-   */
-  updateMember = async (workspaceSlug: string, userId: string, data: { role: EUserPermissions }) => {
-    const memberDetails = this.getWorkspaceMemberDetails(userId);
-    if (!memberDetails) throw new Error("Member not found");
-    // original data to revert back in case of error
-    const originalProjectMemberData = { ...this.workspaceMemberMap?.[workspaceSlug]?.[userId] };
+  fetchWorkspaceMembers = async (workspaceSlug: string): Promise<WorkspaceMember[] | undefined> => {
     try {
+      const memberships = await this.service.list(workspaceSlug);
       runInAction(() => {
-        set(this.workspaceMemberMap, [workspaceSlug, userId, "role"], data.role);
+        for (const membership of memberships) set(this.memberRoot.memberMap, membership.member.id, membership.member);
+        this.workspaceMemberMap[workspaceSlug] = Object.fromEntries(memberships.map((m) => [m.member.id, m]));
       });
-      await this.workspaceService.updateWorkspaceMember(workspaceSlug, memberDetails.id, data);
+      return memberships;
     } catch (error) {
-      // revert back to original members in case of error
-      runInAction(() => {
-        set(this.workspaceMemberMap, [workspaceSlug, userId], originalProjectMemberData);
-      });
+      if (error instanceof SessionChangedError) return undefined;
       throw error;
     }
   };
 
   /**
-   * @description remove a member from workspace
-   * @param workspaceSlug
-   * @param userId
+   * @description changes the role of a member of the workspace; the store then has nerve's answer. Fails,
+   * changing nothing, when nerve refuses or the store has no membership of his.
+   * @returns {Promise<WorkspaceMember>}
    */
-  removeMemberFromWorkspace = async (workspaceSlug: string, userId: string) => {
-    const memberDetails = this.getWorkspaceMemberDetails(userId);
-    if (!memberDetails) throw new Error("Member not found");
-    // oxlint-disable-next-line promise/always-return
-    await this.workspaceService.deleteWorkspaceMember(workspaceSlug, memberDetails?.id).then(() => {
+  updateMember = (workspaceSlug: string, userId: string, data: WorkspaceMemberUpdate): Promise<WorkspaceMember> =>
+    this.changes(async () => {
+      const membership = await this.service.update(this.membership(workspaceSlug, userId).id, data);
       runInAction(() => {
-        set(this.workspaceMemberMap, [workspaceSlug, userId, "is_active"], false);
+        set(this.workspaceMemberMap, [workspaceSlug, userId], membership);
+      });
+      return membership;
+    });
+
+  /**
+   * @description ends the membership of a member of the workspace, which the store then keeps as ended
+   * (is_active false), as nerve lists it. Fails, changing nothing, when nerve refuses or the store has no
+   * membership of his.
+   * @returns {Promise<void>}
+   */
+  removeMemberFromWorkspace = (workspaceSlug: string, userId: string): Promise<void> =>
+    this.changes(async () => {
+      const membership = this.membership(workspaceSlug, userId);
+      await this.service.remove(membership.id);
+      runInAction(() => {
+        set(this.workspaceMemberMap, [workspaceSlug, userId], { ...membership, is_active: false });
       });
     });
-  };
+
+  /** The membership of the member userId names in the workspace, as the store has it; fails when it has none. */
+  private membership(workspaceSlug: string, userId: string): WorkspaceMember {
+    const membership = this.workspaceMemberMap[workspaceSlug]?.[userId];
+    if (!membership) throw new Error("Member not found");
+    return membership;
+  }
 
   /**
    * @description fetch all the member invitations of a workspace

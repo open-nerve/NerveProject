@@ -97,10 +97,7 @@ export const ModulesLinksListItem = observer(function ModulesLinksListItem(props
       </div>
       <div className="px-5">
         <p className="mt-0.5 flex items-center gap-1.5 stroke-[1.5] text-11 text-tertiary">
-          Added {calculateTimeAgo(link.created_at)}{" "}
-          {createdByDetails && (
-            <>by {createdByDetails?.is_bot ? createdByDetails?.first_name + " Bot" : createdByDetails?.display_name}</>
-          )}
+          Added {calculateTimeAgo(link.created_at)} {createdByDetails && <>by {createdByDetails.display_name}</>}
         </p>
       </div>
     </div>

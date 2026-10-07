@@ -16,7 +16,7 @@ import { Avatar } from "@makeplane/propel/components/avatar";
 import { useTranslation } from "@nerve/i18n";
 import { DeactivatedUserOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { EPillSize, EPillVariant, Pill } from "@nerve/propel/pill";
-import type { IUserLite } from "@nerve/types";
+import type { MemberUser } from "@nerve/api-client";
 import { cn, getFileURL, sortByCurrentUserThenSelected } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
@@ -25,7 +25,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 
 interface Props {
   className?: string;
-  getUserDetails: (userId: string) => IUserLite | undefined;
+  getUserDetails: (userId: string) => MemberUser | undefined;
   isOpen: boolean;
   memberIds?: string[];
   onDropdownOpen?: () => void;
