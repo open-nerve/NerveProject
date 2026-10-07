@@ -34,14 +34,13 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { allowPermissions, workspaceInfoBySlug } = useUserPermissions();
+  const { allowPermissions, getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
   const {
     workspace: { updateMemberInvitation, deleteMemberInvitation, getWorkspaceInvitationDetails },
   } = useMember();
   // derived values
   const invitationDetails = getWorkspaceInvitationDetails(invitationId);
-  const currentWorkspaceMemberInfo = workspaceInfoBySlug(workspaceSlug);
-  const currentWorkspaceRole = currentWorkspaceMemberInfo?.role;
+  const currentWorkspaceRole = workspaceSlug ? getWorkspaceRoleByWorkspaceSlug(workspaceSlug) : undefined;
   // is the current logged in user admin
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
   // role change access-
@@ -73,7 +72,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
     }
   };
 
-  if (!invitationDetails || !currentWorkspaceMemberInfo) return null;
+  if (!invitationDetails || currentWorkspaceRole === undefined) return null;
 
   const handleCopyText = async () => {
     try {

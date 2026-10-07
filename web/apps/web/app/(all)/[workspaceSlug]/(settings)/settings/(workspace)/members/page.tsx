@@ -37,7 +37,7 @@ const WorkspaceMembersSettingsPage = observer(function WorkspaceMembersSettingsP
   // router
   const { workspaceSlug } = params;
   // store hooks
-  const { workspaceUserInfo, allowPermissions } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
   const {
     workspace: { workspaceMemberIds, inviteMembersToWorkspace, filtersStore },
   } = useMember();
@@ -94,7 +94,7 @@ const WorkspaceMembersSettingsPage = observer(function WorkspaceMembersSettingsP
   const appliedRoleFilters = filtersStore.filters?.roles || [];
 
   // if user is not authorized to view this page
-  if (workspaceUserInfo && !canPerformWorkspaceMemberActions) {
+  if (!canPerformWorkspaceMemberActions) {
     return <NotAuthorizedView section="settings" className="h-auto" />;
   }
 

@@ -12,20 +12,20 @@ import useSWR from "swr";
 import { LogOutOutline } from "@makeplane/propel/icons";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { Button, getButtonStyling } from "@nerve/propel/button";
+import { getButtonStyling } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
 // assets
 import WorkSpaceNotAvailable from "@/app/assets/workspace/workspace-not-available.png?url";
 // components
+import { SessionUnavailable } from "@/components/account/session-unavailable";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { NerveLogo } from "@/components/common/nerve-logo";
 // constants
 import {
   WORKSPACE_MEMBERS,
   WORKSPACE_PARTIAL_PROJECTS,
-  WORKSPACE_MEMBER_ME_INFORMATION,
   WORKSPACE_PROJECTS_ROLES_INFORMATION,
   WORKSPACE_FAVORITE,
   WORKSPACE_STATES,
@@ -39,6 +39,8 @@ import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// local imports
+import { useWorkspaceFetch } from "./use-workspace-fetch";
 
 interface IWorkspaceAuthWrapper {
   children: ReactNode;
@@ -57,27 +59,20 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   const {
     workspace: { fetchWorkspaceMembers },
   } = useMember();
-  const { workspaces, fetchProjectNavigationPreferences } = useWorkspace();
+  const { workspaces, getWorkspaceBySlug, fetchProjectNavigationPreferences } = useWorkspace();
   const { isMobile } = usePlatformOS();
-  const { loader, workspaceInfoBySlug, fetchUserWorkspaceInfo, fetchUserProjectPermissions, allowPermissions } =
-    useUserPermissions();
+  const { fetchUserProjectPermissions, allowPermissions } = useUserPermissions();
   const { fetchWorkspaceStates } = useProjectState();
   // derived values
   const canPerformWorkspaceMemberActions = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.WORKSPACE
   );
-  const allWorkspaces = workspaces ? Object.values(workspaces) : undefined;
-  const currentWorkspace =
-    (allWorkspaces && allWorkspaces.find((workspace) => workspace?.slug === workspaceSlug)) || undefined;
-  const currentWorkspaceInfo = workspaceSlug && workspaceInfoBySlug(workspaceSlug);
+  // The caller's workspaces decide whether he may see this one, and his role in it (M3 design 7.2).
+  const currentWorkspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
 
-  // fetching user workspace information
-  useSWR(
-    workspaceSlug && currentWorkspace ? WORKSPACE_MEMBER_ME_INFORMATION(workspaceSlug) : null,
-    workspaceSlug && currentWorkspace ? () => fetchUserWorkspaceInfo(workspaceSlug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
+  // the workspace side of what every page of a workspace fetches (M3 design 7.1)
+  const listed = useWorkspaceFetch();
   useSWR(
     workspaceSlug && currentWorkspace ? WORKSPACE_PROJECTS_ROLES_INFORMATION(workspaceSlug) : null,
     workspaceSlug && currentWorkspace ? () => fetchUserProjectPermissions(workspaceSlug) : null,
@@ -126,8 +121,11 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
     );
   };
 
+  // nerve could not be reached: the page says so, and tries again when asked (M2 design 7.1)
+  if (listed.error) return <SessionUnavailable autoRetry={false} onRetry={() => void listed.mutate()} />;
+
   // if list of workspaces are not there then we have to render the spinner
-  if (allWorkspaces === undefined || loader) {
+  if (workspaces === undefined) {
     return (
       <div className="grid h-full place-items-center rounded-lg border border-subtle p-4">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -137,8 +135,8 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
     );
   }
 
-  // if workspaces are there and we are trying to access the workspace that we are not part of then show the existing workspaces
-  if (currentWorkspace === undefined && !currentWorkspaceInfo) {
+  // a workspace that is not among the caller's: it does not exist, or he is not a member of it (M3 design 8.3)
+  if (!currentWorkspace) {
     return (
       <div className="relative flex h-full w-full flex-col items-center justify-center bg-surface-2">
         <div className="relative container mx-auto flex h-full w-full flex-col overflow-hidden overflow-y-auto px-5 py-14 md:px-0">
@@ -169,17 +167,17 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
               No workspace found with the URL. It may not exist or you lack authorization to view it.
             </p>
             <div className="flex items-center justify-center gap-2 pt-4">
-              {allWorkspaces && allWorkspaces.length > 0 && (
+              {workspaces.length > 0 && (
                 <Link to="/" className={cn(getButtonStyling("primary", "base"))}>
                   Go Home
                 </Link>
               )}
-              {allWorkspaces?.length > 0 && (
+              {workspaces.length > 0 && (
                 <Link to="/settings/profile/general" className={cn(getButtonStyling("secondary", "base"))}>
                   Visit Profile
                 </Link>
               )}
-              {allWorkspaces && allWorkspaces.length === 0 && (
+              {workspaces.length === 0 && (
                 <Link to="/create-workspace" className={cn(getButtonStyling("secondary", "base"))}>
                   Create new workspace
                 </Link>
@@ -188,31 +186,6 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
           </div>
 
           <div className="absolute top-0 bottom-0 left-4 w-0 bg-layer-1 md:w-0.5" />
-        </div>
-      </div>
-    );
-  }
-
-  // while user does not have access to view that workspace
-  if (currentWorkspaceInfo === undefined) {
-    return (
-      <div className="h-screen w-full overflow-hidden bg-surface-1">
-        <div className="grid h-full place-items-center p-4">
-          <div className="space-y-8 text-center">
-            <div className="space-y-2">
-              <h3 className="text-16 font-semibold">Not Authorized!</h3>
-              <p className="mx-auto w-1/2 text-13 text-secondary">
-                You're not a member of this workspace. Please contact the workspace admin to get an invitation.
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <Link to="/create-workspace">
-                <span>
-                  <Button variant="primary">Create new workspace</Button>
-                </span>
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
     );

@@ -6,7 +6,6 @@
 
 import type { TUserPermissions } from "./enums";
 import type { IUserLite } from "./users";
-import type { IWorkspaceViewProps } from "./view-props";
 
 export enum EUserWorkspaceRoles {
   ADMIN = 20,
@@ -47,21 +46,6 @@ export interface IWorkspaceMember {
   joining_date?: string;
   display_name?: string;
   is_active?: boolean;
-}
-
-export interface IWorkspaceMemberMe {
-  company_role: string | null;
-  created_at: Date;
-  created_by: string;
-  default_props: IWorkspaceViewProps;
-  id: string;
-  member: string;
-  role: TUserPermissions | EUserWorkspaceRoles;
-  updated_at: Date;
-  updated_by: string;
-  view_props: IWorkspaceViewProps;
-  workspace: string;
-  draft_issue_count: number;
 }
 
 export interface IWorkspaceDefaultSearchResult {

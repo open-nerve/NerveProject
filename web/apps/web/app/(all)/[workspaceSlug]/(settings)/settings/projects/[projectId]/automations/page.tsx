@@ -26,7 +26,7 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
   // router
   const { workspaceSlug, projectId } = params;
   // store hooks
-  const { workspaceUserInfo, allowPermissions } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
   const { currentProjectDetails: projectDetails, updateProject } = useProject();
 
   const { t } = useTranslation();
@@ -51,7 +51,7 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
   // derived values
   const pageTitle = projectDetails?.name ? `${projectDetails?.name} - Automations` : undefined;
 
-  if (workspaceUserInfo && !canPerformProjectAdminActions) {
+  if (!canPerformProjectAdminActions) {
     return <NotAuthorizedView section="settings" isProjectView className="h-auto" />;
   }
 

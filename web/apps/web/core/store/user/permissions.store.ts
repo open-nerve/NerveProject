@@ -8,10 +8,10 @@ import { unset, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { ApiClient } from "@nerve/api-client";
+import type { ApiClient, WorkspaceRole } from "@nerve/api-client";
 import type { TUserPermissions, TUserPermissionsLevel } from "@nerve/constants";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import type { EUserProjectRoles, IUserProjectsRole, IWorkspaceMemberMe, TProjectMembership } from "@nerve/types";
+import type { EUserProjectRoles, IUserProjectsRole, TProjectMembership } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
@@ -19,20 +19,14 @@ import type { RootStore } from "@/store/root.store";
 import projectMemberService from "@/services/project/project-member.service";
 import { UserService } from "@/services/user.service";
 
-// derived services
-const workspaceService = new WorkspaceService();
-
 type ETempUserRole = TUserPermissions | EUserWorkspaceRoles | EUserProjectRoles; // TODO: Remove this once user permissions are enums in @nerve/constants
 
 export interface IUserPermissionStore {
-  loader: boolean;
   // observables
-  workspaceUserInfo: Record<string, IWorkspaceMemberMe>; // workspaceSlug -> IWorkspaceMemberMe
   projectUserInfo: Record<string, Record<string, TProjectMembership>>; // workspaceSlug -> projectId -> TProjectMembership
   workspaceProjectsPermissions: Record<string, IUserProjectsRole>; // workspaceSlug -> IUserProjectsRole
   // computed helpers
-  workspaceInfoBySlug: (workspaceSlug: string | undefined) => IWorkspaceMemberMe | undefined;
-  getWorkspaceRoleByWorkspaceSlug: (workspaceSlug: string) => TUserPermissions | EUserWorkspaceRoles | undefined;
+  getWorkspaceRoleByWorkspaceSlug: (workspaceSlug: string) => WorkspaceRole | undefined;
   getProjectRolesByWorkspaceSlug: (workspaceSlug: string) => IUserProjectsRole;
   getProjectRoleByWorkspaceSlugAndProjectId: (
     workspaceSlug: string,
@@ -46,7 +40,6 @@ export interface IUserPermissionStore {
     onPermissionAllowed?: () => boolean
   ) => boolean;
   // actions
-  fetchUserWorkspaceInfo: (workspaceSlug: string) => Promise<IWorkspaceMemberMe>;
   fetchUserProjectInfo: (workspaceSlug: string, projectId: string) => Promise<TProjectMembership>;
   fetchUserProjectPermissions: (workspaceSlug: string) => Promise<IUserProjectsRole>;
   joinProject: (workspaceSlug: string, projectId: string) => Promise<void>;
@@ -55,16 +48,16 @@ export interface IUserPermissionStore {
 
 /**
  * @description This store is used to handle permission layer for the currently logged user.
- * It manages workspace and project level permissions, roles and access control.
+ * It manages workspace and project level permissions, roles and access control. The caller's role in a workspace
+ * is the one nerve gives with the workspace (Workspace.role, M3 design 7.2).
  */
 export class UserPermissionStore implements IUserPermissionStore {
-  loader: boolean = false;
   // constants
-  workspaceUserInfo: Record<string, IWorkspaceMemberMe> = {};
   projectUserInfo: Record<string, Record<string, TProjectMembership>> = {};
   workspaceProjectsPermissions: Record<string, IUserProjectsRole> = {};
   // services
   userService: UserService;
+  private readonly workspaceService = new WorkspaceService();
   // observables
 
   constructor(
@@ -73,13 +66,10 @@ export class UserPermissionStore implements IUserPermissionStore {
   ) {
     makeObservable(this, {
       // observables
-      loader: observable.ref,
-      workspaceUserInfo: observable,
       projectUserInfo: observable,
       workspaceProjectsPermissions: observable,
       // computed
       // actions
-      fetchUserWorkspaceInfo: action,
       fetchUserProjectInfo: action,
       fetchUserProjectPermissions: action,
       joinProject: action,
@@ -91,25 +81,14 @@ export class UserPermissionStore implements IUserPermissionStore {
 
   // computed helpers
   /**
-   * @description Returns the current workspace information
-   * @param { string | undefined } workspaceSlug
-   * @returns { IWorkspaceMemberMe | undefined }
-   */
-  workspaceInfoBySlug = computedFn((workspaceSlug: string | undefined): IWorkspaceMemberMe | undefined => {
-    if (!workspaceSlug) return undefined;
-    return this.workspaceUserInfo[workspaceSlug] || undefined;
-  });
-
-  /**
-   * @description Returns the workspace role by slug
+   * @description Returns the caller's role in the workspace, from the caller's workspaces; undefined while they are
+   * not fetched, or for a workspace the caller is not a member of
    * @param { string } workspaceSlug
-   * @returns { TUserPermissions | EUserWorkspaceRoles | undefined }
+   * @returns { WorkspaceRole | undefined }
    */
   getWorkspaceRoleByWorkspaceSlug = computedFn(
-    (workspaceSlug: string): TUserPermissions | EUserWorkspaceRoles | undefined => {
-      if (!workspaceSlug) return undefined;
-      return this.workspaceUserInfo[workspaceSlug]?.role as TUserPermissions | EUserWorkspaceRoles | undefined;
-    }
+    (workspaceSlug: string): WorkspaceRole | undefined =>
+      this.store.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.role
   );
 
   /**
@@ -122,7 +101,7 @@ export class UserPermissionStore implements IUserPermissionStore {
     if (!workspaceSlug || !projectId) return undefined;
     const projectRole = this.workspaceProjectsPermissions?.[workspaceSlug]?.[projectId];
     if (!projectRole) return undefined;
-    const workspaceRole = this.workspaceUserInfo?.[workspaceSlug]?.role;
+    const workspaceRole = this.getWorkspaceRoleByWorkspaceSlug(workspaceSlug);
     if (workspaceRole === EUserWorkspaceRoles.ADMIN) return EUserPermissions.ADMIN;
     else return projectRole;
   });
@@ -189,9 +168,7 @@ export class UserPermissionStore implements IUserPermissionStore {
     let currentUserRole: TUserPermissions | undefined = undefined;
 
     if (level === EUserPermissionsLevel.WORKSPACE) {
-      currentUserRole = (workspaceSlug && this.getWorkspaceRoleByWorkspaceSlug(workspaceSlug)) as
-        | EUserPermissions
-        | undefined;
+      currentUserRole = workspaceSlug ? this.getWorkspaceRoleByWorkspaceSlug(workspaceSlug) : undefined;
     }
 
     if (level === EUserPermissionsLevel.PROJECT) {
@@ -216,29 +193,6 @@ export class UserPermissionStore implements IUserPermissionStore {
   };
 
   // actions
-  /**
-   * @description Fetches the user's workspace information
-   * @param { string } workspaceSlug
-   * @returns { Promise<IWorkspaceMemberMe | undefined> }
-   */
-  fetchUserWorkspaceInfo = async (workspaceSlug: string): Promise<IWorkspaceMemberMe> => {
-    try {
-      this.loader = true;
-      const response = await workspaceService.workspaceMemberMe(workspaceSlug);
-      if (response) {
-        runInAction(() => {
-          set(this.workspaceUserInfo, [workspaceSlug], response);
-          this.loader = false;
-        });
-      }
-      return response;
-    } catch (error) {
-      console.error("Error fetching user workspace information", error);
-      this.loader = false;
-      throw error;
-    }
-  };
-
   /**
    * @description Fetches the user's project information
    * @param { string } workspaceSlug
@@ -268,7 +222,7 @@ export class UserPermissionStore implements IUserPermissionStore {
    */
   fetchUserProjectPermissions = async (workspaceSlug: string): Promise<IUserProjectsRole> => {
     try {
-      const response = await workspaceService.getWorkspaceUserProjectsRole(workspaceSlug);
+      const response = await this.workspaceService.getWorkspaceUserProjectsRole(workspaceSlug);
       runInAction(() => {
         set(this.workspaceProjectsPermissions, [workspaceSlug], response);
       });

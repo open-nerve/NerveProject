@@ -35,7 +35,7 @@ function WebhooksListPage({ params }: Route.ComponentProps) {
   // nerve hooks
   const { t } = useTranslation();
   // mobx store
-  const { workspaceUserInfo, allowPermissions } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
   const { fetchWebhooks, webhooks, clearSecretKey, webhookSecretKey, createWebhook } = useWebhook();
   const { currentWorkspace } = useWorkspace();
   // derived values
@@ -55,7 +55,7 @@ function WebhooksListPage({ params }: Route.ComponentProps) {
     if (!showCreateWebhookModal && webhookSecretKey) clearSecretKey();
   }, [showCreateWebhookModal, webhookSecretKey, clearSecretKey]);
 
-  if (workspaceUserInfo && !canPerformWorkspaceAdminActions) {
+  if (!canPerformWorkspaceAdminActions) {
     return <NotAuthorizedView section="settings" className="h-auto" />;
   }
 

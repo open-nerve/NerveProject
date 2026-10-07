@@ -24,7 +24,7 @@ function StatesSettingsPage({ params }: Route.ComponentProps) {
   const { workspaceSlug, projectId } = params;
   // store
   const { currentProjectDetails } = useProject();
-  const { workspaceUserInfo, allowPermissions } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
 
   const { t } = useTranslation();
 
@@ -36,7 +36,7 @@ function StatesSettingsPage({ params }: Route.ComponentProps) {
     EUserPermissionsLevel.PROJECT
   );
 
-  if (workspaceUserInfo && !canPerformProjectMemberActions) {
+  if (!canPerformProjectMemberActions) {
     return <NotAuthorizedView section="settings" isProjectView className="h-auto" />;
   }
 

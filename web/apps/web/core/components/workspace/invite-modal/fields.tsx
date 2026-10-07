@@ -14,7 +14,6 @@ import { ROLE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { CustomSelect } from "@nerve/ui";
-import { cn } from "@nerve/utils";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
 import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
@@ -25,7 +24,6 @@ type TInvitationFieldsProps = {
   control: Control<InvitationFormValues>;
   formState: FormState<InvitationFormValues>;
   remove: (index: number) => void;
-  className?: string;
 };
 
 export const InvitationFields = observer(function InvitationFields(props: TInvitationFieldsProps) {
@@ -35,17 +33,16 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
     control,
     formState: { errors },
     remove,
-    className,
   } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { workspaceInfoBySlug } = useUserPermissions();
+  const { getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
   // derived values
-  const currentWorkspaceRole = workspaceInfoBySlug(workspaceSlug)?.role;
+  const currentWorkspaceRole = getWorkspaceRoleByWorkspaceSlug(workspaceSlug);
 
   return (
-    <div className={cn("mb-3 space-y-4", className)}>
+    <div className="mb-3 space-y-4">
       {fields.map((field, index) => (
         <div
           key={field.id}
@@ -101,11 +98,11 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                     className="w-24 flex-grow"
                     input
                   >
-                    {Object.entries(ROLE).map(([key, value]) => {
+                    {Object.entries(ROLE).map(([key, label]) => {
                       if (currentWorkspaceRole && currentWorkspaceRole >= parseInt(key))
                         return (
                           <CustomSelect.Option key={key} value={parseInt(key)}>
-                            {value}
+                            {label}
                           </CustomSelect.Option>
                         );
                     })}

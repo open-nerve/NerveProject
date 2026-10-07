@@ -24,7 +24,7 @@ import { FeaturesViewsProjectSettingsHeader } from "./header";
 function FeaturesViewsSettingsPage({ params }: Route.ComponentProps) {
   const { workspaceSlug, projectId } = params;
   // store hooks
-  const { workspaceUserInfo, allowPermissions } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
   const { currentProjectDetails } = useProject();
   // translation
   const { t } = useTranslation();
@@ -34,7 +34,7 @@ function FeaturesViewsSettingsPage({ params }: Route.ComponentProps) {
     : undefined;
   const canPerformProjectAdminActions = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
 
-  if (workspaceUserInfo && !canPerformProjectAdminActions) {
+  if (!canPerformProjectAdminActions) {
     return <NotAuthorizedView section="settings" isProjectView className="h-auto" />;
   }
 

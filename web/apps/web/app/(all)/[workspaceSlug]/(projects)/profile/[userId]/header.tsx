@@ -33,7 +33,7 @@ export const UserProfileHeader = observer(function UserProfileHeader(props: TUse
   // store hooks
   const { toggleProfileSidebar, profileSidebarCollapsed } = useAppTheme();
   const { data: currentUser } = useUser();
-  const { workspaceUserInfo, allowPermissions } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
   const { member } = useProfileMember(workspaceSlug ?? "", userId ?? "");
   const { t } = useTranslation();
   // derived values
@@ -41,8 +41,6 @@ export const UserProfileHeader = observer(function UserProfileHeader(props: TUse
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.WORKSPACE
   );
-
-  if (!workspaceUserInfo) return null;
 
   const tabsList = isAuthorized ? PROFILE_TABS : [];
 

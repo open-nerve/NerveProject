@@ -66,9 +66,6 @@ export const WORKSPACE_LABELS = (workspaceSlug: string) => `WORKSPACE_LABELS_${w
 
 export const WORKSPACE_INVITATION = (invitationId: string) => `WORKSPACE_INVITATION_${invitationId}`;
 
-export const WORKSPACE_MEMBER_ME_INFORMATION = (workspaceSlug: string) =>
-  `WORKSPACE_MEMBER_ME_INFORMATION_${workspaceSlug.toUpperCase()}`;
-
 export const WORKSPACE_PROJECTS_ROLES_INFORMATION = (workspaceSlug: string) =>
   `WORKSPACE_PROJECTS_ROLES_INFORMATION_${workspaceSlug.toUpperCase()}`;
 

@@ -5,7 +5,6 @@
  */
 
 import type {
-  IWorkspaceMemberMe,
   IWorkspaceMember,
   IWorkspaceMemberInvitation,
   IWorkspaceSearchResults,
@@ -38,14 +37,6 @@ export class WorkspaceService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
-      });
-  }
-
-  async workspaceMemberMe(workspaceSlug: string): Promise<IWorkspaceMemberMe> {
-    return this.get(`/api/workspaces/${workspaceSlug}/workspace-members/me/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
       });
   }
 
