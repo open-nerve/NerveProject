@@ -19,15 +19,16 @@ type ProfileMember =
 /**
  * Which member of the workspace a profile page is about (M1 design 3.2). The page header and the user card both
  * read it here, so they cannot disagree about a user, for instance one who has left the workspace. The workspace is
- * the page's as WorkspaceAuthWrapper gives it, which shows a page only once the caller's list has it; the members'
- * fetch alone decides the rest (useWorkspaceMembersFetch, which the wrapper's fetch shares).
+ * the page's as WorkspaceAuthWrapper gives it, which shows a page only once the caller's list has it; the user's
+ * membership is read in that workspace, and the members' fetch alone decides the rest (useWorkspaceMembersFetch,
+ * which the wrapper's fetch shares).
  */
 export const useProfileMember = (workspace: Workspace | null, userId: string): ProfileMember => {
   const {
-    workspace: { getWorkspaceMemberDetails },
+    workspace: { getMemberships },
   } = useMember();
   const members = useWorkspaceMembersFetch(workspace);
-  const memberDetails = userId ? getWorkspaceMemberDetails(userId) : null;
+  const memberDetails = workspace && userId ? getMemberships(workspace.slug)?.[userId] : undefined;
   // A member removed from the workspace stays in the store, marked inactive: it is no longer a member.
   const membership = memberDetails?.is_active === false ? undefined : memberDetails;
 

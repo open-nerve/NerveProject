@@ -357,19 +357,26 @@ describe("WorkspaceRootStore, while a fetch is out", () => {
     expect(store.workspaces).toEqual([remade, beta]);
   });
 
-  it("lets the newer of two fetches write: the older writes nothing and gives nothing when it answers last", async () => {
-    const { nerve, store } = setUp();
-    const older = track(store.fetchWorkspaces());
-    await until(() => nerve.calls.length === 1, "the older list");
-    const newer = track(store.fetchWorkspaces());
-    await until(() => nerve.calls.length === 2, "the newer list");
-    nerve.calls[1]?.answer(json(200, { data: [acme, beta, gamma] }));
-    await until(() => newer.settled, "the newer list");
+  // The newer fetch decides: an older one answering last gives nothing, whatever nerve answered it, a failure too.
+  it.each([
     // read before gamma was made elsewhere
-    nerve.calls[0]?.answer(json(200, { data: [acme, beta] }));
-    await until(() => older.settled, "the older list");
+    { answer: "a list", reply: () => json(200, { data: [acme, beta] }) },
+    { answer: "a failure", reply: () => problem(503, "server_busy") },
+  ])(
+    "lets the newer of two fetches write: the older writes nothing and gives nothing when $answer comes last",
+    async ({ reply }) => {
+      const { nerve, store } = setUp();
+      const older = track(store.fetchWorkspaces());
+      await until(() => nerve.calls.length === 1, "the older list");
+      const newer = track(store.fetchWorkspaces());
+      await until(() => nerve.calls.length === 2, "the newer list");
+      nerve.calls[1]?.answer(json(200, { data: [acme, beta, gamma] }));
+      await until(() => newer.settled, "the newer list");
+      nerve.calls[0]?.answer(reply());
+      await until(() => older.settled, "the older list");
 
-    expect(older).toEqual({ settled: true, value: undefined });
-    expect(store.workspaces).toEqual([acme, beta, gamma]);
-  });
+      expect(older).toEqual({ settled: true, value: undefined });
+      expect(store.workspaces).toEqual([acme, beta, gamma]);
+    }
+  );
 });

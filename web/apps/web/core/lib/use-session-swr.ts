@@ -14,8 +14,9 @@ export type SessionFetch = readonly [name: string, ...args: (string | undefined)
 
 /**
  * The one SWR configuration of every session fetch, over the app's (WEB_SWR_CONFIG): a fetch is made as a page mounts
- * and as its key changes, not when the tab regains focus, and a refusal is not retried: the page shows it, with its
- * own retry where it has one.
+ * (the app's revalidateOnMount: true) and as its key changes (the app's revalidateIfStale: true, for a key SWR has an
+ * answer of), not when the tab regains focus, and a refusal is not retried: the page shows it, with its own retry
+ * where it has one.
  */
 const SESSION_FETCH: SWRConfiguration = { revalidateOnFocus: false, shouldRetryOnError: false };
 

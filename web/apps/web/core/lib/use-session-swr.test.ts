@@ -59,14 +59,16 @@ describe("useSessionSWR", () => {
     ]);
   });
 
-  it("gives every session fetch one configuration: fetched as a page mounts, not on focus, a refusal not retried", () => {
+  it("gives every session fetch one configuration: fetched as a page mounts and as its key changes, not on focus, a refusal not retried", () => {
     useSessionSWR(["WORKSPACES"], fetchList);
     const config = { revalidateOnFocus: false, shouldRetryOnError: false };
     expect(swr.calls).toEqual([[["WORKSPACES", "x"], expect.any(Function), config]]);
-    // What SWR does is that over the app's configuration (app/provider.tsx). SWR's rule: a set revalidateOnMount
-    // decides a hook's first fetch as it mounts (revalidateIfStale then has no say), and the app's is true.
+    // What SWR does is that over the app's configuration (app/provider.tsx). SWR's two rules: a set revalidateOnMount
+    // decides a hook's fetch as it mounts (revalidateIfStale then has no say), and the app's is true; once mounted, a
+    // hook whose key changes fetches a key SWR has no answer of, and one it has by revalidateIfStale, the app's true.
     expect({ ...WEB_SWR_CONFIG, ...swr.calls[0]?.[2] }).toMatchObject({
       revalidateOnMount: true,
+      revalidateIfStale: true,
       revalidateOnFocus: false,
       shouldRetryOnError: false,
     });

@@ -45,6 +45,7 @@ export interface IWorkspaceMemberStore {
   workspaceMemberInvitationIds: string[] | null;
   memberMap: Memberships | null;
   // computed actions
+  getMemberships: (workspaceSlug: string) => Memberships | undefined;
   getWorkspaceMemberIds: (workspaceSlug: string) => string[];
   getFilteredWorkspaceMemberIds: (workspaceSlug: string) => string[];
   getSearchedWorkspaceMemberIds: (searchQuery: string) => string[] | null;

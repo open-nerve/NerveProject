@@ -44,6 +44,12 @@ describe("useProfileMember", () => {
       shows: { kind: "load-failed" },
     },
     {
+      when: "a refetch failed, the store still holding him",
+      fetched: { error: new Error("nerve cannot be reached") },
+      members: { "u-bob": bob },
+      shows: { kind: "member", member: bob.member, joinedAt: bob.created_at },
+    },
+    {
       when: "he is one of them",
       fetched: { data: { "u-bob": bob } },
       members: { "u-bob": bob },
@@ -58,7 +64,17 @@ describe("useProfileMember", () => {
     { when: "he is none of them", fetched: { data: {} }, members: {}, shows: { kind: "not-a-member" } },
   ])("says what the page shows of a user when $when", ({ fetched, members, shows }) => {
     response.current = fetched;
-    stores.members = members;
+    stores.members = { acme: members };
     expect(useProfileMember(acme, "u-bob")).toEqual({ member: undefined, ...shows });
+  });
+
+  it("reads the user's membership in the workspace it is given, not in the address's", () => {
+    stores.address = "globex";
+    response.current = { data: { "u-bob": bob } };
+    stores.members = { acme: { "u-bob": bob }, globex: {} };
+    expect(useProfileMember(acme, "u-bob")).toEqual({ kind: "member", member: bob.member, joinedAt: bob.created_at });
+    response.current = { data: {} };
+    stores.members = { acme: {}, globex: { "u-bob": bob } };
+    expect(useProfileMember(acme, "u-bob")).toEqual({ kind: "not-a-member", member: undefined });
   });
 });

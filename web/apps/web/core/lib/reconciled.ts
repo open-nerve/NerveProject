@@ -37,9 +37,10 @@ export class Reconciled<V> {
 
   /**
    * Fetches the value with read, and shows it with the changes nerve confirmed meanwhile; gives what it shows. A fetch
-   * that a newer one overtook writes nothing and gives undefined: its answer is older than what the store shows, or
-   * will. A change of session while it is out is no failure either: the new session's stores fetch their own
-   * (store-context.tsx), and this one gives undefined. Any other failure fails it, and the value stays as it was.
+   * that a newer one overtook gives undefined whatever its answer, a failure too, and writes nothing: the newer fetch
+   * decides what the store shows. A change of session while it is out is no failure either: the new session's stores
+   * fetch their own (store-context.tsx), and this one gives undefined. Any other failure of the newest fetch fails
+   * it, and the value stays as it was.
    */
   async fetch(read: () => Promise<V>): Promise<V | undefined> {
     const sequence = ++this.newestFetch;
@@ -54,7 +55,7 @@ export class Reconciled<V> {
       });
       return value;
     } catch (error) {
-      if (error instanceof SessionChangedError) return undefined;
+      if (sequence !== this.newestFetch || error instanceof SessionChangedError) return undefined;
       throw error;
     } finally {
       if (sequence === this.newestFetch) this.changesDuringFetch = undefined;

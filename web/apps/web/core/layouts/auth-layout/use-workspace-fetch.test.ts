@@ -51,7 +51,13 @@ describe("useWorkspaceFetch", () => {
 
   it.each<{ when: string; workspaces: Workspace[] | undefined; failed?: true; shows: object }>([
     {
-      when: "nerve cannot give the list",
+      when: "nerve cannot give the first list",
+      workspaces: undefined,
+      failed: true,
+      shows: { kind: "unavailable", retry: expect.any(Function) },
+    },
+    {
+      when: "nerve cannot give the list again",
       workspaces: [acme],
       failed: true,
       shows: { kind: "unavailable", retry: expect.any(Function) },

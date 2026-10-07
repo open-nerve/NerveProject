@@ -14,15 +14,17 @@ import type { Profile, Workspace, WorkspaceMember } from "@nerve/api-client";
 /** What the stores hold, and the fetches they were asked for, in order; a test resets it before each case. */
 export const stores: {
   workspaces: Workspace[] | undefined;
-  /** The memberships of the address's workspace, by account id. */
-  members: Record<string, WorkspaceMember>;
+  /** The slug of the address's workspace (the router's), which the stores' reads of "the current workspace" follow. */
+  address: string | undefined;
+  /** Each workspace's memberships, by its slug, then by the member's account id. */
+  members: Record<string, Record<string, WorkspaceMember>>;
   profile: Profile | undefined;
   fetched: string[];
-} = { workspaces: undefined, members: {}, profile: undefined, fetched: [] };
+} = { workspaces: undefined, address: undefined, members: {}, profile: undefined, fetched: [] };
 
 /** The stores as a test starts: they hold nothing and were asked for nothing. */
 export function emptyStores() {
-  Object.assign(stores, { workspaces: undefined, members: {}, profile: undefined, fetched: [] });
+  Object.assign(stores, { workspaces: undefined, address: undefined, members: {}, profile: undefined, fetched: [] });
 }
 
 /** A store's fetch, which says what it fetched; its Promise is what SWR gets. */
@@ -49,7 +51,9 @@ export function useMember() {
         fetching(`the members of ${named(workspace)}`),
       fetchWorkspaceMemberInvitations: (workspace: Pick<Workspace, "id" | "slug">) =>
         fetching(`the invitations of ${named(workspace)}`),
-      getWorkspaceMemberDetails: (userId: string) => stores.members[userId] ?? null,
+      getMemberships: (slug: string) => stores.members[slug],
+      getWorkspaceMemberDetails: (userId: string) =>
+        (stores.address === undefined ? undefined : stores.members[stores.address]?.[userId]) ?? null,
     },
   };
 }
