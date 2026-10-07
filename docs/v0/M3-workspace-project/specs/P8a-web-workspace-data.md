@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P8a `web-workspace-data` |
 | 日期 | 2026-10-07 |
-| 状态 | 进行中：spec、plan 和原型已写成；修订（2026-10-07）写入了控制者对第 3 节的裁定（A1–A6）和预检的发现（H1、M1、M2、L1–L9） |
+| 状态 | 已完成（[评审记录](../reviews/P8a-web-workspace-data-review.md)）：执行中和修复轮的改动按评审记录第 3–5 节改入（2026-10-08）。第 3 节由控制者的裁定 A1–A6 和预检的发现（H1、M1、M2、L1–L9）定下，修订一轮（`86ba4347`）；修复轮的裁定 F-1–F-10 见评审记录第 4 节。拆分照控制者的裁定 R1–R4，负责人 2026-10-07 确认 |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（S1、W2 的页面清单）、3.1、3.2（`logo_url`、`avatar_url`）、3.8、3.10、3.14、3.18、3.20（P8a 的两行）、7.1–7.5、7.8–7.11、8.3、9.5、12（P8a 与约束 2、4）、13.1 节；[总体设计](../../v0-design.md) 7.7 |
 | 前置交接 | [M2 收尾交接](../handoffs/M2-closeout.md) 第 2、3、7、11、13 节；[M1 收尾交接](../handoffs/M1-closeout.md)（死成员、oxlint）；[M1-P2](../handoffs/M1-P2-trim-content.md)、[M1-P3](../handoffs/M1-P3-trim-platform.md)、[M1-P4](../handoffs/M1-P4-router-native.md) 的保留名单；P1–P7b 各 spec 第 5 节和 review 第 6 节中 P8 的行；[Codex 设计评审](../reviews/M3-design-codex-adversarial-review.md) 4.3；拆分的裁定 R1–R4（控制者 2026-10-07） |
 | 计划 | [P8a plan](../plans/P8a-web-workspace-data.md) |
@@ -37,7 +37,7 @@ P8a 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - `core/lib/session-key.ts`：`sessionKey(session, name, ...args): SessionKey | null`，`SessionKey = readonly [name, loginId, ...args]`；只有 `signed-in` 且每个参数已知时给出键。键的形状是 `[名称, loginId, 参数…]`，不是 7.1 举例的 `["workspaces", loginId]`：同一个名称在不同的参数下（不同的工作区）是不同的取数。
 - `core/lib/use-session-swr.ts`：`useSessionSWR(fetch, fetcher)`，`fetch = [name, ...args] | null`；fetcher 收到键中的参数，交回 store 的 Promise。会话的取数只有一份 SWR 配置，在它里面，调用方不传（修复轮，裁定 F-1）：`{ revalidateOnFocus: false, shouldRetryOnError: false }`，挂载和键变化的事不写，由应用的配置（`WEB_SWR_CONFIG`）决定：页面每次挂载时取，靠的是 `revalidateOnMount: true`；已挂载的页面换了键时取，SWR 没有这个键的回答时总是取，有时靠的是 `revalidateIfStale: true`；聚焦时不取，被拒绝不重试；同一个键因此不会有两份配置。这是会话的取数的唯一写法（W4：一个有 vitest 的键构造，不是只有 grep 看得见的约定）：工作区一侧的取数都经它，M2 已有的两处手写的会话键（令牌列表、当前用户）改用它，项目一侧的取数在 P8b 随各自的 store 改用它。唯一的例外是公开的邀请查看（第 3 节第 9 条）。绕过它由静态检查发现：Task 8 在根目录 `.oxlintrc.json` 加 `no-restricted-imports`，范围内的文件不能从 `swr` 导入值，修复轮加上 `swr/*`（2.8，附录 A.6）。
 - `core/lib/in-session.ts`：`sessionGuard(): () => boolean`。`theme-switcher.tsx` 改用它；页面的删除、离开、创建、接受之后的核对在 P9、P10（7.1）。
-- `RootStore.dispose()` 调用 `projectRoot.projectFilter.dispose()`（`reaction` 的返回值）；`store-context.tsx` 的 `follow` 在建好新的一代之后对退役的一代调用它。要释放的只有这一个反应（7.1）；`cycle_filter`、`module_filter`、`issue_calendar_view` 和 `issue/root.store.ts` 的 `autorun` 由 M4、M6 照同一写法接上（13.2）。
+- `RootStore.dispose()` 调用 `projectRoot.projectFilter.dispose()`（`reaction` 的返回值）；`store-context.tsx` 的 `follow` 在建好新的一代之后对退役的一代调用它。要释放的只有这一个反应（7.1）；`cycle_filter`、`module_filter` 和 `issue/root.store.ts` 的 `autorun` 由 M4、M6 照同一写法接上（13.2）；`issue_calendar_view` 的反应只观察本代的资料，不用释放（总体设计 7.7）。
 - 测试：`session-key.test.ts`（4 个）、`use-session-swr.test.ts`（3 个；修复轮加的一个核对交给 `useSWR` 的配置，并在并上 `WEB_SWR_CONFIG` 之后核对挂载时取（`revalidateOnMount`）、换键时取（`revalidateIfStale`）、聚焦时不取、被拒绝不重试）、`in-session.test.ts`（2 个）、`store-context.test.ts` 加 1 个（换代之后改路由，旧一代的筛选 store 不再运行，9.5）。
 
 ### 2.2 problem 码的文案表（Task 2；约束 4）
