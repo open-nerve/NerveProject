@@ -119,6 +119,19 @@ describe("WorkspaceRootStore, the list", () => {
     await until(() => failed.settled, "the failure");
     expect(failed.error).toBeInstanceOf(ApiError);
   });
+
+  it("checks a slug while a change is out: a check, a read, does not wait for it", async () => {
+    const { nerve, store } = setUp();
+    const checked: unknown[] = [];
+    await fetchedWhileChangeIsOut(
+      nerve,
+      () => store.updateWorkspace("acme", { name: "Acme Inc" }),
+      async () => checked.push(await store.checkWorkspaceSlug("gamma")),
+      ["GET", "/api/v0/workspace-slugs/gamma"],
+      json(200, { available: true })
+    );
+    expect(checked).toEqual([{ available: true }]);
+  });
 });
 
 describe("WorkspaceRootStore, the changes", () => {

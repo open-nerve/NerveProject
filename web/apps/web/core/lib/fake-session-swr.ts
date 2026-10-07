@@ -10,7 +10,7 @@
 
 import type { SessionFetch } from "./use-session-swr";
 
-/** What a hook handed useSessionSWR: the fetch, and the fetcher of its arguments. */
+/** What a hook handed useSessionSWR: the fetch, the fetcher of its arguments, and SWR's configuration, if any. */
 export type HandedFetch = [
   fetch: SessionFetch | null,
   fetcher: (...args: string[]) => Promise<unknown>,

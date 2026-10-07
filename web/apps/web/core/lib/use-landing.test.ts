@@ -81,6 +81,17 @@ describe("useLanding", () => {
 
   it.each([
     {
+      by: "its profile, a step left undone",
+      profile: profileOf({ onboarding_step: { ...done, workspace_join: false } }),
+    },
+    { by: "its steps, its profile not saying so", profile: profileOf({ is_onboarded: false }) },
+  ])("lands an account onboarded by $by: either is enough", ({ profile }) => {
+    stores.profile = profile;
+    expect(useLanding(NON_AUTHENTICATED, undefined)).toEqual({ kind: "go", to: "/beta" });
+  });
+
+  it.each([
+    {
       who: "an account whose profile has not come",
       pageType: NON_AUTHENTICATED,
       nextPath: undefined,
@@ -116,5 +127,9 @@ describe("useLanding", () => {
     expect(landing.kind).toBe("unavailable");
     if (landing.kind === "unavailable") landing.retry();
     expect(mutate).toHaveBeenCalledOnce();
+    // SWR neither retries a failed list by itself nor fetches it again when the tab regains focus: the page's button
+    // retries it
+    const askedOnly = { revalidateOnFocus: false, shouldRetryOnError: false };
+    expect(handed.map(([, , config]) => config)).toEqual([askedOnly, askedOnly]);
   });
 });
