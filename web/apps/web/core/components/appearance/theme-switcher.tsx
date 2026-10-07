@@ -15,11 +15,10 @@ import { setPromiseToast } from "@nerve/propel/toast";
 // components
 import { ThemeSwitch } from "@/components/core/theme/theme-switch";
 import { SettingsControlItem } from "@/components/settings/control-item";
-// helpers
-import { errorMessageKey } from "@/lib/error-messages";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 // lib
+import { errorMessageKey } from "@/lib/error-messages";
 import { sessionGuard } from "@/lib/in-session";
 
 export const ThemeSwitcher = observer(function ThemeSwitcher(props: {

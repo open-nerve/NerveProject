@@ -20,13 +20,12 @@ import { getPasswordStrength } from "@nerve/utils";
 // components
 import { ApiTokenList } from "@/components/api-token/token-list";
 import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
-// helpers
-import { errorMessageKey, fieldErrorKeys } from "@/lib/error-messages";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
 // lib
 import { ApiError } from "@/lib/api-error";
+import { errorMessageKey, fieldErrorKeys } from "@/lib/error-messages";
 
 export interface FormValues {
   old_password: string;

@@ -22,7 +22,7 @@ import { CustomSelect } from "@nerve/ui";
 import { cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
-// helpers
+// lib
 import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 // local imports
 import type { TExpiryChoice } from "./expiry";

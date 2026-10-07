@@ -13,10 +13,10 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { CustomSelect } from "@nerve/ui";
 // components
 import { SettingsControlItem } from "@/components/settings/control-item";
-// helpers
-import { errorMessageKey } from "@/lib/error-messages";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 // The i18n key of the day's name.
 const startOfWeekLabelKey = (startOfWeek: StartOfTheWeek | undefined) =>

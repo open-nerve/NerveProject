@@ -11,10 +11,10 @@ import { Button } from "@nerve/propel/button";
 import { DeleteOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
-// helpers
-import { errorMessageKey } from "@/lib/error-messages";
 // hooks
 import { useUser } from "@/hooks/store/user";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 type Props = {
   isOpen: boolean;

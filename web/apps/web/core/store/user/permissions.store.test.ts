@@ -20,19 +20,23 @@ import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 const { ADMIN, MEMBER, GUEST } = EUserPermissions;
 const WORKSPACE = EUserPermissionsLevel.WORKSPACE;
 
-/** The checks the pages make: an admin's (settings, invitations), a member's (projects), anyone's (the workspace). */
-type Check = "admin" | "member" | "anyone";
+/**
+ * The checks the pages make: an admin's (settings, invitations), a member's (projects), anyone's (the workspace); and
+ * a guest's alone, a set that skips the higher roles: a check names the roles it allows, not a lowest one.
+ */
+type Check = "admin" | "member" | "anyone" | "guest alone";
 const CHECKS: Record<Check, EUserPermissions[]> = {
   admin: [ADMIN],
   member: [ADMIN, MEMBER],
   anyone: [ADMIN, MEMBER, GUEST],
+  "guest alone": [GUEST],
 };
-const CHECKED: Check[] = ["admin", "member", "anyone"];
+const CHECKED: Check[] = ["admin", "member", "anyone", "guest alone"];
 
 const IDENTITIES: { who: string; role: WorkspaceRole | undefined; allowed: Check[] }[] = [
   { who: "an admin", role: 20, allowed: ["admin", "member", "anyone"] },
   { who: "a member", role: 15, allowed: ["member", "anyone"] },
-  { who: "a guest", role: 5, allowed: ["anyone"] },
+  { who: "a guest", role: 5, allowed: ["anyone", "guest alone"] },
   { who: "no member", role: undefined, allowed: [] },
 ];
 

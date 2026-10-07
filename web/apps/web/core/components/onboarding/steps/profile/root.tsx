@@ -13,10 +13,10 @@ import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EOnboardingSteps } from "@nerve/types";
 import { cn, getFileURL } from "@nerve/utils";
-// helpers
-import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 // hooks
 import { useUser } from "@/hooks/store/user";
+// lib
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 // local components
 import { CommonOnboardingHeader } from "../common";
 

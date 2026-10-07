@@ -23,22 +23,27 @@ export const SettingsMobileNav = observer(function SettingsMobileNav(props: Prop
   // refs
   const sidebarRef = useRef<HTMLDivElement>(null);
   // store hooks
-  const { settingsSidebarCollapsed: sidebarCollapsed, toggleSettingsSidebar: toggleSidebar } = useAppTheme();
+  const { settingsSidebarCollapsed, toggleSettingsSidebar } = useAppTheme();
   const { t } = useTranslation();
 
   useOutsideClickDetector(sidebarRef, () => {
-    if (!sidebarCollapsed) toggleSidebar(true);
+    if (!settingsSidebarCollapsed) toggleSettingsSidebar(true);
   });
 
   return (
     <div className="flex items-center gap-4 border-b border-subtle px-page-x py-3 md:hidden">
       <div ref={sidebarRef} className="relative z-50 w-fit">
-        {!sidebarCollapsed && (
+        {!settingsSidebarCollapsed && (
           <div className="absolute top-10.5 left-0 z-50">
             <HamburgerContent className="max-h-100 rounded-lg border border-subtle pb-3" />
           </div>
         )}
-        <IconButton variant="secondary" className="group z-50 shrink-0" icon={Menu} onClick={() => toggleSidebar()} />
+        <IconButton
+          variant="secondary"
+          className="group z-50 shrink-0"
+          icon={Menu}
+          onClick={() => toggleSettingsSidebar()}
+        />
       </div>
       {/* path */}
       <div className="flex items-center gap-2">

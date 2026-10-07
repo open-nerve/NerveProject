@@ -8,7 +8,8 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
-import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import type { WorkspaceRole } from "@nerve/api-client";
+import { ROLE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline, DeleteOutline, LinkOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -19,7 +20,6 @@ import { cn, copyTextToClipboard } from "@nerve/utils";
 import { ConfirmWorkspaceMemberRemove } from "@/components/workspace/confirm-workspace-member-remove";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
-import { useUserPermissions } from "@/hooks/store/user";
 
 type Props = {
   invitationId: string;
@@ -34,23 +34,12 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { allowPermissions, getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
   const {
     workspace: { updateMemberInvitation, deleteMemberInvitation, getWorkspaceInvitationDetails },
   } = useMember();
-  // derived values
+  // derived values: the row shows only to an admin (the members page's gate, decision 4), who may change, copy and
+  // delete any invitation
   const invitationDetails = getWorkspaceInvitationDetails(invitationId);
-  const currentWorkspaceRole = workspaceSlug ? getWorkspaceRoleByWorkspaceSlug(workspaceSlug) : undefined;
-  // is the current logged in user admin
-  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
-  // role change access-
-  // 1. user cannot change their own role
-  // 2. only admin or member can change role
-  // 3. user cannot change role of higher role
-  const hasRoleChangeAccess = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
-  );
 
   const handleRemoveInvitation = async () => {
     try {
@@ -72,7 +61,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
     }
   };
 
-  if (!invitationDetails || currentWorkspaceRole === undefined) return null;
+  if (!invitationDetails) return null;
 
   const handleCopyText = async () => {
     try {
@@ -104,7 +93,6 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
       },
       title: t("common.remove"),
       icon: DeleteOutline,
-      shouldRender: isAdmin,
       className: "text-danger-primary",
       iconClassName: "text-danger-primary",
     },
@@ -137,22 +125,17 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
           <CustomSelect
             customButton={
               <div className="item-center flex gap-1 rounded-sm px-2 py-0.5">
-                <span
-                  className={`flex items-center rounded-sm text-caption-sm-medium ${
-                    hasRoleChangeAccess ? "" : "text-placeholder"
-                  }`}
-                >
+                <span className="flex items-center rounded-sm text-caption-sm-medium">
                   {ROLE[invitationDetails.role]}
                 </span>
-                {hasRoleChangeAccess && (
-                  <span className="grid place-items-center">
-                    <ChevronDownOutline className="h-3 w-3" />
-                  </span>
-                )}
+                <span className="grid place-items-center">
+                  <ChevronDownOutline className="h-3 w-3" />
+                </span>
               </div>
             }
             value={invitationDetails.role}
-            onChange={(value: EUserPermissions) => {
+            // the select gives the chosen option's value: the role's number, which nerve decodes as a WorkspaceRole
+            onChange={(value: WorkspaceRole) => {
               if (!workspaceSlug || !value) return;
 
               updateMemberInvitation(workspaceSlug, invitationDetails.id, {
@@ -166,61 +149,46 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
                 });
               });
             }}
-            disabled={!hasRoleChangeAccess}
             placement="bottom-end"
           >
-            {Object.keys(ROLE).map((key) => {
-              if (
-                currentWorkspaceRole &&
-                Number(currentWorkspaceRole) !== 20 &&
-                Number(currentWorkspaceRole) < parseInt(key)
-              )
-                return null;
-
-              return (
-                <CustomSelect.Option key={key} value={parseInt(key, 10)}>
-                  <>{ROLE[parseInt(key) as keyof typeof ROLE]}</>
-                </CustomSelect.Option>
-              );
-            })}
+            {Object.entries(ROLE).map(([key, label]) => (
+              <CustomSelect.Option key={key} value={parseInt(key, 10)}>
+                {label}
+              </CustomSelect.Option>
+            ))}
           </CustomSelect>
-          {isAdmin && (
-            <CustomMenu ellipsis placement="bottom-end" closeOnSelect>
-              {MENU_ITEMS.map((item) => {
-                if (item.shouldRender === false) return null;
-                return (
-                  <CustomMenu.MenuItem
-                    key={item.key}
-                    onClick={() => {
-                      item.action();
-                    }}
-                    className={cn(
-                      "flex items-center gap-2",
-                      {
+          <CustomMenu ellipsis placement="bottom-end" closeOnSelect>
+            {MENU_ITEMS.map((item) => (
+              <CustomMenu.MenuItem
+                key={item.key}
+                onClick={() => {
+                  item.action();
+                }}
+                className={cn(
+                  "flex items-center gap-2",
+                  {
+                    "text-placeholder": item.disabled,
+                  },
+                  item.className
+                )}
+                disabled={item.disabled}
+              >
+                {item.icon && <item.icon className={cn("h-3 w-3", item.iconClassName)} />}
+                <div>
+                  <h5>{item.title}</h5>
+                  {item.description && (
+                    <p
+                      className={cn("whitespace-pre-line text-tertiary", {
                         "text-placeholder": item.disabled,
-                      },
-                      item.className
-                    )}
-                    disabled={item.disabled}
-                  >
-                    {item.icon && <item.icon className={cn("h-3 w-3", item.iconClassName)} />}
-                    <div>
-                      <h5>{item.title}</h5>
-                      {item.description && (
-                        <p
-                          className={cn("whitespace-pre-line text-tertiary", {
-                            "text-placeholder": item.disabled,
-                          })}
-                        >
-                          {item.description}
-                        </p>
-                      )}
-                    </div>
-                  </CustomMenu.MenuItem>
-                );
-              })}
-            </CustomMenu>
-          )}
+                      })}
+                    >
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+              </CustomMenu.MenuItem>
+            ))}
+          </CustomMenu>
         </div>
       </div>
     </>

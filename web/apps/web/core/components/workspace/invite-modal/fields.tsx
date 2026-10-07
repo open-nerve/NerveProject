@@ -15,11 +15,9 @@ import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { CustomSelect } from "@nerve/ui";
 // hooks
-import { useUserPermissions } from "@/hooks/store/user";
 import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
 
 type TInvitationFieldsProps = {
-  workspaceSlug: string;
   fields: FieldArrayWithId<InvitationFormValues, "emails", "id">[];
   control: Control<InvitationFormValues>;
   formState: FormState<InvitationFormValues>;
@@ -28,7 +26,6 @@ type TInvitationFieldsProps = {
 
 export const InvitationFields = observer(function InvitationFields(props: TInvitationFieldsProps) {
   const {
-    workspaceSlug,
     fields,
     control,
     formState: { errors },
@@ -36,10 +33,6 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
   } = props;
   // nerve hooks
   const { t } = useTranslation();
-  // store hooks
-  const { getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
-  // derived values
-  const currentWorkspaceRole = getWorkspaceRoleByWorkspaceSlug(workspaceSlug);
 
   return (
     <div className="mb-3 space-y-4">
@@ -98,14 +91,12 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                     className="w-24 flex-grow"
                     input
                   >
-                    {Object.entries(ROLE).map(([key, label]) => {
-                      if (currentWorkspaceRole && currentWorkspaceRole >= parseInt(key))
-                        return (
-                          <CustomSelect.Option key={key} value={parseInt(key)}>
-                            {label}
-                          </CustomSelect.Option>
-                        );
-                    })}
+                    {/* every role: only an admin invites (the members page's gate), and an admin may give any */}
+                    {Object.entries(ROLE).map(([key, label]) => (
+                      <CustomSelect.Option key={key} value={parseInt(key)}>
+                        {label}
+                      </CustomSelect.Option>
+                    ))}
                   </CustomSelect>
                 )}
               />

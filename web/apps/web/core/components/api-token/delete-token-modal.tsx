@@ -10,10 +10,10 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // ui
 import { AlertModalCore } from "@nerve/ui";
-// helpers
-import { errorMessageKey } from "@/lib/error-messages";
 // hooks
 import { useApiTokens } from "@/hooks/store/user";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 type Props = {
   isOpen: boolean;

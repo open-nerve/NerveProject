@@ -268,8 +268,7 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
   const {
     workspace: { inviteMembersToWorkspace },
   } = useMember();
-  const workspacesList = Object.values(workspaces ?? {});
-  const workspace = workspacesList[0];
+  const workspace = workspaces?.[0];
 
   const {
     control,

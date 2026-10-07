@@ -12,11 +12,11 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TOnboardingStep } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
-// helpers
-import { errorMessageKey } from "@/lib/error-messages";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 // local components
 import { OnboardingHeader } from "./header";
 import { OnboardingStepRoot } from "./steps";

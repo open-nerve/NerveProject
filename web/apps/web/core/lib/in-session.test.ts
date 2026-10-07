@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SessionState } from "@/lib/auth/token-manager";
 
 // The tab's session as the token manager has it, which the test moves from one account to another.
-const tab = vi.hoisted(() => ({ state: { status: "signed-in", loginId: "x" } as SessionState }));
+const tab = vi.hoisted((): { state: SessionState } => ({ state: { status: "signed-in", loginId: "x" } }));
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: tab }));
 
 const { sessionGuard } = await import("./in-session");
