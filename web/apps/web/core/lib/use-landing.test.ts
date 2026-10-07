@@ -116,9 +116,5 @@ describe("useLanding", () => {
     expect(landing.kind).toBe("unavailable");
     if (landing.kind === "unavailable") landing.retry();
     expect(mutate).toHaveBeenCalledOnce();
-    // SWR neither retries a failed list by itself nor fetches it again when the tab regains focus: the page's button
-    // retries it
-    const askedOnly = { revalidateOnFocus: false, shouldRetryOnError: false };
-    expect(handed.map(([, , config]) => config)).toEqual([askedOnly, askedOnly]);
   });
 });

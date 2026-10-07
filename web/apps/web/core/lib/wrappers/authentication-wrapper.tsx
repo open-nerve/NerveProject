@@ -60,10 +60,7 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
   // A fetch cut by a change of session is no failure: fetchCurrentUser gives undefined, and the wrapper
   // renders again for the new session, with its new stores. The workspaces are fetched the same way, when the
   // landing needs them (useLanding).
-  const { error, mutate } = useSessionSWR(["CURRENT_USER"], () => fetchCurrentUser(), {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
-  });
+  const { error, mutate } = useSessionSWR(["CURRENT_USER"], () => fetchCurrentUser());
   const landing = useLanding(pageType, validNextPath);
 
   if (session.status === "starting") return <Loading />;

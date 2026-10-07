@@ -44,10 +44,7 @@ export function useLanding(pageType: EPageTypes, validNextPath: string | undefin
     isOnboarded(profile) &&
     !validNextPath &&
     (pageType === EPageTypes.NON_AUTHENTICATED || pageType === EPageTypes.ONBOARDING);
-  const listed = useSessionSWR(lands ? ["WORKSPACES"] : null, () => fetchWorkspaces(), {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
-  });
+  const listed = useSessionSWR(lands ? ["WORKSPACES"] : null, () => fetchWorkspaces());
   if (!lands) return { kind: "none" };
   if (listed.error) return { kind: "unavailable", retry: () => void listed.mutate() };
   if (!workspaces) return { kind: "loading" };

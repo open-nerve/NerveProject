@@ -3,43 +3,45 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { SWRResponse } from "swr";
 import type { Workspace } from "@nerve/api-client";
 // hooks
-import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useWorkspaceMembersFetch } from "@/hooks/use-workspace-members-fetch";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
 
-/** Fetched once a session: a page that mounts again shows what the stores have. */
-const ONCE = { revalidateIfStale: false, revalidateOnFocus: false };
+/**
+ * What WorkspaceAuthWrapper shows for the address's workspace (M3 design 8.3): that nerve cannot be reached, with a
+ * retry; a wait for the caller's workspaces; that the workspace is not found, whether it does not exist or he is not
+ * a member of it (and whether he has others); or its pages.
+ */
+export type WorkspaceAccess =
+  | { kind: "unavailable"; retry: () => void }
+  | { kind: "loading" }
+  | { kind: "not-found"; hasWorkspaces: boolean }
+  | { kind: "ready"; workspace: Workspace };
 
 /**
- * The workspace side of what a page of a workspace fetches as it mounts (M3 design 3.1, 7.1): the caller's
- * workspaces, which decide whether he may see the address's one; once his list has it, its members and his
- * navigation settings in it. Gives the list's response, whose failure the page shows.
+ * The workspace side of what a page of a workspace fetches as it mounts (M3 design 3.1, 7.1), and the one decision
+ * whether the address's workspace is the caller's: his workspaces, which decide it; once his list has it, its members
+ * and his navigation settings in it. Gives what the wrapper shows.
  */
-export function useWorkspaceFetch(workspaceSlug: string | undefined): SWRResponse<Workspace[] | undefined> {
+export function useWorkspaceFetch(workspaceSlug: string | undefined): WorkspaceAccess {
   const {
+    workspaces,
     fetchWorkspaces,
     getWorkspaceBySlug,
     preferences: { fetchPreferences },
   } = useWorkspace();
-  const {
-    workspace: { fetchWorkspaceMembers },
-  } = useMember();
+  const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces());
   // the address's workspace is the caller's once his list has it
   const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
-  const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces(), { ...ONCE, shouldRetryOnError: false });
-  useSessionSWR(
-    workspace && ["WORKSPACE_MEMBERS", workspace.id, workspace.slug],
-    (id, slug) => fetchWorkspaceMembers({ id, slug }),
-    ONCE
+  useWorkspaceMembersFetch(workspace);
+  useSessionSWR(workspace && ["WORKSPACE_PREFERENCES", workspace.id, workspace.slug], (id, slug) =>
+    fetchPreferences({ id, slug })
   );
-  useSessionSWR(
-    workspace && ["WORKSPACE_PREFERENCES", workspace.id, workspace.slug],
-    (id, slug) => fetchPreferences({ id, slug }),
-    ONCE
-  );
-  return listed;
+  if (listed.error) return { kind: "unavailable", retry: () => void listed.mutate() };
+  if (workspaces === undefined) return { kind: "loading" };
+  if (workspace === null) return { kind: "not-found", hasWorkspaces: workspaces.length > 0 };
+  return { kind: "ready", workspace };
 }

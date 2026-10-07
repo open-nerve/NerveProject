@@ -26,7 +26,6 @@ import { WORKSPACE_PARTIAL_PROJECTS, WORKSPACE_PROJECTS_ROLES_INFORMATION, WORKS
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
@@ -45,25 +44,24 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   // store hooks
   const { signOut, data: currentUser } = useUser();
   const { fetchPartialProjects } = useProject();
-  const { workspaces, getWorkspaceBySlug } = useWorkspace();
   const { isMobile } = usePlatformOS();
   const { fetchUserProjectPermissions } = useUserPermissions();
   const { fetchWorkspaceStates } = useProjectState();
-  // The caller's workspaces decide whether he may see this one, and his role in it (M3 design 7.2).
-  const currentWorkspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
 
-  // the workspace side of what every page of a workspace fetches (M3 design 7.1)
-  const listed = useWorkspaceFetch(workspaceSlug);
+  // the workspace side of what every page of a workspace fetches (M3 design 7.1), and what the caller's workspaces
+  // decide this one is to him (7.2, 8.3)
+  const access = useWorkspaceFetch(workspaceSlug);
+  const workspace = access.kind === "ready" ? access.workspace : null;
   useSWR(
-    workspaceSlug && currentWorkspace ? WORKSPACE_PROJECTS_ROLES_INFORMATION(workspaceSlug) : null,
-    workspaceSlug && currentWorkspace ? () => fetchUserProjectPermissions(workspaceSlug) : null,
+    workspace ? WORKSPACE_PROJECTS_ROLES_INFORMATION(workspace.slug) : null,
+    workspace ? () => fetchUserProjectPermissions(workspace.slug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 
   // fetching workspace projects
   useSWR(
-    workspaceSlug && currentWorkspace ? WORKSPACE_PARTIAL_PROJECTS(workspaceSlug) : null,
-    workspaceSlug && currentWorkspace ? () => fetchPartialProjects(workspaceSlug) : null,
+    workspace ? WORKSPACE_PARTIAL_PROJECTS(workspace.slug) : null,
+    workspace ? () => fetchPartialProjects(workspace.slug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   // fetch workspace states
@@ -84,10 +82,10 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   };
 
   // nerve could not be reached: the page says so, and tries again when asked (M2 design 7.1)
-  if (listed.error) return <SessionUnavailable autoRetry={false} onRetry={() => void listed.mutate()} />;
+  if (access.kind === "unavailable") return <SessionUnavailable autoRetry={false} onRetry={access.retry} />;
 
-  // if list of workspaces are not there then we have to render the spinner
-  if (workspaces === undefined) {
+  // the caller's workspaces are not there yet
+  if (access.kind === "loading") {
     return (
       <div className="grid h-full place-items-center rounded-lg border border-subtle p-4">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -98,7 +96,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   }
 
   // a workspace that is not among the caller's: it does not exist, or he is not a member of it (M3 design 8.3)
-  if (!currentWorkspace) {
+  if (access.kind === "not-found") {
     return (
       <div className="relative flex h-full w-full flex-col items-center justify-center bg-surface-2">
         <div className="relative container mx-auto flex h-full w-full flex-col overflow-hidden overflow-y-auto px-5 py-14 md:px-0">
@@ -129,17 +127,17 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
               No workspace found with the URL. It may not exist or you lack authorization to view it.
             </p>
             <div className="flex items-center justify-center gap-2 pt-4">
-              {workspaces.length > 0 && (
+              {access.hasWorkspaces && (
                 <Link to="/" className={cn(getButtonStyling("primary", "base"))}>
                   Go Home
                 </Link>
               )}
-              {workspaces.length > 0 && (
+              {access.hasWorkspaces && (
                 <Link to="/settings/profile/general" className={cn(getButtonStyling("secondary", "base"))}>
                   Visit Profile
                 </Link>
               )}
-              {workspaces.length === 0 && (
+              {!access.hasWorkspaces && (
                 <Link to="/create-workspace" className={cn(getButtonStyling("secondary", "base"))}>
                   Create new workspace
                 </Link>

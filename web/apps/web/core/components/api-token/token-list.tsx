@@ -33,10 +33,7 @@ export const ApiTokenList = observer(function ApiTokenList(props: Props) {
 
   // The list is fetched for each session, into the store of its own RootStore (M2 design 7.1): another account
   // or another sign-in is another key, and nothing of the list before shows.
-  const { error, isValidating, mutate } = useSessionSWR(["API_TOKENS"], () => fetchTokens(), {
-    revalidateOnFocus: false,
-    shouldRetryOnError: false,
-  });
+  const { error, isValidating, mutate } = useSessionSWR(["API_TOKENS"], () => fetchTokens());
 
   if (tokens === undefined)
     return error && !isValidating ? (

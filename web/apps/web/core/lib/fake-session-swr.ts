@@ -5,17 +5,13 @@
 
 // A stand-in for use-session-swr.ts, for the tests of the hooks that make a page's fetches (M3 design 7.1): a test
 // file mocks that module with this one, vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr")), and
-// reads what its hook handed over. The hooks then run as plain functions, outside React. How a fetch is keyed is
-// use-session-swr.test.ts.
+// reads what its hook handed over. The hooks then run as plain functions, outside React. How a fetch is keyed, and
+// SWR's configuration of every session fetch, are use-session-swr.test.ts.
 
 import type { SessionFetch } from "./use-session-swr";
 
-/** What a hook handed useSessionSWR: the fetch, the fetcher of its arguments, and SWR's configuration, if any. */
-export type HandedFetch = [
-  fetch: SessionFetch | null,
-  fetcher: (...args: string[]) => Promise<unknown>,
-  config?: unknown,
-];
+/** What a hook handed useSessionSWR: the fetch, and the fetcher of its arguments. */
+export type HandedFetch = [fetch: SessionFetch | null, fetcher: (...args: string[]) => Promise<unknown>];
 
 /** Every fetch handed over so far, in order; a test empties it before each case. */
 export const handed: HandedFetch[] = [];

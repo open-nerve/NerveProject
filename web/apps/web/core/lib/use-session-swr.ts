@@ -13,17 +13,23 @@ import type { SessionKey } from "@/lib/session-key";
 export type SessionFetch = readonly [name: string, ...args: (string | undefined)[]];
 
 /**
+ * The one SWR configuration of every session fetch, over the app's (WEB_SWR_CONFIG): a fetch is made as a page mounts
+ * and as its key changes, not when the tab regains focus, and a refusal is not retried: the page shows it, with its
+ * own retry where it has one.
+ */
+const SESSION_FETCH: SWRConfiguration = { revalidateOnFocus: false, shouldRetryOnError: false };
+
+/**
  * SWR for a fetch the tab's session makes into its stores (M3 design 7.1), the one way a component makes one: the
  * key is sessionKey's, so it carries the session's loginId; null fetches nothing, which is how a page leaves out
  * what its role may not read. The fetcher is given the fetch's arguments, every one known by then, so that what it
  * fetches is what the key names; it gives the store's Promise, so that a failure is the error SWR returns, never an
- * unhandled rejection.
+ * unhandled rejection. Every session fetch has the one configuration, SESSION_FETCH.
  */
 export function useSessionSWR<T>(
   fetch: SessionFetch | null,
-  fetcher: (...args: string[]) => Promise<T>,
-  config?: SWRConfiguration<T>
+  fetcher: (...args: string[]) => Promise<T>
 ): SWRResponse<T> {
   const session = useSession();
-  return useSWR(fetch && sessionKey(session, ...fetch), ([, , ...args]: SessionKey) => fetcher(...args), config);
+  return useSWR(fetch && sessionKey(session, ...fetch), ([, , ...args]: SessionKey) => fetcher(...args), SESSION_FETCH);
 }
