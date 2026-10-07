@@ -9,7 +9,8 @@ import { ApiError } from "@/lib/api-error";
 import type { FakeNerve } from "@/lib/auth/fake-nerve";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
-import { inTurn } from "@/store/fake-queue";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
 import { memberStore } from "@/store/member/workspace/fake-members";
 import type { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
 
@@ -21,11 +22,14 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }))
 
 const INVITATIONS = "/api/v0/workspaces/acme/invitations";
 
-/** An invitation of acme as nerve lists it to an admin: the name names the address; pending, unless fields say not. */
-function invitationOf(name: string, fields: Partial<WorkspaceInvitation> = {}): WorkspaceInvitation {
+/**
+ * An invitation of the workspace slug names (acme unless it says) as nerve lists it to an admin: the name names the
+ * address and the invitation; pending, unless fields say not.
+ */
+function invitationOf(name: string, fields: Partial<WorkspaceInvitation> = {}, slug = "acme"): WorkspaceInvitation {
   return {
     id: `i-${name}`,
-    workspace_id: "id-acme",
+    workspace_id: `id-${slug}`,
     email: `${name}@example.com`,
     role: 15,
     accepted: false,
@@ -39,12 +43,15 @@ function invitationOf(name: string, fields: Partial<WorkspaceInvitation> = {}): 
 const dan = invitationOf("dan");
 /** An invitation its address declined: nerve lists it until an admin deletes it. */
 const eve = invitationOf("eve", { role: 5, responded_at: "2026-10-03T09:00:00Z" });
+/** Dan's invitation as nerve answers its change to an admin: the account that invited him is gone meanwhile. */
+const promoted = invitationOf("dan", { role: 20, created_by_id: null });
 
-/** The store fetches acme's invitations, and nerve lists these. */
-async function load(nerve: FakeNerve, store: WorkspaceMemberStore, invitations: WorkspaceInvitation[]) {
+/** The store fetches the invitations of the workspace slug names (acme unless it says), and nerve lists these. */
+async function load(nerve: FakeNerve, store: WorkspaceMemberStore, invitations: WorkspaceInvitation[], slug = "acme") {
   const at = nerve.calls.length;
-  const fetched = store.fetchWorkspaceMemberInvitations("acme");
+  const fetched = store.fetchWorkspaceMemberInvitations(slug);
   await until(() => nerve.calls.length === at + 1, "the invitations");
+  expect(nerve.calls[at]).toMatchObject({ method: "GET", path: `/api/v0/workspaces/${slug}/invitations` });
   nerve.calls[at]?.answer(json(200, { data: invitations }));
   return settle(fetched, "the invitations");
 }
@@ -67,7 +74,6 @@ describe("WorkspaceMemberStore, the invitations", () => {
   it("keeps a workspace's invitations as nerve lists them to an admin, declined ones too", async () => {
     const { nerve, store } = memberStore();
     const fetched = await load(nerve, store, [dan, eve]);
-    expect(nerve.calls[0]).toMatchObject({ method: "GET", path: INVITATIONS });
     expect(fetched.value).toEqual([dan, eve]);
     expect(store.workspaceMemberInvitations).toEqual({ acme: [dan, eve] });
     expect(store.workspaceMemberInvitationIds).toEqual(["i-dan", "i-eve"]);
@@ -75,7 +81,7 @@ describe("WorkspaceMemberStore, the invitations", () => {
     expect(store.getSearchedWorkspaceInvitationIds("EVE@")).toEqual(["i-eve"]);
   });
 
-  it("fails when nerve refuses the list, keeping none", async () => {
+  it("fails when nerve refuses the list, keeping the invitations it had", async () => {
     const { nerve, store } = memberStore();
     const refused = track(store.fetchWorkspaceMemberInvitations("acme"));
     await until(() => nerve.calls.length === 1, "the invitations");
@@ -83,6 +89,14 @@ describe("WorkspaceMemberStore, the invitations", () => {
     await until(() => refused.settled, "the refusal");
     expect(refused.error).toBeInstanceOf(ApiError);
     expect(store.workspaceMemberInvitations).toEqual({});
+
+    await load(nerve, store, [dan, eve]);
+    const again = track(store.fetchWorkspaceMemberInvitations("acme"));
+    await until(() => nerve.calls.length === 3, "the refetch");
+    nerve.calls[2]?.answer(problem(403, "forbidden"));
+    await until(() => again.settled, "the refusal");
+    expect(again.error).toBeInstanceOf(ApiError);
+    expect(store.workspaceMemberInvitations).toEqual({ acme: [dan, eve] });
   });
 
   it("gives nothing, and does not fail, when the session changes as it fetches", async () => {
@@ -93,23 +107,46 @@ describe("WorkspaceMemberStore, the invitations", () => {
     expect(store.workspaceMemberInvitations).toEqual({});
   });
 
+  it("keeps the invitations it had when the session changes as it fetches them again", async () => {
+    const { nerve, api, store } = await loaded();
+    // from now on the session's middleware fails each request before it is sent (auth-middleware.ts)
+    api.use({
+      onRequest: () => {
+        throw new SessionChangedError();
+      },
+    });
+    const fetched = await settle(store.fetchWorkspaceMemberInvitations("acme"), "the refetch");
+    expect(fetched).toEqual({ settled: true, value: undefined });
+    expect(nerve.calls).toHaveLength(1);
+    expect(store.workspaceMemberInvitations).toEqual({ acme: [dan, eve] });
+  });
+
   it("puts the new invitations first in the list it has, once nerve gives them, and in none it has not fetched", async () => {
     const { nerve, store } = await loaded();
-    const body: WorkspaceInvitationsCreate = { invitations: [{ email: "fay@example.com", role: 15 }] };
+    const body: WorkspaceInvitationsCreate = {
+      invitations: [
+        { email: "fay@example.com", role: 15 },
+        { email: "gus@example.com", role: 5 },
+      ],
+    };
     const fay = invitationOf("fay");
+    const gus = invitationOf("gus", { role: 5 });
     const invited = track(store.inviteMembersToWorkspace("acme", body));
-    await until(() => nerve.calls.length === 2, "the invitation");
+    await until(() => nerve.calls.length === 2, "the invitations");
     expect(nerve.calls[1]).toMatchObject({ method: "POST", path: INVITATIONS, body });
     expect(store.workspaceMemberInvitations.acme).toEqual([dan, eve]);
-    nerve.calls[1]?.answer(json(201, { data: [fay] }));
+    nerve.calls[1]?.answer(json(201, { data: [fay, gus] }));
     await until(() => invited.settled, "the new invitations");
-    expect(invited.value).toEqual([fay]);
-    expect(store.workspaceMemberInvitations.acme).toEqual([fay, dan, eve]);
+    expect(invited.value).toEqual([fay, gus]);
+    expect(store.workspaceMemberInvitations.acme).toEqual([fay, gus, dan, eve]);
+    // nerve's answer is all the store takes: it does not fetch the list again
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.calls).toHaveLength(2);
 
     const fresh = memberStore();
     const alone = track(fresh.store.inviteMembersToWorkspace("acme", body));
-    await until(() => fresh.nerve.calls.length === 1, "the invitation");
-    fresh.nerve.calls[0]?.answer(json(201, { data: [fay] }));
+    await until(() => fresh.nerve.calls.length === 1, "the invitations");
+    fresh.nerve.calls[0]?.answer(json(201, { data: [fay, gus] }));
     await until(() => alone.settled, "the new invitations");
     // a list of the new invitations alone would show as the whole list
     expect(fresh.store.workspaceMemberInvitations).toEqual({});
@@ -117,7 +154,6 @@ describe("WorkspaceMemberStore, the invitations", () => {
 
   it("changes an invitation's role to nerve's answer, and takes a deleted one off the list", async () => {
     const { nerve, store } = await loaded();
-    const promoted = invitationOf("dan", { role: 20 });
     const changed = track(store.updateMemberInvitation("acme", "i-dan", { role: 20 }));
     await until(() => nerve.calls.length === 2, "the change");
     expect(nerve.calls[1]).toMatchObject({
@@ -129,6 +165,7 @@ describe("WorkspaceMemberStore, the invitations", () => {
     nerve.calls[1]?.answer(json(200, promoted));
     await until(() => changed.settled, "the answer");
     expect(changed.value).toEqual(promoted);
+    // the answer, not the request: the inviter's account is gone, which no request says
     expect(store.workspaceMemberInvitations.acme).toEqual([promoted, eve]);
 
     const deleted = track(store.deleteMemberInvitation("acme", "i-eve"));
@@ -139,6 +176,28 @@ describe("WorkspaceMemberStore, the invitations", () => {
     await until(() => deleted.settled, "the deletion");
     expect(deleted.error).toBeUndefined();
     expect(store.workspaceMemberInvitations.acme).toEqual([promoted]);
+  });
+
+  it("changes the invitations of the workspace it is given, not of the one the address names", async () => {
+    // the tab's address names acme
+    const { nerve, store } = await loaded();
+    const gil = invitationOf("gil", {}, "globex");
+    const hal = invitationOf("hal", {}, "globex");
+    await load(nerve, store, [gil, hal], "globex");
+    const ivy = invitationOf("ivy", {}, "globex");
+    const invited = track(
+      store.inviteMembersToWorkspace("globex", { invitations: [{ email: "ivy@example.com", role: 15 }] })
+    );
+    await inTurn(nerve, 2, ["POST", "/api/v0/workspaces/globex/invitations"], json(201, { data: [ivy] }));
+    await until(() => invited.settled, "the new invitation");
+    const admin = invitationOf("gil", { role: 20 }, "globex");
+    const changed = track(store.updateMemberInvitation("globex", "i-gil", { role: 20 }));
+    await inTurn(nerve, 3, ["PATCH", "/api/v0/workspace-invitations/i-gil"], json(200, admin));
+    await until(() => changed.settled, "the answer");
+    const deleted = track(store.deleteMemberInvitation("globex", "i-hal"));
+    await inTurn(nerve, 4, ["DELETE", "/api/v0/workspace-invitations/i-hal"], noContent());
+    await until(() => deleted.settled, "the deletion");
+    expect(store.workspaceMemberInvitations).toEqual({ acme: [dan, eve], globex: [ivy, admin] });
   });
 
   const refusals: { change: string; send: (store: WorkspaceMemberStore) => Promise<unknown>; refusal: Response }[] = [
@@ -171,7 +230,6 @@ describe("WorkspaceMemberStore, the invitations", () => {
 
   it("sends each change once nerve has answered the one before it, refused or not", async () => {
     const { nerve, store } = await loaded();
-    const promoted = invitationOf("dan", { role: 20 });
     const invited = track(
       store.inviteMembersToWorkspace("acme", { invitations: [{ email: "fay@example.com", role: 15 }] })
     );
@@ -184,5 +242,17 @@ describe("WorkspaceMemberStore, the invitations", () => {
     expect(invited.error).toBeInstanceOf(ApiError);
     expect(changed.value).toEqual(promoted);
     expect(store.workspaceMemberInvitations.acme).toEqual([promoted]);
+  });
+
+  it("fetches the invitations while a change is out: a fetch does not wait for it", async () => {
+    const { nerve, store } = await loaded();
+    await fetchedWhileChangeIsOut(
+      nerve,
+      () => store.updateMemberInvitation("acme", "i-dan", { role: 20 }),
+      () => store.fetchWorkspaceMemberInvitations("acme"),
+      ["GET", INVITATIONS],
+      json(200, { data: [eve] })
+    );
+    expect(store.workspaceMemberInvitations).toEqual({ acme: [eve] });
   });
 });

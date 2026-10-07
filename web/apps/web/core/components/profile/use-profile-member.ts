@@ -7,6 +7,7 @@
 import type { MemberUser } from "@nerve/api-client";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
 
@@ -19,14 +20,17 @@ type TProfileMember =
 // Which workspace member a profile page is about (M1 design 3.2). The page header and the user card both
 // read it here, so they cannot disagree about a user, for instance one who has left the workspace.
 export const useProfileMember = (workspaceSlug: string, userId: string): TProfileMember => {
+  const { getWorkspaceBySlug } = useWorkspace();
   const {
     workspace: { fetchWorkspaceMembers, getWorkspaceMemberDetails },
   } = useMember();
+  // the address's workspace is the caller's once his list has it
+  const isMember = workspaceSlug !== "" && getWorkspaceBySlug(workspaceSlug) !== null;
   // The workspace wrapper already fetches the members under this key, so SWR serves the same request;
   // subscribing here is what tells whether the members are still loading or failed to load: a failed load
   // leaves the request settled without a list.
   const { data: members, isLoading } = useSessionSWR(
-    workspaceSlug ? ["WORKSPACE_MEMBERS", workspaceSlug] : null,
+    isMember ? ["WORKSPACE_MEMBERS", workspaceSlug] : null,
     (slug) => fetchWorkspaceMembers(slug),
     {
       revalidateIfStale: false,

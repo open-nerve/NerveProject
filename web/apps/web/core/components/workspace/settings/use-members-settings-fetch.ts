@@ -12,16 +12,18 @@ import { useSessionSWR } from "@/lib/use-session-swr";
 
 /**
  * The fetches of a workspace's members settings (M3 design 7.1: a page fetches what its caller may read): the
- * members, for anyone the page is shown to; the invitations for an admin alone, as nerve shows them to no one else.
- * The caller's role is the one his workspaces list gives (Workspace.role).
+ * members, once the caller's workspaces list has the workspace; the invitations for an admin alone, as nerve shows
+ * them to no one else. The caller's role is the one his workspaces list gives (Workspace.role).
  */
 export function useMembersSettingsFetch(workspaceSlug: string | undefined): void {
   const { getWorkspaceBySlug } = useWorkspace();
   const {
     workspace: { fetchWorkspaceMembers, fetchWorkspaceMemberInvitations },
   } = useMember();
+  // the address's workspace is the caller's once his list has it
+  const isMember = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug) !== null;
   const isAdmin = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug)?.role === EUserWorkspaceRoles.ADMIN;
-  useSessionSWR(["WORKSPACE_MEMBERS", workspaceSlug], (slug) => fetchWorkspaceMembers(slug));
+  useSessionSWR(isMember ? ["WORKSPACE_MEMBERS", workspaceSlug] : null, (slug) => fetchWorkspaceMembers(slug));
   useSessionSWR(isAdmin ? ["WORKSPACE_INVITATIONS", workspaceSlug] : null, (slug) =>
     fetchWorkspaceMemberInvitations(slug)
   );

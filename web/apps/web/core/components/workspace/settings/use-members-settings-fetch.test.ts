@@ -50,10 +50,14 @@ describe("useMembersSettingsFetch", () => {
   it.each([
     { who: "a member", role: EUserWorkspaceRoles.MEMBER },
     { who: "a guest", role: EUserWorkspaceRoles.GUEST },
-    { who: "a caller whose list does not have the workspace", role: undefined },
   ])("fetches $who the members alone", ({ role }) => {
     state.role = role;
     useMembersSettingsFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACE_MEMBERS", "acme"], null]);
+  });
+
+  it("fetches nothing for a caller whose list does not have the workspace", () => {
+    useMembersSettingsFetch("acme");
+    expect(handed.map(([fetch]) => fetch)).toEqual([null, null]);
   });
 });
