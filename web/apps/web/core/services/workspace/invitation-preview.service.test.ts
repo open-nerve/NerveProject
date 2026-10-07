@@ -10,7 +10,8 @@ import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { previewInvitation } from "./invitation-preview.service";
 
-// What an invitation's link shows whoever holds it (M3 design 7.4), against a fake nerve.
+// What an invitation's link shows whoever holds it (M3 design 7.4), against a fake nerve. The client is the caller's;
+// that the web app asks with the public one, without a session's token, is use-invitation-preview.test.ts.
 
 beforeEach(() => {
   vi.useFakeTimers({ now: 1_000_000 });
@@ -20,7 +21,7 @@ afterEach(() => {
 });
 
 describe("previewInvitation", () => {
-  it("asks nerve, without a token of a session, what the link shows, and fails for a link that names none", async () => {
+  it("asks nerve what the link shows, and fails for a link that names none", async () => {
     const nerve = new FakeNerve();
     const preview: InvitationPreview = {
       id: "i-dan",
@@ -36,7 +37,6 @@ describe("previewInvitation", () => {
       method: "GET",
       path: "/api/v0/workspace-invitations/i-dan",
       query: { token: "nrv_inv_dan" },
-      authorization: null,
     });
     nerve.calls[0]?.answer(json(200, preview));
     await until(() => shown.settled, "the preview");
