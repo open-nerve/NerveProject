@@ -152,11 +152,7 @@ export function NotificationContent({
     verb,
   };
 
-  const renderTriggerName = () => (
-    <span className="font-medium text-primary">
-      {triggeredBy?.is_bot ? triggeredBy.first_name : triggeredBy?.display_name}{" "}
-    </span>
-  );
+  const renderTriggerName = () => <span className="font-medium text-primary">{triggeredBy?.display_name} </span>;
 
   // Get content details from map
   const contentDetails = getNotificationContentDetails(fieldData, renderCommentBox);

@@ -14,10 +14,10 @@ import { CustomSelect } from "@nerve/ui";
 import { TimezoneSelect } from "@/components/global";
 import { StartOfWeekPreference } from "@/components/profile/start-of-week-preference";
 import { SettingsControlItem } from "@/components/settings/control-item";
-// helpers
-import { errorMessageKey } from "@/helpers/authentication.helper";
 // hooks
 import { useUser, useUserProfile } from "@/hooks/store/user";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
   function ProfileSettingsLanguageAndTimezonePreferencesList() {

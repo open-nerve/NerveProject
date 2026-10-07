@@ -20,31 +20,6 @@ export enum EStartOfTheWeek {
   SATURDAY = 6,
 }
 
-export interface IUserLite {
-  avatar_url: string;
-  display_name: string;
-  email?: string;
-  first_name: string;
-  id: string;
-  is_bot: boolean;
-  last_name: string;
-  joining_date?: string;
-}
-
-export interface IUserSettings {
-  id: string | undefined;
-  email: string | undefined;
-  workspace: {
-    last_workspace_id: string | undefined;
-    last_workspace_slug: string | undefined;
-    last_workspace_name: string | undefined;
-    last_workspace_logo: string | undefined;
-    fallback_workspace_id: string | undefined;
-    fallback_workspace_slug: string | undefined;
-    invites: number | undefined;
-  };
-}
-
 export interface IUserProjectsRole {
   [projectId: string]: TUserPermissions;
 }

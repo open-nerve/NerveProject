@@ -14,8 +14,7 @@ import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants"
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { User } from "@nerve/api-client";
-import type { IWorkspaceMember } from "@nerve/types";
+import type { User, WorkspaceMember, WorkspaceRole } from "@nerve/api-client";
 // nerve ui
 import { CustomSelect, PopoverMenu } from "@nerve/ui";
 // helpers
@@ -24,22 +23,16 @@ import { getFileURL } from "@nerve/utils";
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 
-export interface RowData {
-  member: IWorkspaceMember;
-  role: EUserPermissions;
-  is_active: boolean;
-}
-
 type NameProps = {
-  rowData: RowData;
+  rowData: WorkspaceMember;
   workspaceSlug: string;
   isAdmin: boolean;
   currentUser: User | undefined;
-  setRemoveMemberModal: (rowData: RowData) => void;
+  setRemoveMemberModal: (rowData: WorkspaceMember) => void;
 };
 
 type AccountTypeProps = {
-  rowData: RowData;
+  rowData: WorkspaceMember;
   workspaceSlug: string;
 };
 
@@ -65,7 +58,7 @@ export function NameColumn(props: NameProps) {
                     <img
                       src={getFileURL(avatar_url)}
                       className="absolute top-0 left-0 h-full w-full rounded-full object-cover"
-                      alt={display_name || email}
+                      alt={display_name || (email ?? undefined)}
                     />
                   </span>
                 </Link>
@@ -146,12 +139,11 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
           render={({ field: { value } }) => (
             <CustomSelect
               value={value as EUserPermissions}
-              onChange={async (role: EUserPermissions) => {
+              // the select gives the chosen option's value: the role's number, which nerve decodes as a WorkspaceRole
+              onChange={async (role: WorkspaceRole) => {
                 if (!workspaceSlug) return;
                 try {
-                  await updateMember(workspaceSlug, rowData.member.id, {
-                    role: role as unknown as EUserPermissions,
-                  });
+                  await updateMember(workspaceSlug, rowData.member.id, { role });
                 } catch (err: unknown) {
                   const error = err as { error?: string | string[] };
                   const errorString = Array.isArray(error?.error) ? error.error[0] : error?.error;
@@ -172,9 +164,9 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
               className="w-32 rounded-md p-0"
               input
             >
-              {Object.keys(ROLE).map((item) => (
-                <CustomSelect.Option key={item} value={item as unknown as EUserPermissions}>
-                  {ROLE[item as unknown as keyof typeof ROLE]}
+              {Object.entries(ROLE).map(([role, label]) => (
+                <CustomSelect.Option key={role} value={Number(role)}>
+                  {label}
                 </CustomSelect.Option>
               ))}
             </CustomSelect>

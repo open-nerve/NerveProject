@@ -11,14 +11,14 @@ import { Menu } from "@headlessui/react";
 // nerve imports
 import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
 import { cn, getFileURL, getUserRole } from "@nerve/utils";
 
 type TProps = {
-  workspace: IWorkspace;
-  activeWorkspace: IWorkspace | null;
+  workspace: Workspace;
+  activeWorkspace: Workspace | null;
   handleItemClick: () => void;
-  handleWorkspaceNavigation: (workspace: IWorkspace) => void;
+  handleWorkspaceNavigation: (workspace: Workspace) => void;
   handleClose: () => void;
 };
 const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps) {

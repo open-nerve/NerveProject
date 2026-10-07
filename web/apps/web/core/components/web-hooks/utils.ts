@@ -5,11 +5,12 @@
  */
 
 // helpers
-import type { IWebhook, IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
+import type { IWebhook } from "@nerve/types";
 import { renderFormattedPayloadDate } from "@nerve/utils";
 
 export const getCurrentHookAsCSV = (
-  currentWorkspace: IWorkspace | null,
+  currentWorkspace: Workspace | null,
   webhook: IWebhook | undefined,
   secretKey: string | undefined
 ) => ({

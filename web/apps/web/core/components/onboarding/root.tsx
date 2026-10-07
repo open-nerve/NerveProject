@@ -10,22 +10,18 @@ import { observer } from "mobx-react";
 import type { OnboardingStepsUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkspaceMemberInvitation, TOnboardingStep } from "@nerve/types";
+import type { TOnboardingStep } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
-// helpers
-import { errorMessageKey } from "@/helpers/authentication.helper";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 // local components
 import { OnboardingHeader } from "./header";
 import { OnboardingStepRoot } from "./steps";
 
-type Props = {
-  invitations?: IWorkspaceMemberInvitation[];
-};
-
-export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [] }: Props) {
+export const OnboardingRoot = observer(function OnboardingRoot() {
   const [currentStep, setCurrentStep] = useState<TOnboardingStep>(EOnboardingSteps.PROFILE_SETUP);
   const { t } = useTranslation();
   // store hooks
@@ -33,10 +29,7 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
   const { data: userProfile, updateUserProfile, finishUserOnboarding } = useUserProfile();
   const { workspaces } = useWorkspace();
 
-  const workspacesList = Object.values(workspaces ?? {});
-
-  // Calculate total steps based on whether invitations are available
-  const hasInvitations = invitations.length > 0;
+  const hasWorkspaces = (workspaces?.length ?? 0) > 0;
 
   // complete onboarding; a failure says why, by the problem's code
   const finishOnboarding = useCallback(async () => {
@@ -66,7 +59,7 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
     (step: EOnboardingSteps, skipInvites?: boolean) => {
       switch (step) {
         case EOnboardingSteps.PROFILE_SETUP:
-          if (workspacesList.length > 0) finishOnboarding();
+          if (hasWorkspaces) finishOnboarding();
           else {
             stepChange({ profile_complete: true });
             setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
@@ -84,7 +77,7 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
           break;
       }
     },
-    [stepChange, finishOnboarding, workspacesList]
+    [stepChange, finishOnboarding, hasWorkspaces]
   );
 
   const updateCurrentStep = (step: EOnboardingSteps) => setCurrentStep(step);
@@ -114,14 +107,10 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
   return (
     <div className="flex h-full flex-col">
       {/* Header with progress */}
-      <OnboardingHeader
-        currentStep={currentStep}
-        updateCurrentStep={updateCurrentStep}
-        hasInvitations={hasInvitations}
-      />
+      <OnboardingHeader currentStep={currentStep} updateCurrentStep={updateCurrentStep} />
 
       {/* Main content area */}
-      <OnboardingStepRoot currentStep={currentStep} invitations={invitations} handleStepChange={handleStepChange} />
+      <OnboardingStepRoot currentStep={currentStep} handleStepChange={handleStepChange} />
     </div>
   );
 });

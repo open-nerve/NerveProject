@@ -23,7 +23,7 @@ import { LabelsProjectSettingsHeader } from "./header";
 function LabelsSettingsPage() {
   // store hooks
   const { currentProjectDetails } = useProject();
-  const { workspaceUserInfo, allowPermissions } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
 
   const pageTitle = currentProjectDetails?.name ? `${currentProjectDetails?.name} - Labels` : undefined;
 
@@ -48,7 +48,7 @@ function LabelsSettingsPage() {
     );
   }, []);
 
-  if (workspaceUserInfo && !canPerformProjectMemberActions) {
+  if (!canPerformProjectMemberActions) {
     return <NotAuthorizedView section="settings" isProjectView className="h-auto" />;
   }
 

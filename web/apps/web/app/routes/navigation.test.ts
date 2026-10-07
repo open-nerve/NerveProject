@@ -71,6 +71,7 @@ const reaches = (target: string) => {
 type TTarget = { at: string; path: string };
 
 const appDirectory = fileURLToPath(new URL("../..", import.meta.url));
+const reservedSlugs = join(appDirectory, "../../../server/internal/modules/workspace/domain/reserved_slugs.txt");
 
 /**
  * The in-app paths written in one source file: string and template literals that start with "/" (API paths and
@@ -173,5 +174,38 @@ describe("internal navigation", () => {
     expect(lands("/acme/settings/account")).toBe(false);
     // what the disabled feature pages used to link to
     expect(reaches("/*/settings/projects/*/features")).toBe(false);
+  });
+
+  it("gives /invitations, the in-app accept's page that is gone, to the workspace of that name", () => {
+    // decision 2 (M3 design 7.8): no page of the app is /invitations any more; like /login, it is a workspace's
+    // address (3.10), which the workspace's pages answer
+    const leaf = (url: string) => matchRoutes(table, url)?.at(-1)?.route.path;
+    expect(leaf("/invitations")).toBe(":workspaceSlug");
+    expect(leaf("/login")).toBe(":workspaceSlug");
+  });
+});
+
+/** The names of a section of the reserved list: the lines under its "[name]", but blank lines and comments. */
+const reservedSection = (name: string): string[] => {
+  let section = "";
+  return readFileSync(reservedSlugs, "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => {
+      if (/^\[\w+\]$/.test(line)) section = line.slice(1, -1);
+      return line !== "" && !line.startsWith("#") && !line.startsWith("[") && section === name;
+    });
+};
+
+// A workspace may not take an address the app serves itself (M3 design 3.10): the reserved list, the server's and the
+// only one, has the app's top-level segments in its "app" section, so that a route added without its name, or a name
+// left behind by a route that went, fails here.
+describe("the reserved workspace addresses", () => {
+  it("reserve, in the app's section, the first static segment of every page and each directory of public/", () => {
+    const routed = pages.map((page) => page.split("/")[1]).filter((first) => first && !/^[:*]/.test(first));
+    const published = readdirSync(join(appDirectory, "public"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    expect(new Set(reservedSection("app"))).toEqual(new Set([...routed, ...published]));
   });
 });

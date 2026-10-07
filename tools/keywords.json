@@ -1994,6 +1994,171 @@
           "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/modules/instance/app/list_timezones.go"]
         }
       }
+    },
+    {
+      "id": "in-system-invitations",
+      "phase": "M3/P8a",
+      "why": "系统内接受邀请（决策点 2，M3 设计 7.8）：/invitations 页、它的路由和入口、新手引导的\"加入工作区\"一步，以及按邮箱列出、批量接受邀请的旧接口和方法都已删除；接受邀请只经邀请链接 /workspace-invitations。/workspace-invitations 和工作区的邀请接口不在其内",
+      "files": {
+        "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "[\"'`]/invitations(?![\\w-])|route\\(\"invitations\"|\\b(?:joinWorkspaces|userWorkspaceInvitations|getUserWorkspaceInvitations|WorkspaceJoinInvitesStep|ECreateOrJoinWorkspaceViews)\\b|/api/users/me/workspaces/invitations/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "              <Link to=\"/invitations\">",
+          "      action: () => navigate(\"/invitations\"),",
+          "  layout(\"./(all)/invitations/layout.tsx\", [route(\"invitations\", \"./(all)/invitations/page.tsx\")]),",
+          "  async joinWorkspaces(data: any): Promise<any> {",
+          "    return this.get(\"/api/users/me/workspaces/invitations/\")",
+          "import { WorkspaceCreateStep, WorkspaceJoinInvitesStep } from \"./\";",
+          "  async userWorkspaceInvitations(): Promise<IWorkspaceMemberInvitation[]> {",
+          "      if (user?.id) return workspaceService.getUserWorkspaceInvitations();",
+          "  const [currentView, setCurrentView] = useState<ECreateOrJoinWorkspaceViews | null>(null);"
+        ],
+        "miss": [
+          "    route(\"workspace-invitations\", \"./(all)/workspace-invitations/page.tsx\"),",
+          "  return `/workspace-invitations?invitation_id=${id}&token=${token}`;",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/invitations/`, data)",
+          "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/invitations\", { params: { path: { slug } } }));",
+          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
+          "  async joinWorkspace(workspaceSlug: string, invitationId: string, data: any): Promise<any> {"
+        ],
+        "files": {
+          "hit": ["web/apps/web/app/routes/core.ts", "web/apps/web/core/components/power-k/config/account-commands.ts"],
+          "miss": [
+            "docs/v0/M3-workspace-project/M3-design.md",
+            "server/internal/modules/workspace/domain/reserved_slugs.txt",
+            "web/apps/web/app/routes/navigation.test.ts"
+          ]
+        }
+      }
+    },
+    {
+      "id": "plane-workspace-urls",
+      "phase": "M3/P8a",
+      "why": "M3 换掉的 Plane 地址（M3 设计 7.10）：工作区一侧的 store 改调 /api/v0 之后，旧 service 中这些地址的方法都已删除。模式只写到 P8a 已换掉的地址为止；项目一侧的地址（项目、项目成员、项目角色、状态、标签、显示设置）P8b 换掉时补进来，在那之前它们不命中。/search-issues/ 不是 M3 的地址",
+      "files": {
+        "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/|/api/workspaces/\\$\\{[^}]+\\}/invitations/|/api/workspaces/\\$\\{[^}]+\\}/user-properties/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(\"/api/users/me/workspaces/\")",
+          "    return this.post(\"/api/workspaces/\", data)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/`)",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/`, data)",
+          "    return this.delete(`/api/workspaces/${workspaceSlug}/`)",
+          "    return this.get(\"/api/users/last-visited-workspace/\")",
+          "    return this.get(`/api/workspace-slug-check/?slug=${slug}`)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/members/leave/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/workspace-members/me/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/members/`)",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/members/${memberId}/`, data)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/invitations/`, data)",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/`, data)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/join/`, { headers: {} })",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/user-properties/`)",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/user-properties/`, data)"
+        ],
+        "miss": [
+          "    return unwrap(await this.api.GET(\"/api/v0/workspaces\"));",
+          "    return unwrap(await this.api.DELETE(\"/api/v0/workspaces/{slug}\", { params: { path: { slug } } }));",
+          "    return this.get(`/api/users/me/workspaces/${workspaceSlug}/project-roles/`)",
+          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/search-issues/`, {",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/states/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/views/`)",
+          "    return unwrap(await this.api.GET(\"/api/v0/workspace-slugs/{slug}\", { params: { path: { slug } } }));",
+          "    unwrap(await this.api.POST(\"/api/v0/workspaces/{slug}/leave\", { params: { path: { slug } } }));",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/leave/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/project-members/me/`)",
+          "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/members\", { params: { path: { slug } } })).data;",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`, data)",
+          "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/invitations\", { params: { path: { slug } } })).data;",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/invitations/`, data)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/user-properties/`)",
+          "    return unwrap(await this.api.GET(\"/api/v0/me/workspaces/{slug}/preferences\", { params: { path: { slug } } }));"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/workspace.service.ts"],
+          "miss": ["docs/v0/M3-workspace-project/M3-design.md", "web/apps/web/core/store/workspace/index.test.ts"]
+        }
+      }
+    },
+    {
+      "id": "restricted-urls",
+      "phase": "M3/P8a",
+      "why": "前端的保留名单副本 RESTRICTED_URLS（M3 设计 3.10）：保留名单只有服务端的一份（server/internal/modules/workspace/domain/reserved_slugs.txt），创建表单问 GET /api/v0/workspace-slugs/{slug}；web 的 vitest 读那份名单核对应用一段",
+      "files": {
+        "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bRESTRICTED_URLS\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "export const RESTRICTED_URLS: string[] = [",
+          "      if (available && !RESTRICTED_URLS.includes(formData.slug)) {"
+        ],
+        "miss": [
+          "      const { available } = await checkWorkspaceSlug(formData.slug);",
+          "  return readFileSync(reservedSlugs, \"utf8\")"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/constants/src/workspace.ts",
+            "web/apps/web/core/components/workspace/create-workspace-form.tsx"
+          ],
+          "miss": [
+            "server/internal/modules/workspace/domain/reserved_slugs.txt",
+            "web/apps/web/app/routes/navigation.test.ts"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-settings",
+      "phase": "M3/P8a",
+      "why": "Plane 的用户设置（M3 设计 3.14、7.8）：/api/users/me/settings/ 和它的类型、store、hook 都已删除；登录之后的落点由工作区列表和 Profile.last_workspace_id 算出（core/lib/landing.ts），设置页的移动端导航的开合在 ThemeStore",
+      "files": {
+        "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\b(?:IUserSettings|IUserSettingsStore|UserSettingsStore|currentUserSettings|fetchCurrentUserSettings|useUserSettings|getWorkspaceRedirectionUrl)\\b|/api/users/me/settings/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "export interface IUserSettings {",
+          "  const { fetchCurrentUserSettings } = useUserSettings();",
+          "    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : \"/api/users/me/settings/\";",
+          "      navigate(getWorkspaceRedirectionUrl());"
+        ],
+        "miss": [
+          "  const { settingsSidebarCollapsed: sidebarCollapsed, toggleSettingsSidebar: toggleSidebar } = useAppTheme();",
+          "    return <Navigate to={landingPath(workspaces, currentProfile.last_workspace_id)} replace />;",
+          "  const { data: profile } = useUserProfile();"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/user/settings.store.ts", "web/packages/types/src/users.ts"],
+          "miss": ["docs/v0/M3-workspace-project/M3-design.md", "e2e/stories/identity/a3-sign-in.spec.ts"]
+        }
+      }
     }
   ],
   "exceptions": [

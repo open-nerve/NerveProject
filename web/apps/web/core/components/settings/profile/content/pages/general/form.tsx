@@ -21,10 +21,10 @@ import { getFileURL } from "@nerve/utils";
 import { DeactivateAccountModal } from "@/components/account/deactivate-account-modal";
 import { CoverImage } from "@/components/common/cover-image";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
-// helpers
-import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
+// lib
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 
 type TUserProfileForm = {
   first_name: string;

@@ -10,7 +10,7 @@ import { Link, useNavigate } from "react-router";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button, getButtonStyling } from "@nerve/propel/button";
-import type { IWorkspace } from "@nerve/types";
+import type { Workspace, WorkspaceCreate } from "@nerve/api-client";
 // assets
 import WorkspaceCreationDisabled from "@/app/assets/workspace/workspace-creation-disabled.png?url";
 // components
@@ -31,10 +31,9 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
   const { data: currentUser } = useUser();
   const { updateUserProfile } = useUserProfile();
   // states
-  const [defaultValues, setDefaultValues] = useState<Pick<IWorkspace, "name" | "slug" | "organization_size">>({
+  const [defaultValues, setDefaultValues] = useState<Pick<WorkspaceCreate, "name" | "slug" | "organization_size">>({
     name: "",
     slug: "",
-    organization_size: "",
   });
   // derived values
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
@@ -51,7 +50,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
     return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
-  const onSubmit = async (workspace: IWorkspace) => {
+  const onSubmit = async (workspace: Workspace) => {
     // the workspace opened last is a best-effort preference: the new workspace opens whether nerve saves it or not
     await updateUserProfile({ last_workspace_id: workspace.id }).catch(() => undefined);
     await navigate(`/${workspace.slug}`);

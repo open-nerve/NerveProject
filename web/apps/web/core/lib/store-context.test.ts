@@ -317,6 +317,26 @@ describe("store-context", () => {
     expect(page.languages).toEqual(["en"]);
   });
 
+  it("releases a retired session's project filters: the address's next workspace reaches the new session's filters only", async () => {
+    const { context, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    await follow(Y);
+    const y = context.rootStore;
+    // The address's parameters are the page's: Y's stores go on with X's RouterStore, which X's project filters
+    // followed (project_filter.store.ts). The project filters' reaction is the one RootStore.dispose releases; the
+    // cycle and module filters' and the issue root's are M6's and M4's (M3 design 7.1, 13.2).
+    expect(y.router).toBe(x.router);
+    x.projectRoot.projectFilter.updateSearchQuery("x");
+    y.projectRoot.projectFilter.updateSearchQuery("y");
+    y.router.setQuery({ workspaceSlug: "acme" });
+    // Y's filters follow the new workspace (they start it and clear the search); X's no longer run.
+    expect(y.projectRoot.projectFilter.searchQuery).toBe("");
+    expect(y.projectRoot.projectFilter.getDisplayFiltersByWorkspaceSlug("acme")).toBeDefined();
+    expect(x.projectRoot.projectFilter.searchQuery).toBe("x");
+    expect(x.projectRoot.projectFilter.getDisplayFiltersByWorkspaceSlug("acme")).toBeUndefined();
+  });
+
   it("gives the code that reads the stores outside the components the RootStore of the session now", async () => {
     const { context, signedIn, follow } = await load();
     await signedIn();

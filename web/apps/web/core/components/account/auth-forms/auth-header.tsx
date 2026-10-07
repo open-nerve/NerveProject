@@ -5,20 +5,19 @@
  */
 
 import { observer } from "mobx-react";
-import useSWR from "swr";
+import type { InvitationPreview } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import type { IWorkspaceMemberInvitation } from "@nerve/types";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { WorkspaceLogo } from "@/components/workspace/logo";
 // helpers
 import { EAuthModes } from "@/helpers/authentication.helper";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
+// hooks
+import { useInvitationPreview } from "@/hooks/use-invitation-preview";
 
 type TAuthHeader = {
-  workspaceSlug: string | undefined;
-  invitationId: string | undefined;
+  invitationId: string | null;
+  token: string | null;
   authMode: EAuthModes;
 };
 
@@ -34,31 +33,25 @@ const TITLE_KEYS = {
   },
 };
 
-const workSpaceService = new WorkspaceService();
-
 export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
-  const { workspaceSlug, invitationId, authMode } = props;
+  const { invitationId, token, authMode } = props;
   // nerve imports
   const { t } = useTranslation();
 
-  const { data: invitation, isLoading } = useSWR(
-    workspaceSlug && invitationId ? `WORKSPACE_INVITATION_${workspaceSlug}_${invitationId}` : null,
-    async () => workspaceSlug && invitationId && workSpaceService.getWorkspaceInvitation(workspaceSlug, invitationId),
-    {
-      revalidateOnFocus: false,
-      shouldRetryOnError: false,
-    }
-  );
+  const { data: invitation, isLoading } = useInvitationPreview(invitationId, token);
 
-  const getHeaderSubHeader = (mode: EAuthModes, current: IWorkspaceMemberInvitation | undefined) => {
-    if (current?.workspace) {
-      const workspace = current.workspace;
+  const getHeaderSubHeader = (mode: EAuthModes, current: InvitationPreview | undefined) => {
+    if (current) {
       return {
         header: (
           <div className="relative inline-flex items-center gap-2">
             {t("common.join")}{" "}
-            <WorkspaceLogo logo={workspace?.logo_url} name={workspace?.name} classNames="size-9 flex-shrink-0" />{" "}
-            {workspace.name}
+            <WorkspaceLogo
+              logo={current.workspace_logo_url}
+              name={current.workspace_name}
+              classNames="size-9 flex-shrink-0"
+            />{" "}
+            {current.workspace_name}
           </div>
         ),
         subHeader: t(
@@ -70,7 +63,7 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
     return { header: t(TITLE_KEYS[mode].header), subHeader: t(TITLE_KEYS[mode].subHeader) };
   };
 
-  const { header, subHeader } = getHeaderSubHeader(authMode, invitation || undefined);
+  const { header, subHeader } = getHeaderSubHeader(authMode, invitation);
 
   if (isLoading)
     return (

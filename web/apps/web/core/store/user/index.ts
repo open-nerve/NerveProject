@@ -33,15 +33,12 @@ import { ProfileStore } from "@/store/user/profile.store";
 // local imports
 import type { IApiTokenStore } from "./api-token.store";
 import { ApiTokenStore } from "./api-token.store";
-import type { IUserSettingsStore } from "./settings.store";
-import { UserSettingsStore } from "./settings.store";
 
 export interface IUserStore {
   // observables
   data: User | undefined;
   // store observables
   userProfile: IUserProfileStore;
-  userSettings: IUserSettingsStore;
   permission: IUserPermissionStore;
   apiTokens: IApiTokenStore;
   // actions
@@ -62,7 +59,6 @@ export class UserStore implements IUserStore {
   data: User | undefined = undefined;
   // store observables
   userProfile: IUserProfileStore;
-  userSettings: IUserSettingsStore;
   permission: IUserPermissionStore;
   apiTokens: IApiTokenStore;
   // service
@@ -77,7 +73,6 @@ export class UserStore implements IUserStore {
   ) {
     // stores
     this.userProfile = new ProfileStore(store, api);
-    this.userSettings = new UserSettingsStore(api);
     this.permission = new UserPermissionStore(store, api);
     this.apiTokens = new ApiTokenStore(api);
     // service
@@ -88,7 +83,6 @@ export class UserStore implements IUserStore {
       // model observables
       data: observable,
       userProfile: observable,
-      userSettings: observable,
       permission: observable,
       apiTokens: observable,
       // actions

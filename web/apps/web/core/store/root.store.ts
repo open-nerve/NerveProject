@@ -97,9 +97,9 @@ export class RootStore {
     this.instance = before?.instance ?? new InstanceStore();
     this.user = new UserStore(this, api);
     this.theme = before?.theme ?? new ThemeStore();
-    this.workspaceRoot = new WorkspaceRootStore(this);
+    this.workspaceRoot = new WorkspaceRootStore(this, api);
     this.projectRoot = new ProjectRootStore(this);
-    this.memberRoot = new MemberRootStore(this);
+    this.memberRoot = new MemberRootStore(this, api);
     this.cycle = new CycleStore(this);
     this.cycleFilter = new CycleFilterStore(this);
     this.module = new ModulesStore(this);
@@ -115,5 +115,16 @@ export class RootStore {
     this.editorAssetStore = new EditorAssetStore();
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
+  }
+
+  /**
+   * Releases the project filters' reaction to the address's workspace: it is registered on the page's RouterStore,
+   * which goes on with the next session (v0 design 7.7, M3 design 7.1). store-context.tsx calls it as the next
+   * session's RootStore takes over, so that a retired session's project filters no longer follow the address. It
+   * releases nothing else yet: the cycle and module filters' reactions and the issue root's autorun also follow the
+   * RouterStore, and run on in a retired session until M6 and M4 release them here (M3 design 7.1, 13.2).
+   */
+  dispose(): void {
+    this.projectRoot.projectFilter.dispose();
   }
 }

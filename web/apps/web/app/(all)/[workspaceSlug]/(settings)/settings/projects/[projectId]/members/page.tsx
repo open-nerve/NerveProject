@@ -29,7 +29,7 @@ function MembersSettingsPage({ params }: Route.ComponentProps) {
   const { t } = useTranslation();
   // store hooks
   const { currentProjectDetails } = useProject();
-  const { workspaceUserInfo, allowPermissions } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
   // derived values
   const pageTitle = currentProjectDetails?.name ? `${currentProjectDetails?.name} - Members` : undefined;
   const isProjectMemberOrAdmin = allowPermissions(
@@ -39,7 +39,7 @@ function MembersSettingsPage({ params }: Route.ComponentProps) {
   const isWorkspaceAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
   const canPerformProjectMemberActions = isProjectMemberOrAdmin || isWorkspaceAdmin;
 
-  if (workspaceUserInfo && !canPerformProjectMemberActions) {
+  if (!canPerformProjectMemberActions) {
     return <NotAuthorizedView section="settings" isProjectView className="h-auto" />;
   }
 

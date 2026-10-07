@@ -5,7 +5,7 @@
  */
 
 import type { ENotificationFilterType } from "./enums";
-import type { IUserLite } from "./users";
+import type { MemberUser } from "@nerve/api-client";
 
 // filters
 export type TNotificationFilter = {
@@ -52,7 +52,7 @@ export type TNotification = {
   sender: string | undefined;
   receiver: string | undefined;
   triggered_by: string | undefined;
-  triggered_by_details: IUserLite | undefined;
+  triggered_by_details: MemberUser | undefined;
   read_at: string | undefined;
   archived_at: string | undefined;
   snoozed_till: string | undefined;

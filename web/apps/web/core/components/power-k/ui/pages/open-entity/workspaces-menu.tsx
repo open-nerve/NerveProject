@@ -6,25 +6,20 @@
 
 import { observer } from "mobx-react";
 // nerve types
-import type { IWorkspace } from "@nerve/types";
-import { Spinner } from "@nerve/ui";
+import type { Workspace } from "@nerve/api-client";
 // components
 import { PowerKWorkspacesMenu } from "@/components/power-k/menus/workspaces";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 
 type Props = {
-  handleSelect: (workspace: IWorkspace) => void;
+  handleSelect: (workspace: Workspace) => void;
 };
 
 export const PowerKOpenWorkspaceMenu = observer(function PowerKOpenWorkspaceMenu(props: Props) {
   const { handleSelect } = props;
   // store hooks
-  const { loader, workspaces } = useWorkspace();
-  // derived values
-  const workspacesList = workspaces ? Object.values(workspaces) : [];
+  const { workspaces } = useWorkspace();
 
-  if (loader) return <Spinner />;
-
-  return <PowerKWorkspacesMenu workspaces={workspacesList} onSelect={handleSelect} />;
+  return <PowerKWorkspacesMenu workspaces={workspaces ?? []} onSelect={handleSelect} />;
 });

@@ -8,15 +8,14 @@ import type { ICycle } from "./cycle";
 import type { TIssue } from "./issues/issue";
 import type { IModule } from "./module";
 import type { IProject } from "./project";
-import type { IUserLite } from "./users";
-import type { IWorkspace } from "./workspace";
+import type { Workspace, MemberUser } from "@nerve/api-client";
 
 export type TSearchEntities = "user_mention" | "issue" | "project" | "cycle" | "module";
 
 export type TUserSearchResponse = {
-  member__avatar_url: IUserLite["avatar_url"];
-  member__display_name: IUserLite["display_name"];
-  member__id: IUserLite["id"];
+  member__avatar_url: MemberUser["avatar_url"];
+  member__display_name: MemberUser["display_name"];
+  member__id: MemberUser["id"];
 };
 
 type TProjectSearchResponse = {
@@ -24,7 +23,7 @@ type TProjectSearchResponse = {
   id: IProject["id"];
   identifier: IProject["identifier"];
   logo_props: IProject["logo_props"];
-  workspace__slug: IWorkspace["slug"];
+  workspace__slug: Workspace["slug"];
 };
 
 type TIssueSearchResponse = {
@@ -43,7 +42,7 @@ type TCycleSearchResponse = {
   project_id: ICycle["project_id"];
   project__identifier: IProject["identifier"];
   status: ICycle["status"];
-  workspace__slug: IWorkspace["slug"];
+  workspace__slug: Workspace["slug"];
 };
 
 type TModuleSearchResponse = {
@@ -52,7 +51,7 @@ type TModuleSearchResponse = {
   project_id: IModule["project_id"];
   project__identifier: IProject["identifier"];
   status: IModule["status"];
-  workspace__slug: IWorkspace["slug"];
+  workspace__slug: Workspace["slug"];
 };
 
 export type TSearchResponse = {

@@ -12,7 +12,6 @@ import { getWorkspaceActivePath, pathnameToAccessKey } from "@/components/settin
 import { SettingsMobileNav } from "@/components/settings/mobile/nav";
 // nerve imports
 import { WORKSPACE_SETTINGS_ACCESS } from "@nerve/constants";
-import type { EUserWorkspaceRoles } from "@nerve/types";
 // components
 import { WorkspaceSettingsSidebarRoot } from "@/components/settings/workspace/sidebar";
 // hooks
@@ -24,7 +23,7 @@ const WorkspaceSettingLayout = observer(function WorkspaceSettingLayout({ params
   // router
   const { workspaceSlug } = params;
   // store hooks
-  const { workspaceUserInfo, getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
+  const { getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
   // next hooks
   const { pathname } = useLocation();
   // derived values
@@ -33,7 +32,7 @@ const WorkspaceSettingLayout = observer(function WorkspaceSettingLayout({ params
 
   let isAuthorized: boolean | string = false;
   if (pathname && workspaceSlug && userWorkspaceRole) {
-    isAuthorized = WORKSPACE_SETTINGS_ACCESS[accessKey]?.includes(userWorkspaceRole as EUserWorkspaceRoles);
+    isAuthorized = WORKSPACE_SETTINGS_ACCESS[accessKey]?.includes(userWorkspaceRole);
   }
 
   return (
@@ -43,7 +42,7 @@ const WorkspaceSettingLayout = observer(function WorkspaceSettingLayout({ params
         activePath={getWorkspaceActivePath(pathname) || ""}
       />
       <div className="inset-y-0 flex h-full w-full flex-row">
-        {workspaceUserInfo && !isAuthorized ? (
+        {!isAuthorized ? (
           <NotAuthorizedView section="settings" className="h-auto" />
         ) : (
           <div className="relative flex size-full">

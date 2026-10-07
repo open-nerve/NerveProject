@@ -7,7 +7,8 @@
 import { useState } from "react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import type { IWorkspaceMember, TProjectMembership } from "@nerve/types";
+import type { MemberUser } from "@nerve/api-client";
+import type { TProjectMembership } from "@nerve/types";
 import { renderFormattedDate } from "@nerve/utils";
 // components
 import { MemberHeaderColumn } from "@/components/project/member-header-column";
@@ -17,8 +18,8 @@ import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import type { IMemberFilters } from "@/store/member/utils";
 
-export interface RowData extends Pick<TProjectMembership, "original_role"> {
-  member: IWorkspaceMember;
+export interface RowData extends Pick<TProjectMembership, "original_role" | "created_at"> {
+  member: MemberUser;
 }
 
 type TUseProjectColumnsProps = {
@@ -126,7 +127,7 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) => <div>{renderFormattedDate(rowData?.member?.joining_date)}</div>,
+      tdRender: (rowData: RowData) => <div>{renderFormattedDate(rowData.created_at)}</div>,
     },
   ];
   return {

@@ -5,7 +5,8 @@
  */
 
 // nerve imports
-import type { IProject, IUserLite, TOperatorConfigMap, TSupportedOperators } from "@nerve/types";
+import type { MemberUser } from "@nerve/api-client";
+import type { IProject, TOperatorConfigMap, TSupportedOperators } from "@nerve/types";
 import { COMPARISON_OPERATOR, EQUALITY_OPERATOR } from "@nerve/types";
 // local imports
 import { getDatePickerConfig, getDateRangePickerConfig, getMultiSelectConfig } from "../core";
@@ -18,8 +19,8 @@ import { createOperatorConfigEntry } from "../shared";
  * User filter specific params
  */
 export type TCreateUserFilterParams = TCreateFilterConfigParams &
-  IFilterIconConfig<IUserLite> & {
-    members: IUserLite[];
+  IFilterIconConfig<MemberUser> & {
+    members: MemberUser[];
   };
 
 /**
@@ -28,7 +29,7 @@ export type TCreateUserFilterParams = TCreateFilterConfigParams &
  * @returns The member multi select config
  */
 export const getMemberMultiSelectConfig = (params: TCreateUserFilterParams, singleValueOperator: TSupportedOperators) =>
-  getMultiSelectConfig<IUserLite, string, IUserLite>(
+  getMultiSelectConfig<MemberUser, string, MemberUser>(
     {
       items: params.members,
       getId: (member) => member.id,

@@ -8,13 +8,13 @@ import { Fragment, useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
 // icons
-import { ChevronDownOutline, LogOutOutline, MailOutline, PlusCircleOutline } from "@makeplane/propel/icons";
+import { ChevronDownOutline, LogOutOutline, PlusCircleOutline } from "@makeplane/propel/icons";
 // ui
 import { Menu, Transition } from "@headlessui/react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
 import { Loader } from "@nerve/ui";
 import { orderWorkspacesList, cn } from "@nerve/utils";
 // helpers
@@ -49,7 +49,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
 
   // the workspace opened last is a best-effort preference: the link opens the workspace whether nerve saves it or not
-  const handleWorkspaceNavigation = (workspace: IWorkspace) => {
+  const handleWorkspaceNavigation = (workspace: Workspace) => {
     void updateUserProfile({ last_workspace_id: workspace?.id }).catch(() => undefined);
   };
 
@@ -68,7 +68,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
       toggleSidebar();
     }
   };
-  const workspacesList = orderWorkspacesList(Object.values(workspaces ?? {}));
+  const workspacesList = workspaces && orderWorkspacesList(workspaces);
   // TODO: fix workspaces list scroll
 
   // Toggle sidebar dropdown state when either menu is open
@@ -200,16 +200,6 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
                         </Menu.Item>
                       </Link>
                     )}
-
-                    <Link to="/invitations" className="w-full" onClick={handleItemClick}>
-                      <Menu.Item
-                        as="div"
-                        className="flex items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
-                      >
-                        <MailOutline className="h-4 w-4 flex-shrink-0" />
-                        {t("workspace_invites")}
-                      </Menu.Item>
-                    </Link>
 
                     <div className="w-full">
                       <Menu.Item

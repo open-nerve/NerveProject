@@ -13,16 +13,14 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkspace } from "@nerve/types";
-
+import type { Workspace } from "@nerve/api-client";
 import { cn } from "@nerve/utils";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUserSettings } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 
 type Props = {
-  data: IWorkspace | null;
+  data: Workspace | null;
   onClose: () => void;
 };
 
@@ -38,8 +36,6 @@ export const DeleteWorkspaceForm = observer(function DeleteWorkspaceForm(props: 
   // store hooks
   const { deleteWorkspace } = useWorkspace();
   const { t } = useTranslation();
-  const { getWorkspaceRedirectionUrl } = useWorkspace();
-  const { fetchCurrentUserSettings } = useUserSettings();
   // form info
   const {
     control,
@@ -64,10 +60,10 @@ export const DeleteWorkspaceForm = observer(function DeleteWorkspaceForm(props: 
     if (!data || !canDelete) return;
 
     try {
-      await deleteWorkspace(data.slug);
-      await fetchCurrentUserSettings();
+      await deleteWorkspace(data);
       handleClose();
-      navigate(getWorkspaceRedirectionUrl());
+      // the root lands the caller where his workspaces, as they are now, say (M3 design 3.14)
+      navigate("/");
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("workspace_settings.settings.general.delete_modal.success_title"),

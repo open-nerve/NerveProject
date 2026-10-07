@@ -9,38 +9,26 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { TickCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
+import { ORGANIZATION_SIZE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { User } from "@nerve/api-client";
-import type { IWorkspace } from "@nerve/types";
+import type { User, WorkspaceCreate } from "@nerve/api-client";
 import { Spinner } from "@nerve/ui";
 import { cn, validateWorkspaceName, validateSlug } from "@nerve/utils";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUserProfile, useUserSettings } from "@/hooks/store/user";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
+import { useUserProfile } from "@/hooks/store/user";
 // local components
 import { CommonOnboardingHeader } from "../common";
 
 type Props = {
   user: User | undefined;
   onComplete: (skipInvites?: boolean) => void;
-  handleCurrentViewChange: () => void;
-  hasInvitations?: boolean;
 };
 
-const workspaceService = new WorkspaceService();
-
-export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
-  user,
-  onComplete,
-  handleCurrentViewChange,
-  hasInvitations = false,
-}: Props) {
+export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user, onComplete }: Props) {
   // states
   const [slugError, setSlugError] = useState(false);
   const [invalidSlug, setInvalidSlug] = useState(false);
@@ -49,8 +37,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
   // store hooks
   const { config } = useInstance();
   const { updateUserProfile } = useUserProfile();
-  const { fetchCurrentUserSettings } = useUserSettings();
-  const { createWorkspace, fetchWorkspaces } = useWorkspace();
+  const { createWorkspace, fetchWorkspaces, checkWorkspaceSlug } = useWorkspace();
 
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
@@ -60,21 +47,20 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
     control,
     setValue,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<IWorkspace>({
+  } = useForm<WorkspaceCreate>({
     defaultValues: {
       name: "",
       slug: "",
-      organization_size: "",
     },
     mode: "onChange",
   });
 
-  const handleCreateWorkspace = async (formData: IWorkspace) => {
+  const handleCreateWorkspace = async (formData: WorkspaceCreate) => {
     if (isSubmitting) return;
 
     try {
-      const res = (await workspaceService.workspaceSlugCheck(formData.slug)) as { status: boolean };
-      if (res.status === true && !RESTRICTED_URLS.includes(formData.slug)) {
+      const { available } = await checkWorkspaceSlug(formData.slug);
+      if (available) {
         setSlugError(false);
         try {
           const workspaceResponse = await createWorkspace(formData);
@@ -109,7 +95,6 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
     if (!user) return;
     // the workspace opened last is a best-effort preference: the onboarding goes on whether nerve saves it or not
     await updateUserProfile({ last_workspace_id: workspaceId }).catch(() => undefined);
-    await fetchCurrentUserSettings();
   };
 
   const isButtonDisabled = !isValid || invalidSlug || isSubmitting;
@@ -288,16 +273,9 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-4">
-        <Button variant="primary" type="submit" size="xl" className="w-full" disabled={isButtonDisabled}>
-          {isSubmitting ? <Spinner height="20px" width="20px" /> : t("workspace_creation.button.default")}
-        </Button>
-        {hasInvitations && (
-          <Button variant="ghost" size="xl" className="w-full" onClick={handleCurrentViewChange}>
-            {t("onboarding.workspace.join_existing")}
-          </Button>
-        )}
-      </div>
+      <Button variant="primary" type="submit" size="xl" className="w-full" disabled={isButtonDisabled}>
+        {isSubmitting ? <Spinner height="20px" width="20px" /> : t("workspace_creation.button.default")}
+      </Button>
     </form>
   );
 });

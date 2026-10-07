@@ -51,7 +51,6 @@ export interface IWorkspaceNotificationStore {
   setCurrentNotificationTab: (tab: TNotificationTab) => void;
   setCurrentSelectedNotificationId: (notificationId: string | undefined) => void;
   setUnreadNotificationsCount: (type: "increment" | "decrement", newCount?: number) => void;
-  getUnreadNotificationsCount: (workspaceSlug: string) => Promise<TUnreadNotificationsCount | undefined>;
   getNotifications: (
     workspaceSlug: string,
     loader?: TNotificationLoader,

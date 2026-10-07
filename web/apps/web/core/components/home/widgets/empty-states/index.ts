@@ -5,4 +5,3 @@
  */
 
 export * from "./no-projects";
-export * from "./recents";

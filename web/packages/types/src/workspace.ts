@@ -4,88 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import type { TUserPermissions } from "./enums";
-import type { TProjectMembership } from "./project";
-import type { IUserLite } from "./users";
-import type { IWorkspaceViewProps } from "./view-props";
-
 export enum EUserWorkspaceRoles {
   ADMIN = 20,
   MEMBER = 15,
   GUEST = 5,
-}
-
-export interface IWorkspace {
-  readonly id: string;
-  readonly owner: IUserLite;
-  readonly created_at: Date;
-  readonly updated_at: Date;
-  name: string;
-  url: string;
-  logo_url: string | null;
-  readonly total_members: number;
-  readonly slug: string;
-  readonly created_by: string;
-  readonly updated_by: string;
-  organization_size: string;
-  total_projects?: number;
-  role: number;
-  timezone: string;
-}
-
-export interface IWorkspaceMemberInvitation {
-  accepted: boolean;
-  email: string;
-  id: string;
-  message: string;
-  responded_at: Date;
-  role: TUserPermissions;
-  token: string;
-  invite_link: string;
-  workspace: {
-    id: string;
-    logo_url: string;
-    name: string;
-    slug: string;
-  };
-}
-
-export interface IWorkspaceBulkInviteFormData {
-  emails: { email: string; role: TUserPermissions }[];
-}
-
-export interface IWorkspaceMember {
-  id: string;
-  member: IUserLite;
-  role: TUserPermissions | EUserWorkspaceRoles;
-  created_at?: string;
-  avatar_url?: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-  joining_date?: string;
-  display_name?: string;
-  is_active?: boolean;
-}
-
-export interface IWorkspaceMemberMe {
-  company_role: string | null;
-  created_at: Date;
-  created_by: string;
-  default_props: IWorkspaceViewProps;
-  id: string;
-  member: string;
-  role: TUserPermissions | EUserWorkspaceRoles;
-  updated_at: Date;
-  updated_by: string;
-  view_props: IWorkspaceViewProps;
-  workspace: string;
-  draft_issue_count: number;
-}
-
-export interface ILastActiveWorkspaceDetails {
-  workspace_details: IWorkspace;
-  project_details?: TProjectMembership[];
 }
 
 export interface IWorkspaceDefaultSearchResult {
@@ -135,8 +57,3 @@ export enum EOnboardingSteps {
 }
 
 export type TOnboardingStep = EOnboardingSteps;
-
-export enum ECreateOrJoinWorkspaceViews {
-  WORKSPACE_CREATE = "WORKSPACE_CREATE",
-  WORKSPACE_JOIN = "WORKSPACE_JOIN",
-}

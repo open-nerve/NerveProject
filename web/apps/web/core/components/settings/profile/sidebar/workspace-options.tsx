@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { MailOutline, PlusCircleOutline } from "@makeplane/propel/icons";
+import { PlusCircleOutline } from "@makeplane/propel/icons";
 import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -24,7 +24,7 @@ export const ProfileSettingsSidebarWorkspaceOptions = observer(function ProfileS
     <div className="shrink-0">
       <div className="p-2 text-caption-md-medium text-tertiary capitalize">{t("common.workspace")}</div>
       <div className="flex flex-col">
-        {Object.values(workspaces).map((workspace) => (
+        {(workspaces ?? []).map((workspace) => (
           <SettingsSidebarItem
             key={workspace.id}
             as="link"
@@ -40,13 +40,6 @@ export const ProfileSettingsSidebarWorkspaceOptions = observer(function ProfileS
             href="/create-workspace"
             icon={PlusCircleOutline}
             label={t("create_workspace")}
-            isActive={false}
-          />
-          <SettingsSidebarItem
-            as="link"
-            href="/invitations"
-            icon={MailOutline}
-            label={t("workspace_invites")}
             isActive={false}
           />
         </div>

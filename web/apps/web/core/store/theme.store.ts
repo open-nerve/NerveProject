@@ -14,6 +14,8 @@ export interface IThemeStore {
   isExtendedProjectSidebarOpened: boolean | undefined;
   profileSidebarCollapsed: boolean | undefined;
   issueDetailSidebarCollapsed: boolean | undefined;
+  /** Whether the settings' navigation is closed, on a narrow screen: closed until opened. */
+  settingsSidebarCollapsed: boolean;
   // actions
   toggleAnySidebarDropdown: (open?: boolean) => void;
   toggleSidebar: (collapsed?: boolean) => void;
@@ -21,6 +23,7 @@ export interface IThemeStore {
   toggleExtendedProjectSidebar: (collapsed?: boolean) => void;
   toggleProfileSidebar: (collapsed?: boolean) => void;
   toggleIssueDetailSidebar: (collapsed?: boolean) => void;
+  toggleSettingsSidebar: (collapsed?: boolean) => void;
 }
 
 export class ThemeStore implements IThemeStore {
@@ -31,6 +34,7 @@ export class ThemeStore implements IThemeStore {
   isExtendedProjectSidebarOpened: boolean | undefined = undefined;
   profileSidebarCollapsed: boolean | undefined = undefined;
   issueDetailSidebarCollapsed: boolean | undefined = undefined;
+  settingsSidebarCollapsed: boolean = true;
 
   constructor() {
     makeObservable(this, {
@@ -41,6 +45,7 @@ export class ThemeStore implements IThemeStore {
       isExtendedProjectSidebarOpened: observable.ref,
       profileSidebarCollapsed: observable.ref,
       issueDetailSidebarCollapsed: observable.ref,
+      settingsSidebarCollapsed: observable.ref,
       // action
       toggleAnySidebarDropdown: action,
       toggleSidebar: action,
@@ -48,6 +53,7 @@ export class ThemeStore implements IThemeStore {
       toggleExtendedProjectSidebar: action,
       toggleProfileSidebar: action,
       toggleIssueDetailSidebar: action,
+      toggleSettingsSidebar: action,
     });
   }
 
@@ -117,5 +123,13 @@ export class ThemeStore implements IThemeStore {
       this.issueDetailSidebarCollapsed = collapsed;
     }
     localStorage.setItem("issue_detail_sidebar_collapsed", this.issueDetailSidebarCollapsed.toString());
+  };
+
+  /**
+   * Open or close the settings' navigation on a narrow screen
+   * @param collapsed
+   */
+  toggleSettingsSidebar = (collapsed?: boolean) => {
+    this.settingsSidebarCollapsed = collapsed ?? !this.settingsSidebarCollapsed;
   };
 }

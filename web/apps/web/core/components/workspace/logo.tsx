@@ -19,7 +19,7 @@ export const WorkspaceLogo = observer(function WorkspaceLogo(props: Props) {
   // translation
   const { t } = useTranslation();
 
-  // A span: the logo sits inside buttons (the workspace menus, the invitations page), which take phrasing content
+  // A span: the logo sits inside buttons (the workspace menus), which take phrasing content
   return (
     <span
       className={cn(

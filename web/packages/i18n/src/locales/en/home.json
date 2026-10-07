@@ -24,19 +24,6 @@
         "cta": "Personalize now"
       }
     },
-    "recents": {
-      "title": "Recents",
-      "empty": {
-        "project": "Your recent projects will appear here once you visit one.",
-        "issue": "Your recent work items will appear here once you visit one.",
-        "default": "You don't have any recents yet."
-      },
-      "filters": {
-        "all": "All",
-        "projects": "Projects",
-        "issues": "Work items"
-      }
-    },
     "title": "Home"
   }
 }

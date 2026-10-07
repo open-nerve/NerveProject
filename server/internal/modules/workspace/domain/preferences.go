@@ -30,8 +30,8 @@ func DefaultPreferences() Preferences {
 	return Preferences{NavigationControl: "ACCORDION", NavigationProjectLimit: 10}
 }
 
-// navigationControls are the web app's two modes (TProjectNavigationMode),
-// which the column's CHECK holds too.
+// navigationControls are the web app's two modes (the generated
+// NavigationControlPreference), which the column's CHECK holds too.
 var navigationControls = []string{"ACCORDION", "TABBED"}
 
 // Apply returns p with the fields patch sets changed.

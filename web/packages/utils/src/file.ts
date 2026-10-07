@@ -6,11 +6,11 @@
 
 /**
  * @description the URL of a file: asset paths are relative to this origin and absolute URLs stay as they are;
- * an empty path means there is no file
- * @param {string} path
+ * a null or empty path means there is no file
+ * @param {string | null} path
  * @returns {string | undefined} the URL, or undefined when there is no file
  */
-export const getFileURL = (path: string): string | undefined => path || undefined;
+export const getFileURL = (path: string | null): string | undefined => path || undefined;
 
 /**
  * @description this function returns the assetId from the asset source

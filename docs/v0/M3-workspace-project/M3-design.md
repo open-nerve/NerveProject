@@ -123,7 +123,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 
 **冒烟故事的更新**：
 - S1：`goose_db_version` 的最新版本等于最后一个迁移文件（照旧，M3 加了九个）。
-- S2：登录之后落到工作区首页、打开一个项目的设置时，没有失败的请求，没有发往旧接口的请求，没有 CSP 违规（3.1）。它在前端的第一个 Phase（P8）改写。
+- S2：登录之后落到工作区首页、打开一个项目的设置时，没有失败的请求，没有发往旧接口的请求，没有 CSP 违规（3.1）。它在 P8b 改写：它要工作区、项目两侧的数据层都已改接（第 12 节）。
 
 ---
 
@@ -142,7 +142,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
   - 首页的"最近"小部件（M7）：从 `HomeBody` 移除，它的组件文件随之删除（`core/components/home/widgets/recents/` 四个文件 381 行，以及只为它存在的空状态和骨架），否则 knip 报未使用。M7 从 Plane 的源码加回。首页在 M7 之前只有问候和"还没有项目"的引导。
   - `ProjectAuthWrapper` 取迭代、两次模块（M6）和视图、分诊状态（M7）：删掉这几个 SWR。
   - 项目侧边栏读 `project.intake_count`（M7）：M3 的项目资源不定义它（3.2 的规则 3），读取删掉。
-- **M3 自己的挂载时取数一次改完**：两个包装层在每一页挂载时取项目角色、项目列表、工作区的状态、项目的显示设置、标签、成员和状态（第 1 节）。它们的 store 全部在前端的第一个 Phase（P8，数据层）改接新接口，页面的 Phase 在它之后。这样任何页面的故事加入时，挂载路径上已经没有旧接口的请求（第 12 节）。
+- **M3 自己的挂载时取数一次改完**：两个包装层在每一页挂载时取项目角色、项目列表、工作区的状态、项目的显示设置、标签、成员和状态（第 1 节）。它们的 store 全部在前端的数据层（P8a 工作区一侧、P8b 项目一侧）改接新接口，页面的 Phase 在两段之后。这样任何页面的故事加入时，挂载路径上已经没有旧接口的请求（第 12 节）。
 - **理由**：与 M2 相同。故事的 `watchPage` 断言"没有发往旧接口的请求、没有失败的请求、控制台安静"不需要例外；挂载时注定失败的请求会产生 404 提示和控制台错误，把真正的缺陷淹没。每个后续 M 随自己的接口加回自己的取数，改动落在拥有它的 M。
 - **代价**：M7 之前侧边栏没有收藏、通知没有数字、首页没有"最近"。
 - **守卫**：第 2 节每个有页面的故事都经 `watchPage` 断言；收尾按页面逐个列出守着它的故事（M2 收尾的做法）。README"前端"一节"M2 中看到的页面"一条改写为 M3 能到达的页面（M2 交接第 2 节）。
@@ -155,7 +155,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 | `MemberUser.avatar_url`（成员里的用户资料，5.2） | 2 | 可为 `null`，恒为 `null`。生成的 `MemberUser` 取代 `IUserLite`，`avatar_url` 本来就可空（M2 交接第 7 节） |
 | `Project.logo_props` | 1 | 真实数据（表情或图标的 JSON），M3 读写（3.19） |
 | 工作项的计数：项目的 `intake_count`（M7）、`total_issues` 一类，工作区成员的 `draft_issue_count`（M4） | 3 | 不定义，删掉前端的读取，由产生它的 M 加回 |
-| `Project.is_favorite`（M7 的收藏） | 3 | 不定义。项目卡片上的收藏按钮、建项目之后"加入收藏"的一步（`core/components/projects/create/root.tsx:53`）、`project.store.ts` 的 `addProjectToFavorites`、`removeProjectFromFavorites` 和 `favoriteProjectIds` getter（`:228-245`，没有读者，成为死代码），以及 `favorite.store.ts:284-287` 移除收藏时把 `projectMap[…].is_favorite` 置为假的项目分支（`Project` 没有这个字段，不删就编译不过），在 P8 删除，M7 随收藏的接口加回（13.2）。旧 `ProjectService` 中三个收藏方法本来就没有调用方，一并删除 |
+| `Project.is_favorite`（M7 的收藏） | 3 | 不定义。项目卡片上的收藏按钮、建项目之后"加入收藏"的一步（`core/components/projects/create/root.tsx:53`）、`project.store.ts` 的 `addProjectToFavorites`、`removeProjectFromFavorites` 和 `favoriteProjectIds` getter（`:228-245`，没有读者，成为死代码），以及 `favorite.store.ts:284-287` 移除收藏时把 `projectMap[…].is_favorite` 置为假的项目分支（`Project` 没有这个字段，不删就编译不过），在 P8b 删除，M7 随收藏的接口加回（13.2）。旧 `ProjectService` 中三个收藏方法本来就没有调用方，一并删除 |
 
 ### 3.3 模块划分与跨模块的协作
 - **三个模块**，照总体设计 6.2：
@@ -588,8 +588,8 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 | P7a | 差异清单 | 四 | 4.11 中标 P7a 的行（修改状态、默认状态和分诊状态、一组中唯一的状态） |
 | P7b | 差异清单 | 二·按表、四 | `labels` 逐列，原"工作区级标签的名称唯一范围"一行改写（3.16）；4.11 中标 P7b 的行 |
 | P1、P3、P5a、P6 | README | "部署""安全"两节 | 8.7 中各 Phase 的行 |
-| P8 | 总体设计 | 7.7 | `RootStore` 有了释放的方法，由 `store-context.tsx` 在换代时调用；`inSession()` 从 `theme-switcher.tsx` 的闭包移到 `core/lib/in-session.ts`，7.7 的引用随之改；加一句"页面按权限决定取数，不只决定显示"（7.1） |
-| P8–P11 | 前端改动清单 | 3.1、3.2 | M3 一行的状态；上传控件删除到 M5；`/invitations` 页、`RESTRICTED_URLS`、设置 store 删除；挂载时的取数删除到 M6、M7（3.1） |
+| P8a | 总体设计 | 7.7 | `RootStore` 有了释放的方法，由 `store-context.tsx` 在换代时调用；`inSession()` 从 `theme-switcher.tsx` 的闭包移到 `core/lib/in-session.ts`，7.7 的引用随之改；加一句"页面按权限决定取数，不只决定显示"（7.1） |
+| P8a–P11 | 前端改动清单 | 3.1、3.2 | M3 一行的状态；上传控件删除到 M5；`/invitations` 页、`RESTRICTED_URLS`、设置 store 删除；挂载时的取数删除到 M6、M7（3.1） |
 | P9 | README | "前端"一节 | "M2 中看到的页面"改写为 M3 能到达的页面（M2 交接第 2 节） |
 | 收尾 | 总体设计 | 9.4 | M3 的状态改为"已完成" |
 
@@ -1163,25 +1163,25 @@ modules/access/
 
 ## 7. 前端
 
-前端先做数据层（P8），再做页面（P9–P11）：P8 把 M3 的全部类型、service、store 和两个包装层挂载时的取数一次迁到新接口，页面的 Phase 加入故事时，挂载路径上已经没有旧接口的请求（3.1、第 12 节）。
+前端先做数据层（P8a 工作区一侧、P8b 项目一侧，第 12 节），再做页面（P9–P11）：两段把 M3 的全部类型、service、store 和两个包装层挂载时的取数迁到新接口，页面的 Phase 加入故事时，挂载路径上已经没有旧接口的请求（3.1、第 12 节）。
 
 ### 7.1 按会话分代（总体设计 7.7；M2 交接第 3 节）
-- **service 按代建**：M3 的 service 都是生成的客户端之上的薄封装，构造时接收这一代的 `ApiClient`，由 store 在构造时建（`ApiTokenStore` 的写法，`core/store/user/api-token.store.ts`）。M2 交接列出的 10 处模块级实例在 P8 全部消失；只调公开操作的（注册页和邀请页查看邀请，`getWorkspaceInvitation`）用 `publicClient`，可以是模块级的。
-- **`RootStore` 的释放**：M3 是第一个接上注册在沿用对象上的反应的 M，按总体设计 7.7 给 `RootStore` 加上 `dispose()`，由 `store-context.tsx` 在换代时调用旧的一代。要释放的只有 `project_filter.store.ts:63` 观察 `router.workspaceSlug` 的 `reaction`：store 保存它返回的释放函数，`dispose()` 调用它。单元测试：换代之后改路由，旧一代的反应不再运行。`cycle_filter`、`module_filter`、`issue_calendar_view` 的同类反应和 `issue/root.store.ts:170` 的 `autorun` 属于 M4、M6，照同一写法由它们接上（13.2）。
-- **SWR 键**：M3 加回和新写的 SWR 键都带 `loginId`（例如 `["workspaces", loginId]`）。fetcher 返回 store 方法的 Promise（M2 交接第 2 节"注意"）。
+- **service 按代建**：M3 的 service 都是生成的客户端之上的薄封装，构造时接收这一代的 `ApiClient`，由 store 在构造时建（`ApiTokenStore` 的写法，`core/store/user/api-token.store.ts`）。M2 交接列出的 10 处模块级实例在 P8a（`WorkspaceService` 的 8 处）、P8b（`ProjectService`、`ProjectMemberService` 各 1 处）全部消失；只调公开操作的（注册页和邀请页查看邀请，`getWorkspaceInvitation`）用 `publicClient`，可以是模块级的。
+- **`RootStore` 的释放**：M3 是第一个接上注册在沿用对象上的反应的 M，按总体设计 7.7 给 `RootStore` 加上 `dispose()`，由 `store-context.tsx` 在换代时调用旧的一代。要释放的只有 `project_filter.store.ts:63` 观察 `router.workspaceSlug` 的 `reaction`：store 保存它返回的释放函数，`dispose()` 调用它。单元测试：换代之后改路由，旧一代的反应不再运行。`cycle_filter`、`module_filter` 的同类反应和 `issue/root.store.ts:170` 的 `autorun` 属于 M4、M6，照同一写法由它们接上（13.2）。`issue_calendar_view` 的反应只观察本代的资料，不用释放（总体设计 7.7；P8a 评审记录第 3 节 T12）。
+- **SWR 键**：会话的取数都带 `loginId`，经 `useSessionSWR`、`sessionKey`（`core/lib/use-session-swr.ts`、`core/lib/session-key.ts`，P8a），键的形状是 `[取数的名称, loginId, ...取数的参数]`（例如 `["WORKSPACE_MEMBERS", loginId, slug]`）。fetcher 返回 store 方法的 Promise（M2 交接第 2 节"注意"）。经 `publicClient` 的公开操作只取决于它的输入，键就是它的输入，不带 `loginId`（查看邀请的链接，`useInvitationPreview`，P8a）；这是唯一的例外。绕过 `useSessionSWR` 的会话取数由 oxlint 静态地发现（根目录 `.oxlintrc.json` 按路径限制从 `swr` 导入，P8a 的 spec 附录 A.6 列出范围）。（M3/P8a 的修订按控制者的裁定 A6 改写这一条。）
 - **一个资源的修改一个接一个发出**（总体设计 7.7）：每个 store 对同一个资源的修改经 `oneAtATime()`（`core/lib/one-at-a-time.ts`）排队，前一个有了应答或失败之后才发下一个。M3 里连续修改最多的是拖动排序（状态的 `sequence`、标签的父子和 `sort_order`、侧边栏的项目顺序）和显示设置；表单另外在提交期间禁用按钮。只排队修改，取数不排队。
 - **`SessionChangedError`**：store 的修改遇到它时不改本代的状态、不提示错误（M2 的做法）。
 - **组件在 `await` 之后的页面级副作用先核对会话**（总体设计 7.7 的规则，Codex 4.3 第 2 条）：`SessionChangedError` 只管 store 发出请求之前换了代的情形；已经发出的请求在另一个标签页换了账户之后照样可能迟到地成功，旧的组件闭包仍会拿到结果。所以组件在修改成功之后跳转、提示、改页面状态之前，先核对标签页仍在发出修改时的会话。
-  - `inSession()` 从 `core/components/appearance/theme-switcher.tsx:50` 的闭包移到 `core/lib/in-session.ts`：`const inSession = sessionGuard()` 在发出修改时取当前的 `loginId`，之后 `inSession()` 比较它（P8）。
+  - `inSession()` 从 `core/components/appearance/theme-switcher.tsx:50` 的闭包移到 `core/lib/in-session.ts`：`const inSession = sessionGuard()` 在发出修改时取当前的 `loginId`，之后 `inSession()` 比较它（P8a）。
   - M3 的页面里这样的组件逐个列进 P9、P10 的 spec，例如 `project/delete-project-modal.tsx:62-69`、`workspace/delete-workspace-form.tsx:67-75`（删除之后跳转和提示）、离开工作区和项目、创建工作区和项目之后的跳转、接受邀请之后的跳转。
-  - 测试：`sessionGuard` 的 vitest（P8）；上面两个删除组件各一个 vitest（修改的 Promise 在 `loginId` 改变之后才兑现，组件不跳转、不提示）（P9、P10）；端到端在 W3 的页面版本里（P9）：
+  - 测试：`sessionGuard` 的 vitest（P8a）；上面两个删除组件各一个 vitest（修改的 Promise 在 `loginId` 改变之后才兑现，组件不跳转、不提示）（P9、P10）；端到端在 W3 的页面版本里（P9）：
     - 删除工作区的请求在换账户之前经 `route.fetch()` 到达 nerve 并成功，它的回答在另一个标签页换了账户之后才经 `route.fulfill()` 交给页面；原标签页不跳转、不提示。
     - 不能在换账户之后才放行请求：退出撤销了原会话，每个请求都查会话（M2 设计 3.5），放行的请求得到 401，按总体设计 7.7 成为 `SessionChangedError`；页面因为请求失败而不跳转，没有 `inSession()` 也会通过（复核 M6）。
     - 变异核对：去掉组件里 `inSession()` 的核对，这个端到端必须失败。
 - **权限决定取数，不只决定显示**（Codex 4.3 第 1 条）：页面只请求调用者有权读的资源；按权限隐藏的区域，它的取数同样按权限启用（SWR 的键在没有权限时为 `null`）。M3 的每一页照此写，后续 M 照做：
   - 工作区设置的成员页：成员列表单独取；邀请列表只在调用者是工作区管理员时取（`workspace/settings/members-list.tsx:46-55` 现在不分角色先取邀请，只在 `:79` 控制显示）。
   - `ProjectAuthWrapper`：先取项目详情；调用者是有效的项目成员（`member_role` 不为 `null`）之后，才取项目的显示设置、标签、成员和状态（`layouts/auth-layout/project-wrapper.tsx:70-95` 现在同时发出，不是成员时后四个都是 403）。
-  - 测试：W4 的页面版本（成员打开成员页）和 P2 的页面版本（不是成员的人直接打开公开项目的地址），`watchPage` 断言没有失败的请求（P9、P10）；两处的取数条件各有一个 vitest（P8）。
+  - 测试：W4 的页面版本（成员打开成员页）和 P2 的页面版本（不是成员的人直接打开公开项目的地址），`watchPage` 断言没有失败的请求（P9、P10）；两处的取数条件各有一个 vitest（成员页的在 P8a，`ProjectAuthWrapper` 的在 P8b）。
 
 ### 7.2 类型
 生成的类型（`@nerve/api-client`，`--root-types`）取代下面的 Plane 类型，没有转换层（总体设计 7.2）：
@@ -1193,7 +1193,7 @@ modules/access/
 | `IUserLite` | `MemberUser` | `avatar_url` 可空；`is_bot` 删除（M2 交接第 7、11 节） |
 | `IWorkspaceMemberInvitation`、`IWorkspaceBulkInviteFormData` | `WorkspaceInvitation`、`WorkspaceInvitationsCreate`、`InvitationPreview` | `invite_link` 由页面用 `id` 和 `token` 拼出；`InvitationPreview` 没有邮箱 |
 | `IWorkspaceUserPropertiesResponse` 的导航部分 | `WorkspacePreferences` | 筛选部分属于 M4、M7 |
-| `IProject`、`TProject` | `Project` | 关联字段带 `_id`；`intake_count`、`cover_image`、`inbox_view`、`is_favorite` 没有了（3.1、3.2） |
+| `IProject`、`TProject` | `Project` | 关联字段带 `_id`；`intake_count`、`cover_image`、`is_favorite` 没有了（3.1、3.2）；`inbox_view` 改名为 `intake_view`（Plane 的 `inbox_view` 是 `intake_view` 的只读别名，`plane/apps/api/plane/app/serializers/project.py:32`），使用方改读 `intake_view` |
 | `TProjectMembership`、`IProjectBulkAddFormData` | `ProjectMember`、`ProjectMembersAdd` | 显示人名时从工作区成员按 `member_id` 取 |
 | `IProjectUserPropertiesResponse` 的导航和顺序、`TProjectNavigationPreferences`、`IProjectMemberNavigationPreferences` | `ProjectPreferences` | 筛选部分属于 M4 |
 | `IState` | `State` | `order` 由 store 算（3.17） |
@@ -1202,9 +1202,9 @@ modules/access/
 | `EUserWorkspaceRoles`、`EUserProjectRoles` | 保留为常量 | 取值 5、15、20 与生成的 `Role` 相同；页面用它们比较角色 |
 
 - `packages/types/src/workspace.ts`、`project/`、`state.ts` 中 M3 的部分随之删除；仍被 M4 以后的代码引用的少数类型（例如工作项的筛选、`TProjectAppliedDisplayFilterKeys`）留在原处，由它们的 M 处理。
-- 使用方（第 1 节的统计：`IProject` 20 个文件、`IState` 23、`IIssueLabel` 25、`IUserLite` 14 等）在 P8 逐个改用生成的类型：大部分只改导入和字段名（`parent`、`project_lead`、`default_assignee`、`member`），属于 7.11 的"跟随类型的使用方"。
+- 使用方（第 1 节的统计：`IProject` 20 个文件、`IState` 23、`IIssueLabel` 25、`IUserLite` 14 等）在 P8a（工作区一侧）、P8b（项目一侧）逐个改用生成的类型：大部分只改导入和字段名（`parent`、`project_lead`、`default_assignee`、`member`、`inbox_view`），属于 7.11 的"跟随类型的使用方"。
 
-### 7.3 services 与 stores（P8）
+### 7.3 services 与 stores（P8a、P8b）
 | store（`core/store/`） | 做法 |
 |---|---|
 | `workspace/index.ts`（`WorkspaceRootStore`） | 重写：工作区列表、当前工作区、创建、修改、删除、slug 检查；落点的计算移到 `AuthenticationWrapper` 用的一个纯函数（7.4）；`getWorkspaceRedirectionUrl` 删除 |
@@ -1217,8 +1217,8 @@ modules/access/
 | `user/settings.store.ts` | 删除（3.14） |
 
 - **services**（`core/services/`）：`workspace.service.ts`、`project/*.service.ts`、`issue/issue_label.service.ts` 中 M3 的 56 个方法改为按资源的新 service（`workspace`、`workspace-member`、`workspace-invitation`、`project`、`project-member`、`state`、`label`、`preferences`），每个方法一次调用生成的客户端。`user.service.ts` 的 `currentUserSettings`、`leaveWorkspace`、`joinProject`、`leaveProject` 移入对应的新 service 或删除（M2 交接第 11 节）。
-- **挂载路径上的取数**：`WorkspaceAuthWrapper`、`ProjectAuthWrapper`、`TopNavigationRoot` 挂载时的取数在 P8 一起处理：M3 自己的改调新 store，并按 7.1 由权限启用；M6、M7 的删除（3.1）。
-- **P8 的使用方**：store 的方法签名和字段一变，调用它们的页面和组件（第 1 节：`useProject` 129 个文件等）要在同一个 Phase 改到能编译、行为不变；页面的新行为（新手引导、邀请页、设置页）在 P9–P11。
+- **挂载路径上的取数**：`WorkspaceAuthWrapper`、`ProjectAuthWrapper`、`TopNavigationRoot` 挂载时的取数在 P8a、P8b 处理：M6、M7 的删除和工作区一侧的改调在 P8a，项目一侧的随各自的 store 在 P8b 改调；M3 自己的都按 7.1 由权限启用（3.1、第 12 节）。
+- **P8a、P8b 的使用方**：store 的方法签名和字段一变，调用它们的页面和组件（第 1 节：`useProject` 129 个文件等）要在改这个 store 的 Phase 改到能编译、行为不变；页面的新行为（新手引导、邀请页、设置页）在 P9–P11。
 - **旧 `ProjectService`（`core/services/project/project.service.ts`）留下三个方法**，其余的删除：
   - 取、改项目用户属性的两个方法：M4 的筛选 store 使用（`core/store/issue/project/filter.store.ts:127,174,236,256`，3.18）。它们的地址是 M3 替换的地址（`/user-properties/`），关键词守卫为它们登记例外（7.10）。
   - `projectIssuesSearch`：工作项搜索，三个调用方属于后续的 M，要在 M3 之后仍能编译（Codex M-3）：`core/components/issues/parent-issues-list-modal.tsx:68`（选父工作项，M4）、`core/components/core/modals/existing-issues-list-modal.tsx:104`（向迭代、模块加已有的工作项，M6）、`core/components/inbox/modals/select-duplicate.tsx:62`（收集箱查重，M7）。它的地址 `/search-issues/` 不是 M3 替换的地址，不在关键词规则里，不需要例外。
@@ -1227,11 +1227,11 @@ modules/access/
 - **时区**：工作区和项目设置的时区选择用 M2 的 `GET /api/v0/timezones`（M2 交接第 11 节）。
 
 ### 7.4 落点、新手引导、邀请页与注册页
-- **落点**（3.14，P8）：`AuthenticationWrapper` 取 `GET /api/v0/workspaces`（SWR 键带 `loginId`），按"上次的工作区仍在列表中 → 它；否则最早创建的 → 它；一个都没有 → `/create-workspace`"算出，纯函数有 vitest。M2 为"完成引导的用户直接去 `/create-workspace`"写的分支改为这条规则。四处 `await fetchCurrentUserSettings()` 删除（M2 交接第 2 节）。切换工作区、创建工作区、接受邀请之后经 `PATCH /api/v0/me/profile` 写 `last_workspace_id`（P9）。
+- **落点**（3.14，P8a）：`AuthenticationWrapper` 取 `GET /api/v0/workspaces`（SWR 键带 `loginId`），按"上次的工作区仍在列表中 → 它；否则最早创建的 → 它；一个都没有 → `/create-workspace`"算出，纯函数有 vitest。M2 为"完成引导的用户直接去 `/create-workspace`"写的分支改为这条规则。四处 `await fetchCurrentUserSettings()` 删除（M2 交接第 2 节）。切换工作区、创建工作区、接受邀请之后经 `PATCH /api/v0/me/profile` 写 `last_workspace_id`（P9）。
 - **新手引导**（决策点 2，P9）：
   - 资料步骤之后，已经有工作区的人（受邀的人先接受、再完成引导）直接完成引导，进入落点。这是 `onboarding/root.tsx` 现有的分支（资料一步时 `workspacesList.length > 0` 就 `finishOnboarding()`），它的列表改由 `listWorkspaces` 提供。
   - 还没有工作区的人：资料之后是"创建工作区"，再是"邀请成员"（可跳过）。创建工作区关闭时，这一步显示"创建工作区已关闭，请向工作区的管理员要邀请链接"。邀请成员一步调 `createWorkspaceInvitations`，完成后显示每个邀请的链接供复制（v0 不发邮件）。
-  - "加入工作区"一步（`onboarding/steps/workspace/join-invites.tsx`）和 `OnboardingRoot` 的 `invitations` 在 P8 随系统内接受一起删除（7.8）。
+  - "加入工作区"一步（`onboarding/steps/workspace/join-invites.tsx`）和 `OnboardingRoot` 的 `invitations` 在 P8a 随系统内接受一起删除（7.8）。
 - **邀请页** `/workspace-invitations?invitation_id=…&token=…`（P9）：用 `publicClient` 查看（`getWorkspaceInvitation`），按回答显示：
   - 未登录：工作区名、角色和"这份邀请发给一个指定的邮箱"，"登录以接受"和"注册以接受"（都带 `next_path` 回到本页）；
   - 已登录：接受、忽略。接受之后写 `last_workspace_id`，进入工作区（还没完成引导的新账户先完成资料一步，见上）；他本来就是有效成员时接受同样成功，角色不变（3.8），页面同样进入工作区；跳转之前核对会话（7.1）；
@@ -1239,23 +1239,23 @@ modules/access/
   - 已忽略（`declined`）：说明已忽略，请向管理员要新的邀请；
   - 链接无效（404）：说明，提供回到首页。
 - **注册页**（决策点 1，P9）：带着 `invitation_id`、`token` 的注册页（`auth-root.tsx`、`auth-header.tsx` 已读 `invitation_id`）用公开的查看取工作区名，标题"加入 <工作区>"。邮箱不预填：查看不返回被邀请的邮箱。提交时 `RegisterRequest.invitation` 带上两者。注册关闭而没有邀请：照 M2 显示"注册已关闭"。
-- **`/invitations` 页删除**（决策点 2，P8）：它的入口（设置的侧边栏、工作区菜单 `workspace-menu-root.tsx:204`、`workspace-options.tsx:47`、命令面板 `account-commands.ts:47`、`workspace-wrapper.tsx:210` 的链接）和路由（`routes/core.ts:28`）一起删除。
+- **`/invitations` 页删除**（决策点 2，P8a）：它的入口（设置的侧边栏、工作区菜单 `workspace-menu-root.tsx:204`、`workspace-options.tsx:47`、命令面板 `account-commands.ts:47`、`workspace-wrapper.tsx:210` 的链接）和路由（`routes/core.ts:28`）一起删除。
 
 ### 7.5 工作区的页面（P9）
-- **工作区首页**：问候和"还没有项目"的引导；"最近"小部件在 P8 删除（3.1）。
+- **工作区首页**：问候和"还没有项目"的引导；"最近"小部件在 P8a 删除（3.1）。
 - **侧边栏**：工作区菜单切换工作区；"项目导航"对话框读写 `WorkspacePreferences`（W8）；收藏区在 M7 之前为空（3.1）。项目的顺序在 P10。
-- **工作区设置 general**：名称、规模、时区；slug 只读；图标上传删除（3.2）；删除工作区（输入名称确认）之后按落点规则去下一个工作区。
+- **工作区设置 general**：名称、规模、时区；slug 只读；图标上传已在 P8a 删除（3.2、7.8）；删除工作区（输入名称确认）之后按落点规则去下一个工作区。
 - **工作区设置 members**：
   - 成员列表：角色下拉只对管理员可用，不能改自己；访客看不到任何人的邮箱，`email` 都为 `null`，他自己的也是（与 Plane 相同，9.2）；离开工作区，唯一的管理员时显示 409 的说明。
   - 邀请只对管理员显示，也只为管理员取（决策点 4，与 Plane 的页面相同；7.1）：邀请弹窗（批量，每行邮箱和角色，422 的字段错误落到对应的行）；邀请列表的每一行有复制链接、改角色、删除。
   - 已忽略的邀请在列表中标"已忽略"，只能删除；再邀请这个邮箱得到的 422 `duplicate` 落到那一行，说明"这个邮箱已有一份邀请，先删除它"（3.8）。
 - **停用账户**（M2 的 general 页）：409 `workspace.sole_admin`、`project.sole_admin` 在弹窗里显示"先指定另一位管理员"（W9）。
-- **`WorkspaceAuthWrapper`**：按 `GET /api/v0/workspaces/{slug}` 显示工作区或"找不到工作区"（404）；取收藏的 SWR 在 P8 删除（3.1）；M2 改过的"找不到工作区"界面的退出按钮、`isLoading` 在这里核对（M2 交接第 13 节，9.7）。
+- **`WorkspaceAuthWrapper`**：按调用者的工作区列表显示工作区或"找不到工作区"（P8a 起，`useWorkspaceFetch` 的判断，P8a spec 2.6）：路由的工作区不在列表中就是找不到，不分不存在和不是成员（8.3），不另发 `GET /api/v0/workspaces/{slug}`，P9 也不加第二种判断。挂载着的包装层换 slug 时不重取列表，别的标签页加入的工作区要到下一次挂载才显示；要改时改这一个判断（P8a 评审记录第 6 节）；取收藏的 SWR 在 P8a 删除（3.1）；M2 改过的"找不到工作区"界面的退出按钮、`isLoading` 在这里核对（M2 交接第 13 节，9.7）。
 
 ### 7.6 项目的页面（P10、P11）
 - **项目列表**：按 `listProjects` 的结果（已按可见性过滤）；卡片上的"加入"对看得到而不是成员的项目显示（`member_role` 为 `null`）；已归档的项目在 archives 页（`?archived=true`），恢复、删除。
 - **创建项目**：名、标识（输入时转大写，只接受 3.19 的字符，`common-attributes.tsx:96-107` 的规则不变）、说明、公开或私密、负责人（从工作区的管理员和成员中选）、图标（表情或图标，表情数据见 7.7）；封面一步删除（3.2）。
-- **`ProjectAuthWrapper`**：按 `getProject` 的回答：404 → "找不到项目"；`member_role` 为 `null` → "加入项目"的界面（原来按 409、403 分支，`project-access-restriction.tsx`）；`archived_at` 有值 → 已归档的界面。取迭代、模块、视图、分诊状态的 SWR 在 P8 删除（3.1）；显示设置、标签、成员、状态在确认是有效的项目成员之后才取（7.1）。
+- **`ProjectAuthWrapper`**：按 `getProject` 的回答：404 → "找不到项目"；`member_role` 为 `null` → "加入项目"的界面（原来按 409、403 分支，`project-access-restriction.tsx`）；`archived_at` 有值 → 已归档的界面。取迭代、模块、视图、分诊状态的 SWR 在 P8a 删除（3.1）；显示设置、标签、成员、状态在确认是有效的项目成员之后才取（7.1，P8b）。
 - **项目设置**：
   - general：名、标识、说明、可见性、时区、图标。
   - members：成员列表（添加、改角色、移出；添加时只列出还不是成员的工作区成员）；负责人、默认负责人（从项目中不是访客的成员里选）、"访客可见全部"（`project-settings-member-defaults.tsx`，由 `…/members/page.tsx:50` 渲染，与 Plane 相同）。
@@ -1284,37 +1284,39 @@ modules/access/
   - 守卫：一个 vitest 核对传入的地址和版本；故事 P1、P3 打开表情选择器，`watchPage` 断言没有 CSP 违规、没有发往外部的请求（总体设计 8.2 的 `cspViolations`）。
 
 ### 7.8 删除的代码
-- 系统内接受（决策点 2，P8）：`/invitations` 页和它的入口、新手引导的"加入工作区"一步、按邮箱列出和批量接受的 service 方法和 store 方法。
-- `RESTRICTED_URLS`（`web/packages/constants/src/workspace.ts`）和它的检查（3.10，P8）：创建表单改问 `checkWorkspaceSlug`；`navigation.test.ts` 中守着它的部分改为 3.10 的名单测试。
-- `IUserSettings`、`settings.store.ts`、`currentUserSettings`（3.14，P8）。
-- 10 处模块级的 service 实例（7.1，P8）。
-- 首页的"最近"小部件和挂载时取收藏、未读通知数、迭代、模块、视图、分诊状态的 SWR（3.1，P8）。
-- `permissions.store.ts` 中 `workspace-members/me`、`project-roles` 的取数（P8）。
-- 项目侧边栏读 `intake_count` 的部分（3.1、3.2 的规则 3，P8）。
-- `Project.is_favorite` 的读写（3.2，P8；M7 加回）：项目卡片的收藏按钮、建项目之后加入收藏的一步、`project.store.ts` 的两个收藏方法和 `favoriteProjectIds` getter、`favorite.store.ts:284-287` 的项目分支。
-- `IUserLite.is_bot`（M2 交接第 11 节，P8）。
-- 工作区图标、项目封面的上传控件和随机封面（3.2，P9、P10）。
+- 系统内接受（决策点 2，P8a）：`/invitations` 页和它的入口、新手引导的"加入工作区"一步、按邮箱列出和批量接受的 service 方法和 store 方法。
+- `RESTRICTED_URLS`（`web/packages/constants/src/workspace.ts`）和它的检查（3.10，P8a）：创建表单改问 `checkWorkspaceSlug`；`navigation.test.ts` 中守着它的部分改为 3.10 的名单测试。
+- `IUserSettings`、`settings.store.ts`、`currentUserSettings`（3.14，P8a）。
+- 10 处模块级的 service 实例（7.1，P8a、P8b）。
+- 首页的"最近"小部件和挂载时取收藏、未读通知数、迭代、模块、视图、分诊状态的 SWR（3.1，P8a）。
+- `permissions.store.ts` 中 `workspace-members/me`（P8a）、`project-roles`（P8b）的取数。
+- 项目侧边栏读 `intake_count` 的部分（3.1、3.2 的规则 3，P8b）。
+- `Project.is_favorite` 的读写（3.2，P8b；M7 加回）：项目卡片的收藏按钮、建项目之后加入收藏的一步、`project.store.ts` 的两个收藏方法和 `favoriteProjectIds` getter、`favorite.store.ts:284-287` 的项目分支。
+- `IUserLite.is_bot`（M2 交接第 11 节，P8a）。
+- 工作区图标的上传控件（3.2，P8a）：生成的 `WorkspaceUpdate` 没有 `logo_url`（3.2 的规则 2），`IWorkspace` 换成 `Workspace` 时它就编译不过，所以随类型在 P8a 删除（M3/P8a 的修订，原写在 P9）。
+- 项目封面的上传控件和随机封面（3.2，P10）。
 
 ### 7.9 死成员、死 prop 和 oxlint（M1 收尾交接）
 - **死成员和死 prop**：`domains.mjs --rows M3` 在 `f8cb7c2` 上是 208 行，其中 41 行按路径归到 M3、实际属于别的 M（第 1 节），M3 自己的 167 行在它们的文件被重写或改到时删除，P11 清完剩下的。
   - 关闭条件照交接：M3 合并时 `--rows M3` 的每一行已消失，或写进 review（文件、名称、谁在读或传它）。
   - 那 41 行按归属写进 M4、M6、M7 的交接（13.2），`domains.mjs` 的 `DOMAINS` 不改（它是 M1 收尾计划附录 A 的一部分，改它等于改所有 M 的口径）。
 - **oxlint**：
-  - 谁改谁清：P8–P11 改到的文件在那个 Phase 合并时没有 oxlint 警告。M3 领域现在 73 条，分布在 39 个文件（第 1 节）。
+  - 谁改谁清：P8a–P11 改到的文件在那个 Phase 合并时没有 oxlint 警告。M3 领域现在 73 条，分布在 39 个文件（第 1 节）。
+  - 例外（控制者 2026-10-07 的裁定）：一个文件在这个 Phase 的全部改动只是 plan 的一个机械步骤（导入路径或类型名，由命令对写明的文件列表执行），它的警告留给 P11 的第 4 个任务；这个 Phase 的 review 第 6 节列出这些文件和它们按规则的警告数。只经改名到达的多是 M4–M7 的组件（拆分 P8 时的测量：约 30 个文件、约 81 条，多是 `no-shadow`、`always-return` 和可访问性），在 M3 的故事走不到的页面上，在改名的那个 Phase 修它们会改变那些页面的行为而无从核对。其余改到的文件（store、service、包装层、改动的 M3 领域的组件、每个有手改的文件）照旧在那个 Phase 清零；各包的上限照旧在每个 Phase 合并时调到新的条数。
   - 按规则清一类（P11）：`eslint-plugin-promise(always-return)` 全仓清零（62 条，其中 M3 领域 14 条）。它能机械修复（`then` 回调里补 `return` 或改为 `await`），也常与"复制到剪贴板"一类未处理的拒绝同处出现，修它顺带检查错误处理。`no-shadow`（165 条）数量太多、改名会碰到 M4–M7 的文件，不选。
   - 各包的上限随之调低（`tools/lint-cap.mjs`），review 写明各包的变化。
 
-### 7.10 关键词守卫的新规则（`tools/keywords.json`，P8）
+### 7.10 关键词守卫的新规则（`tools/keywords.json`，P8a、P8b）
 | 规则 | 禁止 |
 |---|---|
-| `plane-workspace-urls` | M3 替换的 Plane 地址：由 56 个旧方法的地址写出模式（工作区、成员、邀请、slug 检查、`workspace-members/me`、`project-roles`、项目、项目成员、归档、标识检查、状态、标签、显示设置）。一条例外：`core/services/project/project.service.ts` 中 `/user-properties/` 的两处（M4 的筛选 store 用，7.3），`until: "M4"`，原因写"M3/P8 起，M4 的工作项筛选改用新接口时删除"。`/search-issues/` 不是 M3 的地址，不在模式里；规则的不命中样例加上 `/api/workspaces/{slug}/projects/{id}/search-issues/`，守住项目地址的模式不会宽到它 |
-| `plane-user-urls`（收紧） | 整个 `/api/users/`（M2 交接第 11 节）：7 处调用都是 M3 的，P8 全部迁走 |
+| `plane-workspace-urls` | M3 替换的 Plane 地址：由 56 个旧方法的地址写出模式（工作区、成员、邀请、slug 检查、`workspace-members/me`、`project-roles`、项目、项目成员、归档、标识检查、状态、标签、显示设置）。一条例外：`core/services/project/project.service.ts` 中 `/user-properties/` 的两处（M4 的筛选 store 用，7.3），`until: "M4"`，原因写"M3/P8b 起，M4 的工作项筛选改用新接口时删除"。`/search-issues/` 不是 M3 的地址，不在模式里；规则的不命中样例加上 `/api/workspaces/{slug}/projects/{id}/search-issues/`，守住项目地址的模式不会宽到它 |
+| `plane-user-urls`（收紧） | 整个 `/api/users/`（M2 交接第 11 节）：7 处调用都是 M3 的，P8a、P8b 迁走，规则在 P8b 收紧（`project-roles` 和 `joinProject` 的两处在 P8b 迁走） |
 | `project-invitations`（例外删除） | `joinProject` 的例外（`until: "M3"`）随它改用新接口删除（M1-P3 交接） |
 | `restricted-urls` | `RESTRICTED_URLS` |
 | `in-system-invitations` | `/invitations` 路由、`joinWorkspaces`、`getUserWorkspaceInvitations` 一类名称（决策点 2） |
 | `user-settings` | `IUserSettings`、`currentUserSettings`、`fetchCurrentUserSettings` |
 
-- 全部在 P8 加入：数据层一次迁走全部旧调用，规则从第一个前端 Phase 起就是完整的；P11 只核对 M3 加的例外只剩跨 M 的一条（`/user-properties/` 的两处，`until: "M4"`），`project-invitations` 的 `until: "M3"` 已删除。
+- 在 P8a、P8b 加入：P8a 加入工作区一侧的地址的模式和 `restricted-urls`、`in-system-invitations`、`user-settings`；P8b 补全项目一侧的模式、`/user-properties/` 的例外和不命中样例，删除 `project-invitations` 的例外，收紧 `plane-user-urls`。规则在数据层的第二段（P8b）合并时完整，在任何页面的 Phase 之前；P11 只核对 M3 加的例外只剩跨 M 的一条（`/user-properties/` 的两处，`until: "M4"`），`project-invitations` 的 `until: "M3"` 已删除。
 - 每条规则带 `samples`（命中和不命中）和 `files` 样例，照 M2 设计 7.9 的写法；`node tools/keywords.mjs` 通过。
 
 ### 7.11 规模估计（按 M2 收尾附录 B 校准）
@@ -1539,15 +1541,15 @@ modules/access/
 - `archtest`：命令行的组合测试覆盖 `Users` 和 `Workspaces`（6.6）；`TestSQLCSchemaScope` 的四个反例（4.1）。
 
 ### 9.5 前端单元测试（vitest）
-- 落点函数（3.14）的三种情况（P8）。
-- 权限 store：`Workspace.role`、`Project.member_role` 到页面权限的对应（与 9.2 同一组身份，P8）。
-- state store 的顺序和分组中的位置（取代 `order`，P8）。
-- `RootStore.dispose()`：换代之后改路由，旧一代的反应不再运行（7.1，P8）。
-- 一个资源的修改一个接一个：连续两次拖动排序，第二个请求在第一个有了应答之后才发出（7.1，P8）。
-- `sessionGuard()`：`loginId` 不变时 `inSession()` 为真，换了之后为假（7.1，P8）。
-- 权限决定取数：成员页的邀请列表只在工作区管理员时启用取数；`ProjectAuthWrapper` 在 `member_role` 为 `null` 时不启用子资源的取数（7.1，P8）。
+- 落点函数（3.14）的三种情况（P8a）。
+- 权限 store：`Workspace.role`、`Project.member_role` 到页面权限的对应（与 9.2 同一组身份；`Workspace.role` 一半 P8a，`Project.member_role` 一半 P8b）。
+- state store 的顺序和分组中的位置（取代 `order`，P8b）。
+- `RootStore.dispose()`：换代之后改路由，旧一代的反应不再运行（7.1，P8a）。
+- 一个资源的修改一个接一个：连续两次拖动排序，第二个请求在第一个有了应答之后才发出（7.1，P8b）。
+- `sessionGuard()`：`loginId` 不变时 `inSession()` 为真，换了之后为假（7.1，P8a）。
+- 权限决定取数：成员页的邀请列表只在工作区管理员时启用取数；`ProjectAuthWrapper` 在 `member_role` 为 `null` 时不启用子资源的取数（7.1；成员页的 P8a，`ProjectAuthWrapper` 的 P8b）。
 - 删除工作区、删除项目的组件：修改的 Promise 在 `loginId` 改变之后才兑现，组件不跳转、不提示（7.1，P9、P10）。
-- 保留名单"应用"一段等于 `routes/core.ts` 的顶层静态路由段加 `public/` 的顶层目录（3.10，P8）。
+- 保留名单"应用"一段等于 `routes/core.ts` 的顶层静态路由段加 `public/` 的顶层目录（3.10，P8a）。
 - 新手引导：已有工作区的人资料一步之后完成（7.4，P9）。
 - 邀请链接的拼法（`id`、`token` 编码，P9）。
 - 离开项目：接口失败时不跳转（7.6，P10）。
@@ -1714,12 +1716,12 @@ modules/access/
 
 **约束**：
 1. **每个故事的前置数据在它加入时都能经接口准备**（总体设计 8.2），不写 SQL。第二个工作区成员只能由接受邀请产生，所以凡是断言"成员 403""访客看不到"的故事都排在邀请之后（第 2 节最后一列）。权限矩阵是 Go 测试，用仓储准备数据，每个 Phase 都能加它的行（9.2）。
-2. **每段约 16 个任务以内，plan 不超过约 1,500 行**。M2 的 P3 在设计里是一段，实施时超过了上限，由负责人批准拆成 P3a、P3b：设计时没有按任务数估每段的大小。M3 在这里按任务数分好，下面每段的任务列表就是 plan 的草稿。设计里的 P4（16 个任务）同样在实施前超出了上限：P4 的架构子任务按 P1–P3 的 plan 实测的每个任务的行数逐个估出约 21–23 个任务、约 22,000–24,000 行，两个上限都超出；由负责人裁定（2026-10-01）拆成 P4a、P4b，与 M2 的 P3 相同。设计里的 P5（15 个任务）也是这样：P5 的架构子任务按 P1–P4b 的 plan 实测的每个任务的行数逐个估出约 22–24 个任务、约 23,400 行，超出约 16 个任务的上限；由负责人裁定（2026-10-02）拆成 P5a、P5b，并预先批准一条退路：P5a 的 plan 仍超出上限时，恢复的一半移到 P5b（A'，见 P5a 一节），不再停下来请示。设计里的 P7（13 个任务）也是这样：P7 的架构子任务在原型里做出了前九个任务（状态的全部操作、交错测试 10、标签的表和存储），按这九个任务在 plan 中的代码块实测的行数和 P4b–P6 的 plan 估出约 18–20 个任务、约 17,000–18,600 行；状态一半的三个任务（状态的领域和存储、`listStates` 与 `createState`、`updateState`）在加上说明和清扫之前就已到约 1,400–1,520 行，标签一半与之对称，两个上限都超出；由负责人裁定（2026-10-05）拆成 P7a、P7b，并预先允许两段的架构子任务在上限之内重新切分任务，不再停下来请示（见 P7a 一节）。
+2. **每段约 16 个任务以内，plan 不超过约 1,500 行**。M2 的 P3 在设计里是一段，实施时超过了上限，由负责人批准拆成 P3a、P3b：设计时没有按任务数估每段的大小。M3 在这里按任务数分好，下面每段的任务列表就是 plan 的草稿。设计里的 P4（16 个任务）同样在实施前超出了上限：P4 的架构子任务按 P1–P3 的 plan 实测的每个任务的行数逐个估出约 21–23 个任务、约 22,000–24,000 行，两个上限都超出；由负责人裁定（2026-10-01）拆成 P4a、P4b，与 M2 的 P3 相同。设计里的 P5（15 个任务）也是这样：P5 的架构子任务按 P1–P4b 的 plan 实测的每个任务的行数逐个估出约 22–24 个任务、约 23,400 行，超出约 16 个任务的上限；由负责人裁定（2026-10-02）拆成 P5a、P5b，并预先批准一条退路：P5a 的 plan 仍超出上限时，恢复的一半移到 P5b（A'，见 P5a 一节），不再停下来请示。设计里的 P7（13 个任务）也是这样：P7 的架构子任务在原型里做出了前九个任务（状态的全部操作、交错测试 10、标签的表和存储），按这九个任务在 plan 中的代码块实测的行数和 P4b–P6 的 plan 估出约 18–20 个任务、约 17,000–18,600 行；状态一半的三个任务（状态的领域和存储、`listStates` 与 `createState`、`updateState`）在加上说明和清扫之前就已到约 1,400–1,520 行，标签一半与之对称，两个上限都超出；由负责人裁定（2026-10-05）拆成 P7a、P7b，并预先允许两段的架构子任务在上限之内重新切分任务，不再停下来请示（见 P7a 一节）。设计里的 P8（16 个任务）也是这样：P8 的架构子任务按 P6、P7a、P7b 的 plan 实测的每个任务的说明和每处改动的行数，加上在 `2474d32e` 上的测量（M3 的 Plane 类型换成生成的类型之后 `tsc` 报出 200 处，其中使用方 65 个文件 151 处；签名改变的 store 修改约 70 个调用点；可能改到的文件中 134 条 oxlint 警告），估出约 19–21 个任务、约 19,000–22,000 行，两个上限都超出；草稿的第 15、16 个任务（vitest；S2、3.20 和 review）不能成为任务（测试随它的代码），其余 14 个中有 4 个约 1,700–2,900 行。由控制者裁定（2026-10-07，第 16 节点名的分法；负责人同日确认："按这个拆法来，继续推进"）拆成 P8a（工作区一侧）、P8b（项目一侧），不按取数和修改拆（那样两段之间的主干上有一半改接的 store）；第 16 节中与这条分法矛盾的一句（两个包装层挂载时的取数）同时改正（见 P8a 一节）。同日的裁定：只经 plan 的机械一步改到的文件，它的 oxlint 警告留给 P11 的第 4 个任务（7.9）；7.2 的 `inbox_view` 是改名为 `intake_view`，不是删除。
 3. **评审敏感的内容不在同一段**（M2 的教训：两件都需要细审的事放在一起会互相稀释）：权限框架（P1）、加锁约定和连带（P2 起步，P4a、P4b、P5a、P5b、P7a、P7b 延伸）、邀请令牌（P3）、停用（P6）。P4 拆分的边界把它的两件评审敏感的内容分开：第一次跨越模块的两个连带和"谁看得到项目"在 P4a，项目一侧的成员关系增长（约定三、六的添加和加入，`min`，目标的 422 在判定之后，交错测试 17）在 P4b。P5 拆分的边界同样分开：跨越模块的结束连带（`EndMemberships`、3.7 规则 2、邀请的一步，交错测试 1、4、5、6）和恢复成员在 P5a，S2、9d 和 W12 一起测它们；第一批按资源寻址的项目级的写（共用取锁路径的新分支、3.5 的相对规则、项目一侧的规则 1）在 P5b。P7 拆分的边界同样分开：按资源寻址的共用取锁路径的提取（P5b 的三个写改走它）和第一批用它的守卫的写（默认状态、一组至少一个，交错测试 10）在 P7a；标签的层级在并发下由项目行的锁保证（交错测试 11）、新表进入删除项目和删除工作区的连带、删除父标签连带子标签的批量写（约定五）在 P7b。
-4. **新的错误码随它的文案进来**：M2 的 vitest 要求 `PROBLEM_MESSAGES` 的键恰好等于契约的全部 `x-problem-codes`（M2 设计 3.11、7.3），后端的 Phase 也不例外（M3/P1 spec 第 3 节第 4 条）。P2–P7b 中声明新错误码的任务，在同一个任务里把它加进 `PROBLEM_MESSAGES`（`web/apps/web/helpers/authentication.helper.ts`）和 `en`、`zh-CN` 两份 `auth.json`，并运行 `make test-web`。平台码 `forbidden` 随第一个声明它的操作（P2）进表。这张表和它的文案在 P8 移到通用的位置（P8 任务 13）。
+4. **新的错误码随它的文案进来**：M2 的 vitest 要求 `PROBLEM_MESSAGES` 的键恰好等于契约的全部 `x-problem-codes`（M2 设计 3.11、7.3），后端的 Phase 也不例外（M3/P1 spec 第 3 节第 4 条）。P2–P7b 中声明新错误码的任务，在同一个任务里把它加进 `PROBLEM_MESSAGES`（M3/P8a 起在 `web/apps/web/core/lib/error-messages.ts`）和 `en`、`zh-CN` 两份 `errors.json`（`errors` 命名空间），并运行 `make test-web`。平台码 `forbidden` 随第一个声明它的操作（P2）进表。这张表和它的文案在 P8a 移到通用的位置（P8a 的任务 2）。
 
 **顺序**：
-- **后端十段，前端四段**（先后端、后前端，M2 的做法：前端对接真实的接口）。后端原是七段，P4、P5、P7 在实施前各拆成两段：P4a、P4b，P5a、P5b，P7a、P7b（约束 2）。
+- **后端十段，前端五段**（先后端、后前端，M2 的做法：前端对接真实的接口）。后端原是七段，P4、P5、P7 在实施前各拆成两段：P4a、P4b，P5a、P5b，P7a、P7b；前端原是四段，P8 在实施前拆成 P8a、P8b（约束 2）。
 - **P1 平台**带上建、列、看工作区三个操作和建工作区的命令，让它合并的是有故事验收（W1、W10）的接口，而不只是基础设施；这三个操作不改成员关系，不牵涉加锁约定。
 - **P2 工作区**让"先锁父行，再判定"第一次落地（修改、删除工作区，改成员角色）。
 - **P3 邀请**之后才有第二个成员。
@@ -1730,10 +1732,11 @@ modules/access/
 - **P6 停用**单独一段：它跨越工作区、有接口和命令两条路、改动 `identity`，是单独的评审敏感内容；与 P5 合在一起约 22 个任务。
 - **P7a 状态**在 P6 之后：状态只依赖项目，状态的表在 P4a 随默认状态建出。状态是第二种按资源寻址的资源，按资源寻址的一段在这里从项目成员上提出来共用（P5b review 第 6 节）。故事 P6 和 W11（它抽样的四格之一是访客 `POST /states` 的 403）在 P7a。
 - **P7b 标签**最后：`labels` 表随它的第一个操作建出（4.1），删除项目、删除工作区的连带随表加入；标签的写经 P7a 提出来的共用取锁路径。故事 P7 在 P7b，W3 和 P4 在 P7b 加上标签的断言（P4a 的裁定 S4）。
-- **P8 数据层**先于全部页面（3.1）：页面的故事加入时，挂载路径上已经没有旧接口。
+- **P8a 工作区一侧的数据层**在 P7b 之后：两段共用的基础（释放、`sessionGuard()`、带 `loginId` 的 SWR 键、`PROBLEM_MESSAGES` 的搬移）、工作区一侧的 store、落点，两个包装层中 M6、M7 的删除和工作区一侧的挂载时取数。
+- **P8b 项目一侧的数据层**在 P8a 之后：项目一侧的 store，两个包装层项目一侧的挂载时取数随各自的 store 改接；关键词规则在它合并时完整；S2 在它改写（要两侧都已改接）。两段都先于全部页面（3.1）：页面的故事加入时，挂载路径上已经没有旧接口。
 - **没有空实现**：连带随表加入（删除工作区的连带：P2 显示设置和成员，P3 邀请，P4a 项目，P7b 标签；降为访客的连带在 P4a）。
 
-**规模**：167 个任务（后端 113、前端 54），每段 8–16 个。第三稿为 Codex 的发现加的测试让 P5、P6、P9 各多一个任务，其余加进已有的任务，每段仍在上限之内。第三稿的聚焦复核（17.3）加的规则和测试都并进已有的任务（P3、P4（拆分之后在 P4b）、P5（拆分之后在 P5a）、P6、P8、P9），各段的任务数不变。设计定稿时是 148 个（后端 94），P4 一段 16 个；P4 拆成 P4a（12 个）、P4b（9 个）之后后端多 5 个；P5 一段 15 个，拆成 P5a（15 个）、P5b（9 个）之后后端再多 9 个；P7 一段 13 个，拆成 P7a（10 个）、P7b（8 个）之后后端再多 5 个（约束 2）。
+**规模**：171 个任务（后端 113、前端 58），每段 8–16 个。第三稿为 Codex 的发现加的测试让 P5、P6、P9 各多一个任务，其余加进已有的任务，每段仍在上限之内。第三稿的聚焦复核（17.3）加的规则和测试都并进已有的任务（P3、P4（拆分之后在 P4b）、P5（拆分之后在 P5a）、P6、P8（拆分之后在 P8b）、P9），各段的任务数不变。设计定稿时是 148 个（后端 94），P4 一段 16 个；P4 拆成 P4a（12 个）、P4b（9 个）之后后端多 5 个；P5 一段 15 个，拆成 P5a（15 个）、P5b（9 个）之后后端再多 9 个；P7 一段 13 个，拆成 P7a（10 个）、P7b（8 个）之后后端再多 5 个；P8 一段 16 个，拆成 P8a（11 个）、P8b（9 个）之后前端多 4 个（约束 2）。
 
 ### P1 `platform`：权限框架、组合与建工作区（后端，15 个任务）
 - **目标**：权限框架、两段组合、矩阵测试的骨架定下；任何调用方都能建、列、看工作区，管理员能用命令建工作区。
@@ -1753,7 +1756,7 @@ modules/access/
   13. `nerve workspaces create` 和 `bootstrap.Workspaces` 的组合，组合测试扩展（6.6）。
   14. 矩阵测试的骨架（`pgtest` 从已准备的库复制）和本 Phase 的行；整程序测试覆盖新操作。
   15. 端到端：`api.ts` 的建工作区、`assert/workspace.ts`，W1、W10 的接口版本；3.20、8.7 中 P1 的行；review。
-- **关闭**：M2 交接第 4 节（3.14）、第 5 节（3.11）、第 8 节（端口而不是例外、`TestSQLCSchemaScope`、`Authorizer`；`ProjectAccess` 在 P4a 照同一写法）、第 12 节（review 写明 M3 没有分页的列表）；M1-P2、M1-P3、M1-P4 的保留名单的服务端一侧（前端一侧在 P8）。
+- **关闭**：M2 交接第 4 节（3.14）、第 5 节（3.11）、第 8 节（端口而不是例外、`TestSQLCSchemaScope`、`Authorizer`；`ProjectAccess` 在 P4a 照同一写法）、第 12 节（review 写明 M3 没有分页的列表）；M1-P2、M1-P3、M1-P4 的保留名单的服务端一侧（前端一侧在 P8a）。
 - **完成线**：W1、W10 的接口版本通过；本 Phase 的矩阵格子通过；判定表测试、完整性测试通过；`TestSQLCSchemaScope` 的四个反例和前缀规则的反例在规则漏掉时失败；架构测试通过。
 
 ### P2 `workspaces`：工作区的管理和加锁约定（后端，12 个任务）
@@ -1810,7 +1813,7 @@ modules/access/
   10. `DemoteToGuest`（`ProjectCascade` 的第二个方法）：`updateWorkspaceMember` 改为访客时，在写之后、读资料之前调用；接受邀请恢复为访客时，在 `RestoreMember` 之后、`AcceptInvitation` 之前、同一个事务里调用（3.8，它让加入的上限成立）；两处都有组合出的 app 上的测试，连带失败时整个写回滚。
   11. 端到端：`api.ts` 的建项目、`assert/project.ts`；P1 的接口版本；W3 加上项目的连带。
   12. 3.20 中 P4a 的行；review。
-- **关闭**：M2 交接第 7 节的接口一侧（`logo_url`、`cover_image_url`、`avatar_url` 可为 `null`；`IUserLite` 在 P8）、第 9 节（4.12）；M1-P2 项目字段；M1-P3 不再读的字段、地址（`project-identifiers` 不带结尾 `/`）。
+- **关闭**：M2 交接第 7 节的接口一侧（`logo_url`、`cover_image_url`、`avatar_url` 可为 `null`；`IUserLite` 在 P8a）、第 9 节（4.12）；M1-P2 项目字段；M1-P3 不再读的字段、地址（`project-identifiers` 不带结尾 `/`）。
 - **完成线**：上述故事通过；可见性一致测试、`logo_props` 的 CHECK 反例、删除工作区和降为访客（两处调用）的连带在组合出的 app 上的回滚测试通过；`project` 的 `apitest.Main` 两个方向核对通过；本 Phase 的矩阵格子通过。
 
 ### P4b `project-members`：项目的管理、显示设置与成员的加入（后端，9 个任务）
@@ -1826,7 +1829,7 @@ modules/access/
   7. 交错测试 17（降为访客与加入、添加，两种顺序）；每个项目级的写最先等在工作区行上；删除工作区等项目级的写、一个时刻（3.3）；添加若干成员与删除工作区（预检 M1）。
   8. 端到端：`api.ts` 的加项目成员；P2、P3、P4、P8 的接口版本。
   9. 3.20 中 P4b 的行；review。
-- **关闭**：M1-P3 项目成员（只有"从工作区成员中添加"；`joinProject` 的前端一侧在 P8）。
+- **关闭**：M1-P3 项目成员（只有"从工作区成员中添加"；`joinProject` 的前端一侧在 P8b）。
 - **完成线**：上述故事通过；恢复时角色的四行表、交错测试 17（加入、添加各两种顺序，`-count=5 -race`，没有 40P01）通过；每个项目级的写最先锁工作区行的组合测试（按操作的完整性核对）、删除工作区与项目级的写的时刻、添加若干成员与删除工作区（没有 40P01）的测试通过；本 Phase 的矩阵格子通过，含无效目标的两格。
 
 ### P5a `memberships`：结束与恢复工作区的成员关系（后端，15 个任务）
@@ -1918,27 +1921,41 @@ modules/access/
 - **关闭**：没有。
 - **完成线**：P7 和断言标签的 W3、P4 通过，此前的全部故事仍通过；交错测试 11 和同名的并发创建两种顺序 `-count=5 -race` 通过，没有 40P01；迁移 `00014` 升、降、再升通过；每个标签的写在每个项目级的写最先锁工作区的测试里有一行（第一步探测它的标签行）；`project` 的 `apitest.Main` 两个方向核对通过（含两个标签码）；整程序测试覆盖本 Phase 的操作；项目级矩阵的全部格子通过（后端的矩阵至此完整），已归档项目的小表含每个状态和标签的操作。
 
-### P8 `web-data-layer`：前端的数据层（16 个任务）
-- **目标**：M3 的全部类型、service、store、权限 store 和挂载路径上的取数迁到新接口，按会话分代；使用方改到能编译、行为不变；系统内接受删除；关键词规则完整。
+### P8a `web-workspace-data`：工作区一侧的数据层（11 个任务）
+- **拆分**（P8a、P8b 共用）：设计定稿时这里是一段 P8 `web-data-layer`（16 个任务）。实施之前估出约 19–21 个任务、约 19,000–22,000 行（约束 2），由控制者裁定（2026-10-07）照第 16 节拆成 P8a、P8b，依次合并：P8a → P8b → P9，每段合并之后下一段才开始（约束 2 和"顺序"）。边界是一侧：P8a 是工作区一侧的 store（工作区、成员、邀请、工作区的显示设置、权限 store 的工作区一半）、落点和两段共用的基础；P8b 是项目一侧的 store（项目、项目成员、状态、标签、项目的显示设置、权限 store 的项目一半）。第 16 节原写"两个包装层挂载时的取数留在第一段"，它与这条边界不能同时成立：每个项目一侧的 store 都由一个包装层在挂载时取（`workspace-wrapper.tsx:81-111` 取项目角色、项目列表、工作区的状态，`project-wrapper.tsx:70-95` 取项目详情、显示设置、标签、成员、状态），而一个 store 的类型一换，它的使用方要在同一个任务里改完。裁定改为：两个包装层中 M6、M7 的删除，收藏、未读通知数、"最近"小部件的删除和工作区一侧的挂载时取数在 P8a；项目一侧的挂载时取数随各自的 store 在 P8b 改接，连同 `member_role` 的启用条件（7.1）和 S2 的改写（S2 要两侧都已改接）。这一句的用意（页面的故事加入时挂载路径上已经没有旧接口，3.1）照旧成立：P9–P11 在两段之后。两段的任务列表同样是 plan 的草稿。
+- **目标**：会话分代的基础（总体设计 7.7 的释放、`sessionGuard()`、带 `loginId` 的 SWR 键），工作区一侧的类型、service、store 和挂载时的取数迁到新接口，按会话分代；使用方改到能编译、行为不变（看得见的例外列在 P8a 的 spec 第 3 节，其中删除的只有工作区图标的上传，3.2）；系统内接受删除；落点；问题码的文案表移到通用的位置。
+- **评审重点**：换代之后旧的一代不再写、它的反应已释放（7.1）；页面只取调用者有权读的（成员页的邀请只为工作区管理员取，7.1）；落点只认此刻工作区列表中的工作区（3.14）。
 - **任务**：
-  1. `RootStore.dispose()` 和 `project_filter` 反应的释放（7.1）。
-  2. 工作区的类型、service、store；`RESTRICTED_URLS` 删除，保留名单"应用"一段的 vitest（3.10）。
-  3. 工作区成员、邀请的 store；`MemberUser` 取代 `IUserLite` 的使用方。
-  4. 系统内接受的删除：`/invitations` 页、入口、路由、新手引导的"加入工作区"一步和它们的 service、store 方法（7.8）。
-  5. 项目 store，`IProject`、`TProject` 的使用方；`is_favorite` 的读取、收藏的两个 store 方法、`favoriteProjectIds` getter 和 `favorite.store.ts:284-287` 的项目分支删除（3.2）。
-  6. 项目成员 store。
-  7. 状态 store（顺序、组中的位置），`IState` 的使用方。
-  8. 标签 store（层级），`IIssueLabel` 的使用方。
-  9. 显示设置的 store（工作区、项目）。
-  10. 权限 store（`Workspace.role`、`Project.member_role`）。
-  11. 设置 store 删除、落点函数、`AuthenticationWrapper`（3.14、7.4）。
-  12. 两个包装层和 `TopNavigationRoot` 挂载时的取数：M3 的改调新 store，按权限启用（`ProjectAuthWrapper` 的子资源在确认是项目成员之后才取，7.1），M6、M7 的删除，首页"最近"小部件删除（3.1）。
-  13. service 按代建（10 处模块级实例消失）、修改经 `oneAtATime()` 的核对；`sessionGuard()` 移到 `core/lib/in-session.ts`（7.1）；problem 码的文案表 `PROBLEM_MESSAGES` 和它的文案从 `authentication.helper.ts` 和 `auth` 命名空间移到通用的位置，核对它与契约的码一致的 vitest 随它移动（第 12 节约束 4）。
-  14. 关键词规则和 `/user-properties/` 的例外（`until: "M4"`，7.10），`/projects/{id}/search-issues/` 是规则的不命中样例；旧 `ProjectService` 只留三个方法（7.3）。
-  15. vitest（9.5 中 P8 的各项）。
-  16. S2 的改写；3.20 中 P8 的行；review。
-- **关闭**：M2 交接第 3 节、第 7 节（`IUserLite` → `MemberUser`）；M1-P3 项目成员（`project-invitations` 的例外删除）；M1-P2、M1-P3、M1-P4 保留名单的前端一侧（前后端一份，有测试）。
-- **完成线**：S1、S2 通过，此前的全部故事仍通过；M2 交接第 3 节的 `git grep` 中 M3 的 10 处消失；`node tools/keywords.mjs` 通过；9.5 中 P8 的 vitest 通过；`tsc`、knip 通过。
+  1. `RootStore.dispose()` 和 `project_filter` 反应的释放；`sessionGuard()` 在 `core/lib/in-session.ts`，`theme-switcher.tsx` 改用它；带 `loginId` 的 SWR 键只有一处写法；各自的 vitest（7.1、9.5）。
+  2. problem 码的文案表 `PROBLEM_MESSAGES` 和它的文案从 `authentication.helper.ts` 和 `auth` 命名空间移到通用的位置，核对它与契约的码一致的 vitest 随它移动（约束 4）。
+  3. 工作区的类型、service、store（列出、查看、创建、修改、删除、slug 检查），`IWorkspace` 的使用方；工作区图标的上传删除（3.2）；权限 store 的工作区角色取自 `Workspace.role`，`workspace-members/me` 的取数删除（7.3、7.8）。
+  4. `RESTRICTED_URLS` 删除，创建表单改问 `checkWorkspaceSlug`，保留名单"应用"一段的 vitest（3.10）；设置 store 删除、落点函数、`AuthenticationWrapper`（3.14、7.4）。
+  5. `MemberUser` 取代 `IUserLite` 的使用方（7.2）。
+  6. 工作区成员的 service、store（列出、改角色、移出、离开）；`user.service.ts` 的 `leaveWorkspace` 改用生成的客户端。
+  7. 邀请的 service、store；成员页的邀请列表只为工作区管理员取，取数条件的 vitest（7.1、9.5）。
+  8. 系统内接受的删除：`/invitations` 页、入口、路由、新手引导的"加入工作区"一步和它们的 service、store 方法（7.8）；工作区一侧的模块级实例消失（`WorkspaceService` 的 8 处，查看邀请的改用 `publicClient`，7.1）。
+  9. 工作区的显示设置的 store（3.18）。
+  10. `WorkspaceAuthWrapper`、`TopNavigationRoot` 挂载时的取数：工作区一侧的改调新 store，取收藏、未读通知数的 SWR 和首页"最近"小部件删除；`ProjectAuthWrapper` 中 M6、M7 的 SWR 删除（3.1）。
+  11. 工作区一侧的关键词规则（7.10）；3.20 中 P8a 的行；review。
+- **关闭**：M2 交接第 2 节中 P8a 的部分（落点规则、`currentUserSettings` 和四处 `await` 删除、取数失败时没有未处理的拒绝）、第 7 节（`IUserLite` → `MemberUser`）；M1-P2、M1-P3、M1-P4 保留名单的前端一侧（前后端一份，有测试）。M2 交接第 3、11 节中工作区一侧的部分，其余在 P8b。
+- **完成线**：S1 和此前的全部故事通过（S2 在 P8b 改写）；M2 交接第 3 节的 `git grep` 中 `WorkspaceService` 的 8 处消失（只调公开操作的可以是 `publicClient`）；`node tools/keywords.mjs` 通过；9.5 中 P8a 的 vitest 通过；`tsc`、knip 通过；改到的文件按 7.9 没有 oxlint 警告，各包上限已调低。
+
+### P8b `web-project-data`：项目一侧的数据层（9 个任务）
+- **拆分**：见 P8a 的同一条；P8b 在 P8a 合并之后开始。
+- **目标**：项目一侧的类型、service、store、权限 store 的项目一半和两个包装层项目一侧的挂载时取数迁到新接口，按会话分代、按权限启用；使用方改到能编译、行为不变；关键词规则完整；S2 改写。
+- **评审重点**：不是有效的项目成员（`member_role` 为 `null`）时不取项目的子资源（7.1）；权限 store 的项目角色与 3.4 的服务端规则一致（`getProjectRole` 的规则不变，7.3）；拖动排序一个接一个发出（7.1）。
+- **任务**：
+  1. 项目的类型和字段的使用方（`IProject`、`TProject` → `Project`，`inbox_view` → `intake_view`，7.2）；`is_favorite` 的读取、收藏的两个 store 方法、`favoriteProjectIds` getter 和 `favorite.store.ts:284-287` 的项目分支删除，项目侧边栏读 `intake_count` 的部分删除（3.1、3.2）。
+  2. 项目的 service、store（未归档、已归档两份列表，详情、创建、修改、删除、归档、恢复、标识检查）；`project/form.tsx` 的模块级实例消失；`WorkspaceAuthWrapper` 取项目列表改调新 store。
+  3. 权限 store 的项目一半：项目角色取自 `Project.member_role`，`project-roles` 的取数删除（7.3、7.8）；与 9.2 同一组身份的 vitest（9.5）。
+  4. 项目成员的 service、store（列出、添加、改角色、移出、加入、离开），`TProjectMembership` 的使用方；`user.service.ts` 的 `joinProject`、`leaveProject` 改用生成的客户端，`ProjectMemberService` 的模块级实例消失。
+  5. 状态的 service、store（顺序、组中的位置，取代 `order`，3.17），`IState` 的使用方；工作区的状态；收集箱的分诊状态从 state store 删除（M7，3.1）。
+  6. 标签的 service、store（两层，按项目），`IIssueLabel` 的使用方；工作区级的标签取数删除（M7，7.3）。
+  7. 项目的显示设置的 store（导航、侧边栏的顺序，3.18）；`ProjectAuthWrapper` 挂载时的取数改调新 store，子资源在确认是有效的项目成员之后才取，取数条件的 vitest（7.1、9.5）。
+  8. oxlint：受 7.9 约束的改到的文件清零，各包上限调低；只经机械一步改到的文件列进 review 第 6 节（7.9）。
+  9. 旧 `ProjectService` 只留三个方法，其余旧的 service 方法删除（7.3）；关键词规则补全（7.10）；S2 的改写（第 2 节）；3.20 中 P8b 的行；review。
+- **关闭**：M2 交接第 3 节（10 处全部消失）、第 11 节中项目一侧的部分（`joinProject`、`leaveProject`，`plane-user-urls` 收紧）；M1-P3 项目成员（`project-invitations` 的例外删除）。
+- **完成线**：S1、S2 通过，此前的全部故事仍通过；M2 交接第 3 节的 `git grep` 中 M3 的 10 处消失；`node tools/keywords.mjs` 通过（7.10 的全部规则）；9.5 中 P8b 的 vitest 通过；`tsc`、knip 通过；改到的文件按 7.9 没有 oxlint 警告，各包上限已调低。
 
 ### P9 `web-workspace-pages`：工作区的页面（14 个任务）
 - **目标**：落点、新手引导、邀请页、注册页、工作区首页和侧边栏、工作区设置对接新接口，行为按第 2 节的故事。
@@ -1948,7 +1965,7 @@ modules/access/
   3. 邀请页（7.4）。
   4. 注册页带邀请（7.4）。
   5. 首页、侧边栏的工作区部分、项目导航对话框（7.5）。
-  6. 工作区设置 general（图标上传删除）。
+  6. 工作区设置 general（7.5）。
   7. 工作区设置 members：成员列表、改角色、移出、离开；邀请只为管理员取（7.1）。
   8. 邀请的界面：批量邀请、复制链接、改角色、删除、已忽略（7.5）。
   9. 停用账户的弹窗显示 409 的说明（7.5）。
@@ -1987,7 +2004,7 @@ modules/access/
   1. 状态设置页（7.6）。
   2. 标签设置页（7.6）。
   3. 死成员和死 prop：`--rows M3` 剩下的行（7.9）。
-  4. oxlint：M3 改到的文件清零。
+  4. oxlint：M3 改到的文件清零，含 P8a–P10 的 review 第 6 节列出的只经机械一步改到的文件（7.9）。
   5. `promise(always-return)` 全仓清零，各包上限调低（7.9）。
   6. 关键词守卫的最终核对：M3 加的例外只剩 `/user-properties/` 的两处（`until: "M4"`），`until: "M3"` 的例外都已删除；旧 `ProjectService` 只剩 7.3 的三个方法。
   7. 端到端：P6、P7、P9、W11 的页面版本。
@@ -2013,30 +2030,30 @@ modules/access/
 | 交接与节 | 落在哪里 | 关闭条件（在哪个 Phase 满足） |
 |---|---|---|
 | M2-closeout §1 邀请与注册 | 3.8；决策点 1、2、4；7.4 | 负责人已裁定（第 10 节）；只凭邮箱的接受被拒绝、凭有效令牌且邮箱一致的成功；接受最先锁住接收账户的行，已是有效成员时不改成员关系（交错测试 12、9.1 的用例测试）；注册关闭时带有效邀请的注册成功、不带的 `identity.signup_disabled`；W5、W6 两个版本（P3 接口、P9 页面） |
-| M2-closeout §2 落点与新手引导的取数 | 3.1、3.14、7.4 | 落点规则（上次的、最早的、`/create-workspace`）；新手引导用新接口；A3、A10 的断言不改仍通过；取数失败时没有未处理的拒绝（SWR fetcher 返回 Promise，vitest）；`currentUserSettings` 和四处 `await` 删除（P8）；README"前端"一节改写；挂载时的规则延伸到 M3 的页面（3.1）（P9） |
-| M2-closeout §3 stores 按会话分代 | 7.1 | M3 的 10 处模块级实例消失（`publicClient` 除外）；`project_filter` 的反应随退役的一代释放，有单元测试；新 SWR 键带 `loginId`（P8） |
+| M2-closeout §2 落点与新手引导的取数 | 3.1、3.14、7.4 | 落点规则（上次的、最早的、`/create-workspace`）；新手引导用新接口；A3、A10 的断言不改仍通过；取数失败时没有未处理的拒绝（SWR fetcher 返回 Promise，vitest）；`currentUserSettings` 和四处 `await` 删除（P8a）；README"前端"一节改写；挂载时的规则延伸到 M3 的页面（3.1）（P9） |
+| M2-closeout §3 stores 按会话分代 | 7.1 | M3 的 10 处模块级实例消失（`publicClient` 除外）；`project_filter` 的反应随退役的一代释放，有单元测试；新 SWR 键带 `loginId`（P8a、P8b） |
 | M2-closeout §4 `last_workspace_id` 的外键 | 3.14 | 不加，理由写在 3.14（本文满足；P1 的 review 复述） |
 | M2-closeout §5 `workspace_creation_enabled` | 3.11 | 关闭时 403 `workspace.creation_disabled`，有测试；提供 `nerve workspaces create`（P1） |
 | M2-closeout §6 停用的端口 | 3.6、3.7、3.9 | 三件事在停用的事务里；唯一管理员时拒绝；接口和命令两条路都有测试；`deactivateMe` 的码声明、两个方向核对（`identity` 自己的 HTTP 测试返回过它们，9.4）；差异清单"停用账户"一行；加锁顺序和成员关系集合的增长与收缩写在 3.6，每条增长路径与停用的交错测试（7、8、13–16）和忽略与停用的交错测试（19）通过（P6） |
-| M2-closeout §7 可空的引用字段 | 3.2、5.2、7.2 | `logo_url`、`cover_image_url`、`MemberUser.avatar_url` 可为 `null`（P1、P2、P4a）；`IUserLite` 由 `MemberUser` 取代（P8） |
+| M2-closeout §7 可空的引用字段 | 3.2、5.2、7.2 | `logo_url`、`cover_image_url`、`MemberUser.avatar_url` 可为 `null`（P1、P2、P4a）；`IUserLite` 由 `MemberUser` 取代（P8a） |
 | M2-closeout §8 模块边界 | 3.3、3.4、4.1 | 端口而不是例外（3.3）；`TestSQLCSchemaScope` 四种写法各一个反例；`Authorizer` 在 `shared`，规则 10 照旧（P1） |
 | M2-closeout §9 删除关系图 | 3.15、4.12 | 图写在 4.12，每条指向 `users` 的外键有去向；项目负责人改为 `SET NULL`，登记差异（P4a） |
 | M2-closeout §10 表情选择器的数据 | 7.7、8.5 | 不请求 `cdn.jsdelivr.net`，没有 CSP 违规（故事 P1、P3 的 `watchPage`，C6）；CSP 不放开外部来源（P10） |
-| M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（P8）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8、P9）；时区用 `GET /api/v0/timezones`（P9、P10） |
+| M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（`leaveWorkspace`、`is_bot`、`owner` 在 P8a，其余在 P8b）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8a、P9）；时区用 `GET /api/v0/timezones`（P9、P10） |
 | M2-closeout §12 页大小的规则 | 3.12 | M3 没有分页的列表：P1 的 review 写明，本节原样写进 M4 的交接（收尾，13.2） |
 | M2-closeout §13 P5 改到、M2 走不到的页面 | 9.7 C4 | 逐条的浏览器核对写进 review；"加入工作区"一步删除，写明（P9） |
 | M2-closeout §14 下拉框和复制 | 7.7、9.7 C7、C8 | `CustomSearchSelect` 能用 Tab 到达、键盘打开；`member-options` 的列表在按钮旁；9 个和 4 个调用方核对；3 处复制处理失败（P10） |
 | M1-closeout 死成员和死 prop | 7.9 | `--rows M3` 的每一行消失或写进 review；按路径误归的 41 行写进 M4、M6、M7 的交接（P11、收尾） |
-| M1-closeout oxlint | 7.9 | 改到的文件 0 条；`promise(always-return)` 全仓清零；各包上限调低，review 写明（P8–P11） |
+| M1-closeout oxlint | 7.9 | 改到的文件 0 条；`promise(always-return)` 全仓清零；各包上限调低，review 写明（P8a–P11；只经机械一步改到的文件在 P11 的第 4 个任务，7.9） |
 | M1-P2 项目字段 | 4.6、5.2 | 接口没有 `close_in`、`default_state`、`page_view`、`estimate_id`（P4a） |
 | M1-P2 侧边栏偏好 | 3.18、5.1 | 没有 `/sidebar-preferences/`；项目导航偏好经 `WorkspacePreferences`（P2） |
-| M1-P2 保留的工作区地址 | 3.10 | 与 M1-P3、M1-P4 的同一项一起关闭（P1、P8） |
+| M1-P2 保留的工作区地址 | 3.10 | 与 M1-P3、M1-P4 的同一项一起关闭（P1、P8a） |
 | M1-P2 个人主页 | 决策点 3；9.2 | 裁定写进矩阵（本文 9.2 的一格；页面在 P11 的 C10，接口的一行交给 M4） |
 | M1-P3 不再读的字段 | 4.6、5.2、3.19 | 项目接口没有 `anchor`、发布设置；Nerve 没有项目动态，不产生那几类记录（P4a）。视图、收集箱的接口不在 M3，由 M7 的同名交接（`docs/v0/M7-collaboration/handoffs/M1-P3-trim-platform.md`）约束，M3 的 review 写明 |
-| M1-P3 项目成员 | 3.5、7.10 | 只有"从工作区成员中添加"（P4b）；`joinProject` 改用新接口，`project-invitations` 的例外删除，`node tools/keywords.mjs` 通过（P8） |
-| M1-P3 保留的工作区地址 | 3.10 | 与后端同源；产品词逐个有结论：全部去掉，另加四个预留段（3.10）（P1、P8） |
+| M1-P3 项目成员 | 3.5、7.10 | 只有"从工作区成员中添加"（P4b）；`joinProject` 改用新接口，`project-invitations` 的例外删除，`node tools/keywords.mjs` 通过（P8b） |
+| M1-P3 保留的工作区地址 | 3.10 | 与后端同源；产品词逐个有结论：全部去掉，另加四个预留段（3.10）（P1、P8a） |
 | M1-P3 地址 | 5.1 | `project-identifiers` 等新地址都不带结尾 `/`（P4a 起） |
-| M1-P4 保留的工作区名 | 3.10 | 名单"应用"一段正好是 `routes/core.ts` 的顶层静态路由段（加 `public/` 的顶层目录），前后端一份，vitest 和 Go 测试各守一段（P1、P8） |
+| M1-P4 保留的工作区名 | 3.10 | 名单"应用"一段正好是 `routes/core.ts` 的顶层静态路由段（加 `public/` 的顶层目录），前后端一份，vitest 和 Go 测试各守一段（P1、P8a） |
 | M1-P4 离开项目的顺序 | 7.6 | 先等接口成功再跳转，vitest 和故事 P5（P10） |
 | M0-P3 分页的公共组件 | — | 已在 M2/P3a 完成（`status: done`）。M3 的列表不分页（3.12），不引用这些组件；收尾时状态改为 `closed` |
 
@@ -2055,10 +2072,10 @@ modules/access/
 ### 13.2 M3 交给后续 M 的事项（收尾时写成交接）
 | 接收者 | 事项 |
 |---|---|
-| M4 | **事件**：M3 没有领域事件，删除工作区、降为访客、结束成员关系的连带经 `ProjectCascade` 同步完成（3.3）。M4 随第一个异步订阅者引入事件（M2 设计 3.15、M4 的 M2 收尾交接第 6 节不变），届时可以把删除工作区的连带改挂到 `WorkspaceDeleted` 上，并为工作项加上删除项目、删除工作区的连带。但邀请的软删除必须留在删除工作区的事务里：注册时的邀请检查（`SignupInvitations`）只看邀请行、不看工作区，连带改为异步之后，从删除到任务运行之间，已删除工作区的邀请链接会让被邀请的邮箱在注册关闭时注册；所以要么邀请这一步保持同步，要么让这个检查也读工作区。**约定**：先锁父行再判定、加锁顺序、成员关系集合的增长与收缩（3.6 约定六，以后加入新的成员关系时照它写，恢复"不比新授予给得更多，也不比原来那一行更多"）、共享锁之下的批量插入按唯一键排序（约定五）、账户行只作第一把锁（约定一）；页面按权限取数、`await` 之后先核对会话（7.1）；声明在一个模块上的跨模块错误码由这个模块的 HTTP 测试返回（9.4）；规则表和操作名在各模块、完整性测试（3.4）；权限矩阵的写法（9.2）；错误码前缀规则的修订和 `forbidden`（11.7）；规则表的 `AllowCreator` 和 `guest_view_all_features` 对工作项的约束（3.4）。**数据**：删除状态前检查它的工作项、删除标签时处理 `issue_labels`；工作项编号取 `projects.last_issue_sequence`（4.6）；工作项的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（3.18），旧 `ProjectService` 的 `/user-properties/` 两个方法和关键词例外（`until: "M4"`）；旧 `ProjectService` 的 `projectIssuesSearch` 和它的三个调用方（M4 的选父工作项、M6 的添加已有工作项、M7 的收集箱查重）随 M4 的工作项搜索接口替换，之后删除旧 service（7.3）；60 天清理包括 M3 的表，指向 `workspaces`、`projects`、`labels.parent_id` 的外键已有不带条件的索引，工作项的表照做（4.12）；工作项引用状态、标签、项目的外键在 4.12 的图上延伸。**其他**：页大小的规则移到 `shared`、游标不签名的提醒（M2 交接第 12 节原样，3.12）；决策点 3 的规则行（个人主页的工作项列表）；`issue_calendar_view` 的反应和 `issue/root.store.ts` 的 `autorun` 的释放（7.1）；`workspace-draft-issues/base.ts` 的 16 行死成员；M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（3.1） |
+| M4 | **事件**：M3 没有领域事件，删除工作区、降为访客、结束成员关系的连带经 `ProjectCascade` 同步完成（3.3）。M4 随第一个异步订阅者引入事件（M2 设计 3.15、M4 的 M2 收尾交接第 6 节不变），届时可以把删除工作区的连带改挂到 `WorkspaceDeleted` 上，并为工作项加上删除项目、删除工作区的连带。但邀请的软删除必须留在删除工作区的事务里：注册时的邀请检查（`SignupInvitations`）只看邀请行、不看工作区，连带改为异步之后，从删除到任务运行之间，已删除工作区的邀请链接会让被邀请的邮箱在注册关闭时注册；所以要么邀请这一步保持同步，要么让这个检查也读工作区。**约定**：先锁父行再判定、加锁顺序、成员关系集合的增长与收缩（3.6 约定六，以后加入新的成员关系时照它写，恢复"不比新授予给得更多，也不比原来那一行更多"）、共享锁之下的批量插入按唯一键排序（约定五）、账户行只作第一把锁（约定一）；页面按权限取数、`await` 之后先核对会话（7.1）；声明在一个模块上的跨模块错误码由这个模块的 HTTP 测试返回（9.4）；规则表和操作名在各模块、完整性测试（3.4）；权限矩阵的写法（9.2）；错误码前缀规则的修订和 `forbidden`（11.7）；规则表的 `AllowCreator` 和 `guest_view_all_features` 对工作项的约束（3.4）。**数据**：删除状态前检查它的工作项、删除标签时处理 `issue_labels`；工作项编号取 `projects.last_issue_sequence`（4.6）；工作项的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（3.18），旧 `ProjectService` 的 `/user-properties/` 两个方法和关键词例外（`until: "M4"`）；旧 `ProjectService` 的 `projectIssuesSearch` 和它的三个调用方（M4 的选父工作项、M6 的添加已有工作项、M7 的收集箱查重）随 M4 的工作项搜索接口替换，之后删除旧 service（7.3）；60 天清理包括 M3 的表，指向 `workspaces`、`projects`、`labels.parent_id` 的外键已有不带条件的索引，工作项的表照做（4.12）；工作项引用状态、标签、项目的外键在 4.12 的图上延伸。**其他**：页大小的规则移到 `shared`、游标不签名的提醒（M2 交接第 12 节原样，3.12）；决策点 3 的规则行（个人主页的工作项列表）；`issue/root.store.ts` 的 `autorun` 不在 action 之外写 `router` 的副本（计算属性，或由 `RootStore.dispose()` 释放的 `reaction`；7.1，P8a 评审记录第 6 节）；工作项的分页、分组列表扩展 `core/lib/reconciled.ts`，不另写一份（总体设计 7.7）；`workspace-draft-issues/base.ts` 的 16 行死成员；M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（3.1） |
 | M5 | `workspaces.logo_asset_id`、`projects.cover_image_asset_id` 的迁移归各自模块，图标和封面的上传控件从 Plane 的源码加回，`logo_url`、`cover_image_url`、`MemberUser.avatar_url` 有真值（3.2）；新建项目的封面值（M5 的 M1-closeout，M3 已删掉上传预设封面的一步） |
 | M6 | `ProjectAuthWrapper` 取迭代、模块（3.1，按 7.1 由权限启用）；`existing-issues-list-modal.tsx` 改用 M4 的工作项搜索（7.3）；`cycle_filter`、`module_filter` 的反应的释放（7.1）；`core/sidebar/progress-stats/` 的 8 行死成员；迭代、模块的外键在 4.12 的图上延伸 |
-| M7 | 侧边栏的收藏、未读通知数、首页的"最近"小部件、项目的视图和分诊状态的取数、项目侧边栏的 `intake_count`（3.1）；打开 `intake_view` 时建默认收集箱、分诊状态的接口（3.17）；跨项目的标签列表（3.16、7.3）；项目的收藏（`is_favorite`、卡片上的收藏按钮、建项目之后加入收藏、`favorite.store.ts` 的项目分支、`favoriteProjectIds` getter，3.2）和归档项目时的收藏处理；收集箱查重 `select-duplicate.tsx` 改用 M4 的工作项搜索（7.3）；`workspace-notifications.ts` 的 17 行死成员；工作区视图的筛选列（3.18） |
+| M7 | 侧边栏的收藏、未读通知数、首页的"最近"小部件（连同它的工作项预览 `peek-overviews.tsx`，P8a 随小部件删除，M1 3.14）、项目的视图和分诊状态的取数、项目侧边栏的 `intake_count`（3.1）；打开 `intake_view` 时建默认收集箱、分诊状态的接口（3.17）；跨项目的标签列表（3.16、7.3）；项目的收藏（`is_favorite`、卡片上的收藏按钮、建项目之后加入收藏、`favorite.store.ts` 的项目分支、`favoriteProjectIds` getter，3.2）和归档项目时的收藏处理；收集箱查重 `select-duplicate.tsx` 改用 M4 的工作项搜索（7.3）；`workspace-notifications.ts` 的 17 行死成员；工作区视图的筛选列（3.18） |
 | M8 | 工作区、项目、成员的 Webhook 事件：在 M4 引入的事件机制上加（M3 没有事件）；表情选择器的数据请求只剩核对（7.7）；README 中邀请链接与签名密钥的说明随发布核对（8.7）；性能测量加上大工作区的成员列表、项目列表（不分页的集合，11.3）：回答的大小和页面的加载时间，按测到的数字决定要不要给其中一个分页 |
 
 ---
@@ -2094,7 +2111,8 @@ modules/access/
 | P6 `deactivation` | 停用账户与成员关系（后端，9） | 已完成：[spec](specs/P6-deactivation.md)、[plan](plans/P6-deactivation.md)、[评审](reviews/P6-deactivation-review.md)（执行时 9 个 Task；终审之后负责人裁定"A"和"甲"，邀请的锁按 id 取，3.6 约定五加例外） |
 | P7a `states` | 状态与按资源寻址的共用取锁路径（后端，10）；设计中的 P7 由负责人裁定拆出（2026-10-05，第 12 节） | 已完成：[spec](specs/P7a-states.md)、[plan](plans/P7a-states.md)、[评审](reviews/P7a-states-review.md)（执行时 10 个 Task） |
 | P7b `labels` | 标签（后端，8）；同上，P7a 合并之后开始 | 已完成：[spec](specs/P7b-labels.md)、[plan](plans/P7b-labels.md)、[评审](reviews/P7b-labels-review.md)（执行时 11 个 Task；契约文件不拆，裁定 B1） |
-| P8 `web-data-layer` | 前端的数据层（16） | 未开始 |
+| P8a `web-workspace-data` | 工作区一侧的数据层（11）；设计中的 P8 由控制者裁定拆出（2026-10-07，第 12 节） | 已完成：[spec](specs/P8a-web-workspace-data.md)、[plan](plans/P8a-web-workspace-data.md)、[评审](reviews/P8a-web-workspace-data-review.md)（执行时 12 个 Task；修复轮的裁定 F-1–F-10） |
+| P8b `web-project-data` | 项目一侧的数据层（9）；同上，P8a 合并之后开始 | 未开始 |
 | P9 `web-workspace-pages` | 工作区的页面（14） | 未开始 |
 | P10 `web-project-pages` | 项目的页面（15） | 未开始 |
 | P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 未开始 |
@@ -2103,8 +2121,8 @@ modules/access/
 ## 16. 风险
 | 风险 | 影响 | 应对 |
 |---|---|---|
-| M3 的规模约是 M2 的三倍（45 个操作，前端约 380 个文件） | 周期拉长；某个 Phase 超出规模上限 | 按任务数分成 11 段，每段 9–16 个任务（第 12 节）；某个 Phase 的 plan 仍超出约 1,500 行时，照 M2 拆分并请负责人批准。已发生三次：P4 在实施前按 P1–P3 的实测估出约 21–23 个任务，负责人裁定（2026-10-01）拆成 P4a（12 个）、P4b（9 个）；P5 在实施前按 P1–P4b 的实测估出约 22–24 个任务，负责人裁定（2026-10-02）拆成 P5a（15 个）、P5b（9 个），并预先批准 P5a 的 plan 仍超出时把恢复的一半移到 P5b（A'）；P7 在实施前按原型中实测的前九个任务和 P4b–P6 的 plan 估出约 18–20 个任务，负责人裁定（2026-10-05）拆成 P7a（10 个）、P7b（8 个），两段在上限之内可以重新切分任务。现在是 14 段（第 12 节约束 2） |
-| 前端的数据层（P8）一次改到的文件多（store 的使用方约 140 个） | plan 超出上限 | 已按领域分成 16 个任务；仍超出时拆成工作区一侧和项目一侧两段，两个包装层挂载时的取数留在第一段，页面的 Phase 仍在两段之后 |
+| M3 的规模约是 M2 的三倍（45 个操作，前端约 380 个文件） | 周期拉长；某个 Phase 超出规模上限 | 按任务数分成 11 段，每段 9–16 个任务（第 12 节）；某个 Phase 的 plan 仍超出约 1,500 行时，照 M2 拆分并请负责人批准。已发生四次：P4 在实施前按 P1–P3 的实测估出约 21–23 个任务，负责人裁定（2026-10-01）拆成 P4a（12 个）、P4b（9 个）；P5 在实施前按 P1–P4b 的实测估出约 22–24 个任务，负责人裁定（2026-10-02）拆成 P5a（15 个）、P5b（9 个），并预先批准 P5a 的 plan 仍超出时把恢复的一半移到 P5b（A'）；P7 在实施前按原型中实测的前九个任务和 P4b–P6 的 plan 估出约 18–20 个任务，负责人裁定（2026-10-05）拆成 P7a（10 个）、P7b（8 个），两段在上限之内可以重新切分任务；P8 在实施前按 P6–P7b 的 plan 和在 `2474d32e` 上的测量估出约 19–21 个任务，控制者裁定（2026-10-07）照下一行拆成 P8a（11 个）、P8b（9 个）。现在是 15 段（第 12 节约束 2） |
+| 前端的数据层（设计中的 P8）一次改到的文件多（store 的使用方约 140 个） | plan 超出上限 | 已按领域分成 16 个任务；仍超出时拆成工作区一侧和项目一侧两段，页面的 Phase 仍在两段之后。已发生：控制者裁定（2026-10-07）拆成 P8a、P8b；原写的"两个包装层挂载时的取数留在第一段"与这条分法不能同时成立，改为两个包装层中 M6、M7 的删除和工作区一侧的取数在 P8a，项目一侧的取数随各自的 store 在 P8b（第 12 节 P8a 的"拆分"） |
 | 规则表与列表的 SQL 过滤走散 | 列表里出现看不到的项目，或漏掉看得到的 | 可见性一致的集成测试（9.3）；规则只在 `access/domain` 一处 |
 | 无人管理的工作区（唯一的成员被停用，或成员被误移出） | 数据留在库里，没有人能进入 | `nerve users activate` 和 `nerve workspaces reactivate-member`，与 Plane 的两个管理命令相同；README 写明（3.11、8.6） |
 | 换签名密钥使全部邀请链接失效；进程之间密钥不同使链接时好时坏 | 待接受的人拿到的链接不能用 | README 写明同一部署共用一个密钥文件；换钥之后管理员重新复制（3.8、11.1） |
@@ -2124,7 +2142,7 @@ modules/access/
 |---|---|---|
 | I1 | 先判定、后锁父行：两位管理员能互相降级到一个不剩；被移出的人还能建项目、删工作区 | 3.6 约定二"先锁父行，再判定"，成员关系和角色的一切改变用 `FOR NO KEY UPDATE`，按 id 寻址的写先读、锁父行、再重读，锁语句带 `deleted_at IS NULL`；6.7 改写；3.7 删去"改的人自己是管理员"的旧理由，改由约定二推出；交错测试 2、5、6；不用按行的写法（它死锁） |
 | I2 | 后端 Phase 的顺序让故事的前置数据到不了 | 第 12 节重排为 platform → workspaces → invitations → projects → memberships → deactivation → states-and-labels；第 2 节每个故事标出接口和页面的 Phase；W2 改写为"删除一个，提升第二位管理员后离开另一个" |
-| I3 | 前端 Phase 让挂载时的旧接口请求留在页面上 | P8 `web-data-layer` 先迁走全部类型、service、store、权限 store 和挂载路径上的取数，加上关键词规则；页面在 P9–P11；W11 的页面版本移到 P11；"10 处实例消失"写在 P8 的完成线 |
+| I3 | 前端 Phase 让挂载时的旧接口请求留在页面上 | P8 `web-data-layer`（拆分之后为 P8a、P8b，第 12 节）先迁走全部类型、service、store、权限 store 和挂载路径上的取数，加上关键词规则；页面在 P9–P11；W11 的页面版本移到 P11；"10 处实例消失"写在 P8 的完成线 |
 | I4 | 跨模块的错误码违反 `apitest` 的前缀规则 | 平台码 `forbidden`（3.4、5.3）；M2 设计 3.11 的前缀规则修订为"前缀是 nerve 的一个模块"，`apitest` 核对（11.7、3.20 的 P1、9.4） |
 | I5 | "与 Plane 相同、没有恢复"不实 | `nerve workspaces reactivate-member`（3.11、W12）；3.7、3.9、8.6、16 和 README（8.7）改正；不照搬 `create_project_member`，理由在 3.11 |
 | I6 | 标签的层级在并发下能成环 | 标签的全部写入先以 `FOR NO KEY UPDATE` 锁项目行（3.16、3.6 的表）；交错测试 11 |
@@ -2198,11 +2216,11 @@ modules/access/
 | I-3 | 若让成员邀请，邀请列表会把管理员邀请的令牌交给成员，成员注册、接受就是管理员（只在决策点 4 选 B 时成立） | 决策点 4 的"以后改的代价"写明读取范围的条件：列表、单个邀请、复制链接都要排除高于读者角色的邀请 | 决策点 4 裁定 A，风险不存在；9.2 的矩阵中成员对邀请的四个操作 403（P3） |
 | M-1 | 跨模块的读取没有覆盖成员列表的资料和恢复命令；`Accounts` 只锁有效账户，与恢复停用账户的命令矛盾 | 6.5 `MemberProfiles`（无锁批量读，含停用的账户）、`Accounts` 交回状态、`ProjectMembershipCounts`；值在 `bootstrap/ports.go` 转换，不跨模块 JOIN（S6）；6.6 的顺序不变 | 三个端口的集成测试（P1 `Accounts`、P2 `MemberProfiles`、P5a `ProjectMembershipCounts`）；W12（P5a） |
 | M-2 | `bootstrap` 返回过的码补不了 `identity` 的 HTTP 测试进程的记录，`identity` 的 `apitest.Main` 会失败（S7） | 9.4 规则：声明在模块 X 的操作上的码，在 X 的 HTTP 测试包里经 `CheckResponse` 返回过；5.3 | `identity` 用 `fakeDeactivate.err` 的两条 409 透传测试（P6）；`workspace` 的 `project.sole_admin`（P5a）；`project` 的 `workspace.not_found`（P4a） |
-| M-3 | 旧 `ProjectService` 缩到两个方法会丢掉 `projectIssuesSearch` 和它的三个调用方 | 7.3 旧 service 留三个方法及理由；7.10 例外 `until: "M4"`，`/search-issues/` 不需要例外；13.2（M4、M6、M7）；P11 的最终核对 | P8 的 `tsc`、`node tools/keywords.mjs`；P11 的第 6 个任务 |
+| M-3 | 旧 `ProjectService` 缩到两个方法会丢掉 `projectIssuesSearch` 和它的三个调用方 | 7.3 旧 service 留三个方法及理由；7.10 例外 `until: "M4"`，`/search-issues/` 不需要例外；13.2（M4、M6、M7）；P11 的最终核对 | P8b 的 `tsc`、`node tools/keywords.mjs`；P11 的第 6 个任务 |
 | M-4 | W5 要求打开链接时就认出账户不对，而查看里没有邮箱 | W5 改为点"接受"得到 403 之后说明、按钮不再可用、提供退出；与 7.4 一致 | W5 的页面版本（P9） |
 | M-5 | `logo_props` 的 CHECK 只查对象类型，不合 M2 设计 3.13 | 4.6 按 3.13 写全：键的集合、出现的每个键的类型、嵌套的 `emoji`、`icon`；第三稿 spike；3.19、5.2 | 9.3 的十个反例（含 S5 的值）和四个合法值（P4a） |
-| 4.3 第 1 条 | 页面按权限显示，却不按权限取数：成员页给成员取邀请，项目包装层给不是成员的人取子资源，都得到 403 | 7.1 规则"权限决定取数，不只决定显示"；7.3、7.5、7.6 | W4、P2 的页面版本（P9、P10）；9.5 的两个取数条件的 vitest（P8） |
-| 4.3 第 2 条 | 已发出的修改在换了账户之后迟到地成功，旧页面仍会跳转、提示 | 7.1 规则：`inSession()` 移到 `core/lib/in-session.ts`，组件在 `await` 之后先核对；3.20 的 P8 行 | 9.5 的 `sessionGuard` 和两个删除组件的 vitest（P8、P9、P10）；W3 的会话切换端到端（P9） |
+| 4.3 第 1 条 | 页面按权限显示，却不按权限取数：成员页给成员取邀请，项目包装层给不是成员的人取子资源，都得到 403 | 7.1 规则"权限决定取数，不只决定显示"；7.3、7.5、7.6 | W4、P2 的页面版本（P9、P10）；9.5 的两个取数条件的 vitest（P8a、P8b） |
+| 4.3 第 2 条 | 已发出的修改在换了账户之后迟到地成功，旧页面仍会跳转、提示 | 7.1 规则：`inSession()` 移到 `core/lib/in-session.ts`，组件在 `await` 之后先核对；3.20 的 P8a 行 | 9.5 的 `sessionGuard` 和两个删除组件的 vitest（P8a、P9、P10）；W3 的会话切换端到端（P9） |
 | 4.1 决策点 1 | 注册能用来试邮箱；(a) 改 (b) 之后留下已注册的账户 | 第 10 节决策点 1；3.8；8.2 | 写明的风险；`register_ip` 的限流沿用 M2 的测试 |
 | 4.1 决策点 3 | B、C 的代价漏了 M4 的查询过滤和测试 | 第 10 节决策点 3 | 若以后改选，由 M4 的规则行和查询测试覆盖（13.2） |
 | 4.2 11.1 | 另一种做法的好处写得太窄 | 11.1：分开轮换、影响范围更小 | — |
@@ -2216,7 +2234,7 @@ modules/access/
 - **I-1**：接受邀请照评审取接收账户行的 `FOR SHARE`；项目一侧的增长不锁账户行，靠工作区成员行和收缩的顺序串行，3.6 约定六说明为什么够；账户行只重读 `is_active` 和邮箱，不复核凭证（接受不签发凭证）。
 - **I-2**：选评审推荐的"保留现角色并消费邀请"，不选"拒绝"；`reactivate-member` 不删除旧邀请（3.11；聚焦复核的 M3 证明通用的规则只在他有效时够，移出、离开现在删除发给他的待接受邀请，17.3）。另外把同一条原则推到两处评审没有提的地方，都是约定六"恢复不比新授予给得更多，也不比原来那一行更多"的推论：加入项目恢复以前的行时，角色取 `min(原来那一行的角色, 现在的工作区角色)`（第三稿取现在的工作区角色，聚焦复核的 I1 补上后一半，17.3；Plane 保留旧角色，登记差异，3.5）；接受邀请恢复为工作区访客时 `DemoteToGuest`，在 `min` 之下它是承重的。
 - **M-1**：`reactivate-member` 照 Plane 允许停用的账户，是约定六唯一的例外，命令提示下一步 `nerve users activate`。
-- **M-3**：选"留在旧 service"，不选"移到一个新的旧搜索 service"，理由在 7.3。核对时连带发现：新的 `Project` 没有 `is_favorite`，收藏的读取也要在 P8 删除（3.2，13.2 的 M7）。
+- **M-3**：选"留在旧 service"，不选"移到一个新的旧搜索 service"，理由在 7.3。核对时连带发现：新的 `Project` 没有 `is_favorite`，收藏的读取也要在 P8（拆分之后在 P8b）删除（3.2，13.2 的 M7）。
 - **M-5**：CHECK 查到嵌套的两个对象为止，它们的值都是字符串，结构到此查完。
 
 ### 17.3 第三稿的聚焦复核（2026-09-29）
@@ -2232,9 +2250,9 @@ modules/access/
 | M4 | 添加在判定之前锁并确认目标，实现可能把 422 给了该得 403、404 的人，而 422 与 404 之差透露项目 id 存在 | 3.6 约定三"锁目标行只为取锁的顺序；目标的 422 在判定之后给出"；取锁表 | 9.2 `addProjectMembers` 无效目标的 PM、X 两格（P4b 第 5 个任务；定稿时是 P4 第 13 个任务） |
 | M5 | 停用的邮箱从哪里来没有写，`LockedAccount` 没有邮箱；列举到而上锁时已删除的工作区会落进"0 行答 404"（spike 15） | 3.9：邮箱取自锁下的账户行（`LockedAccount` 加 `Email`）；上锁时已删除的工作区、项目跳过，不答 404。6.1、6.5、取锁表 | P6 第 7 个任务：spike 15 的情形，改邮箱先提交时删除发给新邮箱的邀请；实现在 P6 第 1–3 个任务 |
 | M6 | W3 的会话切换端到端在换账户之后才放行请求，请求得到 401，没有 `inSession()` 也会通过 | W3、7.1、9.6：`route.fetch()` 在换账户之前，`route.fulfill()` 在之后 | P9 第 11 个任务，变异核对：去掉 `inSession()` 时它失败 |
-| M7 | `is_favorite` 的删除清单漏了 `favorite.store.ts:284-287` 和 `favoriteProjectIds` getter，7.2、7.3、7.8 没提 | 3.2、7.2、7.3、7.8、13.2 的 M7 行 | P8 第 5 个任务；`tsc`、knip |
+| M7 | `is_favorite` 的删除清单漏了 `favorite.store.ts:284-287` 和 `favoriteProjectIds` getter，7.2、7.3、7.8 没提 | 3.2、7.2、7.3、7.8、13.2 的 M7 行 | P8b 第 1 个任务（定稿时是 P8 第 5 个任务）；`tsc`、knip |
 | M8 | `reactivate-member` 的例外同样让项目一侧的增长接纳停用的账户 | 3.11 写明这一状态下项目一侧的增长照常允许，直到 `nerve users activate` 或再次停用 | 写明的行为，没有新测试 |
-| M9 | 六处文字 | 0.3 S5 的计数；4.6"三个键"；约定四和 11.2 的例子（添加项目成员、以别人为负责人建项目）；5.2 `ProjectMember` 只读 `project_members`；7.4 与 W5 一致（按钮不再可用）；7.10 `search-issues` 的不命中样例 | P8 第 14 个任务（关键词的样例）；其余是文字 |
+| M9 | 六处文字 | 0.3 S5 的计数；4.6"三个键"；约定四和 11.2 的例子（添加项目成员、以别人为负责人建项目）；5.2 `ProjectMember` 只读 `project_members`；7.4 与 W5 一致（按钮不再可用）；7.10 `search-issues` 的不命中样例 | P8b 第 9 个任务（定稿时是 P8 第 14 个任务；关键词的样例）；其余是文字 |
 
 **控制者的核对**：控制者读了复核的全文，逐条对照第三稿的原文确认问题存在；I1、I2、M1、M3、M5 另有复核者的 spike（17、14a 和 14b、16、9d、15），M2 的串行由 spike 12a、12b、5a、5b 证实；M6 对照了 M2 设计 3.5"每个请求都查一次会话"，M7 对照了 `favorite.store.ts` 和 `project.store.ts` 的代码。
 

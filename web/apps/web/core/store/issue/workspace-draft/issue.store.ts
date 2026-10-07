@@ -136,13 +136,6 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
     });
   }
 
-  private updateWorkspaceUserDraftIssueCount(workspaceSlug: string, increment: number) {
-    const workspaceUserInfo = this.issueStore.rootStore.user.permission.workspaceUserInfo;
-    const currentCount = workspaceUserInfo[workspaceSlug]?.draft_issue_count ?? 0;
-
-    set(workspaceUserInfo, [workspaceSlug, "draft_issue_count"], currentCount + increment);
-  }
-
   // computed
   get issueIds() {
     const workspaceSlug = this.issueStore.workspaceSlug;
@@ -233,7 +226,7 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
           const newIssueIds = issueIds.filter((issueId) => !existingIssueIds.includes(issueId));
           this.addIssue(results);
           // issue map update
-          update(this.issueMapIds, [workspaceSlug], (existingIssueIds = []) => [...newIssueIds, ...existingIssueIds]);
+          update(this.issueMapIds, [workspaceSlug], (listedIssueIds = []) => [...newIssueIds, ...listedIssueIds]);
           this.loader = undefined;
         } else {
           this.loader = "empty-state";
@@ -267,8 +260,6 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
               total_count: this.paginationInfo.total_count + 1,
             });
           }
-          // Update draft issue count in workspaceUserInfo
-          this.updateWorkspaceUserDraftIssueCount(workspaceSlug, 1);
         });
       }
 
@@ -288,7 +279,7 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
         set(this.issuesMap, [issueId], {
           ...issueBeforeUpdate,
           ...payload,
-          ...{ updated_at: getCurrentDateTimeInISO() },
+          updated_at: getCurrentDateTimeInISO(),
         });
       });
       const response = await workspaceDraftService.updateIssue(workspaceSlug, issueId, payload);
@@ -320,8 +311,6 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
             total_count: this.paginationInfo.total_count - 1,
           });
         }
-        // Update draft issue count in workspaceUserInfo
-        this.updateWorkspaceUserDraftIssueCount(workspaceSlug, -1);
       });
 
       this.loader = undefined;
@@ -349,9 +338,6 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
             total_count: this.paginationInfo.total_count - 1,
           });
         }
-
-        // Update draft issue count in workspaceUserInfo
-        this.updateWorkspaceUserDraftIssueCount(workspaceSlug, -1);
       });
 
       this.loader = undefined;

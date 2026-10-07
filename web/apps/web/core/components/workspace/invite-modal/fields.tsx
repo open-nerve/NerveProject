@@ -14,38 +14,28 @@ import { ROLE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { CustomSelect } from "@nerve/ui";
-import { cn } from "@nerve/utils";
 // hooks
-import { useUserPermissions } from "@/hooks/store/user";
 import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
 
 type TInvitationFieldsProps = {
-  workspaceSlug: string;
   fields: FieldArrayWithId<InvitationFormValues, "emails", "id">[];
   control: Control<InvitationFormValues>;
   formState: FormState<InvitationFormValues>;
   remove: (index: number) => void;
-  className?: string;
 };
 
 export const InvitationFields = observer(function InvitationFields(props: TInvitationFieldsProps) {
   const {
-    workspaceSlug,
     fields,
     control,
     formState: { errors },
     remove,
-    className,
   } = props;
   // nerve hooks
   const { t } = useTranslation();
-  // store hooks
-  const { workspaceInfoBySlug } = useUserPermissions();
-  // derived values
-  const currentWorkspaceRole = workspaceInfoBySlug(workspaceSlug)?.role;
 
   return (
-    <div className={cn("mb-3 space-y-4", className)}>
+    <div className="mb-3 space-y-4">
       {fields.map((field, index) => (
         <div
           key={field.id}
@@ -101,14 +91,12 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                     className="w-24 flex-grow"
                     input
                   >
-                    {Object.entries(ROLE).map(([key, value]) => {
-                      if (currentWorkspaceRole && currentWorkspaceRole >= parseInt(key))
-                        return (
-                          <CustomSelect.Option key={key} value={parseInt(key)}>
-                            {value}
-                          </CustomSelect.Option>
-                        );
-                    })}
+                    {/* every role: only an admin invites (the members page's gate), and an admin may give any */}
+                    {Object.entries(ROLE).map(([key, label]) => (
+                      <CustomSelect.Option key={key} value={parseInt(key)}>
+                        {label}
+                      </CustomSelect.Option>
+                    ))}
                   </CustomSelect>
                 )}
               />

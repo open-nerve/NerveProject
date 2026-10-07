@@ -6,74 +6,45 @@
 
 import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
-import type { TProjectNavigationPreferences, TProjectNavigationMode } from "@nerve/types";
-import { DEFAULT_PROJECT_PREFERENCES } from "@nerve/types";
+import type { NavigationControlPreference } from "@nerve/api-client";
+import { navigationOf, preferencesChangeOf } from "./navigation-preferences";
 import { useWorkspace } from "./store/use-workspace";
 
 export const useProjectNavigationPreferences = () => {
   const { workspaceSlug } = useParams();
-  const { getProjectNavigationPreferences, updateProjectNavigationPreferences } = useWorkspace();
+  const {
+    preferences: { getPreferences, updatePreferences },
+  } = useWorkspace();
 
-  // Get preferences from the store
-  const storePreferences = getProjectNavigationPreferences(workspaceSlug || "");
-
-  // Computed preferences with fallback logic: API → defaults
-  const preferences: TProjectNavigationPreferences = useMemo(() => {
-    // 1. Try API data first
-    if (
-      storePreferences &&
-      (storePreferences.navigation_control_preference || storePreferences.navigation_project_limit !== undefined)
-    ) {
-      const limit = storePreferences.navigation_project_limit ?? DEFAULT_PROJECT_PREFERENCES.limitedProjectsCount;
-
-      return {
-        navigationMode: storePreferences.navigation_control_preference || DEFAULT_PROJECT_PREFERENCES.navigationMode,
-        limitedProjectsCount: limit > 0 ? limit : DEFAULT_PROJECT_PREFERENCES.limitedProjectsCount,
-        showLimitedProjects: limit > 0, // Derived: 0 = false, >0 = true
-      };
-    }
-
-    // 2. Fall back to defaults
-    return DEFAULT_PROJECT_PREFERENCES;
-  }, [storePreferences]);
+  // The caller's settings as nerve gave them, in the sidebar's terms (navigation-preferences.ts)
+  const storePreferences = getPreferences(workspaceSlug || "");
+  const preferences = useMemo(() => navigationOf(storePreferences), [storePreferences]);
 
   // Update navigation mode
   const updateNavigationMode = useCallback(
-    async (mode: TProjectNavigationMode) => {
+    async (mode: NavigationControlPreference) => {
       if (!workspaceSlug) return;
-
-      await updateProjectNavigationPreferences(workspaceSlug, {
-        navigation_control_preference: mode,
-      });
+      await updatePreferences(workspaceSlug, preferencesChangeOf({ navigationMode: mode }, preferences));
     },
-    [workspaceSlug, updateProjectNavigationPreferences]
+    [workspaceSlug, updatePreferences, preferences]
   );
 
   // Update show limited projects
   const updateShowLimitedProjects = useCallback(
     async (show: boolean) => {
       if (!workspaceSlug) return;
-
-      // When toggling off, set to 0; when toggling on, use current count or default
-      const newLimit = show ? preferences.limitedProjectsCount || DEFAULT_PROJECT_PREFERENCES.limitedProjectsCount : 0;
-
-      await updateProjectNavigationPreferences(workspaceSlug, {
-        navigation_project_limit: newLimit,
-      });
+      await updatePreferences(workspaceSlug, preferencesChangeOf({ showLimitedProjects: show }, preferences));
     },
-    [workspaceSlug, updateProjectNavigationPreferences, preferences.limitedProjectsCount]
+    [workspaceSlug, updatePreferences, preferences]
   );
 
   // Update limited projects count
   const updateLimitedProjectsCount = useCallback(
     async (count: number) => {
       if (!workspaceSlug) return;
-
-      await updateProjectNavigationPreferences(workspaceSlug, {
-        navigation_project_limit: count,
-      });
+      await updatePreferences(workspaceSlug, preferencesChangeOf({ limitedProjectsCount: count }, preferences));
     },
-    [workspaceSlug, updateProjectNavigationPreferences]
+    [workspaceSlug, updatePreferences, preferences]
   );
 
   return {

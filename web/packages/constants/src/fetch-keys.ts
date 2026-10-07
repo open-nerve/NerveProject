@@ -53,12 +53,8 @@ const paramsToKey = (params: any) => {
   return `${layoutKey}_${projectKey}_${stateGroupKey}_${stateKey}_${priorityKey}_${assigneesKey}_${mentionsKey}_${createdByKey}_${type}_${groupBy}_${orderBy}_${labelsKey}_${startDateKey}_${targetDateKey}_${sub_issue}_${subscriberKey}`;
 };
 
-export const USER_WORKSPACES_LIST = "USER_WORKSPACES_LIST";
-
 export const WORKSPACE_PARTIAL_PROJECTS = (workspaceSlug: string) =>
   `WORKSPACE_PARTIAL_PROJECTS_${workspaceSlug.toUpperCase()}`;
-
-export const WORKSPACE_MEMBERS = (workspaceSlug: string) => `WORKSPACE_MEMBERS_${workspaceSlug.toUpperCase()}`;
 
 export const WORKSPACE_MODULES = (workspaceSlug: string) => `WORKSPACE_MODULES_${workspaceSlug.toUpperCase()}`;
 
@@ -66,20 +62,10 @@ export const WORKSPACE_CYCLES = (workspaceSlug: string) => `WORKSPACE_CYCLES_${w
 
 export const WORKSPACE_LABELS = (workspaceSlug: string) => `WORKSPACE_LABELS_${workspaceSlug.toUpperCase()}`;
 
-export const WORKSPACE_INVITATION = (invitationId: string) => `WORKSPACE_INVITATION_${invitationId}`;
-
-export const WORKSPACE_MEMBER_ME_INFORMATION = (workspaceSlug: string) =>
-  `WORKSPACE_MEMBER_ME_INFORMATION_${workspaceSlug.toUpperCase()}`;
-
 export const WORKSPACE_PROJECTS_ROLES_INFORMATION = (workspaceSlug: string) =>
   `WORKSPACE_PROJECTS_ROLES_INFORMATION_${workspaceSlug.toUpperCase()}`;
 
-export const WORKSPACE_FAVORITE = (workspaceSlug: string) => `WORKSPACE_FAVORITE_${workspaceSlug.toUpperCase()}`;
-
 export const WORKSPACE_STATES = (workspaceSlug: string) => `WORKSPACE_STATES_${workspaceSlug.toUpperCase()}`;
-
-export const WORKSPACE_PROJECT_NAVIGATION_PREFERENCES = (workspaceSlug: string) =>
-  `WORKSPACE_PROJECT_NAVIGATION_PREFERENCES_${workspaceSlug.toUpperCase()}`;
 
 // cycles
 export const CYCLE_ISSUES_WITH_PARAMS = (cycleId: string, params?: any) => {
@@ -108,18 +94,6 @@ export const PROJECT_MEMBERS = (projectId: string, projectRole: EUserPermissions
 
 export const PROJECT_STATES = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_STATES_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_INTAKE_STATE = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_INTAKE_STATE_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_ALL_CYCLES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_ALL_CYCLES_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_MODULES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MODULES_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_VIEWS = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_VIEWS_${projectId.toUpperCase()}_${projectRole}`;
 
 export const PROJECT_MEMBER_PREFERENCES = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_MEMBER_PREFERENCES_${projectId.toUpperCase()}_${projectRole}`;

@@ -4,10 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { FieldError } from "@nerve/api-client";
-import { ApiError } from "@/lib/api-error";
-import { SessionUnavailableError } from "@/lib/auth/token-manager";
-
 export enum EPageTypes {
   PUBLIC = "PUBLIC",
   NON_AUTHENTICATED = "NON_AUTHENTICATED",
@@ -18,87 +14,4 @@ export enum EPageTypes {
 export enum EAuthModes {
   SIGN_IN = "SIGN_IN",
   SIGN_UP = "SIGN_UP",
-}
-
-/**
- * The message of every problem code an operation lists in x-problem-codes of api/dist/openapi.yaml, which a
- * test keeps equal to the keys (M2 design 3.11, 7.3). Any other code, such as the unauthorized that an
- * operation needing a bearer token can also answer, gets auth.errors.unknown from errorMessageKey.
- */
-export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
-  bad_request: "auth.errors.bad_request",
-  payload_too_large: "auth.errors.payload_too_large",
-  rate_limited: "auth.errors.rate_limited",
-  internal_error: "auth.errors.internal_error",
-  validation_failed: "auth.errors.validation_failed",
-  server_busy: "auth.errors.server_busy",
-  forbidden: "auth.errors.forbidden",
-  "identity.signup_disabled": "auth.errors.signup_disabled",
-  "identity.email_taken": "auth.errors.email_taken",
-  "identity.invalid_credentials": "auth.errors.invalid_credentials",
-  "identity.account_deactivated": "auth.errors.account_deactivated",
-  "identity.refresh_token_invalid": "auth.errors.refresh_token_invalid",
-  "identity.current_password_incorrect": "auth.errors.current_password_incorrect",
-  "identity.api_token_not_found": "auth.errors.api_token_not_found",
-  "workspace.not_found": "auth.errors.workspace_not_found",
-  "workspace.creation_disabled": "auth.errors.workspace_creation_disabled",
-  "workspace.slug_taken": "auth.errors.workspace_slug_taken",
-  "workspace.member_not_found": "auth.errors.workspace_member_not_found",
-  "workspace.own_membership": "auth.errors.workspace_own_membership",
-  "workspace.sole_admin": "auth.errors.workspace_sole_admin",
-  "workspace.invitation_not_found": "auth.errors.workspace_invitation_not_found",
-  "workspace.invitation_responded": "auth.errors.workspace_invitation_responded",
-  "workspace.invitation_email_mismatch": "auth.errors.workspace_invitation_email_mismatch",
-  "project.identifier_taken": "auth.errors.project_identifier_taken",
-  "project.name_taken": "auth.errors.project_name_taken",
-  "project.not_found": "auth.errors.project_not_found",
-  "project.archived": "auth.errors.project_archived",
-  "project.member_not_found": "auth.errors.project_member_not_found",
-  "project.own_membership": "auth.errors.project_own_membership",
-  "project.role_too_high": "auth.errors.project_role_too_high",
-  "project.sole_admin": "auth.errors.project_sole_admin",
-  "project.state_name_taken": "auth.errors.project_state_name_taken",
-  "project.state_not_found": "auth.errors.project_state_not_found",
-  "project.state_last_in_group": "auth.errors.project_state_last_in_group",
-  "project.state_default": "auth.errors.project_state_default",
-  "project.label_name_taken": "auth.errors.project_label_name_taken",
-  "project.label_not_found": "auth.errors.project_label_not_found",
-};
-
-/** The message of every FieldError.code, shown under the field it names. */
-export const FIELD_ERROR_MESSAGES: Readonly<Record<FieldError["code"], string>> = {
-  required: "auth.errors.field.required",
-  invalid_format: "auth.errors.field.invalid_format",
-  too_short: "auth.errors.field.too_short",
-  too_long: "auth.errors.field.too_long",
-  out_of_range: "auth.errors.field.out_of_range",
-  not_allowed: "auth.errors.field.not_allowed",
-  duplicate: "auth.errors.field.duplicate",
-  weak_password: "auth.errors.field.weak_password",
-  common_password: "auth.errors.field.common_password",
-  must_be_future: "auth.errors.field.must_be_future",
-  contains_url: "auth.errors.field.contains_url",
-};
-
-/** The i18n key of the message for an error of a call to nerve. */
-export function errorMessageKey(error: unknown): string {
-  if (error instanceof ApiError) return PROBLEM_MESSAGES[error.problem?.code ?? ""] ?? "auth.errors.unknown";
-  if (error instanceof SessionUnavailableError) return "auth.errors.unreachable";
-  return "auth.errors.unknown";
-}
-
-/** The i18n keys of the messages for the fields a problem names, by field. */
-export function fieldErrorKeys(error: unknown): Partial<Record<string, string>> {
-  if (!(error instanceof ApiError)) return {};
-  return Object.fromEntries((error.problem?.errors ?? []).map((e) => [e.field, FIELD_ERROR_MESSAGES[e.code]]));
-}
-
-/**
- * Whether a form with the given fields shows an error of a call to nerve above it: unless every field the
- * error names is one of them, whose messages show under the fields. An error that names a field the form
- * does not have would otherwise show nothing.
- */
-export function needsErrorBanner(error: unknown, fields: readonly string[]): boolean {
-  const named = Object.keys(fieldErrorKeys(error));
-  return named.length === 0 || named.some((field) => !fields.includes(field));
 }

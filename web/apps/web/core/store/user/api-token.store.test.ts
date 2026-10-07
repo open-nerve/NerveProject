@@ -6,8 +6,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiToken, ApiTokenCreated } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
-import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
+import { inTurn } from "@/store/fake-queue";
 import { ApiTokenStore } from "@/store/user/api-token.store";
 
 // The personal access tokens of an account (M2 design 7.5), against a fake nerve. That the store sends as the
@@ -140,15 +141,27 @@ describe("ApiTokenStore", () => {
     expect(revoked.error).toBeUndefined();
     expect(store.tokens).toEqual([listed(3), listed(1)]);
   });
+
+  it("sends each change once nerve has answered the one before it, refused or not", async () => {
+    const nerve = new FakeNerve();
+    const store = new ApiTokenStore(nerve.client());
+    await loadList(nerve, store, [listed(2), listed(1)]);
+    const refused = track(store.createToken({ label: "token 3" }));
+    const revoked = track(store.revokeToken(listed(2).id));
+    const made = track(store.createToken({ label: "token 4" }));
+    await inTurn(nerve, 1, ["POST", LIST], problem(422, "validation_failed"));
+    await inTurn(nerve, 2, ["DELETE", `/api/v0/api-tokens/${listed(2).id}`], noContent());
+    await inTurn(nerve, 3, ["POST", LIST], json(201, created(4)));
+    await until(() => made.settled, "the last change");
+    expect(refused.error).toBeInstanceOf(ApiError);
+    expect(revoked.error).toBeUndefined();
+    expect(store.tokens).toEqual([listed(4), listed(1)]);
+  });
 });
 
 /** Fetches the list, and nerve answers it with one page of tokens. */
 async function loadList(nerve: FakeNerve, store: ApiTokenStore, tokens: ApiToken[]) {
-  const at = nerve.calls.length;
-  const fetched = track(store.fetchTokens());
-  await until(() => nerve.calls.length === at + 1, "the list");
-  nerve.calls[at]?.answer(json(200, { data: tokens, next_cursor: null }));
-  await until(() => fetched.settled, "the list");
+  await answered(nerve, () => store.fetchTokens(), ["GET", LIST], { data: tokens, next_cursor: null }, "the list");
   expect(store.tokens).toEqual(tokens);
 }
 

@@ -9,22 +9,21 @@ import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkspaceMember } from "@nerve/types";
+import type { WorkspaceMember } from "@nerve/api-client";
 import { Table } from "@nerve/ui";
 // components
 import { MembersLayoutLoader } from "@/components/ui/loader/layouts/members-layout-loader";
 import { ConfirmWorkspaceMemberRemove } from "@/components/workspace/confirm-workspace-member-remove";
-import type { RowData } from "@/components/workspace/settings/member-columns";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUser, useUserPermissions, useUserSettings } from "@/hooks/store/user";
+import { useUser } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 // components
 import { useMemberColumns } from "@/components/workspace/settings/useMemberColumns";
 
 type Props = {
-  memberDetails: (IWorkspaceMember | null)[];
+  memberDetails: (WorkspaceMember | null)[];
 };
 
 export const WorkspaceMembersListItem = observer(function WorkspaceMembersListItem(props: Props) {
@@ -37,19 +36,17 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
   const {
     workspace: { removeMemberFromWorkspace },
   } = useMember();
-  const { leaveWorkspace } = useUserPermissions();
-  const { getWorkspaceRedirectionUrl } = useWorkspace();
-  const { fetchCurrentUserSettings } = useUserSettings();
+  const { currentWorkspace, leaveWorkspace } = useWorkspace();
   const { t } = useTranslation();
   // derived values
 
   const handleLeaveWorkspace = async () => {
-    if (!workspaceSlug || !currentUser) return;
+    if (!currentWorkspace || !currentUser) return;
 
     try {
-      await leaveWorkspace(workspaceSlug);
-      await fetchCurrentUserSettings();
-      navigate(getWorkspaceRedirectionUrl());
+      await leaveWorkspace(currentWorkspace);
+      // the root lands the caller where his workspaces, as they are now, say (M3 design 3.14)
+      navigate("/");
     } catch (err: unknown) {
       const error = err as { error?: string };
       setToast({
@@ -103,11 +100,9 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
           onSubmit={() => handleRemove(removeMemberModal.member.id)}
         />
       )}
-      <Table<RowData>
+      <Table<WorkspaceMember>
         columns={columns ?? []}
-        data={
-          (memberDetails?.filter((member): member is IWorkspaceMember => member !== null) ?? []) as unknown as RowData[]
-        }
+        data={memberDetails.filter((member): member is WorkspaceMember => member !== null)}
         keyExtractor={(rowData) => rowData?.member.id ?? ""}
         tHeadClassName="border-b border-subtle"
         thClassName="text-left font-medium divide-x-0 text-placeholder"

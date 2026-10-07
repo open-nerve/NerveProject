@@ -48,7 +48,11 @@
     },
     "web#test": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/api/dist/openapi.yaml"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/api/dist/openapi.yaml",
+        "$TURBO_ROOT$/server/internal/modules/workspace/domain/reserved_slugs.txt"
+      ],
       "outputs": []
     }
   }

@@ -6,22 +6,21 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import type { IWorkspaceBulkInviteFormData } from "@nerve/types";
 import { EModalWidth, EModalPosition, ModalCore } from "@nerve/ui";
 // components
 import { InvitationModalActions } from "@/components/workspace/invite-modal/actions";
 import { InvitationFields } from "@/components/workspace/invite-modal/fields";
 import { InvitationForm } from "@/components/workspace/invite-modal/form";
 // hooks
+import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
 import { useWorkspaceInvitationActions } from "@/hooks/use-workspace-invitation";
 
 export type TSendWorkspaceInvitationModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: IWorkspaceBulkInviteFormData) => Promise<void> | undefined;
+  onSubmit: (data: InvitationFormValues) => Promise<void> | undefined;
 };
 
 export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvitationModal(
@@ -30,15 +29,11 @@ export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvit
   const { isOpen, onClose, onSubmit } = props;
   // store hooks
   const { t } = useTranslation();
-  // router
-  const { workspaceSlug } = useParams();
   // derived values
   const { control, fields, formState, remove, onFormSubmit, handleClose, appendField } = useWorkspaceInvitationActions({
     onSubmit,
     onClose,
   });
-
-  if (!workspaceSlug) return null;
 
   return (
     <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXL}>
@@ -55,13 +50,7 @@ export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvit
         }
         className="p-5"
       >
-        <InvitationFields
-          workspaceSlug={workspaceSlug}
-          fields={fields}
-          control={control}
-          formState={formState}
-          remove={remove}
-        />
+        <InvitationFields fields={fields} control={control} formState={formState} remove={remove} />
       </InvitationForm>
     </ModalCore>
   );

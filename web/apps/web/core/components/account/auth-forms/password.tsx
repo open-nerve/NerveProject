@@ -19,10 +19,12 @@ import { Button } from "@nerve/propel/button";
 import { PasswordStrengthIndicator, Spinner } from "@nerve/ui";
 import { checkEmailValidity, getPasswordStrength } from "@nerve/utils";
 // helpers
-import { EAuthModes, errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
+import { EAuthModes } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
+// lib
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 
 type Props = {
   mode: EAuthModes;

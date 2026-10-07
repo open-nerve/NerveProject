@@ -6,15 +6,15 @@
 
 import React from "react";
 // nerve imports
-import type { IWorkspace } from "@nerve/types";
+import type { Workspace } from "@nerve/api-client";
 // components
 import { WorkspaceLogo } from "@/components/workspace/logo";
 // local imports
 import { PowerKMenuBuilder } from "./builder";
 
 type Props = {
-  workspaces: IWorkspace[];
-  onSelect: (workspace: IWorkspace) => void;
+  workspaces: Workspace[];
+  onSelect: (workspace: Workspace) => void;
 };
 
 export function PowerKWorkspacesMenu({ workspaces, onSelect }: Props) {

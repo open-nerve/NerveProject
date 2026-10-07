@@ -17,6 +17,7 @@ import { renderFormattedDate, getFileURL } from "@nerve/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
 // local imports
 import { useProfileMember } from "./use-profile-member";
@@ -25,15 +26,16 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
   // refs
   const ref = useRef<HTMLDivElement>(null);
   // router
-  const { workspaceSlug, userId } = useParams();
+  const { userId } = useParams();
   // store hooks
+  const { currentWorkspace } = useWorkspace();
   const { data: currentUser } = useUser();
   const { profileSidebarCollapsed, toggleProfileSidebar } = useAppTheme();
   // the state now, for the resize listener, which is added once
   const collapsed = useRef(profileSidebarCollapsed);
   collapsed.current = profileSidebarCollapsed;
   const { toggleProfileSettingsModal } = useCommandPalette();
-  const profileMember = useProfileMember(workspaceSlug ?? "", userId ?? "");
+  const profileMember = useProfileMember(currentWorkspace, userId ?? "");
   const { t } = useTranslation();
 
   useOutsideClickDetector(ref, () => {
@@ -60,7 +62,7 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
   }, [toggleProfileSidebar]);
 
   const renderContent = () => {
-    if (profileMember.status === "loading")
+    if (profileMember.kind === "loading")
       return (
         <Loader className="space-y-7 px-5 py-6">
           <Loader.Item height="52px" width="52px" />
@@ -70,9 +72,9 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
           </div>
         </Loader>
       );
-    if (profileMember.status === "load-failed")
+    if (profileMember.kind === "load-failed")
       return <div className="px-5 py-6 text-13 text-secondary">{t("profile.details.load_failed")}</div>;
-    if (profileMember.status === "not-a-member")
+    if (profileMember.kind === "not-a-member")
       return <div className="px-5 py-6 text-13 text-secondary">{t("profile.details.not_a_member")}</div>;
     const userData = profileMember.member;
     return (
@@ -114,7 +116,7 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
         </div>
         <div className="mt-6 flex items-center gap-4 text-13">
           <div className="w-2/5 flex-shrink-0 text-secondary">{t("profile.details.joined_on")}</div>
-          <div className="w-3/5 font-medium break-words">{renderFormattedDate(userData.joining_date ?? "")}</div>
+          <div className="w-3/5 font-medium break-words">{renderFormattedDate(profileMember.joinedAt)}</div>
         </div>
       </div>
     );

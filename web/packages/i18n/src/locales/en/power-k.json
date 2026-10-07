@@ -83,8 +83,7 @@
       "nav_project_settings": "Go to project settings"
     },
     "account_actions": {
-      "sign_out": "Sign out",
-      "workspace_invites": "Workspace invites"
+      "sign_out": "Sign out"
     },
     "miscellaneous_actions": {
       "toggle_app_sidebar": "Toggle app sidebar",

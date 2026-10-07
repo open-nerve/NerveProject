@@ -15,12 +15,11 @@ import { setPromiseToast } from "@nerve/propel/toast";
 // components
 import { ThemeSwitch } from "@/components/core/theme/theme-switch";
 import { SettingsControlItem } from "@/components/settings/control-item";
-// helpers
-import { errorMessageKey } from "@/helpers/authentication.helper";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 // lib
-import { tokenManager } from "@/lib/auth/api-client";
+import { errorMessageKey } from "@/lib/error-messages";
+import { sessionGuard } from "@/lib/in-session";
 
 export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
   option: {
@@ -46,8 +45,7 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
       // The session the change is made in: the tab may follow another tab's sign-in while the change is out, and
       // then the page is that session's, which keeps its theme and does not reload (an operation acts only for the
       // session it was made in: M2 design 7.1, P4 spec 2.8).
-      const loginId = tokenManager.state.loginId;
-      const inSession = () => tokenManager.state.loginId === loginId;
+      const inSession = sessionGuard();
       const updatePromise = updateUserTheme(themeOption.value);
       setPromiseToast(updatePromise, {
         loading: t("power_k.preferences_actions.toast.theme.updating"),

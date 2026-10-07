@@ -109,5 +109,84 @@
         "ignoreRestSiblings": true
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "web/apps/web/core/store/workspace/**",
+        "web/apps/web/core/store/member/workspace/**",
+        "web/apps/web/core/components/workspace/settings/**",
+        "web/apps/web/core/components/profile/use-profile-member.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts",
+        "web/apps/web/core/lib/use-landing.ts",
+        "web/apps/web/core/lib/wrappers/authentication-wrapper.tsx",
+        "web/apps/web/app/(all)/workspace-invitations/page.tsx",
+        "web/apps/web/core/components/account/auth-forms/auth-header.tsx",
+        "web/apps/web/core/components/api-token/token-list.tsx",
+        "web/apps/web/core/hooks/use-workspace-members-fetch.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "swr",
+                "allowTypeImports": true,
+                "message": "A fetch of the session goes through useSessionSWR, whose key carries the loginId (v0 design 7.7)."
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["swr/*"],
+                "allowTypeImports": true,
+                "message": "A fetch of the session goes through useSessionSWR, whose key carries the loginId (v0 design 7.7)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "web/apps/web/core/store/workspace/**",
+        "web/apps/web/core/store/member/workspace/**",
+        "web/apps/web/core/store/user/permissions.store.ts",
+        "web/apps/web/core/services/workspace/**",
+        "web/apps/web/core/components/workspace/settings/**",
+        "web/apps/web/core/components/profile/use-profile-member.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts",
+        "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.test.ts",
+        "web/apps/web/core/lib/error-messages.test.ts",
+        "web/apps/web/core/lib/error-messages.ts",
+        "web/apps/web/core/lib/fake-session-swr.ts",
+        "web/apps/web/core/lib/in-session.test.ts",
+        "web/apps/web/core/lib/in-session.ts",
+        "web/apps/web/core/lib/landing.test.ts",
+        "web/apps/web/core/lib/landing.ts",
+        "web/apps/web/core/lib/session-key.test.ts",
+        "web/apps/web/core/lib/session-key.ts",
+        "web/apps/web/core/lib/use-landing.test.ts",
+        "web/apps/web/core/lib/use-landing.ts",
+        "web/apps/web/core/lib/use-session-swr.test.ts",
+        "web/apps/web/core/lib/use-session-swr.ts",
+        "web/apps/web/core/lib/wrappers/authentication-wrapper.tsx",
+        "web/apps/web/core/lib/reconciled.ts",
+        "web/apps/web/core/store/fake-root.ts",
+        "web/apps/web/core/store/fake-queue.ts",
+        "web/apps/web/core/hooks/navigation-preferences.ts",
+        "web/apps/web/core/hooks/navigation-preferences.test.ts",
+        "web/apps/web/core/hooks/use-navigation-preferences.ts",
+        "web/apps/web/core/hooks/use-invitation-preview.ts",
+        "web/apps/web/core/hooks/use-invitation-preview.test.ts",
+        "web/apps/web/core/hooks/use-workspace-members-fetch.ts",
+        "web/apps/web/core/hooks/use-workspace-members-fetch.test.ts",
+        "web/apps/web/core/hooks/store/fake-store-hooks.ts",
+        "web/apps/web/core/components/profile/use-profile-member.test.ts"
+      ],
+      "rules": {
+        "typescript/no-non-null-assertion": "error"
+      }
+    }
+  ]
 }

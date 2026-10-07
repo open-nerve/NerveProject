@@ -10,7 +10,7 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { renderFormattedDate } from "@nerve/utils";
 import { MemberHeaderColumn } from "@/components/project/member-header-column";
-import type { RowData } from "@/components/workspace/settings/member-columns";
+import type { WorkspaceMember } from "@nerve/api-client";
 import { AccountTypeColumn, NameColumn } from "@/components/workspace/settings/member-columns";
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
@@ -18,7 +18,7 @@ import type { IMemberFilters } from "@/store/member/utils";
 
 export const useMemberColumns = () => {
   // states
-  const [removeMemberModal, setRemoveMemberModal] = useState<RowData | null>(null);
+  const [removeMemberModal, setRemoveMemberModal] = useState<WorkspaceMember | null>(null);
 
   const { workspaceSlug } = useParams();
 
@@ -35,7 +35,7 @@ export const useMemberColumns = () => {
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
 
   // oxlint-disable-next-line unicorn/consistent-function-scoping
-  const isSuspended = (rowData: RowData) => rowData.is_active === false;
+  const isSuspended = (rowData: WorkspaceMember) => rowData.is_active === false;
 
   // handlers
   const handleDisplayFilterUpdate = (filterUpdates: Partial<IMemberFilters>) => {
@@ -54,7 +54,7 @@ export const useMemberColumns = () => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) =>
+      tdRender: (rowData: WorkspaceMember) =>
         workspaceSlug && (
           <NameColumn
             rowData={rowData}
@@ -69,7 +69,7 @@ export const useMemberColumns = () => {
     {
       key: "Display name",
       content: t("workspace_settings.settings.members.details.display_name"),
-      tdRender: (rowData: RowData) => (
+      tdRender: (rowData: WorkspaceMember) => (
         <div className={`w-32 ${isSuspended(rowData) ? "text-placeholder" : ""}`}>{rowData.member.display_name}</div>
       ),
       thRender: () => (
@@ -84,7 +84,7 @@ export const useMemberColumns = () => {
     {
       key: "Email address",
       content: t("workspace_settings.settings.members.details.email_address"),
-      tdRender: (rowData: RowData) => (
+      tdRender: (rowData: WorkspaceMember) => (
         <div className={`w-48 truncate ${isSuspended(rowData) ? "text-placeholder" : ""}`}>{rowData.member.email}</div>
       ),
       thRender: () => (
@@ -106,15 +106,15 @@ export const useMemberColumns = () => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) =>
+      tdRender: (rowData: WorkspaceMember) =>
         workspaceSlug && <AccountTypeColumn rowData={rowData} workspaceSlug={workspaceSlug} />,
     },
 
     {
       key: "Joining date",
       content: t("workspace_settings.settings.members.details.joining_date"),
-      tdRender: (rowData: RowData) =>
-        isSuspended(rowData) ? null : <div>{renderFormattedDate(rowData?.member?.joining_date)}</div>,
+      tdRender: (rowData: WorkspaceMember) =>
+        isSuspended(rowData) ? null : <div>{renderFormattedDate(rowData.created_at)}</div>,
       thRender: () => (
         <MemberHeaderColumn
           property="joining_date"

@@ -6,7 +6,8 @@
 
 // Types and utilities for member filtering
 import type { EUserPermissions, TMemberOrderByOptions } from "@nerve/constants";
-import type { IUserLite, TProjectMembership } from "@nerve/types";
+import type { MemberUser } from "@nerve/api-client";
+import type { TProjectMembership } from "@nerve/types";
 
 export interface IMemberFilters {
   order_by?: TMemberOrderByOptions;
@@ -31,8 +32,13 @@ const parseOrderKey = (orderKey?: TMemberOrderByOptions): { field: string; direc
   };
 };
 
-// Unified function to get sort key for any member type
-const getMemberSortKey = (memberDetails: IUserLite, field: string, memberRole?: string): string | Date => {
+// Unified function to get sort key for any member type; a member joined when his membership began (joinedAt)
+const getMemberSortKey = (
+  memberDetails: MemberUser,
+  field: string,
+  memberRole?: string,
+  joinedAt?: string | null
+): string | Date => {
   switch (field) {
     case "display_name":
       return memberDetails.display_name?.toLowerCase() || "";
@@ -44,11 +50,11 @@ const getMemberSortKey = (memberDetails: IUserLite, field: string, memberRole?: 
     case "email":
       return memberDetails.email?.toLowerCase() || "";
     case "joining_date": {
-      if (!memberDetails.joining_date) {
+      if (!joinedAt) {
         // Return a very old date for missing dates to sort them last
         return new Date(0);
       }
-      const date = new Date(memberDetails.joining_date);
+      const date = new Date(joinedAt);
       // Return a very old date for invalid dates to sort them last
       return isNaN(date.getTime()) ? new Date(0) : date;
     }
@@ -97,16 +103,17 @@ const filterWorkspaceMembersByRole = <T extends { role: string | EUserPermission
 // Unified sorting function
 const sortMembers = <T>(
   members: T[],
-  memberDetailsMap: Record<string, IUserLite>,
+  memberDetailsMap: Record<string, MemberUser>,
   getMemberKey: (member: T) => string,
   getMemberRole: (member: T) => string,
+  getJoinedAt: (member: T) => string | null,
   orderBy?: TMemberOrderByOptions
 ): T[] => {
   if (!orderBy) return members;
 
   const { field, direction } = parseOrderKey(orderBy);
 
-  return [...members].sort((a, b) => {
+  return members.toSorted((a, b) => {
     const aKey = getMemberKey(a);
     const bKey = getMemberKey(b);
     const aMemberDetails = memberDetailsMap[aKey];
@@ -117,8 +124,8 @@ const sortMembers = <T>(
     const aRole = getMemberRole(a);
     const bRole = getMemberRole(b);
 
-    const aValue = getMemberSortKey(aMemberDetails, field, aRole);
-    const bValue = getMemberSortKey(bMemberDetails, field, bRole);
+    const aValue = getMemberSortKey(aMemberDetails, field, aRole, getJoinedAt(a));
+    const bValue = getMemberSortKey(bMemberDetails, field, bRole, getJoinedAt(b));
 
     let comparison = 0;
 
@@ -146,7 +153,7 @@ const sortMembers = <T>(
 // Specific implementations using the unified functions
 export const sortProjectMembers = (
   members: TProjectMembership[],
-  memberDetailsMap: Record<string, IUserLite>,
+  memberDetailsMap: Record<string, MemberUser>,
   getMemberKey: (member: TProjectMembership) => string,
   filters?: IMemberFilters
 ): TProjectMembership[] => {
@@ -163,13 +170,14 @@ export const sortProjectMembers = (
     memberDetailsMap,
     getMemberKey,
     (member) => String(member.role ?? member.original_role ?? ""),
+    (member) => member.created_at,
     filters.order_by
   );
 };
 
-export const sortWorkspaceMembers = <T extends { role: string | EUserPermissions; is_active?: boolean }>(
+export const sortWorkspaceMembers = <T extends { role: string | EUserPermissions; created_at: string }>(
   members: T[],
-  memberDetailsMap: Record<string, IUserLite>,
+  memberDetailsMap: Record<string, MemberUser>,
   getMemberKey: (member: T) => string,
   filters?: IMemberFilters
 ): T[] => {
@@ -185,6 +193,7 @@ export const sortWorkspaceMembers = <T extends { role: string | EUserPermissions
     memberDetailsMap,
     getMemberKey,
     (member) => String(member.role ?? ""),
+    (member) => member.created_at,
     filters.order_by
   );
 };

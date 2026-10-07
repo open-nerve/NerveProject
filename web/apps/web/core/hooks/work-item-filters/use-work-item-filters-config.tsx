@@ -23,10 +23,10 @@ import {
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
+import type { MemberUser } from "@nerve/api-client";
 import type {
   ICycle,
   IState,
-  IUserLite,
   TFilterConfig,
   IIssueLabel,
   IModule,
@@ -85,7 +85,7 @@ export type TWorkItemFiltersConfig = {
     [key in TWorkItemFilterProperty]?: TFilterConfig<TWorkItemFilterProperty>;
   };
   isFilterEnabled: (key: TWorkItemFilterProperty) => boolean;
-  members: IUserLite[];
+  members: MemberUser[];
 };
 
 export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps): TWorkItemFiltersConfig => {
@@ -102,10 +102,10 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
   const operatorConfigs = useFiltersOperatorConfigs({ workspaceSlug });
   const filtersToShow = useMemo(() => new Set(allowedFilters), [allowedFilters]);
   const project = useMemo(() => getProjectById(projectId), [projectId, getProjectById]);
-  const members: IUserLite[] | undefined = useMemo(
+  const members: MemberUser[] | undefined = useMemo(
     () =>
       memberIds
-        ? (memberIds.map((memberId) => getUserDetails(memberId)).filter((member) => member) as IUserLite[])
+        ? (memberIds.map((memberId) => getUserDetails(memberId)).filter((member) => member) as MemberUser[])
         : undefined,
     [memberIds, getUserDetails]
   );

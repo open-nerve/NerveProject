@@ -5,28 +5,20 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // local imports
-import { HomeLoader, NoProjectsEmptyState, RecentActivityWidget } from "./widgets";
+import { HomeLoader, NoProjectsEmptyState } from "./widgets";
 
-/** The home body is a fixed list (M1 design 3.14): the no-projects empty state and the recent visits. */
+/**
+ * The home body (M1 design 3.14) is the no-projects empty state once the projects are loaded. The recent visits come
+ * back with M7 (M3 design 3.1).
+ */
 export const HomeBody = observer(function HomeBody() {
-  // router
-  const { workspaceSlug } = useParams();
   // store hooks
   const { loader } = useProject();
 
-  if (!workspaceSlug) return null;
   if (loader !== "loaded") return <HomeLoader />;
 
-  return (
-    <div className="relative flex h-full w-full flex-col gap-7">
-      <NoProjectsEmptyState />
-      <div className="py-4">
-        <RecentActivityWidget workspaceSlug={workspaceSlug} />
-      </div>
-    </div>
-  );
+  return <NoProjectsEmptyState />;
 });

@@ -9,25 +9,6 @@ import type { IIssueFiltersResponse } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 
 export class IssueFiltersService extends APIService {
-  // // workspace issue filters
-  // async fetchWorkspaceFilters(workspaceSlug: string): Promise<IIssueFiltersResponse> {
-  //   return this.get(`/api/workspaces/${workspaceSlug}/user-properties/`)
-  //     .then((response) => response?.data)
-  //     .catch((error) => {
-  //       throw error?.response?.data;
-  //     });
-  // }
-  // async patchWorkspaceFilters(
-  //   workspaceSlug: string,
-  //   data: Partial<IIssueFiltersResponse>
-  // ): Promise<IIssueFiltersResponse> {
-  //   return this.patch(`/api/workspaces/${workspaceSlug}/user-properties/`, data)
-  //     .then((response) => response?.data)
-  //     .catch((error) => {
-  //       throw error?.response?.data;
-  //     });
-  // }
-
   // cycle issue filters
   async fetchCycleIssueFilters(
     workspaceSlug: string,
