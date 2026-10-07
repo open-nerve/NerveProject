@@ -34,11 +34,14 @@ vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 // At the top level, after the mocks: the first import of the stores compiles a few hundred modules, which must
 // happen as the file loads, not inside a test's 5 s (store-context.test.ts's beforeAll).
 const { RootStore } = await import("@/store/root.store");
+const { membershipOf } = await import("@/store/member/workspace/fake-members");
 
 const REFRESH = "/api/v0/auth/refresh";
 const ME = "/api/v0/me";
 const PROFILE = "/api/v0/me/profile";
 const WORKSPACES = "/api/v0/workspaces";
+const MEMBERS = "/api/v0/workspaces/acme/members";
+const PREFERENCES = "/api/v0/me/workspaces/acme/preferences";
 const X = "0123456789abcdef0123456789abcdef";
 /** The session of another account, Y, which another tab signs in to. */
 const Y = "fedcba9876543210fedcba9876543210";
@@ -120,27 +123,60 @@ describe("RootStore", () => {
     nerve.calls[1]?.answer(json(200, { data: [] }));
     await until(() => listed.settled, "X's list");
     expect(listed.value).toEqual([]);
+    // the stores under the workspaces' and the members' roots too: acme's members, and X's settings there
+    const ann = membershipOf("ann");
+    const members = track(x.memberRoot.workspace.fetchWorkspaceMembers("acme"));
+    await until(() => nerve.calls.length === 3, "X's members");
+    expect(nerve.calls[2]).toMatchObject({ method: "GET", path: MEMBERS, authorization: "Bearer at-1" });
+    nerve.calls[2]?.answer(json(200, { data: [ann] }));
+    await until(() => members.settled, "X's members");
+    expect(members.value).toEqual([ann]);
+    const tabbed = { navigation_control_preference: "TABBED", navigation_project_limit: 3 };
+    const settings = track(x.workspaceRoot.preferences.fetchPreferences("acme"));
+    await until(() => nerve.calls.length === 4, "X's settings");
+    expect(nerve.calls[3]).toMatchObject({ method: "GET", path: PREFERENCES, authorization: "Bearer at-1" });
+    nerve.calls[3]?.answer(json(200, tabbed));
+    await until(() => settings.settled, "X's settings");
+    expect(x.workspaceRoot.preferences.getPreferences("acme")).toEqual(tabbed);
 
     await followY();
     const y = new RootStore(apiFor(Y), x);
+    // the stores built for Y hold nothing X's fetched
+    expect(y.memberRoot.workspace.workspaceMemberMap).toEqual({});
+    expect(y.workspaceRoot.preferences.getPreferences("acme")).toBeUndefined();
     const named = track(y.user.updateCurrentUser({ first_name: "Yvonne" }));
-    await until(() => nerve.calls.length === 3, "Y's refresh");
-    expect(nerve.calls[2]).toMatchObject({ path: REFRESH, body: { refresh_token: "rt-y" } });
-    nerve.calls[2]?.answer(json(200, nerve.tokens()));
-    await until(() => nerve.calls.length === 4, "Y's request");
-    expect(nerve.calls[3]).toMatchObject({ method: "PATCH", path: ME, authorization: "Bearer at-2" });
-    nerve.calls[3]?.answer(json(200, { first_name: "Yvonne" }));
+    await until(() => nerve.calls.length === 5, "Y's refresh");
+    expect(nerve.calls[4]).toMatchObject({ path: REFRESH, body: { refresh_token: "rt-y" } });
+    nerve.calls[4]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 6, "Y's request");
+    expect(nerve.calls[5]).toMatchObject({ method: "PATCH", path: ME, authorization: "Bearer at-2" });
+    nerve.calls[5]?.answer(json(200, { first_name: "Yvonne" }));
     await until(() => named.settled, "Y's answer");
     expect(named.error).toBeUndefined();
+    const yMembers = track(y.memberRoot.workspace.fetchWorkspaceMembers("acme"));
+    await until(() => nerve.calls.length === 7, "Y's members");
+    expect(nerve.calls[6]).toMatchObject({ method: "GET", path: MEMBERS, authorization: "Bearer at-2" });
+    nerve.calls[6]?.answer(json(200, { data: [ann] }));
+    await until(() => yMembers.settled, "Y's members");
+    expect(yMembers.value).toEqual([ann]);
+    // nerve's defaults: Y has changed none of his settings in acme
+    const defaults = { navigation_control_preference: "ACCORDION", navigation_project_limit: 10 };
+    const ySettings = track(y.workspaceRoot.preferences.fetchPreferences("acme"));
+    await until(() => nerve.calls.length === 8, "Y's settings");
+    expect(nerve.calls[7]).toMatchObject({ method: "GET", path: PREFERENCES, authorization: "Bearer at-2" });
+    nerve.calls[7]?.answer(json(200, defaults));
+    await until(() => ySettings.settled, "Y's settings");
+    expect(y.workspaceRoot.preferences.getPreferences("acme")).toEqual(defaults);
+    expect(x.workspaceRoot.preferences.getPreferences("acme")).toEqual(tabbed);
 
     // X's stores send nothing now: their client is bound to X.
     const stepped = track(x.user.userProfile.updateUserProfile({ onboarding_step: { profile_complete: true } }));
-    await until(() => stepped.settled || nerve.calls.length > 4, "X's answer, or a request");
+    await until(() => stepped.settled || nerve.calls.length > 8, "X's answer, or a request");
     expect(stepped.error).toBeInstanceOf(SessionChangedError);
     const created = track(x.workspaceRoot.createWorkspace({ name: "Gamma", slug: "gamma" }));
-    await until(() => created.settled || nerve.calls.length > 4, "X's answer, or a request");
+    await until(() => created.settled || nerve.calls.length > 8, "X's answer, or a request");
     expect(created.error).toBeInstanceOf(SessionChangedError);
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(nerve.calls).toHaveLength(4);
+    expect(nerve.calls).toHaveLength(8);
   });
 });

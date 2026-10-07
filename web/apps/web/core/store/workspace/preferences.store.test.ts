@@ -8,6 +8,7 @@ import type { ApiClient, WorkspacePreferences } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
 import { WorkspacePreferencesStore } from "@/store/workspace/preferences.store";
 
@@ -20,20 +21,35 @@ const defaults: WorkspacePreferences = { navigation_control_preference: "ACCORDI
 const tabbed: WorkspacePreferences = { navigation_control_preference: "TABBED", navigation_project_limit: 10 };
 /** nerve's answer to the change to tabs, once another tab of his has set the limit to 3. */
 const elsewhere: WorkspacePreferences = { navigation_control_preference: "TABBED", navigation_project_limit: 3 };
+/** The caller's settings in another workspace of his, where the sidebar shows every project. */
+const all: WorkspacePreferences = { navigation_control_preference: "ACCORDION", navigation_project_limit: 0 };
 
-/** The store of a tab; client builds its client. */
+/** The store of a tab and its client; client builds the client. */
 function preferencesStore(client: (nerve: FakeNerve) => ApiClient = (nerve) => nerve.client()) {
   const nerve = new FakeNerve();
-  return { nerve, store: new WorkspacePreferencesStore(client(nerve)) };
+  const api = client(nerve);
+  return { nerve, api, store: new WorkspacePreferencesStore(api) };
+}
+
+/** The store fetches the caller's settings in the workspace slug names (acme unless it says), and nerve gives these. */
+async function load(
+  nerve: FakeNerve,
+  store: WorkspacePreferencesStore,
+  preferences: WorkspacePreferences,
+  slug = "acme"
+) {
+  const at = nerve.calls.length;
+  const fetched = store.fetchPreferences(slug);
+  await until(() => nerve.calls.length === at + 1, "the settings");
+  expect(nerve.calls[at]).toMatchObject({ method: "GET", path: `/api/v0/me/workspaces/${slug}/preferences` });
+  nerve.calls[at]?.answer(json(200, preferences));
+  return settle(fetched, "the settings");
 }
 
 /** A store whose settings in acme nerve gave as its defaults. */
 async function loaded() {
   const tab = preferencesStore();
-  const fetched = tab.store.fetchPreferences("acme");
-  await until(() => tab.nerve.calls.length === 1, "the settings");
-  tab.nerve.calls[0]?.answer(json(200, defaults));
-  await settle(fetched, "the settings");
+  await load(tab.nerve, tab.store, defaults);
   return tab;
 }
 
@@ -67,12 +83,37 @@ describe("WorkspacePreferencesStore", () => {
     expect(store.preferencesMap).toEqual({});
   });
 
+  it("fails when nerve refuses them again, keeping the settings it had", async () => {
+    const { nerve, store } = await loaded();
+    const refused = track(store.fetchPreferences("acme"));
+    await until(() => nerve.calls.length === 2, "the settings again");
+    expect(nerve.calls[1]).toMatchObject({ method: "GET", path: PREFERENCES });
+    nerve.calls[1]?.answer(problem(503, "server_busy"));
+    await until(() => refused.settled, "the refusal");
+    expect(refused.error).toBeInstanceOf(ApiError);
+    expect(store.getPreferences("acme")).toEqual(defaults);
+  });
+
   it("gives nothing, and does not fail, when the session changes as it fetches", async () => {
     const { nerve, store } = preferencesStore((fake) => fake.replacedSessionClient());
     const fetched = await settle(store.fetchPreferences("acme"), "the fetch");
     expect(fetched).toEqual({ settled: true, value: undefined });
     expect(nerve.calls).toEqual([]);
     expect(store.preferencesMap).toEqual({});
+  });
+
+  it("keeps the settings it had when the session changes as it fetches them again", async () => {
+    const { nerve, api, store } = await loaded();
+    // another session has replaced the store's: its requests fail before they are sent (auth-middleware.ts)
+    api.use({
+      onRequest: () => {
+        throw new SessionChangedError();
+      },
+    });
+    const fetched = await settle(store.fetchPreferences("acme"), "the fetch");
+    expect(fetched).toEqual({ settled: true, value: undefined });
+    expect(nerve.calls).toHaveLength(1);
+    expect(store.getPreferences("acme")).toEqual(defaults);
   });
 
   it("has nerve's answer to a change, not the change, and only once nerve answers", async () => {
@@ -101,15 +142,31 @@ describe("WorkspacePreferencesStore", () => {
     expect(store.getPreferences("acme")).toEqual(defaults);
   });
 
+  it("keeps each workspace's settings apart: a change or a fetch in one leaves the other's", async () => {
+    const { nerve, store } = await loaded();
+    await load(nerve, store, all, "beta");
+    const changed = track(store.updatePreferences("acme", { navigation_control_preference: "TABBED" }));
+    await until(() => nerve.calls.length === 3, "the change");
+    expect(nerve.calls[2]).toMatchObject({ method: "PATCH", path: PREFERENCES });
+    nerve.calls[2]?.answer(json(200, elsewhere));
+    await until(() => changed.settled, "the answer");
+    expect(store.getPreferences("acme")).toEqual(elsewhere);
+    expect(store.getPreferences("beta")).toEqual(all);
+    await load(nerve, store, tabbed, "beta");
+    expect(store.getPreferences("beta")).toEqual(tabbed);
+    expect(store.getPreferences("acme")).toEqual(elsewhere);
+  });
+
   it("sends each change once nerve has answered the one before it, refused or not", async () => {
     const { nerve, store } = await loaded();
-    const first = track(store.updatePreferences("acme", { navigation_project_limit: 3 }));
+    const first = track(store.updatePreferences("acme", { navigation_project_limit: 5 }));
     const second = track(store.updatePreferences("acme", { navigation_control_preference: "TABBED" }));
     await inTurn(nerve, 1, ["PATCH", PREFERENCES], problem(503, "server_busy"));
-    await inTurn(nerve, 2, ["PATCH", PREFERENCES], json(200, tabbed));
+    await inTurn(nerve, 2, ["PATCH", PREFERENCES], json(200, elsewhere));
     await until(() => second.settled, "the last change");
     expect(first.error).toBeInstanceOf(ApiError);
-    expect(store.getPreferences("acme")).toEqual(tabbed);
+    // nerve's answer, not a change sent: its limit is neither the refused 5 nor the loaded 10
+    expect(store.getPreferences("acme")).toEqual(elsewhere);
   });
 
   it("fetches the settings while a change is out: a fetch does not wait for it", async () => {
