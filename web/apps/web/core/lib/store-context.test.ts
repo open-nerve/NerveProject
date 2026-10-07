@@ -317,14 +317,15 @@ describe("store-context", () => {
     expect(page.languages).toEqual(["en"]);
   });
 
-  it("releases a retired session's reactions: the address's next workspace reaches the new stores only", async () => {
+  it("releases a retired session's project filters: the address's next workspace reaches the new session's filters only", async () => {
     const { context, signedIn, follow } = await load();
     await signedIn();
     const x = context.rootStore;
     await follow(Y);
     const y = context.rootStore;
     // The address's parameters are the page's: Y's stores go on with X's RouterStore, which X's project filters
-    // followed (project_filter.store.ts).
+    // followed (project_filter.store.ts). The project filters' reaction is the one RootStore.dispose releases; the
+    // cycle and module filters' and the issue root's are M6's and M4's (M3 design 7.1, 13.2).
     expect(y.router).toBe(x.router);
     x.projectRoot.projectFilter.updateSearchQuery("x");
     y.projectRoot.projectFilter.updateSearchQuery("y");

@@ -44,8 +44,14 @@ describe("useSessionSWR", () => {
     const config = { revalidateOnFocus: false };
     useSessionSWR(["WORKSPACE_MEMBERS", "acme"], fetchList, config);
     expect(swr.calls).toEqual([[["WORKSPACE_MEMBERS", "x", "acme"], expect.any(Function), config]]);
-    expect(swr.calls[0]?.[1](["WORKSPACE_MEMBERS", "x", "acme"])).toBe(answer);
-    expect(given).toEqual([["acme"]]);
+    // The tab follows another session: the same fetch is keyed by that session's loginId.
+    tab.session = { status: "signed-in", loginId: "y" };
+    useSessionSWR(["WORKSPACE_MEMBERS", "acme"], fetchList, config);
+    expect(swr.calls[1]).toEqual([["WORKSPACE_MEMBERS", "y", "acme"], expect.any(Function), config]);
+    // SWR calls each fetcher with the key it was handed: the fetcher gives the store's Promise, for the fetch's
+    // arguments only.
+    for (const [key, fetcher] of swr.calls) expect(key && fetcher(key)).toBe(answer);
+    expect(given).toEqual([["acme"], ["acme"]]);
   });
 
   it("fetches nothing for no fetch, nor before the tab is signed in", () => {
