@@ -7,7 +7,6 @@
 import type { ReactNode } from "react";
 import { observer } from "mobx-react";
 import { Navigate, useLocation, useSearchParams } from "react-router";
-import useSWR from "swr";
 // nerve imports
 import type { Profile } from "@nerve/api-client";
 import { isValidNextPath, signInPath } from "@nerve/utils";
@@ -21,6 +20,7 @@ import { useUser, useUserProfile } from "@/hooks/store/user";
 // lib
 import { tokenManager } from "@/lib/auth/api-client";
 import { useSession } from "@/lib/auth/use-session";
+import { useSessionSWR } from "@/lib/use-session-swr";
 
 type TAuthenticationWrapper = {
   children: ReactNode;
@@ -62,11 +62,10 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
   // The account is fetched for each session: a sign-in here or in another tab, or another account (7.1).
   // A fetch cut by a change of session is no failure: fetchCurrentUser gives undefined, and the wrapper
   // renders again for the new session, with its new stores.
-  const { error, mutate } = useSWR(
-    session.status === "signed-in" ? ["CURRENT_USER", session.loginId] : null,
-    () => fetchCurrentUser(),
-    { revalidateOnFocus: false, shouldRetryOnError: false }
-  );
+  const { error, mutate } = useSessionSWR(["CURRENT_USER"], () => fetchCurrentUser(), {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  });
 
   if (session.status === "starting") return <Loading />;
   if (session.status === "unavailable")

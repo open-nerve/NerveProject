@@ -5,7 +5,6 @@
 
 import type { ReactNode } from "react";
 import { observer } from "mobx-react";
-import useSWR from "swr";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
@@ -15,7 +14,7 @@ import { APITokenSettingsLoader } from "@/components/ui/loader/settings/api-toke
 // hooks
 import { useApiTokens } from "@/hooks/store/user";
 // lib
-import { useSession } from "@/lib/auth/use-session";
+import { useSessionSWR } from "@/lib/use-session-swr";
 
 type Props = {
   /** What shows when the account has no token. */
@@ -29,17 +28,15 @@ type Props = {
 export const ApiTokenList = observer(function ApiTokenList(props: Props) {
   const { empty } = props;
   // store hooks
-  const session = useSession();
   const { tokens, fetchTokens } = useApiTokens();
   const { t } = useTranslation();
 
   // The list is fetched for each session, into the store of its own RootStore (M2 design 7.1): another account
   // or another sign-in is another key, and nothing of the list before shows.
-  const { error, isValidating, mutate } = useSWR(
-    session.status === "signed-in" ? ["API_TOKENS", session.loginId] : null,
-    () => fetchTokens(),
-    { revalidateOnFocus: false, shouldRetryOnError: false }
-  );
+  const { error, isValidating, mutate } = useSessionSWR(["API_TOKENS"], () => fetchTokens(), {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  });
 
   if (tokens === undefined)
     return error && !isValidating ? (

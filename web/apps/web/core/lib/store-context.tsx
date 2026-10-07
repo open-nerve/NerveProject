@@ -41,13 +41,16 @@ export const snapshot = (): RootStore => rootStore;
  * A new session starts: the tab signed out or in, or followed another tab's sign-in, maybe as another account.
  * It gets a new RootStore, and the app renders again with it: nothing of the account shown before stays on
  * screen. The stores left behind keep their own RootStore, whose account's stores and client are the
- * old session's: nothing they still do reaches the new one. The language was the account's: the new session shows
- * the default until its profile sets it. The theme follows the session in StoreWrapper.
+ * old session's: nothing they still do reaches the new one, and what they registered on the page's stores is
+ * released (dispose). The language was the account's: the new session shows the default until its profile sets
+ * it. The theme follows the session in StoreWrapper.
  */
 function startSession(next: string | undefined): void {
   loginId = next;
   void setLanguage(FALLBACK_LANGUAGE);
-  rootStore = new RootStore(apiFor(next), rootStore);
+  const retired = rootStore;
+  rootStore = new RootStore(apiFor(next), retired);
+  retired.dispose();
   for (const listener of listeners) listener();
 }
 

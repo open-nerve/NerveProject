@@ -116,4 +116,13 @@ export class RootStore {
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
   }
+
+  /**
+   * Releases what the stores of this session registered on the page's stores, which go on with the next session
+   * (v0 design 7.7, M3 design 7.1): the project filters' reaction to the address's workspace. store-context.tsx
+   * calls it as the next session's RootStore takes over, so that nothing of a retired session runs again.
+   */
+  dispose(): void {
+    this.projectRoot.projectFilter.dispose();
+  }
 }

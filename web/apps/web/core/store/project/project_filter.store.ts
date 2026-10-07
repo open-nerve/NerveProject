@@ -30,6 +30,8 @@ export interface IProjectFilterStore {
   updateSearchQuery: (query: string) => void;
   clearAllFilters: (workspaceSlug: string) => void;
   clearAllAppliedDisplayFilters: (workspaceSlug: string) => void;
+  /** Stops following the address's workspace: the RouterStore it follows outlives the session (RootStore.dispose). */
+  dispose: () => void;
 }
 
 export class ProjectFilterStore implements IProjectFilterStore {
@@ -39,6 +41,7 @@ export class ProjectFilterStore implements IProjectFilterStore {
   searchQuery: string = "";
   // root store
   rootStore: RootStore;
+  dispose: () => void;
 
   constructor(_rootStore: RootStore) {
     makeObservable(this, {
@@ -60,7 +63,7 @@ export class ProjectFilterStore implements IProjectFilterStore {
     // root store
     this.rootStore = _rootStore;
     // initialize display filters of the current workspace
-    reaction(
+    this.dispose = reaction(
       () => this.rootStore.router.workspaceSlug,
       (workspaceSlug) => {
         if (!workspaceSlug) return;
