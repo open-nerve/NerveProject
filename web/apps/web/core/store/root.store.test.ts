@@ -38,6 +38,7 @@ const { RootStore } = await import("@/store/root.store");
 const REFRESH = "/api/v0/auth/refresh";
 const ME = "/api/v0/me";
 const PROFILE = "/api/v0/me/profile";
+const WORKSPACES = "/api/v0/workspaces";
 const X = "0123456789abcdef0123456789abcdef";
 /** The session of another account, Y, which another tab signs in to. */
 const Y = "fedcba9876543210fedcba9876543210";
@@ -113,24 +114,33 @@ describe("RootStore", () => {
     nerve.calls[0]?.answer(json(200, { theme: "dark" }));
     await until(() => themed.settled, "X's answer");
     expect(themed.error).toBeUndefined();
+    const listed = track(x.workspaceRoot.fetchWorkspaces());
+    await until(() => nerve.calls.length === 2, "X's list");
+    expect(nerve.calls[1]).toMatchObject({ method: "GET", path: WORKSPACES, authorization: "Bearer at-1" });
+    nerve.calls[1]?.answer(json(200, { data: [] }));
+    await until(() => listed.settled, "X's list");
+    expect(listed.value).toEqual([]);
 
     await followY();
     const y = new RootStore(apiFor(Y), x);
     const named = track(y.user.updateCurrentUser({ first_name: "Yvonne" }));
-    await until(() => nerve.calls.length === 2, "Y's refresh");
-    expect(nerve.calls[1]).toMatchObject({ path: REFRESH, body: { refresh_token: "rt-y" } });
-    nerve.calls[1]?.answer(json(200, nerve.tokens()));
-    await until(() => nerve.calls.length === 3, "Y's request");
-    expect(nerve.calls[2]).toMatchObject({ method: "PATCH", path: ME, authorization: "Bearer at-2" });
-    nerve.calls[2]?.answer(json(200, { first_name: "Yvonne" }));
+    await until(() => nerve.calls.length === 3, "Y's refresh");
+    expect(nerve.calls[2]).toMatchObject({ path: REFRESH, body: { refresh_token: "rt-y" } });
+    nerve.calls[2]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 4, "Y's request");
+    expect(nerve.calls[3]).toMatchObject({ method: "PATCH", path: ME, authorization: "Bearer at-2" });
+    nerve.calls[3]?.answer(json(200, { first_name: "Yvonne" }));
     await until(() => named.settled, "Y's answer");
     expect(named.error).toBeUndefined();
 
     // X's stores send nothing now: their client is bound to X.
     const stepped = track(x.user.userProfile.updateUserProfile({ onboarding_step: { profile_complete: true } }));
-    await until(() => stepped.settled || nerve.calls.length > 3, "X's answer, or a request");
+    await until(() => stepped.settled || nerve.calls.length > 4, "X's answer, or a request");
     expect(stepped.error).toBeInstanceOf(SessionChangedError);
+    const created = track(x.workspaceRoot.createWorkspace({ name: "Gamma", slug: "gamma" }));
+    await until(() => created.settled || nerve.calls.length > 4, "X's answer, or a request");
+    expect(created.error).toBeInstanceOf(SessionChangedError);
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(nerve.calls).toHaveLength(3);
+    expect(nerve.calls).toHaveLength(4);
   });
 });

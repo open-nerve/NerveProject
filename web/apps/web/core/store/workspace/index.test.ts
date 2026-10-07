@@ -82,14 +82,16 @@ describe("WorkspaceRootStore, the list", () => {
 
   it("fetches the list while a change is out: a fetch does not wait for it", async () => {
     const { nerve, store } = await loaded();
+    // nerve lists one more than was loaded: the store holds the fetch's answer, which the refused change leaves alone
+    const listed = [acme, beta, workspaceOf("gamma")];
     await fetchedWhileChangeIsOut(
       nerve,
       () => store.updateWorkspace("acme", { name: "Acme Inc" }),
       () => store.fetchWorkspaces(),
       ["GET", LIST],
-      json(200, { data: [acme, beta] })
+      json(200, { data: listed })
     );
-    expect(store.workspaces).toEqual([acme, beta]);
+    expect(store.workspaces).toEqual(listed);
   });
 
   it("gives nothing, and does not fail, when the session changes as it fetches", async () => {
@@ -137,6 +139,8 @@ describe("WorkspaceRootStore, the changes", () => {
       path: "/api/v0/workspaces/acme",
       body: { name: "Acme Inc" },
     });
+    // until nerve answers, the list is as it was
+    expect(store.workspaces).toEqual([acme, beta]);
     nerve.calls[1]?.answer(json(200, renamed));
     await until(() => updated.settled, "the answer");
     expect(updated.value).toEqual(renamed);
