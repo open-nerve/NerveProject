@@ -15,8 +15,8 @@ import { useUser } from "@/hooks/store/user";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 
-// The workspaces and the invitations come back with the workspace API (M3): until then the page asks for
-// nothing of them when it opens (M2 design 3.1).
+// The workspaces come back with the workspace API (M3): until then the page asks for nothing of them when it
+// opens (M2 design 3.1).
 function OnboardingPage() {
   // store hooks
   const { data: user } = useUser();

@@ -2014,14 +2014,18 @@
           "  layout(\"./(all)/invitations/layout.tsx\", [route(\"invitations\", \"./(all)/invitations/page.tsx\")]),",
           "  async joinWorkspaces(data: any): Promise<any> {",
           "    return this.get(\"/api/users/me/workspaces/invitations/\")",
-          "import { WorkspaceCreateStep, WorkspaceJoinInvitesStep } from \"./\";"
+          "import { WorkspaceCreateStep, WorkspaceJoinInvitesStep } from \"./\";",
+          "  async userWorkspaceInvitations(): Promise<IWorkspaceMemberInvitation[]> {",
+          "      if (user?.id) return workspaceService.getUserWorkspaceInvitations();",
+          "  const [currentView, setCurrentView] = useState<ECreateOrJoinWorkspaceViews | null>(null);"
         ],
         "miss": [
           "    route(\"workspace-invitations\", \"./(all)/workspace-invitations/page.tsx\"),",
           "  return `/workspace-invitations?invitation_id=${id}&token=${token}`;",
           "    return this.post(`/api/workspaces/${workspaceSlug}/invitations/`, data)",
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/invitations\", { params: { path: { slug } } }));",
-          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })"
+          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
+          "  async joinWorkspace(workspaceSlug: string, invitationId: string, data: any): Promise<any> {"
         ],
         "files": {
           "hit": ["web/apps/web/app/routes/core.ts", "web/apps/web/core/components/power-k/config/account-commands.ts"],
