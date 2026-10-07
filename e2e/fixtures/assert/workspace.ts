@@ -208,7 +208,7 @@ export async function expectMembership(
   expect(rows, `the membership of ${email} in ${slug}`).toEqual(want === null ? [] : [want]);
 }
 
-/** The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7b adds the labels. */
+/** The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12). */
 export const workspaceTables = [
   "workspace_members",
   "workspace_member_invites",
@@ -217,12 +217,13 @@ export const workspaceTables = [
   "project_members",
   "project_user_properties",
   "states",
+  "labels",
 ] as const;
 
 /**
  * The tables whose rows a story can delete on their own before their workspace, which keep that moment: an
  * invitation, when it is accepted or deleted, or its address's membership ends (M3 design 3.8); a project, its
- * memberships, its members' display settings and its states, when the project is deleted (P4b).
+ * memberships, its members' display settings, its states and its labels, when the project is deleted (P4b, P7b).
  */
 export const deletedAloneTables: (typeof workspaceTables)[number][] = [
   "workspace_member_invites",
@@ -230,14 +231,15 @@ export const deletedAloneTables: (typeof workspaceTables)[number][] = [
   "project_members",
   "project_user_properties",
   "states",
+  "labels",
 ];
 
 /**
  * W2, W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by
  * the same account, every row under it that was not deleted before: its memberships, invitations and display
- * settings, its projects, their memberships, their members' display settings and their states. Each table has
- * such a row; none is left undeleted; each table of deletedAlone, whose rows the story deleted alone, has rows
- * deleted earlier, which kept their moment, and every row of the others carries the workspace's.
+ * settings, its projects, their memberships, their members' display settings, their states and their labels. Each
+ * table has such a row; none is left undeleted; each table of deletedAlone, whose rows the story deleted alone, has
+ * rows deleted earlier, which kept their moment, and every row of the others carries the workspace's.
  */
 export async function expectWorkspaceDeleted(
   db: Database,

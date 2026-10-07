@@ -10,6 +10,21 @@ import (
 	"uuid"
 )
 
+type Label struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	ParentID    *uuid.UUID
+	Name        string
+	Color       string
+	SortOrder   float64
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
 type Project struct {
 	ID                   uuid.UUID
 	WorkspaceID          uuid.UUID

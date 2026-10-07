@@ -12,6 +12,31 @@ import (
 	"uuid"
 )
 
+const deleteLabels = `-- name: DeleteLabels :exec
+UPDATE labels
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE workspace_id = $3 AND ($4::uuid IS NULL OR project_id = $4)
+  AND deleted_at IS NULL
+`
+
+type DeleteLabelsParams struct {
+	Now         time.Time
+	DeletedBy   uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   *uuid.UUID
+}
+
+// The parents and their children alike.
+func (q *Queries) DeleteLabels(ctx context.Context, arg DeleteLabelsParams) error {
+	_, err := q.db.Exec(ctx, deleteLabels,
+		arg.Now,
+		arg.DeletedBy,
+		arg.WorkspaceID,
+		arg.ProjectID,
+	)
+	return err
+}
+
 const deleteProjectMembers = `-- name: DeleteProjectMembers :exec
 UPDATE project_members
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid

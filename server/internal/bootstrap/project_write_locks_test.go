@@ -44,7 +44,7 @@ type projectWrite struct {
 
 // underRow is a row under a project, one a phase: in table, the row whose
 // column by is the phase's key, an account's name for a membership
-// (member_id), a state's name for a state (name).
+// (member_id), a state's or a label's name for a state or a label (name).
 type underRow struct {
 	table, by string
 	keys      [2]string
@@ -59,9 +59,13 @@ func membershipsOf(a, b string) underRow {
 // stateNamed is the state name of each phase's project.
 func stateNamed(name string) underRow { return underRow{"states", "name", [2]string{name, name}} }
 
+// labelNamed is the label name of each phase's project.
+func labelNamed(name string) underRow { return underRow{"labels", "name", [2]string{name, name}} }
+
 // rowPaths are the paths that name a row under a project by its id, by
 // their beginning, and the parameter each names it by.
-var rowPaths = map[string]string{"/api/v0/project-members/": "{project_member_id}", "/api/v0/states/": "{state_id}"}
+var rowPaths = map[string]string{"/api/v0/project-members/": "{project_member_id}", "/api/v0/states/": "{state_id}",
+	"/api/v0/labels/": "{label_id}"}
 
 // param is the parameter w's path names: a row's id for a path of one
 // (rowPaths), else the project's.
@@ -103,6 +107,11 @@ var projectWrites = []projectWrite{
 	// The state renamed before, deleted.
 	{op: "deleteState", method: http.MethodDelete, path: "/api/v0/states/%s", want: http.StatusNoContent, row: stateNamed("Checked")},
 	{op: "markDefaultState", method: http.MethodPost, path: "/api/v0/states/%s/mark-default", want: http.StatusNoContent, row: stateNamed("Done")},
+	{op: "createLabel", method: http.MethodPost, path: "/api/v0/projects/%s/labels", body: `{"name":"QA"}`, want: http.StatusCreated},
+	// The label made before, renamed.
+	{op: "updateLabel", method: http.MethodPatch, path: "/api/v0/labels/%s", body: `{"name":"Checked"}`, want: http.StatusOK, row: labelNamed("QA")},
+	// The label renamed before, deleted.
+	{op: "deleteLabel", method: http.MethodDelete, path: "/api/v0/labels/%s", want: http.StatusNoContent, row: labelNamed("Checked")},
 	// Last: it deletes the project every write before it needs.
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }
@@ -113,12 +122,12 @@ var projectWrites = []projectWrite{
 // level (a column of a project table, projectTables, that is no column of
 // the workspace level). The second takes in a write on a project addressed
 // by a row under it (P5b's /project-members/{project_member_id}, P7a's
-// /states/{state_id}) whose row names a project table's columns; a column
-// set of a row's own counts only once it is listed in projectTables, so a
-// new table of the project level goes there, one of the workspace level in
-// workspaceLevelTables, and neither into matrixTables alone
-// (TestEachMatrixTableIsOfOneLevel); not a workspace's write that the only
-// admin's table asks (leaveWorkspace).
+// /states/{state_id}, P7b's /labels/{label_id}) whose row names a project
+// table's columns; a column set of a row's own counts only once it is
+// listed in projectTables, so a new table of the project level goes there,
+// one of the workspace level in workspaceLevelTables, and neither into
+// matrixTables alone (TestEachMatrixTableIsOfOneLevel); not a workspace's
+// write that the only admin's table asks (leaveWorkspace).
 func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 	ofTheProjectLevel := func(c caller) bool {
 		return !slices.Contains(workspaceColumns, c) && slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) })
@@ -231,7 +240,7 @@ func lockOn(t *testing.T, pool *pgxpool.Pool, from string, args ...any) string {
 //     UPDATE, as every cascade over its projects does (3.3). The write on
 //     Web waits for that row, and meanwhile holds neither Web's row, nor
 //     its target's membership of acme, nor the row under Web it changes, a
-//     membership or a state: a FOR UPDATE NOWAIT of each succeeds.
+//     membership, a state or a label: a FOR UPDATE NOWAIT of each succeeds.
 //   - In its transaction, FOR SHARE, before its target and its project:
 //     another transaction holds Ops's row FOR NO KEY UPDATE. The write on
 //     Ops waits for it, and meanwhile holds acme's row at FOR SHARE, no

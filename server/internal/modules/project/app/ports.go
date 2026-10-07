@@ -348,4 +348,5 @@ type ProjectsDeleter interface {
 	DeleteProjectMembers(ctx context.Context, d Deletion) error
 	DeleteProjectPreferences(ctx context.Context, d Deletion) error
 	DeleteStates(ctx context.Context, d Deletion) error
+	DeleteLabels(ctx context.Context, d Deletion) error
 }

@@ -1,5 +1,13 @@
-import { createProject, createWorkspace, invite, inviteAndAccept, slugFor, type Workspace } from "../../fixtures/api";
-import { expectProjectCreated, expectProjectDeleted } from "../../fixtures/assert/project";
+import {
+  createLabel,
+  createProject,
+  createWorkspace,
+  invite,
+  inviteAndAccept,
+  slugFor,
+  type Workspace,
+} from "../../fixtures/api";
+import { expectLabels, expectProjectCreated, expectProjectDeleted, type LabelRow } from "../../fixtures/assert/project";
 import {
   deletedAloneTables,
   expectInvitations,
@@ -27,9 +35,9 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const slug = slugFor(testInfo);
   const other = slugFor(testInfo, "other");
   // Two workspaces alike, each with the member, a pending and a declined invitation, the member's settings and a
-  // project the admin created with the member its lead; only Acme is deleted. Both exist before either is
-  // furnished, and the member is Other's admin and Acme's member: each answer, role and row must be the
-  // workspace's own, whichever row the database reads first.
+  // project the admin created with the member its lead, which the member labelled; only Acme is deleted. Both exist
+  // before either is furnished, and the member is Other's admin and Acme's member: each answer, role and row must be
+  // the workspace's own, whichever row the database reads first.
   const [adminId, memberId] = await Promise.all([admin, member].map((token) => accountId(api, token)));
   const web = { name: "Web", identifier: "WEB", description: "", network: 2, timezone: "UTC", logo_props: {} };
   const otherWorkspace = await createWorkspace(api, admin, { name: "Other", slug: other });
@@ -63,18 +71,31 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     });
     expect(settings.response.status).toBe(200);
     // The answer is the workspace's own new project as its creator sees it, first in both admins' sidebars.
-    expect(
-      await createProject(api, admin, target, { name: "Web", identifier: "web", project_lead_id: memberId })
-    ).toMatchObject({
+    const project = await createProject(api, admin, target, {
+      name: "Web",
+      identifier: "web",
+      project_lead_id: memberId,
+    });
+    expect(project).toMatchObject({
       workspace_id: id,
       identifier: "WEB",
       member_role: 20,
       sort_order: 65535,
       member_ids: [adminId, memberId],
     });
+    // The member, Web's lead and so its admin, labels it: Bug, and UI under Bug.
+    const bug = await createLabel(api, member, project.id, { name: "Bug", color: "#EF4444" });
+    await createLabel(api, member, project.id, { name: "UI", parent_id: bug.id });
+    return project;
   };
-  await furnish(otherWorkspace, 20);
-  await furnish(acme, 15);
+  const otherWeb = await furnish(otherWorkspace, 20);
+  const acmeWeb = await furnish(acme, 15);
+  /** Web's labels, as the member made them; deleted by the admin, as Acme's deletion writes them. */
+  const webLabels = (deleted: boolean): LabelRow[] => [
+    { name: "Bug", color: "#EF4444", parent: null, sort_order: 65535, deleted, by: deleted ? adminEmail : memberEmail },
+    { name: "UI", color: "", parent: "Bug", sort_order: 75535, deleted, by: deleted ? adminEmail : memberEmail },
+  ];
+  await expectLabels(db, acmeWeb.id, webLabels(false));
   // The member reads Other as its admin, whatever becomes of Acme.
   const readOther = async () => {
     const read = await api.GET("/api/v0/workspaces/{slug}", {
@@ -140,8 +161,9 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   // A project deleted before the workspace keeps its moment, and so do its rows: Old, with the member its lead, so
   // that each project table has a row of it.
   const old = await createProject(api, admin, slug, { name: "Old", identifier: "OLD", project_lead_id: memberId });
-  // The member moves Old in his sidebar: his display settings in it are his own writing, which Old's deletion must
-  // write again as the admin's.
+  // The member moves Old in his sidebar and labels it: his display settings in it and its label are his own writing,
+  // which Old's deletion must write again as the admin's.
+  await createLabel(api, member, old.id, { name: "Bug" });
   const moved = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
     params: { path: { project_id: old.id } },
     body: { sort_order: 75535 },
@@ -156,6 +178,9 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
       [old.id, memberEmail]
     )
   ).toEqual([{ sort_order: 75535, by: memberEmail }]);
+  await expectLabels(db, old.id, [
+    { name: "Bug", color: "", parent: null, sort_order: 65535, deleted: false, by: memberEmail },
+  ]);
   const oldDeleted = await api.DELETE("/api/v0/projects/{project_id}", {
     params: { path: { project_id: old.id } },
     headers: bearer(admin),
@@ -165,6 +190,20 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const deleted = await api.DELETE("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(admin) });
   expect(deleted.response.status).toBe(204);
   await expectWorkspaceDeleted(db, slug, adminEmail, deletedAloneTables);
+  await expectLabels(db, acmeWeb.id, webLabels(true));
+  // Each of Web's labels carries Acme's deletion, its moment and its author: expectWorkspaceDeleted's counts cannot
+  // tell a label stamped earlier, as Old's Bug, deleted before, gives the labels an earlier row.
+  expect(
+    await db.query(
+      `SELECT l.name, l.deleted_at = w.deleted_at AS at_acmes_moment, l.updated_by_id = w.updated_by_id AS by_acmes_deleter
+         FROM labels l JOIN workspaces w ON w.id = l.workspace_id WHERE l.project_id = $1 ORDER BY l.sort_order`,
+      [acmeWeb.id]
+    ),
+    "when and by whom Web's labels were deleted"
+  ).toEqual([
+    { name: "Bug", at_acmes_moment: true, by_acmes_deleter: true },
+    { name: "UI", at_acmes_moment: true, by_acmes_deleter: true },
+  ]);
   // Old and every row under it keep its deletion: its moment and its author, the admin.
   await expectProjectDeleted(db, old.id, adminEmail);
   // The invitations accepted before keep the moment they were answered; the declined one goes with the pending
@@ -191,6 +230,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     navigation_control_preference: "ACCORDION",
     navigation_project_limit: 3,
   });
+  await expectLabels(db, otherWeb.id, webLabels(false));
   await readOther();
   const gone = await Promise.all(
     [admin, member].map((token) =>

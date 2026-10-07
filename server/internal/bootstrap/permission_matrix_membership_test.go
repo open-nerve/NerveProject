@@ -23,22 +23,16 @@ var (
 	cellProjectSoleAdmin      = cell{http.StatusConflict, "project.sole_admin"}
 )
 
-// ofMembership are the cells of a row of a write on a project membership:
-// the answers of PA, PM, PG, PM+WA, WA- and WM-公, and
-// project.member_not_found for the columns that do not see their project:
-// WM-私, WG-, P-前 and X.
+// ofMembership are the cells of a row of a write on a project membership
+// (projectCells), with project.member_not_found.
 func ofMembership(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
-	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
-		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: cellProjectMemberNotFound, callerGuestOnly: cellProjectMemberNotFound,
-		callerBefore: cellProjectMemberNotFound, callerNever: cellProjectMemberNotFound, callerRemoved: cellProjectMemberNotFound,
-		callerDeleted: cellProjectMemberNotFound}
+	return projectCells(cellProjectMemberNotFound, pa, pm, pg, pmwa, wa, wm)
 }
 
 // ofArchivedMembership are the cells of a row of a write on a membership of
-// the archived project: the answers of PA and of the workspace's member,
-// who sees the project, and project.member_not_found for X, who does not.
+// the archived project (archivedCells), with project.member_not_found.
 func ofArchivedMembership(pa, wm cell) map[caller]cell {
-	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: cellProjectMemberNotFound}
+	return archivedCells(cellProjectMemberNotFound, pa, wm)
 }
 
 // aMembership names, for a column, the membership of its project a row's

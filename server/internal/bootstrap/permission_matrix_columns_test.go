@@ -266,8 +266,8 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		}
 	}
 	// A row under a project that a path names by its id (underProject: a
-	// membership, a state) is one seeded in the column's project, from a
-	// column of a project table.
+	// membership, a state, a label) is one seeded in the column's project,
+	// from a column of a project table.
 	for _, under := range []struct {
 		op      apitest.Operation
 		what    string
@@ -281,6 +281,8 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		}, s.projectMember("acme/public", callerProjectMember)},
 		{apitest.Operation{ID: "updateState", Tags: []string{"project"}, Method: http.MethodPatch, Path: "/api/v0/states/{state_id}"}, "state",
 			func(c caller, s seeded) uuid.UUID { return s.state(projectOf(c), "Todo") }, s.state("acme/public", "Todo")},
+		{apitest.Operation{ID: "updateLabel", Tags: []string{"project"}, Method: http.MethodPatch, Path: "/api/v0/labels/{label_id}"}, "label",
+			func(c caller, s seeded) uuid.UUID { return s.label(projectOf(c), "Bug") }, s.label("acme/public", "Bug")},
 	} {
 		prefix, param := path.Split(under.op.Path)
 		changes := matrixRow{op: under.op.ID, write: true, columns: projectColumns, cells: cells,
@@ -345,9 +347,14 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 	if want := "no membership of acme/public by never a member is seeded"; failed != want {
 		t.Errorf("a project membership never seeded: failed with %q, want %q", failed, want)
 	}
-	// And a state never seeded.
+	// A state never seeded.
 	failed = fatalOf(func(tb testing.TB) { newSeeded().in(tb).state("acme/public", "Triaged") })
 	if want := "no state Triaged of acme/public is seeded"; failed != want {
 		t.Errorf("a state never seeded: failed with %q, want %q", failed, want)
+	}
+	// And a label never seeded.
+	failed = fatalOf(func(tb testing.TB) { newSeeded().in(tb).label("acme/public", "Bugs") })
+	if want := "no label Bugs of acme/public is seeded"; failed != want {
+		t.Errorf("a label never seeded: failed with %q, want %q", failed, want)
 	}
 }

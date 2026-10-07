@@ -13,9 +13,22 @@ import (
 )
 
 // projectNames are the constraints and indexes of the project module's
-// tables (M3 design 4.6–4.9), as TestConstraintAndIndexNames reads them:
-// the part of its want that the migrations 00010–00013 add.
+// tables (M3 design 4.6–4.10), as TestConstraintAndIndexNames reads them:
+// the part of its want that the migrations 00010–00014 add.
 var projectNames = []string{
+	"labels_created_by_id_fkey f n",
+	"labels_name_check c",
+	"labels_not_own_parent_check c",
+	"labels_parent_id_fkey f c",
+	"labels_parent_id_idx i",
+	"labels_pkey iu",
+	"labels_pkey p",
+	"labels_project_id_fkey f c",
+	"labels_project_id_idx i",
+	"labels_project_id_name_key iuw",
+	"labels_updated_by_id_fkey f n",
+	"labels_workspace_id_fkey f c",
+	"labels_workspace_id_idx i",
 	"project_members_created_by_id_fkey f n",
 	"project_members_member_id_fkey f c",
 	"project_members_member_id_idx iw",
@@ -71,7 +84,7 @@ var projectNames = []string{
 }
 
 // The project tables' CHECKs accept what the domain writes and reject what
-// bypasses it (M3 design 3.17, 3.19, 4.6–4.9). projects_logo_props_check
+// bypasses it (M3 design 3.16, 3.17, 3.19, 4.6–4.10). projects_logo_props_check
 // takes five valid values, the four of 4.6 and the web app's create body,
 // and refuses twenty counterexamples: the ten of 4.6, Codex S5's two among
 // them; one for each conjunct those ten leave untried (the emoji's keys and
@@ -94,6 +107,7 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 		"INSERT INTO project_user_properties (id, workspace_id, project_id, user_id) VALUES (gen_random_uuid(), " + workspace + ", " + project +
 			", " + user + ")",
 		"INSERT INTO states (id, workspace_id, project_id, name, color) VALUES (gen_random_uuid(), " + workspace + ", " + project + ", 'Backlog', '#60646C')",
+		"INSERT INTO labels (id, workspace_id, project_id, name) VALUES (gen_random_uuid(), " + workspace + ", " + project + ", 'Bug')",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -186,6 +200,8 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 		{"empty state name", "UPDATE states SET name = ''", "states_name_check"},
 		{"unknown group", `UPDATE states SET "group" = 'other'`, "states_group_check"},
 		{"upper-case group", `UPDATE states SET "group" = 'Backlog'`, "states_group_check"},
+		{"empty label name", "UPDATE labels SET name = ''", "labels_name_check"},
+		{"a label its own parent", "UPDATE labels SET parent_id = id", "labels_not_own_parent_check"},
 	}
 	// Each of Plane's forbidden characters in a name (M3 design 3.19).
 	for _, c := range "&+,:;$^}{*=?@#|'<>.()%!-" {
@@ -206,11 +222,12 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 
 // The project tables' partial unique keys hold among undeleted rows only:
 // a second undeleted row with the key is refused, and soft-deleting the
-// first frees the key (M3 design 3.17, 3.19, 4.6–4.9). Another workspace,
-// project or account holds keys of its own: a key short of a column
-// refuses one of the seeds. A project's or a state's name that differs
-// from another in case only is another name, as in Plane (3.17, 3.19): a
-// key that folds case refuses one of the seeds too.
+// first frees the key (M3 design 3.16, 3.17, 3.19, 4.6–4.10). Another
+// workspace, project or account holds keys of its own: a key short of a
+// column refuses one of the seeds. A project's or a state's name that
+// differs from another in case only is another name, as in Plane (3.17,
+// 3.19): a key that folds case refuses one of the seeds too. A label's is
+// the same name (3.16): a key that does not fold case takes it.
 func TestProjectUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -233,6 +250,9 @@ func TestProjectUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 		return fmt.Sprintf(`INSERT INTO states (id, workspace_id, project_id, name, color, "group", "default") VALUES (gen_random_uuid(), %s, %s, '%s', '#60646C', '%s', %t)`,
 			acme, project, name, group, isDefault)
 	}
+	label := func(project, name string) string {
+		return "INSERT INTO labels (id, workspace_id, project_id, name) VALUES (gen_random_uuid(), " + acme + ", " + project + ", '" + name + "')"
+	}
 	for _, stmt := range []string{
 		"INSERT INTO users (id, email, password, display_name) VALUES (" + alice + ", 'alice@corp.com', 'x', 'alice'), (" + bob + ", 'bob@corp.com', 'x', 'bob')",
 		"INSERT INTO workspaces (id, name, slug) VALUES (" + acme + ", 'Acme', 'acme'), (" + beta + ", 'Beta', 'beta')",
@@ -250,6 +270,8 @@ func TestProjectUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 		state(web, "Backlog", "backlog", true), state(web, "Triage", "triage", false), state(web, "Todo", "unstarted", false),
 		state(web, "todo", "unstarted", false),
 		state(ops, "Backlog", "backlog", true), state(ops, "Triage", "triage", false), state(ops, "Todo", "unstarted", false),
+		// web's Bug; ops has its own.
+		label(web, "Bug"), label(ops, "Bug"),
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -270,6 +292,8 @@ func TestProjectUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 			`UPDATE states SET deleted_at = now() WHERE "default" AND project_id = ` + web, "states_project_id_default_key"},
 		{"a project's triage state", state(web, "Intake", "triage", false),
 			`UPDATE states SET deleted_at = now() WHERE "group" = 'triage' AND project_id = ` + web, "states_project_id_triage_key"},
+		{"a label's name in a project, in another case", label(web, "bug"),
+			"UPDATE labels SET deleted_at = now() WHERE name = 'Bug' AND project_id = " + web, "labels_project_id_name_key"},
 	}
 	// Any case can run first: each soft-deletes rows of its own table only,
 	// and none of those rows is another case's key.

@@ -295,7 +295,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a workspace
-         * @description For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings and states are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+         * @description For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states and labels are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
          */
         delete: operations["deleteWorkspace"];
         options?: never;
@@ -605,7 +605,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a project
-         * @description For the project's admins, and its members who are the workspace's admins; an archived project is deleted as any other. The project is deleted with its memberships, its members' display settings and its states, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project is deleted as any other. The project is deleted with its memberships, its members' display settings, its states and its labels, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.
          */
         delete: operations["deleteProject"];
         options?: never;
@@ -861,6 +861,60 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v0/projects/{project_id}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a project's labels
+         * @description For the project's active members: its labels, those at the top and those under them alike, by sort order, the lowest first, then by id; an archived project's as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listLabels"];
+        put?: never;
+        /**
+         * Create a label in a project
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels are created as any other's. The name has 1–255 characters, not blank, without NUL; the color has at most 255, without NUL, and is empty when it is left out (validation_failed). The values are checked before the project is looked at. The parent, when it is given, is a label of the project at the top, not one under another: labels have two levels (parent_id not_allowed). The new label comes after the project's others: its sort order is the greatest of theirs plus 10000, or 65535 when the project has none; updateLabel moves it. The name may not be another undeleted label's of the project, in any case (project.label_name_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the workspace and project rows are locked, and the parent is checked after it.
+         */
+        post: operations["createLabel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/labels/{label_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A label's id (Label.id). */
+                label_id: components["parameters"]["LabelID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a label and the labels under it
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels are deleted as any other's. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. The label and the labels under it are deleted at the moment of the request, by the caller, and their names are free again in the project. The role is decided after the workspace and project rows are locked.
+         */
+        delete: operations["deleteLabel"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a label
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels change as any other's. The fields given change and the others stay; the values follow createLabel's rules, and the sort order is any number (validation_failed), checked before the label is looked at. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. A parent given is a label of the project at the top, not the label itself, and a label with labels under it takes none: labels have two levels (parent_id not_allowed); a null parent moves the label to the top. The name may not be another undeleted label's of the project, in any case (project.label_name_taken). The role is decided after the workspace and project rows are locked, and the parent is checked after it.
+         */
+        patch: operations["updateLabel"];
         trace?: never;
     };
     "/api/v0/me/projects/{project_id}/preferences": {
@@ -1542,6 +1596,57 @@ export interface components {
             /** @description The state's place among the project's states, the lowest first. */
             sequence?: number;
         };
+        /** @description A label of a project, at the top or under a label at the top. */
+        Label: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /**
+             * Format: uuid
+             * @description The label it is under; null for a label at the top.
+             */
+            parent_id: string | null;
+            name: string;
+            /** @description As the web app's color picker gives it, e.g. "#F59E0B"; empty for none. */
+            color: string;
+            /** @description The label's place among the project's labels, the lowest first. */
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        LabelList: {
+            data: components["schemas"]["Label"][];
+        };
+        LabelCreate: {
+            /** @description 1–255 characters, not blank; another undeleted label of the project may not have it, in any case. */
+            name: string;
+            /** @description At most 255 characters; empty when left out. */
+            color?: string;
+            /**
+             * Format: uuid
+             * @description A label of the project at the top, which the new label goes under; left out for a label at the top.
+             */
+            parent_id?: string;
+        };
+        /** @description Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top. */
+        LabelUpdate: {
+            /** @description 1–255 characters, not blank; another undeleted label of the project may not have it, in any case. */
+            name?: string;
+            /** @description At most 255 characters; empty for none. */
+            color?: string;
+            /**
+             * Format: uuid
+             * @description A label of the project at the top, not this one, which the label goes under; null for the top.
+             */
+            parent_id?: string | null;
+            /** @description The label's place among the project's labels, the lowest first. */
+            sort_order?: number;
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -1595,6 +1700,8 @@ export interface components {
         ProjectMemberID: string;
         /** @description A state's id (State.id). */
         StateID: string;
+        /** @description A label's id (Label.id). */
+        LabelID: string;
     };
     requestBodies: never;
     headers: never;
@@ -1668,6 +1775,10 @@ export type State = components['schemas']['State'];
 export type StateList = components['schemas']['StateList'];
 export type StateCreate = components['schemas']['StateCreate'];
 export type StateUpdate = components['schemas']['StateUpdate'];
+export type Label = components['schemas']['Label'];
+export type LabelList = components['schemas']['LabelList'];
+export type LabelCreate = components['schemas']['LabelCreate'];
+export type LabelUpdate = components['schemas']['LabelUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -1680,6 +1791,7 @@ export type ParameterInvitationId = components['parameters']['InvitationID'];
 export type ParameterProjectId = components['parameters']['ProjectID'];
 export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
 export type ParameterStateId = components['parameters']['StateID'];
+export type ParameterLabelId = components['parameters']['LabelID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -2997,6 +3109,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StateList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listLabels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's labels. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelCreate"];
+            };
+        };
+        responses: {
+            /** @description The new label. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Label"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A label's id (Label.id). */
+                label_id: components["parameters"]["LabelID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The label and the labels under it are deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A label's id (Label.id). */
+                label_id: components["parameters"]["LabelID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelUpdate"];
+            };
+        };
+        responses: {
+            /** @description The label as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Label"];
                 };
             };
             default: components["responses"]["Problem"];

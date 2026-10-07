@@ -19,7 +19,7 @@ func newDelete() (*app.DeleteProject, *writeFixture) {
 }
 
 // deleted are the calls of bob's deletion of project: the locks, the
-// decision, the clock, the four steps on that project alone.
+// decision, the clock, the five steps on that project alone.
 func deleted(project uuid.UUID) []string {
 	return slices.Concat(lockedDecision(bob, project, domain.ActionDelete), []string{"Now"},
 		deletionSteps(acme.ID, project.String(), bob, clockNow))
@@ -80,7 +80,8 @@ func TestDeleteProjectReturnsEachFailure(t *testing.T) {
 		{"the members", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjectMembers": errDisk} }, 8},
 		{"the display settings", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjectPreferences": errDisk} }, 9},
 		{"the states", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteStates": errDisk} }, 10},
-		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 10},
+		{"the labels", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteLabels": errDisk} }, 11},
+		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 11},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

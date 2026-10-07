@@ -19,7 +19,8 @@ import (
 
 // UpdateState changes exactly the fields the patch gives of Web's default
 // state, Backlog, and the audit columns to the moment and the account
-// given, and answers the state as stored; every other column keeps its
+// given, and answers the state as stored, made at earlier and written at
+// that moment, each moment its own column's; every other column keeps its
 // value, the default flag too, which the column's default, false, would
 // not show, and every other state every column. A patch that gives
 // nothing changes the audit columns alone: it comes after one that gave
@@ -51,8 +52,9 @@ func TestUpdateState(t *testing.T) {
 		if after := columns(t, w.pool, "states", backlog); err != nil || !maps.Equal(after, want) {
 			t.Errorf("%s: UpdateState() = %v, the row %v\nwant %v", tt.name, err, after, want)
 		}
-		if stored, _, _ := w.s.StateByID(context.Background(), backlog); got != stored {
-			t.Errorf("%s: UpdateState() answered %+v; want the row as stored, %+v", tt.name, got, stored)
+		if stored, _, _ := w.s.StateByID(context.Background(), backlog); got != stored || !got.CreatedAt.Equal(earlier) ||
+			!got.UpdatedAt.Equal(now) {
+			t.Errorf("%s: UpdateState() answered %+v; want the row as stored, %+v, made at %v and written at %v", tt.name, got, stored, earlier, now)
 		}
 	}
 	if after := tableRows(t, w.pool, "states", backlog); after != others {

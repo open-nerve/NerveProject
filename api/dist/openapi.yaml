@@ -14,7 +14,7 @@ tags:
   - name: workspace
     description: Workspaces and their members.
   - name: project
-    description: Projects, their members and their states.
+    description: Projects, their members, their states and their labels.
 paths:
   /api/v0/auth/register:
     post:
@@ -450,7 +450,7 @@ paths:
       tags:
         - workspace
       summary: Delete a workspace
-      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings and states are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states and labels are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
       security:
         - bearer: []
       x-problem-codes:
@@ -949,7 +949,7 @@ paths:
       tags:
         - project
       summary: Delete a project
-      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings and its states, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings, its states and its labels, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
       security:
         - bearer: []
       x-problem-codes:
@@ -1289,6 +1289,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StateList'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/labels:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listLabels
+      tags:
+        - project
+      summary: List a project's labels
+      description: 'For the project''s active members: its labels, those at the top and those under them alike, by sort order, the lowest first, then by id; an archived project''s as any other''s. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '200':
+          description: The project's labels.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createLabel
+      tags:
+        - project
+      summary: Create a label in a project
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project''s labels are created as any other''s. The name has 1–255 characters, not blank, without NUL; the color has at most 255, without NUL, and is empty when it is left out (validation_failed). The values are checked before the project is looked at. The parent, when it is given, is a label of the project at the top, not one under another: labels have two levels (parent_id not_allowed). The new label comes after the project''s others: its sort order is the greatest of theirs plus 10000, or 65535 when the project has none; updateLabel moves it. The name may not be another undeleted label''s of the project, in any case (project.label_name_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the workspace and project rows are locked, and the parent is checked after it.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.not_found
+        - forbidden
+        - project.label_name_taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelCreate'
+      responses:
+        '201':
+          description: The new label.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/labels/{label_id}:
+    parameters:
+      - $ref: '#/components/parameters/LabelID'
+    patch:
+      operationId: updateLabel
+      tags:
+        - project
+      summary: Change a label
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project''s labels change as any other''s. The fields given change and the others stay; the values follow createLabel''s rules, and the sort order is any number (validation_failed), checked before the label is looked at. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. A parent given is a label of the project at the top, not the label itself, and a label with labels under it takes none: labels have two levels (parent_id not_allowed); a null parent moves the label to the top. The name may not be another undeleted label''s of the project, in any case (project.label_name_taken). The role is decided after the workspace and project rows are locked, and the parent is checked after it.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.label_not_found
+        - forbidden
+        - project.label_name_taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelUpdate'
+      responses:
+        '200':
+          description: The label as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteLabel
+      tags:
+        - project
+      summary: Delete a label and the labels under it
+      description: For the project's admins, and its members who are the workspace's admins; an archived project's labels are deleted as any other's. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. The label and the labels under it are deleted at the moment of the request, by the caller, and their names are free again in the project. The role is decided after the workspace and project rows are locked.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.label_not_found
+        - forbidden
+      responses:
+        '204':
+          description: The label and the labels under it are deleted.
         default:
           $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
@@ -2627,6 +2725,96 @@ components:
         sequence:
           description: The state's place among the project's states, the lowest first.
           type: number
+    Label:
+      description: A label of a project, at the top or under a label at the top.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - project_id
+        - parent_id
+        - name
+        - color
+        - sort_order
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        parent_id:
+          description: The label it is under; null for a label at the top.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        name:
+          type: string
+        color:
+          description: As the web app's color picker gives it, e.g. "#F59E0B"; empty for none.
+          type: string
+        sort_order:
+          description: The label's place among the project's labels, the lowest first.
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    LabelList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+    LabelCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+          type: string
+        color:
+          description: At most 255 characters; empty when left out.
+          type: string
+        parent_id:
+          description: A label of the project at the top, which the new label goes under; left out for a label at the top.
+          type: string
+          format: uuid
+    LabelUpdate:
+      description: Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+          type: string
+        color:
+          description: At most 255 characters; empty for none.
+          type: string
+        parent_id:
+          description: A label of the project at the top, not this one, which the label goes under; null for the top.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sort_order:
+          description: The label's place among the project's labels, the lowest first.
+          type: number
     ProjectTab:
       description: A tab of a project's header.
       type: string
@@ -2742,6 +2930,14 @@ components:
       in: path
       required: true
       description: A state's id (State.id).
+      schema:
+        type: string
+        format: uuid
+    LabelID:
+      name: label_id
+      in: path
+      required: true
+      description: A label's id (Label.id).
       schema:
         type: string
         format: uuid

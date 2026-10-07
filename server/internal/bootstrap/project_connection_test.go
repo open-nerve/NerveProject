@@ -25,6 +25,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -153,8 +154,12 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 // completed group, and moves it to the started group, which the count of
 // its group refuses (409 project.state_last_in_group); she renames it
 // Checked, creates Done in the completed group, deletes Checked, which
-// counts the group again, and makes Done Web's default; carol, an admin,
-// leaves it; alice deletes both projects.
+// counts the group again, and makes Done Web's default; she creates the
+// label Bug in it, UI under Bug, and Icons under UI, which the parent's
+// read refuses (422: labels have two levels); she moves Bug under UI,
+// which the same read refuses, renames UI Widgets at the top, moves it
+// back under Bug, and deletes Bug, Widgets with it; carol, an admin,
+// leaves Web; alice deletes both projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()
@@ -198,12 +203,56 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		ID uuid.UUID `json:"id"`
 	}
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"QA","color":"#0EA5E9","group":"completed"}`, http.StatusCreated), &qa)
-	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict)
+	lastInGroup := send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict)
+	if got := refusalOf(t, []byte(lastInGroup), true); got != "project.state_last_in_group" {
+		t.Errorf("QA moved to the started group = %s; want project.state_last_in_group", lastInGroup)
+	}
 	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"name":"Checked"}`, http.StatusOK)
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"Done","color":"#46A758","group":"completed"}`, http.StatusCreated),
 		&done)
 	send(http.MethodDelete, "/api/v0/states/"+qa.ID.String(), r.alice, "", http.StatusNoContent)
 	send(http.MethodPost, "/api/v0/states/"+done.ID.String()+"/mark-default", r.alice, "", http.StatusNoContent)
+	var bug, ui struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Bug"}`, http.StatusCreated), &bug)
+	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"UI","parent_id":"`+bug.ID.String()+`"}`, http.StatusCreated), &ui)
+	// The parent's refusal of a parent under another label: labels have two
+	// levels.
+	const twoLevels = "validation_failed parent_id not_allowed: must be a label without a parent: labels have two levels"
+	icons := send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity)
+	if got := refusalOf(t, []byte(icons), true); got != twoLevels {
+		t.Errorf("Icons under UI = %s; want %s", icons, twoLevels)
+	}
+	bugUnderUI := send(http.MethodPatch, "/api/v0/labels/"+bug.ID.String(), r.alice, `{"parent_id":"`+ui.ID.String()+`"}`,
+		http.StatusUnprocessableEntity)
+	if got := refusalOf(t, []byte(bugUnderUI), true); got != twoLevels {
+		t.Errorf("Bug under UI = %s; want %s", bugUnderUI, twoLevels)
+	}
+	// UI, under Bug, renamed and moved to the top by a null parent.
+	var widgets struct {
+		ID       uuid.UUID  `json:"id"`
+		Name     string     `json:"name"`
+		ParentID *uuid.UUID `json:"parent_id"`
+	}
+	answer := send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"name":"Widgets","parent_id":null}`, http.StatusOK)
+	if decodeAnswer(t, answer, &widgets); widgets.ID != ui.ID || widgets.Name != "Widgets" || widgets.ParentID != nil {
+		t.Errorf("UI renamed Widgets at the top = %s; want UI, named Widgets, at the top", answer)
+	}
+	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"parent_id":"`+bug.ID.String()+`"}`, http.StatusOK)
+	send(http.MethodDelete, "/api/v0/labels/"+bug.ID.String(), r.alice, "", http.StatusNoContent)
+	// Bug and Widgets, which the move put back under it, deleted together,
+	// at one moment.
+	var bugDeleted, widgetsDeleted, widgetsParent string
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(b.deleted_at::text, 'undeleted'), coalesce(w.deleted_at::text, 'undeleted'),
+		coalesce(w.parent_id::text, 'none') FROM labels b, labels w WHERE b.id = $1 AND w.id = $2`, bug.ID, ui.ID).Scan(&bugDeleted,
+		&widgetsDeleted, &widgetsParent); err != nil {
+		t.Fatal(err)
+	}
+	if bugDeleted == "undeleted" || widgetsDeleted != bugDeleted || widgetsParent != bug.ID.String() {
+		t.Errorf("Bug deleted at %s, Widgets at %s, under %s; want both deleted at one moment, Widgets under Bug, %s", bugDeleted,
+			widgetsDeleted, widgetsParent, bug.ID)
+	}
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)

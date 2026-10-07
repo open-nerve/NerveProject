@@ -136,6 +136,56 @@ type IdentifierAvailability struct {
 	Available bool `json:"available"`
 }
 
+// Label A label of a project, at the top or under a label at the top.
+type Label struct {
+	// Color As the web app's color picker gives it, e.g. "#F59E0B"; empty for none.
+	Color     string    `json:"color"`
+	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+
+	// ParentID The label it is under; null for a label at the top.
+	ParentID  nullable.Nullable[uuid.UUID] `json:"parent_id"`
+	ProjectID uuid.UUID                    `json:"project_id"`
+
+	// SortOrder The label's place among the project's labels, the lowest first.
+	SortOrder   float64   `json:"sort_order"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	WorkspaceID uuid.UUID `json:"workspace_id"`
+}
+
+// LabelCreate defines model for LabelCreate.
+type LabelCreate struct {
+	// Color At most 255 characters; empty when left out.
+	Color *string `json:"color,omitempty"`
+
+	// Name 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+	Name string `json:"name"`
+
+	// ParentID A label of the project at the top, which the new label goes under; left out for a label at the top.
+	ParentID *uuid.UUID `json:"parent_id,omitempty"`
+}
+
+// LabelList defines model for LabelList.
+type LabelList struct {
+	Data []Label `json:"data"`
+}
+
+// LabelUpdate Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top.
+type LabelUpdate struct {
+	// Color At most 255 characters; empty for none.
+	Color *string `json:"color,omitempty"`
+
+	// Name 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+	Name *string `json:"name,omitempty"`
+
+	// ParentID A label of the project at the top, not this one, which the label goes under; null for the top.
+	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id,omitempty"`
+
+	// SortOrder The label's place among the project's labels, the lowest first.
+	SortOrder *float64 `json:"sort_order,omitempty"`
+}
+
 // LogoEmoji defines model for LogoEmoji.
 type LogoEmoji struct {
 	// URL The address of a custom emoji.
@@ -418,6 +468,9 @@ type StateUpdate struct {
 	Sequence *float64 `json:"sequence,omitempty"`
 }
 
+// LabelID defines model for LabelID.
+type LabelID = uuid.UUID
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
 
@@ -439,6 +492,9 @@ type ListProjectsParams struct {
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
+// UpdateLabelJSONRequestBody defines body for UpdateLabel for application/json ContentType.
+type UpdateLabelJSONRequestBody = LabelUpdate
+
 // UpdateProjectPreferencesJSONRequestBody defines body for UpdateProjectPreferences for application/json ContentType.
 type UpdateProjectPreferencesJSONRequestBody = ProjectPreferencesUpdate
 
@@ -447,6 +503,9 @@ type UpdateProjectMemberJSONRequestBody = ProjectMemberUpdate
 
 // UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
 type UpdateProjectJSONRequestBody = ProjectUpdate
+
+// CreateLabelJSONRequestBody defines body for CreateLabel for application/json ContentType.
+type CreateLabelJSONRequestBody = LabelCreate
 
 // AddProjectMembersJSONRequestBody defines body for AddProjectMembers for application/json ContentType.
 type AddProjectMembersJSONRequestBody = ProjectMembersAdd
@@ -462,6 +521,12 @@ type CreateProjectJSONRequestBody = ProjectCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteLabel Delete a label and the labels under it
+	// (DELETE /api/v0/labels/{label_id})
+	DeleteLabel(w http.ResponseWriter, r *http.Request, labelID LabelID)
+	// UpdateLabel Change a label
+	// (PATCH /api/v0/labels/{label_id})
+	UpdateLabel(w http.ResponseWriter, r *http.Request, labelID LabelID)
 	// GetProjectPreferences Read the caller's display settings in a project
 	// (GET /api/v0/me/projects/{project_id}/preferences)
 	GetProjectPreferences(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -489,6 +554,12 @@ type ServerInterface interface {
 	// JoinProject Join a project
 	// (POST /api/v0/projects/{project_id}/join)
 	JoinProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// ListLabels List a project's labels
+	// (GET /api/v0/projects/{project_id}/labels)
+	ListLabels(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// CreateLabel Create a label in a project
+	// (POST /api/v0/projects/{project_id}/labels)
+	CreateLabel(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// LeaveProject Leave a project
 	// (POST /api/v0/projects/{project_id}/leave)
 	LeaveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -538,6 +609,58 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteLabel operation middleware
+func (siw *ServerInterfaceWrapper) DeleteLabel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "label_id" -------------
+	var labelID LabelID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "label_id", r.PathValue("label_id"), &labelID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteLabel(w, r, labelID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateLabel operation middleware
+func (siw *ServerInterfaceWrapper) UpdateLabel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "label_id" -------------
+	var labelID LabelID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "label_id", r.PathValue("label_id"), &labelID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateLabel(w, r, labelID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetProjectPreferences operation middleware
 func (siw *ServerInterfaceWrapper) GetProjectPreferences(w http.ResponseWriter, r *http.Request) {
@@ -764,6 +887,58 @@ func (siw *ServerInterfaceWrapper) JoinProject(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.JoinProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLabels operation middleware
+func (siw *ServerInterfaceWrapper) ListLabels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLabels(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateLabel operation middleware
+func (siw *ServerInterfaceWrapper) CreateLabel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateLabel(w, r, projectID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1276,6 +1451,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.UpdateState)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/states/{state_id}/mark-default", wrapper.MarkDefaultState)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/states", wrapper.ListWorkspaceStates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/labels", wrapper.ListLabels)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/labels", wrapper.CreateLabel)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/labels/{label_id}", wrapper.DeleteLabel)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/labels/{label_id}", wrapper.UpdateLabel)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1290,6 +1469,93 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteLabelRequestObject struct {
+	LabelID LabelID `json:"label_id"`
+}
+
+type DeleteLabelResponseObject interface {
+	VisitDeleteLabelResponse(w http.ResponseWriter) error
+}
+
+type DeleteLabel204Response struct {
+}
+
+func (response DeleteLabel204Response) VisitDeleteLabelResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteLabeldefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteLabeldefaultApplicationProblemPlusJSONResponse) VisitDeleteLabelResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLabelRequestObject struct {
+	LabelID LabelID `json:"label_id"`
+	Body    *UpdateLabelJSONRequestBody
+}
+
+type UpdateLabelResponseObject interface {
+	VisitUpdateLabelResponse(w http.ResponseWriter) error
+}
+
+type UpdateLabel200JSONResponse Label
+
+func (response UpdateLabel200JSONResponse) VisitUpdateLabelResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLabeldefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateLabeldefaultApplicationProblemPlusJSONResponse) VisitUpdateLabelResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetProjectPreferencesRequestObject struct {
@@ -1680,6 +1946,99 @@ type JoinProjectdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response JoinProjectdefaultApplicationProblemPlusJSONResponse) VisitJoinProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListLabelsRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type ListLabelsResponseObject interface {
+	VisitListLabelsResponse(w http.ResponseWriter) error
+}
+
+type ListLabels200JSONResponse LabelList
+
+func (response ListLabels200JSONResponse) VisitListLabelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListLabelsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListLabelsdefaultApplicationProblemPlusJSONResponse) VisitListLabelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateLabelRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *CreateLabelJSONRequestBody
+}
+
+type CreateLabelResponseObject interface {
+	VisitCreateLabelResponse(w http.ResponseWriter) error
+}
+
+type CreateLabel201JSONResponse Label
+
+func (response CreateLabel201JSONResponse) VisitCreateLabelResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateLabeldefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateLabeldefaultApplicationProblemPlusJSONResponse) VisitCreateLabelResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2285,6 +2644,12 @@ func (response ListWorkspaceStatesdefaultApplicationProblemPlusJSONResponse) Vis
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteLabel Delete a label and the labels under it
+	// (DELETE /api/v0/labels/{label_id})
+	DeleteLabel(ctx context.Context, request DeleteLabelRequestObject) (DeleteLabelResponseObject, error)
+	// UpdateLabel Change a label
+	// (PATCH /api/v0/labels/{label_id})
+	UpdateLabel(ctx context.Context, request UpdateLabelRequestObject) (UpdateLabelResponseObject, error)
 	// GetProjectPreferences Read the caller's display settings in a project
 	// (GET /api/v0/me/projects/{project_id}/preferences)
 	GetProjectPreferences(ctx context.Context, request GetProjectPreferencesRequestObject) (GetProjectPreferencesResponseObject, error)
@@ -2312,6 +2677,12 @@ type StrictServerInterface interface {
 	// JoinProject Join a project
 	// (POST /api/v0/projects/{project_id}/join)
 	JoinProject(ctx context.Context, request JoinProjectRequestObject) (JoinProjectResponseObject, error)
+	// ListLabels List a project's labels
+	// (GET /api/v0/projects/{project_id}/labels)
+	ListLabels(ctx context.Context, request ListLabelsRequestObject) (ListLabelsResponseObject, error)
+	// CreateLabel Create a label in a project
+	// (POST /api/v0/projects/{project_id}/labels)
+	CreateLabel(ctx context.Context, request CreateLabelRequestObject) (CreateLabelResponseObject, error)
 	// LeaveProject Leave a project
 	// (POST /api/v0/projects/{project_id}/leave)
 	LeaveProject(ctx context.Context, request LeaveProjectRequestObject) (LeaveProjectResponseObject, error)
@@ -2390,6 +2761,65 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteLabel operation middleware
+func (sh *strictHandler) DeleteLabel(w http.ResponseWriter, r *http.Request, labelID LabelID) {
+	var request DeleteLabelRequestObject
+
+	request.LabelID = labelID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteLabel(ctx, request.(DeleteLabelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteLabel")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteLabelResponseObject); ok {
+		if err := validResponse.VisitDeleteLabelResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateLabel operation middleware
+func (sh *strictHandler) UpdateLabel(w http.ResponseWriter, r *http.Request, labelID LabelID) {
+	var request UpdateLabelRequestObject
+
+	request.LabelID = labelID
+
+	var body UpdateLabelJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateLabel(ctx, request.(UpdateLabelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateLabel")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateLabelResponseObject); ok {
+		if err := validResponse.VisitUpdateLabelResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetProjectPreferences operation middleware
@@ -2640,6 +3070,65 @@ func (sh *strictHandler) JoinProject(w http.ResponseWriter, r *http.Request, pro
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(JoinProjectResponseObject); ok {
 		if err := validResponse.VisitJoinProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListLabels operation middleware
+func (sh *strictHandler) ListLabels(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request ListLabelsRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListLabels(ctx, request.(ListLabelsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListLabels")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListLabelsResponseObject); ok {
+		if err := validResponse.VisitListLabelsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateLabel operation middleware
+func (sh *strictHandler) CreateLabel(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request CreateLabelRequestObject
+
+	request.ProjectID = projectID
+
+	var body CreateLabelJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateLabel(ctx, request.(CreateLabelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateLabel")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateLabelResponseObject); ok {
+		if err := validResponse.VisitCreateLabelResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

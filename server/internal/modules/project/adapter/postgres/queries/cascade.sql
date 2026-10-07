@@ -28,6 +28,13 @@ SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated
 WHERE workspace_id = sqlc.arg(workspace_id) AND (sqlc.narg(project_id)::uuid IS NULL OR project_id = sqlc.narg(project_id))
   AND deleted_at IS NULL;
 
+-- name: DeleteLabels :exec
+-- The parents and their children alike.
+UPDATE labels
+SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE workspace_id = sqlc.arg(workspace_id) AND (sqlc.narg(project_id)::uuid IS NULL OR project_id = sqlc.narg(project_id))
+  AND deleted_at IS NULL;
+
 -- name: LockMemberProjects :many
 -- The first step of making an account a guest in the workspace's projects, DemoteToGuest's: the workspace's undeleted
 -- projects, archived ones too, in which he has an undeleted membership, active or not, FOR NO KEY UPDATE in id order.

@@ -24,8 +24,7 @@ func newUpdateState() (*app.UpdateState, *writeFixture, *fakeStates) {
 // acme's row FOR SHARE, the project FOR NO KEY UPDATE, the state read
 // again, the decision.
 func stateLocked(id, project, caller uuid.UUID, action shared.Action) []string {
-	return []string{"Begin", "StateByID " + id.String(), "ShareWorkspaceByID " + acme.ID.String(), "LockProject " + project.String(),
-		"StateByID " + id.String(), fmt.Sprintf("Authorize %s %s on %s/%s", caller, action, acme.ID, project)}
+	return rowLocked("StateByID", id, project, caller, action)
 }
 
 // stateUpdated are the calls of user's change p of the state id of web:

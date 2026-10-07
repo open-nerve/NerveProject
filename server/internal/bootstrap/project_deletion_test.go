@@ -28,7 +28,8 @@ import (
 
 // twoProjects is the wired app on a database of its own, and acme with two
 // projects alice created, Web and Ops: each has her membership, her display
-// settings in it and its states, through createProject.
+// settings in it and its states, through createProject, and a label of
+// hers, Bug, with its child, UI, written directly (seedLabels).
 func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string, aliceID, web, ops uuid.UUID) {
 	t.Helper()
 	contract = apitest.Load(t)
@@ -40,8 +41,38 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", alice, `{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
 		t.Fatalf("creating acme = %d %s", status, body)
 	}
-	return contract, base, pool, alice, aliceID, createdProject(t, contract, base, alice, "acme", "Web", "WEB"),
-		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")
+	web, ops = createdProject(t, contract, base, alice, "acme", "Web", "WEB"), createdProject(t, contract, base, alice, "acme", "Ops", "OPS")
+	seedLabels(t, pool, web, aliceID)
+	seedLabels(t, pool, ops, aliceID)
+	return contract, base, pool, alice, aliceID, web, ops
+}
+
+// seedLabels writes a label of project, Bug, and its child, UI, by by,
+// directly: the seed does not depend on which of the project module's
+// writes exist.
+func seedLabels(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
+	t.Helper()
+	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO labels (id, workspace_id, project_id, parent_id, name, created_by_id, updated_by_id)
+		SELECT $1::uuid, workspace_id, id, NULL::uuid, 'Bug', $2::uuid, $2::uuid FROM projects WHERE id = $3
+		UNION ALL SELECT $4::uuid, workspace_id, id, $1::uuid, 'UI', $2::uuid, $2::uuid FROM projects WHERE id = $3`,
+		uuid.NewV7(), by, project, uuid.NewV7()); err != nil || tag.RowsAffected() != 2 {
+		t.Fatalf("seeding the labels of %s: %d rows, %v; want 2", project, tag.RowsAffected(), err)
+	}
+}
+
+// noRowLastWrittenBy fails the test when a row under project, in a table
+// the catalog ties to projects (keysTo), the project row itself included,
+// was last written by by: a deletion by by that kept a row's writer would
+// not show on that row. The deletion tests read it before they delete.
+func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
+	t.Helper()
+	for _, k := range keysTo(t, pool, "projects") {
+		var n int
+		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
+			" = $1 AND updated_by_id = $2", project, by).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("%s: %d rows under the project %s last written by %s, %v; want none", k, n, project, by, err)
+		}
+	}
 }
 
 // Deleting a project through the API soft-deletes every row under it in
@@ -69,12 +100,8 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	for i, k := range keys {
 		recorded[i] = k.undeleted(t, pool, web)
 		under[i] = rowsUnder{key: k.String(), deletedBefore: len(recorded[i]), keptBefore: k.rows(t, pool, ops)}
-		var his int
-		if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
-			" = $1 AND updated_by_id = $2", web, daveID).Scan(&his); err != nil || his != 0 {
-			t.Fatalf("%s: %d rows under Web last written by dave, %v; want none", k, his, err)
-		}
 	}
+	noRowLastWrittenBy(t, pool, web, daveID)
 
 	before := time.Now().Truncate(time.Microsecond)
 	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), dave, ""); status != http.StatusNoContent {

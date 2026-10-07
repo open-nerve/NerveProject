@@ -2,11 +2,13 @@ package postgresadapter_test
 
 import (
 	"context"
+	"errors"
 	"maps"
 	"testing"
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
@@ -16,6 +18,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // now is the fixed clock's time: whole microseconds, as timestamptz stores
@@ -132,4 +135,11 @@ func jsonTime(at time.Time) string {
 // them.
 func audit(by uuid.UUID, at time.Time) map[string]string {
 	return map[string]string{"updated_by_id": `"` + by.String() + `"`, "updated_at": jsonTime(at)}
+}
+
+// internalViolation reports whether err is constraint's violation, not a domain error.
+func internalViolation(err error, constraint string) bool {
+	var se *shared.Error
+	var pgErr *pgconn.PgError
+	return !errors.As(err, &se) && errors.As(err, &pgErr) && pgErr.ConstraintName == constraint
 }

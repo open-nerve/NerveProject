@@ -1,12 +1,19 @@
 import {
   amidAnotherWorkspace,
+  createLabel,
   createProject,
   createWorkspace,
   inviteAndAccept,
   slugFor,
   type Api,
 } from "../../fixtures/api";
-import { expectMember, expectProjectCreated, expectProjectDeleted } from "../../fixtures/assert/project";
+import {
+  expectLabels,
+  expectMember,
+  expectProjectCreated,
+  expectProjectDeleted,
+  type LabelRow,
+} from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import type { Database } from "../../fixtures/db";
 import { expect, test } from "../../fixtures/test";
@@ -71,7 +78,7 @@ async function archiving(db: Database, id: string): Promise<unknown> {
   return row;
 }
 
-test("P4 (API): the admin archives a project, which leaves the list for the archived ones and whose fields cannot be updated (409) until it is unarchived; unarchives it and archives it again; then deletes it with its members, settings and states at one moment, after which it is not found and its identifier is free", async ({
+test("P4 (API): the admin archives a project, which leaves the list for the archived ones and whose fields cannot be updated (409) until it is unarchived; unarchives it and archives it again; then labels it and deletes it with its members, settings, states and labels at one moment, a label deleted before keeping its own, after which it is not found and its identifier is free", async ({
   api,
   db,
 }, testInfo) => {
@@ -127,6 +134,29 @@ test("P4 (API): the admin archives a project, which leaves the list for the arch
   });
   expect(dragged.response.status, `the member drags Web: ${JSON.stringify(dragged.error)}`).toBe(200);
   await expectMember(db, web.id, memberEmail, { role: 15, is_active: true, sort_order: 25535, by: memberEmail });
+  // The admin labels the archived Web, as any project (M3 design 3.19): Bug, UI under Bug, and Feature, which he
+  // deletes before Web.
+  const bug = await createLabel(api, admin, web.id, { name: "Bug" });
+  await createLabel(api, admin, web.id, { name: "UI", parent_id: bug.id });
+  const feature = await createLabel(api, admin, web.id, { name: "Feature" });
+  const removed = await api.DELETE("/api/v0/labels/{label_id}", {
+    params: { path: { label_id: feature.id } },
+    headers: bearer(admin),
+  });
+  expect(removed.response.status, `delete Feature: ${JSON.stringify(removed.error)}`).toBe(204);
+  const label = (name: string, parent: string | null, sort_order: number, deleted: boolean): LabelRow => ({
+    name,
+    color: "",
+    parent,
+    sort_order,
+    deleted,
+    by: adminEmail,
+  });
+  await expectLabels(db, web.id, [
+    label("Bug", null, 65535, false),
+    label("UI", "Bug", 75535, false),
+    label("Feature", null, 85535, true),
+  ]);
 
   // An archived project is deleted as any other.
   const deleted = await api.DELETE("/api/v0/projects/{project_id}", {
@@ -135,6 +165,24 @@ test("P4 (API): the admin archives a project, which leaves the list for the arch
   });
   expect(deleted.response.status, `delete Web: ${JSON.stringify(deleted.error)}`).toBe(204);
   await expectProjectDeleted(db, web.id, adminEmail);
+  // Its labels are deleted with it; Feature, deleted before, keeps its moment.
+  await expectLabels(db, web.id, [
+    label("Bug", null, 65535, true),
+    label("UI", "Bug", 75535, true),
+    label("Feature", null, 85535, true),
+  ]);
+  expect(
+    await db.query(
+      `SELECT l.name, l.deleted_at < p.deleted_at AS before_web
+         FROM labels l JOIN projects p ON p.id = l.project_id WHERE p.id = $1 ORDER BY l.sort_order`,
+      [web.id]
+    ),
+    "when Web's labels were deleted"
+  ).toEqual([
+    { name: "Bug", before_web: false },
+    { name: "UI", before_web: false },
+    { name: "Feature", before_web: true },
+  ]);
   // Every operation on it is refused as on a project that does not exist, its admin's too.
   expect(await onProject(api, admin, web.id, memberId)).toEqual(
     Array(10).fill({ status: 404, code: "project.not_found" })

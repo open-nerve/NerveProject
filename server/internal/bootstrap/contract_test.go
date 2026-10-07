@@ -303,25 +303,50 @@ func send(t *testing.T, req *http.Request) (*http.Response, []byte) {
 	return res, body
 }
 
-func problemCode(t *testing.T, body []byte) string {
+// problemOf is body, a problem, decoded: the readers below read it.
+func problemOf(t *testing.T, body []byte) httpserver.Problem {
 	t.Helper()
 	var p httpserver.Problem
 	if err := json.Unmarshal(body, &p); err != nil {
 		t.Fatalf("decode problem %s: %v", body, err)
 	}
-	return p.Code
+	return p
+}
+
+func problemCode(t *testing.T, body []byte) string {
+	t.Helper()
+	return problemOf(t, body).Code
 }
 
 // oneError is the one error of a problem body, as "field code"; "" when
 // the body holds none or more than one, which no refusal matches.
 func oneError(t *testing.T, body []byte) string {
 	t.Helper()
-	var p httpserver.Problem
-	if err := json.Unmarshal(body, &p); err != nil {
-		t.Fatalf("decode problem %s: %v", body, err)
-	}
+	p := problemOf(t, body)
 	if len(p.Errors) != 1 {
 		return ""
 	}
 	return p.Errors[0].Field + " " + p.Errors[0].Code
+}
+
+// refusalOf is a problem body as a refusal is compared: its code, then each
+// of its field errors as "field code", followed, when messages is true, by
+// ": " and its message, the errors apart by "; ". So
+// "project.label_name_taken", "validation_failed parent_id not_allowed",
+// or with messages "validation_failed parent_id not_allowed: must be a
+// label without a parent: labels have two levels".
+func refusalOf(t *testing.T, body []byte, messages bool) string {
+	t.Helper()
+	p := problemOf(t, body)
+	if len(p.Errors) == 0 {
+		return p.Code
+	}
+	errs := make([]string, len(p.Errors))
+	for i, e := range p.Errors {
+		errs[i] = e.Field + " " + e.Code
+		if messages {
+			errs[i] += ": " + e.Message
+		}
+	}
+	return p.Code + " " + strings.Join(errs, "; ")
 }

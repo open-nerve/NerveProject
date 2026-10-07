@@ -65,6 +65,15 @@ var (
 	// its move to another group: every group keeps a state (M3 design 3.17).
 	ErrStateLastInGroup = shared.NewError(shared.KindConflict, "project.state_last_in_group",
 		"The state is the only one of its group, and every group keeps one; add another to the group first.")
+	// ErrLabelNotFound answers a label that does not exist, is deleted, or
+	// whose project the caller does not see: the same 404 for all (M3 design
+	// 3.16, 5.3, 8.2).
+	ErrLabelNotFound = shared.NewError(shared.KindNotFound, "project.label_not_found",
+		"The label does not exist, or you cannot see its project.")
+	// ErrLabelNameTaken answers a name another undeleted label of the
+	// project has, in any case (M3 design 3.16).
+	ErrLabelNameTaken = shared.NewError(shared.KindConflict, "project.label_name_taken",
+		"A label of the project has this name, in this case or another.")
 )
 
 // LeadNotAllowed is the 422 of a lead who is not an active admin or member

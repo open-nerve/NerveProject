@@ -20,13 +20,13 @@ var errDisk = errors.New("disk full")
 // for every project of it, by by at at, in the order of M3 design 3.6.
 func deletionSteps(workspace uuid.UUID, project string, by uuid.UUID, at time.Time) []string {
 	var steps []string
-	for _, name := range []string{"DeleteProjects", "DeleteProjectMembers", "DeleteProjectPreferences", "DeleteStates"} {
+	for _, name := range []string{"DeleteProjects", "DeleteProjectMembers", "DeleteProjectPreferences", "DeleteStates", "DeleteLabels"} {
 		steps = append(steps, fmt.Sprintf("%s %s/%s by %s at %s", name, workspace, project, by, at.Format(timeFormat)))
 	}
 	return steps
 }
 
-// DeleteWorkspaceProjects runs the four steps in the order of M3 design
+// DeleteWorkspaceProjects runs the five steps in the order of M3 design
 // 3.6, each on every project of the caller's workspace, with the caller's
 // account and moment, in the caller's transaction; a failing step comes
 // back as itself and the steps after it do not run. Each step fails in

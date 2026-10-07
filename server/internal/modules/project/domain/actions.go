@@ -57,6 +57,15 @@ const (
 	// ActionWorkspaceStateList is listing the states of a workspace's
 	// projects that the caller is a member of: listWorkspaceStates.
 	ActionWorkspaceStateList shared.Action = "workspace_state.list"
+	// ActionLabelList is listing a project's labels: listLabels.
+	ActionLabelList shared.Action = "label.list"
+	// ActionLabelCreate is creating a label in a project: createLabel.
+	ActionLabelCreate shared.Action = "label.create"
+	// ActionLabelUpdate is changing a label: updateLabel.
+	ActionLabelUpdate shared.Action = "label.update"
+	// ActionLabelDelete is deleting a label and the labels under it:
+	// deleteLabel.
+	ActionLabelDelete shared.Action = "label.delete"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -66,5 +75,6 @@ func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
 		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
 		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate, ActionMemberRemove, ActionLeave,
-		ActionStateList, ActionStateCreate, ActionStateUpdate, ActionStateDelete, ActionStateMarkDefault, ActionWorkspaceStateList}
+		ActionStateList, ActionStateCreate, ActionStateUpdate, ActionStateDelete, ActionStateMarkDefault, ActionWorkspaceStateList,
+		ActionLabelList, ActionLabelCreate, ActionLabelUpdate, ActionLabelDelete}
 }

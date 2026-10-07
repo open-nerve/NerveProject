@@ -41,11 +41,12 @@ func TestCreatingAProjectReadsTheClockBeforeItsTransaction(t *testing.T) {
 // transaction, after its locks (its workspace's FOR SHARE first, then its
 // project's), its decision and its checks, just before it writes (P2 spec
 // 2.6, M3 design 3.3): a write that queued behind another on either lock
-// never stamps an earlier time than the one it waited for. So does
-// createState, which only inserts, after it reads the project's states
-// under its lock. deleteState counts the states its group keeps after it
-// deletes the state, the clock read before. The clock logs its read among
-// the fakes' calls.
+// never stamps an earlier time than the one it waited for. So do
+// createState and createLabel, which only insert, after they read the
+// project's states, or its labels and the parent given, under its lock.
+// deleteState counts the states its group keeps after it deletes the
+// state, the clock read before. The clock logs its read among the fakes'
+// calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	tests := []struct {
 		name string
@@ -125,6 +126,21 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			err := uc.Execute(as(bob), webTodo)
 			return f.log.calls, err
 		}, defaultMarked(bob, webTodo, webID)},
+		{"createLabel", func() ([]string, error) {
+			uc, f, _ := newCreateLabel()
+			_, err := uc.Execute(as(bob), webID, underBug)
+			return f.log.calls, err
+		}, labelCreated(bob, webID, underBug, 95535)},
+		{"updateLabel", func() ([]string, error) {
+			uc, f, _ := newUpdateLabel()
+			_, err := uc.Execute(as(bob), webFeature, domain.LabelPatch{SetParent: true, ParentID: &webBug})
+			return f.log.calls, err
+		}, labelUpdated(bob, webFeature, webID, domain.LabelPatch{SetParent: true, ParentID: &webBug})},
+		{"deleteLabel", func() ([]string, error) {
+			uc, f, _ := newDeleteLabel()
+			err := uc.Execute(as(bob), webBug)
+			return f.log.calls, err
+		}, labelDeleted(bob, webBug, webID)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

@@ -159,13 +159,13 @@ func checkName(name string) *shared.FieldError {
 
 func checkIdentifier(id string) *shared.FieldError {
 	field := "identifier"
-	switch {
-	case id == "":
+	if id == "" {
 		return &shared.FieldError{Field: field, Code: shared.FieldTooShort, Message: "must not be empty"}
-	case utf8.RuneCountInString(id) > maxIdentifierLength:
-		return &shared.FieldError{Field: field, Code: shared.FieldTooLong,
-			Message: fmt.Sprintf("must be at most %d characters", maxIdentifierLength)}
-	case !identifierPattern.MatchString(id):
+	}
+	if f := checkMaxLength(field, id, maxIdentifierLength); f != nil {
+		return f
+	}
+	if !identifierPattern.MatchString(id) {
 		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "may hold only A-Z, 0-9 and ÇŞĞİÖÜ"}
 	}
 	return nil
@@ -174,13 +174,29 @@ func checkIdentifier(id string) *shared.FieldError {
 // checkLength refuses the text of field, a column of varchar(limit), when
 // it is blank, or longer than limit characters: blank first.
 func checkLength(field, s string, limit int) *shared.FieldError {
-	switch {
-	case strings.TrimSpace(s) == "":
+	if strings.TrimSpace(s) == "" {
 		return &shared.FieldError{Field: field, Code: shared.FieldTooShort, Message: "must not be empty"}
-	case utf8.RuneCountInString(s) > limit:
+	}
+	return checkMaxLength(field, s, limit)
+}
+
+// checkMaxLength refuses the text of field, a column of varchar(limit),
+// when it is longer than limit characters; it may be empty.
+func checkMaxLength(field, s string, limit int) *shared.FieldError {
+	if utf8.RuneCountInString(s) > limit {
 		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: fmt.Sprintf("must be at most %d characters", limit)}
 	}
 	return nil
+}
+
+// checkRequiredText refuses the text of field, a column of varchar(limit)
+// that may not be blank: blank or too long (checkLength), or with NUL
+// (checkText), the first of them.
+func checkRequiredText(field, s string, limit int) *shared.FieldError {
+	if f := checkLength(field, s, limit); f != nil {
+		return f
+	}
+	return checkText(field, s)
 }
 
 // checkText refuses NUL in the text of field, which Postgres cannot store

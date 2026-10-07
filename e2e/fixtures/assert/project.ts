@@ -182,8 +182,10 @@ export async function expectMember(
 
 /**
  * P4, W3: the project of projectId is deleted by the account of adminEmail, and with it, at the same moment and by the
- * same account, every row under it: of each table whose foreign key names projects (the catalog's list, so a table a
- * later phase adds is read too), by its project_id. Each table has such a row, and none is left undeleted.
+ * same account, every row under it that was not deleted before: of each table whose foreign key names projects (the
+ * catalog's list, so a table a later phase adds is read too, and the list is every table with a project_id column),
+ * by its project_id. Each table has such a row, and none is left undeleted; a row deleted before the project, as a
+ * label a story deleted, is not counted.
  */
 export async function expectProjectDeleted(db: Database, projectId: string, adminEmail: string): Promise<void> {
   const [project] = await db.query(
@@ -191,18 +193,27 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
     [projectId]
   );
   expect(project, `the project ${projectId}`).toEqual({ deleted: true, by: adminEmail });
+  // Both lists sort their names under "C": a regclass's text would sort under the database's collation and an
+  // information_schema name under "C", two orders that differ (issues, issue_views).
   const tables = await db.query<{ name: string }>(
-    `SELECT DISTINCT c.conrelid::regclass::text AS name FROM pg_constraint c
+    `SELECT DISTINCT c.conrelid::regclass::text COLLATE "C" AS name FROM pg_constraint c
       WHERE c.contype = 'f' AND c.confrelid = 'projects'::regclass ORDER BY 1`
   );
   expect(tables.length, "the tables under projects").toBeGreaterThan(0);
+  // Every table with a project_id is read: a table left out of the list above fails here.
+  const withProjectId = await db.query<{ name: string }>(
+    `SELECT DISTINCT c.table_name::text COLLATE "C" AS name FROM information_schema.columns c
+      WHERE c.table_schema = current_schema() AND c.column_name = 'project_id' ORDER BY 1`
+  );
+  expect(tables, "the tables under projects, as their project_id columns name them").toEqual(withProjectId);
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const rows = await Promise.all(
     tables.map(async ({ name }) => {
       const [counts] = await db.query<{ with_it: number; other: number }>(
         `SELECT count(*) FILTER (WHERE t.deleted_at = p.deleted_at AND t.updated_by_id = p.updated_by_id)::int AS with_it,
-                count(*) FILTER (WHERE t.deleted_at IS DISTINCT FROM p.deleted_at
-                                    OR t.updated_by_id IS DISTINCT FROM p.updated_by_id)::int AS other
+                count(*) FILTER (WHERE (t.deleted_at IS NULL OR t.deleted_at >= p.deleted_at)
+                                   AND (t.deleted_at IS DISTINCT FROM p.deleted_at
+                                        OR t.updated_by_id IS DISTINCT FROM p.updated_by_id))::int AS other
            FROM ${name} t JOIN projects p ON p.id = t.project_id WHERE p.id = $1`,
         [projectId]
       );
@@ -317,6 +328,53 @@ export async function expectStates(db: Database, projectId: string, want: StateR
         deleted,
         by,
         in_its_workspace: true,
+        deleted_with_its_last_write: true,
+      }))
+  );
+}
+
+/** A label of a project as expectLabels reads it. */
+export interface LabelRow {
+  name: string;
+  color: string;
+  /** The name of the label it is under; null at the top. */
+  parent: string | null;
+  sort_order: number;
+  deleted: boolean;
+  /** The address of the account that wrote the label last: created, changed or deleted it. */
+  by: string;
+}
+
+/**
+ * P4, P7, W3: the labels of the project of projectId, deleted ones too, are exactly want, by sort order, then name.
+ * Each is a row of the project's workspace, its parent a label of the same project, and a deleted one was deleted at
+ * the moment of its last write, by its writer (M3 design 3.16).
+ */
+export async function expectLabels(db: Database, projectId: string, want: LabelRow[]): Promise<void> {
+  expect(
+    await db.query(
+      `SELECT l.name, l.color, pl.name AS parent, l.sort_order, l.deleted_at IS NOT NULL AS deleted, b.email AS by,
+              l.workspace_id = p.workspace_id AND (pl.id IS NULL OR pl.project_id = l.project_id) AS in_its_project,
+              coalesce(l.deleted_at = l.updated_at, true) AS deleted_with_its_last_write
+         FROM labels l
+         JOIN projects p ON p.id = l.project_id
+         JOIN users b ON b.id = l.updated_by_id
+         LEFT JOIN labels pl ON pl.id = l.parent_id
+        WHERE l.project_id = $1 ORDER BY l.sort_order, l.name COLLATE "C"`,
+      [projectId]
+    ),
+    `the labels of ${projectId}`
+  ).toEqual(
+    want
+      .toSorted((a, b) => a.sort_order - b.sort_order || (a.name < b.name ? -1 : 1))
+      .map(({ name, color, parent, sort_order, deleted, by }) => ({
+        name,
+        color,
+        parent,
+        sort_order,
+        deleted,
+        by,
+        in_its_project: true,
         deleted_with_its_last_write: true,
       }))
   );

@@ -6,8 +6,7 @@ import (
 	"testing"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
+	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -38,11 +37,15 @@ func failed(err error) bool {
 // nor no states, which listStates and listWorkspaceStates would answer as
 // none, nor "no sequence", which createState would take for the first
 // state's, nor an empty group, which a deletion or a move would answer as
-// project.state_last_in_group. Each read runs on a cancelled context
+// project.state_last_in_group; not "no such label", which a write on it
+// would answer as project.label_not_found, nor no labels, which listLabels
+// would answer as none, nor "no sort order", which createLabel would take
+// for the first label's, nor "no children", which updateLabel would take
+// for a label free to take a parent. Each read runs on a cancelled context
 // against a project alice is the only admin of, beside bob, a member, and
-// has display settings in, with its six default states, bob's membership
-// of another project ended, so that the right answer is none of the zero
-// values.
+// has display settings in, with its six default states and a label with a
+// child, bob's membership of another project ended, so that the right
+// answer is none of the zero values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -63,6 +66,8 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 		t.Fatalf("CountInactive() of bob = %d, %v; want his ended membership of Ops, 1", n, err)
 	}
 	todo := seedDefaultStates(t, s, acme, web, alice)["Todo"]
+	bug := seedLabel(t, s, acme, web, nil, "Bug", alice)
+	seedLabel(t, s, acme, web, &bug, "UI", alice)
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
 
@@ -123,12 +128,36 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if list, err := s.ListWorkspaceStates(cancelled, acme, alice); !failed(err) || list != nil {
 		t.Errorf("ListWorkspaceStates() = %+v, %v; want context.Canceled, not none", list, err)
 	}
+	if l, found, err := s.LabelByID(cancelled, bug); !failed(err) || found || l.ID != (uuid.UUID{}) {
+		t.Errorf("LabelByID() = %+v, %v, %v; want context.Canceled, not no label", l, found, err)
+	}
+	if list, err := s.ListLabels(cancelled, web); !failed(err) || list != nil {
+		t.Errorf("ListLabels() = %+v, %v; want context.Canceled, not none", list, err)
+	}
+	if greatest, err := s.GreatestSortOrder(cancelled, web); !failed(err) || greatest != nil {
+		t.Errorf("GreatestSortOrder() = %s, %v; want context.Canceled, not none", jsonOf(t, greatest), err)
+	}
+	if has, err := s.HasChildren(cancelled, bug); !failed(err) || has {
+		t.Errorf("HasChildren() = %v, %v; want context.Canceled, not an answer", has, err)
+	}
+}
+
+// seedLabel stores a label of project, under parent, made by by at now, and
+// returns its id.
+func seedLabel(t *testing.T, s *postgresadapter.Store, workspace, project uuid.UUID, parent *uuid.UUID, name string, by uuid.UUID) uuid.UUID {
+	t.Helper()
+	id := uuid.NewV7()
+	if _, err := s.CreateLabel(context.Background(), app.LabelRow{ID: id, WorkspaceID: workspace, ProjectID: project, ParentID: parent,
+		Name: name, SortOrder: 1, CreatedBy: by, Now: now}); err != nil {
+		t.Fatal(err)
+	}
+	return id
 }
 
 // A write that fails answers its error as itself (failed): never nil,
 // which a use case would take for done; never a domain problem, such as a
-// project's or a state's taken name or identifier; a deletion or a
-// marking of a state, never "not written", which the use case would
+// project's, a state's or a label's taken name or identifier; a deletion
+// or a marking of a state, never "not written", which the use case would
 // answer as project.state_default or project.state_not_found. Each write
 // runs on a cancelled context, with values the database would take.
 func TestAFailedWriteIsAnError(t *testing.T) {
@@ -212,6 +241,17 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if marked, err := s.MarkDefaultState(cancelled, web, todo, alice, now); !failed(err) || marked {
 		t.Errorf("MarkDefaultState() = %v, %v; want context.Canceled", marked, err)
 	}
+	bug := seedLabel(t, s, acme, web, nil, "Bug", alice)
+	if l, err := s.CreateLabel(cancelled, app.LabelRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, ParentID: &bug, Name: "UI",
+		SortOrder: 2, CreatedBy: alice, Now: now}); !failed(err) || l.ID != (uuid.UUID{}) {
+		t.Errorf("CreateLabel() = %+v, %v; want context.Canceled", l, err)
+	}
+	if l, err := s.UpdateLabel(cancelled, bug, domain.LabelPatch{Name: ptr("Feature")}, alice, now); !failed(err) || l.ID != (uuid.UUID{}) {
+		t.Errorf("UpdateLabel() = %+v, %v; want context.Canceled", l, err)
+	}
+	if err := s.DeleteLabel(cancelled, bug, alice, now); !failed(err) {
+		t.Errorf("DeleteLabel() = %v; want context.Canceled", err)
+	}
 }
 
 // Only the two unique keys of a name and an identifier are a 409: another
@@ -233,9 +273,7 @@ func TestCreateProjectBreakingAnotherConstraintIsInternal(t *testing.T) {
 	} {
 		err := s.CreateProject(context.Background(), app.ProjectRow{ID: tt.id, WorkspaceID: acme, Name: "Ops", Identifier: tt.identifier,
 			Timezone: "UTC", CreatedBy: alice, Now: now})
-		var se *shared.Error
-		var pgErr *pgconn.PgError
-		if errors.As(err, &se) || !errors.As(err, &pgErr) || pgErr.ConstraintName != tt.constraint {
+		if !internalViolation(err, tt.constraint) {
 			t.Errorf("%s: CreateProject() = %v; want the violation of %s, not a domain error", tt.name, err, tt.constraint)
 		}
 	}

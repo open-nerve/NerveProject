@@ -23,26 +23,28 @@ import (
 // rowWrite is one of the writes on a row under a project as the races send
 // it on memberWorld: bob, Web's admin and acme's member, changes gina's
 // role in Web to a guest's, or removes her; dave, Web's admin, leaves it;
-// bob renames Web's QA, deletes it, or makes it Web's default; or bob
-// creates a state in Web, a write addressed by its project, as leaving is.
-// gina is Web's member and acme's admin; alice, Web's other admin, stays;
-// QA is of the completed group, beside Done; nothing else refuses each
-// write.
+// bob renames Web's QA, deletes it, or makes it Web's default; bob renames
+// Web's label Feature or deletes it, of the labels seedLabelsOf gives Web
+// for these writes alone; or bob creates a state or a label in Web, a write
+// addressed by its project, as leaving is. gina is Web's member and acme's
+// admin; alice, Web's other admin, stays; QA is of the completed group,
+// beside Done; Feature is at the top, with no label under it; nothing else
+// refuses each write.
 type rowWrite struct {
 	op, by string
 	// member is whose membership of Web a write on a membership changes,
-	// the caller's own for leaving. A write on a state changes none: it
-	// carries its caller, whose membership of acme the lock test reads, and
-	// state is the name of Web's state it changes instead. A creation
-	// changes neither and carries neither; the races end its caller's
-	// membership through by, as every write's.
-	member, state      string
-	method, path, body string // path: %s the row's id for a path of one (rowPaths), else Web's
-	status             int    // its answer, alone
-	notFound           string // the code of its 404
-	target             bool   // it changes the member's role: it shares his membership of acme (convention 3)
-	clears             bool   // it makes its state Web's default: it writes Web's default, Backlog, before its state
-	creates            bool   // it creates a state of Web: it has no row of its own to wait on
+	// the caller's own for leaving. A write on a state or a label changes
+	// none: it carries its caller, whose membership of acme the lock test
+	// reads, and state or label is the name of Web's state or label it
+	// changes instead. A creation changes neither and carries neither; the
+	// races end its caller's membership through by, as every write's.
+	member, state, label string
+	method, path, body   string // path: %s the row's id for a path of one (rowPaths), else Web's
+	status               int    // its answer, alone
+	notFound             string // the code of its 404
+	target               bool   // it changes the member's role: it shares his membership of acme (convention 3)
+	clears               bool   // it makes its state Web's default: it writes Web's default, Backlog, before its state
+	creates              bool   // it creates a state or a label of Web: it has no row of its own to wait on
 }
 
 var rowWrites = []rowWrite{
@@ -61,6 +63,12 @@ var rowWrites = []rowWrite{
 	{op: "createState", by: "bob", method: http.MethodPost, path: "/api/v0/projects/%s/states",
 		body: `{"name":"Checked","color":"#0EA5E9","group":"completed"}`, status: http.StatusCreated, notFound: "project.not_found",
 		creates: true},
+	{op: "updateLabel", by: "bob", member: "bob", label: "Feature", method: http.MethodPatch, path: "/api/v0/labels/%s",
+		body: `{"name":"Story"}`, status: http.StatusOK, notFound: "project.label_not_found"},
+	{op: "deleteLabel", by: "bob", member: "bob", label: "Feature", method: http.MethodDelete, path: "/api/v0/labels/%s",
+		status: http.StatusNoContent, notFound: "project.label_not_found"},
+	{op: "createLabel", by: "bob", method: http.MethodPost, path: "/api/v0/projects/%s/labels", body: `{"name":"QA"}`,
+		status: http.StatusCreated, notFound: "project.not_found", creates: true},
 }
 
 // row is the row of Web that m changes: its table and its id. A creation
@@ -68,12 +76,23 @@ var rowWrites = []rowWrite{
 func (m rowWrite) row(t *testing.T, w memberWorld) (string, uuid.UUID) {
 	t.Helper()
 	if m.creates {
-		t.Fatalf("%s creates a state: it has no row of its own", m.op)
+		t.Fatalf("%s creates a row of Web: it has no row of its own", m.op)
 	}
 	if m.state != "" {
 		return "states", stateID(t, w.pool, w.web, m.state)
 	}
+	if m.label != "" {
+		return "labels", labelID(t, w.pool, w.web, m.label)
+	}
 	return "project_members", w.membership(t, w.web, m.member)
+}
+
+// labelsFor gives Web seedLabelsOf's labels when m writes one of them.
+func (m rowWrite) labelsFor(t *testing.T, w memberWorld) {
+	t.Helper()
+	if m.label != "" {
+		w.seedLabelsOf(t, w.web)
+	}
 }
 
 // sent sends m on w's app, checked against the contract, and hands over its
@@ -121,11 +140,11 @@ func newPrivateWorld(t *testing.T) memberWorld {
 // acme. SQL makes each change inside the other transaction, which must hold
 // its lock open across the probe: a real write cannot without a hook in
 // product code. The write has passed authentication and its read without a
-// lock, of the row it names or, leaving or creating a state, of Web's
-// workspace, and waits for the row the other holds. Once the other commits,
-// the write is 404; the row the other changed is as it left it, and every
-// other row as it was, no state created among them. Web is private: bob or
-// dave, his membership ended, does not see it.
+// lock, of the row it names or, leaving or creating a state or a label, of
+// Web's workspace, and waits for the row the other holds. Once the other
+// commits, the write is 404; the row the other changed is as it left it,
+// and every other row as it was, no state or label created among them. Web
+// is private: bob or dave, his membership ended, does not see it.
 func TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile(t *testing.T) {
 	type change struct {
 		name, holds, sql string // holds: the table of the row the other transaction locks first, acme's or Web's; sql: %s the table
@@ -161,13 +180,14 @@ func TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile(t *testing.T) {
 			switch {
 			case c.ofRow && m.creates:
 				continue // a creation has no row of its own
-			case c.ofRow && m.state == "" && m.member == m.by:
+			case c.ofRow && m.state == "" && m.label == "" && m.member == m.by:
 				continue // leaving: its row is the caller's own membership, which "the caller's membership ended" ends
-			case c.membership && m.state != "":
-				continue // a state does not end
+			case c.membership && (m.state != "" || m.label != ""):
+				continue // a state or a label does not end
 			}
 			t.Run(m.op+", "+c.name, func(t *testing.T) {
 				w := newPrivateWorld(t)
+				m.labelsFor(t, w)
 				table := c.table
 				if table == "" {
 					table, _ = m.row(t, w)
@@ -240,11 +260,13 @@ func TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength(t *testing.T) {
 		if m.creates {
 			// A creation has no row of its own to wait on: the order and the
 			// strength of its locks are TestEachWriteOnAProjectSharesItsWorkspaceFirst's
-			// and the two creations' of TestStateWritesOnOneProjectSerialize.
+			// and the two creations' of TestStateWritesOnOneProjectSerialize and
+			// TestLabelWritesOnOneProjectSerialize.
 			continue
 		}
 		t.Run(m.op, func(t *testing.T) {
 			w := newMemberWorld(t)
+			m.labelsFor(t, w)
 			var acme, inAcme uuid.UUID
 			if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT s.id, m.id FROM workspaces s JOIN workspace_members m ON m.workspace_id = s.id
 				WHERE s.slug = 'acme' AND m.member_id = $1`, w.ids[m.member]).Scan(&acme, &inAcme); err != nil {
