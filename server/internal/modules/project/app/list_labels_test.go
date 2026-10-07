@@ -2,7 +2,6 @@ package app_test
 
 import (
 	"cmp"
-	"context"
 	"fmt"
 	"reflect"
 	"slices"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
-	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // labelsListed are the calls of user's list of project's labels: the
@@ -39,10 +37,7 @@ func TestListLabels(t *testing.T) {
 		f, l := newLabels()
 		want := l.of(project)
 		if project == webID {
-			for _, by := range []struct {
-				name  string
-				order func(a, b domain.Label) int
-			}{
+			sortedByNone(t, want, []sortOrder[domain.Label]{
 				{"the sort order's", func(a, b domain.Label) int { return cmp.Compare(a.SortOrder, b.SortOrder) }},
 				{"the sort order's, reversed", func(a, b domain.Label) int { return cmp.Compare(b.SortOrder, a.SortOrder) }},
 				{"the id's", func(a, b domain.Label) int { return slices.Compare(a.ID[:], b.ID[:]) }},
@@ -50,11 +45,7 @@ func TestListLabels(t *testing.T) {
 				{"the name's", func(a, b domain.Label) int { return cmp.Compare(a.Name, b.Name) }},
 				{"the name's, reversed", func(a, b domain.Label) int { return cmp.Compare(b.Name, a.Name) }},
 				{"the one putting the labels at the top first", func(a, b domain.Label) int { return cmp.Compare(under(a), under(b)) }},
-			} {
-				if slices.IsSortedFunc(want, by.order) {
-					t.Fatalf("the store's order %v is %s: a use case that sorted so would pass", want, by.name)
-				}
-			}
+			})
 		}
 		got, err := app.NewListLabels(l, f.auth).Execute(as(bob), project)
 		if err != nil || len(got) == 0 || !reflect.DeepEqual(got, want) || !slices.Equal(f.log.calls, labelsListed(bob, project)) {
@@ -68,26 +59,7 @@ func TestListLabels(t *testing.T) {
 // member. Every port's failure comes back as itself, after the calls
 // before it and none after.
 func TestListLabelsRefuses(t *testing.T) {
-	tests := []struct {
-		name  string
-		ctx   context.Context
-		id    uuid.UUID
-		fail  func(f *writeFixture)
-		want  error
-		calls []string
-	}{
-		{"no caller", context.Background(), webID, nil, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), nil, domain.ErrNotFound, []string{"ProjectWorkspace " + uuid.Nil().String() + " outside tx"}},
-		{"not seen", as(erin), webID, nil, domain.ErrNotFound, labelsListed(erin, webID)[:2]},
-		{"forbidden", as(alice), webID, nil, shared.Forbidden(), labelsListed(alice, webID)[:2]},
-		{"the project failing", as(bob), webID, func(f *writeFixture) { f.store.errs = map[string]error{"ProjectWorkspace": errDisk} }, errDisk,
-			labelsListed(bob, webID)[:1]},
-		{"the decision failing", as(bob), webID, func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, errDisk,
-			labelsListed(bob, webID)[:2]},
-		{"the list failing", as(bob), webID, func(f *writeFixture) { f.store.errs = map[string]error{"ListLabels": errDisk} }, errDisk,
-			labelsListed(bob, webID)},
-	}
-	for _, tt := range tests {
+	for _, tt := range readRefusals(labelsListed, "the list", "ListLabels") {
 		t.Run(tt.name, func(t *testing.T) {
 			f, l := newLabels()
 			if tt.fail != nil {

@@ -163,6 +163,38 @@ func marksDefault(name string) stateWrite {
 	}}
 }
 
+// serializeOnWeb runs first, a write on Web's rows that waits at the gate it
+// is given past its write, then second, once the first is held there; once
+// the second waits for a row of projects, Web's, it opens the gate. Neither
+// write writes a row of projects, so only the wait for that lock satisfies
+// the probe. It answers the moment the gate opened, and each write's
+// error. Every wait has a deadline, ctx's or the probe's.
+func (w memberWorld) serializeOnWeb(t *testing.T, ctx context.Context, first func(g *gate) error,
+	second func() error) (opened time.Time, firstErr, secondErr error) {
+	t.Helper()
+	g := newGate()
+	done := run(func() error { return first(g) })
+	held(t, ctx, g, done, "the first write")
+	answered := run(second)
+	pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
+	opened = time.Now().Truncate(time.Microsecond)
+	close(g.open)
+	firstErr = result(t, ctx, done, "the first write")
+	return opened, firstErr, result(t, ctx, answered, "the second write")
+}
+
+// webWrittenSince checks that Web's last write of its rows of table is no
+// earlier than opened, the gate's opening: the second write read the clock
+// under the locks it took once the first had committed (M3 design 3.3).
+func (w memberWorld) webWrittenSince(t *testing.T, table string, opened time.Time) {
+	t.Helper()
+	var latest time.Time
+	err := w.pool.QueryRow(pgtest.Soon(t), "SELECT max(updated_at) FROM "+table+" WHERE project_id = $1", w.web).Scan(&latest)
+	if err != nil || latest.Before(opened) {
+		t.Errorf("Web's last write at %v (%v); want one no earlier than the gate's opening, %v", latest, err, opened)
+	}
+}
+
 // Two writes on Web's states at once serialize on Web's row (M3 design 3.6,
 // 3.17; 9.3, interleaving 10), in both orders. The first holds acme FOR
 // SHARE, Web FOR NO KEY UPDATE and the rows it wrote, and waits at its gate
@@ -221,28 +253,19 @@ func TestStateWritesOnOneProjectSerialize(t *testing.T) {
 				for name := range states {
 					ids[name] = stateID(t, w.pool, w.web, name)
 				}
-				g := newGate()
-				done := run(func() error { return first.run(ctx, w, stateWrittenHolding{projectpg.New(w.pool), g}, ids) })
-				held(t, ctx, g, done, "the first write")
-				answered := run(func() error { return second.run(ctx, w, projectpg.New(w.pool), ids) })
-				pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
-				opened := time.Now().Truncate(time.Microsecond)
-				close(g.open)
-
-				if err := result(t, ctx, done, "the first write"); err != nil {
-					t.Errorf("%s = %v, want it done", first.name, err)
+				opened, firstErr, secondErr := w.serializeOnWeb(t, ctx,
+					func(g *gate) error { return first.run(ctx, w, stateWrittenHolding{projectpg.New(w.pool), g}, ids) },
+					func() error { return second.run(ctx, w, projectpg.New(w.pool), ids) })
+				if firstErr != nil {
+					t.Errorf("%s = %v, want it done", first.name, firstErr)
 				}
-				if err := result(t, ctx, answered, "the second write"); !sameOutcome(err, want) {
-					t.Errorf("%s = %v, want %v as its first problem", second.name, err, want)
+				if !sameOutcome(secondErr, want) {
+					t.Errorf("%s = %v, want %v as its first problem", second.name, secondErr, want)
 				}
 				first.apply(states)
 				if want == nil {
 					second.apply(states)
-					var latest time.Time
-					err := w.pool.QueryRow(pgtest.Soon(t), "SELECT max(updated_at) FROM states WHERE project_id = $1", w.web).Scan(&latest)
-					if err != nil || latest.Before(opened) {
-						t.Errorf("Web's last write at %v (%v); want one no earlier than the gate's opening, %v", latest, err, opened)
-					}
+					w.webWrittenSince(t, "states", opened)
 				}
 				if got := w.statesOf(t, w.web); !maps.Equal(got, states) {
 					t.Errorf("Web's states after both: %v; want %v", got, states)

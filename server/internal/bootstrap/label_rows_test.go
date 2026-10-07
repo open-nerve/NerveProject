@@ -37,8 +37,9 @@ func TestEachLabelWriteChangesItsRowsAlone(t *testing.T) {
 		status       int
 		writes       func() []uuid.UUID // the rows there before it that it may write
 		creates      string             // the name of the label it creates, a row it may write too
-		// refusal, when set, is the problem a refused write answers (refusalOf):
-		// its code, then its field error (field and code) when it has one.
+		// refusal, when set, is the problem a refused write answers, as
+		// refusalOf reads it without messages: its code, then its field error
+		// (field and code) when it has one.
 		refusal string
 	}{
 		{"createLabel", http.MethodPost, labels, `{"name":"QA"}`, http.StatusCreated, nil, "QA", ""},
@@ -79,7 +80,7 @@ func TestEachLabelWriteChangesItsRowsAlone(t *testing.T) {
 		w.contract.CheckRequest(t, req)
 		res, answer := send(t, req)
 		w.contract.CheckResponse(t, req, res)
-		if res.StatusCode != s.status || s.refusal != "" && refusalOf(t, answer) != s.refusal {
+		if res.StatusCode != s.status || s.refusal != "" && refusalOf(t, answer, false) != s.refusal {
 			t.Fatalf("%s = %d %s, want %d %s", s.name, res.StatusCode, answer, s.status, s.refusal)
 		}
 		if s.creates != "" {
@@ -89,15 +90,4 @@ func TestEachLabelWriteChangesItsRowsAlone(t *testing.T) {
 			t.Errorf("%s: every other row after it:\n%v\nwant them as they were:\n%v", s.name, after, before)
 		}
 	}
-}
-
-// refusalOf is the problem body answers: its code (problemCode), then its
-// field error (oneError) when it has exactly one, as "validation_failed
-// parent_id not_allowed" or "project.label_name_taken".
-func refusalOf(t *testing.T, body []byte) string {
-	t.Helper()
-	if one := oneError(t, body); one != "" {
-		return problemCode(t, body) + " " + one
-	}
-	return problemCode(t, body)
 }

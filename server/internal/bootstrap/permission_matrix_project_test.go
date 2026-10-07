@@ -16,21 +16,34 @@ var (
 	cellProjectArchived = cell{http.StatusConflict, "project.archived"}
 )
 
-// ofProject are the cells of a project-level row: the answers of PA, PM,
-// PG, PM+WA, WA- and WM-公, and project.not_found for the columns that do
-// not see their project: WM-私, WG-, P-前 and X.
-func ofProject(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
+// projectCells are the cells of a project-level row: the answers of PA,
+// PM, PG, PM+WA, WA- and WM-公, and notFound, the row's answer to a caller
+// who does not see its project, for the columns that do not see theirs:
+// WM-私, WG-, P-前 and X.
+func projectCells(notFound, pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
 	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
-		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: cellProjectNotFound, callerGuestOnly: cellProjectNotFound,
-		callerBefore: cellProjectNotFound, callerNever: cellProjectNotFound, callerRemoved: cellProjectNotFound,
-		callerDeleted: cellProjectNotFound}
+		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: notFound, callerGuestOnly: notFound, callerBefore: notFound,
+		callerNever: notFound, callerRemoved: notFound, callerDeleted: notFound}
 }
 
-// ofArchived are the cells of a row of the archived project's table: the
-// answers of PA and of the workspace's member, who sees the project, and
-// project.not_found for X, who does not.
+// archivedCells are the cells of a row of the archived project's table:
+// the answers of PA and of the workspace's member, who sees the project,
+// and notFound, the row's answer to a caller who does not see it, for X,
+// who does not.
+func archivedCells(notFound, pa, wm cell) map[caller]cell {
+	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: notFound}
+}
+
+// ofProject are the cells of a row on a project (projectCells), with
+// project.not_found.
+func ofProject(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
+	return projectCells(cellProjectNotFound, pa, pm, pg, pmwa, wa, wm)
+}
+
+// ofArchived are the cells of a row on the archived project
+// (archivedCells), with project.not_found.
 func ofArchived(pa, wm cell) map[caller]cell {
-	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: cellProjectNotFound}
+	return archivedCells(cellProjectNotFound, pa, wm)
 }
 
 // toProject is the request of a row whose callers each send method to the
@@ -51,21 +64,16 @@ type rowsByID struct {
 	find     func(s seeded, project, name string) uuid.UUID
 }
 
-// of are the cells of a row of a write on one: the answers of PA, PM, PG,
-// PM+WA, WA- and WM-公, and notFound for the columns that do not see their
-// project: WM-私, WG-, P-前 and X, whose row in gone's project is deleted
-// with it.
+// of are the cells of a row of a write on one (projectCells), with
+// notFound: X's row in gone's project is deleted with it.
 func (k rowsByID) of(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
-	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
-		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: k.notFound, callerGuestOnly: k.notFound,
-		callerBefore: k.notFound, callerNever: k.notFound, callerRemoved: k.notFound, callerDeleted: k.notFound}
+	return projectCells(k.notFound, pa, pm, pg, pmwa, wa, wm)
 }
 
 // ofArchived are the cells of a row of a write on one of the archived
-// project: the answers of PA and of the workspace's member, who sees the
-// project, and notFound for X, who does not.
+// project (archivedCells), with notFound.
 func (k rowsByID) ofArchived(pa, wm cell) map[caller]cell {
-	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: k.notFound}
+	return archivedCells(k.notFound, pa, wm)
 }
 
 // to is the request of a row whose callers each send method, with body,

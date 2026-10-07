@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -119,17 +118,6 @@ func (p moduleRoute) answerWithin(t *testing.T, contract *apitest.Contract, meth
 	return a.rec.Body.String()
 }
 
-// refusedWith checks that answer, a problem, is want: its code, and its
-// errors, messages and all.
-func refusedWith(t *testing.T, answer string, want httpserver.Problem) {
-	t.Helper()
-	var p httpserver.Problem
-	decodeAnswer(t, answer, &p)
-	if p.Code != want.Code || !slices.Equal(p.Errors, want.Errors) {
-		t.Errorf("the refusal %s; want %s, errors %+v", answer, want.Code, want.Errors)
-	}
-}
-
 // poolOfOne is a pool of one connection to url's database. A statement on a
 // context without a deadline would wait for its connection for ever, and so
 // would closing the pool: the closing has a deadline of its own.
@@ -215,8 +203,10 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		ID uuid.UUID `json:"id"`
 	}
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"QA","color":"#0EA5E9","group":"completed"}`, http.StatusCreated), &qa)
-	refusedWith(t, send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict),
-		httpserver.Problem{Code: "project.state_last_in_group"})
+	lastInGroup := send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict)
+	if got := refusalOf(t, []byte(lastInGroup), true); got != "project.state_last_in_group" {
+		t.Errorf("QA moved to the started group = %s; want project.state_last_in_group", lastInGroup)
+	}
 	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"name":"Checked"}`, http.StatusOK)
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"Done","color":"#46A758","group":"completed"}`, http.StatusCreated),
 		&done)
@@ -229,12 +219,16 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"UI","parent_id":"`+bug.ID.String()+`"}`, http.StatusCreated), &ui)
 	// The parent's refusal of a parent under another label: labels have two
 	// levels.
-	twoLevels := httpserver.Problem{Code: "validation_failed", Errors: []httpserver.FieldError{{Field: "parent_id", Code: "not_allowed",
-		Message: "must be a label without a parent: labels have two levels"}}}
-	refusedWith(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
-		twoLevels)
-	refusedWith(t, send(http.MethodPatch, "/api/v0/labels/"+bug.ID.String(), r.alice, `{"parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
-		twoLevels)
+	const twoLevels = "validation_failed parent_id not_allowed: must be a label without a parent: labels have two levels"
+	icons := send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity)
+	if got := refusalOf(t, []byte(icons), true); got != twoLevels {
+		t.Errorf("Icons under UI = %s; want %s", icons, twoLevels)
+	}
+	bugUnderUI := send(http.MethodPatch, "/api/v0/labels/"+bug.ID.String(), r.alice, `{"parent_id":"`+ui.ID.String()+`"}`,
+		http.StatusUnprocessableEntity)
+	if got := refusalOf(t, []byte(bugUnderUI), true); got != twoLevels {
+		t.Errorf("Bug under UI = %s; want %s", bugUnderUI, twoLevels)
+	}
 	// UI, under Bug, renamed and moved to the top by a null parent.
 	var widgets struct {
 		ID       uuid.UUID  `json:"id"`

@@ -11,7 +11,6 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
-	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // ListMembers is the project's active memberships, in storeOrder: an order
@@ -86,26 +85,7 @@ func TestListProjectMembers(t *testing.T) {
 // visible: 404; a member's 403 from the Authorizer. Every port's failure
 // comes back as itself, after the calls before it and none after.
 func TestListProjectMembersRefuses(t *testing.T) {
-	tests := []struct {
-		name  string
-		ctx   context.Context
-		id    uuid.UUID
-		fail  func(f *writeFixture)
-		want  error
-		calls []string
-	}{
-		{"no caller", context.Background(), webID, nil, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), nil, domain.ErrNotFound, []string{"ProjectWorkspace " + uuid.Nil().String() + " outside tx"}},
-		{"not seen", as(erin), webID, nil, domain.ErrNotFound, listed(erin, webID)[:2]},
-		{"forbidden", as(alice), webID, nil, shared.Forbidden(), listed(alice, webID)[:2]},
-		{"the project failing", as(bob), webID, func(f *writeFixture) { f.store.errs = map[string]error{"ProjectWorkspace": errDisk} }, errDisk,
-			listed(bob, webID)[:1]},
-		{"the decision failing", as(bob), webID, func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, errDisk,
-			listed(bob, webID)[:2]},
-		{"the list failing", as(bob), webID, func(f *writeFixture) { f.store.errs = map[string]error{"ListMembers": errDisk} }, errDisk,
-			listed(bob, webID)},
-	}
-	for _, tt := range tests {
+	for _, tt := range readRefusals(listed, "the list", "ListMembers") {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newWrites()
 			if tt.fail != nil {

@@ -35,6 +35,37 @@ func refusedAs(err, want error) bool {
 	return sameError(err, want)
 }
 
+// readRefusal is a row of a read under a project's refusals (readRefusals):
+// its caller and project, a port's failure, the error and the calls.
+type readRefusal struct {
+	name  string
+	ctx   context.Context
+	id    uuid.UUID
+	fail  func(f *writeFixture)
+	want  error
+	calls []string
+}
+
+// readRefusals are the refusals of a read under a project, through
+// findAndDecide, each in its place, calls being the read's calls by a user
+// in a project: no caller; a project not there, and erin, who does not see
+// web: 404; alice, the Authorizer's 403. Then each port's failure, come
+// back as itself after the calls before it and none after: the project's,
+// the decision's, and that of port, the read's own, named what.
+func readRefusals(calls func(user, project uuid.UUID) []string, what, port string) []readRefusal {
+	return []readRefusal{
+		{"no caller", context.Background(), webID, nil, shared.Unauthenticated(), nil},
+		{"no project", as(bob), uuid.Nil(), nil, domain.ErrNotFound, []string{"ProjectWorkspace " + uuid.Nil().String() + " outside tx"}},
+		{"not seen", as(erin), webID, nil, domain.ErrNotFound, calls(erin, webID)[:2]},
+		{"forbidden", as(alice), webID, nil, shared.Forbidden(), calls(alice, webID)[:2]},
+		{"the project failing", as(bob), webID, func(f *writeFixture) { f.store.errs = map[string]error{"ProjectWorkspace": errDisk} }, errDisk,
+			calls(bob, webID)[:1]},
+		{"the decision failing", as(bob), webID, func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, errDisk,
+			calls(bob, webID)[:2]},
+		{what + " failing", as(bob), webID, func(f *writeFixture) { f.store.errs = map[string]error{port: errDisk} }, errDisk, calls(bob, webID)},
+	}
+}
+
 // read are the calls of user's read of his display settings in project: the
 // project's workspace, the decision, his settings; none in a transaction.
 func read(user, project uuid.UUID) []string {
@@ -63,26 +94,7 @@ func TestGetProjectPreferences(t *testing.T) {
 // visible: 404; a caller the Authorizer refuses: its 403. Every port's
 // failure comes back as itself, after the calls before it and none after.
 func TestGetProjectPreferencesRefuses(t *testing.T) {
-	tests := []struct {
-		name  string
-		ctx   context.Context
-		id    uuid.UUID
-		fail  func(f *writeFixture)
-		want  error
-		calls []string
-	}{
-		{"no caller", context.Background(), webID, nil, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), nil, domain.ErrNotFound, []string{"ProjectWorkspace " + uuid.Nil().String() + " outside tx"}},
-		{"not seen", as(erin), webID, nil, domain.ErrNotFound, read(erin, webID)[:2]},
-		{"forbidden", as(alice), webID, nil, shared.Forbidden(), read(alice, webID)[:2]},
-		{"the project failing", as(bob), webID, func(f *writeFixture) { f.store.errs = map[string]error{"ProjectWorkspace": errDisk} }, errDisk,
-			read(bob, webID)[:1]},
-		{"the decision failing", as(bob), webID, func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, errDisk,
-			read(bob, webID)[:2]},
-		{"the settings failing", as(bob), webID, func(f *writeFixture) { f.store.errs = map[string]error{"Preferences": errDisk} }, errDisk,
-			read(bob, webID)},
-	}
-	for _, tt := range tests {
+	for _, tt := range readRefusals(read, "the settings", "Preferences") {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newPreferences()
 			if tt.fail != nil {

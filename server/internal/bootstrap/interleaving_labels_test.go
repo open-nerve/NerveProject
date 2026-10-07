@@ -251,28 +251,20 @@ func TestLabelWritesOnOneProjectSerialize(t *testing.T) {
 				ids := w.seedLabelsOf(t, w.web)
 				w.seedLabelsOf(t, w.ops)
 				labels, ops := w.labelsOf(t, w.web), w.labelsOf(t, w.ops)
-				g := newGate()
-				done := run(func() error { return first.run(ctx, w, labelWrittenHolding{projectpg.New(w.pool), g}, ids) })
-				held(t, ctx, g, done, "the first write")
-				answered := run(func() error { return second.run(ctx, w, projectpg.New(w.pool), ids) })
-				pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
-				opened := time.Now().Truncate(time.Microsecond)
-				close(g.open)
-
-				if err := result(t, ctx, done, "the first write"); err != nil {
-					t.Errorf("%s = %v, want it done", first.name, err)
+				opened, firstErr, secondErr := w.serializeOnWeb(t, ctx,
+					func(g *gate) error { return first.run(ctx, w, labelWrittenHolding{projectpg.New(w.pool), g}, ids) },
+					func() error { return second.run(ctx, w, projectpg.New(w.pool), ids) })
+				if firstErr != nil {
+					t.Errorf("%s = %v, want it done", first.name, firstErr)
 				}
-				if err := result(t, ctx, answered, "the second write"); !sameLabelOutcome(err, want) {
-					t.Errorf("%s = %v, fields %#v; want %v, fields %#v, as its first problem", second.name, err, fieldsOf(err), want, fieldsOf(want))
+				if !sameLabelOutcome(secondErr, want) {
+					t.Errorf("%s = %v, fields %#v; want %v, fields %#v, as its first problem", second.name, secondErr, fieldsOf(secondErr), want,
+						fieldsOf(want))
 				}
 				first.apply(labels)
 				if want == nil {
 					second.apply(labels)
-					var latest time.Time
-					err := w.pool.QueryRow(pgtest.Soon(t), "SELECT max(updated_at) FROM labels WHERE project_id = $1", w.web).Scan(&latest)
-					if err != nil || latest.Before(opened) {
-						t.Errorf("Web's last write at %v (%v); want one no earlier than the gate's opening, %v", latest, err, opened)
-					}
+					w.webWrittenSince(t, "labels", opened)
 				}
 				if got := w.labelsOf(t, w.web); !maps.Equal(got, labels) {
 					t.Errorf("Web's labels after both: %v; want %v", got, labels)
