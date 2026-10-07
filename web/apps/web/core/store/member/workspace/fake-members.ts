@@ -13,8 +13,11 @@ import { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.
 import { RouterStore } from "@/store/router.store";
 import { UserStore } from "@/store/user";
 
-/** A membership of acme as nerve lists it: the name names the member; an active member's, unless fields say not. */
-export function membershipOf(name: string, fields: Partial<WorkspaceMember> = {}): WorkspaceMember {
+/**
+ * A membership of the workspace slug names (acme unless it says) as nerve lists it: the name names the member, and
+ * with the slug the membership; an active member's, unless fields say not.
+ */
+export function membershipOf(name: string, fields: Partial<WorkspaceMember> = {}, slug = "acme"): WorkspaceMember {
   const member: MemberUser = {
     id: `u-${name}`,
     display_name: name,
@@ -24,8 +27,8 @@ export function membershipOf(name: string, fields: Partial<WorkspaceMember> = {}
     email: `${name}@example.com`,
   };
   return {
-    id: `m-${name}`,
-    workspace_id: "id-acme",
+    id: `m-${slug}-${name}`,
+    workspace_id: `id-${slug}`,
     role: 15,
     is_active: true,
     created_at: "2026-10-01T09:00:00Z",
@@ -34,7 +37,7 @@ export function membershipOf(name: string, fields: Partial<WorkspaceMember> = {}
   };
 }
 
-/** The store, and the users the stores share, of a tab whose address names acme; client builds its client. */
+/** The store, the users the stores share and the store's client, of a tab whose address names acme; client builds it. */
 export function memberStore(client: (nerve: FakeNerve) => ApiClient = (nerve) => nerve.client()) {
   const nerve = new FakeNerve();
   const api = client(nerve);
@@ -43,5 +46,5 @@ export function memberStore(client: (nerve: FakeNerve) => ApiClient = (nerve) =>
   const user = new UserStore(fakeRoot({ router }), api);
   const users: Record<string, MemberUser> = {};
   const store = new WorkspaceMemberStore({ memberMap: users }, fakeRoot({ router, user }), api);
-  return { nerve, user, users, store };
+  return { nerve, api, user, users, store };
 }

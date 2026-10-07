@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api-error";
 import type { FakeNerve } from "@/lib/auth/fake-nerve";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
 import { memberStore, membershipOf } from "@/store/member/workspace/fake-members";
 import type { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
@@ -21,16 +22,24 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }))
 
 const MEMBERS = "/api/v0/workspaces/acme/members";
 
+/** The membership as nerve lists it once its member has changed his display name. */
+function renamed(membership: WorkspaceMember, displayName: string): WorkspaceMember {
+  return { ...membership, member: { ...membership.member, display_name: displayName } };
+}
+
 const ann = membershipOf("ann", { role: 20 });
 const bob = membershipOf("bob");
 /** A member who was removed: nerve lists his membership, ended. */
 const cat = membershipOf("cat", { role: 5, is_active: false });
+/** Bob's membership as nerve answers his change to a guest: he renamed himself meanwhile, which no request says. */
+const demoted = renamed(membershipOf("bob", { role: 5 }), "Robert");
 
-/** The store fetches acme's members, and nerve lists these. */
-async function load(nerve: FakeNerve, store: WorkspaceMemberStore, memberships: WorkspaceMember[]) {
+/** The store fetches the members of the workspace slug names (acme unless it says), and nerve lists these. */
+async function load(nerve: FakeNerve, store: WorkspaceMemberStore, memberships: WorkspaceMember[], slug = "acme") {
   const at = nerve.calls.length;
-  const fetched = store.fetchWorkspaceMembers("acme");
+  const fetched = store.fetchWorkspaceMembers(slug);
   await until(() => nerve.calls.length === at + 1, "the members");
+  expect(nerve.calls[at]).toMatchObject({ method: "GET", path: `/api/v0/workspaces/${slug}/members` });
   nerve.calls[at]?.answer(json(200, { data: memberships }));
   return settle(fetched, "the members");
 }
@@ -53,7 +62,6 @@ describe("WorkspaceMemberStore, the members", () => {
   it("keeps a workspace's memberships as nerve lists them, ended ones too, and shares the members' profiles", async () => {
     const { nerve, users, store } = memberStore();
     const fetched = await load(nerve, store, [ann, bob, cat]);
-    expect(nerve.calls[0]).toMatchObject({ method: "GET", path: MEMBERS });
     expect(fetched.value).toEqual([ann, bob, cat]);
     expect(store.workspaceMemberMap).toEqual({ acme: { "u-ann": ann, "u-bob": bob, "u-cat": cat } });
     expect(users).toEqual({ "u-ann": ann.member, "u-bob": bob.member, "u-cat": cat.member });
@@ -62,15 +70,25 @@ describe("WorkspaceMemberStore, the members", () => {
     expect(store.isUserSuspended("u-cat", "acme")).toBe(true);
     expect(store.isUserSuspended("u-bob", "acme")).toBe(false);
 
-    // a fetch again holds the list as nerve has it now
-    const promoted = membershipOf("bob", { role: 20 });
+    // each workspace's list is its own; a fetch again holds acme's as nerve has it now, the profiles too
+    const elsewhere = membershipOf("ann", {}, "globex");
+    await load(nerve, store, [elsewhere], "globex");
+    const promoted = renamed(membershipOf("bob", { role: 20 }), "Robert");
     await load(nerve, store, [ann, promoted]);
-    expect(store.workspaceMemberMap).toEqual({ acme: { "u-ann": ann, "u-bob": promoted } });
+    expect(store.workspaceMemberMap).toEqual({
+      acme: { "u-ann": ann, "u-bob": promoted },
+      globex: { "u-ann": elsewhere },
+    });
+    expect(users["u-bob"]).toEqual(promoted.member);
   });
 
   it("lists the caller first, then the others by display name", async () => {
-    const { user, store } = await loaded();
-    expect(store.getWorkspaceMemberIds("acme")).toEqual(["u-ann", "u-bob", "u-cat"]);
+    const { nerve, user, store } = memberStore();
+    /** A display name with a capital: the order is the names', whatever their case. */
+    const dee = membershipOf("Dee");
+    // nerve's order is not the names'
+    await load(nerve, store, [dee, cat, bob, ann]);
+    expect(store.getWorkspaceMemberIds("acme")).toEqual(["u-ann", "u-bob", "u-cat", "u-Dee"]);
     runInAction(() => {
       user.data = {
         ...bob.member,
@@ -80,7 +98,7 @@ describe("WorkspaceMemberStore, the members", () => {
         created_at: "2026-09-01T09:00:00Z",
       };
     });
-    expect(store.getWorkspaceMemberIds("acme")).toEqual(["u-bob", "u-ann", "u-cat"]);
+    expect(store.getWorkspaceMemberIds("acme")).toEqual(["u-bob", "u-ann", "u-cat", "u-Dee"]);
   });
 
   it("fails when nerve cannot list them, keeping the members it had", async () => {
@@ -109,17 +127,31 @@ describe("WorkspaceMemberStore, the members", () => {
     expect(nerve.calls).toEqual([]);
     expect(store.workspaceMemberMap).toEqual({});
   });
+
+  it("keeps the members it had when the session changes as it fetches them again", async () => {
+    const { nerve, api, users, store } = await loaded();
+    // from now on the session's middleware fails each request before it is sent (auth-middleware.ts)
+    api.use({
+      onRequest: () => {
+        throw new SessionChangedError();
+      },
+    });
+    const fetched = await settle(store.fetchWorkspaceMembers("acme"), "the refetch");
+    expect(fetched).toEqual({ settled: true, value: undefined });
+    expect(nerve.calls).toHaveLength(1);
+    expect(store.workspaceMemberMap).toEqual({ acme: { "u-ann": ann, "u-bob": bob, "u-cat": cat } });
+    expect(users).toEqual({ "u-ann": ann.member, "u-bob": bob.member, "u-cat": cat.member });
+  });
 });
 
 describe("WorkspaceMemberStore, the changes", () => {
   it("changes a member's role to nerve's answer, once nerve gives it", async () => {
     const { nerve, store } = await loaded();
-    const demoted = membershipOf("bob", { role: 5 });
     const updated = track(store.updateMember("acme", "u-bob", { role: 5 }));
     await until(() => nerve.calls.length === 2, "the change");
     expect(nerve.calls[1]).toMatchObject({
       method: "PATCH",
-      path: "/api/v0/workspace-members/m-bob",
+      path: "/api/v0/workspace-members/m-acme-bob",
       body: { role: 5 },
     });
     // until nerve answers, the role is as it was
@@ -134,13 +166,31 @@ describe("WorkspaceMemberStore, the changes", () => {
     const { nerve, store } = await loaded();
     const removed = track(store.removeMemberFromWorkspace("acme", "u-bob"));
     await until(() => nerve.calls.length === 2, "the removal");
-    expect(nerve.calls[1]).toMatchObject({ method: "DELETE", path: "/api/v0/workspace-members/m-bob" });
+    expect(nerve.calls[1]).toMatchObject({ method: "DELETE", path: "/api/v0/workspace-members/m-acme-bob" });
     expect(store.isUserSuspended("u-bob", "acme")).toBe(false);
     nerve.calls[1]?.answer(noContent());
     await until(() => removed.settled, "the removal");
     expect(removed.error).toBeUndefined();
     expect(store.workspaceMemberMap.acme?.["u-bob"]).toEqual({ ...bob, is_active: false });
     expect(store.isUserSuspended("u-bob", "acme")).toBe(true);
+  });
+
+  it("changes the membership of the workspace it is given, not of the one the address names", async () => {
+    // the tab's address names acme
+    const { nerve, store } = await loaded();
+    const elsewhere = membershipOf("bob", {}, "globex");
+    await load(nerve, store, [elsewhere], "globex");
+    const guest = membershipOf("bob", { role: 5 }, "globex");
+    const updated = track(store.updateMember("globex", "u-bob", { role: 5 }));
+    await inTurn(nerve, 2, ["PATCH", "/api/v0/workspace-members/m-globex-bob"], json(200, guest));
+    await until(() => updated.settled, "the answer");
+    const removed = track(store.removeMemberFromWorkspace("globex", "u-bob"));
+    await inTurn(nerve, 3, ["DELETE", "/api/v0/workspace-members/m-globex-bob"], noContent());
+    await until(() => removed.settled, "the removal");
+    expect(store.workspaceMemberMap).toEqual({
+      acme: { "u-ann": ann, "u-bob": bob, "u-cat": cat },
+      globex: { "u-bob": { ...guest, is_active: false } },
+    });
   });
 
   const refusals: { change: string; send: (store: WorkspaceMemberStore) => Promise<unknown>; refusal: Response }[] = [
@@ -174,13 +224,12 @@ describe("WorkspaceMemberStore, the changes", () => {
 
   it("sends each change once nerve has answered the one before it, refused or not", async () => {
     const { nerve, store } = await loaded();
-    const demoted = membershipOf("bob", { role: 5 });
     const promoted = track(store.updateMember("acme", "u-bob", { role: 20 }));
     const changed = track(store.updateMember("acme", "u-bob", { role: 5 }));
     const removed = track(store.removeMemberFromWorkspace("acme", "u-bob"));
-    await inTurn(nerve, 1, ["PATCH", "/api/v0/workspace-members/m-bob"], problem(503, "server_busy"));
-    await inTurn(nerve, 2, ["PATCH", "/api/v0/workspace-members/m-bob"], json(200, demoted));
-    await inTurn(nerve, 3, ["DELETE", "/api/v0/workspace-members/m-bob"], noContent());
+    await inTurn(nerve, 1, ["PATCH", "/api/v0/workspace-members/m-acme-bob"], problem(503, "server_busy"));
+    await inTurn(nerve, 2, ["PATCH", "/api/v0/workspace-members/m-acme-bob"], json(200, demoted));
+    await inTurn(nerve, 3, ["DELETE", "/api/v0/workspace-members/m-acme-bob"], noContent());
     await until(() => removed.settled, "the last change");
     expect(promoted.error).toBeInstanceOf(ApiError);
     expect(changed.value).toEqual(demoted);
