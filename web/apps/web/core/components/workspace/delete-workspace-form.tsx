@@ -60,7 +60,7 @@ export const DeleteWorkspaceForm = observer(function DeleteWorkspaceForm(props: 
     if (!data || !canDelete) return;
 
     try {
-      await deleteWorkspace(data.slug);
+      await deleteWorkspace(data);
       handleClose();
       // the root lands the caller where his workspaces, as they are now, say (M3 design 3.14)
       navigate("/");

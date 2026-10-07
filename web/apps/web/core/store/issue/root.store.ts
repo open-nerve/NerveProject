@@ -7,7 +7,7 @@
 import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
-import type { ApiClient, MemberUser, WorkspaceMember } from "@nerve/api-client";
+import type { ApiClient, MemberUser } from "@nerve/api-client";
 import type { ICycle, IIssueLabel, IModule, IProject, IState } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
@@ -52,7 +52,6 @@ export interface IIssueRootStore {
   stateDetails: IState[] | undefined;
   workspaceStateDetails: IState[] | undefined;
   labelMap: Record<string, IIssueLabel> | undefined;
-  workSpaceMemberRolesMap: Record<string, WorkspaceMember> | undefined;
   memberMap: Record<string, MemberUser> | undefined;
   projectMap: Record<string, IProject> | undefined;
   moduleMap: Record<string, IModule> | undefined;
@@ -105,7 +104,6 @@ export class IssueRootStore implements IIssueRootStore {
   stateDetails: IState[] | undefined = undefined;
   workspaceStateDetails: IState[] | undefined = undefined;
   labelMap: Record<string, IIssueLabel> | undefined = undefined;
-  workSpaceMemberRolesMap: Record<string, WorkspaceMember> | undefined = undefined;
   memberMap: Record<string, MemberUser> | undefined = undefined;
   projectMap: Record<string, IProject> | undefined = undefined;
   moduleMap: Record<string, IModule> | undefined = undefined;
@@ -158,7 +156,6 @@ export class IssueRootStore implements IIssueRootStore {
       workspaceStateDetails: observable,
       labelMap: observable,
       memberMap: observable,
-      workSpaceMemberRolesMap: observable,
       projectMap: observable,
       moduleMap: observable,
       cycleMap: observable,
@@ -179,8 +176,6 @@ export class IssueRootStore implements IIssueRootStore {
       if (!isEmpty(rootStore?.state?.projectStates)) this.stateDetails = rootStore?.state?.projectStates;
       if (!isEmpty(rootStore?.state?.workspaceStates)) this.workspaceStateDetails = rootStore?.state?.workspaceStates;
       if (!isEmpty(rootStore?.label?.labelMap)) this.labelMap = rootStore?.label?.labelMap;
-      if (!isEmpty(rootStore?.memberRoot?.workspace?.workspaceMemberMap))
-        this.workSpaceMemberRolesMap = rootStore?.memberRoot?.workspace?.memberMap || undefined;
       if (!isEmpty(rootStore?.memberRoot?.memberMap)) this.memberMap = rootStore?.memberRoot?.memberMap || undefined;
       if (!isEmpty(rootStore?.projectRoot?.project?.projectMap))
         this.projectMap = rootStore?.projectRoot?.project?.projectMap;

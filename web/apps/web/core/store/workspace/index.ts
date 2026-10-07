@@ -4,12 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { action, computed, observable, makeObservable, runInAction } from "mobx";
+import { action, computed, makeObservable } from "mobx";
 // nerve imports
 import type { ApiClient, SlugAvailability, Workspace, WorkspaceCreate, WorkspaceUpdate } from "@nerve/api-client";
 // lib
-import { SessionChangedError } from "@/lib/auth/token-manager";
 import { oneAtATime } from "@/lib/one-at-a-time";
+import { Reconciled, dropped, replaced, upserted } from "@/lib/reconciled";
 // services
 import { WorkspacesService } from "@/services/workspace/workspaces.service";
 // store
@@ -21,7 +21,10 @@ import type { IWebhookStore } from "./webhook.store";
 import { WebhookStore } from "./webhook.store";
 
 export interface IWorkspaceRootStore {
-  /** The caller's workspaces, in nerve's order (by name, then id); undefined until fetched. */
+  /**
+   * The caller's workspaces, in nerve's order (by name, then id) but for those created or joined since nerve listed
+   * them, which come last until the next fetch; undefined until fetched.
+   */
   workspaces: Workspace[] | undefined;
   // computed
   currentWorkspace: Workspace | null;
@@ -33,8 +36,8 @@ export interface IWorkspaceRootStore {
   // crud actions
   createWorkspace: (data: WorkspaceCreate) => Promise<Workspace>;
   updateWorkspace: (workspaceSlug: string, data: WorkspaceUpdate) => Promise<Workspace>;
-  deleteWorkspace: (workspaceSlug: string) => Promise<void>;
-  leaveWorkspace: (workspaceSlug: string) => Promise<void>;
+  deleteWorkspace: (workspace: Pick<Workspace, "id" | "slug">) => Promise<void>;
+  leaveWorkspace: (workspace: Pick<Workspace, "id" | "slug">) => Promise<void>;
   acceptInvitation: (invitationId: string, token: string) => Promise<Workspace>;
   declineInvitation: (invitationId: string, token: string) => Promise<void>;
   // sub-stores
@@ -47,7 +50,8 @@ export interface IWorkspaceRootStore {
  * the RootStore of the session hands down. Changes go one at a time (v0 design 7.7); fetches do not queue.
  */
 export class WorkspaceRootStore implements IWorkspaceRootStore {
-  workspaces: Workspace[] | undefined = undefined;
+  /** The list, reconciled between its fetches and the changes nerve confirmed (reconciled.ts). */
+  private readonly list = new Reconciled<Workspace[]>();
   // services
   private readonly service: WorkspacesService;
   /** The changes of the workspaces, sent one at a time. */
@@ -60,8 +64,6 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
 
   constructor(_rootStore: RootStore, api: ApiClient) {
     makeObservable(this, {
-      // observables
-      workspaces: observable.ref,
       // computed
       currentWorkspace: computed,
       // actions
@@ -79,8 +81,12 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
     // root store
     this.router = _rootStore.router;
     // sub-stores
-    this.preferences = new WorkspacePreferencesStore(api);
+    this.preferences = new WorkspacePreferencesStore(this.getWorkspaceBySlug, api);
     this.webhook = new WebhookStore(_rootStore);
+  }
+
+  get workspaces(): Workspace[] | undefined {
+    return this.list.value;
   }
 
   /** The workspace the address names, when the caller is a member of it. */
@@ -94,22 +100,11 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
     this.workspaces?.find((workspace) => workspace.slug === workspaceSlug) ?? null;
 
   /**
-   * @description fetches the caller's workspaces and gives them; a change of session while they load is no failure:
-   * the new session's store fetches its own (store-context.tsx), and this one gives undefined
+   * @description fetches the caller's workspaces and shows them with the changes nerve confirmed meanwhile; gives what
+   * it shows, or undefined for a fetch a newer one overtook or a change of session cut (Reconciled.fetch)
    * @returns {Promise<Workspace[] | undefined>}
    */
-  fetchWorkspaces = async (): Promise<Workspace[] | undefined> => {
-    try {
-      const workspaces = await this.service.list();
-      runInAction(() => {
-        this.workspaces = workspaces;
-      });
-      return workspaces;
-    } catch (error) {
-      if (error instanceof SessionChangedError) return undefined;
-      throw error;
-    }
-  };
+  fetchWorkspaces = (): Promise<Workspace[] | undefined> => this.list.fetch(() => this.service.list());
 
   /**
    * @description whether slug can name a new workspace, or why not (reserved, taken, invalid)
@@ -118,16 +113,14 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
   checkWorkspaceSlug = (slug: string): Promise<SlugAvailability> => this.service.checkSlug(slug);
 
   /**
-   * @description creates a workspace, with the caller as its admin; once the list is fetched it has the new one
-   * last, until the next fetch puts it in nerve's order. Fails, changing nothing, when nerve refuses.
+   * @description creates a workspace, with the caller as its admin: the list has it last, until the next fetch puts
+   * it in nerve's order. Fails, changing nothing, when nerve refuses.
    * @returns {Promise<Workspace>}
    */
   createWorkspace = (data: WorkspaceCreate): Promise<Workspace> =>
     this.changes(async () => {
       const workspace = await this.service.create(data);
-      runInAction(() => {
-        if (this.workspaces) this.workspaces = [...this.workspaces, workspace];
-      });
+      this.list.confirm(upserted(workspace));
       return workspace;
     });
 
@@ -139,31 +132,30 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
   updateWorkspace = (workspaceSlug: string, data: WorkspaceUpdate): Promise<Workspace> =>
     this.changes(async () => {
       const workspace = await this.service.update(workspaceSlug, data);
-      runInAction(() => {
-        this.workspaces = this.workspaces?.map((w) => (w.id === workspace.id ? workspace : w));
-      });
+      this.list.confirm(replaced(workspace));
       return workspace;
     });
 
   /**
-   * @description deletes a workspace, which then leaves the list; fails, changing nothing, when nerve refuses
+   * @description deletes a workspace, which then leaves the list, and with it what the stores keep of it, by its id
+   * (its members, invitations and the caller's settings there); fails, changing nothing, when nerve refuses
    * @returns {Promise<void>}
    */
-  deleteWorkspace = (workspaceSlug: string): Promise<void> =>
+  deleteWorkspace = (workspace: Pick<Workspace, "id" | "slug">): Promise<void> =>
     this.changes(async () => {
-      await this.service.delete(workspaceSlug);
-      this.drop(workspaceSlug);
+      await this.service.delete(workspace.slug);
+      this.list.confirm(dropped(workspace.id));
     });
 
   /**
-   * @description ends the caller's membership of a workspace, which then leaves the list; fails, changing nothing,
-   * when nerve refuses (the only admin of the workspace or of one of its projects, 409)
+   * @description ends the caller's membership of a workspace, which then leaves the list, as deleteWorkspace; fails,
+   * changing nothing, when nerve refuses (the only admin of the workspace or of one of its projects, 409)
    * @returns {Promise<void>}
    */
-  leaveWorkspace = (workspaceSlug: string): Promise<void> =>
+  leaveWorkspace = (workspace: Pick<Workspace, "id" | "slug">): Promise<void> =>
     this.changes(async () => {
-      await this.service.leave(workspaceSlug);
-      this.drop(workspaceSlug);
+      await this.service.leave(workspace.slug);
+      this.list.confirm(dropped(workspace.id));
     });
 
   /**
@@ -175,11 +167,7 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
   acceptInvitation = (invitationId: string, token: string): Promise<Workspace> =>
     this.changes(async () => {
       const workspace = await this.service.accept(invitationId, token);
-      runInAction(() => {
-        const listed = this.workspaces?.some((w) => w.id === workspace.id);
-        if (listed) this.workspaces = this.workspaces?.map((w) => (w.id === workspace.id ? workspace : w));
-        else if (this.workspaces) this.workspaces = [...this.workspaces, workspace];
-      });
+      this.list.confirm(upserted(workspace));
       return workspace;
     });
 
@@ -190,11 +178,4 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
    */
   declineInvitation = (invitationId: string, token: string): Promise<void> =>
     this.changes(() => this.service.decline(invitationId, token));
-
-  /** The workspace leaves the caller's list: it was deleted, or he is no longer a member. */
-  private drop(workspaceSlug: string): void {
-    runInAction(() => {
-      this.workspaces = this.workspaces?.filter((workspace) => workspace.slug !== workspaceSlug);
-    });
-  }
 }

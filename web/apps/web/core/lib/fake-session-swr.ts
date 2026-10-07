@@ -27,3 +27,10 @@ export function useSessionSWR(...call: HandedFetch): object {
   handed.push(call);
   return response.current;
 }
+
+/** Calls each fetcher handed over with its fetch's arguments, as SWR calls it with the key's; null fetches nothing. */
+export function fetchHanded(): Promise<unknown[]> {
+  return Promise.all(handed.flatMap(([fetch, fetcher]) => (fetch ? [fetcher(...known(fetch.slice(1)))] : [])));
+}
+
+const known = (args: (string | undefined)[]) => args.filter((arg) => arg !== undefined);

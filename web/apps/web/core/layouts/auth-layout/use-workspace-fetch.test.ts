@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
-import { handed } from "@/lib/fake-session-swr";
+import { fetchHanded, handed } from "@/lib/fake-session-swr";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // A page of a workspace fetches what its caller may read (M3 design 3.1, 7.1), with fake-session-swr.ts's stand-in for
@@ -28,11 +28,15 @@ describe("useWorkspaceFetch", () => {
     useWorkspaceFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([
       ["WORKSPACES"],
-      ["WORKSPACE_MEMBERS", "acme"],
-      ["WORKSPACE_PREFERENCES", "acme"],
+      ["WORKSPACE_MEMBERS", "id-acme", "acme"],
+      ["WORKSPACE_PREFERENCES", "id-acme", "acme"],
     ]);
-    await Promise.all(handed.map(([, fetcher]) => fetcher("acme")));
-    expect(stores.fetched).toEqual(["the workspaces", "the members of acme", "the settings in acme"]);
+    await fetchHanded();
+    expect(stores.fetched).toEqual([
+      "the workspaces",
+      "the members of acme (id-acme)",
+      "the settings in acme (id-acme)",
+    ]);
   });
 
   it("fetches only the caller's workspaces where the address names none of his", () => {

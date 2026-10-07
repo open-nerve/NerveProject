@@ -63,21 +63,15 @@ export class FakeNerve {
   }
 
   /**
-   * The client api from now on as a session another has replaced as the tab's: each request fails before it is
+   * From now on, the client api is of a session another has replaced as the tab's: each request fails before it is
    * sent, with SessionChangedError, as the session's middleware fails it then (auth-middleware.ts).
    */
-  static replaceSession(api: ApiClient): ApiClient {
+  static replaceSession(api: ApiClient): void {
     api.use({
       onRequest: () => {
         throw new SessionChangedError();
       },
     });
-    return api;
-  }
-
-  /** A client of this fake for a session another has replaced as the tab's (replaceSession). */
-  replacedSessionClient() {
-    return FakeNerve.replaceSession(this.client());
   }
 
   /** The requests to path so far. */

@@ -21,10 +21,12 @@ export function useMembersSettingsFetch(workspaceSlug: string | undefined): void
     workspace: { fetchWorkspaceMembers, fetchWorkspaceMemberInvitations },
   } = useMember();
   // the address's workspace is the caller's once his list has it
-  const isMember = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug) !== null;
-  const isAdmin = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug)?.role === EUserWorkspaceRoles.ADMIN;
-  useSessionSWR(isMember ? ["WORKSPACE_MEMBERS", workspaceSlug] : null, (slug) => fetchWorkspaceMembers(slug));
-  useSessionSWR(isAdmin ? ["WORKSPACE_INVITATIONS", workspaceSlug] : null, (slug) =>
-    fetchWorkspaceMemberInvitations(slug)
+  const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
+  useSessionSWR(workspace && ["WORKSPACE_MEMBERS", workspace.id, workspace.slug], (id, slug) =>
+    fetchWorkspaceMembers({ id, slug })
+  );
+  useSessionSWR(
+    workspace?.role === EUserWorkspaceRoles.ADMIN ? ["WORKSPACE_INVITATIONS", workspace.id, workspace.slug] : null,
+    (id, slug) => fetchWorkspaceMemberInvitations({ id, slug })
   );
 }

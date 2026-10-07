@@ -8,6 +8,7 @@ import type { ApiToken, ApiTokenCreated } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
+import { inTurn } from "@/store/fake-queue";
 import { ApiTokenStore } from "@/store/user/api-token.store";
 
 // The personal access tokens of an account (M2 design 7.5), against a fake nerve. That the store sends as the
@@ -139,6 +140,22 @@ describe("ApiTokenStore", () => {
     await until(() => revoked.settled, "the revocation");
     expect(revoked.error).toBeUndefined();
     expect(store.tokens).toEqual([listed(3), listed(1)]);
+  });
+
+  it("sends each change once nerve has answered the one before it, refused or not", async () => {
+    const nerve = new FakeNerve();
+    const store = new ApiTokenStore(nerve.client());
+    await loadList(nerve, store, [listed(2), listed(1)]);
+    const refused = track(store.createToken({ label: "token 3" }));
+    const revoked = track(store.revokeToken(listed(2).id));
+    const made = track(store.createToken({ label: "token 4" }));
+    await inTurn(nerve, 1, ["POST", LIST], problem(422, "validation_failed"));
+    await inTurn(nerve, 2, ["DELETE", `/api/v0/api-tokens/${listed(2).id}`], noContent());
+    await inTurn(nerve, 3, ["POST", LIST], json(201, created(4)));
+    await until(() => made.settled, "the last change");
+    expect(refused.error).toBeInstanceOf(ApiError);
+    expect(revoked.error).toBeUndefined();
+    expect(store.tokens).toEqual([listed(4), listed(1)]);
   });
 });
 

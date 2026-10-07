@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
-import { handed } from "@/lib/fake-session-swr";
+import { fetchHanded, handed } from "@/lib/fake-session-swr";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // A profile page fetches the members of a workspace its caller may read (M3 design 7.1), with fake-session-swr.ts's
@@ -26,9 +26,9 @@ beforeEach(() => {
 describe("useProfileMember", () => {
   it("fetches the members of one of the caller's workspaces", async () => {
     useProfileMember("acme", "u-bob");
-    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACE_MEMBERS", "acme"]]);
-    await Promise.all(handed.map(([, fetcher]) => fetcher("acme")));
-    expect(stores.fetched).toEqual(["the members of acme"]);
+    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACE_MEMBERS", "id-acme", "acme"]]);
+    await fetchHanded();
+    expect(stores.fetched).toEqual(["the members of acme (id-acme)"]);
   });
 
   it("fetches nothing where the address names none of the caller's workspaces", () => {

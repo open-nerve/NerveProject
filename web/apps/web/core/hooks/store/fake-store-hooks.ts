@@ -28,20 +28,27 @@ export function emptyStores() {
 /** A store's fetch, which says what it fetched; its Promise is what SWR gets. */
 const fetching = (what: string) => Promise.resolve(stores.fetched.push(what));
 
+/** A workspace as a fetch names it: its slug, and its id. */
+const named = ({ id, slug }: Pick<Workspace, "id" | "slug">) => `${slug} (${id})`;
+
 export function useWorkspace() {
   return {
     workspaces: stores.workspaces,
     getWorkspaceBySlug: (slug: string) => stores.workspaces?.find((workspace) => workspace.slug === slug) ?? null,
     fetchWorkspaces: () => fetching("the workspaces"),
-    preferences: { fetchPreferences: (slug: string) => fetching(`the settings in ${slug}`) },
+    preferences: {
+      fetchPreferences: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the settings in ${named(workspace)}`),
+    },
   };
 }
 
 export function useMember() {
   return {
     workspace: {
-      fetchWorkspaceMembers: (slug: string) => fetching(`the members of ${slug}`),
-      fetchWorkspaceMemberInvitations: (slug: string) => fetching(`the invitations of ${slug}`),
+      fetchWorkspaceMembers: (workspace: Pick<Workspace, "id" | "slug">) =>
+        fetching(`the members of ${named(workspace)}`),
+      fetchWorkspaceMemberInvitations: (workspace: Pick<Workspace, "id" | "slug">) =>
+        fetching(`the invitations of ${named(workspace)}`),
       getWorkspaceMemberDetails: (userId: string) => stores.members[userId] ?? null,
     },
   };

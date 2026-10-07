@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OnboardingSteps, Profile } from "@nerve/api-client";
 import { EPageTypes } from "@/helpers/authentication.helper";
 import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
-import { handed, response } from "@/lib/fake-session-swr";
+import { fetchHanded, handed, response } from "@/lib/fake-session-swr";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // The landing of a signed-in account (M3 design 3.14) as AuthenticationWrapper is told it, with fake-session-swr.ts's
@@ -57,7 +57,7 @@ describe("useLanding", () => {
   it("sends an onboarded account on the sign-in page where its workspaces decide, the one it opened last first", async () => {
     expect(useLanding(NON_AUTHENTICATED, undefined)).toEqual({ kind: "go", to: "/beta" });
     expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"]]);
-    await Promise.all(handed.map(([, fetcher]) => fetcher()));
+    await fetchHanded();
     expect(stores.fetched).toEqual(["the workspaces"]);
 
     stores.profile = profileOf({ last_workspace_id: null });

@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { action, makeObservable, observable, runInAction } from "mobx";
+import { action, makeObservable } from "mobx";
 // nerve imports
-import type { ApiClient, WorkspacePreferences, WorkspacePreferencesUpdate } from "@nerve/api-client";
+import type { ApiClient, Workspace, WorkspacePreferences, WorkspacePreferencesUpdate } from "@nerve/api-client";
 // lib
-import { SessionChangedError } from "@/lib/auth/token-manager";
 import { oneAtATime } from "@/lib/one-at-a-time";
+import { ReconciledByKey } from "@/lib/reconciled";
 // services
 import { WorkspacePreferencesService } from "@/services/workspace/workspace-preferences.service";
 
 export interface IWorkspacePreferencesStore {
   getPreferences: (workspaceSlug: string) => WorkspacePreferences | undefined;
-  fetchPreferences: (workspaceSlug: string) => Promise<WorkspacePreferences | undefined>;
+  fetchPreferences: (workspace: Pick<Workspace, "id" | "slug">) => Promise<WorkspacePreferences | undefined>;
   updatePreferences: (workspaceSlug: string, data: WorkspacePreferencesUpdate) => Promise<WorkspacePreferences>;
 }
 
@@ -24,54 +24,54 @@ export interface IWorkspacePreferencesStore {
  * (v0 design 7.7); fetches do not queue.
  */
 export class WorkspacePreferencesStore implements IWorkspacePreferencesStore {
-  /** The caller's settings of the sidebar's project navigation, by workspace slug, as nerve last gave them. */
-  preferencesMap: Record<string, WorkspacePreferences> = {};
+  /**
+   * The caller's settings in each workspace, by the workspace's id, reconciled between their fetches and the changes
+   * nerve confirmed (reconciled.ts): the settings are one document, so a change nerve confirmed wins over a fetch
+   * that was out.
+   */
+  private readonly preferences = new ReconciledByKey<WorkspacePreferences>();
   private readonly service: WorkspacePreferencesService;
   /** The changes of the settings, sent one at a time. */
   private readonly changes = oneAtATime();
 
-  constructor(api: ApiClient) {
+  /** workspaceOf: the caller's workspace a slug names, by his list (WorkspaceRootStore.getWorkspaceBySlug). */
+  constructor(
+    private readonly workspaceOf: (workspaceSlug: string) => Workspace | null,
+    api: ApiClient
+  ) {
     makeObservable(this, {
-      preferencesMap: observable,
       fetchPreferences: action,
       updatePreferences: action,
     });
     this.service = new WorkspacePreferencesService(api);
   }
 
-  /** The caller's settings in the workspace, once fetched. */
-  getPreferences = (workspaceSlug: string): WorkspacePreferences | undefined => this.preferencesMap[workspaceSlug];
+  /**
+   * The caller's settings in the workspace slug names, once fetched: nothing for one that is not on his list, so
+   * nothing of a workspace he left or deleted, or of one deleted whose slug names another now.
+   */
+  getPreferences = (workspaceSlug: string): WorkspacePreferences | undefined =>
+    this.preferences.get(this.workspaceOf(workspaceSlug)?.id);
 
   /**
-   * @description fetches the caller's settings in a workspace, nerve's defaults until he changes one, and gives
-   * them. A change of session while they load is no failure: the new session's store fetches its own
-   * (store-context.tsx), and this one gives undefined.
+   * @description fetches the caller's settings in a workspace, nerve's defaults until he changes one, and shows them
+   * with the changes nerve confirmed meanwhile; gives what it shows, or undefined for a fetch a newer one overtook or
+   * a change of session cut (Reconciled.fetch)
    * @returns {Promise<WorkspacePreferences | undefined>}
    */
-  fetchPreferences = async (workspaceSlug: string): Promise<WorkspacePreferences | undefined> => {
-    try {
-      const preferences = await this.service.get(workspaceSlug);
-      runInAction(() => {
-        this.preferencesMap[workspaceSlug] = preferences;
-      });
-      return preferences;
-    } catch (error) {
-      if (error instanceof SessionChangedError) return undefined;
-      throw error;
-    }
-  };
+  fetchPreferences = (workspace: Pick<Workspace, "id" | "slug">): Promise<WorkspacePreferences | undefined> =>
+    this.preferences.fetch(workspace.id, () => this.service.get(workspace.slug));
 
   /**
-   * @description changes the settings data names; the store then has nerve's answer, all of them. Fails, changing
-   * nothing, when nerve refuses.
+   * @description changes the settings data names; the store then has nerve's answer, all of them, once it has
+   * fetched them. Fails, changing nothing, when nerve refuses.
    * @returns {Promise<WorkspacePreferences>}
    */
   updatePreferences = (workspaceSlug: string, data: WorkspacePreferencesUpdate): Promise<WorkspacePreferences> =>
     this.changes(async () => {
+      const workspaceId = this.workspaceOf(workspaceSlug)?.id;
       const preferences = await this.service.update(workspaceSlug, data);
-      runInAction(() => {
-        this.preferencesMap[workspaceSlug] = preferences;
-      });
+      this.preferences.confirm(workspaceId, () => preferences);
       return preferences;
     });
 }

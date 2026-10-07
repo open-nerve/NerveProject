@@ -29,9 +29,17 @@ export function useWorkspaceFetch(workspaceSlug: string | undefined): SWRRespons
     workspace: { fetchWorkspaceMembers },
   } = useMember();
   // the address's workspace is the caller's once his list has it
-  const isMember = workspaceSlug !== undefined && getWorkspaceBySlug(workspaceSlug) !== null;
+  const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
   const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces(), { ...ONCE, shouldRetryOnError: false });
-  useSessionSWR(isMember ? ["WORKSPACE_MEMBERS", workspaceSlug] : null, (slug) => fetchWorkspaceMembers(slug), ONCE);
-  useSessionSWR(isMember ? ["WORKSPACE_PREFERENCES", workspaceSlug] : null, (slug) => fetchPreferences(slug), ONCE);
+  useSessionSWR(
+    workspace && ["WORKSPACE_MEMBERS", workspace.id, workspace.slug],
+    (id, slug) => fetchWorkspaceMembers({ id, slug }),
+    ONCE
+  );
+  useSessionSWR(
+    workspace && ["WORKSPACE_PREFERENCES", workspace.id, workspace.slug],
+    (id, slug) => fetchPreferences({ id, slug }),
+    ONCE
+  );
   return listed;
 }

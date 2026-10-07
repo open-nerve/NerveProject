@@ -36,15 +36,15 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
   const {
     workspace: { removeMemberFromWorkspace },
   } = useMember();
-  const { leaveWorkspace } = useWorkspace();
+  const { currentWorkspace, leaveWorkspace } = useWorkspace();
   const { t } = useTranslation();
   // derived values
 
   const handleLeaveWorkspace = async () => {
-    if (!workspaceSlug || !currentUser) return;
+    if (!currentWorkspace || !currentUser) return;
 
     try {
-      await leaveWorkspace(workspaceSlug);
+      await leaveWorkspace(currentWorkspace);
       // the root lands the caller where his workspaces, as they are now, say (M3 design 3.14)
       navigate("/");
     } catch (err: unknown) {

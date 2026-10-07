@@ -25,13 +25,13 @@ export const useProfileMember = (workspaceSlug: string, userId: string): TProfil
     workspace: { fetchWorkspaceMembers, getWorkspaceMemberDetails },
   } = useMember();
   // the address's workspace is the caller's once his list has it
-  const isMember = workspaceSlug !== "" && getWorkspaceBySlug(workspaceSlug) !== null;
+  const workspace = workspaceSlug === "" ? null : getWorkspaceBySlug(workspaceSlug);
   // The workspace wrapper already fetches the members under this key, so SWR serves the same request;
   // subscribing here is what tells whether the members are still loading or failed to load: a failed load
   // leaves the request settled without a list.
   const { data: members, isLoading } = useSessionSWR(
-    isMember ? ["WORKSPACE_MEMBERS", workspaceSlug] : null,
-    (slug) => fetchWorkspaceMembers(slug),
+    workspace && ["WORKSPACE_MEMBERS", workspace.id, workspace.slug],
+    (id, slug) => fetchWorkspaceMembers({ id, slug }),
     {
       revalidateIfStale: false,
       revalidateOnFocus: false,

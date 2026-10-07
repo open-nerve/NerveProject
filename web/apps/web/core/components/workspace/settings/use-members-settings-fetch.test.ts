@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EUserWorkspaceRoles } from "@nerve/types";
 import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
-import { handed } from "@/lib/fake-session-swr";
+import { fetchHanded, handed } from "@/lib/fake-session-swr";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // The members settings fetch what the caller may read (M3 design 7.1, 9.5), with fake-session-swr.ts's stand-in for
@@ -28,11 +28,11 @@ describe("useMembersSettingsFetch", () => {
     stores.workspaces = [workspaceOf("acme", { role: EUserWorkspaceRoles.ADMIN })];
     useMembersSettingsFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([
-      ["WORKSPACE_MEMBERS", "acme"],
-      ["WORKSPACE_INVITATIONS", "acme"],
+      ["WORKSPACE_MEMBERS", "id-acme", "acme"],
+      ["WORKSPACE_INVITATIONS", "id-acme", "acme"],
     ]);
-    await Promise.all(handed.map(([, fetcher]) => fetcher("acme")));
-    expect(stores.fetched).toEqual(["the members of acme", "the invitations of acme"]);
+    await fetchHanded();
+    expect(stores.fetched).toEqual(["the members of acme (id-acme)", "the invitations of acme (id-acme)"]);
   });
 
   it.each([
@@ -41,7 +41,7 @@ describe("useMembersSettingsFetch", () => {
   ])("fetches $who the members alone", ({ role }) => {
     stores.workspaces = [workspaceOf("acme", { role })];
     useMembersSettingsFetch("acme");
-    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACE_MEMBERS", "acme"], null]);
+    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACE_MEMBERS", "id-acme", "acme"], null]);
   });
 
   it("fetches nothing for a caller whose list does not have the workspace", () => {

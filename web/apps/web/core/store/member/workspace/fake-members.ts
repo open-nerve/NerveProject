@@ -6,12 +6,14 @@
 // The workspace members' store, for the tests of its members and of its invitations, against a fake nerve. A test
 // file that uses it mocks @/lib/auth/api-client: the account's store, which it builds, imports the tab's session.
 
-import type { ApiClient, MemberUser, WorkspaceInvitation, WorkspaceMember } from "@nerve/api-client";
+import type { MemberUser, WorkspaceInvitation, WorkspaceMember } from "@nerve/api-client";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
 import { fakeRoot } from "@/store/fake-root";
 import { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
 import { RouterStore } from "@/store/router.store";
 import { UserStore } from "@/store/user";
+import { WorkspaceRootStore } from "@/store/workspace";
+import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 
 /**
  * A membership of the workspace slug names (acme unless it says) as nerve lists it: the name names the member, and
@@ -60,14 +62,20 @@ export function invitationOf(
   };
 }
 
-/** The store, the users the stores share and the store's client, of a tab whose address names acme; client builds it. */
-export function memberStore(client: (nerve: FakeNerve) => ApiClient = (nerve) => nerve.client()) {
+/**
+ * The store, the users the stores share and the store's client, of a tab whose address names acme, and whose
+ * caller's list nerve gave as acme and globex (workspaceOf), the requests of which are then forgotten.
+ */
+export async function memberStore() {
   const nerve = new FakeNerve();
-  const api = client(nerve);
+  const api = nerve.client();
   const router = new RouterStore();
   router.setQuery({ workspaceSlug: "acme" });
   const user = new UserStore(fakeRoot({ router }), api);
+  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
+  await loadWorkspaces(nerve, workspaceRoot, [workspaceOf("acme"), workspaceOf("globex")]);
+  nerve.calls.length = 0;
   const users: Record<string, MemberUser> = {};
-  const store = new WorkspaceMemberStore({ memberMap: users }, fakeRoot({ router, user }), api);
+  const store = new WorkspaceMemberStore({ memberMap: users }, fakeRoot({ router, user, workspaceRoot }), api);
   return { nerve, api, user, users, store };
 }
