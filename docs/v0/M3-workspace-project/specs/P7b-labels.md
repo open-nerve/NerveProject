@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P7b `labels` |
 | 日期 | 2026-10-06 |
-| 状态 | 进行中：spec、plan 和原型（拆分照负责人 2026-10-05 的裁定与控制者的裁定 S1–S8，`p7-split-rulings.md`；P7b 的简报 `p7b-architect-brief.md`）；第 3 节第 1、2、3、11 条待控制者裁定 |
+| 状态 | 已完成（[评审记录](../reviews/P7b-labels-review.md)）：执行中的改动按评审记录第 3–5 节改入（2026-10-07）。第 3 节第 1、2、3、11 条由控制者裁定 B1–B4（2026-10-06，B2 不取第 2 条原来的做法）；预检之后的修订一轮（`1b7b8966`）。拆分照负责人 2026-10-05 的裁定与控制者的裁定 S1–S8（`p7-split-rulings.md`） |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（P7、W3、P4）、3.4、3.6（加锁表，约定一、二、三、五及其例外）、3.16、3.19、3.20（P7b 两行）、4.10、4.11、5.1–5.3、6.7、9.2、9.3（交错 11）、11.5、12（P7b 与约束 1–4）、13.1 节 |
 | 前置交接 | [P7a spec](P7a-states.md) 第 5 节 P7b 一行、[P7a review](../reviews/P7a-states-review.md) 第 6 节（共用路径、竞争和阶梯、矩阵、假实现、已归档的小表、第一次运行的重放、踩过的十个坑）；[P4a review](../reviews/P4a-projects-review.md) 第 6 节（标签进 `DeleteWorkspaceProjects`，W3、P4 断言标签）；[P4b review](../reviews/P4b-project-members-review.md) 第 6 节（每个写经 `Locks`，手工维护的表，`keysTo`，`expectProjectDeleted` 只数之前未删除的行）；[P5b review](../reviews/P5b-project-memberships-review.md) 第 6 节（标签是共用路径的又一种行）；[P6 review](../reviews/P6-deactivation-review.md) 第 6 节（`deleteLabel` 连带子标签与约定五的例外，裁定 S7 的 O3）。落点见第 3 节第 13 条 |
 | 计划 | [P7b plan](../plans/P7b-labels.md) |
