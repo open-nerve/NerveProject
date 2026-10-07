@@ -28,7 +28,6 @@ import {
   WORKSPACE_PROJECTS_ROLES_INFORMATION,
   WORKSPACE_FAVORITE,
   WORKSPACE_STATES,
-  WORKSPACE_PROJECT_NAVIGATION_PREFERENCES,
 } from "@nerve/constants";
 // hooks
 import { useFavorite } from "@/hooks/store/use-favorite";
@@ -54,7 +53,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   const { signOut, data: currentUser } = useUser();
   const { fetchPartialProjects } = useProject();
   const { fetchFavorite } = useFavorite();
-  const { workspaces, getWorkspaceBySlug, fetchProjectNavigationPreferences } = useWorkspace();
+  const { workspaces, getWorkspaceBySlug } = useWorkspace();
   const { isMobile } = usePlatformOS();
   const { fetchUserProjectPermissions, allowPermissions } = useUserPermissions();
   const { fetchWorkspaceStates } = useProjectState();
@@ -90,13 +89,6 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   useSWR(
     workspaceSlug ? WORKSPACE_STATES(workspaceSlug) : null,
     workspaceSlug ? () => fetchWorkspaceStates(workspaceSlug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-
-  // fetch workspace project navigation preferences
-  useSWR(
-    workspaceSlug ? WORKSPACE_PROJECT_NAVIGATION_PREFERENCES(workspaceSlug) : null,
-    workspaceSlug ? () => fetchProjectNavigationPreferences(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 

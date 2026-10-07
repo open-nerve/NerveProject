@@ -13,7 +13,6 @@ import type {
   TSearchResponse,
   TSearchEntityRequestPayload,
   TActivityEntityData,
-  IWorkspaceUserPropertiesResponse,
 } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
@@ -131,25 +130,6 @@ export class WorkspaceService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response;
-      });
-  }
-
-  async fetchWorkspaceFilters(workspaceSlug: string): Promise<IWorkspaceUserPropertiesResponse> {
-    return this.get(`/api/workspaces/${workspaceSlug}/user-properties/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async patchWorkspaceFilters(
-    workspaceSlug: string,
-    data: Partial<IWorkspaceUserPropertiesResponse>
-  ): Promise<IWorkspaceUserPropertiesResponse> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/user-properties/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
       });
   }
 }

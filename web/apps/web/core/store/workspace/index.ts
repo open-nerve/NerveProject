@@ -4,28 +4,25 @@
  * See the LICENSE file for details.
  */
 
-import { clone } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
-import { computedFn } from "mobx-utils";
 // nerve imports
 import type { ApiClient, SlugAvailability, Workspace, WorkspaceCreate, WorkspaceUpdate } from "@nerve/api-client";
-import type { IWorkspaceUserPropertiesResponse } from "@nerve/types";
 // lib
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { oneAtATime } from "@/lib/one-at-a-time";
 // services
-import { WorkspaceService } from "@/services/workspace.service";
 import { WorkspacesService } from "@/services/workspace/workspaces.service";
 // store
 import type { RootStore } from "@/store/root.store";
 // sub-stores
+import type { IWorkspacePreferencesStore } from "./preferences.store";
+import { WorkspacePreferencesStore } from "./preferences.store";
 import type { IWebhookStore } from "./webhook.store";
 import { WebhookStore } from "./webhook.store";
 
 export interface IWorkspaceRootStore {
   /** The caller's workspaces, in nerve's order (by name, then id); undefined until fetched. */
   workspaces: Workspace[] | undefined;
-  projectNavigationPreferencesMap: Record<string, IWorkspaceUserPropertiesResponse>;
   // computed
   currentWorkspace: Workspace | null;
   // computed actions
@@ -40,13 +37,8 @@ export interface IWorkspaceRootStore {
   leaveWorkspace: (workspaceSlug: string) => Promise<void>;
   acceptInvitation: (invitationId: string, token: string) => Promise<Workspace>;
   declineInvitation: (invitationId: string, token: string) => Promise<void>;
-  getProjectNavigationPreferences: (workspaceSlug: string) => IWorkspaceUserPropertiesResponse | undefined;
-  fetchProjectNavigationPreferences: (workspaceSlug: string) => Promise<void>;
-  updateProjectNavigationPreferences: (
-    workspaceSlug: string,
-    data: Partial<IWorkspaceUserPropertiesResponse>
-  ) => Promise<void>;
   // sub-stores
+  preferences: IWorkspacePreferencesStore;
   webhook: IWebhookStore;
 }
 
@@ -56,22 +48,20 @@ export interface IWorkspaceRootStore {
  */
 export class WorkspaceRootStore implements IWorkspaceRootStore {
   workspaces: Workspace[] | undefined = undefined;
-  projectNavigationPreferencesMap: Record<string, IWorkspaceUserPropertiesResponse> = {};
   // services
-  workspaceService;
   private readonly service: WorkspacesService;
   /** The changes of the workspaces, sent one at a time. */
   private readonly changes = oneAtATime();
   // root store
   router;
   // sub-stores
+  preferences: IWorkspacePreferencesStore;
   webhook: IWebhookStore;
 
   constructor(_rootStore: RootStore, api: ApiClient) {
     makeObservable(this, {
       // observables
       workspaces: observable.ref,
-      projectNavigationPreferencesMap: observable,
       // computed
       currentWorkspace: computed,
       // actions
@@ -82,16 +72,14 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
       leaveWorkspace: action,
       acceptInvitation: action,
       declineInvitation: action,
-      fetchProjectNavigationPreferences: action,
-      updateProjectNavigationPreferences: action,
     });
 
     // services
-    this.workspaceService = new WorkspaceService();
     this.service = new WorkspacesService(api);
     // root store
     this.router = _rootStore.router;
     // sub-stores
+    this.preferences = new WorkspacePreferencesStore(api);
     this.webhook = new WebhookStore(_rootStore);
   }
 
@@ -209,49 +197,4 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
       this.workspaces = this.workspaces?.filter((workspace) => workspace.slug !== workspaceSlug);
     });
   }
-
-  getProjectNavigationPreferences = computedFn(
-    (workspaceSlug: string): IWorkspaceUserPropertiesResponse | undefined =>
-      this.projectNavigationPreferencesMap[workspaceSlug]
-  );
-
-  fetchProjectNavigationPreferences = async (workspaceSlug: string) => {
-    try {
-      const response = await this.workspaceService.fetchWorkspaceFilters(workspaceSlug);
-
-      runInAction(() => {
-        this.projectNavigationPreferencesMap[workspaceSlug] = response;
-      });
-    } catch (error) {
-      console.error("Failed to fetch project navigation preferences:", error);
-      throw error;
-    }
-  };
-
-  updateProjectNavigationPreferences = async (
-    workspaceSlug: string,
-    data: Partial<IWorkspaceUserPropertiesResponse>
-  ) => {
-    const beforeUpdateData = clone(this.projectNavigationPreferencesMap[workspaceSlug]);
-
-    try {
-      // Optimistically update store
-      runInAction(() => {
-        this.projectNavigationPreferencesMap[workspaceSlug] = {
-          ...this.projectNavigationPreferencesMap[workspaceSlug],
-          ...data,
-        };
-      });
-
-      // Call API to persist changes
-      await this.workspaceService.patchWorkspaceFilters(workspaceSlug, data);
-    } catch (error) {
-      // Rollback on failure
-      runInAction(() => {
-        this.projectNavigationPreferencesMap[workspaceSlug] = beforeUpdateData;
-      });
-      console.error("Failed to update project navigation preferences:", error);
-      throw error;
-    }
-  };
 }

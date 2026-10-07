@@ -69,9 +69,6 @@ export const WORKSPACE_FAVORITE = (workspaceSlug: string) => `WORKSPACE_FAVORITE
 
 export const WORKSPACE_STATES = (workspaceSlug: string) => `WORKSPACE_STATES_${workspaceSlug.toUpperCase()}`;
 
-export const WORKSPACE_PROJECT_NAVIGATION_PREFERENCES = (workspaceSlug: string) =>
-  `WORKSPACE_PROJECT_NAVIGATION_PREFERENCES_${workspaceSlug.toUpperCase()}`;
-
 // cycles
 export const CYCLE_ISSUES_WITH_PARAMS = (cycleId: string, params?: any) => {
   if (!params) return `CYCLE_ISSUES_WITH_PARAMS_${cycleId.toUpperCase()}`;

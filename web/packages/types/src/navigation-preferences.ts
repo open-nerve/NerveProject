@@ -4,10 +4,10 @@
  * See the LICENSE file for details.
  */
 
-export type TProjectNavigationMode = "ACCORDION" | "TABBED";
+import type { NavigationControlPreference } from "@nerve/api-client";
 
 export interface TProjectNavigationPreferences {
-  navigationMode: TProjectNavigationMode;
+  navigationMode: NavigationControlPreference;
   showLimitedProjects: boolean;
   limitedProjectsCount: number;
 }

@@ -15,6 +15,9 @@ vi.mock("@/hooks/store/use-workspace", () => ({
   useWorkspace: () => ({
     fetchWorkspaces: () => Promise.resolve(fetched.calls.push("the workspaces")),
     getWorkspaceBySlug: (slug: string) => (slug === "acme" ? { slug } : null),
+    preferences: {
+      fetchPreferences: (slug: string) => Promise.resolve(fetched.calls.push(`the settings in ${slug}`)),
+    },
   }),
 }));
 vi.mock("@/hooks/store/use-member", () => ({
@@ -33,15 +36,19 @@ beforeEach(() => {
 });
 
 describe("useWorkspaceFetch", () => {
-  it("fetches the caller's workspaces and, in one of his, its members", async () => {
+  it("fetches the caller's workspaces and, in one of his, its members and his settings", async () => {
     useWorkspaceFetch("acme");
-    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"], ["WORKSPACE_MEMBERS", "acme"]]);
+    expect(handed.map(([fetch]) => fetch)).toEqual([
+      ["WORKSPACES"],
+      ["WORKSPACE_MEMBERS", "acme"],
+      ["WORKSPACE_PREFERENCES", "acme"],
+    ]);
     await Promise.all(handed.map(([, fetcher]) => fetcher("acme")));
-    expect(fetched.calls).toEqual(["the workspaces", "the members of acme"]);
+    expect(fetched.calls).toEqual(["the workspaces", "the members of acme", "the settings in acme"]);
   });
 
   it("fetches only the caller's workspaces where the address names none of his", () => {
     useWorkspaceFetch("elsewhere");
-    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"], null]);
+    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"], null, null]);
   });
 });
