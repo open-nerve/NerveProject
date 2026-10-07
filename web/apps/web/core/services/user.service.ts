@@ -6,7 +6,7 @@
 
 // services
 import type { ApiClient, ChangePasswordRequest, Profile, ProfileUpdate, User, UserUpdate } from "@nerve/api-client";
-import type { IUserSettings, TIssuesResponse } from "@nerve/types";
+import type { TIssuesResponse } from "@nerve/types";
 import { unwrap } from "@/lib/api-error";
 import { APIService } from "@/services/api.service";
 
@@ -40,15 +40,6 @@ export class UserService extends APIService {
     return unwrap(await this.api.PATCH("/api/v0/me/profile", { body: data }));
   }
 
-  async currentUserSettings(bustCache: boolean = false): Promise<IUserSettings> {
-    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : "/api/users/me/settings/";
-    return this.get(url)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
   async getUserProfileIssues(
     workspaceSlug: string,
     userId: string,
@@ -62,14 +53,6 @@ export class UserService extends APIService {
       },
       config
     )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async leaveWorkspace(workspaceSlug: string) {
-    return this.post(`/api/workspaces/${workspaceSlug}/members/leave/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

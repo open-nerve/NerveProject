@@ -17,7 +17,8 @@ import { ConfirmWorkspaceMemberRemove } from "@/components/workspace/confirm-wor
 import type { RowData } from "@/components/workspace/settings/member-columns";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
-import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useUser } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 // components
 import { useMemberColumns } from "@/components/workspace/settings/useMemberColumns";
@@ -36,7 +37,7 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
   const {
     workspace: { removeMemberFromWorkspace },
   } = useMember();
-  const { leaveWorkspace } = useUserPermissions();
+  const { leaveWorkspace } = useWorkspace();
   const { t } = useTranslation();
   // derived values
 

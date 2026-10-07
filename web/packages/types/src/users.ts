@@ -31,20 +31,6 @@ export interface IUserLite {
   joining_date?: string;
 }
 
-export interface IUserSettings {
-  id: string | undefined;
-  email: string | undefined;
-  workspace: {
-    last_workspace_id: string | undefined;
-    last_workspace_slug: string | undefined;
-    last_workspace_name: string | undefined;
-    last_workspace_logo: string | undefined;
-    fallback_workspace_id: string | undefined;
-    fallback_workspace_slug: string | undefined;
-    invites: number | undefined;
-  };
-}
-
 export interface IUserProjectsRole {
   [projectId: string]: TUserPermissions;
 }

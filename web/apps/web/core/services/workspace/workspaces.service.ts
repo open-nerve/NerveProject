@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiClient, Workspace, WorkspaceCreate, WorkspaceUpdate } from "@nerve/api-client";
+import type { ApiClient, SlugAvailability, Workspace, WorkspaceCreate, WorkspaceUpdate } from "@nerve/api-client";
 import { unwrap } from "@/lib/api-error";
 
 /** The caller's workspaces (M3 design 5.1, 7.3). */
@@ -28,5 +28,15 @@ export class WorkspacesService {
 
   async delete(slug: string): Promise<void> {
     unwrap(await this.api.DELETE("/api/v0/workspaces/{slug}", { params: { path: { slug } } }));
+  }
+
+  /** Ends the caller's own membership of the workspace. */
+  async leave(slug: string): Promise<void> {
+    unwrap(await this.api.POST("/api/v0/workspaces/{slug}/leave", { params: { path: { slug } } }));
+  }
+
+  /** Whether slug can name a new workspace, or why not. */
+  async checkSlug(slug: string): Promise<SlugAvailability> {
+    return unwrap(await this.api.GET("/api/v0/workspace-slugs/{slug}", { params: { path: { slug } } }));
   }
 }

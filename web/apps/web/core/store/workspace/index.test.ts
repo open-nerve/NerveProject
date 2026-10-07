@@ -103,6 +103,22 @@ describe("WorkspaceRootStore, the list", () => {
     expect(nerve.calls).toEqual([]);
     expect(store.workspaces).toBeUndefined();
   });
+
+  it("asks nerve whether a slug is free, and fails when nerve cannot say", async () => {
+    const { nerve, store } = setUp();
+    const checked = track(store.checkWorkspaceSlug("acme"));
+    await until(() => nerve.calls.length === 1, "the check");
+    expect(nerve.calls[0]).toMatchObject({ method: "GET", path: "/api/v0/workspace-slugs/acme" });
+    nerve.calls[0]?.answer(json(200, { available: false, reason: "taken" }));
+    await until(() => checked.settled, "the answer");
+    expect(checked.value).toEqual({ available: false, reason: "taken" });
+
+    const failed = track(store.checkWorkspaceSlug("beta"));
+    await until(() => nerve.calls.length === 2, "the second check");
+    nerve.calls[1]?.answer(problem(500, "internal_error"));
+    await until(() => failed.settled, "the failure");
+    expect(failed.error).toBeInstanceOf(ApiError);
+  });
 });
 
 describe("WorkspaceRootStore, the changes", () => {
@@ -147,7 +163,7 @@ describe("WorkspaceRootStore, the changes", () => {
     expect(store.workspaces).toEqual([renamed, beta]);
   });
 
-  it("takes a deleted workspace off the list", async () => {
+  it("takes a deleted workspace off the list, and one the caller left", async () => {
     const { nerve, store } = await loaded();
     const deleted = track(store.deleteWorkspace("acme"));
     await until(() => nerve.calls.length === 2, "the deletion");
@@ -158,6 +174,14 @@ describe("WorkspaceRootStore, the changes", () => {
     await until(() => deleted.settled, "the deletion");
     expect(deleted.error).toBeUndefined();
     expect(store.workspaces).toEqual([beta]);
+
+    const left = track(store.leaveWorkspace("beta"));
+    await until(() => nerve.calls.length === 3, "the leave");
+    expect(nerve.calls[2]).toMatchObject({ method: "POST", path: "/api/v0/workspaces/beta/leave" });
+    nerve.calls[2]?.answer(noContent());
+    await until(() => left.settled, "the leave");
+    expect(left.error).toBeUndefined();
+    expect(store.workspaces).toEqual([]);
   });
 
   const refusals: { change: string; send: (store: WorkspaceRootStore) => Promise<unknown>; refusal: Response }[] = [
@@ -172,6 +196,11 @@ describe("WorkspaceRootStore, the changes", () => {
       refusal: problem(403, "forbidden"),
     },
     { change: "a deletion", send: (store) => store.deleteWorkspace("beta"), refusal: problem(403, "forbidden") },
+    {
+      change: "a leave",
+      send: (store) => store.leaveWorkspace("acme"),
+      refusal: problem(409, "workspace.sole_admin"),
+    },
   ];
   it.each(refusals)("fails, changing nothing, when nerve refuses $change", async ({ send, refusal }) => {
     const { nerve, store } = await loaded();
@@ -189,13 +218,15 @@ describe("WorkspaceRootStore, the changes", () => {
     const updated = track(store.updateWorkspace("acme", { timezone: "Asia/Shanghai" }));
     const created = track(store.createWorkspace({ name: "gamma", slug: "gamma" }));
     const deleted = track(store.deleteWorkspace("beta"));
+    const left = track(store.leaveWorkspace("acme"));
     await inTurn(nerve, 1, ["PATCH", "/api/v0/workspaces/acme"], problem(503, "server_busy"));
     await inTurn(nerve, 2, ["POST", LIST], json(201, gamma));
     await inTurn(nerve, 3, ["DELETE", "/api/v0/workspaces/beta"], noContent());
-    await until(() => deleted.settled, "the last change");
+    await inTurn(nerve, 4, ["POST", "/api/v0/workspaces/acme/leave"], noContent());
+    await until(() => left.settled, "the last change");
     expect(updated.error).toBeInstanceOf(ApiError);
     expect(created.value).toEqual(gamma);
     expect(deleted.error).toBeUndefined();
-    expect(store.workspaces).toEqual([acme, gamma]);
+    expect(store.workspaces).toEqual([gamma]);
   });
 });

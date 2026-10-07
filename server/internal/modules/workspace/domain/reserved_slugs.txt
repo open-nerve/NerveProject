@@ -1,9 +1,9 @@
-# 工作区 slug 的保留名单（M3 设计 3.10）。前端的副本 RESTRICTED_URLS 随前端的数据层删除，
-# 之后前后端只有这一份。
+# 工作区 slug 的保留名单（M3 设计 3.10），前后端只有这一份：前端没有副本，创建表单问
+# GET /api/v0/workspace-slugs/{slug}。
 # 一行一个名字，属于它上面最近的一段；空行和 # 开头的行不算。
 #
 # [app]：应用用到的顶层路径段，即 web/apps/web/app/routes/core.ts 的顶层静态路由段，
-#   加上 web/apps/web/public/ 的顶层目录。核对它的 web vitest 随前端的数据层加入（M3 设计 9.5）。
+#   加上 web/apps/web/public/ 的顶层目录，由 web 的 vitest 核对（web/apps/web/app/routes/navigation.test.ts）。
 # [server]：服务端在前端页面之外自己回答的顶层路径，由 bootstrap 的 Go 测试核对。
 # [reserved]：以后最可能加的顶层页面先占住的名字，与另两段不重复。
 

@@ -47,7 +47,6 @@ export interface IUserPermissionStore {
   ) => boolean;
   // actions
   fetchUserWorkspaceInfo: (workspaceSlug: string) => Promise<IWorkspaceMemberMe>;
-  leaveWorkspace: (workspaceSlug: string) => Promise<void>;
   fetchUserProjectInfo: (workspaceSlug: string, projectId: string) => Promise<TProjectMembership>;
   fetchUserProjectPermissions: (workspaceSlug: string) => Promise<IUserProjectsRole>;
   joinProject: (workspaceSlug: string, projectId: string) => Promise<void>;
@@ -81,7 +80,6 @@ export class UserPermissionStore implements IUserPermissionStore {
       // computed
       // actions
       fetchUserWorkspaceInfo: action,
-      leaveWorkspace: action,
       fetchUserProjectInfo: action,
       fetchUserProjectPermissions: action,
       joinProject: action,
@@ -237,25 +235,6 @@ export class UserPermissionStore implements IUserPermissionStore {
     } catch (error) {
       console.error("Error fetching user workspace information", error);
       this.loader = false;
-      throw error;
-    }
-  };
-
-  /**
-   * @description Leaves a workspace
-   * @param { string } workspaceSlug
-   * @returns { Promise<void | undefined> }
-   */
-  leaveWorkspace = async (workspaceSlug: string): Promise<void> => {
-    try {
-      await this.userService.leaveWorkspace(workspaceSlug);
-      runInAction(() => {
-        unset(this.workspaceUserInfo, workspaceSlug);
-        unset(this.projectUserInfo, workspaceSlug);
-        unset(this.workspaceProjectsPermissions, workspaceSlug);
-      });
-    } catch (error) {
-      console.error("Error user leaving the workspace", error);
       throw error;
     }
   };

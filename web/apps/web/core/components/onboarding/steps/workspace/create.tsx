@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { TickCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
+import { ORGANIZATION_SIZE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -19,9 +19,7 @@ import { cn, validateWorkspaceName, validateSlug } from "@nerve/utils";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUserProfile, useUserSettings } from "@/hooks/store/user";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
+import { useUserProfile } from "@/hooks/store/user";
 // local components
 import { CommonOnboardingHeader } from "../common";
 
@@ -29,8 +27,6 @@ type Props = {
   user: User | undefined;
   onComplete: (skipInvites?: boolean) => void;
 };
-
-const workspaceService = new WorkspaceService();
 
 export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user, onComplete }: Props) {
   // states
@@ -41,8 +37,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
   // store hooks
   const { config } = useInstance();
   const { updateUserProfile } = useUserProfile();
-  const { fetchCurrentUserSettings } = useUserSettings();
-  const { createWorkspace, fetchWorkspaces } = useWorkspace();
+  const { createWorkspace, fetchWorkspaces, checkWorkspaceSlug } = useWorkspace();
 
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
@@ -64,8 +59,8 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
     if (isSubmitting) return;
 
     try {
-      const res = (await workspaceService.workspaceSlugCheck(formData.slug)) as { status: boolean };
-      if (res.status === true && !RESTRICTED_URLS.includes(formData.slug)) {
+      const { available } = await checkWorkspaceSlug(formData.slug);
+      if (available) {
         setSlugError(false);
         try {
           const workspaceResponse = await createWorkspace(formData);
@@ -100,7 +95,6 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
     if (!user) return;
     // the workspace opened last is a best-effort preference: the onboarding goes on whether nerve saves it or not
     await updateUserProfile({ last_workspace_id: workspaceId }).catch(() => undefined);
-    await fetchCurrentUserSettings();
   };
 
   const isButtonDisabled = !isValid || invalidSlug || isSubmitting;

@@ -47,9 +47,9 @@ test("A3 (page): signing in comes back to the page asked for, and only to a page
   });
   await page.context().close();
 
-  // A next_path that could lead elsewhere is dropped: the account's default page instead. That page,
-  // /create-workspace, is one M2 reaches, so it asks no older API as it mounts (M2 design 3.1): the
-  // workspace addresses answer 404 until M3.
+  // A next_path that could lead elsewhere is dropped: the landing instead, which for an account with no
+  // workspace is /create-workspace (M3 design 3.14). Neither the landing nor that page asks an older API as
+  // it mounts (M2 design 3.1): the landing asks nerve for the account's workspaces.
   await Promise.all(
     ["//evil.example", "/\\evil.example", "javascript:alert(1)", "/\t/evil.example"].map(async (nextPath) => {
       const other = await freshPage(browser, nerve.baseURL);

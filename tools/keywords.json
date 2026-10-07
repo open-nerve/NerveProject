@@ -2046,7 +2046,7 @@
         "flags": ""
       },
       "content": {
-        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/",
+        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/leave/",
         "flags": ""
       },
       "samples": {
@@ -2056,7 +2056,9 @@
           "    return this.get(`/api/workspaces/${workspaceSlug}/`)",
           "    return this.patch(`/api/workspaces/${workspaceSlug}/`, data)",
           "    return this.delete(`/api/workspaces/${workspaceSlug}/`)",
-          "    return this.get(\"/api/users/last-visited-workspace/\")"
+          "    return this.get(\"/api/users/last-visited-workspace/\")",
+          "    return this.get(`/api/workspace-slug-check/?slug=${slug}`)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/members/leave/`)"
         ],
         "miss": [
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces\"));",
@@ -2069,11 +2071,77 @@
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/search-issues/`, {",
           "    return this.get(`/api/workspaces/${workspaceSlug}/states/`)",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/views/`)"
+          "    return this.get(`/api/workspaces/${workspaceSlug}/views/`)",
+          "    return unwrap(await this.api.GET(\"/api/v0/workspace-slugs/{slug}\", { params: { path: { slug } } }));",
+          "    unwrap(await this.api.POST(\"/api/v0/workspaces/{slug}/leave\", { params: { path: { slug } } }));",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/leave/`)"
         ],
         "files": {
           "hit": ["web/apps/web/core/services/workspace.service.ts"],
           "miss": ["docs/v0/M3-workspace-project/M3-design.md", "web/apps/web/core/store/workspace/index.test.ts"]
+        }
+      }
+    },
+    {
+      "id": "restricted-urls",
+      "phase": "M3/P8a",
+      "why": "前端的保留名单副本 RESTRICTED_URLS（M3 设计 3.10）：保留名单只有服务端的一份（server/internal/modules/workspace/domain/reserved_slugs.txt），创建表单问 GET /api/v0/workspace-slugs/{slug}；web 的 vitest 读那份名单核对应用一段",
+      "files": {
+        "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bRESTRICTED_URLS\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "export const RESTRICTED_URLS: string[] = [",
+          "      if (available && !RESTRICTED_URLS.includes(formData.slug)) {"
+        ],
+        "miss": [
+          "      const { available } = await checkWorkspaceSlug(formData.slug);",
+          "  return readFileSync(reservedSlugs, \"utf8\")"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/constants/src/workspace.ts",
+            "web/apps/web/core/components/workspace/create-workspace-form.tsx"
+          ],
+          "miss": [
+            "server/internal/modules/workspace/domain/reserved_slugs.txt",
+            "web/apps/web/app/routes/navigation.test.ts"
+          ]
+        }
+      }
+    },
+    {
+      "id": "user-settings",
+      "phase": "M3/P8a",
+      "why": "Plane 的用户设置（M3 设计 3.14、7.8）：/api/users/me/settings/ 和它的类型、store、hook 都已删除；登录之后的落点由工作区列表和 Profile.last_workspace_id 算出（core/lib/landing.ts），设置页的移动端导航的开合在 ThemeStore",
+      "files": {
+        "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\b(?:IUserSettings|IUserSettingsStore|UserSettingsStore|currentUserSettings|fetchCurrentUserSettings|useUserSettings|getWorkspaceRedirectionUrl)\\b|/api/users/me/settings/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "export interface IUserSettings {",
+          "  const { fetchCurrentUserSettings } = useUserSettings();",
+          "    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : \"/api/users/me/settings/\";",
+          "      navigate(getWorkspaceRedirectionUrl());"
+        ],
+        "miss": [
+          "  const { settingsSidebarCollapsed: sidebarCollapsed, toggleSettingsSidebar: toggleSidebar } = useAppTheme();",
+          "    return <Navigate to={landingPath(workspaces, currentProfile.last_workspace_id)} replace />;",
+          "  const { data: profile } = useUserProfile();"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/user/settings.store.ts", "web/packages/types/src/users.ts"],
+          "miss": ["docs/v0/M3-workspace-project/M3-design.md", "e2e/stories/identity/a3-sign-in.spec.ts"]
         }
       }
     }

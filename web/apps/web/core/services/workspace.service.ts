@@ -121,14 +121,6 @@ export class WorkspaceService extends APIService {
       });
   }
 
-  async workspaceSlugCheck(slug: string): Promise<any> {
-    return this.get(`/api/workspace-slug-check/?slug=${slug}`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async searchWorkspace(
     workspaceSlug: string,
     params: {

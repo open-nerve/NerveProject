@@ -8,7 +8,7 @@ import { clone } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { ApiClient, Workspace, WorkspaceCreate, WorkspaceUpdate } from "@nerve/api-client";
+import type { ApiClient, SlugAvailability, Workspace, WorkspaceCreate, WorkspaceUpdate } from "@nerve/api-client";
 import type { IWorkspaceUserPropertiesResponse } from "@nerve/types";
 // lib
 import { SessionChangedError } from "@/lib/auth/token-manager";
@@ -32,10 +32,12 @@ export interface IWorkspaceRootStore {
   getWorkspaceBySlug: (workspaceSlug: string) => Workspace | null;
   // fetch actions
   fetchWorkspaces: () => Promise<Workspace[] | undefined>;
+  checkWorkspaceSlug: (slug: string) => Promise<SlugAvailability>;
   // crud actions
   createWorkspace: (data: WorkspaceCreate) => Promise<Workspace>;
   updateWorkspace: (workspaceSlug: string, data: WorkspaceUpdate) => Promise<Workspace>;
   deleteWorkspace: (workspaceSlug: string) => Promise<void>;
+  leaveWorkspace: (workspaceSlug: string) => Promise<void>;
   getProjectNavigationPreferences: (workspaceSlug: string) => IWorkspaceUserPropertiesResponse | undefined;
   fetchProjectNavigationPreferences: (workspaceSlug: string) => Promise<void>;
   updateProjectNavigationPreferences: (
@@ -75,6 +77,7 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
       createWorkspace: action,
       updateWorkspace: action,
       deleteWorkspace: action,
+      leaveWorkspace: action,
       fetchProjectNavigationPreferences: action,
       updateProjectNavigationPreferences: action,
     });
@@ -117,6 +120,12 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
   };
 
   /**
+   * @description whether slug can name a new workspace, or why not (reserved, taken, invalid)
+   * @returns {Promise<SlugAvailability>}
+   */
+  checkWorkspaceSlug = (slug: string): Promise<SlugAvailability> => this.service.checkSlug(slug);
+
+  /**
    * @description creates a workspace, with the caller as its admin; once the list is fetched it has the new one
    * last, until the next fetch puts it in nerve's order. Fails, changing nothing, when nerve refuses.
    * @returns {Promise<Workspace>}
@@ -151,10 +160,26 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
   deleteWorkspace = (workspaceSlug: string): Promise<void> =>
     this.changes(async () => {
       await this.service.delete(workspaceSlug);
-      runInAction(() => {
-        this.workspaces = this.workspaces?.filter((workspace) => workspace.slug !== workspaceSlug);
-      });
+      this.drop(workspaceSlug);
     });
+
+  /**
+   * @description ends the caller's membership of a workspace, which then leaves the list; fails, changing nothing,
+   * when nerve refuses (the only admin of the workspace or of one of its projects, 409)
+   * @returns {Promise<void>}
+   */
+  leaveWorkspace = (workspaceSlug: string): Promise<void> =>
+    this.changes(async () => {
+      await this.service.leave(workspaceSlug);
+      this.drop(workspaceSlug);
+    });
+
+  /** The workspace leaves the caller's list: it was deleted, or he is no longer a member. */
+  private drop(workspaceSlug: string): void {
+    runInAction(() => {
+      this.workspaces = this.workspaces?.filter((workspace) => workspace.slug !== workspaceSlug);
+    });
+  }
 
   getProjectNavigationPreferences = computedFn(
     (workspaceSlug: string): IWorkspaceUserPropertiesResponse | undefined =>

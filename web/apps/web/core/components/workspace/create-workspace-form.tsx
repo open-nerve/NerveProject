@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
+import { ORGANIZATION_SIZE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -21,41 +21,23 @@ import { validateWorkspaceName, validateSlug } from "@nerve/utils";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useNavigate } from "react-router";
-// services
-import { WorkspaceService } from "@/services/workspace.service";
 
 type Props = {
   onSubmit?: (res: Workspace) => Promise<void>;
   defaultValues: Pick<WorkspaceCreate, "name" | "slug" | "organization_size">;
   setDefaultValues: Dispatch<SetStateAction<Pick<WorkspaceCreate, "name" | "slug" | "organization_size">>>;
-  secondaryButton?: React.ReactNode;
-  primaryButtonText?: {
-    loading: string;
-    default: string;
-  };
 };
-
-const workspaceService = new WorkspaceService();
 
 export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: Props) {
   const { t } = useTranslation();
-  const {
-    onSubmit,
-    defaultValues,
-    setDefaultValues,
-    secondaryButton,
-    primaryButtonText = {
-      loading: "workspace_creation.button.loading",
-      default: "workspace_creation.button.default",
-    },
-  } = props;
+  const { onSubmit, defaultValues, setDefaultValues } = props;
   // states
   const [slugError, setSlugError] = useState(false);
   const [invalidSlug, setInvalidSlug] = useState(false);
   // router
   const navigate = useNavigate();
   // store hooks
-  const { createWorkspace } = useWorkspace();
+  const { createWorkspace, checkWorkspaceSlug } = useWorkspace();
   // form info
   const {
     handleSubmit,
@@ -67,8 +49,8 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
 
   const handleCreateWorkspace = async (formData: WorkspaceCreate) => {
     try {
-      const res = (await workspaceService.workspaceSlugCheck(formData.slug)) as { status: boolean };
-      if (res.status === true && !RESTRICTED_URLS.includes(formData.slug)) {
+      const { available } = await checkWorkspaceSlug(formData.slug);
+      if (available) {
         setSlugError(false);
         try {
           const workspaceResponse = await createWorkspace(formData);
@@ -242,15 +224,12 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
         </div>
       </div>
       <div className="flex items-center gap-4">
-        {secondaryButton}
         <Button variant="primary" type="submit" size="xl" disabled={!isValid} loading={isSubmitting}>
-          {isSubmitting ? t(primaryButtonText.loading) : t(primaryButtonText.default)}
+          {isSubmitting ? t("workspace_creation.button.loading") : t("workspace_creation.button.default")}
         </Button>
-        {!secondaryButton && (
-          <Button variant="secondary" type="button" size="xl" onClick={() => navigate(-1)}>
-            {t("common.go_back")}
-          </Button>
-        )}
+        <Button variant="secondary" type="button" size="xl" onClick={() => navigate(-1)}>
+          {t("common.go_back")}
+        </Button>
       </div>
     </form>
   );

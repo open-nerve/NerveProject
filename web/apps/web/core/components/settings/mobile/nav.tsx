@@ -10,7 +10,7 @@ import { Menu } from "lucide-react";
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronRightOutline } from "@makeplane/propel/icons";
-import { useUserSettings } from "@/hooks/store/user";
+import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { IconButton } from "@nerve/propel/icon-button";
 
 type Props = {
@@ -23,7 +23,7 @@ export const SettingsMobileNav = observer(function SettingsMobileNav(props: Prop
   // refs
   const sidebarRef = useRef<HTMLDivElement>(null);
   // store hooks
-  const { sidebarCollapsed, toggleSidebar } = useUserSettings();
+  const { settingsSidebarCollapsed: sidebarCollapsed, toggleSettingsSidebar: toggleSidebar } = useAppTheme();
   const { t } = useTranslation();
 
   useOutsideClickDetector(sidebarRef, () => {
