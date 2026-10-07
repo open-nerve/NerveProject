@@ -199,7 +199,7 @@
 | 领域 | 所属 M | 状态 |
 |---|---|---|
 | 认证、用户、实例配置、PAT；令牌管理器 | M2 | 已完成 |
-| 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 计划中 |
+| 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 进行中：工作区、成员、邀请、工作区的显示设置已对接（M3/P8a）；项目一侧在 M3/P8b |
 | 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 计划中 |
 | 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 计划中 |
 | 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 计划中 |
@@ -214,9 +214,14 @@
 | `core/store/issue/helpers/base-issues.store.ts` 等列表相关 store | 使用新接口的分页结构（不透明游标 `next_cursor`）和分组结构（`groups` 数组），不再按"已加载条数 ÷ 每页条数"拼页码游标 | 新接口的分页和分组设计 | 计划中 | |
 | 用户和认证相关的 store | 登录、退出、续期改走令牌管理器 | 认证改为 Bearer 令牌 | 已完成 | M2/P4 |
 | 登录、注册、退出、修改密码的提交方式 | 删除 CSRF 令牌和 Django 会话的表单提交，改走令牌管理器 | 认证改为 Bearer 令牌；CSRF 是传输方式的一部分，和它的替代品一起删除（[M1 设计](M1-frontend-trim/M1-design.md) 3.6） | 已完成 | M2/P4 |
-| 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误。M2/P5 改完个人设置的其余部分（[M2 设计](M2-auth/M2-design.md) 7.7）和新手引导的资料步骤：general 页的保存、资料步骤和 api-tokens 页的创建把字段错误显示在字段下方（名字的规则只在 nerve，页面只查必填，Plane 的名字校验从 `@nerve/utils` 删除），其余的错误和 preferences 的主题、时区、语言、每周第一天、PAT 的撤销、停用账户、新手引导换步骤时更新资料（`onboarding/root.tsx`）的失败都在提示中，文案按 `code` 取（`helpers/authentication.helper.ts` 的 `fieldErrorKeys`、`errorMessageKey`）。M3–M8 的领域在各自的 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |
+| 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误。M2/P5 改完个人设置的其余部分（[M2 设计](M2-auth/M2-design.md) 7.7）和新手引导的资料步骤：general 页的保存、资料步骤和 api-tokens 页的创建把字段错误显示在字段下方（名字的规则只在 nerve，页面只查必填，Plane 的名字校验从 `@nerve/utils` 删除），其余的错误和 preferences 的主题、时区、语言、每周第一天、PAT 的撤销、停用账户、新手引导换步骤时更新资料（`onboarding/root.tsx`）的失败都在提示中，文案按 `code` 取（`core/lib/error-messages.ts` 的 `PROBLEM_MESSAGES`、`fieldErrorKeys`、`errorMessageKey`，M3/P8a 从 `helpers/authentication.helper.ts` 移来）。M3/P8a 起工作区、成员、邀请、工作区的显示设置经生成的客户端，失败是 `ApiError`，它们的页面按 `code` 显示错误在 M3/P9；M3 的项目一侧和 M4–M8 的领域在各自的 Phase 和 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |
 | 文件上传相关的 store 和调用方 | 预签名 POST 改为 `{method, url, headers}` 形式的 PUT | 文件存储改为 PUT 上传 | 计划中 | |
 | 迭代和模块的归属 | 通过工作项的 `cycle_id`、`module_ids` 字段修改，不再调用单独的接口 | 接口设计 | 计划中 | |
+| 系统内接受邀请 | `/invitations` 页、它的入口和路由、新手引导的"加入工作区"一步、旧 `WorkspaceService` 按邮箱列出和批量接受邀请的两个方法删除；邀请只凭链接接受（`/workspace-invitations`） | [M3 设计](M3-workspace-project/M3-design.md) 决策点 2 | 已完成 | M3/P8a |
+| 创建工作区的 slug 检查 | `RESTRICTED_URLS` 删除，创建表单改问 nerve（`GET /api/v0/workspace-slugs/{slug}`）；保留名单"应用"一段由 vitest 核对与路由和 `public/` 的顶层目录一致 | M3 设计 3.10 | 已完成 | M3/P8a |
+| 用户设置和落点 | `settings.store.ts`、`IUserSettings`、`currentUserSettings` 删除；登录后的落点由 `useLanding`（`core/lib/use-landing.ts`）决定，落到哪个工作区由纯函数按工作区列表和资料的 `last_workspace_id` 算出（`core/lib/landing.ts`） | M3 设计 3.14 | 已完成 | M3/P8a |
+| 挂载时的取数 | 工作区包装层取收藏、顶部导航取未读通知数、首页的"最近"小部件、项目包装层取迭代、模块、视图、分诊状态，全部删除，各自的 M 随新接口加回 | M3 设计 3.1 | 已完成（M6、M7 加回） | M3/P8a |
+| 工作区图标的上传 | 工作区设置 general 页的图标上传弹窗删除：接口不能设置 `logo_url`，它恒为 `null`，显示图标的地方照旧显示首字母；M5 随文件的接口加回 | M3 设计 3.2 | 已完成（M5 加回） | M3/P8a |
 
 ---
 
