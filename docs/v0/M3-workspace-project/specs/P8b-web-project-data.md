@@ -123,6 +123,8 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - `plane-workspace-urls` 的模式在 Task 3–9 已随各 Task 的删除补上项目一侧的旧地址（第 3 节第 7 条）；Task 11 加最后一个，项目的 `user-properties/`，和精确例外一条：`project.service.ts` 中项目的 `user-properties/` 两处，`until: "M4"`（7.10），以及不命中样例（迭代的 `archived-cycles`、工作项的标签、v0 的标签地址）。`plane-user-urls` 收紧为整个 `/api/users/`（M2 交接第 11 节）。规则 64 条不变；例外 3 → 2（Task 4）→ 3（附录 A.11）。
 - `project_filter.store.ts` 的死行（P8a spec 第 5 节）：`getDisplayFiltersByWorkspaceSlug`、`getFiltersByWorkspaceSlug` 和接口上的 `displayFilters`、`filters` 删除；`store-context.test.ts` 改读 `currentWorkspaceDisplayFilters`。
 - 文档：总体设计 7.7 的三处（`.oxlintrc.json` 的范围加上 P8b 的文件；"页面按权限决定取数"加项目包装层的例子；`reconciled.ts` 的使用者加上 P8b 的 store 和 `values()`）；前端改动清单 3.1 的 M3 一行、错误格式一行，3.2 加五行（项目封面的上传（预设的 29 张封面图只留一张）、项目的收藏、收集箱的分诊状态、工作区级的标签、项目一侧的挂载时取数），1.6 的封面图一行和第二节的 Unsplash 一行加上指向 3.2 的说明（裁定 D3）。
+- Task 11 在 plan 的文字之外（裁定 E5）：总体设计 7.7 在"一个接一个发出"一条之后加一条预检 PF-M2 的总规则：修改的请求体取决于 store 所持的值时，轮到它发出时从 nerve 最近一次回答的值算出请求体和它改的是哪一项，不在调用时算；列出 P8b 照做的地方（侧边栏中项目的移动、项目标签栏的修改、项目成员的改角色和移出、状态的移动、删除和设默认、标签的移动和删除；第 3 节第 15 条和 2.6、2.8、2.9）。它和排队一样约束之后的 M。"取数和修改的应答对齐"一条原来说"排队是上一条的事"，新的一条插在中间，改为指名"一个接一个发出"一条。
+- Task 11 的文档照修正轮之后的代码写，不只照 plan 的文字：7.7 中 `.oxlintrc.json` 的范围加上 Task 3 的修正轮加的 `use-archived-projects-fetch.ts`（2.3），写明两个设置组件的目录中有修正轮加的表单渲染测试（2.8、2.9），`core/store/project/` 写作项目、项目的显示设置和项目列表的筛选（整个目录在范围内）；`reconciled.ts` 一条写明按工作区或按项目的值都用 `ReconciledByKey`（项目的两份列表按工作区），`values()` 由状态和标签的 store 读。前端改动清单的错误格式一行写明状态和标签的设置页、工作项的三个标签选择器在 P8b 已按 `code` 显示错误（裁定 T8-b、T8-e、T8-h），其余页面在 P9–P11；工作区级的标签一行加上工作区一级显示的工作项不显示标签，除非那个项目的标签已经取过（Task 7 的评审 m1，第 3 节第 21 条）。
 
 ### 2.12 挂载时的取数和它们的条件（W5）
 

@@ -332,9 +332,9 @@ describe("store-context", () => {
     y.router.setQuery({ workspaceSlug: "acme" });
     // Y's filters follow the new workspace (they start it and clear the search); X's no longer run.
     expect(y.projectRoot.projectFilter.searchQuery).toBe("");
-    expect(y.projectRoot.projectFilter.getDisplayFiltersByWorkspaceSlug("acme")).toBeDefined();
+    expect(y.projectRoot.projectFilter.currentWorkspaceDisplayFilters).toBeDefined();
     expect(x.projectRoot.projectFilter.searchQuery).toBe("x");
-    expect(x.projectRoot.projectFilter.getDisplayFiltersByWorkspaceSlug("acme")).toBeUndefined();
+    expect(x.projectRoot.projectFilter.currentWorkspaceDisplayFilters).toBeUndefined();
   });
 
   it("gives the code that reads the stores outside the components the RootStore of the session now", async () => {

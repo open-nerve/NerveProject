@@ -6,7 +6,6 @@
 
 import { set } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction, reaction } from "mobx";
-import { computedFn } from "mobx-utils";
 // types
 import type { TProjectDisplayFilters, TProjectFilters, TProjectAppliedDisplayFilterKeys } from "@nerve/types";
 // store
@@ -14,16 +13,11 @@ import type { RootStore } from "../root.store";
 
 export interface IProjectFilterStore {
   // observables
-  displayFilters: Record<string, TProjectDisplayFilters>;
-  filters: Record<string, TProjectFilters>;
   searchQuery: string;
   // computed
   currentWorkspaceDisplayFilters: TProjectDisplayFilters | undefined;
   currentWorkspaceAppliedDisplayFilters: TProjectAppliedDisplayFilterKeys[] | undefined;
   currentWorkspaceFilters: TProjectFilters | undefined;
-  // computed functions
-  getDisplayFiltersByWorkspaceSlug: (workspaceSlug: string) => TProjectDisplayFilters | undefined;
-  getFiltersByWorkspaceSlug: (workspaceSlug: string) => TProjectFilters | undefined;
   // actions
   updateDisplayFilters: (workspaceSlug: string, displayFilters: TProjectDisplayFilters) => void;
   updateFilters: (workspaceSlug: string, filters: TProjectFilters) => void;
@@ -107,23 +101,11 @@ export class ProjectFilterStore implements IProjectFilterStore {
   }
 
   /**
-   * @description get display filters of a workspace by workspaceSlug
-   * @param {string} workspaceSlug
-   */
-  getDisplayFiltersByWorkspaceSlug = computedFn((workspaceSlug: string) => this.displayFilters[workspaceSlug]);
-
-  /**
-   * @description get filters of a workspace by workspaceSlug
-   * @param {string} workspaceSlug
-   */
-  getFiltersByWorkspaceSlug = computedFn((workspaceSlug: string) => this.filters[workspaceSlug]);
-
-  /**
    * @description initialize display filters and filters of a workspace
    * @param {string} workspaceSlug
    */
   initWorkspaceFilters = (workspaceSlug: string) => {
-    const displayFilters = this.getDisplayFiltersByWorkspaceSlug(workspaceSlug);
+    const displayFilters = this.displayFilters[workspaceSlug];
     runInAction(() => {
       this.displayFilters[workspaceSlug] = {
         order_by: displayFilters?.order_by || "created_at",

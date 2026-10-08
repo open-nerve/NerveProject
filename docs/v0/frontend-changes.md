@@ -120,7 +120,7 @@
 | `tailwind-config`、`typescript-config` 的 `package.json`；仓库根目录的 `package.json` | 两个包加 `check:format`、`fix:format`（oxlint 在它们里面没有可读的文件）；根目录的格式检查加上 `package.json`、`pnpm-workspace.yaml`、`turbo.json`、`knip.jsonc`、`.oxlintrc.json`、`.oxfmtrc.json`；`typescript-config` 删掉只在打包发布时起作用、又只列了 4 个配置中 3 个的 `files` | P1 评审第 6 节 (b) |
 | en、zh-CN 的文案 | 删掉没有代码引用的 500 个键（严格方法下的 482 个，加上 18 个只因名字与无关的字面量相同而算作有引用的键），以及它们留下的 149 个空对象；每种语言 1577 → 1077 个键；主题选项的标签只剩一个来源（`i18n_label` 是键），Power K 的主题菜单在中文界面下不再显示英文 | M1 设计 6、9 节 |
 | `app/assets/` | 删掉 133 张没有被导入的图片（6.1 MiB）：126 张空状态插图（画的是 Plane 的界面）、认证页的三张、项目 emoji、命令键图形和两张图库人像 | M1 设计 9 节；P5 评审 |
-| `app/assets/cover-images/`、`helpers/cover-image.helper.ts` | 29 张预设封面从来源和许可查不到的照片换成 Nerve 自己画的抽象图（色块、波纹、圆盘、条带、切面、点阵、等高线，中到深色，画面中部有细节：封面会被裁成宽条，上面写白字）。SVG 是源文件，带 Nerve 的版权声明；应用导入由它渲染的 WebP（1920 × 1080，质量 0.9），因为项目或个人资料选用预设封面时应用会上传一份副本，上传只接受 JPEG、PNG、WebP。同目录的 `SOURCES.md` 写明做法和每张画的是什么。旧的 29 张 JPEG 删除，封面辅助函数导入新文件，上传的兜底文件名随格式改为 `image.webp` | 收尾 spec 第 9 节第 1 条的裁定：来源和许可查不到的图片不随 Nerve 发布，功能保留 |
+| `app/assets/cover-images/`、`helpers/cover-image.helper.ts` | 29 张预设封面从来源和许可查不到的照片换成 Nerve 自己画的抽象图（色块、波纹、圆盘、条带、切面、点阵、等高线，中到深色，画面中部有细节：封面会被裁成宽条，上面写白字）。SVG 是源文件，带 Nerve 的版权声明；应用导入由它渲染的 WebP（1920 × 1080，质量 0.9），因为项目或个人资料选用预设封面时应用会上传一份副本，上传只接受 JPEG、PNG、WebP。同目录的 `SOURCES.md` 写明做法和每张画的是什么。旧的 29 张 JPEG 删除，封面辅助函数导入新文件，上传的兜底文件名随格式改为 `image.webp`（M3/P8b 删除预设，只留显示用的 `image_1`，见 3.2） | 收尾 spec 第 9 节第 1 条的裁定：来源和许可查不到的图片不随 Nerve 发布，功能保留 |
 | `app/assets/onboarding/`、`app/assets/empty-state/`；`cycles/active-cycle/root.tsx` | 导览的三张截图和"功能未开启"的八张图里，显示照片的头像（人像、卡通人物和盖在照片上的计数徽章，11 张图共 77 个）改为字母头像，真实的人名改为中性的名字（"vera"；"Robin"、"Robin Park"），用应用的字体 Inter 写在原来的位置，字号、字重、颜色和基线按原文拟合；此外没有改动，只是多了一次有损的 WebP 编码（取文件大小最接近原图的质量）；同目录的 `SOURCES.md` 保留上游的版权声明，写明每张改了什么。删掉不显示的 8 张图：按路径没有被引用的 6 张（与在用的图同名，或是另一张图文件名的结尾，按文件名查找时被当作在用）；活动迭代的两张，根组件按主题选出它们，传给内层组件一个不读的属性，这个属性和只为它存在的主题 hook 一起删除 | 收尾 spec 第 9 节第 1 条的裁定：保留的图片不含第三方的肖像和个人信息；保留的其余图片按能看清 20 px 细节的尺寸复看过（收尾 plan 的 Task 15） |
 | propel 右键菜单的 `Trigger`、`Content` | 属性类型去掉 `className`（`Omit`）：T3 删掉了它们自己声明的 `className`，可它们继承的 base-ui 属性里还有，传进来时 `Trigger` 会用它换掉 `outline-none`，`Content` 会不声不响地丢掉；现在传它是类型错误 | 收尾的任务评审（修复轮） |
 | 5 个文件的导入分组注释 | 4 行只有 `//` 的标签：`count-chip.tsx` 的删除，迭代工作项 store 的删除（下面的本地导入并入上面的本地一组），工作项基类 store 和模块工作项 store 的改为 `// local imports`（删掉会把本地导入归到 `// services`、`// helpers` 下）；模块链接列表项盖在 toast、tooltip 和类型上的 `// nerve types` 改为 `// nerve imports`，盖在 `@nerve/utils` 上的 `// nerve ui` 改为 `// nerve utils`。只改注释行，不移动导入 | 收尾的任务评审（修复轮） |
@@ -156,7 +156,7 @@
 | 首页快捷链接和首页个性化；自定义主题（首页固定显示问候、无项目空状态和最近访问，见 [M1 设计](M1-frontend-trim/M1-design.md) 3.14）；已经没有入口的旧首页仪表盘 | 已完成 | M1/P2 |
 | 侧边栏的自定义导航（固定、排序、隐藏菜单项；数据在已砍掉的 `workspace_user_preferences` 表），侧边栏改为固定列表；保留的项目导航偏好改由 `ProjectNavigationDialog` 配置 | 已完成 | M1/P2 |
 | AI 助手，连同 Plane AI 的侧边栏入口和实例的 AI 开关；遥测残留（实例的遥测开关，应用里没有遥测 SDK） | 已完成 | M1/P3 |
-| Unsplash 封面图（封面选择只留静态图和上传，打开选择器不再请求 `/api/unsplash/`） | 已完成 | M1/P3 |
+| Unsplash 封面图（封面选择只留静态图和上传，打开选择器不再请求 `/api/unsplash/`；M3/P8b 删除封面选择和预设，见 3.2） | 已完成 | M1/P3 |
 | 公开发布（发布弹窗、指向 space 的链接），连同评论的内部 / 外部可见范围 | 已完成 | M1/P3 |
 | 管理后台（god-mode）入口，连同"实例未完成设置"页（实例请求失败时的维护页保留） | 已完成 | M1/P3 |
 | 个人主页的统计和动态，连同 propel 中最后只有它用到的 `bar-chart`、`pie-chart`；个人主页只剩用户卡片和工作项分页，`/profile/:userId` 重定向到"分配给他的" | 已完成 | M1/P2 |
@@ -199,7 +199,7 @@
 | 领域 | 所属 M | 状态 |
 |---|---|---|
 | 认证、用户、实例配置、PAT；令牌管理器 | M2 | 已完成 |
-| 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 进行中：工作区、成员、邀请、工作区的显示设置已对接（M3/P8a）；项目一侧在 M3/P8b |
+| 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 进行中：数据层已对接（工作区一侧 M3/P8a，项目一侧 M3/P8b）；页面在 M3/P9–P11 |
 | 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 计划中 |
 | 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 计划中 |
 | 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 计划中 |
@@ -214,7 +214,7 @@
 | `core/store/issue/helpers/base-issues.store.ts` 等列表相关 store | 使用新接口的分页结构（不透明游标 `next_cursor`）和分组结构（`groups` 数组），不再按"已加载条数 ÷ 每页条数"拼页码游标 | 新接口的分页和分组设计 | 计划中 | |
 | 用户和认证相关的 store | 登录、退出、续期改走令牌管理器 | 认证改为 Bearer 令牌 | 已完成 | M2/P4 |
 | 登录、注册、退出、修改密码的提交方式 | 删除 CSRF 令牌和 Django 会话的表单提交，改走令牌管理器 | 认证改为 Bearer 令牌；CSRF 是传输方式的一部分，和它的替代品一起删除（[M1 设计](M1-frontend-trim/M1-design.md) 3.6） | 已完成 | M2/P4 |
-| 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误。M2/P5 改完个人设置的其余部分（[M2 设计](M2-auth/M2-design.md) 7.7）和新手引导的资料步骤：general 页的保存、资料步骤和 api-tokens 页的创建把字段错误显示在字段下方（名字的规则只在 nerve，页面只查必填，Plane 的名字校验从 `@nerve/utils` 删除），其余的错误和 preferences 的主题、时区、语言、每周第一天、PAT 的撤销、停用账户、新手引导换步骤时更新资料（`onboarding/root.tsx`）的失败都在提示中，文案按 `code` 取（`core/lib/error-messages.ts` 的 `PROBLEM_MESSAGES`、`fieldErrorKeys`、`errorMessageKey`，M3/P8a 从 `helpers/authentication.helper.ts` 移来）。M3/P8a 起工作区、成员、邀请、工作区的显示设置经生成的客户端，nerve 的错误应答是 `ApiError`，它们的页面按 `code` 显示错误在 M3/P9；M3 的项目一侧和 M4–M8 的领域在各自的 Phase 和 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |
+| 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误。M2/P5 改完个人设置的其余部分（[M2 设计](M2-auth/M2-design.md) 7.7）和新手引导的资料步骤：general 页的保存、资料步骤和 api-tokens 页的创建把字段错误显示在字段下方（名字的规则只在 nerve，页面只查必填，Plane 的名字校验从 `@nerve/utils` 删除），其余的错误和 preferences 的主题、时区、语言、每周第一天、PAT 的撤销、停用账户、新手引导换步骤时更新资料（`onboarding/root.tsx`）的失败都在提示中，文案按 `code` 取（`core/lib/error-messages.ts` 的 `PROBLEM_MESSAGES`、`fieldErrorKeys`、`errorMessageKey`，M3/P8a 从 `helpers/authentication.helper.ts` 移来）。M3/P8a 起工作区、成员、邀请、工作区的显示设置，M3/P8b 起项目、项目成员、状态、标签、项目的显示设置经生成的客户端，nerve 的错误应答是 `ApiError`：状态和标签的设置页、工作项的三个标签选择器在 M3/P8b 已按 `code` 显示错误（`errorMessageKey`），其余页面在 M3/P9–P11；M4–M8 的领域在各自的 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |
 | 文件上传相关的 store 和调用方 | 预签名 POST 改为 `{method, url, headers}` 形式的 PUT | 文件存储改为 PUT 上传 | 计划中 | |
 | 迭代和模块的归属 | 通过工作项的 `cycle_id`、`module_ids` 字段修改，不再调用单独的接口 | 接口设计 | 计划中 | |
 | 系统内接受邀请 | `/invitations` 页、它的入口和路由、新手引导的"加入工作区"一步、旧 `WorkspaceService` 按邮箱列出和批量接受邀请的两个方法删除；邀请只凭链接接受（`/workspace-invitations`） | [M3 设计](M3-workspace-project/M3-design.md) 决策点 2 | 已完成 | M3/P8a |
@@ -222,6 +222,11 @@
 | 用户设置和落点 | `settings.store.ts`、`IUserSettings`、`currentUserSettings` 删除；登录后的落点由 `useLanding`（`core/lib/use-landing.ts`）决定，落到哪个工作区由纯函数按工作区列表和资料的 `last_workspace_id` 算出（`core/lib/landing.ts`） | M3 设计 3.14 | 已完成 | M3/P8a |
 | 挂载时的取数 | 工作区包装层取收藏、顶部导航取未读通知数、首页的"最近"小部件、项目包装层取迭代、模块、视图、分诊状态，全部删除，各自的 M 随新接口加回 | M3 设计 3.1 | 已完成（M6、M7 加回） | M3/P8a |
 | 工作区图标的上传 | 工作区设置 general 页的图标上传弹窗删除：接口不能设置 `logo_url`，它恒为 `null`，显示图标的地方照旧显示首字母；M5 随文件的接口加回 | M3 设计 3.2 | 已完成（M5 加回） | M3/P8a |
+| 项目封面的上传 | 新建项目时的封面一步、默认的随机封面和项目设置的封面选择器删除，预设的 29 张封面图只留显示用的一张（`image_1`）：接口不能设置 `cover_image_url`，它恒为 `null`，显示封面的地方用这张默认图（`helpers/cover-image.helper.ts`）；M5 随文件的接口加回 | M3 设计 3.2 | 已完成（M5 加回） | M3/P8b |
+| 项目的收藏 | 项目卡片的收藏按钮、建项目之后加入收藏的一步、项目 store 的两个收藏方法和 `favoriteProjectIds`、收藏 store 移除收藏时改项目的一支删除；`Project` 没有 `is_favorite`；M7 随收藏的接口加回 | M3 设计 3.2 | 已完成（M7 加回） | M3/P8b |
+| 收集箱的分诊状态 | state store 的分诊状态、取它的旧 service 方法、分诊状态的下拉框、类型和图标删除；收集箱中已接受的工作项照旧显示状态，新建弹窗不再选分诊状态；M7 随收集箱的接口加回 | M3 设计 3.1、第 12 节 P8b | 已完成（M7 加回） | M3/P8b |
+| 工作区级的标签 | 工作区内全部项目的标签列表、它的取数和旧地址删除（nerve 没有工作区级的标签，标签按项目）；工作区一级的工作项列表按标签分组只有"无"，标签筛选没有选项，工作区一级显示的工作项不显示标签（除非那个项目的标签已经取过）；M7 的视图决定工作区一级怎样取标签 | M3 设计 3.16、7.3 | 已完成（M7 决定） | M3/P8b |
+| 项目一侧的挂载时取数 | 项目包装层的取数由 `useProjectFetch`（`core/layouts/auth-layout/use-project-fetch.ts`）决定：先取项目，nerve 说调用者是有效成员之后才取显示设置、标签、成员和状态；不是成员的看得到的项目显示"加入项目"，看不到的显示"找不到项目"（nerve 对看不到的项目答 404，Plane 的 403 界面删除）；工作区包装层取项目列表和工作区的状态，项目角色取自 `Project.member_role`，`project-roles` 的取数删除 | M3 设计 7.1、7.3 | 已完成 | M3/P8b |
 
 ---
 
