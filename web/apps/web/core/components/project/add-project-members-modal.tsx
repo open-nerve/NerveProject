@@ -4,11 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 // nerve imports
-import type { ProjectMembersAdd } from "@nerve/api-client";
+import type { ProjectMembersAdd, ProjectRole } from "@nerve/api-client";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { ROLE, EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -21,6 +20,8 @@ import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUserPermissions } from "@/hooks/store/user";
+// local imports
+import { PROJECT_ROLES } from "./project-roles";
 
 type Props = {
   isOpen: boolean;
@@ -58,7 +59,7 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     reset,
     handleSubmit,
     control,
-  } = useForm<FormValues>();
+  } = useForm<FormValues>({ defaultValues });
   const { fields, append, remove } = useFieldArray({
     control,
     name: "members",
@@ -103,17 +104,6 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     });
   };
 
-  useEffect(() => {
-    if (fields.length === 0) {
-      append([
-        {
-          role: 5,
-          member_id: "",
-        },
-      ]);
-    }
-  }, [fields, append]);
-
   const options = nonProjectMemberIds?.flatMap((userId) => {
     const memberDetails = getWorkspaceMemberDetails(userId);
 
@@ -144,17 +134,15 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     ];
   });
 
-  const checkCurrentOptionWorkspaceRole = (value: string) => {
+  const checkCurrentOptionWorkspaceRole = (value: string): ProjectRole[] => {
     const currentMemberWorkspaceRole = getWorkspaceMemberDetails(value)?.role;
-    if (!value || !currentMemberWorkspaceRole) return ROLE;
+    if (!value || !currentMemberWorkspaceRole) return PROJECT_ROLES;
 
     const isGuestOROwner = [EUserPermissions.ADMIN, EUserPermissions.GUEST].includes(
       currentMemberWorkspaceRole as EUserPermissions
     );
 
-    return Object.fromEntries(
-      Object.entries(ROLE).filter(([key]) => !isGuestOROwner || parseInt(key) === currentMemberWorkspaceRole)
-    );
+    return PROJECT_ROLES.filter((role) => !isGuestOROwner || role === currentMemberWorkspaceRole);
   };
 
   return (
@@ -236,17 +224,15 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                           }
                           input
                         >
-                          {Object.entries(checkCurrentOptionWorkspaceRole(watch(`members.${index}.member_id`))).map(
-                            ([key, label]) => {
-                              if (parseInt(key) > (currentProjectRole ?? EUserPermissions.GUEST)) return null;
+                          {checkCurrentOptionWorkspaceRole(watch(`members.${index}.member_id`)).map((role) => {
+                            if (role > (currentProjectRole ?? EUserPermissions.GUEST)) return null;
 
-                              return (
-                                <CustomSelect.Option key={key} value={key}>
-                                  {label}
-                                </CustomSelect.Option>
-                              );
-                            }
-                          )}
+                            return (
+                              <CustomSelect.Option key={role} value={role}>
+                                {ROLE[role]}
+                              </CustomSelect.Option>
+                            );
+                          })}
                         </CustomSelect>
                       )}
                     />

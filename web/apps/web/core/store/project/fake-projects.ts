@@ -6,7 +6,16 @@
 // The caller's projects, for the tests of the stores that read them, against a fake nerve: nerve's records, the
 // fetches that load them into a store, and a tab whose stores have the caller's workspaces and projects.
 
-import type { Label, Project, ProjectPreferences, State, StateGroup, Workspace } from "@nerve/api-client";
+import type {
+  Label,
+  Project,
+  ProjectMember,
+  ProjectPreferences,
+  ProjectRole,
+  State,
+  StateGroup,
+  Workspace,
+} from "@nerve/api-client";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { fakeRoot } from "@/store/fake-root";
 import { ProjectRootStore } from "@/store/project";
@@ -93,6 +102,17 @@ export function labelOf(project: Project, name: string, sortOrder: number, field
     created_at: "2026-10-01T09:00:00Z",
     updated_at: "2026-10-01T09:00:00Z",
     ...fields,
+  };
+}
+
+/** A membership of the project as nerve lists it: the name names the member and the membership; a member's role. */
+export function projectMemberOf(project: Pick<Project, "id">, name: string, role: ProjectRole = 15): ProjectMember {
+  return {
+    id: `pm-${project.id}-${name}`,
+    project_id: project.id,
+    member_id: `u-${name}`,
+    role,
+    created_at: "2026-10-01T09:00:00Z",
   };
 }
 

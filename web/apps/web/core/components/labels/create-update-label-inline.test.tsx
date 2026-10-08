@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Label } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
+import { emptyShown, shown } from "@/lib/fake-controls";
 import { toasts } from "@/lib/fake-toast";
 import { labelOf, projectOf } from "@/store/project/fake-projects";
 import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
@@ -17,26 +18,8 @@ import { CreateUpdateLabelInline } from "./create-update-label-inline";
 // 3.16; v0 design 7.7). The form renders on the server with stand-ins for the name's input and the buttons, which keep
 // the props they were given: the test types the name as the input would, and clicks the form's button.
 
-type Input = { onChange: (value: string) => void };
-type Submit = { variant: string; onClick: (event: { preventDefault: () => void }) => void };
-const shown = vi.hoisted(() => {
-  const inputs: Input[] = [];
-  const buttons: Submit[] = [];
-  return { inputs, buttons };
-});
-vi.mock("@makeplane/propel/components/input", () => ({
-  Input: (props: Input) => {
-    shown.inputs.push(props);
-    return null;
-  },
-  InputGroup: ({ children }: { children: ReactNode }) => children,
-}));
-vi.mock("@nerve/propel/button", () => ({
-  Button: (props: Submit) => {
-    shown.buttons.push(props);
-    return null;
-  },
-}));
+vi.mock("@makeplane/propel/components/input", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
@@ -45,12 +28,11 @@ const bug = labelOf(web, "bug", 65535);
 
 /** Renders the form, types the name, and clicks its button, which sends what the form holds. */
 function submit(form: ReactElement, name: string) {
-  shown.inputs.length = 0;
-  shown.buttons.length = 0;
+  emptyShown();
   renderToStaticMarkup(form);
   const [input] = shown.inputs;
   const button = shown.buttons.find((props) => props.variant === "primary");
-  if (!input || !button) throw new Error("the form showed no name or no button");
+  if (!input || !button?.onClick) throw new Error("the form showed no name or no button");
   input.onChange(name);
   button.onClick({ preventDefault: () => {} });
 }

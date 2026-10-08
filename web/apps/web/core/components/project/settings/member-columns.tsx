@@ -19,6 +19,8 @@ import { getFileURL } from "@nerve/utils";
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
+// local imports
+import { PROJECT_ROLES } from "../project-roles";
 
 type NameProps = {
   rowData: IProjectMemberDetails;
@@ -124,15 +126,13 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
   const isRoleEditable =
     (isCurrentUserWorkspaceAdmin && isCurrentUser) ||
     (isCurrentUserProjectAdmin && !isRowDataWorkspaceAdmin && !isCurrentUser);
-  const checkCurrentOptionWorkspaceRole = (value: string) => {
+  const checkCurrentOptionWorkspaceRole = (value: string): ProjectRole[] => {
     const currentMemberWorkspaceRole = getWorkspaceMemberDetails(value)?.role as EUserPermissions | undefined;
-    if (!value || !currentMemberWorkspaceRole) return ROLE;
+    if (!value || !currentMemberWorkspaceRole) return PROJECT_ROLES;
 
     const isGuest = [EUserPermissions.GUEST].includes(currentMemberWorkspaceRole);
 
-    return Object.fromEntries(
-      Object.entries(ROLE).filter(([key]) => !isGuest || parseInt(key) === EUserPermissions.GUEST)
-    );
+    return PROJECT_ROLES.filter((role) => !isGuest || role === EUserPermissions.GUEST);
   };
 
   return (
@@ -168,9 +168,9 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
               className="w-32 rounded-md p-0"
               input
             >
-              {Object.entries(checkCurrentOptionWorkspaceRole(rowData.member.id)).map(([key, label]) => (
-                <CustomSelect.Option key={key} value={key}>
-                  {label}
+              {checkCurrentOptionWorkspaceRole(rowData.member.id).map((role) => (
+                <CustomSelect.Option key={role} value={role}>
+                  {ROLE[role]}
                 </CustomSelect.Option>
               ))}
             </CustomSelect>

@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { Project } from "@nerve/api-client";
+import type { ProjectUpdate } from "@nerve/api-client";
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
 import { AutoArchiveAutomation } from "@/components/automation";
 import { PageHead } from "@/components/core/page-title";
@@ -48,7 +48,7 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
       });
     }
   };
-  const handleChange = (formData: Partial<Project>) => send(() => updateProject(projectId, formData));
+  const handleChange = (formData: Pick<ProjectUpdate, "archive_in">) => send(() => updateProject(projectId, formData));
   const handleToggle = () => send(() => toggleAutoArchive(projectId));
 
   // derived values

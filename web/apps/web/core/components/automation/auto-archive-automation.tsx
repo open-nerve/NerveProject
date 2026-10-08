@@ -11,7 +11,7 @@ import { RestoreOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { PROJECT_AUTOMATION_MONTHS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { Project } from "@nerve/api-client";
+import type { ProjectUpdate } from "@nerve/api-client";
 import { Switch } from "@makeplane/propel/components/switch";
 import { CustomSelect, Loader } from "@nerve/ui";
 // component
@@ -22,12 +22,12 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 
 type Props = {
-  handleChange: (formData: Partial<Project>) => Promise<void>;
+  handleChange: (formData: Pick<ProjectUpdate, "archive_in">) => Promise<void>;
   /** Turns the auto-archiving on or off, from nerve's last answer, in the change's turn. */
   handleToggle: () => Promise<void>;
 };
 
-const initialValues: Partial<Project> = { archive_in: 1 };
+const initialValues: Pick<ProjectUpdate, "archive_in"> = { archive_in: 1 };
 
 export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(props: Props) {
   const { handleChange, handleToggle } = props;

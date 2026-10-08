@@ -5,7 +5,7 @@
 
 import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectMember, ProjectMembersAdd, ProjectRole } from "@nerve/api-client";
+import type { ProjectMember, ProjectMembersAdd } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
@@ -13,7 +13,7 @@ import { fetchedWhileChangeIsOut, inTurn, sent } from "@/store/fake-queue";
 import { fakeRoot } from "@/store/fake-root";
 import { ProjectMemberStore } from "@/store/member/project/project-member.store";
 import { membershipOf } from "@/store/member/workspace/fake-members";
-import { loadArchivedProjects, projectOf, projectTab } from "@/store/project/fake-projects";
+import { loadArchivedProjects, projectMemberOf, projectOf, projectTab } from "@/store/project/fake-projects";
 import { UserStore } from "@/store/user";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
@@ -31,20 +31,12 @@ const ops = projectOf("OPS", acme.id);
 const lab = projectOf("LAB", beta.id, { member_ids: ["u-ann"] });
 const MEMBERS = `/api/v0/projects/${web.id}/members`;
 
-/** A membership of a project (web unless it says) as nerve lists it: the name names the member and the membership. */
-const memberOf = (name: string, role: ProjectRole = 15, projectId = web.id): ProjectMember => ({
-  id: `pm-${projectId}-${name}`,
-  project_id: projectId,
-  member_id: `u-${name}`,
-  role,
-  created_at: "2026-10-01T09:00:00Z",
-});
-const ann = memberOf("ann", 20);
-const bob = memberOf("bob");
-const cat = memberOf("cat", 5);
-const dee = memberOf("dee");
+const ann = projectMemberOf(web, "ann", 20);
+const bob = projectMemberOf(web, "bob");
+const cat = projectMemberOf(web, "cat", 5);
+const dee = projectMemberOf(web, "dee");
 /** Bob's membership as nerve answers his change to a guest: its created_at, which only nerve gives, is not the list's. */
-const demoted: ProjectMember = { ...memberOf("bob", 5), created_at: "2026-10-03T09:00:00Z" };
+const demoted: ProjectMember = { ...projectMemberOf(web, "bob", 5), created_at: "2026-10-03T09:00:00Z" };
 /** Dee, a member of the workspace, added to web. */
 const adding: ProjectMembersAdd = { members: [{ member_id: "u-dee", role: 15 }] };
 /** The profiles the workspace's members gave. */
@@ -191,9 +183,9 @@ describe("ProjectMemberStore, the changes", () => {
 
   it("adds members to a project of his other workspace: it has them, and the address's project does not", async () => {
     const { nerve, projects, store } = await loaded();
-    await load(nerve, store, [memberOf("ann", 15, lab.id)], lab.id);
+    await load(nerve, store, [projectMemberOf(lab, "ann")], lab.id);
     const labs = `/api/v0/projects/${lab.id}/members`;
-    const added = json(201, { data: [memberOf("dee", 15, lab.id)] });
+    const added = json(201, { data: [projectMemberOf(lab, "dee")] });
     await sent(nerve, () => store.bulkAddMembersToProject(lab.id, adding), ["POST", labs], added);
     expect(store.getProjectMemberIds(lab.id, true)).toEqual(["u-ann", "u-dee"]);
     expect(projects.getProjectById(lab.id)?.member_ids).toEqual(["u-ann", "u-dee"]);
@@ -205,7 +197,7 @@ describe("ProjectMemberStore, the changes", () => {
     const { nerve, projects, store } = await loaded();
     const old = projectOf("OLD", acme.id, { archived_at: "2026-10-02T09:00:00Z", member_ids: ["u-ann", "u-bob"] });
     await loadArchivedProjects(nerve, projects, acme, [old]);
-    await load(nerve, store, [memberOf("ann", 20, old.id), memberOf("bob", 15, old.id)], old.id);
+    await load(nerve, store, [projectMemberOf(old, "ann", 20), projectMemberOf(old, "bob")], old.id);
     const bobs = `/api/v0/project-members/pm-${old.id}-bob`;
     await sent(nerve, () => store.removeMemberFromProject(old.id, "u-bob"), ["DELETE", bobs], noContent());
     expect(projects.getProjectById(old.id)?.member_ids).toEqual(["u-ann"]);
@@ -352,7 +344,7 @@ describe("ProjectMemberStore, while a fetch is out", () => {
     nerve.calls[2]?.answer(json(200, { data: [ann, demoted] }));
     await until(() => newer.settled, "the newer members");
     // a newer fetch of web's members does not overtake one of ops's
-    nerve.calls[1]?.answer(json(200, { data: [memberOf("dee", 15, ops.id)] }));
+    nerve.calls[1]?.answer(json(200, { data: [projectMemberOf(ops, "dee")] }));
     await until(() => elsewhere.settled, "ops's members");
     // read before bob's change
     nerve.calls[0]?.answer(json(200, { data: [ann, bob] }));
