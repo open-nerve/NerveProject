@@ -307,7 +307,8 @@ describe("ProjectStore, the changes", () => {
   ];
   it.each(changes)("fails, changing nothing, when nerve refuses $change", async ({ send, refusal }) => {
     const { nerve, store } = await loaded();
-    await loadProject(nerve, store, web);
+    // web's own read is newer than its list's copy: a change that drops the read before nerve answers shows the copy
+    await loadProject(nerve, store, web, renamed);
     await loadProject(nerve, store, ops);
     const k = nerve.calls.length;
     const refused = track(send(store));
@@ -316,7 +317,7 @@ describe("ProjectStore, the changes", () => {
     await until(() => refused.settled, "the refusal");
     expect(refused.error).toBeInstanceOf(ApiError);
     expect(store.workspaceProjectIds).toEqual(ids([web, ops, docs]));
-    expect([web, ops, docs].map((project) => store.getProjectById(project.id))).toEqual([web, ops, docs]);
+    expect([web, ops, docs].map((project) => store.getProjectById(project.id))).toEqual([renamed, ops, docs]);
   });
 
   it("sends each change once nerve has answered the one before it, refused or not", async () => {
