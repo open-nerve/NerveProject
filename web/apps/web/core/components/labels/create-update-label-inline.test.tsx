@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Label } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
+import { toasts } from "@/lib/fake-toast";
 import { labelOf, projectOf } from "@/store/project/fake-projects";
 import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
@@ -18,12 +19,10 @@ import { CreateUpdateLabelInline } from "./create-update-label-inline";
 
 type Input = { onChange: (value: string) => void };
 type Submit = { variant: string; onClick: (event: { preventDefault: () => void }) => void };
-type Toast = { type: string; title: string; message: string };
 const shown = vi.hoisted(() => {
   const inputs: Input[] = [];
   const buttons: Submit[] = [];
-  const toasts: Toast[] = [];
-  return { inputs, buttons, toasts };
+  return { inputs, buttons };
 });
 vi.mock("@makeplane/propel/components/input", () => ({
   Input: (props: Input) => {
@@ -38,13 +37,8 @@ vi.mock("@nerve/propel/button", () => ({
     return null;
   },
 }));
-vi.mock("@nerve/propel/toast", () => ({
-  TOAST_TYPE: { SUCCESS: "success", ERROR: "error" },
-  setToast: (toast: Toast) => {
-    shown.toasts.push(toast);
-  },
-}));
-vi.mock("@nerve/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 const web = projectOf("WEB", "w-acme");
 const bug = labelOf(web, "bug", 65535);
@@ -73,7 +67,7 @@ const formOf = (callbacks: TLabelOperationsCallbacks, label?: Label) => (
 );
 
 beforeEach(() => {
-  shown.toasts.length = 0;
+  toasts.length = 0;
 });
 
 describe("the label settings' inline form", () => {
@@ -93,7 +87,7 @@ describe("the label settings' inline form", () => {
   ];
   it.each(forms)("shows nerve's reason when it refuses a $change: the name is taken", async ({ form }) => {
     submit(form, "BUG");
-    await vi.waitFor(() => expect(shown.toasts).toHaveLength(1));
-    expect(shown.toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.project_label_name_taken" }]);
+    await vi.waitFor(() => expect(toasts).toHaveLength(1));
+    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.project_label_name_taken" }]);
   });
 });

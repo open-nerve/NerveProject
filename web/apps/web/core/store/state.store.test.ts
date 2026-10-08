@@ -4,27 +4,31 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { State, StateCreate } from "@nerve/api-client";
+import type { State } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
+import {
+  acme,
+  beta,
+  blocking,
+  changed,
+  lab,
+  listTab,
+  loadStates,
+  loadedStates,
+  ops,
+  stateRequests,
+  web,
+} from "@/store/fake-project-lists";
 import { fetchedWhileChangeIsOut, inTurn, sent } from "@/store/fake-queue";
-import { fakeRoot } from "@/store/fake-root";
-import { projectOf, projectTab, stateOf } from "@/store/project/fake-projects";
+import { stateOf } from "@/store/project/fake-projects";
 import { StateStore } from "@/store/state.store";
-import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // The states of the caller's projects (M3 design 3.17, 7.3), against a fake nerve that answers each request when the
 // test says. The tab's address is web's, a project of acme; ops is acme's other; his other workspace, beta, has lab.
 
-const acme = workspaceOf("acme");
-const beta = workspaceOf("beta");
-const web = projectOf("WEB", acme.id);
-const ops = projectOf("OPS", acme.id);
-const lab = projectOf("LAB", beta.id);
-const LIST = `/api/v0/projects/${web.id}/states`;
-const ACME = "/api/v0/workspaces/acme/states";
-
+const { LIST, ACME, at } = stateRequests;
 const backlog = stateOf(web, "Backlog", "backlog", 15000, { default: true });
 const todo = stateOf(web, "Todo", "unstarted", 30000);
 const doing = stateOf(web, "Doing", "started", 45000);
@@ -33,34 +37,11 @@ const done = stateOf(web, "Done", "completed", 40000);
 /** web's states by group, then sequence: the started group has two, whose sequences are above done's. */
 const listed = [backlog, todo, doing, review, done];
 const opsBacklog = stateOf(ops, "Backlog", "backlog", 15000, { default: true });
-/** Doing moved before Todo, as nerve answers it: a change the request does not make shows its updated_at. */
-const moved: State = { ...doing, group: "unstarted", sequence: 20000, updated_at: "2026-10-08T09:00:00Z" };
-/** A state created in web's started group, as the page sends it and as nerve answers it. */
-const blocking: StateCreate = { name: "Blocked", color: "#60646C", group: "started" };
+/** Doing moved before Todo, as nerve answers it. */
+const moved = changed(doing, { group: "unstarted", sequence: 20000 });
+/** The state created in web's started group, as nerve answers it. */
 const blocked = stateOf(web, "Blocked", "started", 75000);
 const ids = (states: State[]) => states.map((state) => state.id);
-const at = (state: State) => `/api/v0/states/${state.id}`;
-
-/** The store of a tab at web's address, whose caller's acme and beta nerve listed with their projects. */
-async function stateStore() {
-  const { nerve, api, router, workspaceRoot, projectRoot } = await projectTab(
-    { workspace: acme, projects: [web, ops] },
-    { workspace: beta, projects: [lab] }
-  );
-  const store = new StateStore(fakeRoot({ router, workspaceRoot, projectRoot }), api);
-  return { nerve, api, projects: projectRoot.project, store };
-}
-
-/** The store fetches web's states, and nerve lists these. */
-const load = (nerve: FakeNerve, store: StateStore, states: State[]) =>
-  answered(nerve, () => store.fetchProjectStates(web.id), ["GET", LIST], { data: states }, "the states");
-
-/** A store whose states of web nerve listed. */
-async function loaded() {
-  const tab = await stateStore();
-  await load(tab.nerve, tab.store, listed);
-  return tab;
-}
 
 beforeEach(() => {
   vi.useFakeTimers({ now: 1_000_000 });
@@ -71,8 +52,8 @@ afterEach(() => {
 
 describe("StateStore, the states", () => {
   it("keeps a project's states by group, then sequence, and each one's place in its group", async () => {
-    const { nerve, store } = await stateStore();
-    const fetched = await load(nerve, store, [doing, done, review, backlog, todo]);
+    const { nerve, store } = await listTab(StateStore);
+    const fetched = await loadStates(nerve, store, [doing, done, review, backlog, todo]);
     expect(fetched.value).toEqual([doing, done, review, backlog, todo]);
     expect(store.getProjectStates(web.id)).toEqual(listed);
     expect(store.projectStates).toEqual(listed);
@@ -91,14 +72,14 @@ describe("StateStore, the states", () => {
   });
 
   it("gives a project's states from its workspace's list until its own is fetched, and none of a project left", async () => {
-    const { nerve, projects, store } = await stateStore();
+    const { nerve, projects, store } = await listTab(StateStore);
     const fetch = () => store.fetchWorkspaceStates(acme);
     await answered(nerve, fetch, ["GET", ACME], { data: [opsBacklog, ...listed] }, "acme's states");
     // by group, then sequence; nerve's order where both are equal
     expect(store.workspaceStates).toEqual([opsBacklog, backlog, todo, doing, review, done]);
     expect(store.getProjectStates(ops.id)).toEqual([opsBacklog]);
     expect(store.getProjectStates(web.id)).toEqual(listed);
-    await load(nerve, store, [backlog, done]);
+    await loadStates(nerve, store, [backlog, done]);
     expect(store.getProjectStates(web.id)).toEqual([backlog, done]);
 
     await sent(nerve, () => projects.leaveProject(ops), ["POST", `/api/v0/projects/${ops.id}/leave`], noContent());
@@ -108,7 +89,7 @@ describe("StateStore, the states", () => {
   });
 
   it("keeps each workspace's states under its id: another workspace's list does not replace acme's", async () => {
-    const { nerve, store } = await stateStore();
+    const { nerve, store } = await listTab(StateStore);
     await answered(nerve, () => store.fetchWorkspaceStates(acme), ["GET", ACME], { data: listed }, "acme's states");
     const labBacklog = stateOf(lab, "Backlog", "backlog", 15000, { default: true });
     const BETA = "/api/v0/workspaces/beta/states";
@@ -124,15 +105,15 @@ describe("StateStore, the states", () => {
   });
 
   it("gives one copy of a state, its project's list's, which the project's pages fetch again: not its workspace's", async () => {
-    const { nerve, store } = await stateStore();
+    const { nerve, store } = await listTab(StateStore);
     await answered(nerve, () => store.fetchWorkspaceStates(acme), ["GET", ACME], { data: listed }, "acme's states");
-    await load(nerve, store, [backlog, moved, todo, review, done]);
+    await loadStates(nerve, store, [backlog, moved, todo, review, done]);
     expect(store.getStateById(doing.id)).toEqual(moved);
     expect(store.getProjectStates(web.id)).toContainEqual(moved);
   });
 
   it("fails when nerve refuses a project's or the workspace's, keeping none, and again, keeping the states it had", async () => {
-    const { nerve, store } = await stateStore();
+    const { nerve, store } = await listTab(StateStore);
     const refused = track(store.fetchProjectStates(web.id));
     await until(() => nerve.calls.length === 1, "the states");
     nerve.calls[0]?.answer(problem(403, "forbidden"));
@@ -146,7 +127,7 @@ describe("StateStore, the states", () => {
     expect(workspace.error).toBeInstanceOf(ApiError);
     expect(store.workspaceStates).toBeUndefined();
 
-    await load(nerve, store, listed);
+    await loadStates(nerve, store, listed);
     const again = track(store.fetchProjectStates(web.id));
     await until(() => nerve.calls.length === 4, "the refetch");
     nerve.calls[3]?.answer(problem(503, "server_busy"));
@@ -156,7 +137,7 @@ describe("StateStore, the states", () => {
   });
 
   it("keeps the states it had, gives nothing and does not fail, when the session changes as it fetches again", async () => {
-    const { nerve, api, store } = await loaded();
+    const { nerve, api, store } = await loadedStates(listed);
     FakeNerve.replaceSession(api);
     const fetched = await settle(store.fetchProjectStates(web.id), "the refetch");
     expect(fetched).toEqual({ settled: true, value: undefined });
@@ -167,7 +148,7 @@ describe("StateStore, the states", () => {
 
 describe("StateStore, the changes", () => {
   it("adds a created state as nerve answers it, last of its project's", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     const created = await sent(nerve, () => store.createState(web.id, blocking), ["POST", LIST], json(201, blocked));
     expect(nerve.calls[1]?.body).toEqual(blocking);
     expect(created.value).toEqual(blocked);
@@ -176,10 +157,10 @@ describe("StateStore, the changes", () => {
   });
 
   it("moves a state where it was dropped, to the place nerve answers, in its project's list and its workspace's", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     await answered(nerve, () => store.fetchWorkspaceStates(acme), ["GET", ACME], { data: listed }, "acme's states");
     // into unstarted, before Todo, its first: a step before it
-    const changed = track(store.moveState(doing.id, "unstarted", todo.id, false));
+    const move = track(store.moveState(doing.id, "unstarted", todo.id, false));
     await until(() => nerve.calls.length === 3, "the move");
     expect(nerve.calls[2]).toMatchObject({
       method: "PATCH",
@@ -188,14 +169,14 @@ describe("StateStore, the changes", () => {
     });
     expect(store.getStateById(doing.id)).toEqual(doing);
     nerve.calls[2]?.answer(json(200, moved));
-    await until(() => changed.settled, "the answer");
+    await until(() => move.settled, "the answer");
     expect(store.getProjectStates(web.id)).toEqual([backlog, moved, todo, review, done]);
     expect(store.workspaceStates).toEqual([backlog, moved, todo, review, done]);
     expect(store.getStatePercentageInGroup(review.id)).toBe(100);
   });
 
   it("reckons a move's sequence in its turn, from the sequences nerve gave: two moves in a row", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     // Review before Doing, the group's first: a step before it; then Doing after Review, between the two once nerve
     // placed Review first
     const reviewFirst: State = { ...review, sequence: 30000 };
@@ -214,7 +195,7 @@ describe("StateStore, the changes", () => {
   });
 
   it("changes a state, and moves a state to the end of a group: a step past its last", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     const renamed: State = { ...todo, name: "To do" };
     await sent(nerve, () => store.updateState(todo.id, { name: "To do" }), ["PATCH", at(todo)], json(200, renamed));
     expect(nerve.calls[1]?.body).toEqual({ name: "To do" });
@@ -230,7 +211,7 @@ describe("StateStore, the changes", () => {
   });
 
   it("deletes a state, and makes another its project's default, the one that was no longer", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     await answered(nerve, () => store.fetchWorkspaceStates(acme), ["GET", ACME], { data: [opsBacklog] }, "acme");
     const deleted = await sent(nerve, () => store.deleteState(review.id), ["DELETE", at(review)], noContent());
     expect(deleted.error).toBeUndefined();
@@ -270,7 +251,7 @@ describe("StateStore, the changes", () => {
     },
   ];
   it.each(refusals)("fails, changing nothing, when nerve refuses $change", async ({ send, refusal }) => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     const refused = track(send(store));
     await until(() => nerve.calls.length === 2, "the change");
     nerve.calls[1]?.answer(refusal);
@@ -282,7 +263,7 @@ describe("StateStore, the changes", () => {
   it.each(refusals.slice(2))(
     "fails, asking nerve nothing, for $change of a state it does not have",
     async ({ send }) => {
-      const { nerve, store } = await stateStore();
+      const { nerve, store } = await listTab(StateStore);
       const refused = await settle(send(store), "the change");
       expect(refused).toMatchObject({ settled: true, error: new Error("State not found") });
       expect(nerve.calls).toEqual([]);
@@ -290,7 +271,7 @@ describe("StateStore, the changes", () => {
   );
 
   it("sends each change once nerve has answered the one before it, refused or not: two moves in a row among them", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     const first = track(store.updateState(doing.id, { sequence: 1 }));
     const second = track(store.updateState(doing.id, { group: "unstarted", sequence: 20000 }));
     const marked = track(store.markStateAsDefault(todo.id));
@@ -304,7 +285,7 @@ describe("StateStore, the changes", () => {
   });
 
   it("fetches the states while a change is out: a fetch does not wait for it", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     await fetchedWhileChangeIsOut(
       nerve,
       { send: () => store.updateState(doing.id, { sequence: 1 }), request: ["PATCH", at(doing)] },
@@ -319,7 +300,7 @@ describe("StateStore, the changes", () => {
 // fetches of one project's states, only the newer writes.
 describe("StateStore, while a fetch is out", () => {
   it("shows once a state created during a refetch whose list has it, and the changes confirmed meanwhile", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     const refetched = track(store.fetchProjectStates(web.id));
     await until(() => nerve.calls.length === 2, "the refetch");
     await sent(nerve, () => store.createState(web.id, blocking), ["POST", LIST], json(201, blocked));
@@ -335,7 +316,7 @@ describe("StateStore, while a fetch is out", () => {
   });
 
   it("keeps a state created during a fetch of the workspace's states on the list the fetch shows", async () => {
-    const { nerve, store } = await loaded();
+    const { nerve, store } = await loadedStates(listed);
     const fetched = track(store.fetchWorkspaceStates(acme));
     await until(() => nerve.calls.length === 2, "acme's states");
     await sent(nerve, () => store.createState(web.id, blocking), ["POST", LIST], json(201, blocked));
@@ -346,7 +327,7 @@ describe("StateStore, while a fetch is out", () => {
   });
 
   it("lets each project's newer fetch write: an older one answering last writes nothing", async () => {
-    const { nerve, store } = await stateStore();
+    const { nerve, store } = await listTab(StateStore);
     const older = track(store.fetchProjectStates(web.id));
     await until(() => nerve.calls.length === 1, "the older states");
     const opsStates = track(store.fetchProjectStates(ops.id));

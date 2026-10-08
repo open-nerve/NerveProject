@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TStateOperationsCallbacks } from "@nerve/types";
 import { ApiError } from "@/lib/api-error";
+import { toasts } from "@/lib/fake-toast";
 import { projectOf, stateOf } from "@/store/project/fake-projects";
 import { StateCreate } from "./create";
 import type { TStateFormData } from "./form";
@@ -18,11 +19,9 @@ import { StateUpdate } from "./update";
 // submits the form's data as the form would, with the edits it says.
 
 type Form = { data: TStateFormData; onSubmit: (formData: TStateFormData) => Promise<void> };
-type Toast = { type: string; title: string; message: string };
 const shown = vi.hoisted(() => {
   const forms: Form[] = [];
-  const toasts: Toast[] = [];
-  return { forms, toasts };
+  return { forms };
 });
 vi.mock("@/components/project-states", () => ({
   StateForm: (props: Form) => {
@@ -30,13 +29,8 @@ vi.mock("@/components/project-states", () => ({
     return null;
   },
 }));
-vi.mock("@nerve/propel/toast", () => ({
-  TOAST_TYPE: { SUCCESS: "success", ERROR: "error" },
-  setToast: (toast: Toast) => {
-    shown.toasts.push(toast);
-  },
-}));
-vi.mock("@nerve/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 const web = projectOf("WEB", "w-acme");
 const doing = stateOf(web, "Doing", "started", 30000, { description: "Being worked on" });
@@ -51,7 +45,7 @@ function formOf(page: ReactElement): Form {
 }
 
 beforeEach(() => {
-  shown.toasts.length = 0;
+  toasts.length = 0;
 });
 
 describe("the state settings' creation and change", () => {
@@ -79,6 +73,6 @@ describe("the state settings' creation and change", () => {
   it.each(pages)("shows nerve's reason when it refuses a $change: the name is taken", async ({ page }) => {
     const form = formOf(page);
     await form.onSubmit({ ...form.data, name: "Todo" });
-    expect(shown.toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.project_state_name_taken" }]);
+    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.project_state_name_taken" }]);
   });
 });

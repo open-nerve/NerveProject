@@ -36,7 +36,7 @@ vi.mock("@nerve/propel/empty-state", () => ({
     return props.title;
   },
 }));
-vi.mock("@nerve/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 const member = projectOf("WEB", "w-acme");
 const seen = projectOf("WEB", "w-acme", { member_role: null });
