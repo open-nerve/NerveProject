@@ -31,11 +31,11 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   // router
   const navigate = useNavigate();
   // store hooks
-  const { joinedProjectIds, getPartialProjectById } = useProject();
+  const { joinedProjectIds, getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
 
   // Get current project details
-  const currentProjectDetails = getPartialProjectById(projectId);
+  const currentProjectDetails = getProjectById(projectId);
 
   // Get available navigation items for this project
   const navigationItems = useNavigationItems({
@@ -65,7 +65,7 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
     () =>
       joinedProjectIds
         .map((id): ICustomSearchSelectOption | null => {
-          const project = getPartialProjectById(id);
+          const project = getProjectById(id);
           if (!project) return null;
 
           return {
@@ -82,7 +82,7 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
           };
         })
         .filter((option): option is ICustomSearchSelectOption => option !== null),
-    [joinedProjectIds, getPartialProjectById]
+    [joinedProjectIds, getProjectById]
   );
 
   // Memoize onChange handler

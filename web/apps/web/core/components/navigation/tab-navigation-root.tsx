@@ -52,7 +52,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   const { t } = useTranslation();
 
   // Store hooks
-  const { getPartialProjectById } = useProject();
+  const { getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
   const {
     issue: { getIssueIdByIdentifier, getIssueById },
@@ -67,7 +67,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   // Derived values
   const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
   const workItem = workItemId ? getIssueById(workItemId) : undefined;
-  const project = getPartialProjectById(projectId);
+  const project = getProjectById(projectId);
 
   // Navigation items hook
   const navigationItems = useNavigationItems({

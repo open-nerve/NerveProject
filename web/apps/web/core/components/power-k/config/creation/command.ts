@@ -35,7 +35,7 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
     canPerformAnyCreateAction,
     permission: { allowPermissions },
   } = useUser();
-  const { workspaceProjectIds, getPartialProjectById } = useProject();
+  const { workspaceProjectIds, getProjectById } = useProject();
   const {
     toggleCreateIssueModal,
     toggleCreateProjectModal,
@@ -59,7 +59,7 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   const getProjectDetails = (ctx: TPowerKContext) =>
-    ctx.params.projectId ? getPartialProjectById(ctx.params.projectId) : undefined;
+    ctx.params.projectId ? getProjectById(ctx.params.projectId) : undefined;
 
   return {
     create_work_item: {

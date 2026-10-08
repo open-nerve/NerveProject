@@ -41,7 +41,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
   // store hooks
   const { t } = useTranslation();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar, toggleSidebar } = useAppTheme();
-  const { getPartialProjectById } = useProject();
+  const { getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
   const {
     issue: { getIssueIdByIdentifier, getIssueById },
@@ -51,7 +51,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
   // derived values
   const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
   const workItem = workItemId ? getIssueById(workItemId) : undefined;
-  const project = getPartialProjectById(projectId);
+  const project = getProjectById(projectId);
   // handlers
   const handleProjectClick = () => {
     if (window.innerWidth < 768) {
@@ -112,7 +112,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         href: `/${workspaceSlug}/projects/${projectId}/intake`,
         icon: IntakeOutline,
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
-        shouldRender: project?.inbox_view ?? false,
+        shouldRender: project?.intake_view ?? false,
         sortOrder: 6,
       },
     ],

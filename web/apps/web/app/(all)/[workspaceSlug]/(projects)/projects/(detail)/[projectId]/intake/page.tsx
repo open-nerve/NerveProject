@@ -42,7 +42,7 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
   const resolvedPath = resolvedTheme === "light" ? lightIntakeAsset : darkIntakeAsset;
 
   // No access to inbox
-  if (currentProjectDetails?.inbox_view === false)
+  if (currentProjectDetails?.intake_view === false)
     return (
       <div className="flex h-full w-full items-center justify-center">
         <DetailedEmptyState
@@ -77,7 +77,7 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
           workspaceSlug={workspaceSlug}
           projectId={projectId}
           inboxIssueId={inboxIssueId || undefined}
-          inboxAccessible={currentProjectDetails?.inbox_view || false}
+          inboxAccessible={currentProjectDetails?.intake_view || false}
           navigationTab={currentNavigationTab}
         />
       </div>

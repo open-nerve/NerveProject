@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { setPromiseToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 import { SettingsHeading } from "@/components/settings/heading";
@@ -41,7 +41,7 @@ const PROJECT_FEATURES_LIST = {
   inbox: {
     i18n_label: "intake",
     i18n_description: "intake_description",
-    property: "inbox_view",
+    property: "intake_view",
   },
 };
 
@@ -58,7 +58,7 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
 
     // making the request to update the project feature
     const settingsPayload = {
-      [featureProperty]: !currentProjectDetails?.[featureProperty as keyof IProject],
+      [featureProperty]: !currentProjectDetails?.[featureProperty as keyof Project],
     };
     const updateProjectPromise = updateProject(workspaceSlug, projectId, settingsPayload);
 
@@ -90,7 +90,7 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
               control={
                 <ProjectFeatureToggle
                   featureItem={featureItem}
-                  value={Boolean(currentProjectDetails?.[featureItem.property as keyof IProject])}
+                  value={Boolean(currentProjectDetails?.[featureItem.property as keyof Project])}
                   handleSubmit={handleSubmit}
                 />
               }

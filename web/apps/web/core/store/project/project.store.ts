@@ -12,7 +12,7 @@ import type { TFetchStatus, TLoader } from "@nerve/types";
 // helpers
 import { orderProjects, shouldFilterProject } from "@nerve/utils";
 // services
-import type { TProject, TPartialProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { IssueLabelService, IssueService } from "@/services/issue";
 import { ProjectService, ProjectStateService, ProjectArchiveService } from "@/services/project";
 // store
@@ -23,7 +23,7 @@ export interface IProjectStore {
   isUpdatingProject: boolean;
   loader: TLoader;
   fetchStatus: TFetchStatus;
-  projectMap: Record<string, TProject>; // projectId: project info
+  projectMap: Record<string, Project>; // projectId: project info
   // computed
   isInitializingProjects: boolean;
   filteredProjectIds: string[] | undefined;
@@ -31,29 +31,23 @@ export interface IProjectStore {
   archivedProjectIds: string[] | undefined;
   totalProjectIds: string[] | undefined;
   joinedProjectIds: string[];
-  favoriteProjectIds: string[];
-  currentProjectDetails: TProject | undefined;
-  currentProjectNextSequenceId: number | undefined;
+  currentProjectDetails: Project | undefined;
   // actions
-  getProjectById: (projectId: string | undefined | null) => TProject | undefined;
-  getPartialProjectById: (projectId: string | undefined | null) => TPartialProject | undefined;
+  getProjectById: (projectId: string | undefined | null) => Project | undefined;
   getProjectIdentifierById: (projectId: string | undefined | null) => string;
-  getProjectByIdentifier: (projectIdentifier: string) => TProject | undefined;
+  getProjectByIdentifier: (projectIdentifier: string) => Project | undefined;
   // helper actions
-  processProjectAfterCreation: (workspaceSlug: string, data: TProject) => void;
+  processProjectAfterCreation: (workspaceSlug: string, data: Project) => void;
 
   // fetch actions
-  fetchPartialProjects: (workspaceSlug: string) => Promise<TPartialProject[]>;
-  fetchProjects: (workspaceSlug: string) => Promise<TProject[]>;
-  fetchProjectDetails: (workspaceSlug: string, projectId: string) => Promise<TProject>;
-  // favorites actions
-  addProjectToFavorites: (workspaceSlug: string, projectId: string) => Promise<any>;
-  removeProjectFromFavorites: (workspaceSlug: string, projectId: string) => Promise<any>;
+  fetchPartialProjects: (workspaceSlug: string) => Promise<Project[]>;
+  fetchProjects: (workspaceSlug: string) => Promise<Project[]>;
+  fetchProjectDetails: (workspaceSlug: string, projectId: string) => Promise<Project>;
   // project-view action
   updateProjectView: (workspaceSlug: string, projectId: string, viewProps: any) => Promise<any>;
   // CRUD actions
-  createProject: (workspaceSlug: string, data: Partial<TProject>) => Promise<TProject>;
-  updateProject: (workspaceSlug: string, projectId: string, data: Partial<TProject>) => Promise<TProject>;
+  createProject: (workspaceSlug: string, data: Partial<Project>) => Promise<Project>;
+  updateProject: (workspaceSlug: string, projectId: string, data: Partial<Project>) => Promise<Project>;
   deleteProject: (workspaceSlug: string, projectId: string) => Promise<void>;
   // archive actions
   archiveProject: (workspaceSlug: string, projectId: string) => Promise<void>;
@@ -65,7 +59,7 @@ export class ProjectStore implements IProjectStore {
   isUpdatingProject: boolean = false;
   loader: TLoader = "init-loader";
   fetchStatus: TFetchStatus = undefined;
-  projectMap: Record<string, TProject> = {};
+  projectMap: Record<string, Project> = {};
 
   // root store
   rootStore: RootStore;
@@ -91,17 +85,12 @@ export class ProjectStore implements IProjectStore {
       totalProjectIds: computed,
       currentProjectDetails: computed,
       joinedProjectIds: computed,
-      favoriteProjectIds: computed,
-      currentProjectNextSequenceId: computed,
       // helper actions
       processProjectAfterCreation: action,
       // fetch actions
       fetchPartialProjects: action,
       fetchProjects: action,
       fetchProjectDetails: action,
-      // favorites actions
-      addProjectToFavorites: action,
-      removeProjectFromFavorites: action,
       // project-view action
       updateProjectView: action,
       // CRUD actions
@@ -138,7 +127,7 @@ export class ProjectStore implements IProjectStore {
     if (!workspaceDetails || !displayFilters || !filters) return;
     let workspaceProjects = Object.values(this.projectMap).filter(
       (p) =>
-        p.workspace === workspaceDetails.id &&
+        p.workspace_id === workspaceDetails.id &&
         (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           p.identifier.toLowerCase().includes(searchQuery.toLowerCase())) &&
         shouldFilterProject(p, displayFilters, filters)
@@ -154,7 +143,7 @@ export class ProjectStore implements IProjectStore {
     const workspaceDetails = this.rootStore.workspaceRoot.currentWorkspace;
     if (!workspaceDetails) return;
     const workspaceProjects = Object.values(this.projectMap).filter(
-      (p) => p.workspace === workspaceDetails.id && !p.archived_at
+      (p) => p.workspace_id === workspaceDetails.id && !p.archived_at
     );
     const projectIds = workspaceProjects.map((p) => p.id);
     return projectIds ?? null;
@@ -171,7 +160,7 @@ export class ProjectStore implements IProjectStore {
     projects = sortBy(projects, "archived_at");
 
     const projectIds = projects
-      .filter((project) => project.workspace === currentWorkspace.id && !!project.archived_at)
+      .filter((project) => project.workspace_id === currentWorkspace.id && !!project.archived_at)
       .map((project) => project.id);
     return projectIds;
   }
@@ -198,15 +187,6 @@ export class ProjectStore implements IProjectStore {
   }
 
   /**
-   * Returns the next sequence ID for the current project
-   * Used for calculating identifier width in list layouts
-   */
-  get currentProjectNextSequenceId() {
-    if (!this.rootStore.router.projectId) return undefined;
-    return this.currentProjectDetails?.next_work_item_sequence;
-  }
-
-  /**
    * Returns joined project IDs belong to the current workspace
    */
   get joinedProjectIds() {
@@ -217,28 +197,8 @@ export class ProjectStore implements IProjectStore {
     projects = sortBy(projects, "sort_order");
 
     const projectIds = projects
-      .filter((project) => project.workspace === currentWorkspace.id && !!project.member_role && !project.archived_at)
-      .map((project) => project.id);
-    return projectIds;
-  }
-
-  /**
-   * Returns favorite project IDs belong to the current workspace
-   */
-  get favoriteProjectIds() {
-    const currentWorkspace = this.rootStore.workspaceRoot.currentWorkspace;
-    if (!currentWorkspace) return [];
-
-    let projects = Object.values(this.projectMap ?? {});
-    projects = sortBy(projects, "created_at");
-
-    const projectIds = projects
       .filter(
-        (project) =>
-          project.workspace === currentWorkspace.id &&
-          !!project.member_role &&
-          project.is_favorite &&
-          !project.archived_at
+        (project) => project.workspace_id === currentWorkspace.id && !!project.member_role && !project.archived_at
       )
       .map((project) => project.id);
     return projectIds;
@@ -249,7 +209,7 @@ export class ProjectStore implements IProjectStore {
    * @param workspaceSlug
    * @param data
    */
-  processProjectAfterCreation = (workspaceSlug: string, data: TProject) => {
+  processProjectAfterCreation = (workspaceSlug: string, data: Project) => {
     runInAction(() => {
       set(this.projectMap, [data.id], data);
       // updating the user project role in workspaceProjectsPermissions
@@ -260,7 +220,7 @@ export class ProjectStore implements IProjectStore {
   /**
    * get Workspace projects partial data using workspace slug
    * @param workspaceSlug
-   * @returns Promise<TPartialProject[]>
+   * @returns Promise<Project[]>
    *
    */
   fetchPartialProjects = async (workspaceSlug: string) => {
@@ -285,7 +245,7 @@ export class ProjectStore implements IProjectStore {
   /**
    * get Workspace projects using workspace slug
    * @param workspaceSlug
-   * @returns Promise<TProject[]>
+   * @returns Promise<Project[]>
    *
    */
   fetchProjects = async (workspaceSlug: string) => {
@@ -315,7 +275,7 @@ export class ProjectStore implements IProjectStore {
    * Fetches project details using workspace slug and project id
    * @param workspaceSlug
    * @param projectId
-   * @returns Promise<TProject>
+   * @returns Promise<Project>
    */
   fetchProjectDetails = async (workspaceSlug: string, projectId: string) => {
     try {
@@ -333,7 +293,7 @@ export class ProjectStore implements IProjectStore {
   /**
    * Returns project details using project id
    * @param projectId
-   * @returns TProject | null
+   * @returns Project | null
    */
   getProjectById = computedFn((projectId: string | undefined | null) => {
     const projectInfo = this.projectMap[projectId ?? ""] || undefined;
@@ -343,22 +303,11 @@ export class ProjectStore implements IProjectStore {
   /**
    * Returns project details using project identifier
    * @param projectIdentifier
-   * @returns TProject | undefined
+   * @returns Project | undefined
    */
   getProjectByIdentifier = computedFn((projectIdentifier: string) =>
     Object.values(this.projectMap).find((project) => project.identifier === projectIdentifier)
   );
-
-  /**
-   * Returns project lite using project id
-   * This method is used just for type safety
-   * @param projectId
-   * @returns TPartialProject | null
-   */
-  getPartialProjectById = computedFn((projectId: string | undefined | null) => {
-    const projectInfo = this.projectMap[projectId ?? ""] || undefined;
-    return projectInfo;
-  });
 
   /**
    * Returns project identifier using project id
@@ -369,60 +318,6 @@ export class ProjectStore implements IProjectStore {
     const projectInfo = this.projectMap?.[projectId ?? ""];
     return projectInfo?.identifier;
   });
-
-  /**
-   * Adds project to favorites and updates project favorite status in the store
-   * @param workspaceSlug
-   * @param projectId
-   * @returns
-   */
-  addProjectToFavorites = async (workspaceSlug: string, projectId: string) => {
-    try {
-      const currentProject = this.getProjectById(projectId);
-      if (currentProject.is_favorite) return;
-      runInAction(() => {
-        set(this.projectMap, [projectId, "is_favorite"], true);
-      });
-      const response = await this.rootStore.favorite.addFavorite(workspaceSlug, {
-        entity_type: "project",
-        entity_identifier: projectId,
-        project_id: projectId,
-        entity_data: { name: this.projectMap[projectId].name || "" },
-      });
-      return response;
-    } catch (error) {
-      console.log("Failed to add project to favorite");
-      runInAction(() => {
-        set(this.projectMap, [projectId, "is_favorite"], false);
-      });
-      throw error;
-    }
-  };
-
-  /**
-   * Removes project from favorites and updates project favorite status in the store
-   * @param workspaceSlug
-   * @param projectId
-   * @returns
-   */
-  removeProjectFromFavorites = async (workspaceSlug: string, projectId: string) => {
-    try {
-      const currentProject = this.getProjectById(projectId);
-      if (!currentProject.is_favorite) return;
-      runInAction(() => {
-        set(this.projectMap, [projectId, "is_favorite"], false);
-      });
-      const response = await this.rootStore.favorite.removeFavoriteEntity(workspaceSlug, projectId);
-
-      return response;
-    } catch (error) {
-      console.log("Failed to add project to favorite");
-      runInAction(() => {
-        set(this.projectMap, [projectId, "is_favorite"], true);
-      });
-      throw error;
-    }
-  };
 
   /**
    * Updates the project view
@@ -452,7 +347,7 @@ export class ProjectStore implements IProjectStore {
    * Creates a project in the workspace and adds it to the store
    * @param workspaceSlug
    * @param data
-   * @returns Promise<TProject>
+   * @returns Promise<Project>
    */
   createProject = async (workspaceSlug: string, data: any) => {
     try {
@@ -470,9 +365,9 @@ export class ProjectStore implements IProjectStore {
    * @param workspaceSlug
    * @param projectId
    * @param data
-   * @returns Promise<TProject>
+   * @returns Promise<Project>
    */
-  updateProject = async (workspaceSlug: string, projectId: string, data: Partial<TProject>) => {
+  updateProject = async (workspaceSlug: string, projectId: string, data: Partial<Project>) => {
     const projectDetails = cloneDeep(this.getProjectById(projectId));
     try {
       runInAction(() => {
@@ -522,18 +417,11 @@ export class ProjectStore implements IProjectStore {
    * @returns Promise<void>
    */
   archiveProject = async (workspaceSlug: string, projectId: string) => {
-    await this.projectArchiveService
-      .archiveProject(workspaceSlug, projectId)
-      .then((response) => {
-        runInAction(() => {
-          set(this.projectMap, [projectId, "archived_at"], response.archived_at);
-          this.rootStore.favorite.removeFavoriteFromStore(projectId);
-        });
-      })
-      .catch((error) => {
-        console.log("Failed to archive project from project store");
-        throw error;
-      });
+    const response = await this.projectArchiveService.archiveProject(workspaceSlug, projectId);
+    runInAction(() => {
+      set(this.projectMap, [projectId, "archived_at"], response.archived_at);
+      this.rootStore.favorite.removeFavoriteFromStore(projectId);
+    });
   };
 
   /**
@@ -543,16 +431,9 @@ export class ProjectStore implements IProjectStore {
    * @returns Promise<void>
    */
   restoreProject = async (workspaceSlug: string, projectId: string) => {
-    await this.projectArchiveService
-      .restoreProject(workspaceSlug, projectId)
-      .then(() => {
-        runInAction(() => {
-          set(this.projectMap, [projectId, "archived_at"], null);
-        });
-      })
-      .catch((error) => {
-        console.log("Failed to restore project from project store");
-        throw error;
-      });
+    await this.projectArchiveService.restoreProject(workspaceSlug, projectId);
+    runInAction(() => {
+      set(this.projectMap, [projectId, "archived_at"], null);
+    });
   };
 }

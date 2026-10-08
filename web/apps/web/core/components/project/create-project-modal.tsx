@@ -10,15 +10,12 @@ import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import useKeypress from "@/hooks/use-keypress";
 // components
 import { CreateProjectForm } from "@/components/projects/create/root";
-// nerve imports
-import type { TProject } from "@nerve/types";
 import { ProjectFeatureUpdate } from "./project-feature-update";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
   workspaceSlug: string;
-  data?: Partial<TProject>;
 };
 
 enum EProjectCreationSteps {
@@ -27,7 +24,7 @@ enum EProjectCreationSteps {
 }
 
 export function CreateProjectModal(props: Props) {
-  const { isOpen, onClose, workspaceSlug, data } = props;
+  const { isOpen, onClose, workspaceSlug } = props;
   // states
   const [currentStep, setCurrentStep] = useState<EProjectCreationSteps>(EProjectCreationSteps.CREATE_PROJECT);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
@@ -52,12 +49,7 @@ export function CreateProjectModal(props: Props) {
   return (
     <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXXXL}>
       {currentStep === EProjectCreationSteps.CREATE_PROJECT && (
-        <CreateProjectForm
-          workspaceSlug={workspaceSlug}
-          onClose={onClose}
-          handleNextStep={handleNextStep}
-          data={data}
-        />
+        <CreateProjectForm workspaceSlug={workspaceSlug} onClose={onClose} handleNextStep={handleNextStep} />
       )}
       {currentStep === EProjectCreationSteps.FEATURE_SELECTION && (
         <ProjectFeatureUpdate projectId={createdProjectId} workspaceSlug={workspaceSlug} onClose={onClose} />

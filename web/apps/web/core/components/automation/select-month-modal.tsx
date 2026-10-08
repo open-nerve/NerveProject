@@ -10,15 +10,15 @@ import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { Button } from "@nerve/propel/button";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // types
 type Props = {
   isOpen: boolean;
-  initialValues: Partial<IProject>;
+  initialValues: Partial<Project>;
   handleClose: () => void;
-  handleChange: (formData: Partial<IProject>) => Promise<void>;
+  handleChange: (formData: Partial<Project>) => Promise<void>;
 };
 
 export function SelectMonthModal({ initialValues, isOpen, handleClose, handleChange }: Props) {
@@ -29,7 +29,7 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
     handleSubmit,
     control,
     reset,
-  } = useForm<IProject>({
+  } = useForm<Project>({
     defaultValues: initialValues,
   });
 
@@ -38,7 +38,7 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
     reset(initialValues);
   };
 
-  const onSubmit = (formData: Partial<IProject>) => {
+  const onSubmit = (formData: Partial<Project>) => {
     if (!workspaceSlug && !projectId) return;
     handleChange(formData);
     onClose();

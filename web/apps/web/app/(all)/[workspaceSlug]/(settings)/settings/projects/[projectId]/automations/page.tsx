@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
 import { AutoArchiveAutomation } from "@/components/automation";
 import { PageHead } from "@/components/core/page-title";
@@ -34,7 +34,7 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
   // derived values
   const canPerformProjectAdminActions = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
 
-  const handleChange = async (formData: Partial<IProject>) => {
+  const handleChange = async (formData: Partial<Project>) => {
     if (!projectDetails) return;
 
     try {

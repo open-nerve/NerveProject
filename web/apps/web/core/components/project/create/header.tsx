@@ -12,7 +12,7 @@ import { useTranslation } from "@nerve/i18n";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { CloseOutline } from "@makeplane/propel/icons";
 // nerve types
-import type { IProject } from "@nerve/types";
+import type { ProjectCreate } from "@nerve/api-client";
 // nerve ui
 import { getTabIndex } from "@nerve/utils";
 // components
@@ -25,7 +25,7 @@ type Props = {
 
 function ProjectCreateHeader(props: Props) {
   const { handleClose, isMobile = false } = props;
-  const { control, setValue } = useFormContext<IProject>();
+  const { control, setValue } = useFormContext<ProjectCreate>();
   const { t } = useTranslation();
 
   const [isOpen, setIsOpen] = useState(false);

@@ -314,10 +314,10 @@ export class ProjectMemberStore implements IProjectMemberStore {
           });
         });
       });
-      update(this.projectRoot.projectMap, [projectId, "members"], (memberIds) =>
+      update(this.projectRoot.projectMap, [projectId, "member_ids"], (memberIds) =>
         uniq([...memberIds, ...data.members.map((m) => m.member_id)])
       );
-      this.projectRoot.projectMap[projectId].members = this.projectRoot.projectMap?.[projectId]?.members?.concat(
+      this.projectRoot.projectMap[projectId].member_ids = this.projectRoot.projectMap[projectId].member_ids.concat(
         data.members.map((m) => m.member_id)
       );
 
@@ -403,8 +403,8 @@ export class ProjectMemberStore implements IProjectMemberStore {
     unset(this.projectMemberMap, [projectId, userId]);
     set(
       this.projectRoot.projectMap,
-      [projectId, "members"],
-      this.projectRoot.projectMap?.[projectId]?.members?.filter((memberId) => memberId !== userId)
+      [projectId, "member_ids"],
+      this.projectRoot.projectMap?.[projectId]?.member_ids.filter((memberId) => memberId !== userId)
     );
   };
 

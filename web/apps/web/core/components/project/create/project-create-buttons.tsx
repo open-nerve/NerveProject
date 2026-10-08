@@ -9,7 +9,7 @@ import { useFormContext } from "react-hook-form";
 import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { IProject } from "@nerve/types";
+import type { ProjectCreate } from "@nerve/api-client";
 // helpers
 import { getTabIndex } from "@nerve/utils";
 
@@ -23,7 +23,7 @@ function ProjectCreateButtons(props: Props) {
   const { handleClose, isMobile = false } = props;
   const {
     formState: { isSubmitting },
-  } = useFormContext<IProject>();
+  } = useFormContext<ProjectCreate>();
 
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
 

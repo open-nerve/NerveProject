@@ -18,7 +18,7 @@ import ProjectCreateButtons from "@/components/project/create/project-create-but
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // nerve imports
-import type { TProject } from "@nerve/types";
+import type { ProjectCreate } from "@nerve/api-client";
 import { ProjectAttributes } from "./attributes";
 import { getProjectFormValues } from "./utils";
 
@@ -26,27 +26,26 @@ export type TCreateProjectFormProps = {
   workspaceSlug: string;
   onClose: () => void;
   handleNextStep: (projectId: string) => void;
-  data?: Partial<TProject>;
 };
 
 export const CreateProjectForm = observer(function CreateProjectForm(props: TCreateProjectFormProps) {
-  const { workspaceSlug, data, onClose, handleNextStep } = props;
+  const { workspaceSlug, onClose, handleNextStep } = props;
   // store
   const { t } = useTranslation();
   const { createProject } = useProject();
   // states
   const [shouldAutoSyncIdentifier, setShouldAutoSyncIdentifier] = useState(true);
   // form info
-  const methods = useForm<TProject>({
-    defaultValues: { ...getProjectFormValues(), ...data },
+  const methods = useForm<ProjectCreate>({
+    defaultValues: getProjectFormValues(),
     reValidateMode: "onChange",
   });
   const { handleSubmit, reset, setValue } = methods;
   const { isMobile } = usePlatformOS();
 
-  const onSubmit = async (formData: Partial<TProject>) => {
+  const onSubmit = async (formData: ProjectCreate) => {
     // Upper case identifier
-    return createProject(workspaceSlug, { ...formData, identifier: formData.identifier?.toUpperCase() })
+    return createProject(workspaceSlug, { ...formData, identifier: formData.identifier.toUpperCase() })
       .then((res) => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

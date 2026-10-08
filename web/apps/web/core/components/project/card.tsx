@@ -24,7 +24,7 @@ import { Button } from "@nerve/propel/button";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import type { TContextMenuItem } from "@nerve/ui";
 import { ContextMenu } from "@nerve/ui";
 import { copyUrlToClipboard, cn, getFileURL, renderFormattedDate } from "@nerve/utils";
@@ -39,7 +39,7 @@ import { JoinProjectModal } from "./join-project-modal";
 import { ArchiveRestoreProjectModal } from "./archive-restore-modal";
 
 type Props = {
-  project: IProject;
+  project: Project;
 };
 
 export const ProjectCard = observer(function ProjectCard(props: Props) {
@@ -58,7 +58,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   // hooks
   const { isMobile } = usePlatformOS();
   // derived values
-  const projectMembersIds = project.members;
+  const projectMembersIds = project.member_ids;
   // auth
   const isMemberOfProject = !!project.member_role;
   const hasAdminRole = project.member_role === EUserPermissions.ADMIN;
@@ -169,7 +169,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/60 to-transparent" />
 
           <CoverImage
-            src={project.cover_image_url}
+            src={project.cover_image_url ?? undefined}
             showDefaultWhenEmpty
             alt={project.name}
             className="absolute top-0 left-0 h-full w-full rounded-t"
@@ -220,11 +220,11 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
           <div className="item-center flex justify-between">
             <div className="flex items-center justify-center gap-2">
               <Tooltip
-                label={project.members?.length ? `Members: ${project.members.length}` : "No members"}
+                label={projectMembersIds.length ? `Members: ${projectMembersIds.length}` : "No members"}
                 layout="stacked"
                 disabled={isMobile}
               >
-                {projectMembersIds && projectMembersIds.length > 0 ? (
+                {projectMembersIds.length > 0 ? (
                   <div className="flex cursor-pointer items-center gap-2 text-secondary">
                     <AvatarGroupOverflow size="xs">
                       {projectMembersIds.map((memberId) => {

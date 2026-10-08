@@ -37,6 +37,7 @@
   "dependencies": {
     "@base-ui-components/react": "catalog:",
     "@makeplane/propel": "catalog:",
+    "@nerve/api-client": "workspace:*",
     "@nerve/constants": "workspace:*",
     "@nerve/types": "workspace:*",
     "class-variance-authority": "catalog:",

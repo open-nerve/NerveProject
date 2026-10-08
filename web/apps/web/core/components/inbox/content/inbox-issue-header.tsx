@@ -80,12 +80,11 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
   const { currentTab, deleteInboxIssue, filteredInboxIssueIds } = useProjectInbox();
   const { data: currentUser } = useUser();
   const { allowPermissions } = useUserPermissions();
-  const { getPartialProjectById } = useProject();
-  const currentProjectDetails = getPartialProjectById(projectId);
+  const { getProjectById } = useProject();
+  const currentProjectDetails = getProjectById(projectId);
   const { t } = useTranslation();
 
   const navigate = useNavigate();
-  const { getProjectById } = useProject();
 
   const issue = inboxIssue?.issue;
   // derived values
@@ -162,9 +161,8 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
 
   const handleInboxIssueDelete = async () => {
     if (!inboxIssue || !currentInboxIssueId) return;
-    await deleteInboxIssue(workspaceSlug, projectId, currentInboxIssueId).then(() => {
-      if (!isNotificationEmbed) navigate(`/${workspaceSlug}/projects/${projectId}/intake`);
-    });
+    await deleteInboxIssue(workspaceSlug, projectId, currentInboxIssueId);
+    if (!isNotificationEmbed) navigate(`/${workspaceSlug}/projects/${projectId}/intake`);
   };
 
   const handleIssueSnoozeAction = async () => {

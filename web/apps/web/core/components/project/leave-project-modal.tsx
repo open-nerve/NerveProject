@@ -12,7 +12,7 @@ import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
@@ -29,7 +29,7 @@ const defaultValues: FormData = {
 };
 
 export interface ILeaveProjectModal {
-  project: IProject;
+  project: Project;
   isOpen: boolean;
   onClose: () => void;
 }

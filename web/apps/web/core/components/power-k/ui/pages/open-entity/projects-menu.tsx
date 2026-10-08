@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // nerve types
-import type { IPartialProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { Spinner } from "@nerve/ui";
 // components
 import { PowerKProjectsMenu } from "@/components/power-k/menus/projects";
@@ -14,16 +14,16 @@ import { PowerKProjectsMenu } from "@/components/power-k/menus/projects";
 import { useProject } from "@/hooks/store/use-project";
 
 type Props = {
-  handleSelect: (project: IPartialProject) => void;
+  handleSelect: (project: Project) => void;
 };
 
 export const PowerKOpenProjectMenu = observer(function PowerKOpenProjectMenu(props: Props) {
   const { handleSelect } = props;
   // store hooks
-  const { loader, joinedProjectIds, getPartialProjectById } = useProject();
+  const { loader, joinedProjectIds, getProjectById } = useProject();
   // derived values
   const projectsList = joinedProjectIds
-    ? joinedProjectIds.map((id) => getPartialProjectById(id)).filter((project) => project !== undefined)
+    ? joinedProjectIds.map((id) => getProjectById(id)).filter((project) => project !== undefined)
     : [];
 
   if (loader === "init-loader") return <Spinner />;

@@ -7,7 +7,7 @@
 import { useState } from "react";
 // types
 import { Button } from "@nerve/propel/button";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
@@ -18,7 +18,7 @@ import { useNavigate } from "react-router";
 type TJoinProjectModalProps = {
   isOpen: boolean;
   workspaceSlug: string;
-  project: IProject;
+  project: Project;
   handleClose: () => void;
 };
 

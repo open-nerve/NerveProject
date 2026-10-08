@@ -6,12 +6,12 @@
 
 import type { IProjectUserPropertiesResponse, ISearchIssueResponse, TProjectIssuesSearchParams } from "@nerve/types";
 // nerve imports
-import type { TProject, TPartialProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // services
 import { APIService } from "@/services/api.service";
 
 export class ProjectService extends APIService {
-  async createProject(workspaceSlug: string, data: Partial<TProject>): Promise<TProject> {
+  async createProject(workspaceSlug: string, data: Partial<Project>): Promise<Project> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/`, data)
       .then((response) => response?.data)
       .catch((error) => {
@@ -31,7 +31,7 @@ export class ProjectService extends APIService {
       });
   }
 
-  async getProjectsLite(workspaceSlug: string): Promise<TPartialProject[]> {
+  async getProjectsLite(workspaceSlug: string): Promise<Project[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/`)
       .then((response) => response?.data)
       .catch((error) => {
@@ -39,7 +39,7 @@ export class ProjectService extends APIService {
       });
   }
 
-  async getProjects(workspaceSlug: string): Promise<TProject[]> {
+  async getProjects(workspaceSlug: string): Promise<Project[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/details/`)
       .then((response) => response?.data)
       .catch((error) => {
@@ -47,7 +47,7 @@ export class ProjectService extends APIService {
       });
   }
 
-  async getProject(workspaceSlug: string, projectId: string): Promise<TProject> {
+  async getProject(workspaceSlug: string, projectId: string): Promise<Project> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/`)
       .then((response) => response?.data)
       .catch((error) => {
@@ -55,7 +55,7 @@ export class ProjectService extends APIService {
       });
   }
 
-  async updateProject(workspaceSlug: string, projectId: string, data: Partial<TProject>): Promise<TProject> {
+  async updateProject(workspaceSlug: string, projectId: string, data: Partial<Project>): Promise<Project> {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/`, data)
       .then((response) => response?.data)
       .catch((error) => {

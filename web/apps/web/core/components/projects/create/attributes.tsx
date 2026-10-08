@@ -8,7 +8,7 @@ import { Controller, useFormContext } from "react-hook-form";
 // nerve imports
 import { NETWORK_CHOICES, ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { IProject } from "@nerve/types";
+import type { ProjectCreate } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
 import { getTabIndex } from "@nerve/utils";
 // components
@@ -22,7 +22,7 @@ type Props = {
 function ProjectAttributes(props: Props) {
   const { isMobile = false } = props;
   const { t } = useTranslation();
-  const { control } = useFormContext<IProject>();
+  const { control } = useFormContext<ProjectCreate>();
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -72,24 +72,20 @@ function ProjectAttributes(props: Props) {
         }}
       />
       <Controller
-        name="project_lead"
+        name="project_lead_id"
         control={control}
-        render={({ field: { value, onChange } }) => {
-          if (value === undefined || value === null || typeof value === "string")
-            return (
-              <div className="h-7 flex-shrink-0" tabIndex={getIndex("lead")}>
-                <MemberDropdown
-                  value={value ?? null}
-                  onChange={(lead) => onChange(lead === value ? null : lead)}
-                  placeholder={t("lead")}
-                  multiple={false}
-                  buttonVariant="border-with-text"
-                  tabIndex={getIndex("lead")}
-                />
-              </div>
-            );
-          else return <></>;
-        }}
+        render={({ field: { value, onChange } }) => (
+          <div className="h-7 flex-shrink-0" tabIndex={getIndex("lead")}>
+            <MemberDropdown
+              value={value ?? null}
+              onChange={(lead) => onChange(lead === value ? undefined : lead)}
+              placeholder={t("lead")}
+              multiple={false}
+              buttonVariant="border-with-text"
+              tabIndex={getIndex("lead")}
+            />
+          </div>
+        )}
       />
     </div>
   );

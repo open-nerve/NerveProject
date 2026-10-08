@@ -5,13 +5,13 @@
  */
 
 import type { FC } from "react";
+import type { LogoProps } from "@nerve/api-client";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import type { ISvgIcons } from "@nerve/propel/icons";
-import type { TLogoProps } from "@nerve/types";
 import { getFileURL, truncateText } from "@nerve/utils";
 
 type TSwitcherIconProps = {
-  logo_props?: TLogoProps;
+  logo_props?: LogoProps;
   logo_url?: string;
   LabelIcon: FC<ISvgIcons>;
   size?: number;
@@ -37,7 +37,7 @@ export function SwitcherIcon({ logo_props, logo_url, LabelIcon, size = 12, type 
 }
 
 type TSwitcherLabelProps = {
-  logo_props?: TLogoProps;
+  logo_props?: LogoProps;
   logo_url?: string;
   name?: string;
   LabelIcon: FC<ISvgIcons>;

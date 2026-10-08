@@ -17,8 +17,7 @@ import { Button } from "@nerve/propel/button";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { Workspace } from "@nerve/api-client";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
 import { renderFormattedDate } from "@nerve/utils";
 import { CoverImage } from "@/components/common/cover-image";
@@ -32,7 +31,7 @@ import { ProjectService } from "@/services/project";
 import { ProjectNetworkIcon } from "./project-network-icon";
 
 export interface IProjectDetailsForm {
-  project: IProject;
+  project: Project;
   workspaceSlug: string;
   projectId: string;
   isAdmin: boolean;
@@ -59,21 +58,13 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     reset,
     formState: { errors },
     getValues,
-  } = useForm<IProject>({
-    defaultValues: {
-      ...project,
-      workspace: (project.workspace as Workspace).id,
-    },
-  });
+  } = useForm<Project>({ defaultValues: project });
   // derived values
   const currentNetwork = NETWORK_CHOICES.find((n) => n.key === project?.network);
 
   useEffect(() => {
     if (project && projectId !== getValues("id")) {
-      reset({
-        ...project,
-        workspace: (project.workspace as Workspace).id,
-      });
+      reset(project);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, projectId]);
@@ -86,7 +77,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     setValue("identifier", formattedValue);
   };
 
-  const handleUpdateChange = async (payload: Partial<IProject>) => {
+  const handleUpdateChange = async (payload: Partial<Project>) => {
     if (!workspaceSlug || !project) return;
     return updateProject(workspaceSlug, project.id, payload)
       .then(() =>
@@ -148,10 +139,10 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
       });
   };
 
-  const onSubmit = async (formData: IProject) => {
+  const onSubmit = async (formData: Project) => {
     if (!workspaceSlug) return;
     setIsLoading(true);
-    const payload: Partial<IProject> = {
+    const payload: Partial<Project> = {
       name: formData.name,
       network: formData.network,
       identifier: formData.identifier,
@@ -176,7 +167,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
       <div className="relative h-44 w-full">
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <CoverImage
-          src={project.cover_image_url}
+          src={project.cover_image_url ?? undefined}
           showDefaultWhenEmpty
           alt="Project cover image"
           className="h-44 w-full rounded-md"

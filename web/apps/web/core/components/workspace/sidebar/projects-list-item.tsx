@@ -78,7 +78,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   } = props;
   // store hooks
   const { t } = useTranslation();
-  const { getPartialProjectById } = useProject();
+  const { getProjectById } = useProject();
   const { isMobile } = usePlatformOS();
   const { allowPermissions } = useUserPermissions();
   const { getIsProjectListOpen, toggleProjectListOpen } = useCommandPalette();
@@ -99,7 +99,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const { projectId: URLProjectId } = useParams();
   const navigate = useNavigate();
   // derived values
-  const project = getPartialProjectById(projectId);
+  const project = getProjectById(projectId);
 
   // Get available navigation items for this project
   const navigationItems = useNavigationItems({

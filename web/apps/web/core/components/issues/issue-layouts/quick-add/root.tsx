@@ -14,7 +14,8 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
 import { setPromiseToast } from "@nerve/propel/toast";
-import type { IProject, TIssue, EIssueLayoutTypes } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
+import type { TIssue, EIssueLayoutTypes } from "@nerve/types";
 import { cn, createIssuePayload } from "@nerve/utils";
 // local imports
 import { QuickAddIssueFormRoot } from "./form";
@@ -23,7 +24,7 @@ import { CreateIssueToastActionItems } from "../../create-issue-toast-action-ite
 export type TQuickAddIssueForm = {
   ref: React.RefObject<HTMLFormElement | null>;
   isOpen: boolean;
-  projectDetail: IProject;
+  projectDetail: Project;
   hasError: boolean;
   register: UseFormRegister<TIssue>;
   onSubmit: () => void;

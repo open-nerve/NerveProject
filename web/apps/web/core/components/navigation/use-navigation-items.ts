@@ -8,13 +8,14 @@ import { useMemo, useCallback } from "react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-import type { EUserProjectRoles, IPartialProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
+import type { EUserProjectRoles } from "@nerve/types";
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
 
 type UseNavigationItemsProps = {
   workspaceSlug: string;
   projectId: string;
-  project?: IPartialProject;
+  project?: Project;
   allowPermissions: (
     access: EUserPermissions[] | EUserProjectRoles[],
     level: EUserPermissionsLevel,
@@ -80,7 +81,7 @@ export const useNavigationItems = ({
         href: `/${workspaceSlug}/projects/${projectId}/intake`,
         icon: IntakeOutline,
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
-        shouldRender: !!project?.inbox_view,
+        shouldRender: !!project?.intake_view,
         sortOrder: 6,
       },
     ],

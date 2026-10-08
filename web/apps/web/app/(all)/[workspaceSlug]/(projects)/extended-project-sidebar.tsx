@@ -22,7 +22,7 @@ import { SidebarProjectsListItem } from "@/components/workspace/sidebar/projects
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import type { TProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { ExtendedSidebarWrapper } from "./extended-sidebar-wrapper";
 
 export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar() {
@@ -37,7 +37,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
   // store hooks
   const { t } = useTranslation();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
-  const { getPartialProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
+  const { getProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
   const { allowPermissions } = useUserPermissions();
 
   const handleOnProjectDrop = (
@@ -48,9 +48,9 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
     if (!sourceId || !destinationId || !workspaceSlug) return;
     if (sourceId === destinationId) return;
 
-    const joinedProjectsList: TProject[] = [];
+    const joinedProjectsList: Project[] = [];
     joinedProjects.map((projectId) => {
-      const projectDetails = getPartialProjectById(projectId);
+      const projectDetails = getProjectById(projectId);
       if (projectDetails) joinedProjectsList.push(projectDetails);
     });
 
@@ -72,7 +72,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
 
   // filter projects based on search query
   const filteredProjects = joinedProjects.filter((projectId) => {
-    const project = getPartialProjectById(projectId);
+    const project = getProjectById(projectId);
     if (!project) return false;
     return project.name.toLowerCase().includes(searchQuery.toLowerCase()) || project.identifier.includes(searchQuery);
   });

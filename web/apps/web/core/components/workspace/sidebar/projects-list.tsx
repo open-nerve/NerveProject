@@ -29,7 +29,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
 // nerve imports
-import type { TProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // local imports
 import { SidebarProjectsListItem } from "./projects-list-item";
 
@@ -47,7 +47,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
 
-  const { loader, getPartialProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
+  const { loader, getProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
   // router params
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();
@@ -85,9 +85,9 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
     if (!sourceId || !destinationId || !workspaceSlug) return;
     if (sourceId === destinationId) return;
 
-    const joinedProjectsList: TProject[] = [];
+    const joinedProjectsList: Project[] = [];
     joinedProjects.map((projectId) => {
-      const projectDetails = getPartialProjectById(projectId);
+      const projectDetails = getProjectById(projectId);
       if (projectDetails) joinedProjectsList.push(projectDetails);
     });
 

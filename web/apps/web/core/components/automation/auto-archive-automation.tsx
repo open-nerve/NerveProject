@@ -11,7 +11,7 @@ import { RestoreOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { PROJECT_AUTOMATION_MONTHS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { Switch } from "@makeplane/propel/components/switch";
 import { CustomSelect, Loader } from "@nerve/ui";
 // component
@@ -22,10 +22,10 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 
 type Props = {
-  handleChange: (formData: Partial<IProject>) => Promise<void>;
+  handleChange: (formData: Partial<Project>) => Promise<void>;
 };
 
-const initialValues: Partial<IProject> = { archive_in: 1 };
+const initialValues: Partial<Project> = { archive_in: 1 };
 
 export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(props: Props) {
   const { handleChange } = props;

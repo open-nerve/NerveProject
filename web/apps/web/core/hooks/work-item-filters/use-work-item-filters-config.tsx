@@ -23,16 +23,8 @@ import {
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
-import type { MemberUser } from "@nerve/api-client";
-import type {
-  ICycle,
-  IState,
-  TFilterConfig,
-  IIssueLabel,
-  IModule,
-  IProject,
-  TWorkItemFilterProperty,
-} from "@nerve/types";
+import type { MemberUser, Project } from "@nerve/api-client";
+import type { ICycle, IState, TFilterConfig, IIssueLabel, IModule, TWorkItemFilterProperty } from "@nerve/types";
 
 import {
   getAssigneeFilterConfig,
@@ -133,7 +125,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
   const projects = useMemo(
     () =>
       projectIds
-        ? (projectIds.map((projectId) => getProjectById(projectId)).filter((project) => project) as IProject[])
+        ? (projectIds.map((projectId) => getProjectById(projectId)).filter((project) => project) as Project[])
         : [],
     [projectIds, getProjectById]
   );

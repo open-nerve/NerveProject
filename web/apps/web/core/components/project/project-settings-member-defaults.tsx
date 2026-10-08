@@ -13,8 +13,7 @@ import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { Workspace, MemberUser } from "@nerve/api-client";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { Switch } from "@makeplane/propel/components/switch";
 import { Loader } from "@nerve/ui";
 // constants
@@ -25,9 +24,11 @@ import { useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { MemberSelect } from "./member-select";
 
-const defaultValues: Partial<IProject> = {
-  project_lead: null,
-  default_assignee: null,
+type TMemberDefaults = Pick<Project, "project_lead_id" | "default_assignee_id">;
+
+const defaultValues: TMemberDefaults = {
+  project_lead_id: null,
+  default_assignee_id: null,
 };
 
 type TDefaultSettingItemProps = {
@@ -71,7 +72,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
     currentProjectDetails?.id
   );
   // form info
-  const { reset, control } = useForm<IProject>({ defaultValues });
+  const { reset, control } = useForm<TMemberDefaults>({ defaultValues });
   // fetching user members
   useSWR(
     workspaceSlug && projectId ? PROJECT_DETAILS(workspaceSlug, projectId) : null,
@@ -82,61 +83,56 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
     if (!currentProjectDetails) return;
 
     reset({
-      ...currentProjectDetails,
-      default_assignee:
-        (currentProjectDetails.default_assignee as MemberUser)?.id ?? currentProjectDetails.default_assignee,
-      project_lead: (currentProjectDetails.project_lead as MemberUser)?.id ?? currentProjectDetails.project_lead,
-      workspace: (currentProjectDetails.workspace as Workspace).id,
+      project_lead_id: currentProjectDetails.project_lead_id,
+      default_assignee_id: currentProjectDetails.default_assignee_id,
     });
   }, [currentProjectDetails, reset]);
 
-  const submitChanges = async (formData: Partial<IProject>) => {
+  const submitChanges = async (formData: Partial<TMemberDefaults>) => {
     if (!workspaceSlug || !projectId) return;
 
     reset({
-      ...currentProjectDetails,
-      default_assignee:
-        (currentProjectDetails?.default_assignee as MemberUser)?.id ?? currentProjectDetails?.default_assignee,
-      project_lead: (currentProjectDetails?.project_lead as MemberUser)?.id ?? currentProjectDetails?.project_lead,
+      project_lead_id: currentProjectDetails?.project_lead_id ?? null,
+      default_assignee_id: currentProjectDetails?.default_assignee_id ?? null,
       ...formData,
     });
 
-    await updateProject(workspaceSlug, projectId, {
-      default_assignee:
-        formData.default_assignee === "none"
-          ? null
-          : (formData.default_assignee ?? currentProjectDetails?.default_assignee),
-      project_lead:
-        formData.project_lead === "none" ? null : (formData.project_lead ?? currentProjectDetails?.project_lead),
-    })
-      .then(() => {
-        setToast({
-          title: `${t("success")}!`,
-          type: TOAST_TYPE.SUCCESS,
-          message: t("project_settings.general.toast.success"),
-        });
-      })
-      .catch((err) => {
-        console.error(err);
+    try {
+      await updateProject(workspaceSlug, projectId, {
+        default_assignee_id:
+          formData.default_assignee_id === "none"
+            ? null
+            : (formData.default_assignee_id ?? currentProjectDetails?.default_assignee_id),
+        project_lead_id:
+          formData.project_lead_id === "none"
+            ? null
+            : (formData.project_lead_id ?? currentProjectDetails?.project_lead_id),
       });
+      setToast({
+        title: `${t("success")}!`,
+        type: TOAST_TYPE.SUCCESS,
+        message: t("project_settings.general.toast.success"),
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const toggleGuestViewAllIssues = async (value: boolean) => {
     if (!workspaceSlug || !projectId) return;
 
-    updateProject(workspaceSlug, projectId, {
-      guest_view_all_features: value,
-    })
-      .then(() => {
-        setToast({
-          title: `${t("success")}!`,
-          type: TOAST_TYPE.SUCCESS,
-          message: t("project_settings.general.toast.success"),
-        });
-      })
-      .catch((err) => {
-        console.error(err);
+    try {
+      await updateProject(workspaceSlug, projectId, {
+        guest_view_all_features: value,
       });
+      setToast({
+        title: `${t("success")}!`,
+        type: TOAST_TYPE.SUCCESS,
+        message: t("project_settings.general.toast.success"),
+      });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -145,12 +141,12 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
         {currentProjectDetails ? (
           <Controller
             control={control}
-            name="project_lead"
+            name="project_lead_id"
             render={({ field: { value } }) => (
               <MemberSelect
                 value={value}
                 onChange={(val: string) => {
-                  submitChanges({ project_lead: val });
+                  submitChanges({ project_lead_id: val });
                 }}
                 isDisabled={!isAdmin}
               />
@@ -166,12 +162,12 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
         {currentProjectDetails ? (
           <Controller
             control={control}
-            name="default_assignee"
+            name="default_assignee_id"
             render={({ field: { value } }) => (
               <MemberSelect
                 value={value}
                 onChange={(val: string) => {
-                  submitChanges({ default_assignee: val });
+                  submitChanges({ default_assignee_id: val });
                 }}
                 isDisabled={!isAdmin}
               />

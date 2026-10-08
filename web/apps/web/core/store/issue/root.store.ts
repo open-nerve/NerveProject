@@ -7,8 +7,8 @@
 import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
-import type { ApiClient, MemberUser } from "@nerve/api-client";
-import type { ICycle, IIssueLabel, IModule, IProject, IState } from "@nerve/types";
+import type { ApiClient, MemberUser, Project } from "@nerve/api-client";
+import type { ICycle, IIssueLabel, IModule, IState } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueDetail } from "@/store/issue/issue-details/root.store";
@@ -53,7 +53,7 @@ export interface IIssueRootStore {
   workspaceStateDetails: IState[] | undefined;
   labelMap: Record<string, IIssueLabel> | undefined;
   memberMap: Record<string, MemberUser> | undefined;
-  projectMap: Record<string, IProject> | undefined;
+  projectMap: Record<string, Project> | undefined;
   moduleMap: Record<string, IModule> | undefined;
   cycleMap: Record<string, ICycle> | undefined;
 
@@ -105,7 +105,7 @@ export class IssueRootStore implements IIssueRootStore {
   workspaceStateDetails: IState[] | undefined = undefined;
   labelMap: Record<string, IIssueLabel> | undefined = undefined;
   memberMap: Record<string, MemberUser> | undefined = undefined;
-  projectMap: Record<string, IProject> | undefined = undefined;
+  projectMap: Record<string, Project> | undefined = undefined;
   moduleMap: Record<string, IModule> | undefined = undefined;
   cycleMap: Record<string, ICycle> | undefined = undefined;
 

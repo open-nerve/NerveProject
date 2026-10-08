@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 // nerve imports
 import { setPromiseToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { Switch } from "@makeplane/propel/components/switch";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
@@ -18,7 +18,7 @@ type Props = {
   description?: React.ReactNode;
   disabled?: boolean;
   projectId: string;
-  featureProperty: keyof IProject;
+  featureProperty: keyof Project;
   title: React.ReactNode;
   value: boolean;
   workspaceSlug: string;

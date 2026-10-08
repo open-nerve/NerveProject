@@ -14,21 +14,20 @@ import { SwitcherLabel } from "@/components/common/switcher-label";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";
-import type { TProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 
 type TProjectBreadcrumbProps = {
   workspaceSlug: string;
   projectId: string;
-  handleOnClick?: () => void;
 };
 
 export const ProjectBreadcrumb = observer(function ProjectBreadcrumb(props: TProjectBreadcrumbProps) {
-  const { workspaceSlug, projectId, handleOnClick } = props;
+  const { workspaceSlug, projectId } = props;
   // router
   const navigate = useNavigate();
   // store hooks
-  const { joinedProjectIds, getPartialProjectById } = useProject();
-  const currentProjectDetails = getPartialProjectById(projectId);
+  const { joinedProjectIds, getProjectById } = useProject();
+  const currentProjectDetails = getProjectById(projectId);
 
   // store hooks
 
@@ -38,7 +37,7 @@ export const ProjectBreadcrumb = observer(function ProjectBreadcrumb(props: TPro
   const switcherOptions = joinedProjectIds
     // oxlint-disable-next-line no-shadow
     .map((projectId) => {
-      const project = getPartialProjectById(projectId);
+      const project = getProjectById(projectId);
       return {
         value: projectId,
         query: project?.name,
@@ -56,7 +55,7 @@ export const ProjectBreadcrumb = observer(function ProjectBreadcrumb(props: TPro
 
   // helpers
   // oxlint-disable-next-line unicorn/consistent-function-scoping
-  const renderIcon = (projectDetails: TProject) => (
+  const renderIcon = (projectDetails: Project) => (
     <span className="grid size-4 flex-shrink-0 place-items-center">
       <Logo logo={projectDetails.logo_props} size={14} />
     </span>
@@ -74,10 +73,7 @@ export const ProjectBreadcrumb = observer(function ProjectBreadcrumb(props: TPro
             }}
             title={currentProjectDetails?.name}
             icon={renderIcon(currentProjectDetails)}
-            handleOnClick={() => {
-              if (handleOnClick) handleOnClick();
-              else navigate(`/${workspaceSlug}/projects/${currentProjectDetails.id}/issues`);
-            }}
+            handleOnClick={() => navigate(`/${workspaceSlug}/projects/${currentProjectDetails.id}/issues`)}
             shouldTruncate
           />
         }

@@ -5,8 +5,8 @@
  */
 
 // nerve imports
-import type { MemberUser } from "@nerve/api-client";
-import type { IProject, TOperatorConfigMap, TSupportedOperators } from "@nerve/types";
+import type { MemberUser, Project } from "@nerve/api-client";
+import type { TOperatorConfigMap, TSupportedOperators } from "@nerve/types";
 import { COMPARISON_OPERATOR, EQUALITY_OPERATOR } from "@nerve/types";
 // local imports
 import { getDatePickerConfig, getDateRangePickerConfig, getMultiSelectConfig } from "../core";
@@ -62,8 +62,8 @@ export const getSupportedDateOperators = (params: TCreateDateFilterParams): TOpe
  * Project filter specific params
  */
 export type TCreateProjectFilterParams = TCreateFilterConfigParams &
-  IFilterIconConfig<IProject> & {
-    projects: IProject[];
+  IFilterIconConfig<Project> & {
+    projects: Project[];
   };
 
 /**
@@ -75,7 +75,7 @@ export const getProjectMultiSelectConfig = (
   params: TCreateProjectFilterParams,
   singleValueOperator: TSupportedOperators
 ) =>
-  getMultiSelectConfig<IProject, string, IProject>(
+  getMultiSelectConfig<Project, string, Project>(
     {
       items: params.projects,
       getId: (project) => project.id,
