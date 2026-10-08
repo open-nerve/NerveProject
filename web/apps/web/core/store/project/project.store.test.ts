@@ -6,7 +6,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
-import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
+import type { Endpoint } from "@/lib/auth/fake-nerve";
+import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
 import { fetchedWhileChangeIsOut, sent } from "@/store/fake-queue";
 import { loadArchivedProjects, loadProject, loadProjects, projectOf, projectTab } from "@/store/project/fake-projects";
@@ -159,6 +160,19 @@ describe("ProjectStore, the lists and the reads", () => {
     expect(fetched).toEqual({ settled: true, value: undefined });
     expect(nerve.calls).toHaveLength(0);
     expect(store.workspaceProjectIds).toEqual(ids([web, ops, docs]));
+  });
+
+  it("asks nerve whether an identifier is free, and fails when nerve refuses", async () => {
+    const { nerve, store } = await unloaded();
+    const check = () => store.checkProjectIdentifier("acme", "web");
+    const request: Endpoint = ["GET", "/api/v0/workspaces/acme/project-identifiers/web"];
+    const checked = await answered(nerve, check, request, { available: false }, "the check");
+    expect(checked).toEqual({ settled: true, value: { available: false } });
+    const refused = track(check());
+    await until(() => nerve.calls.length === 2, "the second check");
+    nerve.calls[1]?.answer(problem(403, "forbidden"));
+    await until(() => refused.settled, "the refusal");
+    expect(refused.error).toBeInstanceOf(ApiError);
   });
 });
 

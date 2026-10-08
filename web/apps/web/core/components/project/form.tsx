@@ -25,8 +25,6 @@ import { TimezoneSelect } from "@/components/global";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// services
-import { ProjectService } from "@/services/project";
 // local imports
 import { ProjectNetworkIcon } from "./project-network-icon";
 
@@ -36,7 +34,6 @@ export interface IProjectDetailsForm {
   projectId: string;
   isAdmin: boolean;
 }
-const projectService = new ProjectService();
 
 export function ProjectDetailsForm(props: IProjectDetailsForm) {
   const { project, workspaceSlug, projectId, isAdmin } = props;
@@ -45,7 +42,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   // store hooks
-  const { updateProject } = useProject();
+  const { updateProject, checkProjectIdentifier } = useProject();
   const { isMobile } = usePlatformOS();
 
   // form info
@@ -153,8 +150,8 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     };
 
     if (project.identifier !== formData.identifier) {
-      const res = await projectService.checkProjectIdentifierAvailability(workspaceSlug, payload.identifier ?? "");
-      if (res.exists) setError("identifier", { message: t("common.identifier_already_exists") });
+      const { available } = await checkProjectIdentifier(workspaceSlug, payload.identifier ?? "");
+      if (!available) setError("identifier", { message: t("common.identifier_already_exists") });
       else await handleUpdateChange(payload);
     } else await handleUpdateChange(payload);
     setTimeout(() => {

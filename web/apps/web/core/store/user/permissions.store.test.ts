@@ -9,9 +9,8 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { FakeNerve, noContent } from "@/lib/auth/fake-nerve";
 import { inTurn } from "@/store/fake-queue";
 import { fakeRoot } from "@/store/fake-root";
+import { ProjectRootStore } from "@/store/project";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
-import { ProjectStore } from "@/store/project/project.store";
-import { ProjectFilterStore } from "@/store/project/project_filter.store";
 import { RouterStore } from "@/store/router.store";
 import { UserPermissionStore } from "@/store/user/permissions.store";
 import { WorkspaceRootStore } from "@/store/workspace";
@@ -107,11 +106,8 @@ async function inProjects() {
   const api = nerve.client();
   const router = new RouterStore();
   const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
-  const projectFilter = new ProjectFilterStore(fakeRoot({ router }));
-  const project = new ProjectStore(fakeRoot({ router, workspaceRoot }), projectFilter, api);
-  const permissions = new UserPermissionStore(
-    fakeRoot({ router, workspaceRoot, projectRoot: { project, projectFilter } })
-  );
+  const projectRoot = new ProjectRootStore(fakeRoot({ router, workspaceRoot }), api);
+  const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot, projectRoot }));
   const workspaces = IN_PROJECTS.map(({ role }, i) => workspaceOf(`ws-${i}`, { role }));
   await loadWorkspaces(nerve, workspaceRoot, workspaces);
   // each workspace's list, one after another: the projects of the rows that are of it (a row's own, unless elsewhere)
@@ -120,7 +116,8 @@ async function inProjects() {
   );
   const listedIn = (workspaceId: string) => projects.filter((held) => held.workspace_id === workspaceId);
   await workspaces.reduce<Promise<unknown>>(
-    (before, workspace) => before.then(() => loadProjects(nerve, project, workspace, listedIn(workspace.id))),
+    (before, workspace) =>
+      before.then(() => loadProjects(nerve, projectRoot.project, workspace, listedIn(workspace.id))),
     Promise.resolve()
   );
   return { nerve, router, workspaceRoot, permissions };

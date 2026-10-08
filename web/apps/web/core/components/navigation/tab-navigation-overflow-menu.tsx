@@ -6,6 +6,7 @@
 
 import React from "react";
 import { Link } from "react-router";
+import type { ProjectTab } from "@nerve/api-client";
 import { DefaultTabOutline, MoreHorizontalOutline, PinOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -20,8 +21,8 @@ type Props = {
   overflowItems: TNavigationItem[];
   isActive: (item: TNavigationItem) => boolean;
   tabPreferences: TTabPreferences;
-  onToggleDefault: (tabKey: string) => void;
-  onShow: (tabKey: string) => void;
+  onToggleDefault: (tabKey: ProjectTab) => void;
+  onShow: (tabKey: ProjectTab) => void;
 };
 
 /**

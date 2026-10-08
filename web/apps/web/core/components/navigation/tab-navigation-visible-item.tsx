@@ -5,6 +5,7 @@
  */
 
 import { Link } from "react-router";
+import type { ProjectTab } from "@nerve/api-client";
 import { DefaultTabOutline, UnpinOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -18,8 +19,8 @@ export type TTabNavigationVisibleItemProps = {
   item: TNavigationItem;
   isActive: boolean;
   tabPreferences: TTabPreferences;
-  onToggleDefault: (tabKey: string) => void;
-  onHide: (tabKey: string) => void;
+  onToggleDefault: (tabKey: ProjectTab) => void;
+  onHide: (tabKey: ProjectTab) => void;
   itemRef?: (el: HTMLDivElement | null) => void;
 };
 

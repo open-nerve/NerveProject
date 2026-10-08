@@ -46,7 +46,7 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   });
 
   // Get preferences from hook
-  const { tabPreferences } = useTabPreferences(workspaceSlug, projectId);
+  const { tabPreferences } = useTabPreferences(projectId);
 
   // Memoize available tab keys
   const availableTabKeys = useMemo(() => navigationItems.map((item) => item.key), [navigationItems]);

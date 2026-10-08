@@ -5,7 +5,6 @@
  */
 
 import type { FC } from "react";
-import type { IProjectMemberNavigationPreferences } from "./project";
 import type { TIssue } from "./issues/issue";
 import type { LOGICAL_OPERATOR, TSupportedOperators } from "./rich-filters";
 import type { CompleteOrEmpty } from "./utils";
@@ -191,13 +190,6 @@ export interface IIssueFiltersResponse {
   rich_filters: TWorkItemFilterExpression;
   display_filters: IIssueDisplayFilterOptions;
   display_properties: IIssueDisplayProperties;
-}
-
-export interface IProjectUserPropertiesResponse extends IIssueFiltersResponse {
-  sort_order: number;
-  preferences: {
-    navigation: IProjectMemberNavigationPreferences;
-  };
 }
 
 export interface IWorkspaceViewProps {

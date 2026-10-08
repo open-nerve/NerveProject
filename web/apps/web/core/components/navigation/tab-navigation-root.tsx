@@ -7,6 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams, useLocation, Link } from "react-router";
+import type { ProjectTab } from "@nerve/api-client";
 import { EUserPermissionsLevel, EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TabNavigationList, TabNavigationItem } from "@nerve/propel/tab-navigation";
@@ -36,7 +37,7 @@ export type TNavigationItem = {
   shouldRender: boolean;
   sortOrder: number;
   i18n_key: string;
-  key: string;
+  key: ProjectTab;
 };
 
 type TTabNavigationRootProps = {
@@ -59,10 +60,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   } = useIssueDetail();
 
   // Tab preferences hook
-  const { tabPreferences, handleToggleDefaultTab, handleHideTab, handleShowTab } = useTabPreferences(
-    workspaceSlug,
-    projectId
-  );
+  const { tabPreferences, handleToggleDefaultTab, handleHideTab, handleShowTab } = useTabPreferences(projectId);
 
   // Derived values
   const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;

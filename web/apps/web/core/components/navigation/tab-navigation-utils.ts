@@ -4,12 +4,14 @@
  * See the LICENSE file for details.
  */
 
+import type { ProjectTab } from "@nerve/api-client";
+
 // Tab preferences type
 export type TTabPreferences = {
-  defaultTab: string;
-  hiddenTabs: string[];
+  defaultTab: ProjectTab;
+  hiddenTabs: ProjectTab[];
 };
-export const DEFAULT_TAB_KEY = "work_items";
+export const DEFAULT_TAB_KEY: ProjectTab = "work_items";
 
 /**
  * Map tab keys to their corresponding URLs

@@ -33,11 +33,6 @@ export interface IProjectBulkAddFormData {
   members: { role: TUserPermissions | EUserProjectRoles; member_id: string }[];
 }
 
-export type IProjectMemberNavigationPreferences = {
-  default_tab: string;
-  hide_in_more_menu: string[];
-};
-
 export type TProjectIssuesSearchParams = {
   search: string;
   parent?: boolean;

@@ -23,6 +23,7 @@ import {
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
+import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 
@@ -40,8 +41,9 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const { fetchProject, joinProject } = useProject();
   const {
-    project: { fetchProjectMembers, fetchProjectUserProperties },
+    project: { fetchProjectMembers },
   } = useMember();
+  const { fetchNavigation } = useProjectPreferences();
   const { fetchProjectStates } = useProjectState();
   const { data: currentUserData } = useUser();
   const { fetchProjectLabels } = useLabel();
@@ -59,10 +61,10 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
     PROJECT_DETAILS(workspaceSlug, projectId),
     () => fetchProject(projectId)
   );
-  // fetching project member preferences
+  // fetching the caller's tab bar in the project
   useSWR(
     currentUserData?.id ? PROJECT_MEMBER_PREFERENCES(projectId, currentProjectRole) : null,
-    currentUserData?.id ? () => fetchProjectUserProperties(workspaceSlug, projectId) : null,
+    currentUserData?.id ? () => fetchNavigation(projectId) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   // fetching project labels

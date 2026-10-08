@@ -8,7 +8,14 @@ import { sortBy } from "lodash-es";
 import { action, computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { ApiClient, Project, ProjectCreate, ProjectUpdate, Workspace } from "@nerve/api-client";
+import type {
+  ApiClient,
+  IdentifierAvailability,
+  Project,
+  ProjectCreate,
+  ProjectUpdate,
+  Workspace,
+} from "@nerve/api-client";
 import type { TLoader } from "@nerve/types";
 import { orderProjects, shouldFilterProject } from "@nerve/utils";
 // lib
@@ -54,6 +61,7 @@ export interface IProjectStore {
   fetchProjects: (workspace: WorkspaceRef) => Promise<Project[] | undefined>;
   fetchArchivedProjects: (workspace: WorkspaceRef) => Promise<Project[] | undefined>;
   fetchProject: (projectId: string) => Promise<Project | null | undefined>;
+  checkProjectIdentifier: (workspaceSlug: string, identifier: string) => Promise<IdentifierAvailability>;
   // changes
   createProject: (workspaceSlug: string, data: ProjectCreate) => Promise<Project>;
   updateProject: (projectId: string, data: ProjectUpdate) => Promise<Project>;
@@ -206,6 +214,10 @@ export class ProjectStore implements IProjectStore {
   /** @description reads the project alone, as the caller sees it (a page of the project), as fetchProjects */
   fetchProject = (projectId: string): Promise<Project | null | undefined> =>
     this.details.fetch(projectId, () => this.service.get(projectId));
+
+  /** @description whether identifier can name a new project of the workspace */
+  checkProjectIdentifier = (workspaceSlug: string, identifier: string): Promise<IdentifierAvailability> =>
+    this.service.checkIdentifier(workspaceSlug, identifier);
 
   /**
    * @description creates a project: it comes first in its workspace's list, as nerve lists it, the caller's sidebar

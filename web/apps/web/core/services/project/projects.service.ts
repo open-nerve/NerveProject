@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiClient, Project, ProjectCreate, ProjectUpdate } from "@nerve/api-client";
+import type { ApiClient, IdentifierAvailability, Project, ProjectCreate, ProjectUpdate } from "@nerve/api-client";
 import { unwrap } from "@/lib/api-error";
 
 /** The projects the caller sees, each as he sees it (M3 design 3.19, 5.1, 7.3). */
@@ -25,6 +25,15 @@ export class ProjectsService {
   async create(slug: string, data: ProjectCreate): Promise<Project> {
     return unwrap(
       await this.api.POST("/api/v0/workspaces/{slug}/projects", { params: { path: { slug } }, body: data })
+    );
+  }
+
+  /** Whether identifier, once upper-cased, can name a new project of the workspace. */
+  async checkIdentifier(slug: string, identifier: string): Promise<IdentifierAvailability> {
+    return unwrap(
+      await this.api.GET("/api/v0/workspaces/{slug}/project-identifiers/{identifier}", {
+        params: { path: { slug, identifier } },
+      })
     );
   }
 

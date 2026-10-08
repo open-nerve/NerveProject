@@ -10,16 +10,11 @@ import { computedFn } from "mobx-utils";
 // nerve imports
 import { EUserPermissions } from "@nerve/constants";
 import type { MemberUser } from "@nerve/api-client";
-import type {
-  EUserProjectRoles,
-  IProjectBulkAddFormData,
-  IProjectUserPropertiesResponse,
-  TProjectMembership,
-} from "@nerve/types";
+import type { EUserProjectRoles, IProjectBulkAddFormData, TProjectMembership } from "@nerve/types";
 // store
 import type { RootStore } from "@/store/root.store";
 // services
-import { ProjectMemberService, ProjectService } from "@/services/project";
+import { ProjectMemberService } from "@/services/project";
 // store
 import type { IProjectStore } from "@/store/project/project.store";
 import type { IRouterStore } from "@/store/router.store";
@@ -42,9 +37,6 @@ export interface IProjectMemberStore {
   projectMemberMap: {
     [projectId: string]: Record<string, TProjectMembership>;
   };
-  projectUserPropertiesMap: {
-    [projectId: string]: IProjectUserPropertiesResponse;
-  };
   // filters store
   filters: IProjectMemberFiltersStore;
   // computed
@@ -54,20 +46,12 @@ export interface IProjectMemberStore {
   getProjectMemberDetails: (userId: string, projectId: string) => IProjectMemberDetails | null;
   getProjectMemberIds: (projectId: string, includeGuestUsers: boolean) => string[] | null;
   getFilteredProjectMemberDetails: (userId: string, projectId: string) => IProjectMemberDetails | null;
-  getProjectUserProperties: (projectId: string) => IProjectUserPropertiesResponse | null;
   // fetch actions
   fetchProjectMembers: (
     workspaceSlug: string,
     projectId: string,
     clearExistingMembers?: boolean
   ) => Promise<TProjectMembership[]>;
-  fetchProjectUserProperties: (workspaceSlug: string, projectId: string) => Promise<IProjectUserPropertiesResponse>;
-  // update actions
-  updateProjectUserProperties: (
-    workspaceSlug: string,
-    projectId: string,
-    data: Partial<IProjectUserPropertiesResponse>
-  ) => Promise<IProjectUserPropertiesResponse>;
   // bulk operation actions
   bulkAddMembersToProject: (
     workspaceSlug: string,
@@ -92,9 +76,6 @@ export class ProjectMemberStore implements IProjectMemberStore {
   projectMemberMap: {
     [projectId: string]: Record<string, TProjectMembership>;
   } = {};
-  projectUserPropertiesMap: {
-    [projectId: string]: IProjectUserPropertiesResponse;
-  } = {};
   // filters store
   filters: IProjectMemberFiltersStore;
   // stores
@@ -105,19 +86,15 @@ export class ProjectMemberStore implements IProjectMemberStore {
   rootStore: RootStore;
   // services
   projectMemberService;
-  projectService;
 
   constructor(_memberRoot: IMemberRootStore, _rootStore: RootStore) {
     makeObservable(this, {
       // observables
       projectMemberMap: observable,
-      projectUserPropertiesMap: observable,
       // computed
       projectMemberIds: computed,
       // actions
       fetchProjectMembers: action,
-      fetchProjectUserProperties: action,
-      updateProjectUserProperties: action,
       bulkAddMembersToProject: action,
       updateMemberRole: action,
       removeMemberFromProject: action,
@@ -131,7 +108,6 @@ export class ProjectMemberStore implements IProjectMemberStore {
     this.filters = new ProjectMemberFiltersStore();
     // services
     this.projectMemberService = new ProjectMemberService();
-    this.projectService = new ProjectService();
   }
 
   /**
@@ -395,62 +371,5 @@ export class ProjectMemberStore implements IProjectMemberStore {
         this.processMemberRemoval(projectId, userId);
       });
     });
-  };
-
-  /**
-   * @description get project member preferences
-   * @param projectId
-   */
-  getProjectUserProperties = computedFn(
-    (projectId: string): IProjectUserPropertiesResponse | null => this.projectUserPropertiesMap[projectId] || null
-  );
-
-  /**
-   * @description fetch project member preferences
-   * @param workspaceSlug
-   * @param projectId
-   * @param data
-   */
-  fetchProjectUserProperties = async (
-    workspaceSlug: string,
-    projectId: string
-  ): Promise<IProjectUserPropertiesResponse> => {
-    const response = await this.projectService.getProjectUserProperties(workspaceSlug, projectId);
-    runInAction(() => {
-      set(this.projectUserPropertiesMap, [projectId], response);
-    });
-    return response;
-  };
-
-  /**
-   * @description update project member preferences
-   * @param workspaceSlug
-   * @param projectId
-   * @param data
-   */
-  updateProjectUserProperties = async (
-    workspaceSlug: string,
-    projectId: string,
-    data: Partial<IProjectUserPropertiesResponse>
-  ): Promise<IProjectUserPropertiesResponse> => {
-    const previousProperties = this.projectUserPropertiesMap[projectId];
-    try {
-      // Optimistically update the store
-      runInAction(() => {
-        set(this.projectUserPropertiesMap, [projectId], data);
-      });
-      const response = await this.projectService.updateProjectUserProperties(workspaceSlug, projectId, data);
-      return response;
-    } catch (error) {
-      // Revert on error
-      runInAction(() => {
-        if (previousProperties) {
-          set(this.projectUserPropertiesMap, [projectId], previousProperties);
-        } else {
-          unset(this.projectUserPropertiesMap, [projectId]);
-        }
-      });
-      throw error;
-    }
   };
 }
