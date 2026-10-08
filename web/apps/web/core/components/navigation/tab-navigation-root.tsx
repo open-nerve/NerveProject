@@ -60,7 +60,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   } = useIssueDetail();
 
   // Tab preferences hook
-  const { tabPreferences, handleToggleDefaultTab, handleHideTab, handleShowTab } = useTabPreferences(projectId);
+  const { navigation, handleToggleDefaultTab, handleHideTab, handleShowTab } = useTabPreferences(projectId);
 
   // Derived values
   const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
@@ -100,10 +100,10 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   // 1. visibleNavigationItems: Items NOT user-hidden (may still overflow due to space)
   // 2. hiddenNavigationItems: Items user explicitly hid (always in overflow with "Show" icon)
   const visibleNavigationItems = allNavigationItems.filter(
-    (item: TNavigationItem) => !tabPreferences.hiddenTabs.includes(item.key)
+    (item: TNavigationItem) => !navigation.hide_in_more_menu.includes(item.key)
   );
   const hiddenNavigationItems = allNavigationItems.filter((item: TNavigationItem) =>
-    tabPreferences.hiddenTabs.includes(item.key)
+    navigation.hide_in_more_menu.includes(item.key)
   );
 
   // Responsive tab layout hook
@@ -161,7 +161,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
                   key={item.key}
                   item={item}
                   isActive={itemIsActive}
-                  tabPreferences={tabPreferences}
+                  navigation={navigation}
                   onToggleDefault={handleToggleDefaultTab}
                   onHide={handleHideTab}
                   itemRef={(el) => {
@@ -176,7 +176,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
               <TabNavigationOverflowMenu
                 overflowItems={overflowItems}
                 isActive={isActive}
-                tabPreferences={tabPreferences}
+                navigation={navigation}
                 onToggleDefault={handleToggleDefaultTab}
                 onShow={handleShowTab}
               />

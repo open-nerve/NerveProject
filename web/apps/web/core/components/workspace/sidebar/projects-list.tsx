@@ -30,6 +30,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
 // local imports
 import { SidebarProjectsListItem } from "./projects-list-item";
+import { useProjectDrop } from "./use-project-drop";
 
 export const SidebarProjectsList = observer(function SidebarProjectsList() {
   // states
@@ -45,7 +46,8 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
 
-  const { loader, getProjectById, joinedProjectIds: joinedProjects, updateProjectSortOrder } = useProject();
+  const { loader, joinedProjectIds: joinedProjects } = useProject();
+  const handleOnProjectDrop = useProjectDrop();
   // router params
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();
@@ -73,25 +75,6 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
         message: t("project_link_copied_to_clipboard"),
       })
     );
-  };
-
-  const handleOnProjectDrop = (
-    sourceId: string | undefined,
-    destinationId: string | undefined,
-    shouldDropAtEnd: boolean
-  ) => {
-    if (!sourceId || !destinationId || !workspaceSlug) return;
-    if (sourceId === destinationId) return;
-
-    const source = getProjectById(sourceId);
-    if (source)
-      updateProjectSortOrder(source, destinationId, shouldDropAtEnd).catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("error"),
-          message: t("something_went_wrong"),
-        });
-      });
   };
 
   /**

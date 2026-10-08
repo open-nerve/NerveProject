@@ -4,15 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { useMemo } from "react";
-import type { ProjectTab } from "@nerve/api-client";
+import type { ProjectNavigation, ProjectTab } from "@nerve/api-client";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
-import { DEFAULT_TAB_KEY, hideTab, showTab, toggleDefaultTab } from "./tab-navigation-utils";
-import type { TTabPreferences } from "./tab-navigation-utils";
+import { DEFAULT_NAVIGATION, hideTab, showTab, toggleDefaultTab } from "./tab-navigation-utils";
 
 export type TTabPreferencesHook = {
-  tabPreferences: TTabPreferences;
+  navigation: ProjectNavigation;
   handleToggleDefaultTab: (tabKey: ProjectTab) => void;
   handleHideTab: (tabKey: ProjectTab) => void;
   handleShowTab: (tabKey: ProjectTab) => void;
@@ -27,19 +25,11 @@ export type TTabPreferencesHook = {
  * tab bar with it. A change that fails shows an error toast.
  *
  * @param projectId - The project ID
- * @returns Tab preferences state and handlers
+ * @returns The caller's tab bar, nerve's default until it is fetched, and its changes
  */
 export const useTabPreferences = (projectId: string): TTabPreferencesHook => {
   const { getNavigation, updateNavigation } = useProjectPreferences();
-  const navigation = getNavigation(projectId);
-
-  const tabPreferences: TTabPreferences = useMemo(
-    () => ({
-      defaultTab: navigation?.default_tab ?? DEFAULT_TAB_KEY,
-      hiddenTabs: navigation?.hide_in_more_menu ?? [],
-    }),
-    [navigation]
-  );
+  const navigation = getNavigation(projectId) ?? DEFAULT_NAVIGATION;
 
   /**
    * Toggle default tab setting
@@ -93,7 +83,7 @@ export const useTabPreferences = (projectId: string): TTabPreferencesHook => {
   };
 
   return {
-    tabPreferences,
+    navigation,
     handleToggleDefaultTab,
     handleHideTab,
     handleShowTab,

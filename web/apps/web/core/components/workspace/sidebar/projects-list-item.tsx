@@ -111,8 +111,8 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const availableTabKeys = navigationItems.map((item) => item.key);
 
   // Get preferences from hook
-  const { tabPreferences } = useTabPreferences(projectId);
-  const defaultTabKey = tabPreferences.defaultTab;
+  const { navigation } = useTabPreferences(projectId);
+  const defaultTabKey = navigation.default_tab;
   // Validate that the default tab is available
   const validatedDefaultTabKey = availableTabKeys.includes(defaultTabKey) ? defaultTabKey : DEFAULT_TAB_KEY;
   const defaultTabUrl = project ? getTabUrl(workspaceSlug, project.id, validatedDefaultTabKey) : "";

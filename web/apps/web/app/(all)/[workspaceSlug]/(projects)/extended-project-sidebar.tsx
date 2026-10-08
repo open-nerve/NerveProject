@@ -18,6 +18,7 @@ import { copyUrlToClipboard } from "@nerve/utils";
 // components
 import { CreateProjectModal } from "@/components/project/create-project-modal";
 import { SidebarProjectsListItem } from "@/components/workspace/sidebar/projects-list-item";
+import { useProjectDrop } from "@/components/workspace/sidebar/use-project-drop";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useProject } from "@/hooks/store/use-project";
@@ -36,27 +37,9 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
   // store hooks
   const { t } = useTranslation();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
-  const { getProjectById, joinedProjectIds: joinedProjects, updateProjectSortOrder } = useProject();
+  const { getProjectById, joinedProjectIds: joinedProjects } = useProject();
+  const handleOnProjectDrop = useProjectDrop();
   const { allowPermissions } = useUserPermissions();
-
-  const handleOnProjectDrop = (
-    sourceId: string | undefined,
-    destinationId: string | undefined,
-    shouldDropAtEnd: boolean
-  ) => {
-    if (!sourceId || !destinationId || !workspaceSlug) return;
-    if (sourceId === destinationId) return;
-
-    const source = getProjectById(sourceId);
-    if (source)
-      updateProjectSortOrder(source, destinationId, shouldDropAtEnd).catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("error"),
-          message: t("something_went_wrong"),
-        });
-      });
-  };
 
   // filter projects based on search query
   const filteredProjects = joinedProjects.filter((projectId) => {

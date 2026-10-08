@@ -5,7 +5,7 @@
  */
 
 import { Link } from "react-router";
-import type { ProjectTab } from "@nerve/api-client";
+import type { ProjectNavigation, ProjectTab } from "@nerve/api-client";
 import { DefaultTabOutline, UnpinOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -13,12 +13,11 @@ import { ContextMenu } from "@nerve/propel/context-menu";
 import { TabNavigationItem } from "@nerve/propel/tab-navigation";
 // local imports
 import type { TNavigationItem } from "./tab-navigation-root";
-import type { TTabPreferences } from "./tab-navigation-utils";
 
 export type TTabNavigationVisibleItemProps = {
   item: TNavigationItem;
   isActive: boolean;
-  tabPreferences: TTabPreferences;
+  navigation: ProjectNavigation;
   onToggleDefault: (tabKey: ProjectTab) => void;
   onHide: (tabKey: ProjectTab) => void;
   itemRef?: (el: HTMLDivElement | null) => void;
@@ -31,13 +30,13 @@ export type TTabNavigationVisibleItemProps = {
 export function TabNavigationVisibleItem({
   item,
   isActive,
-  tabPreferences,
+  navigation,
   onToggleDefault,
   onHide,
   itemRef,
 }: TTabNavigationVisibleItemProps) {
   const { t } = useTranslation();
-  const isDefault = item.key === tabPreferences.defaultTab;
+  const isDefault = item.key === navigation.default_tab;
 
   return (
     <div className="relative flex h-full items-center transition-all duration-300">

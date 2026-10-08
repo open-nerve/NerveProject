@@ -9,7 +9,7 @@
 // stores hold, and reads there what they were asked to fetch. The hooks then run as plain functions, outside React,
 // with fake-session-swr.ts. How the stores fetch is their own tests'.
 
-import type { Profile, Project, Workspace, WorkspaceMember } from "@nerve/api-client";
+import type { Profile, Project, ProjectNavigation, Workspace, WorkspaceMember } from "@nerve/api-client";
 
 /** What the stores hold, and the fetches they were asked for, in order; a test resets it before each case. */
 export const stores: {
@@ -21,8 +21,18 @@ export const stores: {
   profile: Profile | undefined;
   /** The projects the project store gives (getProjectById). */
   projects: Project[];
+  /** The caller's tab bar in each project, by its id, once fetched (ProjectPreferencesStore.getNavigation). */
+  navigations: Record<string, ProjectNavigation>;
   fetched: string[];
-} = { workspaces: undefined, address: undefined, members: {}, profile: undefined, projects: [], fetched: [] };
+} = {
+  workspaces: undefined,
+  address: undefined,
+  members: {},
+  profile: undefined,
+  projects: [],
+  navigations: {},
+  fetched: [],
+};
 
 /** The stores as a test starts: they hold nothing and were asked for nothing. */
 export function emptyStores() {
@@ -32,6 +42,7 @@ export function emptyStores() {
     members: {},
     profile: undefined,
     projects: [],
+    navigations: {},
     fetched: [],
   });
 }
@@ -83,6 +94,7 @@ export function useProject() {
 
 export function useProjectPreferences() {
   return {
+    getNavigation: (projectId: string): ProjectNavigation | undefined => stores.navigations[projectId],
     fetchNavigation: (projectId: string) => fetching(`the tab bar in ${projectId}`),
   };
 }

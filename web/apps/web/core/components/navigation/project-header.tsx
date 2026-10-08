@@ -46,7 +46,7 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   });
 
   // Get preferences from hook
-  const { tabPreferences } = useTabPreferences(projectId);
+  const { navigation } = useTabPreferences(projectId);
 
   // Memoize available tab keys
   const availableTabKeys = useMemo(() => navigationItems.map((item) => item.key), [navigationItems]);
@@ -54,10 +54,8 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   // Memoize validated default tab key
   const validatedDefaultTabKey = useMemo(
     () =>
-      availableTabKeys.includes(tabPreferences.defaultTab)
-        ? tabPreferences.defaultTab
-        : availableTabKeys[0] || "work_items",
-    [availableTabKeys, tabPreferences.defaultTab]
+      availableTabKeys.includes(navigation.default_tab) ? navigation.default_tab : availableTabKeys[0] || "work_items",
+    [availableTabKeys, navigation.default_tab]
   );
 
   // Memoize switcher options to prevent recalculation on every render
