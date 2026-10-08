@@ -7,11 +7,14 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { STATE_GROUPS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { StateGroup } from "@nerve/api-client";
 import type { TStateOperationsCallbacks } from "@nerve/types";
 // components
 import { StateForm } from "@/components/project-states";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 import type { TStateFormData } from "./form";
 
 type TStateCreate = {
@@ -22,6 +25,7 @@ type TStateCreate = {
 
 export const StateCreate = observer(function StateCreate(props: TStateCreate) {
   const { groupKey, createStateCallback, handleClose } = props;
+  const { t } = useTranslation();
 
   // states
   const [loader, setLoader] = useState(false);
@@ -44,20 +48,7 @@ export const StateCreate = observer(function StateCreate(props: TStateCreate) {
       });
       handleClose();
     } catch (error) {
-      const errorStatus = error as { status: number; data: { error: string } };
-      if (errorStatus?.status === 400) {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "State with that name already exists. Please try again with another name.",
-        });
-      } else {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: errorStatus.data.error ?? "State could not be created. Please try again.",
-        });
-      }
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
     }
   };
 

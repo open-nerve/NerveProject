@@ -10905,7 +10905,7 @@ Expected: 每个文件的散列和行数与下表相同：
 | `52da5497369fa34ee360d375e4d28c70bafad357845bac8fefb72a192b002f1a` | 34 | `web/apps/web/core/components/power-k/ui/pages/context-based/work-item/labels-menu.tsx` |
 | `66ab1381d8155aec73575916d3eb111e568431bc761f011cf1980fce27fd28c7` | 37 | `web/apps/web/core/components/ui/labels-list.tsx` |
 | `8ee9fb569ce525a1d731bc2270828c7b2331ab0ac7ce86ff4074004e89f107d2` | 394 | `web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx` |
-| `d574f9e376ae803d1c4e10bc72dcfa30de72cb293e9a2eca5453c4fbd024c582` | 213 | `web/apps/web/core/store/issue/root.store.ts` |
+| `0ba27f2de16344f53b363980a2406c26a2266db96a82b58b11b5eb3761f37f5f` | 205 | `web/apps/web/core/store/issue/root.store.ts` |
 | `213164821196ab064c0b1306c431f8dcb29e3fb1a360776fa71f97fe8cc5497c` | 65 | `web/packages/utils/src/work-item-filters/configs/filters/label.ts` |
 
 - [ ] **Step 2: service 和 store**
@@ -11600,10 +11600,10 @@ const bug = labelOf(web, "bug", 65535);
   it("gives the work items' stores what the state and label stores give: nothing of a project the caller left", async () => {
 ````
 ````old web/apps/web/core/store/root.store.test.ts
-    expect(root.issue.stateDetails).toEqual([backlog]);
+    expect(root.issue.stateMap).toEqual({ [backlog.id]: backlog });
 ````
 ````new web/apps/web/core/store/root.store.test.ts
-    expect(root.issue.stateDetails).toEqual([backlog]);
+    expect(root.issue.stateMap).toEqual({ [backlog.id]: backlog });
     const LABELS = `/api/v0/projects/${web.id}/labels`;
     await answered(nerve, () => root.label.fetchProjectLabels(web.id), ["GET", LABELS], { data: [bug] }, "the labels");
     expect(root.issue.labelMap).toEqual({ [bug.id]: bug });
@@ -11615,10 +11615,10 @@ const bug = labelOf(web, "bug", 65535);
     await inTurn(nerve, 4, ["POST", `/api/v0/projects/${web.id}/leave`], noContent());
 ````
 ````old web/apps/web/core/store/root.store.test.ts
-    expect(root.issue.stateDetails).toBeUndefined();
+    expect(root.issue.stateMap).toEqual({});
 ````
 ````new web/apps/web/core/store/root.store.test.ts
-    expect(root.issue.stateDetails).toBeUndefined();
+    expect(root.issue.stateMap).toEqual({});
     expect(root.issue.labelMap).toEqual({});
 ````
 

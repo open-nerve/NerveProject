@@ -49,8 +49,6 @@ export interface IIssueRootStore {
   globalViewId: string | undefined; // all issues view id
   userId: string | undefined; // user profile detail Id
   stateMap: Record<string, State> | undefined;
-  stateDetails: State[] | undefined;
-  workspaceStateDetails: State[] | undefined;
   labelMap: Record<string, IIssueLabel> | undefined;
   memberMap: Record<string, MemberUser> | undefined;
   moduleMap: Record<string, IModule> | undefined;
@@ -100,8 +98,6 @@ export class IssueRootStore implements IIssueRootStore {
   globalViewId: string | undefined = undefined;
   userId: string | undefined = undefined;
   stateMap: Record<string, State> | undefined = undefined;
-  stateDetails: State[] | undefined = undefined;
-  workspaceStateDetails: State[] | undefined = undefined;
   labelMap: Record<string, IIssueLabel> | undefined = undefined;
   memberMap: Record<string, MemberUser> | undefined = undefined;
   moduleMap: Record<string, IModule> | undefined = undefined;
@@ -150,8 +146,6 @@ export class IssueRootStore implements IIssueRootStore {
       userId: observable.ref,
       globalViewId: observable.ref,
       stateMap: observable,
-      stateDetails: observable,
-      workspaceStateDetails: observable,
       labelMap: observable,
       memberMap: observable,
       moduleMap: observable,
@@ -171,8 +165,6 @@ export class IssueRootStore implements IIssueRootStore {
       if (this.userId !== rootStore.router.userId) this.userId = rootStore.router.userId;
       // the state store's states as it gives them, none of a project it no longer gives (M3/P8b)
       this.stateMap = rootStore?.state?.stateMap;
-      this.stateDetails = rootStore?.state?.projectStates;
-      this.workspaceStateDetails = rootStore?.state?.workspaceStates;
       if (!isEmpty(rootStore?.label?.labelMap)) this.labelMap = rootStore?.label?.labelMap;
       if (!isEmpty(rootStore?.memberRoot?.memberMap)) this.memberMap = rootStore?.memberRoot?.memberMap || undefined;
       if (!isEmpty(rootStore?.module?.moduleMap)) this.moduleMap = rootStore?.module?.moduleMap;

@@ -270,12 +270,10 @@ describe("RootStore", () => {
       "the states"
     );
     expect(root.issue.stateMap).toEqual({ [backlog.id]: backlog });
-    expect(root.issue.stateDetails).toEqual([backlog]);
 
     const left = track(root.projectRoot.project.leaveProject(web));
     await inTurn(nerve, 3, ["POST", `/api/v0/projects/${web.id}/leave`], noContent());
     await until(() => left.settled, "the leave");
     expect(root.issue.stateMap).toEqual({});
-    expect(root.issue.stateDetails).toBeUndefined();
   });
 });

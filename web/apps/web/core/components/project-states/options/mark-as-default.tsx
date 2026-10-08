@@ -7,8 +7,12 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TStateOperationsCallbacks } from "@nerve/types";
 import { cn } from "@nerve/utils";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 type TStateMarksAsDefault = {
   stateId: string;
@@ -18,6 +22,7 @@ type TStateMarksAsDefault = {
 
 export const StateMarksAsDefault = observer(function StateMarksAsDefault(props: TStateMarksAsDefault) {
   const { stateId, isDefault, markStateAsDefaultCallback } = props;
+  const { t } = useTranslation();
   // states
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,10 +31,10 @@ export const StateMarksAsDefault = observer(function StateMarksAsDefault(props: 
     setIsLoading(true);
 
     try {
-      setIsLoading(false);
       await markStateAsDefaultCallback(stateId);
-      setIsLoading(false);
-    } catch {
+    } catch (error) {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+    } finally {
       setIsLoading(false);
     }
   };

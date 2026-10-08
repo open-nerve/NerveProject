@@ -72,6 +72,12 @@ describe("StateStore, the workspace's list and another workspace's", () => {
     const renamed: State = { ...labDoing, name: "In progress", updated_at: LATER };
     const rename = () => store.updateState(labDoing.id, { name: "In progress" });
     await sent(nerve, rename, ["PATCH", at(labDoing)], json(200, renamed));
+    // Review before Doing, among lab's started states: a step before Doing's 30000, whatever web's are
+    const moved: State = { ...labReview, sequence: 15000, updated_at: LATER };
+    const move = () => store.moveState(labReview.id, "started", labDoing.id, false);
+    await sent(nerve, move, ["PATCH", at(labReview)], json(200, moved));
+    expect(nerve.calls.at(-1)?.body).toEqual({ group: "started", sequence: 15000 });
+    expect(store.getProjectStates(lab.id)).toEqual([labTodo, moved, renamed]);
     await sent(nerve, () => store.deleteState(labReview.id), ["DELETE", at(labReview)], noContent());
     await sent(
       nerve,
@@ -144,21 +150,22 @@ describe("StateStore, a change in its turn", () => {
     expect(nerve.calls).toHaveLength(4);
   });
 
-  it("reckons the second of two moves from nerve's answer to the first, not from the place the first asked for", async () => {
+  it("reckons a move from the states nerve gave, not from a refused move's request: two moves in a row", async () => {
     const { nerve, store } = await loaded();
-    // Review before Doing asks for 15000, a step before Doing's 30000; nerve's answer places it at 20000, so Doing
-    // after Review asks for 25000, halfway between the two (from the place asked, it would be 22500)
-    const reviewFirst: State = { ...review, sequence: 20000, updated_at: LATER };
-    const doingAfter: State = { ...doing, sequence: 25000, updated_at: LATER };
-    const first = track(store.moveState(review.id, "started", doing.id, false));
-    const second = track(store.moveState(doing.id, "started", review.id, true));
-    await inTurn(nerve, 1, ["PATCH", at(review)], json(200, reviewFirst));
-    await inTurn(nerve, 2, ["PATCH", at(doing)], json(200, doingAfter));
+    // Done last of the started group asks for 60000, a step past Review's 45000, and nerve refuses it: Done stays the
+    // completed group's. Doing last of the started group then asks for 60000 too (from the refused request, 75000)
+    const doingLast: State = { ...doing, sequence: 60000, updated_at: LATER };
+    const first = track(store.moveState(done.id, "started", undefined, false));
+    const second = track(store.moveState(doing.id, "started", undefined, false));
+    await inTurn(nerve, 1, ["PATCH", at(done)], problem(409, "project.state_last_in_group"));
+    await inTurn(nerve, 2, ["PATCH", at(doing)], json(200, doingLast));
     await until(() => second.settled, "the second move");
-    expect([first.value, second.value]).toEqual([reviewFirst, doingAfter]);
+    expect(first.error).toBeInstanceOf(ApiError);
+    expect(second.value).toEqual(doingLast);
     expect(nerve.calls.slice(1).map((call) => call.body)).toEqual([
-      { group: "started", sequence: 15000 },
-      { group: "started", sequence: 25000 },
+      { group: "started", sequence: 60000 },
+      { group: "started", sequence: 60000 },
     ]);
+    expect(store.getProjectStates(web.id)).toEqual([todo, review, doingLast, done]);
   });
 });

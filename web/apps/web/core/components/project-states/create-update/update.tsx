@@ -6,11 +6,14 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { State } from "@nerve/api-client";
 import type { TStateOperationsCallbacks } from "@nerve/types";
 // components
 import { StateForm } from "@/components/project-states";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 import type { TStateFormData } from "./form";
 
 type TStateUpdate = {
@@ -21,6 +24,7 @@ type TStateUpdate = {
 
 export const StateUpdate = observer(function StateUpdate(props: TStateUpdate) {
   const { state, updateStateCallback, handleClose } = props;
+  const { t } = useTranslation();
   // states
   const [loader, setLoader] = useState(false);
 
@@ -41,26 +45,14 @@ export const StateUpdate = observer(function StateUpdate(props: TStateUpdate) {
       });
       handleClose();
     } catch (error) {
-      const errorStatus = error as { status: number };
-      if (errorStatus?.status === 400) {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Another state exists with the same name. Please try again with another name.",
-        });
-      } else {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "State could not be updated. Please try again.",
-        });
-      }
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
     }
   };
 
   return (
     <StateForm
-      data={state}
+      // the fields the form edits, all a change sends: nerve's StateUpdate takes no others
+      data={{ name: state.name, color: state.color, description: state.description }}
       onSubmit={onSubmit}
       onCancel={onCancel}
       buttonDisabled={loader}
