@@ -57,4 +57,16 @@ export class ProjectsService {
       await this.api.POST("/api/v0/projects/{project_id}/unarchive", { params: { path: { project_id: projectId } } })
     );
   }
+
+  /** Makes the caller a member of the project; the answer is the project as he now sees it. */
+  async join(projectId: string): Promise<Project> {
+    return unwrap(
+      await this.api.POST("/api/v0/projects/{project_id}/join", { params: { path: { project_id: projectId } } })
+    );
+  }
+
+  /** Ends the caller's own membership of the project. */
+  async leave(projectId: string): Promise<void> {
+    unwrap(await this.api.POST("/api/v0/projects/{project_id}/leave", { params: { path: { project_id: projectId } } }));
+  }
 }

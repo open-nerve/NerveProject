@@ -14,7 +14,6 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { ProjectAccessRestriction } from "@/components/auth-screens/project/project-access-restriction";
 import {
   PROJECT_DETAILS,
-  PROJECT_ME_INFORMATION,
   PROJECT_LABELS,
   PROJECT_MEMBERS,
   PROJECT_MEMBER_PREFERENCES,
@@ -38,9 +37,8 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   // states
   const [isJoiningProject, setIsJoiningProject] = useState(false);
   // store hooks
-  const { fetchUserProjectInfo, allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
-  const { fetchProject } = useProject();
-  const { joinProject } = useUserPermissions();
+  const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { fetchProject, joinProject } = useProject();
   const {
     project: { fetchProjectMembers, fetchProjectUserProperties },
   } = useMember();
@@ -61,8 +59,6 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
     PROJECT_DETAILS(workspaceSlug, projectId),
     () => fetchProject(projectId)
   );
-  // fetching user project member information
-  useSWR(PROJECT_ME_INFORMATION(workspaceSlug, projectId), () => fetchUserProjectInfo(workspaceSlug, projectId));
   // fetching project member preferences
   useSWR(
     currentUserData?.id ? PROJECT_MEMBER_PREFERENCES(projectId, currentProjectRole) : null,
@@ -88,7 +84,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   // handle join project
   const handleJoinProject = () => {
     setIsJoiningProject(true);
-    joinProject(workspaceSlug, projectId).finally(() => setIsJoiningProject(false));
+    joinProject(projectId).finally(() => setIsJoiningProject(false));
   };
 
   const isProjectLoading = isProjectDetailsLoading && !projectDetailsError;

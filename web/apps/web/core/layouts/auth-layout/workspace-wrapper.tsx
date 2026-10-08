@@ -22,10 +22,10 @@ import { SessionUnavailable } from "@/components/account/session-unavailable";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { NerveLogo } from "@/components/common/nerve-logo";
 // constants
-import { WORKSPACE_PROJECTS_ROLES_INFORMATION, WORKSPACE_STATES } from "@nerve/constants";
+import { WORKSPACE_STATES } from "@nerve/constants";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useUser } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { useWorkspaceFetch } from "./use-workspace-fetch";
@@ -43,18 +43,11 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   // store hooks
   const { signOut, data: currentUser } = useUser();
   const { isMobile } = usePlatformOS();
-  const { fetchUserProjectPermissions } = useUserPermissions();
   const { fetchWorkspaceStates } = useProjectState();
 
   // the workspace side of what every page of a workspace fetches (M3 design 7.1), and what the caller's workspaces
   // decide this one is to him (7.2, 8.3)
   const access = useWorkspaceFetch(workspaceSlug);
-  const workspace = access.kind === "ready" ? access.workspace : null;
-  useSWR(
-    workspace ? WORKSPACE_PROJECTS_ROLES_INFORMATION(workspace.slug) : null,
-    workspace ? () => fetchUserProjectPermissions(workspace.slug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
 
   // fetch workspace states
   useSWR(

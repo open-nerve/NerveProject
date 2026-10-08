@@ -338,24 +338,12 @@ export class ProjectMemberStore implements IProjectMemberStore {
     const memberDetails = this.getProjectMemberDetails(userId, projectId);
     if (!memberDetails || !memberDetails?.id) throw new Error("Member not found");
     // original data to revert back in case of error
-    const isCurrentUser = this.rootStore.user.data?.id === userId;
     const membershipBeforeUpdate = { ...this.getProjectMembershipByUserId(userId, projectId) };
-    const permissionBeforeUpdate = isCurrentUser
-      ? this.rootStore.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
-      : undefined;
     const updatedProjectRole = this.getProjectMemberRoleForUpdate(projectId, userId, role);
     try {
       runInAction(() => {
         set(this.projectMemberMap, [projectId, userId, "original_role"], role);
         set(this.projectMemberMap, [projectId, userId, "role"], updatedProjectRole);
-        if (isCurrentUser) {
-          set(
-            this.rootStore.user.permission.workspaceProjectsPermissions,
-            [workspaceSlug, projectId],
-            updatedProjectRole
-          );
-        }
-        set(this.rootStore.user.permission.projectUserInfo, [workspaceSlug, projectId, "role"], updatedProjectRole);
       });
       const response = await this.projectMemberService.updateProjectMember(
         workspaceSlug,
@@ -371,18 +359,6 @@ export class ProjectMemberStore implements IProjectMemberStore {
       runInAction(() => {
         set(this.projectMemberMap, [projectId, userId, "original_role"], membershipBeforeUpdate?.original_role);
         set(this.projectMemberMap, [projectId, userId, "role"], membershipBeforeUpdate?.role);
-        if (isCurrentUser) {
-          set(
-            this.rootStore.user.permission.workspaceProjectsPermissions,
-            [workspaceSlug, projectId],
-            membershipBeforeUpdate?.original_role
-          );
-          set(
-            this.rootStore.user.permission.projectUserInfo,
-            [workspaceSlug, projectId, "role"],
-            permissionBeforeUpdate
-          );
-        }
       });
       throw error;
     }

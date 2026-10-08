@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { TUserPermissions } from "./enums";
-
 /**
  * @description The start of the week for the user
  * @enum {number}
@@ -18,10 +16,6 @@ export enum EStartOfTheWeek {
   THURSDAY = 4,
   FRIDAY = 5,
   SATURDAY = 6,
-}
-
-export interface IUserProjectsRole {
-  [projectId: string]: TUserPermissions;
 }
 
 export type TProfileViews = "assigned" | "created" | "subscribed";

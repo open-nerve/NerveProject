@@ -10,7 +10,8 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Table } from "@nerve/ui";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
-import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useProject } from "@/hooks/store/use-project";
+import { useUser } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 // components
 import { useProjectColumns } from "@/components/projects/settings/useProjectColumns";
@@ -30,7 +31,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
   // router
   const navigate = useNavigate();
   // store hooks
-  const { leaveProject } = useUserPermissions();
+  const { getProjectById, leaveProject } = useProject();
   const { data: currentUser } = useUser();
   const {
     project: { removeMemberFromProject },
@@ -44,8 +45,9 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
   const handleRemove = async (memberId: string) => {
     if (!workspaceSlug || !projectId || !memberId) return;
 
-    if (memberId === currentUser?.id) {
-      await leaveProject(workspaceSlug, projectId)
+    const project = getProjectById(projectId);
+    if (memberId === currentUser?.id && project) {
+      await leaveProject(project)
         // oxlint-disable-next-line promise/always-return
         .then(async () => {
           navigate(`/${workspaceSlug}/projects`);

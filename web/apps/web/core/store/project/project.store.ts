@@ -60,6 +60,8 @@ export interface IProjectStore {
   deleteProject: (project: ProjectRef) => Promise<void>;
   archiveProject: (projectId: string) => Promise<Project>;
   restoreProject: (projectId: string) => Promise<Project>;
+  joinProject: (projectId: string) => Promise<Project>;
+  leaveProject: (project: ProjectRef) => Promise<void>;
   updateProjectSortOrder: (project: ProjectRef, droppedOnId: string | undefined, dropAtEnd: boolean) => Promise<void>;
 }
 
@@ -75,7 +77,7 @@ export class ProjectStore implements IProjectStore {
   private readonly unarchived = new ReconciledByKey<Project[]>();
   /** Each workspace's archived projects. */
   private readonly archived = new ReconciledByKey<Project[]>();
-  /** Each project as nerve last read it alone; null once deleted. */
+  /** Each project as nerve last read it alone; null once deleted or left. */
   private readonly details = new ReconciledByKey<Project | null>();
   // services
   private readonly service: ProjectsService;
@@ -105,6 +107,8 @@ export class ProjectStore implements IProjectStore {
       deleteProject: action,
       archiveProject: action,
       restoreProject: action,
+      joinProject: action,
+      leaveProject: action,
       updateProjectSortOrder: action,
     });
     this.rootStore = _rootStore;
@@ -160,7 +164,7 @@ export class ProjectStore implements IProjectStore {
 
   /**
    * The project as the store last had it from nerve, its own read first, else from its workspace's lists; nothing
-   * once deleted, or when its workspace is no longer among the caller's.
+   * once deleted or left, or when its workspace is no longer among the caller's.
    */
   getProjectById = computedFn((projectId: string | undefined | null): Project | undefined => {
     if (!projectId) return undefined;
@@ -248,6 +252,28 @@ export class ProjectStore implements IProjectStore {
       this.unarchived.confirm(project.workspace_id, upserted(project));
       this.details.confirm(project.id, () => project);
       return project;
+    });
+
+  /**
+   * @description makes the caller a member of a project; the store then shows it as he now sees it, in its place in
+   * its list, else last. Fails, changing nothing, when nerve refuses.
+   */
+  joinProject = (projectId: string): Promise<Project> =>
+    this.changes(async () => {
+      const project = await this.service.join(projectId);
+      (project.archived_at ? this.archived : this.unarchived).confirm(project.workspace_id, upserted(project));
+      this.details.confirm(project.id, () => project);
+      return project;
+    });
+
+  /**
+   * @description ends the caller's membership of a project, which the store then no longer gives (nerve may still
+   * list a public one to him: the next fetch shows it). Fails, changing nothing, when nerve refuses (its only admin).
+   */
+  leaveProject = (project: ProjectRef): Promise<void> =>
+    this.changes(async () => {
+      await this.service.leave(project.id);
+      this.forget(project);
     });
 
   /**

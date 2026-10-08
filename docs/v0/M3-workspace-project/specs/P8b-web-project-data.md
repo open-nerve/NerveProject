@@ -61,9 +61,9 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 ### 2.4 加入、离开；权限 store 的项目一半（Task 4；3.4、7.3；M2 交接第 11 节；P14、P18）
 
 - `ProjectStore.joinProject(projectId)`：回答是调用者此刻看到的项目（带他的 `member_role`），写进它所在的那份列表（已归档的进已归档的列表；原位，没有时在最后）和它自己的读；`leaveProject(project)`：之后 store 不再给出它（两份列表和它自己的读都去掉；公开项目在下一次取数时显示为不是成员）。两者与其余修改同一个队列（第 3 节第 4 条）。
-- `UserPermissionStore(rootStore)`（`core/store/user/permissions.store.ts`，重写）只读两个 store：工作区角色是列表给出的 `Workspace.role`（P8a），项目角色是项目 store 给出的 `Project.member_role`。`getProjectRoleByWorkspaceSlugAndProjectId(slug, projectId)`：项目属于这个工作区、调用者是成员时给出角色，工作区管理员给出管理员（PM+WA 是管理员；WA- 什么都没有，P18）；项目、工作区不在 store 中时什么都不给。权限 store 自己什么都不存，所以离开或删除工作区之后它的项目没有角色，同一个 slug 重建的工作区也没有旧项目的角色（P14）。`projectUserInfo`、`workspaceProjectsPermissions`、`fetchUserProjectInfo`、`fetchUserProjectPermissions`、`getProjectRolesByWorkspaceSlug`、`joinProject`、`leaveProject` 和它的 `WorkspaceService` 字段删除（P8a spec 第 3 节第 4 条关闭）。`UserStore.projectsWithCreatePermissions` 从 `joinedProjectIds` 和项目角色算出。
+- `UserPermissionStore(rootStore)`（`core/store/user/permissions.store.ts`，重写）只读两个 store：工作区角色是列表给出的 `Workspace.role`（P8a），项目角色是项目 store 给出的 `Project.member_role`。`getProjectRoleByWorkspaceSlugAndProjectId(slug, projectId)`：项目属于这个工作区、调用者是成员时给出角色，工作区管理员给出管理员（PM+WA 是管理员；WA- 什么都没有，P18）；项目、工作区不在 store 中时什么都不给，工作区管理员也一样（不开放的写法，第 3 节第 22 条）。权限 store 自己什么都不存，所以离开或删除工作区之后它的项目没有角色，同一个 slug 重建的工作区也没有旧项目的角色（P14）。`projectUserInfo`、`workspaceProjectsPermissions`、`fetchUserProjectInfo`、`fetchUserProjectPermissions`、`getProjectRolesByWorkspaceSlug`、`joinProject`、`leaveProject` 和它的 `WorkspaceService` 字段删除（P8a spec 第 3 节第 4 条关闭）。`UserStore.projectsWithCreatePermissions` 从 `joinedProjectIds` 和项目角色算出。
 - 删除：`UserService.joinProject`、`leaveProject`；`WorkspaceService.getWorkspaceUserProjectsRole`；`ProjectMemberService.projectMemberMe` 和模块级的 `projectMemberService`；`IUserProjectsRole`；键 `WORKSPACE_PROJECTS_ROLES_INFORMATION`、`PROJECT_ME_INFORMATION`；两个包装层取项目角色和 `project-members/me` 的 `useSWR`。关键词规则 `project-invitations` 的例外删除（M1-P3 的项目成员一条关闭）；`plane-workspace-urls` 加上删掉的 `/project-roles/` 和项目的 `project-members/me/`、`members/leave/`（第 3 节第 7 条）。
-- 测试：`permissions.store.test.ts` 9 → 20 个：`UserPermissionStore, in a project` 的 `allows $who what nerve allows in it, in the project named or in the address's`（9.2 的项目一列：PA、PM、PG、PM+WA、WA-、WM-公、WM-私、WG-、P-前，9 行；每行核对管理员、成员、任何人、只有访客四组，在给出的项目和地址的项目中各一次）；经别的工作区不给角色；离开的工作区和同一个 slug 重建的工作区都不给（P14）。`project.store.changes.test.ts` 加入（先读了它自己的读，加入之后两处都是回答）、加入的已归档项目、离开、拒绝的两行、排队。
+- 测试：`permissions.store.test.ts` 9 → 22 个：`UserPermissionStore, in a project` 的 `allows $who what nerve allows in it, in the project named or in the address's`（9.2 的项目一列：PA、PM、PG、PM+WA、WA-、WM-公、WM-私、WG-、P-前，9 行；另加工作区管理员的两行：store 没有的项目、他另一个工作区的项目，第 3 节第 22 条；每行核对管理员、成员、任何人、只有访客四组，在给出的项目和地址的项目中各一次）；经别的工作区不给角色；离开的工作区和同一个 slug 重建的工作区都不给（P14）。`project.store.changes.test.ts` 加入（先读了它自己的读，加入之后两处都是回答）、加入的已归档项目、离开、拒绝的两行、排队。
 
 ### 2.5 调用者在项目里的标签栏；标识检查；旧 `ProjectService`（Task 5；3.18、7.3；P4b 的交接；Codex M-3）
 
@@ -185,7 +185,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 21. **裁定 D10（接受）：页面上看得到的不同**（W17；P9–P11 照第 2 节的故事改页面）：
     - 项目一侧现在能显示：`7390e012` 上项目的列表、读和子资源都是 404（附录 A.5），项目页和侧边栏是空的、项目的页面打不开。
     - 封面只显示，没有上传和预设的选择，没有封面的显示默认图；新建项目不再随机给封面（第 3 条）。卡片没有收藏的星标，创建项目没有"加入收藏"；侧边栏的"收集箱"没有数字；列表视图中工作项的键宽按一位数字算。
-    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。归档、恢复的确认弹窗中，"归档"或"恢复"按钮不再有 `tabIndex={1}`：Tab 键按文档的顺序先到"取消"，原来先到它（Task 3 清 oxlint 警告时改的，评审 m4）。
+    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。归档、恢复的确认弹窗中，"归档"或"恢复"按钮不再有 `tabIndex={1}`：Tab 键按文档的顺序先到"取消"，原来先到它（Task 3 清 oxlint 警告时改的，评审 m4）；加入项目的弹窗中的"加入项目"按钮同样（Task 4）。
     - 项目、标签栏、成员角色、状态和标签的拖动在 nerve 回答之后才显示（第 12 条）；侧边栏项目的顺序是 nerve 回答的位置。连续两次拖动或两次标签栏的修改，第二次从第一次的回答算（第 15 条）；标签放到第一个之前的位置是它减 10000（原来是它的一半）。项目页在已归档的列表也到了之后才显示。
     - 加入项目之后显示 nerve 回答的项目；离开之后它立即从列表中消失（公开项目在下一次取数时显示为不是成员）。
     - 项目包装层：看得到、不是成员（公开项目）→ 加入的界面；找不到（不存在、看不到的私密项目、删除、离开、在另一个工作区的地址下打开）→"找不到项目"；nerve 连不上 → `SessionUnavailable`，带重取；Plane 的"无权访问"界面没有了。不是成员的人不发任何子资源的请求（原来发出四个、都是 403）。
@@ -193,6 +193,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
     - 被拒绝的标签移动和"移出分组"提示失败（原来什么都不提示）。对 store 没有列出的成员、没有的状态和标签，修改不发请求、直接失败。
     - 工作区的状态只在调用者的列表有这个工作区时取（原来对不是成员的工作区也按 slug 发出）；项目设置的成员默认值不再自己取项目（少一个重复的请求）。项目一侧的取数每次挂载都重取，聚焦时不取（P8a 的 F-1）。
     - 项目的工作项列表和已归档工作项列表中，工作项的创建、修改、删除、归档之后不再重取项目（少一个请求；Task 3，裁定 T3-c）。
+22. **裁定 T4-pre：项目角色不开放（fail closed）**（Task 4 进行中一次自动的安全评审提出）：页面按权限 store 决定显示什么、取什么（7.1），所以项目角色只在四条都成立时给出：工作区是调用者的、项目 store 给出这个项目、`project.workspace_id` 等于这个工作区的 id、`member_role` 不为 `null`；之后工作区管理员是管理员（PM+WA），其余是他的 `member_role`（WA- 仍什么都没有）。plan 的 `permissions.store.ts` 本来就这样写，代码不变；评审读到的开放写法（store 没有的项目给工作区管理员管理员、给其余的人访客，不比较项目的工作区）是变异 `t4-pf-unlisted-guest` 在 `mut.py` 运行时临时写进文件的样子。变化在测试：`allows $who …` 的表加两行，store 没有的项目和他另一个工作区的项目（在那里是它的管理员），在其中工作区管理员也什么都没有（工作区的其余角色在 store 没有的项目中的行是 WM-私、WG-、P-前）；两个变异 `t4-pf-unknown-project-open`、`t4-pf-foreign-workspace` 由这两行发现（附录 A.2）。
 
 **交接到 P8b 的事项的落点**（brief"Carried into P8b"）：
 
@@ -306,6 +307,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - 一个变异列在它守的性质出现的 Task（`mutcheck.py`：每个变异要改的文字在它的 Task 的快照上都恰好出现一次；其中 23 个要改的文字在更早的快照上就已出现：它们改的是 P8b 之前就有的代码，例如 `reconciled.ts`、`sortStates`、旧 `ProjectService`、项目卡片、工作区包装层，列在第一个依赖这个性质的 Task，或删掉那个地址的 Task）。每个 Task 的变异另在那个 Task 自己的快照上跑过（`mutpertask.py`：把原型的源码换成那个快照、从它构建工作区内的包，先在没有变异的树上跑一遍变异要用的每个检查，都通过，再跑变异）：158 个都在它自己的 Task 的树上被发现，所用的层与最终原型上相同（`t4-pf-old-workspace` 在 Task 4 的树上另由 `tsc` 发现）。所以 plan 的变异表中没有"（之后的 Task 起）"的标记。
 - **例外**（只由评审或之后的 Task 才能发现的性质）：没有。修订前唯一的一个（`t10-pw-children-non-member` 从 Task 11 起）随 S2 并进 Task 10 而消失（裁定 D9）。
 - **Task 3 的修正轮**（Task 3 的评审 I1、I2、m1、m2；裁定 T3-a、T3-b）另加 7 个，不在上面的 158 个、表和 W18 的计数中：它们照 `mut.py` 的写法在 Task 3 的树上跑过，最终原型上没有跑。`t3-page-no-archived`（W2，项目页的 hook 不取已归档的列表）、`t3-page-unarchived`（W2，改取未归档的列表）、`t3-page-unlisted`（W5，调用者的列表还没有地址的工作区就按地址取）由 `use-archived-projects-fetch.test.ts` 发现；`t3-ps-sort-read`（W3，侧边栏的移动不写项目自己的读）、`t3-ps-read-refusal-forgets`（W3，项目的读再取被拒绝时丢掉已有的读）、`t3-ps-archive-twice`、`t3-ps-restore-twice`（W3，归档、恢复的回答追加到列表，不是 `upserted`：重取的列表已有它时列两次）由项目 store 的测试发现，在修正之前的测试上都存活。项目页不再调用这个 hook、连同导入一起删掉，仍没有检查发现（knip 把测试当作入口，hook 仍算被用到；只删调用、留下导入时 oxlint 的上限发现）；它要等项目页的故事（P10）。
+- **Task 4 的裁定 T4-pre**（第 3 节第 22 条）另加 2 个 W9 的变异，同样不在上面的计数中，在 Task 4 的树上跑过：`t4-pf-unknown-project-open`（store 没有的项目给工作区管理员管理员的角色）、`t4-pf-foreign-workspace`（项目属于调用者的任何一个工作区就给出角色，不必是地址的那个）。它们由权限表新加的两行发现；在 plan 原来的测试上也被发现，分别由 P14 的测试（同一个 slug 重建的工作区中，旧项目是 store 没有的）和"经别的工作区不给角色"的测试，不在表中。
 
 ### A.3 清扫
 

@@ -155,6 +155,7 @@
         "web/apps/web/core/store/workspace/**",
         "web/apps/web/core/store/member/workspace/**",
         "web/apps/web/core/store/user/permissions.store.ts",
+        "web/apps/web/core/store/user/permissions.store.test.ts",
         "web/apps/web/core/services/workspace/**",
         "web/apps/web/core/components/workspace/settings/**",
         "web/apps/web/core/components/profile/use-profile-member.ts",

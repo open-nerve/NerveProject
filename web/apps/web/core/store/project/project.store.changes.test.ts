@@ -105,7 +105,7 @@ describe("ProjectStore, the changes", () => {
     expect(store.getProjectById(web.id)).toEqual(restored);
   });
 
-  it("forgets a deleted project: neither the lists nor its own read give it", async () => {
+  it("forgets a deleted project and one the caller left: neither the lists nor its own read give it", async () => {
     const { nerve, store } = await loaded();
     await loadArchivedProjects(nerve, store, acme, [old]);
     const shelved = await sent(
@@ -126,8 +126,48 @@ describe("ProjectStore, the changes", () => {
     );
     expect(deleted.error).toBeUndefined();
     expect(store.getProjectById(web.id)).toBeUndefined();
-    expect(store.workspaceProjectIds).toEqual(ids([ops, docs]));
-    expect(store.joinedProjectIds).toEqual([docs.id]);
+
+    const left = await sent(
+      nerve,
+      () => store.leaveProject(docs),
+      ["POST", `/api/v0/projects/${docs.id}/leave`],
+      noContent()
+    );
+    expect(left.error).toBeUndefined();
+    expect(store.workspaceProjectIds).toEqual([ops.id]);
+    expect(store.joinedProjectIds).toEqual([]);
+  });
+
+  it("shows a project the caller joined as nerve now gives it, in its place and as its own read", async () => {
+    const { nerve, store } = await loaded();
+    await loadProject(nerve, store, ops);
+    const joined: Project = { ...ops, member_role: 20, sort_order: 3000 };
+    const joining = await sent(
+      nerve,
+      () => store.joinProject(ops.id),
+      ["POST", `/api/v0/projects/${ops.id}/join`],
+      json(200, joined)
+    );
+    expect(joining.value).toEqual(joined);
+    expect(store.workspaceProjectIds).toEqual(ids([web, ops, docs]));
+    expect(store.joinedProjectIds).toEqual(ids([docs, web, ops]));
+    expect(store.getProjectById(ops.id)).toEqual(joined);
+  });
+
+  it("puts a project the caller joined in its own list: an archived one in the archived list", async () => {
+    const { nerve, store } = await loaded();
+    const shelf = projectOf("SHELF", acme.id, { member_role: null, archived_at: "2026-10-02T09:00:00Z" });
+    await loadArchivedProjects(nerve, store, acme, [old, shelf]);
+    const joined: Project = { ...shelf, member_role: 15, sort_order: 4000 };
+    await sent(
+      nerve,
+      () => store.joinProject(shelf.id),
+      ["POST", `/api/v0/projects/${shelf.id}/join`],
+      json(200, joined)
+    );
+    expect(store.workspaceProjectIds).toEqual(ids([web, ops, docs]));
+    expect(store.totalProjectIds).toEqual(ids([web, ops, docs, old, joined]));
+    expect(store.getProjectById(shelf.id)).toEqual(joined);
   });
 
   it("moves a project in the caller's sidebar before the one he dropped it on, to the place nerve gives it", async () => {
@@ -170,6 +210,8 @@ describe("ProjectStore, the changes", () => {
     { change: "a deletion", send: (store) => store.deleteProject(web), refusal: problem(403, "forbidden") },
     { change: "an archiving", send: (store) => store.archiveProject(web.id), refusal: problem(403, "forbidden") },
     { change: "an unarchiving", send: (store) => store.restoreProject(web.id), refusal: problem(403, "forbidden") },
+    { change: "a join", send: (store) => store.joinProject(ops.id), refusal: problem(403, "forbidden") },
+    { change: "a leave", send: (store) => store.leaveProject(web), refusal: problem(409, "project.sole_admin") },
     {
       change: "a move in the sidebar",
       send: (store) => store.updateProjectSortOrder(web, docs.id, false),
@@ -197,9 +239,20 @@ describe("ProjectStore, the changes", () => {
     await inTurn(nerve, 2, ["DELETE", `/api/v0/projects/${web.id}`], problem(403, "forbidden"));
     await inTurn(nerve, 3, ["POST", `/api/v0/projects/${web.id}/archive`], problem(403, "forbidden"));
     await inTurn(nerve, 4, ["POST", `/api/v0/projects/${web.id}/unarchive`], json(200, renamed));
-    await inTurn(nerve, 5, ["PATCH", placeOf(web)], json(200, preferencesOf({ sort_order: 500 })));
+    await inTurn(nerve, 5, ["POST", `/api/v0/projects/${ops.id}/join`], json(200, { ...ops, member_role: 20 }));
+    await inTurn(nerve, 6, ["POST", `/api/v0/projects/${web.id}/leave`], problem(409, "project.sole_admin"));
+    await inTurn(nerve, 7, ["PATCH", placeOf(web)], json(200, preferencesOf({ sort_order: 500 })));
     await until(() => sending.every((change) => change.settled), "the last change");
-    expect(sending.map((change) => change.error === undefined)).toEqual([true, true, false, false, true, true]);
+    expect(sending.map((change) => change.error === undefined)).toEqual([
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+    ]);
     expect(store.getProjectById(web.id)).toEqual({ ...renamed, sort_order: 500 });
     // the unarchiving's answer is in its place, once
     expect(store.workspaceProjectIds).toEqual(ids([api, web, ops, docs]));
