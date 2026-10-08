@@ -78,7 +78,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - `ProjectMembersService(api)`：`list`、`add`（`ProjectMembersAdd`，回答是加入的成员关系）、`update`、`remove`；旧的 `project-member.service.ts` 删除。
 - `ProjectMemberStore(memberRoot: Pick<IMemberRootStore, "memberMap">, rootStore, api)`（重写）：每个项目的成员关系按成员的账户 id 存，项目按它的 id 存（`ReconciledByKey`）；项目 store 不再给出这个项目时什么都不给。`projectMemberIds`、`getProjectMemberDetails(userId, projectId)`（`IProjectMemberDetails = ProjectMember & { member: MemberUser }`，公开资料来自工作区成员）、`getProjectMemberIds(projectId, includeGuestUsers)`（调用者在最前，其余按显示名）、`getFilteredProjectMemberDetails`；`fetchProjectMembers(projectId)`；修改经 `changes`、写入回答：`bulkAddMembersToProject`、`updateMemberRole`、`removeMemberFromProject`；store 没有列出这个人时不问 nerve、直接失败。修改改到的项目一侧（`member_ids`、调用者自己的 `member_role`）经 `ProjectStore.confirmProject` 写到项目 store 显示它的每一处，也重放到取数在外的回答上。Plane 的乐观修改和回滚删除。
 - `TProjectMembership`、`IProjectBulkAddFormData`、`RowData` 删除；成员行直接用 `IProjectMemberDetails`，角色是 `ProjectMember.role`；加成员的表单值是 `ProjectMembersAdd`。成员下拉框没有调用方传的 `memberIds` 删除（7.9）。关键词：项目的 `members/leave/`（Task 4）放宽到项目的 `members/`，删除的旧成员 service 的四个方法都命中（第 3 节第 7 条）。
-- 测试：`project-member.store.test.ts` 21 个（`projectTab` 的两个工作区）：成员 4 个（列出，连同公开资料；离开的项目不给；拒绝；会话已换）；修改：加入、改角色（连同调用者自己的角色；回答的 `created_at` 与列表的不同）、移出，调用者另一个工作区的项目（加入的成员只到那个项目，地址的项目不变；P8a 的第三条教训），已归档的项目（移出之后已归档的列表中的项目没有他），拒绝的 `it.each` 3 行，没有列出的成员的 `it.each` 2 行，从已列出成员的 store 开始：列表中没有的成员、调用者离开的项目（P8a 的第一条教训），排队，取数不等修改；三种交错（成员关系按成员存，"已列出的又被加入"不会列两次，文件里说明；项目的列表在外时加入成员，nerve 读在加入之前、之后两行，项目的 `member_ids` 都只有他一次：Task 2 记下 Plane 的批量加入把新的 id 加两次）。
+- 测试：`project-member.store.test.ts` 21 个（`projectTab` 的两个工作区）：成员 4 个（列出，连同公开资料；离开的项目不给；拒绝；会话已换）；修改：加入、改角色（连同调用者自己的角色，回答的角色与他请求的不同；回答的 `created_at` 与列表的不同）、移出，调用者另一个工作区的项目（加入的成员只到那个项目，地址的项目不变；P8a 的第三条教训），已归档的项目（移出之后已归档的列表中的项目没有他），拒绝的 `it.each` 3 行，没有列出的成员的 `it.each` 2 行，从已列出成员的 store 开始：列表中没有的成员、调用者离开的项目（P8a 的第一条教训），排队（调用时成员还在、轮到时已移出的改角色和移出不问 nerve、直接失败：成员关系在轮到它时才找，裁定 T6-a），取数不等修改；三种交错（成员关系按成员存，"已列出的又被加入"不会列两次，文件里说明；项目的列表在外时加入成员，nerve 读在加入之前、之后两行，项目的 `member_ids` 都只有他一次：Task 2 记下 Plane 的批量加入把新的 id 加两次）。
 
 ### 2.7 M7 的部分先走；标签的页面清零（Task 7；3.1、3.16、3.17、7.3）
 
@@ -316,6 +316,10 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - **Task 5 的修正轮**（Task 5 的评审 I1、I2、M1、M2；裁定 T5-a、T5-b）另加 9 个，同样不在上面的计数中，在 Task 5 的树上跑过：
   - 标签栏 store（`preferences.store.test.ts`），在修正之前的测试上都存活：`t5r-pp-change-on-default`（W3，store 没有标签栏时修改作用于 nerve 的默认并发出，即修正之前的代码；由取数在外时的修改发现）；`t5r-pp-chain-on-request`（W6，每个修改作用于上一个修改发出的请求体，不是 nerve 的回答；由两次连续的隐藏、排队两个测试发现）；`t5r-pp-refusal-resets`、`t5r-pp-cut-resets`（W3，被拒绝的、被会话切断的重取把 store 已有的标签栏换成默认的；由加载的不是默认的标签栏发现）。`t5r-pp-change-at-call` 是 plan 的 `t5-pp-change-at-call` 在修正后的 store 上的写法（它要改的文字已不在），修正前后的测试都发现它。
   - 页头的三个修改（`tab-navigation-utils.test.ts`，修正之前没有测试）：`t5r-nav-hide-duplicates`（隐藏已隐藏的列两次）、`t5r-nav-toggle-always`（切换当前默认的仍是它，不回到工作项）、`t5r-nav-show-nothing`（显示什么都不去掉）、`t5r-nav-show-all`（显示去掉全部）。
+- **Task 6**（plan 的测试之外加的五个测试，和修正轮：评审 I1、M1，裁定 T6-a）另加 10 个，再记 1 个等价的，同样不在上面的计数中，在 Task 6 的树上跑过，都由 `project-member.store.test.ts` 发现：
+  - 加的五个测试（P8a 的教训），在 plan 的测试上都存活：`t6r-pm-add-project-twice`（W3，项目的列表在外、nerve 读在加入之后时，加入的成员在项目的 `member_ids` 上列两次：Task 2 记下的 Plane 的批量加入）、`t6r-pm-confirm-address-project`（W3，加入写到地址的项目的成员中）、`t6r-ps-confirm-address-workspace`（W3，`confirmProject` 改地址的工作区的列表，不是项目自己工作区的；这两个是第三条教训，由调用者另一个工作区的项目发现）、`t6r-ps-confirm-archived`（W3，`confirmProject` 不改已归档的列表）、`t6r-pm-unlisted-loaded`（W3，store 已列出这个项目的成员、其中没有这个人时也发出；第一条教训）、`t6r-pm-change-left`（W3，调用者离开的项目的成员修改照样发出，P14）。
+  - 修正轮，在修正之前的测试上都存活：`t6r-pm-membership-at-call`、`t6r-pm-role-membership-at-call`、`t6r-pm-remove-membership-at-call`（W6，改角色、移出所找的成员关系在调用时找，不是在轮到它时；由排队的测试中调用时成员还在、轮到时已移出的两个修改发现）；`t6r-pm-own-role-request`（W3，项目上调用者自己的角色是他请求的，不是 nerve 回答的；由回答的角色与请求的不同发现）。
+  - 等价：`t6r-pm-add-ids-request`（项目的 `member_ids` 加的是请求中的 id，不是回答中的）。nerve 的加入全部或全不，回答是请求中每个目标的成员关系、按请求的顺序（`server/internal/modules/project/app/add_members.go` 的 `Execute`），成功时两组 id 相同。
 
 ### A.3 清扫
 
@@ -455,7 +459,7 @@ plan 共 13,308 行：Task 1 之前（约束、一次性脚本、文件结构）
 | 11 关键词的收尾、死行、文档 | 268 | 209 | 5 |
 
 - **Phase 的大小**（brief 的检查，写 plan 之前做；修订之后重量）：11 个 Task，在约 16 个之内；修订前 Task 3 的 1,559 行比约 1,500 行多 4%、Task 8 是 1,504 行（裁定 D2 接受）；修订之后 Task 3 是 1,875 行、Task 8 是 1,726 行，Task 10 随 S2 从 604 行到 873 行（D9 估计约 860 行），Task 11 从 485 行到 268 行（第 3 节第 2 条，请再裁定）。
-- **文件的行数**（约 400 行）：P8b 写或重写的文件中最长的是 `state.store.test.ts` 369 行、`project-member.store.test.ts` 358 行（Task 6 加了五个测试）、`project.store.ts` 332 行、`label.store.test.ts` 331 行、S2 292 行、`project.store.test.ts` 257 行、`project.store.changes.test.ts` 255 行（第 3 节第 9 条）；P8a 的 `root.store.test.ts` 加了一个测试，286 行。只为使用方改到的 Plane 文件，原来超过 400 行的都没有变长，除了第 3 节第 8 条的三个（808 → 812、465 → 466、414 → 415）；`tools/keywords.json` 2,189 → 2,208（规则的样例，A.11）。其余手改的 Plane 文件都变短了（例如 `project/form.tsx` 462 → 411、`projects-list-item.tsx` 476 → 460、`project-inbox.store.ts` 524 → 511）。
+- **文件的行数**（约 400 行）：P8b 写或重写的文件中最长的是 `state.store.test.ts` 369 行、`project-member.store.test.ts` 366 行（Task 6 加了五个测试，修正轮加长排队的测试）、`project.store.ts` 332 行、`label.store.test.ts` 331 行、S2 292 行、`project.store.test.ts` 257 行、`project.store.changes.test.ts` 255 行（第 3 节第 9 条）；P8a 的 `root.store.test.ts` 加了一个测试，286 行。只为使用方改到的 Plane 文件，原来超过 400 行的都没有变长，除了第 3 节第 8 条的三个（808 → 812、465 → 466、414 → 415）；`tools/keywords.json` 2,189 → 2,208（规则的样例，A.11）。其余手改的 Plane 文件都变短了（例如 `project/form.tsx` 462 → 411、`projects-list-item.tsx` 476 → 460、`project-inbox.store.ts` 524 → 511）。
 
 ### A.11 关键词规则
 

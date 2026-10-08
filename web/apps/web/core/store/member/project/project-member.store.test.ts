@@ -168,11 +168,12 @@ describe("ProjectMemberStore, the changes", () => {
     expect(store.getProjectMemberDetails("u-bob", web.id)).toEqual({ ...demoted, member: profile("bob") });
     expect(projects.getProjectById(web.id)?.member_role).toBe(20);
 
-    // ann, an admin of the workspace, makes herself a member of the project
-    const own: ProjectMember = { ...ann, role: 15 };
+    // ann, an admin of the workspace, changes her own role: the project takes the role nerve answers, which the test
+    // makes differ from the one she asked for
+    const own: ProjectMember = { ...ann, role: 5 };
     await sent(nerve, () => store.updateMemberRole(web.id, "u-ann", 15), ["PATCH", membership("ann")], json(200, own));
-    expect(store.getProjectMemberDetails("u-ann", web.id)?.role).toBe(15);
-    expect(projects.getProjectById(web.id)?.member_role).toBe(15);
+    expect(store.getProjectMemberDetails("u-ann", web.id)?.role).toBe(5);
+    expect(projects.getProjectById(web.id)?.member_role).toBe(5);
   });
 
   it("removes a member, whom the project then no longer has among its members", async () => {
@@ -260,17 +261,24 @@ describe("ProjectMemberStore, the changes", () => {
     expect(nerve.calls).toHaveLength(2);
   });
 
-  it("sends each change once nerve has answered the one before it, refused or not", async () => {
+  it("sends each change once nerve has answered the one before it, refused or not, finding the member in its turn", async () => {
     const { nerve, store } = await loaded();
     const promoted = track(store.updateMemberRole(web.id, "u-bob", 20));
     const changed = track(store.updateMemberRole(web.id, "u-bob", 5));
     const removed = track(store.removeMemberFromProject(web.id, "u-bob"));
+    // made while bob is still listed; their turns come after his removal
+    const changedLate = track(store.updateMemberRole(web.id, "u-bob", 15));
+    const removedLate = track(store.removeMemberFromProject(web.id, "u-bob"));
     await inTurn(nerve, 1, ["PATCH", membership("bob")], problem(503, "server_busy"));
     await inTurn(nerve, 2, ["PATCH", membership("bob")], json(200, demoted));
     await inTurn(nerve, 3, ["DELETE", membership("bob")], noContent());
-    await until(() => removed.settled, "the last change");
+    await until(() => changedLate.settled && removedLate.settled, "the changes after the removal");
     expect(promoted.error).toBeInstanceOf(ApiError);
     expect(changed.value).toEqual(demoted);
+    expect(removed).toEqual({ settled: true, value: undefined });
+    expect(changedLate).toMatchObject({ settled: true, error: new Error("Member not found") });
+    expect(removedLate).toMatchObject({ settled: true, error: new Error("Member not found") });
+    expect(nerve.calls).toHaveLength(4);
     expect(store.getProjectMemberIds(web.id, true)).toEqual(["u-ann", "u-cat"]);
   });
 
