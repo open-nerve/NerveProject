@@ -1940,7 +1940,7 @@ modules/access/
 - **关闭**：M2 交接第 2 节中 P8a 的部分（落点规则、`currentUserSettings` 和四处 `await` 删除、取数失败时没有未处理的拒绝）、第 7 节（`IUserLite` → `MemberUser`）；M1-P2、M1-P3、M1-P4 保留名单的前端一侧（前后端一份，有测试）。M2 交接第 3、11 节中工作区一侧的部分，其余在 P8b。
 - **完成线**：S1 和此前的全部故事通过（S2 在 P8b 改写）；M2 交接第 3 节的 `git grep` 中 `WorkspaceService` 的 8 处消失（只调公开操作的可以是 `publicClient`）；`node tools/keywords.mjs` 通过；9.5 中 P8a 的 vitest 通过；`tsc`、knip 通过；改到的文件按 7.9 没有 oxlint 警告，各包上限已调低。
 
-### P8b `web-project-data`：项目一侧的数据层（9 个任务）
+### P8b `web-project-data`：项目一侧的数据层（9 个任务；执行时 11 个 Task，P8b spec 第 3 节第 1 条，裁定 D1）
 - **拆分**：见 P8a 的同一条；P8b 在 P8a 合并之后开始。
 - **目标**：项目一侧的类型、service、store、权限 store 的项目一半和两个包装层项目一侧的挂载时取数迁到新接口，按会话分代、按权限启用；使用方改到能编译、行为不变；关键词规则完整；S2 改写。
 - **评审重点**：不是有效的项目成员（`member_role` 为 `null`）时不取项目的子资源（7.1）；权限 store 的项目角色与 3.4 的服务端规则一致（`getProjectRole` 的规则不变，7.3）；拖动排序一个接一个发出（7.1）。
