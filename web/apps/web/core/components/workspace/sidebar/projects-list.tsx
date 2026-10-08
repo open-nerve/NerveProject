@@ -68,13 +68,13 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
     projectPreferences.showLimitedProjects && joinedProjects.length > projectPreferences.limitedProjectsCount;
 
   const handleCopyText = (projectId: string) => {
-    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() => {
+    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() =>
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("link_copied"),
         message: t("project_link_copied_to_clipboard"),
-      });
-    });
+      })
+    );
   };
 
   const handleOnProjectDrop = (
@@ -158,7 +158,6 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
         <CreateProjectModal
           isOpen={isProjectModalOpen}
           onClose={() => setIsProjectModalOpen(false)}
-          setToFavorite={false}
           workspaceSlug={workspaceSlug}
         />
       )}
@@ -228,8 +227,8 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
             >
               {loader === "init-loader" && (
                 <Loader className="w-full space-y-1.5">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <Loader.Item key={index} height="28px" />
+                  {["first", "second", "third", "fourth"].map((row) => (
+                    <Loader.Item key={row} height="28px" />
                   ))}
                 </Loader>
               )}

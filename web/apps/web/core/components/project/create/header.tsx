@@ -17,7 +17,7 @@ import type { IProject } from "@nerve/types";
 import { getTabIndex } from "@nerve/utils";
 // components
 import { CoverImage } from "@/components/common/cover-image";
-import { ImagePickerPopover } from "@/components/core/image-picker-popover";
+import { DEFAULT_COVER_IMAGE_URL } from "@/helpers/cover-image.helper";
 
 type Props = {
   handleClose: () => void;
@@ -26,10 +26,8 @@ type Props = {
 
 function ProjectCreateHeader(props: Props) {
   const { handleClose, isMobile = false } = props;
-  const { watch, control, setValue } = useFormContext<IProject>();
+  const { control, setValue } = useFormContext<IProject>();
   const { t } = useTranslation();
-  // derived values
-  const coverImage = watch("cover_image_url");
 
   const [isOpen, setIsOpen] = useState(false);
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
@@ -37,7 +35,7 @@ function ProjectCreateHeader(props: Props) {
   return (
     <div className="group relative h-44 w-full rounded-lg">
       <CoverImage
-        src={coverImage}
+        src={DEFAULT_COVER_IMAGE_URL}
         alt={t("project_cover_image_alt")}
         className="absolute top-0 left-0 h-full w-full rounded-lg"
       />
@@ -45,20 +43,6 @@ function ProjectCreateHeader(props: Props) {
         <button type="button" onClick={handleClose} tabIndex={getIndex("close")}>
           <CloseOutline className="h-5 w-5 text-on-color" />
         </button>
-      </div>
-      <div className="absolute right-2 bottom-2">
-        <Controller
-          name="cover_image_url"
-          control={control}
-          render={({ field: { value, onChange } }) => (
-            <ImagePickerPopover
-              label={t("change_cover")}
-              onChange={onChange}
-              value={value ?? null}
-              tabIndex={getIndex("cover_image")}
-            />
-          )}
-        />
       </div>
       <div className="absolute -bottom-[22px] left-3">
         <Controller

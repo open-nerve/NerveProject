@@ -17,16 +17,12 @@ import { Button } from "@nerve/propel/button";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { EFileAssetType } from "@nerve/types";
 import type { Workspace } from "@nerve/api-client";
 import type { IProject } from "@nerve/types";
 import { CustomSelect } from "@nerve/ui";
 import { renderFormattedDate } from "@nerve/utils";
 import { CoverImage } from "@/components/common/cover-image";
-import { ImagePickerPopover } from "@/components/core/image-picker-popover";
 import { TimezoneSelect } from "@/components/global";
-// helpers
-import { handleCoverImageChange } from "@/helpers/cover-image.helper";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -71,7 +67,6 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
   });
   // derived values
   const currentNetwork = NETWORK_CHOICES.find((n) => n.key === project?.network);
-  const coverImage = watch("cover_image_url");
 
   useEffect(() => {
     if (project && projectId !== getValues("id")) {
@@ -166,28 +161,6 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
       timezone: formData.timezone,
     };
 
-    // Handle cover image changes
-    try {
-      const coverImagePayload = await handleCoverImageChange(project.cover_image_url, formData.cover_image_url, {
-        workspaceSlug,
-        entityIdentifier: project.id,
-        entityType: EFileAssetType.PROJECT_COVER,
-      });
-
-      if (coverImagePayload) {
-        Object.assign(payload, coverImagePayload);
-      }
-    } catch (error) {
-      console.error("Error handling cover image:", error);
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: error instanceof Error ? error.message : "Failed to process cover image",
-      });
-      setIsLoading(false);
-      return;
-    }
-
     if (project.identifier !== formData.identifier) {
       const res = await projectService.checkProjectIdentifierAvailability(workspaceSlug, payload.identifier ?? "");
       if (res.exists) setError("identifier", { message: t("common.identifier_already_exists") });
@@ -202,7 +175,12 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="relative h-44 w-full">
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        <CoverImage src={coverImage} alt="Project cover image" className="h-44 w-full rounded-md" />
+        <CoverImage
+          src={project.cover_image_url}
+          showDefaultWhenEmpty
+          alt="Project cover image"
+          className="h-44 w-full rounded-md"
+        />
         <div className="absolute bottom-4 z-5 flex w-full items-end justify-between gap-3 px-4">
           <div className="flex flex-grow gap-3 truncate">
             <Controller
@@ -250,23 +228,6 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                   {currentNetwork && t(currentNetwork?.i18n_label)}
                 </span>
               </span>
-            </div>
-          </div>
-          <div className="flex flex-shrink-0 justify-center">
-            <div>
-              <Controller
-                control={control}
-                name="cover_image_url"
-                render={({ field: { value, onChange } }) => (
-                  <ImagePickerPopover
-                    label={t("change_cover")}
-                    onChange={onChange}
-                    value={value ?? null}
-                    disabled={!isAdmin}
-                    projectId={project.id}
-                  />
-                )}
-              />
             </div>
           </div>
         </div>

@@ -64,7 +64,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
   };
 
   const baseNavigation = useCallback(
-    (workspaceSlug: string, projectId: string): TNavigationItem[] => [
+    (): TNavigationItem[] => [
       {
         i18n_key: "sidebar.work_items",
         key: "work_items",
@@ -116,13 +116,13 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         sortOrder: 6,
       },
     ],
-    [project]
+    [project, workspaceSlug, projectId]
   );
 
   // memoized navigation items, sorted by sortOrder
   const navigationItemsMemo = useMemo(
-    () => baseNavigation(workspaceSlug, projectId).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
-    [workspaceSlug, projectId, baseNavigation]
+    () => baseNavigation().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
+    [baseNavigation]
   );
 
   const isActive = useCallback(
@@ -149,8 +149,6 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         const hasAccess = allowPermissions(item.access, EUserPermissionsLevel.PROJECT, workspaceSlug, project.id);
         if (!hasAccess) return null;
 
-        const shouldShowCount = item.key === "intake" && (project.intake_count ?? 0) > 0;
-
         return (
           <Link key={item.key} to={item.href} onClick={handleProjectClick}>
             <SidebarNavItem isActive={!!isActive(item)}>
@@ -161,7 +159,6 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
                   />
                   <span className="text-11 font-medium">{t(item.i18n_key)}</span>
                 </div>
-                {shouldShowCount && <span className="text-11 font-medium text-tertiary">{project.intake_count}</span>}
               </div>
             </SidebarNavItem>
           </Link>

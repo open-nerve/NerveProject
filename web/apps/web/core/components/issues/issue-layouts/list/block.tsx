@@ -69,7 +69,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
   const { workspaceSlug } = useParams();
   // hooks
   const { sidebarCollapsed: isSidebarCollapsed } = useAppTheme();
-  const { getProjectIdentifierById, currentProjectNextSequenceId } = useProject();
+  const { getProjectIdentifierById } = useProject();
   const { getIsIssuePeeked, peekIssue, setPeekIssue, subIssues: subIssuesStore } = useIssueDetail();
 
   const handleIssuePeekOverview = (issue: TIssue) =>
@@ -135,12 +135,9 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     }
   };
 
-  // Calculate width for: projectIdentifier + "-" + dynamic sequence number digits
-  // Use next_work_item_sequence from backend (static value from project endpoint)
-  const maxSequenceId = currentProjectNextSequenceId ?? 1;
-  const keyMinWidth = displayProperties?.key
-    ? calculateIdentifierWidth(projectIdentifier?.length ?? 0, maxSequenceId)
-    : 0;
+  // Calculate width for: projectIdentifier + "-" + the sequence number's digits: one, as nerve's project has no
+  // count of its work items until M4 adds it (M3 design 3.2)
+  const keyMinWidth = displayProperties?.key ? calculateIdentifierWidth(projectIdentifier?.length ?? 0, 1) : 0;
 
   const workItemLink = generateWorkItemLink({
     workspaceSlug,

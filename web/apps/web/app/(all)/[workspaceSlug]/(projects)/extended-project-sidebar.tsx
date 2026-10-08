@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
@@ -28,6 +28,7 @@ import { ExtendedSidebarWrapper } from "./extended-sidebar-wrapper";
 export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar() {
   // refs
   const extendedProjectSidebarRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   // states
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -84,14 +85,19 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
 
   const handleClose = useCallback(() => toggleExtendedProjectSidebar(false), [toggleExtendedProjectSidebar]);
 
+  // the search takes the focus each time the sidebar opens
+  useEffect(() => {
+    if (isExtendedProjectSidebarOpened) searchInputRef.current?.focus();
+  }, [isExtendedProjectSidebarOpened]);
+
   const handleCopyText = (projectId: string) => {
-    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() => {
+    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() =>
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("link_copied"),
         message: t("project_link_copied_to_clipboard"),
-      });
-    });
+      })
+    );
   };
   return (
     <>
@@ -99,7 +105,6 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
         <CreateProjectModal
           isOpen={isProjectModalOpen}
           onClose={() => setIsProjectModalOpen(false)}
-          setToFavorite={false}
           workspaceSlug={workspaceSlug}
         />
       )}
@@ -134,7 +139,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
               className="w-full max-w-[234px] border-none bg-transparent text-13 outline-none placeholder:text-placeholder"
               placeholder={t("search")}
               value={searchQuery}
-              autoFocus
+              ref={searchInputRef}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>

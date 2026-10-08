@@ -10,13 +10,11 @@ import { FormProvider, useForm } from "react-hook-form";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { EFileAssetType } from "@nerve/types";
 // components
 import ProjectCommonAttributes from "@/components/project/create/common-attributes";
 import ProjectCreateHeader from "@/components/project/create/header";
 import ProjectCreateButtons from "@/components/project/create/project-create-buttons";
 // hooks
-import { getCoverImageType, uploadCoverImage } from "@/helpers/cover-image.helper";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // nerve imports
@@ -25,19 +23,17 @@ import { ProjectAttributes } from "./attributes";
 import { getProjectFormValues } from "./utils";
 
 export type TCreateProjectFormProps = {
-  setToFavorite?: boolean;
   workspaceSlug: string;
   onClose: () => void;
   handleNextStep: (projectId: string) => void;
   data?: Partial<TProject>;
-  updateCoverImageStatus: (projectId: string, coverImage: string) => Promise<void>;
 };
 
 export const CreateProjectForm = observer(function CreateProjectForm(props: TCreateProjectFormProps) {
-  const { setToFavorite, workspaceSlug, data, onClose, handleNextStep, updateCoverImageStatus } = props;
+  const { workspaceSlug, data, onClose, handleNextStep } = props;
   // store
   const { t } = useTranslation();
-  const { addProjectToFavorites, createProject, updateProject } = useProject();
+  const { createProject } = useProject();
   // states
   const [shouldAutoSyncIdentifier, setShouldAutoSyncIdentifier] = useState(true);
   // form info
@@ -47,67 +43,16 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
   });
   const { handleSubmit, reset, setValue } = methods;
   const { isMobile } = usePlatformOS();
-  const handleAddToFavorites = (projectId: string) => {
-    if (!workspaceSlug) return;
-
-    addProjectToFavorites(workspaceSlug, projectId).catch(() => {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: t("failed_to_remove_project_from_favorites"),
-      });
-    });
-  };
 
   const onSubmit = async (formData: Partial<TProject>) => {
     // Upper case identifier
-    formData.identifier = formData.identifier?.toUpperCase();
-    const coverImage = formData.cover_image_url;
-    let uploadedAssetUrl: string | null = null;
-
-    if (coverImage) {
-      const imageType = getCoverImageType(coverImage);
-
-      if (imageType === "local_static") {
-        try {
-          uploadedAssetUrl = await uploadCoverImage(coverImage, {
-            workspaceSlug,
-            entityIdentifier: "",
-            entityType: EFileAssetType.PROJECT_COVER,
-          });
-        } catch (error) {
-          console.error("Error uploading cover image:", error);
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: error instanceof Error ? error.message : "Failed to upload cover image",
-          });
-          return Promise.reject(error);
-        }
-      } else {
-        formData.cover_image = coverImage;
-        formData.cover_image_asset = null;
-      }
-    }
-
-    return createProject(workspaceSlug, formData)
-      .then(async (res) => {
-        if (uploadedAssetUrl) {
-          await updateCoverImageStatus(res.id, uploadedAssetUrl);
-          await updateProject(workspaceSlug, res.id, { cover_image_url: uploadedAssetUrl });
-        } else if (coverImage && coverImage.startsWith("http")) {
-          await updateCoverImageStatus(res.id, coverImage);
-          await updateProject(workspaceSlug, res.id, { cover_image_url: coverImage });
-        }
+    return createProject(workspaceSlug, { ...formData, identifier: formData.identifier?.toUpperCase() })
+      .then((res) => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
           title: t("success"),
           message: t("project_created_successfully"),
         });
-
-        if (setToFavorite) {
-          handleAddToFavorites(res.id);
-        }
         return handleNextStep(res.id);
       })
       .catch((err) => {

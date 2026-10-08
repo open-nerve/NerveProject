@@ -6,22 +6,17 @@
 
 import { useEffect, useState } from "react";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
-import { getAssetIdFromUrl, checkURLValidity } from "@nerve/utils";
 // hooks
 import useKeypress from "@/hooks/use-keypress";
 // components
 import { CreateProjectForm } from "@/components/projects/create/root";
 // nerve imports
 import type { TProject } from "@nerve/types";
-// services
-import { FileService } from "@/services/file.service";
-const fileService = new FileService();
 import { ProjectFeatureUpdate } from "./project-feature-update";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  setToFavorite?: boolean;
   workspaceSlug: string;
   data?: Partial<TProject>;
 };
@@ -32,7 +27,7 @@ enum EProjectCreationSteps {
 }
 
 export function CreateProjectModal(props: Props) {
-  const { isOpen, onClose, setToFavorite = false, workspaceSlug, data } = props;
+  const { isOpen, onClose, workspaceSlug, data } = props;
   // states
   const [currentStep, setCurrentStep] = useState<EProjectCreationSteps>(EProjectCreationSteps.CREATE_PROJECT);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
@@ -50,14 +45,6 @@ export function CreateProjectModal(props: Props) {
     setCurrentStep(EProjectCreationSteps.FEATURE_SELECTION);
   };
 
-  const handleCoverImageStatusUpdate = async (projectId: string, coverImage: string) => {
-    if (!checkURLValidity(coverImage)) {
-      await fileService.updateBulkProjectAssetsUploadStatus(workspaceSlug, projectId, projectId, {
-        asset_ids: [getAssetIdFromUrl(coverImage)],
-      });
-    }
-  };
-
   useKeypress("Escape", () => {
     if (isOpen) onClose();
   });
@@ -66,10 +53,8 @@ export function CreateProjectModal(props: Props) {
     <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXXXL}>
       {currentStep === EProjectCreationSteps.CREATE_PROJECT && (
         <CreateProjectForm
-          setToFavorite={setToFavorite}
           workspaceSlug={workspaceSlug}
           onClose={onClose}
-          updateCoverImageStatus={handleCoverImageStatusUpdate}
           handleNextStep={handleNextStep}
           data={data}
         />

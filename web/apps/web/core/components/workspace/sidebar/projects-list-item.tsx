@@ -373,22 +373,6 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                   closeOnSelect
                   onMenuClose={() => setIsMenuActive(false)}
                 >
-                  {/* TODO: Removed is_favorite logic due to the optimization in projects API */}
-                  {/* {isAuthorized && (
-                    <CustomMenu.MenuItem
-                      onClick={project.is_favorite ? handleRemoveFromFavorites : handleAddToFavorites}
-                    >
-                      <span className="flex items-center justify-start gap-2">
-                        <Star
-                          className={cn("h-3.5 w-3.5 ", {
-                            "fill-yellow-500 stroke-yellow-500": project.is_favorite,
-                          })}
-                        />
-                        <span>{project.is_favorite ? t("remove_from_favorites") : t("add_to_favorites")}</span>
-                      </span>
-                    </CustomMenu.MenuItem>
-                  )} */}
-
                   <CustomMenu.MenuItem onClick={handleCopyText}>
                     <span className="flex items-center justify-start gap-2">
                       <LinkOutline className="h-3.5 w-3.5 stroke-[1.5]" />
