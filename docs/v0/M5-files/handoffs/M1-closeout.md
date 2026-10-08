@@ -38,7 +38,8 @@ M1 结束时 oxlint 警告共 694 个（web 565、editor 65、ui 25、utils 18�
 ## 新建项目时的封面值
 
 新建项目时（`projects/create/root.tsx` 的 `onSubmit`），前端先上传预设封面的副本，再创建项目，但 `POST …/projects/` 的 `cover_image_url` 仍是构建里预设封面的地址（`/assets/image_<n>-<hash>.webp`，每次构建都会变）；项目建好之后才登记副本（`POST …/bulk/`）、用副本的地址覆盖（`PATCH …/projects/<id>/`）。这两步有一步失败时，项目保存的是一个下次构建就失效的地址（上传本身失败时不创建项目）。这是 Plane 原有的行为，M1 收尾 T14 的浏览器核对记下了这几个请求的顺序（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 3.15、第 8 节）。
-- **关闭条件**：本 M 的封面接口只保存上传后的资源（或预设的编号），不保存构建路径；新建项目只写一次封面值。
+- **M3/P8b 之后**：生成的 `ProjectCreate`、`ProjectUpdate` 没有封面，M3/P8b 删除了上面这段流程：新建项目时的封面一步、随机封面、项目设置的封面选择器和 28 张预设封面（`app/assets/cover-images/` 的 `image_2`–`image_29`），只留没有封面时显示的默认图 `image_1.webp`（[M3 设计](../../M3-workspace-project/M3-design.md) 7.8、[P8b spec](../../M3-workspace-project/specs/P8b-web-project-data.md) 第 3 节第 3 条）。本 M 随 `projects.cover_image_asset_id` 把封面的上传和选择器从 Plane 的源码加回时，预设封面一并加回（图片照 M1/P5 的做法重画，登记在同目录的 `SOURCES.md`），并照下面的条件写封面值。
+- **关闭条件**：本 M 的封面接口只保存上传后的资源（或本 M 加回的预设封面的编号），不保存构建路径；新建项目只写一次封面值。
 
 ## 复制资源的权限
 
