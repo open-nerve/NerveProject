@@ -27,18 +27,19 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
   const { projectId } = params;
   // store hooks
   const { allowPermissions } = useUserPermissions();
-  const { currentProjectDetails: projectDetails, updateProject } = useProject();
+  const { currentProjectDetails: projectDetails, updateProject, toggleAutoArchive } = useProject();
 
   const { t } = useTranslation();
 
   // derived values
   const canPerformProjectAdminActions = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
 
-  const handleChange = async (formData: Partial<Project>) => {
+  /** Sends a change of the auto-archiving; a refusal shows a toast. */
+  const send = async (change: () => Promise<unknown>) => {
     if (!projectDetails) return;
 
     try {
-      await updateProject(projectId, formData);
+      await change();
     } catch {
       setToast({
         type: TOAST_TYPE.ERROR,
@@ -47,6 +48,8 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
       });
     }
   };
+  const handleChange = (formData: Partial<Project>) => send(() => updateProject(projectId, formData));
+  const handleToggle = () => send(() => toggleAutoArchive(projectId));
 
   // derived values
   const pageTitle = projectDetails?.name ? `${projectDetails?.name} - Automations` : undefined;
@@ -64,7 +67,7 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
           description={t("project_settings.automations.description")}
         />
         <div className="mt-6">
-          <AutoArchiveAutomation handleChange={handleChange} />
+          <AutoArchiveAutomation handleChange={handleChange} handleToggle={handleToggle} />
         </div>
       </section>
     </SettingsContentWrapper>

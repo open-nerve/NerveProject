@@ -23,12 +23,14 @@ import { useUserPermissions } from "@/hooks/store/user";
 
 type Props = {
   handleChange: (formData: Partial<Project>) => Promise<void>;
+  /** Turns the auto-archiving on or off, from nerve's last answer, in the change's turn. */
+  handleToggle: () => Promise<void>;
 };
 
 const initialValues: Partial<Project> = { archive_in: 1 };
 
 export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(props: Props) {
-  const { handleChange } = props;
+  const { handleChange, handleToggle } = props;
   // router
   const { workspaceSlug } = useParams();
   // states
@@ -51,14 +53,6 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(pro
     return currentProjectDetails.archive_in !== 0;
   }, [currentProjectDetails]);
 
-  const handleToggleArchive = async () => {
-    if (currentProjectDetails?.archive_in === 0) {
-      await handleChange({ archive_in: 1 });
-    } else {
-      await handleChange({ archive_in: 0 });
-    }
-  };
-
   return (
     <>
       <SelectMonthModal
@@ -79,7 +73,7 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(pro
               <Switch
                 size="sm"
                 checked={autoArchiveStatus}
-                onCheckedChange={handleToggleArchive}
+                onCheckedChange={handleToggle}
                 disabled={!isAdmin}
                 aria-label={t("project_settings.automations.auto-archive.title")}
               />

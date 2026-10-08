@@ -4,11 +4,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Project } from "@nerve/api-client";
+import type { Project, ProjectUpdate } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import type { Endpoint } from "@/lib/auth/fake-nerve";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
-import { track, until } from "@/lib/auth/fake-time";
+import { settle, track, until } from "@/lib/auth/fake-time";
 import { inTurn, sent } from "@/store/fake-queue";
 import {
   loadArchivedProjects,
@@ -244,6 +244,44 @@ describe("ProjectStore, the changes", () => {
     expect(moving.error).toEqual(new Error("Project not found"));
     expect(nerve.calls).toHaveLength(1);
   });
+
+  // a field of web that is on or off turned twice: its cycles, on, and its auto-archiving, off; each turn's body
+  const toggles: { field: string; turn: (store: IProjectStore) => Promise<Project>; bodies: ProjectUpdate[] }[] = [
+    {
+      field: "a feature",
+      turn: (store) => store.toggleProject(web.id, "cycle_view"),
+      bodies: [{ cycle_view: false }, { cycle_view: true }],
+    },
+    {
+      field: "the auto-archiving",
+      turn: (store) => store.toggleAutoArchive(web.id),
+      bodies: [{ archive_in: 1 }, { archive_in: 0 }],
+    },
+  ];
+  it.each(toggles)(
+    "turns $field from nerve's last answer, in its turn: two quick turns end where they began",
+    async ({ turn, bodies }) => {
+      const { nerve, store } = await loaded();
+      const turns = [track(turn(store)), track(turn(store))];
+      const request: Endpoint = ["PATCH", `/api/v0/projects/${web.id}`];
+      await inTurn(nerve, 0, request, json(200, { ...web, ...bodies[0], updated_at: "2026-10-09T09:00:00Z" }));
+      await inTurn(nerve, 1, request, json(200, { ...web, ...bodies[1], updated_at: "2026-10-09T10:00:00Z" }));
+      await until(() => turns.every((turned) => turned.settled), "the second turn");
+      expect(nerve.calls.map((call) => call.body)).toEqual(bodies);
+      expect(store.getProjectById(web.id)).toMatchObject({ ...bodies[1], updated_at: "2026-10-09T10:00:00Z" });
+    }
+  );
+
+  it.each(toggles)(
+    "fails, asking nerve nothing, for a turn of $field of a project the store no longer gives",
+    async ({ turn }) => {
+      const { nerve, store } = await loaded();
+      await sent(nerve, () => store.deleteProject(web), ["DELETE", `/api/v0/projects/${web.id}`], noContent());
+      const refused = await settle(turn(store), "the turn");
+      expect(refused).toMatchObject({ settled: true, error: new Error("Project not found") });
+      expect(nerve.calls).toHaveLength(1);
+    }
+  );
 
   const changes: { change: string; send: (store: IProjectStore) => Promise<unknown>; refusal: Response }[] = [
     {

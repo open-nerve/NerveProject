@@ -28,6 +28,9 @@ const defaultValues: TMemberDefaults = {
   default_assignee_id: null,
 };
 
+/** The member a select names, or none for its "none". */
+const chosen = (value: string) => (value === "none" ? null : value);
+
 type TDefaultSettingItemProps = {
   title: string;
   description: string;
@@ -60,7 +63,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
   // store hooks
   const { allowPermissions } = useUserPermissions();
 
-  const { currentProjectDetails, updateProject } = useProject();
+  const { currentProjectDetails, updateProject, toggleProject } = useProject();
   // derived values
   const isAdmin = allowPermissions(
     [EUserPermissions.ADMIN],
@@ -79,26 +82,21 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
     });
   }, [currentProjectDetails, reset]);
 
-  const submitChanges = async (formData: Partial<TMemberDefaults>) => {
+  /**
+   * Changes the project's lead or its default assignee: data is the one field changed, as ProjectUpdate is a partial
+   * change and nerve keeps the other as it has it (v0 design 7.7).
+   */
+  const submitChanges = async (data: Partial<TMemberDefaults>) => {
     if (!workspaceSlug || !projectId) return;
 
     reset({
       project_lead_id: currentProjectDetails?.project_lead_id ?? null,
       default_assignee_id: currentProjectDetails?.default_assignee_id ?? null,
-      ...formData,
+      ...data,
     });
 
     try {
-      await updateProject(projectId, {
-        default_assignee_id:
-          formData.default_assignee_id === "none"
-            ? null
-            : (formData.default_assignee_id ?? currentProjectDetails?.default_assignee_id),
-        project_lead_id:
-          formData.project_lead_id === "none"
-            ? null
-            : (formData.project_lead_id ?? currentProjectDetails?.project_lead_id),
-      });
+      await updateProject(projectId, data);
       setToast({
         title: `${t("success")}!`,
         type: TOAST_TYPE.SUCCESS,
@@ -109,13 +107,12 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
     }
   };
 
-  const toggleGuestViewAllIssues = async (value: boolean) => {
+  /** Turns the guests' view of every work item the other way, from nerve's last answer, in the change's turn. */
+  const toggleGuestViewAllIssues = async () => {
     if (!workspaceSlug || !projectId) return;
 
     try {
-      await updateProject(projectId, {
-        guest_view_all_features: value,
-      });
+      await toggleProject(projectId, "guest_view_all_features");
       setToast({
         title: `${t("success")}!`,
         type: TOAST_TYPE.SUCCESS,
@@ -137,7 +134,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
               <MemberSelect
                 value={value}
                 onChange={(val: string) => {
-                  submitChanges({ project_lead_id: val });
+                  submitChanges({ project_lead_id: chosen(val) });
                 }}
                 isDisabled={!isAdmin}
               />
@@ -158,7 +155,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
               <MemberSelect
                 value={value}
                 onChange={(val: string) => {
-                  submitChanges({ default_assignee_id: val });
+                  submitChanges({ default_assignee_id: chosen(val) });
                 }}
                 isDisabled={!isAdmin}
               />

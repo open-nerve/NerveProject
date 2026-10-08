@@ -8,12 +8,12 @@ import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { setPromiseToast } from "@nerve/propel/toast";
-import type { Project } from "@nerve/api-client";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 import { SettingsHeading } from "@/components/settings/heading";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
+import type { ProjectToggleField } from "@/store/project/project.store";
 // local imports
 import { ProjectFeatureToggle } from "./helper";
 
@@ -22,7 +22,10 @@ type Props = {
   projectId: string;
 };
 
-const PROJECT_FEATURES_LIST = {
+const PROJECT_FEATURES_LIST: Record<
+  string,
+  { i18n_label: string; i18n_description: string; property: ProjectToggleField }
+> = {
   cycles: {
     i18n_label: "cycles",
     i18n_description: "cycles_description",
@@ -49,20 +52,15 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
   const { workspaceSlug, projectId } = props;
   // store hooks
   const { t } = useTranslation();
-  const { getProjectById, updateProject } = useProject();
+  const { getProjectById, toggleProject } = useProject();
   // derived values
   const currentProjectDetails = getProjectById(projectId);
 
-  const handleSubmit = (featureProperty: string) => {
-    if (!workspaceSlug || !projectId || !currentProjectDetails) return;
+  // the feature turns the other way from nerve's last answer, in the change's turn (v0 design 7.7)
+  const handleSubmit = (featureProperty: ProjectToggleField) => {
+    if (!workspaceSlug || !projectId) return;
 
-    // making the request to update the project feature
-    const settingsPayload = {
-      [featureProperty]: !currentProjectDetails?.[featureProperty as keyof Project],
-    };
-    const updateProjectPromise = updateProject(projectId, settingsPayload);
-
-    setPromiseToast(updateProjectPromise, {
+    setPromiseToast(toggleProject(projectId, featureProperty), {
       loading: "Updating project feature...",
       success: {
         title: "Success!",
@@ -72,9 +70,6 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
         title: "Error!",
         message: () => "Something went wrong while updating project feature. Please try again.",
       },
-    });
-    void updateProjectPromise.then(() => {
-      return undefined;
     });
   };
 
@@ -90,7 +85,7 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
               control={
                 <ProjectFeatureToggle
                   featureItem={featureItem}
-                  value={Boolean(currentProjectDetails?.[featureItem.property as keyof Project])}
+                  value={Boolean(currentProjectDetails?.[featureItem.property])}
                   handleSubmit={handleSubmit}
                 />
               }

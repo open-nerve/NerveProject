@@ -7,17 +7,17 @@
 import { observer } from "mobx-react";
 // nerve imports
 import { setPromiseToast } from "@nerve/propel/toast";
-import type { Project } from "@nerve/api-client";
 import { Switch } from "@makeplane/propel/components/switch";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
+import type { ProjectToggleField } from "@/store/project/project.store";
 
 type Props = {
   description?: React.ReactNode;
   projectId: string;
-  featureProperty: keyof Project;
+  featureProperty: ProjectToggleField;
   title: React.ReactNode;
   value: boolean;
   workspaceSlug: string;
@@ -26,20 +26,13 @@ type Props = {
 export const ProjectSettingsFeatureControlItem = observer(function ProjectSettingsFeatureControlItem(props: Props) {
   const { description, featureProperty, projectId, title, value, workspaceSlug } = props;
   // store hooks
-  const { getProjectById, updateProject } = useProject();
-  // derived values
-  const currentProjectDetails = getProjectById(projectId);
+  const { toggleProject } = useProject();
 
+  // the feature turns the other way from nerve's last answer, in the change's turn (v0 design 7.7)
   const handleSubmit = () => {
-    if (!workspaceSlug || !projectId || !currentProjectDetails) return;
+    if (!workspaceSlug || !projectId) return;
 
-    // making the request to update the project feature
-    const settingsPayload = {
-      [featureProperty]: !currentProjectDetails?.[featureProperty],
-    };
-    const updateProjectPromise = updateProject(projectId, settingsPayload);
-
-    setPromiseToast(updateProjectPromise, {
+    setPromiseToast(toggleProject(projectId, featureProperty), {
       loading: "Updating project feature...",
       success: {
         title: "Success!",
@@ -49,9 +42,6 @@ export const ProjectSettingsFeatureControlItem = observer(function ProjectSettin
         title: "Error!",
         message: () => "Something went wrong while updating project feature. Please try again.",
       },
-    });
-    void updateProjectPromise.then(() => {
-      return undefined;
     });
   };
 

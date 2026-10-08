@@ -34,6 +34,10 @@ import type { IProjectFilterStore } from "./project_filter.store";
 type WorkspaceRef = Pick<Workspace, "id" | "slug">;
 /** A project as the store changes it where no answer of nerve names its workspace. */
 type ProjectRef = Pick<Project, "id" | "workspace_id">;
+/** A field of a project that is on or off, as nerve's ProjectUpdate changes it: a feature, the guests' view. */
+export type ProjectToggleField = {
+  [K in keyof ProjectUpdate]-?: Exclude<ProjectUpdate[K], undefined> extends boolean ? K : never;
+}[keyof ProjectUpdate];
 /**
  * nerve's gap between the places of the caller's sidebar: a project he is made a member of goes this far before his
  * first (M3 design 3.18).
@@ -65,6 +69,8 @@ export interface IProjectStore {
   // changes
   createProject: (workspaceSlug: string, data: ProjectCreate) => Promise<Project>;
   updateProject: (projectId: string, data: ProjectUpdate) => Promise<Project>;
+  toggleProject: (projectId: string, field: ProjectToggleField) => Promise<Project>;
+  toggleAutoArchive: (projectId: string) => Promise<Project>;
   deleteProject: (project: ProjectRef) => Promise<void>;
   archiveProject: (projectId: string) => Promise<Project>;
   restoreProject: (projectId: string) => Promise<Project>;
@@ -116,6 +122,8 @@ export class ProjectStore implements IProjectStore {
       fetchProject: action,
       createProject: action,
       updateProject: action,
+      toggleProject: action,
+      toggleAutoArchive: action,
       deleteProject: action,
       archiveProject: action,
       restoreProject: action,
@@ -237,12 +245,27 @@ export class ProjectStore implements IProjectStore {
 
   /** @description changes a project; the store then shows nerve's answer. Fails, changing nothing, when refused. */
   updateProject = (projectId: string, data: ProjectUpdate): Promise<Project> =>
+    this.changes(() => this.send(projectId, data));
+
+  /**
+   * @description turns a field of a project that is on or off the other way, from its value as nerve last answered it,
+   * in the change's turn: two quick turns end where they began. Fails, changing nothing, when nerve refuses, or asking
+   * nerve nothing when the store does not give the project.
+   */
+  toggleProject = (projectId: string, field: ProjectToggleField): Promise<Project> =>
     this.changes(async () => {
-      const project = await this.service.update(projectId, data);
-      this.unarchived.confirm(project.workspace_id, replaced(project));
-      this.details.confirm(project.id, () => project);
-      return project;
+      // set by its key, which checks the value against ProjectUpdate (a computed key in a literal would not)
+      const data: ProjectUpdate = {};
+      data[field] = !this.held(projectId)[field];
+      return this.send(projectId, data);
     });
+
+  /**
+   * @description turns the archiving of a project's closed work items on, after a month, or off, as toggleProject:
+   * from the value nerve last answered, in the change's turn
+   */
+  toggleAutoArchive = (projectId: string): Promise<Project> =>
+    this.changes(() => this.send(projectId, { archive_in: this.held(projectId).archive_in === 0 ? 1 : 0 }));
 
   /** @description deletes a project, which the store then no longer gives; fails, changing nothing, when refused */
   deleteProject = (project: ProjectRef): Promise<void> =>
@@ -320,6 +343,21 @@ export class ProjectStore implements IProjectStore {
     this.archived.confirm(project.workspace_id, inPlace);
     this.details.confirm(project.id, (held) => held && change(held));
   };
+
+  /** Sends a change of a project, its turn come, and makes nerve's answer on its list and its own read. */
+  private async send(projectId: string, data: ProjectUpdate): Promise<Project> {
+    const project = await this.service.update(projectId, data);
+    this.unarchived.confirm(project.workspace_id, replaced(project));
+    this.details.confirm(project.id, () => project);
+    return project;
+  }
+
+  /** The project as the store gives it; fails when it gives none. */
+  private held(projectId: string): Project {
+    const project = this.getProjectById(projectId);
+    if (!project) throw new Error("Project not found");
+    return project;
+  }
 
   /** The workspace's projects the caller is a member of, not archived, by their place in his sidebar. */
   private joinedIn(workspaceId: string | undefined): Project[] {
