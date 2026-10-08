@@ -9,20 +9,22 @@ import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
 import { EIconSize } from "@nerve/constants";
 import { StateGroupIcon } from "@nerve/propel/icons";
-import type { IState } from "@nerve/types";
+import type { State } from "@nerve/api-client";
 // components
 import { Loader } from "@nerve/ui";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
+import { useProjectState } from "@/hooks/store/use-project-state";
 
 type Props = {
   appliedFilters: string[] | null;
   handleUpdate: (val: string) => void;
   searchQuery: string;
-  states: IState[] | undefined;
+  states: State[] | undefined;
 };
 
 export const FilterState = observer(function FilterState(props: Props) {
   const { appliedFilters, handleUpdate, searchQuery, states } = props;
+  const { getStatePercentageInGroup } = useProjectState();
 
   const [itemsToRender, setItemsToRender] = useState(5);
   const [previewEnabled, setPreviewEnabled] = useState(true);
@@ -65,7 +67,7 @@ export const FilterState = observer(function FilterState(props: Props) {
                         stateGroup={state.group}
                         color={state.color}
                         size={EIconSize.MD}
-                        percentage={state?.order}
+                        percentage={getStatePercentageInGroup(state.id)}
                       />
                     }
                     title={state.name}

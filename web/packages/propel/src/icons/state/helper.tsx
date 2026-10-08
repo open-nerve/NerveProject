@@ -4,20 +4,19 @@
  * See the LICENSE file for details.
  */
 
+import type { StateGroup } from "@nerve/api-client";
 import { EIconSize } from "@nerve/constants";
 
 export interface IStateGroupIcon {
   className?: string;
   color?: string;
-  stateGroup: TStateGroups;
+  stateGroup: StateGroup;
   size?: EIconSize;
   percentage?: number;
 }
 
-type TStateGroups = "backlog" | "unstarted" | "started" | "completed" | "cancelled";
-
 export const STATE_GROUP_COLORS: {
-  [key in TStateGroups]: string;
+  [key in StateGroup]: string;
 } = {
   backlog: "#60646C",
   unstarted: "#60646C",

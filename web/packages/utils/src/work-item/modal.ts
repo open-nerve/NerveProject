@@ -7,8 +7,8 @@
 import { set } from "lodash-es";
 // nerve imports
 import { DEFAULT_WORK_ITEM_FORM_VALUES } from "@nerve/constants";
-import type { Project } from "@nerve/api-client";
-import type { ISearchIssueResponse, IState, TIssue } from "@nerve/types";
+import type { Project, State } from "@nerve/api-client";
+import type { ISearchIssueResponse, TIssue } from "@nerve/types";
 
 export const getUpdateFormDataForReset = (projectId: string | null | undefined, formData: Partial<TIssue>) => ({
   ...DEFAULT_WORK_ITEM_FORM_VALUES,
@@ -24,7 +24,7 @@ export const convertWorkItemDataToSearchResponse = (
   workspaceSlug: string,
   workItem: TIssue,
   project: Project | undefined,
-  state: IState | undefined
+  state: State | undefined
 ): ISearchIssueResponse => ({
   id: workItem.id,
   name: workItem.name,

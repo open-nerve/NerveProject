@@ -10,14 +10,15 @@ import { DragDropOutline, EditOutline } from "@makeplane/propel/icons";
 import { EIconSize } from "@nerve/constants";
 // nerve imports
 import { StateGroupIcon } from "@nerve/propel/icons";
-import type { IState, TStateOperationsCallbacks } from "@nerve/types";
+import type { State } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 // local imports
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { StateDelete, StateMarksAsDefault } from "./options";
 
 type TBaseStateItemTitleProps = {
   stateCount: number;
-  state: IState;
+  state: State;
   shouldShowDescription?: boolean;
   setUpdateStateModal: (value: SetStateAction<boolean>) => void;
 };

@@ -5,7 +5,7 @@
  */
 
 import type { TIssuePriorities } from "../issues";
-import type { TStateGroups } from "../state";
+import type { StateGroup } from "@nerve/api-client";
 import type { TIssueAttachment } from "./issue_attachment";
 import type { TIssueLink } from "./issue_link";
 import type { TIssueReaction } from "./issue_reaction";
@@ -85,7 +85,7 @@ export type TIssue = TBaseIssue & {
   tempId?: string;
   // sourceIssueId is used to store the original issue id when creating a copy of an issue. Used in cloning property values. It is not a part of the API response.
   sourceIssueId?: string;
-  state__group?: TStateGroups | null;
+  state__group?: StateGroup | null;
 };
 
 export type TIssueMap = {

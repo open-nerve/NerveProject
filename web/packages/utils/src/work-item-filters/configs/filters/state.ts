@@ -6,7 +6,8 @@
 
 // nerve imports
 import { STATE_GROUPS } from "@nerve/constants";
-import type { IState, TFilterProperty, TStateGroups, TSupportedOperators } from "@nerve/types";
+import type { State, StateGroup } from "@nerve/api-client";
+import type { TFilterProperty, TSupportedOperators } from "@nerve/types";
 import { COLLECTION_OPERATOR, EQUALITY_OPERATOR } from "@nerve/types";
 // local imports
 import type { IFilterIconConfig, TCreateFilterConfig, TCreateFilterConfigParams } from "../../../rich-filters";
@@ -17,7 +18,7 @@ import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } f
 /**
  * State group filter specific params
  */
-type TCreateStateGroupFilterParams = TCreateFilterConfigParams & IFilterIconConfig<TStateGroups>;
+type TCreateStateGroupFilterParams = TCreateFilterConfigParams & IFilterIconConfig<StateGroup>;
 
 /**
  * Helper to get the state group multi select config
@@ -28,7 +29,7 @@ const getStateGroupMultiSelectConfig = (
   params: TCreateStateGroupFilterParams,
   singleValueOperator: TSupportedOperators
 ) =>
-  getMultiSelectConfig<{ key: TStateGroups; label: string }, TStateGroups, TStateGroups>(
+  getMultiSelectConfig<{ key: StateGroup; label: string }, StateGroup, StateGroup>(
     {
       items: Object.values(STATE_GROUPS),
       getId: (state) => state.key,
@@ -72,8 +73,8 @@ export const getStateGroupFilterConfig =
  * State filter specific params
  */
 type TCreateStateFilterParams = TCreateFilterConfigParams &
-  IFilterIconConfig<IState> & {
-    states: IState[];
+  IFilterIconConfig<State> & {
+    states: State[];
   };
 
 /**
@@ -82,7 +83,7 @@ type TCreateStateFilterParams = TCreateFilterConfigParams &
  * @returns The state multi select config
  */
 const getStateMultiSelectConfig = (params: TCreateStateFilterParams, singleValueOperator: TSupportedOperators) =>
-  getMultiSelectConfig<IState, string, IState>(
+  getMultiSelectConfig<State, string, State>(
     {
       items: params.states,
       getId: (state) => state.id,

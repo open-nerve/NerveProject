@@ -11,17 +11,18 @@ import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-
 import { observer } from "mobx-react";
 // Nerve
 import type { TDraggableData } from "@nerve/constants";
-import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
+import type { State, StateGroup } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 import { DropIndicator } from "@nerve/ui";
-import { cn, getCurrentStateSequence } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // components
 import { StateItemTitle, StateUpdate } from "@/components/project-states";
 // helpers
 type TStateItem = {
-  groupKey: TStateGroups;
-  groupedStates: Record<string, IState[]>;
+  groupKey: StateGroup;
+  groupedStates: Record<string, State[]>;
   totalStates: number;
-  state: IState;
+  state: State;
   stateOperationsCallbacks: TStateOperationsCallbacks;
   disabled?: boolean;
   stateItemClassName?: string;
@@ -53,10 +54,9 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
   };
 
   const handleStateSequence = useCallback(
-    async (payload: Partial<IState>) => {
+    async (stateId: string, group: StateGroup, droppedOnId: string, after: boolean) => {
       try {
-        if (!payload.id) return;
-        await stateOperationsCallbacks.moveStatePosition(payload.id, payload);
+        await stateOperationsCallbacks.moveState(stateId, group, droppedOnId, after);
       } catch (error) {
         console.error("error", error);
       }
@@ -102,12 +102,7 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
             if (sourceData && destinationData && sourceData.id) {
               const destinationGroupKey = destinationData.groupKey;
               const edge = extractClosestEdge(destinationData) || undefined;
-              const payload: Partial<IState> = {
-                id: sourceData.id,
-                group: destinationGroupKey,
-                sequence: getCurrentStateSequence(groupedStates[destinationGroupKey], destinationData, edge),
-              };
-              handleStateSequence(payload);
+              handleStateSequence(sourceData.id, destinationGroupKey, destinationData.id, edge === "bottom");
             }
           },
         })

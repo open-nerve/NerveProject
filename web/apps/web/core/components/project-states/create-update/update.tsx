@@ -7,12 +7,14 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IState, TStateOperationsCallbacks } from "@nerve/types";
+import type { State } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 // components
 import { StateForm } from "@/components/project-states";
+import type { TStateFormData } from "./form";
 
 type TStateUpdate = {
-  state: IState;
+  state: State;
   updateStateCallback: TStateOperationsCallbacks["updateState"];
   handleClose: () => void;
 };
@@ -27,8 +29,8 @@ export const StateUpdate = observer(function StateUpdate(props: TStateUpdate) {
     handleClose();
   };
 
-  const onSubmit = async (formData: Partial<IState>) => {
-    if (!state.id) return { status: "error" };
+  const onSubmit = async (formData: TStateFormData) => {
+    if (!state.id) return;
 
     try {
       await updateStateCallback(state.id, formData);
@@ -38,7 +40,6 @@ export const StateUpdate = observer(function StateUpdate(props: TStateUpdate) {
         message: "State updated successfully.",
       });
       handleClose();
-      return { status: "success" };
     } catch (error) {
       const errorStatus = error as { status: number };
       if (errorStatus?.status === 400) {
@@ -47,14 +48,12 @@ export const StateUpdate = observer(function StateUpdate(props: TStateUpdate) {
           title: "Error!",
           message: "Another state exists with the same name. Please try again with another name.",
         });
-        return { status: "already_exists" };
       } else {
         setToast({
           type: TOAST_TYPE.ERROR,
           title: "Error!",
           message: "State could not be updated. Please try again.",
         });
-        return { status: "error" };
       }
     }
   };

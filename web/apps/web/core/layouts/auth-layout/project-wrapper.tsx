@@ -78,7 +78,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
     revalidateOnFocus: false,
   });
   // fetching project states
-  useSWR(PROJECT_STATES(projectId, currentProjectRole), () => fetchProjectStates(workspaceSlug, projectId), {
+  useSWR(PROJECT_STATES(projectId, currentProjectRole), () => fetchProjectStates(projectId), {
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });

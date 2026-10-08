@@ -7,7 +7,8 @@
 import { observer } from "mobx-react";
 // nerve imports
 import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
-import type { TIssue, TStateGroups } from "@nerve/types";
+import type { StateGroup } from "@nerve/api-client";
+import type { TIssue } from "@nerve/types";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -19,7 +20,7 @@ import { WorkItemPreviewCardDate } from "./date";
 type Props = {
   projectId: string;
   stateDetails: {
-    group?: TStateGroups;
+    group?: StateGroup;
     id?: string;
     name?: string;
   };

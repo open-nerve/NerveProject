@@ -6,15 +6,16 @@
 
 import { useMemo } from "react";
 import { observer } from "mobx-react";
-import useSWR from "swr";
 // components
 import { EUserPermissionsLevel } from "@nerve/constants";
-import type { IState, TStateOperationsCallbacks } from "@nerve/types";
+import type { StateCreate } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 import { EUserProjectRoles } from "@nerve/types";
 import { ProjectStateLoader, GroupList } from "@/components/project-states";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useSessionSWR } from "@/lib/use-session-swr";
 
 type TProjectState = {
   workspaceSlug: string;
@@ -28,8 +29,8 @@ export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProje
     groupedProjectStates,
     fetchProjectStates,
     createState,
-    moveStatePosition,
     updateState,
+    moveState,
     deleteState,
     markStateAsDefault,
   } = useProjectState();
@@ -43,24 +44,18 @@ export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProje
   );
 
   // Fetching all project states
-  useSWR(
-    workspaceSlug && projectId ? `PROJECT_STATES_${workspaceSlug}_${projectId}` : null,
-    workspaceSlug && projectId ? () => fetchProjectStates(workspaceSlug, projectId) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
+  useSessionSWR(["PROJECT_STATES", projectId], (id) => fetchProjectStates(id));
 
   // State operations callbacks
   const stateOperationsCallbacks: TStateOperationsCallbacks = useMemo(
     () => ({
-      createState: async (data: Partial<IState>) => createState(workspaceSlug, projectId, data),
-      updateState: async (stateId: string, data: Partial<IState>) =>
-        updateState(workspaceSlug, projectId, stateId, data),
-      deleteState: async (stateId: string) => deleteState(workspaceSlug, projectId, stateId),
-      moveStatePosition: async (stateId: string, data: Partial<IState>) =>
-        moveStatePosition(workspaceSlug, projectId, stateId, data),
-      markStateAsDefault: async (stateId: string) => markStateAsDefault(workspaceSlug, projectId, stateId),
+      createState: (data: StateCreate) => createState(projectId, data),
+      updateState,
+      moveState,
+      deleteState,
+      markStateAsDefault,
     }),
-    [workspaceSlug, projectId, createState, moveStatePosition, updateState, deleteState, markStateAsDefault]
+    [projectId, createState, updateState, moveState, deleteState, markStateAsDefault]
   );
 
   // Loader

@@ -7,13 +7,14 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
+import type { State, StateGroup } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // components
 import { GroupItem } from "@/components/project-states";
 
 type TGroupList = {
-  groupedStates: Record<string, IState[]>;
+  groupedStates: Record<string, State[]>;
   stateOperationsCallbacks: TStateOperationsCallbacks;
   isEditable: boolean;
   groupListClassName?: string;
@@ -31,7 +32,7 @@ export const GroupList = observer(function GroupList(props: TGroupList) {
     stateItemClassName,
   } = props;
   // states
-  const [groupsExpanded, setGroupsExpanded] = useState<Partial<TStateGroups>[]>([
+  const [groupsExpanded, setGroupsExpanded] = useState<Partial<StateGroup>[]>([
     "backlog",
     "unstarted",
     "started",
@@ -39,7 +40,7 @@ export const GroupList = observer(function GroupList(props: TGroupList) {
     "cancelled",
   ]);
 
-  const handleGroupCollapse = (groupKey: TStateGroups) => {
+  const handleGroupCollapse = (groupKey: StateGroup) => {
     setGroupsExpanded((prev) => {
       if (prev.includes(groupKey)) {
         return prev.filter((key) => key !== groupKey);
@@ -48,7 +49,7 @@ export const GroupList = observer(function GroupList(props: TGroupList) {
     });
   };
 
-  const handleExpand = (groupKey: TStateGroups) => {
+  const handleExpand = (groupKey: StateGroup) => {
     setGroupsExpanded((prev) => {
       if (prev.includes(groupKey)) {
         return prev;
@@ -59,7 +60,7 @@ export const GroupList = observer(function GroupList(props: TGroupList) {
   return (
     <div className={cn("space-y-5", groupListClassName)}>
       {Object.entries(groupedStates).map(([key, value]) => {
-        const groupKey = key as TStateGroups;
+        const groupKey = key as StateGroup;
         const groupStates = value;
         return (
           <GroupItem

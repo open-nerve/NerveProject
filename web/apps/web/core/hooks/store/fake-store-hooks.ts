@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// A stand-in for the store hooks that the hooks of a page's fetches read (use-workspace.ts, use-member.ts,
-// use-project.ts and user's useUserProfile), for their tests: a test file mocks each of those modules with this one,
-// for instance vi.mock("@/hooks/store/use-workspace", () => import("@/hooks/store/fake-store-hooks")), says in
-// `stores` what the stores hold, and reads there what they were asked to fetch. The hooks then run as plain functions, outside React,
+// A stand-in for the store hooks that the hooks of a page's fetches read (the modules of core/hooks/store that have
+// the hooks below), for their tests: a test file mocks each of those modules with this one, for instance
+// vi.mock("@/hooks/store/use-workspace", () => import("@/hooks/store/fake-store-hooks")), says in `stores` what the
+// stores hold, and reads there what they were asked to fetch. The hooks then run as plain functions, outside React,
 // with fake-session-swr.ts. How the stores fetch is their own tests'.
 
 import type { Profile, Workspace, WorkspaceMember } from "@nerve/api-client";
@@ -63,6 +63,12 @@ export function useProject() {
     fetchProjects: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the projects of ${named(workspace)}`),
     fetchArchivedProjects: (workspace: Pick<Workspace, "id" | "slug">) =>
       fetching(`the archived projects of ${named(workspace)}`),
+  };
+}
+
+export function useProjectState() {
+  return {
+    fetchWorkspaceStates: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the states of ${named(workspace)}`),
   };
 }
 

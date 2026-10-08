@@ -10,7 +10,8 @@ import { CloseOutline, LoadingOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IState, TStateOperationsCallbacks } from "@nerve/types";
+import type { State } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 import { AlertModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
@@ -18,7 +19,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TStateDelete = {
   totalStates: number;
-  state: IState;
+  state: State;
   deleteStateCallback: TStateOperationsCallbacks["deleteState"];
 };
 
@@ -41,7 +42,7 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
       await deleteStateCallback(state.id);
       setIsDelete(false);
     } catch (error) {
-      const errorStatus = error as { status: number; data: { error: string } };
+      const errorStatus = error as { status: number };
       if (errorStatus.status === 400) {
         setToast({
           type: TOAST_TYPE.ERROR,

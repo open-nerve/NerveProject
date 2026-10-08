@@ -4,16 +4,16 @@
  * See the LICENSE file for details.
  */
 
-import type { TStateGroups } from "@nerve/types";
+import type { StateGroup } from "@nerve/api-client";
 
 export type TDraggableData = {
-  groupKey: TStateGroups;
+  groupKey: StateGroup;
   id: string;
 };
 
 export const STATE_GROUPS: {
-  [key in TStateGroups]: {
-    key: TStateGroups;
+  [key in StateGroup]: {
+    key: StateGroup;
     label: string;
     defaultStateName: string;
     color: string;

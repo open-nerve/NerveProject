@@ -5,14 +5,15 @@
  */
 
 import { observer } from "mobx-react";
-import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
+import type { State, StateGroup } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 // components
 import { StateItem } from "@/components/project-states";
 
 type TStateList = {
-  groupKey: TStateGroups;
-  groupedStates: Record<string, IState[]>;
-  states: IState[];
+  groupKey: StateGroup;
+  groupedStates: Record<string, State[]>;
+  states: State[];
   stateOperationsCallbacks: TStateOperationsCallbacks;
   disabled?: boolean;
   stateItemClassName?: string;
@@ -23,7 +24,7 @@ export const StateList = observer(function StateList(props: TStateList) {
 
   return (
     <>
-      {states.map((state: IState) => (
+      {states.map((state: State) => (
         <StateItem
           key={state?.name}
           groupKey={groupKey}

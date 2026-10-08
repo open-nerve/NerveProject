@@ -13,7 +13,7 @@ import { Combobox } from "@headlessui/react";
 import { useTranslation } from "@nerve/i18n";
 import { StateGroupIcon } from "@nerve/propel/icons";
 import { ChevronDownOutline, SearchOutline } from "@makeplane/propel/icons";
-import type { IState } from "@nerve/types";
+import type { State } from "@nerve/api-client";
 import { ComboDropDown, Spinner } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
@@ -29,7 +29,8 @@ export type TWorkItemStateDropdownBaseProps = TDropdownProps & {
   button?: ReactNode;
   dropdownArrow?: boolean;
   dropdownArrowClassName?: string;
-  getStateById: (stateId: string | null | undefined) => IState | undefined;
+  getStateById: (stateId: string | null | undefined) => State | undefined;
+  getStatePercentageInGroup: (stateId: string | null | undefined) => number | undefined;
   iconSize?: string;
   isInitializing?: boolean;
   onChange: (val: string) => void;
@@ -55,6 +56,7 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
     dropdownArrow = false,
     dropdownArrowClassName = "",
     getStateById,
+    getStatePercentageInGroup,
     hideIcon = false,
     iconSize = "size-4",
     isInitializing = false,
@@ -117,7 +119,7 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
           stateGroup={state?.group ?? "backlog"}
           color={state?.color}
           className={cn("flex-shrink-0", iconSize)}
-          percentage={state?.order}
+          percentage={getStatePercentageInGroup(state?.id)}
         />
         <span className="flex-grow truncate text-left">{state?.name}</span>
       </div>
@@ -179,7 +181,7 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
                 stateGroup={selectedState?.group ?? "backlog"}
                 color={selectedState?.color ?? "var(--text-color-tertiary)"}
                 className={cn("flex-shrink-0", iconSize)}
-                percentage={selectedState?.order}
+                percentage={getStatePercentageInGroup(selectedState?.id)}
               />
             )}
             {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (

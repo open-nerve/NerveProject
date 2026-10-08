@@ -222,7 +222,7 @@ const getModuleColumns = (): IGroupByColumn[] | undefined => {
 };
 
 const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefined => {
-  const { getProjectStates, projectStates } = rootStore.state;
+  const { getProjectStates, projectStates, getStatePercentageInGroup } = rootStore.state;
   const _states = projectId ? getProjectStates(projectId) : projectStates;
   if (!_states) return;
   // map project states to group by columns
@@ -231,7 +231,12 @@ const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefin
     name: state.name,
     icon: (
       <div className="size-4 rounded-full">
-        <StateGroupIcon stateGroup={state.group} color={state.color} size={EIconSize.LG} percentage={state.order} />
+        <StateGroupIcon
+          stateGroup={state.group}
+          color={state.color}
+          size={EIconSize.LG}
+          percentage={getStatePercentageInGroup(state.id)}
+        />
       </div>
     ),
     payload: { state_id: state.id },

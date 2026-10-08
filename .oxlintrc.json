@@ -127,7 +127,10 @@
         "web/apps/web/core/components/api-token/token-list.tsx",
         "web/apps/web/core/hooks/use-workspace-members-fetch.ts",
         "web/apps/web/core/store/project/**",
-        "web/apps/web/core/components/projects/page.tsx"
+        "web/apps/web/core/components/projects/page.tsx",
+        "web/apps/web/core/store/state.store.ts",
+        "web/apps/web/core/components/project-states/**",
+        "web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -192,6 +195,10 @@
         "web/apps/web/core/services/project/projects.service.ts",
         "web/apps/web/core/services/project/project-preferences.service.ts",
         "web/apps/web/core/services/project/project-members.service.ts",
+        "web/apps/web/core/services/project/states.service.ts",
+        "web/apps/web/core/store/state.store.ts",
+        "web/apps/web/core/store/state.store.test.ts",
+        "web/apps/web/core/store/state.store.changes.test.ts",
         "web/apps/web/core/store/project/**",
         "web/apps/web/core/hooks/store/use-project-preferences.ts",
         "web/apps/web/core/components/navigation/use-tab-preferences.ts",

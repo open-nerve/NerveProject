@@ -4,25 +4,12 @@
  * See the LICENSE file for details.
  */
 
-export type TStateGroups = "backlog" | "unstarted" | "started" | "completed" | "cancelled";
-
-export interface IState {
-  readonly id: string;
-  color: string;
-  default: boolean;
-  description: string;
-  group: TStateGroups;
-  name: string;
-  project_id: string;
-  sequence: number;
-  workspace_id: string;
-  order: number;
-}
+import type { State, StateCreate, StateGroup, StateUpdate } from "@nerve/api-client";
 
 export type TStateOperationsCallbacks = {
-  createState: (data: Partial<IState>) => Promise<IState>;
-  updateState: (stateId: string, data: Partial<IState>) => Promise<IState | undefined>;
+  createState: (data: StateCreate) => Promise<State>;
+  updateState: (stateId: string, data: StateUpdate) => Promise<State>;
+  moveState: (stateId: string, group: StateGroup, droppedOnId: string, after: boolean) => Promise<State>;
   deleteState: (stateId: string) => Promise<void>;
-  moveStatePosition: (stateId: string, data: Partial<IState>) => Promise<void>;
   markStateAsDefault: (stateId: string) => Promise<void>;
 };

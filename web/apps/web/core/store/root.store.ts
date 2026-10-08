@@ -107,7 +107,7 @@ export class RootStore {
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this, api);
-    this.state = new StateStore(this);
+    this.state = new StateStore(this, api);
     this.label = new LabelStore(this);
     this.projectInbox = new ProjectInboxStore(this);
     this.workspaceNotification = new WorkspaceNotificationStore(this);

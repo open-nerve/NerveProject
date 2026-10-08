@@ -17,6 +17,7 @@ vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"));
 vi.mock("@/hooks/store/use-workspace", () => import("@/hooks/store/fake-store-hooks"));
 vi.mock("@/hooks/store/use-member", () => import("@/hooks/store/fake-store-hooks"));
 vi.mock("@/hooks/store/use-project", () => import("@/hooks/store/fake-store-hooks"));
+vi.mock("@/hooks/store/use-project-state", () => import("@/hooks/store/fake-store-hooks"));
 
 const { useWorkspaceFetch } = await import("./use-workspace-fetch");
 
@@ -30,13 +31,14 @@ beforeEach(() => {
 });
 
 describe("useWorkspaceFetch", () => {
-  it("fetches the caller's workspaces and, in one of his, its members, his settings and its projects", async () => {
+  it("fetches the caller's workspaces and, in one of his, its members, his settings, its projects, their states", async () => {
     useWorkspaceFetch("acme");
     expect(handed.map(([fetch]) => fetch)).toEqual([
       ["WORKSPACES"],
       ["WORKSPACE_MEMBERS", "id-acme", "acme"],
       ["WORKSPACE_PREFERENCES", "id-acme", "acme"],
       ["PROJECTS", "id-acme", "acme"],
+      ["WORKSPACE_STATES", "id-acme", "acme"],
     ]);
     await fetchHanded();
     expect(stores.fetched).toEqual([
@@ -44,12 +46,13 @@ describe("useWorkspaceFetch", () => {
       "the members of acme (id-acme)",
       "the settings in acme (id-acme)",
       "the projects of acme (id-acme)",
+      "the states of acme (id-acme)",
     ]);
   });
 
   it("fetches only the caller's workspaces where the address names none of his", () => {
     useWorkspaceFetch("elsewhere");
-    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"], null, null, null]);
+    expect(handed.map(([fetch]) => fetch)).toEqual([["WORKSPACES"], null, null, null, null]);
   });
 
   it.each<{ when: string; workspaces: Workspace[] | undefined; failed?: true; shows: object }>([

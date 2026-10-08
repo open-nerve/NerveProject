@@ -335,7 +335,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     if (projectIds.length > 0) {
       for (const projectId of projectIds) {
         // fetching other project states
-        this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(workspaceSlug, projectId);
+        this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
         // fetching other project members
         this.rootIssueDetailStore.rootIssueStore.rootStore.memberRoot.project.fetchProjectMembers(projectId);
         // fetching other project labels

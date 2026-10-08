@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
 // local imports
@@ -15,27 +14,23 @@ import { WorkItemStateDropdownBase } from "./base";
 
 type TWorkItemStateDropdownProps = Omit<
   TWorkItemStateDropdownBaseProps,
-  "stateIds" | "getStateById" | "onDropdownOpen" | "isInitializing"
-> & {
-  stateIds?: string[];
-};
+  "stateIds" | "getStateById" | "getStatePercentageInGroup" | "onDropdownOpen" | "isInitializing"
+>;
 
 export const StateDropdown = observer(function StateDropdown(props: TWorkItemStateDropdownProps) {
-  const { projectId, stateIds: propsStateIds } = props;
-  // router params
-  const { workspaceSlug } = useParams();
+  const { projectId } = props;
   // states
   const [stateLoader, setStateLoader] = useState(false);
   // store hooks
-  const { fetchProjectStates, getProjectStateIds, getStateById } = useProjectState();
+  const { fetchProjectStates, getProjectStateIds, getStateById, getStatePercentageInGroup } = useProjectState();
   // derived values
-  const stateIds = propsStateIds ?? getProjectStateIds(projectId);
+  const stateIds = getProjectStateIds(projectId);
 
   // fetch states if not provided
   const onDropdownOpen = async () => {
-    if ((stateIds === undefined || stateIds.length === 0) && workspaceSlug && projectId) {
+    if ((stateIds === undefined || stateIds.length === 0) && projectId) {
       setStateLoader(true);
-      await fetchProjectStates(workspaceSlug, projectId);
+      await fetchProjectStates(projectId);
       setStateLoader(false);
     }
   };
@@ -44,6 +39,7 @@ export const StateDropdown = observer(function StateDropdown(props: TWorkItemSta
     <WorkItemStateDropdownBase
       {...props}
       getStateById={getStateById}
+      getStatePercentageInGroup={getStatePercentageInGroup}
       isInitializing={stateLoader}
       stateIds={stateIds ?? []}
       onDropdownOpen={onDropdownOpen}

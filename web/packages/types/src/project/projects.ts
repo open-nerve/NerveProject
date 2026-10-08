@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TStateGroups } from "../state";
+import type { StateGroup } from "@nerve/api-client";
 
 export enum EUserProjectRoles {
   ADMIN = 20,
@@ -33,7 +33,7 @@ export interface ISearchIssueResponse {
   sequence_id: number;
   start_date: string | null;
   state__color: string;
-  state__group: TStateGroups;
+  state__group: StateGroup;
   state__name: string;
   workspace__slug: string;
 }

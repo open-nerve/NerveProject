@@ -10,11 +10,15 @@ import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { Button } from "@nerve/propel/button";
-import type { IState } from "@nerve/types";
+import type { StateCreate } from "@nerve/api-client";
 import { Popover } from "@nerve/ui";
+
+/** What the form edits of a state, as a creation sends it. */
+export type TStateFormData = Omit<StateCreate, "group">;
+
 type TStateForm = {
-  data: Partial<IState>;
-  onSubmit: (formData: Partial<IState>) => Promise<{ status: string }>;
+  data: TStateFormData;
+  onSubmit: (formData: TStateFormData) => Promise<void>;
   onCancel: () => void;
   buttonDisabled: boolean;
   buttonTitle: string;
@@ -34,15 +38,15 @@ function PopoverButton({ color }: { color?: string }) {
 export function StateForm(props: TStateForm) {
   const { data, onSubmit, onCancel, buttonDisabled, buttonTitle } = props;
   // states
-  const [formData, setFromData] = useState<Partial<IState> | undefined>(undefined);
-  const [errors, setErrors] = useState<Partial<Record<keyof IState, string>> | undefined>(undefined);
+  const [formData, setFromData] = useState<TStateFormData | undefined>(undefined);
+  const [errors, setErrors] = useState<Partial<Record<keyof TStateFormData, string>> | undefined>(undefined);
 
   useEffect(() => {
     if (data && !formData) setFromData(data);
   }, [data, formData]);
 
-  const handleFormData = <T extends keyof IState>(key: T, value: IState[T]) => {
-    setFromData((prev) => ({ ...prev, [key]: value }));
+  const handleFormData = <T extends keyof TStateFormData>(key: T, value: TStateFormData[T]) => {
+    setFromData((prev) => prev && { ...prev, [key]: value });
     setErrors((prev) => ({ ...prev, [key]: "" }));
   };
 
@@ -51,7 +55,7 @@ export function StateForm(props: TStateForm) {
 
     const name = formData?.name || undefined;
     if (!formData || !name) {
-      let currentErrors: Partial<Record<keyof IState, string>> = {};
+      let currentErrors: Partial<Record<keyof TStateFormData, string>> = {};
       if (!name) currentErrors = { ...currentErrors, name: "Name is required" };
       setErrors(currentErrors);
       return;
@@ -86,7 +90,6 @@ export function StateForm(props: TStateForm) {
               value={formData?.name}
               onChange={(e) => handleFormData("name", e.target.value)}
               maxLength={100}
-              autoFocus
             />
           </InputGroup>
         </Field>

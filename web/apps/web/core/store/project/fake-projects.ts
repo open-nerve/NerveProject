@@ -6,7 +6,7 @@
 // The caller's projects, for the tests of the stores that read them, against a fake nerve: nerve's records, the
 // fetches that load them into a store, and a tab whose stores have the caller's workspaces and projects.
 
-import type { Project, ProjectPreferences, Workspace } from "@nerve/api-client";
+import type { Project, ProjectPreferences, State, StateGroup, Workspace } from "@nerve/api-client";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { fakeRoot } from "@/store/fake-root";
 import { ProjectRootStore } from "@/store/project";
@@ -54,6 +54,30 @@ export function projectOf(identifier: string, workspaceId: string, fields: Parti
  */
 export function preferencesOf(fields: Partial<ProjectPreferences> = {}): ProjectPreferences {
   return { navigation: { default_tab: "work_items", hide_in_more_menu: [] }, sort_order: 65535, ...fields };
+}
+
+/** A state of the project as nerve gives it: the name names it in its project; not its default unless fields say so. */
+export function stateOf(
+  project: Project,
+  name: string,
+  group: StateGroup,
+  sequence: number,
+  fields: Partial<State> = {}
+): State {
+  return {
+    id: `s-${project.identifier}-${name}`,
+    workspace_id: project.workspace_id,
+    project_id: project.id,
+    name,
+    description: "",
+    color: "#60646C",
+    group,
+    default: false,
+    sequence,
+    created_at: "2026-10-01T09:00:00Z",
+    updated_at: "2026-10-01T09:00:00Z",
+    ...fields,
+  };
 }
 
 /** The store fetches the workspace's projects that are not archived, and nerve lists these. */

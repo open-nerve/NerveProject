@@ -7,8 +7,8 @@
 import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
-import type { ApiClient, MemberUser } from "@nerve/api-client";
-import type { ICycle, IIssueLabel, IModule, IState } from "@nerve/types";
+import type { ApiClient, MemberUser, State } from "@nerve/api-client";
+import type { ICycle, IIssueLabel, IModule } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueDetail } from "@/store/issue/issue-details/root.store";
@@ -48,9 +48,9 @@ export interface IIssueRootStore {
   viewId: string | undefined;
   globalViewId: string | undefined; // all issues view id
   userId: string | undefined; // user profile detail Id
-  stateMap: Record<string, IState> | undefined;
-  stateDetails: IState[] | undefined;
-  workspaceStateDetails: IState[] | undefined;
+  stateMap: Record<string, State> | undefined;
+  stateDetails: State[] | undefined;
+  workspaceStateDetails: State[] | undefined;
   labelMap: Record<string, IIssueLabel> | undefined;
   memberMap: Record<string, MemberUser> | undefined;
   moduleMap: Record<string, IModule> | undefined;
@@ -99,9 +99,9 @@ export class IssueRootStore implements IIssueRootStore {
   viewId: string | undefined = undefined;
   globalViewId: string | undefined = undefined;
   userId: string | undefined = undefined;
-  stateMap: Record<string, IState> | undefined = undefined;
-  stateDetails: IState[] | undefined = undefined;
-  workspaceStateDetails: IState[] | undefined = undefined;
+  stateMap: Record<string, State> | undefined = undefined;
+  stateDetails: State[] | undefined = undefined;
+  workspaceStateDetails: State[] | undefined = undefined;
   labelMap: Record<string, IIssueLabel> | undefined = undefined;
   memberMap: Record<string, MemberUser> | undefined = undefined;
   moduleMap: Record<string, IModule> | undefined = undefined;
@@ -169,9 +169,10 @@ export class IssueRootStore implements IIssueRootStore {
       if (this.viewId !== rootStore.router.viewId) this.viewId = rootStore.router.viewId;
       if (this.globalViewId !== rootStore.router.globalViewId) this.globalViewId = rootStore.router.globalViewId;
       if (this.userId !== rootStore.router.userId) this.userId = rootStore.router.userId;
-      if (!isEmpty(rootStore?.state?.stateMap)) this.stateMap = rootStore?.state?.stateMap;
-      if (!isEmpty(rootStore?.state?.projectStates)) this.stateDetails = rootStore?.state?.projectStates;
-      if (!isEmpty(rootStore?.state?.workspaceStates)) this.workspaceStateDetails = rootStore?.state?.workspaceStates;
+      // the state store's states as it gives them, none of a project it no longer gives (M3/P8b)
+      this.stateMap = rootStore?.state?.stateMap;
+      this.stateDetails = rootStore?.state?.projectStates;
+      this.workspaceStateDetails = rootStore?.state?.workspaceStates;
       if (!isEmpty(rootStore?.label?.labelMap)) this.labelMap = rootStore?.label?.labelMap;
       if (!isEmpty(rootStore?.memberRoot?.memberMap)) this.memberMap = rootStore?.memberRoot?.memberMap || undefined;
       if (!isEmpty(rootStore?.module?.moduleMap)) this.moduleMap = rootStore?.module?.moduleMap;

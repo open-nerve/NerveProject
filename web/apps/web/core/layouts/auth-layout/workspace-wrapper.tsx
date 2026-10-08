@@ -7,7 +7,6 @@
 import type { ReactNode } from "react";
 import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
-import useSWR from "swr";
 // ui
 import { LogOutOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
@@ -21,10 +20,7 @@ import WorkSpaceNotAvailable from "@/app/assets/workspace/workspace-not-availabl
 import { SessionUnavailable } from "@/components/account/session-unavailable";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { NerveLogo } from "@/components/common/nerve-logo";
-// constants
-import { WORKSPACE_STATES } from "@nerve/constants";
 // hooks
-import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUser } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
@@ -43,18 +39,10 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   // store hooks
   const { signOut, data: currentUser } = useUser();
   const { isMobile } = usePlatformOS();
-  const { fetchWorkspaceStates } = useProjectState();
 
   // the workspace side of what every page of a workspace fetches (M3 design 7.1), and what the caller's workspaces
   // decide this one is to him (7.2, 8.3)
   const access = useWorkspaceFetch(workspaceSlug);
-
-  // fetch workspace states
-  useSWR(
-    workspaceSlug ? WORKSPACE_STATES(workspaceSlug) : null,
-    workspaceSlug ? () => fetchWorkspaceStates(workspaceSlug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
 
   const handleSignOut = async () => {
     await signOut().catch(() =>

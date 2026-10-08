@@ -2046,7 +2046,7 @@
         "flags": ""
       },
       "content": {
-        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/|/api/workspaces/\\$\\{[^}]+\\}/invitations/|/api/workspaces/\\$\\{[^}]+\\}/user-properties/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/archive/|/project-roles/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/(?:project-members/me/|members/)|/api/workspaces/\\$\\{[^}]+\\}/projects/(?:`|details/|\\$\\{[^}]+\\}/`)|/api/workspaces/\\$\\{[^}]+\\}/(?:project-identifiers|user-favorite-projects/)|/api/workspaces/\\$\\{[^}]+\\}/labels/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/intake-state/",
+        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/|/api/workspaces/\\$\\{[^}]+\\}/invitations/|/api/workspaces/\\$\\{[^}]+\\}/user-properties/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/archive/|/project-roles/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/(?:project-members/me/|members/)|/api/workspaces/\\$\\{[^}]+\\}/projects/(?:`|details/|\\$\\{[^}]+\\}/`)|/api/workspaces/\\$\\{[^}]+\\}/(?:project-identifiers|user-favorite-projects/)|/api/workspaces/\\$\\{[^}]+\\}/labels/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/intake-state/|/api/workspaces/\\$\\{[^}]+\\}/(?:projects/\\$\\{[^}]+\\}/)?states/",
         "flags": ""
       },
       "samples": {
@@ -2083,7 +2083,10 @@
           "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/`, data)",
           "    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/labels/`)",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-state/`)"
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-state/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/states/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/`)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/${stateId}/mark-default/`, {})"
         ],
         "miss": [
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces\"));",
@@ -2091,7 +2094,6 @@
           "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/search-issues/`, {",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/states/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/views/`)",
           "    return unwrap(await this.api.GET(\"/api/v0/workspace-slugs/{slug}\", { params: { path: { slug } } }));",
           "    unwrap(await this.api.POST(\"/api/v0/workspaces/{slug}/leave\", { params: { path: { slug } } }));",
