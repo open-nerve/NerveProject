@@ -208,6 +208,7 @@
         "web/apps/web/core/store/label.store.test.ts",
         "web/apps/web/core/layouts/auth-layout/use-project-fetch.ts",
         "web/apps/web/core/layouts/auth-layout/use-project-fetch.test.ts",
+        "web/apps/web/core/layouts/auth-layout/project-wrapper.test.tsx",
         "web/apps/web/core/store/state.store.changes.test.ts",
         "web/apps/web/core/components/project-states/create-update/create-update.test.tsx",
         "web/apps/web/core/store/label.store.changes.test.ts",

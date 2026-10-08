@@ -93,6 +93,13 @@ describe("useProjectFetch", () => {
       shows: { kind: "unavailable", retry: expect.any(Function) },
     },
     {
+      when: "nerve no longer finds it: the refusal wins over its earlier answer and the store having it",
+      projects: [member],
+      data: member,
+      error: notFound,
+      shows: { kind: "not-found" },
+    },
+    {
       when: "nerve does not find it: the refusal wins over no answer yet and the store having it",
       projects: [member],
       error: notFound,

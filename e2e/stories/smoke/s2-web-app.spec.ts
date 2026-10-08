@@ -322,6 +322,9 @@ test("S2: the admin of two workspaces opens a project of one at the other's addr
   await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: expected });
   expect(watch.apiFailures).toEqual([]);
   expect(watch.oldApiRequests).toEqual([]);
+  expect(watch.cspViolations).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  // Nothing came after the list was whole.
+  expect(requests.between(0)).toEqual({ pending: 0, requests: expected });
 });
