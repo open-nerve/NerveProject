@@ -112,7 +112,7 @@ describe("ProjectStore, the changes", () => {
     expect(store.getProjectById(web.id)).toEqual(restored);
   });
 
-  it("forgets a deleted project and one the caller left: neither the lists nor its own read give it", async () => {
+  it("forgets a deleted project and one the caller left, until a later list has it: a public one, no member's", async () => {
     const { nerve, store } = await loaded();
     await loadArchivedProjects(nerve, store, acme, [old]);
     const shelved = await sent(
@@ -145,6 +145,13 @@ describe("ProjectStore, the changes", () => {
     expect(store.workspaceProjectIds).toEqual([ops.id]);
     expect(store.joinedProjectIds).toEqual([]);
     expect(store.getProjectById(docs.id)).toBeUndefined();
+
+    // docs is public: the next fetch lists it again, to one who is no member of it
+    const seen: Project = { ...docs, member_role: null, sort_order: null, updated_at: "2026-10-09T09:00:00Z" };
+    await loadProjects(nerve, store, acme, [ops, seen]);
+    expect(store.workspaceProjectIds).toEqual(ids([ops, seen]));
+    expect(store.getProjectById(docs.id)).toEqual(seen);
+    expect(store.getProjectById(web.id)).toBeUndefined();
   });
 
   it("shows a project the caller joined as nerve now gives it, in its place and as its own read", async () => {
@@ -205,6 +212,15 @@ describe("ProjectStore, the changes", () => {
     expect(store.getProjectById(docs.id)?.sort_order).toBe(2500);
   });
 
+  it("moves a project dropped at the end of the caller's sidebar, on his last, past it", async () => {
+    const { nerve, store } = await loaded();
+    // docs dropped at the end, on web, his last: a step past web
+    const moving = () => store.updateProjectSortOrder(docs, web.id, true);
+    await sent(nerve, moving, ["PATCH", placeOf(docs)], json(200, preferencesOf({ sort_order: 12000 })));
+    expect(nerve.calls[0]?.body).toEqual({ sort_order: 12000 });
+    expect(store.joinedProjectIds).toEqual(ids([web, docs]));
+  });
+
   it("reckons a move's place in its turn, from the places nerve gave: two moves in a row", async () => {
     const { nerve, store } = await loaded();
     // web before docs, his first: a step before it; then docs last, which is after web once nerve placed web first
@@ -216,6 +232,17 @@ describe("ProjectStore, the changes", () => {
     expect(first.error).toBeUndefined();
     expect(nerve.calls.map((call) => call.body)).toEqual([{ sort_order: -9000 }, { sort_order: 11000 }]);
     expect(store.joinedProjectIds).toEqual(ids([web, docs]));
+  });
+
+  it("fails in its turn, asking nerve nothing, for a move of a project the caller left before it", async () => {
+    const { nerve, store } = await loaded();
+    const leaving = track(store.leaveProject(docs));
+    const moving = track(store.updateProjectSortOrder(docs, web.id, false));
+    await inTurn(nerve, 0, ["POST", `/api/v0/projects/${docs.id}/leave`], noContent());
+    await until(() => moving.settled, "the move");
+    expect(leaving.error).toBeUndefined();
+    expect(moving.error).toEqual(new Error("Project not found"));
+    expect(nerve.calls).toHaveLength(1);
   });
 
   const changes: { change: string; send: (store: IProjectStore) => Promise<unknown>; refusal: Response }[] = [

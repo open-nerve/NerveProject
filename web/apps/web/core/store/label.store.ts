@@ -10,7 +10,7 @@ import { computedFn } from "mobx-utils";
 import type { ApiClient, Label, LabelCreate, LabelUpdate, Project } from "@nerve/api-client";
 // lib
 import { oneAtATime } from "@/lib/one-at-a-time";
-import { placeBetween } from "@/lib/place-between";
+import { placeAt } from "@/lib/place-between";
 import type { Change } from "@/lib/reconciled";
 import { ReconciledByKey, replaced, upserted } from "@/lib/reconciled";
 // services
@@ -179,9 +179,13 @@ export class LabelStore implements ILabelStore {
       const label = this.held(labelId);
       if (label.parent_id === parentId && !droppedOnId) return undefined;
       const siblings = (this.getProjectLabels(label.project_id) ?? []).filter((held) => held.parent_id === parentId);
-      const droppedOn = siblings.findIndex((held) => held.id === droppedOnId);
-      const at = dropAtEndOfList || droppedOn === -1 ? siblings.length : droppedOn;
-      const sortOrder = placeBetween(siblings[at - 1]?.sort_order, siblings[at]?.sort_order, SORT_ORDER_STEP);
+      const sortOrder = placeAt(
+        siblings,
+        "sort_order",
+        droppedOnId,
+        dropAtEndOfList ? "end" : "before",
+        SORT_ORDER_STEP
+      );
       return this.send(
         label.id,
         sortOrder === undefined ? { parent_id: parentId } : { parent_id: parentId, sort_order: sortOrder }

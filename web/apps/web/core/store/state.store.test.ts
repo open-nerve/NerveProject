@@ -42,6 +42,8 @@ const moved = changed(doing, { group: "unstarted", sequence: 20000 });
 /** The state created in web's started group, as nerve answers it. */
 const blocked = stateOf(web, "Blocked", "started", 75000);
 const ids = (states: State[]) => states.map((state) => state.id);
+/** The states by id, as stateMap gives them. */
+const byId = (states: State[]) => Object.fromEntries(states.map((state) => [state.id, state]));
 
 beforeEach(() => {
   vi.useFakeTimers({ now: 1_000_000 });
@@ -75,8 +77,7 @@ describe("StateStore, the states", () => {
     const { nerve, projects, store } = await listTab(StateStore);
     const fetch = () => store.fetchWorkspaceStates(acme);
     await answered(nerve, fetch, ["GET", ACME], { data: [opsBacklog, ...listed] }, "acme's states");
-    // by group, then sequence; nerve's order where both are equal
-    expect(store.workspaceStates).toEqual([opsBacklog, backlog, todo, doing, review, done]);
+    expect(store.stateMap).toEqual(byId([opsBacklog, ...listed]));
     expect(store.getProjectStates(ops.id)).toEqual([opsBacklog]);
     expect(store.getProjectStates(web.id)).toEqual(listed);
     await loadStates(nerve, store, [backlog, done]);
@@ -85,7 +86,7 @@ describe("StateStore, the states", () => {
     await sent(nerve, () => projects.leaveProject(ops), ["POST", `/api/v0/projects/${ops.id}/leave`], noContent());
     expect(store.getProjectStates(ops.id)).toBeUndefined();
     expect(store.getStateById(opsBacklog.id)).toBeUndefined();
-    expect(store.workspaceStates).toEqual([backlog, todo, doing, review, done]);
+    expect(store.stateMap).toEqual(byId(listed));
   });
 
   it("keeps each workspace's states under its id: another workspace's list does not replace acme's", async () => {
@@ -100,7 +101,7 @@ describe("StateStore, the states", () => {
       { data: [labBacklog] },
       "beta's states"
     );
-    expect(store.workspaceStates).toEqual(listed);
+    expect(store.getProjectStates(web.id)).toEqual(listed);
     expect(store.getProjectStates(lab.id)).toEqual([labBacklog]);
   });
 
@@ -125,7 +126,7 @@ describe("StateStore, the states", () => {
     nerve.calls[1]?.answer(problem(403, "forbidden"));
     await until(() => workspace.settled, "the refusal");
     expect(workspace.error).toBeInstanceOf(ApiError);
-    expect(store.workspaceStates).toBeUndefined();
+    expect(store.stateMap).toEqual({});
 
     await loadStates(nerve, store, listed);
     const again = track(store.fetchProjectStates(web.id));
@@ -156,22 +157,22 @@ describe("StateStore, the changes", () => {
     expect(store.getStatePercentageInGroup(review.id)).toBeCloseTo(66.67, 2);
   });
 
-  it("moves a state where it was dropped, to the place nerve answers, in its project's list and its workspace's", async () => {
-    const { nerve, store } = await loadedStates(listed);
+  it("moves a state where it was dropped, to the place nerve answers, in its workspace's list: its project's own not fetched", async () => {
+    const { nerve, store } = await listTab(StateStore);
     await answered(nerve, () => store.fetchWorkspaceStates(acme), ["GET", ACME], { data: listed }, "acme's states");
     // into unstarted, before Todo, its first: a step before it
     const move = track(store.moveState(doing.id, "unstarted", todo.id, false));
-    await until(() => nerve.calls.length === 3, "the move");
-    expect(nerve.calls[2]).toMatchObject({
+    await until(() => nerve.calls.length === 2, "the move");
+    expect(nerve.calls[1]).toMatchObject({
       method: "PATCH",
       path: at(doing),
       body: { group: "unstarted", sequence: 15000 },
     });
     expect(store.getStateById(doing.id)).toEqual(doing);
-    nerve.calls[2]?.answer(json(200, moved));
+    nerve.calls[1]?.answer(json(200, moved));
     await until(() => move.settled, "the answer");
+    // web's states from acme's list
     expect(store.getProjectStates(web.id)).toEqual([backlog, moved, todo, review, done]);
-    expect(store.workspaceStates).toEqual([backlog, moved, todo, review, done]);
     expect(store.getStatePercentageInGroup(review.id)).toBe(100);
   });
 
@@ -316,14 +317,15 @@ describe("StateStore, while a fetch is out", () => {
   });
 
   it("keeps a state created during a fetch of the workspace's states on the list the fetch shows", async () => {
-    const { nerve, store } = await loadedStates(listed);
+    const { nerve, store } = await listTab(StateStore);
     const fetched = track(store.fetchWorkspaceStates(acme));
-    await until(() => nerve.calls.length === 2, "acme's states");
+    await until(() => nerve.calls.length === 1, "acme's states");
     await sent(nerve, () => store.createState(web.id, blocking), ["POST", LIST], json(201, blocked));
     // read before the creation
-    nerve.calls[1]?.answer(json(200, { data: listed }));
+    nerve.calls[0]?.answer(json(200, { data: listed }));
     await until(() => fetched.settled, "acme's states");
-    expect(store.workspaceStates).toEqual([backlog, todo, doing, review, blocked, done]);
+    // web's states from acme's list: web's own is not fetched
+    expect(store.getProjectStates(web.id)).toEqual([backlog, todo, doing, review, blocked, done]);
   });
 
   it("lets each project's newer fetch write: an older one answering last writes nothing", async () => {

@@ -12,7 +12,7 @@ import { STATE_GROUPS } from "@nerve/constants";
 import { sortStates } from "@nerve/utils";
 // lib
 import { oneAtATime } from "@/lib/one-at-a-time";
-import { placeBetween } from "@/lib/place-between";
+import { placeAt } from "@/lib/place-between";
 import type { Change } from "@/lib/reconciled";
 import { ReconciledByKey, dropped, replaced, upserted } from "@/lib/reconciled";
 // services
@@ -30,8 +30,6 @@ export interface IStateStore {
   // computed
   /** Every state the store shows, by id, which the work items' stores look up. */
   stateMap: Record<string, State>;
-  /** The current workspace's states, by group, then sequence; undefined until fetched. */
-  workspaceStates: State[] | undefined;
   /** The address's project's states, by group, then sequence; undefined until fetched. */
   projectStates: State[] | undefined;
   /** The address's project's states in each group, every group there; undefined until fetched. */
@@ -71,7 +69,6 @@ export class StateStore implements IStateStore {
   private readonly changes = oneAtATime();
   // stores
   private readonly router: IRouterStore;
-  private readonly rootStore: RootStore;
   /** The project as the caller sees it, by the project store (ProjectStore.getProjectById). */
   private readonly projectOf: (projectId: string | undefined | null) => Project | undefined;
 
@@ -79,7 +76,6 @@ export class StateStore implements IStateStore {
     makeObservable(this, {
       // computed
       stateMap: computed,
-      workspaceStates: computed,
       projectStates: computed,
       groupedProjectStates: computed,
       // actions
@@ -93,7 +89,6 @@ export class StateStore implements IStateStore {
     });
     this.service = new StatesService(api);
     this.router = _rootStore.router;
-    this.rootStore = _rootStore;
     this.projectOf = _rootStore.projectRoot.project.getProjectById;
   }
 
@@ -103,11 +98,6 @@ export class StateStore implements IStateStore {
     return Object.fromEntries(
       held.filter((state) => this.projectOf(state.project_id)).map((state) => [state.id, state])
     );
-  }
-
-  get workspaceStates() {
-    const states = this.workspaces.get(this.rootStore.workspaceRoot.currentWorkspace?.id);
-    return states && sortStates(states.filter((state) => this.projectOf(state.project_id)));
   }
 
   get projectStates() {
@@ -189,9 +179,7 @@ export class StateStore implements IStateStore {
     this.changes(async () => {
       const state = this.held(stateId);
       const siblings = (this.getProjectStates(state.project_id) ?? []).filter((held) => held.group === group);
-      const droppedOn = siblings.findIndex((held) => held.id === droppedOnId);
-      const at = droppedOn === -1 ? siblings.length : droppedOn + (after ? 1 : 0);
-      const sequence = placeBetween(siblings[at - 1]?.sequence, siblings[at]?.sequence, SEQUENCE_STEP);
+      const sequence = placeAt(siblings, "sequence", droppedOnId, after ? "after" : "before", SEQUENCE_STEP);
       return this.send(state.id, sequence === undefined ? { group } : { group, sequence });
     });
 

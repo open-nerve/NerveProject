@@ -20,7 +20,7 @@ import type { TLoader } from "@nerve/types";
 import { orderProjects, shouldFilterProject } from "@nerve/utils";
 // lib
 import { oneAtATime } from "@/lib/one-at-a-time";
-import { placeBetween } from "@/lib/place-between";
+import { placeAt } from "@/lib/place-between";
 import type { Change } from "@/lib/reconciled";
 import { ReconciledByKey, dropped, prepended, replaced, upserted } from "@/lib/reconciled";
 // services
@@ -86,7 +86,10 @@ export class ProjectStore implements IProjectStore {
   private readonly unarchived = new ReconciledByKey<Project[]>();
   /** Each workspace's archived projects. */
   private readonly archived = new ReconciledByKey<Project[]>();
-  /** Each project as nerve last read it alone; null once deleted or left. */
+  /**
+   * Each project as nerve last read it alone; null once deleted or left: then only a list read after gives it (a fetch
+   * out meanwhile drops it from its answer).
+   */
   private readonly details = new ReconciledByKey<Project | null>();
   // services
   private readonly service: ProjectsService;
@@ -173,14 +176,15 @@ export class ProjectStore implements IProjectStore {
 
   /**
    * The project as the store last had it from nerve, its own read first, else from its workspace's lists; nothing
-   * once deleted or left, or when its workspace is no longer among the caller's.
+   * once deleted or left until a list has it again (a public project, to one no longer its member), or when its
+   * workspace is no longer among the caller's.
    */
   getProjectById = computedFn((projectId: string | undefined | null): Project | undefined => {
     if (!projectId) return undefined;
     const workspaces = this.rootStore.workspaceRoot.workspaces ?? [];
     const read = this.details.get(projectId);
-    if (read !== undefined) {
-      return read && workspaces.some((workspace) => workspace.id === read.workspace_id) ? read : undefined;
+    if (read) {
+      return workspaces.some((workspace) => workspace.id === read.workspace_id) ? read : undefined;
     }
     for (const { id } of workspaces) {
       const listed = [...(this.unarchived.get(id) ?? []), ...(this.archived.get(id) ?? [])];
@@ -292,14 +296,14 @@ export class ProjectStore implements IProjectStore {
   /**
    * @description moves a project in the caller's sidebar where he dropped it: before the project droppedOnId names, or
    * last for none or at the end. Its place is reckoned in the change's turn, from his projects as nerve last answered
-   * them; the store then shows the place nerve gives it. Fails, changing nothing, when nerve refuses.
+   * them; the store then shows the place nerve gives it. Fails, changing nothing, when nerve refuses, or asking nerve
+   * nothing when his projects no longer have it in its turn (left, archived or deleted before it).
    */
   updateProjectSortOrder = (project: ProjectRef, droppedOnId: string | undefined, dropAtEnd: boolean): Promise<void> =>
     this.changes(async () => {
       const joined = this.joinedIn(project.workspace_id);
-      const droppedOn = joined.findIndex((held) => held.id === droppedOnId);
-      const at = dropAtEnd || droppedOn === -1 ? joined.length : droppedOn;
-      const sortOrder = placeBetween(joined[at - 1]?.sort_order, joined[at]?.sort_order, SIDEBAR_STEP);
+      if (!joined.some((held) => held.id === project.id)) throw new Error("Project not found");
+      const sortOrder = placeAt(joined, "sort_order", droppedOnId, dropAtEnd ? "end" : "before", SIDEBAR_STEP);
       if (sortOrder === undefined) return;
       const { sort_order } = await this.preferences.update(project.id, { sort_order: sortOrder });
       this.confirmProject(project, (held) => ({ ...held, sort_order }));

@@ -9,6 +9,7 @@ import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import type { GlobalViewStore } from "@/store/global-view.store";
 import type { RootStore } from "@/store/root.store";
+import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // Each session of the tab has its own RootStore (M2 design 7.1: a tab never writes as the wrong account):
 // store-context.tsx builds one for the session the app loaded with, and a new one, with a client bound to the
@@ -318,11 +319,20 @@ describe("store-context", () => {
   });
 
   it("releases a retired session's project filters: the address's next workspace reaches the new session's filters only", async () => {
-    const { context, signedIn, follow } = await load();
+    const { nerve, context, signedIn, follow } = await load();
     await signedIn();
     const x = context.rootStore;
+    // Each session's list has acme, the address's next workspace, whose filters are kept by its id.
+    const acme = workspaceOf("acme");
+    await loadWorkspaces(nerve, x.workspaceRoot, [acme]);
     await follow(Y);
     const y = context.rootStore;
+    const listed = track(y.workspaceRoot.fetchWorkspaces());
+    await until(() => nerve.calls.length === 2, "Y's refresh");
+    nerve.calls[1]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 3, "Y's list");
+    nerve.calls[2]?.answer(json(200, { data: [acme] }));
+    await until(() => listed.settled, "Y's list");
     // The address's parameters are the page's: Y's stores go on with X's RouterStore, which X's project filters
     // followed (project_filter.store.ts). The project filters' reaction is the one RootStore.dispose releases; the
     // cycle and module filters' and the issue root's are M6's and M4's (M3 design 7.1, 13.2).

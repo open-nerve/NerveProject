@@ -13,6 +13,7 @@ import {
   blocking,
   changed,
   lab,
+  listTab,
   loadStates,
   loadedStates,
   stateRequests,
@@ -20,6 +21,7 @@ import {
 } from "@/store/fake-project-lists";
 import { inTurn, sent } from "@/store/fake-queue";
 import { stateOf } from "@/store/project/fake-projects";
+import { StateStore } from "@/store/state.store";
 
 // More of the states' changes and fetches (M3 design 3.17, 7.3; v0 design 7.7) than state.store.test.ts has: a change
 // of a state of the caller's other workspace is made on that state's own lists, whatever the address; the workspace's
@@ -48,12 +50,25 @@ afterEach(() => {
 });
 
 describe("StateStore, the workspace's list and another workspace's", () => {
-  it("makes the changes of a state of his other workspace on its project's list and its workspace's", async () => {
-    const { nerve, router, store } = await loadedStates(listed);
-    const labs = [labTodo, labDoing, labReview];
-    const BETA = "/api/v0/workspaces/beta/states";
-    await answered(nerve, () => store.fetchWorkspaceStates(beta), ["GET", BETA], { data: labs }, "beta's states");
-    await loadStates(nerve, store, labs, lab);
+  const labs = [labTodo, labDoing, labReview];
+  /** A list of lab's states the store fetched: lab's own, or beta's, which gives them until lab's own is fetched. */
+  const labLists: { list: string; load: (nerve: FakeNerve, store: StateStore) => Promise<unknown> }[] = [
+    { list: "its project's list", load: (nerve, store) => loadStates(nerve, store, labs, lab) },
+    {
+      list: "its workspace's, which gives its project's states until its own is fetched",
+      load: (nerve, store) =>
+        answered(
+          nerve,
+          () => store.fetchWorkspaceStates(beta),
+          ["GET", "/api/v0/workspaces/beta/states"],
+          { data: labs },
+          "beta's states"
+        ),
+    },
+  ];
+  it.each(labLists)("makes the changes of a state of his other workspace on $list", async ({ load }) => {
+    const { nerve, store } = await loadedStates(listed);
+    await load(nerve, store);
     const renamed = changed(labDoing, { name: "In progress" });
     const rename = () => store.updateState(labDoing.id, { name: "In progress" });
     await sent(nerve, rename, ["PATCH", at(labDoing)], json(200, renamed));
@@ -79,34 +94,34 @@ describe("StateStore, the workspace's list and another workspace's", () => {
     // the last of lab's started group, whatever web's has
     expect(store.getStatePercentageInGroup(labDoing.id)).toBe(100);
     expect(store.getProjectStates(web.id)).toEqual(listed);
-    router.setQuery({ workspaceSlug: beta.slug, projectId: lab.id });
-    expect(store.workspaceStates).toEqual(shown);
   });
 
   it("keeps a state created during a fetch of the workspace's states once, the list read after the creation", async () => {
-    const { nerve, store } = await loadedStates(listed);
+    const { nerve, store } = await listTab(StateStore);
     const fetched = track(store.fetchWorkspaceStates(acme));
-    await until(() => nerve.calls.length === 2, "acme's states");
+    await until(() => nerve.calls.length === 1, "acme's states");
     await sent(nerve, () => store.createState(web.id, blocking), ["POST", LIST], json(201, blocked));
-    nerve.calls[1]?.answer(json(200, { data: [...listed, blocked] }));
+    nerve.calls[0]?.answer(json(200, { data: [...listed, blocked] }));
     await until(() => fetched.settled, "acme's states");
-    expect(store.workspaceStates).toEqual([todo, doing, review, blocked, done]);
+    // web's states from acme's list: web's own is not fetched
+    expect(store.getProjectStates(web.id)).toEqual([todo, doing, review, blocked, done]);
   });
 
   it("keeps the workspace's states it had when nerve refuses a refetch, and when the session changes as it fetches", async () => {
-    const { nerve, api, store } = await loadedStates(listed);
+    const { nerve, api, store } = await listTab(StateStore);
     await answered(nerve, () => store.fetchWorkspaceStates(acme), ["GET", ACME], { data: listed }, "acme's states");
     const refused = track(store.fetchWorkspaceStates(acme));
-    await until(() => nerve.calls.length === 3, "the refetch");
-    nerve.calls[2]?.answer(problem(503, "server_busy"));
+    await until(() => nerve.calls.length === 2, "the refetch");
+    nerve.calls[1]?.answer(problem(503, "server_busy"));
     await until(() => refused.settled, "the refusal");
     expect(refused.error).toBeInstanceOf(ApiError);
-    expect(store.workspaceStates).toEqual(listed);
+    // web's states from acme's list: web's own is not fetched
+    expect(store.getProjectStates(web.id)).toEqual(listed);
 
     FakeNerve.replaceSession(api);
     const cut = await settle(store.fetchWorkspaceStates(acme), "the refetch the session cut");
     expect(cut).toEqual({ settled: true, value: undefined });
-    expect(store.workspaceStates).toEqual(listed);
+    expect(store.getProjectStates(web.id)).toEqual(listed);
   });
 });
 
