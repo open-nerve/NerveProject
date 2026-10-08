@@ -2112,7 +2112,7 @@ modules/access/
 | P7a `states` | 状态与按资源寻址的共用取锁路径（后端，10）；设计中的 P7 由负责人裁定拆出（2026-10-05，第 12 节） | 已完成：[spec](specs/P7a-states.md)、[plan](plans/P7a-states.md)、[评审](reviews/P7a-states-review.md)（执行时 10 个 Task） |
 | P7b `labels` | 标签（后端，8）；同上，P7a 合并之后开始 | 已完成：[spec](specs/P7b-labels.md)、[plan](plans/P7b-labels.md)、[评审](reviews/P7b-labels-review.md)（执行时 11 个 Task；契约文件不拆，裁定 B1） |
 | P8a `web-workspace-data` | 工作区一侧的数据层（11）；设计中的 P8 由控制者裁定拆出（2026-10-07，第 12 节） | 已完成：[spec](specs/P8a-web-workspace-data.md)、[plan](plans/P8a-web-workspace-data.md)、[评审](reviews/P8a-web-workspace-data-review.md)（执行时 12 个 Task；修复轮的裁定 F-1–F-10） |
-| P8b `web-project-data` | 项目一侧的数据层（9）；同上，P8a 合并之后开始 | 进行中：[spec](specs/P8b-web-project-data.md)、[plan](plans/P8b-web-project-data.md)（11 个 Task；spec 第 3 节的裁定待定） |
+| P8b `web-project-data` | 项目一侧的数据层（9）；同上，P8a 合并之后开始 | 已完成：[spec](specs/P8b-web-project-data.md)、[plan](plans/P8b-web-project-data.md)、[评审](reviews/P8b-web-project-data-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-6） |
 | P9 `web-workspace-pages` | 工作区的页面（14） | 未开始 |
 | P10 `web-project-pages` | 项目的页面（15） | 未开始 |
 | P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 未开始 |
