@@ -67,10 +67,11 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 
 ### 2.5 调用者在项目里的标签栏；标识检查；旧 `ProjectService`（Task 5；3.18、7.3；P4b 的交接；Codex M-3）
 
-- `ProjectPreferencesStore(projectOf, api)`（`core/store/project/preferences.store.ts`，`ProjectRootStore.preferences`）：每个项目的标签栏按项目的 id（`ReconciledByKey`，一份文档）；`getNavigation(projectId)`（项目 store 不再给出这个项目时什么都不给）、`fetchNavigation`、`updateNavigation(projectId, change)`（`change` 是作用于标签栏的函数：经 `changes`，轮到它发出时才作用于 nerve 最近一次回答的标签栏，nerve 整份替换，写入回答；第 3 节第 15 条）。设置的另一个字段 `sort_order` 由项目 store 持有、经 `updateProjectSortOrder` 修改（`Project.sort_order` 也带着它，第 3 节第 13 条）。`useProjectPreferences()`；`useTabPreferences(projectId)` 读写新 store，键是生成的 `ProjectTab`，三个操作各交给 store 一个函数（切换默认的标签、隐藏（已隐藏的不重复）、显示），Plane 先改再回滚的写法删除。
+- `ProjectPreferencesStore(projectOf, api)`（`core/store/project/preferences.store.ts`，`ProjectRootStore.preferences`）：每个项目的标签栏按项目的 id（`ReconciledByKey`，一份文档）；`getNavigation(projectId)`（项目 store 不再给出这个项目时什么都不给）、`fetchNavigation`、`updateNavigation(projectId, change)`（`change` 是作用于标签栏的函数：经 `changes`，轮到它发出时才作用于 nerve 最近一次回答的标签栏，nerve 整份替换，写入回答；store 没有这个项目的标签栏时（还没取到，或项目 store 不再给出这个项目）不发请求、直接失败（Task 5 的评审 I1，裁定 T5-a）；第 3 节第 15 条）。设置的另一个字段 `sort_order` 由项目 store 持有、经 `updateProjectSortOrder` 修改（`Project.sort_order` 也带着它，第 3 节第 13 条）。`useProjectPreferences()`；`useTabPreferences(projectId)` 读写新 store，键是生成的 `ProjectTab`，三个操作各交给 store 一个函数，由 `tab-navigation-utils.ts` 的 `toggleDefaultTab`、`hideTab`、`showTab` 做出（切换默认的标签、隐藏（已隐藏的不重复）、显示；裁定 T5-b），Plane 先改再回滚的写法删除。
 - `ProjectStore.checkProjectIdentifier(slug, identifier)`；项目设置页的标识检查改调它，`project/form.tsx` 的模块级 `ProjectService` 删除（M2 交接第 3 节的一处）。
 - `core/services/project/project.service.ts` 只留 M4、M6、M7 的三个方法：`getProjectUserProperties`、`updateProjectUserProperties`（M4 的工作项筛选）、`projectIssuesSearch`（M4、M6、M7 的工作项搜索；Codex M-3）。成员 store 的 `fetchProjectUserProperties`、`updateProjectUserProperties`、`projectUserPropertiesMap`，`IProjectMemberNavigationPreferences`、`IProjectUserPropertiesResponse` 删除。关键词：`plane-workspace-urls` 加上旧 `ProjectService` 删掉的方法的地址（工作区的项目列表和创建、`projects/details/`、一个项目、`project-identifiers`、`user-favorite-projects/`，第 3 节第 7 条）。
-- 测试：`preferences.store.test.ts` 11 个，经 `projectTab` 用真的 `ProjectRootStore`（门是项目 store 的 `getProjectById`，"不再给出"经 `leaveProject`，预检 PF-M6）：取到；拒绝，没有时不留、已有时保留；会话已换，先加载再重取；写入回答，回答与请求不同；两次连续的隐藏都保留（第二次作用于第一次的回答）；拒绝的修改；两个项目分开；排队；取数不等修改；两种交错，一份文档没有"已列出的又被创建"，文件里说明；`project.store.test.ts` 的标识检查（回答和拒绝，`asks nerve whether an identifier is free, and fails when nerve refuses`）。
+- 测试：`preferences.store.test.ts` 12 个，经 `projectTab` 用真的 `ProjectRootStore`（门是项目 store 的 `getProjectById`，"不再给出"经 `leaveProject`，预检 PF-M6）；加载的标签栏不是 nerve 的默认（藏起模块），"保留已有的"与"换成默认的"分得开（裁定 T5-b）：取到；拒绝，没有时不留、已有时保留；会话已换，先加载再重取；写入回答，回答与请求不同；两次连续的隐藏都保留（第二次作用于第一次的回答，第一次的回答与它的请求不同，裁定 T5-b）；拒绝的修改；取数在外、store 还没有标签栏时修改不发请求、直接失败，取数的回答之后照常显示（裁定 T5-a）；两个项目分开；排队（被拒绝的修改的请求体不是下一个的起点）；取数不等修改；两种交错，一份文档没有"已列出的又被创建"，文件里说明；`tab-navigation-utils.test.ts` 的三个修改 5 行（`it.each`：切换到别的标签、切换当前默认的回到工作项、隐藏、隐藏已隐藏的不重复、显示只去掉那一个；裁定 T5-b）；`project.store.test.ts` 的标识检查（回答和拒绝，`asks nerve whether an identifier is free, and fails when nerve refuses`）。
+- 迭代和模块的 store（`cycle.store.ts`、`module.store.ts`）从不读的 `projectService` 字段和导入删除（Task 5 的评审 M3）；`cycle.store.ts` 的 3 条 `promise/always-return` 随之清零（删除、归档、恢复改用 `await`，同 P8a 的 `module.store.ts`），web 的上限 408 → 405。
 
 ### 2.6 项目成员（Task 6；7.2、7.3；M2 交接第 3 节）
 
@@ -83,7 +84,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 
 - 收集箱的分诊状态删除：`dropdowns/intake-state/`、`StateStore` 的六个分诊成员、旧状态 service 的 `getIntakeState`、`packages/types/src/intake/`、`@nerve/propel` 的 `IntakeStateGroupIcon`、`TriageGroupIcon` 和它们的类型、颜色。收集箱的工作项：已接受的显示状态下拉框，未接受的不显示状态；创建弹窗没有状态一项（第 3 节第 6 条）。
 - 工作区级的标签删除：`LabelStore` 的四个工作区级成员、旧标签 service 的 `getWorkspaceIssueLabels`、键 `WORKSPACE_LABELS`；`useWorkspaceIssueProperties` 不再取它；工作区级的工作项筛选没有标签一项，按标签分组只有"无"（M7 加回）。
-- 标签的设置页和工作项的标签选择器在 Task 9 有手改，它们的 oxlint 警告在这里先清零（`then` 的回调不再返回值、遮蔽的变量改名、点击的 `p`/`li` 改为 `button`、只收集按键的根加 `role="presentation"`，`@nerve/ui` 的 `ComboBox` 加 `role` 这个 prop、`useCallback` 的依赖补齐），行为不变；web 的上限 406 → 370。没有新的 vitest。
+- 标签的设置页和工作项的标签选择器在 Task 9 有手改，它们的 oxlint 警告在这里先清零（`then` 的回调不再返回值、遮蔽的变量改名、点击的 `p`/`li` 改为 `button`、只收集按键的根加 `role="presentation"`，`@nerve/ui` 的 `ComboBox` 加 `role` 这个 prop、`useCallback` 的依赖补齐），行为不变；web 的上限 403 → 367。没有新的 vitest。
 - 关键词：`plane-workspace-urls` 加上删掉的工作区的 `labels/` 和项目的 `intake-state/`（第 3 节第 7 条）。
 
 ### 2.8 状态（Task 8；3.17、7.1、7.2、7.3；P7a 的交接）
@@ -174,13 +175,13 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
     - **侧边栏的项目**：`updateProjectSortOrder(project, droppedOnId, dropAtEnd)` 收拖放的目标，从调用者的项目此刻的顺序算出 `sort_order`（`t3-ps-sort-at-call`）。
     - **状态**：`moveState(stateId, group, droppedOnId, after)` 从那个组的状态算出 `sequence`（`t8-st-move-at-call`）。
     - **标签**：`updateLabelPosition(labelId, parentId, droppedOnId, dropAtEndOfList)` 从新的同级算出 `sort_order`（`t9-lb-no-queue`）；新父标签下没有同级时只发 `parent_id`；放回原父标签下、没有放在某个标签上时什么都不发。
-    - **标签栏**：`updateNavigation(projectId, change)` 收一个作用于标签栏的函数，作用于 nerve 最近一次回答的标签栏（`t5-pp-change-at-call`）。
+    - **标签栏**：`updateNavigation(projectId, change)` 收一个作用于标签栏的函数，作用于 nerve 最近一次回答的标签栏（`t5-pp-change-at-call`；修正轮在修正后的 store 上重写为 `t5r-pp-change-at-call`），不是上一个修改发出的请求体（`t5r-pp-chain-on-request`，裁定 T5-b）。store 没有这个项目的标签栏（还没取到）时不发请求、直接失败，与状态、标签的移动对 store 没有的状态、标签一样（`held()`）：nerve 整份替换，作用于手写的默认值会把调用者已藏起的标签换掉（Task 5 的评审 I1，裁定 T5-a，`t5r-pp-change-on-default`；plan 原来写的"没有取过时是默认的"与本条相抵，以本条为准）。
 
     三种移动的位置是同一个算法，只写一份（`core/lib/place-between.ts` 的 `placeBetween(before, after, step)`）：在两邻之间取中点；放在第一个之前取它减一步；放到最后取最后一个加一步。步长与服务端相同：侧边栏和标签 10000（`SortOrderFirst`、标签的 `sortOrderStep`，3.16），状态 15000（`sequenceStep`，P7a）。标签放在第一个之前原来取它的一半，现在与另两种一样取它减 10000（三种共用之后的唯一行为变化，第 21 条）。
 16. **状态在组中的位置由顺序算出**（P7a 的交接）：nerve 不给 `order`；`sortStates` 按组在 `STATE_GROUPS` 中的顺序、再按 `sequence` 排，`getStatePercentageInGroup` 是它在组中的位置（组中最后一个是 100），状态图标读它。拖动排序经 `moveState`，在轮到它发出时算 `sequence`（第 15 条），发出 `{ group, sequence }`，由 nerve 决定（P7a）。
 17. **`useProjectFetch` 是新加的 hook，判断的顺序是固定的**（P8a 的 `useWorkspaceFetch` 同样，P8a spec 第 3 节第 13 条）：读被拒绝先于"还没有回答"（否则 nerve 连不上时包装层一直空白，没有重取；`t10-pf-no-retry` 和"第一次就取不到"一行），nerve 的读先于项目 store 的副本（否则显示 store 中旧的成员身份：`t10-pf-no-loading`、`t10-pf-stale-member`），"还没有回答"先于项目 store 是否仍给出（`t10-pf-store-before-loading`），项目 store 是否仍给出先于 `member_role`（删除、离开之后显示"找不到项目"：`t10-pf-store-gone-waits`），`member_role` 读项目 store 的（加入之后 SWR 的读还是加入之前的：`t10-pf-role-from-read`）。项目只在地址的工作区里算数：调用者另一个工作区的项目与 store 不给出的一样是 `not-found`，子资源一个都不取（`t10-pf-other-workspace`，vitest 和 S2 两层，预检 PF-M3）。码只认 `project.not_found`（`t10-pf-code`、`t10-pf-any-refusal-not-found`）：其余的拒绝（包括 nerve 连不上）是 `unavailable`，可以重取。
 18. **"找不到项目"包括私密项目的非成员**（8.3）：nerve 对看不到的项目答 404 `project.not_found`，与不存在的不分；页面照它显示"找不到项目"。附录 A.5 的清单中，成员、访客、不是项目成员的人打开私密项目 `ops` 时那一个 404 就是它，不是旧接口。
-19. **旧 `ProjectService` 只留三个方法**（7.3、Codex M-3）：`getProjectUserProperties`、`updateProjectUserProperties`（M4 的工作项筛选，关键词规则的 `until: "M4"` 例外）、`projectIssuesSearch`（M4、M6、M7 的工作项搜索，它的三个调用方各有一个模块级实例：M2 交接第 3 节的计数中它们属于 M4–M7）。
+19. **旧 `ProjectService` 只留三个方法**（7.3、Codex M-3）：`getProjectUserProperties`、`updateProjectUserProperties`（M4 的工作项筛选，关键词规则的 `until: "M4"` 例外）、`projectIssuesSearch`（M4、M6、M7 的工作项搜索，它的三个调用方各有一个模块级实例：M2 交接第 3 节的计数中它们属于 M4–M7）。持有它的只剩这两类调用方：工作项搜索的三个模块级实例，和 M4 的工作项筛选 store（`issue/project/filter.store.ts`）的一个字段；迭代和模块的 store 中从不读的两个字段删除（Task 5 的评审 M3）。
 20. **`@nerve/propel` 依赖 `@nerve/api-client`**：项目的图标是生成的 `LogoProps`，`Logo` 收它（Plane 的 `TLogoProps` 是 M7 的，形状与它相同）。工作区内的依赖，不是新的 npm 包（与 P8a 的 `@nerve/types`、`@nerve/utils` 同）。
 21. **裁定 D10（接受）：页面上看得到的不同**（W17；P9–P11 照第 2 节的故事改页面）：
     - 项目一侧现在能显示：`7390e012` 上项目的列表、读和子资源都是 404（附录 A.5），项目页和侧边栏是空的、项目的页面打不开。
@@ -191,6 +192,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
     - 项目包装层：看得到、不是成员（公开项目）→ 加入的界面；找不到（不存在、看不到的私密项目、删除、离开、在另一个工作区的地址下打开）→"找不到项目"；nerve 连不上 → `SessionUnavailable`，带重取；Plane 的"无权访问"界面没有了。不是成员的人不发任何子资源的请求（原来发出四个、都是 403）。
     - 收集箱的工作项：未接受的不显示状态，创建弹窗没有状态一项；工作区级的工作项筛选没有标签一项，按标签分组只有"无"（第 6 条，M7）。
     - 被拒绝的标签移动和"移出分组"提示失败（原来什么都不提示）。对 store 没有列出的成员、没有的状态和标签，修改不发请求、直接失败。
+    - 标签栏：调用者的标签栏还没取到时（项目包装层的取数在外，或被拒绝），页头的切换默认、隐藏、显示不发请求，提示失败（裁定 T5-a；原来作用于默认值发出，nerve 整份替换，已藏起的标签又回到页头）；控件在这期间仍显示，取到之前藏起它们是 P10 的页面的事。被拒绝的隐藏、显示提示失败（原来什么都不提示：Plane 的 `try` 接不住没有等待的拒绝；Task 5 的评审 M4）。
     - 工作区的状态只在调用者的列表有这个工作区时取（原来对不是成员的工作区也按 slug 发出）；项目设置的成员默认值不再自己取项目（少一个重复的请求）。项目一侧的取数每次挂载都重取，聚焦时不取（P8a 的 F-1）。
     - 项目的工作项列表和已归档工作项列表中，工作项的创建、修改、删除、归档之后不再重取项目（少一个请求；Task 3，裁定 T3-c）。
 22. **裁定 T4-pre：项目角色不开放（fail closed）**（Task 4 进行中一次自动的安全评审提出）：页面按权限 store 决定显示什么、取什么（7.1），所以项目角色只在四条都成立时给出：工作区是调用者的、项目 store 给出这个项目、`project.workspace_id` 等于这个工作区的 id、`member_role` 不为 `null`；之后工作区管理员是管理员（PM+WA），其余是他的 `member_role`（WA- 仍什么都没有）。plan 的 `permissions.store.ts` 本来就这样写，代码不变；评审读到的开放写法（store 没有的项目给工作区管理员管理员、给其余的人访客，不比较项目的工作区）是变异 `t4-pf-unlisted-guest` 在 `mut.py` 运行时临时写进文件的样子。变化在测试：`allows $who …` 的表加两行，store 没有的项目和他另一个工作区的项目（在那里是它的管理员），在其中工作区管理员也什么都没有（工作区的其余角色在 store 没有的项目中的行是 WM-私、WG-、P-前）；两个变异 `t4-pf-unknown-project-open`、`t4-pf-foreign-workspace` 由这两行发现（附录 A.2）。
@@ -235,7 +237,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - [ ] 9.5 中 P8b 的 vitest 通过：权限 store 的项目一半（9.2 同一组身份，含 PM+WA、WA-）、状态的顺序和组中的位置、拖动排序一个接一个、位置在轮到它时算（项目、状态、标签；标签栏的修改同样）、`ProjectAuthWrapper` 在 `member_role` 为 `null` 时和项目不在地址的工作区里时不取子资源；五个 store 的取数、修改、会话、排队、取数不等修改、取数与修改的交错、按 id 存；每个都有一个发现它的变异（W18，附录 A.2）。
 - [ ] 根目录 `.oxlintrc.json` 的两条 `overrides` 覆盖 P8b 的文件：范围内的会话取数从 `swr` 导入值、范围内的文件用非空断言，`check:lint` 都失败（附录 A.2 的 W4、W12 变异）；两个包装层都在范围内。
 - [ ] `tsc`、knip 通过。
-- [ ] 改到的文件按 7.9 没有 oxlint 警告：有手改的源文件 148 个都是 0 条，没有新的抑制；只经机械步骤到达的 38 个文件的 14 条列在附录 A.8，留给 P11 第 4 个任务；web 的上限 435 → 367，`utils` 12 → 7，其余各包不变。
+- [ ] 改到的文件按 7.9 没有 oxlint 警告：有手改的源文件 148 个都是 0 条，没有新的抑制；只经机械步骤到达的 38 个文件的 14 条列在附录 A.8，留给 P11 第 4 个任务；web 的上限 435 → 364，`utils` 12 → 7，其余各包不变。
 - [ ] 逐 Task 复现：从 `7390e012` 加上本修订的文档提交的树照 plan 应用，每个 Task 之后门禁通过，最终与原型逐文件相同（附录 A.12）。
 
 ## 5. 不在 P8b 范围内
@@ -311,6 +313,9 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - **Task 4 的修正轮**（Task 4 的评审 I1–I3；裁定 T4-a）另加 9 个，同样不在上面的计数中，在 Task 4 的树上跑过，在修正之前的测试上都存活：
   - W3：`probe-join-current-workspace`（加入的项目写进地址的工作区的列表，不是它自己工作区的；P8a 的第三条教训，由加入调用者另一个工作区的项目发现）；`probe-leave-forgets-read-first`、`rv-delete-forgets-read-first`（离开、删除在 nerve 回答之前就丢掉项目自己的读；第一条教训，由从读了自己的读的 store 开始的拒绝发现）；`rv-leave-keeps-read`（离开的项目自己的读留着，由离开之前先读它发现）。
   - W9：`rv-create-any-role`（访客的项目也算可以创建）、`probe-create-no-role-check`（加入的项目都算，带成员的角色）、`t4fix-create-any-empty`（没有可以创建的项目也算可以创建）、`t4fix-create-other-address`（不按地址的工作区问角色），由 `user/index.test.ts` 发现。`rv-create-workspace-projects`（看工作区的项目而不是加入的）与原来等价：不是成员的项目没有角色；它由 `tsc` 和地址没有工作区时的崩溃发现，不是由性质。
+- **Task 5 的修正轮**（Task 5 的评审 I1、I2、M1、M2；裁定 T5-a、T5-b）另加 9 个，同样不在上面的计数中，在 Task 5 的树上跑过：
+  - 标签栏 store（`preferences.store.test.ts`），在修正之前的测试上都存活：`t5r-pp-change-on-default`（W3，store 没有标签栏时修改作用于 nerve 的默认并发出，即修正之前的代码；由取数在外时的修改发现）；`t5r-pp-chain-on-request`（W6，每个修改作用于上一个修改发出的请求体，不是 nerve 的回答；由两次连续的隐藏、排队两个测试发现）；`t5r-pp-refusal-resets`、`t5r-pp-cut-resets`（W3，被拒绝的、被会话切断的重取把 store 已有的标签栏换成默认的；由加载的不是默认的标签栏发现）。`t5r-pp-change-at-call` 是 plan 的 `t5-pp-change-at-call` 在修正后的 store 上的写法（它要改的文字已不在），修正前后的测试都发现它。
+  - 页头的三个修改（`tab-navigation-utils.test.ts`，修正之前没有测试）：`t5r-nav-hide-duplicates`（隐藏已隐藏的列两次）、`t5r-nav-toggle-always`（切换当前默认的仍是它，不回到工作项）、`t5r-nav-show-nothing`（显示什么都不去掉）、`t5r-nav-show-all`（显示去掉全部）。
 
 ### A.3 清扫
 
@@ -388,7 +393,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - M2 交接第 3 节的 `git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web`：27 处 → 22 处。M3 的 2 处（`project/form.tsx` 的 `ProjectService`、`project-member.service.ts` 的 `ProjectMemberService`）消失，M3 的 10 处至此全部消失；另 3 处是封面上传的 `FileService`（`image-picker-popover.tsx`、`create-project-modal.tsx`、`cover-image.helper.ts`，M5 的，随 Task 1 删除）。剩下的 22 处都是 M4–M7 的（其中 `ProjectService` 的 3 处是工作项搜索的调用方，第 3 节第 19 条）。
 - 项目一侧的每个 store 和 service 由 `RootStore` 用这一代的 `ApiClient` 建：`ProjectRootStore(root, api)` 建 `ProjectStore`、`ProjectPreferencesStore`；`MemberRootStore` 建 `ProjectMemberStore`；`StateStore(root, api)`、`LabelStore(root, api)`；五个 service 由各自的 store 建。权限 store 不建 service（它只读 store）。
 - 键：项目一侧的每个会话的取数经 `useSessionSWR`（2.12 的表）。P8b 改到的文件中仍从 `swr` 导入值的只有三个，取的都是 M4–M7 的东西：工作项的浏览页 `browse/[workItem]/page.tsx`（工作项，M4；Task 10 只改了包装层的 prop）、`use-workspace-issue-properties.ts`（迭代、模块，M6；Task 7 删去其中的工作区标签）、通知页的 `workspace-notifications/root.tsx`（收集箱项读项目，M7，第 5 节）。
-- 静态检查：根目录 `.oxlintrc.json` 的 `no-restricted-imports` 的范围加上 `web/apps/web/core/store/member/project/**`、`core/store/project/**`、`core/store/state.store.ts`、`core/store/label.store.ts`、`core/components/projects/page.tsx` 和 `use-archived-projects-fetch.ts`（裁定 T3-a）、`core/components/project-states/**`、`core/components/labels/**`、`core/components/project/project-settings-member-defaults.tsx`、`core/layouts/auth-layout/workspace-wrapper.tsx`、`project-wrapper.tsx`、`use-project-fetch.ts`（P8a 的已知限制在这里解除：两个包装层都在范围内）；`typescript/no-non-null-assertion` 的范围加上五个 service、`core/store/project/**`（项目 store 的两个测试文件和 `fake-projects.ts` 都在其中）、`core/store/member/project/**`、状态和标签的 store 和它们的测试、`core/lib/place-between.ts`、`use-project-fetch.ts` 和它的测试、`permissions.store.test.ts`、`use-project-preferences.ts`、`use-tab-preferences.ts`、`projects/page.tsx`、`use-archived-projects-fetch.ts` 和它的测试（裁定 T3-a）。W4、W12 的 7 个变异都让 `check:lint` 失败（A.2）。
+- 静态检查：根目录 `.oxlintrc.json` 的 `no-restricted-imports` 的范围加上 `web/apps/web/core/store/member/project/**`、`core/store/project/**`、`core/store/state.store.ts`、`core/store/label.store.ts`、`core/components/projects/page.tsx` 和 `use-archived-projects-fetch.ts`（裁定 T3-a）、`core/components/project-states/**`、`core/components/labels/**`、`core/components/project/project-settings-member-defaults.tsx`、`core/layouts/auth-layout/workspace-wrapper.tsx`、`project-wrapper.tsx`、`use-project-fetch.ts`（P8a 的已知限制在这里解除：两个包装层都在范围内）；`typescript/no-non-null-assertion` 的范围加上五个 service、`core/store/project/**`（项目 store 的两个测试文件和 `fake-projects.ts` 都在其中）、`core/store/member/project/**`、状态和标签的 store 和它们的测试、`core/lib/place-between.ts`、`use-project-fetch.ts` 和它的测试、`permissions.store.test.ts`、`use-project-preferences.ts`、`use-tab-preferences.ts` 和 `tab-navigation-utils.ts` 与它的测试（裁定 T5-b）、`projects/page.tsx`、`use-archived-projects-fetch.ts` 和它的测试（裁定 T3-a）。W4、W12 的 7 个变异都让 `check:lint` 失败（A.2）。
 
 ### A.7 W12、W13
 
@@ -417,7 +422,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 | `core/hooks/work-item-filters/use-work-item-filters-config.tsx` | 3 | `no-shadow` 3（P8a 的清单中已有） |
 
   其余 33 个只经机械步骤到达的文件没有警告。
-- 上限：web 应用 435 → 421（Task 1）→ 414（Task 2）→ 411（Task 3）→ 409（Task 4）→ 408（Task 5）→ 406（Task 6）→ 370（Task 7）→ 367（Task 8）；`utils` 12 → 10（Task 2）→ 9（Task 8）→ 7（Task 9）；`types` 0、`constants` 1、`propel` 16、`ui` 19 不变。
+- 上限：web 应用 435 → 421（Task 1）→ 414（Task 2）→ 411（Task 3）→ 409（Task 4）→ 408（Task 5）→ 405（Task 5 的修正轮，`cycle.store.ts` 的 3 条 `always-return`）→ 403（Task 6）→ 367（Task 7）→ 364（Task 8）；`utils` 12 → 10（Task 2）→ 9（Task 8）→ 7（Task 9）；`types` 0、`constants` 1、`propel` 16、`ui` 19 不变。
 - `promise/always-return`：P8b 有手改的文件中都已清零；只经机械步骤到达的 3 条在上表。
 - 抑制：没有新的抑制；删去四处（`dropdowns/intake-state/base.tsx` 的一处随文件删除，`project-member.store.ts` 一处、`state.store.ts` 两处随重写删除）。
 

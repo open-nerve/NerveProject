@@ -5,6 +5,7 @@
  */
 
 import type { ProjectTab } from "@nerve/api-client";
+import type { NavigationChange } from "@/store/project/preferences.store";
 
 // Tab preferences type
 export type TTabPreferences = {
@@ -12,6 +13,24 @@ export type TTabPreferences = {
   hiddenTabs: ProjectTab[];
 };
 export const DEFAULT_TAB_KEY: ProjectTab = "work_items";
+
+// The changes of the caller's tab bar that the header's controls make, each to the tab bar nerve last answered
+// (ProjectPreferencesStore.updateNavigation)
+
+/** The project opens on tab; on its work items again when it opens on tab already. */
+export const toggleDefaultTab =
+  (tab: ProjectTab): NavigationChange =>
+  (held) => ({ ...held, default_tab: tab === held.default_tab ? DEFAULT_TAB_KEY : tab });
+
+/** tab goes under "more", last; a tab there already is not listed twice. */
+export const hideTab =
+  (tab: ProjectTab): NavigationChange =>
+  (held) => ({ ...held, hide_in_more_menu: [...held.hide_in_more_menu.filter((hidden) => hidden !== tab), tab] });
+
+/** tab leaves "more"; the other tabs there stay. */
+export const showTab =
+  (tab: ProjectTab): NavigationChange =>
+  (held) => ({ ...held, hide_in_more_menu: held.hide_in_more_menu.filter((hidden) => hidden !== tab) });
 
 /**
  * Map tab keys to their corresponding URLs

@@ -19,7 +19,7 @@
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
 - **规则**（总体设计 7.7，P8a 的裁定 F-1–F-10）：store 每个资源一个，按会话分代，由 `RootStore` 用这一代的 `ApiClient` 建；没有模块级的 service 实例（M2 交接第 3 节的 `git grep` 中 M3 的两处在本 Phase 消失）；修改经 `oneAtATime()` 排队，取数不排队；修改不乐观，store 写入 nerve 的回答；取数和修改的应答只经 `core/lib/reconciled.ts` 对齐（扩展它，不复制）；每个工作区、每个项目的状态按 id 存，项目一侧的 store 只给出项目 store 仍给出的项目的东西（离开、删除的项目，和不再是调用者的工作区里的项目，什么都不给）；取数遇到 `SessionChangedError` 给出 `undefined`、不改本代的状态，它不是认证失败。会话的每个取数都经 `useSessionSWR`（键 `[取数的名称, loginId, ...取数的参数]`，不传配置），没有权限时键为 `null`，权限的条件由取数的 hook 自己从 store 算出、不由调用方传入。这一条有静态检查：根目录 `.oxlintrc.json` 的 `no-restricted-imports` 不让范围内的文件从 `swr` 导入值（P8b 的 store、两个包装层、`use-project-fetch.ts` 和读它们的设置组件，spec 附录 A.6）。类型只来自生成的客户端：不写重述契约的类型，不留旧名字的别名，不写把新接口映射成 Plane 形状的适配层。删除的代码删干净（store 和 service 的方法、组件、两种语言的文案、常量、键、它们的测试），不加 knip 的忽略、开关或桩。没有新的 `as`、`any`、`!`（spec 附录 A.7 的 W12），P8b 的 M3 路径上 `typescript/no-non-null-assertion` 是错误（同一组 `overrides`）。本 plan 写或重写的文件都在约 400 行以内（最终原型上量的，spec 附录 A.10：最长的是 `core/store/state.store.test.ts` 369 行、`core/store/project/project.store.ts` 332 行、`core/store/label.store.test.ts` 331 行；项目 store 的测试按关注点分成两个文件）；只为使用方改到的 Plane 文件不拆，也不变长，例外三个，原因见 spec 附录 A.10：`issues/issue-layouts/utils.tsx` 808 → 812（状态图标读组中的位置，调用比 `state.order` 长，格式化把一行拆成五行）、`power-k/config/navigation/commands.ts` 465 → 466（两个不读闭包的条件移出 hook，清掉 `consistent-function-scoping`，多一个空行）、只经机械步骤改到的 `power-k/ui/pages/context-based/work-item/commands.ts` 414 → 415（`rename_types.py` 把 `Label` 另起一行导入）。
-- **oxlint**（M3 设计 7.9，裁定 R3）：有手改的文件（每个有块的 TS 文件）在它的 Task 提交时没有 oxlint 警告；只经本 plan 的机械步骤改到的文件（Task 2、8、9 的 Step 1 的文件中没有块的那些）不在此列，它们的警告留给 P11 的第 4 个任务，spec 附录 A.8 列出它们。没有新的 oxlint 抑制。上限在改变条数的 Task 里调到新的条数：web 435 → 421（Task 1）→ 414（Task 2）→ 411（Task 3）→ 409（Task 4）→ 408（Task 5）→ 406（Task 6）→ 370（Task 7）→ 367（Task 8）；`utils` 12 → 10（Task 2）→ 9（Task 8）→ 7（Task 9）；`types` 0、`constants` 1、`propel` 16、`ui` 19 不变。
+- **oxlint**（M3 设计 7.9，裁定 R3）：有手改的文件（每个有块的 TS 文件）在它的 Task 提交时没有 oxlint 警告；只经本 plan 的机械步骤改到的文件（Task 2、8、9 的 Step 1 的文件中没有块的那些）不在此列，它们的警告留给 P11 的第 4 个任务，spec 附录 A.8 列出它们。没有新的 oxlint 抑制。上限在改变条数的 Task 里调到新的条数：web 435 → 421（Task 1）→ 414（Task 2）→ 411（Task 3）→ 409（Task 4）→ 408（Task 5）→ 405（Task 5 的修正轮）→ 403（Task 6）→ 367（Task 7）→ 364（Task 8）；`utils` 12 → 10（Task 2）→ 9（Task 8）→ 7（Task 9）；`types` 0、`constants` 1、`propel` 16、`ui` 19 不变。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -6848,6 +6848,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `pf-old-read-t5` | 旧的单个项目的地址又写回来（预检在它的 Task 5 树上写的） | 关键词守卫 | 静态 |
 | `t5-pp-change-at-call` | 标签栏的修改在调用时做，改的是上一次修改回答之前的标签栏 | `preferences.store.test.ts` | vitest |
 | `t5-pp-wiring-ungated` | 项目的根 store 对任何 id 都给标签栏 store 一个项目：接线处丢了门 | `preferences.store.test.ts` | vitest |
+| `t5r-pp-change-on-default` | store 没有标签栏时修改作用于 nerve 的默认并发出（修正轮，裁定 T5-a） | `preferences.store.test.ts` | vitest |
+| `t5r-pp-chain-on-request` | 每个修改作用于上一个修改发出的请求体，不是 nerve 的回答（修正轮，裁定 T5-b） | `preferences.store.test.ts` | vitest |
+| `t5r-pp-change-at-call` | `t5-pp-change-at-call` 在修正后的 store 上的写法（修正轮） | `preferences.store.test.ts` | vitest |
+| `t5r-pp-refusal-resets` | 被拒绝的重取把已有的标签栏换成默认的（修正轮，裁定 T5-b） | `preferences.store.test.ts` | vitest |
+| `t5r-pp-cut-resets` | 被会话切断的重取把已有的标签栏换成默认的（修正轮，裁定 T5-b） | `preferences.store.test.ts` | vitest |
+| `t5r-nav-hide-duplicates` | 隐藏已隐藏的标签时列两次（修正轮，裁定 T5-b） | `tab-navigation-utils.test.ts` | vitest |
+| `t5r-nav-toggle-always` | 切换当前默认的标签时仍是它，不回到工作项（修正轮，裁定 T5-b） | `tab-navigation-utils.test.ts` | vitest |
+| `t5r-nav-show-nothing` | 显示一个标签时什么都不去掉（修正轮，裁定 T5-b） | `tab-navigation-utils.test.ts` | vitest |
+| `t5r-nav-show-all` | 显示一个标签时去掉全部（修正轮，裁定 T5-b） | `tab-navigation-utils.test.ts` | vitest |
 
 ---
 
@@ -8011,10 +8020,10 @@ import type { IMemberFilters } from "@/store/member/utils";
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 408",
+    "check:lint": "node ../../../tools/lint-cap.mjs 405",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 406",
+    "check:lint": "node ../../../tools/lint-cap.mjs 403",
 ````
 
 `web/packages/types/src/project/projects.ts`（修改，2 处）：
@@ -8056,7 +8065,7 @@ export interface IProjectBulkAddFormData {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 406 条，等于新的上限。
+Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 403 条，等于新的上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -8120,7 +8129,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - 收集箱的分诊状态：`IntakeStateDropdown`（`dropdowns/intake-state/` 删除）、`StateStore` 的 `intakeStateMap`、`fetchedIntakeMap`、`getIntakeStateById`、`getProjectIntakeState`、`getProjectIntakeStateIds`、`fetchProjectIntakeState`，旧状态 service 的 `getIntakeState`，`packages/types/src/intake/`，`@nerve/propel` 的 `IntakeStateGroupIcon`、`TriageGroupIcon`、`IIntakeStateGroupIcon`、`INTAKE_STATE_GROUP_COLORS`。收集箱的工作项：已接受的显示状态下拉框，未接受的不显示状态；创建弹窗没有状态一项（W17）。
   - 工作区级的标签：`LabelStore` 的 `workspaceLabels`、`getWorkspaceLabels`、`getWorkspaceLabelIds`、`fetchWorkspaceLabels`，旧标签 service 的 `getWorkspaceIssueLabels`（`/api/workspaces/{slug}/labels/`），键 `WORKSPACE_LABELS`；`useWorkspaceIssueProperties` 不再取它（整个文件）；工作区级的工作项筛选没有标签一项，按标签分组只有"无"（W17，M7 加回）。
 - 清零（7.9，R3）：标签的设置页和工作项的标签选择器有 Task 9 的手改，它们的 oxlint 警告在这里先清零，Task 9 的块因此只有换 store 的改动：`then` 的回调不再返回值、遮蔽的变量改名、点击的 `p`/`li` 改为 `button`、只收集按键的根加 `role="presentation"`（`@nerve/ui` 的 `ComboBox` 加 `role` 这个 prop）、`useCallback` 的依赖补齐、`createLabel` 的回调不再收 slug 和项目（调用方已有它们）。行为不变。
-- web 的 oxlint 上限 406 → 370。
+- web 的 oxlint 上限 403 → 367。
 - 关键词：`plane-workspace-urls` 加上本 Task 删掉的两个地址：工作区的 `labels/`（`getWorkspaceIssueLabels`）和项目的 `intake-state/`（`getIntakeState`），命中样例取自这两个方法。
 
 **Tests:** 没有新的 vitest：本 Task 只删除和清零。
@@ -9016,10 +9025,10 @@ export function LabelDropdown(props: ILabelDropdownProps) {
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 406",
+    "check:lint": "node ../../../tools/lint-cap.mjs 403",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 370",
+    "check:lint": "node ../../../tools/lint-cap.mjs 367",
 ````
 
 `web/packages/ui/src/dropdowns/combo-box.tsx`（修改，2 处）：
@@ -9042,7 +9051,7 @@ import type { AriaRole, ElementType, KeyboardEventHandler, ReactNode, Ref } from
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 370 条，等于新的上限；`propel` 16 条、`ui` 19 条，不变。
+Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 367 条，等于新的上限；`propel` 16 条、`ui` 19 条，不变。
 
 Run: `make knip`
 Expected: 通过。
@@ -10687,10 +10696,10 @@ import { cn } from "@nerve/utils";
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 370",
+    "check:lint": "node ../../../tools/lint-cap.mjs 367",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 367",
+    "check:lint": "node ../../../tools/lint-cap.mjs 364",
 ````
 
 `web/packages/constants/src/fetch-keys.ts`（修改，1 处）：
@@ -10739,7 +10748,7 @@ type TStateGroups = "backlog" | "unstarted" | "started" | "completed" | "cancell
 - [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 367 条、`utils` 9 条，等于新的上限。
+Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 364 条、`utils` 9 条，等于新的上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -12112,7 +12121,7 @@ import type { Label, LabelCreate } from "@nerve/api-client";
 - [ ] **Step 4: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 367 条、`utils` 7 条，等于上限。
+Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 364 条、`utils` 7 条，等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -12981,7 +12990,7 @@ export const PROJECT_MEMBER_PREFERENCES = (projectId: string, projectRole: EUser
 - [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 367 条，等于上限。
+Expected: 通过；关键词守卫 64 条规则、2 个例外，没有命中；web 的 oxlint 364 条，等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -13283,7 +13292,7 @@ import { action, computed, observable, makeObservable, runInAction, reaction } f
 - [ ] **Step 4: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 64 条规则、3 个例外（加了 `plane-workspace-urls` 的 `until: "M4"`），没有命中；web 的 oxlint 367 条，等于上限。
+Expected: 通过；关键词守卫 64 条规则、3 个例外（加了 `plane-workspace-urls` 的 `until: "M4"`），没有命中；web 的 oxlint 364 条，等于上限。
 
 Run: `make knip`
 Expected: 通过。

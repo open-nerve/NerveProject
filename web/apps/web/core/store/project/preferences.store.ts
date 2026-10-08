@@ -13,16 +13,13 @@ import { ReconciledByKey } from "@/lib/reconciled";
 import { ProjectPreferencesService } from "@/services/project/project-preferences.service";
 
 /** A change of a tab bar: what it makes of the tab bar it is made to. */
-type NavigationChange = (held: ProjectNavigation) => ProjectNavigation;
+export type NavigationChange = (held: ProjectNavigation) => ProjectNavigation;
 
 export interface IProjectPreferencesStore {
   getNavigation: (projectId: string) => ProjectNavigation | undefined;
   fetchNavigation: (projectId: string) => Promise<ProjectNavigation | undefined>;
   updateNavigation: (projectId: string, change: NavigationChange) => Promise<ProjectNavigation>;
 }
-
-/** nerve's tab bar of one who has changed none (M3 design 3.18): the project opens on its work items, none hidden. */
-const DEFAULT_NAVIGATION: ProjectNavigation = { default_tab: "work_items", hide_in_more_menu: [] };
 
 /**
  * The tab bar of each project's header as the caller has it, the navigation of his settings in the project (M3 design
@@ -70,15 +67,23 @@ export class ProjectPreferencesStore implements IProjectPreferencesStore {
 
   /**
    * @description changes the caller's tab bar in a project, which nerve replaces whole: change is made, in the
-   * change's turn, to the tab bar nerve last answered (its default until fetched), so that a change asked for before
-   * the one before it is answered keeps that one; the store then has nerve's answer. Fails, changing nothing, when
-   * nerve refuses.
+   * change's turn, to the tab bar nerve last answered, so that a change asked for before the one before it is answered
+   * keeps that one; the store then has nerve's answer. Fails, changing nothing, when nerve refuses; and without
+   * sending, when the store has no tab bar of the project (none fetched yet, or of a project it no longer gives): made
+   * to a tab bar nerve did not give, the change would replace the caller's whole with it.
    */
   updateNavigation = (projectId: string, change: NavigationChange): Promise<ProjectNavigation> =>
     this.changes(async () => {
-      const held = this.getNavigation(projectId) ?? DEFAULT_NAVIGATION;
+      const held = this.held(projectId);
       const preferences = await this.service.update(projectId, { navigation: change(held) });
       this.navigation.confirm(projectId, () => preferences.navigation);
       return preferences.navigation;
     });
+
+  /** The caller's tab bar in the project as the store has it; fails when it has none. */
+  private held(projectId: string): ProjectNavigation {
+    const navigation = this.getNavigation(projectId);
+    if (!navigation) throw new Error("Tab bar not found");
+    return navigation;
+  }
 }

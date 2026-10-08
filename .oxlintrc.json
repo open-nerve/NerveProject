@@ -192,6 +192,8 @@
         "web/apps/web/core/store/project/**",
         "web/apps/web/core/hooks/store/use-project-preferences.ts",
         "web/apps/web/core/components/navigation/use-tab-preferences.ts",
+        "web/apps/web/core/components/navigation/tab-navigation-utils.ts",
+        "web/apps/web/core/components/navigation/tab-navigation-utils.test.ts",
         "web/apps/web/core/lib/place-between.ts",
         "web/apps/web/core/components/projects/use-archived-projects-fetch.ts",
         "web/apps/web/core/components/projects/use-archived-projects-fetch.test.ts",
