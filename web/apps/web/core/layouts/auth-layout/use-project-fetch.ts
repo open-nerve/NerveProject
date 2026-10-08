@@ -31,10 +31,12 @@ export type ProjectAccess =
  * The project side of what a page of a project fetches as it mounts (M3 design 3.1, 7.1), and the one decision what
  * the project is to the caller: nerve's read of the project, which decides it; once it says he is a member, his tab
  * bar in the project, its labels, its members and its states, which nerve gives its members alone. A project counts
- * in the address's workspace alone: one of another of his workspaces is not found here. Gives what the wrapper shows.
+ * in the address's workspace alone, workspaceSlug's (the route's, as useWorkspaceFetch reads it; the stores' current
+ * workspace follows the address a render later): one of another of his workspaces is not found here. Gives what the
+ * wrapper shows.
  */
-export function useProjectFetch(projectId: string): ProjectAccess {
-  const { currentWorkspace } = useWorkspace();
+export function useProjectFetch(workspaceSlug: string | undefined, projectId: string): ProjectAccess {
+  const { getWorkspaceBySlug } = useWorkspace();
   const { getProjectById, fetchProject } = useProject();
   const { fetchNavigation } = useProjectPreferences();
   const { fetchProjectLabels } = useLabel();
@@ -43,8 +45,9 @@ export function useProjectFetch(projectId: string): ProjectAccess {
   } = useMember();
   const { fetchProjectStates } = useProjectState();
   const read = useSessionSWR(["PROJECT", projectId], (id) => fetchProject(id));
+  const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
   const held = getProjectById(projectId);
-  const project = held && held.workspace_id === currentWorkspace?.id ? held : undefined;
+  const project = held && held.workspace_id === workspace?.id ? held : undefined;
   const access = decide(read, project);
   // the project's own reads, a member's alone: for anyone else they are nothing to fetch
   const member = access.kind === "member" ? access.project.id : undefined;

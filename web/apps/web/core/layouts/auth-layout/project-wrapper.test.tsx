@@ -5,13 +5,15 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/lib/api-error";
+import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import { ProjectAuthWrapper } from "./project-wrapper";
 import type { ProjectAccess } from "./use-project-fetch";
 
 // What the project wrapper shows for each decision of useProjectFetch (M3 design 3.19, 7.6): the wrapper renders on
 // the server with that decision, and stand-ins for the page of an unreachable nerve and for the empty state of the
-// join and not-found screens, which keep the props they were given.
+// join and not-found screens, which keep the props they were given, and for the toasts.
 
 type Unavailable = { onRetry: () => void; autoRetry: boolean };
 type Screen = { title: string; description: string; actions?: { label: string; onClick: () => void }[] };
@@ -37,6 +39,7 @@ vi.mock("@nerve/propel/empty-state", () => ({
   },
 }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 
 const member = projectOf("WEB", "w-acme");
 const seen = projectOf("WEB", "w-acme", { member_role: null });
@@ -55,6 +58,7 @@ beforeEach(() => {
   shown.unavailable.length = 0;
   shown.screens.length = 0;
   shown.joinProject.mockClear();
+  toasts.length = 0;
 });
 
 describe("ProjectAuthWrapper", () => {
@@ -80,6 +84,15 @@ describe("ProjectAuthWrapper", () => {
     ]);
     shown.screens[0]?.actions?.[0]?.onClick();
     expect(shown.joinProject.mock.calls).toEqual([[member.id]]);
+  });
+
+  it("shows nerve's reason when it refuses the join", async () => {
+    const refusal = new ApiError(403, { status: 403, code: "forbidden", title: "Forbidden" });
+    shown.joinProject.mockImplementationOnce(() => Promise.reject(refusal));
+    render({ kind: "not-member", project: seen });
+    shown.screens[0]?.actions?.[0]?.onClick();
+    await vi.waitFor(() => expect(toasts).toHaveLength(1));
+    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.forbidden" }]);
   });
 
   it("shows that the project is not found, with nothing to do, when it is not found to him", () => {

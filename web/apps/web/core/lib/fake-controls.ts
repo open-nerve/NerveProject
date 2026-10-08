@@ -46,6 +46,11 @@ export function Button(props: Pressed) {
   return null;
 }
 
+/** A link styled as a button: no class. */
+export function getButtonStyling() {
+  return "";
+}
+
 export function CustomSelect(props: Select) {
   shown.selects.push(props);
   return null;

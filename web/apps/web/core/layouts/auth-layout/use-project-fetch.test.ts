@@ -47,7 +47,7 @@ describe("useProjectFetch", () => {
   it("fetches the project and, for a member, his tab bar in it, its labels, its members and its states", async () => {
     stores.projects = [member];
     response.current = { data: member };
-    expect(useProjectFetch(member.id)).toEqual({ kind: "member", project: member });
+    expect(useProjectFetch("acme", member.id)).toEqual({ kind: "member", project: member });
     expect(handed.map(([fetch]) => fetch)).toEqual([
       ["PROJECT", "p-web"],
       ["PROJECT_PREFERENCES", "p-web"],
@@ -74,7 +74,7 @@ describe("useProjectFetch", () => {
   ])("fetches the project alone when $when", ({ projects, data, error }) => {
     stores.projects = projects;
     response.current = { data, error };
-    useProjectFetch(member.id);
+    useProjectFetch("acme", member.id);
     expect(handed.map(([fetch]) => fetch)).toEqual([["PROJECT", "p-web"], null, null, null, null]);
   });
 
@@ -139,13 +139,22 @@ describe("useProjectFetch", () => {
   ])("shows the wrapper what to render when $when", ({ projects, data, error, shows }) => {
     stores.projects = projects;
     response.current = { data, error };
-    expect(useProjectFetch(member.id)).toEqual(shows);
+    expect(useProjectFetch("acme", member.id)).toEqual(shows);
+  });
+
+  it("decides by the address, not by the stores' current workspace, a render behind it: another's project is not found", () => {
+    // the stores' address still names beta, of which the project is; the page's address is acme's
+    stores.address = "beta";
+    stores.projects = [elsewhere];
+    response.current = { data: elsewhere };
+    expect(useProjectFetch("acme", elsewhere.id)).toEqual({ kind: "not-found" });
+    expect(handed.map(([fetch]) => fetch)).toEqual([["PROJECT", "p-web"], null, null, null, null]);
   });
 
   it("reads the project again when the page's retry asks", () => {
     const mutate = vi.fn(() => Promise.resolve(undefined));
     response.current = { error: unreachable, mutate };
-    const access = useProjectFetch(member.id);
+    const access = useProjectFetch("acme", member.id);
     if (access.kind === "unavailable") access.retry();
     expect(mutate).toHaveBeenCalledOnce();
   });
