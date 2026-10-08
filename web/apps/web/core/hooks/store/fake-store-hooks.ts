@@ -9,7 +9,7 @@
 // stores hold, and reads there what they were asked to fetch. The hooks then run as plain functions, outside React,
 // with fake-session-swr.ts. How the stores fetch is their own tests'.
 
-import type { Profile, Workspace, WorkspaceMember } from "@nerve/api-client";
+import type { Profile, Project, Workspace, WorkspaceMember } from "@nerve/api-client";
 
 /** What the stores hold, and the fetches they were asked for, in order; a test resets it before each case. */
 export const stores: {
@@ -19,12 +19,21 @@ export const stores: {
   /** Each workspace's memberships, by its slug, then by the member's account id. */
   members: Record<string, Record<string, WorkspaceMember>>;
   profile: Profile | undefined;
+  /** The projects the project store gives (getProjectById). */
+  projects: Project[];
   fetched: string[];
-} = { workspaces: undefined, address: undefined, members: {}, profile: undefined, fetched: [] };
+} = { workspaces: undefined, address: undefined, members: {}, profile: undefined, projects: [], fetched: [] };
 
 /** The stores as a test starts: they hold nothing and were asked for nothing. */
 export function emptyStores() {
-  Object.assign(stores, { workspaces: undefined, address: undefined, members: {}, profile: undefined, fetched: [] });
+  Object.assign(stores, {
+    workspaces: undefined,
+    address: undefined,
+    members: {},
+    profile: undefined,
+    projects: [],
+    fetched: [],
+  });
 }
 
 /** A store's fetch, which says what it fetched; its Promise is what SWR gets. */
@@ -36,6 +45,7 @@ const named = ({ id, slug }: Pick<Workspace, "id" | "slug">) => `${slug} (${id})
 export function useWorkspace() {
   return {
     workspaces: stores.workspaces,
+    currentWorkspace: stores.workspaces?.find((workspace) => workspace.slug === stores.address),
     getWorkspaceBySlug: (slug: string) => stores.workspaces?.find((workspace) => workspace.slug === slug) ?? null,
     fetchWorkspaces: () => fetching("the workspaces"),
     preferences: {
@@ -55,20 +65,38 @@ export function useMember() {
       getWorkspaceMemberDetails: (userId: string) =>
         (stores.address === undefined ? undefined : stores.members[stores.address]?.[userId]) ?? null,
     },
+    project: {
+      fetchProjectMembers: (projectId: string) => fetching(`the members of ${projectId}`),
+    },
   };
 }
 
 export function useProject() {
   return {
+    getProjectById: (projectId: string) => stores.projects.find((project) => project.id === projectId),
     fetchProjects: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the projects of ${named(workspace)}`),
     fetchArchivedProjects: (workspace: Pick<Workspace, "id" | "slug">) =>
       fetching(`the archived projects of ${named(workspace)}`),
+    fetchProject: (projectId: string) => fetching(`the project ${projectId}`),
+  };
+}
+
+export function useProjectPreferences() {
+  return {
+    fetchNavigation: (projectId: string) => fetching(`the tab bar in ${projectId}`),
+  };
+}
+
+export function useLabel() {
+  return {
+    fetchProjectLabels: (projectId: string) => fetching(`the labels of ${projectId}`),
   };
 }
 
 export function useProjectState() {
   return {
     fetchWorkspaceStates: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the states of ${named(workspace)}`),
+    fetchProjectStates: (projectId: string) => fetching(`the states of ${projectId}`),
   };
 }
 

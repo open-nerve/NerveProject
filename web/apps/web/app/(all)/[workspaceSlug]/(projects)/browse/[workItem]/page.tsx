@@ -121,7 +121,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
     <>
       <PageHead title={pageTitle} />
       {workspaceSlug && projectId && issueId && (
-        <ProjectAuthWrapper workspaceSlug={workspaceSlug} projectId={projectId}>
+        <ProjectAuthWrapper projectId={projectId}>
           <WorkItemDetailRoot workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} issue={issue} />
         </ProjectAuthWrapper>
       )}

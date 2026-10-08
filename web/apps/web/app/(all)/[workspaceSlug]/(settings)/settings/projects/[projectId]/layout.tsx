@@ -16,7 +16,7 @@ import type { Route } from "./+types/layout";
 import { ProjectSettingsSidebarRoot } from "@/components/settings/project/sidebar";
 
 function ProjectDetailSettingsLayout({ params }: Route.ComponentProps) {
-  const { workspaceSlug, projectId } = params;
+  const { projectId } = params;
   // router
   const { pathname } = useLocation();
 
@@ -31,7 +31,7 @@ function ProjectDetailSettingsLayout({ params }: Route.ComponentProps) {
           <div className="hidden h-full shrink-0 md:block">
             <ProjectSettingsSidebarRoot projectId={projectId} />
           </div>
-          <ProjectAuthWrapper workspaceSlug={workspaceSlug} projectId={projectId}>
+          <ProjectAuthWrapper projectId={projectId}>
             <Outlet />
           </ProjectAuthWrapper>
         </div>

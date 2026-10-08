@@ -50,7 +50,7 @@ function ProjectLayout({ params }: Route.ComponentProps) {
           </Row>
         </div>
       )}
-      <ProjectAuthWrapper workspaceSlug={workspaceSlug} projectId={projectId}>
+      <ProjectAuthWrapper projectId={projectId}>
         <Outlet />
       </ProjectAuthWrapper>
     </>

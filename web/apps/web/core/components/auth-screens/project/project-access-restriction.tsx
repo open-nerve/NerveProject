@@ -10,21 +10,19 @@ import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 
 type TProps = {
-  isWorkspaceAdmin: boolean;
+  /** Whether the caller sees the project and is no member of it (M3 design 3.19): he may join it. */
+  canJoin: boolean;
   handleJoinProject: () => void;
   isJoinButtonDisabled: boolean;
-  errorStatusCode: number | undefined;
 };
 
 export const ProjectAccessRestriction = observer(function ProjectAccessRestriction(props: TProps) {
-  const { isWorkspaceAdmin, handleJoinProject, isJoinButtonDisabled, errorStatusCode } = props;
+  const { canJoin, handleJoinProject, isJoinButtonDisabled } = props;
   // nerve hooks
   const { t } = useTranslation();
 
-  // Show join project screen if:
-  // - User lacks project membership (409 Conflict)
-  // - User lacks permission to access the private project (403 Forbidden) but is a workspace admin (can join any project)
-  if (errorStatusCode === 409 || (errorStatusCode === 403 && isWorkspaceAdmin))
+  // the caller sees the project and is no member of it: he may join it
+  if (canJoin)
     return (
       <div className="grid h-full w-full place-items-center bg-surface-1">
         <EmptyStateDetailed
@@ -45,24 +43,7 @@ export const ProjectAccessRestriction = observer(function ProjectAccessRestricti
       </div>
     );
 
-  // Show no access screen if:
-  // - User lacks permission to access the private project (403 Forbidden)
-  if (errorStatusCode === 403) {
-    return (
-      <div className="grid h-full w-full place-items-center bg-surface-1">
-        <EmptyStateDetailed
-          title={t("project_empty_state.no_access.title")}
-          description={t("project_empty_state.no_access.restricted_description")}
-          assetKey="no-access"
-          assetClassName="size-40"
-        />
-      </div>
-    );
-  }
-
-  // Show empty state screen if:
-  // - Project not found (404 Not Found)
-  // - Any other error status code
+  // the project is not found to him: it does not exist, is deleted, or he does not see it
   return (
     <div className="grid h-full w-full place-items-center bg-surface-1">
       <EmptyStateDetailed

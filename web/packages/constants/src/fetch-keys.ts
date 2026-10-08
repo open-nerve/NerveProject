@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { EUserPermissions } from "@nerve/types";
-
 const paramsToKey = (params: any) => {
   const {
     state,
@@ -68,19 +66,3 @@ export const CYCLE_ISSUES_WITH_PARAMS = (cycleId: string, params?: any) => {
 
 // Issues
 export const ISSUE_DETAILS = (issueId: string) => `ISSUE_DETAILS_${issueId.toUpperCase()}`;
-
-// project level keys
-export const PROJECT_DETAILS = (_workspaceSlug: string, projectId: string) =>
-  `PROJECT_DETAILS_${projectId.toUpperCase()}`;
-
-export const PROJECT_LABELS = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_LABELS_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_MEMBERS = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MEMBERS_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_STATES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_STATES_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_MEMBER_PREFERENCES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MEMBER_PREFERENCES_${projectId.toUpperCase()}_${projectRole}`;

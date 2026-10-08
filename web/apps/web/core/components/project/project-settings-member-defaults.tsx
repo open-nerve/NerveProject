@@ -8,7 +8,6 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
-import useSWR from "swr";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -16,8 +15,6 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Project } from "@nerve/api-client";
 import { Switch } from "@makeplane/propel/components/switch";
 import { Loader } from "@nerve/ui";
-// constants
-import { PROJECT_DETAILS } from "@nerve/constants";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -63,7 +60,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
   // store hooks
   const { allowPermissions } = useUserPermissions();
 
-  const { currentProjectDetails, fetchProject, updateProject } = useProject();
+  const { currentProjectDetails, updateProject } = useProject();
   // derived values
   const isAdmin = allowPermissions(
     [EUserPermissions.ADMIN],
@@ -73,12 +70,6 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
   );
   // form info
   const { reset, control } = useForm<TMemberDefaults>({ defaultValues });
-  // fetching user members
-  useSWR(
-    workspaceSlug && projectId ? PROJECT_DETAILS(workspaceSlug, projectId) : null,
-    workspaceSlug && projectId ? () => fetchProject(projectId) : null
-  );
-
   useEffect(() => {
     if (!currentProjectDetails) return;
 

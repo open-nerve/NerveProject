@@ -132,7 +132,10 @@
         "web/apps/web/core/components/project-states/**",
         "web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx",
         "web/apps/web/core/store/label.store.ts",
-        "web/apps/web/core/components/labels/**"
+        "web/apps/web/core/components/labels/**",
+        "web/apps/web/core/layouts/auth-layout/project-wrapper.tsx",
+        "web/apps/web/core/layouts/auth-layout/use-project-fetch.ts",
+        "web/apps/web/core/components/project/project-settings-member-defaults.tsx"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -203,6 +206,8 @@
         "web/apps/web/core/services/project/labels.service.ts",
         "web/apps/web/core/store/label.store.ts",
         "web/apps/web/core/store/label.store.test.ts",
+        "web/apps/web/core/layouts/auth-layout/use-project-fetch.ts",
+        "web/apps/web/core/layouts/auth-layout/use-project-fetch.test.ts",
         "web/apps/web/core/store/state.store.changes.test.ts",
         "web/apps/web/core/components/project-states/create-update/create-update.test.tsx",
         "web/apps/web/core/store/label.store.changes.test.ts",
