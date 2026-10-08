@@ -45,8 +45,9 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
   const handleRemove = async (memberId: string) => {
     if (!workspaceSlug || !projectId || !memberId) return;
 
-    const project = getProjectById(projectId);
-    if (memberId === currentUser?.id && project) {
+    if (memberId === currentUser?.id) {
+      const project = getProjectById(projectId);
+      if (!project) return;
       await leaveProject(project)
         // oxlint-disable-next-line promise/always-return
         .then(async () => {

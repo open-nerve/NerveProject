@@ -10,7 +10,14 @@ import type { Endpoint } from "@/lib/auth/fake-nerve";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { inTurn, sent } from "@/store/fake-queue";
-import { loadArchivedProjects, loadProject, preferencesOf, projectOf, projectTab } from "@/store/project/fake-projects";
+import {
+  loadArchivedProjects,
+  loadProject,
+  loadProjects,
+  preferencesOf,
+  projectOf,
+  projectTab,
+} from "@/store/project/fake-projects";
 import type { IProjectStore } from "@/store/project/project.store";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
@@ -127,6 +134,7 @@ describe("ProjectStore, the changes", () => {
     expect(deleted.error).toBeUndefined();
     expect(store.getProjectById(web.id)).toBeUndefined();
 
+    await loadProject(nerve, store, docs);
     const left = await sent(
       nerve,
       () => store.leaveProject(docs),
@@ -136,6 +144,7 @@ describe("ProjectStore, the changes", () => {
     expect(left.error).toBeUndefined();
     expect(store.workspaceProjectIds).toEqual([ops.id]);
     expect(store.joinedProjectIds).toEqual([]);
+    expect(store.getProjectById(docs.id)).toBeUndefined();
   });
 
   it("shows a project the caller joined as nerve now gives it, in its place and as its own read", async () => {
@@ -168,6 +177,19 @@ describe("ProjectStore, the changes", () => {
     expect(store.workspaceProjectIds).toEqual(ids([web, ops, docs]));
     expect(store.totalProjectIds).toEqual(ids([web, ops, docs, old, joined]));
     expect(store.getProjectById(shelf.id)).toEqual(joined);
+
+    // a project of beta, his other workspace, joined at acme's address: it goes in beta's list, not the address's
+    const lab = projectOf("LAB", beta.id, { member_role: null });
+    await loadProjects(nerve, store, beta, [lab]);
+    const joinedLab: Project = { ...lab, member_role: 15, sort_order: 5000 };
+    await sent(
+      nerve,
+      () => store.joinProject(lab.id),
+      ["POST", `/api/v0/projects/${lab.id}/join`],
+      json(200, joinedLab)
+    );
+    expect(store.workspaceProjectIds).toEqual(ids([web, ops, docs]));
+    expect(store.getProjectById(lab.id)).toEqual(joinedLab);
   });
 
   it("moves a project in the caller's sidebar before the one he dropped it on, to the place nerve gives it", async () => {
@@ -220,9 +242,12 @@ describe("ProjectStore, the changes", () => {
   ];
   it.each(changes)("fails, changing nothing, when nerve refuses $change", async ({ send, refusal }) => {
     const { nerve, store } = await loaded();
+    await loadProject(nerve, store, web);
+    await loadProject(nerve, store, ops);
+    const k = nerve.calls.length;
     const refused = track(send(store));
-    await until(() => nerve.calls.length === 1, "the change");
-    nerve.calls[0]?.answer(refusal);
+    await until(() => nerve.calls.length === k + 1, "the change");
+    nerve.calls[k]?.answer(refusal);
     await until(() => refused.settled, "the refusal");
     expect(refused.error).toBeInstanceOf(ApiError);
     expect(store.workspaceProjectIds).toEqual(ids([web, ops, docs]));

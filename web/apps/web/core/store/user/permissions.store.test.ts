@@ -6,11 +6,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import { FakeNerve, json, noContent } from "@/lib/auth/fake-nerve";
-import { until } from "@/lib/auth/fake-time";
+import { FakeNerve, noContent } from "@/lib/auth/fake-nerve";
 import { inTurn } from "@/store/fake-queue";
 import { fakeRoot } from "@/store/fake-root";
-import { projectOf } from "@/store/project/fake-projects";
+import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import { ProjectStore } from "@/store/project/project.store";
 import { ProjectFilterStore } from "@/store/project/project_filter.store";
 import { RouterStore } from "@/store/router.store";
@@ -115,20 +114,15 @@ async function inProjects() {
   );
   const workspaces = IN_PROJECTS.map(({ role }, i) => workspaceOf(`ws-${i}`, { role }));
   await loadWorkspaces(nerve, workspaceRoot, workspaces);
-  // each workspace's list, by its address: the projects of the rows that are of it (a row's own, unless elsewhere)
+  // each workspace's list, one after another: the projects of the rows that are of it (a row's own, unless elsewhere)
   const projects = IN_PROJECTS.flatMap(({ memberRole, elsewhere }, i) =>
     memberRole === undefined ? [] : [projectOf(`P${i}`, `id-ws-${elsewhere ? 0 : i}`, { member_role: memberRole })]
   );
-  const lists = new Map(
-    workspaces.map(({ id, slug }) => [
-      `/api/v0/workspaces/${slug}/projects`,
-      projects.filter((listed) => listed.workspace_id === id),
-    ])
+  const listedIn = (workspaceId: string) => projects.filter((held) => held.workspace_id === workspaceId);
+  await workspaces.reduce<Promise<unknown>>(
+    (before, workspace) => before.then(() => loadProjects(nerve, project, workspace, listedIn(workspace.id))),
+    Promise.resolve()
   );
-  const fetched = Promise.all(workspaces.map((workspace) => project.fetchProjects(workspace)));
-  await until(() => nerve.calls.length === 1 + workspaces.length, "the projects");
-  for (const call of nerve.calls.slice(1)) call.answer(json(200, { data: lists.get(call.path) }));
-  await fetched;
   return { nerve, router, workspaceRoot, permissions };
 }
 

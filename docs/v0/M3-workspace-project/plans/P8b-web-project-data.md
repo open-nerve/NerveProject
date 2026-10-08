@@ -6231,14 +6231,14 @@ import type {
 
 ````old web/apps/web/core/store/user/permissions.store.test.ts
 import { fakeRoot } from "@/store/fake-root";
-import { projectOf } from "@/store/project/fake-projects";
+import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import { ProjectStore } from "@/store/project/project.store";
 import { ProjectFilterStore } from "@/store/project/project_filter.store";
 ````
 ````new web/apps/web/core/store/user/permissions.store.test.ts
 import { fakeRoot } from "@/store/fake-root";
 import { ProjectRootStore } from "@/store/project";
-import { projectOf } from "@/store/project/fake-projects";
+import { loadProjects, projectOf } from "@/store/project/fake-projects";
 ````
 ````old web/apps/web/core/store/user/permissions.store.test.ts
   const projectFilter = new ProjectFilterStore(fakeRoot({ router }));
@@ -6252,10 +6252,11 @@ import { projectOf } from "@/store/project/fake-projects";
   const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot, projectRoot }));
 ````
 ````old web/apps/web/core/store/user/permissions.store.test.ts
-  const fetched = Promise.all(workspaces.map((workspace) => project.fetchProjects(workspace)));
+    (before, workspace) => before.then(() => loadProjects(nerve, project, workspace, listedIn(workspace.id))),
 ````
 ````new web/apps/web/core/store/user/permissions.store.test.ts
-  const fetched = Promise.all(workspaces.map((workspace) => projectRoot.project.fetchProjects(workspace)));
+    (before, workspace) =>
+      before.then(() => loadProjects(nerve, projectRoot.project, workspace, listedIn(workspace.id))),
 ````
 
 - [ ] **Step 2: 标签栏和标识检查的使用方**

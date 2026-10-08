@@ -51,7 +51,7 @@ export interface IUserStore {
   signOut: () => Promise<void>;
   // computed
   canPerformAnyCreateAction: boolean;
-  projectsWithCreatePermissions: { [projectId: string]: number } | null;
+  projectsWithCreatePermissions: { [projectId: string]: TUserPermissions };
 }
 
 export class UserStore implements IUserStore {
@@ -178,13 +178,11 @@ export class UserStore implements IUserStore {
     await tokenManager.signOut();
   };
 
-  // helper actions
   /**
    * @description the current workspace's projects, not archived, in which the caller may create (his role a member's
    * or an admin's), each with his role; read from the stores, nothing is fetched
-   * @returns {{[projectId: string]: number}}
    */
-  fetchProjectsWithCreatePermissions = (): { [key: string]: TUserPermissions } => {
+  get projectsWithCreatePermissions() {
     const workspaceSlug = this.store.router.workspaceSlug ?? "";
     const roles: { [projectId: string]: TUserPermissions } = {};
     for (const projectId of this.store.projectRoot.project.joinedProjectIds) {
@@ -192,22 +190,10 @@ export class UserStore implements IUserStore {
       if (role !== undefined && role >= EUserPermissions.MEMBER) roles[projectId] = role;
     }
     return roles;
-  };
-
-  /**
-   * @description returns projects where user has permissions
-   * @returns {{[projectId: string]: number}}
-   */
-  get projectsWithCreatePermissions() {
-    return this.fetchProjectsWithCreatePermissions();
   }
 
-  /**
-   * @description returns true if user has permissions to write in any project
-   * @returns {boolean}
-   */
+  /** @description whether the caller may create in any project of the current workspace */
   get canPerformAnyCreateAction() {
-    const filteredProjects = this.fetchProjectsWithCreatePermissions();
-    return filteredProjects ? Object.keys(filteredProjects).length > 0 : false;
+    return Object.keys(this.projectsWithCreatePermissions).length > 0;
   }
 }
