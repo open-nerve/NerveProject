@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// A stand-in for the UI kit's controls a page's form renders (@nerve/ui's selects and modal, propel's input and
-// button), for the tests of those pages: a test file mocks each such module with this one, for instance
+// A stand-in for the UI kit's controls a page renders (@nerve/ui's selects and modal, propel's input, button and
+// switch), for the tests of those pages: a test file mocks each such module with this one, for instance
 // vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in `shown` the
 // props each control was given. A control renders nothing, but a modal its children: its form is the page's.
 
@@ -17,6 +17,8 @@ type Field = { onChange: (value: unknown) => void };
 type Pressed = { variant?: string; onClick?: (event: { preventDefault: () => void }) => void };
 /** A select, and its options (CustomSelect.Option): each a value and a label. */
 type Select = Field & { children?: ReactNode };
+/** A switch: what a flip does. */
+type Toggle = { onCheckedChange: (checked: boolean) => unknown };
 
 /** The props each control was given, in the order rendered; a test empties them before each case (emptyShown). */
 export const shown: {
@@ -24,12 +26,13 @@ export const shown: {
   buttons: Pressed[];
   selects: Select[];
   searchSelects: Field[];
+  switches: Toggle[];
   modals: { children?: ReactNode }[];
-} = { inputs: [], buttons: [], selects: [], searchSelects: [], modals: [] };
+} = { inputs: [], buttons: [], selects: [], searchSelects: [], switches: [], modals: [] };
 
 /** The controls as a test starts: none rendered. */
 export function emptyShown() {
-  Object.assign(shown, { inputs: [], buttons: [], selects: [], searchSelects: [], modals: [] });
+  Object.assign(shown, { inputs: [], buttons: [], selects: [], searchSelects: [], switches: [], modals: [] });
 }
 
 export function Input(props: Field) {
@@ -61,6 +64,11 @@ CustomSelect.Option = function Option(_props: { value: unknown; children?: React
 
 export function CustomSearchSelect(props: Field) {
   shown.searchSelects.push(props);
+  return null;
+}
+
+export function Switch(props: Toggle) {
+  shown.switches.push(props);
   return null;
 }
 

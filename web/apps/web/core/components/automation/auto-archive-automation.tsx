@@ -11,6 +11,7 @@ import { RestoreOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { PROJECT_AUTOMATION_MONTHS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { ProjectUpdate } from "@nerve/api-client";
 import { Switch } from "@makeplane/propel/components/switch";
 import { CustomSelect, Loader } from "@nerve/ui";
@@ -21,16 +22,14 @@ import { SettingsControlItem } from "@/components/settings/control-item";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 
-type Props = {
-  handleChange: (formData: Pick<ProjectUpdate, "archive_in">) => Promise<void>;
-  /** Turns the auto-archiving on or off, from nerve's last answer, in the change's turn. */
-  handleToggle: () => Promise<void>;
-};
-
 const initialValues: Pick<ProjectUpdate, "archive_in"> = { archive_in: 1 };
 
-export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(props: Props) {
-  const { handleChange, handleToggle } = props;
+/**
+ * The auto-archiving of the current project's closed work items: its switch turns it on, after a month, or off, from
+ * the project as nerve last answered it, in the change's turn (ProjectStore.toggleAutoArchive; v0 design 7.7), not
+ * from what the switch shows; its select and the custom range send the months picked. A refusal shows a toast.
+ */
+export const AutoArchiveAutomation = observer(function AutoArchiveAutomation() {
   // router
   const { workspaceSlug } = useParams();
   // states
@@ -39,7 +38,7 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(pro
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
 
-  const { currentProjectDetails } = useProject();
+  const { currentProjectDetails, updateProject, toggleAutoArchive } = useProject();
 
   const isAdmin = allowPermissions(
     [EUserPermissions.ADMIN],
@@ -47,6 +46,24 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(pro
     workspaceSlug,
     currentProjectDetails?.id
   );
+
+  /** Sends a change of the current project's auto-archiving; a refusal shows a toast. */
+  const send = async (change: (projectId: string) => Promise<unknown>) => {
+    if (!currentProjectDetails) return;
+
+    try {
+      await change(currentProjectDetails.id);
+    } catch {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Error!",
+        message: "Something went wrong. Please try again.",
+      });
+    }
+  };
+  const handleChange = (formData: Pick<ProjectUpdate, "archive_in">) =>
+    send((projectId) => updateProject(projectId, formData));
+  const handleToggle = () => send((projectId) => toggleAutoArchive(projectId));
 
   const autoArchiveStatus = useMemo(() => {
     if (currentProjectDetails?.archive_in === undefined) return false;

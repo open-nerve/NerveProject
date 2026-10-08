@@ -2039,7 +2039,7 @@ modules/access/
 | M2-closeout §8 模块边界 | 3.3、3.4、4.1 | 端口而不是例外（3.3）；`TestSQLCSchemaScope` 四种写法各一个反例；`Authorizer` 在 `shared`，规则 10 照旧（P1） |
 | M2-closeout §9 删除关系图 | 3.15、4.12 | 图写在 4.12，每条指向 `users` 的外键有去向；项目负责人改为 `SET NULL`，登记差异（P4a） |
 | M2-closeout §10 表情选择器的数据 | 7.7、8.5 | 不请求 `cdn.jsdelivr.net`，没有 CSP 违规（故事 P1、P3 的 `watchPage`，C6）；CSP 不放开外部来源（P10） |
-| M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（`leaveWorkspace`、`is_bot`、`owner` 在 P8a，其余在 P8b）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8a、P9）；时区用 `GET /api/v0/timezones`（P9、P10） |
+| M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（`leaveWorkspace`、`is_bot`、`owner` 在 P8a，其余在 P8b）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8a、P9）；时区用 `GET /api/v0/timezones`（P9、P10）。代码一侧在 P8a、P8b 完成（M2 交接的"处理结果（M3/P8b）"），本节随 P10 关闭 |
 | M2-closeout §12 页大小的规则 | 3.12 | M3 没有分页的列表：P1 的 review 写明，本节原样写进 M4 的交接（收尾，13.2） |
 | M2-closeout §13 P5 改到、M2 走不到的页面 | 9.7 C4 | 逐条的浏览器核对写进 review；"加入工作区"一步删除，写明（P9） |
 | M2-closeout §14 下拉框和复制 | 7.7、9.7 C7、C8 | `CustomSearchSelect` 能用 Tab 到达、键盘打开；`member-options` 的列表在按钮旁；9 个和 4 个调用方核对；3 处复制处理失败（P10） |

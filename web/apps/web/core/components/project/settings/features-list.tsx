@@ -7,7 +7,6 @@
 import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { setPromiseToast } from "@nerve/propel/toast";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 import { SettingsHeading } from "@/components/settings/heading";
@@ -16,6 +15,7 @@ import { useProject } from "@/hooks/store/use-project";
 import type { ProjectToggleField } from "@/store/project/project.store";
 // local imports
 import { ProjectFeatureToggle } from "./helper";
+import { useFeatureToggle } from "./use-feature-toggle";
 
 type Props = {
   workspaceSlug: string;
@@ -52,26 +52,11 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
   const { workspaceSlug, projectId } = props;
   // store hooks
   const { t } = useTranslation();
-  const { getProjectById, toggleProject } = useProject();
+  const { getProjectById } = useProject();
+  // the feature turns the other way from nerve's last answer, in the change's turn (v0 design 7.7)
+  const toggleFeature = useFeatureToggle(workspaceSlug, projectId);
   // derived values
   const currentProjectDetails = getProjectById(projectId);
-
-  // the feature turns the other way from nerve's last answer, in the change's turn (v0 design 7.7)
-  const handleSubmit = (featureProperty: ProjectToggleField) => {
-    if (!workspaceSlug || !projectId) return;
-
-    setPromiseToast(toggleProject(projectId, featureProperty), {
-      loading: "Updating project feature...",
-      success: {
-        title: "Success!",
-        message: () => "Project feature updated successfully.",
-      },
-      error: {
-        title: "Error!",
-        message: () => "Something went wrong while updating project feature. Please try again.",
-      },
-    });
-  };
 
   return (
     <div>
@@ -86,7 +71,7 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
                 <ProjectFeatureToggle
                   featureItem={featureItem}
                   value={Boolean(currentProjectDetails?.[featureItem.property])}
-                  handleSubmit={handleSubmit}
+                  handleSubmit={toggleFeature}
                 />
               }
             />
