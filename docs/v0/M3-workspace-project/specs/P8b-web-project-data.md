@@ -82,9 +82,9 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 
 ### 2.7 M7 的部分先走；标签的页面清零（Task 7；3.1、3.16、3.17、7.3）
 
-- 收集箱的分诊状态删除：`dropdowns/intake-state/`、`StateStore` 的六个分诊成员、旧状态 service 的 `getIntakeState`、`packages/types/src/intake/`、`@nerve/propel` 的 `IntakeStateGroupIcon`、`TriageGroupIcon` 和它们的类型、颜色。收集箱的工作项：已接受的显示状态下拉框，未接受的不显示状态；创建弹窗没有状态一项（第 3 节第 6 条），它在 `@nerve/constants` 的标签页序号中的 `state_id` 一并删除（唯一的读者是这一项；与 Task 1 删除 `cover_image` 同，Task 7 的实现者发现，plan 中没有；其余各项的先后不变）。
+- 收集箱的分诊状态删除：`dropdowns/intake-state/`、`StateStore` 的六个分诊成员、旧状态 service 的 `getIntakeState`、`packages/types/src/intake/`、`@nerve/propel` 的 `IntakeStateGroupIcon`、`TriageGroupIcon` 和它们的类型、颜色。收集箱的工作项：已接受的显示状态下拉框，未接受的不显示状态；创建弹窗没有状态一项（第 3 节第 6 条），它在 `@nerve/constants` 的标签页序号中的 `state_id` 一并删除（唯一的读者是这一项；与 Task 1 删除 `cover_image` 同，Task 7 的实现者发现，plan 中没有，裁定 T7-a；其余各项的先后不变），`create-root.tsx` 的默认值和请求体中总是 `""` 的 `state_id` 两行也删除（Task 7 的评审 m4）。
 - 工作区级的标签删除：`LabelStore` 的四个工作区级成员、旧标签 service 的 `getWorkspaceIssueLabels`、键 `WORKSPACE_LABELS`；`useWorkspaceIssueProperties` 不再取它；工作区级的工作项筛选没有标签一项，按标签分组只有"无"（M7 加回）。
-- 标签的设置页和工作项的标签选择器在 Task 9 有手改，它们的 oxlint 警告在这里先清零（`then` 的回调不再返回值、遮蔽的变量改名、点击的 `p`/`li` 改为 `button`、只收集按键的根加 `role="presentation"`，`@nerve/ui` 的 `ComboBox` 加 `role` 这个 prop、`useCallback` 的依赖补齐），行为不变，只有"添加标签"一行成为按钮（第 3 节第 21 条）；web 的上限 403 → 367。没有新的 vitest。
+- 标签的设置页和工作项的标签选择器在 Task 9 有手改，它们的 oxlint 警告在这里先清零（`then` 的回调不再返回值、遮蔽的变量改名、点击的 `p`/`li` 改为 `button`、只收集按键的根加 `role="presentation"`，`@nerve/ui` 的 `ComboBox` 加 `role` 这个 prop、`useCallback` 的依赖补齐），行为不变，只有"添加标签"一行成为按钮（第 3 节第 21 条），工作项详情中的这一行因此不再在创建标签之前把输入的文字当作标签 id 写进工作项；web 的上限 403 → 367。没有新的 vitest。
 - 关键词：`plane-workspace-urls` 加上删掉的工作区的 `labels/` 和项目的 `intake-state/`（第 3 节第 7 条）。
 
 ### 2.8 状态（Task 8；3.17、7.1、7.2、7.3；P7a 的交接）
@@ -186,11 +186,11 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 21. **裁定 D10（接受）：页面上看得到的不同**（W17；P9–P11 照第 2 节的故事改页面）：
     - 项目一侧现在能显示：`7390e012` 上项目的列表、读和子资源都是 404（附录 A.5），项目页和侧边栏是空的、项目的页面打不开。
     - 封面只显示，没有上传和预设的选择，没有封面的显示默认图；新建项目不再随机给封面（第 3 条）。卡片没有收藏的星标，创建项目没有"加入收藏"；侧边栏的"收集箱"没有数字；列表视图中工作项的键宽按一位数字算。
-    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。归档、恢复的确认弹窗中，"归档"或"恢复"按钮不再有 `tabIndex={1}`：Tab 键按文档的顺序先到"取消"，原来先到它（Task 3 清 oxlint 警告时改的，评审 m4）；加入项目的弹窗中的"加入项目"按钮同样（Task 4）。项目成员页打开时，搜索框不再取得焦点（原来的 `autoFocus`，Task 6 清 oxlint 警告时去掉的）。工作项的三个标签选择器（工作项布局中的标签下拉框、创建工作项和收集箱的标签选择、工作项详情的标签选择）中"+ Add "…" to labels"一行是按钮，可以取得焦点（原来是可点击的 `p`，详情中是列表的一个选项 `li`：方向键不再选到它；在搜索框中按回车照旧创建）（Task 7 清 oxlint 警告时改的）。
+    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。归档、恢复的确认弹窗中，"归档"或"恢复"按钮不再有 `tabIndex={1}`：Tab 键按文档的顺序先到"取消"，原来先到它（Task 3 清 oxlint 警告时改的，评审 m4）；加入项目的弹窗中的"加入项目"按钮同样（Task 4）。项目成员页打开时，搜索框不再取得焦点（原来的 `autoFocus`，Task 6 清 oxlint 警告时去掉的）。工作项的三个标签选择器（工作项布局中的标签下拉框、创建工作项和收集箱的标签选择、工作项详情的标签选择）中"+ Add "…" to labels"一行是按钮，可以取得焦点（原来是可点击的 `p`，详情中是列表的一个选项 `li`：方向键不再选到它；在搜索框中按回车照旧创建）（Task 7 清 oxlint 警告时改的）；详情中的这一改也修正了一处错误：Headless UI 2.2.10 的选项在按下鼠标（`onMouseDown`）时就选中，原来的 `Combobox.Option value={query}` 在点击创建标签之前先把输入的文字当作标签 id 写进工作项（`updateIssue` 的 `label_ids` 末尾是 `"<名称>"`），没有标签的项目中搜索框为空时按方向键下、回车则写进 `""`（Task 7 的评审）。
     - 项目、标签栏、成员角色、状态和标签的拖动在 nerve 回答之后才显示（第 12 条）；侧边栏项目的顺序是 nerve 回答的位置。连续两次拖动或两次标签栏的修改，第二次从第一次的回答算（第 15 条）；标签放到第一个之前的位置是它减 10000（原来是它的一半）。项目页在已归档的列表也到了之后才显示。
     - 加入项目之后显示 nerve 回答的项目；离开之后它立即从列表中消失（公开项目在下一次取数时显示为不是成员）。
     - 项目包装层：看得到、不是成员（公开项目）→ 加入的界面；找不到（不存在、看不到的私密项目、删除、离开、在另一个工作区的地址下打开）→"找不到项目"；nerve 连不上 → `SessionUnavailable`，带重取；Plane 的"无权访问"界面没有了。不是成员的人不发任何子资源的请求（原来发出四个、都是 403）。
-    - 收集箱的工作项：未接受的不显示状态，创建弹窗没有状态一项；工作区级的工作项筛选没有标签一项，按标签分组只有"无"（第 6 条，M7）。
+    - 收集箱的工作项：未接受的不显示状态，创建弹窗没有状态一项；工作区级的工作项筛选没有标签一项，按标签分组只有"无"；工作区一级显示的工作项（所有工作项、视图、草稿、通知的预览）不显示标签，除非那个项目的标签已经取过（进过那个项目，或打开过那一行的标签下拉框）：标签的显示读 `labelMap` 和 `getProjectLabels`（`spreadsheet/columns/label-column.tsx:26-31`、`properties/all-properties.tsx:60,171-174`、`properties/labels.tsx:165-184`，详情的 `label-list-item.tsx:27-29`），原来由删掉的工作区取数为每个项目填满（第 6 条，M7；M4 起工作项有了才看得到，第 5 节）。
     - 被拒绝的标签移动和"移出分组"提示失败（原来什么都不提示）。对 store 没有列出的成员、没有的状态和标签，修改不发请求、直接失败。
     - 标签栏：调用者的标签栏还没取到时（项目包装层的取数在外，或被拒绝），页头的切换默认、隐藏、显示不发请求，提示失败（裁定 T5-a；原来作用于默认值发出，nerve 整份替换，已藏起的标签又回到页头）；控件在这期间仍显示，取到之前藏起它们是 P10 的页面的事。被拒绝的隐藏、显示提示失败（原来什么都不提示：Plane 的 `try` 接不住没有等待的拒绝；Task 5 的评审 M4）。
     - 工作区的状态只在调用者的列表有这个工作区时取（原来对不是成员的工作区也按 slug 发出）；项目设置的成员默认值不再自己取项目（少一个重复的请求）。项目一侧的取数每次挂载都重取，聚焦时不取（P8a 的 F-1）。
@@ -245,10 +245,10 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - **P9**：工作区的页面（P8a spec 第 5 节 P9 一行照录）。P8b 没有新加的。
 - **P10**：项目的页面（第 2 节的故事）；`ProjectAuthWrapper` 中已归档项目的界面（7.6：`archived_at` 有值；成员打开已归档的项目时包装层照常取四个子资源，nerve 对状态答空列表、对标签照常列出，P7b）；删除项目之后的 `sessionGuard()`（Codex 4.3 第 2 条）；项目成员设置的角色下拉框发出字符串的角色（P8a spec 第 3 节第 12 条，`member-columns.tsx` 仍以 `Object.entries(…)` 的键作值）；下拉框、复制到剪贴板、表情选择器（7.7）；项目创建弹窗的页面版本（封面一步已在 Task 1 删除，第 3 节第 3 条；设计 12 节 P10 的任务 3 已照裁定 D3 改）。
 - **P11**：只经机械步骤到达的 38 个文件中 5 个的 14 条警告（附录 A.8；其中 `use-work-item-filters-config.tsx` 的 3 条已在 P8a 的清单中）；`--rows M3` 剩下的行（附录 A.9）；核对 M3 加的关键词例外只剩 `until: "M4"` 的一条。
-- **M4**：项目的 `user-properties`（工作项筛选，旧 `ProjectService` 的两个方法和关键词的例外）；`projectIssuesSearch` 和它的三个模块级实例（与 M6、M7 共用）；工作项页面中按需的取数照 7.1 按权限启用：状态、成员、标签的下拉框打开时取（`dropdowns/state/dropdown.tsx`、`dropdowns/member/dropdown.tsx`、`issues/select/dropdown.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`issue-detail/label/select/label-select.tsx`），子工作项的 store 取别的项目的状态、成员、标签（`sub_issues.store.ts`，调用者可能不是那些项目的成员）；工作项的键宽读回 `next_work_item_sequence`（Task 1）；`TIssueIdentifierProps.projectIdentifier` 可以是 `undefined`（Task 3：项目未到时）；P8a 交给 M4 的各项照旧。（`issue` 的两个 store 的 `fetchParentStats` 不再重取项目，已在 Task 3 做了，裁定 T3-c；工作项的修改将来若动了项目的字段，M4 再加一个不等的重取。）
+- **M4**：项目的 `user-properties`（工作项筛选，旧 `ProjectService` 的两个方法和关键词的例外）；`projectIssuesSearch` 和它的三个模块级实例（与 M6、M7 共用）；工作项页面中按需的取数照 7.1 按权限启用：状态、成员、标签的下拉框打开时取（`dropdowns/state/dropdown.tsx`、`dropdowns/member/dropdown.tsx`、`issues/select/dropdown.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`issue-detail/label/select/label-select.tsx`），子工作项的 store 取别的项目的状态、成员、标签（`sub_issues.store.ts`，调用者可能不是那些项目的成员）；工作项的键宽读回 `next_work_item_sequence`（Task 1）；`TIssueIdentifierProps.projectIdentifier` 可以是 `undefined`（Task 3：项目未到时）；工作区一级显示的工作项不显示没有取过标签的项目的标签（Task 7 删掉了为每个项目取标签的工作区取数，M7 加回；M4 先于 M7 让工作项显示出来，那时就看得到，见 M7 一行和第 3 节第 21 条）；P8a 交给 M4 的各项照旧。（`issue` 的两个 store 的 `fetchParentStats` 不再重取项目，已在 Task 3 做了，裁定 T3-c；工作项的修改将来若动了项目的字段，M4 再加一个不等的重取。）
 - **M5**：项目封面的上传（`cover_image_asset_id`，3.2）连同预设封面（Task 1 删除的 28 张）和"新建项目时的封面值"（M5 的 M1-closeout，本修订已写明预设封面随上传加回）。
 - **M6**：迭代的 `user-properties` 不在关键词规则的模式里（不命中样例）；P8a 交给 M6 的各项照旧。
-- **M7**：项目的收藏（卡片的星标、创建时加入收藏、`FavoriteStore` 的项目一支，Task 1）；`intake_count`（侧边栏的数字和收集箱 store 写它的两段）；收集箱的分诊状态（store、下拉框、类型、`@nerve/propel` 的两个图标，Task 7）；工作区级的标签（store 的四个成员、筛选的标签一项、按标签分组，Task 7）；通知页的收集箱项经原来的 `useSWR` 读项目（`workspace-notifications/root.tsx`，Task 4 改调 `fetchProject`；它写项目自己的读，可以盖过包装层的读，M7 照 7.1 改成按权限的取数，预检 PF-L3）；P8a 交给 M7 的各项照旧。
+- **M7**：项目的收藏（卡片的星标、创建时加入收藏、`FavoriteStore` 的项目一支，Task 1）；`intake_count`（侧边栏的数字和收集箱 store 写它的两段）；收集箱的分诊状态（store、下拉框、类型、`@nerve/propel` 的两个图标，Task 7）；工作区级的标签（store 的四个成员、筛选的标签一项、按标签分组，Task 7；连同工作区一级显示的工作项上的标签：所有工作项、视图、草稿、通知的预览只显示已经取过标签的项目的标签，第 3 节第 21 条）；通知页的收集箱项经原来的 `useSWR` 读项目（`workspace-notifications/root.tsx`，Task 4 改调 `fetchProject`；它写项目自己的读，可以盖过包装层的读，M7 照 7.1 改成按权限的取数，预检 PF-L3）；P8a 交给 M7 的各项照旧。
 - **收尾**：核对 3.20 的 P8b 两行（总体设计 7.7、前端改动清单）。工具的缺口（预检 PF-L5）：没有检查发现两种语言都留下、已没有读者的文案键（`check:sync` 只比两种语言的键是否相同）；P8b 删除的两条由各 Task 的"完成时"和附录 A.7 的键表人工核对，收尾决定是否加一个检查。
 
 ## 6. 风险
@@ -438,7 +438,7 @@ M1 收尾的 `deadsym.mjs`、`domains.mjs`（`$M3TMP/p8btools/dead/`，`dead.sh`
 - 新加的 12 行都是测试里 `it.each` 的表的列（四个 store 测试的 `change`、`refusal`、`send`，在标题和行中读）。
 - 去掉的 49 行包括 P8a 交给 P8b 的全部死行（`add-project-members-modal.tsx` 的 `value`、`query`、`content`、`onSuccess`，`project-member.store.ts` 的 4 行，`project_filter.store.ts` 的 4 个成员（`displayFilters`、`filters` 和两个按 slug 的 getter；第 5 行 `projectFilter` 在 `project/index.ts`），`useProjectColumns.tsx` 的 `member`），以及 P8b 重写的 store 中原有的死成员（`fetchedMap`、`getWorkspaceLabels`、`intakeStateMap`、`processProjectAfterCreation` 等）和没有调用方传的 prop（`memberIds`、`stateIds`、`handleOnClick` 等）。
 - P8b 改到的文件中仍有的 M3 行和它们的去处：只经机械步骤到达的六个文件的 prop（`state_group.tsx` 的 `completed`、`state`、`total`，`label-item-block.tsx` 的 `draggable`，`group-list.tsx` 的三个 `className`，`state-item-title.tsx` 的 `shouldShowDescription`，`common-attributes.tsx` 的 `handleFormOnChange`，`project-create-buttons.tsx` 的 `isMobile`：P11 第 4 个任务）；`workspace.service.ts` 的搜索参数和 `types/src/project/projects.ts` 的工作项搜索类型（M4 的搜索，P8a 已记）。
-- 包经入口再导出、knip 看不见的死成员（同 Task 1 的 `checkURLValidity`，第 2.1 节）：`@nerve/types` 的 `TFetchStatus`（`common.ts`）唯一的读者是 Plane 项目 store 的 `fetchStatus`，Task 3 删掉它时一并删除（Task 3 的实现者发现，评审 m5）；原型上它一直留到最终，这里与快照不同。
+- 包经入口再导出、knip 看不见的死成员（同 Task 1 的 `checkURLValidity`，第 2.1 节）：`@nerve/types` 的 `TFetchStatus`（`common.ts`）唯一的读者是 Plane 项目 store 的 `fetchStatus`，Task 3 删掉它时一并删除（Task 3 的实现者发现，评审 m5）；原型上它一直留到最终，这里与快照不同。`@nerve/constants` 的 `TAB_INDEX_MAP` 中收集箱创建表单的 `state_id`（`tab-indices.ts`）同类：唯一的读者是创建弹窗的分诊状态一项，Task 7 删掉它时一并删除（Task 7 的实现者发现，裁定 T7-a）；原型上它和 `create-root.tsx` 中总是 `""` 的两行 `state_id` 都留到最终，这里与快照不同（第 2.7 节）。
 
 ### A.10 规模
 
@@ -459,7 +459,7 @@ plan 共 13,308 行：Task 1 之前（约束、一次性脚本、文件结构）
 | 11 关键词的收尾、死行、文档 | 268 | 209 | 5 |
 
 - **Phase 的大小**（brief 的检查，写 plan 之前做；修订之后重量）：11 个 Task，在约 16 个之内；修订前 Task 3 的 1,559 行比约 1,500 行多 4%、Task 8 是 1,504 行（裁定 D2 接受）；修订之后 Task 3 是 1,875 行、Task 8 是 1,726 行，Task 10 随 S2 从 604 行到 873 行（D9 估计约 860 行），Task 11 从 485 行到 268 行（第 3 节第 2 条，请再裁定）。
-- **文件的行数**（约 400 行）：P8b 写或重写的文件中最长的是 `state.store.test.ts` 369 行、`project-member.store.test.ts` 366 行（Task 6 加了五个测试，修正轮加长排队的测试）、`project.store.ts` 332 行、`label.store.test.ts` 331 行、S2 292 行、`project.store.test.ts` 257 行、`project.store.changes.test.ts` 255 行（第 3 节第 9 条）；P8a 的 `root.store.test.ts` 加了一个测试，286 行。只为使用方改到的 Plane 文件，原来超过 400 行的都没有变长，除了第 3 节第 8 条的三个（808 → 812、465 → 466、414 → 415）；`tools/keywords.json` 2,189 → 2,208（规则的样例，A.11）。其余手改的 Plane 文件都变短了（例如 `project/form.tsx` 462 → 411、`projects-list-item.tsx` 476 → 460、`project-inbox.store.ts` 524 → 511）。
+- **文件的行数**（约 400 行）：P8b 写或重写的文件中最长的是 `state.store.test.ts` 369 行、`project-member.store.test.ts` 366 行（Task 6 加了五个测试，修正轮加长排队的测试）、`project.store.ts` 332 行、`label.store.test.ts` 331 行、S2 292 行、`project.store.test.ts` 257 行、`project.store.changes.test.ts` 255 行（第 3 节第 9 条）；P8a 的 `root.store.test.ts` 加了一个测试，286 行。只为使用方改到的 Plane 文件，原来超过 400 行的都没有变长，除了第 3 节第 8 条的三个（808 → 812、465 → 466、414 → 415）；`tools/keywords.json` 2,189 → 2,208（规则的样例，A.11）。其余原来超过 400 行、有手改的 Plane 文件都变短了（例如 `project/form.tsx` 462 → 411、`projects-list-item.tsx` 476 → 460、`project-inbox.store.ts` 524 → 511）。400 行以内的手改的 Plane 文件有的变长几行，例如 Task 7 的 `issue-layouts/properties/label-dropdown.tsx` 336 → 338 和 `issues/select/base.tsx` 322 → 324：清 oxlint 警告时"添加标签"一行的 `p` 改为 `button`，多一行 `type="button"`，只收集按键的根加一行 `role="presentation"`（第 2.7 节）。
 
 ### A.11 关键词规则
 
