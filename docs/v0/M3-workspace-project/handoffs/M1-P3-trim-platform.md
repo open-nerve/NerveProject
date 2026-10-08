@@ -67,3 +67,15 @@ M3 合并时：
 仍未处理，状态保持 `open`：`joinProject` 的页面改调新接口、守卫的 `project-invitations` 例外删除（P8）；`RESTRICTED_URLS` 与后端同源（前端一侧，P8）。
 
 来源：[M3/P4b spec](../specs/P4b-project-members.md) 第 7 节。
+
+## 处理结果（M3/P8b）
+
+P8a 没有在这里记处理结果；它做到的一项一并记在下面。
+
+- **项目成员**（完成）：加入公开项目改调 `POST /api/v0/projects/{project_id}/join`（`ProjectsService.join`、`ProjectStore.joinProject`），`UserService.joinProject` 删除；守卫的 `project-invitations` 例外从 `tools/keywords.json` 删掉，`node tools/keywords.mjs` 通过，例外少一条（P8b 的 Task 4；Task 11 加 M4 的 `until: "M4"` 一条之后共 3 个，[P8b spec](../specs/P8b-web-project-data.md) 附录 A.11）。旧的项目成员地址由 `plane-workspace-urls` 看住（Task 4、6）。
+- **保留的工作区地址，前端一侧**（完成）：`RESTRICTED_URLS` 删除，保留名单前后端一份，"应用"一段有 vitest（P8a，[P8a spec](../specs/P8a-web-workspace-data.md) 第 2 节，M3 设计 3.10）。
+- **地址**（完成）：项目设置页的标识检查经项目 store 的 `checkProjectIdentifier` 调 `GET /api/v0/workspaces/{slug}/project-identifiers/{identifier}`（P8b 的 Task 5），旧 `ProjectService` 的这个方法删除。
+
+仍未处理：本文件的关闭条件在 M3 中都已做到（视图、收集箱的字段由 M7 的同名交接约束，见 P4a 一条）；`status` 在 M3 收尾时随 review 改为 `closed`。
+
+来源：[M3/P8b spec](../specs/P8b-web-project-data.md) 第 7 节；[M3/P8a spec](../specs/P8a-web-workspace-data.md) 第 7 节。

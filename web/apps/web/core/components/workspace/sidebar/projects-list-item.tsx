@@ -78,7 +78,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   } = props;
   // store hooks
   const { t } = useTranslation();
-  const { getPartialProjectById } = useProject();
+  const { getProjectById } = useProject();
   const { isMobile } = usePlatformOS();
   const { allowPermissions } = useUserPermissions();
   const { getIsProjectListOpen, toggleProjectListOpen } = useCommandPalette();
@@ -99,7 +99,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const { projectId: URLProjectId } = useParams();
   const navigate = useNavigate();
   // derived values
-  const project = getPartialProjectById(projectId);
+  const project = getProjectById(projectId);
 
   // Get available navigation items for this project
   const navigationItems = useNavigationItems({
@@ -111,8 +111,8 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const availableTabKeys = navigationItems.map((item) => item.key);
 
   // Get preferences from hook
-  const { tabPreferences } = useTabPreferences(workspaceSlug, projectId);
-  const defaultTabKey = tabPreferences.defaultTab;
+  const { navigation } = useTabPreferences(projectId);
+  const defaultTabKey = navigation.default_tab;
   // Validate that the default tab is available
   const validatedDefaultTabKey = availableTabKeys.includes(defaultTabKey) ? defaultTabKey : DEFAULT_TAB_KEY;
   const defaultTabUrl = project ? getTabUrl(workspaceSlug, project.id, validatedDefaultTabKey) : "";
@@ -373,22 +373,6 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                   closeOnSelect
                   onMenuClose={() => setIsMenuActive(false)}
                 >
-                  {/* TODO: Removed is_favorite logic due to the optimization in projects API */}
-                  {/* {isAuthorized && (
-                    <CustomMenu.MenuItem
-                      onClick={project.is_favorite ? handleRemoveFromFavorites : handleAddToFavorites}
-                    >
-                      <span className="flex items-center justify-start gap-2">
-                        <Star
-                          className={cn("h-3.5 w-3.5 ", {
-                            "fill-yellow-500 stroke-yellow-500": project.is_favorite,
-                          })}
-                        />
-                        <span>{project.is_favorite ? t("remove_from_favorites") : t("add_to_favorites")}</span>
-                      </span>
-                    </CustomMenu.MenuItem>
-                  )} */}
-
                   <CustomMenu.MenuItem onClick={handleCopyText}>
                     <span className="flex items-center justify-start gap-2">
                       <LinkOutline className="h-3.5 w-3.5 stroke-[1.5]" />

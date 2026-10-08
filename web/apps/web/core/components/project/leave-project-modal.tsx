@@ -12,10 +12,10 @@ import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
-import { useUserPermissions } from "@/hooks/store/user";
+import { useProject } from "@/hooks/store/use-project";
 import { useParams, useNavigate } from "react-router";
 
 type FormData = {
@@ -29,7 +29,7 @@ const defaultValues: FormData = {
 };
 
 export interface ILeaveProjectModal {
-  project: IProject;
+  project: Project;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -40,7 +40,7 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
   const navigate = useNavigate();
   const { workspaceSlug } = useParams();
   // store hooks
-  const { leaveProject } = useUserPermissions();
+  const { leaveProject } = useProject();
 
   const {
     control,
@@ -61,10 +61,8 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
       if (data.projectName === project?.name) {
         if (data.confirmLeave === "Leave Project") {
           navigate(`/${workspaceSlug}/projects`);
-          return leaveProject(workspaceSlug, project.id)
-            .then(() => {
-              handleClose();
-            })
+          return leaveProject(project)
+            .then(() => handleClose())
             .catch((_err) => {
               setToast({
                 type: TOAST_TYPE.ERROR,

@@ -25,8 +25,7 @@ type TCoverImageProps = {
  * A reusable cover image component that handles:
  * - Loading states with skeleton
  * - Static images (local assets)
- * - Uploaded images (processed through getFileURL)
- * - External URLs
+ * - Uploaded images and external URLs (shown as given)
  * - Fallback to default cover image
  */
 export function CoverImage(props: TCoverImageProps) {

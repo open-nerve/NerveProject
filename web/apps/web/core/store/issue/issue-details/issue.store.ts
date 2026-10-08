@@ -96,9 +96,9 @@ export class IssueStore implements IIssueStore {
     // store handlers from issue detail
     // parent
     if (issue && issue?.parent && issue?.parent?.id && issue?.parent?.project_id) {
-      this.issueService.retrieve(workspaceSlug, issue.parent.project_id, issue?.parent?.id).then((res) => {
-        this.rootIssueDetailStore.rootIssueStore.issues.addIssue([res]);
-      });
+      this.issueService
+        .retrieve(workspaceSlug, issue.parent.project_id, issue?.parent?.id)
+        .then((res) => this.rootIssueDetailStore.rootIssueStore.issues.addIssue([res]));
     }
     // assignees
     // labels
@@ -129,7 +129,7 @@ export class IssueStore implements IIssueStore {
 
     // fetching states
     // TODO: check if this function is required
-    this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(workspaceSlug, projectId);
+    this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
 
     return issue;
   };
@@ -267,9 +267,9 @@ export class IssueStore implements IIssueStore {
 
     // handle parent issue if exists
     if (issue?.parent && issue?.parent?.id && issue?.parent?.project_id) {
-      this.issueService.retrieve(workspaceSlug, issue.parent.project_id, issue.parent.id).then((res) => {
-        this.rootIssueDetailStore.rootIssueStore.issues.addIssue([res]);
-      });
+      this.issueService
+        .retrieve(workspaceSlug, issue.parent.project_id, issue.parent.id)
+        .then((res) => this.rootIssueDetailStore.rootIssueStore.issues.addIssue([res]));
     }
 
     // add identifiers to map
@@ -307,7 +307,7 @@ export class IssueStore implements IIssueStore {
 
     // fetching states
     // TODO: check if this function is required
-    rootWorkItemDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(workspaceSlug, projectId);
+    rootWorkItemDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
 
     return issue;
   };

@@ -8,17 +8,21 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, LoadingOutline } from "@makeplane/propel/icons";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IState, TStateOperationsCallbacks } from "@nerve/types";
+import type { State } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 import { AlertModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 type TStateDelete = {
   totalStates: number;
-  state: IState;
+  state: State;
   deleteStateCallback: TStateOperationsCallbacks["deleteState"];
 };
 
@@ -26,6 +30,7 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
   const { totalStates, state, deleteStateCallback } = props;
   // hooks
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
   // states
   const [isDeleteModal, setIsDeleteModal] = useState(false);
   const [isDelete, setIsDelete] = useState(false);
@@ -41,21 +46,7 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
       await deleteStateCallback(state.id);
       setIsDelete(false);
     } catch (error) {
-      const errorStatus = error as { status: number; data: { error: string } };
-      if (errorStatus.status === 400) {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message:
-            "This state contains some work items within it, please move them to some other state to delete this state.",
-        });
-      } else {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "State could not be deleted. Please try again.",
-        });
-      }
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
       setIsDelete(false);
     }
   };

@@ -5,6 +5,8 @@
 
 import type { Workspace } from "@nerve/api-client";
 // hooks
+import { useProject } from "@/hooks/store/use-project";
+import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useWorkspaceMembersFetch } from "@/hooks/use-workspace-members-fetch";
 // lib
@@ -23,8 +25,9 @@ export type WorkspaceAccess =
 
 /**
  * The workspace side of what a page of a workspace fetches as it mounts (M3 design 3.1, 7.1), and the one decision
- * whether the address's workspace is the caller's: his workspaces, which decide it; once his list has it, its members
- * and his navigation settings in it. Gives what the wrapper shows.
+ * whether the address's workspace is the caller's: his workspaces, which decide it; once his list has it, its members,
+ * his navigation settings in it, its projects that are not archived and the states of those he is a member of. Gives
+ * what the wrapper shows.
  */
 export function useWorkspaceFetch(workspaceSlug: string | undefined): WorkspaceAccess {
   const {
@@ -33,12 +36,18 @@ export function useWorkspaceFetch(workspaceSlug: string | undefined): WorkspaceA
     getWorkspaceBySlug,
     preferences: { fetchPreferences },
   } = useWorkspace();
+  const { fetchProjects } = useProject();
+  const { fetchWorkspaceStates } = useProjectState();
   const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces());
   // the address's workspace is the caller's once his list has it
   const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
   useWorkspaceMembersFetch(workspace);
   useSessionSWR(workspace && ["WORKSPACE_PREFERENCES", workspace.id, workspace.slug], (id, slug) =>
     fetchPreferences({ id, slug })
+  );
+  useSessionSWR(workspace && ["PROJECTS", workspace.id, workspace.slug], (id, slug) => fetchProjects({ id, slug }));
+  useSessionSWR(workspace && ["WORKSPACE_STATES", workspace.id, workspace.slug], (id, slug) =>
+    fetchWorkspaceStates({ id, slug })
   );
   if (listed.error) return { kind: "unavailable", retry: () => void listed.mutate() };
   if (workspaces === undefined) return { kind: "loading" };

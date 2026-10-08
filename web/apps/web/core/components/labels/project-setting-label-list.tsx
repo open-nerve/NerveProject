@@ -12,7 +12,8 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
-import type { IIssueLabel } from "@nerve/types";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { Label, LabelCreate } from "@nerve/api-client";
 import { Loader } from "@nerve/ui";
 import type { TLabelOperationsCallbacks } from "@/components/labels";
 import {
@@ -24,31 +25,33 @@ import {
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 // local imports
 import { SettingsHeading } from "../settings/heading";
 
 export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelList() {
   // router
-  const { workspaceSlug, projectId } = useParams();
+  const { projectId } = useParams();
   // refs
   const scrollToRef = useRef<HTMLDivElement>(null);
   // states
   const [showLabelForm, setLabelForm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [selectDeleteLabel, setSelectDeleteLabel] = useState<IIssueLabel | null>(null);
+  const [selectDeleteLabel, setSelectDeleteLabel] = useState<Label | null>(null);
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { projectLabels, updateLabelPosition, projectLabelsTree, createLabel, updateLabel } = useLabel();
   const { allowPermissions } = useUserPermissions();
 
-  if (!workspaceSlug || !projectId) return null;
+  if (!projectId) return null;
 
   // derived values
   const isEditable = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
   const labelOperationsCallbacks: TLabelOperationsCallbacks = {
-    createLabel: (data: Partial<IIssueLabel>) => createLabel(workspaceSlug, projectId, data),
-    updateLabel: (labelId: string, data: Partial<IIssueLabel>) => updateLabel(workspaceSlug, projectId, labelId, data),
+    createLabel: (data: LabelCreate) => createLabel(projectId, data),
+    updateLabel,
   };
 
   const newLabel = () => {
@@ -62,7 +65,9 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
     droppedLabelId: string | undefined,
     dropAtEndOfList: boolean
   ) => {
-    updateLabelPosition(workspaceSlug, projectId, draggingLabelId, droppedParentId, droppedLabelId, dropAtEndOfList);
+    updateLabelPosition(draggingLabelId, droppedParentId, droppedLabelId, dropAtEndOfList).catch((error: unknown) => {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+    });
   };
 
   return (
@@ -119,13 +124,13 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
             />
           ) : (
             projectLabelsTree?.map((label, index) => {
-              if (label.children && label.children.length) {
+              if (label.children.length > 0) {
                 return (
                   <ProjectSettingLabelGroup
                     key={label.id}
                     label={label}
-                    labelChildren={label.children || []}
-                    handleLabelDelete={(label: IIssueLabel) => setSelectDeleteLabel(label)}
+                    labelChildren={label.children}
+                    handleLabelDelete={setSelectDeleteLabel}
                     isUpdating={isUpdating}
                     setIsUpdating={setIsUpdating}
                     isLastChild={index === projectLabelsTree.length - 1}
@@ -140,7 +145,7 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
                   label={label}
                   key={label.id}
                   setIsUpdating={setIsUpdating}
-                  handleLabelDelete={(label) => setSelectDeleteLabel(label)}
+                  handleLabelDelete={setSelectDeleteLabel}
                   isChild={false}
                   isLastChild={index === projectLabelsTree.length - 1}
                   onDrop={onDrop}

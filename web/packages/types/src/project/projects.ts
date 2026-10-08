@@ -4,81 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import type { TLogoProps } from "../common";
-import type { TUserPermissions } from "../enums";
-import type { TStateGroups } from "../state";
-import type { Workspace, MemberUser } from "@nerve/api-client";
+import type { StateGroup } from "@nerve/api-client";
 
 export enum EUserProjectRoles {
   ADMIN = 20,
   MEMBER = 15,
   GUEST = 5,
 }
-
-export interface IPartialProject {
-  id: string;
-  name: string;
-  identifier: string;
-  sort_order: number | null;
-  logo_props: TLogoProps;
-  member_role?: TUserPermissions | EUserProjectRoles | null;
-  archived_at: string | null;
-  workspace: Workspace | string;
-  cycle_view: boolean;
-  issue_views_view: boolean;
-  module_view: boolean;
-  inbox_view: boolean;
-  guest_view_all_features?: boolean;
-  project_lead?: MemberUser | string | null;
-  network?: number;
-  // Timestamps
-  created_at?: Date;
-  updated_at?: Date;
-  // actor
-  created_by?: string;
-  updated_by?: string;
-  intake_count?: number;
-}
-
-export interface IProject extends IPartialProject {
-  archive_in?: number;
-  // only for uploading the cover image
-  cover_image_asset?: null;
-  cover_image?: string;
-  // only for rendering the cover image
-  readonly cover_image_url?: string;
-  default_assignee?: MemberUser | string | null;
-  description?: string;
-  is_favorite?: boolean;
-  members?: string[];
-  timezone?: string;
-  next_work_item_sequence?: number;
-}
-
-export type TProjectMembership = {
-  member: string;
-  role: TUserPermissions | EUserProjectRoles;
-} & (
-  | {
-      id: string;
-      original_role: EUserProjectRoles;
-      created_at: string;
-    }
-  | {
-      id: null;
-      original_role: null;
-      created_at: null;
-    }
-);
-
-export interface IProjectBulkAddFormData {
-  members: { role: TUserPermissions | EUserProjectRoles; member_id: string }[];
-}
-
-export type IProjectMemberNavigationPreferences = {
-  default_tab: string;
-  hide_in_more_menu: string[];
-};
 
 export type TProjectIssuesSearchParams = {
   search: string;
@@ -101,11 +33,7 @@ export interface ISearchIssueResponse {
   sequence_id: number;
   start_date: string | null;
   state__color: string;
-  state__group: TStateGroups;
+  state__group: StateGroup;
   state__name: string;
   workspace__slug: string;
 }
-
-export type TPartialProject = IPartialProject;
-
-export type TProject = TPartialProject & IProject;

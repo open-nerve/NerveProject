@@ -9,13 +9,13 @@
 
 import useFontFaceObserver from "use-font-face-observer";
 // nerve imports
-import type { TLogoProps } from "@nerve/types";
+import type { LogoProps } from "@nerve/api-client";
 // local imports
 import { getEmojiSize, stringToEmoji } from "./helper";
 import { LUCIDE_ICONS_LIST } from "./lucide-icons";
 
 type Props = {
-  logo?: TLogoProps;
+  logo?: LogoProps;
   size?: number;
   type?: "lucide" | "material";
 };

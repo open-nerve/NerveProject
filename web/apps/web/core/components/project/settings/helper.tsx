@@ -5,11 +5,12 @@
  */
 
 import { Switch } from "@makeplane/propel/components/switch";
+import type { ProjectToggleField } from "@/store/project/project.store";
 
 type Props = {
-  featureItem: { property: string };
+  featureItem: { property: ProjectToggleField };
   value: boolean;
-  handleSubmit: (featureProperty: string) => void;
+  handleSubmit: (featureProperty: ProjectToggleField) => void;
 };
 
 export function ProjectFeatureToggle(props: Props) {

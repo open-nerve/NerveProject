@@ -6,7 +6,6 @@
 
 import type {
   IWorkspaceSearchResults,
-  IUserProjectsRole,
   IWorkspaceView,
   TIssuesResponse,
   TSearchResponse,
@@ -83,14 +82,6 @@ export class WorkspaceService extends APIService {
       },
       config
     )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getWorkspaceUserProjectsRole(workspaceSlug: string): Promise<IUserProjectsRole> {
-    return this.get(`/api/users/me/workspaces/${workspaceSlug}/project-roles/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

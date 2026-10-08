@@ -51,7 +51,7 @@ export interface IUserStore {
   signOut: () => Promise<void>;
   // computed
   canPerformAnyCreateAction: boolean;
-  projectsWithCreatePermissions: { [projectId: string]: number } | null;
+  projectsWithCreatePermissions: { [projectId: string]: TUserPermissions };
 }
 
 export class UserStore implements IUserStore {
@@ -73,7 +73,7 @@ export class UserStore implements IUserStore {
   ) {
     // stores
     this.userProfile = new ProfileStore(store, api);
-    this.permission = new UserPermissionStore(store, api);
+    this.permission = new UserPermissionStore(store);
     this.apiTokens = new ApiTokenStore(api);
     // service
     this.userService = new UserService(api);
@@ -178,43 +178,22 @@ export class UserStore implements IUserStore {
     await tokenManager.signOut();
   };
 
-  // helper actions
   /**
-   * @description fetches the projects with write permissions
-   * @returns {{[projectId: string]: number} || null}
-   */
-  fetchProjectsWithCreatePermissions = (): { [key: string]: TUserPermissions } => {
-    const { workspaceSlug } = this.store.router;
-
-    const allWorkspaceProjectRoles = this.permission.getProjectRolesByWorkspaceSlug(workspaceSlug || "");
-
-    const userPermissions =
-      (allWorkspaceProjectRoles &&
-        Object.keys(allWorkspaceProjectRoles)
-          .filter((key) => allWorkspaceProjectRoles[key] >= EUserPermissions.MEMBER)
-          .reduce(
-            (res: { [projectId: string]: number }, key: string) => ((res[key] = allWorkspaceProjectRoles[key]), res),
-            {}
-          )) ||
-      null;
-
-    return userPermissions;
-  };
-
-  /**
-   * @description returns projects where user has permissions
-   * @returns {{[projectId: string]: number} || null}
+   * @description the current workspace's projects, not archived, in which the caller may create (his role a member's
+   * or an admin's), each with his role; read from the stores, nothing is fetched
    */
   get projectsWithCreatePermissions() {
-    return this.fetchProjectsWithCreatePermissions();
+    const workspaceSlug = this.store.router.workspaceSlug ?? "";
+    const roles: { [projectId: string]: TUserPermissions } = {};
+    for (const projectId of this.store.projectRoot.project.joinedProjectIds) {
+      const role = this.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
+      if (role !== undefined && role >= EUserPermissions.MEMBER) roles[projectId] = role;
+    }
+    return roles;
   }
 
-  /**
-   * @description returns true if user has permissions to write in any project
-   * @returns {boolean}
-   */
+  /** @description whether the caller may create in any project of the current workspace */
   get canPerformAnyCreateAction() {
-    const filteredProjects = this.fetchProjectsWithCreatePermissions();
-    return filteredProjects ? Object.keys(filteredProjects).length > 0 : false;
+    return Object.keys(this.projectsWithCreatePermissions).length > 0;
   }
 }

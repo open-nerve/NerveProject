@@ -7,99 +7,61 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { observer } from "mobx-react";
-import useSWR from "swr";
+import { useParams } from "react-router";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // components
+import { SessionUnavailable } from "@/components/account/session-unavailable";
 import { ProjectAccessRestriction } from "@/components/auth-screens/project/project-access-restriction";
-import {
-  PROJECT_DETAILS,
-  PROJECT_ME_INFORMATION,
-  PROJECT_LABELS,
-  PROJECT_MEMBERS,
-  PROJECT_MEMBER_PREFERENCES,
-  PROJECT_STATES,
-} from "@nerve/constants";
 // hooks
-import { useLabel } from "@/hooks/store/use-label";
-import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
-import { useProjectState } from "@/hooks/store/use-project-state";
-import { useUser, useUserPermissions } from "@/hooks/store/user";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
+// local imports
+import { useProjectFetch } from "./use-project-fetch";
 
 interface IProjectAuthWrapper {
-  workspaceSlug: string;
   projectId: string;
   children: ReactNode;
 }
 
 export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IProjectAuthWrapper) {
-  const { workspaceSlug, projectId, children } = props;
+  const { projectId, children } = props;
+  // router params
+  const { workspaceSlug } = useParams();
+  // translation
+  const { t } = useTranslation();
   // states
   const [isJoiningProject, setIsJoiningProject] = useState(false);
   // store hooks
-  const { fetchUserProjectInfo, allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
-  const { fetchProjectDetails } = useProject();
-  const { joinProject } = useUserPermissions();
-  const {
-    project: { fetchProjectMembers, fetchProjectUserProperties },
-  } = useMember();
-  const { fetchProjectStates } = useProjectState();
-  const { data: currentUserData } = useUser();
-  const { fetchProjectLabels } = useLabel();
-  // derived values
-  const hasPermissionToCurrentProject = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
-    EUserPermissionsLevel.PROJECT,
-    workspaceSlug,
-    projectId
-  );
-  const currentProjectRole = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const isWorkspaceAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
-  // fetching project details
-  const { isLoading: isProjectDetailsLoading, error: projectDetailsError } = useSWR(
-    PROJECT_DETAILS(workspaceSlug, projectId),
-    () => fetchProjectDetails(workspaceSlug, projectId)
-  );
-  // fetching user project member information
-  useSWR(PROJECT_ME_INFORMATION(workspaceSlug, projectId), () => fetchUserProjectInfo(workspaceSlug, projectId));
-  // fetching project member preferences
-  useSWR(
-    currentUserData?.id ? PROJECT_MEMBER_PREFERENCES(projectId, currentProjectRole) : null,
-    currentUserData?.id ? () => fetchProjectUserProperties(workspaceSlug, projectId) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-  // fetching project labels
-  useSWR(PROJECT_LABELS(projectId, currentProjectRole), () => fetchProjectLabels(workspaceSlug, projectId), {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
-  // fetching project members
-  useSWR(PROJECT_MEMBERS(projectId, currentProjectRole), () => fetchProjectMembers(workspaceSlug, projectId), {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
-  // fetching project states
-  useSWR(PROJECT_STATES(projectId, currentProjectRole), () => fetchProjectStates(workspaceSlug, projectId), {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
+  const { joinProject } = useProject();
 
-  // handle join project
+  // the project side of what every page of a project fetches (M3 design 7.1), and what nerve's read of the project
+  // decides it is to the caller (3.19)
+  const access = useProjectFetch(workspaceSlug, projectId);
+
+  // joins the project; a refusal shows nerve's reason
   const handleJoinProject = () => {
     setIsJoiningProject(true);
-    joinProject(workspaceSlug, projectId).finally(() => setIsJoiningProject(false));
+    joinProject(projectId)
+      .catch((error: unknown) =>
+        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) })
+      )
+      .finally(() => setIsJoiningProject(false));
   };
 
-  const isProjectLoading = isProjectDetailsLoading && !projectDetailsError;
+  // nerve's read of the project has not answered yet
+  if (access.kind === "loading") return null;
 
-  if (isProjectLoading) return null;
+  // nerve could not be reached: the page says so, and tries again when asked (M2 design 7.1)
+  if (access.kind === "unavailable") return <SessionUnavailable autoRetry={false} onRetry={access.retry} />;
 
-  if (!isProjectLoading && hasPermissionToCurrentProject === false) {
+  // a project the caller sees and is no member of, which he may join; or one not found to him
+  if (access.kind !== "member") {
     return (
       <ProjectAccessRestriction
-        errorStatusCode={projectDetailsError?.status}
-        isWorkspaceAdmin={isWorkspaceAdmin}
+        canJoin={access.kind === "not-member"}
         handleJoinProject={handleJoinProject}
         isJoinButtonDisabled={isJoiningProject}
       />

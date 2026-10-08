@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 // nerve imports
 import { StateGroupIcon } from "@nerve/propel/icons";
-import type { TStateGroups } from "@nerve/types";
+import type { StateGroup } from "@nerve/api-client";
 // components
 import { SingleProgressStats } from "@/components/core/sidebar/single-progress-stats";
 
@@ -35,7 +35,7 @@ export const StateGroupStatComponent = observer(function StateGroupStatComponent
           key={index}
           title={
             <div className="flex items-center gap-2">
-              <StateGroupIcon stateGroup={group.state as TStateGroups} />
+              <StateGroupIcon stateGroup={group.state as StateGroup} />
               <span className="text-11 capitalize">{group.state}</span>
             </div>
           }

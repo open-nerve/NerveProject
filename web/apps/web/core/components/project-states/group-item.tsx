@@ -12,22 +12,23 @@ import { EIconSize } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { StateGroupIcon } from "@nerve/propel/icons";
 import { AddOutline, ChevronDownOutline } from "@makeplane/propel/icons";
-import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
+import type { State, StateGroup } from "@nerve/api-client";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // components
 import { StateList, StateCreate } from "@/components/project-states";
 
 type TGroupItem = {
-  groupKey: TStateGroups;
-  groupsExpanded: Partial<TStateGroups>[];
-  groupedStates: Record<string, IState[]>;
-  states: IState[];
+  groupKey: StateGroup;
+  groupsExpanded: Partial<StateGroup>[];
+  groupedStates: Record<string, State[]>;
+  states: State[];
   stateOperationsCallbacks: TStateOperationsCallbacks;
   isEditable: boolean;
   groupItemClassName?: string;
   stateItemClassName?: string;
-  handleGroupCollapse: (groupKey: TStateGroups) => void;
-  handleExpand: (groupKey: TStateGroups) => void;
+  handleGroupCollapse: (groupKey: StateGroup) => void;
+  handleExpand: (groupKey: StateGroup) => void;
 };
 
 export const GroupItem = observer(function GroupItem(props: TGroupItem) {

@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { EUserPermissions } from "@nerve/types";
-
 const paramsToKey = (params: any) => {
   const {
     state,
@@ -53,19 +51,9 @@ const paramsToKey = (params: any) => {
   return `${layoutKey}_${projectKey}_${stateGroupKey}_${stateKey}_${priorityKey}_${assigneesKey}_${mentionsKey}_${createdByKey}_${type}_${groupBy}_${orderBy}_${labelsKey}_${startDateKey}_${targetDateKey}_${sub_issue}_${subscriberKey}`;
 };
 
-export const WORKSPACE_PARTIAL_PROJECTS = (workspaceSlug: string) =>
-  `WORKSPACE_PARTIAL_PROJECTS_${workspaceSlug.toUpperCase()}`;
-
 export const WORKSPACE_MODULES = (workspaceSlug: string) => `WORKSPACE_MODULES_${workspaceSlug.toUpperCase()}`;
 
 export const WORKSPACE_CYCLES = (workspaceSlug: string) => `WORKSPACE_CYCLES_${workspaceSlug.toUpperCase()}`;
-
-export const WORKSPACE_LABELS = (workspaceSlug: string) => `WORKSPACE_LABELS_${workspaceSlug.toUpperCase()}`;
-
-export const WORKSPACE_PROJECTS_ROLES_INFORMATION = (workspaceSlug: string) =>
-  `WORKSPACE_PROJECTS_ROLES_INFORMATION_${workspaceSlug.toUpperCase()}`;
-
-export const WORKSPACE_STATES = (workspaceSlug: string) => `WORKSPACE_STATES_${workspaceSlug.toUpperCase()}`;
 
 // cycles
 export const CYCLE_ISSUES_WITH_PARAMS = (cycleId: string, params?: any) => {
@@ -78,22 +66,3 @@ export const CYCLE_ISSUES_WITH_PARAMS = (cycleId: string, params?: any) => {
 
 // Issues
 export const ISSUE_DETAILS = (issueId: string) => `ISSUE_DETAILS_${issueId.toUpperCase()}`;
-
-// project level keys
-export const PROJECT_DETAILS = (_workspaceSlug: string, projectId: string) =>
-  `PROJECT_DETAILS_${projectId.toUpperCase()}`;
-
-export const PROJECT_ME_INFORMATION = (_workspaceSlug: string, projectId: string) =>
-  `PROJECT_ME_INFORMATION_${projectId.toUpperCase()}`;
-
-export const PROJECT_LABELS = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_LABELS_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_MEMBERS = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MEMBERS_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_STATES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_STATES_${projectId.toUpperCase()}_${projectRole}`;
-
-export const PROJECT_MEMBER_PREFERENCES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MEMBER_PREFERENCES_${projectId.toUpperCase()}_${projectRole}`;

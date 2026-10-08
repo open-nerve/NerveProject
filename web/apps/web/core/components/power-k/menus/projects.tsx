@@ -8,13 +8,13 @@ import React from "react";
 // components
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 // nerve imports
-import type { TPartialProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // local imports
 import { PowerKMenuBuilder } from "./builder";
 
 type Props = {
-  projects: TPartialProject[];
-  onSelect: (project: TPartialProject) => void;
+  projects: Project[];
+  onSelect: (project: Project) => void;
 };
 
 export function PowerKProjectsMenu({ projects, onSelect }: Props) {

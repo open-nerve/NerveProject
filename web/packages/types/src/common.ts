@@ -33,8 +33,6 @@ export type TLogoProps = {
 
 export type TNameDescriptionLoader = "submitting" | "submitted" | "saved";
 
-export type TFetchStatus = "partial" | "complete" | undefined;
-
 export type ICustomSearchSelectOption = {
   value: any;
   query: string;

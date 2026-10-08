@@ -6,7 +6,8 @@
 
 import type { LucideIcon } from "lucide-react";
 // nerve imports
-import type { TFavoriteEntityType, TLogoProps } from "@nerve/types";
+import type { LogoProps } from "@nerve/api-client";
+import type { TFavoriteEntityType } from "@nerve/types";
 import { FavoriteFolderIcon } from "@nerve/propel/icons";
 import { CyclesOutline, ModuleOutline, ProjectsOutline, ViewsOutline } from "@makeplane/propel/icons";
 import type { ISvgIcons } from "@nerve/propel/icons";
@@ -22,7 +23,7 @@ const ICON_MAP: Record<TFavoriteEntityType, React.FC<ISvgIcons> | LucideIcon> = 
 
 type Props = {
   type: TFavoriteEntityType;
-  logo?: TLogoProps;
+  logo?: LogoProps;
 };
 
 export const FavoriteItemIcon = ({ type, logo }: Props) => {

@@ -4,306 +4,216 @@
  * See the LICENSE file for details.
  */
 
-import { set, sortBy } from "lodash-es";
-import { action, computed, makeObservable, observable, runInAction } from "mobx";
+import { action, computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
-// types
-import type { IIssueLabel, IIssueLabelTree } from "@nerve/types";
-// helpers
-import { buildTree } from "@nerve/utils";
+// nerve imports
+import type { ApiClient, Label, LabelCreate, LabelUpdate, Project } from "@nerve/api-client";
+// lib
+import { oneAtATime } from "@/lib/one-at-a-time";
+import { placeAt } from "@/lib/place-between";
+import type { Change } from "@/lib/reconciled";
+import { ReconciledByKey, replaced, upserted } from "@/lib/reconciled";
 // services
-import { IssueLabelService } from "@/services/issue";
+import { LabelsService } from "@/services/project/labels.service";
 // store
-import type { RootStore } from "./root.store";
+import type { RootStore } from "@/store/root.store";
+import type { IRouterStore } from "@/store/router.store";
+
+/** A label at the top with the labels under it, in their project's order: labels have two levels (M3 design 3.16). */
+type LabelTree = Label & { children: Label[] };
+/** nerve's gap between a project's last label and a new one (M3 design 4.10). */
+const SORT_ORDER_STEP = 10000;
 
 export interface ILabelStore {
-  //Loaders
-  fetchedMap: Record<string, boolean>;
-  //Observable
-  labelMap: Record<string, IIssueLabel>;
   // computed
-  projectLabels: IIssueLabel[] | undefined;
-  projectLabelsTree: IIssueLabelTree[] | undefined;
-  workspaceLabels: IIssueLabel[] | undefined;
-  //computed actions
-  getWorkspaceLabels: (workspaceSlug: string) => IIssueLabel[] | undefined;
-  getWorkspaceLabelIds: (workspaceSlug: string) => string[] | undefined;
-  getProjectLabels: (projectId: string | undefined | null) => IIssueLabel[] | undefined;
-  getProjectLabelIds: (projectId: string | undefined | null) => string[] | undefined;
-  getLabelById: (labelId: string) => IIssueLabel | null;
+  /** Every label the store shows, by id, which the work items' stores look up. */
+  labelMap: Record<string, Label>;
+  /** The address's project's labels, by sort order, then id; undefined until fetched. */
+  projectLabels: Label[] | undefined;
+  /** The address's project's labels at the top, each with the labels under it; undefined until fetched. */
+  projectLabelsTree: LabelTree[] | undefined;
+  // computed actions
+  getLabelById: (labelId: string | null | undefined) => Label | undefined;
+  getProjectLabels: (projectId: string | null | undefined) => Label[] | undefined;
+  getProjectLabelIds: (projectId: string | null | undefined) => string[] | undefined;
   // fetch actions
-  fetchWorkspaceLabels: (workspaceSlug: string) => Promise<IIssueLabel[]>;
-  fetchProjectLabels: (workspaceSlug: string, projectId: string) => Promise<IIssueLabel[]>;
-  // crud actions
-  createLabel: (workspaceSlug: string, projectId: string, data: Partial<IIssueLabel>) => Promise<IIssueLabel>;
-  updateLabel: (
-    workspaceSlug: string,
-    projectId: string,
-    labelId: string,
-    data: Partial<IIssueLabel>
-  ) => Promise<IIssueLabel>;
+  fetchProjectLabels: (projectId: string) => Promise<Label[] | undefined>;
+  // changes
+  createLabel: (projectId: string, data: LabelCreate) => Promise<Label>;
+  updateLabel: (labelId: string, data: LabelUpdate) => Promise<Label>;
   updateLabelPosition: (
-    workspaceSlug: string,
-    projectId: string,
-    draggingLabelId: string,
-    droppedParentId: string | null,
-    droppedLabelId: string | undefined,
+    labelId: string,
+    parentId: string | null,
+    droppedOnId: string | undefined,
     dropAtEndOfList: boolean
-  ) => Promise<void>;
-  deleteLabel: (workspaceSlug: string, projectId: string, labelId: string) => Promise<void>;
+  ) => Promise<Label | undefined>;
+  deleteLabel: (labelId: string) => Promise<void>;
 }
 
-export class LabelStore implements ILabelStore {
-  // root store
-  rootStore;
-  // root store labelMap
-  labelMap: Record<string, IIssueLabel> = {};
-  //loaders
-  fetchedMap: Record<string, boolean> = {};
-  // services
-  issueLabelService;
+/** nerve's order of a project's labels: by sort order, the lowest first, then by id. */
+const inOrder = (labels: Label[]): Label[] =>
+  labels.toSorted((a, b) => a.sort_order - b.sort_order || Number(a.id > b.id) - Number(a.id < b.id));
 
-  constructor(_rootStore: RootStore) {
+/** A label at the top, a copy, with the labels of the list under it, in the list's order. */
+const treeOf = (top: Label, labels: Label[]): LabelTree => ({
+  ...top,
+  children: labels.filter((label) => label.parent_id === top.id),
+});
+
+/** The list without the label id names and the labels under it, as nerve deletes them. */
+const deleted =
+  (id: string): Change<Label[]> =>
+  (list) =>
+    list.filter((label) => label.id !== id && label.parent_id !== id);
+
+/**
+ * The labels of the projects of a session (M3 design 3.16, 7.3): each project's list, by its id, which its pages
+ * fetch; labels are a project's only, the workspace's across its projects are M7's. Their order is nerve's (sort
+ * order, then id), and the labels under a label at the top come from parent_id. The labels of a project the project
+ * store no longer gives (deleted, left, or of a workspace no longer the caller's) do not show. Its service sends with
+ * the session's client; changes go one at a time and the store writes nerve's answers (v0 design 7.7); fetches do
+ * not queue.
+ */
+export class LabelStore implements ILabelStore {
+  /** Each project's labels, reconciled between fetches and changes (reconciled.ts). */
+  private readonly projects = new ReconciledByKey<Label[]>();
+  // services
+  private readonly service: LabelsService;
+  /** The changes of the labels, sent one at a time. */
+  private readonly changes = oneAtATime();
+  // stores
+  private readonly router: IRouterStore;
+  /** The project as the caller sees it, by the project store (ProjectStore.getProjectById). */
+  private readonly projectOf: (projectId: string | undefined | null) => Project | undefined;
+
+  constructor(_rootStore: RootStore, api: ApiClient) {
     makeObservable(this, {
-      labelMap: observable,
-      fetchedMap: observable,
       // computed
+      labelMap: computed,
       projectLabels: computed,
       projectLabelsTree: computed,
-
+      // actions
       fetchProjectLabels: action,
       createLabel: action,
       updateLabel: action,
       updateLabelPosition: action,
       deleteLabel: action,
     });
-
-    // root store
-    this.rootStore = _rootStore;
-    // services
-    this.issueLabelService = new IssueLabelService();
+    this.service = new LabelsService(api);
+    this.router = _rootStore.router;
+    this.projectOf = _rootStore.projectRoot.project.getProjectById;
   }
 
-  /**
-   * Returns the labelMap belongs to a specific workspace
-   */
-  get workspaceLabels() {
-    const currentWorkspaceDetails = this.rootStore.workspaceRoot.currentWorkspace;
-    if (!currentWorkspaceDetails) return;
-    return this.getWorkspaceLabels(currentWorkspaceDetails.slug);
+  get labelMap() {
+    const shown = this.projects
+      .values()
+      .flat()
+      .filter((label) => this.projectOf(label.project_id));
+    return Object.fromEntries(shown.map((label) => [label.id, label]));
   }
 
-  /**
-   * Returns the labelMap belonging to the current project
-   */
   get projectLabels() {
-    const projectId = this.rootStore.router.projectId;
-    const workspaceSlug = this.rootStore.router.workspaceSlug || "";
-    if (!projectId || !(this.fetchedMap[projectId] || this.fetchedMap[workspaceSlug])) return;
-    return sortBy(
-      Object.values(this.labelMap).filter((label) => label?.project_id === projectId),
-      "sort_order"
-    );
+    return this.getProjectLabels(this.router.projectId);
   }
 
-  /**
-   * Returns the labelMap in a tree format
-   */
   get projectLabelsTree() {
-    if (!this.projectLabels) return;
-    return buildTree(this.projectLabels);
+    const labels = this.projectLabels;
+    return labels?.filter((label) => label.parent_id === null).map((top) => treeOf(top, labels));
   }
 
-  getWorkspaceLabels = computedFn((workspaceSlug: string) => {
-    const workspaceDetails = this.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
-    if (!workspaceDetails || !this.fetchedMap[workspaceSlug]) return;
-    return sortBy(
-      Object.values(this.labelMap).filter((label) => label.workspace_id === workspaceDetails.id),
-      "sort_order"
-    );
-  });
-
-  getWorkspaceLabelIds = computedFn(
-    (workspaceSlug: string) => this.getWorkspaceLabels(workspaceSlug)?.map((label) => label.id) ?? undefined
+  /** @description the label, of a project the caller sees, as the store last had it from nerve */
+  getLabelById = computedFn((labelId: string | null | undefined): Label | undefined =>
+    labelId ? this.labelMap[labelId] : undefined
   );
 
-  getProjectLabels = computedFn((projectId: string | undefined | null) => {
-    const workspaceSlug = this.rootStore.router.workspaceSlug || "";
-    if (!projectId || !(this.fetchedMap[projectId] || this.fetchedMap[workspaceSlug])) return;
-    return sortBy(
-      Object.values(this.labelMap).filter((label) => label?.project_id === projectId),
-      "sort_order"
-    );
+  /**
+   * @description the project's labels, by sort order, then id; undefined until fetched, or once the project store
+   * no longer gives the project
+   */
+  getProjectLabels = computedFn((projectId: string | null | undefined): Label[] | undefined => {
+    const project = this.projectOf(projectId);
+    const labels = project && this.projects.get(project.id);
+    return labels && inOrder(labels);
   });
 
-  /**
-   * Returns the label ids for a specific project
-   * @param projectId
-   * @returns string[]
-   */
-  getProjectLabelIds = computedFn((projectId: string | undefined | null) => {
-    const workspaceSlug = this.rootStore.router.workspaceSlug;
-    if (!workspaceSlug || !projectId || !(this.fetchedMap[projectId] || this.fetchedMap[workspaceSlug]))
-      return undefined;
-    return this.getProjectLabels(projectId)?.map((label) => label.id) ?? [];
-  });
+  getProjectLabelIds = computedFn((projectId: string | null | undefined): string[] | undefined =>
+    this.getProjectLabels(projectId)?.map((label) => label.id)
+  );
 
   /**
-   * get label info from the map of labels in the store using label id
-   * @param labelId
+   * @description fetches a project's labels, a member's to fetch as nerve refuses anyone else, and shows them with
+   * the changes nerve confirmed meanwhile; gives what it shows, or undefined for a fetch a newer one overtook or a
+   * change of session cut (Reconciled.fetch)
    */
-  getLabelById = computedFn((labelId: string): IIssueLabel | null => this.labelMap?.[labelId] || null);
+  fetchProjectLabels = (projectId: string): Promise<Label[] | undefined> =>
+    this.projects.fetch(projectId, () => this.service.list(projectId));
 
   /**
-   * Fetches all the labelMap belongs to a specific project
-   * @param workspaceSlug
-   * @param projectId
-   * @returns Promise<IIssueLabel[]>
+   * @description creates a label, last of its project's: at the top unless data names a parent; fails, changing
+   * nothing, when nerve refuses
    */
-  fetchProjectLabels = async (workspaceSlug: string, projectId: string) =>
-    await this.issueLabelService.getProjectLabels(workspaceSlug, projectId).then((response) => {
-      runInAction(() => {
-        response.forEach((label) => {
-          set(this.labelMap, [label.id], label);
-        });
-        set(this.fetchedMap, projectId, true);
-      });
-      return response;
+  createLabel = (projectId: string, data: LabelCreate): Promise<Label> =>
+    this.changes(async () => {
+      const label = await this.service.create(projectId, data);
+      this.projects.confirm(label.project_id, upserted(label));
+      return label;
     });
 
-  /**
-   * Fetches all the labelMap belongs to a specific project
-   * @param workspaceSlug
-   * @param projectId
-   * @returns Promise<IIssueLabel[]>
-   */
-  fetchWorkspaceLabels = async (workspaceSlug: string) =>
-    await this.issueLabelService.getWorkspaceIssueLabels(workspaceSlug).then((response) => {
-      runInAction(() => {
-        response.forEach((label) => {
-          set(this.labelMap, [label.id], label);
-        });
-        set(this.fetchedMap, workspaceSlug, true);
-      });
-      return response;
-    });
+  /** @description changes a label; the store then shows nerve's answer. Fails, changing nothing, when nerve refuses. */
+  updateLabel = (labelId: string, data: LabelUpdate): Promise<Label> => this.changes(() => this.send(labelId, data));
 
   /**
-   * Creates a new label for a specific project and add it to the store
-   * @param workspaceSlug
-   * @param projectId
-   * @param data
-   * @returns Promise<IIssueLabel>
+   * @description moves a label where it was dropped: under parentId (null for the top), before the label droppedOnId
+   * names, or last there for none or at the end of the list. Its place among the labels under its new parent is
+   * reckoned when the change goes out, from the labels as nerve last answered them (none among none: it takes the
+   * parent alone); dropped under its own parent on no label, it stays and nothing is sent. Fails, changing nothing,
+   * when nerve refuses or the store does not have it.
    */
-  createLabel = async (workspaceSlug: string, projectId: string, data: Partial<IIssueLabel>) =>
-    await this.issueLabelService.createIssueLabel(workspaceSlug, projectId, data).then((response) => {
-      runInAction(() => {
-        set(this.labelMap, [response.id], response);
-      });
-      return response;
-    });
-
-  /**
-   * Updates a label for a specific project and update it in the store
-   * @param workspaceSlug
-   * @param projectId
-   * @param labelId
-   * @param data
-   * @returns Promise<IIssueLabel>
-   */
-  updateLabel = async (workspaceSlug: string, projectId: string, labelId: string, data: Partial<IIssueLabel>) => {
-    const originalLabel = this.labelMap[labelId];
-    try {
-      runInAction(() => {
-        set(this.labelMap, [labelId], { ...originalLabel, ...data });
-      });
-      const response = await this.issueLabelService.patchIssueLabel(workspaceSlug, projectId, labelId, data);
-      return response;
-    } catch (error) {
-      console.log("Failed to update label from project store");
-      runInAction(() => {
-        set(this.labelMap, [labelId], originalLabel);
-      });
-      throw error;
-    }
-  };
-
-  /**
-   * updates the sort order of a label and updates the label information using API.
-   * @param workspaceSlug
-   * @param projectId
-   * @param labelId
-   * @param parentId
-   * @param index
-   * @param isSameParent
-   * @param prevIndex
-   * @returns
-   */
-  updateLabelPosition = async (
-    workspaceSlug: string,
-    projectId: string,
-    draggingLabelId: string,
-    droppedParentId: string | null,
-    droppedLabelId: string | undefined,
+  updateLabelPosition = (
+    labelId: string,
+    parentId: string | null,
+    droppedOnId: string | undefined,
     dropAtEndOfList: boolean
-  ) => {
-    const currLabel = this.labelMap?.[draggingLabelId];
-    const labelTree = this.projectLabelsTree;
-    let currentArray: IIssueLabel[];
-
-    if (!currLabel || !labelTree) return;
-
-    //If its is dropped in the same parent then, there is not specific label on which it is mentioned then keep it's original position
-    if (currLabel.parent === droppedParentId && !droppedLabelId) return;
-
-    const data: Partial<IIssueLabel> = { parent: droppedParentId };
-
-    // find array in which the label is to be added
-    if (!droppedParentId) currentArray = labelTree;
-    else currentArray = labelTree?.find((label) => label.id === droppedParentId)?.children || [];
-
-    let droppedLabelIndex = currentArray.findIndex((label) => label.id === droppedLabelId);
-    //if the position of droppedLabelId cannot be determined then drop it at the end of the list
-    if (dropAtEndOfList || droppedLabelIndex === -1) droppedLabelIndex = currentArray.length;
-
-    //if currently adding to a new array, then let backend assign a sort order
-    if (currentArray.length > 0) {
-      let prevSortOrder: number | undefined, nextSortOrder: number | undefined;
-
-      if (typeof currentArray[droppedLabelIndex - 1] !== "undefined") {
-        prevSortOrder = currentArray[droppedLabelIndex - 1].sort_order;
-      }
-      if (typeof currentArray[droppedLabelIndex] !== "undefined") {
-        nextSortOrder = currentArray[droppedLabelIndex].sort_order;
-      }
-
-      let sortOrder: number = 65535;
-      //based on the next and previous labelMap calculate current sort order
-      if (prevSortOrder && nextSortOrder) {
-        sortOrder = (prevSortOrder + nextSortOrder) / 2;
-      } else if (nextSortOrder) {
-        sortOrder = nextSortOrder / 2;
-      } else if (prevSortOrder) {
-        sortOrder = prevSortOrder + 10000;
-      }
-      data.sort_order = sortOrder;
-    }
-
-    return this.updateLabel(workspaceSlug, projectId, draggingLabelId, data);
-  };
+  ): Promise<Label | undefined> =>
+    this.changes(async () => {
+      const label = this.held(labelId);
+      if (label.parent_id === parentId && !droppedOnId) return undefined;
+      const siblings = (this.getProjectLabels(label.project_id) ?? []).filter((held) => held.parent_id === parentId);
+      const sortOrder = placeAt(
+        siblings,
+        "sort_order",
+        droppedOnId,
+        dropAtEndOfList ? "end" : "before",
+        SORT_ORDER_STEP
+      );
+      return this.send(
+        label.id,
+        sortOrder === undefined ? { parent_id: parentId } : { parent_id: parentId, sort_order: sortOrder }
+      );
+    });
 
   /**
-   * Delete the label from the project and remove it from the labelMap object
-   * @param workspaceSlug
-   * @param projectId
-   * @param labelId
+   * @description deletes a label and the labels under it; fails, changing nothing, when nerve refuses or the store
+   * does not have it
    */
-  deleteLabel = async (workspaceSlug: string, projectId: string, labelId: string) => {
-    if (!this.labelMap[labelId]) return;
-    await this.issueLabelService.deleteIssueLabel(workspaceSlug, projectId, labelId).then(() => {
-      runInAction(() => {
-        delete this.labelMap[labelId];
-      });
+  deleteLabel = (labelId: string): Promise<void> =>
+    this.changes(async () => {
+      const label = this.held(labelId);
+      await this.service.delete(label.id);
+      this.projects.confirm(label.project_id, deleted(label.id));
     });
-  };
+
+  /** Sends a change of a label, its turn come, and makes nerve's answer on its project's list. */
+  private async send(labelId: string, data: LabelUpdate): Promise<Label> {
+    const label = await this.service.update(labelId, data);
+    this.projects.confirm(label.project_id, replaced(label));
+    return label;
+  }
+
+  /** The label as the store has it; fails when it has none. */
+  private held(labelId: string): Label {
+    const label = this.getLabelById(labelId);
+    if (!label) throw new Error("Label not found");
+    return label;
+  }
 }

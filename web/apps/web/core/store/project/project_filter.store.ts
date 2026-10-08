@@ -6,7 +6,6 @@
 
 import { set } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction, reaction } from "mobx";
-import { computedFn } from "mobx-utils";
 // types
 import type { TProjectDisplayFilters, TProjectFilters, TProjectAppliedDisplayFilterKeys } from "@nerve/types";
 // store
@@ -14,16 +13,11 @@ import type { RootStore } from "../root.store";
 
 export interface IProjectFilterStore {
   // observables
-  displayFilters: Record<string, TProjectDisplayFilters>;
-  filters: Record<string, TProjectFilters>;
   searchQuery: string;
   // computed
   currentWorkspaceDisplayFilters: TProjectDisplayFilters | undefined;
   currentWorkspaceAppliedDisplayFilters: TProjectAppliedDisplayFilterKeys[] | undefined;
   currentWorkspaceFilters: TProjectFilters | undefined;
-  // computed functions
-  getDisplayFiltersByWorkspaceSlug: (workspaceSlug: string) => TProjectDisplayFilters | undefined;
-  getFiltersByWorkspaceSlug: (workspaceSlug: string) => TProjectFilters | undefined;
   // actions
   updateDisplayFilters: (workspaceSlug: string, displayFilters: TProjectDisplayFilters) => void;
   updateFilters: (workspaceSlug: string, filters: TProjectFilters) => void;
@@ -34,6 +28,11 @@ export interface IProjectFilterStore {
   dispose: () => void;
 }
 
+/**
+ * The projects page's filters, each workspace's by its id (v0 design 7.7): a workspace made again under a deleted
+ * one's slug starts from the default. The changes take the address's slug, and find its workspace's id among the
+ * caller's workspaces now.
+ */
 export class ProjectFilterStore implements IProjectFilterStore {
   // observables
   displayFilters: Record<string, TProjectDisplayFilters> = {};
@@ -64,22 +63,32 @@ export class ProjectFilterStore implements IProjectFilterStore {
     this.rootStore = _rootStore;
     // initialize display filters of the current workspace
     this.dispose = reaction(
-      () => this.rootStore.router.workspaceSlug,
-      (workspaceSlug) => {
-        if (!workspaceSlug) return;
-        this.initWorkspaceFilters(workspaceSlug);
+      () => this.currentWorkspaceId,
+      (workspaceId) => {
+        if (!workspaceId) return;
+        this.initWorkspaceFilters(workspaceId);
         this.searchQuery = "";
       }
     );
+  }
+
+  /** The id of the address's workspace, when it is among the caller's. */
+  private get currentWorkspaceId() {
+    return this.rootStore.workspaceRoot.currentWorkspace?.id;
+  }
+
+  /** The id of the workspace the slug names, among the caller's workspaces now. */
+  private idOf(workspaceSlug: string) {
+    return this.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug)?.id;
   }
 
   /**
    * @description get display filters of the current workspace
    */
   get currentWorkspaceDisplayFilters() {
-    const workspaceSlug = this.rootStore.router.workspaceSlug;
-    if (!workspaceSlug) return;
-    return this.displayFilters[workspaceSlug];
+    const workspaceId = this.currentWorkspaceId;
+    if (!workspaceId) return;
+    return this.displayFilters[workspaceId];
   }
 
   /**
@@ -88,9 +97,9 @@ export class ProjectFilterStore implements IProjectFilterStore {
    */
   // TODO: Figure out a better approach for this
   get currentWorkspaceAppliedDisplayFilters() {
-    const workspaceSlug = this.rootStore.router.workspaceSlug;
-    if (!workspaceSlug) return;
-    const displayFilters = this.displayFilters[workspaceSlug];
+    const workspaceId = this.currentWorkspaceId;
+    if (!workspaceId) return;
+    const displayFilters = this.displayFilters[workspaceId];
     return Object.keys(displayFilters).filter(
       (key): key is TProjectAppliedDisplayFilterKeys =>
         ["my_projects", "archived_projects"].includes(key) && !!displayFilters[key as keyof TProjectDisplayFilters]
@@ -101,34 +110,22 @@ export class ProjectFilterStore implements IProjectFilterStore {
    * @description get filters of the current workspace
    */
   get currentWorkspaceFilters() {
-    const workspaceSlug = this.rootStore.router.workspaceSlug;
-    if (!workspaceSlug) return;
-    return this.filters[workspaceSlug];
+    const workspaceId = this.currentWorkspaceId;
+    if (!workspaceId) return;
+    return this.filters[workspaceId];
   }
 
   /**
-   * @description get display filters of a workspace by workspaceSlug
-   * @param {string} workspaceSlug
-   */
-  getDisplayFiltersByWorkspaceSlug = computedFn((workspaceSlug: string) => this.displayFilters[workspaceSlug]);
-
-  /**
-   * @description get filters of a workspace by workspaceSlug
-   * @param {string} workspaceSlug
-   */
-  getFiltersByWorkspaceSlug = computedFn((workspaceSlug: string) => this.filters[workspaceSlug]);
-
-  /**
    * @description initialize display filters and filters of a workspace
-   * @param {string} workspaceSlug
+   * @param {string} workspaceId
    */
-  initWorkspaceFilters = (workspaceSlug: string) => {
-    const displayFilters = this.getDisplayFiltersByWorkspaceSlug(workspaceSlug);
+  initWorkspaceFilters = (workspaceId: string) => {
+    const displayFilters = this.displayFilters[workspaceId];
     runInAction(() => {
-      this.displayFilters[workspaceSlug] = {
+      this.displayFilters[workspaceId] = {
         order_by: displayFilters?.order_by || "created_at",
       };
-      this.filters[workspaceSlug] = this.filters[workspaceSlug] ?? {};
+      this.filters[workspaceId] = this.filters[workspaceId] ?? {};
     });
   };
 
@@ -138,9 +135,11 @@ export class ProjectFilterStore implements IProjectFilterStore {
    * @param {TProjectDisplayFilters} displayFilters
    */
   updateDisplayFilters = (workspaceSlug: string, displayFilters: TProjectDisplayFilters) => {
+    const workspaceId = this.idOf(workspaceSlug);
+    if (!workspaceId) return;
     runInAction(() => {
       Object.keys(displayFilters).forEach((key) => {
-        set(this.displayFilters, [workspaceSlug, key], displayFilters[key as keyof TProjectDisplayFilters]);
+        set(this.displayFilters, [workspaceId, key], displayFilters[key as keyof TProjectDisplayFilters]);
       });
     });
   };
@@ -151,9 +150,11 @@ export class ProjectFilterStore implements IProjectFilterStore {
    * @param {TProjectFilters} filters
    */
   updateFilters = (workspaceSlug: string, filters: TProjectFilters) => {
+    const workspaceId = this.idOf(workspaceSlug);
+    if (!workspaceId) return;
     runInAction(() => {
       Object.keys(filters).forEach((key) => {
-        set(this.filters, [workspaceSlug, key], filters[key as keyof TProjectFilters]);
+        set(this.filters, [workspaceId, key], filters[key as keyof TProjectFilters]);
       });
     });
   };
@@ -169,8 +170,10 @@ export class ProjectFilterStore implements IProjectFilterStore {
    * @param {string} workspaceSlug
    */
   clearAllFilters = (workspaceSlug: string) => {
+    const workspaceId = this.idOf(workspaceSlug);
+    if (!workspaceId) return;
     runInAction(() => {
-      this.filters[workspaceSlug] = {};
+      this.filters[workspaceId] = {};
     });
   };
 
@@ -179,10 +182,12 @@ export class ProjectFilterStore implements IProjectFilterStore {
    * @param {string} workspaceSlug
    */
   clearAllAppliedDisplayFilters = (workspaceSlug: string) => {
+    const workspaceId = this.idOf(workspaceSlug);
+    if (!workspaceId) return;
     runInAction(() => {
       if (!this.currentWorkspaceAppliedDisplayFilters) return;
       this.currentWorkspaceAppliedDisplayFilters.forEach((key) => {
-        set(this.displayFilters, [workspaceSlug, key], false);
+        set(this.displayFilters, [workspaceId, key], false);
       });
     });
   };

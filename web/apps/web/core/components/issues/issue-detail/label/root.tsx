@@ -8,11 +8,14 @@ import { useMemo } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IIssueLabel, TIssue } from "@nerve/types";
+import type { Label, LabelCreate } from "@nerve/api-client";
+import type { TIssue } from "@nerve/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useLabel } from "@/hooks/store/use-label";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 // types
 import { LabelList, IssueLabelSelectRoot } from "./";
 // TODO: Fix this import statement, as core should not import from ee
@@ -28,7 +31,7 @@ export type TIssueLabel = {
 
 export type TLabelOperations = {
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
-  createLabel: (workspaceSlug: string, projectId: string, data: Partial<IIssueLabel>) => Promise<any>;
+  createLabel: (data: LabelCreate) => Promise<Label>;
 };
 
 export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
@@ -46,10 +49,10 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
 
   const labelOperations: TLabelOperations = useMemo(
     () => ({
-      updateIssue: async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => {
+      updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: Partial<TIssue>) => {
         try {
           if (onLabelUpdate) onLabelUpdate(data.label_ids || []);
-          else await updateIssue(workspaceSlug, projectId, issueId, data);
+          else await updateIssue(slug, issueProjectId, workItemId, data);
         } catch (_error) {
           setToast({
             title: t("toast.error"),
@@ -58,9 +61,9 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
           });
         }
       },
-      createLabel: async (workspaceSlug: string, projectId: string, data: Partial<IIssueLabel>) => {
+      createLabel: async (data: LabelCreate) => {
         try {
-          const labelResponse = await createLabel(workspaceSlug, projectId, data);
+          const labelResponse = await createLabel(projectId, data);
           if (!isInboxIssue)
             setToast({
               title: t("toast.success"),
@@ -69,20 +72,12 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
             });
           return labelResponse;
         } catch (error) {
-          let errMessage = t("label.create.failed");
-          if (error && (error as any).error === "Label with the same name already exists in the project")
-            errMessage = t("label.create.already_exists");
-
-          setToast({
-            title: t("toast.error"),
-            type: TOAST_TYPE.ERROR,
-            message: errMessage,
-          });
+          setToast({ title: t("toast.error"), type: TOAST_TYPE.ERROR, message: t(errorMessageKey(error)) });
           throw error;
         }
       },
     }),
-    [updateIssue, createLabel, onLabelUpdate]
+    [updateIssue, createLabel, onLabelUpdate, isInboxIssue, projectId, t]
   );
 
   return (

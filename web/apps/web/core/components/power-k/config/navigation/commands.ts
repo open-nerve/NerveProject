@@ -19,8 +19,8 @@ import {
 } from "@makeplane/propel/icons";
 // nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
-import type { Workspace } from "@nerve/api-client";
-import type { ICycle, IModule, IPartialProject, IProjectView } from "@nerve/types";
+import type { Workspace, Project } from "@nerve/api-client";
+import type { ICycle, IModule, IProjectView } from "@nerve/types";
 import { EUserProjectRoles, EUserWorkspaceRoles } from "@nerve/types";
 // components
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
@@ -57,6 +57,9 @@ export type TPowerKNavigationCommandKeys =
   | "open_project_setting"
   | "nav_project_settings";
 
+const baseWorkspaceConditions = (ctx: TPowerKContext) => Boolean(ctx.params.workspaceSlug);
+const baseProjectConditions = (ctx: TPowerKContext) => Boolean(ctx.params.workspaceSlug && ctx.params.projectId);
+
 /**
  * Navigation commands - Navigate to all pages in the app
  */
@@ -66,7 +69,7 @@ export const usePowerKNavigationCommandsRecord = (): Record<TPowerKNavigationCom
     data: currentUser,
     permission: { allowPermissions },
   } = useUser();
-  const { getPartialProjectById } = useProject();
+  const { getProjectById } = useProject();
   // derived values
   const hasWorkspaceMemberLevelPermissions = (ctx: TPowerKContext) =>
     allowPermissions(
@@ -81,9 +84,7 @@ export const usePowerKNavigationCommandsRecord = (): Record<TPowerKNavigationCom
       ctx.params.workspaceSlug,
       ctx.params.projectId
     );
-  const baseWorkspaceConditions = (ctx: TPowerKContext) => Boolean(ctx.params.workspaceSlug);
-  const baseProjectConditions = (ctx: TPowerKContext) => Boolean(ctx.params.workspaceSlug && ctx.params.projectId);
-  const getContextProject = (ctx: TPowerKContext) => getPartialProjectById(ctx.params.projectId);
+  const getContextProject = (ctx: TPowerKContext) => getProjectById(ctx.params.projectId);
 
   return {
     open_workspace: {
@@ -158,7 +159,7 @@ export const usePowerKNavigationCommandsRecord = (): Record<TPowerKNavigationCom
       keySequence: "op",
       page: "open-project",
       onSelect: (data, ctx) => {
-        const projectDetails = data as IPartialProject;
+        const projectDetails = data as Project;
         handlePowerKNavigate(ctx, [ctx.params.workspaceSlug, "projects", projectDetails.id, "issues"]);
       },
       isEnabled: (ctx) => baseWorkspaceConditions(ctx),
@@ -409,8 +410,8 @@ export const usePowerKNavigationCommandsRecord = (): Record<TPowerKNavigationCom
       keySequence: "gk",
       action: (ctx) =>
         handlePowerKNavigate(ctx, [ctx.params.workspaceSlug, "projects", ctx.params.projectId, "intake"]),
-      isEnabled: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.inbox_view,
-      isVisible: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.inbox_view,
+      isEnabled: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.intake_view,
+      isVisible: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.intake_view,
       closeOnSelect: true,
     },
     nav_project_archives: {

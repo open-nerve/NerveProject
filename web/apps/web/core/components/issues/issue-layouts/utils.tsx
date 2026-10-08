@@ -142,13 +142,13 @@ export const getGroupByColumns = ({
 };
 
 const getProjectColumns = (): IGroupByColumn[] | undefined => {
-  const { joinedProjectIds: projectIds, projectMap } = rootStore.projectRoot.project;
+  const { joinedProjectIds: projectIds, getProjectById } = rootStore.projectRoot.project;
   // Return undefined if no project ids
   if (!projectIds) return;
   // Map project ids to project columns
   return projectIds
     .map((projectId: string) => {
-      const project = projectMap[projectId];
+      const project = getProjectById(projectId);
       if (!project) return;
       return {
         id: project.id,
@@ -222,7 +222,7 @@ const getModuleColumns = (): IGroupByColumn[] | undefined => {
 };
 
 const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefined => {
-  const { getProjectStates, projectStates } = rootStore.state;
+  const { getProjectStates, projectStates, getStatePercentageInGroup } = rootStore.state;
   const _states = projectId ? getProjectStates(projectId) : projectStates;
   if (!_states) return;
   // map project states to group by columns
@@ -231,7 +231,12 @@ const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefin
     name: state.name,
     icon: (
       <div className="size-4 rounded-full">
-        <StateGroupIcon stateGroup={state.group} color={state.color} size={EIconSize.LG} percentage={state.order} />
+        <StateGroupIcon
+          stateGroup={state.group}
+          color={state.color}
+          size={EIconSize.LG}
+          percentage={getStatePercentageInGroup(state.id)}
+        />
       </div>
     ),
     payload: { state_id: state.id },
@@ -263,10 +268,9 @@ const getPriorityColumns = (): IGroupByColumn[] => {
 };
 
 const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] => {
-  const { workspaceLabels, projectLabels } = rootStore.label;
-  // map labels to group by columns
+  // the workspace's labels across its projects are M7's (M3 design 7.3): a workspace level groups none of them
   const labels = [
-    ...(isWorkspaceLevel ? workspaceLabels || [] : projectLabels || []),
+    ...(isWorkspaceLevel ? [] : (rootStore.label.projectLabels ?? [])),
     { id: "None", name: "None", color: "#666" },
   ];
   // map labels to group by columns

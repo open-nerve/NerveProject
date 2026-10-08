@@ -20,6 +20,15 @@ export async function inTurn(nerve: FakeNerve, k: number, [method, path]: Endpoi
   nerve.calls[k]?.answer(answer);
 }
 
+/** Sends a change, which nerve gives reply once it is the request out; gives how the change settled. */
+export async function sent(nerve: FakeNerve, send: () => Promise<unknown>, request: Endpoint, reply: Response) {
+  const k = nerve.calls.length;
+  const change = track(send());
+  await inTurn(nerve, k, request, reply);
+  await until(() => change.settled, "the change");
+  return change;
+}
+
 /** A store's request, as the tests make it: what sends it, and the request it is. */
 type Sent = { send: () => Promise<unknown>; request: Endpoint };
 

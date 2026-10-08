@@ -41,7 +41,7 @@ export function ArchiveRestoreProjectModal(props: Props) {
 
   const handleArchiveProject = async () => {
     setIsLoading(true);
-    await archiveProject(workspaceSlug, projectId)
+    await archiveProject(projectId)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -64,7 +64,7 @@ export function ArchiveRestoreProjectModal(props: Props) {
 
   const handleRestoreProject = async () => {
     setIsLoading(true);
-    await restoreProject(workspaceSlug, projectId)
+    await restoreProject(projectId)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -103,7 +103,6 @@ export function ArchiveRestoreProjectModal(props: Props) {
           <Button
             variant="primary"
             size="lg"
-            tabIndex={1}
             onClick={archive ? handleArchiveProject : handleRestoreProject}
             loading={isLoading}
           >

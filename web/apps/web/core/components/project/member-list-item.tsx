@@ -10,7 +10,8 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Table } from "@nerve/ui";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
-import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useProject } from "@/hooks/store/use-project";
+import { useUser } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 // components
 import { useProjectColumns } from "@/components/projects/settings/useProjectColumns";
@@ -30,7 +31,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
   // router
   const navigate = useNavigate();
   // store hooks
-  const { leaveProject } = useUserPermissions();
+  const { getProjectById, leaveProject } = useProject();
   const { data: currentUser } = useUser();
   const {
     project: { removeMemberFromProject },
@@ -45,7 +46,9 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
     if (!workspaceSlug || !projectId || !memberId) return;
 
     if (memberId === currentUser?.id) {
-      await leaveProject(workspaceSlug, projectId)
+      const project = getProjectById(projectId);
+      if (!project) return;
+      await leaveProject(project)
         // oxlint-disable-next-line promise/always-return
         .then(async () => {
           navigate(`/${workspaceSlug}/projects`);
@@ -58,7 +61,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
           });
         });
     } else
-      await removeMemberFromProject(workspaceSlug, projectId, memberId).catch((err) =>
+      await removeMemberFromProject(projectId, memberId).catch((err) =>
         setToast({
           type: TOAST_TYPE.ERROR,
           title: "You can't remove the member from this project yet.",
@@ -80,7 +83,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
       )}
       <Table
         columns={columns}
-        data={(memberDetails?.filter((member): member is IProjectMemberDetails => member !== null) ?? []) as any}
+        data={memberDetails.filter((member): member is IProjectMemberDetails => member !== null)}
         keyExtractor={(rowData) => rowData?.member.id ?? ""}
         tHeadClassName="border-b border-subtle"
         thClassName="text-left font-medium divide-x-0 text-placeholder"

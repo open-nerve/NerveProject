@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 import { Disclosure, Transition } from "@headlessui/react";
 // nerve imports
 import { ChevronDownOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 // components
 import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
@@ -20,9 +20,9 @@ import { LabelDndHOC } from "./label-drag-n-drop-HOC";
 import { ProjectSettingLabelItem } from "./project-setting-label-item";
 
 type Props = {
-  label: IIssueLabel;
-  labelChildren: IIssueLabel[];
-  handleLabelDelete: (label: IIssueLabel) => void;
+  label: Label;
+  labelChildren: Label[];
+  handleLabelDelete: (label: Label) => void;
   isUpdating: boolean;
   setIsUpdating: Dispatch<SetStateAction<boolean>>;
   isLastChild: boolean;

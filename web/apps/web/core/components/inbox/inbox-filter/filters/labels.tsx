@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 import { Loader } from "@nerve/ui";
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
@@ -18,7 +18,7 @@ function LabelIcons({ color }: { color: string }) {
 }
 
 type Props = {
-  labels: IIssueLabel[] | undefined;
+  labels: Label[] | undefined;
   searchQuery: string;
 };
 

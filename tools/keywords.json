@@ -1397,7 +1397,7 @@
     {
       "id": "project-invitations",
       "phase": "M1/P3",
-      "why": "项目邀请（M1 设计 2.2、3.15）：web 里没有按邮件邀请进项目的流程，\"邀请成员\"弹窗是从工作区成员中直接添加，改名为添加成员；离开项目、私有项目的文案不再说\"受邀\"。工作区邀请保留，不搜单独的 invite、invitation。精确例外：joinProject 调用的 Plane 地址 /projects/invitations/，到 M3",
+      "why": "项目邀请（M1 设计 2.2、3.15）：web 里没有按邮件邀请进项目的流程，\"邀请成员\"弹窗是从工作区成员中直接添加，改名为添加成员；离开项目、私有项目的文案不再说\"受邀\"。工作区邀请保留，不搜单独的 invite、invitation。joinProject 调用的 Plane 地址 /projects/invitations/ 曾是精确例外，M3/P8b 改调 POST /api/v0/projects/{project_id}/join 时删除",
       "files": {
         "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
         "flags": ""
@@ -1774,13 +1774,13 @@
     {
       "id": "plane-user-urls",
       "phase": "M2/P4",
-      "why": "Plane 的当前用户、资料、新手引导、导览和实例地址（M2 设计 7.9）；前端改调 /api/v0 下的 /me、/me/profile 和 /instance。当前用户只禁止 /api/users/me/ 本身（后面紧跟引号），不禁止整个 /api/users/me/：M3 的 joinProject、工作区列表和邀请等旧调用还在用它下面的地址",
+      "why": "Plane 的当前用户、资料、新手引导、导览和实例地址（M2 设计 7.9），以及它们之下 M3 的工作区列表、项目角色、加入项目等地址；前端改调 /api/v0 下的 /me、/me/profile、/instance 和 M3 的接口。M3/P8b 起禁止整个 /api/users/（M3 设计 7.10，M2 交接第 11 节）：它下面的旧调用都已迁走",
       "files": {
         "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
       },
       "content": {
-        "source": "/api/users/me/(?:profile|onboard|tour-completed|(?=[\"'`]))|/api/instances/",
+        "source": "/api/users/|/api/instances/",
         "flags": ""
       },
       "samples": {
@@ -1791,14 +1791,17 @@
           "    return this.get(\"/api/users/me/profile/\")",
           "    return this.patch(\"/api/users/me/onboard/\", {",
           "    return this.patch(\"/api/users/me/tour-completed/\", {",
-          "    return this.get(\"/api/instances/\")"
+          "    return this.get(\"/api/instances/\")",
+          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
+          "    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : \"/api/users/me/settings/\";",
+          "    return this.get(\"/api/users/me/workspaces/\")",
+          "    return this.get(`/api/users/me/workspaces/${workspaceSlug}/project-roles/`)",
+          "    return this.get(\"/api/users/last-visited-workspace/\")"
         ],
         "miss": [
           "    return unwrap(await api.GET(\"/api/v0/me/profile\"));",
           "    return unwrap(await publicClient.GET(\"/api/v0/instance\"));",
-          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
-          "    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : \"/api/users/me/settings/\";",
-          "    return this.get(\"/api/users/me/workspaces/\")"
+          "    return unwrap(await this.api.POST(\"/api/v0/projects/{project_id}/join\", { params: { path: { project_id: projectId } } }));"
         ],
         "files": {
           "hit": ["web/apps/web/core/services/user.service.ts", "web/apps/web/core/services/instance.service.ts"],
@@ -2040,13 +2043,13 @@
     {
       "id": "plane-workspace-urls",
       "phase": "M3/P8a",
-      "why": "M3 换掉的 Plane 地址（M3 设计 7.10）：工作区一侧的 store 改调 /api/v0 之后，旧 service 中这些地址的方法都已删除。模式只写到 P8a 已换掉的地址为止；项目一侧的地址（项目、项目成员、项目角色、状态、标签、显示设置）P8b 换掉时补进来，在那之前它们不命中。/search-issues/ 不是 M3 的地址",
+      "why": "M3 换掉的 Plane 地址（M3 设计 7.10）：工作区、项目两侧的 store 改调 /api/v0 之后，旧 service 中这些地址的方法都已删除（P8a 工作区一侧；P8b 项目一侧：项目、项目角色、项目成员、归档、标识检查、收藏、状态、标签、工作区的标签、分诊状态、显示设置，各 Task 删掉时补上）。项目的 /user-properties/ 是 M4 的工作项筛选读写的，留一条例外到 M4。/search-issues/ 和迭代、模块、工作项的地址不是 M3 的，模式不宽到它们",
       "files": {
         "source": "^web/(?!.*\\.test\\.[jt]sx?$).*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
       },
       "content": {
-        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/|/api/workspaces/\\$\\{[^}]+\\}/invitations/|/api/workspaces/\\$\\{[^}]+\\}/user-properties/",
+        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/|/api/workspaces/\\$\\{[^}]+\\}/invitations/|/api/workspaces/\\$\\{[^}]+\\}/user-properties/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/archive/|/project-roles/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/(?:project-members/me/|members/)|/api/workspaces/\\$\\{[^}]+\\}/projects/(?:`|details/|\\$\\{[^}]+\\}/`)|/api/workspaces/\\$\\{[^}]+\\}/(?:project-identifiers|user-favorite-projects/)|/api/workspaces/\\$\\{[^}]+\\}/labels/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/intake-state/|/api/workspaces/\\$\\{[^}]+\\}/(?:projects/\\$\\{[^}]+\\}/)?states/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/issue-labels/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/user-properties/",
         "flags": ""
       },
       "samples": {
@@ -2066,30 +2069,47 @@
           "    return this.patch(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/`, data)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/invitations/${invitationId}/join/`, { headers: {} })",
           "    return this.get(`/api/workspaces/${workspaceSlug}/user-properties/`)",
-          "    return this.patch(`/api/workspaces/${workspaceSlug}/user-properties/`, data)"
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/user-properties/`, data)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/archive/`)",
+          "    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/archive/`)",
+          "    return this.get(`/api/users/me/workspaces/${workspaceSlug}/project-roles/`)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/leave/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/project-members/me/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/details/`)",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/`, data)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/project-identifiers`, {",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/user-favorite-projects/`, { project })",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/`)",
+          "    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`, data)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/`, data)",
+          "    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/labels/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-state/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/states/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/`)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/${stateId}/mark-default/`, {})",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-labels/`)",
+          "    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-labels/${labelId}/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/`)"
         ],
         "miss": [
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces\"));",
           "    return unwrap(await this.api.DELETE(\"/api/v0/workspaces/{slug}\", { params: { path: { slug } } }));",
-          "    return this.get(`/api/users/me/workspaces/${workspaceSlug}/project-roles/`)",
           "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/`)",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/`)",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/`)",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/search-issues/`, {",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/states/`)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/views/`)",
           "    return unwrap(await this.api.GET(\"/api/v0/workspace-slugs/{slug}\", { params: { path: { slug } } }));",
           "    unwrap(await this.api.POST(\"/api/v0/workspaces/{slug}/leave\", { params: { path: { slug } } }));",
-          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/leave/`)",
-          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/project-members/me/`)",
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/members\", { params: { path: { slug } } })).data;",
-          "    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`, data)",
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces/{slug}/invitations\", { params: { path: { slug } } })).data;",
           "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/invitations/`, data)",
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/user-properties/`)",
-          "    return unwrap(await this.api.GET(\"/api/v0/me/workspaces/{slug}/preferences\", { params: { path: { slug } } }));"
+          "    return unwrap(await this.api.GET(\"/api/v0/me/workspaces/{slug}/preferences\", { params: { path: { slug } } }));",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-cycles/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/labels/`)",
+          "    return unwrap(await this.api.GET(\"/api/v0/projects/{project_id}/labels\", { params: { path: { project_id: projectId } } }));"
         ],
         "files": {
           "hit": ["web/apps/web/core/services/workspace.service.ts"],
@@ -2170,20 +2190,20 @@
       "until": "M6"
     },
     {
-      "rule": "project-invitations",
-      "path": "web/apps/web/core/services/user.service.ts",
-      "match": "projects/invitation",
-      "count": 1,
-      "reason": "joinProject 调用的 Plane 地址 /projects/invitations/（加入公开项目），M3 定义项目成员接口时替换",
-      "until": "M3"
-    },
-    {
       "rule": "brand",
       "path": "pnpm-workspace.yaml",
       "match": "Plane",
       "count": 3,
       "reason": "三行中文注释记录这份配置的来源：文件开头说 catalog 等各节来自 Plane 提交 02c19e1 的 pnpm-workspace.yaml、英文注释是 Plane 的原文（M0/P5 spec 2.4），allowBuilds 里说最后三项不来自 Plane（M0/P6）。来源说明随文件长期存在，在 v0 内不会消失",
       "until": "M9"
+    },
+    {
+      "rule": "plane-workspace-urls",
+      "path": "web/apps/web/core/services/project/project.service.ts",
+      "match": "/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/",
+      "count": 2,
+      "reason": "M3/P8b 起，M4 的工作项筛选改用新接口时删除：项目的工作项筛选（getProjectUserProperties、updateProjectUserProperties）由 M4 的筛选 store 读写（M3 设计 7.3）",
+      "until": "M4"
     }
   ]
 }

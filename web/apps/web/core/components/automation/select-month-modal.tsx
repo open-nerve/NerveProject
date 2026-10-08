@@ -10,15 +10,17 @@ import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { Button } from "@nerve/propel/button";
-import type { IProject } from "@nerve/types";
+import type { ProjectUpdate } from "@nerve/api-client";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // types
+/** The auto-archiving's range, as ProjectUpdate takes it: a number of months. */
+type TArchiveIn = Pick<ProjectUpdate, "archive_in">;
 type Props = {
   isOpen: boolean;
-  initialValues: Partial<IProject>;
+  initialValues: TArchiveIn;
   handleClose: () => void;
-  handleChange: (formData: Partial<IProject>) => Promise<void>;
+  handleChange: (formData: TArchiveIn) => Promise<void>;
 };
 
 export function SelectMonthModal({ initialValues, isOpen, handleClose, handleChange }: Props) {
@@ -29,7 +31,7 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
     handleSubmit,
     control,
     reset,
-  } = useForm<IProject>({
+  } = useForm<TArchiveIn>({
     defaultValues: initialValues,
   });
 
@@ -38,7 +40,7 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
     reset(initialValues);
   };
 
-  const onSubmit = (formData: Partial<IProject>) => {
+  const onSubmit = (formData: TArchiveIn) => {
     if (!workspaceSlug && !projectId) return;
     handleChange(formData);
     onClose();
@@ -68,8 +70,11 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
                           id="archive_in"
                           name="archive_in"
                           type="number"
-                          value={value?.toString()}
-                          onChange={onChange}
+                          value={value ?? ""}
+                          // the field holds a number, which nerve's ProjectUpdate takes; none while it is empty
+                          onChange={(event) =>
+                            onChange(event.target.value === "" ? undefined : Number(event.target.value))
+                          }
                           ref={ref}
                           placeholder="Enter Months"
                           min={1}

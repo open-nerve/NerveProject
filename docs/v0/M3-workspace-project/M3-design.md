@@ -151,7 +151,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 | 字段 | 规则 | 处理 |
 |---|---|---|
 | `Workspace.logo_url` | 2 | 可为 `null`，M3 恒为 `null`。删除 general 页的图标上传弹窗（`core/components/workspace/settings/workspace-details.tsx:153-190` 一带）；显示图标的地方不改（没有图标时显示首字母）。M5 加 `workspaces.logo_asset_id`，迁移归 `workspace` 模块（`<v>_workspace_workspaces_logo_asset.sql`，M2 设计 3.14） |
-| `Project.cover_image_url` | 2 | 同上，恒为 `null`。删除新建项目时上传预设封面的一步（`core/components/projects/create/root.tsx:65-101`）和默认的随机封面（`projects/create/utils.ts:12`），删除项目设置里的封面选择器；显示封面的地方用默认图。M5 加 `projects.cover_image_asset_id`（`<v>_project_projects_cover_image_asset.sql`），并处理它自己的交接"新建项目时的封面值"（M5 的 M1-closeout） |
+| `Project.cover_image_url` | 2 | 同上，恒为 `null`。删除新建项目时上传预设封面的一步（`core/components/projects/create/root.tsx:65-101`）和默认的随机封面（`projects/create/utils.ts:12`），删除项目设置里的封面选择器；预设封面只为它们存在，一并删除（P8b，7.8）；显示封面的地方用默认图。M5 加 `projects.cover_image_asset_id`（`<v>_project_projects_cover_image_asset.sql`），并处理它自己的交接"新建项目时的封面值"（M5 的 M1-closeout） |
 | `MemberUser.avatar_url`（成员里的用户资料，5.2） | 2 | 可为 `null`，恒为 `null`。生成的 `MemberUser` 取代 `IUserLite`，`avatar_url` 本来就可空（M2 交接第 7 节） |
 | `Project.logo_props` | 1 | 真实数据（表情或图标的 JSON），M3 读写（3.19） |
 | 工作项的计数：项目的 `intake_count`（M7）、`total_issues` 一类，工作区成员的 `draft_issue_count`（M4） | 3 | 不定义，删掉前端的读取，由产生它的 M 加回 |
@@ -1294,7 +1294,7 @@ modules/access/
 - `Project.is_favorite` 的读写（3.2，P8b；M7 加回）：项目卡片的收藏按钮、建项目之后加入收藏的一步、`project.store.ts` 的两个收藏方法和 `favoriteProjectIds` getter、`favorite.store.ts:284-287` 的项目分支。
 - `IUserLite.is_bot`（M2 交接第 11 节，P8a）。
 - 工作区图标的上传控件（3.2，P8a）：生成的 `WorkspaceUpdate` 没有 `logo_url`（3.2 的规则 2），`IWorkspace` 换成 `Workspace` 时它就编译不过，所以随类型在 P8a 删除（M3/P8a 的修订，原写在 P9）。
-- 项目封面的上传控件和随机封面（3.2，P10）。
+- 项目封面的上传控件、随机封面和 28 张预设封面（3.2，P8b；M5 加回）：生成的 `ProjectCreate`、`ProjectUpdate` 没有封面（3.2 的规则 2），项目的类型和 store 换成生成的时上传和随机封面就编译不过，所以随类型在 P8b 删除；预设封面只为选择器和随机封面存在，一并删除，只留没有封面时显示的默认图 `image_1.webp`（M3/P8b 的修订，原写在 P10）。
 
 ### 7.9 死成员、死 prop 和 oxlint（M1 收尾交接）
 - **死成员和死 prop**：`domains.mjs --rows M3` 在 `f8cb7c2` 上是 208 行，其中 41 行按路径归到 M3、实际属于别的 M（第 1 节），M3 自己的 167 行在它们的文件被重写或改到时删除，P11 清完剩下的。
@@ -1940,7 +1940,7 @@ modules/access/
 - **关闭**：M2 交接第 2 节中 P8a 的部分（落点规则、`currentUserSettings` 和四处 `await` 删除、取数失败时没有未处理的拒绝）、第 7 节（`IUserLite` → `MemberUser`）；M1-P2、M1-P3、M1-P4 保留名单的前端一侧（前后端一份，有测试）。M2 交接第 3、11 节中工作区一侧的部分，其余在 P8b。
 - **完成线**：S1 和此前的全部故事通过（S2 在 P8b 改写）；M2 交接第 3 节的 `git grep` 中 `WorkspaceService` 的 8 处消失（只调公开操作的可以是 `publicClient`）；`node tools/keywords.mjs` 通过；9.5 中 P8a 的 vitest 通过；`tsc`、knip 通过；改到的文件按 7.9 没有 oxlint 警告，各包上限已调低。
 
-### P8b `web-project-data`：项目一侧的数据层（9 个任务）
+### P8b `web-project-data`：项目一侧的数据层（9 个任务；执行时 11 个 Task，P8b spec 第 3 节第 1 条，裁定 D1）
 - **拆分**：见 P8a 的同一条；P8b 在 P8a 合并之后开始。
 - **目标**：项目一侧的类型、service、store、权限 store 的项目一半和两个包装层项目一侧的挂载时取数迁到新接口，按会话分代、按权限启用；使用方改到能编译、行为不变；关键词规则完整；S2 改写。
 - **评审重点**：不是有效的项目成员（`member_role` 为 `null`）时不取项目的子资源（7.1）；权限 store 的项目角色与 3.4 的服务端规则一致（`getProjectRole` 的规则不变，7.3）；拖动排序一个接一个发出（7.1）。
@@ -1982,7 +1982,7 @@ modules/access/
 - **任务**：
   1. 项目列表、卡片、加入。
   2. 已归档的项目页。
-  3. 创建项目（去掉封面，负责人从工作区的管理员和成员中选）。
+  3. 创建项目（负责人从工作区的管理员和成员中选；封面的一步、随机封面和预设封面已在 P8b 删除，7.8）。
   4. `ProjectAuthWrapper` 的界面（7.6）；不是成员时只取项目详情（7.1，P2 故事的页面版本核对）。
   5. 项目设置 general。
   6. 项目设置 members：成员、添加、改角色、移出；负责人、默认负责人、访客可见全部。
@@ -2039,7 +2039,7 @@ modules/access/
 | M2-closeout §8 模块边界 | 3.3、3.4、4.1 | 端口而不是例外（3.3）；`TestSQLCSchemaScope` 四种写法各一个反例；`Authorizer` 在 `shared`，规则 10 照旧（P1） |
 | M2-closeout §9 删除关系图 | 3.15、4.12 | 图写在 4.12，每条指向 `users` 的外键有去向；项目负责人改为 `SET NULL`，登记差异（P4a） |
 | M2-closeout §10 表情选择器的数据 | 7.7、8.5 | 不请求 `cdn.jsdelivr.net`，没有 CSP 违规（故事 P1、P3 的 `watchPage`，C6）；CSP 不放开外部来源（P10） |
-| M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（`leaveWorkspace`、`is_bot`、`owner` 在 P8a，其余在 P8b）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8a、P9）；时区用 `GET /api/v0/timezones`（P9、P10） |
+| M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（`leaveWorkspace`、`is_bot`、`owner` 在 P8a，其余在 P8b）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8a、P9）；时区用 `GET /api/v0/timezones`（P9、P10）。代码一侧在 P8a、P8b 完成（M2 交接的"处理结果（M3/P8b）"），本节随 P10 关闭 |
 | M2-closeout §12 页大小的规则 | 3.12 | M3 没有分页的列表：P1 的 review 写明，本节原样写进 M4 的交接（收尾，13.2） |
 | M2-closeout §13 P5 改到、M2 走不到的页面 | 9.7 C4 | 逐条的浏览器核对写进 review；"加入工作区"一步删除，写明（P9） |
 | M2-closeout §14 下拉框和复制 | 7.7、9.7 C7、C8 | `CustomSearchSelect` 能用 Tab 到达、键盘打开；`member-options` 的列表在按钮旁；9 个和 4 个调用方核对；3 处复制处理失败（P10） |
@@ -2066,14 +2066,14 @@ modules/access/
 | M4 的 M2-closeout §5、M6 的 §2、M7 的 §5 删除关系图 | 各自延伸自己的表，M3 延伸 M3 的 | 4.12 |
 | M4 的 M2-closeout §8 callout 的表情图 | 表情回应"用表情选择器，数据由 M3 改为本站提供" | 7.7；M4 核对表情回应 |
 | M8 的 M1-closeout"AGPL 的三项义务和发往第三方的请求" | 表情选择器的数据请求 | 7.7 完成之后，M8 对这一项只剩核对 |
-| M5 的 M1-closeout"新建项目时的封面值" | M3 删掉了上传预设封面的一步（3.2） | M5 加回封面时按它的关闭条件做；13.2 |
+| M5 的 M1-closeout"新建项目时的封面值" | M3/P8b 删掉了上传预设封面的一步、随机封面和 28 张预设封面（3.2，7.8），只留显示用的默认图 | M5 加回封面时连同预设封面，按它的关闭条件做；13.2 |
 | M5、M8 的 M2-closeout 开头"M3 及以后有 stores 的 M" | M3 的部分就是 M2-closeout §3 | 7.1 |
 
 ### 13.2 M3 交给后续 M 的事项（收尾时写成交接）
 | 接收者 | 事项 |
 |---|---|
 | M4 | **事件**：M3 没有领域事件，删除工作区、降为访客、结束成员关系的连带经 `ProjectCascade` 同步完成（3.3）。M4 随第一个异步订阅者引入事件（M2 设计 3.15、M4 的 M2 收尾交接第 6 节不变），届时可以把删除工作区的连带改挂到 `WorkspaceDeleted` 上，并为工作项加上删除项目、删除工作区的连带。但邀请的软删除必须留在删除工作区的事务里：注册时的邀请检查（`SignupInvitations`）只看邀请行、不看工作区，连带改为异步之后，从删除到任务运行之间，已删除工作区的邀请链接会让被邀请的邮箱在注册关闭时注册；所以要么邀请这一步保持同步，要么让这个检查也读工作区。**约定**：先锁父行再判定、加锁顺序、成员关系集合的增长与收缩（3.6 约定六，以后加入新的成员关系时照它写，恢复"不比新授予给得更多，也不比原来那一行更多"）、共享锁之下的批量插入按唯一键排序（约定五）、账户行只作第一把锁（约定一）；页面按权限取数、`await` 之后先核对会话（7.1）；声明在一个模块上的跨模块错误码由这个模块的 HTTP 测试返回（9.4）；规则表和操作名在各模块、完整性测试（3.4）；权限矩阵的写法（9.2）；错误码前缀规则的修订和 `forbidden`（11.7）；规则表的 `AllowCreator` 和 `guest_view_all_features` 对工作项的约束（3.4）。**数据**：删除状态前检查它的工作项、删除标签时处理 `issue_labels`；工作项编号取 `projects.last_issue_sequence`（4.6）；工作项的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（3.18），旧 `ProjectService` 的 `/user-properties/` 两个方法和关键词例外（`until: "M4"`）；旧 `ProjectService` 的 `projectIssuesSearch` 和它的三个调用方（M4 的选父工作项、M6 的添加已有工作项、M7 的收集箱查重）随 M4 的工作项搜索接口替换，之后删除旧 service（7.3）；60 天清理包括 M3 的表，指向 `workspaces`、`projects`、`labels.parent_id` 的外键已有不带条件的索引，工作项的表照做（4.12）；工作项引用状态、标签、项目的外键在 4.12 的图上延伸。**其他**：页大小的规则移到 `shared`、游标不签名的提醒（M2 交接第 12 节原样，3.12）；决策点 3 的规则行（个人主页的工作项列表）；`issue/root.store.ts` 的 `autorun` 不在 action 之外写 `router` 的副本（计算属性，或由 `RootStore.dispose()` 释放的 `reaction`；7.1，P8a 评审记录第 6 节）；工作项的分页、分组列表扩展 `core/lib/reconciled.ts`，不另写一份（总体设计 7.7）；`workspace-draft-issues/base.ts` 的 16 行死成员；M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（3.1） |
-| M5 | `workspaces.logo_asset_id`、`projects.cover_image_asset_id` 的迁移归各自模块，图标和封面的上传控件从 Plane 的源码加回，`logo_url`、`cover_image_url`、`MemberUser.avatar_url` 有真值（3.2）；新建项目的封面值（M5 的 M1-closeout，M3 已删掉上传预设封面的一步） |
+| M5 | `workspaces.logo_asset_id`、`projects.cover_image_asset_id` 的迁移归各自模块，图标和封面的上传控件从 Plane 的源码加回，`logo_url`、`cover_image_url`、`MemberUser.avatar_url` 有真值（3.2）；P8b 删除的 28 张预设封面和随机封面随封面的上传加回（7.8，只留了显示用的默认图 `image_1.webp`）；新建项目的封面值（M5 的 M1-closeout，M3/P8b 已删掉上传预设封面的一步） |
 | M6 | `ProjectAuthWrapper` 取迭代、模块（3.1，按 7.1 由权限启用）；`existing-issues-list-modal.tsx` 改用 M4 的工作项搜索（7.3）；`cycle_filter`、`module_filter` 的反应的释放（7.1）；`core/sidebar/progress-stats/` 的 8 行死成员；迭代、模块的外键在 4.12 的图上延伸 |
 | M7 | 侧边栏的收藏、未读通知数、首页的"最近"小部件（连同它的工作项预览 `peek-overviews.tsx`，P8a 随小部件删除，M1 3.14）、项目的视图和分诊状态的取数、项目侧边栏的 `intake_count`（3.1）；打开 `intake_view` 时建默认收集箱、分诊状态的接口（3.17）；跨项目的标签列表（3.16、7.3）；项目的收藏（`is_favorite`、卡片上的收藏按钮、建项目之后加入收藏、`favorite.store.ts` 的项目分支、`favoriteProjectIds` getter，3.2）和归档项目时的收藏处理；收集箱查重 `select-duplicate.tsx` 改用 M4 的工作项搜索（7.3）；`workspace-notifications.ts` 的 17 行死成员；工作区视图的筛选列（3.18） |
 | M8 | 工作区、项目、成员的 Webhook 事件：在 M4 引入的事件机制上加（M3 没有事件）；表情选择器的数据请求只剩核对（7.7）；README 中邀请链接与签名密钥的说明随发布核对（8.7）；性能测量加上大工作区的成员列表、项目列表（不分页的集合，11.3）：回答的大小和页面的加载时间，按测到的数字决定要不要给其中一个分页 |
@@ -2112,7 +2112,7 @@ modules/access/
 | P7a `states` | 状态与按资源寻址的共用取锁路径（后端，10）；设计中的 P7 由负责人裁定拆出（2026-10-05，第 12 节） | 已完成：[spec](specs/P7a-states.md)、[plan](plans/P7a-states.md)、[评审](reviews/P7a-states-review.md)（执行时 10 个 Task） |
 | P7b `labels` | 标签（后端，8）；同上，P7a 合并之后开始 | 已完成：[spec](specs/P7b-labels.md)、[plan](plans/P7b-labels.md)、[评审](reviews/P7b-labels-review.md)（执行时 11 个 Task；契约文件不拆，裁定 B1） |
 | P8a `web-workspace-data` | 工作区一侧的数据层（11）；设计中的 P8 由控制者裁定拆出（2026-10-07，第 12 节） | 已完成：[spec](specs/P8a-web-workspace-data.md)、[plan](plans/P8a-web-workspace-data.md)、[评审](reviews/P8a-web-workspace-data-review.md)（执行时 12 个 Task；修复轮的裁定 F-1–F-10） |
-| P8b `web-project-data` | 项目一侧的数据层（9）；同上，P8a 合并之后开始 | 未开始 |
+| P8b `web-project-data` | 项目一侧的数据层（9）；同上，P8a 合并之后开始 | 已完成：[spec](specs/P8b-web-project-data.md)、[plan](plans/P8b-web-project-data.md)、[评审](reviews/P8b-web-project-data-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-6） |
 | P9 `web-workspace-pages` | 工作区的页面（14） | 未开始 |
 | P10 `web-project-pages` | 项目的页面（15） | 未开始 |
 | P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 未开始 |

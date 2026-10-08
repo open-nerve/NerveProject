@@ -31,11 +31,11 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   // router
   const navigate = useNavigate();
   // store hooks
-  const { joinedProjectIds, getPartialProjectById } = useProject();
+  const { joinedProjectIds, getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
 
   // Get current project details
-  const currentProjectDetails = getPartialProjectById(projectId);
+  const currentProjectDetails = getProjectById(projectId);
 
   // Get available navigation items for this project
   const navigationItems = useNavigationItems({
@@ -46,7 +46,7 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   });
 
   // Get preferences from hook
-  const { tabPreferences } = useTabPreferences(workspaceSlug, projectId);
+  const { navigation } = useTabPreferences(projectId);
 
   // Memoize available tab keys
   const availableTabKeys = useMemo(() => navigationItems.map((item) => item.key), [navigationItems]);
@@ -54,10 +54,8 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   // Memoize validated default tab key
   const validatedDefaultTabKey = useMemo(
     () =>
-      availableTabKeys.includes(tabPreferences.defaultTab)
-        ? tabPreferences.defaultTab
-        : availableTabKeys[0] || "work_items",
-    [availableTabKeys, tabPreferences.defaultTab]
+      availableTabKeys.includes(navigation.default_tab) ? navigation.default_tab : availableTabKeys[0] || "work_items",
+    [availableTabKeys, navigation.default_tab]
   );
 
   // Memoize switcher options to prevent recalculation on every render
@@ -65,7 +63,7 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
     () =>
       joinedProjectIds
         .map((id): ICustomSearchSelectOption | null => {
-          const project = getPartialProjectById(id);
+          const project = getProjectById(id);
           if (!project) return null;
 
           return {
@@ -82,7 +80,7 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
           };
         })
         .filter((option): option is ICustomSearchSelectOption => option !== null),
-    [joinedProjectIds, getPartialProjectById]
+    [joinedProjectIds, getProjectById]
   );
 
   // Memoize onChange handler

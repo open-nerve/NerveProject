@@ -15,7 +15,8 @@ import { observer } from "mobx-react";
 import { createRoot } from "react-dom/client";
 // types
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import type { IIssueLabel, InstructionType } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
+import type { InstructionType } from "@nerve/types";
 // ui
 import { DropIndicator } from "@nerve/ui";
 // components
@@ -25,7 +26,7 @@ import type { TargetData } from "./label-utils";
 import { getCanDrop, getInstructionFromPayload } from "./label-utils";
 
 type LabelDragPreviewProps = {
-  label: IIssueLabel;
+  label: Label;
   isGroup: boolean;
 };
 
@@ -40,7 +41,7 @@ function LabelDragPreview(props: LabelDragPreviewProps) {
 }
 
 type Props = {
-  label: IIssueLabel;
+  label: Label;
   isGroup: boolean;
   isChild: boolean;
   isLastChild: boolean;
@@ -70,16 +71,16 @@ export const LabelDndHOC = observer(function LabelDndHOC(props: Props) {
   const isEditable = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
 
   useEffect(() => {
-    const element = labelRef.current;
+    const labelElement = labelRef.current;
     const dragHandleElement = dragHandleRef.current;
 
-    if (!element || !isEditable) return;
+    if (!labelElement || !isEditable) return;
 
     return combine(
       draggable({
-        element,
+        element: labelElement,
         dragHandle: dragHandleElement ?? undefined,
-        getInitialData: () => ({ id: label?.id, parentId: label?.parent, isGroup, isChild }),
+        getInitialData: () => ({ id: label?.id, parentId: label?.parent_id, isGroup, isChild }),
         onDragStart: () => {
           setIsDragging(true);
         },
@@ -99,10 +100,10 @@ export const LabelDndHOC = observer(function LabelDndHOC(props: Props) {
         },
       }),
       dropTargetForElements({
-        element,
+        element: labelElement,
         canDrop: ({ source }) => getCanDrop(source, label, isChild),
         getData: ({ input, element }) => {
-          const data = { id: label?.id, parentId: label?.parent, isGroup, isChild };
+          const data = { id: label?.id, parentId: label?.parent_id, isGroup, isChild };
 
           const blockedStates: InstructionType[] = [];
 
@@ -121,8 +122,7 @@ export const LabelDndHOC = observer(function LabelDndHOC(props: Props) {
           });
         },
         onDrag: ({ self, source, location }) => {
-          const instruction = getInstructionFromPayload(self, source, location);
-          setInstruction(instruction);
+          setInstruction(getInstructionFromPayload(self, source, location));
         },
         onDragLeave: () => {
           setInstruction(undefined);
@@ -146,21 +146,21 @@ export const LabelDndHOC = observer(function LabelDndHOC(props: Props) {
           if (!dropTarget || !dropTargetData) return;
 
           // get possible instructions for the dropTarget
-          const instruction = getInstructionFromPayload(dropTarget, source, location);
+          const dropInstruction = getInstructionFromPayload(dropTarget, source, location);
 
           // if instruction is make child the set parentId as current dropTarget Id or else set it as dropTarget's parentId
-          parentId = instruction === "make-child" ? dropTargetData.id : dropTargetData.parentId;
+          parentId = dropInstruction === "make-child" ? dropTargetData.id : dropTargetData.parentId;
           // if instruction is any other than make-child, i.e., reorder-above and reorder-below then set the droppedId as dropTarget's id
-          const droppedLabelId = instruction !== "make-child" ? dropTargetData.id : undefined;
+          const droppedLabelId = dropInstruction !== "make-child" ? dropTargetData.id : undefined;
           // if instruction is to reorder-below that is enabled only for end of the last items in the list then dropAtEndOfList as true
-          if (instruction === "reorder-below") dropAtEndOfList = true;
+          if (dropInstruction === "reorder-below") dropAtEndOfList = true;
 
           const sourceData = source.data as TargetData;
           if (sourceData.id) onDrop(sourceData.id, parentId, droppedLabelId, dropAtEndOfList);
         },
       })
     );
-  }, [labelRef?.current, dragHandleRef?.current, label, isChild, isGroup, isLastChild, onDrop]);
+  }, [label, isChild, isGroup, isLastChild, onDrop, isEditable]);
 
   const isMakeChild = instruction == "make-child";
 

@@ -8,8 +8,11 @@ import type { User } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
+import { fakeRoot } from "@/store/fake-root";
+import { projectOf, projectTab } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import { UserStore } from "@/store/user";
+import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // The account's changes (names, time zone) against a fake nerve that answers each when the test says: a change goes
 // out once the one before it is answered or has failed, so nerve applies them in the order they were made and the
@@ -82,5 +85,33 @@ describe("UserStore.updateCurrentUser", () => {
     await until(() => second.settled, "the second answer");
 
     expect(store.data).toEqual(accountIn("Europe/Berlin"));
+  });
+});
+
+// The projects the pages offer for a new work item, cycle or module: those of the address's workspace in which the
+// caller's role, as the permission store gives it from the project store, is a member's or an admin's.
+describe("UserStore, the projects the caller may create in", () => {
+  it("gives the address's workspace's projects in which he is a member or an admin, each with his role", async () => {
+    const acme = workspaceOf("acme", { role: 15 });
+    const beta = workspaceOf("beta", { role: 20 });
+    const pa = projectOf("PA", acme.id, { member_role: 20 });
+    const pm = projectOf("PM", acme.id, { member_role: 15 });
+    const pg = projectOf("PG", acme.id, { member_role: 5 });
+    const seen = projectOf("SEEN", acme.id, { member_role: null });
+    const lab = projectOf("LAB", beta.id, { member_role: 15 });
+    const { api, router, workspaceRoot, projectRoot } = await projectTab(
+      { workspace: acme, projects: [pa, pm, pg, seen] },
+      { workspace: beta, projects: [lab] }
+    );
+    const user = new UserStore(fakeRoot({ router, workspaceRoot, projectRoot }), api);
+    expect(user.projectsWithCreatePermissions).toEqual({ [pa.id]: 20, [pm.id]: 15 });
+    expect(user.canPerformAnyCreateAction).toBe(true);
+
+    // at beta's address, its project, where his role is the admin's (beta's admin); none at an address of no workspace
+    router.setQuery({ workspaceSlug: beta.slug });
+    expect(user.projectsWithCreatePermissions).toEqual({ [lab.id]: 20 });
+    router.setQuery({});
+    expect(user.projectsWithCreatePermissions).toEqual({});
+    expect(user.canPerformAnyCreateAction).toBe(false);
   });
 });

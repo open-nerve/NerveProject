@@ -80,6 +80,11 @@ export class ReconciledByKey<V> {
     return key === undefined ? undefined : this.entries.get(key)?.value;
   }
 
+  /** The values of the keys fetched, whatever their keys (for one, to find an item in any of them). */
+  values(): V[] {
+    return [...this.entries.values()].flatMap((entry) => (entry.value === undefined ? [] : [entry.value]));
+  }
+
   /** Fetches the key's value with read (Reconciled.fetch). */
   fetch(key: string, read: () => Promise<V>): Promise<V | undefined> {
     return this.entry(key).fetch(read);

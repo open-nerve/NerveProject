@@ -14,13 +14,13 @@ import { InfoOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { TProject } from "@nerve/types";
+import type { ProjectCreate } from "@nerve/api-client";
 // ui
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { projectIdentifierSanitizer, getTabIndex } from "@nerve/utils";
 
 type Props = {
-  setValue: UseFormSetValue<TProject>;
+  setValue: UseFormSetValue<ProjectCreate>;
   isMobile: boolean;
   shouldAutoSyncIdentifier: boolean;
   setShouldAutoSyncIdentifier: (value: boolean) => void;
@@ -32,7 +32,7 @@ function ProjectCommonAttributes(props: Props) {
   const {
     formState: { errors },
     control,
-  } = useFormContext<TProject>();
+  } = useFormContext<ProjectCreate>();
 
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
   const { t } = useTranslation();

@@ -7,8 +7,8 @@
 import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
-import type { ApiClient, MemberUser } from "@nerve/api-client";
-import type { ICycle, IIssueLabel, IModule, IProject, IState } from "@nerve/types";
+import type { ApiClient, MemberUser, State, Label } from "@nerve/api-client";
+import type { ICycle, IModule } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueDetail } from "@/store/issue/issue-details/root.store";
@@ -48,12 +48,9 @@ export interface IIssueRootStore {
   viewId: string | undefined;
   globalViewId: string | undefined; // all issues view id
   userId: string | undefined; // user profile detail Id
-  stateMap: Record<string, IState> | undefined;
-  stateDetails: IState[] | undefined;
-  workspaceStateDetails: IState[] | undefined;
-  labelMap: Record<string, IIssueLabel> | undefined;
+  stateMap: Record<string, State> | undefined;
+  labelMap: Record<string, Label> | undefined;
   memberMap: Record<string, MemberUser> | undefined;
-  projectMap: Record<string, IProject> | undefined;
   moduleMap: Record<string, IModule> | undefined;
   cycleMap: Record<string, ICycle> | undefined;
 
@@ -100,12 +97,9 @@ export class IssueRootStore implements IIssueRootStore {
   viewId: string | undefined = undefined;
   globalViewId: string | undefined = undefined;
   userId: string | undefined = undefined;
-  stateMap: Record<string, IState> | undefined = undefined;
-  stateDetails: IState[] | undefined = undefined;
-  workspaceStateDetails: IState[] | undefined = undefined;
-  labelMap: Record<string, IIssueLabel> | undefined = undefined;
+  stateMap: Record<string, State> | undefined = undefined;
+  labelMap: Record<string, Label> | undefined = undefined;
   memberMap: Record<string, MemberUser> | undefined = undefined;
-  projectMap: Record<string, IProject> | undefined = undefined;
   moduleMap: Record<string, IModule> | undefined = undefined;
   cycleMap: Record<string, ICycle> | undefined = undefined;
 
@@ -152,11 +146,8 @@ export class IssueRootStore implements IIssueRootStore {
       userId: observable.ref,
       globalViewId: observable.ref,
       stateMap: observable,
-      stateDetails: observable,
-      workspaceStateDetails: observable,
       labelMap: observable,
       memberMap: observable,
-      projectMap: observable,
       moduleMap: observable,
       cycleMap: observable,
     });
@@ -172,13 +163,10 @@ export class IssueRootStore implements IIssueRootStore {
       if (this.viewId !== rootStore.router.viewId) this.viewId = rootStore.router.viewId;
       if (this.globalViewId !== rootStore.router.globalViewId) this.globalViewId = rootStore.router.globalViewId;
       if (this.userId !== rootStore.router.userId) this.userId = rootStore.router.userId;
-      if (!isEmpty(rootStore?.state?.stateMap)) this.stateMap = rootStore?.state?.stateMap;
-      if (!isEmpty(rootStore?.state?.projectStates)) this.stateDetails = rootStore?.state?.projectStates;
-      if (!isEmpty(rootStore?.state?.workspaceStates)) this.workspaceStateDetails = rootStore?.state?.workspaceStates;
-      if (!isEmpty(rootStore?.label?.labelMap)) this.labelMap = rootStore?.label?.labelMap;
+      // the state and label stores' records as they give them, none of a project they no longer give (M3/P8b)
+      this.stateMap = rootStore?.state?.stateMap;
+      this.labelMap = rootStore?.label?.labelMap;
       if (!isEmpty(rootStore?.memberRoot?.memberMap)) this.memberMap = rootStore?.memberRoot?.memberMap || undefined;
-      if (!isEmpty(rootStore?.projectRoot?.project?.projectMap))
-        this.projectMap = rootStore?.projectRoot?.project?.projectMap;
       if (!isEmpty(rootStore?.module?.moduleMap)) this.moduleMap = rootStore?.module?.moduleMap;
       if (!isEmpty(rootStore?.cycle?.cycleMap)) this.cycleMap = rootStore?.cycle?.cycleMap;
     });

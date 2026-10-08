@@ -15,7 +15,7 @@ import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 // nerve imports
-import type { TProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // local imports
 import { WorkItemFiltersToggle } from "../work-item-filters/filters-toggle";
 import {
@@ -26,7 +26,7 @@ import {
 } from "./issue-layouts/filters";
 
 type Props = {
-  currentProjectDetails: TProject | undefined;
+  currentProjectDetails: Project | undefined;
   projectId: string;
   workspaceSlug: string;
 };

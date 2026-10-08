@@ -8,8 +8,6 @@ import { observer } from "mobx-react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
 import { AutoArchiveAutomation } from "@/components/automation";
 import { PageHead } from "@/components/core/page-title";
@@ -19,36 +17,17 @@ import { SettingsHeading } from "@/components/settings/heading";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 // local imports
-import type { Route } from "./+types/page";
 import { AutomationsProjectSettingsHeader } from "./header";
 
-function AutomationSettingsPage({ params }: Route.ComponentProps) {
-  // router
-  const { workspaceSlug, projectId } = params;
+function AutomationSettingsPage() {
   // store hooks
   const { allowPermissions } = useUserPermissions();
-  const { currentProjectDetails: projectDetails, updateProject } = useProject();
+  const { currentProjectDetails: projectDetails } = useProject();
 
   const { t } = useTranslation();
 
   // derived values
   const canPerformProjectAdminActions = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
-
-  const handleChange = async (formData: Partial<IProject>) => {
-    if (!projectDetails) return;
-
-    try {
-      await updateProject(workspaceSlug, projectId, formData);
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Something went wrong. Please try again.",
-      });
-    }
-  };
-
-  // derived values
   const pageTitle = projectDetails?.name ? `${projectDetails?.name} - Automations` : undefined;
 
   if (!canPerformProjectAdminActions) {
@@ -64,7 +43,7 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
           description={t("project_settings.automations.description")}
         />
         <div className="mt-6">
-          <AutoArchiveAutomation handleChange={handleChange} />
+          <AutoArchiveAutomation />
         </div>
       </section>
     </SettingsContentWrapper>

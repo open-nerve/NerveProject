@@ -11,17 +11,22 @@ import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-
 import { observer } from "mobx-react";
 // Nerve
 import type { TDraggableData } from "@nerve/constants";
-import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
+import type { State, StateGroup } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TStateOperationsCallbacks } from "@nerve/types";
 import { DropIndicator } from "@nerve/ui";
-import { cn, getCurrentStateSequence } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // components
 import { StateItemTitle, StateUpdate } from "@/components/project-states";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 // helpers
 type TStateItem = {
-  groupKey: TStateGroups;
-  groupedStates: Record<string, IState[]>;
+  groupKey: StateGroup;
+  groupedStates: Record<string, State[]>;
   totalStates: number;
-  state: IState;
+  state: State;
   stateOperationsCallbacks: TStateOperationsCallbacks;
   disabled?: boolean;
   stateItemClassName?: string;
@@ -37,6 +42,7 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
     disabled = false,
     stateItemClassName,
   } = props;
+  const { t } = useTranslation();
   // ref
   const draggableElementRef = useRef<HTMLDivElement | null>(null);
   // states
@@ -53,66 +59,61 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
   };
 
   const handleStateSequence = useCallback(
-    async (payload: Partial<IState>) => {
+    async (stateId: string, group: StateGroup, droppedOnId: string, after: boolean) => {
       try {
-        if (!payload.id) return;
-        await stateOperationsCallbacks.moveStatePosition(payload.id, payload);
+        await stateOperationsCallbacks.moveState(stateId, group, droppedOnId, after);
       } catch (error) {
-        console.error("error", error);
+        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
       }
     },
-    [stateOperationsCallbacks]
+    [stateOperationsCallbacks, t]
   );
 
   useEffect(() => {
     const elementRef = draggableElementRef.current;
     const initialData: TDraggableData = { groupKey: groupKey, id: state.id };
 
-    if (elementRef && state) {
-      combine(
-        draggable({
-          element: elementRef,
-          getInitialData: () => initialData,
-          onDragStart: () => setIsDragging(true),
-          onDrop: () => setIsDragging(false),
-          canDrag: () => isDraggable && !disabled,
-        }),
-        dropTargetForElements({
-          element: elementRef,
-          getData: ({ input, element }) =>
-            attachClosestEdge(initialData, {
-              input,
-              element,
-              allowedEdges: ["top", "bottom"],
-            }),
-          onDragEnter: (args) => {
-            setIsDraggedOver(true);
-            setClosestEdge(extractClosestEdge(args.self.data));
-          },
-          onDragLeave: () => {
-            setIsDraggedOver(false);
-            setClosestEdge(null);
-          },
-          onDrop: (data) => {
-            setIsDraggedOver(false);
-            const { self, source } = data;
-            const sourceData = source.data as TDraggableData;
-            const destinationData = self.data as TDraggableData;
+    if (!elementRef) return;
 
-            if (sourceData && destinationData && sourceData.id) {
-              const destinationGroupKey = destinationData.groupKey;
-              const edge = extractClosestEdge(destinationData) || undefined;
-              const payload: Partial<IState> = {
-                id: sourceData.id,
-                group: destinationGroupKey,
-                sequence: getCurrentStateSequence(groupedStates[destinationGroupKey], destinationData, edge),
-              };
-              handleStateSequence(payload);
-            }
-          },
-        })
-      );
-    }
+    // the cleanup: each run registers the element again, with the handlers of this render
+    return combine(
+      draggable({
+        element: elementRef,
+        getInitialData: () => initialData,
+        onDragStart: () => setIsDragging(true),
+        onDrop: () => setIsDragging(false),
+        canDrag: () => isDraggable && !disabled,
+      }),
+      dropTargetForElements({
+        element: elementRef,
+        getData: ({ input, element }) =>
+          attachClosestEdge(initialData, {
+            input,
+            element,
+            allowedEdges: ["top", "bottom"],
+          }),
+        onDragEnter: (args) => {
+          setIsDraggedOver(true);
+          setClosestEdge(extractClosestEdge(args.self.data));
+        },
+        onDragLeave: () => {
+          setIsDraggedOver(false);
+          setClosestEdge(null);
+        },
+        onDrop: (data) => {
+          setIsDraggedOver(false);
+          const { self, source } = data;
+          const sourceData = source.data as TDraggableData;
+          const destinationData = self.data as TDraggableData;
+
+          if (sourceData && destinationData && sourceData.id) {
+            const destinationGroupKey = destinationData.groupKey;
+            const edge = extractClosestEdge(destinationData) || undefined;
+            handleStateSequence(sourceData.id, destinationGroupKey, destinationData.id, edge === "bottom");
+          }
+        },
+      })
+    );
   }, [draggableElementRef, state, groupKey, isDraggable, groupedStates, handleStateSequence, disabled]);
   // DND ends
 

@@ -8,7 +8,8 @@ import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
-import type { IIssueFilterOptions, IState } from "@nerve/types";
+import type { State } from "@nerve/api-client";
+import type { IIssueFilterOptions } from "@nerve/types";
 import { cn } from "@nerve/utils";
 import {
   FilterAssignees,
@@ -25,7 +26,7 @@ type TSubIssueFiltersProps = {
   handleFiltersUpdate: (key: keyof IIssueFilterOptions, value: string | string[]) => void;
   filters: IIssueFilterOptions;
   memberIds: string[] | undefined;
-  states?: IState[];
+  states?: State[];
   availableFilters: (keyof IIssueFilterOptions)[];
 };
 

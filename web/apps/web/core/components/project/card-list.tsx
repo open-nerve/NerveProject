@@ -21,30 +21,14 @@ import { useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { ProjectCard } from "./card";
 
-type TProjectCardListProps = {
-  totalProjectIds?: string[];
-  filteredProjectIds?: string[];
-};
-
-export const ProjectCardList = observer(function ProjectCardList(props: TProjectCardListProps) {
-  const { totalProjectIds: totalProjectIdsProps, filteredProjectIds: filteredProjectIdsProps } = props;
+export const ProjectCardList = observer(function ProjectCardList() {
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { toggleCreateProjectModal } = useCommandPalette();
-  const {
-    loader,
-    fetchStatus,
-    workspaceProjectIds: storeWorkspaceProjectIds,
-    filteredProjectIds: storeFilteredProjectIds,
-    getProjectById,
-  } = useProject();
+  const { workspaceProjectIds, filteredProjectIds, getProjectById } = useProject();
   const { currentWorkspaceDisplayFilters, currentWorkspaceFilters } = useProjectFilter();
   const { allowPermissions } = useUserPermissions();
-
-  // derived values
-  const workspaceProjectIds = totalProjectIdsProps ?? storeWorkspaceProjectIds;
-  const filteredProjectIds = filteredProjectIdsProps ?? storeFilteredProjectIds;
 
   // permissions
   const canPerformEmptyStateActions = allowPermissions(
@@ -52,8 +36,7 @@ export const ProjectCardList = observer(function ProjectCardList(props: TProject
     EUserPermissionsLevel.WORKSPACE
   );
 
-  if (!filteredProjectIds || !workspaceProjectIds || loader === "init-loader" || fetchStatus !== "complete")
-    return <ProjectsLoader />;
+  if (!filteredProjectIds || !workspaceProjectIds) return <ProjectsLoader />;
 
   if (workspaceProjectIds?.length === 0 && !currentWorkspaceDisplayFilters?.archived_projects)
     return (

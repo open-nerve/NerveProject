@@ -71,7 +71,7 @@ export const ProjectInboxHeader = observer(function ProjectInboxHeader() {
         </div>
       </Header.LeftItem>
       <Header.RightItem>
-        {currentProjectDetails?.inbox_view && isAuthorized ? (
+        {currentProjectDetails?.intake_view && isAuthorized ? (
           <div className="flex items-center gap-2">
             <InboxIssueCreateModalRoot
               workspaceSlug={workspaceSlug}

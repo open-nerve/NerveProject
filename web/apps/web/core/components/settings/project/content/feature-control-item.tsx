@@ -6,55 +6,25 @@
 
 import { observer } from "mobx-react";
 // nerve imports
-import { setPromiseToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
 import { Switch } from "@makeplane/propel/components/switch";
 // components
+import { useFeatureToggle } from "@/components/project/settings/use-feature-toggle";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
-// hooks
-import { useProject } from "@/hooks/store/use-project";
+import type { ProjectToggleField } from "@/store/project/project.store";
 
 type Props = {
   description?: React.ReactNode;
-  disabled?: boolean;
   projectId: string;
-  featureProperty: keyof IProject;
+  featureProperty: ProjectToggleField;
   title: React.ReactNode;
   value: boolean;
   workspaceSlug: string;
 };
 
 export const ProjectSettingsFeatureControlItem = observer(function ProjectSettingsFeatureControlItem(props: Props) {
-  const { description, disabled, featureProperty, projectId, title, value, workspaceSlug } = props;
-  // store hooks
-  const { getProjectById, updateProject } = useProject();
-  // derived values
-  const currentProjectDetails = getProjectById(projectId);
-
-  const handleSubmit = () => {
-    if (!workspaceSlug || !projectId || !currentProjectDetails) return;
-
-    // making the request to update the project feature
-    const settingsPayload = {
-      [featureProperty]: !currentProjectDetails?.[featureProperty],
-    };
-    const updateProjectPromise = updateProject(workspaceSlug, projectId, settingsPayload);
-
-    setPromiseToast(updateProjectPromise, {
-      loading: "Updating project feature...",
-      success: {
-        title: "Success!",
-        message: () => "Project feature updated successfully.",
-      },
-      error: {
-        title: "Error!",
-        message: () => "Something went wrong while updating project feature. Please try again.",
-      },
-    });
-    void updateProjectPromise.then(() => {
-      return undefined;
-    });
-  };
+  const { description, featureProperty, projectId, title, value, workspaceSlug } = props;
+  // the feature turns the other way from nerve's last answer, in the change's turn (v0 design 7.7)
+  const toggleFeature = useFeatureToggle(workspaceSlug, projectId);
 
   return (
     <SettingsBoxedControlItem
@@ -64,8 +34,7 @@ export const ProjectSettingsFeatureControlItem = observer(function ProjectSettin
         <Switch
           size="sm"
           checked={value}
-          onCheckedChange={handleSubmit}
-          disabled={disabled}
+          onCheckedChange={() => toggleFeature(featureProperty)}
           aria-label={typeof title === "string" ? title : "Toggle project feature"}
         />
       }

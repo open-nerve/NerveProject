@@ -28,9 +28,9 @@ export const ProjectSettingsSidebarHeader = observer(function ProjectSettingsSid
   // store hooks
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const { currentWorkspace } = useWorkspace();
-  const { getPartialProjectById } = useProject();
+  const { getProjectById } = useProject();
   // derived values
-  const projectDetails = getPartialProjectById(projectId);
+  const projectDetails = getProjectById(projectId);
   const currentProjectRole = currentWorkspace?.slug
     ? getProjectRoleByWorkspaceSlugAndProjectId(currentWorkspace.slug, projectId)
     : undefined;

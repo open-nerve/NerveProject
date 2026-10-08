@@ -18,7 +18,7 @@ import { IconButton } from "@nerve/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { Loader } from "@nerve/ui";
-import { copyUrlToClipboard, cn, orderJoinedProjects } from "@nerve/utils";
+import { copyUrlToClipboard, cn } from "@nerve/utils";
 // components
 import { CreateProjectModal } from "@/components/project/create-project-modal";
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
@@ -28,10 +28,9 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
-// nerve imports
-import type { TProject } from "@nerve/types";
 // local imports
 import { SidebarProjectsListItem } from "./projects-list-item";
+import { useProjectDrop } from "./use-project-drop";
 
 export const SidebarProjectsList = observer(function SidebarProjectsList() {
   // states
@@ -47,7 +46,8 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
 
-  const { loader, getPartialProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
+  const { loader, joinedProjectIds: joinedProjects } = useProject();
+  const handleOnProjectDrop = useProjectDrop();
   // router params
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();
@@ -68,43 +68,13 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
     projectPreferences.showLimitedProjects && joinedProjects.length > projectPreferences.limitedProjectsCount;
 
   const handleCopyText = (projectId: string) => {
-    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() => {
+    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() =>
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("link_copied"),
         message: t("project_link_copied_to_clipboard"),
-      });
-    });
-  };
-
-  const handleOnProjectDrop = (
-    sourceId: string | undefined,
-    destinationId: string | undefined,
-    shouldDropAtEnd: boolean
-  ) => {
-    if (!sourceId || !destinationId || !workspaceSlug) return;
-    if (sourceId === destinationId) return;
-
-    const joinedProjectsList: TProject[] = [];
-    joinedProjects.map((projectId) => {
-      const projectDetails = getPartialProjectById(projectId);
-      if (projectDetails) joinedProjectsList.push(projectDetails);
-    });
-
-    const sourceIndex = joinedProjects.indexOf(sourceId);
-    const destinationIndex = shouldDropAtEnd ? joinedProjects.length : joinedProjects.indexOf(destinationId);
-
-    if (joinedProjectsList.length <= 0) return;
-
-    const updatedSortOrder = orderJoinedProjects(sourceIndex, destinationIndex, sourceId, joinedProjectsList);
-    if (updatedSortOrder != undefined)
-      updateProjectView(workspaceSlug, sourceId, { sort_order: updatedSortOrder }).catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("error"),
-          message: t("something_went_wrong"),
-        });
-      });
+      })
+    );
   };
 
   /**
@@ -158,7 +128,6 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
         <CreateProjectModal
           isOpen={isProjectModalOpen}
           onClose={() => setIsProjectModalOpen(false)}
-          setToFavorite={false}
           workspaceSlug={workspaceSlug}
         />
       )}
@@ -228,8 +197,8 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
             >
               {loader === "init-loader" && (
                 <Loader className="w-full space-y-1.5">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <Loader.Item key={index} height="28px" />
+                  {["first", "second", "third", "fourth"].map((row) => (
+                    <Loader.Item key={row} height="28px" />
                   ))}
                 </Loader>
               )}

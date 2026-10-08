@@ -8,7 +8,8 @@ import { format } from "date-fns";
 import { get, set } from "lodash-es";
 // nerve imports
 import { COMPLETED_STATE_GROUPS, STATE_DISTRIBUTION } from "@nerve/constants";
-import type { ICycle, IModule, IState, TIssue } from "@nerve/types";
+import type { State } from "@nerve/api-client";
+import type { ICycle, IModule, TIssue } from "@nerve/types";
 // helper
 import { getDate } from "./datetime";
 
@@ -43,7 +44,7 @@ export type DistributionUpdates = {
 export const getDistributionPathsPostUpdate = (
   prevIssueState: TIssue | undefined,
   nextIssueState: TIssue | undefined,
-  stateMap: Record<string, IState>
+  stateMap: Record<string, State>
 ): DistributionUpdates => {
   const prevIssueDistribution = getDistributionDataOfIssue(prevIssueState, -1, stateMap);
   const nextIssueDistribution = getDistributionDataOfIssue(nextIssueState, 1, stateMap);
@@ -82,7 +83,7 @@ export const getDistributionPathsPostUpdate = (
 const getDistributionDataOfIssue = (
   issue: TIssue | undefined,
   multiplier: -1 | 1,
-  stateMap: Record<string, IState>
+  stateMap: Record<string, State>
 ): DistributionUpdates & { chartUpdates: ChartUpdates } => {
   const pathUpdates: { path: string[]; value: number }[] = [];
 

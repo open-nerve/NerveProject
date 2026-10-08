@@ -4,14 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import type { TPartialProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // nerve propel imports
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 
 type TProjectHeaderButtonProps = {
-  project: TPartialProject;
+  project: Project;
 };
 
 export function ProjectHeaderButton({ project }: TProjectHeaderButtonProps) {

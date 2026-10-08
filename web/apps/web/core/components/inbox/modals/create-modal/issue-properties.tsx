@@ -14,7 +14,6 @@ import { renderFormattedPayloadDate, getDate, getTabIndex } from "@nerve/utils";
 // components
 import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";
-import { IntakeStateDropdown } from "@/components/dropdowns/intake-state/dropdown";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
@@ -51,17 +50,6 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
 
   return (
     <div className="relative flex flex-wrap items-center gap-2">
-      {/* intake state */}
-      <div className="h-7">
-        <IntakeStateDropdown
-          value={data?.state_id}
-          onChange={(stateId) => handleData("state_id", stateId)}
-          projectId={projectId}
-          buttonVariant="border-with-text"
-          tabIndex={getIndex("state_id")}
-        />
-      </div>
-
       {/* priority */}
       <div className="h-7">
         <PriorityDropdown

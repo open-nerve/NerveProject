@@ -5,11 +5,9 @@
  */
 
 import { RANDOM_EMOJI_CODES } from "@nerve/constants";
-import type { IProject } from "@nerve/types";
-import { getRandomCoverImage } from "@/helpers/cover-image.helper";
+import type { ProjectCreate } from "@nerve/api-client";
 
-export const getProjectFormValues = (): Partial<IProject> => ({
-  cover_image_url: getRandomCoverImage(),
+export const getProjectFormValues = (): ProjectCreate => ({
   description: "",
   logo_props: {
     in_use: "emoji",
@@ -20,5 +18,4 @@ export const getProjectFormValues = (): Partial<IProject> => ({
   identifier: "",
   name: "",
   network: 2,
-  project_lead: null,
 });

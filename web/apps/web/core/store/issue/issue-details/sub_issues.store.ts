@@ -183,10 +183,10 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
         });
       });
 
-      const issueIds = subIssues.map((issue) => issue.id);
+      const subIssueIds = subIssues.map((issue) => issue.id);
       update(this.subIssues, [parentIssueId], (issues) => {
-        if (!issues) return issueIds;
-        return concat(issues, issueIds);
+        if (!issues) return subIssueIds;
+        return concat(issues, subIssueIds);
       });
     });
 
@@ -335,14 +335,11 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     if (projectIds.length > 0) {
       for (const projectId of projectIds) {
         // fetching other project states
-        this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(workspaceSlug, projectId);
+        this.rootIssueDetailStore.rootIssueStore.rootStore.state.fetchProjectStates(projectId);
         // fetching other project members
-        this.rootIssueDetailStore.rootIssueStore.rootStore.memberRoot.project.fetchProjectMembers(
-          workspaceSlug,
-          projectId
-        );
+        this.rootIssueDetailStore.rootIssueStore.rootStore.memberRoot.project.fetchProjectMembers(projectId);
         // fetching other project labels
-        this.rootIssueDetailStore.rootIssueStore.rootStore.label.fetchProjectLabels(workspaceSlug, projectId);
+        this.rootIssueDetailStore.rootIssueStore.rootStore.label.fetchProjectLabels(projectId);
         // fetching other project cycles
         this.rootIssueDetailStore.rootIssueStore.rootStore.cycle.fetchAllCycles(workspaceSlug, projectId);
         // fetching other project modules

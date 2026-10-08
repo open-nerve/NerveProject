@@ -14,7 +14,6 @@ import { updateDistribution, orderModules, shouldFilterModule } from "@nerve/uti
 // services
 import { ModuleService } from "@/services/module.service";
 import { ModuleArchiveService } from "@/services/module_archive.service";
-import { ProjectService } from "@/services/project";
 // store
 import type { RootStore } from "./root.store";
 
@@ -82,7 +81,6 @@ export class ModulesStore implements IModuleStore {
   // root store
   rootStore;
   // services
-  projectService;
   moduleService;
   moduleArchiveService;
 
@@ -116,7 +114,6 @@ export class ModulesStore implements IModuleStore {
     this.rootStore = _rootStore;
 
     // services
-    this.projectService = new ProjectService();
     this.moduleService = new ModuleService();
     this.moduleArchiveService = new ModuleArchiveService();
   }

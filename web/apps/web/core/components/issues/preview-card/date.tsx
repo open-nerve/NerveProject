@@ -6,12 +6,12 @@
 
 import { CalendarOutline, DueDateOutline, StartDateOutline } from "@makeplane/propel/icons";
 // nerve imports
-import type { TStateGroups } from "@nerve/types";
+import type { StateGroup } from "@nerve/api-client";
 import { cn, renderFormattedDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 
 type Props = {
   startDate: string | null;
-  stateGroup: TStateGroups;
+  stateGroup: StateGroup;
   targetDate: string | null;
 };
 

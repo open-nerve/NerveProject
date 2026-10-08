@@ -7,14 +7,14 @@
 import { observer } from "mobx-react";
 import { NavLink, useParams } from "react-router";
 // types
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 
 const ARCHIVES_TAB_LIST: {
   key: string;
   label: string;
-  shouldRender: (projectDetails: IProject) => boolean;
+  shouldRender: (projectDetails: Project) => boolean;
 }[] = [
   {
     key: "issues",

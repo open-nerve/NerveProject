@@ -9,13 +9,8 @@ import { isEmpty } from "lodash-es";
 import { v4 as uuidv4 } from "uuid";
 // nerve imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE, STATE_GROUPS } from "@nerve/constants";
-import type {
-  IIssueDisplayFilterOptions,
-  IIssueDisplayProperties,
-  TIssue,
-  TIssueParams,
-  TStateGroups,
-} from "@nerve/types";
+import type { StateGroup } from "@nerve/api-client";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssue, TIssueParams } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 // local imports
 import { getDate } from "../datetime";
@@ -84,7 +79,7 @@ export const createIssuePayload: (projectId: string, formData: Partial<TIssue>) 
  */
 export const shouldHighlightIssueDueDate = (
   date: string | Date | null,
-  stateGroup: TStateGroups | undefined
+  stateGroup: StateGroup | undefined
 ): boolean => {
   if (!date || !stateGroup) return false;
   // if the issue is completed or cancelled, don't highlight the due date

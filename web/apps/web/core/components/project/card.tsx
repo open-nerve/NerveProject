@@ -18,21 +18,18 @@ import {
   UserPlusOutline,
 } from "@makeplane/propel/icons";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
-import { useLocalStorage } from "@nerve/hooks";
+import { EUserPermissions } from "@nerve/constants";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Button } from "@nerve/propel/button";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
-import { setPromiseToast, setToast, TOAST_TYPE } from "@nerve/propel/toast";
+import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import type { TContextMenuItem } from "@nerve/ui";
-import { ContextMenu, FavoriteStar } from "@nerve/ui";
+import { ContextMenu } from "@nerve/ui";
 import { copyUrlToClipboard, cn, getFileURL, renderFormattedDate } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
-import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
@@ -42,7 +39,7 @@ import { JoinProjectModal } from "./join-project-modal";
 import { ArchiveRestoreProjectModal } from "./archive-restore-modal";
 
 type Props = {
-  project: IProject;
+  project: Project;
 };
 
 export const ProjectCard = observer(function ProjectCard(props: Props) {
@@ -58,65 +55,16 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const { workspaceSlug } = useParams();
   // store hooks
   const { getUserDetails } = useMember();
-  const { addProjectToFavorites, removeProjectFromFavorites } = useProject();
-  const { allowPermissions } = useUserPermissions();
   // hooks
   const { isMobile } = usePlatformOS();
   // derived values
-  const projectMembersIds = project.members;
-  const shouldRenderFavorite = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
-  );
+  const projectMembersIds = project.member_ids;
   // auth
   const isMemberOfProject = !!project.member_role;
   const hasAdminRole = project.member_role === EUserPermissions.ADMIN;
   const hasMemberRole = project.member_role === EUserPermissions.MEMBER;
   // archive
   const isArchived = !!project.archived_at;
-  // local storage
-  const { setValue: toggleFavoriteMenu, storedValue: isFavoriteMenuOpen } = useLocalStorage<boolean>(
-    IS_FAVORITE_MENU_OPEN,
-    false
-  );
-
-  const handleAddToFavorites = () => {
-    if (!workspaceSlug) return;
-
-    const addToFavoritePromise = addProjectToFavorites(workspaceSlug, project.id);
-    setPromiseToast(addToFavoritePromise, {
-      loading: "Adding project to favorites...",
-      success: {
-        title: "Success!",
-        message: () => "Project added to favorites.",
-        actionItems: () => {
-          if (!isFavoriteMenuOpen) toggleFavoriteMenu(true);
-          return <></>;
-        },
-      },
-      error: {
-        title: "Error!",
-        message: () => "Couldn't add the project to favorites. Please try again.",
-      },
-    });
-  };
-
-  const handleRemoveFromFavorites = () => {
-    if (!workspaceSlug) return;
-
-    const removeFromFavoritePromise = removeProjectFromFavorites(workspaceSlug, project.id);
-    setPromiseToast(removeFromFavoritePromise, {
-      loading: "Removing project from favorites...",
-      success: {
-        title: "Success!",
-        message: () => "Project removed from favorites.",
-      },
-      error: {
-        title: "Error!",
-        message: () => "Couldn't remove the project from favorites. Please try again.",
-      },
-    });
-  };
 
   const projectLink = `${workspaceSlug}/projects/${project.id}/issues`;
   const handleCopyText = () =>
@@ -221,7 +169,8 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/60 to-transparent" />
 
           <CoverImage
-            src={project.cover_image_url}
+            src={project.cover_image_url ?? undefined}
+            showDefaultWhenEmpty
             alt={project.name}
             className="absolute top-0 left-0 h-full w-full rounded-t"
           />
@@ -253,21 +202,6 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                 >
                   <LinkOutline className="h-3 w-3 text-on-color" />
                 </button>
-                {shouldRenderFavorite && (
-                  <FavoriteStar
-                    buttonClassName="h-6 w-6 bg-white/10 rounded-sm"
-                    iconClassName={cn("h-3 w-3", {
-                      "text-on-color": !project.is_favorite,
-                    })}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (project.is_favorite) handleRemoveFromFavorites();
-                      else handleAddToFavorites();
-                    }}
-                    selected={!!project.is_favorite}
-                  />
-                )}
               </div>
             )}
           </div>
@@ -286,11 +220,11 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
           <div className="item-center flex justify-between">
             <div className="flex items-center justify-center gap-2">
               <Tooltip
-                label={project.members?.length ? `Members: ${project.members.length}` : "No members"}
+                label={projectMembersIds.length ? `Members: ${projectMembersIds.length}` : "No members"}
                 layout="stacked"
                 disabled={isMobile}
               >
-                {projectMembersIds && projectMembersIds.length > 0 ? (
+                {projectMembersIds.length > 0 ? (
                   <div className="flex cursor-pointer items-center gap-2 text-secondary">
                     <AvatarGroupOverflow size="xs">
                       {projectMembersIds.map((memberId) => {
@@ -316,7 +250,8 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
             {isArchived ? (
               hasAdminRole && (
                 <div className="flex items-center justify-center gap-2">
-                  <div
+                  <button
+                    type="button"
                     className="flex items-center justify-center text-11 font-medium text-placeholder hover:text-secondary"
                     onClick={(e) => {
                       e.preventDefault();
@@ -328,8 +263,9 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                       <RestoreOutline className="h-3.5 w-3.5" />
                       Restore
                     </div>
-                  </div>
-                  <div
+                  </button>
+                  <button
+                    type="button"
                     className="flex items-center justify-center text-11 font-medium text-placeholder hover:text-secondary"
                     onClick={(e) => {
                       e.preventDefault();
@@ -338,7 +274,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                     }}
                   >
                     <DeleteOutline className="h-3.5 w-3.5" />
-                  </div>
+                  </button>
                 </div>
               )
             ) : (

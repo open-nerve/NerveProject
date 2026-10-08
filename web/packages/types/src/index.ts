@@ -22,7 +22,6 @@ export * from "./module";
 export * from "./navigation-preferences";
 export * from "./pragmatic";
 export * from "./project";
-export * from "./intake";
 export * from "./rich-filters";
 export * from "./search";
 export * from "./settings";

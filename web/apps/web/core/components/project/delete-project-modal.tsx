@@ -11,7 +11,7 @@ import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
@@ -19,7 +19,7 @@ import { useParams, useNavigate } from "react-router";
 
 type DeleteProjectModal = {
   isOpen: boolean;
-  project: IProject;
+  project: Project;
   onClose: () => void;
 };
 
@@ -59,7 +59,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
     if (!workspaceSlug || !canDelete) return;
 
     try {
-      await deleteProject(workspaceSlug, project.id);
+      await deleteProject(project);
       if (projectId && projectId === project.id) navigate(`/${workspaceSlug}/projects`);
       handleClose();
       setToast({

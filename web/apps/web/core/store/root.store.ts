@@ -98,7 +98,7 @@ export class RootStore {
     this.user = new UserStore(this, api);
     this.theme = before?.theme ?? new ThemeStore();
     this.workspaceRoot = new WorkspaceRootStore(this, api);
-    this.projectRoot = new ProjectRootStore(this);
+    this.projectRoot = new ProjectRootStore(this, api);
     this.memberRoot = new MemberRootStore(this, api);
     this.cycle = new CycleStore(this);
     this.cycleFilter = new CycleFilterStore(this);
@@ -107,8 +107,8 @@ export class RootStore {
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this, api);
-    this.state = new StateStore(this);
-    this.label = new LabelStore(this);
+    this.state = new StateStore(this, api);
+    this.label = new LabelStore(this, api);
     this.projectInbox = new ProjectInboxStore(this);
     this.workspaceNotification = new WorkspaceNotificationStore(this);
     this.favorite = new FavoriteStore(this);

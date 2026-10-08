@@ -14,26 +14,29 @@ import { getRandomLabelColor } from "@nerve/constants";
 // nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-import type { IIssueLabel } from "@nerve/types";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { Label, LabelCreate } from "@nerve/api-client";
 import { cn } from "@nerve/utils";
 // components
 import { IssueLabelsList } from "@/components/ui/labels-list";
 // hooks
 import { useDropdownKeyDown } from "@/hooks/use-dropdown-key-down";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 export type TWorkItemLabelSelectBaseProps = {
   buttonClassName?: string;
   buttonContainerClassName?: string;
   createLabelEnabled?: boolean;
   disabled?: boolean;
-  getLabelById: (labelId: string) => IIssueLabel | null;
+  getLabelById: (labelId: string) => Label | undefined;
   label?: React.ReactNode;
   labelIds: string[];
   onChange: (value: string[]) => void;
   onDropdownOpen?: () => void;
   placement?: Placement;
-  createLabel?: (data: Partial<IIssueLabel>) => Promise<IIssueLabel>;
+  createLabel?: (data: LabelCreate) => Promise<Label>;
   tabIndex?: number;
   value: string[];
 };
@@ -45,7 +48,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
     createLabelEnabled = false,
     disabled = false,
     getLabelById,
-    label,
+    label: buttonLabel,
     labelIds,
     onChange,
     onDropdownOpen,
@@ -142,8 +145,8 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
       const idToAdd = existing ? existing.id : (await createLabel({ name, color: getRandomLabelColor() })).id;
       onChange(Array.from(new Set([...value, idToAdd])));
       setQuery("");
-    } catch (e) {
-      console.error("Failed to create label", e);
+    } catch (error) {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
     } finally {
       setSubmitting(false);
     }
@@ -152,6 +155,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
   return (
     <Combobox
       as="div"
+      role="presentation"
       ref={dropdownRef}
       tabIndex={tabIndex}
       value={value}
@@ -167,8 +171,8 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
         className={cn("flex h-full cursor-pointer items-center gap-2 text-11", buttonContainerClassName)}
         onClick={handleOnClick}
       >
-        {label ? (
-          label
+        {buttonLabel ? (
+          buttonLabel
         ) : value && value.length > 0 ? (
           <span className={cn("flex h-full items-center justify-center gap-2 text-11", buttonClassName)}>
             <IssueLabelsList
@@ -214,10 +218,10 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
                 filteredOptions.length > 0 ? (
                   <ul className="space-y-1">
                     {filteredOptions.map((label) => {
-                      const children = labelsList?.filter((l) => l.parent === label.id);
+                      const children = labelsList?.filter((l) => l.parent_id === label.id);
 
                       if (children.length === 0) {
-                        if (!label.parent)
+                        if (!label.parent_id)
                           return (
                             <Combobox.Option
                               as="li"
@@ -291,7 +295,8 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
                 ) : submitting ? (
                   <LoadingOutline className="h-3.5 w-3.5 animate-spin" />
                 ) : createLabelEnabled ? (
-                  <p
+                  <button
+                    type="button"
                     onClick={() => {
                       if (!query.length) return;
                       handleAddLabel(query);
@@ -306,7 +311,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
                     ) : (
                       t("label.create.type")
                     )}
-                  </p>
+                  </button>
                 ) : (
                   <p className="px-1.5 py-1 text-placeholder italic">{t("no_matching_results")}</p>
                 )

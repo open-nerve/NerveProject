@@ -67,14 +67,8 @@ export class ArchivedIssues extends BaseIssuesStore implements IArchivedIssues {
     this.issueFilterStore = issueFilterStore;
   }
 
-  /**
-   * Fetches the project details
-   * @param workspaceSlug
-   * @param projectId
-   */
-  fetchParentStats = async (workspaceSlug: string, projectId?: string) => {
-    projectId && this.rootIssueStore.rootStore.projectRoot.project.fetchProjectDetails(workspaceSlug, projectId);
-  };
+  /** A change of a work item moves nothing of its project, which the project's wrapper reads: nothing to fetch. */
+  fetchParentStats = () => {};
 
   /** */
   updateParentStats = () => {};

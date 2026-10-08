@@ -15,8 +15,8 @@ import { cn } from "@nerve/utils";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 // hooks
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
+import { useProject } from "@/hooks/store/use-project";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUserPermissions } from "@/hooks/store/user";
 import { useWorkspaceIssueProperties } from "@/hooks/use-workspace-issue-properties";
 import { useNotificationPreview } from "@/hooks/use-notification-preview";
 // local imports
@@ -36,7 +36,7 @@ export const NotificationsRoot = observer(function NotificationsRoot({ workspace
     notificationIdsByWorkspaceId,
     getNotifications,
   } = useWorkspaceNotifications();
-  const { fetchUserProjectInfo } = useUserPermissions();
+  const { fetchProject } = useProject();
   const { isWorkItem, PeekOverviewComponent, setPeekWorkItem } = useNotificationPreview();
   // derived values
   const { workspace_slug, project_id, issue_id, is_inbox_issue } =
@@ -66,7 +66,7 @@ export const NotificationsRoot = observer(function NotificationsRoot({ workspace
     workspace_slug && project_id && is_inbox_issue
       ? `PROJECT_MEMBER_PERMISSION_INFO_${workspace_slug}_${project_id}`
       : null,
-    workspace_slug && project_id && is_inbox_issue ? () => fetchUserProjectInfo(workspace_slug, project_id) : null
+    workspace_slug && project_id && is_inbox_issue ? () => fetchProject(project_id) : null
   );
 
   const embedRemoveCurrentNotification = useCallback(

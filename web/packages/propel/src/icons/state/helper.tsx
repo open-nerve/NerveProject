@@ -4,29 +4,19 @@
  * See the LICENSE file for details.
  */
 
+import type { StateGroup } from "@nerve/api-client";
 import { EIconSize } from "@nerve/constants";
-import type { TIntakeStateGroups } from "@nerve/types";
 
 export interface IStateGroupIcon {
   className?: string;
   color?: string;
-  stateGroup: TStateGroups;
+  stateGroup: StateGroup;
   size?: EIconSize;
   percentage?: number;
 }
-
-export interface IIntakeStateGroupIcon {
-  className?: string;
-  color?: string;
-  stateGroup: TIntakeStateGroups;
-  size?: EIconSize;
-  percentage?: number;
-}
-
-type TStateGroups = "backlog" | "unstarted" | "started" | "completed" | "cancelled";
 
 export const STATE_GROUP_COLORS: {
-  [key in TStateGroups]: string;
+  [key in StateGroup]: string;
 } = {
   backlog: "#60646C",
   unstarted: "#60646C",
@@ -34,8 +24,6 @@ export const STATE_GROUP_COLORS: {
   completed: "#46A758",
   cancelled: "#9AA4BC",
 };
-
-export const INTAKE_STATE_GROUP_COLORS: { [key in TIntakeStateGroups]: string } = { triage: "#4E5355" };
 
 export const STATE_GROUP_SIZES: {
   [key in EIconSize]: string;

@@ -7,6 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams, useLocation, Link } from "react-router";
+import type { ProjectTab } from "@nerve/api-client";
 import { EUserPermissionsLevel, EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TabNavigationList, TabNavigationItem } from "@nerve/propel/tab-navigation";
@@ -36,7 +37,7 @@ export type TNavigationItem = {
   shouldRender: boolean;
   sortOrder: number;
   i18n_key: string;
-  key: string;
+  key: ProjectTab;
 };
 
 type TTabNavigationRootProps = {
@@ -52,22 +53,19 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   const { t } = useTranslation();
 
   // Store hooks
-  const { getPartialProjectById } = useProject();
+  const { getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
   const {
     issue: { getIssueIdByIdentifier, getIssueById },
   } = useIssueDetail();
 
   // Tab preferences hook
-  const { tabPreferences, handleToggleDefaultTab, handleHideTab, handleShowTab } = useTabPreferences(
-    workspaceSlug,
-    projectId
-  );
+  const { navigation, handleToggleDefaultTab, handleHideTab, handleShowTab } = useTabPreferences(projectId);
 
   // Derived values
   const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
   const workItem = workItemId ? getIssueById(workItemId) : undefined;
-  const project = getPartialProjectById(projectId);
+  const project = getProjectById(projectId);
 
   // Navigation items hook
   const navigationItems = useNavigationItems({
@@ -102,10 +100,10 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   // 1. visibleNavigationItems: Items NOT user-hidden (may still overflow due to space)
   // 2. hiddenNavigationItems: Items user explicitly hid (always in overflow with "Show" icon)
   const visibleNavigationItems = allNavigationItems.filter(
-    (item: TNavigationItem) => !tabPreferences.hiddenTabs.includes(item.key)
+    (item: TNavigationItem) => !navigation.hide_in_more_menu.includes(item.key)
   );
   const hiddenNavigationItems = allNavigationItems.filter((item: TNavigationItem) =>
-    tabPreferences.hiddenTabs.includes(item.key)
+    navigation.hide_in_more_menu.includes(item.key)
   );
 
   // Responsive tab layout hook
@@ -163,7 +161,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
                   key={item.key}
                   item={item}
                   isActive={itemIsActive}
-                  tabPreferences={tabPreferences}
+                  navigation={navigation}
                   onToggleDefault={handleToggleDefaultTab}
                   onHide={handleHideTab}
                   itemRef={(el) => {
@@ -178,7 +176,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
               <TabNavigationOverflowMenu
                 overflowItems={overflowItems}
                 isActive={isActive}
-                tabPreferences={tabPreferences}
+                navigation={navigation}
                 onToggleDefault={handleToggleDefaultTab}
                 onShow={handleShowTab}
               />

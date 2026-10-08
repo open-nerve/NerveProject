@@ -18,7 +18,7 @@ import { cn, sortBySelectedFirst } from "@nerve/utils";
 // hooks
 import { useDropdown } from "@/hooks/use-dropdown";
 // nerve imports
-import type { TProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // local imports
 import { DropdownButton } from "../buttons";
 import { BUTTON_VARIANTS_WITH_TEXT } from "../constants";
@@ -29,7 +29,7 @@ type Props = TDropdownProps & {
   currentProjectId?: string;
   dropdownArrow?: boolean;
   dropdownArrowClassName?: string;
-  getProjectById: (projectId: string | null | undefined) => Partial<TProject> | undefined;
+  getProjectById: (projectId: string | null | undefined) => Partial<Project> | undefined;
   onClose?: () => void;
   projectIds: string[];
   renderByDefault?: boolean;
@@ -148,7 +148,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
   };
 
   const getProjectIcon = (value: string | string[] | null) => {
-    const renderIcon = (logoProps: TProject["logo_props"]) => (
+    const renderIcon = (logoProps: Project["logo_props"]) => (
       <span className="grid h-4 w-4 flex-shrink-0 place-items-center">
         <Logo logo={logoProps} size={14} />
       </span>

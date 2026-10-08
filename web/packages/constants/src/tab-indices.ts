@@ -27,7 +27,6 @@ const ISSUE_FORM_TAB_INDICES = [
 const INTAKE_ISSUE_CREATE_FORM_TAB_INDICES = [
   "name",
   "description_html",
-  "state_id",
   "priority",
   "assignee_ids",
   "label_ids",
@@ -52,7 +51,6 @@ const PROJECT_CREATE_TAB_INDICES = [
   "cancel",
   "submit",
   "close",
-  "cover_image",
   "logo_props",
 ];
 

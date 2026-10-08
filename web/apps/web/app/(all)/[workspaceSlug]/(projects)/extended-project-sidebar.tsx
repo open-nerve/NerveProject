@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
@@ -14,20 +14,21 @@ import { EmptyStateCompact } from "@nerve/propel/empty-state";
 import { AddOutline, SearchOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { copyUrlToClipboard, orderJoinedProjects } from "@nerve/utils";
+import { copyUrlToClipboard } from "@nerve/utils";
 // components
 import { CreateProjectModal } from "@/components/project/create-project-modal";
 import { SidebarProjectsListItem } from "@/components/workspace/sidebar/projects-list-item";
+import { useProjectDrop } from "@/components/workspace/sidebar/use-project-drop";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import type { TProject } from "@nerve/types";
 import { ExtendedSidebarWrapper } from "./extended-sidebar-wrapper";
 
 export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar() {
   // refs
   const extendedProjectSidebarRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   // states
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -36,42 +37,13 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
   // store hooks
   const { t } = useTranslation();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
-  const { getPartialProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
+  const { getProjectById, joinedProjectIds: joinedProjects } = useProject();
+  const handleOnProjectDrop = useProjectDrop();
   const { allowPermissions } = useUserPermissions();
-
-  const handleOnProjectDrop = (
-    sourceId: string | undefined,
-    destinationId: string | undefined,
-    shouldDropAtEnd: boolean
-  ) => {
-    if (!sourceId || !destinationId || !workspaceSlug) return;
-    if (sourceId === destinationId) return;
-
-    const joinedProjectsList: TProject[] = [];
-    joinedProjects.map((projectId) => {
-      const projectDetails = getPartialProjectById(projectId);
-      if (projectDetails) joinedProjectsList.push(projectDetails);
-    });
-
-    const sourceIndex = joinedProjects.indexOf(sourceId);
-    const destinationIndex = shouldDropAtEnd ? joinedProjects.length : joinedProjects.indexOf(destinationId);
-
-    if (joinedProjectsList.length <= 0) return;
-
-    const updatedSortOrder = orderJoinedProjects(sourceIndex, destinationIndex, sourceId, joinedProjectsList);
-    if (updatedSortOrder != undefined)
-      updateProjectView(workspaceSlug, sourceId, { sort_order: updatedSortOrder }).catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("error"),
-          message: t("something_went_wrong"),
-        });
-      });
-  };
 
   // filter projects based on search query
   const filteredProjects = joinedProjects.filter((projectId) => {
-    const project = getPartialProjectById(projectId);
+    const project = getProjectById(projectId);
     if (!project) return false;
     return project.name.toLowerCase().includes(searchQuery.toLowerCase()) || project.identifier.includes(searchQuery);
   });
@@ -84,14 +56,19 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
 
   const handleClose = useCallback(() => toggleExtendedProjectSidebar(false), [toggleExtendedProjectSidebar]);
 
+  // the search takes the focus each time the sidebar opens
+  useEffect(() => {
+    if (isExtendedProjectSidebarOpened) searchInputRef.current?.focus();
+  }, [isExtendedProjectSidebarOpened]);
+
   const handleCopyText = (projectId: string) => {
-    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() => {
+    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() =>
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("link_copied"),
         message: t("project_link_copied_to_clipboard"),
-      });
-    });
+      })
+    );
   };
   return (
     <>
@@ -99,7 +76,6 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
         <CreateProjectModal
           isOpen={isProjectModalOpen}
           onClose={() => setIsProjectModalOpen(false)}
-          setToFavorite={false}
           workspaceSlug={workspaceSlug}
         />
       )}
@@ -134,7 +110,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
               className="w-full max-w-[234px] border-none bg-transparent text-13 outline-none placeholder:text-placeholder"
               placeholder={t("search")}
               value={searchQuery}
-              autoFocus
+              ref={searchInputRef}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>

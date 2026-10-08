@@ -23,20 +23,6 @@ export interface ILinkDetails {
   url: string;
 }
 
-export interface IIssueLabel {
-  id: string;
-  name: string;
-  color: string;
-  project_id: string;
-  workspace_id: string;
-  parent: string | null;
-  sort_order: number;
-}
-
-export interface IIssueLabelTree extends IIssueLabel {
-  children: IIssueLabel[] | undefined;
-}
-
 export type TIssuePriorities = "urgent" | "high" | "medium" | "low" | "none";
 
 export interface ViewFlags {

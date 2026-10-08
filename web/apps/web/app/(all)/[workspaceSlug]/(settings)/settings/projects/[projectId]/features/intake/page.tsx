@@ -50,9 +50,9 @@ function FeaturesIntakeSettingsPage({ params }: Route.ComponentProps) {
           <ProjectSettingsFeatureControlItem
             title={t("project_settings.features.intake.toggle_title")}
             description={t("project_settings.features.intake.toggle_description")}
-            featureProperty="inbox_view"
+            featureProperty="intake_view"
             projectId={projectId}
-            value={!!currentProjectDetails?.inbox_view}
+            value={!!currentProjectDetails?.intake_view}
             workspaceSlug={workspaceSlug}
           />
         </div>

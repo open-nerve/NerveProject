@@ -5,7 +5,8 @@
  */
 
 import { extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
-import type { IIssueLabel, IPragmaticPayloadLocation, InstructionType, TDropTarget } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
+import type { IPragmaticPayloadLocation, InstructionType, TDropTarget } from "@nerve/types";
 
 export type TargetData = {
   id: string;
@@ -58,13 +59,13 @@ export const getInstructionFromPayload = (
  * @param isCurrentChild if the dropTarget is a child
  * @returns
  */
-export const getCanDrop = (source: TDropTarget, label: IIssueLabel | undefined, isCurrentChild: boolean) => {
+export const getCanDrop = (source: TDropTarget, label: Label | undefined, isCurrentChild: boolean) => {
   const sourceData = source?.data;
 
   if (!sourceData) return false;
 
   // a label cannot be dropped on to itself and it's parent cannon be dropped on the child
-  if (sourceData.id === label?.id || sourceData.id === label?.parent) return false;
+  if (sourceData.id === label?.id || sourceData.id === label?.parent_id) return false;
 
   // if current dropTarget is a child and the label being dropped is a group then don't enable drop
   if (isCurrentChild && sourceData.isGroup) return false;

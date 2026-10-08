@@ -7,22 +7,25 @@
 import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { setPromiseToast } from "@nerve/propel/toast";
-import type { IProject } from "@nerve/types";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 import { SettingsHeading } from "@/components/settings/heading";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
+import type { ProjectToggleField } from "@/store/project/project.store";
 // local imports
 import { ProjectFeatureToggle } from "./helper";
+import { useFeatureToggle } from "./use-feature-toggle";
 
 type Props = {
   workspaceSlug: string;
   projectId: string;
 };
 
-const PROJECT_FEATURES_LIST = {
+const PROJECT_FEATURES_LIST: Record<
+  string,
+  { i18n_label: string; i18n_description: string; property: ProjectToggleField }
+> = {
   cycles: {
     i18n_label: "cycles",
     i18n_description: "cycles_description",
@@ -41,7 +44,7 @@ const PROJECT_FEATURES_LIST = {
   inbox: {
     i18n_label: "intake",
     i18n_description: "intake_description",
-    property: "inbox_view",
+    property: "intake_view",
   },
 };
 
@@ -49,34 +52,11 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
   const { workspaceSlug, projectId } = props;
   // store hooks
   const { t } = useTranslation();
-  const { getProjectById, updateProject } = useProject();
+  const { getProjectById } = useProject();
+  // the feature turns the other way from nerve's last answer, in the change's turn (v0 design 7.7)
+  const toggleFeature = useFeatureToggle(workspaceSlug, projectId);
   // derived values
   const currentProjectDetails = getProjectById(projectId);
-
-  const handleSubmit = (featureProperty: string) => {
-    if (!workspaceSlug || !projectId || !currentProjectDetails) return;
-
-    // making the request to update the project feature
-    const settingsPayload = {
-      [featureProperty]: !currentProjectDetails?.[featureProperty as keyof IProject],
-    };
-    const updateProjectPromise = updateProject(workspaceSlug, projectId, settingsPayload);
-
-    setPromiseToast(updateProjectPromise, {
-      loading: "Updating project feature...",
-      success: {
-        title: "Success!",
-        message: () => "Project feature updated successfully.",
-      },
-      error: {
-        title: "Error!",
-        message: () => "Something went wrong while updating project feature. Please try again.",
-      },
-    });
-    void updateProjectPromise.then(() => {
-      return undefined;
-    });
-  };
 
   return (
     <div>
@@ -90,8 +70,8 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
               control={
                 <ProjectFeatureToggle
                   featureItem={featureItem}
-                  value={Boolean(currentProjectDetails?.[featureItem.property as keyof IProject])}
-                  handleSubmit={handleSubmit}
+                  value={Boolean(currentProjectDetails?.[featureItem.property])}
+                  handleSubmit={toggleFeature}
                 />
               }
             />

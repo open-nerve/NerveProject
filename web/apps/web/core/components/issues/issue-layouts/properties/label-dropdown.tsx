@@ -14,8 +14,9 @@ import { Combobox } from "@headlessui/react";
 import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // types
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 import { EUserProjectRoles } from "@nerve/types";
 // components
 import { ComboDropDown } from "@nerve/ui";
@@ -25,6 +26,8 @@ import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useDropdownKeyDown } from "@/hooks/use-dropdown-key-down";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 export interface ILabelDropdownProps {
   projectId: string | null;
@@ -45,6 +48,11 @@ export interface ILabelDropdownProps {
   label: React.ReactNode;
 }
 
+const preventPropagation = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+  e.stopPropagation();
+  e.preventDefault();
+};
+
 export function LabelDropdown(props: ILabelDropdownProps) {
   const {
     projectId,
@@ -62,7 +70,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
     renderByDefault = true,
     fullWidth = false,
     fullHeight = false,
-    label,
+    label: buttonLabel,
   } = props;
   const { t } = useTranslation();
 
@@ -92,7 +100,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   const canCreateLabel =
     projectId && allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
-  let projectLabels: IIssueLabel[] = defaultOptions;
+  let projectLabels: Label[] = defaultOptions;
   if (storeLabels && storeLabels.length > 0) projectLabels = storeLabels;
 
   const options = useMemo(
@@ -137,13 +145,13 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   });
 
   const onOpen = useCallback(() => {
-    if (!storeLabels && workspaceSlug && projectId)
-      fetchProjectLabels(workspaceSlug, projectId)
+    if (!storeLabels && projectId)
+      fetchProjectLabels(projectId)
         .then(() => setIsLoading(false))
         .catch(() => {
           setIsLoading(false);
         });
-  }, [storeLabels, workspaceSlug, projectId, fetchProjectLabels, setIsLoading]);
+  }, [storeLabels, projectId, fetchProjectLabels, setIsLoading]);
 
   const toggleDropdown = useCallback(() => {
     if (!isOpen) onOpen();
@@ -159,12 +167,17 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   };
 
   const handleAddLabel = async (labelName: string) => {
-    if (!workspaceSlug || !projectId) return;
+    if (!projectId) return;
     setSubmitting(true);
-    const label = await createLabel(workspaceSlug, projectId, { name: labelName, color: getRandomLabelColor() });
-    onChange([...value, label.id]);
-    setQuery("");
-    setSubmitting(false);
+    try {
+      const label = await createLabel(projectId, { name: labelName, color: getRandomLabelColor() });
+      onChange([...value, label.id]);
+      setQuery("");
+    } catch (error) {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const searchInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -213,7 +226,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
         onClick={handleOnClick}
         disabled={disabled}
       >
-        {label}
+        {buttonLabel}
         {!hideDropdownArrow && !disabled && <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />}
       </button>
     ),
@@ -223,22 +236,18 @@ export function LabelDropdown(props: ILabelDropdownProps) {
       fullWidth,
       handleOnClick,
       hideDropdownArrow,
-      label,
+      buttonLabel,
       maxRender,
       value.length,
       setReferenceElement,
     ]
   );
 
-  const preventPropagation = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
   return (
-    <div className={`${fullHeight ? "h-full" : "h-5"}`} onClick={preventPropagation}>
+    <div className={`${fullHeight ? "h-full" : "h-5"}`} onClick={preventPropagation} role="presentation">
       <ComboDropDown
         as="div"
+        role="presentation"
         ref={dropdownRef}
         className={`h-full w-auto max-w-full flex-shrink-0 text-left ${className}`}
         value={value}
@@ -307,7 +316,8 @@ export function LabelDropdown(props: ILabelDropdownProps) {
                 ) : submitting ? (
                   <LoadingOutline className="h-3.5 w-3.5 animate-spin" />
                 ) : canCreateLabel ? (
-                  <p
+                  <button
+                    type="button"
                     onClick={() => {
                       if (!query.length) return;
                       handleAddLabel(query);
@@ -322,7 +332,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
                     ) : (
                       t("label.create.type")
                     )}
-                  </p>
+                  </button>
                 ) : (
                   <p className="text-left text-secondary">{t("common.search.no_matching_results")}</p>
                 )}

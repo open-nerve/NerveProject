@@ -1,7 +1,7 @@
 <!--
   Copyright (c) 2026-present OpenNerve
   SPDX-License-Identifier: AGPL-3.0-only
-  Preset project cover 1: soft fields of colour in teal. Drawn for Nerve; see SOURCES.md.
+  The default cover of a project or a user: soft fields of colour in teal. Drawn for Nerve; see SOURCES.md.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1600 900">
   <defs><linearGradient id="g" x1="0" y1="0.3" x2="1" y2="0.7"><stop offset="0%" stop-color="#082F3A"/><stop offset="100%" stop-color="#155E75"/></linearGradient>

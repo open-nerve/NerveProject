@@ -20,7 +20,7 @@ export const InboxIssueAppliedFiltersLabel = observer(function InboxIssueApplied
   const { getLabelById } = useLabel();
   // derived values
   const filteredValues = inboxFilters?.labels || [];
-  const currentOptionDetail = (labelId: string) => getLabelById(labelId) || undefined;
+  const currentOptionDetail = (labelId: string) => getLabelById(labelId);
 
   const handleFilterValue = (value: string): string[] =>
     filteredValues?.includes(value) ? filteredValues.filter((v) => v !== value) : [...filteredValues, value];
@@ -40,22 +40,26 @@ export const InboxIssueAppliedFiltersLabel = observer(function InboxIssueApplied
               <LabelIcons color={optionDetail.color} />
             </div>
             <div className="truncate text-11">{optionDetail?.name}</div>
-            <div
+            <button
+              type="button"
+              aria-label={`Remove ${optionDetail.name}`}
               className="relative flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden text-tertiary transition-all hover:text-secondary"
               onClick={() => handleInboxIssueFilters("labels", handleFilterValue(value))}
             >
               <CloseOutline className="h-3 w-3" />
-            </div>
+            </button>
           </div>
         );
       })}
 
-      <div
+      <button
+        type="button"
+        aria-label="Clear the labels"
         className="relative flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden text-tertiary transition-all hover:text-secondary"
         onClick={clearFilter}
       >
         <CloseOutline className="h-3 w-3" />
-      </div>
+      </button>
     </div>
   );
 });

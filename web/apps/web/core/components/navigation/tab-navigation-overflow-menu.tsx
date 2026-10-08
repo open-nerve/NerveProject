@@ -6,6 +6,7 @@
 
 import React from "react";
 import { Link } from "react-router";
+import type { ProjectNavigation, ProjectTab } from "@nerve/api-client";
 import { DefaultTabOutline, MoreHorizontalOutline, PinOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -14,14 +15,13 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
 // local imports
 import type { TNavigationItem } from "./tab-navigation-root";
-import type { TTabPreferences } from "./tab-navigation-utils";
 
 type Props = {
   overflowItems: TNavigationItem[];
   isActive: (item: TNavigationItem) => boolean;
-  tabPreferences: TTabPreferences;
-  onToggleDefault: (tabKey: string) => void;
-  onShow: (tabKey: string) => void;
+  navigation: ProjectNavigation;
+  onToggleDefault: (tabKey: ProjectTab) => void;
+  onShow: (tabKey: ProjectTab) => void;
 };
 
 /**
@@ -29,7 +29,7 @@ type Props = {
  * Displays items that don't fit in the visible area, with action icons
  * Shows "Eye" icon for user-hidden items, "Set as default" icon for all items
  */
-export function TabNavigationOverflowMenu({ overflowItems, isActive, tabPreferences, onToggleDefault, onShow }: Props) {
+export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation, onToggleDefault, onShow }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -46,8 +46,8 @@ export function TabNavigationOverflowMenu({ overflowItems, isActive, tabPreferen
       {overflowItems.map((item) => {
         const itemIsActive = isActive(item);
         // isHidden = true only for user-hidden items (not space-constrained overflow)
-        const isHidden = tabPreferences.hiddenTabs.includes(item.key);
-        const isDefault = item.key === tabPreferences.defaultTab;
+        const isHidden = navigation.hide_in_more_menu.includes(item.key);
+        const isDefault = item.key === navigation.default_tab;
 
         return (
           <Menu.MenuItem key={`${item.key}-overflow-${itemIsActive ? "active" : "inactive"}`} className="w-full p-0">

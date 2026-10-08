@@ -7,18 +7,18 @@
 import { useState } from "react";
 // types
 import { Button } from "@nerve/propel/button";
-import type { IProject } from "@nerve/types";
+import type { Project } from "@nerve/api-client";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
-import { useUserPermissions } from "@/hooks/store/user";
+import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";
 
 // type
 type TJoinProjectModalProps = {
   isOpen: boolean;
   workspaceSlug: string;
-  project: IProject;
+  project: Project;
   handleClose: () => void;
 };
 
@@ -27,14 +27,14 @@ export function JoinProjectModal(props: TJoinProjectModalProps) {
   // states
   const [isJoiningLoading, setIsJoiningLoading] = useState(false);
   // store hooks
-  const { joinProject } = useUserPermissions();
+  const { joinProject } = useProject();
   // router
   const navigate = useNavigate();
 
   const handleJoin = async () => {
     setIsJoiningLoading(true);
 
-    await joinProject(workspaceSlug, project.id)
+    await joinProject(project.id)
       .then(() => {
         navigate(`/${workspaceSlug}/projects/${project.id}/issues`);
         handleClose();
@@ -62,7 +62,7 @@ export function JoinProjectModal(props: TJoinProjectModalProps) {
         <Button variant="secondary" size="lg" onClick={handleClose}>
           Cancel
         </Button>
-        <Button variant="primary" size="lg" tabIndex={1} type="submit" onClick={handleJoin} loading={isJoiningLoading}>
+        <Button variant="primary" size="lg" type="submit" onClick={handleJoin} loading={isJoiningLoading}>
           {isJoiningLoading ? "Joining..." : "Join Project"}
         </Button>
       </div>

@@ -6,14 +6,14 @@
 
 import { observer } from "mobx-react";
 import { StateGroupIcon } from "@nerve/propel/icons";
-import type { IState } from "@nerve/types";
+import type { State } from "@nerve/api-client";
 // components
 import { PowerKModalCommandItem } from "@/components/power-k/ui/modal/command-item";
 
 export type TPowerKProjectStatesMenuItemsProps = {
   handleSelect: (stateId: string) => void;
   selectedStateId: string | undefined;
-  states: IState[];
+  states: State[];
 };
 
 export const PowerKProjectStatesMenuItems = observer(function PowerKProjectStatesMenuItems(

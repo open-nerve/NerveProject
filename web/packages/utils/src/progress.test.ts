@@ -4,7 +4,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { ICycle, IModule, IState, TIssue } from "@nerve/types";
+import type { State } from "@nerve/api-client";
+import type { ICycle, IModule, TIssue } from "@nerve/types";
 import { calculateCycleProgress } from "./cycle";
 import { getDistributionPathsPostUpdate, updateDistribution } from "./distribution-update";
 
@@ -56,11 +57,11 @@ describe("calculateCycleProgress", () => {
   });
 });
 
-const STATE_MAP: Record<string, IState> = {
-  backlog: { id: "backlog", group: "backlog" } as IState,
-  started: { id: "started", group: "started" } as IState,
-  done: { id: "done", group: "completed" } as IState,
-  cancelled: { id: "cancelled", group: "cancelled" } as IState,
+const STATE_MAP: Record<string, State> = {
+  backlog: { id: "backlog", group: "backlog" } as State,
+  started: { id: "started", group: "started" } as State,
+  done: { id: "done", group: "completed" } as State,
+  cancelled: { id: "cancelled", group: "cancelled" } as State,
 };
 
 const workItem = (stateId: string, fields: Partial<TIssue> = {}) =>

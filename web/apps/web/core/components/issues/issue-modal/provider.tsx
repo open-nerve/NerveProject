@@ -25,7 +25,7 @@ export const IssueModalProvider = observer(function IssueModalProvider(props: TI
   // store hooks
   const { projectsWithCreatePermissions } = useUser();
   // derived values
-  const projectIdsWithCreatePermissions = Object.keys(projectsWithCreatePermissions ?? {});
+  const projectIdsWithCreatePermissions = Object.keys(projectsWithCreatePermissions);
 
   return (
     <IssueModalContext.Provider

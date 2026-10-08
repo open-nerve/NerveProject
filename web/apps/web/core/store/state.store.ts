@@ -4,390 +4,223 @@
  * See the LICENSE file for details.
  */
 
-import { set, groupBy } from "lodash-es";
-import { action, computed, makeObservable, observable, runInAction } from "mobx";
+import { action, computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
+import type { ApiClient, Project, State, StateCreate, StateGroup, StateUpdate, Workspace } from "@nerve/api-client";
 import { STATE_GROUPS } from "@nerve/constants";
-import type { IIntakeState, IState } from "@nerve/types";
-// helpers
 import { sortStates } from "@nerve/utils";
+// lib
+import { oneAtATime } from "@/lib/one-at-a-time";
+import { placeAt } from "@/lib/place-between";
+import type { Change } from "@/lib/reconciled";
+import { ReconciledByKey, dropped, replaced, upserted } from "@/lib/reconciled";
 // services
-import { ProjectStateService } from "@/services/project/project-state.service";
+import { StatesService } from "@/services/project/states.service";
+// store
 import type { RootStore } from "@/store/root.store";
+import type { IRouterStore } from "@/store/router.store";
+
+/** A workspace as the store fetches its states: by its slug, kept under its id. */
+type WorkspaceRef = Pick<Workspace, "id" | "slug">;
+/** nerve's gap between a project's last state and a new one (M3 design 3.17). */
+const SEQUENCE_STEP = 15000;
 
 export interface IStateStore {
-  //Loaders
-  fetchedMap: Record<string, boolean>;
-  fetchedIntakeMap: Record<string, boolean>;
-  // observables
-  stateMap: Record<string, IState>;
-  intakeStateMap: Record<string, IIntakeState>;
   // computed
-  workspaceStates: IState[] | undefined;
-  projectStates: IState[] | undefined;
-  groupedProjectStates: Record<string, IState[]> | undefined;
+  /** Every state the store shows, by id, which the work items' stores look up. */
+  stateMap: Record<string, State>;
+  /** The address's project's states, by group, then sequence; undefined until fetched. */
+  projectStates: State[] | undefined;
+  /** The address's project's states in each group, every group there; undefined until fetched. */
+  groupedProjectStates: Record<string, State[]> | undefined;
   // computed actions
-  getStateById: (stateId: string | null | undefined) => IState | undefined;
-  getIntakeStateById: (intakeStateId: string | null | undefined) => IIntakeState | undefined;
-  getProjectStates: (projectId: string | null | undefined) => IState[] | undefined;
-  getProjectIntakeState: (projectId: string | null | undefined) => IIntakeState | undefined;
+  getStateById: (stateId: string | null | undefined) => State | undefined;
+  getProjectStates: (projectId: string | null | undefined) => State[] | undefined;
   getProjectStateIds: (projectId: string | null | undefined) => string[] | undefined;
-  getProjectIntakeStateIds: (projectId: string | null | undefined) => string[] | undefined;
-  getProjectDefaultStateId: (projectId: string | null | undefined) => string | undefined;
-  // fetch actions
-  fetchProjectStates: (workspaceSlug: string, projectId: string) => Promise<IState[]>;
-  fetchProjectIntakeState: (workspaceSlug: string, projectId: string) => Promise<IIntakeState>;
-  fetchWorkspaceStates: (workspaceSlug: string) => Promise<IState[]>;
-  // crud actions
-  createState: (workspaceSlug: string, projectId: string, data: Partial<IState>) => Promise<IState>;
-  updateState: (
-    workspaceSlug: string,
-    projectId: string,
-    stateId: string,
-    data: Partial<IState>
-  ) => Promise<IState | undefined>;
-  deleteState: (workspaceSlug: string, projectId: string, stateId: string) => Promise<void>;
-  markStateAsDefault: (workspaceSlug: string, projectId: string, stateId: string) => Promise<void>;
-  moveStatePosition: (
-    workspaceSlug: string,
-    projectId: string,
-    stateId: string,
-    payload: Partial<IState>
-  ) => Promise<void>;
-
   getStatePercentageInGroup: (stateId: string | null | undefined) => number | undefined;
+  // fetch actions
+  fetchProjectStates: (projectId: string) => Promise<State[] | undefined>;
+  fetchWorkspaceStates: (workspace: WorkspaceRef) => Promise<State[] | undefined>;
+  // changes
+  createState: (projectId: string, data: StateCreate) => Promise<State>;
+  updateState: (stateId: string, data: StateUpdate) => Promise<State>;
+  moveState: (stateId: string, group: StateGroup, droppedOnId: string | undefined, after: boolean) => Promise<State>;
+  deleteState: (stateId: string) => Promise<void>;
+  markStateAsDefault: (stateId: string) => Promise<void>;
 }
 
+/**
+ * The states of the projects of a session (M3 design 3.17, 7.3): each project's list, by its id, which its pages
+ * fetch, and each workspace's, by its id, the states of its projects the caller is a member of. Their order is
+ * sortStates' (group, then sequence), and a state's place in its group is computed from it: nerve gives no order. The
+ * states of a project the project store no longer gives (deleted, left, or of a workspace no longer the caller's) do
+ * not show. Its service sends with the session's client; changes go one at a time and the store writes nerve's
+ * answers (v0 design 7.7); fetches do not queue.
+ */
 export class StateStore implements IStateStore {
-  stateMap: Record<string, IState> = {};
-  intakeStateMap: Record<string, IIntakeState> = {};
-  //loaders
-  fetchedMap: Record<string, boolean> = {};
-  fetchedIntakeMap: Record<string, boolean> = {};
-  rootStore: RootStore;
-  router;
-  stateService: ProjectStateService;
+  /** Each project's states, reconciled between fetches and changes (reconciled.ts). */
+  private readonly projects = new ReconciledByKey<State[]>();
+  /** Each workspace's states. */
+  private readonly workspaces = new ReconciledByKey<State[]>();
+  // services
+  private readonly service: StatesService;
+  /** The changes of the states, sent one at a time. */
+  private readonly changes = oneAtATime();
+  // stores
+  private readonly router: IRouterStore;
+  /** The project as the caller sees it, by the project store (ProjectStore.getProjectById). */
+  private readonly projectOf: (projectId: string | undefined | null) => Project | undefined;
 
-  constructor(_rootStore: RootStore) {
+  constructor(_rootStore: RootStore, api: ApiClient) {
     makeObservable(this, {
-      // observables
-      stateMap: observable,
-      intakeStateMap: observable,
-      fetchedMap: observable,
-      fetchedIntakeMap: observable,
       // computed
+      stateMap: computed,
       projectStates: computed,
       groupedProjectStates: computed,
-      // fetch action
+      // actions
       fetchProjectStates: action,
-      fetchProjectIntakeState: action,
-      // CRUD actions
+      fetchWorkspaceStates: action,
       createState: action,
       updateState: action,
+      moveState: action,
       deleteState: action,
-      // state actions
       markStateAsDefault: action,
-      moveStatePosition: action,
     });
-    this.stateService = new ProjectStateService();
+    this.service = new StatesService(api);
     this.router = _rootStore.router;
-    this.rootStore = _rootStore;
+    this.projectOf = _rootStore.projectRoot.project.getProjectById;
   }
 
-  /**
-   * Returns the stateMap belongs to a specific workspace
-   */
-  get workspaceStates() {
-    const workspaceSlug = this.router.workspaceSlug || "";
-    if (!workspaceSlug || !this.fetchedMap[workspaceSlug]) return;
-    return sortStates(Object.values(this.stateMap));
+  get stateMap() {
+    // the projects' lists last: a state in both shows as its project's list has it, as getProjectStates gives it
+    const held = [...this.workspaces.values(), ...this.projects.values()].flat();
+    return Object.fromEntries(
+      held.filter((state) => this.projectOf(state.project_id)).map((state) => [state.id, state])
+    );
   }
 
-  /**
-   * Returns the stateMap belongs to a specific project
-   */
   get projectStates() {
-    const projectId = this.router.projectId;
-    const workspaceSlug = this.router.workspaceSlug || "";
-    if (!projectId || !(this.fetchedMap[projectId] || this.fetchedMap[workspaceSlug])) return;
-    return sortStates(Object.values(this.stateMap).filter((state) => state.project_id === projectId));
+    return this.getProjectStates(this.router.projectId);
   }
 
-  /**
-   * Returns the stateMap belongs to a specific project grouped by group
-   */
   get groupedProjectStates() {
-    if (!this.router.projectId) return;
-
-    // First group the existing states
-    const groupedStates = groupBy(this.projectStates, "group") as Record<string, IState[]>;
-
-    // Ensure all STATE_GROUPS are present
-    const allGroups = Object.keys(STATE_GROUPS).reduce(
-      (acc, group) => ({
-        // oxlint-disable-next-line oxc/no-accumulating-spread
-        ...acc,
-        [group]: groupedStates[group] || [],
-      }),
-      {} as Record<string, IState[]>
+    const states = this.projectStates;
+    if (!states) return undefined;
+    return Object.fromEntries(
+      Object.keys(STATE_GROUPS).map((group) => [group, states.filter((state) => state.group === group)])
     );
-
-    return allGroups;
   }
 
+  /** @description the state, of a project the caller sees, as the store last had it from nerve */
+  getStateById = computedFn((stateId: string | null | undefined): State | undefined =>
+    stateId ? this.stateMap[stateId] : undefined
+  );
+
   /**
-   * @description returns state details using state id
-   * @param stateId
+   * @description the project's states, by group, then sequence: its own list, else its workspace's; undefined until
+   * fetched, or once the project store no longer gives the project
    */
-  getStateById = computedFn((stateId: string | null | undefined) => {
-    if (!this.stateMap || !stateId) return;
-    return this.stateMap[stateId] ?? undefined;
+  getProjectStates = computedFn((projectId: string | null | undefined): State[] | undefined => {
+    const project = this.projectOf(projectId);
+    if (!project) return undefined;
+    const listed =
+      this.projects.get(project.id) ??
+      this.workspaces.get(project.workspace_id)?.filter((state) => state.project_id === project.id);
+    return listed && sortStates(listed);
+  });
+
+  getProjectStateIds = computedFn((projectId: string | null | undefined): string[] | undefined =>
+    this.getProjectStates(projectId)?.map((state) => state.id)
+  );
+
+  /** @description the state's place in its group, in its project's order: 100 for the group's last, as a percentage */
+  getStatePercentageInGroup = computedFn((stateId: string | null | undefined): number | undefined => {
+    const state = this.getStateById(stateId);
+    if (!state) return undefined;
+    const group = this.getProjectStates(state.project_id)?.filter((held) => held.group === state.group) ?? [];
+    const place = group.findIndex((held) => held.id === state.id);
+    return place === -1 ? undefined : ((place + 1) / group.length) * 100;
   });
 
   /**
-   * @description returns intake state details using intake state id
-   * @param intakeStateId
+   * @description fetches a project's states, a member's to fetch as nerve refuses anyone else, and shows them with
+   * the changes nerve confirmed meanwhile; gives what it shows, or undefined for a fetch a newer one overtook or a
+   * change of session cut (Reconciled.fetch)
    */
-  getIntakeStateById = computedFn((intakeStateId: string | null | undefined) => {
-    if (!this.intakeStateMap || !intakeStateId) return;
-    return this.intakeStateMap[intakeStateId] ?? undefined;
-  });
+  fetchProjectStates = (projectId: string): Promise<State[] | undefined> =>
+    this.projects.fetch(projectId, () => this.service.list(projectId));
 
-  /**
-   * Returns the stateMap belongs to a project by projectId
-   * @param projectId
-   * @returns IState[]
-   */
-  getProjectStates = computedFn((projectId: string | null | undefined) => {
-    const workspaceSlug = this.router.workspaceSlug || "";
-    if (!projectId || !(this.fetchedMap[projectId] || this.fetchedMap[workspaceSlug])) return;
-    return sortStates(Object.values(this.stateMap).filter((state) => state.project_id === projectId));
-  });
+  /** @description fetches the states of the workspace's projects the caller is a member of, as fetchProjectStates */
+  fetchWorkspaceStates = (workspace: WorkspaceRef): Promise<State[] | undefined> =>
+    this.workspaces.fetch(workspace.id, () => this.service.listInWorkspace(workspace.slug));
 
-  /**
-   * Returns the intake state for a project by projectId
-   * @param projectId
-   * @returns IIntakeState | undefined
-   */
-  getProjectIntakeState = computedFn((projectId: string | null | undefined) => {
-    if (!projectId || !this.fetchedIntakeMap[projectId]) return;
-    return Object.values(this.intakeStateMap).find((state) => state.project_id === projectId);
-  });
-
-  /**
-   * Returns the state ids for a project by projectId
-   * @param projectId
-   * @returns string[]
-   */
-  getProjectStateIds = computedFn((projectId: string | null | undefined) => {
-    const workspaceSlug = this.router.workspaceSlug;
-    if (!workspaceSlug || !projectId || !(this.fetchedMap[projectId] || this.fetchedMap[workspaceSlug]))
-      return undefined;
-    const projectStates = this.getProjectStates(projectId);
-    return projectStates?.map((state) => state.id) ?? [];
-  });
-
-  /**
-   * Returns the intake state ids for a project by projectId
-   * @param projectId
-   * @returns string[]
-   */
-  getProjectIntakeStateIds = computedFn((projectId: string | null | undefined) => {
-    const workspaceSlug = this.router.workspaceSlug;
-    if (!workspaceSlug || !projectId || !this.fetchedIntakeMap[projectId]) return undefined;
-    const projectIntakeState = this.getProjectIntakeState(projectId);
-    return projectIntakeState?.id ? [projectIntakeState.id] : [];
-  });
-
-  /**
-   * Returns the default state id for a project
-   * @param projectId
-   * @returns string | undefined
-   */
-  getProjectDefaultStateId = computedFn((projectId: string | null | undefined) => {
-    const projectStates = this.getProjectStates(projectId);
-    return projectStates?.find((state) => state.default)?.id;
-  });
-
-  /**
-   * fetches the stateMap of a project
-   * @param workspaceSlug
-   * @param projectId
-   * @returns
-   */
-  fetchProjectStates = async (workspaceSlug: string, projectId: string) => {
-    const statesResponse = await this.stateService.getStates(workspaceSlug, projectId);
-    runInAction(() => {
-      statesResponse.forEach((state) => {
-        set(this.stateMap, [state.id], state);
-      });
-      set(this.fetchedMap, projectId, true);
-    });
-    return statesResponse;
-  };
-
-  /**
-   * fetches the intakeStateMap of a project
-   * @param workspaceSlug
-   * @param projectId
-   * @returns
-   */
-  fetchProjectIntakeState = async (workspaceSlug: string, projectId: string) => {
-    const intakeStateResponse = await this.stateService.getIntakeState(workspaceSlug, projectId);
-    runInAction(() => {
-      set(this.intakeStateMap, [intakeStateResponse.id], intakeStateResponse);
-      set(this.fetchedIntakeMap, projectId, true);
-    });
-    return intakeStateResponse;
-  };
-
-  /**
-   * fetches the stateMap of all the states in workspace
-   * @param workspaceSlug
-   * @returns
-   */
-  fetchWorkspaceStates = async (workspaceSlug: string) => {
-    const statesResponse = await this.stateService.getWorkspaceStates(workspaceSlug);
-    runInAction(() => {
-      statesResponse.forEach((state) => {
-        set(this.stateMap, [state.id], state);
-      });
-      set(this.fetchedMap, workspaceSlug, true);
-    });
-    return statesResponse;
-  };
-
-  /**
-   * creates a new state in a project and adds it to the store
-   * @param workspaceSlug
-   * @param projectId
-   * @param data
-   * @returns
-   */
-  createState = async (workspaceSlug: string, projectId: string, data: Partial<IState>) =>
-    await this.stateService.createState(workspaceSlug, projectId, data).then((response) => {
-      runInAction(() => {
-        set(this.stateMap, [response?.id], response);
-      });
-      return response;
+  /** @description creates a state, last of its project's; fails, changing nothing, when nerve refuses */
+  createState = (projectId: string, data: StateCreate): Promise<State> =>
+    this.changes(async () => {
+      const state = await this.service.create(projectId, data);
+      this.confirm(state, upserted(state));
+      return state;
     });
 
   /**
-   * Updates the state details in the store, in case of failure reverts back to original state
-   * @param workspaceSlug
-   * @param projectId
-   * @param stateId
-   * @param data
-   * @returns
+   * @description changes a state, its place among its project's (group, sequence) too; the store then shows nerve's
+   * answer. Fails, changing nothing, when nerve refuses.
    */
-  updateState = async (workspaceSlug: string, projectId: string, stateId: string, data: Partial<IState>) => {
-    const originalState = this.stateMap[stateId];
-    try {
-      runInAction(() => {
-        set(this.stateMap, [stateId], { ...this.stateMap?.[stateId], ...data });
-      });
-      const response = await this.stateService.patchState(workspaceSlug, projectId, stateId, data);
-      return response;
-    } catch (error) {
-      runInAction(() => {
-        this.stateMap = {
-          ...this.stateMap,
-          [stateId]: originalState,
-        };
-      });
-      throw error;
-    }
-  };
+  updateState = (stateId: string, data: StateUpdate): Promise<State> => this.changes(() => this.send(stateId, data));
 
   /**
-   * deletes the state from the store, in case of failure reverts back to original state
-   * @param workspaceSlug
-   * @param projectId
-   * @param stateId
+   * @description moves a state where it was dropped: into group, before the state droppedOnId names (after it, for
+   * after), or last of the group for none. Its sequence is reckoned in the change's turn, from the states as nerve last
+   * answered them; the store then shows nerve's answer. Fails, changing nothing, when nerve refuses or the store does
+   * not have it.
    */
-  deleteState = async (workspaceSlug: string, projectId: string, stateId: string) => {
-    if (!this.stateMap?.[stateId]) return;
-    // oxlint-disable-next-line promise/always-return
-    await this.stateService.deleteState(workspaceSlug, projectId, stateId).then(() => {
-      runInAction(() => {
-        delete this.stateMap[stateId];
-      });
+  moveState = (stateId: string, group: StateGroup, droppedOnId: string | undefined, after: boolean): Promise<State> =>
+    this.changes(async () => {
+      const state = this.held(stateId);
+      const siblings = (this.getProjectStates(state.project_id) ?? []).filter((held) => held.group === group);
+      const sequence = placeAt(siblings, "sequence", droppedOnId, after ? "after" : "before", SEQUENCE_STEP);
+      return this.send(state.id, sequence === undefined ? { group } : { group, sequence });
     });
-  };
+
+  /** @description deletes a state; fails, changing nothing, when nerve refuses or the store does not have it */
+  deleteState = (stateId: string): Promise<void> =>
+    this.changes(async () => {
+      const state = this.held(stateId);
+      await this.service.delete(state.id);
+      this.confirm(state, dropped(state.id));
+    });
 
   /**
-   * marks a state as default in a project
-   * @param workspaceSlug
-   * @param projectId
-   * @param stateId
+   * @description makes a state its project's default, and the one that was no longer; fails, changing nothing, when
+   * nerve refuses or the store does not have it
    */
-  markStateAsDefault = async (workspaceSlug: string, projectId: string, stateId: string) => {
-    const originalStates = this.stateMap;
-    const currentDefaultState = Object.values(this.stateMap).find(
-      (state) => state.project_id === projectId && state.default
-    );
-    try {
-      runInAction(() => {
-        if (currentDefaultState) set(this.stateMap, [currentDefaultState.id, "default"], false);
-        set(this.stateMap, [stateId, "default"], true);
-      });
-      await this.stateService.markDefault(workspaceSlug, projectId, stateId);
-    } catch (error) {
-      // reverting back to old state group if api fails
-      runInAction(() => {
-        this.stateMap = originalStates;
-      });
-      throw error;
-    }
-  };
+  markStateAsDefault = (stateId: string): Promise<void> =>
+    this.changes(async () => {
+      const state = this.held(stateId);
+      await this.service.markDefault(state.id);
+      this.confirm(state, (list) =>
+        list.map((held) => (held.project_id === state.project_id ? { ...held, default: held.id === state.id } : held))
+      );
+    });
 
-  /**
-   * updates the sort order of a state and updates the state information using API, in case of failure reverts back to original state
-   * @param workspaceSlug
-   * @param projectId
-   * @param stateId
-   * @param direction
-   * @param groupIndex
-   */
-  moveStatePosition = async (workspaceSlug: string, projectId: string, stateId: string, payload: Partial<IState>) => {
-    const originalStates = this.stateMap;
-    try {
-      Object.entries(payload).forEach(([key, value]) => {
-        runInAction(() => {
-          set(this.stateMap, [stateId, key], value);
-        });
-      });
-      // updating using api
-      await this.stateService.patchState(workspaceSlug, projectId, stateId, payload);
-    } catch {
-      // reverting back to old state group if api fails
-      runInAction(() => {
-        this.stateMap = originalStates;
-      });
-    }
-  };
+  /** Sends a change of a state, its turn come, and makes nerve's answer on its project's list and its workspace's. */
+  private async send(stateId: string, data: StateUpdate): Promise<State> {
+    const state = await this.service.update(stateId, data);
+    this.confirm(state, replaced(state));
+    return state;
+  }
 
-  /**
-   * Returns the percentage position of a state within its group based on sequence
-   * @param stateId The ID of the state to find the percentage for
-   * @returns The percentage position of the state in its group (0-100), or -1 if not found
-   */
-  getStatePercentageInGroup = computedFn((stateId: string | null | undefined) => {
-    if (!stateId || !this.stateMap[stateId]) return -1;
+  /** The state as the store has it; fails when it has none. */
+  private held(stateId: string): State {
+    const state = this.getStateById(stateId);
+    if (!state) throw new Error("State not found");
+    return state;
+  }
 
-    const state = this.stateMap[stateId];
-    const group = state.group;
-
-    if (!group || !this.groupedProjectStates || !this.groupedProjectStates[group]) return -1;
-
-    // Get all states in the same group
-    const statesInGroup = this.groupedProjectStates[group];
-    const stateIndex = statesInGroup.findIndex((s) => s.id === stateId);
-
-    if (stateIndex === -1) return undefined;
-
-    // Calculate percentage: ((index + 1) / totalLength) * 100
-    return ((stateIndex + 1) / statesInGroup.length) * 100;
-  });
+  /** A change nerve confirmed to a state's project: made on its project's list and on its workspace's. */
+  private confirm(state: Pick<State, "project_id" | "workspace_id">, change: Change<State[]>): void {
+    this.projects.confirm(state.project_id, change);
+    this.workspaces.confirm(state.workspace_id, change);
+  }
 }

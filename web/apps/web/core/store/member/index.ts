@@ -40,7 +40,7 @@ export class MemberRootStore implements IMemberRootStore {
     });
     // sub-stores
     this.workspace = new WorkspaceMemberStore(this, _rootStore, api);
-    this.project = new ProjectMemberStore(this, _rootStore);
+    this.project = new ProjectMemberStore(this, _rootStore, api);
   }
 
   /**

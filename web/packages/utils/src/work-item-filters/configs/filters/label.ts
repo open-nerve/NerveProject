@@ -5,7 +5,8 @@
  */
 
 // nerve imports
-import type { IIssueLabel, TFilterProperty, TSupportedOperators } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
+import type { TFilterProperty, TSupportedOperators } from "@nerve/types";
 import { EQUALITY_OPERATOR, COLLECTION_OPERATOR } from "@nerve/types";
 // local imports
 import type { TCreateFilterConfigParams, IFilterIconConfig, TCreateFilterConfig } from "../../../rich-filters";
@@ -16,7 +17,7 @@ import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } f
  */
 type TCreateLabelFilterParams = TCreateFilterConfigParams &
   IFilterIconConfig<string> & {
-    labels: IIssueLabel[];
+    labels: Label[];
   };
 
 /**
@@ -25,7 +26,7 @@ type TCreateLabelFilterParams = TCreateFilterConfigParams &
  * @returns The label multi select config
  */
 const getLabelMultiSelectConfig = (params: TCreateLabelFilterParams, singleValueOperator: TSupportedOperators) =>
-  getMultiSelectConfig<IIssueLabel, string, string>(
+  getMultiSelectConfig<Label, string, string>(
     {
       items: params.labels,
       getId: (label) => label.id,
