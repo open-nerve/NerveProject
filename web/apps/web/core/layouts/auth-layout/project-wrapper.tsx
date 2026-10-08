@@ -39,7 +39,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const [isJoiningProject, setIsJoiningProject] = useState(false);
   // store hooks
   const { fetchUserProjectInfo, allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
-  const { fetchProjectDetails } = useProject();
+  const { fetchProject } = useProject();
   const { joinProject } = useUserPermissions();
   const {
     project: { fetchProjectMembers, fetchProjectUserProperties },
@@ -59,7 +59,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   // fetching project details
   const { isLoading: isProjectDetailsLoading, error: projectDetailsError } = useSWR(
     PROJECT_DETAILS(workspaceSlug, projectId),
-    () => fetchProjectDetails(workspaceSlug, projectId)
+    () => fetchProject(projectId)
   );
   // fetching user project member information
   useSWR(PROJECT_ME_INFORMATION(workspaceSlug, projectId), () => fetchUserProjectInfo(workspaceSlug, projectId));

@@ -59,7 +59,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
     if (!workspaceSlug || !canDelete) return;
 
     try {
-      await deleteProject(workspaceSlug, project.id);
+      await deleteProject(project);
       if (projectId && projectId === project.id) navigate(`/${workspaceSlug}/projects`);
       handleClose();
       setToast({

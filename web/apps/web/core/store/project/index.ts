@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { ApiClient } from "@nerve/api-client";
 import type { RootStore } from "../root.store";
 import type { IProjectStore } from "./project.store";
 import { ProjectStore } from "./project.store";
@@ -15,12 +16,12 @@ export interface IProjectRootStore {
   projectFilter: IProjectFilterStore;
 }
 
-export class ProjectRootStore {
+export class ProjectRootStore implements IProjectRootStore {
   project: IProjectStore;
   projectFilter: IProjectFilterStore;
 
-  constructor(_root: RootStore) {
-    this.project = new ProjectStore(_root);
+  constructor(_root: RootStore, api: ApiClient) {
     this.projectFilter = new ProjectFilterStore(_root);
+    this.project = new ProjectStore(_root, this.projectFilter, api);
   }
 }

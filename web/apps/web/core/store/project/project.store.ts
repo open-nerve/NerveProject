@@ -4,436 +4,281 @@
  * See the LICENSE file for details.
  */
 
-import { sortBy, cloneDeep, update, set } from "lodash-es";
-import { observable, action, computed, makeObservable, runInAction } from "mobx";
+import { sortBy } from "lodash-es";
+import { action, computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { TFetchStatus, TLoader } from "@nerve/types";
-// helpers
+import type { ApiClient, Project, ProjectCreate, ProjectUpdate, Workspace } from "@nerve/api-client";
+import type { TLoader } from "@nerve/types";
 import { orderProjects, shouldFilterProject } from "@nerve/utils";
+// lib
+import { oneAtATime } from "@/lib/one-at-a-time";
+import { placeBetween } from "@/lib/place-between";
+import type { Change } from "@/lib/reconciled";
+import { ReconciledByKey, dropped, prepended, replaced, upserted } from "@/lib/reconciled";
 // services
-import type { Project } from "@nerve/api-client";
-import { IssueLabelService, IssueService } from "@/services/issue";
-import { ProjectService, ProjectStateService, ProjectArchiveService } from "@/services/project";
+import { ProjectPreferencesService } from "@/services/project/project-preferences.service";
+import { ProjectsService } from "@/services/project/projects.service";
 // store
 import type { RootStore } from "../root.store";
+import type { IProjectFilterStore } from "./project_filter.store";
+
+/** A workspace as the store fetches its projects: by its slug, kept under its id. */
+type WorkspaceRef = Pick<Workspace, "id" | "slug">;
+/** A project as the store changes it where no answer of nerve names its workspace. */
+type ProjectRef = Pick<Project, "id" | "workspace_id">;
+/**
+ * nerve's gap between the places of the caller's sidebar: a project he is made a member of goes this far before his
+ * first (M3 design 3.18).
+ */
+const SIDEBAR_STEP = 10000;
 
 export interface IProjectStore {
-  // observables
-  isUpdatingProject: boolean;
-  loader: TLoader;
-  fetchStatus: TFetchStatus;
-  projectMap: Record<string, Project>; // projectId: project info
   // computed
-  isInitializingProjects: boolean;
-  filteredProjectIds: string[] | undefined;
+  /** "init-loader" until the current workspace's projects are fetched, then "loaded". */
+  loader: TLoader;
+  /** The current workspace's projects that are not archived, in nerve's order; undefined until fetched. */
   workspaceProjectIds: string[] | undefined;
-  archivedProjectIds: string[] | undefined;
+  /** The current workspace's projects, the archived ones last, of the lists fetched. */
   totalProjectIds: string[] | undefined;
+  /** The projects page's projects, by its filters and its order; undefined until both lists are fetched. */
+  filteredProjectIds: string[] | undefined;
+  /** The current workspace's projects the caller is a member of, not archived, by their place in his sidebar. */
   joinedProjectIds: string[];
   currentProjectDetails: Project | undefined;
-  // actions
+  // computed actions
   getProjectById: (projectId: string | undefined | null) => Project | undefined;
-  getProjectIdentifierById: (projectId: string | undefined | null) => string;
+  getProjectIdentifierById: (projectId: string | undefined | null) => string | undefined;
   getProjectByIdentifier: (projectIdentifier: string) => Project | undefined;
-  // helper actions
-  processProjectAfterCreation: (workspaceSlug: string, data: Project) => void;
-
   // fetch actions
-  fetchPartialProjects: (workspaceSlug: string) => Promise<Project[]>;
-  fetchProjects: (workspaceSlug: string) => Promise<Project[]>;
-  fetchProjectDetails: (workspaceSlug: string, projectId: string) => Promise<Project>;
-  // project-view action
-  updateProjectView: (workspaceSlug: string, projectId: string, viewProps: any) => Promise<any>;
-  // CRUD actions
-  createProject: (workspaceSlug: string, data: Partial<Project>) => Promise<Project>;
-  updateProject: (workspaceSlug: string, projectId: string, data: Partial<Project>) => Promise<Project>;
-  deleteProject: (workspaceSlug: string, projectId: string) => Promise<void>;
-  // archive actions
-  archiveProject: (workspaceSlug: string, projectId: string) => Promise<void>;
-  restoreProject: (workspaceSlug: string, projectId: string) => Promise<void>;
+  fetchProjects: (workspace: WorkspaceRef) => Promise<Project[] | undefined>;
+  fetchArchivedProjects: (workspace: WorkspaceRef) => Promise<Project[] | undefined>;
+  fetchProject: (projectId: string) => Promise<Project | null | undefined>;
+  // changes
+  createProject: (workspaceSlug: string, data: ProjectCreate) => Promise<Project>;
+  updateProject: (projectId: string, data: ProjectUpdate) => Promise<Project>;
+  deleteProject: (project: ProjectRef) => Promise<void>;
+  archiveProject: (projectId: string) => Promise<Project>;
+  restoreProject: (projectId: string) => Promise<Project>;
+  updateProjectSortOrder: (project: ProjectRef, droppedOnId: string | undefined, dropAtEnd: boolean) => Promise<void>;
 }
 
+/**
+ * The projects the caller sees, each as he sees it (M3 design 3.19, 7.3): two lists for each workspace, by its id,
+ * the archived projects and the others, and each project's own read, by its id, which the project's pages fetch.
+ * What the store holds of a workspace he is no longer a member of, it no longer gives (v0 design 7.7). Its services
+ * send with the session's client; changes go one at a time and the store writes nerve's answers (7.7); fetches do not
+ * queue.
+ */
 export class ProjectStore implements IProjectStore {
-  // observables
-  isUpdatingProject: boolean = false;
-  loader: TLoader = "init-loader";
-  fetchStatus: TFetchStatus = undefined;
-  projectMap: Record<string, Project> = {};
+  /** Each workspace's projects that are not archived, reconciled between fetches and changes (reconciled.ts). */
+  private readonly unarchived = new ReconciledByKey<Project[]>();
+  /** Each workspace's archived projects. */
+  private readonly archived = new ReconciledByKey<Project[]>();
+  /** Each project as nerve last read it alone; null once deleted. */
+  private readonly details = new ReconciledByKey<Project | null>();
+  // services
+  private readonly service: ProjectsService;
+  private readonly preferences: ProjectPreferencesService;
+  /** The changes of the projects, sent one at a time. */
+  private readonly changes = oneAtATime();
+  // stores
+  private readonly rootStore: RootStore;
+  /** The projects page's filters, by which filteredProjectIds picks and orders. */
+  private readonly filters: IProjectFilterStore;
 
-  // root store
-  rootStore: RootStore;
-  // service
-  projectService;
-  projectArchiveService;
-  issueLabelService;
-  issueService;
-  stateService;
-
-  constructor(_rootStore: RootStore) {
+  constructor(_rootStore: RootStore, filters: IProjectFilterStore, api: ApiClient) {
     makeObservable(this, {
-      // observables
-      isUpdatingProject: observable,
-      loader: observable.ref,
-      fetchStatus: observable.ref,
-      projectMap: observable,
       // computed
-      isInitializingProjects: computed,
-      filteredProjectIds: computed,
+      loader: computed,
       workspaceProjectIds: computed,
-      archivedProjectIds: computed,
       totalProjectIds: computed,
-      currentProjectDetails: computed,
+      filteredProjectIds: computed,
       joinedProjectIds: computed,
-      // helper actions
-      processProjectAfterCreation: action,
-      // fetch actions
-      fetchPartialProjects: action,
+      currentProjectDetails: computed,
+      // actions
       fetchProjects: action,
-      fetchProjectDetails: action,
-      // project-view action
-      updateProjectView: action,
-      // CRUD actions
+      fetchArchivedProjects: action,
+      fetchProject: action,
       createProject: action,
       updateProject: action,
+      deleteProject: action,
+      archiveProject: action,
+      restoreProject: action,
+      updateProjectSortOrder: action,
     });
-    // root store
     this.rootStore = _rootStore;
-    // services
-    this.projectService = new ProjectService();
-    this.projectArchiveService = new ProjectArchiveService();
-    this.issueService = new IssueService();
-    this.issueLabelService = new IssueLabelService();
-    this.stateService = new ProjectStateService();
+    this.filters = filters;
+    this.service = new ProjectsService(api);
+    this.preferences = new ProjectPreferencesService(api);
   }
 
-  /**
-   * @description returns true if projects are still initializing
-   */
-  get isInitializingProjects() {
-    return this.loader === "init-loader";
+  /** The current workspace's two lists, each undefined until fetched. */
+  private get currentLists() {
+    const workspace = this.rootStore.workspaceRoot.currentWorkspace;
+    return { unarchived: this.unarchived.get(workspace?.id), archived: this.archived.get(workspace?.id) };
   }
 
-  /**
-   * @description returns filtered projects based on filters and search query
-   */
+  get loader(): TLoader {
+    return this.workspaceProjectIds === undefined ? "init-loader" : "loaded";
+  }
+
+  get workspaceProjectIds() {
+    return this.currentLists.unarchived?.map((project) => project.id);
+  }
+
+  get totalProjectIds() {
+    if (!this.rootStore.workspaceRoot.currentWorkspace) return undefined;
+    const { unarchived, archived } = this.currentLists;
+    return [...(unarchived ?? []), ...(archived ?? [])].map((project) => project.id);
+  }
+
   get filteredProjectIds() {
-    const workspaceDetails = this.rootStore.workspaceRoot.currentWorkspace;
     const {
       currentWorkspaceDisplayFilters: displayFilters,
       currentWorkspaceFilters: filters,
       searchQuery,
-    } = this.rootStore.projectRoot.projectFilter;
-    if (!workspaceDetails || !displayFilters || !filters) return;
-    let workspaceProjects = Object.values(this.projectMap).filter(
-      (p) =>
-        p.workspace_id === workspaceDetails.id &&
-        (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.identifier.toLowerCase().includes(searchQuery.toLowerCase())) &&
-        shouldFilterProject(p, displayFilters, filters)
+    } = this.filters;
+    const { unarchived, archived } = this.currentLists;
+    if (!displayFilters || !filters || !unarchived || !archived) return undefined;
+    const query = searchQuery.toLowerCase();
+    const found = [...unarchived, ...archived].filter(
+      (project) =>
+        (project.name.toLowerCase().includes(query) || project.identifier.toLowerCase().includes(query)) &&
+        shouldFilterProject(project, displayFilters, filters)
     );
-    workspaceProjects = orderProjects(workspaceProjects, displayFilters.order_by);
-    return workspaceProjects.map((p) => p.id);
+    return orderProjects(found, displayFilters.order_by).map((project) => project.id);
   }
 
-  /**
-   * Returns project IDs belong to the current workspace
-   */
-  get workspaceProjectIds() {
-    const workspaceDetails = this.rootStore.workspaceRoot.currentWorkspace;
-    if (!workspaceDetails) return;
-    const workspaceProjects = Object.values(this.projectMap).filter(
-      (p) => p.workspace_id === workspaceDetails.id && !p.archived_at
-    );
-    const projectIds = workspaceProjects.map((p) => p.id);
-    return projectIds ?? null;
-  }
-
-  /**
-   * Returns archived project IDs belong to current workspace.
-   */
-  get archivedProjectIds() {
-    const currentWorkspace = this.rootStore.workspaceRoot.currentWorkspace;
-    if (!currentWorkspace) return;
-
-    let projects = Object.values(this.projectMap ?? {});
-    projects = sortBy(projects, "archived_at");
-
-    const projectIds = projects
-      .filter((project) => project.workspace_id === currentWorkspace.id && !!project.archived_at)
-      .map((project) => project.id);
-    return projectIds;
-  }
-
-  /**
-   * Returns total project IDs belong to the current workspace
-   */
-  // workspaceProjectIds + archivedProjectIds
-  get totalProjectIds() {
-    const currentWorkspace = this.rootStore.workspaceRoot.currentWorkspace;
-    if (!currentWorkspace) return;
-
-    const workspaceProjects = this.workspaceProjectIds ?? [];
-    const archivedProjects = this.archivedProjectIds ?? [];
-    return [...workspaceProjects, ...archivedProjects];
-  }
-
-  /**
-   * Returns current project details
-   */
-  get currentProjectDetails() {
-    if (!this.rootStore.router.projectId) return;
-    return this.projectMap?.[this.rootStore.router.projectId];
-  }
-
-  /**
-   * Returns joined project IDs belong to the current workspace
-   */
   get joinedProjectIds() {
-    const currentWorkspace = this.rootStore.workspaceRoot.currentWorkspace;
-    if (!currentWorkspace) return [];
+    return this.joinedIn(this.rootStore.workspaceRoot.currentWorkspace?.id).map((project) => project.id);
+  }
 
-    let projects = Object.values(this.projectMap ?? {});
-    projects = sortBy(projects, "sort_order");
-
-    const projectIds = projects
-      .filter(
-        (project) => project.workspace_id === currentWorkspace.id && !!project.member_role && !project.archived_at
-      )
-      .map((project) => project.id);
-    return projectIds;
+  get currentProjectDetails() {
+    return this.getProjectById(this.rootStore.router.projectId);
   }
 
   /**
-   * @description process project after creation
-   * @param workspaceSlug
-   * @param data
+   * The project as the store last had it from nerve, its own read first, else from its workspace's lists; nothing
+   * once deleted, or when its workspace is no longer among the caller's.
    */
-  processProjectAfterCreation = (workspaceSlug: string, data: Project) => {
-    runInAction(() => {
-      set(this.projectMap, [data.id], data);
-      // updating the user project role in workspaceProjectsPermissions
-      set(this.rootStore.user.permission.workspaceProjectsPermissions, [workspaceSlug, data.id], data.member_role);
-    });
-  };
-
-  /**
-   * get Workspace projects partial data using workspace slug
-   * @param workspaceSlug
-   * @returns Promise<Project[]>
-   *
-   */
-  fetchPartialProjects = async (workspaceSlug: string) => {
-    try {
-      this.loader = "init-loader";
-      const projectsResponse = await this.projectService.getProjectsLite(workspaceSlug);
-      runInAction(() => {
-        projectsResponse.forEach((project) => {
-          update(this.projectMap, [project.id], (p) => ({ ...p, ...project }));
-        });
-        this.loader = "loaded";
-        if (!this.fetchStatus) this.fetchStatus = "partial";
-      });
-      return projectsResponse;
-    } catch (error) {
-      console.log("Failed to fetch project from workspace store");
-      this.loader = "loaded";
-      throw error;
+  getProjectById = computedFn((projectId: string | undefined | null): Project | undefined => {
+    if (!projectId) return undefined;
+    const workspaces = this.rootStore.workspaceRoot.workspaces ?? [];
+    const read = this.details.get(projectId);
+    if (read !== undefined) {
+      return read && workspaces.some((workspace) => workspace.id === read.workspace_id) ? read : undefined;
     }
-  };
-
-  /**
-   * get Workspace projects using workspace slug
-   * @param workspaceSlug
-   * @returns Promise<Project[]>
-   *
-   */
-  fetchProjects = async (workspaceSlug: string) => {
-    try {
-      if (this.workspaceProjectIds && this.workspaceProjectIds.length > 0) {
-        this.loader = "mutation";
-      } else {
-        this.loader = "init-loader";
-      }
-      const projectsResponse = await this.projectService.getProjects(workspaceSlug);
-      runInAction(() => {
-        projectsResponse.forEach((project) => {
-          update(this.projectMap, [project.id], (p) => ({ ...p, ...project }));
-        });
-        this.loader = "loaded";
-        this.fetchStatus = "complete";
-      });
-      return projectsResponse;
-    } catch (error) {
-      console.log("Failed to fetch project from workspace store");
-      this.loader = "loaded";
-      throw error;
+    for (const { id } of workspaces) {
+      const listed = [...(this.unarchived.get(id) ?? []), ...(this.archived.get(id) ?? [])];
+      const project = listed.find((held) => held.id === projectId);
+      if (project) return project;
     }
-  };
-
-  /**
-   * Fetches project details using workspace slug and project id
-   * @param workspaceSlug
-   * @param projectId
-   * @returns Promise<Project>
-   */
-  fetchProjectDetails = async (workspaceSlug: string, projectId: string) => {
-    try {
-      const response = await this.projectService.getProject(workspaceSlug, projectId);
-      runInAction(() => {
-        update(this.projectMap, [projectId], (p) => ({ ...p, ...response }));
-      });
-      return response;
-    } catch (error) {
-      console.log("Error while fetching project details", error);
-      throw error;
-    }
-  };
-
-  /**
-   * Returns project details using project id
-   * @param projectId
-   * @returns Project | null
-   */
-  getProjectById = computedFn((projectId: string | undefined | null) => {
-    const projectInfo = this.projectMap[projectId ?? ""] || undefined;
-    return projectInfo;
+    return undefined;
   });
 
-  /**
-   * Returns project details using project identifier
-   * @param projectIdentifier
-   * @returns Project | undefined
-   */
-  getProjectByIdentifier = computedFn((projectIdentifier: string) =>
-    Object.values(this.projectMap).find((project) => project.identifier === projectIdentifier)
+  getProjectIdentifierById = computedFn(
+    (projectId: string | undefined | null): string | undefined => this.getProjectById(projectId)?.identifier
   );
 
-  /**
-   * Returns project identifier using project id
-   * @param projectId
-   * @returns string
-   */
-  getProjectIdentifierById = computedFn((projectId: string | undefined | null) => {
-    const projectInfo = this.projectMap?.[projectId ?? ""];
-    return projectInfo?.identifier;
+  /** The current workspace's project that identifier names. */
+  getProjectByIdentifier = computedFn((projectIdentifier: string): Project | undefined => {
+    const { unarchived, archived } = this.currentLists;
+    return [...(unarchived ?? []), ...(archived ?? [])].find((project) => project.identifier === projectIdentifier);
   });
 
   /**
-   * Updates the project view
-   * @param workspaceSlug
-   * @param projectId
-   * @param viewProps
-   * @returns
+   * @description fetches the workspace's projects that are not archived, and shows them with the changes nerve
+   * confirmed meanwhile; gives what it shows, or undefined for a fetch a newer one overtook or a change of session cut
+   * (Reconciled.fetch)
    */
-  updateProjectView = async (workspaceSlug: string, projectId: string, viewProps: { sort_order: number }) => {
-    const currentProjectSortOrder = this.getProjectById(projectId)?.sort_order;
-    try {
-      runInAction(() => {
-        set(this.projectMap, [projectId, "sort_order"], viewProps?.sort_order);
-      });
-      const response = await this.projectService.updateProjectUserProperties(workspaceSlug, projectId, viewProps);
-      return response;
-    } catch (error) {
-      runInAction(() => {
-        set(this.projectMap, [projectId, "sort_order"], currentProjectSortOrder);
-      });
-      console.log("Failed to update sort order of the projects");
-      throw error;
-    }
-  };
+  fetchProjects = (workspace: WorkspaceRef): Promise<Project[] | undefined> =>
+    this.unarchived.fetch(workspace.id, () => this.service.list(workspace.slug, false));
+
+  /** @description fetches the workspace's archived projects, as fetchProjects */
+  fetchArchivedProjects = (workspace: WorkspaceRef): Promise<Project[] | undefined> =>
+    this.archived.fetch(workspace.id, () => this.service.list(workspace.slug, true));
+
+  /** @description reads the project alone, as the caller sees it (a page of the project), as fetchProjects */
+  fetchProject = (projectId: string): Promise<Project | null | undefined> =>
+    this.details.fetch(projectId, () => this.service.get(projectId));
 
   /**
-   * Creates a project in the workspace and adds it to the store
-   * @param workspaceSlug
-   * @param data
-   * @returns Promise<Project>
+   * @description creates a project: it comes first in its workspace's list, as nerve lists it, the caller's sidebar
+   * having it first. Fails, changing nothing, when nerve refuses.
    */
-  createProject = async (workspaceSlug: string, data: any) => {
-    try {
-      const response = await this.projectService.createProject(workspaceSlug, data);
-      this.processProjectAfterCreation(workspaceSlug, response);
-      return response;
-    } catch (error) {
-      console.log("Failed to create project from project store");
-      throw error;
-    }
-  };
-
-  /**
-   * Updates a details of a project and updates it in the store
-   * @param workspaceSlug
-   * @param projectId
-   * @param data
-   * @returns Promise<Project>
-   */
-  updateProject = async (workspaceSlug: string, projectId: string, data: Partial<Project>) => {
-    const projectDetails = cloneDeep(this.getProjectById(projectId));
-    try {
-      runInAction(() => {
-        set(this.projectMap, [projectId], { ...projectDetails, ...data });
-        this.isUpdatingProject = true;
-      });
-      const response = await this.projectService.updateProject(workspaceSlug, projectId, data);
-      runInAction(() => {
-        this.isUpdatingProject = false;
-      });
-      return response;
-    } catch (error) {
-      console.log("Failed to create project from project store");
-      runInAction(() => {
-        set(this.projectMap, [projectId], projectDetails);
-        this.isUpdatingProject = false;
-      });
-      throw error;
-    }
-  };
-
-  /**
-   * Deletes a project from specific workspace and deletes it from the store
-   * @param workspaceSlug
-   * @param projectId
-   * @returns Promise<void>
-   */
-  deleteProject = async (workspaceSlug: string, projectId: string) => {
-    try {
-      if (!this.projectMap?.[projectId]) return;
-      await this.projectService.deleteProject(workspaceSlug, projectId);
-      runInAction(() => {
-        delete this.projectMap[projectId];
-        if (this.rootStore.favorite.entityMap[projectId]) this.rootStore.favorite.removeFavoriteFromStore(projectId);
-        delete this.rootStore.user.permission.workspaceProjectsPermissions[workspaceSlug][projectId];
-      });
-    } catch (error) {
-      console.log("Failed to delete project from project store");
-      throw error;
-    }
-  };
-
-  /**
-   * Archives a project from specific workspace and updates it in the store
-   * @param workspaceSlug
-   * @param projectId
-   * @returns Promise<void>
-   */
-  archiveProject = async (workspaceSlug: string, projectId: string) => {
-    const response = await this.projectArchiveService.archiveProject(workspaceSlug, projectId);
-    runInAction(() => {
-      set(this.projectMap, [projectId, "archived_at"], response.archived_at);
-      this.rootStore.favorite.removeFavoriteFromStore(projectId);
+  createProject = (workspaceSlug: string, data: ProjectCreate): Promise<Project> =>
+    this.changes(async () => {
+      const project = await this.service.create(workspaceSlug, data);
+      this.unarchived.confirm(project.workspace_id, prepended([project]));
+      return project;
     });
-  };
+
+  /** @description changes a project; the store then shows nerve's answer. Fails, changing nothing, when refused. */
+  updateProject = (projectId: string, data: ProjectUpdate): Promise<Project> =>
+    this.changes(async () => {
+      const project = await this.service.update(projectId, data);
+      this.unarchived.confirm(project.workspace_id, replaced(project));
+      this.details.confirm(project.id, () => project);
+      return project;
+    });
+
+  /** @description deletes a project, which the store then no longer gives; fails, changing nothing, when refused */
+  deleteProject = (project: ProjectRef): Promise<void> =>
+    this.changes(async () => {
+      await this.service.delete(project.id);
+      this.forget(project);
+    });
+
+  /** @description archives a project: it moves to the end of its workspace's archived list until the next fetch */
+  archiveProject = (projectId: string): Promise<Project> =>
+    this.changes(async () => {
+      const project = await this.service.archive(projectId);
+      this.unarchived.confirm(project.workspace_id, dropped(project.id));
+      this.archived.confirm(project.workspace_id, upserted(project));
+      this.details.confirm(project.id, () => project);
+      return project;
+    });
+
+  /** @description unarchives a project: it moves to the end of its workspace's list until the next fetch */
+  restoreProject = (projectId: string): Promise<Project> =>
+    this.changes(async () => {
+      const project = await this.service.unarchive(projectId);
+      this.archived.confirm(project.workspace_id, dropped(project.id));
+      this.unarchived.confirm(project.workspace_id, upserted(project));
+      this.details.confirm(project.id, () => project);
+      return project;
+    });
 
   /**
-   * Restores a project from specific workspace and updates it in the store
-   * @param workspaceSlug
-   * @param projectId
-   * @returns Promise<void>
+   * @description moves a project in the caller's sidebar where he dropped it: before the project droppedOnId names, or
+   * last for none or at the end. Its place is reckoned in the change's turn, from his projects as nerve last answered
+   * them; the store then shows the place nerve gives it. Fails, changing nothing, when nerve refuses.
    */
-  restoreProject = async (workspaceSlug: string, projectId: string) => {
-    await this.projectArchiveService.restoreProject(workspaceSlug, projectId);
-    runInAction(() => {
-      set(this.projectMap, [projectId, "archived_at"], null);
+  updateProjectSortOrder = (project: ProjectRef, droppedOnId: string | undefined, dropAtEnd: boolean): Promise<void> =>
+    this.changes(async () => {
+      const joined = this.joinedIn(project.workspace_id);
+      const droppedOn = joined.findIndex((held) => held.id === droppedOnId);
+      const at = dropAtEnd || droppedOn === -1 ? joined.length : droppedOn;
+      const sortOrder = placeBetween(joined[at - 1]?.sort_order, joined[at]?.sort_order, SIDEBAR_STEP);
+      if (sortOrder === undefined) return;
+      const { sort_order } = await this.preferences.update(project.id, { sort_order: sortOrder });
+      const placed: Change<Project[]> = (list) =>
+        list.map((held) => (held.id === project.id ? { ...held, sort_order } : held));
+      this.unarchived.confirm(project.workspace_id, placed);
+      this.details.confirm(project.id, (held) => held && { ...held, sort_order });
     });
-  };
+
+  /** The workspace's projects the caller is a member of, not archived, by their place in his sidebar. */
+  private joinedIn(workspaceId: string | undefined): Project[] {
+    const joined = (this.unarchived.get(workspaceId) ?? []).filter((project) => project.member_role !== null);
+    return sortBy(joined, "sort_order");
+  }
+
+  /** The project leaves both lists, and its own read is gone. */
+  private forget(project: ProjectRef) {
+    this.unarchived.confirm(project.workspace_id, dropped(project.id));
+    this.archived.confirm(project.workspace_id, dropped(project.id));
+    this.details.confirm(project.id, () => null);
+  }
 }

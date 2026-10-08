@@ -142,13 +142,13 @@ export const getGroupByColumns = ({
 };
 
 const getProjectColumns = (): IGroupByColumn[] | undefined => {
-  const { joinedProjectIds: projectIds, projectMap } = rootStore.projectRoot.project;
+  const { joinedProjectIds: projectIds, getProjectById } = rootStore.projectRoot.project;
   // Return undefined if no project ids
   if (!projectIds) return;
   // Map project ids to project columns
   return projectIds
     .map((projectId: string) => {
-      const project = projectMap[projectId];
+      const project = getProjectById(projectId);
       if (!project) return;
       return {
         id: project.id,

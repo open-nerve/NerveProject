@@ -14,7 +14,7 @@ import { EmptyStateCompact } from "@nerve/propel/empty-state";
 import { AddOutline, SearchOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { copyUrlToClipboard, orderJoinedProjects } from "@nerve/utils";
+import { copyUrlToClipboard } from "@nerve/utils";
 // components
 import { CreateProjectModal } from "@/components/project/create-project-modal";
 import { SidebarProjectsListItem } from "@/components/workspace/sidebar/projects-list-item";
@@ -22,7 +22,6 @@ import { SidebarProjectsListItem } from "@/components/workspace/sidebar/projects
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import type { Project } from "@nerve/api-client";
 import { ExtendedSidebarWrapper } from "./extended-sidebar-wrapper";
 
 export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar() {
@@ -37,7 +36,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
   // store hooks
   const { t } = useTranslation();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
-  const { getProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
+  const { getProjectById, joinedProjectIds: joinedProjects, updateProjectSortOrder } = useProject();
   const { allowPermissions } = useUserPermissions();
 
   const handleOnProjectDrop = (
@@ -48,20 +47,9 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
     if (!sourceId || !destinationId || !workspaceSlug) return;
     if (sourceId === destinationId) return;
 
-    const joinedProjectsList: Project[] = [];
-    joinedProjects.map((projectId) => {
-      const projectDetails = getProjectById(projectId);
-      if (projectDetails) joinedProjectsList.push(projectDetails);
-    });
-
-    const sourceIndex = joinedProjects.indexOf(sourceId);
-    const destinationIndex = shouldDropAtEnd ? joinedProjects.length : joinedProjects.indexOf(destinationId);
-
-    if (joinedProjectsList.length <= 0) return;
-
-    const updatedSortOrder = orderJoinedProjects(sourceIndex, destinationIndex, sourceId, joinedProjectsList);
-    if (updatedSortOrder != undefined)
-      updateProjectView(workspaceSlug, sourceId, { sort_order: updatedSortOrder }).catch(() => {
+    const source = getProjectById(sourceId);
+    if (source)
+      updateProjectSortOrder(source, destinationId, shouldDropAtEnd).catch(() => {
         setToast({
           type: TOAST_TYPE.ERROR,
           title: t("error"),

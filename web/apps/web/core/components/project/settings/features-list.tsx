@@ -60,7 +60,7 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
     const settingsPayload = {
       [featureProperty]: !currentProjectDetails?.[featureProperty as keyof Project],
     };
-    const updateProjectPromise = updateProject(workspaceSlug, projectId, settingsPayload);
+    const updateProjectPromise = updateProject(projectId, settingsPayload);
 
     setPromiseToast(updateProjectPromise, {
       loading: "Updating project feature...",

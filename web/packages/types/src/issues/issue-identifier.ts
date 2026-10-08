@@ -23,7 +23,7 @@ type TIssueIdentifierFromStore = TIssueIdentifierBaseProps & {
 };
 
 type TIssueIdentifierWithDetails = TIssueIdentifierBaseProps & {
-  projectIdentifier: string;
+  projectIdentifier: string | undefined;
   issueSequenceId: string | number;
 };
 

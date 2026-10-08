@@ -16,7 +16,6 @@ import { useProject } from "@/hooks/store/use-project";
 
 type Props = {
   description?: React.ReactNode;
-  disabled?: boolean;
   projectId: string;
   featureProperty: keyof Project;
   title: React.ReactNode;
@@ -25,7 +24,7 @@ type Props = {
 };
 
 export const ProjectSettingsFeatureControlItem = observer(function ProjectSettingsFeatureControlItem(props: Props) {
-  const { description, disabled, featureProperty, projectId, title, value, workspaceSlug } = props;
+  const { description, featureProperty, projectId, title, value, workspaceSlug } = props;
   // store hooks
   const { getProjectById, updateProject } = useProject();
   // derived values
@@ -38,7 +37,7 @@ export const ProjectSettingsFeatureControlItem = observer(function ProjectSettin
     const settingsPayload = {
       [featureProperty]: !currentProjectDetails?.[featureProperty],
     };
-    const updateProjectPromise = updateProject(workspaceSlug, projectId, settingsPayload);
+    const updateProjectPromise = updateProject(projectId, settingsPayload);
 
     setPromiseToast(updateProjectPromise, {
       loading: "Updating project feature...",
@@ -65,7 +64,6 @@ export const ProjectSettingsFeatureControlItem = observer(function ProjectSettin
           size="sm"
           checked={value}
           onCheckedChange={handleSubmit}
-          disabled={disabled}
           aria-label={typeof title === "string" ? title : "Toggle project feature"}
         />
       }

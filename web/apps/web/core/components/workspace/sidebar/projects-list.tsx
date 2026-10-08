@@ -18,7 +18,7 @@ import { IconButton } from "@nerve/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { Loader } from "@nerve/ui";
-import { copyUrlToClipboard, cn, orderJoinedProjects } from "@nerve/utils";
+import { copyUrlToClipboard, cn } from "@nerve/utils";
 // components
 import { CreateProjectModal } from "@/components/project/create-project-modal";
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
@@ -28,8 +28,6 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
-// nerve imports
-import type { Project } from "@nerve/api-client";
 // local imports
 import { SidebarProjectsListItem } from "./projects-list-item";
 
@@ -47,7 +45,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
 
-  const { loader, getProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
+  const { loader, getProjectById, joinedProjectIds: joinedProjects, updateProjectSortOrder } = useProject();
   // router params
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();
@@ -85,20 +83,9 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
     if (!sourceId || !destinationId || !workspaceSlug) return;
     if (sourceId === destinationId) return;
 
-    const joinedProjectsList: Project[] = [];
-    joinedProjects.map((projectId) => {
-      const projectDetails = getProjectById(projectId);
-      if (projectDetails) joinedProjectsList.push(projectDetails);
-    });
-
-    const sourceIndex = joinedProjects.indexOf(sourceId);
-    const destinationIndex = shouldDropAtEnd ? joinedProjects.length : joinedProjects.indexOf(destinationId);
-
-    if (joinedProjectsList.length <= 0) return;
-
-    const updatedSortOrder = orderJoinedProjects(sourceIndex, destinationIndex, sourceId, joinedProjectsList);
-    if (updatedSortOrder != undefined)
-      updateProjectView(workspaceSlug, sourceId, { sort_order: updatedSortOrder }).catch(() => {
+    const source = getProjectById(sourceId);
+    if (source)
+      updateProjectSortOrder(source, destinationId, shouldDropAtEnd).catch(() => {
         setToast({
           type: TOAST_TYPE.ERROR,
           title: t("error"),

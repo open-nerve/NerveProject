@@ -63,7 +63,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
   // store hooks
   const { allowPermissions } = useUserPermissions();
 
-  const { currentProjectDetails, fetchProjectDetails, updateProject } = useProject();
+  const { currentProjectDetails, fetchProject, updateProject } = useProject();
   // derived values
   const isAdmin = allowPermissions(
     [EUserPermissions.ADMIN],
@@ -76,7 +76,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
   // fetching user members
   useSWR(
     workspaceSlug && projectId ? PROJECT_DETAILS(workspaceSlug, projectId) : null,
-    workspaceSlug && projectId ? () => fetchProjectDetails(workspaceSlug, projectId) : null
+    workspaceSlug && projectId ? () => fetchProject(projectId) : null
   );
 
   useEffect(() => {
@@ -98,7 +98,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
     });
 
     try {
-      await updateProject(workspaceSlug, projectId, {
+      await updateProject(projectId, {
         default_assignee_id:
           formData.default_assignee_id === "none"
             ? null
@@ -122,7 +122,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
     if (!workspaceSlug || !projectId) return;
 
     try {
-      await updateProject(workspaceSlug, projectId, {
+      await updateProject(projectId, {
         guest_view_all_features: value,
       });
       setToast({

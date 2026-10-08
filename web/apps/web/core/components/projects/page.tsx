@@ -5,25 +5,20 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
-import useSWR from "swr";
 // components
 import { ProjectRoot } from "@/components/project/root";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useWorkspace } from "@/hooks/store/use-workspace";
+// lib
+import { useSessionSWR } from "@/lib/use-session-swr";
 
 export const ProjectPageRoot = observer(function ProjectPageRoot() {
-  // router
-  const { workspaceSlug } = useParams();
   // store
   const { currentWorkspace } = useWorkspace();
-  const { fetchProjects } = useProject();
-  // fetching workspace projects
-  useSWR(
-    workspaceSlug && currentWorkspace ? `WORKSPACE_PROJECTS_${workspaceSlug}` : null,
-    workspaceSlug && currentWorkspace ? () => fetchProjects(workspaceSlug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
+  const { fetchArchivedProjects } = useProject();
+  useSessionSWR(currentWorkspace && ["ARCHIVED_PROJECTS", currentWorkspace.id, currentWorkspace.slug], (id, slug) =>
+    fetchArchivedProjects({ id, slug })
   );
 
   return <ProjectRoot />;

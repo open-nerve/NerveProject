@@ -141,7 +141,7 @@ export class UserPermissionStore implements IUserPermissionStore {
    * @returns { Promise<void> }
    */
   fetchWorkspaceLevelProjectEntities = (workspaceSlug: string, projectId: string): void => {
-    void this.store.projectRoot.project.fetchProjectDetails(workspaceSlug, projectId);
+    void this.store.projectRoot.project.fetchProject(projectId);
   };
 
   // action helpers
@@ -267,7 +267,6 @@ export class UserPermissionStore implements IUserPermissionStore {
       runInAction(() => {
         unset(this.workspaceProjectsPermissions, [workspaceSlug, projectId]);
         unset(this.projectUserInfo, [workspaceSlug, projectId]);
-        unset(this.store.projectRoot.project.projectMap, [projectId]);
       });
     } catch (error) {
       console.error("Error user leaving the project", error);

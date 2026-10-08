@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { uniq, unset, set, update, sortBy } from "lodash-es";
+import { unset, set, sortBy } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
@@ -314,12 +314,6 @@ export class ProjectMemberStore implements IProjectMemberStore {
           });
         });
       });
-      update(this.projectRoot.projectMap, [projectId, "member_ids"], (memberIds) =>
-        uniq([...memberIds, ...data.members.map((m) => m.member_id)])
-      );
-      this.projectRoot.projectMap[projectId].member_ids = this.projectRoot.projectMap[projectId].member_ids.concat(
-        data.members.map((m) => m.member_id)
-      );
 
       return response;
     });
@@ -401,11 +395,6 @@ export class ProjectMemberStore implements IProjectMemberStore {
    */
   protected handleMemberRemoval = (projectId: string, userId: string) => {
     unset(this.projectMemberMap, [projectId, userId]);
-    set(
-      this.projectRoot.projectMap,
-      [projectId, "member_ids"],
-      this.projectRoot.projectMap?.[projectId]?.member_ids.filter((memberId) => memberId !== userId)
-    );
   };
 
   /**

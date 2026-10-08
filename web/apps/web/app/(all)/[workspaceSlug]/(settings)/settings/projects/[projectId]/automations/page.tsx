@@ -24,7 +24,7 @@ import { AutomationsProjectSettingsHeader } from "./header";
 
 function AutomationSettingsPage({ params }: Route.ComponentProps) {
   // router
-  const { workspaceSlug, projectId } = params;
+  const { projectId } = params;
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { currentProjectDetails: projectDetails, updateProject } = useProject();
@@ -38,7 +38,7 @@ function AutomationSettingsPage({ params }: Route.ComponentProps) {
     if (!projectDetails) return;
 
     try {
-      await updateProject(workspaceSlug, projectId, formData);
+      await updateProject(projectId, formData);
     } catch {
       setToast({
         type: TOAST_TYPE.ERROR,

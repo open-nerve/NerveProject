@@ -17,7 +17,7 @@ import { Button } from "@nerve/propel/button";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { Project } from "@nerve/api-client";
+import type { Project, ProjectUpdate } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
 import { renderFormattedDate } from "@nerve/utils";
 import { CoverImage } from "@/components/common/cover-image";
@@ -77,9 +77,9 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     setValue("identifier", formattedValue);
   };
 
-  const handleUpdateChange = async (payload: Partial<Project>) => {
+  const handleUpdateChange = async (payload: ProjectUpdate) => {
     if (!workspaceSlug || !project) return;
-    return updateProject(workspaceSlug, project.id, payload)
+    return updateProject(project.id, payload)
       .then(() =>
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -142,7 +142,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
   const onSubmit = async (formData: Project) => {
     if (!workspaceSlug) return;
     setIsLoading(true);
-    const payload: Partial<Project> = {
+    const payload: ProjectUpdate = {
       name: formData.name,
       network: formData.network,
       identifier: formData.identifier,

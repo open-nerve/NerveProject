@@ -22,9 +22,8 @@ import { SessionUnavailable } from "@/components/account/session-unavailable";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { NerveLogo } from "@/components/common/nerve-logo";
 // constants
-import { WORKSPACE_PARTIAL_PROJECTS, WORKSPACE_PROJECTS_ROLES_INFORMATION, WORKSPACE_STATES } from "@nerve/constants";
+import { WORKSPACE_PROJECTS_ROLES_INFORMATION, WORKSPACE_STATES } from "@nerve/constants";
 // hooks
-import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -43,7 +42,6 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   const { t } = useTranslation();
   // store hooks
   const { signOut, data: currentUser } = useUser();
-  const { fetchPartialProjects } = useProject();
   const { isMobile } = usePlatformOS();
   const { fetchUserProjectPermissions } = useUserPermissions();
   const { fetchWorkspaceStates } = useProjectState();
@@ -58,12 +56,6 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 
-  // fetching workspace projects
-  useSWR(
-    workspace ? WORKSPACE_PARTIAL_PROJECTS(workspace.slug) : null,
-    workspace ? () => fetchPartialProjects(workspace.slug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
   // fetch workspace states
   useSWR(
     workspaceSlug ? WORKSPACE_STATES(workspaceSlug) : null,
