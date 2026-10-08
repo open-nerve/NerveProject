@@ -33,11 +33,11 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 
 ### 2.1 生成的 `Project` 没有的（Task 1；3.2 的规则 2、7.8）
 
-- 封面的上传和选择删除：`core/components/core/image-picker-popover.tsx`；`helpers/cover-image.helper.ts` 只留 `DEFAULT_COVER_IMAGE_URL`（`image_1.webp`）和 `getCoverImageDisplayURL`；其余 28 张预设封面（`image_2`–`image_29` 的 `.svg`、`.webp`，56 个文件）和 `SOURCES.md` 中它们的行；`EFileAssetType.PROJECT_COVER`、`ACCEPTED_COVER_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE`、`TAB_INDEX` 的 `cover_image`、文案 `change_cover`（两种语言）。卡片、设置页、创建弹窗只显示封面，没有自己的封面时显示默认的那一张（`CoverImage` 的 `showDefaultWhenEmpty`）；创建时不再随机给封面、不再上传（第 3 节第 3 条）。
-- 项目的收藏（M7）：卡片的星标、创建弹窗的 `setToFavorite`、侧边栏菜单中注释掉的收藏一段、`FavoriteStore` 的项目一支（写 `projectMap[…].is_favorite`）。工作区的收藏列表本身不动（M7）。
+- 封面的上传和选择删除：`core/components/core/image-picker-popover.tsx`；`helpers/cover-image.helper.ts` 只留 `DEFAULT_COVER_IMAGE_URL`（`image_1.webp`）和 `getCoverImageDisplayURL`；其余 28 张预设封面（`image_2`–`image_29` 的 `.svg`、`.webp`，56 个文件）和 `SOURCES.md` 中它们的行；`EFileAssetType.PROJECT_COVER`、`ACCEPTED_COVER_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE`、`TAB_INDEX` 的 `cover_image`、文案 `change_cover`、`cover_numbered`、`cover_preview`（两种语言）、`@nerve/utils` 的 `checkURLValidity`（唯一的读者是创建弹窗的封面一段）。`getCoverImageDisplayURL` 只剩"自己的封面，没有时用默认的"（`getFileURL` 原样返回路径）。卡片、设置页、创建弹窗只显示封面，没有自己的封面时显示默认的那一张（`CoverImage` 的 `showDefaultWhenEmpty`）；创建时不再随机给封面、不再上传（第 3 节第 3 条）。
+- 项目的收藏（M7）：卡片的星标、创建弹窗的 `setToFavorite`、侧边栏菜单中注释掉的收藏一段、`FavoriteStore` 的项目一支（写 `projectMap[…].is_favorite`），文案 `failed_to_remove_project_from_favorites` 和顶层的 `add_to_favorites`、`remove_from_favorites`（两种语言；附录 A.7）。工作区的收藏列表本身不动（M7）。
 - `intake_count`：侧边栏"收集箱"一项的数字，收集箱 store 在状态变化时改写它的两段。
 - `next_work_item_sequence`：列表视图中工作项的键宽按一位数字算（`currentProjectNextSequenceId` 不再读，M4 加回）。
-- 这些文件的 oxlint 警告清零（7.9）。没有新的 vitest：只删除，`tsc` 和 knip 核对没有留下读者（附录 A.7 的 W13）。
+- 这些文件的 oxlint 警告清零（7.9）。没有新的 vitest：只删除，`tsc` 和 knip 核对没有留下读者（附录 A.7 的 W13）。knip 看不到两类：文案键（附录 A.7 的键表），和包经入口 `index.ts` 再导出的成员（knip 把入口的导出当作包的公开接口）；`checkURLValidity` 和五条文案键由 Task 1 的评审发现（裁定 T1-b）。
 
 ### 2.2 生成的 `Project`、`ProjectCreate`（Task 2；7.2）
 
@@ -184,6 +184,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 21. **裁定 D10（接受）：页面上看得到的不同**（W17；P9–P11 照第 2 节的故事改页面）：
     - 项目一侧现在能显示：`7390e012` 上项目的列表、读和子资源都是 404（附录 A.5），项目页和侧边栏是空的、项目的页面打不开。
     - 封面只显示，没有上传和预设的选择，没有封面的显示默认图；新建项目不再随机给封面（第 3 条）。卡片没有收藏的星标，创建项目没有"加入收藏"；侧边栏的"收集箱"没有数字；列表视图中工作项的键宽按一位数字算。
+    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。
     - 项目、标签栏、成员角色、状态和标签的拖动在 nerve 回答之后才显示（第 12 条）；侧边栏项目的顺序是 nerve 回答的位置。连续两次拖动或两次标签栏的修改，第二次从第一次的回答算（第 15 条）；标签放到第一个之前的位置是它减 10000（原来是它的一半）。项目页在已归档的列表也到了之后才显示。
     - 加入项目之后显示 nerve 回答的项目；离开之后它立即从列表中消失（公开项目在下一次取数时显示为不是成员）。
     - 项目包装层：看得到、不是成员（公开项目）→ 加入的界面；找不到（不存在、看不到的私密项目、删除、离开、在另一个工作区的地址下打开）→"找不到项目"；nerve 连不上 → `SessionUnavailable`，带重取；Plane 的"无权访问"界面没有了。不是成员的人不发任何子资源的请求（原来发出四个、都是 403）。
@@ -389,10 +390,10 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 
 | Task | 文件 | 键 |
 |---|---|---|
-| 1 | `common.json` | `change_cover`（1 条） |
+| 1 | `common.json` | `change_cover`、`cover_numbered`、`cover_preview`、`failed_to_remove_project_from_favorites`、顶层的 `add_to_favorites`、`remove_from_favorites`（6 条；`change_cover` 之外的五条由 Task 1 的评审发现，裁定 T1-b：`cover_numbered`、`cover_preview` 唯一的读者是本 Task 删除的封面选择器，`failed_to_remove_project_from_favorites` 的是创建弹窗的收藏，`add_to_favorites`、`remove_from_favorites` 只在本 Task 删除的注释中出现；power-k 读的是它自己的 `power_k.contextual_actions.*` 那几条） |
 | 10 | `empty-state.json` | `project_empty_state.no_access.restricted_description`（1 条） |
 
-  其余 Task 没有删除或移动文案键（分诊状态、工作区的标签和收藏用的文案仍有别的读者）。
+  其余 Task 没有删除或移动文案键（分诊状态和工作区的标签用的文案仍有别的读者）。
 
 ### A.8 oxlint（7.9，R3）
 

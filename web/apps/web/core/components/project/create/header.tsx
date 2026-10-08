@@ -17,7 +17,6 @@ import type { IProject } from "@nerve/types";
 import { getTabIndex } from "@nerve/utils";
 // components
 import { CoverImage } from "@/components/common/cover-image";
-import { DEFAULT_COVER_IMAGE_URL } from "@/helpers/cover-image.helper";
 
 type Props = {
   handleClose: () => void;
@@ -35,7 +34,8 @@ function ProjectCreateHeader(props: Props) {
   return (
     <div className="group relative h-44 w-full rounded-lg">
       <CoverImage
-        src={DEFAULT_COVER_IMAGE_URL}
+        src={undefined}
+        showDefaultWhenEmpty
         alt={t("project_cover_image_alt")}
         className="absolute top-0 left-0 h-full w-full rounded-lg"
       />
