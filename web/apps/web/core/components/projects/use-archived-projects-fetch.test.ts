@@ -33,10 +33,9 @@ describe("useArchivedProjectsFetch", () => {
     expect(stores.fetched).toEqual(["the archived projects of beta (id-beta)"]);
   });
 
-  it.each<{ when: string; slug: string | undefined; workspaces: Workspace[] | undefined }>([
+  it.each<{ when: string; slug: string; workspaces: Workspace[] | undefined }>([
     { when: "the address names no workspace of his", slug: "elsewhere", workspaces: [workspaceOf("acme")] },
     { when: "his workspaces are not there yet", slug: "acme", workspaces: undefined },
-    { when: "the address names no workspace", slug: undefined, workspaces: [workspaceOf("acme")] },
   ])("fetches nothing when $when", ({ slug, workspaces }) => {
     stores.workspaces = workspaces;
     useArchivedProjectsFetch(slug);

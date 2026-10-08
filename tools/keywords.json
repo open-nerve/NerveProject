@@ -1795,7 +1795,8 @@
           "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
           "    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : \"/api/users/me/settings/\";",
           "    return this.get(\"/api/users/me/workspaces/\")",
-          "    return this.get(`/api/users/me/workspaces/${workspaceSlug}/project-roles/`)"
+          "    return this.get(`/api/users/me/workspaces/${workspaceSlug}/project-roles/`)",
+          "    return this.get(\"/api/users/last-visited-workspace/\")"
         ],
         "miss": [
           "    return unwrap(await api.GET(\"/api/v0/me/profile\"));",
