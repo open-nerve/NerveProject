@@ -9,14 +9,6 @@ import type { IIssueLabel } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 
 export class IssueLabelService extends APIService {
-  async getWorkspaceIssueLabels(workspaceSlug: string): Promise<IIssueLabel[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/labels/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async getProjectLabels(workspaceSlug: string, projectId: string): Promise<IIssueLabel[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-labels/`)
       .then((response) => response?.data)

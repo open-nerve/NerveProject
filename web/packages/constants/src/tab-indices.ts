@@ -27,7 +27,6 @@ const ISSUE_FORM_TAB_INDICES = [
 const INTAKE_ISSUE_CREATE_FORM_TAB_INDICES = [
   "name",
   "description_html",
-  "state_id",
   "priority",
   "assignee_ids",
   "label_ids",

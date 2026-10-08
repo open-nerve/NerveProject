@@ -19,7 +19,6 @@ import { ControlLink } from "@nerve/ui";
 import { getDate, renderFormattedPayloadDate, generateWorkItemLink } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
-import { IntakeStateDropdown } from "@/components/dropdowns/intake-state/dropdown";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
@@ -58,7 +57,6 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
     projectIdentifier: currentProjectDetails?.identifier,
     sequenceId: duplicateIssueDetails?.sequence_id,
   });
-  const DropdownComponent = isIntakeAccepted ? StateDropdown : IntakeStateDropdown;
 
   return (
     <div className="flex w-full flex-col divide-y-2 divide-subtle-1">
@@ -72,8 +70,8 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
                 <StateOutline className="h-4 w-4 flex-shrink-0" />
                 <span>State</span>
               </div>
-              {issue?.state_id && (
-                <DropdownComponent
+              {issue?.state_id && isIntakeAccepted && (
+                <StateDropdown
                   value={issue?.state_id}
                   onChange={() => {}}
                   projectId={projectId}

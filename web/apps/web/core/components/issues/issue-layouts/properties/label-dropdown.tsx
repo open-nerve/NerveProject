@@ -45,6 +45,11 @@ export interface ILabelDropdownProps {
   label: React.ReactNode;
 }
 
+const preventPropagation = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+  e.stopPropagation();
+  e.preventDefault();
+};
+
 export function LabelDropdown(props: ILabelDropdownProps) {
   const {
     projectId,
@@ -62,7 +67,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
     renderByDefault = true,
     fullWidth = false,
     fullHeight = false,
-    label,
+    label: buttonLabel,
   } = props;
   const { t } = useTranslation();
 
@@ -213,7 +218,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
         onClick={handleOnClick}
         disabled={disabled}
       >
-        {label}
+        {buttonLabel}
         {!hideDropdownArrow && !disabled && <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />}
       </button>
     ),
@@ -223,22 +228,18 @@ export function LabelDropdown(props: ILabelDropdownProps) {
       fullWidth,
       handleOnClick,
       hideDropdownArrow,
-      label,
+      buttonLabel,
       maxRender,
       value.length,
       setReferenceElement,
     ]
   );
 
-  const preventPropagation = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
   return (
-    <div className={`${fullHeight ? "h-full" : "h-5"}`} onClick={preventPropagation}>
+    <div className={`${fullHeight ? "h-full" : "h-5"}`} onClick={preventPropagation} role="presentation">
       <ComboDropDown
         as="div"
+        role="presentation"
         ref={dropdownRef}
         className={`h-full w-auto max-w-full flex-shrink-0 text-left ${className}`}
         value={value}
@@ -307,7 +308,8 @@ export function LabelDropdown(props: ILabelDropdownProps) {
                 ) : submitting ? (
                   <LoadingOutline className="h-3.5 w-3.5 animate-spin" />
                 ) : canCreateLabel ? (
-                  <p
+                  <button
+                    type="button"
                     onClick={() => {
                       if (!query.length) return;
                       handleAddLabel(query);
@@ -322,7 +324,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
                     ) : (
                       t("label.create.type")
                     )}
-                  </p>
+                  </button>
                 ) : (
                   <p className="text-left text-secondary">{t("common.search.no_matching_results")}</p>
                 )}

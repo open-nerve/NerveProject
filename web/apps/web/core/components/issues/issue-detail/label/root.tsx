@@ -28,7 +28,7 @@ export type TIssueLabel = {
 
 export type TLabelOperations = {
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
-  createLabel: (workspaceSlug: string, projectId: string, data: Partial<IIssueLabel>) => Promise<any>;
+  createLabel: (data: Partial<IIssueLabel>) => Promise<IIssueLabel>;
 };
 
 export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
@@ -46,10 +46,10 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
 
   const labelOperations: TLabelOperations = useMemo(
     () => ({
-      updateIssue: async (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => {
+      updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: Partial<TIssue>) => {
         try {
           if (onLabelUpdate) onLabelUpdate(data.label_ids || []);
-          else await updateIssue(workspaceSlug, projectId, issueId, data);
+          else await updateIssue(slug, issueProjectId, workItemId, data);
         } catch (_error) {
           setToast({
             title: t("toast.error"),
@@ -58,7 +58,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
           });
         }
       },
-      createLabel: async (workspaceSlug: string, projectId: string, data: Partial<IIssueLabel>) => {
+      createLabel: async (data: Partial<IIssueLabel>) => {
         try {
           const labelResponse = await createLabel(workspaceSlug, projectId, data);
           if (!isInboxIssue)
@@ -82,7 +82,7 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
         }
       },
     }),
-    [updateIssue, createLabel, onLabelUpdate]
+    [updateIssue, createLabel, onLabelUpdate, isInboxIssue, workspaceSlug, projectId, t]
   );
 
   return (

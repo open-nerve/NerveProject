@@ -2046,7 +2046,7 @@
         "flags": ""
       },
       "content": {
-        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/|/api/workspaces/\\$\\{[^}]+\\}/invitations/|/api/workspaces/\\$\\{[^}]+\\}/user-properties/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/archive/|/project-roles/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/(?:project-members/me/|members/)|/api/workspaces/\\$\\{[^}]+\\}/projects/(?:`|details/|\\$\\{[^}]+\\}/`)|/api/workspaces/\\$\\{[^}]+\\}/(?:project-identifiers|user-favorite-projects/)",
+        "source": "[\"'`]/api/users/me/workspaces/[\"'`]|[\"'`]/api/workspaces/[\"'`]|/api/workspaces/\\$\\{[^}]+\\}/`|/api/users/last-visited-workspace/|/api/workspace-slug-check/|/api/workspaces/\\$\\{[^}]+\\}/members/|/workspace-members/me/|/api/workspaces/\\$\\{[^}]+\\}/invitations/|/api/workspaces/\\$\\{[^}]+\\}/user-properties/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/archive/|/project-roles/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/(?:project-members/me/|members/)|/api/workspaces/\\$\\{[^}]+\\}/projects/(?:`|details/|\\$\\{[^}]+\\}/`)|/api/workspaces/\\$\\{[^}]+\\}/(?:project-identifiers|user-favorite-projects/)|/api/workspaces/\\$\\{[^}]+\\}/labels/|/api/workspaces/\\$\\{[^}]+\\}/projects/\\$\\{[^}]+\\}/intake-state/",
         "flags": ""
       },
       "samples": {
@@ -2081,7 +2081,9 @@
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/`)",
           "    return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`, data)",
           "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/`, data)",
-          "    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`)"
+          "    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/${memberId}/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/labels/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-state/`)"
         ],
         "miss": [
           "    return unwrap(await this.api.GET(\"/api/v0/workspaces\"));",

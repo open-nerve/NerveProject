@@ -55,7 +55,7 @@ export function ProjectSettingLabelItem(props: Props) {
   // store hooks
   const { updateLabel } = useLabel();
 
-  const removeFromGroup = (label: IIssueLabel) => {
+  const removeFromGroup = () => {
     if (!workspaceSlug || !projectId) return;
 
     updateLabel(workspaceSlug, projectId, label.id, {

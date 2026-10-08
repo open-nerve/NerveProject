@@ -263,10 +263,9 @@ const getPriorityColumns = (): IGroupByColumn[] => {
 };
 
 const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] => {
-  const { workspaceLabels, projectLabels } = rootStore.label;
-  // map labels to group by columns
+  // the workspace's labels across its projects are M7's (M3 design 7.3): a workspace level groups none of them
   const labels = [
-    ...(isWorkspaceLevel ? workspaceLabels || [] : projectLabels || []),
+    ...(isWorkspaceLevel ? [] : (rootStore.label.projectLabels ?? [])),
     { id: "None", name: "None", color: "#666" },
   ];
   // map labels to group by columns

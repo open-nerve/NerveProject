@@ -5,7 +5,7 @@
  */
 
 import { Combobox } from "@headlessui/react";
-import type { ElementType, KeyboardEventHandler, ReactNode, Ref } from "react";
+import type { AriaRole, ElementType, KeyboardEventHandler, ReactNode, Ref } from "react";
 import React, { Fragment, forwardRef, useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -17,6 +17,8 @@ type Props = {
   onChange?: (value: any) => void;
   disabled?: boolean | undefined;
   onKeyDown?: KeyboardEventHandler<HTMLDivElement> | undefined;
+  /** The root's role: "presentation" for a root that only gathers its parts' keys (onKeyDown). */
+  role?: AriaRole | undefined;
   /** Called when Headless UI closes the combobox on its own (Escape on the button, a click outside). */
   onClose?: () => void;
   multiple?: boolean;

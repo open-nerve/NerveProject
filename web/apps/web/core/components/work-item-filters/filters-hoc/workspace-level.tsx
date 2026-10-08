@@ -17,7 +17,6 @@ import { removeNillKeys } from "@/components/issues/issue-layouts/utils";
 import { CreateUpdateWorkspaceViewModal } from "@/components/workspace/views/modal";
 // hooks
 import { useGlobalView } from "@/hooks/store/use-global-view";
-import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
@@ -45,7 +44,6 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
   const {
     workspace: { getWorkspaceMemberIds },
   } = useMember();
-  const { getWorkspaceLabelIds } = useLabel();
   // derived values
   const hasWorkspaceMemberLevelPermissions = allowPermissions(
     [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
@@ -139,13 +137,13 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
         /* No need to sync filters here as updateFilters already handles it */
         false
       )
-        .then(() => {
+        .then(() =>
           setToast({
             type: TOAST_TYPE.SUCCESS,
             title: "Success!",
             message: "Your view has been updated successfully.",
-          });
-        })
+          })
+        )
         .catch(() => {
           setToast({
             type: TOAST_TYPE.ERROR,
@@ -189,7 +187,6 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
       <WorkItemFiltersHOC
         {...props}
         memberIds={getWorkspaceMemberIds(workspaceSlug)}
-        labelIds={getWorkspaceLabelIds(workspaceSlug)}
         projectIds={joinedProjectIds}
         saveViewOptions={saveViewOptions}
         updateViewOptions={updateViewOptions}

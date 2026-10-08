@@ -28,7 +28,7 @@ export interface IIssueLabelSelect {
   issueId: string;
   values: string[];
   onSelect: (_labelIds: string[]) => void;
-  onAddLabel: (workspaceSlug: string, projectId: string, data: Partial<IIssueLabel>) => Promise<any>;
+  onAddLabel: (data: Partial<IIssueLabel>) => Promise<IIssueLabel>;
 }
 
 export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssueLabelSelect) {
@@ -108,8 +108,8 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
 
   const handleAddLabel = async (labelName: string) => {
     setSubmitting(true);
-    const label = await onAddLabel(workspaceSlug, projectId, { name: labelName, color: getRandomLabelColor() });
-    onSelect([...values, label.id]);
+    const created = await onAddLabel({ name: labelName, color: getRandomLabelColor() });
+    onSelect([...values, created.id]);
     setQuery("");
     setSubmitting(false);
   };
@@ -191,10 +191,9 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
               ) : submitting ? (
                 <LoadingOutline className="spin h-3.5 w-3.5" />
               ) : canCreateLabel ? (
-                <ul className="space-y-1">
-                  <Combobox.Option
-                    as="li"
-                    value={query}
+                <div className="space-y-1">
+                  <button
+                    type="button"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -211,8 +210,8 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
                     ) : (
                       t("label.create.type")
                     )}
-                  </Combobox.Option>
-                </ul>
+                  </button>
+                </div>
               ) : (
                 <p className="text-left text-secondary">{t("common.search.no_matching_results")}</p>
               )}

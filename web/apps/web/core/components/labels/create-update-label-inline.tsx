@@ -92,10 +92,7 @@ export const CreateUpdateLabelInline = observer(
 
       await labelOperationsCallbacks
         .createLabel(formData)
-        .then((_res) => {
-          handleClose();
-          reset(defaultValues);
-        })
+        .then(() => handleClose())
         .catch((error) => {
           const errorMessage = getErrorMessage(error, "create");
           setToast({
@@ -112,10 +109,7 @@ export const CreateUpdateLabelInline = observer(
 
       await labelOperationsCallbacks
         .updateLabel(labelToUpdate.id, formData)
-        .then((_res) => {
-          reset(defaultValues);
-          handleClose();
-        })
+        .then(() => handleClose())
         .catch((error) => {
           const errorMessage = getErrorMessage(error, "update");
           setToast({
@@ -198,7 +192,7 @@ export const CreateUpdateLabelInline = observer(
                           <TwitterPicker
                             colors={LABEL_COLOR_OPTIONS}
                             color={value}
-                            onChange={(value) => onChange(value.hex)}
+                            onChange={(picked) => onChange(picked.hex)}
                           />
                         )}
                       />
@@ -219,7 +213,7 @@ export const CreateUpdateLabelInline = observer(
                   message: t("project_settings.labels.label_max_char"),
                 },
               }}
-              render={({ field: { value, onChange, ref } }) => (
+              render={({ field: { value, onChange, ref: inputRef } }) => (
                 <Field name="name" invalid={Boolean(errors.name)}>
                   <InputGroup size="2xl">
                     <Input
@@ -227,10 +221,9 @@ export const CreateUpdateLabelInline = observer(
                       id="labelName"
                       name="name"
                       type="text"
-                      autoFocus
                       value={value}
                       onChange={onChange}
-                      ref={ref}
+                      ref={inputRef}
                       placeholder={t("project_settings.labels.label_title")}
                     />
                   </InputGroup>

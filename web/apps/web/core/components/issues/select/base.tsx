@@ -45,7 +45,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
     createLabelEnabled = false,
     disabled = false,
     getLabelById,
-    label,
+    label: buttonLabel,
     labelIds,
     onChange,
     onDropdownOpen,
@@ -152,6 +152,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
   return (
     <Combobox
       as="div"
+      role="presentation"
       ref={dropdownRef}
       tabIndex={tabIndex}
       value={value}
@@ -167,8 +168,8 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
         className={cn("flex h-full cursor-pointer items-center gap-2 text-11", buttonContainerClassName)}
         onClick={handleOnClick}
       >
-        {label ? (
-          label
+        {buttonLabel ? (
+          buttonLabel
         ) : value && value.length > 0 ? (
           <span className={cn("flex h-full items-center justify-center gap-2 text-11", buttonClassName)}>
             <IssueLabelsList
@@ -291,7 +292,8 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
                 ) : submitting ? (
                   <LoadingOutline className="h-3.5 w-3.5 animate-spin" />
                 ) : createLabelEnabled ? (
-                  <p
+                  <button
+                    type="button"
                     onClick={() => {
                       if (!query.length) return;
                       handleAddLabel(query);
@@ -306,7 +308,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
                     ) : (
                       t("label.create.type")
                     )}
-                  </p>
+                  </button>
                 ) : (
                   <p className="px-1.5 py-1 text-placeholder italic">{t("no_matching_results")}</p>
                 )
