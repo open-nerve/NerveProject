@@ -25,7 +25,8 @@ import {
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import type { ICycle, IIssueLabel, IModule, TIssue, TIssuePriorities } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
+import type { ICycle, IModule, TIssue, TIssuePriorities } from "@nerve/types";
 import { EUserPermissions } from "@nerve/types";
 import { copyTextToClipboard } from "@nerve/utils";
 // components
@@ -329,7 +330,7 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
       type: "change-page",
       page: "update-work-item-labels",
       onSelect: (data) => {
-        const labelId = (data as IIssueLabel)?.id;
+        const labelId = (data as Label)?.id;
         if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
         const updatedLabels = [...(entityDetails.label_ids ?? [])];
         if (updatedLabels.includes(labelId)) updatedLabels.splice(updatedLabels.indexOf(labelId), 1);

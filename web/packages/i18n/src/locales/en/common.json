@@ -421,8 +421,6 @@
     "select": "Add labels",
     "create": {
       "success": "Label created successfully",
-      "failed": "Label creation failed",
-      "already_exists": "Label already exists",
       "type": "Type to add a new label"
     }
   },

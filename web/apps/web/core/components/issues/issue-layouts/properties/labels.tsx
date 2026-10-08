@@ -14,7 +14,7 @@ import { useTranslation } from "@nerve/i18n";
 import { LabelsOutline } from "@makeplane/propel/icons";
 // types
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 // hooks
 import { cn } from "@nerve/utils";
 import { useLabel } from "@/hooks/store/use-label";
@@ -72,7 +72,7 @@ type LabelSummaryProps = {
   fullWidth: boolean;
   noLabelBorder: boolean;
   disabled?: boolean;
-  projectLabels: IIssueLabel[];
+  projectLabels: Label[];
   value: string[];
 };
 
@@ -103,7 +103,7 @@ function LabelSummary({ isMobile, fullWidth, noLabelBorder, disabled, projectLab
 }
 
 type LabelItemProps = {
-  label: IIssueLabel;
+  label: Label;
   isMobile: boolean;
   renderByDefault: boolean;
   disabled?: boolean;
@@ -180,7 +180,7 @@ export const IssuePropertyLabels = observer(function IssuePropertyLabels(props: 
     }
   }, [isOpen, isMobile]);
 
-  let projectLabels: IIssueLabel[] = defaultOptions as IIssueLabel[];
+  let projectLabels: Label[] = defaultOptions as Label[];
   if (storeLabels && storeLabels.length > 0) projectLabels = storeLabels;
 
   return (

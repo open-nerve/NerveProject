@@ -6,27 +6,28 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
-// types
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 // ui
 import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  data: IIssueLabel | null;
+  data: Label | null;
 };
 
 export const DeleteLabelModal = observer(function DeleteLabelModal(props: Props) {
   const { isOpen, onClose, data } = props;
-  // router
-  const { workspaceSlug, projectId } = useParams();
   // store hooks
   const { deleteLabel } = useLabel();
+  const { t } = useTranslation();
   // states
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
 
@@ -36,20 +37,15 @@ export const DeleteLabelModal = observer(function DeleteLabelModal(props: Props)
   };
 
   const handleDeletion = async () => {
-    if (!workspaceSlug || !projectId || !data) return;
+    if (!data) return;
 
     setIsDeleteLoading(true);
 
-    await deleteLabel(workspaceSlug, projectId, data.id)
+    await deleteLabel(data.id)
       .then(() => handleClose())
-      .catch((err) => {
+      .catch((error: unknown) => {
         setIsDeleteLoading(false);
-        const error = err?.error || "Label could not be deleted. Please try again.";
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: error,
-        });
+        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
       });
   };
 

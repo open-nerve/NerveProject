@@ -37,7 +37,7 @@ vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 const { RootStore } = await import("@/store/root.store");
 const { invitationOf, membershipOf } = await import("@/store/member/workspace/fake-members");
 const { loadWorkspaces, workspaceOf } = await import("@/store/workspace/fake-workspaces");
-const { loadProjects, projectOf, stateOf } = await import("@/store/project/fake-projects");
+const { labelOf, loadProjects, projectOf, stateOf } = await import("@/store/project/fake-projects");
 
 const REFRESH = "/api/v0/auth/refresh";
 const ME = "/api/v0/me";
@@ -49,6 +49,7 @@ const INVITATIONS = "/api/v0/workspaces/acme/invitations";
 const acme = workspaceOf("acme", { role: 20 });
 const web = projectOf("WEB", acme.id);
 const backlog = stateOf(web, "Backlog", "backlog", 15000, { default: true });
+const bug = labelOf(web, "bug", 65535);
 const X = "0123456789abcdef0123456789abcdef";
 /** The session of another account, Y, which another tab signs in to. */
 const Y = "fedcba9876543210fedcba9876543210";
@@ -255,7 +256,7 @@ describe("RootStore", () => {
     expect(shown()).toEqual(nothing);
   });
 
-  it("gives the work items' stores what the state store gives: nothing of a project the caller left", async () => {
+  it("gives the work items' stores what the state and label stores give: nothing of a project the caller left", async () => {
     const nerve = new FakeNerve();
     const root = new RootStore(nerve.client());
     root.router.setQuery({ workspaceSlug: "acme", projectId: web.id });
@@ -270,10 +271,14 @@ describe("RootStore", () => {
       "the states"
     );
     expect(root.issue.stateMap).toEqual({ [backlog.id]: backlog });
+    const LABELS = `/api/v0/projects/${web.id}/labels`;
+    await answered(nerve, () => root.label.fetchProjectLabels(web.id), ["GET", LABELS], { data: [bug] }, "the labels");
+    expect(root.issue.labelMap).toEqual({ [bug.id]: bug });
 
     const left = track(root.projectRoot.project.leaveProject(web));
-    await inTurn(nerve, 3, ["POST", `/api/v0/projects/${web.id}/leave`], noContent());
+    await inTurn(nerve, 4, ["POST", `/api/v0/projects/${web.id}/leave`], noContent());
     await until(() => left.settled, "the leave");
     expect(root.issue.stateMap).toEqual({});
+    expect(root.issue.labelMap).toEqual({});
   });
 });

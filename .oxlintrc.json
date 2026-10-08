@@ -130,7 +130,9 @@
         "web/apps/web/core/components/projects/page.tsx",
         "web/apps/web/core/store/state.store.ts",
         "web/apps/web/core/components/project-states/**",
-        "web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx"
+        "web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx",
+        "web/apps/web/core/store/label.store.ts",
+        "web/apps/web/core/components/labels/**"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -198,8 +200,13 @@
         "web/apps/web/core/services/project/states.service.ts",
         "web/apps/web/core/store/state.store.ts",
         "web/apps/web/core/store/state.store.test.ts",
+        "web/apps/web/core/services/project/labels.service.ts",
+        "web/apps/web/core/store/label.store.ts",
+        "web/apps/web/core/store/label.store.test.ts",
         "web/apps/web/core/store/state.store.changes.test.ts",
         "web/apps/web/core/components/project-states/create-update/create-update.test.tsx",
+        "web/apps/web/core/store/label.store.changes.test.ts",
+        "web/apps/web/core/components/labels/create-update-label-inline.test.tsx",
         "web/apps/web/core/store/project/**",
         "web/apps/web/core/hooks/store/use-project-preferences.ts",
         "web/apps/web/core/components/navigation/use-tab-preferences.ts",

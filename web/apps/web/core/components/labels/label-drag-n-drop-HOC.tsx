@@ -15,7 +15,8 @@ import { observer } from "mobx-react";
 import { createRoot } from "react-dom/client";
 // types
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import type { IIssueLabel, InstructionType } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
+import type { InstructionType } from "@nerve/types";
 // ui
 import { DropIndicator } from "@nerve/ui";
 // components
@@ -25,7 +26,7 @@ import type { TargetData } from "./label-utils";
 import { getCanDrop, getInstructionFromPayload } from "./label-utils";
 
 type LabelDragPreviewProps = {
-  label: IIssueLabel;
+  label: Label;
   isGroup: boolean;
 };
 
@@ -40,7 +41,7 @@ function LabelDragPreview(props: LabelDragPreviewProps) {
 }
 
 type Props = {
-  label: IIssueLabel;
+  label: Label;
   isGroup: boolean;
   isChild: boolean;
   isLastChild: boolean;
@@ -79,7 +80,7 @@ export const LabelDndHOC = observer(function LabelDndHOC(props: Props) {
       draggable({
         element: labelElement,
         dragHandle: dragHandleElement ?? undefined,
-        getInitialData: () => ({ id: label?.id, parentId: label?.parent, isGroup, isChild }),
+        getInitialData: () => ({ id: label?.id, parentId: label?.parent_id, isGroup, isChild }),
         onDragStart: () => {
           setIsDragging(true);
         },
@@ -102,7 +103,7 @@ export const LabelDndHOC = observer(function LabelDndHOC(props: Props) {
         element: labelElement,
         canDrop: ({ source }) => getCanDrop(source, label, isChild),
         getData: ({ input, element }) => {
-          const data = { id: label?.id, parentId: label?.parent, isGroup, isChild };
+          const data = { id: label?.id, parentId: label?.parent_id, isGroup, isChild };
 
           const blockedStates: InstructionType[] = [];
 

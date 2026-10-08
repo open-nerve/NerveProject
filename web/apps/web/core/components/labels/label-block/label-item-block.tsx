@@ -12,7 +12,7 @@ import { useOutsideClickDetector } from "@nerve/hooks";
 import type { ISvgIcons } from "@nerve/propel/icons";
 import { CloseOutline } from "@makeplane/propel/icons";
 // types
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 // ui
 import { CustomMenu, DragHandle } from "@nerve/ui";
 // helpers
@@ -22,17 +22,17 @@ import { LabelName } from "./label-name";
 
 export interface ICustomMenuItem {
   CustomIcon: LucideIcon | React.FC<ISvgIcons>;
-  onClick: (label: IIssueLabel) => void;
+  onClick: (label: Label) => void;
   isVisible: boolean;
   text: string;
   key: string;
 }
 
 interface ILabelItemBlock {
-  label: IIssueLabel;
+  label: Label;
   isDragging: boolean;
   customMenuItems: ICustomMenuItem[];
-  handleLabelDelete: (label: IIssueLabel) => void;
+  handleLabelDelete: (label: Label) => void;
   isLabelGroup?: boolean;
   dragHandleRef: MutableRefObject<HTMLButtonElement | null>;
   disabled?: boolean;

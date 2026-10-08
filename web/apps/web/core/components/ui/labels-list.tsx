@@ -6,12 +6,12 @@
 
 // ui
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 // types
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type IssueLabelsListProps = {
-  labels?: (IIssueLabel | undefined)[];
+  labels?: (Label | undefined)[];
   length?: number;
   showLength?: boolean;
 };

@@ -14,8 +14,9 @@ import { Combobox } from "@headlessui/react";
 import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // types
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 import { EUserProjectRoles } from "@nerve/types";
 // components
 import { ComboDropDown } from "@nerve/ui";
@@ -25,6 +26,8 @@ import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useDropdownKeyDown } from "@/hooks/use-dropdown-key-down";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 export interface ILabelDropdownProps {
   projectId: string | null;
@@ -97,7 +100,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   const canCreateLabel =
     projectId && allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
-  let projectLabels: IIssueLabel[] = defaultOptions;
+  let projectLabels: Label[] = defaultOptions;
   if (storeLabels && storeLabels.length > 0) projectLabels = storeLabels;
 
   const options = useMemo(
@@ -142,13 +145,13 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   });
 
   const onOpen = useCallback(() => {
-    if (!storeLabels && workspaceSlug && projectId)
-      fetchProjectLabels(workspaceSlug, projectId)
+    if (!storeLabels && projectId)
+      fetchProjectLabels(projectId)
         .then(() => setIsLoading(false))
         .catch(() => {
           setIsLoading(false);
         });
-  }, [storeLabels, workspaceSlug, projectId, fetchProjectLabels, setIsLoading]);
+  }, [storeLabels, projectId, fetchProjectLabels, setIsLoading]);
 
   const toggleDropdown = useCallback(() => {
     if (!isOpen) onOpen();
@@ -164,12 +167,17 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   };
 
   const handleAddLabel = async (labelName: string) => {
-    if (!workspaceSlug || !projectId) return;
+    if (!projectId) return;
     setSubmitting(true);
-    const label = await createLabel(workspaceSlug, projectId, { name: labelName, color: getRandomLabelColor() });
-    onChange([...value, label.id]);
-    setQuery("");
-    setSubmitting(false);
+    try {
+      const label = await createLabel(projectId, { name: labelName, color: getRandomLabelColor() });
+      onChange([...value, label.id]);
+      setQuery("");
+    } catch (error) {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const searchInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {

@@ -26,10 +26,7 @@
       "description": "创建自定义标签以分类和组织您的工作项",
       "label_title": "标签标题",
       "label_title_is_required": "标签标题为必填项",
-      "label_max_char": "标签名称不应超过255个字符",
-      "toast": {
-        "error": "更新标签时出错"
-      }
+      "label_max_char": "标签名称不应超过255个字符"
     },
     "automations": {
       "label": "自动化",

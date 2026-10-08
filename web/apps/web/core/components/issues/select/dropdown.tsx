@@ -8,7 +8,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { EUserPermissionsLevel } from "@nerve/constants";
-import type { IIssueLabel } from "@nerve/types";
+import type { LabelCreate } from "@nerve/api-client";
 import { EUserPermissions } from "@nerve/types";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
@@ -35,14 +35,14 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: TWorkI
     projectId && allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
   const onDropdownOpen = () => {
-    if (projectLabelIds === undefined && workspaceSlug && projectId) fetchProjectLabels(workspaceSlug, projectId);
+    if (projectLabelIds === undefined && projectId) fetchProjectLabels(projectId);
   };
 
-  const handleCreateLabel = (data: Partial<IIssueLabel>) => {
-    if (!workspaceSlug || !projectId) {
-      throw new Error("Workspace slug or project ID is missing");
+  const handleCreateLabel = (data: LabelCreate) => {
+    if (!projectId) {
+      throw new Error("Project ID is missing");
     }
-    return createLabel(workspaceSlug, projectId, data);
+    return createLabel(projectId, data);
   };
 
   return (

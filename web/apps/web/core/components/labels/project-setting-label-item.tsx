@@ -6,12 +6,15 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
-import { useParams } from "react-router";
 import { CloseOutline, EditOutline } from "@makeplane/propel/icons";
 // types
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 // components
 import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
@@ -20,8 +23,8 @@ import { LabelItemBlock } from "./label-block/label-item-block";
 import { LabelDndHOC } from "./label-drag-n-drop-HOC";
 
 type Props = {
-  label: IIssueLabel;
-  handleLabelDelete: (label: IIssueLabel) => void;
+  label: Label;
+  handleLabelDelete: (label: Label) => void;
   setIsUpdating: Dispatch<SetStateAction<boolean>>;
   isParentDragging?: boolean;
   isChild: boolean;
@@ -50,16 +53,14 @@ export function ProjectSettingLabelItem(props: Props) {
   } = props;
   // states
   const [isEditLabelForm, setEditLabelForm] = useState(false);
-  // router
-  const { workspaceSlug, projectId } = useParams();
+  // nerve hooks
+  const { t } = useTranslation();
   // store hooks
   const { updateLabel } = useLabel();
 
   const removeFromGroup = () => {
-    if (!workspaceSlug || !projectId) return;
-
-    updateLabel(workspaceSlug, projectId, label.id, {
-      parent: null,
+    updateLabel(label.id, { parent_id: null }).catch((error: unknown) => {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
     });
   };
 
@@ -67,7 +68,7 @@ export function ProjectSettingLabelItem(props: Props) {
     {
       CustomIcon: CloseOutline,
       onClick: removeFromGroup,
-      isVisible: !!label.parent,
+      isVisible: label.parent_id !== null,
       text: "Remove from group",
       key: "remove_from_group",
     },

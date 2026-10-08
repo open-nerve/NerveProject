@@ -6,7 +6,7 @@
 // The caller's projects, for the tests of the stores that read them, against a fake nerve: nerve's records, the
 // fetches that load them into a store, and a tab whose stores have the caller's workspaces and projects.
 
-import type { Project, ProjectPreferences, State, StateGroup, Workspace } from "@nerve/api-client";
+import type { Label, Project, ProjectPreferences, State, StateGroup, Workspace } from "@nerve/api-client";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { fakeRoot } from "@/store/fake-root";
 import { ProjectRootStore } from "@/store/project";
@@ -74,6 +74,22 @@ export function stateOf(
     group,
     default: false,
     sequence,
+    created_at: "2026-10-01T09:00:00Z",
+    updated_at: "2026-10-01T09:00:00Z",
+    ...fields,
+  };
+}
+
+/** A label of the project as nerve gives it: the name names it in its project; at the top unless fields say otherwise. */
+export function labelOf(project: Project, name: string, sortOrder: number, fields: Partial<Label> = {}): Label {
+  return {
+    id: `l-${project.identifier}-${name}`,
+    workspace_id: project.workspace_id,
+    project_id: project.id,
+    parent_id: null,
+    name,
+    color: "#F59E0B",
+    sort_order: sortOrder,
     created_at: "2026-10-01T09:00:00Z",
     updated_at: "2026-10-01T09:00:00Z",
     ...fields,

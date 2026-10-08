@@ -5,27 +5,6 @@
  */
 
 import { isEmpty } from "lodash-es";
-import type { IIssueLabel, IIssueLabelTree } from "@nerve/types";
-
-/**
- * @description Builds a tree structure from an array of labels
- * @param {IIssueLabel[]} array Array of labels
- * @param {any} parent Parent ID
- * @returns {IIssueLabelTree[]} Tree structure
- */
-export const buildTree = (array: IIssueLabel[], parent = null) => {
-  const tree: IIssueLabelTree[] = [];
-
-  array.forEach((item: any) => {
-    if (item.parent === parent) {
-      const children = buildTree(array, item.id);
-      item.children = children;
-      tree.push(item);
-    }
-  });
-
-  return tree;
-};
 
 /**
  * @description Returns valid keys from object whose value is not falsy
@@ -60,8 +39,7 @@ export const sortBySelectedFirst = <T extends { value: string | null }>(
 
   if (selectedSet.size === 0) return options;
 
-  // Create a shallow copy to avoid mutating the original array
-  return [...options].sort((a, b) => {
+  return options.toSorted((a, b) => {
     const aSelected = a.value !== null && selectedSet.has(a.value);
     const bSelected = b.value !== null && selectedSet.has(b.value);
 
@@ -94,8 +72,7 @@ export const sortByCurrentUserThenSelected = <T extends { value: string | null }
   // Normalize selectedValues to array for consistent handling
   const selectedSet = new Set(Array.isArray(selectedValues) ? selectedValues : selectedValues ? [selectedValues] : []);
 
-  // Create a shallow copy to avoid mutating the original array
-  return [...options].sort((a, b) => {
+  return options.toSorted((a, b) => {
     const aIsCurrent = currentUserId && a.value === currentUserId;
     const bIsCurrent = currentUserId && b.value === currentUserId;
 

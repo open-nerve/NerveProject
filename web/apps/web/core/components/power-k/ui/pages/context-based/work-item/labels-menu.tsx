@@ -6,7 +6,8 @@
 
 import { observer } from "mobx-react";
 // nerve types
-import type { IIssueLabel, TIssue } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
+import type { TIssue } from "@nerve/types";
 import { Spinner } from "@nerve/ui";
 // components
 import { PowerKLabelsMenu } from "@/components/power-k/menus/labels";
@@ -14,7 +15,7 @@ import { PowerKLabelsMenu } from "@/components/power-k/menus/labels";
 import { useLabel } from "@/hooks/store/use-label";
 
 type Props = {
-  handleSelect: (label: IIssueLabel) => void;
+  handleSelect: (label: Label) => void;
   workItemDetails: TIssue;
 };
 

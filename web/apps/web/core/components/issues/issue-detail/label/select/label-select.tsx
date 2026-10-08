@@ -13,7 +13,7 @@ import { Combobox } from "@headlessui/react";
 import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { IIssueLabel } from "@nerve/types";
+import type { Label, LabelCreate } from "@nerve/api-client";
 import { EUserProjectRoles } from "@nerve/types";
 // helpers
 import { getTabIndex } from "@nerve/utils";
@@ -28,7 +28,7 @@ export interface IIssueLabelSelect {
   issueId: string;
   values: string[];
   onSelect: (_labelIds: string[]) => void;
-  onAddLabel: (data: Partial<IIssueLabel>) => Promise<IIssueLabel>;
+  onAddLabel: (data: LabelCreate) => Promise<Label>;
 }
 
 export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssueLabelSelect) {
@@ -54,8 +54,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
 
   const fetchLabels = () => {
     setIsLoading(true);
-    if (!projectLabels && workspaceSlug && projectId)
-      fetchProjectLabels(workspaceSlug, projectId).then(() => setIsLoading(false));
+    if (!projectLabels && projectId) fetchProjectLabels(projectId).then(() => setIsLoading(false));
   };
 
   const options = (projectLabels ?? []).map((label) => ({
@@ -108,10 +107,15 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
 
   const handleAddLabel = async (labelName: string) => {
     setSubmitting(true);
-    const created = await onAddLabel({ name: labelName, color: getRandomLabelColor() });
-    onSelect([...values, created.id]);
-    setQuery("");
-    setSubmitting(false);
+    try {
+      const created = await onAddLabel({ name: labelName, color: getRandomLabelColor() });
+      onSelect([...values, created.id]);
+      setQuery("");
+    } catch {
+      // onAddLabel has shown nerve's reason; nothing is selected
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!issueId || !values) return <></>;

@@ -23,8 +23,8 @@ import {
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
-import type { MemberUser, Project, State } from "@nerve/api-client";
-import type { ICycle, TFilterConfig, IIssueLabel, IModule, TWorkItemFilterProperty } from "@nerve/types";
+import type { MemberUser, Project, State, Label } from "@nerve/api-client";
+import type { ICycle, TFilterConfig, IModule, TWorkItemFilterProperty } from "@nerve/types";
 
 import {
   getAssigneeFilterConfig,
@@ -106,11 +106,9 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       stateIds ? (stateIds.map((stateId) => getStateById(stateId)).filter((state) => state) as State[]) : undefined,
     [stateIds, getStateById]
   );
-  const workItemLabels: IIssueLabel[] | undefined = useMemo(
+  const workItemLabels: Label[] | undefined = useMemo(
     () =>
-      labelIds
-        ? (labelIds.map((labelId) => getLabelById(labelId)).filter((label) => label) as IIssueLabel[])
-        : undefined,
+      labelIds ? (labelIds.map((labelId) => getLabelById(labelId)).filter((label) => label) as Label[]) : undefined,
     [labelIds, getLabelById]
   );
   const cycles = useMemo(

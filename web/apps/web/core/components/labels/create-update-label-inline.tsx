@@ -17,28 +17,28 @@ import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IIssueLabel } from "@nerve/types";
-
-// error codes
-const errorCodes = {
-  LABEL_NAME_ALREADY_EXISTS: "LABEL_NAME_ALREADY_EXISTS",
-};
+import type { Label, LabelCreate, LabelUpdate } from "@nerve/api-client";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
 
 export type TLabelOperationsCallbacks = {
-  createLabel: (data: Partial<IIssueLabel>) => Promise<IIssueLabel>;
-  updateLabel: (labelId: string, data: Partial<IIssueLabel>) => Promise<IIssueLabel>;
+  createLabel: (data: LabelCreate) => Promise<Label>;
+  updateLabel: (labelId: string, data: LabelUpdate) => Promise<Label>;
 };
+
+/** What the form edits and sends, a creation (at the top) or a change alike: nerve's LabelUpdate takes no others. */
+type TLabelFormValues = Pick<Label, "name" | "color">;
 
 type TCreateUpdateLabelInlineProps = {
   labelForm: boolean;
   setLabelForm: React.Dispatch<React.SetStateAction<boolean>>;
   isUpdating: boolean;
   labelOperationsCallbacks: TLabelOperationsCallbacks;
-  labelToUpdate?: IIssueLabel;
+  labelToUpdate?: Label;
   onClose?: () => void;
 };
 
-const defaultValues: Partial<IIssueLabel> = {
+const defaultValues: TLabelFormValues = {
   name: "",
   color: "var(--text-color-secondary)",
 };
@@ -56,10 +56,12 @@ export const CreateUpdateLabelInline = observer(
       reset,
       formState: { errors, isSubmitting },
       watch,
-      setValue,
       setFocus,
-    } = useForm<IIssueLabel>({
-      defaultValues,
+    } = useForm<TLabelFormValues>({
+      // a change starts from the label's name and colour, a creation from no name and a colour at random
+      defaultValues: labelToUpdate
+        ? { name: labelToUpdate.name, color: labelToUpdate.color || "#000" }
+        : { ...defaultValues, color: getRandomLabelColor() },
     });
 
     const { t } = useTranslation();
@@ -70,58 +72,31 @@ export const CreateUpdateLabelInline = observer(
       if (onClose) onClose();
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const getErrorMessage = (error: any, operation: "create" | "update"): string => {
-      const errorData = error ?? {};
-
-      const labelError = errorData.name?.includes(errorCodes.LABEL_NAME_ALREADY_EXISTS);
-      if (labelError) {
-        return t("label.create.already_exists");
-      }
-
-      // Fallback to general error messages
-      if (operation === "create") {
-        return errorData?.detail ?? errorData?.error ?? t("common.something_went_wrong");
-      }
-
-      return errorData?.error ?? t("project_settings.labels.toast.error");
+    /** Shows nerve's reason for a refused creation or change, and keeps what the form holds. */
+    const handleRefusal = (error: unknown, formData: TLabelFormValues) => {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      reset(formData);
     };
 
-    const handleLabelCreate: SubmitHandler<IIssueLabel> = async (formData) => {
+    const handleLabelCreate: SubmitHandler<TLabelFormValues> = async (formData) => {
       if (isSubmitting) return;
 
       await labelOperationsCallbacks
         .createLabel(formData)
         .then(() => handleClose())
-        .catch((error) => {
-          const errorMessage = getErrorMessage(error, "create");
-          setToast({
-            title: "Error!",
-            type: TOAST_TYPE.ERROR,
-            message: errorMessage,
-          });
-          reset(formData);
-        });
+        .catch((error: unknown) => handleRefusal(error, formData));
     };
 
-    const handleLabelUpdate: SubmitHandler<IIssueLabel> = async (formData) => {
+    const handleLabelUpdate: SubmitHandler<TLabelFormValues> = async (formData) => {
       if (!labelToUpdate?.id || isSubmitting) return;
 
       await labelOperationsCallbacks
         .updateLabel(labelToUpdate.id, formData)
         .then(() => handleClose())
-        .catch((error) => {
-          const errorMessage = getErrorMessage(error, "update");
-          setToast({
-            title: "Oops!",
-            type: TOAST_TYPE.ERROR,
-            message: errorMessage,
-          });
-          reset(formData);
-        });
+        .catch((error: unknown) => handleRefusal(error, formData));
     };
 
-    const handleFormSubmit = (formData: IIssueLabel) => {
+    const handleFormSubmit = (formData: TLabelFormValues) => {
       if (isUpdating) {
         handleLabelUpdate(formData);
       } else {
@@ -135,22 +110,6 @@ export const CreateUpdateLabelInline = observer(
     useEffect(() => {
       setFocus("name");
     }, [setFocus, labelForm]);
-
-    useEffect(() => {
-      if (!labelToUpdate) return;
-
-      setValue("name", labelToUpdate.name);
-      setValue("color", labelToUpdate.color && labelToUpdate.color !== "" ? labelToUpdate.color : "#000");
-    }, [labelToUpdate, setValue]);
-
-    useEffect(() => {
-      if (labelToUpdate) {
-        setValue("color", labelToUpdate.color && labelToUpdate.color !== "" ? labelToUpdate.color : "#000");
-        return;
-      }
-
-      setValue("color", getRandomLabelColor());
-    }, [labelToUpdate, setValue]);
 
     return (
       <>

@@ -421,8 +421,6 @@
     "select": "选择标签",
     "create": {
       "success": "标签创建成功",
-      "failed": "标签创建失败",
-      "already_exists": "标签已存在",
       "type": "输入以添加新标签"
     }
   },

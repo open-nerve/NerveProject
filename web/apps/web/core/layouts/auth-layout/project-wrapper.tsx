@@ -68,7 +68,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   // fetching project labels
-  useSWR(PROJECT_LABELS(projectId, currentProjectRole), () => fetchProjectLabels(workspaceSlug, projectId), {
+  useSWR(PROJECT_LABELS(projectId, currentProjectRole), () => fetchProjectLabels(projectId), {
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });

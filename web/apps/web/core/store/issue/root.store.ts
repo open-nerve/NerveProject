@@ -7,8 +7,8 @@
 import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
-import type { ApiClient, MemberUser, State } from "@nerve/api-client";
-import type { ICycle, IIssueLabel, IModule } from "@nerve/types";
+import type { ApiClient, MemberUser, State, Label } from "@nerve/api-client";
+import type { ICycle, IModule } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueDetail } from "@/store/issue/issue-details/root.store";
@@ -49,7 +49,7 @@ export interface IIssueRootStore {
   globalViewId: string | undefined; // all issues view id
   userId: string | undefined; // user profile detail Id
   stateMap: Record<string, State> | undefined;
-  labelMap: Record<string, IIssueLabel> | undefined;
+  labelMap: Record<string, Label> | undefined;
   memberMap: Record<string, MemberUser> | undefined;
   moduleMap: Record<string, IModule> | undefined;
   cycleMap: Record<string, ICycle> | undefined;
@@ -98,7 +98,7 @@ export class IssueRootStore implements IIssueRootStore {
   globalViewId: string | undefined = undefined;
   userId: string | undefined = undefined;
   stateMap: Record<string, State> | undefined = undefined;
-  labelMap: Record<string, IIssueLabel> | undefined = undefined;
+  labelMap: Record<string, Label> | undefined = undefined;
   memberMap: Record<string, MemberUser> | undefined = undefined;
   moduleMap: Record<string, IModule> | undefined = undefined;
   cycleMap: Record<string, ICycle> | undefined = undefined;
@@ -163,9 +163,9 @@ export class IssueRootStore implements IIssueRootStore {
       if (this.viewId !== rootStore.router.viewId) this.viewId = rootStore.router.viewId;
       if (this.globalViewId !== rootStore.router.globalViewId) this.globalViewId = rootStore.router.globalViewId;
       if (this.userId !== rootStore.router.userId) this.userId = rootStore.router.userId;
-      // the state store's states as it gives them, none of a project it no longer gives (M3/P8b)
+      // the state and label stores' records as they give them, none of a project they no longer give (M3/P8b)
       this.stateMap = rootStore?.state?.stateMap;
-      if (!isEmpty(rootStore?.label?.labelMap)) this.labelMap = rootStore?.label?.labelMap;
+      this.labelMap = rootStore?.label?.labelMap;
       if (!isEmpty(rootStore?.memberRoot?.memberMap)) this.memberMap = rootStore?.memberRoot?.memberMap || undefined;
       if (!isEmpty(rootStore?.module?.moduleMap)) this.moduleMap = rootStore?.module?.moduleMap;
       if (!isEmpty(rootStore?.cycle?.cycleMap)) this.cycleMap = rootStore?.cycle?.cycleMap;

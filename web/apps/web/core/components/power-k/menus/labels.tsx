@@ -7,13 +7,13 @@
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { IIssueLabel } from "@nerve/types";
+import type { Label } from "@nerve/api-client";
 // local imports
 import { PowerKMenuBuilder } from "./builder";
 
 type Props = {
-  labels: IIssueLabel[];
-  onSelect: (label: IIssueLabel) => void;
+  labels: Label[];
+  onSelect: (label: Label) => void;
   value?: string[];
 };
 
