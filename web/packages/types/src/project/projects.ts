@@ -4,33 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import type { TUserPermissions } from "../enums";
 import type { TStateGroups } from "../state";
 
 export enum EUserProjectRoles {
   ADMIN = 20,
   MEMBER = 15,
   GUEST = 5,
-}
-
-export type TProjectMembership = {
-  member: string;
-  role: TUserPermissions | EUserProjectRoles;
-} & (
-  | {
-      id: string;
-      original_role: EUserProjectRoles;
-      created_at: string;
-    }
-  | {
-      id: null;
-      original_role: null;
-      created_at: null;
-    }
-);
-
-export interface IProjectBulkAddFormData {
-  members: { role: TUserPermissions | EUserProjectRoles; member_id: string }[];
 }
 
 export type TProjectIssuesSearchParams = {

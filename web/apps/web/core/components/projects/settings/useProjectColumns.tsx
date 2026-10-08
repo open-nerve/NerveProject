@@ -7,8 +7,6 @@
 import { useState } from "react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import type { MemberUser } from "@nerve/api-client";
-import type { TProjectMembership } from "@nerve/types";
 import { renderFormattedDate } from "@nerve/utils";
 // components
 import { MemberHeaderColumn } from "@/components/project/member-header-column";
@@ -16,11 +14,8 @@ import { AccountTypeColumn, NameColumn } from "@/components/project/settings/mem
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
+import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
 import type { IMemberFilters } from "@/store/member/utils";
-
-export interface RowData extends Pick<TProjectMembership, "original_role" | "created_at"> {
-  member: MemberUser;
-}
 
 type TUseProjectColumnsProps = {
   projectId: string;
@@ -30,7 +25,7 @@ type TUseProjectColumnsProps = {
 export const useProjectColumns = (props: TUseProjectColumnsProps) => {
   const { projectId, workspaceSlug } = props;
   // states
-  const [removeMemberModal, setRemoveMemberModal] = useState<RowData | null>(null);
+  const [removeMemberModal, setRemoveMemberModal] = useState<IProjectMemberDetails | null>(null);
 
   // store hooks
   const { data: currentUser } = useUser();
@@ -64,7 +59,7 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) => (
+      tdRender: (rowData: IProjectMemberDetails) => (
         <NameColumn
           rowData={rowData}
           workspaceSlug={workspaceSlug}
@@ -84,7 +79,7 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) => <div className="w-32">{rowData.member.display_name}</div>,
+      tdRender: (rowData: IProjectMemberDetails) => <div className="w-32">{rowData.member.display_name}</div>,
     },
     {
       key: "Email",
@@ -96,7 +91,7 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) => <div className="w-48 text-secondary">{rowData.member.email}</div>,
+      tdRender: (rowData: IProjectMemberDetails) => <div className="w-48 text-secondary">{rowData.member.email}</div>,
     },
     {
       key: "Account Type",
@@ -108,7 +103,7 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) => (
+      tdRender: (rowData: IProjectMemberDetails) => (
         <AccountTypeColumn
           rowData={rowData}
           currentProjectRole={currentProjectRole}
@@ -127,7 +122,7 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) => <div>{renderFormattedDate(rowData.created_at)}</div>,
+      tdRender: (rowData: IProjectMemberDetails) => <div>{renderFormattedDate(rowData.created_at)}</div>,
     },
   ];
   return {

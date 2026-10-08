@@ -6,8 +6,7 @@
 
 // Types and utilities for member filtering
 import type { EUserPermissions, TMemberOrderByOptions } from "@nerve/constants";
-import type { MemberUser } from "@nerve/api-client";
-import type { TProjectMembership } from "@nerve/types";
+import type { MemberUser, ProjectMember } from "@nerve/api-client";
 
 export interface IMemberFilters {
   order_by?: TMemberOrderByOptions;
@@ -66,13 +65,10 @@ const getMemberSortKey = (
 };
 
 // Filter functions
-const filterProjectMembersByRole = (members: TProjectMembership[], roleFilters: string[]): TProjectMembership[] => {
+const filterProjectMembersByRole = (members: ProjectMember[], roleFilters: string[]): ProjectMember[] => {
   if (roleFilters.length === 0) return members;
 
-  return members.filter((member) => {
-    const memberRole = String(member.role ?? member.original_role ?? "");
-    return roleFilters.includes(memberRole);
-  });
+  return members.filter((member) => roleFilters.includes(String(member.role)));
 };
 
 const filterWorkspaceMembersByRole = <T extends { role: string | EUserPermissions; is_active?: boolean }>(
@@ -152,11 +148,11 @@ const sortMembers = <T>(
 
 // Specific implementations using the unified functions
 export const sortProjectMembers = (
-  members: TProjectMembership[],
+  members: ProjectMember[],
   memberDetailsMap: Record<string, MemberUser>,
-  getMemberKey: (member: TProjectMembership) => string,
+  getMemberKey: (member: ProjectMember) => string,
   filters?: IMemberFilters
-): TProjectMembership[] => {
+): ProjectMember[] => {
   // Apply role filtering first
   const filteredMembers =
     filters?.roles && filters.roles.length > 0 ? filterProjectMembersByRole(members, filters.roles) : members;
@@ -169,7 +165,7 @@ export const sortProjectMembers = (
     filteredMembers,
     memberDetailsMap,
     getMemberKey,
-    (member) => String(member.role ?? member.original_role ?? ""),
+    (member) => String(member.role),
     (member) => member.created_at,
     filters.order_by
   );

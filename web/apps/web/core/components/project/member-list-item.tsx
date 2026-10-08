@@ -61,7 +61,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
           });
         });
     } else
-      await removeMemberFromProject(workspaceSlug, projectId, memberId).catch((err) =>
+      await removeMemberFromProject(projectId, memberId).catch((err) =>
         setToast({
           type: TOAST_TYPE.ERROR,
           title: "You can't remove the member from this project yet.",
@@ -83,7 +83,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
       )}
       <Table
         columns={columns}
-        data={(memberDetails?.filter((member): member is IProjectMemberDetails => member !== null) ?? []) as any}
+        data={memberDetails.filter((member): member is IProjectMemberDetails => member !== null)}
         keyExtractor={(rowData) => rowData?.member.id ?? ""}
         tHeadClassName="border-b border-subtle"
         thClassName="text-left font-medium divide-x-0 text-placeholder"

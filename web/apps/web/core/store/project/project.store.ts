@@ -71,6 +71,7 @@ export interface IProjectStore {
   joinProject: (projectId: string) => Promise<Project>;
   leaveProject: (project: ProjectRef) => Promise<void>;
   updateProjectSortOrder: (project: ProjectRef, droppedOnId: string | undefined, dropAtEnd: boolean) => Promise<void>;
+  confirmProject: (project: ProjectRef, change: Change<Project>) => void;
 }
 
 /**
@@ -301,11 +302,20 @@ export class ProjectStore implements IProjectStore {
       const sortOrder = placeBetween(joined[at - 1]?.sort_order, joined[at]?.sort_order, SIDEBAR_STEP);
       if (sortOrder === undefined) return;
       const { sort_order } = await this.preferences.update(project.id, { sort_order: sortOrder });
-      const placed: Change<Project[]> = (list) =>
-        list.map((held) => (held.id === project.id ? { ...held, sort_order } : held));
-      this.unarchived.confirm(project.workspace_id, placed);
-      this.details.confirm(project.id, (held) => held && { ...held, sort_order });
+      this.confirmProject(project, (held) => ({ ...held, sort_order }));
     });
+
+  /**
+   * @description a change nerve confirmed to what the caller sees of a project, by another store (its members, his
+   * role in it) or this one: it is made wherever the store shows the project, and on the answers of the fetches out
+   * (reconciled.ts)
+   */
+  confirmProject = (project: ProjectRef, change: Change<Project>): void => {
+    const inPlace: Change<Project[]> = (list) => list.map((held) => (held.id === project.id ? change(held) : held));
+    this.unarchived.confirm(project.workspace_id, inPlace);
+    this.archived.confirm(project.workspace_id, inPlace);
+    this.details.confirm(project.id, (held) => held && change(held));
+  };
 
   /** The workspace's projects the caller is a member of, not archived, by their place in his sidebar. */
   private joinedIn(workspaceId: string | undefined): Project[] {

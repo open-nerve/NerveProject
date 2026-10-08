@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 import type { ComponentType, SVGProps } from "react";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
@@ -15,7 +14,6 @@ import type { MemberDropdownProps } from "./types";
 
 type TMemberDropdownProps = {
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
-  memberIds?: string[];
   onClose?: () => void;
   optionsClassName?: string;
   projectId?: string;
@@ -23,9 +21,7 @@ type TMemberDropdownProps = {
 } & MemberDropdownProps;
 
 export const MemberDropdown = observer(function MemberDropdown(props: TMemberDropdownProps) {
-  const { memberIds: propsMemberIds, projectId } = props;
-  // router params
-  const { workspaceSlug } = useParams();
+  const { projectId } = props;
   // store hooks
   const {
     getUserDetails,
@@ -33,14 +29,10 @@ export const MemberDropdown = observer(function MemberDropdown(props: TMemberDro
     workspace: { workspaceMemberIds },
   } = useMember();
 
-  const memberIds = propsMemberIds
-    ? propsMemberIds
-    : projectId
-      ? getProjectMemberIds(projectId, false)
-      : workspaceMemberIds;
+  const memberIds = projectId ? getProjectMemberIds(projectId, false) : workspaceMemberIds;
 
   const onDropdownOpen = () => {
-    if (!memberIds && projectId && workspaceSlug) fetchProjectMembers(workspaceSlug, projectId);
+    if (!memberIds && projectId) fetchProjectMembers(projectId);
   };
 
   return (

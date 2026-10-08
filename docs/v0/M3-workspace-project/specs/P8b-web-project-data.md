@@ -78,7 +78,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - `ProjectMembersService(api)`：`list`、`add`（`ProjectMembersAdd`，回答是加入的成员关系）、`update`、`remove`；旧的 `project-member.service.ts` 删除。
 - `ProjectMemberStore(memberRoot: Pick<IMemberRootStore, "memberMap">, rootStore, api)`（重写）：每个项目的成员关系按成员的账户 id 存，项目按它的 id 存（`ReconciledByKey`）；项目 store 不再给出这个项目时什么都不给。`projectMemberIds`、`getProjectMemberDetails(userId, projectId)`（`IProjectMemberDetails = ProjectMember & { member: MemberUser }`，公开资料来自工作区成员）、`getProjectMemberIds(projectId, includeGuestUsers)`（调用者在最前，其余按显示名）、`getFilteredProjectMemberDetails`；`fetchProjectMembers(projectId)`；修改经 `changes`、写入回答：`bulkAddMembersToProject`、`updateMemberRole`、`removeMemberFromProject`；store 没有列出这个人时不问 nerve、直接失败。修改改到的项目一侧（`member_ids`、调用者自己的 `member_role`）经 `ProjectStore.confirmProject` 写到项目 store 显示它的每一处，也重放到取数在外的回答上。Plane 的乐观修改和回滚删除。
 - `TProjectMembership`、`IProjectBulkAddFormData`、`RowData` 删除；成员行直接用 `IProjectMemberDetails`，角色是 `ProjectMember.role`；加成员的表单值是 `ProjectMembersAdd`。成员下拉框没有调用方传的 `memberIds` 删除（7.9）。关键词：项目的 `members/leave/`（Task 4）放宽到项目的 `members/`，删除的旧成员 service 的四个方法都命中（第 3 节第 7 条）。
-- 测试：`project-member.store.test.ts` 16 个（`projectTab` 的两个工作区）：成员 4 个（列出，连同公开资料；离开的项目不给；拒绝；会话已换）；修改：加入、改角色（连同调用者自己的角色；回答的 `created_at` 与列表的不同）、移出，拒绝的 `it.each` 3 行，没有列出的成员的 `it.each` 2 行，排队，取数不等修改；两种交错（成员关系按成员存，"已列出的又被加入"不会列两次，文件里说明）。
+- 测试：`project-member.store.test.ts` 21 个（`projectTab` 的两个工作区）：成员 4 个（列出，连同公开资料；离开的项目不给；拒绝；会话已换）；修改：加入、改角色（连同调用者自己的角色；回答的 `created_at` 与列表的不同）、移出，调用者另一个工作区的项目（加入的成员只到那个项目，地址的项目不变；P8a 的第三条教训），已归档的项目（移出之后已归档的列表中的项目没有他），拒绝的 `it.each` 3 行，没有列出的成员的 `it.each` 2 行，从已列出成员的 store 开始：列表中没有的成员、调用者离开的项目（P8a 的第一条教训），排队，取数不等修改；三种交错（成员关系按成员存，"已列出的又被加入"不会列两次，文件里说明；项目的列表在外时加入成员，nerve 读在加入之前、之后两行，项目的 `member_ids` 都只有他一次：Task 2 记下 Plane 的批量加入把新的 id 加两次）。
 
 ### 2.7 M7 的部分先走；标签的页面清零（Task 7；3.1、3.16、3.17、7.3）
 
@@ -186,7 +186,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 21. **裁定 D10（接受）：页面上看得到的不同**（W17；P9–P11 照第 2 节的故事改页面）：
     - 项目一侧现在能显示：`7390e012` 上项目的列表、读和子资源都是 404（附录 A.5），项目页和侧边栏是空的、项目的页面打不开。
     - 封面只显示，没有上传和预设的选择，没有封面的显示默认图；新建项目不再随机给封面（第 3 条）。卡片没有收藏的星标，创建项目没有"加入收藏"；侧边栏的"收集箱"没有数字；列表视图中工作项的键宽按一位数字算。
-    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。归档、恢复的确认弹窗中，"归档"或"恢复"按钮不再有 `tabIndex={1}`：Tab 键按文档的顺序先到"取消"，原来先到它（Task 3 清 oxlint 警告时改的，评审 m4）；加入项目的弹窗中的"加入项目"按钮同样（Task 4）。
+    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。归档、恢复的确认弹窗中，"归档"或"恢复"按钮不再有 `tabIndex={1}`：Tab 键按文档的顺序先到"取消"，原来先到它（Task 3 清 oxlint 警告时改的，评审 m4）；加入项目的弹窗中的"加入项目"按钮同样（Task 4）。项目成员页打开时，搜索框不再取得焦点（原来的 `autoFocus`，Task 6 清 oxlint 警告时去掉的）。
     - 项目、标签栏、成员角色、状态和标签的拖动在 nerve 回答之后才显示（第 12 条）；侧边栏项目的顺序是 nerve 回答的位置。连续两次拖动或两次标签栏的修改，第二次从第一次的回答算（第 15 条）；标签放到第一个之前的位置是它减 10000（原来是它的一半）。项目页在已归档的列表也到了之后才显示。
     - 加入项目之后显示 nerve 回答的项目；离开之后它立即从列表中消失（公开项目在下一次取数时显示为不是成员）。
     - 项目包装层：看得到、不是成员（公开项目）→ 加入的界面；找不到（不存在、看不到的私密项目、删除、离开、在另一个工作区的地址下打开）→"找不到项目"；nerve 连不上 → `SessionUnavailable`，带重取；Plane 的"无权访问"界面没有了。不是成员的人不发任何子资源的请求（原来发出四个、都是 403）。
@@ -455,7 +455,7 @@ plan 共 13,308 行：Task 1 之前（约束、一次性脚本、文件结构）
 | 11 关键词的收尾、死行、文档 | 268 | 209 | 5 |
 
 - **Phase 的大小**（brief 的检查，写 plan 之前做；修订之后重量）：11 个 Task，在约 16 个之内；修订前 Task 3 的 1,559 行比约 1,500 行多 4%、Task 8 是 1,504 行（裁定 D2 接受）；修订之后 Task 3 是 1,875 行、Task 8 是 1,726 行，Task 10 随 S2 从 604 行到 873 行（D9 估计约 860 行），Task 11 从 485 行到 268 行（第 3 节第 2 条，请再裁定）。
-- **文件的行数**（约 400 行）：P8b 写或重写的文件中最长的是 `state.store.test.ts` 369 行、`project.store.ts` 332 行、`label.store.test.ts` 331 行、`project-member.store.test.ts` 307 行、S2 292 行、`project.store.test.ts` 257 行、`project.store.changes.test.ts` 255 行（第 3 节第 9 条）；P8a 的 `root.store.test.ts` 加了一个测试，286 行。只为使用方改到的 Plane 文件，原来超过 400 行的都没有变长，除了第 3 节第 8 条的三个（808 → 812、465 → 466、414 → 415）；`tools/keywords.json` 2,189 → 2,208（规则的样例，A.11）。其余手改的 Plane 文件都变短了（例如 `project/form.tsx` 462 → 411、`projects-list-item.tsx` 476 → 460、`project-inbox.store.ts` 524 → 511）。
+- **文件的行数**（约 400 行）：P8b 写或重写的文件中最长的是 `state.store.test.ts` 369 行、`project-member.store.test.ts` 358 行（Task 6 加了五个测试）、`project.store.ts` 332 行、`label.store.test.ts` 331 行、S2 292 行、`project.store.test.ts` 257 行、`project.store.changes.test.ts` 255 行（第 3 节第 9 条）；P8a 的 `root.store.test.ts` 加了一个测试，286 行。只为使用方改到的 Plane 文件，原来超过 400 行的都没有变长，除了第 3 节第 8 条的三个（808 → 812、465 → 466、414 → 415）；`tools/keywords.json` 2,189 → 2,208（规则的样例，A.11）。其余手改的 Plane 文件都变短了（例如 `project/form.tsx` 462 → 411、`projects-list-item.tsx` 476 → 460、`project-inbox.store.ts` 524 → 511）。
 
 ### A.11 关键词规则
 

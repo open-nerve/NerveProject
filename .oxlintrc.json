@@ -115,6 +115,7 @@
       "files": [
         "web/apps/web/core/store/workspace/**",
         "web/apps/web/core/store/member/workspace/**",
+        "web/apps/web/core/store/member/project/**",
         "web/apps/web/core/components/workspace/settings/**",
         "web/apps/web/core/components/profile/use-profile-member.ts",
         "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts",
@@ -154,6 +155,7 @@
       "files": [
         "web/apps/web/core/store/workspace/**",
         "web/apps/web/core/store/member/workspace/**",
+        "web/apps/web/core/store/member/project/**",
         "web/apps/web/core/store/user/permissions.store.ts",
         "web/apps/web/core/store/user/permissions.store.test.ts",
         "web/apps/web/core/services/workspace/**",
@@ -189,6 +191,7 @@
         "web/apps/web/core/components/profile/use-profile-member.test.ts",
         "web/apps/web/core/services/project/projects.service.ts",
         "web/apps/web/core/services/project/project-preferences.service.ts",
+        "web/apps/web/core/services/project/project-members.service.ts",
         "web/apps/web/core/store/project/**",
         "web/apps/web/core/hooks/store/use-project-preferences.ts",
         "web/apps/web/core/components/navigation/use-tab-preferences.ts",

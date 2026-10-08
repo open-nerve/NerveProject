@@ -12,28 +12,24 @@ import { Disclosure } from "@headlessui/react";
 // nerve imports
 import { ROLE, EUserPermissions } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { MemberUser, User } from "@nerve/api-client";
-import type { EUserProjectRoles, TProjectMembership } from "@nerve/types";
+import type { ProjectRole, User } from "@nerve/api-client";
 import { CustomMenu, CustomSelect } from "@nerve/ui";
 import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-
-interface RowData extends Pick<TProjectMembership, "original_role" | "created_at"> {
-  member: MemberUser;
-}
+import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
 
 type NameProps = {
-  rowData: RowData;
+  rowData: IProjectMemberDetails;
   workspaceSlug: string;
   isAdmin: boolean;
   currentUser: User | undefined;
-  setRemoveMemberModal: (rowData: RowData) => void;
+  setRemoveMemberModal: (rowData: IProjectMemberDetails) => void;
 };
 
 type AccountTypeProps = {
-  rowData: RowData;
+  rowData: IProjectMemberDetails;
   currentProjectRole: EUserPermissions | undefined;
   workspaceSlug: string;
   projectId: string;
@@ -106,7 +102,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
     formState: { errors },
   } = useForm();
   // derived values
-  const roleLabel = ROLE[rowData.original_role ?? EUserPermissions.GUEST];
+  const roleLabel = ROLE[rowData.role];
   const isCurrentUser = currentUser?.id === rowData.member.id;
   const isRowDataWorkspaceAdmin = [EUserPermissions.ADMIN].includes(
     Number(getWorkspaceMemberDetails(rowData.member.id)?.role ?? EUserPermissions.GUEST)
@@ -148,10 +144,10 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
           rules={{ required: "Role is required." }}
           render={() => (
             <CustomSelect
-              value={rowData.original_role}
-              onChange={async (value: EUserProjectRoles) => {
+              value={rowData.role}
+              onChange={async (value: ProjectRole) => {
                 if (!workspaceSlug) return;
-                await updateMemberRole(workspaceSlug, projectId, rowData.member.id, value).catch((err) => {
+                await updateMemberRole(projectId, rowData.member.id, value).catch((err) => {
                   console.log(err, "err");
                   const error = err.error;
                   const errorString = Array.isArray(error) ? error[0] : error;

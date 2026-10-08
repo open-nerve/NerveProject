@@ -8,6 +8,7 @@ import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 // nerve imports
+import type { ProjectMembersAdd } from "@nerve/api-client";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { ROLE, EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -24,19 +25,11 @@ import { useUserPermissions } from "@/hooks/store/user";
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
   projectId: string;
   workspaceSlug: string;
 };
 
-type member = {
-  role: EUserPermissions;
-  member_id: string;
-};
-
-type FormValues = {
-  members: member[];
-};
+type FormValues = ProjectMembersAdd;
 
 const defaultValues: FormValues = {
   members: [
@@ -48,7 +41,7 @@ const defaultValues: FormValues = {
 };
 
 export const AddProjectMembersModal = observer(function AddProjectMembersModal(props: Props) {
-  const { isOpen, onClose, onSuccess, projectId, workspaceSlug } = props;
+  const { isOpen, onClose, projectId, workspaceSlug } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
@@ -72,20 +65,15 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
   });
   // derived values
   const currentProjectRole = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const nonProjectMemberIds = workspaceMemberIds?.filter((userId) => {
-    const projectMemberDetails = getProjectMemberDetails(userId, projectId);
-    const isProjectMember = projectMemberDetails?.member.id && projectMemberDetails?.original_role;
-    return !isProjectMember;
-  });
+  const nonProjectMemberIds = workspaceMemberIds?.filter(
+    (userId) => getProjectMemberDetails(userId, projectId) === null
+  );
 
   const onSubmit = async (formData: FormValues) => {
     if (!workspaceSlug || !projectId || isSubmitting) return;
 
-    const payload = { ...formData };
-
     try {
-      await bulkAddMembersToProject(workspaceSlug, projectId, payload);
-      if (onSuccess) onSuccess();
+      await bulkAddMembersToProject(projectId, formData);
       onClose();
       setToast({
         title: "Success!",
@@ -126,12 +114,12 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     }
   }, [fields, append]);
 
-  const options = nonProjectMemberIds
-    ?.map((userId) => {
-      const memberDetails = getWorkspaceMemberDetails(userId);
+  const options = nonProjectMemberIds?.flatMap((userId) => {
+    const memberDetails = getWorkspaceMemberDetails(userId);
 
-      if (!memberDetails?.member) return;
-      return {
+    if (!memberDetails?.member) return [];
+    return [
+      {
         value: `${memberDetails?.member.id}`,
         query: `${memberDetails?.member.first_name} ${
           memberDetails?.member.last_name
@@ -152,15 +140,9 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
             </div>
           </div>
         ),
-      };
-    })
-    .filter((option) => !!option) as
-    | {
-        value: string;
-        query: string;
-        content: React.ReactNode;
-      }[]
-    | undefined;
+      },
+    ];
+  });
 
   const checkCurrentOptionWorkspaceRole = (value: string) => {
     const currentMemberWorkspaceRole = getWorkspaceMemberDetails(value)?.role;
@@ -220,13 +202,7 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                           onChange={(val: string) => {
                             onChange(val);
                             // Update the role to the workspace role when member ID changes
-                            const workspaceMemberDetails = getWorkspaceMemberDetails(val);
-                            const workspaceRole = workspaceMemberDetails?.role ?? 5;
-                            const newValue = ROLE[workspaceRole].toUpperCase();
-                            setValue(
-                              `members.${index}.role`,
-                              EUserPermissions[newValue as keyof typeof EUserPermissions]
-                            );
+                            setValue(`members.${index}.role`, getWorkspaceMemberDetails(val)?.role ?? 5);
                           }}
                           options={options}
                           optionsClassName="w-48"

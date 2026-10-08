@@ -7,8 +7,7 @@
 import { action, makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
-import type { MemberUser } from "@nerve/api-client";
-import type { TProjectMembership } from "@nerve/types";
+import type { MemberUser, ProjectMember } from "@nerve/api-client";
 // local imports
 import type { IMemberFilters } from "../utils";
 import { sortProjectMembers } from "../utils";
@@ -18,9 +17,9 @@ export interface IProjectMemberFiltersStore {
   filtersMap: Record<string, IMemberFilters>;
   // computed actions
   getFilteredMemberIds: (
-    members: TProjectMembership[],
+    members: ProjectMember[],
     memberDetailsMap: Record<string, MemberUser>,
-    getMemberKey: (member: TProjectMembership) => string,
+    getMemberKey: (member: ProjectMember) => string,
     projectId: string
   ) => string[];
   // actions
@@ -50,9 +49,9 @@ export class ProjectMemberFiltersStore implements IProjectMemberFiltersStore {
    */
   getFilteredMemberIds = computedFn(
     (
-      members: TProjectMembership[],
+      members: ProjectMember[],
       memberDetailsMap: Record<string, MemberUser>,
-      getMemberKey: (member: TProjectMembership) => string,
+      getMemberKey: (member: ProjectMember) => string,
       projectId: string
     ): string[] => {
       if (!members || members.length === 0) return [];

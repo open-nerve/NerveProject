@@ -41,7 +41,7 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
   const searchedProjectMembers = (projectMemberIds ?? []).filter((userId) => {
     const memberDetails = projectId ? getFilteredProjectMemberDetails(userId, projectId) : null;
 
-    if (!memberDetails?.member || !memberDetails.original_role) return false;
+    if (!memberDetails) return false;
 
     const fullName = `${memberDetails?.member.first_name} ${memberDetails?.member.last_name}`.toLowerCase();
     const displayName = memberDetails?.member.display_name.toLowerCase();
@@ -90,7 +90,6 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
               className="w-full max-w-[234px] border-none bg-transparent text-13 placeholder:text-placeholder focus:outline-none"
               placeholder="Search"
               value={searchQuery}
-              autoFocus
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
