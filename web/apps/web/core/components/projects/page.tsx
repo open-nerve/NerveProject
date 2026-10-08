@@ -5,21 +5,15 @@
  */
 
 import { observer } from "mobx-react";
+import { useParams } from "react-router";
 // components
 import { ProjectRoot } from "@/components/project/root";
-// hooks
-import { useProject } from "@/hooks/store/use-project";
-import { useWorkspace } from "@/hooks/store/use-workspace";
-// lib
-import { useSessionSWR } from "@/lib/use-session-swr";
+// local imports
+import { useArchivedProjectsFetch } from "./use-archived-projects-fetch";
 
 export const ProjectPageRoot = observer(function ProjectPageRoot() {
-  // store
-  const { currentWorkspace } = useWorkspace();
-  const { fetchArchivedProjects } = useProject();
-  useSessionSWR(currentWorkspace && ["ARCHIVED_PROJECTS", currentWorkspace.id, currentWorkspace.slug], (id, slug) =>
-    fetchArchivedProjects({ id, slug })
-  );
+  const { workspaceSlug } = useParams();
+  useArchivedProjectsFetch(workspaceSlug);
 
   return <ProjectRoot />;
 });

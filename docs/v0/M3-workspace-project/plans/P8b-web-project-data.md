@@ -4665,6 +4665,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `t3-ps-archive-read-stale` | 归档的项目，它自己的读仍是归档之前的 | `project.store.test.ts`、`project.store.changes.test.ts` | vitest |
 | `t3-ps-archived-bypass` | 已归档的列表只按回答写：它在外时确认的修改丢失 | `project.store.test.ts`、`project.store.changes.test.ts` | vitest |
 | `t3-ps-read-bypass` | 项目自己的读只按回答写：它在外时确认的修改丢失 | `project.store.test.ts`、`project.store.changes.test.ts` | vitest |
+| `t3-page-no-archived` | 项目页的 hook 不取已归档的列表（修正轮，裁定 T3-a） | `use-archived-projects-fetch.test.ts` | vitest |
+| `t3-page-unarchived` | 项目页的 hook 取的是未归档的列表（修正轮，裁定 T3-a） | `use-archived-projects-fetch.test.ts` | vitest |
+| `t3-page-unlisted` | 调用者的列表还没有地址的工作区，项目页就按地址取它的已归档项目（修正轮，裁定 T3-a） | `use-archived-projects-fetch.test.ts` | vitest |
+| `t3-ps-sort-read` | 侧边栏的移动不写项目自己的读（修正轮，裁定 T3-b） | `project.store.test.ts`、`project.store.changes.test.ts` | vitest |
+| `t3-ps-read-refusal-forgets` | 项目的读再取被拒绝时丢掉已有的读（修正轮，裁定 T3-b） | `project.store.test.ts`、`project.store.changes.test.ts` | vitest |
+| `t3-ps-archive-twice` | 归档的回答追加到已归档的列表，不是 `upserted`：重取的列表已有它时列两次（修正轮，裁定 T3-b） | `project.store.test.ts`、`project.store.changes.test.ts` | vitest |
+| `t3-ps-restore-twice` | 恢复的回答追加到未归档的列表，不是 `upserted`：列表已有它时列两次（修正轮，裁定 T3-b） | `project.store.test.ts`、`project.store.changes.test.ts` | vitest |
 
 ---
 
@@ -12243,12 +12250,16 @@ import type { Profile, Project, Workspace, WorkspaceMember } from "@nerve/api-cl
 export function useProject() {
   return {
     fetchProjects: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the projects of ${named(workspace)}`),
+    fetchArchivedProjects: (workspace: Pick<Workspace, "id" | "slug">) =>
+      fetching(`the archived projects of ${named(workspace)}`),
 ````
 ````new web/apps/web/core/hooks/store/fake-store-hooks.ts
 export function useProject() {
   return {
     getProjectById: (projectId: string) => stores.projects.find((project) => project.id === projectId),
     fetchProjects: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the projects of ${named(workspace)}`),
+    fetchArchivedProjects: (workspace: Pick<Workspace, "id" | "slug">) =>
+      fetching(`the archived projects of ${named(workspace)}`),
     fetchProject: (projectId: string) => fetching(`the project ${projectId}`),
   };
 }

@@ -61,6 +61,8 @@ export function useMember() {
 export function useProject() {
   return {
     fetchProjects: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the projects of ${named(workspace)}`),
+    fetchArchivedProjects: (workspace: Pick<Workspace, "id" | "slug">) =>
+      fetching(`the archived projects of ${named(workspace)}`),
   };
 }
 

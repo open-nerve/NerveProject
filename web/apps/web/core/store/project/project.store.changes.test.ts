@@ -132,12 +132,14 @@ describe("ProjectStore, the changes", () => {
 
   it("moves a project in the caller's sidebar before the one he dropped it on, to the place nerve gives it", async () => {
     const { nerve, store } = await loaded();
+    await loadProject(nerve, store, docs);
     // dropped on web: halfway between docs, before it, and web; nerve's answer places docs after web
     const moving = () => store.updateProjectSortOrder(docs, web.id, false);
     const moved = await sent(nerve, moving, ["PATCH", placeOf(docs)], json(200, preferencesOf({ sort_order: 2500 })));
-    expect(nerve.calls[0]?.body).toEqual({ sort_order: 1500 });
+    expect(nerve.calls[1]?.body).toEqual({ sort_order: 1500 });
     expect(moved.error).toBeUndefined();
     expect(store.joinedProjectIds).toEqual(ids([web, docs]));
+    // its own read's place
     expect(store.getProjectById(docs.id)?.sort_order).toBe(2500);
   });
 
@@ -185,11 +187,12 @@ describe("ProjectStore, the changes", () => {
     expect([web, ops, docs].map((project) => store.getProjectById(project.id))).toEqual([web, ops, docs]);
   });
 
-  it("sends each change once nerve has answered the one before it, refused or not: two moves in a row among them", async () => {
+  it("sends each change once nerve has answered the one before it, refused or not", async () => {
     const { nerve, store } = await loaded();
     const sending = changes.map(({ send }) => track(send(store)));
-    // the first move is refused; the second is sent after it, as each change after the one before
-    await inTurn(nerve, 0, ["POST", LIST], json(201, projectOf("API", acme.id)));
+    // nerve refuses some (the problems below); the change after each is sent all the same, once it has answered
+    const api = projectOf("API", acme.id);
+    await inTurn(nerve, 0, ["POST", LIST], json(201, api));
     await inTurn(nerve, 1, ["PATCH", `/api/v0/projects/${web.id}`], json(200, renamed));
     await inTurn(nerve, 2, ["DELETE", `/api/v0/projects/${web.id}`], problem(403, "forbidden"));
     await inTurn(nerve, 3, ["POST", `/api/v0/projects/${web.id}/archive`], problem(403, "forbidden"));
@@ -198,5 +201,7 @@ describe("ProjectStore, the changes", () => {
     await until(() => sending.every((change) => change.settled), "the last change");
     expect(sending.map((change) => change.error === undefined)).toEqual([true, true, false, false, true, true]);
     expect(store.getProjectById(web.id)).toEqual({ ...renamed, sort_order: 500 });
+    // the unarchiving's answer is in its place, once
+    expect(store.workspaceProjectIds).toEqual(ids([api, web, ops, docs]));
   });
 });

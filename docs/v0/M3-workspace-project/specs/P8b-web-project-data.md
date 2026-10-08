@@ -53,9 +53,10 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - `ProjectRootStore(root, api)` 先建筛选 store 再交给 `ProjectStore`；`RootStore` 传这一代的客户端。
 - `core/lib/place-between.ts`：`placeBetween(before, after, step)`，放在两项之间的位置（两邻之间取中点，第一个之前取它减 `step`，最后一个之后取它加 `step`，两边都没有时不给）；侧边栏的项目、状态（Task 8）、标签（Task 9）的移动共用它（第 3 节第 15 条）。两个侧边栏把拖放的目标交给 store，`@nerve/utils` 的 `orderJoinedProjects` 删除。
 - 关键词：`plane-workspace-urls` 加上 Task 3 删掉的归档地址（第 3 节第 7 条）。
-- 挂载时：`useWorkspaceFetch` 在列表中有这个工作区之后取 `["PROJECTS", id, slug]`；项目页（`components/projects/page.tsx`）取 `["ARCHIVED_PROJECTS", id, slug]`。工作区包装层的 `fetchPartialProjects` 的 `useSWR` 和键删除。
-- 测试的共用部分（裁定 D8）：`fake-projects.ts` 的记录 `projectOf(identifier, workspaceId, fields?)`、`preferencesOf(fields?)`，加载 `loadProjects`、`loadArchivedProjects`、`loadProject`（经 P8a 的 `answered`，核对方法和路径），和 `projectTab(here, elsewhere)`：建好路由、工作区和项目的根 store，载入两个工作区（`acme` 和 `beta`）和它们的项目，停在 `here` 的第一个项目的地址上；之后的标签栏、成员、状态、标签的测试都用它，各有第二个工作区（Task 8、9 加 `stateOf`、`labelOf`）。四个 store 测试共用的 `sent()` 在 `core/store/fake-queue.ts`（P8a 的 `inTurn` 旁边）。`fake-store-hooks.ts` 加 `useProject()`。
-- 测试（按关注点两个文件，第 3 节第 9 条）：`project.store.test.ts` 最终 14 个（Task 3 写，Task 5 加）：列表和读 7 个（两份列表、项目自己的读和它被拒绝、列表被拒绝、离开的工作区什么都不给、同一个 slug 重建的工作区什么都不给（列表按工作区的 id）、会话已换：先加载，再把同一个客户端换成会话已换、重取、状态不变）和标识检查 1 个（回答和拒绝，Task 5）；取数与修改的交错 6 个（取数不等修改，回答的列表与加载的不同；重取中确认的创建、修改、删除各保留一次；已归档的列表重取中确认的归档、项目自己的读在外时确认的修改，各自不被较旧的回答盖掉（预检 PF-L4）；较旧的取数后到时答到列表、答到失败两行都不写）。`project.store.changes.test.ts` 最终 17 个（Task 3 写，Task 4 加）：修改 8 个（创建、修改、归档和恢复（恢复写 nerve 的回答，不是归档时的读）、删除和离开（已归档的那份也去掉；离开 Task 4）、加入（Task 4）、加入的已归档项目进已归档的列表（Task 4）、侧边栏的位置、两次连续的移动（第二次从第一次的回答算））、拒绝的 `it.each` 8 行、排队 1 个（含两次连续的移动）。`use-workspace-fetch.test.ts` 的取数测试加上项目列表（键和 fetcher 的参数）。
+- 挂载时：`useWorkspaceFetch` 在列表中有这个工作区之后取 `["PROJECTS", id, slug]`；项目页（`components/projects/page.tsx`）经 `useArchivedProjectsFetch(workspaceSlug)`（`components/projects/use-archived-projects-fetch.ts`，Task 3 的评审，裁定 T3-a：页面中的取数没有检查，删掉它或改取未归档的列表，项目页一直转圈而门禁都通过）在调用者的列表中有地址的工作区之后取 `["ARCHIVED_PROJECTS", id, slug]`。工作区包装层的 `fetchPartialProjects` 的 `useSWR` 和键删除。
+- `issue` 的项目、已归档两个 store 的 `fetchParentStats` 不再重取项目，同工作区、个人页的 store（`() => {}`，Task 3 的评审，裁定 T3-c）：工作项的修改不动项目的任何字段（原来动的 `next_work_item_sequence`、`intake_count` 已由 Task 1 删掉）；等着它的重取被拒绝时，`createIssue` 会在 nerve 已建好工作项之后失败，它又与包装层的读写同一个项目自己的读（预检 PF-L3）。
+- 测试的共用部分（裁定 D8）：`fake-projects.ts` 的记录 `projectOf(identifier, workspaceId, fields?)`、`preferencesOf(fields?)`，加载 `loadProjects`、`loadArchivedProjects`、`loadProject`（经 P8a 的 `answered`，核对方法和路径），和 `projectTab(here, elsewhere)`：建好路由、工作区和项目的根 store，载入两个工作区（`acme` 和 `beta`）和它们的项目，停在 `here` 的第一个项目的地址上；之后的标签栏、成员、状态、标签的测试都用它，各有第二个工作区（Task 8、9 加 `stateOf`、`labelOf`）。四个 store 测试共用的 `sent()` 在 `core/store/fake-queue.ts`（P8a 的 `inTurn` 旁边）。`fake-store-hooks.ts` 加 `useProject()`（`fetchProjects`、`fetchArchivedProjects`）。
+- 测试（按关注点两个文件，第 3 节第 9 条）：`project.store.test.ts` 最终 16 个（Task 3 写，Task 5 加）：列表和读 8 个（两份列表、项目自己的读和它被拒绝、项目自己的读再取时被拒绝而留着已有的读（从加载好的 store 开始，裁定 T3-b）、列表被拒绝、离开的工作区什么都不给、同一个 slug 重建的工作区什么都不给（列表按工作区的 id）、会话已换：先加载，再把同一个客户端换成会话已换、重取、状态不变）和标识检查 1 个（回答和拒绝，Task 5）；取数与修改的交错 7 个（取数不等修改，回答的列表与加载的不同；重取中确认的创建、修改、删除各保留一次；已归档的列表重取中确认的归档，重取读在归档之前、之后两行，都只列一次（裁定 T3-b）；项目自己的读在外时确认的修改不被较旧的回答盖掉（预检 PF-L4）；较旧的取数后到时答到列表、答到失败两行都不写）。`project.store.changes.test.ts` 最终 17 个（Task 3 写，Task 4 加）：修改 8 个（创建、修改、归档和恢复（恢复写 nerve 的回答，不是归档时的读）、删除和离开（已归档的那份也去掉；离开 Task 4）、加入（Task 4）、加入的已归档项目进已归档的列表（Task 4）、侧边栏的位置（项目自己的读也写回答的位置，裁定 T3-b）、两次连续的移动（第二次从第一次的回答算））、拒绝的 `it.each` 8 行、排队 1 个（每个修改在上一个有了回答之后才发出，被拒绝的是删除、归档（Task 4 加离开）；恢复的回答在列表中它的位置上只一次，裁定 T3-b）。`use-workspace-fetch.test.ts` 的取数测试加上项目列表（键和 fetcher 的参数）。`use-archived-projects-fetch.test.ts` 4 个（裁定 T3-a）：键和 fetcher 的参数（取调用者的第二个工作区，`beta`）；地址的工作区不是他的、他的列表还没到、地址没有工作区时不取。
 
 ### 2.4 加入、离开；权限 store 的项目一半（Task 4；3.4、7.3；M2 交接第 11 节；P14、P18）
 
@@ -128,7 +129,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 |---|---|---|---|
 | 工作区的项目（未归档） | `["PROJECTS", loginId, id, slug]` | 调用者的列表中有这个工作区 | `useWorkspaceFetch`（工作区的每一页） |
 | 工作区的状态 | `["WORKSPACE_STATES", loginId, id, slug]` | 同上 | `useWorkspaceFetch` |
-| 工作区的已归档项目 | `["ARCHIVED_PROJECTS", loginId, id, slug]` | 列表中有地址的工作区（`currentWorkspace`） | 项目页 `components/projects/page.tsx`（在工作区包装层之内） |
+| 工作区的已归档项目 | `["ARCHIVED_PROJECTS", loginId, id, slug]` | 调用者的列表中有地址的工作区 | `useArchivedProjectsFetch`（项目页 `components/projects/page.tsx`，在工作区包装层之内；裁定 T3-a） |
 | 项目的读 | `["PROJECT", loginId, projectId]` | 已登录，地址有项目 | `useProjectFetch`（项目的每一页） |
 | 调用者在项目里的标签栏 | `["PROJECT_PREFERENCES", loginId, projectId]` | nerve 的读说调用者是成员（`member_role` 不为 `null`），且项目 store 仍给出它 | `useProjectFetch` |
 | 项目的标签 | `["PROJECT_LABELS", loginId, projectId]` | 同上 | `useProjectFetch` |
@@ -184,13 +185,14 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 21. **裁定 D10（接受）：页面上看得到的不同**（W17；P9–P11 照第 2 节的故事改页面）：
     - 项目一侧现在能显示：`7390e012` 上项目的列表、读和子资源都是 404（附录 A.5），项目页和侧边栏是空的、项目的页面打不开。
     - 封面只显示，没有上传和预设的选择，没有封面的显示默认图；新建项目不再随机给封面（第 3 条）。卡片没有收藏的星标，创建项目没有"加入收藏"；侧边栏的"收集箱"没有数字；列表视图中工作项的键宽按一位数字算。
-    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。
+    - 扩展的项目侧边栏每次打开时搜索框都取得焦点（它一直挂载，关着时隐藏；原来的 `autoFocus` 只在挂载时起作用）；已归档项目的卡片上的"恢复"和"删除"是按钮，可以用键盘到达（原来是可点击的 `div`）。两处都是 Task 1 清 oxlint 警告时改的（7.9）。归档、恢复的确认弹窗中，"归档"或"恢复"按钮不再有 `tabIndex={1}`：Tab 键按文档的顺序先到"取消"，原来先到它（Task 3 清 oxlint 警告时改的，评审 m4）。
     - 项目、标签栏、成员角色、状态和标签的拖动在 nerve 回答之后才显示（第 12 条）；侧边栏项目的顺序是 nerve 回答的位置。连续两次拖动或两次标签栏的修改，第二次从第一次的回答算（第 15 条）；标签放到第一个之前的位置是它减 10000（原来是它的一半）。项目页在已归档的列表也到了之后才显示。
     - 加入项目之后显示 nerve 回答的项目；离开之后它立即从列表中消失（公开项目在下一次取数时显示为不是成员）。
     - 项目包装层：看得到、不是成员（公开项目）→ 加入的界面；找不到（不存在、看不到的私密项目、删除、离开、在另一个工作区的地址下打开）→"找不到项目"；nerve 连不上 → `SessionUnavailable`，带重取；Plane 的"无权访问"界面没有了。不是成员的人不发任何子资源的请求（原来发出四个、都是 403）。
     - 收集箱的工作项：未接受的不显示状态，创建弹窗没有状态一项；工作区级的工作项筛选没有标签一项，按标签分组只有"无"（第 6 条，M7）。
     - 被拒绝的标签移动和"移出分组"提示失败（原来什么都不提示）。对 store 没有列出的成员、没有的状态和标签，修改不发请求、直接失败。
     - 工作区的状态只在调用者的列表有这个工作区时取（原来对不是成员的工作区也按 slug 发出）；项目设置的成员默认值不再自己取项目（少一个重复的请求）。项目一侧的取数每次挂载都重取，聚焦时不取（P8a 的 F-1）。
+    - 项目的工作项列表和已归档工作项列表中，工作项的创建、修改、删除、归档之后不再重取项目（少一个请求；Task 3，裁定 T3-c）。
 
 **交接到 P8b 的事项的落点**（brief"Carried into P8b"）：
 
@@ -240,7 +242,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - **P9**：工作区的页面（P8a spec 第 5 节 P9 一行照录）。P8b 没有新加的。
 - **P10**：项目的页面（第 2 节的故事）；`ProjectAuthWrapper` 中已归档项目的界面（7.6：`archived_at` 有值；成员打开已归档的项目时包装层照常取四个子资源，nerve 对状态答空列表、对标签照常列出，P7b）；删除项目之后的 `sessionGuard()`（Codex 4.3 第 2 条）；项目成员设置的角色下拉框发出字符串的角色（P8a spec 第 3 节第 12 条，`member-columns.tsx` 仍以 `Object.entries(…)` 的键作值）；下拉框、复制到剪贴板、表情选择器（7.7）；项目创建弹窗的页面版本（封面一步已在 Task 1 删除，第 3 节第 3 条；设计 12 节 P10 的任务 3 已照裁定 D3 改）。
 - **P11**：只经机械步骤到达的 38 个文件中 5 个的 14 条警告（附录 A.8；其中 `use-work-item-filters-config.tsx` 的 3 条已在 P8a 的清单中）；`--rows M3` 剩下的行（附录 A.9）；核对 M3 加的关键词例外只剩 `until: "M4"` 的一条。
-- **M4**：项目的 `user-properties`（工作项筛选，旧 `ProjectService` 的两个方法和关键词的例外）；`projectIssuesSearch` 和它的三个模块级实例（与 M6、M7 共用）；工作项页面中按需的取数照 7.1 按权限启用：状态、成员、标签的下拉框打开时取（`dropdowns/state/dropdown.tsx`、`dropdowns/member/dropdown.tsx`、`issues/select/dropdown.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`issue-detail/label/select/label-select.tsx`），子工作项的 store 取别的项目的状态、成员、标签（`sub_issues.store.ts`，调用者可能不是那些项目的成员）；工作项的键宽读回 `next_work_item_sequence`（Task 1）；`TIssueIdentifierProps.projectIdentifier` 可以是 `undefined`（Task 3：项目未到时）；`issue` 的两个 store 的 `fetchParentStats` 不再重取项目（它与包装层的读写同一个项目自己的读，后到的会盖过包装层的，预检 PF-L3；项目由包装层读）；P8a 交给 M4 的各项照旧。
+- **M4**：项目的 `user-properties`（工作项筛选，旧 `ProjectService` 的两个方法和关键词的例外）；`projectIssuesSearch` 和它的三个模块级实例（与 M6、M7 共用）；工作项页面中按需的取数照 7.1 按权限启用：状态、成员、标签的下拉框打开时取（`dropdowns/state/dropdown.tsx`、`dropdowns/member/dropdown.tsx`、`issues/select/dropdown.tsx`、`issue-layouts/properties/label-dropdown.tsx`、`issue-detail/label/select/label-select.tsx`），子工作项的 store 取别的项目的状态、成员、标签（`sub_issues.store.ts`，调用者可能不是那些项目的成员）；工作项的键宽读回 `next_work_item_sequence`（Task 1）；`TIssueIdentifierProps.projectIdentifier` 可以是 `undefined`（Task 3：项目未到时）；P8a 交给 M4 的各项照旧。（`issue` 的两个 store 的 `fetchParentStats` 不再重取项目，已在 Task 3 做了，裁定 T3-c；工作项的修改将来若动了项目的字段，M4 再加一个不等的重取。）
 - **M5**：项目封面的上传（`cover_image_asset_id`，3.2）连同预设封面（Task 1 删除的 28 张）和"新建项目时的封面值"（M5 的 M1-closeout，本修订已写明预设封面随上传加回）。
 - **M6**：迭代的 `user-properties` 不在关键词规则的模式里（不命中样例）；P8a 交给 M6 的各项照旧。
 - **M7**：项目的收藏（卡片的星标、创建时加入收藏、`FavoriteStore` 的项目一支，Task 1）；`intake_count`（侧边栏的数字和收集箱 store 写它的两段）；收集箱的分诊状态（store、下拉框、类型、`@nerve/propel` 的两个图标，Task 7）；工作区级的标签（store 的四个成员、筛选的标签一项、按标签分组，Task 7）；通知页的收集箱项经原来的 `useSWR` 读项目（`workspace-notifications/root.tsx`，Task 4 改调 `fetchProject`；它写项目自己的读，可以盖过包装层的读，M7 照 7.1 改成按权限的取数，预检 PF-L3）；P8a 交给 M7 的各项照旧。
@@ -303,6 +305,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - W18（每个新的 vitest 都能失败）：`w18tests.py` 把最终原型上 vitest 的 JSON 报告中 P8b 写或改的 11 个测试文件的 163 个测试（`it.each` 的每一行算一个），对照每个变异的 vitest 日志中失败的测试：P8b 新加或改写的 138 个都至少失败一次；没有失败过的 25 个都是 P8a 原有的测试（`store-context.test.ts` 的 6 个、`root.store.test.ts` 的 3 个、`use-workspace-fetch.test.ts` 包装层判断的 7 个、`permissions.store.test.ts` 工作区一半的 9 个），不是 P8b 写的。
 - 一个变异列在它守的性质出现的 Task（`mutcheck.py`：每个变异要改的文字在它的 Task 的快照上都恰好出现一次；其中 23 个要改的文字在更早的快照上就已出现：它们改的是 P8b 之前就有的代码，例如 `reconciled.ts`、`sortStates`、旧 `ProjectService`、项目卡片、工作区包装层，列在第一个依赖这个性质的 Task，或删掉那个地址的 Task）。每个 Task 的变异另在那个 Task 自己的快照上跑过（`mutpertask.py`：把原型的源码换成那个快照、从它构建工作区内的包，先在没有变异的树上跑一遍变异要用的每个检查，都通过，再跑变异）：158 个都在它自己的 Task 的树上被发现，所用的层与最终原型上相同（`t4-pf-old-workspace` 在 Task 4 的树上另由 `tsc` 发现）。所以 plan 的变异表中没有"（之后的 Task 起）"的标记。
 - **例外**（只由评审或之后的 Task 才能发现的性质）：没有。修订前唯一的一个（`t10-pw-children-non-member` 从 Task 11 起）随 S2 并进 Task 10 而消失（裁定 D9）。
+- **Task 3 的修正轮**（Task 3 的评审 I1、I2、m1、m2；裁定 T3-a、T3-b）另加 7 个，不在上面的 158 个、表和 W18 的计数中：它们照 `mut.py` 的写法在 Task 3 的树上跑过，最终原型上没有跑。`t3-page-no-archived`（W2，项目页的 hook 不取已归档的列表）、`t3-page-unarchived`（W2，改取未归档的列表）、`t3-page-unlisted`（W5，调用者的列表还没有地址的工作区就按地址取）由 `use-archived-projects-fetch.test.ts` 发现；`t3-ps-sort-read`（W3，侧边栏的移动不写项目自己的读）、`t3-ps-read-refusal-forgets`（W3，项目的读再取被拒绝时丢掉已有的读）、`t3-ps-archive-twice`、`t3-ps-restore-twice`（W3，归档、恢复的回答追加到列表，不是 `upserted`：重取的列表已有它时列两次）由项目 store 的测试发现，在修正之前的测试上都存活。项目页不再调用这个 hook、连同导入一起删掉，仍没有检查发现（knip 把测试当作入口，hook 仍算被用到；只删调用、留下导入时 oxlint 的上限发现）；它要等项目页的故事（P10）。
 
 ### A.3 清扫
 
@@ -380,7 +383,7 @@ P8b 的每一处取数都按安全测试看待（brief）：一个角色不能�
 - M2 交接第 3 节的 `git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web`：27 处 → 22 处。M3 的 2 处（`project/form.tsx` 的 `ProjectService`、`project-member.service.ts` 的 `ProjectMemberService`）消失，M3 的 10 处至此全部消失；另 3 处是封面上传的 `FileService`（`image-picker-popover.tsx`、`create-project-modal.tsx`、`cover-image.helper.ts`，M5 的，随 Task 1 删除）。剩下的 22 处都是 M4–M7 的（其中 `ProjectService` 的 3 处是工作项搜索的调用方，第 3 节第 19 条）。
 - 项目一侧的每个 store 和 service 由 `RootStore` 用这一代的 `ApiClient` 建：`ProjectRootStore(root, api)` 建 `ProjectStore`、`ProjectPreferencesStore`；`MemberRootStore` 建 `ProjectMemberStore`；`StateStore(root, api)`、`LabelStore(root, api)`；五个 service 由各自的 store 建。权限 store 不建 service（它只读 store）。
 - 键：项目一侧的每个会话的取数经 `useSessionSWR`（2.12 的表）。P8b 改到的文件中仍从 `swr` 导入值的只有三个，取的都是 M4–M7 的东西：工作项的浏览页 `browse/[workItem]/page.tsx`（工作项，M4；Task 10 只改了包装层的 prop）、`use-workspace-issue-properties.ts`（迭代、模块，M6；Task 7 删去其中的工作区标签）、通知页的 `workspace-notifications/root.tsx`（收集箱项读项目，M7，第 5 节）。
-- 静态检查：根目录 `.oxlintrc.json` 的 `no-restricted-imports` 的范围加上 `web/apps/web/core/store/member/project/**`、`core/store/project/**`、`core/store/state.store.ts`、`core/store/label.store.ts`、`core/components/projects/page.tsx`、`core/components/project-states/**`、`core/components/labels/**`、`core/components/project/project-settings-member-defaults.tsx`、`core/layouts/auth-layout/workspace-wrapper.tsx`、`project-wrapper.tsx`、`use-project-fetch.ts`（P8a 的已知限制在这里解除：两个包装层都在范围内）；`typescript/no-non-null-assertion` 的范围加上五个 service、`core/store/project/**`（项目 store 的两个测试文件和 `fake-projects.ts` 都在其中）、`core/store/member/project/**`、状态和标签的 store 和它们的测试、`core/lib/place-between.ts`、`use-project-fetch.ts` 和它的测试、`permissions.store.test.ts`、`use-project-preferences.ts`、`use-tab-preferences.ts`、`projects/page.tsx`。W4、W12 的 7 个变异都让 `check:lint` 失败（A.2）。
+- 静态检查：根目录 `.oxlintrc.json` 的 `no-restricted-imports` 的范围加上 `web/apps/web/core/store/member/project/**`、`core/store/project/**`、`core/store/state.store.ts`、`core/store/label.store.ts`、`core/components/projects/page.tsx` 和 `use-archived-projects-fetch.ts`（裁定 T3-a）、`core/components/project-states/**`、`core/components/labels/**`、`core/components/project/project-settings-member-defaults.tsx`、`core/layouts/auth-layout/workspace-wrapper.tsx`、`project-wrapper.tsx`、`use-project-fetch.ts`（P8a 的已知限制在这里解除：两个包装层都在范围内）；`typescript/no-non-null-assertion` 的范围加上五个 service、`core/store/project/**`（项目 store 的两个测试文件和 `fake-projects.ts` 都在其中）、`core/store/member/project/**`、状态和标签的 store 和它们的测试、`core/lib/place-between.ts`、`use-project-fetch.ts` 和它的测试、`permissions.store.test.ts`、`use-project-preferences.ts`、`use-tab-preferences.ts`、`projects/page.tsx`、`use-archived-projects-fetch.ts` 和它的测试（裁定 T3-a）。W4、W12 的 7 个变异都让 `check:lint` 失败（A.2）。
 
 ### A.7 W12、W13
 
@@ -421,6 +424,7 @@ M1 收尾的 `deadsym.mjs`、`domains.mjs`（`$M3TMP/p8btools/dead/`，`dead.sh`
 - 新加的 12 行都是测试里 `it.each` 的表的列（四个 store 测试的 `change`、`refusal`、`send`，在标题和行中读）。
 - 去掉的 49 行包括 P8a 交给 P8b 的全部死行（`add-project-members-modal.tsx` 的 `value`、`query`、`content`、`onSuccess`，`project-member.store.ts` 的 4 行，`project_filter.store.ts` 的 4 个成员（`displayFilters`、`filters` 和两个按 slug 的 getter；第 5 行 `projectFilter` 在 `project/index.ts`），`useProjectColumns.tsx` 的 `member`），以及 P8b 重写的 store 中原有的死成员（`fetchedMap`、`getWorkspaceLabels`、`intakeStateMap`、`processProjectAfterCreation` 等）和没有调用方传的 prop（`memberIds`、`stateIds`、`handleOnClick` 等）。
 - P8b 改到的文件中仍有的 M3 行和它们的去处：只经机械步骤到达的六个文件的 prop（`state_group.tsx` 的 `completed`、`state`、`total`，`label-item-block.tsx` 的 `draggable`，`group-list.tsx` 的三个 `className`，`state-item-title.tsx` 的 `shouldShowDescription`，`common-attributes.tsx` 的 `handleFormOnChange`，`project-create-buttons.tsx` 的 `isMobile`：P11 第 4 个任务）；`workspace.service.ts` 的搜索参数和 `types/src/project/projects.ts` 的工作项搜索类型（M4 的搜索，P8a 已记）。
+- 包经入口再导出、knip 看不见的死成员（同 Task 1 的 `checkURLValidity`，第 2.1 节）：`@nerve/types` 的 `TFetchStatus`（`common.ts`）唯一的读者是 Plane 项目 store 的 `fetchStatus`，Task 3 删掉它时一并删除（Task 3 的实现者发现，评审 m5）；原型上它一直留到最终，这里与快照不同。
 
 ### A.10 规模
 

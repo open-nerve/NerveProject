@@ -103,6 +103,18 @@ describe("ProjectStore, the lists and the reads", () => {
     expect(store.getProjectById("p-gone")).toBeUndefined();
   });
 
+  it("fails when nerve refuses to read a project again, keeping the read it had", async () => {
+    const { nerve, store } = await loaded();
+    await loadProject(nerve, store, web, renamed);
+    const again = track(store.fetchProject(web.id));
+    await until(() => nerve.calls.length === 2, "the second read");
+    nerve.calls[1]?.answer(problem(503, "server_busy"));
+    await until(() => again.settled, "the refusal");
+    expect(again.error).toBeInstanceOf(ApiError);
+    // its own read, not the list's web
+    expect(store.getProjectById(web.id)).toEqual(renamed);
+  });
+
   it("fails when nerve refuses a list, keeping none, and again, keeping the list it had", async () => {
     const { nerve, store } = await loaded();
     const archived = track(store.fetchArchivedProjects(acme));
@@ -193,22 +205,28 @@ describe("ProjectStore, while a fetch is out", () => {
     expect(store.getProjectById(web.id)).toEqual(renamed);
   });
 
-  it("keeps a project archived during a refetch of the archived list on the list the refetch shows", async () => {
-    const { nerve, store } = await loaded();
-    const refetched = track(store.fetchArchivedProjects(acme));
-    await until(() => nerve.calls.length === 1, "the archived list");
-    const archived: Project = { ...web, archived_at: "2026-10-08T09:00:00Z" };
-    await sent(
-      nerve,
-      () => store.archiveProject(web.id),
-      ["POST", `/api/v0/projects/${web.id}/archive`],
-      json(200, archived)
-    );
-    // read before the archiving
-    nerve.calls[0]?.answer(json(200, { data: [old] }));
-    await until(() => refetched.settled, "the archived list");
-    expect(store.totalProjectIds).toEqual(ids([ops, docs, old, archived]));
-  });
+  // web as nerve answers its archiving
+  const archived: Project = { ...web, archived_at: "2026-10-08T09:00:00Z" };
+  it.each([
+    { read: "before", listed: [old] },
+    { read: "after", listed: [old, archived] },
+  ])(
+    "keeps a project archived during a refetch of the archived list, read $read the archiving, on it once",
+    async ({ listed }) => {
+      const { nerve, store } = await loaded();
+      const refetched = track(store.fetchArchivedProjects(acme));
+      await until(() => nerve.calls.length === 1, "the archived list");
+      await sent(
+        nerve,
+        () => store.archiveProject(web.id),
+        ["POST", `/api/v0/projects/${web.id}/archive`],
+        json(200, archived)
+      );
+      nerve.calls[0]?.answer(json(200, { data: listed }));
+      await until(() => refetched.settled, "the archived list");
+      expect(store.totalProjectIds).toEqual(ids([ops, docs, old, archived]));
+    }
+  );
 
   it("shows a change nerve confirmed during a read of the project, not the read's older project", async () => {
     const { nerve, store } = await loaded();

@@ -118,6 +118,7 @@
         "web/apps/web/core/components/workspace/settings/**",
         "web/apps/web/core/components/profile/use-profile-member.ts",
         "web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts",
+        "web/apps/web/core/components/projects/use-archived-projects-fetch.ts",
         "web/apps/web/core/lib/use-landing.ts",
         "web/apps/web/core/lib/wrappers/authentication-wrapper.tsx",
         "web/apps/web/app/(all)/workspace-invitations/page.tsx",
@@ -192,6 +193,8 @@
         "web/apps/web/core/store/project/project.store.changes.test.ts",
         "web/apps/web/core/store/project/fake-projects.ts",
         "web/apps/web/core/lib/place-between.ts",
+        "web/apps/web/core/components/projects/use-archived-projects-fetch.ts",
+        "web/apps/web/core/components/projects/use-archived-projects-fetch.test.ts",
         "web/apps/web/core/components/projects/page.tsx"
       ],
       "rules": {
