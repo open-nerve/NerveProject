@@ -252,7 +252,11 @@
         "web/apps/web/core/hooks/use-navigation-preferences.test.ts",
         "web/apps/web/core/components/home/root.test.tsx",
         "web/apps/web/core/components/account/deactivate-account-modal.test.tsx",
-        "web/apps/web/core/hooks/use-workspaces-fetch.ts"
+        "web/apps/web/core/hooks/use-workspaces-fetch.ts",
+        "web/apps/web/core/hooks/use-refusal-toast.ts",
+        "web/apps/web/core/hooks/use-refusal-toast.test.ts",
+        "web/apps/web/core/hooks/use-sign-out.ts",
+        "web/apps/web/core/hooks/use-sign-out.test.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"
