@@ -4,7 +4,7 @@
 
 **Goal:** 工作区的页面接上 P8a、P8b 的数据层，行为按 M3 设计第 2 节的故事 W1–W9：落点的页面一侧（切换工作区、创建工作区、接受邀请之后写 `last_workspace_id`，删除、离开之后回到落点）、新手引导（资料；还没有工作区的人创建工作区、邀请成员并复制链接；已经有工作区的人资料一步之后完成）、邀请页和带邀请的注册、工作区首页和侧边栏的工作区部分、项目导航对话框、工作区设置 general 和 members（成员、邀请）、停用弹窗的 409、`WorkspaceAuthWrapper` 的界面。页面发出工作区一侧的修改之后的跳转、提示和界面变化只在发出它的会话里进行；每个请求体由表单编辑的字段构成，类型取自生成的客户端，数字就是数字；每个错误经 `errorMessageKey` 显示，没有吞进 `console.error` 的拒绝；取决于 store 所持的值的修改在轮到它发出时才算出（E5）。W1–W9 的页面版本、W3 的会话切换、S2 的挂载清单。
 
-**Architecture:** 只改 web、`e2e/` 和两份文档（README、前端改动清单）。页面调用 store 的方法，不调 service；会话的每个取数经 `useSessionSWR`。共用的新部分：`core/lib/in-session.ts` 的 `followInSession(change, { done?, failed })`（`sessionGuard` 旁边：发出修改，只在发出它的会话里跟进结果；Task 1）；测试的共用部分 `core/lib/auth/fake-tab.ts`（标签页的会话、换账户、由测试决定何时兑现的修改）和 `core/lib/fake-refusal.ts`（nerve 的拒绝）；纯函数的决定都返回 `kind` 的联合，用 `it.each` 测：`invitation-view.ts`（邀请页显示什么，Task 4）、`onboarding-place.ts`（新手引导的位置，Task 6）、`invite-modal/refusal.ts`（批量邀请的拒绝落到哪一行，Task 3）、`use-create-workspace.ts` 的 `creationRefusal`（Task 5）。页面一侧的 hook：`useMembershipChanges`（Task 2）、`useOpenWorkspace`（Task 4）、`useCreateWorkspace`（Task 5，`/create-workspace` 和新手引导共用）、`useCopyInvitationLink`（Task 6）、`useProjectNavigationPreferences`（Task 8 重写）、`useWorkspacesFetch`（Task 10，调用者的工作区列表的唯一取数）。store 改两处：`WorkspacePreferencesStore.updatePreferences(slug, change)` 收 `(held) => WorkspacePreferencesUpdate`，轮到它时作用于 nerve 最近一次的回答（Task 8，照 P8b 的 `ProjectPreferencesStore`）；资料 store 的 `finishUserOnboarding` 不再把列表中的第一个工作区写成上次打开的（Task 6）。契约、Go 代码和生成的文件都不变；不加 npm 包，锁文件不变。
+**Architecture:** 只改 web、`e2e/`、两处静态检查（根目录 `.oxlintrc.json` 的两条 `overrides`、`tools/keywords.json` 的一条规则）和三份文档（README、前端改动清单、M2 收尾交接的 P9 处理结果）。页面调用 store 的方法，不调 service；会话的每个取数经 `useSessionSWR`。共用的新部分：`core/lib/in-session.ts` 的 `followInSession(change, { done?, failed })`（`sessionGuard` 旁边：发出修改，只在发出它的会话里跟进结果；Task 1）；测试的共用部分 `core/lib/auth/fake-tab.ts`（标签页的会话、换账户、由测试决定何时兑现的修改）和 `core/lib/fake-refusal.ts`（nerve 的拒绝）；纯函数的决定都返回 `kind` 的联合，用 `it.each` 测：`invitation-view.ts`（邀请页显示什么，Task 4）、`onboarding-place.ts`（新手引导的位置，Task 6）、`invite-modal/refusal.ts`（批量邀请的拒绝落到哪一行，Task 3）、`use-create-workspace.ts` 的 `creationRefusal`（Task 5）。页面一侧的 hook：`useMembershipChanges`（Task 2）、`useInvitationChanges`（Task 3）、`useInvitationAnswer`、`useOpenWorkspace`（Task 4）、`useCreateWorkspace`（Task 5，`/create-workspace` 和新手引导共用）、`useCopyInvitationLink`（Task 3，Task 6 也用）、`useProjectNavigationPreferences`（Task 8 重写）、`useWorkspacesFetch`（Task 10，调用者的工作区列表的唯一取数）。store 改两处：`WorkspacePreferencesStore.updatePreferences(slug, change)` 收 `(held) => WorkspacePreferencesUpdate`，轮到它时作用于 nerve 最近一次的回答（Task 8，照 P8b 的 `ProjectPreferencesStore`）；资料 store 的 `finishUserOnboarding` 不再把列表中的第一个工作区写成上次打开的（Task 6）；M2 的 `UserStore.deactivateAccount` 交回它是否结束了标签页的会话（Task 9）。静态检查：P9 的新模块和它们的测试加进 `typescript/no-non-null-assertion` 的范围，取工作区列表的三个文件加进 `no-restricted-imports` 的范围，都在加入它们的 Task（总体设计 7.7）；关键词守卫的规则 `workspaces-list-fetch` 让 `useWorkspacesFetch` 是列表唯一的取数（Task 10）。契约、Go 代码和生成的文件都不变；不加 npm 包，锁文件不变。
 
 **Tech Stack:** React 19.2.8、React Router 8.3.0、MobX 6.12.0、SWR 2.4.2、openapi-fetch 0.17.0、TypeScript 5.8.3、vitest 4.1.11、oxlint 1.51.0、oxfmt 0.35.0、knip 6.37.0、turbo 2.10.11；Node 24、pnpm 11.10.0、Playwright 1.63.0；Go 1.27.1（Go 代码不变）。版本都由 `pnpm-lock.yaml` 固定。
 
@@ -18,7 +18,7 @@
 - **容器**：`make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**（总体设计 7.7，P8a 的裁定 F-1–F-10，P8b 的一条）：会话的每个取数经 `useSessionSWR`（不传配置），没有权限时键为 `null`；页面只取它的角色能读的（成员页的邀请只为管理员取）；修改经 store 的方法，一个接一个，store 写入 nerve 的回答；请求体取决于 store 所持的值时，轮到它发出时从 nerve 最近一次回答算出，页面不按它此刻显示的值算请求体（Task 8）；`SessionChangedError` 不是认证失败。页面发出工作区一侧的修改（删除、改名、成员、邀请、接受和忽略、创建、新手引导的步骤、导航设置、导览的结束）之后的跳转、提示和界面变化经 `followInSession` 只在发出它的会话里进行（M3 设计 7.1；另一个标签页换了账户之后，页面已是那个账户的）；M2 的账户修改（新手引导的资料一步、个人设置的三页）的提示不在本 plan 中，见 spec 第 5 节；会话变化时随页面卸载的组件状态（停用弹窗的原因，Task 9）不另加核对，理由见 spec 第 3 节。请求体由表单编辑的字段构成，类型是生成的 `…Create`、`…Update`，角色是数字（`CustomSelect` 的值是 `any`，P8a 的 F-9）；每个请求体有一个测试钉住它（vitest 或端到端的 `sentTo`）。每个错误经 `errorMessageKey`（提示）或 `FIELD_ERROR_MESSAGES`（字段下方）显示，被拒绝的修改结束它的加载状态。类型只来自生成的客户端：不写重述契约的类型，没有新的 `as`、`any`、`!`（spec 附录 A.7）。删除的代码删干净（组件、两种语言的文案、工具函数、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（最终原型上量的：最长的是 `e2e/stories/workspace/w3-workspace-settings.spec.ts` 395 行、`e2e/fixtures/assert/workspace.ts` 390 行、`e2e/stories/smoke/s2-web-app.spec.ts` 375 行；web 中最长的新文件是 `use-create-workspace.test.ts` 165 行）；只为使用方改到的 Plane 文件不变长，例外一个：`workspace/settings/members-list.tsx` 89 → 91（Task 2：成员行收地址的工作区，格式化把一行拆成三行）。
+- **规则**（总体设计 7.7，P8a 的裁定 F-1–F-10，P8b 的一条）：会话的每个取数经 `useSessionSWR`（不传配置），没有权限时键为 `null`；页面只取它的角色能读的（成员页的邀请只为管理员取）；修改经 store 的方法，一个接一个，store 写入 nerve 的回答；请求体取决于 store 所持的值时，轮到它发出时从 nerve 最近一次回答算出，页面不按它此刻显示的值算请求体（Task 8）；`SessionChangedError` 不是认证失败。页面发出工作区一侧的修改（删除、改名、成员、邀请、接受和忽略、创建、新手引导的步骤、导航设置、导览的结束）之后的跳转、提示和界面变化经 `followInSession` 只在发出它的会话里进行（M3 设计 7.1；另一个标签页换了账户之后，页面已是那个账户的）；每一处跟进由它自己的 vitest 守着（换账户之后兑现的 `lateSettlings`）；新手引导的资料一步只在发出名字的会话里把引导交给根（Task 6），它自己的提示和个人设置的三页（M2 的账户修改）不在本 plan 中，见 spec 第 5 节；会话变化时随页面卸载的组件状态（停用弹窗的原因，Task 9；确认框的关闭、按钮的加载）不另加核对，理由见 spec 第 3 节。请求体由表单编辑的字段构成，类型是生成的 `…Create`、`…Update`，角色是数字（`CustomSelect` 的值是 `any`，P8a 的 F-9）；每个请求体有一个测试钉住它（vitest 或端到端的 `sentTo`）。每个错误经 `errorMessageKey`（提示）或 `FIELD_ERROR_MESSAGES`（字段下方）显示，被拒绝的修改结束它的加载状态。类型只来自生成的客户端：不写重述契约的类型，没有新的 `as`、`any`、`!`（spec 附录 A.7）。删除的代码删干净（组件、两种语言的文案、工具函数、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（最终原型上量的：最长的是 `e2e/stories/workspace/w3-workspace-settings.spec.ts` 395 行、`e2e/fixtures/assert/workspace.ts` 390 行、`e2e/stories/smoke/s2-web-app.spec.ts` 379 行；web 中最长的新文件是 `use-create-workspace.test.ts` 165 行）；只为使用方改到的 Plane 文件不变长，例外一个：`workspace/settings/members-list.tsx` 89 → 91（Task 2：成员行收地址的工作区，格式化把一行拆成三行）。
 - **oxlint**（M3 设计 7.9，裁定 R3）：有手改的文件（本 plan 的每个 TS 文件都是手改的，没有机械步骤）在它的 Task 提交时没有 oxlint 警告。上限：web 360 → 359（Task 3：`use-workspace-invitation.tsx` 的一条清零），其余包不变。没有新的 oxlint 抑制，删掉两条（Task 6：新手引导的根原来以 `useEffect` 决定第一步，抑制 `react-hooks/exhaustive-deps`；Task 8：对话框的 `unicorn/consistent-function-scoping`）。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -28,9 +28,9 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `4b1334a5` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A.10）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：`core/lib/in-session.ts`（Task 1、2）、`core/lib/invitation-link.ts` 和它的测试（Task 3、4）、`use-workspace-invitation.tsx`、`members/invite-modal.tsx`、`settings/invitations-list-item.tsx`（Task 3、6）、`onboarding/root.tsx`（Task 6、10）、两种语言的 `workspace-settings.json`（Task 1、3）和 `workspace.json`（Task 4、5、6、10），以及 `e2e/fixtures/workspace-pages.ts`（Task 1、2、3）、`e2e/fixtures/api.ts`（Task 1、3）、`e2e/fixtures/assert/workspace.ts`（Task 2、3）、S2（Task 1、2、6、10）、W1（Task 5、6）、W2（Task 1、2）。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p9tools/mutants_p9.py`，`mut.py` 在它写的每个检查上各跑一次），也在各自 Task 的树上跑过（spec 附录 A.2）；表中标"（之后的 Task 起）"的检查只在之后的 Task 加入的测试中才让它失败。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief）：表中每一条这类性质都有一个会失败的检查。
-- **评审敏感**（M3 设计 12 节 P9 的评审重点）：页面级的副作用只在发出修改的会话里（Task 1 的 W3 会话切换：`route.fetch()` 在换账户之前，`route.fulfill()` 在之后；去掉 `followInSession` 的核对时它失败，见 Task 1 的变异 `T1.1`）；成员页的邀请只为管理员取（Task 2，S2）；角色是数字（Task 2、3）；导航设置的修改在轮到它时算（Task 8）；邀请页不显示被邀请的邮箱（Task 4）。改动这些之前，先照"变异"表确认它在所说的性质去掉之后失败。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1–6、8–10，每个 Task 加它的文件）、`core/lib/in-session.ts`（Task 1、2）、`core/lib/invitation-link.ts` 和它的测试（Task 3、4）、`onboarding/root.tsx`（Task 6、10）、两种语言的 `workspace-settings.json`（Task 1、3）和 `workspace.json`（Task 4、5、6、10），以及 `e2e/fixtures/workspace-pages.ts`（Task 1、2、3）、`e2e/fixtures/api.ts`（Task 1、3）、`e2e/fixtures/assert/workspace.ts`（Task 2、3）、S2（Task 1、2、6、10）、W1（Task 5、6）、W2（Task 1、2）。每个过渡版本都在逐 Task 复现中运行过。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p9tools/mutants_p9.py`，`mut.py` 在它写的每个检查上各跑一次），也在各自 Task 的树上跑过（spec 附录 A.2）；表中标"（之后的 Task 起）"的检查只在之后的 Task 加入的测试中才让它失败。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief）：表中每一条这类性质都有一个会失败的检查。
+- **评审敏感**（M3 设计 12 节 P9 的评审重点）：页面级的副作用只在发出修改的会话里（Task 1 的 W3 会话切换：`route.fetch()` 在换账户之前，`route.fulfill()` 在之后；去掉 `followInSession` 的核对时它失败，见 Task 1 的变异 `T1.1`）；成员页的邀请只为管理员取（Task 2，S2）；角色是数字（Task 2、3）；导航设置的修改在轮到它时算，开关也是（Task 8）；邀请页不显示被邀请的邮箱（Task 4）。改动这些之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
 
@@ -42,12 +42,13 @@
 |---|---|---|
 | `web/apps/web/core/lib/in-session.ts` | `followInSession`：发出修改，只在发出它的会话里跟进结果（Task 1）；`done` 可省（Task 2） | 1、2 |
 | `web/apps/web/core/lib/in-session.test.ts` | `sessionGuard`、`followInSession` 的 vitest，改用 `fake-tab.ts` | 1 |
-| `web/apps/web/core/lib/auth/fake-tab.ts` | 测试的共用部分：标签页的会话、换账户、由测试决定何时兑现的修改、换账户之后兑现的两种方式 | 1 |
+| `.oxlintrc.json` | P9 的新模块和它们的测试加进非空断言的范围，取工作区列表的文件加进 `no-restricted-imports` 的范围，各在加入它们的 Task（总体设计 7.7） | 1、2、3、4、5、6、8、9、10 |
+| `web/apps/web/core/lib/auth/fake-tab.ts` | 测试的共用部分：标签页的会话、换账户、由测试决定何时兑现的修改（`fake-browser.ts` 的 `gate()`）、换账户之后兑现的两种方式 | 1 |
 | `web/apps/web/core/lib/fake-refusal.ts` | 测试的共用部分：nerve 的拒绝（`ApiError`，状态、`code`、字段错误） | 1 |
 | `web/apps/web/core/components/workspace/delete-workspace-modal.tsx`、`web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx` | 删除工作区的弹窗自己带表单（整个文件）：按提交的值确认，在会话里跟进，拒绝按 `code` 提示；它的 vitest（9.5） | 1 |
 | `web/apps/web/core/components/workspace/delete-workspace-form.tsx` | 删除工作区的表单（并入弹窗，删除） | 1 |
 | `web/apps/web/core/components/workspace/delete-workspace-section.tsx` | 弹窗收地址的工作区 | 1 |
-| `web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.test.tsx` | general 页：工作区按地址找，修改只发表单的三个字段，规模没有时为 `null` 的受控值，拒绝按 `code` 提示，在会话里跟进；它的 vitest | 1 |
+| `web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.test.tsx` | general 页：工作区按地址找，修改只发表单的三个字段，规模没有时为 `null` 的受控值，拒绝按 `code` 提示，在会话里跟进，复制地址失败有提示；它的 vitest | 1 |
 | `web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json` | 删除工作区之后的说明，删除失败的通用文案删除（Task 1）；已是成员、已有邀请、已忽略的文案（Task 3） | 1、3 |
 | `web/apps/web/core/components/workspace/settings/use-membership-changes.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts` | 成员页的三个修改（改角色、移出、离开）：拒绝按 `code` 提示，在会话里跟进；它的 vitest | 2 |
 | `web/apps/web/core/components/workspace/workspace-roles.ts` | 工作区角色的选项（编号、文案），成员页和邀请共用 | 2 |
@@ -56,14 +57,16 @@
 | `web/apps/web/core/components/workspace/invite-modal/refusal.ts`、`web/apps/web/core/components/workspace/invite-modal/refusal.test.ts` | 批量邀请被拒绝时，每个字段错误落到哪一行、说什么 | 3 |
 | `web/apps/web/core/components/workspace/members/invite-modal.test.tsx` | 邀请弹窗的 vitest：请求体、行的错误、拒绝、会话 | 3 |
 | `web/apps/web/core/components/workspace/invite-modal/fields.tsx` | 邀请的一行：角色选择给出编号，错误来自表单 | 3 |
-| `web/apps/web/core/components/workspace/members/invite-modal.tsx` | 弹窗收 `invite`（Task 3）；发出之后关闭由弹窗自己做（Task 6） | 3、6 |
-| `web/apps/web/core/hooks/use-workspace-invitation.tsx` | 生成的 `WorkspaceInvitationsCreate`，在会话里跟进，行的错误经 `setError`（Task 3，整个文件）；`onSent`、`clear`（Task 6） | 3、6 |
-| `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx` | 已忽略的邀请标"已忽略"、只能删除；拒绝按 `code` 提示；复制失败有提示（Task 3）；复制改用共用的 hook（Task 6） | 3、6 |
+| `web/apps/web/core/components/workspace/members/invite-modal.tsx` | 弹窗收 `invite`，`onSent` 是它的关闭，关闭之后自己清空表单 | 3 |
+| `web/apps/web/core/hooks/use-workspace-invitation.tsx` | 生成的 `WorkspaceInvitationsCreate`，在会话里跟进，行的错误经 `setError`，发出的邀请交给 `onSent`（整个文件） | 3 |
+| `web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts` | 邀请列表的两个修改（改角色、删除）：拒绝按 `code` 提示，在会话里跟进；它的 vitest | 3 |
+| `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx` | 已忽略的邀请标"已忽略"、只能删除；修改经 `useInvitationChanges`；复制经 `useCopyInvitationLink` | 3 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx` | 成员页把 `invite` 交给邀请弹窗 | 3 |
 | `web/apps/web/package.json` | web 的 oxlint 上限 360 → 359 | 3 |
 | `web/apps/web/core/hooks/use-open-workspace.ts`、`web/apps/web/core/hooks/use-open-workspace.test.ts` | 进入刚加入的工作区：写上次打开的工作区（尽力而为），再跳转，在会话里跟进；它的 vitest | 4 |
 | `web/apps/web/core/components/workspace/invitation-view.ts`、`web/apps/web/core/components/workspace/invitation-view.test.ts` | 邀请页显示什么：纯函数，`kind` 的联合；它的 vitest | 4 |
-| `web/apps/web/app/(all)/workspace-invitations/page.tsx` | 邀请页（整个文件）：查看、接受、忽略、邮箱不一致、已忽略、链接无效 | 4 |
+| `web/apps/web/core/components/workspace/use-invitation-answer.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.test.ts` | 邀请页的接受、忽略：在会话里跟进（打开工作区、重读邀请、邮箱不一致），拒绝按 `code` 提示；它的 vitest | 4 |
+| `web/apps/web/app/(all)/workspace-invitations/page.tsx` | 邀请页（整个文件）：查看、接受、忽略（经 `useInvitationAnswer`）、邮箱不一致、已忽略、链接无效 | 4 |
 | `web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json` | 邀请页的文案（Task 4）；slug 的两条文案和创建关闭的文案（Task 5）；创建失败的提示删除（Task 6）；"找不到工作区"的文案（Task 10） | 4、5、6、10 |
 | `web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-create-workspace.test.ts` | 创建工作区：nerve 的 slug 检查决定发不发，请求体由表单构成，拒绝落到字段或提示，在会话里跟进；它的 vitest | 5 |
 | `web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/app/(all)/create-workspace/page.tsx` | 表单和页面改用 `useCreateWorkspace`、`useOpenWorkspace`；slug 字段显示的就是发出的值；创建关闭时页面说明已关闭，给实例管理员写信的按钮删除 | 5 |
@@ -72,15 +75,17 @@
 | `web/apps/web/core/components/onboarding/root.tsx` | 新手引导取工作区列表，按它决定步骤，修改在会话里跟进（Task 6，整个文件）；列表的取数改用共用的 hook（Task 10） | 6、10 |
 | `web/apps/web/core/components/onboarding/steps/root.tsx`、`web/apps/web/core/components/onboarding/steps/team/root.tsx` | 步骤按位置显示；邀请成员一步用成员页的邀请表单（整个文件） | 6 |
 | `web/apps/web/core/components/onboarding/steps/team/links.tsx` | 发出邀请之后列出每个邀请的链接供复制 | 6 |
-| `web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/index.ts`、`web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/app/(all)/onboarding/page.tsx` | 创建一步改用 `useCreateWorkspace`；资料一步的完成交给根；页面的说明 | 6 |
+| `web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/index.ts`、`web/apps/web/app/(all)/onboarding/page.tsx` | 创建一步改用 `useCreateWorkspace`；页面的说明 | 6 |
+| `web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx` | 资料一步只在发出名字的会话里把引导交给根；它的 vitest | 6 |
+| `web/packages/constants/src/workspace.ts` | 角色的说明字段删除（没有读者） | 6 |
 | `web/apps/web/core/components/onboarding/steps/workspace/root.tsx` | "创建或加入工作区"的包装组件（删除） | 6 |
-| `web/apps/web/core/hooks/use-copy-invitation-link.ts` | 复制邀请链接，成功、失败都有提示：邀请列表和新手引导共用 | 6 |
+| `web/apps/web/core/hooks/use-copy-invitation-link.ts` | 复制邀请链接，成功、失败都有提示：邀请列表和新手引导共用 | 3 |
 | `web/apps/web/core/store/user/profile.store.ts` | 完成引导不再写列表中第一个工作区 | 6 |
 | `web/packages/utils/src/validation.ts` | `validateSlug`、`SLUG_REGEX` 删除 | 6 |
-| `web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json` | 新手引导的文案：创建关闭（P7）、邀请的链接；邀请一步的两条旧文案删除 | 6 |
+| `web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json` | 新手引导的文案：创建关闭（P7）、邀请的链接；邀请一步的两条旧文案和角色的三条说明删除 | 6 |
 | `web/apps/web/core/components/account/auth-forms/auth-root.tsx`、`web/apps/web/core/components/account/auth-forms/password.tsx`、`web/apps/web/core/components/auth-screens/header.tsx` | 注册带上链接的邀请；登录页和注册页之间的链接保留查询参数 | 7 |
 | `web/apps/web/core/store/workspace/preferences.store.ts`、`web/apps/web/core/store/workspace/preferences.store.test.ts` | 导航设置的修改是 `(held) => update`，轮到它时作用于 nerve 最近的回答；没有设置时不发出 | 8 |
-| `web/apps/web/core/hooks/navigation-preferences.ts`、`web/apps/web/core/hooks/navigation-preferences.test.ts` | nerve 的默认值；修改在轮到它时算出；数量框的草稿（整个文件） | 8 |
+| `web/apps/web/core/hooks/navigation-preferences.ts`、`web/apps/web/core/hooks/navigation-preferences.test.ts` | nerve 的默认值；修改在轮到它时算出，开关在那时决定打开或关闭；数量框的草稿（整个文件） | 8 |
 | `web/apps/web/core/hooks/use-navigation-preferences.ts`、`web/apps/web/core/hooks/use-navigation-preferences.test.ts` | 侧边栏读设置，对话框改设置：在会话里跟进，拒绝按 `code` 提示（整个文件）；它的 vitest | 8 |
 | `web/apps/web/core/components/navigation/project-navigation-dialog.tsx` | 数量在失去焦点时发出，框里显示设置的数量，标签关联输入框 | 8 |
 | `web/apps/web/core/components/sidebar/sidebar-wrapper.tsx`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json` | 打开项目导航对话框的按钮有名字 | 8 |
@@ -89,9 +94,10 @@
 | `web/apps/web/core/components/account/deactivate-account-modal.tsx`、`web/apps/web/core/components/account/deactivate-account-modal.test.tsx` | 停用被拒绝的原因显示在弹窗里；停用结束了标签页的会话时才说已停用、关闭；它的 vitest | 9 |
 | `web/apps/web/core/store/user/index.ts`、`web/apps/web/core/store/user/index.test.ts` | 停用交回它是否结束了标签页的会话（`endSession` 的回答）；它的 vitest | 9 |
 | `web/apps/web/core/hooks/use-workspaces-fetch.ts` | 调用者的工作区列表的取数，落点、工作区的页面、新手引导、个人设置共用 | 10 |
+| `tools/keywords.json` | 规则 `workspaces-list-fetch`：`useWorkspacesFetch` 是列表唯一的取数 | 10 |
 | `web/apps/web/core/lib/use-landing.ts`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`、`web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx` | 列表的取数改用共用的 hook；个人设置自己取列表（P8a 评审的 M7） | 10 |
 | `web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.test.tsx` | "找不到工作区"的界面和退出失败的提示经 `t()`；测试读键 | 10 |
-| `README.md`、`docs/v0/frontend-changes.md` | "前端"一节的能用的页面；前端改动清单 3.1、3.2 | 11 |
+| `README.md`、`docs/v0/frontend-changes.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md` | "前端"一节的能用的页面；前端改动清单 3.1、3.2；M2 收尾交接的 P9 处理结果 | 11 |
 | `e2e/fixtures/settings-pages.ts` | `sentTo`：请求离开页面时读它的请求体，路由一直留着 | 1 |
 | `e2e/fixtures/api.ts` | `changeRole`、`furnishWorkspace`（Task 1）；`invitationTo`（Task 3） | 1、3 |
 | `e2e/fixtures/workspace-pages.ts` | 工作区页面的操作：另一个浏览器、删除（Task 1，新文件）；重新登录、切换工作区、成员行、改角色、结束成员关系（Task 2，整个文件）；邀请链接、邀请行、发出邀请、删除邀请（Task 3） | 1、2、3 |
@@ -104,7 +110,7 @@
 | `e2e/stories/workspace/w5-invitation-link.spec.ts` | W5 的页面版本 | 4 |
 | `e2e/stories/workspace/w1-create-workspace.spec.ts` | W1 的页面版本：`/create-workspace`（Task 5）；新手引导（Task 6） | 5、6 |
 | `e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts` | W6 的页面版本 | 7 |
-| `e2e/stories/workspace/w8-navigation-preferences.spec.ts` | W8 的页面版本 | 8 |
+| `e2e/stories/workspace/w8-navigation-preferences.spec.ts` | W8 的页面版本（连按两下限制的开关） | 8 |
 | `e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | 停用被拒绝的原因在弹窗里；W9 的页面版本 | 9 |
 
 ---
@@ -113,7 +119,7 @@
 
 **Files:**
 - Create: `e2e/fixtures/workspace-pages.ts`、`web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.test.tsx`、`web/apps/web/core/lib/auth/fake-tab.ts`、`web/apps/web/core/lib/fake-refusal.ts`
-- Modify: `e2e/fixtures/api.ts`、`e2e/fixtures/settings-pages.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx`、`web/apps/web/core/components/workspace/delete-workspace-section.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/lib/in-session.test.ts`、`web/apps/web/core/lib/in-session.ts`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
+- Modify: `.oxlintrc.json`、`e2e/fixtures/api.ts`、`e2e/fixtures/settings-pages.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx`、`web/apps/web/core/components/workspace/delete-workspace-section.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/lib/in-session.test.ts`、`web/apps/web/core/lib/in-session.ts`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
 - Delete: `web/apps/web/core/components/workspace/delete-workspace-form.tsx`
 
 **Interfaces:**
@@ -121,8 +127,9 @@
   - `core/lib/in-session.ts`：`followInSession<T>(change: () => Promise<T>, followers: ChangeFollowers<T>): Promise<void>`，`ChangeFollowers<T> = { done: (answer: T) => void; failed: (error: unknown) => void }`（Task 2 起 `done` 可省）：发出修改时取标签页的会话（`sessionGuard()`），修改兑现之后只在标签页仍在那个会话里时跟进：成功调 `done`，失败调 `failed`；另一个标签页把这个标签页换到别的账户之后两者都不调。自己从不拒绝。
   - `DeleteWorkspaceModal`（`core/components/workspace/delete-workspace-modal.tsx`，整个文件）：收 `workspace: Workspace`，表单并入弹窗（`delete-workspace-form.tsx` 删除）；按提交的值核对名称和"delete my workspace"，`deleteWorkspace(workspace)` 经 `followInSession`：成功时提示、关闭、回到 `/`（落点按剩下的工作区决定，3.14），失败时按 `code` 提示并停在弹窗。`delete-workspace-section.tsx` 传地址的工作区。
   - i18n（en、zh-CN 的 `workspace-settings.json`）：删除被拒绝时说 nerve 的原因，`delete_modal.error_message`（"Try again, please."）随之没有读者，删除；`delete_modal.success_message` 改写：删除之后根路径把调用者落到他的另一个工作区或 `/create-workspace`（3.14），不是 Plane 说的个人资料页。
-  - `WorkspaceDetails`（general 页）：地址的工作区经 `useParams` + `getWorkspaceBySlug`（不读 `currentWorkspace`）；修改只发表单编辑的 `name`、`organization_size`（没有时不发）、`timezone`（生成的 `WorkspaceUpdate`）；规模没有时表单的值是 `null`（受控，原来的 `undefined` 让 React 在第一次选择时报"uncontrolled to controlled"）；结果经 `followInSession`，拒绝按 `code` 提示（P12：原来只有 `console.error`），被拒绝之后按钮结束加载。
-- 测试的共用部分：`core/lib/auth/fake-tab.ts`（`api-client.ts` 的替身：`tokenManager`、`signedIn`、`switchAccount`、`heldChange`、`lateSettlings`、`pageSettled`），`core/lib/fake-refusal.ts`（`refusal(status, code, fields?)`：nerve 的拒绝，`ApiError`）。
+  - `WorkspaceDetails`（general 页）：地址的工作区经 `useParams` + `getWorkspaceBySlug`（不读 `currentWorkspace`）；修改只发表单编辑的 `name`、`organization_size`（没有时不发）、`timezone`（生成的 `WorkspaceUpdate`）；规模没有时表单的值是 `null`（受控，原来的 `undefined` 让 React 在第一次选择时报"uncontrolled to controlled"）；结果经 `followInSession`，拒绝按 `code` 提示（P12：原来只有 `console.error`），被拒绝之后按钮结束加载。复制地址时浏览器不让写剪贴板，提示失败（原来什么都不说；与邀请链接的复制同一句，M2 交接第 14 节）。
+- 测试的共用部分：`core/lib/auth/fake-tab.ts`（`api-client.ts` 的替身：`tokenManager`、`signedIn`、`switchAccount`、`heldChange`（M2 的 `fake-browser.ts` 的 `gate()`）、`lateSettlings`、`pageSettled`），`core/lib/fake-refusal.ts`（`refusal(status, code, fields?)`：nerve 的拒绝，`ApiError`）。
+- 静态检查（总体设计 7.7）：根目录 `.oxlintrc.json` 的 `typescript/no-non-null-assertion` 的范围加上本 Task 的新模块 `fake-tab.ts`、`fake-refusal.ts` 和 `delete-workspace-modal.test.tsx`。
 - e2e 的共用部分：`e2e/fixtures/settings-pages.ts` 的 `sentTo(page, method, path, act)`（请求离开页面时经路由读它的请求体：页面的客户端发出的 `fetch`，`response.request().postDataJSON()` 读不到；路由按路径的模式匹配，一直留着：在页面发出下一个请求时移除路由，可能让那个请求一直挂着）；`e2e/fixtures/api.ts` 的 `changeRole`、`furnishWorkspace`（W2 的 API 版本改用它）；新文件 `e2e/fixtures/workspace-pages.ts`：`anotherBrowser`、`deleteFromGeneralPage`。
 
 **Tests:**
@@ -131,7 +138,7 @@
 
 - [ ] **Step 1: 会话里的跟进和测试的共用部分**
 
-`web/apps/web/core/lib/auth/fake-tab.ts`（新文件，50 行）：
+`web/apps/web/core/lib/auth/fake-tab.ts`（新文件，48 行）：
 
 ````file web/apps/web/core/lib/auth/fake-tab.ts
 /**
@@ -144,6 +151,7 @@
 // vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab")), moves the tab from one session to another,
 // and has nerve settle a change when it says (heldChange).
 
+import { gate } from "./fake-browser";
 import type { SessionState } from "./token-manager";
 
 /** The token manager, as far as the session's check reads it: the tab's session. */
@@ -162,13 +170,10 @@ export function switchAccount() {
 /** A change sent to nerve, and the two ways the test settles it: nerve answers it, or refuses it. */
 export type HeldChange<T> = { sent: Promise<T>; answer: (value: T) => void; refuse: (error: unknown) => void };
 
-/** A change nerve settles when the test says (a store's change, as a page's test mocks it). */
+/** A change nerve settles when the test says (a store's change, as a page's test mocks it): fake-browser.ts's gate. */
 export function heldChange<T>(): HeldChange<T> {
-  let settle!: Pick<HeldChange<T>, "answer" | "refuse">;
-  const sent = new Promise<T>((answer, refuse) => {
-    settle = { answer, refuse };
-  });
-  return { sent, ...settle };
+  const { promise, open, fail } = gate<T>();
+  return { sent: promise, answer: open, refuse: fail };
 }
 
 /** The ways a change sent before the tab switched settles after it, for it.each: answered, or refused. */
@@ -762,7 +767,7 @@ describe("WorkspaceDetails", () => {
 });
 ````
 
-`web/apps/web/core/components/workspace/settings/workspace-details.tsx`（修改，10 处）：
+`web/apps/web/core/components/workspace/settings/workspace-details.tsx`（修改，11 处）：
 
 ````old web/apps/web/core/components/workspace/settings/workspace-details.tsx
 import { Controller, useForm } from "react-hook-form";
@@ -867,6 +872,21 @@ type TWorkspaceForm = Required<Pick<WorkspaceUpdate, "name" | "timezone">> & {
     });
     setIsLoading(false);
 ````
+````old web/apps/web/core/components/workspace/settings/workspace-details.tsx
+      .catch(() => {
+        // Silently handle clipboard errors
+      });
+````
+````new web/apps/web/core/components/workspace/settings/workspace-details.tsx
+      // the browser did not let the page write the clipboard
+      .catch(() =>
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: t("toast.error"),
+          message: t("something_went_wrong_please_try_again"),
+        })
+      );
+````
 
 `web/packages/i18n/src/locales/en/workspace-settings.json`（修改，1 处）：
 
@@ -892,7 +912,23 @@ type TWorkspaceForm = Required<Pick<WorkspaceUpdate, "name" | "timezone">> & {
           "error_title": "操作失败。"
 ````
 
-- [ ] **Step 3: 端到端**
+- [ ] **Step 3: 静态检查的范围**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/components/projects/use-archived-projects-fetch.test.ts",
+        "web/apps/web/core/components/projects/page.tsx"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/projects/use-archived-projects-fetch.test.ts",
+        "web/apps/web/core/components/projects/page.tsx",
+        "web/apps/web/core/lib/auth/fake-tab.ts",
+        "web/apps/web/core/lib/fake-refusal.ts",
+        "web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx"
+````
+
+- [ ] **Step 4: 端到端**
 
 `e2e/fixtures/api.ts`（修改，2 处）：
 
@@ -1301,7 +1337,7 @@ test("W3 (page): a deletion nerve made before another tab signed another account
 
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 360 条，等于上限。
@@ -1315,10 +1351,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 77 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add e2e/fixtures/api.ts e2e/fixtures/settings-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w2-landing.spec.ts e2e/stories/workspace/w3-workspace-settings.spec.ts web/apps/web/core/components/workspace/delete-workspace-form.tsx web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx web/apps/web/core/components/workspace/delete-workspace-modal.tsx web/apps/web/core/components/workspace/delete-workspace-section.tsx web/apps/web/core/components/workspace/settings/workspace-details.test.tsx web/apps/web/core/components/workspace/settings/workspace-details.tsx web/apps/web/core/lib/auth/fake-tab.ts web/apps/web/core/lib/fake-refusal.ts web/apps/web/core/lib/in-session.test.ts web/apps/web/core/lib/in-session.ts web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
+git add .oxlintrc.json e2e/fixtures/api.ts e2e/fixtures/settings-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w2-landing.spec.ts e2e/stories/workspace/w3-workspace-settings.spec.ts web/apps/web/core/components/workspace/delete-workspace-form.tsx web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx web/apps/web/core/components/workspace/delete-workspace-modal.tsx web/apps/web/core/components/workspace/delete-workspace-section.tsx web/apps/web/core/components/workspace/settings/workspace-details.test.tsx web/apps/web/core/components/workspace/settings/workspace-details.tsx web/apps/web/core/lib/auth/fake-tab.ts web/apps/web/core/lib/fake-refusal.ts web/apps/web/core/lib/in-session.test.ts web/apps/web/core/lib/in-session.ts web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
 ```
 ```bash
 git commit -m "feat(M3/P9): pages follow a change only in the session they sent it in; the general page and the deletion
@@ -1331,8 +1367,10 @@ nerve's reason for a refusal, and lands at the root only in its
 session, saying the page goes to another workspace or to create one,
 not to a profile page. The general page finds the address's workspace,
 sends the three fields its form edits, says nerve's reason for a
-refusal and keeps the size controlled. W3's page versions, the session
-switch among them, and S2's general pages.
+refusal, keeps the size controlled, and says when the browser does not
+let it copy the address. The new modules join the non-null override.
+W3's page versions, the session switch among them, and S2's general
+pages.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1350,6 +1388,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T1.7` | 不论输入的名称和确认的话，删除都照样进行 | `delete-workspace-modal.test.tsx` | vitest |
 | `T1.8` | 删除之后不回到根路径（落点） | `delete-workspace-modal.test.tsx`、故事 W3 | vitest；端到端 |
 | `T1.9` | 修改被拒绝之后按钮一直在加载 | 故事 W3 | 端到端 |
+| `T1.10` | 标签页的替身（`fake-tab.ts`，非空断言的范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -1357,7 +1396,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.ts`、`web/apps/web/core/components/workspace/workspace-roles.ts`
-- Modify: `e2e/fixtures/assert/workspace.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/apps/web/core/lib/in-session.ts`
+- Modify: `.oxlintrc.json`、`e2e/fixtures/assert/workspace.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/apps/web/core/lib/in-session.ts`
 
 **Interfaces:**
 - Produces（spec 2.2；M3 设计 2 的 W7、W2，3.14，7.1，7.5；P8a 的 P21、P22）：
@@ -1366,6 +1405,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `member-columns.tsx` 的 `AccountTypeColumn`：不再包一层 `useForm` 的 `Controller`（它从没有提交过，`value as EUserPermissions` 去掉，`errors.role` 永远为空）；`CustomSelect` 的值是行的角色，选项是 `WORKSPACE_ROLES`，`onChange` 调 `changeRole`。
   - `members-list-item.tsx`（整个文件）：收 `workspaceSlug`（地址的工作区，`members-list.tsx` 传入，不读 `currentWorkspace`），自己一行是"离开"，别人的一行是"移出"，都经 `useMembershipChanges`。
   - `core/lib/in-session.ts`：`ChangeFollowers.done` 可省（store 写入回答、页面不另做什么的修改）。
+  - 静态检查（总体设计 7.7）：`.oxlintrc.json` 的非空断言的范围加上 `workspace-roles.ts`（`use-membership-changes.ts` 和它的测试已在 `workspace/settings/**` 之内）。
 - e2e 的共用部分：`e2e/fixtures/workspace-pages.ts`（整个文件）加 `signInAnew`（在自己的浏览器里经登录表单登录，看着它的第一页）、`switchWorkspace`（经工作区菜单打开，交回页面写的"上次打开的工作区"和 nerve 的回答）、`memberRow`、`pickRole`、`endMembership`；`e2e/fixtures/assert/workspace.ts` 加 `lastWorkspaceOf(db, email)`。
 
 **Tests:**
@@ -1777,7 +1817,19 @@ export type ChangeFollowers<T> = { done?: (answer: T) => void; failed: (error: u
   if (outcome.settled === "done") followers.done?.(outcome.answer);
 ````
 
-- [ ] **Step 2: 端到端**
+- [ ] **Step 2: 静态检查的范围**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx",
+        "web/apps/web/core/components/workspace/workspace-roles.ts"
+````
+
+- [ ] **Step 3: 端到端**
 
 `e2e/fixtures/assert/workspace.ts`（修改，1 处）：
 
@@ -2232,7 +2284,7 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
 
 ````
 
-- [ ] **Step 3: 运行检查**
+- [ ] **Step 4: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 360 条，等于上限。
@@ -2246,10 +2298,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 79 个全部通过。
 
-- [ ] **Step 4: 提交**
+- [ ] **Step 5: 提交**
 
 ```bash
-git add e2e/fixtures/assert/workspace.ts e2e/fixtures/workspace-pages.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w2-landing.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/components/workspace/settings/members-list.tsx web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts web/apps/web/core/components/workspace/settings/use-membership-changes.ts web/apps/web/core/components/workspace/settings/useMemberColumns.tsx web/apps/web/core/components/workspace/workspace-roles.ts web/apps/web/core/lib/in-session.ts
+git add .oxlintrc.json e2e/fixtures/assert/workspace.ts e2e/fixtures/workspace-pages.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w2-landing.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/components/workspace/settings/members-list.tsx web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts web/apps/web/core/components/workspace/settings/use-membership-changes.ts web/apps/web/core/components/workspace/settings/useMemberColumns.tsx web/apps/web/core/components/workspace/workspace-roles.ts web/apps/web/core/lib/in-session.ts
 ```
 ```bash
 git commit -m "feat(M3/P9): the members page changes a role, removes and leaves through one hook, in its session
@@ -2260,7 +2312,7 @@ a refusal, and follows each only in the session it was sent in; leaving
 lands at the root. The role column drops the form it never submitted and
 its cast; the roles offered are WORKSPACE_ROLES. W7's and W2's page
 versions, and S2's members pages, where only an admin asks for the
-workspace's invitations.
+workspace's invitations. The roles' module joins the non-null override.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -2277,28 +2329,32 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T2.6` | 自己的一行显示"移出"而不是"离开" | 故事 W7、故事 W2 | 端到端 |
 | `T2.7` | 离开工作区之后停在原页 | `use-membership-changes.test.ts`、故事 W2 | vitest；端到端 |
 | `T2.8` | 成员页对每个角色都取邀请 | 故事 S2 | 端到端 |
+| `T2.9` | 工作区的角色（`workspace-roles.ts`，范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
 ### Task 3: 邀请的表单和列表；W4 的页面版本
 
 **Files:**
-- Create: `web/apps/web/core/components/workspace/invite-modal/refusal.test.ts`、`web/apps/web/core/components/workspace/invite-modal/refusal.ts`、`web/apps/web/core/components/workspace/members/invite-modal.test.tsx`、`web/apps/web/core/lib/invitation-link.test.ts`、`web/apps/web/core/lib/invitation-link.ts`
-- Modify: `e2e/fixtures/api.ts`、`e2e/fixtures/assert/workspace.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/core/components/workspace/invite-modal/fields.tsx`、`web/apps/web/core/components/workspace/members/invite-modal.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/hooks/use-workspace-invitation.tsx`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
+- Create: `web/apps/web/core/components/workspace/invite-modal/refusal.test.ts`、`web/apps/web/core/components/workspace/invite-modal/refusal.ts`、`web/apps/web/core/components/workspace/members/invite-modal.test.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/hooks/use-copy-invitation-link.ts`、`web/apps/web/core/lib/invitation-link.test.ts`、`web/apps/web/core/lib/invitation-link.ts`
+- Modify: `.oxlintrc.json`、`e2e/fixtures/api.ts`、`e2e/fixtures/assert/workspace.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/core/components/workspace/invite-modal/fields.tsx`、`web/apps/web/core/components/workspace/members/invite-modal.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/hooks/use-workspace-invitation.tsx`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
 
 **Interfaces:**
 - Produces（spec 2.3；M3 设计 2 的 W4，7.1，7.4，7.5；P8a 的 P19、P21、P22）：
-  - `core/hooks/use-workspace-invitation.tsx`（整个文件）：表单的值就是生成的 `WorkspaceInvitationsCreate`（`{ invitations: InvitationCreate[] }`；Plane 的 `InvitationFormValues`、`EmailRole` 和 `role: EUserPermissions` 删除，页面原来把 `data.emails` 改名发出）。`useWorkspaceInvitationActions({ invite, onClose })`：提交经 `followInSession(() => invite(data), …)`；成功时关闭、清空、提示；被拒绝时按 `invitationRefusal` 把原因放在 nerve 指出的行下（`setError("invitations.<i>.email", …)`），否则提示。页面原来在 `catch` 里读 `err.error`（P21）再重新抛出（没有处理的拒绝）。`watch` 不再给出（没有读者）；oxlint 的一条警告随之清零。
+  - `core/hooks/use-workspace-invitation.tsx`（整个文件）：表单的值就是生成的 `WorkspaceInvitationsCreate`（`{ invitations: InvitationCreate[] }`；Plane 的 `InvitationFormValues`、`EmailRole` 和 `role: EUserPermissions` 删除，页面原来把 `data.emails` 改名发出）。`useWorkspaceInvitationActions({ invite, onSent })`：提交经 `followInSession(() => invite(data), …)`；成功时清空、提示，把 nerve 建的邀请交给 `onSent(invitations)`（表单所在的地方决定之后做什么：弹窗关闭，Task 6 的新手引导列出链接）；`clear()` 清空表单（弹窗在它离场的过渡之后调；原来 hook 的 `handleClose` 知道弹窗的 350 毫秒）；被拒绝时按 `invitationRefusal` 把原因放在 nerve 指出的行下（`setError("invitations.<i>.email", …)`），否则提示。页面原来在 `catch` 里读 `err.error`（P21）再重新抛出（没有处理的拒绝）。`watch` 不再给出（没有读者）；oxlint 的一条警告随之清零。
   - `core/components/workspace/invite-modal/refusal.ts`：`invitationRefusal(error, rows): InvitationRefusal`，`{ kind: "rows"; rows: { index; message }[] } | { kind: "toast"; message }`：nerve 的字段错误都指向表单里的行（`invitations[<i>].email`）时落到行下：`not_allowed` 是"已是成员"，`duplicate` 是"已有邀请"（待接受、已忽略或表单里重复），其余按 `FIELD_ERROR_MESSAGES`；有任何一条不在行上时，整个拒绝按 `errorMessageKey` 提示。
   - `core/lib/invitation-link.ts`：`invitationLink(origin, invitation)`，邀请链接（`/workspace-invitations?invitation_id=…&token=…`，查询参数经 `URLSearchParams` 编码；原来在列表项里拼字符串，令牌不编码）。
-  - `SendWorkspaceInvitationModal`（`members/invite-modal.tsx`）收 `invite: (data: WorkspaceInvitationsCreate) => Promise<unknown>`（原来是 `onSubmit`）；成员页传 `(data) => inviteMembersToWorkspace(workspaceSlug, data)`，它自己的 `handleWorkspaceInvite` 删除。`invite-modal/fields.tsx` 的行名是 `invitations.<i>.*`，角色的选项是 `WORKSPACE_ROLES`。
-  - `settings/invitations-list-item.tsx`：已忽略的邀请（`responded_at` 不为空）标"已忽略"，没有角色选择和复制链接，只能删除（nerve 不让改、不让接受它）；删除和改角色经 `followInSession`，拒绝按 `code` 提示（原来读 `err.error`）；复制失败有提示（原来只有 `console.error`）。
+  - `SendWorkspaceInvitationModal`（`members/invite-modal.tsx`）收 `invite: (data: WorkspaceInvitationsCreate) => Promise<WorkspaceInvitation[]>`（原来是 `onSubmit`），`onSent` 是它的 `onClose`，关闭时自己在过渡之后清空表单；成员页传 `(data) => inviteMembersToWorkspace(workspaceSlug, data)`，它自己的 `handleWorkspaceInvite` 删除。`invite-modal/fields.tsx` 的行名是 `invitations.<i>.*`，角色的选项是 `WORKSPACE_ROLES`。
+  - `core/components/workspace/settings/use-invitation-changes.ts`：`useInvitationChanges()` 给出 `{ changeRole(workspaceSlug, invitationId, role: WorkspaceRole), remove(workspaceSlug, invitationId) }`（参数照 store 的修改：列表项在地址没有工作区时不渲染，hook 先于这个判断调用）：改角色发 `{ role }`（编号），删除之后提示；都经 `followInSession`，拒绝按 `code` 提示（原来读 `err.error`）。与 Task 2 的 `useMembershipChanges` 同一形状，跟进由它自己的 vitest 守着（预检 M1）。
+  - `settings/invitations-list-item.tsx`：已忽略的邀请（`responded_at` 不为空）标"已忽略"，没有角色选择和复制链接，只能删除（nerve 不让改、不让接受它）；删除和改角色经 `useInvitationChanges`；复制链接经 `useCopyInvitationLink`。
+  - `core/hooks/use-copy-invitation-link.ts`：`useCopyInvitationLink()`，复制邀请链接（`invitationLink`，本页的 origin），成功、失败都提示（原来失败只有 `console.error`）；Task 6 的邀请一步也用它。
   - i18n（en、zh-CN 的 `workspace-settings.json`）：`members.declined`，`members.modal.errors.already_member`、`already_invited`。
   - `web/apps/web/package.json`：web 的 oxlint 上限 360 → 359。
+  - 静态检查（总体设计 7.7）：`.oxlintrc.json` 的非空断言的范围加上 `invitation-link.ts`、`invite-modal/refusal.ts` 和它们的测试、`members/invite-modal.test.tsx`、`use-copy-invitation-link.ts`（`use-invitation-changes.ts` 和它的测试在 `workspace/settings/**` 之内）。
 - e2e 的共用部分：`e2e/fixtures/api.ts` 加 `decline`、`invitationTo`（管理员列出的某个邮箱的邀请，带链接的令牌）；`workspace-pages.ts` 加 `invitationLinkOf`（链接的路径；W4、W5、W1、W6 共用）、`invitationRow`、`sendInvitations`、`removeInvitation`；`assert/workspace.ts` 的 `expectInvitations` 让同一邮箱的两条邀请按创建时间排（W4 的页面版本里同一邮箱先后两条，原来的顺序不定，偶尔失败）。
 
 **Tests:**
-- vitest：`refusal.test.ts`：`invitationRefusal` 的 `shows $refusal`（`it.each`，两行的表单：行上的已是成员和已有邀请、行上的格式不对、一行的角色错误（表单没有它的文案，整个按原因提示）、表单没有的行、没有字段的拒绝、没有回答的失败）。`invitation-link.test.ts`：`opens the invitation page at the origin, with the invitation's id and token`；`gives back the token %s as it was`（`a+b`、`a&token=b`、`a b/c=?#d`、`雪` 经 `URL` 的查询读回原样）。`members/invite-modal.test.tsx`（`SendWorkspaceInvitationModal`）：`sends its rows as nerve's WorkspaceInvitationsCreate, each role a number; then closes, and says so`；`sends nothing for an address that is none`；`stays open when nerve refuses a row, whose message the row shows`；`stays open, and shows nerve's reason, when it refuses the invitations`；`neither closes nor speaks when the invitations' answer $settles after another tab moved this one to another account`。
+- vitest：`refusal.test.ts`：`invitationRefusal` 的 `shows $refusal`（`it.each`，两行的表单：行上的已是成员和已有邀请、行上的格式不对、一行的角色错误（表单没有它的文案，整个按原因提示）、表单没有的行、没有字段的拒绝、没有回答的失败）。`invitation-link.test.ts`：`opens the invitation page at the origin, with the invitation's id and token`；`gives back the token %s as it was`（`a+b`、`a&token=b`、`a b/c=?#d`、`雪` 经 `URL` 的查询读回原样）。`members/invite-modal.test.tsx`（`SendWorkspaceInvitationModal`）：`sends its rows as nerve's WorkspaceInvitationsCreate, each role a number; then closes, and says so`；`sends nothing for an address that is none`；`stays open, with no toast, when nerve refuses a row`（行下的原因由 W4 核对：服务端渲染看不到之后才设的错误）；`stays open, and shows nerve's reason, when it refuses the invitations`；`neither closes nor speaks when the invitations' answer $settles after another tab moved this one to another account`。`settings/use-invitation-changes.test.ts`：`sends a pending invitation's new role as its number, to the invitation's workspace`；`deletes an invitation of the workspace, and says so`；`shows nerve's reason when it refuses $change`（两种修改各一行）；`does nothing on the page when it $settles after another tab moved this one to another account`（两种修改各两行）。
 - 端到端：`W4 (page): the admin invites a member and a guest, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; …`（成员的页面不显示邀请，也不请求它；已忽略的邀请标"Declined"，没有角色选择；两行一次发出，请求体经 `sentTo`，角色是编号；改角色的请求体 `{ role: 15 }`；复制的链接与 `invitationLinkOf` 相同；经 API 先删掉的邀请，页面的删除得到 404，提示原因；已是成员的邮箱、已忽略的邀请的邮箱被拒绝，原因在各自的行下，表单不关；删除已忽略的那条之后可以再邀请）。
 
 - [ ] **Step 1: 链接、拒绝和表单**
@@ -2495,7 +2551,45 @@ export function invitationRefusal(error: unknown, rows: number): InvitationRefus
 }
 ````
 
-`web/apps/web/core/hooks/use-workspace-invitation.tsx`（整个文件，107 行）：
+`web/apps/web/core/hooks/use-copy-invitation-link.ts`（新文件，33 行）：
+
+````file web/apps/web/core/hooks/use-copy-invitation-link.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { WorkspaceInvitation } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { copyTextToClipboard } from "@nerve/utils";
+// lib
+import { invitationLink } from "@/lib/invitation-link";
+
+/** Copies an invitation's link (invitationLink, at this origin) to the clipboard, and says whether it could. */
+export function useCopyInvitationLink(): (invitation: Pick<WorkspaceInvitation, "id" | "token">) => Promise<void> {
+  const { t } = useTranslation();
+  return async (invitation) => {
+    try {
+      await copyTextToClipboard(invitationLink(window.location.origin, invitation));
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: t("common.link_copied"),
+        message: t("entity.link_copied_to_clipboard", { entity: t("common.invite") }),
+      });
+    } catch {
+      // the browser did not let the page write the clipboard
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: t("toast.error"),
+        message: t("something_went_wrong_please_try_again"),
+      });
+    }
+  };
+}
+````
+
+`web/apps/web/core/hooks/use-workspace-invitation.tsx`（整个文件，101 行）：
 
 ````whole web/apps/web/core/hooks/use-workspace-invitation.tsx
 /**
@@ -2508,7 +2602,7 @@ import { useEffect } from "react";
 import type { Control, FieldArrayWithId, FormState } from "react-hook-form";
 import { useFieldArray, useForm } from "react-hook-form";
 // nerve imports
-import type { InvitationCreate, WorkspaceInvitationsCreate } from "@nerve/api-client";
+import type { InvitationCreate, WorkspaceInvitation, WorkspaceInvitationsCreate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // components
@@ -2523,9 +2617,10 @@ const newRow = (): InvitationCreate => ({ email: "", role: 15 });
 const opened = (): WorkspaceInvitationsCreate => ({ invitations: [newRow()] });
 
 type TUseWorkspaceInvitationProps = {
-  /** Sends the invitations of the form, nerve's WorkspaceInvitationsCreate. */
-  invite: (data: WorkspaceInvitationsCreate) => Promise<unknown>;
-  onClose: () => void;
+  /** Sends the invitations of the form, nerve's WorkspaceInvitationsCreate, and gives the invitations nerve made. */
+  invite: (data: WorkspaceInvitationsCreate) => Promise<WorkspaceInvitation[]>;
+  /** What the form's place does with the invitations sent: the modal closes, the onboarding shows their links. */
+  onSent: (invitations: WorkspaceInvitation[]) => void;
 };
 
 type TUseWorkspaceInvitationReturn = {
@@ -2534,17 +2629,18 @@ type TUseWorkspaceInvitationReturn = {
   formState: FormState<WorkspaceInvitationsCreate>;
   remove: (index: number) => void;
   onFormSubmit: () => void;
-  handleClose: () => void;
+  /** Empties the form: one row again. */
+  clear: () => void;
   appendField: () => void;
 };
 
 /**
  * The invitation form (M3 design 2, W4): its rows, each an address and a role, which it sends together. Sent, the form
- * closes and says so; refused, it shows why under each row nerve names, else in a toast (invitationRefusal). It
- * follows the answer only in the session the invitations were sent in (M3 design 7.1).
+ * empties, says so and gives nerve's invitations to onSent; refused, it shows why under each row nerve names, else in a
+ * toast (invitationRefusal). It follows the answer only in the session the invitations were sent in (M3 design 7.1).
  */
 export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProps): TUseWorkspaceInvitationReturn => {
-  const { invite, onClose } = props;
+  const { invite, onSent } = props;
   const { t } = useTranslation();
   // form info
   const { control, reset, handleSubmit, formState, setError } = useForm<WorkspaceInvitationsCreate>({
@@ -2556,28 +2652,20 @@ export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProp
     name: "invitations",
   });
 
-  const handleClose = () => {
-    onClose();
-    const timeout = setTimeout(() => {
-      reset(opened());
-      clearTimeout(timeout);
-    }, 350);
-  };
-
   const appendField = () => {
     append(newRow());
   };
 
   const onSubmitForm = (data: WorkspaceInvitationsCreate) =>
     followInSession(() => invite(data), {
-      done: () => {
-        onClose();
+      done: (invitations) => {
         reset(opened());
         setToast({
           type: TOAST_TYPE.SUCCESS,
           title: t("toast.success"),
           message: t("workspace_settings.settings.members.invitations_sent_successfully"),
         });
+        onSent(invitations);
       },
       failed: (error) => {
         const refusal = invitationRefusal(error, data.invitations.length);
@@ -2601,7 +2689,7 @@ export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProp
     formState,
     remove,
     onFormSubmit: handleSubmit(onSubmitForm),
-    handleClose,
+    clear: () => reset(opened()),
     appendField,
   };
 };
@@ -2717,7 +2805,7 @@ import { useUserPermissions } from "@/hooks/store/user";
         invite={(data) => inviteMembersToWorkspace(workspaceSlug, data)}
 ````
 
-`web/apps/web/core/components/workspace/members/invite-modal.test.tsx`（新文件，100 行）：
+`web/apps/web/core/components/workspace/members/invite-modal.test.tsx`（新文件，101 行）：
 
 ````file web/apps/web/core/components/workspace/members/invite-modal.test.tsx
 /**
@@ -2791,7 +2879,8 @@ describe("SendWorkspaceInvitationModal", () => {
     expect([page.invite.mock.calls, page.onClose.mock.calls, toasts]).toEqual([[], [], []]);
   });
 
-  it("stays open when nerve refuses a row, whose message the row shows", async () => {
+  // the message the form then shows under the row is W4's to check: the render does not show what is set after it
+  it("stays open, with no toast, when nerve refuses a row", async () => {
     page.invite.mockRejectedValueOnce(
       refusal(422, "validation_failed", [{ field: "invitations[0].email", code: "duplicate" }])
     );
@@ -2829,7 +2918,7 @@ describe("SendWorkspaceInvitationModal", () => {
 ````
 ````new web/apps/web/core/components/workspace/members/invite-modal.tsx
 // nerve imports
-import type { WorkspaceInvitationsCreate } from "@nerve/api-client";
+import type { WorkspaceInvitation, WorkspaceInvitationsCreate } from "@nerve/api-client";
 ````
 ````old web/apps/web/core/components/workspace/members/invite-modal.tsx
 // hooks
@@ -2843,7 +2932,7 @@ import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
 ````
 ````new web/apps/web/core/components/workspace/members/invite-modal.tsx
   /** Sends the invitations of the form (the workspace's store, for the page's workspace). */
-  invite: (data: WorkspaceInvitationsCreate) => Promise<unknown>;
+  invite: (data: WorkspaceInvitationsCreate) => Promise<WorkspaceInvitation[]>;
 ````
 ````old web/apps/web/core/components/workspace/members/invite-modal.tsx
   const { isOpen, onClose, onSubmit } = props;
@@ -2852,154 +2941,126 @@ import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
   const { isOpen, onClose, invite } = props;
 ````
 ````old web/apps/web/core/components/workspace/members/invite-modal.tsx
+  const { control, fields, formState, remove, onFormSubmit, handleClose, appendField } = useWorkspaceInvitationActions({
     onSubmit,
+    onClose,
+  });
 ````
 ````new web/apps/web/core/components/workspace/members/invite-modal.tsx
+  const { control, fields, formState, remove, onFormSubmit, clear, appendField } = useWorkspaceInvitationActions({
     invite,
-````
+    onSent: onClose,
+  });
 
-`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`（修改，11 处）：
-
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-import { useMember } from "@/hooks/store/use-member";
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-import { useMember } from "@/hooks/store/use-member";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
-import { followInSession } from "@/lib/in-session";
-import { invitationLink } from "@/lib/invitation-link";
-// local imports
-import { WORKSPACE_ROLES } from "../workspace-roles";
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  // delete any invitation
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  // delete any pending invitation, and delete a declined one, which nerve keeps from being changed or accepted
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  const handleRemoveInvitation = async () => {
-    try {
-      if (!workspaceSlug || !invitationDetails) return;
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  if (!workspaceSlug || !invitationDetails) return null;
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-      await deleteMemberInvitation(workspaceSlug, invitationDetails.id);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "Invitation removed successfully.",
-      });
-    } catch (err: unknown) {
-      const error = err as { error?: string };
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: error?.error || "Something went wrong. Please try again.",
-      });
-    }
+  // the form empties once the modal has gone (its leave transition)
+  const handleClose = () => {
+    onClose();
+    const timeout = setTimeout(() => {
+      clear();
+      clearTimeout(timeout);
+    }, 350);
   };
 ````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  const declined = invitationDetails.responded_at !== null;
-  // nerve's refusal, as its reason; the page follows a change only in the session it was sent in (M3 design 7.1)
-  const failed = (error: unknown) =>
-    setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  if (!invitationDetails) return null;
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  const handleRemoveInvitation = () =>
-    followInSession(() => deleteMemberInvitation(workspaceSlug, invitationDetails.id), {
-      done: () =>
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Invitation removed successfully.",
-        }),
-      failed,
-    });
 
-  const changeRole = (role: WorkspaceRole) =>
-    followInSession(() => updateMemberInvitation(workspaceSlug, invitationDetails.id, { role }), { failed });
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-      // the invitation's link (M3 design 7.4): its id and the token nerve gives an admin with it
-      const path = `/workspace-invitations?invitation_id=${invitationDetails.id}&token=${invitationDetails.token}`;
-      const inviteLink = new URL(path, window.location.origin).href;
-      await copyTextToClipboard(inviteLink);
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-      await copyTextToClipboard(invitationLink(window.location.origin, invitationDetails));
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-    } catch (error) {
-      console.error("Error generating invite link:", error);
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-    } catch {
-      // the browser did not let the page write the clipboard
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: t("something_went_wrong_please_try_again"),
-      });
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-      icon: LinkOutline,
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
+`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`（整个文件，159 行）：
+
+````whole web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { useState } from "react";
+import { observer } from "mobx-react";
+import { useParams } from "react-router";
+// nerve imports
+import type { WorkspaceRole } from "@nerve/api-client";
+import { ROLE } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { ChevronDownOutline, DeleteOutline, LinkOutline } from "@makeplane/propel/icons";
+import type { TContextMenuItem } from "@nerve/ui";
+import { CustomSelect, CustomMenu } from "@nerve/ui";
+import { cn } from "@nerve/utils";
+// components
+import { ConfirmWorkspaceMemberRemove } from "@/components/workspace/confirm-workspace-member-remove";
+// hooks
+import { useMember } from "@/hooks/store/use-member";
+import { useCopyInvitationLink } from "@/hooks/use-copy-invitation-link";
+// local imports
+import { WORKSPACE_ROLES } from "../workspace-roles";
+import { useInvitationChanges } from "./use-invitation-changes";
+
+type Props = {
+  invitationId: string;
+};
+
+export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitationsListItem(props: Props) {
+  const { invitationId } = props;
+  // router
+  const { workspaceSlug } = useParams();
+  // states
+  const [removeMemberModal, setRemoveMemberModal] = useState(false);
+  // nerve hooks
+  const { t } = useTranslation();
+  // store hooks
+  const {
+    workspace: { getWorkspaceInvitationDetails },
+  } = useMember();
+  const { changeRole, remove } = useInvitationChanges();
+  const copyLink = useCopyInvitationLink();
+  // derived values: the row shows only to an admin (the members page's gate, decision 4), who may change, copy and
+  // delete any pending invitation, and delete a declined one, which nerve keeps from being changed or accepted
+  const invitationDetails = getWorkspaceInvitationDetails(invitationId);
+
+  if (!workspaceSlug || !invitationDetails) return null;
+
+  const declined = invitationDetails.responded_at !== null;
+
+  const MENU_ITEMS: TContextMenuItem[] = [
+    {
+      key: "copy-link",
+      action: () => void copyLink(invitationDetails),
+      title: t("common.actions.copy_link"),
       icon: LinkOutline,
       shouldRender: !declined,
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-            <p>{t("common.pending")}</p>
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-            <p>{declined ? t("workspace_settings.settings.members.declined") : t("common.pending")}</p>
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-          <CustomSelect
-            customButton={
-              <div className="item-center flex gap-1 rounded-sm px-2 py-0.5">
-                <span className="flex items-center rounded-sm text-caption-sm-medium">
-                  {ROLE[invitationDetails.role]}
-                </span>
-                <span className="grid place-items-center">
-                  <ChevronDownOutline className="h-3 w-3" />
-                </span>
-              </div>
-            }
-            value={invitationDetails.role}
-            // the select gives the chosen option's value: the role's number, which nerve decodes as a WorkspaceRole
-            onChange={(value: WorkspaceRole) => {
-              if (!workspaceSlug || !value) return;
+    },
+    {
+      key: "remove",
+      action: () => {
+        setRemoveMemberModal(true);
+      },
+      title: t("common.remove"),
+      icon: DeleteOutline,
+      className: "text-danger-primary",
+      iconClassName: "text-danger-primary",
+    },
+  ];
 
-              updateMemberInvitation(workspaceSlug, invitationDetails.id, {
-                role: value,
-              }).catch((err: unknown) => {
-                const error = err as { error?: string };
-                setToast({
-                  type: TOAST_TYPE.ERROR,
-                  title: "Error!",
-                  message: error?.error || "An error occurred while updating member role. Please try again.",
-                });
-              });
-            }}
-            placement="bottom-end"
-          >
-            {Object.entries(ROLE).map(([key, label]) => (
-              <CustomSelect.Option key={key} value={parseInt(key, 10)}>
-                {label}
-              </CustomSelect.Option>
-            ))}
-          </CustomSelect>
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
+  return (
+    <>
+      <ConfirmWorkspaceMemberRemove
+        isOpen={removeMemberModal}
+        onClose={() => setRemoveMemberModal(false)}
+        userDetails={{
+          id: invitationDetails.id,
+          display_name: `${invitationDetails.email}`,
+        }}
+        onSubmit={() => remove(workspaceSlug, invitationDetails.id)}
+      />
+      <div className="group flex h-full w-full items-center justify-between px-3 py-4 hover:bg-layer-transparent-hover">
+        <div className="flex items-center gap-x-4 gap-y-2">
+          <span className="relative flex h-10 w-10 items-center justify-center rounded-sm bg-layer-3 p-4 text-tertiary capitalize">
+            {(invitationDetails.email ?? "?")[0]}
+          </span>
+          <div>
+            <h4 className="cursor-default text-body-xs-regular">{invitationDetails.email}</h4>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-11">
+          <div className="flex items-center justify-center rounded-sm bg-label-yellow-bg-strong/20 px-2.5 py-1 text-center text-caption-sm-medium text-label-yellow-text">
+            <p>{declined ? t("workspace_settings.settings.members.declined") : t("common.pending")}</p>
+          </div>
           {declined ? (
             <span className="px-2 py-0.5 text-caption-sm-medium">{ROLE[invitationDetails.role]}</span>
           ) : (
@@ -3016,7 +3077,7 @@ import { WORKSPACE_ROLES } from "../workspace-roles";
               }
               value={invitationDetails.role}
               // the select gives the picked option's value: a role's number, of WORKSPACE_ROLES
-              onChange={(role: WorkspaceRole) => void changeRole(role)}
+              onChange={(role: WorkspaceRole) => void changeRole(workspaceSlug, invitationDetails.id, role)}
               placement="bottom-end"
             >
               {WORKSPACE_ROLES.map((role) => (
@@ -3026,12 +3087,179 @@ import { WORKSPACE_ROLES } from "../workspace-roles";
               ))}
             </CustomSelect>
           )}
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-            {MENU_ITEMS.map((item) => (
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
+          <CustomMenu ellipsis placement="bottom-end" closeOnSelect>
             {MENU_ITEMS.filter((item) => item.shouldRender !== false).map((item) => (
+              <CustomMenu.MenuItem
+                key={item.key}
+                onClick={() => {
+                  item.action();
+                }}
+                className={cn(
+                  "flex items-center gap-2",
+                  {
+                    "text-placeholder": item.disabled,
+                  },
+                  item.className
+                )}
+                disabled={item.disabled}
+              >
+                {item.icon && <item.icon className={cn("h-3 w-3", item.iconClassName)} />}
+                <div>
+                  <h5>{item.title}</h5>
+                  {item.description && (
+                    <p
+                      className={cn("whitespace-pre-line text-tertiary", {
+                        "text-placeholder": item.disabled,
+                      })}
+                    >
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+              </CustomMenu.MenuItem>
+            ))}
+          </CustomMenu>
+        </div>
+      </div>
+    </>
+  );
+});
+````
+
+`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`（新文件，84 行）：
+
+````file web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { refusal } from "@/lib/fake-refusal";
+import { toasts } from "@/lib/fake-toast";
+import { useInvitationChanges } from "./use-invitation-changes";
+
+// What the members page sends for each change of an invitation, and what it does with nerve's answer (M3 design 7.1,
+// 7.5): the hook runs as a plain function, with stand-ins for the store's changes, which nerve answers when the test
+// says. Its session is fake-tab.ts's.
+
+const page = vi.hoisted(() => ({ updateMemberInvitation: vi.fn(), deleteMemberInvitation: vi.fn() }));
+vi.mock("@/hooks/store/use-member", () => ({
+  useMember: () => ({
+    workspace: {
+      updateMemberInvitation: page.updateMemberInvitation,
+      deleteMemberInvitation: page.deleteMemberInvitation,
+    },
+  }),
+}));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+/** Each change the page makes, by its store change: the role's and the deletion's. */
+const changes = [
+  {
+    change: "a role",
+    store: page.updateMemberInvitation,
+    make: () => useInvitationChanges().changeRole("acme", "i-dan", 5),
+  },
+  {
+    change: "a deletion",
+    store: page.deleteMemberInvitation,
+    make: () => useInvitationChanges().remove("acme", "i-dan"),
+  },
+];
+
+beforeEach(() => {
+  signedIn();
+  for (const store of [page.updateMemberInvitation, page.deleteMemberInvitation]) {
+    store.mockReset();
+    store.mockResolvedValue(undefined);
+  }
+  toasts.length = 0;
+});
+
+describe("useInvitationChanges", () => {
+  it("sends a pending invitation's new role as its number, to the invitation's workspace", async () => {
+    await useInvitationChanges().changeRole("acme", "i-dan", 5);
+    expect([page.updateMemberInvitation.mock.calls, toasts]).toEqual([[["acme", "i-dan", { role: 5 }]], []]);
+  });
+
+  it("deletes an invitation of the workspace, and says so", async () => {
+    await useInvitationChanges().remove("acme", "i-dan");
+    expect(page.deleteMemberInvitation.mock.calls).toEqual([["acme", "i-dan"]]);
+    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Invitation removed successfully." }]);
+  });
+
+  it.each(changes)("shows nerve's reason when it refuses $change", async ({ store, make }) => {
+    store.mockRejectedValueOnce(refusal(409, "workspace.invitation_responded"));
+    await make();
+    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_invitation_responded" }]);
+  });
+
+  describe.each(changes)("$change", ({ store, make }) => {
+    it.each(lateSettlings)(
+      "does nothing on the page when it $settles after another tab moved this one to another account",
+      async ({ settle }) => {
+        const change = heldChange<undefined>();
+        store.mockReturnValueOnce(change.sent);
+        const made = make();
+        switchAccount();
+        settle(change);
+        await made;
+        expect(toasts).toEqual([]);
+      }
+    );
+  });
+});
+````
+
+`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`（新文件，42 行）：
+
+````file web/apps/web/core/components/workspace/settings/use-invitation-changes.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { WorkspaceRole } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+// hooks
+import { useMember } from "@/hooks/store/use-member";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
+import { followInSession } from "@/lib/in-session";
+
+/**
+ * The changes the members page makes to a workspace's invitations (M3 design 7.5), each to the invitation of
+ * invitationId in the workspace of workspaceSlug, as the store's changes take them: a pending invitation's role, and
+ * the deletion of an invitation, pending or declined. Each shows nerve's refusal as its reason; the page follows each
+ * only in the session it was sent in (M3 design 7.1): once another tab has moved this one to another account, the
+ * page is that account's, and says nothing of the change.
+ */
+export function useInvitationChanges() {
+  const {
+    workspace: { updateMemberInvitation, deleteMemberInvitation },
+  } = useMember();
+  const { t } = useTranslation();
+  const failed = (error: unknown) =>
+    setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+
+  return {
+    /** Gives the pending invitation the role: its number, as nerve's invitation update takes it. */
+    changeRole: (workspaceSlug: string, invitationId: string, role: WorkspaceRole) =>
+      followInSession(() => updateMemberInvitation(workspaceSlug, invitationId, { role }), { failed }),
+    /** Deletes the invitation, and says so. */
+    remove: (workspaceSlug: string, invitationId: string) =>
+      followInSession(() => deleteMemberInvitation(workspaceSlug, invitationId), {
+        done: () =>
+          setToast({ type: TOAST_TYPE.SUCCESS, title: "Success!", message: "Invitation removed successfully." }),
+        failed,
+      }),
+  };
+}
 ````
 
 `web/apps/web/package.json`（修改，1 处）：
@@ -3079,7 +3307,24 @@ import { WORKSPACE_ROLES } from "../workspace-roles";
             "already_invited": "这个邮箱已有一份邀请（先删除它），或在这里填了两次。"
 ````
 
-- [ ] **Step 3: 端到端**
+- [ ] **Step 3: 静态检查的范围**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/components/workspace/workspace-roles.ts"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/workspace/workspace-roles.ts",
+        "web/apps/web/core/lib/invitation-link.ts",
+        "web/apps/web/core/lib/invitation-link.test.ts",
+        "web/apps/web/core/components/workspace/invite-modal/refusal.ts",
+        "web/apps/web/core/components/workspace/invite-modal/refusal.test.ts",
+        "web/apps/web/core/components/workspace/members/invite-modal.test.tsx",
+        "web/apps/web/core/hooks/use-copy-invitation-link.ts"
+````
+
+- [ ] **Step 4: 端到端**
 
 `e2e/fixtures/api.ts`（修改，1 处）：
 
@@ -3406,7 +3651,7 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
 
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于新的上限。
@@ -3420,10 +3665,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 80 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add e2e/fixtures/api.ts e2e/fixtures/assert/workspace.ts e2e/fixtures/workspace-pages.ts e2e/stories/workspace/w4-invite-members.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' web/apps/web/core/components/workspace/invite-modal/fields.tsx web/apps/web/core/components/workspace/invite-modal/refusal.test.ts web/apps/web/core/components/workspace/invite-modal/refusal.ts web/apps/web/core/components/workspace/members/invite-modal.test.tsx web/apps/web/core/components/workspace/members/invite-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/hooks/use-workspace-invitation.tsx web/apps/web/core/lib/invitation-link.test.ts web/apps/web/core/lib/invitation-link.ts web/apps/web/package.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
+git add .oxlintrc.json e2e/fixtures/api.ts e2e/fixtures/assert/workspace.ts e2e/fixtures/workspace-pages.ts e2e/stories/workspace/w4-invite-members.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' web/apps/web/core/components/workspace/invite-modal/fields.tsx web/apps/web/core/components/workspace/invite-modal/refusal.test.ts web/apps/web/core/components/workspace/invite-modal/refusal.ts web/apps/web/core/components/workspace/members/invite-modal.test.tsx web/apps/web/core/components/workspace/members/invite-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts web/apps/web/core/components/workspace/settings/use-invitation-changes.ts web/apps/web/core/hooks/use-copy-invitation-link.ts web/apps/web/core/hooks/use-workspace-invitation.tsx web/apps/web/core/lib/invitation-link.test.ts web/apps/web/core/lib/invitation-link.ts web/apps/web/package.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
 ```
 ```bash
 git commit -m "feat(M3/P9): the invitation form sends nerve's WorkspaceInvitationsCreate and shows its refusals under the rows
@@ -3433,8 +3678,10 @@ a number; a refusal that names rows of the form is shown under them (an
 active member's address, one invited already), any other as nerve's
 reason; the answer is followed only in the session it was sent in. The
 invitation list labels a declined invitation, offers only its removal,
-says why nerve refused a change and when the clipboard was not written;
-the link is built in one place, its query encoded. W4's page version.
+makes its changes through useInvitationChanges, which follows each only
+in its session and says why nerve refused it, and says when the
+clipboard was not written; the link is built in one place, its query
+encoded. The new modules join the non-null override. W4's page version.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -3446,30 +3693,36 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T3.1` | 邀请表单的角色选择给出字符串形式的角色编号 | `invite-modal.test.tsx`、故事 W4 | vitest；端到端 |
 | `T3.2` | 邀请表单丢掉 nerve 的拒绝 | `invite-modal.test.tsx`、故事 W4 | vitest；端到端 |
 | `T3.3` | 邀请表单不论会话都跟进回答 | `invite-modal.test.tsx` | vitest |
-| `T3.4` | 邀请列表的一行丢掉 nerve 的拒绝 | 故事 W4 | 端到端 |
+| `T3.4` | 邀请列表的修改（`useInvitationChanges`）丢掉 nerve 的拒绝 | `use-invitation-changes.test.ts`、故事 W4 | vitest；端到端 |
 | `T3.5` | 已忽略的邀请显示为待接受，带角色和链接 | 故事 W4 | 端到端 |
 | `T3.6` | 一行的拒绝显示字段的通用文案 | `refusal.test.ts`、故事 W4 | vitest；端到端 |
 | `T3.7` | 邀请链接不编码其中的值 | `invitation-link.test.ts` | vitest |
 | `T3.8` | 拒绝指名的字段不属于任何一行时，显示在它指名的行下，其余不说 | `refusal.test.ts` | vitest |
+| `T3.9` | 邀请的改角色不论会话都跟进（`try/catch`，预检的 PF3c） | `use-invitation-changes.test.ts` | vitest |
+| `T3.10` | 删除邀请不论会话都跟进（`try/catch`，预检的 PF3c） | `use-invitation-changes.test.ts` | vitest |
+| `T3.11` | 邀请链接（`invitation-link.ts`，范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
+| `T3.12` | 邀请弹窗发出邀请之后不关闭 | `invite-modal.test.tsx`、故事 W4 | vitest；端到端 |
 
 ---
 
 ### Task 4: 邀请页；打开刚加入的工作区；W5 的页面版本
 
 **Files:**
-- Create: `web/apps/web/core/components/workspace/invitation-view.test.ts`、`web/apps/web/core/components/workspace/invitation-view.ts`、`web/apps/web/core/hooks/use-open-workspace.test.ts`、`web/apps/web/core/hooks/use-open-workspace.ts`
-- Modify: `e2e/stories/workspace/w5-invitation-link.spec.ts`、`web/apps/web/app/(all)/workspace-invitations/page.tsx`、`web/apps/web/core/lib/invitation-link.test.ts`、`web/apps/web/core/lib/invitation-link.ts`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
+- Create: `web/apps/web/core/components/workspace/invitation-view.test.ts`、`web/apps/web/core/components/workspace/invitation-view.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.test.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts`、`web/apps/web/core/hooks/use-open-workspace.test.ts`、`web/apps/web/core/hooks/use-open-workspace.ts`
+- Modify: `.oxlintrc.json`、`e2e/stories/workspace/w5-invitation-link.spec.ts`、`web/apps/web/app/(all)/workspace-invitations/page.tsx`、`web/apps/web/core/lib/invitation-link.test.ts`、`web/apps/web/core/lib/invitation-link.ts`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
 
 **Interfaces:**
 - Produces（spec 2.4；M3 设计 2 的 W5，3.8，3.14，7.1，7.4；决定 1；P8a 的 P12、P21）：
   - `core/components/workspace/invitation-view.ts`：`invitationView({ link, preview, signedIn, mismatched }): InvitationView`，纯函数，返回 `kind` 的联合：链接缺 id 或令牌、nerve 按链接找不到邀请（400：id 不是 id；404）是 `invalid`；nerve 没有回答是 `unavailable`（可以重试）；预览还在路上是 `loading`；然后按预览：已忽略是 `declined`，没有登录是 `sign-in`，nerve 对调用者的回答说邀请是别的邮箱的是 `mismatch`，其余是 `answer`。后四种带邀请和链接的令牌。
   - `core/hooks/use-open-workspace.ts`：`useOpenWorkspace()` 给出 `(workspace: Pick<Workspace, "id" | "slug">) => Promise<void>`：把工作区写成调用者上次打开的（`updateUserProfile({ last_workspace_id })`，尽力而为：nerve 不保存时照样打开），再去 `/{slug}`；经 `followInSession`，换账户之后不跳转。接受邀请之后用它（Task 5 的创建也用）。
+  - `core/components/workspace/use-invitation-answer.ts`：`useInvitationAnswer({ reread, mismatched })` 给出 `{ accept(invitationId, token), decline(invitationId, token) }`，都经 `followInSession`：接受之后 `useOpenWorkspace`，忽略之后 `reread()`（重读预览，它说已忽略）；nerve 拒绝时：邮箱不一致（`workspace.invitation_email_mismatch`）调 `mismatched()`，其余按 `code` 提示并 `reread()`（邀请可能已被删除或回答）。页面的跟进由它自己的 vitest 守着（预检 M1）。
   - `core/lib/invitation-link.ts` 加 `invitationAuthPath("/" | "/sign-up", invitation)`：从链接去登录或注册的地址，带 `invitation_id`、`token`（页头据此显示要加入的工作区，Task 7 的注册据此带上邀请）和 `next_path`（登录之后回到链接，M2 设计 3.18）。
-  - 邀请页（`app/(all)/workspace-invitations/page.tsx`，整个文件）：按 `invitationView` 显示；文案都经 `t()`（`workspace_invitation.*`，en、zh-CN 的 `workspace.json`），标题写工作区和角色，不写被邀请的邮箱（预览不给它，页面也不显示）；接受经 `followInSession`，成功之后 `useOpenWorkspace`；忽略之后重读预览（它说已忽略）；nerve 拒绝时：邮箱不一致（`workspace.invitation_email_mismatch`）转到 `mismatch`，只给"退出登录"；其余按 `code` 提示并重读预览（邀请可能已被删除或回答）。原来接受之后直接跳转，不写上次打开的工作区；两种失败都只有 `console.error`；没有登录的人也看到"接受"。
+  - 邀请页（`app/(all)/workspace-invitations/page.tsx`，整个文件）：按 `invitationView` 显示；文案都经 `t()`（`workspace_invitation.*`，en、zh-CN 的 `workspace.json`），标题写工作区和角色，不写被邀请的邮箱（预览不给它，页面也不显示）；接受、忽略经 `useInvitationAnswer`：`reread` 重读预览，`mismatched` 转到 `mismatch`，只给"退出登录"。原来接受之后直接跳转，不写上次打开的工作区；两种失败都只有 `console.error`；没有登录的人也看到"接受"。
+- 静态检查（总体设计 7.7）：`.oxlintrc.json` 的非空断言的范围加上 `invitation-view.ts`、`use-invitation-answer.ts`、`use-open-workspace.ts` 和它们的测试（邀请页在 P8a 起已在 `no-restricted-imports` 的范围内）。
 - e2e：W5 的两个页面版本用 Task 3 的 `invitationLinkOf`、`invitationTo`、`decline`。
 
 **Tests:**
-- vitest：`invitation-view.test.ts`：`invitationView` 的 `shows $view.kind when $when`（`it.each` 十行：链接没有令牌、没有 id，nerve 找不到（404）、id 不是 id（400），nerve 没有回答，还在路上，已忽略，没有登录，邮箱不一致，可以回答）。`use-open-workspace.test.ts`：`writes the workspace as the one opened last, then goes there`；`goes there when nerve does not save it`；`stays when the write $settles after another tab moved this one to another account`（`lateSettlings`）。`invitation-link.test.ts` 加 `opens %s for the link's invitation, and comes back to the link`（`/`、`/sign-up`）。
+- vitest：`invitation-view.test.ts`：`invitationView` 的 `shows $view.kind when $when`（`it.each` 十行：链接没有令牌、没有 id，nerve 找不到（404）、id 不是 id（400），nerve 没有回答，还在路上，已忽略，没有登录，邮箱不一致，可以回答）。`use-open-workspace.test.ts`：`writes the workspace as the one opened last, then goes there`；`goes there when nerve does not save it`；`stays when the write $settles after another tab moved this one to another account`（`lateSettlings`）。`invitation-link.test.ts` 加 `opens %s for the link's invitation, and comes back to the link`（`/`、`/sign-up`）。`use-invitation-answer.test.ts`：`accepts the invitation with the link's token, then opens the workspace nerve answers`；`declines the invitation with the link's token, then reads it again`；`says the invitation is another address's when nerve refuses $answer so`；`shows nerve's reason when it refuses $answer, and reads the invitation again`（接受、忽略各一行）；`does nothing on the page when it $settles after another tab moved this one to another account`（接受、忽略各两行）。
 - 端到端：`W5 (page): signed out, the link shows the workspace and the role and sends the invitee to sign in and back; she accepts and lands in the workspace, written as the one she opened last; …`（另一条邀请忽略之后页面说已忽略；链接打开时被删除的邀请，接受被拒绝，页面说明原因，之后链接无效）；`W5 (page): another address's invitation, once nerve refuses the answer, says it was sent to another address, offers no answer but signing out, and changes nothing; a link with a changed token, or none, is not valid`。
 
 - [ ] **Step 1: 邀请页的决定、打开工作区和登录的地址**
@@ -3602,6 +3855,170 @@ export function invitationView(page: {
   if (!signedIn) return { kind: "sign-in", invitation, token };
   if (mismatched) return { kind: "mismatch", invitation, token };
   return { kind: "answer", invitation, token };
+}
+````
+
+`web/apps/web/core/components/workspace/use-invitation-answer.test.ts`（新文件，102 行）：
+
+````file web/apps/web/core/components/workspace/use-invitation-answer.test.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { refusal } from "@/lib/fake-refusal";
+import { toasts } from "@/lib/fake-toast";
+import { workspaceOf } from "@/store/workspace/fake-workspaces";
+import { useInvitationAnswer } from "./use-invitation-answer";
+
+// What the invitation page sends for an answer to the invitation of its link, and what it does with nerve's word on it
+// (M3 design 7.1, 7.4; W5): the hook runs as a plain function, with stand-ins for the store's answers, which nerve
+// settles when the test says, and for the opening of a workspace. Its session is fake-tab.ts's.
+
+const page = vi.hoisted(() => ({
+  acceptInvitation: vi.fn(),
+  declineInvitation: vi.fn(),
+  openWorkspace: vi.fn(),
+  reread: vi.fn(),
+  mismatched: vi.fn(),
+}));
+vi.mock("@/hooks/store/use-workspace", () => ({
+  useWorkspace: () => ({ acceptInvitation: page.acceptInvitation, declineInvitation: page.declineInvitation }),
+}));
+vi.mock("@/hooks/use-open-workspace", () => ({ useOpenWorkspace: () => page.openWorkspace }));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+const acme = workspaceOf("acme", { role: 15 });
+/** The page's hook, with the page's follow-ups: reading the invitation again, and saying it is another address's. */
+const answers = () => useInvitationAnswer({ reread: page.reread, mismatched: page.mismatched });
+
+/** Each answer the page gives, by its store change. */
+const given = [
+  { answer: "an acceptance", store: page.acceptInvitation, make: () => answers().accept("i-ada", "nrv_inv_x") },
+  { answer: "a decline", store: page.declineInvitation, make: () => answers().decline("i-ada", "nrv_inv_x") },
+];
+
+/** What the page did after nerve's word: opened, read again, said another address's, toasted. */
+const followed = () => [page.openWorkspace.mock.calls, page.reread.mock.calls, page.mismatched.mock.calls, toasts];
+
+beforeEach(() => {
+  signedIn();
+  page.acceptInvitation.mockReset();
+  page.acceptInvitation.mockResolvedValue(acme);
+  page.declineInvitation.mockReset();
+  page.declineInvitation.mockResolvedValue(undefined);
+  for (const followUp of [page.openWorkspace, page.reread, page.mismatched]) followUp.mockReset();
+  toasts.length = 0;
+});
+
+describe("useInvitationAnswer", () => {
+  it("accepts the invitation with the link's token, then opens the workspace nerve answers", async () => {
+    await answers().accept("i-ada", "nrv_inv_x");
+    expect(page.acceptInvitation.mock.calls).toEqual([["i-ada", "nrv_inv_x"]]);
+    expect(followed()).toEqual([[[acme]], [], [], []]);
+  });
+
+  it("declines the invitation with the link's token, then reads it again", async () => {
+    await answers().decline("i-ada", "nrv_inv_x");
+    expect(page.declineInvitation.mock.calls).toEqual([["i-ada", "nrv_inv_x"]]);
+    expect(followed()).toEqual([[], [[]], [], []]);
+  });
+
+  it.each(given)("says the invitation is another address's when nerve refuses $answer so", async ({ store, make }) => {
+    store.mockRejectedValueOnce(refusal(403, "workspace.invitation_email_mismatch"));
+    await make();
+    expect(followed()).toEqual([[], [], [[]], []]);
+  });
+
+  it.each(given)(
+    "shows nerve's reason when it refuses $answer, and reads the invitation again",
+    async ({ store, make }) => {
+      store.mockRejectedValueOnce(refusal(404, "workspace.invitation_not_found"));
+      await make();
+      expect(followed()).toEqual([
+        [],
+        [[]],
+        [],
+        [{ type: "error", title: "toast.error", message: "errors.workspace_invitation_not_found" }],
+      ]);
+    }
+  );
+
+  describe.each(given)("$answer", ({ store, make }) => {
+    it.each(lateSettlings)(
+      "does nothing on the page when it $settles after another tab moved this one to another account",
+      async ({ settle }) => {
+        const answer = heldChange<undefined>();
+        store.mockReturnValueOnce(answer.sent);
+        const made = make();
+        switchAccount();
+        settle(answer);
+        await made;
+        expect(followed()).toEqual([[], [], [], []]);
+      }
+    );
+  });
+});
+````
+
+`web/apps/web/core/components/workspace/use-invitation-answer.ts`（新文件，52 行）：
+
+````file web/apps/web/core/components/workspace/use-invitation-answer.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+// hooks
+import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useOpenWorkspace } from "@/hooks/use-open-workspace";
+// lib
+import { ApiError } from "@/lib/api-error";
+import { errorMessageKey } from "@/lib/error-messages";
+import { followInSession } from "@/lib/in-session";
+
+/**
+ * What the invitation page does with nerve's word on an answer: it reads the invitation again, or it says the
+ * invitation is another address's (decision 1).
+ */
+type AnswerFollowUps = { reread: () => void; mismatched: () => void };
+
+/**
+ * The answers the invitation page gives to the invitation of invitationId, with its link's token (M3 design 7.4, W5):
+ * accepted, the page opens the workspace, its membership's or the caller's own already (M3 design 3.8); declined, it
+ * reads the invitation again, which says so. nerve's refusal: another address's invitation, which the page then says;
+ * else its reason, and the invitation read again, as nerve has it now (answered meanwhile, or deleted). The page
+ * follows an answer only in the session it was sent in (M3 design 7.1): once another tab has moved this one to
+ * another account, the page is that account's, and does nothing of the answer.
+ */
+export function useInvitationAnswer({ reread, mismatched }: AnswerFollowUps) {
+  const { acceptInvitation, declineInvitation } = useWorkspace();
+  const openWorkspace = useOpenWorkspace();
+  const { t } = useTranslation();
+  const refused = (error: unknown) => {
+    if (error instanceof ApiError && error.problem?.code === "workspace.invitation_email_mismatch") {
+      mismatched();
+      return;
+    }
+    setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+    reread();
+  };
+
+  return {
+    accept: (invitationId: string, token: string) =>
+      followInSession(() => acceptInvitation(invitationId, token), {
+        done: (workspace) => void openWorkspace(workspace),
+        failed: refused,
+      }),
+    decline: (invitationId: string, token: string) =>
+      followInSession(() => declineInvitation(invitationId, token), { done: () => reread(), failed: refused }),
+  };
 }
 ````
 
@@ -3754,7 +4171,7 @@ export function invitationAuthPath(
 
 - [ ] **Step 2: 邀请页和文案**
 
-`web/apps/web/app/(all)/workspace-invitations/page.tsx`（整个文件，179 行）：
+`web/apps/web/app/(all)/workspace-invitations/page.tsx`（整个文件，153 行）：
 
 ````whole web/apps/web/app/(all)/workspace-invitations/page.tsx
 /**
@@ -3766,26 +4183,20 @@ export function invitationAuthPath(
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useSearchParams } from "react-router";
-import type { InvitationPreview } from "@nerve/api-client";
 import { ROLE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { BoxesOutline, CloseOutline, LogOutOutline, TickOutline, UserOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { EmptySpace, EmptySpaceItem } from "@/components/ui/empty-space";
 import { invitationView } from "@/components/workspace/invitation-view";
+import { useInvitationAnswer } from "@/components/workspace/use-invitation-answer";
 // helpers
 import { EPageTypes } from "@/helpers/authentication.helper";
 // hooks
-import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
 import { useInvitationPreview } from "@/hooks/use-invitation-preview";
-import { useOpenWorkspace } from "@/hooks/use-open-workspace";
 // lib
-import { ApiError } from "@/lib/api-error";
-import { errorMessageKey } from "@/lib/error-messages";
-import { followInSession } from "@/lib/in-session";
 import { invitationAuthPath } from "@/lib/invitation-link";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
@@ -3800,8 +4211,6 @@ function WorkspaceInvitationPage() {
   const link = { invitationId: searchParams.get("invitation_id"), token: searchParams.get("token") };
   // store hooks
   const { data: currentUser, signOut } = useUser();
-  const { acceptInvitation, declineInvitation } = useWorkspace();
-  const openWorkspace = useOpenWorkspace();
   const { t } = useTranslation();
   // whether nerve answered the caller's answer that the invitation is another address's (decision 1)
   const [mismatched, setMismatched] = useState(false);
@@ -3814,29 +4223,11 @@ function WorkspaceInvitationPage() {
     mismatched,
   });
 
-  // nerve's refusal of an answer: another address's invitation; else its reason, and the link's invitation read again,
-  // as nerve has it now (answered meanwhile, or deleted)
-  const refused = (error: unknown) => {
-    if (error instanceof ApiError && error.problem?.code === "workspace.invitation_email_mismatch") {
-      setMismatched(true);
-      return;
-    }
-    setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
-    void preview.mutate();
-  };
-
-  // The page follows an answer only in the session it was sent in (M3 design 7.1): accepted, it opens the workspace,
-  // its membership's or his own already (M3 design 3.8); declined, it reads the invitation again, which says so.
-  const answer = (invitation: InvitationPreview, token: string, accept: boolean) =>
-    accept
-      ? followInSession(() => acceptInvitation(invitation.id, token), {
-          done: (workspace) => void openWorkspace(workspace),
-          failed: refused,
-        })
-      : followInSession(() => declineInvitation(invitation.id, token), {
-          done: () => void preview.mutate(),
-          failed: refused,
-        });
+  // the caller's answers, followed only in the session they were sent in (use-invitation-answer.ts)
+  const { accept, decline } = useInvitationAnswer({
+    reread: () => void preview.mutate(),
+    mismatched: () => setMismatched(true),
+  });
 
   const home = currentUser ? (
     <EmptySpaceItem Icon={BoxesOutline} title={t("workspace_invitation.home")} href="/" />
@@ -3915,12 +4306,12 @@ function WorkspaceInvitationPage() {
             <EmptySpaceItem
               Icon={TickOutline}
               title={t("workspace_invitation.accept")}
-              action={() => void answer(invitation, token, true)}
+              action={() => void accept(invitation.id, token)}
             />
             <EmptySpaceItem
               Icon={CloseOutline}
               title={t("workspace_invitation.ignore")}
-              action={() => void answer(invitation, token, false)}
+              action={() => void decline(invitation.id, token)}
             />
           </EmptySpace>
         );
@@ -4008,7 +4399,24 @@ export default observer(WorkspaceInvitationPage);
   },
 ````
 
-- [ ] **Step 3: 端到端**
+- [ ] **Step 3: 静态检查的范围**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/hooks/use-copy-invitation-link.ts"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/hooks/use-copy-invitation-link.ts",
+        "web/apps/web/core/components/workspace/invitation-view.ts",
+        "web/apps/web/core/components/workspace/invitation-view.test.ts",
+        "web/apps/web/core/components/workspace/use-invitation-answer.ts",
+        "web/apps/web/core/components/workspace/use-invitation-answer.test.ts",
+        "web/apps/web/core/hooks/use-open-workspace.ts",
+        "web/apps/web/core/hooks/use-open-workspace.test.ts"
+````
+
+- [ ] **Step 4: 端到端**
 
 `e2e/stories/workspace/w5-invitation-link.spec.ts`（修改，3 处）：
 
@@ -4180,7 +4588,7 @@ test("W5 (page): another address's invitation, once nerve refuses the answer, sa
 
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
@@ -4194,10 +4602,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 82 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add e2e/stories/workspace/w5-invitation-link.spec.ts 'web/apps/web/app/(all)/workspace-invitations/page.tsx' web/apps/web/core/components/workspace/invitation-view.test.ts web/apps/web/core/components/workspace/invitation-view.ts web/apps/web/core/hooks/use-open-workspace.test.ts web/apps/web/core/hooks/use-open-workspace.ts web/apps/web/core/lib/invitation-link.test.ts web/apps/web/core/lib/invitation-link.ts web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/workspace.json
+git add .oxlintrc.json e2e/stories/workspace/w5-invitation-link.spec.ts 'web/apps/web/app/(all)/workspace-invitations/page.tsx' web/apps/web/core/components/workspace/invitation-view.test.ts web/apps/web/core/components/workspace/invitation-view.ts web/apps/web/core/components/workspace/use-invitation-answer.test.ts web/apps/web/core/components/workspace/use-invitation-answer.ts web/apps/web/core/hooks/use-open-workspace.test.ts web/apps/web/core/hooks/use-open-workspace.ts web/apps/web/core/lib/invitation-link.test.ts web/apps/web/core/lib/invitation-link.ts web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/workspace.json
 ```
 ```bash
 git commit -m "feat(M3/P9): the invitation page shows what invitationView decides, and opens the workspace joined
@@ -4206,9 +4614,11 @@ invitationView decides the page from the link, its invitation's preview
 and the caller: not valid, unreachable, declined, sign in or up to
 accept, sent to another address, or accept and ignore. Accepted, the
 page writes the workspace as the one opened last (best effort) and goes
-there, in its session alone; a refusal says nerve's reason and reads the
-invitation again; another address's invitation offers signing out alone.
-The page never shows the invited address. W5's page versions.
+there; a decline reads the invitation again; a refusal says nerve's
+reason and reads the invitation again; another address's invitation
+offers signing out alone. useInvitationAnswer gives the answers and
+follows each only in its session. The page never shows the invited
+address. The new modules join the non-null override. W5's page versions.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4218,14 +4628,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
 | `T4.1` | 接受邀请之后不论会话都进入工作区 | `use-open-workspace.test.ts` | vitest |
-| `T4.2` | 发给另一个邮箱的邀请把 nerve 的原因放在提示里，仍可接受和忽略 | 故事 W5 | 端到端 |
-| `T4.3` | 忽略之后不重新读取邀请 | 故事 W5 | 端到端 |
+| `T4.2` | 发给另一个邮箱的邀请把 nerve 的原因放在提示里，仍可接受和忽略（`useInvitationAnswer`） | `use-invitation-answer.test.ts`、故事 W5 | vitest；端到端 |
+| `T4.3` | 忽略之后不重新读取邀请 | `use-invitation-answer.test.ts`、故事 W5 | vitest；端到端 |
 | `T4.4` | 接受的工作区不写成上次打开的工作区 | `use-open-workspace.test.ts`、故事 W5 | vitest；端到端 |
 | `T4.5` | 已忽略的邀请让未登录的人去登录 | `invitation-view.test.ts` | vitest |
-| `T4.6` | 没有 `invitation_id` 的链接显示重试 | `invitation-view.test.ts` | vitest |
+| `T4.6` | `invitation_id` 不是 id 的链接（nerve 答 400）显示重试 | `invitation-view.test.ts` | vitest |
 | `T4.7` | 没有令牌的链接一直转圈 | `invitation-view.test.ts`、故事 W5 | vitest；端到端 |
 | `T4.8` | 从链接去登录之后不回到链接 | `invitation-link.test.ts`、故事 W5 | vitest；端到端 |
-| `T4.9` | 邀请页丢掉 nerve 对接受、忽略的拒绝 | 故事 W5 | 端到端 |
+| `T4.9` | 邀请页丢掉 nerve 对接受、忽略的拒绝（`useInvitationAnswer`） | `use-invitation-answer.test.ts`、故事 W5 | vitest；端到端 |
+| `T4.10` | 接受邀请不论会话都跟进（预检的 PF2） | `use-invitation-answer.test.ts` | vitest |
+| `T4.11` | 忽略邀请不论会话都跟进（预检的 PF2b） | `use-invitation-answer.test.ts` | vitest |
+| `T4.12` | 邀请页的回答（`use-invitation-answer.ts`，范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -4233,7 +4646,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/workspace/use-create-workspace.test.ts`、`web/apps/web/core/components/workspace/use-create-workspace.ts`
-- Modify: `e2e/stories/workspace/w1-create-workspace.spec.ts`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
+- Modify: `.oxlintrc.json`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
 
 **Interfaces:**
 - Produces（spec 2.5；M3 设计 2 的 W1，3.10，3.11，3.14，7.1；P8a 的 P9、P21 和评审的 M7）：
@@ -4245,6 +4658,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `CreateWorkspaceForm`：收 `onCreated(workspace)`（原来是 `onSubmit`），值是 `CreationForm`，经 `useCreateWorkspace` 和表单的 `setError`；表单自己的 slug 检查（`validateSlug`、`invalidSlug`、`slugError` 和它们的两段文字）删除：nerve 的检查是唯一的检查（原来的检查允许 Unicode 字母、文案与 nerve 的不同，还可能和 nerve 的原因一起显示两遍）。
   - `/create-workspace` 页：`defaultValues` 是 `CreationForm`；创建之后 `useOpenWorkspace`（Task 4：写上次打开的工作区，再打开它，只在会话里）。创建关闭时（`workspace_creation_enabled` 为假）说明创建已关闭、请工作区的管理员给一个邀请链接，与新手引导的说法一致（第 2 节 W1："两个入口都显示'创建工作区已关闭'"）；Plane 的"只有实例管理员能创建工作区"和给实例管理员写信的按钮（`mailto:`）删除：Nerve 没有实例管理员（M2 设计 3.16）。
   - i18n（en、zh-CN 的 `workspace.json`）：`url_alphanumeric` 改成 nerve 的规则（小写字母、数字、`-` 和 `_`），加 `url_reserved`；`creation_disabled` 的标题和说明改写，`creation_disabled.request_button` 和 `request_email` 的两条删除。
+
+- 静态检查（总体设计 7.7）：`.oxlintrc.json` 的非空断言的范围加上 `use-create-workspace.ts` 和它的测试。
 
 **Tests:**
 - vitest：`use-create-workspace.test.ts`：`useCreateWorkspace` 的 `asks whether the slug is free, creates the workspace from the form, says so and gives it`；`sends no size when the form has none chosen`；`sends nothing for a slug nerve says is $reason, and says so under it`（已被占用、保留、格式不对）；`shows nerve's refusal under the fields it names`；`shows nerve's reason when it names no field of the form`；`neither speaks nor gives the workspace when the creation $settles after another tab moved this one to another account`（`lateSettlings`）。`creationRefusal` 的 `shows $refused`、`slugFrom` 的 `makes '$typed' into '$slug'`（`it.each`）。
@@ -4833,7 +5248,20 @@ import { slugFrom, useCreateWorkspace, type CreationForm } from "./use-create-wo
       }
 ````
 
-- [ ] **Step 3: 端到端**
+- [ ] **Step 3: 静态检查的范围**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/hooks/use-open-workspace.test.ts"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/hooks/use-open-workspace.test.ts",
+        "web/apps/web/core/components/workspace/use-create-workspace.ts",
+        "web/apps/web/core/components/workspace/use-create-workspace.test.ts"
+````
+
+- [ ] **Step 4: 端到端**
 
 `e2e/stories/workspace/w1-create-workspace.spec.ts`（修改，3 处）：
 
@@ -4942,7 +5370,7 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
 
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
@@ -4956,10 +5384,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 83 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add e2e/stories/workspace/w1-create-workspace.spec.ts 'web/apps/web/app/(all)/create-workspace/page.tsx' web/apps/web/core/components/workspace/create-workspace-form.tsx web/apps/web/core/components/workspace/use-create-workspace.test.ts web/apps/web/core/components/workspace/use-create-workspace.ts web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/workspace.json
+git add .oxlintrc.json e2e/stories/workspace/w1-create-workspace.spec.ts 'web/apps/web/app/(all)/create-workspace/page.tsx' web/apps/web/core/components/workspace/create-workspace-form.tsx web/apps/web/core/components/workspace/use-create-workspace.test.ts web/apps/web/core/components/workspace/use-create-workspace.ts web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/workspace.json
 ```
 ```bash
 git commit -m "feat(M3/P9): workspaces are created through one hook: nerve's slug check decides, its refusals land on the fields
@@ -4990,31 +5418,31 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T5.7` | 检查之后才被占用的 slug 显示在提示里，不在字段下方 | `use-create-workspace.test.ts` | vitest |
 | `T5.8` | nerve 对 slug 的说明哪里都不显示 | `use-create-workspace.test.ts`、故事 W1 | vitest；端到端 |
 | `T5.9` | slug 字段保留输入的空格 | `use-create-workspace.test.ts`、故事 W1 | vitest；端到端 |
+| `T5.10` | 创建工作区的 hook（范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
 ### Task 6: 新手引导：按工作区列表决定步骤，创建一步共用 hook，邀请一步用成员页的表单；W1 的页面版本（二）
 
 **Files:**
-- Create: `web/apps/web/core/components/onboarding/onboarding-place.test.ts`、`web/apps/web/core/components/onboarding/onboarding-place.ts`、`web/apps/web/core/components/onboarding/root.test.tsx`、`web/apps/web/core/components/onboarding/steps/team/links.tsx`、`web/apps/web/core/hooks/use-copy-invitation-link.ts`
-- Modify: `e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`web/apps/web/app/(all)/onboarding/page.tsx`、`web/apps/web/core/components/onboarding/root.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/onboarding/steps/root.tsx`、`web/apps/web/core/components/onboarding/steps/team/root.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/index.ts`、`web/apps/web/core/components/workspace/members/invite-modal.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/hooks/use-workspace-invitation.tsx`、`web/apps/web/core/store/user/profile.store.ts`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`、`web/packages/utils/src/validation.ts`
+- Create: `web/apps/web/core/components/onboarding/onboarding-place.test.ts`、`web/apps/web/core/components/onboarding/onboarding-place.ts`、`web/apps/web/core/components/onboarding/root.test.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx`、`web/apps/web/core/components/onboarding/steps/team/links.tsx`
+- Modify: `.oxlintrc.json`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`web/apps/web/app/(all)/onboarding/page.tsx`、`web/apps/web/core/components/onboarding/root.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/onboarding/steps/root.tsx`、`web/apps/web/core/components/onboarding/steps/team/root.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/index.ts`、`web/apps/web/core/store/user/profile.store.ts`、`web/packages/constants/src/workspace.ts`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`、`web/packages/utils/src/validation.ts`
 - Delete: `web/apps/web/core/components/onboarding/steps/workspace/root.tsx`
 
 **Interfaces:**
 - Produces（spec 2.6；M3 设计 2 的 W1，7.1，7.4；决定 2；P8a 的 P7、P21 和评审的 M4、M7）：
   - `core/components/onboarding/onboarding-place.ts`：`OnboardingPlace`（`kind` 是 `EOnboardingSteps` 的三步，邀请一步带它邀请到的工作区）；`resumedPlace(profile, workspaces)`：资料、创建都已完成、还没邀请、创建的工作区（写成上次打开的那个）仍在列表中时，接着在邀请一步（邀请到它，不是列表的第一个，M4）；资料已完成、没有创建、没有工作区时，在创建一步；其余在资料一步。`afterProfile(workspaces)`：有工作区的人（先接受了邀请的）资料一步之后就完成（`"finish"`），没有的去创建（`"create"`，决定 2）。原来接着做时，被邀请的人也停在创建一步。
   - `core/components/onboarding/root.tsx`（整个文件）：`OnboardingRoot` 经 `useSessionSWR(["WORKSPACES"], …)` 取调用者的工作区列表（M7：原来新手引导读一份没人取过的列表），列表到之前显示加载，取不到时显示 `SessionUnavailable`；`OnboardingSteps` 按 `onboarding-place.ts` 决定步骤，资料一步之后、创建之后、完成时的修改都经 `followInSession`，拒绝按 `code` 提示；创建的工作区与它的步骤一起写成上次打开的（`last_workspace_id`）；只给创建者自己用的工作区（规模选"Just myself"）没有邀请一步。
-  - `steps/root.tsx`（整个文件）：按 `place` 显示，收 `onNamed`、`onCreated(workspace, alone)`、`onDone`；`steps/profile/root.tsx` 的 `ProfileSetupStep` 收 `onDone`（原来的 `handleStepChange(step, skipInvites?)` 删除）。`steps/workspace/root.tsx`（"创建或加入"的包装）删除，`index.ts` 改为导出创建一步。
+  - `steps/root.tsx`（整个文件）：按 `place` 显示，收 `onNamed`、`onCreated(workspace, alone)`、`onDone`；`steps/profile/root.tsx` 的 `ProfileSetupStep` 收 `onDone`（原来的 `handleStepChange(step, skipInvites?)` 删除），只在发出名字的会话里调它：名字的保存经 `followInSession`，`done` 在保存成功时调 `onDone()`（预检 M2：原来在 `await` 之后直接交给根，另一个标签页换了账户之后，根的完成或下一步发生在新会话里，旧 store 的请求被 `SessionChangedError` 截断，"出错了"显示在那个账户的页面上）；资料一步自己的提示仍是 M2 的（spec 第 5 节 P11）。`steps/workspace/root.tsx`（"创建或加入"的包装）删除，`index.ts` 改为导出创建一步。
   - `steps/workspace/create.tsx`：创建一步改用 Task 5 的 `useCreateWorkspace`、`CreationForm`、`slugFrom`（它自己的 slug 检查、`validateSlug` 和 `try/catch` 删除；slug 框的红边原来读的是 `errors.name`，改为 `errors.slug`）。
-  - `steps/team/root.tsx`（整个文件）：邀请一步用成员页的表单（`useWorkspaceInvitationActions` 和 `InvitationFields`：一行起，角色是 Guest、Member、Admin 的编号，行的错误来自 nerve），邀请到这一步的工作区（原来 Plane 的三行表单，邀请到列表的第一个工作区，拒绝读 `err.error`，P21）；发出之后显示 `steps/team/links.tsx`：每个邀请的链接和"复制链接"，再"继续"（v0 不发邮件）。
-  - `core/hooks/use-copy-invitation-link.ts`：`useCopyInvitationLink()`，复制邀请链接并提示成败；邀请列表（Task 3 的复制改用它）和新手引导共用。
-  - `use-workspace-invitation.tsx`：`invite` 交回 nerve 建的邀请，`onSent(invitations)` 取代 `onClose`，`clear()` 取代 `handleClose`（关闭时清空表单在弹窗里，`members/invite-modal.tsx`）。
+  - `steps/team/root.tsx`（整个文件）：邀请一步用成员页的表单（`useWorkspaceInvitationActions` 和 `InvitationFields`：一行起，角色是 Guest、Member、Admin 的编号，行的错误来自 nerve），邀请到这一步的工作区（原来 Plane 的三行表单，邀请到列表的第一个工作区，拒绝读 `err.error`，P21）；表单的 `onSent` 交来的邀请就是 `steps/team/links.tsx` 列出的：每个邀请的链接和"复制链接"（Task 3 的 `useCopyInvitationLink`），再"继续"（v0 不发邮件）。
   - `profile.store.ts`：`finishUserOnboarding` 不再把列表中的第一个工作区写成上次打开的。
-  - `@nerve/utils` 的 `validateSlug`、`SLUG_REGEX` 删除（不再有读者）。i18n：`onboarding.workspace.creation_disabled` 改成 nerve 的情形（创建已关闭：请工作区的管理员给一个邀请链接，P7）；`onboarding.invite.links.*` 新增；`onboarding.invite.role`、`not_an_email` 和 `workspace_creation.toast.error` 删除（en、zh-CN）。
+  - `@nerve/utils` 的 `validateSlug`、`SLUG_REGEX` 删除（不再有读者）。`@nerve/constants` 的 `ROLE_DETAILS` 的 `i18n_description` 和两种语言 `common.json` 的 `role_details.{guest,member,admin}.description` 删除：它们唯一的读者是旧的邀请一步（预检 L2）。i18n：`onboarding.workspace.creation_disabled` 改成 nerve 的情形（创建已关闭：请工作区的管理员给一个邀请链接，P7）；`onboarding.invite.links.*` 新增；`onboarding.invite.role`、`not_an_email` 和 `workspace_creation.toast.error` 删除（en、zh-CN）。
+  - 静态检查（总体设计 7.7）：`.oxlintrc.json` 的 `no-restricted-imports` 的范围加上 `onboarding/root.tsx`（它取工作区列表）；非空断言的范围加上 `onboarding-place.ts` 和它的测试、`onboarding/root.test.tsx`、`steps/profile/root.test.tsx`、`steps/team/links.tsx`。
 
 **Tests:**
-- vitest：`onboarding-place.test.ts`：`resumedPlace` 的 `resumes $account at $place.kind`、`afterProfile` 的 `leads $account to $next`（`it.each`）。`root.test.tsx`（`OnboardingRoot`）：`lists the caller's workspaces, and shows no step before nerve has`；`ends the onboarding of one who has a workspace with the profile step`；`writes the profile step done for one who has none, whom the creation step follows`；`writes a workspace created $workspace as the one opened last, with its step`；`says why nerve refused a step's change`；`says nothing when the end of the onboarding $settles after another tab moved this one to another account`。
-- 端到端：`W1 (page): a newcomer's onboarding creates a workspace after the profile step, written as the one opened last; invites to it and shows the link to copy; then lands in it`（请求体经 `sentTo`：创建、写进资料的步骤和上次打开的工作区、邀请、完成；复制的链接）；`W1 (page): a newcomer who puts off the invitations at their step lands in the workspace he created, having invited no one`（第 2 节 W1 的"点跳过"）；`W1 (page): one who joined a workspace before onboarding is done after the profile step; one who comes back after creating a workspace invites to that one, whatever comes first in his list`；`W1 (page): on a nerve with creation switched off, a newcomer's onboarding says to ask for an invitation link after the profile step`。S2 加 `S2: a newcomer opens /, which sends him to the onboarding: it asks for his workspaces, as the app does, and no more`。
+- vitest：`onboarding-place.test.ts`：`resumedPlace` 的 `resumes $account at $place.kind`、`afterProfile` 的 `leads $account to $next`（`it.each`）。`root.test.tsx`（`OnboardingRoot`）：`lists the caller's workspaces, and shows no step before nerve has`；`ends the onboarding of one who has a workspace with the profile step`；`writes the profile step done for one who has none, whom the creation step follows`；`writes a workspace created $workspace as the one opened last, with its step`；`says why nerve refused a step's change`；`says nothing when it $settles after another tab moved this one to another account`（一步的资料修改、完成引导各两行，预检 M1）。`steps/profile/root.test.tsx`（`ProfileSetupStep`；`react-hook-form` 的 `useForm` 换成留下提交函数的替身）：`sends the names, then hands the onboarding on`；`stays when nerve refuses the names`；`hands nothing on when nerve has the names after another tab moved this one to another account`。
+- 端到端：`W1 (page): a newcomer's onboarding creates a workspace after the profile step, written as the one opened last; invites to it and shows the link to copy; then lands in it`（请求体经 `sentTo`：创建、写进资料的步骤和上次打开的工作区、邀请、完成；复制的链接）；`W1 (page): a newcomer who puts off the invitations at their step lands in the workspace he created, having invited no one`（第 2 节 W1 的"点跳过"）；`W1 (page): one who joined a workspace before onboarding is done after the profile step; one who comes back after creating a workspace invites to that one, whatever comes first in his list`；`W1 (page): on a nerve with creation switched off, a newcomer's onboarding says to ask for an invitation link after the profile step`。S2 加 `S2: a newcomer opens /, which sends him to the onboarding: it asks for his workspaces, as the app does, and no more`（像其余的 S2 测试，安静的控制台之后再读一次请求：之后没有别的请求）。
 
 - [ ] **Step 1: 新手引导的位置和根**
 
@@ -5135,7 +5563,7 @@ export const afterProfile = (workspaces: readonly Workspace[]): "finish" | "crea
   workspaces.length > 0 ? "finish" : "create";
 ````
 
-`web/apps/web/core/components/onboarding/root.test.tsx`（新文件，130 行）：
+`web/apps/web/core/components/onboarding/root.test.tsx`（新文件，137 行）：
 
 ````file web/apps/web/core/components/onboarding/root.test.tsx
 /**
@@ -5195,6 +5623,11 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 const alpha = workspaceOf("alpha");
 const zeta = workspaceOf("zeta", { role: 20 });
+/** Each change the onboarding follows, by the profile's store change: a step's, and the end's. */
+const changes = [
+  { change: "a step's change", store: page.updateUserProfile, make: () => opened([]).onNamed() },
+  { change: "the end of the onboarding", store: page.finishUserOnboarding, make: () => opened([alpha]).onDone() },
+];
 
 /** Opens the onboarding of one whose workspaces nerve listed as workspaces; gives how its steps end. */
 function opened(workspaces: Workspace[]): Ends {
@@ -5255,18 +5688,20 @@ describe("OnboardingRoot", () => {
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.validation_failed" }]);
   });
 
-  it.each(lateSettlings)(
-    "says nothing when the end of the onboarding $settles after another tab moved this one to another account",
-    async ({ settle }) => {
-      const finishing = heldChange<undefined>();
-      page.finishUserOnboarding.mockReturnValueOnce(finishing.sent);
-      opened([alpha]).onDone();
-      switchAccount();
-      settle(finishing);
-      await pageSettled();
-      expect(toasts).toEqual([]);
-    }
-  );
+  describe.each(changes)("$change", ({ store, make }) => {
+    it.each(lateSettlings)(
+      "says nothing when it $settles after another tab moved this one to another account",
+      async ({ settle }) => {
+        const change = heldChange<undefined>();
+        store.mockReturnValueOnce(change.sent);
+        make();
+        switchAccount();
+        settle(change);
+        await pageSettled();
+        expect(toasts).toEqual([]);
+      }
+    );
+  });
 });
 ````
 
@@ -5372,7 +5807,7 @@ export const OnboardingRoot = observer(function OnboardingRoot() {
 });
 ````
 
-- [ ] **Step 2: 步骤、邀请的表单和链接、store、工具函数和文案**
+- [ ] **Step 2: 步骤、邀请的链接、store、工具函数和文案**
 
 `web/apps/web/app/(all)/onboarding/page.tsx`（修改，1 处）：
 
@@ -5384,7 +5819,100 @@ export const OnboardingRoot = observer(function OnboardingRoot() {
 // The onboarding lists the caller's workspaces, which decide its steps (OnboardingRoot, M3 design 7.4).
 ````
 
-`web/apps/web/core/components/onboarding/steps/profile/root.tsx`（修改，4 处）：
+`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx`（新文件，88 行）：
+
+````file web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { heldChange, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { refusal } from "@/lib/fake-refusal";
+import { ProfileSetupStep } from "./root";
+
+// When the onboarding's profile step hands the onboarding on (M3 design 7.1, 7.4): the step renders on the server with
+// a stand-in for its form (react-hook-form's useForm), which keeps the step's submit; the test submits names as the
+// form would, and nerve answers them when the test says. Its session is fake-tab.ts's. What the step itself says of a
+// refusal is M2's (M2 design 7.3).
+
+/** The names the step's form gives its submit. */
+type Names = { first_name: string; last_name: string };
+
+const page = vi.hoisted(
+  (): { submit: ((names: Names) => Promise<void>) | undefined; updateCurrentUser: ReturnType<typeof vi.fn> } => ({
+    submit: undefined,
+    updateCurrentUser: vi.fn(),
+  })
+);
+/** The step hands the onboarding on: the root's part. */
+const onDone = vi.fn<() => void>();
+vi.mock("react-hook-form", () => ({
+  useForm: () => ({
+    handleSubmit: (submit: (names: Names) => Promise<void>) => {
+      page.submit = submit;
+      return () => undefined;
+    },
+    control: {},
+    watch: () => "",
+    setError: () => undefined,
+    formState: { errors: {}, isSubmitting: false, isValid: true },
+  }),
+  Controller: () => null,
+}));
+vi.mock("@/hooks/store/user", () => ({
+  useUser: () => ({ data: { display_name: "ada" }, updateCurrentUser: page.updateCurrentUser }),
+}));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+/** Renders the step, and submits the names as its form would; settles once the step has. */
+async function named() {
+  renderToStaticMarkup(<ProfileSetupStep onDone={onDone} />);
+  if (!page.submit) throw new Error("the step showed no form");
+  await page.submit({ first_name: "Ada", last_name: "Lovelace" });
+}
+
+beforeEach(() => {
+  signedIn();
+  page.submit = undefined;
+  page.updateCurrentUser.mockReset();
+  page.updateCurrentUser.mockResolvedValue(undefined);
+  onDone.mockReset();
+});
+
+describe("ProfileSetupStep", () => {
+  it("sends the names, then hands the onboarding on", async () => {
+    await named();
+    expect(page.updateCurrentUser.mock.calls).toEqual([[{ first_name: "Ada", last_name: "Lovelace" }]]);
+    expect(onDone.mock.calls).toEqual([[]]);
+  });
+
+  it("stays when nerve refuses the names", async () => {
+    page.updateCurrentUser.mockRejectedValueOnce(
+      refusal(422, "validation_failed", [{ field: "first_name", code: "required" }])
+    );
+    await named();
+    expect(onDone.mock.calls).toEqual([]);
+  });
+
+  it("hands nothing on when nerve has the names after another tab moved this one to another account", async () => {
+    const names = heldChange<undefined>();
+    page.updateCurrentUser.mockReturnValueOnce(names.sent);
+    const submitted = named();
+    switchAccount();
+    names.answer(undefined);
+    await submitted;
+    expect(onDone.mock.calls).toEqual([]);
+  });
+});
+````
+
+`web/apps/web/core/components/onboarding/steps/profile/root.tsx`（修改，5 处）：
 
 ````old web/apps/web/core/components/onboarding/steps/profile/root.tsx
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -5392,6 +5920,13 @@ import { EOnboardingSteps } from "@nerve/types";
 ````
 ````new web/apps/web/core/components/onboarding/steps/profile/root.tsx
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+````
+````old web/apps/web/core/components/onboarding/steps/profile/root.tsx
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+````
+````new web/apps/web/core/components/onboarding/steps/profile/root.tsx
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { followInSession } from "@/lib/in-session";
 ````
 ````old web/apps/web/core/components/onboarding/steps/profile/root.tsx
   handleStepChange: (step: EOnboardingSteps, skipInvites?: boolean) => void;
@@ -5410,7 +5945,15 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
     if (await handleSubmitUserDetail(formData)) handleStepChange(EOnboardingSteps.PROFILE_SETUP);
 ````
 ````new web/apps/web/core/components/onboarding/steps/profile/root.tsx
-    if (await handleSubmitUserDetail(formData)) onDone();
+    // the onboarding goes on only in the session the names were sent in (M3 design 7.1); what the step says of a
+    // refusal is M2's (M3/P9 spec 5: P11)
+    await followInSession(() => handleSubmitUserDetail(formData), {
+      done: (named) => {
+        if (named) onDone();
+      },
+      // handleSubmitUserDetail says why itself, and answers false: it does not reject
+      failed: () => undefined,
+    });
 ````
 
 `web/apps/web/core/components/onboarding/steps/root.tsx`（整个文件，62 行）：
@@ -5803,217 +6346,6 @@ export * from "./create";
 ````delete web/apps/web/core/components/onboarding/steps/workspace/root.tsx
 ````
 
-`web/apps/web/core/components/workspace/members/invite-modal.tsx`（修改，4 处）：
-
-````old web/apps/web/core/components/workspace/members/invite-modal.tsx
-import type { WorkspaceInvitationsCreate } from "@nerve/api-client";
-````
-````new web/apps/web/core/components/workspace/members/invite-modal.tsx
-import type { WorkspaceInvitation, WorkspaceInvitationsCreate } from "@nerve/api-client";
-````
-````old web/apps/web/core/components/workspace/members/invite-modal.tsx
-  invite: (data: WorkspaceInvitationsCreate) => Promise<unknown>;
-````
-````new web/apps/web/core/components/workspace/members/invite-modal.tsx
-  invite: (data: WorkspaceInvitationsCreate) => Promise<WorkspaceInvitation[]>;
-````
-````old web/apps/web/core/components/workspace/members/invite-modal.tsx
-  const { control, fields, formState, remove, onFormSubmit, handleClose, appendField } = useWorkspaceInvitationActions({
-````
-````new web/apps/web/core/components/workspace/members/invite-modal.tsx
-  const { control, fields, formState, remove, onFormSubmit, clear, appendField } = useWorkspaceInvitationActions({
-````
-````old web/apps/web/core/components/workspace/members/invite-modal.tsx
-    onClose,
-  });
-````
-````new web/apps/web/core/components/workspace/members/invite-modal.tsx
-    onSent: onClose,
-  });
-
-  // the form empties once the modal has gone (its leave transition)
-  const handleClose = () => {
-    onClose();
-    const timeout = setTimeout(() => {
-      clear();
-      clearTimeout(timeout);
-    }, 350);
-  };
-````
-
-`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`（修改，6 处）：
-
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-import { cn, copyTextToClipboard } from "@nerve/utils";
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-import { cn } from "@nerve/utils";
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-import { useMember } from "@/hooks/store/use-member";
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-import { useMember } from "@/hooks/store/use-member";
-import { useCopyInvitationLink } from "@/hooks/use-copy-invitation-link";
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-import { followInSession } from "@/lib/in-session";
-import { invitationLink } from "@/lib/invitation-link";
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-import { followInSession } from "@/lib/in-session";
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  } = useMember();
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-  } = useMember();
-  const copyLink = useCopyInvitationLink();
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-
-  const handleCopyText = async () => {
-    try {
-      await copyTextToClipboard(invitationLink(window.location.origin, invitationDetails));
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("common.link_copied"),
-        message: t("entity.link_copied_to_clipboard", { entity: t("common.invite") }),
-      });
-    } catch {
-      // the browser did not let the page write the clipboard
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: t("something_went_wrong_please_try_again"),
-      });
-    }
-  };
-
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-
-````
-````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-      action: () => void handleCopyText(),
-````
-````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
-      action: () => void copyLink(invitationDetails),
-````
-
-`web/apps/web/core/hooks/use-copy-invitation-link.ts`（新文件，33 行）：
-
-````file web/apps/web/core/hooks/use-copy-invitation-link.ts
-/**
- * Copyright (c) 2026-present OpenNerve
- * SPDX-License-Identifier: AGPL-3.0-only
- */
-
-import type { WorkspaceInvitation } from "@nerve/api-client";
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { copyTextToClipboard } from "@nerve/utils";
-// lib
-import { invitationLink } from "@/lib/invitation-link";
-
-/** Copies an invitation's link (invitationLink, at this origin) to the clipboard, and says whether it could. */
-export function useCopyInvitationLink(): (invitation: Pick<WorkspaceInvitation, "id" | "token">) => Promise<void> {
-  const { t } = useTranslation();
-  return async (invitation) => {
-    try {
-      await copyTextToClipboard(invitationLink(window.location.origin, invitation));
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("common.link_copied"),
-        message: t("entity.link_copied_to_clipboard", { entity: t("common.invite") }),
-      });
-    } catch {
-      // the browser did not let the page write the clipboard
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: t("something_went_wrong_please_try_again"),
-      });
-    }
-  };
-}
-````
-
-`web/apps/web/core/hooks/use-workspace-invitation.tsx`（修改，9 处）：
-
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
-import type { InvitationCreate, WorkspaceInvitationsCreate } from "@nerve/api-client";
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
-import type { InvitationCreate, WorkspaceInvitation, WorkspaceInvitationsCreate } from "@nerve/api-client";
-````
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
-  /** Sends the invitations of the form, nerve's WorkspaceInvitationsCreate. */
-  invite: (data: WorkspaceInvitationsCreate) => Promise<unknown>;
-  onClose: () => void;
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
-  /** Sends the invitations of the form, nerve's WorkspaceInvitationsCreate, and gives the invitations nerve made. */
-  invite: (data: WorkspaceInvitationsCreate) => Promise<WorkspaceInvitation[]>;
-  /** What the form's place does with the invitations sent: the modal closes, the onboarding shows their links. */
-  onSent: (invitations: WorkspaceInvitation[]) => void;
-````
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
-  handleClose: () => void;
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
-  /** Empties the form: one row again. */
-  clear: () => void;
-````
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
- * closes and says so; refused, it shows why under each row nerve names, else in a toast (invitationRefusal). It
- * follows the answer only in the session the invitations were sent in (M3 design 7.1).
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
- * empties, says so and gives nerve's invitations to onSent; refused, it shows why under each row nerve names, else in a
- * toast (invitationRefusal). It follows the answer only in the session the invitations were sent in (M3 design 7.1).
-````
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
-  const { invite, onClose } = props;
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
-  const { invite, onSent } = props;
-````
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
-
-  const handleClose = () => {
-    onClose();
-    const timeout = setTimeout(() => {
-      reset(opened());
-      clearTimeout(timeout);
-    }, 350);
-  };
-
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
-
-````
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
-      done: () => {
-        onClose();
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
-      done: (invitations) => {
-````
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
-        });
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
-        });
-        onSent(invitations);
-````
-````old web/apps/web/core/hooks/use-workspace-invitation.tsx
-    handleClose,
-````
-````new web/apps/web/core/hooks/use-workspace-invitation.tsx
-    clear: () => reset(opened()),
-````
-
 `web/apps/web/core/store/user/profile.store.ts`（修改，2 处）：
 
 ````old web/apps/web/core/store/user/profile.store.ts
@@ -6031,8 +6363,53 @@ import type { InvitationCreate, WorkspaceInvitation, WorkspaceInvitationsCreate 
       is_onboarded: true,
 ````
 
-`web/packages/i18n/src/locales/en/common.json`（修改，3 处）：
+`web/packages/constants/src/workspace.ts`（修改，3 处）：
 
+````old web/packages/constants/src/workspace.ts
+    i18n_title: "role_details.guest.title",
+    i18n_description: "role_details.guest.description",
+````
+````new web/packages/constants/src/workspace.ts
+    i18n_title: "role_details.guest.title",
+````
+````old web/packages/constants/src/workspace.ts
+    i18n_title: "role_details.member.title",
+    i18n_description: "role_details.member.description",
+````
+````new web/packages/constants/src/workspace.ts
+    i18n_title: "role_details.member.title",
+````
+````old web/packages/constants/src/workspace.ts
+    i18n_title: "role_details.admin.title",
+    i18n_description: "role_details.admin.description",
+````
+````new web/packages/constants/src/workspace.ts
+    i18n_title: "role_details.admin.title",
+````
+
+`web/packages/i18n/src/locales/en/common.json`（修改，6 处）：
+
+````old web/packages/i18n/src/locales/en/common.json
+      "title": "Guest",
+      "description": "External members of organizations can be invited as guests."
+````
+````new web/packages/i18n/src/locales/en/common.json
+      "title": "Guest"
+````
+````old web/packages/i18n/src/locales/en/common.json
+      "title": "Member",
+      "description": "Ability to read, write, edit, and delete entities inside projects, cycles, and modules"
+````
+````new web/packages/i18n/src/locales/en/common.json
+      "title": "Member"
+````
+````old web/packages/i18n/src/locales/en/common.json
+      "title": "Admin",
+      "description": "All permissions set to true within the workspace."
+````
+````new web/packages/i18n/src/locales/en/common.json
+      "title": "Admin"
+````
 ````old web/packages/i18n/src/locales/en/common.json
       "creation_disabled": "You don't seem to have any invites to a workspace and your instance admin has restricted creation of new workspaces. Please ask a workspace owner or admin to invite you to a workspace first and come back to this screen to join."
 ````
@@ -6071,8 +6448,29 @@ import type { InvitationCreate, WorkspaceInvitation, WorkspaceInvitationsCreate 
         "message": "Workspace created successfully"
 ````
 
-`web/packages/i18n/src/locales/zh-CN/common.json`（修改，3 处）：
+`web/packages/i18n/src/locales/zh-CN/common.json`（修改，6 处）：
 
+````old web/packages/i18n/src/locales/zh-CN/common.json
+      "title": "访客",
+      "description": "组织的外部成员可以被邀请为访客。"
+````
+````new web/packages/i18n/src/locales/zh-CN/common.json
+      "title": "访客"
+````
+````old web/packages/i18n/src/locales/zh-CN/common.json
+      "title": "成员",
+      "description": "可以在项目、周期和模块内读取、写入、编辑和删除实体"
+````
+````new web/packages/i18n/src/locales/zh-CN/common.json
+      "title": "成员"
+````
+````old web/packages/i18n/src/locales/zh-CN/common.json
+      "title": "管理员",
+      "description": "在工作区内所有权限均设置为允许。"
+````
+````new web/packages/i18n/src/locales/zh-CN/common.json
+      "title": "管理员"
+````
 ````old web/packages/i18n/src/locales/zh-CN/common.json
       "creation_disabled": "您似乎还没有收到任何工作区的邀请，而实例管理员限制了创建新工作区。请先请工作区的所有者或管理员邀请您加入工作区，再回到这里加入。"
 ````
@@ -6163,7 +6561,30 @@ export const validateSlug = (slug: string): boolean | string => {
 /**
 ````
 
-- [ ] **Step 3: 端到端**
+- [ ] **Step 3: 静态检查的范围**
+
+`.oxlintrc.json`（修改，2 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/components/project/project-settings-member-defaults.tsx"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/project/project-settings-member-defaults.tsx",
+        "web/apps/web/core/components/onboarding/root.tsx"
+````
+````old .oxlintrc.json
+        "web/apps/web/core/components/workspace/use-create-workspace.test.ts"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/workspace/use-create-workspace.test.ts",
+        "web/apps/web/core/components/onboarding/onboarding-place.ts",
+        "web/apps/web/core/components/onboarding/onboarding-place.test.ts",
+        "web/apps/web/core/components/onboarding/root.test.tsx",
+        "web/apps/web/core/components/onboarding/steps/profile/root.test.tsx",
+        "web/apps/web/core/components/onboarding/steps/team/links.tsx"
+````
+
+- [ ] **Step 4: 端到端**
 
 `e2e/stories/smoke/s2-web-app.spec.ts`（修改，2 处）：
 
@@ -6195,6 +6616,8 @@ test("S2: a newcomer opens /, which sends him to the onboarding: it asks for his
   await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
   expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
   await expectQuietConsole(page, watch);
+  // Nothing came after the list was whole.
+  expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
 });
 
 ````
@@ -6415,7 +6838,7 @@ test("W1 (page): on a nerve with creation switched off, a newcomer's onboarding 
 
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
@@ -6429,10 +6852,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 88 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w1-create-workspace.spec.ts 'web/apps/web/app/(all)/onboarding/page.tsx' web/apps/web/core/components/onboarding/onboarding-place.test.ts web/apps/web/core/components/onboarding/onboarding-place.ts web/apps/web/core/components/onboarding/root.test.tsx web/apps/web/core/components/onboarding/root.tsx web/apps/web/core/components/onboarding/steps/profile/root.tsx web/apps/web/core/components/onboarding/steps/root.tsx web/apps/web/core/components/onboarding/steps/team/links.tsx web/apps/web/core/components/onboarding/steps/team/root.tsx web/apps/web/core/components/onboarding/steps/workspace/create.tsx web/apps/web/core/components/onboarding/steps/workspace/index.ts web/apps/web/core/components/onboarding/steps/workspace/root.tsx web/apps/web/core/components/workspace/members/invite-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/hooks/use-copy-invitation-link.ts web/apps/web/core/hooks/use-workspace-invitation.tsx web/apps/web/core/store/user/profile.store.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/workspace.json web/packages/utils/src/validation.ts
+git add .oxlintrc.json e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w1-create-workspace.spec.ts 'web/apps/web/app/(all)/onboarding/page.tsx' web/apps/web/core/components/onboarding/onboarding-place.test.ts web/apps/web/core/components/onboarding/onboarding-place.ts web/apps/web/core/components/onboarding/root.test.tsx web/apps/web/core/components/onboarding/root.tsx web/apps/web/core/components/onboarding/steps/profile/root.test.tsx web/apps/web/core/components/onboarding/steps/profile/root.tsx web/apps/web/core/components/onboarding/steps/root.tsx web/apps/web/core/components/onboarding/steps/team/links.tsx web/apps/web/core/components/onboarding/steps/team/root.tsx web/apps/web/core/components/onboarding/steps/workspace/create.tsx web/apps/web/core/components/onboarding/steps/workspace/index.ts web/apps/web/core/components/onboarding/steps/workspace/root.tsx web/apps/web/core/store/user/profile.store.ts web/packages/constants/src/workspace.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/workspace.json web/packages/utils/src/validation.ts
 ```
 ```bash
 git commit -m "feat(M3/P9): the onboarding lists the caller's workspaces and decides its steps by them
@@ -6444,9 +6867,12 @@ to it with the members page's form, then copies each invitation's link,
 or puts the invitations off.
 Resumed, it invites to the workspace it created, not the list's first.
 Each change is followed only in its session and a refusal says nerve's
-reason; finishing no longer writes the list's first workspace. The
-create step shares useCreateWorkspace; the slug helpers it no longer
-needs are deleted. W1's onboarding page versions and S2's newcomer.
+reason; the profile step hands the onboarding on only in the session
+the names were sent in; finishing no longer writes the list's first
+workspace. The create step shares useCreateWorkspace; the slug helpers
+and the roles' descriptions it no longer needs are deleted. The root
+joins the swr override, the new modules the non-null one. W1's
+onboarding page versions and S2's newcomer.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -6462,9 +6888,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T6.5` | 完成引导时把列表中的第一个工作区写成上次打开的（Plane） | 故事 W1 | 端到端 |
 | `T6.6` | 新手引导的修改不论会话都跟进 | `root.test.tsx` | vitest |
 | `T6.7` | 邀请一步发出邀请之后不显示链接 | oxlint（`check:lint`）、故事 W1 | 静态；端到端 |
-| `T6.8` | 邀请弹窗发出邀请之后不关闭 | `invite-modal.test.tsx`、故事 W4 | vitest；端到端 |
-| `T6.9` | 新手引导的修改被拒绝时什么都不说 | `root.test.tsx` | vitest |
-| `T6.10` | 邀请成员一步的"以后再说"不结束引导 | 故事 W1 | 端到端 |
+| `T6.8` | 新手引导的修改被拒绝时什么都不说 | `root.test.tsx` | vitest |
+| `T6.9` | 邀请成员一步的"以后再说"不结束引导 | 故事 W1 | 端到端 |
+| `T6.10` | 新手引导一步的资料修改不论会话都跟进（预检的 PF19） | `root.test.tsx` | vitest |
+| `T6.11` | 资料一步不论会话都把引导交给根（预检的 M2） | `root.test.tsx` | vitest |
+| `T6.12` | 新手引导的根经 `swr` 取列表，不经 `useSessionSWR` | oxlint（`check:lint`） | 静态 |
+| `T6.13` | 新手引导的位置（`onboarding-place.ts`，范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -6738,19 +7167,20 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/home/root.test.tsx`、`web/apps/web/core/hooks/use-navigation-preferences.test.ts`
-- Modify: `e2e/stories/workspace/w8-navigation-preferences.spec.ts`、`web/apps/web/core/components/home/root.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/sidebar/sidebar-wrapper.tsx`、`web/apps/web/core/hooks/navigation-preferences.test.ts`、`web/apps/web/core/hooks/navigation-preferences.ts`、`web/apps/web/core/hooks/use-navigation-preferences.ts`、`web/apps/web/core/store/workspace/preferences.store.test.ts`、`web/apps/web/core/store/workspace/preferences.store.ts`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/types/src/navigation-preferences.ts`
+- Modify: `.oxlintrc.json`、`e2e/stories/workspace/w8-navigation-preferences.spec.ts`、`web/apps/web/core/components/home/root.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/sidebar/sidebar-wrapper.tsx`、`web/apps/web/core/hooks/navigation-preferences.test.ts`、`web/apps/web/core/hooks/navigation-preferences.ts`、`web/apps/web/core/hooks/use-navigation-preferences.ts`、`web/apps/web/core/store/workspace/preferences.store.test.ts`、`web/apps/web/core/store/workspace/preferences.store.ts`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/types/src/navigation-preferences.ts`
 
 **Interfaces:**
 - Produces（spec 2.8；M3 设计 2 的 W8，3.18，7.1；总体设计 7.7 的 P8b 一条；P8b 评审的 E5；P8a 的 P12）：
   - `core/store/workspace/preferences.store.ts`：`PreferencesChange = (held: WorkspacePreferences) => WorkspacePreferencesUpdate`；`updatePreferences(workspaceSlug, change: PreferencesChange)` 在队列轮到它时，把 `change` 作用于 store 此刻所持的、nerve 最近一次回答的设置，再发出（照 P8b 的 `ProjectPreferencesStore`）；还没有这个工作区的设置时不发出，以 `Workspace settings not found` 失败。原来收现成的请求体，页面按调用时侧边栏显示的值算出它（E5）。
-  - `core/hooks/navigation-preferences.ts`（整个文件）：`NERVE_DEFAULTS`（`ACCORDION`、10，nerve 的默认值）是 `navigationOf` 的缺省参数：设置到达之前侧边栏按默认值显示，不再在到达时从"全部项目"跳到 10 个（原来缺省是 `@nerve/types` 的 `DEFAULT_PROJECT_PREFERENCES`，它随之删除）；`preferencesChangeOf(change): PreferencesChange`，修改在轮到它时算出：打开限制时取 `navigationOf(held)` 的数量，关闭是 0；`countOf(draft)`：数量框的草稿限制到的数量（数字组成的数，至少 1，否则没有）。
+  - `core/hooks/navigation-preferences.ts`（整个文件）：`NERVE_DEFAULTS`（`ACCORDION`、10，nerve 的默认值）是 `navigationOf` 的缺省参数：设置到达之前侧边栏按默认值显示，不再在到达时从"全部项目"跳到 10 个（原来缺省是 `@nerve/types` 的 `DEFAULT_PROJECT_PREFERENCES`，它随之删除）；`TProjectNavigationChange` 是模式、限制的一次开关（`{ limitToggled: true }`）或数量之一；`preferencesChangeOf(change): PreferencesChange`，修改在轮到它时算出：开关按所作用的设置决定打开还是关闭（设置限制项目数时关闭，是 0；不限制时打开，取 `navigationOf(held)` 的数量，即 nerve 的默认数量），连按两下回到原样（预检 M3：原来对话框发出点击时显示的开或关，nerve 回答第一下之前的第二下仍发同一个值；P8b 的 `toggleProject` 的先例）；`countOf(draft)`：数量框的草稿限制到的数量（数字组成的数，至少 1，否则没有）。
   - `core/hooks/use-navigation-preferences.ts`（整个文件）：`useProjectNavigationPreferences()` 给出 `{ preferences, changeNavigation(change) }`：`preferences` 是地址的工作区的设置（`navigationOf`），`changeNavigation` 经 `followInSession` 发出 `preferencesChangeOf(change)`，拒绝按 `code` 提示。原来是三个更新函数，被拒绝时成为没有处理的拒绝。
-  - `ProjectNavigationDialog`：数量框的文字在编辑时是草稿（`null` 时显示设置的数量，随设置到达更新），失去焦点时发出一次（原来每敲一个数字发一次：输入 30 发出 3 和 30）；标签经 `htmlFor`/`useId` 关联输入框；`blockNonDigits` 移到模块级（一条 `oxlint-disable-next-line` 删除）。`sidebar-wrapper.tsx` 打开对话框的按钮有名字（`aria_labels.projects_sidebar.project_navigation`，en "Project navigation"、zh-CN）。
+  - `ProjectNavigationDialog`：开关发出 `{ limitToggled: true }`；数量框的文字在编辑时是草稿（`null` 时显示设置的数量，随设置到达更新），失去焦点时发出一次（原来每敲一个数字发一次：输入 30 发出 3 和 30）；标签经 `htmlFor`/`useId` 关联输入框；`blockNonDigits` 移到模块级（一条 `oxlint-disable-next-line` 删除）。`sidebar-wrapper.tsx` 打开对话框的按钮有名字（`aria_labels.projects_sidebar.project_navigation`，en "Project navigation"、zh-CN）。
   - `home/root.tsx`：导览结束（`updateTourCompleted`）经 `followInSession`，拒绝按 `code` 提示（原来只有 `console.error`）。
+  - 静态检查（总体设计 7.7）：`.oxlintrc.json` 的非空断言的范围加上 `use-navigation-preferences.test.ts`、`home/root.test.tsx`（hook 和 `navigation-preferences.test.ts` 在 P8a 起已在范围内）。
 
 **Tests:**
-- vitest：`preferences.store.test.ts` 的修改都写成函数（`to(data)`），加 `makes each change to the settings nerve answered the one before it, not to those the store had as it was asked for`；`fails without sending a change while it has no settings of the workspace`。`navigation-preferences.test.ts`（整个文件）：`navigationOf` 的三条；`preferencesChangeOf` 的 `sends only the setting a change changes, made to the settings nerve last answered: $does`（五行）；`countOf` 的 `limits the sidebar to the number of a draft's digits, when 1 or more: '$draft'`（四行）。`use-navigation-preferences.test.ts`：`shows the caller's settings in the address's workspace, and nerve's defaults until they arrive`；`sends a change to the address's workspace, made in its turn to the settings nerve last answered`；`shows nerve's reason when it refuses a change`；`says nothing of a change that $settles after another tab moved this one to another account`。`home/root.test.tsx`（`WorkspaceHomeView`）：`writes the tour's end in the caller's profile`；`shows nerve's reason when it refuses the tour's end`；`says nothing of the tour's end when it $settles after another tab moved this one to another account`。
-- 端到端：`W8 (page): in his workspace's sidebar the caller makes the project navigation tabs and limits it to 3 projects, the count sent once, as he leaves its field; so it stays after a refresh; a count nerve refuses is said, and the sidebar keeps its 3`（跳过导览的请求体 `{ is_tour_completed: true }`；四个项目按默认值全部显示；改成标签页 `{ navigation_control_preference: "TABBED" }`；关闭限制 `{ navigation_project_limit: 0 }`，打开 `{ navigation_project_limit: 10 }`；输入 30、删一位、离开，只发一次 `{ navigation_project_limit: 3 }`；刷新之后仍是 3 个，对话框显示标签页和 3；3000000000 被拒绝（422），页面说明，侧边栏仍是 3 个；一共五个 `PATCH`。项目行只在"Main sidebar"里数：侧边栏的项目列表渲染了三份）。
+- vitest：`preferences.store.test.ts` 的修改都写成函数（`to(data)`），加 `makes each change to the settings nerve answered the one before it, not to those the store had as it was asked for`；`makes two quick turns of the limit each to nerve's answer to the one before it: off, then on again`；`fails without sending a change while it has no settings of the workspace`。`navigation-preferences.test.ts`（整个文件）：`navigationOf` 的三条；`preferencesChangeOf` 的 `sends only the setting a change changes, made to the settings nerve last answered: $does`（四行：模式、限制项目数时的一次开关、不限制时的一次开关、数量）；`countOf` 的 `limits the sidebar to the number of a draft's digits, when 1 or more: '$draft'`（四行）。`use-navigation-preferences.test.ts`：`shows the caller's settings in the address's workspace, and nerve's defaults until they arrive`；`sends a change to the address's workspace, made in its turn to the settings nerve last answered`；`shows nerve's reason when it refuses a change`；`says nothing of a change that $settles after another tab moved this one to another account`。`home/root.test.tsx`（`WorkspaceHomeView`）：`writes the tour's end in the caller's profile`；`shows nerve's reason when it refuses the tour's end`；`says nothing of the tour's end when it $settles after another tab moved this one to another account`。
+- 端到端：`W8 (page): in his workspace's sidebar the caller makes the project navigation tabs and limits it to 3 projects, the count sent once, as he leaves its field; so it stays after a refresh; a count nerve refuses is said, and the sidebar keeps its 3`（跳过导览的请求体 `{ is_tour_completed: true }`；四个项目按默认值全部显示；改成标签页 `{ navigation_control_preference: "TABBED" }`；连按两下开关，第二下在 nerve 回答第一下之前（`holdAnswer`）：先关闭 `{ navigation_project_limit: 0 }`，再在那个回答之上打开 `{ navigation_project_limit: 10 }`，回到原样；输入 30、删一位、离开，只发一次 `{ navigation_project_limit: 3 }`；刷新之后仍是 3 个，对话框显示标签页和 3；3000000000 被拒绝（422），页面说明，侧边栏仍是 3 个；一共五个 `PATCH`。项目行只在"Main sidebar"里数：侧边栏的项目列表渲染了三份）。
 
 - [ ] **Step 1: store 的修改是函数**
 
@@ -6761,6 +7191,7 @@ import type { WorkspacePreferences } from "@nerve/api-client";
 ````
 ````new web/apps/web/core/store/workspace/preferences.store.test.ts
 import type { WorkspacePreferences, WorkspacePreferencesUpdate } from "@nerve/api-client";
+import { preferencesChangeOf } from "@/hooks/navigation-preferences";
 ````
 ````old web/apps/web/core/store/workspace/preferences.store.test.ts
 import type { IWorkspacePreferencesStore } from "@/store/workspace/preferences.store";
@@ -6830,6 +7261,20 @@ const to =
     await until(() => second.settled, "the second change");
     expect(first.error).toBeUndefined();
     expect(nerve.calls[2]?.body).toEqual({ navigation_project_limit: 3 });
+  });
+
+  it("makes two quick turns of the limit each to nerve's answer to the one before it: off, then on again", async () => {
+    const { nerve, store } = await loaded();
+    const turn = preferencesChangeOf({ limitToggled: true });
+    track(store.updatePreferences("acme", turn));
+    const second = track(store.updatePreferences("acme", turn));
+    await inTurn(nerve, 1, ["PATCH", PREFERENCES], json(200, { ...defaults, navigation_project_limit: 0 }));
+    await inTurn(nerve, 2, ["PATCH", PREFERENCES], json(200, defaults));
+    await until(() => second.settled, "the second turn");
+    expect([nerve.calls[1]?.body, nerve.calls[2]?.body]).toEqual([
+      { navigation_project_limit: 0 },
+      { navigation_project_limit: 10 },
+    ]);
   });
 
   it("fails without sending a change while it has no settings of the workspace", async () => {
@@ -7025,7 +7470,7 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
                     onCheckedChange={updateShowLimitedProjects}
 ````
 ````new web/apps/web/core/components/navigation/project-navigation-dialog.tsx
-                    onCheckedChange={(checked) => void changeNavigation({ showLimitedProjects: checked })}
+                    onCheckedChange={() => void changeNavigation({ limitToggled: true })}
 ````
 ````old web/apps/web/core/components/navigation/project-navigation-dialog.tsx
                         <label className="w-full text-11 text-secondary">{t("enter_number_of_projects")}</label>
@@ -7086,7 +7531,7 @@ import { useTranslation } from "@nerve/i18n";
                   aria-label={t("aria_labels.projects_sidebar.project_navigation")}
 ````
 
-`web/apps/web/core/hooks/navigation-preferences.test.ts`（整个文件，98 行）：
+`web/apps/web/core/hooks/navigation-preferences.test.ts`（整个文件，92 行）：
 
 ````whole web/apps/web/core/hooks/navigation-preferences.test.ts
 /**
@@ -7137,20 +7582,14 @@ const changes: {
     sent: { navigation_control_preference: "ACCORDION" },
   },
   {
-    does: "turning the limit off, a limit of 0",
-    change: { showLimitedProjects: false },
+    does: "a turn of the limit, where the settings limit the projects: off, a limit of 0",
+    change: { limitToggled: true },
     held: sevenTabbed,
     sent: { navigation_project_limit: 0 },
   },
   {
-    does: "turning the limit on, the count of the settings it is made to",
-    change: { showLimitedProjects: true },
-    held: sevenTabbed,
-    sent: { navigation_project_limit: 7 },
-  },
-  {
-    does: "turning the limit on from every project, nerve's default count",
-    change: { showLimitedProjects: true },
+    does: "a turn of the limit, where the settings show every project: on, nerve's default count",
+    change: { limitToggled: true },
     held: all,
     sent: { navigation_project_limit: 10 },
   },
@@ -7189,7 +7628,7 @@ describe("countOf", () => {
 });
 ````
 
-`web/apps/web/core/hooks/navigation-preferences.ts`（整个文件，57 行）：
+`web/apps/web/core/hooks/navigation-preferences.ts`（整个文件，59 行）：
 
 ````whole web/apps/web/core/hooks/navigation-preferences.ts
 /**
@@ -7202,10 +7641,10 @@ import type { TProjectNavigationPreferences } from "@nerve/types";
 // store
 import type { PreferencesChange } from "@/store/workspace/preferences.store";
 
-/** One change of the sidebar's project navigation: its mode, whether it limits the projects, or to how many. */
+/** One change of the sidebar's project navigation: its mode, a turn of its limit, or the count it limits to. */
 export type TProjectNavigationChange =
   | { navigationMode: NavigationControlPreference }
-  | { showLimitedProjects: boolean }
+  | { limitToggled: true }
   | { limitedProjectsCount: number };
 
 /** nerve's defaults: the caller's settings in a workspace until he changes one (M3 design 3.18). */
@@ -7231,14 +7670,16 @@ export function navigationOf(preferences: WorkspacePreferences = NERVE_DEFAULTS)
 
 /**
  * The change of the caller's settings that a change of the sidebar's project navigation is, made in its turn to the
- * settings nerve last answered (v0 design 7.7), not to those the sidebar shows as it is asked for: turning the limit
- * on limits it to the count those settings give, and turning it off is a limit of 0.
+ * settings nerve last answered (v0 design 7.7), not to those the sidebar shows as it is asked for. A turn of the limit
+ * is decided by those settings too: where they limit the projects it turns the limit off, a limit of 0; where they do
+ * not, it turns it on, to the count they give (nerve's default one). Two quick turns end where they began.
  */
 export function preferencesChangeOf(change: TProjectNavigationChange): PreferencesChange {
   return (held) => {
     if ("navigationMode" in change) return { navigation_control_preference: change.navigationMode };
-    if ("showLimitedProjects" in change) {
-      return { navigation_project_limit: change.showLimitedProjects ? navigationOf(held).limitedProjectsCount : 0 };
+    if ("limitToggled" in change) {
+      const shown = navigationOf(held);
+      return { navigation_project_limit: shown.showLimitedProjects ? 0 : shown.limitedProjectsCount };
     }
     return { navigation_project_limit: change.limitedProjectsCount };
   };
@@ -7312,11 +7753,11 @@ describe("useProjectNavigationPreferences", () => {
 
   it("sends a change to the address's workspace, made in its turn to the settings nerve last answered", async () => {
     page.settings.set("acme", tabbed);
-    await useProjectNavigationPreferences().changeNavigation({ showLimitedProjects: true });
+    await useProjectNavigationPreferences().changeNavigation({ limitToggled: true });
     expect(page.updatePreferences.mock.calls).toEqual([["acme", expect.any(Function)]]);
-    // nerve answered a limit of 5 to the change before it: the sidebar showed 3 as this one was asked for
-    const answered: WorkspacePreferences = { navigation_control_preference: "TABBED", navigation_project_limit: 5 };
-    expect(page.updatePreferences.mock.calls[0]?.[1](answered)).toEqual({ navigation_project_limit: 5 });
+    // nerve answered every project to the turn before it: the sidebar showed a limit of 3 as this one was asked for
+    const answered: WorkspacePreferences = { navigation_control_preference: "TABBED", navigation_project_limit: 0 };
+    expect(page.updatePreferences.mock.calls[0]?.[1](answered)).toEqual({ navigation_project_limit: 10 });
     expect(toasts).toEqual([]);
   });
 
@@ -7559,7 +8000,20 @@ export const DEFAULT_PROJECT_PREFERENCES: TProjectNavigationPreferences = {
 
 ````
 
-- [ ] **Step 4: 端到端**
+- [ ] **Step 4: 静态检查的范围**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/components/onboarding/steps/team/links.tsx"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/onboarding/steps/team/links.tsx",
+        "web/apps/web/core/hooks/use-navigation-preferences.test.ts",
+        "web/apps/web/core/components/home/root.test.tsx"
+````
+
+- [ ] **Step 5: 端到端**
 
 `e2e/stories/workspace/w8-navigation-preferences.spec.ts`（修改，4 处）：
 
@@ -7578,7 +8032,7 @@ import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 ````new e2e/stories/workspace/w8-navigation-preferences.spec.ts
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 ````
 ````old e2e/stories/workspace/w8-navigation-preferences.spec.ts
 // W8, the project navigation's settings (M3 design 2, 3.18). The page
@@ -7638,12 +8092,21 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   const tabbed = await sentTo(page, "PATCH", path, () => tabs.click());
   expect([tabbed.answer.status(), tabbed.body]).toEqual([200, { navigation_control_preference: "TABBED" }]);
   await expect(tabs).toBeChecked();
-  // Every project, then a limit again: from every project, the limit is nerve's default count.
-  const all = await sentTo(page, "PATCH", path, () => limited.click());
-  expect([all.answer.status(), all.body]).toEqual([200, { navigation_project_limit: 0 }]);
-  await expect(count).toBeHidden();
-  const again = await sentTo(page, "PATCH", path, () => limited.click());
-  expect([again.answer.status(), again.body]).toEqual([200, { navigation_project_limit: 10 }]);
+  // Every project, then a limit again, in two quick turns: the second is asked for before nerve answers the first, and
+  // made to that answer (v0 design 7.7), so they end where they began, at nerve's default count.
+  const release = await holdAnswer(page, "PATCH", path);
+  const turns: unknown[] = [];
+  await page.route(`**${path}`, async (route) => {
+    if (route.request().method() === "PATCH") turns.push(route.request().postDataJSON());
+    await route.fallback();
+  });
+  await limited.click();
+  await expect.poll(() => turns.length).toBe(1);
+  await limited.click();
+  await release();
+  await expect.poll(() => turns).toEqual([{ navigation_project_limit: 0 }, { navigation_project_limit: 10 }]);
+  await expect(limited).toBeChecked();
+  await expect(count).toHaveValue("10");
   // He types 30 and corrects it to 3: the count goes once, as he leaves the field.
   const limit = await sentTo(page, "PATCH", path, async () => {
     await count.fill("30");
@@ -7685,7 +8148,7 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
 
 ````
 
-- [ ] **Step 5: 运行检查**
+- [ ] **Step 6: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
@@ -7699,23 +8162,25 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 91 个全部通过。
 
-- [ ] **Step 6: 提交**
+- [ ] **Step 7: 提交**
 
 ```bash
-git add e2e/stories/workspace/w8-navigation-preferences.spec.ts web/apps/web/core/components/home/root.test.tsx web/apps/web/core/components/home/root.tsx web/apps/web/core/components/navigation/project-navigation-dialog.tsx web/apps/web/core/components/sidebar/sidebar-wrapper.tsx web/apps/web/core/hooks/navigation-preferences.test.ts web/apps/web/core/hooks/navigation-preferences.ts web/apps/web/core/hooks/use-navigation-preferences.test.ts web/apps/web/core/hooks/use-navigation-preferences.ts web/apps/web/core/store/workspace/preferences.store.test.ts web/apps/web/core/store/workspace/preferences.store.ts web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/types/src/navigation-preferences.ts
+git add .oxlintrc.json e2e/stories/workspace/w8-navigation-preferences.spec.ts web/apps/web/core/components/home/root.test.tsx web/apps/web/core/components/home/root.tsx web/apps/web/core/components/navigation/project-navigation-dialog.tsx web/apps/web/core/components/sidebar/sidebar-wrapper.tsx web/apps/web/core/hooks/navigation-preferences.test.ts web/apps/web/core/hooks/navigation-preferences.ts web/apps/web/core/hooks/use-navigation-preferences.test.ts web/apps/web/core/hooks/use-navigation-preferences.ts web/apps/web/core/store/workspace/preferences.store.test.ts web/apps/web/core/store/workspace/preferences.store.ts web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/types/src/navigation-preferences.ts
 ```
 ```bash
 git commit -m "feat(M3/P9): a navigation change is made in its turn to nerve's latest settings; the dialog sends the count once
 
 The workspace preferences store takes a change as a function of the
 settings it holds, applied in the queue's turn to nerve's latest answer;
-the sidebar's changes are made that way, turning the limit on to the
-count those settings give. Until the settings arrive the sidebar shows
+the sidebar's changes are made that way: the limit's switch is a turn,
+off where those settings limit the projects and on, to their count,
+where they do not, so two quick turns end where they began. Until the settings arrive the sidebar shows
 nerve's defaults. The dialog sends the count once, as its field is left,
 shows the settings' count otherwise, and labels its field; the button
 that opens it has a name. Navigation changes and the tour's end are
-followed in their session and say nerve's reason for a refusal. W8's
-page version.
+followed in their session and say nerve's reason for a refusal. The
+new tests join the non-null override. W8's page version, two quick
+turns of the switch among it.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -7726,8 +8191,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 |---|---|---|---|
 | `T8.1` | store 把修改作用于提出修改时它持有的设置（E5） | `preferences.store.test.ts` | vitest |
 | `T8.2` | store 没有这个工作区的设置时照样发出修改，作用于 nerve 的默认值 | `preferences.store.test.ts` | vitest |
-| `T8.3` | 打开"只显示几个项目"时用 nerve 的默认数量，而不是设置的数量（E5） | `navigation-preferences.test.ts` | vitest |
-| `T8.4` | 对话框把修改作用于提出修改时侧边栏显示的设置（页面上的 E5） | `use-navigation-preferences.test.ts` | vitest |
+| `T8.3` | 限制项目数的开关按 nerve 的默认值决定打开或关闭，而不是按它作用的设置（E5） | `navigation-preferences.test.ts`、`preferences.store.test.ts`、故事 W8 | vitest；端到端 |
+| `T8.4` | 对话框把修改（开关的一次也在其中）作用于提出修改时侧边栏显示的设置（页面上的 E5） | `use-navigation-preferences.test.ts` | vitest |
 | `T8.5` | 设置到达之前侧边栏显示全部项目（P28，Plane） | `navigation-preferences.test.ts`、`use-navigation-preferences.test.ts` | vitest |
 | `T8.6` | 导航设置的修改被拒绝时进了控制台，页面不说（P28） | `use-navigation-preferences.test.ts`、故事 W8 | vitest；端到端 |
 | `T8.7` | 对话框的修改不论会话都跟进（P28） | `use-navigation-preferences.test.ts` | vitest |
@@ -7737,6 +8202,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.11` | 首页的导览结束而 nerve 不知道 | `root.test.tsx`、故事 W8 | vitest；端到端 |
 | `T8.12` | 首页导览的结束被拒绝时什么都不说（Plane：`console.error`） | `root.test.tsx` | vitest |
 | `T8.13` | 首页导览的结束不论会话都跟进 | `root.test.tsx` | vitest |
+| `T8.14` | 对话框的开关发出点击时侧边栏显示的开或关（预检的 M3，P8b 的 P14 在页面上） | 故事 W8 | 端到端 |
+| `T8.15` | 限制项目数的开关每次都打开 | `navigation-preferences.test.ts`、`preferences.store.test.ts`、故事 W8 | vitest；端到端 |
+| `T8.16` | 导航 hook 的测试（范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -7744,7 +8212,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/account/deactivate-account-modal.test.tsx`
-- Modify: `e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts`、`web/apps/web/core/components/account/deactivate-account-modal.tsx`、`web/apps/web/core/store/user/index.test.ts`、`web/apps/web/core/store/user/index.ts`
+- Modify: `.oxlintrc.json`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts`、`web/apps/web/core/components/account/deactivate-account-modal.tsx`、`web/apps/web/core/store/user/index.test.ts`、`web/apps/web/core/store/user/index.ts`
 
 **Interfaces:**
 - Produces（spec 2.9；M3 设计 2 的 W9，3.7，3.9，7.1，7.5；P6 评审留给页面的一侧）：
@@ -7752,8 +8220,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `UserStore.deactivateAccount(): Promise<boolean>`（M2 的 store，原来是 `Promise<void>`）：发出时读标签页的会话，nerve 停用之后结束它（`tokenManager.endSession(loginId)`），交回 `endSession` 的回答：结束了它为真；标签页的记录已不是那个会话的（另一个标签页退出了，或换到了别的账户）为假。
 - e2e：A12 被拒绝的那一段改读弹窗里的原因（原来读提示）。
 
+- 静态检查（总体设计 7.7）：`.oxlintrc.json` 的非空断言的范围加上 `deactivate-account-modal.test.tsx`。
+
 **Tests:**
-- vitest：`deactivate-account-modal.test.tsx`（新文件；弹窗在服务端渲染，按钮和弹窗是 `fake-controls.ts` 的替身，store 的停用是替身）：`says the account is deactivated, and closes, once the deactivation ended the tab's session`；`says nothing, and stays, when it ended no session of the tab's: another tab had moved it to another account`；`keeps nerve's refusal in the dialog, which stays: no toast`。`core/store/user/index.test.ts` 加 `UserStore.deactivateAccount` 的 `ends the session it was sent in, and resolves $ended when $when`（`it.each` 两行；`api-client` 的替身改为记下 `endSession` 的调用；停用在外时标签页换了会话，store 结束的仍是发出时的那个）。
+- vitest：`deactivate-account-modal.test.tsx`（新文件；弹窗在服务端渲染，按钮和弹窗是 `fake-controls.ts` 的替身，store 的停用是替身）：`says the account is deactivated, and closes, once the deactivation ended the tab's session`；`says nothing, and stays, when it ended no session of the tab's: another tab had moved it to another account`；`stays open, with no toast, when nerve refuses`（弹窗里的原因由 W9 核对：服务端渲染看不到之后才设的状态）。`core/store/user/index.test.ts` 加 `UserStore.deactivateAccount` 的 `ends the session it was sent in, and resolves $ended when $when`（`it.each` 两行；`api-client` 的替身改为记下 `endSession` 的调用；停用在外时标签页换了会话，store 结束的仍是发出时的那个）。
 - 端到端：`W9 (page): the only admin of a workspace with another member deactivates from the general page: the dialog says to make another admin first, and nothing changes; once there is another, the deactivation ends his membership and the page is back at sign-in`（409 的原因在弹窗里，账户的状态和成员关系不变；取消再打开，原因不在了；把成员改成管理员之后 204，页面在登录页，说账户已停用，成员关系结束）。
 
 - [ ] **Step 1: store 的停用交回它是否结束了标签页的会话**
@@ -7846,7 +8316,7 @@ describe("UserStore.deactivateAccount", () => {
 
 - [ ] **Step 2: 弹窗**
 
-`web/apps/web/core/components/account/deactivate-account-modal.test.tsx`（新文件，59 行）：
+`web/apps/web/core/components/account/deactivate-account-modal.test.tsx`（新文件，60 行）：
 
 ````file web/apps/web/core/components/account/deactivate-account-modal.test.tsx
 /**
@@ -7902,7 +8372,8 @@ describe("DeactivateAccountModal", () => {
     expect([toasts, onClose.mock.calls]).toEqual([[], []]);
   });
 
-  it("keeps nerve's refusal in the dialog, which stays: no toast", async () => {
+  // the reason the dialog then shows is W9's to check: the render does not show what is set after it
+  it("stays open, with no toast, when nerve refuses", async () => {
     store.deactivateAccount.mockRejectedValueOnce(refusal(409, "workspace.sole_admin"));
     const onClose = await confirm();
     expect([toasts, onClose.mock.calls]).toEqual([[], []]);
@@ -7972,7 +8443,19 @@ describe("DeactivateAccountModal", () => {
               )}
 ````
 
-- [ ] **Step 3: 端到端**
+- [ ] **Step 3: 静态检查的范围**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/components/home/root.test.tsx"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/home/root.test.tsx",
+        "web/apps/web/core/components/account/deactivate-account-modal.test.tsx"
+````
+
+- [ ] **Step 4: 端到端**
 
 `e2e/stories/identity/a12-deactivate.spec.ts`（修改，1 处）：
 
@@ -8081,7 +8564,7 @@ test("W9 (page): the only admin of a workspace with another member deactivates f
 
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
@@ -8095,10 +8578,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 92 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add e2e/stories/identity/a12-deactivate.spec.ts e2e/stories/workspace/w9-deactivation.spec.ts web/apps/web/core/components/account/deactivate-account-modal.test.tsx web/apps/web/core/components/account/deactivate-account-modal.tsx web/apps/web/core/store/user/index.test.ts web/apps/web/core/store/user/index.ts
+git add .oxlintrc.json e2e/stories/identity/a12-deactivate.spec.ts e2e/stories/workspace/w9-deactivation.spec.ts web/apps/web/core/components/account/deactivate-account-modal.test.tsx web/apps/web/core/components/account/deactivate-account-modal.tsx web/apps/web/core/store/user/index.test.ts web/apps/web/core/store/user/index.ts
 ```
 ```bash
 git commit -m "feat(M3/P9): the deactivation dialog says why nerve refused it, and follows a success only in the session it ended
@@ -8122,6 +8605,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T9.2` | 弹窗关闭再打开，仍显示上一次的拒绝 | 故事 W9 | 端到端 |
 | `T9.3` | 不论标签页此时在哪个会话里，弹窗都说账户已停用并关闭（M2） | oxlint（`check:lint`）、`deactivate-account-modal.test.tsx` | 静态；vitest |
 | `T9.4` | store 的停用不论是否结束了标签页的会话，都说结束了 | `index.test.ts` | vitest |
+| `T9.5` | 停用弹窗的测试（范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -8129,17 +8613,18 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/hooks/use-workspaces-fetch.ts`
-- Modify: `e2e/stories/smoke/s2-web-app.spec.ts`、`web/apps/web/core/components/onboarding/root.tsx`、`web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.test.tsx`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/apps/web/core/lib/use-landing.ts`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
+- Modify: `.oxlintrc.json`、`e2e/stories/smoke/s2-web-app.spec.ts`、`tools/keywords.json`、`web/apps/web/core/components/onboarding/root.tsx`、`web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx`、`web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.test.tsx`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/apps/web/core/lib/use-landing.ts`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
 
 **Interfaces:**
 - Produces（spec 2.10；M3 设计 7.1，7.5；P8a 评审的 M7；M2 收尾第 13 节）：
   - `core/hooks/use-workspaces-fetch.ts`：`useWorkspacesFetch(wanted = true)`，调用者的工作区列表的唯一取数（`useSessionSWR(wanted ? ["WORKSPACES"] : null, () => fetchWorkspaces())`）。落点（`use-landing.ts`，只在要决定落点时取）、工作区的页面（`use-workspace-fetch.ts`）、新手引导（`onboarding/root.tsx`，Task 6 的取数）都改用它；原来三处各写一遍键和取数。
   - 个人设置的侧边栏（`settings/profile/sidebar/workspace-options.tsx`）挂载时经 `useWorkspacesFetch()` 取列表（M7：工作区之外没有包装层取它，直接打开 `/settings/profile/*` 时侧边栏的工作区列表和命令面板的工作区菜单是空的）。
+  - 静态检查：`useWorkspacesFetch` 是唯一的取数，由关键词守卫的新规则 `workspaces-list-fetch` 看住（`tools/keywords.json`：web 的源文件中，store 自己、测试和测试的替身之外，只有 `use-workspaces-fetch.ts` 能写 `fetchWorkspaces`；预检 L10）；`.oxlintrc.json` 的 `no-restricted-imports` 的范围加上 `use-workspaces-fetch.ts`、`workspace-options.tsx`，非空断言的范围加上 `use-workspaces-fetch.ts`（总体设计 7.7）。
   - `WorkspaceAuthWrapper`：退出登录失败的提示经 `t("auth.sign_out.toast.error.*")`，"找不到工作区"的界面经 `t("workspace_not_found.*")`（en、zh-CN 的 `workspace.json` 新增五个键；原来是写死的英文）。`workspace-wrapper.test.tsx` 改为核对键（测试的 `t` 交回键）。
 
 **Tests:**
 - vitest：`workspace-wrapper.test.tsx` 的"找不到工作区"一条（`it.each` 的两行：有别的工作区、没有工作区）改读键；退出失败的提示只是换成已有的一对键（其余几处退出登录的失败提示用的同一对），没有新的测试。`use-landing.test.ts` 不改：不需要决定落点时不取列表（`wanted` 为假）由它的既有用例守着（变异 `T10.2`）。
-- 端到端：S2 加 `S2: a member of a workspace opens his profile's settings directly: they ask for his workspaces, as the app does, which their sidebar lists, and no more`。
+- 端到端：S2 加 `S2: a member of a workspace opens his profile's settings directly: they ask for his workspaces, as the app does, which their sidebar lists, and no more`（安静的控制台之后再读一次请求）。
 
 - [ ] **Step 1: 列表的取数**
 
@@ -8364,17 +8849,84 @@ import { useWorkspacesFetch } from "@/hooks/use-workspaces-fetch";
     "create_workspace": "创建新工作区"
 ````
 
-- [ ] **Step 3: 端到端**
+- [ ] **Step 3: 静态检查：关键词守卫和 oxlint 的范围**
+
+`.oxlintrc.json`（修改，2 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/core/components/onboarding/root.tsx"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/onboarding/root.tsx",
+        "web/apps/web/core/hooks/use-workspaces-fetch.ts",
+        "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx"
+````
+````old .oxlintrc.json
+        "web/apps/web/core/components/account/deactivate-account-modal.test.tsx"
+````
+````new .oxlintrc.json
+        "web/apps/web/core/components/account/deactivate-account-modal.test.tsx",
+        "web/apps/web/core/hooks/use-workspaces-fetch.ts"
+````
+
+`tools/keywords.json`（修改，1 处）：
+
+````old tools/keywords.json
+          "miss": ["docs/v0/M3-workspace-project/M3-design.md", "e2e/stories/identity/a3-sign-in.spec.ts"]
+        }
+      }
+    }
+````
+````new tools/keywords.json
+          "miss": ["docs/v0/M3-workspace-project/M3-design.md", "e2e/stories/identity/a3-sign-in.spec.ts"]
+        }
+      }
+    },
+    {
+      "id": "workspaces-list-fetch",
+      "phase": "M3/P9",
+      "why": "调用者的工作区列表只有一个取数：useWorkspacesFetch（web/apps/web/core/hooks/use-workspaces-fetch.ts，键 [\"WORKSPACES\", loginId]），登录后的落点、工作区包装层、新手引导和个人设置的侧边栏都经它（M3/P9 spec 第 3 节第 14 条）；别处调 store 的 fetchWorkspaces 就是另一个键、另一份取数。store 自己（core/store/workspace/）、测试和测试的替身不算",
+      "files": {
+        "source": "^web/apps/web/(?:app|core)/(?!hooks/use-workspaces-fetch\\.ts$|store/workspace/|hooks/store/fake-store-hooks\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bfetchWorkspaces\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  const { workspaces, fetchWorkspaces } = useWorkspace();",
+          "  useSessionSWR([\"PROFILE_WORKSPACES\"], () => fetchWorkspaces());"
+        ],
+        "miss": ["  useWorkspacesFetch();", "  const listed = useWorkspacesFetch(false);"],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx",
+            "web/apps/web/core/components/onboarding/root.tsx"
+          ],
+          "miss": [
+            "web/apps/web/core/hooks/use-workspaces-fetch.ts",
+            "web/apps/web/core/store/workspace/index.ts",
+            "web/apps/web/core/hooks/store/fake-store-hooks.ts",
+            "web/apps/web/core/lib/store-context.test.ts"
+          ]
+        }
+      }
+    }
+````
+
+- [ ] **Step 4: 端到端**
 
 `e2e/stories/smoke/s2-web-app.spec.ts`（修改，1 处）：
 
 ````old e2e/stories/smoke/s2-web-app.spec.ts
-  await expectQuietConsole(page, watch);
+  expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
 });
 
 ````
 ````new e2e/stories/smoke/s2-web-app.spec.ts
-  await expectQuietConsole(page, watch);
+  expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
 });
 
 test("S2: a member of a workspace opens his profile's settings directly: they ask for his workspaces, as the app does, which their sidebar lists, and no more", async ({
@@ -8391,14 +8943,16 @@ test("S2: a member of a workspace opens his profile's settings directly: they as
   await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
   expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  // Nothing came after the list was whole.
+  expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
 });
 
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
+Expected: 通过；关键词守卫 65 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -8409,10 +8963,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 93 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add e2e/stories/smoke/s2-web-app.spec.ts web/apps/web/core/components/onboarding/root.tsx web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx web/apps/web/core/hooks/use-workspaces-fetch.ts web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts web/apps/web/core/layouts/auth-layout/workspace-wrapper.test.tsx web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx web/apps/web/core/lib/use-landing.ts web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/workspace.json
+git add .oxlintrc.json e2e/stories/smoke/s2-web-app.spec.ts tools/keywords.json web/apps/web/core/components/onboarding/root.tsx web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx web/apps/web/core/hooks/use-workspaces-fetch.ts web/apps/web/core/layouts/auth-layout/use-workspace-fetch.ts web/apps/web/core/layouts/auth-layout/workspace-wrapper.test.tsx web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx web/apps/web/core/lib/use-landing.ts web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/workspace.json
 ```
 ```bash
 git commit -m "feat(M3/P9): one fetch of the caller's workspaces, which the profile's settings use too; the wrapper's screens speak through t()
@@ -8422,7 +8976,8 @@ landing, a workspace's pages and the onboarding share it, and the
 profile's settings, which no wrapper serves, fetch the list as they
 mount, so their sidebar and power-K's menu list the caller's workspaces.
 The workspace wrapper's not-found screen and its sign-out failure speak
-through t(). S2 opens the profile's settings directly.
+through t(). The keyword guard holds the one fetch; its files join the
+swr and non-null overrides. S2 opens the profile's settings directly.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -8434,18 +8989,23 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T10.1` | 个人设置显示调用者的工作区而不取列表（P8a 评审的 M7） | 故事 S2 | 端到端 |
 | `T10.2` | 落点在不落到任何地方的页面上也取工作区列表 | `use-landing.test.ts` | vitest |
 | `T10.3` | 包装层"找不到工作区"的界面不论语言都是英文（Plane） | `workspace-wrapper.test.tsx` | vitest |
+| `T10.4` | 工作区列表唯一的取数经 `swr`，不经 `useSessionSWR` | oxlint（`check:lint`） | 静态 |
+| `T10.5` | 个人设置的侧边栏经 `swr` 取列表，不经 `useSessionSWR` | oxlint（`check:lint`） | 静态 |
+| `T10.6` | 个人设置的侧边栏以自己的键取列表（预检的 PF11） | 关键词守卫 | 静态 |
+| `T10.7` | 列表的取数（`use-workspaces-fetch.ts`，范围内）用非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
 ### Task 11: 文档：README 的"前端"一节和前端改动清单
 
 **Files:**
-- Modify: `README.md`、`docs/v0/frontend-changes.md`
+- Modify: `README.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`、`docs/v0/frontend-changes.md`
 
 **Interfaces:**
 - Produces（spec 2.11；M3 设计 3.20 中 P9 的行；M2 收尾第 2 节的关闭条件之一）：
   - `README.md` 的"前端"一节："M2 中看到的页面"一条改写为"能用的页面（M3/P9 起）"：登录、注册（凭邀请链接）、邀请链接的页面、新手引导、落点、创建工作区、工作区首页、侧边栏、工作区设置的 general 和 members、个人设置；项目的页面在 P10、P11，其余的由 M4–M7 对接。
   - `docs/v0/frontend-changes.md`：3.1 中 M3 一行的状态（工作区的页面已对接）；3.2 "所有处理接口错误的地方"一行写明 P9 改到的页面；新增五行（页面跟进修改的结果、创建工作区、新手引导的邀请成员一步、侧边栏的项目导航设置、停用账户的弹窗），都是"已完成，M3/P9"。
+  - `docs/v0/M3-workspace-project/handoffs/M2-closeout.md`：加"处理结果（M3/P9）"：第 1、2 节的页面一侧完成，第 11 节的页面一侧中工作区的部分，第 13 节 P9 的部分（浏览器核对是 C4）；M2 的 `UserStore.deactivateAccount` 改为交回 `Promise<boolean>`（`endSession` 的回答），停用弹窗只在为 `true` 时说已停用（裁定 P3）。
 - 控制者的浏览器核对 C1–C5 和评审不在本 plan 中（M3 设计 9.7、12 节 P9 的第 14 个任务）。
 
 **Tests:** 没有新的测试：本 Task 只改文档。
@@ -8459,6 +9019,29 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new README.md
 - **能用的页面**（M3/P9 起）：登录、注册（注册关闭时，凭邀请链接仍可注册）；邀请链接的页面 `/workspace-invitations`（没登录时显示工作区和角色，登录后接受或忽略）；新手引导（资料一步；还没有工作区的人接着创建工作区、邀请成员，发出邀请之后列出每个邀请的链接供复制，v0 不发邮件；已经有工作区的人资料一步之后就完成）；登录后的落点（上次打开的工作区；它不在列表中时，最早创建的那个；一个都没有时 `/create-workspace`）；创建工作区；工作区首页（问候、"快速开始"的引导，第一次进入时的导览）；侧边栏的工作区菜单（切换、创建工作区、退出）和"项目导航"对话框；工作区设置的 general（名称、规模、时区，删除工作区）和 members（成员、改角色、移出、离开；管理员还有邀请：批量邀请、复制链接、改角色、删除）；个人设置的四个标签页（general、preferences、security、api-tokens，停用账户在 general 页）。项目的页面在 M3/P10、P11 对接；工作项、迭代、模块、视图、收藏、通知等页面还在调用 Plane 的接口，Nerve 返回 404，由 M4–M7 对接。
+````
+
+`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`（修改，1 处）：
+
+````old docs/v0/M3-workspace-project/handoffs/M2-closeout.md
+来源：[M3/P8b spec](../specs/P8b-web-project-data.md) 第 7 节；[M3/P8a spec](../specs/P8a-web-workspace-data.md) 第 7 节。
+
+````
+````new docs/v0/M3-workspace-project/handoffs/M2-closeout.md
+来源：[M3/P8b spec](../specs/P8b-web-project-data.md) 第 7 节；[M3/P8a spec](../specs/P8a-web-workspace-data.md) 第 7 节。
+
+## 处理结果（M3/P9）
+
+- **第 1 节 邀请与注册**（页面一侧完成）：邀请链接的页面由 `invitationView`（`web/apps/web/core/components/workspace/invitation-view.ts`）决定显示什么：链接缺 id 或令牌、nerve 按链接找不到时无效；没有登录时给登录、注册，两者都带着链接回来；登录之后接受或忽略（`use-invitation-answer.ts`），邮箱不一致时只给退出登录；接受之后写上次打开的工作区再进入。注册凭链接中的邀请（注册关闭时也能注册），登录页和注册页之间的链接保留链接的参数。W5、W6 的页面版本守着（[M3/P9 spec](../specs/P9-web-workspace-pages.md) 2.4、2.7）。
+- **第 2 节 登录后的落点与新手引导的取数**（页面一侧完成）：新手引导取调用者的工作区列表，由它决定步骤，已有工作区的人资料一步之后就完成；创建一步与 `/create-workspace` 共用 `useCreateWorkspace`，邀请一步发往刚建的工作区；完成引导不再把列表中的第一个工作区写成上次打开的。W2 的页面版本守着切换、创建、接受之后写的 `last_workspace_id` 和删除、离开之后的落点；README 的"前端"一节写明能用的页面（spec 2.2、2.5、2.6、2.11）。
+- **第 11 节 M2 留下的 M3 调用和类型**（页面一侧中工作区的部分完成）：新手引导的创建、邀请两步（spec 2.6）；工作区 general 页的时区随修改发出（spec 2.1）。项目的部分随 P10。
+- **第 13 节**（P9 的部分）：`WorkspaceAuthWrapper` 的"找不到工作区"界面和退出登录失败的提示经 `t()`（spec 2.10）；新手引导的邀请一步换成成员页的表单（spec 2.6）。逐条的浏览器核对是 M3/P9 评审的 C4。
+- **M2 的 `UserStore.deactivateAccount`**（`web/apps/web/core/store/user/index.ts`，M3/P9 改了签名）：交回 `Promise<boolean>`，即 `tokenManager.endSession(loginId)` 的回答：停用应答时标签页的记录是否仍是发出停用的那个会话（是时结束它）；另一个标签页先退出、或把这个标签页换到别的账户时为 `false`。它唯一的调用方停用弹窗只在为 `true` 时说已停用并关闭；nerve 拒绝时它照旧拒绝（spec 2.9，第 3 节第 3 条）。
+
+仍未处理，状态保持 `open`：第 11 节的页面一侧（P10）；第 13 节等 C4 写进 M3/P9 的评审；第 10、14 节（P10，M3 设计 7.7）；第 12 节等 M3 的收尾。
+
+来源：[M3/P9 spec](../specs/P9-web-workspace-pages.md) 第 7 节。
+
 ````
 
 `docs/v0/frontend-changes.md`（修改，3 处）：
@@ -8483,14 +9066,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 页面跟进修改的结果 | 工作区的页面发出修改之后的跳转、提示和界面变化，只在发出它的会话里进行（`core/lib/in-session.ts` 的 `followInSession`）：另一个标签页换了账户之后，页面已是那个账户的，旧会话的修改不论成败都不再跟进 | M3 设计 7.1 | 已完成 | M3/P9 |
 | 创建工作区 | 表单自己的 slug 校验（`@nerve/utils` 的 `validateSlug`、`SLUG_REGEX`）删除，规则只在 nerve：提交时 nerve 说明不能用的原因（已占用、保留、格式不对），显示在 slug 字段下方；slug 字段显示的就是要发出的值（Plane 显示转换后的文字，发出的却是原文）。`/create-workspace` 和新手引导的创建一步共用 `useCreateWorkspace`。创建关闭时两处都说明已关闭、请工作区的管理员给邀请链接；Plane 给实例管理员写信的按钮和信的文案删除（Nerve 没有实例管理员，M2 设计 3.16） | M3 设计 3.10、3.11、7.4 | 已完成 | M3/P9 |
 | 新手引导的邀请成员一步 | Plane 的三行邀请表单换成成员页的邀请表单（`InvitationFields`、`useWorkspaceInvitationActions`），发往刚建的工作区；发出之后列出每个邀请的链接供复制（v0 不发邮件）。"创建或加入工作区"的包装组件（`onboarding/steps/workspace/root.tsx`）删除；引导从工作区列表决定步骤（`onboarding-place.ts`），完成引导不再写 `last_workspace_id` | M3 设计 7.4、决策点 2 | 已完成 | M3/P9 |
-| 侧边栏的项目导航设置 | `@nerve/types` 的 `DEFAULT_PROJECT_PREFERENCES` 删除：设置到达之前按 nerve 的默认值显示（最多 10 个项目，折叠式）；对话框的修改在轮到它时按 nerve 最近一次的回答算出（总体设计 7.7），数量在输入框失去焦点时发出 | M3 设计 3.18、7.5 | 已完成 | M3/P9 |
+| 侧边栏的项目导航设置 | `@nerve/types` 的 `DEFAULT_PROJECT_PREFERENCES` 删除：设置到达之前按 nerve 的默认值显示（最多 10 个项目，折叠式）；对话框的修改在轮到它时按 nerve 最近一次的回答算出（总体设计 7.7）：限制项目数的开关按那个回答打开或关闭，连按两下回到原样；数量在输入框失去焦点时发出 | M3 设计 3.18、7.5 | 已完成 | M3/P9 |
 | 停用账户的弹窗 | nerve 拒绝的原因（如唯一的管理员）显示在确认弹窗里，不再是提示，弹窗关闭时清掉；停用只在它结束了标签页的会话时才说已停用（另一个标签页先换了账户时，页面已是那个账户的） | M3 设计 7.1、7.5 | 已完成 | M3/P9 |
 ````
 
 - [ ] **Step 2: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 64 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
+Expected: 通过；关键词守卫 65 条规则、3 个例外，没有命中；web 的 oxlint 359 条，等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -8504,15 +9087,17 @@ Expected: 93 个全部通过。
 - [ ] **Step 3: 提交**
 
 ```bash
-git add README.md docs/v0/frontend-changes.md
+git add README.md docs/v0/M3-workspace-project/handoffs/M2-closeout.md docs/v0/frontend-changes.md
 ```
 ```bash
-git commit -m "docs(M3/P9): README's frontend section lists the pages that work, and the frontend changes list P9's
+git commit -m "docs(M3/P9): README's frontend section lists the pages that work, the frontend changes list P9's, and the M2 handoff its results
 
 README's frontend section says which pages work from M3/P9 on, where the
 project pages and the rest are connected; the frontend changes list says
 the workspace pages are connected, which pages show nerve's errors by
-their code, and P9's five changes.
+their code, and P9's five changes. The M2 handoff records what P9 did
+for its sections, and that UserStore.deactivateAccount now says whether
+it ended the tab's session.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```

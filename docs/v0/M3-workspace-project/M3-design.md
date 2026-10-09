@@ -99,7 +99,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 
 | 编号 | 故事 | 页面 | 数据库 | 接口版本 | Phase（接口 / 页面） |
 |---|---|---|---|---|---|
-| W1 | 创建工作区 | 新用户完成资料步骤后在新手引导里建工作区（名、slug、规模），再到"邀请成员"一步点跳过，落到工作区首页；已完成引导的用户在 `/create-workspace` 再建一个。slug 已被占用、是保留名、含大写：表单在字段下方提示，不提交。`workspace.creation_enabled = false` 的独立 nerve：两个入口都显示"创建工作区已关闭" | `workspaces` 新增一行：slug 为小写，`created_by_id` 是当前账户；`workspace_members` 新增一行，`role = 20`、`is_active`；`profiles.last_workspace_id` 是新工作区（前端写入，3.14）。没有任何演示数据（3.11） | `POST /api/v0/workspaces`，同一组断言；slug 被占用 409 `workspace.slug_taken`，保留名 422（`slug`，`not_allowed`）；关闭时 403 `workspace.creation_disabled`，数据库不变。`GET /api/v0/workspace-slugs/{slug}` 三种回答（可用、被占用、保留） | P1 / P9 |
+| W1 | 创建工作区 | 新用户完成资料步骤后在新手引导里建工作区（名、slug、规模），再到"邀请成员"一步点跳过，落到工作区首页；已完成引导的用户在 `/create-workspace` 再建一个。slug 已被占用、是保留名、格式不对（例如 `café`）：表单在字段下方提示，不提交；输入的大写由 slug 字段转成小写（字段显示的就是发出的），到不了 nerve（M3/P9 spec 第 3 节第 5 条，裁定 P5）。`workspace.creation_enabled = false` 的独立 nerve：两个入口都显示"创建工作区已关闭" | `workspaces` 新增一行：slug 为小写，`created_by_id` 是当前账户；`workspace_members` 新增一行，`role = 20`、`is_active`；`profiles.last_workspace_id` 是新工作区（前端写入，3.14）。没有任何演示数据（3.11） | `POST /api/v0/workspaces`，同一组断言；slug 被占用 409 `workspace.slug_taken`，保留名 422（`slug`，`not_allowed`）；关闭时 403 `workspace.creation_disabled`，数据库不变。`GET /api/v0/workspace-slugs/{slug}` 三种回答（可用、被占用、保留） | P1 / P9 |
 | W2 | 登录后的落点 | 有两个工作区的账户：登录后落到上次的工作区；在 general 页删掉上次的工作区，再登录，落到另一个；在另一个工作区先把一位成员提升为管理员，再离开它，之后登录落到 `/create-workspace`。三次都没有失败的请求 | `profiles.last_workspace_id` 随切换工作区而变（工作区菜单切换一次）；删除、离开之后对应的行按 W3、W7 的断言 | `GET /api/v0/workspaces` 只返回仍是有效成员的工作区，含 `role`、`total_members`、`created_at`：删除之后少一个，离开之后再少一个。落点规则是前端的，接口版本只核对列表 | P5a / P9 |
 | W3 | 工作区设置 | 管理员在 general 页改名、规模、时区，刷新后仍是新值；成员打开同一页，表单不可编辑。管理员在 general 页删除工作区（输入名称确认），落到下一个工作区或 `/create-workspace`。会话切换：另建一个工作区再删除，测试在 `page.route` 里先经 `route.fetch()` 把删除的请求发到 nerve（此时会话未变，它成功），另一个标签页退出并以另一个账户登录之后，才经 `route.fulfill()` 把这个回答交给页面：原标签页不跳转、不提示（7.1、9.6） | `workspaces` 对应列和 `updated_by_id`；删除后工作区及其成员、邀请、显示设置、项目（和项目之下的行）的 `deleted_at` 在同一时刻写入 | `PATCH`、`DELETE /api/v0/workspaces/{slug}`；成员 403；删除之后原成员 `GET` 得到 404 `workspace.not_found`；slug 不能修改（请求体里带 `slug` 是 400）。P4a 起断言加上项目的连带 | P3（P4a 补连带）/ P9 |
 | W4 | 邀请成员 | 管理员在成员页邀请两个邮箱（一个成员、一个访客），列表出现两条待接受的邀请；改其中一条的角色；复制链接（剪贴板里是 `/workspace-invitations?invitation_id=…&token=…`）；删除另一条。邀请已是成员的邮箱、重复的邮箱：弹窗在对应行提示。一条被忽略的邀请在列表中显示"已忽略"，再邀请这个邮箱被拒绝，删掉它之后才能再邀请。成员打开同一页：只有成员列表，没有邀请的界面，页面也不请求邀请列表（`watchPage` 没有失败的请求，7.1） | `workspace_member_invites` 新增两行：邮箱已规范化、`role` 正确、`accepted = false`、`responded_at` 为空；表中没有令牌；删除的一行 `deleted_at` 已填 | `POST /api/v0/workspaces/{slug}/invitations`（批量）、`PATCH`/`DELETE /api/v0/workspace-invitations/{id}`，同一组断言；成员、访客 403（决策点 4）；已是成员 422（`invitations[i].email`，`not_allowed`），重复或已被忽略 422（`duplicate`） | P3 / P9 |
@@ -1171,13 +1171,13 @@ modules/access/
 - **SWR 键**：会话的取数都带 `loginId`，经 `useSessionSWR`、`sessionKey`（`core/lib/use-session-swr.ts`、`core/lib/session-key.ts`，P8a），键的形状是 `[取数的名称, loginId, ...取数的参数]`（例如 `["WORKSPACE_MEMBERS", loginId, slug]`）。fetcher 返回 store 方法的 Promise（M2 交接第 2 节"注意"）。经 `publicClient` 的公开操作只取决于它的输入，键就是它的输入，不带 `loginId`（查看邀请的链接，`useInvitationPreview`，P8a）；这是唯一的例外。绕过 `useSessionSWR` 的会话取数由 oxlint 静态地发现（根目录 `.oxlintrc.json` 按路径限制从 `swr` 导入，P8a 的 spec 附录 A.6 列出范围）。（M3/P8a 的修订按控制者的裁定 A6 改写这一条。）
 - **一个资源的修改一个接一个发出**（总体设计 7.7）：每个 store 对同一个资源的修改经 `oneAtATime()`（`core/lib/one-at-a-time.ts`）排队，前一个有了应答或失败之后才发下一个。M3 里连续修改最多的是拖动排序（状态的 `sequence`、标签的父子和 `sort_order`、侧边栏的项目顺序）和显示设置；表单另外在提交期间禁用按钮。只排队修改，取数不排队。
 - **`SessionChangedError`**：store 的修改遇到它时不改本代的状态、不提示错误（M2 的做法）。
-- **组件在 `await` 之后的页面级副作用先核对会话**（总体设计 7.7 的规则，Codex 4.3 第 2 条）：`SessionChangedError` 只管 store 发出请求之前换了代的情形；已经发出的请求在另一个标签页换了账户之后照样可能迟到地成功，旧的组件闭包仍会拿到结果。所以组件在修改成功之后跳转、提示、改页面状态之前，先核对标签页仍在发出修改时的会话。
-  - `inSession()` 从 `core/components/appearance/theme-switcher.tsx:50` 的闭包移到 `core/lib/in-session.ts`：`const inSession = sessionGuard()` 在发出修改时取当前的 `loginId`，之后 `inSession()` 比较它（P8a）。
+- **组件在 `await` 之后的页面级副作用先核对会话**（总体设计 7.7 的规则，Codex 4.3 第 2 条）：`SessionChangedError` 只管 store 发出请求之前换了代的情形；已经发出的请求在另一个标签页换了账户之后照样可能迟到地成功，旧的组件闭包仍会拿到结果。所以组件在修改成功之后跳转、提示、改页面状态之前，先核对标签页仍在发出修改时的会话。核对只写在一处：`core/lib/in-session.ts` 的 `followInSession(change, { done?, failed })`（P9）在发出修改时取会话，修改兑现之后只在标签页仍在那个会话里时调 `done` 或 `failed`；组件经它跟进，只给出跟进什么，不自己取 `sessionGuard()`（M3/P9 spec 第 3 节第 2 条，裁定 P2）。
+  - `inSession()` 从 `core/components/appearance/theme-switcher.tsx:50` 的闭包移到 `core/lib/in-session.ts`：`const inSession = sessionGuard()` 在发出修改时取当前的 `loginId`，之后 `inSession()` 比较它（P8a）；`followInSession` 用的就是它（P9）。
   - M3 的页面里这样的组件逐个列进 P9、P10 的 spec，例如 `project/delete-project-modal.tsx:62-69`、`workspace/delete-workspace-form.tsx:67-75`（删除之后跳转和提示）、离开工作区和项目、创建工作区和项目之后的跳转、接受邀请之后的跳转。
   - 测试：`sessionGuard` 的 vitest（P8a）；上面两个删除组件各一个 vitest（修改的 Promise 在 `loginId` 改变之后才兑现，组件不跳转、不提示）（P9、P10）；端到端在 W3 的页面版本里（P9）：
     - 删除工作区的请求在换账户之前经 `route.fetch()` 到达 nerve 并成功，它的回答在另一个标签页换了账户之后才经 `route.fulfill()` 交给页面；原标签页不跳转、不提示。
-    - 不能在换账户之后才放行请求：退出撤销了原会话，每个请求都查会话（M2 设计 3.5），放行的请求得到 401，按总体设计 7.7 成为 `SessionChangedError`；页面因为请求失败而不跳转，没有 `inSession()` 也会通过（复核 M6）。
-    - 变异核对：去掉组件里 `inSession()` 的核对，这个端到端必须失败。
+    - 不能在换账户之后才放行请求：退出撤销了原会话，每个请求都查会话（M2 设计 3.5），放行的请求得到 401，按总体设计 7.7 成为 `SessionChangedError`；页面因为请求失败而不跳转，没有会话的核对也会通过（复核 M6）。
+    - 变异核对：去掉 `followInSession` 的核对，这个端到端必须失败；一个组件不经 `followInSession` 自己跟进，由它自己的 vitest 发现（P9）。
 - **权限决定取数，不只决定显示**（Codex 4.3 第 1 条）：页面只请求调用者有权读的资源；按权限隐藏的区域，它的取数同样按权限启用（SWR 的键在没有权限时为 `null`）。M3 的每一页照此写，后续 M 照做：
   - 工作区设置的成员页：成员列表单独取；邀请列表只在调用者是工作区管理员时取（`workspace/settings/members-list.tsx:46-55` 现在不分角色先取邀请，只在 `:79` 控制显示）。
   - `ProjectAuthWrapper`：先取项目详情；调用者是有效的项目成员（`member_role` 不为 `null`）之后，才取项目的显示设置、标签、成员和状态（`layouts/auth-layout/project-wrapper.tsx:70-95` 现在同时发出，不是成员时后四个都是 403）。
@@ -1559,8 +1559,8 @@ modules/access/
 - **fixture**：`e2e/fixtures/api.ts` 加建工作区（P1）、邀请并接受（P3）、建项目（P4a）、加项目成员（P4b）、建状态（P7a）和标签（P7b）的帮助函数（生成的客户端，PAT）；`e2e/fixtures/assert/workspace.ts`、`assert/project.ts` 按表的断言函数，页面版本和接口版本共用；`e2e/fixtures/db.ts` 加九张表的读取。
 - **故事**：第 2 节的 21 个；S1、S2 的更新。每个故事的接口版本和页面版本在第 2 节标出的 Phase 加入。
 - **会话切换**（W3 的页面版本，P9）：在 `page.route` 里先经 `route.fetch()` 把删除工作区的请求发到 nerve，拿到成功的回答（此时会话还是原来的）；在同一个浏览器上下文的另一个标签页退出并以另一个账户登录之后，才经 `route.fulfill()` 把这个回答交给页面；断言原标签页没有跳转、没有提示（7.1）。
-  - 不能在切换之后才放行请求：退出撤销了原会话，放行的请求得到 401，页面因为请求失败而不跳转，测试不依赖 `inSession()` 就会通过（复核 M6）。
-  - 变异核对：去掉组件里 `inSession()` 的核对，这个测试必须失败（P9 第 11 个任务写进 review）。
+  - 不能在切换之后才放行请求：退出撤销了原会话，放行的请求得到 401，页面因为请求失败而不跳转，测试不依赖会话的核对就会通过（复核 M6）。
+  - 变异核对：去掉 `followInSession` 的核对（P9 的 `T1.1`），这个测试必须失败（P9 写进 review）。
   - 这是 C5 的自动化部分，C5 仍由控制者在浏览器里看一遍。
 - **注册关闭、创建关闭的独立 nerve**（W1、W6）：沿用 M2 为 A13 起的第二个 nerve 的写法。它以 `NERVE_ENV=test` 运行、没有配置密钥文件（`e2e/fixtures/server.ts:100-105`），签名密钥是它自己的临时密钥，主 nerve 算出的令牌在它那里无效。所以 W6 在第二个 nerve 上经它的接口建工作区、发邀请，链接由它算出。部署时的要求（全部进程共用一个密钥文件）写在 README（8.7）。
 
@@ -1970,7 +1970,7 @@ modules/access/
   8. 邀请的界面：批量邀请、复制链接、改角色、删除、已忽略（7.5）。
   9. 停用账户的弹窗显示 409 的说明（7.5）。
   10. `WorkspaceAuthWrapper` 的界面（M2 交接第 13 节）。
-  11. 页面级副作用的会话核对：删除工作区、离开工作区、创建工作区、接受邀请之后的跳转和提示先核对 `inSession()`（spec 逐个列出组件）；删除工作区组件的 vitest；W3 的会话切换端到端：`route.fetch()` 在换账户之前，`route.fulfill()` 在之后；变异核对：去掉 `inSession()` 时它失败，写进 review（7.1、9.6）。
+  11. 页面级副作用的会话核对：删除工作区、离开工作区、创建工作区、接受邀请之后的跳转和提示只在发出修改的会话里进行，经 `followInSession`（spec 逐个列出组件）；删除工作区组件的 vitest；W3 的会话切换端到端：`route.fetch()` 在换账户之前，`route.fulfill()` 在之后；变异核对：去掉 `followInSession` 的核对时它失败，写进 review（7.1、9.6）。
   12. 端到端：W1–W5 的页面版本（W4 含成员打开成员页没有失败的请求）。
   13. 端到端：W6–W9 的页面版本。
   14. 浏览器核对 C1–C5；3.20 中 P9 的行（README"前端"一节）；review。
@@ -1987,7 +1987,7 @@ modules/access/
   5. 项目设置 general。
   6. 项目设置 members：成员、添加、改角色、移出；负责人、默认负责人、访客可见全部。
   7. features、automations。
-  8. 离开项目的顺序（M1-P4 交接）；删除、离开、创建项目之后的跳转和提示先核对 `inSession()`，删除项目组件的 vitest（7.1）。
+  8. 离开项目的顺序（M1-P4 交接）；删除、离开、创建项目之后的跳转和提示只在发出修改的会话里进行，经 `followInSession`（P9），删除项目组件的 vitest（7.1）。
   9. 侧边栏的项目顺序、项目页头的导航偏好。
   10. 下拉框（M2 交接第 14 节）。
   11. 复制到剪贴板。
@@ -2220,7 +2220,7 @@ modules/access/
 | M-4 | W5 要求打开链接时就认出账户不对，而查看里没有邮箱 | W5 改为点"接受"得到 403 之后说明、按钮不再可用、提供退出；与 7.4 一致 | W5 的页面版本（P9） |
 | M-5 | `logo_props` 的 CHECK 只查对象类型，不合 M2 设计 3.13 | 4.6 按 3.13 写全：键的集合、出现的每个键的类型、嵌套的 `emoji`、`icon`；第三稿 spike；3.19、5.2 | 9.3 的十个反例（含 S5 的值）和四个合法值（P4a） |
 | 4.3 第 1 条 | 页面按权限显示，却不按权限取数：成员页给成员取邀请，项目包装层给不是成员的人取子资源，都得到 403 | 7.1 规则"权限决定取数，不只决定显示"；7.3、7.5、7.6 | W4、P2 的页面版本（P9、P10）；9.5 的两个取数条件的 vitest（P8a、P8b） |
-| 4.3 第 2 条 | 已发出的修改在换了账户之后迟到地成功，旧页面仍会跳转、提示 | 7.1 规则：`inSession()` 移到 `core/lib/in-session.ts`，组件在 `await` 之后先核对；3.20 的 P8a 行 | 9.5 的 `sessionGuard` 和两个删除组件的 vitest（P8a、P9、P10）；W3 的会话切换端到端（P9） |
+| 4.3 第 2 条 | 已发出的修改在换了账户之后迟到地成功，旧页面仍会跳转、提示 | 7.1 规则：`inSession()` 移到 `core/lib/in-session.ts`（P8a），组件经同一文件的 `followInSession` 在修改兑现之后跟进，只在发出修改的会话里（P9）；3.20 的 P8a 行 | 9.5 的 `sessionGuard` 和两个删除组件的 vitest（P8a、P9、P10）；W3 的会话切换端到端（P9） |
 | 4.1 决策点 1 | 注册能用来试邮箱；(a) 改 (b) 之后留下已注册的账户 | 第 10 节决策点 1；3.8；8.2 | 写明的风险；`register_ip` 的限流沿用 M2 的测试 |
 | 4.1 决策点 3 | B、C 的代价漏了 M4 的查询过滤和测试 | 第 10 节决策点 3 | 若以后改选，由 M4 的规则行和查询测试覆盖（13.2） |
 | 4.2 11.1 | 另一种做法的好处写得太窄 | 11.1：分开轮换、影响范围更小 | — |
@@ -2249,7 +2249,7 @@ modules/access/
 | M3 | 待接受的旧邀请让刚被移出的成员凭旧链接自己回来；3.11 的"旧邀请无害"只在他有效时成立（spike 9d） | 3.8"结束的成员关系不留下邀请"：移出、离开软删除这个工作区里发给他的待接受邀请（在已持有的工作区 N 之下、改成员行之前，邮箱经 `MemberProfiles`）；3.6 取锁表；3.11 改正，并写明 `reactivate-member` 为什么不需要改；4.11 和 3.20 的 P5a 行 | 9.3 的 9d 顺序，移出、离开各一次（P5a 第 13 个任务；定稿时是 P5 第 14 个任务）；实现在 P5a 第 3 个任务（定稿时是 P5 第 2 个任务） |
 | M4 | 添加在判定之前锁并确认目标，实现可能把 422 给了该得 403、404 的人，而 422 与 404 之差透露项目 id 存在 | 3.6 约定三"锁目标行只为取锁的顺序；目标的 422 在判定之后给出"；取锁表 | 9.2 `addProjectMembers` 无效目标的 PM、X 两格（P4b 第 5 个任务；定稿时是 P4 第 13 个任务） |
 | M5 | 停用的邮箱从哪里来没有写，`LockedAccount` 没有邮箱；列举到而上锁时已删除的工作区会落进"0 行答 404"（spike 15） | 3.9：邮箱取自锁下的账户行（`LockedAccount` 加 `Email`）；上锁时已删除的工作区、项目跳过，不答 404。6.1、6.5、取锁表 | P6 第 7 个任务：spike 15 的情形，改邮箱先提交时删除发给新邮箱的邀请；实现在 P6 第 1–3 个任务 |
-| M6 | W3 的会话切换端到端在换账户之后才放行请求，请求得到 401，没有 `inSession()` 也会通过 | W3、7.1、9.6：`route.fetch()` 在换账户之前，`route.fulfill()` 在之后 | P9 第 11 个任务，变异核对：去掉 `inSession()` 时它失败 |
+| M6 | W3 的会话切换端到端在换账户之后才放行请求，请求得到 401，没有会话的核对也会通过 | W3、7.1、9.6：`route.fetch()` 在换账户之前，`route.fulfill()` 在之后 | P9 第 11 个任务，变异核对：去掉 `followInSession` 的核对（`T1.1`）时它失败 |
 | M7 | `is_favorite` 的删除清单漏了 `favorite.store.ts:284-287` 和 `favoriteProjectIds` getter，7.2、7.3、7.8 没提 | 3.2、7.2、7.3、7.8、13.2 的 M7 行 | P8b 第 1 个任务（定稿时是 P8 第 5 个任务）；`tsc`、knip |
 | M8 | `reactivate-member` 的例外同样让项目一侧的增长接纳停用的账户 | 3.11 写明这一状态下项目一侧的增长照常允许，直到 `nerve users activate` 或再次停用 | 写明的行为，没有新测试 |
 | M9 | 六处文字 | 0.3 S5 的计数；4.6"三个键"；约定四和 11.2 的例子（添加项目成员、以别人为负责人建项目）；5.2 `ProjectMember` 只读 `project_members`；7.4 与 W5 一致（按钮不再可用）；7.10 `search-issues` 的不命中样例 | P8b 第 9 个任务（定稿时是 P8 第 14 个任务；关键词的样例）；其余是文字 |
