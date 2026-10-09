@@ -128,11 +128,14 @@ test("A12 (page): a deactivation nerve fails says why, sent once however often C
   await page.getByRole("button", { name: "Confirm" }).dblclick();
   await sent;
   await expect(page.getByRole("button", { name: "Deactivating" })).toBeDisabled();
+  // The confirmation cannot be dismissed while the request is out either: Cancel is disabled, Escape leaves it open.
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  await page.keyboard.press("Escape");
   const refused = await answerTo(page, "POST", "/api/v0/me/deactivate", async () => answer());
   expect(refused.status()).toBe(500);
 
-  // The confirmation says why, by the problem's code, and stays open, to confirm again or cancel; the page stays
-  // signed in, on the general page; nothing changed.
+  // The confirmation, which Escape left open, says why, by the problem's code, and stays open, to confirm again or
+  // cancel; the page stays signed in, on the general page; nothing changed.
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
     "Something went wrong on the server. Please try again."
   );
@@ -140,6 +143,10 @@ test("A12 (page): a deactivation nerve fails says why, sent once however often C
   await expect(page).toHaveURL("/settings/profile/general");
   expect(await recordOf(page)).toEqual(held);
   expect(await accountStateOf(db, email)).toEqual(before);
+  // Escape closed nothing: a closing dialog fades out still showing its content, but this one is still there to
+  // cancel. Cancel, enabled again, closes it.
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 
   // The page sent the one deactivation.
   expect(watch.apiRequests.filter((request) => request === "POST /api/v0/me/deactivate")).toHaveLength(1);

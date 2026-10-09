@@ -96,9 +96,9 @@ describe("UserStore.updateCurrentUser", () => {
 // it is out (M3 design 7.1). Its answer says whether it ended it, which the dialog follows.
 describe("UserStore.deactivateAccount", () => {
   it.each([
-    { ended: true, when: "the tab's record is still that session's" },
-    { ended: false, when: "another tab has moved this one to another account" },
-  ])("ends the session it was sent in, and resolves $ended when $when", async ({ ended }) => {
+    { answeredIn: "x", ended: true, when: "the tab's record is still that session's" },
+    { answeredIn: "y", ended: false, when: "another tab has moved this one to another account" },
+  ])("ends the session it was sent in, and resolves $ended when $when", async ({ answeredIn, ended }) => {
     tab.state.loginId = "x";
     tab.endSession.mockReset();
     tab.endSession.mockResolvedValue(ended);
@@ -106,8 +106,8 @@ describe("UserStore.deactivateAccount", () => {
     const deactivated = track(new UserStore(fakeRoot({}), nerve.client()).deactivateAccount());
     await until(() => nerve.calls.length === 1, "the deactivation");
     expect([nerve.calls[0]?.method, nerve.calls[0]?.path]).toEqual(["POST", "/api/v0/me/deactivate"]);
-    // the tab moves while the deactivation is out: the store ends the session it was sent in
-    tab.state.loginId = "y";
+    // the session the tab is in when nerve answers: still x, or y once another tab has moved it; the store ends x
+    tab.state.loginId = answeredIn;
     nerve.calls[0]?.answer(noContent());
     await until(() => deactivated.settled, "the deactivation's answer");
 

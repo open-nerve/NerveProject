@@ -13,7 +13,7 @@ import { expectMembership } from "../../fixtures/assert/workspace";
 import { signInPath } from "../../fixtures/auth-pages";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
+import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers, nerveUsersFails } from "../../fixtures/users";
 import { nerveWorkspaces } from "../../fixtures/workspaces";
@@ -293,6 +293,16 @@ test("W9 (page): the only admin of a workspace with another member deactivates f
   await expect(dialog.getByRole("alert")).toHaveText(
     "The workspace would be left without an admin. Make another member an admin first."
   );
+  // Confirmed again, still the only admin: while the request is out the dialog no longer says the reason; nerve's
+  // second refusal says it again.
+  const release = await holdAnswer(page, "POST", "/api/v0/me/deactivate");
+  await dialog.getByRole("button", { name: "Confirm" }).click();
+  await expect(dialog.getByRole("button", { name: "Deactivating" })).toBeDisabled();
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+  expect((await answerTo(page, "POST", "/api/v0/me/deactivate", release)).status()).toBe(409);
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "The workspace would be left without an admin. Make another member an admin first."
+  );
   expect(await accountStateOf(db, email)).toEqual(before);
   await expectMembership(db, slug, email, { role: 20, is_active: true });
   // Cancelled and opened again, the dialog no longer says it.
@@ -308,12 +318,15 @@ test("W9 (page): the only admin of a workspace with another member deactivates f
   await expect(page.getByText("Your account is deactivated.")).toBeVisible();
   await expectMembership(db, slug, email, { role: 20, is_active: false });
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
-    ["409 POST /api/v0/me/deactivate"],
+    ["409 POST /api/v0/me/deactivate", "409 POST /api/v0/me/deactivate"],
     [],
     [],
   ]);
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING],
-    errors: ["Failed to load resource: the server responded with a status of 409 (Conflict)"],
+    errors: [
+      "Failed to load resource: the server responded with a status of 409 (Conflict)",
+      "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    ],
   });
 });

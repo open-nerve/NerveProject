@@ -33,7 +33,6 @@ export function DeactivateAccountModal(props: Props) {
   const [refusal, setRefusal] = useState<string | undefined>(undefined);
 
   const handleClose = () => {
-    setIsDeactivating(false);
     setRefusal(undefined);
     onClose();
   };
@@ -63,8 +62,15 @@ export function DeactivateAccountModal(props: Props) {
       .finally(() => setIsDeactivating(false));
   };
 
+  // While the deactivation is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): nerve's answer is said
+  // in the dialog that sent it, and no dialog opened again offers Confirm while the request is out.
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isDeactivating ? undefined : handleClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XXL}
+    >
       <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
         <div className="">
           <div className="flex items-start gap-x-4">
@@ -89,7 +95,7 @@ export function DeactivateAccountModal(props: Props) {
         </div>
       </div>
       <div className="mb-2 flex items-center justify-end gap-2 p-4 sm:px-6">
-        <Button variant="secondary" size="lg" onClick={handleClose}>
+        <Button variant="secondary" size="lg" onClick={handleClose} disabled={isDeactivating}>
           {t("cancel")}
         </Button>
         {/* Disabled while the request is out: a second click would send the deactivation again */}
