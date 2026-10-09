@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { Dispatch, SetStateAction } from "react";
-import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
@@ -27,13 +25,11 @@ type Props = {
    * is done, so that no second click checks the new workspace's slug again.
    */
   onCreated: (workspace: Workspace) => Promise<void>;
-  defaultValues: CreationForm;
-  setDefaultValues: Dispatch<SetStateAction<CreationForm>>;
 };
 
 export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: Props) {
   const { t } = useTranslation();
-  const { onCreated, defaultValues, setDefaultValues } = props;
+  const { onCreated } = props;
   // router
   const navigate = useNavigate();
   // store hooks
@@ -43,23 +39,14 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
     handleSubmit,
     control,
     setValue,
-    getValues,
     setError,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<CreationForm>({ defaultValues, mode: "onChange" });
+  } = useForm<CreationForm>({ defaultValues: { name: "", slug: "", organization_size: null }, mode: "onChange" });
 
   const handleCreateWorkspace = async (formData: CreationForm) => {
     const created = await create(formData, setError);
     if (created) await onCreated(created);
   };
-
-  useEffect(
-    () => () => {
-      // when the component unmounts set the default values to whatever user typed in
-      setDefaultValues(getValues());
-    },
-    [getValues, setDefaultValues]
-  );
 
   return (
     <form

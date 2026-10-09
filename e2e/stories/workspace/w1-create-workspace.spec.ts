@@ -10,7 +10,7 @@ import {
   expectWorkspaceCreated,
   lastWorkspaceOf,
 } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
 import {
@@ -81,7 +81,7 @@ test("W1 (API): creating a workspace makes the caller its admin and only member;
   expect(await expectWorkspaceCreated(db, email, body)).toBe(created.id);
 });
 
-test("W1 (page): at /create-workspace an onboarded account is told under the field of a taken, a reserved or an invalid slug, and nothing is created; then it creates a workspace with the slug the field shows, which opens, written as the one opened last; on a nerve with creation switched off the page says so", async ({
+test("W1 (page): at /create-workspace an onboarded account is told under the field of a taken, a reserved or an invalid slug, and nothing is created; then it creates a workspace with the slug the field shows, which opens, written as the one opened last; a draft goes once another tab signs another account in; on a nerve with creation switched off the page says so", async ({
   api,
   browser,
   db,
@@ -143,6 +143,16 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
   });
   await expect.poll(() => lastWorkspaceOf(db, email)).toBe(id);
   expect(watch.apiRequests.filter((request) => request === "POST /api/v0/workspaces")).toHaveLength(1);
+
+  // A draft is the session's: another tab signs another account in, and the form, mounted again for it, is empty.
+  const other = emailFor(testInfo, "other");
+  await registerOnboarded(api, other);
+  await page.goto("/create-workspace");
+  await page.locator("#workspaceName").fill("Secret plans");
+  await anotherTabSignsIn(page.context(), api, other);
+  await expect(page.getByText(other)).toBeVisible();
+  await expect(page.locator("#workspaceName")).toHaveValue("");
+  await expect(url).toHaveValue("");
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // The new workspace's home.
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });

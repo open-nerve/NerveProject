@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
 import { observer } from "mobx-react";
 import { Link, useNavigate } from "react-router";
 // nerve imports
@@ -15,7 +14,6 @@ import WorkspaceCreationDisabled from "@/app/assets/workspace/workspace-creation
 // components
 import { NerveLogo } from "@/components/common/nerve-logo";
 import { CreateWorkspaceForm } from "@/components/workspace/create-workspace-form";
-import type { CreationForm } from "@/components/workspace/use-create-workspace";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { useInstance } from "@/hooks/store/use-instance";
@@ -31,8 +29,6 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
   const { config } = useInstance();
   const { data: currentUser } = useUser();
   const openWorkspace = useOpenWorkspace();
-  // states
-  const [defaultValues, setDefaultValues] = useState<CreationForm>({ name: "", slug: "", organization_size: null });
   // derived values
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
@@ -75,11 +71,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
             <div className="w-full space-y-7 sm:space-y-10">
               <h4 className="text-20 font-semibold">{t("workspace_creation.heading")}</h4>
               <div className="sm:w-3/4 md:w-2/5">
-                <CreateWorkspaceForm
-                  onCreated={openWorkspace}
-                  defaultValues={defaultValues}
-                  setDefaultValues={setDefaultValues}
-                />
+                <CreateWorkspaceForm onCreated={openWorkspace} />
               </div>
             </div>
           )}

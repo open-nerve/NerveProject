@@ -77,6 +77,18 @@ export async function removeRecord(page: Page): Promise<void> {
   }, authKey);
 }
 
+/**
+ * Another tab of context signs the account of email in (nerve's sign-in through the API) and keeps that sign-in as the
+ * token manager does (writeRecord): a new record, with a new login_id, which the context's other tabs follow. The tab
+ * opens a file of the site, not a page of the app, which would refresh the session itself: resolves with it.
+ */
+export async function anotherTabSignsIn(context: BrowserContext, api: Api, email: string): Promise<Page> {
+  const tab = await context.newPage();
+  await tab.goto("/site.webmanifest.json");
+  await writeRecord(tab, newRecord(await login(api, email)));
+  return tab;
+}
+
 /** A password that meets the rules and is not common. */
 export const password = "Tr0ub4dor&3";
 
