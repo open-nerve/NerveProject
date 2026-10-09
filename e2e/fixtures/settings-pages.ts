@@ -121,36 +121,40 @@ export async function holdScripts(page: Page): Promise<{ requested: Promise<void
 }
 
 /**
+ * What a wait of a second that failed says: false when the second ran out (what was waited for did not come); any
+ * other failure, such as a locator that matches several elements, rejects, so that it cannot read as "it did not".
+ */
+function timedOut(error: unknown): false {
+  if (error instanceof errors.TimeoutError) return false;
+  throw error;
+}
+
+/**
  * Resolves with whether button is enabled within a second: one that stays disabled while the test holds what its page
  * waits for keeps it disabled the whole time, where a check made at once could pass before the page has re-rendered.
+ * button is one element with the button role: a locator that matches none, several or something else fails, not as
+ * "stayed disabled". Enabled is as Playwright's role queries take it (getByRole's disabled).
  */
-export function enabledWithin(button: Locator): Promise<boolean> {
-  return expect(button)
-    .toBeEnabled({ timeout: 1_000 })
-    .then(
-      () => true,
-      () => false
-    );
+export async function enabledWithin(button: Locator): Promise<boolean> {
+  await expect(button, "the one button").toHaveRole("button");
+  return button
+    .and(button.page().getByRole("button", { disabled: false }))
+    .waitFor({ state: "attached", timeout: 1_000 })
+    .then(() => true, timedOut);
 }
 
 /**
  * Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed within a second.
  * A toast is a dialog too, not a modal one: it does not count. A dialog that closes still shows its content while it
  * fades out (ModalCore's leave transition, 200 ms), so a check made just after the key cannot tell it from one that
- * stays: the second outlasts the transition. Only the second running out means it stayed; any other failure, such as
- * two modal dialogs, rejects.
+ * stays: the second outlasts the transition. Only the second running out means it stayed (timedOut); any other failure,
+ * such as two modal dialogs, rejects.
  */
 export async function closedByEscape(page: Page): Promise<boolean> {
   const closed = page
     .locator('[role="dialog"][aria-modal="true"]')
     .waitFor({ state: "detached", timeout: 1_000 })
-    .then(
-      () => true,
-      (error: unknown) => {
-        if (error instanceof errors.TimeoutError) return false;
-        throw error;
-      }
-    );
+    .then(() => true, timedOut);
   await page.keyboard.press("Escape");
   return closed;
 }
