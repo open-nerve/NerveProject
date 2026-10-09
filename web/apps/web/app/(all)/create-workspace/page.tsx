@@ -9,16 +9,17 @@ import { observer } from "mobx-react";
 import { Link, useNavigate } from "react-router";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { Button, getButtonStyling } from "@nerve/propel/button";
-import type { Workspace, WorkspaceCreate } from "@nerve/api-client";
+import { Button } from "@nerve/propel/button";
 // assets
 import WorkspaceCreationDisabled from "@/app/assets/workspace/workspace-creation-disabled.png?url";
 // components
 import { NerveLogo } from "@/components/common/nerve-logo";
 import { CreateWorkspaceForm } from "@/components/workspace/create-workspace-form";
+import type { CreationForm } from "@/components/workspace/use-create-workspace";
 // hooks
-import { useUser, useUserProfile } from "@/hooks/store/user";
+import { useUser } from "@/hooks/store/user";
 import { useInstance } from "@/hooks/store/use-instance";
+import { useOpenWorkspace } from "@/hooks/use-open-workspace";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 
@@ -29,32 +30,11 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
   // store hooks
   const { config } = useInstance();
   const { data: currentUser } = useUser();
-  const { updateUserProfile } = useUserProfile();
+  const openWorkspace = useOpenWorkspace();
   // states
-  const [defaultValues, setDefaultValues] = useState<Pick<WorkspaceCreate, "name" | "slug" | "organization_size">>({
-    name: "",
-    slug: "",
-  });
+  const [defaultValues, setDefaultValues] = useState<CreationForm>({ name: "", slug: "", organization_size: null });
   // derived values
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
-
-  // methods
-  const getMailtoHref = () => {
-    const subject = t("workspace_creation.request_email.subject");
-    const body = t("workspace_creation.request_email.body", {
-      firstName: currentUser?.first_name || "",
-      lastName: currentUser?.last_name || "",
-      email: currentUser?.email || "",
-    });
-
-    return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  };
-
-  const onSubmit = async (workspace: Workspace) => {
-    // the workspace opened last is a best-effort preference: the new workspace opens whether nerve saves it or not
-    await updateUserProfile({ last_workspace_id: workspace.id }).catch(() => undefined);
-    await navigate(`/${workspace.slug}`);
-  };
 
   return (
     <AuthenticationWrapper>
@@ -89,9 +69,6 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
                 <Button variant="primary" onClick={() => navigate(-1)}>
                   {t("common.go_back")}
                 </Button>
-                <a href={getMailtoHref()} className={getButtonStyling("secondary", "base")}>
-                  {t("workspace_creation.errors.creation_disabled.request_button")}
-                </a>
               </div>
             </div>
           ) : (
@@ -99,7 +76,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
               <h4 className="text-20 font-semibold">{t("workspace_creation.heading")}</h4>
               <div className="sm:w-3/4 md:w-2/5">
                 <CreateWorkspaceForm
-                  onSubmit={onSubmit}
+                  onCreated={(workspace) => void openWorkspace(workspace)}
                   defaultValues={defaultValues}
                   setDefaultValues={setDefaultValues}
                 />

@@ -5,7 +5,7 @@
  */
 
 import type { Dispatch, SetStateAction } from "react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
@@ -13,71 +13,41 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { ORGANIZATION_SIZE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { Workspace, WorkspaceCreate } from "@nerve/api-client";
+import type { Workspace } from "@nerve/api-client";
 // ui
 import { CustomSelect } from "@nerve/ui";
-import { validateWorkspaceName, validateSlug } from "@nerve/utils";
-// hooks
-import { useWorkspace } from "@/hooks/store/use-workspace";
+import { validateWorkspaceName } from "@nerve/utils";
 import { useNavigate } from "react-router";
+// local imports
+import { slugFrom, useCreateWorkspace, type CreationForm } from "./use-create-workspace";
 
 type Props = {
-  onSubmit?: (res: Workspace) => Promise<void>;
-  defaultValues: Pick<WorkspaceCreate, "name" | "slug" | "organization_size">;
-  setDefaultValues: Dispatch<SetStateAction<Pick<WorkspaceCreate, "name" | "slug" | "organization_size">>>;
+  /** What the page does with the workspace created (in the session it was created in). */
+  onCreated: (workspace: Workspace) => void;
+  defaultValues: CreationForm;
+  setDefaultValues: Dispatch<SetStateAction<CreationForm>>;
 };
 
 export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: Props) {
   const { t } = useTranslation();
-  const { onSubmit, defaultValues, setDefaultValues } = props;
-  // states
-  const [slugError, setSlugError] = useState(false);
-  const [invalidSlug, setInvalidSlug] = useState(false);
+  const { onCreated, defaultValues, setDefaultValues } = props;
   // router
   const navigate = useNavigate();
   // store hooks
-  const { createWorkspace, checkWorkspaceSlug } = useWorkspace();
+  const create = useCreateWorkspace();
   // form info
   const {
     handleSubmit,
     control,
     setValue,
     getValues,
+    setError,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<WorkspaceCreate>({ defaultValues, mode: "onChange" });
+  } = useForm<CreationForm>({ defaultValues, mode: "onChange" });
 
-  const handleCreateWorkspace = async (formData: WorkspaceCreate) => {
-    try {
-      const { available } = await checkWorkspaceSlug(formData.slug);
-      if (available) {
-        setSlugError(false);
-        try {
-          const workspaceResponse = await createWorkspace(formData);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("workspace_creation.toast.success.title"),
-            message: t("workspace_creation.toast.success.message"),
-          });
-
-          if (onSubmit) await onSubmit(workspaceResponse);
-        } catch {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("workspace_creation.toast.error.title"),
-            message: t("workspace_creation.toast.error.message"),
-          });
-        }
-      } else {
-        setSlugError(true);
-      }
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("workspace_creation.toast.error.title"),
-        message: t("workspace_creation.toast.error.message"),
-      });
-    }
+  const handleCreateWorkspace = async (formData: CreationForm) => {
+    const created = await create(formData, setError);
+    if (created) onCreated(created);
   };
 
   useEffect(
@@ -124,7 +94,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                       onChange={(e) => {
                         onChange(e.target.value);
                         setValue("name", e.target.value);
-                        setValue("slug", e.target.value.toLocaleLowerCase().trim().replace(/ /g, "-"), {
+                        setValue("slug", slugFrom(e.target.value.trim()), {
                           shouldValidate: true,
                         });
                       }}
@@ -154,20 +124,15 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
               },
             }}
             render={({ field: { onChange, value, ref } }) => (
-              <Field name="workspaceUrl" invalid={invalidSlug || Boolean(errors.slug)}>
+              <Field name="workspaceUrl" invalid={Boolean(errors.slug)}>
                 <InputGroup size="2xl">
                   <span className="text-12 whitespace-nowrap text-secondary">{window && window.location.host}/</span>
                   <Input
                     size="2xl"
                     id="workspaceUrl"
                     type="text"
-                    value={value.toLocaleLowerCase().trim().replace(/ /g, "-")}
-                    onChange={(e) => {
-                      const validation = validateSlug(e.target.value);
-                      if (validation === true) setInvalidSlug(false);
-                      else setInvalidSlug(true);
-                      onChange(e.target.value.toLowerCase());
-                    }}
+                    value={value}
+                    onChange={(e) => onChange(slugFrom(e.target.value))}
                     ref={ref}
                     placeholder={t("workspace_creation.form.url.placeholder")}
                   />
@@ -175,14 +140,6 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
               </Field>
             )}
           />
-          {slugError && (
-            <p className="-mt-3 text-13 text-danger-primary">
-              {t("workspace_creation.errors.validation.url_already_taken")}
-            </p>
-          )}
-          {invalidSlug && (
-            <p className="text-13 text-danger-primary">{t("workspace_creation.errors.validation.url_alphanumeric")}</p>
-          )}
           {errors.slug && <span className="text-11 text-danger-primary">{errors.slug.message}</span>}
         </div>
         <div className="flex flex-col gap-2 text-13">

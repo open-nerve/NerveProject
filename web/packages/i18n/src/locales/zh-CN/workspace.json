@@ -18,20 +18,16 @@
     },
     "errors": {
       "creation_disabled": {
-        "title": "只有您的实例管理员可以创建工作区",
-        "description": "如果您知道实例管理员的电子邮件地址，请点击下方按钮与他们联系。",
-        "request_button": "请求实例管理员"
+        "title": "创建工作区已关闭",
+        "description": "请向工作区的管理员要一个邀请链接。"
       },
       "validation": {
         "name_length": "名称限制在 80 个字符以内。",
-        "url_alphanumeric": "URL 只能包含 ('-') 和字母数字字符。",
+        "url_alphanumeric": "URL 只能包含小写字母、数字、'-' 和 '_'。",
         "url_length": "URL 限制在 48 个字符以内。",
-        "url_already_taken": "工作区 URL 已被占用！"
+        "url_already_taken": "工作区 URL 已被占用！",
+        "url_reserved": "这个 URL 是保留的，请换一个。"
       }
-    },
-    "request_email": {
-      "subject": "请求新工作区",
-      "body": "您好，实例管理员：\n\n请为 [创建工作区的目的] 创建一个 URL 为 [/workspace-name] 的新工作区。\n\n谢谢，\n{firstName} {lastName}\n{email}"
     },
     "button": {
       "default": "创建工作区",

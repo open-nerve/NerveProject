@@ -18,20 +18,16 @@
     },
     "errors": {
       "creation_disabled": {
-        "title": "Only your instance admin can create workspaces",
-        "description": "If you know your instance admin's email address, click the button below to get in touch with them.",
-        "request_button": "Request instance admin"
+        "title": "Creating workspaces is switched off",
+        "description": "Ask a workspace's admin for an invitation link."
       },
       "validation": {
         "name_length": "Limit your name to 80 characters.",
-        "url_alphanumeric": "URLs can contain only ('-') and alphanumeric characters.",
+        "url_alphanumeric": "URLs can contain only lower-case letters, digits, '-' and '_'.",
         "url_length": "Limit your URL to 48 characters.",
-        "url_already_taken": "Workspace URL is already taken!"
+        "url_already_taken": "Workspace URL is already taken!",
+        "url_reserved": "This URL is reserved: choose another."
       }
-    },
-    "request_email": {
-      "subject": "Requesting a new workspace",
-      "body": "Hi instance admin(s),\n\nPlease create a new workspace with the URL [/workspace-name] for [purpose of creating the workspace].\n\nThanks,\n{firstName} {lastName}\n{email}"
     },
     "button": {
       "default": "Create workspace",
