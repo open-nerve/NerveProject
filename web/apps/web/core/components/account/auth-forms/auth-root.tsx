@@ -20,7 +20,8 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
   const { authMode } = props;
   //router
   const [searchParams] = useSearchParams();
-  // query params: a workspace invitation's link, for M3's "join the workspace" title (M2 design 7.3)
+  // query params: a workspace invitation's link, for the "join the workspace" title and the registration it lets
+  // through (M3 design 7.4)
   const invitation_id = searchParams.get("invitation_id");
   const token = searchParams.get("token");
 
@@ -28,7 +29,10 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
     <div className="mt-10 flex w-full flex-grow flex-col items-center justify-center py-6">
       <div className="relative flex w-full max-w-[22.5rem] flex-col gap-6">
         <AuthHeader invitationId={invitation_id} token={token} authMode={authMode} />
-        <AuthPasswordForm mode={authMode} />
+        <AuthPasswordForm
+          mode={authMode}
+          invitation={invitation_id && token ? { id: invitation_id, token } : undefined}
+        />
       </div>
     </div>
   );
