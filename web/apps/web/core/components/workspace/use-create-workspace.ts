@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { UseFormSetError } from "react-hook-form";
+import { useForm, type UseFormSetError } from "react-hook-form";
 import type { OrganizationSize, SlugAvailability, Workspace, WorkspaceCreate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { validateWorkspaceName } from "@nerve/utils";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
@@ -119,4 +120,38 @@ export function useCreateWorkspace(): (
     });
     return workspace;
   };
+}
+
+/**
+ * A creation form (M3 design 2 W1, 7.4), which /create-workspace and the onboarding's creation step each lay out their
+ * own way: the form, empty as it opens; the rules of its fields; onNameChange, by which the name typed gives the slug
+ * (slugFrom); and the submit, which creates the workspace (useCreateWorkspace) and hands it, with the values sent, to
+ * onCreated. The form stays busy until onCreated has settled, so that no second click checks the new workspace's slug
+ * again.
+ */
+export function useCreationForm(onCreated: (workspace: Workspace, values: CreationForm) => Promise<void>) {
+  const { t } = useTranslation();
+  const create = useCreateWorkspace();
+  const form = useForm<CreationForm>({
+    defaultValues: { name: "", slug: "", organization_size: null },
+    mode: "onChange",
+  });
+  const rules = {
+    name: {
+      required: t("common.errors.required"),
+      validate: (value: string) => validateWorkspaceName(value, true),
+      maxLength: { value: 80, message: t("workspace_creation.errors.validation.name_length") },
+    },
+    slug: {
+      required: t("common.errors.required"),
+      maxLength: { value: 48, message: t("workspace_creation.errors.validation.url_length") },
+    },
+    organization_size: { required: t("common.errors.required") },
+  };
+  const onNameChange = (name: string) => form.setValue("slug", slugFrom(name.trim()), { shouldValidate: true });
+  const submit = form.handleSubmit(async (values) => {
+    const created = await create(values, form.setError);
+    if (created) await onCreated(created, values);
+  });
+  return { form, rules, onNameChange, submit };
 }

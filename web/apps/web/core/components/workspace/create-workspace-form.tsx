@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { ORGANIZATION_SIZE } from "@nerve/constants";
@@ -14,10 +14,9 @@ import { Button } from "@nerve/propel/button";
 import type { Workspace } from "@nerve/api-client";
 // ui
 import { CustomSelect } from "@nerve/ui";
-import { validateWorkspaceName } from "@nerve/utils";
 import { useNavigate } from "react-router";
 // local imports
-import { slugFrom, useCreateWorkspace, type CreationForm } from "./use-create-workspace";
+import { slugFrom, useCreationForm } from "./use-create-workspace";
 
 type Props = {
   /**
@@ -32,29 +31,19 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
   const { onCreated } = props;
   // router
   const navigate = useNavigate();
-  // store hooks
-  const create = useCreateWorkspace();
   // form info
   const {
-    handleSubmit,
-    control,
-    setValue,
-    setError,
-    formState: { errors, isSubmitting, isValid },
-  } = useForm<CreationForm>({ defaultValues: { name: "", slug: "", organization_size: null }, mode: "onChange" });
-
-  const handleCreateWorkspace = async (formData: CreationForm) => {
-    const created = await create(formData, setError);
-    if (created) await onCreated(created);
-  };
+    form: {
+      control,
+      formState: { errors, isSubmitting, isValid },
+    },
+    rules,
+    onNameChange,
+    submit,
+  } = useCreationForm(onCreated);
 
   return (
-    <form
-      className="space-y-6 sm:space-y-9"
-      onSubmit={(e) => {
-        void handleSubmit(handleCreateWorkspace)(e);
-      }}
-    >
+    <form className="space-y-6 sm:space-y-9" onSubmit={(e) => void submit(e)}>
       <div className="space-y-6 sm:space-y-7">
         <div className="flex flex-col gap-2 text-13">
           <label htmlFor="workspaceName">
@@ -65,14 +54,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
             <Controller
               control={control}
               name="name"
-              rules={{
-                required: t("common.errors.required"),
-                validate: (value) => validateWorkspaceName(value, true),
-                maxLength: {
-                  value: 80,
-                  message: t("workspace_creation.errors.validation.name_length"),
-                },
-              }}
+              rules={rules.name}
               render={({ field: { value, ref, onChange } }) => (
                 <Field name="workspaceName" invalid={Boolean(errors.name)}>
                   <InputGroup size="2xl">
@@ -83,10 +65,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                       value={value}
                       onChange={(e) => {
                         onChange(e.target.value);
-                        setValue("name", e.target.value);
-                        setValue("slug", slugFrom(e.target.value.trim()), {
-                          shouldValidate: true,
-                        });
+                        onNameChange(e.target.value);
                       }}
                       ref={ref}
                       placeholder={t("workspace_creation.form.name.placeholder")}
@@ -106,13 +85,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
           <Controller
             control={control}
             name="slug"
-            rules={{
-              required: t("common.errors.required"),
-              maxLength: {
-                value: 48,
-                message: t("workspace_creation.errors.validation.url_length"),
-              },
-            }}
+            rules={rules.slug}
             render={({ field: { onChange, value, ref } }) => (
               <Field name="workspaceUrl" invalid={Boolean(errors.slug)}>
                 <InputGroup size="2xl">
@@ -141,7 +114,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
             <Controller
               name="organization_size"
               control={control}
-              rules={{ required: t("common.errors.required") }}
+              rules={rules.organization_size}
               render={({ field: { value, onChange } }) => (
                 <CustomSelect
                   value={value}

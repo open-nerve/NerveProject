@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { TickCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { ORGANIZATION_SIZE } from "@nerve/constants";
@@ -13,9 +13,9 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { Workspace } from "@nerve/api-client";
 import { Spinner } from "@nerve/ui";
-import { cn, validateWorkspaceName } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // components
-import { slugFrom, useCreateWorkspace, type CreationForm } from "@/components/workspace/use-create-workspace";
+import { slugFrom, useCreationForm } from "@/components/workspace/use-create-workspace";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
 // local components
@@ -34,30 +34,19 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
   const { t } = useTranslation();
   // store hooks
   const { config } = useInstance();
-  const create = useCreateWorkspace();
 
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   // form info
   const {
-    handleSubmit,
-    control,
-    setValue,
-    setError,
-    formState: { errors, isSubmitting, isValid },
-  } = useForm<CreationForm>({
-    defaultValues: {
-      name: "",
-      slug: "",
-      organization_size: null,
+    form: {
+      control,
+      formState: { errors, isSubmitting, isValid },
     },
-    mode: "onChange",
-  });
-
-  const handleCreateWorkspace = async (formData: CreationForm) => {
-    const created = await create(formData, setError);
-    if (created) await onCreated(created, formData.organization_size === "Just myself");
-  };
+    rules,
+    onNameChange,
+    submit,
+  } = useCreationForm((workspace, values) => onCreated(workspace, values.organization_size === "Just myself"));
 
   const isButtonDisabled = !isValid || isSubmitting;
 
@@ -69,12 +58,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
     );
   }
   return (
-    <form
-      className="flex flex-col gap-10"
-      onSubmit={(e) => {
-        void handleSubmit(handleCreateWorkspace)(e);
-      }}
-    >
+    <form className="flex flex-col gap-10" onSubmit={(e) => void submit(e)}>
       <CommonOnboardingHeader
         title={t("workspace_creation.heading")}
         description={t("onboarding.workspace.description")}
@@ -90,14 +74,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
           <Controller
             control={control}
             name="name"
-            rules={{
-              required: t("common.errors.required"),
-              validate: (value) => validateWorkspaceName(value, true),
-              maxLength: {
-                value: 80,
-                message: t("workspace_creation.errors.validation.name_length"),
-              },
-            }}
+            rules={rules.name}
             render={({ field: { value, ref, onChange } }) => (
               <div className="relative flex items-center rounded-md">
                 <input
@@ -107,10 +84,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
                   value={value}
                   onChange={(event) => {
                     onChange(event.target.value);
-                    setValue("name", event.target.value);
-                    setValue("slug", slugFrom(event.target.value.trim()), {
-                      shouldValidate: true,
-                    });
+                    onNameChange(event.target.value);
                   }}
                   placeholder={t("onboarding.workspace.name_placeholder")}
                   ref={ref}
@@ -139,13 +113,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
           <Controller
             control={control}
             name="slug"
-            rules={{
-              required: t("common.errors.required"),
-              maxLength: {
-                value: 48,
-                message: t("workspace_creation.errors.validation.url_length"),
-              },
-            }}
+            rules={rules.slug}
             render={({ field: { value, ref, onChange } }) => (
               <div
                 className={cn(
@@ -188,7 +156,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
             <Controller
               name="organization_size"
               control={control}
-              rules={{ required: t("common.errors.required") }}
+              rules={rules.organization_size}
               render={({ field: { value, onChange } }) => (
                 <div className="flex flex-wrap gap-3">
                   {ORGANIZATION_SIZE.map((size) => {

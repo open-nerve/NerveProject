@@ -5,7 +5,6 @@
  */
 
 import { useState } from "react";
-import { useParams } from "react-router";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { renderFormattedDate } from "@nerve/utils";
@@ -16,11 +15,10 @@ import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import type { IMemberFilters } from "@/store/member/utils";
 
-export const useMemberColumns = () => {
+/** The columns of the members of the workspace of workspaceSlug, which the list reads from the page's address. */
+export const useMemberColumns = (workspaceSlug: string) => {
   // states
   const [removeMemberModal, setRemoveMemberModal] = useState<WorkspaceMember | null>(null);
-
-  const { workspaceSlug } = useParams();
 
   const { data: currentUser } = useUser();
   const { allowPermissions } = useUserPermissions();
@@ -54,16 +52,15 @@ export const useMemberColumns = () => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: WorkspaceMember) =>
-        workspaceSlug && (
-          <NameColumn
-            rowData={rowData}
-            workspaceSlug={workspaceSlug}
-            isAdmin={isAdmin}
-            currentUser={currentUser}
-            setRemoveMemberModal={setRemoveMemberModal}
-          />
-        ),
+      tdRender: (rowData: WorkspaceMember) => (
+        <NameColumn
+          rowData={rowData}
+          workspaceSlug={workspaceSlug}
+          isAdmin={isAdmin}
+          currentUser={currentUser}
+          setRemoveMemberModal={setRemoveMemberModal}
+        />
+      ),
     },
 
     {
@@ -106,8 +103,7 @@ export const useMemberColumns = () => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: WorkspaceMember) =>
-        workspaceSlug && <AccountTypeColumn rowData={rowData} workspaceSlug={workspaceSlug} />,
+      tdRender: (rowData: WorkspaceMember) => <AccountTypeColumn rowData={rowData} workspaceSlug={workspaceSlug} />,
     },
 
     {

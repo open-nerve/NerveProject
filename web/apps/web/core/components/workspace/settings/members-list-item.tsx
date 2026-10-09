@@ -27,7 +27,7 @@ type Props = {
 
 export const WorkspaceMembersListItem = observer(function WorkspaceMembersListItem(props: Props) {
   const { workspaceSlug, memberDetails } = props;
-  const { columns, removeMemberModal, setRemoveMemberModal } = useMemberColumns();
+  const { columns, removeMemberModal, setRemoveMemberModal } = useMemberColumns(workspaceSlug);
   // store hooks
   const { data: currentUser } = useUser();
   const { leave, remove } = useMembershipChanges(workspaceSlug);
