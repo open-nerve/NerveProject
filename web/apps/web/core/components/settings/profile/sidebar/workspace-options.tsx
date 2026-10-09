@@ -13,10 +13,14 @@ import { SettingsSidebarItem } from "@/components/settings/sidebar/item";
 import { WorkspaceLogo } from "@/components/workspace/logo";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useWorkspacesFetch } from "@/hooks/use-workspaces-fetch";
 
 export const ProfileSettingsSidebarWorkspaceOptions = observer(function ProfileSettingsSidebarWorkspaceOptions() {
   // store hooks
   const { workspaces } = useWorkspace();
+  // outside a workspace no wrapper has fetched the caller's workspaces: the settings fetch them as they mount (M3
+  // design 7.1), for this list and power-K's
+  useWorkspacesFetch();
   // translation
   const { t } = useTranslation();
 

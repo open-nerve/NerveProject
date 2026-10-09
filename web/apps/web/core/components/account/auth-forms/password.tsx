@@ -16,6 +16,7 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
+import type { RegisterInvitation } from "@nerve/api-client";
 import { PasswordStrengthIndicator, Spinner } from "@nerve/ui";
 import { checkEmailValidity, getPasswordStrength } from "@nerve/utils";
 // helpers
@@ -28,6 +29,8 @@ import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-m
 
 type Props = {
   mode: EAuthModes;
+  /** The invitation of the link the page was opened with: a registration sends it (M3 design 7.4, decision 1). */
+  invitation?: RegisterInvitation;
 };
 
 type TPasswordFormValues = {
@@ -52,7 +55,7 @@ const NERVE_FIELDS = ["email", "password"];
  * one of the form's.
  */
 export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props) {
-  const { mode } = props;
+  const { mode, invitation } = props;
   const { t } = useTranslation();
   const passwordStrengthLabels = usePasswordStrengthLabels();
   const { signIn, signUp } = useUser();
@@ -115,7 +118,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
     setSubmitError(undefined);
     const credentials = { email: passwordFormData.email, password };
     try {
-      await (mode === EAuthModes.SIGN_IN ? signIn(credentials) : signUp(credentials));
+      await (mode === EAuthModes.SIGN_IN ? signIn(credentials) : signUp({ ...credentials, invitation }));
     } catch (error) {
       setSubmitError(error);
     } finally {

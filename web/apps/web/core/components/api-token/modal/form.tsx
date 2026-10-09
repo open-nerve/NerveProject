@@ -15,15 +15,16 @@ import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area"
 import type { ApiTokenCreate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // ui
 import { Switch } from "@makeplane/propel/components/switch";
 import { CustomSelect } from "@nerve/ui";
 import { cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
+// hooks
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 // local imports
 import type { TExpiryChoice } from "./expiry";
 import { EXPIRY_PERIODS, expiryDate } from "./expiry";
@@ -65,6 +66,7 @@ export function CreateApiTokenForm(props: Props) {
   } = useForm<TFormValues>({ defaultValues });
   // hooks
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
 
   const handleFormSubmit = async (data: TFormValues) => {
     const expiresAt = data.expiry === null ? undefined : expiryDate(data.expiry, new Date(), customDate);
@@ -83,8 +85,7 @@ export function CreateApiTokenForm(props: Props) {
       const fields = fieldErrorKeys(error);
       if (fields.label !== undefined) setError("label", { type: "manual", message: t(fields.label) });
       if (fields.expired_at !== undefined) setError("expiry", { type: "manual", message: t(fields.expired_at) });
-      if (needsErrorBanner(error, FIELDS))
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
     }
   };
 

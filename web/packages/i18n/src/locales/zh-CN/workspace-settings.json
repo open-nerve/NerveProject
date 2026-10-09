@@ -18,9 +18,8 @@
         "delete_modal": {
           "title": "确定要删除此工作区吗？",
           "success_title": "工作区已删除。",
-          "success_message": "即将跳转到您的个人资料页面。",
-          "error_title": "操作失败。",
-          "error_message": "请重试。"
+          "success_message": "即将跳转到您的另一个工作区；没有其他工作区时，跳转到创建工作区。",
+          "error_title": "操作失败。"
         },
         "errors": {
           "company_size": {
@@ -33,6 +32,7 @@
         "add_member": "添加成员",
         "invite_members": "邀请成员",
         "pending_invites": "待处理邀请",
+        "declined": "已忽略",
         "invitations_sent_successfully": "邀请发送成功",
         "leave_confirmation": "您确定要离开工作区吗？您将无法再访问此工作区。此操作无法撤消。",
         "details": {
@@ -50,7 +50,9 @@
           "placeholder": "name@company.com",
           "errors": {
             "required": "我们需要一个电子邮件地址来邀请他们。",
-            "invalid": "电子邮件无效"
+            "invalid": "电子邮件无效",
+            "already_member": "已是这个工作区的成员。",
+            "already_invited": "这个邮箱已有一份邀请（先删除它），或在这里填了两次。"
           }
         }
       },

@@ -6,32 +6,43 @@
 
 import { useEffect, useRef } from "react";
 // nerve imports
+import type { Workspace } from "@nerve/api-client";
 import { EOnboardingSteps } from "@nerve/types";
 // local components
+import type { OnboardingPlace } from "../onboarding-place";
 import { ProfileSetupStep } from "./profile";
 import { InviteTeamStep } from "./team";
-import { WorkspaceSetupStep } from "./workspace";
+import { WorkspaceCreateStep } from "./workspace";
 
 type Props = {
-  currentStep: EOnboardingSteps;
-  handleStepChange: (step: EOnboardingSteps, skipInvites?: boolean) => void;
+  place: OnboardingPlace;
+  /**
+   * The profile step is done. When that ends the onboarding, the step stays busy until what this returns settles, so
+   * that no second click sends the names and the end again.
+   */
+  onNamed: () => Promise<void> | undefined;
+  /**
+   * The creation step created workspace; alone when it is for its creator alone. The step stays busy until this
+   * settles, so that no second click checks the new workspace's slug again.
+   */
+  onCreated: (workspace: Workspace, alone: boolean) => Promise<void>;
+  /** The invitation step is done, or put off: the step stays busy until this settles, as the onboarding ends. */
+  onDone: () => Promise<void>;
 };
 
-function OnboardingStepContent({ currentStep, handleStepChange }: Props) {
-  switch (currentStep) {
+function OnboardingStepContent({ place, onNamed, onCreated, onDone }: Props) {
+  switch (place.kind) {
     case EOnboardingSteps.PROFILE_SETUP:
-      return <ProfileSetupStep handleStepChange={handleStepChange} />;
+      return <ProfileSetupStep onDone={onNamed} />;
     case EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN:
-      return <WorkspaceSetupStep handleStepChange={handleStepChange} />;
+      return <WorkspaceCreateStep onCreated={onCreated} />;
     case EOnboardingSteps.INVITE_MEMBERS:
-      return <InviteTeamStep handleStepChange={handleStepChange} />;
-    default:
-      return null;
+      return <InviteTeamStep workspace={place.workspace} onDone={onDone} />;
   }
 }
 
 export function OnboardingStepRoot(props: Props) {
-  const { currentStep } = props;
+  const { place } = props;
   // ref for the scrollable container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -43,7 +54,7 @@ export function OnboardingStepRoot(props: Props) {
         behavior: "smooth",
       });
     }
-  }, [currentStep]);
+  }, [place.kind]);
 
   return (
     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">

@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
-import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { fakeRoot } from "@/store/fake-root";
 import { projectOf, projectTab } from "@/store/project/fake-projects";
@@ -16,9 +16,13 @@ import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // The account's changes (names, time zone) against a fake nerve that answers each when the test says: a change goes
 // out once the one before it is answered or has failed, so nerve applies them in the order they were made and the
-// last answer is what nerve holds. The store gets its session's client from RootStore; the token manager it
-// imports is not used here.
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
+// last answer is what nerve holds. The store gets its session's client from RootStore; of the token manager it
+// imports, the deactivation reads the tab's session and ends it (tab).
+const tab = vi.hoisted(() => ({
+  state: { loginId: "x" },
+  endSession: vi.fn<(loginId: string | undefined) => Promise<boolean>>(),
+}));
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: tab, publicClient: {} }));
 
 const ME = "/api/v0/me";
 
@@ -85,6 +89,29 @@ describe("UserStore.updateCurrentUser", () => {
     await until(() => second.settled, "the second answer");
 
     expect(store.data).toEqual(accountIn("Europe/Berlin"));
+  });
+});
+
+// The deactivation ends the session it was sent in, read as it is sent: the tab may follow another tab's sign-in while
+// it is out (M3 design 7.1). Its answer says whether it ended it, which the dialog follows.
+describe("UserStore.deactivateAccount", () => {
+  it.each([
+    { answeredIn: "x", ended: true, when: "the tab's record is still that session's" },
+    { answeredIn: "y", ended: false, when: "another tab has moved this one to another account" },
+  ])("ends the session it was sent in, and resolves $ended when $when", async ({ answeredIn, ended }) => {
+    tab.state.loginId = "x";
+    tab.endSession.mockReset();
+    tab.endSession.mockResolvedValue(ended);
+    const nerve = new FakeNerve();
+    const deactivated = track(new UserStore(fakeRoot({}), nerve.client()).deactivateAccount());
+    await until(() => nerve.calls.length === 1, "the deactivation");
+    expect([nerve.calls[0]?.method, nerve.calls[0]?.path]).toEqual(["POST", "/api/v0/me/deactivate"]);
+    // the session the tab is in when nerve answers: still x, or y once another tab has moved it; the store ends x
+    tab.state.loginId = answeredIn;
+    nerve.calls[0]?.answer(noContent());
+    await until(() => deactivated.settled, "the deactivation's answer");
+
+    expect([tab.endSession.mock.calls, deactivated.value]).toEqual([[["x"]], ended]);
   });
 });
 

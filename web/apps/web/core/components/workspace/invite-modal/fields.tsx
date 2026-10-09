@@ -10,17 +10,18 @@ import { Controller } from "react-hook-form";
 // nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ROLE } from "@nerve/constants";
+import type { WorkspaceInvitationsCreate } from "@nerve/api-client";
+import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { CustomSelect } from "@nerve/ui";
-// hooks
-import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
+// local imports
+import { WORKSPACE_ROLES } from "../workspace-roles";
 
 type TInvitationFieldsProps = {
-  fields: FieldArrayWithId<InvitationFormValues, "emails", "id">[];
-  control: Control<InvitationFormValues>;
-  formState: FormState<InvitationFormValues>;
+  fields: FieldArrayWithId<WorkspaceInvitationsCreate, "invitations", "id">[];
+  control: Control<WorkspaceInvitationsCreate>;
+  formState: FormState<WorkspaceInvitationsCreate>;
   remove: (index: number) => void;
 };
 
@@ -44,7 +45,7 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
           <div className="w-full">
             <Controller
               control={control}
-              name={`emails.${index}.email`}
+              name={`invitations.${index}.email`}
               rules={{
                 required: t("workspace_settings.settings.members.modal.errors.required"),
                 pattern: {
@@ -54,12 +55,12 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
               }}
               render={({ field: { value, onChange, ref } }) => (
                 <>
-                  <Field name="input" invalid={Boolean(errors.emails?.[index]?.email)}>
+                  <Field name="input" invalid={Boolean(errors.invitations?.[index]?.email)}>
                     <InputGroup size="2xl">
                       <Input
                         size="2xl"
-                        id={`emails.${index}.email`}
-                        name={`emails.${index}.email`}
+                        id={`invitations.${index}.email`}
+                        name={`invitations.${index}.email`}
                         type="text"
                         value={value}
                         onChange={onChange}
@@ -68,9 +69,9 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                       />
                     </InputGroup>
                   </Field>
-                  {errors.emails?.[index]?.email && (
+                  {errors.invitations?.[index]?.email && (
                     <span className="ml-1 text-caption-sm-regular text-danger-primary">
-                      {errors.emails?.[index]?.email?.message}
+                      {errors.invitations?.[index]?.email?.message}
                     </span>
                   )}
                 </>
@@ -81,20 +82,25 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
             <div className="flex flex-col gap-1">
               <Controller
                 control={control}
-                name={`emails.${index}.role`}
+                name={`invitations.${index}.role`}
                 rules={{ required: true }}
                 render={({ field: { value, onChange } }) => (
                   <CustomSelect
                     value={value}
-                    label={<span className="text-caption-sm-regular sm:text-body-xs-regular">{ROLE[value]}</span>}
+                    label={
+                      <span className="text-caption-sm-regular sm:text-body-xs-regular">
+                        {t(ROLE_DETAILS[value].i18n_title)}
+                      </span>
+                    }
                     onChange={onChange}
                     className="w-24 flex-grow"
                     input
                   >
-                    {/* every role: only an admin invites (the members page's gate), and an admin may give any */}
-                    {Object.entries(ROLE).map(([key, label]) => (
-                      <CustomSelect.Option key={key} value={parseInt(key)}>
-                        {label}
+                    {/* every role: only an admin invites (the members page's gate), and an admin may give any; the select
+                    gives the picked option's value, a role's number */}
+                    {WORKSPACE_ROLES.map((role) => (
+                      <CustomSelect.Option key={role} value={role}>
+                        {t(ROLE_DETAILS[role].i18n_title)}
                       </CustomSelect.Option>
                     ))}
                   </CustomSelect>

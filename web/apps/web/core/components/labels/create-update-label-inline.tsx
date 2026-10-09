@@ -16,10 +16,9 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Label, LabelCreate, LabelUpdate } from "@nerve/api-client";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+// hooks
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 export type TLabelOperationsCallbacks = {
   createLabel: (data: LabelCreate) => Promise<Label>;
@@ -65,6 +64,7 @@ export const CreateUpdateLabelInline = observer(
     });
 
     const { t } = useTranslation();
+    const toastRefusal = useRefusalToast();
 
     const handleClose = () => {
       setLabelForm(false);
@@ -74,7 +74,7 @@ export const CreateUpdateLabelInline = observer(
 
     /** Shows nerve's reason for a refused creation or change, and keeps what the form holds. */
     const handleRefusal = (error: unknown, formData: TLabelFormValues) => {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      toastRefusal(error);
       reset(formData);
     };
 

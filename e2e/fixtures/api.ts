@@ -14,6 +14,7 @@ export type WorkspacePreferences = components["schemas"]["WorkspacePreferences"]
 export type WorkspacePreferencesUpdate = components["schemas"]["WorkspacePreferencesUpdate"];
 export type WorkspaceInvitation = components["schemas"]["WorkspaceInvitation"];
 export type WorkspaceMember = components["schemas"]["WorkspaceMember"];
+export type WorkspaceMemberUpdate = components["schemas"]["WorkspaceMemberUpdate"];
 export type InvitationCreate = components["schemas"]["InvitationCreate"];
 export type Project = components["schemas"]["Project"];
 export type ProjectCreate = components["schemas"]["ProjectCreate"];
@@ -109,6 +110,33 @@ export async function accept(api: Api, token: string, invitation: WorkspaceInvit
   return data;
 }
 
+/** Declines invitation with the bearer token given, the invitee's. */
+export async function decline(api: Api, token: string, invitation: WorkspaceInvitation): Promise<void> {
+  const { error, response } = await api.POST("/api/v0/workspace-invitations/{invitation_id}/decline", {
+    params: { path: { invitation_id: invitation.id } },
+    body: { token: invitation.token },
+    headers: bearer(token),
+  });
+  expect(response.status, `decline the invitation of ${invitation.email}: ${JSON.stringify(error)}`).toBe(204);
+}
+
+/**
+ * The invitation of email to the workspace of slug, pending or declined, with its link's token, as its admin of token
+ * lists it.
+ */
+export async function invitationTo(api: Api, token: string, slug: string, email: string): Promise<WorkspaceInvitation> {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/invitations", {
+    params: { path: { slug } },
+    headers: bearer(token),
+  });
+  expect(response.status, `list the invitations of ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  const invitation = data?.data.find((i) => i.email === email);
+  if (!invitation) {
+    throw new Error(`no invitation of ${email} to ${slug}`);
+  }
+  return invitation;
+}
+
 /**
  * Makes the account of member.email, whose bearer token is member.token, a member of the workspace of slug with
  * role: its admin, with adminToken, invites the address and the account accepts. The one way a workspace gets a
@@ -148,6 +176,47 @@ export async function membershipOf(api: Api, token: string, slug: string, member
     throw new Error(`no membership of ${memberId} in ${slug}`);
   }
   return membership.id;
+}
+
+/**
+ * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
+ * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
+ * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows, its label Bug
+ * among them.
+ */
+export async function furnishWorkspace(
+  api: Api,
+  adminToken: string,
+  slug: string,
+  member: { email: string; token: string },
+  inviteeEmail: string
+): Promise<void> {
+  await inviteAndAccept(api, adminToken, slug, member, 15);
+  await invite(api, adminToken, slug, [{ email: inviteeEmail, role: 15 }]);
+  const { error, response } = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
+    params: { path: { slug } },
+    body: { navigation_project_limit: 3 },
+    headers: bearer(adminToken),
+  });
+  expect(response.status, `the admin's settings in ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
+  await createLabel(api, adminToken, web.id, { name: "Bug" });
+}
+
+/** Gives the account of memberId the role in the workspace of slug, with the bearer token given, an admin's. */
+export async function changeRole(
+  api: Api,
+  token: string,
+  slug: string,
+  memberId: string,
+  role: WorkspaceMemberUpdate["role"]
+): Promise<void> {
+  const { error, response } = await api.PATCH("/api/v0/workspace-members/{workspace_member_id}", {
+    params: { path: { workspace_member_id: await membershipOf(api, token, slug, memberId) } },
+    body: { role },
+    headers: bearer(token),
+  });
+  expect(response.status, `the role of ${memberId} in ${slug}: ${JSON.stringify(error)}`).toBe(200);
 }
 
 /** Creates a project in the workspace of slug with the bearer token given, an admin's or a member's, and returns it. */

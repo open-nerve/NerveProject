@@ -57,7 +57,8 @@ export const InvitationModalActions = observer(function InvitationModalActions(p
         {addMoreButtonText || t("common.add_more")}
       </button>
       <div className="flex items-center gap-2">
-        <Button variant="secondary" size="lg" onClick={handleClose}>
+        {/* Disabled while the invitations are out: nerve's answer is said in the form that sent them */}
+        <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
           {cancelButtonText || t("cancel")}
         </Button>
         <Button variant="primary" size="lg" type="submit" loading={isSubmitting} disabled={isInviteDisabled}>

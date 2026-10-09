@@ -16,7 +16,7 @@ import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-it
 import { DeleteWorkspaceModal } from "./delete-workspace-modal";
 
 type TDeleteWorkspace = {
-  workspace: Workspace | null;
+  workspace: Workspace;
 };
 
 export const DeleteWorkspaceSection = observer(function DeleteWorkspaceSection(props: TDeleteWorkspace) {
@@ -29,7 +29,7 @@ export const DeleteWorkspaceSection = observer(function DeleteWorkspaceSection(p
   return (
     <>
       <DeleteWorkspaceModal
-        data={workspace}
+        workspace={workspace}
         isOpen={deleteWorkspaceModal}
         onClose={() => setDeleteWorkspaceModal(false)}
       />

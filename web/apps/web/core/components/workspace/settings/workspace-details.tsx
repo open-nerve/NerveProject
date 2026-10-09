@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
+import { useParams } from "react-router";
 // Nerve Imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
@@ -14,7 +15,7 @@ import { ORGANIZATION_SIZE, EUserPermissions, EUserPermissionsLevel } from "@ner
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { Workspace, WorkspaceUpdate } from "@nerve/api-client";
+import type { OrganizationSize, Workspace, WorkspaceUpdate } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
 import { cn, copyUrlToClipboard, getFileURL, validateWorkspaceName } from "@nerve/utils";
 // components
@@ -22,26 +23,38 @@ import { TimezoneSelect } from "@/components/global/timezone-select";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // components
 import { DeleteWorkspaceSection } from "@/components/workspace/delete-workspace-section";
+// lib
+import { followInSession } from "@/lib/in-session";
 
-/** The form's values: what an admin may change of the workspace. */
-type TWorkspaceForm = Required<Pick<WorkspaceUpdate, "name" | "timezone">> & Pick<WorkspaceUpdate, "organization_size">;
+/**
+ * The form's values: what an admin may change of the workspace. The size is null while the workspace has none, which
+ * nerve's WorkspaceUpdate cannot set: the select holds a value from the start (undefined would leave it uncontrolled).
+ */
+type TWorkspaceForm = Required<Pick<WorkspaceUpdate, "name" | "timezone">> & {
+  organization_size: OrganizationSize | null;
+};
 
 /** The form's values for a workspace; a size the form does not offer (none was given) shows as none. */
 const formValues = (workspace: Workspace): TWorkspaceForm => ({
   name: workspace.name,
-  organization_size: ORGANIZATION_SIZE.find((size) => size === workspace.organization_size),
+  organization_size: ORGANIZATION_SIZE.find((size) => size === workspace.organization_size) ?? null,
   timezone: workspace.timezone,
 });
 
 export const WorkspaceDetails = observer(function WorkspaceDetails() {
   // states
   const [isLoading, setIsLoading] = useState(false);
+  // router: the address's workspace, as the caller's list has it (the wrapper shows the page once it has)
+  const { workspaceSlug } = useParams();
   // store hooks
-  const { currentWorkspace, updateWorkspace } = useWorkspace();
+  const { getWorkspaceBySlug, updateWorkspace } = useWorkspace();
+  const workspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
 
   // form info
   const {
@@ -51,42 +64,38 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     watch,
     formState: { errors },
   } = useForm<TWorkspaceForm>({
-    defaultValues: currentWorkspace
-      ? formValues(currentWorkspace)
-      : { name: "", organization_size: "2-10", timezone: "UTC" },
+    defaultValues: workspace ? formValues(workspace) : { name: "", organization_size: "2-10", timezone: "UTC" },
   });
 
+  // the fields the form edits, which nerve's WorkspaceUpdate takes; the page follows the change only in the session it
+  // was sent in (M3 design 7.1)
   const onSubmit = async (formData: TWorkspaceForm) => {
-    if (!currentWorkspace) return;
+    if (!workspace) return;
 
     setIsLoading(true);
 
     const payload: WorkspaceUpdate = {
       name: formData.name,
-      organization_size: formData.organization_size,
+      organization_size: formData.organization_size ?? undefined,
       timezone: formData.timezone,
     };
 
-    try {
-      await updateWorkspace(currentWorkspace.slug, payload);
-      setToast({
-        title: "Success!",
-        type: TOAST_TYPE.SUCCESS,
-        message: "Workspace updated successfully",
-      });
-    } catch (err: unknown) {
-      console.error(err);
-    } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
-    }
+    await followInSession(() => updateWorkspace(workspace.slug, payload), {
+      done: () =>
+        setToast({
+          title: "Success!",
+          type: TOAST_TYPE.SUCCESS,
+          message: "Workspace updated successfully",
+        }),
+      failed: toastRefusal,
+    });
+    setIsLoading(false);
   };
 
   const handleCopyUrl = () => {
-    if (!currentWorkspace) return;
+    if (!workspace) return;
 
-    void copyUrlToClipboard(`${currentWorkspace.slug}`)
+    void copyUrlToClipboard(`${workspace.slug}`)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -94,35 +103,40 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
         });
         return undefined;
       })
-      .catch(() => {
-        // Silently handle clipboard errors
-      });
+      // the browser did not let the page write the clipboard
+      .catch(() =>
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: t("toast.error"),
+          message: t("something_went_wrong_please_try_again"),
+        })
+      );
   };
 
   useEffect(() => {
-    if (currentWorkspace) reset(formValues(currentWorkspace));
-  }, [currentWorkspace, reset]);
+    if (workspace) reset(formValues(workspace));
+  }, [workspace, reset]);
 
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
 
-  if (!currentWorkspace) return null;
+  if (!workspace) return null;
 
   return (
     <>
       <div className={cn("flex w-full flex-col gap-y-7", { "opacity-60": !isAdmin })}>
         <div className="flex items-center gap-5">
           <div className="flex shrink-0 flex-col gap-1">
-            {currentWorkspace.logo_url ? (
+            {workspace.logo_url ? (
               <div className="relative flex size-14">
                 <img
-                  src={getFileURL(currentWorkspace.logo_url)}
+                  src={getFileURL(workspace.logo_url)}
                   className="absolute top-0 left-0 size-full rounded-md object-cover"
                   alt="Workspace Logo"
                 />
               </div>
             ) : (
               <div className="relative grid size-14 place-items-center rounded-md bg-accent-primary text-24 text-on-color uppercase">
-                {currentWorkspace.name.charAt(0)}
+                {workspace.name.charAt(0)}
               </div>
             )}
           </div>
@@ -130,7 +144,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
             <div className="mb:-my-5 text-h5-semibold leading-6">{watch("name")}</div>
             <button type="button" onClick={handleCopyUrl} className="text-left text-body-xs-regular tracking-tight">{`${
               typeof window !== "undefined" && window.location.origin.replace("http://", "").replace("https://", "")
-            }/${currentWorkspace.slug}`}</button>
+            }/${workspace.slug}`}</button>
           </div>
         </div>
         <div className="flex flex-col gap-7">
@@ -203,7 +217,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                     value={`${
                       typeof window !== "undefined" &&
                       window.location.origin.replace("http://", "").replace("https://", "")
-                    }/${currentWorkspace.slug}`}
+                    }/${workspace.slug}`}
                     readOnly
                     disabled
                   />
@@ -243,7 +257,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
       </div>
       {isAdmin && (
         <div className="mt-10">
-          <DeleteWorkspaceSection workspace={currentWorkspace} />
+          <DeleteWorkspaceSection workspace={workspace} />
         </div>
       )}
     </>

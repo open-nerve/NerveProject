@@ -13,7 +13,6 @@ import { ChevronDownOutline, LogOutOutline, PlusCircleOutline } from "@makeplane
 import { Menu, Transition } from "@headlessui/react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Workspace } from "@nerve/api-client";
 import { Loader } from "@nerve/ui";
 import { orderWorkspacesList, cn } from "@nerve/utils";
@@ -24,6 +23,7 @@ import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
 import { useInstance } from "@/hooks/store/use-instance";
+import { useSignOut } from "@/hooks/use-sign-out";
 // components
 import { WorkspaceLogo } from "../logo";
 import SidebarDropdownItem from "./dropdown-item";
@@ -38,7 +38,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
   const { toggleSidebar, toggleAnySidebarDropdown } = useAppTheme();
   const { config } = useInstance();
   const { data: currentUser } = useUser();
-  const { signOut } = useUser();
+  const signOut = useSignOut();
   const { updateUserProfile } = useUserProfile();
   const { currentWorkspace: activeWorkspace, workspaces } = useWorkspace();
   // derived values
@@ -53,15 +53,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
     void updateUserProfile({ last_workspace_id: workspace?.id }).catch(() => undefined);
   };
 
-  const handleSignOut = async () => {
-    await signOut().catch(() =>
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("auth.sign_out.toast.error.title"),
-        message: t("auth.sign_out.toast.error.message"),
-      })
-    );
-  };
+  const handleSignOut = () => void signOut();
 
   const handleItemClick = () => {
     if (window.innerWidth < 768) {

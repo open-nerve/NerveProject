@@ -6,7 +6,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@nerve/api-client";
 import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
-import { ApiError } from "@/lib/api-error";
+import type { ApiError } from "@/lib/api-error";
+import { refusal } from "@/lib/fake-refusal";
 import { fetchHanded, handed, response } from "@/lib/fake-session-swr";
 import { projectOf } from "@/store/project/fake-projects";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -32,8 +33,8 @@ const guest = projectOf("WEB", acme.id, { member_role: 5 });
 const seen = projectOf("WEB", acme.id, { member_role: null });
 /** The project the address names, a project of beta's, of which he is a member: the address is acme's. */
 const elsewhere = projectOf("WEB", beta.id);
-const notFound = new ApiError(404, { status: 404, code: "project.not_found", title: "Not Found" });
-const unreachable = new ApiError(503, { status: 503, code: "server_busy", title: "Service Unavailable" });
+const notFound = refusal(404, "project.not_found");
+const unreachable = refusal(503, "server_busy");
 
 beforeEach(() => {
   handed.length = 0;

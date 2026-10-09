@@ -135,7 +135,10 @@
         "web/apps/web/core/components/labels/**",
         "web/apps/web/core/layouts/auth-layout/project-wrapper.tsx",
         "web/apps/web/core/layouts/auth-layout/use-project-fetch.ts",
-        "web/apps/web/core/components/project/project-settings-member-defaults.tsx"
+        "web/apps/web/core/components/project/project-settings-member-defaults.tsx",
+        "web/apps/web/core/components/onboarding/root.tsx",
+        "web/apps/web/core/hooks/use-workspaces-fetch.ts",
+        "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -221,7 +224,39 @@
         "web/apps/web/core/lib/place-between.ts",
         "web/apps/web/core/components/projects/use-archived-projects-fetch.ts",
         "web/apps/web/core/components/projects/use-archived-projects-fetch.test.ts",
-        "web/apps/web/core/components/projects/page.tsx"
+        "web/apps/web/core/components/projects/page.tsx",
+        "web/apps/web/core/lib/auth/fake-tab.ts",
+        "web/apps/web/core/lib/fake-refusal.ts",
+        "web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx",
+        "web/apps/web/core/components/workspace/workspace-roles.ts",
+        "web/apps/web/core/lib/invitation-link.ts",
+        "web/apps/web/core/lib/invitation-link.test.ts",
+        "web/apps/web/core/components/workspace/invite-modal/refusal.ts",
+        "web/apps/web/core/components/workspace/invite-modal/refusal.test.ts",
+        "web/apps/web/core/components/workspace/members/invite-modal.test.tsx",
+        "web/apps/web/core/hooks/use-copy-invitation-link.ts",
+        "web/apps/web/core/components/workspace/invitation-view.ts",
+        "web/apps/web/core/components/workspace/invitation-view.test.ts",
+        "web/apps/web/core/components/workspace/use-invitation-answer.ts",
+        "web/apps/web/core/components/workspace/use-invitation-answer.test.ts",
+        "web/apps/web/core/components/ui/empty-space.tsx",
+        "web/apps/web/core/hooks/use-open-workspace.ts",
+        "web/apps/web/core/hooks/use-open-workspace.test.ts",
+        "web/apps/web/core/components/workspace/use-create-workspace.ts",
+        "web/apps/web/core/components/workspace/use-create-workspace.test.ts",
+        "web/apps/web/core/components/onboarding/onboarding-place.ts",
+        "web/apps/web/core/components/onboarding/onboarding-place.test.ts",
+        "web/apps/web/core/components/onboarding/root.test.tsx",
+        "web/apps/web/core/components/onboarding/steps/profile/root.test.tsx",
+        "web/apps/web/core/components/onboarding/steps/team/links.tsx",
+        "web/apps/web/core/hooks/use-navigation-preferences.test.ts",
+        "web/apps/web/core/components/home/root.test.tsx",
+        "web/apps/web/core/components/account/deactivate-account-modal.test.tsx",
+        "web/apps/web/core/hooks/use-workspaces-fetch.ts",
+        "web/apps/web/core/hooks/use-refusal-toast.ts",
+        "web/apps/web/core/hooks/use-refusal-toast.test.ts",
+        "web/apps/web/core/hooks/use-sign-out.ts",
+        "web/apps/web/core/hooks/use-sign-out.test.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

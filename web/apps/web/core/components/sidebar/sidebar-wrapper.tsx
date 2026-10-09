@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
 import { PreferencesOutline } from "@makeplane/propel/icons";
 import { ScrollArea } from "@nerve/propel/scrollarea";
 // components
@@ -28,6 +29,7 @@ export const SidebarWrapper = observer(function SidebarWrapper(props: TSidebarWr
   const { title, children, quickActions } = props;
   // state
   const [isProjectNavDialogOpen, setIsProjectNavDialogOpen] = useState(false);
+  const { t } = useTranslation();
   // store hooks
   const { toggleSidebar, sidebarCollapsed } = useAppTheme();
   const windowSize = useSize();
@@ -61,6 +63,7 @@ export const SidebarWrapper = observer(function SidebarWrapper(props: TSidebarWr
                   variant="ghost"
                   icon={PreferencesOutline}
                   onClick={() => setIsProjectNavDialogOpen(true)}
+                  aria-label={t("aria_labels.projects_sidebar.project_navigation")}
                 />
               )}
               <AppSidebarToggleButton />

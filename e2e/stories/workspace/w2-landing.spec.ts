@@ -1,20 +1,33 @@
 import {
   addProjectMembers,
-  createLabel,
   createProject,
   createWorkspace,
-  invite,
+  furnishWorkspace,
   inviteAndAccept,
   membershipOf,
   slugFor,
   type Workspace,
 } from "../../fixtures/api";
-import { expectMembershipEnded, expectWorkspaceDeleted, expectWrittenLastBy } from "../../fixtures/assert/workspace";
+import {
+  expectMembershipEnded,
+  expectWorkspaceDeleted,
+  expectWrittenLastBy,
+  lastWorkspaceOf,
+} from "../../fixtures/assert/workspace";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole } from "../../fixtures/browser";
+import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
+import {
+  deleteFromGeneralPage,
+  endMembership,
+  pickRole,
+  signInAnew,
+  switchWorkspace,
+} from "../../fixtures/workspace-pages";
 
-// W2, where an account lands once signed in (M3 design 2). The landing rule is the web app's (P9); the API version
-// checks the list it rests on.
+// W2, where an account lands once signed in (M3 design 2). The landing rule is the web app's: the page version
+// follows it; the API version checks the list it rests on.
 
 /** A workspace as GET /api/v0/workspaces lists it for its member of role, with members active members. */
 const entry = (w: Workspace, role: number, members: number) => ({
@@ -39,16 +52,7 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
   // deletion's writing it shows; the invitee's pending invitation (bob's own was deleted when he accepted it, before
   // the workspace); her display settings; and her project Web with its own rows, its label Bug among them.
   const firstWorkspace = await createWorkspace(api, alice, { name: "First", slug: first });
-  await inviteAndAccept(api, alice, first, { email: bobEmail, token: bob }, 15);
-  await invite(api, alice, first, [{ email: emailFor(testInfo, "invitee"), role: 15 }]);
-  const settings = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
-    params: { path: { slug: first } },
-    body: { navigation_project_limit: 3 },
-    headers: bearer(alice),
-  });
-  expect(settings.response.status).toBe(200);
-  const web = await createProject(api, alice, first, { name: "Web", identifier: "WEB" });
-  await createLabel(api, alice, web.id, { name: "Bug" });
+  await furnishWorkspace(api, alice, first, { email: bobEmail, token: bob }, emailFor(testInfo, "invitee"));
   // Second has bob as its member, and his project Ops, alice its admin by his adding, so both are its admins.
   const secondWorkspace = await createWorkspace(api, alice, { name: "Second", slug: second });
   await inviteAndAccept(api, alice, second, { email: bobEmail, token: bob }, 15);
@@ -113,4 +117,65 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
   await expectMembershipEnded(db, second, aliceEmail, aliceEmail, 20, [{ identifier: "OPS", role: 20 }]);
   expect(await listed(alice)).toEqual([]);
   expect(await listed(bob)).toEqual([entry(secondWorkspace, 20, 1)]);
+});
+
+test("W2 (page): signed in, an account lands on the workspace it opened last; once that is deleted, on its other one; once it has made a member that one's admin and left it, on the page that creates one; no request fails", async ({
+  api,
+  baseURL,
+  browser,
+  db,
+}, testInfo) => {
+  const aliceEmail = emailFor(testInfo, "alice");
+  const alice = await registerOnboarded(api, aliceEmail);
+  const bobEmail = emailFor(testInfo, "bob");
+  const bob = await registerOnboarded(api, bobEmail);
+  const first = slugFor(testInfo, "first");
+  const second = slugFor(testInfo, "second");
+  await createWorkspace(api, alice.access_token, { name: "First", slug: first });
+  await inviteAndAccept(api, alice.access_token, first, { email: bobEmail, token: bob.access_token }, 15);
+  const secondWorkspace = await createWorkspace(api, alice.access_token, { name: "Second", slug: second });
+  const bobsMembership = await membershipOf(api, alice.access_token, first, await accountId(api, bob.access_token));
+  /** Signs alice in, in a browser of her own, and checks where she lands. */
+  const signIn = async (landing: string) => {
+    const signedIn = await signInAnew(browser, baseURL ?? "", aliceEmail);
+    await expect(signedIn.page).toHaveURL(landing);
+    return signedIn;
+  };
+  /**
+   * Nothing failed in the browser of signedIn, where loads documents opened a workspace's page (each logs
+   * EMOJI_CHECK_WARNING); then it closes.
+   */
+  const nothingFailed = async ({ page, watch, close }: Awaited<ReturnType<typeof signIn>>, loads: number) => {
+    expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+    await expectQuietConsole(page, watch, { warnings: Array.from({ length: loads }, () => EMOJI_CHECK_WARNING) });
+    await close();
+  };
+
+  // She has opened neither: she lands on First, created first. She opens Second through the workspace menu, and the
+  // web app writes it down as the one she opened last.
+  const one = await signIn(`/${first}`);
+  const switched = await switchWorkspace(one.page, secondWorkspace.id);
+  expect([switched.answer.status(), switched.body]).toEqual([200, { last_workspace_id: secondWorkspace.id }]);
+  await expect(one.page).toHaveURL(`/${second}`);
+  expect(await lastWorkspaceOf(db, aliceEmail)).toBe(secondWorkspace.id);
+  await nothingFailed(one, 1);
+
+  // Signed in again, she lands on Second, and deletes it from its general page: the root lands her on First.
+  const two = await signIn(`/${second}`);
+  await two.page.goto(`/${second}/settings`);
+  expect((await deleteFromGeneralPage(two.page, second, "Second")).status()).toBe(204);
+  await expect(two.page).toHaveURL(`/${first}`);
+  await nothingFailed(two, 2);
+
+  // Signed in again, she lands on First. She makes bob its admin, and leaves it: the root lands her on the page that
+  // creates a workspace, as it does when she signs in again.
+  const three = await signIn(`/${first}`);
+  await three.page.goto(`/${first}/settings/members`);
+  const promoted = await pickRole(three.page, bobEmail, bobsMembership, { from: "Member", to: "Admin" });
+  expect([promoted.answer.status(), promoted.body]).toEqual([200, { role: 20 }]);
+  const leaving = { method: "POST", path: `/api/v0/workspaces/${first}/leave` };
+  expect((await endMembership(three.page, aliceEmail, "Leave", leaving)).status()).toBe(204);
+  await expect(three.page).toHaveURL("/create-workspace");
+  await nothingFailed(three, 2);
+  await nothingFailed(await signIn("/create-workspace"), 0);
 });

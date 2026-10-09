@@ -45,8 +45,15 @@ export const ConfirmWorkspaceMemberRemove = observer(function ConfirmWorkspaceMe
     handleClose();
   };
 
+  // While the removal is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): it closes once nerve has
+  // answered, and no dialog opened again offers the removal while the request is out.
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isRemoving ? undefined : handleClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XXL}
+    >
       <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
         <div className="sm:flex sm:items-start">
           <div className="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-danger-subtle sm:mx-0 sm:h-10 sm:w-10">
@@ -73,10 +80,10 @@ export const ConfirmWorkspaceMemberRemove = observer(function ConfirmWorkspaceMe
         </div>
       </div>
       <div className="flex justify-end gap-2 p-4 sm:px-6">
-        <Button variant="secondary" size="lg" onClick={handleClose}>
+        <Button variant="secondary" size="lg" onClick={handleClose} disabled={isRemoving}>
           {t("cancel")}
         </Button>
-        <Button variant="error-fill" size="lg" tabIndex={1} onClick={handleDeletion} loading={isRemoving}>
+        <Button variant="error-fill" size="lg" onClick={handleDeletion} loading={isRemoving}>
           {currentUser?.id === userDetails.id
             ? isRemoving
               ? t("leaving")

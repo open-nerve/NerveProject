@@ -4,7 +4,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { WorkspacePreferences } from "@nerve/api-client";
+import type { WorkspacePreferences, WorkspacePreferencesUpdate } from "@nerve/api-client";
+import { preferencesChangeOf } from "@/hooks/navigation-preferences";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
@@ -13,7 +14,7 @@ import { fakeRoot } from "@/store/fake-root";
 import { RouterStore } from "@/store/router.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
-import type { IWorkspacePreferencesStore } from "@/store/workspace/preferences.store";
+import type { IWorkspacePreferencesStore, PreferencesChange } from "@/store/workspace/preferences.store";
 
 // The caller's navigation settings in his workspaces (M3 design 3.18, 7.3), against a fake nerve that answers each
 // request when the test says. That they are kept by the workspace's id is root.store.test.ts.
@@ -26,6 +27,11 @@ const tabbed: WorkspacePreferences = { navigation_control_preference: "TABBED", 
 const elsewhere: WorkspacePreferences = { navigation_control_preference: "TABBED", navigation_project_limit: 3 };
 /** The caller's settings in another workspace of his, where the sidebar shows every project. */
 const all: WorkspacePreferences = { navigation_control_preference: "ACCORDION", navigation_project_limit: 0 };
+/** The change to data, whatever the settings it is made to. */
+const to =
+  (data: WorkspacePreferencesUpdate): PreferencesChange =>
+  () =>
+    data;
 
 /**
  * The store of a tab and its client: the workspaces root's, whose caller's list nerve gave as acme and beta, the
@@ -102,7 +108,7 @@ describe("WorkspacePreferencesStore", () => {
 
   it("has nerve's answer to a change, not the change, and only once nerve answers", async () => {
     const { nerve, store } = await loaded();
-    const changed = track(store.updatePreferences("acme", { navigation_control_preference: "TABBED" }));
+    const changed = track(store.updatePreferences("acme", to({ navigation_control_preference: "TABBED" })));
     await until(() => nerve.calls.length === 2, "the change");
     expect(nerve.calls[1]).toMatchObject({
       method: "PATCH",
@@ -118,7 +124,7 @@ describe("WorkspacePreferencesStore", () => {
 
   it("fails, changing nothing, when nerve refuses a change", async () => {
     const { nerve, store } = await loaded();
-    const refused = track(store.updatePreferences("acme", { navigation_project_limit: -1 }));
+    const refused = track(store.updatePreferences("acme", to({ navigation_project_limit: -1 })));
     await until(() => nerve.calls.length === 2, "the change");
     nerve.calls[1]?.answer(problem(422, "validation_failed"));
     await until(() => refused.settled, "the refusal");
@@ -129,7 +135,7 @@ describe("WorkspacePreferencesStore", () => {
   it("keeps each workspace's settings apart: a change or a fetch in one leaves the other's", async () => {
     const { nerve, store } = await loaded();
     await load(nerve, store, all, "beta");
-    const changed = track(store.updatePreferences("acme", { navigation_control_preference: "TABBED" }));
+    const changed = track(store.updatePreferences("acme", to({ navigation_control_preference: "TABBED" })));
     await until(() => nerve.calls.length === 3, "the change");
     expect(nerve.calls[2]).toMatchObject({ method: "PATCH", path: PREFERENCES });
     nerve.calls[2]?.answer(json(200, elsewhere));
@@ -143,8 +149,8 @@ describe("WorkspacePreferencesStore", () => {
 
   it("sends each change once nerve has answered the one before it, refused or not", async () => {
     const { nerve, store } = await loaded();
-    const first = track(store.updatePreferences("acme", { navigation_project_limit: 5 }));
-    const second = track(store.updatePreferences("acme", { navigation_control_preference: "TABBED" }));
+    const first = track(store.updatePreferences("acme", to({ navigation_project_limit: 5 })));
+    const second = track(store.updatePreferences("acme", to({ navigation_control_preference: "TABBED" })));
     await inTurn(nerve, 1, ["PATCH", PREFERENCES], problem(503, "server_busy"));
     await inTurn(nerve, 2, ["PATCH", PREFERENCES], json(200, elsewhere));
     await until(() => second.settled, "the last change");
@@ -153,11 +159,51 @@ describe("WorkspacePreferencesStore", () => {
     expect(store.getPreferences("acme")).toEqual(elsewhere);
   });
 
+  it("makes each change to the settings nerve answered the one before it, not to those the store had as it was asked for", async () => {
+    const { nerve, store } = await loaded();
+    const first = track(store.updatePreferences("acme", to({ navigation_control_preference: "TABBED" })));
+    // turning the limit on: a limit of the count of the settings it is made to
+    const second = track(
+      store.updatePreferences("acme", (held) => ({ navigation_project_limit: held.navigation_project_limit }))
+    );
+    // nerve's answer to the first: another tab of his has set the limit to 3 meanwhile
+    await inTurn(nerve, 1, ["PATCH", PREFERENCES], json(200, elsewhere));
+    await inTurn(nerve, 2, ["PATCH", PREFERENCES], json(200, elsewhere));
+    await until(() => second.settled, "the second change");
+    expect(first.error).toBeUndefined();
+    expect(nerve.calls[2]?.body).toEqual({ navigation_project_limit: 3 });
+  });
+
+  it("makes two quick turns of the limit each to nerve's answer to the one before it: off, then on again", async () => {
+    const { nerve, store } = await loaded();
+    const turn = preferencesChangeOf({ limitToggled: true });
+    track(store.updatePreferences("acme", turn));
+    const second = track(store.updatePreferences("acme", turn));
+    await inTurn(nerve, 1, ["PATCH", PREFERENCES], json(200, { ...defaults, navigation_project_limit: 0 }));
+    await inTurn(nerve, 2, ["PATCH", PREFERENCES], json(200, defaults));
+    await until(() => second.settled, "the second turn");
+    expect([nerve.calls[1]?.body, nerve.calls[2]?.body]).toEqual([
+      { navigation_project_limit: 0 },
+      { navigation_project_limit: 10 },
+    ]);
+  });
+
+  it("fails without sending a change while it has no settings of the workspace", async () => {
+    const { nerve, store } = await preferencesStore();
+    const changed = track(store.updatePreferences("acme", to({ navigation_control_preference: "TABBED" })));
+    await until(() => changed.settled, "the change");
+    expect(changed).toMatchObject({ settled: true, error: new Error("Workspace settings not found") });
+    expect(nerve.calls).toHaveLength(0);
+  });
+
   it("fetches the settings while a change is out: a fetch does not wait for it", async () => {
     const { nerve, store } = await loaded();
     await fetchedWhileChangeIsOut(
       nerve,
-      { send: () => store.updatePreferences("acme", { navigation_project_limit: 3 }), request: ["PATCH", PREFERENCES] },
+      {
+        send: () => store.updatePreferences("acme", to({ navigation_project_limit: 3 })),
+        request: ["PATCH", PREFERENCES],
+      },
       { send: () => store.fetchPreferences(workspaceOf("acme")), request: ["GET", PREFERENCES], body: elsewhere }
     );
     expect(store.getPreferences("acme")).toEqual(elsewhere);
@@ -173,7 +219,7 @@ describe("WorkspacePreferencesStore, while a fetch is out", () => {
     const { nerve, store } = await loaded();
     const refetched = track(store.fetchPreferences(workspaceOf("acme")));
     await until(() => nerve.calls.length === 2, "the refetch");
-    const changed = track(store.updatePreferences("acme", { navigation_control_preference: "TABBED" }));
+    const changed = track(store.updatePreferences("acme", to({ navigation_control_preference: "TABBED" })));
     await inTurn(nerve, 2, ["PATCH", PREFERENCES], json(200, tabbed));
     await until(() => changed.settled, "the answer");
     // read before the change

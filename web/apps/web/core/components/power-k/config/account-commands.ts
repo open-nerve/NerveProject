@@ -4,35 +4,17 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
 import { LogOutOutline } from "@makeplane/propel/icons";
-// nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks
-import { useUser } from "@/hooks/store/user";
+import { useSignOut } from "@/hooks/use-sign-out";
 
 /**
  * Account commands - Account related commands
  */
 export const usePowerKAccountCommands = (): TPowerKCommandConfig[] => {
-  // store
-  const { signOut } = useUser();
-  // translation
-  const { t } = useTranslation();
-
-  const handleSignOut = useCallback(() => {
-    signOut().catch(() =>
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("auth.sign_out.toast.error.title"),
-        message: t("auth.sign_out.toast.error.message"),
-      })
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signOut]);
+  const signOut = useSignOut();
 
   return [
     {
@@ -41,7 +23,7 @@ export const usePowerKAccountCommands = (): TPowerKCommandConfig[] => {
       group: "account",
       i18n_title: "power_k.account_actions.sign_out",
       icon: LogOutOutline,
-      action: handleSignOut,
+      action: () => void signOut(),
       isEnabled: () => true,
       isVisible: () => true,
       closeOnSelect: true,

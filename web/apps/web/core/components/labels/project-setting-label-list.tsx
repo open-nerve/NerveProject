@@ -12,7 +12,6 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Label, LabelCreate } from "@nerve/api-client";
 import { Loader } from "@nerve/ui";
 import type { TLabelOperationsCallbacks } from "@/components/labels";
@@ -25,8 +24,7 @@ import {
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // local imports
 import { SettingsHeading } from "../settings/heading";
 
@@ -41,6 +39,7 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
   const [selectDeleteLabel, setSelectDeleteLabel] = useState<Label | null>(null);
   // nerve hooks
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // store hooks
   const { projectLabels, updateLabelPosition, projectLabelsTree, createLabel, updateLabel } = useLabel();
   const { allowPermissions } = useUserPermissions();
@@ -66,7 +65,7 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
     dropAtEndOfList: boolean
   ) => {
     updateLabelPosition(draggingLabelId, droppedParentId, droppedLabelId, dropAtEndOfList).catch((error: unknown) => {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      toastRefusal(error);
     });
   };
 

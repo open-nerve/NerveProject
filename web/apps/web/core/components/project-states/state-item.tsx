@@ -12,15 +12,13 @@ import { observer } from "mobx-react";
 // Nerve
 import type { TDraggableData } from "@nerve/constants";
 import type { State, StateGroup } from "@nerve/api-client";
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TStateOperationsCallbacks } from "@nerve/types";
 import { DropIndicator } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
 import { StateItemTitle, StateUpdate } from "@/components/project-states";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+// hooks
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // helpers
 type TStateItem = {
   groupKey: StateGroup;
@@ -42,7 +40,7 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
     disabled = false,
     stateItemClassName,
   } = props;
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // ref
   const draggableElementRef = useRef<HTMLDivElement | null>(null);
   // states
@@ -63,10 +61,10 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
       try {
         await stateOperationsCallbacks.moveState(stateId, group, droppedOnId, after);
       } catch (error) {
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+        toastRefusal(error);
       }
     },
-    [stateOperationsCallbacks, t]
+    [stateOperationsCallbacks, toastRefusal]
   );
 
   useEffect(() => {

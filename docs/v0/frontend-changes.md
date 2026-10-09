@@ -199,7 +199,7 @@
 | 领域 | 所属 M | 状态 |
 |---|---|---|
 | 认证、用户、实例配置、PAT；令牌管理器 | M2 | 已完成 |
-| 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 进行中：数据层已对接（工作区一侧 M3/P8a，项目一侧 M3/P8b）；页面在 M3/P9–P11 |
+| 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 进行中：数据层已对接（工作区一侧 M3/P8a，项目一侧 M3/P8b）；工作区的页面 M3/P9 已对接，项目的页面在 M3/P10–P11 |
 | 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 计划中 |
 | 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 计划中 |
 | 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 计划中 |
@@ -214,7 +214,7 @@
 | `core/store/issue/helpers/base-issues.store.ts` 等列表相关 store | 使用新接口的分页结构（不透明游标 `next_cursor`）和分组结构（`groups` 数组），不再按"已加载条数 ÷ 每页条数"拼页码游标 | 新接口的分页和分组设计 | 计划中 | |
 | 用户和认证相关的 store | 登录、退出、续期改走令牌管理器 | 认证改为 Bearer 令牌 | 已完成 | M2/P4 |
 | 登录、注册、退出、修改密码的提交方式 | 删除 CSRF 令牌和 Django 会话的表单提交，改走令牌管理器 | 认证改为 Bearer 令牌；CSRF 是传输方式的一部分，和它的替代品一起删除（[M1 设计](M1-frontend-trim/M1-design.md) 3.6） | 已完成 | M2/P4 |
-| 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误。M2/P5 改完个人设置的其余部分（[M2 设计](M2-auth/M2-design.md) 7.7）和新手引导的资料步骤：general 页的保存、资料步骤和 api-tokens 页的创建把字段错误显示在字段下方（名字的规则只在 nerve，页面只查必填，Plane 的名字校验从 `@nerve/utils` 删除），其余的错误和 preferences 的主题、时区、语言、每周第一天、PAT 的撤销、停用账户、新手引导换步骤时更新资料（`onboarding/root.tsx`）的失败都在提示中，文案按 `code` 取（`core/lib/error-messages.ts` 的 `PROBLEM_MESSAGES`、`fieldErrorKeys`、`errorMessageKey`，M3/P8a 从 `helpers/authentication.helper.ts` 移来）。M3/P8a 起工作区、成员、邀请、工作区的显示设置，M3/P8b 起项目、项目成员、状态、标签、项目的显示设置经生成的客户端，nerve 的错误应答是 `ApiError`：状态和标签的设置页、工作项的三个标签选择器和项目包装层的加入界面在 M3/P8b 已按 `code` 显示错误（`errorMessageKey`），其余页面在 M3/P9–P11；M4–M8 的领域在各自的 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |
+| 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误。M2/P5 改完个人设置的其余部分（[M2 设计](M2-auth/M2-design.md) 7.7）和新手引导的资料步骤：general 页的保存、资料步骤和 api-tokens 页的创建把字段错误显示在字段下方（名字的规则只在 nerve，页面只查必填，Plane 的名字校验从 `@nerve/utils` 删除），其余的错误和 preferences 的主题、时区、语言、每周第一天、PAT 的撤销、停用账户、新手引导换步骤时更新资料（`onboarding/root.tsx`）的失败都在提示中，文案按 `code` 取（`core/lib/error-messages.ts` 的 `PROBLEM_MESSAGES`、`fieldErrorKeys`、`errorMessageKey`，M3/P8a 从 `helpers/authentication.helper.ts` 移来）。M3/P8a 起工作区、成员、邀请、工作区的显示设置，M3/P8b 起项目、项目成员、状态、标签、项目的显示设置经生成的客户端，nerve 的错误应答是 `ApiError`：状态和标签的设置页、工作项的三个标签选择器和项目包装层的加入界面在 M3/P8b 已按 `code` 显示错误（`errorMessageKey`），工作区的页面在 M3/P9（新手引导、邀请页、注册、创建工作区、首页、侧边栏的项目导航、工作区设置和停用账户的弹窗；创建工作区和邀请的表单把 nerve 指名的字段错误显示在对应的字段下方），其余页面在 M3/P10–P11；M4–M8 的领域在各自的 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |
 | 文件上传相关的 store 和调用方 | 预签名 POST 改为 `{method, url, headers}` 形式的 PUT | 文件存储改为 PUT 上传 | 计划中 | |
 | 迭代和模块的归属 | 通过工作项的 `cycle_id`、`module_ids` 字段修改，不再调用单独的接口 | 接口设计 | 计划中 | |
 | 系统内接受邀请 | `/invitations` 页、它的入口和路由、新手引导的"加入工作区"一步、旧 `WorkspaceService` 按邮箱列出和批量接受邀请的两个方法删除；邀请只凭链接接受（`/workspace-invitations`） | [M3 设计](M3-workspace-project/M3-design.md) 决策点 2 | 已完成 | M3/P8a |
@@ -227,6 +227,11 @@
 | 收集箱的分诊状态 | state store 的分诊状态、取它的旧 service 方法、分诊状态的下拉框、类型和图标删除；收集箱中已接受的工作项照旧显示状态，新建弹窗不再选分诊状态；M7 随收集箱的接口加回 | M3 设计 3.1、第 12 节 P8b | 已完成（M7 加回） | M3/P8b |
 | 工作区级的标签 | 工作区内全部项目的标签列表、它的取数和旧地址删除（nerve 没有工作区级的标签，标签按项目）；工作区一级的工作项列表按标签分组只有"无"，标签筛选没有选项，工作区一级显示的工作项不显示标签（除非那个项目的标签已经取过）；M7 的视图决定工作区一级怎样取标签 | M3 设计 3.16、7.3 | 已完成（M7 决定） | M3/P8b |
 | 项目一侧的挂载时取数 | 项目包装层的取数由 `useProjectFetch`（`core/layouts/auth-layout/use-project-fetch.ts`）决定：先取项目，nerve 说调用者是有效成员之后才取显示设置、标签、成员和状态；不是成员的看得到的项目显示"加入项目"，看不到的和在另一个工作区的地址下打开的显示"找不到项目"（nerve 对看不到的项目答 404，Plane 的 403 界面删除；项目只在地址的工作区里算数）；工作区包装层取项目列表和工作区的状态，项目角色取自 `Project.member_role`，`project-roles` 的取数删除 | M3 设计 7.1、7.3 | 已完成 | M3/P8b |
+| 页面跟进修改的结果 | 工作区的页面发出修改之后的跳转、提示和界面变化，只在发出它的会话里进行（`core/lib/in-session.ts` 的 `followInSession`）：另一个标签页换了账户之后，页面已是那个账户的，旧会话的修改不论成败都不再跟进 | M3 设计 7.1 | 已完成 | M3/P9 |
+| 创建工作区 | 表单自己的 slug 校验（`@nerve/utils` 的 `validateSlug`、`SLUG_REGEX`）删除，规则只在 nerve：提交时 nerve 说明不能用的原因（已占用、保留、格式不对），显示在 slug 字段下方；slug 字段显示的就是要发出的值（Plane 显示转换后的文字，发出的却是原文）。`/create-workspace` 和新手引导的创建一步共用 `useCreateWorkspace`。创建关闭时两处都说明已关闭、请工作区的管理员给邀请链接；Plane 给实例管理员写信的按钮和信的文案删除（Nerve 没有实例管理员，M2 设计 3.16） | M3 设计 3.10、3.11、7.4 | 已完成 | M3/P9 |
+| 新手引导的邀请成员一步 | Plane 的三行邀请表单换成成员页的邀请表单（`InvitationFields`、`useWorkspaceInvitationActions`），发往刚建的工作区；发出之后列出每个邀请的链接供复制（v0 不发邮件）。"创建或加入工作区"的包装组件（`onboarding/steps/workspace/root.tsx`）删除；引导从工作区列表决定步骤（`onboarding-place.ts`），完成引导不再写 `last_workspace_id` | M3 设计 7.4、决策点 2 | 已完成 | M3/P9 |
+| 侧边栏的项目导航设置 | `@nerve/types` 的 `DEFAULT_PROJECT_PREFERENCES` 删除：设置到达之前按 nerve 的默认值显示（最多 10 个项目，折叠式）；对话框的修改在轮到它时按 nerve 最近一次的回答算出（总体设计 7.7）：限制项目数的开关按那个回答打开或关闭，连按两下回到原样；数量在输入框失去焦点时发出 | M3 设计 3.18、7.5 | 已完成 | M3/P9 |
+| 停用账户的弹窗 | nerve 拒绝的原因（如唯一的管理员）显示在确认弹窗里，不再是提示，弹窗关闭时清掉；停用只在它结束了标签页的会话时才说已停用（另一个标签页先换了账户时，页面已是那个账户的） | M3 设计 7.1、7.5 | 已完成 | M3/P9 |
 
 ---
 

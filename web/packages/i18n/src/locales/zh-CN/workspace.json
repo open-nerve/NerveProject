@@ -18,20 +18,16 @@
     },
     "errors": {
       "creation_disabled": {
-        "title": "只有您的实例管理员可以创建工作区",
-        "description": "如果您知道实例管理员的电子邮件地址，请点击下方按钮与他们联系。",
-        "request_button": "请求实例管理员"
+        "title": "创建工作区已关闭",
+        "description": "请向工作区的管理员要一个邀请链接。"
       },
       "validation": {
         "name_length": "名称限制在 80 个字符以内。",
-        "url_alphanumeric": "URL 只能包含 ('-') 和字母数字字符。",
+        "url_alphanumeric": "URL 只能包含小写字母、数字、'-' 和 '_'。",
         "url_length": "URL 限制在 48 个字符以内。",
-        "url_already_taken": "工作区 URL 已被占用！"
+        "url_already_taken": "工作区 URL 已被占用！",
+        "url_reserved": "这个 URL 是保留的，请换一个。"
       }
-    },
-    "request_email": {
-      "subject": "请求新工作区",
-      "body": "您好，实例管理员：\n\n请为 [创建工作区的目的] 创建一个 URL 为 [/workspace-name] 的新工作区。\n\n谢谢，\n{firstName} {lastName}\n{email}"
     },
     "button": {
       "default": "创建工作区",
@@ -41,12 +37,35 @@
       "success": {
         "title": "成功",
         "message": "工作区创建成功"
-      },
-      "error": {
-        "title": "错误",
-        "message": "工作区创建失败。请重试。"
       }
     }
+  },
+  "workspace_invitation": {
+    "invited": "您受邀以 {role} 的身份加入 {workspace}。",
+    "description": "工作区是您创建项目、协作处理工作项、组织不同工作流的地方。",
+    "accept": "接受",
+    "ignore": "忽略",
+    "addressed": "这份邀请发给了一个指定的邮箱：用它登录或注册即可接受。",
+    "sign_in_to_accept": "登录以接受",
+    "sign_up_to_accept": "注册以接受",
+    "mismatch": "请退出登录，再用收到邀请的邮箱登录。",
+    "declined": {
+      "title": "您已忽略这份邀请。",
+      "description": "请向 {workspace} 的管理员要一份新的邀请。"
+    },
+    "invalid": {
+      "title": "这个邀请链接无效。",
+      "description": "请向工作区的管理员要一个新的链接。"
+    },
+    "home": "回到首页",
+    "sign_in": "登录"
+  },
+  "workspace_not_found": {
+    "title": "找不到工作区",
+    "description": "这个地址没有对应的工作区：它可能不存在，或者您没有权限查看。",
+    "go_home": "回到首页",
+    "visit_profile": "个人设置",
+    "create_workspace": "创建新工作区"
   },
   "workspace_projects": {
     "label": "{count, plural, one {项目} other {项目}}",

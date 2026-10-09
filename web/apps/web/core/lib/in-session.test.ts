@@ -3,14 +3,26 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { describe, expect, it, vi } from "vitest";
-import type { SessionState } from "@/lib/auth/token-manager";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  heldChange,
+  lateSettlings,
+  pageSettled,
+  settledYet,
+  signedIn,
+  switchAccount,
+  tokenManager as tab,
+  type HeldChange,
+} from "@/lib/auth/fake-tab";
 
-// The tab's session as the token manager has it, which the test moves from one account to another.
-const tab = vi.hoisted((): { state: SessionState } => ({ state: { status: "signed-in", loginId: "x" } }));
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: tab }));
+// The tab's session as the token manager has it, which the test moves from one account to another (fake-tab.ts).
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 
-const { sessionGuard } = await import("./in-session");
+const { followInSession, sessionGuard } = await import("./in-session");
+
+beforeEach(() => {
+  signedIn();
+});
 
 describe("sessionGuard", () => {
   it("holds while the tab stays in the session the change was sent in, and fails once it is in another", () => {
@@ -35,5 +47,93 @@ describe("sessionGuard", () => {
     // a new sign-in is a new session: another loginId, though the account is the same
     tab.state = { status: "signed-in", loginId: "x2" };
     expect(inSession()).toBe(false);
+  });
+});
+
+describe("followInSession", () => {
+  /** Follows a change nerve settles when the test says (heldChange): what the page did once it settled. */
+  function follow<T>(change: HeldChange<T>) {
+    const followed: string[] = [];
+    const following = followInSession(() => change.sent, {
+      done: (answer) => followed.push(`done: ${String(answer)}`),
+      failed: (error) => followed.push(`failed: ${String(error)}`),
+    });
+    return { followed, following };
+  }
+
+  it("follows nerve's answer, and its refusal, while the tab is in the session the change was sent in", async () => {
+    const answered = heldChange<string>();
+    const afterAnswer = follow(answered);
+    answered.answer("acme");
+    await afterAnswer.following;
+    const refused = heldChange<string>();
+    const afterRefusal = follow(refused);
+    refused.refuse("refused");
+    await afterRefusal.following;
+    expect([afterAnswer.followed, afterRefusal.followed]).toEqual([["done: acme"], ["failed: refused"]]);
+  });
+
+  it.each(lateSettlings)(
+    "follows nothing when the change $settles after another tab moved this one to another account",
+    async ({ settle }) => {
+      const change = heldChange<undefined>();
+      const after = follow(change);
+      switchAccount();
+      settle(change);
+      await after.following;
+      expect(after.followed).toEqual([]);
+    }
+  );
+
+  it("takes the session as the change is sent: a change sent after the switch is followed", async () => {
+    switchAccount();
+    const change = heldChange<string>();
+    const after = follow(change);
+    change.answer("acme");
+    await after.following;
+    expect(after.followed).toEqual(["done: acme"]);
+  });
+
+  it.each(lateSettlings)(
+    "settles, when the change $settles, once what its follower returned has",
+    async ({ settle }) => {
+      const change = heldChange<undefined>();
+      const followUp = heldChange<undefined>();
+      const follower = () => followUp.sent;
+      const settled = settledYet(followInSession(() => change.sent, { done: follower, failed: follower }));
+      settle(change);
+      await pageSettled();
+      expect(settled()).toBe(false);
+      followUp.answer(undefined);
+      await pageSettled();
+      expect(settled()).toBe(true);
+    }
+  );
+
+  describe("a follower's own failure", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it.each([
+      {
+        fails: "throws",
+        follower: (fault: Error) => (): void => {
+          throw fault;
+        },
+      },
+      { fails: "rejects", follower: (fault: Error) => () => Promise.reject(fault) },
+    ])(
+      "goes to the browser's report of uncaught errors when the follower $fails, not to the caller",
+      async ({ follower }) => {
+        const reported = vi.fn();
+        vi.stubGlobal("reportError", reported);
+        const fault = new Error("the page's code failed");
+        await expect(
+          followInSession(() => Promise.resolve("acme"), { done: follower(fault), failed: () => undefined })
+        ).resolves.toBeUndefined();
+        expect(reported.mock.calls).toEqual([[fault]]);
+      }
+    );
   });
 });

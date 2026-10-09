@@ -12,14 +12,17 @@ import type { WorkspaceRole } from "@nerve/api-client";
 import { ROLE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline, DeleteOutline, LinkOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TContextMenuItem } from "@nerve/ui";
 import { CustomSelect, CustomMenu } from "@nerve/ui";
-import { cn, copyTextToClipboard } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // components
 import { ConfirmWorkspaceMemberRemove } from "@/components/workspace/confirm-workspace-member-remove";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useCopyInvitationLink } from "@/hooks/use-copy-invitation-link";
+// local imports
+import { WORKSPACE_ROLES } from "../workspace-roles";
+import { useInvitationChanges } from "./use-invitation-changes";
 
 type Props = {
   invitationId: string;
@@ -35,56 +38,25 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
   const { t } = useTranslation();
   // store hooks
   const {
-    workspace: { updateMemberInvitation, deleteMemberInvitation, getWorkspaceInvitationDetails },
+    workspace: { getWorkspaceInvitationDetails },
   } = useMember();
+  const { changeRole, remove } = useInvitationChanges();
+  const copyLink = useCopyInvitationLink();
   // derived values: the row shows only to an admin (the members page's gate, decision 4), who may change, copy and
-  // delete any invitation
+  // delete any pending invitation, and delete a declined one, which nerve keeps from being changed or accepted
   const invitationDetails = getWorkspaceInvitationDetails(invitationId);
 
-  const handleRemoveInvitation = async () => {
-    try {
-      if (!workspaceSlug || !invitationDetails) return;
+  if (!workspaceSlug || !invitationDetails) return null;
 
-      await deleteMemberInvitation(workspaceSlug, invitationDetails.id);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "Invitation removed successfully.",
-      });
-    } catch (err: unknown) {
-      const error = err as { error?: string };
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: error?.error || "Something went wrong. Please try again.",
-      });
-    }
-  };
-
-  if (!invitationDetails) return null;
-
-  const handleCopyText = async () => {
-    try {
-      // the invitation's link (M3 design 7.4): its id and the token nerve gives an admin with it
-      const path = `/workspace-invitations?invitation_id=${invitationDetails.id}&token=${invitationDetails.token}`;
-      const inviteLink = new URL(path, window.location.origin).href;
-      await copyTextToClipboard(inviteLink);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("common.link_copied"),
-        message: t("entity.link_copied_to_clipboard", { entity: t("common.invite") }),
-      });
-    } catch (error) {
-      console.error("Error generating invite link:", error);
-    }
-  };
+  const declined = invitationDetails.responded_at !== null;
 
   const MENU_ITEMS: TContextMenuItem[] = [
     {
       key: "copy-link",
-      action: () => void handleCopyText(),
+      action: () => void copyLink(invitationDetails),
       title: t("common.actions.copy_link"),
       icon: LinkOutline,
+      shouldRender: !declined,
     },
     {
       key: "remove",
@@ -107,7 +79,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
           id: invitationDetails.id,
           display_name: `${invitationDetails.email}`,
         }}
-        onSubmit={handleRemoveInvitation}
+        onSubmit={() => remove(workspaceSlug, invitationDetails.id)}
       />
       <div className="group flex h-full w-full items-center justify-between px-3 py-4 hover:bg-layer-transparent-hover">
         <div className="flex items-center gap-x-4 gap-y-2">
@@ -120,45 +92,36 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
         </div>
         <div className="flex items-center gap-2 text-11">
           <div className="flex items-center justify-center rounded-sm bg-label-yellow-bg-strong/20 px-2.5 py-1 text-center text-caption-sm-medium text-label-yellow-text">
-            <p>{t("common.pending")}</p>
+            <p>{declined ? t("workspace_settings.settings.members.declined") : t("common.pending")}</p>
           </div>
-          <CustomSelect
-            customButton={
-              <div className="item-center flex gap-1 rounded-sm px-2 py-0.5">
-                <span className="flex items-center rounded-sm text-caption-sm-medium">
-                  {ROLE[invitationDetails.role]}
-                </span>
-                <span className="grid place-items-center">
-                  <ChevronDownOutline className="h-3 w-3" />
-                </span>
-              </div>
-            }
-            value={invitationDetails.role}
-            // the select gives the chosen option's value: the role's number, which nerve decodes as a WorkspaceRole
-            onChange={(value: WorkspaceRole) => {
-              if (!workspaceSlug || !value) return;
-
-              updateMemberInvitation(workspaceSlug, invitationDetails.id, {
-                role: value,
-              }).catch((err: unknown) => {
-                const error = err as { error?: string };
-                setToast({
-                  type: TOAST_TYPE.ERROR,
-                  title: "Error!",
-                  message: error?.error || "An error occurred while updating member role. Please try again.",
-                });
-              });
-            }}
-            placement="bottom-end"
-          >
-            {Object.entries(ROLE).map(([key, label]) => (
-              <CustomSelect.Option key={key} value={parseInt(key, 10)}>
-                {label}
-              </CustomSelect.Option>
-            ))}
-          </CustomSelect>
+          {declined ? (
+            <span className="px-2 py-0.5 text-caption-sm-medium">{ROLE[invitationDetails.role]}</span>
+          ) : (
+            <CustomSelect
+              customButton={
+                <div className="item-center flex gap-1 rounded-sm px-2 py-0.5">
+                  <span className="flex items-center rounded-sm text-caption-sm-medium">
+                    {ROLE[invitationDetails.role]}
+                  </span>
+                  <span className="grid place-items-center">
+                    <ChevronDownOutline className="h-3 w-3" />
+                  </span>
+                </div>
+              }
+              value={invitationDetails.role}
+              // the select gives the picked option's value: a role's number, of WORKSPACE_ROLES
+              onChange={(role: WorkspaceRole) => void changeRole(workspaceSlug, invitationDetails.id, role)}
+              placement="bottom-end"
+            >
+              {WORKSPACE_ROLES.map((role) => (
+                <CustomSelect.Option key={role} value={role}>
+                  {ROLE[role]}
+                </CustomSelect.Option>
+              ))}
+            </CustomSelect>
+          )}
           <CustomMenu ellipsis placement="bottom-end" closeOnSelect>
-            {MENU_ITEMS.map((item) => (
+            {MENU_ITEMS.filter((item) => item.shouldRender !== false).map((item) => (
               <CustomMenu.MenuItem
                 key={item.key}
                 onClick={() => {

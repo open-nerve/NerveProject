@@ -4,100 +4,51 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
 import { observer } from "mobx-react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { TickCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { ORGANIZATION_SIZE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { User, WorkspaceCreate } from "@nerve/api-client";
+import type { Workspace } from "@nerve/api-client";
 import { Spinner } from "@nerve/ui";
-import { cn, validateWorkspaceName, validateSlug } from "@nerve/utils";
+import { cn } from "@nerve/utils";
+// components
+import { slugFrom, useCreationForm } from "@/components/workspace/use-create-workspace";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
-import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUserProfile } from "@/hooks/store/user";
 // local components
 import { CommonOnboardingHeader } from "../common";
 
 type Props = {
-  user: User | undefined;
-  onComplete: (skipInvites?: boolean) => void;
+  /**
+   * What the onboarding does with the workspace created; alone when it is for its creator alone. The step stays busy
+   * until it is done, so that no second click checks the new workspace's slug again.
+   */
+  onCreated: (workspace: Workspace, alone: boolean) => Promise<void>;
 };
 
-export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user, onComplete }: Props) {
-  // states
-  const [slugError, setSlugError] = useState(false);
-  const [invalidSlug, setInvalidSlug] = useState(false);
+export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCreated }: Props) {
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { config } = useInstance();
-  const { updateUserProfile } = useUserProfile();
-  const { createWorkspace, fetchWorkspaces, checkWorkspaceSlug } = useWorkspace();
 
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   // form info
   const {
-    handleSubmit,
-    control,
-    setValue,
-    formState: { errors, isSubmitting, isValid },
-  } = useForm<WorkspaceCreate>({
-    defaultValues: {
-      name: "",
-      slug: "",
+    form: {
+      control,
+      formState: { errors, isSubmitting, isValid },
     },
-    mode: "onChange",
-  });
+    rules,
+    onNameChange,
+    submit,
+  } = useCreationForm((workspace, values) => onCreated(workspace, values.organization_size === "Just myself"));
 
-  const handleCreateWorkspace = async (formData: WorkspaceCreate) => {
-    if (isSubmitting) return;
-
-    try {
-      const { available } = await checkWorkspaceSlug(formData.slug);
-      if (available) {
-        setSlugError(false);
-        try {
-          const workspaceResponse = await createWorkspace(formData);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("workspace_creation.toast.success.title"),
-            message: t("workspace_creation.toast.success.message"),
-          });
-          await fetchWorkspaces();
-          await completeStep(workspaceResponse.id);
-          onComplete(formData.organization_size === "Just myself");
-        } catch {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("workspace_creation.toast.error.title"),
-            message: t("workspace_creation.toast.error.message"),
-          });
-        }
-      } else {
-        setSlugError(true);
-      }
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("workspace_creation.toast.error.title"),
-        message: t("workspace_creation.toast.error.message"),
-      });
-    }
-  };
-
-  const completeStep = async (workspaceId: string) => {
-    if (!user) return;
-    // the workspace opened last is a best-effort preference: the onboarding goes on whether nerve saves it or not
-    await updateUserProfile({ last_workspace_id: workspaceId }).catch(() => undefined);
-  };
-
-  const isButtonDisabled = !isValid || invalidSlug || isSubmitting;
+  const isButtonDisabled = !isValid || isSubmitting;
 
   if (isWorkspaceCreationDisabled) {
     return (
@@ -107,12 +58,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
     );
   }
   return (
-    <form
-      className="flex flex-col gap-10"
-      onSubmit={(e) => {
-        void handleSubmit(handleCreateWorkspace)(e);
-      }}
-    >
+    <form className="flex flex-col gap-10" onSubmit={(e) => void submit(e)}>
       <CommonOnboardingHeader
         title={t("workspace_creation.heading")}
         description={t("onboarding.workspace.description")}
@@ -128,14 +74,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
           <Controller
             control={control}
             name="name"
-            rules={{
-              required: t("common.errors.required"),
-              validate: (value) => validateWorkspaceName(value, true),
-              maxLength: {
-                value: 80,
-                message: t("workspace_creation.errors.validation.name_length"),
-              },
-            }}
+            rules={rules.name}
             render={({ field: { value, ref, onChange } }) => (
               <div className="relative flex items-center rounded-md">
                 <input
@@ -145,10 +84,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
                   value={value}
                   onChange={(event) => {
                     onChange(event.target.value);
-                    setValue("name", event.target.value);
-                    setValue("slug", event.target.value.toLocaleLowerCase().trim().replace(/ /g, "-"), {
-                      shouldValidate: true,
-                    });
+                    onNameChange(event.target.value);
                   }}
                   placeholder={t("onboarding.workspace.name_placeholder")}
                   ref={ref}
@@ -177,20 +113,14 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
           <Controller
             control={control}
             name="slug"
-            rules={{
-              required: t("common.errors.required"),
-              maxLength: {
-                value: 48,
-                message: t("workspace_creation.errors.validation.url_length"),
-              },
-            }}
+            rules={rules.slug}
             render={({ field: { value, ref, onChange } }) => (
               <div
                 className={cn(
                   "flex w-full items-center rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
                   {
-                    "border-strong": !errors.name,
-                    "border-danger-strong": errors.name,
+                    "border-strong": !errors.slug,
+                    "border-danger-strong": errors.slug,
                   }
                 )}
               >
@@ -201,13 +131,8 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
                   id="slug"
                   name="slug"
                   type="text"
-                  value={value.toLocaleLowerCase().trim().replace(/ /g, "-")}
-                  onChange={(e) => {
-                    const validation = validateSlug(e.target.value);
-                    if (validation === true) setInvalidSlug(false);
-                    else setInvalidSlug(true);
-                    onChange(e.target.value.toLowerCase());
-                  }}
+                  value={value}
+                  onChange={(e) => onChange(slugFrom(e.target.value))}
                   ref={ref}
                   placeholder={t("workspace_creation.form.url.placeholder")}
                   className={cn(
@@ -218,14 +143,6 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
             )}
           />
           <p className="text-13 text-tertiary">{t("workspace_creation.form.url.edit_slug")}</p>
-          {slugError && (
-            <p className="-mt-3 text-13 text-danger-primary">
-              {t("workspace_creation.errors.validation.url_already_taken")}
-            </p>
-          )}
-          {invalidSlug && (
-            <p className="text-13 text-danger-primary">{t("workspace_creation.errors.validation.url_alphanumeric")}</p>
-          )}
           {errors.slug && <span className="text-13 text-danger-primary">{errors.slug.message}</span>}
         </div>
         <div className="flex flex-col gap-2">
@@ -239,7 +156,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
             <Controller
               name="organization_size"
               control={control}
-              rules={{ required: t("common.errors.required") }}
+              rules={rules.organization_size}
               render={({ field: { value, onChange } }) => (
                 <div className="flex flex-wrap gap-3">
                   {ORGANIZATION_SIZE.map((size) => {

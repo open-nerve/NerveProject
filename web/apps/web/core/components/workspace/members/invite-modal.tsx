@@ -7,6 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
+import type { WorkspaceInvitation, WorkspaceInvitationsCreate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { EModalWidth, EModalPosition, ModalCore } from "@nerve/ui";
 // components
@@ -14,26 +15,32 @@ import { InvitationModalActions } from "@/components/workspace/invite-modal/acti
 import { InvitationFields } from "@/components/workspace/invite-modal/fields";
 import { InvitationForm } from "@/components/workspace/invite-modal/form";
 // hooks
-import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
 import { useWorkspaceInvitationActions } from "@/hooks/use-workspace-invitation";
 
 export type TSendWorkspaceInvitationModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: InvitationFormValues) => Promise<void> | undefined;
+  /** Sends the invitations of the form (the workspace's store, for the page's workspace). */
+  invite: (data: WorkspaceInvitationsCreate) => Promise<WorkspaceInvitation[]>;
 };
 
 export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvitationModal(
   props: TSendWorkspaceInvitationModalProps
 ) {
-  const { isOpen, onClose, onSubmit } = props;
+  const { isOpen, onClose, invite } = props;
   // store hooks
   const { t } = useTranslation();
   // derived values
-  const { control, fields, formState, remove, onFormSubmit, handleClose, appendField } = useWorkspaceInvitationActions({
-    onSubmit,
-    onClose,
+  const { control, fields, formState, remove, onFormSubmit, clear, appendField } = useWorkspaceInvitationActions({
+    invite,
+    onSent: onClose,
   });
+
+  // the form empties once the modal has gone (its leave transition)
+  const handleClose = () => {
+    onClose();
+    setTimeout(clear, 350);
+  };
 
   return (
     <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXL}>

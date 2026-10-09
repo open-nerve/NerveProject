@@ -14,7 +14,8 @@
       "close_projects_menu": "Close projects menu",
       "toggle_quick_actions_menu": "Toggle quick actions menu",
       "open_project_menu": "Open project menu",
-      "close_project_menu": "Close project menu"
+      "close_project_menu": "Close project menu",
+      "project_navigation": "Project navigation"
     },
     "auth_forms": {
       "clear_email": "Clear email",

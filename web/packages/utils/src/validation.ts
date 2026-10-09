@@ -31,14 +31,6 @@ const COMPANY_NAME_REGEX = /^[\p{L}\p{N}\s_-]+$/u;
  */
 const HAS_ALPHANUMERIC_REGEX = /[\p{L}\p{N}]/u;
 
-/**
- * URL Slug Pattern (for workspace slugs, URL-safe identifiers)
- * Allows: Unicode letters (\p{L}), numbers (\p{N}), underscores, hyphens
- * Use case: International URL-safe identifiers like "josé-workspace", "李明-project"
- * Blocks: Spaces and special characters (URL encoding will handle Unicode in actual URLs)
- */
-const SLUG_REGEX = /^[\p{L}\p{N}_-]+$/u;
-
 // =============================================================================
 // VALIDATION FUNCTIONS
 // =============================================================================
@@ -72,35 +64,6 @@ export const validateWorkspaceName = (workspaceName: string, required: boolean =
 
   if (!HAS_ALPHANUMERIC_REGEX.test(workspaceName)) {
     return "Workspace name must contain at least one letter or number";
-  }
-
-  return true;
-};
-
-/**
- * @description Validates URL slugs and identifiers
- * @param {string} slug - Slug to validate
- * @returns {boolean | string} true if valid, error message if invalid
- * @example
- * validateSlug("my-workspace") // returns true
- * validateSlug("my_workspace_123") // returns true
- * validateSlug("my workspace") // returns error message (spaces not allowed)
- */
-export const validateSlug = (slug: string): boolean | string => {
-  if (!slug || slug.trim() === "") {
-    return "Slug is required";
-  }
-
-  if (slug.length > 48) {
-    return "Slug must be 48 characters or less";
-  }
-
-  if (hasInjectionRiskChars(slug)) {
-    return "Slug cannot contain special characters like < > ' \" { } [ ] * ^ ! # %";
-  }
-
-  if (!SLUG_REGEX.test(slug)) {
-    return "Slug can only contain letters, numbers, hyphens, and underscores";
   }
 
   return true;

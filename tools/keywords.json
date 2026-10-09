@@ -2179,6 +2179,104 @@
           "miss": ["docs/v0/M3-workspace-project/M3-design.md", "e2e/stories/identity/a3-sign-in.spec.ts"]
         }
       }
+    },
+    {
+      "id": "workspaces-list-fetch",
+      "phase": "M3/P9",
+      "why": "调用者的工作区列表只有一个取数：useWorkspacesFetch（web/apps/web/core/hooks/use-workspaces-fetch.ts，键 [\"WORKSPACES\", loginId]），登录后的落点、工作区包装层、新手引导和个人设置的侧边栏都经它（M3/P9 spec 第 3 节第 14 条）；别处调 store 的 fetchWorkspaces 就是另一个键、另一份取数。store 自己（core/store/workspace/）、测试和测试的替身不算",
+      "files": {
+        "source": "^web/apps/web/(?:app|core)/(?!hooks/use-workspaces-fetch\\.ts$|store/workspace/|hooks/store/fake-store-hooks\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bfetchWorkspaces\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  const { workspaces, fetchWorkspaces } = useWorkspace();",
+          "  useSessionSWR([\"PROFILE_WORKSPACES\"], () => fetchWorkspaces());"
+        ],
+        "miss": ["  useWorkspacesFetch();", "  const listed = useWorkspacesFetch(false);"],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx",
+            "web/apps/web/core/components/onboarding/root.tsx"
+          ],
+          "miss": [
+            "web/apps/web/core/hooks/use-workspaces-fetch.ts",
+            "web/apps/web/core/store/workspace/index.ts",
+            "web/apps/web/core/hooks/store/fake-store-hooks.ts",
+            "web/apps/web/core/lib/store-context.test.ts"
+          ]
+        }
+      }
+    },
+    {
+      "id": "refusal-toast",
+      "phase": "M3/P9",
+      "why": "页面用 setToast 按 errorMessageKey 把失败说成提示只有一处：useRefusalToast（web/apps/web/core/hooks/use-refusal-toast.ts），按 errorMessageKey 给出 nerve 的原因，标题默认 toast.error（M3/P9 修复轮，裁定 F-4）；别处的 setToast 里再写 errorMessageKey 就是又一份。主题切换的 setPromiseToast 自己说失败，本规则不管，留在 P9 规格 §5 的收尾清单上。错误放在字段下、对话框里的不是提示，不算；测试不算",
+      "files": {
+        "source": "^web/apps/web/(?:app|core)/(?!hooks/use-refusal-toast\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "setToast\\(\\{[^}]*\\berrorMessageKey\\(",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  setToast({ type: TOAST_TYPE.ERROR, title: t(\"toast.error\"), message: t(errorMessageKey(error)) });",
+          "      setToast({\n        type: TOAST_TYPE.ERROR,\n        title: t(\"auth.common.password.toast.change_password.error.title\"),\n        message: t(errorMessageKey(error)),\n      });"
+        ],
+        "miss": [
+          "      failed: toastRefusal,",
+          "        setError(\"old_password\", { type: \"manual\", message: t(errorMessageKey(error)) });",
+          "      setToast({ type: TOAST_TYPE.SUCCESS, title: t(\"toast.success\"), message: t(\"profile_updated\") });"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/labels/delete-label-modal.tsx",
+            "web/apps/web/app/(all)/workspace-invitations/page.tsx"
+          ],
+          "miss": [
+            "web/apps/web/core/hooks/use-refusal-toast.ts",
+            "web/apps/web/core/hooks/use-refusal-toast.test.ts",
+            "web/packages/propel/src/toast/toast.tsx"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sign-out-toast",
+      "phase": "M3/P9",
+      "why": "页面退出登录只有一处：useSignOut（web/apps/web/core/hooks/use-sign-out.ts），nerve 的登出失败时提示 auth.sign_out.toast.error.*、会话不变（M3/P9 修复轮，裁定 F-4）；别处直接调 store 的 signOut 再自己提示就是又一份，没有提示的一份就是没有处理的拒绝。测试不算",
+      "files": {
+        "source": "^web/apps/web/(?:app|core)/(?!hooks/use-sign-out\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bauth\\.sign_out\\.toast\\.error\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "        title: t(\"auth.sign_out.toast.error.title\"),",
+          "        message: t(\"auth.sign_out.toast.error.message\"),"
+        ],
+        "miss": ["  const signOut = useSignOut();", "        {t(\"sign_out\")}"],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/workspace/sidebar/user-menu-root.tsx",
+            "web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx"
+          ],
+          "miss": [
+            "web/apps/web/core/hooks/use-sign-out.ts",
+            "web/apps/web/core/hooks/use-sign-out.test.ts",
+            "web/packages/i18n/src/locales/en/auth.json"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [

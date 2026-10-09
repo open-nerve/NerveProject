@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { SITE_NAME } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { NerveLockup } from "@/components/common/nerve-logo";
@@ -35,20 +35,23 @@ type AuthHeaderProps = {
 
 export const AuthHeader = observer(function AuthHeader({ type }: AuthHeaderProps) {
   const { t } = useTranslation();
+  // router: the other page gets this one's query, an invitation's link and the way back to it (M3 design 7.4)
+  const { search } = useLocation();
   // store
   const { config } = useInstance();
-  // derived values
-  const enableSignUpConfig = config?.signup_enabled ?? false;
+  // derived values: the link to the sign-up page shows only while sign-up is open; the link to the sign-in page always
+  // does, as an invitation's link opens the sign-up page of a closed nerve too (M3 design 7.4)
+  const showsLink = type === EAuthModes.SIGN_UP || (config?.signup_enabled ?? false);
 
   return (
     <AuthHeaderBase
       pageTitle={t(authContentMap[type].pageTitle)}
       additionalAction={
-        enableSignUpConfig && (
+        showsLink && (
           <div className="flex flex-col items-end text-center text-13 font-medium text-tertiary sm:flex-row sm:items-center sm:gap-2">
             <span className="text-body-sm-regular text-tertiary">{t(authContentMap[type].text)}</span>
             <Link
-              to={authContentMap[type].linkHref}
+              to={{ pathname: authContentMap[type].linkHref, search }}
               className="text-body-sm-semibold text-accent-primary hover:underline"
             >
               {t(authContentMap[type].linkText)}

@@ -9,7 +9,7 @@ import {
   type Api,
   type Project,
 } from "../../fixtures/api";
-import { accountId, emailFor, type AuthTokens } from "../../fixtures/auth";
+import { accountId, emailFor, register, type AuthTokens } from "../../fixtures/auth";
 import { signInPath } from "../../fixtures/auth-pages";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
 import { registerOnboarded } from "../../fixtures/settings-pages";
@@ -146,32 +146,46 @@ const PROJECT_MEMBER = [
   "GET /api/v0/projects/{project}/members",
   "GET /api/v0/projects/{project}/states",
 ];
-/** The project's general settings, the page S2 opens, list the time zones for its member (M2 design 5.3). */
+/**
+ * A general settings page lists the time zones (M2 design 5.3): the project's, for its members; the workspace's, for
+ * its admins and members (the workspace's settings show a guest no general page, M3 design 9.2).
+ */
 const GENERAL = ["GET /api/v0/timezones"];
 /** The workspace's projects page lists its archived projects too, its own fetch (useArchivedProjectsFetch). */
 const ARCHIVED = ["GET /api/v0/workspaces/{slug}/projects?archived=true"];
+/** The members page lists the workspace's invitations for an admin alone, as nerve shows them to no one else. */
+const INVITATIONS = ["GET /api/v0/workspaces/{slug}/invitations"];
 
 /**
  * The pages each account opens, in order, each as its path ({slug} and {project} for their values) and the requests it
  * makes as it loads: "/", which lands on the workspace's home; for the admin, the workspace's projects page, whose
- * call of its own fetch no other check holds; then the project's settings.
+ * call of its own fetch no other check holds; the workspace's general settings and its members; then the project's
+ * settings.
  */
 const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
   admin: [
     ["/", [...APP, ...WORKSPACE]],
     ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
+    ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
+    ["/{slug}/settings/members", [...APP, ...WORKSPACE, ...INVITATIONS]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
   ],
   member: [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
+    ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
   ],
   guest: [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/settings", [...APP, ...WORKSPACE]],
+    ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
   ],
   "project non-member": [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
+    ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT]],
   ],
 };
@@ -259,6 +273,26 @@ function followRequests(page: Page, names: Record<string, string>) {
   };
 }
 
+/**
+ * The end of a story that loads one page: waits until the requests followed are exactly expected, none pending; then
+ * no API request failed or went to an old address, the Content-Security-Policy blocked nothing and the page threw
+ * nothing; its console is quiet but for warnings; and, read once more after all that, nothing came after the list was
+ * whole.
+ */
+async function expectExactly(
+  page: Page,
+  watch: PageWatch,
+  requests: ReturnType<typeof followRequests>,
+  expected: string[],
+  warnings: readonly string[]
+): Promise<void> {
+  const whole = { pending: 0, requests: expected.toSorted() };
+  await expect.poll(() => requests.between(0)).toEqual(whole);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings });
+  expect(requests.between(0)).toEqual(whole);
+}
+
 for (const account of ACCOUNTS) {
   const visits = REQUESTS[account];
   test(`S2: the workspace's ${account} signs in and opens ${visits.map(([path]) => path).join(", then ")}`, async ({
@@ -318,13 +352,32 @@ test("S2: the admin of two workspaces opens a project of one at the other's addr
   // a project counts in the address's workspace alone (M3 design 3.19): its own resources are not fetched here
   await page.goto(`/${slug}/settings/projects/${lab.id}`);
   await expect(page.getByText("Project not found")).toBeVisible();
-  const expected = [...APP, ...WORKSPACE, ...PROJECT].toSorted();
-  await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: expected });
-  expect(watch.apiFailures).toEqual([]);
-  expect(watch.oldApiRequests).toEqual([]);
-  expect(watch.cspViolations).toEqual([]);
-  expect(watch.pageErrors).toEqual([]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
-  // Nothing came after the list was whole.
-  expect(requests.between(0)).toEqual({ pending: 0, requests: expected });
+  await expectExactly(page, watch, requests, [...APP, ...WORKSPACE, ...PROJECT], [EMOJI_CHECK_WARNING]);
+});
+
+test("S2: a newcomer opens /, which sends him to the onboarding: it asks for his workspaces, as the app does, and no more", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const page = await signedInPage(await register(api, emailFor(testInfo)));
+  const watch = await watchPage(page);
+  const requests = followRequests(page, {});
+  await page.goto("/");
+  await expect(page).toHaveURL("/onboarding");
+  await expect(page.getByText("Create your profile.")).toBeVisible();
+  await expectExactly(page, watch, requests, APP, []);
+});
+
+test("S2: a member of a workspace opens his profile's settings directly: they ask for his workspaces, as the app does, which their sidebar lists, and no more", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const tokens = await registerOnboarded(api, emailFor(testInfo));
+  await createWorkspace(api, tokens.access_token, { name: "Acme", slug: slugFor(testInfo) });
+  const page = await signedInPage(tokens);
+  const watch = await watchPage(page);
+  const requests = followRequests(page, {});
+  await page.goto("/settings/profile/general");
+  await expect(page.getByRole("link", { name: "Acme" })).toBeVisible();
+  await expectExactly(page, watch, requests, APP, [EMOJI_CHECK_WARNING]);
 });

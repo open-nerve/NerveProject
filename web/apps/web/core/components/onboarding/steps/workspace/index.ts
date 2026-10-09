@@ -5,4 +5,3 @@
  */
 
 export * from "./create";
-export * from "./root";

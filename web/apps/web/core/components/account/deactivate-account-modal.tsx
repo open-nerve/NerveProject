@@ -29,18 +29,24 @@ export function DeactivateAccountModal(props: Props) {
 
   // states
   const [isDeactivating, setIsDeactivating] = useState(false);
+  // nerve's reason for refusing the deactivation (an i18n key), which the dialog says until it closes or confirms again
+  const [refusal, setRefusal] = useState<string | undefined>(undefined);
 
   const handleClose = () => {
-    setIsDeactivating(false);
+    setRefusal(undefined);
     onClose();
   };
 
   const handleDeleteAccount = async () => {
     setIsDeactivating(true);
+    setRefusal(undefined);
 
     await deactivateAccount()
-      .then(() => {
-        // The session has ended: the sign-in page takes over (AuthenticationWrapper), and shows this.
+      .then((endedHere) => {
+        // The deactivation ended the tab's session: the sign-in page takes over (AuthenticationWrapper), and shows
+        // this. It ended none when another tab had moved this one to another account meanwhile, whose page this is
+        // then, and hears nothing of it (M3 design 7.1).
+        if (!endedHere) return;
         setToast({
           type: TOAST_TYPE.SUCCESS,
           title: t("toast.success"),
@@ -49,18 +55,22 @@ export function DeactivateAccountModal(props: Props) {
         handleClose();
         return;
       })
-      .catch((error: unknown) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("toast.error"),
-          message: t(errorMessageKey(error)),
-        });
-      })
+      // nerve's reason, such as the only admin's of a workspace or a project (W9). The dialog is a page's of the
+      // session the deactivation was sent in: another tab's sign-in of another account unmounts it, the wrapper
+      // waiting for that account (authentication-wrapper.tsx), so a refusal answered after says nothing there.
+      .catch((error: unknown) => setRefusal(errorMessageKey(error)))
       .finally(() => setIsDeactivating(false));
   };
 
+  // While the deactivation is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): nerve's answer is said
+  // in the dialog that sent it, and no dialog opened again offers Confirm while the request is out.
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isDeactivating ? undefined : handleClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XXL}
+    >
       <div className="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
         <div className="">
           <div className="flex items-start gap-x-4">
@@ -75,12 +85,17 @@ export function DeactivateAccountModal(props: Props) {
               <p className="mt-6 list-disc pr-4 text-14 font-regular text-secondary">
                 {t("deactivate_your_account_description")}
               </p>
+              {refusal && (
+                <p role="alert" className="mt-4 pr-4 text-14 font-medium text-danger-primary">
+                  {t(refusal)}
+                </p>
+              )}
             </div>
           </div>
         </div>
       </div>
       <div className="mb-2 flex items-center justify-end gap-2 p-4 sm:px-6">
-        <Button variant="secondary" size="lg" onClick={handleClose}>
+        <Button variant="secondary" size="lg" onClick={handleClose} disabled={isDeactivating}>
           {t("cancel")}
         </Button>
         {/* Disabled while the request is out: a second click would send the deactivation again */}

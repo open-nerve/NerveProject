@@ -8,7 +8,6 @@ import type { Profile } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
-import type { RootStore } from "@/store/root.store";
 import { ProfileStore } from "@/store/user/profile.store";
 
 // The profile's changes against a fake nerve that answers each when the test says: a change goes out once the one
@@ -23,7 +22,7 @@ const profileIn = (language: "en" | "zh-CN") => ({ language, theme: "system" }) 
 /** A store, and two changes made one after the other, to Chinese and then to English: only the first is out. */
 async function twoChanges() {
   const nerve = new FakeNerve();
-  const store = new ProfileStore({} as RootStore, nerve.client());
+  const store = new ProfileStore(nerve.client());
   const first = track(store.updateUserProfile({ language: "zh-CN" }));
   const second = track(store.updateUserProfile({ language: "en" }));
   await until(() => nerve.calls.length === 1, "the first change");

@@ -14,7 +14,6 @@ import { Combobox } from "@headlessui/react";
 import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // types
 import type { Label } from "@nerve/api-client";
 import { EUserProjectRoles } from "@nerve/types";
@@ -26,8 +25,7 @@ import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useDropdownKeyDown } from "@/hooks/use-dropdown-key-down";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 export interface ILabelDropdownProps {
   projectId: string | null;
@@ -73,6 +71,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
     label: buttonLabel,
   } = props;
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
 
   //router
   const { workspaceSlug } = useParams();
@@ -174,7 +173,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
       onChange([...value, label.id]);
       setQuery("");
     } catch (error) {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      toastRefusal(error);
     } finally {
       setSubmitting(false);
     }

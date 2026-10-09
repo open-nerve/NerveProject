@@ -74,7 +74,11 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
   await expectNothingAdded(db, before);
 });
 
-/** Opens the sign-in page of the nerve at baseURL, and waits until it has the instance's settings. */
+/**
+ * Opens the sign-in page of the nerve at baseURL, and waits until it has the instance's settings and shows its form,
+ * which the app renders only once it holds them (InstanceWrapper): a check made after this that the page lacks
+ * something sees the page those settings decide, not one still waiting for them.
+ */
 async function showSignIn(page: Page, baseURL: string): Promise<void> {
   await Promise.all([
     page.waitForResponse((res) => res.url() === `${baseURL}/api/v0/instance` && res.ok(), { timeout: 10_000 }),

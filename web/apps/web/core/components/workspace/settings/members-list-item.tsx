@@ -7,83 +7,33 @@
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 // nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { WorkspaceMember } from "@nerve/api-client";
 import { Table } from "@nerve/ui";
 // components
 import { MembersLayoutLoader } from "@/components/ui/loader/layouts/members-layout-loader";
 import { ConfirmWorkspaceMemberRemove } from "@/components/workspace/confirm-workspace-member-remove";
 // hooks
-import { useMember } from "@/hooks/store/use-member";
-import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
 // components
 import { useMemberColumns } from "@/components/workspace/settings/useMemberColumns";
+// local imports
+import { useMembershipChanges } from "./use-membership-changes";
 
 type Props = {
+  /** The workspace of the page's address, whose members these are. */
+  workspaceSlug: string;
   memberDetails: (WorkspaceMember | null)[];
 };
 
 export const WorkspaceMembersListItem = observer(function WorkspaceMembersListItem(props: Props) {
-  const { memberDetails } = props;
-  const { columns, workspaceSlug, removeMemberModal, setRemoveMemberModal } = useMemberColumns();
-  // router
-  const navigate = useNavigate();
+  const { workspaceSlug, memberDetails } = props;
+  const { columns, removeMemberModal, setRemoveMemberModal } = useMemberColumns(workspaceSlug);
   // store hooks
   const { data: currentUser } = useUser();
-  const {
-    workspace: { removeMemberFromWorkspace },
-  } = useMember();
-  const { currentWorkspace, leaveWorkspace } = useWorkspace();
-  const { t } = useTranslation();
-  // derived values
+  const { leave, remove } = useMembershipChanges(workspaceSlug);
 
-  const handleLeaveWorkspace = async () => {
-    if (!currentWorkspace || !currentUser) return;
-
-    try {
-      await leaveWorkspace(currentWorkspace);
-      // the root lands the caller where his workspaces, as they are now, say (M3 design 3.14)
-      navigate("/");
-    } catch (err: unknown) {
-      const error = err as { error?: string };
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: error?.error || t("something_went_wrong_please_try_again"),
-      });
-    }
-  };
-
-  const handleRemoveMember = async (memberId: string) => {
-    if (!workspaceSlug || !memberId) return;
-
-    try {
-      await removeMemberFromWorkspace(workspaceSlug, memberId);
-    } catch (err: unknown) {
-      const error = err as { error?: string };
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: error?.error || t("something_went_wrong_please_try_again"),
-      });
-    }
-  };
-
-  const handleRemove = async (memberId: string) => {
-    if (memberId === currentUser?.id) await handleLeaveWorkspace();
-    else await handleRemoveMember(memberId);
-  };
-
-  // is the member current logged in user
-  // const isCurrentUser = memberDetails?.member.id === currentUser?.id;
-  // is the current logged in user admin
-  // role change access-
-  // 1. user cannot change their own role
-  // 2. only admin or member can change role
-  // 3. user cannot change role of higher role
+  // the caller's own row offers him to leave; another's, to remove that member (an admin's)
+  const handleRemove = (memberId: string) => (memberId === currentUser?.id ? leave() : remove(memberId));
 
   if (isEmpty(columns)) return <MembersLayoutLoader />;
 

@@ -4,8 +4,9 @@ import type { Api } from "../../fixtures/api";
 import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fixtures/assert/identity";
 import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { bearer, createPAT, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
+import { deferred } from "../../fixtures/deferred";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
+import { answerTo, closedByEscape, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers } from "../../fixtures/users";
 
@@ -100,12 +101,9 @@ test("A12 (page): a deactivation nerve fails says why, sent once however often C
   const held = await recordOf(page);
   expect(held, "the page's session").not.toBeNull();
   // nerve fails the deactivation, once the test lets it answer.
-  let answer!: () => void;
-  const answerable = new Promise<void>((resolve) => {
-    answer = resolve;
-  });
+  const answerable = deferred();
   await page.route("**/api/v0/me/deactivate", async (route) => {
-    await answerable;
+    await answerable.promise;
     await route.fulfill({
       status: 500,
       contentType: "application/problem+json",
@@ -128,16 +126,24 @@ test("A12 (page): a deactivation nerve fails says why, sent once however often C
   await page.getByRole("button", { name: "Confirm" }).dblclick();
   await sent;
   await expect(page.getByRole("button", { name: "Deactivating" })).toBeDisabled();
-  const refused = await answerTo(page, "POST", "/api/v0/me/deactivate", async () => answer());
+  // The confirmation cannot be dismissed while the request is out either: Cancel is disabled, Escape leaves it open.
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  const refused = await answerTo(page, "POST", "/api/v0/me/deactivate", async () => answerable.resolve());
   expect(refused.status()).toBe(500);
 
-  // The toast says why, by the problem's code; the confirmation stays open, to confirm again or cancel; the page
-  // stays signed in, on the general page; nothing changed.
-  await expect(page.getByText("Something went wrong on the server. Please try again.")).toBeVisible();
+  // The confirmation, which Escape left open, says why, by the problem's code, and stays open, to confirm again or
+  // cancel; the page stays signed in, on the general page; nothing changed.
+  await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
+    "Something went wrong on the server. Please try again."
+  );
   await expect(page.getByRole("button", { name: "Confirm" })).toBeVisible();
   await expect(page).toHaveURL("/settings/profile/general");
   expect(await recordOf(page)).toEqual(held);
   expect(await accountStateOf(db, email)).toEqual(before);
+  // Cancel, enabled again once nerve has answered, closes it.
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 
   // The page sent the one deactivation.
   expect(watch.apiRequests.filter((request) => request === "POST /api/v0/me/deactivate")).toHaveLength(1);

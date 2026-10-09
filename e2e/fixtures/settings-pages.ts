@@ -1,7 +1,8 @@
-import { expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
+import { errors, expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
 
 import type { Api } from "./api";
 import { bearer, register, type AuthTokens } from "./auth";
+import { deferred } from "./deferred";
 
 // The personal settings (M2 design 7.7), as a person uses them. Each load of a settings page logs
 // EMOJI_CHECK_WARNING (browser.ts), which the stories name.
@@ -29,14 +30,42 @@ export async function answerTo(page: Page, method: string, path: string, act: ()
 }
 
 /**
+ * The bodies, as JSON, of the requests of method to path (no query) that page sends from now on, in the order they
+ * leave it: the array returned grows as they do. Each body is read as its request leaves page, on its way (a route):
+ * the request of a response does not have the bodies the web app's client sends. The route matches path by a
+ * pattern, so it stops no other request, and stays for the page's life: a route removed while the page sends its next
+ * request can leave that request waiting for good.
+ */
+export async function bodiesSentTo(page: Page, method: string, path: string): Promise<unknown[]> {
+  const bodies: unknown[] = [];
+  await page.route(`**${path}`, async (route: Route) => {
+    if (route.request().method() === method) bodies.push(route.request().postDataJSON());
+    await route.fallback();
+  });
+  return bodies;
+}
+
+/**
+ * Resolves with the body, as JSON, of the request of method to path (no query) that act makes page send, read as it
+ * leaves page (bodiesSentTo), and nerve's answer to it.
+ */
+export async function sentTo(
+  page: Page,
+  method: string,
+  path: string,
+  act: () => Promise<void>
+): Promise<{ body: unknown; answer: Response }> {
+  const bodies = await bodiesSentTo(page, method, path);
+  const answer = await answerTo(page, method, path, act);
+  return { body: bodies[0], answer };
+}
+
+/**
  * Holds from page nerve's answer to the next request of method to path that page sends: the request reaches nerve
  * at once, and page gets the answer only when the function returned is called. Later requests pass.
  */
 export async function holdAnswer(page: Page, method: string, path: string): Promise<() => Promise<void>> {
-  let release!: () => void;
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const released = deferred();
   let held = false;
   await page.route(
     (url) => url.pathname === path,
@@ -47,11 +76,87 @@ export async function holdAnswer(page: Page, method: string, path: string): Prom
       }
       held = true;
       const response = await route.fetch();
-      await released;
+      await released.promise;
       await route.fulfill({ response });
     }
   );
-  return async () => release();
+  return async () => released.resolve();
+}
+
+/**
+ * Holds from page nerve's answer to the request of method to path that act makes page send (holdAnswer): resolves once
+ * the request has left page, with its body (bodiesSentTo), and the function that lets the answer through, which
+ * resolves with it once page has it.
+ */
+export async function sentHeld(
+  page: Page,
+  method: string,
+  path: string,
+  act: () => Promise<void>
+): Promise<{ body: unknown; release: () => Promise<Response> }> {
+  const release = await holdAnswer(page, method, path);
+  // registered after the hold, so that it reads the request first, on its way to the hold
+  const bodies = await bodiesSentTo(page, method, path);
+  await act();
+  await expect.poll(() => bodies.length, { message: `${method} ${path} sent` }).toBeGreaterThan(0);
+  return { body: bodies[0], release: () => answerTo(page, method, path, release) };
+}
+
+/**
+ * Holds every script page asks for from now on, until release is called: a navigation to a page whose code the app has
+ * not loaded yet waits for it. requested resolves once page has asked for one, the navigation under way.
+ */
+export async function holdScripts(page: Page): Promise<{ requested: Promise<void>; release: () => void }> {
+  const released = deferred();
+  const requested = deferred();
+  await page.route(
+    (url) => url.pathname.endsWith(".js"),
+    async (route: Route) => {
+      requested.resolve();
+      await released.promise;
+      await route.fallback();
+    }
+  );
+  return { requested: requested.promise, release: released.resolve };
+}
+
+/**
+ * What a wait of a second that failed says: false when the second ran out (what was waited for did not come); any
+ * other failure, such as a locator that matches several elements, rejects, so that it cannot read as "it did not".
+ */
+function timedOut(error: unknown): false {
+  if (error instanceof errors.TimeoutError) return false;
+  throw error;
+}
+
+/**
+ * Resolves with whether button is enabled within a second: one that stays disabled while the test holds what its page
+ * waits for keeps it disabled the whole time, where a check made at once could pass before the page has re-rendered.
+ * button is one element with the button role: a locator that matches none, several or something else fails, not as
+ * "stayed disabled". Enabled is as Playwright's role queries take it (getByRole's disabled).
+ */
+export async function enabledWithin(button: Locator): Promise<boolean> {
+  await expect(button, "the one button").toHaveRole("button");
+  return button
+    .and(button.page().getByRole("button", { disabled: false }))
+    .waitFor({ state: "attached", timeout: 1_000 })
+    .then(() => true, timedOut);
+}
+
+/**
+ * Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed within a second.
+ * A toast is a dialog too, not a modal one: it does not count. A dialog that closes still shows its content while it
+ * fades out (ModalCore's leave transition, 200 ms), so a check made just after the key cannot tell it from one that
+ * stays: the second outlasts the transition. Only the second running out means it stayed (timedOut); any other failure,
+ * such as two modal dialogs, rejects.
+ */
+export async function closedByEscape(page: Page): Promise<boolean> {
+  const closed = page
+    .locator('[role="dialog"][aria-modal="true"]')
+    .waitFor({ state: "detached", timeout: 1_000 })
+    .then(() => true, timedOut);
+  await page.keyboard.press("Escape");
+  return closed;
 }
 
 /**

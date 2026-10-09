@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline } from "@makeplane/propel/icons";
 // nerve imports
@@ -13,6 +13,7 @@ import { Checkbox } from "@makeplane/propel/components/checkbox";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
+import { countOf } from "@/hooks/navigation-preferences";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
 
 type TProjectNavigationDialogProps = {
@@ -20,44 +21,31 @@ type TProjectNavigationDialogProps = {
   onClose: () => void;
 };
 
+/** Keeps out of the count field the keys a number's other characters are typed with: e, E, +, - and the point. */
+function blockNonDigits(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
+}
+
 export const ProjectNavigationDialog = observer(function ProjectNavigationDialog(props: TProjectNavigationDialogProps) {
   const { isOpen, onClose } = props;
   const { t } = useTranslation();
 
-  // store hooks
-  const {
-    preferences: projectPreferences,
-    updateNavigationMode,
-    updateShowLimitedProjects,
-    updateLimitedProjectsCount,
-  } = useProjectNavigationPreferences();
+  const countId = useId();
 
-  // local state for limited projects count input
-  const [projectCountInput, setProjectCountInput] = useState(projectPreferences.limitedProjectsCount.toString());
+  // store hooks: the caller's settings as nerve gave them, and their change (use-navigation-preferences.ts)
+  const { preferences: projectPreferences, changeNavigation } = useProjectNavigationPreferences();
 
-  // Prevent typing invalid characters in number input
-  // oxlint-disable-next-line unicorn/consistent-function-scoping
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Block: e, E, +, -, .
-    if (["e", "E", "+", "-", "."].includes(e.key)) {
-      e.preventDefault();
-    }
-  };
+  // the count field's text while the caller edits it, sent once he leaves the field; otherwise the field shows the
+  // settings' count, as they arrive
+  const [countDraft, setCountDraft] = useState<string | null>(null);
+  const countText = countDraft ?? projectPreferences.limitedProjectsCount.toString();
+  const countValid = countOf(countText) !== undefined;
 
-  // Handle project count input change
-  const handleProjectCountChange = (value: string) => {
-    // Strip any non-digit characters
-    const cleanedValue = value.replace(/\D/g, "");
-    setProjectCountInput(cleanedValue);
-
-    // Parse and validate the value
-    const numValue = parseInt(cleanedValue, 10);
-
-    // If valid number, enforce minimum of 1
-    if (!isNaN(numValue)) {
-      const validValue = Math.max(1, numValue);
-      updateLimitedProjectsCount(validValue);
-    }
+  const sendCount = () => {
+    if (countDraft === null) return;
+    const count = countOf(countDraft);
+    setCountDraft(null);
+    if (count !== undefined) void changeNavigation({ limitedProjectsCount: count });
   };
 
   return (
@@ -90,7 +78,7 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
                     name="navigation-mode"
                     value="ACCORDION"
                     checked={projectPreferences.navigationMode === "ACCORDION"}
-                    onChange={() => updateNavigationMode("ACCORDION")}
+                    onChange={() => void changeNavigation({ navigationMode: "ACCORDION" })}
                     className="mt-1 size-4 text-accent-primary focus:ring-accent-strong"
                   />
                   <div className="flex-1">
@@ -108,7 +96,7 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
                     name="navigation-mode"
                     value="TABBED"
                     checked={projectPreferences.navigationMode === "TABBED"}
-                    onChange={() => updateNavigationMode("TABBED")}
+                    onChange={() => void changeNavigation({ navigationMode: "TABBED" })}
                     className="mt-1 size-4 text-accent-primary focus:ring-accent-strong"
                   />
                   <div className="flex-1">
@@ -127,7 +115,7 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
                     label={t("show_limited_projects_on_sidebar")}
                     stretch="full"
                     checked={projectPreferences.showLimitedProjects}
-                    onCheckedChange={updateShowLimitedProjects}
+                    onCheckedChange={() => void changeNavigation({ limitToggled: true })}
                   />
                 </div>
 
@@ -135,25 +123,29 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
                   <div className="pl-8">
                     <div className="flex w-full flex-col gap-1">
                       <div className="flex w-full flex-col gap-2 pb-1.5">
-                        <label className="w-full text-11 text-secondary">{t("enter_number_of_projects")}</label>
+                        <label htmlFor={countId} className="w-full text-11 text-secondary">
+                          {t("enter_number_of_projects")}
+                        </label>
                         <input
+                          id={countId}
                           type="number"
                           min="1"
                           step="1"
-                          value={projectCountInput}
-                          onKeyDown={handleKeyDown}
-                          onChange={(e) => handleProjectCountChange(e.target.value)}
+                          value={countText}
+                          onKeyDown={blockNonDigits}
+                          onChange={(e) => setCountDraft(e.target.value.replace(/\D/g, ""))}
+                          onBlur={sendCount}
                           className={cn(
                             "w-full rounded-md px-2 py-1 text-13",
                             "border bg-surface-2",
                             "text-secondary",
-                            parseInt(projectCountInput) >= 1
+                            countValid
                               ? "border-strong focus:border-accent-strong focus:ring-1 focus:ring-accent-strong"
                               : "border-danger-strong focus:border-danger-strong focus:ring-1 focus:ring-danger-strong"
                           )}
                         />
                       </div>
-                      {parseInt(projectCountInput) < 1 && projectCountInput !== "" && (
+                      {!countValid && countText !== "" && (
                         <span className="pl-0.5 text-11 text-danger-primary">Minimum value is 1</span>
                       )}
                     </div>

@@ -44,7 +44,7 @@ export interface IUserStore {
   // actions
   fetchCurrentUser: () => Promise<User | undefined>;
   updateCurrentUser: (data: UserUpdate) => Promise<User>;
-  deactivateAccount: () => Promise<void>;
+  deactivateAccount: () => Promise<boolean>;
   changePassword: (payload: ChangePasswordRequest) => Promise<void>;
   signIn: (credentials: LoginRequest) => Promise<void>;
   signUp: (credentials: RegisterRequest) => Promise<void>;
@@ -72,7 +72,7 @@ export class UserStore implements IUserStore {
     api: ApiClient
   ) {
     // stores
-    this.userProfile = new ProfileStore(store, api);
+    this.userProfile = new ProfileStore(api);
     this.permission = new UserPermissionStore(store);
     this.apiTokens = new ApiTokenStore(api);
     // service
@@ -101,9 +101,10 @@ export class UserStore implements IUserStore {
 
   /**
    * @description fetches the account and its profile, once the session is decided: without one it asks
-   * nerve nothing (M2 design 7.1). The workspaces come with M3 (M2 design 3.1). A change of session while
-   * they load is no failure: the new session has a RootStore of its own (store-context.tsx), and
-   * AuthenticationWrapper fetches the new session's account through it.
+   * nerve nothing (M2 design 7.1). The workspaces are not fetched here: useWorkspacesFetch fetches them, where a
+   * page needs them (M3 design 7.1). A change of session while the account and profile load is no failure: the new
+   * session has a RootStore of its own (store-context.tsx), and AuthenticationWrapper fetches the new session's account
+   * through it.
    * @returns {Promise<User | undefined>}
    */
   fetchCurrentUser = async (): Promise<User | undefined> => {
@@ -143,13 +144,14 @@ export class UserStore implements IUserStore {
   /**
    * @description deactivates the account; nerve ends all its sessions, and this browser forgets its own:
    * the session the account was deactivated in, read before the request, since the tab may follow another
-   * tab's sign-in while the request is out
-   * @returns {Promise<void>}
+   * tab's sign-in while the request is out. Resolves whether it ended that session: false when the tab's record was
+   * no longer that session's (another tab signed out, or moved this one to another account, whose page it then is)
+   * @returns {Promise<boolean>}
    */
-  deactivateAccount = async (): Promise<void> => {
+  deactivateAccount = async (): Promise<boolean> => {
     const loginId = tokenManager.state.loginId;
     await this.userService.deactivate();
-    await tokenManager.endSession(loginId);
+    return tokenManager.endSession(loginId);
   };
 
   /**

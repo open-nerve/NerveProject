@@ -17,7 +17,6 @@
   "remove": "Remove",
   "first_name": "First name",
   "last_name": "Last name",
-  "email": "Email",
   "display_name": "Display name",
   "timezone": "Timezone",
   "password": "Password",
@@ -434,16 +433,13 @@
   },
   "role_details": {
     "guest": {
-      "title": "Guest",
-      "description": "External members of organizations can be invited as guests."
+      "title": "Guest"
     },
     "member": {
-      "title": "Member",
-      "description": "Ability to read, write, edit, and delete entities inside projects, cycles, and modules"
+      "title": "Member"
     },
     "admin": {
-      "title": "Admin",
-      "description": "All permissions set to true within the workspace."
+      "title": "Admin"
     }
   },
   "default_global_view": {
@@ -489,15 +485,17 @@
     "workspace": {
       "description": "All your work — unified.",
       "name_placeholder": "Enter workspace name",
-      "creation_disabled": "You don't seem to have any invites to a workspace and your instance admin has restricted creation of new workspaces. Please ask a workspace owner or admin to invite you to a workspace first and come back to this screen to join."
+      "creation_disabled": "Creating workspaces is switched off on this instance: ask a workspace's admin for an invitation link."
     },
     "invite": {
       "title": "Invite your teammates",
       "description": "Work in Nerve happens best with your team. Invite them now to use Nerve to its potential.",
-      "role": "Role",
-      "not_an_email": "That doesn't look like an email address.",
       "add_another": "Add another",
-      "later": "I’ll do it later"
+      "later": "I’ll do it later",
+      "links": {
+        "title": "Your invitations",
+        "description": "Nerve sends no email: copy each link and give it to the person it is for."
+      }
     },
     "tour": {
       "welcome": {

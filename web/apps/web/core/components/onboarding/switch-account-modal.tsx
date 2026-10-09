@@ -11,9 +11,9 @@ import { Dialog, Transition } from "@headlessui/react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useUser } from "@/hooks/store/user";
+import { useSignOut } from "@/hooks/use-sign-out";
 
 type Props = {
   isOpen: boolean;
@@ -26,7 +26,8 @@ export function SwitchAccountModal(props: Props) {
   // states
   const [switchingAccount, setSwitchingAccount] = useState(false);
   // store hooks
-  const { data: userData, signOut } = useUser();
+  const { data: userData } = useUser();
+  const signOut = useSignOut();
 
   const handleClose = () => {
     setSwitchingAccount(false);
@@ -35,19 +36,8 @@ export function SwitchAccountModal(props: Props) {
 
   const handleSwitchAccount = async () => {
     setSwitchingAccount(true);
-
-    try {
-      await signOut();
-      handleClose();
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("auth.sign_out.toast.error.title"),
-        message: t("auth.sign_out.toast.error.message"),
-      });
-    } finally {
-      setSwitchingAccount(false);
-    }
+    if (await signOut()) handleClose();
+    setSwitchingAccount(false);
   };
 
   return (

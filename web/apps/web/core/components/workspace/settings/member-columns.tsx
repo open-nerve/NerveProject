@@ -6,22 +6,22 @@
 
 import { observer } from "mobx-react";
 import { Link } from "react-router";
-import { Controller, useForm } from "react-hook-form";
 
 import { Disclosure } from "@headlessui/react";
 // nerve imports
 import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { User, WorkspaceMember, WorkspaceRole } from "@nerve/api-client";
 // nerve ui
 import { CustomSelect, PopoverMenu } from "@nerve/ui";
 // helpers
 import { getFileURL } from "@nerve/utils";
 // hooks
-import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
+// local imports
+import { WORKSPACE_ROLES } from "../workspace-roles";
+import { useMembershipChanges } from "./use-membership-changes";
 
 type NameProps = {
   rowData: WorkspaceMember;
@@ -100,18 +100,10 @@ export function NameColumn(props: NameProps) {
 
 export const AccountTypeColumn = observer(function AccountTypeColumn(props: AccountTypeProps) {
   const { rowData, workspaceSlug } = props;
-  // form info
-  const {
-    control,
-    formState: { errors },
-  } = useForm();
   // store hooks
   const { allowPermissions } = useUserPermissions();
-
-  const {
-    workspace: { updateMember },
-  } = useMember();
   const { data: currentUser } = useUser();
+  const { changeRole } = useMembershipChanges(workspaceSlug);
 
   // derived values
   const isCurrentUser = currentUser?.id === rowData.member.id;
@@ -132,46 +124,25 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
           <span>{ROLE[rowData.role]}</span>
         </div>
       ) : (
-        <Controller
-          name="role"
-          control={control}
-          rules={{ required: "Role is required." }}
-          render={({ field: { value } }) => (
-            <CustomSelect
-              value={value as EUserPermissions}
-              // the select gives the chosen option's value: the role's number, which nerve decodes as a WorkspaceRole
-              onChange={async (role: WorkspaceRole) => {
-                if (!workspaceSlug) return;
-                try {
-                  await updateMember(workspaceSlug, rowData.member.id, { role });
-                } catch (err: unknown) {
-                  const error = err as { error?: string | string[] };
-                  const errorString = Array.isArray(error?.error) ? error.error[0] : error?.error;
-
-                  setToast({
-                    type: TOAST_TYPE.ERROR,
-                    title: "Error!",
-                    message: errorString ?? "An error occurred while updating member role. Please try again.",
-                  });
-                }
-              }}
-              label={
-                <div className="flex">
-                  <span>{ROLE[rowData.role]}</span>
-                </div>
-              }
-              buttonClassName={`!px-0 !justify-start hover:bg-surface-1 ${errors.role ? "border-danger-strong" : "border-none"}`}
-              className="w-32 rounded-md p-0"
-              input
-            >
-              {Object.entries(ROLE).map(([role, label]) => (
-                <CustomSelect.Option key={role} value={Number(role)}>
-                  {label}
-                </CustomSelect.Option>
-              ))}
-            </CustomSelect>
-          )}
-        />
+        <CustomSelect
+          value={rowData.role}
+          // the select gives the picked option's value: a role's number, of WORKSPACE_ROLES
+          onChange={(role: WorkspaceRole) => void changeRole(rowData.member.id, role)}
+          label={
+            <div className="flex">
+              <span>{ROLE[rowData.role]}</span>
+            </div>
+          }
+          buttonClassName="!px-0 !justify-start hover:bg-surface-1 border-none"
+          className="w-32 rounded-md p-0"
+          input
+        >
+          {WORKSPACE_ROLES.map((role) => (
+            <CustomSelect.Option key={role} value={role}>
+              {ROLE[role]}
+            </CustomSelect.Option>
+          ))}
+        </CustomSelect>
       )}
     </>
   );

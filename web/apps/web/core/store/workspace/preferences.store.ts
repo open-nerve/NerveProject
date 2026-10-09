@@ -12,10 +12,13 @@ import { ReconciledByKey } from "@/lib/reconciled";
 // services
 import { WorkspacePreferencesService } from "@/services/workspace/workspace-preferences.service";
 
+/** A change of the caller's settings in a workspace: what it changes of the settings it is made to. */
+export type PreferencesChange = (held: WorkspacePreferences) => WorkspacePreferencesUpdate;
+
 export interface IWorkspacePreferencesStore {
   getPreferences: (workspaceSlug: string) => WorkspacePreferences | undefined;
   fetchPreferences: (workspace: Pick<Workspace, "id" | "slug">) => Promise<WorkspacePreferences | undefined>;
-  updatePreferences: (workspaceSlug: string, data: WorkspacePreferencesUpdate) => Promise<WorkspacePreferences>;
+  updatePreferences: (workspaceSlug: string, change: PreferencesChange) => Promise<WorkspacePreferences>;
 }
 
 /**
@@ -63,15 +66,24 @@ export class WorkspacePreferencesStore implements IWorkspacePreferencesStore {
     this.preferences.fetch(workspace.id, () => this.service.get(workspace.slug));
 
   /**
-   * @description changes the settings data names; the store then has nerve's answer, all of them, once it has
-   * fetched them. Fails, changing nothing, when nerve refuses.
+   * @description changes the caller's settings in a workspace: change is made, in the change's turn, to the settings
+   * nerve last answered, so that a change asked for before the one before it is answered builds on that one's answer
+   * (v0 design 7.7); the store then has nerve's answer. Fails, changing nothing, when nerve refuses; and without
+   * sending, when the store has no settings of the workspace (none fetched yet, or of a workspace not on his list).
    * @returns {Promise<WorkspacePreferences>}
    */
-  updatePreferences = (workspaceSlug: string, data: WorkspacePreferencesUpdate): Promise<WorkspacePreferences> =>
+  updatePreferences = (workspaceSlug: string, change: PreferencesChange): Promise<WorkspacePreferences> =>
     this.changes(async () => {
       const workspaceId = this.workspaceOf(workspaceSlug)?.id;
-      const preferences = await this.service.update(workspaceSlug, data);
+      const preferences = await this.service.update(workspaceSlug, change(this.held(workspaceSlug)));
       this.preferences.confirm(workspaceId, () => preferences);
       return preferences;
     });
+
+  /** The caller's settings in the workspace as the store has them; fails when it has none. */
+  private held(workspaceSlug: string): WorkspacePreferences {
+    const preferences = this.getPreferences(workspaceSlug);
+    if (!preferences) throw new Error("Workspace settings not found");
+    return preferences;
+  }
 }

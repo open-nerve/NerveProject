@@ -6,11 +6,11 @@
 import { describe, expect, it } from "vitest";
 import type { WorkspacePreferences, WorkspacePreferencesUpdate } from "@nerve/api-client";
 import type { TProjectNavigationPreferences } from "@nerve/types";
-import { DEFAULT_PROJECT_PREFERENCES } from "@nerve/types";
 import type { TProjectNavigationChange } from "./navigation-preferences";
-import { navigationOf, preferencesChangeOf } from "./navigation-preferences";
+import { countOf, navigationOf, preferencesChangeOf } from "./navigation-preferences";
 
-// The sidebar's project navigation and the caller's settings in a workspace (M3 design 3.18), both ways.
+// The sidebar's project navigation and the caller's settings in a workspace (M3 design 3.18), both ways, and the
+// count the dialog's field gives.
 
 const views: { settings: string; preferences?: WorkspacePreferences; shown: TProjectNavigationPreferences }[] = [
   {
@@ -23,32 +23,46 @@ const views: { settings: string; preferences?: WorkspacePreferences; shown: TPro
     preferences: { navigation_control_preference: "TABBED", navigation_project_limit: 0 },
     shown: { navigationMode: "TABBED", limitedProjectsCount: 10, showLimitedProjects: false },
   },
-  { settings: "none yet", shown: DEFAULT_PROJECT_PREFERENCES },
+  {
+    settings: "none yet, taken to be nerve's defaults",
+    shown: { navigationMode: "ACCORDION", limitedProjectsCount: 10, showLimitedProjects: true },
+  },
 ];
 
-/** The sidebar shows 7 projects, in tabs. */
-const sevenTabbed: TProjectNavigationPreferences = {
-  navigationMode: "TABBED",
-  limitedProjectsCount: 7,
-  showLimitedProjects: true,
-};
-const changes: { does: string; change: TProjectNavigationChange; sent: WorkspacePreferencesUpdate }[] = [
+/** The settings nerve last answered: a limit of 7, in tabs. */
+const sevenTabbed: WorkspacePreferences = { navigation_control_preference: "TABBED", navigation_project_limit: 7 };
+/** The settings nerve last answered: every project, as an accordion. */
+const all: WorkspacePreferences = { navigation_control_preference: "ACCORDION", navigation_project_limit: 0 };
+const changes: {
+  does: string;
+  change: TProjectNavigationChange;
+  held: WorkspacePreferences;
+  sent: WorkspacePreferencesUpdate;
+}[] = [
   {
     does: "the mode",
     change: { navigationMode: "ACCORDION" },
+    held: sevenTabbed,
     sent: { navigation_control_preference: "ACCORDION" },
   },
   {
-    does: "turning the limit off, a limit of 0",
-    change: { showLimitedProjects: false },
+    does: "a turn of the limit, where the settings limit the projects: off, a limit of 0",
+    change: { limitToggled: true },
+    held: sevenTabbed,
     sent: { navigation_project_limit: 0 },
   },
   {
-    does: "turning the limit on, the count shown",
-    change: { showLimitedProjects: true },
-    sent: { navigation_project_limit: 7 },
+    does: "a turn of the limit, where the settings show every project: on, nerve's default count",
+    change: { limitToggled: true },
+    held: all,
+    sent: { navigation_project_limit: 10 },
   },
-  { does: "the count the caller set", change: { limitedProjectsCount: 4 }, sent: { navigation_project_limit: 4 } },
+  {
+    does: "the count the caller set",
+    change: { limitedProjectsCount: 4 },
+    held: sevenTabbed,
+    sent: { navigation_project_limit: 4 },
+  },
 ];
 
 describe("navigationOf", () => {
@@ -58,7 +72,21 @@ describe("navigationOf", () => {
 });
 
 describe("preferencesChangeOf", () => {
-  it.each(changes)("sends only the setting a change changes: $does", ({ change, sent }) => {
-    expect(preferencesChangeOf(change, sevenTabbed)).toEqual(sent);
+  it.each(changes)(
+    "sends only the setting a change changes, made to the settings nerve last answered: $does",
+    ({ change, held, sent }) => {
+      expect(preferencesChangeOf(change)(held)).toEqual(sent);
+    }
+  );
+});
+
+describe("countOf", () => {
+  it.each([
+    { draft: "3", count: 3 },
+    { draft: "007", count: 7 },
+    { draft: "0", count: undefined },
+    { draft: "", count: undefined },
+  ])("limits the sidebar to the number of a draft's digits, when 1 or more: '$draft'", ({ draft, count }) => {
+    expect(countOf(draft)).toBe(count);
   });
 });

@@ -2,17 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { accountOf, expectRevoked, onboardingStepsOf, sessionOf } from "../../fixtures/assert/identity";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
-import {
-  bearer,
-  emailFor,
-  login,
-  newRecord,
-  password,
-  recordOf,
-  refresh,
-  register,
-  writeRecord,
-} from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, emailFor, password, recordOf, refresh, register } from "../../fixtures/auth";
 import { expectQuietConsole, followAccessToken, watchPage, type PageWatch } from "../../fixtures/browser";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
 import { expect, test } from "../../fixtures/test";
@@ -112,11 +102,9 @@ test("A6 (page): another tab signs another account in without signing out: every
   await openOnboarding(tabA, x);
   const xHeld = (await recordOf(tabA))?.refresh_token ?? "";
 
-  // Tab B, any page of the site, keeps a sign-in of Y as the token manager does: a new record, written
-  // under the refresh lock, with a new login_id.
-  const tabB = await context.newPage();
-  await tabB.goto("/site.webmanifest.json");
-  await writeRecord(tabB, newRecord(await login(api, y)));
+  // Tab B, on a file of the site, keeps a sign-in of Y as the token manager does (anotherTabSignsIn): a new record,
+  // written under the refresh lock, with a new login_id.
+  await anotherTabSignsIn(context, api, y);
 
   // Tab A follows: it shows Y, and what it writes from now on is Y's.
   await expect(accountMenu(tabA, y)).toBeVisible();

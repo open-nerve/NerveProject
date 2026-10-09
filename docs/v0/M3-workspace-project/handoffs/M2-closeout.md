@@ -183,3 +183,15 @@ P8a 没有在这里记处理结果；它做到的部分（[P8a spec](../specs/P8
 仍未处理，状态保持 `open`：第 1 节的页面一侧、第 2 节的页面一侧和第 13 节（P9）；第 11 节的页面一侧（P9、P10）；第 10、14 节（P10，M3 设计 7.7）；第 12 节等 M3 的收尾。
 
 来源：[M3/P8b spec](../specs/P8b-web-project-data.md) 第 7 节；[M3/P8a spec](../specs/P8a-web-workspace-data.md) 第 7 节。
+
+## 处理结果（M3/P9）
+
+- **第 1 节 邀请与注册**（页面一侧完成）：邀请链接的页面由 `invitationView`（`web/apps/web/core/components/workspace/invitation-view.ts`）决定显示什么：链接缺 id 或令牌、nerve 按链接找不到时无效；没有登录时给登录、注册，两者都带着链接回来；登录之后接受或忽略（`use-invitation-answer.ts`），邮箱不一致时只给退出登录；接受之后写上次打开的工作区再进入。注册凭链接中的邀请（注册关闭时也能注册），登录页和注册页之间的链接保留链接的参数。W5、W6 的页面版本守着（[M3/P9 spec](../specs/P9-web-workspace-pages.md) 2.4、2.7）。
+- **第 2 节 登录后的落点与新手引导的取数**（页面一侧完成）：新手引导取调用者的工作区列表，由它决定步骤，已有工作区的人资料一步之后就完成；创建一步与 `/create-workspace` 共用 `useCreateWorkspace`，邀请一步发往刚建的工作区；完成引导不再把列表中的第一个工作区写成上次打开的。W2、W1、W5 的页面版本分别守着切换、创建、接受之后写的 `last_workspace_id`，W2 的还守着删除、离开之后的落点；README 的"前端"一节写明能用的页面（spec 2.2、2.4、2.5、2.6、2.11）。
+- **第 11 节 M2 留下的 M3 调用和类型**（页面一侧中工作区的部分完成）：新手引导的创建、邀请两步（spec 2.6）；工作区 general 页的时区随修改发出（spec 2.1）。项目的部分随 P10。
+- **第 13 节 P5 改到、M2 的页面走不到的地方**（关闭）：`WorkspaceAuthWrapper` 的"找不到工作区"界面和退出登录失败的提示经 `t()`（spec 2.10）；新手引导的邀请一步换成成员页的表单（spec 2.6）。逐条的浏览器核对写在 [M3/P9 评审](../reviews/P9-web-workspace-pages-review.md)第 2 节的 C4，都通过："找不到工作区"的退出按钮 Tab 能到、空格和回车退出；工作区的页面在取数回答之前显示加载，项目的设置页在项目详情到达之后才显示；`ProfileSidebar` 窄屏折叠、拉过 768 像素展开，两次相同；`WorkspaceLogo` 在工作区菜单和设置的工作区卡片中是方形的盒子；新手引导三步、链接一步和首页导览在中文下都译出。加入工作区一步随决策点 2 在 M3/P8a 删除，不再核对。
+- **M2 的 `UserStore.deactivateAccount`**（`web/apps/web/core/store/user/index.ts`，M3/P9 改了签名）：交回 `Promise<boolean>`，即 `tokenManager.endSession(loginId)` 的回答：停用应答时标签页的记录是否仍是发出停用的那个会话（是时结束它）；另一个标签页先退出、或把这个标签页换到别的账户时为 `false`。它唯一的调用方停用弹窗只在为 `true` 时说已停用并关闭；nerve 拒绝时它照旧拒绝（spec 2.9，第 3 节第 3 条）。
+
+仍未处理，状态保持 `open`：第 11 节的页面一侧（P10）；第 10、14 节（P10，M3 设计 7.7）；第 12 节等 M3 的收尾。
+
+来源：[M3/P9 spec](../specs/P9-web-workspace-pages.md) 第 7 节。

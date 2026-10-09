@@ -14,7 +14,6 @@ import { getRandomLabelColor } from "@nerve/constants";
 // nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Label, LabelCreate } from "@nerve/api-client";
 import { cn } from "@nerve/utils";
 // components
@@ -22,8 +21,7 @@ import { IssueLabelsList } from "@/components/ui/labels-list";
 // hooks
 import { useDropdownKeyDown } from "@/hooks/use-dropdown-key-down";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 export type TWorkItemLabelSelectBaseProps = {
   buttonClassName?: string;
@@ -68,6 +66,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
   const [submitting, setSubmitting] = useState<boolean>(false);
   // nerve hooks
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // store hooks
   const { isMobile } = usePlatformOS();
   // popper-js init
@@ -146,7 +145,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
       onChange(Array.from(new Set([...value, idToAdd])));
       setQuery("");
     } catch (error) {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      toastRefusal(error);
     } finally {
       setSubmitting(false);
     }

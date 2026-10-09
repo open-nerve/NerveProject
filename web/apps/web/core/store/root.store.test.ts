@@ -12,7 +12,6 @@ import { track, until } from "@/lib/auth/fake-time";
 import { AUTH_KEY, SessionChangedError, TokenManager } from "@/lib/auth/token-manager";
 import { inTurn } from "@/store/fake-queue";
 import type { GlobalViewStore } from "@/store/global-view.store";
-import type { ProfileStore } from "@/store/user/profile.store";
 
 // A RootStore holds the stores of one session (M2 design 7.1: a tab never writes as the wrong account): it hands
 // the client it is built with, bound to that session, to the stores that send requests with the session's
@@ -111,7 +110,6 @@ describe("RootStore", () => {
     }
     // The page's stores hold nothing of the RootStore before; the new stores reach their siblings through y.
     for (const name of PAGE_STORES) expect(Object.values(x[name as keyof typeof x])).not.toContain(x);
-    expect((y.user.userProfile as ProfileStore).store).toBe(y);
     expect((y.globalView as GlobalViewStore).rootStore).toBe(y);
     expect(y.issue.rootStore).toBe(y);
   });

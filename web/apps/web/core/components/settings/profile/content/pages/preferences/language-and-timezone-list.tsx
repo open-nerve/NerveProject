@@ -16,8 +16,7 @@ import { StartOfWeekPreference } from "@/components/profile/start-of-week-prefer
 import { SettingsControlItem } from "@/components/settings/control-item";
 // hooks
 import { useUser, useUserProfile } from "@/hooks/store/user";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
   function ProfileSettingsLanguageAndTimezonePreferencesList() {
@@ -30,6 +29,7 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
     const { updateUserProfile } = useUserProfile();
     // translation
     const { t } = useTranslation();
+    const toastRefusal = useRefusalToast();
 
     const handleTimezoneChange = async (value: string) => {
       try {
@@ -40,7 +40,7 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
           type: TOAST_TYPE.SUCCESS,
         });
       } catch (error) {
-        setToast({ title: t("toast.error"), message: t(errorMessageKey(error)), type: TOAST_TYPE.ERROR });
+        toastRefusal(error);
       }
     };
 
@@ -53,7 +53,7 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
           type: TOAST_TYPE.SUCCESS,
         });
       } catch (error) {
-        setToast({ title: t("toast.error"), message: t(errorMessageKey(error)), type: TOAST_TYPE.ERROR });
+        toastRefusal(error);
       }
     };
 

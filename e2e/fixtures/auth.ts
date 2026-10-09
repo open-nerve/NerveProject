@@ -19,7 +19,7 @@ export interface AuthRecord {
 }
 
 /** The record a sign-in with tokens writes: a new login_id of 16 random bytes in hexadecimal. */
-export function newRecord(tokens: AuthTokens): AuthRecord {
+function newRecord(tokens: AuthTokens): AuthRecord {
   return { refresh_token: tokens.refresh_token, login_id: randomBytes(16).toString("hex") };
 }
 
@@ -54,7 +54,7 @@ export async function recordOf(page: Page): Promise<AuthRecord | null> {
  * holding the refresh lock, so that no refresh of another tab writes in between. The other tabs get the
  * storage event.
  */
-export async function writeRecord(page: Page, record: AuthRecord): Promise<void> {
+async function writeRecord(page: Page, record: AuthRecord): Promise<void> {
   await page.evaluate(
     async ({ key, text }) => {
       await navigator.locks.request("nerve.auth.refresh", () => {
@@ -63,6 +63,30 @@ export async function writeRecord(page: Page, record: AuthRecord): Promise<void>
     },
     { key: authKey, text: JSON.stringify(record) }
   );
+}
+
+/**
+ * Removes the record from the localStorage of page as the token manager does as it signs out (M2 design 7.1), after
+ * nerve's logout, which this leaves out: holding the refresh lock. The other tabs get the storage event, and sign out.
+ */
+export async function removeRecord(page: Page): Promise<void> {
+  await page.evaluate(async (key) => {
+    await navigator.locks.request("nerve.auth.refresh", () => {
+      localStorage.removeItem(key);
+    });
+  }, authKey);
+}
+
+/**
+ * Another tab of context signs the account of email in (nerve's sign-in through the API) and keeps that sign-in as the
+ * token manager does (writeRecord): a new record, with a new login_id, which the context's other tabs follow. The tab
+ * opens a file of the site, not a page of the app, which would refresh the session itself: resolves with it.
+ */
+export async function anotherTabSignsIn(context: BrowserContext, api: Api, email: string): Promise<Page> {
+  const tab = await context.newPage();
+  await tab.goto("/site.webmanifest.json");
+  await writeRecord(tab, newRecord(await login(api, email)));
+  return tab;
 }
 
 /** A password that meets the rules and is not common. */
