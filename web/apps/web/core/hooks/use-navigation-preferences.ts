@@ -5,11 +5,10 @@
  */
 
 import { useParams } from "react-router";
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TProjectNavigationPreferences } from "@nerve/types";
+// hooks
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 // local imports
 import type { TProjectNavigationChange } from "./navigation-preferences";
@@ -27,7 +26,7 @@ export function useProjectNavigationPreferences(): {
   changeNavigation: (change: TProjectNavigationChange) => Promise<void>;
 } {
   const { workspaceSlug = "" } = useParams();
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   const {
     preferences: { getPreferences, updatePreferences },
   } = useWorkspace();
@@ -35,8 +34,7 @@ export function useProjectNavigationPreferences(): {
     preferences: navigationOf(getPreferences(workspaceSlug)),
     changeNavigation: (change) =>
       followInSession(() => updatePreferences(workspaceSlug, preferencesChangeOf(change)), {
-        failed: (error) =>
-          setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) }),
+        failed: toastRefusal,
       }),
   };
 }

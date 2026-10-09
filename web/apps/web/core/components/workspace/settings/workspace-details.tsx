@@ -23,10 +23,10 @@ import { TimezoneSelect } from "@/components/global/timezone-select";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // components
 import { DeleteWorkspaceSection } from "@/components/workspace/delete-workspace-section";
 // lib
-import { errorMessageKey } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 
 /**
@@ -54,6 +54,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
   const workspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
 
   // form info
   const {
@@ -86,8 +87,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
           type: TOAST_TYPE.SUCCESS,
           message: "Workspace updated successfully",
         }),
-      failed: (error) =>
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) }),
+      failed: toastRefusal,
     });
     setIsLoading(false);
   };

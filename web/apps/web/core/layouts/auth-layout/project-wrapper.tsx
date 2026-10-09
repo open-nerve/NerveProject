@@ -8,16 +8,12 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // components
 import { SessionUnavailable } from "@/components/account/session-unavailable";
 import { ProjectAccessRestriction } from "@/components/auth-screens/project/project-access-restriction";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // local imports
 import { useProjectFetch } from "./use-project-fetch";
 
@@ -30,8 +26,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const { projectId, children } = props;
   // router params
   const { workspaceSlug } = useParams();
-  // translation
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // states
   const [isJoiningProject, setIsJoiningProject] = useState(false);
   // store hooks
@@ -45,9 +40,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const handleJoinProject = () => {
     setIsJoiningProject(true);
     joinProject(projectId)
-      .catch((error: unknown) =>
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) })
-      )
+      .catch(toastRefusal)
       .finally(() => setIsJoiningProject(false));
   };
 

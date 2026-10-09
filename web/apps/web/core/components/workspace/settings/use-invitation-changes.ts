@@ -4,12 +4,11 @@
  */
 
 import type { WorkspaceRole } from "@nerve/api-client";
-import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 
 /**
@@ -23,9 +22,7 @@ export function useInvitationChanges() {
   const {
     workspace: { updateMemberInvitation, deleteMemberInvitation },
   } = useMember();
-  const { t } = useTranslation();
-  const failed = (error: unknown) =>
-    setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+  const failed = useRefusalToast();
 
   return {
     /** Gives the pending invitation the role: its number, as nerve's invitation update takes it. */

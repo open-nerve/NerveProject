@@ -15,8 +15,7 @@ import { CustomSelect } from "@nerve/ui";
 import { SettingsControlItem } from "@/components/settings/control-item";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 // The i18n key of the day's name.
 const startOfWeekLabelKey = (startOfWeek: StartOfTheWeek | undefined) =>
@@ -28,6 +27,7 @@ export const StartOfWeekPreference = observer(function StartOfWeekPreference(pro
   // hooks
   const { data: userProfile, updateUserProfile } = useUserProfile();
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // derived values
   const labelKey = startOfWeekLabelKey(userProfile?.start_of_the_week);
 
@@ -40,7 +40,7 @@ export const StartOfWeekPreference = observer(function StartOfWeekPreference(pro
         message: t("power_k.preferences_actions.toast.generic.success"),
       });
     } catch (error) {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      toastRefusal(error);
     }
   };
 

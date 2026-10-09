@@ -6,15 +6,13 @@
 
 import { observer } from "mobx-react";
 // nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { ContentWrapper } from "@nerve/ui";
 // hooks
 import { useUserProfile, useUser } from "@/hooks/store/user";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // components
 import { TourRoot } from "@/components/onboarding/tour/root";
 // lib
-import { errorMessageKey } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 // local imports
 import { HomeBody } from "./home-body";
@@ -24,15 +22,11 @@ export const WorkspaceHomeView = observer(function WorkspaceHomeView() {
   // store hooks
   const { data: currentUser } = useUser();
   const { data: currentUserProfile, updateTourCompleted } = useUserProfile();
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
 
   // the tour ends once nerve has its end in the profile; a refusal's reason is said, and the tour stays. Followed only
   // in the session the end was sent in (M3 design 7.1)
-  const completeTour = () =>
-    void followInSession(() => updateTourCompleted(), {
-      failed: (error) =>
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) }),
-    });
+  const completeTour = () => void followInSession(() => updateTourCompleted(), { failed: toastRefusal });
 
   // TODO: refactor loader implementation
   return (

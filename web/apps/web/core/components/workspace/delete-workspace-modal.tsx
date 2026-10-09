@@ -19,8 +19,8 @@ import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 
 type Props = {
@@ -44,6 +44,7 @@ export const DeleteWorkspaceModal = observer(function DeleteWorkspaceModal(props
   // store hooks
   const { deleteWorkspace } = useWorkspace();
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast("workspace_settings.settings.general.delete_modal.error_title");
   // form info
   const {
     control,
@@ -80,12 +81,7 @@ export const DeleteWorkspaceModal = observer(function DeleteWorkspaceModal(props
           message: t("workspace_settings.settings.general.delete_modal.success_message"),
         });
       },
-      failed: (error) =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("workspace_settings.settings.general.delete_modal.error_title"),
-          message: t(errorMessageKey(error)),
-        }),
+      failed: toastRefusal,
     });
   };
 

@@ -23,8 +23,9 @@ import { CoverImage } from "@/components/common/cover-image";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 // hooks
 import { useUser } from "@/hooks/store/user";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 
 type TUserProfileForm = {
   first_name: string;
@@ -50,6 +51,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
   const [deactivateAccountModal, setDeactivateAccountModal] = useState(false);
   // language support
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // form info
   const {
     handleSubmit,
@@ -86,8 +88,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
         const key = fields[field];
         if (key !== undefined) setError(field, { type: "manual", message: t(key) });
       }
-      if (needsErrorBanner(error, FIELDS))
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
     } finally {
       setIsLoading(false);
     }

@@ -9,12 +9,9 @@ import { useState } from "react";
 import { CloseOutline, EditOutline } from "@makeplane/propel/icons";
 // types
 import type { Label } from "@nerve/api-client";
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // components
 import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
@@ -54,13 +51,13 @@ export function ProjectSettingLabelItem(props: Props) {
   // states
   const [isEditLabelForm, setEditLabelForm] = useState(false);
   // nerve hooks
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // store hooks
   const { updateLabel } = useLabel();
 
   const removeFromGroup = () => {
     updateLabel(label.id, { parent_id: null }).catch((error: unknown) => {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      toastRefusal(error);
     });
   };
 

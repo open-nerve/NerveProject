@@ -13,6 +13,8 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // components
 import { invitationRefusal } from "@/components/workspace/invite-modal/refusal";
+// hooks
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { followInSession } from "@/lib/in-session";
 
@@ -48,6 +50,7 @@ type TUseWorkspaceInvitationReturn = {
 export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProps): TUseWorkspaceInvitationReturn => {
   const { invite, onSent } = props;
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // form info
   const { control, reset, handleSubmit, formState, setError } = useForm<WorkspaceInvitationsCreate>({
     defaultValues: opened(),
@@ -76,7 +79,7 @@ export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProp
       failed: (error) => {
         const refusal = invitationRefusal(error, data.invitations.length);
         if (refusal.kind === "toast") {
-          setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(refusal.message) });
+          toastRefusal(error);
           return;
         }
         for (const { index, message } of refusal.rows) {

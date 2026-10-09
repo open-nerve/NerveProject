@@ -10,12 +10,12 @@ import { Controller, useForm } from "react-hook-form";
 import type { UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { cn, getFileURL } from "@nerve/utils";
 // hooks
 import { useUser } from "@/hooks/store/user";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 // local components
 import { CommonOnboardingHeader } from "../common";
@@ -38,6 +38,7 @@ const FIELDS = ["first_name"] as const;
 
 export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: Props) {
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // store hooks
   const { data: user, updateCurrentUser } = useUser();
   // form info
@@ -68,8 +69,7 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
       // A refusal of the name shows under it, anything else in a toast (M2 design 7.3).
       const key = fieldErrorKeys(error).first_name;
       if (key !== undefined) setError("first_name", { type: "manual", message: t(key) });
-      if (needsErrorBanner(error, FIELDS))
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
       return false;
     }
   };

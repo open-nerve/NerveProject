@@ -23,6 +23,7 @@ import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { ApiError } from "@/lib/api-error";
 import { errorMessageKey, fieldErrorKeys } from "@/lib/error-messages";
@@ -68,6 +69,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
   const confirmPassword = watch("confirm_password");
   // i18n
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast("auth.common.password.toast.change_password.error.title");
   const passwordStrengthLabels = usePasswordStrengthLabels();
 
   const isNewPasswordSameAsOldPassword = oldPassword !== "" && password !== "" && password === oldPassword;
@@ -98,11 +100,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
         setError("new_password", { type: "manual", message: t(newPassword) });
         return;
       }
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("auth.common.password.toast.change_password.error.title"),
-        message: t(errorMessageKey(error)),
-      });
+      toastRefusal(error);
     }
   };
 

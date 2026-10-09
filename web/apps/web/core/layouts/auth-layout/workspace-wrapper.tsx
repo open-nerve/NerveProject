@@ -11,7 +11,6 @@ import { useParams, Link } from "react-router";
 import { LogOutOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 import { getButtonStyling } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
 // assets
@@ -23,6 +22,7 @@ import { NerveLogo } from "@/components/common/nerve-logo";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { useSignOut } from "@/hooks/use-sign-out";
 // local imports
 import { useWorkspaceFetch } from "./use-workspace-fetch";
 
@@ -37,22 +37,13 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   // translation
   const { t } = useTranslation();
   // store hooks
-  const { signOut, data: currentUser } = useUser();
+  const { data: currentUser } = useUser();
+  const signOut = useSignOut();
   const { isMobile } = usePlatformOS();
 
   // the workspace side of what every page of a workspace fetches (M3 design 7.1), and what the caller's workspaces
   // decide this one is to him (7.2, 8.3)
   const access = useWorkspaceFetch(workspaceSlug);
-
-  const handleSignOut = async () => {
-    await signOut().catch(() =>
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("auth.sign_out.toast.error.title"),
-        message: t("auth.sign_out.toast.error.message"),
-      })
-    );
-  };
 
   // nerve could not be reached: the page says so, and tries again when asked (M2 design 7.1)
   if (access.kind === "unavailable") return <SessionUnavailable autoRetry={false} onRetry={access.retry} />;
@@ -83,7 +74,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
                 type="button"
                 aria-label={t("sign_out")}
                 className="relative flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm hover:bg-layer-1"
-                onClick={handleSignOut}
+                onClick={() => void signOut()}
               >
                 <Tooltip label={t("sign_out")} alignOffset={8} disabled={isMobile}>
                   <LogOutOutline width={14} height={14} />

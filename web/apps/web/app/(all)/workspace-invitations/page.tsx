@@ -20,6 +20,7 @@ import { EPageTypes } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { useInvitationPreview } from "@/hooks/use-invitation-preview";
+import { useSignOut } from "@/hooks/use-sign-out";
 // lib
 import { invitationAuthPath } from "@/lib/invitation-link";
 // wrappers
@@ -36,7 +37,8 @@ const WorkspaceInvitation = observer(function WorkspaceInvitation() {
   const [searchParams] = useSearchParams();
   const link = { invitationId: searchParams.get("invitation_id"), token: searchParams.get("token") };
   // store hooks
-  const { data: currentUser, signOut } = useUser();
+  const { data: currentUser } = useUser();
+  const signOut = useSignOut();
   const { t } = useTranslation();
   // whether nerve answered the caller's answer that the invitation is another address's (decision 1)
   const [mismatched, setMismatched] = useState(false);

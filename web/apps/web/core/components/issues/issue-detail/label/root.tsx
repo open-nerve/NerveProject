@@ -14,8 +14,7 @@ import type { TIssue } from "@nerve/types";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useLabel } from "@/hooks/store/use-label";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // types
 import { LabelList, IssueLabelSelectRoot } from "./";
 // TODO: Fix this import statement, as core should not import from ee
@@ -37,6 +36,7 @@ export type TLabelOperations = {
 export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
   const { workspaceSlug, projectId, issueId, disabled = false, isInboxIssue = false, onLabelUpdate } = props;
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // hooks
   const { updateIssue } = useIssueDetail();
   const { createLabel } = useLabel();
@@ -72,12 +72,12 @@ export const IssueLabel = observer(function IssueLabel(props: TIssueLabel) {
             });
           return labelResponse;
         } catch (error) {
-          setToast({ title: t("toast.error"), type: TOAST_TYPE.ERROR, message: t(errorMessageKey(error)) });
+          toastRefusal(error);
           throw error;
         }
       },
     }),
-    [updateIssue, createLabel, onLabelUpdate, isInboxIssue, projectId, t]
+    [updateIssue, createLabel, onLabelUpdate, isInboxIssue, projectId, t, toastRefusal]
   );
 
   return (

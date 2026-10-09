@@ -8,8 +8,6 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, LoadingOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { State } from "@nerve/api-client";
 import type { TStateOperationsCallbacks } from "@nerve/types";
@@ -17,8 +15,7 @@ import { AlertModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 type TStateDelete = {
   totalStates: number;
@@ -30,7 +27,7 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
   const { totalStates, state, deleteStateCallback } = props;
   // hooks
   const { isMobile } = usePlatformOS();
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // states
   const [isDeleteModal, setIsDeleteModal] = useState(false);
   const [isDelete, setIsDelete] = useState(false);
@@ -46,7 +43,7 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
       await deleteStateCallback(state.id);
       setIsDelete(false);
     } catch (error) {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      toastRefusal(error);
       setIsDelete(false);
     }
   };

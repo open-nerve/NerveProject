@@ -12,8 +12,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useApiTokens } from "@/hooks/store/user";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 type Props = {
   isOpen: boolean;
@@ -28,6 +27,7 @@ export function DeleteApiTokenModal(props: Props) {
   // states
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast("workspace_settings.settings.api_tokens.delete.error.title");
 
   const handleClose = () => {
     onClose();
@@ -45,11 +45,7 @@ export function DeleteApiTokenModal(props: Props) {
       });
       handleClose();
     } catch (error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("workspace_settings.settings.api_tokens.delete.error.title"),
-        message: t(errorMessageKey(error)),
-      });
+      toastRefusal(error);
       setDeleteLoading(false);
     }
   };

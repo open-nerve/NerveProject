@@ -10,7 +10,6 @@ import { LogOutOutline, SettingsOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { CustomMenu } from "@nerve/ui";
 import { getFileURL } from "@nerve/utils";
 // components
@@ -20,6 +19,7 @@ import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useUser } from "@/hooks/store/user";
+import { useSignOut } from "@/hooks/use-sign-out";
 
 export const UserMenuRoot = observer(function UserMenuRoot() {
   // states
@@ -27,20 +27,12 @@ export const UserMenuRoot = observer(function UserMenuRoot() {
   // store hooks
   const { toggleAnySidebarDropdown } = useAppTheme();
   const { data: currentUser } = useUser();
-  const { signOut } = useUser();
+  const signOut = useSignOut();
   const { toggleProfileSettingsModal } = useCommandPalette();
   // translation
   const { t } = useTranslation();
 
-  const handleSignOut = () => {
-    signOut().catch(() =>
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("auth.sign_out.toast.error.title"),
-        message: t("auth.sign_out.toast.error.message"),
-      })
-    );
-  };
+  const handleSignOut = () => void signOut();
 
   // Toggle sidebar dropdown state when menu is open
   useEffect(() => {

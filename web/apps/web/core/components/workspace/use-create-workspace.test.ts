@@ -162,17 +162,17 @@ describe("creationRefusal", () => {
         { field: "name", code: "too_long" },
         { field: "timezone", code: "invalid_format" },
       ]),
-      shown: { kind: "toast", message: "errors.validation_failed" },
+      shown: { kind: "toast" },
     },
     {
       refused: "creation switched off",
       error: refusal(403, "workspace.creation_disabled"),
-      shown: { kind: "toast", message: "errors.workspace_creation_disabled" },
+      shown: { kind: "toast" },
     },
     {
       refused: "a failure without an answer",
       error: new TypeError("offline"),
-      shown: { kind: "toast", message: "errors.unknown" },
+      shown: { kind: "toast" },
     },
   ])("shows $refused", ({ error, shown }) => {
     expect(creationRefusal(error)).toEqual(shown);

@@ -3,14 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useOpenWorkspace } from "@/hooks/use-open-workspace";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { ApiError } from "@/lib/api-error";
-import { errorMessageKey } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 
 /**
@@ -30,13 +28,13 @@ type AnswerFollowUps = { reread: () => void; mismatched: () => void };
 export function useInvitationAnswer({ reread, mismatched }: AnswerFollowUps) {
   const { acceptInvitation, declineInvitation } = useWorkspace();
   const openWorkspace = useOpenWorkspace();
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   const refused = (error: unknown) => {
     if (error instanceof ApiError && error.problem?.code === "workspace.invitation_email_mismatch") {
       mismatched();
       return;
     }
-    setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+    toastRefusal(error);
     reread();
   };
 

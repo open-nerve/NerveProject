@@ -12,7 +12,6 @@ import { invitationRefusal, type InvitationRefusal } from "./refusal";
 
 /** nerve's refusal of a batch, 422, naming errors. */
 const refused = (...errors: Pick<FieldError, "field" | "code">[]) => refusal(422, "validation_failed", errors);
-const toast = (message: string): InvitationRefusal => ({ kind: "toast", message });
 
 describe("invitationRefusal", () => {
   it.each<{ refusal: string; error: unknown; shown: InvitationRefusal }>([
@@ -36,27 +35,27 @@ describe("invitationRefusal", () => {
       shown: { kind: "rows", rows: [{ index: 0, message: "errors.field.invalid_format" }] },
     },
     {
-      refusal: "a fault of a row's role, which the form has no message for, as nerve's reason",
+      refusal: "a fault of a row's role, which the form has no message for, in a toast",
       error: refused(
         { field: "invitations[0].email", code: "duplicate" },
         { field: "invitations[1].role", code: "invalid_format" }
       ),
-      shown: toast("errors.validation_failed"),
+      shown: { kind: "toast" },
     },
     {
-      refusal: "a row the form does not have, as nerve's reason",
+      refusal: "a row the form does not have, in a toast",
       error: refused({ field: "invitations[2].email", code: "duplicate" }),
-      shown: toast("errors.validation_failed"),
+      shown: { kind: "toast" },
     },
     {
-      refusal: "a refusal that names no field, as nerve's reason",
+      refusal: "a refusal that names no field, in a toast",
       error: refusal(403, "forbidden"),
-      shown: toast("errors.forbidden"),
+      shown: { kind: "toast" },
     },
     {
-      refusal: "a failure without an answer, as unknown",
+      refusal: "a failure without an answer, in a toast",
       error: new TypeError("offline"),
-      shown: toast("errors.unknown"),
+      shown: { kind: "toast" },
     },
   ])("shows $refusal", ({ error, shown }) => {
     expect(invitationRefusal(error, 2)).toEqual(shown);

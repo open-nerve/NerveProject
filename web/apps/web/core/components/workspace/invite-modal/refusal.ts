@@ -6,15 +6,13 @@
 import type { FieldError } from "@nerve/api-client";
 // lib
 import { ApiError } from "@/lib/api-error";
-import { FIELD_ERROR_MESSAGES, errorMessageKey } from "@/lib/error-messages";
+import { FIELD_ERROR_MESSAGES } from "@/lib/error-messages";
 
 /**
  * What the invitation form shows of nerve's refusal of its invitations (M3 design 2, W4): the message under each row
- * nerve names, when it names rows of the form alone; else nerve's reason, in a toast. Each message is an i18n key.
+ * nerve names (an i18n key), when it names rows of the form alone; else nerve's reason, in a toast.
  */
-export type InvitationRefusal =
-  | { kind: "rows"; rows: { index: number; message: string }[] }
-  | { kind: "toast"; message: string };
+export type InvitationRefusal = { kind: "rows"; rows: { index: number; message: string }[] } | { kind: "toast" };
 
 /**
  * Why an address of a row cannot be invited, by nerve's code for its email: it is an active member's; or it is
@@ -33,5 +31,5 @@ export function invitationRefusal(error: unknown, rows: number): InvitationRefus
     return index >= 0 && index < rows ? [{ index, message: ROW_MESSAGES[code] ?? FIELD_ERROR_MESSAGES[code] }] : [];
   });
   if (onRows.length > 0 && onRows.length === named.length) return { kind: "rows", rows: onRows };
-  return { kind: "toast", message: errorMessageKey(error) };
+  return { kind: "toast" };
 }

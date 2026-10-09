@@ -9,9 +9,10 @@ import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { ApiError } from "@/lib/api-error";
-import { FIELD_ERROR_MESSAGES, errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { FIELD_ERROR_MESSAGES, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 
 /** A creation form's values: no size until one is chosen (null, which keeps a select of sizes controlled). */
@@ -24,7 +25,7 @@ export const slugFrom = (text: string): string => text.toLowerCase().replace(/ /
 type CreationFields = Partial<Record<"name" | "slug", string>>;
 
 /** What the creation's form shows of nerve's refusal: under the fields it names, or its reason in a toast. */
-export type CreationRefusal = { kind: "fields"; fields: CreationFields } | { kind: "toast"; message: string };
+export type CreationRefusal = { kind: "fields"; fields: CreationFields } | { kind: "toast" };
 
 /** Why nerve says a slug cannot name a new workspace (SlugAvailability.reason). */
 type SlugUnavailable = NonNullable<SlugAvailability["reason"]>;
@@ -58,7 +59,7 @@ const SLUG_FIELD_MESSAGES: Partial<Record<string, string>> = {
 export function creationRefusal(error: unknown): CreationRefusal {
   if (error instanceof ApiError && error.problem?.code === "workspace.slug_taken")
     return { kind: "fields", fields: { slug: SLUG_MESSAGES.taken } };
-  if (needsErrorBanner(error, FIELDS)) return { kind: "toast", message: errorMessageKey(error) };
+  if (needsErrorBanner(error, FIELDS)) return { kind: "toast" };
   const { name, slug } = fieldErrorKeys(error);
   return { kind: "fields", fields: { name, slug: slug && (SLUG_FIELD_MESSAGES[slug] ?? slug) } };
 }
@@ -76,6 +77,7 @@ export function useCreateWorkspace(): (
 ) => Promise<Workspace | undefined> {
   const { checkWorkspaceSlug, createWorkspace } = useWorkspace();
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
 
   // the slug's check decides: an unavailable slug is not sent
   const attempt = async (form: CreationForm): Promise<Attempt> => {
@@ -112,7 +114,7 @@ export function useCreateWorkspace(): (
       failed: (error) => {
         const refusal = creationRefusal(error);
         if (refusal.kind === "fields") refused(refusal.fields);
-        else setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(refusal.message) });
+        else toastRefusal(error);
       },
     });
     return workspace;

@@ -7,15 +7,12 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Label } from "@nerve/api-client";
 // ui
 import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
-// lib
-import { errorMessageKey } from "@/lib/error-messages";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 
 type Props = {
   isOpen: boolean;
@@ -27,7 +24,7 @@ export const DeleteLabelModal = observer(function DeleteLabelModal(props: Props)
   const { isOpen, onClose, data } = props;
   // store hooks
   const { deleteLabel } = useLabel();
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   // states
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
 
@@ -45,7 +42,7 @@ export const DeleteLabelModal = observer(function DeleteLabelModal(props: Props)
       .then(() => handleClose())
       .catch((error: unknown) => {
         setIsDeleteLoading(false);
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+        toastRefusal(error);
       });
   };
 

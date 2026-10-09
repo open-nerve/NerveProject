@@ -8,8 +8,6 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { ProfileUpdate, Workspace } from "@nerve/api-client";
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EOnboardingSteps } from "@nerve/types";
 // components
 import { SessionUnavailable } from "@/components/account/session-unavailable";
@@ -18,8 +16,8 @@ import { LogoSpinner } from "@/components/common/logo-spinner";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserProfile } from "@/hooks/store/user";
 import { useWorkspacesFetch } from "@/hooks/use-workspaces-fetch";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 // local components
 import { OnboardingHeader } from "./header";
@@ -32,7 +30,6 @@ type Props = {
 };
 
 const OnboardingSteps = observer(function OnboardingSteps({ workspaces }: Props) {
-  const { t } = useTranslation();
   // store hooks
   const { data: profile, updateUserProfile, finishUserOnboarding } = useUserProfile();
   // where the onboarding is: where it was left, as it opens
@@ -41,8 +38,7 @@ const OnboardingSteps = observer(function OnboardingSteps({ workspaces }: Props)
   );
 
   // a change of the profile; nerve's refusal says why, in the session it was sent in alone (M3 design 7.1)
-  const failed = (error: unknown) =>
-    setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+  const failed = useRefusalToast();
   const change = (data: ProfileUpdate) => void followInSession(() => updateUserProfile(data), { failed });
   // settles once nerve has answered, and never rejects (followInSession); a refusal is onFailed's, by default failed's
   const finish = (onFailed: (error: unknown) => void = failed) =>

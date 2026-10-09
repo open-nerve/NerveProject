@@ -7,14 +7,14 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { STATE_GROUPS } from "@nerve/constants";
-import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { StateGroup } from "@nerve/api-client";
 import type { TStateOperationsCallbacks } from "@nerve/types";
 // components
 import { StateForm } from "@/components/project-states";
+// hooks
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey } from "@/lib/error-messages";
 import type { TStateFormData } from "./form";
 
 type TStateCreate = {
@@ -25,7 +25,7 @@ type TStateCreate = {
 
 export const StateCreate = observer(function StateCreate(props: TStateCreate) {
   const { groupKey, createStateCallback, handleClose } = props;
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
 
   // states
   const [loader, setLoader] = useState(false);
@@ -48,7 +48,7 @@ export const StateCreate = observer(function StateCreate(props: TStateCreate) {
       });
       handleClose();
     } catch (error) {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+      toastRefusal(error);
     }
   };
 
