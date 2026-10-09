@@ -7,8 +7,8 @@ import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Label } from "@nerve/api-client";
-import { ApiError } from "@/lib/api-error";
 import { emptyShown, shown } from "@/lib/fake-controls";
+import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { labelOf, projectOf } from "@/store/project/fake-projects";
 import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
@@ -61,7 +61,7 @@ describe("the label settings' inline form", () => {
   });
 
   const refuse = async (): Promise<never> => {
-    throw new ApiError(409, { status: 409, code: "project.label_name_taken", title: "Conflict" });
+    throw refusal(409, "project.label_name_taken");
   };
   const forms: { change: string; form: ReactElement }[] = [
     { change: "creation", form: formOf({ createLabel: refuse, updateLabel: vi.fn() }) },

@@ -98,6 +98,20 @@ export function followAccessToken(page: Page): () => string {
   return () => last;
 }
 
+/** Run in a page: its navigator.clipboard.writeText rejects with a NotAllowedError, as a browser's refusal does. */
+function refuseWrites(): void {
+  navigator.clipboard.writeText = () => Promise.reject(new DOMException("Write permission denied.", "NotAllowedError"));
+}
+
+/**
+ * Makes the browser refuse page the clipboard, as one that has not let it write there (refuseWrites): from now on, in
+ * the document page holds and in each it loads.
+ */
+export async function refuseClipboardWrites(page: Page): Promise<void> {
+  await page.addInitScript(refuseWrites);
+  await page.evaluate(refuseWrites);
+}
+
 /**
  * Chromium's hint when a script reads a canvas back often, which a page logs once for each load that brings the
  * editor: tiptap builds the editor's Emoji node, which asks is-emoji-supported about each emoji version (a canvas

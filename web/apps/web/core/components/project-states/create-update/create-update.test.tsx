@@ -7,7 +7,7 @@ import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TStateOperationsCallbacks } from "@nerve/types";
-import { ApiError } from "@/lib/api-error";
+import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf, stateOf } from "@/store/project/fake-projects";
 import { StateCreate } from "./create";
@@ -61,7 +61,7 @@ describe("the state settings' creation and change", () => {
   });
 
   const refuse = async (): Promise<never> => {
-    throw new ApiError(409, { status: 409, code: "project.state_name_taken", title: "Conflict" });
+    throw refusal(409, "project.state_name_taken");
   };
   const pages: { change: string; page: ReactElement }[] = [
     {

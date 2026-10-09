@@ -5,7 +5,7 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError } from "@/lib/api-error";
+import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import { ProjectAuthWrapper } from "./project-wrapper";
@@ -87,8 +87,7 @@ describe("ProjectAuthWrapper", () => {
   });
 
   it("shows nerve's reason when it refuses the join", async () => {
-    const refusal = new ApiError(403, { status: 403, code: "forbidden", title: "Forbidden" });
-    shown.joinProject.mockImplementationOnce(() => Promise.reject(refusal));
+    shown.joinProject.mockImplementationOnce(() => Promise.reject(refusal(403, "forbidden")));
     render({ kind: "not-member", project: seen });
     shown.screens[0]?.actions?.[0]?.onClick();
     await vi.waitFor(() => expect(toasts).toHaveLength(1));

@@ -17,7 +17,7 @@ import {
   expectPreferences,
   expectWorkspaceDeleted,
 } from "../../fixtures/assert/workspace";
-import { accountId, bearer, createPAT, emailFor, login, newRecord, register, writeRecord } from "../../fixtures/auth";
+import { accountId, anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, closedByEscape, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -374,9 +374,7 @@ test("W3 (page): a deletion nerve made before another tab signed another account
   await expect.poll(deletedAt).toBeInstanceOf(Date);
 
   // Tab B keeps a sign-in of Y as the token manager does; tab A follows, and Doomed is not one of Y's.
-  const tabB = await context.newPage();
-  await tabB.goto("/site.webmanifest.json");
-  await writeRecord(tabB, newRecord(await login(api, y)));
+  await anotherTabSignsIn(context, api, y);
   await expect(tabA.getByText("Workspace not found")).toBeVisible();
 
   // nerve's answer reaches tab A, waited for from its release on (answerTo), so that the wait's deadline is the

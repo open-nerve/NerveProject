@@ -1,16 +1,6 @@
 import { createWorkspace, invitationTo, invite, slugFor, type Api, type WorkspaceInvitation } from "../../fixtures/api";
 import { expectInvitations, expectMembership, lastWorkspaceOf } from "../../fixtures/assert/workspace";
-import {
-  bearer,
-  createPAT,
-  emailFor,
-  login,
-  newRecord,
-  password,
-  register,
-  removeRecord,
-  writeRecord,
-} from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, createPAT, emailFor, password, register, removeRecord } from "../../fixtures/auth";
 import { submitSignIn } from "../../fixtures/auth-pages";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
@@ -293,9 +283,7 @@ test("W5 (page): another address's invitation, once nerve refuses the answer, sa
   await expect(page.getByRole("link", { name: "Sign in to accept" })).toBeVisible();
   // Another tab signs Carol in, and this one follows: nerve's word on Dave's answer was Dave's session's, and the
   // page offers Carol her own invitation's answers.
-  const tabB = await context.newPage();
-  await tabB.goto("/site.webmanifest.json");
-  await writeRecord(tabB, newRecord(await login(api, carolEmail)));
+  const tabB = await anotherTabSignsIn(context, api, carolEmail);
   await expect(page.getByRole("button", { name: "Accept" })).toBeVisible();
   await expect(page.getByText("This invitation was sent to another email address.")).toHaveCount(0);
   // She accepts, and the other tab signs her out while nerve's answer is on its way (holdAnswer): the page, signed out,

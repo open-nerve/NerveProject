@@ -19,7 +19,7 @@ export interface AuthRecord {
 }
 
 /** The record a sign-in with tokens writes: a new login_id of 16 random bytes in hexadecimal. */
-export function newRecord(tokens: AuthTokens): AuthRecord {
+function newRecord(tokens: AuthTokens): AuthRecord {
   return { refresh_token: tokens.refresh_token, login_id: randomBytes(16).toString("hex") };
 }
 
@@ -54,7 +54,7 @@ export async function recordOf(page: Page): Promise<AuthRecord | null> {
  * holding the refresh lock, so that no refresh of another tab writes in between. The other tabs get the
  * storage event.
  */
-export async function writeRecord(page: Page, record: AuthRecord): Promise<void> {
+async function writeRecord(page: Page, record: AuthRecord): Promise<void> {
   await page.evaluate(
     async ({ key, text }) => {
       await navigator.locks.request("nerve.auth.refresh", () => {

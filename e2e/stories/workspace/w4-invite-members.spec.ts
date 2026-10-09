@@ -9,7 +9,7 @@ import {
 } from "../../fixtures/api";
 import { expectInvitations } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import {
@@ -179,7 +179,7 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   );
 });
 
-test("W4 (page): the admin invites a member and a guest, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; an active member's address and a declined invitation's are refused under their rows; the declined one deleted, its address is invited again; a member sees no invitation and asks for none", async ({
+test("W4 (page): the admin invites a member and a guest, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; an active member's address and a declined invitation's are refused under their rows; the declined one deleted, its address is invited again; a copy the browser refuses says so, the link's and the workspace URL's; a member sees no invitation and asks for none", async ({
   api,
   baseURL,
   browser,
@@ -291,6 +291,14 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   const again = await sending;
   expect([again.answer.status(), again.body]).toEqual([201, { invitations: [{ email: erinEmail, role: 5 }] }]);
   await expect(invitationRow(page, erinEmail)).toContainText("Pending");
+  // A browser that refuses the page the clipboard: each copy says it could not, dave's link and the workspace's URL.
+  await refuseClipboardWrites(page);
+  await invitationRow(page, dave).getByRole("button").last().click();
+  await page.getByText("Copy link", { exact: true }).click();
+  await expect(page.getByText("Something went wrong. Please try again.")).toBeVisible();
+  await page.goto(`/${slug}/settings`);
+  await page.getByRole("button", { name: `${new URL(baseURL ?? "").host}/${slug}` }).click();
+  await expect(page.getByText("Something went wrong. Please try again.")).toBeVisible();
 
   const accepted = { email: memberEmail, role: 15, accepted: true, responded: true, deleted: true };
   await expectInvitations(db, slug, adminEmail, [
@@ -306,7 +314,8 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
+    // the members page's load, then the general page's
+    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: [
       "Failed to load resource: the server responded with a status of 404 (Not Found)",
       "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",

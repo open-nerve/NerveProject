@@ -4,7 +4,7 @@ import type { components } from "@nerve/api-client";
 import type { Download } from "@playwright/test";
 
 import { expectTokenStored } from "../../fixtures/assert/identity";
-import { bearer, createPAT, emailFor, login, newRecord, register, writeRecord } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   answerTo,
@@ -267,10 +267,8 @@ test("A11 (page): the list is the account's own: when another tab signs another 
   await expect(tabA.getByText("token of x")).toBeVisible();
 
   // Tab B keeps a sign-in of Y as the token manager does; tab A follows, and its list is Y's.
-  const tabB = await context.newPage();
-  await tabB.goto("/site.webmanifest.json");
   const listed = answerTo(tabA, "GET", "/api/v0/me/api-tokens", async () => {
-    await writeRecord(tabB, newRecord(await login(api, y)));
+    await anotherTabSignsIn(context, api, y);
   });
   expect((await listed).status()).toBe(200);
   await expect(tabA.getByText("token of y")).toBeVisible();

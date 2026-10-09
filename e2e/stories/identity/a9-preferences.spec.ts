@@ -1,7 +1,7 @@
 import type { Request } from "@playwright/test";
 
 import { expectPreferences } from "../../fixtures/assert/identity";
-import { bearer, createPAT, emailFor, login, newRecord, register, writeRecord } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, expectListBesideButton, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -299,9 +299,7 @@ test("A9 (page): a theme change nerve answers after the tab followed another acc
   await tabA.getByRole("option", { name: "Dark", exact: true }).click();
   await sent;
   // Tab B keeps a sign-in of Y as the token manager does; tab A follows, and shows Y's theme.
-  const tabB = await context.newPage();
-  await tabB.goto("/site.webmanifest.json");
-  await writeRecord(tabB, newRecord(await login(api, y)));
+  await anotherTabSignsIn(context, api, y);
   await expect(tabA.getByRole("button", { name: "Light high contrast", exact: true })).toBeVisible();
   await expect(html).toHaveAttribute("data-theme", "light-contrast");
 
