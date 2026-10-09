@@ -124,7 +124,7 @@ const authPathOf = (path: "/" | "/sign-up", invitation: Pick<WorkspaceInvitation
   return `${path}?${new URLSearchParams(query).toString()}`;
 };
 
-test("W6 (page): with sign-up off, the sign-up page says so; the invitee opens her link signed out and signs up to accept it, under the workspace's name, with the link's invitation; back at the link she accepts, takes the profile step alone and lands in the workspace", async ({
+test("W6 (page): with sign-up off, the sign-up page says so; the invitee opens her link signed out and signs up to accept it, under the workspace's name, with the link's invitation, on a page that also leads to her link's sign-in page; back at the link she accepts, takes the profile step alone and lands in the workspace", async ({
   api,
   browser,
   db,
@@ -157,6 +157,10 @@ test("W6 (page): with sign-up off, the sign-up page says so; the invitee opens h
   await expect(page).toHaveURL(authPathOf("/sign-up", toCarol));
   // the heading: "Join", the workspace's logo (its initial while it has no image), its name
   await expect(page.getByText(/^Join\s+A\s+Acme$/)).toBeVisible();
+  // Sign-up closed, the page still leads to the sign-in page of her link, for one who has an account.
+  const signIn = page.getByRole("link", { name: "Sign in", exact: true });
+  await expect(signIn).toBeVisible();
+  await expect(signIn).toHaveAttribute("href", authPathOf("/", toCarol));
   await fillSignUp(page, carolEmail, password);
   const registered = await sentTo(page, "POST", "/api/v0/auth/register", () =>
     page.getByRole("button", { name: "Create account", exact: true }).click()
@@ -188,7 +192,7 @@ test("W6 (page): with sign-up off, the sign-up page says so; the invitee opens h
   await context.close();
 });
 
-test("W6 (page): with sign-up on, one who has an account goes from the sign-up page of her link to the sign-in page, which keeps the link and comes back to it", async ({
+test("W6 (page): with sign-up on, one who has an account goes from the sign-in page of her link to the sign-up page and back, each keeping the link, and signing in comes back to it", async ({
   api,
   baseURL,
   browser,
@@ -204,9 +208,13 @@ test("W6 (page): with sign-up on, one who has an account goes from the sign-up p
   }
   const context = await browser.newContext({ baseURL });
   const page = await context.newPage();
-  await page.goto(authPathOf("/sign-up", toDave));
+  await page.goto(authPathOf("/", toDave));
+  await page.getByRole("link", { name: "Sign up", exact: true }).click();
+  await expect(page).toHaveURL(authPathOf("/sign-up", toDave));
   await page.getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(authPathOf("/", toDave));
+  // the address changes before the page does, and both pages say "Join": the sign-in form is on show first
+  await expect(page.getByRole("button", { name: "Go to workspace" })).toBeVisible();
   await expect(page.getByText(/^Join\s+A\s+Acme$/)).toBeVisible();
   expect(await submitSignIn(page, daveEmail, password)).toBe(200);
   await expect(page).toHaveURL(invitationLinkOf(toDave));
