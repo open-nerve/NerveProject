@@ -99,6 +99,16 @@ describe("useCreateWorkspace", () => {
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_creation_disabled" }]);
   });
 
+  it("sends nothing when nerve refuses the slug's check, and shows its reason", async () => {
+    page.checkWorkspaceSlug.mockRejectedValueOnce(refusal(429, "rate_limited"));
+    expect(await create()).toBeUndefined();
+    expect([page.createWorkspace.mock.calls, page.setError.mock.calls, toasts]).toEqual([
+      [],
+      [],
+      [{ type: "error", title: "toast.error", message: "errors.rate_limited" }],
+    ]);
+  });
+
   it.each(lateSettlings)(
     "neither speaks nor gives the workspace when the creation $settles after another tab moved this one to another account",
     async ({ settle }) => {
@@ -110,6 +120,20 @@ describe("useCreateWorkspace", () => {
       settle(created);
       expect(await creating).toBeUndefined();
       expect([page.setError.mock.calls, toasts]).toEqual([[], []]);
+    }
+  );
+
+  it.each(lateSettlings)(
+    "neither says why nor sends anything when the slug's check $settles after another tab moved this one to another account",
+    async ({ settle }) => {
+      const checked = heldChange<undefined>();
+      page.checkWorkspaceSlug.mockReturnValueOnce(checked.sent.then(() => ({ available: false, reason: "taken" })));
+      const creating = create();
+      await vi.waitFor(() => expect(page.checkWorkspaceSlug).toHaveBeenCalledTimes(1));
+      switchAccount();
+      settle(checked);
+      expect(await creating).toBeUndefined();
+      expect([page.createWorkspace.mock.calls, page.setError.mock.calls, toasts]).toEqual([[], [], []]);
     }
   );
 });

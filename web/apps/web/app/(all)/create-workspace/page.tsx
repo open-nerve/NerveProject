@@ -76,7 +76,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
               <h4 className="text-20 font-semibold">{t("workspace_creation.heading")}</h4>
               <div className="sm:w-3/4 md:w-2/5">
                 <CreateWorkspaceForm
-                  onCreated={(workspace) => void openWorkspace(workspace)}
+                  onCreated={openWorkspace}
                   defaultValues={defaultValues}
                   setDefaultValues={setDefaultValues}
                 />

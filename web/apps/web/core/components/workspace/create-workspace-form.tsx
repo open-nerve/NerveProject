@@ -22,8 +22,11 @@ import { useNavigate } from "react-router";
 import { slugFrom, useCreateWorkspace, type CreationForm } from "./use-create-workspace";
 
 type Props = {
-  /** What the page does with the workspace created (in the session it was created in). */
-  onCreated: (workspace: Workspace) => void;
+  /**
+   * What the page does with the workspace created (in the session it was created in): the form stays busy until it
+   * is done, so that no second click checks the new workspace's slug again.
+   */
+  onCreated: (workspace: Workspace) => Promise<void>;
   defaultValues: CreationForm;
   setDefaultValues: Dispatch<SetStateAction<CreationForm>>;
 };
@@ -47,7 +50,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
 
   const handleCreateWorkspace = async (formData: CreationForm) => {
     const created = await create(formData, setError);
-    if (created) onCreated(created);
+    if (created) await onCreated(created);
   };
 
   useEffect(

@@ -7,7 +7,7 @@ import {
 } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
@@ -105,12 +105,17 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
   const slug = slugFor(testInfo);
   await url.fill(slug.replace("-", " ").toUpperCase());
   await expect(url).toHaveValue(slug);
+  // The form stays busy until the workspace opens: while nerve's answer to the write of the one opened last is on its
+  // way (holdAnswer), no second click checks the new workspace's slug again.
+  const release = await holdAnswer(page, "PATCH", "/api/v0/me/profile");
   const sent = await sentTo(page, "POST", "/api/v0/workspaces", () =>
     page.getByRole("button", { name: "Create workspace" }).click()
   );
   expect([sent.answer.status(), sent.body]).toEqual([201, { name: "Acme Two", slug, organization_size: "2-10" }]);
-  await expect(page).toHaveURL(`/${slug}`);
   await expect(page.getByText("Workspace created successfully")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Creating workspace" })).toBeDisabled();
+  expect((await answerTo(page, "PATCH", "/api/v0/me/profile", release)).status()).toBe(200);
+  await expect(page).toHaveURL(`/${slug}`);
   const id = await expectWorkspaceCreated(db, email, {
     name: "Acme Two",
     slug,

@@ -4,14 +4,14 @@
  */
 
 import type { UseFormSetError } from "react-hook-form";
-import type { FieldError, OrganizationSize, SlugAvailability, Workspace, WorkspaceCreate } from "@nerve/api-client";
+import type { OrganizationSize, SlugAvailability, Workspace, WorkspaceCreate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // lib
 import { ApiError } from "@/lib/api-error";
-import { FIELD_ERROR_MESSAGES, errorMessageKey } from "@/lib/error-messages";
+import { FIELD_ERROR_MESSAGES, errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 
 /** A creation form's values: no size until one is chosen (null, which keeps a select of sizes controlled). */
@@ -39,26 +39,28 @@ const SLUG_MESSAGES: Record<SlugUnavailable, string> = {
   invalid: "workspace_creation.errors.validation.url_alphanumeric",
 };
 
-/** A field error of nerve's on the slug: a reserved slug is not allowed; one of other characters, not of the format. */
-const SLUG_CODES: Partial<Record<FieldError["code"], string>> = {
-  not_allowed: SLUG_MESSAGES.reserved,
-  invalid_format: SLUG_MESSAGES.invalid,
+/** The fields of the creation's form, under which nerve's field errors show. */
+const FIELDS: readonly (keyof CreationFields)[] = ["name", "slug"];
+
+/**
+ * The slug's own messages in place of those fieldErrorKeys gives any field for two of nerve's codes: a reserved slug
+ * is not allowed; one of other characters, not of the format.
+ */
+const SLUG_FIELD_MESSAGES: Partial<Record<string, string>> = {
+  [FIELD_ERROR_MESSAGES.not_allowed]: SLUG_MESSAGES.reserved,
+  [FIELD_ERROR_MESSAGES.invalid_format]: SLUG_MESSAGES.invalid,
 };
 
-/** nerve's refusal of a creation (M3 design 2 W1), as the form shows it. */
+/**
+ * nerve's refusal of a creation (M3 design 2 W1), as the form shows it: a slug taken after its check, under the slug;
+ * field errors under the form's fields when they name only those (needsErrorBanner); else nerve's reason in a toast.
+ */
 export function creationRefusal(error: unknown): CreationRefusal {
-  if (!(error instanceof ApiError)) return { kind: "toast", message: errorMessageKey(error) };
-  if (error.problem?.code === "workspace.slug_taken") return { kind: "fields", fields: { slug: SLUG_MESSAGES.taken } };
-  const named = error.problem?.errors ?? [];
-  const fields: CreationFields = {};
-  for (const { field, code } of named) {
-    if (field === "slug") fields.slug = SLUG_CODES[code] ?? FIELD_ERROR_MESSAGES[code];
-    if (field === "name") fields.name = FIELD_ERROR_MESSAGES[code];
-  }
-  const shown = Object.keys(fields).length;
-  return shown > 0 && shown === named.length
-    ? { kind: "fields", fields }
-    : { kind: "toast", message: errorMessageKey(error) };
+  if (error instanceof ApiError && error.problem?.code === "workspace.slug_taken")
+    return { kind: "fields", fields: { slug: SLUG_MESSAGES.taken } };
+  if (needsErrorBanner(error, FIELDS)) return { kind: "toast", message: errorMessageKey(error) };
+  const { name, slug } = fieldErrorKeys(error);
+  return { kind: "fields", fields: { name, slug: slug && (SLUG_FIELD_MESSAGES[slug] ?? slug) } };
 }
 
 /**
@@ -77,8 +79,8 @@ export function useCreateWorkspace(): (
 
   // the slug's check decides: an unavailable slug is not sent
   const attempt = async (form: CreationForm): Promise<Attempt> => {
-    const slug = await checkWorkspaceSlug(form.slug);
-    if (!slug.available) return { kind: "unavailable", reason: slug.reason ?? "taken" };
+    const availability = await checkWorkspaceSlug(form.slug);
+    if (!availability.available) return { kind: "unavailable", reason: availability.reason ?? "taken" };
     const data: WorkspaceCreate = {
       name: form.name,
       slug: form.slug,
