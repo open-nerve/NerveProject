@@ -273,6 +273,26 @@ function followRequests(page: Page, names: Record<string, string>) {
   };
 }
 
+/**
+ * The end of a story that loads one page: waits until the requests followed are exactly expected, none pending; then
+ * no API request failed or went to an old address, the Content-Security-Policy blocked nothing and the page threw
+ * nothing; its console is quiet but for warnings; and, read once more after all that, nothing came after the list was
+ * whole.
+ */
+async function expectExactly(
+  page: Page,
+  watch: PageWatch,
+  requests: ReturnType<typeof followRequests>,
+  expected: string[],
+  warnings: readonly string[]
+): Promise<void> {
+  const whole = { pending: 0, requests: expected.toSorted() };
+  await expect.poll(() => requests.between(0)).toEqual(whole);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings });
+  expect(requests.between(0)).toEqual(whole);
+}
+
 for (const account of ACCOUNTS) {
   const visits = REQUESTS[account];
   test(`S2: the workspace's ${account} signs in and opens ${visits.map(([path]) => path).join(", then ")}`, async ({
@@ -332,15 +352,7 @@ test("S2: the admin of two workspaces opens a project of one at the other's addr
   // a project counts in the address's workspace alone (M3 design 3.19): its own resources are not fetched here
   await page.goto(`/${slug}/settings/projects/${lab.id}`);
   await expect(page.getByText("Project not found")).toBeVisible();
-  const expected = [...APP, ...WORKSPACE, ...PROJECT].toSorted();
-  await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: expected });
-  expect(watch.apiFailures).toEqual([]);
-  expect(watch.oldApiRequests).toEqual([]);
-  expect(watch.cspViolations).toEqual([]);
-  expect(watch.pageErrors).toEqual([]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
-  // Nothing came after the list was whole.
-  expect(requests.between(0)).toEqual({ pending: 0, requests: expected });
+  await expectExactly(page, watch, requests, [...APP, ...WORKSPACE, ...PROJECT], [EMOJI_CHECK_WARNING]);
 });
 
 test("S2: a newcomer opens /, which sends him to the onboarding: it asks for his workspaces, as the app does, and no more", async ({
@@ -353,11 +365,7 @@ test("S2: a newcomer opens /, which sends him to the onboarding: it asks for his
   await page.goto("/");
   await expect(page).toHaveURL("/onboarding");
   await expect(page.getByText("Create your profile.")).toBeVisible();
-  await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
-  expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
-  await expectQuietConsole(page, watch);
-  // Nothing came after the list was whole.
-  expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
+  await expectExactly(page, watch, requests, APP, []);
 });
 
 test("S2: a member of a workspace opens his profile's settings directly: they ask for his workspaces, as the app does, which their sidebar lists, and no more", async ({
@@ -371,9 +379,5 @@ test("S2: a member of a workspace opens his profile's settings directly: they as
   const requests = followRequests(page, {});
   await page.goto("/settings/profile/general");
   await expect(page.getByRole("link", { name: "Acme" })).toBeVisible();
-  await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
-  expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
-  // Nothing came after the list was whole.
-  expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
+  await expectExactly(page, watch, requests, APP, [EMOJI_CHECK_WARNING]);
 });
