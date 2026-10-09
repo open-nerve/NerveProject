@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P9 `web-workspace-pages` |
 | 日期 | 2026-10-09 |
-| 状态 | 已裁定：第 3 节的八条由控制者裁定（P1–P8，2026-10-09，都接受）；预检（0 高、4 中、10 低）之后修订一次，各条的落点在第 3 节的"预检之后"；控制者的浏览器核对 C1–C5 和评审在 plan 的 Task 之后（M3 设计 9.7） |
+| 状态 | 已完成（[评审记录](../reviews/P9-web-workspace-pages-review.md)）：各 Task 的修正轮和修复轮的改动由修复轮的文档（裁定 F-8）和复审之后的补充（F-11、F-12）改入第 2–5 节和附录，2.15 是修复轮（2026-10-09）。第 3 节由控制者的裁定 P1–P8 和预检的发现（0 高、4 中、10 低）定下，修订一轮（`1f777867`），各条的落点在第 3 节的"预检之后"；执行开始时的裁定和执行中的裁定见评审记录第 3 节，修复轮的裁定 F-1–F-12 见第 3、4 节；控制者的浏览器核对 C1–C5 见第 2 节 |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（W1–W9、S2）、3.8、3.10、3.11、3.14、3.18、7.1、7.4、7.5、9.5、9.6、9.7、12（P9）、13.1 节；[总体设计](../../v0-design.md) 7.7 |
 | 前置交接 | [P8a spec](P8a-web-workspace-data.md) 第 3 节第 12 条、第 5 节 P9 一行；[P8a review](../reviews/P8a-web-workspace-data-review.md) 第 6 节 P9 一行；[P8b spec](P8b-web-project-data.md) 第 5 节 P9 一行；[P8b review](../reviews/P8b-web-project-data-review.md) 第 6 节 P9 一行（E5）；[M2 收尾交接](../handoffs/M2-closeout.md) 第 1、2、11、13 节；P2、P3、P6 的 spec 第 5 节，P3、P4b、P6 的 review 第 6 节中 P9 的行；[M1-P2 交接](../handoffs/M1-P2-trim-content.md)；[Codex 设计评审](../reviews/M3-design-codex-adversarial-review.md) M-4、4.3 |
 | 计划 | [P9 plan](../plans/P9-web-workspace-pages.md) |
@@ -422,7 +422,7 @@ S2 的清单在 Task 1、2、6、10 的树上加入，每次 `make e2e` 都核�
 
 - 有手改的 TS 文件：web 应用 76 个（含 22 个测试）、`@nerve/types` 的 `navigation-preferences.ts`、`@nerve/utils` 的 `validation.ts`、`@nerve/constants` 的 `workspace.ts`，都是 0 条警告（`oxfinal.sh`）。P9 没有机械步骤，没有只经机械步骤到达的文件。`4b1334a5` 上这些文件共有 1 条（`use-workspace-invitation.tsx`，Task 3 清零；各包的上限要求警告数等于上限，web 的只降了 1，其余不变）。
 - 上限：web 应用 360 → 359（Task 3）→ 357（Task 4 的修正轮：`empty-space.tsx` 清零）→ 356（修复轮：`confirm-workspace-member-remove.tsx` 的正的 `tabIndex`）；`utils` 7、`types` 0、`constants` 1、`propel` 16、`ui` 19 不变。修复轮之后 P9 有手改的 web 的 TS 文件 115 个（其中测试 30 个）都是 0 条警告。
-- 抑制：没有新的抑制；删去两处（Task 6：新手引导的根原来以 `useEffect` 决定第一步，抑制 `react-hooks/exhaustive-deps`；Task 8：对话框的 `unicorn/consistent-function-scoping`），188 → 186（`suppressions.py`）。
+- 抑制：没有新的抑制；删去三处（Task 6：新手引导的根原来以 `useEffect` 决定第一步，抑制 `react-hooks/exhaustive-deps`；Task 8：对话框的 `unicorn/consistent-function-scoping`；修复轮的 F-4：`power-k/config/account-commands.ts` 的退出登录改用 `useSignOut`，删去 `useCallback` 和它的 `react-hooks/exhaustive-deps`），188 → 185（`suppressions.py`）。
 - 根目录 `.oxlintrc.json` 的两条错误级的范围（2.14）：`no-restricted-imports` 加 3 个文件，`typescript/no-non-null-assertion` 加 P9 的新模块和测试，各在加入它们的 Task；每组一个变异（A.2 的 W4、W12）。
 - 关键词守卫：65 条规则、3 个例外，每个 Task 都没有命中；P9 加一条 `workspaces-list-fetch`（Task 10，2.14），没有删掉旧地址（P8a、P8b 已删完）。修复轮加 `refusal-toast`、`sign-out-toast`（2.14、2.15）：67 条规则、3 个例外，没有命中。
 
