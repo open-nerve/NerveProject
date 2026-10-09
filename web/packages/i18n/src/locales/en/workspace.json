@@ -48,6 +48,26 @@
       }
     }
   },
+  "workspace_invitation": {
+    "invited": "You have been invited to {workspace} as {role}.",
+    "description": "Your workspace is where you'll create projects, collaborate on your work items, and organize different streams of work in your Nerve account.",
+    "accept": "Accept",
+    "ignore": "Ignore",
+    "addressed": "The invitation was sent to one email address: sign in or sign up with it to accept.",
+    "sign_in_to_accept": "Sign in to accept",
+    "sign_up_to_accept": "Sign up to accept",
+    "mismatch": "Sign out, and sign in with the address it was sent to.",
+    "declined": {
+      "title": "You declined this invitation.",
+      "description": "Ask an admin of {workspace} for a new one."
+    },
+    "invalid": {
+      "title": "This invitation link is not valid.",
+      "description": "Ask an admin of the workspace for a new link."
+    },
+    "home": "Continue to home",
+    "sign_in": "Sign in"
+  },
   "workspace_projects": {
     "label": "{count, plural, one {Project} other {Projects}}",
     "create": {

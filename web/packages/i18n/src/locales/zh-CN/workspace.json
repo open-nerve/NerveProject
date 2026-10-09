@@ -48,6 +48,26 @@
       }
     }
   },
+  "workspace_invitation": {
+    "invited": "您受邀以 {role} 的身份加入 {workspace}。",
+    "description": "工作区是您创建项目、协作处理工作项、组织不同工作流的地方。",
+    "accept": "接受",
+    "ignore": "忽略",
+    "addressed": "这份邀请发给了一个指定的邮箱：用它登录或注册即可接受。",
+    "sign_in_to_accept": "登录以接受",
+    "sign_up_to_accept": "注册以接受",
+    "mismatch": "请退出登录，再用收到邀请的邮箱登录。",
+    "declined": {
+      "title": "您已忽略这份邀请。",
+      "description": "请向 {workspace} 的管理员要一份新的邀请。"
+    },
+    "invalid": {
+      "title": "这个邀请链接无效。",
+      "description": "请向工作区的管理员要一个新的链接。"
+    },
+    "home": "回到首页",
+    "sign_in": "登录"
+  },
   "workspace_projects": {
     "label": "{count, plural, one {项目} other {项目}}",
     "create": {

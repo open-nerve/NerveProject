@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { invitationLink } from "./invitation-link";
+import { invitationAuthPath, invitationLink } from "./invitation-link";
 
 // The link an admin copies for an invitation (M3 design 7.4, 9.5): the invitation page reads its id and its token
 // back from the query as they were.
@@ -23,5 +23,17 @@ describe("invitationLink", () => {
       "i-1",
       token,
     ]);
+  });
+});
+
+describe("invitationAuthPath", () => {
+  it.each(["/", "/sign-up"] as const)("opens %s for the link's invitation, and comes back to the link", (path) => {
+    const page = new URL(invitationAuthPath(path, { id: "i-1", token: "a&b" }), "https://nerve.example");
+    expect([
+      page.pathname,
+      page.searchParams.get("invitation_id"),
+      page.searchParams.get("token"),
+      page.searchParams.get("next_path"),
+    ]).toEqual([path, "i-1", "a&b", "/workspace-invitations?invitation_id=i-1&token=a%26b"]);
   });
 });

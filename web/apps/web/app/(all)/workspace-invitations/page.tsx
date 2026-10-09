@@ -4,90 +4,148 @@
  * See the LICENSE file for details.
  */
 
+import { useState } from "react";
 import { observer } from "mobx-react";
-import { useNavigate, useSearchParams } from "react-router";
-import { BoxesOutline, CloseOutline, TickOutline, UserOutline } from "@makeplane/propel/icons";
+import { useSearchParams } from "react-router";
+import { ROLE } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { BoxesOutline, CloseOutline, LogOutOutline, TickOutline, UserOutline } from "@makeplane/propel/icons";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { EmptySpace, EmptySpaceItem } from "@/components/ui/empty-space";
+import { invitationView } from "@/components/workspace/invitation-view";
+import { useInvitationAnswer } from "@/components/workspace/use-invitation-answer";
 // helpers
 import { EPageTypes } from "@/helpers/authentication.helper";
 // hooks
-import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
 import { useInvitationPreview } from "@/hooks/use-invitation-preview";
+// lib
+import { invitationAuthPath } from "@/lib/invitation-link";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 
+/**
+ * The page an invitation's link opens (M3 design 7.4, W5): what invitationView decides, from the link, its invitation
+ * as the link shows it, and the caller.
+ */
 function WorkspaceInvitationPage() {
-  // router
-  const navigate = useNavigate();
-  // query params
+  // query params: the invitation's link
   const [searchParams] = useSearchParams();
-  const invitation_id = searchParams.get("invitation_id");
-  const token = searchParams.get("token");
+  const link = { invitationId: searchParams.get("invitation_id"), token: searchParams.get("token") };
   // store hooks
-  const { data: currentUser } = useUser();
-  const { acceptInvitation, declineInvitation } = useWorkspace();
+  const { data: currentUser, signOut } = useUser();
+  const { t } = useTranslation();
+  // whether nerve answered the caller's answer that the invitation is another address's (decision 1)
+  const [mismatched, setMismatched] = useState(false);
 
-  const { data: invitationDetail, error } = useInvitationPreview(invitation_id, token);
+  const preview = useInvitationPreview(link.invitationId, link.token);
+  const view = invitationView({
+    link,
+    preview: { data: preview.data, error: preview.error },
+    signedIn: currentUser !== undefined,
+    mismatched,
+  });
 
-  const handleAccept = async () => {
-    if (!invitationDetail || !token) return;
-    try {
-      // nerve accepts the invitation of the caller's own address alone
-      await acceptInvitation(invitationDetail.id, token);
-      navigate(`/${invitationDetail.workspace_slug}`);
-    } catch (err: unknown) {
-      console.error(err);
-    }
-  };
+  // the caller's answers, followed only in the session they were sent in (use-invitation-answer.ts)
+  const { accept, decline } = useInvitationAnswer({
+    reread: () => void preview.mutate(),
+    mismatched: () => setMismatched(true),
+  });
 
-  const handleReject = async () => {
-    if (!invitationDetail || !token) return;
-    try {
-      await declineInvitation(invitationDetail.id, token);
-      navigate("/");
-    } catch (err: unknown) {
-      console.error(err);
+  const home = currentUser ? (
+    <EmptySpaceItem Icon={BoxesOutline} title={t("workspace_invitation.home")} href="/" />
+  ) : (
+    <EmptySpaceItem Icon={UserOutline} title={t("workspace_invitation.sign_in")} href="/" />
+  );
+
+  const content = () => {
+    switch (view.kind) {
+      case "loading":
+        return <LogoSpinner />;
+      case "invalid":
+        return (
+          <EmptySpace
+            title={t("workspace_invitation.invalid.title")}
+            description={t("workspace_invitation.invalid.description")}
+          >
+            {home}
+          </EmptySpace>
+        );
+      case "unavailable":
+        return (
+          <EmptySpace title={t("errors.unreachable")} description="">
+            <EmptySpaceItem Icon={BoxesOutline} title={t("common.retry")} action={() => void preview.mutate()} />
+          </EmptySpace>
+        );
+      case "declined":
+        return (
+          <EmptySpace
+            title={t("workspace_invitation.declined.title")}
+            description={t("workspace_invitation.declined.description", { workspace: view.invitation.workspace_name })}
+          >
+            {home}
+          </EmptySpace>
+        );
+      case "sign-in":
+        return (
+          <EmptySpace
+            title={t("workspace_invitation.invited", {
+              workspace: view.invitation.workspace_name,
+              role: ROLE[view.invitation.role],
+            })}
+            description={t("workspace_invitation.addressed")}
+          >
+            <EmptySpaceItem
+              Icon={UserOutline}
+              title={t("workspace_invitation.sign_in_to_accept")}
+              href={invitationAuthPath("/", { id: view.invitation.id, token: view.token })}
+            />
+            <EmptySpaceItem
+              Icon={UserOutline}
+              title={t("workspace_invitation.sign_up_to_accept")}
+              href={invitationAuthPath("/sign-up", { id: view.invitation.id, token: view.token })}
+            />
+          </EmptySpace>
+        );
+      case "mismatch":
+        return (
+          <EmptySpace
+            title={t("errors.workspace_invitation_email_mismatch")}
+            description={t("workspace_invitation.mismatch")}
+          >
+            <EmptySpaceItem Icon={LogOutOutline} title={t("sign_out")} action={() => void signOut()} />
+          </EmptySpace>
+        );
+      case "answer": {
+        const { invitation, token } = view;
+        return (
+          <EmptySpace
+            title={t("workspace_invitation.invited", {
+              workspace: invitation.workspace_name,
+              role: ROLE[invitation.role],
+            })}
+            description={t("workspace_invitation.description")}
+          >
+            <EmptySpaceItem
+              Icon={TickOutline}
+              title={t("workspace_invitation.accept")}
+              action={() => void accept(invitation.id, token)}
+            />
+            <EmptySpaceItem
+              Icon={CloseOutline}
+              title={t("workspace_invitation.ignore")}
+              action={() => void decline(invitation.id, token)}
+            />
+          </EmptySpace>
+        );
+      }
     }
   };
 
   return (
     <AuthenticationWrapper pageType={EPageTypes.PUBLIC}>
-      <div className="flex h-full w-full flex-col items-center justify-center px-3">
-        {invitationDetail && !invitationDetail.declined ? (
-          error ? (
-            <div className="shadow-2xl flex w-full flex-col space-y-4 rounded-sm border border-subtle bg-surface-1 px-4 py-8 text-center md:w-1/3">
-              <h2 className="text-18 uppercase">INVITATION NOT FOUND</h2>
-            </div>
-          ) : (
-            <EmptySpace
-              title={`You have been invited to ${invitationDetail.workspace_name}`}
-              description="Your workspace is where you'll create projects, collaborate on your work items, and organize different streams of work in your Nerve account."
-            >
-              <EmptySpaceItem Icon={TickOutline} title="Accept" action={handleAccept} />
-              <EmptySpaceItem Icon={CloseOutline} title="Ignore" action={handleReject} />
-            </EmptySpace>
-          )
-        ) : error || invitationDetail?.declined ? (
-          <EmptySpace
-            title="This invitation link is not active anymore."
-            description="Your workspace is where you'll create projects, collaborate on your work items, and organize different streams of work in your Nerve account."
-            link={{ text: "Or start from an empty project", href: "/" }}
-          >
-            {!currentUser ? (
-              <EmptySpaceItem Icon={UserOutline} title="Sign in to continue" href="/" />
-            ) : (
-              <EmptySpaceItem Icon={BoxesOutline} title="Continue to home" href="/" />
-            )}
-          </EmptySpace>
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <LogoSpinner />
-          </div>
-        )}
-      </div>
+      <div className="flex h-full w-full flex-col items-center justify-center px-3">{content()}</div>
     </AuthenticationWrapper>
   );
 }
