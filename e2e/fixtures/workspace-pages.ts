@@ -20,14 +20,21 @@ export async function anotherBrowser(
 }
 
 /**
- * Deletes the workspace of slug, whose name is name, from its general page, which page shows: the admin opens the
- * deletion, types the name and the words that confirm it, and confirms. Resolves with nerve's answer to the deletion.
+ * Confirms the deletion of the workspace whose name is name on its general page, which page shows: the admin opens the
+ * deletion, types the name and the words that confirm it, and confirms. Resolves once the confirmation is clicked, not
+ * waiting for nerve's answer.
  */
-export async function deleteFromGeneralPage(page: Page, slug: string, name: string): Promise<Response> {
+export async function confirmDeletion(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await page.locator("#workspaceName").fill(name);
   await page.locator("#confirmDelete").fill("delete my workspace");
-  return answerTo(page, "DELETE", `/api/v0/workspaces/${slug}`, () =>
-    page.getByRole("button", { name: "Confirm", exact: true }).click()
-  );
+  await page.getByRole("button", { name: "Confirm", exact: true }).click();
+}
+
+/**
+ * Deletes the workspace of slug, whose name is name, from its general page, which page shows (confirmDeletion).
+ * Resolves with nerve's answer to the deletion.
+ */
+export function deleteFromGeneralPage(page: Page, slug: string, name: string): Promise<Response> {
+  return answerTo(page, "DELETE", `/api/v0/workspaces/${slug}`, () => confirmDeletion(page, name));
 }

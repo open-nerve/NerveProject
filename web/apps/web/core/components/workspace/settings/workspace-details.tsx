@@ -51,7 +51,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
   const { workspaceSlug } = useParams();
   // store hooks
   const { getWorkspaceBySlug, updateWorkspace } = useWorkspace();
-  const currentWorkspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
+  const workspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
 
@@ -63,15 +63,13 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     watch,
     formState: { errors },
   } = useForm<TWorkspaceForm>({
-    defaultValues: currentWorkspace
-      ? formValues(currentWorkspace)
-      : { name: "", organization_size: "2-10", timezone: "UTC" },
+    defaultValues: workspace ? formValues(workspace) : { name: "", organization_size: "2-10", timezone: "UTC" },
   });
 
   // the fields the form edits, which nerve's WorkspaceUpdate takes; the page follows the change only in the session it
   // was sent in (M3 design 7.1)
   const onSubmit = async (formData: TWorkspaceForm) => {
-    if (!currentWorkspace) return;
+    if (!workspace) return;
 
     setIsLoading(true);
 
@@ -81,7 +79,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
       timezone: formData.timezone,
     };
 
-    await followInSession(() => updateWorkspace(currentWorkspace.slug, payload), {
+    await followInSession(() => updateWorkspace(workspace.slug, payload), {
       done: () =>
         setToast({
           title: "Success!",
@@ -95,9 +93,9 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
   };
 
   const handleCopyUrl = () => {
-    if (!currentWorkspace) return;
+    if (!workspace) return;
 
-    void copyUrlToClipboard(`${currentWorkspace.slug}`)
+    void copyUrlToClipboard(`${workspace.slug}`)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -116,29 +114,29 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
   };
 
   useEffect(() => {
-    if (currentWorkspace) reset(formValues(currentWorkspace));
-  }, [currentWorkspace, reset]);
+    if (workspace) reset(formValues(workspace));
+  }, [workspace, reset]);
 
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
 
-  if (!currentWorkspace) return null;
+  if (!workspace) return null;
 
   return (
     <>
       <div className={cn("flex w-full flex-col gap-y-7", { "opacity-60": !isAdmin })}>
         <div className="flex items-center gap-5">
           <div className="flex shrink-0 flex-col gap-1">
-            {currentWorkspace.logo_url ? (
+            {workspace.logo_url ? (
               <div className="relative flex size-14">
                 <img
-                  src={getFileURL(currentWorkspace.logo_url)}
+                  src={getFileURL(workspace.logo_url)}
                   className="absolute top-0 left-0 size-full rounded-md object-cover"
                   alt="Workspace Logo"
                 />
               </div>
             ) : (
               <div className="relative grid size-14 place-items-center rounded-md bg-accent-primary text-24 text-on-color uppercase">
-                {currentWorkspace.name.charAt(0)}
+                {workspace.name.charAt(0)}
               </div>
             )}
           </div>
@@ -146,7 +144,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
             <div className="mb:-my-5 text-h5-semibold leading-6">{watch("name")}</div>
             <button type="button" onClick={handleCopyUrl} className="text-left text-body-xs-regular tracking-tight">{`${
               typeof window !== "undefined" && window.location.origin.replace("http://", "").replace("https://", "")
-            }/${currentWorkspace.slug}`}</button>
+            }/${workspace.slug}`}</button>
           </div>
         </div>
         <div className="flex flex-col gap-7">
@@ -219,7 +217,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                     value={`${
                       typeof window !== "undefined" &&
                       window.location.origin.replace("http://", "").replace("https://", "")
-                    }/${currentWorkspace.slug}`}
+                    }/${workspace.slug}`}
                     readOnly
                     disabled
                   />
@@ -259,7 +257,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
       </div>
       {isAdmin && (
         <div className="mt-10">
-          <DeleteWorkspaceSection workspace={currentWorkspace} />
+          <DeleteWorkspaceSection workspace={workspace} />
         </div>
       )}
     </>

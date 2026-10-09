@@ -21,7 +21,7 @@ import { accountId, bearer, createPAT, emailFor, login, newRecord, register, wri
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
-import { anotherBrowser, deleteFromGeneralPage } from "../../fixtures/workspace-pages";
+import { anotherBrowser, confirmDeletion, deleteFromGeneralPage } from "../../fixtures/workspace-pages";
 
 // W3, the workspace's settings (M3 design 2), with the session switch of 7.1.
 
@@ -332,7 +332,8 @@ test("W3 (page): the admin changes the name, size and time zone, which hold afte
     [],
     [],
   ]);
-  // The settings' two loads, and the workspace's home; the browser's report of the refusal.
+  // Two loads of the settings: the first, and the reload; the deletion's landing navigates within the app. The
+  // browser's report of the refusal.
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
@@ -363,7 +364,7 @@ test("W3 (page): a deletion nerve made before another tab signed another account
 
   // X deletes Doomed: nerve deletes it at once, and its answer waits (holdAnswer: route.fetch, later route.fulfill).
   const release = await holdAnswer(tabA, "DELETE", `/api/v0/workspaces/${slug}`);
-  const deleted = deleteFromGeneralPage(tabA, slug, "Doomed");
+  await confirmDeletion(tabA, "Doomed");
   const deletedAt = async () =>
     (await db.query<{ deleted_at: Date | null }>(`SELECT deleted_at FROM workspaces WHERE slug = $1`, [slug]))[0]
       ?.deleted_at ?? null;
@@ -375,16 +376,16 @@ test("W3 (page): a deletion nerve made before another tab signed another account
   await writeRecord(tabB, newRecord(await login(api, y)));
   await expect(tabA.getByText("Workspace not found")).toBeVisible();
 
-  // nerve's answer reaches tab A. A move would come with the deletion's continuation, as its answer settles it: the
-  // window of 2 s after the release is orders of magnitude longer than the moment that takes.
+  // nerve's answer reaches tab A, waited for from its release on (answerTo), so that the wait's deadline is the
+  // answer's alone. A move would come with the deletion's continuation, as its answer settles it: the window of 2 s
+  // after the release is orders of magnitude longer than the moment that takes.
   const moved = tabA
     .waitForURL((url) => url.pathname !== `/${slug}/settings`, { timeout: 2_000 })
     .then(
       () => true,
       () => false
     );
-  await release();
-  expect((await deleted).status()).toBe(204);
+  expect((await answerTo(tabA, "DELETE", `/api/v0/workspaces/${slug}`, release)).status()).toBe(204);
   expect(await moved).toBe(false);
   // counted at once, as a retrying check would pass once a toast had gone
   expect(await tabA.getByText("Workspace deleted.").count()).toBe(0);
