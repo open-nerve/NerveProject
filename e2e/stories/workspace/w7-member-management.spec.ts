@@ -13,7 +13,7 @@ import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "..
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { registerOnboarded } from "../../fixtures/settings-pages";
+import { closedByEscape, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
 
@@ -292,7 +292,13 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   // carol is removed: her membership ends, its row kept; a new invitation brings her back, with its role.
   const carols = await membership(carol.id);
   const removal = { method: "DELETE", path: `/api/v0/workspace-members/${carols}` };
-  expect((await endMembership(page, carol.email, "Remove", removal)).status()).toBe(204);
+  // While the removal is out the dialog that asked cannot be dismissed: Cancel is disabled, and Escape leaves it open.
+  const release = await holdAnswer(page, removal.method, removal.path);
+  const removed = endMembership(page, carol.email, "Remove", removal);
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  await release();
+  expect((await removed).status()).toBe(204);
   await expect(memberRow(page, carol.email)).toContainText("Suspended");
   await expectMembershipEnded(db, slug, carol.email, adminEmail, 15, []);
   await inviteAndAccept(api, admin.access_token, slug, { email: carol.email, token: carol.tokens.access_token }, 5);

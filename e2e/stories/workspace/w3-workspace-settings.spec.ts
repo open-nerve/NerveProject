@@ -19,7 +19,7 @@ import {
 } from "../../fixtures/assert/workspace";
 import { accountId, bearer, createPAT, emailFor, login, newRecord, register, writeRecord } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import { answerTo, closedByEscape, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, confirmDeletion, deleteFromGeneralPage } from "../../fixtures/workspace-pages";
 
@@ -365,6 +365,9 @@ test("W3 (page): a deletion nerve made before another tab signed another account
   // X deletes Doomed: nerve deletes it at once, and its answer waits (holdAnswer: route.fetch, later route.fulfill).
   const release = await holdAnswer(tabA, "DELETE", `/api/v0/workspaces/${slug}`);
   await confirmDeletion(tabA, "Doomed");
+  // While it is out the dialog cannot be dismissed: Cancel is disabled, and Escape leaves it open.
+  await expect(tabA.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(tabA)).toBe(false);
   const deletedAt = async () =>
     (await db.query<{ deleted_at: Date | null }>(`SELECT deleted_at FROM workspaces WHERE slug = $1`, [slug]))[0]
       ?.deleted_at ?? null;

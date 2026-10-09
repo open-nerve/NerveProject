@@ -10,7 +10,7 @@ import {
 import { expectInvitations } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import {
   anotherBrowser,
@@ -283,7 +283,12 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   // erin's declined invitation deleted, her address is invited again.
   const erins = { method: "DELETE", path: `/api/v0/workspace-invitations/${toErin.id}` };
   expect((await removeInvitation(page, erinEmail, erins)).status()).toBe(204);
-  const again = await sendInvitations(page, slug, [{ email: erinEmail, role: "Guest" }]);
+  // While the invitation is out the form cannot be closed: its Cancel is disabled until nerve has answered.
+  const release = await holdAnswer(page, "POST", invitations);
+  const sending = sendInvitations(page, slug, [{ email: erinEmail, role: "Guest" }]);
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  await release();
+  const again = await sending;
   expect([again.answer.status(), again.body]).toEqual([201, { invitations: [{ email: erinEmail, role: 5 }] }]);
   await expect(invitationRow(page, erinEmail)).toContainText("Pending");
 

@@ -86,6 +86,23 @@ export async function holdAnswer(page: Page, method: string, path: string): Prom
 }
 
 /**
+ * Presses Escape on page, which shows one dialog, and resolves with whether the dialog closed within a second. A
+ * dialog that closes still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check
+ * made just after the key cannot tell it from one that stays: the second outlasts the transition.
+ */
+export async function closedByEscape(page: Page): Promise<boolean> {
+  const closed = page
+    .getByRole("dialog")
+    .waitFor({ state: "detached", timeout: 1_000 })
+    .then(
+      () => true,
+      () => false
+    );
+  await page.keyboard.press("Escape");
+  return closed;
+}
+
+/**
  * The records of a CSV text (RFC 4180): fields apart by commas, each record ending with CRLF (the last one may
  * not), a field in double quotes holding commas, CR, LF and double quotes, each of those doubled.
  */

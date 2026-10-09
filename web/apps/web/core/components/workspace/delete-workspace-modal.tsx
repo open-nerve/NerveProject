@@ -89,8 +89,15 @@ export const DeleteWorkspaceModal = observer(function DeleteWorkspaceModal(props
     });
   };
 
+  // While the deletion is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): nerve's answer is followed
+  // by the dialog that sent it, and no dialog opened again offers Confirm while the request is out.
   return (
-    <ModalCore isOpen={isOpen} handleClose={() => onClose()} position={EModalPosition.CENTER} width={EModalWidth.XL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isSubmitting ? undefined : handleClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XL}
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 p-6">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <span
@@ -166,7 +173,7 @@ export const DeleteWorkspaceModal = observer(function DeleteWorkspaceModal(props
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="lg" onClick={handleClose}>
+          <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
             {t("cancel")}
           </Button>
           <Button variant="error-fill" size="lg" type="submit" disabled={!confirmed(watch())} loading={isSubmitting}>

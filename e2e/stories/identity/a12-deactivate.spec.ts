@@ -5,7 +5,7 @@ import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fi
 import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { bearer, createPAT, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
+import { answerTo, closedByEscape, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers } from "../../fixtures/users";
 
@@ -130,7 +130,7 @@ test("A12 (page): a deactivation nerve fails says why, sent once however often C
   await expect(page.getByRole("button", { name: "Deactivating" })).toBeDisabled();
   // The confirmation cannot be dismissed while the request is out either: Cancel is disabled, Escape leaves it open.
   await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
-  await page.keyboard.press("Escape");
+  expect(await closedByEscape(page)).toBe(false);
   const refused = await answerTo(page, "POST", "/api/v0/me/deactivate", async () => answer());
   expect(refused.status()).toBe(500);
 
@@ -143,8 +143,7 @@ test("A12 (page): a deactivation nerve fails says why, sent once however often C
   await expect(page).toHaveURL("/settings/profile/general");
   expect(await recordOf(page)).toEqual(held);
   expect(await accountStateOf(db, email)).toEqual(before);
-  // Escape closed nothing: a closing dialog fades out still showing its content, but this one is still there to
-  // cancel. Cancel, enabled again, closes it.
+  // Cancel, enabled again once nerve has answered, closes it.
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
