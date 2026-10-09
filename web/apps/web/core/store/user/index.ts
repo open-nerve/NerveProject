@@ -101,8 +101,8 @@ export class UserStore implements IUserStore {
 
   /**
    * @description fetches the account and its profile, once the session is decided: without one it asks
-   * nerve nothing (M2 design 7.1). The workspaces come with M3 (M2 design 3.1). A change of session while
-   * they load is no failure: the new session has a RootStore of its own (store-context.tsx), and
+   * nerve nothing (M2 design 7.1). The workspaces are not fetched here: useWorkspacesFetch fetches them, where a
+   * page needs them (M3 design 7.1). A change of session while the account and profile load is no failure: the new session has a RootStore of its own (store-context.tsx), and
    * AuthenticationWrapper fetches the new session's account through it.
    * @returns {Promise<User | undefined>}
    */

@@ -55,3 +55,11 @@ M3 合并时：
 仍未处理，状态保持 `open`：保留名单的前端一侧（P8）；个人主页的页面（P11，故事 P9 的页面版本和 C10）。
 
 来源：[M3/P4a spec](../specs/P4a-projects.md) 第 7 节。
+
+## 处理结果（M3/P9）
+
+- **侧边栏偏好**（页面一侧完成）：`ProjectNavigationDialog` 经 `useProjectNavigationPreferences()`（`web/apps/web/core/hooks/use-navigation-preferences.ts`）读写项目导航偏好（`GET`、`PATCH /api/v0/me/workspaces/{slug}/preferences`）：每个修改由 `WorkspacePreferencesStore.updatePreferences` 在队列轮到它时作用于 nerve 最近一次回答的设置；设置到达之前侧边栏按 nerve 的默认值（`ACCORDION`、10）显示。W8 的页面版本核对（M3/P9 spec 2.8）。
+
+保留名单的前端一侧在 M3/P8a 完成（`RESTRICTED_URLS` 删除，[P8a spec](../specs/P8a-web-workspace-data.md) 第 1 节）。仍未处理，状态保持 `open`：个人主页的页面（P11，故事 P9 的页面版本和 C10）。
+
+来源：[M3/P9 spec](../specs/P9-web-workspace-pages.md) 第 7 节。

@@ -8199,7 +8199,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.1` | store 把修改作用于提出修改时它持有的设置（E5） | `preferences.store.test.ts` | vitest |
 | `T8.2` | store 没有这个工作区的设置时照样发出修改，作用于 nerve 的默认值 | `preferences.store.test.ts` | vitest |
 | `T8.3` | 限制项目数的开关按 nerve 的默认值决定打开或关闭，而不是按它作用的设置（E5） | `navigation-preferences.test.ts`、`preferences.store.test.ts`、故事 W8 | vitest；端到端 |
-| `T8.4` | 对话框把修改（开关的一次也在其中）作用于提出修改时侧边栏显示的设置（页面上的 E5） | `use-navigation-preferences.test.ts` | vitest |
+| `T8.4` | 对话框在修改排队之前取提出修改时侧边栏显示的设置，把修改（开关的一次也在其中）作用于它们（页面上的 E5；Task 8 的修正轮照探查 `T8p.1` 改写：原来的写法在轮到它时才读，读到的就是 store 所持的，与正确的代码等价） | `use-navigation-preferences.test.ts`、故事 W8 | vitest；端到端 |
 | `T8.5` | 设置到达之前侧边栏显示全部项目（P28，Plane） | `navigation-preferences.test.ts`、`use-navigation-preferences.test.ts` | vitest |
 | `T8.6` | 导航设置的修改被拒绝时进了控制台，页面不说（P28） | `use-navigation-preferences.test.ts`、故事 W8 | vitest；端到端 |
 | `T8.7` | 对话框的修改不论会话都跟进（P28） | `use-navigation-preferences.test.ts` | vitest |

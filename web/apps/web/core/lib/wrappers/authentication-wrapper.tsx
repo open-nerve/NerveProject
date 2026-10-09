@@ -42,6 +42,9 @@ function Loading() {
  * to a valid next_path, else to /onboarding until onboarded, else to the landing (M3 design 3.14), as from
  * the onboarding page once onboarded: useLanding decides it, and the wrapper renders what it says. While nerve
  * cannot be reached the session is kept, and the page says so instead of moving.
+ * A sign-in or an account switch passes through Loading and mounts the children again; a sign-out keeps a PUBLIC
+ * page's children mounted, so what such a page holds of a session is read only in its signed-in views; state above
+ * the wrapper outlives every change, and holds nothing a session owns (M3/P9 spec 3 #4).
  */
 export const AuthenticationWrapper = observer(function AuthenticationWrapper(props: TAuthenticationWrapper) {
   const { children, pageType = EPageTypes.AUTHENTICATED } = props;
