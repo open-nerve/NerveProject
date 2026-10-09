@@ -65,6 +65,18 @@ export async function writeRecord(page: Page, record: AuthRecord): Promise<void>
   );
 }
 
+/**
+ * Removes the record from the localStorage of page as the token manager does as it signs out (M2 design 7.1), after
+ * nerve's logout, which this leaves out: holding the refresh lock. The other tabs get the storage event, and sign out.
+ */
+export async function removeRecord(page: Page): Promise<void> {
+  await page.evaluate(async (key) => {
+    await navigator.locks.request("nerve.auth.refresh", () => {
+      localStorage.removeItem(key);
+    });
+  }, authKey);
+}
+
 /** A password that meets the rules and is not common. */
 export const password = "Tr0ub4dor&3";
 

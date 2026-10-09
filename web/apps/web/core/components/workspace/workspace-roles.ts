@@ -6,8 +6,8 @@
 import type { WorkspaceRole } from "@nerve/api-client";
 
 /**
- * A workspace's roles, the lowest first, as its role selects offer them, each labelled by ROLE: a select gives the
- * picked role's number, the WorkspaceRole nerve's WorkspaceMemberUpdate, InvitationCreate and WorkspaceInvitationUpdate
- * take (a string is refused).
+ * A workspace's roles, the lowest first, as its role selects offer them: a select gives the picked role's number, the
+ * WorkspaceRole nerve's WorkspaceMemberUpdate, InvitationCreate and WorkspaceInvitationUpdate take (a string is
+ * refused).
  */
 export const WORKSPACE_ROLES: WorkspaceRole[] = [5, 15, 20];

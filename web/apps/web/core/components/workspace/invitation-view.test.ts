@@ -9,7 +9,8 @@ import { refusal } from "@/lib/fake-refusal";
 import { invitationView, type InvitationView } from "./invitation-view";
 
 // What the invitation page shows (M3 design 7.4, W5), each case one step further down the decision than the one
-// before: a page that showed a later view on an earlier case's inputs fails it.
+// before: a page that showed a later view on an earlier case's inputs fails it. nerve's error comes with the invitation
+// as SWR still holds it from an earlier read, as after a refused answer's reread: the error decides.
 
 const acme: InvitationPreview = {
   id: "i-1",
@@ -37,17 +38,17 @@ describe("invitationView", () => {
     },
     {
       when: "nerve knows no invitation of the link",
-      inputs: { ...page, preview: { data: undefined, error: refusal(404, "workspace.invitation_not_found") } },
+      inputs: { ...page, preview: { data: acme, error: refusal(404, "workspace.invitation_not_found") } },
       view: { kind: "invalid" },
     },
     {
       when: "the link's id is none",
-      inputs: { ...page, preview: { data: undefined, error: refusal(400, "bad_request") } },
+      inputs: { ...page, preview: { data: acme, error: refusal(400, "bad_request") } },
       view: { kind: "invalid" },
     },
     {
       when: "nerve could not be asked",
-      inputs: { ...page, preview: { data: undefined, error: new TypeError("offline") } },
+      inputs: { ...page, preview: { data: acme, error: new TypeError("offline") } },
       view: { kind: "unavailable" },
     },
     {

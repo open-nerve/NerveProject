@@ -1,9 +1,19 @@
 import { createWorkspace, invitationTo, invite, slugFor, type Api, type WorkspaceInvitation } from "../../fixtures/api";
 import { expectInvitations, expectMembership, lastWorkspaceOf } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, password, register } from "../../fixtures/auth";
+import {
+  bearer,
+  createPAT,
+  emailFor,
+  login,
+  newRecord,
+  password,
+  register,
+  removeRecord,
+  writeRecord,
+} from "../../fixtures/auth";
 import { submitSignIn } from "../../fixtures/auth-pages";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { invitationLinkOf } from "../../fixtures/workspace-pages";
 
@@ -142,7 +152,7 @@ test("W5 (API): the link shows the workspace and the role without the address; t
   await expectMembership(db, slug, daveEmail, null);
 });
 
-test("W5 (page): signed out, the link shows the workspace and the role and sends the invitee to sign in and back; she accepts and lands in the workspace, written as the one she opened last; another invitation she ignores says she declined it; one deleted while its link is open is refused with the reason, and is no longer valid", async ({
+test("W5 (page): signed out, the link shows the workspace and the role and sends the invitee to sign in and back; she accepts, with a double click sending one acceptance, and lands in the workspace, written as the one she opened last; another invitation she ignores says she declined it; a link whose first read does not reach nerve offers to read it again; one deleted while its link is open is refused with the reason, and is no longer valid", async ({
   api,
   baseURL,
   browser,
@@ -171,18 +181,23 @@ test("W5 (page): signed out, the link shows the workspace and the role and sends
   await page.goto(invitationLinkOf(toAcme));
   await expect(page.getByText("You have been invited to Acme as Guest.")).toBeVisible();
   await expect(page.getByText(carolEmail)).toHaveCount(0);
-  await page.getByRole("button", { name: "Sign in to accept" }).click();
+  await page.getByRole("link", { name: "Sign in to accept" }).click();
   expect(await submitSignIn(page, carolEmail, password)).toBe(200);
   await expect(page).toHaveURL(invitationLinkOf(toAcme));
 
-  // She accepts: the page sends the link's token, and opens Acme, which it writes as the one she opened last.
-  const accepted = await sentTo(page, "POST", `/api/v0/workspace-invitations/${toAcme.id}/accept`, () =>
-    page.getByRole("button", { name: "Accept" }).click()
+  // She accepts, with a double click: the page sends the link's token once, and opens Acme, which it writes as the one
+  // she opened last.
+  const acceptAcme = `/api/v0/workspace-invitations/${toAcme.id}/accept`;
+  const accepted = await sentTo(page, "POST", acceptAcme, () =>
+    page.getByRole("button", { name: "Accept" }).dblclick()
   );
   expect([accepted.answer.status(), accepted.body]).toEqual([200, { token: toAcme.token }]);
   await expect(page).toHaveURL(`/${slug}`);
   await expectMembership(db, slug, carolEmail, { role: 5, is_active: true });
   await expect.poll(() => lastWorkspaceOf(db, carolEmail)).toBe(acme.id);
+  expect(watch.apiRequests.filter((request) => request === `POST ${acceptAcme}`)).toEqual([`POST ${acceptAcme}`]);
+  // counted at once, as a retrying check would pass once a toast had gone
+  expect(await page.getByText("Error!").count()).toBe(0);
 
   // She ignores Other's: the page reads the invitation again, which says she declined it.
   await page.goto(invitationLinkOf(toOther));
@@ -196,9 +211,26 @@ test("W5 (page): signed out, the link shows the workspace and the role and sends
     { email: carolEmail, role: 15, accepted: false, responded: true, deleted: false },
   ]);
 
-  // Third's, deleted while its link is open: nerve refuses the acceptance and says why; the page reads the link again.
+  // Third's: the link's first read does not reach nerve, and the page offers to read it again, which shows it.
+  const thirdPreview = `/api/v0/workspace-invitations/${toThird.id}`;
+  let cut = false;
+  await page.route(
+    (url) => url.pathname === thirdPreview,
+    async (route) => {
+      if (cut || route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      cut = true;
+      await route.abort();
+    }
+  );
   await page.goto(invitationLinkOf(toThird));
+  await expect(page.getByText("Cannot reach the server for now. Please try again.")).toBeVisible();
+  await page.getByRole("button", { name: "Retry" }).click();
   await expect(page.getByRole("button", { name: "Accept" })).toBeVisible();
+
+  // Third's, deleted while its link is open: nerve refuses the acceptance and says why; the page reads the link again.
   const deleted = await api.DELETE("/api/v0/workspace-invitations/{invitation_id}", {
     params: { path: { invitation_id: toThird.id } },
     headers: bearer(admin.access_token),
@@ -211,14 +243,15 @@ test("W5 (page): signed out, the link shows the workspace and the role and sends
   await expect(page.getByText("This invitation link is not valid.")).toBeVisible();
   await expectMembership(db, third, carolEmail, null);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
-    [`404 POST ${accept}`, `404 GET /api/v0/workspace-invitations/${toThird.id}`],
+    [`net::ERR_FAILED GET ${thirdPreview}`, `404 POST ${accept}`, `404 GET ${thirdPreview}`],
     [],
     [],
   ]);
-  // Acme's home logs the hint once; the browser reports the two refusals.
+  // Acme's home logs the hint once; the browser reports the read cut and the two refusals.
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING],
     errors: [
+      "Failed to load resource: net::ERR_FAILED",
       "Failed to load resource: the server responded with a status of 404 (Not Found)",
       "Failed to load resource: the server responded with a status of 404 (Not Found)",
     ],
@@ -226,8 +259,9 @@ test("W5 (page): signed out, the link shows the workspace and the role and sends
   await context.close();
 });
 
-test("W5 (page): another address's invitation, once nerve refuses the answer, says it was sent to another address, offers no answer but signing out, and changes nothing; a link with a changed token, or none, is not valid", async ({
+test("W5 (page): another address's invitation, once nerve refuses the answer, says it was sent to another address, offers no answer but signing out, and changes nothing; once another tab signs the invitee in, it offers her the answers, and once it signs her out while her acceptance is on its way, the ways to sign in; a link with a changed token, or none, is not valid", async ({
   api,
+  context,
   db,
   signedInPage,
 }, testInfo) => {
@@ -236,6 +270,7 @@ test("W5 (page): another address's invitation, once nerve refuses the answer, sa
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin.access_token, { name: "Acme", slug });
   const carolEmail = emailFor(testInfo, "carol");
+  await registerOnboarded(api, carolEmail);
   await invite(api, admin.access_token, slug, [{ email: carolEmail, role: 15 }]);
   const toCarol = await invitationTo(api, admin.access_token, slug, carolEmail);
   const daveEmail = emailFor(testInfo, "dave");
@@ -255,7 +290,23 @@ test("W5 (page): another address's invitation, once nerve refuses the answer, sa
   ]);
   // Signed out, the link offers to sign in as the invitee.
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("button", { name: "Sign in to accept" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in to accept" })).toBeVisible();
+  // Another tab signs Carol in, and this one follows: nerve's word on Dave's answer was Dave's session's, and the
+  // page offers Carol her own invitation's answers.
+  const tabB = await context.newPage();
+  await tabB.goto("/site.webmanifest.json");
+  await writeRecord(tabB, newRecord(await login(api, carolEmail)));
+  await expect(page.getByRole("button", { name: "Accept" })).toBeVisible();
+  await expect(page.getByText("This invitation was sent to another email address.")).toHaveCount(0);
+  // She accepts, and the other tab signs her out while nerve's answer is on its way (holdAnswer): the page, signed out,
+  // shows the ways to sign in rather than wait for an answer it no longer follows.
+  const release = await holdAnswer(page, "POST", accept);
+  await page.getByRole("button", { name: "Accept" }).click();
+  await expect(page.getByRole("button", { name: "Accept" })).toHaveCount(0);
+  await removeRecord(tabB);
+  await expect(page.getByRole("link", { name: "Sign in to accept" })).toBeVisible();
+  expect((await answerTo(page, "POST", accept, release)).status()).toBe(200);
+  await expect(page.getByRole("link", { name: "Sign in to accept" })).toBeVisible();
 
   // A token changed in one character: nerve finds no invitation. No token: the page does not ask.
   const changed = toCarol.token.slice(0, 10) + (toCarol.token[10] === "A" ? "B" : "A") + toCarol.token.slice(11);

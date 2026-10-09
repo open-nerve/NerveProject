@@ -7067,7 +7067,7 @@ test("W6 (page): with sign-up off, the sign-up page says so; the invitee opens h
 
   // With her link: she signs up to accept it, and the registration carries the invitation.
   await page.goto(invitationLinkOf(toCarol));
-  await page.getByRole("button", { name: "Sign up to accept" }).click();
+  await page.getByRole("link", { name: "Sign up to accept" }).click();
   await expect(page).toHaveURL(authPathOf("/sign-up", toCarol));
   // the heading: "Join", the workspace's logo (its initial while it has no image), its name
   await expect(page.getByText(/^Join\s+A\s+Acme$/)).toBeVisible();

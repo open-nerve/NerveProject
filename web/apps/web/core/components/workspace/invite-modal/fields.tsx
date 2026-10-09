@@ -11,7 +11,7 @@ import { Controller } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import type { WorkspaceInvitationsCreate } from "@nerve/api-client";
-import { ROLE } from "@nerve/constants";
+import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { CustomSelect } from "@nerve/ui";
@@ -87,7 +87,11 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                 render={({ field: { value, onChange } }) => (
                   <CustomSelect
                     value={value}
-                    label={<span className="text-caption-sm-regular sm:text-body-xs-regular">{ROLE[value]}</span>}
+                    label={
+                      <span className="text-caption-sm-regular sm:text-body-xs-regular">
+                        {t(ROLE_DETAILS[value].i18n_title)}
+                      </span>
+                    }
                     onChange={onChange}
                     className="w-24 flex-grow"
                     input
@@ -96,7 +100,7 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                     gives the picked option's value, a role's number */}
                     {WORKSPACE_ROLES.map((role) => (
                       <CustomSelect.Option key={role} value={role}>
-                        {ROLE[role]}
+                        {t(ROLE_DETAILS[role].i18n_title)}
                       </CustomSelect.Option>
                     ))}
                   </CustomSelect>

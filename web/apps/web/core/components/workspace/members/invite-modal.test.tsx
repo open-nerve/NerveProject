@@ -30,7 +30,7 @@ vi.mock("@headlessui/react", async (importOriginal) => ({
   Dialog: { Title: ({ children }: { children?: ReactNode }) => children },
 }));
 
-/** Renders the form, types email in its one row, picks the role labelled role, and submits it. */
+/** Renders the form, types email in its one row, picks the role labelled role (its name's key), and submits it. */
 async function invite(email: string, role: string) {
   renderToStaticMarkup(<SendWorkspaceInvitationModal isOpen onClose={page.onClose} invite={page.invite} />);
   const [address] = shown.inputs;
@@ -52,7 +52,7 @@ beforeEach(() => {
 
 describe("SendWorkspaceInvitationModal", () => {
   it("sends its rows as nerve's WorkspaceInvitationsCreate, each role a number; then closes, and says so", async () => {
-    await invite("dave@example.com", "Guest");
+    await invite("dave@example.com", "role_details.guest.title");
     expect(page.invite.mock.calls).toEqual([[{ invitations: [{ email: "dave@example.com", role: 5 }] }]]);
     expect(page.onClose).toHaveBeenCalledTimes(1);
     expect(toasts).toEqual([
@@ -65,7 +65,7 @@ describe("SendWorkspaceInvitationModal", () => {
   });
 
   it("sends nothing for an address that is none", async () => {
-    await invite("dave", "Member");
+    await invite("dave", "role_details.member.title");
     expect([page.invite.mock.calls, page.onClose.mock.calls, toasts]).toEqual([[], [], []]);
   });
 
@@ -74,13 +74,13 @@ describe("SendWorkspaceInvitationModal", () => {
     page.invite.mockRejectedValueOnce(
       refusal(422, "validation_failed", [{ field: "invitations[0].email", code: "duplicate" }])
     );
-    await invite("dave@example.com", "Member");
+    await invite("dave@example.com", "role_details.member.title");
     expect([page.onClose.mock.calls, toasts]).toEqual([[], []]);
   });
 
   it("stays open, and shows nerve's reason, when it refuses the invitations", async () => {
     page.invite.mockRejectedValueOnce(refusal(403, "forbidden"));
-    await invite("dave@example.com", "Member");
+    await invite("dave@example.com", "role_details.member.title");
     expect(page.onClose.mock.calls).toEqual([]);
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.forbidden" }]);
   });
@@ -90,7 +90,7 @@ describe("SendWorkspaceInvitationModal", () => {
     async ({ settle }) => {
       const sent = heldChange<undefined>();
       page.invite.mockReturnValueOnce(sent.sent);
-      const submitted = invite("dave@example.com", "Member");
+      const submitted = invite("dave@example.com", "role_details.member.title");
       await vi.waitFor(() => expect(page.invite).toHaveBeenCalledTimes(1));
       switchAccount();
       settle(sent);

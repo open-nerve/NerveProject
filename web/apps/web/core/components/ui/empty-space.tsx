@@ -4,19 +4,17 @@
  * See the LICENSE file for details.
  */
 
-// next
-import React from "react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
 import { Link } from "react-router";
 import { ChevronRightOutline } from "@makeplane/propel/icons";
 
 type EmptySpaceProps = {
   title: string;
   description: string;
-  children: any;
-  link?: { text: string; href: string };
+  children: ReactNode;
 };
 
-function EmptySpace({ title, description, children, link }: EmptySpaceProps) {
+function EmptySpace({ title, description, children }: EmptySpaceProps) {
   return (
     <div className="max-w-lg">
       <h2 className="text-16 font-medium text-primary">{title}</h2>
@@ -24,29 +22,18 @@ function EmptySpace({ title, description, children, link }: EmptySpaceProps) {
       <ul role="list" className="mt-6 divide-y divide-subtle-1 border-t border-b border-subtle">
         {children}
       </ul>
-      {link ? (
-        <div className="mt-6 flex">
-          <Link to={link.href}>
-            <span className="text-13 font-medium text-accent-primary hover:text-accent-primary">
-              {link.text}
-              <span aria-hidden="true"> &rarr;</span>
-            </span>
-          </Link>
-        </div>
-      ) : null}
     </div>
   );
 }
 
-type EmptySpaceItemProps = {
-  title: string;
-  Icon: any;
-  action?: () => void;
-  href?: string;
-};
+/** An item of an EmptySpace's list: a button that does action, or a link to href. */
+type EmptySpaceItemProps = { title: string; Icon: ComponentType<SVGProps<SVGSVGElement>> } & (
+  | { action: () => void; href?: undefined }
+  | { href: string; action?: undefined }
+);
 
 function EmptySpaceItem({ title, Icon, action, href }: EmptySpaceItemProps) {
-  let spaceItem = (
+  const spaceItem = (
     <div className="group relative flex items-center space-x-3 py-4">
       <div className="flex-shrink-0">
         <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary">
@@ -62,13 +49,17 @@ function EmptySpaceItem({ title, Icon, action, href }: EmptySpaceItemProps) {
     </div>
   );
 
-  if (href) {
-    spaceItem = <Link to={href}>{spaceItem}</Link>;
-  }
-
   return (
-    <li className="cursor-pointer" onClick={action} role="button">
-      {spaceItem}
+    <li>
+      {href === undefined ? (
+        <button type="button" className="w-full cursor-pointer text-left" onClick={action}>
+          {spaceItem}
+        </button>
+      ) : (
+        <Link to={href} className="block">
+          {spaceItem}
+        </Link>
+      )}
     </li>
   );
 }

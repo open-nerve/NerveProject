@@ -236,6 +236,7 @@
         "web/apps/web/core/components/workspace/invitation-view.test.ts",
         "web/apps/web/core/components/workspace/use-invitation-answer.ts",
         "web/apps/web/core/components/workspace/use-invitation-answer.test.ts",
+        "web/apps/web/core/components/ui/empty-space.tsx",
         "web/apps/web/core/hooks/use-open-workspace.ts",
         "web/apps/web/core/hooks/use-open-workspace.test.ts"
       ],

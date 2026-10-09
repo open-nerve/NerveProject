@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useSearchParams } from "react-router";
-import { ROLE } from "@nerve/constants";
+import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { BoxesOutline, CloseOutline, LogOutOutline, TickOutline, UserOutline } from "@makeplane/propel/icons";
 // components
@@ -27,9 +27,11 @@ import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 
 /**
  * The page an invitation's link opens (M3 design 7.4, W5): what invitationView decides, from the link, its invitation
- * as the link shows it, and the caller.
+ * as the link shows it, and the caller. It renders under AuthenticationWrapper, which unmounts it as the tab moves to
+ * another account (M3 design 7.1): what it holds of the caller's answers (nerve's word that the invitation is
+ * another address's, an answer on its way) goes with the session it came from.
  */
-function WorkspaceInvitationPage() {
+const WorkspaceInvitation = observer(function WorkspaceInvitation() {
   // query params: the invitation's link
   const [searchParams] = useSearchParams();
   const link = { invitationId: searchParams.get("invitation_id"), token: searchParams.get("token") };
@@ -38,6 +40,9 @@ function WorkspaceInvitationPage() {
   const { t } = useTranslation();
   // whether nerve answered the caller's answer that the invitation is another address's (decision 1)
   const [mismatched, setMismatched] = useState(false);
+  // whether the caller's answer is on its way: the page shows the spinner in place of the answers, so that a second
+  // click finds none to send
+  const [answering, setAnswering] = useState(false);
 
   const preview = useInvitationPreview(link.invitationId, link.token);
   const view = invitationView({
@@ -47,11 +52,20 @@ function WorkspaceInvitationPage() {
     mismatched,
   });
 
-  // the caller's answers, followed only in the session they were sent in (use-invitation-answer.ts)
+  // the caller's answers, followed only in the session they were sent in (use-invitation-answer.ts); an answer is on
+  // its way until the page shows nerve's word on it: the invitation read again, or another address's; an accepted
+  // one, until the workspace opens
   const { accept, decline } = useInvitationAnswer({
-    reread: () => void preview.mutate(),
-    mismatched: () => setMismatched(true),
+    reread: () => void preview.mutate().finally(() => setAnswering(false)),
+    mismatched: () => {
+      setMismatched(true);
+      setAnswering(false);
+    },
   });
+  const answer = (send: () => Promise<void>) => {
+    setAnswering(true);
+    void send();
+  };
 
   const home = currentUser ? (
     <EmptySpaceItem Icon={BoxesOutline} title={t("workspace_invitation.home")} href="/" />
@@ -92,7 +106,7 @@ function WorkspaceInvitationPage() {
           <EmptySpace
             title={t("workspace_invitation.invited", {
               workspace: view.invitation.workspace_name,
-              role: ROLE[view.invitation.role],
+              role: t(ROLE_DETAILS[view.invitation.role].i18n_title),
             })}
             description={t("workspace_invitation.addressed")}
           >
@@ -118,24 +132,26 @@ function WorkspaceInvitationPage() {
           </EmptySpace>
         );
       case "answer": {
+        // the answers alone wait: a tab another tab signs out meanwhile shows the ways to sign in
+        if (answering) return <LogoSpinner />;
         const { invitation, token } = view;
         return (
           <EmptySpace
             title={t("workspace_invitation.invited", {
               workspace: invitation.workspace_name,
-              role: ROLE[invitation.role],
+              role: t(ROLE_DETAILS[invitation.role].i18n_title),
             })}
             description={t("workspace_invitation.description")}
           >
             <EmptySpaceItem
               Icon={TickOutline}
               title={t("workspace_invitation.accept")}
-              action={() => void accept(invitation.id, token)}
+              action={() => answer(() => accept(invitation.id, token))}
             />
             <EmptySpaceItem
               Icon={CloseOutline}
               title={t("workspace_invitation.ignore")}
-              action={() => void decline(invitation.id, token)}
+              action={() => answer(() => decline(invitation.id, token))}
             />
           </EmptySpace>
         );
@@ -143,11 +159,14 @@ function WorkspaceInvitationPage() {
     }
   };
 
+  return <div className="flex h-full w-full flex-col items-center justify-center px-3">{content()}</div>;
+});
+
+/** The invitation's page, public: to one signed out as to one signed in (WorkspaceInvitation). */
+export default function WorkspaceInvitationPage() {
   return (
     <AuthenticationWrapper pageType={EPageTypes.PUBLIC}>
-      <div className="flex h-full w-full flex-col items-center justify-center px-3">{content()}</div>
+      <WorkspaceInvitation />
     </AuthenticationWrapper>
   );
 }
-
-export default observer(WorkspaceInvitationPage);
