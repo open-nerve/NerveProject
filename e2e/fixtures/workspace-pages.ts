@@ -124,6 +124,21 @@ export function invitationRow(page: Page, email: string): Locator {
 }
 
 /**
+ * The row at index of the members page's invitation form, which page shows: its address, its role's select, and the
+ * reason nerve refused the row, under its address.
+ */
+export function invitationFormRow(page: Page, index: number): Locator {
+  // the innermost element that holds the row's address and a button, its role's select: rows come after the list that
+  // holds them
+  return page
+    .getByRole("dialog")
+    .locator("div")
+    .filter({ has: page.locator(`[id="invitations.${index}.email"]`) })
+    .filter({ has: page.getByRole("button") })
+    .last();
+}
+
+/**
  * Sends invitations from the members page, which page shows to an admin of the workspace of slug: opens the form, types
  * each address in a row of its own and picks its role by its label, and sends them. Resolves with what the page sent,
  * and nerve's answer.
@@ -140,9 +155,9 @@ export async function sendInvitations(
     await before;
     if (index > 0) await form.getByRole("button", { name: "Add more" }).click();
     await form.locator(`[id="invitations.${index}.email"]`).fill(email);
-    // a row's role select shows the role it holds, Member as the row is added
+    // a row holds Member as it is added; its role's select is its first button (its removal's comes after it)
     if (role !== "Member") {
-      await form.getByRole("button", { name: "Member", exact: true }).nth(index).click();
+      await invitationFormRow(page, index).getByRole("button").first().click();
       await page.getByRole("option", { name: role, exact: true }).click();
     }
   }, Promise.resolve());

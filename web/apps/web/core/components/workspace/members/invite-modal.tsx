@@ -39,10 +39,7 @@ export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvit
   // the form empties once the modal has gone (its leave transition)
   const handleClose = () => {
     onClose();
-    const timeout = setTimeout(() => {
-      clear();
-      clearTimeout(timeout);
-    }, 350);
+    setTimeout(clear, 350);
   };
 
   return (

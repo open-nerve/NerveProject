@@ -14,6 +14,7 @@ import { registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import {
   anotherBrowser,
+  invitationFormRow,
   invitationLinkOf,
   invitationRow,
   memberRow,
@@ -195,8 +196,10 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   await inviteAndAccept(api, admin.access_token, slug, { email: memberEmail, token: member.access_token }, 15);
   // erin declined an invitation to Acme.
   const erinEmail = emailFor(testInfo, "erin");
-  await invite(api, admin.access_token, slug, [{ email: erinEmail, role: 15 }]);
-  const toErin = await invitationTo(api, admin.access_token, slug, erinEmail);
+  const [toErin] = await invite(api, admin.access_token, slug, [{ email: erinEmail, role: 15 }]);
+  if (!toErin) {
+    throw new Error("the invitation of erin was not created");
+  }
   await decline(api, (await registerOnboarded(api, erinEmail)).access_token, toErin);
   const [dave, frank] = [emailFor(testInfo, "dave"), emailFor(testInfo, "frank")];
   const invitations = `/api/v0/workspaces/${slug}/invitations`;
@@ -217,9 +220,13 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
   await page.goto(`/${slug}/settings/members`);
-  // erin's invitation says it was declined, and offers neither a role nor a link.
+  // erin's invitation says it was declined, and offers neither a role nor a link: its menu holds its removal alone.
   await expect(invitationRow(page, erinEmail)).toContainText("Declined");
   await expect(invitationRow(page, erinEmail).getByRole("button", { name: "Member" })).toHaveCount(0);
+  await invitationRow(page, erinEmail).getByRole("button").last().click();
+  await expect(page.getByText("Remove", { exact: true })).toBeVisible();
+  await expect(page.getByText("Copy link", { exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
 
   // dave as a member, frank as a guest: one request, nerve's WorkspaceInvitationsCreate, each role a number.
   const sent = await sendInvitations(page, slug, [
@@ -268,12 +275,11 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
     { email: erinEmail, role: "Member" },
   ]);
   expect(refused.answer.status()).toBe(422);
-  const form = page.getByRole("dialog");
-  await expect(form.getByText("Already a member of this workspace.")).toBeVisible();
-  await expect(
-    form.getByText("This address is invited already (delete that invitation first), or given twice here.")
-  ).toBeVisible();
-  await form.getByRole("button", { name: "Cancel" }).click();
+  await expect(invitationFormRow(page, 0)).toContainText("Already a member of this workspace.");
+  await expect(invitationFormRow(page, 1)).toContainText(
+    "This address is invited already (delete that invitation first), or given twice here."
+  );
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
   // erin's declined invitation deleted, her address is invited again.
   const erins = { method: "DELETE", path: `/api/v0/workspace-invitations/${toErin.id}` };
   expect((await removeInvitation(page, erinEmail, erins)).status()).toBe(204);
