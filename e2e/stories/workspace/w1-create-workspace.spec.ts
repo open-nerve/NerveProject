@@ -12,6 +12,7 @@ import {
 } from "../../fixtures/assert/workspace";
 import { anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { deferred } from "../../fixtures/deferred";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
 import {
   answerTo,
@@ -292,15 +293,14 @@ test("W1 (page): a newcomer who puts off the invitations at their step lands in 
   await there.page.locator("#name").fill("Solo");
   await there.page.locator("#slug").fill(own);
   await there.page.getByRole("button", { name: "Just myself", exact: true }).click();
-  // nerve is busy when the end comes (its body is FINISHED), once; the page has that answer once answerEnd is called.
-  let answerEnd!: () => void;
-  const endAnswered = new Promise<void>((resolve) => (answerEnd = resolve));
+  // nerve is busy when the end comes (its body is FINISHED), once; the page has that answer once the test resolves it.
+  const endAnswered = deferred();
   let busy = true;
   await there.page.route("**/api/v0/me/profile", async (route) => {
     const end = route.request().method() === "PATCH" && isDeepStrictEqual(route.request().postDataJSON(), FINISHED);
     if (!busy || !end) return route.fallback();
     busy = false;
-    await endAnswered;
+    await endAnswered.promise;
     return route.fulfill(BUSY);
   });
   const created = await answerTo(there.page, "POST", "/api/v0/workspaces", () =>
@@ -311,7 +311,7 @@ test("W1 (page): a newcomer who puts off the invitations at their step lands in 
   // The end sent, its answer held: the step's button stays busy (it shows a spinner, which gives it no name).
   await expect.poll(() => busy, { message: "the end sent" }).toBe(false);
   expect(await enabledWithin(there.page.locator('button[type="submit"]'))).toBe(false);
-  answerEnd();
+  endAnswered.resolve();
 
   // The end refused: the page says why, and the creation, over, gives way to the workspace's invitation step, whose
   // "later" ends the onboarding; he lands in his workspace.

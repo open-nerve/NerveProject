@@ -1,7 +1,8 @@
-import { expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
+import { errors, expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
 
 import type { Api } from "./api";
 import { bearer, register, type AuthTokens } from "./auth";
+import { deferred } from "./deferred";
 
 // The personal settings (M2 design 7.7), as a person uses them. Each load of a settings page logs
 // EMOJI_CHECK_WARNING (browser.ts), which the stories name.
@@ -64,10 +65,7 @@ export async function sentTo(
  * at once, and page gets the answer only when the function returned is called. Later requests pass.
  */
 export async function holdAnswer(page: Page, method: string, path: string): Promise<() => Promise<void>> {
-  let release!: () => void;
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const released = deferred();
   let held = false;
   await page.route(
     (url) => url.pathname === path,
@@ -78,11 +76,11 @@ export async function holdAnswer(page: Page, method: string, path: string): Prom
       }
       held = true;
       const response = await route.fetch();
-      await released;
+      await released.promise;
       await route.fulfill({ response });
     }
   );
-  return async () => release();
+  return async () => released.resolve();
 }
 
 /**
@@ -109,23 +107,17 @@ export async function sentHeld(
  * not loaded yet waits for it. requested resolves once page has asked for one, the navigation under way.
  */
 export async function holdScripts(page: Page): Promise<{ requested: Promise<void>; release: () => void }> {
-  let release!: () => void;
-  const released = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let asked!: () => void;
-  const requested = new Promise<void>((resolve) => {
-    asked = resolve;
-  });
+  const released = deferred();
+  const requested = deferred();
   await page.route(
     (url) => url.pathname.endsWith(".js"),
     async (route: Route) => {
-      asked();
-      await released;
+      requested.resolve();
+      await released.promise;
       await route.fallback();
     }
   );
-  return { requested, release };
+  return { requested: requested.promise, release: released.resolve };
 }
 
 /**
@@ -142,17 +134,22 @@ export function enabledWithin(button: Locator): Promise<boolean> {
 }
 
 /**
- * Presses Escape on page, which shows one dialog, and resolves with whether the dialog closed within a second. A
- * dialog that closes still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check
- * made just after the key cannot tell it from one that stays: the second outlasts the transition.
+ * Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed within a second.
+ * A toast is a dialog too, not a modal one: it does not count. A dialog that closes still shows its content while it
+ * fades out (ModalCore's leave transition, 200 ms), so a check made just after the key cannot tell it from one that
+ * stays: the second outlasts the transition. Only the second running out means it stayed; any other failure, such as
+ * two modal dialogs, rejects.
  */
 export async function closedByEscape(page: Page): Promise<boolean> {
   const closed = page
-    .getByRole("dialog")
+    .locator('[role="dialog"][aria-modal="true"]')
     .waitFor({ state: "detached", timeout: 1_000 })
     .then(
       () => true,
-      () => false
+      (error: unknown) => {
+        if (error instanceof errors.TimeoutError) return false;
+        throw error;
+      }
     );
   await page.keyboard.press("Escape");
   return closed;

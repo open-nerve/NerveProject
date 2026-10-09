@@ -2215,7 +2215,7 @@
     {
       "id": "refusal-toast",
       "phase": "M3/P9",
-      "why": "页面把修改的失败说成提示只有一处：useRefusalToast（web/apps/web/core/hooks/use-refusal-toast.ts），按 errorMessageKey 给出 nerve 的原因，标题默认 toast.error（M3/P9 修复轮，裁定 F-4）；别处的 setToast 里再写 errorMessageKey 就是又一份。错误放在字段下、对话框里的不是提示，不算；测试不算",
+      "why": "页面用 setToast 按 errorMessageKey 把失败说成提示只有一处：useRefusalToast（web/apps/web/core/hooks/use-refusal-toast.ts），按 errorMessageKey 给出 nerve 的原因，标题默认 toast.error（M3/P9 修复轮，裁定 F-4）；别处的 setToast 里再写 errorMessageKey 就是又一份。主题切换的 setPromiseToast 自己说失败，本规则不管，留在 P9 规格 §5 的收尾清单上。错误放在字段下、对话框里的不是提示，不算；测试不算",
       "files": {
         "source": "^web/apps/web/(?:app|core)/(?!hooks/use-refusal-toast\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
         "flags": ""
