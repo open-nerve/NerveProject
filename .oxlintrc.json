@@ -135,7 +135,8 @@
         "web/apps/web/core/components/labels/**",
         "web/apps/web/core/layouts/auth-layout/project-wrapper.tsx",
         "web/apps/web/core/layouts/auth-layout/use-project-fetch.ts",
-        "web/apps/web/core/components/project/project-settings-member-defaults.tsx"
+        "web/apps/web/core/components/project/project-settings-member-defaults.tsx",
+        "web/apps/web/core/components/onboarding/root.tsx"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -240,7 +241,12 @@
         "web/apps/web/core/hooks/use-open-workspace.ts",
         "web/apps/web/core/hooks/use-open-workspace.test.ts",
         "web/apps/web/core/components/workspace/use-create-workspace.ts",
-        "web/apps/web/core/components/workspace/use-create-workspace.test.ts"
+        "web/apps/web/core/components/workspace/use-create-workspace.test.ts",
+        "web/apps/web/core/components/onboarding/onboarding-place.ts",
+        "web/apps/web/core/components/onboarding/onboarding-place.test.ts",
+        "web/apps/web/core/components/onboarding/root.test.tsx",
+        "web/apps/web/core/components/onboarding/steps/profile/root.test.tsx",
+        "web/apps/web/core/components/onboarding/steps/team/links.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

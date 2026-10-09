@@ -37,10 +37,6 @@
       "success": {
         "title": "成功",
         "message": "工作区创建成功"
-      },
-      "error": {
-        "title": "错误",
-        "message": "工作区创建失败。请重试。"
       }
     }
   },

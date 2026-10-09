@@ -434,16 +434,13 @@
   },
   "role_details": {
     "guest": {
-      "title": "访客",
-      "description": "组织的外部成员可以被邀请为访客。"
+      "title": "访客"
     },
     "member": {
-      "title": "成员",
-      "description": "可以在项目、周期和模块内读取、写入、编辑和删除实体"
+      "title": "成员"
     },
     "admin": {
-      "title": "管理员",
-      "description": "在工作区内所有权限均设置为允许。"
+      "title": "管理员"
     }
   },
   "default_global_view": {
@@ -489,15 +486,17 @@
     "workspace": {
       "description": "所有工作，汇于一处。",
       "name_placeholder": "输入工作区名称",
-      "creation_disabled": "您似乎还没有收到任何工作区的邀请，而实例管理员限制了创建新工作区。请先请工作区的所有者或管理员邀请您加入工作区，再回到这里加入。"
+      "creation_disabled": "这个实例关闭了创建工作区：请向某个工作区的管理员要一个邀请链接。"
     },
     "invite": {
       "title": "邀请您的队友",
       "description": "在 Nerve 中，与团队一起工作效果最好。现在就邀请他们，充分发挥 Nerve 的作用。",
-      "role": "角色",
-      "not_an_email": "这看起来不像邮箱地址。",
       "add_another": "再添加一个",
-      "later": "稍后再说"
+      "later": "稍后再说",
+      "links": {
+        "title": "你的邀请",
+        "description": "Nerve 不发邮件：复制每个链接，交给它邀请的人。"
+      }
     },
     "tour": {
       "welcome": {

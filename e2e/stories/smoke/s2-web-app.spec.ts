@@ -9,7 +9,7 @@ import {
   type Api,
   type Project,
 } from "../../fixtures/api";
-import { accountId, emailFor, type AuthTokens } from "../../fixtures/auth";
+import { accountId, emailFor, register, type AuthTokens } from "../../fixtures/auth";
 import { signInPath } from "../../fixtures/auth-pages";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
 import { registerOnboarded } from "../../fixtures/settings-pages";
@@ -341,4 +341,21 @@ test("S2: the admin of two workspaces opens a project of one at the other's addr
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
   // Nothing came after the list was whole.
   expect(requests.between(0)).toEqual({ pending: 0, requests: expected });
+});
+
+test("S2: a newcomer opens /, which sends him to the onboarding: it asks for his workspaces, as the app does, and no more", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const page = await signedInPage(await register(api, emailFor(testInfo)));
+  const watch = await watchPage(page);
+  const requests = followRequests(page, {});
+  await page.goto("/");
+  await expect(page).toHaveURL("/onboarding");
+  await expect(page.getByText("Create your profile.")).toBeVisible();
+  await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
+  expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch);
+  // Nothing came after the list was whole.
+  expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
 });

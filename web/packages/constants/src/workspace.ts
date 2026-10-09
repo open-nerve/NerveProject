@@ -19,15 +19,12 @@ export const ROLE = {
 export const ROLE_DETAILS = {
   [EUserWorkspaceRoles.GUEST]: {
     i18n_title: "role_details.guest.title",
-    i18n_description: "role_details.guest.description",
   },
   [EUserWorkspaceRoles.MEMBER]: {
     i18n_title: "role_details.member.title",
-    i18n_description: "role_details.member.description",
   },
   [EUserWorkspaceRoles.ADMIN]: {
     i18n_title: "role_details.admin.title",
-    i18n_description: "role_details.admin.description",
   },
 };
 

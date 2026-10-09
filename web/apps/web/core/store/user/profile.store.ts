@@ -85,7 +85,6 @@ export class ProfileStore implements IUserProfileStore {
    * @returns {Promise<void>}
    */
   finishUserOnboarding = async (): Promise<void> => {
-    const firstWorkspace = this.store.workspaceRoot.workspaces?.[0];
     await this.updateUserProfile({
       onboarding_step: {
         profile_complete: true,
@@ -94,7 +93,6 @@ export class ProfileStore implements IUserProfileStore {
         workspace_invite: true,
       },
       is_onboarded: true,
-      ...(firstWorkspace ? { last_workspace_id: firstWorkspace.id } : {}),
     });
   };
 

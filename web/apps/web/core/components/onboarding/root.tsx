@@ -4,113 +4,96 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { OnboardingStepsUpdate } from "@nerve/api-client";
+import type { ProfileUpdate, Workspace } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { TOnboardingStep } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
+// components
+import { SessionUnavailable } from "@/components/account/session-unavailable";
+import { LogoSpinner } from "@/components/common/logo-spinner";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUser, useUserProfile } from "@/hooks/store/user";
+import { useUserProfile } from "@/hooks/store/user";
 // lib
 import { errorMessageKey } from "@/lib/error-messages";
+import { followInSession } from "@/lib/in-session";
+import { useSessionSWR } from "@/lib/use-session-swr";
 // local components
 import { OnboardingHeader } from "./header";
+import { afterProfile, resumedPlace, type OnboardingPlace } from "./onboarding-place";
 import { OnboardingStepRoot } from "./steps";
 
-export const OnboardingRoot = observer(function OnboardingRoot() {
-  const [currentStep, setCurrentStep] = useState<TOnboardingStep>(EOnboardingSteps.PROFILE_SETUP);
+type Props = {
+  /** The caller's workspaces, as nerve listed them. */
+  workspaces: Workspace[];
+};
+
+const OnboardingSteps = observer(function OnboardingSteps({ workspaces }: Props) {
   const { t } = useTranslation();
   // store hooks
-  const { data: user } = useUser();
-  const { data: userProfile, updateUserProfile, finishUserOnboarding } = useUserProfile();
-  const { workspaces } = useWorkspace();
+  const { data: profile, updateUserProfile, finishUserOnboarding } = useUserProfile();
+  // where the onboarding is: where it was left, as it opens
+  const [place, setPlace] = useState<OnboardingPlace>(() =>
+    profile ? resumedPlace(profile, workspaces) : { kind: EOnboardingSteps.PROFILE_SETUP }
+  );
 
-  const hasWorkspaces = (workspaces?.length ?? 0) > 0;
+  // a change of the profile; nerve's refusal says why, in the session it was sent in alone (M3 design 7.1)
+  const failed = (error: unknown) =>
+    setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+  const change = (data: ProfileUpdate) => void followInSession(() => updateUserProfile(data), { failed });
+  // settles once nerve has answered, and never rejects (followInSession)
+  const finish = () => followInSession(() => finishUserOnboarding(), { failed });
 
-  // complete onboarding; a failure says why, by the problem's code
-  const finishOnboarding = useCallback(async () => {
-    if (!user) return;
-    try {
-      await finishUserOnboarding();
-    } catch (error) {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+  // one who has a workspace is done after the profile step; one who has none creates one (M3 design 7.4)
+  const named = () => {
+    if (afterProfile(workspaces) === "finish") {
+      void finish();
+      return;
     }
-  }, [user, finishUserOnboarding, t]);
+    change({ onboarding_step: { profile_complete: true } });
+    setPlace({ kind: EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN });
+  };
 
-  // handle step change: nerve merges the steps it is given into the profile's; a failure says why, by the code
-  const stepChange = useCallback(
-    async (steps: OnboardingStepsUpdate) => {
-      if (!user) return;
-      try {
-        await updateUserProfile({ onboarding_step: steps });
-      } catch (error) {
-        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
-      }
-    },
-    [user, updateUserProfile, t]
-  );
-
-  // finishing sets all four steps in its one write, so it goes without the step change it supersedes
-  const handleStepChange = useCallback(
-    (step: EOnboardingSteps, skipInvites?: boolean) => {
-      switch (step) {
-        case EOnboardingSteps.PROFILE_SETUP:
-          if (hasWorkspaces) finishOnboarding();
-          else {
-            stepChange({ profile_complete: true });
-            setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
-          }
-          break;
-        case EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN:
-          if (skipInvites) finishOnboarding();
-          else {
-            setCurrentStep(EOnboardingSteps.INVITE_MEMBERS);
-            stepChange({ workspace_create: true });
-          }
-          break;
-        case EOnboardingSteps.INVITE_MEMBERS:
-          finishOnboarding();
-          break;
-      }
-    },
-    [stepChange, finishOnboarding, hasWorkspaces]
-  );
-
-  const updateCurrentStep = (step: EOnboardingSteps) => setCurrentStep(step);
-
-  useEffect(() => {
-    const handleInitialStep = () => {
-      if (
-        userProfile?.onboarding_step?.profile_complete &&
-        !userProfile?.onboarding_step?.workspace_create &&
-        !userProfile?.onboarding_step?.workspace_join
-      ) {
-        setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
-      }
-      if (
-        userProfile?.onboarding_step?.profile_complete &&
-        userProfile?.onboarding_step?.workspace_create &&
-        !userProfile?.onboarding_step?.workspace_invite
-      ) {
-        setCurrentStep(EOnboardingSteps.INVITE_MEMBERS);
-      }
-    };
-
-    handleInitialStep();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // the workspace created is the one opened last, and the one the invitation step invites to; a workspace for its
+  // creator alone has no invitation step: the onboarding ends, and the creation step stays busy until nerve has
+  // answered the end, which goes after the step's change (the profile's changes are sent one at a time)
+  const created = async (workspace: Workspace, alone: boolean) => {
+    change({ onboarding_step: { workspace_create: true }, last_workspace_id: workspace.id });
+    if (alone) await finish();
+    else setPlace({ kind: EOnboardingSteps.INVITE_MEMBERS, workspace });
+  };
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header with progress */}
-      <OnboardingHeader currentStep={currentStep} updateCurrentStep={updateCurrentStep} />
+      {/* Header with progress: its one way back is from the creation to the profile step */}
+      <OnboardingHeader
+        currentStep={place.kind}
+        updateCurrentStep={() => setPlace({ kind: EOnboardingSteps.PROFILE_SETUP })}
+      />
 
       {/* Main content area */}
-      <OnboardingStepRoot currentStep={currentStep} handleStepChange={handleStepChange} />
+      <OnboardingStepRoot place={place} onNamed={named} onCreated={created} onDone={() => void finish()} />
+    </div>
+  );
+});
+
+/**
+ * The onboarding (M3 design 7.4): its steps once nerve has listed the caller's workspaces, which decide them. The list
+ * is the session's, the one the landing reads once the onboarding is done.
+ */
+export const OnboardingRoot = observer(function OnboardingRoot() {
+  // store hooks
+  const { workspaces, fetchWorkspaces } = useWorkspace();
+  const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces());
+
+  if (workspaces) return <OnboardingSteps workspaces={workspaces} />;
+  if (listed.error) return <SessionUnavailable autoRetry={false} onRetry={() => void listed.mutate()} />;
+  return (
+    <div className="grid h-full w-full place-items-center">
+      <LogoSpinner />
     </div>
   );
 });

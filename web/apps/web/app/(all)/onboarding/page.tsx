@@ -15,8 +15,7 @@ import { useUser } from "@/hooks/store/user";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 
-// The page asks for nothing of the caller's workspaces when it opens (M2 design 3.1): P9 adds the fetch its steps
-// decide by (M3 design 7.4).
+// The onboarding lists the caller's workspaces, which decide its steps (OnboardingRoot, M3 design 7.4).
 function OnboardingPage() {
   // store hooks
   const { data: user } = useUser();

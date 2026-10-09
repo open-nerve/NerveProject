@@ -37,10 +37,6 @@
       "success": {
         "title": "Success",
         "message": "Workspace created successfully"
-      },
-      "error": {
-        "title": "Error",
-        "message": "Workspace could not be created. Please try again."
       }
     }
   },

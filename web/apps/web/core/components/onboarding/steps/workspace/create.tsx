@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { TickCircleOutline } from "@makeplane/propel/icons";
@@ -12,32 +11,30 @@ import { TickCircleOutline } from "@makeplane/propel/icons";
 import { ORGANIZATION_SIZE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { User, WorkspaceCreate } from "@nerve/api-client";
+import type { Workspace } from "@nerve/api-client";
 import { Spinner } from "@nerve/ui";
-import { cn, validateWorkspaceName, validateSlug } from "@nerve/utils";
+import { cn, validateWorkspaceName } from "@nerve/utils";
+// components
+import { slugFrom, useCreateWorkspace, type CreationForm } from "@/components/workspace/use-create-workspace";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
-import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useUserProfile } from "@/hooks/store/user";
 // local components
 import { CommonOnboardingHeader } from "../common";
 
 type Props = {
-  user: User | undefined;
-  onComplete: (skipInvites?: boolean) => void;
+  /**
+   * What the onboarding does with the workspace created; alone when it is for its creator alone. The step stays busy
+   * until it is done, so that no second click checks the new workspace's slug again.
+   */
+  onCreated: (workspace: Workspace, alone: boolean) => Promise<void>;
 };
 
-export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user, onComplete }: Props) {
-  // states
-  const [slugError, setSlugError] = useState(false);
-  const [invalidSlug, setInvalidSlug] = useState(false);
+export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCreated }: Props) {
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { config } = useInstance();
-  const { updateUserProfile } = useUserProfile();
-  const { createWorkspace, fetchWorkspaces, checkWorkspaceSlug } = useWorkspace();
+  const create = useCreateWorkspace();
 
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
@@ -46,58 +43,23 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
     handleSubmit,
     control,
     setValue,
+    setError,
     formState: { errors, isSubmitting, isValid },
-  } = useForm<WorkspaceCreate>({
+  } = useForm<CreationForm>({
     defaultValues: {
       name: "",
       slug: "",
+      organization_size: null,
     },
     mode: "onChange",
   });
 
-  const handleCreateWorkspace = async (formData: WorkspaceCreate) => {
-    if (isSubmitting) return;
-
-    try {
-      const { available } = await checkWorkspaceSlug(formData.slug);
-      if (available) {
-        setSlugError(false);
-        try {
-          const workspaceResponse = await createWorkspace(formData);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t("workspace_creation.toast.success.title"),
-            message: t("workspace_creation.toast.success.message"),
-          });
-          await fetchWorkspaces();
-          await completeStep(workspaceResponse.id);
-          onComplete(formData.organization_size === "Just myself");
-        } catch {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("workspace_creation.toast.error.title"),
-            message: t("workspace_creation.toast.error.message"),
-          });
-        }
-      } else {
-        setSlugError(true);
-      }
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("workspace_creation.toast.error.title"),
-        message: t("workspace_creation.toast.error.message"),
-      });
-    }
+  const handleCreateWorkspace = async (formData: CreationForm) => {
+    const created = await create(formData, setError);
+    if (created) await onCreated(created, formData.organization_size === "Just myself");
   };
 
-  const completeStep = async (workspaceId: string) => {
-    if (!user) return;
-    // the workspace opened last is a best-effort preference: the onboarding goes on whether nerve saves it or not
-    await updateUserProfile({ last_workspace_id: workspaceId }).catch(() => undefined);
-  };
-
-  const isButtonDisabled = !isValid || invalidSlug || isSubmitting;
+  const isButtonDisabled = !isValid || isSubmitting;
 
   if (isWorkspaceCreationDisabled) {
     return (
@@ -146,7 +108,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
                   onChange={(event) => {
                     onChange(event.target.value);
                     setValue("name", event.target.value);
-                    setValue("slug", event.target.value.toLocaleLowerCase().trim().replace(/ /g, "-"), {
+                    setValue("slug", slugFrom(event.target.value.trim()), {
                       shouldValidate: true,
                     });
                   }}
@@ -189,8 +151,8 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
                 className={cn(
                   "flex w-full items-center rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
                   {
-                    "border-strong": !errors.name,
-                    "border-danger-strong": errors.name,
+                    "border-strong": !errors.slug,
+                    "border-danger-strong": errors.slug,
                   }
                 )}
               >
@@ -201,13 +163,8 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
                   id="slug"
                   name="slug"
                   type="text"
-                  value={value.toLocaleLowerCase().trim().replace(/ /g, "-")}
-                  onChange={(e) => {
-                    const validation = validateSlug(e.target.value);
-                    if (validation === true) setInvalidSlug(false);
-                    else setInvalidSlug(true);
-                    onChange(e.target.value.toLowerCase());
-                  }}
+                  value={value}
+                  onChange={(e) => onChange(slugFrom(e.target.value))}
                   ref={ref}
                   placeholder={t("workspace_creation.form.url.placeholder")}
                   className={cn(
@@ -218,14 +175,6 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ user,
             )}
           />
           <p className="text-13 text-tertiary">{t("workspace_creation.form.url.edit_slug")}</p>
-          {slugError && (
-            <p className="-mt-3 text-13 text-danger-primary">
-              {t("workspace_creation.errors.validation.url_already_taken")}
-            </p>
-          )}
-          {invalidSlug && (
-            <p className="text-13 text-danger-primary">{t("workspace_creation.errors.validation.url_alphanumeric")}</p>
-          )}
           {errors.slug && <span className="text-13 text-danger-primary">{errors.slug.message}</span>}
         </div>
         <div className="flex flex-col gap-2">

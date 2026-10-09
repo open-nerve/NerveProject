@@ -11,17 +11,18 @@ import type { UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { EOnboardingSteps } from "@nerve/types";
 import { cn, getFileURL } from "@nerve/utils";
 // hooks
 import { useUser } from "@/hooks/store/user";
 // lib
 import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { followInSession } from "@/lib/in-session";
 // local components
 import { CommonOnboardingHeader } from "../common";
 
 type Props = {
-  handleStepChange: (step: EOnboardingSteps, skipInvites?: boolean) => void;
+  /** The step is done: nerve has the names. */
+  onDone: () => void;
 };
 
 type TProfileSetupFormValues = {
@@ -35,7 +36,7 @@ type TProfileSetupFormValues = {
  */
 const FIELDS = ["first_name"] as const;
 
-export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepChange }: Props) {
+export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: Props) {
   const { t } = useTranslation();
   // store hooks
   const { data: user, updateCurrentUser } = useUser();
@@ -75,7 +76,15 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepC
 
   const onSubmit = async (formData: TProfileSetupFormValues) => {
     if (!user) return;
-    if (await handleSubmitUserDetail(formData)) handleStepChange(EOnboardingSteps.PROFILE_SETUP);
+    // the onboarding goes on only in the session the names were sent in (M3 design 7.1); what the step says of a
+    // refusal is M2's (M3/P9 spec 5: P11)
+    await followInSession(() => handleSubmitUserDetail(formData), {
+      done: (named) => {
+        if (named) onDone();
+      },
+      // handleSubmitUserDetail says why itself, and answers false: it does not reject
+      failed: () => undefined,
+    });
   };
 
   const isButtonDisabled = isSubmitting || !isValid;
