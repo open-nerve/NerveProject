@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   heldChange,
   lateSettlings,
+  pageSettled,
+  settledYet,
   signedIn,
   switchAccount,
   tokenManager as tab,
@@ -90,5 +92,48 @@ describe("followInSession", () => {
     change.answer("acme");
     await after.following;
     expect(after.followed).toEqual(["done: acme"]);
+  });
+
+  it.each(lateSettlings)(
+    "settles, when the change $settles, once what its follower returned has",
+    async ({ settle }) => {
+      const change = heldChange<undefined>();
+      const followUp = heldChange<undefined>();
+      const follower = () => followUp.sent;
+      const settled = settledYet(followInSession(() => change.sent, { done: follower, failed: follower }));
+      settle(change);
+      await pageSettled();
+      expect(settled()).toBe(false);
+      followUp.answer(undefined);
+      await pageSettled();
+      expect(settled()).toBe(true);
+    }
+  );
+
+  describe("a follower's own failure", () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it.each([
+      {
+        fails: "throws",
+        follower: (fault: Error) => (): void => {
+          throw fault;
+        },
+      },
+      { fails: "rejects", follower: (fault: Error) => () => Promise.reject(fault) },
+    ])(
+      "goes to the browser's report of uncaught errors when the follower $fails, not to the caller",
+      async ({ follower }) => {
+        const reported = vi.fn();
+        vi.stubGlobal("reportError", reported);
+        const fault = new Error("the page's code failed");
+        await expect(
+          followInSession(() => Promise.resolve("acme"), { done: follower(fault), failed: () => undefined })
+        ).resolves.toBeUndefined();
+        expect(reported.mock.calls).toEqual([[fault]]);
+      }
+    );
   });
 });

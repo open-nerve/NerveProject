@@ -33,7 +33,10 @@ export function heldChange<T>(): HeldChange<T> {
   return { sent: promise, answer: open, refuse: fail };
 }
 
-/** The ways a change sent before the tab switched settles after it, for it.each: answered, or refused. */
+/**
+ * The ways a change settles, for it.each: answered, or refused; mostly a change sent before the tab switched, which
+ * settles after it.
+ */
 export const lateSettlings = [
   { settles: "is answered", settle: (change: HeldChange<undefined>) => change.answer(undefined) },
   { settles: "is refused", settle: (change: HeldChange<undefined>) => change.refuse(new Error("refused")) },
@@ -45,4 +48,17 @@ export const lateSettlings = [
  */
 export function pageSettled(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Watches work of a page that must wait for something the test holds (a follow-up of a change): the function returned
+ * tells whether promise has settled yet, resolved or rejected.
+ */
+export function settledYet(promise: Promise<unknown>): () => boolean {
+  let settled = false;
+  const settle = () => {
+    settled = true;
+  };
+  void promise.then(settle, settle);
+  return () => settled;
 }

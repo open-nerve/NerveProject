@@ -86,6 +86,62 @@ export async function holdAnswer(page: Page, method: string, path: string): Prom
 }
 
 /**
+ * Holds from page nerve's answer to the request of method to path that act makes page send (holdAnswer): resolves once
+ * the request has left page, with its body (bodiesSentTo), and the function that lets the answer through, which
+ * resolves with it once page has it.
+ */
+export async function sentHeld(
+  page: Page,
+  method: string,
+  path: string,
+  act: () => Promise<void>
+): Promise<{ body: unknown; release: () => Promise<Response> }> {
+  const release = await holdAnswer(page, method, path);
+  // registered after the hold, so that it reads the request first, on its way to the hold
+  const bodies = await bodiesSentTo(page, method, path);
+  await act();
+  await expect.poll(() => bodies.length, { message: `${method} ${path} sent` }).toBeGreaterThan(0);
+  return { body: bodies[0], release: () => answerTo(page, method, path, release) };
+}
+
+/**
+ * Holds every script page asks for from now on, until release is called: a navigation to a page whose code the app has
+ * not loaded yet waits for it. requested resolves once page has asked for one, the navigation under way.
+ */
+export async function holdScripts(page: Page): Promise<{ requested: Promise<void>; release: () => void }> {
+  let release!: () => void;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let asked!: () => void;
+  const requested = new Promise<void>((resolve) => {
+    asked = resolve;
+  });
+  await page.route(
+    (url) => url.pathname.endsWith(".js"),
+    async (route: Route) => {
+      asked();
+      await released;
+      await route.fallback();
+    }
+  );
+  return { requested, release };
+}
+
+/**
+ * Resolves with whether button is enabled within a second: one that stays disabled while the test holds what its page
+ * waits for keeps it disabled the whole time, where a check made at once could pass before the page has re-rendered.
+ */
+export function enabledWithin(button: Locator): Promise<boolean> {
+  return expect(button)
+    .toBeEnabled({ timeout: 1_000 })
+    .then(
+      () => true,
+      () => false
+    );
+}
+
+/**
  * Presses Escape on page, which shows one dialog, and resolves with whether the dialog closed within a second. A
  * dialog that closes still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check
  * made just after the key cannot tell it from one that stays: the second outlasts the transition.

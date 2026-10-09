@@ -48,12 +48,10 @@ const OnboardingSteps = observer(function OnboardingSteps({ workspaces }: Props)
   const finish = (onFailed: (error: unknown) => void = failed) =>
     followInSession(() => finishUserOnboarding(), { failed: onFailed });
 
-  // one who has a workspace is done after the profile step; one who has none creates one (M3 design 7.4)
+  // one who has a workspace is done after the profile step, which stays busy until nerve has answered the end; one who
+  // has none creates one (M3 design 7.4)
   const named = () => {
-    if (afterProfile(workspaces) === "finish") {
-      void finish();
-      return;
-    }
+    if (afterProfile(workspaces) === "finish") return finish();
     change({ onboarding_step: { profile_complete: true } });
     setPlace({ kind: EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN });
   };
@@ -85,7 +83,7 @@ const OnboardingSteps = observer(function OnboardingSteps({ workspaces }: Props)
       />
 
       {/* Main content area */}
-      <OnboardingStepRoot place={place} onNamed={named} onCreated={created} onDone={() => void finish()} />
+      <OnboardingStepRoot place={place} onNamed={named} onCreated={created} onDone={() => finish()} />
     </div>
   );
 });

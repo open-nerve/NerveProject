@@ -13,7 +13,15 @@ import {
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
-import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import {
+  answerTo,
+  enabledWithin,
+  holdAnswer,
+  holdScripts,
+  registerOnboarded,
+  sentHeld,
+  sentTo,
+} from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, invitationLinkOf } from "../../fixtures/workspace-pages";
 
@@ -112,7 +120,8 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
   await url.fill(slug.replace("-", " ").toUpperCase());
   await expect(url).toHaveValue(slug);
   // The form stays busy until the workspace opens: while nerve's answer to the write of the one opened last is on its
-  // way (holdAnswer), no second click checks the new workspace's slug again.
+  // way (holdAnswer), then while the workspace's page is (its code, held), no second click checks the new workspace's
+  // slug again.
   const release = await holdAnswer(page, "PATCH", "/api/v0/me/profile");
   const sent = await sentTo(page, "POST", "/api/v0/workspaces", () =>
     page.getByRole("button", { name: "Create workspace" }).click()
@@ -120,7 +129,11 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
   expect([sent.answer.status(), sent.body]).toEqual([201, { name: "Acme Two", slug, organization_size: "2-10" }]);
   await expect(page.getByText("Workspace created successfully")).toBeVisible();
   await expect(page.getByRole("button", { name: "Creating workspace" })).toBeDisabled();
+  const scripts = await holdScripts(page);
   expect((await answerTo(page, "PATCH", "/api/v0/me/profile", release)).status()).toBe(200);
+  await scripts.requested;
+  expect(await enabledWithin(page.getByRole("button", { name: /^Creat(e|ing) workspace$/ }))).toBe(false);
+  scripts.release();
   await expect(page).toHaveURL(`/${slug}`);
   const id = await expectWorkspaceCreated(db, email, {
     name: "Acme Two",
@@ -215,11 +228,11 @@ test("W1 (page): a newcomer's onboarding creates a workspace after the profile s
     { email: invitee, role: 15, accepted: false, responded: false, deleted: false },
   ]);
 
-  // Done: the landing is the workspace created.
-  const finished = await sentTo(page, "PATCH", "/api/v0/me/profile", () =>
-    page.getByRole("button", { name: "Continue", exact: true }).click()
-  );
-  expect([finished.answer.status(), finished.body]).toEqual([200, FINISHED]);
+  // Done: the landing is the workspace created. Continue stays busy while nerve's answer to the end is on its way.
+  const proceed = page.getByRole("button", { name: "Continue", exact: true });
+  const finished = await sentHeld(page, "PATCH", "/api/v0/me/profile", () => proceed.click());
+  expect(await enabledWithin(proceed)).toBe(false);
+  expect([(await finished.release()).status(), finished.body]).toEqual([200, FINISHED]);
   await expect(page).toHaveURL(`/${slug}`);
   expect(await lastWorkspaceOf(db, email)).toBe(id);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
@@ -247,11 +260,12 @@ test("W1 (page): a newcomer who puts off the invitations at their step lands in 
   );
   expect(stepped.answer.status()).toBe(200);
 
-  // The invitation step, put off: the onboarding ends, and he lands in the workspace he created.
-  const finished = await sentTo(page, "PATCH", "/api/v0/me/profile", () =>
-    page.getByRole("button", { name: "I’ll do it later", exact: true }).click()
-  );
-  expect([finished.answer.status(), finished.body]).toEqual([200, FINISHED]);
+  // The invitation step, put off: the onboarding ends, and he lands in the workspace he created. "Later" stays busy
+  // while nerve's answer to the end is on its way (sentHeld).
+  const putOff = page.getByRole("button", { name: "I’ll do it later", exact: true });
+  const finished = await sentHeld(page, "PATCH", "/api/v0/me/profile", () => putOff.click());
+  expect(await enabledWithin(putOff)).toBe(false);
+  expect([(await finished.release()).status(), finished.body]).toEqual([200, FINISHED]);
   await expect(page).toHaveURL(`/${slug}`);
   expect(watch.apiRequests.filter((request) => request.endsWith(`/api/v0/workspaces/${slug}/invitations`))).toEqual([]);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
@@ -314,15 +328,16 @@ test("W1 (page): one who joined a workspace before onboarding is done after the 
     return tokens;
   };
 
-  // Ada joined Alpha: her profile step is her last, and she lands there.
+  // Ada joined Alpha: her profile step is her last, and she lands there. The step stays busy while nerve's answer to
+  // the end is on its way (sentHeld).
   const page = await signedInPage(await newcomer("ada"));
   const watch = await watchPage(page);
   await page.goto("/onboarding");
   await page.getByLabel("Name", { exact: true }).fill("Ada");
-  const finished = await sentTo(page, "PATCH", "/api/v0/me/profile", () =>
-    page.getByRole("button", { name: "Continue", exact: true }).click()
-  );
-  expect([finished.answer.status(), finished.body]).toEqual([200, FINISHED]);
+  const proceed = page.getByRole("button", { name: "Continue", exact: true });
+  const finished = await sentHeld(page, "PATCH", "/api/v0/me/profile", () => proceed.click());
+  expect(await enabledWithin(proceed)).toBe(false);
+  expect([(await finished.release()).status(), finished.body]).toEqual([200, FINISHED]);
   await expect(page).toHaveURL(`/${alpha.slug}`);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });

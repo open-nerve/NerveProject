@@ -5,7 +5,7 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { heldChange, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { heldChange, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { ProfileSetupStep } from "./root";
 
@@ -24,7 +24,7 @@ const page = vi.hoisted(
   })
 );
 /** The step hands the onboarding on: the root's part. */
-const onDone = vi.fn<() => void>();
+const onDone = vi.fn<() => Promise<void> | undefined>();
 vi.mock("react-hook-form", () => ({
   useForm: () => ({
     handleSubmit: (submit: (names: Names) => Promise<void>) => {
@@ -66,6 +66,17 @@ describe("ProfileSetupStep", () => {
     await named();
     expect(page.updateCurrentUser.mock.calls).toEqual([[{ first_name: "Ada", last_name: "Lovelace" }]]);
     expect(onDone.mock.calls).toEqual([[]]);
+  });
+
+  it("stays busy until the root is done with the onboarding it handed on (its end, for one who has a workspace)", async () => {
+    const ending = heldChange<undefined>();
+    onDone.mockReturnValueOnce(ending.sent);
+    const settled = settledYet(named());
+    await pageSettled();
+    expect([onDone.mock.calls, settled()]).toEqual([[[]], false]);
+    ending.answer(undefined);
+    await pageSettled();
+    expect(settled()).toBe(true);
   });
 
   it("stays when nerve refuses the names", async () => {

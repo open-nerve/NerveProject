@@ -24,8 +24,8 @@ import { InvitationLinks } from "./links";
 type Props = {
   /** The workspace the onboarding created, which the step invites to (M3 design 7.4). */
   workspace: Workspace;
-  /** Ends the onboarding. */
-  onDone: () => void;
+  /** Ends the onboarding: settles once nerve has answered the end. */
+  onDone: () => Promise<void>;
 };
 
 /**
@@ -37,6 +37,9 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
   const { t } = useTranslation();
   // states
   const [sent, setSent] = useState<WorkspaceInvitation[]>();
+  // the end is out: what ends the onboarding ("later", the links' "Continue") stays busy until nerve has answered it,
+  // so that no second click sends it again
+  const [ending, setEnding] = useState(false);
   // store hooks
   const {
     workspace: { inviteMembersToWorkspace },
@@ -46,7 +49,13 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
     onSent: setSent,
   });
 
-  if (sent) return <InvitationLinks invitations={sent} onDone={onDone} />;
+  const end = () => {
+    setEnding(true);
+    // onDone never rejects (followInSession)
+    void onDone().finally(() => setEnding(false));
+  };
+
+  if (sent) return <InvitationLinks invitations={sent} onDone={end} ending={ending} />;
   return (
     <form
       className="flex flex-col gap-10"
@@ -71,7 +80,7 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
         <Button variant="primary" type="submit" size="xl" className="w-full" disabled={formState.isSubmitting}>
           {formState.isSubmitting ? <Spinner height="20px" width="20px" /> : t("continue")}
         </Button>
-        <Button variant="ghost" size="xl" className="w-full" onClick={onDone}>
+        <Button variant="ghost" size="xl" className="w-full" onClick={end} loading={ending}>
           {t("onboarding.invite.later")}
         </Button>
       </div>

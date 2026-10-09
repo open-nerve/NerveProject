@@ -16,10 +16,12 @@ type Props = {
   invitations: WorkspaceInvitation[];
   /** Ends the onboarding. */
   onDone: () => void;
+  /** The end is out: Continue is busy until nerve has answered it. */
+  ending: boolean;
 };
 
 /** The links of the invitations the step sent, each to copy (M3 design 7.4: v0 sends no email). */
-export function InvitationLinks({ invitations, onDone }: Props) {
+export function InvitationLinks({ invitations, onDone, ending }: Props) {
   const { t } = useTranslation();
   const copyLink = useCopyInvitationLink();
 
@@ -39,7 +41,7 @@ export function InvitationLinks({ invitations, onDone }: Props) {
           </li>
         ))}
       </ul>
-      <Button variant="primary" size="xl" className="w-full" onClick={onDone}>
+      <Button variant="primary" size="xl" className="w-full" onClick={onDone} loading={ending}>
         {t("continue")}
       </Button>
     </div>

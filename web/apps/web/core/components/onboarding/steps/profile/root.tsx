@@ -21,8 +21,8 @@ import { followInSession } from "@/lib/in-session";
 import { CommonOnboardingHeader } from "../common";
 
 type Props = {
-  /** The step is done: nerve has the names. */
-  onDone: () => void;
+  /** The step is done: nerve has the names. The step stays busy until what this returns settles. */
+  onDone: () => Promise<void> | undefined;
 };
 
 type TProfileSetupFormValues = {
@@ -79,9 +79,7 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
     // the onboarding goes on only in the session the names were sent in (M3 design 7.1); what the step says of a
     // refusal is M2's (M3/P9 spec 5: P11)
     await followInSession(() => handleSubmitUserDetail(formData), {
-      done: (named) => {
-        if (named) onDone();
-      },
+      done: (named) => (named ? onDone() : undefined),
       // handleSubmitUserDetail says why itself, and answers false: it does not reject
       failed: () => undefined,
     });

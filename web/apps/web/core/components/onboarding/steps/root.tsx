@@ -16,15 +16,18 @@ import { WorkspaceCreateStep } from "./workspace";
 
 type Props = {
   place: OnboardingPlace;
-  /** The profile step is done. */
-  onNamed: () => void;
+  /**
+   * The profile step is done. When that ends the onboarding, the step stays busy until what this returns settles, so
+   * that no second click sends the names and the end again.
+   */
+  onNamed: () => Promise<void> | undefined;
   /**
    * The creation step created workspace; alone when it is for its creator alone. The step stays busy until this
    * settles, so that no second click checks the new workspace's slug again.
    */
   onCreated: (workspace: Workspace, alone: boolean) => Promise<void>;
-  /** The invitation step is done, or put off. */
-  onDone: () => void;
+  /** The invitation step is done, or put off: the step stays busy until this settles, as the onboarding ends. */
+  onDone: () => Promise<void>;
 };
 
 function OnboardingStepContent({ place, onNamed, onCreated, onDone }: Props) {

@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Workspace } from "@nerve/api-client";
 import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
-import { heldChange, lateSettlings, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { heldChange, lateSettlings, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { fetchHanded, handed, response } from "@/lib/fake-session-swr";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
@@ -21,9 +21,9 @@ import { OnboardingRoot } from "./root";
 
 /** How the steps tell the root they are done (OnboardingStepRoot's props). */
 type Ends = {
-  onNamed: () => void;
+  onNamed: () => Promise<void> | undefined;
   onCreated: (workspace: Workspace, alone: boolean) => Promise<void>;
-  onDone: () => void;
+  onDone: () => Promise<void>;
 };
 /** What the page of an unreachable nerve is given (SessionUnavailable's props). */
 type Unavailable = { onRetry: () => void; autoRetry: boolean };
@@ -122,9 +122,19 @@ describe("OnboardingRoot", () => {
     expect(mutate).toHaveBeenCalledOnce();
   });
 
-  it("ends the onboarding of one who has a workspace with the profile step", () => {
-    opened([alpha]).onNamed();
-    expect([page.finishUserOnboarding.mock.calls, page.updateUserProfile.mock.calls]).toEqual([[[]], []]);
+  it("ends the onboarding of one who has a workspace with the profile step, which waits for nerve's answer", async () => {
+    const end = heldChange<undefined>();
+    page.finishUserOnboarding.mockReturnValueOnce(end.sent);
+    const settled = settledYet(Promise.resolve(opened([alpha]).onNamed()));
+    await pageSettled();
+    expect([page.finishUserOnboarding.mock.calls, page.updateUserProfile.mock.calls, settled()]).toEqual([
+      [[]],
+      [],
+      false,
+    ]);
+    end.answer(undefined);
+    await pageSettled();
+    expect(settled()).toBe(true);
   });
 
   it("writes the profile step done for one who has none, whom the creation step follows", () => {

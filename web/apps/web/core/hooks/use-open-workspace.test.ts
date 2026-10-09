@@ -4,7 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { heldChange, lateSettlings, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { useOpenWorkspace } from "./use-open-workspace";
 
@@ -31,6 +31,17 @@ describe("useOpenWorkspace", () => {
     await useOpenWorkspace()(acme);
     expect(page.updateUserProfile.mock.calls).toEqual([[{ last_workspace_id: "id-acme" }]]);
     expect(page.navigate.mock.calls).toEqual([["/acme"]]);
+  });
+
+  it("settles once the workspace's page has opened", async () => {
+    const opening = heldChange<undefined>();
+    page.navigate.mockReturnValueOnce(opening.sent);
+    const settled = settledYet(useOpenWorkspace()(acme));
+    await pageSettled();
+    expect([page.navigate.mock.calls, settled()]).toEqual([[["/acme"]], false]);
+    opening.answer(undefined);
+    await pageSettled();
+    expect(settled()).toBe(true);
   });
 
   it("goes there when nerve does not save it", async () => {
