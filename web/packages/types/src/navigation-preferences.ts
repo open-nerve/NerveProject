@@ -11,9 +11,3 @@ export interface TProjectNavigationPreferences {
   showLimitedProjects: boolean;
   limitedProjectsCount: number;
 }
-
-export const DEFAULT_PROJECT_PREFERENCES: TProjectNavigationPreferences = {
-  navigationMode: "ACCORDION",
-  showLimitedProjects: false,
-  limitedProjectsCount: 10,
-};

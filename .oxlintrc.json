@@ -246,7 +246,9 @@
         "web/apps/web/core/components/onboarding/onboarding-place.test.ts",
         "web/apps/web/core/components/onboarding/root.test.tsx",
         "web/apps/web/core/components/onboarding/steps/profile/root.test.tsx",
-        "web/apps/web/core/components/onboarding/steps/team/links.tsx"
+        "web/apps/web/core/components/onboarding/steps/team/links.tsx",
+        "web/apps/web/core/hooks/use-navigation-preferences.test.ts",
+        "web/apps/web/core/components/home/root.test.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"
