@@ -11,7 +11,6 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { SearchOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { cn } from "@nerve/utils";
 // components
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
@@ -25,7 +24,6 @@ import { SendWorkspaceInvitationModal } from "@/components/workspace/members";
 import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
-import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
 // local imports
 import type { Route } from "./+types/page";
 import { MembersWorkspaceSettingsHeader } from "./header";
@@ -50,33 +48,6 @@ const WorkspaceMembersSettingsPage = observer(function WorkspaceMembersSettingsP
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.WORKSPACE
   );
-
-  const handleWorkspaceInvite = async (data: InvitationFormValues) => {
-    try {
-      await inviteMembersToWorkspace(workspaceSlug, { invitations: data.emails });
-
-      setInviteModal(false);
-
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: t("workspace_settings.settings.members.invitations_sent_successfully"),
-      });
-    } catch (error: unknown) {
-      let message = undefined;
-      if (error instanceof Error) {
-        const err = error as Error & { error?: string };
-        message = err.error;
-      }
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: `${message ?? t("something_went_wrong_please_try_again")}`,
-      });
-
-      throw error;
-    }
-  };
 
   // Handler for role filter updates
   const handleRoleFilterUpdate = (role: string) => {
@@ -104,7 +75,7 @@ const WorkspaceMembersSettingsPage = observer(function WorkspaceMembersSettingsP
       <SendWorkspaceInvitationModal
         isOpen={inviteModal}
         onClose={() => setInviteModal(false)}
-        onSubmit={handleWorkspaceInvite}
+        invite={(data) => inviteMembersToWorkspace(workspaceSlug, data)}
       />
       <section
         className={cn("size-full", {

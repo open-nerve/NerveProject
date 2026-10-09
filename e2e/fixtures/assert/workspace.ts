@@ -149,7 +149,8 @@ const invitationColumns = [
 ];
 
 /**
- * W4, W5, W6: the invitations of the workspace of slug, deleted ones too, are want, in any order. The table
+ * W4, W5, W6: the invitations of the workspace of slug, deleted ones too, are want, in any order of their addresses
+ * (of two to one address, the older first). The table
  * holds no token: its rows have the columns of the design, and none holds any of tokens. Every one was made by
  * the account of inviterEmail; an acceptance deletes the invitation at the moment of the answer.
  */
@@ -164,7 +165,7 @@ export async function expectInvitations(
     Record<string, unknown> & { email: string; accepted: boolean; responded_at: Date | null; deleted_at: Date | null }
   >(
     `SELECT i.* FROM workspace_member_invites i JOIN workspaces w ON w.id = i.workspace_id
-      WHERE w.slug = $1 ORDER BY i.email COLLATE "C"`,
+      WHERE w.slug = $1 ORDER BY i.email COLLATE "C", i.created_at`,
     [slug]
   );
   for (const row of rows) {
@@ -184,7 +185,7 @@ export async function expectInvitations(
       deleted: r.deleted_at !== null,
     })),
     `the invitations of ${slug}`
-  ).toEqual(want.toSorted((a, b) => (a.email < b.email ? -1 : 1)));
+  ).toEqual(want.toSorted((a, b) => (a.email < b.email ? -1 : a.email > b.email ? 1 : 0)));
   const [inviter] = await db.query<{ id: string }>("SELECT id FROM users WHERE email = $1", [inviterEmail]);
   expect(
     rows.map((r) => r.created_by_id),

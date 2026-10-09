@@ -1,5 +1,6 @@
 import { expect, type Browser, type Locator, type Page, type Response } from "@playwright/test";
 
+import type { WorkspaceInvitation } from "./api";
 import { password, signInContext, type AuthTokens } from "./auth";
 import { submitSignIn } from "./auth-pages";
 import { watchPage, type PageWatch } from "./browser";
@@ -104,5 +105,65 @@ export async function endMembership(
   await page.getByRole("button", { name: entry, exact: true }).click();
   return answerTo(page, request.method, request.path, () =>
     page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
+  );
+}
+
+/** The path of an invitation's link (M3 design 7.4): the invitation page, with its id and its token in the query. */
+export function invitationLinkOf(invitation: Pick<WorkspaceInvitation, "id" | "token">): string {
+  return `/workspace-invitations?invitation_id=${invitation.id}&token=${invitation.token}`;
+}
+
+/** The row of the members page's invitations, which page shows, of the invitation to email. */
+export function invitationRow(page: Page, email: string): Locator {
+  // the innermost element that holds the address and the invitation's state: rows come after the lists that hold them
+  return page
+    .locator("div")
+    .filter({ has: page.getByRole("heading", { name: email, exact: true }) })
+    .filter({ hasText: /Pending|Declined/ })
+    .last();
+}
+
+/**
+ * Sends invitations from the members page, which page shows to an admin of the workspace of slug: opens the form, types
+ * each address in a row of its own and picks its role by its label, and sends them. Resolves with what the page sent,
+ * and nerve's answer.
+ */
+export async function sendInvitations(
+  page: Page,
+  slug: string,
+  rows: { email: string; role: string }[]
+): Promise<{ body: unknown; answer: Response }> {
+  await page.getByRole("button", { name: "Add member" }).click();
+  const form = page.getByRole("dialog");
+  // the rows one after another: the form adds a row once the one before it is typed
+  await rows.reduce(async (before, { email, role }, index) => {
+    await before;
+    if (index > 0) await form.getByRole("button", { name: "Add more" }).click();
+    await form.locator(`[id="invitations.${index}.email"]`).fill(email);
+    // a row's role select shows the role it holds, Member as the row is added
+    if (role !== "Member") {
+      await form.getByRole("button", { name: "Member", exact: true }).nth(index).click();
+      await page.getByRole("option", { name: role, exact: true }).click();
+    }
+  }, Promise.resolve());
+  return sentTo(page, "POST", `/api/v0/workspaces/${slug}/invitations`, () =>
+    form.getByRole("button", { name: "Send invitations" }).click()
+  );
+}
+
+/**
+ * Deletes the invitation to email from the members page, which page shows: its row's menu, Remove, and the dialog that
+ * asks. Resolves with nerve's answer to the request of method to path that the page sends.
+ */
+export async function removeInvitation(
+  page: Page,
+  email: string,
+  request: { method: string; path: string }
+): Promise<Response> {
+  // the row's menu is its last button
+  await invitationRow(page, email).getByRole("button").last().click();
+  await page.getByText("Remove", { exact: true }).click();
+  return answerTo(page, request.method, request.path, () =>
+    page.getByRole("dialog").getByRole("button", { name: "Remove", exact: true }).click()
   );
 }

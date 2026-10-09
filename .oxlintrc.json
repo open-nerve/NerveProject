@@ -225,7 +225,13 @@
         "web/apps/web/core/lib/auth/fake-tab.ts",
         "web/apps/web/core/lib/fake-refusal.ts",
         "web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx",
-        "web/apps/web/core/components/workspace/workspace-roles.ts"
+        "web/apps/web/core/components/workspace/workspace-roles.ts",
+        "web/apps/web/core/lib/invitation-link.ts",
+        "web/apps/web/core/lib/invitation-link.test.ts",
+        "web/apps/web/core/components/workspace/invite-modal/refusal.ts",
+        "web/apps/web/core/components/workspace/invite-modal/refusal.test.ts",
+        "web/apps/web/core/components/workspace/members/invite-modal.test.tsx",
+        "web/apps/web/core/hooks/use-copy-invitation-link.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

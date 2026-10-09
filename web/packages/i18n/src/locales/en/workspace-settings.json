@@ -32,6 +32,7 @@
         "add_member": "Add member",
         "invite_members": "Invite members",
         "pending_invites": "Pending invites",
+        "declined": "Declined",
         "invitations_sent_successfully": "Invitations sent successfully",
         "leave_confirmation": "Are you sure you want to leave the workspace? You will no longer have access to this workspace. This action cannot be undone.",
         "details": {
@@ -49,7 +50,9 @@
           "placeholder": "name@company.com",
           "errors": {
             "required": "We need an email address to invite them.",
-            "invalid": "Email is invalid"
+            "invalid": "Email is invalid",
+            "already_member": "Already a member of this workspace.",
+            "already_invited": "This address is invited already (delete that invitation first), or given twice here."
           }
         }
       },

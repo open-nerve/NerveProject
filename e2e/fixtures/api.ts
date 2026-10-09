@@ -110,6 +110,33 @@ export async function accept(api: Api, token: string, invitation: WorkspaceInvit
   return data;
 }
 
+/** Declines invitation with the bearer token given, the invitee's. */
+export async function decline(api: Api, token: string, invitation: WorkspaceInvitation): Promise<void> {
+  const { error, response } = await api.POST("/api/v0/workspace-invitations/{invitation_id}/decline", {
+    params: { path: { invitation_id: invitation.id } },
+    body: { token: invitation.token },
+    headers: bearer(token),
+  });
+  expect(response.status, `decline the invitation of ${invitation.email}: ${JSON.stringify(error)}`).toBe(204);
+}
+
+/**
+ * The invitation of email to the workspace of slug, pending or declined, with its link's token, as its admin of token
+ * lists it.
+ */
+export async function invitationTo(api: Api, token: string, slug: string, email: string): Promise<WorkspaceInvitation> {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/invitations", {
+    params: { path: { slug } },
+    headers: bearer(token),
+  });
+  expect(response.status, `list the invitations of ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  const invitation = data?.data.find((i) => i.email === email);
+  if (!invitation) {
+    throw new Error(`no invitation of ${email} to ${slug}`);
+  }
+  return invitation;
+}
+
 /**
  * Makes the account of member.email, whose bearer token is member.token, a member of the workspace of slug with
  * role: its admin, with adminToken, invites the address and the account accepts. The one way a workspace gets a
