@@ -221,7 +221,10 @@
         "web/apps/web/core/lib/place-between.ts",
         "web/apps/web/core/components/projects/use-archived-projects-fetch.ts",
         "web/apps/web/core/components/projects/use-archived-projects-fetch.test.ts",
-        "web/apps/web/core/components/projects/page.tsx"
+        "web/apps/web/core/components/projects/page.tsx",
+        "web/apps/web/core/lib/auth/fake-tab.ts",
+        "web/apps/web/core/lib/fake-refusal.ts",
+        "web/apps/web/core/components/workspace/delete-workspace-modal.test.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

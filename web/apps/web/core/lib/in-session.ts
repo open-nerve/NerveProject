@@ -15,3 +15,23 @@ export function sessionGuard(): () => boolean {
   const loginId = tokenManager.state.loginId;
   return () => tokenManager.state.loginId === loginId;
 }
+
+/** What a page does once a change it sent has settled: with nerve's answer, or with why it failed. */
+export type ChangeFollowers<T> = { done: (answer: T) => void; failed: (error: unknown) => void };
+
+/**
+ * Sends a change, and follows how it settles on the page only while the tab is in the session the change was sent in
+ * (sessionGuard): done with nerve's answer, failed with the error; neither once another tab has moved this one to
+ * another account, whose page it then is, whatever the answer (M3 design 7.1). Settles once the change has, and never
+ * rejects: its failure is the followers' to show.
+ */
+export async function followInSession<T>(change: () => Promise<T>, followers: ChangeFollowers<T>): Promise<void> {
+  const inSession = sessionGuard();
+  const outcome = await change().then(
+    (answer) => ({ settled: "done" as const, answer }),
+    (error: unknown) => ({ settled: "failed" as const, error })
+  );
+  if (!inSession()) return;
+  if (outcome.settled === "done") followers.done(outcome.answer);
+  else followers.failed(outcome.error);
+}

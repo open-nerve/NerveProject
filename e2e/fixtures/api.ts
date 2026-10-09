@@ -14,6 +14,7 @@ export type WorkspacePreferences = components["schemas"]["WorkspacePreferences"]
 export type WorkspacePreferencesUpdate = components["schemas"]["WorkspacePreferencesUpdate"];
 export type WorkspaceInvitation = components["schemas"]["WorkspaceInvitation"];
 export type WorkspaceMember = components["schemas"]["WorkspaceMember"];
+export type WorkspaceMemberUpdate = components["schemas"]["WorkspaceMemberUpdate"];
 export type InvitationCreate = components["schemas"]["InvitationCreate"];
 export type Project = components["schemas"]["Project"];
 export type ProjectCreate = components["schemas"]["ProjectCreate"];
@@ -148,6 +149,47 @@ export async function membershipOf(api: Api, token: string, slug: string, member
     throw new Error(`no membership of ${memberId} in ${slug}`);
   }
   return membership.id;
+}
+
+/**
+ * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
+ * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
+ * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows, its label Bug
+ * among them.
+ */
+export async function furnishWorkspace(
+  api: Api,
+  adminToken: string,
+  slug: string,
+  member: { email: string; token: string },
+  inviteeEmail: string
+): Promise<void> {
+  await inviteAndAccept(api, adminToken, slug, member, 15);
+  await invite(api, adminToken, slug, [{ email: inviteeEmail, role: 15 }]);
+  const { error, response } = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
+    params: { path: { slug } },
+    body: { navigation_project_limit: 3 },
+    headers: bearer(adminToken),
+  });
+  expect(response.status, `the admin's settings in ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
+  await createLabel(api, adminToken, web.id, { name: "Bug" });
+}
+
+/** Gives the account of memberId the role in the workspace of slug, with the bearer token given, an admin's. */
+export async function changeRole(
+  api: Api,
+  token: string,
+  slug: string,
+  memberId: string,
+  role: WorkspaceMemberUpdate["role"]
+): Promise<void> {
+  const { error, response } = await api.PATCH("/api/v0/workspace-members/{workspace_member_id}", {
+    params: { path: { workspace_member_id: await membershipOf(api, token, slug, memberId) } },
+    body: { role },
+    headers: bearer(token),
+  });
+  expect(response.status, `the role of ${memberId} in ${slug}: ${JSON.stringify(error)}`).toBe(200);
 }
 
 /** Creates a project in the workspace of slug with the bearer token given, an admin's or a member's, and returns it. */

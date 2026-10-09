@@ -29,6 +29,28 @@ export async function answerTo(page: Page, method: string, path: string, act: ()
 }
 
 /**
+ * Resolves with the body, as JSON, of the request of method to path (no query) that act makes page send, and nerve's
+ * answer to it. The body is read as the request leaves page, on its way (a route): the request of a response does not
+ * have the bodies the web app's client sends. The route matches path by a pattern, so it stops no other request, and
+ * stays for the page's life: a route removed while the page sends its next request can leave that request waiting for
+ * good.
+ */
+export async function sentTo(
+  page: Page,
+  method: string,
+  path: string,
+  act: () => Promise<void>
+): Promise<{ body: unknown; answer: Response }> {
+  const bodies: unknown[] = [];
+  await page.route(`**${path}`, async (route: Route) => {
+    if (route.request().method() === method) bodies.push(route.request().postDataJSON());
+    await route.fallback();
+  });
+  const answer = await answerTo(page, method, path, act);
+  return { body: bodies[0], answer };
+}
+
+/**
  * Holds from page nerve's answer to the next request of method to path that page sends: the request reaches nerve
  * at once, and page gets the answer only when the function returned is called. Later requests pass.
  */

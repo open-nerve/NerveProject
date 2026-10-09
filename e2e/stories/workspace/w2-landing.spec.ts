@@ -1,9 +1,8 @@
 import {
   addProjectMembers,
-  createLabel,
   createProject,
   createWorkspace,
-  invite,
+  furnishWorkspace,
   inviteAndAccept,
   membershipOf,
   slugFor,
@@ -39,16 +38,7 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
   // deletion's writing it shows; the invitee's pending invitation (bob's own was deleted when he accepted it, before
   // the workspace); her display settings; and her project Web with its own rows, its label Bug among them.
   const firstWorkspace = await createWorkspace(api, alice, { name: "First", slug: first });
-  await inviteAndAccept(api, alice, first, { email: bobEmail, token: bob }, 15);
-  await invite(api, alice, first, [{ email: emailFor(testInfo, "invitee"), role: 15 }]);
-  const settings = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
-    params: { path: { slug: first } },
-    body: { navigation_project_limit: 3 },
-    headers: bearer(alice),
-  });
-  expect(settings.response.status).toBe(200);
-  const web = await createProject(api, alice, first, { name: "Web", identifier: "WEB" });
-  await createLabel(api, alice, web.id, { name: "Bug" });
+  await furnishWorkspace(api, alice, first, { email: bobEmail, token: bob }, emailFor(testInfo, "invitee"));
   // Second has bob as its member, and his project Ops, alice its admin by his adding, so both are its admins.
   const secondWorkspace = await createWorkspace(api, alice, { name: "Second", slug: second });
   await inviteAndAccept(api, alice, second, { email: bobEmail, token: bob }, 15);

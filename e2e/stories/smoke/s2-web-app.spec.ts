@@ -146,7 +146,10 @@ const PROJECT_MEMBER = [
   "GET /api/v0/projects/{project}/members",
   "GET /api/v0/projects/{project}/states",
 ];
-/** The project's general settings, the page S2 opens, list the time zones for its member (M2 design 5.3). */
+/**
+ * A general settings page lists the time zones (M2 design 5.3): the project's, for its members; the workspace's, for
+ * its admins and members (the workspace's settings show a guest no general page, M3 design 9.2).
+ */
 const GENERAL = ["GET /api/v0/timezones"];
 /** The workspace's projects page lists its archived projects too, its own fetch (useArchivedProjectsFetch). */
 const ARCHIVED = ["GET /api/v0/workspaces/{slug}/projects?archived=true"];
@@ -154,24 +157,28 @@ const ARCHIVED = ["GET /api/v0/workspaces/{slug}/projects?archived=true"];
 /**
  * The pages each account opens, in order, each as its path ({slug} and {project} for their values) and the requests it
  * makes as it loads: "/", which lands on the workspace's home; for the admin, the workspace's projects page, whose
- * call of its own fetch no other check holds; then the project's settings.
+ * call of its own fetch no other check holds; the workspace's general settings; then the project's settings.
  */
 const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
   admin: [
     ["/", [...APP, ...WORKSPACE]],
     ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
+    ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
   ],
   member: [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
   ],
   guest: [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/settings", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
   ],
   "project non-member": [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT]],
   ],
 };

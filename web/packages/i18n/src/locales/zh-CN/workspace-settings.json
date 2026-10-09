@@ -18,9 +18,8 @@
         "delete_modal": {
           "title": "确定要删除此工作区吗？",
           "success_title": "工作区已删除。",
-          "success_message": "即将跳转到您的个人资料页面。",
-          "error_title": "操作失败。",
-          "error_message": "请重试。"
+          "success_message": "即将跳转到您的另一个工作区；没有其他工作区时，跳转到创建工作区。",
+          "error_title": "操作失败。"
         },
         "errors": {
           "company_size": {

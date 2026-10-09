@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
+import { useParams } from "react-router";
 // Nerve Imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
@@ -14,7 +15,7 @@ import { ORGANIZATION_SIZE, EUserPermissions, EUserPermissionsLevel } from "@ner
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { Workspace, WorkspaceUpdate } from "@nerve/api-client";
+import type { OrganizationSize, Workspace, WorkspaceUpdate } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
 import { cn, copyUrlToClipboard, getFileURL, validateWorkspaceName } from "@nerve/utils";
 // components
@@ -24,22 +25,33 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
 // components
 import { DeleteWorkspaceSection } from "@/components/workspace/delete-workspace-section";
+// lib
+import { errorMessageKey } from "@/lib/error-messages";
+import { followInSession } from "@/lib/in-session";
 
-/** The form's values: what an admin may change of the workspace. */
-type TWorkspaceForm = Required<Pick<WorkspaceUpdate, "name" | "timezone">> & Pick<WorkspaceUpdate, "organization_size">;
+/**
+ * The form's values: what an admin may change of the workspace. The size is null while the workspace has none, which
+ * nerve's WorkspaceUpdate cannot set: the select holds a value from the start (undefined would leave it uncontrolled).
+ */
+type TWorkspaceForm = Required<Pick<WorkspaceUpdate, "name" | "timezone">> & {
+  organization_size: OrganizationSize | null;
+};
 
 /** The form's values for a workspace; a size the form does not offer (none was given) shows as none. */
 const formValues = (workspace: Workspace): TWorkspaceForm => ({
   name: workspace.name,
-  organization_size: ORGANIZATION_SIZE.find((size) => size === workspace.organization_size),
+  organization_size: ORGANIZATION_SIZE.find((size) => size === workspace.organization_size) ?? null,
   timezone: workspace.timezone,
 });
 
 export const WorkspaceDetails = observer(function WorkspaceDetails() {
   // states
   const [isLoading, setIsLoading] = useState(false);
+  // router: the address's workspace, as the caller's list has it (the wrapper shows the page once it has)
+  const { workspaceSlug } = useParams();
   // store hooks
-  const { currentWorkspace, updateWorkspace } = useWorkspace();
+  const { getWorkspaceBySlug, updateWorkspace } = useWorkspace();
+  const currentWorkspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
 
@@ -56,6 +68,8 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
       : { name: "", organization_size: "2-10", timezone: "UTC" },
   });
 
+  // the fields the form edits, which nerve's WorkspaceUpdate takes; the page follows the change only in the session it
+  // was sent in (M3 design 7.1)
   const onSubmit = async (formData: TWorkspaceForm) => {
     if (!currentWorkspace) return;
 
@@ -63,24 +77,21 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
 
     const payload: WorkspaceUpdate = {
       name: formData.name,
-      organization_size: formData.organization_size,
+      organization_size: formData.organization_size ?? undefined,
       timezone: formData.timezone,
     };
 
-    try {
-      await updateWorkspace(currentWorkspace.slug, payload);
-      setToast({
-        title: "Success!",
-        type: TOAST_TYPE.SUCCESS,
-        message: "Workspace updated successfully",
-      });
-    } catch (err: unknown) {
-      console.error(err);
-    } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
-    }
+    await followInSession(() => updateWorkspace(currentWorkspace.slug, payload), {
+      done: () =>
+        setToast({
+          title: "Success!",
+          type: TOAST_TYPE.SUCCESS,
+          message: "Workspace updated successfully",
+        }),
+      failed: (error) =>
+        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) }),
+    });
+    setIsLoading(false);
   };
 
   const handleCopyUrl = () => {
@@ -94,9 +105,14 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
         });
         return undefined;
       })
-      .catch(() => {
-        // Silently handle clipboard errors
-      });
+      // the browser did not let the page write the clipboard
+      .catch(() =>
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: t("toast.error"),
+          message: t("something_went_wrong_please_try_again"),
+        })
+      );
   };
 
   useEffect(() => {
