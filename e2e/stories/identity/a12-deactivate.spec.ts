@@ -131,9 +131,11 @@ test("A12 (page): a deactivation nerve fails says why, sent once however often C
   const refused = await answerTo(page, "POST", "/api/v0/me/deactivate", async () => answer());
   expect(refused.status()).toBe(500);
 
-  // The toast says why, by the problem's code; the confirmation stays open, to confirm again or cancel; the page
-  // stays signed in, on the general page; nothing changed.
-  await expect(page.getByText("Something went wrong on the server. Please try again.")).toBeVisible();
+  // The confirmation says why, by the problem's code, and stays open, to confirm again or cancel; the page stays
+  // signed in, on the general page; nothing changed.
+  await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
+    "Something went wrong on the server. Please try again."
+  );
   await expect(page.getByRole("button", { name: "Confirm" })).toBeVisible();
   await expect(page).toHaveURL("/settings/profile/general");
   expect(await recordOf(page)).toEqual(held);

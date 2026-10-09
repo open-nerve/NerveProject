@@ -1,5 +1,6 @@
 import {
   addProjectMembers,
+  changeRole,
   createProject,
   createWorkspace,
   invite,
@@ -7,15 +8,18 @@ import {
   membershipOf,
   slugFor,
 } from "../../fixtures/api";
-import { accountOf, expectDeactivated, tokensOf } from "../../fixtures/assert/identity";
+import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fixtures/assert/identity";
 import { expectMembership } from "../../fixtures/assert/workspace";
+import { signInPath } from "../../fixtures/auth-pages";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers, nerveUsersFails } from "../../fixtures/users";
 import { nerveWorkspaces } from "../../fixtures/workspaces";
 
 // W9, a deactivation ends every membership of the account (M3 design 2, 3.9; M2 handoff 6): the API version, with the
-// command. The page's is P9's.
+// command, and the page's, from the general page's dialog.
 
 /** The two refusals' details: the API's problem and the command's line say the same. */
 const workspaceRefusal =
@@ -259,4 +263,57 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   await expectDeactivated(db, again, tokensBefore);
   await expectMembership(db, acme, bEmail, { role: 20, is_active: false });
   expect(await others(), "every row of anyone else").toEqual(othersBefore);
+});
+
+test("W9 (page): the only admin of a workspace with another member deactivates from the general page: the dialog says to make another admin first, and nothing changes; once there is another, the deactivation ends his membership and the page is back at sign-in", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const email = emailFor(testInfo, "admin");
+  const tokens = await registerOnboarded(api, email);
+  const memberEmail = emailFor(testInfo, "member");
+  const member = await registerOnboarded(api, memberEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, tokens.access_token, { name: "Acme", slug });
+  await inviteAndAccept(api, tokens.access_token, slug, { email: memberEmail, token: member.access_token }, 15);
+  const page = await signedInPage(tokens);
+  const watch = await watchPage(page);
+  await page.goto("/settings/profile/general");
+  await expect(page.getByRole("button", { name: "Deactivate account" })).toBeVisible();
+  // once the page has its session: its first refresh writes the session's row
+  const before = await accountStateOf(db, email);
+  const dialog = page.getByRole("dialog");
+  const confirmed = () =>
+    answerTo(page, "POST", "/api/v0/me/deactivate", () => dialog.getByRole("button", { name: "Confirm" }).click());
+
+  // The only admin of Acme, which has a member: nerve refuses, the dialog says why, and nothing changes.
+  await page.getByRole("button", { name: "Deactivate account" }).click();
+  expect((await confirmed()).status()).toBe(409);
+  await expect(dialog.getByRole("alert")).toHaveText(
+    "The workspace would be left without an admin. Make another member an admin first."
+  );
+  expect(await accountStateOf(db, email)).toEqual(before);
+  await expectMembership(db, slug, email, { role: 20, is_active: true });
+  // Cancelled and opened again, the dialog no longer says it.
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("button", { name: "Deactivate account" }).click();
+  await expect(dialog.getByRole("button", { name: "Confirm" })).toBeVisible();
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+
+  // He makes the member an admin: the deactivation goes through, his membership ends, and the page is at sign-in.
+  await changeRole(api, tokens.access_token, slug, await accountId(api, member.access_token), 20);
+  expect((await confirmed()).status()).toBe(204);
+  await expect(page).toHaveURL(signInPath("/settings/profile/general"));
+  await expect(page.getByText("Your account is deactivated.")).toBeVisible();
+  await expectMembership(db, slug, email, { role: 20, is_active: false });
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    ["409 POST /api/v0/me/deactivate"],
+    [],
+    [],
+  ]);
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 409 (Conflict)"],
+  });
 });
