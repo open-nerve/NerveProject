@@ -9,6 +9,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useWorkspaceMembersFetch } from "@/hooks/use-workspace-members-fetch";
+import { useWorkspacesFetch } from "@/hooks/use-workspaces-fetch";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
 
@@ -32,13 +33,12 @@ export type WorkspaceAccess =
 export function useWorkspaceFetch(workspaceSlug: string | undefined): WorkspaceAccess {
   const {
     workspaces,
-    fetchWorkspaces,
     getWorkspaceBySlug,
     preferences: { fetchPreferences },
   } = useWorkspace();
   const { fetchProjects } = useProject();
   const { fetchWorkspaceStates } = useProjectState();
-  const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces());
+  const listed = useWorkspacesFetch();
   // the address's workspace is the caller's once his list has it
   const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
   useWorkspaceMembersFetch(workspace);

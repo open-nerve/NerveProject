@@ -60,6 +60,13 @@
     "home": "回到首页",
     "sign_in": "登录"
   },
+  "workspace_not_found": {
+    "title": "找不到工作区",
+    "description": "这个地址没有对应的工作区：它可能不存在，或者您没有权限查看。",
+    "go_home": "回到首页",
+    "visit_profile": "个人设置",
+    "create_workspace": "创建新工作区"
+  },
   "workspace_projects": {
     "label": "{count, plural, one {项目} other {项目}}",
     "create": {

@@ -359,3 +359,21 @@ test("S2: a newcomer opens /, which sends him to the onboarding: it asks for his
   // Nothing came after the list was whole.
   expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
 });
+
+test("S2: a member of a workspace opens his profile's settings directly: they ask for his workspaces, as the app does, which their sidebar lists, and no more", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const tokens = await registerOnboarded(api, emailFor(testInfo));
+  await createWorkspace(api, tokens.access_token, { name: "Acme", slug: slugFor(testInfo) });
+  const page = await signedInPage(tokens);
+  const watch = await watchPage(page);
+  const requests = followRequests(page, {});
+  await page.goto("/settings/profile/general");
+  await expect(page.getByRole("link", { name: "Acme" })).toBeVisible();
+  await expect.poll(() => requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
+  expect([watch.apiFailures, watch.oldApiRequests, watch.cspViolations, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+  // Nothing came after the list was whole.
+  expect(requests.between(0)).toEqual({ pending: 0, requests: APP.toSorted() });
+});

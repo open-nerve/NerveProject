@@ -17,10 +17,10 @@ import { LogoSpinner } from "@/components/common/logo-spinner";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserProfile } from "@/hooks/store/user";
+import { useWorkspacesFetch } from "@/hooks/use-workspaces-fetch";
 // lib
 import { errorMessageKey } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
-import { useSessionSWR } from "@/lib/use-session-swr";
 // local components
 import { OnboardingHeader } from "./header";
 import { afterProfile, resumedPlace, type OnboardingPlace } from "./onboarding-place";
@@ -96,8 +96,8 @@ const OnboardingSteps = observer(function OnboardingSteps({ workspaces }: Props)
  */
 export const OnboardingRoot = observer(function OnboardingRoot() {
   // store hooks
-  const { workspaces, fetchWorkspaces } = useWorkspace();
-  const listed = useSessionSWR(["WORKSPACES"], () => fetchWorkspaces());
+  const { workspaces } = useWorkspace();
+  const listed = useWorkspacesFetch();
 
   if (workspaces) return <OnboardingSteps workspaces={workspaces} />;
   if (listed.error) return <SessionUnavailable autoRetry={false} onRetry={() => void listed.mutate()} />;

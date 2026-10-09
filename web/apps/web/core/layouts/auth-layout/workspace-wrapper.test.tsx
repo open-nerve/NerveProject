@@ -59,11 +59,21 @@ describe("WorkspaceAuthWrapper", () => {
   });
 
   it.each([
-    { has: "others", hasWorkspaces: true, links: ["Go Home", "Visit Profile"], not: "Create new workspace" },
-    { has: "none", hasWorkspaces: false, links: ["Create new workspace"], not: "Go Home" },
+    {
+      has: "others",
+      hasWorkspaces: true,
+      links: ["workspace_not_found.go_home", "workspace_not_found.visit_profile"],
+      not: "workspace_not_found.create_workspace",
+    },
+    {
+      has: "none",
+      hasWorkspaces: false,
+      links: ["workspace_not_found.create_workspace"],
+      not: "workspace_not_found.go_home",
+    },
   ])("shows that the workspace is not found, with where to go when he has $has", ({ hasWorkspaces, links, not }) => {
     const markup = render({ kind: "not-found", hasWorkspaces });
-    expect(markup).toContain("Workspace not found");
+    expect(markup).toContain("workspace_not_found.title");
     for (const link of links) expect(markup).toContain(link);
     expect(markup).not.toContain(not);
     expect(markup).not.toContain(PAGES);

@@ -48,8 +48,8 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
     await signOut().catch(() =>
       setToast({
         type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Failed to sign out. Please try again.",
+        title: t("auth.sign_out.toast.error.title"),
+        message: t("auth.sign_out.toast.error.message"),
       })
     );
   };
@@ -95,24 +95,22 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
             <div className="relative flex-shrink-0">
               <img src={WorkSpaceNotAvailable} className="h-[220px] object-contain object-center" alt="" />
             </div>
-            <h3 className="text-center text-16 font-semibold">Workspace not found</h3>
-            <p className="text-center text-13 text-secondary">
-              No workspace found with the URL. It may not exist or you lack authorization to view it.
-            </p>
+            <h3 className="text-center text-16 font-semibold">{t("workspace_not_found.title")}</h3>
+            <p className="text-center text-13 text-secondary">{t("workspace_not_found.description")}</p>
             <div className="flex items-center justify-center gap-2 pt-4">
               {access.hasWorkspaces && (
                 <Link to="/" className={cn(getButtonStyling("primary", "base"))}>
-                  Go Home
+                  {t("workspace_not_found.go_home")}
                 </Link>
               )}
               {access.hasWorkspaces && (
                 <Link to="/settings/profile/general" className={cn(getButtonStyling("secondary", "base"))}>
-                  Visit Profile
+                  {t("workspace_not_found.visit_profile")}
                 </Link>
               )}
               {!access.hasWorkspaces && (
                 <Link to="/create-workspace" className={cn(getButtonStyling("secondary", "base"))}>
-                  Create new workspace
+                  {t("workspace_not_found.create_workspace")}
                 </Link>
               )}
             </div>

@@ -60,6 +60,13 @@
     "home": "Continue to home",
     "sign_in": "Sign in"
   },
+  "workspace_not_found": {
+    "title": "Workspace not found",
+    "description": "No workspace found with the URL. It may not exist or you lack authorization to view it.",
+    "go_home": "Go Home",
+    "visit_profile": "Visit Profile",
+    "create_workspace": "Create new workspace"
+  },
   "workspace_projects": {
     "label": "{count, plural, one {Project} other {Projects}}",
     "create": {

@@ -9,9 +9,9 @@ import { EPageTypes } from "@/helpers/authentication.helper";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserProfile } from "@/hooks/store/user";
+import { useWorkspacesFetch } from "@/hooks/use-workspaces-fetch";
 // lib
 import { landingPath } from "@/lib/landing";
-import { useSessionSWR } from "@/lib/use-session-swr";
 
 /** Whether the account is done with onboarding (M2 design 7.4): its profile says so, or every step is done. */
 export const isOnboarded = (profile: Profile) =>
@@ -38,13 +38,13 @@ export type Landing =
  */
 export function useLanding(pageType: EPageTypes, validNextPath: string | undefined): Landing {
   const { data: profile } = useUserProfile();
-  const { workspaces, fetchWorkspaces } = useWorkspace();
+  const { workspaces } = useWorkspace();
   const lands =
     profile !== undefined &&
     isOnboarded(profile) &&
     !validNextPath &&
     (pageType === EPageTypes.NON_AUTHENTICATED || pageType === EPageTypes.ONBOARDING);
-  const listed = useSessionSWR(lands ? ["WORKSPACES"] : null, () => fetchWorkspaces());
+  const listed = useWorkspacesFetch(lands);
   if (!lands) return { kind: "none" };
   if (listed.error) return { kind: "unavailable", retry: () => void listed.mutate() };
   if (!workspaces) return { kind: "loading" };

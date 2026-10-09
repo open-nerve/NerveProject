@@ -2179,6 +2179,38 @@
           "miss": ["docs/v0/M3-workspace-project/M3-design.md", "e2e/stories/identity/a3-sign-in.spec.ts"]
         }
       }
+    },
+    {
+      "id": "workspaces-list-fetch",
+      "phase": "M3/P9",
+      "why": "调用者的工作区列表只有一个取数：useWorkspacesFetch（web/apps/web/core/hooks/use-workspaces-fetch.ts，键 [\"WORKSPACES\", loginId]），登录后的落点、工作区包装层、新手引导和个人设置的侧边栏都经它（M3/P9 spec 第 3 节第 14 条）；别处调 store 的 fetchWorkspaces 就是另一个键、另一份取数。store 自己（core/store/workspace/）、测试和测试的替身不算",
+      "files": {
+        "source": "^web/apps/web/(?:app|core)/(?!hooks/use-workspaces-fetch\\.ts$|store/workspace/|hooks/store/fake-store-hooks\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bfetchWorkspaces\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  const { workspaces, fetchWorkspaces } = useWorkspace();",
+          "  useSessionSWR([\"PROFILE_WORKSPACES\"], () => fetchWorkspaces());"
+        ],
+        "miss": ["  useWorkspacesFetch();", "  const listed = useWorkspacesFetch(false);"],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx",
+            "web/apps/web/core/components/onboarding/root.tsx"
+          ],
+          "miss": [
+            "web/apps/web/core/hooks/use-workspaces-fetch.ts",
+            "web/apps/web/core/store/workspace/index.ts",
+            "web/apps/web/core/hooks/store/fake-store-hooks.ts",
+            "web/apps/web/core/lib/store-context.test.ts"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [

@@ -136,7 +136,9 @@
         "web/apps/web/core/layouts/auth-layout/project-wrapper.tsx",
         "web/apps/web/core/layouts/auth-layout/use-project-fetch.ts",
         "web/apps/web/core/components/project/project-settings-member-defaults.tsx",
-        "web/apps/web/core/components/onboarding/root.tsx"
+        "web/apps/web/core/components/onboarding/root.tsx",
+        "web/apps/web/core/hooks/use-workspaces-fetch.ts",
+        "web/apps/web/core/components/settings/profile/sidebar/workspace-options.tsx"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -249,7 +251,8 @@
         "web/apps/web/core/components/onboarding/steps/team/links.tsx",
         "web/apps/web/core/hooks/use-navigation-preferences.test.ts",
         "web/apps/web/core/components/home/root.test.tsx",
-        "web/apps/web/core/components/account/deactivate-account-modal.test.tsx"
+        "web/apps/web/core/components/account/deactivate-account-modal.test.tsx",
+        "web/apps/web/core/hooks/use-workspaces-fetch.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"
