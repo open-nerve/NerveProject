@@ -16,8 +16,11 @@ export function sessionGuard(): () => boolean {
   return () => tokenManager.state.loginId === loginId;
 }
 
-/** What a page does once a change it sent has settled: with nerve's answer, or with why it failed. */
-export type ChangeFollowers<T> = { done: (answer: T) => void; failed: (error: unknown) => void };
+/**
+ * What a page does once a change it sent has settled: with nerve's answer (nothing, for a change whose answer the
+ * stores show), or with why it failed.
+ */
+export type ChangeFollowers<T> = { done?: (answer: T) => void; failed: (error: unknown) => void };
 
 /**
  * Sends a change, and follows how it settles on the page only while the tab is in the session the change was sent in
@@ -32,6 +35,6 @@ export async function followInSession<T>(change: () => Promise<T>, followers: Ch
     (error: unknown) => ({ settled: "failed" as const, error })
   );
   if (!inSession()) return;
-  if (outcome.settled === "done") followers.done(outcome.answer);
+  if (outcome.settled === "done") followers.done?.(outcome.answer);
   else followers.failed(outcome.error);
 }

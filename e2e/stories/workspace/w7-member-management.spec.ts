@@ -11,9 +11,26 @@ import {
 } from "../../fixtures/api";
 import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "../../fixtures/assert/workspace";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import type { Database } from "../../fixtures/db";
+import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
+import { anotherBrowser, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
 
-// W7, the members' management (M3 design 2). The page version comes with the members' page (P9).
+// W7, the members' management (M3 design 2).
+
+/**
+ * The memberships of the account of email of the projects of the workspace of slug, ended ones too: each one's role,
+ * whether it is active, and who wrote it last.
+ */
+const projectRoles = (db: Database, slug: string, email: string) =>
+  db.query(
+    `SELECT p.identifier, m.role, m.is_active, b.email AS by
+       FROM project_members m JOIN projects p ON p.id = m.project_id JOIN workspaces w ON w.id = p.workspace_id
+       JOIN users u ON u.id = m.member_id JOIN users b ON b.id = m.updated_by_id
+      WHERE w.slug = $1 AND u.email = $2 AND m.deleted_at IS NULL ORDER BY p.identifier COLLATE "C"`,
+    [slug, email]
+  );
 
 test("W7 (API): the admin makes a member a guest in every project, removes another, ending her project memberships and no other invitation, and invites her back as a guest; nobody changes or removes his own membership, and the only admin cannot leave", async ({
   api,
@@ -86,19 +103,10 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   expect(erinLeaves.response.status, "erin leaves acme").toBe(204);
   const membership = (id: string) => membershipOf(api, admin, slug, id);
   const adminId = await accountId(api, admin);
-  // The account of email's memberships of acme's projects, ended ones too: each one's role, whether it is active,
-  // and who wrote it last.
-  const projectRoles = (email: string) =>
-    db.query(
-      `SELECT p.identifier, m.role, m.is_active, b.email AS by
-         FROM project_members m JOIN projects p ON p.id = m.project_id JOIN workspaces w ON w.id = p.workspace_id
-         JOIN users u ON u.id = m.member_id JOIN users b ON b.id = m.updated_by_id
-        WHERE w.slug = $1 AND u.email = $2 AND m.deleted_at IS NULL ORDER BY p.identifier COLLATE "C"`,
-      [slug, email]
-    );
-  expect(await projectRoles(erin.email), "erin's membership of Docs, an admin's, ended by her leaving").toEqual([
-    { identifier: "DOCS", role: 20, is_active: false, by: erin.email },
-  ]);
+  expect(
+    await projectRoles(db, slug, erin.email),
+    "erin's membership of Docs, an admin's, ended by her leaving"
+  ).toEqual([{ identifier: "DOCS", role: 20, is_active: false, by: erin.email }]);
 
   // Nobody changes or removes his own membership; the only admin cannot leave, though Other has an admin.
   const own = await membership(adminId);
@@ -128,7 +136,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   // bob becomes a guest, and a guest in each of his projects: Ops is left without an admin. He wrote each of those
   // rows last, so that the admin's writing them shows.
   await expectWrittenLastBy(db, slug, bob.email, { workspace: bob.email, OPS: bob.email, WEB: bob.email });
-  expect(await projectRoles(bob.email), "bob's memberships of the projects, Ops's admin's").toEqual([
+  expect(await projectRoles(db, slug, bob.email), "bob's memberships of the projects, Ops's admin's").toEqual([
     { identifier: "OPS", role: 20, is_active: true, by: bob.email },
     { identifier: "WEB", role: 15, is_active: true, by: bob.email },
   ]);
@@ -140,7 +148,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   expect(demoted.response.status).toBe(200);
   await expectMembership(db, slug, bob.email, { role: 5, is_active: true });
   await expectWrittenLastBy(db, slug, bob.email, { workspace: adminEmail, OPS: adminEmail, WEB: adminEmail });
-  expect(await projectRoles(bob.email), "bob's memberships of the projects").toEqual([
+  expect(await projectRoles(db, slug, bob.email), "bob's memberships of the projects").toEqual([
     { identifier: "OPS", role: 5, is_active: true, by: adminEmail },
     { identifier: "WEB", role: 5, is_active: true, by: adminEmail },
   ]);
@@ -202,7 +210,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   expect(await accept(api, carol.token, invitation)).toMatchObject({ slug, role: 5 });
   expect(await membership(carol.id), "carol's membership, restored").toBe(carolsMembership);
   await expectMembership(db, slug, carol.email, { role: 5, is_active: true });
-  expect(await projectRoles(carol.email), "carol's memberships of the projects").toEqual([
+  expect(await projectRoles(db, slug, carol.email), "carol's memberships of the projects").toEqual([
     { identifier: "DOCS", role: 5, is_active: false, by: carol.email },
     { identifier: "OPS", role: 5, is_active: false, by: carol.email },
     { identifier: "WEB", role: 5, is_active: false, by: carol.email },
@@ -223,4 +231,88 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
     [404, "project.not_found"],
     [404, "project.not_found"],
   ]);
+});
+
+test("W7 (page): the admin makes a member a guest, in the workspace and in each of his projects, and removes another, who comes back by a new invitation; his own row offers no role and no removal, and his leaving, as the only admin, is refused with the reason; a member sees the roles and changes none", async ({
+  api,
+  baseURL,
+  browser,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  const join = async (name: string) => {
+    const email = emailFor(testInfo, name);
+    const tokens = await registerOnboarded(api, email);
+    await inviteAndAccept(api, admin.access_token, slug, { email, token: tokens.access_token }, 15);
+    return { email, tokens, id: await accountId(api, tokens.access_token) };
+  };
+  const bob = await join("bob");
+  const carol = await join("carol");
+  // bob is a member of Web, and the admin of Ops, his own.
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await addProjectMembers(api, admin.access_token, web.id, [{ member_id: bob.id, role: 15 }]);
+  await createProject(api, bob.tokens.access_token, slug, { name: "Ops", identifier: "OPS" });
+  const membership = (id: string) => membershipOf(api, admin.access_token, slug, id);
+  const members = `/${slug}/settings/members`;
+
+  // carol, a member, sees each role as text; her own row's menu offers her leaving.
+  const theMember = await anotherBrowser(browser, baseURL ?? "", carol.tokens);
+  const memberWatch = await watchPage(theMember.page);
+  await theMember.page.goto(members);
+  await expect(memberRow(theMember.page, bob.email)).toContainText("Member");
+  await expect(memberRow(theMember.page, bob.email).locator("button")).toHaveCount(0);
+  await expect(memberRow(theMember.page, adminEmail).locator("button")).toHaveCount(0);
+  await memberRow(theMember.page, carol.email).locator("button").first().click();
+  await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
+  expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await theMember.close();
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  await page.goto(members);
+  // His own row: his role as text, nothing to pick.
+  await expect(memberRow(page, adminEmail)).toContainText("Admin");
+  await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin" })).toHaveCount(0);
+
+  // bob becomes a guest: the page sends the role's number (nerve refuses a string), and so is he in each project.
+  const demoted = await pickRole(page, bob.email, await membership(bob.id), { from: "Member", to: "Guest" });
+  expect([demoted.answer.status(), demoted.body]).toEqual([200, { role: 5 }]);
+  await expect(memberRow(page, bob.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
+  await expectMembership(db, slug, bob.email, { role: 5, is_active: true });
+  expect(await projectRoles(db, slug, bob.email)).toEqual([
+    { identifier: "OPS", role: 5, is_active: true, by: adminEmail },
+    { identifier: "WEB", role: 5, is_active: true, by: adminEmail },
+  ]);
+
+  // carol is removed: her membership ends, its row kept; a new invitation brings her back, with its role.
+  const carols = await membership(carol.id);
+  const removal = { method: "DELETE", path: `/api/v0/workspace-members/${carols}` };
+  expect((await endMembership(page, carol.email, "Remove", removal)).status()).toBe(204);
+  await expect(memberRow(page, carol.email)).toContainText("Suspended");
+  await expectMembershipEnded(db, slug, carol.email, adminEmail, 15, []);
+  await inviteAndAccept(api, admin.access_token, slug, { email: carol.email, token: carol.tokens.access_token }, 5);
+  await expectMembership(db, slug, carol.email, { role: 5, is_active: true });
+
+  // His leaving, as the only admin: nerve refuses it, and the page says why and stays.
+  const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
+  expect((await endMembership(page, adminEmail, "Leave", leaving)).status()).toBe(409);
+  await expect(
+    page.getByText("The workspace would be left without an admin. Make another member an admin first.")
+  ).toBeVisible();
+  await expect(page).toHaveURL(members);
+  await expectMembership(db, slug, adminEmail, { role: 20, is_active: true });
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    [`409 ${leaving.method} ${leaving.path}`],
+    [],
+    [],
+  ]);
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 409 (Conflict)"],
+  });
 });

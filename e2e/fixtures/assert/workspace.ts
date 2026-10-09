@@ -63,6 +63,15 @@ export async function expectWorkspaceCreated(db: Database, adminEmail: string, w
   return id;
 }
 
+/** The workspace the account of email opened last, as the web app wrote it in the profile (M3 design 3.14), or null. */
+export async function lastWorkspaceOf(db: Database, email: string): Promise<string | null> {
+  const [profile] = await db.query<{ last_workspace_id: string | null }>(
+    "SELECT p.last_workspace_id FROM profiles p JOIN users u ON u.id = p.user_id WHERE u.email = $1",
+    [email]
+  );
+  return profile?.last_workspace_id ?? null;
+}
+
 /** How many workspaces and memberships there are. */
 export interface WorkspaceCounts {
   workspaces: number;

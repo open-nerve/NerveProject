@@ -124,5 +124,5 @@ export const useMemberColumns = () => {
       ),
     },
   ];
-  return { columns, workspaceSlug, removeMemberModal, setRemoveMemberModal };
+  return { columns, removeMemberModal, setRemoveMemberModal };
 };
