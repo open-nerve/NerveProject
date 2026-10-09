@@ -58,8 +58,10 @@ describe("useProjectNavigationPreferences", () => {
     page.settings.set("acme", tabbed);
     await useProjectNavigationPreferences().changeNavigation({ limitToggled: true });
     expect(page.updatePreferences.mock.calls).toEqual([["acme", expect.any(Function)]]);
-    // nerve answered every project to the turn before it: the sidebar showed a limit of 3 as this one was asked for
+    // nerve answered every project to the turn before it: the sidebar showed a limit of 3 as this one was asked for,
+    // and in this one's turn the store has that answer, as its settings show
     const answered: WorkspacePreferences = { navigation_control_preference: "TABBED", navigation_project_limit: 0 };
+    page.settings.set("acme", answered);
     expect(page.updatePreferences.mock.calls[0]?.[1](answered)).toEqual({ navigation_project_limit: 10 });
     expect(toasts).toEqual([]);
   });

@@ -29,11 +29,24 @@ export async function answerTo(page: Page, method: string, path: string, act: ()
 }
 
 /**
- * Resolves with the body, as JSON, of the request of method to path (no query) that act makes page send, and nerve's
- * answer to it. The body is read as the request leaves page, on its way (a route): the request of a response does not
- * have the bodies the web app's client sends. The route matches path by a pattern, so it stops no other request, and
- * stays for the page's life: a route removed while the page sends its next request can leave that request waiting for
- * good.
+ * The bodies, as JSON, of the requests of method to path (no query) that page sends from now on, in the order they
+ * leave it: the array returned grows as they do. Each body is read as its request leaves page, on its way (a route):
+ * the request of a response does not have the bodies the web app's client sends. The route matches path by a
+ * pattern, so it stops no other request, and stays for the page's life: a route removed while the page sends its next
+ * request can leave that request waiting for good.
+ */
+export async function bodiesSentTo(page: Page, method: string, path: string): Promise<unknown[]> {
+  const bodies: unknown[] = [];
+  await page.route(`**${path}`, async (route: Route) => {
+    if (route.request().method() === method) bodies.push(route.request().postDataJSON());
+    await route.fallback();
+  });
+  return bodies;
+}
+
+/**
+ * Resolves with the body, as JSON, of the request of method to path (no query) that act makes page send, read as it
+ * leaves page (bodiesSentTo), and nerve's answer to it.
  */
 export async function sentTo(
   page: Page,
@@ -41,11 +54,7 @@ export async function sentTo(
   path: string,
   act: () => Promise<void>
 ): Promise<{ body: unknown; answer: Response }> {
-  const bodies: unknown[] = [];
-  await page.route(`**${path}`, async (route: Route) => {
-    if (route.request().method() === method) bodies.push(route.request().postDataJSON());
-    await route.fallback();
-  });
+  const bodies = await bodiesSentTo(page, method, path);
   const answer = await answerTo(page, method, path, act);
   return { body: bodies[0], answer };
 }

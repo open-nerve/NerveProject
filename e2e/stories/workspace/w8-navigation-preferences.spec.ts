@@ -10,7 +10,7 @@ import {
 import { expectPreferences } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import { answerTo, bodiesSentTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // W8, the project navigation's settings (M3 design 2, 3.18): through the API, and through the sidebar's "project
@@ -133,11 +133,7 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   // Every project, then a limit again, in two quick turns: the second is asked for before nerve answers the first, and
   // made to that answer (v0 design 7.7), so they end where they began, at nerve's default count.
   const release = await holdAnswer(page, "PATCH", path);
-  const turns: unknown[] = [];
-  await page.route(`**${path}`, async (route) => {
-    if (route.request().method() === "PATCH") turns.push(route.request().postDataJSON());
-    await route.fallback();
-  });
+  const turns = await bodiesSentTo(page, "PATCH", path);
   await limited.click();
   await expect.poll(() => turns.length).toBe(1);
   await limited.click();
