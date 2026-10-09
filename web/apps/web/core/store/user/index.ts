@@ -72,7 +72,7 @@ export class UserStore implements IUserStore {
     api: ApiClient
   ) {
     // stores
-    this.userProfile = new ProfileStore(store, api);
+    this.userProfile = new ProfileStore(api);
     this.permission = new UserPermissionStore(store);
     this.apiTokens = new ApiTokenStore(api);
     // service

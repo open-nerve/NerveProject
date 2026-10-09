@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Workspace } from "@nerve/api-client";
 import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
 import { heldChange, lateSettlings, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
-import { fetchHanded, handed } from "@/lib/fake-session-swr";
+import { fetchHanded, handed, response } from "@/lib/fake-session-swr";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -16,8 +16,8 @@ import { OnboardingRoot } from "./root";
 
 // What the onboarding writes as its steps end (M3 design 7.4, 7.1): the root renders on the server, its steps a
 // stand-in that keeps what it was given, and the test ends a step as the step would; the profile's store is a
-// stand-in too, which nerve answers when the test says. The workspaces are fake-store-hooks.ts's, the fetch
-// fake-session-swr.ts's, the session fake-tab.ts's.
+// stand-in too, which nerve answers when the test says, and so is the page of an unreachable nerve, which keeps its
+// props. The workspaces are fake-store-hooks.ts's, the fetch fake-session-swr.ts's, the session fake-tab.ts's.
 
 /** How the steps tell the root they are done (OnboardingStepRoot's props). */
 type Ends = {
@@ -25,14 +25,18 @@ type Ends = {
   onCreated: (workspace: Workspace, alone: boolean) => Promise<void>;
   onDone: () => void;
 };
+/** What the page of an unreachable nerve is given (SessionUnavailable's props). */
+type Unavailable = { onRetry: () => void; autoRetry: boolean };
 
 const page = vi.hoisted(
   (): {
     ends: Ends | undefined;
+    unavailable: Unavailable[];
     updateUserProfile: ReturnType<typeof vi.fn>;
     finishUserOnboarding: ReturnType<typeof vi.fn>;
   } => ({
     ends: undefined,
+    unavailable: [],
     updateUserProfile: vi.fn(),
     finishUserOnboarding: vi.fn(),
   })
@@ -44,6 +48,12 @@ vi.mock("./steps", () => ({
   },
 }));
 vi.mock("./header", () => ({ OnboardingHeader: () => null }));
+vi.mock("@/components/account/session-unavailable", () => ({
+  SessionUnavailable: (props: Unavailable) => {
+    page.unavailable.push(props);
+    return null;
+  },
+}));
 vi.mock("@/hooks/store/user", () => ({
   useUserProfile: () => ({
     data: undefined,
@@ -59,10 +69,18 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 const alpha = workspaceOf("alpha");
 const zeta = workspaceOf("zeta", { role: 20 });
-/** Each change the onboarding follows, by the profile's store change: a step's, and the end's. */
+/**
+ * Each change the onboarding follows, by the profile's store change: a step's, the end's, and the end after a
+ * workspace created for its creator alone, which follows a refusal its own way.
+ */
 const changes = [
   { change: "a step's change", store: page.updateUserProfile, make: () => opened([]).onNamed() },
   { change: "the end of the onboarding", store: page.finishUserOnboarding, make: () => opened([alpha]).onDone() },
+  {
+    change: "the end of the onboarding of a workspace created for its creator alone",
+    store: page.finishUserOnboarding,
+    make: () => void opened([alpha, zeta]).onCreated(zeta, true),
+  },
 ];
 
 /** Opens the onboarding of one whose workspaces nerve listed as workspaces; gives how its steps end. */
@@ -77,7 +95,9 @@ beforeEach(() => {
   signedIn();
   emptyStores();
   handed.length = 0;
+  response.current = {};
   page.ends = undefined;
+  page.unavailable.length = 0;
   page.updateUserProfile.mockReset();
   page.updateUserProfile.mockResolvedValue({});
   page.finishUserOnboarding.mockReset();
@@ -91,6 +111,15 @@ describe("OnboardingRoot", () => {
     expect(page.ends).toBeUndefined();
     await fetchHanded();
     expect([handed.map(([fetch]) => fetch), stores.fetched]).toEqual([[["WORKSPACES"]], ["the workspaces"]]);
+  });
+
+  it("says when nerve cannot list the caller's workspaces, shows no step, and asks again on a retry", () => {
+    const mutate = vi.fn(() => Promise.resolve(undefined));
+    response.current = { error: new Error("nerve cannot be reached"), mutate };
+    renderToStaticMarkup(<OnboardingRoot />);
+    expect([page.ends, page.unavailable.map(({ autoRetry }) => autoRetry)]).toEqual([undefined, [false]]);
+    page.unavailable[0]?.onRetry();
+    expect(mutate).toHaveBeenCalledOnce();
   });
 
   it("ends the onboarding of one who has a workspace with the profile step", () => {

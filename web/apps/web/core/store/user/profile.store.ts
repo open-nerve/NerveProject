@@ -11,8 +11,6 @@ import type { ApiClient, Profile, ProfileUpdate, Theme } from "@nerve/api-client
 import { oneAtATime } from "@/lib/one-at-a-time";
 // services
 import { UserService } from "@/services/user.service";
-// store
-import type { RootStore } from "../root.store";
 
 export interface IUserProfileStore {
   // observables
@@ -33,10 +31,7 @@ export class ProfileStore implements IUserProfileStore {
   // services
   userService: UserService;
 
-  constructor(
-    public store: RootStore,
-    api: ApiClient
-  ) {
+  constructor(api: ApiClient) {
     makeObservable(this, {
       // observables
       data: observable,

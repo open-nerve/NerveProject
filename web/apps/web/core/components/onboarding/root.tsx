@@ -44,8 +44,9 @@ const OnboardingSteps = observer(function OnboardingSteps({ workspaces }: Props)
   const failed = (error: unknown) =>
     setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
   const change = (data: ProfileUpdate) => void followInSession(() => updateUserProfile(data), { failed });
-  // settles once nerve has answered, and never rejects (followInSession)
-  const finish = () => followInSession(() => finishUserOnboarding(), { failed });
+  // settles once nerve has answered, and never rejects (followInSession); a refusal is onFailed's, by default failed's
+  const finish = (onFailed: (error: unknown) => void = failed) =>
+    followInSession(() => finishUserOnboarding(), { failed: onFailed });
 
   // one who has a workspace is done after the profile step; one who has none creates one (M3 design 7.4)
   const named = () => {
@@ -57,13 +58,22 @@ const OnboardingSteps = observer(function OnboardingSteps({ workspaces }: Props)
     setPlace({ kind: EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN });
   };
 
-  // the workspace created is the one opened last, and the one the invitation step invites to; a workspace for its
+  // the workspace created is the one opened last, and the one the invitation step invites to. A workspace for its
   // creator alone has no invitation step: the onboarding ends, and the creation step stays busy until nerve has
-  // answered the end, which goes after the step's change (the profile's changes are sent one at a time)
+  // answered the end, which goes after the step's change (the profile's changes are sent one at a time). An end nerve
+  // refuses says why, and moves on to the workspace's invitation step all the same, as a reload would: the creation
+  // is over once the workspace exists, and that step's "later" ends the onboarding again.
   const created = async (workspace: Workspace, alone: boolean) => {
     change({ onboarding_step: { workspace_create: true }, last_workspace_id: workspace.id });
-    if (alone) await finish();
-    else setPlace({ kind: EOnboardingSteps.INVITE_MEMBERS, workspace });
+    const invite = () => setPlace({ kind: EOnboardingSteps.INVITE_MEMBERS, workspace });
+    if (!alone) {
+      invite();
+      return;
+    }
+    await finish((error) => {
+      failed(error);
+      invite();
+    });
   };
 
   return (

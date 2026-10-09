@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util";
+
 import type { Response } from "@playwright/test";
 
 import { createApi, createWorkspace, invitationTo, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
@@ -151,6 +153,13 @@ const FINISHED = {
   is_onboarded: true,
 };
 
+/** nerve's answer when it is busy, a problem the page says by its code. */
+const BUSY = {
+  status: 503,
+  contentType: "application/problem+json",
+  body: JSON.stringify({ type: "about:blank", title: "Service Unavailable", status: 503, code: "server_busy" }),
+};
+
 test("W1 (page): a newcomer's onboarding creates a workspace after the profile step, written as the one opened last; invites to it and shows the link to copy; then lands in it", async ({
   api,
   db,
@@ -218,7 +227,7 @@ test("W1 (page): a newcomer's onboarding creates a workspace after the profile s
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });
 
-test("W1 (page): a newcomer who puts off the invitations at their step lands in the workspace he created, having invited no one; one who creates a workspace for himself alone has no such step, and the form stays busy until he lands in it", async ({
+test("W1 (page): a newcomer who puts off the invitations at their step lands in the workspace he created, having invited no one; for one who creates a workspace for himself alone the creation ends the onboarding, the form busy until nerve answers, and an end nerve refuses leads to that step", async ({
   api,
   baseURL,
   browser,
@@ -249,9 +258,9 @@ test("W1 (page): a newcomer who puts off the invitations at their step lands in 
   // The workspace's home.
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 
-  // Bob creates a workspace for himself alone: the onboarding ends with the creation, and he lands in it. The form
-  // stays busy until then: while nerve's answer to the write of the creation's step is on its way (holdAnswer), no
-  // second click checks the new workspace's slug again.
+  // Bob creates a workspace for himself alone: the onboarding ends with the creation. The form stays busy until nerve
+  // has answered the end: while its answer to the write of the creation's step is on its way (holdAnswer), no second
+  // click checks the new workspace's slug again.
   const there = await anotherBrowser(browser, baseURL ?? "", await register(api, emailFor(testInfo, "bob")));
   await there.page.goto("/onboarding");
   await there.page.getByLabel("Name", { exact: true }).fill("Bob");
@@ -261,6 +270,14 @@ test("W1 (page): a newcomer who puts off the invitations at their step lands in 
   await there.page.locator("#slug").fill(own);
   await there.page.getByRole("button", { name: "Just myself", exact: true }).click();
   const release = await holdAnswer(there.page, "PATCH", "/api/v0/me/profile");
+  // nerve is busy when the end comes (its body is FINISHED), once.
+  let busy = true;
+  await there.page.route("**/api/v0/me/profile", (route) => {
+    const end = route.request().method() === "PATCH" && isDeepStrictEqual(route.request().postDataJSON(), FINISHED);
+    if (!busy || !end) return route.fallback();
+    busy = false;
+    return route.fulfill(BUSY);
+  });
   const created = await answerTo(there.page, "POST", "/api/v0/workspaces", () =>
     there.page.getByRole("button", { name: "Create workspace" }).click()
   );
@@ -269,6 +286,15 @@ test("W1 (page): a newcomer who puts off the invitations at their step lands in 
   // The step's button shows its spinner, whose status gives the button no name.
   await expect(there.page.getByRole("button").filter({ hasText: "Loading..." })).toBeDisabled();
   expect((await answerTo(there.page, "PATCH", "/api/v0/me/profile", release)).status()).toBe(200);
+
+  // The end refused: the page says why, and the creation, over, gives way to the workspace's invitation step, whose
+  // "later" ends the onboarding; he lands in his workspace.
+  await expect(there.page.getByText("The server is busy. Please try again later.")).toBeVisible();
+  await expect(there.page.getByText("Invite your teammates")).toBeVisible();
+  const later = await sentTo(there.page, "PATCH", "/api/v0/me/profile", () =>
+    there.page.getByRole("button", { name: "I’ll do it later", exact: true }).click()
+  );
+  expect([later.answer.status(), later.body, busy]).toEqual([200, FINISHED, false]);
   await expect(there.page).toHaveURL(`/${own}`);
   await there.close();
 });
