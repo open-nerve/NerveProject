@@ -5,21 +5,25 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Project, ProjectUpdate } from "@nerve/api-client";
+import type { Project, ProjectRole, ProjectUpdate, WorkspaceRole } from "@nerve/api-client";
 import { heldChange, lateSettlingsAnswering, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import type { ProjectToggleField } from "@/store/project/project.store";
+import { callerInWeb } from "@/store/user/fake-permissions";
+import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { ProjectSettingsMemberDefaults } from "./project-settings-member-defaults";
 
 // What the project's member defaults send (v0 design 7.7: a change whose body depends on what the store holds is
-// built in its turn), and what the page says of them (M3 design 7.1): the page renders on the server with stand-ins
-// for the member selects and the guests' switch (fake-controls.ts), which keep the props they were given, and for the
-// project store, whose changes nerve has not answered yet unless the test says. Its session is fake-tab.ts's.
+// built in its turn), what the page says of them (M3 design 7.1), and whom it lets change them (3.4): the page renders
+// on the server with stand-ins for the member selects and the guests' switch (fake-controls.ts), which keep the props
+// they were given, and for the project store, whose changes nerve has not answered yet unless the test says. Its
+// session is fake-tab.ts's; the caller's permissions are the store's own, over acme and web as nerve lists them to him
+// (fake-permissions.ts): web's admin, unless the test says.
 
-type Select = { onChange: (value: string) => void };
+type Select = { onChange: (value: string) => void; isDisabled?: boolean };
 const page = vi.hoisted(() => {
   const selects: Select[] = [];
   // nerve has not answered: a change stays out, unless a test answers it
@@ -29,7 +33,11 @@ const page = vi.hoisted(() => {
   );
   return { selects, updateProject, toggleProject };
 });
-const web: Project = projectOf("WEB", "w-acme", { project_lead_id: "u-bob", default_assignee_id: "u-cat" });
+const caller = vi.hoisted(() => {
+  const held: { permissions?: IUserPermissionStore } = {};
+  return held;
+});
+const web: Project = projectOf("WEB", "id-acme", { project_lead_id: "u-bob", default_assignee_id: "u-cat" });
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({
     getProjectById: () => web,
@@ -37,7 +45,7 @@ vi.mock("@/hooks/store/use-project", () => ({
     toggleProject: page.toggleProject,
   }),
 }));
-vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => ({ allowPermissions: () => true }) }));
+vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => caller.permissions }));
 vi.mock("./member-select", () => ({
   MemberSelect: (props: Select) => {
     page.selects.push(props);
@@ -63,8 +71,9 @@ function render() {
   return { lead, assignee, guests };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   signedIn();
+  caller.permissions = (await callerInWeb(15, 20)).permissions;
   page.updateProject.mockClear();
   page.toggleProject.mockClear();
   toasts.length = 0;
@@ -131,5 +140,18 @@ describe("the project's member defaults", () => {
         expect(toasts).toEqual([]);
       }
     );
+  });
+
+  // whom nerve lets change the project (project.update: its admins, and its members who are the workspace's admins)
+  it.each<{ who: string; workspaceRole: WorkspaceRole; projectRole: ProjectRole | null; changes: boolean }>([
+    { who: "its admin", workspaceRole: 15, projectRole: 20, changes: true },
+    { who: "its member who is the workspace's admin", workspaceRole: 20, projectRole: 15, changes: true },
+    { who: "its member", workspaceRole: 15, projectRole: 15, changes: false },
+    { who: "its guest", workspaceRole: 5, projectRole: 5, changes: false },
+    { who: "the workspace's admin who is not its member", workspaceRole: 20, projectRole: null, changes: false },
+  ])("lets $who change them when nerve does", async ({ workspaceRole, projectRole, changes }) => {
+    caller.permissions = (await callerInWeb(workspaceRole, projectRole)).permissions;
+    const { lead, assignee, guests } = render();
+    expect([lead.isDisabled, assignee.isDisabled, guests.disabled]).toEqual([!changes, !changes, !changes]);
   });
 });

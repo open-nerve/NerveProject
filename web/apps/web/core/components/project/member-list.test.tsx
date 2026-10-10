@@ -4,24 +4,18 @@
  */
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
-import { FakeNerve } from "@/lib/auth/fake-nerve";
 import { emptyShown, shown } from "@/lib/fake-controls";
-import { fakeRoot } from "@/store/fake-root";
-import { ProjectRootStore } from "@/store/project";
-import { loadProjects, projectOf } from "@/store/project/fake-projects";
-import { RouterStore } from "@/store/router.store";
-import { UserPermissionStore, type IUserPermissionStore } from "@/store/user/permissions.store";
-import { WorkspaceRootStore } from "@/store/workspace";
-import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
+import { callerInWeb } from "@/store/user/fake-permissions";
+import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { ProjectMemberList } from "./member-list";
 
 // Whom the project's members page offers "Add member" (M3 design 3.5, 9.2): those nerve lets add members to the
 // project (project_member.add: its admins, and its members who are the workspace's admins). The page renders on the
 // server with stand-ins for its button (fake-controls.ts, which keeps the props it was given) and for the list's other
-// parts; the caller's permissions are the store's own, over acme and its project web as nerve lists them to him, the
-// address's.
+// parts; the caller's permissions are the store's own, over acme and its project web as nerve lists them to him, at
+// web's address (fake-permissions.ts).
 
 const caller = vi.hoisted(() => {
   const held: { permissions?: IUserPermissionStore } = {};
@@ -49,28 +43,12 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
  * web's members page and gives what its buttons say.
  */
 async function buttonsFor(workspaceRole: WorkspaceRole, projectRole: ProjectRole | null) {
-  const nerve = new FakeNerve();
-  const api = nerve.client();
-  const router = new RouterStore();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
-  const projectRoot = new ProjectRootStore(fakeRoot({ router, workspaceRoot }), api);
-  const acme = workspaceOf("acme", { role: workspaceRole });
-  await loadWorkspaces(nerve, workspaceRoot, [acme]);
-  const web = projectOf("WEB", acme.id, { member_role: projectRole });
-  await loadProjects(nerve, projectRoot.project, acme, [web]);
-  router.setQuery({ workspaceSlug: acme.slug, projectId: web.id });
-  caller.permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot, projectRoot }));
+  const { permissions, acme, web } = await callerInWeb(workspaceRole, projectRole);
+  caller.permissions = permissions;
   emptyShown();
   renderToStaticMarkup(<ProjectMemberList projectId={web.id} workspaceSlug={acme.slug} />);
   return shown.buttons.map((button) => button.children);
 }
-
-beforeEach(() => {
-  vi.useFakeTimers({ now: 1_000_000 });
-});
-afterEach(() => {
-  vi.useRealTimers();
-});
 
 describe("the project's members page", () => {
   it.each<{ who: string; workspaceRole: WorkspaceRole; projectRole: ProjectRole | null; offered: string[] }>([

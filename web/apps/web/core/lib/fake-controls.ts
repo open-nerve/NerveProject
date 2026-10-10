@@ -24,8 +24,8 @@ type SearchSelect = Field & {
   customButton?: ReactNode;
   options?: { value: string }[];
 };
-/** A switch: what a flip does. */
-type Toggle = { onCheckedChange: (checked: boolean) => unknown };
+/** A switch: what a flip does, and whether it can be flipped. */
+type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean };
 
 /** The props each control was given, in the order rendered; a test empties them before each case (emptyShown). */
 export const shown: {
