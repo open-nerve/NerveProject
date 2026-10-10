@@ -180,14 +180,17 @@ export async function closedByEscape(page: Page): Promise<boolean> {
 }
 
 /**
- * Dispatches on field what the browser gives the page when an Escape ends an input method's composition (Chinese,
- * say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown that
- * tracks the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
+ * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
+ * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
+ * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
  */
 export async function composingEscape(field: Locator): Promise<void> {
-  await field.dispatchEvent("compositionstart");
-  await field.dispatchEvent("keydown", { key: "Escape", isComposing: true });
-  await field.dispatchEvent("compositionend");
+  await field.evaluate((element) => {
+    const init = { bubbles: true, cancelable: true, composed: true };
+    element.dispatchEvent(new CompositionEvent("compositionstart", init));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", isComposing: true }));
+    element.dispatchEvent(new CompositionEvent("compositionend", init));
+  });
 }
 
 /**
