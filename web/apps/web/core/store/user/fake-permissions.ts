@@ -20,8 +20,8 @@ import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 
 /**
  * The permission store over workspaces, as nerve lists them, and their projects, each workspace's list one after
- * another; with nerve, the address and the workspaces' store, for a test that goes on with them. Nerve answers the
- * lists in fake time (fake-time.ts): the test runs under vitest's fake timers.
+ * another; with nerve, the address and the workspaces' and the projects' stores, for a test that goes on with them.
+ * Nerve answers the lists in fake time (fake-time.ts): the test runs under vitest's fake timers.
  */
 export async function permissionsOver(workspaces: Workspace[], projects: Project[]) {
   const nerve = new FakeNerve();
@@ -37,13 +37,14 @@ export async function permissionsOver(workspaces: Workspace[], projects: Project
       before.then(() => loadProjects(nerve, projectRoot.project, workspace, listedIn(workspace.id))),
     Promise.resolve()
   );
-  return { nerve, router, workspaceRoot, permissions };
+  return { nerve, router, workspaceRoot, projects: projectRoot.project, permissions };
 }
 
 /**
  * A caller of acme, of role workspaceRole in it, and of role projectRole in its project web (null: he sees web, no
- * member of it): his permissions, at web's address, and the two. Nerve answers the lists in fake time, and a test that
- * runs in real time is back in it once they are loaded.
+ * member of it): his permissions, at web's address; the address (the router store) and the projects' store, for a
+ * test that moves the address elsewhere; and the two. Nerve answers the lists in fake time, and a test that runs in
+ * real time is back in it once they are loaded.
  */
 export async function callerInWeb(workspaceRole: WorkspaceRole, projectRole: ProjectRole | null) {
   const inRealTime = !vi.isFakeTimers();
@@ -51,9 +52,9 @@ export async function callerInWeb(workspaceRole: WorkspaceRole, projectRole: Pro
   try {
     const acme = workspaceOf("acme", { role: workspaceRole });
     const web = projectOf("WEB", acme.id, { member_role: projectRole });
-    const { router, permissions } = await permissionsOver([acme], [web]);
+    const { router, projects, permissions } = await permissionsOver([acme], [web]);
     router.setQuery({ workspaceSlug: acme.slug, projectId: web.id });
-    return { permissions, acme, web };
+    return { permissions, router, projects, acme, web };
   } finally {
     if (inRealTime) vi.useRealTimers();
   }

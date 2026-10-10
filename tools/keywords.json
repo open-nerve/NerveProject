@@ -2308,6 +2308,55 @@
           ]
         }
       }
+    },
+    {
+      "id": "project-address-route",
+      "phase": "M3/P10",
+      "why": "项目页面从路由参数读地址（项目、工作区），不从 router store 读：project store 的 currentProjectDetails 和 member store 的 projectMemberIds 读 router store 的 projectId，workspace store 的 currentWorkspace 读它的 workspaceSlug，allowPermissions 不传 slug 和项目时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，同一路由换了项目时晚一次提交，那一次页面按上一个项目显示、按上一个项目判断权限（M3/P10 修复轮，裁定 F-2；P10 规格 §5）。本规则只管 P10 已经改过来的文件：常规设置页和它的控制区、四个功能页、自动化页、成员页、成员列表、成员选择、项目设置侧栏的头部；后面的阶段（P11 的状态和标签页，M4、M6、M7 各自的页面）改它们的读法时，把那些文件加进本规则的 files，收尾删掉 projectMemberIds 这个 getter。测试不算",
+      "files": {
+        "source": "^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/projects/\\[projectId\\]/(?:page|members/page|automations/page|features/(?:cycles|intake|modules|views)/page)|core/components/(?:project/(?:settings/control-section|member-list|member-select)|settings/project/sidebar/header))\\.tsx$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bcurrentProjectDetails\\b|\\bprojectMemberIds\\b|\\bcurrentWorkspace\\b|\\ballowPermissions\\(\\s*\\[[^\\]]*\\]\\s*,\\s*[\\w.]+\\s*(?:,\\s*[\\w.?]+\\s*)?,?\\s*\\)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  const { currentProjectDetails } = useProject();",
+          "    project: { projectMemberIds, getFilteredProjectMemberDetails, filters },",
+          "  const { currentWorkspace } = useWorkspace();",
+          "  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);",
+          "  const isProjectMemberOrAdmin = allowPermissions(\n    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],\n    EUserPermissionsLevel.PROJECT\n  );",
+          "  allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug)"
+        ],
+        "miss": [
+          "  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);",
+          "  const canPerformProjectAdminActions = allowPermissions(\n    [EUserPermissions.ADMIN],\n    EUserPermissionsLevel.PROJECT,\n    workspaceSlug,\n    projectId\n  );",
+          "    project: { getFilteredProjectMemberIds, getFilteredProjectMemberDetails, filters },",
+          "  const { allowPermissions } = useUserPermissions();",
+          "  const project = getProjectById(projectId);"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx",
+            "web/apps/web/core/components/project/settings/control-section.tsx",
+            "web/apps/web/core/components/project/member-list.tsx",
+            "web/apps/web/core/components/project/member-select.tsx",
+            "web/apps/web/core/components/settings/project/sidebar/header.tsx"
+          ],
+          "miss": [
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx",
+            "web/apps/web/core/components/project/member-list.test.tsx",
+            "web/apps/web/core/components/project/member-list-item.tsx"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [

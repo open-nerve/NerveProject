@@ -32,13 +32,15 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
   const [addMembersModal, setAddMembersModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const {
-    project: { projectMemberIds, getFilteredProjectMemberDetails, filters },
+    project: { getFilteredProjectMemberIds, getFilteredProjectMemberDetails, filters },
   } = useMember();
   const { allowPermissions } = useUserPermissions();
 
   const { t } = useTranslation();
 
-  const searchedProjectMembers = (projectMemberIds ?? []).filter((userId) => {
+  // the members of the route's project, by the page's filters and order
+  const memberIds = getFilteredProjectMemberIds(projectId);
+  const searchedProjectMembers = (memberIds ?? []).filter((userId) => {
     const memberDetails = projectId ? getFilteredProjectMemberDetails(userId, projectId) : null;
 
     if (!memberDetails) return false;
@@ -53,7 +55,7 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
     projectId ? getFilteredProjectMemberDetails(memberId, projectId) : null
   );
 
-  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
+  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
   // Handler for role filter updates
   const handleRoleFilterUpdate = (role: string) => {
@@ -109,7 +111,7 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
           )}
         </div>
       </div>
-      {!projectMemberIds ? (
+      {!memberIds ? (
         <MembersSettingsLoader />
       ) : (
         <div className="divide-y divide-subtle overflow-scroll">

@@ -90,9 +90,10 @@ describe("ProjectMemberStore, the members", () => {
     expect(store.getProjectMemberIds(web.id, true)).toEqual(["u-ann", "u-bob", "u-cat"]);
     expect(store.getProjectMemberIds(web.id, false)).toEqual(["u-ann", "u-bob"]);
     expect(store.getProjectMemberIds(ops.id, true)).toBeNull();
-    // the address's project's, by the members page's order and filters
+    // a project's, and the address's project's, by the members page's order and filters
     store.filters.updateFilters(web.id, { order_by: "-display_name" });
-    expect(store.projectMemberIds).toEqual(["u-cat", "u-bob", "u-ann"]);
+    const byPage = ["u-cat", "u-bob", "u-ann"];
+    expect([store.getFilteredProjectMemberIds(web.id), store.projectMemberIds]).toEqual([byPage, byPage]);
     store.filters.updateFilters(web.id, { roles: ["5"] });
     expect(store.getFilteredProjectMemberDetails("u-cat", web.id)).toEqual({ ...cat, member: profile("cat") });
     expect(store.getFilteredProjectMemberDetails("u-bob", web.id)).toBeNull();
@@ -354,5 +355,7 @@ describe("ProjectMemberStore, while a fetch is out", () => {
     expect(store.getProjectMemberIds(web.id, true)).toEqual(["u-ann", "u-bob"]);
     expect(store.getProjectMemberDetails("u-bob", web.id)?.role).toBe(5);
     expect(store.getProjectMemberIds(ops.id, true)).toEqual(["u-dee"]);
+    // ops's, by the members page's filters, at web's address
+    expect(store.getFilteredProjectMemberIds(ops.id)).toEqual(["u-dee"]);
   });
 });

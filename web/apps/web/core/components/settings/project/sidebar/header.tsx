@@ -13,9 +13,8 @@ import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { IconButton } from "@nerve/propel/icon-button";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useProject } from "@/hooks/store/use-project";
-import { useWorkspace } from "@/hooks/store/use-workspace";
 
 type Props = {
   projectId: string;
@@ -23,16 +22,16 @@ type Props = {
 
 export const ProjectSettingsSidebarHeader = observer(function ProjectSettingsSidebarHeader(props: Props) {
   const { projectId } = props;
-  // router
+  // router: the route's workspace
   const navigate = useNavigate();
+  const { workspaceSlug } = useParams();
   // store hooks
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
-  const { currentWorkspace } = useWorkspace();
   const { getProjectById } = useProject();
   // derived values
   const projectDetails = getProjectById(projectId);
-  const currentProjectRole = currentWorkspace?.slug
-    ? getProjectRoleByWorkspaceSlugAndProjectId(currentWorkspace.slug, projectId)
+  const currentProjectRole = workspaceSlug
+    ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
     : undefined;
   // translation
   const { t } = useTranslation();
@@ -46,7 +45,7 @@ export const ProjectSettingsSidebarHeader = observer(function ProjectSettingsSid
           variant="ghost"
           size="base"
           icon={ArrowNarrowLeftOutline}
-          onClick={() => navigate(`/${currentWorkspace?.slug}/projects/${projectId}/issues`)}
+          onClick={() => navigate(`/${workspaceSlug}/projects/${projectId}/issues`)}
         />
         <p>Project settings</p>
       </div>

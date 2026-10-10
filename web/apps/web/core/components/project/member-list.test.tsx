@@ -14,8 +14,8 @@ import { ProjectMemberList } from "./member-list";
 // Whom the project's members page offers "Add member" (M3 design 3.5, 9.2): those nerve lets add members to the
 // project (project_member.add: its admins, and its members who are the workspace's admins). The page renders on the
 // server with stand-ins for its button (fake-controls.ts, which keeps the props it was given) and for the list's other
-// parts; the caller's permissions are the store's own, over acme and its project web as nerve lists them to him, at
-// web's address (fake-permissions.ts).
+// parts; the caller's permissions are the store's own, over acme and its project web as nerve lists them to him
+// (fake-permissions.ts), while the address (the router store's) names no project: the list is web's by its props.
 
 const caller = vi.hoisted(() => {
   const held: { permissions?: IUserPermissionStore } = {};
@@ -25,7 +25,7 @@ vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => caller.permissi
 vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({
     project: {
-      projectMemberIds: null,
+      getFilteredProjectMemberIds: () => null,
       getFilteredProjectMemberDetails: () => null,
       filters: { getFilters: () => ({}) },
     },
@@ -43,8 +43,9 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
  * web's members page and gives what its buttons say.
  */
 async function buttonsFor(workspaceRole: WorkspaceRole, projectRole: ProjectRole | null) {
-  const { permissions, acme, web } = await callerInWeb(workspaceRole, projectRole);
+  const { permissions, router, acme, web } = await callerInWeb(workspaceRole, projectRole);
   caller.permissions = permissions;
+  router.setQuery({ workspaceSlug: acme.slug });
   emptyShown();
   renderToStaticMarkup(<ProjectMemberList projectId={web.id} workspaceSlug={acme.slug} />);
   return shown.buttons.map((button) => button.children);

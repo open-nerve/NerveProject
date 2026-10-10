@@ -296,7 +296,8 @@
         "web/apps/web/core/components/workspace/sidebar/use-project-drop.ts",
         "web/apps/web/core/components/workspace/sidebar/use-project-drop.test.ts",
         "web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx",
-        "web/apps/web/core/store/member/fake-users.ts"
+        "web/apps/web/core/store/member/fake-users.ts",
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(settings)/settings/projects/\\[projectId\\]/admin-pages.test.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

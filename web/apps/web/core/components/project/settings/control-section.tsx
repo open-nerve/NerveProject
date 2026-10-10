@@ -31,12 +31,13 @@ export const GeneralProjectSettingsControlSection = observer(function GeneralPro
   const [archiveProject, setArchiveProject] = useState<boolean>(false);
   // params
   const { workspaceSlug } = useParams();
-  // store hooks
-  const { currentProjectDetails } = useProject();
+  // store hooks: the route's project
+  const { getProjectById } = useProject();
+  const project = getProjectById(projectId);
   // translation
   const { t } = useTranslation();
 
-  if (!currentProjectDetails) return null;
+  if (!project) return null;
 
   return (
     <div className="mt-10">
@@ -49,11 +50,7 @@ export const GeneralProjectSettingsControlSection = observer(function GeneralPro
           archive
         />
       )}
-      <DeleteProjectModal
-        project={currentProjectDetails}
-        isOpen={Boolean(selectProject)}
-        onClose={() => setSelectedProject(null)}
-      />
+      <DeleteProjectModal project={project} isOpen={Boolean(selectProject)} onClose={() => setSelectedProject(null)} />
       <div className="rounded-lg border border-subtle bg-layer-2">
         {/* Project Selector */}
         <SettingsBoxedControlItem
@@ -72,7 +69,7 @@ export const GeneralProjectSettingsControlSection = observer(function GeneralPro
           title={t("delete")}
           description="When deleting a project, all of the data and resources within that project will be permanently removed and cannot be recovered."
           control={
-            <Button variant="error-outline" onClick={() => setSelectedProject(currentProjectDetails.id ?? null)}>
+            <Button variant="error-outline" onClick={() => setSelectedProject(project.id)}>
               {t("delete")}
             </Button>
           }

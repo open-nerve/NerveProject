@@ -23,20 +23,28 @@ import type { Route } from "./+types/page";
 import { MembersProjectSettingsHeader } from "./header";
 
 function MembersSettingsPage({ params }: Route.ComponentProps) {
-  // router
+  // router: the route's project, as the store gives it
   const { workspaceSlug, projectId } = params;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { currentProjectDetails } = useProject();
+  const { getProjectById } = useProject();
+  const project = getProjectById(projectId);
   const { allowPermissions } = useUserPermissions();
   // derived values
-  const pageTitle = currentProjectDetails?.name ? `${currentProjectDetails?.name} - Members` : undefined;
+  const pageTitle = project?.name ? `${project.name} - Members` : undefined;
   const isProjectMemberOrAdmin = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
   );
-  const isWorkspaceAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
+  const isWorkspaceAdmin = allowPermissions(
+    [EUserPermissions.ADMIN],
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug,
+    projectId
+  );
   const canPerformProjectMemberActions = isProjectMemberOrAdmin || isWorkspaceAdmin;
 
   if (!canPerformProjectMemberActions) {
