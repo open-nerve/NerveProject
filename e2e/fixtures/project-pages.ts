@@ -48,13 +48,13 @@ export async function tabCycle(page: Page, within: Locator): Promise<string[]> {
   const from = async (stops: string[]): Promise<string[]> => {
     await page.keyboard.press("Tab");
     const { stop, back } = await page.evaluate(
-      ([inside, first]) => {
+      ({ inside, first }) => {
         const focused = document.activeElement;
         const field = focused?.matches("input, textarea") ? focused.id : focused?.textContent?.trim();
         const name = focused?.getAttribute("aria-label") || field || focused?.tagName || "";
         return { stop: inside?.contains(focused) ? name : `outside: ${name}`, back: focused === first };
       },
-      [box, start] as const
+      { inside: box, first: start }
     );
     return back || stops.length === 39 ? [...stops, stop] : from([...stops, stop]);
   };
