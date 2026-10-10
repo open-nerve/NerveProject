@@ -5664,6 +5664,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T6.5` | 自定义时长的修改在途时取消按钮仍可用 | 故事 P3 | 端到端 |
 | `T6.6` | 自定义时长在发出时就关闭，不等 nerve 做完 | `select-month-modal.test.tsx`、故事 P3 | vitest；端到端 |
 | `T6.7` | 在功能开关的 hook 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T6.8` | 自动归档在自定义时长的修改结束之后不论结果、不论会话都关上弹窗：被拒绝时关，另一个标签页换了账户之后在那个账户的页面上关（Task 6 的修正轮，裁定 T6-a） | `auto-archive-automation.test.tsx` | vitest |
+| `T6.9` | 自定义时长的修改在途时提交按钮不显示忙：再点一次又发一次修改（修正轮，裁定 T6-b） | 故事 P3 | 端到端 |
+
+修正轮的这两行之外：`auto-archive-automation.test.tsx` 的自定义时长的替身留下它收到的属性，测试用它的 `handleChange({ archive_in: 6 }, done)`：nerve 做完时 `done` 调一次；被拒绝时不调，提示 nerve 的原因；换账户之后兑现的两种都不调、不提示（共 4 个测试）；文件开头的说明随之说到页面的跟进和 `fake-tab.ts` 的会话。P3 在扣住自定义时长时核对 "Submitting..." 按钮禁用（在取消之前），P3 仍在 400 行以内。
 
 ---
 

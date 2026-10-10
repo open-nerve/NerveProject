@@ -91,8 +91,8 @@ P10 的每一处页面改动都按安全测试看待（brief）：一个角色�
 
 - `useFeatureToggle`（整个文件）：一下开关经 `followInSession(() => toggleProject(projectId, field), …)`：完成时提示（Plane 的英文"Project feature updated successfully."），被拒绝时经 `useRefusalToast`；原来的 `setPromiseToast` 不论会话都提示，失败的文案也不是 nerve 的原因。开关作用于 nerve 最近的回答，在轮到它时由 store 决定（P8b 已做，P10 不改）。
 - `AutoArchiveAutomation`：项目是地址的（`useParams` 的 `projectId`，经 `getProjectById`；原来读路由 store 的 `currentProjectDetails`，页面读地址只有一种写法）；`send(change, done?)` 经 `followInSession`，拒绝经 `useRefusalToast`（原来提示固定的"Something went wrong"）；开关经 store 的 `toggleAutoArchive`（P8b）；`handleChange(formData, done?)` 把 `done` 交给自定义时长的弹窗。`SelectMonthModal`：提交时 `await handleChange(formData, onClose)`，nerve 做完之后才关（原来发出就关，被拒绝时弹窗已不在）；在途时关不掉。
-- 测试：`use-feature-toggle.test.tsx`、`auto-archive-automation.test.tsx` 各改写 1 个（拒绝说 nerve 的原因）、加换账户之后兑现的两种（4 → 6、3 → 5 个）；`select-month-modal.test.tsx` 加 1 个（nerve 做完才关，不是发出就关）。
-- 端到端：P3 的 features、automations 页的页面版本（nerve 建的项目四个功能都关着；每页的开关只发它的字段，开关随之打开；自动归档打开发 `{ archive_in: 1 }`；自定义 6 个月的修改被扣住：取消禁用、Escape 不关，放行之后关上；再从列表选 3 个月）。
+- 测试：`use-feature-toggle.test.tsx`、`auto-archive-automation.test.tsx` 各改写 1 个（拒绝说 nerve 的原因）、加换账户之后兑现的两种（4 → 6、3 → 5 个）；`select-month-modal.test.tsx` 加 1 个（nerve 做完才关，不是发出就关）。Task 6 的修正轮（裁定 T6-a）：`auto-archive-automation.test.tsx` 的自定义时长的替身留下它收到的属性，页面交给它的 `handleChange` 在 nerve 做完时调 `done`，被拒绝时不调、提示 nerve 的原因，换账户之后兑现的两种都不调、不提示（5 → 9 个；`T6.8`）。
+- 端到端：P3 的 features、automations 页的页面版本（nerve 建的项目四个功能都关着；每页的开关只发它的字段，开关随之打开；自动归档打开发 `{ archive_in: 1 }`；自定义 6 个月的修改被扣住：取消禁用、Escape 不关，放行之后关上；再从列表选 3 个月）。Task 6 的修正轮（裁定 T6-b）：扣住时提交的按钮（"Submitting..."）也禁用（`T6.9`）。
 
 ### 2.7 成员页的改角色、移出、离开；P5 的页面版本（一）（Task 7；P5，3.5、3.7，7.1、7.6；M1-P4 交接；P8b 的 P5、T4-b；P9 spec 第 5 节）
 
@@ -343,7 +343,7 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
 
 ### A.2 变异
 
-`mutants_p10.py`：106 个变异，每个只改一处或几处，`mut.py` 在最终原型上、在它写的每个检查上各跑一次：106 个都被发现，没有存活的；每个写的每个检查都让它失败（`$M3TMP/p10tools/mut-results.json`，日志 `mut-logs/`）。每个变异另在它自己的 Task 的快照上跑过（`mutpertask.py`，`mut-results-pertask.json`）：103 个在自己的 Task 的树上就被发现；3 个只在之后的 Task 起（`T2.8` Task 4 起、`T2.9` Task 8 起、`T2.14` Task 3 起，plan 的表中标出），各在那个 Task 的树上被发现（`mutfrom.py`，`mut-results-from.json`）。每个变异要改的文字在它的 Task 的快照上和最终原型上都恰好出现一次（`mutchecksnap.py`：0 个不适用；`T3.5`、`T3.7`、`T4.10`、`T6.7`、`T10.7` 要改的文字在 Task 1 的快照上已有，在它们自己的 Task 之前就适用，不影响结果）。"静态"是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的范围）、关键词守卫，以及 `make knip`。Task 2 的修正轮（裁定 T2-b、T2-e、T2-f）加了 3 个（`T2.16`、`T2.17`、`T2.18`），在修正之后的 Task 2 的树上跑过，都被发现（`$M3TMP/p10mut/t2`），没有在最终原型上跑。Task 3 的修正轮（裁定 T3-c、T3-d、T3-e）加了 5 个（`T3.13`–`T3.17`），同样在修正之后的 Task 3 的树上跑过，都被发现（`$M3TMP/p10mut/t3`）。下面的表和计数含这 8 个，共 114 个。按缺陷类别（一个变异可以被几层发现）：
+`mutants_p10.py`：106 个变异，每个只改一处或几处，`mut.py` 在最终原型上、在它写的每个检查上各跑一次：106 个都被发现，没有存活的；每个写的每个检查都让它失败（`$M3TMP/p10tools/mut-results.json`，日志 `mut-logs/`）。每个变异另在它自己的 Task 的快照上跑过（`mutpertask.py`，`mut-results-pertask.json`）：103 个在自己的 Task 的树上就被发现；3 个只在之后的 Task 起（`T2.8` Task 4 起、`T2.9` Task 8 起、`T2.14` Task 3 起，plan 的表中标出），各在那个 Task 的树上被发现（`mutfrom.py`，`mut-results-from.json`）。每个变异要改的文字在它的 Task 的快照上和最终原型上都恰好出现一次（`mutchecksnap.py`：0 个不适用；`T3.5`、`T3.7`、`T4.10`、`T6.7`、`T10.7` 要改的文字在 Task 1 的快照上已有，在它们自己的 Task 之前就适用，不影响结果）。"静态"是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的范围）、关键词守卫，以及 `make knip`。Task 2 的修正轮（裁定 T2-b、T2-e、T2-f）加了 3 个（`T2.16`、`T2.17`、`T2.18`），在修正之后的 Task 2 的树上跑过，都被发现（`$M3TMP/p10mut/t2`），没有在最终原型上跑。Task 3 的修正轮（裁定 T3-c、T3-d、T3-e）加了 5 个（`T3.13`–`T3.17`），同样在修正之后的 Task 3 的树上跑过，都被发现（`$M3TMP/p10mut/t3`）。下面的表和计数含这 8 个，共 114 个。Task 6 的修正轮（裁定 T6-a、T6-b）加了 2 个（`T6.8` 自定义时长的弹窗被拒绝时、换账户之后关上，`T6.9` 它的提交按钮在途时不显示忙），在修正之后的 Task 6 的树上跑过，都被发现（`$M3TMP/p10mut/t6`）；它们不在下面的计数中，计数在修正波统一重算。按缺陷类别（一个变异可以被几层发现）：
 
 | 类别 | 变异 | 静态 | vitest | 端到端 | 存活 |
 |---|---|---|---|---|---|

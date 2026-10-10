@@ -323,7 +323,7 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
     page.getByRole("switch", { name: "Auto-archive closed work items" }).click()
   );
   expect([turnedOn.answer.status(), turnedOn.body]).toEqual([200, { archive_in: 1 }]);
-  // A range of his own: the modal waits for nerve, and cannot be closed meanwhile; it closes once nerve has made it.
+  // A range of his own: the modal waits for nerve, busy and not to be closed; it closes once nerve has made it.
   await page.getByRole("button", { name: "1 month" }).click();
   await page.getByRole("button", { name: "Customize time range" }).click();
   await page.locator("#archive_in").fill("6");
@@ -331,6 +331,7 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
     page.getByRole("button", { name: "Submit" }).click()
   );
   expect(body).toEqual({ archive_in: 6 });
+  await expect(page.getByRole("button", { name: "Submitting..." })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
   expect(await closedByEscape(page)).toBe(false);
   expect((await release()).status()).toBe(200);
