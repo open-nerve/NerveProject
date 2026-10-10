@@ -8,6 +8,13 @@ import { useEffect, useRef } from "react";
 import { EmojiPicker } from "frimousse";
 import { cn } from "../../utils";
 
+/**
+ * Where the picker reads its data (frimousse's emojibaseUrl): nerve serves emojibase-data's en emoji and messages
+ * itself, which the web app's build writes at this path (web/apps/web/emojibase.ts), the version pinned (M3 design
+ * 7.7). frimousse's default is a CDN, which the page's Content-Security-Policy blocks and which would learn who uses it.
+ */
+export const EMOJIBASE_URL = "/assets/emojibase/15.3.2";
+
 type EmojiRootProps = {
   onChange: (value: string) => void;
   searchPlaceholder?: string;
@@ -35,6 +42,7 @@ export function EmojiRoot(props: EmojiRootProps) {
     <EmojiPicker.Root
       data-slot="emoji-picker"
       className="isolate flex h-full w-full flex-col rounded-md border-none p-2"
+      emojibaseUrl={EMOJIBASE_URL}
       onEmojiSelect={(val) => onChange(val.emoji)}
     >
       <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-surface-1 px-1.5 py-2 [&>[data-slot='emoji-picker-search-wrapper']]:flex-grow [&>[data-slot='emoji-picker-search-wrapper']]:p-0">
@@ -55,27 +63,27 @@ export function EmojiRoot(props: EmojiRootProps) {
           data-slot="emoji-picker-list"
           className={cn("pb-2 select-none")}
           components={{
-            CategoryHeader: ({ category, ...props }) => (
+            CategoryHeader: ({ category, ...rest }) => (
               <div
                 data-slot="emoji-picker-list-category-header"
                 className="bg-surface-1 px-3 pb-1.5 text-11 font-medium text-tertiary"
-                {...props}
+                {...rest}
               >
                 {category.label}
               </div>
             ),
-            Row: ({ children, ...props }) => (
-              <div data-slot="emoji-picker-list-row" className="scroll-my-1.5 px-1.5" {...props}>
+            Row: ({ children, ...rest }) => (
+              <div data-slot="emoji-picker-list-row" className="scroll-my-1.5 px-1.5" {...rest}>
                 {children}
               </div>
             ),
-            Emoji: ({ emoji, ...props }) => (
+            Emoji: ({ emoji, ...rest }) => (
               <button
                 type="button"
                 aria-label={emoji?.label ?? emoji?.emoji}
                 data-slot="emoji-picker-list-emoji"
                 className="data-active:bg-accent flex size-8 items-center justify-center rounded-md text-16"
-                {...props}
+                {...rest}
               >
                 {emoji.emoji}
               </button>

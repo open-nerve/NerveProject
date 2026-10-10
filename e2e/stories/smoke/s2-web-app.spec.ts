@@ -11,7 +11,13 @@ import {
 } from "../../fixtures/api";
 import { accountId, emailFor, register, type AuthTokens } from "../../fixtures/auth";
 import { signInPath } from "../../fixtures/auth-pages";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
+import {
+  EMOJI_CHECK_WARNING,
+  expectQuietConsole,
+  requestsElsewhere,
+  watchPage,
+  type PageWatch,
+} from "../../fixtures/browser";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -41,12 +47,8 @@ function isStatic(url: string): boolean {
  */
 async function open(page: Page, path: string): Promise<Visit> {
   const watch = await watchPage(page);
-  const requested: string[] = [];
   const loaded: string[] = [];
   const failed: string[] = [];
-  page.on("request", (req) => {
-    requested.push(req.url());
-  });
   page.on("response", (res) => {
     if (isStatic(res.url())) {
       (res.status() < 400 ? loaded : failed).push(`${res.status()} ${res.url()}`);
@@ -65,9 +67,7 @@ async function open(page: Page, path: string): Promise<Visit> {
     throw new Error(`no document response for ${path}`);
   }
   await expect(page.getByRole("button", { name: "Go to workspace" })).toBeVisible();
-  const origin = new URL(document.url()).origin;
-  const elsewhere = requested.filter((url) => new URL(url).origin !== origin);
-  return { document, watch, loaded, failed, elsewhere };
+  return { document, watch, loaded, failed, elsewhere: requestsElsewhere(page, watch) };
 }
 
 /**

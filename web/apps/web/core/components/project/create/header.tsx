@@ -50,6 +50,7 @@ function ProjectCreateHeader(props: Props) {
           control={control}
           render={({ field: { value, onChange } }) => (
             <EmojiPicker
+              ariaLabel={t("aria_labels.project_icon")}
               iconType="material"
               isOpen={isOpen}
               handleToggle={(val: boolean) => setIsOpen(val)}

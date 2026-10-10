@@ -8,10 +8,14 @@ import {
 } from "../../fixtures/api";
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
-// P1, create a project (M3 design 2, 3.17, 3.18). The page version comes
-// with the projects' pages (P10).
+// P1, create a project (M3 design 2, 3.17, 3.18), and its page (P10).
+
+/** Where nerve serves the emoji picker's data (M3 design 7.7). */
+const EMOJIBASE = "/assets/emojibase/15.3.2/en";
 
 /** The answer of GET /api/v0/workspaces/{slug}/project-identifiers/{identifier}. */
 async function availability(api: Api, token: string, slug: string, identifier: string): Promise<unknown> {
@@ -199,4 +203,31 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
     project: { identifier: "DOCS", member_role: 20, sort_order: 45535, member_ids: [memberId, adminId] },
   });
   expect(await read(api, member, ops.id)).toEqual({ status: 404, code: "project.not_found" });
+});
+
+test("P1 (page): a new project's icon picker shows the emoji nerve serves itself, nothing asked of another address, nothing blocked", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const member = await registerOnboarded(api, emailFor(testInfo, "member"));
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, member.access_token, { name: "Acme", slug });
+  const page = await signedInPage(member);
+  const watch = await watchPage(page);
+
+  await page.goto(`/${slug}/projects`);
+  await page.getByRole("button", { name: "Add Project", exact: true }).click();
+  const data = page.waitForResponse((answer) => new URL(answer.url()).pathname === `${EMOJIBASE}/data.json`);
+  const messages = page.waitForResponse((answer) => new URL(answer.url()).pathname === `${EMOJIBASE}/messages.json`);
+  await page.getByRole("button", { name: "Project icon" }).click();
+  expect([(await data).status(), (await messages).status()]).toEqual([200, 200]);
+  await page.getByRole("searchbox").fill("rocket");
+  await page.getByRole("gridcell", { name: "Rocket" }).click();
+  await expect(page.getByRole("button", { name: "Project icon" })).toContainText("🚀");
+
+  // The picker asks nerve, which answers its HEAD too (frimousse compares the files' ETags before it reads its cache).
+  expect((await page.request.head(`${EMOJIBASE}/data.json`)).status()).toBe(200);
+  expect(requestsElsewhere(page, watch)).toEqual([]);
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });

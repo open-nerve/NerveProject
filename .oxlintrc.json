@@ -256,7 +256,9 @@
         "web/apps/web/core/hooks/use-refusal-toast.ts",
         "web/apps/web/core/hooks/use-refusal-toast.test.ts",
         "web/apps/web/core/hooks/use-sign-out.ts",
-        "web/apps/web/core/hooks/use-sign-out.test.ts"
+        "web/apps/web/core/hooks/use-sign-out.test.ts",
+        "web/apps/web/emojibase.ts",
+        "web/apps/web/emojibase.test.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

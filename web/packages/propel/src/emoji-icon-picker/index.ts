@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+export { EMOJIBASE_URL } from "./emoji/emoji";
 export * from "./emoji-picker";
 export * from "./helper";
 export * from "./logo";

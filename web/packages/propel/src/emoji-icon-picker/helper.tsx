@@ -27,6 +27,8 @@ type TChangeHandlerProps =
 type TEmojiIconPickerTypes = typeof EmojiIconPickerTypes.EMOJI | typeof EmojiIconPickerTypes.ICON;
 
 export type TCustomEmojiPicker = {
+  /** The name of the picker's button, which shows the icon picked: what the icon is of. */
+  ariaLabel?: string;
   isOpen: boolean;
   handleToggle: (value: boolean) => void;
   buttonClassName?: string;
@@ -46,6 +48,9 @@ export type TCustomEmojiPicker = {
   side?: TSide;
   align?: TAlign;
 };
+
+/** A colour channel's value, 0 to 255, as two hex digits. */
+const toHex = (value: number): string => value.toString(16).padStart(2, "0");
 
 /**
  * Adjusts the given hex color to ensure it has enough contrast.
@@ -83,11 +88,6 @@ export const adjustColorForContrast = (hex: string): string => {
   }
 
   // Convert RGB back to hex
-  const toHex = (value: number): string => {
-    const hex = value.toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
-  };
-
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
