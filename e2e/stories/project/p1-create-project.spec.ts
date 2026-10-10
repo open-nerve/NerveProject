@@ -10,8 +10,11 @@ import { countProjects, expectProjectCreated } from "../../fixtures/assert/proje
 import { accountId, bearer, createPAT, emailFor, named, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import {
+  closedByComposingEscape,
   closedByEscape,
+  composingEscape,
   expectListBesideButton,
+  hiddenWithin,
   keydownsReachingDocument,
   registerOnboarded,
   sentHeld,
@@ -229,7 +232,12 @@ test("P1 (page): a new project's icon picker shows the emoji nerve serves itself
   const messages = page.waitForResponse((answer) => new URL(answer.url()).pathname === `${EMOJIBASE}/messages.json`);
   await page.getByRole("button", { name: "Project icon" }).click();
   expect([(await data).status(), (await messages).status()]).toEqual([200, 200]);
-  await page.getByRole("searchbox").fill("rocket");
+  const search = page.getByRole("searchbox");
+  await search.fill("rocket");
+  // An Escape that ends an input method's composition in the search is the input method's: the picker stays open.
+  const pickerClosed = hiddenWithin(search);
+  await composingEscape(search);
+  expect(await pickerClosed).toBe(false);
   await page.getByRole("gridcell", { name: "Rocket" }).click();
   await expect(page.getByRole("button", { name: "Project icon" })).toContainText("🚀");
 
@@ -268,6 +276,8 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   await transitionsEnded(page.getByRole("dialog"));
   // The name gives the identifier, as typed; the identifier typed is upper case, of the characters it may have.
   await page.locator("#name").fill("Web-App");
+  // An Escape that ends an input method's composition in the name is the input method's: the modal stays open.
+  expect(await closedByComposingEscape(page.locator("#name"))).toBe(false);
   await expect(page.locator("#identifier")).toHaveValue("WEBAPP");
   await page.locator("#identifier").fill("we.b");
   await expect(page.locator("#identifier")).toHaveValue("WEB");
@@ -379,7 +389,7 @@ test("P1 (page): the lead's list opens beside its button with its search focused
   await expectListBesideButton(page, lead);
   await page.keyboard.type("nobody");
   // An Escape that ends an input method's composition (Chinese, say) is the input method's: the list stays open.
-  await search.dispatchEvent("keydown", { key: "Escape", isComposing: true });
+  await composingEscape(search);
   await page.keyboard.type("!");
   await expect(search).toHaveValue("nobody!");
   await page.keyboard.press("Escape");

@@ -153,6 +153,11 @@ export async function shownWithin(locator: Locator): Promise<boolean> {
   return locator.waitFor({ state: "visible", timeout: 1_000 }).then(() => true, timedOut);
 }
 
+/** Resolves with whether locator, one element, hides within a second, as a panel that closes does: shownWithin's twin. */
+export async function hiddenWithin(locator: Locator): Promise<boolean> {
+  return locator.waitFor({ state: "hidden", timeout: 1_000 }).then(() => true, timedOut);
+}
+
 /**
  * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
  * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
@@ -171,6 +176,27 @@ export async function closedWithin(page: Page): Promise<boolean> {
 export async function closedByEscape(page: Page): Promise<boolean> {
   const closed = closedWithin(page);
   await page.keyboard.press("Escape");
+  return closed;
+}
+
+/**
+ * Dispatches on field what the browser gives the page when an Escape ends an input method's composition (Chinese,
+ * say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown that
+ * tracks the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
+ */
+export async function composingEscape(field: Locator): Promise<void> {
+  await field.dispatchEvent("compositionstart");
+  await field.dispatchEvent("keydown", { key: "Escape", isComposing: true });
+  await field.dispatchEvent("compositionend");
+}
+
+/**
+ * Gives field, in the one modal dialog its page shows, an Escape that ends a composition (composingEscape), and
+ * resolves with whether that dialog closed (closedWithin).
+ */
+export async function closedByComposingEscape(field: Locator): Promise<boolean> {
+  const closed = closedWithin(field.page());
+  await composingEscape(field);
   return closed;
 }
 

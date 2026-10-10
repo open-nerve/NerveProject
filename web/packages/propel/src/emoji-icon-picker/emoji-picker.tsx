@@ -120,6 +120,8 @@ export function EmojiPicker(props: TCustomEmojiPicker) {
             return;
           }
           if (e.key === "Escape") {
+            // an Escape that ends an IME composition in the search is the composition's: the picker stays open
+            if (e.nativeEvent.isComposing) return;
             handleToggle(false);
             return;
           }

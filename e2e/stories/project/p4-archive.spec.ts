@@ -20,7 +20,14 @@ import {
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { answerTo, closedByEscape, enabledWithin, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
+import {
+  answerTo,
+  closedByComposingEscape,
+  closedByEscape,
+  enabledWithin,
+  registerOnboarded,
+  sentHeld,
+} from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
@@ -236,6 +243,12 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   const watch = await watchPage(page);
   const general = `/${slug}/settings/projects/${web.id}`;
   await page.goto(general);
+  // An Escape that ends an input method's composition in the deletion's name field is the input method's: the dialog
+  // stays open, and a plain Escape still closes it.
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.locator("#projectName").fill("We");
+  expect(await closedByComposingEscape(page.locator("#projectName"))).toBe(false);
+  expect(await closedByEscape(page)).toBe(true);
   // The admin archives Web: the dialog cannot be closed, nor Web archived twice, and the page stays, until nerve has
   // archived it.
   await page.getByRole("button", { name: "Archive", exact: true }).click();
