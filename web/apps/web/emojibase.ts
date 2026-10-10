@@ -12,7 +12,10 @@ const require = createRequire(import.meta.url);
 /** The emoji picker's data: its emoji, and the names of their groups, in the one locale it reads (frimousse's en). */
 const FILES = ["en/data.json", "en/messages.json"];
 
-/** The version of emojibase-data the web app has: its package.json pins it (M3 design 7.7). */
+/**
+ * The version of emojibase-data installed for the web app, as its own package.json names it; the catalog in
+ * pnpm-workspace.yaml pins it (M3 design 7.7).
+ */
 function installedVersion(): string {
   const manifest: unknown = JSON.parse(readFileSync(require.resolve("emojibase-data/package.json"), "utf8"));
   if (
