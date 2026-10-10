@@ -99,6 +99,18 @@ describe("the project's role selects", () => {
     pick(roleSelect, key);
     expect(store.updateMemberRole.mock.calls).toEqual([[web.id, ann.member.id, role]]);
   });
+
+  it.each(roles)("show ann $label by that role's name, where no change of it is offered", ({ key, role }) => {
+    const markup = renderToStaticMarkup(
+      <AccountTypeColumn
+        rowData={{ ...projectMemberOf(web, "ann", role), member: ann.member }}
+        choices={[]}
+        projectId={web.id}
+        workspaceSlug="acme"
+      />
+    );
+    expect([markup.includes(`<span>${key}</span>`), shown.selects]).toEqual([true, []]);
+  });
 });
 
 /** A membership the page shows: its role, its member's role in the workspace, the caller's own or not. */
@@ -147,10 +159,24 @@ describe("what the members page offers", () => {
       removable: true,
     },
     {
+      who: "a project admin, for a guest of the project who is the workspace's member: the roles below his own, and the removal",
+      caller: projectAdmin,
+      membership: shownAs(5, 15),
+      choices: [5, 15],
+      removable: true,
+    },
+    {
       who: "the workspace's admin, for another admin: every role, and the removal",
       caller: workspaceAdmin,
       membership: shownAs(20, 15),
       choices: [5, 15, 20],
+      removable: true,
+    },
+    {
+      who: "the workspace's admin, for a guest of the workspace: a guest's role alone, and the removal",
+      caller: workspaceAdmin,
+      membership: shownAs(5, 5),
+      choices: [5],
       removable: true,
     },
     {

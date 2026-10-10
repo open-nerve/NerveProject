@@ -89,6 +89,8 @@
 | `web/apps/web/core/components/project/project-roles.ts`、`web/apps/web/core/components/project/project-roles.test.tsx` | nerve 允许的角色和移出（`roleChoices`、`canRemove`，Task 7）、添加时的角色（`addableRoles`，Task 8）；它们的表 | 7、8 |
 | `web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/projects/settings/useProjectColumns.tsx` | 成员页的列：角色只提供允许的，名字经 `ROLE_DETAILS` 翻译，自己一行是离开（整个文件）；列算出调用者和每一行 | 7 |
 | `web/apps/web/core/components/project/member-list-item.tsx` | 成员行经 `useProjectMembershipChanges`（整个文件） | 7 |
+| `web/apps/web/core/components/project/member-list-item.test.tsx` | 成员行把确认框的关上交给移出、离开：nerve 做完才关，被拒绝、换账户之后不关（Task 7 的修正轮，裁定 T7-a） | 7 |
+| `web/apps/web/core/components/projects/settings/useProjectColumns.test.tsx` | 成员页的列把调用者和成员的工作区角色交给规则（Task 7 的修正轮，裁定 T7-a） | 7 |
 | `web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/components/project/leave-project-modal.tsx` | 移出、离开在途时关不掉；离开弹窗先离开、再跳转 | 7 |
 | `tools/keywords.json` | 规则 `project-leave`：store 的 `leaveProject` 只由离开的 hook 调 | 7 |
 | `e2e/fixtures/project-pages.ts` | 项目页面的操作：请求、显示的名字、移出和离开（Task 7，新文件）；`shownNameOf`（Task 8） | 7、8 |
@@ -6919,6 +6921,18 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T7.15` | 离开弹窗在 nerve 回答之后就关上，拒绝也关 | 故事 P5 | 端到端 |
 | `T7.16` | 成员页的确认框在 nerve 回答之后就关上，拒绝也关 | 故事 P5 | 端到端 |
 | `T7.17` | nerve 移出之后确认框不关 | `use-project-membership-changes.test.ts`、故事 P5 | vitest；端到端 |
+| `T7.18` | 工作区管理员对工作区的访客也可以给成员、管理员（nerve 422 `role` `not_allowed`）（Task 7 的修正轮，裁定 T7-a） | `project-roles.test.tsx` | vitest |
+| `T7.19` | 是工作区成员的项目访客只能是访客（按项目角色而不是工作区角色筛；nerve 允许低于调用者的两个）（修正轮，裁定 T7-a） | `project-roles.test.tsx` | vitest |
+| `T7.20` | 离开在途时离开弹窗的"Leave Project"不显示忙：再点一次又发一次离开（修正轮，裁定 T7-a） | 故事 P5 | 端到端 |
+| `T7.21` | 成员页在移出结束之后不论结果、不论会话都关上确认框（修正轮，裁定 T7-a） | `member-list-item.test.tsx` | vitest |
+| `T7.22` | 成员页不把成员的工作区角色交给规则：工作区的访客也可以给任何角色（修正轮，裁定 T7-a） | `useProjectColumns.test.tsx` | vitest |
+| `T7.23` | 成员页按错的键读调用者的工作区角色：工作区管理员受相对规则限制，是项目成员时什么都不能改（修正轮，裁定 T7-a） | `useProjectColumns.test.tsx` | vitest |
+| `T7.24` | 成员页的角色列显示的角色用英文的 ROLE 称呼（修正轮，裁定 T7-a） | `project-roles.test.tsx` | vitest |
+| `T7.25` | 确认框的"移出""离开"在途时不显示忙（修正轮，裁定 T7-a） | 故事 P5 | 端到端 |
+| `T7.26` | 确认框的忙在发出时就结束，不等页面跟进做完（修正轮，裁定 T7-a） | 故事 P5 | 端到端 |
+| `T7.27` | 离开弹窗的忙在发出时就结束，不等页面跟进做完（修正轮，裁定 T7-a） | 故事 P5 | 端到端 |
+
+修正轮的这些行之外：`project-roles.test.tsx` 的 `roleChoices`、`canRemove` 的表加两行（工作区管理员对工作区的访客，项目管理员对是工作区成员的项目访客），加 3 个测试（没有选项时角色列按 `ROLE_DETAILS` 的键显示角色，不给选择）；新的 `member-list-item.test.tsx`（8 个：移出和离开各自 nerve 做完时关上确认框，被拒绝时留着、提示 nerve 的原因，换账户之后兑现的两种都不关、不提示）；新的 `useProjectColumns.test.tsx`（3 个：项目管理员对工作区的访客、是项目成员的工作区管理员对管理员、自己一行）；两个新的测试加进 `.oxlintrc.json` 的非空断言的范围（放在 `use-project-membership-changes.test.ts` 之后，Task 8 的块照旧适用）。P5 在侧边栏的离开被拒绝之后核对弹窗一秒之内没有关上（`closedWithin`：原来的 `toBeEnabled` 在弹窗 200 毫秒的淡出中也通过，`T7.15` 现在在这里被发现），扣住时核对 "Leaving..." 按钮禁用；P5 是 392 行，Task 8 之后 399 行。`PROJECT_ROLES` 的说明不再说"each labelled by ROLE"（成员页按 `ROLE_DETAILS`，Task 8 起添加弹窗也是），Task 8 的块不碰它。
 
 ---
 

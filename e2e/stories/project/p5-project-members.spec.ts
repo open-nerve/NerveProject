@@ -16,6 +16,7 @@ import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtur
 import {
   answerTo,
   closedByEscape,
+  closedWithin,
   enabledWithin,
   holdAnswer,
   registerOnboarded,
@@ -337,8 +338,8 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
 
   // ann, a guest now, leaves by the sidebar, which offers it to guests alone: its modal asks Web's name and "Leave
   // Project". pat has ended her membership meanwhile: nerve refuses the leaving, and the modal stays, to try again.
-  // He adds her back; the modal cannot be closed while the leaving is out; once nerve has made it, Web leaves the
-  // sidebar.
+  // He adds her back; while the leaving is out the modal can neither be closed nor send it again; once nerve has made
+  // it, Web leaves the sidebar.
   const theGuest = await anotherBrowser(browser, baseURL ?? "", ann.tokens);
   const guestWatch = await watchPage(theGuest.page);
   await theGuest.page.goto(`/${slug}/projects`);
@@ -351,11 +352,13 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
   expect((await writes(api, web.id).remove(pat.tokens.access_token, anns.id)).status).toBe(204);
   const leaveProject = theGuest.page.getByRole("dialog").getByRole("button", { name: "Leave Project" });
   expect((await answerTo(theGuest.page, leaving.method, leaving.path, () => leaveProject.click())).status()).toBe(403);
+  expect(await closedWithin(theGuest.page)).toBe(false);
   await expect(leaveProject).toBeEnabled();
   await addProjectMembers(api, pat.tokens.access_token, web.id, [{ member_id: ann.id, role: 5 }]);
   const releaseGuest = await holdAnswer(theGuest.page, leaving.method, leaving.path);
   const guestLeft = answerTo(theGuest.page, leaving.method, leaving.path, () => leaveProject.click());
   await expect(theGuest.page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await enabledWithin(theGuest.page.getByRole("button", { name: "Leaving..." }))).toBe(false);
   expect(await closedByEscape(theGuest.page)).toBe(false);
   await releaseGuest();
   expect((await guestLeft).status()).toBe(204);

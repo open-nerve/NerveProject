@@ -6,8 +6,8 @@
 import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
 
 /**
- * A project's roles, the lowest first, as its role selects offer them, each labelled by ROLE: a select gives the
- * picked role's number, the ProjectRole nerve's ProjectMemberNew and ProjectMemberUpdate take (a string is refused).
+ * A project's roles, the lowest first, as its role selects offer them: a select gives the picked role's number, the
+ * ProjectRole nerve's ProjectMemberNew and ProjectMemberUpdate take (a string is refused).
  */
 export const PROJECT_ROLES: ProjectRole[] = [5, 15, 20];
 
