@@ -310,14 +310,14 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   // Created: the form's fields alone, sent once; the form cannot be closed until nerve answers.
   await page.locator("#identifier").fill("webapp");
   const { body, release } = await sentHeld(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
-  expect(body).toEqual({
+  const form = {
     name: "Web App",
     identifier: "WEBAPP",
     description: "The site",
     network: 2,
     logo_props: { in_use: "emoji", emoji: { value: "128640" } },
-    project_lead_id: adminId,
-  });
+  };
+  expect(body).toEqual({ ...form, project_lead_id: adminId });
   // neither by Cancel, by the header's Close nor by Escape; nor sent again, its button busy
   await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
@@ -329,15 +329,8 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   await expect(page.getByRole("link", { name: /Web App/ })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Main sidebar" }).getByText("Web App")).toBeVisible();
 
-  const created = {
-    name: "Web App",
-    identifier: "WEBAPP",
-    description: "The site",
-    network: 2,
-    timezone: "Asia/Shanghai",
-    logo_props: { in_use: "emoji", emoji: { value: "128640" } },
-  };
-  await expectProjectCreated(db, slug, created, memberEmail, adminEmail, [
+  // the project's row: the form's fields, in the workspace's time zone
+  await expectProjectCreated(db, slug, { ...form, timezone: "Asia/Shanghai" }, memberEmail, adminEmail, [
     { email: memberEmail, sort_order: 65535 },
     { email: adminEmail, sort_order: 55535 },
   ]);
