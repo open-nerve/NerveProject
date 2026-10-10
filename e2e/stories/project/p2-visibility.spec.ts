@@ -219,9 +219,13 @@ test("P2 (page): the projects page shows a member the public project to join and
   // The card copies the project's link; a browser that refuses the page the clipboard: the card says it could not.
   await card.getByRole("button", { name: "Copy link" }).click();
   await expect(page.getByText("Project link copied to clipboard")).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    new URL(`/${slug}/projects/${web.id}/issues`, page.url()).toString()
-  );
+  const link = new URL(`/${slug}/projects/${web.id}/issues`, page.url()).toString();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
+  // So does its menu (a right-click): the menu open is the one not inert; each card's closed menu is out of reach.
+  await page.evaluate(() => navigator.clipboard.writeText(""));
+  await card.click({ button: "right" });
+  await page.locator("#context-menu-portal > :not([inert])").getByRole("button", { name: "Copy link" }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
   await refuseClipboardWrites(page);
   await card.getByRole("button", { name: "Copy link" }).click();
   await expect(page.getByText("Something went wrong. Please try again.")).toBeVisible();
