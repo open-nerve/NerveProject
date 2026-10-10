@@ -274,7 +274,11 @@
         "web/apps/web/core/components/projects/create/use-create-project.ts",
         "web/apps/web/core/components/projects/create/use-create-project.test.ts",
         "web/apps/web/core/components/project/use-update-project-details.ts",
-        "web/apps/web/core/components/project/use-update-project-details.test.ts"
+        "web/apps/web/core/components/project/use-update-project-details.test.ts",
+        "web/apps/web/core/components/project/settings/use-feature-toggle.ts",
+        "web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx",
+        "web/apps/web/core/components/automation/auto-archive-automation.test.tsx",
+        "web/apps/web/core/components/automation/select-month-modal.test.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

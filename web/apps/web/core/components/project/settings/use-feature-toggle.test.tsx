@@ -7,7 +7,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project, ProjectUpdate } from "@nerve/api-client";
 import { ProjectSettingsFeatureControlItem } from "@/components/settings/project/content/feature-control-item";
+import { heldChange, lateSettlings, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
+import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import type { ProjectToggleField } from "@/store/project/project.store";
@@ -15,9 +17,10 @@ import { ProjectFeaturesList } from "./features-list";
 import { useFeatureToggle } from "./use-feature-toggle";
 
 // What a flip of a feature's switch asks the project store (v0 design 7.7: a change whose body depends on what the
-// store holds is built in its turn): the hook runs as a plain function, and the two pages that flip a feature render
-// on the server, with stand-ins for their switches (fake-controls.ts), which keep the props they were given, and for
-// the project store, whose changes record their arguments.
+// store holds is built in its turn), and what the page says of it (M3 design 7.1): the hook runs as a plain function,
+// and the two pages that flip a feature render on the server, with stand-ins for their switches (fake-controls.ts),
+// which keep the props they were given, and for the project store, whose changes record their arguments. Its session
+// is fake-tab.ts's.
 
 const web: Project = projectOf("WEB", "w-acme", { cycle_view: true, module_view: false });
 const store = vi.hoisted(() => ({
@@ -32,10 +35,12 @@ vi.mock("@/hooks/store/use-project", () => ({
   }),
 }));
 vi.mock("@makeplane/propel/components/switch", () => import("@/lib/fake-controls"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 beforeEach(() => {
+  signedIn();
   store.toggleProject.mockClear();
   store.updateProject.mockClear();
   toasts.length = 0;
@@ -49,17 +54,25 @@ describe("useFeatureToggle", () => {
     expect(store.updateProject).not.toHaveBeenCalled();
   });
 
-  it("shows nerve's refusal of a turn in an error toast", async () => {
-    store.toggleProject.mockImplementationOnce(() => Promise.reject(new Error("refused")));
+  it("says a turn is done, and nerve's reason for refusing one", async () => {
     useFeatureToggle("acme", web.id)("module_view");
-    await vi.waitFor(() => expect(toasts).toHaveLength(1));
+    store.toggleProject.mockImplementationOnce(() => Promise.reject(refusal(403, "forbidden")));
+    useFeatureToggle("acme", web.id)("cycle_view");
+    await pageSettled();
     expect(toasts).toEqual([
-      {
-        type: "error",
-        title: "Error!",
-        message: "Something went wrong while updating project feature. Please try again.",
-      },
+      { type: "success", title: "Success!", message: "Project feature updated successfully." },
+      { type: "error", title: "toast.error", message: "errors.forbidden" },
     ]);
+  });
+
+  it.each(lateSettlings)("says nothing when a turn $settles after another tab moved this one", async ({ settle }) => {
+    const turn = heldChange<undefined>();
+    store.toggleProject.mockReturnValueOnce(turn.sent);
+    useFeatureToggle("acme", web.id)("module_view");
+    switchAccount();
+    settle(turn);
+    await pageSettled();
+    expect(toasts).toEqual([]);
   });
 
   it("is what each switch of the features list flips, its own feature", () => {

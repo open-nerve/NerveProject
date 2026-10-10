@@ -6,7 +6,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project, ProjectUpdate } from "@nerve/api-client";
+import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
+import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import { AutoArchiveAutomation } from "./auto-archive-automation";
@@ -23,18 +25,19 @@ const store = vi.hoisted(() => ({
 }));
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({
-    currentProjectDetails: web,
+    getProjectById: (projectId: string) => (projectId === web.id ? web : undefined),
     updateProject: store.updateProject,
     toggleAutoArchive: store.toggleAutoArchive,
   }),
 }));
 vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => ({ allowPermissions: () => true }) }));
-vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme" }) }));
+vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme", projectId: web.id }) }));
 vi.mock("@/components/automation", () => ({ SelectMonthModal: () => null }));
 vi.mock("@makeplane/propel/components/switch", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 
 /** Renders web's auto-archiving: gives its switch and its select of months. */
 function render() {
@@ -47,6 +50,7 @@ function render() {
 }
 
 beforeEach(() => {
+  signedIn();
   store.updateProject.mockClear();
   store.toggleAutoArchive.mockClear();
   toasts.length = 0;
@@ -67,10 +71,21 @@ describe("AutoArchiveAutomation", () => {
     expect(store.toggleAutoArchive).not.toHaveBeenCalled();
   });
 
-  it("shows a toast when nerve refuses the turn", async () => {
-    store.toggleAutoArchive.mockImplementationOnce(() => Promise.reject(new Error("refused")));
+  it("shows nerve's reason in a toast when it refuses the turn", async () => {
+    store.toggleAutoArchive.mockImplementationOnce(() => Promise.reject(refusal(403, "forbidden")));
     const { toggle } = render();
     await toggle.onCheckedChange(false);
-    expect(toasts).toEqual([{ type: "error", title: "Error!", message: "Something went wrong. Please try again." }]);
+    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.forbidden" }]);
+  });
+
+  it.each(lateSettlings)("says nothing when the turn $settles after another tab moved this one", async ({ settle }) => {
+    const turn = heldChange<undefined>();
+    store.toggleAutoArchive.mockReturnValueOnce(turn.sent);
+    const { toggle } = render();
+    const turned = toggle.onCheckedChange(false);
+    switchAccount();
+    settle(turn);
+    await turned;
+    expect(toasts).toEqual([]);
   });
 });

@@ -15,10 +15,12 @@ import type { Database } from "../../fixtures/db";
 import {
   answerTo,
   bodiesSentTo,
+  closedByEscape,
   enabledWithin,
   moveWithinApp,
   registerOnboarded,
   sentHeld,
+  sentTo,
 } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
@@ -284,6 +286,73 @@ test("P3 (page): the project's admin changes its name, identifier, description, 
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
   // the first load, and the reload
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+});
+
+test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const settings = `/${slug}/settings/projects/${web.id}`;
+  const projectApi = `/api/v0/projects/${web.id}`;
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  /** Opens the page of the feature of path and turns it on: the feature alone is sent, the switch then shows it. */
+  const flip = async (path: string, name: string) => {
+    await page.goto(`${settings}/features/${path}`);
+    const toggle = page.getByRole("switch", { name });
+    await expect(toggle).not.toBeChecked();
+    const flipped = await sentTo(page, "PATCH", projectApi, () => toggle.click());
+    await expect(toggle).toBeChecked();
+    return [flipped.answer.status(), flipped.body];
+  };
+  expect(await flip("cycles", "Enable cycles")).toEqual([200, { cycle_view: true }]);
+  expect(await flip("modules", "Enable modules")).toEqual([200, { module_view: true }]);
+  expect(await flip("views", "Enable views")).toEqual([200, { issue_views_view: true }]);
+  expect(await flip("intake", "Enable intake")).toEqual([200, { intake_view: true }]);
+
+  // The auto-archiving: on, after a month.
+  await page.goto(`${settings}/automations`);
+  const turnedOn = await sentTo(page, "PATCH", projectApi, () =>
+    page.getByRole("switch", { name: "Auto-archive closed work items" }).click()
+  );
+  expect([turnedOn.answer.status(), turnedOn.body]).toEqual([200, { archive_in: 1 }]);
+  // A range of his own: the modal waits for nerve, and cannot be closed meanwhile; it closes once nerve has made it.
+  await page.getByRole("button", { name: "1 month" }).click();
+  await page.getByRole("button", { name: "Customize time range" }).click();
+  await page.locator("#archive_in").fill("6");
+  const { body, release } = await sentHeld(page, "PATCH", projectApi, () =>
+    page.getByRole("button", { name: "Submit" }).click()
+  );
+  expect(body).toEqual({ archive_in: 6 });
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect((await release()).status()).toBe(200);
+  await expect(page.locator("#archive_in")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "6 months" })).toBeVisible();
+  // Then 3 months, from the list.
+  await page.getByRole("button", { name: "6 months" }).click();
+  const three = await sentTo(page, "PATCH", projectApi, () => page.getByRole("option", { name: "3 months" }).click());
+  expect([three.answer.status(), three.body]).toEqual([200, { archive_in: 3 }]);
+  await expect(page.getByRole("button", { name: "3 months" })).toBeVisible();
+
+  expect(await stored(db, web.id)).toMatchObject({
+    cycle_view: true,
+    module_view: true,
+    issue_views_view: true,
+    intake_view: true,
+    archive_in: 3,
+    by: adminEmail,
+  });
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  // a load of each feature's page, and of the automations page
+  await expectQuietConsole(page, watch, { warnings: Array.from({ length: 5 }, () => EMOJI_CHECK_WARNING) });
 });
 
 test("P3 (page): another project's general page, reached without leaving the route, shows that project's values", async ({
