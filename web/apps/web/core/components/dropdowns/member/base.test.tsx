@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyShown, shown } from "@/lib/fake-controls";
 import { MemberDropdownBase } from "./base";
 
-// What the member dropdown keeps for its callers (M4–M6's rows among them) now that a CustomSearchSelect is under it
+// What the member dropdown keeps for its callers (M4–M7's rows among them) now that a CustomSearchSelect is under it
 // (M3 design 7.7, P10 spec 3): it renders on the server with a stand-in for the select (fake-controls.ts), which keeps
 // the props it was given, on a desktop unless the test says a phone.
 

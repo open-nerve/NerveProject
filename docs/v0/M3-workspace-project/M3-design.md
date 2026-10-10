@@ -1272,7 +1272,7 @@ modules/access/
 - **下拉框**（M2 交接第 14 节）：
   - `CustomSearchSelect`（`web/packages/ui/src/dropdowns/custom-search-select.tsx`）改成像 Popover 那样可以用 Tab 到达的按钮，`Combobox` 放在它的面板里；
   - 成员下拉框以 `CustomSearchSelect` 为底，列表在按钮旁；
-  - `CustomSelect` 在 M3 页面上的 9 个调用方和 `CustomSearchSelect` 的调用方（M3 的 6 个，M4–M7 经成员下拉框的 14 个文件和页头的 9 个）逐个在浏览器中核对（9.7）。
+  - `CustomSelect` 在 M3 页面上的 9 个调用方和 `CustomSearchSelect` 的调用方（M3 的 6 个，M4–M7 经成员下拉框的 12 个文件（M4 8、M6 2、M7 2）和页头的 9 个）逐个在浏览器中核对（9.7）。
 - **复制到剪贴板**：3 处未处理拒绝的调用（`workspace/sidebar/projects-list.tsx`、`project/card.tsx`、`extended-project-sidebar.tsx`）加上处理，失败时经 `t()` 提示；邀请行的复制链接（`invitations-list-item.tsx:80`，P9）照同样的写法。
 - **表情选择器的数据从本站提供**（M2 交接第 10 节）：
   - `emojibase-data` 固定为 15.3.2（已在依赖树里，由 `@tiptap/extension-emoji` 带进），加为 web 应用的直接依赖；
@@ -1573,7 +1573,7 @@ modules/access/
 | C4 | M2 交接第 13 节：`WorkspaceAuthWrapper` 的退出按钮（Tab、Enter、空格）；工作区和项目加载中的显示；`ProfileSidebar` 宽屏折叠后拉过 768 像素；`WorkspaceLogo` 在工作区菜单和卡片中的盒子；新手引导邀请成员一步和导览在中文下的文案。"加入工作区"一步随决策点 2 删除，这一条写明删除 | P9 |
 | C5 | 两个账户两个标签页：在工作区页上切换账户，旧的一代不再写入，页面以新账户重新渲染（7.1） | P9 |
 | C6 | 项目：创建（表情和图标选择器，Network 面板没有 `cdn.jsdelivr.net`，控制台没有 CSP 违规）、加入、离开（接口失败时停在原页，弹窗留着）、归档、恢复、删除；members 页设负责人、默认负责人 | P10 |
-| C7 | 下拉框：`CustomSearchSelect` 用 Tab 到达、键盘打开；成员下拉框以 `CustomSearchSelect` 为底，列表在按钮旁；9 个 `CustomSelect` 调用方、`CustomSearchSelect` 的调用方逐个（M3 的 6 个，M4–M7 经成员下拉框的 14 个文件和页头的 9 个） | P10 |
+| C7 | 下拉框：`CustomSearchSelect` 用 Tab 到达、键盘打开；成员下拉框以 `CustomSearchSelect` 为底，列表在按钮旁；9 个 `CustomSelect` 调用方、`CustomSearchSelect` 的调用方逐个（M3 的 6 个，M4–M7 经成员下拉框的 12 个文件（M4 8、M6 2、M7 2）和页头的 9 个） | P10 |
 | C8 | 复制到剪贴板：在局域网 HTTP 地址上复制项目链接、邀请链接，失败时有提示 | P10 |
 | C9 | 状态和标签的拖动、设为默认、两层标签的拖放；默认状态和组内唯一状态的删除按钮不可用；访客看状态设置"没有权限" | P11 |
 | C10 | 访客打开别人的个人主页（决策点 3，A） | P11 |
@@ -2042,7 +2042,7 @@ modules/access/
 | M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（`leaveWorkspace`、`is_bot`、`owner` 在 P8a，其余在 P8b）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8a、P9）；时区用 `GET /api/v0/timezones`（P9、P10）。代码一侧在 P8a、P8b 完成（M2 交接的"处理结果（M3/P8b）"），本节随 P10 关闭 |
 | M2-closeout §12 页大小的规则 | 3.12 | M3 没有分页的列表：P1 的 review 写明，本节原样写进 M4 的交接（收尾，13.2） |
 | M2-closeout §13 P5 改到、M2 走不到的页面 | 9.7 C4 | 逐条的浏览器核对写进 review；"加入工作区"一步删除，写明（P9） |
-| M2-closeout §14 下拉框和复制 | 7.7、9.7 C7、C8 | `CustomSearchSelect` 能用 Tab 到达、键盘打开；成员下拉框以 `CustomSearchSelect` 为底，列表在按钮旁；`CustomSelect` 的 9 个调用方、`CustomSearchSelect` 的调用方逐个（M3 的 6 个，M4–M7 经成员下拉框的 14 个文件和页头的 9 个）核对；3 处复制处理失败（P10） |
+| M2-closeout §14 下拉框和复制 | 7.7、9.7 C7、C8 | `CustomSearchSelect` 能用 Tab 到达、键盘打开；成员下拉框以 `CustomSearchSelect` 为底，列表在按钮旁；`CustomSelect` 的 9 个调用方、`CustomSearchSelect` 的调用方逐个（M3 的 6 个，M4–M7 经成员下拉框的 12 个文件（M4 8、M6 2、M7 2）和页头的 9 个）核对；3 处复制处理失败（P10） |
 | M1-closeout 死成员和死 prop | 7.9 | `--rows M3` 的每一行消失或写进 review；按路径误归的 41 行写进 M4、M6、M7 的交接（P11、收尾） |
 | M1-closeout oxlint | 7.9 | 改到的文件 0 条；`promise(always-return)` 全仓清零；各包上限调低，review 写明（P8a–P11；只经机械一步改到的文件在 P11 的第 4 个任务，7.9） |
 | M1-P2 项目字段 | 4.6、5.2 | 接口没有 `close_in`、`default_state`、`page_view`、`estimate_id`（P4a） |
