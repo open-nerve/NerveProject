@@ -141,6 +141,12 @@ export async function accountId(api: Api, token: string): Promise<string> {
   return data.id;
 }
 
+/** Gives the account of the bearer token given the display name name, by which the pages show it. */
+export async function named(api: Api, token: string, name: string): Promise<void> {
+  const { response } = await api.PATCH("/api/v0/me", { body: { display_name: name }, headers: bearer(token) });
+  expect(response.status, `name ${name}`).toBe(200);
+}
+
 /** Creates a personal access token with the bearer token given, and returns it with its token. */
 export async function createPAT(
   api: Api,

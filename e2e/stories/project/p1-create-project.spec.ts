@@ -7,7 +7,7 @@ import {
   type ProjectCreate,
 } from "../../fixtures/api";
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, createPAT, emailFor, named, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import {
   closedByEscape,
@@ -46,12 +46,6 @@ async function read(
     headers: bearer(token),
   });
   return data ? { status: response.status, project: data } : { status: response.status, code: error?.code };
-}
-
-/** Gives the account of token the display name name, by which the pages show it. */
-async function named(api: Api, token: string, name: string): Promise<void> {
-  const { response } = await api.PATCH("/api/v0/me", { body: { display_name: name }, headers: bearer(token) });
-  expect(response.status, `name ${name}`).toBe(200);
 }
 
 /** The answer to a createProject whose field the rules do not allow. */
@@ -314,9 +308,10 @@ test("P1 (page): a member creates a project from the projects page, its identifi
     logo_props: { in_use: "emoji", emoji: { value: "128640" } },
     project_lead_id: adminId,
   });
-  // neither by Cancel, by the header's Close nor by Escape
+  // neither by Cancel, by the header's Close nor by Escape; nor sent again, its button busy
   await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Creating" })).toBeDisabled();
   expect(await closedByEscape(page)).toBe(false);
   expect((await release()).status()).toBe(201);
   await expect(page.getByText("Project created successfully")).toBeVisible();

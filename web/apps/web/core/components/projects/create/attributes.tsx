@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { Controller, useFormContext } from "react-hook-form";
 // nerve imports
-import { EUserPermissions, NETWORK_CHOICES, ETabIndices } from "@nerve/constants";
+import { NETWORK_CHOICES, ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { CustomSelect } from "@nerve/ui";
 import { getTabIndex } from "@nerve/utils";
@@ -17,6 +17,7 @@ import { ProjectNetworkIcon } from "@/components/project/project-network-icon";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 // local imports
+import { leadCandidates } from "./lead-candidates";
 import type { ProjectCreationForm } from "./use-create-project";
 
 type Props = {
@@ -32,11 +33,6 @@ const ProjectAttributes = observer(function ProjectAttributes(props: Props) {
     getUserDetails,
     workspace: { workspaceMemberIds, getWorkspaceMemberDetails },
   } = useMember();
-  // the lead is one of the workspace's admins and members (M3 design 3.19): no guest, no one whose membership ended
-  const leadCandidates = (workspaceMemberIds ?? []).filter((id) => {
-    const membership = getWorkspaceMemberDetails(id);
-    return membership !== null && membership.is_active && membership.role >= EUserPermissions.MEMBER;
-  });
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Controller
@@ -91,7 +87,7 @@ const ProjectAttributes = observer(function ProjectAttributes(props: Props) {
           <div className="h-7 flex-shrink-0">
             <MemberDropdownBase
               getUserDetails={getUserDetails}
-              memberIds={leadCandidates}
+              memberIds={leadCandidates(workspaceMemberIds, getWorkspaceMemberDetails)}
               value={value}
               // the lead picked again is no lead
               onChange={(lead) => onChange(lead === value ? null : lead)}

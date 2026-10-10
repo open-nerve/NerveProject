@@ -74,6 +74,8 @@
 | `web/apps/web/core/components/projects/create/use-create-project.ts`、`web/apps/web/core/components/projects/create/use-create-project.test.ts` | 创建项目：表单的字段构成 `ProjectCreate`，没选负责人不发，在会话里跟进；它的 vitest | 4 |
 | `web/apps/web/core/components/projects/create/root.tsx` | 创建表单经 `useCreateProject`，在途时 Escape 不关（整个文件） | 4 |
 | `web/apps/web/core/components/projects/create/attributes.tsx`、`web/apps/web/core/components/projects/create/utils.ts` | 负责人从工作区的管理员和成员中选；表单的值的类型、默认值 | 4 |
+| `web/apps/web/core/components/projects/create/lead-candidates.ts`、`web/apps/web/core/components/projects/create/lead-candidates.test.ts` | 负责人的候选：工作区的有效管理员和成员（不含访客、成员资格已结束的）；它的表（Task 4 的修正轮，裁定 T4-b） | 4 |
+| `web/apps/web/core/lib/auth/fake-tab.ts` | `lateSettlingsAnswering(answer)`：答以给出的回答的两种兑现，`lateSettlings` 是答以空的（Task 4 的修正轮，裁定 T4-a） | 4 |
 | `web/apps/web/core/components/project/create-project-modal.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/project/create/project-create-buttons.tsx` | 弹窗的 Escape 只在功能一步；表单的值的类型；创建在途时取消禁用 | 4 |
 | `web/packages/utils/src/project.ts`、`web/packages/utils/src/project.test.ts` | 标识符转大写、只留允许的字符（不再有 `.`、`..`）；它的 vitest | 4 |
 | `web/apps/web/core/components/project/use-update-project-details.ts`、`web/apps/web/core/components/project/use-update-project-details.test.ts` | general 页的修改：改了的标识先问 nerve，被占用时说在它下面、不发；字段构成 `ProjectUpdate`；在会话里跟进；它的 vitest | 5 |
@@ -104,6 +106,7 @@
 | `e2e/fixtures/mounts.ts` | 页面加载时的请求清单的列表和 `valued`，从 S2 移来（新文件）；S2、P2 读它 | 3 |
 | `e2e/fixtures/settings-pages.ts` | `transitionsEnded`（Task 2）；`closedWithin`（Task 3 的修正轮，`closedByEscape` 经它）；`moveWithinApp`（Task 5）；`shownWithin`（Task 10） | 2、3、5、10 |
 | `e2e/fixtures/workspace-pages.ts` | `pickTimeZone`：只用键盘选时区 | 2 |
+| `e2e/fixtures/auth.ts` | `named`：给账户显示名，从 P1 移来（Task 4 的修正轮，裁定 T4-c） | 4 |
 | `e2e/fixtures/api.ts` | `archiveProject`（Task 3）；`projectMembershipOf`、`changeProject`、`projectMemberWrites`（Task 8） | 3、8 |
 | `e2e/fixtures/assert/project.ts` | `projectSettingsOf`：项目存下的设置 | 8 |
 | `e2e/stories/project/p1-create-project.spec.ts` | P1 的页面版本：表情选择器（Task 1）、负责人的列表（Task 2）、创建（Task 4） | 1、2、4 |
@@ -4189,12 +4192,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T4.3` | 创建项目不论会话都跟进 | `use-create-project.test.ts` | vitest |
 | `T4.4` | 创建在途时 Escape 关掉表单 | 故事 P1 | 端到端 |
 | `T4.5` | 创建在途时表单的取消按钮仍可用 | 故事 P1 | 端到端 |
-| `T4.6` | 负责人的候选包括工作区的访客 | 故事 P1 | 端到端 |
+| `T4.6` | 负责人的候选包括工作区的访客 | `lead-candidates.test.ts`（Task 4 的修正轮起）、故事 P1 | vitest；端到端 |
 | `T4.7` | 标识符保留输入的大小写 | `project.test.ts`、故事 P1 | vitest；端到端 |
 | `T4.8` | 图标丢掉颜色 | `logo-props.test.ts` | vitest |
 | `T4.9` | 在创建项目的 hook 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
 | `T4.10` | 负责人不在创建表单的 Tab 顺序里：Tab 在表单的按钮之后才到它 | 故事 P1 | 端到端 |
 | `T4.11` | 创建在途时页头的关闭按钮仍可用 | 故事 P1 | 端到端 |
+| `T4.12` | 创建出的项目躲过会话的核对：另一个标签页换了账户之后表单仍拿到它，进入功能一步（Task 4 的修正轮，裁定 T4-a） | `use-create-project.test.ts` | vitest |
+| `T4.13` | 负责人的候选包括成员资格已结束的成员，nerve 不收他做负责人（修正轮，裁定 T4-b） | `lead-candidates.test.ts` | vitest |
+| `T4.14` | 创建在途时创建的按钮不显示忙：再点一次又发一次创建（修正轮，裁定 T4-c） | 故事 P1 | 端到端 |
+
+修正轮的这三行之外：`fake-tab.ts` 的 `lateSettlings` 扩展为 `lateSettlingsAnswering(answer)`（答以给出的回答；`lateSettlings` 是答以空的，原来的调用方不变），`use-create-project.test.ts` 换账户之后的两行答以创建出的项目；负责人的筛选移到 `lead-candidates.ts`，它的表有管理员、成员、访客、成员资格已结束的成员四行（`T4.6` 也由它发现）；P1 在扣住创建时核对 "Creating" 按钮禁用，`named` 移到 `e2e/fixtures/auth.ts`，P1 仍在 400 行以内。再选一次已选的负责人就是没有负责人（`attributes.tsx` 的 `onChange`）没有会失败的检查，由评审看住（裁定 T4-d，spec A.2）。
 
 ---
 

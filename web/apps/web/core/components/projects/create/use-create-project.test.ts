@@ -4,7 +4,8 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { Project } from "@nerve/api-client";
+import { heldChange, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
@@ -99,10 +100,11 @@ describe("useCreateProject", () => {
     expect([underFields(), toasts]).toEqual([[], [{ type: "error", title: "toast.error", message }]]);
   });
 
-  it.each(lateSettlings)(
+  // answered with the project created, which the form must not get once the tab is another account's
+  it.each(lateSettlingsAnswering(web))(
     "does nothing on the page and gives nothing when the creation $settles after another tab moved this one",
     async ({ settle }) => {
-      const answer = heldChange<undefined>();
+      const answer = heldChange<Project>();
       page.createProject.mockReturnValueOnce(answer.sent);
       const created = create();
       switchAccount();
