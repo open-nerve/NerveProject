@@ -65,8 +65,8 @@ P10 的每一处页面改动都按安全测试看待（brief）：一个角色�
 - `ProjectAuthWrapper`（整个文件）照 `kind` 渲染：`not-member` 是加入界面（经 `useJoinProject`，按钮忙到跟进做完），`archived` 是已归档的界面（`project_empty_state.archived.*`：标题"This project is archived"，按钮去 `/{slug}/projects/archives`），`not-found` 照旧。`project-access-restriction.tsx` 给出这三种。
 - F-3：`Reconciled.answeredAt`（一个值显示的是第几个写入的回答；所有 `Reconciled` 共用一个计数，0 是还没取到）和 `ReconciledByKey.answeredAt(key)`；项目 store 的 `getProjectById` 在项目自己的读取和它的工作区的两个列表中给出 nerve 最后回答的那一份（第 3 节第 4 条）。
 - 文案：`project_empty_state.archived.title`、`description`、`cta_primary`（两种语言）。
-- 测试：`use-copy-link.test.ts` 3 个（写剪贴板并说复制了什么；浏览器不让写时提示失败、不拒绝；项目的链接）；`use-join-project.test.ts` 5 个（加入之后做下一步；没有下一步；拒绝提示、不做下一步；换账户之后兑现的两种）；`project-wrapper.test.tsx` 加 1 个（已归档的界面）；`use-project-fetch.test.ts` 的取数表加 1 行、决定表加 2 行；`project.store.test.ts` 改写 1 个、加 1 个（F-3）。
-- 端到端：P2 的两个页面版本（成员直接打开看得到而不是成员的公开项目的地址：加入界面，只读项目本身；加入之后页面显示、读其余四项；私密的找不到，已归档的说已归档。项目页的卡片：成员看到可以加入的公开项目、看不到私密的；复制链接，浏览器拒绝时说不能；加入经 `sentHeld` 扣住：取消禁用、Escape 不关，只发一次；加入之后项目页头的项目一节只停一次 Tab，2.2）。S2 加成员、访客、不是项目成员的成员打开项目列表的行，和"项目的管理员打开已归档的项目"（2.12）。
+- 测试：`use-copy-link.test.ts` 3 个（写剪贴板并说复制了什么；浏览器不让写时提示失败、不拒绝；项目的链接）；`use-join-project.test.ts` 5 个（加入之后做下一步；没有下一步；拒绝提示、不做下一步；换账户之后兑现的两种）；`project-wrapper.test.tsx` 加 1 个（已归档的界面）；`use-project-fetch.test.ts` 的取数表加 1 行、决定表加 2 行；`project.store.test.ts` 改写 1 个、加 1 个（F-3）。Task 3 的修正轮（裁定 T3-d、T3-e）：决定表再加 3 行（已归档的项目：nerve 找不到时是找不到，不可达时是不可达，没回答时是加载：拒绝和没回答在已归档之前，`T3.15`）；`project.store.test.ts` 再加 2 个（列表取了两次之后回答的自己的读取：所有副本共用一个计数，`T3.16`；自己的读取之后回答的已归档的列表：它也是一份副本，`T3.17`）。
+- 端到端：P2 的两个页面版本（成员直接打开看得到而不是成员的公开项目的地址：加入界面，只读项目本身；加入之后页面显示、读其余四项；私密的找不到，已归档的说已归档。项目页的卡片：成员看到可以加入的公开项目、看不到私密的；复制链接，浏览器拒绝时说不能；加入经 `sentHeld` 扣住：取消禁用、Escape 不关，只发一次；加入之后项目页头的项目一节只停一次 Tab，2.2）。S2 加成员、访客、不是项目成员的成员打开项目列表的行，和"项目的管理员打开已归档的项目"（2.12）。Task 3 的修正轮（裁定 T3-c）：卡片的故事另有一次被拒绝的加入（管理员在对话框开着时删除项目）：原因在提示里，对话框留着（`settings-pages.ts` 的 `closedWithin`：一秒之内不关；`closedByEscape` 改为经它），按钮重新可用（`T3.14`）；加入在途时对话框的按钮忙（`enabledWithin`，`T3.13`）。
 
 ### 2.4 创建项目；P1 的页面版本（Task 4；P1，3.19，7.1、7.6；P8b spec 第 5 节 P10 一行；P4a 评审的 P10）
 
@@ -187,7 +187,7 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
 5. **只为使用方改到的 Plane 文件变长一行**（裁定 R5：接受；P9 的裁定 P6 的先例）：`@nerve/propel` 的 `emoji-icon-picker/index.ts` 11 → 12 行：导出 `EMOJIBASE_URL`，web 应用的 `emojibase.test.ts`（9.5 的守卫）读它，核对选择器的地址与构建写出的相同。其余变长的 Plane 文件都是本 Phase 的对象（行为改在它们里面，附录 A.6）。
 6. **被拒绝时弹窗留着，原因在共用的拒绝提示里；成功之后才关上**（裁定 R6：接受；预检之后的裁定 A-M2 扩到每个弹窗；设计 7.6 原来写"失败时留在原页、弹窗显示错误"，本次修订改为"失败时留在原页，弹窗留着，原因在共用的拒绝提示里；成功之后才关上、跳转"）：离开有三个入口（成员页自己一行的确认框、侧边栏和项目页头的离开弹窗），都经 `useProjectMembershipChanges` 的 `leave`（关键词规则 `project-leave`，2.14），拒绝经 `useRefusalToast`（关键词规则 `refusal-toast`：失败提示只写在一处）。P10 的每个弹窗一条规则：nerve 拒绝时弹窗留着、按钮重新可用，原因在提示里，页面不动；弹窗只在成功的跟进中关上（经 `followInSession`）：加入、创建、移出和离开的确认、离开、添加成员、自定义时长、删除、归档和恢复。成员页的确认框原来在 `await onSubmit()` 之后不论结果都关（被拒绝的离开也关），现在由 `remove(userId, done)`、`leave(done)` 的 `done` 关上（2.7）。用户仍在项目里，页面与 nerve 一致（7.6 要的）；原因显示在提示里而不是弹窗里。P9 的停用弹窗把原因写在弹窗里（P9 第 3 节第 3、4 条），那是一个入口、一个弹窗。P5 的页面版本核对确认框和侧边栏的离开弹窗被拒绝时都留着（变异 `T7.15`、`T7.16`、`T7.17`）。
 7. **general 页按项目挂载一个表单**（裁定 R7；预检之后的裁定 A-M1 取 (b′)）：`ProjectDetailsForm` 不再在 `useEffect` 中 `reset`，页面以 `key={project.id}` 让每个项目一个表单。应用中没有从一个项目的设置页直接到另一个项目的设置页（同一个路由组件不卸载）的路：命令面板的'打开项目'、项目搜索和两个项目切换都去工作项页，设置的命令只到当前项目的设置；另外，包装层在 B 的读取还没有缓存时显示加载，页面重新挂载。所以今天 `key` 守着一条用户走不到的路，它守的是之后第一个加在设置页上的项目切换：没有它时项目 B 的设置页显示项目 A 的值，提交会把 A 的值写进 B。P3 的页面版本（Task 5）在同一个路由里移动，代替那个切换（`moveWithinApp`：`history.pushState` + `popstate`，React Router 照它移动）：Web 的设置页、Ops 的、再回 Web 的（Web 的读取已在会话的缓存里，路由一直挂载着），显示的是 Web 的值；去掉 `key` 的变异 `T5.7` 由它发现（附录 A.2）。
-8. **复制只有一处**（W17）：项目的四处复制、P9 的邀请行和工作区 general 页都经 `useCopyLink`。工作区 general 页的成功提示原来标题是"Workspace URL copied to the clipboard."，现在标题是 `common.link_copied`（"Link copied"），那句话是说明（与邀请行相同的形状）。不加关键词规则：web 应用中另有 21 个文件自己写 `copyTextToClipboard`、`copyUrlToClipboard`（工作项、迭代、模块、视图、收集箱、Webhook 的页面，M4–M8；M2 的 API 令牌弹窗；命令面板的"复制当前页面的地址"），规则要为每个写一个例外；它们在各自的页面对接时改用这个 hook（第 5 节）。
+8. **复制只有一处**（W17）：项目的四处复制、P9 的邀请行和工作区 general 页都经 `useCopyLink`。工作区 general 页的成功提示原来标题是"Workspace URL copied to the clipboard."，现在标题是 `common.link_copied`（"Link copied!"），那句话是说明（与邀请行相同的形状）。项目的四处的提示也成了同一个样子（Task 3 的修正轮，裁定 T3-g；第 15 条）：成功是 `SUCCESS`，标题 `common.link_copied`，说明 `project_link_copied_to_clipboard`；失败是共用的错误提示。不加关键词规则：web 应用中另有 21 个文件自己写 `copyTextToClipboard`、`copyUrlToClipboard`（工作项、迭代、模块、视图、收集箱、Webhook 的页面，M4–M8；M2 的 API 令牌弹窗；命令面板的"复制当前页面的地址"），规则要为每个写一个例外；它们在各自的页面对接时改用这个 hook（第 5 节）。
 9. **已归档的项目页对是工作区管理员的项目成员也提供恢复、删除**（W17；设计 3.4）：Plane 的卡片只看项目角色（项目管理员）；项目设置提供归档的条件是 `allowPermissions([ADMIN], PROJECT, …)`（是工作区管理员的项目成员也算），nerve 3.4 对归档、恢复、删除用同一条规则。原来他能在设置页归档，却不能在已归档的项目页恢复。P4 的页面版本由这样的人恢复（变异 `T9.11`）。
 10. **添加成员的角色不按调用者的项目角色筛**（W17；P5b review 的 I1，负责人取 (a)）：Plane 只提供不高于调用者项目角色的（`role > (currentProjectRole ?? GUEST)` 不显示）：不是项目成员的工作区管理员只能加访客，是工作区管理员的项目成员最多加成员。nerve 的添加没有相对规则（P5b spec 第 7 节），只按被添加的人的工作区角色（3.5）。P10 提供 nerve 允许的（`addableRoles`），不把隐藏当作保护（P5b review 第 6 节）。项目管理员本来就能给任何角色，对他没有可见的不同。
 11. **成员的默认值显示 nerve 的回答**（W17）：Plane 先改表单再发，被拒绝时仍显示被拒绝的值；P10 只显示 nerve 所持的值，修改之后由 store 写入回答（总体设计 7.7）。负责人、默认负责人一次只发一个字段（P8b 起）。
@@ -200,7 +200,7 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
     - 弹窗：加入、创建、移出和离开的确认、离开、添加成员、自定义时长、删除、归档和恢复，请求在路上时关不掉（原来可以取消、按 Escape，回答之后照样跳转、提示）；创建表单页头的关闭按钮同样。自定义时长 nerve 做完才关（原来发出就关）。被拒绝时弹窗都留着、按钮重新可用（原来成员页的确认框被拒绝时也关上，第 6 条）。
     - 表情选择器显示表情（原来 CSP 挡住 CDN，选择器是空的）；图标按钮有名字。
     - 下拉框：带搜索的选择 Tab 能到、键盘打开，列表在按钮旁，搜索框有焦点，Escape 关上列表而不关弹窗（输入法组字时的 Escape 留给输入法，预检的 L7），再打开没有搜索；成员下拉框的列表在按钮旁（原来在页面左上角），Tab 只停一次。面包屑的下拉框一节一个 Tab 停留点（预检的 L9：选择改成 Popover 的按钮之后成了两个）：最后一节的标题改为 `<span>`；之前一节的标题仍是选择的按钮里的按钮，`tabIndex={-1}`，点它去那一节的页，键盘从侧边栏到那里。它留作按钮的理由：只能用鼠标的 `<span>` 加点击，jsx-a11y 标出它（`click-events-have-key-events`、`no-static-element-interactions`）；放到选择的按钮旁边成为另一个控件，会改 M4–M6 页头的布局（第 5 节 M4 一行）。成员下拉框对 M4–M6 的调用方照旧（预检的 A-M5）：调用方推迟时（`renderByDefault` 为 false，桌面上列表的每一行）指针经过之前只有按钮，没有选择和 popper；按钮的点击不冒泡到行，由 Headless UI 的 `Popover.Button` 自己做（它先 `preventDefault`、`stopPropagation`，再切换；我们的处理器若 `preventDefault`，Headless UI 的 `mergeProps` 就跳过它自己的切换，所以不另写）；手机上打开时搜索框不取得焦点；列表离窗口边缘 12 像素。按调用方看得到的不同有两处（第 5 节 M4 一行）：按键由 Headless UI 处理（Enter、空格打开，Escape 关上，Tab 离开），代替原来的 `useDropdownKeyDown`（预检的 A-M5 第 5 项）；`CustomSearchSelect` 在列表打开时记下调用方的 `onOpen`、`onClose`（`WhileOpen`），列表开着时调用方换掉的回调在这一次关上时不用（预检的 L8；现在的调用方都传 setter 或不变的回调）。Task 2 的修正轮（裁定 T2-a–T2-c、T2-f）：调用方的 `optionsClassName` 是 popper 定位的面板的，调用方给的宽度和 z-index 照旧有效（M4 的三处行给成员下拉框的列表 `z-10`、`z-[9]`）；选择的按钮由键盘取得焦点时显示一圈轮廓（Headless UI 的 `data-focus`，只在 `CustomSearchSelect` 一处），去掉轮廓的调用方（面包屑、项目页头、成员下拉框）也看得出焦点；成员下拉框的根照旧在行中可以收缩，选择的按钮没有自己的悬停底色。输入法组字时的 Escape 也不传出列表：列表和外面的弹窗都留着（修正之前它传到 `document`，创建弹窗的 `useKeypress` 关上弹窗）。成员下拉框的列表换成 `CustomSearchSelect` 的样子（裁定 R2 接受）：没有 `shadow-raised-200` 的阴影，边框是 `border-subtle-1`、`rounded-md`（原来 `border-strong`、`rounded-sm`），搜索框没有 `bg-surface-2` 的底色，选项没有选中的 `text-primary`、未选中的 `text-secondary`，停用的成员一行 `opacity-60`。
-    - 复制：失败时提示（原来是未处理的拒绝）；卡片的复制按钮有名字；工作区 general 页的成功提示的标题（第 8 条）。
+    - 复制：失败时提示（原来是未处理的拒绝）；卡片的复制按钮有名字；工作区 general 页的成功提示的标题（第 8 条）。项目的四处的提示经一个 hook 成了同一个样子（Task 3 的修正轮，裁定 T3-g）：卡片和项目页头菜单的成功原来是 `INFO`，标题"Link Copied!"（页头"Link copied!"），说明"Project link copied to clipboard."，现在是 `SUCCESS`，标题 `common.link_copied`（"Link copied!"），说明 `project_link_copied_to_clipboard`（"Project link copied to clipboard"）；两个侧边栏的成功的标题原来是 `link_copied`（"Link copied"，这个键随之删除），现在多了"!"；项目页头菜单的失败原来是"Copy failed"、"We couldn't copy the link. Please try again."，现在是共用的错误提示（`toast.error` 的"Error!"、`something_went_wrong_please_try_again`）。
     - 包装层：已归档的项目，它的成员看到已归档的界面（原来显示项目的页面，取四个子资源，工作项页另有 M4 的 404）；看得到而不是成员的也看到已归档的界面（原来是加入界面）。
     - 创建：负责人的候选不含访客和成员关系已结束的人；标识输入时转大写（原来留小写，nerve 拒绝）；没选负责人时不发 `project_lead_id`。
     - general 页：标识被占用时在标识下说，什么都不发；标识的检查被拒绝时说原因、按钮结束加载（原来是未处理的拒绝，一直加载）。
@@ -343,7 +343,7 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
 
 ### A.2 变异
 
-`mutants_p10.py`：106 个变异，每个只改一处或几处，`mut.py` 在最终原型上、在它写的每个检查上各跑一次：106 个都被发现，没有存活的；每个写的每个检查都让它失败（`$M3TMP/p10tools/mut-results.json`，日志 `mut-logs/`）。每个变异另在它自己的 Task 的快照上跑过（`mutpertask.py`，`mut-results-pertask.json`）：103 个在自己的 Task 的树上就被发现；3 个只在之后的 Task 起（`T2.8` Task 4 起、`T2.9` Task 8 起、`T2.14` Task 3 起，plan 的表中标出），各在那个 Task 的树上被发现（`mutfrom.py`，`mut-results-from.json`）。每个变异要改的文字在它的 Task 的快照上和最终原型上都恰好出现一次（`mutchecksnap.py`：0 个不适用；`T3.5`、`T3.7`、`T4.10`、`T6.7`、`T10.7` 要改的文字在 Task 1 的快照上已有，在它们自己的 Task 之前就适用，不影响结果）。"静态"是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的范围）、关键词守卫，以及 `make knip`。Task 2 的修正轮（裁定 T2-b、T2-e、T2-f）加了 3 个（`T2.16`、`T2.17`、`T2.18`），在修正之后的 Task 2 的树上跑过，都被发现（`$M3TMP/p10mut/t2`），没有在最终原型上跑；下面的表和计数含它们，共 109 个。按缺陷类别（一个变异可以被几层发现）：
+`mutants_p10.py`：106 个变异，每个只改一处或几处，`mut.py` 在最终原型上、在它写的每个检查上各跑一次：106 个都被发现，没有存活的；每个写的每个检查都让它失败（`$M3TMP/p10tools/mut-results.json`，日志 `mut-logs/`）。每个变异另在它自己的 Task 的快照上跑过（`mutpertask.py`，`mut-results-pertask.json`）：103 个在自己的 Task 的树上就被发现；3 个只在之后的 Task 起（`T2.8` Task 4 起、`T2.9` Task 8 起、`T2.14` Task 3 起，plan 的表中标出），各在那个 Task 的树上被发现（`mutfrom.py`，`mut-results-from.json`）。每个变异要改的文字在它的 Task 的快照上和最终原型上都恰好出现一次（`mutchecksnap.py`：0 个不适用；`T3.5`、`T3.7`、`T4.10`、`T6.7`、`T10.7` 要改的文字在 Task 1 的快照上已有，在它们自己的 Task 之前就适用，不影响结果）。"静态"是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的范围）、关键词守卫，以及 `make knip`。Task 2 的修正轮（裁定 T2-b、T2-e、T2-f）加了 3 个（`T2.16`、`T2.17`、`T2.18`），在修正之后的 Task 2 的树上跑过，都被发现（`$M3TMP/p10mut/t2`），没有在最终原型上跑。Task 3 的修正轮（裁定 T3-c、T3-d、T3-e）加了 5 个（`T3.13`–`T3.17`），同样在修正之后的 Task 3 的树上跑过，都被发现（`$M3TMP/p10mut/t3`）。下面的表和计数含这 8 个，共 114 个。按缺陷类别（一个变异可以被几层发现）：
 
 | 类别 | 变异 | 静态 | vitest | 端到端 | 存活 |
 |---|---|---|---|---|---|
@@ -357,25 +357,25 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
 | M1-P4：离开的顺序 | 1 | 0 | 1 | 1 | 0 |
 | 封闭的请求体（P8b 第一类） | 5 | 1 | 5 | 1 | 0 |
 | 错误的读法（P8b 第二类） | 10 | 0 | 10 | 0 | 0 |
-| 所持的值（P8b 第三类：几份副本、取到之前的修改） | 4 | 0 | 3 | 2 | 0 |
+| 所持的值（P8b 第三类：几份副本、取到之前的修改） | 6 | 0 | 5 | 2 | 0 |
 | 标识被占用的一支（P8b 的 P6） | 1 | 0 | 1 | 1 | 0 |
 | 请求在路上时弹窗关得掉（P9 第一类） | 17 | 0 | 0 | 17 | 0 |
-| 被拒绝时弹窗关上（预检的 A-M2：成功之后才关） | 3 | 0 | 1 | 3 | 0 |
-| 忙碌在跟进之前结束（P9 第二类） | 3 | 0 | 1 | 3 | 0 |
-| W17：页面上看得到的不同 | 11 | 0 | 6 | 10 | 0 |
+| 被拒绝时弹窗关上（预检的 A-M2：成功之后才关） | 4 | 0 | 1 | 4 | 0 |
+| 忙碌在跟进之前结束（P9 第二类） | 4 | 0 | 1 | 4 | 0 |
+| W17：页面上看得到的不同 | 12 | 0 | 7 | 10 | 0 |
 | 一处实现（关键词规则） | 1 | 1 | 0 | 0 | 0 |
 | 角色的名字（`ROLE_DETAILS`） | 2 | 0 | 2 | 0 | 0 |
 | W12：非空断言的范围（2.14） | 10 | 10 | 0 | 0 | 0 |
-| 合计 | 109 | | | | 0 |
+| 合计 | 114 | | | | 0 |
 
-按发现它的层：只有端到端的 44 个、只有 vitest 的 35 个、vitest 和端到端的 18 个、只有静态的 11 个、静态和 vitest 的 1 个。按 Task：Task 1 5 个、2 18 个、3 12 个、4 11 个、5 8 个、6 7 个、7 17 个、8 11 个、9 13 个、10 7 个；Task 11 只改文档，没有变异。预检的变异中修订针对的和离开的跟进改过之后要重跑的（`mutants_pf_amend.py`：PF1、PF6、PF7、PF13、PF15、PF18、PF19，写在修订后的代码上；PF6、PF15、PF18、PF19 就是 plan 的 `T4.11`、`T2.9`、`T5.7`、`T7.15`）在最终原型上：7 个都被发现（`mut-results-pf.json`）。
+按发现它的层：只有端到端的 46 个、只有 vitest 的 38 个、vitest 和端到端的 18 个、只有静态的 11 个、静态和 vitest 的 1 个。按 Task：Task 1 5 个、2 18 个、3 17 个、4 11 个、5 8 个、6 7 个、7 17 个、8 11 个、9 13 个、10 7 个；Task 11 只改文档，没有变异。预检的变异中修订针对的和离开的跟进改过之后要重跑的（`mutants_pf_amend.py`：PF1、PF6、PF7、PF13、PF15、PF18、PF19，写在修订后的代码上；PF6、PF15、PF18、PF19 就是 plan 的 `T4.11`、`T2.9`、`T5.7`、`T7.15`）在最终原型上：7 个都被发现（`mut-results-pf.json`）。
 
 - **W3 的 12 个**：2.13 的每一处"不论会话都跟进"（`T3.1`、`T4.3`、`T5.4`、`T6.1`、`T6.3`、`T7.3`、`T8.6`、`T8.8`、`T9.1`、`T9.7`、`T10.1`、`T10.3`），每个由它自己的 vitest 发现（`lateSettlings`）；`T9.1` 是 9.5 的"删除项目的组件"。P10 没有会话切换的端到端（2.13）。
 - **关不掉的弹窗的 17 个**（P9 的第一类）：每个弹窗的 Escape 和取消各一个（加入、创建、自定义时长、移出、离开、添加、删除、归档），和创建表单页头的关闭（`T4.11`，预检的 A-M3），都由它的故事扣住请求发现（`closedByEscape`、`enabledWithin`）：服务端渲染看不到之后才有的状态（P9 的先例）。
-- **被拒绝时弹窗关上的 3 个**（预检的 A-M2，第 3 节第 6 条）：离开弹窗（`T7.15`，预检的 PF19）、成员页的确认框（`T7.16`）被拒绝时关上，分别由 P5 中被拒绝的两次离开发现；移出成功时确认框不关（`T7.17`：`remove` 不把 `done` 交给 `followInSession`），由 vitest 和 P5 发现。
+- **被拒绝时弹窗关上的 4 个**（预检的 A-M2，第 3 节第 6 条）：离开弹窗（`T7.15`，预检的 PF19）、成员页的确认框（`T7.16`）被拒绝时关上，分别由 P5 中被拒绝的两次离开发现；加入的对话框被拒绝时关上（`T3.14`，Task 3 的修正轮），由 P2 的卡片的故事中被拒绝的加入发现（`closedWithin`）；移出成功时确认框不关（`T7.17`：`remove` 不把 `done` 交给 `followInSession`），由 vitest 和 P5 发现。
 - **成员下拉框对调用方的约定的 3 个**（预检的 A-M5）：推迟时也渲染选择和 popper（`T2.10`）、手机上打开时搜索框取得焦点（`T2.11`）、列表没有离窗口边缘的距离（`T2.12`），由 `dropdowns/member/base.test.tsx` 发现。
 - **只有端到端的**：都是页面上的行为，P10 的页面在 vitest 中没有渲染它的那一部分（下拉框的焦点和位置、弹窗的关闭、卡片的按钮、Tab 的顺序）；每个由它的故事的页面版本发现。
-- **W18（每个新的 vitest 都能失败）**：`mut.py` 只跑一个变异写的检查，所以另由 `w18p10.py` 把每个变异对 P10 写或改的全部 22 个 web 的 vitest 文件各跑一次，再对照最终的 vitest 报告：P10 新加或改写的 109 个测试（`it.each` 的每一行算一个）中，106 个变异中的 50 个让其中 67 个失败（其余的变异由它们的端到端或静态检查发现）。其余 42 个多是正向的行（例如"在会话里跟进""移出之后停在原页"、决定表中每一步的一行、成员下拉框不推迟时是选择），另写 31 个探查变异（`mutants_w18_p10.py`，`W18.1`–`W18.31`，只在最终原型上跑，不在 plan 的表中）：每个都让它守着的测试失败（`logs/w18-probes.log`）。31 个都被发现，109 个测试都至少失败一次（`w18split.py`）。改到的 10 个 P8 的测试文件中 P8 原有的 57 个测试不算（其中 9 个也被 P10 的变异发现）。`@nerve/utils` 的 `project.test.ts` 6 行在 web 应用之外：`T4.7` 让其中 5 行失败，`..` 一行由一个手工的探查变异（净化保留 `.`）发现（它让 `..`、`w.e.b` 两行失败，`$M3TMP/p10tools/logs/utilsprobe.log`）。
+- **W18（每个新的 vitest 都能失败）**：`mut.py` 只跑一个变异写的检查，所以另由 `w18p10.py` 把每个变异对 P10 写或改的全部 22 个 web 的 vitest 文件各跑一次，再对照最终的 vitest 报告：P10 新加或改写的 109 个测试（`it.each` 的每一行算一个）中，106 个变异中的 50 个让其中 67 个失败（其余的变异由它们的端到端或静态检查发现）。其余 42 个多是正向的行（例如"在会话里跟进""移出之后停在原页"、决定表中每一步的一行、成员下拉框不推迟时是选择），另写 31 个探查变异（`mutants_w18_p10.py`，`W18.1`–`W18.31`，只在最终原型上跑，不在 plan 的表中）：每个都让它守着的测试失败（`logs/w18-probes.log`）。31 个都被发现，109 个测试都至少失败一次（`w18split.py`）。改到的 10 个 P8 的测试文件中 P8 原有的 57 个测试不算（其中 9 个也被 P10 的变异发现）。`@nerve/utils` 的 `project.test.ts` 6 行在 web 应用之外：`T4.7` 让其中 5 行失败，`..` 一行由一个手工的探查变异（净化保留 `.`）发现（它让 `..`、`w.e.b` 两行失败，`$M3TMP/p10tools/logs/utilsprobe.log`）。Task 3 的修正轮加的 5 个测试（`use-project-fetch.test.ts` 决定表的 3 行、`project.store.test.ts` 的 2 个）各被它的变异发现：`T3.15` 让那 3 行都失败，`T3.16` 让那 2 个都失败，`T3.17` 让已归档的列表的一个失败（`$M3TMP/p10mut/t3/logs-fix1`）。
 - **只由评审看住的**（没有会失败的检查的性质，各有理由；都不是会话、权限或取数的性质）：
   - 成员下拉框被推迟时，指针经过之后换成选择（`onMouseEnter`）：P10 的页面没有推迟它的调用方（推迟的是 M4 的列表的行），vitest 是服务端渲染，没有指针；
   - `CustomSearchSelect` 照 `focusSearchOnOpen={false}` 不让搜索框取得焦点：P10 的页面不在手机上跑（vitest 核对成员下拉框在手机上传了它，`T2.11`）；
@@ -403,9 +403,9 @@ S2 的清单在 Task 3 的树上加入，每次 `make e2e` 都核对（2.12）�
 
 - **封闭的请求体**（P8b 的第一类）：P10 的页面发出的每个请求体都由表单编辑的字段构成，类型是生成的 `ProjectCreate`、`ProjectUpdate`、`ProjectMemberUpdate`、`ProjectMembersAdd`、`ProjectPreferencesUpdate`，角色和月数是数字，每个由一个测试钉住：创建（`use-create-project.test.ts`、P1 的 `sentHeld`）；general 页（`use-update-project-details.test.ts`、P3）；功能和自动归档（P3 的 `sentTo`；store 的测试在 P8b）；改角色（`use-project-membership-changes.test.ts`、P5 的 `{ role: 5 }`）；添加（`add-project-members-modal.test.tsx`、P5）；成员的默认值（`project-settings-member-defaults.test.tsx`、P3）；图标（`logo-props.test.ts`、P3）；标签栏和侧边栏（P8）。5 个变异（A.2 的 `body`），都被发现。
 - **错误的读法**（第二类）：P10 改到的页面的每一条出错的路径都经 `errorMessageKey`（`useRefusalToast`、`projectRefusal`），没有吞进 `console.error` 的拒绝，被拒绝的修改结束加载。P10 删掉的：`member-list-item.tsx` 的两处 `err.error`、`member-columns.tsx` 的 `err.error` 和 `console.log`、`project/form.tsx` 的 Plane 字段码和 `console.error`、`add-project-members-modal.tsx` 的 `console.error`、`use-tab-preferences.ts` 的 `console.error`、`useFeatureToggle` 的 `setPromiseToast`、`use-project-drop.ts` 和 `auto-archive-automation.tsx` 的固定文字。web 应用中仍读 `err.error`、`error?.error` 的都不在 P10 的页面中（工作项 M4、迭代和模块 M6、Webhook M8，P9 spec 第 5 节）。10 个变异。
-- **请求体取自所持的值**（第三类）：P10 的页面中这样的修改（功能的开关、访客可见全部、自动归档的开关、侧边栏的移动、标签栏的修改）都经 P8b 的 store 方法，在轮到它时从 nerve 最近的回答算出；P10 只改它们的跟进，页面自己不算请求体。成员的默认值一次只发一个字段。页面上同一类的显示问题：store 的几份副本（F-3，`T3.10`、`T3.11`）、标签栏取到之前的修改（`T10.4`）。
-- **请求在路上时弹窗关得掉**（P9 的第一类）：P10 改到的八个弹窗（加入、创建、自定义时长、移出和离开的确认、离开、添加、删除、归档和恢复）在途时取消禁用、`handleClose` 为空；创建表单另在页头的关闭按钮上（`T4.11`）。17 个变异。被拒绝时这些弹窗都留着、按钮重新可用，只在成功的跟进中关上（第 3 节第 6 条）：成员页的确认框原来不论结果都关，修订之后由 `done` 关上；3 个变异（A.2 的 `stays`）。
-- **忙碌在跟进之前结束**（第二类）：加入界面的按钮、general 页、归档和恢复、离开忙到跟进做完（`followInSession` 等跟进交回的 `Promise`）；删除弹窗先关（第 3 节第 14 条）。3 个变异（`T3.5`、`T5.5`、`T6.6`）。
+- **请求体取自所持的值**（第三类）：P10 的页面中这样的修改（功能的开关、访客可见全部、自动归档的开关、侧边栏的移动、标签栏的修改）都经 P8b 的 store 方法，在轮到它时从 nerve 最近的回答算出；P10 只改它们的跟进，页面自己不算请求体。成员的默认值一次只发一个字段。页面上同一类的显示问题：store 的几份副本（F-3，`T3.10`、`T3.11`；Task 3 的修正轮加 `T3.16` 共用的计数、`T3.17` 已归档的列表的一份）、标签栏取到之前的修改（`T10.4`）。
+- **请求在路上时弹窗关得掉**（P9 的第一类）：P10 改到的八个弹窗（加入、创建、自定义时长、移出和离开的确认、离开、添加、删除、归档和恢复）在途时取消禁用、`handleClose` 为空；创建表单另在页头的关闭按钮上（`T4.11`）。17 个变异。被拒绝时这些弹窗都留着、按钮重新可用，只在成功的跟进中关上（第 3 节第 6 条）：成员页的确认框原来不论结果都关，修订之后由 `done` 关上；4 个变异（A.2 的 `stays`）。
+- **忙碌在跟进之前结束**（第二类）：加入界面的按钮、general 页、归档和恢复、离开忙到跟进做完（`followInSession` 等跟进交回的 `Promise`）；删除弹窗先关（第 3 节第 14 条）。4 个变异（`T3.5`、`T5.5`、`T6.6`，和 Task 3 的修正轮加的加入对话框的按钮 `T3.13`）。
 - **包装层之上的状态**（第三类）：P10 没有在 `AuthenticationWrapper` 之上的状态；general 页和创建表单的值在页面里，换账户时随页面卸载。
 - **连按两下**（第四类）：P10 的每个修改按钮在途时不可用（`isSubmitting`、`loading`）；P2 的两个页面版本扣住加入时数请求，只发一次；删除、归档被扣住时弹窗关不掉、取消不可用（P4），没有另数请求。
 - **会话外的跟进**（W3）：`followsweep.py` 列出 web 应用中提示或跳转的每个文件和它们等待的 store 调用，逐个读过：项目一侧的都在 2.13 的表中，每一处有它自己的 vitest（12 个变异）。

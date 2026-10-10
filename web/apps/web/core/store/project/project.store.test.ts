@@ -115,6 +115,21 @@ describe("ProjectStore, the lists and the reads", () => {
     expect(store.getProjectById(web.id)).toEqual(renamed);
   });
 
+  it("gives a project's own read nerve answered after its list, fetched twice before: one count orders every copy's answers", async () => {
+    const { nerve, store } = await loaded();
+    await loadProjects(nerve, store, acme, [web, ops, docs]);
+    await loadProject(nerve, store, web, renamed);
+    expect(store.getProjectById(web.id)).toEqual(renamed);
+  });
+
+  it("gives the copy of the archived list nerve answered after the project's own read: archived meanwhile, it shows so", async () => {
+    const { nerve, store } = await loaded();
+    await loadProject(nerve, store, web);
+    const archivedWeb: Project = { ...web, archived_at: "2026-10-08T09:00:00Z" };
+    await loadArchivedProjects(nerve, store, acme, [archivedWeb]);
+    expect(store.getProjectById(web.id)).toEqual(archivedWeb);
+  });
+
   it("fails when nerve refuses to read a project again, keeping the read it had", async () => {
     const { nerve, store } = await loaded();
     await loadProject(nerve, store, web, renamed);

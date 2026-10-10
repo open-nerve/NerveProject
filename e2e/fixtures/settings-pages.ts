@@ -144,17 +144,22 @@ export async function enabledWithin(button: Locator): Promise<boolean> {
 }
 
 /**
- * Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed within a second.
- * A toast is a dialog too, not a modal one: it does not count. A dialog that closes still shows its content while it
- * fades out (ModalCore's leave transition, 200 ms), so a check made just after the key cannot tell it from one that
- * stays: the second outlasts the transition. Only the second running out means it stayed (timedOut); any other failure,
- * such as two modal dialogs, rejects.
+ * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
+ * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
+ * still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check made at once cannot
+ * tell it from one that stays: the second outlasts the transition. Only the second running out means it stayed
+ * (timedOut); any other failure, such as two modal dialogs, rejects.
  */
-export async function closedByEscape(page: Page): Promise<boolean> {
-  const closed = page
+export async function closedWithin(page: Page): Promise<boolean> {
+  return page
     .locator('[role="dialog"][aria-modal="true"]')
     .waitFor({ state: "detached", timeout: 1_000 })
     .then(() => true, timedOut);
+}
+
+/** Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed (closedWithin). */
+export async function closedByEscape(page: Page): Promise<boolean> {
+  const closed = closedWithin(page);
   await page.keyboard.press("Escape");
   return closed;
 }

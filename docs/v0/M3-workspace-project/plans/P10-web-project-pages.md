@@ -28,7 +28,7 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `6c1a090a` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A.10）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1–10，每个 Task 加它的文件）、`web/apps/web/package.json`（Task 1 的依赖，Task 2、7 的上限）、`propel` 的 `emoji-icon-picker/helper.tsx`（Task 1、4）、`project/create/header.tsx`（Task 1、4）、`project/card.tsx`（Task 3、9）、`project-roles.ts` 和它的测试（Task 7、8）、`core/lib/fake-controls.ts`（Task 2、8），以及 `e2e/fixtures/api.ts`（Task 3、8）、`e2e/fixtures/settings-pages.ts`（Task 2、5、10）、`e2e/fixtures/project-pages.ts`（Task 7、8）、S2（Task 1、3）、P1（Task 1、2、4）、P3（Task 5、6、8）、P5（Task 7、8）。每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1–10，每个 Task 加它的文件）、`web/apps/web/package.json`（Task 1 的依赖，Task 2、7 的上限）、`propel` 的 `emoji-icon-picker/helper.tsx`（Task 1、4）、`project/create/header.tsx`（Task 1、4）、`project/card.tsx`（Task 3、9）、`project-roles.ts` 和它的测试（Task 7、8）、`core/lib/fake-controls.ts`（Task 2、8），以及 `e2e/fixtures/api.ts`（Task 3、8）、`e2e/fixtures/settings-pages.ts`（Task 2、3、5、10）、`e2e/fixtures/project-pages.ts`（Task 7、8）、S2（Task 1、3）、P1（Task 1、2、4）、P3（Task 5、6、8）、P5（Task 7、8）。每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫，以及 `make knip`；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p10tools/mutants_p10.py`，`mut.py` 在它写的每个检查上各跑一次），也在各自 Task 的树上跑过（spec 附录 A.2）；表中标"（Task N 起）"的检查只在第 N 个 Task 加入的测试中才让它失败（在变异自己的 Task 的树上它还活着）。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief）：表中每一条这类性质都有一个会失败的检查。
 - **评审敏感**（M3 设计 12 节 P10 的评审重点）：页面级的副作用只在发出修改的会话里（每个 hook 的 vitest 的 `lateSettlings`；删除项目的组件，9.5）；页面只取角色能读的（已归档的项目、看得到而不是成员的项目只读项目本身：S2、P2）；页面只提供 nerve 允许的角色和移出（Task 7、8 的 `project-roles.ts`）；请求在路上时弹窗关不掉（每个弹窗一个故事的扣住）；表情的数据不发往别处（P1、P3 的 `requestsElsewhere`）。改动这些之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -102,7 +102,7 @@
 | `README.md`、`docs/v0/frontend-changes.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`、`docs/v0/M3-workspace-project/handoffs/M1-P4-router-native.md` | "前端"一节的项目页面；前端改动清单；M2 收尾交接、M1-P4 交接的 P10 处理结果 | 11 |
 | `e2e/fixtures/browser.ts` | `watchPage` 记下每个请求的地址；`requestsElsewhere`：发往页面之外的源的请求 | 1 |
 | `e2e/fixtures/mounts.ts` | 页面加载时的请求清单的列表和 `valued`，从 S2 移来（新文件）；S2、P2 读它 | 3 |
-| `e2e/fixtures/settings-pages.ts` | `transitionsEnded`（Task 2）；`moveWithinApp`（Task 5）；`shownWithin`（Task 10） | 2、5、10 |
+| `e2e/fixtures/settings-pages.ts` | `transitionsEnded`（Task 2）；`closedWithin`（Task 3 的修正轮，`closedByEscape` 经它）；`moveWithinApp`（Task 5）；`shownWithin`（Task 10） | 2、3、5、10 |
 | `e2e/fixtures/workspace-pages.ts` | `pickTimeZone`：只用键盘选时区 | 2 |
 | `e2e/fixtures/api.ts` | `archiveProject`（Task 3）；`projectMembershipOf`、`changeProject`、`projectMemberWrites`（Task 8） | 3、8 |
 | `e2e/fixtures/assert/project.ts` | `projectSettingsOf`：项目存下的设置 | 8 |
@@ -3208,6 +3208,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T3.10` | 项目自己的读取压过 nerve 在它之后回答的列表（F-3） | `project.store.test.ts` | vitest |
 | `T3.11` | 不按回答的先后：在自己的读取之后回答的列表不算较新的 | `project.store.test.ts` | vitest |
 | `T3.12` | 在加入项目的 hook 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T3.13` | 加入在途时对话框的按钮不显示忙：再点一次又发一次加入（Task 3 的修正轮，裁定 T3-c） | 故事 P2 | 端到端 |
+| `T3.14` | 加入的对话框在 nerve 回答之后不论结果都关上，被拒绝时也关（修正轮，裁定 T3-c） | 故事 P2 | 端到端 |
+| `T3.15` | 已归档在 nerve 的读取之前决定：删除了的已归档项目显示已归档而不是找不到，nerve 不可达时没有重试，读取回答之前就显示（修正轮，裁定 T3-d） | `use-project-fetch.test.ts` | vitest |
+| `T3.16` | 每个值自己计回答的数：取了两次的列表压过在它之后回答的自己的读取（修正轮，裁定 T3-e） | `project.store.test.ts` | vitest |
+| `T3.17` | 已归档的列表中的一份只在没有别的副本时才算（修正轮，裁定 T3-e） | `project.store.test.ts` | vitest |
+
+修正轮的这五行之外，修正轮改的 `getProjectById` 的注释（裁定 T3-f）和 spec 第 3 节第 8、15 条复制的提示（裁定 T3-g）是文字，没有变异。修正轮的测试：P2 的卡片的故事中被拒绝的加入（管理员在对话框开着时删除项目，原因提示、对话框留着、按钮重新可用；`settings-pages.ts` 的 `closedWithin`，`closedByEscape` 改为经它）和在途时按钮忙（`enabledWithin`）；`use-project-fetch.test.ts` 决定的表加三行（已归档的项目：nerve 找不到时找不到、不可达时不可达、没回答时加载）；`project.store.test.ts` 加两个测试（列表取了两次之后回答的自己的读取；自己的读取之后回答的已归档的列表）。
 
 ---
 

@@ -184,9 +184,10 @@ export class ProjectStore implements IProjectStore {
 
   /**
    * The project as nerve last answered it, of the copies the store holds: its own read's and its workspace's lists'
-   * (a list fetched after the read shows a change made meanwhile, a role for one; P8b's F-3); the changes nerve
-   * confirmed are made on every copy. Nothing once deleted or left until a list has it again (a public project, to
-   * one no longer its member), or when its workspace is no longer among the caller's.
+   * (a list fetched after the read shows a change made meanwhile, a role for one; P8b's F-3). The changes nerve
+   * confirmed are made on every copy that holds the project; an update of the project is not made on the archived
+   * list, since nerve changes no archived project (v0 design 7.7). Nothing once deleted or left until a list has it
+   * again (a public project, to one no longer its member), or when its workspace is no longer among the caller's.
    */
   getProjectById = computedFn((projectId: string | undefined | null): Project | undefined => {
     if (!projectId) return undefined;
