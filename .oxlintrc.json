@@ -273,6 +273,7 @@
         "web/apps/web/core/components/projects/create/lead-candidates.test.ts",
         "web/apps/web/core/components/projects/create/use-create-project.ts",
         "web/apps/web/core/components/projects/create/use-create-project.test.ts",
+        "web/packages/utils/src/project.test.ts",
         "web/apps/web/core/components/project/use-update-project-details.ts",
         "web/apps/web/core/components/project/use-update-project-details.test.ts",
         "web/apps/web/core/components/project/settings/use-feature-toggle.ts",
