@@ -86,7 +86,6 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
 
   // Project actions hook
   const { leaveProjectModalOpen, handleLeaveProject, handleCopyText, handleLeaveProjectModal } = useProjectActions({
-    workspaceSlug,
     projectId,
     activeItem,
   });

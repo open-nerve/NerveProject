@@ -7,18 +7,18 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "@nerve/i18n";
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
-import { useCopyLink } from "@/hooks/use-copy-link";
+import { useCopyLink, useCopyProjectLink } from "@/hooks/use-copy-link";
 
 type UseProjectActionsProps = {
-  workspaceSlug: string;
   projectId: string;
   activeItem?: TNavigationItem;
 };
 
-export const useProjectActions = ({ workspaceSlug, projectId, activeItem }: UseProjectActionsProps) => {
+export const useProjectActions = ({ projectId, activeItem }: UseProjectActionsProps) => {
   const [leaveProjectModalOpen, setLeaveProjectModalOpen] = useState(false);
   const { t } = useTranslation();
   const copyLink = useCopyLink();
+  const copyProjectLink = useCopyProjectLink();
 
   const handleLeaveProject = useCallback(() => {
     setLeaveProjectModalOpen(true);
@@ -26,10 +26,7 @@ export const useProjectActions = ({ workspaceSlug, projectId, activeItem }: UseP
 
   // the link of the tab open, else of the project's work items
   const handleCopyText = () =>
-    copyLink(
-      activeItem?.href ?? `/${workspaceSlug}/projects/${projectId}/issues`,
-      t("project_link_copied_to_clipboard")
-    );
+    activeItem ? copyLink(activeItem.href, t("project_link_copied_to_clipboard")) : copyProjectLink(projectId);
 
   const handleLeaveProjectModal = useCallback((open: boolean) => {
     setLeaveProjectModalOpen(open);

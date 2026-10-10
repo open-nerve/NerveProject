@@ -71,6 +71,16 @@ describe("useUpdateProjectDetails", () => {
     expect([underFields(page.setError), toasts]).toEqual([[["identifier", "errors.project_identifier_taken"]], []]);
   });
 
+  it("says an identifier the check finds taken as nerve says one it refuses as taken", async () => {
+    page.checkProjectIdentifier.mockResolvedValueOnce({ available: false });
+    await update({ ...renamed, identifier: "OPS" });
+    const checked = underFields(page.setError);
+    page.setError.mockReset();
+    page.updateProject.mockRejectedValueOnce(refusal(409, "project.identifier_taken"));
+    await update();
+    expect(underFields(page.setError)).toEqual(checked);
+  });
+
   it.each([
     {
       refused: "a name taken",

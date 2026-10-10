@@ -10,6 +10,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // lib
+import { PROBLEM_MESSAGES } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 // local imports
 import { useProjectRefusal, type ProjectFormField } from "./project-refusal";
@@ -68,7 +69,8 @@ export function useUpdateProjectDetails(): (
       {
         done: (outcome) => {
           if (outcome === "identifier_taken") {
-            underField("identifier", t("errors.project_identifier_taken"));
+            // said as nerve's refusal of an identifier taken is (useProjectRefusal)
+            underField("identifier", t(PROBLEM_MESSAGES["project.identifier_taken"]));
             return;
           }
           setToast({

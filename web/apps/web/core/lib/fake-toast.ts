@@ -18,20 +18,3 @@ export const TOAST_TYPE = { SUCCESS: "success", ERROR: "error" };
 export function setToast(toast: Toast) {
   toasts.push(toast);
 }
-
-/** A toast's title, and its message from what the promise gave. */
-type Outcome<T> = { title: string; message?: (outcome: T) => string };
-
-/** The toast of a promise once it settles, as propel's: its success or its error (the loading toast is not kept). */
-export function setPromiseToast<T>(promise: Promise<T>, options: { success: Outcome<T>; error: Outcome<unknown> }) {
-  promise.then(
-    (value) =>
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: options.success.title,
-        message: options.success.message?.(value) ?? "",
-      }),
-    (error: unknown) =>
-      setToast({ type: TOAST_TYPE.ERROR, title: options.error.title, message: options.error.message?.(error) ?? "" })
-  );
-}
