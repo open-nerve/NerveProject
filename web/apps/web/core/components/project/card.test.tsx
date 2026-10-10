@@ -55,7 +55,10 @@ async function offeredTo(workspaceRole: WorkspaceRole, projectRole: ProjectRole 
     delete: card.includes('aria-label="Delete"'),
     settings: card.includes(`href="/${acme.slug}/settings/projects/${web.id}"`),
   };
-  const menu = shown.menus.flatMap(({ items }) => items.filter((item) => item.shouldRender).map((item) => item.key));
+  // the items the menu shows, as ContextMenu picks them: every item but one whose shouldRender is false
+  const menu = shown.menus.flatMap(({ items }) =>
+    items.filter((item) => item.shouldRender !== false).map((item) => item.key)
+  );
   return { inCard, menu };
 }
 
