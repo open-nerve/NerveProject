@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import type { Dispatch, SetStateAction } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { heldChange, lateSettlings, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { Project } from "@nerve/api-client";
+import { heldChange, lateSettlingsAnswering, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
@@ -14,11 +16,27 @@ import { ArchiveRestoreProjectModal } from "./archive-restore-modal";
 
 // What archiving and restoring a project send and do on the page (M3 design 7.1): the modal renders on the server,
 // with stand-ins for its buttons (fake-controls.ts), which keep the props they were given; the test presses its
-// second, as a person would. Its session is fake-tab.ts's.
+// second, as a person would. Its session is fake-tab.ts's. A render on the server shows no later state: React's
+// useState, as the test gives it, keeps each value the modal gives its one state, busy, as it gives it.
 
 const web = projectOf("WEB", "w-acme", { name: "Web" });
 const store = vi.hoisted(() => ({ archiveProject: vi.fn(), restoreProject: vi.fn() }));
 const navigate = vi.hoisted(() => vi.fn());
+const busy = vi.hoisted((): unknown[] => []);
+vi.mock("react", async (importOriginal) => {
+  const react = await importOriginal<typeof import("react")>();
+  function useState<S>(initial: S): [S, Dispatch<SetStateAction<S>>] {
+    const [state, setState] = react.useState(initial);
+    return [
+      state,
+      (next) => {
+        busy.push(next);
+        setState(next);
+      },
+    ];
+  }
+  return { ...react, useState };
+});
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({
     getProjectById: () => web,
@@ -49,8 +67,9 @@ beforeEach(() => {
   store.archiveProject.mockResolvedValue(web);
   store.restoreProject.mockReset();
   store.restoreProject.mockResolvedValue(web);
-  navigate.mockClear();
+  navigate.mockReset();
   toasts.length = 0;
+  busy.length = 0;
   emptyShown();
 });
 
@@ -76,6 +95,17 @@ describe("ArchiveRestoreProjectModal", () => {
     expect([onClose.mock.calls.length, navigate.mock.calls]).toEqual([1, [["/acme/projects"]]]);
   });
 
+  it("stays busy until it has given way to the projects", async () => {
+    const landing = heldChange<undefined>();
+    navigate.mockReturnValueOnce(landing.sent);
+    press(true);
+    await pageSettled();
+    expect([navigate.mock.calls.length, busy]).toEqual([1, [true]]);
+    landing.answer(undefined);
+    await pageSettled();
+    expect(busy).toEqual([true, false]);
+  });
+
   it("shows nerve's reason when it refuses, and stays", async () => {
     store.archiveProject.mockRejectedValueOnce(refusal(403, "forbidden"));
     const onClose = press(true);
@@ -84,10 +114,10 @@ describe("ArchiveRestoreProjectModal", () => {
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.forbidden" }]);
   });
 
-  it.each(lateSettlings)(
+  it.each(lateSettlingsAnswering(web))(
     "neither moves nor speaks when the archiving $settles after another tab moved this one to another account",
     async ({ settle }) => {
-      const archiving = heldChange<undefined>();
+      const archiving = heldChange<Project>();
       store.archiveProject.mockReturnValueOnce(archiving.sent);
       const onClose = press(true);
       switchAccount();

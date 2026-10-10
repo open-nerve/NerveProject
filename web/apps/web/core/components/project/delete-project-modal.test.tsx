@@ -62,8 +62,11 @@ describe("DeleteProjectModal", () => {
     expect(toasts).toEqual([deleted]);
   });
 
-  it("stays on a page that is not the project's, the archived projects', and says so", async () => {
-    params.projectId = undefined;
+  it.each([
+    { page: "the archived projects'", projectId: undefined },
+    { page: "another project's", projectId: "p-ops" },
+  ])("stays on a page that is not the project's, $page, and says so", async ({ projectId }) => {
+    params.projectId = projectId;
     const onClose = await confirm("Web", "delete my project");
     expect(store.deleteProject.mock.calls).toEqual([[web]]);
     expect([onClose.mock.calls.length, navigate.mock.calls]).toEqual([1, []]);

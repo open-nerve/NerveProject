@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// A stand-in for the UI kit's controls a page renders (@nerve/ui's selects and modal, propel's input, button and
-// switch), for the tests of those pages: a test file mocks each such module with this one, for instance
+// A stand-in for the UI kit's controls a page renders (@nerve/ui's selects, modal and context menu, propel's input,
+// button and switch), for the tests of those pages: a test file mocks each such module with this one, for instance
 // vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in `shown` the
 // props each control was given. A control renders nothing, but a modal its children: its form is the page's.
 
@@ -26,6 +26,8 @@ type SearchSelect = Field & {
 };
 /** A switch: what a flip does, and whether it can be flipped. */
 type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean };
+/** A context menu: its items, each by its key, with whether it shows. */
+type Menu = { items: { key: string; shouldRender?: boolean }[] };
 
 /** The props each control was given, in the order rendered; a test empties them before each case (emptyShown). */
 export const shown: {
@@ -35,11 +37,20 @@ export const shown: {
   searchSelects: SearchSelect[];
   switches: Toggle[];
   modals: { children?: ReactNode }[];
-} = { inputs: [], buttons: [], selects: [], searchSelects: [], switches: [], modals: [] };
+  menus: Menu[];
+} = { inputs: [], buttons: [], selects: [], searchSelects: [], switches: [], modals: [], menus: [] };
 
 /** The controls as a test starts: none rendered. */
 export function emptyShown() {
-  Object.assign(shown, { inputs: [], buttons: [], selects: [], searchSelects: [], switches: [], modals: [] });
+  Object.assign(shown, {
+    inputs: [],
+    buttons: [],
+    selects: [],
+    searchSelects: [],
+    switches: [],
+    modals: [],
+    menus: [],
+  });
 }
 
 export function Input(props: Field) {
@@ -76,6 +87,11 @@ export function CustomSearchSelect(props: SearchSelect) {
 
 export function Switch(props: Toggle) {
   shown.switches.push(props);
+  return null;
+}
+
+export function ContextMenu(props: Menu) {
+  shown.menus.push(props);
   return null;
 }
 

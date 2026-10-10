@@ -20,7 +20,7 @@ import {
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { answerTo, closedByEscape, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
+import { answerTo, closedByEscape, enabledWithin, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
@@ -236,12 +236,14 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   const watch = await watchPage(page);
   const general = `/${slug}/settings/projects/${web.id}`;
   await page.goto(general);
-  // The admin archives Web: the dialog cannot be closed, and the page stays, until nerve has archived it.
+  // The admin archives Web: the dialog cannot be closed, nor Web archived twice, and the page stays, until nerve has
+  // archived it.
   await page.getByRole("button", { name: "Archive", exact: true }).click();
   const archive = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/archive`, () =>
     page.getByRole("dialog").getByRole("button", { name: "Archive" }).click()
   );
   await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Archiving" }))).toBe(false);
   expect(await closedByEscape(page)).toBe(false);
   expect(new URL(page.url()).pathname).toBe(general);
   expect((await archive.release()).status()).toBe(200);
@@ -265,22 +267,30 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   await expect(theOtherAdmin.page).toHaveURL(`/${slug}/projects`);
   await expect(theOtherAdmin.page.getByText("You can find Web in your projects.")).toBeVisible();
   expect(await archiving(db, web.id)).toEqual({ archived: false, at_its_change: true, by: wesEmail });
+  // Web's settings offer him archiving and deleting it, as they do its admins.
+  await theOtherAdmin.page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(theOtherAdmin.page.getByRole("button", { name: "Archive", exact: true })).toBeVisible();
+  await expect(theOtherAdmin.page.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
   expect([wesWatch.apiFailures, wesWatch.oldApiRequests, wesWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theOtherAdmin.page, wesWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  // Two loads: the archived projects, and Web's settings.
+  await expectQuietConsole(theOtherAdmin.page, wesWatch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
   await theOtherAdmin.close();
 
-  // Archived again, Web is deleted from the archived projects, by its name and the words that confirm it; the dialog
-  // cannot be closed until nerve has deleted it, and the page stays where it is, the archived projects, without Web.
+  // Archived again, Web is deleted from the archived projects, by its name and the words that confirm it, not before
+  // both; the dialog cannot be closed, nor Web deleted twice, until nerve has deleted it, and the page stays where it
+  // is, the archived projects, without Web.
   await archiveProject(api, admin.access_token, web.id);
   const archives = `/${slug}/projects/archives`;
   await page.goto(archives);
   await page.getByRole("main").getByRole("button", { name: "Delete" }).click();
   await page.locator("#projectName").fill("Web");
+  await expect(page.getByRole("button", { name: "Delete project" })).toBeDisabled();
   await page.locator("#confirmDelete").fill("delete my project");
   const deleting = await sentHeld(page, "DELETE", `/api/v0/projects/${web.id}`, () =>
     page.getByRole("button", { name: "Delete project" }).click()
   );
   await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Deleting" }))).toBe(false);
   expect(await closedByEscape(page)).toBe(false);
   expect((await deleting.release()).status()).toBe(204);
   await expect(page.getByRole("heading", { name: "Delete project" })).toHaveCount(0);

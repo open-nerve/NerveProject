@@ -98,11 +98,12 @@
 | `web/apps/web/core/components/project/member-list.tsx` | 添加弹窗不再收 `workspaceSlug` | 8 |
 | `web/apps/web/core/components/project/member-list.test.tsx` | 成员页只对 nerve 允许添加的人提供"Add member"：项目管理员、是项目成员的工作区管理员（Task 8 的修正轮，裁定 T8-a） | 8 |
 | `web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.test.tsx` | 负责人、默认负责人、访客可见：显示 nerve 的回答，在会话里跟进（整个文件）；它的 vitest，含谁能改它们（Task 8 的修正轮一，裁定 T8-b） | 8 |
-| `web/apps/web/core/lib/fake-controls.ts` | 搜索选择的替身留下它收到的焦点、popper 的修饰（Task 2）和选项（Task 8）；按钮的替身留下它的文字（Task 8 的修正轮）；开关的替身留下它能否拨动（Task 8 的修正轮一） | 2、8 |
+| `web/apps/web/core/lib/fake-controls.ts` | 搜索选择的替身留下它收到的焦点、popper 的修饰（Task 2）和选项（Task 8）；按钮的替身留下它的文字（Task 8 的修正轮）；开关的替身留下它能否拨动（Task 8 的修正轮一）；上下文菜单的替身留下它的项（Task 9 的修正轮，裁定 T9-a） | 2、8、9 |
 | `web/apps/web/core/store/user/fake-permissions.ts` | 调用者的权限是 store 自己的 `UserPermissionStore`，在 nerve 列出的工作区和项目上（`permissionsOver`、`callerInWeb`）：权限 store、成员页、成员默认值的测试共用（Task 8 的修正轮一，裁定 T8-b） | 8 |
 | `web/apps/web/core/store/user/permissions.store.test.ts` | `inProjects` 经 `fake-permissions.ts` 的 `permissionsOver`（Task 8 的修正轮一，裁定 T8-b） | 8 |
 | `web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx` | 删除项目：按提交的值核对，在会话里跟进，项目自己的页面才回到项目列表，在途时关不掉；它的 vitest（9.5） | 9 |
-| `web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx` | 归档、恢复：在会话里跟进，在途时关不掉（整个文件）；它的 vitest | 9 |
+| `web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx` | 归档、恢复：在会话里跟进，忙到跳转做完，在途时关不掉（整个文件）；它的 vitest | 9 |
+| `web/apps/web/core/components/project/card.test.tsx` | 项目的卡片对谁提供什么：已归档时恢复、删除只给 nerve 允许的人（项目管理员、是项目成员的工作区管理员），未归档时设置的链接给项目的管理员、成员和 nerve 允许修改项目的人，不给其余的访客（Task 9 的修正轮，裁定 T9-a） | 9 |
 | `web/apps/web/core/components/workspace/sidebar/use-project-drop.ts`、`web/apps/web/core/components/workspace/sidebar/use-project-drop.test.ts` | 侧边栏的移动失败在会话里按 `code` 提示（整个文件）；它的 vitest | 10 |
 | `web/apps/web/core/components/navigation/use-tab-preferences.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.test.ts` | 标签栏交回 `{ navigation, changes }`：设置取到之前没有修改；修改在会话里跟进（整个文件）；它的 vitest | 10 |
 | `web/apps/web/core/components/navigation/tab-navigation-root.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx` | 页头的标签和"更多"只在有修改时提供菜单 | 10 |
@@ -120,7 +121,7 @@
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 发往别处的请求经 `requestsElsewhere`（Task 1）；挂载清单的列表读 `mounts.ts`，成员、访客、不是成员的人打开项目列表，已归档的项目只读项目本身（Task 3） | 1、3 |
 | `e2e/stories/project/p3-project-settings.spec.ts` | P3 的页面版本：general 和不离开路由到另一个项目的 general（Task 5）、功能和自动归档（Task 6）、成员默认值（Task 8，经 API 的被拒绝的添加经 `projectMemberWrites`） | 5、6、8 |
 | `e2e/stories/project/p5-project-members.spec.ts` | P5 的页面版本：改角色、移出、离开，被拒绝时确认框、离开弹窗留着（Task 7）；添加成员，成员的选择用 Tab 到达（Task 8） | 7、8 |
-| `e2e/stories/project/p4-archive.spec.ts` | P4 的页面版本：归档、恢复、删除 | 9 |
+| `e2e/stories/project/p4-archive.spec.ts` | P4 的页面版本：归档、恢复、删除；在途时按钮忙，删除的按钮在名称和确认的话都对之前不可用，是工作区管理员的项目成员在设置页也看到归档、删除（Task 9 的修正轮） | 9 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | P8 的页面版本：标签栏的默认和"更多"、侧边栏的拖动 | 10 |
 
 ---
@@ -8910,6 +8911,18 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T9.11` | 已归档的项目只向项目管理员提供恢复和删除，不向是工作区管理员的项目成员提供 | 故事 P4 | 端到端 |
 | `T9.12` | 已归档卡片的删除按钮没有名字 | 故事 P4 | 端到端 |
 | `T9.13` | 在删除项目的测试里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T9.14` | 删除在途时删除的按钮不显示忙：再点一次又发一次删除（Task 9 的修正轮，裁定 T9-a） | 故事 P4 | 端到端 |
+| `T9.15` | 归档在途时归档的按钮不显示忙：再点一次又发一次归档（修正轮，裁定 T9-a） | 故事 P4 | 端到端 |
+| `T9.16` | 归档的弹窗在修改里等 nerve 答以项目就关上，越过会话的核对（修正轮，裁定 T9-a） | `archive-restore-modal.test.tsx` | vitest |
+| `T9.17` | 归档只忙到 nerve 回答，不等回到项目列表的跳转做完（修正轮，裁定 T9-a） | `archive-restore-modal.test.tsx` | vitest |
+| `T9.18` | 已归档的项目也向项目的成员提供恢复和删除（nerve 403）（修正轮，裁定 T9-a） | `card.test.tsx` | vitest |
+| `T9.19` | 已归档的项目只按工作区的角色提供恢复和删除：给不是项目成员的工作区管理员（nerve 403），不给是工作区成员的项目管理员（修正轮，裁定 T9-a） | `card.test.tsx` | vitest |
+| `T9.20` | 未归档的卡片也把设置的链接给项目的访客（修正轮，裁定 T9-a） | `card.test.tsx` | vitest |
+| `T9.21` | 项目设置只向项目管理员提供归档和删除，不向是工作区管理员的项目成员提供（nerve 允许他）（修正轮，裁定 T9-a） | 故事 P4 | 端到端 |
+| `T9.22` | 删除把任何项目的页面都带到项目列表，不只是被删除的项目自己的（修正轮，裁定 T9-a） | `delete-project-modal.test.tsx` | vitest |
+| `T9.23` | 名称和确认的话都对之前删除的按钮就可用（修正轮，裁定 T9-a） | 故事 P4 | 端到端 |
+
+修正轮的这些行之外：`archive-restore-modal.test.tsx` 换账户之后兑现的两种答以项目（`lateSettlingsAnswering(web)`，不再是空的回答），加 1 个（`stays busy until it has given way to the projects`：跳转被扣住时弹窗忙，跳转做完才不忙；服务端渲染看不到之后的状态，测试替换 React 的 `useState`，留下弹窗给它的每个值）；`delete-project-modal.test.tsx` 停在不是项目自己的页面的一条变为两种（已归档的项目页、另一个项目的页面）；新的 `card.test.tsx`（12 个：已归档时卡片和菜单的恢复、删除，未归档时卡片和菜单的设置的链接，各六种调用者：项目管理员、是项目成员的工作区管理员、是项目访客的工作区管理员、项目成员、访客、不是项目成员的工作区管理员；权限是 store 自己的，经 `fake-permissions.ts` 的 `callerInWeb`；路由是真的 `MemoryRouter`；`T9.11` 也由它发现），加进 `.oxlintrc.json` 的非空断言的范围（放在 `project-settings-member-defaults.test.tsx` 之后，Task 10 的块照旧适用）；`fake-controls.ts` 加上下文菜单的替身 `ContextMenu`（`shown.menus` 留下它的项）。P4 在扣住归档、删除时核对 "Archiving"、"Deleting" 按钮禁用（`enabledWithin`），只填了名称时 "Delete project" 不可用，wes 恢复之后打开 Web 的设置页，看到 "Archive" 和 "Delete"（多一次加载，他的 `expectQuietConsole` 多一条 `EMOJI_CHECK_WARNING`）；P4 是 304 行。
 
 ---
 
