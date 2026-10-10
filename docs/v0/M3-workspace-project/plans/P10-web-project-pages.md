@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 项目的页面接上 P8b 的数据层，行为按 M3 设计第 2 节的故事 P1–P5、P8：项目列表和卡片（复制链接、加入）、`ProjectAuthWrapper` 的界面（加入、已归档、找不到）、创建项目、项目设置的 general、features、automations 和 members（添加、改角色、移出、离开；负责人、默认负责人、访客可见全部工作项），归档、恢复和删除（项目设置、已归档的项目页），侧边栏拖动项目的顺序和项目页头的标签栏；M2 收尾交接第 10 节（表情选择器的数据由 Nerve 自己提供）和第 14 节（下拉框和复制到剪贴板）的 M3 部分。页面发出项目一侧的修改之后的跳转、提示和界面变化只在发出它的会话里进行（`followInSession`）；每个请求体由表单编辑的字段构成，类型取自生成的客户端，数字就是数字；每个错误经 `errorMessageKey` 显示（字段下方或提示），没有吞进 `console.error` 的拒绝；请求在路上时弹窗关不掉，按钮忙到跟进做完。P1–P5、P8 的页面版本，S2 的挂载清单。
+**Goal:** 项目的页面接上 P8b 的数据层，行为按 M3 设计第 2 节的故事 P1–P5、P8：项目列表和卡片（复制链接、加入）、`ProjectAuthWrapper` 的界面（加入、已归档、找不到）、创建项目、项目设置的 general、features、automations 和 members（添加、改角色、移出、离开；负责人、默认负责人、访客可见全部工作项），归档、恢复和删除（项目设置、已归档的项目页），侧边栏拖动项目的顺序和项目页头的标签栏；M2 收尾交接第 10 节（表情选择器的数据由 Nerve 自己提供）和第 14 节（下拉框和复制到剪贴板）的 M3 部分。页面发出项目一侧的修改之后的跳转、提示和界面变化只在发出它的会话里进行（`followInSession`）；每个请求体由表单编辑的字段构成，类型取自生成的客户端，数字就是数字；每个错误经 `errorMessageKey` 显示（字段下方或提示），没有吞进 `console.error` 的拒绝；请求在路上时弹窗关不掉，按钮忙到跟进做完；被拒绝时弹窗留着，只在成功的跟进中关上。P1–P5、P8 的页面版本，S2 的挂载清单。
 
-**Architecture:** 只改 web、`e2e/`、根目录 `.oxlintrc.json`（非空断言的范围，每个 Task 加它的文件）、`tools/keywords.json`（Task 7 的规则 `project-leave`：离开只有一处）、依赖的声明（Task 1：web 应用声明锁文件中已有的 `emojibase-data`）和四份文档（README、前端改动清单、M2 收尾交接和 M1-P4 交接的处理结果）。页面调用 store 的方法，不调 service；会话的每个取数经 `useSessionSWR`。共用的新部分：`web/apps/web/emojibase.ts`（构建把表情选择器的数据写进资源，`EMOJIBASE_URL` 指向它；Task 1）；`@nerve/ui` 的 `CustomSearchSelect` 改成 Popover 的按钮、面板里的 `Combobox`，成员下拉框以它为底（Task 2）；`core/hooks/use-copy-link.ts`（`useCopyLink`、`useCopyProjectLink`：复制、成功和失败的提示，Task 3）；`core/components/project/use-join-project.ts`（Task 3）；`core/components/project/project-refusal.ts`（`projectRefusal`、`useProjectRefusal`：项目表单的拒绝落到字段下或提示，创建和 general 页共用，Task 4）和 `logo-props.ts`（Task 4）；页面一侧的 hook `useCreateProject`（Task 4）、`useUpdateProjectDetails`（Task 5）、`useProjectMembershipChanges`（Task 7）；`project-roles.ts` 的 `roleChoices`、`canRemove`（Task 7）、`addableRoles`（Task 8）：页面只提供 nerve 允许的（M3 设计 3.5）。数据层改两处：`core/lib/reconciled.ts` 的 `answeredAt`（扩展这份实现，不复制），项目 store 的 `getProjectById` 给出 nerve 最后回答的那一份（P8b 的 F-3，Task 3）；`useProjectFetch` 对已归档的项目给出 `archived`，不取成员才读的（Task 3）。`useTabPreferences` 交回 `{ navigation, changes }`，设置取到之前没有修改（Task 10）。e2e 的共用部分：`watchPage` 记下每个请求的地址，`requestsElsewhere` 给出发往别处的（Task 1）；S2 的挂载清单的列表移进 `e2e/fixtures/mounts.ts`，P2 读同一份（Task 3）。契约、Go 代码和生成的文件都不变。
+**Architecture:** 只改 web、`e2e/`、根目录 `.oxlintrc.json`（非空断言的范围，Task 1–10 各加它的文件）、`tools/keywords.json`（Task 7 的规则 `project-leave`：离开只有一处）、依赖的声明（Task 1：web 应用声明锁文件中已有的 `emojibase-data`）和四份文档（README、前端改动清单、M2 收尾交接和 M1-P4 交接的处理结果）。页面调用 store 的方法，不调 service；会话的每个取数经 `useSessionSWR`。共用的新部分：`web/apps/web/emojibase.ts`（构建把表情选择器的数据写进资源，`EMOJIBASE_URL` 指向它；Task 1）；`@nerve/ui` 的 `CustomSearchSelect` 改成 Popover 的按钮、面板里的 `Combobox`，成员下拉框以它为底，对 M4–M6 的调用方照旧（推迟到指针经过才渲染、手机上不取焦点、列表离窗口边缘 12 像素），面包屑一节一个 Tab 停留点（Task 2）；`core/hooks/use-copy-link.ts`（`useCopyLink`、`useCopyProjectLink`：复制、成功和失败的提示，Task 3）；`core/components/project/use-join-project.ts`（Task 3）；`core/components/project/project-refusal.ts`（`projectRefusal`、`useProjectRefusal`：项目表单的拒绝落到字段下或提示，创建和 general 页共用，Task 4）和 `logo-props.ts`（Task 4）；页面一侧的 hook `useCreateProject`（Task 4）、`useUpdateProjectDetails`（Task 5）、`useProjectMembershipChanges`（Task 7）；`project-roles.ts` 的 `roleChoices`、`canRemove`（Task 7）、`addableRoles`（Task 8）：页面只提供 nerve 允许的（M3 设计 3.5）。数据层改两处：`core/lib/reconciled.ts` 的 `answeredAt`（扩展这份实现，不复制），项目 store 的 `getProjectById` 给出 nerve 最后回答的那一份（P8b 的 F-3，Task 3）；`useProjectFetch` 对已归档的项目给出 `archived`，不取成员才读的（Task 3）。`useTabPreferences` 交回 `{ navigation, changes }`，设置取到之前没有修改（Task 10）。e2e 的共用部分：`watchPage` 记下每个请求的地址，`requestsElsewhere` 给出发往别处的（Task 1）；S2 的挂载清单的列表移进 `e2e/fixtures/mounts.ts`，P2 读同一份（Task 3）。契约、Go 代码和生成的文件都不变。
 
 **Tech Stack:** React 19.2.8、React Router 8.3.0、MobX 6.12.0、SWR 2.4.2、openapi-fetch 0.17.0、Headless UI 2.2、TypeScript 5.8.3、vitest 4.1.11、oxlint 1.51.0、oxfmt 0.35.0、knip 6.37.0、turbo 2.10.11；Node 24、pnpm 11.10.0、Playwright 1.63.0；Go 1.27.1（Go 代码不变）。版本都由 `pnpm-lock.yaml` 固定。
 
@@ -14,11 +14,11 @@
 
 - **依赖**：不加任何 npm 包或 Go 模块，不执行 `go get`、`pnpm add`。Task 1 让 web 应用声明 `emojibase-data` 15.3.2：它已在锁文件中（`@tiptap/extension-emoji` 依赖它），web 应用在构建时读它的文件（M2 收尾交接第 10 节）；`pnpm-workspace.yaml` 的 catalog 一行、`web/apps/web/package.json` 的 `devDependencies` 一行、`pnpm-lock.yaml` 的两处 importer 的条目（块中给出），没有新的包，之后执行 `pnpm install --frozen-lockfile`。`git diff --stat 6c1a090a -- server/ api/` 在本 plan 的任何时刻都没有输出；`pnpm-lock.yaml` 只有 Task 1 的两处。
 - **每个 Task 提交前**：`make lint-web`（关键词守卫、`tsc`、oxlint 在上限、格式、`en` 与 `zh-CN` 的键一致）、`make knip`、`make test-web`、`make e2e` 都通过。本 plan 不改 Go 代码和接口描述，不生成任何文件，不执行 `make gen`（`make gen-check` 照旧没有差异）。
-- **e2e 的数目**：在 worktree 中 `make e2e` 必须全部通过：开始时 93 个；Task 1 起 94、Task 2 起 95、Task 3 起 98、Task 4 起 99、Task 5 起 100、Task 6 起 101、Task 7 起 102、Task 8 起 103、Task 9 起 104、Task 10 起 105。只在不是 git 仓库的副本里，S3 因为构建读不到提交而失败（P4b spec F4），其余照上面的数目减一全部通过。
+- **e2e 的数目**：在 worktree 中 `make e2e` 必须全部通过：开始时 93 个；Task 1 起 94、Task 2 起 95、Task 3 起 98、Task 4 起 99、Task 5 起 101、Task 6 起 102、Task 7 起 103、Task 8 起 104、Task 9 起 105、Task 10 起 106。只在不是 git 仓库的副本里，S3 因为构建读不到提交而失败（P4b spec F4），其余照上面的数目减一全部通过。
 - **容器**：`make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**（总体设计 7.7，P8a 的裁定 F-1–F-10，P8b 的 PF-M2，P9 的 F-1–F-4）：会话的每个取数经 `useSessionSWR`（不传配置），没有权限时键为 `null`；页面只取它的角色能读的（已归档的项目只读项目本身，Task 3）；修改经 store 的方法，一个接一个，store 写入 nerve 的回答；请求体取决于 store 所持的值时，轮到它发出时从 nerve 最近一次回答算出（侧边栏的移动、标签栏的修改、功能和自动归档的开关）；`SessionChangedError` 不是认证失败；`core/lib/reconciled.ts` 只扩展，不复制（Task 3 的 `answeredAt`）。页面读地址只有一种写法：路由的参数（`useParams`）。角色的名字经 `ROLE_DETAILS[...].i18n_title`（翻译），不用英文的 `ROLE`。页面发出项目一侧的修改（加入、创建、general 的修改、功能和自动归档、改角色、移出、离开、添加成员、成员默认值、归档、恢复、删除、侧边栏的移动、标签栏）之后的跳转、提示和界面变化经 `followInSession` 只在发出它的会话里进行；每一处跟进由它自己的 vitest 守着（换账户之后兑现的 `lateSettlings`）。请求在路上时弹窗关不掉（取消按钮禁用，`ModalCore` 的 `handleClose` 为空，P9 的 F-1），按钮忙到跟进做完（P9 的 F-2），由故事扣住请求核对（`sentHeld`、`closedByEscape`、`enabledWithin`）。请求体由表单编辑的字段构成，类型是生成的 `ProjectCreate`、`ProjectUpdate`、`ProjectMemberUpdate`、`ProjectMembersAdd`，角色是数字；每个请求体有一个测试钉住它（vitest 或端到端的 `sentTo`、`sentHeld`）。每个错误经 `errorMessageKey`（`useRefusalToast` 的提示）或 `FIELD_ERROR_MESSAGES`（字段下方，`projectRefusal`）显示，被拒绝的修改结束它的加载状态。类型只来自生成的客户端：不写重述契约的类型，没有新的 `as`、`any`、`!`（spec 附录 A.7）。删除的代码删干净（组件、两种语言的文案、工具函数、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（最终原型上量的：最长的是 `e2e/fixtures/assert/project.ts` 397 行、`e2e/stories/workspace/w3-workspace-settings.spec.ts` 397 行、`e2e/fixtures/api.ts` 390 行、`e2e/stories/project/p1-create-project.spec.ts` 390 行、`e2e/stories/project/p3-project-settings.spec.ts` 378 行；web 中最长的是 `project/form.tsx` 292 行，新文件中最长的是 `use-update-project-details.test.ts` 143 行）；只为使用方改到的 Plane 文件不变长，一处例外待裁定（`@nerve/propel` 的 `emoji-icon-picker/index.ts` 多一行导出，spec 第 3 节第 5 条、附录 A.6）。
+- **规则**（总体设计 7.7，P8a 的裁定 F-1–F-10，P8b 的 PF-M2，P9 的 F-1–F-4）：会话的每个取数经 `useSessionSWR`（不传配置），没有权限时键为 `null`；页面只取它的角色能读的（已归档的项目只读项目本身，Task 3）；修改经 store 的方法，一个接一个，store 写入 nerve 的回答；请求体取决于 store 所持的值时，轮到它发出时从 nerve 最近一次回答算出（侧边栏的移动、标签栏的修改、功能和自动归档的开关）；`SessionChangedError` 不是认证失败；`core/lib/reconciled.ts` 只扩展，不复制（Task 3 的 `answeredAt`）。页面读地址只有一种写法：路由的参数（`useParams`）。角色的名字经 `ROLE_DETAILS[...].i18n_title`（翻译），不用英文的 `ROLE`。页面发出项目一侧的修改（加入、创建、general 的修改、功能和自动归档、改角色、移出、离开、添加成员、成员默认值、归档、恢复、删除、侧边栏的移动、标签栏）之后的跳转、提示和界面变化经 `followInSession` 只在发出它的会话里进行；每一处跟进由它自己的 vitest 守着（换账户之后兑现的 `lateSettlings`）。请求在路上时弹窗关不掉（取消按钮禁用，`ModalCore` 的 `handleClose` 为空，P9 的 F-1），按钮忙到跟进做完（P9 的 F-2），由故事扣住请求核对（`sentHeld`、`closedByEscape`、`enabledWithin`）。每个弹窗一条规则：被拒绝时留着、按钮重新可用，原因在共用的拒绝提示里；只在成功的跟进中关上（经 `followInSession`，spec 第 3 节第 6 条和"预检之后"的 A-M2）。请求体由表单编辑的字段构成，类型是生成的 `ProjectCreate`、`ProjectUpdate`、`ProjectMemberUpdate`、`ProjectMembersAdd`，角色是数字；每个请求体有一个测试钉住它（vitest 或端到端的 `sentTo`、`sentHeld`）。每个错误经 `errorMessageKey`（`useRefusalToast` 的提示）或 `FIELD_ERROR_MESSAGES`（字段下方，`projectRefusal`）显示，被拒绝的修改结束它的加载状态。类型只来自生成的客户端：不写重述契约的类型，没有新的 `as`、`any`、`!`（spec 附录 A.7）。删除的代码删干净（组件、两种语言的文案、工具函数、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（最终原型上量的：最长的是 `e2e/fixtures/assert/project.ts` 397 行、`e2e/stories/workspace/w3-workspace-settings.spec.ts` 397 行、`e2e/fixtures/api.ts` 390 行、`e2e/stories/project/p1-create-project.spec.ts` 397 行、`e2e/stories/project/p3-project-settings.spec.ts` 399 行、`e2e/stories/project/p5-project-members.spec.ts` 396 行；web 中最长的是 `project/form.tsx` 292 行，新文件中最长的是 `use-update-project-details.test.ts` 143 行）；只为使用方改到的 Plane 文件不变长，一处例外（`@nerve/propel` 的 `emoji-icon-picker/index.ts` 多一行导出，spec 第 3 节第 5 条，裁定 R5；附录 A.6）。
 - **oxlint**（M3 设计 7.9，裁定 R3）：有手改的文件（本 plan 的每个 TS 文件都是手改的，没有机械步骤）在它的 Task 提交时没有 oxlint 警告。上限：web 356 → 350（Task 2：`dropdowns/member/` 的六条随 `member-options.tsx` 和旧的写法一起没有了）→ 349（Task 7：确认框的正的 `tabIndex`）；`propel` 16 → 11（Task 1：表情选择器的两个文件的五条，`no-shadow` 四条、`consistent-function-scoping` 一条）；其余包不变。没有新的 oxlint 抑制，删掉两条（Task 5：`project/form.tsx` 的 `react-hooks/exhaustive-deps`；Task 7：`member-list-item.tsx` 的 `promise/always-return`）。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -28,8 +28,8 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `6c1a090a` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A.10）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1、3–10，每个 Task 加它的文件）、`web/apps/web/package.json`（Task 1 的依赖，Task 2、7 的上限）、`propel` 的 `emoji-icon-picker/helper.tsx`（Task 1、4）、`project/create/header.tsx`（Task 1、4）、`project/card.tsx`（Task 3、9）、`project-roles.ts` 和它的测试（Task 7、8），以及 `e2e/fixtures/api.ts`（Task 3、8）、`e2e/fixtures/settings-pages.ts`（Task 2、10）、`e2e/fixtures/project-pages.ts`（Task 7、8）、S2（Task 1、3）、P1（Task 1、2、4）、P3（Task 5、6、8）、P5（Task 7、8）。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫，以及 `make knip`；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p10tools/mutants_p10.py`，`mut.py` 在它写的每个检查上各跑一次），也在各自 Task 的树上跑过（spec 附录 A.2）；表中标"（之后的 Task 起）"的检查只在之后的 Task 加入的测试中才让它失败。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief）：表中每一条这类性质都有一个会失败的检查。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1–10，每个 Task 加它的文件）、`web/apps/web/package.json`（Task 1 的依赖，Task 2、7 的上限）、`propel` 的 `emoji-icon-picker/helper.tsx`（Task 1、4）、`project/create/header.tsx`（Task 1、4）、`project/card.tsx`（Task 3、9）、`project-roles.ts` 和它的测试（Task 7、8）、`core/lib/fake-controls.ts`（Task 2、8），以及 `e2e/fixtures/api.ts`（Task 3、8）、`e2e/fixtures/settings-pages.ts`（Task 2、5、10）、`e2e/fixtures/project-pages.ts`（Task 7、8）、S2（Task 1、3）、P1（Task 1、2、4）、P3（Task 5、6、8）、P5（Task 7、8）。每个过渡版本都在逐 Task 复现中运行过。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫，以及 `make knip`；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p10tools/mutants_p10.py`，`mut.py` 在它写的每个检查上各跑一次），也在各自 Task 的树上跑过（spec 附录 A.2）；表中标"（Task N 起）"的检查只在第 N 个 Task 加入的测试中才让它失败（在变异自己的 Task 的树上它还活着）。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief）：表中每一条这类性质都有一个会失败的检查。
 - **评审敏感**（M3 设计 12 节 P10 的评审重点）：页面级的副作用只在发出修改的会话里（每个 hook 的 vitest 的 `lateSettlings`；删除项目的组件，9.5）；页面只取角色能读的（已归档的项目、看得到而不是成员的项目只读项目本身：S2、P2）；页面只提供 nerve 允许的角色和移出（Task 7、8 的 `project-roles.ts`）；请求在路上时弹窗关不掉（每个弹窗一个故事的扣住）；表情的数据不发往别处（P1、P3 的 `requestsElsewhere`）。改动这些之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
@@ -40,7 +40,7 @@
 
 | 文件 | 职责 | Task |
 |---|---|---|
-| `.oxlintrc.json` | P10 的新模块和测试、改到的 nerve 写的模块和测试加进非空断言的范围，各在加入它们的 Task（P9 spec 2.14 的做法） | 1、3、4、5、6、7、8、9、10 |
+| `.oxlintrc.json` | P10 的新模块和测试、改到的 nerve 写的模块和测试加进非空断言的范围，各在加入它们的 Task（P9 spec 2.14 的做法） | 1、2、3、4、5、6、7、8、9、10 |
 | `pnpm-workspace.yaml`、`pnpm-lock.yaml` | catalog 的 `emojibase-data` 15.3.2；锁文件中 web 应用的两处 importer 条目（包已在锁文件中） | 1 |
 | `web/apps/web/package.json` | `emojibase-data` 的开发依赖（Task 1）；web 的 oxlint 上限 356 → 350（Task 2）→ 349（Task 7） | 1、2、7 |
 | `web/apps/web/emojibase.ts`、`web/apps/web/emojibase.test.ts` | Vite 插件：构建把 `emojibase-data` 的 `en/data.json`、`en/messages.json` 写到 `/assets/emojibase/<版本>/`，开发服务器答同样的路径；它的 vitest（地址、版本、内容与表情选择器读的一致） | 1 |
@@ -50,9 +50,11 @@
 | `web/packages/propel/package.json` | propel 的 oxlint 上限 16 → 11 | 1 |
 | `web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json` | 项目图标的按钮的名字 | 1 |
 | `web/apps/web/core/components/project/create/header.tsx` | 图标选择器有名字（Task 1）；图标经 `logoPropsOf`，创建在途时关闭按钮禁用、有名字（Task 4） | 1、4 |
-| `web/packages/ui/src/dropdowns/custom-search-select.tsx` | Popover 的按钮（Tab 能到）、面板里的 `Combobox`；打开时搜索框取得焦点，Escape 从搜索框也关；单选选了就关；关上时清空搜索；popper 定位面板（整个文件） | 2 |
-| `web/packages/ui/src/dropdowns/helper.tsx` | `Placement` 用 popper 的类型 | 2 |
-| `web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/dropdowns/member/types.d.ts` | 成员下拉框以 `CustomSearchSelect` 为底（整个文件）；Tab 只停在 `DropdownButton` | 2 |
+| `web/packages/ui/src/dropdowns/custom-search-select.tsx` | Popover 的按钮（Tab 能到）、面板里的 `Combobox`；打开时搜索框取得焦点（调用方可以不要），Escape 从搜索框也关（输入法组字时不关）；单选选了就关；关上时清空搜索；popper 定位面板，调用方可以给它修饰（整个文件） | 2 |
+| `web/packages/ui/src/dropdowns/helper.tsx` | `Placement` 用 popper 的类型；`focusSearchOnOpen`、`popperModifiers` | 2 |
+| `web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx` | 一节一个 Tab 停留点：最后一节的标题是 `<span>`，之前一节的标题按钮不在 Tab 顺序里 | 2 |
+| `web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/dropdowns/member/types.d.ts` | 成员下拉框以 `CustomSearchSelect` 为底（整个文件）；Tab 只停在 `DropdownButton`；调用方推迟时指针经过之前只有按钮，手机上打开时搜索框不取得焦点，列表离窗口边缘 12 像素 | 2 |
+| `web/apps/web/core/components/dropdowns/member/base.test.tsx` | 成员下拉框对调用方的约定（新文件） | 2 |
 | `web/apps/web/core/components/dropdowns/buttons.tsx` | `DropdownButton` 收 `tabIndex`：成员下拉框在调用方给的位置停一次 | 2 |
 | `web/apps/web/core/components/dropdowns/member/member-options.tsx` | 成员下拉框原来的列表（删除） | 2 |
 | `web/apps/web/core/hooks/use-copy-link.ts`、`web/apps/web/core/hooks/use-copy-link.test.ts` | `useCopyLink`（复制，成功和失败的提示）、`useCopyProjectLink`（地址的工作区中项目的链接）；它的 vitest | 3 |
@@ -91,7 +93,7 @@
 | `web/apps/web/core/components/project/add-project-members-modal.tsx`、`web/apps/web/core/components/project/add-project-members-modal.test.tsx` | 添加成员：工作区的有效成员中还不是项目成员的，角色按 `addableRoles`（名字同成员页），在会话里跟进，在途时关不掉；它的 vitest | 8 |
 | `web/apps/web/core/components/project/member-list.tsx` | 添加弹窗不再收 `workspaceSlug` | 8 |
 | `web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.test.tsx` | 负责人、默认负责人、访客可见：显示 nerve 的回答，在会话里跟进（整个文件）；它的 vitest | 8 |
-| `web/apps/web/core/lib/fake-controls.ts` | 搜索选择的替身留下它的选项 | 8 |
+| `web/apps/web/core/lib/fake-controls.ts` | 搜索选择的替身留下它收到的焦点、popper 的修饰（Task 2）和选项（Task 8） | 2、8 |
 | `web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx` | 删除项目：按提交的值核对，在会话里跟进，项目自己的页面才回到项目列表，在途时关不掉；它的 vitest（9.5） | 9 |
 | `web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx` | 归档、恢复：在会话里跟进，在途时关不掉（整个文件）；它的 vitest | 9 |
 | `web/apps/web/core/components/workspace/sidebar/use-project-drop.ts`、`web/apps/web/core/components/workspace/sidebar/use-project-drop.test.ts` | 侧边栏的移动失败在会话里按 `code` 提示（整个文件）；它的 vitest | 10 |
@@ -100,16 +102,16 @@
 | `README.md`、`docs/v0/frontend-changes.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`、`docs/v0/M3-workspace-project/handoffs/M1-P4-router-native.md` | "前端"一节的项目页面；前端改动清单；M2 收尾交接、M1-P4 交接的 P10 处理结果 | 11 |
 | `e2e/fixtures/browser.ts` | `watchPage` 记下每个请求的地址；`requestsElsewhere`：发往页面之外的源的请求 | 1 |
 | `e2e/fixtures/mounts.ts` | 页面加载时的请求清单的列表和 `valued`，从 S2 移来（新文件）；S2、P2 读它 | 3 |
-| `e2e/fixtures/settings-pages.ts` | `transitionsEnded`（Task 2）；`shownWithin`（Task 10） | 2、10 |
+| `e2e/fixtures/settings-pages.ts` | `transitionsEnded`（Task 2）；`moveWithinApp`（Task 5）；`shownWithin`（Task 10） | 2、5、10 |
 | `e2e/fixtures/workspace-pages.ts` | `pickTimeZone`：只用键盘选时区 | 2 |
 | `e2e/fixtures/api.ts` | `archiveProject`（Task 3）；`projectMembershipOf`、`changeProject`、`projectMemberWrites`（Task 8） | 3、8 |
 | `e2e/fixtures/assert/project.ts` | `projectSettingsOf`：项目存下的设置 | 8 |
 | `e2e/stories/project/p1-create-project.spec.ts` | P1 的页面版本：表情选择器（Task 1）、负责人的列表（Task 2）、创建（Task 4） | 1、2、4 |
 | `e2e/stories/workspace/w3-workspace-settings.spec.ts` | W3 的页面版本只用键盘选时区 | 2 |
-| `e2e/stories/project/p2-visibility.spec.ts` | P2 的页面版本：地址的加入界面、已归档、找不到；卡片的复制和加入 | 3 |
+| `e2e/stories/project/p2-visibility.spec.ts` | P2 的页面版本：地址的加入界面、已归档、找不到；卡片的复制和加入；页头的项目面包屑一个 Tab 停留点 | 3 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 发往别处的请求经 `requestsElsewhere`（Task 1）；挂载清单的列表读 `mounts.ts`，成员、访客、不是成员的人打开项目列表，已归档的项目只读项目本身（Task 3） | 1、3 |
-| `e2e/stories/project/p3-project-settings.spec.ts` | P3 的页面版本：general（Task 5）、功能和自动归档（Task 6）、成员默认值（Task 8） | 5、6、8 |
-| `e2e/stories/project/p5-project-members.spec.ts` | P5 的页面版本：改角色、移出、离开（Task 7）；添加成员（Task 8） | 7、8 |
+| `e2e/stories/project/p3-project-settings.spec.ts` | P3 的页面版本：general 和不离开路由到另一个项目的 general（Task 5）、功能和自动归档（Task 6）、成员默认值（Task 8，经 API 的被拒绝的添加经 `projectMemberWrites`） | 5、6、8 |
+| `e2e/stories/project/p5-project-members.spec.ts` | P5 的页面版本：改角色、移出、离开，被拒绝时确认框、离开弹窗留着（Task 7）；添加成员，成员的选择用 Tab 到达（Task 8） | 7、8 |
 | `e2e/stories/project/p4-archive.spec.ts` | P4 的页面版本：归档、恢复、删除 | 9 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | P8 的页面版本：标签栏的默认和"更多"、侧边栏的拖动 | 10 |
 
@@ -674,25 +676,105 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 2: 下拉框：带搜索的选择 Tab 能到、在按钮旁展开；成员下拉框以它为底
+### Task 2: 下拉框：带搜索的选择 Tab 能到、在按钮旁展开；成员下拉框以它为底，照旧对调用方；面包屑一个 Tab 停留点
 
 **Files:**
-- Modify: `e2e/fixtures/settings-pages.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`web/apps/web/core/components/dropdowns/buttons.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/dropdowns/member/types.d.ts`、`web/apps/web/package.json`、`web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/helper.tsx`
+- Create: `web/apps/web/core/components/dropdowns/member/base.test.tsx`
+- Modify: `.oxlintrc.json`、`e2e/fixtures/settings-pages.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`web/apps/web/core/components/dropdowns/buttons.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/dropdowns/member/types.d.ts`、`web/apps/web/core/lib/fake-controls.ts`、`web/apps/web/package.json`、`web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx`、`web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/helper.tsx`
 - Delete: `web/apps/web/core/components/dropdowns/member/member-options.tsx`
 
 **Interfaces:**
 - Produces（spec 2.2；M3 设计 7.7；M2 收尾交接第 14 节，根因和修法见 M2/P5 spec 2.3）：
-  - `@nerve/ui` 的 `CustomSearchSelect`（整个文件，props 不变）：按钮是 Headless UI 的 `Popover.Button`，Tab 能到，点击、Enter、空格打开（原来是 `Combobox.Button`，Headless UI 2.2 固定给它 `tabIndex: -1`）；搜索框和选项是面板里的 `Combobox`（`static`），打开状态只有 Popover 的一份。列表打开时搜索框取得焦点（不滚动：popper 那时还没定位）；Escape 从按钮或搜索框都关上列表，焦点回到按钮，不传给外面的弹窗（输入打开 Combobox 之后它的输入框先处理 Escape 并 `preventDefault`，Headless UI 随之跳过面板自己的处理，所以面板在捕获阶段处理）；单选选了一项就关；清空搜索不改选中的值；列表关上时清空搜索（`WhileOpen` 在列表挂载、卸载时调 `onOpen`、`onClose`，并清空搜索）；`defaultOpen` 开一次，像点了按钮；popper 的 ref 在面板（门户里）本身，列表在按钮旁展开。`helper.tsx` 的 `placement` 用 popper 的 `Placement` 类型（原来手写的联合删除）。
-  - 成员下拉框 `dropdowns/member/base.tsx`（整个文件）：以 `CustomSearchSelect` 为底（选项是工作区的成员，按 `memberIds` 或 `optionsFilter` 筛选，单选、多选），`member-options.tsx`（popper 的 ref 放在列表唯一的子元素上，列表停在页面左上角；两份打开状态）删除；Tab 只停在里面的 `DropdownButton`（每个 `dropdowns/` 下拉框都这样嵌一个按钮，嵌套的按钮是 Plane 的，M4 随其余的下拉框处理），它的 Enter、空格交给选择的按钮打开列表；调用方给的 `tabIndex` 给这个按钮（`dropdowns/buttons.tsx` 的 `DropdownButton` 收 `tabIndex`，交给三种样式的按钮；原来在选择自己的按钮上，那个按钮现在不在 Tab 顺序里）。`types.d.ts` 删去 `button`（只有旧的写法读它）。
+  - `@nerve/ui` 的 `CustomSearchSelect`（整个文件）：按钮是 Headless UI 的 `Popover.Button`，Tab 能到，点击、Enter、空格打开（原来是 `Combobox.Button`，Headless UI 2.2 固定给它 `tabIndex: -1`）；搜索框和选项是面板里的 `Combobox`（`static`），打开状态只有 Popover 的一份。列表打开时搜索框取得焦点（不滚动：popper 那时还没定位）；Escape 从按钮或搜索框都关上列表，焦点回到按钮，不传给外面的弹窗（输入打开 Combobox 之后它的输入框先处理 Escape 并 `preventDefault`，Headless UI 随之跳过面板自己的处理，所以面板在捕获阶段处理）；输入法组字时的 Escape 是输入法的，不关列表（`event.nativeEvent.isComposing`）；单选选了一项就关；清空搜索不改选中的值；列表关上时清空搜索（`WhileOpen` 在列表挂载、卸载时调 `onOpen`、`onClose`，并清空搜索；它用的是列表打开那一刻的两个回调）；`defaultOpen` 开一次，像点了按钮；popper 的 ref 在面板（门户里）本身，列表在按钮旁展开。`helper.tsx`：`placement` 用 popper 的 `Placement` 类型（原来手写的联合删除）；两个可选的 props：`focusSearchOnOpen`（列表打开时搜索框是否取得焦点，默认是）、`popperModifiers`（popper 的修饰，与 `placement` 一起交给 `usePopper`）。其余 props 不变。
+  - 成员下拉框 `dropdowns/member/base.tsx`（整个文件）：以 `CustomSearchSelect` 为底（选项是工作区的成员，按 `memberIds` 筛选，单选、多选），`member-options.tsx`（popper 的 ref 放在列表唯一的子元素上，列表停在页面左上角；两份打开状态）删除；Tab 只停在里面的 `DropdownButton`（每个 `dropdowns/` 下拉框都这样嵌一个按钮，嵌套的按钮是 Plane 的，M4 随其余的下拉框处理），它的 Enter、空格交给选择的按钮打开列表；调用方给的 `tabIndex` 给这个按钮（`dropdowns/buttons.tsx` 的 `DropdownButton` 收 `tabIndex`，交给三种样式的按钮；原来在选择自己的按钮上，那个按钮现在不在 Tab 顺序里）。M4–M6 的调用方靠的照旧（spec 第 3 节"预检之后"的 A-M5）：调用方推迟的（`renderByDefault` 为假：桌面上列表的每一行）在指针第一次经过之前只是它的按钮，没有选择、没有 popper（与 `ComboDropDown` 相同）；手机上打开时搜索框不取得焦点（`focusSearchOnOpen={!isMobile}`）；列表离窗口边缘 12 像素（popper 的 `preventOverflow`）；按钮的点击不冒泡到行、不做默认动作：Headless UI 的 Popover 按钮自己在打开之前 `preventDefault`、`stopPropagation`（点击和按下都是），所以不另写。`types.d.ts` 删去 `button`（只有旧的写法读它）。
+  - 面包屑的 `BreadcrumbNavigationSearchDropdown`（`@nerve/ui`）：一节只有一个 Tab 停留点，选择的按钮，它打开列表。最后一节的标题是 `<span>`（点它也打开列表）；之前一节的标题点击时去那一节的页面，是选择的按钮里的按钮，不在 Tab 顺序里（`tabIndex={-1}`；键盘从侧边栏到那个页面）。
   - `web/apps/web/package.json`：web 的 oxlint 上限 356 → 350（`dropdowns/member/` 的六条随旧的写法删除）。
+  - 测试的替身：`core/lib/fake-controls.ts` 的搜索选择留下它收到的 `focusSearchOnOpen`、`popperModifiers`（`SearchSelect`）。根目录 `.oxlintrc.json` 的非空断言范围加 `dropdowns/member/base.test.tsx`、`core/lib/fake-controls.ts`（spec 2.14）。
 - e2e 的共用部分：`e2e/fixtures/settings-pages.ts` 的 `transitionsEnded(locator)`（等定位到的元素和它里面的过渡结束：弹窗的进场过渡移动按钮，popper 在列表打开时按按钮此刻的位置定位）；`e2e/fixtures/workspace-pages.ts` 的 `pickTimeZone(page, current, typed)`（只用键盘在工作区的 general 页选时区：Tab 到选择的按钮、Enter 打开、列表在按钮旁、搜索框有焦点、Escape 关上、再打开、输入、方向键和 Enter 选第一项）。
 
 **Tests:**
-- 端到端：`P1 (page): the lead's list opens beside its button with its search focused; Escape closes it`（负责人的按钮外面那个选择自己的按钮不在 Tab 顺序中（`tabindex="-1"`），Tab 只停一次；创建弹窗的进场过渡结束之后点负责人：列表在按钮旁展开（`expectListBesideButton`），搜索框有焦点；Escape 关上列表、弹窗还开着；在按钮上按 Enter 再打开，输入打开 Combobox 之后的 Escape 也一样；再打开时没有搜索）。W3 的页面版本中时区改用 `pickTimeZone`，选中的"Beijing"按钮保有焦点。个人设置的时区（A8、A9）也是 `CustomSearchSelect`，照旧通过。
+- vitest：`core/components/dropdowns/member/base.test.tsx`（新文件，4 个；`@nerve/ui` 换成 `fake-controls.ts`，服务端渲染）：`is its button alone, no select, while its caller defers it`；`is a select, its button in the select's, unless its caller defers it`；`focuses the search as the list opens on a desktop, not on a phone`；`keeps its list 12 pixels inside the window`。
+- 端到端：`P1 (page): the lead's list opens beside its button with its search focused; Escape closes it`（负责人的按钮外面那个选择自己的按钮不在 Tab 顺序中（`tabindex="-1"`），Tab 只停一次；创建弹窗的进场过渡结束之后点负责人：列表在按钮旁展开（`expectListBesideButton`），搜索框有焦点；Escape 关上列表、弹窗还开着；在按钮上按 Enter 再打开，输入之后，组字中的 Escape（`isComposing`）不关，再输入仍在搜索框里；输入打开 Combobox 之后的 Escape 关上；再打开时没有搜索）。W3 的页面版本中时区改用 `pickTimeZone`，选中的"Beijing"按钮保有焦点。个人设置的时区（A8、A9）也是 `CustomSearchSelect`，照旧通过。面包屑的一个停留点由 Task 3 的 P2 页面版本核对（项目的工作项页的页头），添加成员的选择用 Tab 到达由 Task 8 的 P5 核对。
 
-- [ ] **Step 1: 带搜索的选择**
+- [ ] **Step 1: 带搜索的选择和面包屑**
 
-`web/packages/ui/src/dropdowns/custom-search-select.tsx`（整个文件，268 行）：
+`web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx`（修改，4 处）：
+
+````old web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+````
+````new web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const titleClassName = cn(
+    "group flex h-full cursor-pointer items-center gap-2 rounded-sm rounded-r-none px-1.5 py-1 text-13 font-medium text-tertiary",
+    {
+      "hover:bg-layer-1 hover:text-primary": !isLast,
+    }
+  );
+  const label = (
+    <>
+      {shouldTruncate && <div className="flex text-tertiary @4xl:hidden">...</div>}
+      <div
+        className={cn("flex gap-2", {
+          "hidden items-center gap-2 @4xl:flex": shouldTruncate,
+        })}
+      >
+        {icon && <Breadcrumbs.Icon>{icon}</Breadcrumbs.Icon>}
+        <Breadcrumbs.Label>{title}</Breadcrumbs.Label>
+      </div>
+    </>
+  );
+````
+````old web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx
+            <button
+              onClick={(e) => {
+                if (!isLast) {
+````
+````new web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx
+            {/* The crumb is one Tab stop, the select's button, which opens the list; the last crumb's title opens it
+                too. An earlier crumb's title goes to its page by a click: a button in the select's button, out of the
+                Tab order (the keyboard reaches that page from the sidebar). */}
+            {isLast ? (
+              <span className={titleClassName}>{label}</span>
+            ) : (
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={(e) => {
+````
+````old web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx
+                }
+              }}
+              className={cn(
+                "group flex h-full cursor-pointer items-center gap-2 rounded-sm rounded-r-none px-1.5 py-1 text-13 font-medium text-tertiary",
+                {
+                  "hover:bg-layer-1 hover:text-primary": !isLast,
+                }
+              )}
+            >
+              {shouldTruncate && <div className="flex text-tertiary @4xl:hidden">...</div>}
+              <div
+                className={cn("flex gap-2", {
+                  "hidden items-center gap-2 @4xl:flex": shouldTruncate,
+                })}
+````
+````new web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx
+                }}
+                className={titleClassName}
+````
+````old web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx
+                {icon && <Breadcrumbs.Icon>{icon}</Breadcrumbs.Icon>}
+                <Breadcrumbs.Label>{title}</Breadcrumbs.Label>
+              </div>
+            </button>
+````
+````new web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx
+                {label}
+              </button>
+            )}
+````
+
+`web/packages/ui/src/dropdowns/custom-search-select.tsx`（整个文件，272 行）：
 
 ````whole web/packages/ui/src/dropdowns/custom-search-select.tsx
 /**
@@ -751,21 +833,24 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
     noResultsMessage = "No matches found",
     loadingMessage = "Loading...",
     defaultOpen = false,
+    focusSearchOnOpen = true,
+    popperModifiers,
   } = props;
   const [query, setQuery] = useState("");
 
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
   const openedByDefault = useRef(false);
-  // The search input is in the list: it takes the focus as the list opens, so that typing, the arrows, Enter and
-  // Escape reach Headless UI's input (a click on the button leaves the focus on the button). Not scrolled to: popper
-  // has not placed the list yet.
+  // The search input is in the list: it takes the focus as the list opens (unless the caller says not), so that
+  // typing, the arrows, Enter and Escape reach Headless UI's input (a click on the button leaves the focus on the
+  // button). Not scrolled to: popper has not placed the list yet.
   const focusSearch = useCallback((search: HTMLInputElement | null) => {
     search?.focus({ preventScroll: true });
   }, []);
 
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement: placement ?? "bottom-start",
+    modifiers: popperModifiers,
   });
 
   // Headless UI's Popover has no defaultOpen: a list asked to start open opens once, as a click on its button does.
@@ -854,9 +939,10 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
               {...attributes.popper}
               // Escape closes the list, from the search too: once typing has opened the Combobox, its input takes
               // Escape first and prevents its default, and Headless UI then skips the panel's own handler. Not
-              // passed on: a modal around the select stays open.
+              // passed on: a modal around the select stays open. An Escape that ends an input method's composition
+              // (Chinese, say) is the input method's.
               onKeyDownCapture={(event: React.KeyboardEvent) => {
-                if (event.key !== "Escape") return;
+                if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
                 event.preventDefault();
                 event.stopPropagation();
                 close();
@@ -890,7 +976,7 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
                   <div className="mx-2 flex items-center gap-1.5 rounded-sm border border-subtle px-2">
                     <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
                     <Combobox.Input
-                      ref={focusSearch}
+                      ref={focusSearchOnOpen ? focusSearch : undefined}
                       className="w-full bg-transparent py-1 text-11 text-secondary placeholder:text-placeholder focus:outline-none"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
@@ -965,7 +1051,7 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
 }
 ````
 
-`web/packages/ui/src/dropdowns/helper.tsx`（修改，1 处）：
+`web/packages/ui/src/dropdowns/helper.tsx`（修改，2 处）：
 
 ````old web/packages/ui/src/dropdowns/helper.tsx
 // FIXME: fix this!!!
@@ -987,11 +1073,21 @@ type Placement =
 ````
 ````new web/packages/ui/src/dropdowns/helper.tsx
 // FIXME: fix this!!!
-import type { Placement } from "@popperjs/core";
+import type { Modifier, Placement } from "@popperjs/core";
 import type { ICustomSearchSelectOption } from "@nerve/types";
 ````
+````old web/packages/ui/src/dropdowns/helper.tsx
+  options?: ICustomSearchSelectOption[];
+````
+````new web/packages/ui/src/dropdowns/helper.tsx
+  options?: ICustomSearchSelectOption[];
+  /** Whether the search takes the focus as the list opens: it does unless the caller says not. */
+  focusSearchOnOpen?: boolean;
+  /** Popper's modifiers for the list, beside its placement. */
+  popperModifiers?: Partial<Modifier<string, object>>[];
+````
 
-- [ ] **Step 2: 成员下拉框和上限**
+- [ ] **Step 2: 成员下拉框、它的测试和上限**
 
 `web/apps/web/core/components/dropdowns/buttons.tsx`（修改，10 处）：
 
@@ -1096,7 +1192,80 @@ function TransparentButton(props: ButtonProps) {
           "flex h-full w-full items-center justify-between gap-1.5",
 ````
 
-`web/apps/web/core/components/dropdowns/member/base.tsx`（整个文件，180 行）：
+`web/apps/web/core/components/dropdowns/member/base.test.tsx`（新文件，68 行）：
+
+````file web/apps/web/core/components/dropdowns/member/base.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { emptyShown, shown } from "@/lib/fake-controls";
+import { MemberDropdownBase } from "./base";
+
+// What the member dropdown keeps for its callers (M4–M6's rows among them) now that a CustomSearchSelect is under it
+// (M3 design 7.7, P10 spec 3): it renders on the server with a stand-in for the select (fake-controls.ts), which keeps
+// the props it was given, on a desktop unless the test says a phone.
+
+const device = vi.hoisted(() => ({ isMobile: false }));
+vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => device }));
+vi.mock("@/hooks/store/user", () => ({ useUser: () => ({ data: { id: "u-me" } }) }));
+vi.mock("@/hooks/store/use-member", () => ({
+  useMember: () => ({ getUserDetails: () => undefined, workspace: { isUserSuspended: () => false } }),
+}));
+vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme" }) }));
+
+/** Renders the lead's dropdown, as a caller that defers it or not; gives its markup. */
+function render(renderByDefault?: boolean) {
+  emptyShown();
+  return renderToStaticMarkup(
+    <MemberDropdownBase
+      getUserDetails={() => undefined}
+      memberIds={["u-me"]}
+      multiple={false}
+      value={null}
+      onChange={() => {}}
+      buttonVariant="border-with-text"
+      placeholder="Lead"
+      renderByDefault={renderByDefault}
+    />
+  );
+}
+
+beforeEach(() => {
+  device.isMobile = false;
+});
+
+describe("MemberDropdownBase", () => {
+  it("is its button alone, no select, while its caller defers it", () => {
+    const markup = render(false);
+    expect([shown.searchSelects.length, markup.includes(">Lead</span></button>")]).toEqual([0, true]);
+  });
+
+  it("is a select, its button in the select's, unless its caller defers it", () => {
+    expect([render(), shown.searchSelects.length]).toEqual(["", 1]);
+  });
+
+  it("focuses the search as the list opens on a desktop, not on a phone", () => {
+    render();
+    const desktop = shown.searchSelects[0]?.focusSearchOnOpen;
+    device.isMobile = true;
+    render();
+    expect([desktop, shown.searchSelects[0]?.focusSearchOnOpen]).toEqual([true, false]);
+  });
+
+  it("keeps its list 12 pixels inside the window", () => {
+    render();
+    expect(shown.searchSelects[0]?.popperModifiers).toEqual([{ name: "preventOverflow", options: { padding: 12 } }]);
+  });
+});
+````
+
+`web/apps/web/core/components/dropdowns/member/base.tsx`（整个文件，195 行）：
 
 ````whole web/apps/web/core/components/dropdowns/member/base.tsx
 /**
@@ -1107,6 +1276,7 @@ function TransparentButton(props: ButtonProps) {
 
 import { observer } from "mobx-react";
 import type { ComponentType, SVGProps } from "react";
+import { useState } from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "@nerve/i18n";
 import { Avatar } from "@makeplane/propel/components/avatar";
@@ -1121,6 +1291,7 @@ import { cn, getFileURL, sortByCurrentUserThenSelected } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";
+import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { DropdownButton } from "../buttons";
 import { BUTTON_VARIANTS_WITH_TEXT } from "../constants";
@@ -1139,7 +1310,9 @@ type TMemberDropdownBaseProps = {
 
 /**
  * Picks members: a CustomSearchSelect (@nerve/ui), whose list, with its search, opens beside its button, the open
- * state Headless UI's alone, the search taking the focus as the list opens (M3 design 7.7).
+ * state Headless UI's alone, the search taking the focus as the list opens on a desktop (M3 design 7.7). A dropdown
+ * its caller defers (renderByDefault false: a row of a list on a desktop) is its button alone until the pointer
+ * first comes over it, as ComboDropDown (@nerve/ui) does: no select and no popper for each row.
  */
 export const MemberDropdownBase = observer(function MemberDropdownBase(props: TMemberDropdownBaseProps) {
   const { t } = useTranslation();
@@ -1174,6 +1347,8 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
   const {
     workspace: { isUserSuspended },
   } = useMember();
+  const { isMobile } = usePlatformOS();
+  const [rendered, setRendered] = useState(renderByDefault);
 
   // what the button says: the member picked, how many are, or the placeholder
   const getDisplayName = () => {
@@ -1184,6 +1359,36 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
     }
     return showUserDetails && value ? getUserDetails(value)?.display_name || placeholder : placeholder;
   };
+
+  // the button: alone while the dropdown is deferred, then in the select's button
+  const button = (
+    <DropdownButton
+      // shown as active while the list is open (Headless UI's data-open on the select's button)
+      className={cn("text-11 group-data-open:bg-layer-transparent-active", buttonClassName)}
+      isActive={false}
+      tooltipHeading={placeholder}
+      tooltipContent={tooltipContent ?? `${value?.length ?? 0} ${value?.length !== 1 ? t("assignees") : t("assignee")}`}
+      showTooltip={showTooltip}
+      variant={buttonVariant}
+      renderToolTipByDefault={renderByDefault}
+      tabIndex={tabIndex}
+    >
+      {!hideIcon && <ButtonAvatars showTooltip={showTooltip} userIds={value} icon={icon} />}
+      {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
+        <span className="flex-grow truncate text-left text-body-xs-medium leading-5">{getDisplayName()}</span>
+      )}
+      {dropdownArrow && (
+        <ChevronDownOutline className={cn("h-2.5 w-2.5 flex-shrink-0", dropdownArrowClassName)} aria-hidden="true" />
+      )}
+    </DropdownButton>
+  );
+  if (!rendered) {
+    return (
+      <div className="flex h-full items-center" onMouseEnter={() => setRendered(true)}>
+        {button}
+      </div>
+    );
+  }
 
   // the value and its handler as the select takes them: one member, or many
   const selection:
@@ -1250,32 +1455,11 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
       searchPlaceholder={t("search")}
       noResultsMessage={t("no_matching_results")}
       loadingMessage={t("loading")}
-      customButton={
-        <DropdownButton
-          // shown as active while the list is open (Headless UI's data-open on the select's button)
-          className={cn("text-11 group-data-open:bg-layer-transparent-active", buttonClassName)}
-          isActive={false}
-          tooltipHeading={placeholder}
-          tooltipContent={
-            tooltipContent ?? `${value?.length ?? 0} ${value?.length !== 1 ? t("assignees") : t("assignee")}`
-          }
-          showTooltip={showTooltip}
-          variant={buttonVariant}
-          renderToolTipByDefault={renderByDefault}
-          tabIndex={tabIndex}
-        >
-          {!hideIcon && <ButtonAvatars showTooltip={showTooltip} userIds={value} icon={icon} />}
-          {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
-            <span className="flex-grow truncate text-left text-body-xs-medium leading-5">{getDisplayName()}</span>
-          )}
-          {dropdownArrow && (
-            <ChevronDownOutline
-              className={cn("h-2.5 w-2.5 flex-shrink-0", dropdownArrowClassName)}
-              aria-hidden="true"
-            />
-          )}
-        </DropdownButton>
-      }
+      // on a phone the search takes no focus as the list opens: the keyboard would cover the list
+      focusSearchOnOpen={!isMobile}
+      // the list keeps 12 pixels inside the window
+      popperModifiers={[{ name: "preventOverflow", options: { padding: 12 } }]}
+      customButton={button}
     />
   );
 });
@@ -1296,6 +1480,29 @@ export type MemberDropdownProps = TDropdownProps & {
 export type MemberDropdownProps = TDropdownProps & {
 ````
 
+`web/apps/web/core/lib/fake-controls.ts`（修改，3 处）：
+
+````old web/apps/web/core/lib/fake-controls.ts
+type Select = Field & { children?: ReactNode };
+````
+````new web/apps/web/core/lib/fake-controls.ts
+type Select = Field & { children?: ReactNode };
+/** A search select: what it gives, and how its list opens. */
+type SearchSelect = Field & { focusSearchOnOpen?: boolean; popperModifiers?: object[] };
+````
+````old web/apps/web/core/lib/fake-controls.ts
+  searchSelects: Field[];
+````
+````new web/apps/web/core/lib/fake-controls.ts
+  searchSelects: SearchSelect[];
+````
+````old web/apps/web/core/lib/fake-controls.ts
+export function CustomSearchSelect(props: Field) {
+````
+````new web/apps/web/core/lib/fake-controls.ts
+export function CustomSearchSelect(props: SearchSelect) {
+````
+
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
@@ -1305,7 +1512,18 @@ export type MemberDropdownProps = TDropdownProps & {
     "check:lint": "node ../../../tools/lint-cap.mjs 350",
 ````
 
-- [ ] **Step 3: 端到端**
+- [ ] **Step 3: 端到端和非空断言的范围**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+        "web/apps/web/emojibase.test.ts"
+````
+````new .oxlintrc.json
+        "web/apps/web/emojibase.test.ts",
+        "web/apps/web/core/components/dropdowns/member/base.test.tsx",
+        "web/apps/web/core/lib/fake-controls.ts"
+````
 
 `e2e/fixtures/settings-pages.ts`（修改，1 处）：
 
@@ -1404,19 +1622,24 @@ test("P1 (page): the lead's list opens beside its button with its search focused
   await expect(lead.locator("xpath=ancestor::button")).toHaveAttribute("tabindex", "-1");
   await lead.click();
   await expectListBesideButton(page, lead);
-  await expect(page.getByRole("combobox", { name: "Search" })).toBeFocused();
+  const search = page.getByRole("combobox", { name: "Search" });
+  await expect(search).toBeFocused();
   // Escape closes the list and leaves the modal open; so does it once a search has opened the Combobox.
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await lead.press("Enter");
   await expectListBesideButton(page, lead);
   await page.keyboard.type("nobody");
+  // An Escape that ends an input method's composition (Chinese, say) is the input method's: the list stays open.
+  await search.dispatchEvent("keydown", { key: "Escape", isComposing: true });
+  await page.keyboard.type("!");
+  await expect(search).toHaveValue("nobody!");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Create project" })).toBeVisible();
   // opened again, the list has no search
   await lead.press("Enter");
-  await expect(page.getByRole("combobox", { name: "Search" })).toHaveValue("");
+  await expect(search).toHaveValue("");
   await expect(page.getByRole("option", { name: "You" })).toBeVisible();
 
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
@@ -1461,7 +1684,7 @@ Expected: 95 个全部通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add e2e/fixtures/settings-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/workspace/w3-workspace-settings.spec.ts web/apps/web/core/components/dropdowns/buttons.tsx web/apps/web/core/components/dropdowns/member/base.tsx web/apps/web/core/components/dropdowns/member/member-options.tsx web/apps/web/core/components/dropdowns/member/types.d.ts web/apps/web/package.json web/packages/ui/src/dropdowns/custom-search-select.tsx web/packages/ui/src/dropdowns/helper.tsx
+git add .oxlintrc.json e2e/fixtures/settings-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/workspace/w3-workspace-settings.spec.ts web/apps/web/core/components/dropdowns/buttons.tsx web/apps/web/core/components/dropdowns/member/base.test.tsx web/apps/web/core/components/dropdowns/member/base.tsx web/apps/web/core/components/dropdowns/member/member-options.tsx web/apps/web/core/components/dropdowns/member/types.d.ts web/apps/web/core/lib/fake-controls.ts web/apps/web/package.json web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx web/packages/ui/src/dropdowns/custom-search-select.tsx web/packages/ui/src/dropdowns/helper.tsx
 ```
 ```bash
 git commit -m "fix(M3/P10): the search select is a popover's button Tab reaches, its list beside it; the member dropdown is built on it
@@ -1469,11 +1692,15 @@ git commit -m "fix(M3/P10): the search select is a popover's button Tab reaches,
 CustomSearchSelect's button is a Popover's, which Tab reaches and the
 keyboard opens; the search and the options are a Combobox in its panel,
 whose open state is the popover's alone. The search takes the focus as
-the list opens, Escape closes it from the button or the search, a pick of
-a single value closes it, and it opens again with no search; popper places
-the panel itself. The member dropdown is built on it: member-options,
-whose list stayed at the page's corner, is deleted, and Tab stops once,
-at the DropdownButton, where the caller's tabIndex puts it.
+the list opens, Escape closes it from the button or the search (not one
+that ends an input method's composition), a pick of a single value closes
+it, and it opens again with no search; popper places the panel itself.
+The member dropdown is built on it: member-options, whose list stayed at
+the page's corner, is deleted, and Tab stops once, at the DropdownButton,
+where the caller's tabIndex puts it. What its callers relied on stays: a
+deferred dropdown is its button alone until hovered, a phone's search
+takes no focus, popper keeps the list 12 pixels inside the window. A
+breadcrumb is one Tab stop.
 P1's lead list and W3's time zone by the keyboard alone.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -1490,7 +1717,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T2.5` | 列表打开时搜索框不取得焦点 | 故事 W3、故事 P1 | 端到端 |
 | `T2.6` | 成员下拉框里的选择按钮也在 Tab 顺序里：负责人一格要按两次 Tab | 故事 P1 | 端到端 |
 | `T2.7` | 列表再打开时还留着上次输入的搜索 | 故事 P1 | 端到端 |
-| `T2.8` | 成员下拉框丢掉调用方给的 `tabIndex` | 故事 P1（之后的 Task 起） | 端到端 |
+| `T2.8` | 成员下拉框丢掉调用方给的 `tabIndex` | 故事 P1（Task 4 起） | 端到端 |
+| `T2.9` | 带搜索的下拉框用自定义按钮时不在 Tab 顺序里（添加成员的选择） | 故事 P5（Task 8 起） | 端到端 |
+| `T2.10` | 调用方推迟的成员下拉框立即渲染选择和 popper（每一行都有） | `base.test.tsx` | vitest |
+| `T2.11` | 手机上成员下拉框打开时搜索框也取得焦点 | `base.test.tsx` | vitest |
+| `T2.12` | 成员下拉框的列表离窗口边缘没有 12 像素 | `base.test.tsx` | vitest |
+| `T2.13` | 输入法组字时的 Escape 关上列表 | 故事 P1 | 端到端 |
+| `T2.14` | 面包屑中不是最后一节的标题也在 Tab 顺序里：一节有两个停留点 | 故事 P2（Task 3 起） | 端到端 |
+| `T2.15` | 在成员下拉框的测试里写一个非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -1515,7 +1749,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Tests:**
 - vitest：`use-copy-link.test.ts`：`useCopyLink > writes the link to the clipboard and says what was copied`；`… > says it could not when the browser does not let the page write the clipboard, and does not reject`；`useCopyProjectLink > copies the link of the project's work items in the address's workspace`。`use-join-project.test.ts`：`joins the project, then does what the page does next`；`joins the project with nothing next where the store's answer is the page's`；`shows nerve's reason when it refuses, and does nothing next`；`does nothing on the page when the join $settles after another tab moved this one to another account`（`lateSettlings`）。`project-wrapper.test.tsx` 加 `shows that the project is archived, whose button opens the archived projects, to a member or anyone`。`use-project-fetch.test.ts`：取数的表加一行（已归档、调用者是成员时只取项目本身），决定的表加两行（已归档压过成员关系，也压过加入）。`project.store.test.ts`：`gives a project's own read nerve answered after its list, and holds nothing when nerve refuses it`（改写原来的"自己的读取在先"）；`gives the copy of a list nerve answered after the project's own read: a change made meanwhile shows (F-3)`。
-- 端到端：`P2 (page): a member opens a public project he is no member of by its address: the join screen, which reads the project alone; joined, its pages show and read the rest; a private project is not found, an archived one says so`；`P2 (page): the projects page shows a member the public project to join and not the private one; its card copies its link, or says it could not, and joins it, the dialog held until nerve answers`（`sentHeld` 扣住加入：取消禁用、Escape 不关，只发一次；不是成员时和已归档的项目都不取 `PROJECT_MEMBER`，`watchPage` 的 `apiRequests`）。S2：成员、访客、不是项目成员的成员打开项目列表（`ARCHIVED` 的取数对每个角色），`S2: the admin of a project opens it archived: the archived screen, and the project's read alone, not what its members read`。
+- 端到端：`P2 (page): a member opens a public project he is no member of by its address: the join screen, which reads the project alone; joined, its pages show and read the rest; a private project is not found, an archived one says so`；`P2 (page): the projects page shows a member the public project to join and not the private one; its card copies its link, or says it could not, and joins it, the dialog held until nerve answers`（`sentHeld` 扣住加入：取消禁用、Escape 不关，只发一次；不是成员时和已归档的项目都不取 `PROJECT_MEMBER`，`watchPage` 的 `apiRequests`；加入之后工作项页的页头中项目的面包屑是一个 Tab 停留点：从它按 Tab 到下一节"Work Items"，Task 2 的面包屑）。S2：成员、访客、不是项目成员的成员打开项目列表（`ARCHIVED` 的取数对每个角色），`S2: the admin of a project opens it archived: the archived screen, and the project's read alone, not what its members read`。
 
 - [ ] **Step 1: 复制链接**
 
@@ -2529,10 +2763,10 @@ import { maxBy, sortBy } from "lodash-es";
 `.oxlintrc.json`（修改，1 处）：
 
 ````old .oxlintrc.json
-        "web/apps/web/emojibase.test.ts"
+        "web/apps/web/core/lib/fake-controls.ts"
 ````
 ````new .oxlintrc.json
-        "web/apps/web/emojibase.test.ts",
+        "web/apps/web/core/lib/fake-controls.ts",
         "web/apps/web/core/components/project/use-join-project.ts",
         "web/apps/web/core/components/project/use-join-project.test.ts",
         "web/apps/web/core/hooks/use-copy-link.ts",
@@ -2765,6 +2999,11 @@ test("P2 (page): the projects page shows a member the public project to join and
   await expect(page).toHaveURL(`/${slug}/projects/${web.id}/issues`);
   expect(watch.apiRequests.filter((request) => request === `POST /api/v0/projects/${web.id}/join`)).toHaveLength(1);
   await expectMember(db, web.id, memberEmail, { role: 15, is_active: true, sort_order: 65535, by: memberEmail });
+  // The project's crumb in the header is one Tab stop, the button of its list (M3 design 7.7): its title, which opens
+  // the project's work items by a click, is not another. Tab goes on to the next crumb.
+  await page.getByRole("button", { name: "Web", exact: true }).first().focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Work Items", exact: true })).toBeFocused();
 
   // The work items' page asks Plane's address of the filters, M4's (P8b spec §5)
   const filters = `GET /api/workspaces/${slug}/projects/${web.id}/user-properties/`;
@@ -2985,7 +3224,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Tests:**
 - vitest：`project-refusal.test.ts`：`projectRefusal shows $when`（`it.each`，决定的顺序：名称已被占用（不论问题还指出哪些字段）、标识已被占用、只指向表单的字段的字段错误、也指向表单没有的字段（负责人）的、没有字段的拒绝、没有到达 nerve）。`logo-props.test.ts`：`keeps an $picked.type picked as nerve keeps it`。`use-create-project.test.ts`：`creates the project from the form's fields, no lead until one is picked, says so and gives it`；`sends the lead picked`；`shows $refused under its field, gives nothing and says no success`；`shows nerve's reason for $refused in a toast`；`does nothing on the page and gives nothing when the creation $settles after another tab moved this one`。`web/packages/utils/src/project.test.ts`：`projectIdentifierSanitizer makes $typed $identifier`（转大写、去掉别的字符，土耳其字母照留；`..` 成为空，`w.e.b` 成为 `WEB`）。
-- 端到端：`P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; the project shows in the list and the sidebar`（表单的顺序中负责人紧在取消之前：从取消按 Shift+Tab 到它，Enter 打开它的列表：有管理员和成员、没有访客；被占用的标识和不允许的名称各在字段下；创建的请求体经 `sentHeld`：只有表单的字段，扣住时取消禁用、Escape 不关；之后列表和侧边栏有它）。
+- 端到端：`P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; the project shows in the list and the sidebar`（表单的顺序中负责人紧在取消之前：从取消按 Shift+Tab 到它，Enter 打开它的列表：有管理员和成员、没有访客；被占用的标识和不允许的名称各在字段下；创建的请求体经 `sentHeld`：只有表单的字段，扣住时取消和页头的关闭按钮禁用、Escape 不关；之后列表和侧边栏有它）。
 
 - [ ] **Step 1: 拒绝、图标和创建的 hook**
 
@@ -3847,7 +4086,9 @@ test("P1 (page): a member creates a project from the projects page, its identifi
     logo_props: { in_use: "emoji", emoji: { value: "128640" } },
     project_lead_id: adminId,
   });
+  // neither by Cancel, by the header's Close nor by Escape
   await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
   expect(await closedByEscape(page)).toBe(false);
   expect((await release()).status()).toBe(201);
   await expect(page.getByText("Project created successfully")).toBeVisible();
@@ -3933,8 +4174,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T4.6` | 负责人的候选包括工作区的访客 | 故事 P1 | 端到端 |
 | `T4.7` | 标识符保留输入的大小写 | `project.test.ts`、故事 P1 | vitest；端到端 |
 | `T4.8` | 图标丢掉颜色 | `logo-props.test.ts` | vitest |
-| `T4.10` | 负责人不在创建表单的 Tab 顺序里：Tab 在表单的按钮之后才到它 | 故事 P1 | 端到端 |
 | `T4.9` | 在创建项目的 hook 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T4.10` | 负责人不在创建表单的 Tab 顺序里：Tab 在表单的按钮之后才到它 | 故事 P1 | 端到端 |
+| `T4.11` | 创建在途时页头的关闭按钮仍可用 | 故事 P1 | 端到端 |
 
 ---
 
@@ -3942,19 +4184,20 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/project/use-update-project-details.test.ts`、`web/apps/web/core/components/project/use-update-project-details.ts`
-- Modify: `.oxlintrc.json`、`e2e/stories/project/p3-project-settings.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/core/components/project/form.tsx`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json`
+- Modify: `.oxlintrc.json`、`e2e/fixtures/settings-pages.ts`、`e2e/stories/project/p3-project-settings.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/core/components/project/form.tsx`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json`
 
 **Interfaces:**
 - Produces（spec 2.5；M3 设计 2 的 P3，3.19，7.1、7.6；P8b spec 第 5 节 P10 一行和 P6；M2 收尾交接第 11 节的项目时区）：
   - `core/components/project/use-update-project-details.ts`：`ProjectDetails`（`ProjectUpdate` 中 general 页编辑的 `name`、`identifier`、`description`、`network`、`logo_props`、`timezone`）、`projectDetailsOf(project)`；`useUpdateProjectDetails(): (project, workspaceSlug, details, setError) => Promise<void>`：经 `followInSession` 发出一个修改：标识改了时先问 nerve（`checkProjectIdentifier`），被占用就交回 `identifier_taken`，在标识下说明，什么都不发（P8b 的 P6：原来的检查在 `try` 之外，`!available` 的一支没有测试）；否则发这些字段，成功提示；被拒绝时经 `useProjectRefusal`（检查本身被拒绝也是），不论哪一步都只在发出它的会话里跟进。
   - `ProjectDetailsForm`（`project/form.tsx`，整个文件，411 → 292 行）：默认值是 `projectDetailsOf(project)`；提交经 `useUpdateProjectDetails`，按钮忙到跟进做完（`isSubmitting`）；标识照 Task 4 的 `projectIdentifierSanitizer`；图标经 `logoPropsOf`，选择器的按钮有名字；时区是 `GET /api/v0/timezones` 的列表（M2 交接第 11 节）；成员看到 nerve 所持的值，改不了（没有归档、删除）；原来按 Plane 的错误形状读拒绝（`err.name`、`err.identifier` 中的码，读不到 nerve 的 `problem.code`，只剩"something went wrong"）、`console.error`、提交之后 300 毫秒才结束的加载和 `useEffect` 的 `reset`（和它的 `react-hooks/exhaustive-deps` 抑制）都删除：页面按项目挂载一个表单。
-  - general 页（`settings/projects/[projectId]/page.tsx`）：地址的项目经 `getProjectById(projectId)`（不读 `currentProjectDetails`），表单 `key={project.id}`（去掉它没有会失败的检查：应用中直接从一个项目的设置页到另一个的只有命令面板，spec 第 3 节第 7 条，待裁定）。
+  - general 页（`settings/projects/[projectId]/page.tsx`）：地址的项目经 `getProjectById(projectId)`（不读 `currentProjectDetails`），表单 `key={project.id}`：每个项目一个表单（spec 第 3 节第 7 条）。应用中还没有不离开路由就从一个项目的设置页到另一个的路，P3 的页面版本用路由自己的移动代替以后的切换。
   - i18n（en、zh-CN 的 `common.json`）：没有读者的四条删除（`project_name_already_taken`、`project_name_cannot_contain_special_characters`、`project_identifier_already_taken`、`common.identifier_already_exists`；拒绝的文案是 `errors` 的）。
   - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `use-update-project-details.ts` 和它的测试。
+- e2e 的共用部分：`e2e/fixtures/settings-pages.ts` 的 `moveWithinApp(page, path)`：像应用的链接那样不重新载入就到 `path`（`history.pushState`，再发 `popstate`，React Router 跟着它），故事用它代替应用还没有的链接。
 
 **Tests:**
 - vitest：`use-update-project-details.test.ts`：`sends the fields the page edits, asks nothing of an identifier unchanged, and says so`；`asks nerve of an identifier changed, then sends it`；`says under the identifier that another project has it, and sends nothing`；`shows $refused under its field and says no success`；`shows nerve's reason for $refused in a toast`；`shows nerve's reason in a toast when it refuses the identifier's check, sends nothing and settles`；`does nothing on the page when the change $settles after another tab moved this one`；`says nothing of an identifier nerve answers taken after another tab moved this one`。
-- 端到端：`P3 (page): the project's admin changes its name, identifier, description, visibility, time zone and icon on its general page, which hold after a reload; an identifier another project has is said under it and nothing is sent; the page waits for nerve; its member sees them and can change nothing`（输入 `o.ps`，标识显示 `OPS`，被占用，没有 `PATCH`；修改的请求体经 `sentHeld`，扣住时按钮不可用；重新载入之后都在；成员的页面只读；没有发往别处的请求，`requestsElsewhere`）。
+- 端到端：`P3 (page): the project's admin changes its name, identifier, description, visibility, time zone and icon on its general page, which hold after a reload; an identifier another project has is said under it and nothing is sent; the page waits for nerve; its member sees them and can change nothing`（输入 `o.ps`，标识显示 `OPS`，被占用，没有 `PATCH`；修改的请求体经 `sentHeld`，扣住时按钮不可用；重新载入之后都在；成员的页面只读；没有发往别处的请求，`requestsElsewhere`）。`P3 (page): another project's general page, reached without leaving the route, shows that project's values`（从 Web 的 general 页经 `moveWithinApp` 到 Ops 的，显示 Ops；再回到 Web 的：它的读取已在会话的缓存里，包装层立即显示页面，路由一直挂载着，显示的是 WEB 的标识）。
 
 - [ ] **Step 1: general 页的修改**
 
@@ -4583,6 +4826,30 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
 
 - [ ] **Step 4: 端到端**
 
+`e2e/fixtures/settings-pages.ts`（修改，1 处）：
+
+````old e2e/fixtures/settings-pages.ts
+
+/**
+ * Fills the security page's form, which page shows, with the current password and a new one typed twice, and
+````
+````new e2e/fixtures/settings-pages.ts
+
+/**
+ * Moves page to path as a link of the app would, without a load: React Router follows the history's popstate. A
+ * story's stand-in for a link the app does not have yet.
+ */
+export async function moveWithinApp(page: Page, path: string): Promise<void> {
+  await page.evaluate((to) => {
+    window.history.pushState(null, "", to);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, path);
+}
+
+/**
+ * Fills the security page's form, which page shows, with the current password and a new one typed twice, and
+````
+
 `e2e/stories/project/p3-project-settings.spec.ts`（修改，3 处）：
 
 ````old e2e/stories/project/p3-project-settings.spec.ts
@@ -4594,7 +4861,14 @@ import { expect, test } from "../../fixtures/test";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { answerTo, bodiesSentTo, enabledWithin, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
+import {
+  answerTo,
+  bodiesSentTo,
+  enabledWithin,
+  moveWithinApp,
+  registerOnboarded,
+  sentHeld,
+} from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 ````
@@ -4718,6 +4992,30 @@ test("P3 (page): the project's admin changes its name, identifier, description, 
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
 });
 
+test("P3 (page): another project's general page, reached without leaving the route, shows that project's values", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const admin = await registerOnboarded(api, emailFor(testInfo, "admin"));
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  const ops = await createProject(api, admin.access_token, slug, { name: "Ops", identifier: "OPS" });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  // the router's own move, as a switcher on the settings pages would make it: no link of the app does it yet
+  await page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#name")).toHaveValue("Web");
+  await moveWithinApp(page, `/${slug}/settings/projects/${ops.id}`);
+  await expect(page.locator("#name")).toHaveValue("Ops");
+  // Web's read is in the session's cache: the wrapper shows its page at once, the route mounted throughout
+  await moveWithinApp(page, `/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#identifier")).toHaveValue("WEB");
+
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+});
+
 ````
 
 - [ ] **Step 5: 运行检查**
@@ -4732,12 +5030,12 @@ Run: `make test-web`
 Expected: 通过。
 
 Run: `make e2e`
-Expected: 100 个全部通过。
+Expected: 101 个全部通过。
 
 - [ ] **Step 6: 提交**
 
 ```bash
-git add .oxlintrc.json e2e/stories/project/p3-project-settings.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx' web/apps/web/core/components/project/form.tsx web/apps/web/core/components/project/use-update-project-details.test.ts web/apps/web/core/components/project/use-update-project-details.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/zh-CN/common.json
+git add .oxlintrc.json e2e/fixtures/settings-pages.ts e2e/stories/project/p3-project-settings.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx' web/apps/web/core/components/project/form.tsx web/apps/web/core/components/project/use-update-project-details.test.ts web/apps/web/core/components/project/use-update-project-details.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/zh-CN/common.json
 ```
 ```bash
 git commit -m "feat(M3/P10): a project's general page asks nerve of a changed identifier first, sends its fields and waits for nerve
@@ -4763,6 +5061,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T5.4` | 修改不论会话都跟进 | `use-update-project-details.test.ts` | vitest |
 | `T5.5` | 修改在途时更新按钮仍可用 | 故事 P3 | 端到端 |
 | `T5.6` | 输入的标识符保留大小写和其他字符 | 故事 P3 | 端到端 |
+| `T5.7` | general 页不随项目重建表单：路由移到另一个项目时仍是第一个项目的值（去掉 `key`） | 故事 P3 | 端到端 |
 | `T5.8` | 在 general 页的 hook 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
@@ -5202,29 +5501,28 @@ describe("the auto-archiving's custom range", () => {
 
 - [ ] **Step 4: 端到端**
 
-`e2e/stories/project/p3-project-settings.spec.ts`（修改，2 处）：
+`e2e/stories/project/p3-project-settings.spec.ts`（修改，3 处）：
 
 ````old e2e/stories/project/p3-project-settings.spec.ts
-import { answerTo, bodiesSentTo, enabledWithin, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
+  bodiesSentTo,
 ````
 ````new e2e/stories/project/p3-project-settings.spec.ts
-import {
-  answerTo,
   bodiesSentTo,
   closedByEscape,
-  enabledWithin,
-  registerOnboarded,
-  sentHeld,
-  sentTo,
-} from "../../fixtures/settings-pages";
 ````
 ````old e2e/stories/project/p3-project-settings.spec.ts
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
-});
-
+  sentHeld,
 ````
 ````new e2e/stories/project/p3-project-settings.spec.ts
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+  sentHeld,
+  sentTo,
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+});
+
+test("P3 (page): another project's general page, reached without leaving the route, shows that project's values", async ({
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
 });
 
 test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months", async ({
@@ -5294,6 +5592,7 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   await expectQuietConsole(page, watch, { warnings: Array.from({ length: 5 }, () => EMOJI_CHECK_WARNING) });
 });
 
+test("P3 (page): another project's general page, reached without leaving the route, shows that project's values", async ({
 ````
 
 - [ ] **Step 5: 运行检查**
@@ -5308,7 +5607,7 @@ Run: `make test-web`
 Expected: 通过。
 
 Run: `make e2e`
-Expected: 101 个全部通过。
+Expected: 102 个全部通过。
 
 - [ ] **Step 6: 提交**
 
@@ -5350,17 +5649,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Produces（spec 2.7；M3 设计 2 的 P5，3.5、3.7，7.1、7.6；M1-P4 交接的离开的顺序；P8b spec 第 5 节 P10 一行：`err.error` 和 `console.log`）：
-  - `core/components/project/settings/use-project-membership-changes.ts`：`useProjectMembershipChanges(workspaceSlug, projectId)` 给出 `changeRole(userId, role: ProjectRole)`（发编号，生成的 `ProjectMemberUpdate`）、`remove(userId)`、`leave()`，都经 `followInSession`，拒绝经 `useRefusalToast`；`leave` 在 nerve 做完之后才去 `/{slug}/projects`（M1-P4：原来先跳转再离开，nerve 拒绝时人已离开页面；唯一的管理员离开被拒绝，停在原处），忙到跳转做完。
+  - `core/components/project/settings/use-project-membership-changes.ts`：`useProjectMembershipChanges(workspaceSlug, projectId)` 给出 `changeRole(userId, role: ProjectRole)`（发编号，生成的 `ProjectMemberUpdate`）、`remove(userId, done?)`、`leave(done?)`，都经 `followInSession`，拒绝经 `useRefusalToast`；`done` 是发出移出、离开的弹窗的关上，只在 nerve 做完之后（经 `followInSession`，在发出它的会话里），被拒绝时弹窗留着（spec 第 3 节第 6 条，预检之后的 A-M2：每个弹窗一条规则）；`leave` 在 nerve 做完之后才关上弹窗、去 `/{slug}/projects`（M1-P4：原来先跳转再离开，nerve 拒绝时人已离开页面；唯一的管理员离开被拒绝，停在原处），忙到跳转做完。
   - `project-roles.ts`（整个文件）：`MembershipCaller`（调用者在工作区和项目中的角色）、`ShownMembership`（是否他自己的、角色、成员在工作区的角色）；`roleChoices(caller, membership)`：nerve 允许的角色（M3 设计 3.5：工作区管理员不受相对规则限制；别人只改低于自己的、只给低于自己的，不改自己的；工作区访客只能是访客；没有权限时没有选项）；`canRemove(caller, membership)`：不是自己的，角色不高于自己的（工作区管理员同样）。成员页只提供这些，不提供 nerve 会拒绝的（P5b spec 第 5 节）。
-  - 成员页：`member-columns.tsx`（整个文件）去掉从没有提交过的 `useForm`、`console.log` 和 `err.error`；角色列给出 `roleChoices`，没有选项时只显示角色，角色的名字经 `ROLE_DETAILS[role].i18n_title` 翻译（原来是英文的 `ROLE`）；名字列的菜单在自己一行是"离开"，别人一行在 `canRemove` 时是"移出"。`useProjectColumns` 算出调用者（`MembershipCaller`）和每一行的 `ShownMembership`。`member-list-item.tsx`（整个文件）经 `useProjectMembershipChanges`（原来读 `err.error`、自己跳转）。
-  - 确认框 `confirm-project-member-remove.tsx`：移出、离开在途时关不掉（取消禁用、`handleClose` 为空）；确认按钮的 `tabIndex={1}` 删除（oxlint：正的 `tabIndex`），web 的上限 350 → 349。
-  - 离开弹窗 `leave-project-modal.tsx`：表单的值有类型（原来是 `any`），核对名称和"Leave Project"之后 `await leave()`；在途时关不掉。
+  - 成员页：`member-columns.tsx`（整个文件）去掉从没有提交过的 `useForm`、`console.log` 和 `err.error`；角色列给出 `roleChoices`，没有选项时只显示角色，角色的名字经 `ROLE_DETAILS[role].i18n_title` 翻译（原来是英文的 `ROLE`）；名字列的菜单在自己一行是"离开"，别人一行在 `canRemove` 时是"移出"。`useProjectColumns` 算出调用者（`MembershipCaller`）和每一行的 `ShownMembership`。`member-list-item.tsx`（整个文件）经 `useProjectMembershipChanges`（原来读 `err.error`、自己跳转），确认框的关上交给 `remove`、`leave` 作 `done`。
+  - 确认框 `confirm-project-member-remove.tsx`：移出、离开在途时关不掉（取消禁用、`handleClose` 为空）；它自己不再在 `await onSubmit()` 之后关上，只结束忙碌：关上是成功的跟进（`onSubmit` 的 `done`），被拒绝时留着、按钮重新可用，原因在共用的拒绝提示里；确认按钮的 `tabIndex={1}` 删除（oxlint：正的 `tabIndex`），web 的上限 350 → 349。
+  - 离开弹窗 `leave-project-modal.tsx`：表单的值有类型（原来是 `any`），核对名称和"Leave Project"之后 `await leave(handleClose)`：nerve 做完之后关上、去项目列表，被拒绝时留着；在途时关不掉。侧边栏和项目页头的离开都经它，两处都只对项目的访客提供离开。
   - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `use-project-membership-changes.ts`、`project-roles.ts` 和它们的测试；`tools/keywords.json` 加规则 `project-leave`：web 应用的 `app`、`core` 中只有这个 hook 调 store 的 `leaveProject`（store 自己的定义和测试不算），离开的顺序和拒绝只写在 `leave` 里（spec 2.14）。
 - e2e 的共用部分：新文件 `e2e/fixtures/project-pages.ts`：`Sent`（请求的方法和路径）、`removalOf(id)`、`leavingOf(id)`、`endProjectMembership(page, email, …)`（在成员页打开某一行的菜单，选"离开"或"移出"，在确认框中确认，交回 nerve 的回答）。
 
 **Tests:**
-- vitest：`use-project-membership-changes.test.ts`：`sends a member's new role as its number, to the membership's project`；`removes a member of the project, and stays`；`leaves the project, and shows the workspace's projects only once nerve has made it, settling once they show`；`shows nerve's reason when it refuses $change, and stays`（三种修改各一行）；`does nothing on the page when it $settles after another tab moved this one to another account`（三种修改各两行）。`project-roles.test.tsx` 的角色表加上每个角色显示的键（`role_details.*.title`），成员页的选择按键选；加一张表 `what the members page offers > $who`：项目管理员、工作区管理员（是或不是项目的成员）、项目成员对成员、另一位管理员、自己、工作区的访客，各自可给的角色（`roleChoices`）和能否移出（`canRemove`）。
-- 端到端：`P5 (page): a project admin who is no workspace admin is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal held too`（改角色的请求体 `{ role: 5 }`；移出被扣住时取消禁用、Escape 不关；唯一的管理员离开被拒绝（409），页面说明原因；成员离开被扣住时页面不跳转；访客从侧边栏离开，弹窗被扣住时关不掉）。
+- vitest：`use-project-membership-changes.test.ts`：`sends a member's new role as its number, to the membership's project`；`removes a member of the project, and stays, its dialog closed once nerve has`；`leaves the project, and closes its dialog and shows the workspace's projects only once nerve has made it, settling once they show`；`shows nerve's reason when it refuses $change, and stays, its dialog open`（三种修改各一行）；`does nothing on the page when it $settles after another tab moved this one to another account`（三种修改各两行：弹窗不关、不跳转、不提示）。`project-roles.test.tsx` 的角色表加上每个角色显示的键（`role_details.*.title`），成员页的选择按键选；加一张表 `what the members page offers > $who`：项目管理员、工作区管理员（是或不是项目的成员）、项目成员对成员、另一位管理员、自己、工作区的访客，各自可给的角色（`roleChoices`）和能否移出（`canRemove`）。
+- 端到端：`P5 (page): a project admin who is no workspace admin is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too`（改角色的请求体 `{ role: 5 }`；移出被扣住时取消禁用、Escape 不关；唯一的管理员离开被拒绝（409），页面说明原因，确认框还开着、按钮可用；成员离开被扣住时页面不跳转；访客从侧边栏离开：弹窗开着时管理员经 API 结束了她的成员关系，nerve 拒绝（403），弹窗留着、按钮可用；管理员把她加回来，她再离开，弹窗被扣住时关不掉）。
 
 - [ ] **Step 1: 角色的规则和成员关系的修改**
 
@@ -5607,7 +5906,7 @@ export function canRemove(caller: MembershipCaller, membership: ShownMembership)
 }
 ````
 
-`web/apps/web/core/components/project/settings/use-project-membership-changes.test.ts`（新文件，108 行）：
+`web/apps/web/core/components/project/settings/use-project-membership-changes.test.ts`（新文件，116 行）：
 
 ````file web/apps/web/core/components/project/settings/use-project-membership-changes.test.ts
 /**
@@ -5624,13 +5923,15 @@ import { useProjectMembershipChanges } from "./use-project-membership-changes";
 
 // What a project's pages send for each change of a membership, and what they do with nerve's answer (M3 design 7.1,
 // 7.6, M1-P4): the hook runs as a plain function, with stand-ins for the stores' changes, which nerve answers when the
-// test says, and for the router's navigate. Its session is fake-tab.ts's.
+// test says, for the router's navigate, and for the closing of the dialog that sent a removal or the leaving. Its
+// session is fake-tab.ts's.
 
 const page = vi.hoisted(() => ({
   updateMemberRole: vi.fn(),
   removeMemberFromProject: vi.fn(),
   leaveProject: vi.fn(),
   navigate: vi.fn(),
+  closeDialog: vi.fn(),
 }));
 const web = projectOf("WEB", "w-acme", { member_role: 20 });
 vi.mock("react-router", () => ({ useNavigate: () => page.navigate }));
@@ -5653,8 +5954,8 @@ const changes = () => useProjectMembershipChanges("acme", web.id);
 /** Each change the pages make, by its store change: the role's, the removal's and the leaving's. */
 const made = [
   { change: "a role", store: page.updateMemberRole, make: () => changes().changeRole("u-bob", 5) },
-  { change: "a removal", store: page.removeMemberFromProject, make: () => changes().remove("u-bob") },
-  { change: "the leaving", store: page.leaveProject, make: () => changes().leave() },
+  { change: "a removal", store: page.removeMemberFromProject, make: () => changes().remove("u-bob", page.closeDialog) },
+  { change: "the leaving", store: page.leaveProject, make: () => changes().leave(page.closeDialog) },
 ];
 
 beforeEach(() => {
@@ -5664,6 +5965,7 @@ beforeEach(() => {
     store.mockResolvedValue(undefined);
   }
   page.navigate.mockReset();
+  page.closeDialog.mockReset();
   toasts.length = 0;
 });
 
@@ -5674,32 +5976,37 @@ describe("useProjectMembershipChanges", () => {
     expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
   });
 
-  it("removes a member of the project, and stays", async () => {
-    await changes().remove("u-bob");
+  it("removes a member of the project, and stays, its dialog closed once nerve has", async () => {
+    const removal = heldChange<undefined>();
+    page.removeMemberFromProject.mockReturnValueOnce(removal.sent);
+    const removed = changes().remove("u-bob", page.closeDialog);
     expect(page.removeMemberFromProject.mock.calls).toEqual([[web.id, "u-bob"]]);
-    expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
+    expect(page.closeDialog).not.toHaveBeenCalled();
+    removal.answer(undefined);
+    await removed;
+    expect([page.closeDialog.mock.calls.length, page.navigate.mock.calls, toasts]).toEqual([1, [], []]);
   });
 
-  it("leaves the project, and shows the workspace's projects only once nerve has made it, settling once they show", async () => {
+  it("leaves the project, and closes its dialog and shows the workspace's projects only once nerve has made it, settling once they show", async () => {
     const leaving = heldChange<undefined>();
     page.leaveProject.mockReturnValueOnce(leaving.sent);
     const shown = heldChange<undefined>();
     page.navigate.mockReturnValueOnce(shown.sent);
-    const left = changes().leave();
+    const left = changes().leave(page.closeDialog);
     const settled = settledYet(left);
     expect(page.leaveProject.mock.calls).toEqual([[web]]);
-    expect(page.navigate).not.toHaveBeenCalled();
+    expect([page.closeDialog.mock.calls, page.navigate.mock.calls]).toEqual([[], []]);
     leaving.answer(undefined);
     await vi.waitFor(() => expect(page.navigate.mock.calls).toEqual([["/acme/projects"]]));
-    expect(settled()).toBe(false);
+    expect([page.closeDialog.mock.calls.length, settled()]).toEqual([1, false]);
     shown.answer(undefined);
     await left;
   });
 
-  it.each(made)("shows nerve's reason when it refuses $change, and stays", async ({ store, make }) => {
+  it.each(made)("shows nerve's reason when it refuses $change, and stays, its dialog open", async ({ store, make }) => {
     store.mockRejectedValueOnce(refusal(409, "project.sole_admin"));
     await make();
-    expect(page.navigate.mock.calls).toEqual([]);
+    expect([page.closeDialog.mock.calls, page.navigate.mock.calls]).toEqual([[], []]);
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.project_sole_admin" }]);
   });
 
@@ -5713,14 +6020,14 @@ describe("useProjectMembershipChanges", () => {
         switchAccount();
         settle(change);
         await making;
-        expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
+        expect([page.closeDialog.mock.calls, page.navigate.mock.calls, toasts]).toEqual([[], [], []]);
       }
     );
   });
 });
 ````
 
-`web/apps/web/core/components/project/settings/use-project-membership-changes.ts`（新文件，48 行）：
+`web/apps/web/core/components/project/settings/use-project-membership-changes.ts`（新文件，53 行）：
 
 ````file web/apps/web/core/components/project/settings/use-project-membership-changes.ts
 /**
@@ -5741,7 +6048,8 @@ import { followInSession } from "@/lib/in-session";
  * The changes of the memberships of the project of projectId, in the workspace of workspaceSlug, that its pages make
  * (M3 design 7.6): a member's role, a member's removal, and the caller's leaving. Each shows nerve's refusal as its
  * reason; the page follows each only in the session it was sent in (M3 design 7.1): once another tab has moved this
- * one to another account, the page is that account's, and says nothing of the change.
+ * one to another account, the page is that account's, and says nothing of the change. A dialog that sent the removal
+ * or the leaving gives done, its closing, which follows nerve's having made it alone: one nerve refuses leaves it open.
  */
 export function useProjectMembershipChanges(workspaceSlug: string, projectId: string) {
   const navigate = useNavigate();
@@ -5755,17 +6063,21 @@ export function useProjectMembershipChanges(workspaceSlug: string, projectId: st
     /** Gives the member of userId the role: its number, as nerve's ProjectMemberUpdate takes it. */
     changeRole: (userId: string, role: ProjectRole) =>
       followInSession(() => updateMemberRole(projectId, userId, role), { failed }),
-    /** Ends the membership of the member of userId. */
-    remove: (userId: string) => followInSession(() => removeMemberFromProject(projectId, userId), { failed }),
+    /** Ends the membership of the member of userId; once nerve has, done. */
+    remove: (userId: string, done?: () => void) =>
+      followInSession(() => removeMemberFromProject(projectId, userId), { done, failed }),
     /**
-     * Ends the caller's own membership; once nerve has, and only then, the workspace's projects show (M1-P4: a leaving
-     * nerve refuses, its only admin's, leaves him where he was, its member still). Settles once they show.
+     * Ends the caller's own membership; once nerve has, and only then, done, and the workspace's projects show (M1-P4:
+     * a leaving nerve refuses, its only admin's, leaves him where he was, its member still). Settles once they show.
      */
-    leave: async () => {
+    leave: async (done?: () => void) => {
       const project = getProjectById(projectId);
       if (!project) return;
       await followInSession(() => leaveProject(project), {
-        done: () => navigate(`/${workspaceSlug}/projects`),
+        done: () => {
+          done?.();
+          return navigate(`/${workspaceSlug}/projects`);
+        },
         failed,
       });
     },
@@ -5775,8 +6087,29 @@ export function useProjectMembershipChanges(workspaceSlug: string, projectId: st
 
 - [ ] **Step 2: 成员页、确认框、离开弹窗和上限**
 
-`web/apps/web/core/components/project/confirm-project-member-remove.tsx`（修改，4 处）：
+`web/apps/web/core/components/project/confirm-project-member-remove.tsx`（修改，7 处）：
 
+````old web/apps/web/core/components/project/confirm-project-member-remove.tsx
+  data: Partial<MemberUser>;
+````
+````new web/apps/web/core/components/project/confirm-project-member-remove.tsx
+  data: Partial<MemberUser>;
+  /** Makes the removal or the leaving; settles once the page has followed it: its follow-up of success closes this. */
+````
+````old web/apps/web/core/components/project/confirm-project-member-remove.tsx
+    setIsDeleteLoading(true);
+
+````
+````new web/apps/web/core/components/project/confirm-project-member-remove.tsx
+    setIsDeleteLoading(true);
+````
+````old web/apps/web/core/components/project/confirm-project-member-remove.tsx
+
+    handleClose();
+````
+````new web/apps/web/core/components/project/confirm-project-member-remove.tsx
+    setIsDeleteLoading(false);
+````
 ````old web/apps/web/core/components/project/confirm-project-member-remove.tsx
   const currentProjectDetails = getProjectById(projectId);
 
@@ -5785,7 +6118,8 @@ export function useProjectMembershipChanges(workspaceSlug: string, projectId: st
   const currentProjectDetails = getProjectById(projectId);
 
   // While the removal or the leaving is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): it closes
-  // once nerve has answered, and no dialog opened again offers it while the request is out.
+  // once nerve has made the change, and no dialog opened again offers it while the request is out. One nerve refuses
+  // leaves it open, its buttons enabled again, the reason in the refusal's toast.
 ````
 ````old web/apps/web/core/components/project/confirm-project-member-remove.tsx
     <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
@@ -5893,8 +6227,9 @@ import { useProjectMembershipChanges } from "@/components/project/settings/use-p
       });
       return;
     }
-    // the leaving first: the workspace's projects show once nerve has made it; one it refuses leaves the modal open
-    await leave();
+    // the leaving first: once nerve has made it the modal closes and the workspace's projects show; one it refuses
+    // leaves the modal open
+    await leave(handleClose);
 ````
 ````old web/apps/web/core/components/project/leave-project-modal.tsx
     <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
@@ -5914,7 +6249,7 @@ import { useProjectMembershipChanges } from "@/components/project/settings/use-p
           <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
 ````
 
-`web/apps/web/core/components/project/member-list-item.tsx`（整个文件，63 行）：
+`web/apps/web/core/components/project/member-list-item.tsx`（整个文件，66 行）：
 
 ````whole web/apps/web/core/components/project/member-list-item.tsx
 /**
@@ -5953,8 +6288,11 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
     workspaceSlug,
   });
 
-  // the caller's own membership he leaves; another's he removes
-  const handleRemove = (memberId: string) => (memberId === currentUser?.id ? leave() : remove(memberId));
+  // the caller's own membership he leaves; another's he removes; the dialog that asked closes once nerve has done it
+  const handleRemove = (memberId: string) => {
+    const closeDialog = () => setRemoveMemberModal(null);
+    return memberId === currentUser?.id ? leave(closeDialog) : remove(memberId, closeDialog);
+  };
 
   if (!memberDetails) return null;
   return (
@@ -6344,7 +6682,7 @@ import { anotherBrowser, memberRow } from "../../fixtures/workspace-pages";
   );
 });
 
-test("P5 (page): a project admin who is no workspace admin is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal held too", async ({
+test("P5 (page): a project admin who is no workspace admin is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
   api,
   baseURL,
   browser,
@@ -6407,9 +6745,10 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(memberRow(page, gus.email)).toHaveCount(0);
 
-  // His leaving, as the only admin: nerve refuses it, and the page says why and stays.
+  // His leaving, as the only admin: nerve refuses it, and the page says why and stays, the dialog open.
   expect((await endProjectMembership(page, pat.email, "Leave", leaving)).status()).toBe(409);
   await expect(page.getByText("The project would be left without an admin")).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Leave", exact: true })).toBeEnabled();
   await expect(page).toHaveURL(members);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
     [`409 ${leaving.method} ${leaving.path}`],
@@ -6437,8 +6776,10 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
   await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
   await theMember.close();
 
-  // ann, a guest now, leaves by the sidebar: its modal asks Web's name and "Leave Project", and cannot be closed while
-  // the leaving is out; once nerve has made it, Web leaves the sidebar.
+  // ann, a guest now, leaves by the sidebar, which offers it to guests alone: its modal asks Web's name and "Leave
+  // Project". pat has ended her membership meanwhile: nerve refuses the leaving, and the modal stays, to try again.
+  // He adds her back; the modal cannot be closed while the leaving is out; once nerve has made it, Web leaves the
+  // sidebar.
   const theGuest = await anotherBrowser(browser, baseURL ?? "", ann.tokens);
   const guestWatch = await watchPage(theGuest.page);
   await theGuest.page.goto(`/${slug}/projects`);
@@ -6448,17 +6789,27 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
   await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
   await theGuest.page.locator("#projectName").fill("Web");
   await theGuest.page.locator("#confirmLeave").fill("Leave Project");
+  expect((await writes(api, web.id).remove(pat.tokens.access_token, anns.id)).status).toBe(204);
+  const leaveProject = theGuest.page.getByRole("dialog").getByRole("button", { name: "Leave Project" });
+  expect((await answerTo(theGuest.page, leaving.method, leaving.path, () => leaveProject.click())).status()).toBe(403);
+  await expect(leaveProject).toBeEnabled();
+  await addProjectMembers(api, pat.tokens.access_token, web.id, [{ member_id: ann.id, role: 5 }]);
   const releaseGuest = await holdAnswer(theGuest.page, leaving.method, leaving.path);
-  const guestLeft = answerTo(theGuest.page, leaving.method, leaving.path, () =>
-    theGuest.page.getByRole("dialog").getByRole("button", { name: "Leave Project" }).click()
-  );
+  const guestLeft = answerTo(theGuest.page, leaving.method, leaving.path, () => leaveProject.click());
   await expect(theGuest.page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
   expect(await closedByEscape(theGuest.page)).toBe(false);
   await releaseGuest();
   expect((await guestLeft).status()).toBe(204);
   await expect(sidebar.getByText("Web", { exact: true })).toHaveCount(0);
-  expect([guestWatch.apiFailures, guestWatch.oldApiRequests, guestWatch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(theGuest.page, guestWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  expect([guestWatch.apiFailures, guestWatch.oldApiRequests, guestWatch.pageErrors]).toEqual([
+    [`403 ${leaving.method} ${leaving.path}`],
+    [],
+    [],
+  ]);
+  await expectQuietConsole(theGuest.page, guestWatch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
+  });
   await theGuest.close();
 
   const row = (email: string, role: number, is_active: boolean, by: string): MemberRow => ({
@@ -6492,7 +6843,7 @@ Run: `make test-web`
 Expected: 通过。
 
 Run: `make e2e`
-Expected: 102 个全部通过。
+Expected: 103 个全部通过。
 
 - [ ] **Step 6: 提交**
 
@@ -6510,8 +6861,9 @@ removals nerve's rules allow the caller (roleChoices, canRemove), the
 caller's own row offers leaving, a role is named as the workspace's
 pages name it, and the columns hold no form, console.log or err.error. The
 confirmation and the leave modal cannot be dismissed while their request
-is out; a keyword rule keeps the leaving in its one place. P5's page
-version.
+is out, and close in the follow-up of success alone: a refusal leaves
+them open, the reason in the shared refusal toast. A keyword rule keeps
+the leaving in its one place. P5's page version.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -6531,9 +6883,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T7.9` | 离开在途时 Escape 关掉离开的弹窗 | 故事 P5 | 端到端 |
 | `T7.10` | 离开在途时离开弹窗的取消按钮仍可用 | 故事 P5 | 端到端 |
 | `T7.11` | 自己那一行的"离开"是移出，别人那一行的"移出"是离开 | 故事 P5 | 端到端 |
+| `T7.12` | 在成员关系修改的 hook 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
 | `T7.13` | 离开弹窗直接调 store 的 leaveProject：第二条离开的路 | 关键词守卫 | 静态 |
 | `T7.14` | 成员页的角色下拉框用英文的 ROLE 称呼角色 | `project-roles.test.tsx` | vitest |
-| `T7.12` | 在成员关系修改的 hook 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T7.15` | 离开弹窗在 nerve 回答之后就关上，拒绝也关 | 故事 P5 | 端到端 |
+| `T7.16` | 成员页的确认框在 nerve 回答之后就关上，拒绝也关 | 故事 P5 | 端到端 |
+| `T7.17` | nerve 移出之后确认框不关 | `use-project-membership-changes.test.ts`、故事 P5 | vitest；端到端 |
 
 ---
 
@@ -6548,13 +6903,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `project-roles.ts` 的 `addableRoles(workspaceRole)`：添加时 nerve 允许的角色（工作区管理员只能是管理员，工作区访客只能是访客，成员任意；还没选人时任意）。添加没有相对规则：调用者不论角色都按它提供（P5b spec 第 5 节：隐藏不保护任何东西）。
   - `AddProjectMembersModal`：候选是工作区的有效成员中还不是项目成员的（原来也列出成员关系已结束的人）；每行的角色按 `addableRoles`（原来还按调用者的项目角色筛），名字同成员页（`ROLE_DETAILS`）；成员的选择用 `customButton` 的 `<span>`（不在按钮里再放按钮）；提交经 `followInSession`（生成的 `ProjectMembersAdd`）：成功时关闭、提示，被拒绝时经 `useRefusalToast` 说原因、表单留着（原来只有 `console.error`，表单随之清空）；在途时关不掉（取消禁用、`handleClose` 为空）。不再收 `workspaceSlug`（`member-list.tsx` 不传）。
   - `ProjectSettingsMemberDefaults`（整个文件）：负责人、默认负责人（项目中不是访客的成员）、访客可见全部工作项，显示 nerve 所持的值（`getProjectById(projectId)`），一次改一个字段（`ProjectUpdate` 的部分修改），经 `followInSession`：成功提示，被拒绝时说原因；原来的 `useForm` 和先改显示再发（被拒绝之后仍显示被拒绝的值）删除：值在 nerve 做完之后才变（W17）。
-  - `core/lib/fake-controls.ts`：搜索选择的替身留下它的选项（`shown.searchSelects[i].options`）。
-  - 静态检查：`.oxlintrc.json` 的非空断言的范围加上两个 vitest 文件和 `fake-controls.ts`。
-- e2e 的共用部分（P3、P5 的故事和 `assert/project.ts` 保持在约 400 行：P3、P5 原来各写的经 API 的修改和读取移到共用的 fixture）：`e2e/fixtures/api.ts` 的 `projectMembershipOf`、`changeProject`、`projectMemberWrites`；`e2e/fixtures/assert/project.ts` 的 `projectSettingsOf`；`e2e/fixtures/project-pages.ts` 的 `shownNameOf`（页面显示的没有名字的账户：邮箱 `@` 之前的部分）。
+  - `core/lib/fake-controls.ts`：搜索选择的替身（`SearchSelect`，Task 2）还留下它的选项（`shown.searchSelects[i].options`）。
+  - 静态检查：`.oxlintrc.json` 的非空断言的范围加上两个 vitest 文件（`fake-controls.ts` 在 Task 2 已加）。
+- e2e 的共用部分（P3、P5 的故事和 `assert/project.ts` 保持在约 400 行：P3、P5 原来各写的经 API 的修改和读取移到共用的 fixture）：`e2e/fixtures/api.ts` 的 `projectMembershipOf`、`changeProject`、`projectMemberWrites`；`e2e/fixtures/assert/project.ts` 的 `projectSettingsOf`；`e2e/fixtures/project-pages.ts` 的 `shownNameOf`（页面显示的没有名字的账户：邮箱 `@` 之前的部分）。P3 的经 API 的故事中成员被拒绝的添加也经 `projectMemberWrites`；P5 的页面版本中访客的成员关系的结束（Task 7）同样。
 
 **Tests:**
 - vitest：`add-project-members-modal.test.tsx`：`offers the workspace's active members who are not the project's`；`adds them, then closes and says so`；`stays open and shows nerve's reason when it refuses them`；`neither closes nor says anything when the adding $settles after another tab moved this one`。`project-roles.test.tsx` 加 `the roles a member is added with > $who`（`addableRoles` 的表），添加的选择也按键选。`project-settings-member-defaults.test.tsx`：`says a change is made, and nerve's reason for refusing one`；`says nothing when a change $settles after another tab moved this one`。
-- 端到端：P5 的页面版本在开头加上添加（`P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, the modal held until nerve answers; …`：候选只有工作区的管理员、ann 和 gus；gus 只能是访客；请求体经 `sentHeld`，扣住时取消禁用、Escape 不关；成功的提示在角色列表之前关上，它会遮住列表）。`P3 (page): the project's admin makes a member its lead and its default assignee, each picked from its members who are not its guests, and lets its guests see every work item`（每个修改只发它的字段；数据库中的设置）。
+- 端到端：P5 的页面版本在开头加上添加（`P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, the modal held until nerve answers; …`：成员的选择用键盘：Tab 到它，Enter 打开，搜索框有焦点（Task 2 的 `CustomSearchSelect` 的自定义按钮也在 Tab 顺序里）；候选只有工作区的管理员、ann 和 gus；gus 只能是访客；请求体经 `sentHeld`，扣住时取消禁用、Escape 不关；成功的提示在角色列表之前关上，它会遮住列表）。`P3 (page): the project's admin makes a member its lead and its default assignee, each picked from its members who are not its guests, and lets its guests see every work item`（每个修改只发它的字段；数据库中的设置）。
 
 - [ ] **Step 1: 添加时的角色、添加的弹窗和测试的替身**
 
@@ -6943,27 +7298,19 @@ export function addableRoles(workspaceRole: WorkspaceRole | undefined): ProjectR
 }
 ````
 
-`web/apps/web/core/lib/fake-controls.ts`（修改，3 处）：
+`web/apps/web/core/lib/fake-controls.ts`（修改，1 处）：
 
 ````old web/apps/web/core/lib/fake-controls.ts
-type Select = Field & { children?: ReactNode };
+/** A search select: what it gives, and how its list opens. */
+type SearchSelect = Field & { focusSearchOnOpen?: boolean; popperModifiers?: object[] };
 ````
 ````new web/apps/web/core/lib/fake-controls.ts
-type Select = Field & { children?: ReactNode };
-/** A search select: what it gives, and the options it offers, each by its value. */
-type SearchSelect = Field & { options?: { value: string }[] };
-````
-````old web/apps/web/core/lib/fake-controls.ts
-  searchSelects: Field[];
-````
-````new web/apps/web/core/lib/fake-controls.ts
-  searchSelects: SearchSelect[];
-````
-````old web/apps/web/core/lib/fake-controls.ts
-export function CustomSearchSelect(props: Field) {
-````
-````new web/apps/web/core/lib/fake-controls.ts
-export function CustomSearchSelect(props: SearchSelect) {
+/** A search select: what it gives, how its list opens, and the options it offers, each by its value. */
+type SearchSelect = Field & {
+  focusSearchOnOpen?: boolean;
+  popperModifiers?: object[];
+  options?: { value: string }[];
+};
 ````
 
 - [ ] **Step 2: 成员的默认值**
@@ -7219,8 +7566,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
 ````new .oxlintrc.json
         "web/apps/web/core/components/project/project-roles.test.tsx",
         "web/apps/web/core/components/project/add-project-members-modal.test.tsx",
-        "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx",
-        "web/apps/web/core/lib/fake-controls.ts"
+        "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx"
 ````
 
 - [ ] **Step 4: 端到端**
@@ -7358,7 +7704,7 @@ export function shownNameOf(email: string): string {
 }
 ````
 
-`e2e/stories/project/p3-project-settings.spec.ts`（修改，14 处）：
+`e2e/stories/project/p3-project-settings.spec.ts`（修改，15 处）：
 
 ````old e2e/stories/project/p3-project-settings.spec.ts
   amidAnotherWorkspace,
@@ -7368,11 +7714,14 @@ export function shownNameOf(email: string): string {
   changeProject,
 ````
 ````old e2e/stories/project/p3-project-settings.spec.ts
+  inviteAndAccept,
   slugFor,
   type Api,
   type ProjectUpdate,
 ````
 ````new e2e/stories/project/p3-project-settings.spec.ts
+  inviteAndAccept,
+  projectMemberWrites,
   slugFor,
 ````
 ````old e2e/stories/project/p3-project-settings.spec.ts
@@ -7426,6 +7775,17 @@ async function stored(db: Database, id: string): Promise<unknown> {
 ````
 ````new e2e/stories/project/p3-project-settings.spec.ts
 // P3, a project's settings (M3 design 2, 3.4, 3.5, 3.19, 7.6).
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+  const addedByMember = await api.POST("/api/v0/projects/{project_id}/members", {
+    params: { path: { project_id: web.id } },
+    body: { members: [{ member_id: otherId, role: 15 }] },
+    headers: bearer(member),
+  });
+  expect({ status: addedByMember.response.status, code: addedByMember.error?.code }).toEqual({
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+  expect(await projectMemberWrites(api, web.id).add(member, [{ member_id: otherId, role: 15 }])).toEqual({
 ````
 ````old e2e/stories/project/p3-project-settings.spec.ts
     await change(api, admin, web.id, {
@@ -7485,8 +7845,6 @@ async function stored(db: Database, id: string): Promise<unknown> {
 ````
 ````old e2e/stories/project/p3-project-settings.spec.ts
   await expectQuietConsole(page, watch, { warnings: Array.from({ length: 5 }, () => EMOJI_CHECK_WARNING) });
-});
-
 ````
 ````new e2e/stories/project/p3-project-settings.spec.ts
   await expectQuietConsole(page, watch, { warnings: Array.from({ length: 5 }, () => EMOJI_CHECK_WARNING) });
@@ -7546,11 +7904,9 @@ test("P3 (page): the project's admin makes a member its lead and its default ass
   });
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
-});
-
 ````
 
-`e2e/stories/project/p5-project-members.spec.ts`（修改，13 处）：
+`e2e/stories/project/p5-project-members.spec.ts`（修改，14 处）：
 
 ````old e2e/stories/project/p5-project-members.spec.ts
   amidAnotherWorkspace,
@@ -7633,10 +7989,10 @@ function writes(api: Api, projectId: string) {
   const { add, change, remove, leave } = projectMemberWrites(api, web.id);
 ````
 ````old e2e/stories/project/p5-project-members.spec.ts
-test("P5 (page): a project admin who is no workspace admin is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal held too", async ({
+test("P5 (page): a project admin who is no workspace admin is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
 ````
 ````new e2e/stories/project/p5-project-members.spec.ts
-test("P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, the modal held until nerve answers; he is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal held too", async ({
+test("P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, the modal held until nerve answers; he is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
 ````
 ````old e2e/stories/project/p5-project-members.spec.ts
   // pat, a member of acme, makes Web, its admin; max its other admin, ann and bob its members, gus its guest.
@@ -7670,7 +8026,19 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   // He adds ann as a member and gus as a guest, from acme's active members who are not Web's (the admin, ann and gus),
   // gus with a guest's role alone; the modal cannot be closed until nerve has added them.
   await page.getByRole("button", { name: "Add member" }).click();
-  await page.getByRole("button", { name: "Select co-worker" }).click();
+  // the member select by the keyboard: Tab reaches it, Enter opens its list with the search focused
+  const coWorker = page.getByRole("dialog").getByRole("button", { name: "Select co-worker" });
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press("Tab");
+        return coWorker.evaluate((button) => button === document.activeElement);
+      },
+      { timeout: 5_000 }
+    )
+    .toBe(true);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("combobox", { name: "Search" })).toBeFocused();
   await expect(page.getByRole("option")).toHaveCount(3);
   await expect(page.getByRole("option", { name: shownNameOf(admin.email) })).toBeVisible();
   await page.getByRole("option", { name: shownNameOf(ann.email) }).click();
@@ -7715,6 +8083,12 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   const release = await holdAnswer(page, "DELETE", removalOf(guss).path);
   const removed = endProjectMembership(page, gus.email, "Remove", removalOf(guss));
 ````
+````old e2e/stories/project/p5-project-members.spec.ts
+  expect((await writes(api, web.id).remove(pat.tokens.access_token, anns.id)).status).toBe(204);
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+  expect((await projectMemberWrites(api, web.id).remove(pat.tokens.access_token, anns)).status).toBe(204);
+````
 
 - [ ] **Step 5: 运行检查**
 
@@ -7728,7 +8102,7 @@ Run: `make test-web`
 Expected: 通过。
 
 Run: `make e2e`
-Expected: 103 个全部通过。
+Expected: 104 个全部通过。
 
 - [ ] **Step 6: 提交**
 
@@ -7762,8 +8136,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.7` | 添加被拒绝时什么都不说 | `add-project-members-modal.test.tsx` | vitest |
 | `T8.8` | 成员默认值的修改不论会话都跟进 | `project-settings-member-defaults.test.tsx` | vitest |
 | `T8.9` | 成员默认值的修改被拒绝时什么都不说 | `project-settings-member-defaults.test.tsx` | vitest |
-| `T8.11` | 添加成员弹窗的角色下拉框用英文的 ROLE 称呼角色 | `project-roles.test.tsx` | vitest |
 | `T8.10` | 在添加成员弹窗的测试里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T8.11` | 添加成员弹窗的角色下拉框用英文的 ROLE 称呼角色 | `project-roles.test.tsx` | vitest |
 
 ---
 
@@ -8288,10 +8662,10 @@ import { useUserPermissions } from "@/hooks/store/user";
 `.oxlintrc.json`（修改，1 处）：
 
 ````old .oxlintrc.json
-        "web/apps/web/core/lib/fake-controls.ts"
+        "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx"
 ````
 ````new .oxlintrc.json
-        "web/apps/web/core/lib/fake-controls.ts",
+        "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx",
         "web/apps/web/core/components/project/delete-project-modal.test.tsx",
         "web/apps/web/core/components/project/archive-restore-modal.test.tsx"
 ````
@@ -8439,7 +8813,7 @@ Run: `make test-web`
 Expected: 通过。
 
 Run: `make e2e`
-Expected: 104 个全部通过。
+Expected: 105 个全部通过。
 
 - [ ] **Step 6: 提交**
 
@@ -8495,7 +8869,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Tests:**
 - vitest：`use-project-drop.test.ts`：`says why a move failed: nerve's reason, or none for one the store did not send`（改写原来的"失败时提示"）；`says nothing when a move $settles after another tab moved this one`。`use-tab-preferences.test.ts`（整个文件）：`gives nerve's default tab bar and no change until the caller's is fetched, then his and its changes`；`makes each change to the tab bar nerve last answered, in the change's turn`；`says a new default once nerve has it, and nerve's reason for refusing a change`；`says nothing when a change $settles after another tab moved this one`。
-- 端到端：`P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh`（工作区的导航设为标签式，Web 打开模块和视图；扣住设置的取数时右键"Modules"没有菜单（`shownWithin`），放行之后有；设为默认、收起视图的请求体经 `sentTo`；按住 Ops 的拖动柄拖到 Docs 上（`dragTo` 拖不动：指针离开时柄就隐藏，改用逐步的鼠标操作），发 `{ sort_order: 35535 }`；刷新之后顺序、默认标签、收起的视图都在，数据库中两个项目的显示设置；工作项页请求 M4 的筛选的旧地址，两次 404 是预期的）。
+- 端到端：`P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh`（工作区的导航设为标签式，Web 打开模块和视图；扣住设置的取数时右键"Modules"没有菜单（`shownWithin`），放行之后有（右键再看，五秒为限的 `toPass`）；设为默认、收起视图的请求体经 `sentTo`；按住 Ops 的拖动柄拖到 Docs 上（`dragTo` 拖不动：指针离开时柄就隐藏，改用逐步的鼠标操作），发 `{ sort_order: 35535 }`；刷新之后顺序、默认标签、收起的视图都在，数据库中两个项目的显示设置；工作项页请求 M4 的筛选的旧地址，两次 404 是预期的）。
 
 - [ ] **Step 1: 侧边栏的移动**
 
@@ -9091,7 +9465,7 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   await expect(async () => {
     await tab("Modules").click({ button: "right" });
     await expect(setAsDefault).toBeVisible({ timeout: 1_000 });
-  }).toPass();
+  }).toPass({ timeout: 5_000 });
   const defaulted = await sentTo(page, "PATCH", settings, () => setAsDefault.click());
   expect([defaulted.answer.status(), defaulted.body]).toEqual([
     200,
@@ -9175,7 +9549,7 @@ Run: `make test-web`
 Expected: 通过。
 
 Run: `make e2e`
-Expected: 105 个全部通过。
+Expected: 106 个全部通过。
 
 - [ ] **Step 6: 提交**
 
@@ -9217,7 +9591,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces（spec 2.11；M3 设计 3.20 中 P10 的行；M2 收尾交接第 10、11、14 节；M1-P4 交接）：
   - `README.md` 的"前端"一节：项目的页面一句改写为能用的项目页面（M3/P10 起）：项目列表和已归档的项目、创建项目、包装层的三种界面、项目设置的 general、members、features、automations、侧边栏的拖动和项目页头的标签栏；状态、标签的设置页和个人主页在 M3/P11，其余的由 M4–M8 对接。
   - `docs/v0/frontend-changes.md`：3.1 中 M3 一行的状态（工作区的页面 M3/P9、项目的页面 M3/P10 已对接，状态、标签的设置页在 M3/P11）；3.2 "所有处理接口错误的地方"一行写明 P10 改到的页面；"页面跟进修改的结果"一行写 P9、P10；新增八行（表情选择器的数据、下拉框、复制到剪贴板、创建项目、已归档的项目、项目成员页、项目的成员默认值、项目页头的标签栏），都是"已完成，M3/P10"。
-  - `docs/v0/M3-workspace-project/handoffs/M2-closeout.md`：加"处理结果（M3/P10）"：第 10 节关闭，第 11 节关闭（项目 general 页的时区），第 14 节代码一侧完成，逐个调用方的浏览器核对是 P10 评审的 C7、C8，之后关闭；状态保持 `open`（第 12 节等 M3 的收尾）。
+  - `docs/v0/M3-workspace-project/handoffs/M2-closeout.md`：加"处理结果（M3/P10）"：第 10 节关闭，第 11 节关闭（项目 general 页的时区），第 14 节代码一侧完成（关闭条件中的 `member-options` 一项改为成员下拉框：`member-options.tsx` 已删除），逐个调用方的浏览器核对是 P10 评审的 C7、C8，之后关闭；状态保持 `open`（第 12 节等 M3 的收尾）。
   - `docs/v0/M3-workspace-project/handoffs/M1-P4-router-native.md`：加"处理结果（M3/P10）"：离开项目的顺序（nerve 做完之后才显示工作区的项目，spec 2.7）；保留名在 P8a spec 第 7 节；状态保持 `open` 到 M3 的收尾。
 - 控制者的浏览器核对和评审不在本 plan 中（M3 设计 9.7、12 节 P10 的最后一个任务）。
 
@@ -9245,7 +9619,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## 处理结果（M3/P10）
 
-- **离开项目的顺序**（完成）：先等接口成功，再回到项目列表。项目的三个离开入口（成员页的离开、侧边栏和项目页头菜单的离开弹窗）都经 `useProjectMembershipChanges`（`web/apps/web/core/components/project/settings/use-project-membership-changes.ts`）的 `leave`：nerve 成功之后才跳转，失败时留在原页并提示原因（如唯一的管理员）；跳转只在发出离开的会话里进行。它的 vitest 和故事 P5 的页面版本（nerve 的回答扣住时页面不动）守着（[M3/P10 spec](../specs/P10-web-project-pages.md) 2.7）。
+- **离开项目的顺序**（完成）：先等接口成功，再回到项目列表。项目的三个离开入口（成员页的离开、侧边栏和项目页头菜单的离开弹窗）都经 `useProjectMembershipChanges`（`web/apps/web/core/components/project/settings/use-project-membership-changes.ts`）的 `leave`：nerve 成功之后才关上确认框或弹窗、跳转，失败时留在原页，确认框或弹窗留着，原因在共用的拒绝提示里（如唯一的管理员）；关上和跳转只在发出离开的会话里进行。它的 vitest 和故事 P5 的页面版本（nerve 的回答扣住时页面不动；被拒绝时成员页的确认框和侧边栏的弹窗都留着）守着（[M3/P10 spec](../specs/P10-web-project-pages.md) 2.7）。
 - **保留的工作区名，前后端同一份**：M3/P8a 已完成（[M3/P8a spec](../specs/P8a-web-workspace-data.md) 第 7 节）。
 
 两项都已处理；逐项的结论随 M3 的收尾写进评审，然后 `status` 改为 `closed`。
@@ -9267,7 +9641,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - **第 10 节 CSP：表情选择器的数据从本站提供**（关闭）：`emojibase-data` 15.3.2 是 web 应用的直接依赖；构建时一个 Vite 插件（`web/apps/web/emojibase.ts`）把 `en/data.json`、`en/messages.json` 写到 `/assets/emojibase/15.3.2/en/`，`EmojiPicker.Root` 传 `emojibaseUrl`（`EMOJIBASE_URL`，`web/packages/propel/src/emoji-icon-picker/emoji/emoji.tsx`），一个 vitest 核对它与构建写出的地址和版本一致；CSP 没有为它放开外部来源。P1、P3 的页面版本打开表情选择器，`watchPage` 没有 CSP 违规、没有发往别处的请求（[M3/P10 spec](../specs/P10-web-project-pages.md) 2.1）。
 - **第 11 节 M2 留下的 M3 调用和类型**（关闭）：项目 general 页的时区选择用这个接口，随修改发出，P3 的页面版本核对（spec 2.5）；其余各项在 P8a、P8b、P9 已完成（见上）。
-- **第 14 节 下拉框和复制到剪贴板**（代码一侧完成）：`CustomSearchSelect` 改成像 Popover 那样的按钮，`Combobox` 在它的面板里，Tab 能到、键盘打开，列表关上时清空搜索；成员下拉框以它为底，`member-options.tsx` 删除，列表在按钮旁展开（spec 2.2）。3 处复制、邀请行和工作区 general 页的复制经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`），失败时经 `t()` 提示（spec 2.3）。逐个调用方的浏览器核对是 M3/P10 评审的 C7、C8。
+- **第 14 节 下拉框和复制到剪贴板**（代码一侧完成）：`CustomSearchSelect` 改成像 Popover 那样的按钮，`Combobox` 在它的面板里，Tab 能到、键盘打开，列表关上时清空搜索；成员下拉框以它为底，`member-options.tsx` 删除，列表在按钮旁展开（spec 2.2）；关闭条件中的 `member-options` 一项改为成员下拉框（`member-options.tsx` 已删除）。3 处复制、邀请行和工作区 general 页的复制经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`），失败时经 `t()` 提示（spec 2.3）。逐个调用方的浏览器核对是 M3/P10 评审的 C7、C8。
 
 仍未处理，状态保持 `open`：第 14 节等 C7、C8 写进 M3/P10 的评审；第 12 节等 M3 的收尾。
 
@@ -9301,11 +9675,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new docs/v0/frontend-changes.md
 | 停用账户的弹窗 | nerve 拒绝的原因（如唯一的管理员）显示在确认弹窗里，不再是提示，弹窗关闭时清掉；停用只在它结束了标签页的会话时才说已停用（另一个标签页先换了账户时，页面已是那个账户的） | M3 设计 7.1、7.5 | 已完成 | M3/P9 |
 | 表情选择器的数据 | 表情选择器（`frimousse`）的数据由 Nerve 自己提供：`emojibase-data` 15.3.2 随前端构建，写到 `/assets/emojibase/15.3.2/en/`，选择器从那里读，不再请求 `cdn.jsdelivr.net`（页面的 CSP 本来就挡住它）；表情名称的搜索只有英文（与 Plane 相同） | M3 设计 7.7；M2 收尾交接第 10 节 | 已完成 | M3/P10 |
-| 下拉框 | `CustomSearchSelect`（`@nerve/ui`）改成可以用 Tab 到达的按钮，`Combobox` 在它的弹出面板里：键盘打开，Escape 关上，列表关上时清空搜索；成员下拉框（项目负责人、默认负责人等）以它为底，`member-options.tsx` 删除：列表在按钮旁展开，打开时搜索框取得焦点 | M3 设计 7.7；M2 收尾交接第 14 节 | 已完成 | M3/P10 |
-| 复制到剪贴板 | 项目卡片、侧边栏、扩展侧边栏和项目页头的菜单复制项目的链接，邀请行复制邀请的链接，工作区设置的 general 页复制工作区的地址，都经 `useCopyLink`（`core/hooks/use-copy-link.ts`）：复制失败（如局域网的纯 http 地址）时提示，不再是未处理的 Promise 拒绝 | M3 设计 7.7；M2 收尾交接第 14 节 | 已完成 | M3/P10 |
+| 下拉框 | `CustomSearchSelect`（`@nerve/ui`）改成可以用 Tab 到达的按钮，`Combobox` 在它的弹出面板里：键盘打开，Escape 关上（输入法组字时的 Escape 不关），列表关上时清空搜索；成员下拉框（创建项目的负责人；M4–M6 的指派人、负责人）以它为底，`member-options.tsx` 删除：列表在按钮旁展开，打开时搜索框取得焦点（手机上不取），其余照旧（调用方推迟的，指针经过之前只有按钮；列表离窗口边缘 12 像素）；面包屑的下拉框是一个 Tab 停留点 | M3 设计 7.7；M2 收尾交接第 14 节 | 已完成 | M3/P10 |
+| 复制到剪贴板 | 项目卡片、侧边栏、扩展侧边栏和项目页头的菜单复制项目的链接，邀请行复制邀请的链接，工作区设置的 general 页复制工作区的地址，都经 `useCopyLink`（`core/hooks/use-copy-link.ts`）：复制失败（浏览器拒绝时）有提示，不再是未处理的 Promise 拒绝 | M3 设计 7.7；M2 收尾交接第 14 节 | 已完成 | M3/P10 |
 | 创建项目 | 请求体只含表单的字段（生成的 `ProjectCreate`）；负责人从工作区的管理员和成员中选（Plane 也列访客）；标识输入时转成大写、只留 nerve 接受的字符；nerve 指名的字段错误显示在字段下方；发出之后表单关不掉，直到 nerve 回答 | M3 设计 3.19、7.6 | 已完成 | M3/P10 |
 | 已归档的项目 | 打开已归档项目的地址显示它已归档，按钮去已归档的项目页，不取它的成员、状态、标签和显示设置；已归档的项目页对项目管理员和是工作区管理员的项目成员都给恢复、删除（Plane 只给项目管理员，nerve 两者都允许，项目设置的归档也给两者） | M3 设计 3.4、3.19、7.6 | 已完成 | M3/P10 |
-| 项目成员页 | 角色的选项只有 nerve 允许调用者给的（3.5 的相对规则：不是工作区管理员的只改比自己低的角色、只给比自己低的角色；工作区的访客只能是访客），移出只对 nerve 允许的行显示；添加成员只列出工作区里有效、还不是项目成员的人，角色按他的工作区角色（工作区管理员只能是管理员，访客只能是访客）；离开项目先等 nerve 成功再回到项目列表（M1-P4，Plane 先跳后调）；唯一的管理员离开时提示 nerve 的原因；角色的名字随界面的语言（Plane 写死英文） | M3 设计 3.5、7.6 | 已完成 | M3/P10 |
+| 项目成员页 | 角色的选项只有 nerve 允许调用者给的（3.5 的相对规则：不是工作区管理员的只改比自己低的角色、只给比自己低的角色；工作区的访客只能是访客），移出只对 nerve 允许的行显示；添加成员只列出工作区里有效、还不是项目成员的人，角色按他的工作区角色（工作区管理员只能是管理员，访客只能是访客）；离开项目先等 nerve 成功再回到项目列表（M1-P4，Plane 先跳后调）；唯一的管理员离开时提示 nerve 的原因，确认框或离开弹窗留着（成员页、侧边栏、项目页头相同，成功之后才关上）；角色的名字随界面的语言（Plane 写死英文） | M3 设计 3.5、7.6 | 已完成 | M3/P10 |
 | 项目的成员默认值 | 负责人、默认负责人、"访客可见全部"显示 nerve 的回答，不再先显示选中的值（Plane 被拒绝时仍显示选中的值），拒绝时提示 nerve 的原因 | M3 设计 7.6；总体设计 7.7 | 已完成 | M3/P10 |
 | 项目页头的标签栏 | 调用者的标签栏（默认打开的标签页、收进"更多"的标签页）取到之前，标签不给修改它的菜单：修改按 nerve 最近一次的回答算出，取到之前按默认值算会整份替换他的标签栏 | M3 设计 3.18、7.6 | 已完成 | M3/P10 |
 ````
@@ -9322,7 +9696,7 @@ Run: `make test-web`
 Expected: 通过。
 
 Run: `make e2e`
-Expected: 105 个全部通过。
+Expected: 106 个全部通过。
 
 - [ ] **Step 3: 提交**
 

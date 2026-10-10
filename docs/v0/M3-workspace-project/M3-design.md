@@ -1262,7 +1262,7 @@ modules/access/
   - features：迭代、模块、视图、收集箱。
   - automations：只剩自动归档。
   - 不能编辑时表单只读，与 Plane 页面的判断相同，角色来自 `member_role` 和 `Workspace.role`。
-- **离开项目的顺序**（M1-P4 交接）：**先等接口成功，再跳到项目列表**。失败时留在原页、弹窗显示错误，用户仍在项目里，页面与服务端一致；Plane 先跳后调，失败时用户已离开项目页却仍是成员。`leave-project-modal.tsx` 照此改，故事 P5 断言成功后才跳转。
+- **离开项目的顺序**（M1-P4 交接）：**先等接口成功，再跳到项目列表**。失败时留在原页，弹窗留着，原因在共用的拒绝提示里；成功之后才关上、跳转。用户仍在项目里，页面与服务端一致；Plane 先跳后调，失败时用户已离开项目页却仍是成员。`leave-project-modal.tsx` 照此改，故事 P5 断言成功后才跳转。
 - **侧边栏的项目顺序**：按 `ProjectPreferences.sort_order`，拖动排序调 `updateProjectPreferences`（经 `oneAtATime()`）。
 - **导航偏好**：项目页头的标签页导航（`use-tab-preferences.ts`）读写 `ProjectPreferences.navigation`（P8 故事）。
 - **状态设置**（P11）：列表按组、`sequence`；拖动改 `sequence`；设为默认；默认状态和一组中唯一的状态的删除按钮不可用（Plane 的页面已是这样），服务端并发下仍拒绝时显示 409 的说明（3.17）。
@@ -1271,8 +1271,8 @@ modules/access/
 ### 7.7 下拉框、复制到剪贴板、表情选择器（P10）
 - **下拉框**（M2 交接第 14 节）：
   - `CustomSearchSelect`（`web/packages/ui/src/dropdowns/custom-search-select.tsx`）改成像 Popover 那样可以用 Tab 到达的按钮，`Combobox` 放在它的面板里；
-  - `dropdowns/member/member-options.tsx`：popper 的 ref 放在列表元素本身，有搜索框的用 `Combobox`、打开时输入框取得焦点；
-  - `CustomSelect` 在 M3 页面上的 9 个调用方和 `CustomSearchSelect` 的 4 个调用方逐个在浏览器中核对（9.7）。
+  - 成员下拉框以 `CustomSearchSelect` 为底，列表在按钮旁；
+  - `CustomSelect` 在 M3 页面上的 9 个调用方和 `CustomSearchSelect` 的调用方（M3 的 6 个，M4–M6 经成员下拉框的 14 个文件和页头的 9 个）逐个在浏览器中核对（9.7）。
 - **复制到剪贴板**：3 处未处理拒绝的调用（`workspace/sidebar/projects-list.tsx`、`project/card.tsx`、`extended-project-sidebar.tsx`）加上处理，失败时经 `t()` 提示；邀请行的复制链接（`invitations-list-item.tsx:80`，P9）照同样的写法。
 - **表情选择器的数据从本站提供**（M2 交接第 10 节）：
   - `emojibase-data` 固定为 15.3.2（已在依赖树里，由 `@tiptap/extension-emoji` 带进），加为 web 应用的直接依赖；
@@ -1572,8 +1572,8 @@ modules/access/
 | C3 | 成员页：管理员、成员、访客三种身份（邮箱、角色下拉、邀请列表只对管理员、已忽略的邀请、离开） | P9 |
 | C4 | M2 交接第 13 节：`WorkspaceAuthWrapper` 的退出按钮（Tab、Enter、空格）；工作区和项目加载中的显示；`ProfileSidebar` 宽屏折叠后拉过 768 像素；`WorkspaceLogo` 在工作区菜单和卡片中的盒子；新手引导邀请成员一步和导览在中文下的文案。"加入工作区"一步随决策点 2 删除，这一条写明删除 | P9 |
 | C5 | 两个账户两个标签页：在工作区页上切换账户，旧的一代不再写入，页面以新账户重新渲染（7.1） | P9 |
-| C6 | 项目：创建（表情和图标选择器，Network 面板没有 `cdn.jsdelivr.net`，控制台没有 CSP 违规）、加入、离开（接口失败时停在原页）、归档、恢复、删除；members 页设负责人、默认负责人 | P10 |
-| C7 | 下拉框：`CustomSearchSelect` 用 Tab 到达、键盘打开；`member-options` 的列表在按钮旁；9 个 `CustomSelect` 调用方、4 个 `CustomSearchSelect` 调用方逐个 | P10 |
+| C6 | 项目：创建（表情和图标选择器，Network 面板没有 `cdn.jsdelivr.net`，控制台没有 CSP 违规）、加入、离开（接口失败时停在原页，弹窗留着）、归档、恢复、删除；members 页设负责人、默认负责人 | P10 |
+| C7 | 下拉框：`CustomSearchSelect` 用 Tab 到达、键盘打开；成员下拉框以 `CustomSearchSelect` 为底，列表在按钮旁；9 个 `CustomSelect` 调用方、`CustomSearchSelect` 的调用方逐个（M3 的 6 个，M4–M6 经成员下拉框的 14 个文件和页头的 9 个） | P10 |
 | C8 | 复制到剪贴板：在局域网 HTTP 地址上复制项目链接、邀请链接，失败时有提示 | P10 |
 | C9 | 状态和标签的拖动、设为默认、两层标签的拖放；默认状态和组内唯一状态的删除按钮不可用；访客看状态设置"没有权限" | P11 |
 | C10 | 访客打开别人的个人主页（决策点 3，A） | P11 |
@@ -2042,7 +2042,7 @@ modules/access/
 | M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（`leaveWorkspace`、`is_bot`、`owner` 在 P8a，其余在 P8b）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8a、P9）；时区用 `GET /api/v0/timezones`（P9、P10）。代码一侧在 P8a、P8b 完成（M2 交接的"处理结果（M3/P8b）"），本节随 P10 关闭 |
 | M2-closeout §12 页大小的规则 | 3.12 | M3 没有分页的列表：P1 的 review 写明，本节原样写进 M4 的交接（收尾，13.2） |
 | M2-closeout §13 P5 改到、M2 走不到的页面 | 9.7 C4 | 逐条的浏览器核对写进 review；"加入工作区"一步删除，写明（P9） |
-| M2-closeout §14 下拉框和复制 | 7.7、9.7 C7、C8 | `CustomSearchSelect` 能用 Tab 到达、键盘打开；`member-options` 的列表在按钮旁；9 个和 4 个调用方核对；3 处复制处理失败（P10） |
+| M2-closeout §14 下拉框和复制 | 7.7、9.7 C7、C8 | `CustomSearchSelect` 能用 Tab 到达、键盘打开；成员下拉框以 `CustomSearchSelect` 为底，列表在按钮旁；`CustomSelect` 的 9 个调用方、`CustomSearchSelect` 的调用方逐个（M3 的 6 个，M4–M6 经成员下拉框的 14 个文件和页头的 9 个）核对；3 处复制处理失败（P10） |
 | M1-closeout 死成员和死 prop | 7.9 | `--rows M3` 的每一行消失或写进 review；按路径误归的 41 行写进 M4、M6、M7 的交接（P11、收尾） |
 | M1-closeout oxlint | 7.9 | 改到的文件 0 条；`promise(always-return)` 全仓清零；各包上限调低，review 写明（P8a–P11；只经机械一步改到的文件在 P11 的第 4 个任务，7.9） |
 | M1-P2 项目字段 | 4.6、5.2 | 接口没有 `close_in`、`default_state`、`page_view`、`estimate_id`（P4a） |
