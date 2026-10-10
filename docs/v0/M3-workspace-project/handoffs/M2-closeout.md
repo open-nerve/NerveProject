@@ -195,3 +195,13 @@ P8a 没有在这里记处理结果；它做到的部分（[P8a spec](../specs/P8
 仍未处理，状态保持 `open`：第 11 节的页面一侧（P10）；第 10、14 节（P10，M3 设计 7.7）；第 12 节等 M3 的收尾。
 
 来源：[M3/P9 spec](../specs/P9-web-workspace-pages.md) 第 7 节。
+
+## 处理结果（M3/P10）
+
+- **第 10 节 CSP：表情选择器的数据从本站提供**（关闭）：`emojibase-data` 15.3.2 是 web 应用的开发依赖（版本由 `pnpm-workspace.yaml` 的 catalog 固定）；构建时一个 Vite 插件（`web/apps/web/emojibase.ts`）把 `en/data.json`、`en/messages.json` 写到 `/assets/emojibase/15.3.2/en/`，开发服务器答同样的路径；`EmojiPicker.Root` 传 `emojibaseUrl`（`EMOJIBASE_URL`，`web/packages/propel/src/emoji-icon-picker/emoji/emoji.tsx`），一个 vitest（`web/apps/web/emojibase.test.ts`）核对它与构建写出的地址和版本一致；CSP 没有为它放开外部来源。P1、P3 的页面版本打开表情选择器，`watchPage` 没有 CSP 违规，也没有发往别处的请求（`requestsElsewhere`）（[M3/P10 spec](../specs/P10-web-project-pages.md) 2.1）。
+- **第 11 节 M2 留下的 M3 调用和类型**（关闭）：项目 general 页的时区选择用这个接口，随修改发出，P3 的页面版本核对（spec 2.5）；其余各项在 P8a、P8b、P9 已完成，`is_bot` 在 M4 的活动类型中的两处随 M4（见上）。
+- **第 14 节 下拉框和复制到剪贴板**（代码一侧完成）：`CustomSearchSelect` 的按钮改成 Headless UI 的 `Popover.Button`，`Combobox` 在它的面板里，Tab 能到、键盘打开，列表关上时清空搜索；成员下拉框以它为底，`member-options.tsx` 删除，列表在按钮旁展开，对 M4–M6 的调用方的约定照旧（spec 2.2）。关闭条件中"`member-options` 的列表在按钮旁展开"一项改为"成员下拉框的列表在按钮旁展开"（`member-options.tsx` 已删除；spec 第 3 节"预检之后"的 L1）。本节的 3 处复制（侧边栏、卡片、扩展侧边栏）经 `useCopyProjectLink`，它和项目页头菜单、邀请行、工作区 general 页的复制都经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`），失败时经 `t()` 提示（spec 2.3）。逐个调用方的浏览器核对是 M3/P10 评审的 C7、C8。
+
+仍未处理，状态保持 `open`：第 14 节等 C7、C8 写进 M3/P10 的评审；第 12 节等 M3 的收尾。
+
+来源：[M3/P10 spec](../specs/P10-web-project-pages.md) 第 7 节。
