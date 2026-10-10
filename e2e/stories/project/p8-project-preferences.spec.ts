@@ -1,7 +1,10 @@
+import type { Locator, Page, Response } from "@playwright/test";
+
 import {
   addProjectMembers,
   amidAnotherWorkspace,
   changeProject,
+  changeWorkspacePreferences,
   createProject,
   createWorkspace,
   inviteAndAccept,
@@ -15,6 +18,7 @@ import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtur
 import type { Database } from "../../fixtures/db";
 import { answerTo, holdAnswer, registerOnboarded, sentTo, shownWithin } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
+import { anotherBrowser } from "../../fixtures/workspace-pages";
 
 // P8, a member's display settings in a project (M3 design 2, 3.18): through the API, and through the project's header
 // and the sidebar (7.6).
@@ -53,6 +57,49 @@ async function stored(db: Database, id: string, email: string): Promise<unknown[
       WHERE s.project_id = $1 AND u.email = $2 AND s.deleted_at IS NULL`,
     [id, email]
   );
+}
+
+/** The tab of name in the project's header on page: a link outside the sidebar, which has links of the same names. */
+function tabOf(page: Page, name: string): Locator {
+  return page.locator("xpath=//a[not(ancestor::aside)]").filter({ hasText: new RegExp(`^${name}$`) });
+}
+
+/**
+ * Opens the menu of the tab of name in the project's header on page, which it has once nerve has given the caller's
+ * tab bar: resolves with the menu's "Set as default".
+ */
+async function menuOf(page: Page, name: string): Promise<Locator> {
+  const setAsDefault = page.getByRole("menuitem", { name: "Set as default" });
+  await expect(async () => {
+    await tabOf(page, name).click({ button: "right" });
+    await expect(setAsDefault).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 5_000 });
+  return setAsDefault;
+}
+
+/** The projects of page's sidebar, in its order. */
+function sidebarOrder(page: Page): Locator {
+  return page.getByRole("complementary", { name: "Main sidebar" }).locator('[id^="sidebar-"][id$="-JOINED"]');
+}
+
+/** The project of id in page's sidebar. */
+function inSidebar(page: Page, id: string): Locator {
+  return page.getByRole("complementary", { name: "Main sidebar" }).locator(`[id="sidebar-${id}-JOINED"]`);
+}
+
+/**
+ * Drags the project of id in page's sidebar onto the one of onto by its handle, which shows while the pointer is over
+ * the project: the drag starts there, as a hand's would. Resolves with the body page sends and nerve's answer.
+ */
+async function dragOnto(page: Page, id: string, onto: string): Promise<{ body: unknown; answer: Response }> {
+  await inSidebar(page, id).hover();
+  await inSidebar(page, id).locator("button").first().hover();
+  await page.mouse.down();
+  await inSidebar(page, id).hover({ position: { x: 60, y: 8 } });
+  return sentTo(page, "PATCH", `/api/v0/me/projects/${id}/preferences`, async () => {
+    await inSidebar(page, onto).hover();
+    await page.mouse.up();
+  });
 }
 
 test("P8 (API): the admin opens a project on its modules tab, moves views under more and drags it first in his sidebar, which lasts; an unknown or the work items tab changes nothing; his member's settings stay his own", async ({
@@ -128,8 +175,10 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
   ]);
 });
 
-test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh", async ({
+test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh; Web's guest is offered the menus and the drag as well", async ({
   api,
+  baseURL,
+  browser,
   db,
   signedInPage,
 }, testInfo) => {
@@ -144,30 +193,28 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   const shown = await changeProject(api, admin.access_token, web.id, { module_view: true, issue_views_view: true });
   expect(shown.status).toBe(200);
   // His projects' navigation is the tabbed one, whose project pages have a header of tabs (W8).
-  const tabbed = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
-    params: { path: { slug } },
-    body: { navigation_control_preference: "TABBED" },
-    headers: bearer(admin.access_token),
-  });
-  expect(tabbed.response.status, `tabbed: ${JSON.stringify(tabbed.error)}`).toBe(200);
+  await changeWorkspacePreferences(api, admin.access_token, slug, { navigation_control_preference: "TABBED" });
+  // Gus, acme's guest, is Web's guest and then Docs': his sidebar is Docs 55535, Web 65535. nerve lets a project's
+  // guests change their tab bar and their sidebar as it lets its admins (project_preferences.update).
+  const gusEmail = emailFor(testInfo, "gus");
+  const gus = await registerOnboarded(api, gusEmail);
+  await inviteAndAccept(api, admin.access_token, slug, { email: gusEmail, token: gus.access_token }, 5);
+  const gusId = await accountId(api, gus.access_token);
+  await addProjectMembers(api, admin.access_token, web.id, [{ member_id: gusId, role: 5 }]);
+  await addProjectMembers(api, admin.access_token, docs.id, [{ member_id: gusId, role: 5 }]);
+  await changeWorkspacePreferences(api, gus.access_token, slug, { navigation_control_preference: "TABBED" });
 
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
   const settings = `/api/v0/me/projects/${web.id}/preferences`;
-  /** The tab of name in Web's header: a link of the page outside the sidebar, which has links of the same names. */
-  const tab = (name: string) =>
-    page.locator("xpath=//a[not(ancestor::aside)]").filter({ hasText: new RegExp(`^${name}$`) });
-  const setAsDefault = page.getByRole("menuitem", { name: "Set as default" });
+  const tab = (name: string) => tabOf(page, name);
   // Until nerve has given his tab bar a tab has no menu: a change made to nerve's default would replace his tab bar.
   const release = await holdAnswer(page, "GET", settings);
   await page.goto(`/${slug}/projects/${web.id}/issues`);
   await tab("Modules").click({ button: "right" });
-  expect(await shownWithin(setAsDefault)).toBe(false);
+  expect(await shownWithin(page.getByRole("menuitem", { name: "Set as default" }))).toBe(false);
   expect((await answerTo(page, "GET", settings, release)).status()).toBe(200);
-  await expect(async () => {
-    await tab("Modules").click({ button: "right" });
-    await expect(setAsDefault).toBeVisible({ timeout: 1_000 });
-  }).toPass({ timeout: 5_000 });
+  const setAsDefault = await menuOf(page, "Modules");
   const defaulted = await sentTo(page, "PATCH", settings, () => setAsDefault.click());
   expect([defaulted.answer.status(), defaulted.body]).toEqual([
     200,
@@ -186,26 +233,19 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   await expect(tab("Views")).toHaveCount(0);
 
   // He drags Ops, third in his sidebar, onto Docs, the first, by its handle: Ops goes a step before Docs.
-  const sidebar = page.getByRole("complementary", { name: "Main sidebar" });
-  const item = (id: string) => sidebar.locator(`[id="sidebar-${id}-JOINED"]`);
-  const order = sidebar.locator('[id^="sidebar-"][id$="-JOINED"]');
+  const order = sidebarOrder(page);
   await expect(order).toHaveText([/Docs/, /Web/, /Ops/]);
-  await item(ops.id).hover();
-  // the handle shows while the pointer is over Ops: the drag starts there, as a hand's would, then goes to Docs
-  await item(ops.id).locator("button").first().hover();
-  await page.mouse.down();
-  await item(ops.id).hover({ position: { x: 60, y: 8 } });
-  const moved = await sentTo(page, "PATCH", `/api/v0/me/projects/${ops.id}/preferences`, async () => {
-    await item(docs.id).hover();
-    await page.mouse.up();
-  });
+  const moved = await dragOnto(page, ops.id, docs.id);
   expect([moved.answer.status(), moved.body]).toEqual([200, { sort_order: 35535 }]);
   await expect(order).toHaveText([/Ops/, /Docs/, /Web/]);
 
   // After a refresh: the same order; Web opens on its modules, and its views are under more.
   await page.reload();
   await expect(order).toHaveText([/Ops/, /Docs/, /Web/]);
-  await expect(item(web.id).locator("a").first()).toHaveAttribute("href", `/${slug}/projects/${web.id}/modules`);
+  await expect(inSidebar(page, web.id).locator("a").first()).toHaveAttribute(
+    "href",
+    `/${slug}/projects/${web.id}/modules`
+  );
   // the header's tabs show (the first Modules: the header measures the tabs it shows by hidden copies of them)
   await expect(tab("Modules").first()).toBeVisible();
   await expect(tab("Views")).toHaveCount(0);
@@ -235,4 +275,30 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
       "Failed to load resource: the server responded with a status of 404 (Not Found)",
     ],
   });
+
+  // Gus is offered the same, on the tabs a guest has (not Modules): he makes views the tab Web opens on, by its tab's
+  // menu, and drags Web, second in his sidebar, a step before Docs.
+  const theGuest = await anotherBrowser(browser, baseURL ?? "", gus);
+  const gusWatch = await watchPage(theGuest.page);
+  await theGuest.page.goto(`/${slug}/projects/${web.id}/issues`);
+  const gusDefault = await menuOf(theGuest.page, "Views");
+  const gusDefaulted = await sentTo(theGuest.page, "PATCH", settings, () => gusDefault.click());
+  expect([gusDefaulted.answer.status(), gusDefaulted.body]).toEqual([
+    200,
+    { navigation: { default_tab: "views", hide_in_more_menu: [] } },
+  ]);
+  await expect(sidebarOrder(theGuest.page)).toHaveText([/Docs/, /Web/]);
+  const gusMoved = await dragOnto(theGuest.page, web.id, docs.id);
+  expect([gusMoved.answer.status(), gusMoved.body]).toEqual([200, { sort_order: 45535 }]);
+  await expect(sidebarOrder(theGuest.page)).toHaveText([/Web/, /Docs/]);
+  expect(await stored(db, web.id, gusEmail)).toEqual([
+    { preferences: { navigation: { default_tab: "views", hide_in_more_menu: [] } }, sort_order: 45535, by: gusEmail },
+  ]);
+  await expect.poll(() => gusWatch.apiFailures).toEqual([`404 ${filters}`]);
+  expect([gusWatch.cspViolations, gusWatch.oldApiRequests, gusWatch.pageErrors]).toEqual([[], [filters], []]);
+  await expectQuietConsole(theGuest.page, gusWatch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
+  });
+  await theGuest.close();
 });

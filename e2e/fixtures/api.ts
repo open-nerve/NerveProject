@@ -178,6 +178,21 @@ export async function membershipOf(api: Api, token: string, slug: string, member
   return membership.id;
 }
 
+/** Changes the settings of the account of token, a member's, in the workspace of slug, which nerve must answer. */
+export async function changeWorkspacePreferences(
+  api: Api,
+  token: string,
+  slug: string,
+  body: WorkspacePreferencesUpdate
+): Promise<void> {
+  const { error, response } = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
+    params: { path: { slug } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `the settings in ${slug}: ${JSON.stringify(error)}`).toBe(200);
+}
+
 /**
  * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
  * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
@@ -193,12 +208,7 @@ export async function furnishWorkspace(
 ): Promise<void> {
   await inviteAndAccept(api, adminToken, slug, member, 15);
   await invite(api, adminToken, slug, [{ email: inviteeEmail, role: 15 }]);
-  const { error, response } = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
-    params: { path: { slug } },
-    body: { navigation_project_limit: 3 },
-    headers: bearer(adminToken),
-  });
-  expect(response.status, `the admin's settings in ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  await changeWorkspacePreferences(api, adminToken, slug, { navigation_project_limit: 3 });
   const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
   await createLabel(api, adminToken, web.id, { name: "Bug" });
 }

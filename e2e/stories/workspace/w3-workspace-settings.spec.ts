@@ -1,5 +1,6 @@
 import {
   changeRole,
+  changeWorkspacePreferences,
   createLabel,
   createProject,
   createWorkspace,
@@ -68,12 +69,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
       headers: bearer(decliner),
     });
     expect(declined.response.status).toBe(204);
-    const settings = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
-      params: { path: { slug: target } },
-      body: { navigation_project_limit: 3 },
-      headers: bearer(member),
-    });
-    expect(settings.response.status).toBe(200);
+    await changeWorkspacePreferences(api, member, target, { navigation_project_limit: 3 });
     // The answer is the workspace's own new project as its creator sees it, first in both admins' sidebars.
     const project = await createProject(api, admin, target, {
       name: "Web",

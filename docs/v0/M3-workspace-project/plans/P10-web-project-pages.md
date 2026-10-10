@@ -98,31 +98,32 @@
 | `web/apps/web/core/components/project/member-list.tsx` | 添加弹窗不再收 `workspaceSlug` | 8 |
 | `web/apps/web/core/components/project/member-list.test.tsx` | 成员页只对 nerve 允许添加的人提供"Add member"：项目管理员、是项目成员的工作区管理员（Task 8 的修正轮，裁定 T8-a） | 8 |
 | `web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.test.tsx` | 负责人、默认负责人、访客可见：显示 nerve 的回答，在会话里跟进（整个文件）；它的 vitest，含谁能改它们（Task 8 的修正轮一，裁定 T8-b） | 8 |
-| `web/apps/web/core/lib/fake-controls.ts` | 搜索选择的替身留下它收到的焦点、popper 的修饰（Task 2）和选项（Task 8）；按钮的替身留下它的文字（Task 8 的修正轮）；开关的替身留下它能否拨动（Task 8 的修正轮一）；上下文菜单的替身留下它的项（Task 9 的修正轮，裁定 T9-a） | 2、8、9 |
+| `web/apps/web/core/lib/fake-controls.ts` | 搜索选择的替身留下它收到的焦点、popper 的修饰（Task 2）和选项（Task 8）；按钮的替身留下它的文字（Task 8 的修正轮）；开关的替身留下它能否拨动（Task 8 的修正轮一）；上下文菜单的替身留下它的项（Task 9 的修正轮，裁定 T9-a）；菜单的替身渲染它的项、留下每一项，`buttonsIn` 读一项中页面自己的按钮（Task 10 的修正轮，裁定 T10-a） | 2、8、9、10 |
 | `web/apps/web/core/store/user/fake-permissions.ts` | 调用者的权限是 store 自己的 `UserPermissionStore`，在 nerve 列出的工作区和项目上（`permissionsOver`、`callerInWeb`）：权限 store、成员页、成员默认值的测试共用（Task 8 的修正轮一，裁定 T8-b） | 8 |
 | `web/apps/web/core/store/user/permissions.store.test.ts` | `inProjects` 经 `fake-permissions.ts` 的 `permissionsOver`（Task 8 的修正轮一，裁定 T8-b） | 8 |
 | `web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx` | 删除项目：按提交的值核对，在会话里跟进，项目自己的页面才回到项目列表，在途时关不掉；它的 vitest（9.5） | 9 |
 | `web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx` | 归档、恢复：在会话里跟进，忙到跳转做完，在途时关不掉（整个文件）；它的 vitest | 9 |
 | `web/apps/web/core/components/project/card.test.tsx` | 项目的卡片对谁提供什么：已归档时恢复、删除只给 nerve 允许的人（项目管理员、是项目成员的工作区管理员），未归档时设置的链接给项目的管理员、成员和 nerve 允许修改项目的人，不给其余的访客（Task 9 的修正轮，裁定 T9-a） | 9 |
 | `web/apps/web/core/components/workspace/sidebar/use-project-drop.ts`、`web/apps/web/core/components/workspace/sidebar/use-project-drop.test.ts` | 侧边栏的移动失败在会话里按 `code` 提示（整个文件）；它的 vitest | 10 |
-| `web/apps/web/core/components/navigation/use-tab-preferences.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.test.ts` | 标签栏交回 `{ navigation, changes }`：设置取到之前没有修改；修改在会话里跟进（整个文件）；它的 vitest | 10 |
+| `web/apps/web/core/components/navigation/use-tab-preferences.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.test.ts` | 标签栏交回 `{ navigation, changes }`：设置取到之前没有修改；修改在会话里跟进（整个文件）；它的 vitest（修正轮：每个修改作用于 nerve 答前一个的标签栏） | 10 |
 | `web/apps/web/core/components/navigation/tab-navigation-root.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx` | 页头的标签和"更多"只在有修改时提供菜单 | 10 |
+| `web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx` | "更多"在设置取到之前不提供修改；之后对收进去的标签提供"显示"，对每个提供设为默认或取消，各是它说的修改（Task 10 的修正轮，裁定 T10-a） | 10 |
 | `README.md`、`docs/v0/frontend-changes.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`、`docs/v0/M3-workspace-project/handoffs/M1-P4-router-native.md` | "前端"一节的项目页面；前端改动清单；M2 收尾交接、M1-P4 交接的 P10 处理结果 | 11 |
 | `e2e/fixtures/browser.ts` | `watchPage` 记下每个请求的地址；`requestsElsewhere`：发往页面之外的源的请求 | 1 |
 | `e2e/fixtures/mounts.ts` | 页面加载时的请求清单的列表和 `valued`，从 S2 移来（新文件）；S2、P2 读它 | 3 |
 | `e2e/fixtures/settings-pages.ts` | `transitionsEnded`（Task 2）；`closedWithin`（Task 3 的修正轮，`closedByEscape` 经它）；`moveWithinApp`（Task 5）；`shownWithin`（Task 10） | 2、3、5、10 |
 | `e2e/fixtures/workspace-pages.ts` | `pickTimeZone`：只用键盘选时区 | 2 |
 | `e2e/fixtures/auth.ts` | `named`：给账户显示名，从 P1 移来（Task 4 的修正轮，裁定 T4-c） | 4 |
-| `e2e/fixtures/api.ts` | `archiveProject`（Task 3）；`projectMembershipOf`、`changeProject`、`projectMemberWrites`（Task 8） | 3、8 |
+| `e2e/fixtures/api.ts` | `archiveProject`（Task 3）；`projectMembershipOf`、`changeProject`、`projectMemberWrites`（Task 8）；`changeWorkspacePreferences`：P8、W3、`furnishWorkspace` 共用（Task 10 的修正轮，裁定 T10-a） | 3、8、10 |
 | `e2e/fixtures/assert/project.ts` | `projectSettingsOf`：项目存下的设置 | 8 |
 | `e2e/stories/project/p1-create-project.spec.ts` | P1 的页面版本：表情选择器（Task 1）、负责人的列表（Task 2）、创建（Task 4） | 1、2、4 |
-| `e2e/stories/workspace/w3-workspace-settings.spec.ts` | W3 的页面版本只用键盘选时区 | 2 |
+| `e2e/stories/workspace/w3-workspace-settings.spec.ts` | W3 的页面版本只用键盘选时区（Task 2）；成员的工作区设置经 `changeWorkspacePreferences`（Task 10 的修正轮） | 2、10 |
 | `e2e/stories/project/p2-visibility.spec.ts` | P2 的页面版本：地址的加入界面、已归档、找不到；卡片的复制和加入；页头的项目面包屑一个 Tab 停留点 | 3 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 发往别处的请求经 `requestsElsewhere`（Task 1）；挂载清单的列表读 `mounts.ts`，成员、访客、不是成员的人打开项目列表，已归档的项目只读项目本身（Task 3） | 1、3 |
 | `e2e/stories/project/p3-project-settings.spec.ts` | P3 的页面版本：general 和不离开路由到另一个项目的 general（Task 5）、功能和自动归档（Task 6）、成员默认值（Task 8，经 API 的被拒绝的添加经 `projectMemberWrites`） | 5、6、8 |
 | `e2e/stories/project/p5-project-members.spec.ts` | P5 的页面版本：改角色、移出、离开，被拒绝时确认框、离开弹窗留着（Task 7）；添加成员，成员的选择用 Tab 到达（Task 8） | 7、8 |
 | `e2e/stories/project/p4-archive.spec.ts` | P4 的页面版本：归档、恢复、删除；在途时按钮忙，删除的按钮在名称和确认的话都对之前不可用，是工作区管理员的项目成员在设置页也看到归档、删除（Task 9 的修正轮） | 9 |
-| `e2e/stories/project/p8-project-preferences.spec.ts` | P8 的页面版本：标签栏的默认和"更多"、侧边栏的拖动 | 10 |
+| `e2e/stories/project/p8-project-preferences.spec.ts` | P8 的页面版本：标签栏的默认和"更多"、侧边栏的拖动；Web 的访客也得到标签的菜单和拖动（Task 10 的修正轮） | 10 |
 
 ---
 
@@ -9651,6 +9652,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T10.5` | 标签栏的修改被拒绝时什么都不说 | `use-tab-preferences.test.ts` | vitest |
 | `T10.6` | 新的默认标签不提示 | `use-tab-preferences.test.ts`、故事 P8 | vitest；端到端 |
 | `T10.7` | 在侧边栏拖放的 hook 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T10.8` | 标签栏的修改在调用时由 store 显示的标签栏决定，不在轮到它时：前一个还没回答时要的修改撤销前一个（Task 10 的修正轮，裁定 T10-a） | `use-tab-preferences.test.ts` | vitest |
+| `T10.9` | "更多"在 nerve 给出标签栏的设置之前提供"显示"和"设为默认"，点了什么都不发（修正轮，裁定 T10-a） | `tab-navigation-overflow-menu.test.tsx` | vitest |
+| `T10.10` | "更多"的"显示"把标签收起（修正轮，裁定 T10-a） | `tab-navigation-overflow-menu.test.tsx` | vitest |
+| `T10.11` | 页头只对项目的管理员和成员提供标签的菜单，不对 nerve 允许的项目访客提供（修正轮，裁定 T10-a） | 故事 P8 | 端到端 |
+| `T10.12` | 侧边栏只让工作区的管理员和成员拖动，不让 nerve 允许的工作区访客拖动（修正轮，裁定 T10-a） | 故事 P8 | 端到端 |
+
+修正轮的这些行之外：`use-tab-preferences.test.ts` 的 `made()` 把每个修改作用于 nerve 答前一个的标签栏（第一个作用于持有的），如 store 轮到它时那样，三个修改的结果变为 `{modules,[views]}`、`{modules,[views,modules]}`、`{modules,[modules]}`；新的 `tab-navigation-overflow-menu.test.tsx`（2 个：设置取到之前"更多"中的两个标签没有按钮；之后收进去的标签有"显示"和"设为默认"，默认的标签有"取消默认"，点了各是它说的修改，没有收起），加进 `.oxlintrc.json` 的非空断言的范围（放在 `use-project-drop.test.ts` 之后）；`fake-controls.ts` 加菜单的替身 `Menu`（渲染它的项，`Menu.MenuItem` 在 `shown.menuItems` 留下每一项）和 `buttonsIn`（一项中页面自己的按钮，包在别的组件里的也算）。P8 加 Gus（工作区的访客、Web 和 Docs 的访客；nerve 的 `project_preferences.update` 允许项目的管理员、成员和访客）：管理员之后，他在另一个浏览器里打开 Web，右键 Views（访客有的标签）设为默认，发 `{ navigation: { default_tab: "views", hide_in_more_menu: [] } }`；把侧边栏的 Web 拖到 Docs 上，发 `{ sort_order: 45535 }`；数据库中 Web 的这一行是他写的；他的一次加载有一条 `EMOJI_CHECK_WARNING` 和筛选的旧地址的一次 404。标签的菜单（`menuOf`）和拖动（`dragOnto`）是故事的函数，两人共用；工作区的设置经 api.ts 新的 `changeWorkspacePreferences`（P8、W3、`furnishWorkspace` 共用，不再各写一遍）。P8 是 304 行。
 
 ---
 

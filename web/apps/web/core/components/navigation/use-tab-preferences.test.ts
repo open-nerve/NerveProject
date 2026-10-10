@@ -33,8 +33,18 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 /** The caller's tab bar in Web as nerve last answered it. */
 const held: ProjectNavigation = { default_tab: "cycles", hide_in_more_menu: ["views"] };
 
-/** Each change the store was asked for: its project, and what it makes of the tab bar held. */
-const made = () => preferences.updateNavigation.mock.calls.map(([projectId, change]) => [projectId, change(held)]);
+/**
+ * Each change the store was asked for: its project, and what it makes of the tab bar nerve answered the change before
+ * it with (the first, of the tab bar held), as the store makes it in its turn, nerve answering each with the tab bar
+ * sent. A change decided as it was asked for, of the tab bar shown then, would undo the one before it.
+ */
+const made = () => {
+  let answered = held;
+  return preferences.updateNavigation.mock.calls.map(([projectId, change]) => {
+    answered = change(answered);
+    return [projectId, answered];
+  });
+};
 
 beforeEach(() => {
   signedIn();
@@ -63,8 +73,8 @@ describe("useTabPreferences", () => {
     changes?.show("views");
     expect(made()).toEqual([
       ["p-web", { default_tab: "modules", hide_in_more_menu: ["views"] }],
-      ["p-web", { default_tab: "cycles", hide_in_more_menu: ["views", "modules"] }],
-      ["p-web", { default_tab: "cycles", hide_in_more_menu: [] }],
+      ["p-web", { default_tab: "modules", hide_in_more_menu: ["views", "modules"] }],
+      ["p-web", { default_tab: "modules", hide_in_more_menu: ["modules"] }],
     ]);
   });
 
