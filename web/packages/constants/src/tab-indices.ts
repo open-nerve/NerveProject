@@ -42,18 +42,6 @@ const INTAKE_ISSUE_CREATE_FORM_TAB_INDICES = [
 
 const CREATE_LABEL_TAB_INDICES = ["name", "color", "cancel", "submit"];
 
-const PROJECT_CREATE_TAB_INDICES = [
-  "name",
-  "identifier",
-  "description",
-  "network",
-  "lead",
-  "cancel",
-  "submit",
-  "close",
-  "logo_props",
-];
-
 const PROJECT_CYCLE_TAB_INDICES = ["name", "description", "date_range", "cancel", "submit", "project_id"];
 
 const PROJECT_MODULE_TAB_INDICES = [
@@ -73,7 +61,6 @@ export enum ETabIndices {
   ISSUE_FORM = "issue-form",
   INTAKE_ISSUE_FORM = "intake-issue-form",
   CREATE_LABEL = "create-label",
-  PROJECT_CREATE = "project-create",
   PROJECT_CYCLE = "project-cycle",
   PROJECT_MODULE = "project-module",
   PROJECT_VIEW = "project-view",
@@ -83,7 +70,6 @@ export const TAB_INDEX_MAP: Record<ETabIndices, string[]> = {
   [ETabIndices.ISSUE_FORM]: ISSUE_FORM_TAB_INDICES,
   [ETabIndices.INTAKE_ISSUE_FORM]: INTAKE_ISSUE_CREATE_FORM_TAB_INDICES,
   [ETabIndices.CREATE_LABEL]: CREATE_LABEL_TAB_INDICES,
-  [ETabIndices.PROJECT_CREATE]: PROJECT_CREATE_TAB_INDICES,
   [ETabIndices.PROJECT_CYCLE]: PROJECT_CYCLE_TAB_INDICES,
   [ETabIndices.PROJECT_MODULE]: PROJECT_MODULE_TAB_INDICES,
   [ETabIndices.PROJECT_VIEW]: PROJECT_VIEW_TAB_INDICES,

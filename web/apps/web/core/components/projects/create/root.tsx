@@ -67,7 +67,7 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
 
   return (
     <FormProvider {...methods}>
-      <ProjectCreateHeader handleClose={handleClose} isMobile={isMobile} />
+      <ProjectCreateHeader handleClose={handleClose} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="px-3">
         <div className="mt-9 space-y-6 pb-5">
@@ -77,7 +77,7 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
             shouldAutoSyncIdentifier={shouldAutoSyncIdentifier}
             setShouldAutoSyncIdentifier={setShouldAutoSyncIdentifier}
           />
-          <ProjectAttributes isMobile={isMobile} />
+          <ProjectAttributes />
         </div>
         <ProjectCreateButtons handleClose={handleClose} />
       </form>

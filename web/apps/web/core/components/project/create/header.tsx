@@ -7,12 +7,9 @@
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 // nerve imports
-import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { CloseOutline } from "@makeplane/propel/icons";
-// nerve ui
-import { getTabIndex } from "@nerve/utils";
 // components
 import { CoverImage } from "@/components/common/cover-image";
 import { logoPropsOf } from "@/components/project/logo-props";
@@ -20,11 +17,10 @@ import type { ProjectCreationForm } from "@/components/projects/create/use-creat
 
 type Props = {
   handleClose: () => void;
-  isMobile?: boolean;
 };
 
 function ProjectCreateHeader(props: Props) {
-  const { handleClose, isMobile = false } = props;
+  const { handleClose } = props;
   const {
     control,
     setValue,
@@ -33,7 +29,6 @@ function ProjectCreateHeader(props: Props) {
   const { t } = useTranslation();
 
   const [isOpen, setIsOpen] = useState(false);
-  const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
 
   return (
     <div className="group relative h-44 w-full rounded-lg">
@@ -44,13 +39,7 @@ function ProjectCreateHeader(props: Props) {
         className="absolute top-0 left-0 h-full w-full rounded-lg"
       />
       <div className="absolute top-2 right-2 p-2">
-        <button
-          type="button"
-          onClick={handleClose}
-          disabled={isSubmitting}
-          aria-label={t("close")}
-          tabIndex={getIndex("close")}
-        >
+        <button type="button" onClick={handleClose} disabled={isSubmitting} aria-label={t("close")}>
           <CloseOutline className="h-5 w-5 text-on-color" />
         </button>
       </div>

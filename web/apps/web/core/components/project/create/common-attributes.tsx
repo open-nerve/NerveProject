@@ -12,12 +12,11 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { InfoOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { ProjectCreationForm } from "@/components/projects/create/use-create-project";
 // ui
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { projectIdentifierSanitizer, getTabIndex } from "@nerve/utils";
+import { projectIdentifierSanitizer } from "@nerve/utils";
 
 type Props = {
   setValue: UseFormSetValue<ProjectCreationForm>;
@@ -34,7 +33,6 @@ function ProjectCommonAttributes(props: Props) {
     control,
   } = useFormContext<ProjectCreationForm>();
 
-  const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
   const { t } = useTranslation();
 
   const handleNameChange =
@@ -80,7 +78,6 @@ function ProjectCommonAttributes(props: Props) {
                   value={value}
                   onChange={handleNameChange(onChange)}
                   placeholder={t("project_name")}
-                  tabIndex={getIndex("name")}
                 />
               </InputGroup>
             </Field>
@@ -117,7 +114,6 @@ function ProjectCommonAttributes(props: Props) {
                   value={value}
                   onChange={handleIdentifierChange(onChange)}
                   placeholder={t("project_id")}
-                  tabIndex={getIndex("identifier")}
                 />
               </InputGroup>
             </Field>
@@ -154,7 +150,6 @@ function ProjectCommonAttributes(props: Props) {
                     onChange(e);
                     handleFormOnChange?.();
                   }}
-                  tabIndex={getIndex("description")}
                 />
               </TextAreaGroup>
             </Field>

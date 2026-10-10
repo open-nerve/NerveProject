@@ -9,6 +9,7 @@ import {
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, named, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { tabCycle } from "../../fixtures/project-pages";
 import {
   closedByComposingEscape,
   closedByEscape,
@@ -162,14 +163,6 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
   // places. Ops, which the admin creates, goes before Web in the admin's sidebar. Docs, which the member creates with
   // the admin its lead, goes before Web in the member's sidebar and before Ops in the admin's sidebar.
   const ops = await createProject(api, admin, slug, { name: "Ops", identifier: "ops", network: 0 });
-  expect(ops).toMatchObject({
-    identifier: "OPS",
-    network: 0,
-    member_role: 20,
-    sort_order: 55535,
-    member_ids: [adminId],
-  });
-  // Ops, given no lead, is led by no one.
   const opsRow = {
     name: "Ops",
     identifier: "OPS",
@@ -178,17 +171,14 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
     timezone: "Asia/Shanghai",
     logo_props: {},
   };
+  expect(ops).toMatchObject({ ...opsRow, member_role: 20, sort_order: 55535, member_ids: [adminId] });
+  // Ops, given no lead, is led by no one.
   expect(
     await expectProjectCreated(db, slug, opsRow, adminEmail, null, [{ email: adminEmail, sort_order: 55535 }])
   ).toBe(ops.id);
   const docs = await createProject(api, member, slug, { name: "Docs", identifier: "docs", project_lead_id: adminId });
-  expect(docs).toMatchObject({
-    identifier: "DOCS",
-    member_role: 20,
-    sort_order: 55535,
-    member_ids: [memberId, adminId],
-  });
   const docsRow = { ...opsRow, name: "Docs", identifier: "DOCS", network: 2 };
+  expect(docs).toMatchObject({ ...docsRow, member_role: 20, sort_order: 55535, member_ids: [memberId, adminId] });
   expect(
     await expectProjectCreated(db, slug, docsRow, memberEmail, adminEmail, [
       { email: memberEmail, sort_order: 55535 },
@@ -344,21 +334,28 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   });
 });
 
-test("P1 (page): the lead's list opens beside its button with its search focused; Escape closes it", async ({
+test("P1 (page): Tab goes round the creation dialog and nowhere else; the lead's list opens beside its button with its search focused; Escape closes it", async ({
   api,
   signedInPage,
 }, testInfo) => {
   const member = await registerOnboarded(api, emailFor(testInfo, "member"));
   const slug = slugFor(testInfo);
   await createWorkspace(api, member.access_token, { name: "Acme", slug });
+  await createProject(api, member.access_token, slug, { name: "Ops", identifier: "OPS" });
   const page = await signedInPage(member);
   const watch = await watchPage(page);
 
   await page.goto(`/${slug}/projects`);
+  await expect(page.getByRole("link", { name: /Ops/ })).toBeVisible();
   await page.getByRole("button", { name: "Add Project", exact: true }).click();
   // Popper places the list where the button is as it opens: the modal's enter transition moves the button.
   await transitionsEnded(page.getByRole("dialog"));
-  // The network's select is one Tab stop, its button, right after the description; Space opens it.
+  // Tab goes round the dialog's controls in the form's order, each once, and never out of it (to the page behind, or
+  // to the closed menu of Ops's card); the network's select is one stop, its button, which Space opens.
+  await page.locator("#name").focus();
+  expect((await tabCycle(page, page.getByRole("dialog"))).join(", ")).toBe(
+    "identifier, description, Public, Lead, Cancel, Create project, Close, Project icon, name"
+  );
   await page.locator("#description").press("Tab");
   await expect(page.getByRole("dialog").getByRole("button", { name: "Public" })).toBeFocused();
   await page.keyboard.press("Space");

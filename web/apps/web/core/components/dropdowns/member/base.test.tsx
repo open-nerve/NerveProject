@@ -22,8 +22,8 @@ vi.mock("@/hooks/store/use-member", () => ({
 }));
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme" }) }));
 
-/** Renders the lead's dropdown, as a caller that defers it or not; gives its markup. */
-function render(renderByDefault?: boolean) {
+/** Renders the lead's dropdown, as a caller that defers it or not, and gives it a tabIndex or not; gives its markup. */
+function render(renderByDefault?: boolean, tabIndex?: number) {
   emptyShown();
   return renderToStaticMarkup(
     <MemberDropdownBase
@@ -35,6 +35,7 @@ function render(renderByDefault?: boolean) {
       buttonVariant="border-with-text"
       placeholder="Lead"
       renderByDefault={renderByDefault}
+      tabIndex={tabIndex}
     />
   );
 }
@@ -61,6 +62,12 @@ describe("MemberDropdownBase", () => {
     device.isMobile = true;
     render();
     expect([desktop, shown.searchSelects[0]?.focusSearchOnOpen]).toEqual([true, false]);
+  });
+
+  it("gives its caller's tabIndex to its button, the select's own out of the Tab order (a work item form's)", () => {
+    render(true, 3);
+    const button = renderToStaticMarkup(shown.searchSelects[0]?.customButton);
+    expect([shown.searchSelects[0]?.tabIndex, button.includes('tabindex="3"')]).toEqual([-1, true]);
   });
 
   it("keeps its list 12 pixels inside the window", () => {

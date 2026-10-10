@@ -1,4 +1,4 @@
-import type { Page, Response } from "@playwright/test";
+import type { Locator, Page, Response } from "@playwright/test";
 
 import { answerTo } from "./settings-pages";
 import { memberRow } from "./workspace-pages";
@@ -35,4 +35,28 @@ export async function endProjectMembership(
   return answerTo(page, request.method, request.path, () =>
     page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
   );
+}
+
+/**
+ * Presses Tab on page until the focus is back where it was, at most 40 times, and gives the stops in order: each the
+ * focused element's label, a field's id or a button's text, marked "outside: " when within does not hold it.
+ */
+export async function tabCycle(page: Page, within: Locator): Promise<string[]> {
+  const box = await within.elementHandle();
+  const start = await page.evaluateHandle(() => document.activeElement);
+  // each press waits for the one before it: a stop after another
+  const from = async (stops: string[]): Promise<string[]> => {
+    await page.keyboard.press("Tab");
+    const { stop, back } = await page.evaluate(
+      ([inside, first]) => {
+        const focused = document.activeElement;
+        const field = focused?.matches("input, textarea") ? focused.id : focused?.textContent?.trim();
+        const name = focused?.getAttribute("aria-label") || field || focused?.tagName || "";
+        return { stop: inside?.contains(focused) ? name : `outside: ${name}`, back: focused === first };
+      },
+      [box, start] as const
+    );
+    return back || stops.length === 39 ? [...stops, stop] : from([...stops, stop]);
+  };
+  return from([]);
 }

@@ -6,33 +6,27 @@
 
 import { useFormContext } from "react-hook-form";
 // nerve imports
-import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { ProjectCreationForm } from "@/components/projects/create/use-create-project";
-// helpers
-import { getTabIndex } from "@nerve/utils";
 
 type Props = {
   handleClose: () => void;
-  isMobile?: boolean;
 };
 
 function ProjectCreateButtons(props: Props) {
   const { t } = useTranslation();
-  const { handleClose, isMobile = false } = props;
+  const { handleClose } = props;
   const {
     formState: { isSubmitting },
   } = useFormContext<ProjectCreationForm>();
 
-  const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
-
   return (
     <div className="flex justify-end gap-2 border-t border-subtle py-4">
-      <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting} tabIndex={getIndex("cancel")}>
+      <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
         {t("common.cancel")}
       </Button>
-      <Button variant="primary" size="lg" type="submit" loading={isSubmitting} tabIndex={getIndex("submit")}>
+      <Button variant="primary" size="lg" type="submit" loading={isSubmitting}>
         {isSubmitting ? t("creating") : t("create_project")}
       </Button>
     </div>

@@ -7,10 +7,9 @@
 import { observer } from "mobx-react";
 import { Controller, useFormContext } from "react-hook-form";
 // nerve imports
-import { NETWORK_CHOICES, ETabIndices } from "@nerve/constants";
+import { NETWORK_CHOICES } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { CustomSelect } from "@nerve/ui";
-import { getTabIndex } from "@nerve/utils";
 // components
 import { MemberDropdownBase } from "@/components/dropdowns/member/base";
 import { ProjectNetworkIcon } from "@/components/project/project-network-icon";
@@ -20,15 +19,9 @@ import { useMember } from "@/hooks/store/use-member";
 import { leadCandidates } from "./lead-candidates";
 import type { ProjectCreationForm } from "./use-create-project";
 
-type Props = {
-  isMobile?: boolean;
-};
-
-const ProjectAttributes = observer(function ProjectAttributes(props: Props) {
-  const { isMobile = false } = props;
+const ProjectAttributes = observer(function ProjectAttributes() {
   const { t } = useTranslation();
   const { control } = useFormContext<ProjectCreationForm>();
-  const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
   const {
     getUserDetails,
     workspace: { workspaceMemberIds, getWorkspaceMemberDetails },
@@ -62,7 +55,6 @@ const ProjectAttributes = observer(function ProjectAttributes(props: Props) {
                 className="h-full"
                 buttonClassName="h-full"
                 noChevron
-                tabIndex={getIndex("network")}
               >
                 {NETWORK_CHOICES.map((network) => (
                   <CustomSelect.Option key={network.key} value={network.key}>
@@ -94,7 +86,6 @@ const ProjectAttributes = observer(function ProjectAttributes(props: Props) {
               placeholder={t("lead")}
               multiple={false}
               buttonVariant="border-with-text"
-              tabIndex={getIndex("lead")}
             />
           </div>
         )}
