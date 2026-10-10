@@ -11,12 +11,21 @@ import {
   type ProjectMemberNew,
 } from "../../fixtures/api";
 import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
-import { bearer, newAccount } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import {
+  answerTo,
+  closedByEscape,
+  enabledWithin,
+  holdAnswer,
+  registerOnboarded,
+  sentTo,
+} from "../../fixtures/settings-pages";
+import { endProjectMembership, leavingOf, removalOf } from "../../fixtures/project-pages";
 import { expect, test } from "../../fixtures/test";
+import { anotherBrowser, memberRow } from "../../fixtures/workspace-pages";
 
-// P5, a project's members (M3 design 2, 3.5, 3.7): adding them, changing a
-// role, removing a member, leaving. The page version comes with the
-// project's members page (P10).
+// P5, a project's members (M3 design 2, 3.5, 3.7, 7.6): adding them, changing a role, removing a member, leaving.
 
 /** The writes on a project's members, each by the caller of token. */
 function writes(api: Api, projectId: string) {
@@ -230,4 +239,151 @@ test("P5 (API): the admin adds a member and a guest at once, and cannot leave, t
       ] as const
     ).toSorted()
   );
+});
+
+test("P5 (page): a project admin who is no workspace admin is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
+  api,
+  baseURL,
+  browser,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const admin = await newAccount(api, testInfo, "admin");
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.token, { name: "Acme", slug });
+  // pat, bob and ann open the pages; max and gus do not
+  const [pat, bob, ann] = await Promise.all(
+    ["pat", "bob", "ann"].map(async (label) => {
+      const email = emailFor(testInfo, label);
+      const tokens = await registerOnboarded(api, email);
+      await inviteAndAccept(api, admin.token, slug, { email, token: tokens.access_token }, 15);
+      return { email, tokens, id: await accountId(api, tokens.access_token) };
+    })
+  );
+  const [max, gus] = await Promise.all(["max", "gus"].map((label) => newAccount(api, testInfo, label)));
+  if (!pat || !bob || !ann || !max || !gus) throw new Error("the accounts were not registered");
+  await inviteAndAccept(api, admin.token, slug, max, 15);
+  await inviteAndAccept(api, admin.token, slug, gus, 5);
+  // pat, a member of acme, makes Web, its admin; max its other admin, ann and bob its members, gus its guest.
+  const web = await createProject(api, pat.tokens.access_token, slug, { name: "Web", identifier: "WEB" });
+  const [maxs, anns, , guss] = await addProjectMembers(api, pat.tokens.access_token, web.id, [
+    { member_id: max.id, role: 20 },
+    { member_id: ann.id, role: 15 },
+    { member_id: bob.id, role: 15 },
+    { member_id: gus.id, role: 5 },
+  ]);
+  if (!maxs || !anns || !guss) throw new Error("the members were not added");
+  const members = `/${slug}/settings/projects/${web.id}/members`;
+  const leaving = leavingOf(web.id);
+
+  const page = await signedInPage(pat.tokens);
+  const watch = await watchPage(page);
+  await page.goto(members);
+  // His own row and max's, another admin's: the role as text, nothing to pick.
+  await expect(memberRow(page, pat.email)).toContainText("Admin");
+  await expect(memberRow(page, max.email)).toContainText("Admin");
+  await expect(memberRow(page, max.email).getByRole("button", { name: "Admin" })).toHaveCount(0);
+  // ann, a member: the roles below his own, not an admin's; the page sends the role's number.
+  await memberRow(page, ann.email).getByRole("button", { name: "Member", exact: true }).click();
+  await expect(page.getByRole("option")).toHaveText(["Guest", "Member"]);
+  const demoted = await sentTo(page, "PATCH", `/api/v0/project-members/${anns.id}`, () =>
+    page.getByRole("option", { name: "Guest", exact: true }).click()
+  );
+  expect([demoted.answer.status(), demoted.body]).toEqual([200, { role: 5 }]);
+  await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
+
+  // max is removed; then gus, while the removal is out the dialog that asked cannot be dismissed.
+  expect((await endProjectMembership(page, max.email, "Remove", removalOf(maxs.id))).status()).toBe(204);
+  await expect(memberRow(page, max.email)).toHaveCount(0);
+  const release = await holdAnswer(page, "DELETE", removalOf(guss.id).path);
+  const removed = endProjectMembership(page, gus.email, "Remove", removalOf(guss.id));
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  await release();
+  expect((await removed).status()).toBe(204);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(memberRow(page, gus.email)).toHaveCount(0);
+
+  // His leaving, as the only admin: nerve refuses it, and the page says why and stays, the dialog open.
+  expect((await endProjectMembership(page, pat.email, "Leave", leaving)).status()).toBe(409);
+  await expect(page.getByText("The project would be left without an admin")).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Leave", exact: true })).toBeEnabled();
+  await expect(page).toHaveURL(members);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    [`409 ${leaving.method} ${leaving.path}`],
+    [],
+    [],
+  ]);
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 409 (Conflict)"],
+  });
+
+  // bob leaves: the page stays while nerve has not answered, the dialog busy; then the workspace's projects show.
+  const theMember = await anotherBrowser(browser, baseURL ?? "", bob.tokens);
+  const memberWatch = await watchPage(theMember.page);
+  await theMember.page.goto(members);
+  const releaseLeaving = await holdAnswer(theMember.page, leaving.method, leaving.path);
+  const left = endProjectMembership(theMember.page, bob.email, "Leave", leaving);
+  const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving..." });
+  expect(await enabledWithin(busy)).toBe(false);
+  await expect(theMember.page).toHaveURL(members);
+  await releaseLeaving();
+  expect((await left).status()).toBe(204);
+  await expect(theMember.page).toHaveURL(`/${slug}/projects`);
+  expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await theMember.close();
+
+  // ann, a guest now, leaves by the sidebar, which offers it to guests alone: its modal asks Web's name and "Leave
+  // Project". pat has ended her membership meanwhile: nerve refuses the leaving, and the modal stays, to try again.
+  // He adds her back; the modal cannot be closed while the leaving is out; once nerve has made it, Web leaves the
+  // sidebar.
+  const theGuest = await anotherBrowser(browser, baseURL ?? "", ann.tokens);
+  const guestWatch = await watchPage(theGuest.page);
+  await theGuest.page.goto(`/${slug}/projects`);
+  const sidebar = theGuest.page.getByRole("complementary", { name: "Main sidebar" });
+  await sidebar.getByText("Web", { exact: true }).hover();
+  await sidebar.getByRole("button", { name: "Toggle quick actions menu" }).last().click();
+  await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
+  await theGuest.page.locator("#projectName").fill("Web");
+  await theGuest.page.locator("#confirmLeave").fill("Leave Project");
+  expect((await writes(api, web.id).remove(pat.tokens.access_token, anns.id)).status).toBe(204);
+  const leaveProject = theGuest.page.getByRole("dialog").getByRole("button", { name: "Leave Project" });
+  expect((await answerTo(theGuest.page, leaving.method, leaving.path, () => leaveProject.click())).status()).toBe(403);
+  await expect(leaveProject).toBeEnabled();
+  await addProjectMembers(api, pat.tokens.access_token, web.id, [{ member_id: ann.id, role: 5 }]);
+  const releaseGuest = await holdAnswer(theGuest.page, leaving.method, leaving.path);
+  const guestLeft = answerTo(theGuest.page, leaving.method, leaving.path, () => leaveProject.click());
+  await expect(theGuest.page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(theGuest.page)).toBe(false);
+  await releaseGuest();
+  expect((await guestLeft).status()).toBe(204);
+  await expect(sidebar.getByText("Web", { exact: true })).toHaveCount(0);
+  expect([guestWatch.apiFailures, guestWatch.oldApiRequests, guestWatch.pageErrors]).toEqual([
+    [`403 ${leaving.method} ${leaving.path}`],
+    [],
+    [],
+  ]);
+  await expectQuietConsole(theGuest.page, guestWatch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
+  });
+  await theGuest.close();
+
+  const row = (email: string, role: number, is_active: boolean, by: string): MemberRow => ({
+    email,
+    role,
+    is_active,
+    by,
+    sort_order: 65535,
+    settings_by: pat.email,
+  });
+  await expectMembers(db, web.id, [
+    row(pat.email, 20, true, pat.email),
+    row(max.email, 20, false, pat.email),
+    row(ann.email, 5, false, ann.email),
+    row(bob.email, 15, false, bob.email),
+    row(gus.email, 5, false, pat.email),
+  ]);
 });

@@ -14,9 +14,9 @@ import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Project } from "@nerve/api-client";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
-// hooks
-import { useProject } from "@/hooks/store/use-project";
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
+// components
+import { useProjectMembershipChanges } from "@/components/project/settings/use-project-membership-changes";
 
 type FormData = {
   projectName: string;
@@ -37,10 +37,9 @@ export interface ILeaveProjectModal {
 export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILeaveProjectModal) {
   const { project, isOpen, onClose } = props;
   // router
-  const navigate = useNavigate();
   const { workspaceSlug } = useParams();
   // store hooks
-  const { leaveProject } = useProject();
+  const { leave } = useProjectMembershipChanges(workspaceSlug ?? "", project.id);
 
   const {
     control,
@@ -54,47 +53,37 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
     onClose();
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
     if (!workspaceSlug) return;
 
-    if (data) {
-      if (data.projectName === project?.name) {
-        if (data.confirmLeave === "Leave Project") {
-          navigate(`/${workspaceSlug}/projects`);
-          return leaveProject(project)
-            .then(() => handleClose())
-            .catch((_err) => {
-              setToast({
-                type: TOAST_TYPE.ERROR,
-                title: "Error!",
-                message: "Something went wrong please try again later.",
-              });
-            });
-        } else {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: "Error!",
-            message: "Please confirm leaving the project by typing the 'Leave Project'.",
-          });
-        }
-      } else {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Please enter the project name as shown in the description.",
-        });
-      }
-    } else {
+    if (data.projectName !== project.name) {
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Error!",
-        message: "Please fill all fields.",
+        message: "Please enter the project name as shown in the description.",
       });
+      return;
     }
+    if (data.confirmLeave !== "Leave Project") {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Error!",
+        message: "Please confirm leaving the project by typing the 'Leave Project'.",
+      });
+      return;
+    }
+    // the leaving first: once nerve has made it the modal closes and the workspace's projects show; one it refuses
+    // leaves the modal open
+    await leave(handleClose);
   };
 
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isSubmitting ? undefined : handleClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XXL}
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 p-6">
         <div className="flex w-full items-center justify-start gap-6">
           <span className="place-items-center rounded-full bg-danger-subtle p-4">
@@ -168,7 +157,7 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
           />
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="lg" onClick={handleClose}>
+          <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button variant="error-fill" size="lg" type="submit" loading={isSubmitting}>

@@ -2277,6 +2277,37 @@
           ]
         }
       }
+    },
+    {
+      "id": "project-leave",
+      "phase": "M3/P10",
+      "why": "页面离开项目只有一处：useProjectMembershipChanges 的 leave（web/apps/web/core/components/project/settings/use-project-membership-changes.ts），只在发出它的会话里跟进，nerve 做完离开之后才显示工作区的项目，拒绝时给出 nerve 的原因（M1-P4 交接，M3/P10 spec 2.7）；成员页和离开对话框都经它。别处再调 store 的 leaveProject 就是又一份，顺序和拒绝要再写一遍。store 自己的定义不算；测试不算",
+      "files": {
+        "source": "^web/apps/web/(?:app|core)/(?!components/project/settings/use-project-membership-changes\\.ts$|store/project/project\\.store\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bleaveProject\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["  const { getProjectById, leaveProject } = useProject();", "      return leaveProject(project)"],
+        "miss": [
+          "  const { remove, leave } = useProjectMembershipChanges(workspaceSlug, projectId);",
+          "  const [leaveProjectModalOpen, setLeaveProjectModalOpen] = useState(false);"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/project/leave-project-modal.tsx",
+            "web/apps/web/core/components/project/member-list-item.tsx"
+          ],
+          "miss": [
+            "web/apps/web/core/components/project/settings/use-project-membership-changes.ts",
+            "web/apps/web/core/components/project/settings/use-project-membership-changes.test.ts",
+            "web/apps/web/core/store/project/project.store.ts"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [

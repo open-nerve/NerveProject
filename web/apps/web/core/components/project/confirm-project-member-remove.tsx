@@ -19,6 +19,7 @@ import { useUser } from "@/hooks/store/user";
 
 type Props = {
   data: Partial<MemberUser>;
+  /** Makes the removal or the leaving; settles once the page has followed it: its follow-up of success closes this. */
   onSubmit: () => Promise<void>;
   isOpen: boolean;
   onClose: () => void;
@@ -41,10 +42,8 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
 
   const handleDeletion = async () => {
     setIsDeleteLoading(true);
-
     await onSubmit();
-
-    handleClose();
+    setIsDeleteLoading(false);
   };
 
   if (!projectId) return <></>;
@@ -52,8 +51,16 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
   const isCurrentUser = currentUser?.id === data?.id;
   const currentProjectDetails = getProjectById(projectId);
 
+  // While the removal or the leaving is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): it closes
+  // once nerve has made the change, and no dialog opened again offers it while the request is out. One nerve refuses
+  // leaves it open, its buttons enabled again, the reason in the refusal's toast.
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isDeleteLoading ? undefined : handleClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XXL}
+    >
       <div className="bg-surface-1 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
         <div className="sm:flex sm:items-start">
           <div className="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-danger-subtle sm:mx-0 sm:h-10 sm:w-10">
@@ -82,10 +89,10 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
         </div>
       </div>
       <div className="flex justify-end gap-2 p-4 sm:px-6">
-        <Button variant="secondary" size="lg" onClick={handleClose}>
+        <Button variant="secondary" size="lg" onClick={handleClose} disabled={isDeleteLoading}>
           Cancel
         </Button>
-        <Button variant="error-fill" size="lg" tabIndex={1} onClick={handleDeletion} loading={isDeleteLoading}>
+        <Button variant="error-fill" size="lg" onClick={handleDeletion} loading={isDeleteLoading}>
           {isCurrentUser ? (isDeleteLoading ? "Leaving..." : "Leave") : isDeleteLoading ? "Removing..." : "Remove"}
         </Button>
       </div>

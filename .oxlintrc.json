@@ -278,7 +278,11 @@
         "web/apps/web/core/components/project/settings/use-feature-toggle.ts",
         "web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx",
         "web/apps/web/core/components/automation/auto-archive-automation.test.tsx",
-        "web/apps/web/core/components/automation/select-month-modal.test.tsx"
+        "web/apps/web/core/components/automation/select-month-modal.test.tsx",
+        "web/apps/web/core/components/project/settings/use-project-membership-changes.ts",
+        "web/apps/web/core/components/project/settings/use-project-membership-changes.test.ts",
+        "web/apps/web/core/components/project/project-roles.ts",
+        "web/apps/web/core/components/project/project-roles.test.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"
