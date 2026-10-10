@@ -6,13 +6,11 @@
 import type { ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectRole } from "@nerve/api-client";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
-import { membershipOf } from "@/store/member/workspace/fake-members";
-import { projectMemberOf, projectOf } from "@/store/project/fake-projects";
+import { projectMemberDetailsOf, projectOf } from "@/store/project/fake-projects";
 import type { ConfirmProjectMemberRemove } from "./confirm-project-member-remove";
 import { ProjectMemberListItem } from "./member-list-item";
 
@@ -23,11 +21,6 @@ import { ProjectMemberListItem } from "./member-list-item";
 // the test says. The caller is me, an admin of web. Its session is fake-tab.ts's.
 
 const web = projectOf("WEB", "w-acme", { member_role: 20 });
-/** A row of the members page: name's membership of web, of role. */
-const rowOf = (name: string, role: ProjectRole): IProjectMemberDetails => ({
-  ...projectMemberOf(web, name, role),
-  member: membershipOf(name).member,
-});
 const page = vi.hoisted(() => ({
   removeMemberFromProject: vi.fn(),
   leaveProject: vi.fn(),
@@ -69,8 +62,8 @@ vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 
 /** Each request a dialog asks for: another's removal, from bob's row; the caller's leaving, from his own. */
 const asked = [
-  { request: "a removal", row: rowOf("bob", 15), store: page.removeMemberFromProject },
-  { request: "the leaving", row: rowOf("me", 20), store: page.leaveProject },
+  { request: "a removal", row: projectMemberDetailsOf(web, "bob", 15), store: page.removeMemberFromProject },
+  { request: "the leaving", row: projectMemberDetailsOf(web, "me", 20), store: page.leaveProject },
 ];
 
 /** Renders web's rows with the dialog of row showing, and confirms it: settles once the page has followed it. */

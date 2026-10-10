@@ -2,7 +2,16 @@ import type { Page } from "@playwright/test";
 
 import { accountOf, expectRevoked, onboardingStepsOf, sessionOf } from "../../fixtures/assert/identity";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
-import { anotherTabSignsIn, bearer, emailFor, password, recordOf, refresh, register } from "../../fixtures/auth";
+import {
+  anotherTabSignsIn,
+  bearer,
+  emailFor,
+  password,
+  recordOf,
+  refresh,
+  register,
+  shownNameOf,
+} from "../../fixtures/auth";
 import { expectQuietConsole, followAccessToken, watchPage, type PageWatch } from "../../fixtures/browser";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
 import { expect, test } from "../../fixtures/test";
@@ -21,8 +30,7 @@ async function openOnboarding(tab: Page, email: string): Promise<void> {
 
 /** The account menu of the onboarding header, which shows the display name of the account signed in. */
 function accountMenu(tab: Page, email: string) {
-  // A new account's display name is its address before the "@" (M2 design 2, A1).
-  return tab.getByRole("button", { name: email.toLowerCase().split("@")[0] });
+  return tab.getByRole("button", { name: shownNameOf(email) });
 }
 
 /** Signs out through the account menu: "Wrong e-mail address?", then "Switch account" (M2 has no workspace menu). */

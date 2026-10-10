@@ -10,7 +10,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
-import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   answerTo,
@@ -22,7 +22,7 @@ import {
   sentHeld,
   sentTo,
 } from "../../fixtures/settings-pages";
-import { endProjectMembership, leavingOf, removalOf, shownNameOf } from "../../fixtures/project-pages";
+import { endProjectMembership, leavingOf, removalOf } from "../../fixtures/project-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, memberRow } from "../../fixtures/workspace-pages";
 

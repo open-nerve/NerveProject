@@ -58,3 +58,16 @@ export async function callerInWeb(workspaceRole: WorkspaceRole, projectRole: Pro
     if (inRealTime) vi.useRealTimers();
   }
 }
+
+/** A caller of acme and web, as callerInWeb takes him: who he is, for a test's title, and his role in each. */
+export type Caller = { who: string; workspaceRole: WorkspaceRole; projectRole: ProjectRole | null };
+
+/** The callers the pages' tests ask about, each by his roles in acme and in web. */
+export const its = {
+  admin: { who: "its admin", workspaceRole: 15, projectRole: 20 },
+  member: { who: "its member", workspaceRole: 15, projectRole: 15 },
+  guest: { who: "its guest", workspaceRole: 5, projectRole: 5 },
+  memberAdmin: { who: "its member who is the workspace's admin", workspaceRole: 20, projectRole: 15 },
+  guestAdmin: { who: "its guest who is the workspace's admin", workspaceRole: 20, projectRole: 5 },
+  outsider: { who: "the workspace's admin who is not its member", workspaceRole: 20, projectRole: null },
+} satisfies Record<string, Caller>;

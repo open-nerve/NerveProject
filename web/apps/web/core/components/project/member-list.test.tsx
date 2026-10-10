@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import { emptyShown, shown } from "@/lib/fake-controls";
-import { callerInWeb } from "@/store/user/fake-permissions";
+import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { ProjectMemberList } from "./member-list";
 
@@ -51,12 +51,12 @@ async function buttonsFor(workspaceRole: WorkspaceRole, projectRole: ProjectRole
 }
 
 describe("the project's members page", () => {
-  it.each<{ who: string; workspaceRole: WorkspaceRole; projectRole: ProjectRole | null; offered: string[] }>([
-    { who: "its admin", workspaceRole: 15, projectRole: 20, offered: ["add_member"] },
-    { who: "its member", workspaceRole: 15, projectRole: 15, offered: [] },
-    { who: "its guest", workspaceRole: 5, projectRole: 5, offered: [] },
-    { who: "its member who is the workspace's admin", workspaceRole: 20, projectRole: 15, offered: ["add_member"] },
-    { who: "the workspace's admin who is not its member", workspaceRole: 20, projectRole: null, offered: [] },
+  it.each<Caller & { offered: string[] }>([
+    { ...its.admin, offered: ["add_member"] },
+    { ...its.member, offered: [] },
+    { ...its.guest, offered: [] },
+    { ...its.memberAdmin, offered: ["add_member"] },
+    { ...its.outsider, offered: [] },
   ])('shows $who "Add member" when nerve lets him add members', async ({ workspaceRole, projectRole, offered }) => {
     expect(await buttonsFor(workspaceRole, projectRole)).toEqual(offered);
   });

@@ -100,6 +100,15 @@ export function emailFor(testInfo: TestInfo, label = "user"): string {
   return `${label}-${testInfo.testId}-${testInfo.repeatEachIndex}-${testInfo.retry}@example.com`;
 }
 
+/**
+ * The name the pages show of an account nobody named: nerve's display name for it, the address it keeps, lowercased,
+ * before the @ (M2 design 2, A1).
+ */
+export function shownNameOf(email: string): string {
+  const kept = email.toLowerCase();
+  return kept.slice(0, kept.indexOf("@"));
+}
+
 /** Signs email up through the API and returns the new session's tokens. */
 export async function register(api: Api, email: string, headers: Record<string, string> = {}): Promise<AuthTokens> {
   const { data, error, response } = await api.POST("/api/v0/auth/register", {

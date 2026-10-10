@@ -9,9 +9,8 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectMember, projectSettingsOf } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, newAccount, register } from "../../fixtures/auth";
+import { accountId, bearer, createPAT, emailFor, newAccount, register, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
-import { shownNameOf } from "../../fixtures/project-pages";
 import {
   answerTo,
   bodiesSentTo,

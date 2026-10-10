@@ -9,6 +9,7 @@
 import type { MemberUser, WorkspaceInvitation, WorkspaceMember } from "@nerve/api-client";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
 import { fakeRoot } from "@/store/fake-root";
+import { userOf } from "@/store/member/fake-users";
 import { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
 import { RouterStore } from "@/store/router.store";
 import { UserStore } from "@/store/user";
@@ -20,21 +21,13 @@ import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
  * with the slug the membership; an active member's, unless fields say not.
  */
 export function membershipOf(name: string, fields: Partial<WorkspaceMember> = {}, slug = "acme"): WorkspaceMember {
-  const member: MemberUser = {
-    id: `u-${name}`,
-    display_name: name,
-    first_name: name,
-    last_name: "Doe",
-    avatar_url: null,
-    email: `${name}@example.com`,
-  };
   return {
     id: `m-${slug}-${name}`,
     workspace_id: `id-${slug}`,
     role: 15,
     is_active: true,
     created_at: "2026-10-01T09:00:00Z",
-    member,
+    member: userOf(name),
     ...fields,
   };
 }

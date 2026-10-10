@@ -10,7 +10,7 @@ import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import type { AccountTypeColumn, NameColumn } from "@/components/project/settings/member-columns";
 import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
 import { membershipOf } from "@/store/member/workspace/fake-members";
-import { projectMemberOf, projectOf } from "@/store/project/fake-projects";
+import { projectMemberDetailsOf, projectOf } from "@/store/project/fake-projects";
 import { useProjectColumns } from "./useProjectColumns";
 
 // What the members page's columns give each row (M3 design 3.5): the caller's role in the workspace and in the
@@ -76,12 +76,6 @@ function offered(rowData: IProjectMemberDetails) {
   return { own: name.own, removable: name.removable, choices: role.choices };
 }
 
-/** name's row of web's members page, of role. */
-const rowOf = (name: string, role: ProjectRole): IProjectMemberDetails => ({
-  ...projectMemberOf(web, name, role),
-  member: membershipOf(name).member,
-});
-
 describe("useProjectColumns", () => {
   it.each<{
     who: string;
@@ -94,21 +88,21 @@ describe("useProjectColumns", () => {
       who: "a project admin, for gus, a guest of the workspace: a guest's role alone, and the removal",
       workspaceRole: 15,
       projectRole: 20,
-      row: rowOf("gus", 5),
+      row: projectMemberDetailsOf(web, "gus", 5),
       offers: { own: false, removable: true, choices: [5] },
     },
     {
       who: "the workspace's admin who is the project's member, for max, its admin: every role, no removal",
       workspaceRole: 20,
       projectRole: 15,
-      row: rowOf("max", 20),
+      row: projectMemberDetailsOf(web, "max", 20),
       offers: { own: false, removable: false, choices: [5, 15, 20] },
     },
     {
       who: "a project admin, for his own row: his leaving, no role",
       workspaceRole: 15,
       projectRole: 20,
-      row: rowOf("me", 20),
+      row: projectMemberDetailsOf(web, "me", 20),
       offers: { own: true, removable: false, choices: [] },
     },
   ])("$who", ({ workspaceRole, projectRole, row, offers }) => {

@@ -8,7 +8,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import { emptyShown, shown } from "@/lib/fake-controls";
-import { callerInWeb } from "@/store/user/fake-permissions";
+import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { ProjectCard } from "./card";
 
@@ -61,16 +61,6 @@ async function offeredTo(workspaceRole: WorkspaceRole, projectRole: ProjectRole 
   );
   return { inCard, menu };
 }
-
-type Caller = { who: string; workspaceRole: WorkspaceRole; projectRole: ProjectRole | null };
-const its = {
-  admin: { who: "its admin", workspaceRole: 15, projectRole: 20 },
-  member: { who: "its member", workspaceRole: 15, projectRole: 15 },
-  guest: { who: "its guest", workspaceRole: 5, projectRole: 5 },
-  memberAdmin: { who: "its member who is the workspace's admin", workspaceRole: 20, projectRole: 15 },
-  guestAdmin: { who: "its guest who is the workspace's admin", workspaceRole: 20, projectRole: 5 },
-  outsider: { who: "the workspace's admin who is not its member", workspaceRole: 20, projectRole: null },
-} satisfies Record<string, Caller>;
 
 describe("a project's card", () => {
   it.each<Caller & { offered: boolean }>([

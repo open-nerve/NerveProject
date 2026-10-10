@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@nerve/api-client";
 import { heldChange, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
-import { refusal } from "@/lib/fake-refusal";
+import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import { useCreateProject, type ProjectCreationForm } from "./use-create-project";
@@ -31,8 +31,6 @@ const form: ProjectCreationForm = {
 };
 const web = projectOf("WEB", "w-acme", { member_role: 20 });
 const create = (values = form) => useCreateProject()("acme", values, page.setError);
-/** What nerve's refusal named, field by field, through setError. */
-const underFields = () => page.setError.mock.calls.map(([field, { message }]) => [field, message]);
 
 beforeEach(() => {
   signedIn();
@@ -84,7 +82,7 @@ describe("useCreateProject", () => {
   ])("shows $refused under its field, gives nothing and says no success", async ({ error, fields }) => {
     page.createProject.mockRejectedValueOnce(error);
     expect(await create()).toBeUndefined();
-    expect([underFields(), toasts]).toEqual([fields, []]);
+    expect([underFields(page.setError), toasts]).toEqual([fields, []]);
   });
 
   it.each([
@@ -97,7 +95,7 @@ describe("useCreateProject", () => {
   ])("shows nerve's reason for $refused in a toast", async ({ error, message }) => {
     page.createProject.mockRejectedValueOnce(error);
     expect(await create()).toBeUndefined();
-    expect([underFields(), toasts]).toEqual([[], [{ type: "error", title: "toast.error", message }]]);
+    expect([underFields(page.setError), toasts]).toEqual([[], [{ type: "error", title: "toast.error", message }]]);
   });
 
   // answered with the project created, which the form must not get once the tab is another account's
@@ -110,7 +108,7 @@ describe("useCreateProject", () => {
       switchAccount();
       settle(answer);
       expect(await created).toBeUndefined();
-      expect([underFields(), toasts]).toEqual([[], []]);
+      expect([underFields(page.setError), toasts]).toEqual([[], []]);
     }
   );
 });

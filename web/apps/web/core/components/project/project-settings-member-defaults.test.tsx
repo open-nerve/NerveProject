@@ -5,14 +5,14 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Project, ProjectRole, ProjectUpdate, WorkspaceRole } from "@nerve/api-client";
+import type { Project, ProjectUpdate } from "@nerve/api-client";
 import { heldChange, lateSettlingsAnswering, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import type { ProjectToggleField } from "@/store/project/project.store";
-import { callerInWeb } from "@/store/user/fake-permissions";
+import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { ProjectSettingsMemberDefaults } from "./project-settings-member-defaults";
 
@@ -143,12 +143,12 @@ describe("the project's member defaults", () => {
   });
 
   // whom nerve lets change the project (project.update: its admins, and its members who are the workspace's admins)
-  it.each<{ who: string; workspaceRole: WorkspaceRole; projectRole: ProjectRole | null; changes: boolean }>([
-    { who: "its admin", workspaceRole: 15, projectRole: 20, changes: true },
-    { who: "its member who is the workspace's admin", workspaceRole: 20, projectRole: 15, changes: true },
-    { who: "its member", workspaceRole: 15, projectRole: 15, changes: false },
-    { who: "its guest", workspaceRole: 5, projectRole: 5, changes: false },
-    { who: "the workspace's admin who is not its member", workspaceRole: 20, projectRole: null, changes: false },
+  it.each<Caller & { changes: boolean }>([
+    { ...its.admin, changes: true },
+    { ...its.memberAdmin, changes: true },
+    { ...its.member, changes: false },
+    { ...its.guest, changes: false },
+    { ...its.outsider, changes: false },
   ])("lets $who change them when nerve does", async ({ workspaceRole, projectRole, changes }) => {
     caller.permissions = (await callerInWeb(workspaceRole, projectRole)).permissions;
     const { lead, assignee, guests } = render();

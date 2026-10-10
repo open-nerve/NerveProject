@@ -5,7 +5,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
-import { refusal } from "@/lib/fake-refusal";
+import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import { projectDetailsOf, useUpdateProjectDetails, type ProjectDetails } from "./use-update-project-details";
@@ -25,8 +25,6 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 const web = projectOf("WEB", "w-acme", { member_role: 20, description: "The site", timezone: "Asia/Shanghai" });
 const renamed: ProjectDetails = { ...projectDetailsOf(web), name: "Site", network: 0 };
 const update = (details = renamed) => useUpdateProjectDetails()(web, "acme", details, page.setError);
-/** What the page said under the form's fields, field by field, through setError. */
-const underFields = () => page.setError.mock.calls.map(([field, { message }]) => [field, message]);
 
 beforeEach(() => {
   signedIn();
@@ -70,7 +68,7 @@ describe("useUpdateProjectDetails", () => {
     page.checkProjectIdentifier.mockResolvedValueOnce({ available: false });
     await update({ ...renamed, identifier: "OPS" });
     expect(page.updateProject).not.toHaveBeenCalled();
-    expect([underFields(), toasts]).toEqual([[["identifier", "errors.project_identifier_taken"]], []]);
+    expect([underFields(page.setError), toasts]).toEqual([[["identifier", "errors.project_identifier_taken"]], []]);
   });
 
   it.each([
@@ -92,7 +90,7 @@ describe("useUpdateProjectDetails", () => {
   ])("shows $refused under its field and says no success", async ({ error, fields }) => {
     page.updateProject.mockRejectedValueOnce(error);
     await update();
-    expect([underFields(), toasts]).toEqual([fields, []]);
+    expect([underFields(page.setError), toasts]).toEqual([fields, []]);
   });
 
   it.each([
@@ -105,14 +103,14 @@ describe("useUpdateProjectDetails", () => {
   ])("shows nerve's reason for $refused in a toast", async ({ error, message }) => {
     page.updateProject.mockRejectedValueOnce(error);
     await update();
-    expect([underFields(), toasts]).toEqual([[], [{ type: "error", title: "toast.error", message }]]);
+    expect([underFields(page.setError), toasts]).toEqual([[], [{ type: "error", title: "toast.error", message }]]);
   });
 
   it("shows nerve's reason in a toast when it refuses the identifier's check, sends nothing and settles", async () => {
     page.checkProjectIdentifier.mockRejectedValueOnce(refusal(403, "forbidden"));
     await update({ ...renamed, identifier: "SITE" });
     expect(page.updateProject).not.toHaveBeenCalled();
-    expect([underFields(), toasts]).toEqual([
+    expect([underFields(page.setError), toasts]).toEqual([
       [],
       [{ type: "error", title: "toast.error", message: "errors.forbidden" }],
     ]);
@@ -127,7 +125,7 @@ describe("useUpdateProjectDetails", () => {
       switchAccount();
       settle(answer);
       await updated;
-      expect([underFields(), toasts]).toEqual([[], []]);
+      expect([underFields(page.setError), toasts]).toEqual([[], []]);
     }
   );
 
@@ -138,6 +136,6 @@ describe("useUpdateProjectDetails", () => {
     switchAccount();
     answer.answer({ available: false });
     await updated;
-    expect([page.updateProject.mock.calls, underFields(), toasts]).toEqual([[], [], []]);
+    expect([page.updateProject.mock.calls, underFields(page.setError), toasts]).toEqual([[], [], []]);
   });
 });

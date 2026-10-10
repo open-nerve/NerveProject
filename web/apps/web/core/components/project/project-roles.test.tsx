@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectMembersAdd, ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import { emptyShown, pick, shown, submitModalForm } from "@/lib/fake-controls";
 import { membershipOf } from "@/store/member/workspace/fake-members";
-import { projectMemberOf, projectOf } from "@/store/project/fake-projects";
+import { projectMemberDetailsOf, projectOf } from "@/store/project/fake-projects";
 import { AddProjectMembersModal } from "./add-project-members-modal";
 import {
   PROJECT_ROLES,
@@ -53,10 +53,7 @@ vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 // the workspace members' fakes build the account's store, which imports the tab's session; a role's change is
 // followed in it
-vi.mock("@/lib/auth/api-client", () => ({
-  tokenManager: { state: { status: "signed-in", loginId: "x" } },
-  publicClient: {},
-}));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 
 /** Each role a select offers: its name; the key the selects show it by (ROLE_DETAILS's, translated); its number. */
 const roles: { label: string; key: string; role: ProjectRole }[] = [
@@ -88,7 +85,7 @@ describe("the project's role selects", () => {
   it.each(roles)("make ann $label with that role's number", ({ key, role }) => {
     renderToStaticMarkup(
       <AccountTypeColumn
-        rowData={{ ...projectMemberOf(web, "ann"), member: ann.member }}
+        rowData={projectMemberDetailsOf(web, "ann")}
         choices={PROJECT_ROLES}
         projectId={web.id}
         workspaceSlug="acme"
@@ -103,7 +100,7 @@ describe("the project's role selects", () => {
   it.each(roles)("show ann $label by that role's name, where no change of it is offered", ({ key, role }) => {
     const markup = renderToStaticMarkup(
       <AccountTypeColumn
-        rowData={{ ...projectMemberOf(web, "ann", role), member: ann.member }}
+        rowData={projectMemberDetailsOf(web, "ann", role)}
         choices={[]}
         projectId={web.id}
         workspaceSlug="acme"
