@@ -5,9 +5,9 @@
  */
 
 import { useCallback, useState } from "react";
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import { copyUrlToClipboard } from "@nerve/utils";
+import { useTranslation } from "@nerve/i18n";
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
+import { useCopyLink } from "@/hooks/use-copy-link";
 
 type UseProjectActionsProps = {
   workspaceSlug: string;
@@ -17,29 +17,19 @@ type UseProjectActionsProps = {
 
 export const useProjectActions = ({ workspaceSlug, projectId, activeItem }: UseProjectActionsProps) => {
   const [leaveProjectModalOpen, setLeaveProjectModalOpen] = useState(false);
+  const { t } = useTranslation();
+  const copyLink = useCopyLink();
 
   const handleLeaveProject = useCallback(() => {
     setLeaveProjectModalOpen(true);
   }, []);
 
-  const handleCopyText = useCallback(async () => {
-    const pathToCopy = activeItem?.href ?? `/${workspaceSlug}/projects/${projectId}/issues`;
-
-    try {
-      await copyUrlToClipboard(pathToCopy);
-      setToast({
-        type: TOAST_TYPE.INFO,
-        title: "Link copied!",
-        message: "Project link copied to clipboard.",
-      });
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Copy failed",
-        message: "We couldn't copy the link. Please try again.",
-      });
-    }
-  }, [activeItem, projectId, workspaceSlug]);
+  // the link of the tab open, else of the project's work items
+  const handleCopyText = () =>
+    copyLink(
+      activeItem?.href ?? `/${workspaceSlug}/projects/${projectId}/issues`,
+      t("project_link_copied_to_clipboard")
+    );
 
   const handleLeaveProjectModal = useCallback((open: boolean) => {
     setLeaveProjectModalOpen(open);

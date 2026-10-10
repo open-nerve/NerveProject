@@ -13,6 +13,9 @@ import { SessionChangedError } from "@/lib/auth/token-manager";
  */
 export type Change<V> = (value: V) => V;
 
+/** The answers written so far, of every Reconciled value: each fetch's answer written takes the next number. */
+let answersWritten = 0;
+
 /**
  * One value a store shows of what nerve holds (a list, a map, a document), reconciled between its fetches and the
  * changes nerve confirmed (v0 design 7.7): only the newest fetch writes, and the changes nerve confirmed while it was
@@ -23,6 +26,11 @@ export type Change<V> = (value: V) => V;
 export class Reconciled<V> {
   /** The value, once fetched. */
   value: V | undefined = undefined;
+  /**
+   * When nerve's answer the value shows was written, as the order of the answers written (0 until fetched): of two
+   * values holding the same thing (a project in its list and in its own read), the greater was answered last.
+   */
+  answeredAt = 0;
   /** The sequence number of the newest fetch, the one fetch that may write. */
   private newestFetch = 0;
   /**
@@ -32,7 +40,7 @@ export class Reconciled<V> {
   private changesDuringFetch: Change<V>[] | undefined = undefined;
 
   constructor() {
-    makeObservable(this, { value: observable.ref });
+    makeObservable(this, { value: observable.ref, answeredAt: observable });
   }
 
   /**
@@ -52,6 +60,7 @@ export class Reconciled<V> {
       const value = changes.reduce<V>((made, change) => change(made), fetched);
       runInAction(() => {
         this.value = value;
+        this.answeredAt = ++answersWritten;
       });
       return value;
     } catch (error) {
@@ -78,6 +87,11 @@ export class ReconciledByKey<V> {
   /** The key's value, once fetched; nothing for no key. */
   get(key: string | undefined): V | undefined {
     return key === undefined ? undefined : this.entries.get(key)?.value;
+  }
+
+  /** When the key's value was answered (Reconciled.answeredAt); 0 for a key not fetched. */
+  answeredAt(key: string): number {
+    return this.entries.get(key)?.answeredAt ?? 0;
   }
 
   /** The values of the keys fetched, whatever their keys (for one, to find an item in any of them). */

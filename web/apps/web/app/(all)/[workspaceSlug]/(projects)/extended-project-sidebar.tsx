@@ -12,9 +12,7 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
 import { AddOutline, SearchOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { copyUrlToClipboard } from "@nerve/utils";
 // components
 import { CreateProjectModal } from "@/components/project/create-project-modal";
 import { SidebarProjectsListItem } from "@/components/workspace/sidebar/projects-list-item";
@@ -23,6 +21,7 @@ import { useProjectDrop } from "@/components/workspace/sidebar/use-project-drop"
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useCopyProjectLink } from "@/hooks/use-copy-link";
 import { ExtendedSidebarWrapper } from "./extended-sidebar-wrapper";
 
 export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar() {
@@ -61,15 +60,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
     if (isExtendedProjectSidebarOpened) searchInputRef.current?.focus();
   }, [isExtendedProjectSidebarOpened]);
 
-  const handleCopyText = (projectId: string) => {
-    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() =>
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("link_copied"),
-        message: t("project_link_copied_to_clipboard"),
-      })
-    );
-  };
+  const copyProjectLink = useCopyProjectLink();
   return (
     <>
       {workspaceSlug && (
@@ -133,7 +124,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
                   key={projectId}
                   workspaceSlug={workspaceSlug}
                   projectId={projectId}
-                  handleCopyText={() => handleCopyText(projectId)}
+                  handleCopyText={() => void copyProjectLink(projectId)}
                   projectListType="JOINED"
                   disableDrag={false}
                   disableDrop={false}

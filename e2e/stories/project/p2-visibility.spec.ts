@@ -1,6 +1,7 @@
 import {
   addProjectMembers,
   amidAnotherWorkspace,
+  archiveProject,
   createProject,
   createWorkspace,
   inviteAndAccept,
@@ -10,11 +11,13 @@ import {
 } from "../../fixtures/api";
 import { expectMember } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
+import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
+import { closedByEscape, enabledWithin, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
-// P2, the projects' list and who sees them, and joining (M3 design 2, 3.4,
-// 3.5, 3.19). The page version, with the "join the project" screen, comes
-// with the projects' pages (P10).
+// P2, the projects' list and who sees them, and joining (M3 design 2, 3.4, 3.5, 3.19); the page versions, with the
+// "join the project" screen and the projects page's cards (7.6, P10).
 
 /** The names of the projects of slug that the caller of token lists, in their order; archived: the archived ones. */
 async function listed(api: Api, token: string, slug: string, archived = false): Promise<string[]> {
@@ -115,4 +118,130 @@ test("P2 (API): the admin lists every project, a member the public ones and his 
   await expectMember(db, web.id, guestEmail, null);
   expect(await join(api, guest, docs.id)).toEqual({ status: 403, code: "forbidden" });
   await expectMember(db, docs.id, guestEmail, { role: 5, is_active: true, sort_order: 65535, by: adminEmail });
+});
+
+/**
+ * The reads of the project of projectId that nerve gives its members alone, which its pages make once the caller is one
+ * (M3 design 7.1), as watchPage records them (none has a query).
+ */
+const membersReads = (projectId: string) => PROJECT_MEMBER.map((read) => valued(read, { [projectId]: "{project}" }));
+
+test("P2 (page): a member opens a public project he is no member of by its address: the join screen, which reads the project alone; joined, its pages show and read the rest; a private project is not found, an archived one says so", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = (await registerOnboarded(api, adminEmail)).access_token;
+  const memberEmail = emailFor(testInfo, "member");
+  const member = await registerOnboarded(api, memberEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin, { name: "Acme", slug });
+  await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member.access_token }, 15);
+  const web = await createProject(api, admin, slug, { name: "Web", identifier: "WEB", network: 2 });
+  const secret = await createProject(api, admin, slug, { name: "Secret", identifier: "SEC", network: 0 });
+  const old = await createProject(api, admin, slug, { name: "Old", identifier: "OLD", network: 2 });
+  await archiveProject(api, admin, old.id);
+
+  const page = await signedInPage(member);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/settings/projects/${web.id}`);
+  const joinButton = page.getByRole("button", { name: "Join project" });
+  await expect(joinButton).toBeVisible();
+  // The page read the project, and none of what nerve gives its members alone.
+  expect(watch.apiRequests).toContain(`GET /api/v0/projects/${web.id}`);
+  expect(watch.apiRequests.filter((request) => membersReads(web.id).includes(request))).toEqual([]);
+
+  // Joining: one request, the button busy until nerve answers; then the project's general page, which reads the rest.
+  const { release } = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/join`, () => joinButton.click());
+  const joining = page.getByRole("button", { name: "Joining project" });
+  expect(await enabledWithin(joining)).toBe(false);
+  expect((await release()).status()).toBe(200);
+  await expect(page.locator("#name")).toHaveValue("Web");
+  expect(watch.apiRequests.filter((request) => request === `POST /api/v0/projects/${web.id}/join`)).toHaveLength(1);
+  await expect.poll(() => membersReads(web.id).filter((read) => !watch.apiRequests.includes(read))).toEqual([]);
+  await expectMember(db, web.id, memberEmail, { role: 15, is_active: true, sort_order: 65535, by: memberEmail });
+
+  // A private project he does not see is not found; an archived one says so, and its button opens the archived ones.
+  await page.goto(`/${slug}/projects/${secret.id}/issues`);
+  await expect(page.getByText("Project not found")).toBeVisible();
+  await page.goto(`/${slug}/projects/${old.id}/issues`);
+  await expect(page.getByText("This project is archived")).toBeVisible();
+  expect(watch.apiRequests).toContain(`GET /api/v0/projects/${old.id}`);
+  expect(watch.apiRequests.filter((request) => membersReads(old.id).includes(request))).toEqual([]);
+  await page.getByRole("button", { name: "Archived projects" }).click();
+  await expect(page).toHaveURL(`/${slug}/projects/archives`);
+
+  // The private project's 404, the browser's report of it
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    [],
+    [`404 GET /api/v0/projects/${secret.id}`],
+    [],
+    [],
+  ]);
+  await expectQuietConsole(page, watch, {
+    // the three loads: the settings page, the private project's, the archived one's
+    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
+  });
+});
+
+test("P2 (page): the projects page shows a member the public project to join and not the private one; its card copies its link, or says it could not, and joins it, the dialog held until nerve answers", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const admin = (await registerOnboarded(api, emailFor(testInfo, "admin"))).access_token;
+  const memberEmail = emailFor(testInfo, "member");
+  const member = await registerOnboarded(api, memberEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin, { name: "Acme", slug });
+  await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member.access_token }, 15);
+  const web = await createProject(api, admin, slug, { name: "Web", identifier: "WEB", network: 2 });
+  await createProject(api, admin, slug, { name: "Secret", identifier: "SEC", network: 0 });
+
+  const page = await signedInPage(member);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/projects`);
+  const card = page.getByRole("link", { name: /Web/ });
+  await expect(card).toBeVisible();
+  await expect(page.getByRole("link", { name: /Secret/ })).toHaveCount(0);
+
+  // The card copies the project's link; a browser that refuses the page the clipboard: the card says it could not.
+  await card.getByRole("button", { name: "Copy link" }).click();
+  await expect(page.getByText("Project link copied to clipboard")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    new URL(`/${slug}/projects/${web.id}/issues`, page.url()).toString()
+  );
+  await refuseClipboardWrites(page);
+  await card.getByRole("button", { name: "Copy link" }).click();
+  await expect(page.getByText("Something went wrong. Please try again.")).toBeVisible();
+
+  // Joining from the card: the dialog cannot be dismissed while nerve has not answered, and sends one join.
+  await card.getByRole("button", { name: "Join", exact: true }).click();
+  const { release } = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/join`, () =>
+    page.getByRole("button", { name: "Join Project" }).click()
+  );
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect((await release()).status()).toBe(200);
+  // joined, the page opens the project's work items
+  await expect(page).toHaveURL(`/${slug}/projects/${web.id}/issues`);
+  expect(watch.apiRequests.filter((request) => request === `POST /api/v0/projects/${web.id}/join`)).toHaveLength(1);
+  await expectMember(db, web.id, memberEmail, { role: 15, is_active: true, sort_order: 65535, by: memberEmail });
+  // The project's crumb in the header is one Tab stop, the button of its list (M3 design 7.7): its title, which opens
+  // the project's work items by a click, is not another. Tab goes on to the next crumb.
+  await page.getByRole("button", { name: "Web", exact: true }).first().focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Work Items", exact: true })).toBeFocused();
+
+  // The work items' page asks Plane's address of the filters, M4's (P8b spec §5)
+  const filters = `GET /api/workspaces/${slug}/projects/${web.id}/user-properties/`;
+  await expect.poll(() => watch.apiFailures).toEqual([`404 ${filters}`]);
+  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [filters], []]);
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
+  });
 });

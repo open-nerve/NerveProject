@@ -17,12 +17,13 @@ import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { OrganizationSize, Workspace, WorkspaceUpdate } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
-import { cn, copyUrlToClipboard, getFileURL, validateWorkspaceName } from "@nerve/utils";
+import { cn, getFileURL, validateWorkspaceName } from "@nerve/utils";
 // components
 import { TimezoneSelect } from "@/components/global/timezone-select";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useCopyLink } from "@/hooks/use-copy-link";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // components
 import { DeleteWorkspaceSection } from "@/components/workspace/delete-workspace-section";
@@ -55,6 +56,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
   const toastRefusal = useRefusalToast();
+  const copyLink = useCopyLink();
 
   // form info
   const {
@@ -94,23 +96,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
 
   const handleCopyUrl = () => {
     if (!workspace) return;
-
-    void copyUrlToClipboard(`${workspace.slug}`)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Workspace URL copied to the clipboard.",
-        });
-        return undefined;
-      })
-      // the browser did not let the page write the clipboard
-      .catch(() =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("toast.error"),
-          message: t("something_went_wrong_please_try_again"),
-        })
-      );
+    void copyLink(workspace.slug, "Workspace URL copied to the clipboard.");
   };
 
   useEffect(() => {

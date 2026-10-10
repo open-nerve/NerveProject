@@ -31,6 +31,8 @@ const beta = workspaceOf("beta");
 const member = projectOf("WEB", acme.id);
 const guest = projectOf("WEB", acme.id, { member_role: 5 });
 const seen = projectOf("WEB", acme.id, { member_role: null });
+const archived = projectOf("WEB", acme.id, { archived_at: "2026-10-02T09:00:00Z" });
+const archivedSeen = { ...archived, member_role: null };
 /** The project the address names, a project of beta's, of which he is a member: the address is acme's. */
 const elsewhere = projectOf("WEB", beta.id);
 const notFound = refusal(404, "project.not_found");
@@ -72,6 +74,7 @@ describe("useProjectFetch", () => {
     { when: "nerve does not find it", projects: [], error: notFound },
     { when: "nerve cannot read it again for a member", projects: [member], data: member, error: unreachable },
     { when: "it is a project of another of his workspaces", projects: [elsewhere], data: elsewhere },
+    { when: "it is archived, though he is its member", projects: [archived], data: archived },
   ])("fetches the project alone when $when", ({ projects, data, error }) => {
     stores.projects = projects;
     response.current = { data, error };
@@ -133,6 +136,18 @@ describe("useProjectFetch", () => {
       projects: [elsewhere],
       data: elsewhere,
       shows: { kind: "not-found" },
+    },
+    {
+      when: "it is archived: archived wins over his membership",
+      projects: [archived],
+      data: archived,
+      shows: { kind: "archived", project: archived },
+    },
+    {
+      when: "it is archived and he sees it, no member: archived wins over the join",
+      projects: [archivedSeen],
+      data: archivedSeen,
+      shows: { kind: "archived", project: archivedSeen },
     },
     { when: "he sees it, no member", projects: [seen], data: seen, shows: { kind: "not-member", project: seen } },
     { when: "he is its guest", projects: [guest], data: guest, shows: { kind: "member", project: guest } },

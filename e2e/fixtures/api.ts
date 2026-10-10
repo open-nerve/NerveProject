@@ -256,6 +256,19 @@ export async function addProjectMembers(
   return data.data;
 }
 
+/** Archives the project of projectId with the bearer token given, an admin's of the project, and returns it. */
+export async function archiveProject(api: Api, token: string, projectId: string): Promise<Project> {
+  const { data, error, response } = await api.POST("/api/v0/projects/{project_id}/archive", {
+    params: { path: { project_id: projectId } },
+    headers: bearer(token),
+  });
+  expect(response.status, `archive ${projectId}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error(`archiveProject ${projectId} answered 200 without the project`);
+  }
+  return data;
+}
+
 /** Creates a state in the project of projectId with the bearer token given, an admin's of the project, and returns it. */
 export async function createState(api: Api, token: string, projectId: string, body: StateCreate): Promise<State> {
   const { data, error, response } = await api.POST("/api/v0/projects/{project_id}/states", {

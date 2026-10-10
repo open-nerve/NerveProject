@@ -15,10 +15,9 @@ import { Disclosure, Transition } from "@headlessui/react";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { Loader } from "@nerve/ui";
-import { copyUrlToClipboard, cn } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // components
 import { CreateProjectModal } from "@/components/project/create-project-modal";
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
@@ -27,6 +26,7 @@ import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useCopyProjectLink } from "@/hooks/use-copy-link";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
 // local imports
 import { SidebarProjectsListItem } from "./projects-list-item";
@@ -67,15 +67,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   const hasMoreProjects =
     projectPreferences.showLimitedProjects && joinedProjects.length > projectPreferences.limitedProjectsCount;
 
-  const handleCopyText = (projectId: string) => {
-    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/issues`).then(() =>
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("link_copied"),
-        message: t("project_link_copied_to_clipboard"),
-      })
-    );
-  };
+  const copyProjectLink = useCopyProjectLink();
 
   /**
    * Implementing scroll animation styles based on the scroll length of the container
@@ -210,7 +202,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                         key={projectId}
                         workspaceSlug={workspaceSlug}
                         projectId={projectId}
-                        handleCopyText={() => handleCopyText(projectId)}
+                        handleCopyText={() => void copyProjectLink(projectId)}
                         projectListType="JOINED"
                         disableDrag={false}
                         disableDrop={false}

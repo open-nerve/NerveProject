@@ -260,7 +260,11 @@
         "web/apps/web/emojibase.ts",
         "web/apps/web/emojibase.test.ts",
         "web/apps/web/core/components/dropdowns/member/base.test.tsx",
-        "web/apps/web/core/lib/fake-controls.ts"
+        "web/apps/web/core/lib/fake-controls.ts",
+        "web/apps/web/core/components/project/use-join-project.ts",
+        "web/apps/web/core/components/project/use-join-project.test.ts",
+        "web/apps/web/core/hooks/use-copy-link.ts",
+        "web/apps/web/core/hooks/use-copy-link.test.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

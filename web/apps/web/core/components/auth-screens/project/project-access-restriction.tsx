@@ -5,24 +5,29 @@
  */
 
 import { observer } from "mobx-react";
+import { useNavigate, useParams } from "react-router";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 
-type TProps = {
-  /** Whether the caller sees the project and is no member of it (M3 design 3.19): he may join it. */
-  canJoin: boolean;
-  handleJoinProject: () => void;
-  isJoinButtonDisabled: boolean;
-};
+/**
+ * Why the project's pages do not show (M3 design 3.19, 7.6): the caller sees the project and is no member of it,
+ * which he may join; it is archived; or it is not found to him (it does not exist, is deleted, or he does not see it).
+ */
+type TProps =
+  | { kind: "not-member"; handleJoinProject: () => void; isJoinButtonDisabled: boolean }
+  | { kind: "archived" }
+  | { kind: "not-found" };
 
 export const ProjectAccessRestriction = observer(function ProjectAccessRestriction(props: TProps) {
-  const { canJoin, handleJoinProject, isJoinButtonDisabled } = props;
+  // router
+  const navigate = useNavigate();
+  const { workspaceSlug } = useParams();
   // nerve hooks
   const { t } = useTranslation();
 
   // the caller sees the project and is no member of it: he may join it
-  if (canJoin)
+  if (props.kind === "not-member")
     return (
       <div className="grid h-full w-full place-items-center bg-surface-1">
         <EmptyStateDetailed
@@ -32,11 +37,30 @@ export const ProjectAccessRestriction = observer(function ProjectAccessRestricti
           assetClassName="size-40"
           actions={[
             {
-              label: isJoinButtonDisabled
+              label: props.isJoinButtonDisabled
                 ? t("project_empty_state.no_access.cta_loading")
                 : t("project_empty_state.no_access.cta_primary"),
-              onClick: handleJoinProject,
-              disabled: isJoinButtonDisabled,
+              onClick: props.handleJoinProject,
+              disabled: props.isJoinButtonDisabled,
+            },
+          ]}
+        />
+      </div>
+    );
+
+  // the project is archived: its pages show again once restored, from the workspace's archived projects
+  if (props.kind === "archived")
+    return (
+      <div className="grid h-full w-full place-items-center bg-surface-1">
+        <EmptyStateDetailed
+          title={t("project_empty_state.archived.title")}
+          description={t("project_empty_state.archived.description")}
+          assetKey="project"
+          assetClassName="size-40"
+          actions={[
+            {
+              label: t("project_empty_state.archived.cta_primary"),
+              onClick: () => void navigate(`/${workspaceSlug}/projects/archives`),
             },
           ]}
         />

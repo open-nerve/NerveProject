@@ -16,6 +16,11 @@
       "title": "Project not found",
       "description": "The project you are looking for does not exist."
     },
+    "archived": {
+      "title": "This project is archived",
+      "description": "Its pages show again once an admin of the project restores it from the archived projects.",
+      "cta_primary": "Archived projects"
+    },
     "work_items": {
       "title": "Start with your first work item.",
       "description": "Work items are the building blocks of your project — assign owners, set priorities, and track progress easily.",

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { sortBy } from "lodash-es";
+import { maxBy, sortBy } from "lodash-es";
 import { action, computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
@@ -93,8 +93,8 @@ export class ProjectStore implements IProjectStore {
   /** Each workspace's archived projects. */
   private readonly archived = new ReconciledByKey<Project[]>();
   /**
-   * Each project as nerve last read it alone; null once deleted or left: then only a list read after gives it (a fetch
-   * out meanwhile drops it from its answer).
+   * Each project as nerve last read it alone; null once deleted or left: then only a list gives it (a fetch out
+   * meanwhile drops it from its answer).
    */
   private readonly details = new ReconciledByKey<Project | null>();
   // services
@@ -183,23 +183,25 @@ export class ProjectStore implements IProjectStore {
   }
 
   /**
-   * The project as the store last had it from nerve, its own read first, else from its workspace's lists; nothing
-   * once deleted or left until a list has it again (a public project, to one no longer its member), or when its
-   * workspace is no longer among the caller's.
+   * The project as nerve last answered it, of the copies the store holds: its own read's and its workspace's lists'
+   * (a list fetched after the read shows a change made meanwhile, a role for one; P8b's F-3); the changes nerve
+   * confirmed are made on every copy. Nothing once deleted or left until a list has it again (a public project, to
+   * one no longer its member), or when its workspace is no longer among the caller's.
    */
   getProjectById = computedFn((projectId: string | undefined | null): Project | undefined => {
     if (!projectId) return undefined;
     const workspaces = this.rootStore.workspaceRoot.workspaces ?? [];
+    const copies: { project: Project; answeredAt: number }[] = [];
     const read = this.details.get(projectId);
-    if (read) {
-      return workspaces.some((workspace) => workspace.id === read.workspace_id) ? read : undefined;
-    }
+    if (read) copies.push({ project: read, answeredAt: this.details.answeredAt(projectId) });
     for (const { id } of workspaces) {
-      const listed = [...(this.unarchived.get(id) ?? []), ...(this.archived.get(id) ?? [])];
-      const project = listed.find((held) => held.id === projectId);
-      if (project) return project;
+      for (const lists of [this.unarchived, this.archived]) {
+        const project = lists.get(id)?.find((held) => held.id === projectId);
+        if (project) copies.push({ project, answeredAt: lists.answeredAt(id) });
+      }
     }
-    return undefined;
+    const newest = maxBy(copies, "answeredAt")?.project;
+    return newest && workspaces.some((workspace) => workspace.id === newest.workspace_id) ? newest : undefined;
   });
 
   getProjectIdentifierById = computedFn(

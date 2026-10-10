@@ -22,14 +22,15 @@ import { EUserPermissions } from "@nerve/constants";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Button } from "@nerve/propel/button";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { Project } from "@nerve/api-client";
 import type { TContextMenuItem } from "@nerve/ui";
 import { ContextMenu } from "@nerve/ui";
-import { copyUrlToClipboard, cn, getFileURL, renderFormattedDate } from "@nerve/utils";
+import { useTranslation } from "@nerve/i18n";
+import { cn, getFileURL, renderFormattedDate } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useCopyProjectLink } from "@/hooks/use-copy-link";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
@@ -57,6 +58,8 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const { getUserDetails } = useMember();
   // hooks
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
+  const copyProjectLink = useCopyProjectLink();
   // derived values
   const projectMembersIds = project.member_ids;
   // auth
@@ -67,14 +70,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const isArchived = !!project.archived_at;
 
   const projectLink = `${workspaceSlug}/projects/${project.id}/issues`;
-  const handleCopyText = () =>
-    copyUrlToClipboard(projectLink).then(() =>
-      setToast({
-        type: TOAST_TYPE.INFO,
-        title: "Link Copied!",
-        message: "Project link copied to clipboard.",
-      })
-    );
+  const handleCopyText = () => void copyProjectLink(project.id);
   const handleOpenInNewTab = () => window.open(`/${projectLink}`, "_blank", "noopener,noreferrer");
 
   const MENU_ITEMS: TContextMenuItem[] = [
@@ -194,6 +190,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
               <div data-prevent-progress className="flex h-full flex-shrink-0 items-center gap-2">
                 <button
                   className="flex h-6 w-6 items-center justify-center rounded-sm bg-white/10"
+                  aria-label={t("copy_link")}
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();

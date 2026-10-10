@@ -90,7 +90,7 @@ describe("ProjectStore, the lists and the reads", () => {
     expect(store.filteredProjectIds).toEqual([docs.id]);
   });
 
-  it("gives a project's own read before its list's, and holds nothing when nerve refuses it", async () => {
+  it("gives a project's own read nerve answered after its list, and holds nothing when nerve refuses it", async () => {
     const { nerve, store } = await loaded();
     const read = await loadProject(nerve, store, web, renamed);
     expect(read.value).toEqual(renamed);
@@ -102,6 +102,17 @@ describe("ProjectStore, the lists and the reads", () => {
     await until(() => missing.settled, "the refusal");
     expect(missing.error).toBeInstanceOf(ApiError);
     expect(store.getProjectById("p-gone")).toBeUndefined();
+  });
+
+  it("gives the copy of a list nerve answered after the project's own read: a change made meanwhile shows (F-3)", async () => {
+    const { nerve, store } = await loaded();
+    await loadProject(nerve, store, web);
+    const demoted: Project = { ...web, member_role: 5 };
+    await loadProjects(nerve, store, acme, [demoted, ops, docs]);
+    expect(store.getProjectById(web.id)).toEqual(demoted);
+    // and the project's own read, answered after that list, again
+    await loadProject(nerve, store, web, renamed);
+    expect(store.getProjectById(web.id)).toEqual(renamed);
   });
 
   it("fails when nerve refuses to read a project again, keeping the read it had", async () => {

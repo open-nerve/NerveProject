@@ -2,6 +2,7 @@ import type { Page, Request, Response, TestInfo } from "@playwright/test";
 
 import {
   addProjectMembers,
+  archiveProject,
   createProject,
   createWorkspace,
   inviteAndAccept,
@@ -18,6 +19,7 @@ import {
   watchPage,
   type PageWatch,
 } from "../../fixtures/browser";
+import { APP, ARCHIVED, GENERAL, INVITATIONS, PROJECT, PROJECT_MEMBER, WORKSPACE, valued } from "../../fixtures/mounts";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -117,50 +119,9 @@ const ACCOUNTS = ["admin", "member", "guest", "project non-member"] as const;
 type Account = (typeof ACCOUNTS)[number];
 
 /**
- * What a page asks nerve for as it loads, signed in, as "<method> <path>" with the query when there is one, {slug} for
- * the workspace's slug and {project} for the project's id: the app's start, on every page (M2 design 7.1, M3 design
- * 7.4); the workspace wrapper's, on every page of a workspace, whatever the role; the project's read, on every page of
- * a project; and the project's own resources, only once that read says the caller is a member of the project (M3
- * design 7.1). No list has an address of M6's or M7's (cycles, modules, views, the intake's triage state, favourites,
- * the unread notifications, recents; M3 design 3.1), nor one outside /api/v0 (M2 design 3.1). These lists are the
- * record of what the pages load: a phase that adds a fetch to a page adds it here (the P8b spec's appendix A.5 is a
- * copy, as of P8b).
- */
-const APP = [
-  "POST /api/v0/auth/refresh",
-  "GET /api/v0/instance",
-  "GET /api/v0/me",
-  "GET /api/v0/me/profile",
-  "GET /api/v0/workspaces",
-];
-const WORKSPACE = [
-  "GET /api/v0/me/workspaces/{slug}/preferences",
-  "GET /api/v0/workspaces/{slug}/members",
-  "GET /api/v0/workspaces/{slug}/projects?archived=false",
-  "GET /api/v0/workspaces/{slug}/states",
-];
-const PROJECT = ["GET /api/v0/projects/{project}"];
-const PROJECT_MEMBER = [
-  "GET /api/v0/me/projects/{project}/preferences",
-  "GET /api/v0/projects/{project}/labels",
-  "GET /api/v0/projects/{project}/members",
-  "GET /api/v0/projects/{project}/states",
-];
-/**
- * A general settings page lists the time zones (M2 design 5.3): the project's, for its members; the workspace's, for
- * its admins and members (the workspace's settings show a guest no general page, M3 design 9.2).
- */
-const GENERAL = ["GET /api/v0/timezones"];
-/** The workspace's projects page lists its archived projects too, its own fetch (useArchivedProjectsFetch). */
-const ARCHIVED = ["GET /api/v0/workspaces/{slug}/projects?archived=true"];
-/** The members page lists the workspace's invitations for an admin alone, as nerve shows them to no one else. */
-const INVITATIONS = ["GET /api/v0/workspaces/{slug}/invitations"];
-
-/**
  * The pages each account opens, in order, each as its path ({slug} and {project} for their values) and the requests it
- * makes as it loads: "/", which lands on the workspace's home; for the admin, the workspace's projects page, whose
- * call of its own fetch no other check holds; the workspace's general settings and its members; then the project's
- * settings.
+ * makes as it loads: "/", which lands on the workspace's home; the workspace's projects page, whose call of its own
+ * fetch no other check holds; the workspace's general settings and its members; then the project's settings.
  */
 const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
   admin: [
@@ -172,18 +133,21 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
   ],
   member: [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
   ],
   guest: [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
   ],
   "project non-member": [
     ["/", [...APP, ...WORKSPACE]],
+    ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE, ...GENERAL]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT]],
@@ -233,11 +197,6 @@ async function acme(
 function apiPath(request: Request): string | undefined {
   const { pathname, search } = new URL(request.url());
   return pathname.startsWith("/api/") ? `${pathname}${search}` : undefined;
-}
-
-/** path with the values of names in place of their names: the address of a page of REQUESTS. */
-function valued(path: string, names: Record<string, string>): string {
-  return Object.entries(names).reduce((shown, [value, name]) => shown.replaceAll(name, value), path);
 }
 
 /**
@@ -352,6 +311,20 @@ test("S2: the admin of two workspaces opens a project of one at the other's addr
   // a project counts in the address's workspace alone (M3 design 3.19): its own resources are not fetched here
   await page.goto(`/${slug}/settings/projects/${lab.id}`);
   await expect(page.getByText("Project not found")).toBeVisible();
+  await expectExactly(page, watch, requests, [...APP, ...WORKSPACE, ...PROJECT], [EMOJI_CHECK_WARNING]);
+});
+
+test("S2: the admin of a project opens it archived: the archived screen, and the project's read alone, not what its members read", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const { slug, project, tokens } = await acme(api, testInfo);
+  await archiveProject(api, tokens.admin.access_token, project.id);
+  const page = await signedInPage(tokens.admin);
+  const watch = await watchPage(page);
+  const requests = followRequests(page, { [slug]: "{slug}", [project.id]: "{project}" });
+  await page.goto(`/${slug}/projects/${project.id}/issues`);
+  await expect(page.getByText("This project is archived")).toBeVisible();
   await expectExactly(page, watch, requests, [...APP, ...WORKSPACE, ...PROJECT], [EMOJI_CHECK_WARNING]);
 });
 
