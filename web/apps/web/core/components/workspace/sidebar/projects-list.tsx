@@ -204,8 +204,6 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                         projectId={projectId}
                         handleCopyText={() => void copyProjectLink(projectId)}
                         projectListType="JOINED"
-                        disableDrag={false}
-                        disableDrop={false}
                         isLastChild={index === displayedProjects.length - 1}
                         handleOnProjectDrop={handleOnProjectDrop}
                       />

@@ -126,8 +126,6 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
                   projectId={projectId}
                   handleCopyText={() => void copyProjectLink(projectId)}
                   projectListType="JOINED"
-                  disableDrag={false}
-                  disableDrop={false}
                   isLastChild={index === filteredProjects.length - 1}
                   handleOnProjectDrop={handleOnProjectDrop}
                   renderInExtendedSidebar
