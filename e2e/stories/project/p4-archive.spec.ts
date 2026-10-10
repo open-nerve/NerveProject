@@ -1,5 +1,8 @@
 import {
+  addProjectMembers,
   amidAnotherWorkspace,
+  archiveProject,
+  changeRole,
   createLabel,
   createProject,
   createWorkspace,
@@ -15,11 +18,14 @@ import {
   type LabelRow,
 } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
+import { answerTo, closedByEscape, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
+import { anotherBrowser } from "../../fixtures/workspace-pages";
 
-// P4, archiving, unarchiving and deleting a project (M3 design 2, 3.6,
-// 3.19). The page version comes with the project's settings pages (P10).
+// P4, archiving, unarchiving and deleting a project (M3 design 2, 3.6, 3.19): through the API, and through the
+// project's settings and the archived projects (7.6).
 
 /** The names of the projects of slug that the caller of token lists; archived: the archived ones. */
 async function listed(api: Api, token: string, slug: string, archived = false): Promise<string[]> {
@@ -201,4 +207,88 @@ test("P4 (API): the admin archives a project, which leaves the list for the arch
       { email: adminEmail, sort_order: 65535 },
     ])
   ).toBe(ops.id);
+});
+
+test("P4 (page): the admin archives a project from its settings, the dialog held until nerve answers, and it leaves his sidebar; a member of it who is the workspace's admin restores it from the archived projects; archived again, the admin deletes it there by its name, the dialog held too, and it is gone", async ({
+  api,
+  baseURL,
+  browser,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  // wes is Web's member, and then acme's admin: nerve lets him archive, restore and delete Web (M3 design 3.4).
+  const wesEmail = emailFor(testInfo, "wes");
+  const wes = await registerOnboarded(api, wesEmail);
+  await inviteAndAccept(api, admin.access_token, slug, { email: wesEmail, token: wes.access_token }, 15);
+  const wesId = await accountId(api, wes.access_token);
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await createProject(api, admin.access_token, slug, { name: "Ops", identifier: "OPS" });
+  await addProjectMembers(api, admin.access_token, web.id, [{ member_id: wesId, role: 15 }]);
+  await changeRole(api, admin.access_token, slug, wesId, 20);
+  // Web has a row in each table its deletion writes: its label Bug too (expectProjectDeleted).
+  await createLabel(api, admin.access_token, web.id, { name: "Bug" });
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  const general = `/${slug}/settings/projects/${web.id}`;
+  await page.goto(general);
+  // The admin archives Web: the dialog cannot be closed, and the page stays, until nerve has archived it.
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  const archive = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/archive`, () =>
+    page.getByRole("dialog").getByRole("button", { name: "Archive" }).click()
+  );
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect(new URL(page.url()).pathname).toBe(general);
+  expect((await archive.release()).status()).toBe(200);
+  await expect(page).toHaveURL(`/${slug}/projects`);
+  await expect(page.getByText("Web has been archived successfully")).toBeVisible();
+  const sidebar = page.getByRole("complementary", { name: "Main sidebar" });
+  await expect(sidebar.getByText("Ops", { exact: true })).toBeVisible();
+  await expect(sidebar.getByText("Web", { exact: true })).toHaveCount(0);
+  expect(await archiving(db, web.id)).toEqual({ archived: true, at_its_change: true, by: adminEmail });
+
+  // wes restores it from the archived projects, which offer it him as they do its admins.
+  const theOtherAdmin = await anotherBrowser(browser, baseURL ?? "", wes);
+  const wesWatch = await watchPage(theOtherAdmin.page);
+  await theOtherAdmin.page.goto(`/${slug}/projects/archives`);
+  // the card's button: the card's menu, in a portal of its own, has one too
+  await theOtherAdmin.page.getByRole("main").getByRole("button", { name: "Restore" }).click();
+  const restored = await answerTo(theOtherAdmin.page, "POST", `/api/v0/projects/${web.id}/unarchive`, () =>
+    theOtherAdmin.page.getByRole("dialog").getByRole("button", { name: "Restore" }).click()
+  );
+  expect(restored.status()).toBe(200);
+  await expect(theOtherAdmin.page).toHaveURL(`/${slug}/projects`);
+  await expect(theOtherAdmin.page.getByText("You can find Web in your projects.")).toBeVisible();
+  expect(await archiving(db, web.id)).toEqual({ archived: false, at_its_change: true, by: wesEmail });
+  expect([wesWatch.apiFailures, wesWatch.oldApiRequests, wesWatch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(theOtherAdmin.page, wesWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await theOtherAdmin.close();
+
+  // Archived again, Web is deleted from the archived projects, by its name and the words that confirm it; the dialog
+  // cannot be closed until nerve has deleted it, and the page stays where it is, the archived projects, without Web.
+  await archiveProject(api, admin.access_token, web.id);
+  const archives = `/${slug}/projects/archives`;
+  await page.goto(archives);
+  await page.getByRole("main").getByRole("button", { name: "Delete" }).click();
+  await page.locator("#projectName").fill("Web");
+  await page.locator("#confirmDelete").fill("delete my project");
+  const deleting = await sentHeld(page, "DELETE", `/api/v0/projects/${web.id}`, () =>
+    page.getByRole("button", { name: "Delete project" }).click()
+  );
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect((await deleting.release()).status()).toBe(204);
+  await expect(page.getByRole("heading", { name: "Delete project" })).toHaveCount(0);
+  await expect(page.getByText("Project deleted successfully.")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("button", { name: "Restore" })).toHaveCount(0);
+  expect(new URL(page.url()).pathname).toBe(archives);
+  await expectProjectDeleted(db, web.id, adminEmail);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  // Two loads: the settings, and the archived projects; the archiving's landing navigates within the app.
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
 });

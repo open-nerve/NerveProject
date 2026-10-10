@@ -288,7 +288,9 @@
         "web/apps/web/core/components/project/add-project-members-modal.test.tsx",
         "web/apps/web/core/components/project/member-list.test.tsx",
         "web/apps/web/core/store/user/fake-permissions.ts",
-        "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx"
+        "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx",
+        "web/apps/web/core/components/project/delete-project-modal.test.tsx",
+        "web/apps/web/core/components/project/archive-restore-modal.test.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

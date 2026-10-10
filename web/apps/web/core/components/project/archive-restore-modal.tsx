@@ -11,7 +11,10 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useNavigate } from "react-router";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 type Props = {
   workspaceSlug: string;
@@ -30,63 +33,47 @@ export function ArchiveRestoreProjectModal(props: Props) {
   const [isLoading, setIsLoading] = useState(false);
   // store hooks
   const { getProjectById, archiveProject, restoreProject } = useProject();
+  const toastRefusal = useRefusalToast();
 
   const projectDetails = getProjectById(projectId);
   if (!projectDetails) return null;
 
-  const handleClose = () => {
+  // The page follows the change only in the session it was sent in (M3 design 7.1): it says so, and gives way to the
+  // workspace's projects; busy until it has. A refusal is said by nerve's reason, and the dialog stays.
+  const handleChange = async () => {
+    setIsLoading(true);
+    await followInSession(() => (archive ? archiveProject(projectId) : restoreProject(projectId)), {
+      done: () => {
+        setToast(
+          archive
+            ? {
+                type: TOAST_TYPE.SUCCESS,
+                title: "Archive success",
+                message: `${projectDetails.name} has been archived successfully`,
+              }
+            : {
+                type: TOAST_TYPE.SUCCESS,
+                title: "Restore success",
+                message: `You can find ${projectDetails.name} in your projects.`,
+              }
+        );
+        onClose();
+        return navigate(`/${workspaceSlug}/projects`);
+      },
+      failed: toastRefusal,
+    });
     setIsLoading(false);
-    onClose();
   };
 
-  const handleArchiveProject = async () => {
-    setIsLoading(true);
-    await archiveProject(projectId)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Archive success",
-          message: `${projectDetails.name} has been archived successfully`,
-        });
-        onClose();
-        navigate(`/${workspaceSlug}/projects`);
-        return;
-      })
-      .catch(() =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Project could not be archived. Please try again.",
-        })
-      )
-      .finally(() => setIsLoading(false));
-  };
-
-  const handleRestoreProject = async () => {
-    setIsLoading(true);
-    await restoreProject(projectId)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Restore success",
-          message: `You can find ${projectDetails.name} in your projects.`,
-        });
-        onClose();
-        navigate(`/${workspaceSlug}/projects`);
-        return;
-      })
-      .catch(() =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Project could not be restored. Please try again.",
-        })
-      )
-      .finally(() => setIsLoading(false));
-  };
-
+  // While the change is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): nerve's answer is followed
+  // by the dialog that sent it.
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.LG}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isLoading ? undefined : onClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.LG}
+    >
       <div className="px-5 py-4">
         <h3 className="text-18 font-medium 2xl:text-20">
           {archive ? "Archive" : "Restore"} {projectDetails.name}
@@ -97,15 +84,10 @@ export function ArchiveRestoreProjectModal(props: Props) {
             : "Restoring a project will activate it and make it visible to all members of the project. Are you sure you want to continue?"}
         </p>
         <div className="mt-3 flex justify-end gap-2">
-          <Button variant="secondary" size="lg" onClick={onClose}>
+          <Button variant="secondary" size="lg" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={archive ? handleArchiveProject : handleRestoreProject}
-            loading={isLoading}
-          >
+          <Button variant="primary" size="lg" onClick={() => void handleChange()} loading={isLoading}>
             {archive ? (isLoading ? "Archiving" : "Archive") : isLoading ? "Restoring" : "Restore"}
           </Button>
         </div>

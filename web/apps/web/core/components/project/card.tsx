@@ -18,7 +18,7 @@ import {
   UserPlusOutline,
 } from "@makeplane/propel/icons";
 // nerve imports
-import { EUserPermissions } from "@nerve/constants";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Button } from "@nerve/propel/button";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
@@ -30,6 +30,7 @@ import { useTranslation } from "@nerve/i18n";
 import { cn, getFileURL, renderFormattedDate } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useUserPermissions } from "@/hooks/store/user";
 import { useCopyProjectLink } from "@/hooks/use-copy-link";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
@@ -56,6 +57,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const { workspaceSlug } = useParams();
   // store hooks
   const { getUserDetails } = useMember();
+  const { allowPermissions } = useUserPermissions();
   // hooks
   const { isMobile } = usePlatformOS();
   const { t } = useTranslation();
@@ -64,7 +66,13 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const projectMembersIds = project.member_ids;
   // auth
   const isMemberOfProject = !!project.member_role;
-  const hasAdminRole = project.member_role === EUserPermissions.ADMIN;
+  // its admins, and its members who are the workspace's admins (M3 design 3.4), as its settings take them
+  const hasAdminRole = allowPermissions(
+    [EUserPermissions.ADMIN],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    project.id
+  );
   const hasMemberRole = project.member_role === EUserPermissions.MEMBER;
   // archive
   const isArchived = !!project.archived_at;
@@ -269,6 +277,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                       e.stopPropagation();
                       setDeleteProjectModal(true);
                     }}
+                    aria-label="Delete"
                   >
                     <DeleteOutline className="h-3.5 w-3.5" />
                   </button>
