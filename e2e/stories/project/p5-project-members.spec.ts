@@ -243,7 +243,7 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   const watch = await watchPage(page);
   await page.goto(members);
   // He adds ann as a member and gus as a guest, from acme's active members who are not Web's (the admin, ann and gus),
-  // gus with a guest's role alone; the modal cannot be closed until nerve has added them.
+  // gus with a guest's role alone; until nerve has added them the modal can neither be closed nor send them again.
   await page.getByRole("button", { name: "Add member" }).click();
   // the member select by the keyboard: Tab reaches it, Enter opens its list with the search focused
   const coWorker = page.getByRole("dialog").getByRole("button", { name: "Select co-worker" });
@@ -277,6 +277,7 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
     ],
   });
   await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await enabledWithin(page.getByRole("button", { name: "Add members..." }))).toBe(false);
   expect(await closedByEscape(page)).toBe(false);
   expect((await adding.release()).status()).toBe(201);
   await expect(page.getByRole("heading", { name: "Add members" })).toHaveCount(0);

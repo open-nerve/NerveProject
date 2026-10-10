@@ -6,7 +6,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project, ProjectUpdate } from "@nerve/api-client";
-import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { heldChange, lateSettlingsAnswering, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
@@ -48,6 +48,9 @@ vi.mock("@makeplane/propel/components/switch", () => import("@/lib/fake-controls
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+
+/** The page's controls, as render gives them. */
+type Shown = ReturnType<typeof render>;
 
 /** Renders the page: gives its two member selects, the lead's then the default assignee's, and its switch. */
 function render() {
@@ -101,14 +104,32 @@ describe("the project's member defaults", () => {
     ]);
   });
 
-  it.each(lateSettlings)("says nothing when a change $settles after another tab moved this one", async ({ settle }) => {
-    const change = heldChange<undefined>();
-    page.toggleProject.mockReturnValueOnce(change.sent);
-    const { guests } = render();
-    const turned = guests.onCheckedChange(true);
-    switchAccount();
-    settle(change);
-    await turned;
-    expect(toasts).toEqual([]);
+  // each of the page's three changes, sent before another tab moved this one and settled after; nerve answers with the
+  // project, as it would
+  describe.each([
+    { change: "the lead's change", send: ({ lead }: Shown) => lead.onChange("u-ann"), store: page.updateProject },
+    {
+      change: "the default assignee's change",
+      send: ({ assignee }: Shown) => assignee.onChange("u-ann"),
+      store: page.updateProject,
+    },
+    {
+      change: "the guests' view's change",
+      send: ({ guests }: Shown) => guests.onCheckedChange(true),
+      store: page.toggleProject,
+    },
+  ])("$change", ({ send, store }) => {
+    it.each(lateSettlingsAnswering(web))(
+      "says nothing when it $settles after another tab moved this one",
+      async ({ settle }) => {
+        const change = heldChange<Project>();
+        store.mockReturnValueOnce(change.sent);
+        send(render());
+        switchAccount();
+        settle(change);
+        await pageSettled();
+        expect(toasts).toEqual([]);
+      }
+    );
   });
 });

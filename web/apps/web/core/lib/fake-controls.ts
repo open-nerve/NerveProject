@@ -13,8 +13,8 @@ import { Children, isValidElement } from "react";
 
 /** A control that gives a value: an input gives its change event, a select its picked option's value. */
 type Field = { onChange: (value: unknown) => void };
-/** A button: its look and what a click does. */
-type Pressed = { variant?: string; onClick?: (event: { preventDefault: () => void }) => void };
+/** A button: its look, what a click does, and what it says. */
+type Pressed = { variant?: string; onClick?: (event: { preventDefault: () => void }) => void; children?: ReactNode };
 /** A select, and its options (CustomSelect.Option): each a value and a label. */
 type Select = Field & { children?: ReactNode };
 /** A search select: what it gives, how its list opens, the button it shows, and its options, each by its value. */

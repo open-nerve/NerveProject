@@ -96,8 +96,9 @@
 | `e2e/fixtures/project-pages.ts` | 项目页面的操作：请求、显示的名字、移出和离开（Task 7，新文件）；`shownNameOf`（Task 8） | 7、8 |
 | `web/apps/web/core/components/project/add-project-members-modal.tsx`、`web/apps/web/core/components/project/add-project-members-modal.test.tsx` | 添加成员：工作区的有效成员中还不是项目成员的，角色按 `addableRoles`（名字同成员页），在会话里跟进，在途时关不掉；它的 vitest | 8 |
 | `web/apps/web/core/components/project/member-list.tsx` | 添加弹窗不再收 `workspaceSlug` | 8 |
+| `web/apps/web/core/components/project/member-list.test.tsx` | 成员页只对 nerve 允许添加的人提供"Add member"：项目管理员、是项目成员的工作区管理员（Task 8 的修正轮，裁定 T8-a） | 8 |
 | `web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.test.tsx` | 负责人、默认负责人、访客可见：显示 nerve 的回答，在会话里跟进（整个文件）；它的 vitest | 8 |
-| `web/apps/web/core/lib/fake-controls.ts` | 搜索选择的替身留下它收到的焦点、popper 的修饰（Task 2）和选项（Task 8） | 2、8 |
+| `web/apps/web/core/lib/fake-controls.ts` | 搜索选择的替身留下它收到的焦点、popper 的修饰（Task 2）和选项（Task 8）；按钮的替身留下它的文字（Task 8 的修正轮） | 2、8 |
 | `web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx` | 删除项目：按提交的值核对，在会话里跟进，项目自己的页面才回到项目列表，在途时关不掉；它的 vitest（9.5） | 9 |
 | `web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx` | 归档、恢复：在会话里跟进，在途时关不掉（整个文件）；它的 vitest | 9 |
 | `web/apps/web/core/components/workspace/sidebar/use-project-drop.ts`、`web/apps/web/core/components/workspace/sidebar/use-project-drop.test.ts` | 侧边栏的移动失败在会话里按 `code` 提示（整个文件）；它的 vitest | 10 |
@@ -8183,6 +8184,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.9` | 成员默认值的修改被拒绝时什么都不说 | `project-settings-member-defaults.test.tsx` | vitest |
 | `T8.10` | 在添加成员弹窗的测试里写一个非空断言 | oxlint（`check:lint`） | 静态 |
 | `T8.11` | 添加成员弹窗的角色下拉框用英文的 ROLE 称呼角色 | `project-roles.test.tsx` | vitest |
+| `T8.12` | 添加在途时添加弹窗的"Add members"不显示忙：再点一次又发一次添加（Task 8 的修正轮，裁定 T8-a） | 故事 P5 | 端到端 |
+| `T8.13` | 负责人、默认负责人的修改不论会话都跟进（修正轮，裁定 T8-a） | `project-settings-member-defaults.test.tsx` | vitest |
+| `T8.14` | 成员页对项目的每个成员都提供"Add member"（nerve 对不是项目管理员、也不是工作区管理员的 403）（修正轮，裁定 T8-a） | `member-list.test.tsx` | vitest |
+| `T8.15` | 添加被拒绝时表单清空，所选的人没了（修正轮，裁定 T8-a） | `add-project-members-modal.test.tsx` | vitest |
+| `T8.16` | 添加弹窗在修改里等 nerve 答以成员关系就关上，越过会话的核对（修正轮，裁定 T8-a） | `add-project-members-modal.test.tsx` | vitest |
+
+修正轮的这些行之外：`add-project-members-modal.test.tsx` 的拒绝一条改名为 `stays open, keeps the picks and shows nerve's reason when it refuses them`，被拒绝之后再提交一次，发出同样的请求体；换账户之后兑现的两种答以 ann 的成员关系（`lateSettlingsAnswering([projectMemberOf(web, "ann")])`，不再是空的回答）；`project-settings-member-defaults.test.tsx` 换账户之后兑现的两种从访客可见全部的开关扩到三个修改（`describe.each` 负责人、默认负责人、访客可见全部，各两种，答以项目；5 → 9 个）；新的 `member-list.test.tsx`（5 个：项目管理员、成员、访客，是项目成员的工作区管理员，不是项目成员的工作区管理员；权限是 store 自己的 `UserPermissionStore`，在 nerve 列出的工作区和项目上），加进 `.oxlintrc.json` 的非空断言的范围（放在 `add-project-members-modal.test.tsx` 之后，Task 9 的块照旧适用）；`fake-controls.ts` 的按钮替身的类型加 `children`。P5 在扣住添加时核对 "Add members..." 按钮禁用（`enabledWithin`），开头的说明随之改写；P5 是 400 行。
 
 ---
 

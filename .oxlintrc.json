@@ -286,6 +286,7 @@
         "web/apps/web/core/components/project/project-roles.ts",
         "web/apps/web/core/components/project/project-roles.test.tsx",
         "web/apps/web/core/components/project/add-project-members-modal.test.tsx",
+        "web/apps/web/core/components/project/member-list.test.tsx",
         "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx"
       ],
       "rules": {

@@ -5,20 +5,20 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProjectMembersAdd } from "@nerve/api-client";
-import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { ProjectMember, ProjectMembersAdd } from "@nerve/api-client";
+import { heldChange, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown, submitModalForm } from "@/lib/fake-controls";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { membershipOf } from "@/store/member/workspace/fake-members";
-import { projectOf } from "@/store/project/fake-projects";
+import { projectMemberOf, projectOf } from "@/store/project/fake-projects";
 import { AddProjectMembersModal } from "./add-project-members-modal";
 
 // Whom the project's add-members modal offers, and what it does with nerve's answer (M3 design 2 P5, 3.5, 7.1, 7.6):
 // the modal renders on the server with stand-ins for the UI kit's controls (fake-controls.ts), which keep the props
 // they were given, and for the member stores: of acme's members, bob is web's already and sid's membership ended;
-// ann, wes (its admin) and gus (its guest) are not web's. nerve answers the adding when the test says. Its session is
-// fake-tab.ts's.
+// ann, wes (its admin) and gus (its guest) are not web's. nerve answers the adding at once, unless the test refuses
+// or holds it. Its session is fake-tab.ts's.
 
 const web = projectOf("WEB", "w-acme");
 const acme = [
@@ -86,19 +86,24 @@ describe("AddProjectMembersModal", () => {
     expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Members added successfully." }]);
   });
 
-  it("stays open and shows nerve's reason when it refuses them", async () => {
+  it("stays open, keeps the picks and shows nerve's reason when it refuses them", async () => {
     page.bulkAddMembersToProject.mockRejectedValueOnce(
       refusal(422, "validation_failed", [{ field: "members[0].member_id", code: "duplicate" }])
     );
     await addAnn();
     expect(page.onClose).not.toHaveBeenCalled();
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.validation_failed" }]);
+    // the form still has ann as a member: submitted again, it sends her again
+    await submitModalForm();
+    const addingAnn = [web.id, { members: [{ member_id: "u-ann", role: 15 }] }];
+    expect(page.bulkAddMembersToProject.mock.calls).toEqual([addingAnn, addingAnn]);
   });
 
-  it.each(lateSettlings)(
+  // nerve answers the adding with ann's membership: a close that waited for it, past the session's check, would show
+  it.each(lateSettlingsAnswering([projectMemberOf(web, "ann")]))(
     "neither closes nor says anything when the adding $settles after another tab moved this one",
     async ({ settle }) => {
-      const adding = heldChange<undefined>();
+      const adding = heldChange<ProjectMember[]>();
       page.bulkAddMembersToProject.mockReturnValueOnce(adding.sent);
       const added = addAnn();
       // the form's checks come first: the adding leaves once they pass
