@@ -10,7 +10,14 @@ import { emptyShown, pick, shown, submitModalForm } from "@/lib/fake-controls";
 import { membershipOf } from "@/store/member/workspace/fake-members";
 import { projectMemberOf, projectOf } from "@/store/project/fake-projects";
 import { AddProjectMembersModal } from "./add-project-members-modal";
-import { PROJECT_ROLES, canRemove, roleChoices, type MembershipCaller, type ShownMembership } from "./project-roles";
+import {
+  PROJECT_ROLES,
+  addableRoles,
+  canRemove,
+  roleChoices,
+  type MembershipCaller,
+  type ShownMembership,
+} from "./project-roles";
 import { AccountTypeColumn } from "./settings/member-columns";
 
 // What the project's role selects send (M3 design 3.19): nerve's ProjectMemberNew and ProjectMemberUpdate take a role
@@ -40,10 +47,6 @@ vi.mock("@/hooks/store/use-member", () => ({
 }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => ({ getProjectById: () => web }) }));
 vi.mock("react-router", () => ({ useNavigate: () => vi.fn() }));
-vi.mock("@/hooks/store/user", () => ({
-  useUser: () => ({ data: { id: "u-me" } }),
-  useUserPermissions: () => ({ getProjectRoleByWorkspaceSlugAndProjectId: () => 20 }),
-}));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -55,10 +58,7 @@ vi.mock("@/lib/auth/api-client", () => ({
   publicClient: {},
 }));
 
-/**
- * Each role a select offers: its name, as the add modal shows it; the key the members page shows it by (ROLE_DETAILS's,
- * translated); the number nerve takes.
- */
+/** Each role a select offers: its name; the key the selects show it by (ROLE_DETAILS's, translated); its number. */
 const roles: { label: string; key: string; role: ProjectRole }[] = [
   { label: "Guest", key: "role_details.guest.title", role: 5 },
   { label: "Member", key: "role_details.member.title", role: 15 },
@@ -72,13 +72,13 @@ beforeEach(() => {
 });
 
 describe("the project's role selects", () => {
-  it.each(roles)("add ann as $label with that role's number", async ({ label, role }) => {
-    renderToStaticMarkup(<AddProjectMembersModal isOpen onClose={vi.fn()} projectId={web.id} workspaceSlug="acme" />);
+  it.each(roles)("add ann as $label with that role's number", async ({ key, role }) => {
+    renderToStaticMarkup(<AddProjectMembersModal isOpen onClose={vi.fn()} projectId={web.id} />);
     const [members] = shown.searchSelects;
     const [roleSelect] = shown.selects;
     if (!members || !roleSelect) throw new Error("the modal showed no member or no role select");
     members.onChange(ann.member.id);
-    pick(roleSelect, label);
+    pick(roleSelect, key);
     await submitModalForm();
     expect(store.bulkAddMembersToProject.mock.calls).toEqual([
       [web.id, { members: [{ member_id: ann.member.id, role }] }],
@@ -121,6 +121,17 @@ const shownAs = (role: ProjectRole, workspaceRole: WorkspaceRole, own = false): 
 });
 const projectAdmin: MembershipCaller = { workspaceRole: 15, projectRole: 20 };
 const workspaceAdmin: MembershipCaller = { workspaceRole: 20, projectRole: 20 };
+
+describe("the roles a member is added with", () => {
+  it.each<{ who: string; workspaceRole: WorkspaceRole | undefined; offered: ProjectRole[] }>([
+    { who: "the workspace's admin: an admin's", workspaceRole: 20, offered: [20] },
+    { who: "its member: any", workspaceRole: 15, offered: [5, 15, 20] },
+    { who: "its guest: a guest's", workspaceRole: 5, offered: [5] },
+    { who: "no one picked yet: any", workspaceRole: undefined, offered: [5, 15, 20] },
+  ])("$who", ({ workspaceRole, offered }) => {
+    expect(addableRoles(workspaceRole)).toEqual(offered);
+  });
+});
 
 describe("what the members page offers", () => {
   it.each<{

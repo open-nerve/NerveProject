@@ -8,6 +8,11 @@ import { memberRow } from "./workspace-pages";
 /** A request the page sends: its method and its path, as answerTo and holdAnswer take them. */
 type Sent = { method: string; path: string };
 
+/** The name the pages show of an account nobody named: nerve's display name for it, its address before the @. */
+export function shownNameOf(email: string): string {
+  return email.slice(0, email.indexOf("@"));
+}
+
 /** The request that removes the project membership of id. */
 export function removalOf(id: string): Sent {
   return { method: "DELETE", path: `/api/v0/project-members/${id}` };

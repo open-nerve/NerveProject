@@ -6,28 +6,33 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project, ProjectUpdate } from "@nerve/api-client";
+import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
+import { refusal } from "@/lib/fake-refusal";
+import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import type { ProjectToggleField } from "@/store/project/project.store";
 import { ProjectSettingsMemberDefaults } from "./project-settings-member-defaults";
 
 // What the project's member defaults send (v0 design 7.7: a change whose body depends on what the store holds is
-// built in its turn): the page renders on the server with stand-ins for the member selects and the guests' switch
-// (fake-controls.ts), which keep the props they were given, and for the project store, whose changes nerve has not
-// answered yet.
+// built in its turn), and what the page says of them (M3 design 7.1): the page renders on the server with stand-ins
+// for the member selects and the guests' switch (fake-controls.ts), which keep the props they were given, and for the
+// project store, whose changes nerve has not answered yet unless the test says. Its session is fake-tab.ts's.
 
 type Select = { onChange: (value: string) => void };
 const page = vi.hoisted(() => {
   const selects: Select[] = [];
-  // nerve has not answered: a change stays out
-  const updateProject = vi.fn((_projectId: string, _data: ProjectUpdate) => new Promise<never>(() => {}));
-  const toggleProject = vi.fn((_projectId: string, _field: ProjectToggleField) => new Promise<never>(() => {}));
+  // nerve has not answered: a change stays out, unless a test answers it
+  const updateProject = vi.fn((_projectId: string, _data: ProjectUpdate): Promise<unknown> => new Promise(() => {}));
+  const toggleProject = vi.fn(
+    (_projectId: string, _field: ProjectToggleField): Promise<unknown> => new Promise(() => {})
+  );
   return { selects, updateProject, toggleProject };
 });
 const web: Project = projectOf("WEB", "w-acme", { project_lead_id: "u-bob", default_assignee_id: "u-cat" });
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({
-    currentProjectDetails: web,
+    getProjectById: () => web,
     updateProject: page.updateProject,
     toggleProject: page.toggleProject,
   }),
@@ -42,6 +47,7 @@ vi.mock("./member-select", () => ({
 vi.mock("@makeplane/propel/components/switch", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 
 /** Renders the page: gives its two member selects, the lead's then the default assignee's, and its switch. */
 function render() {
@@ -55,8 +61,10 @@ function render() {
 }
 
 beforeEach(() => {
+  signedIn();
   page.updateProject.mockClear();
   page.toggleProject.mockClear();
+  toasts.length = 0;
 });
 
 describe("the project's member defaults", () => {
@@ -76,5 +84,31 @@ describe("the project's member defaults", () => {
     guests.onCheckedChange(true);
     expect(page.toggleProject.mock.calls).toEqual([[web.id, "guest_view_all_features"]]);
     expect(page.updateProject).not.toHaveBeenCalled();
+  });
+
+  it("says a change is made, and nerve's reason for refusing one", async () => {
+    page.updateProject.mockResolvedValueOnce(web);
+    page.updateProject.mockRejectedValueOnce(
+      refusal(422, "validation_failed", [{ field: "project_lead_id", code: "not_allowed" }])
+    );
+    const { lead } = render();
+    lead.onChange("u-ann");
+    lead.onChange("u-gus");
+    await vi.waitFor(() => expect(toasts).toHaveLength(2));
+    expect(toasts).toEqual([
+      { type: "success", title: "success!", message: "project_settings.general.toast.success" },
+      { type: "error", title: "toast.error", message: "errors.validation_failed" },
+    ]);
+  });
+
+  it.each(lateSettlings)("says nothing when a change $settles after another tab moved this one", async ({ settle }) => {
+    const change = heldChange<undefined>();
+    page.toggleProject.mockReturnValueOnce(change.sent);
+    const { guests } = render();
+    const turned = guests.onCheckedChange(true);
+    switchAccount();
+    settle(change);
+    await turned;
+    expect(toasts).toEqual([]);
   });
 });

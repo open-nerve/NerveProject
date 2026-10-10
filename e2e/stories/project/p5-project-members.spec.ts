@@ -1,14 +1,13 @@
 import {
   addProjectMembers,
   amidAnotherWorkspace,
-  answer,
   createProject,
   createWorkspace,
   inviteAndAccept,
   membershipOf,
+  projectMemberWrites,
+  projectMembershipOf,
   slugFor,
-  type Api,
-  type ProjectMemberNew,
 } from "../../fixtures/api";
 import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
@@ -20,49 +19,14 @@ import {
   enabledWithin,
   holdAnswer,
   registerOnboarded,
+  sentHeld,
   sentTo,
 } from "../../fixtures/settings-pages";
-import { endProjectMembership, leavingOf, removalOf } from "../../fixtures/project-pages";
+import { endProjectMembership, leavingOf, removalOf, shownNameOf } from "../../fixtures/project-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, memberRow } from "../../fixtures/workspace-pages";
 
 // P5, a project's members (M3 design 2, 3.5, 3.7, 7.6): adding them, changing a role, removing a member, leaving.
-
-/** The writes on a project's members, each by the caller of token. */
-function writes(api: Api, projectId: string) {
-  return {
-    add: async (token: string, members: ProjectMemberNew[]) => {
-      const { error, response } = await api.POST("/api/v0/projects/{project_id}/members", {
-        params: { path: { project_id: projectId } },
-        body: { members },
-        headers: bearer(token),
-      });
-      return answer(response, error);
-    },
-    change: async (token: string, membership: string, role: 5 | 15 | 20) => {
-      const { error, response } = await api.PATCH("/api/v0/project-members/{project_member_id}", {
-        params: { path: { project_member_id: membership } },
-        body: { role },
-        headers: bearer(token),
-      });
-      return answer(response, error);
-    },
-    remove: async (token: string, membership: string) => {
-      const { error, response } = await api.DELETE("/api/v0/project-members/{project_member_id}", {
-        params: { path: { project_member_id: membership } },
-        headers: bearer(token),
-      });
-      return answer(response, error);
-    },
-    leave: async (token: string) => {
-      const { error, response } = await api.POST("/api/v0/projects/{project_id}/leave", {
-        params: { path: { project_id: projectId } },
-        headers: bearer(token),
-      });
-      return answer(response, error);
-    },
-  };
-}
 
 test("P5 (API): the admin adds a member and a guest at once, and cannot leave, the only admin; another admin makes the member a guest, removes the guest, and removes a third admin, who joins again as a member, his row back; a member leaves, his membership of the workspace's other project kept, and the workspace's making him a guest makes his ended membership a guest's; an add of one who is no workspace member, of a workspace guest or admin as a member, a member's change of a role and an admin's change of another admin's change nothing", async ({
   api,
@@ -93,7 +57,7 @@ test("P5 (API): the admin adds a member and a guest at once, and cannot leave, t
   const web = await amidAnotherWorkspace(api, admin.token, testInfo, () =>
     createProject(api, admin.token, slug, { name: "Web", identifier: "WEB" })
   );
-  const { add, change, remove, leave } = writes(api, web.id);
+  const { add, change, remove, leave } = projectMemberWrites(api, web.id);
   // Ops, acme's other project: wanda its other admin, none of Web's.
   const ops = await createProject(api, admin.token, slug, { name: "Ops", identifier: "OPS" });
   await addProjectMembers(api, admin.token, ops.id, [{ member_id: wanda.id, role: 20 }]);
@@ -242,7 +206,7 @@ test("P5 (API): the admin adds a member and a guest at once, and cannot leave, t
   );
 });
 
-test("P5 (page): a project admin who is no workspace admin is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
+test("P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, the modal held until nerve answers; he is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
   api,
   baseURL,
   browser,
@@ -265,21 +229,64 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
   if (!pat || !bob || !ann || !max || !gus) throw new Error("the accounts were not registered");
   await inviteAndAccept(api, admin.token, slug, max, 15);
   await inviteAndAccept(api, admin.token, slug, gus, 5);
-  // pat, a member of acme, makes Web, its admin; max its other admin, ann and bob its members, gus its guest.
+  // pat, a member of acme, makes Web, its admin; max its other admin, bob its member.
   const web = await createProject(api, pat.tokens.access_token, slug, { name: "Web", identifier: "WEB" });
-  const [maxs, anns, , guss] = await addProjectMembers(api, pat.tokens.access_token, web.id, [
+  const [maxs] = await addProjectMembers(api, pat.tokens.access_token, web.id, [
     { member_id: max.id, role: 20 },
-    { member_id: ann.id, role: 15 },
     { member_id: bob.id, role: 15 },
-    { member_id: gus.id, role: 5 },
   ]);
-  if (!maxs || !anns || !guss) throw new Error("the members were not added");
+  if (!maxs) throw new Error("the members were not added");
   const members = `/${slug}/settings/projects/${web.id}/members`;
   const leaving = leavingOf(web.id);
 
   const page = await signedInPage(pat.tokens);
   const watch = await watchPage(page);
   await page.goto(members);
+  // He adds ann as a member and gus as a guest, from acme's active members who are not Web's (the admin, ann and gus),
+  // gus with a guest's role alone; the modal cannot be closed until nerve has added them.
+  await page.getByRole("button", { name: "Add member" }).click();
+  // the member select by the keyboard: Tab reaches it, Enter opens its list with the search focused
+  const coWorker = page.getByRole("dialog").getByRole("button", { name: "Select co-worker" });
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press("Tab");
+        return coWorker.evaluate((button) => button === document.activeElement);
+      },
+      { timeout: 5_000 }
+    )
+    .toBe(true);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("combobox", { name: "Search" })).toBeFocused();
+  await expect(page.getByRole("option")).toHaveCount(3);
+  await expect(page.getByRole("option", { name: shownNameOf(admin.email) })).toBeVisible();
+  await page.getByRole("option", { name: shownNameOf(ann.email) }).click();
+  await page.getByRole("button", { name: "Add more" }).click();
+  await page.getByRole("button", { name: "Select co-worker" }).click();
+  await page.getByRole("option", { name: shownNameOf(gus.email) }).click();
+  await page.getByRole("button", { name: "Guest", exact: true }).click();
+  await expect(page.getByRole("option")).toHaveText(["Guest"]);
+  await page.getByRole("option", { name: "Guest" }).click();
+  const adding = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/members`, () =>
+    page.getByRole("button", { name: "Add members" }).click()
+  );
+  expect(adding.body).toEqual({
+    members: [
+      { member_id: ann.id, role: 15 },
+      { member_id: gus.id, role: 5 },
+    ],
+  });
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect((await adding.release()).status()).toBe(201);
+  await expect(page.getByRole("heading", { name: "Add members" })).toHaveCount(0);
+  // the page says so; the toast is closed, as it would cover the role lists below it
+  const saidSo = page.getByRole("dialog").filter({ hasText: "Members added successfully." });
+  await saidSo.locator("button").click();
+  await expect(saidSo).toHaveCount(0);
+  await expect(memberRow(page, gus.email)).toContainText("Guest");
+  const membershipOfWeb = (id: string) => projectMembershipOf(api, pat.tokens.access_token, web.id, id);
+  const [anns, guss] = await Promise.all([membershipOfWeb(ann.id), membershipOfWeb(gus.id)]);
   // His own row and max's, another admin's: the role as text, nothing to pick.
   await expect(memberRow(page, pat.email)).toContainText("Admin");
   await expect(memberRow(page, max.email)).toContainText("Admin");
@@ -287,7 +294,7 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
   // ann, a member: the roles below his own, not an admin's; the page sends the role's number.
   await memberRow(page, ann.email).getByRole("button", { name: "Member", exact: true }).click();
   await expect(page.getByRole("option")).toHaveText(["Guest", "Member"]);
-  const demoted = await sentTo(page, "PATCH", `/api/v0/project-members/${anns.id}`, () =>
+  const demoted = await sentTo(page, "PATCH", `/api/v0/project-members/${anns}`, () =>
     page.getByRole("option", { name: "Guest", exact: true }).click()
   );
   expect([demoted.answer.status(), demoted.body]).toEqual([200, { role: 5 }]);
@@ -296,8 +303,8 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
   // max is removed; then gus, while the removal is out the dialog that asked cannot be dismissed.
   expect((await endProjectMembership(page, max.email, "Remove", removalOf(maxs.id))).status()).toBe(204);
   await expect(memberRow(page, max.email)).toHaveCount(0);
-  const release = await holdAnswer(page, "DELETE", removalOf(guss.id).path);
-  const removed = endProjectMembership(page, gus.email, "Remove", removalOf(guss.id));
+  const release = await holdAnswer(page, "DELETE", removalOf(guss).path);
+  const removed = endProjectMembership(page, gus.email, "Remove", removalOf(guss));
   await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
   expect(await closedByEscape(page)).toBe(false);
   await release();
@@ -349,7 +356,7 @@ test("P5 (page): a project admin who is no workspace admin is offered only the r
   await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
   await theGuest.page.locator("#projectName").fill("Web");
   await theGuest.page.locator("#confirmLeave").fill("Leave Project");
-  expect((await writes(api, web.id).remove(pat.tokens.access_token, anns.id)).status).toBe(204);
+  expect((await projectMemberWrites(api, web.id).remove(pat.tokens.access_token, anns)).status).toBe(204);
   const leaveProject = theGuest.page.getByRole("dialog").getByRole("button", { name: "Leave Project" });
   expect((await answerTo(theGuest.page, leaving.method, leaving.path, () => leaveProject.click())).status()).toBe(403);
   expect(await closedWithin(theGuest.page)).toBe(false);

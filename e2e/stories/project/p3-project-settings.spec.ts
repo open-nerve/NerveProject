@@ -1,17 +1,17 @@
 import {
   addProjectMembers,
   amidAnotherWorkspace,
+  changeProject,
   createProject,
   createWorkspace,
   inviteAndAccept,
+  projectMemberWrites,
   slugFor,
-  type Api,
-  type ProjectUpdate,
 } from "../../fixtures/api";
-import { expectMember } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { expectMember, projectSettingsOf } from "../../fixtures/assert/project";
+import { accountId, bearer, createPAT, emailFor, newAccount, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
-import type { Database } from "../../fixtures/db";
+import { shownNameOf } from "../../fixtures/project-pages";
 import {
   answerTo,
   bodiesSentTo,
@@ -26,38 +26,6 @@ import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
 // P3, a project's settings (M3 design 2, 3.4, 3.5, 3.19, 7.6).
-
-/** The answer of PATCH /api/v0/projects/{project_id}: its status, the project, or the problem's code and fields. */
-async function change(api: Api, token: string, id: string, body: ProjectUpdate) {
-  const { data, error, response } = await api.PATCH("/api/v0/projects/{project_id}", {
-    params: { path: { project_id: id } },
-    body,
-    headers: bearer(token),
-  });
-  return data
-    ? { status: response.status, project: data }
-    : {
-        status: response.status,
-        code: error?.code,
-        errors: error?.errors?.map((e) => ({ field: e.field, code: e.code })),
-      };
-}
-
-/** The project's settings as stored, its lead and default assignee by address, and who changed it last. */
-async function stored(db: Database, id: string): Promise<unknown> {
-  const [row] = await db.query(
-    `SELECT p.name, p.identifier, p.description, p.network, p.timezone, p.logo_props, p.cycle_view, p.module_view,
-            p.issue_views_view, p.intake_view, p.guest_view_all_features, p.archive_in, l.email AS lead,
-            a.email AS default_assignee, u.email AS by
-       FROM projects p
-       JOIN users u ON u.id = p.updated_by_id
-       LEFT JOIN users l ON l.id = p.project_lead_id
-       LEFT JOIN users a ON a.id = p.default_assignee_id
-      WHERE p.id = $1`,
-    [id]
-  );
-  return row;
-}
 
 test("P3 (API): the project's admin adds a member and a guest, whom the member lists with him, then changes every setting, the member its lead and default assignee; its member may not; a lead or default assignee who is its guest or no member, and archive_in 13, change nothing", async ({
   api,
@@ -114,12 +82,7 @@ test("P3 (API): the project's admin adds a member and a guest, whom the member l
     { member_id: guestId, role: 5 },
   ]);
   // Web's member may not add to it: refused, nothing written.
-  const addedByMember = await api.POST("/api/v0/projects/{project_id}/members", {
-    params: { path: { project_id: web.id } },
-    body: { members: [{ member_id: otherId, role: 15 }] },
-    headers: bearer(member),
-  });
-  expect({ status: addedByMember.response.status, code: addedByMember.error?.code }).toEqual({
+  expect(await projectMemberWrites(api, web.id).add(member, [{ member_id: otherId, role: 15 }])).toEqual({
     status: 403,
     code: "forbidden",
   });
@@ -141,7 +104,7 @@ test("P3 (API): the project's admin adds a member and a guest, whom the member l
     archive_in: 3,
   };
   expect(
-    await change(api, admin, web.id, {
+    await changeProject(api, admin, web.id, {
       ...settings,
       identifier: "site",
       project_lead_id: memberId,
@@ -149,7 +112,7 @@ test("P3 (API): the project's admin adds a member and a guest, whom the member l
     })
   ).toMatchObject({ status: 200, project: { ...settings, project_lead_id: memberId, default_assignee_id: memberId } });
   const changed = { ...settings, lead: memberEmail, default_assignee: memberEmail, by: adminEmail };
-  expect(await stored(db, web.id)).toEqual(changed);
+  expect(await projectSettingsOf(db, web.id)).toEqual(changed);
 
   // Each refused, all at once: none writes.
   const refusals = [
@@ -171,17 +134,17 @@ test("P3 (API): the project's admin adds a member and a guest, whom the member l
     },
   ];
   expect(
-    await Promise.all(refusals.map(({ token, body }) => change(api, token, web.id, body))),
+    await Promise.all(refusals.map(({ token, body }) => changeProject(api, token, web.id, body))),
     "the refusals"
   ).toEqual(refusals.map((r) => r.want));
-  expect(await stored(db, web.id)).toEqual(changed);
+  expect(await projectSettingsOf(db, web.id)).toEqual(changed);
 
   // Both cleared with null.
-  expect(await change(api, admin, web.id, { project_lead_id: null, default_assignee_id: null })).toMatchObject({
+  expect(await changeProject(api, admin, web.id, { project_lead_id: null, default_assignee_id: null })).toMatchObject({
     status: 200,
     project: { project_lead_id: null, default_assignee_id: null },
   });
-  expect(await stored(db, web.id)).toEqual({ ...changed, lead: null, default_assignee: null });
+  expect(await projectSettingsOf(db, web.id)).toEqual({ ...changed, lead: null, default_assignee: null });
 });
 
 test("P3 (page): the project's admin changes its name, identifier, description, visibility, time zone and icon on its general page, which hold after a reload; an identifier another project has is said under it and nothing is sent; the page waits for nerve; its member sees them and can change nothing", async ({
@@ -253,7 +216,7 @@ test("P3 (page): the project's admin changes its name, identifier, description, 
   expect((await release()).status()).toBe(200);
   await expect(page.getByText("Project updated successfully")).toBeVisible();
   await expect(update).toBeEnabled();
-  expect(await stored(db, web.id)).toMatchObject({ ...settings, by: adminEmail });
+  expect(await projectSettingsOf(db, web.id)).toMatchObject({ ...settings, by: adminEmail });
   await page.reload();
   await expect(page.locator("#name")).toHaveValue("Site");
   await expect(page.locator("#identifier")).toHaveValue("SITE");
@@ -343,7 +306,7 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   expect([three.answer.status(), three.body]).toEqual([200, { archive_in: 3 }]);
   await expect(page.getByRole("button", { name: "3 months" })).toBeVisible();
 
-  expect(await stored(db, web.id)).toMatchObject({
+  expect(await projectSettingsOf(db, web.id)).toMatchObject({
     cycle_view: true,
     module_view: true,
     issue_views_view: true,
@@ -354,6 +317,62 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // a load of each feature's page, and of the automations page
   await expectQuietConsole(page, watch, { warnings: Array.from({ length: 5 }, () => EMOJI_CHECK_WARNING) });
+});
+
+test("P3 (page): the project's admin makes a member its lead and its default assignee, each picked from its members who are not its guests, and lets its guests see every work item", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  // ann is Web's member, gus its guest; otto is a member of acme, not of Web.
+  const [ann, gus, otto] = await Promise.all(["ann", "gus", "otto"].map((label) => newAccount(api, testInfo, label)));
+  if (!ann || !gus || !otto) throw new Error("the accounts were not registered");
+  await inviteAndAccept(api, admin.access_token, slug, ann, 15);
+  await inviteAndAccept(api, admin.access_token, slug, gus, 5);
+  await inviteAndAccept(api, admin.access_token, slug, otto, 15);
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await addProjectMembers(api, admin.access_token, web.id, [
+    { member_id: ann.id, role: 15 },
+    { member_id: gus.id, role: 5 },
+  ]);
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/settings/projects/${web.id}/members`);
+  /** Picks ann in the member select under title: the select offers the admin and ann, and none; the page sends field. */
+  const pickAnn = async (title: string) => {
+    await page.getByRole("heading", { name: title }).locator("xpath=following::button[1]").click();
+    await expect(page.getByRole("option")).toHaveCount(3);
+    await expect(page.getByRole("option", { name: shownNameOf(adminEmail) })).toBeVisible();
+    await expect(page.getByRole("option", { name: "None" })).toBeVisible();
+    const picked = await sentTo(page, "PATCH", `/api/v0/projects/${web.id}`, () =>
+      page.getByRole("option", { name: shownNameOf(ann.email) }).click()
+    );
+    await expect(page.getByRole("heading", { name: title }).locator("xpath=following::button[1]")).toHaveText(
+      new RegExp(shownNameOf(ann.email))
+    );
+    return [picked.answer.status(), picked.body];
+  };
+  expect(await pickAnn("Project Lead")).toEqual([200, { project_lead_id: ann.id }]);
+  expect(await pickAnn("Default Assignee")).toEqual([200, { default_assignee_id: ann.id }]);
+  const guests = await sentTo(page, "PATCH", `/api/v0/projects/${web.id}`, () =>
+    page.getByRole("switch", { name: "Guest access" }).click()
+  );
+  expect([guests.answer.status(), guests.body]).toEqual([200, { guest_view_all_features: true }]);
+  await expect(page.getByRole("switch", { name: "Guest access" })).toBeChecked();
+
+  expect(await projectSettingsOf(db, web.id)).toMatchObject({
+    lead: ann.email,
+    default_assignee: ann.email,
+    guest_view_all_features: true,
+    by: adminEmail,
+  });
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });
 
 test("P3 (page): another project's general page, reached without leaving the route, shows that project's values", async ({

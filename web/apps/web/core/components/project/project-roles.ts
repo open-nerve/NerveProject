@@ -11,6 +11,17 @@ import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
  */
 export const PROJECT_ROLES: ProjectRole[] = [5, 15, 20];
 
+/**
+ * The roles a member of the workspace whose role in it is workspaceRole may be added to a project with, as nerve allows
+ * them (M3 design 3.5): a workspace admin as an admin alone, a workspace guest as a guest alone, a member as any; any
+ * while no member is picked. Adding has no relative rule.
+ */
+export function addableRoles(workspaceRole: WorkspaceRole | undefined): ProjectRole[] {
+  if (workspaceRole === 20) return [20];
+  if (workspaceRole === 5) return [5];
+  return PROJECT_ROLES;
+}
+
 /** The caller as nerve decides his changes of a project's memberships: his role in its workspace, and in it. */
 export type MembershipCaller = {
   workspaceRole: WorkspaceRole | undefined;

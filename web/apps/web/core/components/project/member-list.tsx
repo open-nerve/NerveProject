@@ -79,7 +79,6 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
         isOpen={addMembersModal}
         onClose={() => setAddMembersModal(false)}
         projectId={projectId}
-        workspaceSlug={workspaceSlug}
       />
       <div className="flex items-center justify-between gap-4 overflow-x-hidden border-b border-subtle py-2">
         <div className="text-14 font-semibold">{t("common.members")}</div>

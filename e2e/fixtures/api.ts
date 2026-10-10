@@ -256,6 +256,77 @@ export async function addProjectMembers(
   return data.data;
 }
 
+/** The id of the membership of the account of memberId in the project of projectId, as the caller of token lists it. */
+export async function projectMembershipOf(
+  api: Api,
+  token: string,
+  projectId: string,
+  memberId: string
+): Promise<string> {
+  const { data, error, response } = await api.GET("/api/v0/projects/{project_id}/members", {
+    params: { path: { project_id: projectId } },
+    headers: bearer(token),
+  });
+  expect(response.status, `the members of ${projectId}: ${JSON.stringify(error)}`).toBe(200);
+  const membership = data?.data.find((m) => m.member_id === memberId);
+  if (!membership) {
+    throw new Error(`no membership of ${memberId} in ${projectId}`);
+  }
+  return membership.id;
+}
+
+/** The answer of PATCH /api/v0/projects/{project_id}: its status, the project, or the problem's code and fields. */
+export async function changeProject(api: Api, token: string, id: string, body: ProjectUpdate) {
+  const { data, error, response } = await api.PATCH("/api/v0/projects/{project_id}", {
+    params: { path: { project_id: id } },
+    body,
+    headers: bearer(token),
+  });
+  return data
+    ? { status: response.status, project: data }
+    : {
+        status: response.status,
+        code: error?.code,
+        errors: error?.errors?.map((e) => ({ field: e.field, code: e.code })),
+      };
+}
+
+/** The writes on a project's members, each by the caller of token. */
+export function projectMemberWrites(api: Api, projectId: string) {
+  return {
+    add: async (token: string, members: ProjectMemberNew[]) => {
+      const { error, response } = await api.POST("/api/v0/projects/{project_id}/members", {
+        params: { path: { project_id: projectId } },
+        body: { members },
+        headers: bearer(token),
+      });
+      return answer(response, error);
+    },
+    change: async (token: string, membership: string, role: 5 | 15 | 20) => {
+      const { error, response } = await api.PATCH("/api/v0/project-members/{project_member_id}", {
+        params: { path: { project_member_id: membership } },
+        body: { role },
+        headers: bearer(token),
+      });
+      return answer(response, error);
+    },
+    remove: async (token: string, membership: string) => {
+      const { error, response } = await api.DELETE("/api/v0/project-members/{project_member_id}", {
+        params: { path: { project_member_id: membership } },
+        headers: bearer(token),
+      });
+      return answer(response, error);
+    },
+    leave: async (token: string) => {
+      const { error, response } = await api.POST("/api/v0/projects/{project_id}/leave", {
+        params: { path: { project_id: projectId } },
+        headers: bearer(token),
+      });
+      return answer(response, error);
+    },
+  };
+}
+
 /** Archives the project of projectId with the bearer token given, an admin's of the project, and returns it. */
 export async function archiveProject(api: Api, token: string, projectId: string): Promise<Project> {
   const { data, error, response } = await api.POST("/api/v0/projects/{project_id}/archive", {

@@ -379,3 +379,19 @@ export async function expectLabels(db: Database, projectId: string, want: LabelR
       }))
   );
 }
+
+/** The project's settings as stored, its lead and default assignee by address, and who changed it last. */
+export async function projectSettingsOf(db: Database, id: string): Promise<unknown> {
+  const [row] = await db.query(
+    `SELECT p.name, p.identifier, p.description, p.network, p.timezone, p.logo_props, p.cycle_view, p.module_view,
+            p.issue_views_view, p.intake_view, p.guest_view_all_features, p.archive_in, l.email AS lead,
+            a.email AS default_assignee, u.email AS by
+       FROM projects p
+       JOIN users u ON u.id = p.updated_by_id
+       LEFT JOIN users l ON l.id = p.project_lead_id
+       LEFT JOIN users a ON a.id = p.default_assignee_id
+      WHERE p.id = $1`,
+    [id]
+  );
+  return row;
+}

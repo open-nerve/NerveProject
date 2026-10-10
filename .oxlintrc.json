@@ -284,7 +284,9 @@
         "web/apps/web/core/components/project/member-list-item.test.tsx",
         "web/apps/web/core/components/projects/settings/useProjectColumns.test.tsx",
         "web/apps/web/core/components/project/project-roles.ts",
-        "web/apps/web/core/components/project/project-roles.test.tsx"
+        "web/apps/web/core/components/project/project-roles.test.tsx",
+        "web/apps/web/core/components/project/add-project-members-modal.test.tsx",
+        "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"
