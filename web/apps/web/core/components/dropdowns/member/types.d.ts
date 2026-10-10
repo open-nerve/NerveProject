@@ -1,7 +1,6 @@
 import type { TDropdownProps } from "../types";
 
 export type MemberDropdownProps = TDropdownProps & {
-  button?: React.ReactNode;
   dropdownArrow?: boolean;
   dropdownArrowClassName?: string;
   placeholder?: string;

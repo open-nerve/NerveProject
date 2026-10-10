@@ -275,6 +275,13 @@ export async function expectListBesideButton(page: Page, button: Locator): Promi
   expect(Math.min(left, right), "between the left edges or the right edges").toBeLessThan(2);
 }
 
+/** Waits for the transitions of what locator finds, and of what it holds, to end (a modal's enter transition). */
+export async function transitionsEnded(locator: Locator): Promise<void> {
+  await locator.evaluate((element) =>
+    Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished))
+  );
+}
+
 /**
  * Fills the security page's form, which page shows, with the current password and a new one typed twice, and
  * submits it: resolves with the status of nerve's answer to the one change it sends.

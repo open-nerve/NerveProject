@@ -9,7 +9,7 @@ import {
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
-import { registerOnboarded } from "../../fixtures/settings-pages";
+import { expectListBesideButton, registerOnboarded, transitionsEnded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // P1, create a project (M3 design 2, 3.17, 3.18), and its page (P10).
@@ -228,6 +228,50 @@ test("P1 (page): a new project's icon picker shows the emoji nerve serves itself
   // The picker asks nerve, which answers its HEAD too (frimousse compares the files' ETags before it reads its cache).
   expect((await page.request.head(`${EMOJIBASE}/data.json`)).status()).toBe(200);
   expect(requestsElsewhere(page, watch)).toEqual([]);
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+});
+
+test("P1 (page): the lead's list opens beside its button with its search focused; Escape closes it", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const member = await registerOnboarded(api, emailFor(testInfo, "member"));
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, member.access_token, { name: "Acme", slug });
+  const page = await signedInPage(member);
+  const watch = await watchPage(page);
+
+  await page.goto(`/${slug}/projects`);
+  await page.getByRole("button", { name: "Add Project", exact: true }).click();
+  // Popper places the list where the button is as it opens: the modal's enter transition moves the button.
+  await transitionsEnded(page.getByRole("dialog"));
+  // The button Tab reaches is the DropdownButton's, in the select's (each dropdown of dropdowns/ nests one), which is
+  // out of the Tab order: Tab stops once.
+  const lead = page.getByRole("button", { name: "Lead", exact: true }).last();
+  await expect(lead.locator("xpath=ancestor::button")).toHaveAttribute("tabindex", "-1");
+  await lead.click();
+  await expectListBesideButton(page, lead);
+  const search = page.getByRole("combobox", { name: "Search" });
+  await expect(search).toBeFocused();
+  // Escape closes the list and leaves the modal open; so does it once a search has opened the Combobox.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await lead.press("Enter");
+  await expectListBesideButton(page, lead);
+  await page.keyboard.type("nobody");
+  // An Escape that ends an input method's composition (Chinese, say) is the input method's: the list stays open.
+  await search.dispatchEvent("keydown", { key: "Escape", isComposing: true });
+  await page.keyboard.type("!");
+  await expect(search).toHaveValue("nobody!");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Create project" })).toBeVisible();
+  // opened again, the list has no search
+  await lead.press("Enter");
+  await expect(search).toHaveValue("");
+  await expect(page.getByRole("option", { name: "You" })).toBeVisible();
+
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });

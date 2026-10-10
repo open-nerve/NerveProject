@@ -258,7 +258,9 @@
         "web/apps/web/core/hooks/use-sign-out.ts",
         "web/apps/web/core/hooks/use-sign-out.test.ts",
         "web/apps/web/emojibase.ts",
-        "web/apps/web/emojibase.test.ts"
+        "web/apps/web/emojibase.test.ts",
+        "web/apps/web/core/components/dropdowns/member/base.test.tsx",
+        "web/apps/web/core/lib/fake-controls.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"
