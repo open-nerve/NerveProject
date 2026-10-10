@@ -9,7 +9,7 @@ import { useFormContext } from "react-hook-form";
 import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { ProjectCreate } from "@nerve/api-client";
+import type { ProjectCreationForm } from "@/components/projects/create/use-create-project";
 // helpers
 import { getTabIndex } from "@nerve/utils";
 
@@ -23,13 +23,13 @@ function ProjectCreateButtons(props: Props) {
   const { handleClose, isMobile = false } = props;
   const {
     formState: { isSubmitting },
-  } = useFormContext<ProjectCreate>();
+  } = useFormContext<ProjectCreationForm>();
 
   const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
 
   return (
     <div className="flex justify-end gap-2 border-t border-subtle py-4">
-      <Button variant="secondary" size="lg" onClick={handleClose} tabIndex={getIndex("cancel")}>
+      <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting} tabIndex={getIndex("cancel")}>
         {t("common.cancel")}
       </Button>
       <Button variant="primary" size="lg" type="submit" loading={isSubmitting} tabIndex={getIndex("submit")}>

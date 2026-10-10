@@ -264,7 +264,13 @@
         "web/apps/web/core/components/project/use-join-project.ts",
         "web/apps/web/core/components/project/use-join-project.test.ts",
         "web/apps/web/core/hooks/use-copy-link.ts",
-        "web/apps/web/core/hooks/use-copy-link.test.ts"
+        "web/apps/web/core/hooks/use-copy-link.test.ts",
+        "web/apps/web/core/components/project/project-refusal.ts",
+        "web/apps/web/core/components/project/project-refusal.test.ts",
+        "web/apps/web/core/components/project/logo-props.ts",
+        "web/apps/web/core/components/project/logo-props.test.ts",
+        "web/apps/web/core/components/projects/create/use-create-project.ts",
+        "web/apps/web/core/components/projects/create/use-create-project.test.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

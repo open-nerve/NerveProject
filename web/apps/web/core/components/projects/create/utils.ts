@@ -5,9 +5,11 @@
  */
 
 import { RANDOM_EMOJI_CODES } from "@nerve/constants";
-import type { ProjectCreate } from "@nerve/api-client";
+// local imports
+import type { ProjectCreationForm } from "./use-create-project";
 
-export const getProjectFormValues = (): ProjectCreate => ({
+/** A new project's form as it opens: public, no lead, a random emoji its icon (M3 design 3.19). */
+export const getProjectFormValues = (): ProjectCreationForm => ({
   description: "",
   logo_props: {
     in_use: "emoji",
@@ -18,4 +20,5 @@ export const getProjectFormValues = (): ProjectCreate => ({
   identifier: "",
   name: "",
   network: 2,
+  project_lead_id: null,
 });

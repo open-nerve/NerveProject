@@ -10,9 +10,12 @@ import { countProjects, expectProjectCreated } from "../../fixtures/assert/proje
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import {
+  closedByEscape,
   expectListBesideButton,
   keydownsReachingDocument,
   registerOnboarded,
+  sentHeld,
+  sentTo,
   transitionsEnded,
 } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -43,6 +46,12 @@ async function read(
     headers: bearer(token),
   });
   return data ? { status: response.status, project: data } : { status: response.status, code: error?.code };
+}
+
+/** Gives the account of token the display name name, by which the pages show it. */
+async function named(api: Api, token: string, name: string): Promise<void> {
+  const { response } = await api.PATCH("/api/v0/me", { body: { display_name: name }, headers: bearer(token) });
+  expect(response.status, `name ${name}`).toBe(200);
 }
 
 /** The answer to a createProject whose field the rules do not allow. */
@@ -235,6 +244,113 @@ test("P1 (page): a new project's icon picker shows the emoji nerve serves itself
   expect(requestsElsewhere(page, watch)).toEqual([]);
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+});
+
+test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; the project shows in the list and the sidebar", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const memberEmail = emailFor(testInfo, "member");
+  const member = await registerOnboarded(api, memberEmail);
+  const guestEmail = emailFor(testInfo, "guest");
+  const guest = await registerOnboarded(api, guestEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug, timezone: "Asia/Shanghai" });
+  await inviteAndAccept(api, admin.access_token, slug, { email: memberEmail, token: member.access_token }, 15);
+  await inviteAndAccept(api, admin.access_token, slug, { email: guestEmail, token: guest.access_token }, 5);
+  await named(api, admin.access_token, "ada");
+  await named(api, guest.access_token, "gus");
+  // WEB is taken by the time the member sends it
+  await createProject(api, admin.access_token, slug, { name: "Site", identifier: "WEB" });
+  const adminId = await accountId(api, admin.access_token);
+
+  const page = await signedInPage(member);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/projects`);
+  await page.getByRole("button", { name: "Add Project", exact: true }).click();
+  await transitionsEnded(page.getByRole("dialog"));
+  // The name gives the identifier, as typed; the identifier typed is upper case, of the characters it may have.
+  await page.locator("#name").fill("Web-App");
+  await expect(page.locator("#identifier")).toHaveValue("WEBAPP");
+  await page.locator("#identifier").fill("we.b");
+  await expect(page.locator("#identifier")).toHaveValue("WEB");
+  await page.locator("#description").fill("The site");
+  // The lead: the form's order puts it right before Cancel, which Shift+Tab leaves for it; the workspace's admin or a
+  // member, not its guest.
+  await page.getByRole("button", { name: "Cancel" }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.getByRole("button", { name: "Lead", exact: true }).last()).toBeFocused();
+  await page.keyboard.press("Enter");
+  // each after its avatar's initial
+  await expect(page.getByRole("option")).toHaveText([/You$/, /ada$/]);
+  await page.getByRole("option", { name: "ada" }).click();
+  // The icon: an emoji from the picker.
+  await page.getByRole("button", { name: "Project icon" }).click();
+  await page.getByRole("searchbox").fill("rocket");
+  await page.getByRole("gridcell", { name: "Rocket" }).click();
+
+  // Refused: the name nerve does not allow and the identifier taken, each under its field.
+  const create = page.getByRole("button", { name: "Create project" });
+  const refusedName = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
+  expect(refusedName.answer.status()).toBe(422);
+  await expect(page.getByText("Not allowed")).toBeVisible();
+  await page.locator("#name").fill("Web App");
+  await page.locator("#identifier").fill("web");
+  const refusedIdentifier = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
+  expect(refusedIdentifier.answer.status()).toBe(409);
+  await expect(page.getByText("A project of this workspace already has this identifier.")).toBeVisible();
+
+  // Created: the form's fields alone, sent once; the form cannot be closed until nerve answers.
+  await page.locator("#identifier").fill("webapp");
+  const { body, release } = await sentHeld(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
+  expect(body).toEqual({
+    name: "Web App",
+    identifier: "WEBAPP",
+    description: "The site",
+    network: 2,
+    logo_props: { in_use: "emoji", emoji: { value: "128640" } },
+    project_lead_id: adminId,
+  });
+  // neither by Cancel, by the header's Close nor by Escape
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect((await release()).status()).toBe(201);
+  await expect(page.getByText("Project created successfully")).toBeVisible();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("link", { name: /Web App/ })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Main sidebar" }).getByText("Web App")).toBeVisible();
+
+  const created = {
+    name: "Web App",
+    identifier: "WEBAPP",
+    description: "The site",
+    network: 2,
+    timezone: "Asia/Shanghai",
+    logo_props: { in_use: "emoji", emoji: { value: "128640" } },
+  };
+  await expectProjectCreated(db, slug, created, memberEmail, adminEmail, [
+    { email: memberEmail, sort_order: 65535 },
+    { email: adminEmail, sort_order: 55535 },
+  ]);
+
+  // the two refusals, the browser's reports of them
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    [],
+    [`422 POST /api/v0/workspaces/${slug}/projects`, `409 POST /api/v0/workspaces/${slug}/projects`],
+    [],
+    [],
+  ]);
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: [
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
+      "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    ],
+  });
 });
 
 test("P1 (page): the lead's list opens beside its button with its search focused; Escape closes it", async ({

@@ -11,12 +11,12 @@ import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { CloseOutline } from "@makeplane/propel/icons";
-// nerve types
-import type { ProjectCreate } from "@nerve/api-client";
 // nerve ui
 import { getTabIndex } from "@nerve/utils";
 // components
 import { CoverImage } from "@/components/common/cover-image";
+import { logoPropsOf } from "@/components/project/logo-props";
+import type { ProjectCreationForm } from "@/components/projects/create/use-create-project";
 
 type Props = {
   handleClose: () => void;
@@ -25,7 +25,11 @@ type Props = {
 
 function ProjectCreateHeader(props: Props) {
   const { handleClose, isMobile = false } = props;
-  const { control, setValue } = useFormContext<ProjectCreate>();
+  const {
+    control,
+    setValue,
+    formState: { isSubmitting },
+  } = useFormContext<ProjectCreationForm>();
   const { t } = useTranslation();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -40,7 +44,13 @@ function ProjectCreateHeader(props: Props) {
         className="absolute top-0 left-0 h-full w-full rounded-lg"
       />
       <div className="absolute top-2 right-2 p-2">
-        <button type="button" onClick={handleClose} tabIndex={getIndex("close")}>
+        <button
+          type="button"
+          onClick={handleClose}
+          disabled={isSubmitting}
+          aria-label={t("close")}
+          tabIndex={getIndex("close")}
+        >
           <CloseOutline className="h-5 w-5 text-on-color" />
         </button>
       </div>
@@ -61,23 +71,10 @@ function ProjectCreateHeader(props: Props) {
                   <Logo logo={value} size={20} />
                 </span>
               }
-              onChange={(val: any) => {
-                let logoValue = {};
-
-                if (val?.type === "emoji")
-                  logoValue = {
-                    value: val.value,
-                  };
-                else if (val?.type === "icon") logoValue = val.value;
-
-                const newLogoProps = {
-                  in_use: val?.type,
-                  [val?.type]: logoValue,
-                };
-                setValue("logo_props", newLogoProps, {
-                  shouldDirty: true,
-                });
-                onChange(newLogoProps);
+              onChange={(picked) => {
+                const logo = logoPropsOf(picked);
+                setValue("logo_props", logo, { shouldDirty: true });
+                onChange(logo);
                 setIsOpen(false);
               }}
               defaultIconColor={value?.in_use && value.in_use === "icon" ? value.icon?.color : undefined}

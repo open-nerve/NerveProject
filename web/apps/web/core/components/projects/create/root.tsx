@@ -7,19 +7,16 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { FormProvider, useForm } from "react-hook-form";
-// nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // components
 import ProjectCommonAttributes from "@/components/project/create/common-attributes";
 import ProjectCreateHeader from "@/components/project/create/header";
 import ProjectCreateButtons from "@/components/project/create/project-create-buttons";
 // hooks
-import { useProject } from "@/hooks/store/use-project";
+import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// nerve imports
-import type { ProjectCreate } from "@nerve/api-client";
+// local imports
 import { ProjectAttributes } from "./attributes";
+import { useCreateProject, type ProjectCreationForm } from "./use-create-project";
 import { getProjectFormValues } from "./utils";
 
 export type TCreateProjectFormProps = {
@@ -30,80 +27,28 @@ export type TCreateProjectFormProps = {
 
 export const CreateProjectForm = observer(function CreateProjectForm(props: TCreateProjectFormProps) {
   const { workspaceSlug, onClose, handleNextStep } = props;
-  // store
-  const { t } = useTranslation();
-  const { createProject } = useProject();
+  // hooks
+  const create = useCreateProject();
   // states
   const [shouldAutoSyncIdentifier, setShouldAutoSyncIdentifier] = useState(true);
   // form info
-  const methods = useForm<ProjectCreate>({
+  const methods = useForm<ProjectCreationForm>({
     defaultValues: getProjectFormValues(),
     reValidateMode: "onChange",
   });
-  const { handleSubmit, reset, setValue } = methods;
+  const {
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+    formState: { isSubmitting },
+  } = methods;
   const { isMobile } = usePlatformOS();
 
-  const onSubmit = async (formData: ProjectCreate) => {
-    // Upper case identifier
-    return createProject(workspaceSlug, { ...formData, identifier: formData.identifier.toUpperCase() })
-      .then((res) => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("success"),
-          message: t("project_created_successfully"),
-        });
-        return handleNextStep(res.id);
-      })
-      .catch((err) => {
-        try {
-          // Handle the new error format where codes are nested in arrays under field names
-          const errorData = err?.data ?? {};
-
-          const nameError = errorData.name?.includes("PROJECT_NAME_ALREADY_EXIST");
-          const identifierError = errorData?.identifier?.includes("PROJECT_IDENTIFIER_ALREADY_EXIST");
-          const nameSpecialCharError = errorData?.name?.includes("PROJECT_NAME_CANNOT_CONTAIN_SPECIAL_CHARACTERS");
-
-          if (nameError || identifierError || nameSpecialCharError) {
-            if (nameError) {
-              setToast({
-                type: TOAST_TYPE.ERROR,
-                title: t("toast.error"),
-                message: t("project_name_already_taken"),
-              });
-            }
-
-            if (identifierError) {
-              setToast({
-                type: TOAST_TYPE.ERROR,
-                title: t("toast.error"),
-                message: t("project_identifier_already_taken"),
-              });
-            }
-
-            if (nameSpecialCharError) {
-              setToast({
-                type: TOAST_TYPE.ERROR,
-                title: t("toast.error"),
-                message: t("project_name_cannot_contain_special_characters"),
-              });
-            }
-          } else {
-            setToast({
-              type: TOAST_TYPE.ERROR,
-              title: t("toast.error"),
-              message: t("something_went_wrong"),
-            });
-          }
-        } catch (error) {
-          // Fallback error handling if the error processing fails
-          console.error("Error processing API error:", error);
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("something_went_wrong"),
-          });
-        }
-      });
+  // The form is busy until nerve has answered and the page has followed: created, the modal's next step.
+  const onSubmit = async (values: ProjectCreationForm) => {
+    const project = await create(workspaceSlug, values, setError);
+    if (project) handleNextStep(project.id);
   };
 
   const handleClose = () => {
@@ -113,6 +58,12 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
       reset();
     }, 300);
   };
+
+  // While the creation is out the form cannot be closed (Escape, its close button, Cancel): nerve's answer is followed
+  // by the form that sent it.
+  useKeypress("Escape", () => {
+    if (!isSubmitting) handleClose();
+  });
 
   return (
     <FormProvider {...methods}>

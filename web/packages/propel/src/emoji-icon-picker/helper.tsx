@@ -11,7 +11,8 @@ export const EmojiIconPickerTypes = {
   ICON: "icon",
 } as const;
 
-type TChangeHandlerProps =
+/** What the picker picked: an emoji, by its code, or an icon, by its name and colour. */
+export type TChangeHandlerProps =
   | {
       type: typeof EmojiIconPickerTypes.EMOJI;
       value: string;

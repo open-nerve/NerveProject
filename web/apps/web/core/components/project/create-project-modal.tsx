@@ -42,8 +42,9 @@ export function CreateProjectModal(props: Props) {
     setCurrentStep(EProjectCreationSteps.FEATURE_SELECTION);
   };
 
+  // the creation's form closes itself on Escape, but while it creates; the next step closes on it
   useKeypress("Escape", () => {
-    if (isOpen) onClose();
+    if (isOpen && currentStep === EProjectCreationSteps.FEATURE_SELECTION) onClose();
   });
 
   return (
