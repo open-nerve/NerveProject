@@ -10,11 +10,20 @@ import {
 } from "../../fixtures/api";
 import { expectMember } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
+import {
+  answerTo,
+  bodiesSentTo,
+  enabledWithin,
+  moveWithinApp,
+  registerOnboarded,
+  sentHeld,
+} from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
+import { anotherBrowser } from "../../fixtures/workspace-pages";
 
-// P3, a project's settings (M3 design 2, 3.4, 3.5, 3.19). The page version
-// comes with the project's settings pages (P10).
+// P3, a project's settings (M3 design 2, 3.4, 3.5, 3.19, 7.6).
 
 /** The answer of PATCH /api/v0/projects/{project_id}: its status, the project, or the problem's code and fields. */
 async function change(api: Api, token: string, id: string, body: ProjectUpdate) {
@@ -171,4 +180,132 @@ test("P3 (API): the project's admin adds a member and a guest, whom the member l
     project: { project_lead_id: null, default_assignee_id: null },
   });
   expect(await stored(db, web.id)).toEqual({ ...changed, lead: null, default_assignee: null });
+});
+
+test("P3 (page): the project's admin changes its name, identifier, description, visibility, time zone and icon on its general page, which hold after a reload; an identifier another project has is said under it and nothing is sent; the page waits for nerve; its member sees them and can change nothing", async ({
+  api,
+  baseURL,
+  browser,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const memberEmail = emailFor(testInfo, "member");
+  const member = await registerOnboarded(api, memberEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  await inviteAndAccept(api, admin.access_token, slug, { email: memberEmail, token: member.access_token }, 15);
+  await createProject(api, admin.access_token, slug, { name: "Ops", identifier: "OPS" });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const memberId = await accountId(api, member.access_token);
+  await addProjectMembers(api, admin.access_token, web.id, [{ member_id: memberId, role: 15 }]);
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#name")).toHaveValue("Web");
+  await page.locator("#name").fill("Site");
+  await page.locator("#description").fill("The site");
+  await page.getByRole("button", { name: "Public" }).click();
+  await page.getByRole("option", { name: /Private/ }).click();
+  // the workspace's time zone, which the project took, for Shanghai's
+  await page.getByRole("button", { name: "UTC" }).click();
+  await page.getByRole("combobox", { name: "Search" }).fill("Asia/Shanghai");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  // The icon: the project has none, so the picker opens on its icons; an emoji from the emoji nerve serves.
+  await page.getByRole("button", { name: "Project icon" }).click();
+  await page.getByRole("tab", { name: "Emoji" }).click();
+  await page.getByRole("searchbox").fill("rocket");
+  await page.getByRole("gridcell", { name: "Rocket" }).click();
+  await expect(page.getByRole("button", { name: "Project icon" })).toContainText("🚀");
+
+  // An identifier another project has: the page asks nerve, says so under it, and sends no change.
+  const changes = await bodiesSentTo(page, "PATCH", `/api/v0/projects/${web.id}`);
+  const update = page.getByRole("button", { name: "Update project" });
+  await page.locator("#identifier").fill("o.ps");
+  await expect(page.locator("#identifier")).toHaveValue("OPS");
+  const checked = await answerTo(page, "GET", `/api/v0/workspaces/${slug}/project-identifiers/OPS`, () =>
+    update.click()
+  );
+  expect(await checked.json()).toEqual({ available: false });
+  await expect(page.getByText("A project of this workspace already has this identifier.")).toBeVisible();
+  await expect(update).toBeEnabled();
+  expect(changes).toEqual([]);
+
+  // Changed: the fields the page edits, the button busy until nerve answers.
+  await page.locator("#identifier").fill("site");
+  const { body, release } = await sentHeld(page, "PATCH", `/api/v0/projects/${web.id}`, () => update.click());
+  const logo = { in_use: "emoji", emoji: { value: "128640" } };
+  const settings = {
+    name: "Site",
+    identifier: "SITE",
+    description: "The site",
+    network: 0,
+    logo_props: logo,
+    timezone: "Asia/Shanghai",
+  };
+  expect(body).toEqual(settings);
+  expect(await enabledWithin(page.getByRole("button", { name: "Updating" }))).toBe(false);
+  expect((await release()).status()).toBe(200);
+  await expect(page.getByText("Project updated successfully")).toBeVisible();
+  await expect(update).toBeEnabled();
+  expect(await stored(db, web.id)).toMatchObject({ ...settings, by: adminEmail });
+  await page.reload();
+  await expect(page.locator("#name")).toHaveValue("Site");
+  await expect(page.locator("#identifier")).toHaveValue("SITE");
+  await expect(page.locator("#description")).toHaveValue("The site");
+  await expect(page.getByRole("button", { name: "Private" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Beijing" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Project icon" })).toContainText("🚀");
+
+  // Its member sees what nerve holds, in a form he cannot change, and no archiving or deletion.
+  const theMember = await anotherBrowser(browser, baseURL ?? "", member);
+  const memberWatch = await watchPage(theMember.page);
+  await theMember.page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(theMember.page.locator("#name")).toHaveValue("Site");
+  await Promise.all(
+    ["#name", "#identifier", "#description"].map((field) => expect(theMember.page.locator(field), field).toBeDisabled())
+  );
+  await Promise.all(
+    ["Project icon", "Private", "Beijing", "Update project"].map((name) =>
+      expect(theMember.page.getByRole("button", { name }), name).toBeDisabled()
+    )
+  );
+  await expect(theMember.page.getByRole("button", { name: "Archive" })).toHaveCount(0);
+  await expect(theMember.page.getByRole("button", { name: "Delete" })).toHaveCount(0);
+  expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await theMember.close();
+
+  // The emoji came from nerve: nothing asked of another address, nothing blocked.
+  expect(requestsElsewhere(page, watch)).toEqual([]);
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  // the first load, and the reload
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+});
+
+test("P3 (page): another project's general page, reached without leaving the route, shows that project's values", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const admin = await registerOnboarded(api, emailFor(testInfo, "admin"));
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  const ops = await createProject(api, admin.access_token, slug, { name: "Ops", identifier: "OPS" });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  // the router's own move, as a switcher on the settings pages would make it: no link of the app does it yet
+  await page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#name")).toHaveValue("Web");
+  await moveWithinApp(page, `/${slug}/settings/projects/${ops.id}`);
+  await expect(page.locator("#name")).toHaveValue("Ops");
+  // Web's read is in the session's cache: the wrapper shows its page at once, the route mounted throughout
+  await moveWithinApp(page, `/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#identifier")).toHaveValue("WEB");
+
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });

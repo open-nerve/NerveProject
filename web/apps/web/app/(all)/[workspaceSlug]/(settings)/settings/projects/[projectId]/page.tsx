@@ -21,27 +21,24 @@ import { GeneralProjectSettingsHeader } from "./header";
 import { GeneralProjectSettingsControlSection } from "@/components/project/settings/control-section";
 
 function ProjectSettingsPage({ params }: Route.ComponentProps) {
-  // router
+  // router: the address's project, as the store gives it (the wrapper shows the page once it has)
   const { workspaceSlug, projectId } = params;
   // store hooks
-  const { currentProjectDetails } = useProject();
+  const { getProjectById } = useProject();
+  const project = getProjectById(projectId);
   const { allowPermissions } = useUserPermissions();
   // derived values
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
-  const pageTitle = currentProjectDetails?.name ? `${currentProjectDetails?.name} - General Settings` : undefined;
+  const pageTitle = project ? `${project.name} - General Settings` : undefined;
 
   return (
     <SettingsContentWrapper header={<GeneralProjectSettingsHeader />}>
       <PageHead title={pageTitle} />
       <div className={`w-full ${isAdmin ? "" : "opacity-60"}`}>
-        {currentProjectDetails ? (
-          <ProjectDetailsForm
-            project={currentProjectDetails}
-            workspaceSlug={workspaceSlug}
-            projectId={projectId}
-            isAdmin={isAdmin}
-          />
+        {project ? (
+          // one form per project: another project's page opens with its own values
+          <ProjectDetailsForm key={project.id} project={project} workspaceSlug={workspaceSlug} isAdmin={isAdmin} />
         ) : (
           <ProjectDetailsFormLoader />
         )}

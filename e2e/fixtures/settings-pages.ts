@@ -311,6 +311,17 @@ export async function keydownsReachingDocument(page: Page, key: string): Promise
 }
 
 /**
+ * Moves page to path as a link of the app would, without a load: React Router follows the history's popstate. A
+ * story's stand-in for a link the app does not have yet.
+ */
+export async function moveWithinApp(page: Page, path: string): Promise<void> {
+  await page.evaluate((to) => {
+    window.history.pushState(null, "", to);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, path);
+}
+
+/**
  * Fills the security page's form, which page shows, with the current password and a new one typed twice, and
  * submits it: resolves with the status of nerve's answer to the one change it sends.
  */

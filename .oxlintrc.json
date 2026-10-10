@@ -272,7 +272,9 @@
         "web/apps/web/core/components/projects/create/lead-candidates.ts",
         "web/apps/web/core/components/projects/create/lead-candidates.test.ts",
         "web/apps/web/core/components/projects/create/use-create-project.ts",
-        "web/apps/web/core/components/projects/create/use-create-project.test.ts"
+        "web/apps/web/core/components/projects/create/use-create-project.test.ts",
+        "web/apps/web/core/components/project/use-update-project-details.ts",
+        "web/apps/web/core/components/project/use-update-project-details.test.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"
