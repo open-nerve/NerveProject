@@ -17,8 +17,8 @@ type Field = { onChange: (value: unknown) => void };
 type Pressed = { variant?: string; onClick?: (event: { preventDefault: () => void }) => void };
 /** A select, and its options (CustomSelect.Option): each a value and a label. */
 type Select = Field & { children?: ReactNode };
-/** A search select: what it gives, and how its list opens. */
-type SearchSelect = Field & { focusSearchOnOpen?: boolean; popperModifiers?: object[] };
+/** A search select: what it gives, how its list opens, and the button it shows. */
+type SearchSelect = Field & { focusSearchOnOpen?: boolean; popperModifiers?: object[]; customButton?: ReactNode };
 /** A switch: what a flip does. */
 type Toggle = { onCheckedChange: (checked: boolean) => unknown };
 

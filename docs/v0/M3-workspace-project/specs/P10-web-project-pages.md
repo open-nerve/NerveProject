@@ -52,10 +52,10 @@ P10 的每一处页面改动都按安全测试看待（brief）：一个角色�
 
 ### 2.2 下拉框（Task 2；7.7、9.7 C7；M2 交接第 14 节，根因见 M2/P5 spec 2.3）
 
-- `@nerve/ui` 的 `CustomSearchSelect`（整个文件；props 加两个可选的，原有的不变）：按钮是 Headless UI 的 `Popover.Button`，Tab 能到，点击、Enter、空格打开（原来是 `Combobox.Button`，Headless UI 2.2 固定给它 `tabIndex: -1`）；搜索框和选项是面板里的 `Combobox`（`static`），打开状态只有 Popover 的一份。列表打开时搜索框取得焦点，调用方可以不要（`focusSearchOnOpen`，默认要；不滚动：popper 那时还没定位）；Escape 从按钮或搜索框都关上列表，焦点回到按钮，不传给外面的弹窗（输入打开 Combobox 之后，它的输入框先处理 Escape 并 `preventDefault`，Headless UI 随之跳过面板自己的处理，所以面板在捕获阶段处理），输入法组字时的 Escape 留给输入法（`event.nativeEvent.isComposing`，预检的 L7）；单选选了一项就关；列表关上时清空搜索；popper 的 ref 在面板本身（门户里），列表在按钮旁展开，调用方的 `popperModifiers` 交给 popper。`helper.tsx` 的 `placement` 用 popper 的 `Placement`（手写的联合删除），两个新 props 的类型（`popperModifiers` 是 popper 的 `Modifier`）。
+- `@nerve/ui` 的 `CustomSearchSelect`（整个文件；props 加两个可选的，原有的不变）：按钮是 Headless UI 的 `Popover.Button`，Tab 能到，点击、Enter、空格打开（原来是 `Combobox.Button`，Headless UI 2.2 固定给它 `tabIndex: -1`）；搜索框和选项是面板里的 `Combobox`（`static`），打开状态只有 Popover 的一份。列表打开时搜索框取得焦点，调用方可以不要（`focusSearchOnOpen`，默认要；不滚动：popper 那时还没定位）；Escape 从按钮或搜索框都关上列表，焦点回到按钮，不传给外面的弹窗（输入打开 Combobox 之后，它的输入框先处理 Escape 并 `preventDefault`，Headless UI 随之跳过面板自己的处理，所以面板在捕获阶段处理），输入法组字时的 Escape 留给输入法（`event.nativeEvent.isComposing`，预检的 L7），也不传出列表：列表和外面的弹窗都留着（Task 2 的修正轮，裁定 T2-f）；单选选了一项就关；列表关上时清空搜索；popper 的 ref 在面板本身（门户里），列表在按钮旁展开，调用方的 `popperModifiers` 交给 popper，调用方的 `optionsClassName` 在面板上（宽度、z-index，裁定 T2-a）。按钮由键盘取得焦点时显示一圈轮廓（Headless UI 的 `data-focus`，裁定 T2-b）。`helper.tsx` 的 `placement` 用 popper 的 `Placement`（手写的联合删除），两个新 props 的类型（`popperModifiers` 是 popper 的 `Modifier`）。
 - `@nerve/ui` 的面包屑下拉框 `breadcrumbs/navigation-search-dropdown.tsx`：一节一个 Tab 停留点，选择的按钮（原来 Combobox 的按钮不在 Tab 顺序中、里面的标题按钮在；选择改成 Popover 的按钮之后成了两个，预检的 L9）：最后一节的标题是 `<span>`（点它由外面的按钮打开列表），之前一节的标题按钮 `tabIndex={-1}`，点它去那一节的页，键盘从侧边栏到那里（第 3 节第 15 条）。
 - 成员下拉框 `dropdowns/member/base.tsx`（整个文件）：以 `CustomSearchSelect` 为底（工作区的成员，按 `memberIds` 筛选，单选、多选），`member-options.tsx` 删除（popper 的 ref 在列表唯一的子元素上，列表停在页面左上角；两份打开状态，第 3 节第 2 条）。对调用方的约定照旧（预检的 A-M5，第 3 节第 15 条）：调用方推迟时（`renderByDefault` 为 false：桌面上列表的每一行）指针第一次经过之前只渲染按钮，没有选择和 popper（与 `@nerve/ui` 的 `ComboDropDown` 相同：`useState(renderByDefault)`、`onMouseEnter`）；手机上（`usePlatformOS` 的 `isMobile`）打开时搜索框不取得焦点（`focusSearchOnOpen={!isMobile}`：键盘会盖住列表）；列表离窗口边缘 12 像素（`popperModifiers` 的 `preventOverflow`）；按钮的点击不冒泡到行，也不做默认的动作，由 Headless UI 的 `Popover.Button` 自己做（它的点击先 `preventDefault`、`stopPropagation`，再切换，与原来的 `handleOnClick` 相同；成员下拉框不另写，自己的处理器 `preventDefault` 反而会让 Headless UI 跳过它的切换）。Tab 只停在里面的 `DropdownButton`：选择自己的按钮 `tabIndex={-1}`，`DropdownButton`（`dropdowns/buttons.tsx`）收调用方的 `tabIndex`、交给三种样式的按钮（第 3 节第 3 条）。`types.d.ts` 删去只有旧写法读的 `button`。web 的 oxlint 上限 356 → 350（`dropdowns/member/` 的六条随旧的写法删除）。
-- 测试：`dropdowns/member/base.test.tsx` 4 个（服务端渲染，`CustomSearchSelect` 是 `fake-controls.ts` 的替身，留下它收到的 props：调用方推迟时只有按钮、没有选择；不推迟时是选择，按钮在选择的按钮里；桌面上打开时搜索框取得焦点，手机上不；列表离窗口边缘 12 像素）。打开、焦点和位置服务端渲染看不到，由端到端核对：P1 的负责人一个（外面那个选择自己的按钮 `tabindex="-1"`；创建弹窗的进场过渡结束之后点负责人，列表在按钮旁（`expectListBesideButton`），搜索框有焦点；Escape 关上列表、弹窗还开着；在按钮上按 Enter 再打开，输入之后的 Escape 也一样，输入法组字时的 Escape 列表留着；再打开时没有搜索）；W3 的页面版本中时区改为只用键盘（`pickTimeZone`）；个人设置的时区（A8、A9）也是 `CustomSearchSelect`，照旧通过；项目页头的项目一节只停一次 Tab（P2，Task 3）；添加成员弹窗的成员选择用 Tab 到达（P5，Task 8）。`CustomSelect` 的 9 个调用方和 `CustomSearchSelect` 的调用方（M3 的 6 个，M4–M6 经成员下拉框的 14 个文件和页头的 9 个）逐个的浏览器核对是 C7（控制者的，M3 设计 9.7）。
+- 测试：`dropdowns/member/base.test.tsx` 4 个（服务端渲染，`CustomSearchSelect` 是 `fake-controls.ts` 的替身，留下它收到的 props：调用方推迟时只有按钮、没有选择；不推迟时是选择，按钮在选择的按钮里（渲染替身收到的 `customButton`）；桌面上打开时搜索框取得焦点，手机上不；列表离窗口边缘 12 像素）。打开、焦点和位置服务端渲染看不到，由端到端核对：P1 的负责人一个（外面那个选择自己的按钮 `tabindex="-1"`；创建弹窗的进场过渡结束之后点负责人，列表在按钮旁（`expectListBesideButton`），搜索框有焦点；Escape 关上列表、选择的按钮显示焦点；在按钮上按 Enter 再打开，输入之后的 Escape 也一样，输入法组字时的 Escape 列表留着；没有 Escape 传到 `document`（创建弹窗在那里听 Escape）；再打开时没有搜索）；W3 的页面版本中时区改为只用键盘（`pickTimeZone`）；个人设置的时区（A8、A9）也是 `CustomSearchSelect`，照旧通过；项目页头的项目一节只停一次 Tab（P2，Task 3）；添加成员弹窗的成员选择用 Tab 到达（P5，Task 8）。`CustomSelect` 的 9 个调用方和 `CustomSearchSelect` 的调用方（M3 的 6 个，M4–M6 经成员下拉框的 14 个文件和页头的 9 个）逐个的浏览器核对是 C7（控制者的，M3 设计 9.7）。
 
 ### 2.3 项目列表、卡片和加入；包装层的界面；复制链接；P2 的页面版本（Task 3；P2，3.4、3.5，7.1、7.6、7.7；P8b 的 F-3；Codex 4.3 第 1 条）
 
@@ -199,7 +199,7 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
     - 错误：加入、创建、general 页的修改和标识的检查、功能和自动归档的开关、成员页的三个修改、添加成员、成员的默认值、删除、归档、恢复、侧边栏的移动、标签栏被拒绝时，都说 nerve 的原因（原来读 `err.error`、Plane 的字段码、显示固定的文字，或只进控制台）；创建和 general 页中名称、标识的原因在字段下方；被拒绝的修改结束加载。唯一的管理员离开时说明原因（原来固定的文字）。
     - 弹窗：加入、创建、移出和离开的确认、离开、添加成员、自定义时长、删除、归档和恢复，请求在路上时关不掉（原来可以取消、按 Escape，回答之后照样跳转、提示）；创建表单页头的关闭按钮同样。自定义时长 nerve 做完才关（原来发出就关）。被拒绝时弹窗都留着、按钮重新可用（原来成员页的确认框被拒绝时也关上，第 6 条）。
     - 表情选择器显示表情（原来 CSP 挡住 CDN，选择器是空的）；图标按钮有名字。
-    - 下拉框：带搜索的选择 Tab 能到、键盘打开，列表在按钮旁，搜索框有焦点，Escape 关上列表而不关弹窗（输入法组字时的 Escape 留给输入法，预检的 L7），再打开没有搜索；成员下拉框的列表在按钮旁（原来在页面左上角），Tab 只停一次。面包屑的下拉框一节一个 Tab 停留点（预检的 L9：选择改成 Popover 的按钮之后成了两个）：最后一节的标题改为 `<span>`；之前一节的标题仍是选择的按钮里的按钮，`tabIndex={-1}`，点它去那一节的页，键盘从侧边栏到那里。它留作按钮的理由：只能用鼠标的 `<span>` 加点击，jsx-a11y 标出它（`click-events-have-key-events`、`no-static-element-interactions`）；放到选择的按钮旁边成为另一个控件，会改 M4–M6 页头的布局（第 5 节 M4 一行）。成员下拉框对 M4–M6 的调用方照旧（预检的 A-M5）：调用方推迟时（`renderByDefault` 为 false，桌面上列表的每一行）指针经过之前只有按钮，没有选择和 popper；按钮的点击不冒泡到行，由 Headless UI 的 `Popover.Button` 自己做（它先 `preventDefault`、`stopPropagation`，再切换；我们的处理器若 `preventDefault`，Headless UI 的 `mergeProps` 就跳过它自己的切换，所以不另写）；手机上打开时搜索框不取得焦点；列表离窗口边缘 12 像素。按调用方看得到的不同有两处（第 5 节 M4 一行）：按键由 Headless UI 处理（Enter、空格打开，Escape 关上，Tab 离开），代替原来的 `useDropdownKeyDown`（预检的 A-M5 第 5 项）；`CustomSearchSelect` 在列表打开时记下调用方的 `onOpen`、`onClose`（`WhileOpen`），列表开着时调用方换掉的回调在这一次关上时不用（预检的 L8；现在的调用方都传 setter 或不变的回调）。
+    - 下拉框：带搜索的选择 Tab 能到、键盘打开，列表在按钮旁，搜索框有焦点，Escape 关上列表而不关弹窗（输入法组字时的 Escape 留给输入法，预检的 L7），再打开没有搜索；成员下拉框的列表在按钮旁（原来在页面左上角），Tab 只停一次。面包屑的下拉框一节一个 Tab 停留点（预检的 L9：选择改成 Popover 的按钮之后成了两个）：最后一节的标题改为 `<span>`；之前一节的标题仍是选择的按钮里的按钮，`tabIndex={-1}`，点它去那一节的页，键盘从侧边栏到那里。它留作按钮的理由：只能用鼠标的 `<span>` 加点击，jsx-a11y 标出它（`click-events-have-key-events`、`no-static-element-interactions`）；放到选择的按钮旁边成为另一个控件，会改 M4–M6 页头的布局（第 5 节 M4 一行）。成员下拉框对 M4–M6 的调用方照旧（预检的 A-M5）：调用方推迟时（`renderByDefault` 为 false，桌面上列表的每一行）指针经过之前只有按钮，没有选择和 popper；按钮的点击不冒泡到行，由 Headless UI 的 `Popover.Button` 自己做（它先 `preventDefault`、`stopPropagation`，再切换；我们的处理器若 `preventDefault`，Headless UI 的 `mergeProps` 就跳过它自己的切换，所以不另写）；手机上打开时搜索框不取得焦点；列表离窗口边缘 12 像素。按调用方看得到的不同有两处（第 5 节 M4 一行）：按键由 Headless UI 处理（Enter、空格打开，Escape 关上，Tab 离开），代替原来的 `useDropdownKeyDown`（预检的 A-M5 第 5 项）；`CustomSearchSelect` 在列表打开时记下调用方的 `onOpen`、`onClose`（`WhileOpen`），列表开着时调用方换掉的回调在这一次关上时不用（预检的 L8；现在的调用方都传 setter 或不变的回调）。Task 2 的修正轮（裁定 T2-a–T2-c、T2-f）：调用方的 `optionsClassName` 是 popper 定位的面板的，调用方给的宽度和 z-index 照旧有效（M4 的三处行给成员下拉框的列表 `z-10`、`z-[9]`）；选择的按钮由键盘取得焦点时显示一圈轮廓（Headless UI 的 `data-focus`，只在 `CustomSearchSelect` 一处），去掉轮廓的调用方（面包屑、项目页头、成员下拉框）也看得出焦点；成员下拉框的根照旧在行中可以收缩，选择的按钮没有自己的悬停底色。输入法组字时的 Escape 也不传出列表：列表和外面的弹窗都留着（修正之前它传到 `document`，创建弹窗的 `useKeypress` 关上弹窗）。成员下拉框的列表换成 `CustomSearchSelect` 的样子（裁定 R2 接受）：没有 `shadow-raised-200` 的阴影，边框是 `border-subtle-1`、`rounded-md`（原来 `border-strong`、`rounded-sm`），搜索框没有 `bg-surface-2` 的底色，选项没有选中的 `text-primary`、未选中的 `text-secondary`，停用的成员一行 `opacity-60`。
     - 复制：失败时提示（原来是未处理的拒绝）；卡片的复制按钮有名字；工作区 general 页的成功提示的标题（第 8 条）。
     - 包装层：已归档的项目，它的成员看到已归档的界面（原来显示项目的页面，取四个子资源，工作项页另有 M4 的 404）；看得到而不是成员的也看到已归档的界面（原来是加入界面）。
     - 创建：负责人的候选不含访客和成员关系已结束的人；标识输入时转大写（原来留小写，nerve 拒绝）；没选负责人时不发 `project_lead_id`。
@@ -288,7 +288,7 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
 ## 5. 不在 P10 范围内
 
 - **P11**：状态、标签的设置页（P8b 的 P7：标签设置页的拖动把手只因 `onDrop` 重建才重新登记，`project-setting-label-list.tsx:62`、`project-setting-label-item.tsx:77-78`、`:105-106`）；P8a、P8b、P9 留给 P11 的照旧。P10 没有只经机械步骤到达的文件，A.8 的清单不变。
-- **M4**：`dropdowns/` 的下拉框的嵌套按钮（第 3 节第 3 条，裁定 R3）：`DropdownButton` 是一个按钮，放在 Headless UI 的按钮里，HTML 不许按钮里有按钮；M4 随工作项的属性下拉框一起改它。面包屑的下拉框之前一节的标题按钮也在选择的按钮里（`tabIndex={-1}`，第 3 节第 15 条），M4 改工作项的页头时一起改。成员下拉框以 `CustomSearchSelect` 为底之后 M4 的调用方看得到的两处（第 3 节第 15 条）：按键由 Headless UI 处理（Enter、空格打开，Escape 关上，Tab 离开），原来的 `useDropdownKeyDown` 没有了；`CustomSearchSelect` 在列表打开时记下调用方的 `onOpen`、`onClose`（`WhileOpen`），列表开着时换掉的回调这一次关上时不用。按钮的点击不冒泡是 Headless UI 的 `Popover.Button` 自己做的，升级 Headless UI 时重看；推迟渲染、手机上不取焦点、列表离窗口边缘 12 像素照旧（`dropdowns/member/base.test.tsx`）。工作项页的三个标签选择器的取数被拒绝（P8b 的 P9：`issue-layouts/properties/label-dropdown.tsx:149-153`、`issue-detail/label/select/label-select.tsx:57`、`issues/select/dropdown.tsx:38`）；工作项页的 `user-properties` 的 404（2.12）；工作项页面的复制（第 3 节第 8 条：`issues/` 下 7 个文件、`power-k` 的工作项命令）；工作项、迭代、模块、视图的表单的正的 `tabIndex`（第 3 节第 12 条）；P8a、P8b、P9 交给 M4 的照旧。
+- **M4**：`dropdowns/` 的下拉框的嵌套按钮（第 3 节第 3 条，裁定 R3）：`DropdownButton` 是一个按钮，放在 Headless UI 的按钮里，HTML 不许按钮里有按钮；M4 随工作项的属性下拉框一起改它。面包屑的下拉框之前一节的标题按钮也在选择的按钮里（`tabIndex={-1}`，第 3 节第 15 条），M4 改工作项的页头时一起改。成员下拉框以 `CustomSearchSelect` 为底之后 M4 的调用方看得到的两处（第 3 节第 15 条）：按键由 Headless UI 处理（Enter、空格打开，Escape 关上，Tab 离开），原来的 `useDropdownKeyDown` 没有了；`CustomSearchSelect` 在列表打开时记下调用方的 `onOpen`、`onClose`（`WhileOpen`），列表开着时换掉的回调这一次关上时不用。按钮的点击不冒泡是 Headless UI 的 `Popover.Button` 自己做的，升级 Headless UI 时重看；推迟渲染、手机上不取焦点、列表离窗口边缘 12 像素照旧（`dropdowns/member/base.test.tsx`）。成员下拉框中 Escape 关上列表之后，焦点在选择自己的按钮上（不在 Tab 顺序里，键盘取得焦点时有轮廓），不回到里面的 `DropdownButton`（原来落到 `body`）：M4 改嵌套的按钮时一起定。成员下拉框的列表换成 `CustomSearchSelect` 的样子（阴影、边框、选项的颜色、停用一行的透明度，第 3 节第 15 条），在 M4 的页面上核对。工作项页的三个标签选择器的取数被拒绝（P8b 的 P9：`issue-layouts/properties/label-dropdown.tsx:149-153`、`issue-detail/label/select/label-select.tsx:57`、`issues/select/dropdown.tsx:38`）；工作项页的 `user-properties` 的 404（2.12）；工作项页面的复制（第 3 节第 8 条：`issues/` 下 7 个文件、`power-k` 的工作项命令）；工作项、迭代、模块、视图的表单的正的 `tabIndex`（第 3 节第 12 条）；P8a、P8b、P9 交给 M4 的照旧。
 - **M6**：迭代、模块、视图的复制（`cycles/quick-actions.tsx`、`modules/quick-actions.tsx`、`modules/links/list-item.tsx`、`views/quick-actions.tsx`、`workspace/views/` 的两个、`power-k` 的迭代和模块命令）；P9 交给 M6 的照旧。
 - **M7**：收集箱的复制（`inbox/content/inbox-issue-header.tsx`）；P9 交给 M7 的照旧。
 - **M8**：Webhook 的密钥的复制（`web-hooks/form/secret-key.tsx`）；P9 交给 M8 的照旧。
@@ -343,13 +343,13 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
 
 ### A.2 变异
 
-`mutants_p10.py`：106 个变异，每个只改一处或几处，`mut.py` 在最终原型上、在它写的每个检查上各跑一次：106 个都被发现，没有存活的；每个写的每个检查都让它失败（`$M3TMP/p10tools/mut-results.json`，日志 `mut-logs/`）。每个变异另在它自己的 Task 的快照上跑过（`mutpertask.py`，`mut-results-pertask.json`）：103 个在自己的 Task 的树上就被发现；3 个只在之后的 Task 起（`T2.8` Task 4 起、`T2.9` Task 8 起、`T2.14` Task 3 起，plan 的表中标出），各在那个 Task 的树上被发现（`mutfrom.py`，`mut-results-from.json`）。每个变异要改的文字在它的 Task 的快照上和最终原型上都恰好出现一次（`mutchecksnap.py`：0 个不适用；`T3.5`、`T3.7`、`T4.10`、`T6.7`、`T10.7` 要改的文字在 Task 1 的快照上已有，在它们自己的 Task 之前就适用，不影响结果）。"静态"是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的范围）、关键词守卫，以及 `make knip`。按缺陷类别（一个变异可以被几层发现）：
+`mutants_p10.py`：106 个变异，每个只改一处或几处，`mut.py` 在最终原型上、在它写的每个检查上各跑一次：106 个都被发现，没有存活的；每个写的每个检查都让它失败（`$M3TMP/p10tools/mut-results.json`，日志 `mut-logs/`）。每个变异另在它自己的 Task 的快照上跑过（`mutpertask.py`，`mut-results-pertask.json`）：103 个在自己的 Task 的树上就被发现；3 个只在之后的 Task 起（`T2.8` Task 4 起、`T2.9` Task 8 起、`T2.14` Task 3 起，plan 的表中标出），各在那个 Task 的树上被发现（`mutfrom.py`，`mut-results-from.json`）。每个变异要改的文字在它的 Task 的快照上和最终原型上都恰好出现一次（`mutchecksnap.py`：0 个不适用；`T3.5`、`T3.7`、`T4.10`、`T6.7`、`T10.7` 要改的文字在 Task 1 的快照上已有，在它们自己的 Task 之前就适用，不影响结果）。"静态"是 `make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的范围）、关键词守卫，以及 `make knip`。Task 2 的修正轮（裁定 T2-b、T2-e、T2-f）加了 3 个（`T2.16`、`T2.17`、`T2.18`），在修正之后的 Task 2 的树上跑过，都被发现（`$M3TMP/p10mut/t2`），没有在最终原型上跑；下面的表和计数含它们，共 109 个。按缺陷类别（一个变异可以被几层发现）：
 
 | 类别 | 变异 | 静态 | vitest | 端到端 | 存活 |
 |---|---|---|---|---|---|
 | 表情的数据（CSP，M2 交接第 10 节） | 4 | 0 | 1 | 4 | 0 |
-| 下拉框（M2 交接第 14 节） | 11 | 0 | 0 | 11 | 0 |
-| 成员下拉框对调用方的约定（M4–M6，预检的 A-M5） | 3 | 0 | 3 | 0 | 0 |
+| 下拉框（M2 交接第 14 节） | 13 | 0 | 0 | 13 | 0 |
+| 成员下拉框对调用方的约定（M4–M6，预检的 A-M5） | 4 | 0 | 4 | 0 | 0 |
 | 复制（M2 交接第 14 节） | 2 | 0 | 2 | 2 | 0 |
 | W3：会话外的跟进（2.13） | 12 | 0 | 12 | 0 | 0 |
 | W2：页面只取角色能读的 | 1 | 0 | 1 | 1 | 0 |
@@ -366,9 +366,9 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
 | 一处实现（关键词规则） | 1 | 1 | 0 | 0 | 0 |
 | 角色的名字（`ROLE_DETAILS`） | 2 | 0 | 2 | 0 | 0 |
 | W12：非空断言的范围（2.14） | 10 | 10 | 0 | 0 | 0 |
-| 合计 | 106 | | | | 0 |
+| 合计 | 109 | | | | 0 |
 
-按发现它的层：只有端到端的 42 个、只有 vitest 的 34 个、vitest 和端到端的 18 个、只有静态的 11 个、静态和 vitest 的 1 个。按 Task：Task 1 5 个、2 15 个、3 12 个、4 11 个、5 8 个、6 7 个、7 17 个、8 11 个、9 13 个、10 7 个；Task 11 只改文档，没有变异。预检的变异中修订针对的和离开的跟进改过之后要重跑的（`mutants_pf_amend.py`：PF1、PF6、PF7、PF13、PF15、PF18、PF19，写在修订后的代码上；PF6、PF15、PF18、PF19 就是 plan 的 `T4.11`、`T2.9`、`T5.7`、`T7.15`）在最终原型上：7 个都被发现（`mut-results-pf.json`）。
+按发现它的层：只有端到端的 44 个、只有 vitest 的 35 个、vitest 和端到端的 18 个、只有静态的 11 个、静态和 vitest 的 1 个。按 Task：Task 1 5 个、2 18 个、3 12 个、4 11 个、5 8 个、6 7 个、7 17 个、8 11 个、9 13 个、10 7 个；Task 11 只改文档，没有变异。预检的变异中修订针对的和离开的跟进改过之后要重跑的（`mutants_pf_amend.py`：PF1、PF6、PF7、PF13、PF15、PF18、PF19，写在修订后的代码上；PF6、PF15、PF18、PF19 就是 plan 的 `T4.11`、`T2.9`、`T5.7`、`T7.15`）在最终原型上：7 个都被发现（`mut-results-pf.json`）。
 
 - **W3 的 12 个**：2.13 的每一处"不论会话都跟进"（`T3.1`、`T4.3`、`T5.4`、`T6.1`、`T6.3`、`T7.3`、`T8.6`、`T8.8`、`T9.1`、`T9.7`、`T10.1`、`T10.3`），每个由它自己的 vitest 发现（`lateSettlings`）；`T9.1` 是 9.5 的"删除项目的组件"。P10 没有会话切换的端到端（2.13）。
 - **关不掉的弹窗的 17 个**（P9 的第一类）：每个弹窗的 Escape 和取消各一个（加入、创建、自定义时长、移出、离开、添加、删除、归档），和创建表单页头的关闭（`T4.11`，预检的 A-M3），都由它的故事扣住请求发现（`closedByEscape`、`enabledWithin`）：服务端渲染看不到之后才有的状态（P9 的先例）。
@@ -381,7 +381,10 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
   - `CustomSearchSelect` 照 `focusSearchOnOpen={false}` 不让搜索框取得焦点：P10 的页面不在手机上跑（vitest 核对成员下拉框在手机上传了它，`T2.11`）；
   - `CustomSearchSelect` 把 `popperModifiers` 交给 popper：P10 的列表没有贴着窗口边缘的（vitest 核对成员下拉框传了它，`T2.12`）；
   - 成员下拉框的按钮的点击不冒泡、不做默认的动作：是 Headless UI 的 `Popover.Button` 自己的代码，没有我们的代码可以变异（原型上的一次探查：P1 中点负责人，`document`、`window` 上的监听都没有收到这次点击；升级 Headless UI 时重看，第 5 节 M4 一行）；
-  - 面包屑最后一节的标题是 `<span>`：P10 的页面上没有作为最后一节的面包屑下拉框（项目页头上项目一节之后还有一节；作为最后一节的在 M4–M6 的页头上）。
+  - 面包屑最后一节的标题是 `<span>`：P10 的页面上没有作为最后一节的面包屑下拉框（项目页头上项目一节之后还有一节；作为最后一节的在 M4–M6 的页头上）；
+  - 调用方的 `optionsClassName` 到达 popper 定位的面板，调用方给列表的 z-index 有效（Task 2 的修正轮，裁定 T2-a）：给列表 z-index 的调用方都在 M4 的行中，P10 的页面上没有，vitest 的替身不渲染选择；
+  - 成员下拉框的根在行中可以收缩（`shrink`）、它的选择按钮没有自己的悬停底色（`hover:bg-transparent`）（修正轮，裁定 T2-c）：只是类名，行和悬停在 M4 的页面上；
+  - `transitionsEnded` 不等无限的动画（修正轮，裁定 T2-d）：测试的辅助函数，P10 的弹窗进场时没有无限的动画。
 
   原来的例外（general 页的 `key`）由 P3 的同一路由内的移动看住（`T5.7`，第 3 节第 7 条）：应用中今天没有走到它的路，这一步代替之后加在设置页上的项目切换。
 

@@ -50,7 +50,9 @@ describe("MemberDropdownBase", () => {
   });
 
   it("is a select, its button in the select's, unless its caller defers it", () => {
-    expect([render(), shown.searchSelects.length]).toEqual(["", 1]);
+    const markup = render();
+    const button = renderToStaticMarkup(shown.searchSelects[0]?.customButton);
+    expect([markup, shown.searchSelects.length, button.includes(">Lead</span></button>")]).toEqual(["", 1, true]);
   });
 
   it("focuses the search as the list opens on a desktop, not on a phone", () => {

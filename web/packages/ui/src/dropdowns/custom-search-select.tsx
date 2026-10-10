@@ -15,6 +15,14 @@ import { cn } from "../utils";
 import type { ICustomSearchSelectProps } from "./helper";
 
 /**
+ * The select's button as the keyboard focuses it (Headless UI's data-focus, which a pointer does not set): a ring
+ * inside its edge, whatever outline its caller turns off. Every caller's select shows it, the breadcrumb's and the
+ * member dropdown's among them, the latter's when Escape gives it the focus back.
+ */
+const KEYBOARD_FOCUS =
+  "data-focus:outline-1 data-focus:-outline-offset-1 data-focus:outline-solid data-focus:outline-accent-strong";
+
+/**
  * Calls onOpen as it mounts, with the list, and onClose as it unmounts, when the list closes: Headless UI's Popover
  * has no callback for either.
  */
@@ -94,10 +102,10 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
   return (
     // The button is Headless UI's Popover's, which Tab reaches (a Combobox's button is out of the Tab order: Headless
     // UI 2.2 gives it tabIndex -1 whatever its caller says); the search and the options are a Combobox in its panel.
-    // The Popover's open state is the only one: its button opens the list (a click, Enter, Space); it closes it
-    // (Escape, a pick of a single value, a click outside, the focus leaving it), and the focus goes back to the
-    // button.
-    <Popover className={cn("relative flex-shrink-0 text-left", className)}>
+    // The Popover's open state is the only one: its button opens the list (a click, Enter, Space); Escape, a pick of
+    // a single value, a click outside and the focus leaving it close it, and Escape and a pick give the button the
+    // focus back. Its root does not shrink in a row (shrink-0, which a caller's shrink overrides).
+    <Popover className={cn("relative shrink-0 text-left", className)}>
       {({ open, close }) => (
         <>
           {customButton ? (
@@ -108,6 +116,7 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
               tabIndex={tabIndex}
               className={cn(
                 "flex w-full items-center justify-between gap-1 text-11",
+                KEYBOARD_FOCUS,
                 {
                   "cursor-not-allowed text-secondary": disabled,
                   "cursor-pointer hover:bg-layer-transparent-hover": !disabled,
@@ -125,6 +134,7 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
               tabIndex={tabIndex}
               className={cn(
                 "flex w-full items-center justify-between gap-1 rounded-sm border-[0.5px] border-strong",
+                KEYBOARD_FOCUS,
                 {
                   "px-3 py-2 text-13": input,
                   "px-2 py-1 text-11": !input,
@@ -151,21 +161,24 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
             />
           )}
           {createPortal(
-            // Popper places the panel, which holds the list and nothing else.
+            // Popper places the panel, which holds the list and nothing else; the caller's optionsClassName is the
+            // panel's, so a caller's width and z-index are those of what popper places.
             <Popover.Panel
               data-prevent-outside-click
               ref={setPopperElement}
-              className="z-30"
+              className={cn("z-30", optionsClassName)}
               style={styles.popper}
               {...attributes.popper}
               // Escape closes the list, from the search too: once typing has opened the Combobox, its input takes
-              // Escape first and prevents its default, and Headless UI then skips the panel's own handler. Not
-              // passed on: a modal around the select stays open. An Escape that ends an input method's composition
-              // (Chinese, say) is the input method's.
+              // Escape first and prevents its default, and Headless UI then skips the panel's own handler. No Escape
+              // is passed on: a modal around the select stays open, its Escape listening on the document or not.
+              // An Escape that ends an input method's composition (Chinese, say) is the input method's: the list
+              // stays open too.
               onKeyDownCapture={(event: React.KeyboardEvent) => {
-                if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
-                event.preventDefault();
+                if (event.key !== "Escape") return;
                 event.stopPropagation();
+                if (event.nativeEvent.isComposing) return;
+                event.preventDefault();
                 close();
               }}
             >
@@ -189,10 +202,7 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
                   as="ul"
                   static
                   modal={false}
-                  className={cn(
-                    "my-1 min-w-48 overflow-y-scroll rounded-md border-[0.5px] border-subtle-1 bg-surface-1 py-2.5 text-11 whitespace-nowrap focus:outline-none",
-                    optionsClassName
-                  )}
+                  className="my-1 min-w-48 overflow-y-scroll rounded-md border-[0.5px] border-subtle-1 bg-surface-1 py-2.5 text-11 whitespace-nowrap focus:outline-none"
                 >
                   <div className="mx-2 flex items-center gap-1.5 rounded-sm border border-subtle px-2">
                     <SearchOutline className="h-3.5 w-3.5 text-placeholder" />

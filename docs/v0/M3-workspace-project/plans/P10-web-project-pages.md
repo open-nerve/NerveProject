@@ -1725,6 +1725,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T2.13` | 输入法组字时的 Escape 关上列表 | 故事 P1 | 端到端 |
 | `T2.14` | 面包屑中不是最后一节的标题也在 Tab 顺序里：一节有两个停留点 | 故事 P2（Task 3 起） | 端到端 |
 | `T2.15` | 在成员下拉框的测试里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T2.16` | 输入法组字时的 Escape 传到列表之外：`document` 上听 Escape 的弹窗关上（Task 2 的修正轮，裁定 T2-f） | 故事 P1 | 端到端 |
+| `T2.17` | 选择的按钮由键盘取得焦点时没有样式：调用方去掉了轮廓的（成员下拉框、面包屑、项目页头）看不出焦点（修正轮，裁定 T2-b） | 故事 P1 | 端到端 |
+| `T2.18` | 成员下拉框的按钮不在选择的按钮里（修正轮，裁定 T2-e） | `base.test.tsx` | vitest |
+
+修正轮的这三行之外，修正轮改的几处没有会失败的检查，只由评审看住（spec 附录 A.2）：调用方的 `optionsClassName` 到达 popper 定位的面板（M3 没有给列表 z-index 的调用方，vitest 的替身不渲染）；成员下拉框的根在行中可以收缩、它的选择按钮没有自己的悬停底色（类名）；`transitionsEnded` 不等无限的动画（测试的辅助函数）。
 
 ---
 
@@ -3986,12 +3991,18 @@ export const getProjectFormValues = (): ProjectCreationForm => ({
 `e2e/stories/project/p1-create-project.spec.ts`（修改，3 处）：
 
 ````old e2e/stories/project/p1-create-project.spec.ts
-import { expectListBesideButton, registerOnboarded, transitionsEnded } from "../../fixtures/settings-pages";
+import {
+  expectListBesideButton,
+  keydownsReachingDocument,
+  registerOnboarded,
+  transitionsEnded,
+} from "../../fixtures/settings-pages";
 ````
 ````new e2e/stories/project/p1-create-project.spec.ts
 import {
   closedByEscape,
   expectListBesideButton,
+  keydownsReachingDocument,
   registerOnboarded,
   sentHeld,
   sentTo,
@@ -7301,14 +7312,15 @@ export function addableRoles(workspaceRole: WorkspaceRole | undefined): ProjectR
 `web/apps/web/core/lib/fake-controls.ts`（修改，1 处）：
 
 ````old web/apps/web/core/lib/fake-controls.ts
-/** A search select: what it gives, and how its list opens. */
-type SearchSelect = Field & { focusSearchOnOpen?: boolean; popperModifiers?: object[] };
+/** A search select: what it gives, how its list opens, and the button it shows. */
+type SearchSelect = Field & { focusSearchOnOpen?: boolean; popperModifiers?: object[]; customButton?: ReactNode };
 ````
 ````new web/apps/web/core/lib/fake-controls.ts
-/** A search select: what it gives, how its list opens, and the options it offers, each by its value. */
+/** A search select: what it gives, how its list opens, the button it shows, and its options, each by its value. */
 type SearchSelect = Field & {
   focusSearchOnOpen?: boolean;
   popperModifiers?: object[];
+  customButton?: ReactNode;
   options?: { value: string }[];
 };
 ````

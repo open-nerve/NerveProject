@@ -9,7 +9,12 @@ import {
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
-import { expectListBesideButton, registerOnboarded, transitionsEnded } from "../../fixtures/settings-pages";
+import {
+  expectListBesideButton,
+  keydownsReachingDocument,
+  registerOnboarded,
+  transitionsEnded,
+} from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // P1, create a project (M3 design 2, 3.17, 3.18), and its page (P10).
@@ -254,9 +259,11 @@ test("P1 (page): the lead's list opens beside its button with its search focused
   await expectListBesideButton(page, lead);
   const search = page.getByRole("combobox", { name: "Search" });
   await expect(search).toBeFocused();
-  // Escape closes the list and leaves the modal open; so does it once a search has opened the Combobox.
+  // Escape closes the list and gives its button the focus (shown); so does it once a search opened the Combobox.
+  const escapes = await keydownsReachingDocument(page, "Escape");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(lead.locator("xpath=ancestor::button")).toHaveCSS("outline-style", "solid");
   await lead.press("Enter");
   await expectListBesideButton(page, lead);
   await page.keyboard.type("nobody");
@@ -266,7 +273,7 @@ test("P1 (page): the lead's list opens beside its button with its search focused
   await expect(search).toHaveValue("nobody!");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Create project" })).toBeVisible();
+  expect(await escapes(), "the Escapes that reached the document, where the modal closes on one").toBe(0);
   // opened again, the list has no search
   await lead.press("Enter");
   await expect(search).toHaveValue("");

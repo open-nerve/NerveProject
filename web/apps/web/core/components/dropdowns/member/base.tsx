@@ -176,11 +176,14 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
       // the caller's tabIndex puts it: its Enter and Space reach the select's button, which opens the list
       tabIndex={-1}
       placement={placement}
-      className={cn("h-full", className)}
+      // As before the select was under it: the dropdown shrinks in its row (an inbox row's assignees), and its
+      // button has no hover tint of its own behind the DropdownButton's (several callers turn that one off).
+      className={cn("h-full shrink", className)}
       customButtonClassName={cn(
-        "clickable group block h-full w-auto max-w-full outline-none",
+        "clickable group block h-full w-auto max-w-full outline-none hover:bg-transparent",
         buttonContainerClassName
       )}
+      // the list's width, and the z-index a caller gives it
       optionsClassName={cn("w-48", optionsClassName)}
       searchPlaceholder={t("search")}
       noResultsMessage={t("no_matching_results")}

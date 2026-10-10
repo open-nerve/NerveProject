@@ -275,11 +275,34 @@ export async function expectListBesideButton(page: Page, button: Locator): Promi
   expect(Math.min(left, right), "between the left edges or the right edges").toBeLessThan(2);
 }
 
-/** Waits for the transitions of what locator finds, and of what it holds, to end (a modal's enter transition). */
+/**
+ * Waits for the transitions of what locator finds, and of what it holds, to end (a modal's enter transition): those
+ * that end, not an endless animation (a spinner's), which would never.
+ */
 export async function transitionsEnded(locator: Locator): Promise<void> {
   await locator.evaluate((element) =>
-    Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished))
+    Promise.all(
+      element
+        .getAnimations({ subtree: true })
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+        .map((animation) => animation.finished)
+    )
   );
+}
+
+/**
+ * Counts the keydowns of key that reach page's document from now on, where a page-wide shortcut listens (a modal's
+ * Escape, for one): the function returned gives the count so far.
+ */
+export async function keydownsReachingDocument(page: Page, key: string): Promise<() => Promise<number>> {
+  const reached = await page.evaluateHandle((pressed) => {
+    const count = { value: 0 };
+    document.addEventListener("keydown", (event) => {
+      if (event.key === pressed) count.value += 1;
+    });
+    return count;
+  }, key);
+  return async () => (await reached.jsonValue()).value;
 }
 
 /**
