@@ -188,14 +188,7 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
     sort_order: 55535,
     member_ids: [memberId, adminId],
   });
-  const docsRow = {
-    name: "Docs",
-    identifier: "DOCS",
-    description: "",
-    network: 2,
-    timezone: "Asia/Shanghai",
-    logo_props: {},
-  };
+  const docsRow = { ...opsRow, name: "Docs", identifier: "DOCS", network: 2 };
   expect(
     await expectProjectCreated(db, slug, docsRow, memberEmail, adminEmail, [
       { email: memberEmail, sort_order: 55535 },
@@ -365,6 +358,12 @@ test("P1 (page): the lead's list opens beside its button with its search focused
   await page.getByRole("button", { name: "Add Project", exact: true }).click();
   // Popper places the list where the button is as it opens: the modal's enter transition moves the button.
   await transitionsEnded(page.getByRole("dialog"));
+  // The network's select is one Tab stop, its button, right after the description; Space opens it.
+  await page.locator("#description").press("Tab");
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Public" })).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("option")).toHaveText([/^Private/, /^Public/]);
+  await page.keyboard.press("Escape");
   // The button Tab reaches is the DropdownButton's, in the select's (each dropdown of dropdowns/ nests one), which is
   // out of the Tab order: Tab stops once.
   const lead = page.getByRole("button", { name: "Lead", exact: true }).last();

@@ -42,7 +42,7 @@ const ProjectAttributes = observer(function ProjectAttributes(props: Props) {
           const currentNetwork = NETWORK_CHOICES.find((n) => n.key === value);
 
           return (
-            <div className="h-7 flex-shrink-0" tabIndex={getIndex("network")}>
+            <div className="h-7 flex-shrink-0">
               <CustomSelect
                 value={value}
                 onChange={onChange}

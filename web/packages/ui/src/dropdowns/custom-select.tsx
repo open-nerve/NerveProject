@@ -45,9 +45,9 @@ function CustomSelect(props: ICustomSelectProps) {
     // A select, so Headless UI's Listbox, whose open state is the only one. Its button opens the list (a click,
     // Space, the arrows; Enter submits an enclosing form, as a native select's does), and the list takes the focus:
     // the arrows move, Enter or Space picks, typing jumps to a name. A pick, Escape, Tab or a click outside closes it.
+    // The caller's tabIndex is the button's: Tab stops at the button alone, not at the Listbox's root (a div).
     <Listbox
       as="div"
-      tabIndex={tabIndex}
       value={value}
       onChange={onChange}
       className={cn("relative flex-shrink-0 text-left", className)}
@@ -60,6 +60,7 @@ function CustomSelect(props: ICustomSelectProps) {
               <button
                 ref={setReferenceElement}
                 type="button"
+                tabIndex={tabIndex}
                 className={`flex items-center justify-between gap-1 rounded text-11 ${
                   disabled ? "cursor-not-allowed text-secondary" : "cursor-pointer hover:bg-layer-transparent-hover"
                 } ${customButtonClassName}`}
@@ -72,6 +73,7 @@ function CustomSelect(props: ICustomSelectProps) {
               <button
                 ref={setReferenceElement}
                 type="button"
+                tabIndex={tabIndex}
                 className={cn(
                   "flex w-full items-center justify-between gap-1 rounded border border-strong",
                   {
