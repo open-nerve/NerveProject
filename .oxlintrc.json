@@ -291,7 +291,10 @@
         "web/apps/web/core/components/project/project-settings-member-defaults.test.tsx",
         "web/apps/web/core/components/project/card.test.tsx",
         "web/apps/web/core/components/project/delete-project-modal.test.tsx",
-        "web/apps/web/core/components/project/archive-restore-modal.test.tsx"
+        "web/apps/web/core/components/project/archive-restore-modal.test.tsx",
+        "web/apps/web/core/components/navigation/use-tab-preferences.test.ts",
+        "web/apps/web/core/components/workspace/sidebar/use-project-drop.ts",
+        "web/apps/web/core/components/workspace/sidebar/use-project-drop.test.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

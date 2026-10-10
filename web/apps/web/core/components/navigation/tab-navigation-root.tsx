@@ -60,7 +60,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   } = useIssueDetail();
 
   // Tab preferences hook
-  const { navigation, handleToggleDefaultTab, handleHideTab, handleShowTab } = useTabPreferences(projectId);
+  const { navigation, changes } = useTabPreferences(projectId);
 
   // Derived values
   const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
@@ -162,8 +162,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
                   item={item}
                   isActive={itemIsActive}
                   navigation={navigation}
-                  onToggleDefault={handleToggleDefaultTab}
-                  onHide={handleHideTab}
+                  changes={changes}
                   itemRef={(el) => {
                     itemRefs.current[originalIndex] = el;
                   }}
@@ -177,8 +176,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
                 overflowItems={overflowItems}
                 isActive={isActive}
                 navigation={navigation}
-                onToggleDefault={handleToggleDefaultTab}
-                onShow={handleShowTab}
+                changes={changes}
               />
             )}
           </TabNavigationList>

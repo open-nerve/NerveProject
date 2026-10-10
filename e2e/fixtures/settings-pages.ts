@@ -144,6 +144,16 @@ export async function enabledWithin(button: Locator): Promise<boolean> {
 }
 
 /**
+ * Resolves with whether locator, one element, shows within a second: what must not show while the test holds what its
+ * page waits for stays hidden the whole time, where a check made at once could pass before the page has rendered it.
+ * Only the second running out means it did not show (timedOut); any other failure, such as a locator that matches
+ * several elements, rejects.
+ */
+export async function shownWithin(locator: Locator): Promise<boolean> {
+  return locator.waitFor({ state: "visible", timeout: 1_000 }).then(() => true, timedOut);
+}
+
+/**
  * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
  * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
  * still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check made at once cannot

@@ -1,6 +1,7 @@
 import {
   addProjectMembers,
   amidAnotherWorkspace,
+  changeProject,
   createProject,
   createWorkspace,
   inviteAndAccept,
@@ -10,11 +11,13 @@ import {
   type ProjectPreferencesUpdate,
 } from "../../fixtures/api";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
+import { answerTo, holdAnswer, registerOnboarded, sentTo, shownWithin } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
-// P8, a member's display settings in a project (M3 design 2, 3.18). The
-// page version comes with the project's header and the sidebar (P10).
+// P8, a member's display settings in a project (M3 design 2, 3.18): through the API, and through the project's header
+// and the sidebar (7.6).
 
 /** GET /api/v0/me/projects/{project_id}/preferences, which must be 200. */
 async function read(api: Api, token: string, id: string): Promise<unknown> {
@@ -123,4 +126,113 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
   expect(await stored(db, web.id, memberEmail)).toEqual([
     { preferences: { navigation: memberSettings.navigation }, sort_order: 65535, by: adminEmail },
   ]);
+});
+
+test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  // His sidebar: Docs 45535, Web 55535, Ops 65535. Web shows its modules and its views: its header has their tabs.
+  const ops = await createProject(api, admin.access_token, slug, { name: "Ops", identifier: "OPS" });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const docs = await createProject(api, admin.access_token, slug, { name: "Docs", identifier: "DOCS" });
+  const shown = await changeProject(api, admin.access_token, web.id, { module_view: true, issue_views_view: true });
+  expect(shown.status).toBe(200);
+  // His projects' navigation is the tabbed one, whose project pages have a header of tabs (W8).
+  const tabbed = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
+    params: { path: { slug } },
+    body: { navigation_control_preference: "TABBED" },
+    headers: bearer(admin.access_token),
+  });
+  expect(tabbed.response.status, `tabbed: ${JSON.stringify(tabbed.error)}`).toBe(200);
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  const settings = `/api/v0/me/projects/${web.id}/preferences`;
+  /** The tab of name in Web's header: a link of the page outside the sidebar, which has links of the same names. */
+  const tab = (name: string) =>
+    page.locator("xpath=//a[not(ancestor::aside)]").filter({ hasText: new RegExp(`^${name}$`) });
+  const setAsDefault = page.getByRole("menuitem", { name: "Set as default" });
+  // Until nerve has given his tab bar a tab has no menu: a change made to nerve's default would replace his tab bar.
+  const release = await holdAnswer(page, "GET", settings);
+  await page.goto(`/${slug}/projects/${web.id}/issues`);
+  await tab("Modules").click({ button: "right" });
+  expect(await shownWithin(setAsDefault)).toBe(false);
+  expect((await answerTo(page, "GET", settings, release)).status()).toBe(200);
+  await expect(async () => {
+    await tab("Modules").click({ button: "right" });
+    await expect(setAsDefault).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 5_000 });
+  const defaulted = await sentTo(page, "PATCH", settings, () => setAsDefault.click());
+  expect([defaulted.answer.status(), defaulted.body]).toEqual([
+    200,
+    { navigation: { default_tab: "modules", hide_in_more_menu: [] } },
+  ]);
+  await expect(page.getByText("Default tab updated successfully.")).toBeVisible();
+  // The second change is made to the tab bar nerve answered the first with.
+  await tab("Views").click({ button: "right" });
+  const hidden = await sentTo(page, "PATCH", settings, () =>
+    page.getByRole("menuitem", { name: "Hide in more menu" }).click()
+  );
+  expect([hidden.answer.status(), hidden.body]).toEqual([
+    200,
+    { navigation: { default_tab: "modules", hide_in_more_menu: ["views"] } },
+  ]);
+  await expect(tab("Views")).toHaveCount(0);
+
+  // He drags Ops, third in his sidebar, onto Docs, the first, by its handle: Ops goes a step before Docs.
+  const sidebar = page.getByRole("complementary", { name: "Main sidebar" });
+  const item = (id: string) => sidebar.locator(`[id="sidebar-${id}-JOINED"]`);
+  const order = sidebar.locator('[id^="sidebar-"][id$="-JOINED"]');
+  await expect(order).toHaveText([/Docs/, /Web/, /Ops/]);
+  await item(ops.id).hover();
+  // the handle shows while the pointer is over Ops: the drag starts there, as a hand's would, then goes to Docs
+  await item(ops.id).locator("button").first().hover();
+  await page.mouse.down();
+  await item(ops.id).hover({ position: { x: 60, y: 8 } });
+  const moved = await sentTo(page, "PATCH", `/api/v0/me/projects/${ops.id}/preferences`, async () => {
+    await item(docs.id).hover();
+    await page.mouse.up();
+  });
+  expect([moved.answer.status(), moved.body]).toEqual([200, { sort_order: 35535 }]);
+  await expect(order).toHaveText([/Ops/, /Docs/, /Web/]);
+
+  // After a refresh: the same order; Web opens on its modules, and its views are under more.
+  await page.reload();
+  await expect(order).toHaveText([/Ops/, /Docs/, /Web/]);
+  await expect(item(web.id).locator("a").first()).toHaveAttribute("href", `/${slug}/projects/${web.id}/modules`);
+  // the header's tabs show (the first Modules: the header measures the tabs it shows by hidden copies of them)
+  await expect(tab("Modules").first()).toBeVisible();
+  await expect(tab("Views")).toHaveCount(0);
+  expect(await stored(db, web.id, adminEmail)).toEqual([
+    {
+      preferences: { navigation: { default_tab: "modules", hide_in_more_menu: ["views"] } },
+      sort_order: 55535,
+      by: adminEmail,
+    },
+  ]);
+  expect(await stored(db, ops.id, adminEmail)).toEqual([
+    {
+      preferences: { navigation: { default_tab: "work_items", hide_in_more_menu: [] } },
+      sort_order: 35535,
+      by: adminEmail,
+    },
+  ]);
+
+  // The work items' page asks Plane's address of the filters, M4's (P8b spec §5), at each of its two loads.
+  const filters = `GET /api/workspaces/${slug}/projects/${web.id}/user-properties/`;
+  await expect.poll(() => watch.apiFailures).toEqual([`404 ${filters}`, `404 ${filters}`]);
+  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [filters, filters], []]);
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
+    errors: [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    ],
+  });
 });

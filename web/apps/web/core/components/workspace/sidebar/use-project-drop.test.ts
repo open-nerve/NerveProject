@@ -5,18 +5,21 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@nerve/api-client";
+import { heldChange, lateSettlings, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import { useProjectDrop } from "./use-project-drop";
 
-// What a drop of a project in the caller's sidebar asks the project store (M3 design 3.18): the hook runs as a plain
-// function, outside React, with a stand-in for the project store, whose moves record their arguments.
+// What a drop of a project in the caller's sidebar asks the project store (M3 design 3.18), and what the page says of
+// it (7.1): the hook runs as a plain function, outside React, with a stand-in for the project store, whose moves record
+// their arguments. Its session is fake-tab.ts's.
 
 const web = projectOf("WEB", "id-acme");
 const docs = projectOf("DOCS", "id-acme");
 const store = vi.hoisted(() => ({
-  updateProjectSortOrder: vi.fn((_project: Project, _droppedOnId: string | undefined, _atEnd: boolean) =>
-    Promise.resolve()
+  updateProjectSortOrder: vi.fn(
+    (_project: Project, _droppedOnId: string | undefined, _atEnd: boolean): Promise<unknown> => Promise.resolve()
   ),
 }));
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme" }) }));
@@ -26,10 +29,12 @@ vi.mock("@/hooks/store/use-project", () => ({
     updateProjectSortOrder: store.updateProjectSortOrder,
   }),
 }));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 beforeEach(() => {
+  signedIn();
   store.updateProjectSortOrder.mockClear();
   toasts.length = 0;
 });
@@ -48,10 +53,25 @@ describe("useProjectDrop", () => {
     expect(store.updateProjectSortOrder).not.toHaveBeenCalled();
   });
 
-  it("shows a toast when the move fails", async () => {
+  it("says why a move failed: nerve's reason, or none for one the store did not send", async () => {
+    store.updateProjectSortOrder.mockImplementationOnce(() => Promise.reject(refusal(404, "project.not_found")));
     store.updateProjectSortOrder.mockImplementationOnce(() => Promise.reject(new Error("Project not found")));
     useProjectDrop()(docs.id, web.id, false);
-    await vi.waitFor(() => expect(toasts).toHaveLength(1));
-    expect(toasts).toEqual([{ type: "error", title: "error", message: "something_went_wrong" }]);
+    useProjectDrop()(web.id, docs.id, false);
+    await pageSettled();
+    expect(toasts).toEqual([
+      { type: "error", title: "toast.error", message: "errors.project_not_found" },
+      { type: "error", title: "toast.error", message: "errors.unknown" },
+    ]);
+  });
+
+  it.each(lateSettlings)("says nothing when a move $settles after another tab moved this one", async ({ settle }) => {
+    const move = heldChange<undefined>();
+    store.updateProjectSortOrder.mockReturnValueOnce(move.sent);
+    useProjectDrop()(docs.id, web.id, false);
+    switchAccount();
+    settle(move);
+    await pageSettled();
+    expect(toasts).toEqual([]);
   });
 });

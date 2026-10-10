@@ -7,85 +7,57 @@
 import type { ProjectNavigation, ProjectTab } from "@nerve/api-client";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { followInSession } from "@/lib/in-session";
+import type { NavigationChange } from "@/store/project/preferences.store";
 import { DEFAULT_NAVIGATION, hideTab, showTab, toggleDefaultTab } from "./tab-navigation-utils";
+
+/** The changes of the caller's tab bar that the header's controls make, each of the tab it is given. */
+export type TTabChanges = {
+  toggleDefault: (tabKey: ProjectTab) => void;
+  hide: (tabKey: ProjectTab) => void;
+  show: (tabKey: ProjectTab) => void;
+};
 
 export type TTabPreferencesHook = {
   navigation: ProjectNavigation;
-  handleToggleDefaultTab: (tabKey: ProjectTab) => void;
-  handleHideTab: (tabKey: ProjectTab) => void;
-  handleShowTab: (tabKey: ProjectTab) => void;
+  changes: TTabChanges | undefined;
 };
 
 /**
  * The caller's tab bar in the project's header (ProjectPreferences.navigation): the tab the project opens on and the
- * tabs under "more", shown as nerve's default (work items, none hidden) until the project wrapper has fetched his. A
- * change shows once nerve has answered it; one nerve refuses leaves the tab bar as it was. Each change is made, in its
- * turn, to the tab bar nerve last answered (the store), so a change asked for before the one before it is answered
- * keeps that one; one asked for before his tab bar is fetched fails without being sent, as nerve would replace his
- * tab bar with it. A change that fails shows an error toast.
+ * tabs under "more", shown as nerve's default (work items, none hidden) until the project wrapper has fetched his; and
+ * its changes, none until then, so that the header offers none: the store makes a change to the tab bar nerve last
+ * answered, and sends none before it has one (made to the default, it would replace his whole). A change shows once
+ * nerve has answered it, and the page follows it in the session that sent it (M3 design 7.1): a new default says so; a
+ * refusal says nerve's reason, the tab bar as it was.
  *
  * @param projectId - The project ID
- * @returns The caller's tab bar, nerve's default until it is fetched, and its changes
+ * @returns The caller's tab bar, nerve's default until it is fetched, and its changes once it is
  */
 export const useTabPreferences = (projectId: string): TTabPreferencesHook => {
   const { getNavigation, updateNavigation } = useProjectPreferences();
-  const navigation = getNavigation(projectId) ?? DEFAULT_NAVIGATION;
+  const toastRefusal = useRefusalToast();
+  const fetched = getNavigation(projectId);
 
-  /**
-   * Toggle default tab setting
-   * If tab is already default, resets to work_items; otherwise sets as default
-   */
-  const handleToggleDefaultTab = (tabKey: ProjectTab) => {
-    updateNavigation(projectId, toggleDefaultTab(tabKey))
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Default tab updated successfully.",
-        });
-        return;
-      })
-      .catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Failed to update default tab. Please try again later.",
-        });
-      });
-  };
-
-  /**
-   * Hide a tab (moves to overflow menu with "Show" option)
-   */
-  const handleHideTab = (tabKey: ProjectTab) => {
-    updateNavigation(projectId, hideTab(tabKey)).catch((error: unknown) => {
-      console.error("Error hiding tab:", error);
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Failed to hide tab. Please try again later.",
-      });
-    });
-  };
-
-  /**
-   * Show a previously hidden tab (returns to visible pool)
-   */
-  const handleShowTab = (tabKey: ProjectTab) => {
-    updateNavigation(projectId, showTab(tabKey)).catch((error: unknown) => {
-      console.error("Error showing tab:", error);
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Something went wrong. Please try again later.",
-      });
-    });
-  };
+  const send = (change: NavigationChange, done?: () => void) =>
+    void followInSession(() => updateNavigation(projectId, change), { done, failed: toastRefusal });
 
   return {
-    navigation,
-    handleToggleDefaultTab,
-    handleHideTab,
-    handleShowTab,
+    navigation: fetched ?? DEFAULT_NAVIGATION,
+    changes: fetched
+      ? {
+          toggleDefault: (tabKey) =>
+            send(toggleDefaultTab(tabKey), () =>
+              setToast({
+                type: TOAST_TYPE.SUCCESS,
+                title: "Success!",
+                message: "Default tab updated successfully.",
+              })
+            ),
+          hide: (tabKey) => send(hideTab(tabKey)),
+          show: (tabKey) => send(showTab(tabKey)),
+        }
+      : undefined,
   };
 };
