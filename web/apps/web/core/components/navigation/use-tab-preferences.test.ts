@@ -36,7 +36,8 @@ const held: ProjectNavigation = { default_tab: "cycles", hide_in_more_menu: ["vi
 /**
  * Each change the store was asked for: its project, and what it makes of the tab bar nerve answered the change before
  * it with (the first, of the tab bar held), as the store makes it in its turn, nerve answering each with the tab bar
- * sent. A change decided as it was asked for, of the tab bar shown then, would undo the one before it.
+ * sent. A change decided as it was asked for, of the tab bar shown then, would be made as though the changes before it
+ * had not been.
  */
 const made = () => {
   let answered = held;
@@ -67,14 +68,19 @@ describe("useTabPreferences", () => {
   });
 
   it("makes each change to the tab bar nerve last answered, in the change's turn", () => {
+    // all asked for from one render, each after a change to the field it reads: the default, then the tabs under more
     const { changes } = useTabPreferences("p-web");
     changes?.toggleDefault("modules");
-    changes?.hide("modules");
+    changes?.toggleDefault("modules");
     changes?.show("views");
+    changes?.hide("modules");
+    changes?.show("modules");
     expect(made()).toEqual([
       ["p-web", { default_tab: "modules", hide_in_more_menu: ["views"] }],
-      ["p-web", { default_tab: "modules", hide_in_more_menu: ["views", "modules"] }],
-      ["p-web", { default_tab: "modules", hide_in_more_menu: ["modules"] }],
+      ["p-web", { default_tab: "work_items", hide_in_more_menu: ["views"] }],
+      ["p-web", { default_tab: "work_items", hide_in_more_menu: [] }],
+      ["p-web", { default_tab: "work_items", hide_in_more_menu: ["modules"] }],
+      ["p-web", { default_tab: "work_items", hide_in_more_menu: [] }],
     ]);
   });
 

@@ -114,10 +114,11 @@
 | `e2e/fixtures/settings-pages.ts` | `transitionsEnded`（Task 2）；`closedWithin`（Task 3 的修正轮，`closedByEscape` 经它）；`moveWithinApp`（Task 5）；`shownWithin`（Task 10） | 2、3、5、10 |
 | `e2e/fixtures/workspace-pages.ts` | `pickTimeZone`：只用键盘选时区 | 2 |
 | `e2e/fixtures/auth.ts` | `named`：给账户显示名，从 P1 移来（Task 4 的修正轮，裁定 T4-c） | 4 |
-| `e2e/fixtures/api.ts` | `archiveProject`（Task 3）；`projectMembershipOf`、`changeProject`、`projectMemberWrites`（Task 8）；`changeWorkspacePreferences`：P8、W3、`furnishWorkspace` 共用（Task 10 的修正轮，裁定 T10-a） | 3、8、10 |
+| `e2e/fixtures/api.ts` | `archiveProject`（Task 3）；`projectMembershipOf`、`changeProject`、`projectMemberWrites`（Task 8）；`changeWorkspacePreferences`：交回 nerve 的回答，P8、W3、W8、`furnishWorkspace` 共用（Task 10 的修正轮，裁定 T10-a；修正轮一，裁定 T10-b） | 3、8、10 |
 | `e2e/fixtures/assert/project.ts` | `projectSettingsOf`：项目存下的设置 | 8 |
 | `e2e/stories/project/p1-create-project.spec.ts` | P1 的页面版本：表情选择器（Task 1）、负责人的列表（Task 2）、创建（Task 4） | 1、2、4 |
 | `e2e/stories/workspace/w3-workspace-settings.spec.ts` | W3 的页面版本只用键盘选时区（Task 2）；成员的工作区设置经 `changeWorkspacePreferences`（Task 10 的修正轮） | 2、10 |
+| `e2e/stories/workspace/w8-navigation-preferences.spec.ts` | 工作区设置的修改经 `changeWorkspacePreferences`，不再有自己的一份（Task 10 的修正轮一，裁定 T10-b） | 10 |
 | `e2e/stories/project/p2-visibility.spec.ts` | P2 的页面版本：地址的加入界面、已归档、找不到；卡片的复制和加入；页头的项目面包屑一个 Tab 停留点 | 3 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 发往别处的请求经 `requestsElsewhere`（Task 1）；挂载清单的列表读 `mounts.ts`，成员、访客、不是成员的人打开项目列表，已归档的项目只读项目本身（Task 3） | 1、3 |
 | `e2e/stories/project/p3-project-settings.spec.ts` | P3 的页面版本：general 和不离开路由到另一个项目的 general（Task 5）、功能和自动归档（Task 6）、成员默认值（Task 8，经 API 的被拒绝的添加经 `projectMemberWrites`） | 5、6、8 |
@@ -9657,8 +9658,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T10.10` | "更多"的"显示"把标签收起（修正轮，裁定 T10-a） | `tab-navigation-overflow-menu.test.tsx` | vitest |
 | `T10.11` | 页头只对项目的管理员和成员提供标签的菜单，不对 nerve 允许的项目访客提供（修正轮，裁定 T10-a） | 故事 P8 | 端到端 |
 | `T10.12` | 侧边栏只让工作区的管理员和成员拖动，不让 nerve 允许的工作区访客拖动（修正轮，裁定 T10-a） | 故事 P8 | 端到端 |
+| `T10.13` | 设为默认在调用时读 store 显示的默认标签：对一个标签很快点两次"设为默认"都发它（Task 10 的修正轮一，裁定 T10-b） | `use-tab-preferences.test.ts` | vitest |
+| `T10.14` | 收起在调用时读 store 显示的"更多"中的标签：之后又显示的标签再被收回去（修正轮一，裁定 T10-b） | `use-tab-preferences.test.ts` | vitest |
 
-修正轮的这些行之外：`use-tab-preferences.test.ts` 的 `made()` 把每个修改作用于 nerve 答前一个的标签栏（第一个作用于持有的），如 store 轮到它时那样，三个修改的结果变为 `{modules,[views]}`、`{modules,[views,modules]}`、`{modules,[modules]}`；新的 `tab-navigation-overflow-menu.test.tsx`（2 个：设置取到之前"更多"中的两个标签没有按钮；之后收进去的标签有"显示"和"设为默认"，默认的标签有"取消默认"，点了各是它说的修改，没有收起），加进 `.oxlintrc.json` 的非空断言的范围（放在 `use-project-drop.test.ts` 之后）；`fake-controls.ts` 加菜单的替身 `Menu`（渲染它的项，`Menu.MenuItem` 在 `shown.menuItems` 留下每一项）和 `buttonsIn`（一项中页面自己的按钮，包在别的组件里的也算）。P8 加 Gus（工作区的访客、Web 和 Docs 的访客；nerve 的 `project_preferences.update` 允许项目的管理员、成员和访客）：管理员之后，他在另一个浏览器里打开 Web，右键 Views（访客有的标签）设为默认，发 `{ navigation: { default_tab: "views", hide_in_more_menu: [] } }`；把侧边栏的 Web 拖到 Docs 上，发 `{ sort_order: 45535 }`；数据库中 Web 的这一行是他写的；他的一次加载有一条 `EMOJI_CHECK_WARNING` 和筛选的旧地址的一次 404。标签的菜单（`menuOf`）和拖动（`dragOnto`）是故事的函数，两人共用；工作区的设置经 api.ts 新的 `changeWorkspacePreferences`（P8、W3、`furnishWorkspace` 共用，不再各写一遍）。P8 是 304 行。
+修正轮的这些行之外：`use-tab-preferences.test.ts` 的 `made()` 把每个修改作用于 nerve 答前一个的标签栏（第一个作用于持有的），如 store 轮到它时那样（修改的次序在修正轮一中又改了，见下）；新的 `tab-navigation-overflow-menu.test.tsx`（2 个：设置取到之前"更多"中的两个标签没有按钮；之后收进去的标签有"显示"和"设为默认"，默认的标签有"取消默认"，点了各是它说的修改，没有收起），加进 `.oxlintrc.json` 的非空断言的范围（放在 `use-project-drop.test.ts` 之后）；`fake-controls.ts` 加菜单的替身 `Menu`（渲染它的项，`Menu.MenuItem` 在 `shown.menuItems` 留下每一项）和 `buttonsIn`（一项中页面自己的按钮，包在别的组件里的也算）。P8 加 Gus（工作区的访客、Web 和 Docs 的访客；nerve 的 `project_preferences.update` 允许项目的管理员、成员和访客）：管理员之后，他在另一个浏览器里打开 Web，右键 Views（访客有的标签）设为默认，发 `{ navigation: { default_tab: "views", hide_in_more_menu: [] } }`；把侧边栏的 Web 拖到 Docs 上，发 `{ sort_order: 45535 }`；数据库中 Web 的这一行是他写的；他的一次加载有一条 `EMOJI_CHECK_WARNING` 和筛选的旧地址的一次 404。标签的菜单（`menuOf`）和拖动（`dragOnto`）是故事的函数，两人共用；工作区的设置经 api.ts 新的 `changeWorkspacePreferences`（P8、W3、`furnishWorkspace` 共用，不再各写一遍）。P8 是 304 行。
+
+修正轮一（裁定 T10-b）：`use-tab-preferences.test.ts` 在一次渲染中要五个修改，每个跟在改它所读的字段的修改之后：`toggleDefault(modules)`、`toggleDefault(modules)`、`show(views)`、`hide(modules)`、`show(modules)`，结果是 `{modules,[views]}`、`{work_items,[views]}`、`{work_items,[]}`、`{work_items,[modules]}`、`{work_items,[]}`；只在调用时决定一个字段的（默认的标签 `T10.13`，"更多"中的标签 `T10.14`）也被发现，在前一个次序下它们存活。api.ts 的 `changeWorkspacePreferences` 交回 nerve 的回答，W8 用它，不再有自己的一份（api.ts 是 404 行，开始时 390）。`tab-navigation-overflow-menu.tsx` 的说明照实写：设置取到之后才有"显示"和"设为默认"。P8 中 Gus 的拖动在负载下时有失败（30 次中 3 次，都在他的拖动没有发出 PATCH）：他设默认之后的提示进来时文档在滚，按下和移动之间有一次滚动就不开始拖动（页面的事件记录为证）；管理员拖动时没有正在进来的提示。`dragOnto` 等页面的有限的过渡结束（`transitionsEnded(body)`）再按下，Gus 也核对他的提示（这样按下之前提示已在页面上）；之后单个 worker 30 次、两个 worker 20 次都通过。P8 是 315 行。
 
 ---
 

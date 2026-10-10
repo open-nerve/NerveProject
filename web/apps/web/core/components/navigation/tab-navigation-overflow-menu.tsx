@@ -26,9 +26,9 @@ type Props = {
 };
 
 /**
- * Overflow menu for tab navigation items
- * Displays items that don't fit in the visible area, with action icons
- * Shows "Eye" icon for user-hidden items, "Set as default" icon for all items
+ * Overflow menu for tab navigation items: those that don't fit in the visible area, and those the caller hid. Once his
+ * tab bar is fetched (changes), it offers "Show" for each item he hid and "Set as default" (or "Clear default") for
+ * every item; until then, no action.
  */
 export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation, changes }: Props) {
   const { t } = useTranslation();

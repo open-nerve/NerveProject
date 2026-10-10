@@ -178,19 +178,23 @@ export async function membershipOf(api: Api, token: string, slug: string, member
   return membership.id;
 }
 
-/** Changes the settings of the account of token, a member's, in the workspace of slug, which nerve must answer. */
+/** Changes the settings of the account of token, a member's, in the workspace of slug, and returns nerve's answer. */
 export async function changeWorkspacePreferences(
   api: Api,
   token: string,
   slug: string,
   body: WorkspacePreferencesUpdate
-): Promise<void> {
-  const { error, response } = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
+): Promise<WorkspacePreferences> {
+  const { data, error, response } = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
     params: { path: { slug } },
     body,
     headers: bearer(token),
   });
-  expect(response.status, `the settings in ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  expect(response.status, `change the settings in ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error(`changeWorkspacePreferences in ${slug} answered 200 without the settings`);
+  }
+  return data;
 }
 
 /**

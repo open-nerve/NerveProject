@@ -16,7 +16,14 @@ import {
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { answerTo, holdAnswer, registerOnboarded, sentTo, shownWithin } from "../../fixtures/settings-pages";
+import {
+  answerTo,
+  holdAnswer,
+  registerOnboarded,
+  sentTo,
+  shownWithin,
+  transitionsEnded,
+} from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
@@ -89,9 +96,12 @@ function inSidebar(page: Page, id: string): Locator {
 
 /**
  * Drags the project of id in page's sidebar onto the one of onto by its handle, which shows while the pointer is over
- * the project: the drag starts there, as a hand's would. Resolves with the body page sends and nerve's answer.
+ * the project: the drag starts there, as a hand's would, once page's transitions have ended. One still under way, as
+ * when a toast comes in, can scroll the document, and a scroll between the press and the move starts no drag. Resolves
+ * with the body page sends and nerve's answer.
  */
 async function dragOnto(page: Page, id: string, onto: string): Promise<{ body: unknown; answer: Response }> {
+  await transitionsEnded(page.locator("body"));
   await inSidebar(page, id).hover();
   await inSidebar(page, id).locator("button").first().hover();
   await page.mouse.down();
@@ -287,6 +297,7 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
     200,
     { navigation: { default_tab: "views", hide_in_more_menu: [] } },
   ]);
+  await expect(theGuest.page.getByText("Default tab updated successfully.")).toBeVisible();
   await expect(sidebarOrder(theGuest.page)).toHaveText([/Docs/, /Web/]);
   const gusMoved = await dragOnto(theGuest.page, web.id, docs.id);
   expect([gusMoved.answer.status(), gusMoved.body]).toEqual([200, { sort_order: 45535 }]);

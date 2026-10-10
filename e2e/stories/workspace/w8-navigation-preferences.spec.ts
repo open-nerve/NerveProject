@@ -1,11 +1,11 @@
 import {
+  changeWorkspacePreferences,
   createProject,
   createWorkspace,
   inviteAndAccept,
   slugFor,
   type Api,
   type WorkspacePreferences,
-  type WorkspacePreferencesUpdate,
 } from "../../fixtures/api";
 import { expectPreferences } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
@@ -28,17 +28,6 @@ async function read(api: Api, token: string, slug: string): Promise<unknown> {
   return data;
 }
 
-/** The answer of PATCH /api/v0/me/workspaces/{slug}/preferences, which must be 200. */
-async function change(api: Api, token: string, slug: string, body: WorkspacePreferencesUpdate): Promise<unknown> {
-  const { data, error, response } = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
-    params: { path: { slug } },
-    body,
-    headers: bearer(token),
-  });
-  expect(response.status, `change the settings in ${slug}: ${JSON.stringify(error)}`).toBe(200);
-  return data;
-}
-
 test("W8 (API): the settings are the defaults and nothing is stored until the first change, which stores one row; later changes change it; each member and each workspace has its own", async ({
   api,
   db,
@@ -54,13 +43,13 @@ test("W8 (API): the settings are the defaults and nothing is stored until the fi
   await expectPreferences(db, slug, email, null);
 
   const tabbed: WorkspacePreferences = { navigation_control_preference: "TABBED", navigation_project_limit: 3 };
-  expect(await change(api, pat, slug, tabbed)).toEqual(tabbed);
+  expect(await changeWorkspacePreferences(api, pat, slug, tabbed)).toEqual(tabbed);
   const row = await expectPreferences(db, slug, email, tabbed);
   // After a refresh the page reads them again.
   expect(await read(api, pat, slug)).toEqual(tabbed);
 
   // Showing every project: one field changes, the other stays, on the same row.
-  expect(await change(api, pat, slug, { navigation_project_limit: 0 })).toEqual({
+  expect(await changeWorkspacePreferences(api, pat, slug, { navigation_project_limit: 0 })).toEqual({
     ...tabbed,
     navigation_project_limit: 0,
   });
