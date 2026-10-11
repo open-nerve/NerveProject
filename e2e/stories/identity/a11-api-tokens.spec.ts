@@ -6,6 +6,7 @@ import type { Download } from "@playwright/test";
 import { expectTokenStored } from "../../fixtures/assert/identity";
 import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { downloadedWithin } from "../../fixtures/downloads";
 import {
   answerTo,
   closedByBackdropClick,
@@ -178,16 +179,20 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
     return release;
   };
 
-  // Answered after its page was left, the create lists the token, and does nothing else: the token never shows,
-  // nor is it anywhere on the page, and nothing downloads. The list shows it once the create's continuation has
-  // run, which is where the modal would have taken the token and downloaded its CSV.
-  const abandonedAnswer = await answerTo(page, "POST", "/api/v0/me/api-tokens", await generateThenLeave("abandoned"));
-  expect(abandonedAnswer.status()).toBe(201);
-  const abandoned = (await abandonedAnswer.json()) as components["schemas"]["ApiTokenCreated"];
+  // Answered after its page was left, the create does nothing: nothing downloads in the second after its answer
+  // reaches the page, by when the create's continuation has run (where the modal would have taken the token and
+  // downloaded its CSV), and the token never shows, nor is it anywhere on the page. The list has the token, which
+  // nerve made before its answer was held (the security page the back opened may have fetched it already).
+  const releaseAbandoned = await generateThenLeave("abandoned");
+  const abandonedCreate = await downloadedWithin(page, () =>
+    answerTo(page, "POST", "/api/v0/me/api-tokens", releaseAbandoned)
+  );
+  expect(abandonedCreate.downloaded, "a download after the answer").toBe(false);
+  expect(abandonedCreate.result.status()).toBe(201);
+  const abandoned = (await abandonedCreate.result.json()) as components["schemas"]["ApiTokenCreated"];
+  expect(await shown()).toEqual([]);
   await tokensPage.click();
   await expect(page.getByText("abandoned", { exact: true })).toBeVisible();
-  expect(await shown()).toEqual([]);
-  expect(downloads).toHaveLength(0);
   await expectTokenGone(page, abandoned.token, log);
 
   // So too when the page and the modal open again before the answer comes: the modal opened again still asks for a
@@ -196,14 +201,14 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
   await tokensPage.click();
   await page.getByRole("button", { name: "Add access token" }).first().click();
   await expect(page.getByLabel("Title")).toHaveValue("");
-  const answer = await answerTo(page, "POST", "/api/v0/me/api-tokens", release);
-  expect(answer.status()).toBe(201);
-  const late = (await answer.json()) as components["schemas"]["ApiTokenCreated"];
+  const lateCreate = await downloadedWithin(page, () => answerTo(page, "POST", "/api/v0/me/api-tokens", release));
+  expect(lateCreate.downloaded, "a download after the answer").toBe(false);
+  expect(lateCreate.result.status()).toBe(201);
+  const late = (await lateCreate.result.json()) as components["schemas"]["ApiTokenCreated"];
   expect(late).toMatchObject({ label: "late" });
-  await expect(page.getByText("late", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("");
   expect(await shown()).toEqual([]);
-  expect(downloads).toHaveLength(0);
+  await expect(page.getByText("late", { exact: true })).toBeVisible();
   await expectTokenGone(page, late.token, log);
 
   // The modal's own create shows its token, which the record has, and its CSV is the page's only download:
