@@ -100,6 +100,15 @@ export function emailFor(testInfo: TestInfo, label = "user"): string {
   return `${label}-${testInfo.testId}-${testInfo.repeatEachIndex}-${testInfo.retry}@example.com`;
 }
 
+/**
+ * The name the pages show of an account nobody named: nerve's display name for it, the address it keeps, lowercased,
+ * before the @ (M2 design 2, A1).
+ */
+export function shownNameOf(email: string): string {
+  const kept = email.toLowerCase();
+  return kept.slice(0, kept.indexOf("@"));
+}
+
 /** Signs email up through the API and returns the new session's tokens. */
 export async function register(api: Api, email: string, headers: Record<string, string> = {}): Promise<AuthTokens> {
   const { data, error, response } = await api.POST("/api/v0/auth/register", {
@@ -139,6 +148,12 @@ export async function accountId(api: Api, token: string): Promise<string> {
     throw new Error("GET /api/v0/me answered 200 without the account");
   }
   return data.id;
+}
+
+/** Gives the account of the bearer token given the display name name, by which the pages show it. */
+export async function named(api: Api, token: string, name: string): Promise<void> {
+  const { response } = await api.PATCH("/api/v0/me", { body: { display_name: name }, headers: bearer(token) });
+  expect(response.status, `name ${name}`).toBe(200);
 }
 
 /** Creates a personal access token with the bearer token given, and returns it with its token. */

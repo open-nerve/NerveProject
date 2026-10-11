@@ -9,9 +9,9 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { FakeNerve, noContent } from "@/lib/auth/fake-nerve";
 import { inTurn } from "@/store/fake-queue";
 import { fakeRoot } from "@/store/fake-root";
-import { ProjectRootStore } from "@/store/project";
-import { loadProjects, projectOf } from "@/store/project/fake-projects";
+import { projectOf } from "@/store/project/fake-projects";
 import { RouterStore } from "@/store/router.store";
+import { permissionsOver } from "@/store/user/fake-permissions";
 import { UserPermissionStore } from "@/store/user/permissions.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -101,26 +101,13 @@ const slugOf = (role: WorkspaceRole | undefined) => (role ? `ws-${role}` : "ws-e
  * For each identity of IN_PROJECTS, a workspace of the caller's (ws-0 …) and its project as nerve gives it (p-p0 …),
  * in ws-0's list for one of another workspace.
  */
-async function inProjects() {
-  const nerve = new FakeNerve();
-  const api = nerve.client();
-  const router = new RouterStore();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
-  const projectRoot = new ProjectRootStore(fakeRoot({ router, workspaceRoot }), api);
-  const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot, projectRoot }));
+function inProjects() {
   const workspaces = IN_PROJECTS.map(({ role }, i) => workspaceOf(`ws-${i}`, { role }));
-  await loadWorkspaces(nerve, workspaceRoot, workspaces);
-  // each workspace's list, one after another: the projects of the rows that are of it (a row's own, unless elsewhere)
+  // each workspace's list: the projects of the rows that are of it (a row's own, unless elsewhere)
   const projects = IN_PROJECTS.flatMap(({ memberRole, elsewhere }, i) =>
     memberRole === undefined ? [] : [projectOf(`P${i}`, `id-ws-${elsewhere ? 0 : i}`, { member_role: memberRole })]
   );
-  const listedIn = (workspaceId: string) => projects.filter((held) => held.workspace_id === workspaceId);
-  await workspaces.reduce<Promise<unknown>>(
-    (before, workspace) =>
-      before.then(() => loadProjects(nerve, projectRoot.project, workspace, listedIn(workspace.id))),
-    Promise.resolve()
-  );
-  return { nerve, router, workspaceRoot, permissions };
+  return permissionsOver(workspaces, projects);
 }
 
 beforeEach(() => {

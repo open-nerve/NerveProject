@@ -1,11 +1,12 @@
 import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig } from "vite";
+import { emojibase } from "./emojibase";
 
 export default defineConfig(() => ({
   build: {
     assetsInlineLimit: 0,
   },
-  plugins: [reactRouter()],
+  plugins: [reactRouter(), emojibase()],
   resolve: {
     tsconfigPaths: true,
     dedupe: ["react", "react-dom", "@headlessui/react"],

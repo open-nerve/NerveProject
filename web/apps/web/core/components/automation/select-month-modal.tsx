@@ -20,7 +20,8 @@ type Props = {
   isOpen: boolean;
   initialValues: TArchiveIn;
   handleClose: () => void;
-  handleChange: (formData: TArchiveIn) => Promise<void>;
+  /** Sends the range; calls done once nerve has made it, and settles once the page has followed it. */
+  handleChange: (formData: TArchiveIn, done: () => void) => Promise<void>;
 };
 
 export function SelectMonthModal({ initialValues, isOpen, handleClose, handleChange }: Props) {
@@ -40,14 +41,19 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
     reset(initialValues);
   };
 
-  const onSubmit = (formData: TArchiveIn) => {
+  // the modal waits for nerve, and cannot be closed meanwhile: it closes once nerve has made the range
+  const onSubmit = async (formData: TArchiveIn) => {
     if (!workspaceSlug && !projectId) return;
-    handleChange(formData);
-    onClose();
+    await handleChange(formData, onClose);
   };
 
   return (
-    <ModalCore isOpen={isOpen} handleClose={onClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isSubmitting ? undefined : onClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XXL}
+    >
       <form onSubmit={handleSubmit(onSubmit)}>
         <div>
           <h3 className="text-16 leading-6 font-medium text-primary">Customize time range</h3>
@@ -93,7 +99,7 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" size="lg" onClick={onClose}>
+          <Button variant="secondary" size="lg" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button variant="primary" size="lg" type="submit" loading={isSubmitting}>

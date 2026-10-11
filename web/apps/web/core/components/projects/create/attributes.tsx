@@ -4,26 +4,28 @@
  * See the LICENSE file for details.
  */
 
+import { observer } from "mobx-react";
 import { Controller, useFormContext } from "react-hook-form";
 // nerve imports
-import { NETWORK_CHOICES, ETabIndices } from "@nerve/constants";
+import { NETWORK_CHOICES } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { ProjectCreate } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
-import { getTabIndex } from "@nerve/utils";
 // components
-import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
+import { MemberDropdownBase } from "@/components/dropdowns/member/base";
 import { ProjectNetworkIcon } from "@/components/project/project-network-icon";
+// hooks
+import { useMember } from "@/hooks/store/use-member";
+// local imports
+import { leadCandidates } from "./lead-candidates";
+import type { ProjectCreationForm } from "./use-create-project";
 
-type Props = {
-  isMobile?: boolean;
-};
-
-function ProjectAttributes(props: Props) {
-  const { isMobile = false } = props;
+const ProjectAttributes = observer(function ProjectAttributes() {
   const { t } = useTranslation();
-  const { control } = useFormContext<ProjectCreate>();
-  const { getIndex } = getTabIndex(ETabIndices.PROJECT_CREATE, isMobile);
+  const { control } = useFormContext<ProjectCreationForm>();
+  const {
+    getUserDetails,
+    workspace: { workspaceMemberIds, getWorkspaceMemberDetails },
+  } = useMember();
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Controller
@@ -33,7 +35,7 @@ function ProjectAttributes(props: Props) {
           const currentNetwork = NETWORK_CHOICES.find((n) => n.key === value);
 
           return (
-            <div className="h-7 flex-shrink-0" tabIndex={getIndex("network")}>
+            <div className="h-7 flex-shrink-0">
               <CustomSelect
                 value={value}
                 onChange={onChange}
@@ -53,7 +55,6 @@ function ProjectAttributes(props: Props) {
                 className="h-full"
                 buttonClassName="h-full"
                 noChevron
-                tabIndex={getIndex("network")}
               >
                 {NETWORK_CHOICES.map((network) => (
                   <CustomSelect.Option key={network.key} value={network.key}>
@@ -75,20 +76,22 @@ function ProjectAttributes(props: Props) {
         name="project_lead_id"
         control={control}
         render={({ field: { value, onChange } }) => (
-          <div className="h-7 flex-shrink-0" tabIndex={getIndex("lead")}>
-            <MemberDropdown
-              value={value ?? null}
-              onChange={(lead) => onChange(lead === value ? undefined : lead)}
+          <div className="h-7 flex-shrink-0">
+            <MemberDropdownBase
+              getUserDetails={getUserDetails}
+              memberIds={leadCandidates(workspaceMemberIds, getWorkspaceMemberDetails)}
+              value={value}
+              // the lead picked again is no lead
+              onChange={(lead) => onChange(lead === value ? null : lead)}
               placeholder={t("lead")}
               multiple={false}
               buttonVariant="border-with-text"
-              tabIndex={getIndex("lead")}
             />
           </div>
         )}
       />
     </div>
   );
-}
+});
 
 export { ProjectAttributes };

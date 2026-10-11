@@ -58,8 +58,6 @@ type Props = {
     shouldDropAtEnd: boolean
   ) => void;
   projectListType: "JOINED" | "FAVORITES";
-  disableDrag?: boolean;
-  disableDrop?: boolean;
   isLastChild: boolean;
   renderInExtendedSidebar?: boolean;
 };
@@ -69,8 +67,6 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
     workspaceSlug,
     projectId,
     handleCopyText,
-    disableDrag,
-    disableDrop,
     isLastChild,
     handleOnProjectDrop,
     projectListType,
@@ -143,7 +139,6 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
     return combine(
       draggable({
         element,
-        canDrag: () => !disableDrag,
         dragHandle: dragHandleElement ?? undefined,
         getInitialData: () => ({ id: projectId, dragInstanceId: "PROJECTS" }),
         onDragStart: () => {
@@ -174,8 +169,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
       }),
       dropTargetForElements({
         element,
-        canDrop: ({ source }) =>
-          !disableDrop && source?.data?.id !== projectId && source?.data?.dragInstanceId === "PROJECTS",
+        canDrop: ({ source }) => source?.data?.id !== projectId && source?.data?.dragInstanceId === "PROJECTS",
         // oxlint-disable-next-line no-shadow
         getData: ({ input, element }) => {
           const data = { id: projectId };
@@ -299,28 +293,26 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
             )}
             id={`${project?.id}`}
           >
-            {!disableDrag && (
-              <Tooltip
-                label={project.sort_order === null ? t("join_the_project_to_rearrange") : t("drag_to_rearrange")}
-                align="end"
-                disabled={isDragging || isMobile}
+            <Tooltip
+              label={project.sort_order === null ? t("join_the_project_to_rearrange") : t("drag_to_rearrange")}
+              align="end"
+              disabled={isDragging || isMobile}
+            >
+              <button
+                type="button"
+                className={cn(
+                  "absolute top-1/2 -left-3 hidden -translate-y-1/2 cursor-grab items-center justify-center rounded-sm text-placeholder group-hover/project-item:flex",
+                  {
+                    "cursor-not-allowed opacity-60": project.sort_order === null,
+                    "cursor-grabbing": isDragging,
+                    flex: isMenuActive || renderInExtendedSidebar,
+                  }
+                )}
+                ref={dragHandleRef}
               >
-                <button
-                  type="button"
-                  className={cn(
-                    "absolute top-1/2 -left-3 hidden -translate-y-1/2 cursor-grab items-center justify-center rounded-sm text-placeholder group-hover/project-item:flex",
-                    {
-                      "cursor-not-allowed opacity-60": project.sort_order === null,
-                      "cursor-grabbing": isDragging,
-                      flex: isMenuActive || renderInExtendedSidebar,
-                    }
-                  )}
-                  ref={dragHandleRef}
-                >
-                  <DragHandle className="bg-transparent" />
-                </button>
-              </Tooltip>
-            )}
+                <DragHandle className="bg-transparent" />
+              </button>
+            </Tooltip>
             <>
               <ControlLink href={defaultTabUrl} className="flex flex-grow truncate" onClick={handleItemClick}>
                 {isAccordionMode ? (

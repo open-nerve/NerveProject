@@ -5,6 +5,7 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { signedIn } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
@@ -13,7 +14,8 @@ import type { ProjectAccess } from "./use-project-fetch";
 
 // What the project wrapper shows for each decision of useProjectFetch (M3 design 3.19, 7.6): the wrapper renders on
 // the server with that decision, and stand-ins for the page of an unreachable nerve and for the empty state of the
-// join and not-found screens, which keep the props they were given, and for the toasts.
+// join, archived and not-found screens, which keep the props they were given, for the router and for the toasts. Its
+// session is fake-tab.ts's.
 
 type Unavailable = { onRetry: () => void; autoRetry: boolean };
 type Screen = { title: string; description: string; actions?: { label: string; onClick: () => void }[] };
@@ -21,8 +23,9 @@ const shown = vi.hoisted(() => {
   const access: { current: ProjectAccess } = { current: { kind: "loading" } };
   const unavailable: Unavailable[] = [];
   const screens: Screen[] = [];
-  const joinProject = vi.fn((_projectId: string) => Promise.resolve());
-  return { access, unavailable, screens, joinProject };
+  const joinProject = vi.fn((_projectId: string): Promise<unknown> => Promise.resolve());
+  const navigate = vi.fn();
+  return { access, unavailable, screens, joinProject, navigate };
 });
 vi.mock("./use-project-fetch", () => ({ useProjectFetch: () => shown.access.current }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => ({ joinProject: shown.joinProject }) }));
@@ -38,11 +41,14 @@ vi.mock("@nerve/propel/empty-state", () => ({
     return props.title;
   },
 }));
+vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme" }), useNavigate: () => shown.navigate }));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 
 const member = projectOf("WEB", "w-acme");
 const seen = projectOf("WEB", "w-acme", { member_role: null });
+const archived = projectOf("WEB", "w-acme", { archived_at: "2026-10-02T09:00:00Z" });
 
 /** Renders the wrapper of the project WEB, its page a paragraph, with the decision access: gives the markup. */
 function render(access: ProjectAccess): string {
@@ -55,9 +61,11 @@ function render(access: ProjectAccess): string {
 }
 
 beforeEach(() => {
+  signedIn();
   shown.unavailable.length = 0;
   shown.screens.length = 0;
   shown.joinProject.mockClear();
+  shown.navigate.mockClear();
   toasts.length = 0;
 });
 
@@ -103,6 +111,20 @@ describe("ProjectAuthWrapper", () => {
       },
     ]);
     expect(shown.screens[0]?.actions).toBeUndefined();
+  });
+
+  it("shows that the project is archived, whose button opens the archived projects, to a member or anyone", () => {
+    expect(render({ kind: "archived", project: archived })).toContain("project_empty_state.archived.title");
+    expect(shown.screens).toMatchObject([
+      {
+        title: "project_empty_state.archived.title",
+        description: "project_empty_state.archived.description",
+        actions: [{ label: "project_empty_state.archived.cta_primary" }],
+      },
+    ]);
+    shown.screens[0]?.actions?.[0]?.onClick();
+    expect(shown.navigate.mock.calls).toEqual([["/acme/projects/archives"]]);
+    expect(shown.joinProject).not.toHaveBeenCalled();
   });
 
   it("renders the project's pages to its member", () => {

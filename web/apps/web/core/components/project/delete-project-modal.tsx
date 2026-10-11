@@ -15,7 +15,10 @@ import type { Project } from "@nerve/api-client";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useParams, useNavigate } from "react-router";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 type DeleteProjectModal = {
   isOpen: boolean;
@@ -23,15 +26,22 @@ type DeleteProjectModal = {
   onClose: () => void;
 };
 
-const defaultValues = {
+/** What the form asks before the deletion: the project's name, and the words that confirm it. */
+type TDeleteProjectForm = { projectName: string; confirmDelete: string };
+
+const defaultValues: TDeleteProjectForm = {
   projectName: "",
   confirmDelete: "",
 };
+
+/** The words that confirm the deletion. */
+const CONFIRMATION = "delete my project";
 
 export function DeleteProjectModal(props: DeleteProjectModal) {
   const { isOpen, project, onClose } = props;
   // store hooks
   const { deleteProject } = useProject();
+  const toastRefusal = useRefusalToast();
   // router
   const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
@@ -42,9 +52,10 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
     handleSubmit,
     reset,
     watch,
-  } = useForm({ defaultValues });
+  } = useForm<TDeleteProjectForm>({ defaultValues });
 
-  const canDelete = watch("projectName") === project?.name && watch("confirmDelete") === "delete my project";
+  const confirmed = (values: TDeleteProjectForm) =>
+    values.projectName === project.name && values.confirmDelete === CONFIRMATION;
 
   const handleClose = () => {
     const timer = setTimeout(() => {
@@ -55,29 +66,34 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
     onClose();
   };
 
-  const onSubmit = async () => {
-    if (!workspaceSlug || !canDelete) return;
-
-    try {
-      await deleteProject(project);
-      if (projectId && projectId === project.id) navigate(`/${workspaceSlug}/projects`);
-      handleClose();
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "Project deleted successfully.",
-      });
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Something went wrong. Please try again later.",
-      });
-    }
+  // The values submitted decide, as typed; the page follows the deletion only in the session it was sent in (M3
+  // design 7.1): once another tab has moved this one to another account, the page is that account's. A page of the
+  // project deleted gives way to the workspace's projects.
+  const onSubmit = (values: TDeleteProjectForm) => {
+    if (!workspaceSlug || !confirmed(values)) return;
+    return followInSession(() => deleteProject(project), {
+      done: () => {
+        handleClose();
+        if (projectId === project.id) void navigate(`/${workspaceSlug}/projects`);
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: "Success!",
+          message: "Project deleted successfully.",
+        });
+      },
+      failed: toastRefusal,
+    });
   };
 
+  // While the deletion is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): nerve's answer is followed
+  // by the dialog that sent it, and no dialog opened again offers the deletion while the request is out.
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isSubmitting ? undefined : handleClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XXL}
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 p-6">
         <div className="flex w-full items-center justify-start gap-6">
           <span className="place-items-center rounded-full bg-danger-subtle p-4">
@@ -89,13 +105,13 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
         </div>
         <span>
           <p className="text-13 leading-7 text-secondary">
-            Are you sure you want to delete project <span className="font-semibold break-words">{project?.name}</span>?
+            Are you sure you want to delete project <span className="font-semibold break-words">{project.name}</span>?
             All of the data related to the project will be permanently removed. This action cannot be undone
           </p>
         </span>
         <div className="text-secondary">
           <p className="text-13 break-words">
-            Enter the project name <span className="font-medium text-primary">{project?.name}</span> to continue:
+            Enter the project name <span className="font-medium text-primary">{project.name}</span> to continue:
           </p>
           <Controller
             control={control}
@@ -121,7 +137,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
         </div>
         <div className="text-secondary">
           <p className="text-13">
-            To confirm, type <span className="font-medium text-primary">delete my project</span> below:
+            To confirm, type <span className="font-medium text-primary">{CONFIRMATION}</span> below:
           </p>
           <Controller
             control={control}
@@ -146,10 +162,10 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
           />
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="lg" onClick={handleClose}>
+          <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button variant="error-fill" size="lg" type="submit" disabled={!canDelete} loading={isSubmitting}>
+          <Button variant="error-fill" size="lg" type="submit" disabled={!confirmed(watch())} loading={isSubmitting}>
             {isSubmitting ? "Deleting" : "Delete project"}
           </Button>
         </div>

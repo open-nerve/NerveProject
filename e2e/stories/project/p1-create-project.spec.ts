@@ -7,11 +7,27 @@ import {
   type ProjectCreate,
 } from "../../fixtures/api";
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, createPAT, emailFor, named, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { tabCycle } from "../../fixtures/project-pages";
+import {
+  closedByComposingEscape,
+  closedByEscape,
+  composingEscape,
+  expectListBesideButton,
+  hiddenWithin,
+  keydownsReachingDocument,
+  registerOnboarded,
+  sentHeld,
+  sentTo,
+  transitionsEnded,
+} from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
-// P1, create a project (M3 design 2, 3.17, 3.18). The page version comes
-// with the projects' pages (P10).
+// P1, create a project (M3 design 2, 3.17, 3.18), and its page (P10).
+
+/** Where nerve serves the emoji picker's data (M3 design 7.7). */
+const EMOJIBASE = "/assets/emojibase/15.3.2/en";
 
 /** The answer of GET /api/v0/workspaces/{slug}/project-identifiers/{identifier}. */
 async function availability(api: Api, token: string, slug: string, identifier: string): Promise<unknown> {
@@ -147,14 +163,6 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
   // places. Ops, which the admin creates, goes before Web in the admin's sidebar. Docs, which the member creates with
   // the admin its lead, goes before Web in the member's sidebar and before Ops in the admin's sidebar.
   const ops = await createProject(api, admin, slug, { name: "Ops", identifier: "ops", network: 0 });
-  expect(ops).toMatchObject({
-    identifier: "OPS",
-    network: 0,
-    member_role: 20,
-    sort_order: 55535,
-    member_ids: [adminId],
-  });
-  // Ops, given no lead, is led by no one.
   const opsRow = {
     name: "Ops",
     identifier: "OPS",
@@ -163,24 +171,14 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
     timezone: "Asia/Shanghai",
     logo_props: {},
   };
+  expect(ops).toMatchObject({ ...opsRow, member_role: 20, sort_order: 55535, member_ids: [adminId] });
+  // Ops, given no lead, is led by no one.
   expect(
     await expectProjectCreated(db, slug, opsRow, adminEmail, null, [{ email: adminEmail, sort_order: 55535 }])
   ).toBe(ops.id);
   const docs = await createProject(api, member, slug, { name: "Docs", identifier: "docs", project_lead_id: adminId });
-  expect(docs).toMatchObject({
-    identifier: "DOCS",
-    member_role: 20,
-    sort_order: 55535,
-    member_ids: [memberId, adminId],
-  });
-  const docsRow = {
-    name: "Docs",
-    identifier: "DOCS",
-    description: "",
-    network: 2,
-    timezone: "Asia/Shanghai",
-    logo_props: {},
-  };
+  const docsRow = { ...opsRow, name: "Docs", identifier: "DOCS", network: 2 };
+  expect(docs).toMatchObject({ ...docsRow, member_role: 20, sort_order: 55535, member_ids: [memberId, adminId] });
   expect(
     await expectProjectCreated(db, slug, docsRow, memberEmail, adminEmail, [
       { email: memberEmail, sort_order: 55535 },
@@ -199,4 +197,203 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
     project: { identifier: "DOCS", member_role: 20, sort_order: 45535, member_ids: [memberId, adminId] },
   });
   expect(await read(api, member, ops.id)).toEqual({ status: 404, code: "project.not_found" });
+});
+
+test("P1 (page): a new project's icon picker shows the emoji nerve serves itself, nothing asked of another address, nothing blocked", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const member = await registerOnboarded(api, emailFor(testInfo, "member"));
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, member.access_token, { name: "Acme", slug });
+  const page = await signedInPage(member);
+  const watch = await watchPage(page);
+
+  await page.goto(`/${slug}/projects`);
+  await page.getByRole("button", { name: "Add Project", exact: true }).click();
+  const data = page.waitForResponse((answer) => new URL(answer.url()).pathname === `${EMOJIBASE}/data.json`);
+  const messages = page.waitForResponse((answer) => new URL(answer.url()).pathname === `${EMOJIBASE}/messages.json`);
+  await page.getByRole("button", { name: "Project icon" }).click();
+  expect([(await data).status(), (await messages).status()]).toEqual([200, 200]);
+  const search = page.getByRole("searchbox");
+  await search.fill("rocket");
+  // An Escape that ends an input method's composition in the search is the input method's: the picker stays open.
+  const pickerClosed = hiddenWithin(search);
+  await composingEscape(search);
+  expect(await pickerClosed).toBe(false);
+  await page.getByRole("gridcell", { name: "Rocket" }).click();
+  await expect(page.getByRole("button", { name: "Project icon" })).toContainText("🚀");
+
+  // The picker asks nerve, which answers its HEAD too (frimousse compares the files' ETags before it reads its cache).
+  expect((await page.request.head(`${EMOJIBASE}/data.json`)).status()).toBe(200);
+  expect(requestsElsewhere(page, watch)).toEqual([]);
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+});
+
+test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const memberEmail = emailFor(testInfo, "member");
+  const member = await registerOnboarded(api, memberEmail);
+  const guestEmail = emailFor(testInfo, "guest");
+  const guest = await registerOnboarded(api, guestEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug, timezone: "Asia/Shanghai" });
+  await inviteAndAccept(api, admin.access_token, slug, { email: memberEmail, token: member.access_token }, 15);
+  await inviteAndAccept(api, admin.access_token, slug, { email: guestEmail, token: guest.access_token }, 5);
+  await named(api, admin.access_token, "ada");
+  await named(api, guest.access_token, "gus");
+  // WEB is taken by the time the member sends it
+  await createProject(api, admin.access_token, slug, { name: "Site", identifier: "WEB" });
+  const adminId = await accountId(api, admin.access_token);
+
+  const page = await signedInPage(member);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/projects`);
+  await page.getByRole("button", { name: "Add Project", exact: true }).click();
+  await transitionsEnded(page.getByRole("dialog"));
+  // The name gives the identifier, as typed; the identifier typed is upper case, of the characters it may have.
+  await page.locator("#name").fill("Web-App");
+  // An Escape that ends an input method's composition in the name is the input method's: the modal stays open.
+  expect(await closedByComposingEscape(page.locator("#name"))).toBe(false);
+  await expect(page.locator("#identifier")).toHaveValue("WEBAPP");
+  await page.locator("#identifier").fill("we.b");
+  await expect(page.locator("#identifier")).toHaveValue("WEB");
+  await page.locator("#description").fill("The site");
+  // The lead: the form's order puts it right before Cancel, which Shift+Tab leaves for it; the workspace's admin or a
+  // member, not its guest.
+  await page.getByRole("button", { name: "Cancel" }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.getByRole("button", { name: "Lead", exact: true }).last()).toBeFocused();
+  await page.keyboard.press("Enter");
+  // each after its avatar's initial
+  await expect(page.getByRole("option")).toHaveText([/You$/, /ada$/]);
+  await page.getByRole("option", { name: "ada" }).click();
+  // The icon: an emoji from the picker.
+  await page.getByRole("button", { name: "Project icon" }).click();
+  await page.getByRole("searchbox").fill("rocket");
+  await page.getByRole("gridcell", { name: "Rocket" }).click();
+
+  // Refused: the name nerve does not allow and the identifier taken, each under its field.
+  const create = page.getByRole("button", { name: "Create project" });
+  const refusedName = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
+  expect(refusedName.answer.status()).toBe(422);
+  await expect(page.getByText("Not allowed")).toBeVisible();
+  await page.locator("#name").fill("Web App");
+  await page.locator("#identifier").fill("web");
+  const refusedIdentifier = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
+  expect(refusedIdentifier.answer.status()).toBe(409);
+  await expect(page.getByText("A project of this workspace already has this identifier.")).toBeVisible();
+
+  // Created: the form's fields alone, sent once; the form cannot be closed until nerve answers.
+  await page.locator("#identifier").fill("webapp");
+  const { body, release } = await sentHeld(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
+  const form = {
+    name: "Web App",
+    identifier: "WEBAPP",
+    description: "The site",
+    network: 2,
+    logo_props: { in_use: "emoji", emoji: { value: "128640" } },
+  };
+  expect(body).toEqual({ ...form, project_lead_id: adminId });
+  // neither by Cancel, by the header's Close nor by Escape; nor sent again, its button busy
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Close", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Creating" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect((await release()).status()).toBe(201);
+  await expect(page.getByText("Project created successfully")).toBeVisible();
+  // The features step: Tab goes round it too, never out of the modal (the toast is a dialog, not modal).
+  await page.getByRole("button", { name: "Close", exact: true }).focus();
+  expect((await tabCycle(page, page.locator("[aria-modal=true]"))).join(", ")).toBe(
+    `Open project, ${"Toggle project feature, ".repeat(4)}Close`
+  );
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("link", { name: /Web App/ })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Main sidebar" }).getByText("Web App")).toBeVisible();
+
+  // the project's row: the form's fields, in the workspace's time zone
+  await expectProjectCreated(db, slug, { ...form, timezone: "Asia/Shanghai" }, memberEmail, adminEmail, [
+    { email: memberEmail, sort_order: 65535 },
+    { email: adminEmail, sort_order: 55535 },
+  ]);
+
+  // the two refusals, the browser's reports of them
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    [],
+    [`422 POST /api/v0/workspaces/${slug}/projects`, `409 POST /api/v0/workspaces/${slug}/projects`],
+    [],
+    [],
+  ]);
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: [
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
+      "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    ],
+  });
+});
+
+test("P1 (page): Tab goes round the creation dialog and nowhere else; the lead's list opens beside its button with its search focused; Escape closes it", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const member = await registerOnboarded(api, emailFor(testInfo, "member"));
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, member.access_token, { name: "Acme", slug });
+  await createProject(api, member.access_token, slug, { name: "Ops", identifier: "OPS" });
+  const page = await signedInPage(member);
+  const watch = await watchPage(page);
+
+  await page.goto(`/${slug}/projects`);
+  await expect(page.getByRole("link", { name: /Ops/ })).toBeVisible();
+  await page.getByRole("button", { name: "Add Project", exact: true }).click();
+  // Popper places the list where the button is as it opens: the modal's enter transition moves the button.
+  await transitionsEnded(page.getByRole("dialog"));
+  // Tab goes round the dialog's controls in the form's order, each once, and never out of it (to the page behind, or
+  // to the closed menu of Ops's card); the network's select is one stop, its button, which Space opens.
+  await page.locator("#name").focus();
+  expect((await tabCycle(page, page.getByRole("dialog"))).join(", ")).toBe(
+    "identifier, description, Public, Lead, Cancel, Create project, Close, Project icon, name"
+  );
+  await page.locator("#description").press("Tab");
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Public" })).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("option")).toHaveText([/^Private/, /^Public/]);
+  await page.keyboard.press("Escape");
+  // The button Tab reaches is the DropdownButton's, in the select's (each dropdown of dropdowns/ nests one), which is
+  // out of the Tab order: Tab stops once.
+  const lead = page.getByRole("button", { name: "Lead", exact: true }).last();
+  await expect(lead.locator("xpath=ancestor::button")).toHaveAttribute("tabindex", "-1");
+  await lead.click();
+  await expectListBesideButton(page, lead);
+  const search = page.getByRole("combobox", { name: "Search" });
+  await expect(search).toBeFocused();
+  // Escape closes the list and gives its button the focus (shown); so does it once a search opened the Combobox.
+  const escapes = await keydownsReachingDocument(page, "Escape");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(lead.locator("xpath=ancestor::button")).toHaveCSS("outline-style", "solid");
+  await lead.press("Enter");
+  await expectListBesideButton(page, lead);
+  await page.keyboard.type("nobody");
+  // An Escape that ends an input method's composition (Chinese, say) is the input method's: the list stays open.
+  await composingEscape(search);
+  await page.keyboard.type("!");
+  await expect(search).toHaveValue("nobody!");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  expect(await escapes(), "the Escapes that reached the document, where the modal closes on one").toBe(0);
+  // opened again, the list has no search
+  await lead.press("Enter");
+  await expect(search).toHaveValue("");
+  await expect(page.getByRole("option", { name: "You" })).toBeVisible();
+
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });

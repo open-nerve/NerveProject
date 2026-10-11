@@ -6,33 +6,46 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project, ProjectUpdate } from "@nerve/api-client";
+import { heldChange, lateSettlingsAnswering, pageSettled, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
+import { refusal } from "@/lib/fake-refusal";
+import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import type { ProjectToggleField } from "@/store/project/project.store";
+import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
+import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { ProjectSettingsMemberDefaults } from "./project-settings-member-defaults";
 
 // What the project's member defaults send (v0 design 7.7: a change whose body depends on what the store holds is
-// built in its turn): the page renders on the server with stand-ins for the member selects and the guests' switch
-// (fake-controls.ts), which keep the props they were given, and for the project store, whose changes nerve has not
-// answered yet.
+// built in its turn), what the page says of them (M3 design 7.1), and whom it lets change them (3.4): the page renders
+// on the server with stand-ins for the member selects and the guests' switch (fake-controls.ts), which keep the props
+// they were given, and for the project store, whose changes nerve has not answered yet unless the test says. Its
+// session is fake-tab.ts's; the caller's permissions are the store's own, over acme and web as nerve lists them to him
+// (fake-permissions.ts): web's admin, unless the test says.
 
-type Select = { onChange: (value: string) => void };
+type Select = { onChange: (value: string) => void; isDisabled?: boolean };
 const page = vi.hoisted(() => {
   const selects: Select[] = [];
-  // nerve has not answered: a change stays out
-  const updateProject = vi.fn((_projectId: string, _data: ProjectUpdate) => new Promise<never>(() => {}));
-  const toggleProject = vi.fn((_projectId: string, _field: ProjectToggleField) => new Promise<never>(() => {}));
+  // nerve has not answered: a change stays out, unless a test answers it
+  const updateProject = vi.fn((_projectId: string, _data: ProjectUpdate): Promise<unknown> => new Promise(() => {}));
+  const toggleProject = vi.fn(
+    (_projectId: string, _field: ProjectToggleField): Promise<unknown> => new Promise(() => {})
+  );
   return { selects, updateProject, toggleProject };
 });
-const web: Project = projectOf("WEB", "w-acme", { project_lead_id: "u-bob", default_assignee_id: "u-cat" });
+const caller = vi.hoisted(() => {
+  const held: { permissions?: IUserPermissionStore } = {};
+  return held;
+});
+const web: Project = projectOf("WEB", "id-acme", { project_lead_id: "u-bob", default_assignee_id: "u-cat" });
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({
-    currentProjectDetails: web,
+    getProjectById: () => web,
     updateProject: page.updateProject,
     toggleProject: page.toggleProject,
   }),
 }));
-vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => ({ allowPermissions: () => true }) }));
+vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => caller.permissions }));
 vi.mock("./member-select", () => ({
   MemberSelect: (props: Select) => {
     page.selects.push(props);
@@ -42,6 +55,10 @@ vi.mock("./member-select", () => ({
 vi.mock("@makeplane/propel/components/switch", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+
+/** The page's controls, as render gives them. */
+type Shown = ReturnType<typeof render>;
 
 /** Renders the page: gives its two member selects, the lead's then the default assignee's, and its switch. */
 function render() {
@@ -54,9 +71,12 @@ function render() {
   return { lead, assignee, guests };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  signedIn();
+  caller.permissions = (await callerInWeb(15, 20)).permissions;
   page.updateProject.mockClear();
   page.toggleProject.mockClear();
+  toasts.length = 0;
 });
 
 describe("the project's member defaults", () => {
@@ -76,5 +96,62 @@ describe("the project's member defaults", () => {
     guests.onCheckedChange(true);
     expect(page.toggleProject.mock.calls).toEqual([[web.id, "guest_view_all_features"]]);
     expect(page.updateProject).not.toHaveBeenCalled();
+  });
+
+  it("says a change is made, and nerve's reason for refusing one", async () => {
+    page.updateProject.mockResolvedValueOnce(web);
+    page.updateProject.mockRejectedValueOnce(
+      refusal(422, "validation_failed", [{ field: "project_lead_id", code: "not_allowed" }])
+    );
+    const { lead } = render();
+    lead.onChange("u-ann");
+    lead.onChange("u-gus");
+    await vi.waitFor(() => expect(toasts).toHaveLength(2));
+    expect(toasts).toEqual([
+      { type: "success", title: "success!", message: "project_settings.general.toast.success" },
+      { type: "error", title: "toast.error", message: "errors.validation_failed" },
+    ]);
+  });
+
+  // each of the page's three changes, sent before another tab moved this one and settled after; nerve answers with the
+  // project, as it would
+  describe.each([
+    { change: "the lead's change", send: ({ lead }: Shown) => lead.onChange("u-ann"), store: page.updateProject },
+    {
+      change: "the default assignee's change",
+      send: ({ assignee }: Shown) => assignee.onChange("u-ann"),
+      store: page.updateProject,
+    },
+    {
+      change: "the guests' view's change",
+      send: ({ guests }: Shown) => guests.onCheckedChange(true),
+      store: page.toggleProject,
+    },
+  ])("$change", ({ send, store }) => {
+    it.each(lateSettlingsAnswering(web))(
+      "says nothing when it $settles after another tab moved this one",
+      async ({ settle }) => {
+        const change = heldChange<Project>();
+        store.mockReturnValueOnce(change.sent);
+        send(render());
+        switchAccount();
+        settle(change);
+        await pageSettled();
+        expect(toasts).toEqual([]);
+      }
+    );
+  });
+
+  // whom nerve lets change the project (project.update: its admins, and its members who are the workspace's admins)
+  it.each<Caller & { changes: boolean }>([
+    { ...its.admin, changes: true },
+    { ...its.memberAdmin, changes: true },
+    { ...its.member, changes: false },
+    { ...its.guest, changes: false },
+    { ...its.outsider, changes: false },
+  ])("lets $who change them when nerve does", async ({ workspaceRole, projectRole, changes }) => {
+    caller.permissions = (await callerInWeb(workspaceRole, projectRole)).permissions;
+    const { lead, assignee, guests } = render();
+    expect([lead.isDisabled, assignee.isDisabled, guests.disabled]).toEqual([!changes, !changes, !changes]);
   });
 });

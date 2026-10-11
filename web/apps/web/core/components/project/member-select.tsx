@@ -29,10 +29,11 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
   const { projectId } = useParams();
   // store hooks
   const {
-    project: { projectMemberIds, getProjectMemberDetails },
+    project: { getFilteredProjectMemberIds, getProjectMemberDetails },
   } = useMember();
 
-  const options = projectMemberIds
+  // the route's project's members as its members page lists them, but its guests
+  const options = (projectId ? getFilteredProjectMemberIds(projectId) : null)
     ?.map((userId) => {
       const memberDetails = projectId ? getProjectMemberDetails(userId, projectId) : null;
 
@@ -90,7 +91,6 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
       }
       buttonClassName="!px-3 !py-2 bg-surface-1"
       options={
-        options &&
         options && [
           ...options,
           {

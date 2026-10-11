@@ -23,6 +23,8 @@ export type DropdownButtonProps = {
   showTooltip: boolean;
   variant: TButtonVariants;
   renderToolTipByDefault?: boolean;
+  /** The button's place in the Tab order, where the dropdown's caller gives one. */
+  tabIndex?: number;
 };
 
 type ButtonProps = {
@@ -33,6 +35,7 @@ type ButtonProps = {
   tooltipHeading: string;
   showTooltip: boolean;
   renderToolTipByDefault?: boolean;
+  tabIndex?: number;
 };
 
 export function DropdownButton(props: DropdownButtonProps) {
@@ -45,6 +48,7 @@ export function DropdownButton(props: DropdownButtonProps) {
     tooltipHeading,
     showTooltip,
     variant,
+    tabIndex,
   } = props;
   const ButtonToRender: React.FC<ButtonProps> = BORDER_BUTTON_VARIANTS.includes(variant)
     ? BorderButton
@@ -60,6 +64,7 @@ export function DropdownButton(props: DropdownButtonProps) {
       tooltipHeading={tooltipHeading}
       showTooltip={showTooltip}
       renderToolTipByDefault={renderToolTipByDefault}
+      tabIndex={tabIndex}
     >
       {children}
     </ButtonToRender>
@@ -67,7 +72,7 @@ export function DropdownButton(props: DropdownButtonProps) {
 }
 
 function BorderButton(props: ButtonProps) {
-  const { children, className, isActive, tooltipContent, tooltipHeading, showTooltip } = props;
+  const { children, className, isActive, tooltipContent, tooltipHeading, showTooltip, tabIndex } = props;
   const { isMobile } = usePlatformOS();
 
   return (
@@ -79,6 +84,7 @@ function BorderButton(props: ButtonProps) {
       <Button
         variant="ghost"
         size="sm"
+        tabIndex={tabIndex}
         className={cn(
           "flex h-full w-full items-center justify-start gap-1.5 border-[0.5px] border-strong",
           {
@@ -94,7 +100,7 @@ function BorderButton(props: ButtonProps) {
 }
 
 function BackgroundButton(props: ButtonProps) {
-  const { children, className, tooltipContent, tooltipHeading, showTooltip } = props;
+  const { children, className, tooltipContent, tooltipHeading, showTooltip, tabIndex } = props;
   const { isMobile } = usePlatformOS();
   return (
     <Tooltip
@@ -105,6 +111,7 @@ function BackgroundButton(props: ButtonProps) {
       <Button
         variant="ghost"
         size="sm"
+        tabIndex={tabIndex}
         className={cn(
           "flex h-full w-full items-center justify-between gap-1.5 bg-layer-3 hover:bg-layer-1-hover",
           className
@@ -117,7 +124,7 @@ function BackgroundButton(props: ButtonProps) {
 }
 
 function TransparentButton(props: ButtonProps) {
-  const { children, className, isActive, tooltipContent, tooltipHeading, showTooltip } = props;
+  const { children, className, isActive, tooltipContent, tooltipHeading, showTooltip, tabIndex } = props;
   const { isMobile } = usePlatformOS();
   return (
     <Tooltip
@@ -128,6 +135,7 @@ function TransparentButton(props: ButtonProps) {
       <Button
         variant="ghost"
         size="sm"
+        tabIndex={tabIndex}
         className={cn(
           "flex h-full w-full items-center justify-between gap-1.5",
           {

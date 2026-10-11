@@ -4,6 +4,8 @@ import { expect, type Page, type Request } from "@playwright/test";
 export interface PageWatch {
   /** Every API request, as "<method> <path>". */
   readonly apiRequests: string[];
+  /** Every request, by its URL, of any origin: nerve's, or another (requestsElsewhere). */
+  readonly requestUrls: string[];
   /** API requests that failed: "<status> <method> <path>", or the browser's error for one without an answer. */
   readonly apiFailures: string[];
   /** Requests to the API of an older frontend, outside /api/v0 (M2 design 3.1): M3's domains, for instance. */
@@ -30,6 +32,7 @@ function apiPath(request: Request): string | undefined {
 export async function watchPage(page: Page): Promise<PageWatch> {
   const watch: PageWatch = {
     apiRequests: [],
+    requestUrls: [],
     apiFailures: [],
     oldApiRequests: [],
     pageErrors: [],
@@ -38,6 +41,7 @@ export async function watchPage(page: Page): Promise<PageWatch> {
     cspViolations: [],
   };
   page.on("request", (request) => {
+    watch.requestUrls.push(request.url());
     const path = apiPath(request);
     if (path === undefined) {
       return;
@@ -84,6 +88,15 @@ export async function watchPage(page: Page): Promise<PageWatch> {
     });
   });
   return watch;
+}
+
+/**
+ * The requests watch saw page send to an origin other than the one it shows now: nerve serves the app and all it
+ * loads, the emoji picker's data among them (M3 design 7.7), and the page's CSP allows no other (M2 design 8.3).
+ */
+export function requestsElsewhere(page: Page, watch: PageWatch): string[] {
+  const { origin } = new URL(page.url());
+  return watch.requestUrls.filter((url) => new URL(url).origin !== origin);
 }
 
 /**

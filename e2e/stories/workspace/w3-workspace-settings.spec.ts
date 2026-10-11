@@ -1,5 +1,6 @@
 import {
   changeRole,
+  changeWorkspacePreferences,
   createLabel,
   createProject,
   createWorkspace,
@@ -21,7 +22,7 @@ import { accountId, anotherTabSignsIn, bearer, createPAT, emailFor, register } f
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, closedByEscape, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
-import { anotherBrowser, confirmDeletion, deleteFromGeneralPage } from "../../fixtures/workspace-pages";
+import { anotherBrowser, confirmDeletion, deleteFromGeneralPage, pickTimeZone } from "../../fixtures/workspace-pages";
 
 // W3, the workspace's settings (M3 design 2), with the session switch of 7.1.
 
@@ -68,12 +69,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
       headers: bearer(decliner),
     });
     expect(declined.response.status).toBe(204);
-    const settings = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
-      params: { path: { slug: target } },
-      body: { navigation_project_limit: 3 },
-      headers: bearer(member),
-    });
-    expect(settings.response.status).toBe(200);
+    await changeWorkspacePreferences(api, member, target, { navigation_project_limit: 3 });
     // The answer is the workspace's own new project as its creator sees it, first in both admins' sidebars.
     const project = await createProject(api, admin, target, {
       name: "Web",
@@ -273,9 +269,9 @@ test("W3 (page): the admin changes the name, size and time zone, which hold afte
   await page.locator("#name").fill("Acme Corp");
   await page.getByRole("button", { name: "Select organization size" }).click();
   await page.getByRole("option", { name: "11-50" }).click();
-  await page.getByRole("button", { name: "UTC" }).click();
-  await page.getByRole("combobox", { name: "Search" }).fill("Asia/Shanghai");
-  await page.getByRole("option", { name: "Beijing" }).click();
+  // The time zone by the keyboard alone (M3 design 7.7): the button then names the zone picked, and keeps the focus.
+  await pickTimeZone(page, "UTC", "Asia/Shanghai");
+  await expect(page.getByRole("button", { name: "Beijing" })).toBeFocused();
   // The page sends the fields its form edits, the size as nerve's OrganizationSize names it.
   const updated = await sentTo(page, "PATCH", `/api/v0/workspaces/${slug}`, () =>
     page.getByRole("button", { name: "Update workspace" }).click()

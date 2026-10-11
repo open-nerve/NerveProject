@@ -34,13 +34,19 @@ export function heldChange<T>(): HeldChange<T> {
 }
 
 /**
- * The ways a change settles, for it.each: answered, or refused; mostly a change sent before the tab switched, which
- * settles after it.
+ * The ways a change settles, for it.each: answered with answer, or refused; mostly a change sent before the tab
+ * switched, which settles after it. A page that gives back nerve's answer is tested with an answer it would give, so
+ * that giving one back after the switch fails the test.
  */
-export const lateSettlings = [
-  { settles: "is answered", settle: (change: HeldChange<undefined>) => change.answer(undefined) },
-  { settles: "is refused", settle: (change: HeldChange<undefined>) => change.refuse(new Error("refused")) },
-];
+export function lateSettlingsAnswering<T>(answer: T) {
+  return [
+    { settles: "is answered", settle: (change: HeldChange<T>) => change.answer(answer) },
+    { settles: "is refused", settle: (change: HeldChange<T>) => change.refuse(new Error("refused")) },
+  ];
+}
+
+/** The ways a change settles, answered with nothing: for a page that gives back nothing of nerve's answer. */
+export const lateSettlings = lateSettlingsAnswering(undefined);
 
 /**
  * Resolves once a page has followed a change that settled: what it does then runs in promises' steps, and a timer's

@@ -16,6 +16,7 @@ import { IconRoot } from "./icon/icon-root";
 
 export function EmojiPicker(props: TCustomEmojiPicker) {
   const {
+    ariaLabel,
     isOpen,
     handleToggle,
     buttonClassName,
@@ -101,7 +102,7 @@ export function EmojiPicker(props: TCustomEmojiPicker) {
 
   return (
     <Popover open={isOpen} onOpenChange={handleToggle}>
-      <Popover.Button className={cn("outline-none", buttonClassName)} disabled={disabled}>
+      <Popover.Button className={cn("outline-none", buttonClassName)} disabled={disabled} aria-label={ariaLabel}>
         {label}
       </Popover.Button>
       <Popover.Panel
@@ -119,6 +120,8 @@ export function EmojiPicker(props: TCustomEmojiPicker) {
             return;
           }
           if (e.key === "Escape") {
+            // an Escape that ends an IME composition in the search is the composition's: the picker stays open
+            if (e.nativeEvent.isComposing) return;
             handleToggle(false);
             return;
           }

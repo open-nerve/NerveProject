@@ -22,17 +22,24 @@ import type { Route } from "./+types/page";
 import { FeaturesModulesProjectSettingsHeader } from "./header";
 
 function FeaturesModulesSettingsPage({ params }: Route.ComponentProps) {
+  // router: the route's project, as the store gives it
   const { workspaceSlug, projectId } = params;
   // store hooks
   const { allowPermissions } = useUserPermissions();
-  const { currentProjectDetails } = useProject();
+  const { getProjectById } = useProject();
+  const project = getProjectById(projectId);
   // translation
   const { t } = useTranslation();
   // derived values
-  const pageTitle = currentProjectDetails?.name
-    ? `${currentProjectDetails?.name} settings - ${t("project_settings.features.modules.short_title")}`
+  const pageTitle = project?.name
+    ? `${project.name} settings - ${t("project_settings.features.modules.short_title")}`
     : undefined;
-  const canPerformProjectAdminActions = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
+  const canPerformProjectAdminActions = allowPermissions(
+    [EUserPermissions.ADMIN],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
+  );
 
   if (!canPerformProjectAdminActions) {
     return <NotAuthorizedView section="settings" isProjectView className="h-auto" />;
@@ -52,7 +59,7 @@ function FeaturesModulesSettingsPage({ params }: Route.ComponentProps) {
             description={t("project_settings.features.modules.toggle_description")}
             featureProperty="module_view"
             projectId={projectId}
-            value={!!currentProjectDetails?.module_view}
+            value={!!project?.module_view}
             workspaceSlug={workspaceSlug}
           />
         </div>

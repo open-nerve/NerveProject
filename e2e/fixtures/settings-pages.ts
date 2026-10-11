@@ -144,18 +144,62 @@ export async function enabledWithin(button: Locator): Promise<boolean> {
 }
 
 /**
- * Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed within a second.
- * A toast is a dialog too, not a modal one: it does not count. A dialog that closes still shows its content while it
- * fades out (ModalCore's leave transition, 200 ms), so a check made just after the key cannot tell it from one that
- * stays: the second outlasts the transition. Only the second running out means it stayed (timedOut); any other failure,
- * such as two modal dialogs, rejects.
+ * Resolves with whether locator, one element, shows within a second: what must not show while the test holds what its
+ * page waits for stays hidden the whole time, where a check made at once could pass before the page has rendered it.
+ * Only the second running out means it did not show (timedOut); any other failure, such as a locator that matches
+ * several elements, rejects.
  */
-export async function closedByEscape(page: Page): Promise<boolean> {
-  const closed = page
+export async function shownWithin(locator: Locator): Promise<boolean> {
+  return locator.waitFor({ state: "visible", timeout: 1_000 }).then(() => true, timedOut);
+}
+
+/** Resolves with whether locator, one element, hides within a second, as a panel that closes does: shownWithin's twin. */
+export async function hiddenWithin(locator: Locator): Promise<boolean> {
+  return locator.waitFor({ state: "hidden", timeout: 1_000 }).then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
+ * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
+ * still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check made at once cannot
+ * tell it from one that stays: the second outlasts the transition. Only the second running out means it stayed
+ * (timedOut); any other failure, such as two modal dialogs, rejects.
+ */
+export async function closedWithin(page: Page): Promise<boolean> {
+  return page
     .locator('[role="dialog"][aria-modal="true"]')
     .waitFor({ state: "detached", timeout: 1_000 })
     .then(() => true, timedOut);
+}
+
+/** Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed (closedWithin). */
+export async function closedByEscape(page: Page): Promise<boolean> {
+  const closed = closedWithin(page);
   await page.keyboard.press("Escape");
+  return closed;
+}
+
+/**
+ * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
+ * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
+ * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
+ */
+export async function composingEscape(field: Locator): Promise<void> {
+  await field.evaluate((element) => {
+    const init = { bubbles: true, cancelable: true, composed: true };
+    element.dispatchEvent(new CompositionEvent("compositionstart", init));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", isComposing: true }));
+    element.dispatchEvent(new CompositionEvent("compositionend", init));
+  });
+}
+
+/**
+ * Gives field, in the one modal dialog its page shows, an Escape that ends a composition (composingEscape), and
+ * resolves with whether that dialog closed (closedWithin).
+ */
+export async function closedByComposingEscape(field: Locator): Promise<boolean> {
+  const closed = closedWithin(field.page());
+  await composingEscape(field);
   return closed;
 }
 
@@ -273,6 +317,47 @@ export async function expectListBesideButton(page: Page, button: Locator): Promi
   const left = Math.abs(at.x - beside.x);
   const right = Math.abs(at.x + at.width - (beside.x + beside.width));
   expect(Math.min(left, right), "between the left edges or the right edges").toBeLessThan(2);
+}
+
+/**
+ * Waits for the transitions of what locator finds, and of what it holds, to end (a modal's enter transition): those
+ * that end, not an endless animation (a spinner's), which would never.
+ */
+export async function transitionsEnded(locator: Locator): Promise<void> {
+  await locator.evaluate((element) =>
+    Promise.all(
+      element
+        .getAnimations({ subtree: true })
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+        .map((animation) => animation.finished)
+    )
+  );
+}
+
+/**
+ * Counts the keydowns of key that reach page's document from now on, where a page-wide shortcut listens (a modal's
+ * Escape, for one): the function returned gives the count so far.
+ */
+export async function keydownsReachingDocument(page: Page, key: string): Promise<() => Promise<number>> {
+  const reached = await page.evaluateHandle((pressed) => {
+    const count = { value: 0 };
+    document.addEventListener("keydown", (event) => {
+      if (event.key === pressed) count.value += 1;
+    });
+    return count;
+  }, key);
+  return async () => (await reached.jsonValue()).value;
+}
+
+/**
+ * Moves page to path as a link of the app would, without a load: React Router follows the history's popstate. A
+ * story's stand-in for a link the app does not have yet.
+ */
+export async function moveWithinApp(page: Page, path: string): Promise<void> {
+  await page.evaluate((to) => {
+    window.history.pushState(null, "", to);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, path);
 }
 
 /**

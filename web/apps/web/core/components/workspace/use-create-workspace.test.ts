@@ -4,7 +4,8 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { Workspace } from "@nerve/api-client";
+import { heldChange, lateSettlings, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -109,10 +110,10 @@ describe("useCreateWorkspace", () => {
     ]);
   });
 
-  it.each(lateSettlings)(
+  it.each(lateSettlingsAnswering(acme))(
     "neither speaks nor gives the workspace when the creation $settles after another tab moved this one to another account",
     async ({ settle }) => {
-      const created = heldChange<undefined>();
+      const created = heldChange<Workspace>();
       page.createWorkspace.mockReturnValueOnce(created.sent);
       const creating = create();
       await vi.waitFor(() => expect(page.createWorkspace).toHaveBeenCalledTimes(1));

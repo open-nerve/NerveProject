@@ -6,19 +6,16 @@
 
 import { observer } from "mobx-react";
 // nerve imports
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Table } from "@nerve/ui";
 // hooks
-import { useMember } from "@/hooks/store/use-member";
-import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
 // components
 import { useProjectColumns } from "@/components/projects/settings/useProjectColumns";
 // store
 import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
 // local imports
 import { ConfirmProjectMemberRemove } from "./confirm-project-member-remove";
+import { useProjectMembershipChanges } from "./settings/use-project-membership-changes";
 
 type Props = {
   memberDetails: (IProjectMemberDetails | null)[];
@@ -28,46 +25,19 @@ type Props = {
 
 export const ProjectMemberListItem = observer(function ProjectMemberListItem(props: Props) {
   const { memberDetails, projectId, workspaceSlug } = props;
-  // router
-  const navigate = useNavigate();
   // store hooks
-  const { getProjectById, leaveProject } = useProject();
   const { data: currentUser } = useUser();
-  const {
-    project: { removeMemberFromProject },
-  } = useMember();
+  const { remove, leave } = useProjectMembershipChanges(workspaceSlug, projectId);
   // helper hooks
   const { columns, removeMemberModal, setRemoveMemberModal } = useProjectColumns({
     projectId,
     workspaceSlug,
   });
 
-  const handleRemove = async (memberId: string) => {
-    if (!workspaceSlug || !projectId || !memberId) return;
-
-    if (memberId === currentUser?.id) {
-      const project = getProjectById(projectId);
-      if (!project) return;
-      await leaveProject(project)
-        // oxlint-disable-next-line promise/always-return
-        .then(async () => {
-          navigate(`/${workspaceSlug}/projects`);
-        })
-        .catch((err) => {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: "You can’t leave this project yet.",
-            message: err?.error || "Something went wrong. Please try again.",
-          });
-        });
-    } else
-      await removeMemberFromProject(projectId, memberId).catch((err) =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "You can't remove the member from this project yet.",
-          message: err?.error || "Something went wrong. Please try again.",
-        })
-      );
+  // the caller's own membership he leaves; another's he removes; the dialog that asked closes once nerve has done it
+  const handleRemove = (memberId: string) => {
+    const closeDialog = () => setRemoveMemberModal(null);
+    return memberId === currentUser?.id ? leave(closeDialog) : remove(memberId, closeDialog);
   };
 
   if (!memberDetails) return null;

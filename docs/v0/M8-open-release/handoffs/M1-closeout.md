@@ -67,3 +67,11 @@ M1 收尾的浏览器核对看到 zh-CN 界面上有英文（[收尾 spec](../..
 - **关闭条件**：本 M 发布之前 zh-CN 界面上没有未翻译的界面文字，核对的方法（脚本或浏览器核对）写进本 M 的 review。
 
 来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节，2.9 的 Important 3、2.10 的 I2。
+
+## 处理结果（M3/P10）
+
+- **发往 jsDelivr 的请求：表情选择器的数据**（完成）：表情选择器不再请求 jsDelivr，数据是 Nerve 自己提供的固定版本。`emojibase-data` 15.3.2 是 web 应用的开发依赖（版本由 `pnpm-workspace.yaml` 的 catalog 固定）；构建时一个 Vite 插件（`web/apps/web/emojibase.ts`）把 `en/data.json`、`en/messages.json` 写到 `/assets/emojibase/15.3.2/en/`，Nerve 和其余的资源一起嵌入、提供它们；`EmojiPicker.Root` 传 `emojibaseUrl`（`EMOJIBASE_URL`，`web/packages/propel/src/emoji-icon-picker/emoji/emoji.tsx`）。一个 vitest（`web/apps/web/emojibase.test.ts`）核对选择器的地址与构建写出的地址和版本一致；P1、P3 的页面版本打开表情选择器，没有发往别处的请求（`requestsElsewhere`），没有 CSP 违规（[M3/P10 spec](../../M3-workspace-project/specs/P10-web-project-pages.md) 2.1）。
+
+关闭条件中"jsDelivr 的两类请求改为自托管的固定版本"一项至此做完一半：剩下标注块的默认图标（`web/packages/editor/src/extensions/callout/utils.ts:19`）。本节的其余各项不变，状态保持 `open`。
+
+来源：[M3/P10 spec](../../M3-workspace-project/specs/P10-web-project-pages.md) 第 7 节。

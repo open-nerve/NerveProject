@@ -5,21 +5,8 @@
  */
 
 // FIXME: fix this!!!
+import type { Modifier, Placement } from "@popperjs/core";
 import type { ICustomSearchSelectOption } from "@nerve/types";
-
-type Placement =
-  | "top"
-  | "top-start"
-  | "top-end"
-  | "bottom"
-  | "bottom-start"
-  | "bottom-end"
-  | "left"
-  | "left-start"
-  | "left-end"
-  | "right"
-  | "right-start"
-  | "right-end";
 
 interface IDropdownProps {
   customButtonClassName?: string;
@@ -69,6 +56,10 @@ interface CustomSearchSelectProps {
   noResultsMessage?: string;
   loadingMessage?: string;
   options?: ICustomSearchSelectOption[];
+  /** Whether the search takes the focus as the list opens: it does unless the caller says not. */
+  focusSearchOnOpen?: boolean;
+  /** Popper's modifiers for the list, beside its placement. */
+  popperModifiers?: Partial<Modifier<string, object>>[];
 }
 
 interface SingleValueProps {

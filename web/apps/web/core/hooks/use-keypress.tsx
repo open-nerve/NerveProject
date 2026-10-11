@@ -17,6 +17,8 @@ const useKeypress = (key: string, callback: (event: KeyboardEvent) => void) => {
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
+      // a key pressed while an IME composes (an Escape that ends the composition) is the composition's, not the page's
+      if (event.isComposing) return;
       if (event.key === key) {
         callbackRef.current(event);
       }

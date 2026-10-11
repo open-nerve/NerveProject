@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { expect } from "@playwright/test";
 
+import { shownNameOf } from "../auth";
 import type { Database } from "../db";
 
 // Database assertions of the identity stories. The page version and the API
@@ -108,7 +109,7 @@ async function expectNewAccount(db: Database, typed: string): Promise<string | u
   expect(users).toHaveLength(1);
   const [user] = users;
   expect(user?.password).toMatch(/^\$argon2id\$/);
-  expect(user?.display_name).toBe(email.slice(0, email.indexOf("@")));
+  expect(user?.display_name).toBe(shownNameOf(email));
   expect(user?.is_active).toBe(true);
 
   const profiles = await db.query(

@@ -11,7 +11,6 @@ import { RestoreOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { PROJECT_AUTOMATION_MONTHS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { ProjectUpdate } from "@nerve/api-client";
 import { Switch } from "@makeplane/propel/components/switch";
 import { CustomSelect, Loader } from "@nerve/ui";
@@ -21,54 +20,50 @@ import { SettingsControlItem } from "@/components/settings/control-item";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 const initialValues: Pick<ProjectUpdate, "archive_in"> = { archive_in: 1 };
 
 /**
  * The auto-archiving of the current project's closed work items: its switch turns it on, after a month, or off, from
  * the project as nerve last answered it, in the change's turn (ProjectStore.toggleAutoArchive; v0 design 7.7), not
- * from what the switch shows; its select and the custom range send the months picked. A refusal shows a toast.
+ * from what the switch shows; its select and the custom range send the months picked. The page follows each only in
+ * the session it was sent in (M3 design 7.1), a refusal with nerve's reason in a toast.
  */
 export const AutoArchiveAutomation = observer(function AutoArchiveAutomation() {
   // router
-  const { workspaceSlug } = useParams();
+  const { workspaceSlug, projectId } = useParams();
   // states
   const [monthModal, setmonthModal] = useState(false);
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
 
-  const { currentProjectDetails, updateProject, toggleAutoArchive } = useProject();
+  const { getProjectById, updateProject, toggleAutoArchive } = useProject();
+  const project = projectId ? getProjectById(projectId) : undefined;
 
-  const isAdmin = allowPermissions(
-    [EUserPermissions.ADMIN],
-    EUserPermissionsLevel.PROJECT,
-    workspaceSlug,
-    currentProjectDetails?.id
-  );
+  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, project?.id);
 
-  /** Sends a change of the current project's auto-archiving; a refusal shows a toast. */
-  const send = async (change: (projectId: string) => Promise<unknown>) => {
-    if (!currentProjectDetails) return;
+  /**
+   * Sends a change of the current project's auto-archiving, and follows it: done, once nerve has made it; a refusal,
+   * with nerve's reason in a toast. Settles once the page has followed it.
+   */
+  const send = async (change: (id: string) => Promise<unknown>, done?: () => void) => {
+    if (!project) return;
 
-    try {
-      await change(currentProjectDetails.id);
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Something went wrong. Please try again.",
-      });
-    }
+    await followInSession(() => change(project.id), { done, failed: toastRefusal });
   };
-  const handleChange = (formData: Pick<ProjectUpdate, "archive_in">) =>
-    send((projectId) => updateProject(projectId, formData));
-  const handleToggle = () => send((projectId) => toggleAutoArchive(projectId));
+  const handleChange = (formData: Pick<ProjectUpdate, "archive_in">, done?: () => void) =>
+    send((id) => updateProject(id, formData), done);
+  const handleToggle = () => send((id) => toggleAutoArchive(id));
 
   const autoArchiveStatus = useMemo(() => {
-    if (currentProjectDetails?.archive_in === undefined) return false;
-    return currentProjectDetails.archive_in !== 0;
-  }, [currentProjectDetails]);
+    if (project?.archive_in === undefined) return false;
+    return project.archive_in !== 0;
+  }, [project]);
 
   return (
     <>
@@ -97,7 +92,7 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation() {
             }
           />
         </div>
-        {currentProjectDetails ? (
+        {project ? (
           autoArchiveStatus && (
             <div className="ml-13">
               <div className="flex w-full items-center justify-between gap-2 rounded-sm border border-subtle bg-surface-2 px-5 py-4">
@@ -106,10 +101,8 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation() {
                 </div>
                 <div className="w-1/2">
                   <CustomSelect
-                    value={currentProjectDetails?.archive_in}
-                    label={`${currentProjectDetails?.archive_in} ${
-                      currentProjectDetails?.archive_in === 1 ? "month" : "months"
-                    }`}
+                    value={project?.archive_in}
+                    label={`${project?.archive_in} ${project?.archive_in === 1 ? "month" : "months"}`}
                     onChange={(val: number) => void handleChange({ archive_in: val })}
                     input
                     disabled={!isAdmin}

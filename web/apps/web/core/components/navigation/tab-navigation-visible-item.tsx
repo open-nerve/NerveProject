@@ -5,7 +5,7 @@
  */
 
 import { Link } from "react-router";
-import type { ProjectNavigation, ProjectTab } from "@nerve/api-client";
+import type { ProjectNavigation } from "@nerve/api-client";
 import { DefaultTabOutline, UnpinOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -13,13 +13,14 @@ import { ContextMenu } from "@nerve/propel/context-menu";
 import { TabNavigationItem } from "@nerve/propel/tab-navigation";
 // local imports
 import type { TNavigationItem } from "./tab-navigation-root";
+import type { TTabChanges } from "./use-tab-preferences";
 
 export type TTabNavigationVisibleItemProps = {
   item: TNavigationItem;
   isActive: boolean;
   navigation: ProjectNavigation;
-  onToggleDefault: (tabKey: ProjectTab) => void;
-  onHide: (tabKey: ProjectTab) => void;
+  /** The tab bar's changes; none until the caller's tab bar is fetched, and the tab then has no menu. */
+  changes: TTabChanges | undefined;
   itemRef?: (el: HTMLDivElement | null) => void;
 };
 
@@ -31,12 +32,18 @@ export function TabNavigationVisibleItem({
   item,
   isActive,
   navigation,
-  onToggleDefault,
-  onHide,
+  changes,
   itemRef,
 }: TTabNavigationVisibleItemProps) {
   const { t } = useTranslation();
   const isDefault = item.key === navigation.default_tab;
+  const link = (
+    <Link key={`${item.key}-${isActive ? "active" : "inactive"}`} to={item.href}>
+      <TabNavigationItem isActive={isActive}>
+        <span>{t(item.i18n_key)}</span>
+      </TabNavigationItem>
+    </Link>
+  );
 
   return (
     <div className="relative flex h-full items-center transition-all duration-300">
@@ -44,39 +51,37 @@ export function TabNavigationVisibleItem({
         <span className="absolute bottom-0 left-1/2 h-0.5 w-[80%] -translate-x-1/2 rounded-t-md bg-(--text-color-icon-primary) transition-all duration-300" />
       )}
       <div key={`${item.key}-measure`} ref={itemRef}>
-        <ContextMenu>
-          <ContextMenu.Trigger>
-            <Link key={`${item.key}-${isActive ? "active" : "inactive"}`} to={item.href}>
-              <TabNavigationItem isActive={isActive}>
-                <span>{t(item.i18n_key)}</span>
-              </TabNavigationItem>
-            </Link>
-          </ContextMenu.Trigger>
-          <ContextMenu.Portal>
-            <ContextMenu.Content positionerClassName="z-30">
-              <ContextMenu.Item
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleDefault(item.key);
-                }}
-                className="flex cursor-pointer items-center gap-2 text-secondary transition-colors"
-              >
-                <DefaultTabOutline className="size-3 shrink-0" />
-                <span className="text-11">{isDefault ? "Clear default" : "Set as default"}</span>
-              </ContextMenu.Item>
-              <ContextMenu.Item
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onHide(item.key);
-                }}
-                className="flex cursor-pointer items-center gap-2 text-secondary transition-colors"
-              >
-                <UnpinOutline className="size-3 shrink-0" />
-                <span className="text-11">Hide in more menu</span>
-              </ContextMenu.Item>
-            </ContextMenu.Content>
-          </ContextMenu.Portal>
-        </ContextMenu>
+        {changes ? (
+          <ContextMenu>
+            <ContextMenu.Trigger>{link}</ContextMenu.Trigger>
+            <ContextMenu.Portal>
+              <ContextMenu.Content positionerClassName="z-30">
+                <ContextMenu.Item
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    changes.toggleDefault(item.key);
+                  }}
+                  className="flex cursor-pointer items-center gap-2 text-secondary transition-colors"
+                >
+                  <DefaultTabOutline className="size-3 shrink-0" />
+                  <span className="text-11">{isDefault ? "Clear default" : "Set as default"}</span>
+                </ContextMenu.Item>
+                <ContextMenu.Item
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    changes.hide(item.key);
+                  }}
+                  className="flex cursor-pointer items-center gap-2 text-secondary transition-colors"
+                >
+                  <UnpinOutline className="size-3 shrink-0" />
+                  <span className="text-11">Hide in more menu</span>
+                </ContextMenu.Item>
+              </ContextMenu.Content>
+            </ContextMenu.Portal>
+          </ContextMenu>
+        ) : (
+          link
+        )}
       </div>
     </div>
   );

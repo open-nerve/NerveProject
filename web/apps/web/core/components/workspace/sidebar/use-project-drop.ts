@@ -4,21 +4,21 @@
  */
 
 import { useParams } from "react-router";
-// nerve imports
-import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 /**
  * What a drop of a project in the caller's sidebar does, in its list and in the extended one: the project dropped
  * moves before the one it was dropped on, or after his last at the end of the list (ProjectStore.updateProjectSortOrder
- * reckons the place in the change's turn); a drop on itself or on nothing moves nothing; a move that fails shows a
- * toast.
+ * reckons the place in the change's turn); a drop on itself or on nothing moves nothing. A move that fails says why,
+ * followed in the session that sent it (M3 design 7.1).
  */
 export function useProjectDrop() {
   const { workspaceSlug } = useParams();
-  const { t } = useTranslation();
+  const toastRefusal = useRefusalToast();
   const { getProjectById, updateProjectSortOrder } = useProject();
 
   return (sourceId: string | undefined, destinationId: string | undefined, shouldDropAtEnd: boolean) => {
@@ -27,12 +27,8 @@ export function useProjectDrop() {
 
     const source = getProjectById(sourceId);
     if (source)
-      updateProjectSortOrder(source, destinationId, shouldDropAtEnd).catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("error"),
-          message: t("something_went_wrong"),
-        });
+      void followInSession(() => updateProjectSortOrder(source, destinationId, shouldDropAtEnd), {
+        failed: toastRefusal,
       });
   };
 }

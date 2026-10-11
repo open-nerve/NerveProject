@@ -12,8 +12,13 @@ import type { TProjectDisplayFilters, TProjectFilters, TProjectOrderByOptions } 
 import { getDate } from "./datetime";
 import { satisfiesDateFilter } from "./filter";
 
+/**
+ * The identifier text typed makes (M3 design 3.19, 7.6): in upper case, of the characters an identifier may have
+ * (A-Z, 0-9 and ÇŞĞİÖÜ), the others dropped as they are typed. A check of it never sends "." or "..", which a URL's
+ * parser would take for path segments (P4a review).
+ */
 export const projectIdentifierSanitizer = (identifier: string): string =>
-  identifier.replace(/[^ÇŞĞIİÖÜA-Za-z0-9]/g, "");
+  identifier.toUpperCase().replace(/[^ÇŞĞİÖÜA-Z0-9]/g, "");
 
 /**
  * @description filters projects based on the filter

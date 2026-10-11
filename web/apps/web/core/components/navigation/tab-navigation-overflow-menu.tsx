@@ -6,7 +6,7 @@
 
 import React from "react";
 import { Link } from "react-router";
-import type { ProjectNavigation, ProjectTab } from "@nerve/api-client";
+import type { ProjectNavigation } from "@nerve/api-client";
 import { DefaultTabOutline, MoreHorizontalOutline, PinOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -15,21 +15,22 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
 // local imports
 import type { TNavigationItem } from "./tab-navigation-root";
+import type { TTabChanges } from "./use-tab-preferences";
 
 type Props = {
   overflowItems: TNavigationItem[];
   isActive: (item: TNavigationItem) => boolean;
   navigation: ProjectNavigation;
-  onToggleDefault: (tabKey: ProjectTab) => void;
-  onShow: (tabKey: ProjectTab) => void;
+  /** The tab bar's changes; none until the caller's tab bar is fetched, and the menu then offers none. */
+  changes: TTabChanges | undefined;
 };
 
 /**
- * Overflow menu for tab navigation items
- * Displays items that don't fit in the visible area, with action icons
- * Shows "Eye" icon for user-hidden items, "Set as default" icon for all items
+ * Overflow menu for tab navigation items: those that don't fit in the visible area, and those the caller hid. Once his
+ * tab bar is fetched (changes), it offers "Show" for each item he hid and "Set as default" (or "Clear default") for
+ * every item; until then, no action.
  */
-export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation, onToggleDefault, onShow }: Props) {
+export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation, changes }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -57,13 +58,13 @@ export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation,
               </Link>
               <div className="flex items-center">
                 {/* Show Eye icon ONLY for user-hidden items */}
-                {isHidden && (
+                {changes && isHidden && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
-                      onShow(item.key);
+                      changes.show(item.key);
                     }}
                     className="invisible rounded-sm p-1 text-tertiary transition-colors group-hover/menu-item:visible hover:text-primary"
                     title="Show"
@@ -71,24 +72,26 @@ export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation,
                     <PinOutline className="size-3" />
                   </button>
                 )}
-                <Tooltip label={isDefault ? "Clear default" : "Set as default"}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      onToggleDefault(item.key);
-                    }}
-                    className={cn(
-                      "invisible rounded-sm p-1 text-tertiary transition-colors group-hover/menu-item:visible hover:text-primary",
-                      {
-                        visible: isDefault,
-                      }
-                    )}
-                    title={isDefault ? "Clear default" : "Set as default"}
-                  >
-                    <DefaultTabOutline className="size-3" />
-                  </button>
-                </Tooltip>
+                {changes && (
+                  <Tooltip label={isDefault ? "Clear default" : "Set as default"}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        changes.toggleDefault(item.key);
+                      }}
+                      className={cn(
+                        "invisible rounded-sm p-1 text-tertiary transition-colors group-hover/menu-item:visible hover:text-primary",
+                        {
+                          visible: isDefault,
+                        }
+                      )}
+                      title={isDefault ? "Clear default" : "Set as default"}
+                    >
+                      <DefaultTabOutline className="size-3" />
+                    </button>
+                  </Tooltip>
+                )}
               </div>
             </div>
           </Menu.MenuItem>

@@ -6,13 +6,19 @@
 
 import { useState } from "react";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { renderFormattedDate } from "@nerve/utils";
 // components
 import { MemberHeaderColumn } from "@/components/project/member-header-column";
+import {
+  canRemove,
+  roleChoices,
+  type MembershipCaller,
+  type ShownMembership,
+} from "@/components/project/project-roles";
 import { AccountTypeColumn, NameColumn } from "@/components/project/settings/member-columns";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useProject } from "@/hooks/store/use-project";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
 import type { IMemberFilters } from "@/store/member/utils";
@@ -29,16 +35,24 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
 
   // store hooks
   const { data: currentUser } = useUser();
-  const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
+  const { getProjectById } = useProject();
   const {
     project: {
       filters: { getFilters, updateFilters },
     },
+    workspace: { getWorkspaceMemberDetails },
   } = useMember();
-  // derived values
-  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
-  const currentProjectRole =
-    getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) ?? EUserPermissions.GUEST;
+  // derived values: the caller and each membership, as nerve decides a change of a membership (M3 design 3.5)
+  const caller: MembershipCaller = {
+    workspaceRole: getWorkspaceRoleByWorkspaceSlug(workspaceSlug),
+    projectRole: getProjectById(projectId)?.member_role,
+  };
+  const shown = (rowData: IProjectMemberDetails): ShownMembership => ({
+    own: rowData.member.id === currentUser?.id,
+    role: rowData.role,
+    workspaceRole: getWorkspaceMemberDetails(rowData.member.id)?.role,
+  });
 
   const displayFilters = getFilters(projectId);
 
@@ -63,8 +77,8 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
         <NameColumn
           rowData={rowData}
           workspaceSlug={workspaceSlug}
-          isAdmin={isAdmin}
-          currentUser={currentUser}
+          own={shown(rowData).own}
+          removable={canRemove(caller, shown(rowData))}
           setRemoveMemberModal={setRemoveMemberModal}
         />
       ),
@@ -106,7 +120,7 @@ export const useProjectColumns = (props: TUseProjectColumnsProps) => {
       tdRender: (rowData: IProjectMemberDetails) => (
         <AccountTypeColumn
           rowData={rowData}
-          currentProjectRole={currentProjectRole}
+          choices={roleChoices(caller, shown(rowData))}
           projectId={projectId}
           workspaceSlug={workspaceSlug}
         />

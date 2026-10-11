@@ -42,6 +42,7 @@ export interface IProjectMemberStore {
   getProjectMemberDetails: (userId: string, projectId: string) => IProjectMemberDetails | null;
   getProjectMemberIds: (projectId: string, includeGuestUsers: boolean) => string[] | null;
   getFilteredProjectMemberDetails: (userId: string, projectId: string) => IProjectMemberDetails | null;
+  getFilteredProjectMemberIds: (projectId: string) => string[] | null;
   // fetch actions
   fetchProjectMembers: (projectId: string) => Promise<Memberships | undefined>;
   // changes
@@ -101,22 +102,10 @@ export class ProjectMemberStore implements IProjectMemberStore {
     return this.projects.getProjectById(projectId) ? this.members.get(projectId) : undefined;
   }
 
-  /**
-   * @description the members of the address's project, by the members page's filters and order; null until fetched
-   * or while it has none
-   */
+  /** @description as getFilteredProjectMemberIds, for the address's project (the router store's) */
   get projectMemberIds() {
     const projectId = this.routerStore.projectId;
-    if (!projectId) return null;
-    const members = Object.values(this.membershipsOf(projectId) ?? {});
-    if (members.length === 0) return null;
-    const sortedMembers = sortProjectMembers(
-      members,
-      this.memberRoot.memberMap,
-      (member) => member.member_id,
-      this.filters.filtersMap[projectId]
-    );
-    return sortedMembers.map((member) => member.member_id);
+    return projectId ? this.getFilteredProjectMemberIds(projectId) : null;
   }
 
   /** @description a member's membership of the project with his profile; null without either */
@@ -149,6 +138,22 @@ export class ProjectMemberStore implements IProjectMemberStore {
       projectId
     );
     return shown.includes(userId) ? this.getProjectMemberDetails(userId, projectId) : null;
+  });
+
+  /**
+   * @description the project's members, by the members page's filters and order; null until fetched or while it has
+   * none
+   */
+  getFilteredProjectMemberIds = computedFn((projectId: string): string[] | null => {
+    const members = Object.values(this.membershipsOf(projectId) ?? {});
+    if (members.length === 0) return null;
+    const sortedMembers = sortProjectMembers(
+      members,
+      this.memberRoot.memberMap,
+      (member) => member.member_id,
+      this.filters.filtersMap[projectId]
+    );
+    return sortedMembers.map((member) => member.member_id);
   });
 
   /**

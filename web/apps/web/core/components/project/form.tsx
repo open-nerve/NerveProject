@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { InfoOutline, LockOutline } from "@makeplane/propel/icons";
 import { Field } from "@makeplane/propel/components/field";
@@ -15,34 +15,36 @@ import { useTranslation } from "@nerve/i18n";
 // nerve imports
 import { Button } from "@nerve/propel/button";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { Project, ProjectUpdate } from "@nerve/api-client";
+import type { Project } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
-import { renderFormattedDate } from "@nerve/utils";
+import { projectIdentifierSanitizer, renderFormattedDate } from "@nerve/utils";
 import { CoverImage } from "@/components/common/cover-image";
 import { TimezoneSelect } from "@/components/global";
 // hooks
-import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
+import { logoPropsOf } from "./logo-props";
 import { ProjectNetworkIcon } from "./project-network-icon";
+import { projectDetailsOf, useUpdateProjectDetails, type ProjectDetails } from "./use-update-project-details";
 
 export interface IProjectDetailsForm {
   project: Project;
   workspaceSlug: string;
-  projectId: string;
   isAdmin: boolean;
 }
 
+/**
+ * A project's general settings (M3 design 7.6), as nerve last answered them when the page opened them: its page mounts
+ * one per project. Its admin changes them; anyone else sees them, in a form he cannot change.
+ */
 export function ProjectDetailsForm(props: IProjectDetailsForm) {
-  const { project, workspaceSlug, projectId, isAdmin } = props;
+  const { project, workspaceSlug, isAdmin } = props;
   const { t } = useTranslation();
   // states
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   // store hooks
-  const { updateProject, checkProjectIdentifier } = useProject();
+  const updateDetails = useUpdateProjectDetails();
   const { isMobile } = usePlatformOS();
 
   // form info
@@ -50,117 +52,17 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     handleSubmit,
     watch,
     control,
-    setValue,
     setError,
-    reset,
-    formState: { errors },
-    getValues,
-  } = useForm<Project>({ defaultValues: project });
+    formState: { errors, isSubmitting },
+  } = useForm<ProjectDetails>({ defaultValues: projectDetailsOf(project) });
   // derived values
-  const currentNetwork = NETWORK_CHOICES.find((n) => n.key === project?.network);
+  const currentNetwork = NETWORK_CHOICES.find((n) => n.key === project.network);
 
-  useEffect(() => {
-    if (project && projectId !== getValues("id")) {
-      reset(project);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project, projectId]);
-
-  // handlers
-  const handleIdentifierChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { value } = event.target;
-    const alphanumericValue = value.replace(/[^a-zA-Z0-9]/g, "");
-    const formattedValue = alphanumericValue.toUpperCase();
-    setValue("identifier", formattedValue);
-  };
-
-  const handleUpdateChange = async (payload: ProjectUpdate) => {
-    if (!workspaceSlug || !project) return;
-    return updateProject(project.id, payload)
-      .then(() =>
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("toast.success"),
-          message: t("project_settings.general.toast.success"),
-        })
-      )
-      .catch((err) => {
-        try {
-          // Handle the new error format where codes are nested in arrays under field names
-          const errorData = err ?? {};
-
-          const nameError = errorData.name?.includes("PROJECT_NAME_ALREADY_EXIST");
-          const identifierError = errorData?.identifier?.includes("PROJECT_IDENTIFIER_ALREADY_EXIST");
-          const nameSpecialCharError = errorData?.name?.includes("PROJECT_NAME_CANNOT_CONTAIN_SPECIAL_CHARACTERS");
-
-          if (nameError || identifierError || nameSpecialCharError) {
-            if (nameError) {
-              setToast({
-                type: TOAST_TYPE.ERROR,
-                title: t("toast.error"),
-                message: t("project_name_already_taken"),
-              });
-            }
-
-            if (identifierError) {
-              setToast({
-                type: TOAST_TYPE.ERROR,
-                title: t("toast.error"),
-                message: t("project_identifier_already_taken"),
-              });
-            }
-
-            if (nameSpecialCharError) {
-              setToast({
-                type: TOAST_TYPE.ERROR,
-                title: t("toast.error"),
-                message: t("project_name_cannot_contain_special_characters"),
-              });
-            }
-          } else {
-            setToast({
-              type: TOAST_TYPE.ERROR,
-              title: t("toast.error"),
-              message: t("something_went_wrong"),
-            });
-          }
-        } catch (error) {
-          // Fallback error handling if the error processing fails
-          console.error("Error processing API error:", error);
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: t("toast.error"),
-            message: t("something_went_wrong"),
-          });
-        }
-      });
-  };
-
-  const onSubmit = async (formData: Project) => {
-    if (!workspaceSlug) return;
-    setIsLoading(true);
-    const payload: ProjectUpdate = {
-      name: formData.name,
-      network: formData.network,
-      identifier: formData.identifier,
-      description: formData.description,
-
-      logo_props: formData.logo_props,
-      timezone: formData.timezone,
-    };
-
-    if (project.identifier !== formData.identifier) {
-      const { available } = await checkProjectIdentifier(workspaceSlug, payload.identifier ?? "");
-      if (!available) setError("identifier", { message: t("common.identifier_already_exists") });
-      else await handleUpdateChange(payload);
-    } else await handleUpdateChange(payload);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
-  };
+  // the page is busy until nerve has answered and the page has followed the answer
+  const onSubmit = (details: ProjectDetails) => updateDetails(project, workspaceSlug, details, setError);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={(event) => void handleSubmit(onSubmit)(event)}>
       <div className="relative h-44 w-full">
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <CoverImage
@@ -176,6 +78,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
               name="logo_props"
               render={({ field: { value, onChange } }) => (
                 <EmojiPicker
+                  ariaLabel={t("aria_labels.project_icon")}
                   iconType="material"
                   closeOnSelect={false}
                   isOpen={isOpen}
@@ -183,26 +86,12 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                   className="flex items-center justify-center"
                   buttonClassName="flex h-[52px] w-[52px] flex-shrink-0 items-center justify-center rounded-lg bg-white/10"
                   label={<Logo logo={value} size={28} />}
-                  // TODO: fix types
-                  onChange={(val: any) => {
-                    let logoValue = {};
-
-                    if (val?.type === "emoji")
-                      logoValue = {
-                        value: val.value,
-                      };
-                    else if (val?.type === "icon") logoValue = val.value;
-
-                    onChange({
-                      in_use: val?.type,
-                      [val?.type]: logoValue,
-                    });
+                  onChange={(picked) => {
+                    onChange(logoPropsOf(picked));
                     setIsOpen(false);
                   }}
-                  defaultIconColor={value?.in_use && value.in_use === "icon" ? value?.icon?.color : undefined}
-                  defaultOpen={
-                    value.in_use && value.in_use === "emoji" ? EmojiIconPickerTypes.EMOJI : EmojiIconPickerTypes.ICON
-                  }
+                  defaultIconColor={value.in_use === "icon" ? value.icon?.color : undefined}
+                  defaultOpen={value.in_use === "emoji" ? EmojiIconPickerTypes.EMOJI : EmojiIconPickerTypes.ICON}
                   disabled={!isAdmin}
                 />
               )}
@@ -213,7 +102,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                 <span>{watch("identifier")} .</span>
                 <span className="flex items-center gap-1.5">
                   {project.network === 0 && <LockOutline className="h-2.5 w-2.5 text-on-color" />}
-                  {currentNetwork && t(currentNetwork?.i18n_label)}
+                  {currentNetwork && t(currentNetwork.i18n_label)}
                 </span>
               </span>
             </div>
@@ -251,7 +140,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
               </Field>
             )}
           />
-          <span className="text-11 text-danger-primary">{errors?.name?.message}</span>
+          <span className="text-11 text-danger-primary">{errors.name?.message}</span>
         </div>
         <div className="flex flex-col gap-1">
           <h4 className="text-13">{t("description")}</h4>
@@ -259,7 +148,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
             name="description"
             control={control}
             render={({ field: { value, onChange } }) => (
-              <Field name="description" invalid={Boolean(errors?.description)} disabled={!isAdmin}>
+              <Field name="description" invalid={Boolean(errors.description)} disabled={!isAdmin}>
                 <TextAreaGroup resize="none">
                   <TextArea
                     size="lg"
@@ -296,7 +185,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                     message: t("project_id_max_char"),
                   },
                 }}
-                render={({ field: { value, ref } }) => (
+                render={({ field: { value, onChange, ref } }) => (
                   <Field name="identifier" invalid={Boolean(errors.identifier)}>
                     <InputGroup size="2xl">
                       <Input
@@ -305,7 +194,8 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                         name="identifier"
                         type="text"
                         value={value}
-                        onChange={handleIdentifierChange}
+                        // upper case as typed, of the characters an identifier may have, as the creation's form
+                        onChange={(event) => onChange(projectIdentifierSanitizer(event.target.value))}
                         ref={ref}
                         placeholder={t("project_settings.general.enter_project_id")}
                         disabled={!isAdmin}
@@ -324,9 +214,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                 <InfoOutline className="absolute top-2.5 right-2 h-4 w-4 text-placeholder" />
               </Tooltip>
             </div>
-            <span className="text-11 text-danger-primary">
-              <>{errors?.identifier?.message}</>
-            </span>
+            <span className="text-11 text-danger-primary">{errors.identifier?.message}</span>
           </div>
           <div className="flex flex-col gap-1">
             <h4 className="text-13">{t("workspace_projects.network.label")}</h4>
@@ -354,7 +242,6 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                     buttonClassName="!border-subtle !shadow-none font-medium rounded-md"
                     input
                     disabled={!isAdmin}
-                    // optionsClassName="w-full"
                   >
                     {NETWORK_CHOICES.map((network) => (
                       <CustomSelect.Option key={network.key} value={network.key}>
@@ -379,31 +266,25 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
               control={control}
               rules={{ required: t("project_settings.general.please_select_a_timezone") }}
               render={({ field: { value, onChange } }) => (
-                <>
-                  <TimezoneSelect
-                    value={value}
-                    onChange={(timezone: string) => {
-                      onChange(timezone);
-                    }}
-                    error={Boolean(errors.timezone)}
-                    buttonClassName="!border-subtle !shadow-none font-medium rounded-md"
-                    disabled={!isAdmin}
-                  />
-                </>
+                <TimezoneSelect
+                  value={value}
+                  onChange={onChange}
+                  error={Boolean(errors.timezone)}
+                  buttonClassName="!border-subtle !shadow-none font-medium rounded-md"
+                  disabled={!isAdmin}
+                />
               )}
             />
             {errors.timezone && <span className="text-11 text-danger-primary">{errors.timezone.message}</span>}
           </div>
         </div>
         <div className="flex items-center justify-between py-2">
-          <>
-            <Button variant="primary" size="lg" type="submit" loading={isLoading} disabled={!isAdmin}>
-              {isLoading ? t("updating") : t("common.update_project")}
-            </Button>
-            <span className="text-13 text-placeholder italic">
-              {t("common.created_on")} {renderFormattedDate(project?.created_at)}
-            </span>
-          </>
+          <Button variant="primary" size="lg" type="submit" loading={isSubmitting} disabled={!isAdmin}>
+            {isSubmitting ? t("updating") : t("common.update_project")}
+          </Button>
+          <span className="text-13 text-placeholder italic">
+            {t("common.created_on")} {renderFormattedDate(project.created_at)}
+          </span>
         </div>
       </div>
     </form>

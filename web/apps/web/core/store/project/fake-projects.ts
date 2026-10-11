@@ -18,6 +18,8 @@ import type {
 } from "@nerve/api-client";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { fakeRoot } from "@/store/fake-root";
+import { userOf } from "@/store/member/fake-users";
+import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
 import { ProjectRootStore } from "@/store/project";
 import type { IProjectStore } from "@/store/project/project.store";
 import { RouterStore } from "@/store/router.store";
@@ -114,6 +116,15 @@ export function projectMemberOf(project: Pick<Project, "id">, name: string, role
     role,
     created_at: "2026-10-01T09:00:00Z",
   };
+}
+
+/** A row of a project's members page: name's membership of the project, of role, with name as nerve gives him. */
+export function projectMemberDetailsOf(
+  project: Pick<Project, "id">,
+  name: string,
+  role?: ProjectRole
+): IProjectMemberDetails {
+  return { ...projectMemberOf(project, name, role), member: userOf(name) };
 }
 
 /** The store fetches the workspace's projects that are not archived, and nerve lists these. */

@@ -4,7 +4,7 @@ import type { WorkspaceInvitation } from "./api";
 import { password, signInContext, type AuthTokens } from "./auth";
 import { submitSignIn } from "./auth-pages";
 import { watchPage, type PageWatch } from "./browser";
-import { answerTo, sentTo } from "./settings-pages";
+import { answerTo, expectListBesideButton, sentTo } from "./settings-pages";
 
 // The workspace's pages (M3 design 7.5), as a person uses them.
 
@@ -66,6 +66,29 @@ export async function confirmDeletion(page: Page, name: string): Promise<void> {
  */
 export function deleteFromGeneralPage(page: Page, slug: string, name: string): Promise<Response> {
   return answerTo(page, "DELETE", `/api/v0/workspaces/${slug}`, () => confirmDeletion(page, name));
+}
+
+/**
+ * Picks a time zone on the workspace's general page, which page shows, by the keyboard alone (M3 design 7.7, the M2
+ * closeout's section 14): Tab reaches the select's button, named by the zone current, from the size's (the address
+ * between them is disabled); Enter opens the list beside it with its search focused; Escape closes it and gives the
+ * button the focus back; then typed filters the list, and the arrows and Enter pick its first option, which closes it.
+ */
+export async function pickTimeZone(page: Page, current: string, typed: string): Promise<void> {
+  await page.keyboard.press("Tab");
+  const timezone = page.getByRole("button", { name: current });
+  await expect(timezone).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expectListBesideButton(page, timezone);
+  await expect(page.getByRole("combobox", { name: "Search" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  await expect(timezone).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.keyboard.type(typed);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("listbox")).toHaveCount(0);
 }
 
 /** The row of the members page, which page shows, of the member whose address is email. */

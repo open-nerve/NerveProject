@@ -7,9 +7,9 @@
 import { observer } from "mobx-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 // nerve imports
-import type { ProjectMembersAdd, ProjectRole } from "@nerve/api-client";
+import type { ProjectMembersAdd } from "@nerve/api-client";
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { ROLE, EUserPermissions } from "@nerve/constants";
+import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { AddOutline, ChevronDownOutline, CloseOutline } from "@makeplane/propel/icons";
@@ -19,15 +19,16 @@ import { CustomSelect, CustomSearchSelect, EModalPosition, EModalWidth, ModalCor
 import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
-import { useUserPermissions } from "@/hooks/store/user";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 // local imports
-import { PROJECT_ROLES } from "./project-roles";
+import { addableRoles } from "./project-roles";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
   projectId: string;
-  workspaceSlug: string;
 };
 
 type FormValues = ProjectMembersAdd;
@@ -42,11 +43,11 @@ const defaultValues: FormValues = {
 };
 
 export const AddProjectMembersModal = observer(function AddProjectMembersModal(props: Props) {
-  const { isOpen, onClose, projectId, workspaceSlug } = props;
+  const { isOpen, onClose, projectId } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const toastRefusal = useRefusalToast();
   const {
     project: { getProjectMemberDetails, bulkAddMembersToProject },
     workspace: { workspaceMemberIds, getWorkspaceMemberDetails },
@@ -64,29 +65,25 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     control,
     name: "members",
   });
-  // derived values
-  const currentProjectRole = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
+  // derived values: the workspace's active members who are not the project's (M3 design 7.6), whom nerve adds
   const nonProjectMemberIds = workspaceMemberIds?.filter(
-    (userId) => getProjectMemberDetails(userId, projectId) === null
+    (userId) => getWorkspaceMemberDetails(userId)?.is_active && getProjectMemberDetails(userId, projectId) === null
   );
 
-  const onSubmit = async (formData: FormValues) => {
-    if (!workspaceSlug || !projectId || isSubmitting) return;
-
-    try {
-      await bulkAddMembersToProject(projectId, formData);
-      onClose();
-      setToast({
-        title: "Success!",
-        type: TOAST_TYPE.SUCCESS,
-        message: "Members added successfully.",
-      });
-    } catch (error) {
-      console.error(error);
-    } finally {
-      reset(defaultValues);
-    }
-  };
+  // The modal waits for nerve, and cannot be closed meanwhile: it closes once nerve has added them; a refusal shows
+  // nerve's reason and keeps the form. The page follows the adding only in the session that sent it (M3 design 7.1).
+  const onSubmit = (formData: FormValues) =>
+    followInSession(() => bulkAddMembersToProject(projectId, formData), {
+      done: () => {
+        handleClose();
+        setToast({
+          title: "Success!",
+          type: TOAST_TYPE.SUCCESS,
+          message: "Members added successfully.",
+        });
+      },
+      failed: toastRefusal,
+    });
 
   const handleClose = () => {
     onClose();
@@ -134,19 +131,13 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     ];
   });
 
-  const checkCurrentOptionWorkspaceRole = (value: string): ProjectRole[] => {
-    const currentMemberWorkspaceRole = getWorkspaceMemberDetails(value)?.role;
-    if (!value || !currentMemberWorkspaceRole) return PROJECT_ROLES;
-
-    const isGuestOROwner = [EUserPermissions.ADMIN, EUserPermissions.GUEST].includes(
-      currentMemberWorkspaceRole as EUserPermissions
-    );
-
-    return PROJECT_ROLES.filter((role) => !isGuestOROwner || role === currentMemberWorkspaceRole);
-  };
-
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={isSubmitting ? undefined : handleClose}
+      position={EModalPosition.CENTER}
+      width={EModalWidth.XXL}
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="p-5">
         <div className="space-y-5">
           <h3 className="text-16 leading-6 font-medium text-primary">
@@ -170,7 +161,7 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                         <CustomSearchSelect
                           value={value}
                           customButton={
-                            <button className="shadow-sm flex w-full items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
+                            <span className="shadow-sm flex w-full items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
                               {value && value !== "" ? (
                                 <div className="flex items-center gap-2">
                                   <Avatar
@@ -185,7 +176,7 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                                 <div className="flex items-center gap-2 py-0.5">Select co-worker</div>
                               )}
                               <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
-                            </button>
+                            </span>
                           }
                           onChange={(val: string) => {
                             onChange(val);
@@ -217,22 +208,20 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                           customButton={
                             <div className="shadow-sm flex w-24 items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2.5 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
                               <span className="capitalize">
-                                {roleField.value ? ROLE[roleField.value] : "Select role"}
+                                {roleField.value ? t(ROLE_DETAILS[roleField.value].i18n_title) : "Select role"}
                               </span>
                               <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
                             </div>
                           }
                           input
                         >
-                          {checkCurrentOptionWorkspaceRole(watch(`members.${index}.member_id`)).map((role) => {
-                            if (role > (currentProjectRole ?? EUserPermissions.GUEST)) return null;
-
-                            return (
+                          {addableRoles(getWorkspaceMemberDetails(watch(`members.${index}.member_id`))?.role).map(
+                            (role) => (
                               <CustomSelect.Option key={role} value={role}>
-                                {ROLE[role]}
+                                {t(ROLE_DETAILS[role].i18n_title)}
                               </CustomSelect.Option>
-                            );
-                          })}
+                            )
+                          )}
                         </CustomSelect>
                       )}
                     />
@@ -267,7 +256,7 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
             {t("common.add_more")}
           </button>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="lg" onClick={handleClose}>
+            <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
               {t("cancel")}
             </Button>
             <Button variant="primary" size="lg" type="submit" loading={isSubmitting}>

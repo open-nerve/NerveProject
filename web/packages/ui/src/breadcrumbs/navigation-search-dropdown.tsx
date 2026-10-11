@@ -39,6 +39,25 @@ export function BreadcrumbNavigationSearchDropdown(props: TBreadcrumbNavigationS
   } = props;
   // state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const titleClassName = cn(
+    "group flex h-full cursor-pointer items-center gap-2 rounded-sm rounded-r-none px-1.5 py-1 text-13 font-medium text-tertiary",
+    {
+      "hover:bg-layer-1 hover:text-primary": !isLast,
+    }
+  );
+  const label = (
+    <>
+      {shouldTruncate && <div className="flex text-tertiary @4xl:hidden">...</div>}
+      <div
+        className={cn("flex gap-2", {
+          "hidden items-center gap-2 @4xl:flex": shouldTruncate,
+        })}
+      >
+        {icon && <Breadcrumbs.Icon>{icon}</Breadcrumbs.Icon>}
+        <Breadcrumbs.Label>{title}</Breadcrumbs.Label>
+      </div>
+    </>
+  );
 
   return (
     <CustomSearchSelect
@@ -58,31 +77,25 @@ export function BreadcrumbNavigationSearchDropdown(props: TBreadcrumbNavigationS
       customButton={
         <>
           <Tooltip tooltipContent={title} position="bottom">
-            <button
-              onClick={(e) => {
-                if (!isLast) {
+            {/* The crumb is one Tab stop, the select's button, which opens the list; the last crumb's title opens it
+                too. An earlier crumb's title goes to its page by a click: a button in the select's button, out of the
+                Tab order (the keyboard reaches that page from the sidebar). */}
+            {isLast ? (
+              <span className={titleClassName}>{label}</span>
+            ) : (
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleOnClick?.();
-                }
-              }}
-              className={cn(
-                "group flex h-full cursor-pointer items-center gap-2 rounded-sm rounded-r-none px-1.5 py-1 text-13 font-medium text-tertiary",
-                {
-                  "hover:bg-layer-1 hover:text-primary": !isLast,
-                }
-              )}
-            >
-              {shouldTruncate && <div className="flex text-tertiary @4xl:hidden">...</div>}
-              <div
-                className={cn("flex gap-2", {
-                  "hidden items-center gap-2 @4xl:flex": shouldTruncate,
-                })}
+                }}
+                className={titleClassName}
               >
-                {icon && <Breadcrumbs.Icon>{icon}</Breadcrumbs.Icon>}
-                <Breadcrumbs.Label>{title}</Breadcrumbs.Label>
-              </div>
-            </button>
+                {label}
+              </button>
+            )}
           </Tooltip>
           <Breadcrumbs.Separator
             className={cn("rounded-r-sm", {

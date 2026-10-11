@@ -17,18 +17,27 @@ import { SettingsHeading } from "@/components/settings/heading";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 // local imports
+import type { Route } from "./+types/page";
 import { AutomationsProjectSettingsHeader } from "./header";
 
-function AutomationSettingsPage() {
+function AutomationSettingsPage({ params }: Route.ComponentProps) {
+  // router: the route's project, as the store gives it
+  const { workspaceSlug, projectId } = params;
   // store hooks
   const { allowPermissions } = useUserPermissions();
-  const { currentProjectDetails: projectDetails } = useProject();
+  const { getProjectById } = useProject();
+  const project = getProjectById(projectId);
 
   const { t } = useTranslation();
 
   // derived values
-  const canPerformProjectAdminActions = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
-  const pageTitle = projectDetails?.name ? `${projectDetails?.name} - Automations` : undefined;
+  const canPerformProjectAdminActions = allowPermissions(
+    [EUserPermissions.ADMIN],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
+  );
+  const pageTitle = project?.name ? `${project.name} - Automations` : undefined;
 
   if (!canPerformProjectAdminActions) {
     return <NotAuthorizedView section="settings" isProjectView className="h-auto" />;
