@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** M3 的最后一批页面和 M3 的清理。页面：项目设置的 states、labels 两页接上 P8b 的数据层，行为按 M3 设计第 2 节的故事 P6、P7、W11：项目管理员和是工作区管理员的项目成员增删改、拖动、设默认（状态）、拖进拖出标签组（标签），项目的其他成员只能看，访客看到没有权限；每个修改只在发出它的会话里跟进（`followInSession`），名字已被占用显示在名字下方，被拒绝时表单和弹窗留着，请求在路上时表单忙、弹窗关不掉；控件 Tab 能到、有名字、Tab 到达时看得见。访客看到的个人主页（P9 的页面版本，决策点 3 的 A：页面不变）。M2 的账户页面（新手引导的资料一步、个人设置的 general、preferences、security）的提示和字段错误只在发出修改的会话里（P9 的裁定 P8）。清理：M3 的死成员和死 prop（`domains.mjs --rows M3`）、P8a 和 P8b 留下的只经机械步骤到达的文件的 oxlint 警告、`promise(always-return)` 全仓清零、关键词守卫的最终核对。P6、P7、P9、W11 的页面版本，S2 的挂载清单加上 P11 的页面。
+**Goal:** M3 的最后一批页面和 M3 的清理。页面：项目设置的 states、labels 两页接上 P8b 的数据层，行为按 M3 设计第 2 节的故事 P6、P7、W11：项目管理员和是工作区管理员的项目成员增删改、拖动、设默认（状态）、拖进拖出标签组（标签），项目的其他成员只能看，访客看到没有权限；每个修改只在发出它的会话里跟进（`followInSession`），名字已被占用显示在名字下方，被拒绝时表单和弹窗留着，请求在路上时表单忙、弹窗关不掉；控件 Tab 能到、有名字、Tab 到达时看得见。访客看到的个人主页（P9 的页面版本，决策点 3 的 A：页面不变）。M2 的账户页面（新手引导的资料一步、个人设置的 general、preferences、security，security 页的 API 令牌的新建和撤销在内）的提示、字段错误和新令牌只在发出修改的会话里（P9 的裁定 P8；预检的 M1），新建令牌的弹窗在请求路上时关不掉。清理：M3 的死成员和死 prop（`domains.mjs --rows M3`）、P8a 和 P8b 留下的只经机械步骤到达的文件的 oxlint 警告、`promise(always-return)` 全仓清零、关键词守卫的最终核对。P6、P7、P9、W11 的页面版本，S2 的挂载清单加上 P11 的页面。
 
-**Architecture:** 只改 web、`e2e/`、根目录 `.oxlintrc.json`（非空断言的范围：Task 1–5、7 各加它新建的模块和测试）、`tools/keywords.json`（`project-address-route` 加 P11 的五个文件：Task 3、5）和四份文档（README、前端改动清单、M1 收尾交接和 M1-P2 交接的处理结果）。页面调用 store 的方法，不调 service；会话的每个取数经 `useSessionSWR`。共用的新部分：`core/lib/form-refusal.ts`（`formRefusal`、`useFormRefusal`：表单的拒绝落到字段下或提示，P10 的 `projectRefusal` 改为以它写成，状态和标签的表单也用它；Task 1）；`@nerve/ui` 的 `AlertModalCore` 在请求路上时关不掉（P9 的 F-1；它在 M4–M8 的 11 个调用方一样；Task 1）；`useStateChanges`（Task 2）、`useLabelChanges`（Task 4）：每个修改经 store、经 `followInSession`，拒绝经 `useFormRefusal` 或 `useRefusalToast`，标签放到第三层的拒绝说标签只有两层。store 的两个 getter 改为以项目的 id 读（`getGroupedProjectStates(projectId)`、`getProjectLabelsTree(projectId)`，Task 3、5；原来读 router store 的项目）。e2e 的共用部分：P8 故事的 `dragOnto` 移进 `e2e/fixtures/project-pages.ts`，`tabCycle` 收按 Tab 的次数（Task 3）。清理（Task 8、9）只删没有读者、没有调用方传入的成员和 prop，只改 oxlint 指出的写法；每一处改动的行为照旧，或写进前端改动清单（spec 附录 A.5、A.6）。契约、Go 代码和生成的文件都不变。
+**Architecture:** 只改 web、`e2e/`、根目录 `.oxlintrc.json`（非空断言的范围：Task 1–5、7 各加它新建的模块和测试；Task 9 把 `no-unreachable` 设为 error）、`tools/keywords.json`（`project-address-route` 加 P11 的五个文件：Task 3、5）和四份文档（README、前端改动清单、M1 收尾交接和 M1-P2 交接的处理结果）。页面调用 store 的方法，不调 service；会话的每个取数经 `useSessionSWR`。共用的新部分：`core/lib/form-refusal.ts`（`formRefusal`、`useFormRefusal`：表单的拒绝落到字段下或提示，P10 的 `projectRefusal` 改为以它写成，状态和标签的表单也用它；Task 1）；`@nerve/ui` 的 `AlertModalCore` 在请求路上时关不掉（P9 的 F-1；它在 M2、M4–M8 的其余 11 个调用方一样，每个在被拒绝时都结束忙碌，spec 附录 A.4；Task 1）；`@nerve/ui` 的 `DragHandle` 只给指针用（不是 Tab 停留点，辅助技术不读它；它的 4 个调用方一样；Task 5）；`useStateChanges`（Task 2）、`useLabelChanges`（Task 4）：每个修改经 store、经 `followInSession`，拒绝经 `useFormRefusal` 或 `useRefusalToast`，标签放到第三层的拒绝说标签只有两层。store 的两个 getter 改为以项目的 id 读（`getGroupedProjectStates(projectId)`、`getProjectLabelsTree(projectId)`，Task 3、5；原来读 router store 的项目）。e2e 的共用部分：P8 故事的 `dragOnto` 移进 `e2e/fixtures/project-pages.ts`，`tabCycle` 收按 Tab 的次数（Task 3）。清理（Task 8、9）只删没有读者、没有调用方传入的成员和 prop，只改 oxlint 指出的写法；每一处改动的行为照旧，或写进前端改动清单（spec 附录 A.5、A.6）。契约、Go 代码和生成的文件都不变。
 
 **Tech Stack:** React 19.2.8、React Router 8.3.0、MobX 6.12.0、SWR 2.4.2、openapi-fetch 0.17.0、Headless UI 2.2.10、react-hook-form 7.84、pragmatic-drag-and-drop 1.7.4、TypeScript 5.8.3、vitest 4.1.11、oxlint 1.51.0、oxfmt 0.35.0、knip 6.37.0、turbo 2.10.11；Node 24、pnpm 11.10.0、Playwright 1.63.0；Go 1.27.1（Go 代码不变）。版本都由 `pnpm-lock.yaml` 固定。
 
@@ -18,7 +18,7 @@
 - **容器**：`make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**（总体设计 7.7，P8a 的裁定 F-1–F-10，P8b 的 PF-M2，P9 的 F-1–F-4，P10 的 A-M2、F-2、F-15）：会话的每个取数经 `useSessionSWR`（不传配置）；页面只取它的角色能读的；修改经 store 的方法，一个接一个，store 写入 nerve 的回答，请求体取决于 store 所持的值时轮到它发出时从 nerve 最近一次回答算出（状态、标签的移动，P7a、P7b 的 store 已是这样）；`SessionChangedError` 不是认证失败；`core/lib/reconciled.ts` 只扩展，不复制（P11 不改它）。页面读地址只有一种写法：路由的参数（route module 的 `params`），`allowPermissions` 写明工作区和项目（`project-address-route`）。页面发出的每个修改（状态、标签的增删改、移动、设默认，账户页面的修改）之后的提示、字段错误和界面变化经 `followInSession` 只在发出它的会话里进行；每一处由它自己的 vitest 守着（换账户之后兑现的 `lateSettlings`、`lateSettlingsAnswering`）。请求在路上时表单忙（react-hook-form 的 `isSubmitting`，取消也按不了），弹窗关不掉（`AlertModalCore` 的取消禁用、`handleClose` 为空），由故事扣住请求核对（`sentHeld`、`closedByEscape`、`enabledWithin`）。被拒绝时表单和弹窗留着，原因在字段下或共用的拒绝提示里；只在成功的跟进中关上（A-M2）。请求体由表单编辑的字段构成，类型是生成的 `StateCreate`、`StateUpdate`、`LabelCreate`、`LabelUpdate`、`UserUpdate`、`ProfileUpdate`；每个请求体有一个测试钉住它（vitest 或端到端的 `sentTo`、`sentHeld`）。每个控件 Tab 能到、按次序（`tabCycle`），不加正的 `tabIndex`（P10 的 F-15、F-18；`AlertModalCore` 的 `tabIndex={1}` 属于 M3 收尾的 `ModalCore` 重写，P11 不动它）。类型只来自生成的客户端：不写重述契约的类型，没有新的 `as`、`any`、`!`（spec 附录 A.7）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.8；原来就超过的 `power-k` 的 `work-item/commands.ts` 和 `tools/keywords.json` 各多三行，spec 第 3 节第 14 条）；只为使用方改到的 Plane 文件不变长。
+- **规则**（总体设计 7.7，P8a 的裁定 F-1–F-10，P8b 的 PF-M2，P9 的 F-1–F-4，P10 的 A-M2、F-2、F-15）：会话的每个取数经 `useSessionSWR`（不传配置）；页面只取它的角色能读的；修改经 store 的方法，一个接一个，store 写入 nerve 的回答，请求体取决于 store 所持的值时轮到它发出时从 nerve 最近一次回答算出（状态、标签的移动，P7a、P7b 的 store 已是这样）；`SessionChangedError` 不是认证失败；`core/lib/reconciled.ts` 只扩展，不复制（P11 不改它）。页面读地址只有一种写法：路由的参数（route module 的 `params`），`allowPermissions` 写明工作区和项目（`project-address-route`）。页面发出的每个修改（状态、标签的增删改、移动、设默认，账户页面的修改）之后的提示、字段错误和界面变化经 `followInSession` 只在发出它的会话里进行；每一处由它自己的 vitest 守着（换账户之后兑现的 `lateSettlings`、`lateSettlingsAnswering`）。请求在路上时表单忙（react-hook-form 的 `isSubmitting`，取消也按不了），弹窗关不掉（`AlertModalCore` 的取消禁用、`handleClose` 为空），由故事扣住请求核对（`sentHeld`、`closedByEscape`、`enabledWithin`）。被拒绝时表单和弹窗留着，原因在字段下或共用的拒绝提示里；只在成功的跟进中关上（A-M2）。请求体由表单编辑的字段构成，类型是生成的 `StateCreate`、`StateUpdate`、`LabelCreate`、`LabelUpdate`、`UserUpdate`、`ProfileUpdate`、`ApiTokenCreate`；每个请求体有一个测试钉住它（vitest 或端到端的 `sentTo`、`sentHeld`）。每个控件 Tab 能到、按次序（`tabCycle`），不加正的 `tabIndex`（P10 的 F-15、F-18；`AlertModalCore` 的 `tabIndex={1}` 属于 M3 收尾的 `ModalCore` 重写，P11 不动它）。类型只来自生成的客户端：不写重述契约的类型，没有新的 `as`、`any`、`!`（spec 附录 A.7）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.8；原来就超过的 `power-k` 的 `work-item/commands.ts` 和 `tools/keywords.json` 各多三行，spec 第 3 节第 14 条）；只为使用方改到的 Plane 文件不变长。
 - **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告；例外两处：`@nerve/ui` 的 `alert-modal.tsx` 留着 `tabIndex={1}` 的一条（M3 收尾的 `ModalCore` 重写，spec 第 3 节第 3 条），Task 9 只按 `promise(always-return)` 改到的 26 个文件的其余 14 条留给它们的 M（spec 第 3 节第 8 条）。上限：web 348 → 346（Task 2：状态的组标题是按钮）→ 337（Task 8：P8a、P8b 留下的文件和死 prop 的删除带走的）→ 303（Task 9：`promise(always-return)` 34 条）；editor 65 → 64（Task 9：1 条）；ui 15、propel 11、utils 7、hooks 3、constants 1 不变（spec 第 3 节第 9 条）。没有新的 oxlint 抑制。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -28,7 +28,7 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `7d6a416b` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A.10）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。Task 9 的 35 处 `return;` 是一个一次性的脚本在原型中写出的（spec 附录 A.6），这里照样写成块。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1–5、7，每个 Task 加它的文件）、`web/apps/web/package.json`（Task 2、8、9 的上限）、`tools/keywords.json`（Task 3、5）、`states-labels.test.tsx`（Task 3、5）、状态的 `group-item.tsx`、`root.tsx`、`state-item-title.tsx`、`options/delete.tsx`（Task 2、3）、标签的 `project-setting-label-group.tsx`、`project-setting-label-list.tsx`（Task 4、5），以及 S2（Task 3、5、6）、W11（Task 3、5）。每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1–5、7 每个 Task 加它的文件，Task 9 加 `no-unreachable`）、`web/apps/web/package.json`（Task 2、8、9 的上限）、`tools/keywords.json`（Task 3、5）、`states-labels.test.tsx`（Task 3、5）、状态的 `group-item.tsx`、`root.tsx`、`state-item-title.tsx`、`options/delete.tsx`（Task 2、3）、标签的 `project-setting-label-group.tsx`、`project-setting-label-list.tsx`（Task 4、5），两个工作项的删除确认框（Task 1 的 `onSubmit` 必传、Task 9 的 `return;`），以及 S2（Task 3、5、6）、W11（Task 3、5）。每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫，以及 `make knip`；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p11tools/mutants_p11.py`，`mut.py` 在它写的每个检查上各跑一次），也在各自 Task 的树上跑过（spec 附录 A.2）；表中标"（Task N 起）"的检查只在第 N 个 Task 加入的测试中才让它失败（在变异自己的 Task 的树上它还活着，在第 N 个 Task 的树上核对过）。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief）：表中每一条这类性质都有一个会失败的检查。
 - **评审敏感**（M3 设计 12 节 P11 的评审重点）：每个修改的跟进只在发出它的会话里（`useStateChanges`、`useLabelChanges` 和账户页面的 vitest 的 `lateSettlings`）；页面只提供 nerve 允许的（改状态、标签的控件只给项目管理员和是工作区管理员的项目成员：`states-labels.test.tsx` 在 store 自己的权限上核对，P6、P7 的页面版本以成员和工作区管理员各看一次）；访客打开个人主页不取工作项（P9 的页面版本、S2）；请求在路上时弹窗关不掉、表单忙（故事扣住请求）；清理的每一处行为照旧（spec 附录 A.5、A.6）。改动这些之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -40,10 +40,11 @@
 
 | 文件 | 职责 | Task |
 |---|---|---|
-| `.oxlintrc.json` | P11 的新模块和测试加进非空断言的范围，各在加入它们的 Task（P9 spec 2.14 的做法） | 1、2、3、4、5、7 |
+| `.oxlintrc.json` | P11 的新模块和测试加进非空断言的范围，各在加入它们的 Task（P9 spec 2.14 的做法）；`no-unreachable` 设为 error（Task 9） | 1、2、3、4、5、7、9 |
 | `web/apps/web/core/lib/form-refusal.ts` | `formRefusal`、`useFormRefusal`：表单的拒绝，已被占用的码在它的字段下，字段错误在表单的字段下，其余提示（新文件） | 1 |
 | `web/apps/web/core/components/project/project-refusal.ts` | `projectRefusal`、`useProjectRefusal` 以 `formRefusal`、`useFormRefusal` 写成，显示的照旧 | 1 |
 | `web/packages/ui/src/modals/alert-modal.tsx` | `AlertModalCore`：`isSubmitting` 时取消禁用，Escape 和点外面不关（P9 的 F-1） | 1 |
+| `web/apps/web/core/components/issues/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx` | 两个工作项的删除确认框的 `onSubmit` 必传（Task 1）；`then()` 的回调末尾加 `return;`（Task 9） | 1、9 |
 | `web/apps/web/core/components/project-states/use-state-changes.ts`、`web/apps/web/core/components/project-states/use-state-changes.test.ts` | `useStateChanges`：状态的创建、修改、移动、删除、设默认经 store、经 `followInSession`，拒绝在字段下或提示；它的 vitest（新文件） | 2 |
 | `web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project-states/create-update/create.tsx`、`web/apps/web/core/components/project-states/create-update/update.tsx`、`web/apps/web/core/components/project-states/create-update/create-update.test.tsx` | 状态的表单用 react-hook-form：忙到页面跟进完，取消也按不了，nerve 指名的字段错误在字段下；创建、修改经 `useStateChanges`；它们的 vitest | 2 |
 | `web/apps/web/core/components/project-states/options/delete.tsx` | 删除经 `useStateChanges`，确认框在跟进做完之前忙、关不掉，只在成功的跟进中关上（Task 2）；删除按钮有名字（Task 3） | 2、3 |
@@ -66,15 +67,17 @@
 | `e2e/stories/workspace/w11-guest-bounds.spec.ts` | W11 的页面版本：访客打开状态（Task 3）、标签（Task 5）的设置页看到没有权限 | 3、5 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | S2 的挂载清单加上状态（Task 3）、标签（Task 5）的设置页和访客打开的两个个人主页（Task 6） | 3、5、6 |
 | `web/apps/web/core/components/labels/use-label-changes.ts`、`web/apps/web/core/components/labels/use-label-changes.test.ts` | `useLabelChanges`：标签的创建、修改、移动、移出组、删除经 store、经 `followInSession`，拒绝在名字下或提示，第三层说标签只有两层；它的 vitest（新文件） | 4 |
-| `web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.test.tsx` | 标签的表单忙到页面跟进完，取消也按不了，名字已被占用在名字下；经 `useLabelChanges`；它的 vitest | 4 |
+| `web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.test.tsx` | 标签的表单忙到页面跟进完，取消也按不了，名字已被占用在名字下；新建还是修改只由 `labelToUpdate` 决定；经 `useLabelChanges`；它的 vitest | 4 |
 | `web/apps/web/core/components/labels/delete-label-modal.tsx` | 删除经 `useLabelChanges`，确认框只在成功的跟进中关上 | 4 |
 | `web/apps/web/core/components/labels/project-setting-label-item.tsx` | 不再收回调，移出组经 `useLabelChanges`，表单收项目 | 4 |
-| `web/apps/web/core/components/labels/project-setting-label-group.tsx` | 不再收、不再传回调，表单收项目（Task 4）；组的那一行的菜单和手柄只给能改标签的人（Task 5） | 4、5 |
+| `web/apps/web/core/components/labels/project-setting-label-group.tsx` | 不再收、不再传回调，表单收项目（Task 4）；组的那一行的菜单和手柄只给能改标签的人，组的展开按钮以标签的名字为名（Task 5） | 4、5 |
 | `web/apps/web/core/components/labels/project-setting-label-list.tsx` | 移动经 `useLabelChanges`（Task 4）；工作区和项目由页面给，标签按项目的 id 读，没有标签时的按钮只给能改标签的人（Task 5） | 4、5 |
 | `web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json` | `project_settings.labels.parent_not_allowed`：标签只有两层 | 4 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx` | 标签设置页从路由读项目，`allowPermissions` 写明工作区和项目 | 5 |
 | `web/apps/web/core/store/label.store.ts`、`web/apps/web/core/store/label.store.test.ts`、`web/apps/web/core/store/label.store.changes.test.ts` | `getProjectLabelsTree(projectId)` 代替读 router store 的 `projectLabelsTree` | 5 |
 | `web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx` | 拖动只由此刻渲染的手柄开始（回调的 ref），手柄只给能改标签的人 | 5 |
+| `web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx` | 拖动以行此刻渲染的手柄登记，行换了手柄时重新登记（新文件） | 5 |
+| `web/packages/ui/src/drag-handle.tsx` | `DragHandle` 只给指针用：不是 Tab 停留点，辅助技术不读它（它的 4 个调用方同样） | 5 |
 | `web/apps/web/core/components/labels/label-block/label-item-block.tsx` | 没有调用方传的 `draggable` 删除；菜单和删除按钮有名字，Tab 到达时看得见 | 5 |
 | `web/apps/web/core/components/labels/project-setting-label-group.test.tsx` | 组的那一行的控件给谁（新文件） | 5 |
 | `e2e/stories/project/p7-labels-page.spec.ts` | P7 的页面版本（新文件） | 5 |
@@ -83,11 +86,14 @@
 | `web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx` | 新手引导的资料一步：修改的跟进经 `followInSession`；它的 vitest | 7 |
 | `web/apps/web/core/components/settings/profile/content/pages/general/form.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx`、`web/apps/web/core/components/profile/start-of-week-preference.tsx` | 个人设置的 general、security、时区、语言、每周第一天：跟进经 `followInSession` | 7 |
 | `web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx` | 它们的 vitest（新文件） | 7 |
+| `web/apps/web/core/components/api-token/modal/create-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/form.tsx`、`web/apps/web/core/components/api-token/delete-token-modal.tsx` | API 令牌的新建和撤销：跟进经 `followInSession`；新建在请求路上时取消按不了 | 7 |
+| `web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx`、`web/apps/web/core/components/api-token/delete-token-modal.test.tsx` | 它们的 vitest（新文件） | 7 |
+| `e2e/stories/identity/a11-api-tokens.spec.ts` | A11 的第二个故事：新建被扣住时取消按不了，经后退离开页面 | 7 |
 | `web/apps/web/core/components/dropdowns/project/dropdown.tsx`、`web/apps/web/core/components/dropdowns/project/base.tsx` | 没有调用方传的六个 prop 删除；`getProjectById` 的类型是生成的 `Project`（P8b 的裁定 P1）；oxlint 清零 | 8 |
-| `web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/state/state-option.tsx`、`web/apps/web/core/components/power-k/menus/members.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/root.tsx`、`web/apps/web/core/components/workspace/invite-modal/actions.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx`、`web/packages/propel/src/icons/state/dashed-circle.tsx` | 没有调用方传入的 prop 删除，组件按原来的默认值显示 | 8 |
+| `web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/state/state-option.tsx`、`web/apps/web/core/components/power-k/menus/members.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/workspace/invite-modal/actions.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx`、`web/packages/propel/src/icons/state/dashed-circle.tsx` | 没有调用方传入的 prop 删除，组件按原来的默认值显示 | 8 |
 | `web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/packages/constants/src/members.ts` | 没有代码读的 `memberMap`、`iconName` 删除 | 8 |
 | `web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx`、`web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx` | P8a、P8b 留下的 oxlint 警告清零（`no-shadow`、`no-array-index-key`） | 8 |
-| `web/apps/web/app/entry.client.tsx`、`web/apps/web/core/components/cycles/delete-modal.tsx`、`web/apps/web/core/components/cycles/modal.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/cycles/transfer-issues-modal.tsx`、`web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx`、`web/apps/web/core/components/modules/delete-module-modal.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx`、`web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts`、`web/apps/web/core/components/web-hooks/create-webhook-modal.tsx`、`web/apps/web/core/components/web-hooks/form/secret-key.tsx`、`web/apps/web/core/components/work-item-filters/filters-hoc/project-level.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx`、`web/apps/web/core/components/workspace/views/default-view-quick-action.tsx`、`web/apps/web/core/store/global-view.store.ts`、`web/apps/web/core/store/workspace/webhook.store.ts`、`web/packages/editor/src/helpers/floating-ui.ts` | `then()` 的回调末尾加 `return;`（35 处，`promise(always-return)` 清零） | 9 |
+| `web/apps/web/app/entry.client.tsx`、`web/apps/web/core/components/cycles/delete-modal.tsx`、`web/apps/web/core/components/cycles/modal.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/cycles/transfer-issues-modal.tsx`、`web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/delete-module-modal.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx`、`web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts`、`web/apps/web/core/components/web-hooks/create-webhook-modal.tsx`、`web/apps/web/core/components/web-hooks/form/secret-key.tsx`、`web/apps/web/core/components/work-item-filters/filters-hoc/project-level.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx`、`web/apps/web/core/components/workspace/views/default-view-quick-action.tsx`、`web/apps/web/core/store/global-view.store.ts`、`web/apps/web/core/store/workspace/webhook.store.ts`、`web/packages/editor/src/helpers/floating-ui.ts` | `then()` 的回调末尾加 `return;`（35 处，`promise(always-return)` 清零） | 9 |
 | `web/packages/editor/package.json` | editor 的 oxlint 上限 65 → 64 | 9 |
 | `README.md`、`docs/v0/frontend-changes.md`、`docs/v0/M3-workspace-project/handoffs/M1-closeout.md`、`docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md` | README 的"前端"一节、前端改动清单、两份交接的处理结果 | 10 |
 
@@ -97,13 +103,14 @@
 
 **Files:**
 - Create: `web/apps/web/core/lib/form-refusal.ts`
-- Modify: `.oxlintrc.json`、`web/apps/web/core/components/project/project-refusal.ts`、`web/packages/ui/src/modals/alert-modal.tsx`
+- Modify: `.oxlintrc.json`、`web/apps/web/core/components/issues/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx`、`web/apps/web/core/components/project/project-refusal.ts`、`web/packages/ui/src/modals/alert-modal.tsx`
 
 **Interfaces:**
 - Produces（spec 2.1；总体设计 7.7；P9 的 F-1；P10 spec 2 的 `project-refusal.ts`）：
   - `core/lib/form-refusal.ts`（新文件）：`FormRefusal<F>`（`{ kind: "fields"; fields } | { kind: "toast" }`）；`formRefusal(error, fields, taken)`：表示"值已被占用"的码在 `taken` 给它的字段下（不论问题指名哪些字段），只指名表单的字段的字段错误在那些字段下（`needsErrorBanner`），其余提示；`useFormRefusal(fields, taken)`：照它显示，字段下的经表单的 `underField`（它的 `setError`），按 `fields` 的次序，提示经 `useRefusalToast`。
   - `project-refusal.ts`：`projectRefusal`、`useProjectRefusal` 以它们写成（字段 `name`、`identifier`，码 `project.name_taken`、`project.identifier_taken`）；`ProjectRefusal` 是 `FormRefusal<ProjectFormField>`。显示的照旧（P10 的 `project-refusal.test.ts` 不改，照旧通过）。状态（Task 2）和标签（Task 4）的表单用同一份。
   - `@nerve/ui` 的 `AlertModalCore`：`isSubmitting` 时取消按钮禁用，`ModalCore` 收到的 `handleClose` 为空（Escape、点外面都不关）。它的其余 11 个调用方同样（M4–M8 的 10 个，个人设置的 API 令牌的撤销；spec 第 3 节第 2 条，W17）；它的确认按钮的 `tabIndex={1}` 不动（M3 收尾的 `ModalCore` 重写）：这个文件留着它的一条 oxlint 警告（`jsx-a11y/tabindex-no-positive`，spec 第 3 节第 3 条），`@nerve/ui` 的上限 15 不变。
+  - 两个工作项的删除确认框（`issues/delete-issue-modal.tsx`、`issues/workspace-draft/delete-modal.tsx`）的 `onSubmit` 必传（spec 2.1、附录 A.4，裁定 Q2 的加固）：不传时确认框一直忙，有了上一条就再也关不掉；11 个调用处都传（`tsc` 核对）。它们各有的一条 `always-return` 在 Task 9 清零。
   - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `form-refusal.ts`。
 
 **Tests:** 没有新的测试文件：`formRefusal` 由 `project-refusal.test.ts`（P10，不改）和 Task 2、4 的 hook 的 vitest 守着；`AlertModalCore` 在请求路上时关不掉由 Task 3 的 P6 页面版本扣住删除请求核对（Task 5 的 P7 页面版本也是），见本 Task 的变异表。
@@ -245,7 +252,129 @@ export function useFormRefusal<F extends string>(
         <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
 ````
 
-- [ ] **Step 3: 静态检查的范围**
+- [ ] **Step 3: 两个工作项的删除确认框的 `onSubmit` 必传**
+
+`web/apps/web/core/components/issues/delete-issue-modal.tsx`（修改，2 处）：
+
+````old web/apps/web/core/components/issues/delete-issue-modal.tsx
+  onSubmit?: () => Promise<void>;
+````
+````new web/apps/web/core/components/issues/delete-issue-modal.tsx
+  /** Deletes it: the confirmation is busy until it settles. */
+  onSubmit: () => Promise<void>;
+````
+````old web/apps/web/core/components/issues/delete-issue-modal.tsx
+    if (onSubmit)
+      await onSubmit()
+        .then(() => {
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: t("common.success"),
+            message: t("entity.delete.success", {
+              entity: isSubIssue ? t("common.sub_work_item") : t("common.work_item"),
+            }),
+          });
+          onClose();
+        })
+        .catch((errors) => {
+          const isPermissionError =
+            errors?.error === `Only admin or creator can delete the ${isSubIssue ? "sub-work item" : "work item"}`;
+          const currentError = isPermissionError
+            ? PROJECT_ERROR_MESSAGES.permissionError
+            : PROJECT_ERROR_MESSAGES.issueDeleteError;
+          setToast({
+            title: t(currentError.i18n_title),
+            type: TOAST_TYPE.ERROR,
+            message: currentError.i18n_message && t(currentError.i18n_message),
+          });
+        })
+        .finally(() => onClose());
+````
+````new web/apps/web/core/components/issues/delete-issue-modal.tsx
+    await onSubmit()
+      .then(() => {
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("common.success"),
+          message: t("entity.delete.success", {
+            entity: isSubIssue ? t("common.sub_work_item") : t("common.work_item"),
+          }),
+        });
+        onClose();
+      })
+      .catch((errors) => {
+        const isPermissionError =
+          errors?.error === `Only admin or creator can delete the ${isSubIssue ? "sub-work item" : "work item"}`;
+        const currentError = isPermissionError
+          ? PROJECT_ERROR_MESSAGES.permissionError
+          : PROJECT_ERROR_MESSAGES.issueDeleteError;
+        setToast({
+          title: t(currentError.i18n_title),
+          type: TOAST_TYPE.ERROR,
+          message: currentError.i18n_message && t(currentError.i18n_message),
+        });
+      })
+      .finally(() => onClose());
+````
+
+`web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx`（修改，2 处）：
+
+````old web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx
+  onSubmit?: () => Promise<void>;
+````
+````new web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx
+  /** Deletes it: the confirmation is busy until it settles. */
+  onSubmit: () => Promise<void>;
+````
+````old web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx
+    if (onSubmit)
+      await onSubmit()
+        .then(() => {
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: `${t("success")}!`,
+            message: t("workspace_draft_issues.toasts.deleted.success"),
+          });
+          onClose();
+        })
+        .catch((errors) => {
+          const isPermissionError = errors?.error === "Only admin or creator can delete the work item";
+          const currentError = isPermissionError
+            ? PROJECT_ERROR_MESSAGES.permissionError
+            : PROJECT_ERROR_MESSAGES.issueDeleteError;
+          setToast({
+            title: t(currentError.i18n_title),
+            type: TOAST_TYPE.ERROR,
+            message: currentError.i18n_message && t(currentError.i18n_message),
+          });
+        })
+        .finally(() => onClose());
+````
+````new web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx
+    await onSubmit()
+      .then(() => {
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: `${t("success")}!`,
+          message: t("workspace_draft_issues.toasts.deleted.success"),
+        });
+        onClose();
+      })
+      .catch((errors) => {
+        const isPermissionError = errors?.error === "Only admin or creator can delete the work item";
+        const currentError = isPermissionError
+          ? PROJECT_ERROR_MESSAGES.permissionError
+          : PROJECT_ERROR_MESSAGES.issueDeleteError;
+        setToast({
+          title: t(currentError.i18n_title),
+          type: TOAST_TYPE.ERROR,
+          message: currentError.i18n_message && t(currentError.i18n_message),
+        });
+      })
+      .finally(() => onClose());
+````
+
+- [ ] **Step 4: 静态检查的范围**
 
 `.oxlintrc.json`（修改，1 处）：
 
@@ -257,7 +386,7 @@ export function useFormRefusal<F extends string>(
         "web/apps/web/core/lib/form-refusal.ts"
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 69 条规则、3 个例外，没有命中；web 的 oxlint 348 条，等于上限。
@@ -271,10 +400,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 106 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add .oxlintrc.json web/apps/web/core/components/project/project-refusal.ts web/apps/web/core/lib/form-refusal.ts web/packages/ui/src/modals/alert-modal.tsx
+git add .oxlintrc.json web/apps/web/core/components/issues/delete-issue-modal.tsx web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx web/apps/web/core/components/project/project-refusal.ts web/apps/web/core/lib/form-refusal.ts web/packages/ui/src/modals/alert-modal.tsx
 ```
 ```bash
 git commit -m "feat(M3/P11): a form's refusal is one module, the project's forms its first user, and a confirmation's dialog stays while its request is out
@@ -283,7 +412,9 @@ formRefusal and useFormRefusal put a code of a value taken under its
 field, field errors under the form's fields and anything else in a toast;
 projectRefusal and useProjectRefusal are now written with them, showing
 what they showed. AlertModalCore disables Cancel and ignores Escape and
-the backdrop while isSubmitting (P9's F-1), for every dialog built on it.
+the backdrop while isSubmitting (P9's F-1), for every dialog built on it;
+the two work items' deletion dialogs, busy until onSubmit settles, take
+it as required.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -1776,7 +1907,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `states-labels.test.tsx`（方括号转义）。
 
 **Tests:**
-- vitest：`[projectId]/states-labels.test.tsx`（新文件；P10 的 `admin-pages.test.tsx` 的写法：页面经 React Router 的 stub 在服务端渲染，权限和项目是 store 自己的，`callerInWeb`、`its`，router store 的地址里没有项目）：`shows $who the states and their controls`（项目管理员、是工作区管理员的项目成员、是工作区管理员的项目访客）；`shows its member the states, and no control`；`tells its guest he may not see them`。`state.store.test.ts` 的三处读 `getGroupedProjectStates(web.id)`。
+- vitest：`[projectId]/states-labels.test.tsx`（新文件；P10 的 `admin-pages.test.tsx` 的写法：页面经 React Router 的 stub 在服务端渲染，权限和项目是 store 自己的，`callerInWeb`、`its`，router store 的地址里没有项目；状态和标签的 store 的替身只对页面的项目回答，状态的替身是 web 的 Backlog、In Progress 两组，组列表的替身写出它们的名字：读了别的 id 的页面只显示加载）：`shows $who the states and their controls`（项目管理员、是工作区管理员的项目成员、是工作区管理员的项目访客）；`shows its member the states, and no control`；`tells its guest he may not see them`。`state.store.test.ts` 的三处读 `getGroupedProjectStates(web.id)`。
 - 端到端：`P6 (page): the admin creates Review in the started group, its form gone through by Tab and held until nerve answers; a name taken is said under the name; he recolours Review, drags it before In Progress and makes it the default, Backlog the default no longer; the default and a group's only state offer no deletion; a deletion nerve refuses leaves its dialog open, one under way cannot be dismissed, and In Progress is deleted; its member sees the states and can change none, a workspace admin who is its member can`（新文件：五个组的标题 `aria-expanded`；表单的 Tab 次序 `name`、`description`、`Create`、`Cancel`；创建扣住时"Creating"和"Cancel"都按不了，请求体是 `StateCreate`；名字已被占用在表单里显示；Review 的一行从"Mark as default"按 Tab 到"Edit"，这一行的控件在焦点进来之前看不见、之后看得见；修改的请求体；拖到 In Progress 的上方：`{ group, sequence: 20000 }`；设默认；默认的、组里唯一的状态的删除按钮禁用；另一处把 In Progress 设为默认之后删除它被拒绝：提示，确认框留着；重新载入之后删除扣住时 Escape 不关、"Cancel"按不了；`expectStates` 核对每一行；成员看不到改状态的控件，是工作区管理员的成员看得到）。`W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state settings tell him he may not see them; no page he opens shows an address, his own neither`（新的一条）。S2 的挂载清单加上状态设置页（spec 2.11）。
 
 - [ ] **Step 1: 状态的 getter 按项目的 id**
@@ -2032,7 +2163,7 @@ import { useTranslation } from "@nerve/i18n";
           "miss": [
 ````
 
-`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`（新文件，75 行）：
+`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`（新文件，93 行）：
 
 ````file web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
 /**
@@ -2053,20 +2184,38 @@ import StatesPage from "./states/page";
 // controls that change them to those nerve lets change them (state.create and the others: its admins, and its members
 // who are the workspace's admins, its guests among them). The page renders on the server at its route, through React
 // Router's stub, which gives it the route's params, with stand-ins for its parts that write what they show: the list
-// of groups says whether it has its controls. The caller's permissions and projects are the stores' own, over acme and
-// its project web as nerve lists them to him (fake-permissions.ts), while the address the router store holds names no
-// project: the page reads its project from its route.
+// of groups writes the states it is given, and whether it has its controls. The caller's permissions and projects are
+// the stores' own, over acme and its project web as nerve lists them to him (fake-permissions.ts), while the address
+// the router store holds names no project: the page reads its project from its route. The state store gives web's
+// states and none of another project's, so that a page that reads another's shows its loader.
 
-const caller = vi.hoisted((): { permissions?: IUserPermissionStore; projects?: IProjectStore } => ({}));
+const caller = vi.hoisted(
+  (): { permissions?: IUserPermissionStore; projects?: IProjectStore; projectId?: string } => ({})
+);
+/** web's states, by group, as the state store groups them. */
+const grouped = vi.hoisted(() => ({ backlog: [{ name: "Backlog" }], started: [{ name: "In Progress" }] }));
 vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => caller.permissions }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => caller.projects }));
 vi.mock("@/hooks/store/use-project-state", () => ({
-  useProjectState: () => ({ getGroupedProjectStates: () => ({}), fetchProjectStates: vi.fn() }),
+  useProjectState: () => ({
+    getGroupedProjectStates: (projectId: string) => (projectId === caller.projectId ? grouped : undefined),
+    fetchProjectStates: vi.fn(),
+  }),
 }));
 vi.mock("@/lib/use-session-swr", () => ({ useSessionSWR: () => ({}) }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@/components/project-states/group-list", () => ({
-  GroupList: ({ isEditable }: { isEditable: boolean }) => `states${isEditable ? " and their controls" : ""}`,
+  GroupList: ({
+    groupedStates,
+    isEditable,
+  }: {
+    groupedStates: Record<string, { name: string }[]>;
+    isEditable: boolean;
+  }) =>
+    `${Object.values(groupedStates)
+      .flat()
+      .map((state) => state.name)
+      .join(", ")}${isEditable ? " and their controls" : ""}`,
 }));
 vi.mock("@/components/auth-screens/not-authorized-view", () => ({ NotAuthorizedView: () => "not authorized" }));
 vi.mock("@/components/core/page-title", () => ({ PageHead: ({ title }: { title?: string }) => `[${title}]` }));
@@ -2085,7 +2234,7 @@ type StubRoute = Parameters<typeof createRoutesStub>[0][number];
  */
 async function openedBy({ workspaceRole, projectRole }: Caller, route: string, Component: StubRoute["Component"]) {
   const { permissions, router, projects, acme, web } = await callerInWeb(workspaceRole, projectRole);
-  Object.assign(caller, { permissions, projects });
+  Object.assign(caller, { permissions, projects, projectId: web.id });
   router.setQuery({ workspaceSlug: acme.slug });
   const Routes = createRoutesStub([{ path: `/:workspaceSlug/settings/projects/:projectId/${route}`, Component }]);
   const markup = renderToStaticMarkup(
@@ -2097,12 +2246,12 @@ async function openedBy({ workspaceRole, projectRole }: Caller, route: string, C
 describe("the state settings page", () => {
   it.each([its.admin, its.memberAdmin, its.guestAdmin])("shows $who the states and their controls", async (row) => {
     const { text, name } = await openedBy(row, "states", StatesPage);
-    expect(text).toBe(`[${name} - States]states and their controls`);
+    expect(text).toBe(`[${name} - States]Backlog, In Progress and their controls`);
   });
 
   it("shows its member the states, and no control", async () => {
     const { text, name } = await openedBy(its.member, "states", StatesPage);
-    expect(text).toBe(`[${name} - States]states`);
+    expect(text).toBe(`[${name} - States]Backlog, In Progress`);
   });
 
   it("tells its guest he may not see them", async () => {
@@ -2672,6 +2821,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T3.7` | 状态的表单的按钮有正的 `tabIndex` | 故事 P6 | 端到端 |
 | `T3.8` | 项目的状态按组分时少一个组 | `state.store.test.ts` | vitest |
 | `T3.9` | 在 `states-labels.test.tsx` 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T3.10` | 根组件按别的 id 读状态 | `states-labels.test.tsx`、故事 P6 | vitest；端到端 |
 
 ---
 
@@ -2683,14 +2833,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Produces（spec 2.4；M3 设计 2 的 P7，3.16，7.1、7.6；总体设计 7.7；P7b spec 第 5 节的 P11 一行；P10 review 第 6 节的 T11-a）：
-  - `useLabelChanges()`（新文件）：`create(projectId, data, underField, done)`、`update(labelId, data, underField, done)`、`move(labelId, parentId, droppedOnId, dropAtEndOfList)`、`removeFromGroup(labelId)`、`remove(labelId, done)`，各经 store 的方法和 `followInSession`；创建、修改的拒绝经 `useFormRefusal`（`project.label_name_taken` 在名字下，不论大小写；名字的字段错误在名字下，其余提示）；移动、移出组被拒绝时 nerve 指名 `parent_id`（第三层、别的项目的标签）说标签只有两层（`project_settings.labels.parent_not_allowed`，两种语言），其余经 `useRefusalToast`；删除的拒绝经 `useRefusalToast`。每个都在页面跟进之后才兑现。移动的请求体由 store 在轮到它时从 nerve 最近的回答算出（P7b：放进没有子标签的组只发 `parent_id`），页面不改。
-  - 标签的行内表单（`create-update-label-inline.tsx`）：经 `create`、`update`，`handleSubmit` 返回的 promise 兑现之前表单忙（按钮显示"Adding"/"Updating"、按不了，取消也按不了），nerve 指名的名字的错误经 `setError` 在名字下（原来名字已被占用在提示里），被拒绝时表单留着，成功的跟进里关上；请求体是 `LabelCreate`/`LabelUpdate` 中表单编辑的名字和颜色。`TLabelOperationsCallbacks` 删除：表单收 `projectId`，列表、组、一行不再收、不再传回调。
+  - `useLabelChanges()`（新文件）：`create(projectId, data, underField, done)`、`update(labelId, data, underField, done)`、`move(labelId, parentId, droppedOnId, dropAtEndOfList)`、`removeFromGroup(labelId)`、`remove(labelId, done)`，各经 store 的方法和 `followInSession`；创建、修改的拒绝经 `useFormRefusal`（`project.label_name_taken` 在名字下，不论大小写；名字的字段错误在名字下，其余提示）；移动被拒绝时 nerve 指名 `parent_id`（nerve 的四种 `not_allowed`：父标签不存在或在别的项目、自己做自己的父标签、父标签已在别的标签之下、下面有标签的标签放到别的标签之下）说"标签只能放在本项目的顶层标签之下，下面有标签的标签留在顶层：标签只有两层"（`project_settings.labels.parent_not_allowed`，两种语言），其余经 `useRefusalToast`；移出组只发 `parent_id: null`，nerve 不因 `parent_id` 拒绝它，它和删除的拒绝都经 `useRefusalToast`。每个都在页面跟进之后才兑现。移动的请求体由 store 在轮到它时从 nerve 最近的回答算出（P7b：放进没有子标签的组只发 `parent_id`），页面不改。
+  - 标签的行内表单（`create-update-label-inline.tsx`）：经 `create`、`update`，`handleSubmit` 返回的 promise 兑现之前表单忙（按钮显示"Adding"/"Updating"、按不了，取消也按不了），nerve 指名的名字的错误经 `setError` 在名字下（原来名字已被占用在提示里），被拒绝时表单留着，成功的跟进里关上；请求体是 `LabelCreate`/`LabelUpdate` 中表单编辑的名字和颜色。新建还是修改、按钮说什么只由 `labelToUpdate` 决定，`isUpdating` prop 删除（原来顶部的新建表单在编辑别的标签时显示"Update"，按了什么都不做：spec 第 3 节第 12 条）；列表和组照旧以自己的 `isUpdating` 排版。`TLabelOperationsCallbacks` 删除：表单收 `projectId`，列表、组、一行不再收、不再传回调。
   - 删除的确认框（`delete-label-modal.tsx`）：经 `remove`，在跟进做完之前忙、关不掉（Task 1 的 `AlertModalCore`），只在成功的跟进中关上；删除连同子标签由 store 写入（P7b）。
   - 一行和组的"移出组"经 `removeFromGroup`；列表的拖放经 `move`。
   - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `use-label-changes.ts` 和它的测试。
 
 **Tests:**
-- vitest：`use-label-changes.test.ts`（新文件）：`sends $change to the store as the page asks`（创建、修改、移动、移出组、删除）；`follows $change nerve makes with done, and says nothing`；`shows $refused under the name, of $by.change, and does not follow it`（另一种大小写的名字已被占用）；`shows a name too long under the name`；`shows nerve's reason for a colour it does not allow, which the form shows nothing under, in a toast`；`says a place nerve does not allow for $change: labels have two levels`（移动、移出组）；`shows nerve's reason when it refuses $by.change otherwise, in a toast`；`does nothing on the page when it $settles after another tab moved this one`（五个修改 × `lateSettlingsAnswering` 的两种）。`create-update-label-inline.test.tsx`（整个文件）：`creates a label in the page's project, at the top, with the name and colour it holds`；`changes a label with the fields its form edits, the only ones nerve's LabelUpdate takes`；`closes once nerve has made the change, not before`；`stays open when nerve refuses a $change, its name taken said under the name, no toast`（原来的"在提示里说名字已被占用"一条删除）。
+- vitest：`use-label-changes.test.ts`（新文件）：`sends $change to the store as the page asks`（创建、修改、移动、移出组、删除）；`follows $change nerve makes with done, and says nothing`；`shows $refused under the name, of $by.change, and does not follow it`（另一种大小写的名字已被占用）；`shows a name too long under the name`；`shows nerve's reason for a colour it does not allow, which the form shows nothing under, in a toast`；`says a place nerve does not allow for a move: labels have two levels`；`shows nerve's reason when it refuses $by.change otherwise, in a toast`；`does nothing on the page when it $settles after another tab moved this one`（五个修改 × `lateSettlingsAnswering` 的两种）。`create-update-label-inline.test.tsx`（整个文件）：`creates a label in the page's project, at the top, with the name and colour it holds, its button Add`；`changes a label with the fields its form edits, the only ones LabelUpdate takes, its button Update`；`closes once nerve has made the change, not before`；`stays open when nerve refuses a $change, its name taken said under the name, no toast`（表单是 react-hook-form 自己的，测试一并记下它的 `setError`；原来的"在提示里说名字已被占用"一条删除）。
 - 端到端：表单和确认框扣住请求的核对、名字已被占用在名字下、第三层的提示在 Task 5 的 P7 页面版本（标签设置页从那里起按路由读项目）；本 Task 的 `make e2e` 照旧通过（P7 的 API 版本，S2）。
 
 - [ ] **Step 1: 标签的修改**
@@ -2823,9 +2973,9 @@ describe("useLabelChanges", () => {
     ]);
   });
 
-  it.each([move, removal])("says a place nerve does not allow for $change: labels have two levels", async (row) => {
-    row.sent().mockRejectedValueOnce(refusal(422, "validation_failed", [{ field: "parent_id", code: "not_allowed" }]));
-    await row.send();
+  it("says a place nerve does not allow for a move: labels have two levels", async () => {
+    move.sent().mockRejectedValueOnce(refusal(422, "validation_failed", [{ field: "parent_id", code: "not_allowed" }]));
+    await move.send();
     expect(toasts).toEqual([
       { type: "error", title: "toast.error", message: "project_settings.labels.parent_not_allowed" },
     ]);
@@ -2892,10 +3042,11 @@ export type LabelUnderField = (field: LabelFormField, message: string) => void;
  * The changes of a project's labels that its settings page makes (M3 design 2 P7, 7.6), each through the label store,
  * one at a time (v0 design 7.7). The page follows each only in the session it was sent in (M3 design 7.1): done, the
  * caller's follow-up of success, once nerve has made the change; nerve's refusal of a creation or a change under the
- * form's name it names (a name taken, in any case), else in a toast, as every refusal of a move or a deletion is. A
- * move to a place nerve does not allow (its parent_id: labels have two levels, a label goes under one of its project
- * at the top; 3.16), which the page's drop rules keep from but another tab's change can make, is said as such. Each
- * settles once the page has followed the change.
+ * form's name it names (a name taken, in any case), else in a toast, as every refusal of a move, a removal from its
+ * group or a deletion is. A move to a place nerve does not allow, which the page's drop rules keep from but another
+ * tab's change can make, is said as such: nerve refuses its parent_id for a parent of another project or none, the
+ * label itself, a parent under another, or a label with labels under it (3.16: labels have two levels). A removal
+ * from its group sends no parent, so nerve never refuses it so. Each settles once the page has followed the change.
  */
 export function useLabelChanges() {
   const { createLabel, updateLabel, updateLabelPosition, deleteLabel } = useLabel();
@@ -2927,8 +3078,7 @@ export function useLabelChanges() {
         failed: placeRefused,
       }),
     /** Moves the label of labelId to the top of its project's labels. */
-    removeFromGroup: (labelId: string) =>
-      followInSession(() => updateLabel(labelId, { parent_id: null }), { failed: placeRefused }),
+    removeFromGroup: (labelId: string) => followInSession(() => updateLabel(labelId, { parent_id: null }), { failed }),
     /** Deletes the label of labelId, and the labels under it. */
     remove: (labelId: string, done: () => void) => followInSession(() => deleteLabel(labelId), { done, failed }),
   };
@@ -2937,7 +3087,7 @@ export function useLabelChanges() {
 
 - [ ] **Step 2: 行内表单和删除的确认框**
 
-`web/apps/web/core/components/labels/create-update-label-inline.test.tsx`（整个文件，100 行）：
+`web/apps/web/core/components/labels/create-update-label-inline.test.tsx`（整个文件，119 行）：
 
 ````whole web/apps/web/core/components/labels/create-update-label-inline.test.tsx
 /**
@@ -2951,7 +3101,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Label } from "@nerve/api-client";
 import { heldChange, pageSettled, signedIn } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
-import { refusal } from "@/lib/fake-refusal";
+import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { labelOf, projectOf } from "@/store/project/fake-projects";
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
@@ -2959,8 +3109,24 @@ import { CreateUpdateLabelInline } from "./create-update-label-inline";
 // What the label settings' inline form sends to create or change a label, and how it follows nerve's answer (M3
 // design 3.16, 7.6; v0 design 7.7). The form renders on the server with stand-ins for the name's input and the buttons,
 // which keep the props they were given: the test types the name as the input would, and clicks the form's button; the
-// label store's changes are stand-ins nerve answers when the test says. Its session is fake-tab.ts's.
+// label store's changes are stand-ins nerve answers when the test says. The form is react-hook-form's own, its setError
+// also kept for the test: what the form says under its fields. Its session is fake-tab.ts's.
 
+const form = vi.hoisted(() => ({ setError: vi.fn() }));
+vi.mock("react-hook-form", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-hook-form")>();
+  return {
+    ...actual,
+    useForm: (...args: Parameters<typeof actual.useForm>) => {
+      const methods = actual.useForm(...args);
+      const setError: typeof methods.setError = (...error) => {
+        form.setError(...error);
+        methods.setError(...error);
+      };
+      return { ...methods, setError };
+    },
+  };
+});
 const store = vi.hoisted(() => ({ createLabel: vi.fn(), updateLabel: vi.fn() }));
 vi.mock("@/hooks/store/use-label", () => ({ useLabel: () => store }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
@@ -2973,26 +3139,21 @@ const web = projectOf("WEB", "w-acme");
 const bug = labelOf(web, "bug", 65535);
 const setLabelForm = vi.fn();
 
-/** Renders the form, types the name, and clicks its button, which sends what the form holds. */
-function submit(form: ReactElement, name: string) {
+/** Renders the form, types the name, and clicks its button, which sends what the form holds: what the button says. */
+function submit(element: ReactElement, name: string) {
   emptyShown();
-  renderToStaticMarkup(form);
+  renderToStaticMarkup(element);
   const [input] = shown.inputs;
   const button = shown.buttons.find((props) => props.variant === "primary");
   if (!input || !button?.onClick) throw new Error("the form showed no name or no button");
   input.onChange(name);
   button.onClick({ preventDefault: () => {} });
+  return button.children;
 }
 
 /** The form for a change of a label, or for a creation with none. */
 const formOf = (label?: Label) => (
-  <CreateUpdateLabelInline
-    projectId={web.id}
-    labelForm
-    setLabelForm={setLabelForm}
-    isUpdating={label !== undefined}
-    labelToUpdate={label}
-  />
+  <CreateUpdateLabelInline projectId={web.id} labelForm setLabelForm={setLabelForm} labelToUpdate={label} />
 );
 
 beforeEach(() => {
@@ -3002,20 +3163,24 @@ beforeEach(() => {
   store.updateLabel.mockReset();
   store.updateLabel.mockResolvedValue(bug);
   setLabelForm.mockReset();
+  form.setError.mockReset();
   toasts.length = 0;
 });
 
 describe("the label settings' inline form", () => {
-  it("creates a label in the page's project, at the top, with the name and colour it holds", async () => {
-    submit(formOf(), "Feature");
+  it("creates a label in the page's project, at the top, with the name and colour it holds, its button Add", async () => {
+    const said = submit(formOf(), "Feature");
     await vi.waitFor(() => expect(store.createLabel).toHaveBeenCalled());
-    expect(store.createLabel.mock.calls).toEqual([[web.id, { name: "Feature", color: expect.any(String) }]]);
+    expect([said, store.createLabel.mock.calls]).toEqual([
+      "add",
+      [[web.id, { name: "Feature", color: expect.any(String) }]],
+    ]);
   });
 
-  it("changes a label with the fields its form edits, the only ones nerve's LabelUpdate takes", async () => {
-    submit(formOf(bug), "defect");
+  it("changes a label with the fields its form edits, the only ones LabelUpdate takes, its button Update", async () => {
+    const said = submit(formOf(bug), "defect");
     await vi.waitFor(() => expect(store.updateLabel).toHaveBeenCalled());
-    expect(store.updateLabel.mock.calls).toEqual([[bug.id, { name: "defect", color: "#F59E0B" }]]);
+    expect([said, store.updateLabel.mock.calls]).toEqual(["update", [[bug.id, { name: "defect", color: "#F59E0B" }]]]);
   });
 
   it("closes once nerve has made the change, not before", async () => {
@@ -3037,12 +3202,16 @@ describe("the label settings' inline form", () => {
     submit(row.form(), "BUG");
     await vi.waitFor(() => expect(row.sent()).toHaveBeenCalled());
     await pageSettled();
-    expect([setLabelForm.mock.calls, toasts]).toEqual([[], []]);
+    expect([underFields(form.setError), setLabelForm.mock.calls, toasts]).toEqual([
+      [["name", "errors.project_label_name_taken"]],
+      [],
+      [],
+    ]);
   });
 });
 ````
 
-`web/apps/web/core/components/labels/create-update-label-inline.tsx`（修改，11 处）：
+`web/apps/web/core/components/labels/create-update-label-inline.tsx`（修改，12 处）：
 
 ````old web/apps/web/core/components/labels/create-update-label-inline.tsx
 import { TwitterPicker } from "react-color";
@@ -3079,13 +3248,13 @@ type TCreateUpdateLabelInlineProps = {
   labelOperationsCallbacks: TLabelOperationsCallbacks;
 ````
 ````new web/apps/web/core/components/labels/create-update-label-inline.tsx
-  isUpdating: boolean;
+  /** The label the form changes; none, a creation. */
 ````
 ````old web/apps/web/core/components/labels/create-update-label-inline.tsx
     const { labelForm, setLabelForm, isUpdating, labelOperationsCallbacks, labelToUpdate, onClose } = props;
 ````
 ````new web/apps/web/core/components/labels/create-update-label-inline.tsx
-    const { projectId, labelForm, setLabelForm, isUpdating, labelToUpdate, onClose } = props;
+    const { projectId, labelForm, setLabelForm, labelToUpdate, onClose } = props;
 ````
 ````old web/apps/web/core/components/labels/create-update-label-inline.tsx
       reset,
@@ -3154,6 +3323,12 @@ type TCreateUpdateLabelInlineProps = {
 ````
 ````new web/apps/web/core/components/labels/create-update-label-inline.tsx
               void handleSubmit(handleFormSubmit)();
+````
+````old web/apps/web/core/components/labels/create-update-label-inline.tsx
+            {isUpdating ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
+````
+````new web/apps/web/core/components/labels/create-update-label-inline.tsx
+            {labelToUpdate ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
 ````
 
 `web/apps/web/core/components/labels/delete-label-modal.tsx`（修改，4 处）：
@@ -3237,10 +3412,13 @@ import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
                           projectId={label.project_id}
 ````
 ````old web/apps/web/core/components/labels/project-setting-label-group.tsx
+                          setLabelForm={setEditLabelForm}
+                          isUpdating
                           labelToUpdate={label}
                           labelOperationsCallbacks={labelOperationsCallbacks}
 ````
 ````new web/apps/web/core/components/labels/project-setting-label-group.tsx
+                          setLabelForm={setEditLabelForm}
                           labelToUpdate={label}
 ````
 ````old web/apps/web/core/components/labels/project-setting-label-group.tsx
@@ -3315,10 +3493,13 @@ import { useLabelChanges } from "./use-label-changes";
                 projectId={label.project_id}
 ````
 ````old web/apps/web/core/components/labels/project-setting-label-item.tsx
+                setLabelForm={setEditLabelForm}
+                isUpdating
                 labelToUpdate={label}
                 labelOperationsCallbacks={labelOperationsCallbacks}
 ````
 ````new web/apps/web/core/components/labels/project-setting-label-item.tsx
+                setLabelForm={setEditLabelForm}
                 labelToUpdate={label}
 ````
 
@@ -3387,11 +3568,12 @@ import { useLabelChanges } from "./use-label-changes";
               projectId={projectId}
 ````
 ````old web/apps/web/core/components/labels/project-setting-label-list.tsx
+              setLabelForm={setLabelForm}
               isUpdating={isUpdating}
               labelOperationsCallbacks={labelOperationsCallbacks}
 ````
 ````new web/apps/web/core/components/labels/project-setting-label-list.tsx
-              isUpdating={isUpdating}
+              setLabelForm={setLabelForm}
 ````
 ````old web/apps/web/core/components/labels/project-setting-label-list.tsx
                     isEditable={isEditable}
@@ -3428,7 +3610,7 @@ import { useLabelChanges } from "./use-label-changes";
 ````
 ````new web/packages/i18n/src/locales/en/project-settings.json
       "label_max_char": "Label name should not exceed 255 characters",
-      "parent_not_allowed": "A label can go only under a label at the top of its project: labels have two levels."
+      "parent_not_allowed": "A label can go only under a label at the top of its project, and a label with labels under it stays at the top: labels have two levels."
 ````
 
 `web/packages/i18n/src/locales/zh-CN/project-settings.json`（修改，1 处）：
@@ -3438,7 +3620,7 @@ import { useLabelChanges } from "./use-label-changes";
 ````
 ````new web/packages/i18n/src/locales/zh-CN/project-settings.json
       "label_max_char": "标签名称不应超过255个字符",
-      "parent_not_allowed": "标签只能放在本项目的顶层标签之下：标签只有两层。"
+      "parent_not_allowed": "标签只能放在本项目的顶层标签之下，下面有标签的标签留在顶层：标签只有两层。"
 ````
 
 - [ ] **Step 5: 运行检查**
@@ -3467,6 +3649,7 @@ useLabelChanges sends each change of a project's labels through the store
 and follows it with followInSession; a creation's or a change's refusal
 shows under the name when nerve names it, a move nerve refuses for its
 parent says labels have two levels, the others are toasts. The inline
+form creates or changes as labelToUpdate says, its button too. The inline
 form stays busy, Cancel too, until the page has followed nerve's answer;
 the deletion's dialog closes only once the label is deleted. The
 components take no callbacks.
@@ -3488,7 +3671,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T4.8` | 标签的表单在 nerve 回答之前不忙 | 故事 P7（Task 5 起） | 端到端 |
 | `T4.9` | 标签的表单在 nerve 回答之前取消仍可用 | 故事 P7（Task 5 起） | 端到端 |
 | `T4.10` | 删除标签的确认框在 nerve 回答之前关上 | 故事 P7（Task 5 起） | 端到端 |
-| `T4.11` | 标签的表单在名字下什么都不显示 | 故事 P7（Task 5 起） | 端到端 |
+| `T4.11` | 标签的表单在名字下什么都不显示 | `create-update-label-inline.test.tsx`、故事 P7（Task 5 起） | vitest；端到端 |
 | `T4.12` | 在 `use-label-changes.ts` 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
 
 ---
@@ -3496,22 +3679,23 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 5: 标签设置页从路由读项目，控件只给能改标签的人，拖动由此刻的手柄开始；P7 的页面版本
 
 **Files:**
-- Create: `e2e/stories/project/p7-labels-page.spec.ts`、`web/apps/web/core/components/labels/project-setting-label-group.test.tsx`
-- Modify: `.oxlintrc.json`、`e2e/stories/project/p7-labels.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-list.tsx`、`web/apps/web/core/store/label.store.changes.test.ts`、`web/apps/web/core/store/label.store.test.ts`、`web/apps/web/core/store/label.store.ts`
+- Create: `e2e/stories/project/p7-labels-page.spec.ts`、`web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.test.tsx`
+- Modify: `.oxlintrc.json`、`e2e/stories/project/p7-labels.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-list.tsx`、`web/apps/web/core/store/label.store.changes.test.ts`、`web/apps/web/core/store/label.store.test.ts`、`web/apps/web/core/store/label.store.ts`、`web/packages/ui/src/drag-handle.tsx`
 
 **Interfaces:**
 - Produces（spec 2.5；M3 设计 2 的 P7、W11，3.16，7.6，9.2；P10 的 F-2 和 `project-address-route`；P10 review 第 6 节 P11 一行；P8b 的 P7）：
   - 标签设置页（`labels/page.tsx`）：工作区和项目取自路由的参数，标题用 `getProjectById(projectId)` 的名字；门是 `allowPermissions([ADMIN, MEMBER], PROJECT, workspaceSlug, projectId)`（`label.list`，访客看到没有权限）；列表收工作区和项目。原来读 router store 的 `currentProjectDetails`，`allowPermissions` 不写工作区和项目。
   - 标签列表（`project-setting-label-list.tsx`）：`TProjectSettingsLabelList`（`workspaceSlug`、`projectId`，不再读 `useParams`）；项目的标签按项目的 id 读（`getProjectLabels(projectId)`、`getProjectLabelsTree(projectId)`：label store 的 `computedFn`，原来是读 router store 的项目的 `projectLabelsTree` getter，删除）；改标签的控件只给 `allowPermissions([ADMIN], PROJECT, workspaceSlug, projectId)`（`label.create` 等）：标题旁的"Add label"和没有标签时的按钮（原来没有标签时每个成员都看得到）。
-  - 组（`project-setting-label-group.tsx`）：组的那一行收 `disabled={!isEditable}`：菜单和拖动手柄只给能改标签的人（原来项目的每个成员都看得到组的菜单和手柄，nerve 拒绝他们的修改）。
+  - 组（`project-setting-label-group.tsx`）：组的那一行收 `disabled={!isEditable}`：菜单和拖动手柄只给能改标签的人（原来项目的每个成员都看得到组的菜单和手柄，nerve 拒绝他们的修改）；组的展开按钮（`Disclosure.Button`）以标签的名字为名（Headless UI 给它 `aria-expanded`）。
   - 拖动（`label-drag-n-drop-HOC.tsx`）：手柄是此刻渲染的那一个（回调的 ref 写进 state，effect 以它为依赖）：一行重新渲染出新的手柄（编辑关上之后）时重新登记，不再靠列表每次渲染都新建的 `onDrop`（P8b 的 P7）；没有手柄就不登记拖动和放下：一行只给能改标签的人渲染手柄、编辑时不渲染，所以 HOC 不再自己判断权限（原来的 `allowPermissions` 不写工作区和项目，删除）。
+  - `@nerve/ui` 的 `DragHandle`：`tabIndex={-1}`、`aria-hidden`。pragmatic-dnd 的拖动只认指针，把手原来是没有名字、看不见的 Tab 停留点；它的 4 个调用方（标签的行，侧边栏项目的行、收藏夹、收藏项）都只把它当指针的把手（spec 第 3 节第 19 条，W17）。
   - 一行（`label-item-block.tsx`）：没有调用方传的 `draggable` 删除（P8b A.9 的行）；菜单（"Options"）和删除按钮（"Delete"，`type="button"`）有名字；菜单和删除按钮在焦点进到这一行时和指针经过时一样显示（`group-focus-within:opacity-100`；原来键盘到达时看不见）。
   - `tools/keywords.json`：`project-address-route` 的文件加上标签设置页、`project-setting-label-list.tsx`、`label-drag-n-drop-HOC.tsx`（规则的说明随之改）。
-  - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `project-setting-label-group.test.tsx`。
+  - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `project-setting-label-group.test.tsx`、`label-drag-n-drop-HOC.test.tsx`。
 
 **Tests:**
-- vitest：`states-labels.test.tsx` 加标签设置页：`shows $who the labels, their controls and its button`（项目管理员、是工作区管理员的项目成员、是工作区管理员的项目访客）；`shows its member the labels, and no control`；`tells its guest he may not see them`；`shows the button of its empty state, with no label, to those who may add one alone`（管理员看到两个按钮，成员一个也没有）。`project-setting-label-group.test.tsx`（新文件）：`shows one who may change the labels the group's controls and those of the labels under it`；`shows any other member the group and the labels under it, with no control`。`label.store.test.ts`、`label.store.changes.test.ts` 读 `getProjectLabelsTree(web.id)`。
-- 端到端：`P7 (page): the admin creates Bug, its form gone through by Tab and held until nerve answers, and Feature; bug is said taken under the name; he drags UI under Bug, which sends its parent alone, renames Bug Defect and drags Feature first; Feature put under Defect meanwhile, a third level the page asks for is said refused; its member sees the labels and can change none, a group's neither, a workspace admin who is its member can; Defect is deleted, its dialog held, with the labels under it`（新文件：表单打开时焦点在名字上，Tab 次序 `labelName`、`Cancel`、`Add`；创建扣住时"Adding"和"Cancel"都按不了，请求体只有名字和颜色；`bug` 的 409 在表单下面一行；拖 UI 到 Bug 的中间：只发 `parent_id`；从组的菜单改名：请求体是名字和颜色；拖 Feature 到 Docs 的上方：`{ parent_id: null, sort_order: 65535 }`；另一处把 Feature 放进 Defect 之后，把 Docs 拖到 Feature 上：422，提示说标签只有两层；点别处之后 Docs 的菜单和删除按钮看不见，从菜单按 Tab 到删除按钮时看得见；成员看不到"Add label"、手柄、菜单、删除按钮，也没有可拖的标签（`[draggable="true"]`），是工作区管理员的成员各有四个（删除按钮三个：组没有）；重新载入之后从菜单删除 Defect，扣住时 Escape 不关、"Cancel"按不了，子标签一起删除；`expectLabels` 核对每一行）。W11 的页面版本加标签设置页；S2 的挂载清单加上标签设置页（spec 2.11）。
+- vitest：`states-labels.test.tsx` 加标签设置页：`shows $who the labels, their controls and its button`（项目管理员、是工作区管理员的项目成员、是工作区管理员的项目访客）；`shows its member the labels, and no control`；`tells its guest he may not see them`；`shows the button of its empty state, with no label, to those who may add one alone`（管理员看到两个按钮，成员一个也没有）。`project-setting-label-group.test.tsx`（新文件）：`shows one who may change the labels the group's controls and those of the labels under it`；`shows any other member the group and the labels under it, with no control`。`label-drag-n-drop-HOC.test.tsx`（新文件；web 应用的 vitest 没有 DOM，测试自己照 React 的语义写 `useState`、`useRef`、`useEffect`，以 pragmatic-dnd 的替身记下登记的把手：spec 第 3 节第 10 条）：`registers the label's drag with the grip its row renders now, and anew when the row renders another`；`registers no drag while its row renders no grip`。`states-labels.test.tsx` 的标签的 store 的替身只对页面的项目回答。`label.store.test.ts`、`label.store.changes.test.ts` 读 `getProjectLabelsTree(web.id)`。
+- 端到端：`P7 (page): the admin creates Bug, its form gone through by Tab and held until nerve answers, and Feature; bug is said taken under the name; he drags UI under Bug, which sends its parent alone, renames Bug Defect and drags Feature first; Feature put under Defect meanwhile, a third level the page asks for is said refused; its member sees the labels and can change none, a group's neither, a workspace admin who is its member can; Defect is deleted, its dialog held, with the labels under it`（新文件：表单打开时焦点在名字上，Tab 次序 `labelName`、`Cancel`、`Add`；创建扣住时"Adding"和"Cancel"都按不了，请求体只有名字和颜色；`bug` 的 409 在表单下面一行；拖 UI 到 Bug 的中间：只发 `parent_id`；从组的菜单改名：请求体是名字和颜色，组的展开按钮名为 Defect、展开着；拖 Feature 到 Docs 的上方：`{ parent_id: null, sort_order: 65535 }`；另一处把 Feature 放进 Defect 之后，把 Docs 拖到 Feature 上：422，提示说标签只有两层；点别处之后 Docs 的菜单和删除按钮看不见，从 Feature 的删除按钮按 Tab 直接到 Docs 的菜单（经过手柄而不停），再到删除按钮，这时看得见；成员看不到"Add label"、手柄、菜单、删除按钮，也没有可拖的标签（`[draggable="true"]`），是工作区管理员的成员各有四个（删除按钮三个：组没有）；重新载入之后从菜单删除 Defect，扣住时 Escape 不关、"Cancel"按不了，子标签一起删除；`expectLabels` 核对每一行）。W11 的页面版本加标签设置页；S2 的挂载清单加上标签设置页（spec 2.11）。
 
 - [ ] **Step 1: 标签的 getter 按项目的 id**
 
@@ -3882,7 +4066,7 @@ import { useUserPermissions } from "@/hooks/store/user";
       {children(isDragging, isMakeChild, setDragHandle)}
 ````
 
-`web/apps/web/core/components/labels/project-setting-label-group.tsx`（修改，1 处）：
+`web/apps/web/core/components/labels/project-setting-label-group.tsx`（修改，2 处）：
 
 ````old web/apps/web/core/components/labels/project-setting-label-group.tsx
                           dragHandleRef={dragHandleRef}
@@ -3890,6 +4074,33 @@ import { useUserPermissions } from "@/hooks/store/user";
 ````new web/apps/web/core/components/labels/project-setting-label-group.tsx
                           dragHandleRef={dragHandleRef}
                           disabled={!isEditable}
+````
+````old web/apps/web/core/components/labels/project-setting-label-group.tsx
+                      <Disclosure.Button>
+````
+````new web/apps/web/core/components/labels/project-setting-label-group.tsx
+                      <Disclosure.Button aria-label={label.name}>
+````
+
+`web/packages/ui/src/drag-handle.tsx`（修改，2 处）：
+
+````old web/packages/ui/src/drag-handle.tsx
+  }
+
+````
+````new web/packages/ui/src/drag-handle.tsx
+  }
+
+  // A pointer's grip: pragmatic-dnd drags by the pointer alone, so the grip is no Tab stop, and nothing for assistive
+  // technology to read; what it drags names itself.
+````
+````old web/packages/ui/src/drag-handle.tsx
+      type="button"
+````
+````new web/packages/ui/src/drag-handle.tsx
+      type="button"
+      tabIndex={-1}
+      aria-hidden
 ````
 
 - [ ] **Step 4: 测试、关键词规则和静态检查的范围**
@@ -3901,7 +4112,8 @@ import { useUserPermissions } from "@/hooks/store/user";
 ````
 ````new .oxlintrc.json
         "web/apps/web/core/components/labels/use-label-changes.test.ts",
-        "web/apps/web/core/components/labels/project-setting-label-group.test.tsx"
+        "web/apps/web/core/components/labels/project-setting-label-group.test.tsx",
+        "web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx"
 ````
 
 `tools/keywords.json`（修改，4 处）：
@@ -3956,9 +4168,10 @@ import LabelsPage from "./labels/page";
 // controls that change them to those nerve lets change them (state.create and the others: its admins, and its members
 // who are the workspace's admins, its guests among them). The page renders on the server at its route, through React
 // Router's stub, which gives it the route's params, with stand-ins for its parts that write what they show: the list
-// of groups says whether it has its controls. The caller's permissions and projects are the stores' own, over acme and
-// its project web as nerve lists them to him (fake-permissions.ts), while the address the router store holds names no
-// project: the page reads its project from its route.
+// of groups writes the states it is given, and whether it has its controls. The caller's permissions and projects are
+// the stores' own, over acme and its project web as nerve lists them to him (fake-permissions.ts), while the address
+// the router store holds names no project: the page reads its project from its route. The state store gives web's
+// states and none of another project's, so that a page that reads another's shows its loader.
 ````
 ````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
 // Whom a project's state and label settings show what (M3 design 2 P6, P7, W11, 9.2): its states and its labels to
@@ -3966,16 +4179,18 @@ import LabelsPage from "./labels/page";
 // members, whatever their role; design 2 W11); the controls that change them to those nerve lets change them
 // (state.create, label.create and the others: its admins, and its members who are the workspace's admins, its guests
 // among them). A page renders on the server at its route, through React Router's stub, which gives it the route's
-// params, with stand-ins for its parts that write what they show: the list of groups and a label say whether they have
-// their controls, the label list's heading and its empty state show their buttons. The caller's permissions and
-// projects are the stores' own, over acme and its project web as nerve lists them to him (fake-permissions.ts), while
-// the address the router store holds names no project: the page reads its project from its route.
+// params, with stand-ins for its parts that write what they show: the list of groups writes the states it is given and
+// a label its name, each whether they have their controls, the label list's heading and its empty state show their
+// buttons. The caller's permissions and projects are the stores' own, over acme and its project web as nerve lists
+// them to him (fake-permissions.ts), while the address the router store holds names no project: the page reads its
+// project from its route. The state and label stores give web's and none of another project's, so that a page that
+// reads another's shows its loader.
 ````
 ````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-const caller = vi.hoisted((): { permissions?: IUserPermissionStore; projects?: IProjectStore } => ({}));
+const grouped = vi.hoisted(() => ({ backlog: [{ name: "Backlog" }], started: [{ name: "In Progress" }] }));
 ````
 ````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-const caller = vi.hoisted((): { permissions?: IUserPermissionStore; projects?: IProjectStore } => ({}));
+const grouped = vi.hoisted(() => ({ backlog: [{ name: "Backlog" }], started: [{ name: "In Progress" }] }));
 /** web's one label, as the label store gives it. */
 const bug = vi.hoisted(() => ({ id: "l-bug", name: "Bug", parent_id: null }));
 /** web's labels as the label store lists them: Bug, but in the test of a project with none. */
@@ -3985,17 +4200,19 @@ beforeEach(() => {
 });
 ````
 ````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-  useProjectState: () => ({ getGroupedProjectStates: () => ({}), fetchProjectStates: vi.fn() }),
+  }),
 }));
 ````
 ````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-  useProjectState: () => ({ getGroupedProjectStates: () => ({}), fetchProjectStates: vi.fn() }),
+  }),
 }));
 vi.mock("@/hooks/store/use-label", () => ({
   useLabel: () => ({
-    getProjectLabels: () => listed.labels,
-    getProjectLabelsTree: () =>
-      listed.labels.map((label) => ({ id: label.id, name: label.name, parent_id: label.parent_id, children: [] })),
+    getProjectLabels: (projectId: string) => (projectId === caller.projectId ? listed.labels : undefined),
+    getProjectLabelsTree: (projectId: string) =>
+      projectId === caller.projectId
+        ? listed.labels.map((label) => ({ id: label.id, name: label.name, parent_id: label.parent_id, children: [] }))
+        : undefined,
   }),
 }));
 vi.mock("@/components/labels/project-setting-label-item", () => ({
@@ -4054,6 +4271,148 @@ describe("the label settings page", () => {
   });
 });
 
+````
+
+`web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx`（新文件，137 行）：
+
+````file web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { labelOf, projectOf } from "@/store/project/fake-projects";
+import { LabelDndHOC } from "./label-drag-n-drop-HOC";
+
+// Which grip a label's drag is registered with, as its row renders it (M3 design 3.16, P8b's P7): a row rendered
+// anew, once its edit closes, has a new grip, which the drag must take. The app's vitest runs in node, with no DOM, so
+// the test models React's hooks itself and runs the HOC's function as React would: useState keeps its value across
+// renders, its setter the same function at each; useRef keeps its object; useEffect runs after a commit, only when its
+// dependencies changed (Object.is), its last cleanup first; a commit sets the row's ref, and calls the grip's ref when
+// the grip or that ref changed; a state the commit changed renders again. The drag adapter's stand-in keeps the grips
+// registered.
+
+const hooks = vi.hoisted(() => {
+  const queued: (() => void)[] = [];
+  return {
+    at: 0,
+    changed: false,
+    states: new Map<number, { value: unknown; set: (next: unknown) => void }>(),
+    refs: new Map<number, { current: unknown }>(),
+    effects: new Map<number, { deps: readonly unknown[]; cleanup: (() => void) | void }>(),
+    queued,
+  };
+});
+vi.mock("react", async (importOriginal) => {
+  const react = await importOriginal<typeof import("react")>();
+  return {
+    ...react,
+    useState: (initial: unknown) => {
+      const at = hooks.at++;
+      const state = hooks.states.get(at) ?? {
+        value: initial,
+        set: (next: unknown) => {
+          if (Object.is(next, state.value)) return;
+          state.value = next;
+          hooks.changed = true;
+        },
+      };
+      hooks.states.set(at, state);
+      return [state.value, state.set];
+    },
+    useRef: (initial: unknown) => {
+      const at = hooks.at++;
+      const ref = hooks.refs.get(at) ?? { current: initial };
+      hooks.refs.set(at, ref);
+      return ref;
+    },
+    useEffect: (effect: () => (() => void) | void, deps: readonly unknown[]) => {
+      const at = hooks.at++;
+      const last = hooks.effects.get(at);
+      if (last && last.deps.length === deps.length && last.deps.every((dep, i) => Object.is(dep, deps[i]))) return;
+      hooks.queued.push(() => {
+        hooks.effects.get(at)?.cleanup?.();
+        hooks.effects.set(at, { deps, cleanup: effect() });
+      });
+    },
+  };
+});
+const dnd = vi.hoisted(() => ({ grips: new Set<unknown>() }));
+vi.mock("@atlaskit/pragmatic-drag-and-drop/element/adapter", () => ({
+  draggable: ({ dragHandle }: { dragHandle?: unknown }) => {
+    dnd.grips.add(dragHandle);
+    return () => dnd.grips.delete(dragHandle);
+  },
+  dropTargetForElements: () => () => undefined,
+}));
+vi.mock("mobx-react", () => ({ observer: <C,>(component: C) => component }));
+vi.mock("@nerve/ui", () => ({ DropIndicator: () => null }));
+
+const web = projectOf("WEB", "w-acme");
+const bug = labelOf(web, "Bug", 10000);
+// stand-ins of the elements React would give the refs, which the HOC only hands on: each its own, by its name
+const element = (name: string): HTMLButtonElement => Object.assign(Object.create(null), { name });
+const row: HTMLDivElement = Object.create(null);
+// one handler for every render, as a list that keeps its handler gives: the drag cannot count on a new one
+const onDrop = () => undefined;
+
+/** The grip the last commit gave the grip's ref, and that ref. */
+let committed: { grip: HTMLButtonElement | null; ref?: (grip: HTMLButtonElement | null) => void } = { grip: null };
+
+/** Shows the label's row with grip (none: the row renders none) as React would: renders, commits, renders again. */
+function show(grip: HTMLButtonElement | null) {
+  for (let renders = 0; renders < 5; renders++) {
+    hooks.at = 0;
+    hooks.changed = false;
+    let gripRef: ((grip: HTMLButtonElement | null) => void) | undefined;
+    const tree = LabelDndHOC({
+      label: bug,
+      isGroup: false,
+      isChild: false,
+      isLastChild: true,
+      onDrop,
+      children: (_dragging, _child, ref) => {
+        gripRef = ref;
+        return null;
+      },
+    });
+    tree.props.ref.current = row;
+    if (gripRef && (gripRef !== committed.ref || grip !== committed.grip)) {
+      if (committed.ref && committed.ref !== gripRef) committed.ref(null);
+      gripRef(grip);
+      committed = { grip, ref: gripRef };
+    }
+    for (const run of hooks.queued.splice(0)) run();
+    if (!hooks.changed) return;
+  }
+  throw new Error("the HOC renders without end");
+}
+
+beforeEach(() => {
+  hooks.states.clear();
+  hooks.refs.clear();
+  hooks.effects.clear();
+  hooks.queued.length = 0;
+  dnd.grips.clear();
+  committed = { grip: null };
+});
+
+describe("LabelDndHOC", () => {
+  it("registers the label's drag with the grip its row renders now, and anew when the row renders another", () => {
+    const first = element("first");
+    show(first);
+    expect([...dnd.grips]).toEqual([first]);
+    const second = element("second");
+    show(second);
+    expect([...dnd.grips]).toEqual([second]);
+  });
+
+  it("registers no drag while its row renders no grip", () => {
+    show(null);
+    expect([...dnd.grips]).toEqual([]);
+  });
+});
 ````
 
 `web/apps/web/core/components/labels/project-setting-label-group.test.tsx`（新文件，55 行）：
@@ -4118,7 +4477,7 @@ describe("ProjectSettingLabelGroup", () => {
 
 - [ ] **Step 5: 端到端**
 
-`e2e/stories/project/p7-labels-page.spec.ts`（新文件，249 行）：
+`e2e/stories/project/p7-labels-page.spec.ts`（新文件，257 行）：
 
 ````file e2e/stories/project/p7-labels-page.spec.ts
 import type { Locator, Page } from "@playwright/test";
@@ -4270,7 +4629,8 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   expect([under.answer.status(), under.body]).toEqual([200, { parent_id: bug.id }]);
   await expect(page.locator("h6")).toHaveText(["Docs", "Bug", "UI", "Feature"]);
 
-  // Bug renamed Defect, from its menu as a group: the fields its form edits.
+  // Bug renamed Defect, from its menu as a group: the fields its form edits. Its disclosure is named by it, and says
+  // the labels under it are shown.
   await labelRow(page, "Bug").getByRole("button", { name: "Options" }).click();
   await page.getByRole("menuitem", { name: "Edit label" }).click();
   await page.locator("#labelName").fill("Defect");
@@ -4279,6 +4639,7 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   );
   expect([renamed.answer.status(), renamed.body]).toEqual([200, { name: "Defect", color: bug.color }]);
   await expect(page.locator("h6")).toHaveText(["Docs", "Defect", "UI", "Feature"]);
+  await expect(page.getByRole("button", { name: "Defect", exact: true, expanded: true })).toBeVisible();
 
   // Feature dragged onto Docs's top: first of the labels at the top, a step before Docs.
   const first = await sentTo(page, "PATCH", `/api/v0/labels/${feature.id}`, () =>
@@ -4298,18 +4659,24 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   const third = await sentTo(page, "PATCH", `/api/v0/labels/${docs.id}`, () => dragLabel(page, "Docs", "Feature"));
   expect([third.answer.status(), third.body]).toEqual([422, { parent_id: feature.id }]);
   await expect(
-    page.getByText("A label can go only under a label at the top of its project: labels have two levels.")
+    page.getByText(
+      "A label can go only under a label at the top of its project, and a label with labels under it stays at the " +
+        "top: labels have two levels."
+    )
   ).toBeVisible();
   await expect(page.locator("h6")).toHaveText(["Feature", "Docs", "Defect", "UI"]);
 
   // Docs's controls, unseen while neither the pointer nor the focus is in its row (a click elsewhere hides them), are
-  // shown while Tab goes through them, as while the pointer is over it.
+  // shown while Tab goes through them, as while the pointer is over it. Tab comes to its menu from Feature's delete
+  // button, past its grip, which only a pointer drags.
   const docsRow = labelRow(page, "Docs");
   const docsControls = docsRow.locator(":scope > div.absolute");
   await docsRow.locator("h6").click();
   await page.mouse.move(0, 0);
   await expect(docsControls).toHaveCSS("opacity", "0");
-  await docsRow.getByRole("button", { name: "Options" }).focus();
+  await labelRow(page, "Feature").getByRole("button", { name: "Delete" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(docsRow.getByRole("button", { name: "Options" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(docsRow.getByRole("button", { name: "Delete" })).toBeFocused();
   await expect(docsControls).toHaveCSS("opacity", "1");
@@ -4481,7 +4848,7 @@ Expected: 109 个全部通过。
 - [ ] **Step 7: 提交**
 
 ```bash
-git add .oxlintrc.json e2e/stories/project/p7-labels-page.spec.ts e2e/stories/project/p7-labels.spec.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx' web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx web/apps/web/core/components/labels/project-setting-label-group.test.tsx web/apps/web/core/components/labels/project-setting-label-group.tsx web/apps/web/core/components/labels/project-setting-label-list.tsx web/apps/web/core/store/label.store.changes.test.ts web/apps/web/core/store/label.store.test.ts web/apps/web/core/store/label.store.ts
+git add .oxlintrc.json e2e/stories/project/p7-labels-page.spec.ts e2e/stories/project/p7-labels.spec.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx' web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx web/apps/web/core/components/labels/project-setting-label-group.test.tsx web/apps/web/core/components/labels/project-setting-label-group.tsx web/apps/web/core/components/labels/project-setting-label-list.tsx web/apps/web/core/store/label.store.changes.test.ts web/apps/web/core/store/label.store.test.ts web/apps/web/core/store/label.store.ts web/packages/ui/src/drag-handle.tsx
 ```
 ```bash
 git commit -m "feat(M3/P11): the label settings page reads its project from its route, offers the changes to whom nerve allows them, and a label is dragged by the grip it shows now
@@ -4491,8 +4858,10 @@ hands them to the list, which reads the project's labels by its id; the
 keyword rule project-address-route takes the page, the list and the drag.
 A group's menu and grip, and the empty state's button, show only to whom
 may change the labels. A label's drag is registered by the grip its row
-renders now, so a row rendered anew is draggable again. The row's menu
-and delete button have names and show while the focus is in the row.
+renders now, so a row rendered anew is draggable again; a vitest of its
+own holds it. The row's menu and delete button have names and show while
+the focus is in the row, a group's disclosure is named by its label, and
+the drag handle is the pointer's alone, no Tab stop.
 P7's page version; W11 and S2 open the page.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -4515,6 +4884,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T5.11` | 标签的表单的按钮有正的 `tabIndex` | 故事 P7 | 端到端 |
 | `T5.12` | 项目的标签树把组下的标签也放在顶层 | `label.store.test.ts` | vitest |
 | `T5.13` | 在 `project-setting-label-group.test.tsx` 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T5.14` | 把手又经 ref 读（Plane 的写法）：不在副作用的依赖里 | `label-drag-n-drop-HOC.test.tsx` | vitest |
+| `T5.15` | 把手照行的渲染存着，但不在副作用的依赖里 | `label-drag-n-drop-HOC.test.tsx`、oxlint（`check:lint`） | vitest；静态 |
+| `T5.16` | 标签组的展开按钮没有名字 | 故事 P7 | 端到端 |
+| `T5.17` | 拖动把手又是没有名字的 Tab 停留点 | 故事 P7 | 端到端 |
 
 ---
 
@@ -4711,22 +5084,23 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 7: M2 的账户页面只在发出修改的会话里跟进
 
 **Files:**
-- Create: `web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.test.tsx`
-- Modify: `.oxlintrc.json`、`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/profile/start-of-week-preference.tsx`、`web/apps/web/core/components/settings/profile/content/pages/general/form.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`
+- Create: `web/apps/web/core/components/api-token/delete-token-modal.test.tsx`、`web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.test.tsx`
+- Modify: `.oxlintrc.json`、`e2e/stories/identity/a11-api-tokens.spec.ts`、`web/apps/web/core/components/api-token/delete-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/create-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/form.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/profile/start-of-week-preference.tsx`、`web/apps/web/core/components/settings/profile/content/pages/general/form.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`
 
 **Interfaces:**
 - Produces（spec 2.7；M3 设计 7.1；P9 的裁定 P8、P9 spec 第 5 节和 review 第 6 节的 P11 一行；M2 设计 7.3）：
-  - 五个文件的修改经 `followInSession`：`done` 里提示成功（或交给下一步、清空表单），`failed` 里显示拒绝；说什么、怎样说照 M2（字段下的错误由各文件自己的映射决定，不改用 `useFormRefusal`：spec 第 3 节第 7 条）。
+  - 七个文件的修改经 `followInSession`：`done` 里提示成功（或交给下一步、清空表单），`failed` 里显示拒绝；说什么、怎样说照 M2（字段下的错误由各文件自己的映射决定，不改用 `useFormRefusal`：spec 第 3 节第 7 条）。
     - 新手引导的资料一步（`onboarding/steps/profile/root.tsx`）：名字的修改兑现之后交给下一步（`onDone`）；被拒绝时 `first_name` 的字段错误在名字下，其余提示（`needsErrorBanner`）；原来的 `handleSubmitUserDetail` 删除。
     - general（`general/form.tsx`）：成功提示"profile_updated"；被拒绝时 nerve 指名的字段错误在字段下，其余提示；按钮的加载在跟进之后结束。
     - preferences：时区和语言（`language-and-timezone-list.tsx`）、每周第一天（`start-of-week-preference.tsx`）：成功提示，被拒绝时提示。
     - security（`security.tsx`）：密码改了之后清空表单、隐藏密码、提示；`current_password_incorrect` 在旧密码下，`new_password` 的字段错误在新密码下，其余提示。
-  - 另一个标签页换了账户之后才兑现的修改，页面什么都不做（不提示、不交给下一步、不清空表单、不在字段下写东西）。
-  - 静态检查：`.oxlintrc.json` 的非空断言的范围加上三个新的测试文件（新手引导的测试已在里面）。
+    - security 页的 API 令牌（预检的 M1）：新建（`api-token/modal/create-token-modal.tsx`）在 `done` 里显示新令牌、下载它的 CSV，只在发出它的那一次打开里（`phase` 照旧）；`failed` 里表单照 M2 显示拒绝：表单（`form.tsx`）的 `onSubmit` 收显示拒绝的函数 `refused`，忙到弹窗跟进做完，取消在 `isSubmitting` 时按不了（F-1：弹窗的 `handleClose` 本来就不关）。撤销（`api-token/delete-token-modal.tsx`）在 `done` 里提示、关上，`failed` 里提示原因（`useRefusalToast`），确认框忙到跟进做完（`AlertModalCore`，Task 1）。
+  - 另一个标签页换了账户之后才兑现的修改，页面什么都不做（不提示、不交给下一步、不清空表单、不在字段下写东西、不显示也不下载新令牌）。
+  - 静态检查：`.oxlintrc.json` 的非空断言的范围加上五个新的测试文件（新手引导的测试已在里面）。
 
 **Tests:**
-- vitest：`onboarding/steps/profile/root.test.tsx`：`stays when nerve refuses the names, its refusal of the name said under it`；`says in a toast a refusal that is not of the name`；`hands nothing on and says nothing when the names' change $settles after another tab moved this one to another account`（替换原来的两条）。`general/form.test.tsx`（新文件）：`sends the names, the address not among them, and says nerve made the change`；`says a refusal under the field it names, and no toast`；`says in a toast a refusal that names no field of the form`；`says nothing when the change $settles after another tab moved this one to another account`。`security.test.tsx`（新文件）：`sends the passwords; once nerve has changed it, empties the form and says so`；`says nerve's refusal of $refused under its field, the form as it was`；`says in a toast a refusal of neither password`；`says nothing, nor empties the form, when the change $settles after another tab moved this one to another account`。`preferences/language-and-timezone-list.test.tsx`（新文件；列表渲染每周第一天）：`sends $preference picked, and says nerve made the change`；`says nerve's refusal of $preference in a toast`；`says nothing when the change of $preference $settles after another tab moved this one to another account`（时区、语言、每周第一天）。
-- 端到端：没有新的；M2 的账户故事（A 系列）照旧通过。
+- vitest：`onboarding/steps/profile/root.test.tsx`：`stays when nerve refuses the names, its refusal of the name said under it`；`says in a toast a refusal that is not of the name`；`hands nothing on and says nothing when the names' change $settles after another tab moved this one to another account`（替换原来的两条）。`general/form.test.tsx`（新文件）：`sends the names, the address not among them, and says nerve made the change`；`says a refusal under the field it names, and no toast`；`says in a toast a refusal that names no field of the form`；`says nothing when the change $settles after another tab moved this one to another account`。`security.test.tsx`（新文件）：`sends the passwords; once nerve has changed it, empties the form and says so`；`says nerve's refusal of $refused under its field, the form as it was`；`says in a toast a refusal of neither password`；`says nothing, nor empties the form, when the change $settles after another tab moved this one to another account`。`preferences/language-and-timezone-list.test.tsx`（新文件；列表渲染每周第一天）：`sends $preference picked, and says nerve made the change`；`says nerve's refusal of $preference in a toast`；`says nothing when the change of $preference $settles after another tab moved this one to another account`（时区、语言、每周第一天）。`api-token/modal/create-token-modal.test.tsx`（新文件）：`creates the token the form gives; once nerve has, downloads its secret`；`has the form say nerve's refusal, and downloads nothing`；`downloads nothing, nor has the form say anything, when the creation $settles after another tab moved this one`。`api-token/delete-token-modal.test.tsx`（新文件）：`revokes the token once its dialog is confirmed; once nerve has, says so and closes`；`says nerve's reason when it refuses, and stays open`；`says nothing, nor closes, when the revocation $settles after another tab moved this one to another account`。
+- 端到端：A11 的第二个故事（`a11-api-tokens.spec.ts`）：新建的请求被扣住时取消按不了，再经浏览器的后退离开页面（tokens 页从 security 页在应用之内进入；原来按取消），之后照旧：迟到的回答不显示令牌、不下载，列表里有它，再打开的弹窗要新的令牌（spec 第 3 节第 18 条）。M2 的其余账户故事（A 系列）照旧通过。
 
 - [ ] **Step 1: 新手引导的资料一步**
 
@@ -5460,21 +5834,426 @@ import { followInSession } from "@/lib/in-session";
     });
 ````
 
-- [ ] **Step 3: 静态检查的范围**
+- [ ] **Step 3: API 令牌的新建和撤销**
+
+`e2e/stories/identity/a11-api-tokens.spec.ts`（修改，8 处）：
+
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+test("A11 (page): what a modal's opening left unfinished stays there: a token answered after it closed shows nowhere; its cleanup spares the next opening", async ({
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+test("A11 (page): what a modal's opening left unfinished stays there: a token answered after its page was left shows nowhere; its cleanup spares the next opening", async ({
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  await page.clock.install();
+  await page.goto("/settings/profile/api-tokens");
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  await page.clock.install();
+  // The tokens' page is reached within the app, so that the browser's back leaves it within the app too.
+  await page.goto("/settings/profile/security");
+  const tokensPage = page.getByRole("button", { name: "Personal Access Tokens" });
+  await tokensPage.click();
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  /** Generates label in the modal opened now, and cancels while nerve's answer is held from the page. */
+  const generateThenCancel = async (label: string): Promise<() => Promise<void>> => {
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  /**
+   * Generates label in the modal opened now, which cannot be closed while nerve's answer is held from the page, and
+   * leaves the page (the browser's back) meanwhile.
+   */
+  const generateThenLeave = async (label: string): Promise<() => Promise<void>> => {
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+    await page.getByRole("button", { name: "Cancel" }).click();
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+    await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    await page.goBack();
+    await expect(page).toHaveURL("/settings/profile/security");
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  // Answered after the modal closed, the create lists the token, and does nothing else: the token never shows,
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  // Answered after its page was left, the create lists the token, and does nothing else: the token never shows,
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  const cancelledAnswer = await answerTo(page, "POST", "/api/v0/me/api-tokens", await generateThenCancel("cancelled"));
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  const cancelledAnswer = await answerTo(page, "POST", "/api/v0/me/api-tokens", await generateThenLeave("cancelled"));
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  const cancelled = (await cancelledAnswer.json()) as components["schemas"]["ApiTokenCreated"];
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  const cancelled = (await cancelledAnswer.json()) as components["schemas"]["ApiTokenCreated"];
+  await tokensPage.click();
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  // So too when the modal opens again before the answer comes: the modal opened again still asks for a new token.
+  const release = await generateThenCancel("late");
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  // So too when the page and the modal open again before the answer comes: the modal opened again still asks for a
+  // new token.
+  const release = await generateThenLeave("late");
+  await tokensPage.click();
+````
+
+`web/apps/web/core/components/api-token/delete-token-modal.test.tsx`（新文件，79 行）：
+
+````file web/apps/web/core/components/api-token/delete-token-modal.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { emptyShown, shown } from "@/lib/fake-controls";
+import { refusal } from "@/lib/fake-refusal";
+import { toasts } from "@/lib/fake-toast";
+import { DeleteApiTokenModal } from "./delete-token-modal";
+
+// What the dialog that revokes an API token does once nerve has settled the revocation (M2 design 7.7, M3 design 7.1):
+// the dialog renders on the server with a stand-in for its confirmation's dialog (fake-controls.ts), which keeps the
+// props it was given; the test presses its button, as a person would, and nerve answers when the test says. Its
+// session is fake-tab.ts's.
+
+const tokens = vi.hoisted(() => ({ revokeToken: vi.fn() }));
+vi.mock("@/hooks/store/user", () => ({ useApiTokens: () => tokens }));
+vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+const onClose = vi.fn();
+
+/** Renders the dialog of the token t-deploy, and presses its button; settles once the dialog has followed nerve. */
+function confirmed(): Promise<unknown> {
+  emptyShown();
+  renderToStaticMarkup(<DeleteApiTokenModal isOpen onClose={onClose} tokenId="t-deploy" />);
+  const [alert] = shown.alerts;
+  if (!alert) throw new Error("no dialog");
+  return Promise.resolve(alert.handleSubmit());
+}
+
+beforeEach(() => {
+  signedIn();
+  tokens.revokeToken.mockReset();
+  tokens.revokeToken.mockResolvedValue(undefined);
+  onClose.mockReset();
+  toasts.length = 0;
+});
+
+describe("DeleteApiTokenModal", () => {
+  it("revokes the token once its dialog is confirmed; once nerve has, says so and closes", async () => {
+    await confirmed();
+    expect(tokens.revokeToken.mock.calls).toEqual([["t-deploy"]]);
+    expect([toasts.map((toast) => toast.type), onClose.mock.calls.length]).toEqual([["success"], 1]);
+  });
+
+  it("says nerve's reason when it refuses, and stays open", async () => {
+    tokens.revokeToken.mockRejectedValueOnce(refusal(404, "identity.api_token_not_found"));
+    await confirmed();
+    expect([toasts, onClose.mock.calls]).toEqual([
+      [
+        {
+          type: "error",
+          title: "workspace_settings.settings.api_tokens.delete.error.title",
+          message: "errors.api_token_not_found",
+        },
+      ],
+      [],
+    ]);
+  });
+
+  it.each(lateSettlings)(
+    "says nothing, nor closes, when the revocation $settles after another tab moved this one to another account",
+    async ({ settle }) => {
+      const revocation = heldChange<undefined>();
+      tokens.revokeToken.mockReturnValueOnce(revocation.sent);
+      const followed = confirmed();
+      switchAccount();
+      settle(revocation);
+      await followed;
+      expect([toasts, onClose.mock.calls]).toEqual([[], []]);
+    }
+  );
+});
+````
+
+`web/apps/web/core/components/api-token/delete-token-modal.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/api-token/delete-token-modal.tsx
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+````
+````new web/apps/web/core/components/api-token/delete-token-modal.tsx
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
+````
+````old web/apps/web/core/components/api-token/delete-token-modal.tsx
+  };
+
+  const handleDeletion = async () => {
+````
+````new web/apps/web/core/components/api-token/delete-token-modal.tsx
+  };
+
+  // Busy, and the dialog not to be dismissed, until the page has followed nerve's answer, only in the session the
+  // revocation was sent in (M3 design 7.1): it says so and closes, or says nerve's reason and stays.
+  const handleDeletion = async () => {
+````
+````old web/apps/web/core/components/api-token/delete-token-modal.tsx
+    try {
+      await revokeToken(tokenId);
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: t("workspace_settings.settings.api_tokens.delete.success.title"),
+        message: t("workspace_settings.settings.api_tokens.delete.success.message"),
+      });
+      handleClose();
+    } catch (error) {
+      toastRefusal(error);
+      setDeleteLoading(false);
+    }
+````
+````new web/apps/web/core/components/api-token/delete-token-modal.tsx
+    await followInSession(() => revokeToken(tokenId), {
+      done: () => {
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("workspace_settings.settings.api_tokens.delete.success.title"),
+          message: t("workspace_settings.settings.api_tokens.delete.success.message"),
+        });
+        handleClose();
+      },
+      failed: toastRefusal,
+    });
+    setDeleteLoading(false);
+````
+
+`web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx`（新文件，95 行）：
+
+````file web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { isValidElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ApiTokenCreate, ApiTokenCreated } from "@nerve/api-client";
+import { heldChange, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { emptyShown, shown } from "@/lib/fake-controls";
+import { refusal } from "@/lib/fake-refusal";
+import { CreateApiTokenModal } from "./create-token-modal";
+
+// What the dialog that creates an API token does once nerve has settled the creation (M2 design 7.7, M3 design 7.1):
+// the dialog renders on the server with stand-ins for its modal (fake-controls.ts, which keeps what it shows) and its
+// form; the test submits a token as the form would, with the form's way of saying nerve's refusal, and nerve answers
+// the creation when the test says. Its session is fake-tab.ts's.
+
+/** The form's submit, as the dialog gives it. */
+type Submit = (data: ApiTokenCreate, refused: (error: unknown) => void) => Promise<void>;
+
+const tokens = vi.hoisted(() => ({ createToken: vi.fn(), csvDownload: vi.fn() }));
+vi.mock("@/hooks/store/user", () => ({ useApiTokens: () => ({ createToken: tokens.createToken }) }));
+vi.mock("@nerve/utils", () => ({ csvDownload: tokens.csvDownload, renderFormattedDate: () => "Oct 18, 2026" }));
+vi.mock("./form", () => ({ CreateApiTokenForm: () => null }));
+vi.mock("./generated-token-details", () => ({ GeneratedTokenDetails: () => null }));
+vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+const data: ApiTokenCreate = { label: "deploy", description: "ci", expired_at: "2026-10-18T00:00:00.000Z" };
+const created: ApiTokenCreated = {
+  id: "t-deploy",
+  label: "deploy",
+  description: "ci",
+  expired_at: "2026-10-18T00:00:00.000Z",
+  last_used: null,
+  created_at: "2026-10-11T00:00:00.000Z",
+  token: "nrv_pat_deploy",
+};
+const refused = vi.fn();
+
+/** Renders the dialog, and submits data as its form would; settles once the dialog has followed the creation. */
+function submitted(): Promise<void> {
+  emptyShown();
+  renderToStaticMarkup(<CreateApiTokenModal isOpen onClose={() => undefined} />);
+  const form = shown.modals.at(-1)?.children;
+  if (!isValidElement<{ onSubmit: Submit }>(form)) throw new Error("the dialog showed no form");
+  return form.props.onSubmit(data, refused);
+}
+
+beforeEach(() => {
+  signedIn();
+  tokens.createToken.mockReset();
+  tokens.createToken.mockResolvedValue(created);
+  tokens.csvDownload.mockReset();
+  refused.mockReset();
+});
+
+describe("CreateApiTokenModal", () => {
+  it("creates the token the form gives; once nerve has, downloads its secret", async () => {
+    await submitted();
+    expect(tokens.createToken.mock.calls).toEqual([[data]]);
+    expect([tokens.csvDownload.mock.calls, refused.mock.calls]).toEqual([
+      [
+        [
+          { Title: "deploy", Description: "ci", Expiry: "Oct 18, 2026", "Secret key": "nrv_pat_deploy" },
+          expect.stringMatching(/^secret-key-\d+$/),
+        ],
+      ],
+      [],
+    ]);
+  });
+
+  it("has the form say nerve's refusal, and downloads nothing", async () => {
+    const error = refusal(422, "validation_failed", [{ field: "label", code: "too_long" }]);
+    tokens.createToken.mockRejectedValueOnce(error);
+    await submitted();
+    expect([refused.mock.calls, tokens.csvDownload.mock.calls]).toEqual([[[error]], []]);
+  });
+
+  it.each(lateSettlingsAnswering(created))(
+    "downloads nothing, nor has the form say anything, when the creation $settles after another tab moved this one",
+    async ({ settle }) => {
+      const creation = heldChange<ApiTokenCreated>();
+      tokens.createToken.mockReturnValueOnce(creation.sent);
+      const followed = submitted();
+      switchAccount();
+      settle(creation);
+      await followed;
+      expect([tokens.csvDownload.mock.calls, refused.mock.calls]).toEqual([[], []]);
+    }
+  );
+});
+````
+
+`web/apps/web/core/components/api-token/modal/create-token-modal.tsx`（修改，4 处）：
+
+````old web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+import { useApiTokens } from "@/hooks/store/user";
+````
+````new web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+import { useApiTokens } from "@/hooks/store/user";
+// lib
+import { followInSession } from "@/lib/in-session";
+````
+````old web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+  // started and finishes in another acts on no opening of its own, so it does nothing: a create answered after
+  // its opening closed (Cancel stays clickable while it is out) keeps no secret and downloads no CSV, and the
+````
+````new web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+  // started and finishes in another acts on no opening of its own, so it does nothing: a create answered after its
+  // page was left (the form cannot be closed while the create is out) keeps no secret and downloads no CSV, and the
+````
+````old web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+  const handleCreateToken = async (data: ApiTokenCreate) => {
+````
+````new web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+  // Followed only in the session the create was sent in (M3 design 7.1) and in its opening: the token shown and its
+  // CSV downloaded, or nerve's refusal said by the form.
+  const handleCreateToken = (data: ApiTokenCreate, refused: (error: unknown) => void) => {
+````
+````old web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+    const created = await createToken(data);
+    if (phase.current !== opening) return;
+    setGeneratedToken(created);
+    downloadSecretKey(created);
+````
+````new web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+    return followInSession(() => createToken(data), {
+      done: (created) => {
+        if (phase.current !== opening) return;
+        setGeneratedToken(created);
+        downloadSecretKey(created);
+      },
+      failed: refused,
+    });
+````
+
+`web/apps/web/core/components/api-token/modal/form.tsx`（修改，4 处）：
+
+````old web/apps/web/core/components/api-token/modal/form.tsx
+  /** Creates the token; fails as nerve refuses. */
+  onSubmit: (data: ApiTokenCreate) => Promise<void>;
+````
+````new web/apps/web/core/components/api-token/modal/form.tsx
+  /** Creates the token, and says nerve's refusal by refused, the form's; settles once the page has followed it. */
+  onSubmit: (data: ApiTokenCreate, refused: (error: unknown) => void) => Promise<void>;
+````
+````old web/apps/web/core/components/api-token/modal/form.tsx
+  const toastRefusal = useRefusalToast();
+
+````
+````new web/apps/web/core/components/api-token/modal/form.tsx
+  const toastRefusal = useRefusalToast();
+
+  // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
+  const showRefusal = (error: unknown) => {
+    const fields = fieldErrorKeys(error);
+    if (fields.label !== undefined) setError("label", { type: "manual", message: t(fields.label) });
+    if (fields.expired_at !== undefined) setError("expiry", { type: "manual", message: t(fields.expired_at) });
+    if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
+  };
+
+  // Busy, Cancel too, until the page has followed nerve's answer (M3 design 7.1).
+````
+````old web/apps/web/core/components/api-token/modal/form.tsx
+    try {
+      await onSubmit({
+        label: data.label,
+        description: data.description,
+        expired_at: neverExpires ? null : expiresAt?.toISOString(),
+      });
+    } catch (error) {
+      // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
+      const fields = fieldErrorKeys(error);
+      if (fields.label !== undefined) setError("label", { type: "manual", message: t(fields.label) });
+      if (fields.expired_at !== undefined) setError("expiry", { type: "manual", message: t(fields.expired_at) });
+      if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
+    }
+````
+````new web/apps/web/core/components/api-token/modal/form.tsx
+    await onSubmit(
+      { label: data.label, description: data.description, expired_at: neverExpires ? null : expiresAt?.toISOString() },
+      showRefusal
+    );
+````
+````old web/apps/web/core/components/api-token/modal/form.tsx
+          <Button variant="secondary" onClick={handleClose}>
+````
+````new web/apps/web/core/components/api-token/modal/form.tsx
+          <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
+````
+
+- [ ] **Step 4: 静态检查的范围**
 
 `.oxlintrc.json`（修改，1 处）：
 
 ````old .oxlintrc.json
-        "web/apps/web/core/components/labels/project-setting-label-group.test.tsx"
+        "web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx"
 ````
 ````new .oxlintrc.json
-        "web/apps/web/core/components/labels/project-setting-label-group.test.tsx",
+        "web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx",
         "web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx",
         "web/apps/web/core/components/settings/profile/content/pages/security.test.tsx",
-        "web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx"
+        "web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx",
+        "web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx",
+        "web/apps/web/core/components/api-token/delete-token-modal.test.tsx"
 ````
 
-- [ ] **Step 4: 运行检查**
+- [ ] **Step 5: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 69 条规则、3 个例外，没有命中；web 的 oxlint 346 条，等于上限。
@@ -5488,19 +6267,21 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 110 个全部通过。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 6: 提交**
 
 ```bash
-git add .oxlintrc.json web/apps/web/core/components/onboarding/steps/profile/root.test.tsx web/apps/web/core/components/onboarding/steps/profile/root.tsx web/apps/web/core/components/profile/start-of-week-preference.tsx web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx web/apps/web/core/components/settings/profile/content/pages/general/form.tsx web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx web/apps/web/core/components/settings/profile/content/pages/security.test.tsx web/apps/web/core/components/settings/profile/content/pages/security.tsx
+git add .oxlintrc.json e2e/stories/identity/a11-api-tokens.spec.ts web/apps/web/core/components/api-token/delete-token-modal.test.tsx web/apps/web/core/components/api-token/delete-token-modal.tsx web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx web/apps/web/core/components/api-token/modal/create-token-modal.tsx web/apps/web/core/components/api-token/modal/form.tsx web/apps/web/core/components/onboarding/steps/profile/root.test.tsx web/apps/web/core/components/onboarding/steps/profile/root.tsx web/apps/web/core/components/profile/start-of-week-preference.tsx web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx web/apps/web/core/components/settings/profile/content/pages/general/form.tsx web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx web/apps/web/core/components/settings/profile/content/pages/security.test.tsx web/apps/web/core/components/settings/profile/content/pages/security.tsx
 ```
 ```bash
 git commit -m "feat(M3/P11): M2's account pages say how nerve settled a change only in the session it was sent in
 
 The onboarding's profile step, the profile settings' general form, time
-zone, language, start of the week and password follow each change with
-followInSession: what they say and where stays M2's, and a change that
-settles after another tab moved this one to another account says nothing,
-hands nothing on and empties no form.
+zone, language, start of the week and password, and the API tokens'
+creation and revocation follow each change with followInSession: what
+they say and where stays M2's, and a change that settles after another
+tab moved this one to another account says nothing, hands nothing on,
+empties no form and downloads no secret. A token's creation cannot be
+cancelled while it is out; A11 leaves its page instead.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -5515,23 +6296,26 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T7.4` | 每周第一天不论会话都跟进 | `language-and-timezone-list.test.tsx` | vitest |
 | `T7.5` | 修改密码不论会话都跟进 | `security.test.tsx` | vitest |
 | `T7.6` | 在 `general/form.test.tsx` 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T7.7` | API 令牌的新建不论会话都跟进 | `create-token-modal.test.tsx` | vitest |
+| `T7.8` | API 令牌的撤销不论会话都跟进 | `delete-token-modal.test.tsx` | vitest |
+| `T7.9` | API 令牌的新建在请求路上时可以取消 | 故事 A11 | 端到端 |
 
 ---
 
 ### Task 8: M3 的死成员和死 prop；P8a、P8b 留下的文件的 oxlint 警告
 
 **Files:**
-- Modify: `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx`、`web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/dropdowns/project/dropdown.tsx`、`web/apps/web/core/components/dropdowns/state/state-option.tsx`、`web/apps/web/core/components/power-k/menus/members.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/root.tsx`、`web/apps/web/core/components/workspace/invite-modal/actions.tsx`、`web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx`、`web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/apps/web/package.json`、`web/packages/constants/src/members.ts`、`web/packages/propel/src/icons/state/dashed-circle.tsx`
+- Modify: `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx`、`web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/dropdowns/project/dropdown.tsx`、`web/apps/web/core/components/dropdowns/state/state-option.tsx`、`web/apps/web/core/components/power-k/menus/members.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/workspace/invite-modal/actions.tsx`、`web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx`、`web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/apps/web/package.json`、`web/packages/constants/src/members.ts`、`web/packages/propel/src/icons/state/dashed-circle.tsx`
 
 **Interfaces:**
 - Produces（spec 2.8、附录 A.5、A.9；M3 设计 7.9；M1 收尾交接；P8a、P8b spec 附录 A.8、A.9 和 review 第 6 节的 P11 一行；P8b 的裁定 P1）：
   - 删掉的都没有读者、没有调用方传入（spec 附录 A.5 的 C-b：`tsc`、knip 通过，`?url` 资源、包的再导出、文案、测试中都没有它们）；没有调用方传的 prop 原来取默认值，组件现在把默认值写成常量，显示的照旧：
     - 项目下拉框（`dropdowns/project/dropdown.tsx`、`base.tsx`）：`button`、`currentProjectId`、`dropdownArrow`、`dropdownArrowClassName`、`onClose`、`renderByDefault`；`getProjectById` 的类型是生成的 `Project`（返回 `Project | undefined`，P8b 的裁定 P1）；`base.tsx` 的五条 oxlint 警告清零（`no-shadow` 三条：取显示名和图标的函数不再收参数；`consistent-function-scoping`：画图标的函数移到模块；`ComboDropDown` 照 `@nerve/ui` 的说明收 `role="presentation"`：它只收集里面的部分的按键）。
-    - 成员头像（`dropdowns/member/avatar.tsx`）的 `size`（固定 `"xs"`）；状态选项（`dropdowns/state/state-option.tsx`）的 `query`；命令面板的成员菜单（`power-k/menus/members.tsx`）的 `heading`；创建项目的公共字段（`project/create/common-attributes.tsx`）的 `handleFormOnChange`；工作区设置的侧边栏（`settings/workspace/sidebar/root.tsx`）的 props（只有 `className`，没有人传）；邀请弹窗的按钮行（`workspace/invite-modal/actions.tsx`）只留 `isSubmitting`、`handleClose`、`appendField`；状态图标的虚线圆（`propel` 的 `dashed-circle.tsx`）的 `totalSegments`（固定 15）；归档页头（`archives/header.tsx`）每个标签的 `href`（图标的类型写成 `React.FC<React.SVGAttributes<SVGElement>>`）。
+    - 成员头像（`dropdowns/member/avatar.tsx`）的 `size`（固定 `"xs"`）；状态选项（`dropdowns/state/state-option.tsx`）的 `query`；命令面板的成员菜单（`power-k/menus/members.tsx`）的 `heading`；创建项目的公共字段（`project/create/common-attributes.tsx`）的 `handleFormOnChange`；邀请弹窗的按钮行（`workspace/invite-modal/actions.tsx`）只留 `isSubmitting`、`handleClose`、`appendField`；状态图标的虚线圆（`propel` 的 `dashed-circle.tsx`）的 `totalSegments`（固定 15）；归档页头（`archives/header.tsx`）每个标签的 `href`（图标的类型写成 `React.FC<React.SVGAttributes<SVGElement>>`）。
     - 工作区成员 store 的 `memberMap`（接口、`computed`、getter）；成员列（`@nerve/constants` 的 `members.ts`）的 `iconName`（五处）。
   - P8a、P8b 留下的只经机械步骤到达的文件（spec 附录 A.5）：`use-work-item-filters-config.tsx` 的三条 `no-shadow`（回调的参数改名 `id`、`listed`、`option`）；`progress-stats/state_group.tsx` 的 `no-array-index-key`（`key={group.state}`：每组一行，`state` 不重复）。它们的 `promise(always-return)` 在 Task 9。
   - web 的 oxlint 上限 346 → 337。
-  - `--rows M3` 留下的行（spec 附录 A.9）：每一行写明谁在读或传它（测试中 `it.each` 的列和 `vi.hoisted` 的桩、经展开或第三方库读取的成员、M4 的搜索类型），按路径归到 M3、实际属于 M4、M6、M7 的 41 行列给收尾。
+  - `--rows M3` 留下的行（spec 附录 A.9）：每一行写明谁在读或传它（测试中 `it.each` 的列和 `vi.hoisted` 的桩、经展开、组件类型的变量或第三方库读取的成员、M4 的搜索类型）。工作区设置的侧边栏（`settings/workspace/sidebar/root.tsx`）的 `className` 留着：移动端的设置导航经 `hamburgerContent` 传入它（`settings/mobile/nav.tsx:38`），spec 附录 A.5 的 C-b，按路径归到 M3、实际属于 M4、M6、M7 的 41 行列给收尾。
 
 **Tests:** 没有新的测试：删除的代码没有读者（`tsc`、knip），组件按原来的默认值显示（spec 附录 A.5 逐个说明）；oxlint 的改法由上限守着（本 Task 的变异表）。
 
@@ -5875,36 +6659,6 @@ import { Avatar } from "@makeplane/propel/components/avatar";
                   onChange={onChange}
 ````
 
-`web/apps/web/core/components/settings/workspace/sidebar/root.tsx`（整个文件，25 行）：
-
-````whole web/apps/web/core/components/settings/workspace/sidebar/root.tsx
-/**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
- * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
- */
-
-// nerve imports
-import { ScrollArea } from "@nerve/propel/scrollarea";
-// local imports
-import { WorkspaceSettingsSidebarHeader } from "./header";
-import { WorkspaceSettingsSidebarItemCategories } from "./item-categories";
-
-export function WorkspaceSettingsSidebarRoot() {
-  return (
-    <ScrollArea
-      scrollType="hover"
-      orientation="vertical"
-      size="sm"
-      rootClassName="h-full w-[250px] shrink-0 animate-fade-in overflow-y-scroll border-r border-r-subtle bg-surface-1"
-    >
-      <WorkspaceSettingsSidebarHeader />
-      <WorkspaceSettingsSidebarItemCategories />
-    </ScrollArea>
-  );
-}
-````
-
 `web/apps/web/core/components/workspace/invite-modal/actions.tsx`（整个文件，48 行）：
 
 ````whole web/apps/web/core/components/workspace/invite-modal/actions.tsx
@@ -6116,15 +6870,14 @@ Expected: 110 个全部通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx' web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx web/apps/web/core/components/dropdowns/member/avatar.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/dropdowns/project/dropdown.tsx web/apps/web/core/components/dropdowns/state/state-option.tsx web/apps/web/core/components/power-k/menus/members.tsx web/apps/web/core/components/project/create/common-attributes.tsx web/apps/web/core/components/settings/workspace/sidebar/root.tsx web/apps/web/core/components/workspace/invite-modal/actions.tsx web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx web/apps/web/core/store/member/workspace/workspace-member.store.ts web/apps/web/package.json web/packages/constants/src/members.ts web/packages/propel/src/icons/state/dashed-circle.tsx
+git add 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx' web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx web/apps/web/core/components/dropdowns/member/avatar.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/dropdowns/project/dropdown.tsx web/apps/web/core/components/dropdowns/state/state-option.tsx web/apps/web/core/components/power-k/menus/members.tsx web/apps/web/core/components/project/create/common-attributes.tsx web/apps/web/core/components/workspace/invite-modal/actions.tsx web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx web/apps/web/core/store/member/workspace/workspace-member.store.ts web/apps/web/package.json web/packages/constants/src/members.ts web/packages/propel/src/icons/state/dashed-circle.tsx
 ```
 ```bash
 git commit -m "refactor(M3/P11): M3's dead members and props go, and the files P8a and P8b left keep no oxlint warning
 
 The props no caller passes (the project dropdown's six, the member
 avatar's size, the state option's query, the command palette's heading,
-the project form's handleFormOnChange, the workspace sidebar's className,
-the invite buttons' five, the dashed circle's totalSegments, the archives
+the project form's handleFormOnChange, the invite buttons' five, the dashed circle's totalSegments, the archives
 header's href) and the members nothing reads (the workspace members'
 memberMap, the member columns' iconName) are deleted; each component
 shows what its default showed. The project dropdown's getter is nerve's
@@ -6146,15 +6899,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 9: `promise(always-return)` 全仓清零
 
 **Files:**
-- Modify: `web/apps/web/app/entry.client.tsx`、`web/apps/web/core/components/cycles/delete-modal.tsx`、`web/apps/web/core/components/cycles/modal.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/cycles/transfer-issues-modal.tsx`、`web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx`、`web/apps/web/core/components/modules/delete-module-modal.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx`、`web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts`、`web/apps/web/core/components/web-hooks/create-webhook-modal.tsx`、`web/apps/web/core/components/web-hooks/form/secret-key.tsx`、`web/apps/web/core/components/work-item-filters/filters-hoc/project-level.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx`、`web/apps/web/core/components/workspace/views/default-view-quick-action.tsx`、`web/apps/web/core/store/global-view.store.ts`、`web/apps/web/core/store/workspace/webhook.store.ts`、`web/apps/web/package.json`、`web/packages/editor/package.json`、`web/packages/editor/src/helpers/floating-ui.ts`
+- Modify: `.oxlintrc.json`、`web/apps/web/app/entry.client.tsx`、`web/apps/web/core/components/cycles/delete-modal.tsx`、`web/apps/web/core/components/cycles/modal.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/cycles/transfer-issues-modal.tsx`、`web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx`、`web/apps/web/core/components/modules/delete-module-modal.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx`、`web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts`、`web/apps/web/core/components/web-hooks/create-webhook-modal.tsx`、`web/apps/web/core/components/web-hooks/form/secret-key.tsx`、`web/apps/web/core/components/work-item-filters/filters-hoc/project-level.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx`、`web/apps/web/core/components/workspace/views/default-view-quick-action.tsx`、`web/apps/web/core/store/global-view.store.ts`、`web/apps/web/core/store/workspace/webhook.store.ts`、`web/apps/web/package.json`、`web/packages/editor/package.json`、`web/packages/editor/src/helpers/floating-ui.ts`
 
 **Interfaces:**
 - Produces（spec 2.9、附录 A.6；M3 设计 7.9；M1 收尾交接；P8a spec 第 5 节的 P11 一行）：
-  - oxlint 指出的 35 个 `then()` 回调（web 34、editor 1）各在最后一个语句之后加 `return;`（原型中由一次性的脚本 `alwaysreturn.mjs` 照 oxlint 的 JSON 写出，见 spec 附录 A.6；下面的块就是它写出的）。回调原来的完成值是 `undefined`，加了 `return;` 仍是 `undefined`：`then()` 给出的 promise 以同样的值、在同样的时刻兑现，拒绝的路径一处都不变（每一处的拒绝怎样处理：后面有 `.catch` 或第二个回调 21 处，交给调用方 9 处，没有处理 5 处，见 spec 附录 A.6；没有处理的照旧没有处理，列给收尾抄进 M4、M6 的交接）。
+  - oxlint 指出的 35 个 `then()` 回调（web 34、editor 1）各在最后一个语句之后加 `return;`（原型中由一次性的脚本 `alwaysreturn.mjs` 照 oxlint 的 JSON 写出，见 spec 附录 A.6；下面的块就是它写出的）。回调原来的完成值是 `undefined`，加了 `return;` 仍是 `undefined`：`then()` 给出的 promise 以同样的值、在同样的时刻兑现，拒绝的路径一处都不变（每一处的拒绝怎样处理：后面有 `.catch` 或第二个回调 21 处，交给调用方 6 处，没有处理 8 处，见 spec 附录 A.6；没有处理的照旧没有处理，列给收尾抄进 M4、M6、M7 的交接）。
   - 上限：web 337 → 303，editor 65 → 64。`promise(always-return)` 全仓 0 条。
+  - 根目录 `.oxlintrc.json` 的 `no-unreachable` 设为 error（预检的 L9）：一处 `return;` 写在回调最后一个语句之前，那个语句就走不到，`check:lint` 失败；今天全仓 0 处，上限不变。
   - 这些文件中 5 个的其余 14 条警告不改（`no-shadow`、可点击的 `div`、`exhaustive-deps` 等，都在 M4、M6、M7、M8 的页面上：spec 第 3 节第 8 条）。
 
-**Tests:** 没有新的测试：行为不变（spec 附录 A.6 逐处的说明）；规则由上限守着（本 Task 的变异表）。
+**Tests:** 没有新的测试：行为不变（spec 附录 A.6 逐处的说明）；规则由上限和 `no-unreachable` 守着（本 Task 的变异表）。
 
 - [ ] **Step 1: 回调的 `return;`**
 
@@ -6259,11 +7013,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 `web/apps/web/core/components/issues/delete-issue-modal.tsx`（修改，1 处）：
 
 ````old web/apps/web/core/components/issues/delete-issue-modal.tsx
-          onClose();
+        onClose();
 ````
 ````new web/apps/web/core/components/issues/delete-issue-modal.tsx
-          onClose();
-          return;
+        onClose();
+        return;
 ````
 
 `web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx`（修改，1 处）：
@@ -6298,11 +7052,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 `web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx`（修改，1 处）：
 
 ````old web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx
-          onClose();
+        onClose();
 ````
 ````new web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx
-          onClose();
-          return;
+        onClose();
+        return;
 ````
 
 `web/apps/web/core/components/modules/delete-module-modal.tsx`（修改，1 处）：
@@ -6523,7 +7277,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
         return;
 ````
 
-- [ ] **Step 2: 两个包的上限**
+- [ ] **Step 2: 两个包的上限和 `no-unreachable`**
+
+`.oxlintrc.json`（修改，1 处）：
+
+````old .oxlintrc.json
+    "react/jsx-curly-brace-presence": "error",
+````
+````new .oxlintrc.json
+    "react/jsx-curly-brace-presence": "error",
+    "no-unreachable": "error",
+````
 
 `web/apps/web/package.json`（修改，1 处）：
 
@@ -6560,7 +7324,7 @@ Expected: 110 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add web/apps/web/app/entry.client.tsx web/apps/web/core/components/cycles/delete-modal.tsx web/apps/web/core/components/cycles/modal.tsx web/apps/web/core/components/cycles/quick-actions.tsx web/apps/web/core/components/cycles/transfer-issues-modal.tsx web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx web/apps/web/core/components/issues/delete-issue-modal.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx web/apps/web/core/components/issues/peek-overview/header.tsx web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx web/apps/web/core/components/modules/delete-module-modal.tsx web/apps/web/core/components/modules/module-card-item.tsx web/apps/web/core/components/modules/module-list-item-action.tsx web/apps/web/core/components/modules/quick-actions.tsx web/apps/web/core/components/power-k/config/miscellaneous-commands.ts web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts web/apps/web/core/components/web-hooks/create-webhook-modal.tsx web/apps/web/core/components/web-hooks/form/secret-key.tsx web/apps/web/core/components/work-item-filters/filters-hoc/project-level.tsx web/apps/web/core/components/workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx web/apps/web/core/components/workspace/views/default-view-quick-action.tsx web/apps/web/core/store/global-view.store.ts web/apps/web/core/store/workspace/webhook.store.ts web/apps/web/package.json web/packages/editor/package.json web/packages/editor/src/helpers/floating-ui.ts
+git add .oxlintrc.json web/apps/web/app/entry.client.tsx web/apps/web/core/components/cycles/delete-modal.tsx web/apps/web/core/components/cycles/modal.tsx web/apps/web/core/components/cycles/quick-actions.tsx web/apps/web/core/components/cycles/transfer-issues-modal.tsx web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx web/apps/web/core/components/issues/delete-issue-modal.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx web/apps/web/core/components/issues/peek-overview/header.tsx web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx web/apps/web/core/components/modules/delete-module-modal.tsx web/apps/web/core/components/modules/module-card-item.tsx web/apps/web/core/components/modules/module-list-item-action.tsx web/apps/web/core/components/modules/quick-actions.tsx web/apps/web/core/components/power-k/config/miscellaneous-commands.ts web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts web/apps/web/core/components/web-hooks/create-webhook-modal.tsx web/apps/web/core/components/web-hooks/form/secret-key.tsx web/apps/web/core/components/work-item-filters/filters-hoc/project-level.tsx web/apps/web/core/components/workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx web/apps/web/core/components/workspace/views/default-view-quick-action.tsx web/apps/web/core/store/global-view.store.ts web/apps/web/core/store/workspace/webhook.store.ts web/apps/web/package.json web/packages/editor/package.json web/packages/editor/src/helpers/floating-ui.ts
 ```
 ```bash
 git commit -m "refactor(M3/P11): every then() callback ends with return, and promise(always-return) is at zero across the repository
@@ -6569,7 +7333,8 @@ The 35 callbacks oxlint names, 34 in the web app and one in the editor,
 end with return;: each completed with undefined and still does, so the
 promise then() gives settles with the same value at the same moment and
 no rejection is handled differently. The web app's cap is 303, the
-editor's 64.
+editor's 64; no-unreachable is an error, so a return; put before a
+callback's last statement fails the lint.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -6580,6 +7345,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 |---|---|---|---|
 | `T9.1` | editor 的浮层定位的回调不返回 | `@nerve/editor` 的 oxlint（`check:lint`） | 静态 |
 | `T9.2` | 删除迭代的回调不返回 | oxlint（`check:lint`） | 静态 |
+| `T9.3` | 一处 `return;` 写在回调最后一个语句之前 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -6591,7 +7357,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces（spec 2.10；M3 设计 3.20、13.1 中 P11 的行；M1 收尾交接；M1-P2 交接）：
   - `README.md` 的"前端"一节：状态、标签的设置页一句改写为 M3/P11 起能用的（谁能改、谁只能看、访客看到没有权限），个人主页（访客看到用户卡片和没有权限；管理员和成员看到的工作项一栏与其余工作项页面一样由 M4–M8 对接）。
-  - `docs/v0/frontend-changes.md`：3.1 中 M3 一行的状态（页面已对接：工作区的 M3/P9，项目的 M3/P10，状态和标签的设置页、访客看到的个人主页 M3/P11；M3 的收尾之后改为已完成）；3.2 的错误格式一行写明状态和标签的设置页的字段错误（M3/P11），"页面跟进修改的结果"一行加上状态、标签的设置页；3.2 新增五行，都是"已完成，M3/P11"：状态和标签的设置页（W17 的每一条，spec 第 3 节第 12 条）、确认框（`AlertModalCore` 在请求路上时关不掉，它的其余 11 个调用方同样）、M2 的账户页面跟进修改的结果、死成员和死 prop、`then()` 的回调。
+  - `docs/v0/frontend-changes.md`：3.1 中 M3 一行的状态（页面已对接：工作区的 M3/P9，项目的 M3/P10，状态和标签的设置页、访客看到的个人主页 M3/P11；M3 的收尾之后改为已完成）；3.2 的错误格式一行写明状态和标签的设置页的字段错误（M3/P11），"页面跟进修改的结果"一行加上状态、标签的设置页；3.2 新增五行，都是"已完成，M3/P11"：状态和标签的设置页（W17 的每一条，spec 第 3 节第 12 条）、确认框（`AlertModalCore` 在请求路上时关不掉，它的其余 11 个调用方同样）、M2 的账户页面跟进修改的结果（API 令牌的新建和撤销在内，新建在请求路上时取消按不了）、死成员和死 prop、`then()` 的回调。
   - `docs/v0/M3-workspace-project/handoffs/M1-closeout.md`：加"处理结果（M3/P11）"：死成员和死 prop（spec 2.8，留下的行在 spec 附录 A.9），oxlint（`promise(always-return)` 全仓清零，P8a、P8b 留下的文件清零，上限 web 348 → 303、editor 65 → 64，其余的包条数没有变；留着的是 `alert-modal.tsx` 的一条和只按 `always-return` 改到的文件中 5 个的 14 条，spec 第 3 节第 3、8 条）；状态保持 `open`，P11 的评审写明之后由 M3 的收尾关闭。
   - `docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`：加"处理结果（M3/P11）"：访客看别人的个人主页（页面一侧完成，决策点 3 的 A），P9 的页面版本和 S2 核对，浏览器核对 C10 由控制者做；状态保持 `open`。
 - 关键词守卫的最终状态和旧的 `ProjectService` 只核对、不改（spec 2.10）：69 条规则、3 个例外（`analytics` 到 M6、`brand` 到 M9、`plane-workspace-urls` 的两处 `/user-properties/` 到 M4），没有 `until: "M3"`；`ProjectService` 只剩 7.3 的三个方法（`getProjectUserProperties`、`updateProjectUserProperties`、`projectIssuesSearch`）。
@@ -6638,7 +7404,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## 处理结果（M3/P11）
 
-- **死成员和死 prop**：P11 删掉它改到的文件和只经机械步骤到达的文件中真正没有读者、没有调用方传入的行（[P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 第 2.8 节）。`--rows M3` 剩下的每一行写进 P11 spec 的附录 A.9：文件、名称、谁在读或传它（测试里 `it.each` 的列和 `vi.hoisted` 的桩、经展开或第三方库读取的成员、M4 的搜索类型），以及按路径归到 M3、实际属于 M4、M6、M7 的行（M3 设计第 1 节；收尾抄进它们的交接）。
+- **死成员和死 prop**：P11 删掉它改到的文件和只经机械步骤到达的文件中真正没有读者、没有调用方传入的行（[P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 第 2.8 节）。`--rows M3` 剩下的每一行写进 P11 spec 的附录 A.9：文件、名称、谁在读或传它（测试里 `it.each` 的列和 `vi.hoisted` 的桩、经展开、组件类型的变量或第三方库读取的成员、M4 的搜索类型），以及按路径归到 M3、实际属于 M4、M6、M7 的行（M3 设计第 1 节；收尾抄进它们的交接）。
 - **oxlint**：`promise(always-return)` 全仓清零（35 条：web 34、editor 1）；P8a、P8b 留给 P11 的只经机械步骤到达的文件清零；各包的上限随之调到新的条数（web 348 → 303、editor 65 → 64，其余的包条数没有变）。P11 改到的文件中留着的警告：`@nerve/ui` 的 `alert-modal.tsx` 的一条（`tabIndex={1}`，M3 收尾的 `ModalCore` 重写），以及只按 `always-return` 改到的文件中 5 个的 14 条（M4、M6、M7、M8 的组件；P11 spec 第 3 节第 3、8 条）。
 
 状态保持 `open`：P11 的评审写明剩下的行和上限之后，M3 的收尾关闭。
@@ -6670,10 +7436,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new docs/v0/frontend-changes.md
 | 创建项目的 Tab 顺序 | 创建项目的弹窗不再有正的 `tabIndex`：表单不再给字段、网络、负责人、按钮和关闭按钮（`ETabIndices.PROJECT_CREATE` 删除），创建之后的功能一步不再给关闭和打开项目（两处 oxlint 的抑制随之删除）。Tab 按页面中的顺序走，绕着弹窗转；原来正的 `tabIndex` 排在弹窗的焦点陷阱之前，Tab 在表单的关闭按钮、功能一步的打开项目之后离开弹窗，走到后面的页面（侧边栏、工作区切换；功能一步时先是创建成功的提示） | 弹窗里的 Tab 不离开弹窗（M3/P10 的浏览器核对 C7；功能一步是之后的裁定 F-18） | 已完成 | M3/P10 |
-| 状态和标签的设置页 | 页面的工作区和项目取自路由的参数（不再读路由 store），权限的判断写明工作区和项目；增删改、拖动和设默认只在发出它的会话里跟进；表单在 nerve 回答、页面跟进之前一直忙（按钮显示"Creating""Adding"一类、按不了，取消也按不了；状态的表单原来马上就能再点），名字已被占用显示在名字下方（标签原来在提示里），被拒绝时表单留着；删除的确认框请求在路上时关不掉，被拒绝时留着、原因在提示里；标签拖到 nerve 不允许的地方（第三层）时说标签只有两层，原来说"出错了"一类的通用原因；状态的组标题是按钮（Tab 能到，`aria-expanded`），每一行的编辑、删除、设默认的按钮 Tab 能到、有名字（原来只在指针经过时显示）；标签每一行的菜单和删除按钮有名字，Tab 到达时显示（原来只在指针经过时显示）；标签组的菜单和拖动手柄、没有标签时的"添加"按钮只给能改标签的人（原来项目的每个成员都看得到组的菜单）；正在编辑的标签不能拖动 | M3 设计 7.6、9.2；总体设计 7.7 | 已完成 | M3/P11 |
+| 状态和标签的设置页 | 页面的工作区和项目取自路由的参数（不再读路由 store），权限的判断写明工作区和项目；增删改、拖动和设默认只在发出它的会话里跟进；表单在 nerve 回答、页面跟进之前一直忙（按钮显示"Creating""Adding"一类、按不了，取消也按不了；状态的表单原来马上就能再点），名字已被占用显示在名字下方（原来在提示里），被拒绝时表单留着；删除的确认框请求在路上时关不掉，被拒绝时留着、原因在提示里；标签拖到 nerve 不允许的地方（第三层，或带着下面的标签放到别的标签之下）时说标签只有两层，原来说"出错了"一类的通用原因；状态的组标题是按钮（Tab 能到，`aria-expanded`），每一行的编辑、删除、设默认的按钮 Tab 能到、有名字（原来只在指针经过时显示）；标签每一行的菜单和删除按钮有名字，Tab 到达时显示（原来只在指针经过时显示）；标签组的菜单和拖动手柄、没有标签时的"添加"按钮只给能改标签的人（原来项目的每个成员都看得到组的菜单）；正在编辑的标签不能拖动；标签组的展开按钮以标签的名字为名；拖动手柄只给指针用，不是 Tab 停留点，辅助技术不读它（`@nerve/ui` 的 `DragHandle`，侧边栏的项目和收藏的手柄同样，原来是没有名字的停留点）；顶部的新建表单在编辑别的标签时照旧显示"Add"、新建标签（原来显示"Update"，按了什么都不做） | M3 设计 7.6、9.2；总体设计 7.7 | 已完成 | M3/P11 |
 | 确认框 | `AlertModalCore`（`@nerve/ui`）在 `isSubmitting` 时关不掉：取消按不了，Escape 和点外面都不关（M3/P9 的 F-1）；它的其余 11 个调用方（M4–M8 的 10 处确认框、个人设置的 API 令牌的撤销）同样 | 请求在路上的弹窗关不掉（总体设计 7.7） | 已完成 | M3/P11 |
-| M2 的账户页面跟进修改的结果 | 新手引导的资料一步、个人设置的 general、preferences（时区、语言、每周第一天）和 security 页，修改之后的提示、字段下方的错误和清空表单，只在发出修改的会话里进行（`followInSession`）；说什么、怎样说照旧（M2 设计 7.3） | M3 设计 7.1（M3/P9 的裁定 P8） | 已完成 | M3/P11 |
-| 死成员和死 prop | 没有调用方传入的 prop（项目下拉框的 `button`、`dropdownArrow` 等六个，邀请弹窗按钮行的五个，成员头像的 `size`、命令面板成员菜单的 `heading`、创建项目的 `handleFormOnChange`、工作区设置侧边栏的 `className`、状态图标虚线圆的 `totalSegments`）和没有代码读取的成员（工作区成员 store 的 `memberMap`、成员列的 `iconName`、归档页头的 `href`、状态选项的 `query`）删除，组件按原来的默认值显示；项目下拉框的取项目函数的类型是生成的 `Project` | M1 收尾交接（M3 设计 7.9） | 已完成 | M3/P11 |
+| M2 的账户页面跟进修改的结果 | 新手引导的资料一步、个人设置的 general、preferences（时区、语言、每周第一天）和 security 页（修改密码，API 令牌的新建和撤销），修改之后的提示、字段下方的错误、清空表单、显示和下载新令牌，只在发出修改的会话里进行（`followInSession`）；说什么、怎样说照旧（M2 设计 7.3）。新建 API 令牌的请求在路上时取消按不了（原来可以按，按了之后迟到的回答什么都不做；现在离开页面时同样） | M3 设计 7.1（M3/P9 的裁定 P8） | 已完成 | M3/P11 |
+| 死成员和死 prop | 没有调用方传入的 prop（项目下拉框的 `button`、`dropdownArrow` 等六个，邀请弹窗按钮行的五个，成员头像的 `size`、命令面板成员菜单的 `heading`、创建项目的 `handleFormOnChange`、状态图标虚线圆的 `totalSegments`）和没有代码读取的成员（工作区成员 store 的 `memberMap`、成员列的 `iconName`、归档页头的 `href`、状态选项的 `query`）删除，组件按原来的默认值显示；项目下拉框的取项目函数的类型是生成的 `Project` | M1 收尾交接（M3 设计 7.9） | 已完成 | M3/P11 |
 | `then()` 的回调 | 35 处 `then()` 回调的末尾加 `return;`（`promise(always-return)` 全仓清零），回调的结果照旧是 `undefined`，行为不变 | M3 设计 7.9 | 已完成 | M3/P11 |
 ````
 
