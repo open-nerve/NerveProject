@@ -231,7 +231,7 @@ test("P1 (page): a new project's icon picker shows the emoji nerve serves itself
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });
 
-test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; the project shows in the list and the sidebar", async ({
+test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar", async ({
   api,
   db,
   signedInPage,
@@ -308,6 +308,11 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   expect(await closedByEscape(page)).toBe(false);
   expect((await release()).status()).toBe(201);
   await expect(page.getByText("Project created successfully")).toBeVisible();
+  // The features step: Tab goes round it too, never out of the modal (the toast is a dialog, not modal).
+  await page.getByRole("button", { name: "Close", exact: true }).focus();
+  expect((await tabCycle(page, page.locator("[aria-modal=true]"))).join(", ")).toBe(
+    `Open project, ${"Toggle project feature, ".repeat(4)}Close`
+  );
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("link", { name: /Web App/ })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Main sidebar" }).getByText("Web App")).toBeVisible();
