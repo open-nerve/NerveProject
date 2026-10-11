@@ -119,10 +119,12 @@ const ACCOUNTS = ["admin", "member", "guest", "project non-member"] as const;
 type Account = (typeof ACCOUNTS)[number];
 
 /**
- * The pages each account opens, in order, each as its path ({slug} and {project} for their values) and the requests it
- * makes as it loads: "/", which lands on the workspace's home; the workspace's projects page, whose call of its own
- * fetch no other check holds; the workspace's general settings and its members; then the project's settings, its
- * general page, its states and its labels.
+ * The pages each account opens, in order, each as its path ({slug}, {project}, {admin} and {guest} for their values:
+ * the workspace's, the project's, the ids of its admin and its guest) and the requests it makes as it loads: "/", which
+ * lands on the workspace's home; the workspace's projects page, whose call of its own fetch no other check holds; the
+ * workspace's general settings and its members; the guest the admin's profile and his own, the card, from the members
+ * the workspace's wrapper lists, and no work item (M3 design decision point 3, A; a member's profile lists his work
+ * items, which are M4's); then the project's settings, its general page, its states and its labels.
  */
 const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
   admin: [
@@ -148,6 +150,8 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/projects", [...APP, ...WORKSPACE, ...ARCHIVED]],
     ["/{slug}/settings", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
+    ["/{slug}/profile/{admin}", [...APP, ...WORKSPACE]],
+    ["/{slug}/profile/{guest}", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
     ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
@@ -166,12 +170,17 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
 /**
  * Makes S2's workspace through the API: its admin creates it and a public project; a member and a guest of the
  * workspace join the project with the same roles; another member of the workspace does not. Returns the tokens of
- * each account, which have not been used in a browser yet.
+ * each account, which have not been used in a browser yet, and the ids of its admin and its guest.
  */
 async function acme(
   api: Api,
   testInfo: TestInfo
-): Promise<{ slug: string; project: Project; tokens: Record<Account, AuthTokens> }> {
+): Promise<{
+  slug: string;
+  project: Project;
+  tokens: Record<Account, AuthTokens>;
+  ids: { admin: string; guest: string };
+}> {
   const signUp = async (label: string) => {
     const email = emailFor(testInfo, label);
     return { email, tokens: await registerOnboarded(api, email) };
@@ -189,9 +198,10 @@ async function acme(
   await join(member, 15);
   await join(guest, 5);
   await join(outsider, 15);
+  const ids = { admin: await accountId(api, token), guest: await accountId(api, guest.tokens.access_token) };
   await addProjectMembers(api, token, project.id, [
     { member_id: await accountId(api, member.tokens.access_token), role: 15 },
-    { member_id: await accountId(api, guest.tokens.access_token), role: 5 },
+    { member_id: ids.guest, role: 5 },
   ]);
   const tokens = {
     admin: admin.tokens,
@@ -199,7 +209,7 @@ async function acme(
     guest: guest.tokens,
     "project non-member": outsider.tokens,
   };
-  return { slug, project, tokens };
+  return { slug, project, tokens, ids };
 }
 
 /** An API request's path and query, or undefined for a request of anything else. */
@@ -267,10 +277,10 @@ for (const account of ACCOUNTS) {
     api,
     signedInPage,
   }, testInfo) => {
-    const { slug, project, tokens } = await acme(api, testInfo);
+    const { slug, project, tokens, ids } = await acme(api, testInfo);
     const page = await signedInPage(tokens[account]);
     const watch = await watchPage(page);
-    const names = { [slug]: "{slug}", [project.id]: "{project}" };
+    const names = { [slug]: "{slug}", [project.id]: "{project}", [ids.admin]: "{admin}", [ids.guest]: "{guest}" };
     const requests = followRequests(page, names);
 
     /** Opens path and waits until its requests are requested, none pending: gives the index of its first and its list. */
