@@ -75,6 +75,7 @@ export function WorkspaceDraftIssueDeleteIssueModal(props: Props) {
           message: t("workspace_draft_issues.toasts.deleted.success"),
         });
         onClose();
+        return;
       })
       .catch((errors) => {
         const isPermissionError = errors?.error === "Only admin or creator can delete the work item";

@@ -66,6 +66,7 @@ export function CycleCreateUpdateModal(props: CycleModalProps) {
           title: "Success!",
           message: "Cycle created successfully.",
         });
+        return;
       })
       .catch((err) => {
         setToast({
@@ -87,6 +88,7 @@ export function CycleCreateUpdateModal(props: CycleModalProps) {
           title: "Success!",
           message: "Cycle updated successfully.",
         });
+        return;
       })
       .catch((err) => {
         setToast({
@@ -102,6 +104,7 @@ export function CycleCreateUpdateModal(props: CycleModalProps) {
 
     await cycleService.cycleDateCheck(workspaceSlug, projectId, payload).then((res) => {
       status = res.status;
+      return;
     });
 
     return status;
@@ -146,6 +149,7 @@ export function CycleCreateUpdateModal(props: CycleModalProps) {
       else {
         await handleCreateCycle(payload).then(() => {
           setCycleTab("all");
+          return;
         });
       }
       handleClose();

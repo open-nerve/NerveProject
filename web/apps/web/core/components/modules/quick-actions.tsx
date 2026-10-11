@@ -60,6 +60,7 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
         title: "Link Copied!",
         message: "Module link copied to clipboard.",
       });
+      return;
     });
   const handleOpenInNewTab = () => window.open(`/${moduleLink}`, "_blank", "noopener,noreferrer");
 

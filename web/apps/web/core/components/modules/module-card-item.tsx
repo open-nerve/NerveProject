@@ -65,6 +65,7 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
 
     const addToFavoritePromise = addModuleToFavorites(workspaceSlug, projectId, moduleId).then(() => {
       if (!storedValue) toggleFavoriteMenu(true);
+      return;
     });
 
     setPromiseToast(addToFavoritePromise, {
@@ -115,6 +116,7 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
           title: "Success!",
           message: "Module updated successfully.",
         });
+        return;
       })
       .catch((err) => {
         setToast({

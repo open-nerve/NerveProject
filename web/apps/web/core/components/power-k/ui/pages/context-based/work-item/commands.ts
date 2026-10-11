@@ -134,6 +134,7 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
           type: TOAST_TYPE.SUCCESS,
           title: t("power_k.contextual_actions.work_item.copy_id_toast_success"),
         });
+        return;
       })
       .catch(() => {
         setToast({
@@ -151,6 +152,7 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
           type: TOAST_TYPE.SUCCESS,
           title: t("power_k.contextual_actions.work_item.copy_title_toast_success"),
         });
+        return;
       })
       .catch(() => {
         setToast({
@@ -169,6 +171,7 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
           type: TOAST_TYPE.SUCCESS,
           title: t("power_k.contextual_actions.work_item.copy_url_toast_success"),
         });
+        return;
       })
       .catch(() => {
         setToast({
