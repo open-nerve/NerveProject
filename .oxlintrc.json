@@ -300,7 +300,8 @@
         "web/apps/web/core/store/member/fake-users.ts",
         "web/apps/web/core/lib/fake-toast.ts",
         "web/apps/web/core/components/navigation/use-project-actions.test.tsx",
-        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(settings)/settings/projects/\\[projectId\\]/admin-pages.test.tsx"
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(settings)/settings/projects/\\[projectId\\]/admin-pages.test.tsx",
+        "web/apps/web/core/lib/form-refusal.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

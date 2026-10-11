@@ -17,6 +17,7 @@ type TModalVariant = "danger" | "primary";
 
 type Props = {
   content: React.ReactNode | string;
+  /** Dismisses the dialog: by Cancel, Escape or the backdrop, none of which does while isSubmitting. */
   handleClose: () => void;
   handleSubmit: () => void;
   hideIcon?: boolean;
@@ -72,7 +73,7 @@ export function AlertModalCore(props: Props) {
   const Icon = VARIANT_ICONS[variant];
 
   return (
-    <ModalCore isOpen={isOpen} handleClose={handleClose} position={position} width={width}>
+    <ModalCore isOpen={isOpen} handleClose={isSubmitting ? undefined : handleClose} position={position} width={width}>
       <div className="flex flex-col items-center gap-4 p-5 sm:flex-row sm:items-start">
         {!hideIcon && (
           <span
@@ -90,7 +91,7 @@ export function AlertModalCore(props: Props) {
         </div>
       </div>
       <div className="flex flex-col-reverse gap-2 border-t-[0.5px] border-subtle px-5 py-4 sm:flex-row sm:justify-end">
-        <Button variant="secondary" onClick={handleClose}>
+        <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
           {secondaryButtonText}
         </Button>
         <Button variant={BUTTON_VARIANTS[variant]} tabIndex={1} onClick={handleSubmit} loading={isSubmitting}>
