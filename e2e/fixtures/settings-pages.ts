@@ -201,6 +201,16 @@ export async function closedByEscape(page: Page): Promise<boolean> {
 }
 
 /**
+ * Clicks the backdrop of the one modal dialog page shows, at the viewport's top left corner (a dialog keeps at least
+ * 16 px from each edge: ModalCore's positions), and resolves with whether that dialog closed (closedWithin).
+ */
+export async function closedByBackdropClick(page: Page): Promise<boolean> {
+  const closed = closedWithin(page);
+  await page.mouse.click(1, 1);
+  return closed;
+}
+
+/**
  * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
  * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
  * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.

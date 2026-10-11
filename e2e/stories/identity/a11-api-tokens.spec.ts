@@ -8,12 +8,16 @@ import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register } from 
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   answerTo,
+  closedByBackdropClick,
+  closedByEscape,
+  enabledWithin,
   expectListBesideButton,
   expectTokenGone,
   holdAnswer,
   parseCsv,
   recordTokensShown,
   registerOnboarded,
+  sentHeld,
 } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -96,12 +100,18 @@ test("A11 (page): a token created on the page shows once, and nowhere after; the
   await expectTokenGone(page, created.token, log);
 
   // The token works until it is revoked on the page, which then lists it no more. The revoke button shows
-  // without a hover.
+  // without a hover. While nerve's answer is out, the dialog is busy and stays: its buttons can't be pressed, and
+  // neither Escape nor its backdrop closes it.
   expect((await api.GET("/api/v0/me", { headers: bearer(created.token) })).response.status).toBe(200);
   await page.getByRole("button", { name: "Revoke token" }).click();
-  const revoked = await answerTo(page, "DELETE", `/api/v0/api-tokens/${created.id}`, () =>
+  const revocation = await sentHeld(page, "DELETE", `/api/v0/api-tokens/${created.id}`, () =>
     page.getByRole("button", { name: "Delete" }).click()
   );
+  expect(await enabledWithin(page.getByRole("button", { name: "Deleting" }))).toBe(false);
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect(await closedByBackdropClick(page)).toBe(false);
+  const revoked = await revocation.release();
   expect(revoked.status()).toBe(204);
   await expect(page.getByText("No Personal token yet")).toBeVisible();
   const [row] = await db.query<{ deleted_at: Date | null }>("SELECT deleted_at FROM api_tokens WHERE id = $1", [
@@ -142,8 +152,8 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
   const shown = await recordTokensShown(page);
 
   /**
-   * Generates label in the modal opened now, which cannot be closed while nerve's answer is held from the page, and
-   * leaves the page (the browser's back) meanwhile.
+   * Generates label in the modal opened now, which is busy and cannot be closed while nerve's answer is held from the
+   * page (neither its buttons nor Escape nor its backdrop), and leaves the page (the browser's back) meanwhile.
    */
   const generateThenLeave = async (label: string): Promise<() => Promise<void>> => {
     const release = await holdAnswer(page, "POST", "/api/v0/me/api-tokens");
@@ -158,7 +168,10 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
       ),
       page.getByRole("button", { name: "Generate token" }).click(),
     ]);
+    expect(await enabledWithin(page.getByRole("button", { name: "Generating" }))).toBe(false);
     await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(await closedByEscape(page)).toBe(false);
+    expect(await closedByBackdropClick(page)).toBe(false);
     await page.goBack();
     await expect(page).toHaveURL("/settings/profile/security");
     await expect(page.getByLabel("Title")).toHaveCount(0);
