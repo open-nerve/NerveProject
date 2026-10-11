@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { MutableRefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
@@ -14,13 +13,11 @@ import { attachInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree
 import { observer } from "mobx-react";
 import { createRoot } from "react-dom/client";
 // types
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { Label } from "@nerve/api-client";
 import type { InstructionType } from "@nerve/types";
 // ui
 import { DropIndicator } from "@nerve/ui";
 // components
-import { useUserPermissions } from "@/hooks/store/user";
 import { LabelName } from "./label-block/label-name";
 import type { TargetData } from "./label-utils";
 import { getCanDrop, getInstructionFromPayload } from "./label-utils";
@@ -48,7 +45,7 @@ type Props = {
   children: (
     isDragging: boolean,
     isDroppingInLabel: boolean,
-    dragHandleRef: MutableRefObject<HTMLButtonElement | null>
+    dragHandleRef: (element: HTMLButtonElement | null) => void
   ) => React.ReactNode;
   onDrop: (
     draggingLabelId: string,
@@ -65,21 +62,20 @@ export const LabelDndHOC = observer(function LabelDndHOC(props: Props) {
   const [instruction, setInstruction] = useState<InstructionType | undefined>(undefined);
   // refs
   const labelRef = useRef<HTMLDivElement | null>(null);
-  const dragHandleRef = useRef<HTMLButtonElement | null>(null);
-
-  const { allowPermissions } = useUserPermissions();
-  const isEditable = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
+  // the grip as the row renders it now: a row rendered anew (once its edit closes, say) has a new one, registered anew
+  const [dragHandle, setDragHandle] = useState<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const labelElement = labelRef.current;
-    const dragHandleElement = dragHandleRef.current;
 
-    if (!labelElement || !isEditable) return;
+    // a label is dragged by its grip alone, which its row renders only for those who may change the labels, and not
+    // while the label is edited
+    if (!labelElement || !dragHandle) return;
 
     return combine(
       draggable({
         element: labelElement,
-        dragHandle: dragHandleElement ?? undefined,
+        dragHandle,
         getInitialData: () => ({ id: label?.id, parentId: label?.parent_id, isGroup, isChild }),
         onDragStart: () => {
           setIsDragging(true);
@@ -160,14 +156,14 @@ export const LabelDndHOC = observer(function LabelDndHOC(props: Props) {
         },
       })
     );
-  }, [label, isChild, isGroup, isLastChild, onDrop, isEditable]);
+  }, [label, isChild, isGroup, isLastChild, onDrop, dragHandle]);
 
   const isMakeChild = instruction == "make-child";
 
   return (
     <div ref={labelRef}>
       <DropIndicator classNames="my-1" isVisible={instruction === "reorder-above"} />
-      {children(isDragging, isMakeChild, dragHandleRef)}
+      {children(isDragging, isMakeChild, setDragHandle)}
       {isLastChild && <DropIndicator classNames="my-1" isVisible={instruction === "reorder-below"} />}
     </div>
   );

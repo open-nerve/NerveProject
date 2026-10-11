@@ -4,11 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import type { MutableRefObject } from "react";
 import { useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
 import type { ISvgIcons } from "@nerve/propel/icons";
 import { CloseOutline } from "@makeplane/propel/icons";
 // types
@@ -34,9 +34,9 @@ interface ILabelItemBlock {
   customMenuItems: ICustomMenuItem[];
   handleLabelDelete: (label: Label) => void;
   isLabelGroup?: boolean;
-  dragHandleRef: MutableRefObject<HTMLButtonElement | null>;
+  dragHandleRef: (element: HTMLButtonElement | null) => void;
+  /** Whether the label is shown alone, with no grip and no control that changes it. */
   disabled?: boolean;
-  draggable?: boolean;
 }
 
 export function LabelItemBlock(props: ILabelItemBlock) {
@@ -48,8 +48,8 @@ export function LabelItemBlock(props: ILabelItemBlock) {
     isLabelGroup,
     dragHandleRef,
     disabled = false,
-    draggable = true,
   } = props;
+  const { t } = useTranslation();
   // states
   const [isMenuActive, setIsMenuActive] = useState(true);
   // refs
@@ -60,7 +60,7 @@ export function LabelItemBlock(props: ILabelItemBlock) {
   return (
     <div className="group flex items-center">
       <div className="flex items-center">
-        {!disabled && draggable && (
+        {!disabled && (
           <DragHandle
             className={cn("opacity-0 group-hover:opacity-100", {
               "opacity-100": isDragging,
@@ -77,10 +77,15 @@ export function LabelItemBlock(props: ILabelItemBlock) {
           className={`absolute right-2.5 flex items-center gap-2 px-4 ${
             isMenuActive || isLabelGroup
               ? "opacity-100"
-              : "opacity-0 group-hover:pointer-events-auto group-hover:opacity-100"
+              : "opacity-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
           } ${isLabelGroup && "-top-0.5"}`}
         >
-          <CustomMenu ellipsis menuButtonOnClick={() => setIsMenuActive(!isMenuActive)} useCaptureForOutsideClick>
+          <CustomMenu
+            ellipsis
+            ariaLabel={t("common.options")}
+            menuButtonOnClick={() => setIsMenuActive(!isMenuActive)}
+            useCaptureForOutsideClick
+          >
             {customMenuItems.map(
               ({ isVisible, onClick, CustomIcon, text, key }) =>
                 isVisible && (
@@ -96,6 +101,8 @@ export function LabelItemBlock(props: ILabelItemBlock) {
           {!isLabelGroup && (
             <div className="py-0.5">
               <button
+                type="button"
+                aria-label={t("common.actions.delete")}
                 className="flex size-5 items-center justify-center rounded-sm hover:bg-layer-1"
                 onClick={() => {
                   handleLabelDelete(label);

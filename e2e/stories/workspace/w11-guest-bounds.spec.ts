@@ -88,7 +88,7 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
   expect(await tables(), "the tables after gus's calls").toEqual(before);
 });
 
-test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state settings tell him he may not see them; no page he opens shows an address, his own neither", async ({
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -120,6 +120,7 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   const denied = "Oops! You are not authorized to view this page";
   await opened(`/${slug}/settings/members`, denied);
   await opened(`/${slug}/settings/projects/${web.id}/states`, denied);
+  await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
 });

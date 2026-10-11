@@ -337,6 +337,7 @@
     "close_peek_view": "Close the peek view",
     "toggle_peek_view_layout": "Toggle peek view layout",
     "options": "Options",
+    "color": "Color",
     "today": "Today",
     "press_for_commands": "Press '/' for commands",
     "click_to_add_description": "Click to add description",

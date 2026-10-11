@@ -24,9 +24,13 @@ export const DragHandle = forwardRef(function DragHandle(
     return <div className="h-[18px] w-[14px]" />;
   }
 
+  // A pointer's grip: pragmatic-dnd drags by the pointer alone, so the grip is no Tab stop, and nothing for assistive
+  // technology to read; what it drags names itself.
   return (
     <button
       type="button"
+      tabIndex={-1}
+      aria-hidden
       className={cn("flex flex-shrink-0 cursor-grab rounded-sm bg-surface-2 p-0.5 text-secondary", className)}
       onContextMenu={(e) => {
         e.preventDefault();

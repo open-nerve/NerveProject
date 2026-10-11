@@ -19,6 +19,7 @@ export function Popover(props: TPopover) {
     popperPosition = "bottom-end",
     popperPadding = 0,
     buttonClassName = "",
+    buttonAriaLabel,
     popoverClassName = "",
     button,
     disabled = false,
@@ -58,6 +59,7 @@ export function Popover(props: TPopover) {
             buttonClassName
           )}
           disabled={disabled}
+          aria-label={buttonAriaLabel}
         >
           {button ? button : <MoreVerticalOutline className="h-3 w-3" />}
         </HeadlessReactPopover.Button>

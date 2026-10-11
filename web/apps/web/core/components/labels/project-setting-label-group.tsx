@@ -108,10 +108,11 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
                           handleLabelDelete={handleLabelDelete}
                           isLabelGroup
                           dragHandleRef={dragHandleRef}
+                          disabled={!isEditable}
                         />
                       )}
 
-                      <Disclosure.Button>
+                      <Disclosure.Button aria-label={label.name}>
                         <span>
                           <ChevronDownOutline
                             className={`h-4 w-4 text-placeholder ${!open ? "rotate-90 transform" : ""}`}

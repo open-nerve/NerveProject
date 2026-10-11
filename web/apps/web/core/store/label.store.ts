@@ -30,11 +30,10 @@ export interface ILabelStore {
   labelMap: Record<string, Label>;
   /** The address's project's labels, by sort order, then id; undefined until fetched. */
   projectLabels: Label[] | undefined;
-  /** The address's project's labels at the top, each with the labels under it; undefined until fetched. */
-  projectLabelsTree: LabelTree[] | undefined;
   // computed actions
   getLabelById: (labelId: string | null | undefined) => Label | undefined;
   getProjectLabels: (projectId: string | null | undefined) => Label[] | undefined;
+  getProjectLabelsTree: (projectId: string | null | undefined) => LabelTree[] | undefined;
   getProjectLabelIds: (projectId: string | null | undefined) => string[] | undefined;
   // fetch actions
   fetchProjectLabels: (projectId: string) => Promise<Label[] | undefined>;
@@ -91,7 +90,6 @@ export class LabelStore implements ILabelStore {
       // computed
       labelMap: computed,
       projectLabels: computed,
-      projectLabelsTree: computed,
       // actions
       fetchProjectLabels: action,
       createLabel: action,
@@ -116,11 +114,6 @@ export class LabelStore implements ILabelStore {
     return this.getProjectLabels(this.router.projectId);
   }
 
-  get projectLabelsTree() {
-    const labels = this.projectLabels;
-    return labels?.filter((label) => label.parent_id === null).map((top) => treeOf(top, labels));
-  }
-
   /** @description the label, of a project the caller sees, as the store last had it from nerve */
   getLabelById = computedFn((labelId: string | null | undefined): Label | undefined =>
     labelId ? this.labelMap[labelId] : undefined
@@ -134,6 +127,12 @@ export class LabelStore implements ILabelStore {
     const project = this.projectOf(projectId);
     const labels = project && this.projects.get(project.id);
     return labels && inOrder(labels);
+  });
+
+  /** @description the project's labels at the top, each with the labels under it; undefined as getProjectLabels */
+  getProjectLabelsTree = computedFn((projectId: string | null | undefined): LabelTree[] | undefined => {
+    const labels = this.getProjectLabels(projectId);
+    return labels?.filter((label) => label.parent_id === null).map((top) => treeOf(top, labels));
   });
 
   getProjectLabelIds = computedFn((projectId: string | null | undefined): string[] | undefined =>

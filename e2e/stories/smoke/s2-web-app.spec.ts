@@ -122,7 +122,7 @@ type Account = (typeof ACCOUNTS)[number];
  * The pages each account opens, in order, each as its path ({slug} and {project} for their values) and the requests it
  * makes as it loads: "/", which lands on the workspace's home; the workspace's projects page, whose call of its own
  * fetch no other check holds; the workspace's general settings and its members; then the project's settings, its
- * general page and its states.
+ * general page, its states and its labels.
  */
 const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
   admin: [
@@ -132,6 +132,7 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/settings/members", [...APP, ...WORKSPACE, ...INVITATIONS]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
+    ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
   ],
   member: [
     ["/", [...APP, ...WORKSPACE]],
@@ -140,6 +141,7 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
+    ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
   ],
   guest: [
     ["/", [...APP, ...WORKSPACE]],
@@ -148,6 +150,7 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER, ...GENERAL]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
+    ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT, ...PROJECT_MEMBER]],
   ],
   "project non-member": [
     ["/", [...APP, ...WORKSPACE]],
@@ -156,6 +159,7 @@ const REQUESTS: Record<Account, [path: string, requests: string[]][]> = {
     ["/{slug}/settings/members", [...APP, ...WORKSPACE]],
     ["/{slug}/settings/projects/{project}", [...APP, ...WORKSPACE, ...PROJECT]],
     ["/{slug}/settings/projects/{project}/states", [...APP, ...WORKSPACE, ...PROJECT]],
+    ["/{slug}/settings/projects/{project}/labels", [...APP, ...WORKSPACE, ...PROJECT]],
   ],
 };
 

@@ -91,6 +91,13 @@ describe("the label settings' inline form", () => {
     expect([said, store.updateLabel.mock.calls]).toEqual(["update", [[bug.id, { name: "defect", color: "#F59E0B" }]]]);
   });
 
+  it("renames a label made without a colour with none, as nerve holds it", async () => {
+    const docs = labelOf(web, "docs", 75535, { color: "" });
+    submit(formOf(docs), "guides");
+    await vi.waitFor(() => expect(store.updateLabel).toHaveBeenCalled());
+    expect(store.updateLabel.mock.calls).toEqual([[docs.id, { name: "guides", color: "" }]]);
+  });
+
   it("closes once nerve has made the change, not before", async () => {
     const answer = heldChange<Label>();
     store.updateLabel.mockReturnValueOnce(answer.sent);

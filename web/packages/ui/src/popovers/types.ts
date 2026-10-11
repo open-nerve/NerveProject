@@ -26,6 +26,8 @@ type TPopoverDefaultOptions = TPopoverButtonDefaultOptions & {
 };
 
 export type TPopover = TPopoverDefaultOptions & {
+  /** The button's name, for a button that shows no text of its own. */
+  buttonAriaLabel?: string;
   // children
   children: ReactNode;
 };

@@ -116,11 +116,15 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await expect(completed).toHaveAttribute("aria-expanded", "true");
   await expect(stateRow(page, "Done")).toBeVisible();
 
-  // Review, in the started group: Tab goes through the form in its order; the form waits for nerve, its buttons
-  // disabled, Cancel too; it closes once nerve has made the state, last of its project's.
+  // Review, in the started group: Tab goes through the form in its order from its colour's button, named and marked
+  // as Shift+Tab reaches it; the form waits for nerve, its buttons disabled, Cancel too; it closes once nerve has made
+  // the state, last of its project's.
   await addTo(page, "started").click();
   await page.locator("#name").fill("Review");
-  await stateForm(page).getByRole("button").first().focus();
+  const colour = stateForm(page).getByRole("button", { name: "Color", exact: true });
+  await page.keyboard.press("Shift+Tab");
+  await expect(colour).toBeFocused();
+  await expect(colour).not.toHaveCSS("outline-style", "none");
   expect(await tabCycle(page, stateForm(page), 4)).toEqual(["name", "description", "Create", "Cancel"]);
   const creation = await sentHeld(page, "POST", listed, () =>
     stateForm(page).getByRole("button", { name: "Create" }).click()
@@ -177,7 +181,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await page.keyboard.press("Shift+Tab");
   await expect(reviewEdit).toBeFocused();
   await page.keyboard.press("Enter");
-  await stateForm(page).getByRole("button").first().click();
+  await colour.click();
   await page.locator('[title="#0693E3"]').click();
   const recoloured = await sentTo(page, "PATCH", `/api/v0/states/${reviewId}`, () =>
     stateForm(page).getByRole("button", { name: "Update" }).click()

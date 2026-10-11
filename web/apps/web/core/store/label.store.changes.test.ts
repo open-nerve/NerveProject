@@ -91,7 +91,7 @@ describe("LabelStore, a change in its turn", () => {
       { parent_id: feature.id, sort_order: 95000 },
       { parent_id: feature.id, sort_order: 95000 },
     ]);
-    expect(store.projectLabelsTree).toEqual([
+    expect(store.getProjectLabelsTree(web.id)).toEqual([
       { ...bug, children: [] },
       { ...feature, children: [backend, frontendLast] },
     ]);

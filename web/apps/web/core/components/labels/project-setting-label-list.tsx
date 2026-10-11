@@ -6,7 +6,6 @@
 
 import { useState, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -27,9 +26,13 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { SettingsHeading } from "../settings/heading";
 import { useLabelChanges } from "./use-label-changes";
 
-export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelList() {
-  // router
-  const { projectId } = useParams();
+type TProjectSettingsLabelList = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelList(props: TProjectSettingsLabelList) {
+  const { workspaceSlug, projectId } = props;
   // refs
   const scrollToRef = useRef<HTMLDivElement>(null);
   // states
@@ -39,14 +42,20 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { projectLabels, projectLabelsTree } = useLabel();
+  const { getProjectLabels, getProjectLabelsTree } = useLabel();
   const { move } = useLabelChanges();
   const { allowPermissions } = useUserPermissions();
 
-  if (!projectId) return null;
-
   // derived values
-  const isEditable = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
+  const projectLabels = getProjectLabels(projectId);
+  const projectLabelsTree = getProjectLabelsTree(projectId);
+  // who may change the labels (label.create and the others): its admins, and its members who are the workspace's
+  const isEditable = allowPermissions(
+    [EUserPermissions.ADMIN],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
+  );
 
   const newLabel = () => {
     setIsUpdating(false);
@@ -102,14 +111,18 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
               assetClassName="size-20"
               title={t("settings_empty_state.labels.title")}
               description={t("settings_empty_state.labels.description")}
-              actions={[
-                {
-                  label: t("settings_empty_state.labels.cta_primary"),
-                  onClick: () => {
-                    newLabel();
-                  },
-                },
-              ]}
+              actions={
+                isEditable
+                  ? [
+                      {
+                        label: t("settings_empty_state.labels.cta_primary"),
+                        onClick: () => {
+                          newLabel();
+                        },
+                      },
+                    ]
+                  : undefined
+              }
               align="start"
               rootClassName="py-20"
             />

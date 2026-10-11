@@ -5,27 +5,37 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoutesStub } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IProjectStore } from "@/store/project/project.store";
 import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
+import LabelsPage from "./labels/page";
 import StatesPage from "./states/page";
 
-// Whom a project's state settings show what (M3 design 2 P6, W11, 9.2): its states to those nerve lets list them, but
-// its guests, whom the page tells they may not (state.list: its members, whatever their role; design 2 W11); the
-// controls that change them to those nerve lets change them (state.create and the others: its admins, and its members
-// who are the workspace's admins, its guests among them). The page renders on the server at its route, through React
-// Router's stub, which gives it the route's params, with stand-ins for its parts that write what they show: the list
-// of groups writes the states it is given, and whether it has its controls. The caller's permissions and projects are
-// the stores' own, over acme and its project web as nerve lists them to him (fake-permissions.ts), while the address
-// the router store holds names no project: the page reads its project from its route. The state store gives web's
-// states and none of another project's, so that a page that reads another's shows its loader.
+// Whom a project's state and label settings show what (M3 design 2 P6, P7, W11, 9.2): its states and its labels to
+// those nerve lets list them, but its guests, whom each page tells they may not (state.list and label.list: its
+// members, whatever their role; design 2 W11); the controls that change them to those nerve lets change them
+// (state.create, label.create and the others: its admins, and its members who are the workspace's admins, its guests
+// among them). A page renders on the server at its route, through React Router's stub, which gives it the route's
+// params, with stand-ins for its parts that write what they show: the list of groups writes the states it is given and
+// a label its name, each whether they have their controls, the label list's heading and its empty state show their
+// buttons. The caller's permissions and projects are the stores' own, over acme and its project web as nerve lists
+// them to him (fake-permissions.ts), while the address the router store holds names no project: the page reads its
+// project from its route. The state and label stores give web's and none of another project's, so that a page that
+// reads another's shows its loader.
 
 const caller = vi.hoisted(
   (): { permissions?: IUserPermissionStore; projects?: IProjectStore; projectId?: string } => ({})
 );
 /** web's states, by group, as the state store groups them. */
 const grouped = vi.hoisted(() => ({ backlog: [{ name: "Backlog" }], started: [{ name: "In Progress" }] }));
+/** web's one label, as the label store gives it. */
+const bug = vi.hoisted(() => ({ id: "l-bug", name: "Bug", parent_id: null }));
+/** web's labels as the label store lists them: Bug, but in the test of a project with none. */
+const listed = vi.hoisted(() => ({ labels: [bug] }));
+beforeEach(() => {
+  listed.labels = [bug];
+});
 vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => caller.permissions }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => caller.projects }));
 vi.mock("@/hooks/store/use-project-state", () => ({
@@ -34,6 +44,20 @@ vi.mock("@/hooks/store/use-project-state", () => ({
     fetchProjectStates: vi.fn(),
   }),
 }));
+vi.mock("@/hooks/store/use-label", () => ({
+  useLabel: () => ({
+    getProjectLabels: (projectId: string) => (projectId === caller.projectId ? listed.labels : undefined),
+    getProjectLabelsTree: (projectId: string) =>
+      projectId === caller.projectId
+        ? listed.labels.map((label) => ({ id: label.id, name: label.name, parent_id: label.parent_id, children: [] }))
+        : undefined,
+  }),
+}));
+vi.mock("@/components/labels/project-setting-label-item", () => ({
+  ProjectSettingLabelItem: ({ label, isEditable }: { label: { name: string }; isEditable: boolean }) =>
+    `${label.name}${isEditable ? " and its controls" : ""}`,
+}));
+vi.mock("@/components/labels/use-label-changes", () => ({ useLabelChanges: () => ({}) }));
 vi.mock("@/lib/use-session-swr", () => ({ useSessionSWR: () => ({}) }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@/components/project-states/group-list", () => ({
@@ -54,7 +78,12 @@ vi.mock("@/components/core/page-title", () => ({ PageHead: ({ title }: { title?:
 vi.mock("@/components/settings/content-wrapper", () => ({
   SettingsContentWrapper: ({ children }: { children: unknown }) => children,
 }));
-vi.mock("@/components/settings/heading", () => ({ SettingsHeading: () => null }));
+vi.mock("@/components/settings/heading", () => ({ SettingsHeading: ({ control }: { control?: unknown }) => control }));
+vi.mock("@nerve/propel/button", () => ({ Button: ({ children }: { children: unknown }) => `[${children}]` }));
+vi.mock("@nerve/propel/empty-state", () => ({
+  EmptyStateCompact: ({ actions }: { actions?: { label: string }[] }) =>
+    (actions ?? []).map((action) => `[${action.label}]`).join(""),
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 /** A route of React Router's stub, whose component gets the route's props as a route module's does. */
@@ -89,5 +118,35 @@ describe("the state settings page", () => {
   it("tells its guest he may not see them", async () => {
     const { text } = await openedBy(its.guest, "states", StatesPage);
     expect(text).toBe("not authorized");
+  });
+});
+
+describe("the label settings page", () => {
+  it.each([its.admin, its.memberAdmin, its.guestAdmin])(
+    "shows $who the labels, their controls and its button",
+    async (row) => {
+      const { text, name } = await openedBy(row, "labels", LabelsPage);
+      expect(text).toBe(`[${name} - Labels][common.add_label]Bug and its controls`);
+    }
+  );
+
+  it("shows its member the labels, and no control", async () => {
+    const { text, name } = await openedBy(its.member, "labels", LabelsPage);
+    expect(text).toBe(`[${name} - Labels]Bug`);
+  });
+
+  it("tells its guest he may not see them", async () => {
+    const { text } = await openedBy(its.guest, "labels", LabelsPage);
+    expect(text).toBe("not authorized");
+  });
+
+  it("shows the button of its empty state, with no label, to those who may add one alone", async () => {
+    listed.labels = [];
+    const admin = await openedBy(its.admin, "labels", LabelsPage);
+    const member = await openedBy(its.member, "labels", LabelsPage);
+    expect([admin.text, member.text]).toEqual([
+      `[${admin.name} - Labels][common.add_label][settings_empty_state.labels.cta_primary]`,
+      `[${member.name} - Labels]`,
+    ]);
   });
 });

@@ -18,21 +18,27 @@ import { SettingsContentWrapper } from "@/components/settings/content-wrapper";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 // local imports
+import type { Route } from "./+types/page";
 import { LabelsProjectSettingsHeader } from "./header";
 
-function LabelsSettingsPage() {
+function LabelsSettingsPage({ params }: Route.ComponentProps) {
+  // router: the address's project, as the store gives it (the wrapper shows the page once it has)
+  const { workspaceSlug, projectId } = params;
   // store hooks
-  const { currentProjectDetails } = useProject();
+  const { getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
 
-  const pageTitle = currentProjectDetails?.name ? `${currentProjectDetails?.name} - Labels` : undefined;
+  const project = getProjectById(projectId);
+  const pageTitle = project ? `${project.name} - Labels` : undefined;
 
   const scrollableContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // derived values
+  // its members see its labels; its guests are told they may not, as on its states (M3 design 2 W11)
   const canPerformProjectMemberActions = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
   );
 
   // Enable Auto Scroll for Labels list
@@ -56,7 +62,7 @@ function LabelsSettingsPage() {
     <SettingsContentWrapper header={<LabelsProjectSettingsHeader />}>
       <PageHead title={pageTitle} />
       <div ref={scrollableContainerRef} className="size-full">
-        <ProjectSettingsLabelList />
+        <ProjectSettingsLabelList workspaceSlug={workspaceSlug} projectId={projectId} />
       </div>
     </SettingsContentWrapper>
   );

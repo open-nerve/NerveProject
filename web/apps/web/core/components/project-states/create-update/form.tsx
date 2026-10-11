@@ -63,7 +63,11 @@ export function StateForm(props: TStateForm) {
     <div className="relative flex space-x-2 rounded-sm bg-surface-1 p-3">
       {/* color */}
       <div className="mt-2 h-full flex-shrink-0">
-        <Popover button={<PopoverButton color={watch("color")} />} panelClassName="mt-4 -ml-3">
+        <Popover
+          button={<PopoverButton color={watch("color")} />}
+          buttonAriaLabel={t("common.color")}
+          panelClassName="mt-4 -ml-3"
+        >
           <Controller
             name="color"
             control={control}

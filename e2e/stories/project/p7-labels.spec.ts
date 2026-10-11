@@ -18,8 +18,8 @@ import { expect, test } from "../../fixtures/test";
 
 // P7, a project's labels (M3 design 2, 3.16): creating them, putting one
 // under another, renaming and moving one, deleting one with the label under
-// it, with what the names and the two levels keep. The page version comes
-// with the labels' settings page (P11).
+// it, with what the names and the two levels keep. The page version is
+// p7-labels-page.spec.ts.
 
 /** The labels of the project of projectId that the caller of token lists, in their order. */
 async function listLabels(api: Api, token: string, projectId: string): Promise<Label[]> {

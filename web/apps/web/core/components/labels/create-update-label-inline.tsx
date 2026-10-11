@@ -53,9 +53,10 @@ export const CreateUpdateLabelInline = observer(
       watch,
       setFocus,
     } = useForm<TLabelFormValues>({
-      // a change starts from the label's name and colour, a creation from no name and a colour at random
+      // a change starts from the label's name and colour as nerve holds them (none, for a label made without one), a
+      // creation from no name and a colour at random
       defaultValues: labelToUpdate
-        ? { name: labelToUpdate.name, color: labelToUpdate.color || "#000" }
+        ? { name: labelToUpdate.name, color: labelToUpdate.color }
         : { ...defaultValues, color: getRandomLabelColor() },
     });
 
@@ -95,14 +96,16 @@ export const CreateUpdateLabelInline = observer(
               {({ open }) => (
                 <>
                   <Popover.Button
-                    className={`group inline-flex items-center text-14 font-medium focus:outline-none ${
+                    aria-label={t("common.color")}
+                    className={`group inline-flex items-center text-14 font-medium ${
                       open ? "text-primary" : "text-secondary"
                     }`}
                   >
+                    {/* a label without a colour shown as the list shows it (label-name.tsx) */}
                     <span
                       className="h-4 w-4 rounded-full"
                       style={{
-                        backgroundColor: watch("color"),
+                        backgroundColor: watch("color") || "#000",
                       }}
                     />
                   </Popover.Button>
