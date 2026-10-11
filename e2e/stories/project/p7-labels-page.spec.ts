@@ -105,10 +105,19 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await page.goto(`/${slug}/settings/projects/${web.id}/labels`);
   await expect(page.locator("h6")).toHaveText(["UI", "Docs"]);
 
+  // The sidebar's way back to the project, an icon button of the app's (propel's), marked as Shift+Tab reaches it from
+  // the first of the sidebar's links, its ring set off from it as on each of the app's buttons.
+  const back = page.getByText("Project settings", { exact: true }).locator("xpath=preceding-sibling::button[1]");
+  await page.getByRole("link", { name: "General", exact: true }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(back).toBeFocused();
+  await expect(back).not.toHaveCSS("outline-style", "none");
+  await expect(back).toHaveCSS("outline-offset", "2px");
+
   // Bug: the form opens on the name (its effect, which may run once the form shows), and Tab goes through it in its
   // order from its colour's button, named and marked as Shift+Tab reaches it, to Add, a button of the app's (propel's)
-  // marked too; the form waits for nerve, its buttons disabled, Cancel too; it closes once nerve has made the label, at
-  // the top, last of the project's. Feature after it.
+  // marked too, its ring set off from its fill; the form waits for nerve, its buttons disabled, Cancel too; it closes
+  // once nerve has made the label, at the top, last of the project's. Feature after it.
   await page.getByRole("button", { name: "Add label" }).click();
   await expect(page.locator("#labelName")).toBeFocused();
   await page.locator("#labelName").fill("Bug");
@@ -120,6 +129,7 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   expect(await tabCycle(page, labelForm(page), 3)).toEqual(["labelName", "Cancel", "Add"]);
   await expect(add).toBeFocused();
   await expect(add).not.toHaveCSS("outline-style", "none");
+  await expect(add).toHaveCSS("outline-offset", "2px");
   const creation = await sentHeld(page, "POST", listed, () => add.click());
   expect(creation.body).toEqual({ name: "Bug", color: expect.stringMatching(/^#/) });
   expect(await enabledWithin(labelForm(page).getByRole("button", { name: "Adding" }))).toBe(false);
