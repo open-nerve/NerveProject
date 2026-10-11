@@ -1,4 +1,6 @@
-import { errors, expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
+import { setTimeout as sleep } from "node:timers/promises";
+
+import { errors, expect, type Locator, type Page, type Request, type Response, type Route } from "@playwright/test";
 
 import type { Api } from "./api";
 import { bearer, register, type AuthTokens } from "./auth";
@@ -141,6 +143,25 @@ export async function enabledWithin(button: Locator): Promise<boolean> {
     .and(button.page().getByRole("button", { disabled: false }))
     .waitFor({ state: "attached", timeout: 1_000 })
     .then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether page sends a request of method to path (no query) while act runs or within a second of its
+ * end: what page must not send, such as a change its caller may not make, stays unsent the whole time, where a check
+ * made at once could pass before page has sent it.
+ */
+export async function sentWithin(page: Page, method: string, path: string, act: () => Promise<void>): Promise<boolean> {
+  const sent = deferred<true>();
+  const onRequest = (request: Request) => {
+    if (request.method() === method && new URL(request.url()).pathname === path) sent.resolve(true);
+  };
+  page.on("request", onRequest);
+  try {
+    await act();
+    return await Promise.race([sent.promise, sleep(1_000, false)]);
+  } finally {
+    page.off("request", onRequest);
+  }
 }
 
 /**

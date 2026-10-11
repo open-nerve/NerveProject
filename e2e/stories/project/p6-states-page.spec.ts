@@ -10,7 +10,7 @@ import {
   type Api,
 } from "../../fixtures/api";
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
-import { accountId, bearer, emailFor } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, login } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { dragOnto, tabCycle } from "../../fixtures/project-pages";
 import {
@@ -20,6 +20,7 @@ import {
   registerOnboarded,
   sentHeld,
   sentTo,
+  sentWithin,
 } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
@@ -89,13 +90,14 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   ]);
   await changeRole(api, admin.access_token, slug, wandaId, 20);
   const listed = `/api/v0/projects/${web.id}/states`;
+  const statesPage = `/${slug}/settings/projects/${web.id}/states`;
   const inProgressId = (await stateIds(api, admin.access_token, web.id))["In Progress"];
   if (!inProgressId) throw new Error("Web was made without In Progress");
   let rows = statesOfANewProject(adminEmail);
 
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
-  await page.goto(`/${slug}/settings/projects/${web.id}/states`);
+  await page.goto(statesPage);
   await expect(stateRow(page, "In Progress")).toBeVisible();
   await Promise.all(
     ["backlog", "unstarted", "started", "completed", "cancelled"].map((key) =>
@@ -157,15 +159,23 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await stateForm(page).getByRole("button", { name: "Cancel" }).click();
 
   // Review recoloured, its row's Edit reached by Tab, its row's controls shown while the focus is in it as while the
-  // pointer is over it (unseen while neither is): the fields its form edits.
+  // pointer is over it (unseen while neither is), Edit and Delete each marked as Tab reaches it: the fields its form
+  // edits.
   const review = stateRow(page, "Review");
   const reviewEdit = review.getByRole("button", { name: "Edit" });
+  const reviewDelete = review.getByRole("button", { name: "Delete" });
   await page.mouse.move(0, 0);
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "0");
   await review.getByRole("button", { name: "Mark as default" }).focus();
   await page.keyboard.press("Tab");
   await expect(reviewEdit).toBeFocused();
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "1");
+  await expect(reviewEdit).not.toHaveCSS("outline-style", "none");
+  await page.keyboard.press("Tab");
+  await expect(reviewDelete).toBeFocused();
+  await expect(reviewDelete).not.toHaveCSS("outline-style", "none");
+  await page.keyboard.press("Shift+Tab");
+  await expect(reviewEdit).toBeFocused();
   await page.keyboard.press("Enter");
   await stateForm(page).getByRole("button").first().click();
   await page.locator('[title="#0693E3"]').click();
@@ -183,15 +193,23 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     dragOnto(page, review, review, stateRow(page, "In Progress"), { x: 60, y: 4 })
   );
   expect([moved.answer.status(), moved.body]).toEqual([200, { group: "started", sequence: 20000 }]);
-  await expect(page.locator("div.group h6")).toHaveText([
-    "Backlog",
-    "Todo",
-    "Review",
-    "In Progress",
-    "Done",
-    "Cancelled",
-  ]);
+  const order = ["Backlog", "Todo", "Review", "In Progress", "Done", "Cancelled"];
+  await expect(page.locator("div.group h6")).toHaveText(order);
   rows = changed(rows, "Review", { sequence: 20000 });
+
+  // Its member drags no state, though the started group holds two: In Progress dragged onto Review's top on his page
+  // sends nothing, and the order stays. He signs in anew, each browser a session of its own: nerve rotates a session's
+  // refresh token, so a second browser given the same tokens would be signed out once the first had refreshed.
+  const member = await anotherBrowser(browser, baseURL ?? "", await login(api, memEmail));
+  await member.page.goto(statesPage);
+  const memberInProgress = stateRow(member.page, "In Progress");
+  expect(
+    await sentWithin(member.page, "PATCH", `/api/v0/states/${inProgressId}`, () =>
+      dragOnto(member.page, memberInProgress, memberInProgress, stateRow(member.page, "Review"), { x: 60, y: 4 })
+    )
+  ).toBe(false);
+  await expect(member.page.locator("div.group h6")).toHaveText(order);
+  await member.close();
 
   // Review the default, its button busy until nerve answers; Backlog the default no longer; neither offers its
   // deletion, nor Todo, its group's only state.
@@ -200,7 +218,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   const marking = await sentHeld(page, "POST", marked, markReview);
   expect(await enabledWithin(review.getByRole("button", { name: "Marking as default" }))).toBe(false);
   expect((await marking.release()).status()).toBe(204);
-  await expect(review.getByRole("button", { name: "Default" })).toBeDisabled();
+  await expect(review.getByRole("button", { name: "Default", exact: true })).toBeDisabled();
   await expect(stateRow(page, "Backlog").getByRole("button", { name: "Mark as default" })).toBeEnabled();
   await Promise.all(
     ["Review", "Backlog", "Todo"].map((name) =>
@@ -233,7 +251,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   // deleted, its dialog held while nerve answers: Escape does not dismiss it, Cancel is disabled; it closes once nerve
   // has, Review left in the started group.
   await page.reload();
-  await expect(inProgress.getByRole("button", { name: "Default" })).toBeDisabled();
+  await expect(inProgress.getByRole("button", { name: "Default", exact: true })).toBeDisabled();
   expect((await sentTo(page, "POST", marked, markReview)).answer.status()).toBe(204);
   await inProgress.getByRole("button", { name: "Delete" }).click();
   const deletion = await sentHeld(page, "DELETE", deleted, () =>
@@ -260,7 +278,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   const seenBy = async (who: string, tokens: typeof mem, controls: boolean) => {
     const other = await anotherBrowser(browser, baseURL ?? "", tokens);
     const otherWatch = await watchPage(other.page);
-    await other.page.goto(`/${slug}/settings/projects/${web.id}/states`);
+    await other.page.goto(statesPage);
     await expect(stateRow(other.page, "Review"), who).toBeVisible();
     await expect(addTo(other.page, "started"), who).toBeEnabled({ enabled: controls });
     await expect(other.page.getByRole("button", { name: "Mark as default" }), who).toHaveCount(controls ? 4 : 0);
