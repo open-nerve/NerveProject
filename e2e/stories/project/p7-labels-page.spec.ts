@@ -105,9 +105,9 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await page.goto(`/${slug}/settings/projects/${web.id}/labels`);
   await expect(page.locator("h6")).toHaveText(["UI", "Docs"]);
 
-  // The sidebar's way back to the project, an icon button of the app's (propel's), marked as Shift+Tab reaches it from
-  // the first of the sidebar's links, its ring set off from it as on each of the app's buttons.
-  const back = page.getByText("Project settings", { exact: true }).locator("xpath=preceding-sibling::button[1]");
+  // The sidebar's way back to the project, an icon button of the app's (propel's), named and marked as Shift+Tab
+  // reaches it from the first of the sidebar's links, its ring set off from it as on each of the app's buttons.
+  const back = page.getByRole("button", { name: "Go back", exact: true });
   await page.getByRole("link", { name: "General", exact: true }).focus();
   await page.keyboard.press("Shift+Tab");
   await expect(back).toBeFocused();

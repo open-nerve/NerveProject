@@ -45,6 +45,7 @@ export const ProjectSettingsSidebarHeader = observer(function ProjectSettingsSid
           variant="ghost"
           size="base"
           icon={ArrowNarrowLeftOutline}
+          aria-label={t("common.go_back")}
           onClick={() => navigate(`/${workspaceSlug}/projects/${projectId}/issues`)}
         />
         <p>Project settings</p>
