@@ -10,9 +10,8 @@ import { observer } from "mobx-react";
 import type { Label } from "@nerve/api-client";
 // ui
 import { AlertModalCore } from "@nerve/ui";
-// hooks
-import { useLabel } from "@/hooks/store/use-label";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// local imports
+import { useLabelChanges } from "./use-label-changes";
 
 type Props = {
   isOpen: boolean;
@@ -22,9 +21,7 @@ type Props = {
 
 export const DeleteLabelModal = observer(function DeleteLabelModal(props: Props) {
   const { isOpen, onClose, data } = props;
-  // store hooks
-  const { deleteLabel } = useLabel();
-  const toastRefusal = useRefusalToast();
+  const { remove } = useLabelChanges();
   // states
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
 
@@ -33,17 +30,13 @@ export const DeleteLabelModal = observer(function DeleteLabelModal(props: Props)
     setIsDeleteLoading(false);
   };
 
+  // Busy, and the dialog not to be dismissed, until the page has followed nerve's answer: it closes once nerve has
+  // deleted the label, and stays, its buttons enabled again, when nerve refuses, the reason in a toast.
   const handleDeletion = async () => {
     if (!data) return;
-
     setIsDeleteLoading(true);
-
-    await deleteLabel(data.id)
-      .then(() => handleClose())
-      .catch((error: unknown) => {
-        setIsDeleteLoading(false);
-        toastRefusal(error);
-      });
+    await remove(data.id, handleClose);
+    setIsDeleteLoading(false);
   };
 
   return (

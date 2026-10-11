@@ -7,7 +7,6 @@
 import React, { forwardRef, useEffect } from "react";
 import { observer } from "mobx-react";
 import { TwitterPicker } from "react-color";
-import type { SubmitHandler } from "react-hook-form";
 import { Controller, useForm } from "react-hook-form";
 import { Popover, Transition } from "@headlessui/react";
 // nerve imports
@@ -16,23 +15,19 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { Label, LabelCreate, LabelUpdate } from "@nerve/api-client";
-// hooks
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
-
-export type TLabelOperationsCallbacks = {
-  createLabel: (data: LabelCreate) => Promise<Label>;
-  updateLabel: (labelId: string, data: LabelUpdate) => Promise<Label>;
-};
+import type { Label } from "@nerve/api-client";
+// local imports
+import { useLabelChanges, type LabelUnderField } from "./use-label-changes";
 
 /** What the form edits and sends, a creation (at the top) or a change alike: nerve's LabelUpdate takes no others. */
 type TLabelFormValues = Pick<Label, "name" | "color">;
 
 type TCreateUpdateLabelInlineProps = {
+  /** The project a label created goes in. */
+  projectId: string;
   labelForm: boolean;
   setLabelForm: React.Dispatch<React.SetStateAction<boolean>>;
-  isUpdating: boolean;
-  labelOperationsCallbacks: TLabelOperationsCallbacks;
+  /** The label the form changes; none, a creation. */
   labelToUpdate?: Label;
   onClose?: () => void;
 };
@@ -47,12 +42,13 @@ export const CreateUpdateLabelInline = observer(
     props: TCreateUpdateLabelInlineProps,
     ref: React.ForwardedRef<HTMLDivElement>
   ) {
-    const { labelForm, setLabelForm, isUpdating, labelOperationsCallbacks, labelToUpdate, onClose } = props;
+    const { projectId, labelForm, setLabelForm, labelToUpdate, onClose } = props;
     // form info
     const {
       handleSubmit,
       control,
       reset,
+      setError,
       formState: { errors, isSubmitting },
       watch,
       setFocus,
@@ -64,7 +60,7 @@ export const CreateUpdateLabelInline = observer(
     });
 
     const { t } = useTranslation();
-    const toastRefusal = useRefusalToast();
+    const { create, update } = useLabelChanges();
 
     const handleClose = () => {
       setLabelForm(false);
@@ -72,36 +68,13 @@ export const CreateUpdateLabelInline = observer(
       if (onClose) onClose();
     };
 
-    /** Shows nerve's reason for a refused creation or change, and keeps what the form holds. */
-    const handleRefusal = (error: unknown, formData: TLabelFormValues) => {
-      toastRefusal(error);
-      reset(formData);
-    };
-
-    const handleLabelCreate: SubmitHandler<TLabelFormValues> = async (formData) => {
-      if (isSubmitting) return;
-
-      await labelOperationsCallbacks
-        .createLabel(formData)
-        .then(() => handleClose())
-        .catch((error: unknown) => handleRefusal(error, formData));
-    };
-
-    const handleLabelUpdate: SubmitHandler<TLabelFormValues> = async (formData) => {
-      if (!labelToUpdate?.id || isSubmitting) return;
-
-      await labelOperationsCallbacks
-        .updateLabel(labelToUpdate.id, formData)
-        .then(() => handleClose())
-        .catch((error: unknown) => handleRefusal(error, formData));
-    };
-
+    // Busy until the page has followed nerve's answer: the form closes once nerve has made the label or the change,
+    // and stays with what it holds when nerve refuses it, the reason under the name or in a toast.
     const handleFormSubmit = (formData: TLabelFormValues) => {
-      if (isUpdating) {
-        handleLabelUpdate(formData);
-      } else {
-        handleLabelCreate(formData);
-      }
+      const underField: LabelUnderField = (field, message) => setError(field, { type: "server", message });
+      return labelToUpdate
+        ? update(labelToUpdate.id, formData, underField, handleClose)
+        : create(projectId, formData, underField, handleClose);
     };
 
     /**
@@ -190,18 +163,18 @@ export const CreateUpdateLabelInline = observer(
               )}
             />
           </div>
-          <Button variant="secondary" onClick={() => handleClose()}>
+          <Button variant="secondary" onClick={() => handleClose()} disabled={isSubmitting}>
             {t("cancel")}
           </Button>
           <Button
             variant="primary"
             onClick={(e) => {
               e.preventDefault();
-              handleSubmit(handleFormSubmit)();
+              void handleSubmit(handleFormSubmit)();
             }}
             loading={isSubmitting}
           >
-            {isUpdating ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
+            {labelToUpdate ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
           </Button>
         </div>
         {errors.name?.message && <p className="p-0.5 pl-8 text-13 text-danger-primary">{errors.name?.message}</p>}

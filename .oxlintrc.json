@@ -305,7 +305,9 @@
         "web/apps/web/core/components/project-states/use-state-changes.ts",
         "web/apps/web/core/components/project-states/use-state-changes.test.ts",
         "web/apps/web/core/components/project-states/options/delete.test.tsx",
-        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(settings)/settings/projects/\\[projectId\\]/states-labels.test.tsx"
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(settings)/settings/projects/\\[projectId\\]/states-labels.test.tsx",
+        "web/apps/web/core/components/labels/use-label-changes.ts",
+        "web/apps/web/core/components/labels/use-label-changes.test.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

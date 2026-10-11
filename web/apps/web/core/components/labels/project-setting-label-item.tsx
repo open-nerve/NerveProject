@@ -9,15 +9,12 @@ import { useState } from "react";
 import { CloseOutline, EditOutline } from "@makeplane/propel/icons";
 // types
 import type { Label } from "@nerve/api-client";
-// hooks
-import { useLabel } from "@/hooks/store/use-label";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // components
-import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
 import type { ICustomMenuItem } from "./label-block/label-item-block";
 import { LabelItemBlock } from "./label-block/label-item-block";
 import { LabelDndHOC } from "./label-drag-n-drop-HOC";
+import { useLabelChanges } from "./use-label-changes";
 
 type Props = {
   label: Label;
@@ -32,7 +29,6 @@ type Props = {
     droppedLabelId: string | undefined,
     dropAtEndOfList: boolean
   ) => void;
-  labelOperationsCallbacks: TLabelOperationsCallbacks;
   isEditable?: boolean;
 };
 
@@ -45,26 +41,16 @@ export function ProjectSettingLabelItem(props: Props) {
     isLastChild,
     isParentDragging = false,
     onDrop,
-    labelOperationsCallbacks,
     isEditable = false,
   } = props;
   // states
   const [isEditLabelForm, setEditLabelForm] = useState(false);
-  // nerve hooks
-  const toastRefusal = useRefusalToast();
-  // store hooks
-  const { updateLabel } = useLabel();
-
-  const removeFromGroup = () => {
-    updateLabel(label.id, { parent_id: null }).catch((error: unknown) => {
-      toastRefusal(error);
-    });
-  };
+  const { removeFromGroup } = useLabelChanges();
 
   const customMenuItems: ICustomMenuItem[] = [
     {
       CustomIcon: CloseOutline,
-      onClick: removeFromGroup,
+      onClick: () => void removeFromGroup(label.id),
       isVisible: label.parent_id !== null,
       text: "Remove from group",
       key: "remove_from_group",
@@ -94,11 +80,10 @@ export function ProjectSettingLabelItem(props: Props) {
           >
             {isEditLabelForm ? (
               <CreateUpdateLabelInline
+                projectId={label.project_id}
                 labelForm={isEditLabelForm}
                 setLabelForm={setEditLabelForm}
-                isUpdating
                 labelToUpdate={label}
-                labelOperationsCallbacks={labelOperationsCallbacks}
                 onClose={() => {
                   setEditLabelForm(false);
                   setIsUpdating(false);

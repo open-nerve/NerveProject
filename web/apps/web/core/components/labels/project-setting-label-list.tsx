@@ -12,9 +12,8 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
-import type { Label, LabelCreate } from "@nerve/api-client";
+import type { Label } from "@nerve/api-client";
 import { Loader } from "@nerve/ui";
-import type { TLabelOperationsCallbacks } from "@/components/labels";
 import {
   CreateUpdateLabelInline,
   DeleteLabelModal,
@@ -24,9 +23,9 @@ import {
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // local imports
 import { SettingsHeading } from "../settings/heading";
+import { useLabelChanges } from "./use-label-changes";
 
 export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelList() {
   // router
@@ -39,19 +38,15 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
   const [selectDeleteLabel, setSelectDeleteLabel] = useState<Label | null>(null);
   // nerve hooks
   const { t } = useTranslation();
-  const toastRefusal = useRefusalToast();
   // store hooks
-  const { projectLabels, updateLabelPosition, projectLabelsTree, createLabel, updateLabel } = useLabel();
+  const { projectLabels, projectLabelsTree } = useLabel();
+  const { move } = useLabelChanges();
   const { allowPermissions } = useUserPermissions();
 
   if (!projectId) return null;
 
   // derived values
   const isEditable = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
-  const labelOperationsCallbacks: TLabelOperationsCallbacks = {
-    createLabel: (data: LabelCreate) => createLabel(projectId, data),
-    updateLabel,
-  };
 
   const newLabel = () => {
     setIsUpdating(false);
@@ -64,9 +59,7 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
     droppedLabelId: string | undefined,
     dropAtEndOfList: boolean
   ) => {
-    updateLabelPosition(draggingLabelId, droppedParentId, droppedLabelId, dropAtEndOfList).catch((error: unknown) => {
-      toastRefusal(error);
-    });
+    void move(draggingLabelId, droppedParentId, droppedLabelId, dropAtEndOfList);
   };
 
   return (
@@ -91,10 +84,9 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
         {showLabelForm && (
           <div className="my-2 w-full rounded-sm border border-subtle px-3.5 py-2">
             <CreateUpdateLabelInline
+              projectId={projectId}
               labelForm={showLabelForm}
               setLabelForm={setLabelForm}
-              isUpdating={isUpdating}
-              labelOperationsCallbacks={labelOperationsCallbacks}
               ref={scrollToRef}
               onClose={() => {
                 setLabelForm(false);
@@ -135,7 +127,6 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
                     isLastChild={index === projectLabelsTree.length - 1}
                     onDrop={onDrop}
                     isEditable={isEditable}
-                    labelOperationsCallbacks={labelOperationsCallbacks}
                   />
                 );
               }
@@ -149,7 +140,6 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
                   isLastChild={index === projectLabelsTree.length - 1}
                   onDrop={onDrop}
                   isEditable={isEditable}
-                  labelOperationsCallbacks={labelOperationsCallbacks}
                 />
               );
             })
