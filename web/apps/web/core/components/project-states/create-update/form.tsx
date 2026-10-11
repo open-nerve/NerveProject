@@ -4,24 +4,32 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useState } from "react";
 import { TwitterPicker } from "react-color";
+import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { StateCreate } from "@nerve/api-client";
 import { Popover } from "@nerve/ui";
+// local imports
+import type { StateUnderField } from "../use-state-changes";
 
 /** What the form edits of a state, as a creation sends it. */
 export type TStateFormData = Omit<StateCreate, "group">;
 
 type TStateForm = {
   data: TStateFormData;
-  onSubmit: (formData: TStateFormData) => Promise<void>;
+  /**
+   * Sends what the form holds; settles once the page has followed nerve's answer, the form busy until then. nerve's
+   * refusal shows under the fields it names, by underField.
+   */
+  onSubmit: (formData: TStateFormData, underField: StateUnderField) => Promise<void>;
   onCancel: () => void;
-  buttonDisabled: boolean;
+  /** What the form's button says, and says while the form is busy. */
   buttonTitle: string;
+  busyButtonTitle: string;
 };
 
 function PopoverButton({ color }: { color?: string }) {
@@ -36,86 +44,92 @@ function PopoverButton({ color }: { color?: string }) {
 }
 
 export function StateForm(props: TStateForm) {
-  const { data, onSubmit, onCancel, buttonDisabled, buttonTitle } = props;
-  // states
-  const [formData, setFromData] = useState<TStateFormData | undefined>(undefined);
-  const [errors, setErrors] = useState<Partial<Record<keyof TStateFormData, string>> | undefined>(undefined);
+  const { data, onSubmit, onCancel, buttonTitle, busyButtonTitle } = props;
+  const { t } = useTranslation();
+  const {
+    control,
+    handleSubmit,
+    setError,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<TStateFormData>({ defaultValues: data });
 
-  useEffect(() => {
-    if (data && !formData) setFromData(data);
-  }, [data, formData]);
-
-  const handleFormData = <T extends keyof TStateFormData>(key: T, value: TStateFormData[T]) => {
-    setFromData((prev) => prev && { ...prev, [key]: value });
-    setErrors((prev) => ({ ...prev, [key]: "" }));
-  };
-
-  const formSubmit = async (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    event.preventDefault();
-
-    const name = formData?.name || undefined;
-    if (!formData || !name) {
-      let currentErrors: Partial<Record<keyof TStateFormData, string>> = {};
-      if (!name) currentErrors = { ...currentErrors, name: "Name is required" };
-      setErrors(currentErrors);
-      return;
-    }
-
-    try {
-      await onSubmit(formData);
-    } catch (error) {
-      console.log("error", error);
-    }
-  };
+  // busy from the click until the page has followed nerve's answer: a second click finds the button disabled
+  const submit = handleSubmit((formData) =>
+    onSubmit(formData, (field, message) => setError(field, { type: "server", message }))
+  );
 
   return (
     <div className="relative flex space-x-2 rounded-sm bg-surface-1 p-3">
       {/* color */}
       <div className="mt-2 h-full flex-shrink-0">
-        <Popover button={<PopoverButton color={formData?.color} />} panelClassName="mt-4 -ml-3">
-          <TwitterPicker color={formData?.color} onChange={(value) => handleFormData("color", value.hex)} />
+        <Popover button={<PopoverButton color={watch("color")} />} panelClassName="mt-4 -ml-3">
+          <Controller
+            name="color"
+            control={control}
+            render={({ field: { value, onChange } }) => (
+              <TwitterPicker color={value} onChange={(picked) => onChange(picked.hex)} />
+            )}
+          />
         </Popover>
       </div>
 
       <div className="w-full space-y-2">
         {/* title */}
-        <Field name="name" invalid={(errors && Boolean(errors.name)) || false}>
-          <InputGroup size="2xl">
-            <Input
-              size="2xl"
-              id="name"
-              type="text"
-              name="name"
-              placeholder="Name"
-              value={formData?.name}
-              onChange={(e) => handleFormData("name", e.target.value)}
-              maxLength={100}
-            />
-          </InputGroup>
-        </Field>
+        <Controller
+          name="name"
+          control={control}
+          rules={{ required: t("errors.field.required") }}
+          render={({ field: { value, onChange } }) => (
+            <Field name="name" invalid={Boolean(errors.name)}>
+              <InputGroup size="2xl">
+                <Input
+                  size="2xl"
+                  id="name"
+                  type="text"
+                  name="name"
+                  placeholder="Name"
+                  value={value}
+                  onChange={onChange}
+                  maxLength={100}
+                />
+              </InputGroup>
+            </Field>
+          )}
+        />
+        {errors.name?.message && <span className="text-11 text-danger-primary">{errors.name.message}</span>}
 
         {/* description */}
-        <Field name="description" invalid={(errors && Boolean(errors.description)) || false}>
-          <TextAreaGroup resize="none">
-            <TextArea
-              size="lg"
-              surface="field"
-              autoResize
-              maxRows={8}
-              id="description"
-              name="description"
-              placeholder="Describe this state for your members."
-              value={formData?.description ?? ""}
-              onChange={(e) => handleFormData("description", e.target.value)}
-            />
-          </TextAreaGroup>
-        </Field>
+        <Controller
+          name="description"
+          control={control}
+          render={({ field: { value, onChange } }) => (
+            <Field name="description" invalid={Boolean(errors.description)}>
+              <TextAreaGroup resize="none">
+                <TextArea
+                  size="lg"
+                  surface="field"
+                  autoResize
+                  maxRows={8}
+                  id="description"
+                  name="description"
+                  placeholder="Describe this state for your members."
+                  value={value ?? ""}
+                  onChange={onChange}
+                />
+              </TextAreaGroup>
+            </Field>
+          )}
+        />
+        {errors.description?.message && (
+          <span className="text-11 text-danger-primary">{errors.description.message}</span>
+        )}
 
         <div className="flex items-center space-x-2">
-          <Button onClick={formSubmit} variant="primary" size="lg" disabled={buttonDisabled}>
-            {buttonTitle}
+          <Button onClick={submit} variant="primary" size="lg" loading={isSubmitting}>
+            {isSubmitting ? busyButtonTitle : buttonTitle}
           </Button>
-          <Button type="button" variant="secondary" size="lg" disabled={buttonDisabled} onClick={onCancel}>
+          <Button type="button" variant="secondary" size="lg" disabled={isSubmitting} onClick={onCancel}>
             Cancel
           </Button>
         </div>

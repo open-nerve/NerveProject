@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-// A stand-in for the UI kit's controls a page renders (@nerve/ui's selects, modal and context menu, propel's input,
+// A stand-in for the UI kit's controls a page renders (@nerve/ui's selects, modals and context menu, propel's input,
 // button, switch and menu), for the tests of those pages: a test file mocks each such module with this one, for
 // instance vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in
 // `shown` the props each control was given. A control renders nothing, but a modal its children (its form is the
@@ -31,6 +31,8 @@ type SearchSelect = Field & {
 };
 /** A switch: what a flip does, and whether it can be flipped. */
 type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean };
+/** A confirmation's dialog (AlertModalCore): whether it shows, its button's press, and whether it is busy. */
+type Alert = { isOpen: boolean; handleSubmit: () => unknown; isSubmitting: boolean };
 /** A context menu: its items, each by its key, with whether it shows. */
 type ContextItems = { items: { key: string; shouldRender?: boolean }[] };
 /** A button the page renders itself (<button>): what it is titled, and what a click does. */
@@ -47,9 +49,20 @@ export const shown: {
   searchSelects: SearchSelect[];
   switches: Toggle[];
   modals: { children?: ReactNode }[];
+  alerts: Alert[];
   menus: ContextItems[];
   menuItems: { children?: ReactNode }[];
-} = { inputs: [], buttons: [], selects: [], searchSelects: [], switches: [], modals: [], menus: [], menuItems: [] };
+} = {
+  inputs: [],
+  buttons: [],
+  selects: [],
+  searchSelects: [],
+  switches: [],
+  modals: [],
+  alerts: [],
+  menus: [],
+  menuItems: [],
+};
 
 /** The controls as a test starts: none rendered. */
 export function emptyShown() {
@@ -60,6 +73,7 @@ export function emptyShown() {
     searchSelects: [],
     switches: [],
     modals: [],
+    alerts: [],
     menus: [],
     menuItems: [],
   });
@@ -119,6 +133,11 @@ Menu.MenuItem = function MenuItem(props: { children?: ReactNode }) {
 export function ModalCore(props: { children?: ReactNode }) {
   shown.modals.push(props);
   return props.children;
+}
+
+export function AlertModalCore(props: Alert) {
+  shown.alerts.push(props);
+  return null;
 }
 
 export const EModalPosition = { CENTER: "center" };

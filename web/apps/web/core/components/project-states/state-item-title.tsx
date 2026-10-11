@@ -11,31 +11,20 @@ import { EIconSize } from "@nerve/constants";
 // nerve imports
 import { StateGroupIcon } from "@nerve/propel/icons";
 import type { State } from "@nerve/api-client";
-import type { TStateOperationsCallbacks } from "@nerve/types";
 // local imports
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { StateDelete, StateMarksAsDefault } from "./options";
 
-type TBaseStateItemTitleProps = {
+type TStateItemTitleProps = {
   stateCount: number;
   state: State;
-  shouldShowDescription?: boolean;
   setUpdateStateModal: (value: SetStateAction<boolean>) => void;
+  /** Whether the state is shown alone, with none of the controls that change it. */
+  disabled: boolean;
 };
-
-type TEnabledStateItemTitleProps = TBaseStateItemTitleProps & {
-  disabled: false;
-  stateOperationsCallbacks: Pick<TStateOperationsCallbacks, "markStateAsDefault" | "deleteState">;
-};
-
-type TDisabledStateItemTitleProps = TBaseStateItemTitleProps & {
-  disabled: true;
-};
-
-export type TStateItemTitleProps = TEnabledStateItemTitleProps | TDisabledStateItemTitleProps;
 
 export const StateItemTitle = observer(function StateItemTitle(props: TStateItemTitleProps) {
-  const { stateCount, setUpdateStateModal, disabled, state, shouldShowDescription = true } = props;
+  const { stateCount, setUpdateStateModal, disabled, state } = props;
   // store hooks
   const { getStatePercentageInGroup } = useProjectState();
   // derived values
@@ -58,18 +47,14 @@ export const StateItemTitle = observer(function StateItemTitle(props: TStateItem
         {/* state title and description */}
         <div className="min-h-5 px-2 text-13">
           <h6 className="text-13 font-medium">{state.name}</h6>
-          {shouldShowDescription && <p className="text-11 text-secondary">{state.description}</p>}
+          <p className="text-11 text-secondary">{state.description}</p>
         </div>
       </div>
       {!disabled && (
         <div className="hidden items-center gap-2 group-hover:flex">
           {/* state mark as default option */}
           <div className="flex-shrink-0 text-11 transition-all">
-            <StateMarksAsDefault
-              stateId={state.id}
-              isDefault={state.default}
-              markStateAsDefaultCallback={props.stateOperationsCallbacks.markStateAsDefault}
-            />
+            <StateMarksAsDefault stateId={state.id} isDefault={state.default} />
           </div>
           {/* state edit options */}
           <div className="flex items-center gap-1 transition-all">
@@ -79,11 +64,7 @@ export const StateItemTitle = observer(function StateItemTitle(props: TStateItem
             >
               <EditOutline className="h-3 w-3" />
             </button>
-            <StateDelete
-              totalStates={stateCount}
-              state={state}
-              deleteStateCallback={props.stateOperationsCallbacks.deleteState}
-            />
+            <StateDelete totalStates={stateCount} state={state} />
           </div>
         </div>
       )}

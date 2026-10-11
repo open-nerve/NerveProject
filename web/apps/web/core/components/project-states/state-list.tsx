@@ -6,7 +6,6 @@
 
 import { observer } from "mobx-react";
 import type { State, StateGroup } from "@nerve/api-client";
-import type { TStateOperationsCallbacks } from "@nerve/types";
 // components
 import { StateItem } from "@/components/project-states";
 
@@ -14,26 +13,22 @@ type TStateList = {
   groupKey: StateGroup;
   groupedStates: Record<string, State[]>;
   states: State[];
-  stateOperationsCallbacks: TStateOperationsCallbacks;
   disabled?: boolean;
-  stateItemClassName?: string;
 };
 
 export const StateList = observer(function StateList(props: TStateList) {
-  const { groupKey, groupedStates, states, stateOperationsCallbacks, disabled = false, stateItemClassName } = props;
+  const { groupKey, groupedStates, states, disabled = false } = props;
 
   return (
     <>
       {states.map((state: State) => (
         <StateItem
-          key={state?.name}
+          key={state.id}
           groupKey={groupKey}
           groupedStates={groupedStates}
           totalStates={states.length || 0}
           state={state}
           disabled={disabled}
-          stateOperationsCallbacks={stateOperationsCallbacks}
-          stateItemClassName={stateItemClassName}
         />
       ))}
     </>

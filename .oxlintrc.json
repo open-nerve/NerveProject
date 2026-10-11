@@ -301,7 +301,10 @@
         "web/apps/web/core/lib/fake-toast.ts",
         "web/apps/web/core/components/navigation/use-project-actions.test.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(settings)/settings/projects/\\[projectId\\]/admin-pages.test.tsx",
-        "web/apps/web/core/lib/form-refusal.ts"
+        "web/apps/web/core/lib/form-refusal.ts",
+        "web/apps/web/core/components/project-states/use-state-changes.ts",
+        "web/apps/web/core/components/project-states/use-state-changes.test.ts",
+        "web/apps/web/core/components/project-states/options/delete.test.tsx"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

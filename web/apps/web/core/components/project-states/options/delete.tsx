@@ -10,42 +10,36 @@ import { CloseOutline, LoadingOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { State } from "@nerve/api-client";
-import type { TStateOperationsCallbacks } from "@nerve/types";
 import { AlertModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// local imports
+import { useStateChanges } from "../use-state-changes";
 
 type TStateDelete = {
   totalStates: number;
   state: State;
-  deleteStateCallback: TStateOperationsCallbacks["deleteState"];
 };
 
 export const StateDelete = observer(function StateDelete(props: TStateDelete) {
-  const { totalStates, state, deleteStateCallback } = props;
+  const { totalStates, state } = props;
   // hooks
   const { isMobile } = usePlatformOS();
-  const toastRefusal = useRefusalToast();
+  const { remove } = useStateChanges();
   // states
   const [isDeleteModal, setIsDeleteModal] = useState(false);
   const [isDelete, setIsDelete] = useState(false);
   // derived values
   const isDeleteDisabled = state.default || totalStates === 1;
 
+  // Busy, and the dialog not to be dismissed, until the page has followed nerve's answer: it closes once nerve has
+  // deleted the state, and stays, its buttons enabled again, when nerve refuses, the reason in a toast.
   const handleDeleteState = async () => {
     if (isDeleteDisabled) return;
-
     setIsDelete(true);
-
-    try {
-      await deleteStateCallback(state.id);
-      setIsDelete(false);
-    } catch (error) {
-      toastRefusal(error);
-      setIsDelete(false);
-    }
+    await remove(state.id, () => setIsDeleteModal(false));
+    setIsDelete(false);
   };
 
   return (
