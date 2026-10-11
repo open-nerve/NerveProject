@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
@@ -12,35 +12,23 @@ import { observer } from "mobx-react";
 // Nerve
 import type { TDraggableData } from "@nerve/constants";
 import type { State, StateGroup } from "@nerve/api-client";
-import type { TStateOperationsCallbacks } from "@nerve/types";
 import { DropIndicator } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
 import { StateItemTitle, StateUpdate } from "@/components/project-states";
-// hooks
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
-// helpers
+// local imports
+import { useStateChanges } from "./use-state-changes";
+
 type TStateItem = {
   groupKey: StateGroup;
-  groupedStates: Record<string, State[]>;
   totalStates: number;
   state: State;
-  stateOperationsCallbacks: TStateOperationsCallbacks;
   disabled?: boolean;
-  stateItemClassName?: string;
 };
 
 export const StateItem = observer(function StateItem(props: TStateItem) {
-  const {
-    groupKey,
-    groupedStates,
-    totalStates,
-    state,
-    stateOperationsCallbacks,
-    disabled = false,
-    stateItemClassName,
-  } = props;
-  const toastRefusal = useRefusalToast();
+  const { groupKey, totalStates, state, disabled = false } = props;
+  const { move } = useStateChanges();
   // ref
   const draggableElementRef = useRef<HTMLDivElement | null>(null);
   // states
@@ -55,17 +43,6 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
     state: state,
     setUpdateStateModal: setUpdateStateModal,
   };
-
-  const handleStateSequence = useCallback(
-    async (stateId: string, group: StateGroup, droppedOnId: string, after: boolean) => {
-      try {
-        await stateOperationsCallbacks.moveState(stateId, group, droppedOnId, after);
-      } catch (error) {
-        toastRefusal(error);
-      }
-    },
-    [stateOperationsCallbacks, toastRefusal]
-  );
 
   useEffect(() => {
     const elementRef = draggableElementRef.current;
@@ -107,22 +84,15 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
           if (sourceData && destinationData && sourceData.id) {
             const destinationGroupKey = destinationData.groupKey;
             const edge = extractClosestEdge(destinationData) || undefined;
-            handleStateSequence(sourceData.id, destinationGroupKey, destinationData.id, edge === "bottom");
+            void move(sourceData.id, destinationGroupKey, destinationData.id, edge === "bottom");
           }
         },
       })
     );
-  }, [draggableElementRef, state, groupKey, isDraggable, groupedStates, handleStateSequence, disabled]);
+  }, [draggableElementRef, state, groupKey, isDraggable, move, disabled]);
   // DND ends
 
-  if (updateStateModal)
-    return (
-      <StateUpdate
-        state={state}
-        updateStateCallback={stateOperationsCallbacks.updateState}
-        handleClose={() => setUpdateStateModal(false)}
-      />
-    );
+  if (updateStateModal) return <StateUpdate state={state} handleClose={() => setUpdateStateModal(false)} />;
 
   return (
     <Fragment>
@@ -133,22 +103,10 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
         className={cn(
           "group relative rounded-sm border border-subtle bg-surface-1 px-3.5 py-3",
           isDragging ? `opacity-50` : `opacity-100`,
-          totalStates === 1 ? `cursor-auto` : `cursor-grab`,
-          stateItemClassName
+          totalStates === 1 ? `cursor-auto` : `cursor-grab`
         )}
       >
-        {disabled ? (
-          <StateItemTitle {...commonStateItemListProps} disabled />
-        ) : (
-          <StateItemTitle
-            {...commonStateItemListProps}
-            disabled={false}
-            stateOperationsCallbacks={{
-              markStateAsDefault: stateOperationsCallbacks.markStateAsDefault,
-              deleteState: stateOperationsCallbacks.deleteState,
-            }}
-          />
-        )}
+        <StateItemTitle {...commonStateItemListProps} disabled={disabled} />
       </div>
       {/* draggable drop bottom indicator */}
       <DropIndicator isVisible={isDraggedOver && closestEdge === "bottom"} />

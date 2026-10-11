@@ -12,7 +12,6 @@ import { cn } from "@nerve/utils";
 export type TStateOptionProps = {
   option: {
     value: string | undefined;
-    query: string;
     content: React.ReactNode;
   };
   className?: string;

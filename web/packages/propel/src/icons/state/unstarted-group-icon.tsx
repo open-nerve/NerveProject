@@ -41,7 +41,7 @@ export function UnstartedGroupIcon({
 
   return (
     <svg width={width} height={height} viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`} className={className}>
-      <DashedCircle center={center} radius={radius} color={color} percentage={validPercentage} />
+      <DashedCircle center={center} color={color} percentage={validPercentage} />
 
       {/* Solid progress circle */}
       <ProgressCircle

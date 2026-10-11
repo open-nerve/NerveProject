@@ -30,3 +30,10 @@ M1 结束时 oxlint 警告共 694 个（web 565、editor 65、ui 25、utils 18�
 - **关闭条件**：本 M 的 review 写明改到的文件的警告数（为 0）、清掉的规则和各包上限的变化。
 
 来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节。
+
+## 处理结果（M3/P11）
+
+- **死成员和死 prop**：P11 删掉它改到的文件和只经机械步骤到达的文件中真正没有读者、没有调用方传入的行（[P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 第 2.8 节）：`--rows M3` 中产品代码的行 80 → 54，删去 26 行，没有新出现的。`--rows M3` 剩下的每一行写进 P11 spec 的附录 A.9：文件、名称、谁在读或传它（测试里 `it.each` 的列和 `vi.hoisted` 的桩、经展开、组件类型的变量或第三方库读取的成员、M4 的搜索类型），以及按路径归到 M3、实际属于 M4、M6、M7 的 41 行（M3 设计第 1 节；收尾抄进它们的交接）。
+- **oxlint**：`promise(always-return)` 全仓清零（35 条：web 34、editor 1；每一处的拒绝照旧：23 处有处理，6 处交回调用方，6 处没有处理：`entry.client.tsx` 的 `then` 之前的拒绝已被吞下，五处复制链接列给 M4、M6、M7，P11 spec 附录 A.6、第 5 节）；P8a、P8b 留给 P11 的只经机械步骤到达的文件清零；各包的上限随之调到新的条数（web 348 → 303、editor 65 → 64，其余的包条数没有变）。P11 改到的文件中留着的警告：`@nerve/ui` 的 `alert-modal.tsx` 的一条（`tabIndex={1}`，M3 收尾的 `ModalCore` 重写），以及只按 `always-return` 改到的文件中 5 个的 14 条（M4、M6、M7、M8 的组件；P11 spec 第 3 节第 3、8 条）。
+
+状态保持 `open`：P11 的评审写明剩下的行和上限之后，M3 的收尾关闭。

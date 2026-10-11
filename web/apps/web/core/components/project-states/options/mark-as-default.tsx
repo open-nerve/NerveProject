@@ -7,38 +7,32 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { TStateOperationsCallbacks } from "@nerve/types";
 import { cn } from "@nerve/utils";
-// hooks
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// local imports
+import { useStateChanges } from "../use-state-changes";
 
 type TStateMarksAsDefault = {
   stateId: string;
   isDefault: boolean;
-  markStateAsDefaultCallback: TStateOperationsCallbacks["markStateAsDefault"];
 };
 
 export const StateMarksAsDefault = observer(function StateMarksAsDefault(props: TStateMarksAsDefault) {
-  const { stateId, isDefault, markStateAsDefaultCallback } = props;
-  const toastRefusal = useRefusalToast();
+  const { stateId, isDefault } = props;
+  const { markDefault } = useStateChanges();
   // states
   const [isLoading, setIsLoading] = useState(false);
 
+  // busy until the page has followed nerve's answer; a refusal is said in a toast
   const handleMarkAsDefault = async () => {
-    if (!stateId || isDefault) return;
+    if (isDefault) return;
     setIsLoading(true);
-
-    try {
-      await markStateAsDefaultCallback(stateId);
-    } catch (error) {
-      toastRefusal(error);
-    } finally {
-      setIsLoading(false);
-    }
+    await markDefault(stateId);
+    setIsLoading(false);
   };
 
   return (
     <button
+      type="button"
       className={cn(
         "text-11 whitespace-nowrap transition-colors",
         isDefault ? "text-tertiary" : "text-secondary hover:text-primary"

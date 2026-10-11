@@ -33,7 +33,6 @@ export const MEMBER_PROPERTY_DETAILS: {
     ascendingOrderTitle: string;
     descendingOrderKey: TMemberOrderByOptions;
     descendingOrderTitle: string;
-    iconName: string;
     isSortingAllowed: boolean;
   };
 } = {
@@ -43,7 +42,6 @@ export const MEMBER_PROPERTY_DETAILS: {
     ascendingOrderTitle: "A",
     descendingOrderKey: "-full_name",
     descendingOrderTitle: "Z",
-    iconName: "User",
     isSortingAllowed: true,
   },
   display_name: {
@@ -52,7 +50,6 @@ export const MEMBER_PROPERTY_DETAILS: {
     ascendingOrderTitle: "A",
     descendingOrderKey: "-display_name",
     descendingOrderTitle: "Z",
-    iconName: "User",
     isSortingAllowed: true,
   },
   email: {
@@ -61,7 +58,6 @@ export const MEMBER_PROPERTY_DETAILS: {
     ascendingOrderTitle: "A",
     descendingOrderKey: "-email",
     descendingOrderTitle: "Z",
-    iconName: "Mail",
     isSortingAllowed: true,
   },
   joining_date: {
@@ -70,7 +66,6 @@ export const MEMBER_PROPERTY_DETAILS: {
     ascendingOrderTitle: "Old",
     descendingOrderKey: "-joining_date",
     descendingOrderTitle: "New",
-    iconName: "Calendar",
     isSortingAllowed: true,
   },
   role: {
@@ -79,7 +74,6 @@ export const MEMBER_PROPERTY_DETAILS: {
     ascendingOrderTitle: "Guest",
     descendingOrderKey: "-role",
     descendingOrderTitle: "Admin",
-    iconName: "Shield",
     isSortingAllowed: true,
   },
 };

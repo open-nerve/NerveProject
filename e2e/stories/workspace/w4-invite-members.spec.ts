@@ -10,7 +10,8 @@ import {
 import { expectInvitations } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
-import { closedByEscape, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import { closedByEscape } from "../../fixtures/dialogs";
+import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import {
   anotherBrowser,

@@ -26,7 +26,8 @@
       "description": "Create custom labels to categorize and organize your work items",
       "label_title": "Label title",
       "label_title_is_required": "Label title is required",
-      "label_max_char": "Label name should not exceed 255 characters"
+      "label_max_char": "Label name should not exceed 255 characters",
+      "parent_not_allowed": "A label can go only under a label at the top of its project, and a label with labels under it stays at the top: labels have two levels."
     },
     "automations": {
       "label": "Automations",

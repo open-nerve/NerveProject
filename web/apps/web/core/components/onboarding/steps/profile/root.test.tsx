@@ -4,40 +4,30 @@
  */
 
 import { renderToStaticMarkup } from "react-dom/server";
+import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { heldChange, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
-import { refusal } from "@/lib/fake-refusal";
+import { heldChange, lateSettlings, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { KeptForm } from "@/lib/fake-form";
+import { refusal, underFields } from "@/lib/fake-refusal";
+import { toasts } from "@/lib/fake-toast";
 import { ProfileSetupStep } from "./root";
 
-// When the onboarding's profile step hands the onboarding on (M3 design 7.1, 7.4): the step renders on the server with
-// a stand-in for its form (react-hook-form's useForm), which keeps the step's submit; the test submits names as the
-// form would, and nerve answers them when the test says. Its session is fake-tab.ts's. What the step itself says of a
-// refusal is M2's (M2 design 7.3).
+// When the onboarding's profile step hands the onboarding on, and what it says of nerve's refusal of the names (M2
+// design 7.3, M3 design 7.1, 7.4): the step renders on the server with a stand-in for its form (react-hook-form's
+// useForm, fake-form.ts), which keeps the step's submit and what the step says under the name; the test submits names
+// as the form would, and nerve answers them when the test says. Its session is fake-tab.ts's.
 
 /** The names the step's form gives its submit. */
 type Names = { first_name: string; last_name: string };
 
-const page = vi.hoisted(
-  (): { submit: ((names: Names) => Promise<void>) | undefined; updateCurrentUser: ReturnType<typeof vi.fn> } => ({
-    submit: undefined,
-    updateCurrentUser: vi.fn(),
-  })
-);
+const page = vi.hoisted((): KeptForm<Names> & { updateCurrentUser: Mock } => ({
+  submit: undefined,
+  updateCurrentUser: vi.fn(),
+  setError: vi.fn(),
+}));
 /** The step hands the onboarding on: the root's part. */
 const onDone = vi.fn<() => Promise<void> | undefined>();
-vi.mock("react-hook-form", () => ({
-  useForm: () => ({
-    handleSubmit: (submit: (names: Names) => Promise<void>) => {
-      page.submit = submit;
-      return () => undefined;
-    },
-    control: {},
-    watch: () => "",
-    setError: () => undefined,
-    formState: { errors: {}, isSubmitting: false, isValid: true },
-  }),
-  Controller: () => null,
-}));
+vi.mock("react-hook-form", async () => (await import("@/lib/fake-form")).fakeForm(page));
 vi.mock("@/hooks/store/user", () => ({
   useUser: () => ({ data: { display_name: "ada" }, updateCurrentUser: page.updateCurrentUser }),
 }));
@@ -58,7 +48,9 @@ beforeEach(() => {
   page.submit = undefined;
   page.updateCurrentUser.mockReset();
   page.updateCurrentUser.mockResolvedValue(undefined);
+  page.setError.mockReset();
   onDone.mockReset();
+  toasts.length = 0;
 });
 
 describe("ProfileSetupStep", () => {
@@ -79,21 +71,38 @@ describe("ProfileSetupStep", () => {
     expect(settled()).toBe(true);
   });
 
-  it("stays when nerve refuses the names", async () => {
+  it("stays when nerve refuses the names, its refusal of the name said under it", async () => {
     page.updateCurrentUser.mockRejectedValueOnce(
       refusal(422, "validation_failed", [{ field: "first_name", code: "required" }])
     );
     await named();
-    expect(onDone.mock.calls).toEqual([]);
+    expect([onDone.mock.calls, underFields(page.setError), toasts]).toEqual([
+      [],
+      [["first_name", "errors.field.required"]],
+      [],
+    ]);
   });
 
-  it("hands nothing on when nerve has the names after another tab moved this one to another account", async () => {
-    const names = heldChange<undefined>();
-    page.updateCurrentUser.mockReturnValueOnce(names.sent);
-    const submitted = named();
-    switchAccount();
-    names.answer(undefined);
-    await submitted;
-    expect(onDone.mock.calls).toEqual([]);
+  it("says in a toast a refusal that is not of the name", async () => {
+    page.updateCurrentUser.mockRejectedValueOnce(refusal(403, "forbidden"));
+    await named();
+    expect([onDone.mock.calls, underFields(page.setError), toasts.map((toast) => toast.type)]).toEqual([
+      [],
+      [],
+      ["error"],
+    ]);
   });
+
+  it.each(lateSettlings)(
+    "hands nothing on and says nothing when the names' change $settles after another tab moved this one to another account",
+    async ({ settle }) => {
+      const names = heldChange<undefined>();
+      page.updateCurrentUser.mockReturnValueOnce(names.sent);
+      const submitted = named();
+      switchAccount();
+      settle(names);
+      await submitted;
+      expect([onDone.mock.calls, page.setError.mock.calls, toasts]).toEqual([[], [], []]);
+    }
+  );
 });

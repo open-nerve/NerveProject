@@ -1297,7 +1297,7 @@ modules/access/
 - 项目封面的上传控件、随机封面和 28 张预设封面（3.2，P8b；M5 加回）：生成的 `ProjectCreate`、`ProjectUpdate` 没有封面（3.2 的规则 2），项目的类型和 store 换成生成的时上传和随机封面就编译不过，所以随类型在 P8b 删除；预设封面只为选择器和随机封面存在，一并删除，只留没有封面时显示的默认图 `image_1.webp`（M3/P8b 的修订，原写在 P10）。
 
 ### 7.9 死成员、死 prop 和 oxlint（M1 收尾交接）
-- **死成员和死 prop**：`domains.mjs --rows M3` 在 `f8cb7c2` 上是 208 行，其中 41 行按路径归到 M3、实际属于别的 M（第 1 节），M3 自己的 167 行在它们的文件被重写或改到时删除，P11 清完剩下的。
+- **死成员和死 prop**：`domains.mjs --rows M3` 在 `f8cb7c2` 上是 208 行，其中 41 行按路径归到 M3、实际属于别的 M（第 1 节），M3 自己的 167 行在它们的文件被重写或改到时处理：没有读者的删除（P11 删去剩下的 26 行），留下的每一行都有读者，写在 P11 spec 的附录 A.9 和 P11 的评审中（文件、名称、谁在读或传它）。
   - 关闭条件照交接：M3 合并时 `--rows M3` 的每一行已消失，或写进 review（文件、名称、谁在读或传它）。
   - 那 41 行按归属写进 M4、M6、M7 的交接（13.2），`domains.mjs` 的 `DOMAINS` 不改（它是 M1 收尾计划附录 A 的一部分，改它等于改所有 M 的口径）。
 - **oxlint**：
@@ -2018,6 +2018,8 @@ modules/access/
 - 按 3.20 逐行核对上级文档和差异清单都已在各 Phase 同步；差异清单按第 4 节逐列总核对。
 - 写好给 M4–M8 的交接（13.2），包括 7.9 中按路径误归到 M3 的 41 行。
 - 规模估计与实际的对比（7.11），照 M2 收尾附录 B 的量法。
+- `ModalCore` 的重写（负责人 2026-10-10）：改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡，每个弹窗后面的页面都是 inert、`aria-hidden`；`AlertModalCore` 确认按钮正的 `tabIndex` 随之去掉；每个弹窗回归一遍；`isSubmitting` 时取消禁用、Escape 和点外面不关这一点照旧（M3/P11 spec 第 3 节第 2、3 条）。重写之后 P6、P7 的页面版本加上删除确认框的 Tab 循环。
+- 离开工作区的入口（负责人 2026-10-11，"菜单加入口，收尾做"）：侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次有了在页面上离开的路；唯一的管理员离开时 nerve 拒绝，页面说明它的原因（M3/P11 spec 第 3 节第 5 条）。
 - 总体设计 9.4 中 M3 的状态改为"已完成"。
 
 ---
@@ -2115,7 +2117,7 @@ modules/access/
 | P8b `web-project-data` | 项目一侧的数据层（9）；同上，P8a 合并之后开始 | 已完成：[spec](specs/P8b-web-project-data.md)、[plan](plans/P8b-web-project-data.md)、[评审](reviews/P8b-web-project-data-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-6） |
 | P9 `web-workspace-pages` | 工作区的页面（14） | 已完成：[spec](specs/P9-web-workspace-pages.md)、[plan](plans/P9-web-workspace-pages.md)、[评审](reviews/P9-web-workspace-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-12） |
 | P10 `web-project-pages` | 项目的页面（15） | 已完成：[spec](specs/P10-web-project-pages.md)、[plan](plans/P10-web-project-pages.md)、[评审](reviews/P10-web-project-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-18） |
-| P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 未开始 |
+| P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 已完成：[spec](specs/P11-web-states-labels-and-cleanup.md)、[plan](plans/P11-web-states-labels-and-cleanup.md)、[评审](reviews/P11-web-states-labels-and-cleanup-review.md)（执行时 10 个 Task；修复轮的裁定 F-1–F-15） |
 | 收尾 `closeout` | 交接、同步核对、规模对比 | 未开始 |
 
 ## 16. 风险

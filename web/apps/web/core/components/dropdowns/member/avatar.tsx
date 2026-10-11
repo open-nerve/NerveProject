@@ -7,7 +7,6 @@
 import { observer } from "mobx-react";
 import type { ComponentType, SVGProps } from "react";
 import { Avatar } from "@makeplane/propel/components/avatar";
-import type { AvatarGroupSize } from "@makeplane/propel/components/avatar-group";
 import { MembersOutline } from "@makeplane/propel/icons";
 import { cn, getFileURL } from "@nerve/utils";
 // hooks
@@ -18,18 +17,17 @@ type AvatarProps = {
   showTooltip: boolean;
   userIds: string | string[] | null;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
-  size?: AvatarGroupSize;
 };
 
 export const ButtonAvatars = observer(function ButtonAvatars(props: AvatarProps) {
-  const { userIds, icon: Icon, size = "xs" } = props;
+  const { userIds, icon: Icon } = props;
   // store hooks
   const { getUserDetails } = useMember();
 
   if (Array.isArray(userIds)) {
     if (userIds.length > 0)
       return (
-        <AvatarGroupOverflow size={size}>
+        <AvatarGroupOverflow size="xs">
           {userIds.map((userId) => {
             const userDetails = getUserDetails(userId);
 
@@ -53,7 +51,7 @@ export const ButtonAvatars = observer(function ButtonAvatars(props: AvatarProps)
           src={getFileURL(userDetails?.avatar_url ?? "")}
           alt={userDetails?.display_name}
           fallback={userDetails?.display_name?.[0]?.toUpperCase()}
-          size={size}
+          size="xs"
         />
       );
     }

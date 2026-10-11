@@ -20,7 +20,8 @@ import {
 } from "../../fixtures/assert/workspace";
 import { accountId, anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, closedByEscape, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+import { closedByEscape } from "../../fixtures/dialogs";
+import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, confirmDeletion, deleteFromGeneralPage, pickTimeZone } from "../../fixtures/workspace-pages";
 

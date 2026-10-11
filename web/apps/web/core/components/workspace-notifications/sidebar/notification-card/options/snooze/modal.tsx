@@ -107,6 +107,7 @@ export function NotificationSnoozeModal(props: TNotificationSnoozeModal) {
 
     await handleSubmitSnooze(dateTime).then(() => {
       handleClose();
+      return;
     });
   };
 

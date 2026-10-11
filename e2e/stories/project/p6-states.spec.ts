@@ -18,7 +18,7 @@ import { expect, test } from "../../fixtures/test";
 
 // P6, a project's states (M3 design 2, 3.17): creating one, changing it,
 // making it the default and deleting one, with what the default and every
-// group keep. The page version comes with the states' settings page (P11).
+// group keep. The page version is p6-states-page.spec.ts.
 
 /** The states of the project of projectId that the caller of token lists, in their order. */
 async function listStates(api: Api, token: string, projectId: string): Promise<State[]> {

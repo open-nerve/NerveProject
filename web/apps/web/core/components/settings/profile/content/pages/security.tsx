@@ -27,6 +27,7 @@ import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { ApiError } from "@/lib/api-error";
 import { errorMessageKey, fieldErrorKeys } from "@/lib/error-messages";
+import { followInSession } from "@/lib/in-session";
 
 export interface FormValues {
   old_password: string;
@@ -79,29 +80,31 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
 
   const handleChangePassword = async (formData: FormValues) => {
     const { old_password, new_password } = formData;
-    try {
-      await changePassword({ current_password: old_password, new_password });
-
-      reset(defaultValues);
-      setShowPassword(defaultShowPassword);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("auth.common.password.toast.change_password.success.title"),
-        message: t("auth.common.password.toast.change_password.success.message"),
-      });
-    } catch (error: unknown) {
-      // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
-      if (error instanceof ApiError && error.problem?.code === "identity.current_password_incorrect") {
-        setError("old_password", { type: "manual", message: t(errorMessageKey(error)) });
-        return;
-      }
-      const newPassword = fieldErrorKeys(error).new_password;
-      if (newPassword !== undefined) {
-        setError("new_password", { type: "manual", message: t(newPassword) });
-        return;
-      }
-      toastRefusal(error);
-    }
+    // Only in the session the change was sent in (M3 design 7.1): the form empties and says nerve made it; a refusal
+    // shows under the field it is about, anything else in a toast (M2 design 7.3).
+    await followInSession(() => changePassword({ current_password: old_password, new_password }), {
+      done: () => {
+        reset(defaultValues);
+        setShowPassword(defaultShowPassword);
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("auth.common.password.toast.change_password.success.title"),
+          message: t("auth.common.password.toast.change_password.success.message"),
+        });
+      },
+      failed: (error) => {
+        if (error instanceof ApiError && error.problem?.code === "identity.current_password_incorrect") {
+          setError("old_password", { type: "manual", message: t(errorMessageKey(error)) });
+          return;
+        }
+        const newPassword = fieldErrorKeys(error).new_password;
+        if (newPassword !== undefined) {
+          setError("new_password", { type: "manual", message: t(newPassword) });
+          return;
+        }
+        toastRefusal(error);
+      },
+    });
   };
 
   const isButtonDisabled =

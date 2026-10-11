@@ -6,6 +6,7 @@ import type { Download } from "@playwright/test";
 import { expectTokenStored } from "../../fixtures/assert/identity";
 import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { closedByBackdropClick, closedByEscape, downloadedWithin, enabledWithin } from "../../fixtures/dialogs";
 import {
   answerTo,
   expectListBesideButton,
@@ -14,6 +15,7 @@ import {
   parseCsv,
   recordTokensShown,
   registerOnboarded,
+  sentHeld,
 } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -96,12 +98,18 @@ test("A11 (page): a token created on the page shows once, and nowhere after; the
   await expectTokenGone(page, created.token, log);
 
   // The token works until it is revoked on the page, which then lists it no more. The revoke button shows
-  // without a hover.
+  // without a hover. While nerve's answer is out, the dialog is busy and stays: its buttons can't be pressed, and
+  // neither Escape nor its backdrop closes it.
   expect((await api.GET("/api/v0/me", { headers: bearer(created.token) })).response.status).toBe(200);
   await page.getByRole("button", { name: "Revoke token" }).click();
-  const revoked = await answerTo(page, "DELETE", `/api/v0/api-tokens/${created.id}`, () =>
+  const revocation = await sentHeld(page, "DELETE", `/api/v0/api-tokens/${created.id}`, () =>
     page.getByRole("button", { name: "Delete" }).click()
   );
+  expect(await enabledWithin(page.getByRole("button", { name: "Deleting" }))).toBe(false);
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect(await closedByBackdropClick(page)).toBe(false);
+  const revoked = await revocation.release();
   expect(revoked.status()).toBe(204);
   await expect(page.getByText("No Personal token yet")).toBeVisible();
   const [row] = await db.query<{ deleted_at: Date | null }>("SELECT deleted_at FROM api_tokens WHERE id = $1", [
@@ -120,7 +128,7 @@ test("A11 (page): a token created on the page shows once, and nowhere after; the
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
 });
 
-test("A11 (page): what a modal's opening left unfinished stays there: a token answered after it closed shows nowhere; its cleanup spares the next opening", async ({
+test("A11 (page): what a modal's opening left unfinished stays there: a token answered after its page was left shows nowhere; its cleanup spares the next opening", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -132,14 +140,20 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
   page.on("download", (download) => downloads.push(download));
   // The page's timers run on Playwright's clock, which keeps time as time goes until the story stops it (below).
   await page.clock.install();
-  await page.goto("/settings/profile/api-tokens");
+  // The tokens' page is reached within the app, so that the browser's back leaves it within the app too.
+  await page.goto("/settings/profile/security");
+  const tokensPage = page.getByRole("button", { name: "Personal Access Tokens" });
+  await tokensPage.click();
   await expect(page.getByText("No Personal token yet")).toBeVisible();
   // Every token the document holds from now on, even for a moment: a look at the page afterwards misses one that
   // showed and went.
   const shown = await recordTokensShown(page);
 
-  /** Generates label in the modal opened now, and cancels while nerve's answer is held from the page. */
-  const generateThenCancel = async (label: string): Promise<() => Promise<void>> => {
+  /**
+   * Generates label in the modal opened now, which is busy and cannot be closed while nerve's answer is held from the
+   * page (neither its buttons nor Escape nor its backdrop), and leaves the page (the browser's back) meanwhile.
+   */
+  const generateThenLeave = async (label: string): Promise<() => Promise<void>> => {
     const release = await holdAnswer(page, "POST", "/api/v0/me/api-tokens");
     await page.getByRole("button", { name: "Add access token" }).first().click();
     await page.getByLabel("Title").fill(label);
@@ -152,34 +166,46 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
       ),
       page.getByRole("button", { name: "Generate token" }).click(),
     ]);
-    await page.getByRole("button", { name: "Cancel" }).click();
+    expect(await enabledWithin(page.getByRole("button", { name: "Generating" }))).toBe(false);
+    await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(await closedByEscape(page)).toBe(false);
+    expect(await closedByBackdropClick(page)).toBe(false);
+    await page.goBack();
+    await expect(page).toHaveURL("/settings/profile/security");
     await expect(page.getByLabel("Title")).toHaveCount(0);
     return release;
   };
 
-  // Answered after the modal closed, the create lists the token, and does nothing else: the token never shows,
-  // nor is it anywhere on the page, and nothing downloads. The list shows it once the create's continuation has
-  // run, which is where the modal would have taken the token and downloaded its CSV.
-  const cancelledAnswer = await answerTo(page, "POST", "/api/v0/me/api-tokens", await generateThenCancel("cancelled"));
-  expect(cancelledAnswer.status()).toBe(201);
-  const cancelled = (await cancelledAnswer.json()) as components["schemas"]["ApiTokenCreated"];
-  await expect(page.getByText("cancelled", { exact: true })).toBeVisible();
+  // Answered after its page was left, the create does nothing: nothing downloads in the second after its answer
+  // reaches the page, by when the create's continuation has run (where the modal would have taken the token and
+  // downloaded its CSV), and the token never shows, nor is it anywhere on the page. The list has the token, which
+  // nerve made before its answer was held (the security page the back opened may have fetched it already).
+  const releaseAbandoned = await generateThenLeave("abandoned");
+  const abandonedCreate = await downloadedWithin(page, () =>
+    answerTo(page, "POST", "/api/v0/me/api-tokens", releaseAbandoned)
+  );
+  expect(abandonedCreate.downloaded, "a download after the answer").toBe(false);
+  expect(abandonedCreate.result.status()).toBe(201);
+  const abandoned = (await abandonedCreate.result.json()) as components["schemas"]["ApiTokenCreated"];
   expect(await shown()).toEqual([]);
-  expect(downloads).toHaveLength(0);
-  await expectTokenGone(page, cancelled.token, log);
+  await tokensPage.click();
+  await expect(page.getByText("abandoned", { exact: true })).toBeVisible();
+  await expectTokenGone(page, abandoned.token, log);
 
-  // So too when the modal opens again before the answer comes: the modal opened again still asks for a new token.
-  const release = await generateThenCancel("late");
+  // So too when the page and the modal open again before the answer comes: the modal opened again still asks for a
+  // new token.
+  const release = await generateThenLeave("late");
+  await tokensPage.click();
   await page.getByRole("button", { name: "Add access token" }).first().click();
   await expect(page.getByLabel("Title")).toHaveValue("");
-  const answer = await answerTo(page, "POST", "/api/v0/me/api-tokens", release);
-  expect(answer.status()).toBe(201);
-  const late = (await answer.json()) as components["schemas"]["ApiTokenCreated"];
+  const lateCreate = await downloadedWithin(page, () => answerTo(page, "POST", "/api/v0/me/api-tokens", release));
+  expect(lateCreate.downloaded, "a download after the answer").toBe(false);
+  expect(lateCreate.result.status()).toBe(201);
+  const late = (await lateCreate.result.json()) as components["schemas"]["ApiTokenCreated"];
   expect(late).toMatchObject({ label: "late" });
-  await expect(page.getByText("late", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue("");
   expect(await shown()).toEqual([]);
-  expect(downloads).toHaveLength(0);
+  await expect(page.getByText("late", { exact: true })).toBeVisible();
   await expectTokenGone(page, late.token, log);
 
   // The modal's own create shows its token, which the record has, and its CSV is the page's only download:
@@ -198,7 +224,7 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
   expect(downloads).toHaveLength(1);
   expect(csv[1]?.[3]).toBe(own.token);
   expect(await shown()).toEqual([own.token]);
-  await expectTokenGone(page, cancelled.token, log);
+  await expectTokenGone(page, abandoned.token, log);
   await expectTokenGone(page, late.token, log);
 
   // A close cleans the modal up 350 ms later, which must not touch an opening that came meanwhile: closed and

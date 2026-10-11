@@ -4,10 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import React, { forwardRef, useEffect } from "react";
+import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { TwitterPicker } from "react-color";
-import type { SubmitHandler } from "react-hook-form";
 import { Controller, useForm } from "react-hook-form";
 import { Popover, Transition } from "@headlessui/react";
 // nerve imports
@@ -16,196 +15,150 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import type { Label, LabelCreate, LabelUpdate } from "@nerve/api-client";
-// hooks
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
-
-export type TLabelOperationsCallbacks = {
-  createLabel: (data: LabelCreate) => Promise<Label>;
-  updateLabel: (labelId: string, data: LabelUpdate) => Promise<Label>;
-};
+import type { Label } from "@nerve/api-client";
+// local imports
+import { useLabelChanges, type LabelUnderField } from "./use-label-changes";
 
 /** What the form edits and sends, a creation (at the top) or a change alike: nerve's LabelUpdate takes no others. */
 type TLabelFormValues = Pick<Label, "name" | "color">;
 
 type TCreateUpdateLabelInlineProps = {
-  labelForm: boolean;
-  setLabelForm: React.Dispatch<React.SetStateAction<boolean>>;
-  isUpdating: boolean;
-  labelOperationsCallbacks: TLabelOperationsCallbacks;
+  /** The project a label created goes in. */
+  projectId: string;
+  /** The label the form changes; none, a creation. */
   labelToUpdate?: Label;
-  onClose?: () => void;
+  /** Closes the form: by Cancel, or once nerve has made the label or the change. */
+  onClose: () => void;
 };
 
-const defaultValues: TLabelFormValues = {
-  name: "",
-  color: "var(--text-color-secondary)",
-};
+export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline(props: TCreateUpdateLabelInlineProps) {
+  const { projectId, labelToUpdate, onClose } = props;
+  // form info
+  const {
+    handleSubmit,
+    control,
+    setError,
+    formState: { errors, isSubmitting },
+    watch,
+    setFocus,
+  } = useForm<TLabelFormValues>({
+    // a change starts from the label's name and colour as nerve holds them (none, for a label made without one), a
+    // creation from no name and a colour at random
+    defaultValues: labelToUpdate
+      ? { name: labelToUpdate.name, color: labelToUpdate.color }
+      : { name: "", color: getRandomLabelColor() },
+  });
 
-export const CreateUpdateLabelInline = observer(
-  forwardRef(function CreateUpdateLabelInline(
-    props: TCreateUpdateLabelInlineProps,
-    ref: React.ForwardedRef<HTMLDivElement>
-  ) {
-    const { labelForm, setLabelForm, isUpdating, labelOperationsCallbacks, labelToUpdate, onClose } = props;
-    // form info
-    const {
-      handleSubmit,
-      control,
-      reset,
-      formState: { errors, isSubmitting },
-      watch,
-      setFocus,
-    } = useForm<TLabelFormValues>({
-      // a change starts from the label's name and colour, a creation from no name and a colour at random
-      defaultValues: labelToUpdate
-        ? { name: labelToUpdate.name, color: labelToUpdate.color || "#000" }
-        : { ...defaultValues, color: getRandomLabelColor() },
-    });
+  const { t } = useTranslation();
+  const { create, update } = useLabelChanges();
 
-    const { t } = useTranslation();
-    const toastRefusal = useRefusalToast();
+  // Busy until the page has followed nerve's answer: the form closes once nerve has made the label or the change,
+  // and stays with what it holds when nerve refuses it, the reason under the name or in a toast.
+  const handleFormSubmit = (formData: TLabelFormValues) => {
+    const underField: LabelUnderField = (field, message) => setError(field, { type: "server", message });
+    return labelToUpdate
+      ? update(labelToUpdate.id, formData, underField, onClose)
+      : create(projectId, formData, underField, onClose);
+  };
 
-    const handleClose = () => {
-      setLabelForm(false);
-      reset(defaultValues);
-      if (onClose) onClose();
-    };
+  // the name has the focus once the form shows
+  useEffect(() => {
+    setFocus("name");
+  }, [setFocus]);
 
-    /** Shows nerve's reason for a refused creation or change, and keeps what the form holds. */
-    const handleRefusal = (error: unknown, formData: TLabelFormValues) => {
-      toastRefusal(error);
-      reset(formData);
-    };
+  return (
+    <>
+      <div className="flex w-full scroll-m-8 items-center gap-2 bg-surface-1">
+        <div className="flex-shrink-0">
+          <Popover className="relative z-10 flex h-full w-full items-center justify-center">
+            {({ open }) => (
+              <>
+                <Popover.Button
+                  aria-label={t("common.color")}
+                  className={`group inline-flex items-center text-14 font-medium ${
+                    open ? "text-primary" : "text-secondary"
+                  }`}
+                >
+                  {/* a label without a colour shown as the list shows it (label-name.tsx) */}
+                  <span
+                    className="h-4 w-4 rounded-full"
+                    style={{
+                      backgroundColor: watch("color") || "#000",
+                    }}
+                  />
+                </Popover.Button>
 
-    const handleLabelCreate: SubmitHandler<TLabelFormValues> = async (formData) => {
-      if (isSubmitting) return;
-
-      await labelOperationsCallbacks
-        .createLabel(formData)
-        .then(() => handleClose())
-        .catch((error: unknown) => handleRefusal(error, formData));
-    };
-
-    const handleLabelUpdate: SubmitHandler<TLabelFormValues> = async (formData) => {
-      if (!labelToUpdate?.id || isSubmitting) return;
-
-      await labelOperationsCallbacks
-        .updateLabel(labelToUpdate.id, formData)
-        .then(() => handleClose())
-        .catch((error: unknown) => handleRefusal(error, formData));
-    };
-
-    const handleFormSubmit = (formData: TLabelFormValues) => {
-      if (isUpdating) {
-        handleLabelUpdate(formData);
-      } else {
-        handleLabelCreate(formData);
-      }
-    };
-
-    /**
-     * For settings focus on name input
-     */
-    useEffect(() => {
-      setFocus("name");
-    }, [setFocus, labelForm]);
-
-    return (
-      <>
-        <div
-          ref={ref}
-          className={`flex w-full scroll-m-8 items-center gap-2 bg-surface-1 ${labelForm ? "" : "hidden"}`}
-        >
-          <div className="flex-shrink-0">
-            <Popover className="relative z-10 flex h-full w-full items-center justify-center">
-              {({ open }) => (
-                <>
-                  <Popover.Button
-                    className={`group inline-flex items-center text-14 font-medium focus:outline-none ${
-                      open ? "text-primary" : "text-secondary"
-                    }`}
-                  >
-                    <span
-                      className="h-4 w-4 rounded-full"
-                      style={{
-                        backgroundColor: watch("color"),
-                      }}
+                <Transition
+                  as={React.Fragment}
+                  enter="transition ease-out duration-200"
+                  enterFrom="opacity-0 translate-y-1"
+                  enterTo="opacity-100 translate-y-0"
+                  leave="transition ease-in duration-150"
+                  leaveFrom="opacity-100 translate-y-0"
+                  leaveTo="opacity-0 translate-y-1"
+                >
+                  <Popover.Panel className="absolute top-full left-0 z-20 mt-3 w-screen max-w-xs px-2 sm:px-0">
+                    <Controller
+                      name="color"
+                      control={control}
+                      render={({ field: { value, onChange } }) => (
+                        <TwitterPicker
+                          colors={LABEL_COLOR_OPTIONS}
+                          color={value}
+                          onChange={(picked) => onChange(picked.hex)}
+                        />
+                      )}
                     />
-                  </Popover.Button>
-
-                  <Transition
-                    as={React.Fragment}
-                    enter="transition ease-out duration-200"
-                    enterFrom="opacity-0 translate-y-1"
-                    enterTo="opacity-100 translate-y-0"
-                    leave="transition ease-in duration-150"
-                    leaveFrom="opacity-100 translate-y-0"
-                    leaveTo="opacity-0 translate-y-1"
-                  >
-                    <Popover.Panel className="absolute top-full left-0 z-20 mt-3 w-screen max-w-xs px-2 sm:px-0">
-                      <Controller
-                        name="color"
-                        control={control}
-                        render={({ field: { value, onChange } }) => (
-                          <TwitterPicker
-                            colors={LABEL_COLOR_OPTIONS}
-                            color={value}
-                            onChange={(picked) => onChange(picked.hex)}
-                          />
-                        )}
-                      />
-                    </Popover.Panel>
-                  </Transition>
-                </>
-              )}
-            </Popover>
-          </div>
-          <div className="flex flex-1 flex-col justify-center">
-            <Controller
-              control={control}
-              name="name"
-              rules={{
-                required: t("project_settings.labels.label_title_is_required"),
-                maxLength: {
-                  value: 255,
-                  message: t("project_settings.labels.label_max_char"),
-                },
-              }}
-              render={({ field: { value, onChange, ref: inputRef } }) => (
-                <Field name="name" invalid={Boolean(errors.name)}>
-                  <InputGroup size="2xl">
-                    <Input
-                      size="2xl"
-                      id="labelName"
-                      name="name"
-                      type="text"
-                      value={value}
-                      onChange={onChange}
-                      ref={inputRef}
-                      placeholder={t("project_settings.labels.label_title")}
-                    />
-                  </InputGroup>
-                </Field>
-              )}
-            />
-          </div>
-          <Button variant="secondary" onClick={() => handleClose()}>
-            {t("cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={(e) => {
-              e.preventDefault();
-              handleSubmit(handleFormSubmit)();
-            }}
-            loading={isSubmitting}
-          >
-            {isUpdating ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
-          </Button>
+                  </Popover.Panel>
+                </Transition>
+              </>
+            )}
+          </Popover>
         </div>
-        {errors.name?.message && <p className="p-0.5 pl-8 text-13 text-danger-primary">{errors.name?.message}</p>}
-      </>
-    );
-  })
-);
+        <div className="flex flex-1 flex-col justify-center">
+          <Controller
+            control={control}
+            name="name"
+            rules={{
+              required: t("project_settings.labels.label_title_is_required"),
+              maxLength: {
+                value: 255,
+                message: t("project_settings.labels.label_max_char"),
+              },
+            }}
+            render={({ field: { value, onChange, ref: inputRef } }) => (
+              <Field name="name" invalid={Boolean(errors.name)}>
+                <InputGroup size="2xl">
+                  <Input
+                    size="2xl"
+                    id="labelName"
+                    name="name"
+                    type="text"
+                    value={value}
+                    onChange={onChange}
+                    ref={inputRef}
+                    placeholder={t("project_settings.labels.label_title")}
+                  />
+                </InputGroup>
+              </Field>
+            )}
+          />
+        </div>
+        <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+          {t("cancel")}
+        </Button>
+        <Button
+          variant="primary"
+          onClick={(e) => {
+            e.preventDefault();
+            void handleSubmit(handleFormSubmit)();
+          }}
+          loading={isSubmitting}
+        >
+          {labelToUpdate ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
+        </Button>
+      </div>
+      {errors.name?.message && <p className="p-0.5 pl-8 text-13 text-danger-primary">{errors.name?.message}</p>}
+    </>
+  );
+});

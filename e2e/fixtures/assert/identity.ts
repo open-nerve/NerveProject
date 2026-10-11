@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 import { shownNameOf } from "../auth";
 import type { Database } from "../db";
 
-// Database assertions of the identity stories. The page version and the API
-// version of a story call the same function (v0 design 8.2).
+// Database assertions of the identity stories, and what a page shows of an
+// account. The page version and the API version of a story call the same
+// function (v0 design 8.2).
 
 const refreshTokenPrefix = "nrv_rt_";
 const dayMs = 24 * 60 * 60 * 1000;
@@ -469,4 +470,16 @@ export async function countIdentity(db: Database): Promise<IdentityCounts> {
 /** A2, A3, A15: a refused sign-up or login added no account, profile or session. */
 export async function expectNothingAdded(db: Database, before: IdentityCounts): Promise<void> {
   expect(await countIdentity(db)).toEqual(before);
+}
+
+/**
+ * Checks that page's document, as it is now, holds none of emails: accounts' addresses that the page must not show its
+ * viewer (a guest, say). where names the page in the failure's message.
+ */
+export async function expectNoAddress(page: Page, emails: readonly string[], where: string): Promise<void> {
+  const html = await page.content();
+  expect(
+    emails.filter((email) => html.includes(email)),
+    `the addresses on ${where}`
+  ).toEqual([]);
 }

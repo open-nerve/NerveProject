@@ -12,15 +12,9 @@ import {
 import { expectMember } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
+import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
 import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
-import {
-  answerTo,
-  closedByEscape,
-  closedWithin,
-  enabledWithin,
-  registerOnboarded,
-  sentHeld,
-} from "../../fixtures/settings-pages";
+import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // P2, the projects' list and who sees them, and joining (M3 design 2, 3.4, 3.5, 3.19); the page versions, with the

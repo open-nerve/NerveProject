@@ -29,23 +29,19 @@ type TProps = {
 const PROJECT_ARCHIVES_BREADCRUMB_LIST: {
   [key: string]: {
     label: string;
-    href: string;
-    icon: React.FC<React.SVGAttributes<SVGElement> & { className?: string }>;
+    icon: React.FC<React.SVGAttributes<SVGElement>>;
   };
 } = {
   issues: {
     label: "Work items",
-    href: "/issues",
     icon: WorkItemsOutline,
   },
   cycles: {
     label: "Cycles",
-    href: "/cycles",
     icon: CyclesOutline,
   },
   modules: {
     label: "Modules",
-    href: "/modules",
     icon: ModuleOutline,
   },
 };

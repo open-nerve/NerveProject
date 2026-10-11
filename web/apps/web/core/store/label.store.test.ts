@@ -47,7 +47,7 @@ describe("LabelStore, the labels", () => {
     expect(store.getProjectLabels(web.id)).toEqual(ordered);
     expect(store.projectLabels).toEqual(ordered);
     expect(store.getProjectLabelIds(web.id)).toEqual(ids(ordered));
-    expect(store.projectLabelsTree).toEqual([
+    expect(store.getProjectLabelsTree(web.id)).toEqual([
       { ...bug, children: [] },
       { ...feature, children: [frontend, tied, backend] },
     ]);
@@ -60,6 +60,7 @@ describe("LabelStore, the labels", () => {
     const { nerve, projects, store } = await loadedLabels();
     await loadLabels(nerve, store, [opsBug], ops);
     expect(store.getProjectLabels(ops.id)).toEqual([opsBug]);
+    expect(store.getProjectLabelsTree(ops.id)).toEqual([{ ...opsBug, children: [] }]);
     expect(store.getProjectLabels(web.id)).toEqual(listed);
 
     await sent(nerve, () => projects.leaveProject(ops), ["POST", `/api/v0/projects/${ops.id}/leave`], noContent());
@@ -108,7 +109,11 @@ describe("LabelStore, the changes", () => {
     const infra = labelOf(web, "infra", 105000, { parent_id: feature.id, color: "" });
     await sent(nerve, () => store.createLabel(web.id, under), ["POST", LIST], json(201, infra));
     expect(nerve.calls[2]?.body).toEqual(under);
-    expect(store.projectLabelsTree?.find((top) => top.id === feature.id)?.children).toEqual([frontend, backend, infra]);
+    expect(store.getProjectLabelsTree(web.id)?.find((top) => top.id === feature.id)?.children).toEqual([
+      frontend,
+      backend,
+      infra,
+    ]);
   });
 
   it("changes a label as nerve answers it, and moves one under a parent to the top with a null parent", async () => {
@@ -125,7 +130,7 @@ describe("LabelStore, the changes", () => {
     expect(store.getLabelById(frontend.id)).toEqual(frontend);
     nerve.calls[2]?.answer(json(200, top));
     await until(() => freed.settled, "the answer");
-    expect(store.projectLabelsTree).toEqual([
+    expect(store.getProjectLabelsTree(web.id)).toEqual([
       { ...renamed, children: [] },
       { ...feature, children: [backend] },
       { ...top, children: [] },
@@ -231,7 +236,10 @@ describe("LabelStore, the changes", () => {
     expect(refused.error).toBeInstanceOf(ApiError);
     expect(first.value).toEqual(backendFirst);
     expect(nerve.calls[3]?.body).toEqual({ parent_id: feature.id, sort_order: 75000 });
-    expect(store.projectLabelsTree?.[0]).toEqual({ ...feature, children: [backendFirst, bugBetween, frontend] });
+    expect(store.getProjectLabelsTree(web.id)?.[0]).toEqual({
+      ...feature,
+      children: [backendFirst, bugBetween, frontend],
+    });
   });
 
   it("fetches the labels while a change is out: a fetch does not wait for it", async () => {

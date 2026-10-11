@@ -50,6 +50,7 @@ export const TransferIssuesModal = observer(function TransferIssuesModal(props: 
           message: "Work items have been transferred successfully",
         });
         await getCycleDetails(payload.new_cycle_id);
+        return;
       })
       .catch(() => {
         setToast({

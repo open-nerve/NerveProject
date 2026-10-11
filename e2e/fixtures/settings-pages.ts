@@ -1,4 +1,4 @@
-import { errors, expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
+import { expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
 
 import type { Api } from "./api";
 import { bearer, register, type AuthTokens } from "./auth";
@@ -118,89 +118,6 @@ export async function holdScripts(page: Page): Promise<{ requested: Promise<void
     }
   );
   return { requested: requested.promise, release: released.resolve };
-}
-
-/**
- * What a wait of a second that failed says: false when the second ran out (what was waited for did not come); any
- * other failure, such as a locator that matches several elements, rejects, so that it cannot read as "it did not".
- */
-function timedOut(error: unknown): false {
-  if (error instanceof errors.TimeoutError) return false;
-  throw error;
-}
-
-/**
- * Resolves with whether button is enabled within a second: one that stays disabled while the test holds what its page
- * waits for keeps it disabled the whole time, where a check made at once could pass before the page has re-rendered.
- * button is one element with the button role: a locator that matches none, several or something else fails, not as
- * "stayed disabled". Enabled is as Playwright's role queries take it (getByRole's disabled).
- */
-export async function enabledWithin(button: Locator): Promise<boolean> {
-  await expect(button, "the one button").toHaveRole("button");
-  return button
-    .and(button.page().getByRole("button", { disabled: false }))
-    .waitFor({ state: "attached", timeout: 1_000 })
-    .then(() => true, timedOut);
-}
-
-/**
- * Resolves with whether locator, one element, shows within a second: what must not show while the test holds what its
- * page waits for stays hidden the whole time, where a check made at once could pass before the page has rendered it.
- * Only the second running out means it did not show (timedOut); any other failure, such as a locator that matches
- * several elements, rejects.
- */
-export async function shownWithin(locator: Locator): Promise<boolean> {
-  return locator.waitFor({ state: "visible", timeout: 1_000 }).then(() => true, timedOut);
-}
-
-/** Resolves with whether locator, one element, hides within a second, as a panel that closes does: shownWithin's twin. */
-export async function hiddenWithin(locator: Locator): Promise<boolean> {
-  return locator.waitFor({ state: "hidden", timeout: 1_000 }).then(() => true, timedOut);
-}
-
-/**
- * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
- * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
- * still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check made at once cannot
- * tell it from one that stays: the second outlasts the transition. Only the second running out means it stayed
- * (timedOut); any other failure, such as two modal dialogs, rejects.
- */
-export async function closedWithin(page: Page): Promise<boolean> {
-  return page
-    .locator('[role="dialog"][aria-modal="true"]')
-    .waitFor({ state: "detached", timeout: 1_000 })
-    .then(() => true, timedOut);
-}
-
-/** Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed (closedWithin). */
-export async function closedByEscape(page: Page): Promise<boolean> {
-  const closed = closedWithin(page);
-  await page.keyboard.press("Escape");
-  return closed;
-}
-
-/**
- * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
- * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
- * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
- */
-export async function composingEscape(field: Locator): Promise<void> {
-  await field.evaluate((element) => {
-    const init = { bubbles: true, cancelable: true, composed: true };
-    element.dispatchEvent(new CompositionEvent("compositionstart", init));
-    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", isComposing: true }));
-    element.dispatchEvent(new CompositionEvent("compositionend", init));
-  });
-}
-
-/**
- * Gives field, in the one modal dialog its page shows, an Escape that ends a composition (composingEscape), and
- * resolves with whether that dialog closed (closedWithin).
- */
-export async function closedByComposingEscape(field: Locator): Promise<boolean> {
-  const closed = closedWithin(field.page());
-  await composingEscape(field);
-  return closed;
 }
 
 /**

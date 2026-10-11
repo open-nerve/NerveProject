@@ -13,37 +13,22 @@ import { useTranslation } from "@nerve/i18n";
 import { StateGroupIcon } from "@nerve/propel/icons";
 import { AddOutline, ChevronDownOutline } from "@makeplane/propel/icons";
 import type { State, StateGroup } from "@nerve/api-client";
-import type { TStateOperationsCallbacks } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // components
 import { StateList, StateCreate } from "@/components/project-states";
 
 type TGroupItem = {
+  projectId: string;
   groupKey: StateGroup;
   groupsExpanded: Partial<StateGroup>[];
-  groupedStates: Record<string, State[]>;
   states: State[];
-  stateOperationsCallbacks: TStateOperationsCallbacks;
   isEditable: boolean;
-  groupItemClassName?: string;
-  stateItemClassName?: string;
   handleGroupCollapse: (groupKey: StateGroup) => void;
   handleExpand: (groupKey: StateGroup) => void;
 };
 
 export const GroupItem = observer(function GroupItem(props: TGroupItem) {
-  const {
-    groupKey,
-    groupedStates,
-    states,
-    groupsExpanded,
-    isEditable,
-    stateOperationsCallbacks,
-    groupItemClassName,
-    stateItemClassName,
-    handleExpand,
-    handleGroupCollapse,
-  } = props;
+  const { projectId, groupKey, states, groupsExpanded, isEditable, handleExpand, handleGroupCollapse } = props;
   // refs
   const dropElementRef = useRef<HTMLDivElement | null>(null);
   // nerve hooks
@@ -55,16 +40,15 @@ export const GroupItem = observer(function GroupItem(props: TGroupItem) {
   const shouldShowEmptyState = states.length === 0 && currentStateExpanded && !createState;
 
   return (
-    <div
-      className={cn("space-y-1 rounded-sm border border-subtle bg-surface-2 p-2 transition-all", groupItemClassName)}
-      ref={dropElementRef}
-    >
+    <div className="space-y-1 rounded-sm border border-subtle bg-surface-2 p-2 transition-all" ref={dropElementRef}>
       <div className="flex items-center justify-between gap-2">
-        <div
+        <button
+          type="button"
           className="flex w-full cursor-pointer items-center py-1"
+          aria-expanded={currentStateExpanded}
           onClick={() => (!currentStateExpanded ? handleExpand(groupKey) : handleGroupCollapse(groupKey))}
         >
-          <div
+          <span
             className={cn(
               "flex h-5 w-5 flex-shrink-0 items-center justify-center overflow-hidden rounded-sm transition-all",
               {
@@ -74,14 +58,15 @@ export const GroupItem = observer(function GroupItem(props: TGroupItem) {
             )}
           >
             <ChevronDownOutline className="h-4 w-4" />
-          </div>
-          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded-sm">
+          </span>
+          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded-sm">
             <StateGroupIcon stateGroup={groupKey} size={EIconSize.XL} />
-          </div>
-          <div className="px-1 text-14 font-medium text-secondary capitalize">{groupKey}</div>
-        </div>
+          </span>
+          <span className="px-1 text-14 font-medium text-secondary capitalize">{groupKey}</span>
+        </button>
         <button
           type="button"
+          aria-label={t("common.add")}
           className={cn(
             "flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm text-accent-primary/80 transition-colors hover:bg-layer-1 hover:text-accent-primary",
             (!isEditable || createState) && "cursor-not-allowed text-placeholder hover:text-placeholder"
@@ -107,24 +92,13 @@ export const GroupItem = observer(function GroupItem(props: TGroupItem) {
 
       {currentStateExpanded && (
         <div id="group-droppable-container">
-          <StateList
-            groupKey={groupKey}
-            groupedStates={groupedStates}
-            states={states}
-            disabled={!isEditable}
-            stateOperationsCallbacks={stateOperationsCallbacks}
-            stateItemClassName={stateItemClassName}
-          />
+          <StateList groupKey={groupKey} states={states} disabled={!isEditable} />
         </div>
       )}
 
       {isEditable && createState && (
         <div className="">
-          <StateCreate
-            groupKey={groupKey}
-            handleClose={() => setCreateState(false)}
-            createStateCallback={stateOperationsCallbacks.createState}
-          />
+          <StateCreate projectId={projectId} groupKey={groupKey} handleClose={() => setCreateState(false)} />
         </div>
       )}
     </div>

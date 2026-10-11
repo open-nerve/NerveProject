@@ -4,17 +4,15 @@
  * See the LICENSE file for details.
  */
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
-import type { Label, LabelCreate } from "@nerve/api-client";
+import type { Label } from "@nerve/api-client";
 import { Loader } from "@nerve/ui";
-import type { TLabelOperationsCallbacks } from "@/components/labels";
 import {
   CreateUpdateLabelInline,
   DeleteLabelModal,
@@ -24,34 +22,38 @@ import {
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // local imports
 import { SettingsHeading } from "../settings/heading";
+import { useLabelChanges } from "./use-label-changes";
 
-export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelList() {
-  // router
-  const { projectId } = useParams();
-  // refs
-  const scrollToRef = useRef<HTMLDivElement>(null);
+type TProjectSettingsLabelList = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelList(props: TProjectSettingsLabelList) {
+  const { workspaceSlug, projectId } = props;
   // states
   const [showLabelForm, setLabelForm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectDeleteLabel, setSelectDeleteLabel] = useState<Label | null>(null);
   // nerve hooks
   const { t } = useTranslation();
-  const toastRefusal = useRefusalToast();
   // store hooks
-  const { projectLabels, updateLabelPosition, projectLabelsTree, createLabel, updateLabel } = useLabel();
+  const { getProjectLabels, getProjectLabelsTree } = useLabel();
+  const { move } = useLabelChanges();
   const { allowPermissions } = useUserPermissions();
 
-  if (!projectId) return null;
-
   // derived values
-  const isEditable = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
-  const labelOperationsCallbacks: TLabelOperationsCallbacks = {
-    createLabel: (data: LabelCreate) => createLabel(projectId, data),
-    updateLabel,
-  };
+  const projectLabels = getProjectLabels(projectId);
+  const projectLabelsTree = getProjectLabelsTree(projectId);
+  // who may change the labels (label.create and the others): its admins, and its members who are the workspace's
+  const isEditable = allowPermissions(
+    [EUserPermissions.ADMIN],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
+  );
 
   const newLabel = () => {
     setIsUpdating(false);
@@ -64,9 +66,7 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
     droppedLabelId: string | undefined,
     dropAtEndOfList: boolean
   ) => {
-    updateLabelPosition(draggingLabelId, droppedParentId, droppedLabelId, dropAtEndOfList).catch((error: unknown) => {
-      toastRefusal(error);
-    });
+    void move(draggingLabelId, droppedParentId, droppedLabelId, dropAtEndOfList);
   };
 
   return (
@@ -91,11 +91,7 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
         {showLabelForm && (
           <div className="my-2 w-full rounded-sm border border-subtle px-3.5 py-2">
             <CreateUpdateLabelInline
-              labelForm={showLabelForm}
-              setLabelForm={setLabelForm}
-              isUpdating={isUpdating}
-              labelOperationsCallbacks={labelOperationsCallbacks}
-              ref={scrollToRef}
+              projectId={projectId}
               onClose={() => {
                 setLabelForm(false);
                 setIsUpdating(false);
@@ -110,14 +106,18 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
               assetClassName="size-20"
               title={t("settings_empty_state.labels.title")}
               description={t("settings_empty_state.labels.description")}
-              actions={[
-                {
-                  label: t("settings_empty_state.labels.cta_primary"),
-                  onClick: () => {
-                    newLabel();
-                  },
-                },
-              ]}
+              actions={
+                isEditable
+                  ? [
+                      {
+                        label: t("settings_empty_state.labels.cta_primary"),
+                        onClick: () => {
+                          newLabel();
+                        },
+                      },
+                    ]
+                  : undefined
+              }
               align="start"
               rootClassName="py-20"
             />
@@ -135,7 +135,6 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
                     isLastChild={index === projectLabelsTree.length - 1}
                     onDrop={onDrop}
                     isEditable={isEditable}
-                    labelOperationsCallbacks={labelOperationsCallbacks}
                   />
                 );
               }
@@ -149,7 +148,6 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
                   isLastChild={index === projectLabelsTree.length - 1}
                   onDrop={onDrop}
                   isEditable={isEditable}
-                  labelOperationsCallbacks={labelOperationsCallbacks}
                 />
               );
             })

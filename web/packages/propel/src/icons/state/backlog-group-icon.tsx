@@ -13,7 +13,6 @@ export function BacklogGroupIcon({ width = "20", height = "20", className, color
   // SVG parameters
   const viewBoxSize = 16;
   const center = viewBoxSize / 2;
-  const radius = 6;
   return (
     <svg
       height={height}
@@ -22,7 +21,7 @@ export function BacklogGroupIcon({ width = "20", height = "20", className, color
       className={className}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <DashedCircle center={center} radius={radius} color={color} percentage={0} />
+      <DashedCircle center={center} color={color} percentage={0} />
     </svg>
   );
 }

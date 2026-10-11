@@ -12,7 +12,6 @@ import { Disclosure, Transition } from "@headlessui/react";
 import { ChevronDownOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
 import type { Label } from "@nerve/api-client";
 // components
-import type { TLabelOperationsCallbacks } from "./create-update-label-inline";
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
 import type { ICustomMenuItem } from "./label-block/label-item-block";
 import { LabelItemBlock } from "./label-block/label-item-block";
@@ -32,7 +31,6 @@ type Props = {
     droppedLabelId: string | undefined,
     dropAtEndOfList: boolean
   ) => void;
-  labelOperationsCallbacks: TLabelOperationsCallbacks;
   isEditable?: boolean;
 };
 
@@ -46,7 +44,6 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
     isLastChild,
     onDrop,
     isEditable = false,
-    labelOperationsCallbacks,
   } = props;
 
   // states
@@ -94,11 +91,8 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
                     <div className="relative flex cursor-pointer items-center justify-between gap-2">
                       {isEditLabelForm ? (
                         <CreateUpdateLabelInline
-                          labelForm={isEditLabelForm}
-                          setLabelForm={setEditLabelForm}
-                          isUpdating
+                          projectId={label.project_id}
                           labelToUpdate={label}
-                          labelOperationsCallbacks={labelOperationsCallbacks}
                           onClose={() => {
                             setEditLabelForm(false);
                             setIsUpdating(false);
@@ -112,10 +106,11 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
                           handleLabelDelete={handleLabelDelete}
                           isLabelGroup
                           dragHandleRef={dragHandleRef}
+                          disabled={!isEditable}
                         />
                       )}
 
-                      <Disclosure.Button>
+                      <Disclosure.Button aria-label={label.name}>
                         <span>
                           <ChevronDownOutline
                             className={`h-4 w-4 text-placeholder ${!open ? "rotate-90 transform" : ""}`}
@@ -147,7 +142,6 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
                                   isLastChild={index === labelChildren.length - 1}
                                   onDrop={onDrop}
                                   isEditable={isEditable}
-                                  labelOperationsCallbacks={labelOperationsCallbacks}
                                 />
                               </div>
                             </div>

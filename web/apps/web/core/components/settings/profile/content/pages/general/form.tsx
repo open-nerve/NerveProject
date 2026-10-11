@@ -26,6 +26,7 @@ import { useUser } from "@/hooks/store/user";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { followInSession } from "@/lib/in-session";
 
 type TUserProfileForm = {
   first_name: string;
@@ -78,20 +79,20 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       display_name: formData?.display_name,
     };
 
-    try {
-      await updateCurrentUser(userPayload);
-      setToast({ type: TOAST_TYPE.SUCCESS, title: t("toast.success"), message: t("profile_updated") });
-    } catch (error) {
-      // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
-      const fields = fieldErrorKeys(error);
-      for (const field of FIELDS) {
-        const key = fields[field];
-        if (key !== undefined) setError(field, { type: "manual", message: t(key) });
-      }
-      if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
-    } finally {
-      setIsLoading(false);
-    }
+    // Only in the session the change was sent in (M3 design 7.1): the form says nerve made it; a refusal shows under
+    // the field it is about, anything else in a toast (M2 design 7.3).
+    await followInSession(() => updateCurrentUser(userPayload), {
+      done: () => setToast({ type: TOAST_TYPE.SUCCESS, title: t("toast.success"), message: t("profile_updated") }),
+      failed: (error) => {
+        const fields = fieldErrorKeys(error);
+        for (const field of FIELDS) {
+          const key = fields[field];
+          if (key !== undefined) setError(field, { type: "manual", message: t(key) });
+        }
+        if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
+      },
+    });
+    setIsLoading(false);
   };
 
   return (

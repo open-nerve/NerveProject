@@ -9,13 +9,10 @@ import {
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, named, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { closedByComposingEscape, closedByEscape, composingEscape, hiddenWithin } from "../../fixtures/dialogs";
 import { tabCycle } from "../../fixtures/project-pages";
 import {
-  closedByComposingEscape,
-  closedByEscape,
-  composingEscape,
   expectListBesideButton,
-  hiddenWithin,
   keydownsReachingDocument,
   registerOnboarded,
   sentHeld,
@@ -246,8 +243,8 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   await createWorkspace(api, admin.access_token, { name: "Acme", slug, timezone: "Asia/Shanghai" });
   await inviteAndAccept(api, admin.access_token, slug, { email: memberEmail, token: member.access_token }, 15);
   await inviteAndAccept(api, admin.access_token, slug, { email: guestEmail, token: guest.access_token }, 5);
-  await named(api, admin.access_token, "ada");
-  await named(api, guest.access_token, "gus");
+  await named(api, admin.access_token, { display_name: "ada" });
+  await named(api, guest.access_token, { display_name: "gus" });
   // WEB is taken by the time the member sends it
   await createProject(api, admin.access_token, slug, { name: "Site", identifier: "WEB" });
   const adminId = await accountId(api, admin.access_token);

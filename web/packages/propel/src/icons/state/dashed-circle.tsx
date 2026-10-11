@@ -8,13 +8,14 @@ import * as React from "react";
 
 interface DashedCircleProps {
   center: number;
-  radius: number;
   color: string;
   percentage: number;
-  totalSegments?: number;
 }
 
-export function DashedCircle({ center, color, percentage, totalSegments = 15 }: DashedCircleProps) {
+/** How many dashes the circle is drawn with. */
+const totalSegments = 15;
+
+export function DashedCircle({ center, color, percentage }: DashedCircleProps) {
   // Ensure percentage is between 0 and 100
   const validPercentage = Math.max(0, Math.min(100, percentage));
 

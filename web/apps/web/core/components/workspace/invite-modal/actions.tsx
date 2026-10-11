@@ -10,61 +10,37 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { AddOutline } from "@makeplane/propel/icons";
-import { cn } from "@nerve/utils";
 
 type TInvitationModalActionsProps = {
-  isInviteDisabled?: boolean;
   isSubmitting?: boolean;
   handleClose: () => void;
   appendField: () => void;
-  addMoreButtonText?: string;
-  submitButtonText?: {
-    default: string;
-    loading: string;
-  };
-  cancelButtonText?: string;
-  className?: string;
 };
 
 export const InvitationModalActions = observer(function InvitationModalActions(props: TInvitationModalActionsProps) {
-  const {
-    isInviteDisabled = false,
-    isSubmitting = false,
-    handleClose,
-    appendField,
-    addMoreButtonText,
-    submitButtonText,
-    cancelButtonText,
-    className,
-  } = props;
+  const { isSubmitting = false, handleClose, appendField } = props;
   // store hooks
   const { t } = useTranslation();
 
   return (
-    <div className={cn("mt-5 flex items-center justify-between gap-2", className)}>
+    <div className="mt-5 flex items-center justify-between gap-2">
       <button
         type="button"
-        className={cn(
-          "flex items-center gap-1 bg-transparent py-2 pr-3 text-caption-md-medium text-accent-primary outline-accent-strong",
-          {
-            "cursor-not-allowed opacity-60": isInviteDisabled,
-          }
-        )}
+        className="flex items-center gap-1 bg-transparent py-2 pr-3 text-caption-md-medium text-accent-primary outline-accent-strong"
         onClick={appendField}
-        disabled={isInviteDisabled}
       >
         <AddOutline className="h-3.5 w-3.5" />
-        {addMoreButtonText || t("common.add_more")}
+        {t("common.add_more")}
       </button>
       <div className="flex items-center gap-2">
         {/* Disabled while the invitations are out: nerve's answer is said in the form that sent them */}
         <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
-          {cancelButtonText || t("cancel")}
+          {t("cancel")}
         </Button>
-        <Button variant="primary" size="lg" type="submit" loading={isSubmitting} disabled={isInviteDisabled}>
+        <Button variant="primary" size="lg" type="submit" loading={isSubmitting}>
           {isSubmitting
-            ? submitButtonText?.loading || t("workspace_settings.settings.members.modal.button_loading")
-            : submitButtonText?.default || t("workspace_settings.settings.members.modal.button")}
+            ? t("workspace_settings.settings.members.modal.button_loading")
+            : t("workspace_settings.settings.members.modal.button")}
         </Button>
       </div>
     </div>

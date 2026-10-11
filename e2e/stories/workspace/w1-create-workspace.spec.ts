@@ -13,16 +13,9 @@ import {
 import { anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { deferred } from "../../fixtures/deferred";
+import { enabledWithin } from "../../fixtures/dialogs";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
-import {
-  answerTo,
-  enabledWithin,
-  holdAnswer,
-  holdScripts,
-  registerOnboarded,
-  sentHeld,
-  sentTo,
-} from "../../fixtures/settings-pages";
+import { answerTo, holdAnswer, holdScripts, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, invitationLinkOf } from "../../fixtures/workspace-pages";
 

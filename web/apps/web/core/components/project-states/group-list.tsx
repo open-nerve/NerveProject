@@ -8,29 +8,17 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { State, StateGroup } from "@nerve/api-client";
-import type { TStateOperationsCallbacks } from "@nerve/types";
-import { cn } from "@nerve/utils";
 // components
 import { GroupItem } from "@/components/project-states";
 
 type TGroupList = {
+  projectId: string;
   groupedStates: Record<string, State[]>;
-  stateOperationsCallbacks: TStateOperationsCallbacks;
   isEditable: boolean;
-  groupListClassName?: string;
-  groupItemClassName?: string;
-  stateItemClassName?: string;
 };
 
 export const GroupList = observer(function GroupList(props: TGroupList) {
-  const {
-    groupedStates,
-    stateOperationsCallbacks,
-    isEditable,
-    groupListClassName,
-    groupItemClassName,
-    stateItemClassName,
-  } = props;
+  const { projectId, groupedStates, isEditable } = props;
   // states
   const [groupsExpanded, setGroupsExpanded] = useState<Partial<StateGroup>[]>([
     "backlog",
@@ -58,23 +46,20 @@ export const GroupList = observer(function GroupList(props: TGroupList) {
     });
   };
   return (
-    <div className={cn("space-y-5", groupListClassName)}>
+    <div className="space-y-5">
       {Object.entries(groupedStates).map(([key, value]) => {
         const groupKey = key as StateGroup;
         const groupStates = value;
         return (
           <GroupItem
             key={groupKey}
+            projectId={projectId}
             groupKey={groupKey}
             states={groupStates}
-            groupedStates={groupedStates}
             groupsExpanded={groupsExpanded}
-            stateOperationsCallbacks={stateOperationsCallbacks}
             isEditable={isEditable}
             handleGroupCollapse={handleGroupCollapse}
             handleExpand={handleExpand}
-            groupItemClassName={groupItemClassName}
-            stateItemClassName={stateItemClassName}
           />
         );
       })}

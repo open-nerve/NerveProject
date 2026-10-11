@@ -17,6 +17,8 @@ import { SettingsControlItem } from "@/components/settings/control-item";
 // hooks
 import { useUser, useUserProfile } from "@/hooks/store/user";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
   function ProfileSettingsLanguageAndTimezonePreferencesList() {
@@ -31,31 +33,28 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
     const { t } = useTranslation();
     const toastRefusal = useRefusalToast();
 
-    const handleTimezoneChange = async (value: string) => {
-      try {
-        await updateCurrentUser({ user_timezone: value });
-        setToast({
-          title: t("toast.success"),
-          message: t("power_k.preferences_actions.toast.timezone.success"),
-          type: TOAST_TYPE.SUCCESS,
-        });
-      } catch (error) {
-        toastRefusal(error);
-      }
-    };
+    // Each says how nerve settled the change only in the session it was sent in (M3 design 7.1).
+    const handleTimezoneChange = (value: string) =>
+      followInSession(() => updateCurrentUser({ user_timezone: value }), {
+        done: () =>
+          setToast({
+            title: t("toast.success"),
+            message: t("power_k.preferences_actions.toast.timezone.success"),
+            type: TOAST_TYPE.SUCCESS,
+          }),
+        failed: toastRefusal,
+      });
 
-    const handleLanguageChange = async (value: Language) => {
-      try {
-        await updateUserProfile({ language: value });
-        setToast({
-          title: t("toast.success"),
-          message: t("power_k.preferences_actions.toast.generic.success"),
-          type: TOAST_TYPE.SUCCESS,
-        });
-      } catch (error) {
-        toastRefusal(error);
-      }
-    };
+    const handleLanguageChange = (value: Language) =>
+      followInSession(() => updateUserProfile({ language: value }), {
+        done: () =>
+          setToast({
+            title: t("toast.success"),
+            message: t("power_k.preferences_actions.toast.generic.success"),
+            type: TOAST_TYPE.SUCCESS,
+          }),
+        failed: toastRefusal,
+      });
 
     // a language that is no longer supported shows as the fallback language, which is what the app uses
     const language = toSupportedLanguage(profile?.language);

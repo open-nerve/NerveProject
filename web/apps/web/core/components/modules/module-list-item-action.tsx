@@ -65,6 +65,7 @@ export const ModuleListItemAction = observer(function ModuleListItemAction(props
     const addToFavoritePromise = addModuleToFavorites(workspaceSlug, projectId, moduleId).then(() => {
       // open favorites menu if closed
       if (!storedValue) toggleFavoriteMenu(true);
+      return;
     });
 
     setPromiseToast(addToFavoritePromise, {
@@ -110,6 +111,7 @@ export const ModuleListItemAction = observer(function ModuleListItemAction(props
           title: "Success!",
           message: "Module updated successfully.",
         });
+        return;
       })
       .catch((err) => {
         setToast({

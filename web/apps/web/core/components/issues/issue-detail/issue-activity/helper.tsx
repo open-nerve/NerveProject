@@ -61,6 +61,7 @@ export const useWorkItemCommentOperations = (
               type: TOAST_TYPE.SUCCESS,
               message: t("issue.comments.copy_link.success"),
             });
+            return;
           });
         } catch (error) {
           console.error("Error in copying comment link:", error);

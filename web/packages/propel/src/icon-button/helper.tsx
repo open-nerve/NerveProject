@@ -9,7 +9,7 @@ import { cva } from "class-variance-authority";
 import type React from "react";
 
 export const iconButtonVariants = cva(
-  "inline-flex aspect-square items-center justify-center gap-1 whitespace-nowrap transition-colors focus-visible:outline-none disabled:pointer-events-none",
+  "inline-flex aspect-square items-center justify-center gap-1 whitespace-nowrap transition-colors focus-visible:outline-offset-2 disabled:pointer-events-none",
   {
     variants: {
       variant: {

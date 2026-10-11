@@ -10,42 +10,38 @@ import { CloseOutline, LoadingOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { State } from "@nerve/api-client";
-import type { TStateOperationsCallbacks } from "@nerve/types";
+import { useTranslation } from "@nerve/i18n";
 import { AlertModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// local imports
+import { useStateChanges } from "../use-state-changes";
 
 type TStateDelete = {
   totalStates: number;
   state: State;
-  deleteStateCallback: TStateOperationsCallbacks["deleteState"];
 };
 
 export const StateDelete = observer(function StateDelete(props: TStateDelete) {
-  const { totalStates, state, deleteStateCallback } = props;
+  const { totalStates, state } = props;
   // hooks
   const { isMobile } = usePlatformOS();
-  const toastRefusal = useRefusalToast();
+  const { t } = useTranslation();
+  const { remove } = useStateChanges();
   // states
   const [isDeleteModal, setIsDeleteModal] = useState(false);
   const [isDelete, setIsDelete] = useState(false);
   // derived values
   const isDeleteDisabled = state.default || totalStates === 1;
 
+  // Busy, and the dialog not to be dismissed, until the page has followed nerve's answer: it closes once nerve has
+  // deleted the state, and stays, its buttons enabled again, when nerve refuses, the reason in a toast.
   const handleDeleteState = async () => {
     if (isDeleteDisabled) return;
-
     setIsDelete(true);
-
-    try {
-      await deleteStateCallback(state.id);
-      setIsDelete(false);
-    } catch (error) {
-      toastRefusal(error);
-      setIsDelete(false);
-    }
+    await remove(state.id, () => setIsDeleteModal(false));
+    setIsDelete(false);
   };
 
   return (
@@ -66,8 +62,9 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
 
       <button
         type="button"
+        aria-label={t("common.actions.delete")}
         className={cn(
-          "flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-colors focus:outline-none",
+          "flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-colors",
           isDeleteDisabled ? "bg-surface-2 text-secondary" : "text-danger-primary hover:bg-layer-1"
         )}
         disabled={isDeleteDisabled}

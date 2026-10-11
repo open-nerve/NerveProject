@@ -8,13 +8,16 @@ import {
   listMembers,
   slugFor,
 } from "../../fixtures/api";
+import { expectNoAddress } from "../../fixtures/assert/identity";
 import { workspaceTables } from "../../fixtures/assert/workspace";
-import { bearer, emailFor, newAccount } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // W11, a guest's bounds (M3 design 2, 9.2): the permission matrix's backend
-// test holds every cell; this story samples four of them through the API.
-// The page version is P11's.
+// test holds every cell; this story samples four of them through the API, and
+// its page version what a guest's pages show him.
 
 test("W11 (API): a guest of a workspace may not list its invitations nor create a state in the project he is a guest of, does not see a private project he is not a member of, and reads no member's address, his own neither; none of it changes a row of the workspace's", async ({
   api,
@@ -84,4 +87,40 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
     ].toSorted()
   );
   expect(await tables(), "the tables after gus's calls").toEqual(before);
+});
+
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const gusEmail = emailFor(testInfo, "gus");
+  const gus = await registerOnboarded(api, gusEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  await inviteAndAccept(api, admin.access_token, slug, { email: gusEmail, token: gus.access_token }, 5);
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await addProjectMembers(api, admin.access_token, web.id, [
+    { member_id: await accountId(api, gus.access_token), role: 5 },
+  ]);
+  await createProject(api, admin.access_token, slug, { name: "Secret", identifier: "SECRET", network: 0 });
+
+  const page = await signedInPage(gus);
+  const watch = await watchPage(page);
+  /** Opens path, and checks that once it shows what is expected no member's address is in the page. */
+  const opened = async (path: string, shown: string) => {
+    await page.goto(path);
+    await expect(page.getByText(shown, { exact: true }).first(), path).toBeVisible();
+    await expectNoAddress(page, [adminEmail, gusEmail], path);
+  };
+  await opened(`/${slug}`, "Web");
+  const joined = page.getByRole("complementary", { name: "Main sidebar" }).locator('[id^="sidebar-"][id$="-JOINED"]');
+  await expect(joined).toHaveText([/Web/]);
+  const denied = "Oops! You are not authorized to view this page";
+  await opened(`/${slug}/settings/members`, denied);
+  await opened(`/${slug}/settings/projects/${web.id}/states`, denied);
+  await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
 });

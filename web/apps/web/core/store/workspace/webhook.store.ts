@@ -171,6 +171,7 @@ export class WebhookStore implements IWebhookStore {
       runInAction(() => {
         this.webhooks = _webhooks;
       });
+      return;
     });
 
   /**

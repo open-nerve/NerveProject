@@ -63,3 +63,9 @@ M3 合并时：
 保留名单的前端一侧在 M3/P8a 完成（`RESTRICTED_URLS` 删除，[P8a spec](../specs/P8a-web-workspace-data.md) 第 1 节）。仍未处理，状态保持 `open`：个人主页的页面（P11，故事 P9 的页面版本和 C10）。
 
 来源：[M3/P9 spec](../specs/P9-web-workspace-pages.md) 第 7 节。
+
+## 处理结果（M3/P11）
+
+- **访客看别人的个人主页**（页面一侧完成）：照决策点 3 的 A，页面不改：访客打开别人的或自己的个人主页，看到用户卡片（数据来自成员列表），工作项一栏说他没有权限，页面不取工作项列表。故事 P9 的页面版本核对（`e2e/stories/project/p9-guest-profile.spec.ts`），S2 核对访客打开这两页时只取应用和工作区的数据。浏览器核对 C10 通过，记在 [M3/P11 评审](../reviews/P11-web-states-labels-and-cleanup-review.md) 第 2 节：访客打开别的成员的和自己的个人主页，看到卡片，工作项一栏说没有权限、没有工作项的标签页，页面里没有任何人的邮箱，也没有工作项的请求。
+
+状态保持 `open`：由 M3 的收尾关闭（M3/P11 spec 第 7 节）。
