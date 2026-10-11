@@ -56,7 +56,6 @@ export const GroupList = observer(function GroupList(props: TGroupList) {
             projectId={projectId}
             groupKey={groupKey}
             states={groupStates}
-            groupedStates={groupedStates}
             groupsExpanded={groupsExpanded}
             isEditable={isEditable}
             handleGroupCollapse={handleGroupCollapse}

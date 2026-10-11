@@ -92,8 +92,6 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
                       {isEditLabelForm ? (
                         <CreateUpdateLabelInline
                           projectId={label.project_id}
-                          labelForm={isEditLabelForm}
-                          setLabelForm={setEditLabelForm}
                           labelToUpdate={label}
                           onClose={() => {
                             setEditLabelForm(false);

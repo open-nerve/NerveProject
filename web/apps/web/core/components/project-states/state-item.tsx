@@ -21,14 +21,13 @@ import { useStateChanges } from "./use-state-changes";
 
 type TStateItem = {
   groupKey: StateGroup;
-  groupedStates: Record<string, State[]>;
   totalStates: number;
   state: State;
   disabled?: boolean;
 };
 
 export const StateItem = observer(function StateItem(props: TStateItem) {
-  const { groupKey, groupedStates, totalStates, state, disabled = false } = props;
+  const { groupKey, totalStates, state, disabled = false } = props;
   const { move } = useStateChanges();
   // ref
   const draggableElementRef = useRef<HTMLDivElement | null>(null);
@@ -90,7 +89,7 @@ export const StateItem = observer(function StateItem(props: TStateItem) {
         },
       })
     );
-  }, [draggableElementRef, state, groupKey, isDraggable, groupedStates, move, disabled]);
+  }, [draggableElementRef, state, groupKey, isDraggable, move, disabled]);
   // DND ends
 
   if (updateStateModal) return <StateUpdate state={state} handleClose={() => setUpdateStateModal(false)} />;

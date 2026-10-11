@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { heldChange, lateSettlings, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { KeptForm } from "@/lib/fake-form";
 import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { ProfileSetupStep } from "./root";
@@ -19,17 +20,11 @@ import { ProfileSetupStep } from "./root";
 /** The names the step's form gives its submit. */
 type Names = { first_name: string; last_name: string };
 
-const page = vi.hoisted(
-  (): {
-    submit: ((names: Names) => Promise<void>) | undefined;
-    updateCurrentUser: ReturnType<typeof vi.fn>;
-    setError: Mock;
-  } => ({
-    submit: undefined,
-    updateCurrentUser: vi.fn(),
-    setError: vi.fn(),
-  })
-);
+const page = vi.hoisted((): KeptForm<Names> & { updateCurrentUser: Mock } => ({
+  submit: undefined,
+  updateCurrentUser: vi.fn(),
+  setError: vi.fn(),
+}));
 /** The step hands the onboarding on: the root's part. */
 const onDone = vi.fn<() => Promise<void> | undefined>();
 vi.mock("react-hook-form", async () => (await import("@/lib/fake-form")).fakeForm(page));

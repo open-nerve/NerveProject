@@ -21,7 +21,6 @@ type TGroupItem = {
   projectId: string;
   groupKey: StateGroup;
   groupsExpanded: Partial<StateGroup>[];
-  groupedStates: Record<string, State[]>;
   states: State[];
   isEditable: boolean;
   handleGroupCollapse: (groupKey: StateGroup) => void;
@@ -29,8 +28,7 @@ type TGroupItem = {
 };
 
 export const GroupItem = observer(function GroupItem(props: TGroupItem) {
-  const { projectId, groupKey, groupedStates, states, groupsExpanded, isEditable, handleExpand, handleGroupCollapse } =
-    props;
+  const { projectId, groupKey, states, groupsExpanded, isEditable, handleExpand, handleGroupCollapse } = props;
   // refs
   const dropElementRef = useRef<HTMLDivElement | null>(null);
   // nerve hooks
@@ -94,7 +92,7 @@ export const GroupItem = observer(function GroupItem(props: TGroupItem) {
 
       {currentStateExpanded && (
         <div id="group-droppable-container">
-          <StateList groupKey={groupKey} groupedStates={groupedStates} states={states} disabled={!isEditable} />
+          <StateList groupKey={groupKey} states={states} disabled={!isEditable} />
         </div>
       )}
 

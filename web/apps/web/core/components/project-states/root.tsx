@@ -12,7 +12,6 @@ import { ProjectStateLoader, GroupList } from "@/components/project-states";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useSessionSWR } from "@/lib/use-session-swr";
 
 type TProjectState = {
   workspaceSlug: string;
@@ -22,7 +21,7 @@ type TProjectState = {
 export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProjectState) {
   const { workspaceSlug, projectId } = props;
   // hooks
-  const { getGroupedProjectStates, fetchProjectStates } = useProjectState();
+  const { getGroupedProjectStates } = useProjectState();
   const { allowPermissions } = useUserPermissions();
   // derived values
   const groupedStates = getGroupedProjectStates(projectId);
@@ -32,9 +31,6 @@ export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProje
     workspaceSlug,
     projectId
   );
-
-  // Fetching all project states
-  useSessionSWR(["PROJECT_STATES", projectId], (id) => fetchProjectStates(id));
 
   // Loader
   if (!groupedStates) return <ProjectStateLoader />;

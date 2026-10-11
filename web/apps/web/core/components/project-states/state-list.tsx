@@ -11,13 +11,12 @@ import { StateItem } from "@/components/project-states";
 
 type TStateList = {
   groupKey: StateGroup;
-  groupedStates: Record<string, State[]>;
   states: State[];
   disabled?: boolean;
 };
 
 export const StateList = observer(function StateList(props: TStateList) {
-  const { groupKey, groupedStates, states, disabled = false } = props;
+  const { groupKey, states, disabled = false } = props;
 
   return (
     <>
@@ -25,7 +24,6 @@ export const StateList = observer(function StateList(props: TStateList) {
         <StateItem
           key={state.id}
           groupKey={groupKey}
-          groupedStates={groupedStates}
           totalStates={states.length || 0}
           state={state}
           disabled={disabled}

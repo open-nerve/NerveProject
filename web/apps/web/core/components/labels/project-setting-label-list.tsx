@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
@@ -33,8 +33,6 @@ type TProjectSettingsLabelList = {
 
 export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelList(props: TProjectSettingsLabelList) {
   const { workspaceSlug, projectId } = props;
-  // refs
-  const scrollToRef = useRef<HTMLDivElement>(null);
   // states
   const [showLabelForm, setLabelForm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -94,9 +92,6 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
           <div className="my-2 w-full rounded-sm border border-subtle px-3.5 py-2">
             <CreateUpdateLabelInline
               projectId={projectId}
-              labelForm={showLabelForm}
-              setLabelForm={setLabelForm}
-              ref={scrollToRef}
               onClose={() => {
                 setLabelForm(false);
                 setIsUpdating(false);

@@ -41,7 +41,7 @@ export function StartedGroupIcon({
   return (
     <svg width={width} height={height} viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`} className={className}>
       {/* Dashed background circle with segments that disappear with progress */}
-      <DashedCircle center={center} radius={radius} color={color} percentage={validPercentage} />
+      <DashedCircle center={center} color={color} percentage={validPercentage} />
 
       {/* render smaller circle in the middle */}
       <circle

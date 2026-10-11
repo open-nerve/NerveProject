@@ -45,7 +45,7 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 const web = projectOf("WEB", "w-acme");
 const bug = labelOf(web, "bug", 65535);
-const setLabelForm = vi.fn();
+const onClose = vi.fn();
 
 /** Renders the form, types the name, and clicks its button, which sends what the form holds: what the button says. */
 function submit(element: ReactElement, name: string) {
@@ -61,7 +61,7 @@ function submit(element: ReactElement, name: string) {
 
 /** The form for a change of a label, or for a creation with none. */
 const formOf = (label?: Label) => (
-  <CreateUpdateLabelInline projectId={web.id} labelForm setLabelForm={setLabelForm} labelToUpdate={label} />
+  <CreateUpdateLabelInline projectId={web.id} labelToUpdate={label} onClose={onClose} />
 );
 
 beforeEach(() => {
@@ -70,7 +70,7 @@ beforeEach(() => {
   store.createLabel.mockResolvedValue(bug);
   store.updateLabel.mockReset();
   store.updateLabel.mockResolvedValue(bug);
-  setLabelForm.mockReset();
+  onClose.mockReset();
   form.setError.mockReset();
   toasts.length = 0;
 });
@@ -104,9 +104,9 @@ describe("the label settings' inline form", () => {
     submit(formOf(bug), "defect");
     await vi.waitFor(() => expect(store.updateLabel).toHaveBeenCalled());
     await pageSettled();
-    expect(setLabelForm.mock.calls).toEqual([]);
+    expect(onClose).not.toHaveBeenCalled();
     answer.answer(bug);
-    await vi.waitFor(() => expect(setLabelForm.mock.calls).toEqual([[false]]));
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   });
 
   it.each([
@@ -117,7 +117,7 @@ describe("the label settings' inline form", () => {
     submit(row.form(), "BUG");
     await vi.waitFor(() => expect(row.sent()).toHaveBeenCalled());
     await pageSettled();
-    expect([underFields(form.setError), setLabelForm.mock.calls, toasts]).toEqual([
+    expect([underFields(form.setError), onClose.mock.calls, toasts]).toEqual([
       [["name", "errors.project_label_name_taken"]],
       [],
       [],

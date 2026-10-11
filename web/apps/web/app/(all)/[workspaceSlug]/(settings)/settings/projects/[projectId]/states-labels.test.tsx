@@ -41,7 +41,6 @@ vi.mock("@/hooks/store/use-project", () => ({ useProject: () => caller.projects 
 vi.mock("@/hooks/store/use-project-state", () => ({
   useProjectState: () => ({
     getGroupedProjectStates: (projectId: string) => (projectId === caller.projectId ? grouped : undefined),
-    fetchProjectStates: vi.fn(),
   }),
 }));
 vi.mock("@/hooks/store/use-label", () => ({
@@ -58,7 +57,6 @@ vi.mock("@/components/labels/project-setting-label-item", () => ({
     `${label.name}${isEditable ? " and its controls" : ""}`,
 }));
 vi.mock("@/components/labels/use-label-changes", () => ({ useLabelChanges: () => ({}) }));
-vi.mock("@/lib/use-session-swr", () => ({ useSessionSWR: () => ({}) }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@/components/project-states/group-list", () => ({
   GroupList: ({

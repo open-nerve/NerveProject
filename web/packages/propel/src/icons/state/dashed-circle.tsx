@@ -8,7 +8,6 @@ import * as React from "react";
 
 interface DashedCircleProps {
   center: number;
-  radius: number;
   color: string;
   percentage: number;
 }

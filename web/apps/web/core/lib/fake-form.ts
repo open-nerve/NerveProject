@@ -13,8 +13,11 @@
 
 import type { Mock } from "vitest";
 
-/** What the stand-in keeps of a form whose values are V: the submit the component gave it, and the form's calls. */
-type KeptForm<V> = { submit: ((values: V) => Promise<void>) | undefined; setError: Mock; reset?: Mock };
+/**
+ * What the stand-in keeps of a form whose values are V: the submit the component gave it, and the form's calls. A test
+ * types its hoisted object with it, beside its own stand-ins.
+ */
+export type KeptForm<V> = { submit: ((values: V) => Promise<void>) | undefined; setError: Mock; reset?: Mock };
 
 /** react-hook-form, as the component reads it, keeping in form what the component gives it. */
 export function fakeForm<V>(form: KeptForm<V>) {

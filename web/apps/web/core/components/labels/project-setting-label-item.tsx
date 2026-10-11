@@ -81,8 +81,6 @@ export function ProjectSettingLabelItem(props: Props) {
             {isEditLabelForm ? (
               <CreateUpdateLabelInline
                 projectId={label.project_id}
-                labelForm={isEditLabelForm}
-                setLabelForm={setEditLabelForm}
                 labelToUpdate={label}
                 onClose={() => {
                   setEditLabelForm(false);

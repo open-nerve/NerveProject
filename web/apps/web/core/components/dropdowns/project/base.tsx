@@ -140,7 +140,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     }
   };
 
-  // the logos of the projects picked
+  // the logos of the projects picked; with several to pick and none picked yet, the icon of projects
   const getProjectIcon = () => {
     if (Array.isArray(value)) {
       return (

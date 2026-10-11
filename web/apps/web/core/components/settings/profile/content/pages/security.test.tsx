@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { KeptForm } from "@/lib/fake-form";
 import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { SecurityProfileSettings } from "./security";
@@ -19,14 +20,12 @@ import { SecurityProfileSettings } from "./security";
 /** What the form's fields hold, as it gives its submit. */
 type Passwords = { old_password: string; new_password: string; confirm_password: string };
 
-const form = vi.hoisted(
-  (): {
-    submit: ((passwords: Passwords) => Promise<void>) | undefined;
-    setError: Mock;
-    reset: Mock;
-    changePassword: Mock;
-  } => ({ submit: undefined, setError: vi.fn(), reset: vi.fn(), changePassword: vi.fn() })
-);
+const form = vi.hoisted((): KeptForm<Passwords> & { reset: Mock; changePassword: Mock } => ({
+  submit: undefined,
+  setError: vi.fn(),
+  reset: vi.fn(),
+  changePassword: vi.fn(),
+}));
 vi.mock("react-hook-form", async () => (await import("@/lib/fake-form")).fakeForm(form));
 vi.mock("@/hooks/store/user", () => ({ useUser: () => ({ changePassword: form.changePassword }) }));
 vi.mock("@/components/api-token/token-list", () => ({ ApiTokenList: () => null }));

@@ -8,6 +8,7 @@ import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@nerve/api-client";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { KeptForm } from "@/lib/fake-form";
 import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { GeneralProfileSettingsForm } from "./form";
@@ -20,13 +21,11 @@ import { GeneralProfileSettingsForm } from "./form";
 /** What the form's fields hold, as it gives its submit. */
 type Names = { first_name: string; last_name: string; display_name: string; email: string };
 
-const form = vi.hoisted(
-  (): {
-    submit: ((names: Names) => Promise<void>) | undefined;
-    setError: Mock;
-    updateCurrentUser: Mock;
-  } => ({ submit: undefined, setError: vi.fn(), updateCurrentUser: vi.fn() })
-);
+const form = vi.hoisted((): KeptForm<Names> & { updateCurrentUser: Mock } => ({
+  submit: undefined,
+  setError: vi.fn(),
+  updateCurrentUser: vi.fn(),
+}));
 vi.mock("react-hook-form", async () => (await import("@/lib/fake-form")).fakeForm(form));
 vi.mock("@/hooks/store/user", () => ({
   useUser: () => ({ data: undefined, updateCurrentUser: form.updateCurrentUser }),
