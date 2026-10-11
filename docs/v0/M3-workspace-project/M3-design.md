@@ -2115,7 +2115,7 @@ modules/access/
 | P8b `web-project-data` | 项目一侧的数据层（9）；同上，P8a 合并之后开始 | 已完成：[spec](specs/P8b-web-project-data.md)、[plan](plans/P8b-web-project-data.md)、[评审](reviews/P8b-web-project-data-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-6） |
 | P9 `web-workspace-pages` | 工作区的页面（14） | 已完成：[spec](specs/P9-web-workspace-pages.md)、[plan](plans/P9-web-workspace-pages.md)、[评审](reviews/P9-web-workspace-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-12） |
 | P10 `web-project-pages` | 项目的页面（15） | 已完成：[spec](specs/P10-web-project-pages.md)、[plan](plans/P10-web-project-pages.md)、[评审](reviews/P10-web-project-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-18） |
-| P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 未开始 |
+| P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 进行中：[spec](specs/P11-web-states-labels-and-cleanup.md)、[plan](plans/P11-web-states-labels-and-cleanup.md)（10 个 Task；spec 第 3 节的 8 条待裁定） |
 | 收尾 `closeout` | 交接、同步核对、规模对比 | 未开始 |
 
 ## 16. 风险
