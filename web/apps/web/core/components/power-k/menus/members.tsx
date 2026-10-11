@@ -16,18 +16,17 @@ import { PowerKModalCommandItem } from "../ui/modal/command-item";
 
 type Props = {
   handleSelect: (assigneeId: string) => void;
-  heading?: string;
   userIds: string[] | undefined;
   value: string[];
 };
 
 export const PowerKMembersMenu = observer(function PowerKMembersMenu(props: Props) {
-  const { handleSelect, heading, userIds, value } = props;
+  const { handleSelect, userIds, value } = props;
   // store hooks
   const { getUserDetails } = useMember();
 
   return (
-    <Command.Group heading={heading}>
+    <Command.Group>
       {userIds?.map((memberId) => {
         const memberDetails = getUserDetails(memberId);
         if (!memberDetails) return;

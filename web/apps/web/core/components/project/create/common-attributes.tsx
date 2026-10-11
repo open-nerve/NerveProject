@@ -23,11 +23,10 @@ type Props = {
   isMobile: boolean;
   shouldAutoSyncIdentifier: boolean;
   setShouldAutoSyncIdentifier: (value: boolean) => void;
-  handleFormOnChange?: () => void;
 };
 
 function ProjectCommonAttributes(props: Props) {
-  const { setValue, isMobile, shouldAutoSyncIdentifier, setShouldAutoSyncIdentifier, handleFormOnChange } = props;
+  const { setValue, isMobile, shouldAutoSyncIdentifier, setShouldAutoSyncIdentifier } = props;
   const {
     formState: { errors },
     control,
@@ -44,7 +43,6 @@ function ProjectCommonAttributes(props: Props) {
       if (e.target.value === "") setValue("identifier", "");
       else setValue("identifier", projectIdentifierSanitizer(e.target.value).substring(0, 10));
       onChange(e);
-      handleFormOnChange?.();
     };
 
   const handleIdentifierChange = (onChange: (value: string) => void) => (e: ChangeEvent<HTMLInputElement>) => {
@@ -52,7 +50,6 @@ function ProjectCommonAttributes(props: Props) {
     const alphanumericValue = projectIdentifierSanitizer(value);
     setShouldAutoSyncIdentifier(false);
     onChange(alphanumericValue);
-    handleFormOnChange?.();
   };
   return (
     <div className="grid grid-cols-1 gap-x-2 gap-y-3 md:grid-cols-4">
@@ -146,10 +143,7 @@ function ProjectCommonAttributes(props: Props) {
                   name="description"
                   value={value}
                   placeholder={t("description")}
-                  onChange={(e) => {
-                    onChange(e);
-                    handleFormOnChange?.();
-                  }}
+                  onChange={onChange}
                 />
               </TextAreaGroup>
             </Field>

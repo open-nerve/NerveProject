@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
@@ -12,7 +11,7 @@ import { Combobox } from "@headlessui/react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
-import { ChevronDownOutline, ProjectsOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
+import { ProjectsOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { ComboDropDown } from "@nerve/ui";
 import { cn, sortBySelectedFirst } from "@nerve/utils";
 // hooks
@@ -25,14 +24,8 @@ import { BUTTON_VARIANTS_WITH_TEXT } from "../constants";
 import type { TDropdownProps } from "../types";
 
 type Props = TDropdownProps & {
-  button?: ReactNode;
-  currentProjectId?: string;
-  dropdownArrow?: boolean;
-  dropdownArrowClassName?: string;
-  getProjectById: (projectId: string | null | undefined) => Partial<Project> | undefined;
-  onClose?: () => void;
+  getProjectById: (projectId: string | null | undefined) => Project | undefined;
   projectIds: string[];
-  renderByDefault?: boolean;
   renderCondition?: (projectId: string) => boolean;
 } & (
     | {
@@ -47,26 +40,27 @@ type Props = TDropdownProps & {
       }
   );
 
+/** A project's logo, as the dropdown's button shows it. */
+const renderProjectLogo = (logoProps: Project["logo_props"]) => (
+  <span className="grid h-4 w-4 flex-shrink-0 place-items-center">
+    <Logo logo={logoProps} size={14} />
+  </span>
+);
+
 export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: Props) {
   const {
-    button,
     buttonClassName,
     buttonContainerClassName,
     buttonVariant,
     className = "",
-    currentProjectId,
     disabled = false,
-    dropdownArrow = false,
-    dropdownArrowClassName = "",
     getProjectById,
     hideIcon = false,
     multiple,
     onChange,
-    onClose,
     placeholder = "Project",
     placement,
     projectIds,
-    renderByDefault = true,
     renderCondition,
     showTooltip = false,
     tabIndex,
@@ -116,10 +110,9 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
   });
 
   const filteredOptions = sortBySelectedFirst(
-    (query === ""
-      ? options?.filter((o) => o?.value !== currentProjectId)
-      : options?.filter((o) => o?.value !== currentProjectId && o?.query.toLowerCase().includes(query.toLowerCase()))
-    )?.filter((o): o is NonNullable<typeof o> => o !== undefined),
+    (query === "" ? options : options?.filter((o) => o?.query.toLowerCase().includes(query.toLowerCase())))?.filter(
+      (o): o is NonNullable<typeof o> => o !== undefined
+    ),
     value
   );
 
@@ -127,7 +120,6 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     dropdownRef,
     inputRef,
     isOpen,
-    onClose,
     query,
     setIsOpen,
     setQuery,
@@ -138,7 +130,8 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     if (!multiple) handleClose();
   };
 
-  const getDisplayName = (value: string | string[] | null, placeholder: string = "") => {
+  // what the button says: the project picked, how many are, or the placeholder
+  const getDisplayName = () => {
     if (Array.isArray(value)) {
       const firstProject = getProjectById(value[0]);
       return value.length ? (value.length === 1 ? firstProject?.name : `${value.length} projects`) : placeholder;
@@ -147,20 +140,15 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     }
   };
 
-  const getProjectIcon = (value: string | string[] | null) => {
-    const renderIcon = (logoProps: Project["logo_props"]) => (
-      <span className="grid h-4 w-4 flex-shrink-0 place-items-center">
-        <Logo logo={logoProps} size={14} />
-      </span>
-    );
-
+  // the logos of the projects picked
+  const getProjectIcon = () => {
     if (Array.isArray(value)) {
       return (
         <div className="flex items-center gap-0.5">
           {value.length > 0 ? (
             value.map((projectId) => {
               const projectDetails = getProjectById(projectId);
-              return projectDetails?.logo_props ? renderIcon(projectDetails.logo_props) : null;
+              return projectDetails?.logo_props ? renderProjectLogo(projectDetails.logo_props) : null;
             })
           ) : (
             <ProjectsOutline className="size-3 text-tertiary" />
@@ -169,21 +157,11 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
       );
     } else {
       const projectDetails = getProjectById(value);
-      return projectDetails?.logo_props ? renderIcon(projectDetails.logo_props) : null;
+      return projectDetails?.logo_props ? renderProjectLogo(projectDetails.logo_props) : null;
     }
   };
 
-  const comboButton = button ? (
-    <button
-      ref={setReferenceElement}
-      type="button"
-      className={cn("clickable block h-full w-full outline-none", buttonContainerClassName)}
-      onClick={handleOnClick}
-      disabled={disabled}
-    >
-      {button}
-    </button>
-  ) : (
+  const comboButton = (
     <button
       ref={setReferenceElement}
       type="button"
@@ -205,14 +183,10 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
         tooltipContent={value?.length ? `${value.length} project${value.length !== 1 ? "s" : ""}` : placeholder}
         showTooltip={showTooltip}
         variant={buttonVariant}
-        renderToolTipByDefault={renderByDefault}
       >
-        {!hideIcon && getProjectIcon(value)}
+        {!hideIcon && getProjectIcon()}
         {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
-          <span className="max-w-40 truncate">{getDisplayName(value, placeholder)}</span>
-        )}
-        {dropdownArrow && (
-          <ChevronDownOutline className={cn("h-2.5 w-2.5 flex-shrink-0", dropdownArrowClassName)} aria-hidden="true" />
+          <span className="max-w-40 truncate">{getDisplayName()}</span>
         )}
       </DropdownButton>
     </button>
@@ -228,8 +202,8 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
       onChange={dropdownOnChange}
       disabled={disabled}
       onKeyDown={handleKeyDown}
+      role="presentation"
       button={comboButton}
-      renderByDefault={renderByDefault}
       multiple={multiple}
     >
       {isOpen && (
