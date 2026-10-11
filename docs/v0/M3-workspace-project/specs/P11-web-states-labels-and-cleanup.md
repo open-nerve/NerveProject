@@ -266,7 +266,7 @@ S2 的 `REQUESTS` 是每个账户每一页的挂载清单唯一的地方（P8b �
   - Task 9 的文件中 M4 的：`issue-activity/helper.tsx` 2 条（`preserve-caught-error`、`exhaustive-deps`）；复制的拒绝没有处理的两处（`helper.tsx` 的评论链接、`peek-overview/header.tsx` 的工作项链接，附录 A.6；P10 已把复制列给 M4）。
   - 两个工作项的删除确认框的 `onSubmit` 已必传（Task 1，附录 A.4），M4 改写它们时保持。
   - P8a、P8b、P9、P10 交给 M4 的照旧。
-- **M6**：`progress-stats/` 的 8 行（`label.tsx` 5 行、`state_group.tsx` 3 行，第 3 节第 17 条）；Task 9 的文件中 M6 的：`cycles/modal.tsx` 1 条（`no-shadow`）、`module-card-item.tsx` 5 条；模块的收藏和迭代、模块的复制链接的拒绝没有处理（`module-card-item.tsx`、`module-list-item-action.tsx`、`cycles/quick-actions.tsx`、`modules/quick-actions.tsx`：菜单的 `action` 是 `() => void`，丢下 promise，附录 A.6）；P10 交给 M6 的照旧。
+- **M6**：`progress-stats/` 的 8 行（`label.tsx` 5 行、`state_group.tsx` 3 行，第 3 节第 17 条）；Task 9 的文件中 M6 的：`cycles/modal.tsx` 1 条（`no-shadow`）、`module-card-item.tsx` 5 条；迭代、模块的复制链接的拒绝没有处理（`cycles/quick-actions.tsx`、`modules/quick-actions.tsx`：复制交给菜单的 `action`，它是 `() => void`，丢下 promise，附录 A.6）；P10 交给 M6 的照旧。
 - **M7**：`workspace-notifications.ts` 的 17 行（附录 A.9）；`snooze/modal.tsx` 5 条；默认视图的复制链接的拒绝没有处理（`workspace/views/default-view-quick-action.tsx`，附录 A.6）；P10 交给 M7 的照旧。
 - **M8**：`webhook.store.ts` 1 条（`no-accumulating-spread`）；P10 交给 M8 的照旧。
 - **收尾**：
@@ -371,7 +371,7 @@ S2 的清单在 Task 3、5、6 加入，每次 `make e2e` 都核对（2.11）。
 - **错误的读法**（第二类）：P11 改到的页面的每一条出错的路径都经 `errorMessageKey`（`useFormRefusal`、`useRefusalToast`、M2 页面自己的映射），没有吞进 `console.error` 的拒绝，被拒绝的修改结束忙碌。P8b 起这两页的拒绝已经 `useRefusalToast`，P11 改的是拒绝落在哪里（字段下或提示）；删掉的是状态表单的 `catch` 中的 `console.log`（它接不到拒绝）。6 个变异（A.2）。
 - **请求体取自所持的值**（第三类）：状态、标签的移动在轮到它时从 nerve 最近的回答算出（P7a、P7b 的 store，P11 不改）；页面自己不算请求体。
 - **请求在路上时弹窗关得掉**（P9 的第一类）：状态、标签的删除确认框（`AlertModalCore`，第 3 节第 2 条）；新建 API 令牌的弹窗的取消（第 3 节第 18 条，A11）。3 个变异（`T1.2`、`T1.3`、`T7.9`）；被拒绝时留着（A-M2）：删除状态的原来被拒绝时关上（`T2.11`），删除标签的原来请求在路上时关得掉、回答之后不经会话的核对就关上（`T4.10`；它原来就只在 nerve 删除之后关，预检的 L1）。
-- **`AlertModalCore` 的其余 11 个调用方**（裁定 Q2 的条件；预检逐个核对过，结论相同）：`isSubmitting` 是必传的 prop，11 个都传；每一个在每条被拒绝的路上都把忙碌复位，没有一个在被拒绝之后卡在忙里、再也关不掉；卸载时忙碌随组件消失。不用改调用方，没有 W17 的行。
+- **`AlertModalCore` 的其余 11 个调用方**（裁定 Q2 的条件；预检逐个核对过，结论相同）：`isSubmitting` 是必传的 prop，11 个都传；每一个在每条被拒绝的路上都把忙碌复位，没有一个在被拒绝之后卡在忙里、再也关不掉；卸载时忙碌随组件消失。不用改调用方；它们看得到的不同（请求在路上时关不掉）来自组件，与状态、标签的删除确认框一起写在前端改动清单的确认框一行（W17，第 3 节第 2 条）。
 
 | 调用方 | M | store 抛出或拒绝 | 提前返回 | 忙碌 |
 |---|---|---|---|---|
@@ -463,9 +463,9 @@ brief 点名的三种：`.then` 链中新浮出或被藏起的拒绝：没有（
 
 | 处理 | 处数 | 位置 |
 |---|---|---|
-| 链的后面有 `.catch`，或在 `try` 中 `await` | 21 | 迭代的删除、创建、修改、恢复、转移；收集箱、工作项、草稿的删除；模块的删除和两处修改；命令面板的五处复制；Webhook 的创建和重新生成密钥；视图的修改；editor 的浮层定位 |
-| 交回调用方，由它处理 | 6 | `cycles/modal.tsx` 的日期检查和创建、工作项预览的删除、收集箱的暂缓、`global-view.store.ts`、`webhook.store.ts` 的删除 |
-| 没有处理 | 8 | `entry.client.tsx`：`initPromise` 的拒绝在 `then` 之前已由 `.catch(() => {})` 吞下，`then` 之后没有能拒绝的；其余 7 处之前之后同样没有处理：`issue-activity/helper.tsx` 的评论链接、`peek-overview/header.tsx` 的工作项链接的复制（M4），`module-card-item.tsx`、`module-list-item-action.tsx` 的加入收藏（M6），迭代、模块的复制链接（`cycles/quick-actions.tsx`、`modules/quick-actions.tsx`，M6）和默认视图的复制链接（`workspace/views/default-view-quick-action.tsx`，M7）：菜单的 `action` 是 `() => void`，丢下 promise（预检的 L4；第 5 节） |
+| 链的后面有 `.catch`，或交给 `setPromiseToast` | 23 | 链的后面有 `.catch` 的 21 处：迭代的删除、创建、修改、恢复、转移；收集箱、工作项、草稿的删除；模块的删除和两处修改；命令面板的六处复制（其他命令 1、迭代 1、模块 1、工作项 3）；Webhook 的创建和重新生成密钥；视图的修改；editor 的浮层定位。交给 `setPromiseToast` 的 2 处：`module-card-item.tsx`、`module-list-item-action.tsx` 的加入收藏（按钮的处理函数；`setPromiseToast` 的 `promise()` 接上 `.then().catch()`，错误提示就是拒绝的处理，它交回的 promise 再次拒绝时由 `void toasted.catch(() => undefined)` 接住，propel 的 `toast/toast.tsx`） |
+| 交回调用方，由它处理 | 6 | `cycles/modal.tsx` 的日期检查和创建、工作项预览的删除、通知的暂缓、`global-view.store.ts`、`webhook.store.ts` 的删除 |
+| 没有处理 | 6 | `entry.client.tsx`：`initPromise` 的拒绝在 `then` 之前已由 `.catch(() => {})` 吞下，`then` 之后没有能拒绝的；其余 5 处之前之后同样没有处理：`issue-activity/helper.tsx` 的评论链接、`peek-overview/header.tsx` 的工作项链接的复制（M4），迭代、模块的复制链接（`cycles/quick-actions.tsx`、`modules/quick-actions.tsx`，M6：交给菜单的 `action`，它是 `() => void`，丢下 promise）和默认视图的复制链接（`workspace/views/default-view-quick-action.tsx`，M7，同样交给菜单的 `action`）（预检的 L4；第 5 节） |
 
 - 变异 `T9.1`、`T9.2`（去掉一处 `return;`）让 oxlint 的上限失败；`T9.3`（`return;` 移到回调最后一个语句之前）让 `no-unreachable` 失败。
 
