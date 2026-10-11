@@ -11,11 +11,10 @@ import {
 import { expectMember, projectSettingsOf } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, newAccount, register, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { closedByEscape, enabledWithin } from "../../fixtures/dialogs";
 import {
   answerTo,
   bodiesSentTo,
-  closedByEscape,
-  enabledWithin,
   moveWithinApp,
   registerOnboarded,
   sentHeld,

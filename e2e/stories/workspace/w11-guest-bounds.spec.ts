@@ -8,6 +8,7 @@ import {
   listMembers,
   slugFor,
 } from "../../fixtures/api";
+import { expectNoAddress } from "../../fixtures/assert/identity";
 import { workspaceTables } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
@@ -111,8 +112,7 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   const opened = async (path: string, shown: string) => {
     await page.goto(path);
     await expect(page.getByText(shown, { exact: true }).first(), path).toBeVisible();
-    const html = await page.content();
-    expect([html.includes(adminEmail), html.includes(gusEmail)], `the addresses on ${path}`).toEqual([false, false]);
+    await expectNoAddress(page, [adminEmail, gusEmail], path);
   };
   await opened(`/${slug}`, "Web");
   const joined = page.getByRole("complementary", { name: "Main sidebar" }).locator('[id^="sidebar-"][id$="-JOINED"]');

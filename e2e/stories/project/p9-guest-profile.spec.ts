@@ -1,4 +1,5 @@
 import { createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
+import { expectNoAddress } from "../../fixtures/assert/identity";
 import { accountId, emailFor, named } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { registerOnboarded } from "../../fixtures/settings-pages";
@@ -33,11 +34,7 @@ test("P9 (page): a guest opens a member's profile: its card, without the address
     await expect(page.getByText("You do not have the permission to access this page."), name).toBeVisible();
     // no tab of the work items: the assigned, the created, the subscribed
     await expect(page.getByRole("link", { name: /^(Assigned|Created|Subscribed)$/ }), name).toHaveCount(0);
-    const html = await page.content();
-    expect([html.includes(adaEmail), html.includes(gusEmail)], `the addresses on ${name}'s profile`).toEqual([
-      false,
-      false,
-    ]);
+    await expectNoAddress(page, [adaEmail, gusEmail], `${name}'s profile`);
   };
   await profileOf(adaId, "Ada Lovelace", "ada");
   await profileOf(gusId, "Gus Grant", "gus");

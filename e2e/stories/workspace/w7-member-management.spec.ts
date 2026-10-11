@@ -13,7 +13,8 @@ import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "..
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { closedByEscape, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+import { closedByEscape } from "../../fixtures/dialogs";
+import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
 

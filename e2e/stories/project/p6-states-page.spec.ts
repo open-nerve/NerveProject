@@ -12,16 +12,9 @@ import {
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, login } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { closedByEscape, closedWithin, enabledWithin, sentWithin } from "../../fixtures/dialogs";
 import { dragOnto, tabCycle } from "../../fixtures/project-pages";
-import {
-  closedByEscape,
-  closedWithin,
-  enabledWithin,
-  registerOnboarded,
-  sentHeld,
-  sentTo,
-  sentWithin,
-} from "../../fixtures/settings-pages";
+import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 

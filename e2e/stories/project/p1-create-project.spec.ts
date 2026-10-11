@@ -9,13 +9,10 @@ import {
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, named, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { closedByComposingEscape, closedByEscape, composingEscape, hiddenWithin } from "../../fixtures/dialogs";
 import { tabCycle } from "../../fixtures/project-pages";
 import {
-  closedByComposingEscape,
-  closedByEscape,
-  composingEscape,
   expectListBesideButton,
-  hiddenWithin,
   keydownsReachingDocument,
   registerOnboarded,
   sentHeld,

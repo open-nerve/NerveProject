@@ -12,16 +12,8 @@ import {
 import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import {
-  answerTo,
-  closedByEscape,
-  closedWithin,
-  enabledWithin,
-  holdAnswer,
-  registerOnboarded,
-  sentHeld,
-  sentTo,
-} from "../../fixtures/settings-pages";
+import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
+import { answerTo, holdAnswer, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { endProjectMembership, leavingOf, removalOf } from "../../fixtures/project-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, memberRow } from "../../fixtures/workspace-pages";

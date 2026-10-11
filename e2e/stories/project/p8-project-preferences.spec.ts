@@ -16,8 +16,9 @@ import {
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
+import { shownWithin } from "../../fixtures/dialogs";
 import { dragOnto } from "../../fixtures/project-pages";
-import { answerTo, holdAnswer, registerOnboarded, sentTo, shownWithin } from "../../fixtures/settings-pages";
+import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 

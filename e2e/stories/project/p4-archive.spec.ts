@@ -20,14 +20,8 @@ import {
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import {
-  answerTo,
-  closedByComposingEscape,
-  closedByEscape,
-  enabledWithin,
-  registerOnboarded,
-  sentHeld,
-} from "../../fixtures/settings-pages";
+import { closedByComposingEscape, closedByEscape, enabledWithin } from "../../fixtures/dialogs";
+import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 

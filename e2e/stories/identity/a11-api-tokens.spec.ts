@@ -6,12 +6,9 @@ import type { Download } from "@playwright/test";
 import { expectTokenStored } from "../../fixtures/assert/identity";
 import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { downloadedWithin } from "../../fixtures/downloads";
+import { closedByBackdropClick, closedByEscape, downloadedWithin, enabledWithin } from "../../fixtures/dialogs";
 import {
   answerTo,
-  closedByBackdropClick,
-  closedByEscape,
-  enabledWithin,
   expectListBesideButton,
   expectTokenGone,
   holdAnswer,
