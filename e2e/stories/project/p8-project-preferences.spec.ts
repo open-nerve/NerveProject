@@ -16,14 +16,8 @@ import {
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import {
-  answerTo,
-  holdAnswer,
-  registerOnboarded,
-  sentTo,
-  shownWithin,
-  transitionsEnded,
-} from "../../fixtures/settings-pages";
+import { dragOnto } from "../../fixtures/project-pages";
+import { answerTo, holdAnswer, registerOnboarded, sentTo, shownWithin } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
@@ -95,21 +89,14 @@ function inSidebar(page: Page, id: string): Locator {
 }
 
 /**
- * Drags the project of id in page's sidebar onto the one of onto by its handle, which shows while the pointer is over
- * the project: the drag starts there, as a hand's would, once page's transitions have ended. One still under way, as
- * when a toast comes in, can scroll the document, and a scroll between the press and the move starts no drag. Resolves
- * with the body page sends and nerve's answer.
+ * Drags the project of id in page's sidebar onto the one of onto by its handle, its first button, which shows while
+ * the pointer is over the project (dragOnto). Resolves with the body page sends and nerve's answer.
  */
-async function dragOnto(page: Page, id: string, onto: string): Promise<{ body: unknown; answer: Response }> {
-  await transitionsEnded(page.locator("body"));
-  await inSidebar(page, id).hover();
-  await inSidebar(page, id).locator("button").first().hover();
-  await page.mouse.down();
-  await inSidebar(page, id).hover({ position: { x: 60, y: 8 } });
-  return sentTo(page, "PATCH", `/api/v0/me/projects/${id}/preferences`, async () => {
-    await inSidebar(page, onto).hover();
-    await page.mouse.up();
-  });
+function dragInSidebar(page: Page, id: string, onto: string): Promise<{ body: unknown; answer: Response }> {
+  const project = inSidebar(page, id);
+  return sentTo(page, "PATCH", `/api/v0/me/projects/${id}/preferences`, () =>
+    dragOnto(page, project, project.locator("button").first(), inSidebar(page, onto))
+  );
 }
 
 test("P8 (API): the admin opens a project on its modules tab, moves views under more and drags it first in his sidebar, which lasts; an unknown or the work items tab changes nothing; his member's settings stay his own", async ({
@@ -245,7 +232,7 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   // He drags Ops, third in his sidebar, onto Docs, the first, by its handle: Ops goes a step before Docs.
   const order = sidebarOrder(page);
   await expect(order).toHaveText([/Docs/, /Web/, /Ops/]);
-  const moved = await dragOnto(page, ops.id, docs.id);
+  const moved = await dragInSidebar(page, ops.id, docs.id);
   expect([moved.answer.status(), moved.body]).toEqual([200, { sort_order: 35535 }]);
   await expect(order).toHaveText([/Ops/, /Docs/, /Web/]);
 
@@ -299,7 +286,7 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   ]);
   await expect(theGuest.page.getByText("Default tab updated successfully.")).toBeVisible();
   await expect(sidebarOrder(theGuest.page)).toHaveText([/Docs/, /Web/]);
-  const gusMoved = await dragOnto(theGuest.page, web.id, docs.id);
+  const gusMoved = await dragInSidebar(theGuest.page, web.id, docs.id);
   expect([gusMoved.answer.status(), gusMoved.body]).toEqual([200, { sort_order: 45535 }]);
   await expect(sidebarOrder(theGuest.page)).toHaveText([/Web/, /Docs/]);
   expect(await stored(db, web.id, gusEmail)).toEqual([

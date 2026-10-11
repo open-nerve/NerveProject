@@ -21,19 +21,23 @@ import type { Route } from "./+types/page";
 import { StatesProjectSettingsHeader } from "./header";
 
 function StatesSettingsPage({ params }: Route.ComponentProps) {
+  // router: the address's project, as the store gives it (the wrapper shows the page once it has)
   const { workspaceSlug, projectId } = params;
   // store
-  const { currentProjectDetails } = useProject();
+  const { getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
 
   const { t } = useTranslation();
 
   // derived values
-  const pageTitle = currentProjectDetails?.name ? `${currentProjectDetails?.name} - States` : undefined;
-  // derived values
+  const project = getProjectById(projectId);
+  const pageTitle = project ? `${project.name} - States` : undefined;
+  // its members see its states; its guests are told they may not (M3 design 2 W11)
   const canPerformProjectMemberActions = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
   );
 
   if (!canPerformProjectMemberActions) {

@@ -6,7 +6,7 @@
 // A stand-in for the UI kit's controls a page renders (@nerve/ui's selects, modals and context menu, propel's input,
 // button, switch and menu), for the tests of those pages: a test file mocks each such module with this one, for
 // instance vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in
-// `shown` the props each control was given. A control renders nothing, but a modal its children (its form is the
+// `shown` the props each control was given. A control renders nothing, but ModalCore its children (its form is the
 // page's), and a menu its items, as it shows them once open.
 
 import type { ReactNode } from "react";

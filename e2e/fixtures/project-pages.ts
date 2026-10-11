@@ -1,6 +1,6 @@
 import type { Locator, Page, Response } from "@playwright/test";
 
-import { answerTo } from "./settings-pages";
+import { answerTo, transitionsEnded } from "./settings-pages";
 import { memberRow } from "./workspace-pages";
 
 // A project's pages (M3 design 7.6), as a person uses them.
@@ -38,10 +38,10 @@ export async function endProjectMembership(
 }
 
 /**
- * Presses Tab on page until the focus is back where it was, at most 40 times, and gives the stops in order: each the
- * focused element's label, a field's id or a button's text, marked "outside: " when within does not hold it.
+ * Presses Tab on page until the focus is back where it was, at most presses times, and gives the stops in order: each
+ * the focused element's label, a field's id or a button's text, marked "outside: " when within does not hold it.
  */
-export async function tabCycle(page: Page, within: Locator): Promise<string[]> {
+export async function tabCycle(page: Page, within: Locator, presses = 40): Promise<string[]> {
   const box = await within.elementHandle();
   const start = await page.evaluateHandle(() => document.activeElement);
   // each press waits for the one before it: a stop after another
@@ -56,7 +56,30 @@ export async function tabCycle(page: Page, within: Locator): Promise<string[]> {
       },
       { inside: box, first: start }
     );
-    return back || stops.length === 39 ? [...stops, stop] : from([...stops, stop]);
+    return back || stops.length === presses - 1 ? [...stops, stop] : from([...stops, stop]);
   };
   return from([]);
+}
+
+/**
+ * Drags item onto onto by its grip, which may show only while the pointer is over item, as a hand does: once page's
+ * transitions have ended (one still under way, as when a toast comes in, can scroll the document, and a scroll between
+ * the press and the move starts no drag), it presses on the grip, moves within item, which starts the drag, then over
+ * onto, at its point at (its middle when left out), and lets go. Playwright's dragTo moves at once, which pragmatic-dnd
+ * does not take for a drag.
+ */
+export async function dragOnto(
+  page: Page,
+  item: Locator,
+  grip: Locator,
+  onto: Locator,
+  at?: { x: number; y: number }
+): Promise<void> {
+  await transitionsEnded(page.locator("body"));
+  await item.hover();
+  await grip.hover();
+  await page.mouse.down();
+  await item.hover({ position: { x: 60, y: 8 } });
+  await onto.hover(at && { position: at });
+  await page.mouse.up();
 }

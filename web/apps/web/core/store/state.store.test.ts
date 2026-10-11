@@ -60,7 +60,7 @@ describe("StateStore, the states", () => {
     expect(store.getProjectStates(web.id)).toEqual(listed);
     expect(store.projectStates).toEqual(listed);
     expect(store.getProjectStateIds(web.id)).toEqual(ids(listed));
-    expect(store.groupedProjectStates).toEqual({
+    expect(store.getGroupedProjectStates(web.id)).toEqual({
       backlog: [backlog],
       unstarted: [todo],
       started: [doing, review],
@@ -153,7 +153,7 @@ describe("StateStore, the changes", () => {
     const created = await sent(nerve, () => store.createState(web.id, blocking), ["POST", LIST], json(201, blocked));
     expect(nerve.calls[1]?.body).toEqual(blocking);
     expect(created.value).toEqual(blocked);
-    expect(store.groupedProjectStates?.started).toEqual([doing, review, blocked]);
+    expect(store.getGroupedProjectStates(web.id)?.started).toEqual([doing, review, blocked]);
     expect(store.getStatePercentageInGroup(review.id)).toBeCloseTo(66.67, 2);
   });
 
@@ -192,7 +192,7 @@ describe("StateStore, the changes", () => {
       { group: "started", sequence: 30000 },
       { group: "started", sequence: 37500 },
     ]);
-    expect(store.groupedProjectStates?.started).toEqual([reviewFirst, doingAfter]);
+    expect(store.getGroupedProjectStates(web.id)?.started).toEqual([reviewFirst, doingAfter]);
   });
 
   it("changes a state, and moves a state to the end of a group: a step past its last", async () => {

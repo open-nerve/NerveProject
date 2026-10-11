@@ -10,6 +10,7 @@ import { CloseOutline, LoadingOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { State } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 import { AlertModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
@@ -26,6 +27,7 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
   const { totalStates, state } = props;
   // hooks
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
   const { remove } = useStateChanges();
   // states
   const [isDeleteModal, setIsDeleteModal] = useState(false);
@@ -60,6 +62,7 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
 
       <button
         type="button"
+        aria-label={t("common.actions.delete")}
         className={cn(
           "flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-colors focus:outline-none",
           isDeleteDisabled ? "bg-surface-2 text-secondary" : "text-danger-primary hover:bg-layer-1"

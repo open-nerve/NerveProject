@@ -22,9 +22,10 @@ type TProjectState = {
 export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProjectState) {
   const { workspaceSlug, projectId } = props;
   // hooks
-  const { groupedProjectStates, fetchProjectStates } = useProjectState();
+  const { getGroupedProjectStates, fetchProjectStates } = useProjectState();
   const { allowPermissions } = useUserPermissions();
   // derived values
+  const groupedStates = getGroupedProjectStates(projectId);
   const isEditable = allowPermissions(
     [EUserProjectRoles.ADMIN],
     EUserPermissionsLevel.PROJECT,
@@ -36,7 +37,7 @@ export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProje
   useSessionSWR(["PROJECT_STATES", projectId], (id) => fetchProjectStates(id));
 
   // Loader
-  if (!groupedProjectStates) return <ProjectStateLoader />;
+  if (!groupedStates) return <ProjectStateLoader />;
 
-  return <GroupList projectId={projectId} groupedStates={groupedProjectStates} isEditable={isEditable} />;
+  return <GroupList projectId={projectId} groupedStates={groupedStates} isEditable={isEditable} />;
 });

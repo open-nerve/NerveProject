@@ -32,11 +32,10 @@ export interface IStateStore {
   stateMap: Record<string, State>;
   /** The address's project's states, by group, then sequence; undefined until fetched. */
   projectStates: State[] | undefined;
-  /** The address's project's states in each group, every group there; undefined until fetched. */
-  groupedProjectStates: Record<string, State[]> | undefined;
   // computed actions
   getStateById: (stateId: string | null | undefined) => State | undefined;
   getProjectStates: (projectId: string | null | undefined) => State[] | undefined;
+  getGroupedProjectStates: (projectId: string | null | undefined) => Record<string, State[]> | undefined;
   getProjectStateIds: (projectId: string | null | undefined) => string[] | undefined;
   getStatePercentageInGroup: (stateId: string | null | undefined) => number | undefined;
   // fetch actions
@@ -77,7 +76,6 @@ export class StateStore implements IStateStore {
       // computed
       stateMap: computed,
       projectStates: computed,
-      groupedProjectStates: computed,
       // actions
       fetchProjectStates: action,
       fetchWorkspaceStates: action,
@@ -104,14 +102,6 @@ export class StateStore implements IStateStore {
     return this.getProjectStates(this.router.projectId);
   }
 
-  get groupedProjectStates() {
-    const states = this.projectStates;
-    if (!states) return undefined;
-    return Object.fromEntries(
-      Object.keys(STATE_GROUPS).map((group) => [group, states.filter((state) => state.group === group)])
-    );
-  }
-
   /** @description the state, of a project the caller sees, as the store last had it from nerve */
   getStateById = computedFn((stateId: string | null | undefined): State | undefined =>
     stateId ? this.stateMap[stateId] : undefined
@@ -128,6 +118,15 @@ export class StateStore implements IStateStore {
       this.projects.get(project.id) ??
       this.workspaces.get(project.workspace_id)?.filter((state) => state.project_id === project.id);
     return listed && sortStates(listed);
+  });
+
+  /** @description the project's states in each group, every group there, in their order; undefined as getProjectStates */
+  getGroupedProjectStates = computedFn((projectId: string | null | undefined): Record<string, State[]> | undefined => {
+    const states = this.getProjectStates(projectId);
+    if (!states) return undefined;
+    return Object.fromEntries(
+      Object.keys(STATE_GROUPS).map((group) => [group, states.filter((state) => state.group === group)])
+    );
   });
 
   getProjectStateIds = computedFn((projectId: string | null | undefined): string[] | undefined =>
