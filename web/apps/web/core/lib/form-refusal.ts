@@ -8,7 +8,7 @@ import { useTranslation } from "@nerve/i18n";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { ApiError } from "@/lib/api-error";
-import { PROBLEM_MESSAGES, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 
 /** What a form shows of nerve's refusal: under the fields it names (their messages' i18n keys), or a toast. */
 export type FormRefusal<F extends string> = { kind: "fields"; fields: Partial<Record<F, string>> } | { kind: "toast" };
@@ -27,8 +27,9 @@ export function formRefusal<F extends string>(
   const code = error instanceof ApiError ? (error.problem?.code ?? "") : "";
   const field = taken[code];
   if (field) {
-    // by the field's name, as fieldErrorKeys gives a problem's fields
-    const named: Partial<Record<string, string>> = { [field]: PROBLEM_MESSAGES[code] };
+    // the message keyed by the field's name; typed as fieldErrorKeys' messages are, since TypeScript takes those
+    // as Partial<Record<F, string>> but not an object literal keyed by a value of the generic F
+    const named: Partial<Record<string, string>> = { [field]: errorMessageKey(error) };
     return { kind: "fields", fields: named };
   }
   if (needsErrorBanner(error, fields)) return { kind: "toast" };
