@@ -309,7 +309,13 @@
         "web/apps/web/core/components/labels/use-label-changes.ts",
         "web/apps/web/core/components/labels/use-label-changes.test.ts",
         "web/apps/web/core/components/labels/project-setting-label-group.test.tsx",
-        "web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx"
+        "web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx",
+        "web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx",
+        "web/apps/web/core/components/settings/profile/content/pages/security.test.tsx",
+        "web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx",
+        "web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx",
+        "web/apps/web/core/components/api-token/delete-token-modal.test.tsx",
+        "web/apps/web/core/lib/fake-form.ts"
       ],
       "rules": {
         "typescript/no-non-null-assertion": "error"

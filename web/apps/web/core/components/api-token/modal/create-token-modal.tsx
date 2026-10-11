@@ -12,6 +12,8 @@ import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { renderFormattedDate, csvDownload } from "@nerve/utils";
 // hooks
 import { useApiTokens } from "@/hooks/store/user";
+// lib
+import { followInSession } from "@/lib/in-session";
 // local imports
 import { CreateApiTokenForm } from "./form";
 import { GeneratedTokenDetails } from "./generated-token-details";
@@ -31,8 +33,8 @@ export function CreateApiTokenModal(props: Props) {
   const [generatedToken, setGeneratedToken] = useState<ApiTokenCreated | null>(null);
   const [wasOpen, setWasOpen] = useState(isOpen);
   // The modal's phase, which moves on at each opening and each close (and when the page is left). What a phase
-  // started and finishes in another acts on no opening of its own, so it does nothing: a create answered after
-  // its opening closed (Cancel stays clickable while it is out) keeps no secret and downloads no CSV, and the
+  // started and finishes in another acts on no opening of its own, so it does nothing: a create answered after its
+  // page was left (the form cannot be closed while the create is out) keeps no secret and downloads no CSV, and the
   // list shows the token, which can be revoked there; the cleanup after a close leaves a modal opened again
   // meanwhile as it is. A count, not an open flag, so that a close and a reopening are two moves.
   const phase = useRef(0);
@@ -82,12 +84,18 @@ export function CreateApiTokenModal(props: Props) {
     csvDownload(csvData, `secret-key-${Date.now()}`);
   };
 
-  const handleCreateToken = async (data: ApiTokenCreate) => {
+  // Followed only in the session the create was sent in (M3 design 7.1) and in its opening: the token shown and its
+  // CSV downloaded, or nerve's refusal said by the form.
+  const handleCreateToken = (data: ApiTokenCreate, refused: (error: unknown) => void) => {
     const opening = phase.current;
-    const created = await createToken(data);
-    if (phase.current !== opening) return;
-    setGeneratedToken(created);
-    downloadSecretKey(created);
+    return followInSession(() => createToken(data), {
+      done: (created) => {
+        if (phase.current !== opening) return;
+        setGeneratedToken(created);
+        downloadSecretKey(created);
+      },
+      failed: refused,
+    });
   };
 
   return (

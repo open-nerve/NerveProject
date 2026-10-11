@@ -33,8 +33,8 @@ type Props = {
   handleClose: () => void;
   neverExpires: boolean;
   toggleNeverExpires: () => void;
-  /** Creates the token; fails as nerve refuses. */
-  onSubmit: (data: ApiTokenCreate) => Promise<void>;
+  /** Creates the token, and says nerve's refusal by refused, the form's; settles once the page has followed it. */
+  onSubmit: (data: ApiTokenCreate, refused: (error: unknown) => void) => Promise<void>;
 };
 
 type TFormValues = {
@@ -68,25 +68,25 @@ export function CreateApiTokenForm(props: Props) {
   const { t } = useTranslation();
   const toastRefusal = useRefusalToast();
 
+  // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
+  const showRefusal = (error: unknown) => {
+    const fields = fieldErrorKeys(error);
+    if (fields.label !== undefined) setError("label", { type: "manual", message: t(fields.label) });
+    if (fields.expired_at !== undefined) setError("expiry", { type: "manual", message: t(fields.expired_at) });
+    if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
+  };
+
+  // Busy, Cancel too, until the page has followed nerve's answer (M3 design 7.1).
   const handleFormSubmit = async (data: TFormValues) => {
     const expiresAt = data.expiry === null ? undefined : expiryDate(data.expiry, new Date(), customDate);
     if (!neverExpires && expiresAt === undefined) {
       setError("expiry", { type: "manual", message: t("account_settings.api_tokens.expiry.required") });
       return;
     }
-    try {
-      await onSubmit({
-        label: data.label,
-        description: data.description,
-        expired_at: neverExpires ? null : expiresAt?.toISOString(),
-      });
-    } catch (error) {
-      // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
-      const fields = fieldErrorKeys(error);
-      if (fields.label !== undefined) setError("label", { type: "manual", message: t(fields.label) });
-      if (fields.expired_at !== undefined) setError("expiry", { type: "manual", message: t(fields.expired_at) });
-      if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
-    }
+    await onSubmit(
+      { label: data.label, description: data.description, expired_at: neverExpires ? null : expiresAt?.toISOString() },
+      showRefusal
+    );
   };
 
   const tomorrow = add(new Date(), { days: 1 });
@@ -220,7 +220,7 @@ export function CreateApiTokenForm(props: Props) {
           <span className="text-11">{t("workspace_settings.settings.api_tokens.never_expires")}</span>
         </label>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
             {t("cancel")}
           </Button>
           <Button variant="primary" type="submit" loading={isSubmitting}>

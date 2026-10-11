@@ -13,6 +13,8 @@ import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useApiTokens } from "@/hooks/store/user";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 type Props = {
   isOpen: boolean;
@@ -34,20 +36,22 @@ export function DeleteApiTokenModal(props: Props) {
     setDeleteLoading(false);
   };
 
+  // Busy, and the dialog not to be dismissed, until the page has followed nerve's answer, only in the session the
+  // revocation was sent in (M3 design 7.1): it says so and closes, or says nerve's reason and stays.
   const handleDeletion = async () => {
     setDeleteLoading(true);
-    try {
-      await revokeToken(tokenId);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("workspace_settings.settings.api_tokens.delete.success.title"),
-        message: t("workspace_settings.settings.api_tokens.delete.success.message"),
-      });
-      handleClose();
-    } catch (error) {
-      toastRefusal(error);
-      setDeleteLoading(false);
-    }
+    await followInSession(() => revokeToken(tokenId), {
+      done: () => {
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("workspace_settings.settings.api_tokens.delete.success.title"),
+          message: t("workspace_settings.settings.api_tokens.delete.success.message"),
+        });
+        handleClose();
+      },
+      failed: toastRefusal,
+    });
+    setDeleteLoading(false);
   };
 
   return (

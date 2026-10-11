@@ -56,32 +56,21 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
     mode: "onChange",
   });
 
-  /** Saves the names; false when nerve did not, so the step stays (M2 design 7.1: nor for another account). */
-  const handleSubmitUserDetail = async (formData: TProfileSetupFormValues): Promise<boolean> => {
+  const onSubmit = async (formData: TProfileSetupFormValues) => {
+    if (!user) return;
     const userDetailsPayload: UserUpdate = {
       first_name: formData.first_name,
       last_name: formData.last_name,
     };
-    try {
-      await updateCurrentUser(userDetailsPayload);
-      return true;
-    } catch (error) {
-      // A refusal of the name shows under it, anything else in a toast (M2 design 7.3).
-      const key = fieldErrorKeys(error).first_name;
-      if (key !== undefined) setError("first_name", { type: "manual", message: t(key) });
-      if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
-      return false;
-    }
-  };
-
-  const onSubmit = async (formData: TProfileSetupFormValues) => {
-    if (!user) return;
-    // the onboarding goes on only in the session the names were sent in (M3 design 7.1); what the step says of a
-    // refusal is M2's (M3/P9 spec 5: P11)
-    await followInSession(() => handleSubmitUserDetail(formData), {
-      done: (named) => (named ? onDone() : undefined),
-      // handleSubmitUserDetail says why itself, and answers false: it does not reject
-      failed: () => undefined,
+    // Only in the session the names were sent in (M3 design 7.1): the onboarding goes on once nerve has them; the step
+    // stays when nerve refuses them, a refusal of the name shown under it, anything else in a toast (M2 design 7.3).
+    await followInSession(() => updateCurrentUser(userDetailsPayload), {
+      done: () => onDone(),
+      failed: (error) => {
+        const key = fieldErrorKeys(error).first_name;
+        if (key !== undefined) setError("first_name", { type: "manual", message: t(key) });
+        if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
+      },
     });
   };
 

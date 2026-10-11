@@ -16,6 +16,8 @@ import { SettingsControlItem } from "@/components/settings/control-item";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 // The i18n key of the day's name.
 const startOfWeekLabelKey = (startOfWeek: StartOfTheWeek | undefined) =>
@@ -31,18 +33,17 @@ export const StartOfWeekPreference = observer(function StartOfWeekPreference(pro
   // derived values
   const labelKey = startOfWeekLabelKey(userProfile?.start_of_the_week);
 
-  const handleStartOfWeekChange = async (val: StartOfTheWeek) => {
-    try {
-      await updateUserProfile({ start_of_the_week: val });
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: t("toast.success"),
-        message: t("power_k.preferences_actions.toast.generic.success"),
-      });
-    } catch (error) {
-      toastRefusal(error);
-    }
-  };
+  // It says how nerve settled the change only in the session it was sent in (M3 design 7.1).
+  const handleStartOfWeekChange = (val: StartOfTheWeek) =>
+    followInSession(() => updateUserProfile({ start_of_the_week: val }), {
+      done: () =>
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("toast.success"),
+          message: t("power_k.preferences_actions.toast.generic.success"),
+        }),
+      failed: toastRefusal,
+    });
 
   return (
     <SettingsControlItem
