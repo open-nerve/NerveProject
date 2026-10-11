@@ -4,7 +4,7 @@
 
 **Goal:** M3 的最后一批页面和 M3 的清理。页面：项目设置的 states、labels 两页接上 P8b 的数据层，行为按 M3 设计第 2 节的故事 P6、P7、W11：项目管理员和是工作区管理员的项目成员增删改、拖动、设默认（状态）、拖进拖出标签组（标签），项目的其他成员只能看，访客看到没有权限；每个修改只在发出它的会话里跟进（`followInSession`），名字已被占用显示在名字下方，被拒绝时表单和弹窗留着，请求在路上时表单忙、弹窗关不掉；控件 Tab 能到、有名字、Tab 到达时看得见。访客看到的个人主页（P9 的页面版本，决策点 3 的 A：页面不变）。M2 的账户页面（新手引导的资料一步、个人设置的 general、preferences、security，security 页的 API 令牌的新建和撤销在内）的提示、字段错误和新令牌只在发出修改的会话里（P9 的裁定 P8；预检的 M1），新建令牌的弹窗在请求路上时关不掉。清理：M3 的死成员和死 prop（`domains.mjs --rows M3`）、P8a 和 P8b 留下的只经机械步骤到达的文件的 oxlint 警告、`promise(always-return)` 全仓清零、关键词守卫的最终核对。P6、P7、P9、W11 的页面版本，S2 的挂载清单加上 P11 的页面。
 
-**Architecture:** 只改 web、`e2e/`、根目录 `.oxlintrc.json`（非空断言的范围：Task 1–5、7 各加它新建的模块和测试；Task 9 把 `no-unreachable` 设为 error）、`tools/keywords.json`（`project-address-route` 加 P11 的五个文件：Task 3、5）和四份文档（README、前端改动清单、M1 收尾交接和 M1-P2 交接的处理结果）。页面调用 store 的方法，不调 service；会话的每个取数经 `useSessionSWR`。共用的新部分：`core/lib/form-refusal.ts`（`formRefusal`、`useFormRefusal`：表单的拒绝落到字段下或提示，P10 的 `projectRefusal` 改为以它写成，状态和标签的表单也用它；Task 1）；`@nerve/ui` 的 `AlertModalCore` 在请求路上时关不掉（P9 的 F-1；它在 M2、M4–M8 的其余 11 个调用方一样，每个在被拒绝时都结束忙碌，spec 附录 A.4；Task 1）；`@nerve/ui` 的 `DragHandle` 只给指针用（不是 Tab 停留点，辅助技术不读它；它的 4 个调用方一样；Task 5）；`useStateChanges`（Task 2）、`useLabelChanges`（Task 4）：每个修改经 store、经 `followInSession`，拒绝经 `useFormRefusal` 或 `useRefusalToast`，标签放到第三层的拒绝说标签只有两层。store 的两个 getter 改为以项目的 id 读（`getGroupedProjectStates(projectId)`、`getProjectLabelsTree(projectId)`，Task 3、5；原来读 router store 的项目）。e2e 的共用部分：P8 故事的 `dragOnto` 移进 `e2e/fixtures/project-pages.ts`，`tabCycle` 收按 Tab 的次数（Task 3）。清理（Task 8、9）只删没有读者、没有调用方传入的成员和 prop，只改 oxlint 指出的写法；每一处改动的行为照旧，或写进前端改动清单（spec 附录 A.5、A.6）。契约、Go 代码和生成的文件都不变。
+**Architecture:** 只改 web、`e2e/`、根目录 `.oxlintrc.json`（非空断言的范围：Task 1–5、7 各加它新建的模块和测试；Task 9 把 `no-unreachable` 设为 error）、`tools/keywords.json`（`project-address-route` 加 P11 的五个文件：Task 3、5）和四份文档（README、前端改动清单、M1 收尾交接和 M1-P2 交接的处理结果）。页面调用 store 的方法，不调 service；会话的每个取数经 `useSessionSWR`。共用的新部分：`core/lib/form-refusal.ts`（`formRefusal`、`useFormRefusal`：表单的拒绝落到字段下或提示，P10 的 `projectRefusal` 改为以它写成，状态和标签的表单也用它；Task 1）；`@nerve/ui` 的 `AlertModalCore` 在请求路上时关不掉（P9 的 F-1；它在 M2、M4–M8 的其余 11 个调用方一样，每个在被拒绝时都结束忙碌，spec 附录 A.4；Task 1）；`@nerve/ui` 的 `DragHandle` 只给指针用（不是 Tab 停留点，辅助技术不读它；它的 4 个调用方一样；Task 5）；共用组件的焦点和名字（Task 5，任务评审的裁定）：propel 的 `Button`、`IconButton` 在键盘取得焦点时有离开它 2 像素的轮廓，`@nerve/ui` 的 `CustomMenu` 的省略号按钮不再 `outline-none`，`Popover` 收 `buttonAriaLabel`；`useStateChanges`（Task 2）、`useLabelChanges`（Task 4）：每个修改经 store、经 `followInSession`，拒绝经 `useFormRefusal` 或 `useRefusalToast`，标签放到第三层的拒绝说标签只有两层。store 的两个 getter 改为以项目的 id 读（`getGroupedProjectStates(projectId)`、`getProjectLabelsTree(projectId)`，Task 3、5；原来读 router store 的项目）。e2e 的共用部分：P8 故事的 `dragOnto` 移进 `e2e/fixtures/project-pages.ts`，`tabCycle` 收按 Tab 的次数（Task 3）；`e2e/fixtures/assert/identity.ts` 的 `expectNoAddress`（Task 6）；新的 `e2e/fixtures/dialogs.ts`：弹窗和"一秒之内"的检查从 `settings-pages.ts` 移来，`closedByBackdropClick`，一个 `happenedWithin` 和它的两个名字 `sentWithin`、`downloadedWithin`（Task 7）；测试的 `core/lib/fake-form.ts`（Task 7）。清理（Task 8、9）只删没有读者、没有调用方传入的成员和 prop，只改 oxlint 指出的写法；每一处改动的行为照旧，或写进前端改动清单（spec 附录 A.5、A.6）。契约、Go 代码和生成的文件都不变。
 
 **Tech Stack:** React 19.2.8、React Router 8.3.0、MobX 6.12.0、SWR 2.4.2、openapi-fetch 0.17.0、Headless UI 2.2.10、react-hook-form 7.84、pragmatic-drag-and-drop 1.7.4、TypeScript 5.8.3、vitest 4.1.11、oxlint 1.51.0、oxfmt 0.35.0、knip 6.37.0、turbo 2.10.11；Node 24、pnpm 11.10.0、Playwright 1.63.0；Go 1.27.1（Go 代码不变）。版本都由 `pnpm-lock.yaml` 固定。
 
@@ -27,8 +27,8 @@
   - ````` ````old <路径> ````` 与紧跟着的 ````` ````new <路径> `````：`old` 的文字在文件当前版本中恰好出现一次，把它换成 `new` 的文字；
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
-  一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `7d6a416b` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A.10）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。Task 9 的 35 处 `return;` 是一个一次性的脚本在原型中写出的（spec 附录 A.6），这里照样写成块。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1–5、7 每个 Task 加它的文件，Task 9 加 `no-unreachable`）、`web/apps/web/package.json`（Task 2、8、9 的上限）、`tools/keywords.json`（Task 3、5）、`states-labels.test.tsx`（Task 3、5）、状态的 `group-item.tsx`、`root.tsx`、`state-item-title.tsx`、`options/delete.tsx`（Task 2、3）、标签的 `project-setting-label-group.tsx`、`project-setting-label-list.tsx`（Task 4、5），两个工作项的删除确认框（Task 1 的 `onSubmit` 必传、Task 9 的 `return;`），以及 S2（Task 3、5、6）、W11（Task 3、5）。每个过渡版本都在逐 Task 复现中运行过。
+  一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `7d6a416b` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A.10）；最终评审的修复轮之后，块由各 Task 提交的代码重新写出，全部应用之后与修复轮之后的代码逐字节相同（spec 附录 A.10）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。Task 9 的 35 处 `return;` 是一个一次性的脚本在原型中写出的（spec 附录 A.6），这里照样写成块。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：根目录 `.oxlintrc.json`（Task 1–5、7 每个 Task 加它的文件，Task 9 加 `no-unreachable`）、`web/apps/web/package.json`（Task 2、8、9 的上限）、`tools/keywords.json`（Task 3、5）、`states-labels.test.tsx`（Task 3、5）、状态的 `group-list.tsx`、`group-item.tsx`、`state-list.tsx`、`state-item.tsx`、`root.tsx`、`state-item-title.tsx`、`options/delete.tsx` 和 `core/lib/fake-controls.ts`（Task 2、3）、状态的表单 `create-update/form.tsx`（Task 2、5）、`state.store.ts` 和它的测试（Task 3、5）、标签的 `create-update-label-inline.tsx`、`project-setting-label-item.tsx`、`project-setting-label-group.tsx`、`project-setting-label-list.tsx`（Task 4、5），两个工作项的删除确认框（Task 1 的 `onSubmit` 必传、Task 9 的 `return;`），以及 `e2e/fixtures/settings-pages.ts`（Task 3、7）、P6 的页面版本（Task 3、5、7）、P7 的页面版本（Task 5、7）、P1（Task 6、7）、P8（Task 3、7）、S2（Task 3、5、6）、W11（Task 3、5、6）。每个过渡版本都在逐 Task 复现中运行过；任务评审的修正轮和最终评审的修复轮之后，各 Task 的块由那时提交的代码重新写出（spec 附录 A.10 的修复轮一段）。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint（上限和 `.oxlintrc.json` 的错误级规则）、关键词守卫，以及 `make knip`；vitest：`make test-web`；端到端：`make e2e` 的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p11tools/mutants_p11.py`，`mut.py` 在它写的每个检查上各跑一次），也在各自 Task 的树上跑过（spec 附录 A.2）；表中标"（Task N 起）"的检查只在第 N 个 Task 加入的测试中才让它失败（在变异自己的 Task 的树上它还活着，在第 N 个 Task 的树上核对过）。**会话、权限或取数的性质只由评审才能发现的，算缺口**（brief）：表中每一条这类性质都有一个会失败的检查。
 - **评审敏感**（M3 设计 12 节 P11 的评审重点）：每个修改的跟进只在发出它的会话里（`useStateChanges`、`useLabelChanges` 和账户页面的 vitest 的 `lateSettlings`）；页面只提供 nerve 允许的（改状态、标签的控件只给项目管理员和是工作区管理员的项目成员：`states-labels.test.tsx` 在 store 自己的权限上核对，P6、P7 的页面版本以成员和工作区管理员各看一次）；访客打开个人主页不取工作项（P9 的页面版本、S2）；请求在路上时弹窗关不掉、表单忙（故事扣住请求）；清理的每一处行为照旧（spec 附录 A.5、A.6）。改动这些之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -46,56 +46,68 @@
 | `web/packages/ui/src/modals/alert-modal.tsx` | `AlertModalCore`：`isSubmitting` 时取消禁用，Escape 和点外面不关（P9 的 F-1） | 1 |
 | `web/apps/web/core/components/issues/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/workspace-draft/delete-modal.tsx` | 两个工作项的删除确认框的 `onSubmit` 必传（Task 1）；`then()` 的回调末尾加 `return;`（Task 9） | 1、9 |
 | `web/apps/web/core/components/project-states/use-state-changes.ts`、`web/apps/web/core/components/project-states/use-state-changes.test.ts` | `useStateChanges`：状态的创建、修改、移动、删除、设默认经 store、经 `followInSession`，拒绝在字段下或提示；它的 vitest（新文件） | 2 |
-| `web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project-states/create-update/create.tsx`、`web/apps/web/core/components/project-states/create-update/update.tsx`、`web/apps/web/core/components/project-states/create-update/create-update.test.tsx` | 状态的表单用 react-hook-form：忙到页面跟进完，取消也按不了，nerve 指名的字段错误在字段下；创建、修改经 `useStateChanges`；它们的 vitest | 2 |
+| `web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project-states/create-update/create.tsx`、`web/apps/web/core/components/project-states/create-update/update.tsx`、`web/apps/web/core/components/project-states/create-update/create-update.test.tsx` | 状态的表单用 react-hook-form：忙到页面跟进完，取消也按不了，nerve 指名的字段错误在字段下；创建、修改经 `useStateChanges`；它们的 vitest（Task 2）；颜色按钮名为"Color"（Task 5） | 2、5 |
 | `web/apps/web/core/components/project-states/options/delete.tsx` | 删除经 `useStateChanges`，确认框在跟进做完之前忙、关不掉，只在成功的跟进中关上（Task 2）；删除按钮有名字（Task 3） | 2、3 |
 | `web/apps/web/core/components/project-states/options/delete.test.tsx` | 哪些状态提供删除，确认之后发出什么，拒绝的提示（新文件） | 2 |
 | `web/apps/web/core/components/project-states/options/mark-as-default.tsx` | 设默认经 `useStateChanges`，忙到跟进做完 | 2 |
-| `web/apps/web/core/components/project-states/root.tsx` | 不再拼回调（Task 2）；项目的状态按路由的项目读（`getGroupedProjectStates`，Task 3） | 2、3 |
-| `web/apps/web/core/components/project-states/group-list.tsx`、`web/apps/web/core/components/project-states/state-list.tsx`、`web/apps/web/core/components/project-states/state-item.tsx` | 不再传回调和没人传的 `className`；状态的一行以 id 为 key；移动经 `useStateChanges` | 2 |
-| `web/apps/web/core/components/project-states/group-item.tsx` | 组标题是按钮（`aria-expanded`），不再传回调（Task 2）；加状态的按钮有名字（Task 3） | 2、3 |
+| `web/apps/web/core/components/project-states/root.tsx` | 不再拼回调（Task 2）；项目的状态按路由的项目读（`getGroupedProjectStates`），不再自己取状态（项目的包装层取的那一次就是，Task 3） | 2、3 |
+| `web/apps/web/core/components/project-states/group-list.tsx`、`web/apps/web/core/components/project-states/state-list.tsx`、`web/apps/web/core/components/project-states/state-item.tsx` | 不再传回调和没人传的 `className`；状态的一行以 id 为 key；移动经 `useStateChanges`（Task 2）；不再传没有读者的 `groupedStates`（Task 3） | 2、3 |
+| `web/apps/web/core/components/project-states/group-item.tsx` | 组标题是按钮（`aria-expanded`），不再传回调（Task 2）；加状态的按钮有名字，不再转交 `groupedStates`（Task 3） | 2、3 |
 | `web/apps/web/core/components/project-states/state-item-title.tsx` | 一个类型（`disabled` 为布尔），没人传的 `shouldShowDescription` 删除（Task 2）；一行的控件 Tab 能到、Tab 到达时看得见，编辑按钮有名字（Task 3） | 2、3 |
 | `web/packages/types/src/state.ts`、`web/packages/types/src/index.ts` | `TStateOperationsCallbacks`（只有状态的组件读它）删除 | 2 |
-| `web/apps/web/core/lib/fake-controls.ts` | `AlertModalCore` 的替身留下它收到的 props | 2 |
+| `web/apps/web/core/lib/fake-controls.ts` | `AlertModalCore` 的替身留下它收到的 props（Task 2）；说明照实写（Task 3） | 2、3 |
 | `web/apps/web/package.json` | web 的 oxlint 上限 348 → 346（Task 2）→ 337（Task 8）→ 303（Task 9） | 2、8、9 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx` | 状态设置页从路由读项目，`allowPermissions` 写明工作区和项目 | 3 |
-| `web/apps/web/core/store/state.store.ts`、`web/apps/web/core/store/state.store.test.ts` | `getGroupedProjectStates(projectId)` 代替读 router store 的 `groupedProjectStates` | 3 |
+| `web/apps/web/core/store/state.store.ts`、`web/apps/web/core/store/state.store.test.ts` | `getGroupedProjectStates(projectId)` 代替读 router store 的 `groupedProjectStates`（Task 3）；store 的测试核对它读给它的项目（Task 5） | 3、5 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx` | 状态（Task 3）、标签（Task 5）的设置页给谁看什么：在 store 自己的权限上核对（新文件） | 3、5 |
 | `tools/keywords.json` | `project-address-route` 加状态设置页和它的根组件（Task 3）、标签设置页、标签列表和它的拖放组件（Task 5） | 3、5 |
 | `e2e/fixtures/project-pages.ts` | `dragOnto`（从 P8 的故事移来）；`tabCycle` 收按 Tab 的次数 | 3 |
-| `e2e/stories/project/p6-states-page.spec.ts` | P6 的页面版本（新文件） | 3 |
-| `e2e/stories/project/p6-states.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts` | P6 的 API 版本的说明指向页面版本；P8 的拖动用 fixture 的 `dragOnto` | 3 |
-| `e2e/stories/workspace/w11-guest-bounds.spec.ts` | W11 的页面版本：访客打开状态（Task 3）、标签（Task 5）的设置页看到没有权限 | 3、5 |
+| `e2e/stories/project/p6-states-page.spec.ts` | P6 的页面版本（新文件，Task 3）；状态表单的颜色按钮按名字找（Task 5）；弹窗的检查从 `dialogs.ts` 导入（Task 7） | 3、5、7 |
+| `e2e/stories/project/p6-states.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts` | P6 的 API 版本的说明指向页面版本；P8 的拖动用 fixture 的 `dragOnto`（Task 3）；P8 的 `shownWithin` 从 `dialogs.ts` 导入（Task 7） | 3、7 |
+| `e2e/stories/workspace/w11-guest-bounds.spec.ts` | W11 的页面版本：访客打开状态（Task 3）、标签（Task 5）的设置页看到没有权限；邮箱的核对经 `expectNoAddress`（Task 6） | 3、5、6 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | S2 的挂载清单加上状态（Task 3）、标签（Task 5）的设置页和访客打开的两个个人主页（Task 6） | 3、5、6 |
 | `web/apps/web/core/components/labels/use-label-changes.ts`、`web/apps/web/core/components/labels/use-label-changes.test.ts` | `useLabelChanges`：标签的创建、修改、移动、移出组、删除经 store、经 `followInSession`，拒绝在名字下或提示，第三层说标签只有两层；它的 vitest（新文件） | 4 |
-| `web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.test.tsx` | 标签的表单忙到页面跟进完，取消也按不了，名字已被占用在名字下；新建还是修改只由 `labelToUpdate` 决定；经 `useLabelChanges`；它的 vitest | 4 |
+| `web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.test.tsx` | 标签的表单忙到页面跟进完，取消也按不了，名字已被占用在名字下；新建还是修改只由 `labelToUpdate` 决定；经 `useLabelChanges`；它的 vitest（Task 4）；颜色按钮名为"Color"、有焦点的轮廓，没有颜色的标签改名不发颜色，不再有显示和隐藏的接线，`onClose` 必传（Task 5） | 4、5 |
 | `web/apps/web/core/components/labels/delete-label-modal.tsx` | 删除经 `useLabelChanges`，确认框只在成功的跟进中关上 | 4 |
-| `web/apps/web/core/components/labels/project-setting-label-item.tsx` | 不再收回调，移出组经 `useLabelChanges`，表单收项目 | 4 |
+| `web/apps/web/core/components/labels/project-setting-label-item.tsx` | 不再收回调，移出组经 `useLabelChanges`，表单收项目（Task 4）；表单只收 `onClose`（Task 5） | 4、5 |
 | `web/apps/web/core/components/labels/project-setting-label-group.tsx` | 不再收、不再传回调，表单收项目（Task 4）；组的那一行的菜单和手柄只给能改标签的人，组的展开按钮以标签的名字为名（Task 5） | 4、5 |
-| `web/apps/web/core/components/labels/project-setting-label-list.tsx` | 移动经 `useLabelChanges`（Task 4）；工作区和项目由页面给，标签按项目的 id 读，没有标签时的按钮只给能改标签的人（Task 5） | 4、5 |
+| `web/apps/web/core/components/labels/project-setting-label-list.tsx` | 移动经 `useLabelChanges`（Task 4）；工作区和项目由页面给，标签按项目的 id 读，没有标签时的按钮只给能改标签的人，不再给表单 `ref`（Task 5） | 4、5 |
 | `web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json` | `project_settings.labels.parent_not_allowed`：标签只有两层 | 4 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx` | 标签设置页从路由读项目，`allowPermissions` 写明工作区和项目 | 5 |
 | `web/apps/web/core/store/label.store.ts`、`web/apps/web/core/store/label.store.test.ts`、`web/apps/web/core/store/label.store.changes.test.ts` | `getProjectLabelsTree(projectId)` 代替读 router store 的 `projectLabelsTree` | 5 |
 | `web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx` | 拖动只由此刻渲染的手柄开始（回调的 ref），手柄只给能改标签的人 | 5 |
 | `web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx` | 拖动以行此刻渲染的手柄登记，行换了手柄时重新登记（新文件） | 5 |
 | `web/packages/ui/src/drag-handle.tsx` | `DragHandle` 只给指针用：不是 Tab 停留点，辅助技术不读它（它的 4 个调用方同样） | 5 |
+| `web/packages/ui/src/popovers/popover.tsx`、`web/packages/ui/src/popovers/types.ts` | `Popover` 的 `buttonAriaLabel`：按钮的名字（状态表单的颜色按钮） | 5 |
+| `web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json` | `common.color`：两个表单的颜色按钮的名字 | 5 |
+| `web/packages/ui/src/dropdowns/custom-menu.tsx` | `CustomMenu` 的省略号按钮 Tab 到达时有焦点的轮廓（去掉 `outline-none`） | 5 |
+| `web/packages/propel/src/button/helper.tsx`、`web/packages/propel/src/icon-button/helper.tsx` | `Button`、`IconButton` 在键盘取得焦点时有离开它 2 像素的轮廓（`focus-visible:outline-offset-2`，去掉 `focus-visible:outline-none`） | 5 |
+| `web/apps/web/core/components/settings/project/sidebar/header.tsx` | 项目设置侧边栏的返回箭头名为"Go back"（`common.go_back`） | 5 |
 | `web/apps/web/core/components/labels/label-block/label-item-block.tsx` | 没有调用方传的 `draggable` 删除；菜单和删除按钮有名字，Tab 到达时看得见 | 5 |
 | `web/apps/web/core/components/labels/project-setting-label-group.test.tsx` | 组的那一行的控件给谁（新文件） | 5 |
-| `e2e/stories/project/p7-labels-page.spec.ts` | P7 的页面版本（新文件） | 5 |
+| `e2e/stories/project/p7-labels-page.spec.ts` | P7 的页面版本（新文件，Task 5）；弹窗的检查从 `dialogs.ts` 导入（Task 7） | 5、7 |
 | `e2e/stories/project/p7-labels.spec.ts` | P7 的 API 版本的说明指向页面版本 | 5 |
 | `e2e/stories/project/p9-guest-profile.spec.ts` | P9 的页面版本：访客打开别人的和自己的个人主页（新文件） | 6 |
+| `e2e/fixtures/auth.ts`、`e2e/stories/project/p1-create-project.spec.ts` | `named` 收要设的名字（P9 设名字和显示名，P1 设显示名，Task 6）；P1 的弹窗的检查从 `dialogs.ts` 导入（Task 7） | 6、7 |
+| `e2e/fixtures/assert/identity.ts` | `expectNoAddress`：页面里没有这些邮箱（P9、W11） | 6 |
 | `web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx` | 新手引导的资料一步：修改的跟进经 `followInSession`；它的 vitest | 7 |
 | `web/apps/web/core/components/settings/profile/content/pages/general/form.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx`、`web/apps/web/core/components/profile/start-of-week-preference.tsx` | 个人设置的 general、security、时区、语言、每周第一天：跟进经 `followInSession` | 7 |
 | `web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx` | 它们的 vitest（新文件） | 7 |
 | `web/apps/web/core/components/api-token/modal/create-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/form.tsx`、`web/apps/web/core/components/api-token/delete-token-modal.tsx` | API 令牌的新建和撤销：跟进经 `followInSession`；新建在请求路上时取消按不了 | 7 |
 | `web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx`、`web/apps/web/core/components/api-token/delete-token-modal.test.tsx` | 它们的 vitest（新文件） | 7 |
-| `e2e/stories/identity/a11-api-tokens.spec.ts` | A11 的第二个故事：新建被扣住时取消按不了，经后退离开页面 | 7 |
+| `e2e/stories/identity/a11-api-tokens.spec.ts` | A11 的第二个故事：新建被扣住时"Generating"和取消按不了、Escape 和点外面不关，经后退离开页面，回答之后一秒之内不下载；第一个故事的撤销扣住时关不掉 | 7 |
+| `web/apps/web/core/lib/fake-form.ts` | react-hook-form 的替身（`fakeForm`、`KeptForm`），新手引导、general、security 的测试共用（新文件） | 7 |
+| `e2e/fixtures/dialogs.ts` | 弹窗的检查和"一秒之内"的检查（从 `settings-pages.ts` 移来）；`closedByBackdropClick`；`happenedWithin` 和它的两个名字 `sentWithin`、`downloadedWithin`（新文件） | 7 |
+| `e2e/fixtures/settings-pages.ts` | `sentWithin`：一秒之内是否发出请求（Task 3）；弹窗和"一秒之内"的检查移到 `dialogs.ts`（Task 7） | 3、7 |
+| `e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p3-project-settings.spec.ts`、`e2e/stories/project/p4-archive.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts` | 弹窗的检查从 `dialogs.ts` 导入 | 7 |
 | `web/apps/web/core/components/dropdowns/project/dropdown.tsx`、`web/apps/web/core/components/dropdowns/project/base.tsx` | 没有调用方传的六个 prop 删除；`getProjectById` 的类型是生成的 `Project`（P8b 的裁定 P1）；oxlint 清零 | 8 |
-| `web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/state/state-option.tsx`、`web/apps/web/core/components/power-k/menus/members.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/workspace/invite-modal/actions.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx`、`web/packages/propel/src/icons/state/dashed-circle.tsx` | 没有调用方传入的 prop 删除，组件按原来的默认值显示 | 8 |
+| `web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/state/state-option.tsx`、`web/apps/web/core/components/power-k/menus/members.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/workspace/invite-modal/actions.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx`、`web/packages/propel/src/icons/state/dashed-circle.tsx`、`web/packages/propel/src/icons/state/backlog-group-icon.tsx`、`web/packages/propel/src/icons/state/started-group-icon.tsx`、`web/packages/propel/src/icons/state/unstarted-group-icon.tsx` | 没有调用方传入的 prop 删除，组件按原来的默认值显示；虚线圆的 `radius` 三个组图标都传、它不读，删除 | 8 |
 | `web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/packages/constants/src/members.ts` | 没有代码读的 `memberMap`、`iconName` 删除 | 8 |
 | `web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx`、`web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx` | P8a、P8b 留下的 oxlint 警告清零（`no-shadow`、`no-array-index-key`） | 8 |
 | `web/apps/web/app/entry.client.tsx`、`web/apps/web/core/components/cycles/delete-modal.tsx`、`web/apps/web/core/components/cycles/modal.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/cycles/transfer-issues-modal.tsx`、`web/apps/web/core/components/inbox/modals/delete-issue-modal.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/delete-module-modal.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts`、`web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx`、`web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts`、`web/apps/web/core/components/web-hooks/create-webhook-modal.tsx`、`web/apps/web/core/components/web-hooks/form/secret-key.tsx`、`web/apps/web/core/components/work-item-filters/filters-hoc/project-level.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx`、`web/apps/web/core/components/workspace/views/default-view-quick-action.tsx`、`web/apps/web/core/store/global-view.store.ts`、`web/apps/web/core/store/workspace/webhook.store.ts`、`web/packages/editor/src/helpers/floating-ui.ts` | `then()` 的回调末尾加 `return;`（35 处，`promise(always-return)` 清零） | 9 |
 | `web/packages/editor/package.json` | editor 的 oxlint 上限 65 → 64 | 9 |
 | `README.md`、`docs/v0/frontend-changes.md`、`docs/v0/M3-workspace-project/handoffs/M1-closeout.md`、`docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md` | README 的"前端"一节、前端改动清单、两份交接的处理结果 | 10 |
+| `docs/v0/M3-workspace-project/specs/P11-web-states-labels-and-cleanup.md` | 本 spec：附录 A.4、A.6 和第 5 节照 Task 9 的评审改正，第 5 节收尾的键盘清单（Task 10 和它的修正轮；它和本 plan 在同一个提交里，不写成块） | 10 |
 
 ---
 
@@ -107,7 +119,7 @@
 
 **Interfaces:**
 - Produces（spec 2.1；总体设计 7.7；P9 的 F-1；P10 spec 2 的 `project-refusal.ts`）：
-  - `core/lib/form-refusal.ts`（新文件）：`FormRefusal<F>`（`{ kind: "fields"; fields } | { kind: "toast" }`）；`formRefusal(error, fields, taken)`：表示"值已被占用"的码在 `taken` 给它的字段下（不论问题指名哪些字段），只指名表单的字段的字段错误在那些字段下（`needsErrorBanner`），其余提示；`useFormRefusal(fields, taken)`：照它显示，字段下的经表单的 `underField`（它的 `setError`），按 `fields` 的次序，提示经 `useRefusalToast`。
+  - `core/lib/form-refusal.ts`（新文件）：`FormRefusal<F>`（`{ kind: "fields"; fields } | { kind: "toast" }`）；`formRefusal(error, fields, taken)`：表示"值已被占用"的码在 `taken` 给它的字段下（不论问题指名哪些字段；文案经 `errorMessageKey`，读错误的唯一的函数，没有文案的码说 `errors.unknown`，不会无声地丢掉：Task 1 评审的 m1、裁定 T1-b），只指名表单的字段的字段错误在那些字段下（`needsErrorBanner`），其余提示；`useFormRefusal(fields, taken)`：照它显示，字段下的经表单的 `underField`（它的 `setError`），按 `fields` 的次序，提示经 `useRefusalToast`。
   - `project-refusal.ts`：`projectRefusal`、`useProjectRefusal` 以它们写成（字段 `name`、`identifier`，码 `project.name_taken`、`project.identifier_taken`）；`ProjectRefusal` 是 `FormRefusal<ProjectFormField>`。显示的照旧（P10 的 `project-refusal.test.ts` 不改，照旧通过）。状态（Task 2）和标签（Task 4）的表单用同一份。
   - `@nerve/ui` 的 `AlertModalCore`：`isSubmitting` 时取消按钮禁用，`ModalCore` 收到的 `handleClose` 为空（Escape、点外面都不关）。它的其余 11 个调用方同样（M4–M8 的 10 个，个人设置的 API 令牌的撤销；spec 第 3 节第 2 条，W17）；它的确认按钮的 `tabIndex={1}` 不动（M3 收尾的 `ModalCore` 重写）：这个文件留着它的一条 oxlint 警告（`jsx-a11y/tabindex-no-positive`，spec 第 3 节第 3 条），`@nerve/ui` 的上限 15 不变。
   - 两个工作项的删除确认框（`issues/delete-issue-modal.tsx`、`issues/workspace-draft/delete-modal.tsx`）的 `onSubmit` 必传（spec 2.1、附录 A.4，裁定 Q2 的加固）：不传时确认框一直忙，有了上一条就再也关不掉；11 个调用处都传（`tsc` 核对）。它们各有的一条 `always-return` 在 Task 9 清零。
@@ -164,7 +176,7 @@ export function useProjectRefusal(): (
 }
 ````
 
-`web/apps/web/core/lib/form-refusal.ts`（新文件，59 行）：
+`web/apps/web/core/lib/form-refusal.ts`（新文件，60 行）：
 
 ````file web/apps/web/core/lib/form-refusal.ts
 /**
@@ -177,7 +189,7 @@ import { useTranslation } from "@nerve/i18n";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { ApiError } from "@/lib/api-error";
-import { PROBLEM_MESSAGES, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 
 /** What a form shows of nerve's refusal: under the fields it names (their messages' i18n keys), or a toast. */
 export type FormRefusal<F extends string> = { kind: "fields"; fields: Partial<Record<F, string>> } | { kind: "toast" };
@@ -196,8 +208,9 @@ export function formRefusal<F extends string>(
   const code = error instanceof ApiError ? (error.problem?.code ?? "") : "";
   const field = taken[code];
   if (field) {
-    // by the field's name, as fieldErrorKeys gives a problem's fields
-    const named: Partial<Record<string, string>> = { [field]: PROBLEM_MESSAGES[code] };
+    // the message keyed by the field's name; typed as fieldErrorKeys' messages are, since TypeScript takes those
+    // as Partial<Record<F, string>> but not an object literal keyed by a value of the generic F
+    const named: Partial<Record<string, string>> = { [field]: errorMessageKey(error) };
     return { kind: "fields", fields: named };
   }
   if (needsErrorBanner(error, fields)) return { kind: "toast" };
@@ -1888,6 +1901,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T2.11` | 删除状态的确认框在 nerve 拒绝时关上（A-M2） | 故事 P6（Task 3 起） | 端到端 |
 | `T2.12` | 组标题又是 `div`：Tab 到不了，没有展开的状态 | 故事 P6（Task 3 起） | 端到端 |
 | `T2.13` | 在 `use-state-changes.ts` 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T2.14` | 设默认在 nerve 回答之前不忙（Task 2 评审的探查 P2.1：`await markDefault` 改成 `void`） | 故事 P6（Task 3 起） | 端到端 |
+| `T2.15` | 设默认的按钮在 nerve 回答时仍可用（去掉 `|| isLoading`） | 故事 P6（Task 3 起） | 端到端 |
+| `T2.16` | 组标题不论展开与否都说展开着（`aria-expanded={true}`） | 故事 P6（Task 3 起） | 端到端 |
 
 ---
 
@@ -1895,20 +1911,21 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/stories/project/p6-states-page.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`
-- Modify: `.oxlintrc.json`、`e2e/fixtures/project-pages.ts`、`e2e/stories/project/p6-states.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/root.tsx`、`web/apps/web/core/components/project-states/state-item-title.tsx`、`web/apps/web/core/store/state.store.test.ts`、`web/apps/web/core/store/state.store.ts`
+- Modify: `.oxlintrc.json`、`e2e/fixtures/project-pages.ts`、`e2e/fixtures/settings-pages.ts`、`e2e/stories/project/p6-states.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/group-list.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/root.tsx`、`web/apps/web/core/components/project-states/state-item-title.tsx`、`web/apps/web/core/components/project-states/state-item.tsx`、`web/apps/web/core/components/project-states/state-list.tsx`、`web/apps/web/core/lib/fake-controls.ts`、`web/apps/web/core/store/state.store.test.ts`、`web/apps/web/core/store/state.store.ts`
 
 **Interfaces:**
 - Produces（spec 2.3；M3 设计 2 的 P6、W11，7.6，9.2；P10 的 F-2 和 `project-address-route`；P10 review 第 6 节 P11 一行）：
   - 状态设置页（`states/page.tsx`）：工作区和项目取自路由的参数（`Route.ComponentProps` 的 `params`），标题用 `getProjectById(projectId)` 的名字；门是 `allowPermissions([ADMIN, MEMBER], PROJECT, workspaceSlug, projectId)`：项目的成员（不论角色）看得到状态，访客看到没有权限（`state.list`，W11）。原来读 router store 的 `currentProjectDetails`，`allowPermissions` 不写工作区和项目。
-  - `ProjectStateRoot`（`root.tsx`）：项目的状态按路由的项目读，`getGroupedProjectStates(projectId)`（state store 的 `computedFn`，每个组都在，组里按顺序；原来是读 router store 的项目的 `groupedProjectStates` getter，删除）；改状态的控件只给 `allowPermissions([ADMIN], PROJECT, workspaceSlug, projectId)`：项目管理员和是工作区管理员的项目成员（`state.create` 等，nerve 的规则）。挂载时照旧取项目的状态（P8b 的选择）。
-  - 一行的控件（`state-item-title.tsx`）：设默认、编辑、删除的按钮 Tab 能到，焦点在这一行时和指针经过时一样显示（`opacity-0 group-focus-within:opacity-100 group-hover:opacity-100`；原来 `hidden group-hover:flex`，键盘到不了）；编辑按钮（"Edit"）、删除按钮（"Delete"，`delete.tsx`）、加状态的按钮（"Add"，`group-item.tsx`）有名字。
+  - `ProjectStateRoot`（`root.tsx`）：项目的状态按路由的项目读，`getGroupedProjectStates(projectId)`（state store 的 `computedFn`，每个组都在，组里按顺序；原来是读 router store 的项目的 `groupedProjectStates` getter，删除）；改状态的控件只给 `allowPermissions([ADMIN], PROJECT, workspaceSlug, projectId)`：项目管理员和是工作区管理员的项目成员（`state.create` 等，nerve 的规则）。它自己不再取项目的状态：项目的包装层按成员身份取的那一次（`use-project-fetch.ts`，总体设计 7.7 的按权限取数）就是这一页的取数；原来它另有一次不看权限的 `useSessionSWR(["PROJECT_STATES", projectId])`，只因页面挂在包装层之内才被 SWR 并进那一次（最终评审的 M3，修复轮的 F-3）。`states-labels.test.tsx` 随之不再替它的取数写替身。
+  - 状态的组件不再传 `groupedStates`：`GroupList` 传给 `GroupItem`、`GroupItem` 和 `StateList` 转交、`StateItem` 只把它写在副作用的依赖里，没有读者（最终评审的 M1，修复轮的 F-1）。
+  - 一行的控件（`state-item-title.tsx`）：设默认、编辑、删除的按钮 Tab 能到，焦点在这一行时和指针经过时一样显示（`opacity-0 group-focus-within:opacity-100 group-hover:opacity-100`；原来 `hidden group-hover:flex`，键盘到不了）；编辑按钮（"Edit"）、删除按钮（"Delete"，`delete.tsx`）、加状态的按钮（"Add"，`group-item.tsx`）有名字；删除按钮去掉 Plane 的 `focus:outline-none`，Tab 到达时有焦点的轮廓（Task 3 评审的 I1）。`core/lib/fake-controls.ts` 的说明照实写：替身的弹窗渲染它的内容，`AlertModalCore` 的替身什么都不渲染（Task 2 评审的 m2，裁定 T2-c）。
   - `tools/keywords.json`：`project-address-route` 的文件加上状态设置页和 `project-states/root.tsx`（69 条规则不变）。
-  - e2e：P8 故事的拖动（按手柄、等过渡结束、经过项目本身再到目标）移进 `e2e/fixtures/project-pages.ts` 的 `dragOnto(page, item, grip, onto, at?)`，P6、P7 的页面版本也用它；P8 故事里找侧边栏的项目、拖动、读回答的一步改名 `dragInSidebar`，拖动经 `dragOnto`；`tabCycle(page, within, presses = 40)`：页面上的表单不是弹窗，Tab 会离开它，P6、P7 只看前几站的次序。
+  - e2e：P8 故事的拖动（按手柄、等过渡结束、经过项目本身再到目标）移进 `e2e/fixtures/project-pages.ts` 的 `dragOnto(page, item, grip, onto, at?)`，P6、P7 的页面版本也用它；P8 故事里找侧边栏的项目、拖动、读回答的一步改名 `dragInSidebar`，拖动经 `dragOnto`；`tabCycle(page, within, presses = 40)`：页面上的表单不是弹窗，Tab 会离开它，P6、P7 只看前几站的次序。`e2e/fixtures/settings-pages.ts` 的 `sentWithin(page, method, path, act)`：`act` 期间和它结束之后一秒之内页面是否发出这个请求（一个不该发出的请求在整段时间里都不发出，马上看一眼可能早于页面发出它；Task 3 评审的 I2）。Task 7 把它和下载的同一做法合成 `e2e/fixtures/dialogs.ts` 的一个 `happenedWithin`（修复轮的 F-4）。
   - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `states-labels.test.tsx`（方括号转义）。
 
 **Tests:**
 - vitest：`[projectId]/states-labels.test.tsx`（新文件；P10 的 `admin-pages.test.tsx` 的写法：页面经 React Router 的 stub 在服务端渲染，权限和项目是 store 自己的，`callerInWeb`、`its`，router store 的地址里没有项目；状态和标签的 store 的替身只对页面的项目回答，状态的替身是 web 的 Backlog、In Progress 两组，组列表的替身写出它们的名字：读了别的 id 的页面只显示加载）：`shows $who the states and their controls`（项目管理员、是工作区管理员的项目成员、是工作区管理员的项目访客）；`shows its member the states, and no control`；`tells its guest he may not see them`。`state.store.test.ts` 的三处读 `getGroupedProjectStates(web.id)`。
-- 端到端：`P6 (page): the admin creates Review in the started group, its form gone through by Tab and held until nerve answers; a name taken is said under the name; he recolours Review, drags it before In Progress and makes it the default, Backlog the default no longer; the default and a group's only state offer no deletion; a deletion nerve refuses leaves its dialog open, one under way cannot be dismissed, and In Progress is deleted; its member sees the states and can change none, a workspace admin who is its member can`（新文件：五个组的标题 `aria-expanded`；表单的 Tab 次序 `name`、`description`、`Create`、`Cancel`；创建扣住时"Creating"和"Cancel"都按不了，请求体是 `StateCreate`；名字已被占用在表单里显示；Review 的一行从"Mark as default"按 Tab 到"Edit"，这一行的控件在焦点进来之前看不见、之后看得见；修改的请求体；拖到 In Progress 的上方：`{ group, sequence: 20000 }`；设默认；默认的、组里唯一的状态的删除按钮禁用；另一处把 In Progress 设为默认之后删除它被拒绝：提示，确认框留着；重新载入之后删除扣住时 Escape 不关、"Cancel"按不了；`expectStates` 核对每一行；成员看不到改状态的控件，是工作区管理员的成员看得到）。`W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state settings tell him he may not see them; no page he opens shows an address, his own neither`（新的一条）。S2 的挂载清单加上状态设置页（spec 2.11）。
+- 端到端：`P6 (page): the admin creates Review in the started group, its form gone through by Tab and held until nerve answers; a name taken is said under the name; he recolours Review, drags it before In Progress and makes it the default, Backlog the default no longer; the default and a group's only state offer no deletion; a deletion nerve refuses leaves its dialog open, one under way cannot be dismissed, and In Progress is deleted; its member sees the states and can change none, a workspace admin who is its member can`（新文件：五个组的标题 `aria-expanded`，Enter 收起 completed 组、Done 的一行不见，空格再展开（Task 2 评审的 m1，裁定 T2-b）；表单的 Tab 次序 `name`、`description`、`Create`、`Cancel`；创建扣住时"Creating"和"Cancel"都按不了，请求体是 `StateCreate`；名字已被占用在表单里显示；Review 的一行从"Mark as default"按 Tab 到"Edit"，这一行的控件在焦点进来之前看不见、之后看得见；Edit、Delete 由 Tab 到达时都有焦点的轮廓，Shift+Tab 回到 Edit（Task 3 评审的 I1）；修改的请求体；拖到 In Progress 的上方：`{ group, sequence: 20000 }`；成员在自己的浏览器里把 In Progress 拖到 Review 上：一秒之内不发 `PATCH`，次序不变（`sentWithin`，Task 3 评审的 I2；成员重新登录，各浏览器各一个会话）；设默认：扣住时"Marking as default"按不了，nerve 回答之后 Review 是"Default"（Task 2 评审的 I1，裁定 T2-a）；默认的、组里唯一的状态的删除按钮禁用（按名字找"Default"时 `exact`，不和"Mark as default"混淆，Task 3 评审的 M1）；另一处把 In Progress 设为默认之后删除它被拒绝：提示，确认框留着；重新载入之后删除扣住时 Escape 不关、"Cancel"按不了；`expectStates` 核对每一行；成员看不到改状态的控件，是工作区管理员的成员看得到）。`W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state settings tell him he may not see them; no page he opens shows an address, his own neither`（新的一条）。S2 的挂载清单加上状态设置页（spec 2.11）。
 
 - [ ] **Step 1: 状态的 getter 按项目的 id**
 
@@ -2022,38 +2039,68 @@ function StatesSettingsPage({ params }: Route.ComponentProps) {
     projectId
 ````
 
-`web/apps/web/core/components/project-states/root.tsx`（修改，4 处）：
+`web/apps/web/core/components/project-states/root.tsx`（整个文件，39 行）：
 
-````old web/apps/web/core/components/project-states/root.tsx
-  const { groupedProjectStates, fetchProjectStates } = useProjectState();
-````
-````new web/apps/web/core/components/project-states/root.tsx
-  const { getGroupedProjectStates, fetchProjectStates } = useProjectState();
-````
-````old web/apps/web/core/components/project-states/root.tsx
-  // derived values
-````
-````new web/apps/web/core/components/project-states/root.tsx
+````whole web/apps/web/core/components/project-states/root.tsx
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { observer } from "mobx-react";
+// components
+import { EUserPermissionsLevel } from "@nerve/constants";
+import { EUserProjectRoles } from "@nerve/types";
+import { ProjectStateLoader, GroupList } from "@/components/project-states";
+// hooks
+import { useProjectState } from "@/hooks/store/use-project-state";
+import { useUserPermissions } from "@/hooks/store/user";
+
+type TProjectState = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProjectState) {
+  const { workspaceSlug, projectId } = props;
+  // hooks
+  const { getGroupedProjectStates } = useProjectState();
+  const { allowPermissions } = useUserPermissions();
   // derived values
   const groupedStates = getGroupedProjectStates(projectId);
-````
-````old web/apps/web/core/components/project-states/root.tsx
-  if (!groupedProjectStates) return <ProjectStateLoader />;
-````
-````new web/apps/web/core/components/project-states/root.tsx
+  const isEditable = allowPermissions(
+    [EUserProjectRoles.ADMIN],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
+  );
+
+  // Loader
   if (!groupedStates) return <ProjectStateLoader />;
-````
-````old web/apps/web/core/components/project-states/root.tsx
-  return <GroupList projectId={projectId} groupedStates={groupedProjectStates} isEditable={isEditable} />;
-````
-````new web/apps/web/core/components/project-states/root.tsx
+
   return <GroupList projectId={projectId} groupedStates={groupedStates} isEditable={isEditable} />;
+});
 ````
 
-- [ ] **Step 3: 一行的控件**
+- [ ] **Step 3: 一行的控件；不再传的 `groupedStates`**
 
-`web/apps/web/core/components/project-states/group-item.tsx`（修改，1 处）：
+`web/apps/web/core/components/project-states/group-item.tsx`（修改，4 处）：
 
+````old web/apps/web/core/components/project-states/group-item.tsx
+  groupsExpanded: Partial<StateGroup>[];
+  groupedStates: Record<string, State[]>;
+````
+````new web/apps/web/core/components/project-states/group-item.tsx
+  groupsExpanded: Partial<StateGroup>[];
+````
+````old web/apps/web/core/components/project-states/group-item.tsx
+  const { projectId, groupKey, groupedStates, states, groupsExpanded, isEditable, handleExpand, handleGroupCollapse } =
+    props;
+````
+````new web/apps/web/core/components/project-states/group-item.tsx
+  const { projectId, groupKey, states, groupsExpanded, isEditable, handleExpand, handleGroupCollapse } = props;
+````
 ````old web/apps/web/core/components/project-states/group-item.tsx
         <button
           type="button"
@@ -2065,8 +2112,24 @@ function StatesSettingsPage({ params }: Route.ComponentProps) {
           aria-label={t("common.add")}
           className={cn(
 ````
+````old web/apps/web/core/components/project-states/group-item.tsx
+          <StateList groupKey={groupKey} groupedStates={groupedStates} states={states} disabled={!isEditable} />
+````
+````new web/apps/web/core/components/project-states/group-item.tsx
+          <StateList groupKey={groupKey} states={states} disabled={!isEditable} />
+````
 
-`web/apps/web/core/components/project-states/options/delete.tsx`（修改，3 处）：
+`web/apps/web/core/components/project-states/group-list.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project-states/group-list.tsx
+            states={groupStates}
+            groupedStates={groupedStates}
+````
+````new web/apps/web/core/components/project-states/group-list.tsx
+            states={groupStates}
+````
+
+`web/apps/web/core/components/project-states/options/delete.tsx`（修改，4 处）：
 
 ````old web/apps/web/core/components/project-states/options/delete.tsx
 import type { State } from "@nerve/api-client";
@@ -2088,6 +2151,12 @@ import { useTranslation } from "@nerve/i18n";
 ````new web/apps/web/core/components/project-states/options/delete.tsx
         type="button"
         aria-label={t("common.actions.delete")}
+````
+````old web/apps/web/core/components/project-states/options/delete.tsx
+          "flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-colors focus:outline-none",
+````
+````new web/apps/web/core/components/project-states/options/delete.tsx
+          "flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-colors",
 ````
 
 `web/apps/web/core/components/project-states/state-item-title.tsx`（修改，4 处）：
@@ -2121,7 +2190,52 @@ import { useTranslation } from "@nerve/i18n";
               aria-label={t("common.actions.edit")}
 ````
 
-- [ ] **Step 4: 权限的测试、关键词规则和静态检查的范围**
+`web/apps/web/core/components/project-states/state-item.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/project-states/state-item.tsx
+  groupKey: StateGroup;
+  groupedStates: Record<string, State[]>;
+````
+````new web/apps/web/core/components/project-states/state-item.tsx
+  groupKey: StateGroup;
+````
+````old web/apps/web/core/components/project-states/state-item.tsx
+  const { groupKey, groupedStates, totalStates, state, disabled = false } = props;
+````
+````new web/apps/web/core/components/project-states/state-item.tsx
+  const { groupKey, totalStates, state, disabled = false } = props;
+````
+````old web/apps/web/core/components/project-states/state-item.tsx
+  }, [draggableElementRef, state, groupKey, isDraggable, groupedStates, move, disabled]);
+````
+````new web/apps/web/core/components/project-states/state-item.tsx
+  }, [draggableElementRef, state, groupKey, isDraggable, move, disabled]);
+````
+
+`web/apps/web/core/components/project-states/state-list.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/project-states/state-list.tsx
+  groupKey: StateGroup;
+  groupedStates: Record<string, State[]>;
+````
+````new web/apps/web/core/components/project-states/state-list.tsx
+  groupKey: StateGroup;
+````
+````old web/apps/web/core/components/project-states/state-list.tsx
+  const { groupKey, groupedStates, states, disabled = false } = props;
+````
+````new web/apps/web/core/components/project-states/state-list.tsx
+  const { groupKey, states, disabled = false } = props;
+````
+````old web/apps/web/core/components/project-states/state-list.tsx
+          groupKey={groupKey}
+          groupedStates={groupedStates}
+````
+````new web/apps/web/core/components/project-states/state-list.tsx
+          groupKey={groupKey}
+````
+
+- [ ] **Step 4: 权限的测试、关键词规则、静态检查的范围和替身的说明**
 
 `.oxlintrc.json`（修改，1 处）：
 
@@ -2163,7 +2277,7 @@ import { useTranslation } from "@nerve/i18n";
           "miss": [
 ````
 
-`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`（新文件，93 行）：
+`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`（新文件，91 行）：
 
 ````file web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
 /**
@@ -2199,10 +2313,8 @@ vi.mock("@/hooks/store/use-project", () => ({ useProject: () => caller.projects 
 vi.mock("@/hooks/store/use-project-state", () => ({
   useProjectState: () => ({
     getGroupedProjectStates: (projectId: string) => (projectId === caller.projectId ? grouped : undefined),
-    fetchProjectStates: vi.fn(),
   }),
 }));
-vi.mock("@/lib/use-session-swr", () => ({ useSessionSWR: () => ({}) }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@/components/project-states/group-list", () => ({
   GroupList: ({
@@ -2259,6 +2371,15 @@ describe("the state settings page", () => {
     expect(text).toBe("not authorized");
   });
 });
+````
+
+`web/apps/web/core/lib/fake-controls.ts`（修改，1 处）：
+
+````old web/apps/web/core/lib/fake-controls.ts
+// `shown` the props each control was given. A control renders nothing, but a modal its children (its form is the
+````
+````new web/apps/web/core/lib/fake-controls.ts
+// `shown` the props each control was given. A control renders nothing, but ModalCore its children (its form is the
 ````
 
 - [ ] **Step 5: 端到端**
@@ -2325,7 +2446,45 @@ export async function dragOnto(
 
 ````
 
-`e2e/stories/project/p6-states-page.spec.ts`（新文件，262 行）：
+`e2e/fixtures/settings-pages.ts`（修改，2 处）：
+
+````old e2e/fixtures/settings-pages.ts
+import { errors, expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
+````
+````new e2e/fixtures/settings-pages.ts
+import { setTimeout as sleep } from "node:timers/promises";
+
+import { errors, expect, type Locator, type Page, type Request, type Response, type Route } from "@playwright/test";
+````
+````old e2e/fixtures/settings-pages.ts
+    .waitFor({ state: "attached", timeout: 1_000 })
+    .then(() => true, timedOut);
+````
+````new e2e/fixtures/settings-pages.ts
+    .waitFor({ state: "attached", timeout: 1_000 })
+    .then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether page sends a request of method to path (no query) while act runs or within a second of its
+ * end: what page must not send, such as a change its caller may not make, stays unsent the whole time, where a check
+ * made at once could pass before page has sent it.
+ */
+export async function sentWithin(page: Page, method: string, path: string, act: () => Promise<void>): Promise<boolean> {
+  const sent = deferred<true>();
+  const onRequest = (request: Request) => {
+    if (request.method() === method && new URL(request.url()).pathname === path) sent.resolve(true);
+  };
+  page.on("request", onRequest);
+  try {
+    await act();
+    return await Promise.race([sent.promise, sleep(1_000, false)]);
+  } finally {
+    page.off("request", onRequest);
+  }
+````
+
+`e2e/stories/project/p6-states-page.spec.ts`（新文件，292 行）：
 
 ````file e2e/stories/project/p6-states-page.spec.ts
 import type { Locator, Page } from "@playwright/test";
@@ -2340,7 +2499,7 @@ import {
   type Api,
 } from "../../fixtures/api";
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
-import { accountId, bearer, emailFor } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, login } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { dragOnto, tabCycle } from "../../fixtures/project-pages";
 import {
@@ -2350,6 +2509,7 @@ import {
   registerOnboarded,
   sentHeld,
   sentTo,
+  sentWithin,
 } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
@@ -2419,19 +2579,31 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   ]);
   await changeRole(api, admin.access_token, slug, wandaId, 20);
   const listed = `/api/v0/projects/${web.id}/states`;
+  const statesPage = `/${slug}/settings/projects/${web.id}/states`;
   const inProgressId = (await stateIds(api, admin.access_token, web.id))["In Progress"];
   if (!inProgressId) throw new Error("Web was made without In Progress");
   let rows = statesOfANewProject(adminEmail);
 
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
-  await page.goto(`/${slug}/settings/projects/${web.id}/states`);
+  await page.goto(statesPage);
   await expect(stateRow(page, "In Progress")).toBeVisible();
   await Promise.all(
     ["backlog", "unstarted", "started", "completed", "cancelled"].map((key) =>
       expect(groupHeading(page, key), key).toHaveAttribute("aria-expanded", "true")
     )
   );
+
+  // A group's heading closes its list and opens it again from the keyboard: Enter closes the completed group's, Done's
+  // row gone; Space opens it, the row back.
+  const completed = groupHeading(page, "completed");
+  await completed.focus();
+  await page.keyboard.press("Enter");
+  await expect(completed).toHaveAttribute("aria-expanded", "false");
+  await expect(stateRow(page, "Done")).toHaveCount(0);
+  await page.keyboard.press("Space");
+  await expect(completed).toHaveAttribute("aria-expanded", "true");
+  await expect(stateRow(page, "Done")).toBeVisible();
 
   // Review, in the started group: Tab goes through the form in its order; the form waits for nerve, its buttons
   // disabled, Cancel too; it closes once nerve has made the state, last of its project's.
@@ -2476,15 +2648,23 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await stateForm(page).getByRole("button", { name: "Cancel" }).click();
 
   // Review recoloured, its row's Edit reached by Tab, its row's controls shown while the focus is in it as while the
-  // pointer is over it (unseen while neither is): the fields its form edits.
+  // pointer is over it (unseen while neither is), Edit and Delete each marked as Tab reaches it: the fields its form
+  // edits.
   const review = stateRow(page, "Review");
   const reviewEdit = review.getByRole("button", { name: "Edit" });
+  const reviewDelete = review.getByRole("button", { name: "Delete" });
   await page.mouse.move(0, 0);
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "0");
   await review.getByRole("button", { name: "Mark as default" }).focus();
   await page.keyboard.press("Tab");
   await expect(reviewEdit).toBeFocused();
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "1");
+  await expect(reviewEdit).not.toHaveCSS("outline-style", "none");
+  await page.keyboard.press("Tab");
+  await expect(reviewDelete).toBeFocused();
+  await expect(reviewDelete).not.toHaveCSS("outline-style", "none");
+  await page.keyboard.press("Shift+Tab");
+  await expect(reviewEdit).toBeFocused();
   await page.keyboard.press("Enter");
   await stateForm(page).getByRole("button").first().click();
   await page.locator('[title="#0693E3"]').click();
@@ -2502,23 +2682,32 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     dragOnto(page, review, review, stateRow(page, "In Progress"), { x: 60, y: 4 })
   );
   expect([moved.answer.status(), moved.body]).toEqual([200, { group: "started", sequence: 20000 }]);
-  await expect(page.locator("div.group h6")).toHaveText([
-    "Backlog",
-    "Todo",
-    "Review",
-    "In Progress",
-    "Done",
-    "Cancelled",
-  ]);
+  const order = ["Backlog", "Todo", "Review", "In Progress", "Done", "Cancelled"];
+  await expect(page.locator("div.group h6")).toHaveText(order);
   rows = changed(rows, "Review", { sequence: 20000 });
 
-  // Review the default, Backlog no longer; neither offers its deletion, nor Todo, its group's only state.
-  const markReview = () =>
-    sentTo(page, "POST", `/api/v0/states/${reviewId}/mark-default`, () =>
-      review.getByRole("button", { name: "Mark as default" }).click()
-    );
-  expect((await markReview()).answer.status()).toBe(204);
-  await expect(review.getByRole("button", { name: "Default" })).toBeDisabled();
+  // Its member drags no state, though the started group holds two: In Progress dragged onto Review's top on his page
+  // sends nothing, and the order stays. He signs in anew, each browser a session of its own: nerve rotates a session's
+  // refresh token, so a second browser given the same tokens would be signed out once the first had refreshed.
+  const member = await anotherBrowser(browser, baseURL ?? "", await login(api, memEmail));
+  await member.page.goto(statesPage);
+  const memberInProgress = stateRow(member.page, "In Progress");
+  expect(
+    await sentWithin(member.page, "PATCH", `/api/v0/states/${inProgressId}`, () =>
+      dragOnto(member.page, memberInProgress, memberInProgress, stateRow(member.page, "Review"), { x: 60, y: 4 })
+    )
+  ).toBe(false);
+  await expect(member.page.locator("div.group h6")).toHaveText(order);
+  await member.close();
+
+  // Review the default, its button busy until nerve answers; Backlog the default no longer; neither offers its
+  // deletion, nor Todo, its group's only state.
+  const marked = `/api/v0/states/${reviewId}/mark-default`;
+  const markReview = () => review.getByRole("button", { name: "Mark as default" }).click();
+  const marking = await sentHeld(page, "POST", marked, markReview);
+  expect(await enabledWithin(review.getByRole("button", { name: "Marking as default" }))).toBe(false);
+  expect((await marking.release()).status()).toBe(204);
+  await expect(review.getByRole("button", { name: "Default", exact: true })).toBeDisabled();
   await expect(stateRow(page, "Backlog").getByRole("button", { name: "Mark as default" })).toBeEnabled();
   await Promise.all(
     ["Review", "Backlog", "Todo"].map((name) =>
@@ -2551,8 +2740,8 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   // deleted, its dialog held while nerve answers: Escape does not dismiss it, Cancel is disabled; it closes once nerve
   // has, Review left in the started group.
   await page.reload();
-  await expect(inProgress.getByRole("button", { name: "Default" })).toBeDisabled();
-  expect((await markReview()).answer.status()).toBe(204);
+  await expect(inProgress.getByRole("button", { name: "Default", exact: true })).toBeDisabled();
+  expect((await sentTo(page, "POST", marked, markReview)).answer.status()).toBe(204);
   await inProgress.getByRole("button", { name: "Delete" }).click();
   const deletion = await sentHeld(page, "DELETE", deleted, () =>
     dialog.getByRole("button", { name: "Delete" }).click()
@@ -2578,7 +2767,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   const seenBy = async (who: string, tokens: typeof mem, controls: boolean) => {
     const other = await anotherBrowser(browser, baseURL ?? "", tokens);
     const otherWatch = await watchPage(other.page);
-    await other.page.goto(`/${slug}/settings/projects/${web.id}/states`);
+    await other.page.goto(statesPage);
     await expect(stateRow(other.page, "Review"), who).toBeVisible();
     await expect(addTo(other.page, "started"), who).toBeEnabled({ enabled: controls });
     await expect(other.page.getByRole("button", { name: "Mark as default" }), who).toHaveCount(controls ? 4 : 0);
@@ -2793,7 +2982,7 @@ Expected: 108 个全部通过。
 - [ ] **Step 7: 提交**
 
 ```bash
-git add .oxlintrc.json e2e/fixtures/project-pages.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p6-states.spec.ts e2e/stories/project/p8-project-preferences.spec.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx' web/apps/web/core/components/project-states/group-item.tsx web/apps/web/core/components/project-states/options/delete.tsx web/apps/web/core/components/project-states/root.tsx web/apps/web/core/components/project-states/state-item-title.tsx web/apps/web/core/store/state.store.test.ts web/apps/web/core/store/state.store.ts
+git add .oxlintrc.json e2e/fixtures/project-pages.ts e2e/fixtures/settings-pages.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p6-states.spec.ts e2e/stories/project/p8-project-preferences.spec.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx' web/apps/web/core/components/project-states/group-item.tsx web/apps/web/core/components/project-states/group-list.tsx web/apps/web/core/components/project-states/options/delete.tsx web/apps/web/core/components/project-states/root.tsx web/apps/web/core/components/project-states/state-item-title.tsx web/apps/web/core/components/project-states/state-item.tsx web/apps/web/core/components/project-states/state-list.tsx web/apps/web/core/lib/fake-controls.ts web/apps/web/core/store/state.store.test.ts web/apps/web/core/store/state.store.ts
 ```
 ```bash
 git commit -m "feat(M3/P11): the state settings page reads its project from its route, offers the changes to whom nerve allows them, and its controls are reached by Tab
@@ -2822,6 +3011,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T3.8` | 项目的状态按组分时少一个组 | `state.store.test.ts` | vitest |
 | `T3.9` | 在 `states-labels.test.tsx` 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
 | `T3.10` | 根组件按别的 id 读状态 | `states-labels.test.tsx`、故事 P6 | vitest；端到端 |
+| `T3.11` | 一行的删除按钮 Tab 到达时看不见（留着 Plane 的 `focus:outline-none`） | 故事 P6 | 端到端 |
+| `T3.12` | 项目成员拖得动状态（`canDrag` 不看 `disabled`） | 故事 P6 | 端到端 |
+| `T3.13` | 按组分的状态读路由 store 的项目，不读交给它的项目 | `state.store.test.ts`（Task 5 起） | vitest |
 
 ---
 
@@ -3673,6 +3865,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T4.10` | 删除标签的确认框在 nerve 回答之前关上 | 故事 P7（Task 5 起） | 端到端 |
 | `T4.11` | 标签的表单在名字下什么都不显示 | `create-update-label-inline.test.tsx`、故事 P7（Task 5 起） | vitest；端到端 |
 | `T4.12` | 在 `use-label-changes.ts` 里写一个非空断言 | oxlint（`check:lint`） | 静态 |
+| `T4.13` | 标签表单的颜色按钮 Tab 到达时看不见（`focus:outline-none` 回来） | 故事 P7（Task 5 起） | 端到端 |
+| `T4.14` | 标签表单的颜色按钮没有名字 | 故事 P7（Task 5 起） | 端到端 |
+| `T4.14b` | 状态表单的颜色按钮没有名字 | 故事 P6（Task 5 起） | 端到端 |
+| `T4.15` | 删除标签的确认框在 nerve 拒绝时关上（A-M2；Task 4 评审的探查 P4.2） | 故事 P7（Task 5 起） | 端到端 |
+| `T4.16` | 给没有颜色的标签改名时发出没人选的颜色（`#000`） | `create-update-label-inline.test.tsx`（Task 5 起） | vitest |
+| `T4.17` | 一行的"移出组"什么都不发（Task 4 评审的探查 P4.3） | 故事 P7（Task 5 起） | 端到端 |
 
 ---
 
@@ -3680,7 +3878,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/stories/project/p7-labels-page.spec.ts`、`web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.test.tsx`
-- Modify: `.oxlintrc.json`、`e2e/stories/project/p7-labels.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-list.tsx`、`web/apps/web/core/store/label.store.changes.test.ts`、`web/apps/web/core/store/label.store.test.ts`、`web/apps/web/core/store/label.store.ts`、`web/packages/ui/src/drag-handle.tsx`
+- Modify: `.oxlintrc.json`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.test.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-item.tsx`、`web/apps/web/core/components/labels/project-setting-label-list.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/settings/project/sidebar/header.tsx`、`web/apps/web/core/store/label.store.changes.test.ts`、`web/apps/web/core/store/label.store.test.ts`、`web/apps/web/core/store/label.store.ts`、`web/apps/web/core/store/state.store.test.ts`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/propel/src/button/helper.tsx`、`web/packages/propel/src/icon-button/helper.tsx`、`web/packages/ui/src/drag-handle.tsx`、`web/packages/ui/src/dropdowns/custom-menu.tsx`、`web/packages/ui/src/popovers/popover.tsx`、`web/packages/ui/src/popovers/types.ts`
 
 **Interfaces:**
 - Produces（spec 2.5；M3 设计 2 的 P7、W11，3.16，7.6，9.2；P10 的 F-2 和 `project-address-route`；P10 review 第 6 节 P11 一行；P8b 的 P7）：
@@ -3689,13 +3887,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - 组（`project-setting-label-group.tsx`）：组的那一行收 `disabled={!isEditable}`：菜单和拖动手柄只给能改标签的人（原来项目的每个成员都看得到组的菜单和手柄，nerve 拒绝他们的修改）；组的展开按钮（`Disclosure.Button`）以标签的名字为名（Headless UI 给它 `aria-expanded`）。
   - 拖动（`label-drag-n-drop-HOC.tsx`）：手柄是此刻渲染的那一个（回调的 ref 写进 state，effect 以它为依赖）：一行重新渲染出新的手柄（编辑关上之后）时重新登记，不再靠列表每次渲染都新建的 `onDrop`（P8b 的 P7）；没有手柄就不登记拖动和放下：一行只给能改标签的人渲染手柄、编辑时不渲染，所以 HOC 不再自己判断权限（原来的 `allowPermissions` 不写工作区和项目，删除）。
   - `@nerve/ui` 的 `DragHandle`：`tabIndex={-1}`、`aria-hidden`。pragmatic-dnd 的拖动只认指针，把手原来是没有名字、看不见的 Tab 停留点；它的 4 个调用方（标签的行，侧边栏项目的行、收藏夹、收藏项）都只把它当指针的把手（spec 第 3 节第 19 条，W17）。
-  - 一行（`label-item-block.tsx`）：没有调用方传的 `draggable` 删除（P8b A.9 的行）；菜单（"Options"）和删除按钮（"Delete"，`type="button"`）有名字；菜单和删除按钮在焦点进到这一行时和指针经过时一样显示（`group-focus-within:opacity-100`；原来键盘到达时看不见）。
+  - 一行（`label-item-block.tsx`）：没有调用方传的 `draggable` 删除（P8b A.9 的行）；菜单（"Options"）和删除按钮（"Delete"，`type="button"`）有名字；菜单和删除按钮在焦点进到这一行时和指针经过时一样显示（`group-focus-within:opacity-100`；原来键盘到达时看不见）。一个没有手柄的行（正在编辑的标签的）不登记拖动，也不是放下的目标（HOC 在没有手柄时直接返回，最终评审的 M5）。
+  - 标签的行内表单（`create-update-label-inline.tsx`，整个文件）：不再有 Plane 的显示和隐藏的接线：`labelForm`（调用方只在它为真时渲染表单，所以总是真）、`setLabelForm`（调用方的 `onClose` 再关一次）、`forwardRef` 和列表的 `scrollToRef`（没有读者）删除；`onClose` 必传，是表单唯一的关法：取消，或 nerve 做完新建、修改之后（`done`），每个调用方只关一次自己的表单；新建的颜色是 `getRandomLabelColor()`（最终评审的 M2，修复轮的 F-2）。颜色按钮名为"Color"（新文案 `common.color`，两种语言），去掉 Plane 的 `focus:outline-none`（Task 4 评审的 I1，裁定 T4-a）；修改从 nerve 存的颜色开始，没有颜色的标签改名时照旧不发颜色（原来发 `#000`，Task 4 评审的 M1，裁定 T4-c；色块照列表画成黑色）。它的 vitest 观察 `onClose`，加一行：给没有颜色的标签改名，请求体是 `{ name, color: "" }`。
+  - 状态表单的颜色按钮（`project-states/create-update/form.tsx`）同样名为"Color"：`@nerve/ui` 的 `Popover` 加 `buttonAriaLabel`，交给它的按钮（`popovers/popover.tsx`、`popovers/types.ts`）。
+  - 共用组件的焦点（spec 第 3 节第 12 条，W17）：`@nerve/ui` 的 `CustomMenu` 的省略号按钮去掉 `outline-none`（标签一行的"Options"Tab 到达时看得见，应用中 17 处同样，Task 5 的裁定 T5-a）；propel 的 `Button`、`IconButton` 的基础类去掉 `focus-visible:outline-none`，加 `focus-visible:outline-offset-2`：每个按钮 Tab 到达时有浏览器的焦点轮廓，离开按钮 2 像素，实心的按钮也看得见（裁定 T5-b、T5-e；`getButtonStyling`、`getIconButtonStyling` 的调用方同样）；项目设置侧边栏的返回箭头（`settings/project/sidebar/header.tsx` 的 `IconButton`）名为"Go back"（`common.go_back`，裁定 T5-f）。
   - `tools/keywords.json`：`project-address-route` 的文件加上标签设置页、`project-setting-label-list.tsx`、`label-drag-n-drop-HOC.tsx`（规则的说明随之改）。
   - 静态检查：`.oxlintrc.json` 的非空断言的范围加上 `project-setting-label-group.test.tsx`、`label-drag-n-drop-HOC.test.tsx`。
 
 **Tests:**
-- vitest：`states-labels.test.tsx` 加标签设置页：`shows $who the labels, their controls and its button`（项目管理员、是工作区管理员的项目成员、是工作区管理员的项目访客）；`shows its member the labels, and no control`；`tells its guest he may not see them`；`shows the button of its empty state, with no label, to those who may add one alone`（管理员看到两个按钮，成员一个也没有）。`project-setting-label-group.test.tsx`（新文件）：`shows one who may change the labels the group's controls and those of the labels under it`；`shows any other member the group and the labels under it, with no control`。`label-drag-n-drop-HOC.test.tsx`（新文件；web 应用的 vitest 没有 DOM，测试自己照 React 的语义写 `useState`、`useRef`、`useEffect`，以 pragmatic-dnd 的替身记下登记的把手：spec 第 3 节第 10 条）：`registers the label's drag with the grip its row renders now, and anew when the row renders another`；`registers no drag while its row renders no grip`。`states-labels.test.tsx` 的标签的 store 的替身只对页面的项目回答。`label.store.test.ts`、`label.store.changes.test.ts` 读 `getProjectLabelsTree(web.id)`。
-- 端到端：`P7 (page): the admin creates Bug, its form gone through by Tab and held until nerve answers, and Feature; bug is said taken under the name; he drags UI under Bug, which sends its parent alone, renames Bug Defect and drags Feature first; Feature put under Defect meanwhile, a third level the page asks for is said refused; its member sees the labels and can change none, a group's neither, a workspace admin who is its member can; Defect is deleted, its dialog held, with the labels under it`（新文件：表单打开时焦点在名字上，Tab 次序 `labelName`、`Cancel`、`Add`；创建扣住时"Adding"和"Cancel"都按不了，请求体只有名字和颜色；`bug` 的 409 在表单下面一行；拖 UI 到 Bug 的中间：只发 `parent_id`；从组的菜单改名：请求体是名字和颜色，组的展开按钮名为 Defect、展开着；拖 Feature 到 Docs 的上方：`{ parent_id: null, sort_order: 65535 }`；另一处把 Feature 放进 Defect 之后，把 Docs 拖到 Feature 上：422，提示说标签只有两层；点别处之后 Docs 的菜单和删除按钮看不见，从 Feature 的删除按钮按 Tab 直接到 Docs 的菜单（经过手柄而不停），再到删除按钮，这时看得见；成员看不到"Add label"、手柄、菜单、删除按钮，也没有可拖的标签（`[draggable="true"]`），是工作区管理员的成员各有四个（删除按钮三个：组没有）；重新载入之后从菜单删除 Defect，扣住时 Escape 不关、"Cancel"按不了，子标签一起删除；`expectLabels` 核对每一行）。W11 的页面版本加标签设置页；S2 的挂载清单加上标签设置页（spec 2.11）。
+- vitest：`states-labels.test.tsx` 加标签设置页：`shows $who the labels, their controls and its button`（项目管理员、是工作区管理员的项目成员、是工作区管理员的项目访客）；`shows its member the labels, and no control`；`tells its guest he may not see them`；`shows the button of its empty state, with no label, to those who may add one alone`（管理员看到两个按钮，成员一个也没有）。`project-setting-label-group.test.tsx`（新文件）：`shows one who may change the labels the group's controls and those of the labels under it`；`shows any other member the group and the labels under it, with no control`。`label-drag-n-drop-HOC.test.tsx`（新文件；web 应用的 vitest 没有 DOM，测试自己照 React 的语义写 `useState`、`useRef`、`useEffect`，以 pragmatic-dnd 的替身记下登记的把手：spec 第 3 节第 10 条）：`registers the label's drag with the grip its row renders now, and anew when the row renders another`；`registers no drag while its row renders no grip`。`states-labels.test.tsx` 的标签的 store 的替身只对页面的项目回答。`label.store.test.ts`、`label.store.changes.test.ts` 读 `getProjectLabelsTree(web.id)`；`label.store.test.ts` 的"各项目的标签分开"一条再读 `ops` 项目的树，`state.store.test.ts` 的同一条再读 `ops` 的按组分的状态：读路由 store 的项目的 getter 让它们失败（Task 5 评审的 I1，`T5.19`、`T3.13`）。`create-update-label-inline.test.tsx` 的表单收 `onClose`，加没有颜色的标签改名的一行。
+- 端到端：`P7 (page): the admin creates Bug, its form gone through by Tab and held until nerve answers, and Feature; bug is said taken under the name; he drags UI under Bug, which sends its parent alone, renames Bug Defect and drags Feature first; Feature put under Defect meanwhile, a third level the page asks for is said refused; its member sees the labels and can change none, a group's neither, a workspace admin who is its member can; a deletion of Docs, deleted meanwhile, is refused and leaves its dialog open; he takes UI out of Defect's group, which sends no parent; Defect is deleted, its dialog held, with Feature under it`（新文件：侧边栏的返回箭头由 Shift+Tab 按名字"Go back"到达，有离开它的焦点轮廓；表单打开时焦点在名字上，颜色按钮按名字"Color"找到、Shift+Tab 到达时有焦点的轮廓，Tab 次序 `labelName`、`Cancel`、`Add`，"Add"有离开实心的焦点轮廓；创建扣住时"Adding"和"Cancel"都按不了，请求体只有名字和颜色；`bug` 的 409 在表单下面一行；拖 UI 到 Bug 的中间：只发 `parent_id`；从组的菜单改名：请求体是名字和颜色，组的展开按钮名为 Defect、展开着；拖 Feature 到 Docs 的上方：`{ parent_id: null, sort_order: 65535 }`；另一处把 Feature 放进 Defect 之后，把 Docs 拖到 Feature 上：422，提示说标签只有两层；点别处之后 Docs 的菜单和删除按钮看不见，从 Feature 的删除按钮按 Tab 直接到 Docs 的菜单（经过手柄而不停），再到删除按钮，这时看得见；成员看不到"Add label"、手柄、菜单、删除按钮，也没有可拖的标签（`[draggable="true"]`），是工作区管理员的成员各有四个（删除按钮三个：组没有）；另一处删掉 Docs 之后在这一页删除它：nerve 拒绝（404），提示，确认框留着，取消关上（Task 4 评审的 I2，裁定 T4-b）；重新载入之后从 UI 的菜单把它移出 Defect 的组：只发 `{ parent_id: null }`，到顶层的最前（Task 4 评审的 M2，裁定 T4-d）；从菜单删除 Defect，扣住时 Escape 不关、"Cancel"按不了，子标签一起删除；`expectLabels` 核对每一行）。P6 的页面版本改为按名字"Color"找状态表单的颜色按钮。W11 的页面版本加标签设置页；S2 的挂载清单加上标签设置页（spec 2.11）。
 
 - [ ] **Step 1: 标签的 getter 按项目的 id**
 
@@ -3708,7 +3909,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     expect(store.getProjectLabelsTree(web.id)).toEqual([
 ````
 
-`web/apps/web/core/store/label.store.test.ts`（修改，4 处）：
+`web/apps/web/core/store/label.store.test.ts`（修改，5 处）：
 
 ````old web/apps/web/core/store/label.store.test.ts
     expect(store.getProjectLabelIds(web.id)).toEqual(ids(ordered));
@@ -3717,6 +3918,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new web/apps/web/core/store/label.store.test.ts
     expect(store.getProjectLabelIds(web.id)).toEqual(ids(ordered));
     expect(store.getProjectLabelsTree(web.id)).toEqual([
+````
+````old web/apps/web/core/store/label.store.test.ts
+    await loadLabels(nerve, store, [opsBug], ops);
+    expect(store.getProjectLabels(ops.id)).toEqual([opsBug]);
+````
+````new web/apps/web/core/store/label.store.test.ts
+    await loadLabels(nerve, store, [opsBug], ops);
+    expect(store.getProjectLabels(ops.id)).toEqual([opsBug]);
+    expect(store.getProjectLabelsTree(ops.id)).toEqual([{ ...opsBug, children: [] }]);
 ````
 ````old web/apps/web/core/store/label.store.test.ts
     expect(store.projectLabelsTree?.find((top) => top.id === feature.id)?.children).toEqual([frontend, backend, infra]);
@@ -3794,6 +4004,18 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     return labels?.filter((label) => label.parent_id === null).map((top) => treeOf(top, labels));
 ````
 
+`web/apps/web/core/store/state.store.test.ts`（修改，1 处）：
+
+````old web/apps/web/core/store/state.store.test.ts
+    expect(store.stateMap).toEqual(byId([opsBacklog, ...listed]));
+    expect(store.getProjectStates(ops.id)).toEqual([opsBacklog]);
+````
+````new web/apps/web/core/store/state.store.test.ts
+    expect(store.stateMap).toEqual(byId([opsBacklog, ...listed]));
+    expect(store.getProjectStates(ops.id)).toEqual([opsBacklog]);
+    expect(store.getGroupedProjectStates(ops.id)?.backlog).toEqual([opsBacklog]);
+````
+
 - [ ] **Step 2: 标签设置页和列表**
 
 `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`（修改，7 处）：
@@ -3847,19 +4069,23 @@ function LabelsSettingsPage({ params }: Route.ComponentProps) {
         <ProjectSettingsLabelList workspaceSlug={workspaceSlug} projectId={projectId} />
 ````
 
-`web/apps/web/core/components/labels/project-setting-label-list.tsx`（修改，6 处）：
+`web/apps/web/core/components/labels/project-setting-label-list.tsx`（修改，7 处）：
 
 ````old web/apps/web/core/components/labels/project-setting-label-list.tsx
+import { useState, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 ````
 ````new web/apps/web/core/components/labels/project-setting-label-list.tsx
+import { useState } from "react";
 import { observer } from "mobx-react";
 ````
 ````old web/apps/web/core/components/labels/project-setting-label-list.tsx
 export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelList() {
   // router
   const { projectId } = useParams();
+  // refs
+  const scrollToRef = useRef<HTMLDivElement>(null);
 ````
 ````new web/apps/web/core/components/labels/project-setting-label-list.tsx
 type TProjectSettingsLabelList = {
@@ -3897,6 +4123,15 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
     workspaceSlug,
     projectId
   );
+````
+````old web/apps/web/core/components/labels/project-setting-label-list.tsx
+              projectId={projectId}
+              labelForm={showLabelForm}
+              setLabelForm={setLabelForm}
+              ref={scrollToRef}
+````
+````new web/apps/web/core/components/labels/project-setting-label-list.tsx
+              projectId={projectId}
 ````
 ````old web/apps/web/core/components/labels/project-setting-label-list.tsx
               actions={[
@@ -4066,8 +4301,16 @@ import { useUserPermissions } from "@/hooks/store/user";
       {children(isDragging, isMakeChild, setDragHandle)}
 ````
 
-`web/apps/web/core/components/labels/project-setting-label-group.tsx`（修改，2 处）：
+`web/apps/web/core/components/labels/project-setting-label-group.tsx`（修改，3 处）：
 
+````old web/apps/web/core/components/labels/project-setting-label-group.tsx
+                          projectId={label.project_id}
+                          labelForm={isEditLabelForm}
+                          setLabelForm={setEditLabelForm}
+````
+````new web/apps/web/core/components/labels/project-setting-label-group.tsx
+                          projectId={label.project_id}
+````
 ````old web/apps/web/core/components/labels/project-setting-label-group.tsx
                           dragHandleRef={dragHandleRef}
 ````
@@ -4080,6 +4323,17 @@ import { useUserPermissions } from "@/hooks/store/user";
 ````
 ````new web/apps/web/core/components/labels/project-setting-label-group.tsx
                       <Disclosure.Button aria-label={label.name}>
+````
+
+`web/apps/web/core/components/labels/project-setting-label-item.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/labels/project-setting-label-item.tsx
+                projectId={label.project_id}
+                labelForm={isEditLabelForm}
+                setLabelForm={setEditLabelForm}
+````
+````new web/apps/web/core/components/labels/project-setting-label-item.tsx
+                projectId={label.project_id}
 ````
 
 `web/packages/ui/src/drag-handle.tsx`（修改，2 处）：
@@ -4103,7 +4357,334 @@ import { useUserPermissions } from "@/hooks/store/user";
       aria-hidden
 ````
 
-- [ ] **Step 4: 测试、关键词规则和静态检查的范围**
+- [ ] **Step 4: 行内表单和两个颜色按钮**
+
+`web/apps/web/core/components/labels/create-update-label-inline.test.tsx`（修改，7 处）：
+
+````old web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+const setLabelForm = vi.fn();
+````
+````new web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+const onClose = vi.fn();
+````
+````old web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+  <CreateUpdateLabelInline projectId={web.id} labelForm setLabelForm={setLabelForm} labelToUpdate={label} />
+````
+````new web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+  <CreateUpdateLabelInline projectId={web.id} labelToUpdate={label} onClose={onClose} />
+````
+````old web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+  setLabelForm.mockReset();
+````
+````new web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+  onClose.mockReset();
+````
+````old web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+  });
+
+  it("closes once nerve has made the change, not before", async () => {
+````
+````new web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+  });
+
+  it("renames a label made without a colour with none, as nerve holds it", async () => {
+    const docs = labelOf(web, "docs", 75535, { color: "" });
+    submit(formOf(docs), "guides");
+    await vi.waitFor(() => expect(store.updateLabel).toHaveBeenCalled());
+    expect(store.updateLabel.mock.calls).toEqual([[docs.id, { name: "guides", color: "" }]]);
+  });
+
+  it("closes once nerve has made the change, not before", async () => {
+````
+````old web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+    expect(setLabelForm.mock.calls).toEqual([]);
+````
+````new web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+    expect(onClose).not.toHaveBeenCalled();
+````
+````old web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+    await vi.waitFor(() => expect(setLabelForm.mock.calls).toEqual([[false]]));
+````
+````new web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+````
+````old web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+    expect([underFields(form.setError), setLabelForm.mock.calls, toasts]).toEqual([
+````
+````new web/apps/web/core/components/labels/create-update-label-inline.test.tsx
+    expect([underFields(form.setError), onClose.mock.calls, toasts]).toEqual([
+````
+
+`web/apps/web/core/components/labels/create-update-label-inline.tsx`（整个文件，164 行）：
+
+````whole web/apps/web/core/components/labels/create-update-label-inline.tsx
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import React, { useEffect } from "react";
+import { observer } from "mobx-react";
+import { TwitterPicker } from "react-color";
+import { Controller, useForm } from "react-hook-form";
+import { Popover, Transition } from "@headlessui/react";
+// nerve imports
+import { Field } from "@makeplane/propel/components/field";
+import { Input, InputGroup } from "@makeplane/propel/components/input";
+import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import type { Label } from "@nerve/api-client";
+// local imports
+import { useLabelChanges, type LabelUnderField } from "./use-label-changes";
+
+/** What the form edits and sends, a creation (at the top) or a change alike: nerve's LabelUpdate takes no others. */
+type TLabelFormValues = Pick<Label, "name" | "color">;
+
+type TCreateUpdateLabelInlineProps = {
+  /** The project a label created goes in. */
+  projectId: string;
+  /** The label the form changes; none, a creation. */
+  labelToUpdate?: Label;
+  /** Closes the form: by Cancel, or once nerve has made the label or the change. */
+  onClose: () => void;
+};
+
+export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline(props: TCreateUpdateLabelInlineProps) {
+  const { projectId, labelToUpdate, onClose } = props;
+  // form info
+  const {
+    handleSubmit,
+    control,
+    setError,
+    formState: { errors, isSubmitting },
+    watch,
+    setFocus,
+  } = useForm<TLabelFormValues>({
+    // a change starts from the label's name and colour as nerve holds them (none, for a label made without one), a
+    // creation from no name and a colour at random
+    defaultValues: labelToUpdate
+      ? { name: labelToUpdate.name, color: labelToUpdate.color }
+      : { name: "", color: getRandomLabelColor() },
+  });
+
+  const { t } = useTranslation();
+  const { create, update } = useLabelChanges();
+
+  // Busy until the page has followed nerve's answer: the form closes once nerve has made the label or the change,
+  // and stays with what it holds when nerve refuses it, the reason under the name or in a toast.
+  const handleFormSubmit = (formData: TLabelFormValues) => {
+    const underField: LabelUnderField = (field, message) => setError(field, { type: "server", message });
+    return labelToUpdate
+      ? update(labelToUpdate.id, formData, underField, onClose)
+      : create(projectId, formData, underField, onClose);
+  };
+
+  // the name has the focus once the form shows
+  useEffect(() => {
+    setFocus("name");
+  }, [setFocus]);
+
+  return (
+    <>
+      <div className="flex w-full scroll-m-8 items-center gap-2 bg-surface-1">
+        <div className="flex-shrink-0">
+          <Popover className="relative z-10 flex h-full w-full items-center justify-center">
+            {({ open }) => (
+              <>
+                <Popover.Button
+                  aria-label={t("common.color")}
+                  className={`group inline-flex items-center text-14 font-medium ${
+                    open ? "text-primary" : "text-secondary"
+                  }`}
+                >
+                  {/* a label without a colour shown as the list shows it (label-name.tsx) */}
+                  <span
+                    className="h-4 w-4 rounded-full"
+                    style={{
+                      backgroundColor: watch("color") || "#000",
+                    }}
+                  />
+                </Popover.Button>
+
+                <Transition
+                  as={React.Fragment}
+                  enter="transition ease-out duration-200"
+                  enterFrom="opacity-0 translate-y-1"
+                  enterTo="opacity-100 translate-y-0"
+                  leave="transition ease-in duration-150"
+                  leaveFrom="opacity-100 translate-y-0"
+                  leaveTo="opacity-0 translate-y-1"
+                >
+                  <Popover.Panel className="absolute top-full left-0 z-20 mt-3 w-screen max-w-xs px-2 sm:px-0">
+                    <Controller
+                      name="color"
+                      control={control}
+                      render={({ field: { value, onChange } }) => (
+                        <TwitterPicker
+                          colors={LABEL_COLOR_OPTIONS}
+                          color={value}
+                          onChange={(picked) => onChange(picked.hex)}
+                        />
+                      )}
+                    />
+                  </Popover.Panel>
+                </Transition>
+              </>
+            )}
+          </Popover>
+        </div>
+        <div className="flex flex-1 flex-col justify-center">
+          <Controller
+            control={control}
+            name="name"
+            rules={{
+              required: t("project_settings.labels.label_title_is_required"),
+              maxLength: {
+                value: 255,
+                message: t("project_settings.labels.label_max_char"),
+              },
+            }}
+            render={({ field: { value, onChange, ref: inputRef } }) => (
+              <Field name="name" invalid={Boolean(errors.name)}>
+                <InputGroup size="2xl">
+                  <Input
+                    size="2xl"
+                    id="labelName"
+                    name="name"
+                    type="text"
+                    value={value}
+                    onChange={onChange}
+                    ref={inputRef}
+                    placeholder={t("project_settings.labels.label_title")}
+                  />
+                </InputGroup>
+              </Field>
+            )}
+          />
+        </div>
+        <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+          {t("cancel")}
+        </Button>
+        <Button
+          variant="primary"
+          onClick={(e) => {
+            e.preventDefault();
+            void handleSubmit(handleFormSubmit)();
+          }}
+          loading={isSubmitting}
+        >
+          {labelToUpdate ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
+        </Button>
+      </div>
+      {errors.name?.message && <p className="p-0.5 pl-8 text-13 text-danger-primary">{errors.name?.message}</p>}
+    </>
+  );
+});
+````
+
+`web/apps/web/core/components/project-states/create-update/form.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project-states/create-update/form.tsx
+        <Popover button={<PopoverButton color={watch("color")} />} panelClassName="mt-4 -ml-3">
+````
+````new web/apps/web/core/components/project-states/create-update/form.tsx
+        <Popover
+          button={<PopoverButton color={watch("color")} />}
+          buttonAriaLabel={t("common.color")}
+          panelClassName="mt-4 -ml-3"
+        >
+````
+
+`web/packages/i18n/src/locales/en/common.json`（修改，1 处）：
+
+````old web/packages/i18n/src/locales/en/common.json
+    "options": "Options",
+````
+````new web/packages/i18n/src/locales/en/common.json
+    "options": "Options",
+    "color": "Color",
+````
+
+`web/packages/i18n/src/locales/zh-CN/common.json`（修改，1 处）：
+
+````old web/packages/i18n/src/locales/zh-CN/common.json
+    "options": "选项",
+````
+````new web/packages/i18n/src/locales/zh-CN/common.json
+    "options": "选项",
+    "color": "颜色",
+````
+
+`web/packages/ui/src/popovers/popover.tsx`（修改，2 处）：
+
+````old web/packages/ui/src/popovers/popover.tsx
+    buttonClassName = "",
+````
+````new web/packages/ui/src/popovers/popover.tsx
+    buttonClassName = "",
+    buttonAriaLabel,
+````
+````old web/packages/ui/src/popovers/popover.tsx
+          disabled={disabled}
+````
+````new web/packages/ui/src/popovers/popover.tsx
+          disabled={disabled}
+          aria-label={buttonAriaLabel}
+````
+
+`web/packages/ui/src/popovers/types.ts`（修改，1 处）：
+
+````old web/packages/ui/src/popovers/types.ts
+export type TPopover = TPopoverDefaultOptions & {
+````
+````new web/packages/ui/src/popovers/types.ts
+export type TPopover = TPopoverDefaultOptions & {
+  /** The button's name, for a button that shows no text of its own. */
+  buttonAriaLabel?: string;
+````
+
+- [ ] **Step 5: 共用组件的焦点和返回箭头的名字**
+
+`web/apps/web/core/components/settings/project/sidebar/header.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/settings/project/sidebar/header.tsx
+          icon={ArrowNarrowLeftOutline}
+````
+````new web/apps/web/core/components/settings/project/sidebar/header.tsx
+          icon={ArrowNarrowLeftOutline}
+          aria-label={t("common.go_back")}
+````
+
+`web/packages/propel/src/button/helper.tsx`（修改，1 处）：
+
+````old web/packages/propel/src/button/helper.tsx
+  "inline-flex items-center justify-center gap-1 whitespace-nowrap transition-colors focus-visible:outline-none disabled:pointer-events-none",
+````
+````new web/packages/propel/src/button/helper.tsx
+  "inline-flex items-center justify-center gap-1 whitespace-nowrap transition-colors focus-visible:outline-offset-2 disabled:pointer-events-none",
+````
+
+`web/packages/propel/src/icon-button/helper.tsx`（修改，1 处）：
+
+````old web/packages/propel/src/icon-button/helper.tsx
+  "inline-flex aspect-square items-center justify-center gap-1 whitespace-nowrap transition-colors focus-visible:outline-none disabled:pointer-events-none",
+````
+````new web/packages/propel/src/icon-button/helper.tsx
+  "inline-flex aspect-square items-center justify-center gap-1 whitespace-nowrap transition-colors focus-visible:outline-offset-2 disabled:pointer-events-none",
+````
+
+`web/packages/ui/src/dropdowns/custom-menu.tsx`（修改，1 处）：
+
+````old web/packages/ui/src/dropdowns/custom-menu.tsx
+                    className={`relative grid place-items-center rounded-sm p-1 text-secondary outline-none hover:text-primary ${
+````
+````new web/packages/ui/src/dropdowns/custom-menu.tsx
+                    className={`relative grid place-items-center rounded-sm p-1 text-secondary hover:text-primary ${
+````
+
+- [ ] **Step 6: 测试、关键词规则和静态检查的范围**
 
 `.oxlintrc.json`（修改，1 处）：
 
@@ -4475,9 +5056,36 @@ describe("ProjectSettingLabelGroup", () => {
 });
 ````
 
-- [ ] **Step 5: 端到端**
+- [ ] **Step 7: 端到端**
 
-`e2e/stories/project/p7-labels-page.spec.ts`（新文件，257 行）：
+`e2e/stories/project/p6-states-page.spec.ts`（修改，3 处）：
+
+````old e2e/stories/project/p6-states-page.spec.ts
+  // Review, in the started group: Tab goes through the form in its order; the form waits for nerve, its buttons
+  // disabled, Cancel too; it closes once nerve has made the state, last of its project's.
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  // Review, in the started group: Tab goes through the form in its order from its colour's button, named and marked
+  // as Shift+Tab reaches it; the form waits for nerve, its buttons disabled, Cancel too; it closes once nerve has made
+  // the state, last of its project's.
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+  await stateForm(page).getByRole("button").first().focus();
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  const colour = stateForm(page).getByRole("button", { name: "Color", exact: true });
+  await page.keyboard.press("Shift+Tab");
+  await expect(colour).toBeFocused();
+  await expect(colour).not.toHaveCSS("outline-style", "none");
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+  await stateForm(page).getByRole("button").first().click();
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  await colour.click();
+````
+
+`e2e/stories/project/p7-labels-page.spec.ts`（新文件，302 行）：
 
 ````file e2e/stories/project/p7-labels-page.spec.ts
 import type { Locator, Page } from "@playwright/test";
@@ -4550,7 +5158,7 @@ async function labelsOf(api: Api, token: string, projectId: string): Promise<(na
   };
 }
 
-test("P7 (page): the admin creates Bug, its form gone through by Tab and held until nerve answers, and Feature; bug is said taken under the name; he drags UI under Bug, which sends its parent alone, renames Bug Defect and drags Feature first; Feature put under Defect meanwhile, a third level the page asks for is said refused; its member sees the labels and can change none, a group's neither, a workspace admin who is its member can; Defect is deleted, its dialog held, with the labels under it", async ({
+test("P7 (page): the admin creates Bug, its form gone through by Tab and held until nerve answers, and Feature; bug is said taken under the name; he drags UI under Bug, which sends its parent alone, renames Bug Defect and drags Feature first; Feature put under Defect meanwhile, a third level the page asks for is said refused; its member sees the labels and can change none, a group's neither, a workspace admin who is its member can; a deletion of Docs, deleted meanwhile, is refused and leaves its dialog open; he takes UI out of Defect's group, which sends no parent; Defect is deleted, its dialog held, with Feature under it", async ({
   api,
   baseURL,
   browser,
@@ -4587,17 +5195,32 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await page.goto(`/${slug}/settings/projects/${web.id}/labels`);
   await expect(page.locator("h6")).toHaveText(["UI", "Docs"]);
 
+  // The sidebar's way back to the project, an icon button of the app's (propel's), named and marked as Shift+Tab
+  // reaches it from the first of the sidebar's links, its ring set off from it as on each of the app's buttons.
+  const back = page.getByRole("button", { name: "Go back", exact: true });
+  await page.getByRole("link", { name: "General", exact: true }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(back).toBeFocused();
+  await expect(back).not.toHaveCSS("outline-style", "none");
+  await expect(back).toHaveCSS("outline-offset", "2px");
+
   // Bug: the form opens on the name (its effect, which may run once the form shows), and Tab goes through it in its
-  // order; the form waits for nerve, its buttons disabled, Cancel too; it closes once nerve has made the label, at the
-  // top, last of the project's. Feature after it.
+  // order from its colour's button, named and marked as Shift+Tab reaches it, to Add, a button of the app's (propel's)
+  // marked too, its ring set off from its fill; the form waits for nerve, its buttons disabled, Cancel too; it closes
+  // once nerve has made the label, at the top, last of the project's. Feature after it.
   await page.getByRole("button", { name: "Add label" }).click();
   await expect(page.locator("#labelName")).toBeFocused();
   await page.locator("#labelName").fill("Bug");
-  await labelForm(page).getByRole("button").first().focus();
+  const colour = labelForm(page).getByRole("button", { name: "Color", exact: true });
+  const add = labelForm(page).getByRole("button", { name: "Add" });
+  await page.keyboard.press("Shift+Tab");
+  await expect(colour).toBeFocused();
+  await expect(colour).not.toHaveCSS("outline-style", "none");
   expect(await tabCycle(page, labelForm(page), 3)).toEqual(["labelName", "Cancel", "Add"]);
-  const creation = await sentHeld(page, "POST", listed, () =>
-    labelForm(page).getByRole("button", { name: "Add" }).click()
-  );
+  await expect(add).toBeFocused();
+  await expect(add).not.toHaveCSS("outline-style", "none");
+  await expect(add).toHaveCSS("outline-offset", "2px");
+  const creation = await sentHeld(page, "POST", listed, () => add.click());
   expect(creation.body).toEqual({ name: "Bug", color: expect.stringMatching(/^#/) });
   expect(await enabledWithin(labelForm(page).getByRole("button", { name: "Adding" }))).toBe(false);
   expect(await enabledWithin(labelForm(page).getByRole("button", { name: "Cancel" }))).toBe(false);
@@ -4667,18 +5290,22 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await expect(page.locator("h6")).toHaveText(["Feature", "Docs", "Defect", "UI"]);
 
   // Docs's controls, unseen while neither the pointer nor the focus is in its row (a click elsewhere hides them), are
-  // shown while Tab goes through them, as while the pointer is over it. Tab comes to its menu from Feature's delete
-  // button, past its grip, which only a pointer drags.
+  // shown while Tab goes through them, as while the pointer is over it, each marked as Tab reaches it. Tab comes to its
+  // menu from Feature's delete button, past its grip, which only a pointer drags.
   const docsRow = labelRow(page, "Docs");
   const docsControls = docsRow.locator(":scope > div.absolute");
+  const docsOptions = docsRow.getByRole("button", { name: "Options" });
+  const docsDelete = docsRow.getByRole("button", { name: "Delete" });
   await docsRow.locator("h6").click();
   await page.mouse.move(0, 0);
   await expect(docsControls).toHaveCSS("opacity", "0");
   await labelRow(page, "Feature").getByRole("button", { name: "Delete" }).focus();
   await page.keyboard.press("Tab");
-  await expect(docsRow.getByRole("button", { name: "Options" })).toBeFocused();
+  await expect(docsOptions).toBeFocused();
+  await expect(docsOptions).not.toHaveCSS("outline-style", "none");
   await page.keyboard.press("Tab");
-  await expect(docsRow.getByRole("button", { name: "Delete" })).toBeFocused();
+  await expect(docsDelete).toBeFocused();
+  await expect(docsDelete).not.toHaveCSS("outline-style", "none");
   await expect(docsControls).toHaveCSS("opacity", "1");
 
   // Its member sees the labels, Defect's group among them, and no control that changes them, no grip, no label to drag;
@@ -4702,14 +5329,39 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await seenBy("its member", mem, false);
   await seenBy("the workspace admin who is its member", wanda, true);
 
-  // Reloaded, the page shows Feature under Defect, after UI, of the same place and made before it. Defect deleted from
-  // its menu, its dialog held while nerve answers: Escape does not dismiss it, Cancel is disabled; it closes once nerve
-  // has deleted Defect with the labels under it.
+  // Docs deleted meanwhile, elsewhere: nerve refuses its deletion here, said in a toast, the dialog open; Cancel closes
+  // it.
+  const gone = await api.DELETE("/api/v0/labels/{label_id}", {
+    params: { path: { label_id: docs.id } },
+    headers: bearer(admin.access_token),
+  });
+  expect(gone.response.status).toBe(204);
+  const dialog = page.getByRole("dialog");
+  await docsDelete.click();
+  const refused = await sentTo(page, "DELETE", `/api/v0/labels/${docs.id}`, () =>
+    dialog.getByRole("button", { name: "Delete" }).click()
+  );
+  expect(refused.answer.status()).toBe(404);
+  await expect(page.getByText("The label does not exist, or you cannot see its project.")).toBeVisible();
+  expect(await closedWithin(page)).toBe(false);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(await closedWithin(page)).toBe(true);
+
+  // Reloaded, the page shows Docs gone, and Feature under Defect, after UI, of the same place and made before it. UI
+  // taken out of Defect's group from its menu: its parent alone, none; at the top, first by its place.
   await page.reload();
-  await expect(page.locator("h6")).toHaveText(shown);
+  await expect(page.locator("h6")).toHaveText(["Defect", "UI", "Feature"]);
+  await labelRow(page, "UI").getByRole("button", { name: "Options" }).click();
+  const removed = await sentTo(page, "PATCH", `/api/v0/labels/${ui.id}`, () =>
+    page.getByRole("menuitem", { name: "Remove from group" }).click()
+  );
+  expect([removed.answer.status(), removed.body]).toEqual([200, { parent_id: null }]);
+  await expect(page.locator("h6")).toHaveText(["UI", "Defect", "Feature"]);
+
+  // Defect deleted from its menu, its dialog held while nerve answers: Escape does not dismiss it, Cancel is disabled;
+  // it closes once nerve has deleted Defect with the label under it.
   await labelRow(page, "Defect").getByRole("button", { name: "Options" }).click();
   await page.getByRole("menuitem", { name: "Delete label" }).click();
-  const dialog = page.getByRole("dialog");
   const deletion = await sentHeld(page, "DELETE", `/api/v0/labels/${bug.id}`, () =>
     dialog.getByRole("button", { name: "Delete" }).click()
   );
@@ -4717,15 +5369,15 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   expect(await enabledWithin(dialog.getByRole("button", { name: "Cancel" }))).toBe(false);
   expect((await deletion.release()).status()).toBe(204);
   expect(await closedWithin(page)).toBe(true);
-  await expect(page.locator("h6")).toHaveText(["Docs"]);
+  await expect(page.locator("h6")).toHaveText(["UI"]);
   await expectLabels(db, web.id, [
     { name: "Feature", color: feature.color, parent: "Defect", sort_order: 65535, deleted: true, by: adminEmail },
-    { name: "UI", color: "", parent: "Defect", sort_order: 65535, deleted: true, by: adminEmail },
-    { name: "Docs", color: "", parent: null, sort_order: 75535, deleted: false, by: adminEmail },
+    { name: "UI", color: "", parent: null, sort_order: 65535, deleted: false, by: adminEmail },
+    { name: "Docs", color: "", parent: null, sort_order: 75535, deleted: true, by: adminEmail },
     { name: "Defect", color: bug.color, parent: null, sort_order: 85535, deleted: true, by: adminEmail },
   ]);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
-    [`409 POST ${listed}`, `422 PATCH /api/v0/labels/${docs.id}`],
+    [`409 POST ${listed}`, `422 PATCH /api/v0/labels/${docs.id}`, `404 DELETE /api/v0/labels/${docs.id}`],
     [],
     [],
   ]);
@@ -4734,6 +5386,7 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
     errors: [
       "Failed to load resource: the server responded with a status of 409 (Conflict)",
       "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
     ],
   });
 });
@@ -4831,7 +5484,7 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
 ````
 
-- [ ] **Step 6: 运行检查**
+- [ ] **Step 8: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 69 条规则、3 个例外，没有命中；web 的 oxlint 346 条，等于上限。
@@ -4845,10 +5498,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 109 个全部通过。
 
-- [ ] **Step 7: 提交**
+- [ ] **Step 9: 提交**
 
 ```bash
-git add .oxlintrc.json e2e/stories/project/p7-labels-page.spec.ts e2e/stories/project/p7-labels.spec.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx' web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx web/apps/web/core/components/labels/project-setting-label-group.test.tsx web/apps/web/core/components/labels/project-setting-label-group.tsx web/apps/web/core/components/labels/project-setting-label-list.tsx web/apps/web/core/store/label.store.changes.test.ts web/apps/web/core/store/label.store.test.ts web/apps/web/core/store/label.store.ts web/packages/ui/src/drag-handle.tsx
+git add .oxlintrc.json e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/project/p7-labels.spec.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx' web/apps/web/core/components/labels/create-update-label-inline.test.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/labels/label-drag-n-drop-HOC.test.tsx web/apps/web/core/components/labels/label-drag-n-drop-HOC.tsx web/apps/web/core/components/labels/project-setting-label-group.test.tsx web/apps/web/core/components/labels/project-setting-label-group.tsx web/apps/web/core/components/labels/project-setting-label-item.tsx web/apps/web/core/components/labels/project-setting-label-list.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/settings/project/sidebar/header.tsx web/apps/web/core/store/label.store.changes.test.ts web/apps/web/core/store/label.store.test.ts web/apps/web/core/store/label.store.ts web/apps/web/core/store/state.store.test.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/propel/src/button/helper.tsx web/packages/propel/src/icon-button/helper.tsx web/packages/ui/src/drag-handle.tsx web/packages/ui/src/dropdowns/custom-menu.tsx web/packages/ui/src/popovers/popover.tsx web/packages/ui/src/popovers/types.ts
 ```
 ```bash
 git commit -m "feat(M3/P11): the label settings page reads its project from its route, offers the changes to whom nerve allows them, and a label is dragged by the grip it shows now
@@ -4888,6 +5541,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T5.15` | 把手照行的渲染存着，但不在副作用的依赖里 | `label-drag-n-drop-HOC.test.tsx`、oxlint（`check:lint`） | vitest；静态 |
 | `T5.16` | 标签组的展开按钮没有名字 | 故事 P7 | 端到端 |
 | `T5.17` | 拖动把手又是没有名字的 Tab 停留点 | 故事 P7 | 端到端 |
+| `T5.18` | 标签一行的菜单 Tab 到达时看不见（`CustomMenu` 的省略号按钮的 `outline-none` 回来） | 故事 P7 | 端到端 |
+| `T5.19` | 标签树读路由 store 的项目，不读交给它的项目 | `label.store.test.ts`、`label.store.changes.test.ts` | vitest |
+| `T5.20` | propel 的 `Button` Tab 到达时看不见（`focus-visible:outline-none` 回来） | 故事 P7 | 端到端 |
+| `T5.21` | propel 的 `IconButton` Tab 到达时看不见（Plane 的 `focus-visible:outline-none`） | 故事 P7 | 端到端 |
+| `T5.22` | `Button` 的焦点轮廓贴着按钮画（没有 `outline-offset`），实心的按钮把它盖住 | 故事 P7 | 端到端 |
+| `T5.23` | `IconButton` 的焦点轮廓贴着按钮画（没有 `outline-offset`） | 故事 P7 | 端到端 |
+| `T5.24` | 项目设置侧边栏的返回箭头没有名字 | 故事 P7 | 端到端 |
 
 ---
 
@@ -4895,24 +5555,26 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/stories/project/p9-guest-profile.spec.ts`
-- Modify: `e2e/stories/smoke/s2-web-app.spec.ts`
+- Modify: `e2e/fixtures/assert/identity.ts`、`e2e/fixtures/auth.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`
 
 **Interfaces:**
 - Produces（spec 2.6；M3 设计 2 的 P9，决策点 3 的 A，9.2 的那一格，3.1；M1-P2 交接）：
   - 页面不改（决策点 3 的 A："页面不变"）：访客打开工作区成员的个人主页（`/{slug}/profile/{id}`）或自己的，看到用户卡片（数据来自工作区的成员列表，P9 的 `useProfileMember`），工作项一栏说他没有权限（布局的门 `allowPermissions([ADMIN, MEMBER], WORKSPACE)`，访客不渲染 `Outlet`），页面不取工作项（M4 的旧地址 `user-issues`）。管理员和成员看到的工作项一栏还请求 Plane 的旧地址（404，M4 对接，3.1；S2 不打开它）。
   - S2：访客的挂载清单加上 `/{slug}/profile/{admin}`、`/{slug}/profile/{guest}`，都是 `APP`、`WORKSPACE`（spec 2.11）；`acme` 交回管理员和访客的 id，`{admin}`、`{guest}` 是它们的名字。
-  - 访客离开工作区的界面、访客的个人主页上工作项的筛选栏：spec 第 3 节第 5、6 条（第 5 条待裁定）。
+  - e2e 的共用部分：`e2e/fixtures/auth.ts` 的 `named(api, token, names)` 收要设的名字（`UserUpdate` 的 `first_name`、`last_name`、`display_name`），P9 设名字和显示名，P1 的两处改为 `{ display_name }`，请求和原来一样（不在故事里另写一份，Task 6 的裁定 T6-a）；`e2e/fixtures/assert/identity.ts` 的 `expectNoAddress(page, emails, where)`：页面此刻的文档里没有这些邮箱，P9 和 W11 的页面版本都经它（原来 W11 自己写，P9 抄了一份；Task 6 评审的 m1，修复轮的 F-5）。
+  - 访客离开工作区的界面、访客的个人主页上工作项的筛选栏：spec 第 3 节第 5、6 条（第 5 条已由负责人裁定：M3 的收尾在侧边栏的工作区菜单加入口）。
 
 **Tests:**
-- 端到端：`P9 (page): a guest opens a member's profile: its card, without the address, and in place of the work items that he may not see them, which the page does not ask for; his own profile the same`（新文件：Ada Lovelace（显示名 ada）是管理员，Gus Grant（gus）是访客；两张主页的地址都转到 `/assigned`，卡片的名字和显示名，"You do not have the permission to access this page."，没有 Assigned、Created、Subscribed 的链接，页面里没有任何人的邮箱；没有一个请求的地址含 `issues`，没有失败、没有 Plane 的旧地址、没有页面错误）。S2 的访客一条加两页。
+- 端到端：`P9 (page): a guest opens a member's profile: its card, without the address, and in place of the work items that he may not see them, which the page does not ask for; his own profile the same`（新文件：Ada Lovelace（显示名 ada）是管理员，Gus Grant（gus）是访客；两张主页的地址都转到 `/assigned`，卡片的名字和显示名，"You do not have the permission to access this page."，没有 Assigned、Created、Subscribed 的链接，页面里没有任何人的邮箱（`expectNoAddress`）；没有一个请求的地址含 `issues`，没有失败、没有 Plane 的旧地址、没有页面错误）。S2 的访客一条加两页。W11 的页面版本的邮箱核对改经 `expectNoAddress`。
 
 - [ ] **Step 1: P9 的页面版本**
 
-`e2e/stories/project/p9-guest-profile.spec.ts`（新文件，52 行）：
+`e2e/stories/project/p9-guest-profile.spec.ts`（新文件，45 行）：
 
 ````file e2e/stories/project/p9-guest-profile.spec.ts
 import { createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
-import { accountId, bearer, emailFor } from "../../fixtures/auth";
+import { expectNoAddress } from "../../fixtures/assert/identity";
+import { accountId, emailFor, named } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -4928,12 +5590,8 @@ test("P9 (page): a guest opens a member's profile: its card, without the address
   const adaEmail = emailFor(testInfo, "ada");
   const gusEmail = emailFor(testInfo, "gus");
   const [ada, gus] = await Promise.all([registerOnboarded(api, adaEmail), registerOnboarded(api, gusEmail)]);
-  const named = async (token: string, body: { first_name: string; last_name: string; display_name: string }) => {
-    const { response } = await api.PATCH("/api/v0/me", { body, headers: bearer(token) });
-    expect(response.status, `named ${body.display_name}`).toBe(200);
-  };
-  await named(ada.access_token, { first_name: "Ada", last_name: "Lovelace", display_name: "ada" });
-  await named(gus.access_token, { first_name: "Gus", last_name: "Grant", display_name: "gus" });
+  await named(api, ada.access_token, { first_name: "Ada", last_name: "Lovelace", display_name: "ada" });
+  await named(api, gus.access_token, { first_name: "Gus", last_name: "Grant", display_name: "gus" });
   const slug = slugFor(testInfo);
   await createWorkspace(api, ada.access_token, { name: "Acme", slug });
   await inviteAndAccept(api, ada.access_token, slug, { email: gusEmail, token: gus.access_token }, 5);
@@ -4950,11 +5608,7 @@ test("P9 (page): a guest opens a member's profile: its card, without the address
     await expect(page.getByText("You do not have the permission to access this page."), name).toBeVisible();
     // no tab of the work items: the assigned, the created, the subscribed
     await expect(page.getByRole("link", { name: /^(Assigned|Created|Subscribed)$/ }), name).toHaveCount(0);
-    const html = await page.content();
-    expect([html.includes(adaEmail), html.includes(gusEmail)], `the addresses on ${name}'s profile`).toEqual([
-      false,
-      false,
-    ]);
+    await expectNoAddress(page, [adaEmail, gusEmail], `${name}'s profile`);
   };
   await profileOf(adaId, "Ada Lovelace", "ada");
   await profileOf(gusId, "Gus Grant", "gus");
@@ -4965,7 +5619,99 @@ test("P9 (page): a guest opens a member's profile: its card, without the address
 });
 ````
 
-- [ ] **Step 2: S2 的挂载清单**
+- [ ] **Step 2: 共用的 `named` 和 `expectNoAddress`**
+
+`e2e/fixtures/assert/identity.ts`（修改，3 处）：
+
+````old e2e/fixtures/assert/identity.ts
+import { expect } from "@playwright/test";
+````
+````new e2e/fixtures/assert/identity.ts
+import { expect, type Page } from "@playwright/test";
+````
+````old e2e/fixtures/assert/identity.ts
+// Database assertions of the identity stories. The page version and the API
+// version of a story call the same function (v0 design 8.2).
+````
+````new e2e/fixtures/assert/identity.ts
+// Database assertions of the identity stories, and what a page shows of an
+// account. The page version and the API version of a story call the same
+// function (v0 design 8.2).
+````
+````old e2e/fixtures/assert/identity.ts
+  expect(await countIdentity(db)).toEqual(before);
+}
+
+````
+````new e2e/fixtures/assert/identity.ts
+  expect(await countIdentity(db)).toEqual(before);
+}
+
+/**
+ * Checks that page's document, as it is now, holds none of emails: accounts' addresses that the page must not show its
+ * viewer (a guest, say). where names the page in the failure's message.
+ */
+export async function expectNoAddress(page: Page, emails: readonly string[], where: string): Promise<void> {
+  const html = await page.content();
+  expect(
+    emails.filter((email) => html.includes(email)),
+    `the addresses on ${where}`
+  ).toEqual([]);
+}
+
+````
+
+`e2e/fixtures/auth.ts`（修改，1 处）：
+
+````old e2e/fixtures/auth.ts
+/** Gives the account of the bearer token given the display name name, by which the pages show it. */
+export async function named(api: Api, token: string, name: string): Promise<void> {
+  const { response } = await api.PATCH("/api/v0/me", { body: { display_name: name }, headers: bearer(token) });
+  expect(response.status, `name ${name}`).toBe(200);
+````
+````new e2e/fixtures/auth.ts
+/**
+ * Gives the account of the bearer token given the names given: the display name, by which the pages show it, and the
+ * first and last names, which its profile's card shows above it.
+ */
+export async function named(
+  api: Api,
+  token: string,
+  names: Pick<components["schemas"]["UserUpdate"], "first_name" | "last_name" | "display_name">
+): Promise<void> {
+  const { response } = await api.PATCH("/api/v0/me", { body: names, headers: bearer(token) });
+  expect(response.status, `named ${JSON.stringify(names)}`).toBe(200);
+````
+
+`e2e/stories/project/p1-create-project.spec.ts`（修改，1 处）：
+
+````old e2e/stories/project/p1-create-project.spec.ts
+  await named(api, admin.access_token, "ada");
+  await named(api, guest.access_token, "gus");
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+  await named(api, admin.access_token, { display_name: "ada" });
+  await named(api, guest.access_token, { display_name: "gus" });
+````
+
+`e2e/stories/workspace/w11-guest-bounds.spec.ts`（修改，2 处）：
+
+````old e2e/stories/workspace/w11-guest-bounds.spec.ts
+} from "../../fixtures/api";
+````
+````new e2e/stories/workspace/w11-guest-bounds.spec.ts
+} from "../../fixtures/api";
+import { expectNoAddress } from "../../fixtures/assert/identity";
+````
+````old e2e/stories/workspace/w11-guest-bounds.spec.ts
+    const html = await page.content();
+    expect([html.includes(adminEmail), html.includes(gusEmail)], `the addresses on ${path}`).toEqual([false, false]);
+````
+````new e2e/stories/workspace/w11-guest-bounds.spec.ts
+    await expectNoAddress(page, [adminEmail, gusEmail], path);
+````
+
+- [ ] **Step 3: S2 的挂载清单**
 
 `e2e/stories/smoke/s2-web-app.spec.ts`（修改，9 处）：
 
@@ -5042,7 +5788,7 @@ test("P9 (page): a guest opens a member's profile: its card, without the address
     const names = { [slug]: "{slug}", [project.id]: "{project}", [ids.admin]: "{admin}", [ids.guest]: "{guest}" };
 ````
 
-- [ ] **Step 3: 运行检查**
+- [ ] **Step 4: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 69 条规则、3 个例外，没有命中；web 的 oxlint 346 条，等于上限。
@@ -5056,10 +5802,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 110 个全部通过。
 
-- [ ] **Step 4: 提交**
+- [ ] **Step 5: 提交**
 
 ```bash
-git add e2e/stories/project/p9-guest-profile.spec.ts e2e/stories/smoke/s2-web-app.spec.ts
+git add e2e/fixtures/assert/identity.ts e2e/fixtures/auth.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p9-guest-profile.spec.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts
 ```
 ```bash
 git commit -m "test(M3/P11): a guest opens a member's profile and his own: the card, no work items and no request for them
@@ -5078,14 +5824,18 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 |---|---|---|---|
 | `T6.1` | 访客得到个人主页的工作项一栏，它去取工作项 | 故事 P9、故事 S2 | 端到端 |
 | `T6.2` | 访客算在看得到个人主页的工作项的人里 | 故事 P9 | 端到端 |
+| `P6.1` | （探查）访客的个人主页在"没有权限"之下挂载工作项一栏：它请求工作项 | 故事 P9 | 端到端 |
+| `P6.2` | （探查）访客的个人主页显示工作项的标签页 | 故事 P9 | 端到端 |
+| `P6.3` | （探查）个人主页的卡片显示看的人的邮箱 | 故事 P9 | 端到端 |
+| `P6.4` | （探查）访客在自己的个人主页上看到工作项 | 故事 P9 | 端到端 |
 
 ---
 
 ### Task 7: M2 的账户页面只在发出修改的会话里跟进
 
 **Files:**
-- Create: `web/apps/web/core/components/api-token/delete-token-modal.test.tsx`、`web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.test.tsx`
-- Modify: `.oxlintrc.json`、`e2e/stories/identity/a11-api-tokens.spec.ts`、`web/apps/web/core/components/api-token/delete-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/create-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/form.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/profile/start-of-week-preference.tsx`、`web/apps/web/core/components/settings/profile/content/pages/general/form.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`
+- Create: `e2e/fixtures/dialogs.ts`、`web/apps/web/core/components/api-token/delete-token-modal.test.tsx`、`web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.test.tsx`、`web/apps/web/core/lib/fake-form.ts`
+- Modify: `.oxlintrc.json`、`e2e/fixtures/settings-pages.ts`、`e2e/stories/identity/a11-api-tokens.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p3-project-settings.spec.ts`、`e2e/stories/project/p4-archive.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels-page.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/api-token/delete-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/create-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/form.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx`、`web/apps/web/core/components/onboarding/steps/profile/root.tsx`、`web/apps/web/core/components/profile/start-of-week-preference.tsx`、`web/apps/web/core/components/settings/profile/content/pages/general/form.tsx`、`web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`
 
 **Interfaces:**
 - Produces（spec 2.7；M3 设计 7.1；P9 的裁定 P8、P9 spec 第 5 节和 review 第 6 节的 P11 一行；M2 设计 7.3）：
@@ -5096,108 +5846,104 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - security（`security.tsx`）：密码改了之后清空表单、隐藏密码、提示；`current_password_incorrect` 在旧密码下，`new_password` 的字段错误在新密码下，其余提示。
     - security 页的 API 令牌（预检的 M1）：新建（`api-token/modal/create-token-modal.tsx`）在 `done` 里显示新令牌、下载它的 CSV，只在发出它的那一次打开里（`phase` 照旧）；`failed` 里表单照 M2 显示拒绝：表单（`form.tsx`）的 `onSubmit` 收显示拒绝的函数 `refused`，忙到弹窗跟进做完，取消在 `isSubmitting` 时按不了（F-1：弹窗的 `handleClose` 本来就不关）。撤销（`api-token/delete-token-modal.tsx`）在 `done` 里提示、关上，`failed` 里提示原因（`useRefusalToast`），确认框忙到跟进做完（`AlertModalCore`，Task 1）。
   - 另一个标签页换了账户之后才兑现的修改，页面什么都不做（不提示、不交给下一步、不清空表单、不在字段下写东西、不显示也不下载新令牌）。
-  - 静态检查：`.oxlintrc.json` 的非空断言的范围加上五个新的测试文件（新手引导的测试已在里面）。
+  - 测试的共用部分：`core/lib/fake-form.ts` 的 `fakeForm(form)`：react-hook-form 的替身，留下组件交给 `handleSubmit` 的提交，表单的 `setError`、`reset` 是测试的；新手引导、general、security 的三个测试都经它（原来各写一份，Task 7 的裁定 T7-b），各自的 `vi.hoisted` 对象以它导出的 `KeptForm<V>` 为类型，不再重述它的形状（Task 8 评审的 m3，修复轮的 F-7）。
+  - e2e 的共用部分：新文件 `e2e/fixtures/dialogs.ts`：弹窗的检查和"一秒之内"的检查从 `settings-pages.ts`（P9、P10 写的 `enabledWithin`、`shownWithin`、`hiddenWithin`、`closedWithin`、`closedByEscape`、`composingEscape`、`closedByComposingEscape`，Task 3 的 `sentWithin`）移来，导入它们的故事随之改（`settings-pages.ts` 原来 418 行，Task 7 评审的 m2，修复轮的 F-4）；新的 `closedByBackdropClick(page)`（点弹窗外面的左上角，`closedByEscape` 的孪生，裁定 T7-a）；一个 `happenedWithin(page, event, matches, act)`：在 `act` 之前就听页面的 `request` 或 `download`，`act` 结束之后让它与一秒赛跑，事件先到时结束那一秒的计时器，无论如何都不再听；`sentWithin`（请求）和 `downloadedWithin`（下载，交回 `act` 的结果）是它的两个名字（原来两份同样的做法，最终评审的 M4；Task 3 的计时器不再空跑到一秒）。
+  - 静态检查：`.oxlintrc.json` 的非空断言的范围加上五个新的测试文件和 `fake-form.ts`（新手引导的测试已在里面）。
 
 **Tests:**
 - vitest：`onboarding/steps/profile/root.test.tsx`：`stays when nerve refuses the names, its refusal of the name said under it`；`says in a toast a refusal that is not of the name`；`hands nothing on and says nothing when the names' change $settles after another tab moved this one to another account`（替换原来的两条）。`general/form.test.tsx`（新文件）：`sends the names, the address not among them, and says nerve made the change`；`says a refusal under the field it names, and no toast`；`says in a toast a refusal that names no field of the form`；`says nothing when the change $settles after another tab moved this one to another account`。`security.test.tsx`（新文件）：`sends the passwords; once nerve has changed it, empties the form and says so`；`says nerve's refusal of $refused under its field, the form as it was`；`says in a toast a refusal of neither password`；`says nothing, nor empties the form, when the change $settles after another tab moved this one to another account`。`preferences/language-and-timezone-list.test.tsx`（新文件；列表渲染每周第一天）：`sends $preference picked, and says nerve made the change`；`says nerve's refusal of $preference in a toast`；`says nothing when the change of $preference $settles after another tab moved this one to another account`（时区、语言、每周第一天）。`api-token/modal/create-token-modal.test.tsx`（新文件）：`creates the token the form gives; once nerve has, downloads its secret`；`has the form say nerve's refusal, and downloads nothing`；`downloads nothing, nor has the form say anything, when the creation $settles after another tab moved this one`。`api-token/delete-token-modal.test.tsx`（新文件）：`revokes the token once its dialog is confirmed; once nerve has, says so and closes`；`says nerve's reason when it refuses, and stays open`；`says nothing, nor closes, when the revocation $settles after another tab moved this one to another account`。
-- 端到端：A11 的第二个故事（`a11-api-tokens.spec.ts`）：新建的请求被扣住时取消按不了，再经浏览器的后退离开页面（tokens 页从 security 页在应用之内进入；原来按取消），之后照旧：迟到的回答不显示令牌、不下载，列表里有它，再打开的弹窗要新的令牌（spec 第 3 节第 18 条）。M2 的其余账户故事（A 系列）照旧通过。
+- 端到端：A11 的第二个故事（`a11-api-tokens.spec.ts`）：新建的请求被扣住时"Generating"和取消都按不了，Escape 和点外面都不关（`closedByEscape`、`closedByBackdropClick`，裁定 T7-a），再经浏览器的后退离开页面（tokens 页从 security 页在应用之内进入；原来按取消；令牌名为"abandoned"），之后：回答到达页面之后的一秒之内不下载（`downloadedWithin`，Task 7 评审的 m1），令牌不显示、不在页面的任何地方，列表里有它，再打开的弹窗要新的令牌（spec 第 3 节第 18 条）。第一个故事的撤销扣住时确认框关不掉、删除按不了（`sentHeld`，裁定 T7-a）。M2 的其余账户故事（A 系列）照旧通过；P1–P8、W1、W3、W4、W7、A12 只改导入（`dialogs.ts`）。
 
-- [ ] **Step 1: 新手引导的资料一步**
+- [ ] **Step 1: 新手引导的资料一步；表单的替身**
 
-`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx`（修改，10 处）：
+`web/apps/web/core/components/onboarding/steps/profile/root.test.tsx`（整个文件，108 行）：
 
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-import { renderToStaticMarkup } from "react-dom/server";
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+````whole web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Mock } from "vitest";
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-import { heldChange, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
-import { refusal } from "@/lib/fake-refusal";
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { heldChange, lateSettlings, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { KeptForm } from "@/lib/fake-form";
 import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-// When the onboarding's profile step hands the onboarding on (M3 design 7.1, 7.4): the step renders on the server with
-// a stand-in for its form (react-hook-form's useForm), which keeps the step's submit; the test submits names as the
-// form would, and nerve answers them when the test says. Its session is fake-tab.ts's. What the step itself says of a
-// refusal is M2's (M2 design 7.3).
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+import { ProfileSetupStep } from "./root";
+
 // When the onboarding's profile step hands the onboarding on, and what it says of nerve's refusal of the names (M2
 // design 7.3, M3 design 7.1, 7.4): the step renders on the server with a stand-in for its form (react-hook-form's
-// useForm), which keeps the step's submit and what the step says under the name; the test submits names as the form
-// would, and nerve answers them when the test says. Its session is fake-tab.ts's.
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-  (): { submit: ((names: Names) => Promise<void>) | undefined; updateCurrentUser: ReturnType<typeof vi.fn> } => ({
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-  (): {
-    submit: ((names: Names) => Promise<void>) | undefined;
-    updateCurrentUser: ReturnType<typeof vi.fn>;
-    setError: Mock;
-  } => ({
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-    updateCurrentUser: vi.fn(),
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-    updateCurrentUser: vi.fn(),
-    setError: vi.fn(),
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-    setError: () => undefined,
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-    setError: page.setError,
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-  page.updateCurrentUser.mockResolvedValue(undefined);
-  onDone.mockReset();
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+// useForm, fake-form.ts), which keeps the step's submit and what the step says under the name; the test submits names
+// as the form would, and nerve answers them when the test says. Its session is fake-tab.ts's.
+
+/** The names the step's form gives its submit. */
+type Names = { first_name: string; last_name: string };
+
+const page = vi.hoisted((): KeptForm<Names> & { updateCurrentUser: Mock } => ({
+  submit: undefined,
+  updateCurrentUser: vi.fn(),
+  setError: vi.fn(),
+}));
+/** The step hands the onboarding on: the root's part. */
+const onDone = vi.fn<() => Promise<void> | undefined>();
+vi.mock("react-hook-form", async () => (await import("@/lib/fake-form")).fakeForm(page));
+vi.mock("@/hooks/store/user", () => ({
+  useUser: () => ({ data: { display_name: "ada" }, updateCurrentUser: page.updateCurrentUser }),
+}));
+vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+/** Renders the step, and submits the names as its form would; settles once the step has. */
+async function named() {
+  renderToStaticMarkup(<ProfileSetupStep onDone={onDone} />);
+  if (!page.submit) throw new Error("the step showed no form");
+  await page.submit({ first_name: "Ada", last_name: "Lovelace" });
+}
+
+beforeEach(() => {
+  signedIn();
+  page.submit = undefined;
+  page.updateCurrentUser.mockReset();
   page.updateCurrentUser.mockResolvedValue(undefined);
   page.setError.mockReset();
   onDone.mockReset();
   toasts.length = 0;
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-  it("stays when nerve refuses the names", async () => {
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-  it("stays when nerve refuses the names, its refusal of the name said under it", async () => {
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+});
+
+describe("ProfileSetupStep", () => {
+  it("sends the names, then hands the onboarding on", async () => {
     await named();
-    expect(onDone.mock.calls).toEqual([]);
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+    expect(page.updateCurrentUser.mock.calls).toEqual([[{ first_name: "Ada", last_name: "Lovelace" }]]);
+    expect(onDone.mock.calls).toEqual([[]]);
+  });
+
+  it("stays busy until the root is done with the onboarding it handed on (its end, for one who has a workspace)", async () => {
+    const ending = heldChange<undefined>();
+    onDone.mockReturnValueOnce(ending.sent);
+    const settled = settledYet(named());
+    await pageSettled();
+    expect([onDone.mock.calls, settled()]).toEqual([[[]], false]);
+    ending.answer(undefined);
+    await pageSettled();
+    expect(settled()).toBe(true);
+  });
+
+  it("stays when nerve refuses the names, its refusal of the name said under it", async () => {
+    page.updateCurrentUser.mockRejectedValueOnce(
+      refusal(422, "validation_failed", [{ field: "first_name", code: "required" }])
+    );
     await named();
     expect([onDone.mock.calls, underFields(page.setError), toasts]).toEqual([
       [],
       [["first_name", "errors.field.required"]],
       [],
     ]);
-````
-````old web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
-  it("hands nothing on when nerve has the names after another tab moved this one to another account", async () => {
-    const names = heldChange<undefined>();
-    page.updateCurrentUser.mockReturnValueOnce(names.sent);
-    const submitted = named();
-    switchAccount();
-    names.answer(undefined);
-    await submitted;
-    expect(onDone.mock.calls).toEqual([]);
   });
-});
-````
-````new web/apps/web/core/components/onboarding/steps/profile/root.test.tsx
+
   it("says in a toast a refusal that is not of the name", async () => {
     page.updateCurrentUser.mockRejectedValueOnce(refusal(403, "forbidden"));
     await named();
@@ -5267,6 +6013,49 @@ import { toasts } from "@/lib/fake-toast";
       },
 ````
 
+`web/apps/web/core/lib/fake-form.ts`（新文件，38 行）：
+
+````file web/apps/web/core/lib/fake-form.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+// A stand-in for react-hook-form, for the tests of a form's component rendered on the server: a test mocks the module
+// with it over what it keeps (vi.hoisted), as
+//   vi.mock("react-hook-form", async () => (await import("@/lib/fake-form")).fakeForm(form));
+// The component's useForm keeps there the submit the component gives handleSubmit, which the test calls with the
+// values as the form would, and gives the component the test's setError and reset, which record what it says under
+// its fields (underFields, fake-refusal.ts) and its emptying. The fields are empty and valid, nothing is being
+// submitted, and Controller renders nothing.
+
+import type { Mock } from "vitest";
+
+/**
+ * What the stand-in keeps of a form whose values are V: the submit the component gave it, and the form's calls. A test
+ * types its hoisted object with it, beside its own stand-ins.
+ */
+export type KeptForm<V> = { submit: ((values: V) => Promise<void>) | undefined; setError: Mock; reset?: Mock };
+
+/** react-hook-form, as the component reads it, keeping in form what the component gives it. */
+export function fakeForm<V>(form: KeptForm<V>) {
+  return {
+    useForm: () => ({
+      handleSubmit: (submit: (values: V) => Promise<void>) => {
+        form.submit = submit;
+        return () => undefined;
+      },
+      control: {},
+      watch: () => "",
+      setError: form.setError,
+      reset: form.reset,
+      formState: { errors: {}, isSubmitting: false, isValid: true },
+    }),
+    Controller: () => null,
+  };
+}
+````
+
 - [ ] **Step 2: 个人设置的 general、preferences、security**
 
 `web/apps/web/core/components/profile/start-of-week-preference.tsx`（修改，2 处）：
@@ -5307,7 +6096,7 @@ import { followInSession } from "@/lib/in-session";
     });
 ````
 
-`web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx`（新文件，117 行）：
+`web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx`（新文件，104 行）：
 
 ````file web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx
 /**
@@ -5320,38 +6109,25 @@ import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@nerve/api-client";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { KeptForm } from "@/lib/fake-form";
 import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { GeneralProfileSettingsForm } from "./form";
 
 // What the profile settings' general form says of how nerve settled the change of the names (M2 design 7.3, M3 design
-// 7.1): the form renders on the server with a stand-in for its form (react-hook-form's useForm), which keeps the form's
-// submit and what it says under its fields; the test submits the names as the form would, and nerve answers them when
-// the test says. Its session is fake-tab.ts's.
+// 7.1): the form renders on the server with a stand-in for its form (react-hook-form's useForm, fake-form.ts), which
+// keeps the form's submit and what it says under its fields; the test submits the names as the form would, and nerve
+// answers them when the test says. Its session is fake-tab.ts's.
 
 /** What the form's fields hold, as it gives its submit. */
 type Names = { first_name: string; last_name: string; display_name: string; email: string };
 
-const form = vi.hoisted(
-  (): {
-    submit: ((names: Names) => Promise<void>) | undefined;
-    setError: Mock;
-    updateCurrentUser: Mock;
-  } => ({ submit: undefined, setError: vi.fn(), updateCurrentUser: vi.fn() })
-);
-vi.mock("react-hook-form", () => ({
-  useForm: () => ({
-    handleSubmit: (submit: (names: Names) => Promise<void>) => {
-      form.submit = submit;
-      return () => undefined;
-    },
-    control: {},
-    watch: () => "",
-    setError: form.setError,
-    formState: { errors: {} },
-  }),
-  Controller: () => null,
+const form = vi.hoisted((): KeptForm<Names> & { updateCurrentUser: Mock } => ({
+  submit: undefined,
+  setError: vi.fn(),
+  updateCurrentUser: vi.fn(),
 }));
+vi.mock("react-hook-form", async () => (await import("@/lib/fake-form")).fakeForm(form));
 vi.mock("@/hooks/store/user", () => ({
   useUser: () => ({ data: undefined, updateCurrentUser: form.updateCurrentUser }),
 }));
@@ -5653,7 +6429,7 @@ import { followInSession } from "@/lib/in-session";
       });
 ````
 
-`web/apps/web/core/components/settings/profile/content/pages/security.test.tsx`（新文件，114 行）：
+`web/apps/web/core/components/settings/profile/content/pages/security.test.tsx`（新文件，100 行）：
 
 ````file web/apps/web/core/components/settings/profile/content/pages/security.test.tsx
 /**
@@ -5665,40 +6441,26 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import type { KeptForm } from "@/lib/fake-form";
 import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { SecurityProfileSettings } from "./security";
 
 // What the security page says of how nerve settled the change of the password (M2 design 7.3, M3 design 7.1): the
-// page renders on the server with a stand-in for its form (react-hook-form's useForm), which keeps the form's submit,
-// what it says under its fields and its emptying; the test submits the passwords as the form would, and nerve answers
-// them when the test says. Its session is fake-tab.ts's.
+// page renders on the server with a stand-in for its form (react-hook-form's useForm, fake-form.ts), which keeps the
+// form's submit, what it says under its fields and its emptying; the test submits the passwords as the form would, and
+// nerve answers them when the test says. Its session is fake-tab.ts's.
 
 /** What the form's fields hold, as it gives its submit. */
 type Passwords = { old_password: string; new_password: string; confirm_password: string };
 
-const form = vi.hoisted(
-  (): {
-    submit: ((passwords: Passwords) => Promise<void>) | undefined;
-    setError: Mock;
-    reset: Mock;
-    changePassword: Mock;
-  } => ({ submit: undefined, setError: vi.fn(), reset: vi.fn(), changePassword: vi.fn() })
-);
-vi.mock("react-hook-form", () => ({
-  useForm: () => ({
-    handleSubmit: (submit: (passwords: Passwords) => Promise<void>) => {
-      form.submit = submit;
-      return () => undefined;
-    },
-    control: {},
-    watch: () => "",
-    setError: form.setError,
-    reset: form.reset,
-    formState: { errors: {}, isSubmitting: false },
-  }),
-  Controller: () => null,
+const form = vi.hoisted((): KeptForm<Passwords> & { reset: Mock; changePassword: Mock } => ({
+  submit: undefined,
+  setError: vi.fn(),
+  reset: vi.fn(),
+  changePassword: vi.fn(),
 }));
+vi.mock("react-hook-form", async () => (await import("@/lib/fake-form")).fakeForm(form));
 vi.mock("@/hooks/store/user", () => ({ useUser: () => ({ changePassword: form.changePassword }) }));
 vi.mock("@/components/api-token/token-list", () => ({ ApiTokenList: () => null }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
@@ -5836,8 +6598,44 @@ import { followInSession } from "@/lib/in-session";
 
 - [ ] **Step 3: API 令牌的新建和撤销**
 
-`e2e/stories/identity/a11-api-tokens.spec.ts`（修改，8 处）：
+`e2e/stories/identity/a11-api-tokens.spec.ts`（修改，14 处）：
 
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { closedByBackdropClick, closedByEscape, downloadedWithin, enabledWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  registerOnboarded,
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  registerOnboarded,
+  sentHeld,
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  // without a hover.
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  // without a hover. While nerve's answer is out, the dialog is busy and stays: its buttons can't be pressed, and
+  // neither Escape nor its backdrop closes it.
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  const revoked = await answerTo(page, "DELETE", `/api/v0/api-tokens/${created.id}`, () =>
+    page.getByRole("button", { name: "Delete" }).click()
+  );
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  const revocation = await sentHeld(page, "DELETE", `/api/v0/api-tokens/${created.id}`, () =>
+    page.getByRole("button", { name: "Delete" }).click()
+  );
+  expect(await enabledWithin(page.getByRole("button", { name: "Deleting" }))).toBe(false);
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect(await closedByBackdropClick(page)).toBe(false);
+  const revoked = await revocation.release();
+````
 ````old e2e/stories/identity/a11-api-tokens.spec.ts
 test("A11 (page): what a modal's opening left unfinished stays there: a token answered after it closed shows nowhere; its cleanup spares the next opening", async ({
 ````
@@ -5861,8 +6659,8 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
 ````
 ````new e2e/stories/identity/a11-api-tokens.spec.ts
   /**
-   * Generates label in the modal opened now, which cannot be closed while nerve's answer is held from the page, and
-   * leaves the page (the browser's back) meanwhile.
+   * Generates label in the modal opened now, which is busy and cannot be closed while nerve's answer is held from the
+   * page (neither its buttons nor Escape nor its backdrop), and leaves the page (the browser's back) meanwhile.
    */
   const generateThenLeave = async (label: string): Promise<() => Promise<void>> => {
 ````
@@ -5870,28 +6668,43 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
     await page.getByRole("button", { name: "Cancel" }).click();
 ````
 ````new e2e/stories/identity/a11-api-tokens.spec.ts
+    expect(await enabledWithin(page.getByRole("button", { name: "Generating" }))).toBe(false);
     await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(await closedByEscape(page)).toBe(false);
+    expect(await closedByBackdropClick(page)).toBe(false);
     await page.goBack();
     await expect(page).toHaveURL("/settings/profile/security");
 ````
 ````old e2e/stories/identity/a11-api-tokens.spec.ts
   // Answered after the modal closed, the create lists the token, and does nothing else: the token never shows,
-````
-````new e2e/stories/identity/a11-api-tokens.spec.ts
-  // Answered after its page was left, the create lists the token, and does nothing else: the token never shows,
-````
-````old e2e/stories/identity/a11-api-tokens.spec.ts
+  // nor is it anywhere on the page, and nothing downloads. The list shows it once the create's continuation has
+  // run, which is where the modal would have taken the token and downloaded its CSV.
   const cancelledAnswer = await answerTo(page, "POST", "/api/v0/me/api-tokens", await generateThenCancel("cancelled"));
+  expect(cancelledAnswer.status()).toBe(201);
+  const cancelled = (await cancelledAnswer.json()) as components["schemas"]["ApiTokenCreated"];
+  await expect(page.getByText("cancelled", { exact: true })).toBeVisible();
 ````
 ````new e2e/stories/identity/a11-api-tokens.spec.ts
-  const cancelledAnswer = await answerTo(page, "POST", "/api/v0/me/api-tokens", await generateThenLeave("cancelled"));
+  // Answered after its page was left, the create does nothing: nothing downloads in the second after its answer
+  // reaches the page, by when the create's continuation has run (where the modal would have taken the token and
+  // downloaded its CSV), and the token never shows, nor is it anywhere on the page. The list has the token, which
+  // nerve made before its answer was held (the security page the back opened may have fetched it already).
+  const releaseAbandoned = await generateThenLeave("abandoned");
+  const abandonedCreate = await downloadedWithin(page, () =>
+    answerTo(page, "POST", "/api/v0/me/api-tokens", releaseAbandoned)
+  );
+  expect(abandonedCreate.downloaded, "a download after the answer").toBe(false);
+  expect(abandonedCreate.result.status()).toBe(201);
+  const abandoned = (await abandonedCreate.result.json()) as components["schemas"]["ApiTokenCreated"];
 ````
 ````old e2e/stories/identity/a11-api-tokens.spec.ts
-  const cancelled = (await cancelledAnswer.json()) as components["schemas"]["ApiTokenCreated"];
+  expect(downloads).toHaveLength(0);
+  await expectTokenGone(page, cancelled.token, log);
 ````
 ````new e2e/stories/identity/a11-api-tokens.spec.ts
-  const cancelled = (await cancelledAnswer.json()) as components["schemas"]["ApiTokenCreated"];
   await tokensPage.click();
+  await expect(page.getByText("abandoned", { exact: true })).toBeVisible();
+  await expectTokenGone(page, abandoned.token, log);
 ````
 ````old e2e/stories/identity/a11-api-tokens.spec.ts
   // So too when the modal opens again before the answer comes: the modal opened again still asks for a new token.
@@ -5902,6 +6715,38 @@ test("A11 (page): what a modal's opening left unfinished stays there: a token an
   // new token.
   const release = await generateThenLeave("late");
   await tokensPage.click();
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  const answer = await answerTo(page, "POST", "/api/v0/me/api-tokens", release);
+  expect(answer.status()).toBe(201);
+  const late = (await answer.json()) as components["schemas"]["ApiTokenCreated"];
+  expect(late).toMatchObject({ label: "late" });
+  await expect(page.getByText("late", { exact: true })).toBeVisible();
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  const lateCreate = await downloadedWithin(page, () => answerTo(page, "POST", "/api/v0/me/api-tokens", release));
+  expect(lateCreate.downloaded, "a download after the answer").toBe(false);
+  expect(lateCreate.result.status()).toBe(201);
+  const late = (await lateCreate.result.json()) as components["schemas"]["ApiTokenCreated"];
+  expect(late).toMatchObject({ label: "late" });
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  expect(await shown()).toEqual([]);
+  expect(downloads).toHaveLength(0);
+  await expectTokenGone(page, late.token, log);
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  expect(await shown()).toEqual([]);
+  await expect(page.getByText("late", { exact: true })).toBeVisible();
+  await expectTokenGone(page, late.token, log);
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  expect(await shown()).toEqual([own.token]);
+  await expectTokenGone(page, cancelled.token, log);
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  expect(await shown()).toEqual([own.token]);
+  await expectTokenGone(page, abandoned.token, log);
 ````
 
 `web/apps/web/core/components/api-token/delete-token-modal.test.tsx`（新文件，79 行）：
@@ -6237,7 +7082,522 @@ import { followInSession } from "@/lib/in-session";
           <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
 ````
 
-- [ ] **Step 4: 静态检查的范围**
+- [ ] **Step 4: 弹窗和"一秒之内"的检查**
+
+`e2e/fixtures/dialogs.ts`（新文件，163 行）：
+
+````file e2e/fixtures/dialogs.ts
+import { setTimeout as sleep } from "node:timers/promises";
+
+import { errors, expect, type Download, type Locator, type Page, type Request } from "@playwright/test";
+
+import { deferred } from "./deferred";
+
+// A page's dialogs, and what a page does or shows within a second: what must not happen while the test holds what the
+// page waits for stays undone the whole time, where a check made at once could pass before the page has done it.
+
+/**
+ * What a wait of a second that failed says: false when the second ran out (what was waited for did not come); any
+ * other failure, such as a locator that matches several elements, rejects, so that it cannot read as "it did not".
+ */
+function timedOut(error: unknown): false {
+  if (error instanceof errors.TimeoutError) return false;
+  throw error;
+}
+
+/** An event of a page that a check waits for, the test of the one it waits for, and what makes the page act. */
+type Watched<T> =
+  | [event: "request", matches: (request: Request) => boolean, act: () => Promise<T>]
+  | [event: "download", matches: (download: Download) => boolean, act: () => Promise<T>];
+
+/**
+ * Runs act, and resolves with what act resolved with and whether page emitted event, one that matches, while act ran
+ * or within a second of its end: what page must not do, such as send a change its caller may not make or download a
+ * secret answered after its page was left, stays undone the whole time, where a look made at once could come before
+ * page has done it. It listens from before act runs, ends the second's timer as soon as the event comes, and stops
+ * listening either way.
+ */
+async function happenedWithin<T>(
+  page: Page,
+  ...[event, matches, act]: Watched<T>
+): Promise<{ result: T; happened: boolean }> {
+  const happened = deferred<true>();
+  let stopListening: () => void;
+  if (event === "request") {
+    const onRequest = (request: Request) => {
+      if (matches(request)) happened.resolve(true);
+    };
+    page.on("request", onRequest);
+    stopListening = () => page.off("request", onRequest);
+  } else {
+    const onDownload = (download: Download) => {
+      if (matches(download)) happened.resolve(true);
+    };
+    page.on("download", onDownload);
+    stopListening = () => page.off("download", onDownload);
+  }
+  const second = new AbortController();
+  try {
+    const result = await act();
+    return { result, happened: await Promise.race([happened.promise, sleep(1_000, false, { signal: second.signal })]) };
+  } finally {
+    second.abort();
+    stopListening();
+  }
+}
+
+/**
+ * Resolves with whether page sends a request of method to path (no query) while act runs or within a second of its
+ * end (happenedWithin), such as a change its caller may not make.
+ */
+export async function sentWithin(page: Page, method: string, path: string, act: () => Promise<void>): Promise<boolean> {
+  const sent = (request: Request) => request.method() === method && new URL(request.url()).pathname === path;
+  return (await happenedWithin(page, "request", sent, act)).happened;
+}
+
+/**
+ * Runs act, and resolves with what act resolved with and whether page began a download while act ran or within a
+ * second of its end (happenedWithin), such as of the secret of a token answered after its page was left.
+ */
+export async function downloadedWithin<T>(
+  page: Page,
+  act: () => Promise<T>
+): Promise<{ result: T; downloaded: boolean }> {
+  const { result, happened } = await happenedWithin(page, "download", () => true, act);
+  return { result, downloaded: happened };
+}
+
+/**
+ * Resolves with whether button is enabled within a second: one that stays disabled while the test holds what its page
+ * waits for keeps it disabled the whole time, where a check made at once could pass before the page has re-rendered.
+ * button is one element with the button role: a locator that matches none, several or something else fails, not as
+ * "stayed disabled". Enabled is as Playwright's role queries take it (getByRole's disabled).
+ */
+export async function enabledWithin(button: Locator): Promise<boolean> {
+  await expect(button, "the one button").toHaveRole("button");
+  return button
+    .and(button.page().getByRole("button", { disabled: false }))
+    .waitFor({ state: "attached", timeout: 1_000 })
+    .then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether locator, one element, shows within a second: what must not show while the test holds what its
+ * page waits for stays hidden the whole time, where a check made at once could pass before the page has rendered it.
+ * Only the second running out means it did not show (timedOut); any other failure, such as a locator that matches
+ * several elements, rejects.
+ */
+export async function shownWithin(locator: Locator): Promise<boolean> {
+  return locator.waitFor({ state: "visible", timeout: 1_000 }).then(() => true, timedOut);
+}
+
+/** Resolves with whether locator, one element, hides within a second, as a panel that closes does: shownWithin's twin. */
+export async function hiddenWithin(locator: Locator): Promise<boolean> {
+  return locator.waitFor({ state: "hidden", timeout: 1_000 }).then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
+ * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
+ * still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check made at once cannot
+ * tell it from one that stays: the second outlasts the transition. Only the second running out means it stayed
+ * (timedOut); any other failure, such as two modal dialogs, rejects.
+ */
+export async function closedWithin(page: Page): Promise<boolean> {
+  return page
+    .locator('[role="dialog"][aria-modal="true"]')
+    .waitFor({ state: "detached", timeout: 1_000 })
+    .then(() => true, timedOut);
+}
+
+/** Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed (closedWithin). */
+export async function closedByEscape(page: Page): Promise<boolean> {
+  const closed = closedWithin(page);
+  await page.keyboard.press("Escape");
+  return closed;
+}
+
+/**
+ * Clicks the backdrop of the one modal dialog page shows, at the viewport's top left corner (a dialog keeps at least
+ * 16 px from each edge: ModalCore's positions), and resolves with whether that dialog closed (closedWithin).
+ */
+export async function closedByBackdropClick(page: Page): Promise<boolean> {
+  const closed = closedWithin(page);
+  await page.mouse.click(1, 1);
+  return closed;
+}
+
+/**
+ * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
+ * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
+ * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
+ */
+export async function composingEscape(field: Locator): Promise<void> {
+  await field.evaluate((element) => {
+    const init = { bubbles: true, cancelable: true, composed: true };
+    element.dispatchEvent(new CompositionEvent("compositionstart", init));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", isComposing: true }));
+    element.dispatchEvent(new CompositionEvent("compositionend", init));
+  });
+}
+
+/**
+ * Gives field, in the one modal dialog its page shows, an Escape that ends a composition (composingEscape), and
+ * resolves with whether that dialog closed (closedWithin).
+ */
+export async function closedByComposingEscape(field: Locator): Promise<boolean> {
+  const closed = closedWithin(field.page());
+  await composingEscape(field);
+  return closed;
+}
+````
+
+`e2e/fixtures/settings-pages.ts`（修改，2 处）：
+
+````old e2e/fixtures/settings-pages.ts
+import { setTimeout as sleep } from "node:timers/promises";
+
+import { errors, expect, type Locator, type Page, type Request, type Response, type Route } from "@playwright/test";
+````
+````new e2e/fixtures/settings-pages.ts
+import { expect, type Locator, type Page, type Response, type Route } from "@playwright/test";
+````
+````old e2e/fixtures/settings-pages.ts
+  return { requested: requested.promise, release: released.resolve };
+}
+
+/**
+ * What a wait of a second that failed says: false when the second ran out (what was waited for did not come); any
+ * other failure, such as a locator that matches several elements, rejects, so that it cannot read as "it did not".
+ */
+function timedOut(error: unknown): false {
+  if (error instanceof errors.TimeoutError) return false;
+  throw error;
+}
+
+/**
+ * Resolves with whether button is enabled within a second: one that stays disabled while the test holds what its page
+ * waits for keeps it disabled the whole time, where a check made at once could pass before the page has re-rendered.
+ * button is one element with the button role: a locator that matches none, several or something else fails, not as
+ * "stayed disabled". Enabled is as Playwright's role queries take it (getByRole's disabled).
+ */
+export async function enabledWithin(button: Locator): Promise<boolean> {
+  await expect(button, "the one button").toHaveRole("button");
+  return button
+    .and(button.page().getByRole("button", { disabled: false }))
+    .waitFor({ state: "attached", timeout: 1_000 })
+    .then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether page sends a request of method to path (no query) while act runs or within a second of its
+ * end: what page must not send, such as a change its caller may not make, stays unsent the whole time, where a check
+ * made at once could pass before page has sent it.
+ */
+export async function sentWithin(page: Page, method: string, path: string, act: () => Promise<void>): Promise<boolean> {
+  const sent = deferred<true>();
+  const onRequest = (request: Request) => {
+    if (request.method() === method && new URL(request.url()).pathname === path) sent.resolve(true);
+  };
+  page.on("request", onRequest);
+  try {
+    await act();
+    return await Promise.race([sent.promise, sleep(1_000, false)]);
+  } finally {
+    page.off("request", onRequest);
+  }
+}
+
+/**
+ * Resolves with whether locator, one element, shows within a second: what must not show while the test holds what its
+ * page waits for stays hidden the whole time, where a check made at once could pass before the page has rendered it.
+ * Only the second running out means it did not show (timedOut); any other failure, such as a locator that matches
+ * several elements, rejects.
+ */
+export async function shownWithin(locator: Locator): Promise<boolean> {
+  return locator.waitFor({ state: "visible", timeout: 1_000 }).then(() => true, timedOut);
+}
+
+/** Resolves with whether locator, one element, hides within a second, as a panel that closes does: shownWithin's twin. */
+export async function hiddenWithin(locator: Locator): Promise<boolean> {
+  return locator.waitFor({ state: "hidden", timeout: 1_000 }).then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
+ * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
+ * still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check made at once cannot
+ * tell it from one that stays: the second outlasts the transition. Only the second running out means it stayed
+ * (timedOut); any other failure, such as two modal dialogs, rejects.
+ */
+export async function closedWithin(page: Page): Promise<boolean> {
+  return page
+    .locator('[role="dialog"][aria-modal="true"]')
+    .waitFor({ state: "detached", timeout: 1_000 })
+    .then(() => true, timedOut);
+}
+
+/** Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed (closedWithin). */
+export async function closedByEscape(page: Page): Promise<boolean> {
+  const closed = closedWithin(page);
+  await page.keyboard.press("Escape");
+  return closed;
+}
+
+/**
+ * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
+ * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
+ * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
+ */
+export async function composingEscape(field: Locator): Promise<void> {
+  await field.evaluate((element) => {
+    const init = { bubbles: true, cancelable: true, composed: true };
+    element.dispatchEvent(new CompositionEvent("compositionstart", init));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", isComposing: true }));
+    element.dispatchEvent(new CompositionEvent("compositionend", init));
+  });
+}
+
+/**
+ * Gives field, in the one modal dialog its page shows, an Escape that ends a composition (composingEscape), and
+ * resolves with whether that dialog closed (closedWithin).
+ */
+export async function closedByComposingEscape(field: Locator): Promise<boolean> {
+  const closed = closedWithin(field.page());
+  await composingEscape(field);
+  return closed;
+````
+````new e2e/fixtures/settings-pages.ts
+  return { requested: requested.promise, release: released.resolve };
+````
+
+`e2e/stories/identity/a12-deactivate.spec.ts`（修改，1 处）：
+
+````old e2e/stories/identity/a12-deactivate.spec.ts
+import { answerTo, closedByEscape, registerOnboarded } from "../../fixtures/settings-pages";
+````
+````new e2e/stories/identity/a12-deactivate.spec.ts
+import { closedByEscape } from "../../fixtures/dialogs";
+import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/project/p1-create-project.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p1-create-project.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { closedByComposingEscape, closedByEscape, composingEscape, hiddenWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+import {
+  closedByComposingEscape,
+  closedByEscape,
+  composingEscape,
+  expectListBesideButton,
+  hiddenWithin,
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+import {
+  expectListBesideButton,
+````
+
+`e2e/stories/project/p2-visibility.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p2-visibility.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
+````
+````new e2e/stories/project/p2-visibility.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
+import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/project/p2-visibility.spec.ts
+import {
+  answerTo,
+  closedByEscape,
+  closedWithin,
+  enabledWithin,
+  registerOnboarded,
+  sentHeld,
+} from "../../fixtures/settings-pages";
+````
+````new e2e/stories/project/p2-visibility.spec.ts
+import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/project/p3-project-settings.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p3-project-settings.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { closedByEscape, enabledWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+  bodiesSentTo,
+  closedByEscape,
+  enabledWithin,
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+  bodiesSentTo,
+````
+
+`e2e/stories/project/p4-archive.spec.ts`（修改，1 处）：
+
+````old e2e/stories/project/p4-archive.spec.ts
+import {
+  answerTo,
+  closedByComposingEscape,
+  closedByEscape,
+  enabledWithin,
+  registerOnboarded,
+  sentHeld,
+} from "../../fixtures/settings-pages";
+````
+````new e2e/stories/project/p4-archive.spec.ts
+import { closedByComposingEscape, closedByEscape, enabledWithin } from "../../fixtures/dialogs";
+import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/project/p5-project-members.spec.ts`（修改，1 处）：
+
+````old e2e/stories/project/p5-project-members.spec.ts
+import {
+  answerTo,
+  closedByEscape,
+  closedWithin,
+  enabledWithin,
+  holdAnswer,
+  registerOnboarded,
+  sentHeld,
+  sentTo,
+} from "../../fixtures/settings-pages";
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
+import { answerTo, holdAnswer, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/project/p6-states-page.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p6-states-page.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { closedByEscape, closedWithin, enabledWithin, sentWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+import {
+  closedByEscape,
+  closedWithin,
+  enabledWithin,
+  registerOnboarded,
+  sentHeld,
+  sentTo,
+  sentWithin,
+} from "../../fixtures/settings-pages";
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/project/p7-labels-page.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p7-labels-page.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+````
+````new e2e/stories/project/p7-labels-page.spec.ts
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/project/p7-labels-page.spec.ts
+import {
+  closedByEscape,
+  closedWithin,
+  enabledWithin,
+  registerOnboarded,
+  sentHeld,
+  sentTo,
+} from "../../fixtures/settings-pages";
+````
+````new e2e/stories/project/p7-labels-page.spec.ts
+import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/project/p8-project-preferences.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p8-project-preferences.spec.ts
+import type { Database } from "../../fixtures/db";
+````
+````new e2e/stories/project/p8-project-preferences.spec.ts
+import type { Database } from "../../fixtures/db";
+import { shownWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/project/p8-project-preferences.spec.ts
+import { answerTo, holdAnswer, registerOnboarded, sentTo, shownWithin } from "../../fixtures/settings-pages";
+````
+````new e2e/stories/project/p8-project-preferences.spec.ts
+import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/workspace/w1-create-workspace.spec.ts`（修改，2 处）：
+
+````old e2e/stories/workspace/w1-create-workspace.spec.ts
+import { deferred } from "../../fixtures/deferred";
+````
+````new e2e/stories/workspace/w1-create-workspace.spec.ts
+import { deferred } from "../../fixtures/deferred";
+import { enabledWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/workspace/w1-create-workspace.spec.ts
+import {
+  answerTo,
+  enabledWithin,
+  holdAnswer,
+  holdScripts,
+  registerOnboarded,
+  sentHeld,
+  sentTo,
+} from "../../fixtures/settings-pages";
+````
+````new e2e/stories/workspace/w1-create-workspace.spec.ts
+import { answerTo, holdAnswer, holdScripts, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/workspace/w3-workspace-settings.spec.ts`（修改，1 处）：
+
+````old e2e/stories/workspace/w3-workspace-settings.spec.ts
+import { answerTo, closedByEscape, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+````
+````new e2e/stories/workspace/w3-workspace-settings.spec.ts
+import { closedByEscape } from "../../fixtures/dialogs";
+import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/workspace/w4-invite-members.spec.ts`（修改，1 处）：
+
+````old e2e/stories/workspace/w4-invite-members.spec.ts
+import { closedByEscape, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+````
+````new e2e/stories/workspace/w4-invite-members.spec.ts
+import { closedByEscape } from "../../fixtures/dialogs";
+import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
+````
+
+`e2e/stories/workspace/w7-member-management.spec.ts`（修改，1 处）：
+
+````old e2e/stories/workspace/w7-member-management.spec.ts
+import { closedByEscape, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+import { closedByEscape } from "../../fixtures/dialogs";
+import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+````
+
+- [ ] **Step 5: 静态检查的范围**
 
 `.oxlintrc.json`（修改，1 处）：
 
@@ -6250,10 +7610,11 @@ import { followInSession } from "@/lib/in-session";
         "web/apps/web/core/components/settings/profile/content/pages/security.test.tsx",
         "web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx",
         "web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx",
-        "web/apps/web/core/components/api-token/delete-token-modal.test.tsx"
+        "web/apps/web/core/components/api-token/delete-token-modal.test.tsx",
+        "web/apps/web/core/lib/fake-form.ts"
 ````
 
-- [ ] **Step 5: 运行检查**
+- [ ] **Step 6: 运行检查**
 
 Run: `make lint-web`
 Expected: 通过；关键词守卫 69 条规则、3 个例外，没有命中；web 的 oxlint 346 条，等于上限。
@@ -6267,10 +7628,10 @@ Expected: 通过。
 Run: `make e2e`
 Expected: 110 个全部通过。
 
-- [ ] **Step 6: 提交**
+- [ ] **Step 7: 提交**
 
 ```bash
-git add .oxlintrc.json e2e/stories/identity/a11-api-tokens.spec.ts web/apps/web/core/components/api-token/delete-token-modal.test.tsx web/apps/web/core/components/api-token/delete-token-modal.tsx web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx web/apps/web/core/components/api-token/modal/create-token-modal.tsx web/apps/web/core/components/api-token/modal/form.tsx web/apps/web/core/components/onboarding/steps/profile/root.test.tsx web/apps/web/core/components/onboarding/steps/profile/root.tsx web/apps/web/core/components/profile/start-of-week-preference.tsx web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx web/apps/web/core/components/settings/profile/content/pages/general/form.tsx web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx web/apps/web/core/components/settings/profile/content/pages/security.test.tsx web/apps/web/core/components/settings/profile/content/pages/security.tsx
+git add .oxlintrc.json e2e/fixtures/dialogs.ts e2e/fixtures/settings-pages.ts e2e/stories/identity/a11-api-tokens.spec.ts e2e/stories/identity/a12-deactivate.spec.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p3-project-settings.spec.ts e2e/stories/project/p4-archive.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/project/p8-project-preferences.spec.ts e2e/stories/workspace/w1-create-workspace.spec.ts e2e/stories/workspace/w3-workspace-settings.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/api-token/delete-token-modal.test.tsx web/apps/web/core/components/api-token/delete-token-modal.tsx web/apps/web/core/components/api-token/modal/create-token-modal.test.tsx web/apps/web/core/components/api-token/modal/create-token-modal.tsx web/apps/web/core/components/api-token/modal/form.tsx web/apps/web/core/components/onboarding/steps/profile/root.test.tsx web/apps/web/core/components/onboarding/steps/profile/root.tsx web/apps/web/core/components/profile/start-of-week-preference.tsx web/apps/web/core/components/settings/profile/content/pages/general/form.test.tsx web/apps/web/core/components/settings/profile/content/pages/general/form.tsx web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.test.tsx web/apps/web/core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx web/apps/web/core/components/settings/profile/content/pages/security.test.tsx web/apps/web/core/components/settings/profile/content/pages/security.tsx web/apps/web/core/lib/fake-form.ts
 ```
 ```bash
 git commit -m "feat(M3/P11): M2's account pages say how nerve settled a change only in the session it was sent in
@@ -6299,19 +7660,22 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T7.7` | API 令牌的新建不论会话都跟进 | `create-token-modal.test.tsx` | vitest |
 | `T7.8` | API 令牌的撤销不论会话都跟进 | `delete-token-modal.test.tsx` | vitest |
 | `T7.9` | API 令牌的新建在请求路上时可以取消 | 故事 A11 | 端到端 |
+| `T7.10` | 新建 API 令牌的请求在路上时"Generate"仍可用 | 故事 A11 | 端到端 |
+| `T7.11` | 新建 API 令牌的弹窗按 Escape 和点外面关上，请求在路上时也是 | 故事 A11 | 端到端 |
+| `T7.12` | 撤销 API 令牌的确认框从不忙：请求在路上时关得掉，删除按钮可用 | 故事 A11 | 端到端 |
 
 ---
 
 ### Task 8: M3 的死成员和死 prop；P8a、P8b 留下的文件的 oxlint 警告
 
 **Files:**
-- Modify: `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx`、`web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/dropdowns/project/dropdown.tsx`、`web/apps/web/core/components/dropdowns/state/state-option.tsx`、`web/apps/web/core/components/power-k/menus/members.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/workspace/invite-modal/actions.tsx`、`web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx`、`web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/apps/web/package.json`、`web/packages/constants/src/members.ts`、`web/packages/propel/src/icons/state/dashed-circle.tsx`
+- Modify: `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx`、`web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/dropdowns/project/dropdown.tsx`、`web/apps/web/core/components/dropdowns/state/state-option.tsx`、`web/apps/web/core/components/power-k/menus/members.tsx`、`web/apps/web/core/components/project/create/common-attributes.tsx`、`web/apps/web/core/components/workspace/invite-modal/actions.tsx`、`web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx`、`web/apps/web/core/store/member/workspace/workspace-member.store.ts`、`web/apps/web/package.json`、`web/packages/constants/src/members.ts`、`web/packages/propel/src/icons/state/backlog-group-icon.tsx`、`web/packages/propel/src/icons/state/dashed-circle.tsx`、`web/packages/propel/src/icons/state/started-group-icon.tsx`、`web/packages/propel/src/icons/state/unstarted-group-icon.tsx`
 
 **Interfaces:**
 - Produces（spec 2.8、附录 A.5、A.9；M3 设计 7.9；M1 收尾交接；P8a、P8b spec 附录 A.8、A.9 和 review 第 6 节的 P11 一行；P8b 的裁定 P1）：
   - 删掉的都没有读者、没有调用方传入（spec 附录 A.5 的 C-b：`tsc`、knip 通过，`?url` 资源、包的再导出、文案、测试中都没有它们）；没有调用方传的 prop 原来取默认值，组件现在把默认值写成常量，显示的照旧：
-    - 项目下拉框（`dropdowns/project/dropdown.tsx`、`base.tsx`）：`button`、`currentProjectId`、`dropdownArrow`、`dropdownArrowClassName`、`onClose`、`renderByDefault`；`getProjectById` 的类型是生成的 `Project`（返回 `Project | undefined`，P8b 的裁定 P1）；`base.tsx` 的五条 oxlint 警告清零（`no-shadow` 三条：取显示名和图标的函数不再收参数；`consistent-function-scoping`：画图标的函数移到模块；`ComboDropDown` 照 `@nerve/ui` 的说明收 `role="presentation"`：它只收集里面的部分的按键）。
-    - 成员头像（`dropdowns/member/avatar.tsx`）的 `size`（固定 `"xs"`）；状态选项（`dropdowns/state/state-option.tsx`）的 `query`；命令面板的成员菜单（`power-k/menus/members.tsx`）的 `heading`；创建项目的公共字段（`project/create/common-attributes.tsx`）的 `handleFormOnChange`；邀请弹窗的按钮行（`workspace/invite-modal/actions.tsx`）只留 `isSubmitting`、`handleClose`、`appendField`；状态图标的虚线圆（`propel` 的 `dashed-circle.tsx`）的 `totalSegments`（固定 15）；归档页头（`archives/header.tsx`）每个标签的 `href`（图标的类型写成 `React.FC<React.SVGAttributes<SVGElement>>`）。
+    - 项目下拉框（`dropdowns/project/dropdown.tsx`、`base.tsx`）：`button`、`currentProjectId`、`dropdownArrow`、`dropdownArrowClassName`、`onClose`、`renderByDefault`；`getProjectById` 的类型是生成的 `Project`（返回 `Project | undefined`，P8b 的裁定 P1）；`base.tsx` 的五条 oxlint 警告清零（`no-shadow` 三条：取显示名和图标的函数不再收参数；`consistent-function-scoping`：画图标的函数移到模块；`ComboDropDown` 照 `@nerve/ui` 的说明收 `role="presentation"`：辅助技术读到的照旧，它的三个调用方在桌面上都给根 `tabIndex`，浏览器不理会可以聚焦的元素上的这个角色，根照旧是一个没有名字的 Tab 停留点，根的改法在 spec 第 5 节收尾的键盘清单，Task 8 评审的 m1、裁定 T8-a）；画图标的注释写明多选而一个都没选时画项目的图标（Task 8 评审的 nit，修复轮的 F-6）。
+    - 成员头像（`dropdowns/member/avatar.tsx`）的 `size`（固定 `"xs"`）；状态选项（`dropdowns/state/state-option.tsx`）的 `query`；命令面板的成员菜单（`power-k/menus/members.tsx`）的 `heading`；创建项目的公共字段（`project/create/common-attributes.tsx`）的 `handleFormOnChange`；邀请弹窗的按钮行（`workspace/invite-modal/actions.tsx`）只留 `isSubmitting`、`handleClose`、`appendField`；状态图标的虚线圆（`propel` 的 `dashed-circle.tsx`）的 `totalSegments`（固定 15）和三个组图标都传、它从不读的 `radius`（`backlog-group-icon.tsx`、`started-group-icon.tsx`、`unstarted-group-icon.tsx` 不再传；后两个照旧用自己的 `radius` 画实心的圆，backlog 的不再有用，删除；Task 8 评审的 m2，修复轮的 F-6）；归档页头（`archives/header.tsx`）每个标签的 `href`（图标的类型写成 `React.FC<React.SVGAttributes<SVGElement>>`）。
     - 工作区成员 store 的 `memberMap`（接口、`computed`、getter）；成员列（`@nerve/constants` 的 `members.ts`）的 `iconName`（五处）。
   - P8a、P8b 留下的只经机械步骤到达的文件（spec 附录 A.5）：`use-work-item-filters-config.tsx` 的三条 `no-shadow`（回调的参数改名 `id`、`listed`、`option`）；`progress-stats/state_group.tsx` 的 `no-array-index-key`（`key={group.state}`：每组一行，`state` 不重复）。它们的 `promise(always-return)` 在 Task 9。
   - web 的 oxlint 上限 346 → 337。
@@ -6430,7 +7794,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
 
 ````
 ````new web/apps/web/core/components/dropdowns/project/base.tsx
-  // the logos of the projects picked
+  // the logos of the projects picked; with several to pick and none picked yet, the icon of projects
   const getProjectIcon = () => {
 ````
 ````old web/apps/web/core/components/dropdowns/project/base.tsx
@@ -6790,8 +8154,31 @@ export const InvitationModalActions = observer(function InvitationModalActions(p
     descendingOrderTitle: "Admin",
 ````
 
-`web/packages/propel/src/icons/state/dashed-circle.tsx`（修改，2 处）：
+`web/packages/propel/src/icons/state/backlog-group-icon.tsx`（修改，2 处）：
 
+````old web/packages/propel/src/icons/state/backlog-group-icon.tsx
+  const center = viewBoxSize / 2;
+  const radius = 6;
+````
+````new web/packages/propel/src/icons/state/backlog-group-icon.tsx
+  const center = viewBoxSize / 2;
+````
+````old web/packages/propel/src/icons/state/backlog-group-icon.tsx
+      <DashedCircle center={center} radius={radius} color={color} percentage={0} />
+````
+````new web/packages/propel/src/icons/state/backlog-group-icon.tsx
+      <DashedCircle center={center} color={color} percentage={0} />
+````
+
+`web/packages/propel/src/icons/state/dashed-circle.tsx`（修改，3 处）：
+
+````old web/packages/propel/src/icons/state/dashed-circle.tsx
+  center: number;
+  radius: number;
+````
+````new web/packages/propel/src/icons/state/dashed-circle.tsx
+  center: number;
+````
 ````old web/packages/propel/src/icons/state/dashed-circle.tsx
   percentage: number;
   totalSegments?: number;
@@ -6807,6 +8194,24 @@ export function DashedCircle({ center, color, percentage, totalSegments = 15 }: 
 const totalSegments = 15;
 
 export function DashedCircle({ center, color, percentage }: DashedCircleProps) {
+````
+
+`web/packages/propel/src/icons/state/started-group-icon.tsx`（修改，1 处）：
+
+````old web/packages/propel/src/icons/state/started-group-icon.tsx
+      <DashedCircle center={center} radius={radius} color={color} percentage={validPercentage} />
+````
+````new web/packages/propel/src/icons/state/started-group-icon.tsx
+      <DashedCircle center={center} color={color} percentage={validPercentage} />
+````
+
+`web/packages/propel/src/icons/state/unstarted-group-icon.tsx`（修改，1 处）：
+
+````old web/packages/propel/src/icons/state/unstarted-group-icon.tsx
+      <DashedCircle center={center} radius={radius} color={color} percentage={validPercentage} />
+````
+````new web/packages/propel/src/icons/state/unstarted-group-icon.tsx
+      <DashedCircle center={center} color={color} percentage={validPercentage} />
 ````
 
 - [ ] **Step 3: P8a、P8b 留下的文件和 web 的上限**
@@ -6870,7 +8275,7 @@ Expected: 110 个全部通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx' web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx web/apps/web/core/components/dropdowns/member/avatar.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/dropdowns/project/dropdown.tsx web/apps/web/core/components/dropdowns/state/state-option.tsx web/apps/web/core/components/power-k/menus/members.tsx web/apps/web/core/components/project/create/common-attributes.tsx web/apps/web/core/components/workspace/invite-modal/actions.tsx web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx web/apps/web/core/store/member/workspace/workspace-member.store.ts web/apps/web/package.json web/packages/constants/src/members.ts web/packages/propel/src/icons/state/dashed-circle.tsx
+git add 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/header.tsx' web/apps/web/core/components/core/sidebar/progress-stats/state_group.tsx web/apps/web/core/components/dropdowns/member/avatar.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/dropdowns/project/dropdown.tsx web/apps/web/core/components/dropdowns/state/state-option.tsx web/apps/web/core/components/power-k/menus/members.tsx web/apps/web/core/components/project/create/common-attributes.tsx web/apps/web/core/components/workspace/invite-modal/actions.tsx web/apps/web/core/hooks/work-item-filters/use-work-item-filters-config.tsx web/apps/web/core/store/member/workspace/workspace-member.store.ts web/apps/web/package.json web/packages/constants/src/members.ts web/packages/propel/src/icons/state/backlog-group-icon.tsx web/packages/propel/src/icons/state/dashed-circle.tsx web/packages/propel/src/icons/state/started-group-icon.tsx web/packages/propel/src/icons/state/unstarted-group-icon.tsx
 ```
 ```bash
 git commit -m "refactor(M3/P11): M3's dead members and props go, and the files P8a and P8b left keep no oxlint warning
@@ -6903,7 +8308,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Produces（spec 2.9、附录 A.6；M3 设计 7.9；M1 收尾交接；P8a spec 第 5 节的 P11 一行）：
-  - oxlint 指出的 35 个 `then()` 回调（web 34、editor 1）各在最后一个语句之后加 `return;`（原型中由一次性的脚本 `alwaysreturn.mjs` 照 oxlint 的 JSON 写出，见 spec 附录 A.6；下面的块就是它写出的）。回调原来的完成值是 `undefined`，加了 `return;` 仍是 `undefined`：`then()` 给出的 promise 以同样的值、在同样的时刻兑现，拒绝的路径一处都不变（每一处的拒绝怎样处理：后面有 `.catch` 或第二个回调 21 处，交给调用方 6 处，没有处理 8 处，见 spec 附录 A.6；没有处理的照旧没有处理，列给收尾抄进 M4、M6、M7 的交接）。
+  - oxlint 指出的 35 个 `then()` 回调（web 34、editor 1）各在最后一个语句之后加 `return;`（原型中由一次性的脚本 `alwaysreturn.mjs` 照 oxlint 的 JSON 写出，见 spec 附录 A.6；下面的块就是它写出的）。回调原来的完成值是 `undefined`，加了 `return;` 仍是 `undefined`：`then()` 给出的 promise 以同样的值、在同样的时刻兑现，拒绝的路径一处都不变（每一处的拒绝怎样处理：链的后面有 `.catch`，或交给 `setPromiseToast`，23 处，交给调用方 6 处，没有处理 6 处，见 spec 附录 A.6，Task 9 评审的 I1、m1；没有处理的照旧没有处理，`entry.client.tsx` 之外的五处列给收尾抄进 M4、M6、M7 的交接）。
   - 上限：web 337 → 303，editor 65 → 64。`promise(always-return)` 全仓 0 条。
   - 根目录 `.oxlintrc.json` 的 `no-unreachable` 设为 error（预检的 L9）：一处 `return;` 写在回调最后一个语句之前，那个语句就走不到，`check:lint` 失败；今天全仓 0 处，上限不变。
   - 这些文件中 5 个的其余 14 条警告不改（`no-shadow`、可点击的 `div`、`exhaustive-deps` 等，都在 M4、M6、M7、M8 的页面上：spec 第 3 节第 8 条）。
@@ -7357,9 +8762,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces（spec 2.10；M3 设计 3.20、13.1 中 P11 的行；M1 收尾交接；M1-P2 交接）：
   - `README.md` 的"前端"一节：状态、标签的设置页一句改写为 M3/P11 起能用的（谁能改、谁只能看、访客看到没有权限），个人主页（访客看到用户卡片和没有权限；管理员和成员看到的工作项一栏与其余工作项页面一样由 M4–M8 对接）。
-  - `docs/v0/frontend-changes.md`：3.1 中 M3 一行的状态（页面已对接：工作区的 M3/P9，项目的 M3/P10，状态和标签的设置页、访客看到的个人主页 M3/P11；M3 的收尾之后改为已完成）；3.2 的错误格式一行写明状态和标签的设置页的字段错误（M3/P11），"页面跟进修改的结果"一行加上状态、标签的设置页；3.2 新增五行，都是"已完成，M3/P11"：状态和标签的设置页（W17 的每一条，spec 第 3 节第 12 条）、确认框（`AlertModalCore` 在请求路上时关不掉，它的其余 11 个调用方同样）、M2 的账户页面跟进修改的结果（API 令牌的新建和撤销在内，新建在请求路上时取消按不了）、死成员和死 prop、`then()` 的回调。
-  - `docs/v0/M3-workspace-project/handoffs/M1-closeout.md`：加"处理结果（M3/P11）"：死成员和死 prop（spec 2.8，留下的行在 spec 附录 A.9），oxlint（`promise(always-return)` 全仓清零，P8a、P8b 留下的文件清零，上限 web 348 → 303、editor 65 → 64，其余的包条数没有变；留着的是 `alert-modal.tsx` 的一条和只按 `always-return` 改到的文件中 5 个的 14 条，spec 第 3 节第 3、8 条）；状态保持 `open`，P11 的评审写明之后由 M3 的收尾关闭。
+  - `docs/v0/frontend-changes.md`：3.1 中 M3 一行的状态（页面已对接：工作区的 M3/P9，项目的 M3/P10，状态和标签的设置页、访客看到的个人主页 M3/P11；M3 的收尾之后改为已完成）；3.2 的错误格式一行写明状态和标签的设置页的字段错误（M3/P11），"页面跟进修改的结果"一行加上状态、标签的设置页；3.2 新增六行，都是"已完成，M3/P11"：状态和标签的设置页（W17 的每一条，spec 第 3 节第 12 条，任务评审加的名字和焦点在内）、确认框（`AlertModalCore` 在请求路上时关不掉，它的 13 个调用方都是这样）、M2 的账户页面跟进修改的结果（API 令牌的新建和撤销在内，新建在请求路上时取消按不了）、死成员和死 prop（`ComboDropDown` 的 `role` 照实说）、`then()` 的回调（拒绝的路径 23 / 6 / 6）、共用组件的键盘焦点（propel 的 `Button`、`IconButton`，`getButtonStyling`、`getIconButtonStyling` 的调用方，`CustomMenu` 的省略号按钮；轮廓照旧看不到的几处指向 spec 第 5 节收尾的键盘清单）。
+  - `docs/v0/M3-workspace-project/handoffs/M1-closeout.md`：加"处理结果（M3/P11）"：死成员和死 prop（spec 2.8，删去 26 行，产品代码的行 80 → 54，按路径误归的 41 行；留下的行在 spec 附录 A.9），`then()` 的拒绝的路径（23 / 6 / 6），oxlint（`promise(always-return)` 全仓清零，P8a、P8b 留下的文件清零，上限 web 348 → 303、editor 65 → 64，其余的包条数没有变；留着的是 `alert-modal.tsx` 的一条和只按 `always-return` 改到的文件中 5 个的 14 条，spec 第 3 节第 3、8 条）；状态保持 `open`，P11 的评审写明之后由 M3 的收尾关闭。
   - `docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`：加"处理结果（M3/P11）"：访客看别人的个人主页（页面一侧完成，决策点 3 的 A），P9 的页面版本和 S2 核对，浏览器核对 C10 由控制者做；状态保持 `open`。
+  - 本 spec（任务评审的裁定 T1-c、T9-a、T10-b）：附录 A.4 的确认框一句与第 3 节第 2 条一致，附录 A.6 的拒绝的路径（23 / 6 / 6）和第 5 节的 M6 一行照 Task 9 的评审改正，第 5 节收尾加键盘清单（第三方的十六进制输入框、没有名字的 `IconButton`、轮廓看不到或 Tab 到不了的五处、项目下拉框的根）和 `ButtonAvatars` 的 `showTooltip`。spec 和本 plan 在同一个提交里，不写成块。
 - 关键词守卫的最终状态和旧的 `ProjectService` 只核对、不改（spec 2.10）：69 条规则、3 个例外（`analytics` 到 M6、`brand` 到 M9、`plane-workspace-urls` 的两处 `/user-properties/` 到 M4），没有 `until: "M3"`；`ProjectService` 只剩 7.3 的三个方法（`getProjectUserProperties`、`updateProjectUserProperties`、`projectIssuesSearch`）。
 - 控制者的浏览器核对 C9、C10 和评审不在本 plan 中（M3 设计 9.7、12 节 P11 的最后一个任务）。
 
@@ -7404,8 +8810,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## 处理结果（M3/P11）
 
-- **死成员和死 prop**：P11 删掉它改到的文件和只经机械步骤到达的文件中真正没有读者、没有调用方传入的行（[P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 第 2.8 节）。`--rows M3` 剩下的每一行写进 P11 spec 的附录 A.9：文件、名称、谁在读或传它（测试里 `it.each` 的列和 `vi.hoisted` 的桩、经展开、组件类型的变量或第三方库读取的成员、M4 的搜索类型），以及按路径归到 M3、实际属于 M4、M6、M7 的行（M3 设计第 1 节；收尾抄进它们的交接）。
-- **oxlint**：`promise(always-return)` 全仓清零（35 条：web 34、editor 1）；P8a、P8b 留给 P11 的只经机械步骤到达的文件清零；各包的上限随之调到新的条数（web 348 → 303、editor 65 → 64，其余的包条数没有变）。P11 改到的文件中留着的警告：`@nerve/ui` 的 `alert-modal.tsx` 的一条（`tabIndex={1}`，M3 收尾的 `ModalCore` 重写），以及只按 `always-return` 改到的文件中 5 个的 14 条（M4、M6、M7、M8 的组件；P11 spec 第 3 节第 3、8 条）。
+- **死成员和死 prop**：P11 删掉它改到的文件和只经机械步骤到达的文件中真正没有读者、没有调用方传入的行（[P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 第 2.8 节）：`--rows M3` 中产品代码的行 80 → 54，删去 26 行，没有新出现的。`--rows M3` 剩下的每一行写进 P11 spec 的附录 A.9：文件、名称、谁在读或传它（测试里 `it.each` 的列和 `vi.hoisted` 的桩、经展开、组件类型的变量或第三方库读取的成员、M4 的搜索类型），以及按路径归到 M3、实际属于 M4、M6、M7 的 41 行（M3 设计第 1 节；收尾抄进它们的交接）。
+- **oxlint**：`promise(always-return)` 全仓清零（35 条：web 34、editor 1；每一处的拒绝照旧：23 处有处理，6 处交回调用方，6 处没有处理：`entry.client.tsx` 的 `then` 之前的拒绝已被吞下，五处复制链接列给 M4、M6、M7，P11 spec 附录 A.6、第 5 节）；P8a、P8b 留给 P11 的只经机械步骤到达的文件清零；各包的上限随之调到新的条数（web 348 → 303、editor 65 → 64，其余的包条数没有变）。P11 改到的文件中留着的警告：`@nerve/ui` 的 `alert-modal.tsx` 的一条（`tabIndex={1}`，M3 收尾的 `ModalCore` 重写），以及只按 `always-return` 改到的文件中 5 个的 14 条（M4、M6、M7、M8 的组件；P11 spec 第 3 节第 3、8 条）。
 
 状态保持 `open`：P11 的评审写明剩下的行和上限之后，M3 的收尾关闭。
 
@@ -7436,11 +8842,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new docs/v0/frontend-changes.md
 | 创建项目的 Tab 顺序 | 创建项目的弹窗不再有正的 `tabIndex`：表单不再给字段、网络、负责人、按钮和关闭按钮（`ETabIndices.PROJECT_CREATE` 删除），创建之后的功能一步不再给关闭和打开项目（两处 oxlint 的抑制随之删除）。Tab 按页面中的顺序走，绕着弹窗转；原来正的 `tabIndex` 排在弹窗的焦点陷阱之前，Tab 在表单的关闭按钮、功能一步的打开项目之后离开弹窗，走到后面的页面（侧边栏、工作区切换；功能一步时先是创建成功的提示） | 弹窗里的 Tab 不离开弹窗（M3/P10 的浏览器核对 C7；功能一步是之后的裁定 F-18） | 已完成 | M3/P10 |
-| 状态和标签的设置页 | 页面的工作区和项目取自路由的参数（不再读路由 store），权限的判断写明工作区和项目；增删改、拖动和设默认只在发出它的会话里跟进；表单在 nerve 回答、页面跟进之前一直忙（按钮显示"Creating""Adding"一类、按不了，取消也按不了；状态的表单原来马上就能再点），名字已被占用显示在名字下方（原来在提示里），被拒绝时表单留着；删除的确认框请求在路上时关不掉，被拒绝时留着、原因在提示里；标签拖到 nerve 不允许的地方（第三层，或带着下面的标签放到别的标签之下）时说标签只有两层，原来说"出错了"一类的通用原因；状态的组标题是按钮（Tab 能到，`aria-expanded`），每一行的编辑、删除、设默认的按钮 Tab 能到、有名字（原来只在指针经过时显示）；标签每一行的菜单和删除按钮有名字，Tab 到达时显示（原来只在指针经过时显示）；标签组的菜单和拖动手柄、没有标签时的"添加"按钮只给能改标签的人（原来项目的每个成员都看得到组的菜单）；正在编辑的标签不能拖动；标签组的展开按钮以标签的名字为名；拖动手柄只给指针用，不是 Tab 停留点，辅助技术不读它（`@nerve/ui` 的 `DragHandle`，侧边栏的项目和收藏的手柄同样，原来是没有名字的停留点）；顶部的新建表单在编辑别的标签时照旧显示"Add"、新建标签（原来显示"Update"，按了什么都不做） | M3 设计 7.6、9.2；总体设计 7.7 | 已完成 | M3/P11 |
-| 确认框 | `AlertModalCore`（`@nerve/ui`）在 `isSubmitting` 时关不掉：取消按不了，Escape 和点外面都不关（M3/P9 的 F-1）；它的其余 11 个调用方（M4–M8 的 10 处确认框、个人设置的 API 令牌的撤销）同样 | 请求在路上的弹窗关不掉（总体设计 7.7） | 已完成 | M3/P11 |
-| M2 的账户页面跟进修改的结果 | 新手引导的资料一步、个人设置的 general、preferences（时区、语言、每周第一天）和 security 页（修改密码，API 令牌的新建和撤销），修改之后的提示、字段下方的错误、清空表单、显示和下载新令牌，只在发出修改的会话里进行（`followInSession`）；说什么、怎样说照旧（M2 设计 7.3）。新建 API 令牌的请求在路上时取消按不了（原来可以按，按了之后迟到的回答什么都不做；现在离开页面时同样） | M3 设计 7.1（M3/P9 的裁定 P8） | 已完成 | M3/P11 |
-| 死成员和死 prop | 没有调用方传入的 prop（项目下拉框的 `button`、`dropdownArrow` 等六个，邀请弹窗按钮行的五个，成员头像的 `size`、命令面板成员菜单的 `heading`、创建项目的 `handleFormOnChange`、状态图标虚线圆的 `totalSegments`）和没有代码读取的成员（工作区成员 store 的 `memberMap`、成员列的 `iconName`、归档页头的 `href`、状态选项的 `query`）删除，组件按原来的默认值显示；项目下拉框的取项目函数的类型是生成的 `Project` | M1 收尾交接（M3 设计 7.9） | 已完成 | M3/P11 |
-| `then()` 的回调 | 35 处 `then()` 回调的末尾加 `return;`（`promise(always-return)` 全仓清零），回调的结果照旧是 `undefined`，行为不变 | M3 设计 7.9 | 已完成 | M3/P11 |
+| 状态和标签的设置页 | 页面的工作区和项目取自路由的参数（不再读路由 store），权限的判断写明工作区和项目；增删改、拖动和设默认只在发出它的会话里跟进；表单在 nerve 回答、页面跟进之前一直忙（按钮显示"Creating""Adding"一类、按不了，取消也按不了；状态的表单原来马上就能再点），名字已被占用显示在名字下方（原来在提示里），被拒绝时表单留着；删除的确认框请求在路上时关不掉，被拒绝时留着、原因在提示里；标签拖到 nerve 不允许的地方（第三层，或带着下面的标签放到别的标签之下）时说标签只有两层，原来说"出错了"一类的通用原因；状态的组标题是按钮（Tab 能到，`aria-expanded`），每一行的编辑、删除、设默认的按钮 Tab 能到、有名字（原来只在指针经过时显示），删除按钮 Tab 到达时有焦点的轮廓（原来留着 Plane 的 `focus:outline-none`，看不出焦点），组的加状态按钮以"Add"（`common.add`，中文"添加"）为名（原来没有名字）；项目的其他成员拖不动状态（照旧，P6 的页面版本现在核对它）；两个表单的颜色按钮以"Color"（`common.color`，中文"颜色"）为名（原来没有名字），标签表单的颜色按钮 Tab 到达时有焦点的轮廓（原来是 `focus:outline-none`）；改名一个没有颜色的标签时照它原有的颜色（没有）发出，不再发出 `#000`（原来顺带把它改成黑色），表单中它的色块照旧显示黑色，与列表相同；标签每一行的菜单和删除按钮有名字，Tab 到达时显示（原来只在指针经过时显示）；标签组的菜单和拖动手柄、没有标签时的"添加"按钮只给能改标签的人（原来项目的每个成员都看得到组的菜单）；标签的一行只由它的拖动手柄拖动，没有手柄的行（不能改标签的人看到的、正在编辑的）整行拖不动，正在编辑的标签因此不能拖动，它的一行也不再是放下的目标（`label-drag-n-drop-HOC.tsx` 在没有手柄时什么都不登记；原来没有手柄时整行就是手柄，正在编辑的标签整行都能拖，也接得住别的标签；不能改标签的人原来也拖不动，拖放组件自己判断权限）；标签组的展开按钮以标签的名字为名；标签一行的拖动手柄只给指针用，不是 Tab 停留点，辅助技术不读它（`@nerve/ui` 的 `DragHandle`，原来是没有名字的停留点）；侧边栏项目的一行和收藏夹里 `DragHandle` 只是手柄里面的图标，同样不是停留点，外层的手柄按钮（`projects-list-item.tsx` 的 `<button>`，pragmatic-dnd 登记的手柄；`favorite-folder.tsx` 的 `<button>`，收藏夹整个可拖，它是拖动的图示）照旧是显示时的 Tab 停留点（指针经过时；项目的一行在菜单开着时和扩展的项目侧边栏里也显示），里面只剩 `aria-hidden` 的图标，现在没有名字，按 Enter 什么都不做（交给 M3 的收尾：M3/P11 spec 第 5 节收尾的键盘清单）；顶部的新建表单在编辑别的标签时照旧显示"Add"、新建标签（原来显示"Update"，按了什么都不做）；项目设置侧边栏的返回箭头以"Go back"（`common.go_back`，中文"返回"）为名（原来没有名字） | M3 设计 7.6、9.2；总体设计 7.7 | 已完成 | M3/P11 |
+| 确认框 | `AlertModalCore`（`@nerve/ui`）在 `isSubmitting` 时关不掉：取消按不了，Escape 和点外面都不关（M3/P9 的 F-1；原来照样关上）。改在组件里，它的 13 个调用方都是这样：状态、标签的删除确认框，和其余 11 个，即 M4–M8 的 10 处确认框（工作项、草稿、附件、迭代、模块、视图、工作区视图的删除，收集箱的拒绝和删除，Webhook 的删除）和 M2 个人设置的 API 令牌的撤销 | 请求在路上的弹窗关不掉（总体设计 7.7） | 已完成 | M3/P11 |
+| M2 的账户页面跟进修改的结果 | 新手引导的资料一步、个人设置的 general、preferences（时区、语言、每周第一天）和 security 页（修改密码，API 令牌的新建和撤销），修改之后的提示、字段下方的错误、清空表单、显示和下载新令牌，只在发出修改的会话里进行（`followInSession`）；说什么、怎样说照旧（M2 设计 7.3）。新建 API 令牌的请求在路上时取消按不了（原来可以按，按了之后迟到的回答什么都不做；现在离开页面时同样）。A11 核对这两个弹窗：新建的请求在路上时 Generate 和取消都按不了，Escape 和点外面都不关弹窗；撤销的请求在路上时确认框一直忙 | M3 设计 7.1（M3/P9 的裁定 P8） | 已完成 | M3/P11 |
+| 死成员和死 prop | 没有调用方传入的 prop（项目下拉框的 `button`、`dropdownArrow` 等六个，邀请弹窗按钮行的五个，成员头像的 `size`、命令面板成员菜单的 `heading`、创建项目的 `handleFormOnChange`、状态图标虚线圆的 `totalSegments`）和没有代码读取的成员（工作区成员 store 的 `memberMap`、成员列的 `iconName`、归档页头的 `href`、状态选项的 `query`）删除，组件按原来的默认值显示；项目下拉框的取项目函数的类型是生成的 `Project`。项目下拉框的 `ComboDropDown` 收 `role="presentation"`（清掉 `base.tsx` 的一条 oxlint 警告），辅助技术读到的照旧：它的三个调用方在桌面上都给根 `tabIndex`（工作项的表单给正数，迭代、模块的表单给 0），浏览器不理会可以聚焦的元素上的这个角色，根照旧是一个没有名字的 Tab 停留点（M4、M6 的表单上；把 `tabIndex` 给里面的按钮、根不再可以聚焦，交给 M3 的收尾：M3/P11 spec 第 5 节收尾的键盘清单） | M1 收尾交接（M3 设计 7.9） | 已完成 | M3/P11 |
+| `then()` 的回调 | 35 处 `then()` 回调（web 34 处，editor 1 处）的末尾加 `return;`（`promise(always-return)` 全仓清零），回调的结果照旧是 `undefined`，行为不变。拒绝的路径一处都没有改：23 处由链后面的 `.catch` 或 `setPromiseToast` 的错误提示处理，6 处交回调用方，6 处之前之后同样没有处理（`entry.client.tsx`，它的 `then` 之前的拒绝已被吞下；和五处复制链接：评论的、工作项预览中的（M4），迭代、模块的（M6），默认视图的（M7）） | M3 设计 7.9 | 已完成 | M3/P11 |
+| 共用组件的键盘焦点 | propel 的 `Button` 在键盘取得焦点时显示浏览器的焦点轮廓，离按钮 2 像素（`focus-visible:outline-offset-2`；原来是 `focus-visible:outline-none`，Tab 到达时看不出焦点），应用中的每个 `Button` 都是这样。propel 的 `IconButton` 同样：应用中 32 个文件的 37 处（个人设置（M2）1 处；M3 的 10 个文件 12 处，侧边栏的收藏在内；工作项（M4）8 个文件 8 处；迭代、模块（M6）6 个文件 6 处；收集箱、通知和视图（M7）7 个文件 10 处），另有收集箱的两个菜单按钮（`getIconButtonStyling`）和 propel 的表情回应的添加按钮（3 个调用方）；其中五处的轮廓照旧看不到：侧边栏收藏的新建文件夹、侧边栏项目一行的菜单（外层 `opacity-0`）、工作项动态的筛选（外面的按钮 `outline-none`），侧边栏项目列表的两处在指针经过之前不显示、Tab 到不了（交给 M3 的收尾：M3/P11 spec 第 5 节收尾的键盘清单）。`@nerve/ui` 的 `CustomMenu` 的省略号按钮去掉 `outline-none`，Tab 到达时显示焦点的轮廓：17 个文件的 17 处（工作项一侧的 11 个文件（M4、M5），成员页的 `member-columns.tsx`，邀请行的 `invitations-list-item.tsx`，工作区视图的 3 个文件，标签的一行）；`member-columns.tsx` 给这个按钮自己的 `opacity-0 group-hover:opacity-100`，所以它的轮廓在键盘取得焦点时仍看不见（M3/P10 的成员页原有的，同在那份键盘清单）。`getButtonStyling` 的类名同样不再有 `focus-visible:outline-none`：应用中 9 个文件的 12 处，其中 4 个文件的 6 处在能取得焦点的元素上：M3 的两个文件的 4 个链接（创建项目之后功能一步的"Open project"，`project-feature-update.tsx`；"找不到工作区"页的三个链接，`workspace-wrapper.tsx`）在键盘取得焦点时显示离它 2 像素的轮廓（原来没有）；M4 的两处照旧，由它们自己的样式决定：工作项筛选的"添加筛选"按钮（`rich-filters/add-filters/button.tsx`）的轮廓是 `CustomSearchSelect` 在 Headless UI 的 `data-focus` 上画的那一条（`data-*` 的类排在 `focus-visible` 的之后），布局的下拉框（`dropdowns/layout.tsx`）的按钮自带 `outline-none`，轮廓照旧看不到；其余 6 处给菜单按钮里面的 `div`、`span`（项目、模块、视图的排序，收集箱的筛选），它们自己不取得焦点。用指针点的人看不到不同：`:focus-visible` 在点击时不生效 | Tab 到达的控件看得出焦点（M3/P11 的状态、标签的设置页用到它们；改在共用组件里） | 已完成 | M3/P11 |
 ````
 
 - [ ] **Step 2: 核对关键词守卫和旧的 `ProjectService`**
