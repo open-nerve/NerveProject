@@ -79,6 +79,7 @@ describe("StateStore, the states", () => {
     await answered(nerve, fetch, ["GET", ACME], { data: [opsBacklog, ...listed] }, "acme's states");
     expect(store.stateMap).toEqual(byId([opsBacklog, ...listed]));
     expect(store.getProjectStates(ops.id)).toEqual([opsBacklog]);
+    expect(store.getGroupedProjectStates(ops.id)?.backlog).toEqual([opsBacklog]);
     expect(store.getProjectStates(web.id)).toEqual(listed);
     await loadStates(nerve, store, [backlog, done]);
     expect(store.getProjectStates(web.id)).toEqual([backlog, done]);

@@ -60,6 +60,7 @@ describe("LabelStore, the labels", () => {
     const { nerve, projects, store } = await loadedLabels();
     await loadLabels(nerve, store, [opsBug], ops);
     expect(store.getProjectLabels(ops.id)).toEqual([opsBug]);
+    expect(store.getProjectLabelsTree(ops.id)).toEqual([{ ...opsBug, children: [] }]);
     expect(store.getProjectLabels(web.id)).toEqual(listed);
 
     await sent(nerve, () => projects.leaveProject(ops), ["POST", `/api/v0/projects/${ops.id}/leave`], noContent());

@@ -68,7 +68,7 @@ async function labelsOf(api: Api, token: string, projectId: string): Promise<(na
   };
 }
 
-test("P7 (page): the admin creates Bug, its form gone through by Tab and held until nerve answers, and Feature; bug is said taken under the name; he drags UI under Bug, which sends its parent alone, renames Bug Defect and drags Feature first; Feature put under Defect meanwhile, a third level the page asks for is said refused; its member sees the labels and can change none, a group's neither, a workspace admin who is its member can; Defect is deleted, its dialog held, with the labels under it", async ({
+test("P7 (page): the admin creates Bug, its form gone through by Tab and held until nerve answers, and Feature; bug is said taken under the name; he drags UI under Bug, which sends its parent alone, renames Bug Defect and drags Feature first; Feature put under Defect meanwhile, a third level the page asks for is said refused; its member sees the labels and can change none, a group's neither, a workspace admin who is its member can; a deletion of Docs, deleted meanwhile, is refused and leaves its dialog open; he takes UI out of Defect's group, which sends no parent; Defect is deleted, its dialog held, with Feature under it", async ({
   api,
   baseURL,
   browser,
@@ -106,19 +106,21 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await expect(page.locator("h6")).toHaveText(["UI", "Docs"]);
 
   // Bug: the form opens on the name (its effect, which may run once the form shows), and Tab goes through it in its
-  // order from its colour's button, named and marked as Shift+Tab reaches it; the form waits for nerve, its buttons
-  // disabled, Cancel too; it closes once nerve has made the label, at the top, last of the project's. Feature after it.
+  // order from its colour's button, named and marked as Shift+Tab reaches it, to Add, a button of the app's (propel's)
+  // marked too; the form waits for nerve, its buttons disabled, Cancel too; it closes once nerve has made the label, at
+  // the top, last of the project's. Feature after it.
   await page.getByRole("button", { name: "Add label" }).click();
   await expect(page.locator("#labelName")).toBeFocused();
   await page.locator("#labelName").fill("Bug");
   const colour = labelForm(page).getByRole("button", { name: "Color", exact: true });
+  const add = labelForm(page).getByRole("button", { name: "Add" });
   await page.keyboard.press("Shift+Tab");
   await expect(colour).toBeFocused();
   await expect(colour).not.toHaveCSS("outline-style", "none");
   expect(await tabCycle(page, labelForm(page), 3)).toEqual(["labelName", "Cancel", "Add"]);
-  const creation = await sentHeld(page, "POST", listed, () =>
-    labelForm(page).getByRole("button", { name: "Add" }).click()
-  );
+  await expect(add).toBeFocused();
+  await expect(add).not.toHaveCSS("outline-style", "none");
+  const creation = await sentHeld(page, "POST", listed, () => add.click());
   expect(creation.body).toEqual({ name: "Bug", color: expect.stringMatching(/^#/) });
   expect(await enabledWithin(labelForm(page).getByRole("button", { name: "Adding" }))).toBe(false);
   expect(await enabledWithin(labelForm(page).getByRole("button", { name: "Cancel" }))).toBe(false);
