@@ -78,9 +78,11 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
 
           return (
             <>
+              {/* as the keyboard focuses it (Headless UI's data-focus), the ring @nerve/ui's selects show on their button,
+                  inside its edge: the menu's root clips what is outside it */}
               <Menu.Button
                 className={cn(
-                  "group/menu-button flex flex-grow items-center justify-between gap-1 truncate rounded-sm p-1 text-13 font-medium text-secondary hover:bg-layer-1 focus:outline-none",
+                  "group/menu-button flex flex-grow items-center justify-between gap-1 truncate rounded-sm p-1 text-13 font-medium text-secondary hover:bg-layer-1 focus:outline-none data-focus:outline-1 data-focus:-outline-offset-1 data-focus:outline-accent-strong data-focus:outline-solid",
                   {
                     "bg-layer-1": open,
                   }
@@ -144,24 +146,27 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
                         </div>
                       )}
                     </div>
+                    {/* each item shows as the menu marks it, by the arrows as by the pointer (Headless UI's data-focus) */}
                     <div className="flex w-full flex-col items-start justify-start gap-2 px-4 py-2 text-13">
                       {!isWorkspaceCreationDisabled && (
                         <Link to="/create-workspace" className="w-full">
                           <Menu.Item
                             as="div"
-                            className="flex items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
+                            className="flex items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary data-focus:bg-layer-transparent-hover"
                           >
                             <PlusCircleOutline className="size-4 flex-shrink-0" />
                             {t("create_workspace")}
                           </Menu.Item>
                         </Link>
                       )}
-                      {/* every member may leave the workspace he is in: nerve refuses its only admin (M3 design 3.7) */}
+                      {/* every member may leave the workspace he is in; nerve refuses its only admin (workspace.sole_admin)
+                          and the only admin of one of its projects that has other members (project.sole_admin), M3
+                          design 3.7 */}
                       {activeWorkspace && (
                         <Menu.Item
                           as="button"
                           type="button"
-                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
+                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary data-focus:bg-layer-transparent-hover"
                           onClick={() => setIsLeaveModalOpen(true)}
                         >
                           <LogOutOutline className="size-4 flex-shrink-0" />
@@ -173,7 +178,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
                         <Menu.Item
                           as="button"
                           type="button"
-                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-danger-primary hover:bg-layer-transparent-hover"
+                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-danger-primary data-focus:bg-layer-transparent-hover"
                           onClick={handleSignOut}
                         >
                           <LogOutOutline className="size-4 flex-shrink-0" />

@@ -188,7 +188,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8） | 7、8 |
 | `web/apps/web/core/components/workspace/sidebar/projects-list.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8）；写明 slug（Task 11） | 7、8、11 |
 | `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | 写明 slug（Task 11） | 11 |
-| `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
+| `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，菜单的按钮和三项在键盘下看得见，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
 | `web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts` | 经 `problemCode()` 或 `useRefusalMessage` | 9 |
 | `web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts` | `useCopy`、`useCopyText`；它的测试 | 9 |
 | `web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts` | `useRefusalMessage`；它的测试 | 9 |
@@ -1273,12 +1273,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `README.md`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/navigation/top-navigation-root.tsx`、`web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.ts`、`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
 
 **Interfaces:**（spec 2.7）
-- `workspace/sidebar/workspace-menu-root.tsx`（整个文件）：没有调用方的"sidebar"写法删除（216 → 200 行）；"离开工作区"一项（`Menu.Item`，每个角色），确认框挂在菜单之外；`navigation/top-navigation-root.tsx` 不再传 `variant`。
+- `workspace/sidebar/workspace-menu-root.tsx`（整个文件）：没有调用方的"sidebar"写法删除（216 → 205 行）；"离开工作区"一项（`Menu.Item`，每个角色），确认框挂在菜单之外；菜单的按钮在键盘取得焦点时有 `@nerve/ui` 的选择框那样的内圈轮廓（Headless UI 的 `data-focus`），三项在方向键或指针选中时显出底色（`data-focus:bg-layer-transparent-hover`，原来只有指针悬停时）；`navigation/top-navigation-root.tsx` 不再传 `variant`。
 - `workspace/leave-workspace-modal.tsx`（新文件）：`ConfirmWorkspaceMemberRemove` 加 `useMembershipChanges().leave(done)`。
 - `useMembershipChanges` 的 `remove(…, done)`、`leave(done)` 和 `useInvitationChanges` 的删除：`done` 只在成功的跟进中调用（A-M2）；`ConfirmWorkspaceMemberRemove` 不再自己关上，离开的标题经 `t()`；成员和邀请的一行传 `closeDialog`。
 - 文案：`leave_workspace`（common）、`workspace_settings.settings.members.leave_title`。README 的工作区菜单加"离开工作区"。
 
-**Tests:** 两个 hook 的 vitest：`done` 在成功时调用、被拒绝时不调用、换账户之后不调用。W11 的页面版本：访客由键盘从菜单离开，双击"离开"只发一次请求，请求在路上时取消不能用、Escape 不关，落到新建工作区的页面；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着。W7：唯一的管理员在成员页离开被拒绝时确认框留着。W4：已被删除的邀请再删除被拒绝时确认框留着。
+**Tests:** 两个 hook 的 vitest：`done` 在成功时调用、被拒绝时不调用、换账户之后不调用。W11 的页面版本：访客由键盘从菜单离开（菜单的按钮显出轮廓，方向键选中的一项显出底色、别的不显），双击"离开"只发一次请求，请求在路上时取消不能用、Escape 不关，落到新建工作区的页面；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着，取消之后焦点回到菜单的按钮。W7：唯一的管理员在成员页离开被拒绝时确认框留着。W4：已被删除的邀请再删除被拒绝时确认框留着。
 
 - [ ] **Step 1: 菜单的入口和确认框**
 
@@ -1332,7 +1332,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
                 : `Remove ${userDetails?.display_name}?`}
 ````
 
-`web/apps/web/core/components/workspace/leave-workspace-modal.tsx`（新文件，39 行）：
+`web/apps/web/core/components/workspace/leave-workspace-modal.tsx`（新文件，40 行）：
 
 ````file web/apps/web/core/components/workspace/leave-workspace-modal.tsx
 /**
@@ -1357,7 +1357,8 @@ type Props = {
 /**
  * The workspace menu's leaving of the workspace of workspaceSlug, for every role (M3 closeout): the dialog and the
  * leaving the members page offers on the caller's own row. Closed once nerve has ended the membership, the root then
- * landing him; one nerve refuses, its only admin's, leaves it open, the reason in the refusal's toast.
+ * landing him; one nerve refuses leaves it open, the reason in the refusal's toast: the workspace's only admin's
+ * (workspace.sole_admin), or that of the only admin of one of its projects that has other members (project.sole_admin).
  */
 export const LeaveWorkspaceModal = observer(function LeaveWorkspaceModal(props: Props) {
   const { workspaceSlug, isOpen, onClose } = props;
@@ -1473,7 +1474,7 @@ export const LeaveWorkspaceModal = observer(function LeaveWorkspaceModal(props: 
       });
 ````
 
-`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`（整个文件，200 行）：
+`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`（整个文件，205 行）：
 
 ````whole web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx
 /**
@@ -1556,9 +1557,11 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
 
           return (
             <>
+              {/* as the keyboard focuses it (Headless UI's data-focus), the ring @nerve/ui's selects show on their button,
+                  inside its edge: the menu's root clips what is outside it */}
               <Menu.Button
                 className={cn(
-                  "group/menu-button flex flex-grow items-center justify-between gap-1 truncate rounded-sm p-1 text-13 font-medium text-secondary hover:bg-layer-1 focus:outline-none",
+                  "group/menu-button flex flex-grow items-center justify-between gap-1 truncate rounded-sm p-1 text-13 font-medium text-secondary hover:bg-layer-1 focus:outline-none data-focus:outline-1 data-focus:-outline-offset-1 data-focus:outline-accent-strong data-focus:outline-solid",
                   {
                     "bg-layer-1": open,
                   }
@@ -1622,24 +1625,27 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
                         </div>
                       )}
                     </div>
+                    {/* each item shows as the menu marks it, by the arrows as by the pointer (Headless UI's data-focus) */}
                     <div className="flex w-full flex-col items-start justify-start gap-2 px-4 py-2 text-13">
                       {!isWorkspaceCreationDisabled && (
                         <Link to="/create-workspace" className="w-full">
                           <Menu.Item
                             as="div"
-                            className="flex items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
+                            className="flex items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary data-focus:bg-layer-transparent-hover"
                           >
                             <PlusCircleOutline className="size-4 flex-shrink-0" />
                             {t("create_workspace")}
                           </Menu.Item>
                         </Link>
                       )}
-                      {/* every member may leave the workspace he is in: nerve refuses its only admin (M3 design 3.7) */}
+                      {/* every member may leave the workspace he is in; nerve refuses its only admin (workspace.sole_admin)
+                          and the only admin of one of its projects that has other members (project.sole_admin), M3
+                          design 3.7 */}
                       {activeWorkspace && (
                         <Menu.Item
                           as="button"
                           type="button"
-                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
+                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary data-focus:bg-layer-transparent-hover"
                           onClick={() => setIsLeaveModalOpen(true)}
                         >
                           <LogOutOutline className="size-4 flex-shrink-0" />
@@ -1651,7 +1657,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
                         <Menu.Item
                           as="button"
                           type="button"
-                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-danger-primary hover:bg-layer-transparent-hover"
+                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-danger-primary data-focus:bg-layer-transparent-hover"
                           onClick={handleSignOut}
                         >
                           <LogOutOutline className="size-4 flex-shrink-0" />
@@ -1771,11 +1777,12 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
 
   // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
-  // stays until Cancel closes it; he is acme's admin still.
+  // stays until Cancel closes it and gives the focus back to the menu's button; he is acme's admin still.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
   const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
   await theAdmin.page.goto(`/${slug}`);
-  await theAdmin.page.getByRole("button", { name: "Open workspace switcher" }).click();
+  const adminsMenu = theAdmin.page.getByRole("button", { name: "Open workspace switcher" });
+  await adminsMenu.click();
   await theAdmin.page.getByRole("menuitem", { name: "Leave workspace" }).click();
   const adminLeaving = await answerTo(theAdmin.page, leaving.method, leaving.path, () =>
     modalDialog(theAdmin.page).getByRole("button", { name: "Leave", exact: true }).click()
@@ -1789,18 +1796,35 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   expect(await closedWithin(theAdmin.page)).toBe(false);
   await modalDialog(theAdmin.page).getByRole("button", { name: "Cancel" }).click();
   await expect(modalDialog(theAdmin.page)).toHaveCount(0);
+  await expect(adminsMenu).toBeFocused();
   await expect(theAdmin.page).toHaveURL(`/${slug}`);
   await expectMembership(db, slug, adminEmail, { role: 20, is_active: true });
   await theAdmin.close();
 
-  // gus's leaving, by the keyboard: the menu's button, then its entry, from its last, signing out, one up; the
+  // gus's leaving, by the keyboard: the menu's button, its ring shown, then its entry, from its last, signing out, one
+  // up, past it to creating a workspace and back, each action marked as the arrows reach it, the others not; the
   // dialog hides the page behind it. He leaves with a double click, nerve's answer held: while it is out the dialog
   // cannot be dismissed (Cancel is disabled, Escape leaves it open), and the page sends the leaving once. Leaving ends
   // his memberships, Web's too, and the root lands him on the page that creates a workspace.
-  await page.getByRole("button", { name: "Open workspace switcher" }).focus();
+  const menu = page.getByRole("button", { name: "Open workspace switcher" });
+  await menu.focus();
+  await expect(menu).toHaveCSS("outline-style", "solid");
   await page.keyboard.press("Enter");
+  const actions = ["Create workspace", "Leave workspace", "Sign out"].map((name) =>
+    page.getByRole("menuitem", { name, exact: true })
+  );
+  const marked = () =>
+    Promise.all(
+      actions.map((action) => action.evaluate((item) => getComputedStyle(item).backgroundColor !== "rgba(0, 0, 0, 0)"))
+    );
   await page.keyboard.press("End");
+  await expect.poll(marked).toEqual([false, false, true]);
   await page.keyboard.press("ArrowUp");
+  await expect.poll(marked).toEqual([false, true, false]);
+  await page.keyboard.press("ArrowUp");
+  await expect.poll(marked).toEqual([true, false, false]);
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(marked).toEqual([false, true, false]);
   await page.keyboard.press("Enter");
   const leave = modalDialog(page).getByRole("button", { name: "Leave", exact: true });
   await expect(modalDialog(page).getByRole("heading", { name: "Leave workspace?" })).toBeVisible();
@@ -2082,7 +2106,8 @@ where the members page goes; a refusal (the only admin) keeps the dialog
 open with the reason; a double click sends it once, the dialog held while
 it is out. The members page's removal, leaving and an invitation's
 deletion keep their dialog on a refusal too, closing it in their success
-follow-up alone. The menu's variant no caller used goes.
+follow-up alone. The menu's button shows a ring, and each of its actions a
+mark, as the keyboard reaches it. The menu's variant no caller used goes.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -2098,6 +2123,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T3.5` | 离开的确认框只在菜单打开时存在（像挂在菜单里那样）：选中这一项时菜单关上，确认框跟着没了 | 故事 W11 | 端到端 |
 | `T3.6` | 删除邀请不管 nerve 回答什么都关上确认框：被拒绝也关 | `use-invitation-changes.test.ts`、故事 W4 | vitest；端到端 |
 | `T3.7` | 确认框的按钮在请求路上时不禁用：双击发两次 | 故事 W11 | 端到端 |
+| `T3.8` | "离开工作区"一项只在指针悬停时显出底色，像原来那样：方向键选中它时看不出来 | 故事 W11 | 端到端 |
+| `T3.9` | 菜单的按钮没有内圈的轮廓，像原来那样只有 `focus:outline-none`：Tab 到达时看不出焦点 | 故事 W11 | 端到端 |
+| `T3.10` | 离开的确认框打开、关上时菜单重建（以确认框的状态为 `key`）：打开它的按钮没了，焦点回不去 | 故事 W11 | 端到端 |
 
 ---
 
@@ -13080,7 +13108,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new docs/v0/frontend-changes.md
 | 共用组件的键盘焦点 | propel 的 `Button` 在键盘取得焦点时显示浏览器的焦点轮廓，离按钮 2 像素（`focus-visible:outline-offset-2`；原来是 `focus-visible:outline-none`，Tab 到达时看不出焦点），应用中的每个 `Button` 都是这样。propel 的 `IconButton` 同样：应用中 32 个文件的 37 处（M3 的收尾删去侧边栏项目一行的那一处之后是 36 处；个人设置（M2）1 处；M3 的 10 个文件 12 处，侧边栏的收藏在内；工作项（M4）8 个文件 8 处；迭代、模块（M6）6 个文件 6 处；收集箱、通知和视图（M7）7 个文件 10 处），另有收集箱的两个菜单按钮（`getIconButtonStyling`）和 propel 的表情回应的添加按钮（3 个调用方）；其中五处的轮廓照旧看不到：侧边栏收藏的新建文件夹、侧边栏项目一行的菜单（外层 `opacity-0`）、工作项动态的筛选（外面的按钮 `outline-none`），侧边栏项目列表的两处在指针经过之前不显示、Tab 到不了（M3 的收尾改好了侧边栏项目的三处，工作项动态的筛选交给 M4、收藏的新建文件夹交给 M7："名字和键盘"一行）。`@nerve/ui` 的 `CustomMenu` 的省略号按钮去掉 `outline-none`，Tab 到达时显示焦点的轮廓：17 个文件的 17 处（工作项一侧的 11 个文件（M4、M5），成员页的 `member-columns.tsx`，邀请行的 `invitations-list-item.tsx`，工作区视图的 3 个文件，标签的一行）；`member-columns.tsx` 给这个按钮自己的 `opacity-0 group-hover:opacity-100`，所以它的轮廓在键盘取得焦点时仍看不见（M3/P10 的成员页原有的；M3 的收尾给它 `focus-visible:opacity-100`）。`getButtonStyling` 的类名同样不再有 `focus-visible:outline-none`：应用中 9 个文件的 12 处，其中 4 个文件的 6 处在能取得焦点的元素上：M3 的两个文件的 4 个链接（创建项目之后功能一步的"Open project"，`project-feature-update.tsx`；"找不到工作区"页的三个链接，`workspace-wrapper.tsx`）在键盘取得焦点时显示离它 2 像素的轮廓（原来没有）；M4 的两处照旧，由它们自己的样式决定：工作项筛选的"添加筛选"按钮（`rich-filters/add-filters/button.tsx`）的轮廓是 `CustomSearchSelect` 在 Headless UI 的 `data-focus` 上画的那一条（`data-*` 的类排在 `focus-visible` 的之后），布局的下拉框（`dropdowns/layout.tsx`）的按钮自带 `outline-none`，轮廓照旧看不到；其余 6 处给菜单按钮里面的 `div`、`span`（项目、模块、视图的排序，收集箱的筛选），它们自己不取得焦点。用指针点的人看不到不同：`:focus-visible` 在点击时不生效 | Tab 到达的控件看得出焦点（M3/P11 的状态、标签的设置页用到它们；改在共用组件里） | 已完成 | M3/P11 |
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
-| 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
+| 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项与指针悬停时一样显出底色（原来都看不出）。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
 | 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |

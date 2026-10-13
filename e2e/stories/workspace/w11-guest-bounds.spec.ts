@@ -128,11 +128,12 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
 
   // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
-  // stays until Cancel closes it; he is acme's admin still.
+  // stays until Cancel closes it and gives the focus back to the menu's button; he is acme's admin still.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
   const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
   await theAdmin.page.goto(`/${slug}`);
-  await theAdmin.page.getByRole("button", { name: "Open workspace switcher" }).click();
+  const adminsMenu = theAdmin.page.getByRole("button", { name: "Open workspace switcher" });
+  await adminsMenu.click();
   await theAdmin.page.getByRole("menuitem", { name: "Leave workspace" }).click();
   const adminLeaving = await answerTo(theAdmin.page, leaving.method, leaving.path, () =>
     modalDialog(theAdmin.page).getByRole("button", { name: "Leave", exact: true }).click()
@@ -146,18 +147,35 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   expect(await closedWithin(theAdmin.page)).toBe(false);
   await modalDialog(theAdmin.page).getByRole("button", { name: "Cancel" }).click();
   await expect(modalDialog(theAdmin.page)).toHaveCount(0);
+  await expect(adminsMenu).toBeFocused();
   await expect(theAdmin.page).toHaveURL(`/${slug}`);
   await expectMembership(db, slug, adminEmail, { role: 20, is_active: true });
   await theAdmin.close();
 
-  // gus's leaving, by the keyboard: the menu's button, then its entry, from its last, signing out, one up; the
+  // gus's leaving, by the keyboard: the menu's button, its ring shown, then its entry, from its last, signing out, one
+  // up, past it to creating a workspace and back, each action marked as the arrows reach it, the others not; the
   // dialog hides the page behind it. He leaves with a double click, nerve's answer held: while it is out the dialog
   // cannot be dismissed (Cancel is disabled, Escape leaves it open), and the page sends the leaving once. Leaving ends
   // his memberships, Web's too, and the root lands him on the page that creates a workspace.
-  await page.getByRole("button", { name: "Open workspace switcher" }).focus();
+  const menu = page.getByRole("button", { name: "Open workspace switcher" });
+  await menu.focus();
+  await expect(menu).toHaveCSS("outline-style", "solid");
   await page.keyboard.press("Enter");
+  const actions = ["Create workspace", "Leave workspace", "Sign out"].map((name) =>
+    page.getByRole("menuitem", { name, exact: true })
+  );
+  const marked = () =>
+    Promise.all(
+      actions.map((action) => action.evaluate((item) => getComputedStyle(item).backgroundColor !== "rgba(0, 0, 0, 0)"))
+    );
   await page.keyboard.press("End");
+  await expect.poll(marked).toEqual([false, false, true]);
   await page.keyboard.press("ArrowUp");
+  await expect.poll(marked).toEqual([false, true, false]);
+  await page.keyboard.press("ArrowUp");
+  await expect.poll(marked).toEqual([true, false, false]);
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(marked).toEqual([false, true, false]);
   await page.keyboard.press("Enter");
   const leave = modalDialog(page).getByRole("button", { name: "Leave", exact: true });
   await expect(modalDialog(page).getByRole("heading", { name: "Leave workspace?" })).toBeVisible();

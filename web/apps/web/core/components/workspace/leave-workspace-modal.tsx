@@ -20,7 +20,8 @@ type Props = {
 /**
  * The workspace menu's leaving of the workspace of workspaceSlug, for every role (M3 closeout): the dialog and the
  * leaving the members page offers on the caller's own row. Closed once nerve has ended the membership, the root then
- * landing him; one nerve refuses, its only admin's, leaves it open, the reason in the refusal's toast.
+ * landing him; one nerve refuses leaves it open, the reason in the refusal's toast: the workspace's only admin's
+ * (workspace.sole_admin), or that of the only admin of one of its projects that has other members (project.sole_admin).
  */
 export const LeaveWorkspaceModal = observer(function LeaveWorkspaceModal(props: Props) {
   const { workspaceSlug, isOpen, onClose } = props;
