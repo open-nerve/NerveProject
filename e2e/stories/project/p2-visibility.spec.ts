@@ -14,6 +14,7 @@ import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
 import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
+import { pageContent } from "../../fixtures/project-pages";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -256,7 +257,7 @@ test("P2 (page): the projects page shows a member the public project to join and
   await expectMember(db, web.id, memberEmail, { role: 15, is_active: true, sort_order: 65535, by: memberEmail });
   // The project's crumb in the header is one Tab stop, the button of its list (M3 design 7.7): its title, which opens
   // the project's work items by a click, is not another. Tab goes on to the next crumb.
-  await page.getByRole("button", { name: "Web", exact: true }).first().focus();
+  await pageContent(page).getByRole("button", { name: "Web", exact: true }).first().focus();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Work Items", exact: true })).toBeFocused();
 

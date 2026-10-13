@@ -19,7 +19,6 @@ import {
   ChevronRightOutline,
   LinkOutline,
   LogOutOutline,
-  MoreHorizontalOutline,
   SettingsOutline,
 } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
@@ -88,9 +87,8 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const isProjectListOpen = getIsProjectListOpen(projectId);
   const [instruction, setInstruction] = useState<"DRAG_OVER" | "DRAG_BELOW" | undefined>(undefined);
   // refs
-  const actionSectionRef = useRef<HTMLButtonElement | null>(null);
   const projectRef = useRef<HTMLDivElement | null>(null);
-  const dragHandleRef = useRef<HTMLButtonElement | null>(null);
+  const dragHandleRef = useRef<HTMLSpanElement | null>(null);
   // router
   const { projectId: URLProjectId } = useParams();
   const navigate = useNavigate();
@@ -224,7 +222,6 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
     else toggleAnySidebarDropdown(false);
   }, [isMenuActive, toggleAnySidebarDropdown]);
 
-  useOutsideClickDetector(actionSectionRef, () => setIsMenuActive(false));
   useOutsideClickDetector(projectRef, () => projectRef?.current?.classList?.remove(HIGHLIGHT_CLASS));
 
   useEffect(() => {
@@ -298,8 +295,8 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
               align="end"
               disabled={isDragging || isMobile}
             >
-              <button
-                type="button"
+              {/* the pointer's grip, no control of the keyboard's */}
+              <span
                 className={cn(
                   "absolute top-1/2 -left-3 hidden -translate-y-1/2 cursor-grab items-center justify-center rounded-sm text-placeholder group-hover/project-item:flex",
                   {
@@ -311,7 +308,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                 ref={dragHandleRef}
               >
                 <DragHandle className="bg-transparent" />
-              </button>
+              </span>
             </Tooltip>
             <>
               <ControlLink href={defaultTabUrl} className="flex flex-grow truncate" onClick={handleItemClick}>
@@ -320,11 +317,6 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                     as="button"
                     type="button"
                     className={cn("flex w-full flex-grow items-center gap-1.5 text-left select-none", {})}
-                    aria-label={
-                      isProjectListOpen
-                        ? t("aria_labels.projects_sidebar.close_project_menu")
-                        : t("aria_labels.projects_sidebar.open_project_menu")
-                    }
                   >
                     <div className="grid size-4 flex-shrink-0 place-items-center">
                       <Logo logo={project.logo_props} size={16} />
@@ -342,26 +334,17 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
               </ControlLink>
               <div className="flex items-center gap-1">
                 <CustomMenu
-                  customButton={
-                    <IconButton
-                      ref={actionSectionRef}
-                      variant="ghost"
-                      size="sm"
-                      icon={MoreHorizontalOutline}
-                      aria-label={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
-                      onClick={() => setIsMenuActive(!isMenuActive)}
-                      className="text-placeholder"
-                    />
-                  }
+                  ellipsis
+                  buttonClassName="text-placeholder"
+                  menuButtonOnClick={() => setIsMenuActive(!isMenuActive)}
                   className={cn(
-                    "pointer-events-none flex-shrink-0 opacity-0 group-hover/project-item:pointer-events-auto group-hover/project-item:opacity-100",
+                    "pointer-events-none flex-shrink-0 opacity-0 group-hover/project-item:pointer-events-auto group-hover/project-item:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
                     {
                       "pointer-events-auto opacity-100": isMenuActive,
                     }
                   )}
-                  customButtonClassName="grid place-items-center"
                   placement="bottom-start"
-                  ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
+                  ariaLabel={t("aria_labels.projects_sidebar.project_quick_actions", { name: project.name })}
                   useCaptureForOutsideClick
                   closeOnSelect
                   onMenuClose={() => setIsMenuActive(false)}
@@ -410,6 +393,8 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                     size="sm"
                     icon={ChevronRightOutline}
                     onClick={() => setIsProjectListOpen(!isProjectListOpen)}
+                    // the row's own button opens and closes the project as this does: the pointer's alone
+                    tabIndex={-1}
                     className={cn("hidden text-placeholder group-hover/project-item:inline-flex", {
                       "inline-flex": isMenuActive,
                     })}

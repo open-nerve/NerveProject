@@ -6,7 +6,6 @@
 
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
-import { TwitterPicker } from "react-color";
 import { Controller, useForm } from "react-hook-form";
 import { Popover, Transition } from "@headlessui/react";
 // nerve imports
@@ -16,6 +15,8 @@ import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { Label } from "@nerve/api-client";
+// components
+import { ColorPicker } from "@/components/common/color-picker";
 // local imports
 import { useLabelChanges, type LabelUnderField } from "./use-label-changes";
 
@@ -102,7 +103,7 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
                       name="color"
                       control={control}
                       render={({ field: { value, onChange } }) => (
-                        <TwitterPicker
+                        <ColorPicker
                           colors={LABEL_COLOR_OPTIONS}
                           color={value}
                           onChange={(picked) => onChange(picked.hex)}

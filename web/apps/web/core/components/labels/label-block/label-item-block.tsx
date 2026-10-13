@@ -82,7 +82,7 @@ export function LabelItemBlock(props: ILabelItemBlock) {
         >
           <CustomMenu
             ellipsis
-            ariaLabel={t("common.options")}
+            ariaLabel={t("common.item_options", { name: label.name })}
             menuButtonOnClick={() => setIsMenuActive(!isMenuActive)}
             useCaptureForOutsideClick
           >

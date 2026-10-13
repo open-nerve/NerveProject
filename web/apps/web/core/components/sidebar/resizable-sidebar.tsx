@@ -48,7 +48,6 @@ export function ResizableSidebar({
 }: ResizableSidebarProps) {
   // states
   const [isResizing, setIsResizing] = useState(false);
-  const [isHoveringTrigger, setIsHoveringTrigger] = useState(false);
   // refs
   const peekTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const initialWidthRef = useRef<number>(0);
@@ -91,7 +90,6 @@ export function ResizableSidebar({
   const toggleCollapsed = useCallback(() => {
     toggleCollapsedProp();
     setShowPeek(false);
-    setIsHoveringTrigger(false);
     if (peekTimeoutRef.current) {
       clearTimeout(peekTimeoutRef.current);
     }
@@ -140,17 +138,10 @@ export function ResizableSidebar({
     []
   );
 
-  useEffect(() => {
-    if (!isAnySidebarDropdownOpen && isCollapsed && isHoveringTrigger) {
-      handlePeekLeave();
-    }
-  }, [isAnySidebarDropdownOpen]);
-
   // Reset peek when sidebar is expanded
   useEffect(() => {
     if (!isCollapsed) {
       setShowPeek(false);
-      setIsHoveringTrigger(false);
       if (peekTimeoutRef.current) {
         clearTimeout(peekTimeoutRef.current);
       }
@@ -185,6 +176,8 @@ export function ResizableSidebar({
         }}
         role="complementary"
         aria-label={t("aria_labels.sidebar.main")}
+        // collapsed, it shows nothing: none of its controls is the keyboard's or assistive technology's
+        inert={isCollapsed}
         data-prevent-outside-click={isMobile}
       >
         <aside className="group/sidebar relative flex h-full w-full flex-col overflow-hidden bg-surface-1 pt-3">
@@ -223,6 +216,8 @@ export function ResizableSidebar({
         onMouseLeave={handlePeekLeave}
         role="complementary"
         aria-label={t("aria_labels.sidebar.peek")}
+        // its copy of the sidebar's controls is for the pointer that asks for it, the keyboard's only while it shows
+        inert={!(isCollapsed && showPeek)}
       >
         <aside
           className={cn(

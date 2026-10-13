@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { TwitterPicker } from "react-color";
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
@@ -13,6 +13,8 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { StateCreate } from "@nerve/api-client";
 import { Popover } from "@nerve/ui";
+// components
+import { ColorPicker } from "@/components/common/color-picker";
 // local imports
 import type { StateUnderField } from "../use-state-changes";
 
@@ -51,8 +53,14 @@ export function StateForm(props: TStateForm) {
     handleSubmit,
     setError,
     watch,
+    setFocus,
     formState: { errors, isSubmitting },
   } = useForm<TStateFormData>({ defaultValues: data });
+
+  // the name has the focus once the form shows
+  useEffect(() => {
+    setFocus("name");
+  }, [setFocus]);
 
   // busy from the click until the page has followed nerve's answer: a second click finds the button disabled
   const submit = handleSubmit((formData) =>
@@ -72,7 +80,7 @@ export function StateForm(props: TStateForm) {
             name="color"
             control={control}
             render={({ field: { value, onChange } }) => (
-              <TwitterPicker color={value} onChange={(picked) => onChange(picked.hex)} />
+              <ColorPicker color={value} onChange={(picked) => onChange(picked.hex)} />
             )}
           />
         </Popover>
@@ -84,7 +92,7 @@ export function StateForm(props: TStateForm) {
           name="name"
           control={control}
           rules={{ required: t("errors.field.required") }}
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <Field name="name" invalid={Boolean(errors.name)}>
               <InputGroup size="2xl">
                 <Input
@@ -95,6 +103,7 @@ export function StateForm(props: TStateForm) {
                   placeholder={t("name")}
                   value={value}
                   onChange={onChange}
+                  ref={ref}
                   maxLength={100}
                 />
               </InputGroup>

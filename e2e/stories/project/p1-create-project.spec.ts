@@ -10,7 +10,7 @@ import { countProjects, expectProjectCreated } from "../../fixtures/assert/proje
 import { accountId, bearer, createPAT, emailFor, named, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import { closedByComposingEscape, closedByEscape, composingEscape, hiddenWithin } from "../../fixtures/dialogs";
-import { tabCycle } from "../../fixtures/project-pages";
+import { pageContent, tabCycle } from "../../fixtures/project-pages";
 import {
   expectListBesideButton,
   keydownsReachingDocument,
@@ -312,7 +312,7 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   );
   await page.getByRole("button", { name: "Close", exact: true }).click();
   // its card, by its heading (the card's link to its settings is named by the project too)
-  await expect(page.getByRole("heading", { name: "Web App", exact: true })).toBeVisible();
+  await expect(pageContent(page).getByRole("heading", { name: "Web App", exact: true })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Main sidebar" }).getByText("Web App")).toBeVisible();
 
   // the project's row: the form's fields, in the workspace's time zone
@@ -349,7 +349,7 @@ test("P1 (page): Tab goes round the creation dialog and nowhere else; the lead's
   const watch = await watchPage(page);
 
   await page.goto(`/${slug}/projects`);
-  await expect(page.getByRole("heading", { name: "Ops", exact: true })).toBeVisible();
+  await expect(pageContent(page).getByRole("heading", { name: "Ops", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add Project", exact: true }).click();
   // Popper places the list where the button is as it opens: the modal's enter transition moves the button.
   await transitionsEnded(page.getByRole("dialog"));

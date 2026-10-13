@@ -98,13 +98,13 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
-| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
+| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
 | `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓（Task 8） | 1、2、6、8 |
 | `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6） | 1、2、6 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 每个角色打开工作区菜单，不发请求（`WORKSPACE_MENU`） | 3 |
 | `e2e/stories/smoke/s6-dialogs.spec.ts` | S6：命令面板、快捷键（以标题为名）、嵌套的弹窗是模态的（新文件，Task 2）；命令面板的复制（Task 9）；组字的 Escape（Task 10） | 2 新、9、10 |
 | `e2e/stories/smoke/s7-chinese.spec.ts` | S7：中文的页面和弹窗（新文件，逐 Task 加） | 4 新、5、6、7、8、12、13 |
-| `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘，项目的一行以项目为名（新文件） | 8 新 |
+| `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘，项目的一行和它的菜单以项目为名，工作区菜单的展开箭头不被读出、不是停留点（新文件） | 8 新 |
 | `e2e/fixtures/workspace-pages.ts` | `askToEndMembership`：打开一行的菜单、选移出或离开，到确认框为止（`endMembership` 经它） | 3 |
 | `e2e/stories/workspace/w11-guest-bounds.spec.ts` | 访客从菜单离开（双击只发一次，请求在路上时确认框关不掉）、唯一的管理员被拒绝（Task 3）；`registeredPAT`、导入（Task 14） | 3、14 |
 | `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；`registeredPAT`（Task 14） | 3、14 |
@@ -143,6 +143,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx` | 工作区经 `useRouteWorkspace()` | 11 |
 | `web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx` | 组字经 `isComposing` | 10 |
 | `web/apps/web/core/components/labels/create-update-label-inline.tsx` | 颜色弹层（Task 8） | 8 |
+| `web/apps/web/core/components/labels/label-block/label-item-block.tsx` | 标签一行的菜单以标签为名（Task 8） | 8 |
 | `web/apps/web/core/components/labels/delete-label-modal.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-item.tsx` | 标签的英文经 `t()`（Task 6） | 6 |
 | `web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 |
 | `web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 新 |
@@ -170,7 +171,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/project/root.tsx` | 工作区经 `useRouteWorkspace()`，回调和副作用写全依赖（Task 11） | 11 |
 | `web/apps/web/core/components/project/search-projects.tsx` | 搜索的占位或名字 | 7 |
 | `web/apps/web/core/components/project/settings/features-list.tsx` | 功能的开关以功能为名（Task 13） | 13 |
-| `web/apps/web/core/components/project/settings/member-columns.tsx` | 成员一行的菜单（Task 8） | 8 |
+| `web/apps/web/core/components/project/settings/member-columns.tsx` | 成员一行的菜单，以成员为名（Task 8） | 8 |
 | `web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx` | 功能开关的提示经 `t()`（Task 5）；开关的名字（Task 13） | 5、13 |
 | `web/apps/web/core/components/project/settings/use-feature-toggle.ts` | 功能开关的提示经 `t()`（Task 5） | 5 |
 | `web/apps/web/core/components/settings/mobile/nav.tsx` | 设置页的手机菜单降到弹窗之下（`z-20`，Task 2）；`IconButton` 的名字（Task 7） | 2、7 |
@@ -192,8 +193,9 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/workspace/settings/workspace-details.test.tsx` | M3 页面上的英文（Task 4） | 4 |
 | `web/apps/web/core/components/workspace/settings/workspace-details.tsx` | M3 页面上的英文（Task 4）；工作区经 `useRouteWorkspace()`（Task 11） | 4、11 |
 | `web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx` | 工作区的一项在方向键选中时显出底色（Task 3）；角色名（Task 6） | 3、6 |
-| `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8） | 7、8 |
+| `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行和它的菜单以项目为名（Task 8） | 7、8 |
 | `web/apps/web/core/components/workspace/sidebar/projects-list.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8）；写明 slug（Task 11） | 7、8、11 |
+| `web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx` | 工作区菜单旁只给指针的展开箭头不被读出、不是停留点（Task 8） | 8 |
 | `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | 写明 slug（Task 11） | 11 |
 | `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，菜单的按钮和三项在键盘下看得见，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
 | `web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts` | 经 `problemCode()` 或 `useRefusalMessage` | 9 |
@@ -212,8 +214,8 @@ sys.exit(1 if broken else 0)
 | `web/packages/constants/src/state.ts` | 状态组的 `i18n_label` | 6 |
 | `web/packages/constants/src/workspace.ts` | `ORGANIZATION_SIZE_I18N_LABEL`（Task 4）；角色的 `i18n_title`（Task 6） | 4、6 |
 | `web/packages/editor/src/extensions/callout/logo-selector.tsx` | 标注块的图标按钮的名字：`EmojiPicker` 的 `ariaLabel`，英文的字面量（编辑器不依赖 i18n） | 7 |
-| `web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、7、13 |
-| `web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 3、4、12、13 |
+| `web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、7、8、13 |
+| `web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 3、4、8、12、13 |
 | `web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 7、12 |
 | `web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 2、4、9 |
 | `web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、5、6、13 |
@@ -6993,19 +6995,21 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 8: 收尾的键盘清单：颜色框、状态表单的焦点、侧边栏、成员一行、项目下拉框；S8
+### Task 8: 收尾的键盘清单：颜色框、状态表单的焦点、侧边栏、成员和标签一行的菜单、项目下拉框；S8
 
 **Files:**
 - Create: `e2e/stories/smoke/s8-sidebar.spec.ts`、`web/apps/web/core/components/common/color-picker.tsx`、`web/apps/web/core/components/dropdowns/project/base.test.tsx`
-- Modify: `e2e/fixtures/project-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/package.json`
+- Modify: `e2e/fixtures/project-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`
 
 **Interfaces:**（spec 2.9）
 - `components/common/color-picker.tsx`（新文件）：`TwitterPicker`，输入框的 `outline` 是浏览器的（`"revert"`）；状态的表单、标签的行内表单用它。状态的表单打开时 `setFocus("name")`。
 - 侧边栏：项目列表的"+"是 `opacity-0`，`group-hover`、`focus-visible` 时显示；项目一行的菜单是 `CustomMenu` 的省略号按钮（`menuButtonOnClick`；`actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；手柄是 `span`；展开箭头 `tabIndex={-1}`。`resizable-sidebar.tsx`：收起时主侧边栏 `inert`，没有浮出时副本 `inert`；从不设置的 `isHoveringTrigger` 和它的副作用删除（web 的上限 301 → 300）。项目一行的 `Disclosure.Button` 不再有 `aria-label`：它的名字是项目的名字（`Logo` 已 `aria-hidden`，Task 7），展开与否由 `aria-expanded` 说出；展开箭头的名字照旧（F6，A-M2）。
-- 项目成员页一行的菜单名为 `common.options`，`focus-visible:opacity-100`，菜单项经 `t()`。项目下拉框：`tabIndex` 给 `DropdownButton`，根不再可以聚焦。
+- 一行重复的控件以它那一行为名（spec 2.9，Task 7 评审的裁定）：项目一行的菜单名为 `aria_labels.projects_sidebar.project_quick_actions`（"{name} quick actions"，项目的名字；原来每一行都是"Toggle quick actions menu"，这个键照旧由收藏和项目页头的菜单读）；项目成员页、标签页一行的菜单名为 `common.item_options`（"{name} options"，成员的显示名、标签的名字；原来每一行都是 `common.options`）。
+- 工作区菜单的标题旁只在指针经过时显示的展开箭头做标题的按钮同样的事：`tabIndex={-1}`、`aria-hidden`，它的 `aria-label` 删除（Task 7 评审的裁定；原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）。
+- 项目成员页一行的菜单 `focus-visible:opacity-100`，菜单项经 `t()`。项目下拉框：`tabIndex` 给 `DropdownButton`，根不再可以聚焦。
 - `e2e/fixtures/project-pages.ts` 的 `pageContent(page)`：页面的内容（应用的 `main` 里的 `main`，侧边栏之外）。侧边栏的一行现在也以项目为名，P1 在这里找项目的卡片，P2 找页头的面包屑。
 
-**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行；P6：名称有焦点、十六进制框有轮廓；P5：一行的菜单由 Tab 到达，以"Options"为名；S7：项目成员一行的菜单的"离开"。
+**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行，以"Web quick actions"找到它的菜单；工作区菜单的标题只有一个按钮被读出，Tab 从它到菜单的第一页；P6：名称有焦点、十六进制框有轮廓；P5：一行的菜单由 Tab 到达，以"max options"为名，访客以"Web quick actions"打开侧边栏一行的菜单；S7：工作区菜单的按钮一个，标签一行的菜单以"Bug 的选项"为名，项目成员一行的菜单以管理员的名字为名，它的"离开"。
 
 - [ ] **Step 1: 键盘**
 
@@ -7069,6 +7073,15 @@ import { ColorPicker } from "@/components/common/color-picker";
 ````
 ````new web/apps/web/core/components/labels/create-update-label-inline.tsx
                         <ColorPicker
+````
+
+`web/apps/web/core/components/labels/label-block/label-item-block.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/labels/label-block/label-item-block.tsx
+            ariaLabel={t("common.options")}
+````
+````new web/apps/web/core/components/labels/label-block/label-item-block.tsx
+            ariaLabel={t("common.item_options", { name: label.name })}
 ````
 
 `web/apps/web/core/components/project-states/create-update/form.tsx`（修改，7 处）：
@@ -7142,7 +7155,7 @@ import { ColorPicker } from "@/components/common/color-picker";
                 buttonClassName="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
 ````
 ````new web/apps/web/core/components/project/settings/member-columns.tsx
-                ariaLabel={t("common.options")}
+                ariaLabel={t("common.item_options", { name: display_name })}
                 buttonClassName="p-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
 ````
 ````old web/apps/web/core/components/project/settings/member-columns.tsx
@@ -7204,7 +7217,7 @@ import { ColorPicker } from "@/components/common/color-picker";
         inert={!(isCollapsed && showPeek)}
 ````
 
-`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`（修改，11 处）：
+`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`（修改，12 处）：
 
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
   LogOutOutline,
@@ -7290,6 +7303,12 @@ import { ColorPicker } from "@/components/common/color-picker";
                   )}
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+                  ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
+````
+````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+                  ariaLabel={t("aria_labels.projects_sidebar.project_quick_actions", { name: project.name })}
+````
+````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
                     onClick={() => setIsProjectListOpen(!isProjectListOpen)}
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
@@ -7307,6 +7326,26 @@ import { ColorPicker } from "@/components/common/color-picker";
                       className="text-placeholder opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
 ````
 
+`web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx
+              className="flex-shrink-0 rounded-sm p-0.5 hover:bg-layer-1"
+              onClick={() => toggleListDisclosure(!isWorkspaceMenuOpen)}
+              aria-label={t(
+                isWorkspaceMenuOpen
+                  ? "aria_labels.app_sidebar.close_workspace_menu"
+                  : "aria_labels.app_sidebar.open_workspace_menu"
+              )}
+````
+````new web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx
+              className="flex-shrink-0 rounded-sm p-0.5 hover:bg-layer-1"
+              onClick={() => toggleListDisclosure(!isWorkspaceMenuOpen)}
+              // the text button beside it opens and closes the menu as this does: this one, shown to the pointer alone,
+              // is neither a Tab stop nor read
+              tabIndex={-1}
+              aria-hidden="true"
+````
+
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
@@ -7314,6 +7353,46 @@ import { ColorPicker } from "@/components/common/color-picker";
 ````
 ````new web/apps/web/package.json
     "check:lint": "node ../../../tools/lint-cap.mjs 300",
+````
+
+`web/packages/i18n/src/locales/en/accessibility.json`（修改，1 处）：
+
+````old web/packages/i18n/src/locales/en/accessibility.json
+      "toggle_quick_actions_menu": "Toggle quick actions menu",
+````
+````new web/packages/i18n/src/locales/en/accessibility.json
+      "toggle_quick_actions_menu": "Toggle quick actions menu",
+      "project_quick_actions": "{name} quick actions",
+````
+
+`web/packages/i18n/src/locales/en/common.json`（修改，1 处）：
+
+````old web/packages/i18n/src/locales/en/common.json
+    "options": "Options",
+````
+````new web/packages/i18n/src/locales/en/common.json
+    "options": "Options",
+    "item_options": "{name} options",
+````
+
+`web/packages/i18n/src/locales/zh-CN/accessibility.json`（修改，1 处）：
+
+````old web/packages/i18n/src/locales/zh-CN/accessibility.json
+      "toggle_quick_actions_menu": "切换快速操作菜单",
+````
+````new web/packages/i18n/src/locales/zh-CN/accessibility.json
+      "toggle_quick_actions_menu": "切换快速操作菜单",
+      "project_quick_actions": "{name} 的快速操作",
+````
+
+`web/packages/i18n/src/locales/zh-CN/common.json`（修改，1 处）：
+
+````old web/packages/i18n/src/locales/zh-CN/common.json
+    "options": "选项",
+````
+````new web/packages/i18n/src/locales/zh-CN/common.json
+    "options": "选项",
+    "item_options": "{name} 的选项",
 ````
 
 - [ ] **Step 2: 测试**
@@ -7381,7 +7460,7 @@ import { pageContent } from "../../fixtures/project-pages";
   await pageContent(page).getByRole("button", { name: "Web", exact: true }).first().focus();
 ````
 
-`e2e/stories/project/p5-project-members.spec.ts`（修改，1 处）：
+`e2e/stories/project/p5-project-members.spec.ts`（修改，2 处）：
 
 ````old e2e/stories/project/p5-project-members.spec.ts
   await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
@@ -7390,14 +7469,20 @@ import { pageContent } from "../../fixtures/project-pages";
 ````new e2e/stories/project/p5-project-members.spec.ts
   await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
 
-  // max's row menu shows, and is marked, as Tab reaches it from his avatar.
-  const maxsMenu = memberRow(page, max.email).getByRole("button", { name: "Options" });
+  // max's row menu, named by him, shows, and is marked, as Tab reaches it from his avatar.
+  const maxsMenu = memberRow(page, max.email).getByRole("button", { name: `${shownNameOf(max.email)} options` });
   await memberRow(page, max.email).getByRole("link").first().focus();
   await page.keyboard.press("Tab");
   await expect(maxsMenu).toBeFocused();
   await expect(maxsMenu).toHaveCSS("opacity", "1");
   await expect(maxsMenu).not.toHaveCSS("outline-style", "none");
 
+````
+````old e2e/stories/project/p5-project-members.spec.ts
+  await sidebar.getByRole("button", { name: "Toggle quick actions menu" }).last().click();
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+  await sidebar.getByRole("button", { name: "Web quick actions", exact: true }).click();
 ````
 
 `e2e/stories/project/p6-states-page.spec.ts`（修改，2 处）：
@@ -7420,20 +7505,40 @@ import { pageContent } from "../../fixtures/project-pages";
   await expect(hex).not.toHaveCSS("outline-style", "none");
 ````
 
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，1 处）：
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，4 处）：
 
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(2);
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  // the workspace menu's button, one: the chevron beside it, which does the same for the pointer, is hidden
+  await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(1);
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  // The labels page: a group's menu, the menu of a label in it, and the deletion's dialog, the group's name in it.
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  // The labels page: a group's menu, named by the group, the menu of a label in it, and the deletion's dialog, the
+  // group's name in it.
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await labelRow(page, "Bug").getByRole("button", { name: "选项" }).click();
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await labelRow(page, "Bug").getByRole("button", { name: "Bug 的选项", exact: true }).click();
+````
 ````old e2e/stories/smoke/s7-chinese.spec.ts
   await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
 ````
 ````new e2e/stories/smoke/s7-chinese.spec.ts
   await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
-  // His row's menu, by its name, offers his leaving.
-  await page.getByRole("button", { name: "选项", exact: true }).click();
+  // His row's menu, named by him, offers his leaving.
+  await page.getByRole("button", { name: `${shownNameOf(emailFor(testInfo, "admin"))} 的选项`, exact: true }).click();
   await expect(page.getByRole("menuitem", { name: "离开" })).toBeVisible();
   await page.keyboard.press("Escape");
 ````
 
-`e2e/stories/smoke/s8-sidebar.spec.ts`（新文件，65 行）：
+`e2e/stories/smoke/s8-sidebar.spec.ts`（新文件，73 行）：
 
 ````file e2e/stories/smoke/s8-sidebar.spec.ts
 import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
@@ -7445,7 +7550,7 @@ import { expect, test } from "../../fixtures/test";
 // S8, the sidebar by the keyboard (M3 closeout, P11's keyboard list): what the keyboard and assistive technology
 // reach in the workspace's sidebar is what it shows.
 
-test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed; the new project's button and a project's menu each show and are marked as Tab reaches them, the menu one Tab stop; a project's row is named by its project, and its grip is none", async ({
+test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed; the workspace menu's chevron is neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them, the menu one Tab stop; a project's row and its menu are named by its project, and its grip is none", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -7466,6 +7571,14 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await expect(navigation).toHaveCount(2);
   expect(await inert()).toEqual([false, true]);
 
+  // The workspace menu's chevron, unseen until the pointer is over its heading, does what the heading's button does:
+  // assistive technology reads that button alone, and Tab goes from it to the menu's first page.
+  const workspaceMenu = sidebar.getByRole("button", { name: "Close workspace menu" });
+  await expect(workspaceMenu.locator("xpath=..").getByRole("button")).toHaveCount(1);
+  await workspaceMenu.focus();
+  await page.keyboard.press("Tab");
+  await expect(sidebar.getByRole("link", { name: "Projects", exact: true })).toBeFocused();
+
   // The new project's button, unseen until the pointer is over the list's heading, shows and is marked as Tab reaches
   // it from the heading.
   const create = sidebar.getByRole("button", { name: "Create new project" });
@@ -7475,10 +7588,10 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await expect(create).toHaveCSS("opacity", "1");
   await expect(create).not.toHaveCSS("outline-style", "none");
 
-  // Web's menu: one Tab stop after Web's row, which is named Web, shown and marked as Tab reaches it; its chevron,
-  // which does what the row does, and its grip, which the pointer drags, are none, though the pointer over the row
-  // shows them.
-  const menu = sidebar.getByRole("button", { name: "Toggle quick actions menu" });
+  // Web's menu, named by Web as its row is: one Tab stop after the row, shown and marked as Tab reaches it; its
+  // chevron, which does what the row does, and its grip, which the pointer drags, are none, though the pointer over
+  // the row shows them.
+  const menu = sidebar.getByRole("button", { name: "Web quick actions", exact: true });
   await expect(menu).toHaveCount(1);
   const row = sidebar.getByRole("button", { name: "Web", exact: true });
   await row.focus();
@@ -7561,7 +7674,7 @@ Expected: 116 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/fixtures/project-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/package.json
+git add e2e/fixtures/project-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx web/apps/web/package.json web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the closeout's keyboard list: the hex field, the state form's focus, the sidebar and the rows' menus
@@ -7569,10 +7682,12 @@ git commit -m "feat(M3/closeout): the closeout's keyboard list: the hex field, t
 The colour pickers' hex field shows the keyboard's focus; the state form
 opens on its name; the sidebar's new project button and a project's menu
 show as Tab reaches them, the menu one Tab stop and the grip none, and a
-project's row is named by its project; the
+project's row and its menu are named by its project; the workspace
+menu's chevron, the pointer's alone, is neither a Tab stop nor read; the
 hidden copy of the sidebar and the collapsed sidebar are inert; the
-project members' row menu has a name and shows on focus; the project
-dropdown's Tab stop is its button. S8 walks the sidebar by keyboard.
+project members' and the labels' row menus are named by their row and
+the members' shows on focus; the project dropdown's Tab stop is its
+button. S8 walks the sidebar by keyboard.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -7594,6 +7709,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.11` | 收起的侧边栏仍能用 Tab 走到 | 故事 S8 | 端到端 |
 | `T8.12` | 没有浮出的侧边栏副本仍能用 Tab 走到 | 故事 S8 | 端到端 |
 | `T8.13` | 项目一行的按钮回到"Open project menu"的名字，每一行都一样（F6） | 故事 S8 | 端到端 |
+| `T8.14` | 侧边栏项目一行的菜单回到"Toggle quick actions menu"的名字，每一行都一样 | 故事 S8 | 端到端 |
+| `T8.15` | 项目成员一行的菜单回到"Options"的名字，每一行都一样 | 故事 P5 | 端到端 |
+| `T8.16` | 标签一行的菜单回到"Options"的名字，每一行都一样 | 故事 S7 | 端到端 |
+| `T8.17` | 工作区菜单的展开箭头（指针经过之前看不见）又是一个停留点 | 故事 S8 | 端到端 |
+| `T8.18` | 工作区菜单的展开箭头又被读出，标题旁多一个按钮 | 故事 S8 | 端到端 |
 
 ---
 
@@ -13616,7 +13736,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **嵌套的按钮**：菜单自己的按钮里又放了 `IconButton` 的两处（M3 收尾找到）：`cycles/quick-actions.tsx`、`modules/quick-actions.tsx`；改法照 M3 收尾的项目一行（`CustomMenu` 的 `customButtonClassName`，内容是图标，不再嵌一个按钮）。
 - **右键菜单**：迭代、模块、视图的列表的右键菜单关着时 `inert`（裁定 F-14），在 M6 的页面上核对右键打开它、点它的项。
 - **下拉框**：C7 没有核对 M6 页面上的 `CustomSearchSelect` 调用方（成员下拉框的 2 个文件，迭代、模块、视图的页头），对接时用键盘核对。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M6 的页面上核对。
-- **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：迭代一行的菜单按钮 `cycles/quick-actions.tsx:141` 和模块一行的 `modules/quick-actions.tsx:135`（都叫"Options"）以迭代、模块的名字为名：两处已有的 `cycleDetails?.name`、`moduleDetails?.name`；一个带 `{name}` 的键（如 "{name} options"），en 与 zh-CN 同时加。
+- **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：迭代一行的菜单按钮 `cycles/quick-actions.tsx:141` 和模块一行的 `modules/quick-actions.tsx:135`（都叫"Options"）以迭代、模块的名字为名：两处已有的 `cycleDetails?.name`、`moduleDetails?.name`；M3 收尾已加的带 `{name}` 的键 `common.item_options`（"{name} options"、"{name} 的选项"，项目成员页、标签页一行的菜单读它）。
 - **关闭条件**：M6 的评审写明上面每一项的浏览器核对。
 
 ## 4. 地址、复制和 oxlint
@@ -13686,7 +13806,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **弹窗**：M3 收尾把 `ModalCore` 改成 Headless UI v2 的 `Dialog`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）：打开时后面的页面 `inert`、`aria-hidden`，请求在路上时关不掉。收集箱、视图、通知的弹窗（通知的打盹 `workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx` 在内）对接时逐个核对 Tab、Escape、点外面、关上之后的焦点和弹窗里经 portal 渲染的东西（收尾 spec 附录 A.3 只证明了 M3 页面上的几种）；`AlertModalCore` 的确认框照 A-M2，按钮的文字经 `t()` 传入。
 - **正的 `tabIndex`**：收集箱的创建表单（`INTAKE_ISSUE_FORM`）同 M4 的交接第 7 节，其中给父工作项的 `CustomMenu` 的一处（`inbox/modals/create-modal/issue-properties.tsx`）落在 Menu 的根上（M3/P10 的裁定 F-17）。M4、M6、M7 中最后删去正的 `tabIndex` 的那一个删除 `getTabIndex` 和两份 `tab-indices.ts`。
 - **嵌套的按钮和看不到的轮廓**（M3/P11 spec 第 5 节、M3 收尾找到）：菜单自己的按钮里又放了 `IconButton` 的三处（`views/quick-actions.tsx`、`workspace-notifications/sidebar/filters/menu/root.tsx`、`workspace-notifications/sidebar/header/options/menu-option/root.tsx`）；收藏的菜单 `workspace/sidebar/favorites/favorites-menu.tsx` 的 `IconButton` 外层 `opacity-0`、没有 `focus-within`，焦点看不到；收藏夹的外层手柄按钮（`workspace/sidebar/favorites/favorite-folder.tsx`）显示时是一个没有名字、按 Enter 什么都不做的停留点。改法照 M3 收尾的项目一行（`CustomMenu` 的 `customButtonClassName`；行的 `focus-within:opacity-100`；手柄不是停留点）。页头的通知链接（`navigation/top-navigation-root.tsx`）没有名字，提示是写死的"Inbox"：随未读数一起给它经 `t()` 的名字。
-- **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：视图一行的菜单按钮 `views/quick-actions.tsx:94`（"Options"）以视图的名字为名：已有的 `view.name`；一个带 `{name}` 的键（如 "{name} options"），en 与 zh-CN 同时加。
+- **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：视图一行的菜单按钮 `views/quick-actions.tsx:94`（"Options"）以视图的名字为名：已有的 `view.name`；M3 收尾已加的带 `{name}` 的键 `common.item_options`（"{name} options"、"{name} 的选项"，项目成员页、标签页一行的菜单读它）。
 - **下拉框**：收集箱的两个指派人的成员下拉框（`inbox/content/issue-properties.tsx`、`inbox/modals/create-modal/issue-properties.tsx`）以 `CustomSearchSelect` 为底之后看得到的不同同 M4 的交接第 7 节，在 M7 的页面上核对（C7 没有核对）。右键菜单关着时 `inert`，在 M7 的页面上核对右键打开。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M7 的页面上核对。
 - **关闭条件**：M7 的评审写明上面每一项的浏览器核对。
 
@@ -13868,7 +13988,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框、命令面板和快捷键列表关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上，窄屏（768 px 以下）上开着的侧边栏收起。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
-| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10），32 处经 `t()`，收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，交给 M7）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开按钮和工作区菜单的按钮的名字有了文案（原来是没有定义的键），项目列表的"More"按钮以它看得见的文字为名（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
+| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10），32 处经 `t()`，收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，交给 M7）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开按钮和工作区菜单的按钮的名字有了文案（原来是没有定义的键），项目列表的"More"按钮以它看得见的文字为名（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），它的菜单也以项目为名（"Web quick actions"，原来每一行都叫"Toggle quick actions menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；工作区菜单的标题旁只在指针经过时显示的展开箭头不再是停留点、不被读出（原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）；项目成员页的筛选同样只是一个按钮；项目成员页、标签页一行的菜单以成员、标签为名（"{name} options"，原来成员页的没有名字，标签页的每一行都叫"Options"），成员页的在键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |

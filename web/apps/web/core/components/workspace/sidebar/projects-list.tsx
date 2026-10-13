@@ -155,7 +155,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                       onClick={() => {
                         setIsProjectModalOpen(true);
                       }}
-                      className="hidden text-placeholder group-hover:inline-flex"
+                      className="text-placeholder opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                       aria-label={t("aria_labels.projects_sidebar.create_new_project")}
                     />
                   </Tooltip>

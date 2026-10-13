@@ -295,6 +295,14 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   expect([demoted.answer.status(), demoted.body]).toEqual([200, { role: 5 }]);
   await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
 
+  // max's row menu, named by him, shows, and is marked, as Tab reaches it from his avatar.
+  const maxsMenu = memberRow(page, max.email).getByRole("button", { name: `${shownNameOf(max.email)} options` });
+  await memberRow(page, max.email).getByRole("link").first().focus();
+  await page.keyboard.press("Tab");
+  await expect(maxsMenu).toBeFocused();
+  await expect(maxsMenu).toHaveCSS("opacity", "1");
+  await expect(maxsMenu).not.toHaveCSS("outline-style", "none");
+
   // max is removed; then gus, while the removal is out the dialog that asked cannot be dismissed.
   expect((await endProjectMembership(page, max.email, "Remove", removalOf(maxs.id))).status()).toBe(204);
   await expect(memberRow(page, max.email)).toHaveCount(0);
@@ -347,7 +355,7 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   await theGuest.page.goto(`/${slug}/projects`);
   const sidebar = theGuest.page.getByRole("complementary", { name: "Main sidebar" });
   await sidebar.getByText("Web", { exact: true }).hover();
-  await sidebar.getByRole("button", { name: "Toggle quick actions menu" }).last().click();
+  await sidebar.getByRole("button", { name: "Web quick actions", exact: true }).click();
   await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
   await theGuest.page.locator("#projectName").fill("Web");
   // the hint names the words to type, as the modal compares them

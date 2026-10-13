@@ -341,6 +341,7 @@
     "close_peek_view": "关闭预览视图",
     "toggle_peek_view_layout": "切换预览视图布局",
     "options": "选项",
+    "item_options": "{name} 的选项",
     "color": "颜色",
     "today": "今天",
     "press_for_commands": "按'/'使用命令",

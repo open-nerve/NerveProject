@@ -85,7 +85,8 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   // The sidebar, by its name: its buttons by theirs; the project navigation's dialog, each mode's description.
   const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
   await expect(sidebar.getByRole("button", { name: "切换侧边栏" })).toBeVisible();
-  await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(2);
+  // the workspace menu's button, one: the chevron beside it, which does the same for the pointer, is hidden
+  await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(1);
   await sidebar.getByRole("button", { name: "项目导航" }).click();
   await expect(modalDialog(page).getByText("功能标签显示为项目下的嵌套项，可以展开和收起。")).toBeVisible();
   await expect(modalDialog(page).getByText("功能标签显示为项目内的横向标签。")).toBeVisible();
@@ -176,12 +177,13 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await expect(page.getByRole("button", { name: "已开始", exact: true })).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("button", { name: "设为默认", exact: true })).toHaveCount(4);
 
-  // The labels page: a group's menu, the menu of a label in it, and the deletion's dialog, the group's name in it.
+  // The labels page: a group's menu, named by the group, the menu of a label in it, and the deletion's dialog, the
+  // group's name in it.
   await page.goto(`/${slug}/settings/projects/${web.id}/labels`);
   await labelRow(page, "UI").getByRole("button", { name: "选项" }).click();
   await expect(page.getByRole("menuitem")).toHaveText(["移出组", "编辑标签"]);
   await page.keyboard.press("Escape");
-  await labelRow(page, "Bug").getByRole("button", { name: "选项" }).click();
+  await labelRow(page, "Bug").getByRole("button", { name: "Bug 的选项", exact: true }).click();
   await expect(page.getByRole("menuitem")).toHaveText(["编辑标签", "删除标签"]);
   await page.getByRole("menuitem", { name: "删除标签" }).click();
   await expect(modalDialog(page).getByRole("heading")).toHaveText("删除标签");
@@ -198,6 +200,10 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await expect(page.getByRole("option")).toHaveText(["无"]);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
+  // His row's menu, named by him, offers his leaving.
+  await page.getByRole("button", { name: `${shownNameOf(emailFor(testInfo, "admin"))} 的选项`, exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "离开" })).toBeVisible();
+  await page.keyboard.press("Escape");
 
   // The adding of members: a row with no member picked says so.
   await page.getByRole("button", { name: "添加成员", exact: true }).click();

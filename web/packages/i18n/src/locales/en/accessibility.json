@@ -24,6 +24,7 @@
       "open_projects_menu": "Open projects menu",
       "close_projects_menu": "Close projects menu",
       "toggle_quick_actions_menu": "Toggle quick actions menu",
+      "project_quick_actions": "{name} quick actions",
       "open_project_menu": "Open project menu",
       "close_project_menu": "Close project menu",
       "project_navigation": "Project navigation"

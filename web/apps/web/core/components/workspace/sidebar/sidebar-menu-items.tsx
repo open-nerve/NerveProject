@@ -60,11 +60,10 @@ export const SidebarMenuItems = observer(function SidebarMenuItems() {
               type="button"
               className="flex-shrink-0 rounded-sm p-0.5 hover:bg-layer-1"
               onClick={() => toggleListDisclosure(!isWorkspaceMenuOpen)}
-              aria-label={t(
-                isWorkspaceMenuOpen
-                  ? "aria_labels.app_sidebar.close_workspace_menu"
-                  : "aria_labels.app_sidebar.open_workspace_menu"
-              )}
+              // the text button beside it opens and closes the menu as this does: this one, shown to the pointer alone,
+              // is neither a Tab stop nor read
+              tabIndex={-1}
+              aria-hidden="true"
             >
               <ChevronRightOutline
                 className={cn("size-3 flex-shrink-0 transition-all", {

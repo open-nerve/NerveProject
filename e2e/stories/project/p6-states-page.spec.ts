@@ -121,6 +121,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   // as Shift+Tab reaches it; the form waits for nerve, its buttons disabled, Cancel too; it closes once nerve has made
   // the state, last of its project's.
   await addTo(page, "Started").click();
+  await expect(page.locator("#name")).toBeFocused();
   await page.locator("#name").fill("Review");
   const colour = stateForm(page).getByRole("button", { name: "Color", exact: true });
   await page.keyboard.press("Shift+Tab");
@@ -183,6 +184,10 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await expect(reviewEdit).toBeFocused();
   await page.keyboard.press("Enter");
   await colour.click();
+  // its hex field shows where the keyboard is (react-color draws it with no outline of its own)
+  const hex = page.locator('input[id^="rc-editable-input"]');
+  await hex.focus();
+  await expect(hex).not.toHaveCSS("outline-style", "none");
   await page.locator('[title="#0693E3"]').click();
   const recoloured = await sentTo(page, "PATCH", `/api/v0/states/${reviewId}`, () =>
     stateForm(page).getByRole("button", { name: "Update" }).click()

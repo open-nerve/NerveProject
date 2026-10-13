@@ -341,6 +341,7 @@
     "close_peek_view": "Close the peek view",
     "toggle_peek_view_layout": "Toggle peek view layout",
     "options": "Options",
+    "item_options": "{name} options",
     "color": "Color",
     "today": "Today",
     "press_for_commands": "Press '/' for commands",
