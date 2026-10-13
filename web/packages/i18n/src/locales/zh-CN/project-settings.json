@@ -45,6 +45,7 @@
       "created": "状态已创建。",
       "updated": "状态已更新。",
       "description_placeholder": "向成员说明这个状态。",
+      "add": "向 {name} 添加状态",
       "delete": {
         "title": "删除状态",
         "body": "确定要删除状态 {name} 吗？这个状态的全部数据将被永久删除。此操作无法撤销。",
@@ -53,6 +54,7 @@
       },
       "default": {
         "mark": "设为默认",
+        "mark_item": "设为默认：{name}",
         "marking": "正在设为默认",
         "is_default": "默认"
       }

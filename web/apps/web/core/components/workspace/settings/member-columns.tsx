@@ -15,7 +15,7 @@ import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
 import type { User, WorkspaceMember, WorkspaceRole } from "@nerve/api-client";
 // nerve ui
-import { CustomSelect, PopoverMenu } from "@nerve/ui";
+import { CustomMenu, CustomSelect } from "@nerve/ui";
 // helpers
 import { getFileURL } from "@nerve/utils";
 // hooks
@@ -77,22 +77,20 @@ export function NameColumn(props: NameProps) {
             </div>
 
             {!isSuspended && (isAdmin || id === currentUser?.id) && (
-              <PopoverMenu
-                data={[""]}
-                keyExtractor={(item) => item}
-                popoverClassName="justify-end"
-                buttonClassName="outline-none	origin-center rotate-90 size-8 aspect-square flex-shrink-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
-                render={() => (
-                  <button
-                    type="button"
-                    className="flex cursor-pointer items-center gap-x-3"
-                    onClick={() => setRemoveMemberModal(rowData)}
-                  >
-                    <DeleteOutline className="size-3.5 align-middle" />{" "}
+              // the menu a project member's row has too: named by the member, shown as the keyboard reaches it
+              <CustomMenu
+                ellipsis
+                ariaLabel={t("common.item_options", { name: display_name })}
+                buttonClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                placement="bottom-end"
+              >
+                <CustomMenu.MenuItem onClick={() => setRemoveMemberModal(rowData)}>
+                  <div className="flex items-center gap-x-3">
+                    <DeleteOutline className="size-3.5 align-middle" />
                     {id === currentUser?.id ? t("leave") : t("remove")}
-                  </button>
-                )}
-              />
+                  </div>
+                </CustomMenu.MenuItem>
+              </CustomMenu>
             )}
           </div>
         </div>

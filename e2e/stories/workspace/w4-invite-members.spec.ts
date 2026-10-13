@@ -221,10 +221,13 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
   await page.goto(`/${slug}/settings/members`);
-  // erin's invitation says it was declined, and offers neither a role nor a link: its menu holds its removal alone.
+  // erin's invitation says it was declined, and offers neither a role nor a link: its menu, named by her address,
+  // holds its removal alone.
   await expect(invitationRow(page, erinEmail)).toContainText("Declined");
   await expect(invitationRow(page, erinEmail).getByRole("button", { name: "Member" })).toHaveCount(0);
-  await invitationRow(page, erinEmail).getByRole("button").last().click();
+  await invitationRow(page, erinEmail)
+    .getByRole("button", { name: `${erinEmail} options`, exact: true })
+    .click();
   await expect(page.getByText("Remove", { exact: true })).toBeVisible();
   await expect(page.getByText("Copy link", { exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");

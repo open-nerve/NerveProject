@@ -39,9 +39,9 @@ function groupHeading(page: Page, name: string): Locator {
   return page.getByRole("button", { name, exact: true });
 }
 
-/** The button beside the heading of the group named name that adds a state to it. */
+/** The button beside the heading of the group named name that adds a state to it, named by the group. */
 function addTo(page: Page, name: string): Locator {
-  return groupHeading(page, name).locator("xpath=..").getByRole("button", { name: "Add" });
+  return page.getByRole("button", { name: `Add a state to ${name}`, exact: true });
 }
 
 /** The form page shows to create or change a state: one at a time. */
@@ -165,14 +165,14 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await stateForm(page).getByRole("button", { name: "Cancel" }).click();
 
   // Review recoloured, its row's Edit reached by Tab, its row's controls shown while the focus is in it as while the
-  // pointer is over it (unseen while neither is), Edit and Delete each marked as Tab reaches it: the fields its form
-  // edits.
+  // pointer is over it (unseen while neither is), each named by Review, Edit and Delete each marked as Tab reaches it:
+  // the fields its form edits.
   const review = stateRow(page, "Review");
-  const reviewEdit = review.getByRole("button", { name: "Edit" });
-  const reviewDelete = review.getByRole("button", { name: "Delete" });
+  const reviewEdit = review.getByRole("button", { name: "Edit Review", exact: true });
+  const reviewDelete = review.getByRole("button", { name: "Delete Review", exact: true });
   await page.mouse.move(0, 0);
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "0");
-  await review.getByRole("button", { name: "Mark as default" }).focus();
+  await review.getByRole("button", { name: "Mark as default: Review", exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(reviewEdit).toBeFocused();
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "1");

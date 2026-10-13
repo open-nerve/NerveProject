@@ -14,11 +14,13 @@ import { useStateChanges } from "../use-state-changes";
 
 type TStateMarksAsDefault = {
   stateId: string;
+  /** The state's name, which names the button on each state that may become the default. */
+  stateName: string;
   isDefault: boolean;
 };
 
 export const StateMarksAsDefault = observer(function StateMarksAsDefault(props: TStateMarksAsDefault) {
-  const { stateId, isDefault } = props;
+  const { stateId, stateName, isDefault } = props;
   const { markDefault } = useStateChanges();
   const { t } = useTranslation();
   // states
@@ -41,6 +43,11 @@ export const StateMarksAsDefault = observer(function StateMarksAsDefault(props: 
       )}
       disabled={isDefault || isLoading}
       onClick={handleMarkAsDefault}
+      // every state but the default offers this, so it says which state, after the words it shows (the default's and
+      // the one being marked are one each, named by their words alone)
+      aria-label={
+        isDefault || isLoading ? undefined : t("project_settings.states.default.mark_item", { name: stateName })
+      }
     >
       {t(
         isLoading

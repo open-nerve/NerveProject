@@ -109,14 +109,18 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await expect(modalDialog(page).getByText("最后确认，请在下方输入 delete my workspace。")).toBeVisible();
   await cancel(page);
 
-  // The members page: its title, bob's role, carol's invitation's, and the removal's dialog, the member's name in it.
+  // The members page: its title, bob's role, carol's invitation's, each row's menu by its name, and the removal's
+  // dialog, the member's name in it.
   await page.goto(`/${slug}/settings/members`);
   await expect(page).toHaveTitle("Acme - 成员");
   await expect(memberRow(page, bobEmail).getByRole("button", { name: "成员", exact: true })).toBeVisible();
   const carols = page.locator("div.group", { has: page.getByRole("heading", { name: carolEmail, exact: true }) });
   await expect(carols.getByRole("button", { name: "访客", exact: true })).toBeVisible();
-  await memberRow(page, bobEmail).locator("button").first().click();
-  await page.getByRole("button", { name: "移除", exact: true }).click();
+  await expect(carols.getByRole("button", { name: `${carolEmail} 的选项`, exact: true })).toBeVisible();
+  await memberRow(page, bobEmail)
+    .getByRole("button", { name: `${shownNameOf(bobEmail)} 的选项`, exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: "移除", exact: true }).click();
   await expect(modalDialog(page).getByRole("heading")).toHaveText(`移出 ${shownNameOf(bobEmail)}？`);
   await expect(modalDialog(page).getByText(/^确定要将 .+ 移出工作区吗？/)).toBeVisible();
   await cancel(page);
@@ -172,10 +176,11 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await expect(modalDialog(page).getByText(/^确定要删除项目 Web 吗？/)).toBeVisible();
   await cancel(page);
 
-  // The states page: a group by its name, the states not the default offered to be it.
+  // The states page: a group by its name, the states not the default offered to be it, each named by its state.
   await page.goto(`/${slug}/settings/projects/${web.id}/states`);
   await expect(page.getByRole("button", { name: "已开始", exact: true })).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("button", { name: "设为默认", exact: true })).toHaveCount(4);
+  await expect(page.getByRole("button", { name: /^设为默认：/ })).toHaveCount(4);
+  await expect(page.getByRole("button", { name: "设为默认：Todo", exact: true })).toHaveText("设为默认");
 
   // The labels page: a group's menu, named by the group, the menu of a label in it, and the deletion's dialog, the
   // group's name in it.

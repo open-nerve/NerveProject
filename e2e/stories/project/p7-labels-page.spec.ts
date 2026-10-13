@@ -196,12 +196,12 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await expect(page.locator("h6")).toHaveText(["Feature", "Docs", "Defect", "UI"]);
 
   // Docs's controls, unseen while neither the pointer nor the focus is in its row (a click elsewhere hides them), are
-  // shown while Tab goes through them, as while the pointer is over it, each marked as Tab reaches it. Tab comes to its
-  // menu from Feature's delete button, past its grip, which only a pointer drags.
+  // shown while Tab goes through them, as while the pointer is over it, each named by Docs and marked as Tab reaches
+  // it. Tab comes to its menu from Feature's delete button, past its grip, which only a pointer drags.
   const docsRow = labelRow(page, "Docs");
   const docsControls = docsRow.locator(":scope > div.absolute");
-  const docsOptions = docsRow.getByRole("button", { name: "Options" });
-  const docsDelete = docsRow.getByRole("button", { name: "Delete" });
+  const docsOptions = docsRow.getByRole("button", { name: "Docs options", exact: true });
+  const docsDelete = docsRow.getByRole("button", { name: "Delete Docs", exact: true });
   await docsRow.locator("h6").click();
   await page.mouse.move(0, 0);
   await expect(docsControls).toHaveCSS("opacity", "0");

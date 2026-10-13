@@ -117,9 +117,8 @@ export async function pickRole(
  * entry (Leave on the caller's own row, Remove on another's), which opens the dialog that asks.
  */
 export async function askToEndMembership(page: Page, email: string, entry: "Leave" | "Remove"): Promise<void> {
-  // the row's menu is its first button: the role's select, when there is one, comes after it
-  await memberRow(page, email).locator("button").first().click();
-  await page.getByRole("button", { name: entry, exact: true }).click();
+  await memberRow(page, email).getByRole("button", { name: "Options" }).click();
+  await page.getByRole("menuitem", { name: entry, exact: true }).click();
 }
 
 /**
@@ -205,8 +204,7 @@ export async function removeInvitation(
   email: string,
   request: { method: string; path: string }
 ): Promise<Response> {
-  // the row's menu is its last button
-  await invitationRow(page, email).getByRole("button").last().click();
+  await invitationRow(page, email).getByRole("button", { name: "Options" }).click();
   await page.getByText("Remove", { exact: true }).click();
   return answerTo(page, request.method, request.path, () =>
     page.getByRole("dialog").getByRole("button", { name: "Remove", exact: true }).click()

@@ -45,6 +45,7 @@
       "created": "State created successfully.",
       "updated": "State updated successfully.",
       "description_placeholder": "Describe this state for your members.",
+      "add": "Add a state to {name}",
       "delete": {
         "title": "Delete State",
         "body": "Are you sure you want to delete state {name}? All of the data related to the state will be permanently removed. This action cannot be undone.",
@@ -53,6 +54,7 @@
       },
       "default": {
         "mark": "Mark as default",
+        "mark_item": "Mark as default: {name}",
         "marking": "Marking as default",
         "is_default": "Default"
       }

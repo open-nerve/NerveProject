@@ -99,17 +99,17 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
 | `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
-| `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓（Task 8） | 1、2、6、8 |
-| `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6） | 1、2、6 |
+| `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓，一行的按钮和组的添加以它们的东西为名（Task 8） | 1、2、6、8 |
+| `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6）；一行的菜单和删除以标签为名（Task 8） | 1、2、6、8 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 每个角色打开工作区菜单，不发请求（`WORKSPACE_MENU`） | 3 |
 | `e2e/stories/smoke/s6-dialogs.spec.ts` | S6：命令面板、快捷键（以标题为名）、嵌套的弹窗是模态的（新文件，Task 2）；命令面板的复制（Task 9）；组字的 Escape（Task 10） | 2 新、9、10 |
 | `e2e/stories/smoke/s7-chinese.spec.ts` | S7：中文的页面和弹窗（新文件，逐 Task 加） | 4 新、5、6、7、8、12、13 |
 | `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘，项目的一行和它的菜单以项目为名，工作区菜单的展开箭头不被读出、不是停留点（新文件） | 8 新 |
-| `e2e/fixtures/workspace-pages.ts` | `askToEndMembership`：打开一行的菜单、选移出或离开，到确认框为止（`endMembership` 经它） | 3 |
+| `e2e/fixtures/workspace-pages.ts` | `askToEndMembership`：打开一行的菜单、选移出或离开，到确认框为止（`endMembership` 经它）（Task 3）；成员和邀请一行的菜单按它的名字，菜单项是 `menuitem`（Task 8） | 3、8 |
 | `e2e/stories/workspace/w11-guest-bounds.spec.ts` | 访客从菜单离开（双击只发一次，请求在路上时确认框关不掉）、唯一的管理员被拒绝（Task 3）；`registeredPAT`、导入（Task 14） | 3、14 |
-| `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；`registeredPAT`（Task 14） | 3、14 |
+| `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；邀请一行的菜单以地址为名（Task 8）；`registeredPAT`（Task 14） | 3、8、14 |
 | `e2e/stories/workspace/w5-invitation-link.spec.ts` | 邀请被拒绝之后的页面的说法（Task 4）；`registeredPAT`、会话断言的导入（Task 14） | 4、14 |
-| `e2e/stories/workspace/w7-member-management.spec.ts` | 条件挂载的确认框隐藏后面的页面（Task 1）；被拒绝时确认框留着（Task 3）；`registeredPAT`（Task 14） | 1、3、14 |
+| `e2e/stories/workspace/w7-member-management.spec.ts` | 条件挂载的确认框隐藏后面的页面（Task 1）；被拒绝时确认框留着（Task 3）；成员一行的菜单以成员为名、Tab 到达时显示（Task 8）；`registeredPAT`（Task 14） | 1、3、8、14 |
 | `e2e/stories/workspace/w8-navigation-preferences.spec.ts` | 弹窗关上之后再读侧边栏（Task 1）；`registeredPAT`（Task 14） | 1、14 |
 | `knip.jsonc` | knip 的入口加 `tools/i18n-keys.mjs` | 9 |
 | `pnpm-lock.yaml` | `@nerve/propel` 依赖 `@nerve/utils`（工作区内） | 10 |
@@ -155,7 +155,9 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/power-k/ui/modal/wrapper.tsx` | 经 `ModalCore`（Task 2）；组字的守卫（Task 10） | 2、10 |
 | `web/apps/web/core/components/profile/sidebar.tsx` | `IconButton` 的名字（Task 7）；工作区经 `useRouteWorkspace()`（Task 11） | 7、11 |
 | `web/apps/web/core/components/project-states/create-update/create-update.test.tsx`、`web/apps/web/core/components/project-states/options/delete.test.tsx` | 读键的测试 | 6 |
-| `web/apps/web/core/components/project-states/create-update/create.tsx`、`web/apps/web/core/components/project-states/create-update/update.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx` | 状态的英文经 `t()`、组的名字（Task 6） | 6 |
+| `web/apps/web/core/components/project-states/create-update/create.tsx`、`web/apps/web/core/components/project-states/create-update/update.tsx` | 状态的英文经 `t()`、组的名字（Task 6） | 6 |
+| `web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx` | 状态的英文经 `t()`、组的名字（Task 6）；一行的按钮、组的添加以它们的东西为名（Task 8） | 6、8 |
+| `web/apps/web/core/components/project-states/state-item-title.tsx` | 一行的编辑以状态为名，设为默认收到状态的名字（Task 8） | 8 |
 | `web/apps/web/core/components/project-states/create-update/form.tsx` | 状态的英文经 `t()`、组的名字（Task 6）；颜色弹层、名称的焦点（Task 8） | 6、8 |
 | `web/apps/web/core/components/project/add-project-members-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx`、`web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/form.tsx`、`web/apps/web/core/components/project/join-project-modal.tsx`、`web/apps/web/core/components/project/leave-project-modal.tsx`、`web/apps/web/core/components/project/member-select.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/settings/control-section.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5 |
 | `web/apps/web/core/components/project/add-project-members-modal.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5、6 |
@@ -183,8 +185,8 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/sidebar/sidebar-wrapper.tsx` | 标题经 `t()`，没有调用方的 `title` 删除 | 12 |
 | `web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；标题和说明经 `t()`（Task 4） | 3、4 |
 | `web/apps/web/core/components/workspace/leave-workspace-modal.tsx` | 侧边栏的离开：成员页的确认框和命令（新文件） | 3 新 |
-| `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；角色名（Task 6） | 3、6 |
-| `web/apps/web/core/components/workspace/settings/member-columns.tsx` | M3 页面上的英文（Task 4）；角色名（Task 6）；工作区经 `useRouteWorkspace()`（Task 11） | 4、6、11 |
+| `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；角色名（Task 6）；一行的菜单以地址为名（Task 8） | 3、6、8 |
+| `web/apps/web/core/components/workspace/settings/member-columns.tsx` | M3 页面上的英文（Task 4）；角色名（Task 6）；一行的菜单是 `CustomMenu`，以成员为名，Tab 到达时显示（Task 8）；工作区经 `useRouteWorkspace()`（Task 11） | 4、6、8、11 |
 | `web/apps/web/core/components/modals/workspace-level.tsx` | 宿主卸载时关上它渲染的弹窗的开关（创建项目，开关在命令面板的 store 里，在 key 之上；Task 3） | 3 |
 | `web/apps/web/core/components/power-k/projects-app-provider.tsx`、`web/apps/web/core/components/power-k/global-shortcuts.tsx` | 宿主卸载时关上命令面板（并清掉它的页）、快捷键列表（开关在 power-K 的 store 里，在 key 之上；Task 3） | 3 |
 | `web/apps/web/core/components/workspace/settings/members-list-item.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3） | 3 |
@@ -218,7 +220,7 @@ sys.exit(1 if broken else 0)
 | `web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 3、4、8、12、13 |
 | `web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 7、12 |
 | `web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 2、4、9 |
-| `web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、5、6、13 |
+| `web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、5、6、8、13 |
 | `web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/zh-CN/project.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 5、6、12 |
 | `web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 3、4、9 |
 | `web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、12 |
@@ -6999,17 +7001,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/stories/smoke/s8-sidebar.spec.ts`、`web/apps/web/core/components/common/color-picker.tsx`、`web/apps/web/core/components/dropdowns/project/base.test.tsx`
-- Modify: `e2e/fixtures/project-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`
+- Modify: `e2e/fixtures/project-pages.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx`、`web/apps/web/core/components/project-states/state-item-title.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`
 
 **Interfaces:**（spec 2.9）
 - `components/common/color-picker.tsx`（新文件）：`TwitterPicker`，输入框的 `outline` 是浏览器的（`"revert"`）；状态的表单、标签的行内表单用它。状态的表单打开时 `setFocus("name")`。
 - 侧边栏：项目列表的"+"是 `opacity-0`，`group-hover`、`focus-visible` 时显示；项目一行的菜单是 `CustomMenu` 的省略号按钮（`menuButtonOnClick`；`actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；手柄是 `span`；展开箭头 `tabIndex={-1}`。`resizable-sidebar.tsx`：收起时主侧边栏 `inert`，没有浮出时副本 `inert`；从不设置的 `isHoveringTrigger` 和它的副作用删除（web 的上限 301 → 300）。项目一行的 `Disclosure.Button` 不再有 `aria-label`：它的名字是项目的名字（`Logo` 已 `aria-hidden`，Task 7），展开与否由 `aria-expanded` 说出；展开箭头的名字照旧（F6，A-M2）。
-- 一行重复的控件以它那一行为名（spec 2.9，Task 7 评审的裁定）：项目一行的菜单名为 `aria_labels.projects_sidebar.project_quick_actions`（"{name} quick actions"，项目的名字；原来每一行都是"Toggle quick actions menu"，这个键照旧由收藏和项目页头的菜单读）；项目成员页、标签页一行的菜单名为 `common.item_options`（"{name} options"，成员的显示名、标签的名字；原来每一行都是 `common.options`）。
+- 一行重复的控件以它那一行为名（spec 2.9，Task 7 评审的裁定）：项目一行的菜单名为 `aria_labels.projects_sidebar.project_quick_actions`（"{name} quick actions"，项目的名字；原来每一行都是"Toggle quick actions menu"，这个键照旧由收藏和项目页头的菜单读）；项目成员页、标签页一行的菜单名为 `common.item_options`（"{name} options"，成员的显示名、标签的名字；原来每一行都是 `common.options`）。M3 的别的一行（Task 8 预审的裁定）：工作区成员页一行的菜单原来没有名字、键盘取得焦点时看不见（`PopoverMenu`，`outline-none`、`opacity-0`），改为与项目成员页一行相同的 `CustomMenu` 的省略号按钮（`common.item_options`、成员的显示名，`focus-visible:opacity-100`，浏览器的焦点轮廓），菜单项是 `menuitem`；邀请一行的菜单原来没有名字，以邀请的地址为名（`common.item_options`）；标签一行的删除、状态一行的编辑和删除以标签、状态为名（`common.delete_item` "Delete {name}"、`common.edit_item` "Edit {name}"）；状态的"Mark as default"以它看得见的文字开头，后接状态的名字（`project_settings.states.default.mark_item` "Mark as default: {name}"，WCAG 2.5.3；默认的一个、正在设的一个各只有一个，照旧以文字为名）；状态组的添加按钮以组为名（`project_settings.states.add` "Add a state to {name}"）。
 - 工作区菜单的标题旁只在指针经过时显示的展开箭头做标题的按钮同样的事：`tabIndex={-1}`、`aria-hidden`，它的 `aria-label` 删除（Task 7 评审的裁定；原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）。
 - 项目成员页一行的菜单 `focus-visible:opacity-100`，菜单项经 `t()`。项目下拉框：`tabIndex` 给 `DropdownButton`，根不再可以聚焦。
 - `e2e/fixtures/project-pages.ts` 的 `pageContent(page)`：页面的内容（应用的 `main` 里的 `main`，侧边栏之外）。侧边栏的一行现在也以项目为名，P1 在这里找项目的卡片，P2 找页头的面包屑。
 
-**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行，以"Web quick actions"找到它的菜单；工作区菜单的标题只有一个按钮被读出，Tab 从它到菜单的第一页；P6：名称有焦点、十六进制框有轮廓；P5：一行的菜单由 Tab 到达，以"max options"为名，访客以"Web quick actions"打开侧边栏一行的菜单；S7：工作区菜单的按钮一个，标签一行的菜单以"Bug 的选项"为名，项目成员一行的菜单以管理员的名字为名，它的"离开"。
+**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行，以"Web quick actions"找到它的菜单；工作区菜单的标题只有一个按钮被读出，Tab 从它到菜单的第一页；P6：名称有焦点、十六进制框有轮廓，Review 一行的编辑、删除、设为默认和组的添加以它们的东西为名；P5：一行的菜单由 Tab 到达，以"max options"为名，访客以"Web quick actions"打开侧边栏一行的菜单；P7：Docs 一行的菜单和删除以 Docs 为名；W7：bob 一行的菜单以他为名，由 Tab 到达时显示、有焦点的标记；W4：erin 的邀请一行的菜单以她的地址为名；S7：工作区菜单的按钮一个，工作区成员和邀请一行的菜单、标签一行的菜单以"…的选项"为名，状态的"设为默认：…"，项目成员一行的菜单以管理员的名字为名，它的"离开"。
 
 - [ ] **Step 1: 键盘**
 
@@ -7075,13 +7077,19 @@ import { ColorPicker } from "@/components/common/color-picker";
                         <ColorPicker
 ````
 
-`web/apps/web/core/components/labels/label-block/label-item-block.tsx`（修改，1 处）：
+`web/apps/web/core/components/labels/label-block/label-item-block.tsx`（修改，2 处）：
 
 ````old web/apps/web/core/components/labels/label-block/label-item-block.tsx
             ariaLabel={t("common.options")}
 ````
 ````new web/apps/web/core/components/labels/label-block/label-item-block.tsx
             ariaLabel={t("common.item_options", { name: label.name })}
+````
+````old web/apps/web/core/components/labels/label-block/label-item-block.tsx
+                aria-label={t("common.actions.delete")}
+````
+````new web/apps/web/core/components/labels/label-block/label-item-block.tsx
+                aria-label={t("common.delete_item", { name: label.name })}
 ````
 
 `web/apps/web/core/components/project-states/create-update/form.tsx`（修改，7 处）：
@@ -7140,6 +7148,71 @@ import { ColorPicker } from "@/components/common/color-picker";
                   value={value}
                   onChange={onChange}
                   ref={ref}
+````
+
+`web/apps/web/core/components/project-states/group-item.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project-states/group-item.tsx
+          aria-label={t("common.add")}
+````
+````new web/apps/web/core/components/project-states/group-item.tsx
+          aria-label={t("project_settings.states.add", { name: t(STATE_GROUPS[groupKey].i18n_label) })}
+````
+
+`web/apps/web/core/components/project-states/options/delete.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project-states/options/delete.tsx
+        aria-label={t("common.actions.delete")}
+````
+````new web/apps/web/core/components/project-states/options/delete.tsx
+        aria-label={t("common.delete_item", { name: state.name })}
+````
+
+`web/apps/web/core/components/project-states/options/mark-as-default.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/project-states/options/mark-as-default.tsx
+  stateId: string;
+  isDefault: boolean;
+````
+````new web/apps/web/core/components/project-states/options/mark-as-default.tsx
+  stateId: string;
+  /** The state's name, which names the button on each state that may become the default. */
+  stateName: string;
+  isDefault: boolean;
+````
+````old web/apps/web/core/components/project-states/options/mark-as-default.tsx
+  const { stateId, isDefault } = props;
+````
+````new web/apps/web/core/components/project-states/options/mark-as-default.tsx
+  const { stateId, stateName, isDefault } = props;
+````
+````old web/apps/web/core/components/project-states/options/mark-as-default.tsx
+      onClick={handleMarkAsDefault}
+    >
+````
+````new web/apps/web/core/components/project-states/options/mark-as-default.tsx
+      onClick={handleMarkAsDefault}
+      // every state but the default offers this, so it says which state, after the words it shows (the default's and
+      // the one being marked are one each, named by their words alone)
+      aria-label={
+        isDefault || isLoading ? undefined : t("project_settings.states.default.mark_item", { name: stateName })
+      }
+    >
+````
+
+`web/apps/web/core/components/project-states/state-item-title.tsx`（修改，2 处）：
+
+````old web/apps/web/core/components/project-states/state-item-title.tsx
+            <StateMarksAsDefault stateId={state.id} isDefault={state.default} />
+````
+````new web/apps/web/core/components/project-states/state-item-title.tsx
+            <StateMarksAsDefault stateId={state.id} stateName={state.name} isDefault={state.default} />
+````
+````old web/apps/web/core/components/project-states/state-item-title.tsx
+              aria-label={t("common.actions.edit")}
+````
+````new web/apps/web/core/components/project-states/state-item-title.tsx
+              aria-label={t("common.edit_item", { name: state.name })}
 ````
 
 `web/apps/web/core/components/project/settings/member-columns.tsx`（修改，3 处）：
@@ -7215,6 +7288,63 @@ import { ColorPicker } from "@/components/common/color-picker";
         aria-label={t("aria_labels.sidebar.peek")}
         // its copy of the sidebar's controls is for the pointer that asks for it, the keyboard's only while it shows
         inert={!(isCollapsed && showPeek)}
+````
+
+`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
+          <CustomMenu ellipsis placement="bottom-end" closeOnSelect>
+````
+````new web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
+          <CustomMenu
+            ellipsis
+            ariaLabel={t("common.item_options", { name: invitationDetails.email })}
+            placement="bottom-end"
+            closeOnSelect
+          >
+````
+
+`web/apps/web/core/components/workspace/settings/member-columns.tsx`（修改，2 处）：
+
+````old web/apps/web/core/components/workspace/settings/member-columns.tsx
+import { CustomSelect, PopoverMenu } from "@nerve/ui";
+````
+````new web/apps/web/core/components/workspace/settings/member-columns.tsx
+import { CustomMenu, CustomSelect } from "@nerve/ui";
+````
+````old web/apps/web/core/components/workspace/settings/member-columns.tsx
+              <PopoverMenu
+                data={[""]}
+                keyExtractor={(item) => item}
+                popoverClassName="justify-end"
+                buttonClassName="outline-none	origin-center rotate-90 size-8 aspect-square flex-shrink-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                render={() => (
+                  <button
+                    type="button"
+                    className="flex cursor-pointer items-center gap-x-3"
+                    onClick={() => setRemoveMemberModal(rowData)}
+                  >
+                    <DeleteOutline className="size-3.5 align-middle" />{" "}
+                    {id === currentUser?.id ? t("leave") : t("remove")}
+                  </button>
+                )}
+              />
+````
+````new web/apps/web/core/components/workspace/settings/member-columns.tsx
+              // the menu a project member's row has too: named by the member, shown as the keyboard reaches it
+              <CustomMenu
+                ellipsis
+                ariaLabel={t("common.item_options", { name: display_name })}
+                buttonClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                placement="bottom-end"
+              >
+                <CustomMenu.MenuItem onClick={() => setRemoveMemberModal(rowData)}>
+                  <div className="flex items-center gap-x-3">
+                    <DeleteOutline className="size-3.5 align-middle" />
+                    {id === currentUser?.id ? t("leave") : t("remove")}
+                  </div>
+                </CustomMenu.MenuItem>
+              </CustomMenu>
 ````
 
 `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`（修改，12 处）：
@@ -7373,6 +7503,25 @@ import { ColorPicker } from "@/components/common/color-picker";
 ````new web/packages/i18n/src/locales/en/common.json
     "options": "Options",
     "item_options": "{name} options",
+    "edit_item": "Edit {name}",
+    "delete_item": "Delete {name}",
+````
+
+`web/packages/i18n/src/locales/en/project-settings.json`（修改，2 处）：
+
+````old web/packages/i18n/src/locales/en/project-settings.json
+      "description_placeholder": "Describe this state for your members.",
+````
+````new web/packages/i18n/src/locales/en/project-settings.json
+      "description_placeholder": "Describe this state for your members.",
+      "add": "Add a state to {name}",
+````
+````old web/packages/i18n/src/locales/en/project-settings.json
+        "mark": "Mark as default",
+````
+````new web/packages/i18n/src/locales/en/project-settings.json
+        "mark": "Mark as default",
+        "mark_item": "Mark as default: {name}",
 ````
 
 `web/packages/i18n/src/locales/zh-CN/accessibility.json`（修改，1 处）：
@@ -7393,6 +7542,25 @@ import { ColorPicker } from "@/components/common/color-picker";
 ````new web/packages/i18n/src/locales/zh-CN/common.json
     "options": "选项",
     "item_options": "{name} 的选项",
+    "edit_item": "编辑 {name}",
+    "delete_item": "删除 {name}",
+````
+
+`web/packages/i18n/src/locales/zh-CN/project-settings.json`（修改，2 处）：
+
+````old web/packages/i18n/src/locales/zh-CN/project-settings.json
+      "description_placeholder": "向成员说明这个状态。",
+````
+````new web/packages/i18n/src/locales/zh-CN/project-settings.json
+      "description_placeholder": "向成员说明这个状态。",
+      "add": "向 {name} 添加状态",
+````
+````old web/packages/i18n/src/locales/zh-CN/project-settings.json
+        "mark": "设为默认",
+````
+````new web/packages/i18n/src/locales/zh-CN/project-settings.json
+        "mark": "设为默认",
+        "mark_item": "设为默认：{name}",
 ````
 
 - [ ] **Step 2: 测试**
@@ -7421,6 +7589,25 @@ import { ColorPicker } from "@/components/common/color-picker";
  */
 export function pageContent(page: Page): Locator {
   return page.getByRole("main").getByRole("main");
+````
+
+`e2e/fixtures/workspace-pages.ts`（修改，2 处）：
+
+````old e2e/fixtures/workspace-pages.ts
+  // the row's menu is its first button: the role's select, when there is one, comes after it
+  await memberRow(page, email).locator("button").first().click();
+  await page.getByRole("button", { name: entry, exact: true }).click();
+````
+````new e2e/fixtures/workspace-pages.ts
+  await memberRow(page, email).getByRole("button", { name: "Options" }).click();
+  await page.getByRole("menuitem", { name: entry, exact: true }).click();
+````
+````old e2e/fixtures/workspace-pages.ts
+  // the row's menu is its last button
+  await invitationRow(page, email).getByRole("button").last().click();
+````
+````new e2e/fixtures/workspace-pages.ts
+  await invitationRow(page, email).getByRole("button", { name: "Options" }).click();
 ````
 
 `e2e/stories/project/p1-create-project.spec.ts`（修改，3 处）：
@@ -7485,7 +7672,7 @@ import { pageContent } from "../../fixtures/project-pages";
   await sidebar.getByRole("button", { name: "Web quick actions", exact: true }).click();
 ````
 
-`e2e/stories/project/p6-states-page.spec.ts`（修改，2 处）：
+`e2e/stories/project/p6-states-page.spec.ts`（修改，4 处）：
 
 ````old e2e/stories/project/p6-states-page.spec.ts
   await addTo(page, "Started").click();
@@ -7504,8 +7691,57 @@ import { pageContent } from "../../fixtures/project-pages";
   await hex.focus();
   await expect(hex).not.toHaveCSS("outline-style", "none");
 ````
+````old e2e/stories/project/p6-states-page.spec.ts
+/** The button beside the heading of the group named name that adds a state to it. */
+function addTo(page: Page, name: string): Locator {
+  return groupHeading(page, name).locator("xpath=..").getByRole("button", { name: "Add" });
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+/** The button beside the heading of the group named name that adds a state to it, named by the group. */
+function addTo(page: Page, name: string): Locator {
+  return page.getByRole("button", { name: `Add a state to ${name}`, exact: true });
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+  // pointer is over it (unseen while neither is), Edit and Delete each marked as Tab reaches it: the fields its form
+  // edits.
+  const review = stateRow(page, "Review");
+  const reviewEdit = review.getByRole("button", { name: "Edit" });
+  const reviewDelete = review.getByRole("button", { name: "Delete" });
+  await page.mouse.move(0, 0);
+  await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "0");
+  await review.getByRole("button", { name: "Mark as default" }).focus();
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  // pointer is over it (unseen while neither is), each named by Review, Edit and Delete each marked as Tab reaches it:
+  // the fields its form edits.
+  const review = stateRow(page, "Review");
+  const reviewEdit = review.getByRole("button", { name: "Edit Review", exact: true });
+  const reviewDelete = review.getByRole("button", { name: "Delete Review", exact: true });
+  await page.mouse.move(0, 0);
+  await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "0");
+  await review.getByRole("button", { name: "Mark as default: Review", exact: true }).focus();
+````
 
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，4 处）：
+`e2e/stories/project/p7-labels-page.spec.ts`（修改，1 处）：
+
+````old e2e/stories/project/p7-labels-page.spec.ts
+  // shown while Tab goes through them, as while the pointer is over it, each marked as Tab reaches it. Tab comes to its
+  // menu from Feature's delete button, past its grip, which only a pointer drags.
+  const docsRow = labelRow(page, "Docs");
+  const docsControls = docsRow.locator(":scope > div.absolute");
+  const docsOptions = docsRow.getByRole("button", { name: "Options" });
+  const docsDelete = docsRow.getByRole("button", { name: "Delete" });
+````
+````new e2e/stories/project/p7-labels-page.spec.ts
+  // shown while Tab goes through them, as while the pointer is over it, each named by Docs and marked as Tab reaches
+  // it. Tab comes to its menu from Feature's delete button, past its grip, which only a pointer drags.
+  const docsRow = labelRow(page, "Docs");
+  const docsControls = docsRow.locator(":scope > div.absolute");
+  const docsOptions = docsRow.getByRole("button", { name: "Docs options", exact: true });
+  const docsDelete = docsRow.getByRole("button", { name: "Delete Docs", exact: true });
+````
+
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，6 处）：
 
 ````old e2e/stories/smoke/s7-chinese.spec.ts
   await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(2);
@@ -7536,6 +7772,43 @@ import { pageContent } from "../../fixtures/project-pages";
   await page.getByRole("button", { name: `${shownNameOf(emailFor(testInfo, "admin"))} 的选项`, exact: true }).click();
   await expect(page.getByRole("menuitem", { name: "离开" })).toBeVisible();
   await page.keyboard.press("Escape");
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  // The members page: its title, bob's role, carol's invitation's, and the removal's dialog, the member's name in it.
+  await page.goto(`/${slug}/settings/members`);
+  await expect(page).toHaveTitle("Acme - 成员");
+  await expect(memberRow(page, bobEmail).getByRole("button", { name: "成员", exact: true })).toBeVisible();
+  const carols = page.locator("div.group", { has: page.getByRole("heading", { name: carolEmail, exact: true }) });
+  await expect(carols.getByRole("button", { name: "访客", exact: true })).toBeVisible();
+  await memberRow(page, bobEmail).locator("button").first().click();
+  await page.getByRole("button", { name: "移除", exact: true }).click();
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  // The members page: its title, bob's role, carol's invitation's, each row's menu by its name, and the removal's
+  // dialog, the member's name in it.
+  await page.goto(`/${slug}/settings/members`);
+  await expect(page).toHaveTitle("Acme - 成员");
+  await expect(memberRow(page, bobEmail).getByRole("button", { name: "成员", exact: true })).toBeVisible();
+  const carols = page.locator("div.group", { has: page.getByRole("heading", { name: carolEmail, exact: true }) });
+  await expect(carols.getByRole("button", { name: "访客", exact: true })).toBeVisible();
+  await expect(carols.getByRole("button", { name: `${carolEmail} 的选项`, exact: true })).toBeVisible();
+  await memberRow(page, bobEmail)
+    .getByRole("button", { name: `${shownNameOf(bobEmail)} 的选项`, exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: "移除", exact: true }).click();
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  // The states page: a group by its name, the states not the default offered to be it.
+  await page.goto(`/${slug}/settings/projects/${web.id}/states`);
+  await expect(page.getByRole("button", { name: "已开始", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: "设为默认", exact: true })).toHaveCount(4);
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  // The states page: a group by its name, the states not the default offered to be it, each named by its state.
+  await page.goto(`/${slug}/settings/projects/${web.id}/states`);
+  await expect(page.getByRole("button", { name: "已开始", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: /^设为默认：/ })).toHaveCount(4);
+  await expect(page.getByRole("button", { name: "设为默认：Todo", exact: true })).toHaveText("设为默认");
 ````
 
 `e2e/stories/smoke/s8-sidebar.spec.ts`（新文件，73 行）：
@@ -7616,6 +7889,56 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
 });
 ````
 
+`e2e/stories/workspace/w4-invite-members.spec.ts`（修改，1 处）：
+
+````old e2e/stories/workspace/w4-invite-members.spec.ts
+  // erin's invitation says it was declined, and offers neither a role nor a link: its menu holds its removal alone.
+  await expect(invitationRow(page, erinEmail)).toContainText("Declined");
+  await expect(invitationRow(page, erinEmail).getByRole("button", { name: "Member" })).toHaveCount(0);
+  await invitationRow(page, erinEmail).getByRole("button").last().click();
+````
+````new e2e/stories/workspace/w4-invite-members.spec.ts
+  // erin's invitation says it was declined, and offers neither a role nor a link: its menu, named by her address,
+  // holds its removal alone.
+  await expect(invitationRow(page, erinEmail)).toContainText("Declined");
+  await expect(invitationRow(page, erinEmail).getByRole("button", { name: "Member" })).toHaveCount(0);
+  await invitationRow(page, erinEmail)
+    .getByRole("button", { name: `${erinEmail} options`, exact: true })
+    .click();
+````
+
+`e2e/stories/workspace/w7-member-management.spec.ts`（修改，3 处）：
+
+````old e2e/stories/workspace/w7-member-management.spec.ts
+import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+import { accountId, bearer, createPAT, emailFor, register, shownNameOf } from "../../fixtures/auth";
+````
+````old e2e/stories/workspace/w7-member-management.spec.ts
+  await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+  await expect(theMember.page.getByRole("menuitem", { name: "Leave", exact: true })).toBeVisible();
+  await theMember.page.keyboard.press("Escape");
+````
+````old e2e/stories/workspace/w7-member-management.spec.ts
+  await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin" })).toHaveCount(0);
+
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+  await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin", exact: true })).toHaveCount(0);
+
+  // bob's row menu, named by him, shows, and is marked, as Tab reaches it from his avatar.
+  const bobsMenu = memberRow(page, bob.email).getByRole("button", { name: `${shownNameOf(bob.email)} options` });
+  await memberRow(page, bob.email).getByRole("link").first().focus();
+  await page.keyboard.press("Tab");
+  await expect(bobsMenu).toBeFocused();
+  await expect(bobsMenu).toHaveCSS("opacity", "1");
+  await expect(bobsMenu).not.toHaveCSS("outline-style", "none");
+
+````
+
 `web/apps/web/core/components/dropdowns/project/base.test.tsx`（新文件，33 行）：
 
 ````file web/apps/web/core/components/dropdowns/project/base.test.tsx
@@ -7674,7 +7997,7 @@ Expected: 116 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/fixtures/project-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx web/apps/web/package.json web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json
+git add e2e/fixtures/project-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project-states/group-item.tsx web/apps/web/core/components/project-states/options/delete.tsx web/apps/web/core/components/project-states/options/mark-as-default.tsx web/apps/web/core/components/project-states/state-item-title.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx web/apps/web/package.json web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/project-settings.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the closeout's keyboard list: the hex field, the state form's focus, the sidebar and the rows' menus
@@ -7685,9 +8008,11 @@ show as Tab reaches them, the menu one Tab stop and the grip none, and a
 project's row and its menu are named by its project; the workspace
 menu's chevron, the pointer's alone, is neither a Tab stop nor read; the
 hidden copy of the sidebar and the collapsed sidebar are inert; the
-project members' and the labels' row menus are named by their row and
-the members' shows on focus; the project dropdown's Tab stop is its
-button. S8 walks the sidebar by keyboard.
+members' (the project's and the workspace's), the invitations' and the
+labels' row menus are named by their row, the members' shown and marked
+on focus; the states' and labels' row buttons and each state group's add
+are named by their item; the project dropdown's Tab stop is its button.
+S8 walks the sidebar by keyboard.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -7714,6 +8039,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.16` | 标签一行的菜单回到"Options"的名字，每一行都一样 | 故事 S7 | 端到端 |
 | `T8.17` | 工作区菜单的展开箭头（指针经过之前看不见）又是一个停留点 | 故事 S8 | 端到端 |
 | `T8.18` | 工作区菜单的展开箭头又被读出，标题旁多一个按钮 | 故事 S8 | 端到端 |
+| `T8.19` | 工作区成员一行的菜单又没有名字 | 故事 W7 | 端到端 |
+| `T8.20` | Tab 到工作区成员一行的菜单时看不见它 | 故事 W7 | 端到端 |
+| `T8.21` | Tab 到工作区成员一行的菜单时没有焦点的标记（`outline-none`，原来如此） | 故事 W7 | 端到端 |
+| `T8.22` | 邀请一行的菜单又没有名字 | 故事 W4 | 端到端 |
+| `T8.23` | 标签一行的删除按钮回到"Delete"的名字，每一行都一样 | 故事 P7 | 端到端 |
+| `T8.24` | 状态一行的编辑按钮回到"Edit"的名字，每一行都一样 | 故事 P6 | 端到端 |
+| `T8.25` | 状态一行的删除按钮回到"Delete"的名字，每一行都一样 | 故事 P6 | 端到端 |
+| `T8.26` | 状态的"Mark as default"又只以它的文字为名，每一行都一样 | 故事 P6 | 端到端 |
+| `T8.27` | 状态组的添加按钮回到"Add"的名字，每一组都一样 | 故事 P6 | 端到端 |
 
 ---
 
@@ -13119,10 +13453,10 @@ import { bearer, emailFor, password, registeredPAT, type RegisterInvitation } fr
 `e2e/stories/workspace/w7-member-management.spec.ts`（修改，3 处）：
 
 ````old e2e/stories/workspace/w7-member-management.spec.ts
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, createPAT, emailFor, register, shownNameOf } from "../../fixtures/auth";
 ````
 ````new e2e/stories/workspace/w7-member-management.spec.ts
-import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT, shownNameOf } from "../../fixtures/auth";
 ````
 ````old e2e/stories/workspace/w7-member-management.spec.ts
   const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
@@ -13988,7 +14322,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框、命令面板和快捷键列表关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上，窄屏（768 px 以下）上开着的侧边栏收起。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
-| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10），32 处经 `t()`，收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，交给 M7）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开按钮和工作区菜单的按钮的名字有了文案（原来是没有定义的键），项目列表的"More"按钮以它看得见的文字为名（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），它的菜单也以项目为名（"Web quick actions"，原来每一行都叫"Toggle quick actions menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；工作区菜单的标题旁只在指针经过时显示的展开箭头不再是停留点、不被读出（原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）；项目成员页的筛选同样只是一个按钮；项目成员页、标签页一行的菜单以成员、标签为名（"{name} options"，原来成员页的没有名字，标签页的每一行都叫"Options"），成员页的在键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
+| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10），32 处经 `t()`，收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，交给 M7）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开按钮和工作区菜单的按钮的名字有了文案（原来是没有定义的键），项目列表的"More"按钮以它看得见的文字为名（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），它的菜单也以项目为名（"Web quick actions"，原来每一行都叫"Toggle quick actions menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；工作区菜单的标题旁只在指针经过时显示的展开箭头不再是停留点、不被读出（原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）；项目成员页的筛选同样只是一个按钮；项目和工作区的成员页、邀请、标签页一行的菜单以成员、地址、标签为名（"{name} options"，原来两个成员页和邀请的没有名字，标签页的每一行都叫"Options"），两个成员页的在键盘取得焦点时显示、有焦点的轮廓（工作区成员页的原来是 `outline-none` 的弹层，现在与项目成员页的一样是菜单）；状态一行的编辑、删除、设为默认，标签一行的删除，状态组的添加以它们的东西为名（原来每一行都叫"Edit""Delete""Mark as default""Add"）；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |

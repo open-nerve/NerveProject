@@ -122,7 +122,12 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
               ))}
             </CustomSelect>
           )}
-          <CustomMenu ellipsis placement="bottom-end" closeOnSelect>
+          <CustomMenu
+            ellipsis
+            ariaLabel={t("common.item_options", { name: invitationDetails.email })}
+            placement="bottom-end"
+            closeOnSelect
+          >
             {MENU_ITEMS.filter((item) => item.shouldRender !== false).map((item) => (
               <CustomMenu.MenuItem
                 key={item.key}

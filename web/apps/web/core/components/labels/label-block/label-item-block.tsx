@@ -102,7 +102,7 @@ export function LabelItemBlock(props: ILabelItemBlock) {
             <div className="py-0.5">
               <button
                 type="button"
-                aria-label={t("common.actions.delete")}
+                aria-label={t("common.delete_item", { name: label.name })}
                 className="flex size-5 items-center justify-center rounded-sm hover:bg-layer-1"
                 onClick={() => {
                   handleLabelDelete(label);

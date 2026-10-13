@@ -10,7 +10,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "../../fixtures/assert/workspace";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, createPAT, emailFor, register, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
@@ -268,7 +268,8 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await expect(memberRow(theMember.page, bob.email).locator("button")).toHaveCount(0);
   await expect(memberRow(theMember.page, adminEmail).locator("button")).toHaveCount(0);
   await memberRow(theMember.page, carol.email).locator("button").first().click();
-  await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
+  await expect(theMember.page.getByRole("menuitem", { name: "Leave", exact: true })).toBeVisible();
+  await theMember.page.keyboard.press("Escape");
   await theMember.page.getByRole("button", { name: "Open workspace switcher" }).click();
   await expect(theMember.page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
@@ -280,7 +281,15 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await page.goto(members);
   // His own row: his role as text, nothing to pick.
   await expect(memberRow(page, adminEmail)).toContainText("Admin");
-  await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin" })).toHaveCount(0);
+  await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin", exact: true })).toHaveCount(0);
+
+  // bob's row menu, named by him, shows, and is marked, as Tab reaches it from his avatar.
+  const bobsMenu = memberRow(page, bob.email).getByRole("button", { name: `${shownNameOf(bob.email)} options` });
+  await memberRow(page, bob.email).getByRole("link").first().focus();
+  await page.keyboard.press("Tab");
+  await expect(bobsMenu).toBeFocused();
+  await expect(bobsMenu).toHaveCSS("opacity", "1");
+  await expect(bobsMenu).not.toHaveCSS("outline-style", "none");
 
   // bob becomes a guest: the page sends the role's number (nerve refuses a string), and so is he in each project.
   const demoted = await pickRole(page, bob.email, await membership(bob.id), { from: "Member", to: "Guest" });

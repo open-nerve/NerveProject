@@ -56,13 +56,13 @@ export const StateItemTitle = observer(function StateItemTitle(props: TStateItem
         <div className="flex items-center gap-2 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
           {/* state mark as default option */}
           <div className="flex-shrink-0 text-11 transition-all">
-            <StateMarksAsDefault stateId={state.id} isDefault={state.default} />
+            <StateMarksAsDefault stateId={state.id} stateName={state.name} isDefault={state.default} />
           </div>
           {/* state edit options */}
           <div className="flex items-center gap-1 transition-all">
             <button
               type="button"
-              aria-label={t("common.actions.edit")}
+              aria-label={t("common.edit_item", { name: state.name })}
               className="flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm text-secondary transition-colors hover:bg-layer-1 hover:text-primary"
               onClick={() => setUpdateStateModal(true)}
             >
