@@ -20,7 +20,7 @@ import {
   pageBehindHidden,
   shownWithin,
 } from "../../fixtures/dialogs";
-import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+import { answerTo, holdAnswer, moveWithinApp, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, askToEndMembership } from "../../fixtures/workspace-pages";
 
@@ -98,7 +98,7 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
   expect(await tables(), "the tables after gus's calls").toEqual(before);
 });
 
-test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open; his leaving's dialog and a removal's end as a Back takes him to another workspace", async ({
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open; his leaving's dialog, a removal's and a project's creation end as a Back takes him to another workspace", async ({
   api,
   baseURL,
   browser,
@@ -169,6 +169,16 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await expect(modalDialog(theAdmin.page)).toHaveCount(1);
   await theAdmin.page.evaluate(() => window.history.go(-2));
   await expect(theAdmin.page).toHaveURL(`/${betaSlug}/settings/members`);
+  expect(await closedWithin(theAdmin.page)).toBe(true);
+  // So does the projects page's creation, whose open flag the command palette's store holds, above the key: its host
+  // closes it as acme's content goes. From Beta's projects page to acme's (the router's own move), Add Project, and a
+  // Back to Beta's: the dialog does not open there, to create the project in Beta.
+  await moveWithinApp(theAdmin.page, `/${betaSlug}/projects`);
+  await moveWithinApp(theAdmin.page, `/${slug}/projects`);
+  await theAdmin.page.getByRole("button", { name: "Add Project", exact: true }).click();
+  await expect(modalDialog(theAdmin.page)).toHaveCount(1);
+  await theAdmin.page.goBack();
+  await expect(theAdmin.page).toHaveURL(`/${betaSlug}/projects`);
   expect(await closedWithin(theAdmin.page)).toBe(true);
 
   // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
