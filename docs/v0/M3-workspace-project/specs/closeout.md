@@ -9,7 +9,7 @@
 | 上级 | [M3 设计](../M3-design.md) 第 12 节"收尾"、13.1、13.2、第 14、15 节、3.20、7.1、7.7、7.9、7.11、8.7、9.7（C11、C12）；[总体设计](../../v0-design.md) 7.7、9.4 |
 | 前置交接 | P1–P11 每份 spec 的第 5 节和每份评审的第 6 节中交给收尾的各条；P8b–P11 修复轮的搁置清单；`frontend-changes.md`；M3 收到的 6 份交接（2.1） |
 | 计划 | [plans/closeout.md](../plans/closeout.md)，16 个 Task |
-| 原型 | `$M3TMP/closeout-proto`（`49190525` 的 `git archive` 副本），Task 0 之后逐个 Task 写成，每个 Task 之后的树存在 `$M3TMP/closeout-snap/T<n>`；工具、日志和计划的块在 `$M3TMP/closeout-tools/`。计划在另一个副本上从本提交逐 Task 复现，每个 Task 之后跑它的门禁，最后的树与原型逐个文件相同（附录 A.9） |
+| 原型 | `$M3TMP/closeout-proto`（`49190525` 的 `git archive` 副本），Task 0 之后逐个 Task 写成，每个 Task 之后的树存在 `$M3TMP/closeout-snap/T<n>`；工具、日志和计划的块在 `$M3TMP/closeout-tools/`。计划在另一个副本上从本 spec 的第一个提交逐 Task 复现，每个 Task 之后跑它的门禁，16 个都通过，最后的树与原型逐个文件相同（附录 A.9） |
 
 `$M3TMP` 是 `/private/tmp/claude-501/-Users-xiaoruan-project-nerve-project/99d2bc1d-fdaf-4b92-a590-29b89514572b/scratchpad/nerve-m3`。
 
@@ -86,7 +86,7 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 | K6 | P11 评审第 6 节（搁置的 B） | 五处 `error instanceof ApiError && error.problem?.code` 合成一个 `problemCode()` | Task 9 |
 | K7 | P9 第 5 节（F-11） | 主题切换的 `setPromiseToast` 的失败一支与 `useRefusalToast` | Task 9（第 3 节第 6 条） |
 | K8 | P9 评审第 6 节 | 关键词规则 `sign-out-toast` 的第二个写法 | Task 9（第 3 节第 7 条） |
-| K9 | P10 评审第 6 节（浏览器核对） | `aria_labels.app_sidebar.*` 在两种语言中都没有定义 | Task 7（另找到 `aria_labels` 的三个和 `sidebar` 的两个） |
+| K9 | P10 评审第 6 节（浏览器核对） | `aria_labels.app_sidebar.*` 在两种语言中都没有定义 | Task 7：两个工作区菜单的、两个扩展侧边栏的四个键在两种语言中加上（Task 9 的 `tools/i18n-keys.mjs` 在 `49190525` 上找到的正是它们和一个日期筛选的键）；Task 7 为新的名字另加 `aria_labels` 的五个和 `sidebar` 的两个 |
 | K10 | P10 第 5 节（F-11） | 输入法的 9 处守卫只查 `isComposing`：一个共用的判断加 `keyCode` 229 | Task 10（第 3 节第 8 条） |
 | K11 | P10 评审第 6 节（浏览器核对） | `CustomSelect` 的按钮上按 Enter 提交外面的表单 | Task 10（第 3 节第 9 条） |
 | K12 | P10 第 5 节（F-10）、P11 第 5 节 | 只读工作区的 36 处 router store 读（是否改读路由参数决定 `project-address-route` 的范围） | M3 的 19 个文件 Task 11 和规则 `workspace-address-route`；M4 4 个、M7 8 个、M8 3 个交给它们（第 3 节第 10 条） |
@@ -194,7 +194,7 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 
 **删除的**（W13）：`project/form-loader.tsx`（项目的包装层只在有项目时显示设置页，加载的分支走不到）、`project/settings/helper.tsx`（功能列表的开关包了一层，把每个开关都叫"Toggle project feature"，Task 13 直接用 `Switch` 并以功能为名）、两个只为 Plane 的英文写的键（`workspace_settings.token_not_copied` 等，2.10）、`@nerve/constants` 的一个没有读者的日期选项（2.10）。
 
-**测试**：新的故事 S7（`s7-chinese.spec.ts`，6 个页面测试，Task 4 起逐 Task 加）：语言是中文的管理员看工作区的首页、菜单、项目页、general 页和成员页和它们的弹窗（Task 4）；项目的 general、成员、状态、标签页和它们的弹窗（Task 5、6）；邀请页（Task 6，`T6.16`）；筛选项目和成员（Task 12）；项目设置的标题、自定义范围和提示（Task 13）；新手引导的标题（Task 13）。vitest：改为读键的 6 个文件（`fake-i18n` 给键本身），新的 `project-dialog-texts.test.tsx`（加入、离开、移出的文字），`tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`、`card.test.tsx` 加的。改了英文说法的故事（P2、P3、P5）照新的说法（附录 A.8）。
+**测试**：新的故事 S7（`s7-chinese.spec.ts`，5 个页面测试，Task 4 起逐 Task 加或扩展）：语言是中文的管理员看工作区的首页、菜单、项目页、general 页和成员页和它们的弹窗（Task 4，之后的 Task 加侧边栏等）；项目的 general、成员、状态、标签页和它们的弹窗（Task 5、6）；邀请页（Task 6，`T6.16`）；筛选项目和成员（Task 12），同一个测试在 Task 13 加项目设置的标题、自定义范围和提示；新手引导的标题（Task 13）。vitest：改为读键的 6 个文件（`fake-i18n` 给键本身），新的 `project-dialog-texts.test.tsx`（加入、离开、移出的文字），`tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`、`card.test.tsx` 加的。改了英文说法的故事（P2、P3、P5）照新的说法（附录 A.8）。
 
 ### 2.9 名字和键盘（Task 7、8）
 
@@ -653,4 +653,16 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 | 16 | 112 | 72 | 4 |
 
   写 plan 之前的核对（brief 的"Phase size"）：按 13 组估出 13–14 个 Task、约 13,500 行，每个在约 1,450 行之内，在约 16 个、每个约 1,500 行之内，不拆。原型中实测 16 个 Task、12,760 行；原来的第 12 个 Task（收尾的扫描找到的英文）量出 1,733 行块，加上说明会超过约 1,500 行，所以分成 Task 12、13（第 3 节第 3 条）；最长的 Task 14 是 1,361 行（代码块 1,164 行）。
-- **逐 Task 复现**：复现在本 spec 和 plan 提交之后进行：本提交的 `git archive`（`49190525` 加 Task 0 和这两个文件）解开到 `$M3TMP/closeout-replay`，`pnpm install --frozen-lockfile` 之后由 `replay.py` 照 plan 逐个 Task 执行：写入块（`planapply.mjs`），核对 Go 的模块文件不变、`pnpm-lock.yaml` 与那个 Task 的快照相同，再执行这个 Task 的每个 `Run:`（Task 14 的 `make gen` 之后核对钉住的 SHA-256 和行数；副本不是 git 仓库，`make lint-web` 的关键词守卫经 `kwreal.py` 运行仓库自己的 `tools/keywords.mjs`，`make gen-check` 由 gen-same 代替，`make e2e` 只有 S3 因为读不到提交而失败，由脚本单独认出）。最后的副本与原型逐文件相同。结果写进下一个提交。
+- **逐 Task 复现**：`replay.py` 在本 spec 和 plan 的第一个提交 `fb5490c5` 的 `git archive` 副本上（`base-commit.tar` 解开到 `$M3TMP/closeout-replay`，`pnpm install --frozen-lockfile` 之后；plan 的一次性脚本 `doclinks.py` 照 plan 写到 `$M3TMP/closeout-plan/`），照 plan 逐个 Task 执行：写入块（`planapply.mjs`），核对 Go 的模块文件不变、`pnpm-lock.yaml` 与那个 Task 的快照相同，再执行这个 Task 的每个 `Run:`。副本不是 git 仓库，所以 `make lint-web` 照它的写法分三步运行（关键词守卫经 `kwreal.py` 运行仓库自己的 `tools/keywords.mjs`，`fakegit` 照 `git ls-files` 列出副本的文件；`tools/i18n-keys.mjs`；turbo 的四个检查），`make gen-check` 由 gen-same 代替（`make gen` 之前之后生成的文件逐字节相同），`make e2e` 只有 S3 因为读不到提交而失败，由脚本单独认出（F4）。16 个 Task 都通过（`replay-logs/summary.txt`）：
+
+| Task | 写入的文件 | 检查 |
+|---|---|---|
+| 1 | 9 | `make lint-web`（69 条规则、3 个例外、没有命中；turbo 54 个任务）、`make knip`、`make test-web`（16 个任务）、`make build` 通过；`make e2e` 109 个通过（S3 除外） |
+| 2–8 | 11、18、36、27、30、38、15 | 同 Task 1；`make e2e` 111、111、112、113、114、114、115 个通过 |
+| 9 | 35 | 关键词守卫 70 条规则、23 个例外；`tools/i18n-keys.mjs` 读到的 1,261 个键都有定义；其余同上，115 个 |
+| 10 | 20 | `pnpm install --frozen-lockfile` 通过；其余同 Task 9，115 个 |
+| 11–13 | 22、34、37 | 71 条规则、23 个例外；读到的键 1,261、1,275、1,277 个；`make e2e` 115、116、117 个 |
+| 14 | 40 | `make gen` 之后三个生成文件的 SHA-256 和行数与表相同；gen-same：39 个生成文件 0 处差异；`make lint-go` 两段 `0 issues.`；`make test` 42 个包 `ok`、没有 `FAIL`；其余同 Task 13，117 个 |
+| 15、16 | 20、4 | `make lint-web` 同上；`doclinks.py` 每个文件 `0 broken`，`broken: 0` |
+
+  这一次复现用的 plan 是本 spec 第一个提交中的那一版（12,760 行，SHA-256 `2df6ca8a6346d890…`）。最后的副本与原型逐文件相同：`treediff.mjs closeout-replay closeout-proto`（原型在 `T16`，放进同一个提交的 spec 和 plan），3,255 个文件对 3,255 个，0 处差异（`logs/replay-all.log`）。本 spec 的第二个提交只改本 spec（本节的复现结果，2.4 的 K9 一行和 2.8 的 S7 的测试数），plan 不变。
