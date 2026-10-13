@@ -295,7 +295,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                         e.stopPropagation();
                       }}
                       to={`/${workspaceSlug}/settings/projects/${project.id}`}
-                      aria-label={t("settings")}
+                      aria-label={t("project_dialogs.settings_link", { name: project.name })}
                     >
                       <SettingsOutline className="h-3.5 w-3.5" />
                     </Link>

@@ -19,8 +19,8 @@ import { ProjectCard } from "./card";
 // guests among them); its other guests are told they joined it, and one who is no member of it is offered joining it.
 // The card renders on the server, at the workspace's projects, with stand-ins for its menu and its buttons
 // (fake-controls.ts, which keeps the items and props it was given), for its dialogs and for @nerve/i18n, whose text is
-// its key; the caller's permissions are the store's own, over acme and its project web as nerve lists them to him
-// (fake-permissions.ts).
+// its key, then the values it was given (fake-i18n-values.ts); the caller's permissions are the store's own, over acme
+// and its project web as nerve lists them to him (fake-permissions.ts).
 
 const caller = vi.hoisted(() => {
   const held: { permissions?: IUserPermissionStore } = {};
@@ -33,7 +33,7 @@ vi.mock("./join-project-modal", () => ({ JoinProjectModal: () => null }));
 vi.mock("./archive-restore-modal", () => ({ ArchiveRestoreProjectModal: () => null }));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 
 /**
  * Signs the caller in as nerve lists acme and web to him, his role in each (null: he sees web, no member of it), and
@@ -65,7 +65,7 @@ async function offeredTo(workspaceRole: WorkspaceRole, projectRole: ProjectRole 
   const menu = shown.menus.flatMap(({ items }) =>
     items.filter((item) => item.shouldRender !== false).map((item) => item.key)
   );
-  return { inCard, menu };
+  return { inCard, menu, project };
 }
 
 describe("a project's card", () => {
@@ -97,12 +97,12 @@ describe("a project's card", () => {
     }
   );
 
-  it("names its settings link, tells a guest he joined it and offers one who is no member joining, in the page's language", async () => {
+  it("names its settings link by the project, tells a guest he joined it and offers one who is no member joining, in the page's language", async () => {
     const admin = await offeredTo(its.admin.workspaceRole, its.admin.projectRole, false);
     const guest = await offeredTo(its.guest.workspaceRole, its.guest.projectRole, false);
     const outsider = await offeredTo(its.outsider.workspaceRole, its.outsider.projectRole, false);
     expect([admin.inCard.settingsName, guest.inCard.joined, outsider.inCard.buttons]).toEqual([
-      "settings",
+      `project_dialogs.settings_link ${admin.project.name}`,
       true,
       ["common.join"],
     ]);

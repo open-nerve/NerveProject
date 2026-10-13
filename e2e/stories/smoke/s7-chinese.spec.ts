@@ -117,6 +117,11 @@ test("S7 (page): an admin whose language is Chinese sees a project's general and
   await page.goto(`/${slug}/settings/projects/${web.id}/members`);
   await expect(page.getByText("项目负责人", { exact: true })).toBeVisible();
   await expect(page.getByText("默认负责人", { exact: true })).toBeVisible();
+  // The lead's select finds its "none" by the word it shows.
+  await page.getByRole("heading", { name: "项目负责人" }).locator("xpath=following::button[1]").click();
+  await page.keyboard.type("无");
+  await expect(page.getByRole("option")).toHaveText(["无"]);
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: Array(2).fill(EMOJI_CHECK_WARNING) });

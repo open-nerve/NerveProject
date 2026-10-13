@@ -165,7 +165,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
                     value={value}
                     onChange={onChange}
                     ref={ref}
-                    placeholder={t("project_dialogs.delete.confirmation_placeholder")}
+                    placeholder={t("project_dialogs.confirmation_placeholder", { confirmation: CONFIRMATION })}
                     autoComplete="off"
                   />
                 </InputGroup>

@@ -190,10 +190,10 @@
   "project_dialogs": {
     "type_project_name": "Enter the project name {name} to continue:",
     "type_confirmation": "To confirm, type {confirmation} below:",
+    "confirmation_placeholder": "Enter “{confirmation}”",
     "delete": {
       "title": "Delete project",
       "body": "Are you sure you want to delete project {name}? All of the data related to the project will be permanently removed. This action cannot be undone",
-      "confirmation_placeholder": "Enter 'delete my project'",
       "deleted": "Project deleted successfully.",
       "description": "When deleting a project, all of the data and resources within that project will be permanently removed and cannot be recovered."
     },
@@ -201,9 +201,8 @@
       "title": "Leave Project",
       "body": "Are you sure you want to leave the project {name}? All of the work items associated with you will become inaccessible.",
       "name_placeholder": "Enter project name",
-      "confirmation_placeholder": "Enter 'leave project'",
       "name_mismatch": "Please enter the project name as shown in the description.",
-      "confirmation_mismatch": "Please confirm leaving the project by typing the 'Leave Project'."
+      "confirmation_mismatch": "Please confirm leaving the project by typing “{confirmation}”."
     },
     "join": {
       "title": "Join Project?",
@@ -238,6 +237,7 @@
     "name_max_length": "Project name should be less than 255 characters",
     "no_member_yet": "No Member Yet",
     "archived": "Archived",
-    "joined": "Joined"
+    "joined": "Joined",
+    "settings_link": "{name} settings"
   }
 }

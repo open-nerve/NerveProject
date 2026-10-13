@@ -190,10 +190,10 @@
   "project_dialogs": {
     "type_project_name": "输入项目名称 {name} 以继续：",
     "type_confirmation": "请在下方输入 {confirmation} 以确认：",
+    "confirmation_placeholder": "输入“{confirmation}”",
     "delete": {
       "title": "删除项目",
       "body": "确定要删除项目 {name} 吗？这个项目的全部数据将被永久删除。此操作无法撤销。",
-      "confirmation_placeholder": "输入 'delete my project'",
       "deleted": "项目已删除。",
       "description": "删除项目时，项目中的全部数据和资源将被永久删除，且无法恢复。"
     },
@@ -201,9 +201,8 @@
       "title": "离开项目",
       "body": "确定要离开项目 {name} 吗？与您相关的全部工作项将无法访问。",
       "name_placeholder": "输入项目名称",
-      "confirmation_placeholder": "输入 'Leave Project'",
       "name_mismatch": "请输入说明中显示的项目名称。",
-      "confirmation_mismatch": "请输入 'Leave Project' 以确认离开项目。"
+      "confirmation_mismatch": "请输入“{confirmation}”以确认离开项目。"
     },
     "join": {
       "title": "加入项目？",
@@ -238,6 +237,7 @@
     "name_max_length": "项目名称应少于 255 个字符",
     "no_member_yet": "还没有成员",
     "archived": "已归档",
-    "joined": "已加入"
+    "joined": "已加入",
+    "settings_link": "{name} 设置"
   }
 }

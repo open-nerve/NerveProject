@@ -93,12 +93,12 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
 | `e2e/stories/identity/a11-api-tokens.spec.ts` | 令牌复制到剪贴板（Task 9）；`registeredPAT`（Task 14） | 9、14 |
 | `e2e/stories/identity/a6-sign-out.spec.ts` | 切换账户的弹窗在退出路上时关不掉（Task 2）；导入（Task 14） | 2、14 |
-| `e2e/stories/project/p1-create-project.spec.ts` | 在页面内容中找卡片（Task 8）；功能的开关以功能为名（Task 13）；`registeredPAT`（Task 14） | 8、13、14 |
+| `e2e/stories/project/p1-create-project.spec.ts` | 以标题找卡片（Task 5）；在页面内容中找卡片（Task 8）；功能的开关以功能为名（Task 13）；`registeredPAT`（Task 14） | 5、8、13、14 |
 | `e2e/stories/project/p2-visibility.spec.ts` | "Joining"（Task 5）；在页面内容中找页头的面包屑（Task 8）；`registeredPAT`（Task 14） | 5、8、14 |
 | `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
-| `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；`registeredPAT`（Task 14） | 1、14 |
-| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"（Task 5）；一行的菜单（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
+| `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
+| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
 | `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓（Task 8） | 1、2、6、8 |
 | `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6） | 1、2、6 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 每个角色打开工作区菜单，不发请求（`WORKSPACE_MENU`） | 3 |
@@ -148,7 +148,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 新 |
 | `web/apps/web/core/components/navigation/top-navigation-root.tsx` | 工作区菜单不再收 `variant` | 3 |
 | `web/apps/web/core/components/navigation/use-tab-preferences.test.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.ts` | 标签栏的菜单和提示经 `t()`；它们的测试 | 5 |
-| `web/apps/web/core/components/onboarding/switch-account-modal.test.tsx` | 切换账户的那句话是一个键，地址在其中（新文件） | 4 新 |
+| `web/apps/web/core/components/onboarding/switch-account-modal.test.tsx` | 切换账户的那句话是一个键，地址在其中（新文件，Task 4）；共用的替身 `fake-i18n-values.ts`（Task 5） | 4 新、5 |
 | `web/apps/web/core/components/onboarding/switch-account-modal.tsx` | 经 `ModalCore`，退出路上时关不掉（Task 2）；那句话一个键，经 `Translated`（Task 4） | 2、4 |
 | `web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx` | 经 `ModalCore`，标题和搜索框经 `t()`，关闭按钮在标题之外，`autoFocus` 写明理由 | 2 |
 | `web/apps/web/core/components/power-k/ui/modal/wrapper.tsx` | 经 `ModalCore`（Task 2）；组字的守卫（Task 10） | 2、10 |
@@ -203,6 +203,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/layouts/auth-layout/use-project-fetch.ts`、`web/apps/web/core/lib/form-refusal.ts` | 经 `problemCode()` | 9 |
 | `web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx` | "找不到工作区"的标题经 `PageHead` | 4 |
 | `web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts` | `problemCode()`；它的测试 | 9 |
+| `web/apps/web/core/lib/fake-i18n-values.ts` | 替身：文字是键和它收到的值（新文件） | 5 新 |
 | `web/apps/web/core/lib/fake-controls.ts` | 替身：`AlertModalCore` 的文字（Task 6）；开关的名字（Task 13） | 6、13 |
 | `web/apps/web/core/store/member/project/project-member.store.test.ts` | 资料来自 `userOf` | 14 |
 | `web/apps/web/package.json` | web 的 oxlint 上限 303 → 301（Task 2）；301 → 300（Task 8）；300 → 298（Task 11）；298 → 295（Task 12） | 2、8、11、12 |
@@ -3742,14 +3743,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 5: 项目的弹窗和设置上的英文经 `t()`
 
 **Files:**
-- Create: `web/apps/web/core/components/project/project-dialog-texts.test.tsx`
-- Modify: `e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.test.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.ts`、`web/apps/web/core/components/project/add-project-members-modal.test.tsx`、`web/apps/web/core/components/project/add-project-members-modal.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/card.test.tsx`、`web/apps/web/core/components/project/card.tsx`、`web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx`、`web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/form.tsx`、`web/apps/web/core/components/project/join-project-modal.tsx`、`web/apps/web/core/components/project/leave-project-modal.tsx`、`web/apps/web/core/components/project/member-select.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/settings/control-section.tsx`、`web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx`、`web/apps/web/core/components/project/settings/use-feature-toggle.ts`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project.json`
+- Create: `web/apps/web/core/components/project/project-dialog-texts.test.tsx`、`web/apps/web/core/lib/fake-i18n-values.ts`
+- Modify: `e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p4-archive.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.test.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.ts`、`web/apps/web/core/components/onboarding/switch-account-modal.test.tsx`、`web/apps/web/core/components/project/add-project-members-modal.test.tsx`、`web/apps/web/core/components/project/add-project-members-modal.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/card.test.tsx`、`web/apps/web/core/components/project/card.tsx`、`web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx`、`web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/form.tsx`、`web/apps/web/core/components/project/join-project-modal.tsx`、`web/apps/web/core/components/project/leave-project-modal.tsx`、`web/apps/web/core/components/project/member-select.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/settings/control-section.tsx`、`web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx`、`web/apps/web/core/components/project/settings/use-feature-toggle.ts`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project.json`
 
 **Interfaces:**（spec 2.8）
-- 经 `t()` 的（多数经 `Translated`）：删除、离开、加入、归档和恢复项目的弹窗，移出项目成员，添加成员（提示、"Select co-worker"），成员的默认值，功能开关和标签栏的提示，控制区的说明，项目表单（`alt=""`、长度的提示、"Project ID"），卡片的菜单和状态（"Archived"，访客看到的"Joined"，不是成员的人看到的"Join"按钮），成员的下拉的"None"。卡片上设置的链接只有一个 `aria-hidden` 的图标，原来没有名字：以"Settings"（`settings`）为名。新键在 `project.json` 的 `project_dialogs.*` 和 `project-settings.json`。
-- 离开时要输入的文字是常量 `CONFIRMATION`（"Leave Project"），名称的规则改为 `required: true`；忙时的"Leaving..."、"Joining..."改用共用的"Leaving"、"Joining"（W17）。
+- 经 `t()` 的（多数经 `Translated`）：删除、离开、加入、归档和恢复项目的弹窗，移出项目成员，添加成员（提示、"Select co-worker"），成员的默认值，功能开关和标签栏的提示，控制区的说明，项目表单（`alt=""`、长度的提示、"Project ID"），卡片的菜单和状态（"Archived"，访客看到的"Joined"，不是成员的人看到的"Join"按钮），成员的下拉的"None"。卡片上设置的链接只有一个 `aria-hidden` 的图标，原来没有名字：以项目为名（`project_dialogs.settings_link`，"{name} settings"，与侧边栏的一行、"Remove X"同一个做法）。归档和恢复的提示按完整的键读（`tools/i18n-keys.mjs` 看得到）；成员下拉框的"无"按页面上的词搜索。新键在 `project.json` 的 `project_dialogs.*` 和 `project-settings.json`。
+- 离开时要输入的文字是常量 `CONFIRMATION`（"Leave Project"），名称的规则改为 `required: true`；删除和离开的输入框的提示（共用的 `project_dialogs.confirmation_placeholder`）和离开的不一致提示都收 `{ confirmation: CONFIRMATION }`，文案里不再抄这几个词（原来英文提示让人输入"leave project"，比对却要"Leave Project"，照提示输入就被拒绝）；忙时的"Leaving..."、"Joining..."改用共用的"Leaving"、"Joining"（W17）。
 
-**Tests:** `project-dialog-texts.test.tsx`（新文件：加入、离开、移出的文字）；`add-project-members-modal`、`archive-restore-modal`、`card`、`delete-project-modal`、`use-feature-toggle`、`use-tab-preferences` 的测试读键；`card.test.tsx` 加一个：设置的链接的名字、访客的"Joined"、不是成员的人的"Join"。P2、P5 照新的忙时文字；S7 的第二个：项目的 general 页和成员页。
+**Tests:** `project-dialog-texts.test.tsx`（新文件：加入、离开、移出的文字）；`add-project-members-modal`、`archive-restore-modal`、`card`、`delete-project-modal`、`use-feature-toggle`、`use-tab-preferences` 的测试读键；`card.test.tsx` 加一个：设置的链接以项目为名、访客的"Joined"、不是成员的人的"Join"（替身 `fake-i18n-values.ts` 给键和它的值，切换账户的测试也改用它）；`project-dialog-texts.test.tsx` 另有自己从成员页离开的一行。P2、P5 照新的忙时文字，P4、P5 核对确认的提示正是要输入的词；P1 以标题找卡片（卡片里设置的链接也以项目为名）；S7 的成员页在负责人的下拉框中输入"无"找到它；S7 的第二个：项目的 general 页和成员页。
 
 - [ ] **Step 1: 弹窗和设置**
 
@@ -3833,11 +3834,12 @@ import { useTranslation } from "@nerve/i18n";
         );
 ````
 ````new web/apps/web/core/components/project/archive-restore-modal.tsx
-        const said = archive ? "project_dialogs.archive" : "project_dialogs.restore";
         setToast({
           type: TOAST_TYPE.SUCCESS,
-          title: t(`${said}.done_title`),
-          message: t(`${said}.done`, { name: projectDetails.name }),
+          title: t(archive ? "project_dialogs.archive.done_title" : "project_dialogs.restore.done_title"),
+          message: t(archive ? "project_dialogs.archive.done" : "project_dialogs.restore.done", {
+            name: projectDetails.name,
+          }),
         });
 ````
 ````old web/apps/web/core/components/project/archive-restore-modal.tsx
@@ -3940,7 +3942,7 @@ import { useTranslation } from "@nerve/i18n";
 ````
 ````new web/apps/web/core/components/project/card.tsx
                       to={`/${workspaceSlug}/settings/projects/${project.id}`}
-                      aria-label={t("settings")}
+                      aria-label={t("project_dialogs.settings_link", { name: project.name })}
 ````
 ````old web/apps/web/core/components/project/card.tsx
                       Joined
@@ -4102,7 +4104,7 @@ import { Translated } from "@/components/common/translated";
                     placeholder="Enter 'delete my project'"
 ````
 ````new web/apps/web/core/components/project/delete-project-modal.tsx
-                    placeholder={t("project_dialogs.delete.confirmation_placeholder")}
+                    placeholder={t("project_dialogs.confirmation_placeholder", { confirmation: CONFIRMATION })}
 ````
 ````old web/apps/web/core/components/project/delete-project-modal.tsx
             Cancel
@@ -4245,7 +4247,7 @@ const CONFIRMATION = "Leave Project";
 ````
 ````new web/apps/web/core/components/project/leave-project-modal.tsx
         title: t("toast.error"),
-        message: t("project_dialogs.leave.confirmation_mismatch"),
+        message: t("project_dialogs.leave.confirmation_mismatch", { confirmation: CONFIRMATION }),
 ````
 ````old web/apps/web/core/components/project/leave-project-modal.tsx
             <h3 className="text-18 font-medium 2xl:text-20">Leave Project</h3>
@@ -4300,7 +4302,7 @@ const CONFIRMATION = "Leave Project";
                     placeholder="Enter 'leave project'"
 ````
 ````new web/apps/web/core/components/project/leave-project-modal.tsx
-                    placeholder={t("project_dialogs.leave.confirmation_placeholder")}
+                    placeholder={t("project_dialogs.confirmation_placeholder", { confirmation: CONFIRMATION })}
 ````
 ````old web/apps/web/core/components/project/leave-project-modal.tsx
             Cancel
@@ -4315,7 +4317,7 @@ const CONFIRMATION = "Leave Project";
             {isSubmitting ? t("leaving") : t("project_dialogs.leave.title")}
 ````
 
-`web/apps/web/core/components/project/member-select.tsx`（修改，4 处）：
+`web/apps/web/core/components/project/member-select.tsx`（修改，5 处）：
 
 ````old web/apps/web/core/components/project/member-select.tsx
 import { Avatar } from "@makeplane/propel/components/avatar";
@@ -4342,6 +4344,12 @@ import { useTranslation } from "@nerve/i18n";
 ````
 ````new web/apps/web/core/components/project/member-select.tsx
                 <span className="py-0.5 text-13 text-placeholder">{t("none")}</span>
+````
+````old web/apps/web/core/components/project/member-select.tsx
+            query: "none",
+````
+````new web/apps/web/core/components/project/member-select.tsx
+            query: t("none"),
 ````
 
 `web/apps/web/core/components/project/project-settings-member-defaults.tsx`（修改，4 处）：
@@ -4453,10 +4461,10 @@ import { useTranslation } from "@nerve/i18n";
   "project_dialogs": {
     "type_project_name": "Enter the project name {name} to continue:",
     "type_confirmation": "To confirm, type {confirmation} below:",
+    "confirmation_placeholder": "Enter “{confirmation}”",
     "delete": {
       "title": "Delete project",
       "body": "Are you sure you want to delete project {name}? All of the data related to the project will be permanently removed. This action cannot be undone",
-      "confirmation_placeholder": "Enter 'delete my project'",
       "deleted": "Project deleted successfully.",
       "description": "When deleting a project, all of the data and resources within that project will be permanently removed and cannot be recovered."
     },
@@ -4464,9 +4472,8 @@ import { useTranslation } from "@nerve/i18n";
       "title": "Leave Project",
       "body": "Are you sure you want to leave the project {name}? All of the work items associated with you will become inaccessible.",
       "name_placeholder": "Enter project name",
-      "confirmation_placeholder": "Enter 'leave project'",
       "name_mismatch": "Please enter the project name as shown in the description.",
-      "confirmation_mismatch": "Please confirm leaving the project by typing the 'Leave Project'."
+      "confirmation_mismatch": "Please confirm leaving the project by typing “{confirmation}”."
     },
     "join": {
       "title": "Join Project?",
@@ -4501,7 +4508,8 @@ import { useTranslation } from "@nerve/i18n";
     "name_max_length": "Project name should be less than 255 characters",
     "no_member_yet": "No Member Yet",
     "archived": "Archived",
-    "joined": "Joined"
+    "joined": "Joined",
+    "settings_link": "{name} settings"
 ````
 
 `web/packages/i18n/src/locales/zh-CN/project-settings.json`（修改，1 处）：
@@ -4538,10 +4546,10 @@ import { useTranslation } from "@nerve/i18n";
   "project_dialogs": {
     "type_project_name": "输入项目名称 {name} 以继续：",
     "type_confirmation": "请在下方输入 {confirmation} 以确认：",
+    "confirmation_placeholder": "输入“{confirmation}”",
     "delete": {
       "title": "删除项目",
       "body": "确定要删除项目 {name} 吗？这个项目的全部数据将被永久删除。此操作无法撤销。",
-      "confirmation_placeholder": "输入 'delete my project'",
       "deleted": "项目已删除。",
       "description": "删除项目时，项目中的全部数据和资源将被永久删除，且无法恢复。"
     },
@@ -4549,9 +4557,8 @@ import { useTranslation } from "@nerve/i18n";
       "title": "离开项目",
       "body": "确定要离开项目 {name} 吗？与您相关的全部工作项将无法访问。",
       "name_placeholder": "输入项目名称",
-      "confirmation_placeholder": "输入 'Leave Project'",
       "name_mismatch": "请输入说明中显示的项目名称。",
-      "confirmation_mismatch": "请输入 'Leave Project' 以确认离开项目。"
+      "confirmation_mismatch": "请输入“{confirmation}”以确认离开项目。"
     },
     "join": {
       "title": "加入项目？",
@@ -4586,10 +4593,27 @@ import { useTranslation } from "@nerve/i18n";
     "name_max_length": "项目名称应少于 255 个字符",
     "no_member_yet": "还没有成员",
     "archived": "已归档",
-    "joined": "已加入"
+    "joined": "已加入",
+    "settings_link": "{name} 设置"
 ````
 
 - [ ] **Step 2: 测试**
+
+`e2e/stories/project/p1-create-project.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p1-create-project.spec.ts
+  await expect(page.getByRole("link", { name: /Web App/ })).toBeVisible();
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+  // its card, by its heading (the card's link to its settings is named by the project too)
+  await expect(page.getByRole("heading", { name: "Web App", exact: true })).toBeVisible();
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+  await expect(page.getByRole("link", { name: /Ops/ })).toBeVisible();
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+  await expect(page.getByRole("heading", { name: "Ops", exact: true })).toBeVisible();
+````
 
 `e2e/stories/project/p2-visibility.spec.ts`（修改，1 处）：
 
@@ -4600,13 +4624,32 @@ import { useTranslation } from "@nerve/i18n";
   expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining" }))).toBe(false);
 ````
 
-`e2e/stories/project/p5-project-members.spec.ts`（修改，2 处）：
+`e2e/stories/project/p4-archive.spec.ts`（修改，1 处）：
+
+````old e2e/stories/project/p4-archive.spec.ts
+  await page.locator("#confirmDelete").fill("delete my project");
+````
+````new e2e/stories/project/p4-archive.spec.ts
+  // the hint names the words to type, as the dialog compares them
+  await expect(page.locator("#confirmDelete")).toHaveAttribute("placeholder", "Enter “delete my project”");
+  await page.locator("#confirmDelete").fill("delete my project");
+````
+
+`e2e/stories/project/p5-project-members.spec.ts`（修改，3 处）：
 
 ````old e2e/stories/project/p5-project-members.spec.ts
   const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving..." });
 ````
 ````new e2e/stories/project/p5-project-members.spec.ts
   const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving" });
+````
+````old e2e/stories/project/p5-project-members.spec.ts
+  await theGuest.page.locator("#confirmLeave").fill("Leave Project");
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+  // the hint names the words to type, as the modal compares them
+  await expect(theGuest.page.locator("#confirmLeave")).toHaveAttribute("placeholder", "Enter “Leave Project”");
+  await theGuest.page.locator("#confirmLeave").fill("Leave Project");
 ````
 ````old e2e/stories/project/p5-project-members.spec.ts
   expect(await enabledWithin(theGuest.page.getByRole("button", { name: "Leaving..." }))).toBe(false);
@@ -4658,6 +4701,11 @@ test("S7 (page): an admin whose language is Chinese sees a project's general and
   await page.goto(`/${slug}/settings/projects/${web.id}/members`);
   await expect(page.getByText("项目负责人", { exact: true })).toBeVisible();
   await expect(page.getByText("默认负责人", { exact: true })).toBeVisible();
+  // The lead's select finds its "none" by the word it shows.
+  await page.getByRole("heading", { name: "项目负责人" }).locator("xpath=following::button[1]").click();
+  await page.keyboard.type("无");
+  await expect(page.getByRole("option")).toHaveText(["无"]);
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: Array(2).fill(EMOJI_CHECK_WARNING) });
@@ -4672,6 +4720,19 @@ test("S7 (page): an admin whose language is Chinese sees a project's general and
 ````
 ````new web/apps/web/core/components/navigation/use-tab-preferences.test.ts
       { type: "success", title: "toast.success", message: "project_dialogs.default_tab_updated" },
+````
+
+`web/apps/web/core/components/onboarding/switch-account-modal.test.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/onboarding/switch-account-modal.test.tsx
+vi.mock("@nerve/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string, values: Record<string, string> = {}) => [key, ...Object.values(values)].join(" "),
+  }),
+}));
+````
+````new web/apps/web/core/components/onboarding/switch-account-modal.test.tsx
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 ````
 
 `web/apps/web/core/components/project/add-project-members-modal.test.tsx`（修改，1 处）：
@@ -4698,7 +4759,7 @@ test("S7 (page): an admin whose language is Chinese sees a project's general and
       said: { title: "project_dialogs.restore.done_title", message: "project_dialogs.restore.done" },
 ````
 
-`web/apps/web/core/components/project/card.test.tsx`（修改，3 处）：
+`web/apps/web/core/components/project/card.test.tsx`（修改，5 处）：
 
 ````old web/apps/web/core/components/project/card.test.tsx
 // guests among them); its other guests are told they joined it. The card renders on the server, at the workspace's
@@ -4710,8 +4771,14 @@ test("S7 (page): an admin whose language is Chinese sees a project's general and
 // guests among them); its other guests are told they joined it, and one who is no member of it is offered joining it.
 // The card renders on the server, at the workspace's projects, with stand-ins for its menu and its buttons
 // (fake-controls.ts, which keeps the items and props it was given), for its dialogs and for @nerve/i18n, whose text is
-// its key; the caller's permissions are the store's own, over acme and its project web as nerve lists them to him
-// (fake-permissions.ts).
+// its key, then the values it was given (fake-i18n-values.ts); the caller's permissions are the store's own, over acme
+// and its project web as nerve lists them to him (fake-permissions.ts).
+````
+````old web/apps/web/core/components/project/card.test.tsx
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+````
+````new web/apps/web/core/components/project/card.test.tsx
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 ````
 ````old web/apps/web/core/components/project/card.test.tsx
   const inCard = {
@@ -4733,6 +4800,12 @@ test("S7 (page): an admin whose language is Chinese sees a project's general and
   };
 ````
 ````old web/apps/web/core/components/project/card.test.tsx
+  return { inCard, menu };
+````
+````new web/apps/web/core/components/project/card.test.tsx
+  return { inCard, menu, project };
+````
+````old web/apps/web/core/components/project/card.test.tsx
       expect([inCard.settings, menu.includes("settings")]).toEqual([row.linked, row.linked]);
     }
   );
@@ -4742,12 +4815,12 @@ test("S7 (page): an admin whose language is Chinese sees a project's general and
     }
   );
 
-  it("names its settings link, tells a guest he joined it and offers one who is no member joining, in the page's language", async () => {
+  it("names its settings link by the project, tells a guest he joined it and offers one who is no member joining, in the page's language", async () => {
     const admin = await offeredTo(its.admin.workspaceRole, its.admin.projectRole, false);
     const guest = await offeredTo(its.guest.workspaceRole, its.guest.projectRole, false);
     const outsider = await offeredTo(its.outsider.workspaceRole, its.outsider.projectRole, false);
     expect([admin.inCard.settingsName, guest.inCard.joined, outsider.inCard.buttons]).toEqual([
-      "settings",
+      `project_dialogs.settings_link ${admin.project.name}`,
       true,
       ["common.join"],
     ]);
@@ -4763,7 +4836,7 @@ const deleted = { type: "success", title: "Success!", message: "Project deleted 
 const deleted = { type: "success", title: "toast.success", message: "project_dialogs.delete.deleted" };
 ````
 
-`web/apps/web/core/components/project/project-dialog-texts.test.tsx`（新文件，76 行）：
+`web/apps/web/core/components/project/project-dialog-texts.test.tsx`（新文件，89 行）：
 
 ````file web/apps/web/core/components/project/project-dialog-texts.test.tsx
 /**
@@ -4836,6 +4909,19 @@ describe("the project's dialogs", () => {
       sentences: ["project_dialogs.remove_member.remove_title", "project_dialogs.remove_member.remove_body"],
       buttons: ["cancel", "remove"],
     },
+    {
+      dialog: "one's own leaving, from the members",
+      open: () => (
+        <ConfirmProjectMemberRemove
+          isOpen
+          data={{ id: "u-admin", display_name: "admin" }}
+          onSubmit={() => Promise.resolve()}
+          onClose={() => {}}
+        />
+      ),
+      sentences: ["project_dialogs.remove_member.leave_title", "project_dialogs.remove_member.leave_body"],
+      buttons: ["cancel", "leave"],
+    },
   ])("$dialog says each of its texts in the page's language", ({ open, sentences, buttons }) => {
     const markup = renderToStaticMarkup(open());
     expect(sentences.filter((key) => !markup.includes(key))).toEqual([]);
@@ -4851,6 +4937,23 @@ describe("the project's dialogs", () => {
 ````
 ````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
       { type: "success", title: "toast.success", message: "project_dialogs.feature_updated" },
+````
+
+`web/apps/web/core/lib/fake-i18n-values.ts`（新文件，12 行）：
+
+````file web/apps/web/core/lib/fake-i18n-values.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+// A stand-in for @nerve/i18n, for the tests that read what a page puts into a text (a name, an address): a test file
+// mocks that module with this one, vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values")). A text is its key,
+// then the values it was given, each after a space. fake-i18n.ts gives the key alone.
+
+export function useTranslation() {
+  return { t: (key: string, values: Record<string, unknown> = {}) => [key, ...Object.values(values)].join(" ") };
+}
 ````
 
 - [ ] **Step 3: 运行检查**
@@ -4873,7 +4976,7 @@ Expected: 114 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s7-chinese.spec.ts web/apps/web/core/components/navigation/use-tab-preferences.test.ts web/apps/web/core/components/navigation/use-tab-preferences.ts web/apps/web/core/components/project/add-project-members-modal.test.tsx web/apps/web/core/components/project/add-project-members-modal.tsx web/apps/web/core/components/project/archive-restore-modal.test.tsx web/apps/web/core/components/project/archive-restore-modal.tsx web/apps/web/core/components/project/card.test.tsx web/apps/web/core/components/project/card.tsx web/apps/web/core/components/project/confirm-project-member-remove.tsx web/apps/web/core/components/project/delete-project-modal.test.tsx web/apps/web/core/components/project/delete-project-modal.tsx web/apps/web/core/components/project/form.tsx web/apps/web/core/components/project/join-project-modal.tsx web/apps/web/core/components/project/leave-project-modal.tsx web/apps/web/core/components/project/member-select.tsx web/apps/web/core/components/project/project-dialog-texts.test.tsx web/apps/web/core/components/project/project-settings-member-defaults.tsx web/apps/web/core/components/project/settings/control-section.tsx web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx web/apps/web/core/components/project/settings/use-feature-toggle.ts web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/en/project.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/i18n/src/locales/zh-CN/project.json
+git add e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p4-archive.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s7-chinese.spec.ts web/apps/web/core/components/navigation/use-tab-preferences.test.ts web/apps/web/core/components/navigation/use-tab-preferences.ts web/apps/web/core/components/onboarding/switch-account-modal.test.tsx web/apps/web/core/components/project/add-project-members-modal.test.tsx web/apps/web/core/components/project/add-project-members-modal.tsx web/apps/web/core/components/project/archive-restore-modal.test.tsx web/apps/web/core/components/project/archive-restore-modal.tsx web/apps/web/core/components/project/card.test.tsx web/apps/web/core/components/project/card.tsx web/apps/web/core/components/project/confirm-project-member-remove.tsx web/apps/web/core/components/project/delete-project-modal.test.tsx web/apps/web/core/components/project/delete-project-modal.tsx web/apps/web/core/components/project/form.tsx web/apps/web/core/components/project/join-project-modal.tsx web/apps/web/core/components/project/leave-project-modal.tsx web/apps/web/core/components/project/member-select.tsx web/apps/web/core/components/project/project-dialog-texts.test.tsx web/apps/web/core/components/project/project-settings-member-defaults.tsx web/apps/web/core/components/project/settings/control-section.tsx web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx web/apps/web/core/components/project/settings/use-feature-toggle.ts web/apps/web/core/lib/fake-i18n-values.ts web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/en/project.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/i18n/src/locales/zh-CN/project.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the project's dialogs and settings speak the user's language
@@ -4881,9 +4984,10 @@ git commit -m "feat(M3/closeout): the project's dialogs and settings speak the u
 Deleting, leaving, joining, archiving and restoring a project, removing
 and adding members, the member defaults, the feature toggles and the tab
 bar's toasts read their text through t(), a sentence with a name one key.
-The busy labels are the shared Leaving and Joining. The project card's
-Joined and Join read t() too, and its settings link has a name. S7 reads
-a project's general and members pages in Chinese.
+The busy labels are the shared Leaving and Joining; the typed
+confirmation's hint shows the words the dialog compares. The project
+card's Joined and Join read t() too, and its settings link is named by
+the project. S7 reads a project's general and members pages in Chinese.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4909,6 +5013,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T5.15` | 访客的卡片上"已加入"是英文 | `card.test.tsx` | vitest |
 | `T5.16` | 不是成员的人的卡片上"加入"是英文 | `card.test.tsx` | vitest |
 | `T5.17` | 卡片上设置的链接没有名字 | `card.test.tsx` | vitest |
+| `T5.18` | 归档的提示的标题（按完整的键读）在两种语言中都没有定义 | `tools/i18n-keys.mjs`（Task 9 起） | 静态 |
+| `T5.19` | 成员下拉框的"无"又按英文的词搜索 | 故事 S7 | 端到端 |
+| `T5.20` | 确认的提示又写着自己的词（Plane 的"leave project"） | 故事 P5 | 端到端 |
+| `T5.21` | 删除项目的提示不是弹窗比对的那几个词 | 故事 P4 | 端到端 |
+| `T5.22` | 自己从成员页离开的那句话又是英文的几段 | `project-dialog-texts.test.tsx` | vitest |
+| `T5.23` | 卡片上设置的链接只叫"Settings"，每张卡片都一样 | `card.test.tsx` | vitest |
 
 ---
 
@@ -7166,16 +7276,16 @@ import { tabCycle } from "../../fixtures/project-pages";
 import { pageContent, tabCycle } from "../../fixtures/project-pages";
 ````
 ````old e2e/stories/project/p1-create-project.spec.ts
-  await expect(page.getByRole("link", { name: /Web App/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Web App", exact: true })).toBeVisible();
 ````
 ````new e2e/stories/project/p1-create-project.spec.ts
-  await expect(pageContent(page).getByRole("link", { name: /Web App/ })).toBeVisible();
+  await expect(pageContent(page).getByRole("heading", { name: "Web App", exact: true })).toBeVisible();
 ````
 ````old e2e/stories/project/p1-create-project.spec.ts
-  await expect(page.getByRole("link", { name: /Ops/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ops", exact: true })).toBeVisible();
 ````
 ````new e2e/stories/project/p1-create-project.spec.ts
-  await expect(pageContent(page).getByRole("link", { name: /Ops/ })).toBeVisible();
+  await expect(pageContent(page).getByRole("heading", { name: "Ops", exact: true })).toBeVisible();
 ````
 
 `e2e/stories/project/p2-visibility.spec.ts`（修改，2 处）：
@@ -10704,10 +10814,10 @@ import type { Project, ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import { renderFormattedDate } from "@nerve/utils";
 ````
 ````old web/apps/web/core/components/project/card.test.tsx
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 ````
 ````new web/apps/web/core/components/project/card.test.tsx
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 // a tooltip shows its label beside what it is the tooltip of
 vi.mock("@makeplane/propel/components/tooltip", () => ({
   Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
@@ -10741,7 +10851,7 @@ vi.mock("@makeplane/propel/components/tooltip", () => ({
     expect(alone).toContain(`common.created_on ${renderFormattedDate(web.created_at)}`);
     expect(alone).toContain('<span data-tooltip="">project_dialogs.no_member_yet</span>');
     expect(cardOf({ ...web, member_ids: ["u-bob"] })).toContain(
-      '<span data-tooltip="">project_dialogs.members_count</span>'
+      '<span data-tooltip="">project_dialogs.members_count 1</span>'
     );
   });
 
@@ -13676,7 +13786,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框、命令面板和快捷键列表关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上，窄屏（768 px 以下）上开着的侧边栏收起。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
-| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（"设置"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
+| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |

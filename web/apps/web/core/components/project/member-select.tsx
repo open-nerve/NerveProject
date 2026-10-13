@@ -97,7 +97,7 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
           ...options,
           {
             value: "none",
-            query: "none",
+            query: t("none"),
             content: (
               <div className="flex items-center gap-2">
                 <Ban className="h-3.5 w-3.5 rotate-90 text-placeholder" />

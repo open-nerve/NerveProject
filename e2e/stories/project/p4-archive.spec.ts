@@ -297,6 +297,8 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   await page.getByRole("main").getByRole("button", { name: "Delete" }).click();
   await page.locator("#projectName").fill("Web");
   await expect(page.getByRole("button", { name: "Delete project" })).toBeDisabled();
+  // the hint names the words to type, as the dialog compares them
+  await expect(page.locator("#confirmDelete")).toHaveAttribute("placeholder", "Enter “delete my project”");
   await page.locator("#confirmDelete").fill("delete my project");
   const deleting = await sentHeld(page, "DELETE", `/api/v0/projects/${web.id}`, () =>
     page.getByRole("button", { name: "Delete project" }).click()

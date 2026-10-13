@@ -68,6 +68,19 @@ describe("the project's dialogs", () => {
       sentences: ["project_dialogs.remove_member.remove_title", "project_dialogs.remove_member.remove_body"],
       buttons: ["cancel", "remove"],
     },
+    {
+      dialog: "one's own leaving, from the members",
+      open: () => (
+        <ConfirmProjectMemberRemove
+          isOpen
+          data={{ id: "u-admin", display_name: "admin" }}
+          onSubmit={() => Promise.resolve()}
+          onClose={() => {}}
+        />
+      ),
+      sentences: ["project_dialogs.remove_member.leave_title", "project_dialogs.remove_member.leave_body"],
+      buttons: ["cancel", "leave"],
+    },
   ])("$dialog says each of its texts in the page's language", ({ open, sentences, buttons }) => {
     const markup = renderToStaticMarkup(open());
     expect(sentences.filter((key) => !markup.includes(key))).toEqual([]);

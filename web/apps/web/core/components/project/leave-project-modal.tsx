@@ -74,7 +74,7 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
       setToast({
         type: TOAST_TYPE.ERROR,
         title: t("toast.error"),
-        message: t("project_dialogs.leave.confirmation_mismatch"),
+        message: t("project_dialogs.leave.confirmation_mismatch", { confirmation: CONFIRMATION }),
       });
       return;
     }
@@ -160,7 +160,7 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
                     value={value}
                     onChange={onChange}
                     ref={ref}
-                    placeholder={t("project_dialogs.leave.confirmation_placeholder")}
+                    placeholder={t("project_dialogs.confirmation_placeholder", { confirmation: CONFIRMATION })}
                   />
                 </InputGroup>
               </Field>

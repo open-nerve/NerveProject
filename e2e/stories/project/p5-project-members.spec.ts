@@ -350,6 +350,8 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   await sidebar.getByRole("button", { name: "Toggle quick actions menu" }).last().click();
   await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
   await theGuest.page.locator("#projectName").fill("Web");
+  // the hint names the words to type, as the modal compares them
+  await expect(theGuest.page.locator("#confirmLeave")).toHaveAttribute("placeholder", "Enter “Leave Project”");
   await theGuest.page.locator("#confirmLeave").fill("Leave Project");
   expect((await projectMemberWrites(api, web.id).remove(pat.tokens.access_token, anns)).status).toBe(204);
   const leaveProject = theGuest.page.getByRole("dialog").getByRole("button", { name: "Leave Project" });

@@ -46,11 +46,12 @@ export function ArchiveRestoreProjectModal(props: Props) {
     setIsLoading(true);
     await followInSession(() => (archive ? archiveProject(projectId) : restoreProject(projectId)), {
       done: () => {
-        const said = archive ? "project_dialogs.archive" : "project_dialogs.restore";
         setToast({
           type: TOAST_TYPE.SUCCESS,
-          title: t(`${said}.done_title`),
-          message: t(`${said}.done`, { name: projectDetails.name }),
+          title: t(archive ? "project_dialogs.archive.done_title" : "project_dialogs.restore.done_title"),
+          message: t(archive ? "project_dialogs.archive.done" : "project_dialogs.restore.done", {
+            name: projectDetails.name,
+          }),
         });
         onClose();
         return navigate(`/${workspaceSlug}/projects`);
