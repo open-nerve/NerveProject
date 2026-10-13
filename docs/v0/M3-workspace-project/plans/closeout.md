@@ -20,7 +20,7 @@
 - **容器**：`make e2e`、`make test` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**（总体设计 7.7；P8a–P11 的裁定）：会话的每个取数经 `useSessionSWR`；修改经 store 的方法，之后的跳转、提示、界面变化经 `followInSession` 只在发出它的会话里（Task 3 的离开：hook 的 vitest 的"换账户之后"一行）。弹窗：请求在路上时关不掉（F-1）、被拒绝时留着、只在成功的跟进中关上（A-M2）、组字的 Escape 不关、打开时后面的页面 `inert` 和 `aria-hidden`、Tab 不出去、关上之后焦点回到打开它的控件（spec 2.5）；每一条由一个会失败的端到端检查看住（各 Task 的变异表）。每个控件 Tab 能到、有名字、键盘取得焦点时看得见，不加正的 `tabIndex`。页面读地址只经路由参数（`project-address-route`、`workspace-address-route`）。文案：页面上的文字经 `t()`，en 与 zh-CN 同时加，一句话带名字时一个键加占位（`Translated`）；不再读的键在两种语言中都删除。类型只来自生成的客户端：没有新的 `as`、`any`、`!`（spec 附录 A.5）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.5）；只为使用方改到的 Plane 文件不变长，记录在案的例外一个：`IconButton` 的名字在根上必传，25 个使用方的文件只加名字（`aria-label`、`addReactionLabel`、`useTranslation` 的导入和 `t` 一行，以及 oxfmt 的重排），其中 21 个变长（控制者已裁定，spec 第 3 节第 1 条、附录 A.5）。
+- **规则**（总体设计 7.7；P8a–P11 的裁定）：会话的每个取数经 `useSessionSWR`；修改经 store 的方法，之后的跳转、提示、界面变化经 `followInSession` 只在发出它的会话里（Task 3 的离开：hook 的 vitest 的"换账户之后"一行）。弹窗：请求在路上时关不掉（F-1）、被拒绝时留着、只在成功的跟进中关上（A-M2）、组字的 Escape 不关、打开时后面的页面 `inert` 和 `aria-hidden`、Tab 不出去、关上之后焦点回到打开它的控件（spec 2.5）；每一条由一个会失败的端到端检查看住（各 Task 的变异表）。每个控件 Tab 能到、有名字、键盘取得焦点时看得见，不加正的 `tabIndex`。页面读地址只经路由参数（`project-address-route`、`workspace-address-route`）。文案：页面上的文字经 `t()`，en 与 zh-CN 同时加，一句话带名字时一个键加占位（`Translated`）；不再读的键在两种语言中都删除。类型只来自生成的客户端：没有新的 `as`、`any`、`!`（spec 附录 A.5）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.5）；只为使用方改到的 Plane 文件不变长，记录在案的例外一个：`IconButton` 的名字和 `EmojiPicker` 的 `ariaLabel` 在根上必传，27 个使用方的文件只加名字（`aria-label`、`addReactionLabel`、`ariaLabel`、`useTranslation` 的导入和 `t` 一行，以及 oxfmt 的重排），其中 24 个变长（控制者已裁定，spec 第 3 节第 1 条、附录 A.5）。
 - **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告。收尾改到、仍有警告的 5 个文件照控制者的裁定交出（spec 第 3 节第 2 条）：只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个给 M4、M6、M7，只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx` 给 M8（Task 15 写进各自的交接）。上限：web 303 → 301（Task 2）→ 300（Task 8）→ 298（Task 11）→ 295（Task 12）；`@nerve/ui` 15 → 14（Task 1）→ 12（Task 10）；`@nerve/propel` 11 → 10（Task 7）；utils 7、constants 1 不变。抑制多两条（Task 2 的快捷键搜索框和 Task 12 的筛选，`autoFocus` 写明理由，spec 第 3 节第 2、20 条），删去两条：181 条照旧。
 - **关键词守卫**：69 条规则、3 个例外；Task 9 起 70 条（`copy-hook`）、23 个例外；Task 11 起 71 条（`workspace-address-route`）。规则的 `phase` 写 `M3/closeout`，例外的 `until` 写 `M4/closeout` 等（spec 第 3 节第 5 条）：在那个 M 的收尾开始、`phase` 改为它时到期，Task 9 把这一点写进守卫的说明和 M1 设计 7.4，Task 15 写进收到例外的 M 的交接。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
@@ -133,7 +133,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/appearance/theme-switcher.tsx` | 失败的提示经 `useRefusalMessage` | 9 |
 | `web/apps/web/core/components/auth-screens/not-authorized-view.tsx`、`web/apps/web/core/components/home/user-greetings.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/navigation/top-nav-power-k.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx` | M3 页面上的英文经 `t()` | 4 |
 | `web/apps/web/core/components/automation/auto-archive-automation.tsx`、`web/apps/web/core/components/automation/select-month-modal.test.tsx`、`web/apps/web/core/components/automation/select-month-modal.tsx` | 自动归档的月数和自定义范围经 `t()`；它的测试 | 13 |
-| `web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx` | `IconButton` 的名字（M2、M4、M6、M7 的调用方） | 7 |
+| `web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/form.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx` | `IconButton` 的名字、`EmojiPicker` 的 `ariaLabel`（M2、M4、M6、M7 的调用方） | 7 |
 | `web/apps/web/core/components/common/color-picker.tsx` | 颜色弹层：十六进制输入框的轮廓（新文件） | 8 新 |
 | `web/apps/web/core/components/common/translated.test.tsx`、`web/apps/web/core/components/common/translated.tsx` | `Translated`：带名字的一句一个键（新文件）和它的测试 | 4 新 |
 | `web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx`、`web/apps/web/core/components/issues/attachment/attachment-list-item.tsx`、`web/apps/web/core/components/issues/issue-detail/sidebar.tsx`、`web/apps/web/core/components/issues/peek-overview/properties.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/views/view-list-item-action.tsx` | `ButtonAvatars` 不再收 `showTooltip` | 9 |
@@ -211,6 +211,7 @@ sys.exit(1 if broken else 0)
 | `web/packages/constants/src/project.ts` | `PROJECT_FILTER_I18N_LABEL` | 12 |
 | `web/packages/constants/src/state.ts` | 状态组的 `i18n_label` | 6 |
 | `web/packages/constants/src/workspace.ts` | `ORGANIZATION_SIZE_I18N_LABEL`（Task 4）；角色的 `i18n_title`（Task 6） | 4、6 |
+| `web/packages/editor/src/extensions/callout/logo-selector.tsx` | 标注块的图标按钮的名字：`EmojiPicker` 的 `ariaLabel`，英文的字面量（编辑器不依赖 i18n） | 7 |
 | `web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、7、13 |
 | `web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 3、4、12、13 |
 | `web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 7、12 |
@@ -220,6 +221,7 @@ sys.exit(1 if broken else 0)
 | `web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 3、4、9 |
 | `web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、12 |
 | `web/packages/propel/package.json` | oxlint 上限 11 → 10（Task 7）；依赖 `@nerve/utils`（Task 10） | 7、10 |
+| `web/packages/propel/src/emoji-icon-picker/helper.tsx` | `EmojiPicker` 的 `ariaLabel` 必传 | 7 |
 | `web/packages/propel/src/emoji-icon-picker/logo.tsx` | 图标的连字和表情 `aria-hidden` | 7 |
 | `web/packages/propel/src/emoji-reaction/emoji-reaction.tsx` | 表情回应的按钮收 `aria-label`，加回应的按钮收 `addReactionLabel`，回应按表情作 `key` | 7 |
 | `web/packages/propel/src/icon-button/helper.tsx` | `aria-label` 必传 | 7 |
@@ -6076,17 +6078,18 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 7: `IconButton` 的名字在根上必传；侧边栏的名字；图标不并进名字
+### Task 7: `IconButton`、`EmojiPicker` 的名字在根上必传；侧边栏的名字；图标不并进名字
 
 **Files:**
-- Modify: `e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx`、`web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/project/search-projects.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/mobile/nav.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json`、`web/packages/propel/package.json`、`web/packages/propel/src/emoji-icon-picker/logo.tsx`、`web/packages/propel/src/emoji-reaction/emoji-reaction.tsx`、`web/packages/propel/src/icon-button/helper.tsx`
+- Modify: `e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx`、`web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/project/search-projects.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/mobile/nav.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/form.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/packages/editor/src/extensions/callout/logo-selector.tsx`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json`、`web/packages/propel/package.json`、`web/packages/propel/src/emoji-icon-picker/helper.tsx`、`web/packages/propel/src/emoji-icon-picker/logo.tsx`、`web/packages/propel/src/emoji-reaction/emoji-reaction.tsx`、`web/packages/propel/src/icon-button/helper.tsx`
 
 **Interfaces:**（spec 2.9）
 - `@nerve/propel` 的 `IconButtonProps`：`"aria-label": string` 必传（从按钮的属性中 `Omit`）。应用中的 28 处都传经 `t()` 的名字（M2 1、M3 6、M4 8、M6 6、M7 6；表情回应的按钮在内）。
 - `EmojiReactionButton` 收 `aria-label`（提示显示它），`EmojiReactionGroup` 收 `addReactionLabel`，回应按表情作 `key`（原来按位置，`no-array-index-key`；`@nerve/propel` 的上限 11 → 10）；`Logo` 的图标连字和表情 `aria-hidden`。
-- 文案：`aria_labels.app_sidebar.*`（展开、收起和工作区菜单的按钮，原来没有定义）、`aria_labels.{settings_menu, toggle_sort_order, toggle_details, add_reaction}`、`sidebar.{more_projects, fewer_projects}`。
+- `@nerve/propel` 的 `EmojiPicker`（`TCustomEmojiPicker`）：`ariaLabel: string` 必传。`Logo` 隐去图标之后，选图标的按钮里没有能作名字的文字，`tsc` 让每个调用方给名字：M3 的两处照旧（`aria_labels.project_icon`），视图的表单经 `t("aria_labels.view_icon")`（M7），编辑器的标注块是英文的字面量 "Callout icon"（M4；`@nerve/editor` 不依赖 i18n，它的名字都是英文，交给 M8 的交接第 3 节）。
+- 文案：`aria_labels.app_sidebar.*`（展开、收起和工作区菜单的按钮，原来没有定义）、`aria_labels.{settings_menu, toggle_sort_order, toggle_details, add_reaction, view_icon}`、`sidebar.{more_projects, fewer_projects}`。
 
-**Tests:** `tsc` 看住名字必传。S7：第一个加侧边栏的展开按钮、工作区菜单的名字、项目页的搜索、设置的返回；第二个加表情图标的项目的链接名和"打开扩展侧边栏"的"更多"。
+**Tests:** `tsc` 看住名字必传（`IconButton` 的 `aria-label`、`EmojiPicker` 的 `ariaLabel`；编辑器的标注块由 `@nerve/editor` 的 `check:types`）。S7：第一个加侧边栏的展开按钮、工作区菜单的名字、项目页的搜索、设置的返回；第二个加表情图标的项目的链接名和"打开扩展侧边栏"的"更多"。
 
 - [ ] **Step 1: 名字**
 
@@ -6499,6 +6502,18 @@ import { useTranslation } from "@nerve/i18n";
       aria-label={t("aria_labels.app_sidebar.toggle")}
 ````
 
+`web/apps/web/core/components/views/form.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/views/form.tsx
+            <EmojiPicker
+              iconType="lucide"
+````
+````new web/apps/web/core/components/views/form.tsx
+            <EmojiPicker
+              ariaLabel={t("aria_labels.view_icon")}
+              iconType="lucide"
+````
+
 `web/apps/web/core/components/views/quick-actions.tsx`（修改，3 处）：
 
 ````old web/apps/web/core/components/views/quick-actions.tsx
@@ -6604,7 +6619,19 @@ export const ViewListHeader = observer(function ViewListHeader() {
                           </span>
 ````
 
-`web/packages/i18n/src/locales/en/accessibility.json`（修改，1 处）：
+`web/packages/editor/src/extensions/callout/logo-selector.tsx`（修改，1 处）：
+
+````old web/packages/editor/src/extensions/callout/logo-selector.tsx
+      <EmojiPicker
+        closeOnSelect={true}
+````
+````new web/packages/editor/src/extensions/callout/logo-selector.tsx
+      <EmojiPicker
+        ariaLabel="Callout icon"
+        closeOnSelect={true}
+````
+
+`web/packages/i18n/src/locales/en/accessibility.json`（修改，2 处）：
 
 ````old web/packages/i18n/src/locales/en/accessibility.json
   "aria_labels": {
@@ -6623,6 +6650,13 @@ export const ViewListHeader = observer(function ViewListHeader() {
       "open_extended_sidebar": "Open extended sidebar"
     },
 ````
+````old web/packages/i18n/src/locales/en/accessibility.json
+    "project_icon": "Project icon",
+````
+````new web/packages/i18n/src/locales/en/accessibility.json
+    "project_icon": "Project icon",
+    "view_icon": "View icon",
+````
 
 `web/packages/i18n/src/locales/en/navigation.json`（修改，1 处）：
 
@@ -6635,7 +6669,7 @@ export const ViewListHeader = observer(function ViewListHeader() {
     "fewer_projects": "Hide",
 ````
 
-`web/packages/i18n/src/locales/zh-CN/accessibility.json`（修改，1 处）：
+`web/packages/i18n/src/locales/zh-CN/accessibility.json`（修改，2 处）：
 
 ````old web/packages/i18n/src/locales/zh-CN/accessibility.json
   "aria_labels": {
@@ -6653,6 +6687,13 @@ export const ViewListHeader = observer(function ViewListHeader() {
       "close_extended_sidebar": "关闭扩展侧边栏",
       "open_extended_sidebar": "打开扩展侧边栏"
     },
+````
+````old web/packages/i18n/src/locales/zh-CN/accessibility.json
+    "project_icon": "项目图标",
+````
+````new web/packages/i18n/src/locales/zh-CN/accessibility.json
+    "project_icon": "项目图标",
+    "view_icon": "视图图标",
 ````
 
 `web/packages/i18n/src/locales/zh-CN/navigation.json`（修改，1 处）：
@@ -6673,6 +6714,15 @@ export const ViewListHeader = observer(function ViewListHeader() {
 ````
 ````new web/packages/propel/package.json
     "check:lint": "node ../../../tools/lint-cap.mjs 10",
+````
+
+`web/packages/propel/src/emoji-icon-picker/helper.tsx`（修改，1 处）：
+
+````old web/packages/propel/src/emoji-icon-picker/helper.tsx
+  ariaLabel?: string;
+````
+````new web/packages/propel/src/emoji-icon-picker/helper.tsx
+  ariaLabel: string;
 ````
 
 `web/packages/propel/src/emoji-icon-picker/logo.tsx`（修改，2 处）：
@@ -6896,7 +6946,7 @@ Expected: 115 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx' web/apps/web/core/components/comments/card/display.tsx web/apps/web/core/components/comments/comment-reaction.tsx web/apps/web/core/components/comments/quick-actions.tsx web/apps/web/core/components/core/description-versions/modal.tsx web/apps/web/core/components/cycles/cycles-view-header.tsx web/apps/web/core/components/cycles/quick-actions.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx web/apps/web/core/components/issues/peek-overview/header.tsx web/apps/web/core/components/modules/module-view-header.tsx web/apps/web/core/components/modules/quick-actions.tsx web/apps/web/core/components/profile/sidebar.tsx web/apps/web/core/components/project/search-projects.tsx web/apps/web/core/components/rich-filters/filters-toggle.tsx web/apps/web/core/components/settings/mobile/nav.tsx web/apps/web/core/components/settings/profile/modal.tsx web/apps/web/core/components/settings/workspace/sidebar/header.tsx web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx web/apps/web/core/components/views/quick-actions.tsx web/apps/web/core/components/views/view-list-header.tsx web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/navigation.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/navigation.json web/packages/propel/package.json web/packages/propel/src/emoji-icon-picker/logo.tsx web/packages/propel/src/emoji-reaction/emoji-reaction.tsx web/packages/propel/src/icon-button/helper.tsx
+git add e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx' web/apps/web/core/components/comments/card/display.tsx web/apps/web/core/components/comments/comment-reaction.tsx web/apps/web/core/components/comments/quick-actions.tsx web/apps/web/core/components/core/description-versions/modal.tsx web/apps/web/core/components/cycles/cycles-view-header.tsx web/apps/web/core/components/cycles/quick-actions.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx web/apps/web/core/components/issues/peek-overview/header.tsx web/apps/web/core/components/modules/module-view-header.tsx web/apps/web/core/components/modules/quick-actions.tsx web/apps/web/core/components/profile/sidebar.tsx web/apps/web/core/components/project/search-projects.tsx web/apps/web/core/components/rich-filters/filters-toggle.tsx web/apps/web/core/components/settings/mobile/nav.tsx web/apps/web/core/components/settings/profile/modal.tsx web/apps/web/core/components/settings/workspace/sidebar/header.tsx web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx web/apps/web/core/components/views/form.tsx web/apps/web/core/components/views/quick-actions.tsx web/apps/web/core/components/views/view-list-header.tsx web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/packages/editor/src/extensions/callout/logo-selector.tsx web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/navigation.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/navigation.json web/packages/propel/package.json web/packages/propel/src/emoji-icon-picker/helper.tsx web/packages/propel/src/emoji-icon-picker/logo.tsx web/packages/propel/src/emoji-reaction/emoji-reaction.tsx web/packages/propel/src/icon-button/helper.tsx
 ```
 ```bash
 git commit -m "feat(M3/closeout): every IconButton has a name, required at the root
@@ -6918,10 +6968,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T7.2` | 侧边栏的展开按钮的名字是英文 | 故事 S7 | 端到端 |
 | `T7.3` | 设置的返回按钮的名字是英文 | 故事 S7 | 端到端 |
 | `T7.4` | 项目页的搜索按钮的名字是英文 | 故事 S7 | 端到端 |
-| `T7.5` | 工作区菜单的按钮名字在中文里没有定义（K9） | ``、故事 S7 | vitest；端到端 |
+| `T7.5` | 工作区菜单的按钮名字在中文里没有定义（K9） | `check:sync`、故事 S7 | 静态；端到端 |
 | `T7.6` | 扩展侧边栏的"更多"是英文 | 故事 S7 | 端到端 |
 | `T7.7` | 项目的表情图标并进链接的名字（K3g） | 故事 S7 | 端到端 |
 | `T7.8` | 表情回应又以下标为 key：oxlint 的 `no-array-index-key` 超出 propel 的上限 | `@nerve/propel` 的 oxlint（`check:lint`） | 静态 |
+| `T7.9` | 视图表单的选图标按钮没有名字（`EmojiPicker` 的 `ariaLabel` 必传：一个调用方不给名字就编译不过） | `tsc` | 静态 |
 
 ---
 
@@ -13420,7 +13471,7 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - **下拉框**：成员下拉框以 `CustomSearchSelect` 为底之后 M4 的调用方看得到的不同（按键由 Headless UI 处理，`WhileOpen` 记下打开时的回调，Escape 之后焦点在选择自己的按钮上，列表的新样子），在 M4 的页面上核对，C7 没有核对 M4 页面上的调用方（成员下拉框的 8 个文件、4 个筛选）。`issues/select/base.tsx` 的根与 M3 收尾改过的项目下拉框是同一种写法：调用方给根 `tabIndex`，根是一个没有名字的停留点；照收尾把 `tabIndex` 给里面的按钮。筛选的共用件（`issues/issue-layouts/filters/` 的 `FilterHeader`、`FilterOption`，M3 的项目筛选也用）：标题的展开按钮没有名字，选项不说出选中与否（M3 收尾找到）。`getButtonStyling` 的两处（`rich-filters/add-filters/button.tsx`、`dropdowns/layout.tsx`）用键盘核对轮廓。
 - **右键菜单**：工作项和草稿的列表的右键菜单关着时 `inert`（M3/P10 的裁定 F-14），在 M4 的页面上核对右键打开它、点它的项。
 - **层叠顺序**：页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下，`z-30` 及以上留给弹窗和从弹窗打开、经 portal 渲染到 `body` 的东西（下拉框、提示、表情）；M3 收尾因此把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。工作项页面上画在任何弹窗之上的元素（行号是 M3 收尾时的）：`issues/issue-layouts/roots/project-layout-root.tsx:80`（`fixed … z-50`）；日历的两个 `Popover.Panel`（`issues/issue-layouts/calendar/dropdowns/options-dropdown.tsx:128`、`months-dropdown.tsx:102`，`fixed z-50`，不经 portal）；`issues/issue-layouts/quick-add/form/calendar.tsx:22`（`z-50`）；更新中的遮罩 `issues/issue-layouts/calendar/issue-block.tsx:110`、`issues/issue-layouts/list/block.tsx:217`（`z-[99999]`）；拖动中的 `issues/issue-layouts/kanban/block.tsx:261`（`z-[100]`）。与弹窗同层或之上的还有 `issues/attachment/attachment-item-list.tsx:123`（`z-30`）和拖动中的 `issues/issue-layouts/kanban/kanban-delete-drop-zone.tsx:52`（`z-40`）。M4 改这些页面时把它们降到 `z-30` 之下，或开着一个弹窗核对它们不画在弹窗上。
-- 共用组件的焦点轮廓（`Button`、`IconButton`、`getButtonStyling`、`CustomMenu`）是否被 `overflow-hidden` 裁掉，在 M4 的页面上用键盘核对（M3/P11 评审第 6 节）。`IconButton` 的 `aria-label` 自 M3 收尾必传，新加的每一个都有名字。
+- 共用组件的焦点轮廓（`Button`、`IconButton`、`getButtonStyling`、`CustomMenu`）是否被 `overflow-hidden` 裁掉，在 M4 的页面上用键盘核对（M3/P11 评审第 6 节）。`IconButton` 的 `aria-label` 和 `EmojiPicker` 的 `ariaLabel` 自 M3 收尾必传，新加的每一个都有名字（编辑器标注块的选图标按钮是英文的"Callout icon"，编辑器的文字见 M8 的交接第 3 节）。
 - **关闭条件**：M4 的评审写明上面每一项的浏览器核对；`getTabIndex` 在最后一个删去正的 `tabIndex` 的 M 删除；上面层叠的每个元素降到 `z-30` 之下，或有开着弹窗的核对。
 
 ## 8. 地址、复制、文案和留下的行
@@ -13641,7 +13692,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **按规则清一类**：另外按规则集中清掉至少一类，优先能机械修复的（`eslint(no-shadow)`；`eslint(no-unneeded-ternary)` 已由 M2/P5 全仓清零，见 [M2/P5 评审](../../M2-auth/reviews/P5-web-account-review.md)第 2 节；`eslint-plugin-promise(always-return)` 已由 M3/P11 全仓清零，见 [M3/P11 spec](../../M3-workspace-project/specs/P11-web-states-labels-and-cleanup.md) 2.9）；
 ````
 
-`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，53 行）：
+`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，54 行）：
 
 ````file docs/v0/M8-open-release/handoffs/M3-closeout.md
 ---
@@ -13679,6 +13730,7 @@ M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是�
 - `app/not-found.tsx` 的英文；`@nerve/propel` 的英文默认值（`toast/toast.tsx` 的"Loading..."）。
 - 命令面板自己的文字：`power-k/menus/empty-state.tsx` 的默认值"No results found"，快捷键的标记里键与键之间的"then"（`power-k/ui/modal/command-item-shortcut-badge.tsx`）。M3 收尾只改了它整个重写的两个弹窗：快捷键列表的标题和搜索框经 `t()`，切换账户的那句话是一个带 `{email}` 的键（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。
 - `@nerve/ui` 的 `AlertModalCore`（`modals/alert-modal.tsx`）的按钮默认值是英文，`@nerve/ui` 不依赖 i18n：M3 的两个删除确认框和 M2 的令牌确认框传入经 `t()` 的文字，M4–M7 的调用方由各 M 照做（各自的交接）；最后一个调用方改完之后，把这几个 prop 改为必传、删去默认值（M3 收尾的建议，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节）。
+- `@nerve/editor` 不依赖 i18n，它的控件的名字和提示是写死的英文（图片工具栏的"Download image""Zoom in"，表格的"Insert columns""Insert rows"等）。M3 收尾让 `@nerve/propel` 的 `EmojiPicker` 的 `ariaLabel` 必传，编辑器标注块的图标按钮照这种写法名为"Callout icon"（`web/packages/editor/src/extensions/callout/logo-selector.tsx`，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 1 条）。编辑器的文字怎样经 `t()`（由应用传入，或编辑器依赖 i18n）一次定，这些名字随之改。
 - **关闭条件**：日期的决定写进 M8 的设计并实现；`web/` 的页面上没有写死的英文（M8 的扫描）。
 
 ## 4. 可访问性
@@ -13795,7 +13847,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框、命令面板和快捷键列表关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上，窄屏（768 px 以下）上开着的侧边栏收起。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
-| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
+| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |
