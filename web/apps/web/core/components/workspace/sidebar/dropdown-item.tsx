@@ -39,11 +39,13 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
       className="w-full"
       id={workspace.id}
     >
+      {/* the entry shows as the menu marks it, by the arrows as by the pointer (Headless UI's data-focus): a step
+          darker than it rests, the current workspace's too */}
       <Menu.Item
         as="div"
         className={cn("px-4 py-2", {
-          "bg-layer-transparent-active": workspace.id === activeWorkspace?.id,
-          "hover:bg-layer-transparent-hover": workspace.id !== activeWorkspace?.id,
+          "bg-layer-transparent-active data-focus:bg-layer-transparent-selected": workspace.id === activeWorkspace?.id,
+          "data-focus:bg-layer-transparent-hover": workspace.id !== activeWorkspace?.id,
         })}
       >
         <div className="flex items-center justify-between gap-1 rounded-sm p-1 text-13 text-primary">

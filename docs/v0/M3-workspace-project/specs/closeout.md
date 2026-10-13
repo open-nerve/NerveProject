@@ -181,11 +181,11 @@ S6 不加 `elementFromPoint` 的检查：后面的页面 `inert`，`elementFromP
 
 **nerve 的规则**（`POST /api/v0/workspaces/{slug}/leave`，M3 设计 9.2、P5a）：每个有效成员都能离开，访客在内；唯一的管理员离开时 nerve 拒绝（`workspace.sole_admin`，409）；是某个有其他成员的项目的唯一管理员时也拒绝（`project.sole_admin`，409），整个离开回滚。后一条没有故事从离开的入口走到，由接口一层的 Go 测试看着（P5a、P5b）：`server/internal/bootstrap/ending_test.go` 的 `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（离开的一支得到 409 `project.sole_admin`，每张表一行不变），前一条是同一个文件的 `TestTheOnlyAdminCannotLeave`，两个问题码到 HTTP 的回答在 `workspace/adapter/http/members_test.go` 的 `TestLeaveWorkspaceRefusals`。页面经同一条拒绝的路径给出 nerve 的说法（`error-messages.ts` 把 `project.sole_admin` 映射为 `errors.project_sole_admin`），确认框留着，与 W11 的唯一管理员走的相同。
 
-**页面**：侧边栏的工作区菜单（`workspace/sidebar/workspace-menu-root.tsx`，只在页头 `navigation/top-navigation-root.tsx` 用）加"离开工作区"一项，每个角色都有。它打开成员页离开时的同一个确认框（`ConfirmWorkspaceMemberRemove`，经新文件 `workspace/leave-workspace-modal.tsx`），经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进（`followInSession`），去成员页离开之后去的地方（另一个工作区，或没有工作区时新建工作区的页面）；nerve 拒绝时确认框留着，原因在共用的拒绝提示里（A-M2）。确认框挂在菜单之外（菜单在选中一项时关上，挂在里面的确认框会跟着没有，`T3.5`）。菜单原来有一个没有调用方的"sidebar"写法，删除（216 → 205 行）。菜单的按钮在键盘取得焦点时显出 `@nerve/ui` 的选择框那样的内圈轮廓（Headless UI 的 `data-focus`；菜单的根裁掉按钮之外的部分，所以在边内），新建工作区、离开工作区、退出三项在方向键或指针选中时显出底色（`data-focus:bg-layer-transparent-hover`；原来只在指针悬停时，方向键选中的一项、Tab 到达的按钮都看不出来：Task 3 的实现者找到，控制者裁定在 Task 3 改）。
+**页面**：侧边栏的工作区菜单（`workspace/sidebar/workspace-menu-root.tsx`，只在页头 `navigation/top-navigation-root.tsx` 用）加"离开工作区"一项，每个角色都有。它打开成员页离开时的同一个确认框（`ConfirmWorkspaceMemberRemove`，经新文件 `workspace/leave-workspace-modal.tsx`），经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进（`followInSession`），去成员页离开之后去的地方（另一个工作区，或没有工作区时新建工作区的页面）；nerve 拒绝时确认框留着，原因在共用的拒绝提示里（A-M2）。确认框挂在菜单之外（菜单在选中一项时关上，挂在里面的确认框会跟着没有，`T3.5`）。菜单原来有一个没有调用方的"sidebar"写法，删除（216 → 205 行）。菜单的按钮在键盘取得焦点时显出 `@nerve/ui` 的选择框那样的内圈轮廓（Headless UI 的 `data-focus`；菜单的根裁掉按钮之外的部分，所以在边内），新建工作区、离开工作区、退出三项在方向键或指针选中时显出底色（`data-focus:bg-layer-transparent-hover`；原来只在指针悬停时，方向键选中的一项、Tab 到达的按钮都看不出来：Task 3 的实现者找到，控制者裁定在 Task 3 改），菜单中工作区的一项（`workspace/sidebar/dropdown-item.tsx`）同样：别的工作区的显出悬停的底色，当前工作区的从 `bg-layer-transparent-active` 深一级到 `selected`（原来当前的那一项选中时不变，而键盘打开菜单时先选中的正是它；控制者同样裁定在 Task 3 改）。
 
 **A-M2 在成员页**：`useMembershipChanges` 的 `remove`、`leave` 和 `useInvitationChanges` 的删除收一个 `done`，只在成功的跟进中调用；`ConfirmWorkspaceMemberRemove` 不再自己关上。成员页的移出、离开和邀请的删除被拒绝时，确认框留着（原来关上；邀请的一行与成员的一行共用这个确认框，收尾找到）。离开的确认框的标题经 `t()`（`workspace_settings.settings.members.leave_title`）。
 
-**测试**：两个 hook 的 vitest 照新的 `done`（成功时调用、被拒绝时不调用、换账户之后不调用）；W11 的页面版本：访客从菜单离开（键盘：按钮显出轮廓，`T3.9`；End、上、Enter 到达这一项，方向键选中的一项显出底色、别的不显，`T3.8`；扣住离开的回答时双击"离开"只发出一次请求，确认框的取消不可用，Escape 关不掉它，变异 `T3.7`），他的成员关系结束，页面去新建工作区；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着，取消之后焦点回到菜单的按钮（`T3.10`：打开它的按钮在弹窗开着时重建，焦点就回不去）；W7：唯一的管理员在成员页离开被拒绝时确认框留着；W4：删除一个已被删除的邀请被拒绝时确认框留着。**W2（每个角色的挂载清单）**：菜单在管理员、唯一的管理员、成员、访客下都有这一项，首页的挂载清单不变，打开菜单不发请求（一次性的清单，附录 A.4；W7、W11 的页面版本看成员、唯一的管理员和访客）；W3（会话切换）：离开的跟进经 `followInSession`，hook 的 vitest 的"换账户之后"一行。
+**测试**：两个 hook 的 vitest 照新的 `done`（成功时调用、被拒绝时不调用、换账户之后不调用）；W11 的页面版本：访客从菜单离开（键盘：按钮显出轮廓，`T3.9`；打开时先选中的当前工作区的一项深一级，`T3.12`；End、上、Enter 到达这一项，方向键选中的一项显出底色、别的不显，`T3.8`；扣住离开的回答时双击"离开"只发出一次请求，确认框的取消不可用，Escape 关不掉它，变异 `T3.7`），他的成员关系结束，页面去新建工作区；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着，取消之后焦点回到菜单的按钮（`T3.10`：打开它的按钮在弹窗开着时重建，焦点就回不去），他的另一个工作区 Beta 的一项在方向键选中时显出底色（`T3.11`）；W7：唯一的管理员在成员页离开被拒绝时确认框留着；W4：删除一个已被删除的邀请被拒绝时确认框留着。**W2（每个角色的挂载清单）**：菜单在管理员、唯一的管理员、成员、访客下都有这一项，首页的挂载清单不变，打开菜单不发请求（一次性的清单，附录 A.4；W7、W11 的页面版本看成员、唯一的管理员和访客）；W3（会话切换）：离开的跟进经 `followInSession`，hook 的 vitest 的"换账户之后"一行。
 
 ### 2.8 M3 页面上的英文和角色名（Task 4、5、6、12、13）
 
@@ -357,7 +357,7 @@ M3 设计 13.2 的每一行，连同各 Phase 的 spec 第 5 节、评审第 6 �
 
 - [ ] 计划的 16 个 Task 都已提交；每个 Task 之后 `make lint-web`、`make knip`、`make test-web`、`make build`、`make e2e` 通过（Task 14 另有 `make gen-check`、`make lint-go`、`make test`），worktree 中 `make e2e` 118 个全部通过（`49190525` 是 110 个）。
 - [ ] 弹窗：`ModalCore` 是 Headless UI v2 的打开方式，打开时后面的页面 `inert`、`aria-hidden`（条件挂载的也是），Tab 在弹窗里转，F-1、组字的 Escape、焦点回到打开它的控件照旧；`AlertModalCore` 和快捷键的搜索框没有正的 `tabIndex`；命令面板、快捷键、切换账户经 `ModalCore`；页面上的元素在弹窗的层之下（设置页的手机菜单 `z-20`，2.6）；P4、P6、P7、W7、S6 的检查和变异 `T1.*`、`T2.*` 都被发现（附录 A.2）。
-- [ ] 离开工作区：侧边栏的工作区菜单每个角色都有这一项，经成员页的确认框和命令；唯一的管理员被拒绝时确认框留着，取消之后焦点回到菜单的按钮；双击只发一次请求，请求在路上时确认框关不掉；菜单的按钮和方向键选中的一项在键盘下看得见；W11、W7、W4 的页面版本。
+- [ ] 离开工作区：侧边栏的工作区菜单每个角色都有这一项，经成员页的确认框和命令；唯一的管理员被拒绝时确认框留着，取消之后焦点回到菜单的按钮；双击只发一次请求，请求在路上时确认框关不掉；菜单的按钮和方向键选中的一项（工作区和三个操作）在键盘下看得见；W11、W7、W4 的页面版本。
 - [ ] 2.4 的每一条有去处：收尾做的有 Task 和检查，交出去的在接收者的交接里，不做的有理由，"收尾决定"的有第 3 节的裁定。
 - [ ] 6 份收到的交接 `status: closed`，各有"处理结果（M3/收尾）"；M4–M8 各有 `handoffs/M3-closeout.md`，13.2 的五行链接到它们。
 - [ ] 3.20 逐行、差异清单逐列核对过（2.2、2.3）；README 按 8.7 和 locale 一条；前端改动清单的收尾七行（附录 A.8）。
@@ -646,7 +646,7 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 
 删去的 en 键：`afternoon`、`evening`、`good`、`morning`、`onboarding.switch_account.description_before_email`、`description_after_email`（同一句的两半，现在是一个键）、`workspace_settings.token_not_copied`、`power_k.miscellaneous_actions.copy_current_page_url_toast_error`。
 
-行为的不同（都在 3.2 的 7 行里）：弹窗打开时后面的页面不能操作、不被读出；Tab 在确认框里转；三个直接用 Headless UI 的弹窗改经 `ModalCore`：命令面板的层级 `z-50` → `z-30`，现在在提示、tooltip、表情的弹层和右键菜单之下（它们经 portal 渲染在主树之外，`z-50` 及以上），与别的弹窗一样，M4 页面上 `z-50` 的元素会画在它之上（交给 M4，2.6）；设置页的手机菜单 `z-50` → `z-20`，在每个弹窗之下（原来画在弹窗之上，2.6）；切换账户的层级 `z-20` → `z-30`、宽度 `w-[40rem]` → `sm:max-w-2xl`；快捷键的标题左对齐（原来居中），关闭按钮在标题旁；只在打开时才挂载的弹窗现在有打开的过渡（原来立即出现）；成员页的移出、离开和邀请的删除被拒绝时确认框留着；工作区菜单的"离开工作区"；工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项与指针悬停时一样显出底色（原来都看不出）；`CustomSelect` 上的 Enter 打开列表、不提交表单；Safari 的组字顺序；侧边栏的副本、收起时 `inert`；侧边栏的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单一个停留点，手柄不是停留点；成员页一行的菜单名为"Options"；项目下拉框的停留点是按钮；状态的表单打开时焦点在名称上；颜色弹层的输入框有焦点的轮廓；图标的连字和表情不并进名字。
+行为的不同（都在 3.2 的 7 行里）：弹窗打开时后面的页面不能操作、不被读出；Tab 在确认框里转；三个直接用 Headless UI 的弹窗改经 `ModalCore`：命令面板的层级 `z-50` → `z-30`，现在在提示、tooltip、表情的弹层和右键菜单之下（它们经 portal 渲染在主树之外，`z-50` 及以上），与别的弹窗一样，M4 页面上 `z-50` 的元素会画在它之上（交给 M4，2.6）；设置页的手机菜单 `z-50` → `z-20`，在每个弹窗之下（原来画在弹窗之上，2.6）；切换账户的层级 `z-20` → `z-30`、宽度 `w-[40rem]` → `sm:max-w-2xl`；快捷键的标题左对齐（原来居中），关闭按钮在标题旁；只在打开时才挂载的弹窗现在有打开的过渡（原来立即出现）；成员页的移出、离开和邀请的删除被拒绝时确认框留着；工作区菜单的"离开工作区"；工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出；指针悬停在当前工作区的一项上时现在也深一级）；`CustomSelect` 上的 Enter 打开列表、不提交表单；Safari 的组字顺序；侧边栏的副本、收起时 `inert`；侧边栏的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单一个停留点，手柄不是停留点；成员页一行的菜单名为"Options"；项目下拉框的停留点是按钮；状态的表单打开时焦点在名称上；颜色弹层的输入框有焦点的轮廓；图标的连字和表情不并进名字。
 
 ### A.9 计划的块和逐 Task 复现
 
