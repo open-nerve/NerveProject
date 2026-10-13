@@ -4,12 +4,12 @@
 |---|---|
 | 里程碑 | M3 工作区与项目（`docs/v0/M3-workspace-project`） |
 | 日期 | 2026-10-13 |
-| 状态 | 进行中：第 3 节的各条待控制者裁定（"收尾决定"的建议、规则的偏离、交给 M4–M8 的决定），第 3.2 节的三条给负责人 |
+| 状态 | 进行中：第 3 节的各条已由控制者裁定（2026-10-13，写在各条之后），第 3.2 节的三条负责人已答（2026-10-13）；预检之后修订一轮（2026-10-13：预检的发现、控制者对它们的裁定和负责人的答复都已写进本 spec 和计划） |
 | 基点 | `49190525`（Merge M3/P11）；M3 从 `f8cb7c22`（M2 的修复轮合并之后）开始 |
 | 上级 | [M3 设计](../M3-design.md) 第 12 节"收尾"、13.1、13.2、第 14、15 节、3.20、7.1、7.7、7.9、7.11、8.7、9.7（C11、C12）；[总体设计](../../v0-design.md) 7.7、9.4 |
 | 前置交接 | P1–P11 每份 spec 的第 5 节和每份评审的第 6 节中交给收尾的各条；P8b–P11 修复轮的搁置清单；`frontend-changes.md`；M3 收到的 6 份交接（2.1） |
 | 计划 | [plans/closeout.md](../plans/closeout.md)，16 个 Task |
-| 原型 | `$M3TMP/closeout-proto`（`49190525` 的 `git archive` 副本），Task 0 之后逐个 Task 写成，每个 Task 之后的树存在 `$M3TMP/closeout-snap/T<n>`；工具、日志和计划的块在 `$M3TMP/closeout-tools/`。计划在另一个副本上从本 spec 的第一个提交逐 Task 复现，每个 Task 之后跑它的门禁，16 个都通过，最后的树与原型逐个文件相同（附录 A.9） |
+| 原型 | `$M3TMP/closeout-proto`（`49190525` 的 `git archive` 副本），Task 0 之后逐个 Task 写成，每个 Task 之后的树存在 `$M3TMP/closeout-snap/T<n>`；工具、日志和计划的块在 `$M3TMP/closeout-tools/`。计划在另一个副本上从本 spec 和计划的提交逐 Task 复现（修订之后从修订的提交再一次），每个 Task 之后跑它的门禁，16 个都通过，最后的树与原型逐个文件相同（附录 A.9） |
 
 `$M3TMP` 是 `/private/tmp/claude-501/-Users-xiaoruan-project-nerve-project/99d2bc1d-fdaf-4b92-a590-29b89514572b/scratchpad/nerve-m3`。
 
@@ -41,7 +41,7 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 | `M1-P2-trim-content.md` | 项目字段、侧边栏偏好、保留的工作区地址、个人主页 | 四项都在 M3 做到 | P4a（`api/` 里没有 `close_in`、`default_state`、`page_view`、`estimate_id`、`/sidebar-preferences/`，收尾在 `49190525` 上 `git grep` 核对）；P2、P9、W8；P1、P8a；决策点 3 的 A、P11、C10。个人主页上工作项列表的规则行交给 M4（M4 的交接第 3 节） |
 | `M1-P3-trim-platform.md` | 不再读的字段、项目成员、保留地址、地址的写法 | 四项都在 M3 做到 | P4a（`git grep` 没有 `anchor`、`is_form_enabled`）；P4b 的 `addProjectMembers`、P8b 的 `join`；P1、P8a；P4a、P8b |
 | `M1-P4-router-native.md` | 保留的工作区名；离开项目的顺序 | 两项都做到 | `reserved_slugs.txt` 前后端一份（P1、P8a 的 vitest 和 `bootstrap` 的 Go 测试）；P10 的离开先等接口成功（vitest、P5）；收尾的离开工作区入口经同一个命令（2.7） |
-| `M1-closeout.md` | 死成员和死 prop；oxlint | 两项都做到，剩下的每一行有出处 | P11 的 `--rows M3` 产品代码 80 → 54（P11 spec 附录 A.9）；收尾在最后一个代码 Task 之后重跑 218 → 225 行（附录 A.5）；误归的 41 行写进 M4、M6、M7 的交接；`always-return` 全仓清零（P11），上限再调低，收尾改到的文件中仍有警告的 8 个由第 3 节第 2 条裁定 |
+| `M1-closeout.md` | 死成员和死 prop；oxlint | 两项都做到，剩下的每一行有出处 | P11 的 `--rows M3` 产品代码 80 → 54（P11 spec 附录 A.9）；收尾在最后一个代码 Task 之后重跑 218 → 225 行（附录 A.5）；误归的 41 行写进 M4、M6、M7 的交接；`always-return` 全仓清零（P11），上限再调低（web 303 → 295、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10）；收尾改到的文件中仍有警告的 8 个：手改的 3 个改掉，其余 5 个按接收者写进 M4、M6、M7、M8 的交接（第 3 节第 2 条的裁定，Task 15） |
 | `M2-closeout.md` | 十四节 | 十三节完成，第 12 节（页大小的规则）原样交给 M4；第 14 节的复制在 M4、M6、M7 的 M2 收尾交接中改为经 `useCopyLink`、`useCopyText` | 交接末尾的十四行表；P8a–P11 的评审；C4、C7、C8；M4 的交接第 5、9 节，M5 的交接第 1 节 |
 
 另：M4–M8 的五份 `M1-closeout.md` 的"按规则清一类"写明 `always-return` 已由 M3/P11 全仓清零（P11 spec 第 5 节收尾一行，修复轮的 F-10）；M4、M6、M7 的 `M2-closeout.md` 的复制一节的关闭条件改为经 `useCopyLink`（`useCopyText`），并说 `copy-hook` 的例外随之删除（2.10）。
@@ -66,7 +66,7 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 
 ### 2.4 各 Phase 留给收尾的事
 
-来源：P1–P11 每份 spec 的第 5 节和评审的第 6 节（逐份读全，`$M3TMP/closeout-tools/read/`）、`rows.txt` 的 71 行（写着"收尾"的行，起点不是清单）、P8b–P11 的 `fix-wave-parked.md`、P9–P11 的浏览器核对、前端改动清单。"去处"一列：收尾做（Task 的编号），交给 M（交接的节），不做（理由），或第 3 节的条目（"收尾决定"的建议和规则的偏离，待裁定）。
+来源：P1–P11 每份 spec 的第 5 节和评审的第 6 节（逐份读全，`$M3TMP/closeout-tools/read/`）、`rows.txt` 的 71 行（写着"收尾"的行，起点不是清单）、P8b–P11 的 `fix-wave-parked.md`、P9–P11 的浏览器核对、前端改动清单。"去处"一列：收尾做（Task 的编号），交给 M（交接的节），不做（理由），或第 3 节的条目（"收尾决定"的建议和规则的偏离，控制者已裁定）。
 
 | # | 来源 | 事项 | 去处 |
 |---|---|---|---|
@@ -100,14 +100,14 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 | K20 | P10 第 5 节 | `webui` 给嵌入的文件加 `ETag` | 交给 M8（交接第 5 节；第 3 节第 12 条） |
 | K21 | P10 第 5 节 | `@nerve/ui` 下拉框的 `any`（泛型改到 13 个调用方） | 交给 M4（交接第 8 节；第 3 节第 13 条） |
 | K22 | P10 第 5 节（F-2） | `projectMemberIds` 的 getter 在 M4、M7 的读者改完之后删除 | 交给 M4（交接第 8 节）、M7（交接第 4 节），最后改完读者的那一个删除 getter（第 3 节第 14 条） |
-| K23 | P8a 修复轮的搁置 P11 | `Workspace.organization_size` 收紧到数据库的 CHECK | 契约的改动：负责人的清单（3.2 第 1 条），交给 M5（交接第 2 节） |
+| K23 | P8a 修复轮的搁置 P11 | `Workspace.organization_size` 收紧到数据库的 CHECK | 契约的改动：交给 M5（交接第 2 节；负责人 2026-10-13 确认，3.2 第 1 条） |
 | K24 | P7a 第 5 节（A1） | 契约中说到工作项的句子扫一遍 | Task 14（只改说明的文字和由它生成的文件；第 3 节第 15 条） |
 | K25 | P7b 评审第 6 节（B1） | 裁定 B1（契约按模块一个文件）写进设计 | Task 16（M3 设计 5.1） |
 | K26 | P7b 第 5 节、评审第 6 节 | 部署说明写数据库的 `LC_CTYPE` | Task 16（README）；M8 核对（交接第 2 节） |
 | K27 | P7b 评审第 6 节 | 架构师的复现中跑 gen-same | 不做：P7b 起每个 Phase 的复现都跑（本收尾的 `gates.sh` 的 `gen-same`） |
 | K28 | P11 评审第 6 节 | Firefox、Safari 中的焦点 | C11 在 WebKit 和 Firefox 中各看一遍弹窗和离开的入口；其余页面交给 M8 的发布核对（交接第 4 节；第 3 节第 16 条） |
 | K29 | P11 评审第 6 节 | `isEditable`、`disabled` 可选而默认值没有用 | 不做：评审写明"不算发现" |
-| K30 | P9 评审第 6 节（浏览器核对） | 打开已拒绝的邀请链接的任何人都看到"You declined this invitation." | 产品问题：负责人的清单（3.2 第 2 条） |
+| K30 | P9 评审第 6 节（浏览器核对） | 打开已拒绝的邀请链接的任何人都看到"You declined this invitation." | Task 4：改为不对读者说话的一句，"This invitation was declined." / "这份邀请已被拒绝。"（负责人 2026-10-13，3.2 第 2 条；W5，变异 `T4.14`） |
 | K31 | P10 评审第 6 节 | 最后一个正的 `tabIndex`（M4、M6、M7）改完之后删除 `getTabIndex` 和 tab 序号的常量 | 交给 M4、M6、M7（交接的键盘一节：M4 第 7 节、M6 第 3 节、M7 第 3 节），最后一个删去正的 `tabIndex` 的 M 删除 |
 | K32 | P11 评审第 6 节 | M4–M8 各自的 `AlertModalCore` 调用方的 A-M2；它们页面上 `overflow-hidden` 下的焦点轮廓 | 交给各 M（各交接） |
 
@@ -120,7 +120,7 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 | F3 | 焦点回到带提示的图标按钮时，提示随键盘焦点打开，下一次 Escape 先关提示 | 不改（提示的规则）；S6 核对这个顺序 |
 | F4 | 侧边栏渲染两份（主侧边栏和浮出的副本）；副本透明、不接指针，但不 `inert`：Tab 和读屏都走到看不见的那一份；收起的侧边栏同样 | Task 8：不显示的一份 `inert`（S8） |
 | F5 | 九处 `IconButton` 嵌在菜单自己的按钮里（按钮里有按钮，两个停留点） | M3 的项目一行 Task 8；M4 3、M6 2、M7 3 交给它们（交接第 7 节、M6 第 3 节、M7 第 3 节） |
-| F6 | 侧边栏项目一行的 `Disclosure.Button` 名为"Open project menu"，每一行都一样 | Task 8（一行的菜单只是一个停留点，按钮以项目为名） |
+| F6 | 侧边栏项目一行的 `Disclosure.Button` 名为"Open project menu"，每一行都一样 | Task 8：删去 `Disclosure.Button` 的 `aria-label`，按钮以项目为名（`Logo` 的图标 `aria-hidden`，K3g），展开箭头照旧名为打开、收起；S8 以项目的名字找到一行（变异 `T8.13`）；P1、P2 中与侧边栏的一行同名的卡片和面包屑改在页面内容中找（2.9） |
 | F7 | Base UI 的 `Toast.Close` 是 `aria-hidden="true"` 而 `tabindex="0"`：Tab 能到、读屏读不到 | 交给 M8（交接第 4 节）：它在 Base UI 里，不在 nerve 的代码里 |
 | F8 | `@nerve/ui` 的 `AlertModalCore` 的按钮默认值是英文（`@nerve/ui` 不依赖 i18n） | M3 的两个删除确认框和 M2 的令牌确认框传经 `t()` 的文字；其余调用方交给各 M，最后改为必传交给 M8（第 3 节第 17 条） |
 | F9 | 日期都按英文格式化（首页的日期、日期筛选的弹窗、项目筛选中自定义日期的标签） | 交给 M8（交接第 3 节）：全应用一个决定 |
@@ -129,8 +129,9 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 | F12 | `FilterHeader` 的展开按钮没有名字，`FilterOption` 的选中状态读屏读不到（M4 的组件，M3 的筛选也用） | 交给 M4（交接第 7 节） |
 | F13 | 收集箱、收藏夹、视图、Webhook 的页面上的英文；`app/not-found.tsx` 的英文 | 交给 M7、M8（各交接） |
 | F14 | `useProjectColumns`、`useMemberColumns` 的 `content` 表头从不渲染（`thRender`） | 不做：渲染的是 `thRender`，`content` 只是表格的数据结构 |
-| F15 | 默认状态的名称（新项目的 Backlog、Todo 等）是 nerve 写进数据库的英文 | 不做：是数据，不是界面的文案；要不要按语言起名是产品问题（3.2 第 3 条） |
+| F15 | 默认状态的名称（新项目的 Backlog、Todo 等）是 nerve 写进数据库的英文 | 不做：是数据，不是界面的文案；负责人 2026-10-13 决定照旧用英文，不交出（3.2 第 3 条） |
 | F16 | 工作区的地址（第 12 条）之外，stores 的 router getter 照旧读 router store（`joinedProjectIds`、`workspaceProjectIds`、项目筛选的 `currentWorkspace*`、成员 store 的 `workspaceMemberIds` 等） | 不做：与 P10 对项目一侧的结论相同，store 的 getter 是读者的派生，页面经路由参数；写进 2.12 |
+| F17 | 设置页的手机菜单（`settings/mobile/nav.tsx`，`relative z-50`）在手机的宽度画在每个 `ModalCore` 弹窗（`z-30`）之上；命令面板改经 `ModalCore` 之后也被它盖住（预检的 L8） | Task 2：菜单的容器、弹层和按钮降到 `z-20`，页面上的元素在弹窗的层之下（2.6）；M4 页面上 `z-50` 的元素写进 M4 的交接第 7 节，全应用的层叠顺序写进 M8 的交接第 2 节（Task 15） |
 
 ### 2.5 弹窗：`ModalCore` 的重写（Task 1）
 
@@ -159,24 +160,32 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 
 命令面板（`power-k/ui/modal/wrapper.tsx`）、快捷键（`power-k/ui/modal/shortcuts-root.tsx`）和切换账户（`onboarding/switch-account-modal.tsx`）原来直接用 Headless UI 的 `Dialog` 和 `Transition`，有 2.5 的同一个缺陷。三个都改经 `ModalCore`：
 
-- 快捷键：搜索框去掉 `tabIndex={1}`（P10 的 F-18；web 的上限 303 → 302），关闭按钮有名字（`common.close`）；
-- 切换账户：退出的请求在路上时关不掉（F-1：`handleClose` 在 `switchingAccount` 时为空）；
-- 命令面板：层级随 `ModalCore` 是 `z-30`（原来它的 `Dialog` 是 `z-50`）；web 中 `z-40` 的只有看板拖动时的删除区和右键菜单的项（M4 的页面），都不与面板同时出现。它只在打开时挂载，`ModalCore` 的 F1 修法同样适用。
+- 快捷键：搜索框去掉 `tabIndex={1}`（P10 的 F-18），打开时焦点照旧在搜索框上：`autoFocus` 照 Task 12 的项目筛选写明理由留着（`oxlint-disable-next-line`，第 3 节第 2、20 条），这个文件的两条警告都没有了，web 的上限 303 → 301。标题和搜索框的占位经 `t()`（已有的 `keyboard_shortcuts`，新键 `power_k.search_shortcuts`）。关闭按钮有名字（`common.close`），放在 `DialogTitle` 之外、标题的旁边：原来它在标题里，弹窗的名字是"Keyboard shortcuts Close"；S6 断言弹窗的名字正是标题（变异 `T2.5`）。标题随之左对齐（原来居中，附录 A.8）；
+- 切换账户：退出的请求在路上时关不掉（F-1：`handleClose` 在 `switchingAccount` 时为空）；层级随 `ModalCore` `z-20` → `z-30`，宽度 `w-[40rem]` → `sm:max-w-2xl`（附录 A.8）。邮箱两边的说明原来由两个键拼成（`description_before_email`、`description_after_email`）：Task 4 改为一个带 `{email}` 的键，经 `Translated`（它在 Task 4 才有），两个旧键在两种语言中删除（vitest `switch-account-modal.test.tsx`，变异 `T4.12`）；
+- 命令面板：层级随 `ModalCore` 是 `z-30`（原来它的 `Dialog` 是 `z-50`）；web 中 `z-40` 的只有看板拖动时的删除区和右键菜单的项（M4 的页面），都不与面板同时出现；`z-50` 的页面元素见下面的"层叠的顺序"。它只在打开时挂载，`ModalCore` 的 F1 修法同样适用。命令面板自己的命令文字是共用的英文，不在收尾的范围里（P11 的英文范围是 M3 的页面），写进 M8 的交接第 3 节（全应用的文案）。
 - API 令牌的新建弹窗原来传 `handleClose={() => {}}`，与不传相同，删去。
 
-新的故事 S6（`e2e/stories/smoke/s6-dialogs.spec.ts`）：命令面板和快捷键列表是模态的（打开时后面的页面 `inert`、隐藏，Tab 不出去，Escape 关上，页面恢复）；在设置弹窗上再打开撤销令牌的确认框：设置弹窗在它后面 `inert`、隐藏，Escape 只关上面的一个，焦点回到原处，然后先关那个按钮的提示（F3），再关设置弹窗。A6 核对切换账户的弹窗在退出被扣住时关不掉。
+新的故事 S6（`e2e/stories/smoke/s6-dialogs.spec.ts`）：命令面板和快捷键列表是模态的（打开时后面的页面 `inert`、隐藏，Tab 不出去，Escape 关上，页面恢复），快捷键弹窗的名字正是它的标题；在设置弹窗上再打开撤销令牌的确认框：设置弹窗在它后面 `inert`、隐藏，Escape 只关上面的一个，焦点回到原处，然后先关那个按钮的提示（F3），再关设置弹窗。A6 核对切换账户的弹窗在退出被扣住时关不掉。
 
 两处没有写成变异，理由写在这里：提示不经 `BaseToast.Portal`（`AppProvider` 把它渲染在 `body` 下，它本来就是 `body` 的另一个子元素，从不在主树里）；命令面板只在打开时挂载（`ModalCore` 的 F1 修法已由 `T1.6` 看住）。
 
+**层叠的顺序**（预检的 L8，F17）：每个 `ModalCore` 弹窗是 `z-30`；弹窗里的下拉框经 portal 渲染，也是 `z-30`，靠 DOM 的次序显示在弹窗之上，所以不抬高 `ModalCore`。规则：**页面上的元素在弹窗的层（`z-30`）之下**。设置页的手机菜单（`settings/mobile/nav.tsx`，容器 `relative z-50`）在手机的宽度画在每个弹窗之上（它 `inert`、`aria-hidden`，只是看得见）；命令面板原来是 `z-50`，改经 `ModalCore` 之后也被它盖住。收尾取修法 (b)：Task 2 把菜单的容器、弹层和按钮降到 `z-20`，注释写明这条规则。条件先核对过（`$M3TMP/closeout-tools/amend/zprobe/`）：
+
+- `zgrep.py`：工作区和项目设置页的文件中 `z-20` 及以上的只有标签颜色的弹层（`z-20`，在 `z-10` 的 `Popover` 之内）、页头（`z-[27]` 和它里面的 `z-30`、`z-20`）和这个菜单的三处 `z-50`。个人设置是弹窗，没有这个菜单。
+- 探针 `zz-zprobe.spec.ts`（跑完删除，不在 plan 中；`before.json`、`after.json`）：在 390×844 打开 12 个设置页（工作区的 general、成员、Webhook，项目的 general、成员、状态、标签、迭代、模块、视图、收集箱、自动化）的菜单，`elementFromPoint` 在弹层的 11×11 个点和按钮的中心都落在弹层里，`z-50` 时和 `z-20` 时相同；`z-20` 及以上的其余元素（顶部的加载进度条、页头）都不与弹层重叠。
+- 截图（`shots/before-*.png`、`after-*.png`）：打开的菜单之前之后相同；命令面板和成员页的邀请弹窗打开时，之前菜单的按钮画在弹窗之上，之后被弹窗盖住。
+
+S6 不加 `elementFromPoint` 的检查：后面的页面 `inert`，`elementFromPoint` 不命中 `inert` 的元素，菜单在 `z-50` 时它在按钮的中心照旧给出弹窗，这个检查看不出缺陷（探针核对过）；证据是截图。M4 的交接第 7 节写出 M4 页面上 `z-50` 及以上的元素和这条规则，M8 的交接第 2 节的发布核对加全应用的层叠顺序（Task 15）。
+
 ### 2.7 离开工作区的入口（Task 3）
 
-**nerve 的规则**（`POST /api/v0/workspaces/{slug}/leave`，M3 设计 9.2、P5a）：每个有效成员都能离开，访客在内；唯一的管理员离开时 nerve 拒绝（`workspace.last_admin`，409）。
+**nerve 的规则**（`POST /api/v0/workspaces/{slug}/leave`，M3 设计 9.2、P5a）：每个有效成员都能离开，访客在内；唯一的管理员离开时 nerve 拒绝（`workspace.sole_admin`，409）；是某个有其他成员的项目的唯一管理员时也拒绝（`project.sole_admin`，409），整个离开回滚。后一条没有故事从离开的入口走到，由接口一层的 Go 测试看着（P5a、P5b）：`server/internal/bootstrap/ending_test.go` 的 `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（离开的一支得到 409 `project.sole_admin`，每张表一行不变），前一条是同一个文件的 `TestTheOnlyAdminCannotLeave`，两个问题码到 HTTP 的回答在 `workspace/adapter/http/members_test.go` 的 `TestLeaveWorkspaceRefusals`。页面经同一条拒绝的路径给出 nerve 的说法（`error-messages.ts` 把 `project.sole_admin` 映射为 `errors.project_sole_admin`），确认框留着，与 W11 的唯一管理员走的相同。
 
 **页面**：侧边栏的工作区菜单（`workspace/sidebar/workspace-menu-root.tsx`，只在页头 `navigation/top-navigation-root.tsx` 用）加"离开工作区"一项，每个角色都有。它打开成员页离开时的同一个确认框（`ConfirmWorkspaceMemberRemove`，经新文件 `workspace/leave-workspace-modal.tsx`），经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进（`followInSession`），去成员页离开之后去的地方（另一个工作区，或没有工作区时新建工作区的页面）；nerve 拒绝时确认框留着，原因在共用的拒绝提示里（A-M2）。确认框挂在菜单之外（菜单在选中一项时关上，挂在里面的确认框会跟着没有，`T3.5`）。菜单原来有一个没有调用方的"sidebar"写法，删除（216 → 200 行）。
 
 **A-M2 在成员页**：`useMembershipChanges` 的 `remove`、`leave` 和 `useInvitationChanges` 的删除收一个 `done`，只在成功的跟进中调用；`ConfirmWorkspaceMemberRemove` 不再自己关上。成员页的移出、离开和邀请的删除被拒绝时，确认框留着（原来关上；邀请的一行与成员的一行共用这个确认框，收尾找到）。离开的确认框的标题经 `t()`（`workspace_settings.settings.members.leave_title`）。
 
-**测试**：两个 hook 的 vitest 照新的 `done`（成功时调用、被拒绝时不调用、换账户之后不调用）；W11 的页面版本：访客从菜单离开（键盘：End、上、Enter 到达这一项），他的成员关系结束，页面去新建工作区；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着；W7：唯一的管理员在成员页离开被拒绝时确认框留着；W4：删除一个已被删除的邀请被拒绝时确认框留着。**W2（每个角色的挂载清单）**：菜单在管理员、唯一的管理员、成员、访客下都有这一项，首页的挂载清单不变，打开菜单不发请求（一次性的清单，附录 A.4；W7、W11 的页面版本看成员、唯一的管理员和访客）；W3（会话切换）：离开的跟进经 `followInSession`，hook 的 vitest 的"换账户之后"一行。
+**测试**：两个 hook 的 vitest 照新的 `done`（成功时调用、被拒绝时不调用、换账户之后不调用）；W11 的页面版本：访客从菜单离开（键盘：End、上、Enter 到达这一项；扣住离开的回答时双击"离开"只发出一次请求，确认框的取消不可用，Escape 关不掉它，变异 `T3.7`），他的成员关系结束，页面去新建工作区；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着；W7：唯一的管理员在成员页离开被拒绝时确认框留着；W4：删除一个已被删除的邀请被拒绝时确认框留着。**W2（每个角色的挂载清单）**：菜单在管理员、唯一的管理员、成员、访客下都有这一项，首页的挂载清单不变，打开菜单不发请求（一次性的清单，附录 A.4；W7、W11 的页面版本看成员、唯一的管理员和访客）；W3（会话切换）：离开的跟进经 `followInSession`，hook 的 vitest 的"换账户之后"一行。
 
 ### 2.8 M3 页面上的英文和角色名（Task 4、5、6、12、13）
 
@@ -186,7 +195,7 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 
 **角色名只有一个来源**（K2）：`ROLE_DETAILS[role].i18n_title`；`@nerve/utils` 的 `ROLE`、`getUserRole`（`permission/role.ts`、`permission/index.ts`）删除。工作区成员的一列、邀请的一行、项目成员的下拉、编辑器的提及卡片（`editor/embeds/mentions/user.tsx`）、工作区菜单都经它。
 
-**几处顺手的改动**：首页的问候原来由两个词拼成（"good"+"morning"），中文读作"早上 晚上"：改为每个时段一个键（`greeting.*`）；状态组的标题原来是小写的键（"backlog"），读屏读到的是键：改为组的名字（`STATE_GROUPS[g].i18n_label`，C9）；规模的选项和 general 页的规模经 `ORGANIZATION_SIZE_I18N_LABEL`（`@nerve/constants`）；两处装饰的图片 `alt=""`；忙时的"Leaving..."、"Joining..."改用共用的"Leaving"、"Joining"（W17）；"Delete Label" → "Delete label"；邀请页、新建工作区、新手引导的标题经 `PageHead`（布局的英文 `meta` 删除）；提示区域的名字由 Base UI 的英文"Notifications"改为经 `t()`（`@nerve/propel` 的 `Toast` 收 `label`，`app/provider.tsx` 的 `AppToast`）。
+**几处顺手的改动**：首页的问候原来由两个词拼成（"good"+"morning"，名字是英文语序的名和姓），中文的"good"也译作"早上"，读作"早上 下午""早上 晚上"：改为每个时段一个带 `{name}` 的键（"Good morning, {name}"、"早上好，{name}"），名字是显示名，与 Task 4 其余带名字的句子相同（S7，变异 `T4.13`）；已拒绝的邀请页的标题改为不对读者说话的一句（"This invitation was declined." / "这份邀请已被拒绝。"，负责人 2026-10-13，3.2 第 2 条；W5，变异 `T4.14`）；状态组的标题原来是小写的键（"backlog"），读屏读到的是键：改为组的名字（`STATE_GROUPS[g].i18n_label`，C9）；规模的选项和 general 页的规模经 `ORGANIZATION_SIZE_I18N_LABEL`（`@nerve/constants`）；两处装饰的图片 `alt=""`；忙时的"Leaving..."、"Joining..."改用共用的"Leaving"、"Joining"（W17）；"Delete Label" → "Delete label"；邀请页、新建工作区、新手引导的标题经 `PageHead`（布局的英文 `meta` 删除）；提示区域的名字由 Base UI 的英文"Notifications"改为经 `t()`（`@nerve/propel` 的 `Toast` 收 `label`，`app/provider.tsx` 的 `AppToast`）。
 
 **`AlertModalCore` 的按钮**：它的默认值是英文，`@nerve/ui` 不依赖 i18n（F8）。M3 的两个删除确认框（状态、标签）照 M2 的令牌确认框传经 `t()` 的文字；其余调用方在 M4–M8（第 3 节第 17 条）。
 
@@ -194,34 +203,34 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 
 **删除的**（W13）：`project/form-loader.tsx`（项目的包装层只在有项目时显示设置页，加载的分支走不到）、`project/settings/helper.tsx`（功能列表的开关包了一层，把每个开关都叫"Toggle project feature"，Task 13 直接用 `Switch` 并以功能为名）、两个只为 Plane 的英文写的键（`workspace_settings.token_not_copied` 等，2.10）、`@nerve/constants` 的一个没有读者的日期选项（2.10）。
 
-**测试**：新的故事 S7（`s7-chinese.spec.ts`，5 个页面测试，Task 4 起逐 Task 加或扩展）：语言是中文的管理员看工作区的首页、菜单、项目页、general 页和成员页和它们的弹窗（Task 4，之后的 Task 加侧边栏等）；项目的 general、成员、状态、标签页和它们的弹窗（Task 5、6）；邀请页（Task 6，`T6.16`）；筛选项目和成员（Task 12），同一个测试在 Task 13 加项目设置的标题、自定义范围和提示；新手引导的标题（Task 13）。vitest：改为读键的 6 个文件（`fake-i18n` 给键本身），新的 `project-dialog-texts.test.tsx`（加入、离开、移出的文字），`tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`、`card.test.tsx` 加的。改了英文说法的故事（P2、P3、P5）照新的说法（附录 A.8）。
+**测试**：新的故事 S7（`s7-chinese.spec.ts`，5 个页面测试，Task 4 起逐 Task 加或扩展）：语言是中文的管理员看工作区的首页、菜单、项目页、general 页和成员页和它们的弹窗（Task 4：问候带显示名，快捷键弹窗的名字和搜索框是中文；之后的 Task 加侧边栏等）；项目的 general、成员、状态、标签页和它们的弹窗（Task 5、6）；邀请页（Task 6，`T6.16`）；筛选项目和成员（Task 12），同一个测试在 Task 13 加项目设置的标题、自定义范围和提示；新手引导的标题（Task 13）。vitest：改为读键的 6 个文件（`fake-i18n` 给键本身），新的 `project-dialog-texts.test.tsx`（加入、离开、移出的文字）和 `switch-account-modal.test.tsx`（切换账户的那句话是一个键，邮箱在其中；Task 4），`tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`、`card.test.tsx` 加的。改了英文说法的故事（P2、P3、P5、W5）照新的说法（附录 A.8）。
 
 ### 2.9 名字和键盘（Task 7、8）
 
-**`IconButton` 的名字在根上必传**（K3b，P11 的教训"共用组件的毛病在根上改"）：propel 的 `IconButtonProps` 的 `"aria-label"` 是必传的 `string`，`tsc` 让每个调用方传它。应用中 36 处（Task 7 改 28 处：M2 1、M3 6、M4 8、M6 6、M7 6，另有表情回应的按钮；Task 8 的项目一行删去 1 处），都有经 `t()` 的名字。表情回应的按钮收 `aria-label`（提示显示它），`EmojiReactionGroup` 收 `addReactionLabel`。这让 M2、M4–M7 的 Plane 文件变长（第 3 节第 1 条）。
+**`IconButton` 的名字在根上必传**（K3b，P11 的教训"共用组件的毛病在根上改"）：propel 的 `IconButtonProps` 的 `"aria-label"` 是必传的 `string`，`tsc` 让每个调用方传它。应用中 36 处（Task 7 改 28 处：M2 1、M3 6、M4 8、M6 6、M7 6，另有表情回应的按钮；Task 8 的项目一行删去 1 处），都有经 `t()` 的名字。表情回应的按钮收 `aria-label`（提示显示它），`EmojiReactionGroup` 收 `addReactionLabel`；回应的列表以表情为 `key`（原来以下标：propel 的那条 `no-array-index-key` 没有了，`@nerve/propel` 的上限 11 → 10）。只为名字改到的 Plane 文件 25 个（M2、M4–M7 和应用侧边栏的展开按钮），其中 22 个变长（第 3 节第 1 条的裁定，附录 A.5）。
 
 **收尾的键盘清单**（P11 第 5 节，K3a–K3g，F4–F6）：
 
 - 颜色弹层（状态的表单、标签的行内表单）经新文件 `components/common/color-picker.tsx`：react-color 的 `TwitterPicker` 的输入框样式里 `outline` 改回浏览器的（`"revert"`），键盘取得焦点时有轮廓（P6 核对）。
 - 状态的表单打开时焦点在名称上（`setFocus("name")`，P6 核对）。
-- 侧边栏的项目列表："+"按钮 `opacity-0` 加 `group-hover`、`focus-visible` 时显示（原来 `hidden`，Tab 到不了）；项目一行的菜单改用 `CustomMenu` 的省略号按钮和 `menuButtonOnClick`（菜单的按钮里不再嵌一个 `IconButton`，一个停留点；原来的 `actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；拖动的手柄是 `span`，不是停留点；展开箭头 `tabIndex={-1}`（行自己的按钮做同一件事）。
-- 侧边栏渲染的两份（F4）：收起的主侧边栏、没有浮出的副本都 `inert`；从不设置的 `isHoveringTrigger` 状态和它的副作用删除（这个文件的一条 `exhaustive-deps` 没有了，web 的上限 302 → 301）。
+- 侧边栏的项目列表："+"按钮 `opacity-0` 加 `group-hover`、`focus-visible` 时显示（原来 `hidden`，Tab 到不了）；项目一行的菜单改用 `CustomMenu` 的省略号按钮和 `menuButtonOnClick`（菜单的按钮里不再嵌一个 `IconButton`，一个停留点；原来的 `actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；拖动的手柄是 `span`，不是停留点；展开箭头 `tabIndex={-1}`（行自己的按钮做同一件事）。行自己的按钮（`Disclosure.Button`）原来名为"Open project menu"，每一行都一样（F6）：删去它的 `aria-label`，名字是项目的名字（`Logo` 的图标 `aria-hidden`，K3g），展开箭头照旧名为打开、收起。P1、P2 中按名字找的项目卡片和页头的面包屑因此与侧边栏的一行同名，改在页面内容中找（`e2e/fixtures/project-pages.ts` 的 `pageContent`）。
+- 侧边栏渲染的两份（F4）：收起的主侧边栏、没有浮出的副本都 `inert`；从不设置的 `isHoveringTrigger` 状态和它的副作用删除（这个文件的一条 `exhaustive-deps` 没有了，web 的上限 301 → 300）。
 - 项目成员页一行的菜单：省略号按钮名为"Options"（`common.options`），键盘取得焦点时显示（`focus-visible:opacity-100`），菜单项经 `t()`。
 - 项目下拉框：停留点是它的按钮（`tabIndex` 给 `DropdownButton`，根不再可以聚焦；Headless UI 的 `ComboboxButton` 把自己设为 `tabIndex=-1`，所以里面的按钮才是停留点，与成员下拉框相同；vitest `dropdowns/project/base.test.tsx`）。
 - 侧边栏的展开、收起和工作区菜单的按钮的名字原来是没有定义的键（K9）：两种语言加上；`Logo` 的图标连字和表情 `aria-hidden`（K3g），不并进链接的名字。
 
-新的故事 S8（`s8-sidebar.spec.ts`）：副本隐藏时里面没有控件可到，收起时侧边栏没有；"+"和项目一行的菜单在 Tab 到达时显示、有焦点的标记，菜单是一个停留点；手柄不是停留点。Playwright 的 `getByRole` 不排除 `inert` 的元素，S8 用 `closest("[inert]")` 核对。
+新的故事 S8（`s8-sidebar.spec.ts`）：副本隐藏时里面没有控件可到，收起时侧边栏没有；"+"和项目一行的菜单在 Tab 到达时显示、有焦点的标记，菜单是一个停留点；项目的一行以项目为名（变异 `T8.13`）；手柄不是停留点。Playwright 的 `getByRole` 不排除 `inert` 的元素，S8 用 `closest("[inert]")` 核对。
 
 ### 2.10 共用的写法和文案的检查（Task 9）
 
 - **`showTooltip`**（K4）：`ButtonAvatars` 的 `showTooltip` 必传而没有读者，删除，10 处调用（9 个文件，M3–M7）。
-- **复制只经 hook**（K5）：`core/hooks/use-copy-link.ts` 里一个不导出的 `useCopy(write, titleKey)`，导出 `useCopyLink`（原有）和新的 `useCopyText`；API 令牌弹窗（`useCopyText`，成功的提示照旧是"Success!"）和命令面板的"复制当前页面的地址"（`useCopyLink`；它的 `useCallback` 和一条 `eslint-disable` 随之删除）经它们；两条专用的失败文案删除（共用的提示）。关键词规则 `copy-hook`：web 应用的 `app/`、`core/` 中 `copy(Text|Url)ToClipboard(` 或 `navigator.clipboard` 只在这个 hook 里；20 个有期限的例外（M4 10、M6 5、M7 4、M8 1，`until` 是各 M 的收尾，第 3 节第 5 条）；编辑器包不在范围内。
+- **复制只经 hook**（K5）：`core/hooks/use-copy-link.ts` 里一个不导出的 `useCopy(write, titleKey)`，导出 `useCopyLink`（原有）和新的 `useCopyText`；API 令牌弹窗（`useCopyText`，成功的提示照旧是"Success!"）和命令面板的"复制当前页面的地址"（`useCopyLink`；它的 `useCallback` 和一条 `eslint-disable` 随之删除）经它们；两条专用的失败文案删除（共用的提示）。关键词规则 `copy-hook`：web 应用的 `app/`、`core/` 中 `copy(Text|Url)ToClipboard(` 或 `navigator.clipboard` 只在这个 hook 里；20 个有期限的例外（M4 10、M6 5、M7 4、M8 1，`until` 是各 M 的收尾，第 3 节第 5 条：在那个 M 的收尾开始、规则文件的 `phase` 改为 `M<n>/closeout` 时到期，`tools/keywords.mjs` 的开头和 M1 设计 7.4 各加一句写明）；编辑器包不在范围内。
 - **问题码只经 `problemCode()`**（K6）：`core/lib/api-error.ts` 加 `problemCode(error)`，五处 `error instanceof ApiError && error.problem?.code` 改用它（vitest）。
 - **拒绝的文字只经一处**（K7）：`use-refusal-toast.ts` 导出 `useRefusalMessage`，`useRefusalToast` 和主题切换的 `setPromiseToast` 的失败一支都经它；关键词规则 `refusal-toast` 也看 `setPromiseToast(…errorMessageKey(` 的写法。
 - **`sign-out-toast`**（K8）：规则加上 `{ … signOut … } = useUser()` 和 `useUser().signOut` 两种写法。
 - **读了却没有定义的键**（K13）：新文件 `tools/i18n-keys.mjs`，进 `make lint-web`（和 knip 的入口）：web 应用的 `app/`、`core/` 与 `@nerve/constants`、`@nerve/types` 的源文件中 `t("…")`、`i18nKey`、`i18n_*` 的值和以已有顶层键开头的带点的字面量，每个在 en 中都有定义（模板的前缀只查前缀）；测试和替身不算。它在 `49190525` 上第一次运行就找到 K9 的四个键和 `@nerve/constants` 的 `filter.ts` 中一个没有读者、没有定义的 `date_filters.1_month_ago`（删除）。
 
-关键词规则的 `phase` 写 `M3/closeout`。A11 核对点击令牌复制到剪贴板并提示；S6 核对命令面板的复制。
+关键词规则的 `phase` 写 `M3/closeout`。M3 设计 7.10 的规则表原来只列 P8a、P8b 的规则：Task 9 补上 P9 的三条（`workspaces-list-fetch`、`refusal-toast`、`sign-out-toast`）、P10 的两条（`project-leave`、`project-address-route`）和 `copy-hook`，Task 11 补上 `workspace-address-route`，每个 Task 结束时表是全的。A11 核对点击令牌复制到剪贴板并提示；S6 核对命令面板的复制。
 
 ### 2.11 输入法和选择上的 Enter（Task 10）
 
@@ -234,7 +243,7 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 
 ### 2.12 工作区的地址（Task 11）
 
-M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`（K12）：新文件 `core/hooks/use-route-workspace.ts`（`useRouteWorkspace()`：路由的 slug 经调用方的工作区列表 `getWorkspaceBySlug` 找到，没有时 `null`；vitest）。改到的：首页、工作区设置的 general 和成员页、个人主页的页头和侧边栏、首页的没有项目、项目页的根、设置侧边栏的页头、工作区菜单、`workspace-details`（它自己的一处查找也是）；工作区级的权限判断写明 slug（`allowPermissions(…, WORKSPACE, slug)`）：扩展侧边栏、个人主页的页头和布局、应用的侧边栏、成员页两处、没有项目两处、卡片列表、项目页的页头、成员的列、`useMemberColumns`、`workspace-details`、项目列表、快捷操作。
+M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`（K12）：新文件 `core/hooks/use-route-workspace.ts`（`useRouteWorkspace()`：路由的 slug 经调用方的工作区列表 `getWorkspaceBySlug` 找到，没有时 `null`；vitest）。改到的：首页、工作区设置的 general 和成员页、个人主页的页头和侧边栏、首页的没有项目、项目页的根、设置侧边栏的页头、工作区菜单、`workspace-details`（它自己的一处查找也是）；工作区级的权限判断写明 slug（`allowPermissions(…, WORKSPACE, slug)`）：扩展侧边栏、个人主页的页头和布局、应用的侧边栏、成员页两处、没有项目两处、卡片列表、项目页的页头、成员的列、`useMemberColumns`、`workspace-details`、项目列表、快捷操作。项目页的根（`project/root.tsx`）的回调和副作用写全依赖（第 3 节第 2 条的裁定：副作用照旧只在挂载和换工作区时运行），web 的上限 300 → 298。
 
 关键词规则 `workspace-address-route`（与项目一侧的 `project-address-route` 同一个写法）：这 19 个文件中没有 `currentWorkspace`，没有两个参数的 `WORKSPACE` 级 `allowPermissions`。M4 4 个、M7 8 个、M8 3 个文件同样只读工作区，交给它们（交接写明文件），对接时加进这条规则的范围（第 3 节第 10 条）。stores 里读 router store 的 getter 照旧（F16）：它们是读者的派生，页面的地址经路由参数，与 P10 对项目一侧的结论相同。
 
@@ -251,7 +260,7 @@ M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWor
 
 ### 2.14 交接和上级文档（Task 15、16）
 
-- **Task 15**：2.1 的 6 份交接写结论、关闭；M4–M8 的 5 份 `handoffs/M3-closeout.md`（第 4 节）；M4–M8 的 5 份 `M1-closeout.md` 写 `always-return` 已清零；M4、M6、M7 的 `M2-closeout.md` 的复制一节改经 hook；M3 设计 13.2 的接收者一格链接到交接文件，表前加一句。
+- **Task 15**：2.1 的 6 份交接写结论、关闭；M4–M8 的 5 份 `handoffs/M3-closeout.md`（第 4 节）；M4–M8 的 5 份 `M1-closeout.md` 写 `always-return` 已清零；M4、M6、M7 的 `M2-closeout.md` 的复制一节改经 hook；M3 设计 13.2 的接收者一格链接到交接文件，表前加一句；M1 收尾交接的处理结果写上限的数（web 303 → 295、ui 15 → 12、propel 11 → 10）和仍有警告的 5 个文件的接收者。M4–M8 的交接另写（第 3 节第 2、5 条的裁定，2.6）：oxlint 留下的 5 个文件（M4 第 8 节 2 个、M6 第 4 节 1 个、M7 第 4 节 1 个、M8 第 4 节 `top-nav-power-k.tsx` 的 4 条）；关键词守卫的 `phase`（收尾开始时改为 `M<n>/closeout`，每个 Phase 开始时改为 `M<n>/P<k>`；M4 第 8 节、M6 第 4 节、M7 第 4 节、M8 第 1 节）；M4 第 7 节写 M4 页面上 `z-50` 及以上的元素和层叠的规则，M8 第 2 节的发布核对加全应用的层叠顺序，第 3 节写命令面板自己的文字。
 - **Task 16**：README（"部署"加数据库的 locale，2.2 的两处"页面：P9"）；差异清单第四节邀请链接一行；M3 设计 5.1 写裁定 B1（契约按模块一个文件：`project.yaml` 1,348 行是写明的例外，由文件名得出模块的约定在 `Makefile` 和 `apitest`；K25）；前端改动清单：3.1 的 M3 一行写收尾，输入法一行（Safari 现在也拦得住）、P11 的键盘一行（36 处 `IconButton`、侧边栏的三处、成员页的菜单）照收尾之后的事实，3.2 加 7 行"完成于 M3/收尾"（附录 A.8）。
 
 两个 Task 只改文档，没有变异；各跑 plan 的一次性脚本 `doclinks.py`：它改的文档中每个相对链接都指向存在的文件。收尾在这些文档中加的行里的路径（完整的和简写的）由原型另外核对，都找得到（附录 A.4）。
@@ -272,7 +281,7 @@ M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWor
 | 8 | 13.1 关闭、6 份交接 `closed`、13.2 的交接 | `grep -l -E '^status: (open|done)$' docs/v0/M3-workspace-project/handoffs/*.md` 没有输出；M4–M8 各有 `handoffs/M3-closeout.md`，13.2 的五行链接到它们（Task 15） |
 | 9 | 3.20、差异清单、README | 2.2、2.3；README 的 8.7 各条和 locale 一条（Task 16） |
 | 10 | C1–C10 写进各 Phase 的评审 | P9 评审（C1–C5）、P10 评审（C6–C8）、P11 评审（C9、C10）的第 2 节；C11、C12 是收尾的（9.7，Task 0） |
-| 11 | `domains.mjs --rows M3`；oxlint 上限 | 225 行，产品代码 54 行和误归的 41 行逐行有出处（附录 A.5）；上限 web 298、ui 12、propel 11、utils 7、constants 1 |
+| 11 | `domains.mjs --rows M3`；oxlint 上限 | 225 行，产品代码 54 行和误归的 41 行逐行有出处（附录 A.5）；上限 web 295、ui 12、propel 10、utils 7、constants 1 |
 | 12 | M3 的页面挂载时没有旧接口、没有无权的请求 | 附录 A.7 的页面与故事的表：每一页有一个 `watchPage` 的故事，断言旧接口请求、失败的请求、页面错误为空（S2 的四个角色另断言请求的清单） |
 | 13 | `await` 之后的跳转、提示先核对会话 | `make test-web`：每个修改的 hook 的 vitest 中"换账户之后兑现"的一行（P9–P11 的 `lateSettlings`；收尾的离开经 `followInSession`，2.7）；`make e2e`：W3 的会话切换 |
 | 14 | 规模的对比 | 附录 A.6 |
@@ -288,38 +297,43 @@ M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWor
 
 ---
 
-## 3. 与设计的差异和建议（请控制者裁定）
+## 3. 与设计的差异和建议（控制者已裁定，2026-10-13）
 
-每一条写明事实、建议和理由，以及不照建议时的退路。第 1–3 条是规则的偏离，第 4–16 条是文档写着"收尾决定"的建议，第 17–22 条是交给 M4–M8 的决定和收尾自己的取舍。
+每一条写明事实、建议和理由，以及不照建议时的退路。第 1–3 条是规则的偏离，第 4–16 条是文档写着"收尾决定"的建议，第 17–22 条是交给 M4–M8 的决定和收尾自己的取舍。控制者 2026-10-13 的裁定（`$M3TMP/closeout-architect-rulings.md`）写在每条之后，预检（`$M3TMP/closeout-preflight/preflight.md`）对裁定的补充一并写进。
 
-1. **`IconButton` 的名字必传让 21 个别的 M 的 Plane 文件变长**（规则的偏离：只为使用方改到的 Plane 文件不变长）。Task 7 把 propel 的 `IconButton` 的 `aria-label` 改为必传（第 4 条），`tsc` 让每个调用方给名字。设置的 2 个（个人设置的弹窗 59 → 67，M2；工作区和个人设置共用的移动导航 55 → 56）、M4 的 10 个（评论的卡片 179 → 186、描述的版本弹窗 186 → 193、活动的排序 22 → 31 等）、M6 的 6 个、M7 的 3 个 Plane 文件共多 83 行：每个加经 `t()` 的名字，多数还要 `useTranslation` 的导入和取 `t` 的一行，oxfmt 把带名字的元素拆成多行（附录 A.5 逐个列出）。**建议：接受。** 名字是这些文件自己的行为（读屏原来读不到这些按钮），在根上改是 P11 的教训（共用组件的毛病在根上改），在每个 M 各补一遍就是同一个规则的几份实现，而新加的 `IconButton` 没有名字时 `tsc` 就拦住。**退路**：`aria-label` 留为可选，只给 M2、M3 的 7 处名字，其余 21 处写进各 M 的交接，再加一条关键词规则看住"没有名字的 `IconButton`"，例外带各 M 的期限。
-2. **收尾改到的 8 个文件仍有 oxlint 警告**（规则的偏离：手改的文件结束时 0 条）。手改的 4 个：`navigation/top-nav-power-k.tsx`（Task 4 只改搜索的占位；4 条：两条 `exhaustive-deps`、可点击的 `div` 的 `click-events-have-key-events`、`prefer-tag-over-role`）、`power-k/ui/modal/shortcuts-root.tsx`（Task 2；2 → 1 条，剩搜索框的 `no-autofocus`）、`project/root.tsx`（Task 11 只改读工作区的三行；2 条 `exhaustive-deps`）、`@nerve/propel` 的 `emoji-reaction.tsx`（Task 7 加 `aria-label`；1 条 `no-array-index-key`）。只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个：`description-versions/modal.tsx`（1 条 `tabindex-no-positive`，M4 的 `getTabIndex`）、`activity-filter.tsx`（2 条，可点击的 `div`）、`module-card-item.tsx`（5 条，P11 已交给 M6）、通知的筛选菜单（1 条 `no-map-spread`）。**建议**：后 4 个照 P11 的裁定 Q6 看待（同一个规则下改到的调用方，修它们会改 M4–M7 页面的 DOM 和副作用的时机，而无从核对），写进 M4、M6、M7 的交接（评审的提交加一行）；前 4 个在收尾的修复轮改掉：`project/root.tsx` 的两个副作用补上依赖（`isArchived`、`updateDisplayFilters`；它是 M3 的项目页，P4、S7 看着），快捷键的搜索框照 Task 12 的项目筛选写明 `autoFocus` 的理由（`oxlint-disable-next-line` 加理由），`emoji-reaction.tsx` 以表情为 key；`top-nav-power-k.tsx` 的四条改的是每个页面的页头（可点击的 `div` 改按钮改 DOM 和样式），交给 M8 的可访问性一节，与页头的帮助菜单、账户菜单一起改。**退路**：全部 8 个交给各自的 M（附录 A.5 的清单照抄进交接）。
-3. **Task 的切分：16 个**（brief 的上限是约 16 个、每个约 1,500 行）。原型原来是 15 个 Task；写计划时第 12 个（收尾的扫描找到的英文）量出 1,733 行块，加上说明会超过约 1,500 行，所以在原型中把它分成两个：Task 12（项目列表页、侧边栏、标签栏的英文）和 Task 13（项目设置的标题、功能的开关、自动归档、没有项目的设置页、新建工作区和新手引导的标题、提示的区域），各自的树都跑过门禁（附录 A.1）。之后的 Task 依次后移。最长的 Task 14 是 1,361 行（附录 A.9）。**建议：接受**（P11 第 3 节第 1 条的先例）。
-4. **K3b：`IconButton` 的名字在根上必传**（P11 第 5 节写"收尾决定"）。见第 1 条。另有两处随之：表情回应的按钮收 `aria-label`（提示显示它），图标的连字和表情 `aria-hidden`（K3g）。**建议：接受**（Task 7）。
-5. **K5：`copy-hook` 规则现在就加，带 20 个有期限的例外**。复制只经 `useCopyLink`、`useCopyText`；M4 10 个、M6 5 个、M7 4 个、M8 1 个文件还自己复制，各是 `until: "M4/closeout"` 等的例外（不是"M4"：已有的例外写 M 的名字，在那个 M 开始时到期；这一条要在各 M 的收尾之前改完）。**建议：接受**（Task 9）；**退路**：规则等最后一个 M 改完再加，交接写明。
-6. **K7：拒绝的文字只有一处**。主题切换的 `setPromiseToast` 的失败一支改经 `useRefusalMessage`，`refusal-toast` 规则也看这种写法。**建议：接受**（Task 9）。
-7. **K8：`sign-out-toast` 规则的第二个写法**。加上解构和直接取 `signOut` 的两种。**建议：接受**（Task 9）。
-8. **K10：组字的判断只有一个，含 `keyCode` 229**。`@nerve/utils` 的 `isComposing`，`@nerve/ui`、`@nerve/propel`、web 的 9 处守卫都经它；`@nerve/propel` 因此依赖 `@nerve/utils`（工作区内的依赖，`pnpm-lock.yaml` 多 3 行，不是新的 npm 包）。M4 的 Enter 守卫在静态上跟着变（同一个判断）。**建议：接受**（Task 10）。**退路**：各包各写一份判断（三份同一个规则）。
-9. **K11：`CustomSelect` 上按 Enter 打开列表，不提交表单**。**建议：接受**（Task 10；W17）。
-10. **K12：只读工作区的地址经路由**。M3 的 19 个文件改用 `useRouteWorkspace()`，新的关键词规则 `workspace-address-route` 看住它们；M4 4 个、M7 8 个、M8 3 个文件交给它们（交接写明文件和"对接时加进规则的范围"）；stores 的 router getter 不改（F16）。**建议：接受**（Task 11）。
-11. **K13：文案的常驻检查只做"读了却没有定义"**。`tools/i18n-keys.mjs` 进 `make lint-web`（它找到的一类正是 K9 的缺陷，不需要基线）。"没有读者的键"按完整的键路径：原型量出 en 的 1,330 个键中 73 个（`49190525`）、80 个（收尾之后：多的 7 个经模板读，如 `greeting.*`）没有一个源文件写出全名，其中 57 个是命令面板的模板读的；做成常驻检查要先给这 80 个一个白名单，而 `i18norphans.py` 逐 Phase 的核对（收尾之前之后没有新的孤儿键）已够。**建议：接受，不加没有读者的常驻检查**；`deadsym` 照旧是一次性的工具。
-12. **K20：嵌入的文件的 `ETag` 交给 M8**。它是 Go 的改动，有没有用要在发布的性能核对时量（每个标签页一次 HEAD 和一次下载）。**建议：交给 M8**（交接第 5 节）。**退路**：收尾加一个小的 Go Task（`webui` 的处理和它的测试）。
-13. **K21：`@nerve/ui` 下拉框的 `any` 交给 M4**。改成泛型要改 13 个调用方，多数在 M4–M7 的页面上，那里的故事还没有。**建议：交给 M4**（交接第 8 节）。
-14. **K22：`projectMemberIds` 的 getter 交给 M4、M7**，最后改完读者的那一个删除它。**建议：接受**（M4 第 8 节、M7 第 4 节）。
-15. **K24：契约中说到工作项的五句只改说明的文字**（brief："收尾不改契约，除非某一项证明需要"）。P7a 的裁定 A1 要扫一遍：`project.yaml` 的五个字段的说明原来说"工作项会怎样"（M4 才有工作项），改为说 nerve 对字段做什么。形状、码、操作都不变，`api/dist/openapi.yaml`、`schema.gen.ts`、项目模块的 `server.gen.go` 随 `make gen` 变（计划钉住 SHA-256），`make gen-check` 没有差异。**建议：接受**（Task 14）。
-16. **K28：Firefox、Safari 中的焦点**。收尾的弹窗和离开的入口在 C11、C12 中由控制者在 WebKit 和 Firefox 中各看一遍（9.7 的两行写明）；其余页面交给 M8 的发布核对（交接第 4 节）。原型中只有 Chromium：Safari 的组字顺序由合成的事件核对（2.11）。**建议：接受**。
-17. **`AlertModalCore` 的英文默认值交给 M8**（F8）。`@nerve/ui` 不依赖 i18n；M2、M3 的三个确认框传经 `t()` 的文字，M4–M7 的调用方由各 M 照做（交接写明），最后一个改完之后把这几个 prop 改为必传、删去默认值（M8 的交接第 3 节）。**建议：接受**。**退路**：现在就改为必传，M4–M7 的 9 个调用方传经 `t()` 的文字（它们的 Plane 文件变长，同第 1 条）。
-18. **日期的本地化交给 M8**（F9）。首页的日期、日期筛选、自定义日期的标签都按英文格式化，是全应用的一个决定。**建议：交给 M8**（交接第 3 节）。
-19. **页面上的其余可访问性交给各 M**：Base UI 的 `Toast.Close` Tab 能到、读屏读不到（F7，M8）；页头的帮助菜单、账户菜单的按钮里有按钮（F11，M8）；通知链接没有名字、提示是英文（F11，M7）；筛选的共用件的展开按钮和选中状态（F12，M4）；嵌套在菜单按钮里的 8 个 `IconButton`（F5，M4、M6、M7）；命令面板打开之后约 200 毫秒之内的输入被清空（F10，M8）。**建议：接受**（各交接写明文件和改法）。
-20. **`project/dropdowns/filters/root.tsx` 的 `autoFocus` 写明理由留着**（Task 12）：下拉框打开时焦点在它的搜索框上，像组合框那样；这一条 `jsx-a11y/no-autofocus` 用 `oxlint-disable-next-line` 加理由（删除的 `lead.tsx` 带走了同样的一条，抑制的总数 181 → 180，附录 A.5）。**建议：接受**。**退路**：去掉 `autoFocus`（打开筛选之后要再按一次 Tab 才到搜索框）。
-21. **README 现在写数据库的 `LC_CTYPE`**（K26）。P7b 的 spec 说由收尾写进部署说明，P7b 的评审把发布前的核对交给 M8；收尾写一条（Task 16），M8 照发布的部署文件核对。**建议：接受**。
-22. **不做的**：K27（P7b 起每个复现都跑 gen-same）；K29（P11 的评审写明不算发现）；F14（`content` 表头只是表格的数据）；F2、F3（行为与原来相同，C11 看一遍）。**建议：接受**。
+1. **`IconButton` 的名字必传让 25 个只为使用方改到的 Plane 文件改动，其中 22 个变长**（规则的偏离：只为使用方改到的 Plane 文件不变长）。Task 7 把 propel 的 `IconButton` 的 `aria-label` 改为必传（第 4 条），`tsc` 让每个调用方给名字。设置的 2 个（个人设置的弹窗 59 → 67，M2；工作区和个人设置共用的移动导航 55 → 56，Task 2 的层级另加一行注释，那是收尾的对象，2.6）、M4 的 10 个（评论的卡片 179 → 186、描述的版本弹窗 186 → 193、活动的排序 22 → 31 等）、M6 的 6 个、M7 的 3 个 Plane 文件和应用侧边栏的展开按钮（`sidebar/sidebar-toggle-button.tsx` 28 → 31：原来记在收尾的对象里，预检指出它也只为名字改到）共多 86 行；另 3 个同样只加名字而不变长（M4 的 `activity-filter.tsx`，M7 的通知的筛选菜单和页头选项的一项）。每个只加经 `t()` 的名字（`aria-label`；评论和工作项的回应另传 `addReactionLabel`，评论卡片的 `EmojiReactionButton` 收 `aria-label`），多数还要 `useTranslation` 的导入和取 `t` 的一行，oxfmt 把带名字的元素拆成多行（附录 A.5 逐个列出）。**建议：接受。** 名字是这些文件自己的行为（读屏原来读不到这些按钮），在根上改是 P11 的教训（共用组件的毛病在根上改），在每个 M 各补一遍就是同一个规则的几份实现，而新加的 `IconButton` 没有名字时 `tsc` 就拦住。**退路**：`aria-label` 留为可选，只给 M2、M3 的 7 处名字，其余 21 处写进各 M 的交接，再加一条关键词规则看住"没有名字的 `IconButton`"，例外带各 M 的期限。 **裁定：接受**（控制者 2026-10-13：在根上改共用组件是 P10、P11 立下的做法，退路是同一个规则在每个 M 各写一份再加守卫；条件是每个使用方的差异只加名字、`useTranslation` 的导入、`t` 的一行和 oxfmt 对那个元素的重排，预检逐个文件核对过 25 个；附录 A.5 记为写明的例外，列出 25 个文件和理由）。
+2. **收尾改到的 8 个文件仍有 oxlint 警告**（规则的偏离：手改的文件结束时 0 条）。手改的 4 个：`navigation/top-nav-power-k.tsx`（Task 4 只改搜索的占位；4 条：两条 `exhaustive-deps`、可点击的 `div` 的 `click-events-have-key-events`、`prefer-tag-over-role`）、`power-k/ui/modal/shortcuts-root.tsx`（Task 2；2 → 1 条，剩搜索框的 `no-autofocus`）、`project/root.tsx`（Task 11 只改读工作区的三行；2 条 `exhaustive-deps`）、`@nerve/propel` 的 `emoji-reaction.tsx`（Task 7 加 `aria-label`；1 条 `no-array-index-key`）。只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个：`description-versions/modal.tsx`（1 条 `tabindex-no-positive`，M4 的 `getTabIndex`）、`activity-filter.tsx`（2 条，可点击的 `div`）、`module-card-item.tsx`（5 条，P11 已交给 M6）、通知的筛选菜单（1 条 `no-map-spread`）。**建议**：后 4 个照 P11 的裁定 Q6 看待（同一个规则下改到的调用方，修它们会改 M4–M7 页面的 DOM 和副作用的时机，而无从核对），写进 M4、M6、M7 的交接（评审的提交加一行）；前 4 个在收尾的修复轮改掉：`project/root.tsx` 的两个副作用补上依赖（`isArchived`、`updateDisplayFilters`；它是 M3 的项目页，P4、S7 看着），快捷键的搜索框照 Task 12 的项目筛选写明 `autoFocus` 的理由（`oxlint-disable-next-line` 加理由），`emoji-reaction.tsx` 以表情为 key；`top-nav-power-k.tsx` 的四条改的是每个页面的页头（可点击的 `div` 改按钮改 DOM 和样式），交给 M8 的可访问性一节，与页头的帮助菜单、账户菜单一起改。**退路**：全部 8 个交给各自的 M（附录 A.5 的清单照抄进交接）。**裁定**（控制者 2026-10-13）：照建议，时间改为现在：手改的 3 个在修订中改掉，不留给修复轮（修复轮是给评审的发现的，计划写的文件里已知的警告是计划的事）；其余 5 个现在就写进交接。
+   - `project/root.tsx`（Task 11）写全依赖：回调 `[clearAllFilters, clearAllAppliedDisplayFilters, isArchived, updateDisplayFilters, workspaceSlug]`，副作用 `[isArchived, updateDisplayFilters, workspaceSlug]`（原来是 `[pathname]`）。裁定的条件是说明依赖变时副作用做什么，预检的分析：`updateDisplayFilters` 是 `project_filter.store.ts` 的箭头字段，构造时经 `makeObservable` 包一次，引用不变；`ProjectRoot` 在项目列表和归档两个布局下各自挂载，归档的切换是一次跳转（卸载一个、挂载另一个），一次挂载之中 `isArchived` 不变，`pathname` 只随 slug 变。所以副作用照旧在挂载和换工作区时运行，不多取数、不多写 store；回调的依赖只改它的身份，并去掉一个陈旧的 `isArchived`。P4 的归档路径（列表 → 归档 → 恢复 → 列表）和 S7 的归档页看着它；行为不变，没有 W17 的行。web 的上限 300 → 298。
+   - 快捷键的搜索框（Task 2）：`autoFocus` 照 Task 12 的项目筛选写明理由（`oxlint-disable-next-line`），抑制随之多一条（第 20 条）。
+   - `emoji-reaction.tsx`（Task 7）以表情为 key，`@nerve/propel` 的上限 11 → 10。
+   - 交出的 5 个由 Task 15 写进交接（不是评审的提交）：`description-versions/modal.tsx`、`activity-filter.tsx` 给 M4（第 8 节），`module-card-item.tsx` 在 M6（第 4 节，P11 已交给它），通知的筛选菜单给 M7（第 4 节），`top-nav-power-k.tsx` 给 M8（第 4 节：四条警告，与页头的帮助菜单、账户菜单一起改）。
+   - 上限：web 303 → 301（Task 2）→ 300（Task 8）→ 298（Task 11）→ 295（Task 12），`@nerve/ui` 15 → 14（Task 1）→ 12（Task 10），`@nerve/propel` 11 → 10（Task 7）。
+3. **Task 的切分：16 个**（brief 的上限是约 16 个、每个约 1,500 行）。原型原来是 15 个 Task；写计划时第 12 个（收尾的扫描找到的英文）量出 1,733 行块，加上说明会超过约 1,500 行，所以在原型中把它分成两个：Task 12（项目列表页、侧边栏、标签栏的英文）和 Task 13（项目设置的标题、功能的开关、自动归档、没有项目的设置页、新建工作区和新手引导的标题、提示的区域），各自的树都跑过门禁（附录 A.1）。之后的 Task 依次后移。最长的 Task 14 是 1,361 行（附录 A.9）。**建议：接受**（P11 第 3 节第 1 条的先例）。 **裁定：接受**（在上限上，不超过；P11 第 3 节第 1 条的先例）。
+4. **K3b：`IconButton` 的名字在根上必传**（P11 第 5 节写"收尾决定"）。见第 1 条。另有两处随之：表情回应的按钮收 `aria-label`（提示显示它），图标的连字和表情 `aria-hidden`（K3g）。**建议：接受**（Task 7）。 **裁定：接受。**
+5. **K5：`copy-hook` 规则现在就加，带 20 个有期限的例外**。复制只经 `useCopyLink`、`useCopyText`；M4 10 个、M6 5 个、M7 4 个、M8 1 个文件还自己复制，各是 `until: "M4/closeout"` 等的例外（不是"M4"：已有的例外写 M 的名字，在那个 M 开始时到期；这一条要在各 M 的收尾之前改完）。**建议：接受**（Task 9）；**退路**：规则等最后一个 M 改完再加，交接写明。 **裁定：接受**，条件是守卫的说明在加第一个这种例外的 Task 里写明这种写法和何时到期，接收的 M 的交接写明例外的文件和到期的时刻。Task 9 在 `tools/keywords.mjs` 的开头和 M1 设计 7.4 各加一句：`until` 为 `M<n>/closeout` 的例外在规则文件的 `phase` 改为 `M<n>/closeout` 时到期，每个 M 的收尾开始时改它（每个 Phase 开始时改为 `M<n>/P<k>`）。这句话要防的陷阱：M3 的 P1–P11 中 `phase` 一直是 `M2/closeout`，Task 9 才改为 `M3/closeout`，不改 `phase` 的 M 的例外不会到期。M4 第 8 节、M6 第 4 节、M7 第 4 节、M8 第 1 节写明各自的例外的文件、"收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M<n>/closeout`"和"每个 Phase 开始时改为 `M<n>/P<k>`"（Task 15）；M3 设计 7.10 的规则表补全（2.10）。
+6. **K7：拒绝的文字只有一处**。主题切换的 `setPromiseToast` 的失败一支改经 `useRefusalMessage`，`refusal-toast` 规则也看这种写法。**建议：接受**（Task 9）。 **裁定：接受。**
+7. **K8：`sign-out-toast` 规则的第二个写法**。加上解构和直接取 `signOut` 的两种。**建议：接受**（Task 9）。 **裁定：接受。**
+8. **K10：组字的判断只有一个，含 `keyCode` 229**。`@nerve/utils` 的 `isComposing`，`@nerve/ui`、`@nerve/propel`、web 的 9 处守卫都经它；`@nerve/propel` 因此依赖 `@nerve/utils`（工作区内的依赖，`pnpm-lock.yaml` 多 3 行，不是新的 npm 包）。M4 的 Enter 守卫在静态上跟着变（同一个判断）。**建议：接受**（Task 10）。**退路**：各包各写一份判断（三份同一个规则）。 **裁定：接受。**
+9. **K11：`CustomSelect` 上按 Enter 打开列表，不提交表单**。**建议：接受**（Task 10；W17）。 **裁定：接受。**
+10. **K12：只读工作区的地址经路由**。M3 的 19 个文件改用 `useRouteWorkspace()`，新的关键词规则 `workspace-address-route` 看住它们；M4 4 个、M7 8 个、M8 3 个文件交给它们（交接写明文件和"对接时加进规则的范围"）；stores 的 router getter 不改（F16）。**建议：接受**（Task 11）。 **裁定：接受**（交接写明每个文件和"对接时加进规则的范围"）。
+11. **K13：文案的常驻检查只做"读了却没有定义"**。`tools/i18n-keys.mjs` 进 `make lint-web`（它找到的一类正是 K9 的缺陷，不需要基线）。"没有读者的键"按完整的键路径：原型量出 en 的 1,330 个键中 73 个（`49190525`）、80 个（收尾之后：多的 7 个经模板读，如 `greeting.*`）没有一个源文件写出全名，其中 57 个是命令面板的模板读的；做成常驻检查要先给这 80 个一个白名单，而 `i18norphans.py` 逐 Phase 的核对（收尾之前之后没有新的孤儿键）已够。**建议：接受，不加没有读者的常驻检查**；`deadsym` 照旧是一次性的工具。 **裁定：接受。**
+12. **K20：嵌入的文件的 `ETag` 交给 M8**。它是 Go 的改动，有没有用要在发布的性能核对时量（每个标签页一次 HEAD 和一次下载）。**建议：交给 M8**（交接第 5 节）。**退路**：收尾加一个小的 Go Task（`webui` 的处理和它的测试）。 **裁定：交给 M8**（要在发布的性能核对时量，那里是它的去处）。
+13. **K21：`@nerve/ui` 下拉框的 `any` 交给 M4**。改成泛型要改 13 个调用方，多数在 M4–M7 的页面上，那里的故事还没有。**建议：交给 M4**（交接第 8 节）。 **裁定：接受。**
+14. **K22：`projectMemberIds` 的 getter 交给 M4、M7**，最后改完读者的那一个删除它。**建议：接受**（M4 第 8 节、M7 第 4 节）。 **裁定：接受。**
+15. **K24：契约中说到工作项的五句只改说明的文字**（brief："收尾不改契约，除非某一项证明需要"）。P7a 的裁定 A1 要扫一遍：`project.yaml` 的五个字段的说明原来说"工作项会怎样"（M4 才有工作项），改为说 nerve 对字段做什么。形状、码、操作都不变，`api/dist/openapi.yaml`、`schema.gen.ts`、项目模块的 `server.gen.go` 随 `make gen` 变（计划钉住 SHA-256），`make gen-check` 没有差异。**建议：接受**（Task 14）。 **裁定：接受。**
+16. **K28：Firefox、Safari 中的焦点**。收尾的弹窗和离开的入口在 C11、C12 中由控制者在 WebKit 和 Firefox 中各看一遍（9.7 的两行写明）；其余页面交给 M8 的发布核对（交接第 4 节）。原型中只有 Chromium：Safari 的组字顺序由合成的事件核对（2.11）。**建议：接受**。 **裁定：接受。**
+17. **`AlertModalCore` 的英文默认值交给 M8**（F8）。`@nerve/ui` 不依赖 i18n；M2、M3 的三个确认框传经 `t()` 的文字，M4–M7 的调用方由各 M 照做（交接写明），最后一个改完之后把这几个 prop 改为必传、删去默认值（M8 的交接第 3 节）。**建议：接受**。**退路**：现在就改为必传，M4–M7 的 9 个调用方传经 `t()` 的文字（它们的 Plane 文件变长，同第 1 条）。 **裁定：接受**（退路要多改 9 个 Plane 文件，而它们的文字 M4–M7 对接时会重写）。
+18. **日期的本地化交给 M8**（F9）。首页的日期、日期筛选、自定义日期的标签都按英文格式化，是全应用的一个决定。**建议：交给 M8**（交接第 3 节）。 **裁定：接受。**
+19. **页面上的其余可访问性交给各 M**：Base UI 的 `Toast.Close` Tab 能到、读屏读不到（F7，M8）；页头的帮助菜单、账户菜单的按钮里有按钮（F11，M8）；通知链接没有名字、提示是英文（F11，M7）；筛选的共用件的展开按钮和选中状态（F12，M4）；嵌套在菜单按钮里的 8 个 `IconButton`（F5，M4、M6、M7）；命令面板打开之后约 200 毫秒之内的输入被清空（F10，M8）。**建议：接受**（各交接写明文件和改法）。 **裁定：接受。**
+20. **`project/dropdowns/filters/root.tsx` 的 `autoFocus` 写明理由留着**（Task 12）：下拉框打开时焦点在它的搜索框上，像组合框那样；这一条 `jsx-a11y/no-autofocus` 用 `oxlint-disable-next-line` 加理由（删除的 `lead.tsx` 带走了同样的一条；快捷键的搜索框照它多一条（第 2 条的裁定），命令面板的一条 `eslint-disable` 随 Task 9 删除，抑制的总数照旧 181，附录 A.4）。**建议：接受**。**退路**：去掉 `autoFocus`（打开筛选之后要再按一次 Tab 才到搜索框）。 **裁定：接受**（组合框的写法）；快捷键的搜索框照它（第 2 条的裁定）。
+21. **README 现在写数据库的 `LC_CTYPE`**（K26）。P7b 的 spec 说由收尾写进部署说明，P7b 的评审把发布前的核对交给 M8；收尾写一条（Task 16），M8 照发布的部署文件核对。**建议：接受**。 **裁定：接受。**
+22. **不做的**：K27（P7b 起每个复现都跑 gen-same）；K29（P11 的评审写明不算发现）；F14（`content` 表头只是表格的数据）；F2、F3（行为与原来相同，C11 看一遍）。**建议：接受**。 **裁定：接受。**
 
-### 3.2 给负责人的
+### 3.2 给负责人的（负责人 2026-10-13 已答，三条都照控制者的建议）
 
-1. **`Workspace.organization_size` 收紧到数据库的取值**（K23；P8a 修复轮的搁置 P11）：数据库的 CHECK 只收前端的六个选项，契约是任意字符串；收紧是契约的改动（响应引用一个 `OrganizationSize` 的枚举）。收尾不改契约，交给下一个改 `workspace.yaml` 的 M（M5 的交接第 2 节，它改工作区的图标）。请负责人确认这个去处，或另定。
-2. **已拒绝的邀请链接对谁都说"You declined this invitation."**（K30；P9 的浏览器核对）：任何打开这个链接的人（不只是被邀请的人）都看到"你已拒绝"。nerve 的回答只说邀请已被拒绝，不说是谁打开的；页面的说法是产品问题（例如"这个邀请已被拒绝"）。收尾不改。
-3. **默认状态的名称是英文的数据**（F15）：新项目的六个默认状态（Backlog、Todo、In Progress、Done、Cancelled 和分诊用的 Triage，`project/domain/state.go` 的 `DefaultStates`）由 nerve 以英文写进数据库，中文的用户看到英文的状态名。要不要按建项目的人的语言起名是产品问题。收尾不改。
+1. **`Workspace.organization_size` 收紧到数据库的取值**（K23；P8a 修复轮的搁置 P11）：数据库的 CHECK 只收前端的六个选项，契约是任意字符串；收紧是契约的改动（响应引用一个 `OrganizationSize` 的枚举）。收尾不改契约，交给下一个改 `workspace.yaml` 的 M（M5 的交接第 2 节，它改工作区的图标）。请负责人确认这个去处，或另定。**负责人 2026-10-13：确认交给 M5**，M5 的交接第 2 节照旧。
+2. **已拒绝的邀请链接对谁都说"You declined this invitation."**（K30；P9 的浏览器核对）：任何打开这个链接的人（不只是被邀请的人）都看到"你已拒绝"。nerve 的回答只说邀请已被拒绝，不说是谁打开的；页面的说法是产品问题（例如"这个邀请已被拒绝"）。**负责人 2026-10-13：改为不对读者说话的一句，收尾做。** `workspace_invitation.declined.title` 两种语言改为"This invitation was declined." / "这份邀请已被拒绝。"（Task 4，邀请页的英文在它里面；W5 照新的说法，变异 `T4.14`），说明的一句不变；W17 的一行（附录 A.8）和前端改动清单的收尾一行写明。
+3. **默认状态的名称是英文的数据**（F15）：新项目的六个默认状态（Backlog、Todo、In Progress、Done、Cancelled 和分诊用的 Triage，`project/domain/state.go` 的 `DefaultStates`）由 nerve 以英文写进数据库，中文的用户看到英文的状态名。要不要按建项目的人的语言起名是产品问题。**负责人 2026-10-13：照旧用英文**：它们是用户会改名的数据，按语言起名要建项目的契约带上语言的信号。不改，不交出。
 
 ---
 
@@ -329,26 +343,26 @@ M3 设计 13.2 的每一行，连同各 Phase 的 spec 第 5 节、评审第 6 �
 
 | M | 文件 | 节 |
 |---|---|---|
-| M4 | [`docs/v0/M4-issue-core/handoffs/M3-closeout.md`](../../M4-issue-core/handoffs/M3-closeout.md) | 1 事件与删除工作区的连带；2 加锁的约定和方案 E；3 权限规则和错误码（个人主页的工作项列表在内）；4 状态、标签和项目的数据；5 显示设置与旧的 service；6 stores、会话和页面的取数；7 工作项页面的键盘、下拉框和弹窗（`ModalCore` 重写之后逐个核对、正的 `tabIndex`、嵌套的按钮、`issues/select/base.tsx`、`activity-filter.tsx`、筛选的共用件）；8 地址、复制、文案和留下的行（`workspace-address-route` 的 4 个文件、`copy-hook` 的 10 个例外、误归的 16 行、`@nerve/ui` 下拉框的 `any`、`projectMemberIds`）；9 页大小的规则移到 `shared`（M2 收尾交接第 12 节，原样） |
+| M4 | [`docs/v0/M4-issue-core/handoffs/M3-closeout.md`](../../M4-issue-core/handoffs/M3-closeout.md) | 1 事件与删除工作区的连带；2 加锁的约定和方案 E；3 权限规则和错误码（个人主页的工作项列表在内）；4 状态、标签和项目的数据；5 显示设置与旧的 service；6 stores、会话和页面的取数；7 工作项页面的键盘、下拉框和弹窗（`ModalCore` 重写之后逐个核对、正的 `tabIndex`、嵌套的按钮、`issues/select/base.tsx`、`activity-filter.tsx`、筛选的共用件、`z-50` 及以上的页面元素和层叠的规则）；8 地址、复制、文案和留下的行（`workspace-address-route` 的 4 个文件、`copy-hook` 的 10 个例外、误归的 16 行、`@nerve/ui` 下拉框的 `any`、`projectMemberIds`、oxlint 留下的 2 个文件、守卫的 `phase`）；9 页大小的规则移到 `shared`（M2 收尾交接第 12 节，原样） |
 | M5 | [`docs/v0/M5-files/handoffs/M3-closeout.md`](../../M5-files/handoffs/M3-closeout.md) | 1 图标、封面和头像；2 `organization_size`（3.2 第 1 条）；3 附件的确认框和弹窗 |
-| M6 | [`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`](../../M6-cycles-modules/handoffs/M3-closeout.md) | 1 取数和 stores；2 数据（误归的 8 行）；3 键盘、弹窗和下拉框；4 地址、复制（5 个例外）和 oxlint |
-| M7 | [`docs/v0/M7-collaboration/handoffs/M3-closeout.md`](../../M7-collaboration/handoffs/M3-closeout.md) | 1 接口和挂载时的取数；2 stores 和会话（误归的 17 行）；3 键盘、弹窗和下拉框（收藏的菜单和手柄、通知的链接）；4 地址（8 个文件）、复制（4 个例外）、文案和其余（`projectMemberIds`） |
-| M8 | [`docs/v0/M8-open-release/handoffs/M3-closeout.md`](../../M8-open-release/handoffs/M3-closeout.md) | 1 Webhook（事件、页面、3 个文件的地址、1 个复制的例外）；2 发布之前的核对（表情的数据、README、locale、大列表的性能）；3 全应用的文案（日期、`not-found`、propel 和 `AlertModalCore` 的默认值）；4 可访问性（`Toast.Close`、页头、Firefox 和 Safari、命令面板的输入）；5 嵌入的文件加 `ETag` |
+| M6 | [`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`](../../M6-cycles-modules/handoffs/M3-closeout.md) | 1 取数和 stores；2 数据（误归的 8 行）；3 键盘、弹窗和下拉框；4 地址、复制（5 个例外）、oxlint 和守卫的 `phase` |
+| M7 | [`docs/v0/M7-collaboration/handoffs/M3-closeout.md`](../../M7-collaboration/handoffs/M3-closeout.md) | 1 接口和挂载时的取数；2 stores 和会话（误归的 17 行）；3 键盘、弹窗和下拉框（收藏的菜单和手柄、通知的链接）；4 地址（8 个文件）、复制（4 个例外）、文案和其余（`projectMemberIds`、通知的筛选菜单的 oxlint、守卫的 `phase`） |
+| M8 | [`docs/v0/M8-open-release/handoffs/M3-closeout.md`](../../M8-open-release/handoffs/M3-closeout.md) | 1 Webhook（事件、页面、3 个文件的地址、1 个复制的例外、守卫的 `phase`）；2 发布之前的核对（表情的数据、README、locale、大列表的性能、全应用的层叠顺序）；3 全应用的文案（日期、`not-found`、propel 和 `AlertModalCore` 的默认值、命令面板自己的文字）；4 可访问性（`Toast.Close`、页头和它的搜索的 oxlint、Firefox 和 Safari、命令面板的输入）；5 嵌入的文件加 `ETag` |
 
-第 3 节第 2 条若照建议，评审的提交在 M4、M6、M7 的交接中各加一行（`description-versions/modal.tsx`、`activity-filter.tsx` 给 M4，`module-card-item.tsx` 已在 M6 的 M1 收尾交接，通知的筛选菜单给 M7），`top-nav-power-k.tsx` 写进 M8 的第 4 节。
+第 3 节第 2 条交出的 5 个文件由 Task 15 写进交接（控制者的裁定：现在写，不在评审的提交里）：`description-versions/modal.tsx`、`activity-filter.tsx` 给 M4（第 8 节），`module-card-item.tsx` 在 M6（第 4 节，P11 已交给它），通知的筛选菜单给 M7（第 4 节），`top-nav-power-k.tsx` 给 M8（第 4 节）。
 
 ---
 
 ## 5. 验收标准（完成线）
 
 - [ ] 计划的 16 个 Task 都已提交；每个 Task 之后 `make lint-web`、`make knip`、`make test-web`、`make build`、`make e2e` 通过（Task 14 另有 `make gen-check`、`make lint-go`、`make test`），worktree 中 `make e2e` 118 个全部通过（`49190525` 是 110 个）。
-- [ ] 弹窗：`ModalCore` 是 Headless UI v2 的打开方式，打开时后面的页面 `inert`、`aria-hidden`（条件挂载的也是），Tab 在弹窗里转，F-1、组字的 Escape、焦点回到打开它的控件照旧；`AlertModalCore` 和快捷键的搜索框没有正的 `tabIndex`；命令面板、快捷键、切换账户经 `ModalCore`；P4、P6、P7、W7、S6 的检查和变异 `T1.*`、`T2.*` 都被发现（附录 A.2）。
-- [ ] 离开工作区：侧边栏的工作区菜单每个角色都有这一项，经成员页的确认框和命令；唯一的管理员被拒绝时确认框留着；W11、W7、W4 的页面版本。
+- [ ] 弹窗：`ModalCore` 是 Headless UI v2 的打开方式，打开时后面的页面 `inert`、`aria-hidden`（条件挂载的也是），Tab 在弹窗里转，F-1、组字的 Escape、焦点回到打开它的控件照旧；`AlertModalCore` 和快捷键的搜索框没有正的 `tabIndex`；命令面板、快捷键、切换账户经 `ModalCore`；页面上的元素在弹窗的层之下（设置页的手机菜单 `z-20`，2.6）；P4、P6、P7、W7、S6 的检查和变异 `T1.*`、`T2.*` 都被发现（附录 A.2）。
+- [ ] 离开工作区：侧边栏的工作区菜单每个角色都有这一项，经成员页的确认框和命令；唯一的管理员被拒绝时确认框留着；双击只发一次请求，请求在路上时确认框关不掉；W11、W7、W4 的页面版本。
 - [ ] 2.4 的每一条有去处：收尾做的有 Task 和检查，交出去的在接收者的交接里，不做的有理由，"收尾决定"的有第 3 节的裁定。
 - [ ] 6 份收到的交接 `status: closed`，各有"处理结果（M3/收尾）"；M4–M8 各有 `handoffs/M3-closeout.md`，13.2 的五行链接到它们。
 - [ ] 3.20 逐行、差异清单逐列核对过（2.2、2.3）；README 按 8.7 和 locale 一条；前端改动清单的收尾七行（附录 A.8）。
-- [ ] 各包的 oxlint 上限照新的条数（web 298、ui 12）；手改的文件结束时 0 条，第 3 节第 2 条的裁定之外。
-- [ ] 计划在新的副本上从本提交逐 Task 复现，每个 Task 之后门禁通过，最后与原型逐个文件相同（附录 A.9）。
+- [ ] 各包的 oxlint 上限照新的条数（web 295、ui 12、propel 10）；手改的文件结束时 0 条（`top-nav-power-k.tsx` 交给 M8），第 3 节第 2 条交出的 5 个文件写在接收者的交接里；抑制照旧 181 条。
+- [ ] 计划在新的副本上从本 spec 和计划的提交（修订之后的那一个）逐 Task 复现，每个 Task 之后门禁通过，最后与原型逐个文件相同（附录 A.9）。
 - [ ] 控制者的 C11、C12 和收尾的评审（评审的提交里第 14、15 节、9.4 和前端改动清单 3.1 的状态翻转，2.16）。
 
 ---
@@ -358,7 +372,8 @@ M3 设计 13.2 的每一行，连同各 Phase 的 spec 第 5 节、评审第 6 �
 - **31 个弹窗没有故事打开**（都是 M4–M8 的：M4 9 个、M5 1 个、M6 9 个、M7 10 个、M8 2 个，附录 A.3）。重写只改 `ModalCore` 自己，调用方的 props 不变；Headless UI v2 的行为（主树之外的 `body` 子元素是根容器、焦点陷阱和点外面允许它们）对所有调用方一样，原型在 M3 的页面上逐类核对了弹窗里的四种 portal。工作项的大弹窗（下拉框、日期、编辑器）在 M4 对接时逐个核对（交接第 7 节）；C11 也在 M3 的页面上看一遍。**退路**：某个调用方在 M4–M8 中发现问题时，在那个调用方修，不回退 `ModalCore`（回退就回到缺陷 ii）。
 - **Safari 和 Firefox 只由合成的事件和 C11 核对**：真实的输入法、真实的 Safari 焦点的差异可能还有（M8 的发布核对）。
 - **条件挂载的修法依赖 Headless UI 的内部顺序**（`MainTreeProvider` 的回调 ref 晚于 `Dialog` 的副作用）：升级 Headless UI 之后，W7 的 `pageBehindHidden`（变异 `T1.6`）会先失败。
-- **`copy-hook` 的例外有期限**：各 M 的收尾之前要改完它们的文件，否则关键词守卫失败；交接写明。
+- **`copy-hook` 的例外有期限**：各 M 的收尾之前要改完它们的文件，否则关键词守卫失败；交接写明。到期靠各 M 照时改规则文件的 `phase`（守卫的说明和交接写明）。
+- **页面上的层叠**：页面上的元素在弹窗的层（`z-30`）之下是一条约定，没有常驻的检查；M4 页面上的 `z-50` 元素写进 M4 的交接，M8 的发布核对全应用看一遍（2.6）。
 - **翻译的质量**：新加的中文由收尾写，S7 只核对页面读的是键、是中文；用词由 C11、C12 和评审看一遍。
 
 ---
@@ -367,36 +382,36 @@ M3 设计 13.2 的每一行，连同各 Phase 的 spec 第 5 节、评审第 6 �
 
 ### A.1 方法与门禁
 
-- 原型 `$M3TMP/closeout-proto` 是 `49190525` 的 `git archive` 副本（`$M3TMP/closeout-tools/base-49190525.tar`，`pnpm install --frozen-lockfile` 之后）。Task 0（M3 设计第 15 节的收尾一行和 9.7 的 C11、C12，本提交）先写进副本，`T0` 是它之后的树。每个 Task 由一个脚本从上一个快照写出（`edit/T<n>.py`，共用 `sub.py`），照仓库的格式化（oxfmt）排版，存一份快照（`$M3TMP/closeout-snap/T1`…`T16`）。计划的块由快照之间的差异写出（`mkblocks.py`：16 个 Task，0 个问题；它把每个 Task 的块依次应用到上一个快照，与那个 Task 的快照逐字节比较）。代码或测试改过时，从改动的那个 Task 起重新写出之后的每个快照（`rerun.sh`）。原型中途把原来的第 12 个 Task 分成 Task 12、13（第 3 节第 3 条），之后的脚本、快照和变异的编号各加一（`edit/renumber_scripts.py`、`renumber_mutants.py`）。
+- 原型 `$M3TMP/closeout-proto` 是 `49190525` 的 `git archive` 副本（`$M3TMP/closeout-tools/base-49190525.tar`，`pnpm install --frozen-lockfile` 之后）。Task 0（M3 设计第 15 节的收尾一行和 9.7 的 C11、C12，本提交）先写进副本，`T0` 是它之后的树。每个 Task 由一个脚本从上一个快照写出（`edit/T<n>.py`，共用 `sub.py`），照仓库的格式化（oxfmt）排版，存一份快照（`$M3TMP/closeout-snap/T1`…`T16`）。计划的块由快照之间的差异写出（`mkblocks.py`：16 个 Task，0 个问题；它把每个 Task 的块依次应用到上一个快照，与那个 Task 的快照逐字节比较）。代码或测试改过时，从改动的那个 Task 起重新写出之后的每个快照（`rerun.sh`）。原型中途把原来的第 12 个 Task 分成 Task 12、13（第 3 节第 3 条），之后的脚本、快照和变异的编号各加一（`edit/renumber_scripts.py`、`renumber_mutants.py`）。预检之后的修订（2026-10-13）改的是 Task 2–5、7–12、15、16 的脚本（`amend/a_t*.py` 改写 `edit/T<n>.py`），从 Task 2 起重新写出之后的每个快照（`chain.sh`）。重写时 `restore.py` 不动生成的文件，原型中是 Task 14 生成的那一份，于是一度被带进 `T2`–`T13` 的快照；`amend/fixgen.py` 把 `T1` 的放回，之后 `gensha.py` 的表与第一轮相同（只有 Task 14 改生成的文件，钉住的三个 SHA-256 不变）。
 - 每个 Task 的树上跑它的门禁（`gates.sh`）：`make lint-web`、`make knip`、`make test-web`、`make build`、`make e2e`；Task 14 另有 gen-same（`make gen` 的输出与树中的生成文件相同，即 `make gen-check` 的核对）、`make lint-go`、`make test`；Task 15、16 只改文档，跑 `make lint-web` 和 plan 的 `doclinks.py`（A.4）。`49190525` 上：`make lint-web`（69 条规则、3 个例外）、`make knip`、`make test-web` 通过，`make e2e` 110 个中 109 个通过（S3 在副本中失败：它读构建的提交，副本不是 git 仓库；P11 附录 A.1 的 F4）。
-- 最终原型上（`logs/final.summary`）：gen-same 0 处差异；`make lint-go` 两段 `0 issues.`；`make lint-web` 通过（关键词守卫 71 条规则、23 个例外、没有命中，turbo 54 个任务）；`make knip` 通过；`make test-web` 通过（16 个任务；web 应用 112 个测试文件、981 个测试，`49190525` 上 106 个测试文件、965 个测试）；`make build` 通过；`make test` 42 个包 `ok`、没有 `FAIL`；`make e2e` 118 个中 117 个通过（S3，F4）。
-- 端到端的反复：收尾写的或改了检查的 14 个故事（S6、S7、S8、W4、W7、W8、W11、P1、P4–P7、A6、A11）在最终原型上各跑 3 次（`repeat.sh`，`logs/repeat-final3.log`）：36 个测试 108 次都通过（`repeat.sh` 的退出码 0）。
+- 最终原型上（修订之后，`logs/a-final.summary`、`a-final-build.summary`）：gen-same 0 处差异；`make lint-go` 两段 `0 issues.`；`make lint-web` 通过（关键词守卫 71 条规则、23 个例外、没有命中，turbo 54 个任务）；`make knip` 通过；`make test-web` 通过（16 个任务；web 应用 113 个测试文件、982 个测试，`49190525` 上 106 个测试文件、965 个测试）；`make build` 通过；`make test` 42 个包 `ok`、没有 `FAIL`；`make e2e` 118 个中 117 个通过（S3，F4）。
+- 端到端的反复：收尾写的或改了检查的 14 个故事（S6、S7、S8、W4、W7、W8、W11、P1、P4–P7、A6、A11）在最终原型上各跑 3 次（`repeat.sh`，`logs/repeat-final3.log`）：36 个测试 108 次都通过（`repeat.sh` 的退出码 0）。修订之后，brief 点名的 S6、S8、W5、W11、P4 再各跑 3 次（`logs/repeat-a-final3.log`：10 个测试 30 次都通过），修订改了检查的 S7、P1、P2 也各 3 次（`logs/repeat-a-changed3.log`：12 个测试 36 次都通过）。
 
-| Task | 改到的文件 | web 的测试文件 / 测试 | 端到端 | oxlint 上限（web / ui） | 关键词守卫（规则 / 例外） |
+| Task | 改到的文件 | web 的测试文件 / 测试 | 端到端 | oxlint 上限（web / ui / propel） | 关键词守卫（规则 / 例外） |
 |---|---|---|---|---|---|
-| `T0` | – | 106 / 965 | 110 | 303 / 15 | 69 / 3 |
-| 1 | 9 | 106 / 965 | 110 | 303 / 14 | 69 / 3 |
-| 2 | 11 | 106 / 965 | 112 | 302 / 14 | 69 / 3 |
-| 3 | 18 | 106 / 965 | 112 | 302 / 14 | 69 / 3 |
-| 4 | 36 | 107 / 967 | 113 | 302 / 14 | 69 / 3 |
-| 5 | 27 | 108 / 970 | 114 | 302 / 14 | 69 / 3 |
-| 6 | 30 | 108 / 971 | 115 | 302 / 14 | 69 / 3 |
-| 7 | 38 | 108 / 971 | 115 | 302 / 14 | 69 / 3 |
-| 8 | 15 | 109 / 972 | 116 | 301 / 14 | 69 / 3 |
-| 9 | 35 | 109 / 976 | 116 | 301 / 14 | 70 / 23 |
-| 10 | 20 | 109 / 976 | 116 | 301 / 12 | 70 / 23 |
-| 11 | 22 | 110 / 978 | 116 | 301 / 12 | 71 / 23 |
-| 12 | 34 | 112 / 981 | 117 | 298 / 12 | 71 / 23 |
-| 13 | 37 | 112 / 981 | 118 | 298 / 12 | 71 / 23 |
-| 14 | 40（另有生成的 3 个） | 112 / 981 | 118 | 298 / 12 | 71 / 23 |
-| 15 | 20 | 112 / 981 | 118 | 298 / 12 | 71 / 23 |
-| 16 | 4 | 112 / 981 | 118 | 298 / 12 | 71 / 23 |
+| `T0` | – | 106 / 965 | 110 | 303 / 15 / 11 | 69 / 3 |
+| 1 | 9 | 106 / 965 | 110 | 303 / 14 / 11 | 69 / 3 |
+| 2 | 14 | 106 / 965 | 112 | 301 / 14 / 11 | 69 / 3 |
+| 3 | 18 | 106 / 965 | 112 | 301 / 14 / 11 | 69 / 3 |
+| 4 | 39 | 108 / 968 | 113 | 301 / 14 / 11 | 69 / 3 |
+| 5 | 27 | 109 / 971 | 114 | 301 / 14 / 11 | 69 / 3 |
+| 6 | 30 | 109 / 972 | 115 | 301 / 14 / 11 | 69 / 3 |
+| 7 | 39 | 109 / 972 | 115 | 301 / 14 / 10 | 69 / 3 |
+| 8 | 17 | 110 / 973 | 116 | 300 / 14 / 10 | 69 / 3 |
+| 9 | 38 | 110 / 977 | 116 | 300 / 14 / 10 | 70 / 23 |
+| 10 | 20 | 110 / 977 | 116 | 300 / 12 / 10 | 70 / 23 |
+| 11 | 24 | 111 / 979 | 116 | 298 / 12 / 10 | 71 / 23 |
+| 12 | 34 | 113 / 982 | 117 | 295 / 12 / 10 | 71 / 23 |
+| 13 | 37 | 113 / 982 | 118 | 295 / 12 / 10 | 71 / 23 |
+| 14 | 40（另有生成的 3 个） | 113 / 982 | 118 | 295 / 12 / 10 | 71 / 23 |
+| 15 | 20 | 113 / 982 | 118 | 295 / 12 / 10 | 71 / 23 |
+| 16 | 4 | 113 / 982 | 118 | 295 / 12 / 10 | 71 / 23 |
 
-（测试数按 vitest 自己的计数，`it.each` 的每一行算一个（`vitestcounts.py`），只算 web 应用；`@nerve/utils` 另有 Task 10 的 `keyboard.test.ts`。一个文件可以由几个 Task 改到，所以改到的文件之和 396 大于 300：收尾改到 300 个文件（改 273 个、新建 22 个、删除 5 个），另有 Task 14 由 `make gen` 重新生成的 3 个。端到端的数是 `make e2e` 的测试数，副本中其中的 S3 失败（F4）。`@nerve/propel` 11、`@nerve/utils` 7、`@nerve/constants` 1 的上限不变。）
+（测试数按 vitest 自己的计数，`it.each` 的每一行算一个（`vitestcounts.py`），只算 web 应用；`@nerve/utils` 另有 Task 10 的 `keyboard.test.ts`。一个文件可以由几个 Task 改到，所以改到的文件之和 410 大于 303：收尾改到 303 个文件（改 275 个、新建 23 个、删除 5 个），另有 Task 14 由 `make gen` 重新生成的 3 个。端到端的数是 `make e2e` 的测试数，副本中其中的 S3 失败（F4）。`@nerve/utils` 7、`@nerve/constants` 1 的上限不变。）
 
 ### A.2 变异
 
-`mutants_closeout.py`：136 个变异，每个只改一处或几处（Task 15、16 只改文档，没有变异）。`mut.py` 在最终原型上、在它写的每个检查上各跑一次（`final-mut.sh`，`mut-results.json`，日志 `mut-logs-final/`）：136 个都被发现，没有存活的；每个写的每个检查都让它失败（`T9.11` 的 `check:sync` 是写明的对照，见下）。按发现它的层：只有端到端的 81 个、只有 vitest 的 29 个、只有静态的 8 个、只有 Go 的 5 个、vitest 和端到端的 10 个、静态和端到端的 3 个。按 Task 的表：Task 1 6 个、2 4 个、3 6 个、4 10 个、5 14 个、6 16 个、7 7 个、8 12 个、9 11 个、10 9 个、11 4 个、12 17 个、13 11 个、14 9 个。每个变异另在它自己的 Task 的快照上跑过（每个 Task 写完时，端到端在内；`mut-results-t<n>.json`，合并为 `mut-results-pertask.json`）：136 个都在自己的 Task 的树上被发现，没有只由之后的 Task 才发现的（`mut-results-from.json` 为空）。每个变异要改的文字在它的 Task 的快照上和最终原型上都恰好出现一次（`mutcheck.py`：136 个都适用；有两处要改的文字在之后的 Task 中变了（`T1.5` 的组字判断由 Task 10 换成 `isComposing`，`T4.5` 的工作区由 Task 11 改读路由），它们照 P11 的写法给出两个版本的旧文字和新文字）。`e2ekills.py` 逐个核对端到端和 vitest 的 135 个"发现"，每一个是断言的失败，不是超时、容器或构建的失败：最终运行中 `T8.4` 在 S8 上的一次"发现"是容器启动的超时，在最终原型上重跑之后由 S8 的断言发现（超时的日志留在 `logs/T8.4-e2e.container-failure.log`），之后 0 个可疑。
+`mutants_closeout.py`：146 个变异（第一轮 136 个，修订加 10 个：`T2.5`、`T2.6`、`T3.7`、`T4.11`–`T4.14`、`T7.8`、`T8.13`、`T11.5`），每个只改一处或几处（Task 15、16 只改文档，没有变异）。`mut.py` 在最终原型上、在它写的每个检查上各跑一次（修订之后由 `amend/mutrun.sh` 重跑，`mut-results.json`，日志 `mut-logs-final/`）：146 个都被发现，没有存活的；每个写的每个检查都让它失败（`T9.11` 的 `check:sync` 是写明的对照，见下）。按发现它的层：只有端到端的 87 个、只有 vitest 的 30 个、只有静态的 11 个、只有 Go 的 5 个、vitest 和端到端的 10 个、静态和端到端的 3 个。按 Task 的表：Task 1 6 个、2 6 个、3 7 个、4 14 个、5 14 个、6 16 个、7 8 个、8 13 个、9 11 个、10 9 个、11 5 个、12 17 个、13 11 个、14 9 个。每个变异另在它自己的 Task 的快照上跑过（每个 Task 写完时，端到端在内；`mut-results-t<n>.json`，合并为 `mut-results-pertask.json`；修订改过的 Task 2–5、7–12 的变异由 `amend/mutrun.sh` 在新的快照上重跑，`logs/a-mut-pertask.log`）：146 个都在自己的 Task 的树上被发现，没有只由之后的 Task 才发现的（`mut-results-from.json` 为空）。每个变异要改的文字在它的 Task 的快照上和最终原型上都恰好出现一次（`mutcheck.py`：146 个都适用；有两处要改的文字在之后的 Task 中变了（`T1.5` 的组字判断由 Task 10 换成 `isComposing`，`T4.5` 的工作区由 Task 11 改读路由），它们照 P11 的写法给出两个版本的旧文字和新文字）。`e2ekills.py` 逐个核对端到端和 vitest 的 142 个"发现"，每一个是断言的失败，不是超时、容器或构建的失败：修订之后的最终运行 0 个可疑（`logs/a-mutrun.log`；第一轮的最终运行中 `T8.4` 在 S8 上的一次"发现"是容器启动的超时，重跑之后由 S8 的断言发现，超时的日志留在 `logs/T8.4-e2e.container-failure.log`）。
 
 `T9.11`（侧边栏读的一个键在两种语言中都改了名）在 `check:sync`（两种语言的键一致）上存活，这是写明的对照：两种语言仍一致，键一致的检查看不到它，发现它的是新的 `tools/i18n-keys.mjs`（K13）。plan 的表只列发现它的检查。
 
@@ -405,31 +420,33 @@ M3 设计 13.2 的每一行，连同各 Phase 的 spec 第 5 节、评审第 6 �
 | 类别 | 变异 | 静态 | vitest | Go | 端到端 | 存活 |
 |---|---|---|---|---|---|---|
 | 弹窗：后面的页面 `inert`、隐藏，焦点回来，Escape 和点外面（2.5、2.6） | 5 | 0 | 0 | 0 | 5 | 0 |
-| 请求在路上时关不掉（F-1） | 2 | 0 | 0 | 0 | 2 | 0 |
+| 请求在路上时关不掉、只发一次（F-1） | 3 | 0 | 0 | 0 | 3 | 0 |
 | 组字的 Escape | 1 | 0 | 0 | 0 | 1 | 0 |
-| Tab 的次序：没有正的 `tabIndex`，菜单的项 | 4 | 2 | 0 | 0 | 4 | 0 |
+| Tab 的次序和弹窗的名字：没有正的 `tabIndex`，菜单的项，快捷键的关闭按钮 | 5 | 2 | 0 | 0 | 5 | 0 |
 | 被拒绝时弹窗留着（A-M2） | 3 | 0 | 2 | 0 | 3 | 0 |
 | 入口的门：每个角色都有离开 | 1 | 0 | 0 | 0 | 1 | 0 |
-| 文案：P9–P11 的清单（2.8） | 47 | 2 | 17 | 0 | 30 | 0 |
+| 文案：P9–P11 的清单和修订加的（2.8） | 51 | 2 | 18 | 0 | 33 | 0 |
 | 文案：收尾的扫描找到的（Task 12、13） | 23 | 0 | 6 | 0 | 17 | 0 |
-| 名字 | 7 | 1 | 3 | 0 | 6 | 0 |
+| 名字 | 8 | 1 | 3 | 0 | 7 | 0 |
 | 键盘取得焦点时看得见；停留点（2.9） | 10 | 0 | 1 | 0 | 9 | 0 |
 | 输入法和选择上的 Enter（2.11） | 9 | 0 | 2 | 0 | 9 | 0 |
 | 共用的写法（2.10） | 7 | 0 | 5 | 0 | 3 | 0 |
 | 规则：关键词守卫、`tools/i18n-keys.mjs` | 6 | 6 | 0 | 0 | 0 | 0 |
+| oxlint 的上限：写明理由的抑制、依赖、key（第 3 节第 2 条） | 3 | 3 | 0 | 0 | 0 | 0 |
 | 工作区的地址（2.12） | 2 | 0 | 2 | 0 | 1 | 0 |
 | 测试的整理（2.13） | 9 | 0 | 1 | 5 | 3 | 0 |
-| 合计 | 136 | 11 | 39 | 5 | 94 | 0 |
+| 合计 | 146 | 14 | 40 | 5 | 100 | 0 |
 
-- **弹窗的 5 个和请求在路上的 2 个**：`Dialog` 只在打开时挂载（`T1.1`，P4 第一次打开时后面的页面不隐藏）、条件挂载的弹窗在挂载的那次渲染就打开（`T1.6`，W7 扣住移出的请求时后面的页面不隐藏：F1 的修法由它看住）、忽略 `handleClose`（`T1.3`）、命令面板不经 `ModalCore`（`T2.3`，S6）、离开的确认框挂在菜单里（`T3.5`，W11：菜单关上时它跟着没有）；确认框和切换账户的弹窗在请求路上时被 Escape 关上（`T1.4`、`T2.4`）。
-- **键盘的 4 个、焦点的 10 个、名字的 7 个**：确认按钮和快捷键的搜索框回到 `tabIndex={1}`（`T1.2`、`T2.1`，P6、P7、S6 的 Tab 循环，也由 oxlint 的上限）、快捷键的关闭按钮没有名字（`T2.2`）、离开一项是菜单之外的按钮（`T3.4`）；颜色弹层的轮廓、状态表单的焦点、侧边栏的"+"、项目一行的菜单和手柄、副本和收起的侧边栏不 `inert`、成员页一行的菜单、项目下拉框的根（`T8.*`，S8、P6、P5 和 `base.test.tsx`）；项目页的搜索、表情并进链接的名字、筛选的移除按钮、功能的开关（`T7.1`、`T7.7`、`T8.7`、`T12.13`、`T12.16`、`T13.3`、`T13.4`）。
-- **文案的 70 个**（P9–P11 的清单 47 个，收尾的扫描 23 个）：每个把一处写回英文、把占位放错、读没有定义的键或删去一个语言的键，由 S7（中文的页面）、改为读键的 vitest、`check:sync`（`T7.5`：一种语言少了键）或 `tools/i18n-keys.mjs`（`T9.11`）发现。
+- **弹窗的 5 个和请求在路上的 3 个**：`Dialog` 只在打开时挂载（`T1.1`，P4 第一次打开时后面的页面不隐藏）、条件挂载的弹窗在挂载的那次渲染就打开（`T1.6`，W7 扣住移出的请求时后面的页面不隐藏：F1 的修法由它看住）、忽略 `handleClose`（`T1.3`）、快捷键弹窗不理 Escape 和背景（`T2.3`，S6）、离开的确认框挂在菜单里（`T3.5`，W11：菜单关上时它跟着没有）；确认框和切换账户的弹窗在请求路上时被 Escape 关上（`T1.4`、`T2.4`）；离开的确认框的按钮在请求路上时不禁用，双击发两次（`T3.7`，W11）。
+- **键盘的 5 个、焦点的 10 个、名字的 8 个**：确认按钮和快捷键的搜索框回到 `tabIndex={1}`（`T1.2`、`T2.1`，P6、P7、S6 的 Tab 循环，也由 oxlint 的上限）、快捷键的关闭按钮没有名字或回到标题里（`T2.2`、`T2.5`，S6 断言弹窗的名字）、离开一项是菜单之外的按钮（`T3.4`）；颜色弹层的轮廓、状态表单的焦点、侧边栏的"+"、项目一行的菜单和手柄、副本和收起的侧边栏不 `inert`、成员页一行的菜单、项目下拉框的根（`T8.*`，S8、P6、P5 和 `base.test.tsx`）；项目页的搜索、表情并进链接的名字、筛选的移除按钮、功能的开关（`T7.1`、`T7.7`、`T8.7`、`T12.13`、`T12.16`、`T13.3`、`T13.4`）、侧边栏项目一行的名字（`T8.13`，S8）。
+- **文案的 74 个**（P9–P11 的清单和修订加的 51 个，收尾的扫描 23 个；修订加的 4 个：快捷键弹窗的英文 `T4.11`、切换账户的两个半句 `T4.12`、问候的名和姓 `T4.13`、已拒绝的邀请页的旧说法 `T4.14`）：每个把一处写回英文、把占位放错、读没有定义的键或删去一个语言的键，由 S7（中文的页面）、改为读键的 vitest、`check:sync`（`T7.5`：一种语言少了键）或 `tools/i18n-keys.mjs`（`T9.11`）发现。
+- **oxlint 的 3 个**（第 3 节第 2 条的裁定）：快捷键的搜索框的 `autoFocus` 不写理由（`T2.6`）、表情回应以下标为 key（`T7.8`，propel 的上限）、项目页的根的副作用只依赖地址（`T11.5`）：各让 oxlint 的条数超出上限，`make lint-web` 失败。
 - **被拒绝时弹窗留着的 3 个、入口的门 1 个**：成员页的确认框在 nerve 回答之后关上（`T3.1`，W4、W7、W11）、离开不论 nerve 怎样回答都关上（`T3.2`）、邀请的删除同样（`T3.6`）；菜单只给管理员这一项（`T3.3`，W7、W11）。
 - **输入法和 Enter 的 10 个**：`isComposing` 漏掉 Safari 的顺序或组字中的按键（`T10.1`、`T10.2`，`keyboard.test.ts`、P1）、各处守卫不经它、命令面板的空搜索框上组字的 Escape 关上面板（S6）、`CustomSelect` 上的 Enter 提交表单（`T10.8`、`T10.9`，P5）；组字的 Escape 关上弹窗（`T1.5`，P4）。
 - **共用的写法 7 个、规则 6 个、地址 2 个**：`useCopy` 的写法和失败、`problemCode`、`useRefusalMessage`（vitest、A11、S6）；`copy-hook`、`refusal-toast`、`sign-out-toast` 和 `workspace-address-route`（两个）各有一个违反它的写法（关键词守卫），页面读一个没有定义的键（`T12.17`，`tools/i18n-keys.mjs`）；`useRouteWorkspace` 不给工作区或读 router store 的（`T11.1`、`T11.2`，vitest，前者也由 W3）。
 - **测试整理的 9 个**（Task 14）：`jobs` 的期限和排序（`T14.1`–`T14.3`，Go 的 `platform/jobs`）、两个常量（`T14.4`、`T14.5`，Go 的项目 HTTP 测试）、移动之后的断言照旧失败（`expectNoAddress` 由 P9、`expectSignedIn` 由 A3、`sessionsOf` 由 A12，`T14.6`–`T14.8`）、`userOf`（`T14.9`，store 的测试）。`registeredPAT` 只是把 23 个故事的同一段写法收进一个函数，由那些故事的通过核对。
 - **K19**（之前各 Phase 的端到端"发现"，`inv/k19.sh` 对 P8a–P11 的变异记录跑 `e2ekills_any.py`，`logs/k19.txt`）：P10、P11 的 0 个可疑；P9 逐 Task 的记录中 `T4.2` 在 W5 上的"发现"是容器启动的超时，同一个变异在 P9 的最终和修复轮的记录中由 W5 的断言真被发现，另由 vitest 发现；P8a、P8b 的日志目录是空的（记录只有结果），无从核对。之前的结论不变。
-- **W18（每个新的 vitest 都能失败）**：`w18closeout.py` 把收尾新加的 22 个 web 的测试（标题在 `T0` 的同一个文件中没有的，`it.each` 按标题算一个）对照每个变异的 vitest 日志：18 个被某个变异的运行失败。其余 4 个（成员页的移出、离开在成功时关上确认框的两行，`useRouteWorkspace` 的"没有时为 null"，`isComposing` 的"其余的按键不是输入法的"）另写探查变异 `W18.1`–`W18.4`（`mutants_w18.py`，只在最终原型上跑，不在 plan 的表中）：每个都让它守着的测试失败（`logs/mut-w18.log`，日志在 `mut-logs-w18/`）；之后 22 个测试都至少被一个变异或探查失败（`logs/w18closeout.txt`）。W3 的探查 `W3.1`–`W3.3`（确认框的 `done` 在 `followInSession` 的核对之外调用：成员页的移出、离开，邀请的删除）：每个都让那个 hook 的"换账户之后"的两行（被回答、被拒绝）和"被拒绝时确认框留着"的一行失败（`logs/mut-w18.log`）。
+- **W18（每个新的 vitest 都能失败）**：`w18closeout.py` 把收尾新加的 23 个 web 的测试（标题在 `T0` 的同一个文件中没有的，`it.each` 按标题算一个；修订加了 `switch-account-modal.test.tsx` 的一个）对照每个变异的 vitest 日志：19 个被某个变异的运行失败（新的一个由 `T4.12`）。其余 4 个（成员页的移出、离开在成功时关上确认框的两行，`useRouteWorkspace` 的"没有时为 null"，`isComposing` 的"其余的按键不是输入法的"）另写探查变异 `W18.1`–`W18.4`（`mutants_w18.py`，只在最终原型上跑，不在 plan 的表中）：每个都让它守着的测试失败（`logs/mut-w18.log`，日志在 `mut-logs-w18/`）；之后 23 个测试都至少被一个变异或探查失败（修订之后重跑：`logs/a-mut-w18.log`、`a-w18closeout.txt`）。W3 的探查 `W3.1`–`W3.3`（确认框的 `done` 在 `followInSession` 的核对之外调用：成员页的移出、离开，邀请的删除）：每个都让那个 hook 的"换账户之后"的两行（被回答、被拒绝）和"被拒绝时确认框留着"的一行失败（`logs/mut-w18.log`）。
 
 ### A.3 弹窗的清单和 portal 的清扫
 
@@ -486,44 +503,44 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 - **W4（取数经 `useSessionSWR`）、W5（按权限取数）、W6（一个接一个）、W7（`sessionGuard()`）、W10、W11（状态、标签的顺序）、W15（保留名单）、W16（取数失败）、W19（M6、M7 的取数）**：不适用，收尾不改取数、stores 的写入和保留名单；T7、T9 在 M4–M7 的文件中只加名字或删去 `showTooltip`。
 - **W8（落点）**：经菜单离开之后去成员页离开之后去的地方：W11 的访客（没有别的工作区）到新建工作区的页面；唯一的管理员被拒绝时留在原页（W11）。
 - **W9（权限 store）**：工作区级的权限判断写明 slug（Task 11 的 19 个文件；关键词规则 `workspace-address-route` 看住两个参数的写法）；`T11.3`、`T11.4`。
-- **W12（`as`、`any`、`!`）**：`castsall.py` 对收尾改到的每个源文件：没有新的 `as`、`any`、`!`；`e2e/fixtures/assert/session.ts:67` 的 `as SessionRow` 是从 `identity.ts` 移来的（Task 14，原来在 `identity.ts:68`）。抑制（`oxlint-disable`、`@ts-expect-error` 等，`suppressions.py`）181 → 180：删除的 `lead.tsx` 和命令面板的 `eslint-disable` 各少一条，项目筛选的 `autoFocus` 多一条带理由的（第 3 节第 20 条）。
-- **W13（删除的代码）**：删去的 5 个文件（`project/form-loader.tsx`、`project/settings/helper.tsx`、`project/dropdowns/filters/lead.tsx`、`@nerve/utils` 的 `permission/role.ts`、`permission/index.ts`）、`ROLE`、`getUserRole`、工作区菜单的"sidebar"写法、`isHoveringTrigger`、`actionSectionRef`、`showTooltip`、6 个没有读者或只为 Plane 的英文写的键：`git grep`（副本中 `grep -r`）没有读者，`make knip` 通过。
+- **W12（`as`、`any`、`!`）**：`castsall.py` 对收尾改到的每个源文件：没有新的 `as`、`any`、`!`；`e2e/fixtures/assert/session.ts:67` 的 `as SessionRow` 是从 `identity.ts` 移来的（Task 14，原来在 `identity.ts:68`）。抑制（`oxlint-disable`、`@ts-expect-error` 等，`suppressions.py`，`logs/a-suppressions.txt`）181 → 181：删除的 `lead.tsx` 和命令面板的 `eslint-disable` 各少一条，项目筛选和快捷键的搜索框的 `autoFocus` 各多一条带理由的（第 3 节第 2、20 条）。
+- **W13（删除的代码）**：删去的 5 个文件（`project/form-loader.tsx`、`project/settings/helper.tsx`、`project/dropdowns/filters/lead.tsx`、`@nerve/utils` 的 `permission/role.ts`、`permission/index.ts`）、`ROLE`、`getUserRole`、工作区菜单的"sidebar"写法、`isHoveringTrigger`、`actionSectionRef`、`showTooltip`、8 个没有读者、只为 Plane 的英文写的或被一整句代替的键（切换账户的两个半句由 Task 4 删去）：`git grep`（副本中 `grep -r`）没有读者，`make knip` 通过。
 - **W14（文案表）**：拒绝的文字只经 `useRefusalMessage`（K7）、问题码只经 `problemCode()`（K6）。
 - **W17（看得到的不同）**：A.8。
 - **W18**：A.2。
 - **W20（可空的字段）**：`useRouteWorkspace()` 可以是 `null`，19 个文件都处理（`tsc`；页面在没有工作区时不渲染或给 `undefined`）。
-- **文档的核对**：Task 15、16 各跑 plan 的 `doclinks.py`：它们改的 24 个文档中每个相对链接都指向存在的文件（本 spec 和 plan 在本提交里，逐 Task 复现时在副本中核对，A.9）。另对收尾在这些文档中加的行（`inv/addedpaths.py`，`T0` 到 `T16` 的差异，`logs/addedpaths.txt`）：374 行中的相对链接、以仓库顶层目录开头的路径 29 个、简写的 `.ts`、`.tsx` 路径 149 个都找得到，只有 `peek-overviews.tsx`（M3 设计 13.2 和 M7 的交接写它已随"最近"小部件删除）是历史。这些文档原有的行中还有不在的路径（已删去的文件的记录，构建和本地的产物，如 README 的 `config.local.yaml`、前端改动清单的 `keys.generated.ts`），是它们记下的历史，不改；所以 `inv/links.py`、`shortpaths.py` 的整篇核对是原型的清扫，不是 Task 的检查。
+- **文档的核对**：Task 15、16 各跑 plan 的 `doclinks.py`：它们改的 23 个文档中每个相对链接都指向存在的文件（本 spec 和 plan 在本提交里，逐 Task 复现时在副本中核对，A.9）。另对收尾在它改的 24 个文档（这 23 个和 Task 9 的 M1 设计）中加的行（`inv/addedpaths.py`，`T0` 到 `T16` 的差异，`amend/docsweep.py`，`logs/a-addedpaths.txt`）：392 行中的相对链接、以仓库顶层目录开头的路径 38 个、简写的 `.ts`、`.tsx` 路径 170 个都找得到，只有 `peek-overviews.tsx`（M3 设计 13.2 和 M7 的交接写它已随"最近"小部件删除）是历史。这些文档原有的行中还有不在的路径（已删去的文件的记录，构建和本地的产物，如 README 的 `config.local.yaml`、前端改动清单的 `keys.generated.ts`），是它们记下的历史，不改；所以 `inv/links.py`、`shortpaths.py` 的整篇核对是原型的清扫，不是 Task 的检查。
 - **交接的清扫**（brief）：2.1 的每个结论写明证据（提交、测试、评审的节）；13.2 的五行各链接到一个接收者的 `M3-closeout.md`，每行的每一项在那个文件的某一节（第 4 节的表）；仍在生效的文档中写于之前的将来时的句子：README 的两处"（页面：P9；此前用接口）"、差异清单邀请链接一行的 Phase 说法由 Task 16 改为已发生的说法（2.2），M1 收尾交接的 oxlint 一句照收尾之后的事实（第 3 节第 2 条）。
 - **Go 的清扫 19、36、45、46、50**（Task 14 只改测试）：19、36 不适用（没有新的方法或路径）；45：改过的 `jobs` 测试和项目 HTTP 测试的常量各有变异让它们失败（`T14.1`–`T14.5`）；46：`jobs` 的测试的每个等待有期限（`startLimit` 2 秒、`timeout + cancelGrace`、定期任务每两次之间 1 秒）；50：改过的测试的注释与代码逐句核对。
 - **注释与代码一致**：每个 Task 新写或改动的注释、JSDoc 与它描述的代码逐句核对；交接和前端改动清单的行与最终的代码核对（Task 15、16）。
 
 ### A.5 文件的大小、Plane 文件的变长、oxlint 和死成员
 
-- **文件的行数**（约 400 行；`sizes.py`，`logs/sizes-final.txt`）：收尾写的文件中最长的是 `s7-chinese.spec.ts` 311 行、`s6-dialogs.spec.ts` 111 行、`e2e/fixtures/dialogs.ts` 163 → 201 行、`assert/session.ts` 165 行；`assert/identity.ts` 485 → 329 行。超过约 400 行的：`p5-project-members.spec.ts` 392 → 404 行（Task 10 加的 Enter 一段，约 400 之内）；原来就超过的 `tools/keywords.json` 2,390 → 2,617 行、两种语言的 `common.json` 528 → 540 行、生成的文件和 `project.yaml`（行数不变）；Plane 的 `workspace/sidebar/projects-list-item.tsx` 452 → 443 行。
-- **变长的 Plane 文件**（brief：只为使用方改到的不变长；`planegrow.py`，`logs/planegrow-final.txt`）：96 个变长。75 个是收尾的对象（行为改在它们里面：弹窗、离开的入口、文案、名字和键盘、地址、组字的守卫），例如 `delete-label-modal.tsx` 57 → 63、`mark-as-default.tsx` 46 → 54、项目的筛选（Task 12）。21 个只为 `IconButton` 的名字改到（Task 7，共 +83 行，第 3 节第 1 条）：
+- **文件的行数**（约 400 行；`sizes.py`，`logs/a-sizes.txt`）：收尾写的文件中最长的是 `s7-chinese.spec.ts` 318 行、`s6-dialogs.spec.ts` 112 行、`e2e/fixtures/dialogs.ts` 163 → 201 行、`assert/session.ts` 165 行；`assert/identity.ts` 485 → 329 行。超过约 400 行的：`p5-project-members.spec.ts` 392 → 404 行（Task 10 加的 Enter 一段，约 400 之内）；原来就超过的 `tools/keywords.json` 2,390 → 2,617 行、两种语言的 `common.json` 528 → 539 行、生成的文件和 `project.yaml`（行数不变）；Plane 的 `workspace/sidebar/projects-list-item.tsx` 452 → 438 行。
+- **变长的 Plane 文件**（brief：只为使用方改到的不变长；`planegrow.py`，`logs/a-planegrow.txt`）：96 个变长。74 个是收尾的对象（行为改在它们里面：弹窗、离开的入口、文案、名字和键盘、地址、组字的守卫、层叠），例如 `delete-label-modal.tsx` 57 → 63、`mark-as-default.tsx` 46 → 54、项目的筛选（Task 12）。
 
-| M | 文件（变长的行） |
+  **写明的例外**（第 3 节第 1 条，控制者 2026-10-13 裁定）：propel 的 `IconButton` 的名字在根上必传，`tsc` 让每个调用方给名字，25 个 Plane 文件只为此改到（Task 7）：22 个变长、共 +86 行，3 个不变长。理由：名字是这些按钮自己的行为（读屏原来读不到它们），在共用组件的根上改一次，新加的没有名字的 `IconButton` 由 `tsc` 拦住；在每个 M 各补一遍是同一个规则的几份实现。允许的改动：名字（`aria-label`；评论和工作项的回应另传 `addReactionLabel`，评论卡片的 `EmojiReactionButton` 收 `aria-label`）、`useTranslation` 的导入、取 `t` 的一行和 oxfmt 对那个元素的重排；预检逐个文件核对过 25 个，没有别的改动。应用侧边栏的展开按钮原来记在收尾的对象里，预检指出它也只为名字改到，记在这里：
+
+| M | 文件（行数：之前 → 之后） |
 |---|---|
-| M2、设置 | `settings/profile/modal.tsx` 59 → 67；`settings/mobile/nav.tsx` 55 → 56 |
-| M4 | `comments/card/display.tsx` 179 → 186、`comments/comment-reaction.tsx` 91 → 94、`comments/quick-actions.tsx` 101 → 106、`core/description-versions/modal.tsx` 186 → 193、`issue-activity/sort-root.tsx` 22 → 31、`issue-detail-quick-actions.tsx` 165 → 171、`reactions/issue.tsx` 145 → 148、`quick-action-dropdowns/issue-detail.tsx` 338 → 342、`peek-overview/header.tsx` 238 → 244、`rich-filters/filters-toggle.tsx` 90 → 93 |
+| M2、设置 | `settings/profile/modal.tsx` 59 → 67；`settings/mobile/nav.tsx` 55 → 56（名字；Task 2 的层级另加一行注释，到 57，那是收尾的对象，2.6） |
+| 共用 | 应用侧边栏的展开按钮 `sidebar/sidebar-toggle-button.tsx` 28 → 31 |
+| M4 | `comments/card/display.tsx` 179 → 186、`comments/comment-reaction.tsx` 91 → 94、`comments/quick-actions.tsx` 101 → 106、`core/description-versions/modal.tsx` 186 → 193、`issue-activity/sort-root.tsx` 22 → 31、`issue-detail-quick-actions.tsx` 165 → 171、`reactions/issue.tsx` 145 → 148、`quick-action-dropdowns/issue-detail.tsx` 338 → 342、`peek-overview/header.tsx` 238 → 244、`rich-filters/filters-toggle.tsx` 90 → 93；不变长：`issue-activity/activity-filter.tsx` 67 → 67 |
 | M6 | 迭代的页头 252 → 253、模块的页头 246 → 249、`cycles-view-header.tsx` 132 → 133、`cycles/quick-actions.tsx` 182 → 184、`module-view-header.tsx` 193 → 194、`modules/quick-actions.tsx` 173 → 177 |
-| M7 | `views/quick-actions.tsx` 132 → 136、`views/view-list-header.tsx` 124 → 127、通知的页头选项 86 → 88 |
+| M7 | `views/quick-actions.tsx` 132 → 136、`views/view-list-header.tsx` 124 → 127、通知的页头选项 86 → 88；不变长：通知的筛选菜单 `workspace-notifications/sidebar/filters/menu/root.tsx` 43 → 43、页头选项的一项 `…/header/options/menu-option/root.tsx` 93 → 93 |
 
   只为 `showTooltip`（Task 9）改到的 9 个文件都变短或不变（Task 9 改到的 Plane 文件中只有主题切换变长 91 → 92，它是 K7 的对象）。
-- **oxlint**（`oxsnapfiles.py`，`logs/ox-final.txt`）：上限 web 303 → 298（Task 2 快捷键的 `tabindex-no-positive`、Task 8 侧边栏的 `exhaustive-deps`、Task 12 两个筛选文件的 3 条）、`@nerve/ui` 15 → 12（Task 1 `AlertModalCore` 的 `tabindex-no-positive`、Task 10 `use-dropdown-key-down` 的 2 条），各等于条数。收尾改到的文件中仍有警告的 8 个（第 3 节第 2 条）：
+- **oxlint**（`oxsnapfiles.py`，`logs/ox-final-amend.txt`）：上限 web 303 → 295（Task 2 快捷键的两条：`tabindex-no-positive` 改掉、`no-autofocus` 写明理由；Task 8 侧边栏的 `exhaustive-deps`；Task 11 项目页的根的 2 条 `exhaustive-deps`；Task 12 两个筛选文件的 3 条）、`@nerve/ui` 15 → 12（Task 1 `AlertModalCore` 的 `tabindex-no-positive`、Task 10 `use-dropdown-key-down` 的 2 条）、`@nerve/propel` 11 → 10（Task 7 表情回应的 `no-array-index-key`），各等于条数。收尾改到的文件中仍有警告的 5 个，照第 3 节第 2 条的裁定由 Task 15 写进接收者的交接：
 
-| 文件 | 改它的 Task | 条数 | 规则 |
-|---|---|---|---|
-| `navigation/top-nav-power-k.tsx` | 4（手改） | 4 | `exhaustive-deps` 2、`click-events-have-key-events`、`prefer-tag-over-role` |
-| `power-k/ui/modal/shortcuts-root.tsx` | 2（手改） | 2 → 1 | `no-autofocus` |
-| `project/root.tsx` | 11（手改） | 2 | `exhaustive-deps` 2 |
-| `@nerve/propel` 的 `emoji-reaction.tsx` | 7（手改） | 1 | `no-array-index-key` |
-| `core/description-versions/modal.tsx` | 7（名字） | 1 | `tabindex-no-positive` |
-| `issue-activity/activity-filter.tsx` | 9（`showTooltip`） | 2 | `click-events-have-key-events`、`no-static-element-interactions` |
-| `modules/module-card-item.tsx` | 9（`showTooltip`） | 5 | `consistent-function-scoping`、可点击的 `div` 4 |
-| 通知的 `filters/menu/root.tsx` | 7（名字） | 1 | `no-map-spread` |
+| 文件 | 改它的 Task | 条数 | 规则 | 交给 |
+|---|---|---|---|---|
+| `navigation/top-nav-power-k.tsx` | 4（手改，只改搜索的占位） | 4 | `exhaustive-deps` 2、`click-events-have-key-events`、`prefer-tag-over-role` | M8 第 4 节（与页头的帮助菜单、账户菜单一起改） |
+| `core/description-versions/modal.tsx` | 7（名字） | 1 | `tabindex-no-positive` | M4 第 8 节 |
+| `issue-activity/activity-filter.tsx` | 7（名字） | 2 | `click-events-have-key-events`、`no-static-element-interactions` | M4 第 8 节 |
+| `modules/module-card-item.tsx` | 9（`showTooltip`） | 5 | `consistent-function-scoping`、可点击的 `div` 4 | M6 第 4 节（P11 已交） |
+| 通知的 `filters/menu/root.tsx` | 7（名字） | 1 | `no-map-spread` | M7 第 4 节 |
 
-- **死成员和死 prop**（M1 收尾计划附录 A 的 `deadsym.mjs`、`domains.mjs`，`dead/run.sh`，副本经 `fakegit` 列出文件）：`deadsym`：死的 prop 362 → 367、成员 975 → 987、导出 2 → 2（之前的数是 P11 修复轮之后的，P11 spec 附录 A.9）。`--rows M3` 218 → 225（`inv/deadcmp.py`，`dead/final.m3` 对 P11 的）：产品代码的 54 行和按路径误归的 41 行与 P11 附录 A.9 的逐行相同（收尾没有加也没有删）；测试文件中的行 123 → 130，新的 7 行是新测试的列和替身的 props（`delete.test.tsx` 的 `label`，`card.test.tsx` 的 `children`、`label`，`project-dialog-texts.test.tsx` 的 `buttons`、`dialog`、`open`、`sentences`），测试自己读它们。
+- **死成员和死 prop**（M1 收尾计划附录 A 的 `deadsym.mjs`、`domains.mjs`，`dead/run.sh`，副本经 `fakegit` 列出文件）：`deadsym`（修订之后重跑，`dead/run2.py`，`dead/a-final.*`）：死的 prop 362 → 368、成员 975 → 987、导出 2 → 2（修订多的一行是 `switch-account-modal.test.tsx` 的替身的 `children`，它在测试里，不在 M3 的行中）（之前的数是 P11 修复轮之后的，P11 spec 附录 A.9）。`--rows M3` 218 → 225（`inv/deadcmp.py`，`dead/final.m3` 对 P11 的）：产品代码的 54 行和按路径误归的 41 行与 P11 附录 A.9 的逐行相同（收尾没有加也没有删）；测试文件中的行 123 → 130，新的 7 行是新测试的列和替身的 props（`delete.test.tsx` 的 `label`，`card.test.tsx` 的 `children`、`label`，`project-dialog-texts.test.tsx` 的 `buttons`、`dialog`、`open`、`sentences`），测试自己读它们。
 
 ### A.6 规模：7.11 的估计与实际
 
@@ -572,7 +589,7 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 
 **端到端**：故事 30 个文件，+6,644 / −71（21 个故事和 S1、S2 的页面版本；估约 2,900，约 2.3 倍：页面版本的键盘、请求在路上和会话的检查）；fixture 13 个文件，+1,962 / −13（估约 1,400）。测试数：`f8cb7c2` 49 个，`49190525` 110 个（估多约 50 个，实多 61 个），收尾之后 118 个。本机 `make e2e`：110 个约 29 秒，118 个约 34 秒。
 
-**收尾自己**（`T0` 到 `T16`，`logs/closeoutsize.txt`）：284 个文件（不含生成的 3 个和语言文件 16 个），+3,569 / −1,623，净 +1,946：web 应用 162 个文件 +1,160 / −1,059，它的测试 26 个 +526 / −82，web 的包 20 个 +127 / −100（另有 `keyboard.test.ts` +25），e2e 的故事 37 个 +758 / −136、fixture 6 个 +245 / −177，Go 的测试 3 个 +38 / −25，`tools/` 2 个 +302 / −9（`keywords.json` 的三条规则和 20 个例外、`i18n-keys.mjs`），文档 23 个 +374 / −26；语言文件 16 个 +342 / −18。
+**收尾自己**（`T0` 到 `T16`，修订之后，`logs/a-closeoutsize.txt`）：287 个文件（不含生成的 3 个和语言文件 16 个），+3,670 / −1,646，净 +2,024：web 应用 162 个文件 +1,175 / −1,071，它的测试 27 个 +558 / −82，web 的包 20 个 +131 / −103（另有 `keyboard.test.ts` +25），e2e 的故事 37 个 +779 / −141、fixture 6 个 +253 / −177，Go 的测试 3 个 +38 / −25，`tools/` 3 个 +305 / −10（`keywords.json` 的三条规则和 20 个例外、`i18n-keys.mjs`、`keywords.mjs` 的说明），文档 24 个 +392 / −28；语言文件 16 个 +348 / −24。
 
 **对 M4 以后的估算**：后端的生产代码与估计相符（11,526 对约 12,000，M2 校准过的按用例估有效）；测试照旧是估得最差的（前端 4 倍、后端 1.8 倍、故事 2.3 倍），M4 起前端的测试按"每个修改一张会话、权限、拒绝的表"估；组外的清理（M1 收尾交接的规则、跟随类型的使用方）不随领域的文件数，单列。
 
@@ -622,38 +639,41 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 | 每个开关都叫"Toggle project feature" | 以功能为名（"Cycles"…） | 项目的功能（P1、P3） |
 | 已选筛选的移除按钮没有名字 | "Remove X" | 项目列表（Task 12） |
 | "Token copied to clipboard." 之外的专用失败文案 | 共用的失败提示 | API 令牌、命令面板的复制（Task 9） |
-| 首页的问候由"good"和"morning"等拼成 | 每个时段一个键 | 首页（中文原来是"早上 晚上"） |
+| 首页的问候由"Good"和"morning"等拼成，名字是名和姓 | 每个时段一个带 `{name}` 的句子（"Good morning, {name}"），名字是显示名 | 首页（中文的"good"也译作"早上"，原来读作"早上 下午""早上 晚上"，现在是"下午好，{name}"等；S7） |
+| "You declined this invitation." | "This invitation was declined." | 已拒绝的邀请页（W5；负责人 2026-10-13，3.2 第 2 条） |
+| 侧边栏项目一行的按钮都叫"Open project menu" | 以项目为名 | 侧边栏（S8；F6） |
+| 快捷键弹窗的名字"Keyboard shortcuts Close"（关闭按钮在标题里） | "Keyboard shortcuts" | 快捷键弹窗（S6） |
 
-删去的 en 键：`afternoon`、`evening`、`good`、`morning`、`workspace_settings.token_not_copied`、`power_k.miscellaneous_actions.copy_current_page_url_toast_error`。
+删去的 en 键：`afternoon`、`evening`、`good`、`morning`、`onboarding.switch_account.description_before_email`、`description_after_email`（同一句的两半，现在是一个键）、`workspace_settings.token_not_copied`、`power_k.miscellaneous_actions.copy_current_page_url_toast_error`。
 
-行为的不同（都在 3.2 的 7 行里）：弹窗打开时后面的页面不能操作、不被读出；Tab 在确认框里转；三个直接用 Headless UI 的弹窗改经 `ModalCore`（命令面板的层级 `z-50` → `z-30`）；成员页的移出、离开和邀请的删除被拒绝时确认框留着；工作区菜单的"离开工作区"；`CustomSelect` 上的 Enter 打开列表、不提交表单；Safari 的组字顺序；侧边栏的副本、收起时 `inert`；侧边栏的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单一个停留点，手柄不是停留点；成员页一行的菜单名为"Options"；项目下拉框的停留点是按钮；状态的表单打开时焦点在名称上；颜色弹层的输入框有焦点的轮廓；图标的连字和表情不并进名字。
+行为的不同（都在 3.2 的 7 行里）：弹窗打开时后面的页面不能操作、不被读出；Tab 在确认框里转；三个直接用 Headless UI 的弹窗改经 `ModalCore`：命令面板的层级 `z-50` → `z-30`，现在在提示、tooltip、表情的弹层和右键菜单之下（它们经 portal 渲染在主树之外，`z-50` 及以上），与别的弹窗一样，M4 页面上 `z-50` 的元素会画在它之上（交给 M4，2.6）；设置页的手机菜单 `z-50` → `z-20`，在每个弹窗之下（原来画在弹窗之上，2.6）；切换账户的层级 `z-20` → `z-30`、宽度 `w-[40rem]` → `sm:max-w-2xl`；快捷键的标题左对齐（原来居中），关闭按钮在标题旁；只在打开时才挂载的弹窗现在有打开的过渡（原来立即出现）；成员页的移出、离开和邀请的删除被拒绝时确认框留着；工作区菜单的"离开工作区"；`CustomSelect` 上的 Enter 打开列表、不提交表单；Safari 的组字顺序；侧边栏的副本、收起时 `inert`；侧边栏的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单一个停留点，手柄不是停留点；成员页一行的菜单名为"Options"；项目下拉框的停留点是按钮；状态的表单打开时焦点在名称上；颜色弹层的输入框有焦点的轮廓；图标的连字和表情不并进名字。
 
 ### A.9 计划的块和逐 Task 复现
 
 - **块的核对**：`mkblocks.py` 从 `T0` 起把每个 Task 的块依次应用，与那个 Task 的快照逐字节相同（16 个 Task，0 个问题）；`compose_plan.py` 核对每个有块的文件只给一次、文件结构的表列出计划改到的每个文件。Task 14 的生成文件不写成块，计划钉住 `make gen` 之后它们的 SHA-256 和行数（`gensha.py check`：只有 Task 14 改生成的文件，`49190525` 的与 Task 1–13 的相同）。
-- **plan 的大小**：plan 共 12,760 行：Task 1 之前（目标、约束、一次性的脚本、文件结构）224 行；各 Task 一节（"其中代码块"是代码块中的行，`plansize.py`）：
+- **plan 的大小**：plan 共 13,122 行（修订之后；第一轮 12,760 行）：Task 1 之前（目标、约束、一次性的脚本、文件结构）228 行；各 Task 一节（"其中代码块"是代码块中的行，`plansize.py`）：
 
 | Task | plan 行数 | 其中代码块 | 文件 |
 |---|---|---|---|
 | 1 | 360 | 284 | 9 |
-| 2 | 615 | 534 | 11 |
-| 3 | 829 | 722 | 18 |
-| 4 | 1,025 | 861 | 36 |
-| 5 | 1,103 | 963 | 27 |
-| 6 | 1,045 | 893 | 30 |
-| 7 | 829 | 663 | 38 |
-| 8 | 538 | 435 | 15 |
-| 9 | 1,065 | 903 | 35 |
-| 10 | 467 | 349 | 20 |
-| 11 | 609 | 495 | 22 |
-| 12 | 1,156 | 990 | 34 |
-| 13 | 819 | 650 | 37 |
+| 2 | 679 | 586 | 14 |
+| 3 | 835 | 729 | 18 |
+| 4 | 1,130 | 954 | 39 |
+| 5 | 1,101 | 963 | 27 |
+| 6 | 1,045 | 895 | 30 |
+| 7 | 849 | 681 | 39 |
+| 8 | 604 | 495 | 17 |
+| 9 | 1,115 | 943 | 38 |
+| 10 | 474 | 356 | 20 |
+| 11 | 647 | 525 | 24 |
+| 12 | 1,154 | 990 | 34 |
+| 13 | 817 | 650 | 37 |
 | 14 | 1,361 | 1,164 | 40 |
-| 15 | 603 | 514 | 20 |
+| 15 | 611 | 522 | 20 |
 | 16 | 112 | 72 | 4 |
 
-  写 plan 之前的核对（brief 的"Phase size"）：按 13 组估出 13–14 个 Task、约 13,500 行，每个在约 1,450 行之内，在约 16 个、每个约 1,500 行之内，不拆。原型中实测 16 个 Task、12,760 行；原来的第 12 个 Task（收尾的扫描找到的英文）量出 1,733 行块，加上说明会超过约 1,500 行，所以分成 Task 12、13（第 3 节第 3 条）；最长的 Task 14 是 1,361 行（代码块 1,164 行）。
-- **逐 Task 复现**：`replay.py` 在本 spec 和 plan 的第一个提交 `fb5490c5` 的 `git archive` 副本上（`base-commit.tar` 解开到 `$M3TMP/closeout-replay`，`pnpm install --frozen-lockfile` 之后；plan 的一次性脚本 `doclinks.py` 照 plan 写到 `$M3TMP/closeout-plan/`），照 plan 逐个 Task 执行：写入块（`planapply.mjs`），核对 Go 的模块文件不变、`pnpm-lock.yaml` 与那个 Task 的快照相同，再执行这个 Task 的每个 `Run:`。副本不是 git 仓库，所以 `make lint-web` 照它的写法分三步运行（关键词守卫经 `kwreal.py` 运行仓库自己的 `tools/keywords.mjs`，`fakegit` 照 `git ls-files` 列出副本的文件；`tools/i18n-keys.mjs`；turbo 的四个检查），`make gen-check` 由 gen-same 代替（`make gen` 之前之后生成的文件逐字节相同），`make e2e` 只有 S3 因为读不到提交而失败，由脚本单独认出（F4）。16 个 Task 都通过（`replay-logs/summary.txt`）：
+  写 plan 之前的核对（brief 的"Phase size"）：按 13 组估出 13–14 个 Task、约 13,500 行，每个在约 1,450 行之内，在约 16 个、每个约 1,500 行之内，不拆。原型中实测 16 个 Task、12,760 行（修订之后 13,122 行，每个在约 1,500 行之内）；原来的第 12 个 Task（收尾的扫描找到的英文）量出 1,733 行块，加上说明会超过约 1,500 行，所以分成 Task 12、13（第 3 节第 3 条）；最长的 Task 14 是 1,361 行（代码块 1,164 行）。修订之后 `compose_plan.py` 另拒绝两种 plan：说明里一行像块的选择（以 `^` 开头）却不在 `@@BLOCKS …@@` 里（第一轮的 Task 3–8、12、13 正是这样，选择印成了说明，Step 1 空着，块都落在 Step 2 下：预检的 A-M1），和没有内容的一步；`amend/guarddemo.py` 核对第一轮的说明在 Task 3 被拒绝、加一个空的步被拒绝、现在的说明通过（`logs/a-guard-demo.txt`），`amend/stepcheck.py` 列出每一步给的文件：Task 1–13 的 Step 1 给它的非测试的 web 文件，Step 2 给其余的（`logs/a-stepcheck.txt`）。
+- **逐 Task 复现（第一轮）**：`replay.py` 在本 spec 和 plan 的第一个提交 `fb5490c5` 的 `git archive` 副本上（`base-commit.tar` 解开到 `$M3TMP/closeout-replay`，`pnpm install --frozen-lockfile` 之后；plan 的一次性脚本 `doclinks.py` 照 plan 写到 `$M3TMP/closeout-plan/`），照 plan 逐个 Task 执行：写入块（`planapply.mjs`），核对 Go 的模块文件不变、`pnpm-lock.yaml` 与那个 Task 的快照相同，再执行这个 Task 的每个 `Run:`。副本不是 git 仓库，所以 `make lint-web` 照它的写法分三步运行（关键词守卫经 `kwreal.py` 运行仓库自己的 `tools/keywords.mjs`，`fakegit` 照 `git ls-files` 列出副本的文件；`tools/i18n-keys.mjs`；turbo 的四个检查），`make gen-check` 由 gen-same 代替（`make gen` 之前之后生成的文件逐字节相同），`make e2e` 只有 S3 因为读不到提交而失败，由脚本单独认出（F4）。16 个 Task 都通过（`replay-logs/summary.txt`）：
 
 | Task | 写入的文件 | 检查 |
 |---|---|---|
@@ -666,3 +686,4 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 | 15、16 | 20、4 | `make lint-web` 同上；`doclinks.py` 每个文件 `0 broken`，`broken: 0` |
 
   这一次复现用的 plan 是本 spec 第一个提交中的那一版（12,760 行，SHA-256 `2df6ca8a6346d890…`）。最后的副本与原型逐文件相同：`treediff.mjs closeout-replay closeout-proto`（原型在 `T16`，放进同一个提交的 spec 和 plan），3,255 个文件对 3,255 个，0 处差异（`logs/replay-all.log`）。本 spec 的第二个提交只改本 spec（本节的复现结果，2.4 的 K9 一行和 2.8 的 S7 的测试数），plan 不变。
+- **修订之后的复现**：在修订的提交（本 spec 和 plan 的修订）的 `git archive` 副本上照同样的做法再复现一次；结果由下一个提交写在这里，plan 不变。

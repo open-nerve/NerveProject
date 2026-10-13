@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** M3 的收尾。负责人的两件：`ModalCore` 改用 Headless UI v2 的 `Dialog` 的打开方式，弹窗打开时后面的页面 `inert`、`aria-hidden`（只在打开时才挂载的弹窗也是），Tab 走不出弹窗，请求在路上时关不掉、组字的 Escape 不关、关上之后焦点回到打开它的控件照旧，`AlertModalCore` 和快捷键的搜索框不再是正的 `tabIndex`，命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`；侧边栏的工作区菜单加"离开工作区"，每个角色都有，经成员页的同一个确认框和命令，唯一的管理员被拒绝时确认框留着。各 Phase 留给收尾的事（spec 2.4）：M3 页面上的英文和角色名、`IconButton` 的名字和收尾的键盘清单、共用的写法（复制、问题码、拒绝的文字）和文案的检查、输入法和选择上的 Enter、工作区的地址经路由、测试的整理和契约的说明。收尾的文档：M3 收到的 6 份交接关闭，M4–M8 的 5 份交接，README、差异清单、M3 设计和前端改动清单。
+**Goal:** M3 的收尾。负责人的两件：`ModalCore` 改用 Headless UI v2 的 `Dialog` 的打开方式，弹窗打开时后面的页面 `inert`、`aria-hidden`（只在打开时才挂载的弹窗也是），Tab 走不出弹窗，请求在路上时关不掉、组字的 Escape 不关、关上之后焦点回到打开它的控件照旧，`AlertModalCore` 和快捷键的搜索框不再是正的 `tabIndex`，命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`，设置页的手机菜单降到弹窗之下；侧边栏的工作区菜单加"离开工作区"，每个角色都有，经成员页的同一个确认框和命令，唯一的管理员被拒绝时确认框留着。各 Phase 留给收尾的事（spec 2.4）：M3 页面上的英文和角色名、`IconButton` 的名字和收尾的键盘清单、共用的写法（复制、问题码、拒绝的文字）和文案的检查、输入法和选择上的 Enter、工作区的地址经路由、测试的整理和契约的说明。收尾的文档：M3 收到的 6 份交接关闭，M4–M8 的 5 份交接，README、差异清单、M3 设计和前端改动清单。
 
 **Architecture:** 改 web（应用和 `@nerve/ui`、`@nerve/propel`、`@nerve/utils`、`@nerve/constants`、`@nerve/i18n` 五个包）、`e2e/`、`tools/`（关键词规则，新的 `i18n-keys.mjs`）、`Makefile`、`knip.jsonc`、文档；Go 只改测试（Task 14）；契约只改 `project.yaml` 中五个字段的说明，`make gen` 写出的三个生成文件在 Task 14 钉住。共用的新部分：`@nerve/ui` 的 `ModalCore`（Task 1）；`@nerve/utils` 的 `isComposing`（Task 10，`@nerve/propel` 因此依赖 `@nerve/utils`）；web 的 `components/common/translated.tsx`（`Translated`，一句一个键，Task 4）、`components/common/color-picker.tsx`（Task 8）、`core/hooks/use-route-workspace.ts`（Task 11）、`use-copy-link.ts` 的 `useCopyText`、`use-refusal-toast.ts` 的 `useRefusalMessage`、`lib/api-error.ts` 的 `problemCode`（Task 9）；e2e 的 `dialogs.ts` 的 `modalDialog`、`pageBehindHidden`、`announced`（Task 1、2），`e2e/fixtures/assert/session.ts`、`auth.ts` 的 `registeredPAT`（Task 14）。页面调用 store 的方法，修改的跟进经 `followInSession`；类型只来自生成的客户端。
 
@@ -20,9 +20,9 @@
 - **容器**：`make e2e`、`make test` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**（总体设计 7.7；P8a–P11 的裁定）：会话的每个取数经 `useSessionSWR`；修改经 store 的方法，之后的跳转、提示、界面变化经 `followInSession` 只在发出它的会话里（Task 3 的离开：hook 的 vitest 的"换账户之后"一行）。弹窗：请求在路上时关不掉（F-1）、被拒绝时留着、只在成功的跟进中关上（A-M2）、组字的 Escape 不关、打开时后面的页面 `inert` 和 `aria-hidden`、Tab 不出去、关上之后焦点回到打开它的控件（spec 2.5）；每一条由一个会失败的端到端检查看住（各 Task 的变异表）。每个控件 Tab 能到、有名字、键盘取得焦点时看得见，不加正的 `tabIndex`。页面读地址只经路由参数（`project-address-route`、`workspace-address-route`）。文案：页面上的文字经 `t()`，en 与 zh-CN 同时加，一句话带名字时一个键加占位（`Translated`）；不再读的键在两种语言中都删除。类型只来自生成的客户端：没有新的 `as`、`any`、`!`（spec 附录 A.5）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.5）；只为使用方改到的 Plane 文件不变长，除 spec 第 3 节第 1 条的 21 个（`IconButton` 的名字，待裁定）。
-- **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告，除 spec 第 3 节第 2 条的 8 个文件（待裁定）。上限：web 303 → 302（Task 2）→ 301（Task 8）→ 298（Task 12）；`@nerve/ui` 15 → 14（Task 1）→ 12（Task 10）；propel 11、utils 7、constants 1 不变。抑制只多一条（Task 12，`autoFocus` 写明理由，spec 第 3 节第 20 条），删去两条。
-- **关键词守卫**：69 条规则、3 个例外；Task 9 起 70 条（`copy-hook`）、23 个例外；Task 11 起 71 条（`workspace-address-route`）。规则的 `phase` 写 `M3/closeout`，例外的 `until` 写 `M4/closeout` 等（spec 第 3 节第 5 条）。
+- **规则**（总体设计 7.7；P8a–P11 的裁定）：会话的每个取数经 `useSessionSWR`；修改经 store 的方法，之后的跳转、提示、界面变化经 `followInSession` 只在发出它的会话里（Task 3 的离开：hook 的 vitest 的"换账户之后"一行）。弹窗：请求在路上时关不掉（F-1）、被拒绝时留着、只在成功的跟进中关上（A-M2）、组字的 Escape 不关、打开时后面的页面 `inert` 和 `aria-hidden`、Tab 不出去、关上之后焦点回到打开它的控件（spec 2.5）；每一条由一个会失败的端到端检查看住（各 Task 的变异表）。每个控件 Tab 能到、有名字、键盘取得焦点时看得见，不加正的 `tabIndex`。页面读地址只经路由参数（`project-address-route`、`workspace-address-route`）。文案：页面上的文字经 `t()`，en 与 zh-CN 同时加，一句话带名字时一个键加占位（`Translated`）；不再读的键在两种语言中都删除。类型只来自生成的客户端：没有新的 `as`、`any`、`!`（spec 附录 A.5）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.5）；只为使用方改到的 Plane 文件不变长，记录在案的例外一个：`IconButton` 的名字在根上必传，25 个使用方的文件只加名字（`aria-label`、`addReactionLabel`、`useTranslation` 的导入和 `t` 一行，以及 oxfmt 的重排），其中 21 个变长（控制者已裁定，spec 第 3 节第 1 条、附录 A.5）。
+- **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告。收尾改到、仍有警告的 5 个文件照控制者的裁定交出（spec 第 3 节第 2 条）：只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个给 M4、M6、M7，只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx` 给 M8（Task 15 写进各自的交接）。上限：web 303 → 301（Task 2）→ 300（Task 8）→ 298（Task 11）→ 295（Task 12）；`@nerve/ui` 15 → 14（Task 1）→ 12（Task 10）；`@nerve/propel` 11 → 10（Task 7）；utils 7、constants 1 不变。抑制多两条（Task 2 的快捷键搜索框和 Task 12 的筛选，`autoFocus` 写明理由，spec 第 3 节第 2、20 条），删去两条：181 条照旧。
+- **关键词守卫**：69 条规则、3 个例外；Task 9 起 70 条（`copy-hook`）、23 个例外；Task 11 起 71 条（`workspace-address-route`）。规则的 `phase` 写 `M3/closeout`，例外的 `until` 写 `M4/closeout` 等（spec 第 3 节第 5 条）：在那个 M 的收尾开始、`phase` 改为它时到期，Task 9 把这一点写进守卫的说明和 M1 设计 7.4，Task 15 写进收到例外的 M 的交接。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -31,7 +31,7 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 Task 0 之后的树起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同；之后在另一个副本上从本提交逐 Task 复现，每个 Task 之后跑它的门禁，最后的树与原型逐个文件相同（spec 附录 A.9）。块写入之后不必再格式化（原型中每个 Task 都经过 `oxfmt`）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`e2e/fixtures/dialogs.ts`（Task 1、2、10）、S6（Task 2、9、10）、S7（Task 4–8、12、13：每个 Task 加它的页面）、P5、P6、P7、W7（几个 Task 各加一处检查）、两种语言的文案文件（每个 Task 加它读的键）、`tools/keywords.json`（Task 9、11）、web 和 `@nerve/ui` 的 `package.json`（上限）、`modal-core.tsx`（Task 1、10）、`workspace-menu-root.tsx`（Task 3、11）、`member-columns.tsx`（Task 4、6、11）、侧边栏的项目列表（Task 7、8、11）、`card.tsx`（Task 5、12）、M3 设计（Task 15、16）、README（Task 3、16）。每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`e2e/fixtures/dialogs.ts`（Task 1、2、10）、S6（Task 2、9、10）、S7（Task 4–8、12、13：每个 Task 加它的页面）、P5、P6、P7、W7（几个 Task 各加一处检查）、两种语言的文案文件（每个 Task 加它读的键）、`tools/keywords.json`（Task 9、11）、web、`@nerve/ui` 和 `@nerve/propel` 的 `package.json`（上限）、`modal-core.tsx`（Task 1、10）、`switch-account-modal.tsx`（Task 2、4）、设置页的手机菜单（Task 2、7）、`workspace-menu-root.tsx`（Task 3、11）、`member-columns.tsx`（Task 4、6、11）、侧边栏的项目列表（Task 7、8、11）、`card.tsx`（Task 5、12）、P1、P2（各几个 Task）、M3 设计（Task 9、11、15、16）、README（Task 3、16）。每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（静态：`make lint-web` 的 `tsc`、oxlint、关键词守卫、`tools/i18n-keys.mjs`，以及 `make knip`；vitest：`make test-web`；Go：`make test` 的一个包；端到端：`make e2e` 的故事）。它们在各自 Task 的树上跑过，也在最终的原型上逐个跑过（`$M3TMP/closeout-tools/mutants_closeout.py`，`mut.py` 在它写的每个检查上各跑一次；spec 附录 A.2）。**会话、权限、焦点或取数的性质只由评审才能发现的，算缺口**（brief）：表中每一条这类性质都有一个会失败的检查。
 - **评审敏感**（spec 第 1 节）：弹窗的每一条规则（上面"规则"一条）；离开的入口只做 nerve 允许的（唯一的管理员被拒绝时确认框留着，访客能离开），跟进只在发出它的会话里；每一处可见的不同写进前端改动清单（spec 附录 A.8）。改动这些之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -75,7 +75,8 @@ sys.exit(1 if broken else 0)
 | `Makefile` | `make lint-web` 跑 `tools/i18n-keys.mjs`（读了却没有定义的键） | 9 |
 | `README.md` | 工作区菜单加"离开工作区"（Task 3）；数据库的 locale、"或经接口"（Task 16） | 3、16 |
 | `api/modules/project.yaml` | 五个字段的说明说 nerve 对它们做什么（K24；`make gen`） | 14 |
-| `docs/v0/M3-workspace-project/M3-design.md` | 13.2 的接收者链接交接（Task 15）；5.1 写裁定 B1（Task 16） | 15、16 |
+| `docs/v0/M1-frontend-trim/M1-design.md` | 7.4 写上 `until` 为 `M<n>/closeout` 的例外何时到期 | 9 |
+| `docs/v0/M3-workspace-project/M3-design.md` | 7.10 的规则表补上 P9、P10 和收尾的规则（Task 9、11）；13.2 的接收者链接交接（Task 15）；5.1 写裁定 B1（Task 16） | 9、11、15、16 |
 | `docs/v0/M3-workspace-project/handoffs/M0-P3-pagination-components.md`、`docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`、`docs/v0/M3-workspace-project/handoffs/M1-P3-trim-platform.md`、`docs/v0/M3-workspace-project/handoffs/M1-P4-router-native.md`、`docs/v0/M3-workspace-project/handoffs/M1-closeout.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md` | M3 收到的交接：处理结果，`status: closed` | 15 |
 | `docs/v0/M4-issue-core/handoffs/M1-closeout.md`、`docs/v0/M5-files/handoffs/M1-closeout.md`、`docs/v0/M6-cycles-modules/handoffs/M1-closeout.md`、`docs/v0/M7-collaboration/handoffs/M1-closeout.md`、`docs/v0/M8-open-release/handoffs/M1-closeout.md` | `always-return` 已由 M3/P11 全仓清零 | 15 |
 | `docs/v0/M4-issue-core/handoffs/M2-closeout.md`、`docs/v0/M6-cycles-modules/handoffs/M2-closeout.md`、`docs/v0/M7-collaboration/handoffs/M2-closeout.md` | 复制一节的关闭条件经 `useCopyLink`、`useCopyText` | 15 |
@@ -87,22 +88,23 @@ sys.exit(1 if broken else 0)
 | `e2e/fixtures/auth.ts` | `registeredPAT(api, email)` | 14 |
 | `e2e/fixtures/browser.ts` | `expectNoAddress` 移来 | 14 |
 | `e2e/fixtures/dialogs.ts` | `modalDialog`、`pageBehindHidden`（Task 1）；`announced`（Task 2）；`composingEscape` 发两种顺序（Task 10） | 1、2、10 |
-| `e2e/fixtures/project-pages.ts` | `labelRow` 移来（Task 6）；侧边栏的帮助（Task 8） | 6、8 |
-| `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w5-invitation-link.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
+| `e2e/fixtures/project-pages.ts` | `labelRow` 移来（Task 6）；成员一行的菜单按它的名字，`pageContent`：侧边栏之外的页面内容（Task 8） | 6、8 |
+| `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
 | `e2e/stories/identity/a11-api-tokens.spec.ts` | 令牌复制到剪贴板（Task 9）；`registeredPAT`（Task 14） | 9、14 |
 | `e2e/stories/identity/a6-sign-out.spec.ts` | 切换账户的弹窗在退出路上时关不掉（Task 2）；导入（Task 14） | 2、14 |
-| `e2e/stories/project/p1-create-project.spec.ts` | 功能的开关以功能为名（Task 13）；`registeredPAT`（Task 14） | 13、14 |
-| `e2e/stories/project/p2-visibility.spec.ts` | "Joining"（Task 5）；`registeredPAT`（Task 14） | 5、14 |
+| `e2e/stories/project/p1-create-project.spec.ts` | 在页面内容中找卡片（Task 8）；功能的开关以功能为名（Task 13）；`registeredPAT`（Task 14） | 8、13、14 |
+| `e2e/stories/project/p2-visibility.spec.ts` | "Joining"（Task 5）；在页面内容中找页头的面包屑（Task 8）；`registeredPAT`（Task 14） | 5、8、14 |
 | `e2e/stories/project/p3-project-settings.spec.ts` | 自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 13、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；`registeredPAT`（Task 14） | 1、14 |
 | `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"（Task 5）；一行的菜单（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
 | `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓（Task 8） | 1、2、6、8 |
 | `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6） | 1、2、6 |
-| `e2e/stories/smoke/s6-dialogs.spec.ts` | S6：命令面板、快捷键、嵌套的弹窗是模态的（新文件）；命令面板的复制（Task 9）、组字的 Escape（Task 10） | 2 新、9、10 |
+| `e2e/stories/smoke/s6-dialogs.spec.ts` | S6：命令面板、快捷键（以标题为名）、嵌套的弹窗是模态的（新文件，Task 2）；命令面板的复制（Task 9）；组字的 Escape（Task 10） | 2 新、9、10 |
 | `e2e/stories/smoke/s7-chinese.spec.ts` | S7：中文的页面和弹窗（新文件，逐 Task 加） | 4 新、5、6、7、8、12、13 |
-| `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘（新文件） | 8 新 |
-| `e2e/stories/workspace/w11-guest-bounds.spec.ts` | 访客从菜单离开、唯一的管理员被拒绝（Task 3）；`registeredPAT`、导入（Task 14） | 3、14 |
+| `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘，项目的一行以项目为名（新文件） | 8 新 |
+| `e2e/stories/workspace/w11-guest-bounds.spec.ts` | 访客从菜单离开（双击只发一次，请求在路上时确认框关不掉）、唯一的管理员被拒绝（Task 3）；`registeredPAT`、导入（Task 14） | 3、14 |
 | `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；`registeredPAT`（Task 14） | 3、14 |
+| `e2e/stories/workspace/w5-invitation-link.spec.ts` | 邀请被拒绝之后的页面的说法（Task 4）；`registeredPAT`、会话断言的导入（Task 14） | 4、14 |
 | `e2e/stories/workspace/w7-member-management.spec.ts` | 条件挂载的确认框隐藏后面的页面（Task 1）；被拒绝时确认框留着（Task 3）；`registeredPAT`（Task 14） | 1、3、14 |
 | `e2e/stories/workspace/w8-navigation-preferences.spec.ts` | 弹窗关上之后再读侧边栏（Task 1）；`registeredPAT`（Task 14） | 1、14 |
 | `knip.jsonc` | knip 的入口加 `tools/i18n-keys.mjs` | 9 |
@@ -111,11 +113,12 @@ sys.exit(1 if broken else 0)
 | `server/internal/platform/jobs/jobs_test.go` | 期限代替余量，定期的运行按 `ScheduledAt` 排序 | 14 |
 | `tools/i18n-keys.mjs` | 页面读的每个键在 en 中都有定义（新文件，spec 2.10） | 9 新 |
 | `tools/keywords.json` | 关键词规则 `copy-hook`（20 个有期限的例外）、`refusal-toast`、`sign-out-toast` 的写法（Task 9）；`workspace-address-route`（Task 11） | 9、11 |
+| `tools/keywords.mjs` | 说明写上 `until` 为 `M<n>/closeout` 的例外何时到期 | 9 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx` | 工作区经 `useRouteWorkspace()` 或写明 slug（Task 11）；侧边栏的标题经 `t()`（Task 12） | 11、12 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx` | 工作区经 `useRouteWorkspace()` 或写明 slug（Task 11）；侧边栏的标题经 `t()`（Task 12） | 11 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx` | 工作区经 `useRouteWorkspace()` 或写明 slug（Task 11） | 11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx` | `IconButton` 的名字 | 7 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx` | 成员页的标题经 `t()`（Task 4）；工作区经 `useRouteWorkspace()`（Task 11） | 4、11 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx` | 成员页的标题经 `t()`（Task 4）；工作区经 `useRouteWorkspace()`（Task 11） | 11 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/project/card-list.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx` | 工作区经 `useRouteWorkspace()`（Task 11） | 11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx` | 项目设置各页的标题经 `t()`；没有项目时的设置页；它们的 vitest 照新的标题 | 13 |
 | `web/apps/web/app/(all)/create-workspace/layout.tsx`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/app/(all)/onboarding/layout.tsx`、`web/apps/web/app/(all)/onboarding/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 13 |
 | `web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 4 |
@@ -125,7 +128,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/appearance/theme-switcher.tsx` | 失败的提示经 `useRefusalMessage` | 9 |
 | `web/apps/web/core/components/auth-screens/not-authorized-view.tsx`、`web/apps/web/core/components/home/user-greetings.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/navigation/top-nav-power-k.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx` | M3 页面上的英文经 `t()` | 4 |
 | `web/apps/web/core/components/automation/auto-archive-automation.tsx`、`web/apps/web/core/components/automation/select-month-modal.test.tsx`、`web/apps/web/core/components/automation/select-month-modal.tsx` | 自动归档的月数和自定义范围经 `t()`；它的测试 | 13 |
-| `web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/mobile/nav.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx` | `IconButton` 的名字（M2、M4、M6、M7 的调用方） | 7 |
+| `web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx` | `IconButton` 的名字（M2、M4、M6、M7 的调用方） | 7 |
 | `web/apps/web/core/components/common/color-picker.tsx` | 颜色弹层：十六进制输入框的轮廓（新文件） | 8 新 |
 | `web/apps/web/core/components/common/translated.test.tsx`、`web/apps/web/core/components/common/translated.tsx` | `Translated`：带名字的一句一个键（新文件）和它的测试 | 4 新 |
 | `web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx`、`web/apps/web/core/components/issues/attachment/attachment-list-item.tsx`、`web/apps/web/core/components/issues/issue-detail/sidebar.tsx`、`web/apps/web/core/components/issues/peek-overview/properties.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/views/view-list-item-action.tsx` | `ButtonAvatars` 不再收 `showTooltip` | 9 |
@@ -134,56 +137,57 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/editor/embeds/mentions/user.tsx` | 角色名经 `ROLE_DETAILS` | 6 |
 | `web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx` | 工作区经 `useRouteWorkspace()` | 11 |
 | `web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx` | 组字经 `isComposing` | 10 |
-| `web/apps/web/core/components/labels/create-update-label-inline.tsx` | 标签的英文经 `t()`（Task 6）；颜色弹层（Task 8） | 8 |
-| `web/apps/web/core/components/labels/delete-label-modal.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-item.tsx` | 标签的英文经 `t()`（Task 6）；颜色弹层（Task 8） | 6 |
+| `web/apps/web/core/components/labels/create-update-label-inline.tsx` | 颜色弹层（Task 8） | 8 |
+| `web/apps/web/core/components/labels/delete-label-modal.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-item.tsx` | 标签的英文经 `t()`（Task 6） | 6 |
 | `web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 |
 | `web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 新 |
 | `web/apps/web/core/components/navigation/top-navigation-root.tsx` | 工作区菜单不再收 `variant` | 3 |
 | `web/apps/web/core/components/navigation/use-tab-preferences.test.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.ts` | 标签栏的菜单和提示经 `t()`；它们的测试 | 5 |
-| `web/apps/web/core/components/onboarding/switch-account-modal.tsx` | 经 `ModalCore`，退出路上时关不掉 | 2 |
-| `web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx` | 经 `ModalCore`（Task 2）；组字的守卫（Task 10） | 2 |
+| `web/apps/web/core/components/onboarding/switch-account-modal.test.tsx` | 切换账户的那句话是一个键，地址在其中（新文件） | 4 新 |
+| `web/apps/web/core/components/onboarding/switch-account-modal.tsx` | 经 `ModalCore`，退出路上时关不掉（Task 2）；那句话一个键，经 `Translated`（Task 4） | 2、4 |
+| `web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx` | 经 `ModalCore`，标题和搜索框经 `t()`，关闭按钮在标题之外，`autoFocus` 写明理由 | 2 |
 | `web/apps/web/core/components/power-k/ui/modal/wrapper.tsx` | 经 `ModalCore`（Task 2）；组字的守卫（Task 10） | 2、10 |
 | `web/apps/web/core/components/profile/sidebar.tsx` | `IconButton` 的名字（Task 7）；工作区经 `useRouteWorkspace()`（Task 11） | 7、11 |
 | `web/apps/web/core/components/project-states/create-update/create-update.test.tsx`、`web/apps/web/core/components/project-states/options/delete.test.tsx` | 读键的测试 | 6 |
-| `web/apps/web/core/components/project-states/create-update/create.tsx`、`web/apps/web/core/components/project-states/create-update/update.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx` | 状态的英文经 `t()`、组的名字（Task 6）；颜色弹层、名称的焦点（Task 8） | 6 |
+| `web/apps/web/core/components/project-states/create-update/create.tsx`、`web/apps/web/core/components/project-states/create-update/update.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx` | 状态的英文经 `t()`、组的名字（Task 6） | 6 |
 | `web/apps/web/core/components/project-states/create-update/form.tsx` | 状态的英文经 `t()`、组的名字（Task 6）；颜色弹层、名称的焦点（Task 8） | 6、8 |
 | `web/apps/web/core/components/project/add-project-members-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx`、`web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/form.tsx`、`web/apps/web/core/components/project/join-project-modal.tsx`、`web/apps/web/core/components/project/leave-project-modal.tsx`、`web/apps/web/core/components/project/member-select.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/settings/control-section.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5 |
 | `web/apps/web/core/components/project/add-project-members-modal.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5、6 |
 | `web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 |
 | `web/apps/web/core/components/project/applied-filters/root.test.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 新 |
-| `web/apps/web/core/components/project/card-list.tsx`、`web/apps/web/core/components/project/root.tsx` | 项目页的英文（Task 5、12）；工作区经 `useRouteWorkspace()`（Task 11） | 11 |
 | `web/apps/web/core/components/project/card.test.tsx` | 卡片的文字（Task 5、12） | 5、12 |
-| `web/apps/web/core/components/project/card.tsx` | 项目页的英文（Task 5、12）；工作区经 `useRouteWorkspace()`（Task 11） | 5、12 |
+| `web/apps/web/core/components/project/card.tsx` | 项目页的英文（Task 5、12） | 5、12 |
 | `web/apps/web/core/components/project/dropdowns/filters/lead.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 删除 |
 | `web/apps/web/core/components/project/form-loader.tsx`、`web/apps/web/core/components/project/settings/helper.tsx` | 没有用到的加载、包了一层的开关删除 | 13 删除 |
-| `web/apps/web/core/components/project/header.tsx` | 项目页的英文（Task 5、12）；工作区经 `useRouteWorkspace()`（Task 11） | 11、12 |
+| `web/apps/web/core/components/project/header.tsx` | 项目页的英文（Task 12）；工作区经 `useRouteWorkspace()`（Task 11） | 11、12 |
 | `web/apps/web/core/components/project/member-list.tsx` | 搜索的占位或名字 | 13 |
 | `web/apps/web/core/components/project/project-dialog-texts.test.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5 新 |
+| `web/apps/web/core/components/project/root.tsx` | 工作区经 `useRouteWorkspace()`，回调和副作用写全依赖（Task 11） | 11 |
 | `web/apps/web/core/components/project/search-projects.tsx` | 搜索的占位或名字 | 7 |
-| `web/apps/web/core/components/project/settings/features-list.tsx` | 功能的开关以功能为名（Task 13）；成员一行的菜单（Task 8） | 13 |
-| `web/apps/web/core/components/project/settings/member-columns.tsx` | 功能的开关以功能为名（Task 13）；成员一行的菜单（Task 8） | 8 |
+| `web/apps/web/core/components/project/settings/features-list.tsx` | 功能的开关以功能为名（Task 13） | 13 |
+| `web/apps/web/core/components/project/settings/member-columns.tsx` | 成员一行的菜单（Task 8） | 8 |
 | `web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx` | 功能开关的提示经 `t()`（Task 5）；开关的名字（Task 13） | 5、13 |
-| `web/apps/web/core/components/project/settings/use-feature-toggle.ts` | 功能开关的提示经 `t()`（Task 5）；开关的名字（Task 13） | 5 |
+| `web/apps/web/core/components/project/settings/use-feature-toggle.ts` | 功能开关的提示经 `t()`（Task 5） | 5 |
+| `web/apps/web/core/components/settings/mobile/nav.tsx` | 设置页的手机菜单降到弹窗之下（`z-20`，Task 2）；`IconButton` 的名字（Task 7） | 2、7 |
 | `web/apps/web/core/components/settings/profile/content/pages/security.tsx` | `signOut` 的取法（`sign-out-toast`） | 9 |
 | `web/apps/web/core/components/settings/project/content/feature-control-item.tsx` | `title` 是字符串，给开关命名 | 13 |
-| `web/apps/web/core/components/settings/project/sidebar/header.tsx` | 设置侧边栏的标题经 `t()`（Task 4）；名字（Task 7）；写明 slug（Task 11） | 4 |
+| `web/apps/web/core/components/settings/project/sidebar/header.tsx` | 设置侧边栏的标题经 `t()`（Task 4） | 4 |
 | `web/apps/web/core/components/settings/workspace/sidebar/header.tsx` | 设置侧边栏的标题经 `t()`（Task 4）；名字（Task 7）；写明 slug（Task 11） | 4、7、11 |
 | `web/apps/web/core/components/sidebar/resizable-sidebar.tsx` | 名字经 `t()`（Task 4）；不显示的一份 `inert`，死的状态删除（Task 8） | 4、8 |
 | `web/apps/web/core/components/sidebar/sidebar-wrapper.tsx` | 标题经 `t()`，没有调用方的 `title` 删除 | 12 |
-| `web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；标题和说明经 `t()`（Task 4）；角色名（Task 6） | 3、4 |
+| `web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；标题和说明经 `t()`（Task 4） | 3、4 |
 | `web/apps/web/core/components/workspace/leave-workspace-modal.tsx` | 侧边栏的离开：成员页的确认框和命令（新文件） | 3 新 |
-| `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；标题和说明经 `t()`（Task 4）；角色名（Task 6） | 3、6 |
-| `web/apps/web/core/components/workspace/settings/member-columns.tsx` | M3 页面上的英文和角色名（Task 4、6）；工作区经 `useRouteWorkspace()`（Task 11） | 4、6、11 |
-| `web/apps/web/core/components/workspace/settings/members-list-item.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；标题和说明经 `t()`（Task 4）；角色名（Task 6） | 3 |
+| `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；角色名（Task 6） | 3、6 |
+| `web/apps/web/core/components/workspace/settings/member-columns.tsx` | M3 页面上的英文（Task 4）；角色名（Task 6）；工作区经 `useRouteWorkspace()`（Task 11） | 4、6、11 |
+| `web/apps/web/core/components/workspace/settings/members-list-item.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3） | 3 |
 | `web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts` | 移出、离开、删除邀请收 `done`，只在成功时调用；它们的测试（Task 3）；删除邀请的提示经 `t()`（Task 4） | 3、4 |
-| `web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.ts` | 移出、离开、删除邀请收 `done`，只在成功时调用；它们的测试（Task 3）；删除邀请的提示经 `t()`（Task 4） | 3 |
-| `web/apps/web/core/components/workspace/settings/useMemberColumns.tsx` | M3 页面上的英文和角色名（Task 4、6）；工作区经 `useRouteWorkspace()`（Task 11） | 11 |
-| `web/apps/web/core/components/workspace/settings/workspace-details.test.tsx` | M3 页面上的英文和角色名（Task 4、6）；工作区经 `useRouteWorkspace()`（Task 11） | 4 |
-| `web/apps/web/core/components/workspace/settings/workspace-details.tsx` | M3 页面上的英文和角色名（Task 4、6）；工作区经 `useRouteWorkspace()`（Task 11） | 4、11 |
-| `web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx` | 角色名（Task 6）；写明 slug（Task 11） | 6 |
-| `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘（Task 8）；写明 slug（Task 11） | 7、8 |
-| `web/apps/web/core/components/workspace/sidebar/projects-list.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘（Task 8）；写明 slug（Task 11） | 7、8、11 |
-| `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | 角色名（Task 6）；写明 slug（Task 11） | 11 |
+| `web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.ts` | 移出、离开、删除邀请收 `done`，只在成功时调用；它们的测试（Task 3） | 3 |
+| `web/apps/web/core/components/workspace/settings/workspace-details.test.tsx` | M3 页面上的英文（Task 4） | 4 |
+| `web/apps/web/core/components/workspace/settings/workspace-details.tsx` | M3 页面上的英文（Task 4）；工作区经 `useRouteWorkspace()`（Task 11） | 4、11 |
+| `web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx` | 角色名（Task 6） | 6 |
+| `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8） | 7、8 |
+| `web/apps/web/core/components/workspace/sidebar/projects-list.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8）；写明 slug（Task 11） | 7、8、11 |
+| `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | 写明 slug（Task 11） | 11 |
 | `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
 | `web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts` | 经 `problemCode()` 或 `useRefusalMessage` | 9 |
 | `web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts` | `useCopy`、`useCopyText`；它的测试 | 9 |
@@ -194,7 +198,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts` | `problemCode()`；它的测试 | 9 |
 | `web/apps/web/core/lib/fake-controls.ts` | 替身：`AlertModalCore` 的文字（Task 6）；开关的名字（Task 13） | 6、13 |
 | `web/apps/web/core/store/member/project/project-member.store.test.ts` | 资料来自 `userOf` | 14 |
-| `web/apps/web/package.json` | web 的 oxlint 上限 303 → 302（Task 2）→ 301（Task 8）→ 298（Task 12） | 2、8、12 |
+| `web/apps/web/package.json` | web 的 oxlint 上限 303 → 301（Task 2）；301 → 300（Task 8）；300 → 298（Task 11）；298 → 295（Task 12） | 2、8、11、12 |
 | `web/packages/constants/src/filter.ts` | 删去没有读者的日期选项（Task 9）；创建日期的选项 `i18n_name`（Task 12） | 9、12 |
 | `web/packages/constants/src/project.ts` | `PROJECT_FILTER_I18N_LABEL` | 12 |
 | `web/packages/constants/src/state.ts` | 状态组的 `i18n_label` | 6 |
@@ -202,17 +206,17 @@ sys.exit(1 if broken else 0)
 | `web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、7、13 |
 | `web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/zh-CN/common.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 3、4、12、13 |
 | `web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 7、12 |
-| `web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、9 |
+| `web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 2、4、9 |
 | `web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、5、6、13 |
 | `web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/zh-CN/project.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 5、6、12 |
 | `web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 3、4、9 |
 | `web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json` | 两种语言的新键（每个 Task 加它读的，删它不再读的） | 4、12 |
-| `web/packages/propel/package.json` | 依赖 `@nerve/utils` | 10 |
+| `web/packages/propel/package.json` | oxlint 上限 11 → 10（Task 7）；依赖 `@nerve/utils`（Task 10） | 7、10 |
 | `web/packages/propel/src/emoji-icon-picker/logo.tsx` | 图标的连字和表情 `aria-hidden` | 7 |
-| `web/packages/propel/src/emoji-reaction/emoji-reaction.tsx` | 表情回应的按钮收 `aria-label`，加回应的按钮收 `addReactionLabel` | 7 |
+| `web/packages/propel/src/emoji-reaction/emoji-reaction.tsx` | 表情回应的按钮收 `aria-label`，加回应的按钮收 `addReactionLabel`，回应按表情作 `key` | 7 |
 | `web/packages/propel/src/icon-button/helper.tsx` | `aria-label` 必传 | 7 |
 | `web/packages/propel/src/toast/toast.tsx` | 提示的区域收 `label` | 13 |
-| `web/packages/ui/package.json` | `@nerve/ui` 的 oxlint 上限 15 → 14（Task 1）→ 12（Task 10） | 1、10 |
+| `web/packages/ui/package.json` | `@nerve/ui` 的 oxlint 上限 15 → 14（Task 1）；14 → 12（Task 10） | 1、10 |
 | `web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/custom-select.tsx`、`web/packages/ui/src/hooks/use-dropdown-key-down.tsx` | 组字经 `isComposing`；`use-dropdown-key-down` 的两条警告（Task 10）；`CustomSelect` 上按 Enter 打开列表 | 10 |
 | `web/packages/ui/src/modals/alert-modal.tsx` | 确认按钮不再是 `tabIndex={1}` | 1 |
 | `web/packages/ui/src/modals/modal-core.tsx` | `ModalCore`：v2 的 `Dialog` 打开方式，从挂载之后的渲染打开（Task 1）；组字经 `isComposing`（Task 10） | 1、10 |
@@ -534,7 +538,7 @@ import { closedWithin, pageBehindHidden } from "../../fixtures/dialogs";
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 303 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 303 条、`@nerve/ui` 14 条、`@nerve/propel` 11 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -586,14 +590,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/stories/smoke/s6-dialogs.spec.ts`
-- Modify: `e2e/fixtures/dialogs.ts`、`e2e/stories/identity/a6-sign-out.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels-page.spec.ts`、`web/apps/web/core/components/api-token/modal/create-token-modal.tsx`、`web/apps/web/core/components/onboarding/switch-account-modal.tsx`、`web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx`、`web/apps/web/core/components/power-k/ui/modal/wrapper.tsx`、`web/apps/web/package.json`
+- Modify: `e2e/fixtures/dialogs.ts`、`e2e/stories/identity/a6-sign-out.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels-page.spec.ts`、`web/apps/web/core/components/api-token/modal/create-token-modal.tsx`、`web/apps/web/core/components/onboarding/switch-account-modal.tsx`、`web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx`、`web/apps/web/core/components/power-k/ui/modal/wrapper.tsx`、`web/apps/web/core/components/settings/mobile/nav.tsx`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json`
 
 **Interfaces:**（spec 2.6）
-- `power-k/ui/modal/wrapper.tsx`（命令面板）、`shortcuts-root.tsx`（快捷键，整个文件）、`onboarding/switch-account-modal.tsx`（整个文件）经 `ModalCore`：快捷键的搜索框不再是 `tabIndex={1}`（web 的上限 303 → 302），关闭按钮名为 `t("close")`；切换账户在退出的请求路上时 `handleClose` 为空（F-1）。
+- `power-k/ui/modal/wrapper.tsx`（命令面板）、`shortcuts-root.tsx`（快捷键，整个文件）、`onboarding/switch-account-modal.tsx`（整个文件）经 `ModalCore`：快捷键的搜索框不再是 `tabIndex={1}`，它的 `autoFocus` 写明理由（`oxlint-disable-next-line`，同 Task 12 的筛选；web 的上限 303 → 301）；快捷键的关闭按钮名为 `t("close")`，在 `DialogTitle` 之外（弹窗的名字只是标题，A-L5）；标题经 `t("keyboard_shortcuts")`（已有的键），搜索框的占位和名字经 `t("power_k.search_shortcuts")`（新键）；切换账户在退出的请求路上时 `handleClose` 为空（F-1）。
+- `settings/mobile/nav.tsx`：设置页的手机菜单（外层、弹层、按钮）从 `z-50` 降到 `z-20`：页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下，弹窗盖住它（spec 2.6）。
 - API 令牌的新建弹窗不再传 `handleClose={() => {}}`（与不传相同）。
 - `e2e/fixtures/dialogs.ts`：`announced(element)`（元素在 `aria-live` 的区域里）。
 
-**Tests:** 新的故事 S6（`e2e/stories/smoke/s6-dialogs.spec.ts`，2 个）：命令面板和快捷键列表是模态的；设置弹窗上的撤销确认框（嵌套），Escape 只关上面的一个。A6：切换账户在退出被扣住时关不掉。P5、P6、P7：弹窗开着时被拒绝的提示被读出（`announced`）。
+**Tests:** 新的故事 S6（`e2e/stories/smoke/s6-dialogs.spec.ts`，2 个）：命令面板和快捷键列表是模态的，快捷键弹窗的名字就是它的标题；设置弹窗上的撤销确认框（嵌套），Escape 只关上面的一个。A6：切换账户在退出被扣住时关不掉。P5、P6、P7：弹窗开着时被拒绝的提示被读出（`announced`）。
 
 - [ ] **Step 1: 三个弹窗**
 
@@ -693,7 +698,7 @@ export function SwitchAccountModal(props: Props) {
 }
 ````
 
-`web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx`（整个文件，77 行）：
+`web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx`（整个文件，81 行）：
 
 ````whole web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx
 /**
@@ -744,12 +749,15 @@ export function ShortcutsModal(props: Props) {
       width={EModalWidth.MD}
       className="flex h-[61vh] flex-col space-y-4 overflow-hidden py-5"
     >
-      <DialogTitle as="h3" className="flex justify-between px-5">
-        <span className="text-16 font-medium">Keyboard shortcuts</span>
+      {/* the title names the dialog alone: its close button stands beside it */}
+      <div className="flex justify-between px-5">
+        <DialogTitle as="h3" className="text-16 font-medium">
+          {t("keyboard_shortcuts")}
+        </DialogTitle>
         <button type="button" onClick={handleClose} aria-label={t("close")}>
           <CloseOutline className="h-4 w-4 text-secondary hover:text-primary" aria-hidden="true" />
         </button>
-      </DialogTitle>
+      </div>
       <div className="px-5">
         <InputGroup size="2xl">
           <SearchOutline className="h-3.5 w-3.5 text-secondary" />
@@ -760,8 +768,9 @@ export function ShortcutsModal(props: Props) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for shortcuts"
-            aria-label="Search for shortcuts"
+            placeholder={t("power_k.search_shortcuts")}
+            aria-label={t("power_k.search_shortcuts")}
+            // oxlint-disable-next-line jsx_a11y/no-autofocus -- the dialog opens on its search, as the palette does
             autoFocus
           />
         </InputGroup>
@@ -901,13 +910,67 @@ import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
     </ModalCore>
 ````
 
+`web/apps/web/core/components/settings/mobile/nav.tsx`（修改，4 处）：
+
+````old web/apps/web/core/components/settings/mobile/nav.tsx
+  });
+
+````
+````new web/apps/web/core/components/settings/mobile/nav.tsx
+  });
+
+  // The menu is the page's: it stays below the dialogs' layer (z-30), so a dialog opened over the settings covers it.
+````
+````old web/apps/web/core/components/settings/mobile/nav.tsx
+      <div ref={sidebarRef} className="relative z-50 w-fit">
+````
+````new web/apps/web/core/components/settings/mobile/nav.tsx
+      <div ref={sidebarRef} className="relative z-20 w-fit">
+````
+````old web/apps/web/core/components/settings/mobile/nav.tsx
+          <div className="absolute top-10.5 left-0 z-50">
+````
+````new web/apps/web/core/components/settings/mobile/nav.tsx
+          <div className="absolute top-10.5 left-0 z-20">
+````
+````old web/apps/web/core/components/settings/mobile/nav.tsx
+          className="group z-50 shrink-0"
+````
+````new web/apps/web/core/components/settings/mobile/nav.tsx
+          className="group z-20 shrink-0"
+````
+
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
     "check:lint": "node ../../../tools/lint-cap.mjs 303",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 302",
+    "check:lint": "node ../../../tools/lint-cap.mjs 301",
+````
+
+`web/packages/i18n/src/locales/en/power-k.json`（修改，1 处）：
+
+````old web/packages/i18n/src/locales/en/power-k.json
+      "report_bug": "Report a bug"
+    },
+````
+````new web/packages/i18n/src/locales/en/power-k.json
+      "report_bug": "Report a bug"
+    },
+    "search_shortcuts": "Search for shortcuts",
+````
+
+`web/packages/i18n/src/locales/zh-CN/power-k.json`（修改，1 处）：
+
+````old web/packages/i18n/src/locales/zh-CN/power-k.json
+      "report_bug": "报告 Bug"
+    },
+````
+````new web/packages/i18n/src/locales/zh-CN/power-k.json
+      "report_bug": "报告 Bug"
+    },
+    "search_shortcuts": "搜索快捷键",
 ````
 
 - [ ] **Step 2: 端到端**
@@ -1044,7 +1107,7 @@ import {
   expect(await announced(refusal)).toBe(true);
 ````
 
-`e2e/stories/smoke/s6-dialogs.spec.ts`（新文件，101 行）：
+`e2e/stories/smoke/s6-dialogs.spec.ts`（新文件，102 行）：
 
 ````file e2e/stories/smoke/s6-dialogs.spec.ts
 import { createWorkspace, slugFor } from "../../fixtures/api";
@@ -1080,9 +1143,10 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
   expect(await closedByEscape(page)).toBe(true);
   expect(await pageBehindHidden(page)).toBe(false);
 
-  // The shortcuts: from its search Tab goes to its list, which scrolls, then to its close button, named, and round;
-  // no stop outside it.
+  // The shortcuts, named by their title alone: from its search Tab goes to its list, which scrolls, then to its close
+  // button, named, and round; no stop outside it.
   await page.keyboard.press("ControlOrMeta+/");
+  await expect(modalDialog(page)).toHaveAccessibleName("Keyboard shortcuts");
   const search = page.getByRole("textbox", { name: "Search for shortcuts" });
   await expect(search).toBeFocused();
   expect(await pageBehindHidden(page)).toBe(true);
@@ -1153,7 +1217,7 @@ test("S6 (page): a dialog opened over another, the revoke dialog over the settin
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 302 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 14 条、`@nerve/propel` 11 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -1170,15 +1234,17 @@ Expected: 112 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/fixtures/dialogs.ts e2e/stories/identity/a6-sign-out.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts web/apps/web/core/components/api-token/modal/create-token-modal.tsx web/apps/web/core/components/onboarding/switch-account-modal.tsx web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx web/apps/web/core/components/power-k/ui/modal/wrapper.tsx web/apps/web/package.json
+git add e2e/fixtures/dialogs.ts e2e/stories/identity/a6-sign-out.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts web/apps/web/core/components/api-token/modal/create-token-modal.tsx web/apps/web/core/components/onboarding/switch-account-modal.tsx web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx web/apps/web/core/components/power-k/ui/modal/wrapper.tsx web/apps/web/core/components/settings/mobile/nav.tsx web/apps/web/package.json web/packages/i18n/src/locales/en/power-k.json web/packages/i18n/src/locales/zh-CN/power-k.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the command palette, the shortcuts and the account switch are ModalCore dialogs
 
 The three dialogs that used Headless UI's Dialog directly now go through
 ModalCore, so the page behind each is inert and hidden while it is open.
-The shortcuts' search loses its tabIndex={1} and its close button gets a
-name; the account switch cannot be dismissed while its sign-out is out.
+The shortcuts' search loses its tabIndex={1}; its title and search read
+through t(), and its close button, named, stands beside the title, which
+alone names the dialog. The account switch cannot be dismissed while its
+sign-out is out. The settings' phone menu sits below the dialogs' layer.
 S6 checks the palette, the shortcuts and a dialog opened over another;
 the stories check that a refusal shown inside an open dialog is
 announced.
@@ -1194,6 +1260,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T2.2` | 快捷键弹窗的关闭按钮没有名字 | 故事 S6 | 端到端 |
 | `T2.3` | 快捷键弹窗不理 Escape 和背景 | 故事 S6 | 端到端 |
 | `T2.4` | 切换账户的弹窗在退出的请求路上时被 Escape 关上（F-1） | 故事 A6 | 端到端 |
+| `T2.5` | 快捷键弹窗的关闭按钮回到标题里：弹窗的名字成了"Keyboard shortcuts Close" | 故事 S6 | 端到端 |
+| `T2.6` | 快捷键的搜索框的 `autoFocus` 不写理由：oxlint 的 `no-autofocus` 超出上限 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -1209,173 +1277,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `useMembershipChanges` 的 `remove(…, done)`、`leave(done)` 和 `useInvitationChanges` 的删除：`done` 只在成功的跟进中调用（A-M2）；`ConfirmWorkspaceMemberRemove` 不再自己关上，离开的标题经 `t()`；成员和邀请的一行传 `closeDialog`。
 - 文案：`leave_workspace`（common）、`workspace_settings.settings.members.leave_title`。README 的工作区菜单加"离开工作区"。
 
-**Tests:** 两个 hook 的 vitest：`done` 在成功时调用、被拒绝时不调用、换账户之后不调用。W11 的页面版本：访客由键盘从菜单离开，落到新建工作区的页面；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着。W7：唯一的管理员在成员页离开被拒绝时确认框留着。W4：已被删除的邀请再删除被拒绝时确认框留着。
+**Tests:** 两个 hook 的 vitest：`done` 在成功时调用、被拒绝时不调用、换账户之后不调用。W11 的页面版本：访客由键盘从菜单离开，双击"离开"只发一次请求，请求在路上时取消不能用、Escape 不关，落到新建工作区的页面；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着。W7：唯一的管理员在成员页离开被拒绝时确认框留着。W4：已被删除的邀请再删除被拒绝时确认框留着。
 
 - [ ] **Step 1: 菜单的入口和确认框**
-
-^web/(?!.*(\.test\.tsx?|/fake-[^/]*\.ts)$)
-
-- [ ] **Step 2: 测试和 README**
-
-`README.md`（修改，1 处）：
-
-````old README.md
-- **能用的页面**（M3/P9 起）：登录、注册（注册关闭时，凭邀请链接仍可注册）；邀请链接的页面 `/workspace-invitations`（没登录时显示工作区和角色，登录后接受或忽略）；新手引导（资料一步；还没有工作区的人接着创建工作区，再邀请成员（规模选"Just myself"时创建之后就完成），发出邀请之后列出每个邀请的链接供复制，v0 不发邮件；已经有工作区的人资料一步之后就完成）；登录后的落点（上次打开的工作区；它不在列表中时，最早创建的那个；一个都没有时 `/create-workspace`）；创建工作区；工作区首页（问候、"快速入门指南"，第一次进入时的导览）；侧边栏的工作区菜单（切换、创建工作区、退出）和"项目导航"对话框；工作区设置的 general（名称、规模、时区，删除工作区）和 members（成员、改角色、移出、离开；管理员还有邀请：批量邀请、复制链接、改角色、删除）；个人设置的四个标签页（general、preferences、security、api-tokens，停用账户在 general 页）。项目的页面（M3/P10 起）：项目列表（卡片复制项目的链接；看得到而还不是成员的项目，卡片上加入）和已归档的项目（恢复、删除）；创建项目（负责人从工作区的管理员和成员中选；表情和图标的选择器，表情的数据由 Nerve 自己提供）；打开项目的地址时，不是成员的看到"加入项目"，看不到的看到"找不到项目"，已归档的看到它已归档；项目设置的 general（名称、标识、说明、可见性、时区、图标；归档、删除）、members（添加、改角色、移出、离开；负责人、默认负责人、访客可见全部）、features（迭代、模块、视图、收集箱的开关）和 automations（自动归档）；侧边栏拖动项目的顺序；标签式导航下项目页头的标签栏（默认打开的标签页、收进"更多"）。项目设置的 states 和 labels（M3/P11 起）：项目管理员和是工作区管理员的项目成员增删改、拖动排序，状态还能设为默认，标签能拖进、拖出标签组；项目的其他成员只能看，访客看到没有权限。个人主页（M3/P11 起）：访客打开别人的或自己的主页，看到用户卡片，工作项一栏说他没有权限；管理员和成员看到的工作项列表，与工作项、迭代、模块、视图、收藏、通知、Webhook 等页面一样还在调用 Plane 的接口，Nerve 返回 404，由 M4–M8 对接。
-````
-````new README.md
-- **能用的页面**（M3/P9 起）：登录、注册（注册关闭时，凭邀请链接仍可注册）；邀请链接的页面 `/workspace-invitations`（没登录时显示工作区和角色，登录后接受或忽略）；新手引导（资料一步；还没有工作区的人接着创建工作区，再邀请成员（规模选"Just myself"时创建之后就完成），发出邀请之后列出每个邀请的链接供复制，v0 不发邮件；已经有工作区的人资料一步之后就完成）；登录后的落点（上次打开的工作区；它不在列表中时，最早创建的那个；一个都没有时 `/create-workspace`）；创建工作区；工作区首页（问候、"快速入门指南"，第一次进入时的导览）；侧边栏的工作区菜单（切换、创建工作区、离开工作区、退出）和"项目导航"对话框；工作区设置的 general（名称、规模、时区，删除工作区）和 members（成员、改角色、移出、离开；管理员还有邀请：批量邀请、复制链接、改角色、删除）；个人设置的四个标签页（general、preferences、security、api-tokens，停用账户在 general 页）。项目的页面（M3/P10 起）：项目列表（卡片复制项目的链接；看得到而还不是成员的项目，卡片上加入）和已归档的项目（恢复、删除）；创建项目（负责人从工作区的管理员和成员中选；表情和图标的选择器，表情的数据由 Nerve 自己提供）；打开项目的地址时，不是成员的看到"加入项目"，看不到的看到"找不到项目"，已归档的看到它已归档；项目设置的 general（名称、标识、说明、可见性、时区、图标；归档、删除）、members（添加、改角色、移出、离开；负责人、默认负责人、访客可见全部）、features（迭代、模块、视图、收集箱的开关）和 automations（自动归档）；侧边栏拖动项目的顺序；标签式导航下项目页头的标签栏（默认打开的标签页、收进"更多"）。项目设置的 states 和 labels（M3/P11 起）：项目管理员和是工作区管理员的项目成员增删改、拖动排序，状态还能设为默认，标签能拖进、拖出标签组；项目的其他成员只能看，访客看到没有权限。个人主页（M3/P11 起）：访客打开别人的或自己的主页，看到用户卡片，工作项一栏说他没有权限；管理员和成员看到的工作项列表，与工作项、迭代、模块、视图、收藏、通知、Webhook 等页面一样还在调用 Plane 的接口，Nerve 返回 404，由 M4–M8 对接。
-````
-
-`e2e/stories/workspace/w11-guest-bounds.spec.ts`（修改，5 处）：
-
-````old e2e/stories/workspace/w11-guest-bounds.spec.ts
-import { workspaceTables } from "../../fixtures/assert/workspace";
-````
-````new e2e/stories/workspace/w11-guest-bounds.spec.ts
-import { expectMembership, expectMembershipEnded, workspaceTables } from "../../fixtures/assert/workspace";
-````
-````old e2e/stories/workspace/w11-guest-bounds.spec.ts
-import { registerOnboarded } from "../../fixtures/settings-pages";
-import { expect, test } from "../../fixtures/test";
-````
-````new e2e/stories/workspace/w11-guest-bounds.spec.ts
-import { announced, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
-import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
-import { expect, test } from "../../fixtures/test";
-import { anotherBrowser } from "../../fixtures/workspace-pages";
-````
-````old e2e/stories/workspace/w11-guest-bounds.spec.ts
-// its page version what a guest's pages show him.
-````
-````new e2e/stories/workspace/w11-guest-bounds.spec.ts
-// its page version what a guest's pages show him, and his leaving.
-````
-````old e2e/stories/workspace/w11-guest-bounds.spec.ts
-test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither", async ({
-  api,
-````
-````new e2e/stories/workspace/w11-guest-bounds.spec.ts
-test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open", async ({
-  api,
-  baseURL,
-  browser,
-  db,
-````
-````old e2e/stories/workspace/w11-guest-bounds.spec.ts
-  await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
-````
-````new e2e/stories/workspace/w11-guest-bounds.spec.ts
-  await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
-
-  // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
-  // stays until Cancel closes it; he is acme's admin still.
-  const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
-  const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
-  await theAdmin.page.goto(`/${slug}`);
-  await theAdmin.page.getByRole("button", { name: "Open workspace switcher" }).click();
-  await theAdmin.page.getByRole("menuitem", { name: "Leave workspace" }).click();
-  const adminLeaving = await answerTo(theAdmin.page, leaving.method, leaving.path, () =>
-    modalDialog(theAdmin.page).getByRole("button", { name: "Leave", exact: true }).click()
-  );
-  expect(adminLeaving.status()).toBe(409);
-  const reason = theAdmin.page.getByText(
-    "The workspace would be left without an admin. Make another member an admin first."
-  );
-  await expect(reason).toBeVisible();
-  expect(await announced(reason)).toBe(true);
-  expect(await closedWithin(theAdmin.page)).toBe(false);
-  await modalDialog(theAdmin.page).getByRole("button", { name: "Cancel" }).click();
-  await expect(modalDialog(theAdmin.page)).toHaveCount(0);
-  await expect(theAdmin.page).toHaveURL(`/${slug}`);
-  await expectMembership(db, slug, adminEmail, { role: 20, is_active: true });
-  await theAdmin.close();
-
-  // gus's leaving, by the keyboard: the menu's button, then its entry, from its last, signing out, one up; the
-  // dialog hides the page behind it. Leaving ends his memberships, Web's too, and the root lands him on the page that
-  // creates a workspace.
-  await page.getByRole("button", { name: "Open workspace switcher" }).focus();
-  await page.keyboard.press("Enter");
-  await page.keyboard.press("End");
-  await page.keyboard.press("ArrowUp");
-  await page.keyboard.press("Enter");
-  const leave = modalDialog(page).getByRole("button", { name: "Leave", exact: true });
-  await expect(modalDialog(page).getByRole("heading", { name: "Leave workspace?" })).toBeVisible();
-  expect(await pageBehindHidden(page)).toBe(true);
-  const left = await answerTo(page, leaving.method, leaving.path, () => leave.click());
-  expect(left.status()).toBe(204);
-  await expect(page).toHaveURL("/create-workspace");
-  await expectMembershipEnded(db, slug, gusEmail, gusEmail, 5, [{ identifier: "WEB", role: 5 }]);
-````
-
-`e2e/stories/workspace/w4-invite-members.spec.ts`（修改，3 处）：
-
-````old e2e/stories/workspace/w4-invite-members.spec.ts
-import { closedByEscape } from "../../fixtures/dialogs";
-````
-````new e2e/stories/workspace/w4-invite-members.spec.ts
-import { announced, closedByEscape, closedWithin, modalDialog } from "../../fixtures/dialogs";
-````
-````old e2e/stories/workspace/w4-invite-members.spec.ts
-  // frank's invitation, deleted meanwhile through the API: the page's removal is refused, and says why.
-````
-````new e2e/stories/workspace/w4-invite-members.spec.ts
-  // frank's invitation, deleted meanwhile through the API: the page's removal is refused, and says why, read beside
-  // the dialog, which stays until Cancel closes it.
-````
-````old e2e/stories/workspace/w4-invite-members.spec.ts
-  await expect(page.getByText("The invitation does not exist, or its link is not valid.")).toBeVisible();
-````
-````new e2e/stories/workspace/w4-invite-members.spec.ts
-  const notFound = page.getByText("The invitation does not exist, or its link is not valid.");
-  await expect(notFound).toBeVisible();
-  expect(await announced(notFound)).toBe(true);
-  expect(await closedWithin(page)).toBe(false);
-  await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
-  await expect(modalDialog(page)).toHaveCount(0);
-````
-
-`e2e/stories/workspace/w7-member-management.spec.ts`（修改，5 处）：
-
-````old e2e/stories/workspace/w7-member-management.spec.ts
-import { closedByEscape, pageBehindHidden } from "../../fixtures/dialogs";
-````
-````new e2e/stories/workspace/w7-member-management.spec.ts
-import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
-````
-````old e2e/stories/workspace/w7-member-management.spec.ts
-  // carol, a member, sees each role as text; her own row's menu offers her leaving.
-````
-````new e2e/stories/workspace/w7-member-management.spec.ts
-  // carol, a member, sees each role as text; her own row's menu offers her leaving, and so does the workspace menu.
-````
-````old e2e/stories/workspace/w7-member-management.spec.ts
-  await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
-````
-````new e2e/stories/workspace/w7-member-management.spec.ts
-  await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
-  await theMember.page.getByRole("button", { name: "Open workspace switcher" }).click();
-  await expect(theMember.page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
-````
-````old e2e/stories/workspace/w7-member-management.spec.ts
-  // His leaving, as the only admin: nerve refuses it, and the page says why and stays.
-````
-````new e2e/stories/workspace/w7-member-management.spec.ts
-  // His leaving, as the only admin: nerve refuses it, and the page says why, read beside the dialog, which stays
-  // until Cancel closes it.
-````
-````old e2e/stories/workspace/w7-member-management.spec.ts
-  await expect(
-    page.getByText("The workspace would be left without an admin. Make another member an admin first.")
-  ).toBeVisible();
-````
-````new e2e/stories/workspace/w7-member-management.spec.ts
-  const reason = page.getByText("The workspace would be left without an admin. Make another member an admin first.");
-  await expect(reason).toBeVisible();
-  expect(await announced(reason)).toBe(true);
-  expect(await closedWithin(page)).toBe(false);
-  await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
-  await expect(modalDialog(page)).toHaveCount(0);
-````
 
 `web/apps/web/core/components/navigation/top-navigation-root.tsx`（修改，1 处）：
 
@@ -1495,69 +1399,6 @@ export const LeaveWorkspaceModal = observer(function LeaveWorkspaceModal(props: 
   };
 ````
 
-`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`（修改，7 处）：
-
-````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-const page = vi.hoisted(() => ({ updateMemberInvitation: vi.fn(), deleteMemberInvitation: vi.fn() }));
-````
-````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-const page = vi.hoisted(() => ({
-  updateMemberInvitation: vi.fn(),
-  deleteMemberInvitation: vi.fn(),
-  closeDialog: vi.fn(),
-}));
-````
-````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-    make: () => useInvitationChanges().remove("acme", "i-dan"),
-````
-````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-    make: () => useInvitationChanges().remove("acme", "i-dan", page.closeDialog),
-````
-````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-    store.mockResolvedValue(undefined);
-  }
-````
-````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-    store.mockResolvedValue(undefined);
-  }
-  page.closeDialog.mockReset();
-````
-````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-  it("deletes an invitation of the workspace, and says so", async () => {
-    await useInvitationChanges().remove("acme", "i-dan");
-    expect(page.deleteMemberInvitation.mock.calls).toEqual([["acme", "i-dan"]]);
-````
-````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-  it("deletes an invitation of the workspace, and says so, its dialog closed once nerve has", async () => {
-    const deletion = heldChange<undefined>();
-    page.deleteMemberInvitation.mockReturnValueOnce(deletion.sent);
-    const deleted = useInvitationChanges().remove("acme", "i-dan", page.closeDialog);
-    expect(page.deleteMemberInvitation.mock.calls).toEqual([["acme", "i-dan"]]);
-    expect([page.closeDialog.mock.calls, toasts]).toEqual([[], []]);
-    deletion.answer(undefined);
-    await deleted;
-    expect(page.closeDialog.mock.calls.length).toBe(1);
-````
-````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-  it.each(changes)("shows nerve's reason when it refuses $change", async ({ store, make }) => {
-````
-````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-  it.each(changes)("shows nerve's reason when it refuses $change, its dialog open", async ({ store, make }) => {
-````
-````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-    await make();
-````
-````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-    await make();
-    expect(page.closeDialog.mock.calls).toEqual([]);
-````
-````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-        expect(toasts).toEqual([]);
-````
-````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-        expect([page.closeDialog.mock.calls, toasts]).toEqual([[], []]);
-````
-
 `web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`（修改，3 处）：
 
 ````old web/apps/web/core/components/workspace/settings/use-invitation-changes.ts
@@ -1584,108 +1425,6 @@ const page = vi.hoisted(() => ({
           done();
           setToast({ type: TOAST_TYPE.SUCCESS, title: "Success!", message: "Invitation removed successfully." });
         },
-````
-
-`web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`（修改，9 处）：
-
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-import { heldChange, lateSettlings, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
-````
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  navigate: vi.fn(),
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  navigate: vi.fn(),
-  closeDialog: vi.fn(),
-````
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-    make: () => useMembershipChanges("acme").remove("u-bob"),
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-    make: () => useMembershipChanges("acme").remove("u-bob", page.closeDialog),
-````
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  { change: "the leaving", store: page.leaveWorkspace, make: () => useMembershipChanges("acme").leave() },
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  {
-    change: "the leaving",
-    store: page.leaveWorkspace,
-    make: () => useMembershipChanges("acme").leave(page.closeDialog),
-  },
-````
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  page.navigate.mockClear();
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  page.navigate.mockReset();
-  page.closeDialog.mockReset();
-````
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  it("removes a member of the workspace, and stays", async () => {
-    await useMembershipChanges("acme").remove("u-bob");
-    expect(page.removeMemberFromWorkspace.mock.calls).toEqual([["acme", "u-bob"]]);
-    expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  it("removes a member of the workspace, and stays, its dialog closed once nerve has", async () => {
-    const removal = heldChange<undefined>();
-    page.removeMemberFromWorkspace.mockReturnValueOnce(removal.sent);
-    const removed = useMembershipChanges("acme").remove("u-bob", page.closeDialog);
-    expect(page.removeMemberFromWorkspace.mock.calls).toEqual([["acme", "u-bob"]]);
-    expect(page.closeDialog).not.toHaveBeenCalled();
-    removal.answer(undefined);
-    await removed;
-    expect([page.closeDialog.mock.calls.length, page.navigate.mock.calls, toasts]).toEqual([1, [], []]);
-````
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  it("leaves the workspace of the address, then lands at the root", async () => {
-    await useMembershipChanges("acme").leave();
-    expect([page.leaveWorkspace.mock.calls, page.navigate.mock.calls]).toEqual([[[acme]], [["/"]]]);
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  it("leaves the workspace of the address, and closes its dialog and lands at the root only once nerve has made it, settling once it has", async () => {
-    const leaving = heldChange<undefined>();
-    page.leaveWorkspace.mockReturnValueOnce(leaving.sent);
-    const landed = heldChange<undefined>();
-    page.navigate.mockReturnValueOnce(landed.sent);
-    const left = useMembershipChanges("acme").leave(page.closeDialog);
-    const settled = settledYet(left);
-    expect(page.leaveWorkspace.mock.calls).toEqual([[acme]]);
-    expect([page.closeDialog.mock.calls, page.navigate.mock.calls]).toEqual([[], []]);
-    leaving.answer(undefined);
-    await vi.waitFor(() => expect(page.navigate.mock.calls).toEqual([["/"]]));
-    expect([page.closeDialog.mock.calls.length, settled()]).toEqual([1, false]);
-    landed.answer(undefined);
-    await left;
-````
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  it.each(changes)("shows nerve's reason when it refuses $change, and stays", async ({ store, make }) => {
-    store.mockRejectedValueOnce(refusal(409, "workspace.sole_admin"));
-    await make();
-    expect(page.navigate.mock.calls).toEqual([]);
-    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_sole_admin" }]);
-  });
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-  it.each(changes)(
-    "shows nerve's reason when it refuses $change, and stays, its dialog open",
-    async ({ store, make }) => {
-      store.mockRejectedValueOnce(refusal(409, "workspace.sole_admin"));
-      await make();
-      expect([page.closeDialog.mock.calls, page.navigate.mock.calls]).toEqual([[], []]);
-      expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_sole_admin" }]);
-    }
-  );
-````
-````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-        expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
-````
-````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
-        expect([page.closeDialog.mock.calls, page.navigate.mock.calls, toasts]).toEqual([[], [], []]);
 ````
 
 `web/apps/web/core/components/workspace/settings/use-membership-changes.ts`（修改，5 处）：
@@ -1978,10 +1717,343 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
         "leave_title": "离开工作区？",
 ````
 
+- [ ] **Step 2: 测试和 README**
+
+`README.md`（修改，1 处）：
+
+````old README.md
+- **能用的页面**（M3/P9 起）：登录、注册（注册关闭时，凭邀请链接仍可注册）；邀请链接的页面 `/workspace-invitations`（没登录时显示工作区和角色，登录后接受或忽略）；新手引导（资料一步；还没有工作区的人接着创建工作区，再邀请成员（规模选"Just myself"时创建之后就完成），发出邀请之后列出每个邀请的链接供复制，v0 不发邮件；已经有工作区的人资料一步之后就完成）；登录后的落点（上次打开的工作区；它不在列表中时，最早创建的那个；一个都没有时 `/create-workspace`）；创建工作区；工作区首页（问候、"快速入门指南"，第一次进入时的导览）；侧边栏的工作区菜单（切换、创建工作区、退出）和"项目导航"对话框；工作区设置的 general（名称、规模、时区，删除工作区）和 members（成员、改角色、移出、离开；管理员还有邀请：批量邀请、复制链接、改角色、删除）；个人设置的四个标签页（general、preferences、security、api-tokens，停用账户在 general 页）。项目的页面（M3/P10 起）：项目列表（卡片复制项目的链接；看得到而还不是成员的项目，卡片上加入）和已归档的项目（恢复、删除）；创建项目（负责人从工作区的管理员和成员中选；表情和图标的选择器，表情的数据由 Nerve 自己提供）；打开项目的地址时，不是成员的看到"加入项目"，看不到的看到"找不到项目"，已归档的看到它已归档；项目设置的 general（名称、标识、说明、可见性、时区、图标；归档、删除）、members（添加、改角色、移出、离开；负责人、默认负责人、访客可见全部）、features（迭代、模块、视图、收集箱的开关）和 automations（自动归档）；侧边栏拖动项目的顺序；标签式导航下项目页头的标签栏（默认打开的标签页、收进"更多"）。项目设置的 states 和 labels（M3/P11 起）：项目管理员和是工作区管理员的项目成员增删改、拖动排序，状态还能设为默认，标签能拖进、拖出标签组；项目的其他成员只能看，访客看到没有权限。个人主页（M3/P11 起）：访客打开别人的或自己的主页，看到用户卡片，工作项一栏说他没有权限；管理员和成员看到的工作项列表，与工作项、迭代、模块、视图、收藏、通知、Webhook 等页面一样还在调用 Plane 的接口，Nerve 返回 404，由 M4–M8 对接。
+````
+````new README.md
+- **能用的页面**（M3/P9 起）：登录、注册（注册关闭时，凭邀请链接仍可注册）；邀请链接的页面 `/workspace-invitations`（没登录时显示工作区和角色，登录后接受或忽略）；新手引导（资料一步；还没有工作区的人接着创建工作区，再邀请成员（规模选"Just myself"时创建之后就完成），发出邀请之后列出每个邀请的链接供复制，v0 不发邮件；已经有工作区的人资料一步之后就完成）；登录后的落点（上次打开的工作区；它不在列表中时，最早创建的那个；一个都没有时 `/create-workspace`）；创建工作区；工作区首页（问候、"快速入门指南"，第一次进入时的导览）；侧边栏的工作区菜单（切换、创建工作区、离开工作区、退出）和"项目导航"对话框；工作区设置的 general（名称、规模、时区，删除工作区）和 members（成员、改角色、移出、离开；管理员还有邀请：批量邀请、复制链接、改角色、删除）；个人设置的四个标签页（general、preferences、security、api-tokens，停用账户在 general 页）。项目的页面（M3/P10 起）：项目列表（卡片复制项目的链接；看得到而还不是成员的项目，卡片上加入）和已归档的项目（恢复、删除）；创建项目（负责人从工作区的管理员和成员中选；表情和图标的选择器，表情的数据由 Nerve 自己提供）；打开项目的地址时，不是成员的看到"加入项目"，看不到的看到"找不到项目"，已归档的看到它已归档；项目设置的 general（名称、标识、说明、可见性、时区、图标；归档、删除）、members（添加、改角色、移出、离开；负责人、默认负责人、访客可见全部）、features（迭代、模块、视图、收集箱的开关）和 automations（自动归档）；侧边栏拖动项目的顺序；标签式导航下项目页头的标签栏（默认打开的标签页、收进"更多"）。项目设置的 states 和 labels（M3/P11 起）：项目管理员和是工作区管理员的项目成员增删改、拖动排序，状态还能设为默认，标签能拖进、拖出标签组；项目的其他成员只能看，访客看到没有权限。个人主页（M3/P11 起）：访客打开别人的或自己的主页，看到用户卡片，工作项一栏说他没有权限；管理员和成员看到的工作项列表，与工作项、迭代、模块、视图、收藏、通知、Webhook 等页面一样还在调用 Plane 的接口，Nerve 返回 404，由 M4–M8 对接。
+````
+
+`e2e/stories/workspace/w11-guest-bounds.spec.ts`（修改，5 处）：
+
+````old e2e/stories/workspace/w11-guest-bounds.spec.ts
+import { workspaceTables } from "../../fixtures/assert/workspace";
+````
+````new e2e/stories/workspace/w11-guest-bounds.spec.ts
+import { expectMembership, expectMembershipEnded, workspaceTables } from "../../fixtures/assert/workspace";
+````
+````old e2e/stories/workspace/w11-guest-bounds.spec.ts
+import { registerOnboarded } from "../../fixtures/settings-pages";
+import { expect, test } from "../../fixtures/test";
+````
+````new e2e/stories/workspace/w11-guest-bounds.spec.ts
+import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+import { expect, test } from "../../fixtures/test";
+import { anotherBrowser } from "../../fixtures/workspace-pages";
+````
+````old e2e/stories/workspace/w11-guest-bounds.spec.ts
+// its page version what a guest's pages show him.
+````
+````new e2e/stories/workspace/w11-guest-bounds.spec.ts
+// its page version what a guest's pages show him, and his leaving.
+````
+````old e2e/stories/workspace/w11-guest-bounds.spec.ts
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither", async ({
+  api,
+````
+````new e2e/stories/workspace/w11-guest-bounds.spec.ts
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open", async ({
+  api,
+  baseURL,
+  browser,
+  db,
+````
+````old e2e/stories/workspace/w11-guest-bounds.spec.ts
+  await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
+````
+````new e2e/stories/workspace/w11-guest-bounds.spec.ts
+  await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
+
+  // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
+  // stays until Cancel closes it; he is acme's admin still.
+  const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
+  const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
+  await theAdmin.page.goto(`/${slug}`);
+  await theAdmin.page.getByRole("button", { name: "Open workspace switcher" }).click();
+  await theAdmin.page.getByRole("menuitem", { name: "Leave workspace" }).click();
+  const adminLeaving = await answerTo(theAdmin.page, leaving.method, leaving.path, () =>
+    modalDialog(theAdmin.page).getByRole("button", { name: "Leave", exact: true }).click()
+  );
+  expect(adminLeaving.status()).toBe(409);
+  const reason = theAdmin.page.getByText(
+    "The workspace would be left without an admin. Make another member an admin first."
+  );
+  await expect(reason).toBeVisible();
+  expect(await announced(reason)).toBe(true);
+  expect(await closedWithin(theAdmin.page)).toBe(false);
+  await modalDialog(theAdmin.page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modalDialog(theAdmin.page)).toHaveCount(0);
+  await expect(theAdmin.page).toHaveURL(`/${slug}`);
+  await expectMembership(db, slug, adminEmail, { role: 20, is_active: true });
+  await theAdmin.close();
+
+  // gus's leaving, by the keyboard: the menu's button, then its entry, from its last, signing out, one up; the
+  // dialog hides the page behind it. He leaves with a double click, nerve's answer held: while it is out the dialog
+  // cannot be dismissed (Cancel is disabled, Escape leaves it open), and the page sends the leaving once. Leaving ends
+  // his memberships, Web's too, and the root lands him on the page that creates a workspace.
+  await page.getByRole("button", { name: "Open workspace switcher" }).focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("End");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("Enter");
+  const leave = modalDialog(page).getByRole("button", { name: "Leave", exact: true });
+  await expect(modalDialog(page).getByRole("heading", { name: "Leave workspace?" })).toBeVisible();
+  expect(await pageBehindHidden(page)).toBe(true);
+  const release = await holdAnswer(page, leaving.method, leaving.path);
+  const left = answerTo(page, leaving.method, leaving.path, () => leave.dblclick());
+  await expect(modalDialog(page).getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  await release();
+  expect((await left).status()).toBe(204);
+  await expect(page).toHaveURL("/create-workspace");
+  expect(watch.apiRequests.filter((request) => request === `POST ${leaving.path}`)).toEqual([`POST ${leaving.path}`]);
+  await expectMembershipEnded(db, slug, gusEmail, gusEmail, 5, [{ identifier: "WEB", role: 5 }]);
+````
+
+`e2e/stories/workspace/w4-invite-members.spec.ts`（修改，3 处）：
+
+````old e2e/stories/workspace/w4-invite-members.spec.ts
+import { closedByEscape } from "../../fixtures/dialogs";
+````
+````new e2e/stories/workspace/w4-invite-members.spec.ts
+import { announced, closedByEscape, closedWithin, modalDialog } from "../../fixtures/dialogs";
+````
+````old e2e/stories/workspace/w4-invite-members.spec.ts
+  // frank's invitation, deleted meanwhile through the API: the page's removal is refused, and says why.
+````
+````new e2e/stories/workspace/w4-invite-members.spec.ts
+  // frank's invitation, deleted meanwhile through the API: the page's removal is refused, and says why, read beside
+  // the dialog, which stays until Cancel closes it.
+````
+````old e2e/stories/workspace/w4-invite-members.spec.ts
+  await expect(page.getByText("The invitation does not exist, or its link is not valid.")).toBeVisible();
+````
+````new e2e/stories/workspace/w4-invite-members.spec.ts
+  const notFound = page.getByText("The invitation does not exist, or its link is not valid.");
+  await expect(notFound).toBeVisible();
+  expect(await announced(notFound)).toBe(true);
+  expect(await closedWithin(page)).toBe(false);
+  await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
+````
+
+`e2e/stories/workspace/w7-member-management.spec.ts`（修改，5 处）：
+
+````old e2e/stories/workspace/w7-member-management.spec.ts
+import { closedByEscape, pageBehindHidden } from "../../fixtures/dialogs";
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+````
+````old e2e/stories/workspace/w7-member-management.spec.ts
+  // carol, a member, sees each role as text; her own row's menu offers her leaving.
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+  // carol, a member, sees each role as text; her own row's menu offers her leaving, and so does the workspace menu.
+````
+````old e2e/stories/workspace/w7-member-management.spec.ts
+  await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+  await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
+  await theMember.page.getByRole("button", { name: "Open workspace switcher" }).click();
+  await expect(theMember.page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
+````
+````old e2e/stories/workspace/w7-member-management.spec.ts
+  // His leaving, as the only admin: nerve refuses it, and the page says why and stays.
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+  // His leaving, as the only admin: nerve refuses it, and the page says why, read beside the dialog, which stays
+  // until Cancel closes it.
+````
+````old e2e/stories/workspace/w7-member-management.spec.ts
+  await expect(
+    page.getByText("The workspace would be left without an admin. Make another member an admin first.")
+  ).toBeVisible();
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+  const reason = page.getByText("The workspace would be left without an admin. Make another member an admin first.");
+  await expect(reason).toBeVisible();
+  expect(await announced(reason)).toBe(true);
+  expect(await closedWithin(page)).toBe(false);
+  await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
+````
+
+`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`（修改，7 处）：
+
+````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+const page = vi.hoisted(() => ({ updateMemberInvitation: vi.fn(), deleteMemberInvitation: vi.fn() }));
+````
+````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+const page = vi.hoisted(() => ({
+  updateMemberInvitation: vi.fn(),
+  deleteMemberInvitation: vi.fn(),
+  closeDialog: vi.fn(),
+}));
+````
+````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+    make: () => useInvitationChanges().remove("acme", "i-dan"),
+````
+````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+    make: () => useInvitationChanges().remove("acme", "i-dan", page.closeDialog),
+````
+````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+    store.mockResolvedValue(undefined);
+  }
+````
+````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+    store.mockResolvedValue(undefined);
+  }
+  page.closeDialog.mockReset();
+````
+````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+  it("deletes an invitation of the workspace, and says so", async () => {
+    await useInvitationChanges().remove("acme", "i-dan");
+    expect(page.deleteMemberInvitation.mock.calls).toEqual([["acme", "i-dan"]]);
+````
+````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+  it("deletes an invitation of the workspace, and says so, its dialog closed once nerve has", async () => {
+    const deletion = heldChange<undefined>();
+    page.deleteMemberInvitation.mockReturnValueOnce(deletion.sent);
+    const deleted = useInvitationChanges().remove("acme", "i-dan", page.closeDialog);
+    expect(page.deleteMemberInvitation.mock.calls).toEqual([["acme", "i-dan"]]);
+    expect([page.closeDialog.mock.calls, toasts]).toEqual([[], []]);
+    deletion.answer(undefined);
+    await deleted;
+    expect(page.closeDialog.mock.calls.length).toBe(1);
+````
+````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+  it.each(changes)("shows nerve's reason when it refuses $change", async ({ store, make }) => {
+````
+````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+  it.each(changes)("shows nerve's reason when it refuses $change, its dialog open", async ({ store, make }) => {
+````
+````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+    await make();
+````
+````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+    await make();
+    expect(page.closeDialog.mock.calls).toEqual([]);
+````
+````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+        expect(toasts).toEqual([]);
+````
+````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+        expect([page.closeDialog.mock.calls, toasts]).toEqual([[], []]);
+````
+
+`web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`（修改，9 处）：
+
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+import { heldChange, lateSettlings, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+````
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  navigate: vi.fn(),
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  navigate: vi.fn(),
+  closeDialog: vi.fn(),
+````
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+    make: () => useMembershipChanges("acme").remove("u-bob"),
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+    make: () => useMembershipChanges("acme").remove("u-bob", page.closeDialog),
+````
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  { change: "the leaving", store: page.leaveWorkspace, make: () => useMembershipChanges("acme").leave() },
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  {
+    change: "the leaving",
+    store: page.leaveWorkspace,
+    make: () => useMembershipChanges("acme").leave(page.closeDialog),
+  },
+````
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  page.navigate.mockClear();
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  page.navigate.mockReset();
+  page.closeDialog.mockReset();
+````
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  it("removes a member of the workspace, and stays", async () => {
+    await useMembershipChanges("acme").remove("u-bob");
+    expect(page.removeMemberFromWorkspace.mock.calls).toEqual([["acme", "u-bob"]]);
+    expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  it("removes a member of the workspace, and stays, its dialog closed once nerve has", async () => {
+    const removal = heldChange<undefined>();
+    page.removeMemberFromWorkspace.mockReturnValueOnce(removal.sent);
+    const removed = useMembershipChanges("acme").remove("u-bob", page.closeDialog);
+    expect(page.removeMemberFromWorkspace.mock.calls).toEqual([["acme", "u-bob"]]);
+    expect(page.closeDialog).not.toHaveBeenCalled();
+    removal.answer(undefined);
+    await removed;
+    expect([page.closeDialog.mock.calls.length, page.navigate.mock.calls, toasts]).toEqual([1, [], []]);
+````
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  it("leaves the workspace of the address, then lands at the root", async () => {
+    await useMembershipChanges("acme").leave();
+    expect([page.leaveWorkspace.mock.calls, page.navigate.mock.calls]).toEqual([[[acme]], [["/"]]]);
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  it("leaves the workspace of the address, and closes its dialog and lands at the root only once nerve has made it, settling once it has", async () => {
+    const leaving = heldChange<undefined>();
+    page.leaveWorkspace.mockReturnValueOnce(leaving.sent);
+    const landed = heldChange<undefined>();
+    page.navigate.mockReturnValueOnce(landed.sent);
+    const left = useMembershipChanges("acme").leave(page.closeDialog);
+    const settled = settledYet(left);
+    expect(page.leaveWorkspace.mock.calls).toEqual([[acme]]);
+    expect([page.closeDialog.mock.calls, page.navigate.mock.calls]).toEqual([[], []]);
+    leaving.answer(undefined);
+    await vi.waitFor(() => expect(page.navigate.mock.calls).toEqual([["/"]]));
+    expect([page.closeDialog.mock.calls.length, settled()]).toEqual([1, false]);
+    landed.answer(undefined);
+    await left;
+````
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  it.each(changes)("shows nerve's reason when it refuses $change, and stays", async ({ store, make }) => {
+    store.mockRejectedValueOnce(refusal(409, "workspace.sole_admin"));
+    await make();
+    expect(page.navigate.mock.calls).toEqual([]);
+    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_sole_admin" }]);
+  });
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+  it.each(changes)(
+    "shows nerve's reason when it refuses $change, and stays, its dialog open",
+    async ({ store, make }) => {
+      store.mockRejectedValueOnce(refusal(409, "workspace.sole_admin"));
+      await make();
+      expect([page.closeDialog.mock.calls, page.navigate.mock.calls]).toEqual([[], []]);
+      expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_sole_admin" }]);
+    }
+  );
+````
+````old web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+        expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
+````
+````new web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts
+        expect([page.closeDialog.mock.calls, page.navigate.mock.calls, toasts]).toEqual([[], [], []]);
+````
+
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 302 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 14 条、`@nerve/propel` 11 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -2006,9 +2078,10 @@ git commit -m "feat(M3/closeout): the sidebar's workspace menu offers leaving th
 The menu's new item opens the members page's leaving dialog through the
 same command: once nerve has made it, the session that left follows it to
 where the members page goes; a refusal (the only admin) keeps the dialog
-open with the reason. The members page's removal, leaving and an
-invitation's deletion keep their dialog on a refusal too, closing it in
-their success follow-up alone. The menu's variant no caller used goes.
+open with the reason; a double click sends it once, the dialog held while
+it is out. The members page's removal, leaving and an invitation's
+deletion keep their dialog on a refusal too, closing it in their success
+follow-up alone. The menu's variant no caller used goes.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -2023,117 +2096,25 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T3.4` | "离开工作区"是菜单里的普通按钮，不是菜单项：菜单的方向键越过它，它也不是 `menuitem` | 故事 W7、故事 W11 | 端到端 |
 | `T3.5` | 离开的确认框只在菜单打开时存在（像挂在菜单里那样）：选中这一项时菜单关上，确认框跟着没了 | 故事 W11 | 端到端 |
 | `T3.6` | 删除邀请不管 nerve 回答什么都关上确认框：被拒绝也关 | `use-invitation-changes.test.ts`、故事 W4 | vitest；端到端 |
+| `T3.7` | 确认框的按钮在请求路上时不禁用：双击发两次 | 故事 W11 | 端到端 |
 
 ---
 
 ### Task 4: 工作区的页面上的英文经 `t()`；一句话带名字一个键；S7
 
 **Files:**
-- Create: `e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/common/translated.test.tsx`、`web/apps/web/core/components/common/translated.tsx`
-- Modify: `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx`、`web/apps/web/core/components/auth-screens/not-authorized-view.tsx`、`web/apps/web/core/components/home/user-greetings.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/navigation/top-nav-power-k.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/settings/project/sidebar/header.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/workspace-details.test.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/packages/constants/src/workspace.ts`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
+- Create: `e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/common/translated.test.tsx`、`web/apps/web/core/components/common/translated.tsx`、`web/apps/web/core/components/onboarding/switch-account-modal.test.tsx`
+- Modify: `e2e/stories/workspace/w5-invitation-link.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx`、`web/apps/web/core/components/auth-screens/not-authorized-view.tsx`、`web/apps/web/core/components/home/user-greetings.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/navigation/top-nav-power-k.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/onboarding/switch-account-modal.tsx`、`web/apps/web/core/components/settings/project/sidebar/header.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/workspace-details.test.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/packages/constants/src/workspace.ts`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
 
 **Interfaces:**（spec 2.8）
 - `components/common/translated.tsx`（新文件）：`Translated({ text, values })`：把一个键的文字按占位切开，占位换成调用方给的节点（名字照旧加粗）。
 - `@nerve/constants` 的 `ORGANIZATION_SIZE_I18N_LABEL`（规模的三处）。
-- 经 `t()` 的：`workspace-details`、新建工作区的表单和新手引导的一步、删除工作区的弹窗（三段）、删除邀请的提示、成员的一列（离开、移出、已停用）、成员页的标题、移出的标题和说明、项目导航对话框、设置侧边栏的标题、命令面板的占位、邀请页的标题（`PageHead`，布局的 `meta` 删除）、没有权限的页面、"找不到工作区"的标题、首页的问候（`greeting.*`；`good`、`morning`、`afternoon`、`evening` 删除）、侧边栏的三个名字。两处装饰的图片 `alt=""`。
+- 经 `t()` 的：`workspace-details`、新建工作区的表单和新手引导的一步、删除工作区的弹窗（三段）、删除邀请的提示、成员的一列（离开、移出、已停用）、成员页的标题、移出的标题和说明、项目导航对话框、设置侧边栏的标题、命令面板的占位、邀请页的标题（`PageHead`，布局的 `meta` 删除）、没有权限的页面、"找不到工作区"的标题、首页的问候（`greeting.*`，每个时段一个带 `{name}` 的键，名字是显示名，同其他带名字的句子；`good`、`morning`、`afternoon`、`evening` 删除）、侧边栏的三个名字。两处装饰的图片 `alt=""`。
+- 切换账户的那句话是一个带 `{email}` 的键（`onboarding.switch_account.description`，经 `Translated`；`description_before_email`、`description_after_email` 在两种语言中删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"，不再对打开链接的人说"您已忽略"（负责人 2026-10-13 的答复 2，spec 3.2）。
 
-**Tests:** `translated.test.tsx`（新文件）；`workspace-details.test.tsx`、`use-invitation-changes.test.ts` 读键。新的故事 S7（`e2e/stories/smoke/s7-chinese.spec.ts`）的第一个：语言是中文的管理员看工作区的首页、菜单、项目页、general 页和成员页和它们的弹窗。
+**Tests:** `translated.test.tsx`、`onboarding/switch-account-modal.test.tsx`（新文件：那句话是一个键，地址在其中）；`workspace-details.test.tsx`、`use-invitation-changes.test.ts` 读键。新的故事 S7（`e2e/stories/smoke/s7-chinese.spec.ts`）的第一个：语言是中文的管理员看工作区的首页（问候带他的名字、快捷键弹窗的标题和搜索框）、菜单、general 页和成员页和它们的弹窗。W5：邀请被拒绝之后的页面的新说法。
 
 - [ ] **Step 1: 页面和文案**
-
-^web/(?!.*(\.test\.tsx?|/fake-[^/]*\.ts)$)
-
-- [ ] **Step 2: 测试**
-
-`e2e/stories/smoke/s7-chinese.spec.ts`（新文件，85 行）：
-
-````file e2e/stories/smoke/s7-chinese.spec.ts
-import type { Page, TestInfo } from "@playwright/test";
-
-import { createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
-import { bearer, emailFor, shownNameOf, type AuthTokens } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { modalDialog } from "../../fixtures/dialogs";
-import { registerOnboarded } from "../../fixtures/settings-pages";
-import { expect, test } from "../../fixtures/test";
-import { memberRow } from "../../fixtures/workspace-pages";
-
-// S7, the workspace's pages in Chinese (M3 closeout: the text Plane wrote in English on M3's pages is in the user's
-// language): an account whose language is zh-CN sees its pages, menus and dialogs in Chinese.
-
-/**
- * An admin of this run of the test whose language is Chinese, the home's tour taken already, and Acme, his workspace,
- * of the size "Just myself", with bob, a member.
- */
-async function chineseAdmin(
-  api: Api,
-  testInfo: TestInfo
-): Promise<{ admin: AuthTokens; slug: string; bobEmail: string }> {
-  const admin = await registerOnboarded(api, emailFor(testInfo, "admin"));
-  const bobEmail = emailFor(testInfo, "bob");
-  const bob = await registerOnboarded(api, bobEmail);
-  const chinese = await api.PATCH("/api/v0/me/profile", {
-    body: { language: "zh-CN", is_tour_completed: true },
-    headers: bearer(admin.access_token),
-  });
-  expect(chinese.response.status).toBe(200);
-  const slug = slugFor(testInfo);
-  await createWorkspace(api, admin.access_token, { name: "Acme", slug, organization_size: "Just myself" });
-  await inviteAndAccept(api, admin.access_token, slug, { email: bobEmail, token: bob.access_token }, 15);
-  return { admin, slug, bobEmail };
-}
-
-/** Closes the one modal dialog page shows by its Cancel (取消). */
-async function cancel(page: Page): Promise<void> {
-  await modalDialog(page).getByRole("button", { name: "取消" }).click();
-  await expect(modalDialog(page)).toHaveCount(0);
-}
-
-test("S7 (page): an admin whose language is Chinese sees the workspace's home, menu, general and members pages and their dialogs in Chinese", async ({
-  api,
-  signedInPage,
-}, testInfo) => {
-  const { admin, slug, bobEmail } = await chineseAdmin(api, testInfo);
-  const page = await signedInPage(admin);
-  const watch = await watchPage(page);
-
-  // The home's greeting, the search's placeholder, the workspace menu's leaving.
-  await page.goto(`/${slug}`);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveText(/^(早上好|下午好|晚上好), /);
-  await expect(page.getByPlaceholder("搜索命令...")).toBeVisible();
-  await page.getByRole("button", { name: "打开工作空间切换器" }).click();
-  await expect(page.getByRole("menuitem", { name: "离开工作区" })).toBeVisible();
-  await page.keyboard.press("Escape");
-
-  // The sidebar, by its name; the project navigation's dialog, each mode's description.
-  await page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" }).click();
-  await expect(modalDialog(page).getByText("功能标签显示为项目下的嵌套项，可以展开和收起。")).toBeVisible();
-  await expect(modalDialog(page).getByText("功能标签显示为项目内的横向标签。")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(modalDialog(page)).toHaveCount(0);
-
-  // The general page: the settings' sidebar, the size, and the deletion's dialog, the workspace's name in it.
-  await page.goto(`/${slug}/settings`);
-  await expect(page.getByText("工作区设置", { exact: true })).toBeVisible();
-  await expect(page.getByText("只有我自己", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "删除", exact: true }).click();
-  await expect(modalDialog(page).getByText(/^您将要删除工作区 Acme。/)).toBeVisible();
-  await expect(modalDialog(page).getByText("输入这个工作区的名称以继续。")).toBeVisible();
-  await expect(modalDialog(page).getByText("最后确认，请在下方输入 delete my workspace。")).toBeVisible();
-  await cancel(page);
-
-  // The members page: its title, and the removal's dialog, the member's name in it.
-  await page.goto(`/${slug}/settings/members`);
-  await expect(page).toHaveTitle("Acme - 成员");
-  await memberRow(page, bobEmail).locator("button").first().click();
-  await page.getByRole("button", { name: "移除", exact: true }).click();
-  await expect(modalDialog(page).getByRole("heading")).toHaveText(`移出 ${shownNameOf(bobEmail)}？`);
-  await expect(modalDialog(page).getByText(/^确定要将 .+ 移出工作区吗？/)).toBeVisible();
-  await cancel(page);
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
-});
-````
 
 `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`（修改，1 处）：
 
@@ -2223,49 +2204,6 @@ import { PageHead } from "@/components/core/page-title";
         <h1 className="text-18 font-medium text-primary">{t("not_authorized_to_view")}</h1>
 ````
 
-`web/apps/web/core/components/common/translated.test.tsx`（新文件，38 行）：
-
-````file web/apps/web/core/components/common/translated.test.tsx
-/**
- * Copyright (c) 2026-present OpenNerve
- * SPDX-License-Identifier: AGPL-3.0-only
- */
-
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-import { Translated } from "./translated";
-
-// A sentence whose placeholders are nodes (M3 closeout): the stand-in for @nerve/i18n fills a key's placeholders as
-// ICU does, from two sentences that order them differently.
-
-const sentences: Record<string, string> = {
-  remove: "Remove {name} from {workspace}?",
-  reversed: "从 {workspace} 移出 {name}？",
-};
-vi.mock("@nerve/i18n", () => ({
-  useTranslation: () => ({
-    t: (key: string, params: Record<string, string>) =>
-      sentences[key].replace(/\{(\w+)\}/g, (_, name: string) => params[name]),
-  }),
-}));
-
-const values = { name: <b>Bob</b>, workspace: <i>Acme</i> };
-
-describe("Translated", () => {
-  it("puts each placeholder's node where the sentence has it", () => {
-    expect(renderToStaticMarkup(<Translated i18nKey="remove" values={values} />)).toBe(
-      "Remove <b>Bob</b> from <i>Acme</i>?"
-    );
-  });
-
-  it("follows the order of the page's language", () => {
-    expect(renderToStaticMarkup(<Translated i18nKey="reversed" values={values} />)).toBe(
-      "从 <i>Acme</i> 移出 <b>Bob</b>？"
-    );
-  });
-});
-````
-
 `web/apps/web/core/components/common/translated.tsx`（新文件，31 行）：
 
 ````file web/apps/web/core/components/common/translated.tsx
@@ -2305,10 +2243,12 @@ export function Translated(props: Props) {
 `web/apps/web/core/components/home/user-greetings.tsx`（修改，1 处）：
 
 ````old web/apps/web/core/components/home/user-greetings.tsx
+      <h2 className="text-center text-20 font-semibold">
         {t("good")} {t(greeting)}, {user?.first_name} {user?.last_name}
+      </h2>
 ````
 ````new web/apps/web/core/components/home/user-greetings.tsx
-        {t(`greeting.${greeting}`)}, {user?.first_name} {user?.last_name}
+      <h2 className="text-center text-20 font-semibold">{t(`greeting.${greeting}`, { name: user.display_name })}</h2>
 ````
 
 `web/apps/web/core/components/navigation/project-navigation-dialog.tsx`（修改，3 处）：
@@ -2374,6 +2314,28 @@ import { ORGANIZATION_SIZE, ORGANIZATION_SIZE_I18N_LABEL } from "@nerve/constant
 ````
 ````new web/apps/web/core/components/onboarding/steps/workspace/create.tsx
                         <span className="font-medium">{t(ORGANIZATION_SIZE_I18N_LABEL[size])}</span>
+````
+
+`web/apps/web/core/components/onboarding/switch-account-modal.tsx`（修改，2 处）：
+
+````old web/apps/web/core/components/onboarding/switch-account-modal.tsx
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+````
+````new web/apps/web/core/components/onboarding/switch-account-modal.tsx
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+// components
+import { Translated } from "@/components/common/translated";
+````
+````old web/apps/web/core/components/onboarding/switch-account-modal.tsx
+                {t("onboarding.switch_account.description_before_email")}{" "}
+                <span className="text-accent-primary">{userData.email}</span>{" "}
+                {t("onboarding.switch_account.description_after_email")}
+````
+````new web/apps/web/core/components/onboarding/switch-account-modal.tsx
+                <Translated
+                  i18nKey="onboarding.switch_account.description"
+                  values={{ email: <span className="text-accent-primary">{userData.email}</span> }}
+                />
 ````
 
 `web/apps/web/core/components/settings/project/sidebar/header.tsx`（修改，1 处）：
@@ -2595,17 +2557,6 @@ import { useTranslation } from "@nerve/i18n";
             {t("workspace_settings.settings.members.suspended")}
 ````
 
-`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`（修改，1 处）：
-
-````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Invitation removed successfully." }]);
-````
-````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
-    expect(toasts).toEqual([
-      { type: "success", title: "toast.success", message: "workspace_settings.settings.members.invitation_removed" },
-    ]);
-````
-
 `web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`（修改，3 处）：
 
 ````old web/apps/web/core/components/workspace/settings/use-invitation-changes.ts
@@ -2631,33 +2582,6 @@ import { useTranslation } from "@nerve/i18n";
             title: t("toast.success"),
             message: t("workspace_settings.settings.members.invitation_removed"),
           });
-````
-
-`web/apps/web/core/components/workspace/settings/workspace-details.test.tsx`（修改，3 处）：
-
-````old web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
-/** Renders the page, has edit change its fields, and clicks the update; settles once the page has followed nerve. */
-````
-````new web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
-/**
- * Renders the page, has edit change its fields (the size by the label the select shows), and clicks the update;
- * settles once the page has followed nerve.
- */
-````
-````old web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
-    await update((form) => Object.assign(form, { name: "Acme Corp", size: "11-50", zone: "Asia/Shanghai" }));
-````
-````new web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
-    const size = "workspace_creation.form.organization_size.sizes.11_50";
-    await update((form) => Object.assign(form, { name: "Acme Corp", size, zone: "Asia/Shanghai" }));
-````
-````old web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
-    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Workspace updated successfully" }]);
-````
-````new web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
-    expect(toasts).toEqual([
-      { type: "success", title: "toast.success", message: "workspace_settings.settings.general.updated" },
-    ]);
 ````
 
 `web/apps/web/core/components/workspace/settings/workspace-details.tsx`（修改，7 处）：
@@ -2765,7 +2689,7 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
     },
 ````
 
-`web/packages/i18n/src/locales/en/common.json`（修改，3 处）：
+`web/packages/i18n/src/locales/en/common.json`（修改，4 处）：
 
 ````old web/packages/i18n/src/locales/en/common.json
   "leave_workspace": "Leave workspace",
@@ -2783,9 +2707,9 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
 ````
 ````new web/packages/i18n/src/locales/en/common.json
   "greeting": {
-    "morning": "Good morning",
-    "afternoon": "Good afternoon",
-    "evening": "Good evening"
+    "morning": "Good morning, {name}",
+    "afternoon": "Good afternoon, {name}",
+    "evening": "Good evening, {name}"
   },
 ````
 ````old web/packages/i18n/src/locales/en/common.json
@@ -2797,16 +2721,21 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
   "horizontal_navigation_description": "Feature tabs will appear as horizontal tabs inside a project.",
   "navigation_count_minimum": "Minimum value is 1",
 ````
+````old web/packages/i18n/src/locales/en/common.json
+      "description_before_email": "If you have signed up via",
+      "description_after_email": "un-intentionally, you can switch your account to a different one from here.",
+````
+````new web/packages/i18n/src/locales/en/common.json
+      "description": "If you have signed up via {email} un-intentionally, you can switch your account to a different one from here.",
+````
 
 `web/packages/i18n/src/locales/en/power-k.json`（修改，1 处）：
 
 ````old web/packages/i18n/src/locales/en/power-k.json
-      "report_bug": "Report a bug"
-    },
+    "search_shortcuts": "Search for shortcuts",
 ````
 ````new web/packages/i18n/src/locales/en/power-k.json
-      "report_bug": "Report a bug"
-    },
+    "search_shortcuts": "Search for shortcuts",
     "search_commands": "Search commands...",
 ````
 
@@ -2858,7 +2787,7 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
         "invitation_removed": "Invitation removed successfully.",
 ````
 
-`web/packages/i18n/src/locales/en/workspace.json`（修改，1 处）：
+`web/packages/i18n/src/locales/en/workspace.json`（修改，2 处）：
 
 ````old web/packages/i18n/src/locales/en/workspace.json
         "placeholder": "Select a range"
@@ -2873,6 +2802,12 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
           "201_500": "201-500",
           "500_plus": "500+"
         }
+````
+````old web/packages/i18n/src/locales/en/workspace.json
+      "title": "You declined this invitation.",
+````
+````new web/packages/i18n/src/locales/en/workspace.json
+      "title": "This invitation was declined.",
 ````
 
 `web/packages/i18n/src/locales/zh-CN/accessibility.json`（修改，1 处）：
@@ -2889,7 +2824,7 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
     },
 ````
 
-`web/packages/i18n/src/locales/zh-CN/common.json`（修改，3 处）：
+`web/packages/i18n/src/locales/zh-CN/common.json`（修改，4 处）：
 
 ````old web/packages/i18n/src/locales/zh-CN/common.json
   "leave_workspace": "离开工作区",
@@ -2907,9 +2842,9 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
 ````
 ````new web/packages/i18n/src/locales/zh-CN/common.json
   "greeting": {
-    "morning": "早上好",
-    "afternoon": "下午好",
-    "evening": "晚上好"
+    "morning": "早上好，{name}",
+    "afternoon": "下午好，{name}",
+    "evening": "晚上好，{name}"
   },
 ````
 ````old web/packages/i18n/src/locales/zh-CN/common.json
@@ -2921,16 +2856,21 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
   "horizontal_navigation_description": "功能标签显示为项目内的横向标签。",
   "navigation_count_minimum": "最小值为 1",
 ````
+````old web/packages/i18n/src/locales/zh-CN/common.json
+      "description_before_email": "如果您无意中使用",
+      "description_after_email": "注册了账户，可以在这里切换到其他账户。",
+````
+````new web/packages/i18n/src/locales/zh-CN/common.json
+      "description": "如果您无意中使用 {email} 注册了账户，可以在这里切换到其他账户。",
+````
 
 `web/packages/i18n/src/locales/zh-CN/power-k.json`（修改，1 处）：
 
 ````old web/packages/i18n/src/locales/zh-CN/power-k.json
-      "report_bug": "报告 Bug"
-    },
+    "search_shortcuts": "搜索快捷键",
 ````
 ````new web/packages/i18n/src/locales/zh-CN/power-k.json
-      "report_bug": "报告 Bug"
-    },
+    "search_shortcuts": "搜索快捷键",
     "search_commands": "搜索命令...",
 ````
 
@@ -2978,11 +2918,11 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
         "page_label": "{workspace} - 成员",
         "suspended": "已停用",
         "remove_title": "移出 {name}？",
-        "remove_confirmation": "确定要将 {name} 移出工作区吗？他将不能再访问这个工作区。此操作无法撤销。",
+        "remove_confirmation": "确定要将 {name} 移出工作区吗？对方将不能再访问这个工作区。此操作无法撤销。",
         "invitation_removed": "邀请已删除。",
 ````
 
-`web/packages/i18n/src/locales/zh-CN/workspace.json`（修改，1 处）：
+`web/packages/i18n/src/locales/zh-CN/workspace.json`（修改，2 处）：
 
 ````old web/packages/i18n/src/locales/zh-CN/workspace.json
         "placeholder": "选择一个范围"
@@ -2998,11 +2938,243 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
           "500_plus": "500 人以上"
         }
 ````
+````old web/packages/i18n/src/locales/zh-CN/workspace.json
+      "title": "您已忽略这份邀请。",
+````
+````new web/packages/i18n/src/locales/zh-CN/workspace.json
+      "title": "这份邀请已被拒绝。",
+````
+
+- [ ] **Step 2: 测试**
+
+`e2e/stories/smoke/s7-chinese.spec.ts`（新文件，92 行）：
+
+````file e2e/stories/smoke/s7-chinese.spec.ts
+import type { Page, TestInfo } from "@playwright/test";
+
+import { createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
+import { bearer, emailFor, shownNameOf, type AuthTokens } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { modalDialog } from "../../fixtures/dialogs";
+import { registerOnboarded } from "../../fixtures/settings-pages";
+import { expect, test } from "../../fixtures/test";
+import { memberRow } from "../../fixtures/workspace-pages";
+
+// S7, the workspace's pages in Chinese (M3 closeout: the text Plane wrote in English on M3's pages is in the user's
+// language): an account whose language is zh-CN sees its pages, menus and dialogs in Chinese.
+
+/**
+ * An admin of this run of the test whose language is Chinese, the home's tour taken already, and Acme, his workspace,
+ * of the size "Just myself", with bob, a member.
+ */
+async function chineseAdmin(
+  api: Api,
+  testInfo: TestInfo
+): Promise<{ admin: AuthTokens; slug: string; bobEmail: string }> {
+  const admin = await registerOnboarded(api, emailFor(testInfo, "admin"));
+  const bobEmail = emailFor(testInfo, "bob");
+  const bob = await registerOnboarded(api, bobEmail);
+  const chinese = await api.PATCH("/api/v0/me/profile", {
+    body: { language: "zh-CN", is_tour_completed: true },
+    headers: bearer(admin.access_token),
+  });
+  expect(chinese.response.status).toBe(200);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug, organization_size: "Just myself" });
+  await inviteAndAccept(api, admin.access_token, slug, { email: bobEmail, token: bob.access_token }, 15);
+  return { admin, slug, bobEmail };
+}
+
+/** Closes the one modal dialog page shows by its Cancel (取消). */
+async function cancel(page: Page): Promise<void> {
+  await modalDialog(page).getByRole("button", { name: "取消" }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
+}
+
+test("S7 (page): an admin whose language is Chinese sees the workspace's home, menu, general and members pages and their dialogs in Chinese", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const { admin, slug, bobEmail } = await chineseAdmin(api, testInfo);
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+
+  // The home's greeting, his name in it, the search's placeholder, the keyboard shortcuts' dialog (its title, which
+  // names it, and its search), the workspace menu's leaving.
+  await page.goto(`/${slug}`);
+  const greeting = new RegExp(`^(早上好|下午好|晚上好)，${shownNameOf(emailFor(testInfo, "admin"))}$`);
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText(greeting);
+  await expect(page.getByPlaceholder("搜索命令...")).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+/");
+  await expect(modalDialog(page)).toHaveAccessibleName("键盘快捷键");
+  await expect(modalDialog(page).getByRole("textbox", { name: "搜索快捷键" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "打开工作空间切换器" }).click();
+  await expect(page.getByRole("menuitem", { name: "离开工作区" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // The sidebar, by its name; the project navigation's dialog, each mode's description.
+  await page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" }).click();
+  await expect(modalDialog(page).getByText("功能标签显示为项目下的嵌套项，可以展开和收起。")).toBeVisible();
+  await expect(modalDialog(page).getByText("功能标签显示为项目内的横向标签。")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(0);
+
+  // The general page: the settings' sidebar, the size, and the deletion's dialog, the workspace's name in it.
+  await page.goto(`/${slug}/settings`);
+  await expect(page.getByText("工作区设置", { exact: true })).toBeVisible();
+  await expect(page.getByText("只有我自己", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "删除", exact: true }).click();
+  await expect(modalDialog(page).getByText(/^您将要删除工作区 Acme。/)).toBeVisible();
+  await expect(modalDialog(page).getByText("输入这个工作区的名称以继续。")).toBeVisible();
+  await expect(modalDialog(page).getByText("最后确认，请在下方输入 delete my workspace。")).toBeVisible();
+  await cancel(page);
+
+  // The members page: its title, and the removal's dialog, the member's name in it.
+  await page.goto(`/${slug}/settings/members`);
+  await expect(page).toHaveTitle("Acme - 成员");
+  await memberRow(page, bobEmail).locator("button").first().click();
+  await page.getByRole("button", { name: "移除", exact: true }).click();
+  await expect(modalDialog(page).getByRole("heading")).toHaveText(`移出 ${shownNameOf(bobEmail)}？`);
+  await expect(modalDialog(page).getByText(/^确定要将 .+ 移出工作区吗？/)).toBeVisible();
+  await cancel(page);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+});
+````
+
+`e2e/stories/workspace/w5-invitation-link.spec.ts`（修改，1 处）：
+
+````old e2e/stories/workspace/w5-invitation-link.spec.ts
+  await expect(page.getByText("You declined this invitation.")).toBeVisible();
+````
+````new e2e/stories/workspace/w5-invitation-link.spec.ts
+  await expect(page.getByText("This invitation was declined.")).toBeVisible();
+````
+
+`web/apps/web/core/components/common/translated.test.tsx`（新文件，38 行）：
+
+````file web/apps/web/core/components/common/translated.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import { Translated } from "./translated";
+
+// A sentence whose placeholders are nodes (M3 closeout): the stand-in for @nerve/i18n fills a key's placeholders as
+// ICU does, from two sentences that order them differently.
+
+const sentences: Record<string, string> = {
+  remove: "Remove {name} from {workspace}?",
+  reversed: "从 {workspace} 移出 {name}？",
+};
+vi.mock("@nerve/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string, params: Record<string, string>) =>
+      sentences[key].replace(/\{(\w+)\}/g, (_, name: string) => params[name]),
+  }),
+}));
+
+const values = { name: <b>Bob</b>, workspace: <i>Acme</i> };
+
+describe("Translated", () => {
+  it("puts each placeholder's node where the sentence has it", () => {
+    expect(renderToStaticMarkup(<Translated i18nKey="remove" values={values} />)).toBe(
+      "Remove <b>Bob</b> from <i>Acme</i>?"
+    );
+  });
+
+  it("follows the order of the page's language", () => {
+    expect(renderToStaticMarkup(<Translated i18nKey="reversed" values={values} />)).toBe(
+      "从 <i>Acme</i> 移出 <b>Bob</b>？"
+    );
+  });
+});
+````
+
+`web/apps/web/core/components/onboarding/switch-account-modal.test.tsx`（新文件，32 行）：
+
+````file web/apps/web/core/components/onboarding/switch-account-modal.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import { SwitchAccountModal } from "./switch-account-modal";
+
+// The account switch's sentence (M3 closeout): one key, the address set apart within it, so that each language orders
+// the sentence as it does. The stand-in for @nerve/i18n says a key, then the values it was given.
+
+vi.mock("@nerve/i18n", () => ({
+  useTranslation: () => ({
+    t: (key: string, values: Record<string, string> = {}) => [key, ...Object.values(values)].join(" "),
+  }),
+}));
+vi.mock("@headlessui/react", () => ({ DialogTitle: ({ children }: { children?: ReactNode }) => <h3>{children}</h3> }));
+vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
+vi.mock("@/hooks/store/user", () => ({ useUser: () => ({ data: { email: "bob@example.com" } }) }));
+vi.mock("@/hooks/use-sign-out", () => ({ useSignOut: () => vi.fn() }));
+
+describe("the account switch", () => {
+  it("says its sentence as one key, the address set apart within it", () => {
+    const markup = renderToStaticMarkup(<SwitchAccountModal isOpen onClose={() => {}} />);
+    expect(markup).toContain(
+      'onboarding.switch_account.description <span class="text-accent-primary">bob@example.com</span>'
+    );
+  });
+});
+````
+
+`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`（修改，1 处）：
+
+````old web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Invitation removed successfully." }]);
+````
+````new web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts
+    expect(toasts).toEqual([
+      { type: "success", title: "toast.success", message: "workspace_settings.settings.members.invitation_removed" },
+    ]);
+````
+
+`web/apps/web/core/components/workspace/settings/workspace-details.test.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
+/** Renders the page, has edit change its fields, and clicks the update; settles once the page has followed nerve. */
+````
+````new web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
+/**
+ * Renders the page, has edit change its fields (the size by the label the select shows), and clicks the update;
+ * settles once the page has followed nerve.
+ */
+````
+````old web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
+    await update((form) => Object.assign(form, { name: "Acme Corp", size: "11-50", zone: "Asia/Shanghai" }));
+````
+````new web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
+    const size = "workspace_creation.form.organization_size.sizes.11_50";
+    await update((form) => Object.assign(form, { name: "Acme Corp", size, zone: "Asia/Shanghai" }));
+````
+````old web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
+    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Workspace updated successfully" }]);
+````
+````new web/apps/web/core/components/workspace/settings/workspace-details.test.tsx
+    expect(toasts).toEqual([
+      { type: "success", title: "toast.success", message: "workspace_settings.settings.general.updated" },
+    ]);
+````
 
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 302 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 14 条、`@nerve/propel` 11 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -3019,7 +3191,7 @@ Expected: 113 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' 'web/apps/web/app/(all)/workspace-invitations/layout.tsx' 'web/apps/web/app/(all)/workspace-invitations/page.tsx' web/apps/web/core/components/auth-screens/not-authorized-view.tsx web/apps/web/core/components/common/translated.test.tsx web/apps/web/core/components/common/translated.tsx web/apps/web/core/components/home/user-greetings.tsx web/apps/web/core/components/navigation/project-navigation-dialog.tsx web/apps/web/core/components/navigation/top-nav-power-k.tsx web/apps/web/core/components/onboarding/steps/workspace/create.tsx web/apps/web/core/components/settings/project/sidebar/header.tsx web/apps/web/core/components/settings/workspace/sidebar/header.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx web/apps/web/core/components/workspace/create-workspace-form.tsx web/apps/web/core/components/workspace/delete-workspace-modal.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts web/apps/web/core/components/workspace/settings/use-invitation-changes.ts web/apps/web/core/components/workspace/settings/workspace-details.test.tsx web/apps/web/core/components/workspace/settings/workspace-details.tsx web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx web/packages/constants/src/workspace.ts web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/power-k.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/power-k.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json web/packages/i18n/src/locales/zh-CN/workspace.json
+git add e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/workspace/w5-invitation-link.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' 'web/apps/web/app/(all)/workspace-invitations/layout.tsx' 'web/apps/web/app/(all)/workspace-invitations/page.tsx' web/apps/web/core/components/auth-screens/not-authorized-view.tsx web/apps/web/core/components/common/translated.test.tsx web/apps/web/core/components/common/translated.tsx web/apps/web/core/components/home/user-greetings.tsx web/apps/web/core/components/navigation/project-navigation-dialog.tsx web/apps/web/core/components/navigation/top-nav-power-k.tsx web/apps/web/core/components/onboarding/steps/workspace/create.tsx web/apps/web/core/components/onboarding/switch-account-modal.test.tsx web/apps/web/core/components/onboarding/switch-account-modal.tsx web/apps/web/core/components/settings/project/sidebar/header.tsx web/apps/web/core/components/settings/workspace/sidebar/header.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx web/apps/web/core/components/workspace/create-workspace-form.tsx web/apps/web/core/components/workspace/delete-workspace-modal.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts web/apps/web/core/components/workspace/settings/use-invitation-changes.ts web/apps/web/core/components/workspace/settings/workspace-details.test.tsx web/apps/web/core/components/workspace/settings/workspace-details.tsx web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx web/packages/constants/src/workspace.ts web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/power-k.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/power-k.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json web/packages/i18n/src/locales/zh-CN/workspace.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the workspace's pages speak the user's language, a sentence that names something one key
@@ -3029,7 +3201,10 @@ and no-permission pages, the project navigation dialog, the settings'
 sidebar, the palette's placeholder and the home's greeting read their text
 through t(), in English and Chinese. Translated puts a sentence's names
 where the language has them, bold as before; the greeting is one key per
-time of day. S7 reads these pages in Chinese.
+time of day with the name the pages show, and the account switch's
+sentence one key with the address. The declined invitation's page says
+the invitation was declined, addressing no one. S7 reads these pages in
+Chinese.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -3044,10 +3219,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T4.4` | 规模的选项是英文：选择框列出 nerve 的值 | `workspace-details.test.tsx` | vitest |
 | `T4.5` | 成员页的标题是英文 | 故事 S7 | 端到端 |
 | `T4.6` | 移出成员的标题是英文 | 故事 S7 | 端到端 |
-| `T4.7` | 问候又由两个词拼成，中文读作两个时段（"早上 晚上"） | 故事 S7 | 端到端 |
+| `T4.7` | 问候又是英文的"Good"加时段，不经 `t()` | 故事 S7 | 端到端 |
 | `T4.8` | 项目导航对话框的说明是英文 | 故事 S7 | 端到端 |
 | `T4.9` | 侧边栏的名字不管什么语言都是英文 | 故事 S7 | 端到端 |
 | `T4.10` | 删除邀请的提示是英文 | `use-invitation-changes.test.ts` | vitest |
+| `T4.11` | 快捷键弹窗的标题和搜索框又是英文（Task 2 的 `t()`） | 故事 S7 | 端到端 |
+| `T4.12` | 切换账户的那句话又是邮箱两边的两个键，语序是英文的 | `switch-account-modal.test.tsx` | vitest |
+| `T4.13` | 问候带 Plane 的名和姓，不是页面上显示的名字 | 故事 S7 | 端到端 |
+| `T4.14` | 已拒绝的邀请页又对打开链接的人说"You declined this invitation." | 故事 W5 | 端到端 |
 
 ---
 
@@ -3064,93 +3243,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Tests:** `project-dialog-texts.test.tsx`（新文件：加入、离开、移出的文字）；`add-project-members-modal`、`archive-restore-modal`、`card`、`delete-project-modal`、`use-feature-toggle`、`use-tab-preferences` 的测试读键。P2、P5 照新的忙时文字；S7 的第二个：项目的 general 页和成员页。
 
 - [ ] **Step 1: 弹窗和设置**
-
-^web/(?!.*(\.test\.tsx?|/fake-[^/]*\.ts)$)
-
-- [ ] **Step 2: 测试**
-
-`e2e/stories/project/p2-visibility.spec.ts`（修改，1 处）：
-
-````old e2e/stories/project/p2-visibility.spec.ts
-  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining..." }))).toBe(false);
-````
-````new e2e/stories/project/p2-visibility.spec.ts
-  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining" }))).toBe(false);
-````
-
-`e2e/stories/project/p5-project-members.spec.ts`（修改，2 处）：
-
-````old e2e/stories/project/p5-project-members.spec.ts
-  const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving..." });
-````
-````new e2e/stories/project/p5-project-members.spec.ts
-  const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving" });
-````
-````old e2e/stories/project/p5-project-members.spec.ts
-  expect(await enabledWithin(theGuest.page.getByRole("button", { name: "Leaving..." }))).toBe(false);
-````
-````new e2e/stories/project/p5-project-members.spec.ts
-  expect(await enabledWithin(theGuest.page.getByRole("button", { name: "Leaving" }))).toBe(false);
-````
-
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，2 处）：
-
-````old e2e/stories/smoke/s7-chinese.spec.ts
-import { createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-import { createProject, createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
-});
-
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
-});
-
-test("S7 (page): an admin whose language is Chinese sees a project's general and members pages and their dialogs in Chinese", async ({
-  api,
-  signedInPage,
-}, testInfo) => {
-  const { admin, slug } = await chineseAdmin(api, testInfo);
-  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
-  const page = await signedInPage(admin);
-  const watch = await watchPage(page);
-
-  // The general page: the settings' sidebar, the deletion's description, the archive's and the deletion's dialogs,
-  // the project's name in them.
-  await page.goto(`/${slug}/settings/projects/${web.id}`);
-  await expect(page.getByText("项目设置", { exact: true })).toBeVisible();
-  await expect(page.getByText("删除项目时，项目中的全部数据和资源将被永久删除，且无法恢复。")).toBeVisible();
-  await page.getByRole("button", { name: "归档", exact: true }).click();
-  await expect(modalDialog(page).getByRole("heading")).toHaveText("归档 Web");
-  await cancel(page);
-  await page.getByRole("button", { name: "删除", exact: true }).click();
-  await expect(modalDialog(page).getByRole("heading")).toHaveText("删除项目");
-  await expect(modalDialog(page).getByText(/^确定要删除项目 Web 吗？/)).toBeVisible();
-  await cancel(page);
-
-  // The members page: the member defaults.
-  await page.goto(`/${slug}/settings/projects/${web.id}/members`);
-  await expect(page.getByText("项目负责人", { exact: true })).toBeVisible();
-  await expect(page.getByText("默认负责人", { exact: true })).toBeVisible();
-  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(2).fill(EMOJI_CHECK_WARNING) });
-});
-
-````
-
-`web/apps/web/core/components/navigation/use-tab-preferences.test.ts`（修改，1 处）：
-
-````old web/apps/web/core/components/navigation/use-tab-preferences.test.ts
-      { type: "success", title: "Success!", message: "Default tab updated successfully." },
-````
-````new web/apps/web/core/components/navigation/use-tab-preferences.test.ts
-      { type: "success", title: "toast.success", message: "project_dialogs.default_tab_updated" },
-````
 
 `web/apps/web/core/components/navigation/use-tab-preferences.ts`（修改，3 处）：
 
@@ -3177,15 +3269,6 @@ import { useTranslation } from "@nerve/i18n";
                 message: t("project_dialogs.default_tab_updated"),
 ````
 
-`web/apps/web/core/components/project/add-project-members-modal.test.tsx`（修改，1 处）：
-
-````old web/apps/web/core/components/project/add-project-members-modal.test.tsx
-    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Members added successfully." }]);
-````
-````new web/apps/web/core/components/project/add-project-members-modal.test.tsx
-    expect(toasts).toEqual([{ type: "success", title: "toast.success", message: "project_dialogs.members_added" }]);
-````
-
 `web/apps/web/core/components/project/add-project-members-modal.tsx`（修改，3 处）：
 
 ````old web/apps/web/core/components/project/add-project-members-modal.tsx
@@ -3207,21 +3290,6 @@ import { useTranslation } from "@nerve/i18n";
                                 <div className="flex items-center gap-2 py-0.5">
                                   {t("project_dialogs.select_member")}
                                 </div>
-````
-
-`web/apps/web/core/components/project/archive-restore-modal.test.tsx`（修改，2 处）：
-
-````old web/apps/web/core/components/project/archive-restore-modal.test.tsx
-      said: { title: "Archive success", message: "Web has been archived successfully" },
-````
-````new web/apps/web/core/components/project/archive-restore-modal.test.tsx
-      said: { title: "project_dialogs.archive.done_title", message: "project_dialogs.archive.done" },
-````
-````old web/apps/web/core/components/project/archive-restore-modal.test.tsx
-      said: { title: "Restore success", message: "You can find Web in your projects." },
-````
-````new web/apps/web/core/components/project/archive-restore-modal.test.tsx
-      said: { title: "project_dialogs.restore.done_title", message: "project_dialogs.restore.done" },
 ````
 
 `web/apps/web/core/components/project/archive-restore-modal.tsx`（修改，7 处）：
@@ -3292,17 +3360,6 @@ import { useTranslation } from "@nerve/i18n";
             {archive
               ? t(isLoading ? "common.archiving" : "archive")
               : t(isLoading ? "project_dialogs.restore.restoring" : "restore")}
-````
-
-`web/apps/web/core/components/project/card.test.tsx`（修改，1 处）：
-
-````old web/apps/web/core/components/project/card.test.tsx
-    restore: />Restore</.test(card),
-    delete: card.includes('aria-label="Delete"'),
-````
-````new web/apps/web/core/components/project/card.test.tsx
-    restore: />restore</.test(card),
-    delete: card.includes('aria-label="delete"'),
 ````
 
 `web/apps/web/core/components/project/card.tsx`（修改，10 处）：
@@ -3437,15 +3494,6 @@ import { Translated } from "@/components/common/translated";
 ````
 ````new web/apps/web/core/components/project/confirm-project-member-remove.tsx
           {isCurrentUser ? t(isDeleteLoading ? "leaving" : "leave") : t(isDeleteLoading ? "removing" : "remove")}
-````
-
-`web/apps/web/core/components/project/delete-project-modal.test.tsx`（修改，1 处）：
-
-````old web/apps/web/core/components/project/delete-project-modal.test.tsx
-const deleted = { type: "success", title: "Success!", message: "Project deleted successfully." };
-````
-````new web/apps/web/core/components/project/delete-project-modal.test.tsx
-const deleted = { type: "success", title: "toast.success", message: "project_dialogs.delete.deleted" };
 ````
 
 `web/apps/web/core/components/project/delete-project-modal.tsx`（修改，12 处）：
@@ -3766,87 +3814,6 @@ import { useTranslation } from "@nerve/i18n";
                 <span className="py-0.5 text-13 text-placeholder">{t("none")}</span>
 ````
 
-`web/apps/web/core/components/project/project-dialog-texts.test.tsx`（新文件，76 行）：
-
-````file web/apps/web/core/components/project/project-dialog-texts.test.tsx
-/**
- * Copyright (c) 2026-present OpenNerve
- * SPDX-License-Identifier: AGPL-3.0-only
- */
-
-import type { ReactElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyShown, shown } from "@/lib/fake-controls";
-import { projectOf } from "@/store/project/fake-projects";
-import { ConfirmProjectMemberRemove } from "./confirm-project-member-remove";
-import { JoinProjectModal } from "./join-project-modal";
-import { LeaveProjectModal } from "./leave-project-modal";
-
-// The texts of the project's dialogs that no story opens in Chinese (M3 closeout): each renders on the server, open,
-// with the stand-in for @nerve/i18n, whose text is its key, and stand-ins for its controls (fake-controls.ts), which
-// keep the props they were given: each title, sentence and button is a key of the page's language.
-
-const web = projectOf("WEB", "w-acme", { name: "Web" });
-vi.mock("react-router", () => ({
-  useNavigate: () => vi.fn(),
-  useParams: () => ({ workspaceSlug: "acme", projectId: web.id }),
-}));
-vi.mock("@/hooks/store/use-project", () => ({ useProject: () => ({ getProjectById: () => web }) }));
-vi.mock("@/hooks/store/user", () => ({ useUser: () => ({ data: { id: "u-admin" } }) }));
-vi.mock("./use-join-project", () => ({ useJoinProject: () => vi.fn() }));
-vi.mock("@/components/project/settings/use-project-membership-changes", () => ({
-  useProjectMembershipChanges: () => ({ leave: vi.fn() }),
-}));
-vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
-vi.mock("@makeplane/propel/components/input", () => import("@/lib/fake-controls"));
-vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-
-beforeEach(() => {
-  emptyShown();
-});
-
-describe("the project's dialogs", () => {
-  it.each<{ dialog: string; open: () => ReactElement; sentences: string[]; buttons: string[] }>([
-    {
-      dialog: "the joining",
-      open: () => <JoinProjectModal isOpen workspaceSlug="acme" project={web} handleClose={() => {}} />,
-      sentences: ["project_dialogs.join.title", "project_dialogs.join.body"],
-      buttons: ["cancel", "project_dialogs.join.submit"],
-    },
-    {
-      dialog: "the leaving",
-      open: () => <LeaveProjectModal isOpen project={web} onClose={() => {}} />,
-      sentences: [
-        "project_dialogs.leave.title",
-        "project_dialogs.leave.body",
-        "project_dialogs.type_project_name",
-        "project_dialogs.type_confirmation",
-      ],
-      buttons: ["cancel", "project_dialogs.leave.title"],
-    },
-    {
-      dialog: "a member's removal",
-      open: () => (
-        <ConfirmProjectMemberRemove
-          isOpen
-          data={{ id: "u-bob", display_name: "bob" }}
-          onSubmit={() => Promise.resolve()}
-          onClose={() => {}}
-        />
-      ),
-      sentences: ["project_dialogs.remove_member.remove_title", "project_dialogs.remove_member.remove_body"],
-      buttons: ["cancel", "remove"],
-    },
-  ])("$dialog says each of its texts in the page's language", ({ open, sentences, buttons }) => {
-    const markup = renderToStaticMarkup(open());
-    expect(sentences.filter((key) => !markup.includes(key))).toEqual([]);
-    expect(shown.buttons.map((button) => button.children)).toEqual(buttons);
-  });
-});
-````
-
 `web/apps/web/core/components/project/project-settings-member-defaults.tsx`（修改，4 处）：
 
 ````old web/apps/web/core/components/project/project-settings-member-defaults.tsx
@@ -3895,15 +3862,6 @@ describe("the project's dialogs", () => {
 ````
 ````new web/apps/web/core/components/project/settings/control-section.tsx
           description={t("project_dialogs.delete.description")}
-````
-
-`web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx`（修改，1 处）：
-
-````old web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
-      { type: "success", title: "Success!", message: "Project feature updated successfully." },
-````
-````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
-      { type: "success", title: "toast.success", message: "project_dialogs.feature_updated" },
 ````
 
 `web/apps/web/core/components/project/settings/use-feature-toggle.ts`（修改，3 处）：
@@ -4074,7 +4032,7 @@ import { useTranslation } from "@nerve/i18n";
       "leave_title": "离开项目？",
       "remove_title": "移出 {name}？",
       "leave_body": "确定要离开项目 {name} 吗？项目管理员再次添加您，或者项目公开时，您可以重新加入。",
-      "remove_body": "确定要将 {name} 移出项目吗？他将不能再访问这个项目。此操作无法撤销。"
+      "remove_body": "确定要将 {name} 移出项目吗？对方将不能再访问这个项目。此操作无法撤销。"
     },
     "archive": {
       "title": "归档 {name}",
@@ -4099,10 +4057,229 @@ import { useTranslation } from "@nerve/i18n";
     "archived": "已归档"
 ````
 
+- [ ] **Step 2: 测试**
+
+`e2e/stories/project/p2-visibility.spec.ts`（修改，1 处）：
+
+````old e2e/stories/project/p2-visibility.spec.ts
+  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining..." }))).toBe(false);
+````
+````new e2e/stories/project/p2-visibility.spec.ts
+  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining" }))).toBe(false);
+````
+
+`e2e/stories/project/p5-project-members.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p5-project-members.spec.ts
+  const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving..." });
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+  const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving" });
+````
+````old e2e/stories/project/p5-project-members.spec.ts
+  expect(await enabledWithin(theGuest.page.getByRole("button", { name: "Leaving..." }))).toBe(false);
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+  expect(await enabledWithin(theGuest.page.getByRole("button", { name: "Leaving" }))).toBe(false);
+````
+
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，2 处）：
+
+````old e2e/stories/smoke/s7-chinese.spec.ts
+import { createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+import { createProject, createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+});
+
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): an admin whose language is Chinese sees a project's general and members pages and their dialogs in Chinese", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const { admin, slug } = await chineseAdmin(api, testInfo);
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+
+  // The general page: the settings' sidebar, the deletion's description, the archive's and the deletion's dialogs,
+  // the project's name in them.
+  await page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(page.getByText("项目设置", { exact: true })).toBeVisible();
+  await expect(page.getByText("删除项目时，项目中的全部数据和资源将被永久删除，且无法恢复。")).toBeVisible();
+  await page.getByRole("button", { name: "归档", exact: true }).click();
+  await expect(modalDialog(page).getByRole("heading")).toHaveText("归档 Web");
+  await cancel(page);
+  await page.getByRole("button", { name: "删除", exact: true }).click();
+  await expect(modalDialog(page).getByRole("heading")).toHaveText("删除项目");
+  await expect(modalDialog(page).getByText(/^确定要删除项目 Web 吗？/)).toBeVisible();
+  await cancel(page);
+
+  // The members page: the member defaults.
+  await page.goto(`/${slug}/settings/projects/${web.id}/members`);
+  await expect(page.getByText("项目负责人", { exact: true })).toBeVisible();
+  await expect(page.getByText("默认负责人", { exact: true })).toBeVisible();
+  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: Array(2).fill(EMOJI_CHECK_WARNING) });
+});
+
+````
+
+`web/apps/web/core/components/navigation/use-tab-preferences.test.ts`（修改，1 处）：
+
+````old web/apps/web/core/components/navigation/use-tab-preferences.test.ts
+      { type: "success", title: "Success!", message: "Default tab updated successfully." },
+````
+````new web/apps/web/core/components/navigation/use-tab-preferences.test.ts
+      { type: "success", title: "toast.success", message: "project_dialogs.default_tab_updated" },
+````
+
+`web/apps/web/core/components/project/add-project-members-modal.test.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project/add-project-members-modal.test.tsx
+    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Members added successfully." }]);
+````
+````new web/apps/web/core/components/project/add-project-members-modal.test.tsx
+    expect(toasts).toEqual([{ type: "success", title: "toast.success", message: "project_dialogs.members_added" }]);
+````
+
+`web/apps/web/core/components/project/archive-restore-modal.test.tsx`（修改，2 处）：
+
+````old web/apps/web/core/components/project/archive-restore-modal.test.tsx
+      said: { title: "Archive success", message: "Web has been archived successfully" },
+````
+````new web/apps/web/core/components/project/archive-restore-modal.test.tsx
+      said: { title: "project_dialogs.archive.done_title", message: "project_dialogs.archive.done" },
+````
+````old web/apps/web/core/components/project/archive-restore-modal.test.tsx
+      said: { title: "Restore success", message: "You can find Web in your projects." },
+````
+````new web/apps/web/core/components/project/archive-restore-modal.test.tsx
+      said: { title: "project_dialogs.restore.done_title", message: "project_dialogs.restore.done" },
+````
+
+`web/apps/web/core/components/project/card.test.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project/card.test.tsx
+    restore: />Restore</.test(card),
+    delete: card.includes('aria-label="Delete"'),
+````
+````new web/apps/web/core/components/project/card.test.tsx
+    restore: />restore</.test(card),
+    delete: card.includes('aria-label="delete"'),
+````
+
+`web/apps/web/core/components/project/delete-project-modal.test.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project/delete-project-modal.test.tsx
+const deleted = { type: "success", title: "Success!", message: "Project deleted successfully." };
+````
+````new web/apps/web/core/components/project/delete-project-modal.test.tsx
+const deleted = { type: "success", title: "toast.success", message: "project_dialogs.delete.deleted" };
+````
+
+`web/apps/web/core/components/project/project-dialog-texts.test.tsx`（新文件，76 行）：
+
+````file web/apps/web/core/components/project/project-dialog-texts.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { ReactElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { emptyShown, shown } from "@/lib/fake-controls";
+import { projectOf } from "@/store/project/fake-projects";
+import { ConfirmProjectMemberRemove } from "./confirm-project-member-remove";
+import { JoinProjectModal } from "./join-project-modal";
+import { LeaveProjectModal } from "./leave-project-modal";
+
+// The texts of the project's dialogs that no story opens in Chinese (M3 closeout): each renders on the server, open,
+// with the stand-in for @nerve/i18n, whose text is its key, and stand-ins for its controls (fake-controls.ts), which
+// keep the props they were given: each title, sentence and button is a key of the page's language.
+
+const web = projectOf("WEB", "w-acme", { name: "Web" });
+vi.mock("react-router", () => ({
+  useNavigate: () => vi.fn(),
+  useParams: () => ({ workspaceSlug: "acme", projectId: web.id }),
+}));
+vi.mock("@/hooks/store/use-project", () => ({ useProject: () => ({ getProjectById: () => web }) }));
+vi.mock("@/hooks/store/user", () => ({ useUser: () => ({ data: { id: "u-admin" } }) }));
+vi.mock("./use-join-project", () => ({ useJoinProject: () => vi.fn() }));
+vi.mock("@/components/project/settings/use-project-membership-changes", () => ({
+  useProjectMembershipChanges: () => ({ leave: vi.fn() }),
+}));
+vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
+vi.mock("@makeplane/propel/components/input", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+beforeEach(() => {
+  emptyShown();
+});
+
+describe("the project's dialogs", () => {
+  it.each<{ dialog: string; open: () => ReactElement; sentences: string[]; buttons: string[] }>([
+    {
+      dialog: "the joining",
+      open: () => <JoinProjectModal isOpen workspaceSlug="acme" project={web} handleClose={() => {}} />,
+      sentences: ["project_dialogs.join.title", "project_dialogs.join.body"],
+      buttons: ["cancel", "project_dialogs.join.submit"],
+    },
+    {
+      dialog: "the leaving",
+      open: () => <LeaveProjectModal isOpen project={web} onClose={() => {}} />,
+      sentences: [
+        "project_dialogs.leave.title",
+        "project_dialogs.leave.body",
+        "project_dialogs.type_project_name",
+        "project_dialogs.type_confirmation",
+      ],
+      buttons: ["cancel", "project_dialogs.leave.title"],
+    },
+    {
+      dialog: "a member's removal",
+      open: () => (
+        <ConfirmProjectMemberRemove
+          isOpen
+          data={{ id: "u-bob", display_name: "bob" }}
+          onSubmit={() => Promise.resolve()}
+          onClose={() => {}}
+        />
+      ),
+      sentences: ["project_dialogs.remove_member.remove_title", "project_dialogs.remove_member.remove_body"],
+      buttons: ["cancel", "remove"],
+    },
+  ])("$dialog says each of its texts in the page's language", ({ open, sentences, buttons }) => {
+    const markup = renderToStaticMarkup(open());
+    expect(sentences.filter((key) => !markup.includes(key))).toEqual([]);
+    expect(shown.buttons.map((button) => button.children)).toEqual(buttons);
+  });
+});
+````
+
+`web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
+      { type: "success", title: "Success!", message: "Project feature updated successfully." },
+````
+````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
+      { type: "success", title: "toast.success", message: "project_dialogs.feature_updated" },
+````
+
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 302 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 14 条、`@nerve/propel` 11 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -4168,271 +4345,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Tests:** 状态的表单和删除的测试读键。P6 照组的名字，P7 照"Delete label"。S7：第一个加菜单里的角色、成员和邀请的角色；第二个加状态页（组名、设为默认）、标签页（菜单、删除的弹窗）和添加成员一行的错误；第三个（新）：邀请页的标题说角色（P9 的存活变异 `T4f.M3a`）。
 
 - [ ] **Step 1: 状态、标签和角色名**
-
-^web/(?!.*(\.test\.tsx?|/fake-[^/]*\.ts)$)
-
-- [ ] **Step 2: 测试**
-
-`e2e/fixtures/project-pages.ts`（修改，1 处）：
-
-````old e2e/fixtures/project-pages.ts
-    page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
-  );
-````
-````new e2e/fixtures/project-pages.ts
-    page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
-  );
-}
-
-/** The row of the label of name on page's label settings: its grip, its name, its menu; the innermost row with it. */
-export function labelRow(page: Page, name: string): Locator {
-  return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) }).last();
-````
-
-`e2e/stories/project/p6-states-page.spec.ts`（修改，7 处）：
-
-````old e2e/stories/project/p6-states-page.spec.ts
-/** The heading of the group of key on page's state settings, which opens and closes its list. */
-function groupHeading(page: Page, key: string): Locator {
-  return page.getByRole("button", { name: key, exact: true });
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-/** The heading of the group named name on page's state settings, which opens and closes its list. */
-function groupHeading(page: Page, name: string): Locator {
-  return page.getByRole("button", { name, exact: true });
-````
-````old e2e/stories/project/p6-states-page.spec.ts
-/** The button beside the heading of the group of key that adds a state to it. */
-function addTo(page: Page, key: string): Locator {
-  return groupHeading(page, key).locator("xpath=..").getByRole("button", { name: "Add" });
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-/** The button beside the heading of the group named name that adds a state to it. */
-function addTo(page: Page, name: string): Locator {
-  return groupHeading(page, name).locator("xpath=..").getByRole("button", { name: "Add" });
-````
-````old e2e/stories/project/p6-states-page.spec.ts
-    ["backlog", "unstarted", "started", "completed", "cancelled"].map((key) =>
-      expect(groupHeading(page, key), key).toHaveAttribute("aria-expanded", "true")
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-    ["Backlog", "Unstarted", "Started", "Completed", "Canceled"].map((name) =>
-      expect(groupHeading(page, name), name).toHaveAttribute("aria-expanded", "true")
-````
-````old e2e/stories/project/p6-states-page.spec.ts
-  const completed = groupHeading(page, "completed");
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-  const completed = groupHeading(page, "Completed");
-````
-````old e2e/stories/project/p6-states-page.spec.ts
-  await addTo(page, "started").click();
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-  await addTo(page, "Started").click();
-````
-````old e2e/stories/project/p6-states-page.spec.ts
-  await addTo(page, "unstarted").click();
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-  await addTo(page, "Unstarted").click();
-````
-````old e2e/stories/project/p6-states-page.spec.ts
-    await expect(addTo(other.page, "started"), who).toBeEnabled({ enabled: controls });
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-    await expect(addTo(other.page, "Started"), who).toBeEnabled({ enabled: controls });
-````
-
-`e2e/stories/project/p7-labels-page.spec.ts`（修改，2 处）：
-
-````old e2e/stories/project/p7-labels-page.spec.ts
-import { dragOnto, tabCycle } from "../../fixtures/project-pages";
-````
-````new e2e/stories/project/p7-labels-page.spec.ts
-import { dragOnto, labelRow, tabCycle } from "../../fixtures/project-pages";
-````
-````old e2e/stories/project/p7-labels-page.spec.ts
-// as its member and a workspace admin who is its member see them. The API version is p7-labels.spec.ts.
-
-/** The row of the label of name on page's label settings: its grip, its name, its menu; the innermost row with it. */
-function labelRow(page: Page, name: string): Locator {
-  return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) }).last();
-}
-````
-````new e2e/stories/project/p7-labels-page.spec.ts
-// as its member and a workspace admin who is its member see them. The API version is p7-labels.spec.ts.
-````
-
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，14 处）：
-
-````old e2e/stories/smoke/s7-chinese.spec.ts
-import { createProject, createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-import {
-  createLabel,
-  createProject,
-  createWorkspace,
-  invitationTo,
-  invite,
-  inviteAndAccept,
-  slugFor,
-  type Api,
-} from "../../fixtures/api";
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-import { modalDialog } from "../../fixtures/dialogs";
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-import { modalDialog } from "../../fixtures/dialogs";
-import { labelRow } from "../../fixtures/project-pages";
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-import { memberRow } from "../../fixtures/workspace-pages";
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-import { invitationLinkOf, memberRow } from "../../fixtures/workspace-pages";
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-// language): an account whose language is zh-CN sees its pages, menus and dialogs in Chinese.
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-// language): an account whose language is zh-CN sees its pages, menus and dialogs in Chinese.
-
-/** Makes the language of the account of tokens Chinese, the home's tour taken already. */
-async function speakChinese(api: Api, tokens: AuthTokens): Promise<void> {
-  const chinese = await api.PATCH("/api/v0/me/profile", {
-    body: { language: "zh-CN", is_tour_completed: true },
-    headers: bearer(tokens.access_token),
-  });
-  expect(chinese.response.status).toBe(200);
-}
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  const chinese = await api.PATCH("/api/v0/me/profile", {
-    body: { language: "zh-CN", is_tour_completed: true },
-    headers: bearer(admin.access_token),
-  });
-  expect(chinese.response.status).toBe(200);
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await speakChinese(api, admin);
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  const { admin, slug, bobEmail } = await chineseAdmin(api, testInfo);
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  const { admin, slug, bobEmail } = await chineseAdmin(api, testInfo);
-  const carolEmail = emailFor(testInfo, "carol");
-  await invite(api, admin.access_token, slug, [{ email: carolEmail, role: 5 }]);
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page.getByPlaceholder("搜索命令...")).toBeVisible();
-  await page.getByRole("button", { name: "打开工作空间切换器" }).click();
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page.getByPlaceholder("搜索命令...")).toBeVisible();
-  // The menu names his role in Acme in Chinese too.
-  await page.getByRole("button", { name: "打开工作空间切换器" }).click();
-  await expect(page.getByRole("menu").getByText("管理员", { exact: true })).toBeVisible();
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  // The members page: its title, and the removal's dialog, the member's name in it.
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  // The members page: its title, bob's role, carol's invitation's, and the removal's dialog, the member's name in it.
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page).toHaveTitle("Acme - 成员");
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page).toHaveTitle("Acme - 成员");
-  await expect(memberRow(page, bobEmail).getByRole("button", { name: "成员", exact: true })).toBeVisible();
-  const carols = page.locator("div.group", { has: page.getByRole("heading", { name: carolEmail, exact: true }) });
-  await expect(carols.getByRole("button", { name: "访客", exact: true })).toBeVisible();
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-test("S7 (page): an admin whose language is Chinese sees a project's general and members pages and their dialogs in Chinese", async ({
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-test("S7 (page): an admin whose language is Chinese sees a project's general, states, labels and members pages and their dialogs in Chinese", async ({
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
-  const bug = await createLabel(api, admin.access_token, web.id, { name: "Bug" });
-  await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await cancel(page);
-
-  // The members page: the member defaults.
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await cancel(page);
-
-  // The states page: a group by its name, the states not the default offered to be it.
-  await page.goto(`/${slug}/settings/projects/${web.id}/states`);
-  await expect(page.getByRole("button", { name: "已开始", exact: true })).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("button", { name: "设为默认", exact: true })).toHaveCount(4);
-
-  // The labels page: a group's menu, the menu of a label in it, and the deletion's dialog, the group's name in it.
-  await page.goto(`/${slug}/settings/projects/${web.id}/labels`);
-  await labelRow(page, "UI").getByRole("button", { name: "选项" }).click();
-  await expect(page.getByRole("menuitem")).toHaveText(["移出组", "编辑标签"]);
-  await page.keyboard.press("Escape");
-  await labelRow(page, "Bug").getByRole("button", { name: "选项" }).click();
-  await expect(page.getByRole("menuitem")).toHaveText(["编辑标签", "删除标签"]);
-  await page.getByRole("menuitem", { name: "删除标签" }).click();
-  await expect(modalDialog(page).getByRole("heading")).toHaveText("删除标签");
-  await expect(modalDialog(page).getByText(/^确定要删除 Bug 吗？/)).toBeVisible();
-  await cancel(page);
-
-  // The members page: the member defaults.
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
-
-  // The adding of members: a row with no member picked says so.
-  await page.getByRole("button", { name: "添加成员", exact: true }).click();
-  await modalDialog(page).getByRole("button", { name: "添加成员", exact: true }).click();
-  await expect(modalDialog(page).getByText("请选择成员", { exact: true })).toBeVisible();
-  await cancel(page);
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(2).fill(EMOJI_CHECK_WARNING) });
-});
-
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
-});
-
-test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
-  api,
-  signedInPage,
-}, testInfo) => {
-  const { admin, slug } = await chineseAdmin(api, testInfo);
-  const carolEmail = emailFor(testInfo, "carol");
-  const carol = await registerOnboarded(api, carolEmail);
-  await speakChinese(api, carol);
-  await invite(api, admin.access_token, slug, [{ email: carolEmail, role: 5 }]);
-  const page = await signedInPage(carol);
-  const watch = await watchPage(page);
-
-  await page.goto(invitationLinkOf(await invitationTo(api, admin.access_token, slug, carolEmail)));
-  await expect(page.getByText("您受邀以 访客 的身份加入 Acme。", { exact: true })).toBeVisible();
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch);
-});
-
-````
 
 `web/apps/web/core/components/editor/embeds/mentions/user.tsx`（修改，3 处）：
 
@@ -4560,27 +4472,6 @@ import { useTranslation } from "@nerve/i18n";
       text: t("project_settings.labels.edit"),
 ````
 
-`web/apps/web/core/components/project-states/create-update/create-update.test.tsx`（修改，3 处）：
-
-````old web/apps/web/core/components/project-states/create-update/create-update.test.tsx
-    said: "State created successfully.",
-````
-````new web/apps/web/core/components/project-states/create-update/create-update.test.tsx
-    said: "project_settings.states.created",
-````
-````old web/apps/web/core/components/project-states/create-update/create-update.test.tsx
-    said: "State updated successfully.",
-````
-````new web/apps/web/core/components/project-states/create-update/create-update.test.tsx
-    said: "project_settings.states.updated",
-````
-````old web/apps/web/core/components/project-states/create-update/create-update.test.tsx
-      [{ type: "success", title: "Success!", message: row.said }],
-````
-````new web/apps/web/core/components/project-states/create-update/create-update.test.tsx
-      [{ type: "success", title: "toast.success", message: row.said }],
-````
-
 `web/apps/web/core/components/project-states/create-update/create.tsx`（修改，4 处）：
 
 ````old web/apps/web/core/components/project-states/create-update/create.tsx
@@ -4689,80 +4580,6 @@ import { EIconSize, STATE_GROUPS } from "@nerve/constants";
           <div>
             {t("project_settings.states.empty_state.title", { groupKey: t(STATE_GROUPS[groupKey].i18n_label) })}
           </div>
-````
-
-`web/apps/web/core/components/project-states/options/delete.test.tsx`（修改，6 处）：
-
-````old web/apps/web/core/components/project-states/options/delete.test.tsx
-// nerve refuses (409), and their button is disabled; nerve's refusal all the same (another tab changed them meanwhile)
-// is said in a toast. Its session is fake-tab.ts's.
-````
-````new web/apps/web/core/components/project-states/options/delete.test.tsx
-// nerve refuses (409), and their button is disabled, its tooltip (its label rendered beside it) saying why; nerve's
-// refusal all the same (another tab changed them meanwhile) is said in a toast. Its session is fake-tab.ts's; its
-// texts are the keys of the page's language (fake-i18n.ts).
-````
-````old web/apps/web/core/components/project-states/options/delete.test.tsx
-  Tooltip: ({ children }: { children: ReactNode }) => children,
-````
-````new web/apps/web/core/components/project-states/options/delete.test.tsx
-  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
-    <>
-      {label}
-      {children}
-    </>
-  ),
-````
-````old web/apps/web/core/components/project-states/options/delete.test.tsx
-/** Renders the deletion of state among totalStates of its group: whether its button is disabled, and its dialog. */
-````
-````new web/apps/web/core/components/project-states/options/delete.test.tsx
-/** Renders the deletion of state among totalStates of its group: whether its button is disabled, its dialog, its text. */
-````
-````old web/apps/web/core/components/project-states/options/delete.test.tsx
-  return { disabled: /<button[^>]* disabled=""/.test(markup), alert };
-````
-````new web/apps/web/core/components/project-states/options/delete.test.tsx
-  return { disabled: /<button[^>]* disabled=""/.test(markup), alert, markup };
-````
-````old web/apps/web/core/components/project-states/options/delete.test.tsx
-    { state: "the default", deleted: { ...review, default: true }, totalStates: 2 },
-    { state: "its group's only state", deleted: review, totalStates: 1 },
-  ])("offers no deletion of $state, and sends none", async ({ deleted, totalStates }) => {
-    const { disabled, alert } = deletionOf(deleted, totalStates);
-````
-````new web/apps/web/core/components/project-states/options/delete.test.tsx
-    {
-      state: "the default",
-      deleted: { ...review, default: true },
-      totalStates: 2,
-      why: "project_settings.states.delete.default",
-    },
-    {
-      state: "its group's only state",
-      deleted: review,
-      totalStates: 1,
-      why: "project_settings.states.delete.only_one",
-    },
-  ])("offers no deletion of $state, says why, and sends none", async ({ deleted, totalStates, why }) => {
-    const { disabled, alert, markup } = deletionOf(deleted, totalStates);
-````
-````old web/apps/web/core/components/project-states/options/delete.test.tsx
-    expect([disabled, store.deleteState.mock.calls]).toEqual([true, []]);
-````
-````new web/apps/web/core/components/project-states/options/delete.test.tsx
-    expect([disabled, markup.includes(why), store.deleteState.mock.calls]).toEqual([true, true, []]);
-  });
-
-  it("asks in the page's language, its buttons too", () => {
-    const { alert } = deletionOf();
-    const { title, content, primaryButtonText, secondaryButtonText } = alert;
-    expect([title, renderToStaticMarkup(content), primaryButtonText, secondaryButtonText]).toEqual([
-      "project_settings.states.delete.title",
-      "project_settings.states.delete.body",
-      { default: "delete", loading: "deleting" },
-      "cancel",
-    ]);
 ````
 
 `web/apps/web/core/components/project-states/options/delete.tsx`（修改，4 处）：
@@ -4936,25 +4753,6 @@ import { cn, getFileURL } from "@nerve/utils";
 ````
 ````new web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx
                 <span>{t(ROLE_DETAILS[workspace.role].i18n_title)}</span>
-````
-
-`web/apps/web/core/lib/fake-controls.ts`（修改，1 处）：
-
-````old web/apps/web/core/lib/fake-controls.ts
-/** A confirmation's dialog (AlertModalCore): whether it shows, its button's press, and whether it is busy. */
-type Alert = { isOpen: boolean; handleSubmit: () => unknown; isSubmitting: boolean };
-````
-````new web/apps/web/core/lib/fake-controls.ts
-/** A confirmation's dialog (AlertModalCore): whether it shows, its button's press, whether it is busy, its words. */
-type Alert = {
-  isOpen: boolean;
-  handleSubmit: () => unknown;
-  isSubmitting: boolean;
-  title: string;
-  content: ReactNode;
-  primaryButtonText?: { default: string; loading: string };
-  secondaryButtonText?: string;
-};
 ````
 
 `web/packages/constants/src/state.ts`（修改，6 处）：
@@ -5142,10 +4940,389 @@ export * from "./notification";
 ````delete web/packages/utils/src/permission/role.ts
 ````
 
+- [ ] **Step 2: 测试**
+
+`e2e/fixtures/project-pages.ts`（修改，1 处）：
+
+````old e2e/fixtures/project-pages.ts
+    page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
+  );
+````
+````new e2e/fixtures/project-pages.ts
+    page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
+  );
+}
+
+/** The row of the label of name on page's label settings: its grip, its name, its menu; the innermost row with it. */
+export function labelRow(page: Page, name: string): Locator {
+  return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) }).last();
+````
+
+`e2e/stories/project/p6-states-page.spec.ts`（修改，7 处）：
+
+````old e2e/stories/project/p6-states-page.spec.ts
+/** The heading of the group of key on page's state settings, which opens and closes its list. */
+function groupHeading(page: Page, key: string): Locator {
+  return page.getByRole("button", { name: key, exact: true });
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+/** The heading of the group named name on page's state settings, which opens and closes its list. */
+function groupHeading(page: Page, name: string): Locator {
+  return page.getByRole("button", { name, exact: true });
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+/** The button beside the heading of the group of key that adds a state to it. */
+function addTo(page: Page, key: string): Locator {
+  return groupHeading(page, key).locator("xpath=..").getByRole("button", { name: "Add" });
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+/** The button beside the heading of the group named name that adds a state to it. */
+function addTo(page: Page, name: string): Locator {
+  return groupHeading(page, name).locator("xpath=..").getByRole("button", { name: "Add" });
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+    ["backlog", "unstarted", "started", "completed", "cancelled"].map((key) =>
+      expect(groupHeading(page, key), key).toHaveAttribute("aria-expanded", "true")
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+    ["Backlog", "Unstarted", "Started", "Completed", "Canceled"].map((name) =>
+      expect(groupHeading(page, name), name).toHaveAttribute("aria-expanded", "true")
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+  const completed = groupHeading(page, "completed");
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  const completed = groupHeading(page, "Completed");
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+  await addTo(page, "started").click();
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  await addTo(page, "Started").click();
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+  await addTo(page, "unstarted").click();
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  await addTo(page, "Unstarted").click();
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+    await expect(addTo(other.page, "started"), who).toBeEnabled({ enabled: controls });
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+    await expect(addTo(other.page, "Started"), who).toBeEnabled({ enabled: controls });
+````
+
+`e2e/stories/project/p7-labels-page.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p7-labels-page.spec.ts
+import { dragOnto, tabCycle } from "../../fixtures/project-pages";
+````
+````new e2e/stories/project/p7-labels-page.spec.ts
+import { dragOnto, labelRow, tabCycle } from "../../fixtures/project-pages";
+````
+````old e2e/stories/project/p7-labels-page.spec.ts
+// as its member and a workspace admin who is its member see them. The API version is p7-labels.spec.ts.
+
+/** The row of the label of name on page's label settings: its grip, its name, its menu; the innermost row with it. */
+function labelRow(page: Page, name: string): Locator {
+  return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) }).last();
+}
+````
+````new e2e/stories/project/p7-labels-page.spec.ts
+// as its member and a workspace admin who is its member see them. The API version is p7-labels.spec.ts.
+````
+
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，14 处）：
+
+````old e2e/stories/smoke/s7-chinese.spec.ts
+import { createProject, createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+import {
+  createLabel,
+  createProject,
+  createWorkspace,
+  invitationTo,
+  invite,
+  inviteAndAccept,
+  slugFor,
+  type Api,
+} from "../../fixtures/api";
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+import { modalDialog } from "../../fixtures/dialogs";
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+import { modalDialog } from "../../fixtures/dialogs";
+import { labelRow } from "../../fixtures/project-pages";
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+import { memberRow } from "../../fixtures/workspace-pages";
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+import { invitationLinkOf, memberRow } from "../../fixtures/workspace-pages";
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+// language): an account whose language is zh-CN sees its pages, menus and dialogs in Chinese.
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+// language): an account whose language is zh-CN sees its pages, menus and dialogs in Chinese.
+
+/** Makes the language of the account of tokens Chinese, the home's tour taken already. */
+async function speakChinese(api: Api, tokens: AuthTokens): Promise<void> {
+  const chinese = await api.PATCH("/api/v0/me/profile", {
+    body: { language: "zh-CN", is_tour_completed: true },
+    headers: bearer(tokens.access_token),
+  });
+  expect(chinese.response.status).toBe(200);
+}
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  const chinese = await api.PATCH("/api/v0/me/profile", {
+    body: { language: "zh-CN", is_tour_completed: true },
+    headers: bearer(admin.access_token),
+  });
+  expect(chinese.response.status).toBe(200);
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await speakChinese(api, admin);
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  const { admin, slug, bobEmail } = await chineseAdmin(api, testInfo);
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  const { admin, slug, bobEmail } = await chineseAdmin(api, testInfo);
+  const carolEmail = emailFor(testInfo, "carol");
+  await invite(api, admin.access_token, slug, [{ email: carolEmail, role: 5 }]);
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "打开工作空间切换器" }).click();
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(0);
+  // The menu names his role in Acme in Chinese too.
+  await page.getByRole("button", { name: "打开工作空间切换器" }).click();
+  await expect(page.getByRole("menu").getByText("管理员", { exact: true })).toBeVisible();
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  // The members page: its title, and the removal's dialog, the member's name in it.
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  // The members page: its title, bob's role, carol's invitation's, and the removal's dialog, the member's name in it.
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(page).toHaveTitle("Acme - 成员");
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(page).toHaveTitle("Acme - 成员");
+  await expect(memberRow(page, bobEmail).getByRole("button", { name: "成员", exact: true })).toBeVisible();
+  const carols = page.locator("div.group", { has: page.getByRole("heading", { name: carolEmail, exact: true }) });
+  await expect(carols.getByRole("button", { name: "访客", exact: true })).toBeVisible();
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+test("S7 (page): an admin whose language is Chinese sees a project's general and members pages and their dialogs in Chinese", async ({
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+test("S7 (page): an admin whose language is Chinese sees a project's general, states, labels and members pages and their dialogs in Chinese", async ({
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const bug = await createLabel(api, admin.access_token, web.id, { name: "Bug" });
+  await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await cancel(page);
+
+  // The members page: the member defaults.
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await cancel(page);
+
+  // The states page: a group by its name, the states not the default offered to be it.
+  await page.goto(`/${slug}/settings/projects/${web.id}/states`);
+  await expect(page.getByRole("button", { name: "已开始", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: "设为默认", exact: true })).toHaveCount(4);
+
+  // The labels page: a group's menu, the menu of a label in it, and the deletion's dialog, the group's name in it.
+  await page.goto(`/${slug}/settings/projects/${web.id}/labels`);
+  await labelRow(page, "UI").getByRole("button", { name: "选项" }).click();
+  await expect(page.getByRole("menuitem")).toHaveText(["移出组", "编辑标签"]);
+  await page.keyboard.press("Escape");
+  await labelRow(page, "Bug").getByRole("button", { name: "选项" }).click();
+  await expect(page.getByRole("menuitem")).toHaveText(["编辑标签", "删除标签"]);
+  await page.getByRole("menuitem", { name: "删除标签" }).click();
+  await expect(modalDialog(page).getByRole("heading")).toHaveText("删除标签");
+  await expect(modalDialog(page).getByText(/^确定要删除 Bug 吗？/)).toBeVisible();
+  await cancel(page);
+
+  // The members page: the member defaults.
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
+
+  // The adding of members: a row with no member picked says so.
+  await page.getByRole("button", { name: "添加成员", exact: true }).click();
+  await modalDialog(page).getByRole("button", { name: "添加成员", exact: true }).click();
+  await expect(modalDialog(page).getByText("请选择成员", { exact: true })).toBeVisible();
+  await cancel(page);
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(2).fill(EMOJI_CHECK_WARNING) });
+});
+
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const { admin, slug } = await chineseAdmin(api, testInfo);
+  const carolEmail = emailFor(testInfo, "carol");
+  const carol = await registerOnboarded(api, carolEmail);
+  await speakChinese(api, carol);
+  await invite(api, admin.access_token, slug, [{ email: carolEmail, role: 5 }]);
+  const page = await signedInPage(carol);
+  const watch = await watchPage(page);
+
+  await page.goto(invitationLinkOf(await invitationTo(api, admin.access_token, slug, carolEmail)));
+  await expect(page.getByText("您受邀以 访客 的身份加入 Acme。", { exact: true })).toBeVisible();
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch);
+});
+
+````
+
+`web/apps/web/core/components/project-states/create-update/create-update.test.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/project-states/create-update/create-update.test.tsx
+    said: "State created successfully.",
+````
+````new web/apps/web/core/components/project-states/create-update/create-update.test.tsx
+    said: "project_settings.states.created",
+````
+````old web/apps/web/core/components/project-states/create-update/create-update.test.tsx
+    said: "State updated successfully.",
+````
+````new web/apps/web/core/components/project-states/create-update/create-update.test.tsx
+    said: "project_settings.states.updated",
+````
+````old web/apps/web/core/components/project-states/create-update/create-update.test.tsx
+      [{ type: "success", title: "Success!", message: row.said }],
+````
+````new web/apps/web/core/components/project-states/create-update/create-update.test.tsx
+      [{ type: "success", title: "toast.success", message: row.said }],
+````
+
+`web/apps/web/core/components/project-states/options/delete.test.tsx`（修改，6 处）：
+
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+// nerve refuses (409), and their button is disabled; nerve's refusal all the same (another tab changed them meanwhile)
+// is said in a toast. Its session is fake-tab.ts's.
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+// nerve refuses (409), and their button is disabled, its tooltip (its label rendered beside it) saying why; nerve's
+// refusal all the same (another tab changed them meanwhile) is said in a toast. Its session is fake-tab.ts's; its
+// texts are the keys of the page's language (fake-i18n.ts).
+````
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+  Tooltip: ({ children }: { children: ReactNode }) => children,
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
+    <>
+      {label}
+      {children}
+    </>
+  ),
+````
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+/** Renders the deletion of state among totalStates of its group: whether its button is disabled, and its dialog. */
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+/** Renders the deletion of state among totalStates of its group: whether its button is disabled, its dialog, its text. */
+````
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+  return { disabled: /<button[^>]* disabled=""/.test(markup), alert };
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+  return { disabled: /<button[^>]* disabled=""/.test(markup), alert, markup };
+````
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+    { state: "the default", deleted: { ...review, default: true }, totalStates: 2 },
+    { state: "its group's only state", deleted: review, totalStates: 1 },
+  ])("offers no deletion of $state, and sends none", async ({ deleted, totalStates }) => {
+    const { disabled, alert } = deletionOf(deleted, totalStates);
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+    {
+      state: "the default",
+      deleted: { ...review, default: true },
+      totalStates: 2,
+      why: "project_settings.states.delete.default",
+    },
+    {
+      state: "its group's only state",
+      deleted: review,
+      totalStates: 1,
+      why: "project_settings.states.delete.only_one",
+    },
+  ])("offers no deletion of $state, says why, and sends none", async ({ deleted, totalStates, why }) => {
+    const { disabled, alert, markup } = deletionOf(deleted, totalStates);
+````
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+    expect([disabled, store.deleteState.mock.calls]).toEqual([true, []]);
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+    expect([disabled, markup.includes(why), store.deleteState.mock.calls]).toEqual([true, true, []]);
+  });
+
+  it("asks in the page's language, its buttons too", () => {
+    const { alert } = deletionOf();
+    const { title, content, primaryButtonText, secondaryButtonText } = alert;
+    expect([title, renderToStaticMarkup(content), primaryButtonText, secondaryButtonText]).toEqual([
+      "project_settings.states.delete.title",
+      "project_settings.states.delete.body",
+      { default: "delete", loading: "deleting" },
+      "cancel",
+    ]);
+````
+
+`web/apps/web/core/lib/fake-controls.ts`（修改，1 处）：
+
+````old web/apps/web/core/lib/fake-controls.ts
+/** A confirmation's dialog (AlertModalCore): whether it shows, its button's press, and whether it is busy. */
+type Alert = { isOpen: boolean; handleSubmit: () => unknown; isSubmitting: boolean };
+````
+````new web/apps/web/core/lib/fake-controls.ts
+/** A confirmation's dialog (AlertModalCore): whether it shows, its button's press, whether it is busy, its words. */
+type Alert = {
+  isOpen: boolean;
+  handleSubmit: () => unknown;
+  isSubmitting: boolean;
+  title: string;
+  content: ReactNode;
+  primaryButtonText?: { default: string; loading: string };
+  secondaryButtonText?: string;
+};
+````
+
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 302 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 14 条、`@nerve/propel` 11 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -5202,121 +5379,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 7: `IconButton` 的名字在根上必传；侧边栏的名字；图标不并进名字
 
 **Files:**
-- Modify: `e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx`、`web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/project/search-projects.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/mobile/nav.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json`、`web/packages/propel/src/emoji-icon-picker/logo.tsx`、`web/packages/propel/src/emoji-reaction/emoji-reaction.tsx`、`web/packages/propel/src/icon-button/helper.tsx`
+- Modify: `e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx`、`web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/project/search-projects.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/mobile/nav.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json`、`web/packages/propel/package.json`、`web/packages/propel/src/emoji-icon-picker/logo.tsx`、`web/packages/propel/src/emoji-reaction/emoji-reaction.tsx`、`web/packages/propel/src/icon-button/helper.tsx`
 
 **Interfaces:**（spec 2.9）
 - `@nerve/propel` 的 `IconButtonProps`：`"aria-label": string` 必传（从按钮的属性中 `Omit`）。应用中的 28 处都传经 `t()` 的名字（M2 1、M3 6、M4 8、M6 6、M7 6；表情回应的按钮在内）。
-- `EmojiReactionButton` 收 `aria-label`（提示显示它），`EmojiReactionGroup` 收 `addReactionLabel`；`Logo` 的图标连字和表情 `aria-hidden`。
+- `EmojiReactionButton` 收 `aria-label`（提示显示它），`EmojiReactionGroup` 收 `addReactionLabel`，回应按表情作 `key`（原来按位置，`no-array-index-key`；`@nerve/propel` 的上限 11 → 10）；`Logo` 的图标连字和表情 `aria-hidden`。
 - 文案：`aria_labels.app_sidebar.*`（展开、收起和工作区菜单的按钮，原来没有定义）、`aria_labels.{settings_menu, toggle_sort_order, toggle_details, add_reaction}`、`sidebar.{more_projects, fewer_projects}`。
 
 **Tests:** `tsc` 看住名字必传。S7：第一个加侧边栏的展开按钮、工作区菜单的名字、项目页的搜索、设置的返回；第二个加表情图标的项目的链接名和"打开扩展侧边栏"的"更多"。
 
 - [ ] **Step 1: 名字**
-
-^web/(?!.*(\.test\.tsx?|/fake-[^/]*\.ts)$)
-
-- [ ] **Step 2: S7**
-
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，9 处）：
-
-````old e2e/stories/smoke/s7-chinese.spec.ts
-
-import {
-  createLabel,
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-
-import {
-  changeWorkspacePreferences,
-  createLabel,
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-test("S7 (page): an admin whose language is Chinese sees the workspace's home, menu, general and members pages and their dialogs in Chinese", async ({
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-test("S7 (page): an admin whose language is Chinese sees the workspace's home, menu, projects, general and members pages and their dialogs in Chinese", async ({
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  // The sidebar, by its name; the project navigation's dialog, each mode's description.
-  await page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" }).click();
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  // The sidebar, by its name: its buttons by theirs; the project navigation's dialog, each mode's description.
-  const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
-  await expect(sidebar.getByRole("button", { name: "切换侧边栏" })).toBeVisible();
-  await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(2);
-  await sidebar.getByRole("button", { name: "项目导航" }).click();
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  // The general page: the settings' sidebar, the size, and the deletion's dialog, the workspace's name in it.
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  // The projects page: its search, by its name.
-  await page.goto(`/${slug}/projects`);
-  await expect(page.getByRole("button", { name: "搜索", exact: true })).toBeVisible();
-
-  // The general page: the settings' sidebar and its way back, the size, and the deletion's dialog, the workspace's
-  // name in it.
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page.getByText("工作区设置", { exact: true })).toBeVisible();
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page.getByText("工作区设置", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "返回", exact: true })).toBeVisible();
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
-  await createProject(api, admin.access_token, slug, {
-    name: "Ops",
-    identifier: "OPS",
-    logo_props: { in_use: "emoji", emoji: { value: "128640" } },
-  });
-  await changeWorkspacePreferences(api, admin.access_token, slug, {
-    navigation_control_preference: "TABBED",
-    navigation_project_limit: 1,
-  });
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
-  const page = await signedInPage(admin);
-  const watch = await watchPage(page);
-
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
-  const page = await signedInPage(admin);
-  const watch = await watchPage(page);
-
-  // The projects page: the sidebar shows one project, as its limit says, Ops, made last, which it puts first, and
-  // offers the rest; its link to Ops, its tabs beside it, is named by Ops's name alone, its logo no part of it.
-  await page.goto(`/${slug}/projects`);
-  const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
-  await expect(sidebar.getByRole("link", { name: "Ops", exact: true })).toBeVisible();
-  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
-
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
-});
-
-test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(5).fill(EMOJI_CHECK_WARNING) });
-});
-
-test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
-````
 
 `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`（修改，1 处）：
 
@@ -5894,6 +5966,15 @@ export const ViewListHeader = observer(function ViewListHeader() {
     "fewer_projects": "收起",
 ````
 
+`web/packages/propel/package.json`（修改，1 处）：
+
+````old web/packages/propel/package.json
+    "check:lint": "node ../../../tools/lint-cap.mjs 11",
+````
+````new web/packages/propel/package.json
+    "check:lint": "node ../../../tools/lint-cap.mjs 10",
+````
+
 `web/packages/propel/src/emoji-icon-picker/logo.tsx`（修改，2 处）：
 
 ````old web/packages/propel/src/emoji-icon-picker/logo.tsx
@@ -5919,7 +6000,7 @@ export const ViewListHeader = observer(function ViewListHeader() {
         className="material-symbols-rounded"
 ````
 
-`web/packages/propel/src/emoji-reaction/emoji-reaction.tsx`（修改，5 处）：
+`web/packages/propel/src/emoji-reaction/emoji-reaction.tsx`（修改，7 处）：
 
 ````old web/packages/propel/src/emoji-reaction/emoji-reaction.tsx
   showAddButton?: boolean;
@@ -5957,6 +6038,18 @@ interface EmojiReactionButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLB
     addReactionLabel,
 ````
 ````old web/packages/propel/src/emoji-reaction/emoji-reaction.tsx
+      {reactions.map((reaction, index) => (
+````
+````new web/packages/propel/src/emoji-reaction/emoji-reaction.tsx
+      {reactions.map((reaction) => (
+````
+````old web/packages/propel/src/emoji-reaction/emoji-reaction.tsx
+          key={`${reaction.emoji}-${index}`}
+````
+````new web/packages/propel/src/emoji-reaction/emoji-reaction.tsx
+          key={reaction.emoji}
+````
+````old web/packages/propel/src/emoji-reaction/emoji-reaction.tsx
       {showAddButton && <EmojiReactionButton onAddReaction={onAddReaction} />}
 ````
 ````new web/packages/propel/src/emoji-reaction/emoji-reaction.tsx
@@ -5980,10 +6073,113 @@ type IconButtonPropsWithChildren = Omit<React.ButtonHTMLAttributes<HTMLButtonEle
     "aria-label": string;
 ````
 
+- [ ] **Step 2: S7**
+
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，9 处）：
+
+````old e2e/stories/smoke/s7-chinese.spec.ts
+
+import {
+  createLabel,
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+
+import {
+  changeWorkspacePreferences,
+  createLabel,
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+test("S7 (page): an admin whose language is Chinese sees the workspace's home, menu, general and members pages and their dialogs in Chinese", async ({
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+test("S7 (page): an admin whose language is Chinese sees the workspace's home, menu, projects, general and members pages and their dialogs in Chinese", async ({
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  // The sidebar, by its name; the project navigation's dialog, each mode's description.
+  await page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" }).click();
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  // The sidebar, by its name: its buttons by theirs; the project navigation's dialog, each mode's description.
+  const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
+  await expect(sidebar.getByRole("button", { name: "切换侧边栏" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(2);
+  await sidebar.getByRole("button", { name: "项目导航" }).click();
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  // The general page: the settings' sidebar, the size, and the deletion's dialog, the workspace's name in it.
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  // The projects page: its search, by its name.
+  await page.goto(`/${slug}/projects`);
+  await expect(page.getByRole("button", { name: "搜索", exact: true })).toBeVisible();
+
+  // The general page: the settings' sidebar and its way back, the size, and the deletion's dialog, the workspace's
+  // name in it.
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(page.getByText("工作区设置", { exact: true })).toBeVisible();
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(page.getByText("工作区设置", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "返回", exact: true })).toBeVisible();
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await createProject(api, admin.access_token, slug, {
+    name: "Ops",
+    identifier: "OPS",
+    logo_props: { in_use: "emoji", emoji: { value: "128640" } },
+  });
+  await changeWorkspacePreferences(api, admin.access_token, slug, {
+    navigation_control_preference: "TABBED",
+    navigation_project_limit: 1,
+  });
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+
+  // The projects page: the sidebar shows one project, as its limit says, Ops, made last, which it puts first, and
+  // offers the rest; its link to Ops, its tabs beside it, is named by Ops's name alone, its logo no part of it.
+  await page.goto(`/${slug}/projects`);
+  const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
+  await expect(sidebar.getByRole("link", { name: "Ops", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
+
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(5).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
+````
+
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 302 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 14 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -6000,16 +6196,16 @@ Expected: 115 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx' web/apps/web/core/components/comments/card/display.tsx web/apps/web/core/components/comments/comment-reaction.tsx web/apps/web/core/components/comments/quick-actions.tsx web/apps/web/core/components/core/description-versions/modal.tsx web/apps/web/core/components/cycles/cycles-view-header.tsx web/apps/web/core/components/cycles/quick-actions.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx web/apps/web/core/components/issues/peek-overview/header.tsx web/apps/web/core/components/modules/module-view-header.tsx web/apps/web/core/components/modules/quick-actions.tsx web/apps/web/core/components/profile/sidebar.tsx web/apps/web/core/components/project/search-projects.tsx web/apps/web/core/components/rich-filters/filters-toggle.tsx web/apps/web/core/components/settings/mobile/nav.tsx web/apps/web/core/components/settings/profile/modal.tsx web/apps/web/core/components/settings/workspace/sidebar/header.tsx web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx web/apps/web/core/components/views/quick-actions.tsx web/apps/web/core/components/views/view-list-header.tsx web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/navigation.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/navigation.json web/packages/propel/src/emoji-icon-picker/logo.tsx web/packages/propel/src/emoji-reaction/emoji-reaction.tsx web/packages/propel/src/icon-button/helper.tsx
+git add e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx' web/apps/web/core/components/comments/card/display.tsx web/apps/web/core/components/comments/comment-reaction.tsx web/apps/web/core/components/comments/quick-actions.tsx web/apps/web/core/components/core/description-versions/modal.tsx web/apps/web/core/components/cycles/cycles-view-header.tsx web/apps/web/core/components/cycles/quick-actions.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx web/apps/web/core/components/issues/peek-overview/header.tsx web/apps/web/core/components/modules/module-view-header.tsx web/apps/web/core/components/modules/quick-actions.tsx web/apps/web/core/components/profile/sidebar.tsx web/apps/web/core/components/project/search-projects.tsx web/apps/web/core/components/rich-filters/filters-toggle.tsx web/apps/web/core/components/settings/mobile/nav.tsx web/apps/web/core/components/settings/profile/modal.tsx web/apps/web/core/components/settings/workspace/sidebar/header.tsx web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx web/apps/web/core/components/views/quick-actions.tsx web/apps/web/core/components/views/view-list-header.tsx web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/navigation.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/navigation.json web/packages/propel/package.json web/packages/propel/src/emoji-icon-picker/logo.tsx web/packages/propel/src/emoji-reaction/emoji-reaction.tsx web/packages/propel/src/icon-button/helper.tsx
 ```
 ```bash
 git commit -m "feat(M3/closeout): every IconButton has a name, required at the root
 
 IconButton's aria-label is a required string, so each of its callers names
 its button through t() and a new one cannot be unnamed. The emoji
-reactions take their names, the sidebar's toggle and workspace menu
-buttons get the keys they lacked, and a logo's icon ligature or emoji is
-hidden from the name of the link it is in.
+reactions take their names and are keyed by their emoji, the sidebar's
+toggle and workspace menu buttons get the keys they lacked, and a logo's
+icon ligature or emoji is hidden from the name of the link it is in.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -6025,6 +6221,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T7.5` | 工作区菜单的按钮名字在中文里没有定义（K9） | ``、故事 S7 | vitest；端到端 |
 | `T7.6` | 扩展侧边栏的"更多"是英文 | 故事 S7 | 端到端 |
 | `T7.7` | 项目的表情图标并进链接的名字（K3g） | 故事 S7 | 端到端 |
+| `T7.8` | 表情回应又以下标为 key：oxlint 的 `no-array-index-key` 超出 propel 的上限 | `@nerve/propel` 的 oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -6032,151 +6229,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/stories/smoke/s8-sidebar.spec.ts`、`web/apps/web/core/components/common/color-picker.tsx`、`web/apps/web/core/components/dropdowns/project/base.test.tsx`
-- Modify: `e2e/fixtures/project-pages.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/package.json`
+- Modify: `e2e/fixtures/project-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/package.json`
 
 **Interfaces:**（spec 2.9）
 - `components/common/color-picker.tsx`（新文件）：`TwitterPicker`，输入框的 `outline` 是浏览器的（`"revert"`）；状态的表单、标签的行内表单用它。状态的表单打开时 `setFocus("name")`。
-- 侧边栏：项目列表的"+"是 `opacity-0`，`group-hover`、`focus-visible` 时显示；项目一行的菜单是 `CustomMenu` 的省略号按钮（`menuButtonOnClick`；`actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；手柄是 `span`；展开箭头 `tabIndex={-1}`。`resizable-sidebar.tsx`：收起时主侧边栏 `inert`，没有浮出时副本 `inert`；从不设置的 `isHoveringTrigger` 和它的副作用删除（web 的上限 302 → 301）。
+- 侧边栏：项目列表的"+"是 `opacity-0`，`group-hover`、`focus-visible` 时显示；项目一行的菜单是 `CustomMenu` 的省略号按钮（`menuButtonOnClick`；`actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；手柄是 `span`；展开箭头 `tabIndex={-1}`。`resizable-sidebar.tsx`：收起时主侧边栏 `inert`，没有浮出时副本 `inert`；从不设置的 `isHoveringTrigger` 和它的副作用删除（web 的上限 301 → 300）。项目一行的 `Disclosure.Button` 不再有 `aria-label`：它的名字是项目的名字（`Logo` 已 `aria-hidden`，Task 7），展开与否由 `aria-expanded` 说出；展开箭头的名字照旧（F6，A-M2）。
 - 项目成员页一行的菜单名为 `common.options`，`focus-visible:opacity-100`，菜单项经 `t()`。项目下拉框：`tabIndex` 给 `DropdownButton`，根不再可以聚焦。
+- `e2e/fixtures/project-pages.ts` 的 `pageContent(page)`：页面的内容（应用的 `main` 里的 `main`，侧边栏之外）。侧边栏的一行现在也以项目为名，P1 在这里找项目的卡片，P2 找页头的面包屑。
 
-**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`）；P6：名称有焦点、十六进制框有轮廓；P5：一行的菜单由 Tab 到达，以"Options"为名；S7：项目成员一行的菜单的"离开"。
+**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行；P6：名称有焦点、十六进制框有轮廓；P5：一行的菜单由 Tab 到达，以"Options"为名；S7：项目成员一行的菜单的"离开"。
 
 - [ ] **Step 1: 键盘**
-
-^web/(?!.*(\.test\.tsx?|/fake-[^/]*\.ts)$)
-
-- [ ] **Step 2: 测试**
-
-`e2e/fixtures/project-pages.ts`（修改，1 处）：
-
-````old e2e/fixtures/project-pages.ts
-  // the row's menu is its first button: the role's select, when there is one, comes after it
-  await memberRow(page, email).locator("button").first().click();
-````
-````new e2e/fixtures/project-pages.ts
-  await memberRow(page, email).getByRole("button", { name: "Options" }).click();
-````
-
-`e2e/stories/project/p5-project-members.spec.ts`（修改，1 处）：
-
-````old e2e/stories/project/p5-project-members.spec.ts
-  await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
-
-````
-````new e2e/stories/project/p5-project-members.spec.ts
-  await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
-
-  // max's row menu shows, and is marked, as Tab reaches it from his avatar.
-  const maxsMenu = memberRow(page, max.email).getByRole("button", { name: "Options" });
-  await memberRow(page, max.email).getByRole("link").first().focus();
-  await page.keyboard.press("Tab");
-  await expect(maxsMenu).toBeFocused();
-  await expect(maxsMenu).toHaveCSS("opacity", "1");
-  await expect(maxsMenu).not.toHaveCSS("outline-style", "none");
-
-````
-
-`e2e/stories/project/p6-states-page.spec.ts`（修改，2 处）：
-
-````old e2e/stories/project/p6-states-page.spec.ts
-  await addTo(page, "Started").click();
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-  await addTo(page, "Started").click();
-  await expect(page.locator("#name")).toBeFocused();
-````
-````old e2e/stories/project/p6-states-page.spec.ts
-  await colour.click();
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-  await colour.click();
-  // its hex field shows where the keyboard is (react-color draws it with no outline of its own)
-  const hex = page.locator('input[id^="rc-editable-input"]');
-  await hex.focus();
-  await expect(hex).not.toHaveCSS("outline-style", "none");
-````
-
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，1 处）：
-
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
-  // His row's menu, by its name, offers his leaving.
-  await page.getByRole("button", { name: "选项", exact: true }).click();
-  await expect(page.getByRole("menuitem", { name: "离开" })).toBeVisible();
-  await page.keyboard.press("Escape");
-````
-
-`e2e/stories/smoke/s8-sidebar.spec.ts`（新文件，64 行）：
-
-````file e2e/stories/smoke/s8-sidebar.spec.ts
-import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
-import { emailFor } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { registerOnboarded } from "../../fixtures/settings-pages";
-import { expect, test } from "../../fixtures/test";
-
-// S8, the sidebar by the keyboard (M3 closeout, P11's keyboard list): what the keyboard and assistive technology
-// reach in the workspace's sidebar is what it shows.
-
-test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed; the new project's button and a project's menu each show and are marked as Tab reaches them, the menu one Tab stop; a project's grip is none", async ({
-  api,
-  signedInPage,
-}, testInfo) => {
-  const tokens = await registerOnboarded(api, emailFor(testInfo));
-  const slug = slugFor(testInfo);
-  await createWorkspace(api, tokens.access_token, { name: "Acme", slug });
-  await createProject(api, tokens.access_token, slug, { name: "Web", identifier: "WEB" });
-  const page = await signedInPage(tokens);
-  const watch = await watchPage(page);
-  await page.goto(`/${slug}/projects`);
-  const sidebar = page.getByRole("complementary", { name: "Main sidebar" });
-  // whether each of the two Project navigation buttons, the sidebar's and its copy's for peeking, is inert: neither
-  // the keyboard nor assistive technology reaches it (Playwright's roles do not leave inert elements out)
-  const navigation = page.getByRole("button", { name: "Project navigation" });
-  const inert = () => navigation.evaluateAll((buttons) => buttons.map((button) => button.closest("[inert]") !== null));
-
-  // The sidebar's copy for peeking, unseen until the pointer asks for it, holds no control.
-  await expect(navigation).toHaveCount(2);
-  expect(await inert()).toEqual([false, true]);
-
-  // The new project's button, unseen until the pointer is over the list's heading, shows and is marked as Tab reaches
-  // it from the heading.
-  const create = sidebar.getByRole("button", { name: "Create new project" });
-  await sidebar.getByRole("button", { name: "Close projects menu" }).first().focus();
-  await page.keyboard.press("Tab");
-  await expect(create).toBeFocused();
-  await expect(create).toHaveCSS("opacity", "1");
-  await expect(create).not.toHaveCSS("outline-style", "none");
-
-  // Web's menu: one Tab stop after Web's row, shown and marked as Tab reaches it; its chevron, which does what the row
-  // does, and its grip, which the pointer drags, are none, though the pointer over the row shows them.
-  const menu = sidebar.getByRole("button", { name: "Toggle quick actions menu" });
-  await expect(menu).toHaveCount(1);
-  const row = sidebar.getByRole("button", { name: "Open project menu" });
-  await row.focus();
-  await page.keyboard.press("Tab");
-  await expect(menu).toBeFocused();
-  await expect(menu.locator("xpath=ancestor::div[@data-main-menu][1]")).toHaveCSS("opacity", "1");
-  await expect(menu).not.toHaveCSS("outline-style", "none");
-  await row.hover();
-  await page.keyboard.press("Tab");
-  await expect(menu).not.toBeFocused();
-  expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).not.toBe("Open project menu");
-  await expect(sidebar.locator(".cursor-grab:is(button, a, [tabindex]):not([tabindex='-1'])")).toHaveCount(0);
-
-  // Collapsed, the sidebar holds no control the keyboard reaches; opened again, it does.
-  await sidebar.getByRole("button", { name: "Toggle sidebar" }).click();
-  await expect.poll(inert).toEqual([true, true]);
-  // the page's header has its own, outside either sidebar, seen while the sidebar is collapsed
-  await page.locator("xpath=//button[@aria-label='Toggle sidebar'][not(ancestor::*[@role='complementary'])]").click();
-  await expect.poll(inert).toEqual([false, true]);
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
-});
-````
 
 `web/apps/web/core/components/common/color-picker.tsx`（新文件，16 行）：
 
@@ -6197,44 +6260,6 @@ const STYLES = { default: { input: { outline: "revert" } } };
 export function ColorPicker(props: TwitterPickerProps) {
   return <TwitterPicker {...props} styles={STYLES} />;
 }
-````
-
-`web/apps/web/core/components/dropdowns/project/base.test.tsx`（新文件，33 行）：
-
-````file web/apps/web/core/components/dropdowns/project/base.test.tsx
-/**
- * Copyright (c) 2026-present OpenNerve
- * SPDX-License-Identifier: AGPL-3.0-only
- */
-
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-import { ProjectDropdownBase } from "./base";
-
-// Where the project dropdown takes the keyboard (M3 closeout, P11's keyboard list): it renders on the server, closed,
-// with the tabIndex its caller gives it. As in every dropdown of dropdowns/, its Tab stop is the DropdownButton in
-// it, where the caller's tabIndex puts it (the combobox's own button, round it, Headless UI keeps out of the Tab
-// order); its root, a box round the button and the list, is no Tab stop and no control (role presentation).
-
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-
-describe("ProjectDropdownBase", () => {
-  it("puts its DropdownButton where its caller's tabIndex says, its root no Tab stop", () => {
-    const markup = renderToStaticMarkup(
-      <ProjectDropdownBase
-        buttonVariant="border-with-text"
-        getProjectById={() => undefined}
-        projectIds={[]}
-        multiple={false}
-        value={null}
-        onChange={() => {}}
-        tabIndex={0}
-      />
-    );
-    const tags = markup.match(/<(div|button)[^>]*>/g) ?? [];
-    expect(tags.map((tag) => /tabindex="(-?\d+)"/.exec(tag)?.[1] ?? "none")).toEqual(["none", "-1", "0"]);
-  });
-});
 ````
 
 `web/apps/web/core/components/dropdowns/project/base.tsx`（修改，2 处）：
@@ -6411,7 +6436,7 @@ import { ColorPicker } from "@/components/common/color-picker";
         inert={!(isCollapsed && showPeek)}
 ````
 
-`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`（修改，10 处）：
+`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`（修改，11 处）：
 
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
   LogOutOutline,
@@ -6453,6 +6478,17 @@ import { ColorPicker } from "@/components/common/color-picker";
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
               </span>
+````
+````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+                    className={cn("flex w-full flex-grow items-center gap-1.5 text-left select-none", {})}
+                    aria-label={
+                      isProjectListOpen
+                        ? t("aria_labels.projects_sidebar.close_project_menu")
+                        : t("aria_labels.projects_sidebar.open_project_menu")
+                    }
+````
+````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+                    className={cn("flex w-full flex-grow items-center gap-1.5 text-left select-none", {})}
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
                   customButton={
@@ -6506,16 +6542,241 @@ import { ColorPicker } from "@/components/common/color-picker";
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 302",
+    "check:lint": "node ../../../tools/lint-cap.mjs 301",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 301",
+    "check:lint": "node ../../../tools/lint-cap.mjs 300",
+````
+
+- [ ] **Step 2: 测试**
+
+`e2e/fixtures/project-pages.ts`（修改，2 处）：
+
+````old e2e/fixtures/project-pages.ts
+  // the row's menu is its first button: the role's select, when there is one, comes after it
+  await memberRow(page, email).locator("button").first().click();
+````
+````new e2e/fixtures/project-pages.ts
+  await memberRow(page, email).getByRole("button", { name: "Options" }).click();
+````
+````old e2e/fixtures/project-pages.ts
+    page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
+  );
+````
+````new e2e/fixtures/project-pages.ts
+    page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
+  );
+}
+
+/**
+ * What page shows beside its sidebars: the main region within the app's, which holds them too. A project's row in the
+ * sidebar is named by the project, as its card and its header's crumb are: a story finds those here.
+ */
+export function pageContent(page: Page): Locator {
+  return page.getByRole("main").getByRole("main");
+````
+
+`e2e/stories/project/p1-create-project.spec.ts`（修改，3 处）：
+
+````old e2e/stories/project/p1-create-project.spec.ts
+import { tabCycle } from "../../fixtures/project-pages";
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+import { pageContent, tabCycle } from "../../fixtures/project-pages";
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+  await expect(page.getByRole("link", { name: /Web App/ })).toBeVisible();
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+  await expect(pageContent(page).getByRole("link", { name: /Web App/ })).toBeVisible();
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+  await expect(page.getByRole("link", { name: /Ops/ })).toBeVisible();
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+  await expect(pageContent(page).getByRole("link", { name: /Ops/ })).toBeVisible();
+````
+
+`e2e/stories/project/p2-visibility.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p2-visibility.spec.ts
+import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
+````
+````new e2e/stories/project/p2-visibility.spec.ts
+import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
+import { pageContent } from "../../fixtures/project-pages";
+````
+````old e2e/stories/project/p2-visibility.spec.ts
+  await page.getByRole("button", { name: "Web", exact: true }).first().focus();
+````
+````new e2e/stories/project/p2-visibility.spec.ts
+  await pageContent(page).getByRole("button", { name: "Web", exact: true }).first().focus();
+````
+
+`e2e/stories/project/p5-project-members.spec.ts`（修改，1 处）：
+
+````old e2e/stories/project/p5-project-members.spec.ts
+  await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
+
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+  await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
+
+  // max's row menu shows, and is marked, as Tab reaches it from his avatar.
+  const maxsMenu = memberRow(page, max.email).getByRole("button", { name: "Options" });
+  await memberRow(page, max.email).getByRole("link").first().focus();
+  await page.keyboard.press("Tab");
+  await expect(maxsMenu).toBeFocused();
+  await expect(maxsMenu).toHaveCSS("opacity", "1");
+  await expect(maxsMenu).not.toHaveCSS("outline-style", "none");
+
+````
+
+`e2e/stories/project/p6-states-page.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p6-states-page.spec.ts
+  await addTo(page, "Started").click();
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  await addTo(page, "Started").click();
+  await expect(page.locator("#name")).toBeFocused();
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+  await colour.click();
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  await colour.click();
+  // its hex field shows where the keyboard is (react-color draws it with no outline of its own)
+  const hex = page.locator('input[id^="rc-editable-input"]');
+  await hex.focus();
+  await expect(hex).not.toHaveCSS("outline-style", "none");
+````
+
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，1 处）：
+
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
+  // His row's menu, by its name, offers his leaving.
+  await page.getByRole("button", { name: "选项", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "离开" })).toBeVisible();
+  await page.keyboard.press("Escape");
+````
+
+`e2e/stories/smoke/s8-sidebar.spec.ts`（新文件，65 行）：
+
+````file e2e/stories/smoke/s8-sidebar.spec.ts
+import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
+import { emailFor } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { registerOnboarded } from "../../fixtures/settings-pages";
+import { expect, test } from "../../fixtures/test";
+
+// S8, the sidebar by the keyboard (M3 closeout, P11's keyboard list): what the keyboard and assistive technology
+// reach in the workspace's sidebar is what it shows.
+
+test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed; the new project's button and a project's menu each show and are marked as Tab reaches them, the menu one Tab stop; a project's row is named by its project, and its grip is none", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const tokens = await registerOnboarded(api, emailFor(testInfo));
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, tokens.access_token, { name: "Acme", slug });
+  await createProject(api, tokens.access_token, slug, { name: "Web", identifier: "WEB" });
+  const page = await signedInPage(tokens);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/projects`);
+  const sidebar = page.getByRole("complementary", { name: "Main sidebar" });
+  // whether each of the two Project navigation buttons, the sidebar's and its copy's for peeking, is inert: neither
+  // the keyboard nor assistive technology reaches it (Playwright's roles do not leave inert elements out)
+  const navigation = page.getByRole("button", { name: "Project navigation" });
+  const inert = () => navigation.evaluateAll((buttons) => buttons.map((button) => button.closest("[inert]") !== null));
+
+  // The sidebar's copy for peeking, unseen until the pointer asks for it, holds no control.
+  await expect(navigation).toHaveCount(2);
+  expect(await inert()).toEqual([false, true]);
+
+  // The new project's button, unseen until the pointer is over the list's heading, shows and is marked as Tab reaches
+  // it from the heading.
+  const create = sidebar.getByRole("button", { name: "Create new project" });
+  await sidebar.getByRole("button", { name: "Close projects menu" }).first().focus();
+  await page.keyboard.press("Tab");
+  await expect(create).toBeFocused();
+  await expect(create).toHaveCSS("opacity", "1");
+  await expect(create).not.toHaveCSS("outline-style", "none");
+
+  // Web's menu: one Tab stop after Web's row, which is named Web, shown and marked as Tab reaches it; its chevron,
+  // which does what the row does, and its grip, which the pointer drags, are none, though the pointer over the row
+  // shows them.
+  const menu = sidebar.getByRole("button", { name: "Toggle quick actions menu" });
+  await expect(menu).toHaveCount(1);
+  const row = sidebar.getByRole("button", { name: "Web", exact: true });
+  await row.focus();
+  await page.keyboard.press("Tab");
+  await expect(menu).toBeFocused();
+  await expect(menu.locator("xpath=ancestor::div[@data-main-menu][1]")).toHaveCSS("opacity", "1");
+  await expect(menu).not.toHaveCSS("outline-style", "none");
+  await row.hover();
+  await page.keyboard.press("Tab");
+  await expect(menu).not.toBeFocused();
+  await expect(sidebar.getByRole("button", { name: "Open project menu" })).not.toBeFocused();
+  await expect(sidebar.locator(".cursor-grab:is(button, a, [tabindex]):not([tabindex='-1'])")).toHaveCount(0);
+
+  // Collapsed, the sidebar holds no control the keyboard reaches; opened again, it does.
+  await sidebar.getByRole("button", { name: "Toggle sidebar" }).click();
+  await expect.poll(inert).toEqual([true, true]);
+  // the page's header has its own, outside either sidebar, seen while the sidebar is collapsed
+  await page.locator("xpath=//button[@aria-label='Toggle sidebar'][not(ancestor::*[@role='complementary'])]").click();
+  await expect.poll(inert).toEqual([false, true]);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+});
+````
+
+`web/apps/web/core/components/dropdowns/project/base.test.tsx`（新文件，33 行）：
+
+````file web/apps/web/core/components/dropdowns/project/base.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import { ProjectDropdownBase } from "./base";
+
+// Where the project dropdown takes the keyboard (M3 closeout, P11's keyboard list): it renders on the server, closed,
+// with the tabIndex its caller gives it. As in every dropdown of dropdowns/, its Tab stop is the DropdownButton in
+// it, where the caller's tabIndex puts it (the combobox's own button, round it, Headless UI keeps out of the Tab
+// order); its root, a box round the button and the list, is no Tab stop and no control (role presentation).
+
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+describe("ProjectDropdownBase", () => {
+  it("puts its DropdownButton where its caller's tabIndex says, its root no Tab stop", () => {
+    const markup = renderToStaticMarkup(
+      <ProjectDropdownBase
+        buttonVariant="border-with-text"
+        getProjectById={() => undefined}
+        projectIds={[]}
+        multiple={false}
+        value={null}
+        onChange={() => {}}
+        tabIndex={0}
+      />
+    );
+    const tags = markup.match(/<(div|button)[^>]*>/g) ?? [];
+    expect(tags.map((tag) => /tabindex="(-?\d+)"/.exec(tag)?.[1] ?? "none")).toEqual(["none", "-1", "0"]);
+  });
+});
 ````
 
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 14 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -6532,14 +6793,15 @@ Expected: 116 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/fixtures/project-pages.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/package.json
+git add e2e/fixtures/project-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/package.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the closeout's keyboard list: the hex field, the state form's focus, the sidebar and the rows' menus
 
 The colour pickers' hex field shows the keyboard's focus; the state form
 opens on its name; the sidebar's new project button and a project's menu
-show as Tab reaches them, the menu one Tab stop and the grip none; the
+show as Tab reaches them, the menu one Tab stop and the grip none, and a
+project's row is named by its project; the
 hidden copy of the sidebar and the collapsed sidebar are inert; the
 project members' row menu has a name and shows on focus; the project
 dropdown's Tab stop is its button. S8 walks the sidebar by keyboard.
@@ -6563,6 +6825,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.10` | 项目下拉框的按钮不在调用方的 Tab 顺序里（K3d） | `base.test.tsx` | vitest |
 | `T8.11` | 收起的侧边栏仍能用 Tab 走到 | 故事 S8 | 端到端 |
 | `T8.12` | 没有浮出的侧边栏副本仍能用 Tab 走到 | 故事 S8 | 端到端 |
+| `T8.13` | 项目一行的按钮回到"Open project menu"的名字，每一行都一样（F6） | 故事 S8 | 端到端 |
 
 ---
 
@@ -6570,7 +6833,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `tools/i18n-keys.mjs`
-- Modify: `Makefile`、`e2e/stories/identity/a11-api-tokens.spec.ts`、`e2e/stories/smoke/s6-dialogs.spec.ts`、`knip.jsonc`、`tools/keywords.json`、`web/apps/web/core/components/api-token/modal/generated-token-details.tsx`、`web/apps/web/core/components/appearance/theme-switcher.tsx`、`web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx`、`web/apps/web/core/components/issues/attachment/attachment-list-item.tsx`、`web/apps/web/core/components/issues/issue-detail/sidebar.tsx`、`web/apps/web/core/components/issues/peek-overview/properties.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`、`web/apps/web/core/components/views/view-list-item-action.tsx`、`web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts`、`web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts`、`web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts`、`web/apps/web/core/layouts/auth-layout/use-project-fetch.ts`、`web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts`、`web/apps/web/core/lib/form-refusal.ts`、`web/packages/constants/src/filter.ts`、`web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
+- Modify: `Makefile`、`docs/v0/M1-frontend-trim/M1-design.md`、`docs/v0/M3-workspace-project/M3-design.md`、`e2e/stories/identity/a11-api-tokens.spec.ts`、`e2e/stories/smoke/s6-dialogs.spec.ts`、`knip.jsonc`、`tools/keywords.json`、`tools/keywords.mjs`、`web/apps/web/core/components/api-token/modal/generated-token-details.tsx`、`web/apps/web/core/components/appearance/theme-switcher.tsx`、`web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx`、`web/apps/web/core/components/issues/attachment/attachment-list-item.tsx`、`web/apps/web/core/components/issues/issue-detail/sidebar.tsx`、`web/apps/web/core/components/issues/peek-overview/properties.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`、`web/apps/web/core/components/views/view-list-item-action.tsx`、`web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts`、`web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts`、`web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts`、`web/apps/web/core/layouts/auth-layout/use-project-fetch.ts`、`web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts`、`web/apps/web/core/lib/form-refusal.ts`、`web/packages/constants/src/filter.ts`、`web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
 
 **Interfaces:**（spec 2.10）
 - `ButtonAvatars` 的 `showTooltip` 删除，10 处调用。
@@ -6578,6 +6841,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `core/lib/api-error.ts` 的 `problemCode(error)`：五处问题码经它。`use-refusal-toast.ts` 的 `useRefusalMessage`：`useRefusalToast` 和主题切换的失败经它。
 - `tools/keywords.json`：`copy-hook`（20 个例外，`until` 是各 M 的收尾）；`refusal-toast` 也看 `setPromiseToast(…errorMessageKey(`；`sign-out-toast` 加两种写法；`phase` 是 `M3/closeout`。
 - `tools/i18n-keys.mjs`（新文件）进 `make lint-web` 和 knip 的入口；`@nerve/constants` 的 `filter.ts` 中没有读者的 `date_filters.1_month_ago` 删除。
+- `tools/keywords.mjs` 的说明、M1 设计 7.4：`until` 写 `M<n>/closeout` 的例外，在那个 M 的收尾开始、`phase` 改为它时到期；每个 Phase 开始时改 `phase`（spec 第 3 节第 5 条）。M3 设计 7.10 的规则表补上 P9 的三条、P10 的两条和 `copy-hook`。
 
 **Tests:** `use-copy-link.test.ts`、`api-error.test.ts`、`use-refusal-toast.test.ts`。A11：点令牌复制到剪贴板并提示；S6：命令面板复制当前页面的地址并提示。
 
@@ -6600,6 +6864,43 @@ lint-web: ## 关键词守卫；前端类型检查、oxlint（警告数等于上�
 lint-web: ## 关键词守卫；读到的翻译键都有定义；前端类型检查、oxlint（警告数等于上限）、格式检查、中英文翻译键一致（需要 Node）
 	node tools/keywords.mjs
 	node tools/i18n-keys.mjs
+````
+
+`docs/v0/M1-frontend-trim/M1-design.md`（修改，1 处）：
+
+````old docs/v0/M1-frontend-trim/M1-design.md
+- **例外**：必须精确，包括规则编号、路径、命中的文本或符号、理由和到期的 Phase 或 M。一条例外默认只覆盖一处命中；同一个文件里同一段原文出现多处时，例外里写明处数（`count`），实际处数必须与它相等，多了少了都失败——否则一条例外会把后来新增的同样一处也顺带盖住。同一处只能登记一条例外，重复登记报错。一条例外不再命中任何内容时（例如代码已经删了），工具报错，提醒删掉它。到期也由工具管：规则文件里写着当前的 Phase（`phase`），例外的 `until` 到了或早于它，工具就报错——也就是说，到期的那个 Phase 一开始，这条例外就必须已经删掉，而不是靠人记得。确实永远不会到期的（例如顶级域名数据里恰好有个 `wiki`），`until` 写 v0 之外的 `M9`，理由里写明为什么它不可能在 v0 内消失；收尾时重新过一遍所有 `until` 超出 M8 的例外（11 节）。
+````
+````new docs/v0/M1-frontend-trim/M1-design.md
+- **例外**：必须精确，包括规则编号、路径、命中的文本或符号、理由和到期的 Phase 或 M。一条例外默认只覆盖一处命中；同一个文件里同一段原文出现多处时，例外里写明处数（`count`），实际处数必须与它相等，多了少了都失败——否则一条例外会把后来新增的同样一处也顺带盖住。同一处只能登记一条例外，重复登记报错。一条例外不再命中任何内容时（例如代码已经删了），工具报错，提醒删掉它。到期也由工具管：规则文件里写着当前的 Phase（`phase`），例外的 `until` 到了或早于它，工具就报错——也就是说，到期的那个 Phase 一开始，这条例外就必须已经删掉，而不是靠人记得。例外的 `until` 也可以写 `M<n>/closeout`：在那个 M 的收尾开始、规则文件的 `phase` 改为 `M<n>/closeout` 时到期；每个 M 的每个 Phase 开始时改 `phase`。确实永远不会到期的（例如顶级域名数据里恰好有个 `wiki`），`until` 写 v0 之外的 `M9`，理由里写明为什么它不可能在 v0 内消失；收尾时重新过一遍所有 `until` 超出 M8 的例外（11 节）。
+````
+
+`docs/v0/M3-workspace-project/M3-design.md`（修改，3 处）：
+
+````old docs/v0/M3-workspace-project/M3-design.md
+### 7.10 关键词守卫的新规则（`tools/keywords.json`，P8a、P8b）
+````
+````new docs/v0/M3-workspace-project/M3-design.md
+### 7.10 关键词守卫的新规则（`tools/keywords.json`，P8a 起）
+````
+````old docs/v0/M3-workspace-project/M3-design.md
+| `user-settings` | `IUserSettings`、`currentUserSettings`、`fetchCurrentUserSettings` |
+````
+````new docs/v0/M3-workspace-project/M3-design.md
+| `user-settings` | `IUserSettings`、`currentUserSettings`、`fetchCurrentUserSettings` |
+| `workspaces-list-fetch`（P9） | 在 `useWorkspacesFetch` 之外取调用者的工作区列表（调 store 的 `fetchWorkspaces`）；store 自己和测试不算 |
+| `refusal-toast`（P9，收尾放宽） | 在 `useRefusalToast` 之外用 `setToast` 按 `errorMessageKey` 说拒绝；收尾加上 `setPromiseToast` 的失败一支（它的 message 是 `useRefusalMessage`） |
+| `sign-out-toast`（P9，收尾放宽） | 在 `useSignOut` 之外退出登录再自己提示；收尾加上从 store 取 `signOut` 的写法（`const { signOut } = useUser()`、`useUser().signOut`） |
+| `project-leave`（P10） | 在 `useProjectMembershipChanges` 的 `leave` 之外调 store 的 `leaveProject` |
+| `project-address-route`（P10） | P10、P11 改过的项目页从 router store 读项目和工作区（`currentProjectDetails`、`projectMemberIds`、`currentWorkspace`、不传 slug 和项目的 `allowPermissions`）；M4、M6、M7 改它们的页面时把那些文件加进规则的 `files` |
+| `copy-hook`（收尾） | 在 `useCopyLink`、`useCopyText` 之外复制到剪贴板（`copyTextToClipboard`、`copyUrlToClipboard`、`navigator.clipboard`）；M4、M6、M7、M8 还自己复制的文件各有一条例外，`until` 是各自的 `M<n>/closeout`，到那个 M 的收尾开始、`phase` 改为它时到期 |
+````
+````old docs/v0/M3-workspace-project/M3-design.md
+- 在 P8a、P8b 加入：P8a 加入工作区一侧的地址的模式和 `restricted-urls`、`in-system-invitations`、`user-settings`；P8b 补全项目一侧的模式、`/user-properties/` 的例外和不命中样例，删除 `project-invitations` 的例外，收紧 `plane-user-urls`。规则在数据层的第二段（P8b）合并时完整，在任何页面的 Phase 之前；P11 只核对 M3 加的例外只剩跨 M 的一条（`/user-properties/` 的两处，`until: "M4"`），`project-invitations` 的 `until: "M3"` 已删除。
+````
+````new docs/v0/M3-workspace-project/M3-design.md
+- 在 P8a、P8b 加入：P8a 加入工作区一侧的地址的模式和 `restricted-urls`、`in-system-invitations`、`user-settings`；P8b 补全项目一侧的模式、`/user-properties/` 的例外和不命中样例，删除 `project-invitations` 的例外，收紧 `plane-user-urls`。规则在数据层的第二段（P8b）合并时完整，在任何页面的 Phase 之前；P11 只核对 M3 加的例外只剩跨 M 的一条（`/user-properties/` 的两处，`until: "M4"`），`project-invitations` 的 `until: "M3"` 已删除。
+- P9、P10 和收尾加入的规则在表的后几行，括号里是加入它的 Phase；每条规则的 `why` 写明它守的那一处和不算的地方。
 ````
 
 `knip.jsonc`（修改，1 处）：
@@ -6957,6 +7258,17 @@ console.log(`i18n-keys: ${read.size} keys read, each defined in ${LOCALE}.`);
       "match": "copyTextToClipboard(",
       "reason": "M8 的 Webhook 页面自己复制密钥，成功和失败各自说；M8 改这个页面时改用 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
       "until": "M8/closeout"
+````
+
+`tools/keywords.mjs`（修改，1 处）：
+
+````old tools/keywords.mjs
+// (its "until" is at or before the file's top-level "phase").
+````
+````new tools/keywords.mjs
+// (its "until" is at or before the file's top-level "phase"). An "until" of "M<n>/closeout" falls due
+// when the top-level "phase" is set to "M<n>/closeout", which each M sets as its closeout starts (and
+// "M<n>/P<k>" as each phase starts).
 ````
 
 `web/apps/web/core/components/api-token/modal/generated-token-details.tsx`（修改，4 处）：
@@ -7580,7 +7892,7 @@ describe("problemCode", () => {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 14 条，各等于上限。
+Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 14 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -7597,7 +7909,7 @@ Expected: 116 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add Makefile e2e/stories/identity/a11-api-tokens.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts knip.jsonc tools/i18n-keys.mjs tools/keywords.json web/apps/web/core/components/api-token/modal/generated-token-details.tsx web/apps/web/core/components/appearance/theme-switcher.tsx web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx web/apps/web/core/components/dropdowns/member/avatar.tsx web/apps/web/core/components/dropdowns/member/base.tsx web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx web/apps/web/core/components/issues/attachment/attachment-list-item.tsx web/apps/web/core/components/issues/issue-detail/sidebar.tsx web/apps/web/core/components/issues/peek-overview/properties.tsx web/apps/web/core/components/modules/module-card-item.tsx web/apps/web/core/components/modules/module-list-item-action.tsx web/apps/web/core/components/power-k/config/miscellaneous-commands.ts web/apps/web/core/components/settings/profile/content/pages/security.tsx web/apps/web/core/components/views/view-list-item-action.tsx web/apps/web/core/components/workspace/use-create-workspace.ts web/apps/web/core/components/workspace/use-invitation-answer.ts web/apps/web/core/hooks/use-copy-link.test.ts web/apps/web/core/hooks/use-copy-link.ts web/apps/web/core/hooks/use-refusal-toast.test.ts web/apps/web/core/hooks/use-refusal-toast.ts web/apps/web/core/layouts/auth-layout/use-project-fetch.ts web/apps/web/core/lib/api-error.test.ts web/apps/web/core/lib/api-error.ts web/apps/web/core/lib/form-refusal.ts web/packages/constants/src/filter.ts web/packages/i18n/src/locales/en/power-k.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/power-k.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
+git add Makefile docs/v0/M1-frontend-trim/M1-design.md docs/v0/M3-workspace-project/M3-design.md e2e/stories/identity/a11-api-tokens.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts knip.jsonc tools/i18n-keys.mjs tools/keywords.json tools/keywords.mjs web/apps/web/core/components/api-token/modal/generated-token-details.tsx web/apps/web/core/components/appearance/theme-switcher.tsx web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx web/apps/web/core/components/dropdowns/member/avatar.tsx web/apps/web/core/components/dropdowns/member/base.tsx web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx web/apps/web/core/components/issues/attachment/attachment-list-item.tsx web/apps/web/core/components/issues/issue-detail/sidebar.tsx web/apps/web/core/components/issues/peek-overview/properties.tsx web/apps/web/core/components/modules/module-card-item.tsx web/apps/web/core/components/modules/module-list-item-action.tsx web/apps/web/core/components/power-k/config/miscellaneous-commands.ts web/apps/web/core/components/settings/profile/content/pages/security.tsx web/apps/web/core/components/views/view-list-item-action.tsx web/apps/web/core/components/workspace/use-create-workspace.ts web/apps/web/core/components/workspace/use-invitation-answer.ts web/apps/web/core/hooks/use-copy-link.test.ts web/apps/web/core/hooks/use-copy-link.ts web/apps/web/core/hooks/use-refusal-toast.test.ts web/apps/web/core/hooks/use-refusal-toast.ts web/apps/web/core/layouts/auth-layout/use-project-fetch.ts web/apps/web/core/lib/api-error.test.ts web/apps/web/core/lib/api-error.ts web/apps/web/core/lib/form-refusal.ts web/packages/constants/src/filter.ts web/packages/i18n/src/locales/en/power-k.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/power-k.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
 ```
 ```bash
 git commit -m "refactor(M3/closeout): one way to copy, to read a problem's code and to say a refusal; every key a page reads is defined
@@ -7608,7 +7920,8 @@ palette's too, and the copy-hook rule keeps it there, with dated
 exceptions for M4-M8's files. problemCode() reads a problem's code;
 useRefusalMessage gives a refusal's text, the theme switcher's too.
 tools/i18n-keys.mjs, in make lint-web, fails on a key a page reads that
-no language defines.
+no language defines. The guard's header and the M1 design say when an
+exception until an M's closeout falls due.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -7900,9 +8213,16 @@ import { isComposing } from "@nerve/utils";
 ````
 ````old web/packages/ui/src/modals/modal-core.tsx
             // an Escape that ends an IME composition is the composition's: Headless UI's Dialog closes on a keydown
+            // of Escape on the window unless its default is prevented (useEscape), so this prevents it on the way
+            // out, once the controls inside have had it (in the capture phase, it would make Headless UI skip their
+            // own handlers, which it does for a prevented event: a select's, which keeps its Escape from the page)
 ````
 ````new web/packages/ui/src/modals/modal-core.tsx
-            // an Escape that ends an input method's composition is the method's (isComposing): Headless UI's Dialog closes on a keydown
+            // an Escape that ends an input method's composition is the method's (isComposing):
+            // Headless UI's Dialog closes on a keydown of Escape on the window unless its default is prevented
+            // (useEscape), so this prevents it on the way out, once the controls inside have had it (in the capture
+            // phase, it would make Headless UI skip their own handlers, which it does for a prevented event: a
+            // select's, which keeps its Escape from the page)
 ````
 ````old web/packages/ui/src/modals/modal-core.tsx
               if (event.key === "Escape" && event.nativeEvent.isComposing) event.preventDefault();
@@ -8050,7 +8370,7 @@ describe("isComposing", () => {
 - [ ] **Step 4: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 12 条，各等于上限。
+Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -8102,16 +8422,27 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/hooks/use-route-workspace.test.ts`、`web/apps/web/core/hooks/use-route-workspace.ts`
-- Modify: `tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/project/card-list.tsx`、`web/apps/web/core/components/project/header.tsx`、`web/apps/web/core/components/project/root.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/quick-actions.tsx`、`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`
+- Modify: `docs/v0/M3-workspace-project/M3-design.md`、`tools/keywords.json`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx`、`web/apps/web/core/components/profile/sidebar.tsx`、`web/apps/web/core/components/project/card-list.tsx`、`web/apps/web/core/components/project/header.tsx`、`web/apps/web/core/components/project/root.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/quick-actions.tsx`、`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`、`web/apps/web/package.json`
 
 **Interfaces:**（spec 2.12）
 - `core/hooks/use-route-workspace.ts`（新文件）：`useRouteWorkspace()`：`useParams()` 的 `workspaceSlug` 经 `getWorkspaceBySlug`，没有时 `null`。
 - 19 个文件改用它，或在工作区级的 `allowPermissions` 写明 slug（spec 2.12 列出）。
-- `tools/keywords.json` 的 `workspace-address-route`：这 19 个文件中没有 `currentWorkspace`，没有两个参数的 `WORKSPACE` 级 `allowPermissions`。
+- `tools/keywords.json` 的 `workspace-address-route`：这 19 个文件中没有 `currentWorkspace`，没有两个参数的 `WORKSPACE` 级 `allowPermissions`；M3 设计 7.10 的规则表加上它。
+- `project/root.tsx`：`handleClearAllFilters` 和设显示筛选的副作用写全依赖（`isArchived`、`updateDisplayFilters`、`workspaceSlug`）。`updateDisplayFilters` 是 store 的动作，引用不变；列表和归档各自挂载这个根，一次挂载里 `isArchived` 不变，副作用照旧在挂载和换工作区时运行（spec 第 3 节第 2 条）。web 的上限 300 → 298。
 
-**Tests:** `use-route-workspace.test.ts`（新文件）；关键词守卫看住 19 个文件。没有端到端的改动：页面显示的照旧，S2、S7、W 系列的故事照旧通过。
+**Tests:** `use-route-workspace.test.ts`（新文件）；关键词守卫看住 19 个文件。没有端到端的改动：页面显示的照旧，S2、S7、W 系列的故事照旧通过；P4 和 S7 走过归档的往返。
 
 - [ ] **Step 1: 地址**
+
+`docs/v0/M3-workspace-project/M3-design.md`（修改，1 处）：
+
+````old docs/v0/M3-workspace-project/M3-design.md
+| `project-address-route`（P10） | P10、P11 改过的项目页从 router store 读项目和工作区（`currentProjectDetails`、`projectMemberIds`、`currentWorkspace`、不传 slug 和项目的 `allowPermissions`）；M4、M6、M7 改它们的页面时把那些文件加进规则的 `files` |
+````
+````new docs/v0/M3-workspace-project/M3-design.md
+| `project-address-route`（P10） | P10、P11 改过的项目页从 router store 读项目和工作区（`currentProjectDetails`、`projectMemberIds`、`currentWorkspace`、不传 slug 和项目的 `allowPermissions`）；M4、M6、M7 改它们的页面时把那些文件加进规则的 `files` |
+| `workspace-address-route`（收尾） | 收尾改过的 19 个工作区页面文件从 router store 读工作区（`currentWorkspace`、不传 slug 的工作区级 `allowPermissions`），而不是经 `useRouteWorkspace`；M4、M7、M8 改它们的页面时把那些文件加进规则的 `files` |
+````
 
 `tools/keywords.json`（修改，1 处）：
 
@@ -8444,7 +8775,7 @@ export const ProjectsBaseHeader = observer(function ProjectsBaseHeader() {
     workspaceSlug
 ````
 
-`web/apps/web/core/components/project/root.tsx`（修改，3 处）：
+`web/apps/web/core/components/project/root.tsx`（修改，5 处）：
 
 ````old web/apps/web/core/components/project/root.tsx
 import { useWorkspace } from "@/hooks/store/use-workspace";
@@ -8465,6 +8796,22 @@ import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 ````
 ````new web/apps/web/core/components/project/root.tsx
   const pageTitle = workspace ? `${workspace.name} - ${t("workspace_projects.label", { count: 2 })}` : undefined;
+````
+````old web/apps/web/core/components/project/root.tsx
+  }, [clearAllFilters, clearAllAppliedDisplayFilters, workspaceSlug]);
+
+````
+````new web/apps/web/core/components/project/root.tsx
+  }, [clearAllFilters, clearAllAppliedDisplayFilters, isArchived, updateDisplayFilters, workspaceSlug]);
+
+  // The archives show the archived projects, the list the others. Each mounts this root apart, so the effect runs at
+  // the mount and when the workspace changes, as it did on the address.
+````
+````old web/apps/web/core/components/project/root.tsx
+  }, [pathname]);
+````
+````new web/apps/web/core/components/project/root.tsx
+  }, [isArchived, updateDisplayFilters, workspaceSlug]);
 ````
 
 `web/apps/web/core/components/settings/workspace/sidebar/header.tsx`（修改，6 处）：
@@ -8618,6 +8965,15 @@ export function useRouteWorkspace(): Workspace | null {
 }
 ````
 
+`web/apps/web/package.json`（修改，1 处）：
+
+````old web/apps/web/package.json
+    "check:lint": "node ../../../tools/lint-cap.mjs 300",
+````
+````new web/apps/web/package.json
+    "check:lint": "node ../../../tools/lint-cap.mjs 298",
+````
+
 - [ ] **Step 2: 测试**
 
 `web/apps/web/core/hooks/use-route-workspace.test.ts`（新文件，38 行）：
@@ -8666,7 +9022,7 @@ describe("useRouteWorkspace", () => {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 301 条、`@nerve/ui` 12 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -8683,7 +9039,7 @@ Expected: 116 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx' web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx web/apps/web/core/components/profile/sidebar.tsx web/apps/web/core/components/project/card-list.tsx web/apps/web/core/components/project/header.tsx web/apps/web/core/components/project/root.tsx web/apps/web/core/components/settings/workspace/sidebar/header.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/settings/useMemberColumns.tsx web/apps/web/core/components/workspace/settings/workspace-details.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/quick-actions.tsx web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx web/apps/web/core/hooks/use-route-workspace.test.ts web/apps/web/core/hooks/use-route-workspace.ts
+git add docs/v0/M3-workspace-project/M3-design.md tools/keywords.json 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx' web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx web/apps/web/core/components/profile/sidebar.tsx web/apps/web/core/components/project/card-list.tsx web/apps/web/core/components/project/header.tsx web/apps/web/core/components/project/root.tsx web/apps/web/core/components/settings/workspace/sidebar/header.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/settings/useMemberColumns.tsx web/apps/web/core/components/workspace/settings/workspace-details.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/quick-actions.tsx web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx web/apps/web/core/hooks/use-route-workspace.test.ts web/apps/web/core/hooks/use-route-workspace.ts web/apps/web/package.json
 ```
 ```bash
 git commit -m "refactor(M3/closeout): pages that read the workspace read it from the route
@@ -8691,7 +9047,8 @@ git commit -m "refactor(M3/closeout): pages that read the workspace read it from
 useRouteWorkspace() finds the route's workspace in the caller's list; the
 19 files of M3's pages that read the router store's currentWorkspace, or
 judged a workspace permission without naming the workspace, now use it or
-name the slug. The workspace-address-route rule keeps them so.
+name the slug. The workspace-address-route rule keeps them so. The
+projects root's callback and effect name what they read.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -8704,6 +9061,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T11.2` | `useRouteWorkspace` 读 router store 的工作区，不是路由的（K12） | `use-route-workspace.test.ts` | vitest |
 | `T11.3` | 工作区菜单又读 router store 的工作区（`workspace-address-route`） | 关键词守卫 | 静态 |
 | `T11.4` | 侧边栏的快捷操作按 router store 的工作区判断权限（`workspace-address-route`） | 关键词守卫 | 静态 |
+| `T11.5` | 项目页的根的副作用又只依赖地址：oxlint 的 `exhaustive-deps` 超出上限 | oxlint（`check:lint`） | 静态 |
 
 ---
 
@@ -8717,87 +9075,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**（spec 2.8）
 - 侧边栏的标题经 `t("projects")`：`SidebarWrapper` 的 `title`（只有一个调用方，总是"Projects"）和 `title === "Projects"` 的条件删除；扩展侧边栏的标题同样。标签栏的菜单经 `navigation.json` 的 `tab_navigation.*`。项目页页头的"已归档"，卡片的创建日期和成员数。
 - 筛选：`@nerve/constants` 的 `PROJECT_FILTER_I18N_LABEL`（下拉框和已选筛选的一栏共用）；`lead.tsx`（`members.tsx` 的副本）删除，`FilterMembers` 收 `title`；网络按页面上的名字搜索；创建日期的选项 `i18n_name`；已选筛选的 9 个移除按钮名为 `common.remove_item`；数目的提示。成员筛选：角色经 `ROLE_DETAILS` 和"已停用"，按钮里不再有按钮（`customButtonClassName`）。
-- 这几个文件自己的警告：已选筛选的两个数组改为 `Set`；筛选的搜索框的 `autoFocus` 写明理由（`oxlint-disable-next-line`）。web 的上限 301 → 298。
+- 这几个文件自己的警告：已选筛选的两个数组改为 `Set`；筛选的搜索框的 `autoFocus` 写明理由（`oxlint-disable-next-line`）。web 的上限 298 → 295。
 
 **Tests:** `tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`（新文件）；`card.test.tsx`、`tab-navigation-overflow-menu.test.tsx` 读键。S7：第二个加扩展侧边栏的标题；第四个（新）：项目页的标题、卡片、筛选、已选筛选的一栏、已归档、成员筛选。
 
 - [ ] **Step 1: 页面和筛选**
-
-^web/(?!.*(\.test\.tsx?|/fake-[^/]*\.ts)$)
-
-- [ ] **Step 2: 测试**
-
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，2 处）：
-
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
-  // the extended sidebar, which the button opens, by its heading
-  await sidebar.getByRole("button", { name: "打开扩展侧边栏" }).click();
-  await expect(page.locator("#extended-project-sidebar-toggle").getByText("项目", { exact: true })).toBeVisible();
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-});
-
-test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-});
-
-test("S7 (page): an admin whose language is Chinese filters the projects and the members in Chinese", async ({
-  api,
-  signedInPage,
-}, testInfo) => {
-  const { admin, slug } = await chineseAdmin(api, testInfo);
-  const page = await signedInPage(admin);
-  const watch = await watchPage(page);
-
-  // The projects page: the sidebar's heading, the card's date and its members.
-  await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
-  await page.goto(`/${slug}/projects`);
-  const navigation = page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" });
-  await expect(navigation.locator("xpath=../preceding-sibling::span")).toHaveText("项目");
-  await expect(page.getByText(/^创建于 /)).toBeVisible();
-  // The filters: each by its name, the accesses searched as the page names them.
-  await page.getByRole("button", { name: "筛选", exact: true }).click();
-  const filters = page.getByRole("button", { name: "我的项目" }).locator("xpath=../..");
-  await expect(filters.getByText(/^(网络|负责人|成员|创建日期)$/)).toHaveText(["网络", "负责人", "成员", "创建日期"]);
-  await expect(filters.getByRole("button", { name: /^(今天|昨天|最近 7 天|最近 30 天|自定义)$/ })).toHaveCount(5);
-  // the caller, in the lead's filter and the members', is 您
-  await expect(filters.getByRole("button", { name: / 您$/ })).toHaveCount(2);
-  await page.getByPlaceholder("搜索", { exact: true }).last().fill("公开");
-  await expect(page.getByRole("button", { name: "公开", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "私有", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "公开", exact: true }).click();
-  await page.keyboard.press("Escape");
-  // The bar of the filters applied: the filter by its name, each button named by what it removes, and the count.
-  await expect(page.getByRole("button", { name: "移除公开", exact: true })).toBeVisible();
-  await page.getByText("1/1", { exact: true }).hover();
-  await expect(page.getByText("1 个项目中有 1 个符合筛选条件。", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "移除网络", exact: true }).click();
-  await expect(page.getByRole("button", { name: "移除公开", exact: true })).toHaveCount(0);
-
-  // The archived projects: the header's breadcrumb says so.
-  await page.goto(`/${slug}/projects/archives`);
-  await expect(page.getByText("已归档", { exact: true })).toHaveCount(1);
-
-  // The members page: one button names its filter, whose roles have their names.
-  await page.goto(`/${slug}/settings/members`);
-  await expect(page.getByRole("button", { name: "筛选" })).toHaveCount(1);
-  await page.getByRole("button", { name: "筛选" }).click();
-  const roleFilter = page.getByRole("menu", { name: "筛选" });
-  await expect(roleFilter.getByText("角色", { exact: true })).toBeVisible();
-  const roles = roleFilter.getByRole("button", { name: /^(管理员|成员|访客|已停用)$/ });
-  await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
-  await page.keyboard.press("Escape");
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
-});
-
-test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
-````
 
 `web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`（修改，1 处）：
 
@@ -8815,17 +9097,6 @@ test("S7 (page): one whose language is Chinese reads her invitation to Acme, as 
 ````
 ````new web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx
     <SidebarWrapper quickActions={<SidebarQuickActions />}>
-````
-
-`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`（修改，1 处）：
-
-````old web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx
-      ["Clear default"],
-      ["Show", "Set as default"],
-````
-````new web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx
-      ["tab_navigation.clear_default"],
-      ["tab_navigation.show", "tab_navigation.set_as_default"],
 ````
 
 `web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`（修改，3 处）：
@@ -8847,71 +9118,6 @@ test("S7 (page): one whose language is Chinese reads her invitation to Acme, as 
 ````
 ````new web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx
                       title={t(isDefault ? "tab_navigation.clear_default" : "tab_navigation.set_as_default")}
-````
-
-`web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx`（新文件，60 行）：
-
-````file web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx
-/**
- * Copyright (c) 2026-present OpenNerve
- * SPDX-License-Identifier: AGPL-3.0-only
- */
-
-import type { ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { MemoryRouter } from "react-router";
-import { describe, expect, it, vi } from "vitest";
-import type { ProjectNavigation } from "@nerve/api-client";
-import type { TNavigationItem } from "./tab-navigation-root";
-import { DEFAULT_NAVIGATION } from "./tab-navigation-utils";
-import { TabNavigationVisibleItem } from "./tab-navigation-visible-item";
-import type { TTabChanges } from "./use-tab-preferences";
-
-// What the menu of a tab of a project's header offers, in the page's language (M3 design 3.18): making the tab the one
-// the project opens on, or no longer, and moving it to the "more" menu. The tab renders on the server with a stand-in
-// for propel's context menu, which renders its items as the open menu does, and the language says each key
-// (fake-i18n.ts).
-
-vi.mock("@nerve/propel/context-menu", () => ({
-  ContextMenu: Object.assign(Shown, { Trigger: Shown, Portal: Shown, Content: Shown, Item: Shown }),
-}));
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-
-/** Each part of the menu, shown with what it holds. */
-function Shown({ children }: { children?: ReactNode }) {
-  return <>{children}</>;
-}
-
-const cycles: TNavigationItem = {
-  name: "cycles",
-  href: "/acme/projects/p-web/cycles",
-  icon: () => null,
-  access: [],
-  shouldRender: true,
-  sortOrder: 2,
-  i18n_key: "sidebar.cycles",
-  key: "cycles",
-};
-const changes = { toggleDefault: () => undefined, hide: () => undefined, show: () => undefined } satisfies TTabChanges;
-
-/** The menu of the cycles' tab, with the tab bar given. */
-function menuOf(navigation: ProjectNavigation): string {
-  return renderToStaticMarkup(
-    <MemoryRouter>
-      <TabNavigationVisibleItem item={cycles} isActive={false} navigation={navigation} changes={changes} />
-    </MemoryRouter>
-  );
-}
-
-describe("the menu of a tab of a project's header", () => {
-  it("offers making the tab the one the project opens on, or no longer, and moving it to the more menu", () => {
-    const menu = menuOf(DEFAULT_NAVIGATION);
-    expect([menu.includes("tab_navigation.set_as_default"), menu.includes("tab_navigation.hide_in_more_menu")]).toEqual(
-      [true, true]
-    );
-    expect(menuOf({ ...DEFAULT_NAVIGATION, default_tab: "cycles" })).toContain("tab_navigation.clear_default");
-  });
-});
 ````
 
 `web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx`（修改，2 处）：
@@ -9031,61 +9237,6 @@ import { useTranslation } from "@nerve/i18n";
                 aria-label={t("common.remove_item", { name: label })}
 ````
 
-`web/apps/web/core/components/project/applied-filters/root.test.tsx`（新文件，50 行）：
-
-````file web/apps/web/core/components/project/applied-filters/root.test.tsx
-/**
- * Copyright (c) 2026-present OpenNerve
- * SPDX-License-Identifier: AGPL-3.0-only
- */
-
-import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-import { ProjectAppliedFiltersList } from "./root";
-
-// The bar of the projects' filters applied (the workspace's projects page): it names each filter in the page's
-// language, and each button that removes a filter, or one of its values. The bar renders on the server, with a
-// stand-in for the workspace's members (bob) and for the language, which says each key (fake-i18n.ts).
-
-vi.mock("@/hooks/store/use-member", () => ({
-  useMember: () => ({
-    workspace: { getWorkspaceMemberDetails: () => ({ member: { display_name: "bob", avatar_url: null } }) },
-  }),
-}));
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-
-describe("the bar of the projects' filters applied", () => {
-  it("names each filter, and each button that removes a filter or one of its values", () => {
-    const bar = renderToStaticMarkup(
-      <ProjectAppliedFiltersList
-        appliedFilters={{ access: ["2"], lead: ["u-bob"], members: ["u-bob"], created_at: ["today;custom;custom"] }}
-        appliedDisplayFilters={["my_projects"]}
-        handleClearAllFilters={() => {}}
-        handleRemoveFilter={() => {}}
-        handleRemoveDisplayFilter={() => {}}
-        filteredProjects={1}
-        totalProjects={2}
-        alwaysAllowEditing
-      />
-    );
-    const names = [...bar.matchAll(/<span class="text-11 text-tertiary">([^<]*)<\/span>/g)].map(([, name]) => name);
-    expect(names).toEqual([
-      "workspace_projects.network.label",
-      "lead",
-      "common.members",
-      "workspace_projects.sort.created_at",
-      "common.projects",
-    ]);
-    // the four filters and their four values, and the projects' value: each its button, named; the bar's clearing
-    // says what it does
-    const buttons = bar.match(/<button[^>]*>/g) ?? [];
-    expect(buttons.filter((button) => button.includes('aria-label="common.remove_item"'))).toHaveLength(9);
-    expect(buttons).toHaveLength(10);
-    expect(bar).toContain("common.clear_all");
-  });
-});
-````
-
 `web/apps/web/core/components/project/applied-filters/root.tsx`（修改，9 处）：
 
 ````old web/apps/web/core/components/project/applied-filters/root.tsx
@@ -9150,59 +9301,6 @@ const DATE_FILTERS = new Set(["created_at"]);
           label={t("workspace_projects.applied_filters_count", { filtered: filteredProjects, total: totalProjects })}
           layout="stacked"
         >
-````
-
-`web/apps/web/core/components/project/card.test.tsx`（修改，3 处）：
-
-````old web/apps/web/core/components/project/card.test.tsx
-import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
-````
-````new web/apps/web/core/components/project/card.test.tsx
-import type { ReactNode } from "react";
-import type { Project, ProjectRole, WorkspaceRole } from "@nerve/api-client";
-import { renderFormattedDate } from "@nerve/utils";
-````
-````old web/apps/web/core/components/project/card.test.tsx
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-````
-````new web/apps/web/core/components/project/card.test.tsx
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-// a tooltip shows its label beside what it is the tooltip of
-vi.mock("@makeplane/propel/components/tooltip", () => ({
-  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
-    <>
-      <span data-tooltip="">{label}</span>
-      {children}
-    </>
-  ),
-}));
-````
-````old web/apps/web/core/components/project/card.test.tsx
-  });
-
-````
-````new web/apps/web/core/components/project/card.test.tsx
-  });
-
-  it("says, in the page's language, when it was made, having no description, and how many members it has", async () => {
-    const { permissions, acme, web } = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole);
-    caller.permissions = permissions;
-    const cardOf = (project: Project) =>
-      renderToStaticMarkup(
-        <MemoryRouter initialEntries={[`/${acme.slug}/projects`]}>
-          <Routes>
-            <Route path=":workspaceSlug/projects" element={<ProjectCard project={project} />} />
-          </Routes>
-        </MemoryRouter>
-      );
-    const alone = cardOf({ ...web, member_ids: [] });
-    expect(alone).toContain(`common.created_on ${renderFormattedDate(web.created_at)}`);
-    expect(alone).toContain('<span data-tooltip="">project_dialogs.no_member_yet</span>');
-    expect(cardOf({ ...web, member_ids: ["u-bob"] })).toContain(
-      '<span data-tooltip="">project_dialogs.members_count</span>'
-    );
-  });
-
 ````
 
 `web/apps/web/core/components/project/card.tsx`（修改，2 处）：
@@ -9627,10 +9725,10 @@ type TSidebarWrapperProps = {
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 301",
+    "check:lint": "node ../../../tools/lint-cap.mjs 298",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 298",
+    "check:lint": "node ../../../tools/lint-cap.mjs 295",
 ````
 
 `web/packages/constants/src/filter.ts`（修改，4 处）：
@@ -9803,10 +9901,268 @@ export const PROJECT_DISPLAY_FILTER_OPTIONS: {
     },
 ````
 
+- [ ] **Step 2: 测试**
+
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，2 处）：
+
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
+  // the extended sidebar, which the button opens, by its heading
+  await sidebar.getByRole("button", { name: "打开扩展侧边栏" }).click();
+  await expect(page.locator("#extended-project-sidebar-toggle").getByText("项目", { exact: true })).toBeVisible();
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+});
+
+test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+});
+
+test("S7 (page): an admin whose language is Chinese filters the projects and the members in Chinese", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const { admin, slug } = await chineseAdmin(api, testInfo);
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+
+  // The projects page: the sidebar's heading, the card's date and its members.
+  await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await page.goto(`/${slug}/projects`);
+  const navigation = page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" });
+  await expect(navigation.locator("xpath=../preceding-sibling::span")).toHaveText("项目");
+  await expect(page.getByText(/^创建于 /)).toBeVisible();
+  // The filters: each by its name, the accesses searched as the page names them.
+  await page.getByRole("button", { name: "筛选", exact: true }).click();
+  const filters = page.getByRole("button", { name: "我的项目" }).locator("xpath=../..");
+  await expect(filters.getByText(/^(网络|负责人|成员|创建日期)$/)).toHaveText(["网络", "负责人", "成员", "创建日期"]);
+  await expect(filters.getByRole("button", { name: /^(今天|昨天|最近 7 天|最近 30 天|自定义)$/ })).toHaveCount(5);
+  // the caller, in the lead's filter and the members', is 您
+  await expect(filters.getByRole("button", { name: / 您$/ })).toHaveCount(2);
+  await page.getByPlaceholder("搜索", { exact: true }).last().fill("公开");
+  await expect(page.getByRole("button", { name: "公开", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "私有", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "公开", exact: true }).click();
+  await page.keyboard.press("Escape");
+  // The bar of the filters applied: the filter by its name, each button named by what it removes, and the count.
+  await expect(page.getByRole("button", { name: "移除公开", exact: true })).toBeVisible();
+  await page.getByText("1/1", { exact: true }).hover();
+  await expect(page.getByText("1 个项目中有 1 个符合筛选条件。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "移除网络", exact: true }).click();
+  await expect(page.getByRole("button", { name: "移除公开", exact: true })).toHaveCount(0);
+
+  // The archived projects: the header's breadcrumb says so.
+  await page.goto(`/${slug}/projects/archives`);
+  await expect(page.getByText("已归档", { exact: true })).toHaveCount(1);
+
+  // The members page: one button names its filter, whose roles have their names.
+  await page.goto(`/${slug}/settings/members`);
+  await expect(page.getByRole("button", { name: "筛选" })).toHaveCount(1);
+  await page.getByRole("button", { name: "筛选" }).click();
+  const roleFilter = page.getByRole("menu", { name: "筛选" });
+  await expect(roleFilter.getByText("角色", { exact: true })).toBeVisible();
+  const roles = roleFilter.getByRole("button", { name: /^(管理员|成员|访客|已停用)$/ });
+  await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
+  await page.keyboard.press("Escape");
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
+````
+
+`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx
+      ["Clear default"],
+      ["Show", "Set as default"],
+````
+````new web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx
+      ["tab_navigation.clear_default"],
+      ["tab_navigation.show", "tab_navigation.set_as_default"],
+````
+
+`web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx`（新文件，60 行）：
+
+````file web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MemoryRouter } from "react-router";
+import { describe, expect, it, vi } from "vitest";
+import type { ProjectNavigation } from "@nerve/api-client";
+import type { TNavigationItem } from "./tab-navigation-root";
+import { DEFAULT_NAVIGATION } from "./tab-navigation-utils";
+import { TabNavigationVisibleItem } from "./tab-navigation-visible-item";
+import type { TTabChanges } from "./use-tab-preferences";
+
+// What the menu of a tab of a project's header offers, in the page's language (M3 design 3.18): making the tab the one
+// the project opens on, or no longer, and moving it to the "more" menu. The tab renders on the server with a stand-in
+// for propel's context menu, which renders its items as the open menu does, and the language says each key
+// (fake-i18n.ts).
+
+vi.mock("@nerve/propel/context-menu", () => ({
+  ContextMenu: Object.assign(Shown, { Trigger: Shown, Portal: Shown, Content: Shown, Item: Shown }),
+}));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+/** Each part of the menu, shown with what it holds. */
+function Shown({ children }: { children?: ReactNode }) {
+  return <>{children}</>;
+}
+
+const cycles: TNavigationItem = {
+  name: "cycles",
+  href: "/acme/projects/p-web/cycles",
+  icon: () => null,
+  access: [],
+  shouldRender: true,
+  sortOrder: 2,
+  i18n_key: "sidebar.cycles",
+  key: "cycles",
+};
+const changes = { toggleDefault: () => undefined, hide: () => undefined, show: () => undefined } satisfies TTabChanges;
+
+/** The menu of the cycles' tab, with the tab bar given. */
+function menuOf(navigation: ProjectNavigation): string {
+  return renderToStaticMarkup(
+    <MemoryRouter>
+      <TabNavigationVisibleItem item={cycles} isActive={false} navigation={navigation} changes={changes} />
+    </MemoryRouter>
+  );
+}
+
+describe("the menu of a tab of a project's header", () => {
+  it("offers making the tab the one the project opens on, or no longer, and moving it to the more menu", () => {
+    const menu = menuOf(DEFAULT_NAVIGATION);
+    expect([menu.includes("tab_navigation.set_as_default"), menu.includes("tab_navigation.hide_in_more_menu")]).toEqual(
+      [true, true]
+    );
+    expect(menuOf({ ...DEFAULT_NAVIGATION, default_tab: "cycles" })).toContain("tab_navigation.clear_default");
+  });
+});
+````
+
+`web/apps/web/core/components/project/applied-filters/root.test.tsx`（新文件，50 行）：
+
+````file web/apps/web/core/components/project/applied-filters/root.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import { ProjectAppliedFiltersList } from "./root";
+
+// The bar of the projects' filters applied (the workspace's projects page): it names each filter in the page's
+// language, and each button that removes a filter, or one of its values. The bar renders on the server, with a
+// stand-in for the workspace's members (bob) and for the language, which says each key (fake-i18n.ts).
+
+vi.mock("@/hooks/store/use-member", () => ({
+  useMember: () => ({
+    workspace: { getWorkspaceMemberDetails: () => ({ member: { display_name: "bob", avatar_url: null } }) },
+  }),
+}));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+
+describe("the bar of the projects' filters applied", () => {
+  it("names each filter, and each button that removes a filter or one of its values", () => {
+    const bar = renderToStaticMarkup(
+      <ProjectAppliedFiltersList
+        appliedFilters={{ access: ["2"], lead: ["u-bob"], members: ["u-bob"], created_at: ["today;custom;custom"] }}
+        appliedDisplayFilters={["my_projects"]}
+        handleClearAllFilters={() => {}}
+        handleRemoveFilter={() => {}}
+        handleRemoveDisplayFilter={() => {}}
+        filteredProjects={1}
+        totalProjects={2}
+        alwaysAllowEditing
+      />
+    );
+    const names = [...bar.matchAll(/<span class="text-11 text-tertiary">([^<]*)<\/span>/g)].map(([, name]) => name);
+    expect(names).toEqual([
+      "workspace_projects.network.label",
+      "lead",
+      "common.members",
+      "workspace_projects.sort.created_at",
+      "common.projects",
+    ]);
+    // the four filters and their four values, and the projects' value: each its button, named; the bar's clearing
+    // says what it does
+    const buttons = bar.match(/<button[^>]*>/g) ?? [];
+    expect(buttons.filter((button) => button.includes('aria-label="common.remove_item"'))).toHaveLength(9);
+    expect(buttons).toHaveLength(10);
+    expect(bar).toContain("common.clear_all");
+  });
+});
+````
+
+`web/apps/web/core/components/project/card.test.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/project/card.test.tsx
+import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
+````
+````new web/apps/web/core/components/project/card.test.tsx
+import type { ReactNode } from "react";
+import type { Project, ProjectRole, WorkspaceRole } from "@nerve/api-client";
+import { renderFormattedDate } from "@nerve/utils";
+````
+````old web/apps/web/core/components/project/card.test.tsx
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+````
+````new web/apps/web/core/components/project/card.test.tsx
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+// a tooltip shows its label beside what it is the tooltip of
+vi.mock("@makeplane/propel/components/tooltip", () => ({
+  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
+    <>
+      <span data-tooltip="">{label}</span>
+      {children}
+    </>
+  ),
+}));
+````
+````old web/apps/web/core/components/project/card.test.tsx
+  });
+
+````
+````new web/apps/web/core/components/project/card.test.tsx
+  });
+
+  it("says, in the page's language, when it was made, having no description, and how many members it has", async () => {
+    const { permissions, acme, web } = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole);
+    caller.permissions = permissions;
+    const cardOf = (project: Project) =>
+      renderToStaticMarkup(
+        <MemoryRouter initialEntries={[`/${acme.slug}/projects`]}>
+          <Routes>
+            <Route path=":workspaceSlug/projects" element={<ProjectCard project={project} />} />
+          </Routes>
+        </MemoryRouter>
+      );
+    const alone = cardOf({ ...web, member_ids: [] });
+    expect(alone).toContain(`common.created_on ${renderFormattedDate(web.created_at)}`);
+    expect(alone).toContain('<span data-tooltip="">project_dialogs.no_member_yet</span>');
+    expect(cardOf({ ...web, member_ids: ["u-bob"] })).toContain(
+      '<span data-tooltip="">project_dialogs.members_count</span>'
+    );
+  });
+
+````
+
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 295 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -9878,156 +10234,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Tests:** `admin-pages.test.tsx`、`states-labels.test.tsx` 照新的标题；`use-feature-toggle.test.tsx` 看开关的名字；`select-month-modal.test.tsx` 读键。P1：功能一步的 Tab 循环按功能的名字；P3：自定义范围说 Update。S7 的第四个加项目设置的标题、成员的搜索、功能开关的提示和提示的区域、自动归档；第五个（新）：没有完成引导的人看到新手引导的标题。
 
 - [ ] **Step 1: 设置和标题**
-
-^web/(?!.*(\.test\.tsx?|/fake-[^/]*\.ts)$)
-
-- [ ] **Step 2: 测试**
-
-`e2e/stories/project/p1-create-project.spec.ts`（修改，1 处）：
-
-````old e2e/stories/project/p1-create-project.spec.ts
-    `Open project, ${"Toggle project feature, ".repeat(4)}Close`
-````
-````new e2e/stories/project/p1-create-project.spec.ts
-    "Open project, Cycles, Modules, Views, Intake, Close"
-````
-
-`e2e/stories/project/p3-project-settings.spec.ts`（修改，2 处）：
-
-````old e2e/stories/project/p3-project-settings.spec.ts
-    page.getByRole("button", { name: "Submit" }).click()
-````
-````new e2e/stories/project/p3-project-settings.spec.ts
-    page.getByRole("button", { name: "Update", exact: true }).click()
-````
-````old e2e/stories/project/p3-project-settings.spec.ts
-  await expect(page.getByRole("button", { name: "Submitting..." })).toBeDisabled();
-````
-````new e2e/stories/project/p3-project-settings.spec.ts
-  await expect(page.getByRole("button", { name: "Updating" })).toBeDisabled();
-````
-
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，5 处）：
-
-````old e2e/stories/smoke/s7-chinese.spec.ts
-import { bearer, emailFor, shownNameOf, type AuthTokens } from "../../fixtures/auth";
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-import { bearer, emailFor, register, shownNameOf, type AuthTokens } from "../../fixtures/auth";
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-test("S7 (page): an admin whose language is Chinese filters the projects and the members in Chinese", async ({
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-test("S7 (page): an admin whose language is Chinese filters the projects and the members, and reads a project's settings, its custom range and a toast in Chinese", async ({
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  const watch = await watchPage(page);
-
-  // The projects page: the sidebar's heading, the card's date and its members.
-  await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  const watch = await watchPage(page);
-
-  // The project settings of a workspace with no project yet, and the create-workspace page's title.
-  await page.goto(`/${slug}/settings/projects`);
-  await expect(page.getByText("没有项目", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "开始您的第一个项目" })).toBeVisible();
-  await page.goto("/create-workspace");
-  await expect(page).toHaveTitle("创建您的工作区");
-
-  // The projects page: the sidebar's heading, the card's date and its members.
-  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
-  await page.keyboard.press("Escape");
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
-  await page.keyboard.press("Escape");
-
-  // A project's settings: each page's title, the members' search; a feature's switch, whose toast says it, in the
-  // region of the toasts, named.
-  const settings = `/${slug}/settings/projects/${web.id}`;
-  await page.goto(settings);
-  await expect(page).toHaveTitle("Web - 常规设置");
-  await page.goto(`${settings}/members`);
-  await expect(page).toHaveTitle("Web - 成员");
-  await expect(page.getByPlaceholder("搜索", { exact: true })).toBeVisible();
-  await page.goto(`${settings}/features/cycles`);
-  await page.getByRole("switch", { name: "启用周期" }).click();
-  const toasts = page.getByRole("region", { name: "通知" });
-  await expect(toasts.getByText("项目功能已更新。", { exact: true })).toBeVisible();
-
-  // The auto-archiving: its months, and its custom range, which says what it takes.
-  await page.goto(`${settings}/automations`);
-  await page.getByRole("switch", { name: "自动归档已关闭的工作项" }).click();
-  await page.getByRole("button", { name: "1 个月", exact: true }).click();
-  await page.getByRole("button", { name: "自定义时间范围" }).click();
-  const months = modalDialog(page).getByPlaceholder("输入月数");
-  await expect(modalDialog(page).getByText("个月", { exact: true })).toBeVisible();
-  await months.fill("");
-  await modalDialog(page).getByRole("button", { name: "更新", exact: true }).click();
-  await expect(modalDialog(page).getByText("请选择 1 到 12 之间的月数。", { exact: true })).toBeVisible();
-  await cancel(page);
-````
-````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
-````
-````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expectQuietConsole(page, watch, { warnings: Array(8).fill(EMOJI_CHECK_WARNING) });
-});
-
-test("S7 (page): one whose language is Chinese, not onboarded yet, reads the onboarding's title in Chinese", async ({
-  api,
-  signedInPage,
-}, testInfo) => {
-  const dave = await register(api, emailFor(testInfo, "dave"));
-  await speakChinese(api, dave);
-  const page = await signedInPage(dave);
-  const watch = await watchPage(page);
-
-  await page.goto("/onboarding");
-  await expect(page).toHaveTitle("新手引导");
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch);
-````
-
-`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`（修改，5 处）：
-
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} settings - project_settings.features.cycles.short_title]switch ${web.cycle_view}`,
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} - project_settings.features.cycles.short_title]switch ${web.cycle_view}`,
-````
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} settings - project_settings.features.intake.short_title]switch ${web.intake_view}`,
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} - project_settings.features.intake.short_title]switch ${web.intake_view}`,
-````
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} settings - project_settings.features.modules.short_title]switch ${web.module_view}`,
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} - project_settings.features.modules.short_title]switch ${web.module_view}`,
-````
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) =>
-      `[${web.name} settings - project_settings.features.views.short_title]switch ${web.issue_views_view}`,
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} - project_settings.features.views.short_title]switch ${web.issue_views_view}`,
-````
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} - Automations]auto-archive`,
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
-    shows: (web) => `[${web.name} - project_settings.automations.label]auto-archive`,
-````
 
 `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`（修改，1 处）：
 
@@ -10150,41 +10356,6 @@ import { ProjectDetailsForm } from "@/components/project/form";
 ````
 ````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx
           <ProjectDetailsForm key={project.id} project={project} workspaceSlug={workspaceSlug} isAdmin={isAdmin} />
-````
-
-`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`（修改，5 处）：
-
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-    expect(text).toBe(`[${name} - States]Backlog, In Progress and their controls`);
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-    expect(text).toBe(`[${name} - common.states]Backlog, In Progress and their controls`);
-````
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-    expect(text).toBe(`[${name} - States]Backlog, In Progress`);
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-    expect(text).toBe(`[${name} - common.states]Backlog, In Progress`);
-````
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-      expect(text).toBe(`[${name} - Labels][common.add_label]Bug and its controls`);
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-      expect(text).toBe(`[${name} - common.labels][common.add_label]Bug and its controls`);
-````
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-    expect(text).toBe(`[${name} - Labels]Bug`);
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-    expect(text).toBe(`[${name} - common.labels]Bug`);
-````
-````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-      `[${admin.name} - Labels][common.add_label][settings_empty_state.labels.cta_primary]`,
-      `[${member.name} - Labels]`,
-````
-````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
-      `[${admin.name} - common.labels][common.add_label][settings_empty_state.labels.cta_primary]`,
-      `[${member.name} - common.labels]`,
 ````
 
 `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`（修改，1 处）：
@@ -10370,16 +10541,6 @@ export interface IAppProvider {
                     label={t("workspace_projects.common.months_count", { months: project.archive_in })}
 ````
 
-`web/apps/web/core/components/automation/select-month-modal.test.tsx`（修改，1 处）：
-
-````old web/apps/web/core/components/automation/select-month-modal.test.tsx
-vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
-````
-````new web/apps/web/core/components/automation/select-month-modal.test.tsx
-vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-````
-
 `web/apps/web/core/components/automation/select-month-modal.tsx`（修改，9 处）：
 
 ````old web/apps/web/core/components/automation/select-month-modal.tsx
@@ -10492,31 +10653,6 @@ import { ProjectFeatureToggle } from "./helper";
 ````delete web/apps/web/core/components/project/settings/helper.tsx
 ````
 
-`web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx`（修改，3 处）：
-
-````old web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
-  it("is what each switch of the features list flips, its own feature", () => {
-    renderToStaticMarkup(<ProjectFeaturesList workspaceSlug="acme" projectId={web.id} />);
-````
-````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
-  it("is what each switch of the features list flips, its own feature, which names it", () => {
-    renderToStaticMarkup(<ProjectFeaturesList workspaceSlug="acme" projectId={web.id} />);
-    expect(shown.switches.map((toggle) => toggle["aria-label"])).toEqual(["cycles", "modules", "views", "intake"]);
-````
-````old web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
-  it("is what the switch of a feature's own page flips", () => {
-````
-````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
-  it("is what the switch of a feature's own page flips, the feature's name its name", () => {
-````
-````old web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
-    );
-````
-````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
-    );
-    expect(shown.switches.map((toggle) => toggle["aria-label"])).toEqual(["Intake"]);
-````
-
 `web/apps/web/core/components/settings/project/content/feature-control-item.tsx`（修改，2 处）：
 
 ````old web/apps/web/core/components/settings/project/content/feature-control-item.tsx
@@ -10536,17 +10672,6 @@ import { ProjectFeatureToggle } from "./helper";
 ````
 ````new web/apps/web/core/components/settings/project/content/feature-control-item.tsx
         <Switch size="sm" checked={value} onCheckedChange={() => toggleFeature(featureProperty)} aria-label={title} />
-````
-
-`web/apps/web/core/lib/fake-controls.ts`（修改，1 处）：
-
-````old web/apps/web/core/lib/fake-controls.ts
-/** A switch: what a flip does, and whether it can be flipped. */
-type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean };
-````
-````new web/apps/web/core/lib/fake-controls.ts
-/** A switch: what a flip does, whether it can be flipped, and its name. */
-type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean; "aria-label"?: string };
 ````
 
 `web/packages/i18n/src/locales/en/accessibility.json`（修改，1 处）：
@@ -10630,10 +10755,239 @@ type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boole
         <BaseToast.Viewport data-theme={props.theme} aria-label={props.label}>
 ````
 
+- [ ] **Step 2: 测试**
+
+`e2e/stories/project/p1-create-project.spec.ts`（修改，1 处）：
+
+````old e2e/stories/project/p1-create-project.spec.ts
+    `Open project, ${"Toggle project feature, ".repeat(4)}Close`
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+    "Open project, Cycles, Modules, Views, Intake, Close"
+````
+
+`e2e/stories/project/p3-project-settings.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p3-project-settings.spec.ts
+    page.getByRole("button", { name: "Submit" }).click()
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+    page.getByRole("button", { name: "Update", exact: true }).click()
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+  await expect(page.getByRole("button", { name: "Submitting..." })).toBeDisabled();
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+  await expect(page.getByRole("button", { name: "Updating" })).toBeDisabled();
+````
+
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，5 处）：
+
+````old e2e/stories/smoke/s7-chinese.spec.ts
+import { bearer, emailFor, shownNameOf, type AuthTokens } from "../../fixtures/auth";
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+import { bearer, emailFor, register, shownNameOf, type AuthTokens } from "../../fixtures/auth";
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+test("S7 (page): an admin whose language is Chinese filters the projects and the members in Chinese", async ({
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+test("S7 (page): an admin whose language is Chinese filters the projects and the members, and reads a project's settings, its custom range and a toast in Chinese", async ({
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  const watch = await watchPage(page);
+
+  // The projects page: the sidebar's heading, the card's date and its members.
+  await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  const watch = await watchPage(page);
+
+  // The project settings of a workspace with no project yet, and the create-workspace page's title.
+  await page.goto(`/${slug}/settings/projects`);
+  await expect(page.getByText("没有项目", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始您的第一个项目" })).toBeVisible();
+  await page.goto("/create-workspace");
+  await expect(page).toHaveTitle("创建您的工作区");
+
+  // The projects page: the sidebar's heading, the card's date and its members.
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
+  await page.keyboard.press("Escape");
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
+  await page.keyboard.press("Escape");
+
+  // A project's settings: each page's title, the members' search; a feature's switch, whose toast says it, in the
+  // region of the toasts, named.
+  const settings = `/${slug}/settings/projects/${web.id}`;
+  await page.goto(settings);
+  await expect(page).toHaveTitle("Web - 常规设置");
+  await page.goto(`${settings}/members`);
+  await expect(page).toHaveTitle("Web - 成员");
+  await expect(page.getByPlaceholder("搜索", { exact: true })).toBeVisible();
+  await page.goto(`${settings}/features/cycles`);
+  await page.getByRole("switch", { name: "启用周期" }).click();
+  const toasts = page.getByRole("region", { name: "通知" });
+  await expect(toasts.getByText("项目功能已更新。", { exact: true })).toBeVisible();
+
+  // The auto-archiving: its months, and its custom range, which says what it takes.
+  await page.goto(`${settings}/automations`);
+  await page.getByRole("switch", { name: "自动归档已关闭的工作项" }).click();
+  await page.getByRole("button", { name: "1 个月", exact: true }).click();
+  await page.getByRole("button", { name: "自定义时间范围" }).click();
+  const months = modalDialog(page).getByPlaceholder("输入月数");
+  await expect(modalDialog(page).getByText("个月", { exact: true })).toBeVisible();
+  await months.fill("");
+  await modalDialog(page).getByRole("button", { name: "更新", exact: true }).click();
+  await expect(modalDialog(page).getByText("请选择 1 到 12 之间的月数。", { exact: true })).toBeVisible();
+  await cancel(page);
+````
+````old e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+  await expectQuietConsole(page, watch, { warnings: Array(8).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): one whose language is Chinese, not onboarded yet, reads the onboarding's title in Chinese", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const dave = await register(api, emailFor(testInfo, "dave"));
+  await speakChinese(api, dave);
+  const page = await signedInPage(dave);
+  const watch = await watchPage(page);
+
+  await page.goto("/onboarding");
+  await expect(page).toHaveTitle("新手引导");
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch);
+````
+
+`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`（修改，5 处）：
+
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} settings - project_settings.features.cycles.short_title]switch ${web.cycle_view}`,
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} - project_settings.features.cycles.short_title]switch ${web.cycle_view}`,
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} settings - project_settings.features.intake.short_title]switch ${web.intake_view}`,
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} - project_settings.features.intake.short_title]switch ${web.intake_view}`,
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} settings - project_settings.features.modules.short_title]switch ${web.module_view}`,
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} - project_settings.features.modules.short_title]switch ${web.module_view}`,
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) =>
+      `[${web.name} settings - project_settings.features.views.short_title]switch ${web.issue_views_view}`,
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} - project_settings.features.views.short_title]switch ${web.issue_views_view}`,
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} - Automations]auto-archive`,
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx
+    shows: (web) => `[${web.name} - project_settings.automations.label]auto-archive`,
+````
+
+`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`（修改，5 处）：
+
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+    expect(text).toBe(`[${name} - States]Backlog, In Progress and their controls`);
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+    expect(text).toBe(`[${name} - common.states]Backlog, In Progress and their controls`);
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+    expect(text).toBe(`[${name} - States]Backlog, In Progress`);
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+    expect(text).toBe(`[${name} - common.states]Backlog, In Progress`);
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+      expect(text).toBe(`[${name} - Labels][common.add_label]Bug and its controls`);
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+      expect(text).toBe(`[${name} - common.labels][common.add_label]Bug and its controls`);
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+    expect(text).toBe(`[${name} - Labels]Bug`);
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+    expect(text).toBe(`[${name} - common.labels]Bug`);
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+      `[${admin.name} - Labels][common.add_label][settings_empty_state.labels.cta_primary]`,
+      `[${member.name} - Labels]`,
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx
+      `[${admin.name} - common.labels][common.add_label][settings_empty_state.labels.cta_primary]`,
+      `[${member.name} - common.labels]`,
+````
+
+`web/apps/web/core/components/automation/select-month-modal.test.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/automation/select-month-modal.test.tsx
+vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
+````
+````new web/apps/web/core/components/automation/select-month-modal.test.tsx
+vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+````
+
+`web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
+  it("is what each switch of the features list flips, its own feature", () => {
+    renderToStaticMarkup(<ProjectFeaturesList workspaceSlug="acme" projectId={web.id} />);
+````
+````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
+  it("is what each switch of the features list flips, its own feature, which names it", () => {
+    renderToStaticMarkup(<ProjectFeaturesList workspaceSlug="acme" projectId={web.id} />);
+    expect(shown.switches.map((toggle) => toggle["aria-label"])).toEqual(["cycles", "modules", "views", "intake"]);
+````
+````old web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
+  it("is what the switch of a feature's own page flips", () => {
+````
+````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
+  it("is what the switch of a feature's own page flips, the feature's name its name", () => {
+````
+````old web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
+    );
+````
+````new web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx
+    );
+    expect(shown.switches.map((toggle) => toggle["aria-label"])).toEqual(["Intake"]);
+````
+
+`web/apps/web/core/lib/fake-controls.ts`（修改，1 处）：
+
+````old web/apps/web/core/lib/fake-controls.ts
+/** A switch: what a flip does, and whether it can be flipped. */
+type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean };
+````
+````new web/apps/web/core/lib/fake-controls.ts
+/** A switch: what a flip does, whether it can be flipped, and its name. */
+type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean; "aria-label"?: string };
+````
+
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 295 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -11994,7 +12348,7 @@ Run: `make test`
 Expected: 通过；42 个包 `ok`，没有 `FAIL`。
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 295 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -12051,7 +12405,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**（spec 2.1、2.14、第 4 节）
 - M3 收到的 6 份交接各加"处理结果（M3/收尾）"，`status: closed`。
-- M4–M8 各一份 `handoffs/M3-closeout.md`（新文件）。M4–M8 的 `M1-closeout.md`：`always-return` 已清零；M4、M6、M7 的 `M2-closeout.md`：复制经 hook。M3 设计 13.2：接收者链接到交接，表前一句。
+- M4–M8 各一份 `handoffs/M3-closeout.md`（新文件）：收到 `copy-hook` 例外的 M4、M6、M7、M8 写明收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M<n>/closeout`、每个 Phase 开始时改为 `M<n>/P<k>`；收尾改到、仍有 oxlint 警告的 5 个文件各归它的 M（控制者的裁定：M4 两个、M6 一个、M7 一个、M8 页头的搜索）；层叠的规则（M4 第 7 节的元素、M8 的发布核对）；命令面板自己的文字（M8 第 3 节）。M4–M8 的 `M1-closeout.md`：`always-return` 已清零；M4、M6、M7 的 `M2-closeout.md`：复制经 hook。M3 设计 13.2：接收者链接到交接，表前一句。M1 收尾交接的处理结果写新的上限（web 303 → 295、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10）。
 
 **Tests:** 只改文档。`doclinks.py`（plan 的"一次性的脚本"）：本 Task 改的文档中每个相对链接都指向存在的文件。
 
@@ -12215,7 +12569,7 @@ status: closed
 两节的结论：
 
 1. **死成员和死 prop**：M3/P11 删掉了改到的文件中真正没有读者的行，`--rows M3` 中产品代码的行 80 → 54；剩下的每一行写进 [M3/P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 附录 A.9（文件、名字、谁在读或传它）。收尾在它的最后一个代码 Task 之后重跑（`deadsym.mjs`、`domains.mjs --rows M3`）：218 → 225 行，产品代码的 54 行和按路径误归的 41 行不变，多出的 7 行是收尾新的测试中 `it.each` 的列和替身的 prop（收尾 spec 附录 A.5）。误归的 41 行写进各自的交接：M4 16 行（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节），M6 8 行（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 2 节），M7 17 行（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 2 节）。
-2. **oxlint**：M3 改到的文件在各 Phase 结束时没有警告，`promise(always-return)` 由 M3/P11 全仓清零，各包的上限照新的条数（M3/P11：web 348 → 303、editor 65 → 64）。收尾再调低上限：web 303 → 298、`@nerve/ui` 15 → 12；收尾改到的文件中仍有警告的 8 个（手改的 4 个，只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个）逐个写在收尾 spec 第 3 节和附录 A.5，由控制者裁定。M4–M8 的五份 M1 收尾交接写明 `always-return` 已清零。
+2. **oxlint**：M3 改到的文件在各 Phase 结束时没有警告，`promise(always-return)` 由 M3/P11 全仓清零，各包的上限照新的条数（M3/P11：web 348 → 303、editor 65 → 64）。收尾再调低上限：web 303 → 295、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10。收尾改到的文件中仍有警告的 5 个照控制者的裁定写进交接：只为 `IconButton` 的名字或 `showTooltip` 改到的 `core/description-versions/modal.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节）、`modules/module-card-item.tsx`（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 4 节）、通知的筛选菜单（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 4 节），和只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx`（[M8 的交接](../../M8-open-release/handoffs/M3-closeout.md)第 4 节）；收尾 spec 第 3 节第 2 条和附录 A.5 逐个写明。M4–M8 的五份 M1 收尾交接写明 `always-return` 已清零。
 
 状态改为 `closed`。
 
@@ -12283,7 +12637,7 @@ status: closed
 - **关闭条件**：6 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，89 行）：
+`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，91 行）：
 
 ````file docs/v0/M4-issue-core/handoffs/M3-closeout.md
 ---
@@ -12354,16 +12708,18 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - **嵌套的按钮**：`dropdowns/` 的 `DropdownButton` 放在 Headless UI 的按钮里（M3/P10 的裁定 R3），面包屑的下拉框之前一节的标题按钮也在选择的按钮里，M4 随工作项的属性下拉框和页头一起改。菜单自己的按钮里又放了 `IconButton` 的三处（M3 收尾找到，`customButton` 或 `PopoverMenu` 的 `button` 中的 `IconButton`，两个 Tab 停留点、按钮里有按钮）：`comments/quick-actions.tsx`、`issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（外面的按钮 `outline-none`，焦点看不到）；改法照 M3 收尾的项目一行和成员筛选（`CustomMenu` 的 `customButtonClassName` 加上按钮的样式，内容是图标，不再嵌一个按钮）。
 - **下拉框**：成员下拉框以 `CustomSearchSelect` 为底之后 M4 的调用方看得到的不同（按键由 Headless UI 处理，`WhileOpen` 记下打开时的回调，Escape 之后焦点在选择自己的按钮上，列表的新样子），在 M4 的页面上核对，C7 没有核对 M4 页面上的调用方（成员下拉框的 8 个文件、4 个筛选）。`issues/select/base.tsx` 的根与 M3 收尾改过的项目下拉框是同一种写法：调用方给根 `tabIndex`，根是一个没有名字的停留点；照收尾把 `tabIndex` 给里面的按钮。筛选的共用件（`issues/issue-layouts/filters/` 的 `FilterHeader`、`FilterOption`，M3 的项目筛选也用）：标题的展开按钮没有名字，选项不说出选中与否（M3 收尾找到）。`getButtonStyling` 的两处（`rich-filters/add-filters/button.tsx`、`dropdowns/layout.tsx`）用键盘核对轮廓。
 - **右键菜单**：工作项和草稿的列表的右键菜单关着时 `inert`（M3/P10 的裁定 F-14），在 M4 的页面上核对右键打开它、点它的项。
+- **层叠顺序**：页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下，`z-30` 及以上留给弹窗和从弹窗打开、经 portal 渲染到 `body` 的东西（下拉框、提示、表情）；M3 收尾因此把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。工作项页面上画在任何弹窗之上的元素（行号是 M3 收尾时的）：`issues/issue-layouts/roots/project-layout-root.tsx:80`（`fixed … z-50`）；日历的两个 `Popover.Panel`（`issues/issue-layouts/calendar/dropdowns/options-dropdown.tsx:128`、`months-dropdown.tsx:102`，`fixed z-50`，不经 portal）；`issues/issue-layouts/quick-add/form/calendar.tsx:22`（`z-50`）；更新中的遮罩 `issues/issue-layouts/calendar/issue-block.tsx:110`、`issues/issue-layouts/list/block.tsx:217`（`z-[99999]`）；拖动中的 `issues/issue-layouts/kanban/block.tsx:261`（`z-[100]`）。与弹窗同层或之上的还有 `issues/attachment/attachment-item-list.tsx:123`（`z-30`）和拖动中的 `issues/issue-layouts/kanban/kanban-delete-drop-zone.tsx:52`（`z-40`）。M4 改这些页面时把它们降到 `z-30` 之下，或开着一个弹窗核对它们不画在弹窗上。
 - 共用组件的焦点轮廓（`Button`、`IconButton`、`getButtonStyling`、`CustomMenu`）是否被 `overflow-hidden` 裁掉，在 M4 的页面上用键盘核对（M3/P11 评审第 6 节）。`IconButton` 的 `aria-label` 自 M3 收尾必传，新加的每一个都有名字。
-- **关闭条件**：M4 的评审写明上面每一项的浏览器核对；`getTabIndex` 在最后一个删去正的 `tabIndex` 的 M 删除。
+- **关闭条件**：M4 的评审写明上面每一项的浏览器核对；`getTabIndex` 在最后一个删去正的 `tabIndex` 的 M 删除；上面层叠的每个元素降到 `z-30` 之下，或有开着弹窗的核对。
 
 ## 8. 地址、复制、文案和留下的行
 
 - **地址只从路由参数**：工作项的页面从 router store 读地址的 22 个文件（M3/P10 spec 第 5 节 M4 一行列出：6 个，和裁定 F-12 补上的 16 个），M4 改成读路由参数，并把它们加进关键词规则 `project-address-route` 的范围。只读工作区的 4 个（`app/(all)/[workspaceSlug]/(projects)/drafts/header.tsx`、`issues/workspace-draft/empty-state.tsx`、`issues/workspace-draft/root.tsx`、`power-k/config/creation/command.ts`）改用 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`）或路由的 slug，并加进关键词规则 `workspace-address-route`（M3 收尾，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.12）。
 - **复制只经 hook**：工作项页面的 10 个文件（`issues/` 下的 `create-issue-toast-action-items.tsx`、`issue-detail-widgets/relations/helper.tsx`、`issue-detail-widgets/sub-issues/helper.ts`、`issue-detail/identifier-text.tsx`、`issue-detail/issue-activity/helper.tsx`、`issue-detail/issue-detail-quick-actions.tsx`、`issue-detail/links/link-item.tsx`、`issue-layouts/quick-action-dropdowns/helper.tsx`、`peek-overview/header.tsx`，和 `power-k/ui/pages/context-based/work-item/commands.ts`）改经 `useCopyLink` 或 `useCopyText`（`core/hooks/use-copy-link.ts`），失败时经 `t()` 提示；关键词规则 `copy-hook` 中这 10 个例外（`until: "M4/closeout"`）随之删除。评论链接和工作项链接的复制今天没有处理拒绝（M3/P11 spec 附录 A.6）。
-- **oxlint**：`issues/issue-detail/issue-activity/helper.tsx` 的 2 条（`preserve-caught-error`、`exhaustive-deps`），M4 改它时清零。`power-k/ui/pages/context-based/work-item/commands.ts` 418 行，M4 改写时拆开。两个工作项的删除确认框的 `onSubmit` 必传，改写时保持。
+- **oxlint**：`issues/issue-detail/issue-activity/helper.tsx` 的 2 条（`preserve-caught-error`、`exhaustive-deps`），M4 改它时清零。收尾只为 `IconButton` 的名字改到、仍有警告的两个（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条）：`core/description-versions/modal.tsx` 1 条（`tabindex-no-positive`，第 7 节写死的 `tabIndex={1}`）、`issues/issue-detail/issue-activity/activity-filter.tsx` 2 条（`click-events-have-key-events`、`no-static-element-interactions`，第 7 节嵌套的按钮），M4 改它们时清零。`power-k/ui/pages/context-based/work-item/commands.ts` 418 行，M4 改写时拆开。两个工作项的删除确认框的 `onSubmit` 必传，改写时保持。
 - **死成员**：`@nerve/types` 的 `workspace-draft-issues/base.ts` 的 16 行（`domains.mjs` 按路径误归到 M3，M3/P11 spec 附录 A.9）。
 - **共用件**：`@nerve/ui` 下拉框的 `any`（`dropdowns/helper.tsx` 7 处、`dropdowns/custom-search-select.tsx` 2 处），改成泛型要改 13 个调用方，多数在 M4–M7 的页面上（M3/P10 spec 第 5 节）：M4 改它们时一起改。成员 store 的 `projectMemberIds` getter 在 M4 的读者是 `issues/issue-layouts/utils.tsx` 的两处，M7 的是视图、收集箱的筛选；M4、M7 中最后改完读者的那一个删除它（M3/P10 spec 第 3 节，裁定 F-2）。
+- **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M4/closeout`，`copy-hook` 的 10 个例外（`until: "M4/closeout"`）那时到期，守卫要求它们已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M4/P<k>`。第 5 节 `/user-properties/` 的例外写的是 `until: "M4"`，`phase` 改为 `M4/P1` 时就到期：M4 的第一个 Phase 改筛选，或由 M4 的设计把它的 `until` 定到改筛选的那个 Phase。
 - **关闭条件**：`project-address-route`、`workspace-address-route` 的范围含上面的文件，`copy-hook` 没有 `M4/closeout` 的例外，`--rows M3` 中 `workspace-draft-issues/base.ts` 的行在 M4 的评审中有结论。
 
 ## 9. 页大小的规则移到 `shared`（M2 收尾交接第 12 节，原样）
@@ -12439,7 +12795,7 @@ M3（工作区与项目）把工作区图标、项目封面和成员头像留成
 - **关闭条件**：3 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`（新文件，43 行）：
+`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`（新文件，44 行）：
 
 ````file docs/v0/M6-cycles-modules/handoffs/M3-closeout.md
 ---
@@ -12482,6 +12838,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **地址只从路由参数**：迭代、模块、视图的页面从 router store 读地址的 22 个文件（M3/P10 spec 第 5 节 M6 一行列出：11 个，和裁定 F-12 补上的 11 个），改成读路由参数，并加进关键词规则 `project-address-route` 的范围。
 - **复制只经 hook**：`cycles/quick-actions.tsx`、`modules/links/list-item.tsx`、`modules/quick-actions.tsx`、`power-k/ui/pages/context-based/cycle/commands.ts`、`power-k/ui/pages/context-based/module/commands.tsx` 改经 `useCopyLink`（`core/hooks/use-copy-link.ts`），失败时经 `t()` 提示；关键词规则 `copy-hook` 中这 5 个例外（`until: "M6/closeout"`）随之删除。两个 quick-actions 今天把复制交给菜单的 `action`（`() => void`），丢下 promise，拒绝没有处理（M3/P11 spec 附录 A.6）。
 - **oxlint**：`cycles/modal.tsx` 1 条（`no-shadow`）、`modules/module-card-item.tsx` 5 条（M3/P11 spec 第 5 节），M6 改它们时清零。
+- **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M6/closeout`，`copy-hook` 的 5 个例外（`until: "M6/closeout"`）那时到期，守卫要求它们已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M6/P<k>`。`analytics` 规则对 `core/services/cycle.service.ts` 的例外写的是 `until: "M6"`，`phase` 改为 `M6/P1` 时就到期（M1 设计 3.4）。
 - **关闭条件**：`project-address-route` 的范围含这些文件，`copy-hook` 没有 `M6/closeout` 的例外。
 
 来源：[M3 设计](../../M3-workspace-project/M3-design.md) 13.2 的 M6 一行；M3/P8a、P8b、P9、P10、P11 的 spec 第 5 节和评审第 6 节中交给 M6 的各条；[M3 收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2 节。
@@ -12505,7 +12862,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **关闭条件**：4 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M7-collaboration/handoffs/M3-closeout.md`（新文件，46 行）：
+`docs/v0/M7-collaboration/handoffs/M3-closeout.md`（新文件，47 行）：
 
 ````file docs/v0/M7-collaboration/handoffs/M3-closeout.md
 ---
@@ -12549,8 +12906,9 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **地址只从路由参数**：收集箱的页面从 router store 读地址的 4 个文件（`app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/intake/page.tsx`、`inbox/content/issue-properties.tsx`、`inbox/sidebar/root.tsx`、`projects/settings/intake/header.tsx`）改成读路由参数，加进关键词规则 `project-address-route` 的范围（M3/P10 spec 第 5 节）。只读工作区的 8 个（`app/(all)/[workspaceSlug]/(projects)/notifications/page.tsx`、`workspace-views/[globalViewId]/page.tsx`、`workspace-views/page.tsx`，`issues/issue-layouts/empty-states/global-view.tsx`、`workspace-notifications/root.tsx`、`workspace/views/quick-action.tsx`，`web/apps/web/core/store/favorite.store.ts`、`global-view.store.ts`）改用 `useRouteWorkspace()` 或路由的 slug（store 的由调用者传入），加进关键词规则 `workspace-address-route`（M3 收尾，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.12）。
 - **复制只经 hook**：`inbox/content/inbox-issue-header.tsx`、`views/quick-actions.tsx`、`workspace/views/default-view-quick-action.tsx`、`workspace/views/quick-action.tsx` 改经 `useCopyLink`，失败时经 `t()` 提示；关键词规则 `copy-hook` 中这 4 个例外（`until: "M7/closeout"`）随之删除。默认视图的复制今天没有处理拒绝（M3/P11 spec 附录 A.6）。
 - **文案**：收集箱的页头（面包屑的"Intake"）、收藏、视图的页面仍有写死的英文（M3 收尾的扫描），对接时经 `t()`。
-- **oxlint**：通知打盹的弹窗（第 3 节）5 条，M7 改它时清零。
+- **oxlint**：通知打盹的弹窗（第 3 节）5 条，M7 改它时清零。通知的筛选菜单（`workspace-notifications/sidebar/filters/menu/root.tsx`）1 条（`no-map-spread`）：收尾只为 `IconButton` 的名字改到它（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条），M7 改它时清零。
 - **共用的 getter**：成员 store 的 `projectMemberIds` 在 M7 的读者是视图的两处和收集箱的筛选，M4 的是 `issues/issue-layouts/utils.tsx` 的两处；M4、M7 中最后改完读者的那一个删除它（M3/P10 spec 第 3 节，裁定 F-2）。
+- **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M7/closeout`，`copy-hook` 的 4 个例外（`until: "M7/closeout"`）那时到期，守卫要求它们已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M7/P<k>`。
 - **关闭条件**：两条地址规则的范围含这些文件，`copy-hook` 没有 `M7/closeout` 的例外。
 
 来源：[M3 设计](../../M3-workspace-project/M3-design.md) 13.2 的 M7 一行；M3/P7a、P7b、P8a、P8b、P9、P10、P11 的 spec 第 5 节和评审第 6 节中交给 M7 的各条；[M3 收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2 节。
@@ -12565,7 +12923,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **按规则清一类**：另外按规则集中清掉至少一类，优先能机械修复的（`eslint(no-shadow)`；`eslint(no-unneeded-ternary)` 已由 M2/P5 全仓清零，见 [M2/P5 评审](../../M2-auth/reviews/P5-web-account-review.md)第 2 节；`eslint-plugin-promise(always-return)` 已由 M3/P11 全仓清零，见 [M3/P11 spec](../../M3-workspace-project/specs/P11-web-states-labels-and-cleanup.md) 2.9）；
 ````
 
-`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，47 行）：
+`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，51 行）：
 
 ````file docs/v0/M8-open-release/handoffs/M3-closeout.md
 ---
@@ -12583,12 +12941,14 @@ M3（工作区与项目）没有领域事件，Webhook 的页面在 M3 里走不
 
 - **事件**：工作区、项目、成员的 Webhook 事件加在 M4 引入的事件机制上（M3 没有事件，M3 设计 3.3）。
 - **页面**：webhooks 读 `error?.error` 的三处（`web-hooks/create-webhook-modal.tsx`、`web-hooks/form/secret-key.tsx`、`app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/[webhookId]/page.tsx`）改经文案表（`errorMessageKey`，M3/P9 spec 第 5 节）；密钥的复制（`web-hooks/form/secret-key.tsx`）改经 `useCopyText`（`core/hooks/use-copy-link.ts`），关键词规则 `copy-hook` 的这个例外（`until: "M8/closeout"`）随之删除；只读工作区的 3 个文件（webhooks 的两个页面和 `secret-key.tsx`）改用 `useRouteWorkspace()` 或路由的 slug，加进关键词规则 `workspace-address-route`（M3 收尾，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.12）；页面上写死的英文经 `t()`；`web/apps/web/core/store/workspace/webhook.store.ts` 的 1 条警告（`no-accumulating-spread`）清零。
+- **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M8/closeout`，`copy-hook` 的这个例外（`until: "M8/closeout"`）那时到期，守卫要求它已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M8/P<k>`。
 - **关闭条件**：Webhook 的事件有接口版本的故事；`copy-hook` 没有例外，`workspace-address-route` 的范围含这 3 个文件。
 
 ## 2. 发布之前的核对
 
 - 表情选择器的数据从本站提供（M3/P10 已完成，M3 设计 7.7）：发布之前只剩核对（M8 的 [M1 收尾交接](M1-closeout.md)中同一项）。
 - README 中邀请链接与签名密钥的说明（M3 设计 8.7）、数据库用 UTF-8 的 `LC_CTYPE` 初始化（标签名不分大小写按数据库的 locale 折叠，M3/P7b spec 第 7 节；M3 收尾已写进 README 的"部署"一节）随发布的部署文件核对。
+- **层叠顺序**：全应用核对一遍页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下：每类页面开着一个弹窗（命令面板就行），手机和桌面的宽度下都没有页面元素画在它上面。M3 收尾把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6），M4 的交接第 7 节列出工作项页面上 `z-30` 及以上的元素；从弹窗打开、经 portal 渲染到 `body` 的下拉框、提示、表情在弹窗之上，靠的是 DOM 的先后，一并核对。
 - **性能**：大工作区的成员列表、项目列表（不分页的集合，M3 设计 11.3）的回答大小和页面的加载时间，按测到的数字决定要不要给其中一个分页。
 - **关闭条件**：M8 的发布核对清单含这几项和它们的结果。
 
@@ -12598,6 +12958,7 @@ M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是�
 
 - **日期**：首页的日期（"Friday, Oct 9"）、日期筛选的弹窗（`core/filters/date-filter-modal.tsx` 的"After:""Before:"）、项目筛选中自定义日期的标签，都按英文格式化；日期的本地化是一个全应用的决定（M3/P9 评审的浏览器核对，M3 收尾）。
 - `app/not-found.tsx` 的英文；`@nerve/propel` 的英文默认值（`toast/toast.tsx` 的"Loading..."）。
+- 命令面板自己的文字：`power-k/menus/empty-state.tsx` 的默认值"No results found"，快捷键的标记里键与键之间的"then"（`power-k/ui/modal/command-item-shortcut-badge.tsx`）。M3 收尾只改了它整个重写的两个弹窗：快捷键列表的标题和搜索框经 `t()`，切换账户的那句话是一个带 `{email}` 的键（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。
 - `@nerve/ui` 的 `AlertModalCore`（`modals/alert-modal.tsx`）的按钮默认值是英文，`@nerve/ui` 不依赖 i18n：M3 的两个删除确认框和 M2 的令牌确认框传入经 `t()` 的文字，M4–M7 的调用方由各 M 照做（各自的交接）；最后一个调用方改完之后，把这几个 prop 改为必传、删去默认值（M3 收尾的建议，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节）。
 - **关闭条件**：日期的决定写进 M8 的设计并实现；`web/` 的页面上没有写死的英文（M8 的扫描）。
 
@@ -12605,6 +12966,7 @@ M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是�
 
 - Base UI 的 `Toast.Close`（`@nerve/propel` 的 `toast/toast.tsx`）渲染成 `aria-hidden="true"` 而 `tabindex="0"`：Tab 能到、读屏读不到（M3 收尾找到）。
 - 页头（`navigation/top-navigation-root.tsx`，每个工作区页面都有）：帮助菜单（`workspace/sidebar/help-section/root.tsx`）和账户菜单（`workspace/sidebar/user-menu-root.tsx`）的按钮里又是按钮，帮助菜单的没有名字；改法照 M3 收尾的成员筛选（`CustomMenu` 的 `customButtonClassName`，内容不再是按钮）。页头的通知链接在 M7 的交接。
+- 页头的搜索（`navigation/top-nav-power-k.tsx`）的 4 条 oxlint 警告：`exhaustive-deps` 2 条，`click-events-have-key-events`、`prefer-tag-over-role` 各 1 条。M3 收尾只把它的占位文字改经 `t()`（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条）；后两条是它的点击区不是按钮，与上面帮助、账户菜单的按钮是同一类改法、同在页头，一起改，改时清零。
 - 焦点和输入法只在 Chromium 中逐个核对过：发布之前在 Firefox、Safari 中看一遍焦点的轮廓、弹窗的 Tab 循环和输入法组字时的 Escape、Enter（M3/P11 评审第 6 节、M3/P10 spec 第 5 节；M3 收尾的 C11 看过的部分写在它的评审里）。
 - 命令面板打开之后约 200 毫秒之内输入的字会被清空（`power-k/ui/modal/wrapper.tsx` 打开时的重置，Plane 原有；之后的输入留着，M3 收尾的探查）。
 - **关闭条件**：M8 的评审写明每一项的修法或结论。
@@ -12710,10 +13072,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new docs/v0/frontend-changes.md
 | 共用组件的键盘焦点 | propel 的 `Button` 在键盘取得焦点时显示浏览器的焦点轮廓，离按钮 2 像素（`focus-visible:outline-offset-2`；原来是 `focus-visible:outline-none`，Tab 到达时看不出焦点），应用中的每个 `Button` 都是这样。propel 的 `IconButton` 同样：应用中 32 个文件的 37 处（M3 的收尾删去侧边栏项目一行的那一处之后是 36 处；个人设置（M2）1 处；M3 的 10 个文件 12 处，侧边栏的收藏在内；工作项（M4）8 个文件 8 处；迭代、模块（M6）6 个文件 6 处；收集箱、通知和视图（M7）7 个文件 10 处），另有收集箱的两个菜单按钮（`getIconButtonStyling`）和 propel 的表情回应的添加按钮（3 个调用方）；其中五处的轮廓照旧看不到：侧边栏收藏的新建文件夹、侧边栏项目一行的菜单（外层 `opacity-0`）、工作项动态的筛选（外面的按钮 `outline-none`），侧边栏项目列表的两处在指针经过之前不显示、Tab 到不了（M3 的收尾改好了侧边栏项目的三处，工作项动态的筛选交给 M4、收藏的新建文件夹交给 M7："名字和键盘"一行）。`@nerve/ui` 的 `CustomMenu` 的省略号按钮去掉 `outline-none`，Tab 到达时显示焦点的轮廓：17 个文件的 17 处（工作项一侧的 11 个文件（M4、M5），成员页的 `member-columns.tsx`，邀请行的 `invitations-list-item.tsx`，工作区视图的 3 个文件，标签的一行）；`member-columns.tsx` 给这个按钮自己的 `opacity-0 group-hover:opacity-100`，所以它的轮廓在键盘取得焦点时仍看不见（M3/P10 的成员页原有的；M3 的收尾给它 `focus-visible:opacity-100`）。`getButtonStyling` 的类名同样不再有 `focus-visible:outline-none`：应用中 9 个文件的 12 处，其中 4 个文件的 6 处在能取得焦点的元素上：M3 的两个文件的 4 个链接（创建项目之后功能一步的"Open project"，`project-feature-update.tsx`；"找不到工作区"页的三个链接，`workspace-wrapper.tsx`）在键盘取得焦点时显示离它 2 像素的轮廓（原来没有）；M4 的两处照旧，由它们自己的样式决定：工作项筛选的"添加筛选"按钮（`rich-filters/add-filters/button.tsx`）的轮廓是 `CustomSearchSelect` 在 Headless UI 的 `data-focus` 上画的那一条（`data-*` 的类排在 `focus-visible` 的之后），布局的下拉框（`dropdowns/layout.tsx`）的按钮自带 `outline-none`，轮廓照旧看不到；其余 6 处给菜单按钮里面的 `div`、`span`（项目、模块、视图的排序，收集箱的筛选），它们自己不取得焦点。用指针点的人看不到不同：`:focus-visible` 在点击时不生效 | Tab 到达的控件看得出焦点（M3/P11 的状态、标签的设置页用到它们；改在共用组件里） | 已完成 | M3/P11 |
-| 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字；切换账户的弹窗在退出的请求在路上时关不掉 | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
+| 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
-| M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、首页的问候（中文原来是"早上 晚上"）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
-| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
+| M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
+| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |
