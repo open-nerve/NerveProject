@@ -7,9 +7,7 @@
     "app_sidebar": {
       "toggle": "切换侧边栏",
       "close_workspace_menu": "收起工作区菜单",
-      "open_workspace_menu": "展开工作区菜单",
-      "close_extended_sidebar": "关闭扩展侧边栏",
-      "open_extended_sidebar": "打开扩展侧边栏"
+      "open_workspace_menu": "展开工作区菜单"
     },
     "project_icon": "项目图标",
     "view_icon": "视图图标",

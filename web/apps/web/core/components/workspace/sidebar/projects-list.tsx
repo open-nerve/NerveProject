@@ -215,11 +215,6 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                           onClick={() => toggleExtendedProjectSidebar()}
                           className="flex flex-grow items-center gap-1.5 text-13 font-medium text-tertiary"
                           id="extended-project-sidebar-toggle"
-                          aria-label={t(
-                            isExtendedProjectSidebarOpened
-                              ? "aria_labels.app_sidebar.close_extended_sidebar"
-                              : "aria_labels.app_sidebar.open_extended_sidebar"
-                          )}
                         >
                           <MoreHorizontalOutline className="size-4 flex-shrink-0" />
                           <span>

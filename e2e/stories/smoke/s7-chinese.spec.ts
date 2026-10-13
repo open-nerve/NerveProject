@@ -134,21 +134,29 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
     identifier: "OPS",
     logo_props: { in_use: "emoji", emoji: { value: "128640" } },
   });
+  await createProject(api, admin.access_token, slug, {
+    name: "Lab",
+    identifier: "LAB",
+    logo_props: { in_use: "icon", icon: { name: "rocket" } },
+  });
   await changeWorkspacePreferences(api, admin.access_token, slug, {
     navigation_control_preference: "TABBED",
-    navigation_project_limit: 1,
+    navigation_project_limit: 2,
   });
   const bug = await createLabel(api, admin.access_token, web.id, { name: "Bug" });
   await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
 
-  // The projects page: the sidebar shows one project, as its limit says, Ops, made last, which it puts first, and
-  // offers the rest; its link to Ops, its tabs beside it, is named by Ops's name alone, its logo no part of it.
+  // The projects page: the sidebar shows two projects, as its limit says, Lab and Ops, made last, which it puts first,
+  // and offers the rest by a button its words name. Each link, its tabs beside it, is named by its project's name
+  // alone, its logo no part of it: Ops's emoji, and Lab's icon, a word the icon font draws once it is in.
   await page.goto(`/${slug}/projects`);
   const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
   await expect(sidebar.getByRole("link", { name: "Ops", exact: true })).toBeVisible();
-  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
+  const lab = sidebar.getByRole("link").filter({ has: page.locator(".material-symbols-rounded") });
+  await expect(lab).toHaveAccessibleName("Lab");
+  await expect(sidebar.getByRole("button", { name: "更多", exact: true })).toHaveText("更多");
 
   // The general page: the settings' sidebar, the deletion's description, the archive's and the deletion's dialogs,
   // the project's name in them.

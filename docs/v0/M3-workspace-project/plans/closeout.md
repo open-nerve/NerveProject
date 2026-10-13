@@ -6087,9 +6087,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `@nerve/propel` 的 `IconButtonProps`：`"aria-label": string` 必传（从按钮的属性中 `Omit`）。应用中的 28 处都传经 `t()` 的名字（M2 1、M3 6、M4 8、M6 6、M7 6；表情回应的按钮在内）。
 - `EmojiReactionButton` 收 `aria-label`（提示显示它），`EmojiReactionGroup` 收 `addReactionLabel`，回应按表情作 `key`（原来按位置，`no-array-index-key`；`@nerve/propel` 的上限 11 → 10）；`Logo` 的图标连字和表情 `aria-hidden`。
 - `@nerve/propel` 的 `EmojiPicker`（`TCustomEmojiPicker`）：`ariaLabel: string` 必传。`Logo` 隐去图标之后，选图标的按钮里没有能作名字的文字，`tsc` 让每个调用方给名字：M3 的两处照旧（`aria_labels.project_icon`），视图的表单经 `t("aria_labels.view_icon")`（M7），编辑器的标注块是英文的字面量 "Callout icon"（M4；`@nerve/editor` 不依赖 i18n，它的名字都是英文，交给 M8 的交接第 3 节）。
-- 文案：`aria_labels.app_sidebar.*`（展开、收起和工作区菜单的按钮，原来没有定义）、`aria_labels.{settings_menu, toggle_sort_order, toggle_details, add_reaction, view_icon}`、`sidebar.{more_projects, fewer_projects}`。
+- 文案：`aria_labels.app_sidebar.{toggle, close_workspace_menu, open_workspace_menu}`（侧边栏的展开按钮和工作区菜单的按钮，原来没有定义）、`aria_labels.{settings_menu, toggle_sort_order, toggle_details, add_reaction, view_icon}`、`sidebar.{more_projects, fewer_projects}`。侧边栏的"更多"按钮原来以没有定义的 `aria_labels.app_sidebar.{close,open}_extended_sidebar` 为名（"打开扩展侧边栏"与看得见的"更多"不同，WCAG 2.5.3）：删去它的 `aria-label`，名字是它看得见的文字（"更多"/"收起"），那两个键不加。
 
-**Tests:** `tsc` 看住名字必传（`IconButton` 的 `aria-label`、`EmojiPicker` 的 `ariaLabel`；编辑器的标注块由 `@nerve/editor` 的 `check:types`）。S7：第一个加侧边栏的展开按钮、工作区菜单的名字、项目页的搜索、设置的返回；第二个加表情图标的项目的链接名和"打开扩展侧边栏"的"更多"。
+**Tests:** `tsc` 看住名字必传（`IconButton` 的 `aria-label`、`EmojiPicker` 的 `ariaLabel`；编辑器的标注块由 `@nerve/editor` 的 `check:types`）。S7：第一个加侧边栏的展开按钮、工作区菜单的名字、项目页的搜索、设置的返回；第二个加表情图标、Material 图标（字体加载之后）的项目的链接名，和以看得见的"更多"为名的按钮。
 
 - [ ] **Step 1: 名字**
 
@@ -6608,8 +6608,19 @@ export const ViewListHeader = observer(function ViewListHeader() {
                       aria-label={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
 ````
 
-`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`（修改，1 处）：
+`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`（修改，2 处）：
 
+````old web/apps/web/core/components/workspace/sidebar/projects-list.tsx
+                          id="extended-project-sidebar-toggle"
+                          aria-label={t(
+                            isExtendedProjectSidebarOpened
+                              ? "aria_labels.app_sidebar.close_extended_sidebar"
+                              : "aria_labels.app_sidebar.open_extended_sidebar"
+                          )}
+````
+````new web/apps/web/core/components/workspace/sidebar/projects-list.tsx
+                          id="extended-project-sidebar-toggle"
+````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list.tsx
                           <span>{isExtendedProjectSidebarOpened ? "Hide" : "More"}</span>
 ````
@@ -6645,9 +6656,7 @@ export const ViewListHeader = observer(function ViewListHeader() {
     "app_sidebar": {
       "toggle": "Toggle sidebar",
       "close_workspace_menu": "Close workspace menu",
-      "open_workspace_menu": "Open workspace menu",
-      "close_extended_sidebar": "Close extended sidebar",
-      "open_extended_sidebar": "Open extended sidebar"
+      "open_workspace_menu": "Open workspace menu"
     },
 ````
 ````old web/packages/i18n/src/locales/en/accessibility.json
@@ -6683,9 +6692,7 @@ export const ViewListHeader = observer(function ViewListHeader() {
     "app_sidebar": {
       "toggle": "切换侧边栏",
       "close_workspace_menu": "收起工作区菜单",
-      "open_workspace_menu": "展开工作区菜单",
-      "close_extended_sidebar": "关闭扩展侧边栏",
-      "open_extended_sidebar": "打开扩展侧边栏"
+      "open_workspace_menu": "展开工作区菜单"
     },
 ````
 ````old web/packages/i18n/src/locales/zh-CN/accessibility.json
@@ -6889,9 +6896,14 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
     identifier: "OPS",
     logo_props: { in_use: "emoji", emoji: { value: "128640" } },
   });
+  await createProject(api, admin.access_token, slug, {
+    name: "Lab",
+    identifier: "LAB",
+    logo_props: { in_use: "icon", icon: { name: "rocket" } },
+  });
   await changeWorkspacePreferences(api, admin.access_token, slug, {
     navigation_control_preference: "TABBED",
-    navigation_project_limit: 1,
+    navigation_project_limit: 2,
   });
 ````
 ````old e2e/stories/smoke/s7-chinese.spec.ts
@@ -6905,12 +6917,15 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
 
-  // The projects page: the sidebar shows one project, as its limit says, Ops, made last, which it puts first, and
-  // offers the rest; its link to Ops, its tabs beside it, is named by Ops's name alone, its logo no part of it.
+  // The projects page: the sidebar shows two projects, as its limit says, Lab and Ops, made last, which it puts first,
+  // and offers the rest by a button its words name. Each link, its tabs beside it, is named by its project's name
+  // alone, its logo no part of it: Ops's emoji, and Lab's icon, a word the icon font draws once it is in.
   await page.goto(`/${slug}/projects`);
   const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
   await expect(sidebar.getByRole("link", { name: "Ops", exact: true })).toBeVisible();
-  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
+  const lab = sidebar.getByRole("link").filter({ has: page.locator(".material-symbols-rounded") });
+  await expect(lab).toHaveAccessibleName("Lab");
+  await expect(sidebar.getByRole("button", { name: "更多", exact: true })).toHaveText("更多");
 
 ````
 ````old e2e/stories/smoke/s7-chinese.spec.ts
@@ -6973,6 +6988,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T7.7` | 项目的表情图标并进链接的名字（K3g） | 故事 S7 | 端到端 |
 | `T7.8` | 表情回应又以下标为 key：oxlint 的 `no-array-index-key` 超出 propel 的上限 | `@nerve/propel` 的 oxlint（`check:lint`） | 静态 |
 | `T7.9` | 视图表单的选图标按钮没有名字（`EmojiPicker` 的 `ariaLabel` 必传：一个调用方不给名字就编译不过） | `tsc` | 静态 |
+| `T7.10` | 项目的 Material 图标的连字并进链接的名字（K3g，`Logo` 的图标一支） | 故事 S7 | 端到端 |
+| `T7.11` | "更多"按钮又以 `aria-label` 为名（"打开扩展侧边栏"，与看得见的文字不同，WCAG 2.5.3） | 故事 S7 | 端到端 |
 
 ---
 
@@ -10663,12 +10680,12 @@ export const PROJECT_DISPLAY_FILTER_OPTIONS: {
 `e2e/stories/smoke/s7-chinese.spec.ts`（修改，2 处）：
 
 ````old e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
+  await expect(sidebar.getByRole("button", { name: "更多", exact: true })).toHaveText("更多");
 ````
 ````new e2e/stories/smoke/s7-chinese.spec.ts
-  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
+  await expect(sidebar.getByRole("button", { name: "更多", exact: true })).toHaveText("更多");
   // the extended sidebar, which the button opens, by its heading
-  await sidebar.getByRole("button", { name: "打开扩展侧边栏" }).click();
+  await sidebar.getByRole("button", { name: "更多", exact: true }).click();
   await expect(page.locator("#extended-project-sidebar-toggle").getByText("项目", { exact: true })).toBeVisible();
 ````
 ````old e2e/stories/smoke/s7-chinese.spec.ts
@@ -13396,7 +13413,7 @@ status: closed
 - **关闭条件**：6 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，94 行）：
+`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，95 行）：
 
 ````file docs/v0/M4-issue-core/handoffs/M3-closeout.md
 ---
@@ -13472,6 +13489,7 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - **右键菜单**：工作项和草稿的列表的右键菜单关着时 `inert`（M3/P10 的裁定 F-14），在 M4 的页面上核对右键打开它、点它的项。
 - **层叠顺序**：页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下，`z-30` 及以上留给弹窗和从弹窗打开、经 portal 渲染到 `body` 的东西（下拉框、提示、表情）；M3 收尾因此把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。工作项页面上画在任何弹窗之上的元素（行号是 M3 收尾时的）：`issues/issue-layouts/roots/project-layout-root.tsx:80`（`fixed … z-50`）；日历的两个 `Popover.Panel`（`issues/issue-layouts/calendar/dropdowns/options-dropdown.tsx:128`、`months-dropdown.tsx:102`，`fixed z-50`，不经 portal）；`issues/issue-layouts/quick-add/form/calendar.tsx:22`（`z-50`）；更新中的遮罩 `issues/issue-layouts/calendar/issue-block.tsx:110`、`issues/issue-layouts/list/block.tsx:217`（`z-[99999]`）；拖动中的 `issues/issue-layouts/kanban/block.tsx:261`（`z-[100]`）。与弹窗同层或之上的还有 `issues/attachment/attachment-item-list.tsx:123`（`z-30`）和拖动中的 `issues/issue-layouts/kanban/kanban-delete-drop-zone.tsx:52`（`z-40`）。M4 改这些页面时把它们降到 `z-30` 之下，或开着一个弹窗核对它们不画在弹窗上。
 - 共用组件的焦点轮廓（`Button`、`IconButton`、`getButtonStyling`、`CustomMenu`）是否被 `overflow-hidden` 裁掉，在 M4 的页面上用键盘核对（M3/P11 评审第 6 节）。`IconButton` 的 `aria-label` 和 `EmojiPicker` 的 `ariaLabel` 自 M3 收尾必传，新加的每一个都有名字（编辑器标注块的选图标按钮是英文的"Callout icon"，编辑器的文字见 M8 的交接第 3 节）。
+- **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：评论的菜单按钮 `comments/quick-actions.tsx:72`（"Options"）和每条评论的"Add reaction"（`comments/card/display.tsx:138`、`comments/comment-reaction.tsx:87`）每条评论都一样。以评论的作者为名：`display.tsx` 中已有的 `displayName`，另两处的 `comment.actor_detail?.display_name`；各一个带 `{name}` 的键（如 "Options for {name}'s comment"、"Add a reaction to {name}'s comment"），en 与 zh-CN 同时加。
 - **关闭条件**：M4 的评审写明上面每一项的浏览器核对；`getTabIndex` 在最后一个删去正的 `tabIndex` 的 M 删除；上面层叠的每个元素降到 `z-30` 之下，或有开着弹窗的核对。
 
 ## 8. 地址、复制、文案和留下的行
@@ -13559,7 +13577,7 @@ M3（工作区与项目）把工作区图标、项目封面和成员头像留成
 - **关闭条件**：3 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`（新文件，47 行）：
+`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`（新文件，48 行）：
 
 ````file docs/v0/M6-cycles-modules/handoffs/M3-closeout.md
 ---
@@ -13598,6 +13616,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **嵌套的按钮**：菜单自己的按钮里又放了 `IconButton` 的两处（M3 收尾找到）：`cycles/quick-actions.tsx`、`modules/quick-actions.tsx`；改法照 M3 收尾的项目一行（`CustomMenu` 的 `customButtonClassName`，内容是图标，不再嵌一个按钮）。
 - **右键菜单**：迭代、模块、视图的列表的右键菜单关着时 `inert`（裁定 F-14），在 M6 的页面上核对右键打开它、点它的项。
 - **下拉框**：C7 没有核对 M6 页面上的 `CustomSearchSelect` 调用方（成员下拉框的 2 个文件，迭代、模块、视图的页头），对接时用键盘核对。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M6 的页面上核对。
+- **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：迭代一行的菜单按钮 `cycles/quick-actions.tsx:141` 和模块一行的 `modules/quick-actions.tsx:135`（都叫"Options"）以迭代、模块的名字为名：两处已有的 `cycleDetails?.name`、`moduleDetails?.name`；一个带 `{name}` 的键（如 "{name} options"），en 与 zh-CN 同时加。
 - **关闭条件**：M6 的评审写明上面每一项的浏览器核对。
 
 ## 4. 地址、复制和 oxlint
@@ -13629,7 +13648,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **关闭条件**：4 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M7-collaboration/handoffs/M3-closeout.md`（新文件，49 行）：
+`docs/v0/M7-collaboration/handoffs/M3-closeout.md`（新文件，51 行）：
 
 ````file docs/v0/M7-collaboration/handoffs/M3-closeout.md
 ---
@@ -13667,6 +13686,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **弹窗**：M3 收尾把 `ModalCore` 改成 Headless UI v2 的 `Dialog`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）：打开时后面的页面 `inert`、`aria-hidden`，请求在路上时关不掉。收集箱、视图、通知的弹窗（通知的打盹 `workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx` 在内）对接时逐个核对 Tab、Escape、点外面、关上之后的焦点和弹窗里经 portal 渲染的东西（收尾 spec 附录 A.3 只证明了 M3 页面上的几种）；`AlertModalCore` 的确认框照 A-M2，按钮的文字经 `t()` 传入。
 - **正的 `tabIndex`**：收集箱的创建表单（`INTAKE_ISSUE_FORM`）同 M4 的交接第 7 节，其中给父工作项的 `CustomMenu` 的一处（`inbox/modals/create-modal/issue-properties.tsx`）落在 Menu 的根上（M3/P10 的裁定 F-17）。M4、M6、M7 中最后删去正的 `tabIndex` 的那一个删除 `getTabIndex` 和两份 `tab-indices.ts`。
 - **嵌套的按钮和看不到的轮廓**（M3/P11 spec 第 5 节、M3 收尾找到）：菜单自己的按钮里又放了 `IconButton` 的三处（`views/quick-actions.tsx`、`workspace-notifications/sidebar/filters/menu/root.tsx`、`workspace-notifications/sidebar/header/options/menu-option/root.tsx`）；收藏的菜单 `workspace/sidebar/favorites/favorites-menu.tsx` 的 `IconButton` 外层 `opacity-0`、没有 `focus-within`，焦点看不到；收藏夹的外层手柄按钮（`workspace/sidebar/favorites/favorite-folder.tsx`）显示时是一个没有名字、按 Enter 什么都不做的停留点。改法照 M3 收尾的项目一行（`CustomMenu` 的 `customButtonClassName`；行的 `focus-within:opacity-100`；手柄不是停留点）。页头的通知链接（`navigation/top-navigation-root.tsx`）没有名字，提示是写死的"Inbox"：随未读数一起给它经 `t()` 的名字。
+- **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：视图一行的菜单按钮 `views/quick-actions.tsx:94`（"Options"）以视图的名字为名：已有的 `view.name`；一个带 `{name}` 的键（如 "{name} options"），en 与 zh-CN 同时加。
 - **下拉框**：收集箱的两个指派人的成员下拉框（`inbox/content/issue-properties.tsx`、`inbox/modals/create-modal/issue-properties.tsx`）以 `CustomSearchSelect` 为底之后看得到的不同同 M4 的交接第 7 节，在 M7 的页面上核对（C7 没有核对）。右键菜单关着时 `inert`，在 M7 的页面上核对右键打开。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M7 的页面上核对。
 - **关闭条件**：M7 的评审写明上面每一项的浏览器核对。
 
@@ -13675,6 +13695,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **地址只从路由参数**：收集箱的页面从 router store 读地址的 4 个文件（`app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/intake/page.tsx`、`inbox/content/issue-properties.tsx`、`inbox/sidebar/root.tsx`、`projects/settings/intake/header.tsx`）改成读路由参数，加进关键词规则 `project-address-route` 的范围（M3/P10 spec 第 5 节）。只读工作区的 8 个（`app/(all)/[workspaceSlug]/(projects)/notifications/page.tsx`、`workspace-views/[globalViewId]/page.tsx`、`workspace-views/page.tsx`，`issues/issue-layouts/empty-states/global-view.tsx`、`workspace-notifications/root.tsx`、`workspace/views/quick-action.tsx`，`web/apps/web/core/store/favorite.store.ts`、`global-view.store.ts`）改用 `useRouteWorkspace()` 或路由的 slug（store 的由调用者传入），加进关键词规则 `workspace-address-route`（M3 收尾，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.12）。
 - **复制只经 hook**：`inbox/content/inbox-issue-header.tsx`、`views/quick-actions.tsx`、`workspace/views/default-view-quick-action.tsx`、`workspace/views/quick-action.tsx` 改经 `useCopyLink`，失败时经 `t()` 提示；关键词规则 `copy-hook` 中这 4 个例外（`until: "M7/closeout"`）随之删除。默认视图的复制今天没有处理拒绝（M3/P11 spec 附录 A.6）。
 - **文案**：收集箱的页头（面包屑的"Intake"）、收藏、视图的页面仍有写死的英文（M3 收尾的扫描），对接时经 `t()`。
+- **收集箱的上一个、下一个工作项**：4 个 `IconButton` 的名字是写死的英文（`inbox/content/inbox-issue-header.tsx:315`、`:322`，`inbox/content/inbox-issue-mobile-header.tsx:123`、`:130`："Previous work item""Next work item"）。`IconButton` 的名字自 M3 收尾必传，它们有名字，只是不经 `t()`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9）：随收集箱的页面经 `t()`，en 与 zh-CN 同时加。
 - **oxlint**：通知打盹的弹窗（第 3 节）5 条，M7 改它时清零。通知的筛选菜单（`workspace-notifications/sidebar/filters/menu/root.tsx`）1 条（`no-map-spread`）：收尾只为 `IconButton` 的名字改到它（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条），M7 改它时清零。
 - **共用的 getter**：成员 store 的 `projectMemberIds` 在 M7 的读者是视图的两处和收集箱的筛选，M4 的是 `issues/issue-layouts/utils.tsx` 的两处；M4、M7 中最后改完读者的那一个删除它（M3/P10 spec 第 3 节，裁定 F-2）。
 - **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M7/closeout`，`copy-hook` 的 4 个例外（`until: "M7/closeout"`）那时到期，守卫要求它们已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M7/P<k>`。
@@ -13847,7 +13868,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框、命令面板和快捷键列表关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上，窄屏（768 px 以下）上开着的侧边栏收起。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
-| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
+| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10），32 处经 `t()`，收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，交给 M7）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开按钮和工作区菜单的按钮的名字有了文案（原来是没有定义的键），项目列表的"More"按钮以它看得见的文字为名（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |

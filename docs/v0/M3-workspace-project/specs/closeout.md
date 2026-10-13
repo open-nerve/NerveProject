@@ -213,7 +213,9 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 
 ### 2.9 名字和键盘（Task 7、8）
 
-**`IconButton` 的名字在根上必传**（K3b，P11 的教训"共用组件的毛病在根上改"）：propel 的 `IconButtonProps` 的 `"aria-label"` 是必传的 `string`，`tsc` 让每个调用方传它。应用中 36 处（Task 7 改 28 处：M2 1、M3 6、M4 8、M6 6、M7 6，另有表情回应的按钮；Task 8 的项目一行删去 1 处），都有经 `t()` 的名字。表情回应的按钮收 `aria-label`（提示显示它），`EmojiReactionGroup` 收 `addReactionLabel`；回应的列表以表情为 `key`（原来以下标：propel 的那条 `no-array-index-key` 没有了，`@nerve/propel` 的上限 11 → 10）。`EmojiPicker` 的 `ariaLabel` 同样必传（Task 7 的预审修复）：下面的 `Logo` 隐去图标之后，选图标的按钮只显示图标，不给名字的调用方的按钮就没有名字；M3 的两处照旧（`aria_labels.project_icon`），视图的表单经 `t("aria_labels.view_icon")`，编辑器的标注块传英文的字面量"Callout icon"（`@nerve/editor` 不依赖 i18n，M8 的交接第 3 节）。只为名字改到的 Plane 文件 27 个（M2、M4–M7 和应用侧边栏的展开按钮），其中 24 个变长（第 3 节第 1 条的裁定，附录 A.5）。
+**`IconButton` 的名字在根上必传**（K3b，P11 的教训"共用组件的毛病在根上改"）：propel 的 `IconButtonProps` 的 `"aria-label"` 是必传的 `string`，`tsc` 让每个调用方传它。应用中 36 处（Task 7 改 28 处：M2 1、M3 6、M4 8、M6 6、M7 6，另有表情回应的按钮；Task 8 的项目一行删去 1 处），都有名字：32 处经 `t()`；收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，`inbox/content/inbox-issue-header.tsx:315`、`:322`，`inbox/content/inbox-issue-mobile-header.tsx:123`、`:130`），那是 M7 的页面，它的英文已交给 M7（F13），这 4 处写进 M7 的交接第 4 节。表情回应的按钮收 `aria-label`（提示显示它），`EmojiReactionGroup` 收 `addReactionLabel`；回应的列表以表情为 `key`（原来以下标：propel 的那条 `no-array-index-key` 没有了，`@nerve/propel` 的上限 11 → 10）。`EmojiPicker` 的 `ariaLabel` 同样必传（Task 7 的预审修复）：下面的 `Logo` 隐去图标之后，选图标的按钮只显示图标，不给名字的调用方的按钮就没有名字；M3 的两处照旧（`aria_labels.project_icon`），视图的表单经 `t("aria_labels.view_icon")`，编辑器的标注块传英文的字面量"Callout icon"（`@nerve/editor` 不依赖 i18n，M8 的交接第 3 节）。只为名字改到的 Plane 文件 27 个（M2、M4–M7 和应用侧边栏的展开按钮），其中 24 个变长（第 3 节第 1 条的裁定，附录 A.5）。
+
+**一行重复的控件以它那一行为名**（F6，Task 5 卡片上的"{name} settings"，Task 12 已选筛选的"Remove X"）：一行一个、每行都一样的控件，名字说出它是哪一行的（项目、成员、标签……），不是每行都一样的"Options"。M3 自己的三处由 Task 8 改（它重写这几处）：侧边栏项目一行的菜单（`workspace/sidebar/projects-list-item.tsx`），项目成员页和标签页一行的"Options"（`project/settings/member-columns.tsx`、`labels/label-block/label-item-block.tsx`）。Task 7 只为必传的名字改到的别的 M 的几处照这条规则写进交接，每一处写明已有的名字和一个带 `{name}` 的键：M4 第 7 节，评论的菜单（`comments/quick-actions.tsx:72`）和每条评论的"Add reaction"（`comments/card/display.tsx:138`、`comments/comment-reaction.tsx:87`），以评论的作者为名；M6 第 3 节，迭代、模块一行的菜单（`cycles/quick-actions.tsx:141`、`modules/quick-actions.tsx:135`）；M7 第 3 节，视图一行的菜单（`views/quick-actions.tsx:94`）。
 
 **收尾的键盘清单**（P11 第 5 节，K3a–K3g，F4–F6）：
 
@@ -223,7 +225,7 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 - 侧边栏渲染的两份（F4）：收起的主侧边栏、没有浮出的副本都 `inert`；从不设置的 `isHoveringTrigger` 状态和它的副作用删除（这个文件的一条 `exhaustive-deps` 没有了，web 的上限 301 → 300）。
 - 项目成员页一行的菜单：省略号按钮名为"Options"（`common.options`），键盘取得焦点时显示（`focus-visible:opacity-100`），菜单项经 `t()`。
 - 项目下拉框：停留点是它的按钮（`tabIndex` 给 `DropdownButton`，根不再可以聚焦；Headless UI 的 `ComboboxButton` 把自己设为 `tabIndex=-1`，所以里面的按钮才是停留点，与成员下拉框相同；vitest `dropdowns/project/base.test.tsx`）。
-- 侧边栏的展开、收起和工作区菜单的按钮的名字原来是没有定义的键（K9）：两种语言加上；`Logo` 的图标连字和表情 `aria-hidden`（K3g），不并进链接的名字；选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（见上）。
+- 侧边栏的展开按钮和工作区菜单的按钮的名字原来是没有定义的键（K9）：两种语言加上。项目列表的"More"按钮也读没有定义的键（`aria_labels.app_sidebar.{close,open}_extended_sidebar`），加上之后名字"打开扩展侧边栏"与看得见的"更多"不同（WCAG 2.5.3）：删去它的 `aria-label`，名字是它看得见的文字（"更多"/"收起"），那两个键不加（S7 以"更多"找它，`T7.11`）。`Logo` 的图标连字和表情 `aria-hidden`（K3g），不并进链接的名字：S7 的一个项目是表情（`T7.7`），一个是 Material 图标，等字体加载、画出图标之后核对链接的名字（`T7.10`）；选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（见上）。
 
 新的故事 S8（`s8-sidebar.spec.ts`）：副本隐藏时里面没有控件可到，收起时侧边栏没有；"+"和项目一行的菜单在 Tab 到达时显示、有焦点的标记，菜单是一个停留点；项目的一行以项目为名（变异 `T8.13`）；手柄不是停留点。Playwright 的 `getByRole` 不排除 `inert` 的元素，S8 用 `closest("[inert]")` 核对。
 
@@ -652,6 +654,7 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 | 首页的问候由"Good"和"morning"等拼成，名字是名和姓 | 每个时段一个带 `{name}` 的句子（"Good morning, {name}"），名字是显示名 | 首页（中文的"good"也译作"早上"，原来读作"早上 下午""早上 晚上"，现在是"下午好，{name}"等；S7） |
 | "You declined this invitation." | "This invitation was declined." | 已拒绝的邀请页（W5；负责人 2026-10-13，3.2 第 2 条） |
 | 侧边栏项目一行的按钮都叫"Open project menu" | 以项目为名 | 侧边栏（S8；F6） |
+| 项目列表的"More"按钮以没有定义的键为名（读屏读出键名） | 以它看得见的文字为名（"More"、"Hide"） | 侧边栏（S7；Task 7） |
 | 视图和编辑器标注块的选图标按钮以所选的表情为名（没有选表情时没有名字） | "View icon"、"Callout icon"（`Logo` 隐去表情之后，`EmojiPicker` 的 `ariaLabel` 必传） | 视图的表单（M7）、编辑器的标注块（M4；Task 7 的预审修复） |
 | 快捷键弹窗的名字"Keyboard shortcuts Close"（关闭按钮在标题里） | "Keyboard shortcuts" | 快捷键弹窗（S6） |
 

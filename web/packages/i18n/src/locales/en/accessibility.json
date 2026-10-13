@@ -7,9 +7,7 @@
     "app_sidebar": {
       "toggle": "Toggle sidebar",
       "close_workspace_menu": "Close workspace menu",
-      "open_workspace_menu": "Open workspace menu",
-      "close_extended_sidebar": "Close extended sidebar",
-      "open_extended_sidebar": "Open extended sidebar"
+      "open_workspace_menu": "Open workspace menu"
     },
     "project_icon": "Project icon",
     "view_icon": "View icon",
