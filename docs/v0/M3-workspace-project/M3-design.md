@@ -1577,6 +1577,8 @@ modules/access/
 | C8 | 复制到剪贴板：在局域网 HTTP 地址上复制项目链接、邀请链接，失败时有提示 | P10 |
 | C9 | 状态和标签的拖动、设为默认、两层标签的拖放；默认状态和组内唯一状态的删除按钮不可用；访客看状态设置"没有权限" | P11 |
 | C10 | 访客打开别人的个人主页（决策点 3，A） | P11 |
+| C11 | 重写之后的弹窗（`ModalCore`、`AlertModalCore`、命令面板、快捷键、切换账户）：打开时后面的页面 `inert`、`aria-hidden`（读屏读不到、点不到），关上之后都不是；Tab 在弹窗里转；Escape、点外面关上，请求在路上时都不关、取消不能用；输入法组字时的 Escape 不关；关上之后焦点回到打开它的控件；弹窗里的下拉框和选择器（成员、角色、网络、表情和图标）能用；被拒绝时提示在弹窗开着时被读出（A-M2）；焦点在 Firefox、Safari 中也看一遍 | 收尾 |
+| C12 | 离开工作区的入口：侧边栏的工作区菜单，管理员（不是唯一的）、唯一的管理员、成员、访客各离开一次，键盘能到；唯一的管理员被拒绝，弹窗留着、原因被读出；离开之后的落点同 W11 的页面版本，跟进只在离开的那个会话里；中文下的文案 | 收尾 |
 
 ---
 
@@ -2118,7 +2120,7 @@ modules/access/
 | P9 `web-workspace-pages` | 工作区的页面（14） | 已完成：[spec](specs/P9-web-workspace-pages.md)、[plan](plans/P9-web-workspace-pages.md)、[评审](reviews/P9-web-workspace-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-12） |
 | P10 `web-project-pages` | 项目的页面（15） | 已完成：[spec](specs/P10-web-project-pages.md)、[plan](plans/P10-web-project-pages.md)、[评审](reviews/P10-web-project-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-18） |
 | P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 已完成：[spec](specs/P11-web-states-labels-and-cleanup.md)、[plan](plans/P11-web-states-labels-and-cleanup.md)、[评审](reviews/P11-web-states-labels-and-cleanup-review.md)（执行时 10 个 Task；修复轮的裁定 F-1–F-15） |
-| 收尾 `closeout` | 交接、同步核对、规模对比 | 未开始 |
+| 收尾 `closeout` | `ModalCore` 的重写、离开工作区的入口、各 Phase 留给收尾的事；交接、同步核对、规模对比 | 进行中：[spec](specs/closeout.md)、[plan](plans/closeout.md)（16 个 Task） |
 
 ## 16. 风险
 | 风险 | 影响 | 应对 |
