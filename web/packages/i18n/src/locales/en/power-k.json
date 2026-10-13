@@ -119,6 +119,7 @@
       "open_documentation": "Open documentation",
       "report_bug": "Report a bug"
     },
+    "search_shortcuts": "Search for shortcuts",
     "page_placeholders": {
       "default": "Type a command or search",
       "open_workspace": "Open a workspace",

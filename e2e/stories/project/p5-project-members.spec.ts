@@ -12,7 +12,7 @@ import {
 import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
+import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
 import { answerTo, holdAnswer, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { endProjectMembership, leavingOf, removalOf } from "../../fixtures/project-pages";
 import { expect, test } from "../../fixtures/test";
@@ -250,6 +250,8 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
     .toBe(true);
   await page.keyboard.press("Enter");
   await expect(page.getByRole("combobox", { name: "Search" })).toBeFocused();
+  // the list opens outside the page behind the dialog, which is hidden: its options are picked all the same
+  expect(await pageBehindHidden(page)).toBe(true);
   await expect(page.getByRole("option")).toHaveCount(3);
   await expect(page.getByRole("option", { name: shownNameOf(admin.email) })).toBeVisible();
   await page.getByRole("option", { name: shownNameOf(ann.email) }).click();

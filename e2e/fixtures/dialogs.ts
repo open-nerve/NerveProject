@@ -140,6 +140,20 @@ export async function pageBehindHidden(page: Page): Promise<boolean> {
     .evaluate((main) => main.closest("[inert]") !== null && main.closest('[aria-hidden="true"]') !== null);
 }
 
+/**
+ * Resolves with whether element, shown while a dialog is open, is read out: within a live region (a toast's), and not
+ * in the page behind the dialog, which is inert and hidden then (pageBehindHidden). The toast that says why nerve
+ * refused what a dialog sent is read while the dialog stays open (A-M2).
+ */
+export async function announced(element: Locator): Promise<boolean> {
+  return element.evaluate(
+    (shown) =>
+      shown.closest("[aria-live]") !== null &&
+      shown.closest("[inert]") === null &&
+      shown.closest('[aria-hidden="true"]') === null
+  );
+}
+
 /** Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed (closedWithin). */
 export async function closedByEscape(page: Page): Promise<boolean> {
   const closed = closedWithin(page);

@@ -13,7 +13,9 @@ import {
   shownNameOf,
 } from "../../fixtures/auth";
 import { expectQuietConsole, followAccessToken, watchPage, type PageWatch } from "../../fixtures/browser";
+import { closedByEscape, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
+import { holdAnswer } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // A6, signing out and switching accounts (M2 design 2, 7.1).
@@ -75,7 +77,16 @@ test("A6 (page): signing out in one tab signs every tab out", async ({ api, db, 
   expect(accessToken, "tab A sent an access token").not.toBe("");
   expect((await api.GET("/api/v0/me", { headers: bearer(accessToken) })).response.status).toBe(200);
 
-  await signOutThroughMenu(tabA, email);
+  // The switch's dialog hides the onboarding behind it; while the sign-out is out it cannot be dismissed, its button
+  // busy.
+  const release = await holdAnswer(tabA, "POST", "/api/v0/auth/logout");
+  await accountMenu(tabA, email).click();
+  await tabA.getByRole("menuitem", { name: "Wrong e-mail address?" }).click();
+  expect(await pageBehindHidden(tabA)).toBe(true);
+  await tabA.getByRole("button", { name: "Switch account" }).click();
+  expect(await closedByEscape(tabA)).toBe(false);
+  expect(await enabledWithin(tabA.getByRole("button", { name: "Switching..." }))).toBe(false);
+  await release();
 
   // Both tabs are on the sign-in page, which comes back to where they were, in the default theme; the record is gone.
   await Promise.all(

@@ -30,17 +30,18 @@ export const SettingsMobileNav = observer(function SettingsMobileNav(props: Prop
     if (!settingsSidebarCollapsed) toggleSettingsSidebar(true);
   });
 
+  // The menu is the page's: it stays below the dialogs' layer (z-30), so a dialog opened over the settings covers it.
   return (
     <div className="flex items-center gap-4 border-b border-subtle px-page-x py-3 md:hidden">
-      <div ref={sidebarRef} className="relative z-50 w-fit">
+      <div ref={sidebarRef} className="relative z-20 w-fit">
         {!settingsSidebarCollapsed && (
-          <div className="absolute top-10.5 left-0 z-50">
+          <div className="absolute top-10.5 left-0 z-20">
             <HamburgerContent className="max-h-100 rounded-lg border border-subtle pb-3" />
           </div>
         )}
         <IconButton
           variant="secondary"
-          className="group z-50 shrink-0"
+          className="group z-20 shrink-0"
           icon={Menu}
           onClick={() => toggleSettingsSidebar()}
         />

@@ -99,7 +99,7 @@ export function CreateApiTokenModal(props: Props) {
   };
 
   return (
-    <ModalCore isOpen={isOpen} handleClose={() => {}} position={EModalPosition.TOP} width={EModalWidth.XXL}>
+    <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXL}>
       {generatedToken ? (
         <GeneratedTokenDetails handleClose={handleClose} tokenDetails={generatedToken} />
       ) : (
