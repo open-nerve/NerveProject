@@ -98,7 +98,7 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
   expect(await tables(), "the tables after gus's calls").toEqual(before);
 });
 
-test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open; his leaving's dialog, a removal's and a project's creation end as a Back takes him to another workspace", async ({
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open; his leaving's dialog, a removal's, a project's creation, the command palette and its shortcuts end as a Back takes him to another workspace", async ({
   api,
   baseURL,
   browser,
@@ -180,6 +180,20 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await theAdmin.page.goBack();
   await expect(theAdmin.page).toHaveURL(`/${betaSlug}/projects`);
   expect(await closedWithin(theAdmin.page)).toBe(true);
+  // So do the command palette and its list of shortcuts, whose open flags the power-K store holds, each by its own
+  // host: opened by its keys on acme's projects page, each ends with the Back to Beta's.
+  /** From Beta's projects page to acme's, opens a dialog by keys, Backs to Beta's: whether the dialog ended. */
+  const endsOnBack = async (keys: string) => {
+    await moveWithinApp(theAdmin.page, `/${slug}/projects`);
+    await expect(theAdmin.page.getByRole("button", { name: "Add Project", exact: true })).toBeVisible();
+    await theAdmin.page.keyboard.press(keys);
+    await expect(modalDialog(theAdmin.page)).toHaveCount(1);
+    await theAdmin.page.goBack();
+    await expect(theAdmin.page).toHaveURL(`/${betaSlug}/projects`);
+    return closedWithin(theAdmin.page);
+  };
+  expect(await endsOnBack("ControlOrMeta+k"), "the palette").toBe(true);
+  expect(await endsOnBack("ControlOrMeta+/"), "the shortcuts list").toBe(true);
 
   // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
   // stays until Cancel closes it and gives the focus back to the menu's button; he is acme's admin still. His menu

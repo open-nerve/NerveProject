@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -35,6 +35,16 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
   const [shouldShowContextBasedActions, setShouldShowContextBasedActions] = useState(true);
   // store hooks
   const { activeContext, isPowerKModalOpen, togglePowerKModal, setActivePage } = usePowerK();
+  // The palette's open flag and its page are the power-K store's, which outlives the workspace's keyed content (v0
+  // design 7.7, state keyed by id): this host closes the palette and clears its page as it unmounts with that content,
+  // before the next page paints, so nothing the palette found in one workspace shows, or acts, in another.
+  useLayoutEffect(
+    () => () => {
+      togglePowerKModal(false);
+      setActivePage(null);
+    },
+    [togglePowerKModal, setActivePage]
+  );
   const { data: currentUser } = useUser();
   // derived values
   const {
