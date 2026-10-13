@@ -1,5 +1,16 @@
 {
   "aria_labels": {
+    "settings_menu": "Settings menu",
+    "toggle_sort_order": "Toggle sort order",
+    "toggle_details": "Toggle details",
+    "add_reaction": "Add reaction",
+    "app_sidebar": {
+      "toggle": "Toggle sidebar",
+      "close_workspace_menu": "Close workspace menu",
+      "open_workspace_menu": "Open workspace menu",
+      "close_extended_sidebar": "Close extended sidebar",
+      "open_extended_sidebar": "Open extended sidebar"
+    },
     "project_icon": "Project icon",
     "projects_sidebar": {
       "workspace_logo": "Workspace logo",

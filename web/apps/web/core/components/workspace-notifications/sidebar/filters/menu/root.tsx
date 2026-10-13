@@ -33,7 +33,7 @@ export const NotificationFilter = observer(function NotificationFilter() {
       data={translatedFilterTypeOptions}
       button={
         <Tooltip label={t("notification.options.filters")} side="bottom" disabled={isMobile}>
-          <IconButton size="base" variant="ghost" icon={FilterOutline} />
+          <IconButton size="base" variant="ghost" icon={FilterOutline} aria-label={t("notification.options.filters")} />
         </Tooltip>
       }
       keyExtractor={(item: { label: string; value: ENotificationFilterType }) => item.value}

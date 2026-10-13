@@ -1,5 +1,16 @@
 {
   "aria_labels": {
+    "settings_menu": "设置菜单",
+    "toggle_sort_order": "切换排序方向",
+    "toggle_details": "显示或隐藏详情",
+    "add_reaction": "添加表情回应",
+    "app_sidebar": {
+      "toggle": "切换侧边栏",
+      "close_workspace_menu": "收起工作区菜单",
+      "open_workspace_menu": "展开工作区菜单",
+      "close_extended_sidebar": "关闭扩展侧边栏",
+      "open_extended_sidebar": "打开扩展侧边栏"
+    },
     "project_icon": "项目图标",
     "projects_sidebar": {
       "workspace_logo": "工作空间徽标",

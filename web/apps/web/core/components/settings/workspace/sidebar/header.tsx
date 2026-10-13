@@ -39,6 +39,7 @@ export const WorkspaceSettingsSidebarHeader = observer(function WorkspaceSetting
           variant="ghost"
           size="base"
           icon={ArrowNarrowLeftOutline}
+          aria-label={t("common.go_back")}
           onClick={() => navigate(`/${currentWorkspace?.slug}`)}
         />
         <p>{t("workspace_settings.sidebar_title")}</p>

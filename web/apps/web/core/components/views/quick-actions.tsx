@@ -9,6 +9,7 @@ import { observer } from "mobx-react";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // types
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IProjectView } from "@nerve/types";
@@ -33,6 +34,7 @@ type Props = {
 
 export const ViewQuickActions = observer(function ViewQuickActions(props: Props) {
   const { parentRef, projectId, view, workspaceSlug, customClassName } = props;
+  const { t } = useTranslation();
   // states
   const [createUpdateViewModal, setCreateUpdateViewModal] = useState(false);
   const [deleteViewModal, setDeleteViewModal] = useState(false);
@@ -88,7 +90,9 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
       <DeleteProjectViewModal data={view} isOpen={deleteViewModal} onClose={() => setDeleteViewModal(false)} />
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
       <CustomMenu
-        customButton={<IconButton variant="tertiary" size="lg" icon={MoreHorizontalOutline} />}
+        customButton={
+          <IconButton variant="tertiary" size="lg" icon={MoreHorizontalOutline} aria-label={t("common.options")} />
+        }
         placement="bottom-end"
         closeOnSelect
         buttonClassName={customClassName}

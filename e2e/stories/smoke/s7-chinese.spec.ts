@@ -1,6 +1,7 @@
 import type { Page, TestInfo } from "@playwright/test";
 
 import {
+  changeWorkspacePreferences,
   createLabel,
   createProject,
   createWorkspace,
@@ -54,7 +55,7 @@ async function cancel(page: Page): Promise<void> {
   await expect(modalDialog(page)).toHaveCount(0);
 }
 
-test("S7 (page): an admin whose language is Chinese sees the workspace's home, menu, general and members pages and their dialogs in Chinese", async ({
+test("S7 (page): an admin whose language is Chinese sees the workspace's home, menu, projects, general and members pages and their dialogs in Chinese", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -81,16 +82,25 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await expect(page.getByRole("menuitem", { name: "离开工作区" })).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // The sidebar, by its name; the project navigation's dialog, each mode's description.
-  await page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" }).click();
+  // The sidebar, by its name: its buttons by theirs; the project navigation's dialog, each mode's description.
+  const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
+  await expect(sidebar.getByRole("button", { name: "切换侧边栏" })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(2);
+  await sidebar.getByRole("button", { name: "项目导航" }).click();
   await expect(modalDialog(page).getByText("功能标签显示为项目下的嵌套项，可以展开和收起。")).toBeVisible();
   await expect(modalDialog(page).getByText("功能标签显示为项目内的横向标签。")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(modalDialog(page)).toHaveCount(0);
 
-  // The general page: the settings' sidebar, the size, and the deletion's dialog, the workspace's name in it.
+  // The projects page: its search, by its name.
+  await page.goto(`/${slug}/projects`);
+  await expect(page.getByRole("button", { name: "搜索", exact: true })).toBeVisible();
+
+  // The general page: the settings' sidebar and its way back, the size, and the deletion's dialog, the workspace's
+  // name in it.
   await page.goto(`/${slug}/settings`);
   await expect(page.getByText("工作区设置", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "返回", exact: true })).toBeVisible();
   await expect(page.getByText("只有我自己", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "删除", exact: true }).click();
   await expect(modalDialog(page).getByText(/^您将要删除工作区 Acme。/)).toBeVisible();
@@ -110,7 +120,7 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await expect(modalDialog(page).getByText(/^确定要将 .+ 移出工作区吗？/)).toBeVisible();
   await cancel(page);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
 });
 
 test("S7 (page): an admin whose language is Chinese sees a project's general, states, labels and members pages and their dialogs in Chinese", async ({
@@ -119,10 +129,26 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
 }, testInfo) => {
   const { admin, slug } = await chineseAdmin(api, testInfo);
   const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await createProject(api, admin.access_token, slug, {
+    name: "Ops",
+    identifier: "OPS",
+    logo_props: { in_use: "emoji", emoji: { value: "128640" } },
+  });
+  await changeWorkspacePreferences(api, admin.access_token, slug, {
+    navigation_control_preference: "TABBED",
+    navigation_project_limit: 1,
+  });
   const bug = await createLabel(api, admin.access_token, web.id, { name: "Bug" });
   await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
+
+  // The projects page: the sidebar shows one project, as its limit says, Ops, made last, which it puts first, and
+  // offers the rest; its link to Ops, its tabs beside it, is named by Ops's name alone, its logo no part of it.
+  await page.goto(`/${slug}/projects`);
+  const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
+  await expect(sidebar.getByRole("link", { name: "Ops", exact: true })).toBeVisible();
+  await expect(sidebar.getByRole("button", { name: "打开扩展侧边栏" })).toHaveText("更多");
 
   // The general page: the settings' sidebar, the deletion's description, the archive's and the deletion's dialogs,
   // the project's name in them.
@@ -171,7 +197,7 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await expect(modalDialog(page).getByText("请选择成员", { exact: true })).toBeVisible();
   await cancel(page);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
+  await expectQuietConsole(page, watch, { warnings: Array(5).fill(EMOJI_CHECK_WARNING) });
 });
 
 test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({

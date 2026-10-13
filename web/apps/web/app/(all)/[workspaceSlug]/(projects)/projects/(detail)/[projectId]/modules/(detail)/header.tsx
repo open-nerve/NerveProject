@@ -15,6 +15,7 @@ import {
   EUserPermissions,
   EUserPermissionsLevel,
 } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { ICustomSearchSelectOption, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
@@ -59,6 +60,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
   const navigate = useNavigate();
   const { workspaceSlug, projectId, moduleId } = props;
   // hooks
+  const { t } = useTranslation();
   const { isMobile } = usePlatformOS();
   // store hooks
   const {
@@ -228,6 +230,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
           variant="tertiary"
           size="lg"
           icon={RightSidePaneOutline}
+          aria-label={t("aria_labels.toggle_details")}
           onClick={toggleSidebar}
           className={cn({
             "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,

@@ -1,5 +1,7 @@
 {
   "sidebar": {
+    "more_projects": "更多",
+    "fewer_projects": "收起",
     "new_work_item": "新工作项",
     "views": "视图",
     "work_items": "工作项",

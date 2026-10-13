@@ -45,6 +45,7 @@ export const ProjectSearch = observer(function ProjectSearch() {
           variant="ghost"
           size="lg"
           className="-mr-1"
+          aria-label={t("common.search.label")}
           onClick={() => {
             setIsSearchOpen(true);
             inputRef.current?.focus();

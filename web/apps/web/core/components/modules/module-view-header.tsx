@@ -107,6 +107,7 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
               inputRef.current?.focus();
             }}
             icon={SearchOutline}
+            aria-label={t("common.search.label")}
           />
         )}
         <div

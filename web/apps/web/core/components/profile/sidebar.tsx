@@ -104,6 +104,7 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
               <IconButton
                 variant="secondary"
                 icon={EditOutline}
+                aria-label={t("common.actions.edit")}
                 onClick={() =>
                   toggleProfileSettingsModal({
                     activeTab: "general",

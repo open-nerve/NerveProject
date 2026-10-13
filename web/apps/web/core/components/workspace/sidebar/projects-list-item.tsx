@@ -348,6 +348,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                       variant="ghost"
                       size="sm"
                       icon={MoreHorizontalOutline}
+                      aria-label={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
                       onClick={() => setIsMenuActive(!isMenuActive)}
                       className="text-placeholder"
                     />

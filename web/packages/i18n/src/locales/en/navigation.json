@@ -1,5 +1,7 @@
 {
   "sidebar": {
+    "more_projects": "More",
+    "fewer_projects": "Hide",
     "new_work_item": "New work item",
     "views": "Views",
     "work_items": "Work items",

@@ -13,6 +13,7 @@ import { Avatar } from "@makeplane/propel/components/avatar";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { EditorRefApi } from "@nerve/editor";
 import { useHashScroll } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
 import type { TCommentsOperations, TIssueComment } from "@nerve/types";
 import { calculateTimeAgo, cn, getFileURL, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
@@ -52,6 +53,7 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
     renderFooter,
     renderQuickActions,
   } = props;
+  const { t } = useTranslation();
   // states
   const [highlightClassName, setHighlightClassName] = useState("");
   // state
@@ -130,7 +132,12 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
               handleToggle={setIsPickerOpen}
               onChange={handleEmojiSelect}
               disabled={disabled}
-              label={<EmojiReactionButton onAddReaction={() => setIsPickerOpen(true)} />}
+              label={
+                <EmojiReactionButton
+                  onAddReaction={() => setIsPickerOpen(true)}
+                  aria-label={t("aria_labels.add_reaction")}
+                />
+              }
               placement="bottom-start"
             />
             {renderQuickActions ? renderQuickActions() : null}

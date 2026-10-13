@@ -35,12 +35,16 @@ interface EmojiReactionGroupProps extends React.HTMLAttributes<HTMLDivElement> {
   onAddReaction?: () => void;
   className?: string;
   showAddButton?: boolean;
+  /** The name of the button that adds a reaction, in the page's language. */
+  addReactionLabel: string;
   maxDisplayUsers?: number;
 }
 
-interface EmojiReactionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface EmojiReactionButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> {
   onAddReaction?: () => void;
   className?: string;
+  /** The button's name, in the page's language, which its tooltip shows too. */
+  "aria-label": string;
 }
 
 const EmojiReaction = React.forwardRef(function EmojiReaction(
@@ -107,7 +111,7 @@ const EmojiReactionButton = React.forwardRef(function EmojiReactionButton(
   ref: React.ForwardedRef<HTMLButtonElement>
 ) {
   return (
-    <Tooltip tooltipContent="Add reaction">
+    <Tooltip tooltipContent={props["aria-label"]}>
       <IconButton
         ref={ref}
         icon={ReactionOutline}
@@ -128,6 +132,7 @@ const EmojiReactionGroup = React.forwardRef(function EmojiReactionGroup(
     onAddReaction,
     className,
     showAddButton = true,
+    addReactionLabel,
     maxDisplayUsers = 5,
     ...props
   }: EmojiReactionGroupProps,
@@ -135,9 +140,9 @@ const EmojiReactionGroup = React.forwardRef(function EmojiReactionGroup(
 ) {
   return (
     <div ref={ref} className={cn("flex flex-wrap items-center gap-2", className)} {...props}>
-      {reactions.map((reaction, index) => (
+      {reactions.map((reaction) => (
         <EmojiReaction
-          key={`${reaction.emoji}-${index}`}
+          key={reaction.emoji}
           emoji={reaction.emoji}
           count={reaction.count}
           reacted={reaction.reacted}
@@ -145,7 +150,7 @@ const EmojiReactionGroup = React.forwardRef(function EmojiReactionGroup(
           onReactionClick={onReactionClick}
         />
       ))}
-      {showAddButton && <EmojiReactionButton onAddReaction={onAddReaction} />}
+      {showAddButton && <EmojiReactionButton onAddReaction={onAddReaction} aria-label={addReactionLabel} />}
     </div>
   );
 });
