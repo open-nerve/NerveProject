@@ -88,6 +88,7 @@ sys.exit(1 if broken else 0)
 | `e2e/fixtures/auth.ts` | `registeredPAT(api, email)` | 14 |
 | `e2e/fixtures/browser.ts` | `expectNoAddress` 移来 | 14 |
 | `e2e/fixtures/dialogs.ts` | `modalDialog`、`pageBehindHidden`（Task 1）；`announced`（Task 2）；`composingEscape` 发两种顺序（Task 10） | 1、2、10 |
+| `e2e/fixtures/mounts.ts` | `WORKSPACE_MENU`：工作区菜单打开时不发请求（W2 的常驻检查） | 3 |
 | `e2e/fixtures/project-pages.ts` | `labelRow` 移来（Task 6）；成员一行的菜单按它的名字，`pageContent`：侧边栏之外的页面内容（Task 8） | 6、8 |
 | `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
 | `e2e/stories/identity/a11-api-tokens.spec.ts` | 令牌复制到剪贴板（Task 9）；`registeredPAT`（Task 14） | 9、14 |
@@ -99,9 +100,11 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"（Task 5）；一行的菜单（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
 | `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓（Task 8） | 1、2、6、8 |
 | `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6） | 1、2、6 |
+| `e2e/stories/smoke/s2-web-app.spec.ts` | 每个角色打开工作区菜单，不发请求（`WORKSPACE_MENU`） | 3 |
 | `e2e/stories/smoke/s6-dialogs.spec.ts` | S6：命令面板、快捷键（以标题为名）、嵌套的弹窗是模态的（新文件，Task 2）；命令面板的复制（Task 9）；组字的 Escape（Task 10） | 2 新、9、10 |
 | `e2e/stories/smoke/s7-chinese.spec.ts` | S7：中文的页面和弹窗（新文件，逐 Task 加） | 4 新、5、6、7、8、12、13 |
 | `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘，项目的一行以项目为名（新文件） | 8 新 |
+| `e2e/fixtures/workspace-pages.ts` | `askToEndMembership`：打开一行的菜单、选移出或离开，到确认框为止（`endMembership` 经它） | 3 |
 | `e2e/stories/workspace/w11-guest-bounds.spec.ts` | 访客从菜单离开（双击只发一次，请求在路上时确认框关不掉）、唯一的管理员被拒绝（Task 3）；`registeredPAT`、导入（Task 14） | 3、14 |
 | `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/workspace/w5-invitation-link.spec.ts` | 邀请被拒绝之后的页面的说法（Task 4）；`registeredPAT`、会话断言的导入（Task 14） | 4、14 |
@@ -118,7 +121,8 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx` | 工作区经 `useRouteWorkspace()` 或写明 slug（Task 11） | 11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx` | `IconButton` 的名字 | 7 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx` | 成员页的标题经 `t()`（Task 4）；工作区经 `useRouteWorkspace()`（Task 11） | 4、11 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/project/card-list.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx` | 工作区经 `useRouteWorkspace()`（Task 11） | 11 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/project/card-list.tsx` | 工作区经 `useRouteWorkspace()`（Task 11） | 11 |
+| `web/apps/web/core/components/workspace/settings/useMemberColumns.tsx` | 移出的确认框记住打开它的工作区，只在那个工作区的页面上显示（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx` | 项目设置各页的标题经 `t()`；没有项目时的设置页；它们的 vitest 照新的标题 | 13 |
 | `web/apps/web/app/(all)/create-workspace/layout.tsx`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/app/(all)/onboarding/layout.tsx`、`web/apps/web/app/(all)/onboarding/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 13 |
 | `web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 4 |
@@ -188,7 +192,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8） | 7、8 |
 | `web/apps/web/core/components/workspace/sidebar/projects-list.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8）；写明 slug（Task 11） | 7、8、11 |
 | `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | 写明 slug（Task 11） | 11 |
-| `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，菜单的按钮和三项在键盘下看得见，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
+| `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，确认框记住打开它的工作区，菜单的按钮和三项在键盘下看得见，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
 | `web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts` | 经 `problemCode()` 或 `useRefusalMessage` | 9 |
 | `web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts` | `useCopy`、`useCopyText`；它的测试 | 9 |
 | `web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts` | `useRefusalMessage`；它的测试 | 9 |
@@ -1270,15 +1274,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/workspace/leave-workspace-modal.tsx`
-- Modify: `README.md`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/navigation/top-navigation-root.tsx`、`web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.ts`、`web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx`、`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
+- Modify: `README.md`、`e2e/fixtures/mounts.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/navigation/top-navigation-root.tsx`、`web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.ts`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx`、`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
 
 **Interfaces:**（spec 2.7）
-- `workspace/sidebar/workspace-menu-root.tsx`（整个文件）：没有调用方的"sidebar"写法删除（216 → 205 行）；"离开工作区"一项（`Menu.Item`，每个角色），确认框挂在菜单之外；菜单的按钮在键盘取得焦点时有 `@nerve/ui` 的选择框那样的内圈轮廓（Headless UI 的 `data-focus`），三项在方向键或指针选中时显出底色（`data-focus:bg-layer-transparent-hover`，原来只有指针悬停时）；`workspace/sidebar/dropdown-item.tsx`：工作区的一项同样（别的工作区的显出悬停的底色，当前工作区的从 `active` 深一级到 `selected`；原来当前的那一项选中时不变）；`navigation/top-navigation-root.tsx` 不再传 `variant`。
+- `workspace/sidebar/workspace-menu-root.tsx`（整个文件）：没有调用方的"sidebar"写法删除（216 → 205 行）；"离开工作区"一项（`Menu.Item`，每个角色），确认框挂在菜单之外，记住打开它时的工作区（`useState<string | null>`，总体设计 7.7 的"状态按 id"），只在那个工作区是路由的工作区时显示，后退或前进到别的工作区时关上，离开的是它记住的那个；菜单的按钮在键盘取得焦点时有 `@nerve/ui` 的选择框那样的内圈轮廓（Headless UI 的 `data-focus`），三项在方向键或指针选中时显出底色（`data-focus:bg-layer-transparent-hover`，原来只有指针悬停时）；`workspace/sidebar/dropdown-item.tsx`：工作区的一项同样（别的工作区的显出悬停的底色，当前工作区的从 `active` 深一级到 `selected`；原来当前的那一项选中时不变）；`navigation/top-navigation-root.tsx` 不再传 `variant`。
 - `workspace/leave-workspace-modal.tsx`（新文件）：`ConfirmWorkspaceMemberRemove` 加 `useMembershipChanges().leave(done)`。
-- `useMembershipChanges` 的 `remove(…, done)`、`leave(done)` 和 `useInvitationChanges` 的删除：`done` 只在成功的跟进中调用（A-M2）；`ConfirmWorkspaceMemberRemove` 不再自己关上，离开的标题经 `t()`；成员和邀请的一行传 `closeDialog`。
+- `useMembershipChanges` 的 `remove(…, done)`、`leave(done)` 和 `useInvitationChanges` 的删除：`done` 只在成功的跟进中调用（A-M2）；`ConfirmWorkspaceMemberRemove` 不再自己关上，离开的标题经 `t()`；成员和邀请的一行传 `closeDialog`；成员页移出（离开）的确认框同样记住打开它的工作区和成员（`useMemberColumns`），只在那个工作区的页面上显示。
 - 文案：`leave_workspace`（common）、`workspace_settings.settings.members.leave_title`。README 的工作区菜单加"离开工作区"。
 
-**Tests:** 两个 hook 的 vitest：`done` 在成功时调用、被拒绝时不调用、换账户之后不调用。W11 的页面版本：访客由键盘从菜单离开（菜单的按钮显出轮廓，打开时选中的当前工作区的一项深一级，方向键选中的一项显出底色、别的不显），双击"离开"只发一次请求，请求在路上时取消不能用、Escape 不关，落到新建工作区的页面；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着，取消之后焦点回到菜单的按钮；他的另一个工作区 Beta 的一项在方向键选中时显出底色。W7：唯一的管理员在成员页离开被拒绝时确认框留着。W4：已被删除的邀请再删除被拒绝时确认框留着。
+**Tests:** 两个 hook 的 vitest：`done` 在成功时调用、被拒绝时不调用、换账户之后不调用。W11 的页面版本：访客由键盘从菜单离开（菜单的按钮显出轮廓，打开时选中的当前工作区的一项深一级，方向键选中的一项显出底色、别的不显），双击"离开"只发一次请求，请求在路上时取消不能用、Escape 不关，落到新建工作区的页面；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着，取消之后焦点回到菜单的按钮；他的另一个工作区 Beta 的一项在方向键选中时显出底色；从 Beta 经菜单到 acme 打开离开的确认框，后退到 Beta 时它关上、前进回来也不再打开；从 Beta 的成员页经应用的链接到 acme 的成员页打开移出 gus 的确认框，一次后退两步回到 Beta 的成员页时它关上。S2：每个角色在最后一页打开工作区菜单，不发请求（`mounts.ts` 的 `WORKSPACE_MENU`，W2 的常驻检查）。W7：唯一的管理员在成员页离开被拒绝时确认框留着。W4：已被删除的邀请再删除被拒绝时确认框留着。
 
 - [ ] **Step 1: 菜单的入口和确认框**
 
@@ -1386,6 +1390,38 @@ export const LeaveWorkspaceModal = observer(function LeaveWorkspaceModal(props: 
         onSubmit={() => remove(workspaceSlug, invitationDetails.id, () => setRemoveMemberModal(false))}
 ````
 
+`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`（修改，2 处）：
+
+````old web/apps/web/core/components/workspace/settings/useMemberColumns.tsx
+/** The columns of the members of the workspace of workspaceSlug, which the list reads from the page's address. */
+export const useMemberColumns = (workspaceSlug: string) => {
+  // states
+  const [removeMemberModal, setRemoveMemberModal] = useState<WorkspaceMember | null>(null);
+````
+````new web/apps/web/core/components/workspace/settings/useMemberColumns.tsx
+/** The member whose removal (his leaving, on the caller's own row) the dialog asks, and the workspace it asks it in. */
+type Removal = { workspaceSlug: string; member: WorkspaceMember };
+
+/**
+ * The columns of the members of the workspace of workspaceSlug, which the list reads from the page's address, and the
+ * member whose removal the dialog asks, kept with the workspace it was opened in (v0 design 7.7, state keyed by id):
+ * the dialog shows only while that workspace is the page's, so a Back or Forward to another workspace's members ends
+ * it, and its Remove or Leave never acts there.
+ */
+export const useMemberColumns = (workspaceSlug: string) => {
+  // states
+  const [removal, setRemoval] = useState<Removal | null>(null);
+  const removalHere = removal?.workspaceSlug === workspaceSlug ? removal : null;
+  if (removal !== removalHere) setRemoval(removalHere);
+  const setRemoveMemberModal = (member: WorkspaceMember | null) => setRemoval(member && { workspaceSlug, member });
+````
+````old web/apps/web/core/components/workspace/settings/useMemberColumns.tsx
+  return { columns, removeMemberModal, setRemoveMemberModal };
+````
+````new web/apps/web/core/components/workspace/settings/useMemberColumns.tsx
+  return { columns, removeMemberModal: removalHere?.member ?? null, setRemoveMemberModal };
+````
+
 `web/apps/web/core/components/workspace/settings/members-list-item.tsx`（修改，1 处）：
 
 ````old web/apps/web/core/components/workspace/settings/members-list-item.tsx
@@ -1393,8 +1429,8 @@ export const LeaveWorkspaceModal = observer(function LeaveWorkspaceModal(props: 
   const handleRemove = (memberId: string) => (memberId === currentUser?.id ? leave() : remove(memberId));
 ````
 ````new web/apps/web/core/components/workspace/settings/members-list-item.tsx
-  // the caller's own row offers him to leave; another's, to remove that member (an admin's); the dialog that asked
-  // closes once nerve has done it
+  // the caller's own row offers him to leave; another's, to remove that member (an admin's), in the page's workspace,
+  // the one the dialog was opened in (useMemberColumns shows it only there); the dialog closes once nerve has done it
   const handleRemove = (memberId: string) => {
     const closeDialog = () => setRemoveMemberModal(null);
     return memberId === currentUser?.id ? leave(closeDialog) : remove(memberId, closeDialog);
@@ -1542,8 +1578,12 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
   const { t } = useTranslation();
   // local state
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
-  // the leaving's dialog outlives the menu, which closes as its entry is picked
-  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+  // the workspace whose leaving the dialog asks, kept as the dialog opens (v0 design 7.7, state keyed by id): the
+  // dialog outlives the menu, which closes as its entry is picked, and leaves that workspace; it shows only while that
+  // workspace is the route's, so a Back or Forward to another workspace ends it, and its Leave never acts on that one
+  const [leaving, setLeaving] = useState<string | null>(null);
+  const leavingHere = leaving !== null && leaving === activeWorkspace?.slug ? leaving : null;
+  if (leaving !== leavingHere) setLeaving(leavingHere);
 
   // the workspace opened last is a best-effort preference: the link opens the workspace whether nerve saves it or not
   const handleWorkspaceNavigation = (workspace: Workspace) => {
@@ -1559,7 +1599,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
   };
   const workspacesList = workspaces && orderWorkspacesList(workspaces);
 
-  // Toggle sidebar dropdown state when either menu is open
+  // Toggle sidebar dropdown state when the menu is open
   useEffect(() => {
     toggleAnySidebarDropdown(isWorkspaceMenuOpen);
   }, [isWorkspaceMenuOpen, toggleAnySidebarDropdown]);
@@ -1607,7 +1647,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
                 as={Fragment}
                 enter="transition ease-out duration-100"
                 enterFrom="transform opacity-0 scale-95"
-                enterTo="trnsform opacity-100 scale-100"
+                enterTo="transform opacity-100 scale-100"
                 leave="transition ease-in duration-75"
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
@@ -1667,7 +1707,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
                           as="button"
                           type="button"
                           className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary data-focus:bg-layer-transparent-hover"
-                          onClick={() => setIsLeaveModalOpen(true)}
+                          onClick={() => setLeaving(activeWorkspace.slug)}
                         >
                           <LogOutOutline className="size-4 flex-shrink-0" />
                           {t("leave_workspace")}
@@ -1693,13 +1733,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
           );
         }}
       </Menu>
-      {activeWorkspace && (
-        <LeaveWorkspaceModal
-          workspaceSlug={activeWorkspace.slug}
-          isOpen={isLeaveModalOpen}
-          onClose={() => setIsLeaveModalOpen(false)}
-        />
-      )}
+      {leavingHere && <LeaveWorkspaceModal workspaceSlug={leavingHere} isOpen onClose={() => setLeaving(null)} />}
     </>
   );
 });
@@ -1756,6 +1790,119 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
 - **能用的页面**（M3/P9 起）：登录、注册（注册关闭时，凭邀请链接仍可注册）；邀请链接的页面 `/workspace-invitations`（没登录时显示工作区和角色，登录后接受或忽略）；新手引导（资料一步；还没有工作区的人接着创建工作区，再邀请成员（规模选"Just myself"时创建之后就完成），发出邀请之后列出每个邀请的链接供复制，v0 不发邮件；已经有工作区的人资料一步之后就完成）；登录后的落点（上次打开的工作区；它不在列表中时，最早创建的那个；一个都没有时 `/create-workspace`）；创建工作区；工作区首页（问候、"快速入门指南"，第一次进入时的导览）；侧边栏的工作区菜单（切换、创建工作区、离开工作区、退出）和"项目导航"对话框；工作区设置的 general（名称、规模、时区，删除工作区）和 members（成员、改角色、移出、离开；管理员还有邀请：批量邀请、复制链接、改角色、删除）；个人设置的四个标签页（general、preferences、security、api-tokens，停用账户在 general 页）。项目的页面（M3/P10 起）：项目列表（卡片复制项目的链接；看得到而还不是成员的项目，卡片上加入）和已归档的项目（恢复、删除）；创建项目（负责人从工作区的管理员和成员中选；表情和图标的选择器，表情的数据由 Nerve 自己提供）；打开项目的地址时，不是成员的看到"加入项目"，看不到的看到"找不到项目"，已归档的看到它已归档；项目设置的 general（名称、标识、说明、可见性、时区、图标；归档、删除）、members（添加、改角色、移出、离开；负责人、默认负责人、访客可见全部）、features（迭代、模块、视图、收集箱的开关）和 automations（自动归档）；侧边栏拖动项目的顺序；标签式导航下项目页头的标签栏（默认打开的标签页、收进"更多"）。项目设置的 states 和 labels（M3/P11 起）：项目管理员和是工作区管理员的项目成员增删改、拖动排序，状态还能设为默认，标签能拖进、拖出标签组；项目的其他成员只能看，访客看到没有权限。个人主页（M3/P11 起）：访客打开别人的或自己的主页，看到用户卡片，工作项一栏说他没有权限；管理员和成员看到的工作项列表，与工作项、迭代、模块、视图、收藏、通知、Webhook 等页面一样还在调用 Plane 的接口，Nerve 返回 404，由 M4–M8 对接。
 ````
 
+`e2e/fixtures/mounts.ts`（修改，2 处）：
+
+````old e2e/fixtures/mounts.ts
+// What the pages ask nerve for as they load: S2's REQUESTS is built of these lists, and a page's story that checks what
+// it loads reads them here rather than writing its own.
+````
+````new e2e/fixtures/mounts.ts
+// What the pages ask nerve for as they load, and the workspace menu as it opens: S2's REQUESTS is built of these lists,
+// S2 opens the menu after them, and a page's story that checks what it loads reads them here rather than writing its
+// own.
+````
+````old e2e/fixtures/mounts.ts
+export const INVITATIONS = ["GET /api/v0/workspaces/{slug}/invitations"];
+````
+````new e2e/fixtures/mounts.ts
+export const INVITATIONS = ["GET /api/v0/workspaces/{slug}/invitations"];
+/**
+ * The workspace menu asks nerve for nothing as it opens, whatever the role (M3 closeout, W2): its entries are the
+ * workspaces the app's start loaded (APP), and its leaving asks the dialog's question before it sends anything.
+ */
+export const WORKSPACE_MENU: string[] = [];
+````
+
+`e2e/fixtures/workspace-pages.ts`（修改，1 处）：
+
+````old e2e/fixtures/workspace-pages.ts
+/**
+ * Ends a membership from the members page, which page shows: opens the menu of the row of email, picks its entry
+ * (Leave on the caller's own row, Remove on another's), and confirms it in the dialog that asks. Resolves with nerve's
+ * answer to the request of method to path that the page sends.
+ */
+export async function endMembership(
+  page: Page,
+  email: string,
+  entry: "Leave" | "Remove",
+  request: { method: string; path: string }
+): Promise<Response> {
+  // the row's menu is its first button: the role's select, when there is one, comes after it
+  await memberRow(page, email).locator("button").first().click();
+  await page.getByRole("button", { name: entry, exact: true }).click();
+````
+````new e2e/fixtures/workspace-pages.ts
+/**
+ * Asks to end a membership from the members page, which page shows: opens the menu of the row of email and picks its
+ * entry (Leave on the caller's own row, Remove on another's), which opens the dialog that asks.
+ */
+export async function askToEndMembership(page: Page, email: string, entry: "Leave" | "Remove"): Promise<void> {
+  // the row's menu is its first button: the role's select, when there is one, comes after it
+  await memberRow(page, email).locator("button").first().click();
+  await page.getByRole("button", { name: entry, exact: true }).click();
+}
+
+/**
+ * Ends a membership from the members page, which page shows: asks it (askToEndMembership) and confirms it in the
+ * dialog that asks. Resolves with nerve's answer to the request of method to path that the page sends.
+ */
+export async function endMembership(
+  page: Page,
+  email: string,
+  entry: "Leave" | "Remove",
+  request: { method: string; path: string }
+): Promise<Response> {
+  await askToEndMembership(page, email, entry);
+````
+
+`e2e/stories/smoke/s2-web-app.spec.ts`（修改，4 处）：
+
+````old e2e/stories/smoke/s2-web-app.spec.ts
+import { APP, ARCHIVED, GENERAL, INVITATIONS, PROJECT, PROJECT_MEMBER, WORKSPACE, valued } from "../../fixtures/mounts";
+````
+````new e2e/stories/smoke/s2-web-app.spec.ts
+import {
+  APP,
+  ARCHIVED,
+  GENERAL,
+  INVITATIONS,
+  PROJECT,
+  PROJECT_MEMBER,
+  WORKSPACE,
+  WORKSPACE_MENU,
+  valued,
+} from "../../fixtures/mounts";
+````
+````old e2e/stories/smoke/s2-web-app.spec.ts
+  test(`S2: the workspace's ${account} signs in and opens ${visits.map(([path]) => path).join(", then ")}`, async ({
+````
+````new e2e/stories/smoke/s2-web-app.spec.ts
+  test(`S2: the workspace's ${account} signs in and opens ${visits.map(([path]) => path).join(", then ")}, then the workspace menu`, async ({
+````
+````old e2e/stories/smoke/s2-web-app.spec.ts
+    else await expect(join).toHaveCount(0);
+````
+````new e2e/stories/smoke/s2-web-app.spec.ts
+    else await expect(join).toHaveCount(0);
+    // The workspace menu, opened on that page with its leaving, asks for what WORKSPACE_MENU lists (nothing).
+    const menu = { from: requests.next(), expected: WORKSPACE_MENU.toSorted() };
+    await page.getByRole("button", { name: "Open workspace switcher" }).click();
+    await expect(page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menuitem", { name: "Leave workspace" })).toHaveCount(0);
+````
+````old e2e/stories/smoke/s2-web-app.spec.ts
+    // Nothing came after any list was whole.
+    for (const [index, { from, expected }] of loads.entries()) {
+      expect(requests.between(from, loads[index + 1]?.from)).toEqual({ pending: 0, requests: expected });
+````
+````new e2e/stories/smoke/s2-web-app.spec.ts
+    // Nothing came after any list was whole, the menu's last.
+    const lists = [...loads, menu];
+    for (const [index, { from, expected }] of lists.entries()) {
+      expect(requests.between(from, lists[index + 1]?.from)).toEqual({ pending: 0, requests: expected });
+````
+
 `e2e/stories/workspace/w11-guest-bounds.spec.ts`（修改，5 处）：
 
 ````old e2e/stories/workspace/w11-guest-bounds.spec.ts
@@ -1769,10 +1916,17 @@ import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 ````
 ````new e2e/stories/workspace/w11-guest-bounds.spec.ts
-import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import {
+  announced,
+  closedByEscape,
+  closedWithin,
+  modalDialog,
+  pageBehindHidden,
+  shownWithin,
+} from "../../fixtures/dialogs";
 import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
-import { anotherBrowser } from "../../fixtures/workspace-pages";
+import { anotherBrowser, askToEndMembership } from "../../fixtures/workspace-pages";
 ````
 ````old e2e/stories/workspace/w11-guest-bounds.spec.ts
 // its page version what a guest's pages show him.
@@ -1785,7 +1939,7 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   api,
 ````
 ````new e2e/stories/workspace/w11-guest-bounds.spec.ts
-test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open", async ({
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open; his leaving's dialog and a removal's end as a Back takes him to another workspace", async ({
   api,
   baseURL,
   browser,
@@ -1797,14 +1951,47 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
 ````new e2e/stories/workspace/w11-guest-bounds.spec.ts
   await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
 
+  // The admin's dialogs keep the workspace they were opened in; he has another, Beta. From Beta's home his menu's
+  // acme entry, a link of the app's, takes him to acme's, where he asks his leaving: a Back to Beta's home ends that
+  // dialog rather than ask it of Beta, and a Forward to acme's does not bring it back. Then, from Beta's members page,
+  // the app takes him to acme's (the acme entry, then its "Invite members"), where he asks gus's removal: a Back of two
+  // entries at once (the Back button's list) to Beta's members page ends that dialog too.
+  const betaSlug = slugFor(testInfo, "beta");
+  await createWorkspace(api, admin.access_token, { name: "Beta", slug: betaSlug });
+  const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
+  const adminsMenu = theAdmin.page.getByRole("button", { name: "Open workspace switcher" });
+  /** Opens the admin's menu and follows the link of its entry named to the path given. */
+  const throughMenu = async (role: "menuitem" | "link", name: string | RegExp, path: string) => {
+    await adminsMenu.click();
+    await theAdmin.page.getByRole("menu").getByRole(role, { name, exact: true }).click();
+    await expect(theAdmin.page).toHaveURL(path);
+  };
+  await theAdmin.page.goto(`/${betaSlug}`);
+  await throughMenu("menuitem", /Acme/, `/${slug}`);
+  await adminsMenu.click();
+  await theAdmin.page.getByRole("menuitem", { name: "Leave workspace" }).click();
+  await expect(modalDialog(theAdmin.page)).toHaveCount(1);
+  await theAdmin.page.goBack();
+  await expect(theAdmin.page).toHaveURL(`/${betaSlug}`);
+  expect(await closedWithin(theAdmin.page)).toBe(true);
+  await theAdmin.page.goForward();
+  await expect(theAdmin.page).toHaveURL(`/${slug}`);
+  expect(await shownWithin(modalDialog(theAdmin.page))).toBe(false);
+  await throughMenu("menuitem", /Beta/, `/${betaSlug}`);
+  await throughMenu("link", "Invite members", `/${betaSlug}/settings/members`);
+  await throughMenu("menuitem", /Acme/, `/${slug}`);
+  await throughMenu("link", "Invite members", `/${slug}/settings/members`);
+  await askToEndMembership(theAdmin.page, gusEmail, "Remove");
+  await expect(modalDialog(theAdmin.page)).toHaveCount(1);
+  await theAdmin.page.evaluate(() => window.history.go(-2));
+  await expect(theAdmin.page).toHaveURL(`/${betaSlug}/settings/members`);
+  expect(await closedWithin(theAdmin.page)).toBe(true);
+
   // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
   // stays until Cancel closes it and gives the focus back to the menu's button; he is acme's admin still. His menu
-  // lists his other workspace, Beta, after acme: the arrows mark its entry as they reach it, as the pointer does.
+  // lists Beta after acme: the arrows mark its entry as they reach it, as the pointer does.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
-  await createWorkspace(api, admin.access_token, { name: "Beta", slug: slugFor(testInfo, "beta") });
-  const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
-  await theAdmin.page.goto(`/${slug}`);
-  const adminsMenu = theAdmin.page.getByRole("button", { name: "Open workspace switcher" });
+  await throughMenu("menuitem", /Acme/, `/${slug}`);
   await adminsMenu.click();
   const beta = theAdmin.page.getByRole("menuitem", { name: "Beta" });
   const betaMarked = () => beta.evaluate((entry) => getComputedStyle(entry).backgroundColor !== "rgba(0, 0, 0, 0)");
@@ -2130,7 +2317,7 @@ Expected: 112 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add README.md e2e/stories/workspace/w11-guest-bounds.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/navigation/top-navigation-root.tsx web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx web/apps/web/core/components/workspace/leave-workspace-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts web/apps/web/core/components/workspace/settings/use-invitation-changes.ts web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts web/apps/web/core/components/workspace/settings/use-membership-changes.ts web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
+git add README.md e2e/fixtures/mounts.ts e2e/fixtures/workspace-pages.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/navigation/top-navigation-root.tsx web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx web/apps/web/core/components/workspace/leave-workspace-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts web/apps/web/core/components/workspace/settings/use-invitation-changes.ts web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts web/apps/web/core/components/workspace/settings/use-membership-changes.ts web/apps/web/core/components/workspace/settings/useMemberColumns.tsx web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the sidebar's workspace menu offers leaving the workspace, to every role
@@ -2142,7 +2329,11 @@ open with the reason; a double click sends it once, the dialog held while
 it is out. The members page's removal, leaving and an invitation's
 deletion keep their dialog on a refusal too, closing it in their success
 follow-up alone. The menu's button shows a ring, and each of its items, the
-workspaces' entries too, a mark, as the keyboard reaches it. The menu's variant no caller used goes.
+workspaces' entries too, a mark, as the keyboard reaches it. The leaving's
+dialog, and the members page's removal's, keep the workspace they were
+opened in and show only while it is the route's: a Back or Forward to
+another workspace ends them. Opening the menu requests nothing, which S2
+checks for every role. The menu's variant no caller used goes.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -2163,6 +2354,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T3.10` | 离开的确认框打开、关上时菜单重建（以确认框的状态为 `key`）：打开它的按钮没了，焦点回不去 | 故事 W11 | 端到端 |
 | `T3.11` | 菜单中别的工作区的一项只在指针悬停时显出底色，像原来那样：方向键选中它时看不出来 | 故事 W11 | 端到端 |
 | `T3.12` | 当前工作区的一项选中时不变深，像原来那样：键盘打开菜单时先选中它，看不出来 | 故事 W11 | 端到端 |
+| `T3.13` | 离开的确认框跟着路由的工作区，像原来的布尔值那样：后退到另一个工作区时开着的确认框跟过去，它的"离开"离开的是那一个 | 故事 W11 | 端到端 |
+| `T3.14` | 成员页移出的确认框不管页面的工作区一直留着，像原来那样：后退到另一个工作区的成员页时它跟过去，它的"移出"作用于那个工作区 | 故事 W11 | 端到端 |
+| `T3.15` | 工作区菜单打开时再取一次工作区列表：原来只有 W2 一次性的清单看得到这个请求 | 故事 S2 | 端到端 |
 
 ---
 
@@ -13145,7 +13339,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new docs/v0/frontend-changes.md
 | 共用组件的键盘焦点 | propel 的 `Button` 在键盘取得焦点时显示浏览器的焦点轮廓，离按钮 2 像素（`focus-visible:outline-offset-2`；原来是 `focus-visible:outline-none`，Tab 到达时看不出焦点），应用中的每个 `Button` 都是这样。propel 的 `IconButton` 同样：应用中 32 个文件的 37 处（M3 的收尾删去侧边栏项目一行的那一处之后是 36 处；个人设置（M2）1 处；M3 的 10 个文件 12 处，侧边栏的收藏在内；工作项（M4）8 个文件 8 处；迭代、模块（M6）6 个文件 6 处；收集箱、通知和视图（M7）7 个文件 10 处），另有收集箱的两个菜单按钮（`getIconButtonStyling`）和 propel 的表情回应的添加按钮（3 个调用方）；其中五处的轮廓照旧看不到：侧边栏收藏的新建文件夹、侧边栏项目一行的菜单（外层 `opacity-0`）、工作项动态的筛选（外面的按钮 `outline-none`），侧边栏项目列表的两处在指针经过之前不显示、Tab 到不了（M3 的收尾改好了侧边栏项目的三处，工作项动态的筛选交给 M4、收藏的新建文件夹交给 M7："名字和键盘"一行）。`@nerve/ui` 的 `CustomMenu` 的省略号按钮去掉 `outline-none`，Tab 到达时显示焦点的轮廓：17 个文件的 17 处（工作项一侧的 11 个文件（M4、M5），成员页的 `member-columns.tsx`，邀请行的 `invitations-list-item.tsx`，工作区视图的 3 个文件，标签的一行）；`member-columns.tsx` 给这个按钮自己的 `opacity-0 group-hover:opacity-100`，所以它的轮廓在键盘取得焦点时仍看不见（M3/P10 的成员页原有的；M3 的收尾给它 `focus-visible:opacity-100`）。`getButtonStyling` 的类名同样不再有 `focus-visible:outline-none`：应用中 9 个文件的 12 处，其中 4 个文件的 6 处在能取得焦点的元素上：M3 的两个文件的 4 个链接（创建项目之后功能一步的"Open project"，`project-feature-update.tsx`；"找不到工作区"页的三个链接，`workspace-wrapper.tsx`）在键盘取得焦点时显示离它 2 像素的轮廓（原来没有）；M4 的两处照旧，由它们自己的样式决定：工作项筛选的"添加筛选"按钮（`rich-filters/add-filters/button.tsx`）的轮廓是 `CustomSearchSelect` 在 Headless UI 的 `data-focus` 上画的那一条（`data-*` 的类排在 `focus-visible` 的之后），布局的下拉框（`dropdowns/layout.tsx`）的按钮自带 `outline-none`，轮廓照旧看不到；其余 6 处给菜单按钮里面的 `div`、`span`（项目、模块、视图的排序，收集箱的筛选），它们自己不取得焦点。用指针点的人看不到不同：`:focus-visible` 在点击时不生效 | Tab 到达的控件看得出焦点（M3/P11 的状态、标签的设置页用到它们；改在共用组件里） | 已完成 | M3/P11 |
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
-| 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
+| 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。离开的确认框和成员页移出的确认框只在打开它们的工作区里显示：后退或前进到别的工作区时关上（原来跟过去，它的"离开""移出"作用于那个工作区）。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
 | 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |

@@ -12,10 +12,17 @@ import { expectNoAddress } from "../../fixtures/assert/identity";
 import { expectMembership, expectMembershipEnded, workspaceTables } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import {
+  announced,
+  closedByEscape,
+  closedWithin,
+  modalDialog,
+  pageBehindHidden,
+  shownWithin,
+} from "../../fixtures/dialogs";
 import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
-import { anotherBrowser } from "../../fixtures/workspace-pages";
+import { anotherBrowser, askToEndMembership } from "../../fixtures/workspace-pages";
 
 // W11, a guest's bounds (M3 design 2, 9.2): the permission matrix's backend
 // test holds every cell; this story samples four of them through the API, and
@@ -91,7 +98,7 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
   expect(await tables(), "the tables after gus's calls").toEqual(before);
 });
 
-test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open", async ({
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open; his leaving's dialog and a removal's end as a Back takes him to another workspace", async ({
   api,
   baseURL,
   browser,
@@ -127,14 +134,47 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await opened(`/${slug}/settings/projects/${web.id}/states`, denied);
   await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
 
+  // The admin's dialogs keep the workspace they were opened in; he has another, Beta. From Beta's home his menu's
+  // acme entry, a link of the app's, takes him to acme's, where he asks his leaving: a Back to Beta's home ends that
+  // dialog rather than ask it of Beta, and a Forward to acme's does not bring it back. Then, from Beta's members page,
+  // the app takes him to acme's (the acme entry, then its "Invite members"), where he asks gus's removal: a Back of two
+  // entries at once (the Back button's list) to Beta's members page ends that dialog too.
+  const betaSlug = slugFor(testInfo, "beta");
+  await createWorkspace(api, admin.access_token, { name: "Beta", slug: betaSlug });
+  const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
+  const adminsMenu = theAdmin.page.getByRole("button", { name: "Open workspace switcher" });
+  /** Opens the admin's menu and follows the link of its entry named to the path given. */
+  const throughMenu = async (role: "menuitem" | "link", name: string | RegExp, path: string) => {
+    await adminsMenu.click();
+    await theAdmin.page.getByRole("menu").getByRole(role, { name, exact: true }).click();
+    await expect(theAdmin.page).toHaveURL(path);
+  };
+  await theAdmin.page.goto(`/${betaSlug}`);
+  await throughMenu("menuitem", /Acme/, `/${slug}`);
+  await adminsMenu.click();
+  await theAdmin.page.getByRole("menuitem", { name: "Leave workspace" }).click();
+  await expect(modalDialog(theAdmin.page)).toHaveCount(1);
+  await theAdmin.page.goBack();
+  await expect(theAdmin.page).toHaveURL(`/${betaSlug}`);
+  expect(await closedWithin(theAdmin.page)).toBe(true);
+  await theAdmin.page.goForward();
+  await expect(theAdmin.page).toHaveURL(`/${slug}`);
+  expect(await shownWithin(modalDialog(theAdmin.page))).toBe(false);
+  await throughMenu("menuitem", /Beta/, `/${betaSlug}`);
+  await throughMenu("link", "Invite members", `/${betaSlug}/settings/members`);
+  await throughMenu("menuitem", /Acme/, `/${slug}`);
+  await throughMenu("link", "Invite members", `/${slug}/settings/members`);
+  await askToEndMembership(theAdmin.page, gusEmail, "Remove");
+  await expect(modalDialog(theAdmin.page)).toHaveCount(1);
+  await theAdmin.page.evaluate(() => window.history.go(-2));
+  await expect(theAdmin.page).toHaveURL(`/${betaSlug}/settings/members`);
+  expect(await closedWithin(theAdmin.page)).toBe(true);
+
   // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
   // stays until Cancel closes it and gives the focus back to the menu's button; he is acme's admin still. His menu
-  // lists his other workspace, Beta, after acme: the arrows mark its entry as they reach it, as the pointer does.
+  // lists Beta after acme: the arrows mark its entry as they reach it, as the pointer does.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
-  await createWorkspace(api, admin.access_token, { name: "Beta", slug: slugFor(testInfo, "beta") });
-  const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
-  await theAdmin.page.goto(`/${slug}`);
-  const adminsMenu = theAdmin.page.getByRole("button", { name: "Open workspace switcher" });
+  await throughMenu("menuitem", /Acme/, `/${slug}`);
   await adminsMenu.click();
   const beta = theAdmin.page.getByRole("menuitem", { name: "Beta" });
   const betaMarked = () => beta.evaluate((entry) => getComputedStyle(entry).backgroundColor !== "rgba(0, 0, 0, 0)");

@@ -1,5 +1,6 @@
-// What the pages ask nerve for as they load: S2's REQUESTS is built of these lists, and a page's story that checks what
-// it loads reads them here rather than writing its own.
+// What the pages ask nerve for as they load, and the workspace menu as it opens: S2's REQUESTS is built of these lists,
+// S2 opens the menu after them, and a page's story that checks what it loads reads them here rather than writing its
+// own.
 
 /**
  * What a page asks nerve for as it loads, signed in, as "<method> <path>" with the query when there is one, {slug} for
@@ -40,6 +41,11 @@ export const GENERAL = ["GET /api/v0/timezones"];
 export const ARCHIVED = ["GET /api/v0/workspaces/{slug}/projects?archived=true"];
 /** The members page lists the workspace's invitations for an admin alone, as nerve shows them to no one else. */
 export const INVITATIONS = ["GET /api/v0/workspaces/{slug}/invitations"];
+/**
+ * The workspace menu asks nerve for nothing as it opens, whatever the role (M3 closeout, W2): its entries are the
+ * workspaces the app's start loaded (APP), and its leaving asks the dialog's question before it sends anything.
+ */
+export const WORKSPACE_MENU: string[] = [];
 
 /** path with the values of names in place of their names: the address of a page of REQUESTS, or a request of a list. */
 export function valued(path: string, names: Record<string, string>): string {

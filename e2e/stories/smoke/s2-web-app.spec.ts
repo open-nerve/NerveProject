@@ -19,7 +19,17 @@ import {
   watchPage,
   type PageWatch,
 } from "../../fixtures/browser";
-import { APP, ARCHIVED, GENERAL, INVITATIONS, PROJECT, PROJECT_MEMBER, WORKSPACE, valued } from "../../fixtures/mounts";
+import {
+  APP,
+  ARCHIVED,
+  GENERAL,
+  INVITATIONS,
+  PROJECT,
+  PROJECT_MEMBER,
+  WORKSPACE,
+  WORKSPACE_MENU,
+  valued,
+} from "../../fixtures/mounts";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -273,7 +283,7 @@ async function expectExactly(
 
 for (const account of ACCOUNTS) {
   const visits = REQUESTS[account];
-  test(`S2: the workspace's ${account} signs in and opens ${visits.map(([path]) => path).join(", then ")}`, async ({
+  test(`S2: the workspace's ${account} signs in and opens ${visits.map(([path]) => path).join(", then ")}, then the workspace menu`, async ({
     api,
     signedInPage,
   }, testInfo) => {
@@ -301,6 +311,12 @@ for (const account of ACCOUNTS) {
     const join = page.getByRole("button", { name: "Join project" });
     if (account === "project non-member") await expect(join).toBeVisible();
     else await expect(join).toHaveCount(0);
+    // The workspace menu, opened on that page with its leaving, asks for what WORKSPACE_MENU lists (nothing).
+    const menu = { from: requests.next(), expected: WORKSPACE_MENU.toSorted() };
+    await page.getByRole("button", { name: "Open workspace switcher" }).click();
+    await expect(page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menuitem", { name: "Leave workspace" })).toHaveCount(0);
 
     expect(watch.apiFailures).toEqual([]);
     expect(watch.oldApiRequests).toEqual([]);
@@ -308,9 +324,10 @@ for (const account of ACCOUNTS) {
     expect(watch.pageErrors).toEqual([]);
     // The hint is logged once for each load (EMOJI_CHECK_WARNING).
     await expectQuietConsole(page, watch, { warnings: visits.map(() => EMOJI_CHECK_WARNING) });
-    // Nothing came after any list was whole.
-    for (const [index, { from, expected }] of loads.entries()) {
-      expect(requests.between(from, loads[index + 1]?.from)).toEqual({ pending: 0, requests: expected });
+    // Nothing came after any list was whole, the menu's last.
+    const lists = [...loads, menu];
+    for (const [index, { from, expected }] of lists.entries()) {
+      expect(requests.between(from, lists[index + 1]?.from)).toEqual({ pending: 0, requests: expected });
     }
   });
 }

@@ -113,9 +113,18 @@ export async function pickRole(
 }
 
 /**
- * Ends a membership from the members page, which page shows: opens the menu of the row of email, picks its entry
- * (Leave on the caller's own row, Remove on another's), and confirms it in the dialog that asks. Resolves with nerve's
- * answer to the request of method to path that the page sends.
+ * Asks to end a membership from the members page, which page shows: opens the menu of the row of email and picks its
+ * entry (Leave on the caller's own row, Remove on another's), which opens the dialog that asks.
+ */
+export async function askToEndMembership(page: Page, email: string, entry: "Leave" | "Remove"): Promise<void> {
+  // the row's menu is its first button: the role's select, when there is one, comes after it
+  await memberRow(page, email).locator("button").first().click();
+  await page.getByRole("button", { name: entry, exact: true }).click();
+}
+
+/**
+ * Ends a membership from the members page, which page shows: asks it (askToEndMembership) and confirms it in the
+ * dialog that asks. Resolves with nerve's answer to the request of method to path that the page sends.
  */
 export async function endMembership(
   page: Page,
@@ -123,9 +132,7 @@ export async function endMembership(
   entry: "Leave" | "Remove",
   request: { method: string; path: string }
 ): Promise<Response> {
-  // the row's menu is its first button: the role's select, when there is one, comes after it
-  await memberRow(page, email).locator("button").first().click();
-  await page.getByRole("button", { name: entry, exact: true }).click();
+  await askToEndMembership(page, email, entry);
   return answerTo(page, request.method, request.path, () =>
     page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
   );
