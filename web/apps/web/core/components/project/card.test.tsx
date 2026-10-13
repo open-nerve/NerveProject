@@ -16,9 +16,10 @@ import { ProjectCard } from "./card";
 // to those nerve lets do it (project.unarchive and project.delete: its admins, and its members who are the workspace's
 // admins), in the card and in its menu. Not archived, it links its settings to its admins and members, who read them,
 // and to whom nerve lets change them (project.update: its admins, and its members who are the workspace's admins, its
-// guests among them); its other guests are told they joined it. The card renders on the server, at the workspace's
-// projects, with stand-ins for its menu (fake-controls.ts, which keeps the items it was given) and for its dialogs;
-// the caller's permissions are the store's own, over acme and its project web as nerve lists them to him
+// guests among them); its other guests are told they joined it, and one who is no member of it is offered joining it.
+// The card renders on the server, at the workspace's projects, with stand-ins for its menu and its buttons
+// (fake-controls.ts, which keeps the items and props it was given), for its dialogs and for @nerve/i18n, whose text is
+// its key; the caller's permissions are the store's own, over acme and its project web as nerve lists them to him
 // (fake-permissions.ts).
 
 const caller = vi.hoisted(() => {
@@ -50,10 +51,15 @@ async function offeredTo(workspaceRole: WorkspaceRole, projectRole: ProjectRole 
       </Routes>
     </MemoryRouter>
   );
+  // the link to its settings (an icon alone), as the card renders it, if it does
+  const settingsLink = new RegExp(`<a [^>]*href="/${acme.slug}/settings/projects/${web.id}"[^>]*>`).exec(card)?.[0];
   const inCard = {
     restore: />restore</.test(card),
     delete: card.includes('aria-label="delete"'),
-    settings: card.includes(`href="/${acme.slug}/settings/projects/${web.id}"`),
+    settings: settingsLink !== undefined,
+    settingsName: settingsLink && /aria-label="([^"]*)"/.exec(settingsLink)?.[1],
+    joined: />project_dialogs\.joined</.test(card),
+    buttons: shown.buttons.map((button) => button.children),
   };
   // the items the menu shows, as ContextMenu picks them: every item but one whose shouldRender is false
   const menu = shown.menus.flatMap(({ items }) =>
@@ -90,4 +96,15 @@ describe("a project's card", () => {
       expect([inCard.settings, menu.includes("settings")]).toEqual([row.linked, row.linked]);
     }
   );
+
+  it("names its settings link, tells a guest he joined it and offers one who is no member joining, in the page's language", async () => {
+    const admin = await offeredTo(its.admin.workspaceRole, its.admin.projectRole, false);
+    const guest = await offeredTo(its.guest.workspaceRole, its.guest.projectRole, false);
+    const outsider = await offeredTo(its.outsider.workspaceRole, its.outsider.projectRole, false);
+    expect([admin.inCard.settingsName, guest.inCard.joined, outsider.inCard.buttons]).toEqual([
+      "settings",
+      true,
+      ["common.join"],
+    ]);
+  });
 });

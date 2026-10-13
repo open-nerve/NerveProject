@@ -237,6 +237,7 @@
     "default_tab_updated": "默认标签已更新。",
     "name_max_length": "项目名称应少于 255 个字符",
     "no_member_yet": "还没有成员",
-    "archived": "已归档"
+    "archived": "已归档",
+    "joined": "已加入"
   }
 }

@@ -295,13 +295,14 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                         e.stopPropagation();
                       }}
                       to={`/${workspaceSlug}/settings/projects/${project.id}`}
+                      aria-label={t("settings")}
                     >
                       <SettingsOutline className="h-3.5 w-3.5" />
                     </Link>
                   ) : (
                     <span className="flex items-center gap-1 text-13 text-placeholder">
                       <TickOutline className="h-3.5 w-3.5" />
-                      Joined
+                      {t("project_dialogs.joined")}
                     </span>
                   ))}
                 {!isMemberOfProject && (
@@ -315,7 +316,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                         setJoinProjectModal(true);
                       }}
                     >
-                      Join
+                      {t("common.join")}
                     </Button>
                   </div>
                 )}

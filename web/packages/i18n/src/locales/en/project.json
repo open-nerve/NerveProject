@@ -237,6 +237,7 @@
     "default_tab_updated": "Default tab updated successfully.",
     "name_max_length": "Project name should be less than 255 characters",
     "no_member_yet": "No Member Yet",
-    "archived": "Archived"
+    "archived": "Archived",
+    "joined": "Joined"
   }
 }

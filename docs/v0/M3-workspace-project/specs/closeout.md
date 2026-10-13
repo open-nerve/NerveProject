@@ -201,7 +201,7 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 
 **角色名只有一个来源**（K2）：`ROLE_DETAILS[role].i18n_title`；`@nerve/utils` 的 `ROLE`、`getUserRole`（`permission/role.ts`、`permission/index.ts`）删除。工作区成员的一列、邀请的一行、项目成员的下拉、编辑器的提及卡片（`editor/embeds/mentions/user.tsx`）、工作区菜单都经它。
 
-**几处顺手的改动**：首页的问候原来由两个词拼成（"good"+"morning"，名字是英文语序的名和姓），中文的"good"也译作"早上"，读作"早上 下午""早上 晚上"：改为每个时段一个带 `{name}` 的键（"Good morning, {name}"、"早上好，{name}"），名字是显示名，与 Task 4 其余带名字的句子相同（S7，变异 `T4.13`）；已拒绝的邀请页的标题改为不对读者说话的一句（"This invitation was declined." / "这份邀请已被拒绝。"，负责人 2026-10-13，3.2 第 2 条；W5，变异 `T4.14`）；状态组的标题原来是小写的键（"backlog"），读屏读到的是键：改为组的名字（`STATE_GROUPS[g].i18n_label`，C9）；规模的选项和 general 页的规模经 `ORGANIZATION_SIZE_I18N_LABEL`（`@nerve/constants`）；两处装饰的图片 `alt=""`；忙时的"Leaving..."、"Joining..."改用共用的"Leaving"、"Joining"（W17）；"Delete Label" → "Delete label"；邀请页、新建工作区、新手引导的标题经 `PageHead`（布局的英文 `meta` 删除）；提示区域的名字由 Base UI 的英文"Notifications"改为经 `t()`（`@nerve/propel` 的 `Toast` 收 `label`，`app/provider.tsx` 的 `AppToast`）。
+**几处顺手的改动**：首页的问候原来由两个词拼成（"good"+"morning"，名字是英文语序的名和姓），中文的"good"也译作"早上"，读作"早上 下午""早上 晚上"：改为每个时段一个带 `{name}` 的键（"Good morning, {name}"、"早上好，{name}"），名字是显示名，与 Task 4 其余带名字的句子相同（S7，变异 `T4.13`）；已拒绝的邀请页的标题改为不对读者说话的一句（"This invitation was declined." / "这份邀请已被拒绝。"，负责人 2026-10-13，3.2 第 2 条；W5，变异 `T4.14`）；状态组的标题原来是小写的键（"backlog"），读屏读到的是键：改为组的名字（`STATE_GROUPS[g].i18n_label`，C9）；规模的选项和 general 页的规模经 `ORGANIZATION_SIZE_I18N_LABEL`（`@nerve/constants`）；两处装饰的图片 `alt=""`；忙时的"Leaving..."、"Joining..."改用共用的"Leaving"、"Joining"（W17）；项目卡片上访客看到的"Joined"、不是成员的人看到的"Join"按钮经 `t()`（`project_dialogs.joined`、`common.join`），设置的链接只有一个 `aria-hidden` 的图标，原来没有名字，现在以"Settings"为名（`card.test.tsx`，变异 `T5.15`–`T5.17`）；"Delete Label" → "Delete label"；邀请页、新建工作区、新手引导的标题经 `PageHead`（布局的英文 `meta` 删除）；提示区域的名字由 Base UI 的英文"Notifications"改为经 `t()`（`@nerve/propel` 的 `Toast` 收 `label`，`app/provider.tsx` 的 `AppToast`）。
 
 **`AlertModalCore` 的按钮**：它的默认值是英文，`@nerve/ui` 不依赖 i18n（F8）。M3 的两个删除确认框（状态、标签）照 M2 的令牌确认框传经 `t()` 的文字；其余调用方在 M4–M8（第 3 节第 17 条）。
 
@@ -645,6 +645,7 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 | "No projects yet" | "No project" 和一句说明 | 设置的项目页（没有项目时，Task 13） |
 | 每个开关都叫"Toggle project feature" | 以功能为名（"Cycles"…） | 项目的功能（P1、P3） |
 | 已选筛选的移除按钮没有名字 | "Remove X" | 项目列表（Task 12） |
+| 项目卡片上设置的链接没有名字（只有图标） | "Settings" | 项目列表的卡片（Task 5） |
 | "Token copied to clipboard." 之外的专用失败文案 | 共用的失败提示 | API 令牌、命令面板的复制（Task 9） |
 | 首页的问候由"Good"和"morning"等拼成，名字是名和姓 | 每个时段一个带 `{name}` 的句子（"Good morning, {name}"），名字是显示名 | 首页（中文的"good"也译作"早上"，原来读作"早上 下午""早上 晚上"，现在是"下午好，{name}"等；S7） |
 | "You declined this invitation." | "This invitation was declined." | 已拒绝的邀请页（W5；负责人 2026-10-13，3.2 第 2 条） |

@@ -160,8 +160,8 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/project/add-project-members-modal.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5、6 |
 | `web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 |
 | `web/apps/web/core/components/project/applied-filters/root.test.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 新 |
-| `web/apps/web/core/components/project/card.test.tsx` | 卡片的文字（Task 5、12） | 5、12 |
-| `web/apps/web/core/components/project/card.tsx` | 项目页的英文（Task 5、12） | 5、12 |
+| `web/apps/web/core/components/project/card.test.tsx` | 卡片的文字（Task 5、12）；设置的链接的名字（Task 5） | 5、12 |
+| `web/apps/web/core/components/project/card.tsx` | 项目页的英文（Task 5、12）；设置的链接的名字（Task 5） | 5、12 |
 | `web/apps/web/core/components/project/dropdowns/filters/lead.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 删除 |
 | `web/apps/web/core/components/project/form-loader.tsx`、`web/apps/web/core/components/project/settings/helper.tsx` | 没有用到的加载、包了一层的开关删除 | 13 删除 |
 | `web/apps/web/core/components/project/header.tsx` | 项目页的英文（Task 12）；工作区经 `useRouteWorkspace()`（Task 11） | 11、12 |
@@ -3746,10 +3746,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.test.ts`、`web/apps/web/core/components/navigation/use-tab-preferences.ts`、`web/apps/web/core/components/project/add-project-members-modal.test.tsx`、`web/apps/web/core/components/project/add-project-members-modal.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/card.test.tsx`、`web/apps/web/core/components/project/card.tsx`、`web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx`、`web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/form.tsx`、`web/apps/web/core/components/project/join-project-modal.tsx`、`web/apps/web/core/components/project/leave-project-modal.tsx`、`web/apps/web/core/components/project/member-select.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/settings/control-section.tsx`、`web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx`、`web/apps/web/core/components/project/settings/use-feature-toggle.ts`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/project.json`
 
 **Interfaces:**（spec 2.8）
-- 经 `t()` 的（多数经 `Translated`）：删除、离开、加入、归档和恢复项目的弹窗，移出项目成员，添加成员（提示、"Select co-worker"），成员的默认值，功能开关和标签栏的提示，控制区的说明，项目表单（`alt=""`、长度的提示、"Project ID"），卡片的菜单和状态，成员的下拉的"None"。新键在 `project.json` 的 `project_dialogs.*` 和 `project-settings.json`。
+- 经 `t()` 的（多数经 `Translated`）：删除、离开、加入、归档和恢复项目的弹窗，移出项目成员，添加成员（提示、"Select co-worker"），成员的默认值，功能开关和标签栏的提示，控制区的说明，项目表单（`alt=""`、长度的提示、"Project ID"），卡片的菜单和状态（"Archived"，访客看到的"Joined"，不是成员的人看到的"Join"按钮），成员的下拉的"None"。卡片上设置的链接只有一个 `aria-hidden` 的图标，原来没有名字：以"Settings"（`settings`）为名。新键在 `project.json` 的 `project_dialogs.*` 和 `project-settings.json`。
 - 离开时要输入的文字是常量 `CONFIRMATION`（"Leave Project"），名称的规则改为 `required: true`；忙时的"Leaving..."、"Joining..."改用共用的"Leaving"、"Joining"（W17）。
 
-**Tests:** `project-dialog-texts.test.tsx`（新文件：加入、离开、移出的文字）；`add-project-members-modal`、`archive-restore-modal`、`card`、`delete-project-modal`、`use-feature-toggle`、`use-tab-preferences` 的测试读键。P2、P5 照新的忙时文字；S7 的第二个：项目的 general 页和成员页。
+**Tests:** `project-dialog-texts.test.tsx`（新文件：加入、离开、移出的文字）；`add-project-members-modal`、`archive-restore-modal`、`card`、`delete-project-modal`、`use-feature-toggle`、`use-tab-preferences` 的测试读键；`card.test.tsx` 加一个：设置的链接的名字、访客的"Joined"、不是成员的人的"Join"。P2、P5 照新的忙时文字；S7 的第二个：项目的 general 页和成员页。
 
 - [ ] **Step 1: 弹窗和设置**
 
@@ -3871,7 +3871,7 @@ import { useTranslation } from "@nerve/i18n";
               : t(isLoading ? "project_dialogs.restore.restoring" : "restore")}
 ````
 
-`web/apps/web/core/components/project/card.tsx`（修改，10 处）：
+`web/apps/web/core/components/project/card.tsx`（修改，13 处）：
 
 ````old web/apps/web/core/components/project/card.tsx
       title: "Settings",
@@ -3934,6 +3934,27 @@ import { useTranslation } from "@nerve/i18n";
 ````
 ````new web/apps/web/core/components/project/card.tsx
                     aria-label={t("delete")}
+````
+````old web/apps/web/core/components/project/card.tsx
+                      to={`/${workspaceSlug}/settings/projects/${project.id}`}
+````
+````new web/apps/web/core/components/project/card.tsx
+                      to={`/${workspaceSlug}/settings/projects/${project.id}`}
+                      aria-label={t("settings")}
+````
+````old web/apps/web/core/components/project/card.tsx
+                      Joined
+````
+````new web/apps/web/core/components/project/card.tsx
+                      {t("project_dialogs.joined")}
+````
+````old web/apps/web/core/components/project/card.tsx
+                      Join
+                    </Button>
+````
+````new web/apps/web/core/components/project/card.tsx
+                      {t("common.join")}
+                    </Button>
 ````
 
 `web/apps/web/core/components/project/confirm-project-member-remove.tsx`（修改，8 处）：
@@ -4479,7 +4500,8 @@ import { useTranslation } from "@nerve/i18n";
     "default_tab_updated": "Default tab updated successfully.",
     "name_max_length": "Project name should be less than 255 characters",
     "no_member_yet": "No Member Yet",
-    "archived": "Archived"
+    "archived": "Archived",
+    "joined": "Joined"
 ````
 
 `web/packages/i18n/src/locales/zh-CN/project-settings.json`（修改，1 处）：
@@ -4563,7 +4585,8 @@ import { useTranslation } from "@nerve/i18n";
     "default_tab_updated": "默认标签已更新。",
     "name_max_length": "项目名称应少于 255 个字符",
     "no_member_yet": "还没有成员",
-    "archived": "已归档"
+    "archived": "已归档",
+    "joined": "已加入"
 ````
 
 - [ ] **Step 2: 测试**
@@ -4675,15 +4698,60 @@ test("S7 (page): an admin whose language is Chinese sees a project's general and
       said: { title: "project_dialogs.restore.done_title", message: "project_dialogs.restore.done" },
 ````
 
-`web/apps/web/core/components/project/card.test.tsx`（修改，1 处）：
+`web/apps/web/core/components/project/card.test.tsx`（修改，3 处）：
 
 ````old web/apps/web/core/components/project/card.test.tsx
-    restore: />Restore</.test(card),
-    delete: card.includes('aria-label="Delete"'),
+// guests among them); its other guests are told they joined it. The card renders on the server, at the workspace's
+// projects, with stand-ins for its menu (fake-controls.ts, which keeps the items it was given) and for its dialogs;
+// the caller's permissions are the store's own, over acme and its project web as nerve lists them to him
+// (fake-permissions.ts).
 ````
 ````new web/apps/web/core/components/project/card.test.tsx
+// guests among them); its other guests are told they joined it, and one who is no member of it is offered joining it.
+// The card renders on the server, at the workspace's projects, with stand-ins for its menu and its buttons
+// (fake-controls.ts, which keeps the items and props it was given), for its dialogs and for @nerve/i18n, whose text is
+// its key; the caller's permissions are the store's own, over acme and its project web as nerve lists them to him
+// (fake-permissions.ts).
+````
+````old web/apps/web/core/components/project/card.test.tsx
+  const inCard = {
+    restore: />Restore</.test(card),
+    delete: card.includes('aria-label="Delete"'),
+    settings: card.includes(`href="/${acme.slug}/settings/projects/${web.id}"`),
+  };
+````
+````new web/apps/web/core/components/project/card.test.tsx
+  // the link to its settings (an icon alone), as the card renders it, if it does
+  const settingsLink = new RegExp(`<a [^>]*href="/${acme.slug}/settings/projects/${web.id}"[^>]*>`).exec(card)?.[0];
+  const inCard = {
     restore: />restore</.test(card),
     delete: card.includes('aria-label="delete"'),
+    settings: settingsLink !== undefined,
+    settingsName: settingsLink && /aria-label="([^"]*)"/.exec(settingsLink)?.[1],
+    joined: />project_dialogs\.joined</.test(card),
+    buttons: shown.buttons.map((button) => button.children),
+  };
+````
+````old web/apps/web/core/components/project/card.test.tsx
+      expect([inCard.settings, menu.includes("settings")]).toEqual([row.linked, row.linked]);
+    }
+  );
+````
+````new web/apps/web/core/components/project/card.test.tsx
+      expect([inCard.settings, menu.includes("settings")]).toEqual([row.linked, row.linked]);
+    }
+  );
+
+  it("names its settings link, tells a guest he joined it and offers one who is no member joining, in the page's language", async () => {
+    const admin = await offeredTo(its.admin.workspaceRole, its.admin.projectRole, false);
+    const guest = await offeredTo(its.guest.workspaceRole, its.guest.projectRole, false);
+    const outsider = await offeredTo(its.outsider.workspaceRole, its.outsider.projectRole, false);
+    expect([admin.inCard.settingsName, guest.inCard.joined, outsider.inCard.buttons]).toEqual([
+      "settings",
+      true,
+      ["common.join"],
+    ]);
+  });
 ````
 
 `web/apps/web/core/components/project/delete-project-modal.test.tsx`（修改，1 处）：
@@ -4813,8 +4881,9 @@ git commit -m "feat(M3/closeout): the project's dialogs and settings speak the u
 Deleting, leaving, joining, archiving and restoring a project, removing
 and adding members, the member defaults, the feature toggles and the tab
 bar's toasts read their text through t(), a sentence with a name one key.
-The busy labels are the shared Leaving and Joining. S7 reads a project's
-general and members pages in Chinese.
+The busy labels are the shared Leaving and Joining. The project card's
+Joined and Join read t() too, and its settings link has a name. S7 reads
+a project's general and members pages in Chinese.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4837,6 +4906,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T5.12` | 加入项目的弹窗标题是英文 | `project-dialog-texts.test.tsx` | vitest |
 | `T5.13` | 离开项目的那句话是英文 | `project-dialog-texts.test.tsx` | vitest |
 | `T5.14` | 移出项目成员的标题是英文 | `project-dialog-texts.test.tsx` | vitest |
+| `T5.15` | 访客的卡片上"已加入"是英文 | `card.test.tsx` | vitest |
+| `T5.16` | 不是成员的人的卡片上"加入"是英文 | `card.test.tsx` | vitest |
+| `T5.17` | 卡片上设置的链接没有名字 | `card.test.tsx` | vitest |
 
 ---
 
@@ -10649,6 +10721,7 @@ vi.mock("@makeplane/propel/components/tooltip", () => ({
 ````old web/apps/web/core/components/project/card.test.tsx
   });
 
+  it.each<Caller & { linked: boolean }>([
 ````
 ````new web/apps/web/core/components/project/card.test.tsx
   });
@@ -10672,6 +10745,7 @@ vi.mock("@makeplane/propel/components/tooltip", () => ({
     );
   });
 
+  it.each<Caller & { linked: boolean }>([
 ````
 
 - [ ] **Step 3: 运行检查**
@@ -13602,7 +13676,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框、命令面板和快捷键列表关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上，窄屏（768 px 以下）上开着的侧边栏收起。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
-| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
+| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（"设置"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |
