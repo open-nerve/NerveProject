@@ -5,6 +5,7 @@
  */
 
 import type { ProjectNavigation, ProjectTab } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
@@ -38,6 +39,7 @@ export type TTabPreferencesHook = {
 export const useTabPreferences = (projectId: string): TTabPreferencesHook => {
   const { getNavigation, updateNavigation } = useProjectPreferences();
   const toastRefusal = useRefusalToast();
+  const { t } = useTranslation();
   const fetched = getNavigation(projectId);
 
   const send = (change: NavigationChange, done?: () => void) =>
@@ -51,8 +53,8 @@ export const useTabPreferences = (projectId: string): TTabPreferencesHook => {
             send(toggleDefaultTab(tabKey), () =>
               setToast({
                 type: TOAST_TYPE.SUCCESS,
-                title: "Success!",
-                message: "Default tab updated successfully.",
+                title: t("toast.success"),
+                message: t("project_dialogs.default_tab_updated"),
               })
             ),
           hide: (tabKey) => send(hideTab(tabKey)),

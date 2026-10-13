@@ -9,10 +9,13 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // types
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { MemberUser } from "@nerve/api-client";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+// components
+import { Translated } from "@/components/common/translated";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
@@ -34,6 +37,7 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
   // store hooks
   const { data: currentUser } = useUser();
   const { getProjectById } = useProject();
+  const { t } = useTranslation();
 
   const handleClose = () => {
     onClose();
@@ -68,20 +72,22 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
           </div>
           <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
             <h3 className="text-16 leading-6 font-medium text-primary">
-              {isCurrentUser ? "Leave project?" : `Remove ${data?.display_name}?`}
+              {isCurrentUser
+                ? t("project_dialogs.remove_member.leave_title")
+                : t("project_dialogs.remove_member.remove_title", { name: data.display_name })}
             </h3>
             <div className="mt-2">
               <p className="text-13 text-secondary">
                 {isCurrentUser ? (
-                  <>
-                    Are you sure you want to leave the <span className="font-bold">{currentProjectDetails?.name}</span>{" "}
-                    project? You will be able to join the project if a project admin adds you again or if it's public.
-                  </>
+                  <Translated
+                    i18nKey="project_dialogs.remove_member.leave_body"
+                    values={{ name: <span className="font-bold">{currentProjectDetails?.name}</span> }}
+                  />
                 ) : (
-                  <>
-                    Are you sure you want to remove member- <span className="font-bold">{data?.display_name}</span>?
-                    They will no longer have access to this project. This action cannot be undone.
-                  </>
+                  <Translated
+                    i18nKey="project_dialogs.remove_member.remove_body"
+                    values={{ name: <span className="font-bold">{data.display_name}</span> }}
+                  />
                 )}
               </p>
             </div>
@@ -90,10 +96,10 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
       </div>
       <div className="flex justify-end gap-2 p-4 sm:px-6">
         <Button variant="secondary" size="lg" onClick={handleClose} disabled={isDeleteLoading}>
-          Cancel
+          {t("cancel")}
         </Button>
         <Button variant="error-fill" size="lg" onClick={handleDeletion} loading={isDeleteLoading}>
-          {isCurrentUser ? (isDeleteLoading ? "Leaving..." : "Leave") : isDeleteLoading ? "Removing..." : "Remove"}
+          {isCurrentUser ? t(isDeleteLoading ? "leaving" : "leave") : t(isDeleteLoading ? "removing" : "remove")}
         </Button>
       </div>
     </ModalCore>

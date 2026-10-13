@@ -85,42 +85,42 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
     {
       key: "settings",
       action: () => navigate(`/${workspaceSlug}/settings/projects/${project.id}`),
-      title: "Settings",
+      title: t("settings"),
       icon: SettingsOutline,
       shouldRender: !isArchived && (hasAdminRole || hasMemberRole),
     },
     {
       key: "join",
       action: () => setJoinProjectModal(true),
-      title: "Join",
+      title: t("common.join"),
       icon: UserPlusOutline,
       shouldRender: !isMemberOfProject && !isArchived,
     },
     {
       key: "open-new-tab",
       action: handleOpenInNewTab,
-      title: "Open in new tab",
+      title: t("open_in_new_tab"),
       icon: NewTabOutline,
       shouldRender: !isMemberOfProject && !isArchived,
     },
     {
       key: "copy-link",
       action: handleCopyText,
-      title: "Copy link",
+      title: t("copy_link"),
       icon: LinkOutline,
       shouldRender: !isArchived,
     },
     {
       key: "restore",
       action: () => setRestoreProject(true),
-      title: "Restore",
+      title: t("restore"),
       icon: RestoreOutline,
       shouldRender: isArchived && hasAdminRole,
     },
     {
       key: "delete",
       action: () => setDeleteProjectModal(true),
-      title: "Delete",
+      title: t("delete"),
       icon: DeleteOutline,
       shouldRender: isArchived && hasAdminRole,
     },
@@ -247,10 +247,12 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                     </AvatarGroupOverflow>
                   </div>
                 ) : (
-                  <span className="text-13 text-placeholder italic">No Member Yet</span>
+                  <span className="text-13 text-placeholder italic">{t("project_dialogs.no_member_yet")}</span>
                 )}
               </Tooltip>
-              {isArchived && <div className="text-11 font-medium text-placeholder">Archived</div>}
+              {isArchived && (
+                <div className="text-11 font-medium text-placeholder">{t("project_dialogs.archived")}</div>
+              )}
             </div>
             {isArchived ? (
               hasAdminRole && (
@@ -266,7 +268,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                   >
                     <div className="flex items-center gap-1.5">
                       <RestoreOutline className="h-3.5 w-3.5" />
-                      Restore
+                      {t("restore")}
                     </div>
                   </button>
                   <button
@@ -277,7 +279,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                       e.stopPropagation();
                       setDeleteProjectModal(true);
                     }}
-                    aria-label="Delete"
+                    aria-label={t("delete")}
                   >
                     <DeleteOutline className="h-3.5 w-3.5" />
                   </button>

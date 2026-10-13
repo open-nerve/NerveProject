@@ -77,9 +77,9 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
       done: () => {
         handleClose();
         setToast({
-          title: "Success!",
+          title: t("toast.success"),
           type: TOAST_TYPE.SUCCESS,
-          message: "Members added successfully.",
+          message: t("project_dialogs.members_added"),
         });
       },
       failed: toastRefusal,
@@ -173,7 +173,9 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                                   {selectedMember?.member.display_name}
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 py-0.5">Select co-worker</div>
+                                <div className="flex items-center gap-2 py-0.5">
+                                  {t("project_dialogs.select_member")}
+                                </div>
                               )}
                               <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
                             </span>

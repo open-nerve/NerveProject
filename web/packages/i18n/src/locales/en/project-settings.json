@@ -9,6 +9,20 @@
       }
     },
     "members": {
+      "defaults": {
+        "lead": {
+          "title": "Project Lead",
+          "description": "Select the project lead for the project."
+        },
+        "assignee": {
+          "title": "Default Assignee",
+          "description": "Select the default assignee for the project."
+        },
+        "guest_access": {
+          "title": "Guest access",
+          "description": "This will allow guests to have view access to all the project work items."
+        }
+      },
       "add_members": {
         "title": "Add members",
         "sub_heading": "Add workspace members to work on your project."

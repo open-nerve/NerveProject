@@ -51,8 +51,8 @@ async function offeredTo(workspaceRole: WorkspaceRole, projectRole: ProjectRole 
     </MemoryRouter>
   );
   const inCard = {
-    restore: />Restore</.test(card),
-    delete: card.includes('aria-label="Delete"'),
+    restore: />restore</.test(card),
+    delete: card.includes('aria-label="delete"'),
     settings: card.includes(`href="/${acme.slug}/settings/projects/${web.id}"`),
   };
   // the items the menu shows, as ContextMenu picks them: every item but one whose shouldRender is false

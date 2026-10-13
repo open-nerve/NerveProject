@@ -60,7 +60,7 @@ describe("useFeatureToggle", () => {
     useFeatureToggle("acme", web.id)("cycle_view");
     await pageSettled();
     expect(toasts).toEqual([
-      { type: "success", title: "Success!", message: "Project feature updated successfully." },
+      { type: "success", title: "toast.success", message: "project_dialogs.feature_updated" },
       { type: "error", title: "toast.error", message: "errors.forbidden" },
     ]);
   });

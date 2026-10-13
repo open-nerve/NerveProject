@@ -186,5 +186,57 @@
     "email": "邮箱",
     "joining_date": "加入日期",
     "role": "角色"
+  },
+  "project_dialogs": {
+    "type_project_name": "输入项目名称 {name} 以继续：",
+    "type_confirmation": "请在下方输入 {confirmation} 以确认：",
+    "delete": {
+      "title": "删除项目",
+      "body": "确定要删除项目 {name} 吗？这个项目的全部数据将被永久删除。此操作无法撤销。",
+      "confirmation_placeholder": "输入 'delete my project'",
+      "deleted": "项目已删除。",
+      "description": "删除项目时，项目中的全部数据和资源将被永久删除，且无法恢复。"
+    },
+    "leave": {
+      "title": "离开项目",
+      "body": "确定要离开项目 {name} 吗？与您相关的全部工作项将无法访问。",
+      "name_placeholder": "输入项目名称",
+      "confirmation_placeholder": "输入 'Leave Project'",
+      "name_mismatch": "请输入说明中显示的项目名称。",
+      "confirmation_mismatch": "请输入 'Leave Project' 以确认离开项目。"
+    },
+    "join": {
+      "title": "加入项目？",
+      "body": "确定要加入项目 {name} 吗？请点击下方的“加入项目”按钮继续。",
+      "submit": "加入项目",
+      "joining": "正在加入"
+    },
+    "remove_member": {
+      "leave_title": "离开项目？",
+      "remove_title": "移出 {name}？",
+      "leave_body": "确定要离开项目 {name} 吗？项目管理员再次添加您，或者项目公开时，您可以重新加入。",
+      "remove_body": "确定要将 {name} 移出项目吗？对方将不能再访问这个项目。此操作无法撤销。"
+    },
+    "archive": {
+      "title": "归档 {name}",
+      "body": "这个项目和它的工作项、迭代、模块将被归档，它的工作项不会出现在搜索中。只有项目管理员可以恢复这个项目。",
+      "done_title": "已归档",
+      "done": "{name} 已归档",
+      "description": "归档项目后，它不再显示在侧边导航中，您仍可以在项目页中访问它。您可以随时恢复或删除这个项目。"
+    },
+    "restore": {
+      "title": "恢复 {name}",
+      "body": "恢复项目会重新启用它，项目的全部成员都能看到它。确定要继续吗？",
+      "done_title": "已恢复",
+      "done": "您可以在项目中找到 {name}。",
+      "restoring": "正在恢复"
+    },
+    "members_added": "成员已添加。",
+    "select_member": "选择同事",
+    "feature_updated": "项目功能已更新。",
+    "default_tab_updated": "默认标签已更新。",
+    "name_max_length": "项目名称应少于 255 个字符",
+    "no_member_yet": "还没有成员",
+    "archived": "已归档"
   }
 }

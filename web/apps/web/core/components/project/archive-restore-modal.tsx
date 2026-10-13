@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 // ui
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
@@ -34,6 +35,7 @@ export function ArchiveRestoreProjectModal(props: Props) {
   // store hooks
   const { getProjectById, archiveProject, restoreProject } = useProject();
   const toastRefusal = useRefusalToast();
+  const { t } = useTranslation();
 
   const projectDetails = getProjectById(projectId);
   if (!projectDetails) return null;
@@ -44,19 +46,12 @@ export function ArchiveRestoreProjectModal(props: Props) {
     setIsLoading(true);
     await followInSession(() => (archive ? archiveProject(projectId) : restoreProject(projectId)), {
       done: () => {
-        setToast(
-          archive
-            ? {
-                type: TOAST_TYPE.SUCCESS,
-                title: "Archive success",
-                message: `${projectDetails.name} has been archived successfully`,
-              }
-            : {
-                type: TOAST_TYPE.SUCCESS,
-                title: "Restore success",
-                message: `You can find ${projectDetails.name} in your projects.`,
-              }
-        );
+        const said = archive ? "project_dialogs.archive" : "project_dialogs.restore";
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t(`${said}.done_title`),
+          message: t(`${said}.done`, { name: projectDetails.name }),
+        });
         onClose();
         return navigate(`/${workspaceSlug}/projects`);
       },
@@ -76,19 +71,21 @@ export function ArchiveRestoreProjectModal(props: Props) {
     >
       <div className="px-5 py-4">
         <h3 className="text-18 font-medium 2xl:text-20">
-          {archive ? "Archive" : "Restore"} {projectDetails.name}
+          {t(archive ? "project_dialogs.archive.title" : "project_dialogs.restore.title", {
+            name: projectDetails.name,
+          })}
         </h3>
         <p className="mt-3 text-13 text-secondary">
-          {archive
-            ? "This project and its work items, cycles and modules will be archived. Its work items won't appear in search. Only project admins can restore the project."
-            : "Restoring a project will activate it and make it visible to all members of the project. Are you sure you want to continue?"}
+          {t(archive ? "project_dialogs.archive.body" : "project_dialogs.restore.body")}
         </p>
         <div className="mt-3 flex justify-end gap-2">
           <Button variant="secondary" size="lg" onClick={onClose} disabled={isLoading}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button variant="primary" size="lg" onClick={() => void handleChange()} loading={isLoading}>
-            {archive ? (isLoading ? "Archiving" : "Archive") : isLoading ? "Restoring" : "Restore"}
+            {archive
+              ? t(isLoading ? "common.archiving" : "archive")
+              : t(isLoading ? "project_dialogs.restore.restoring" : "restore")}
           </Button>
         </div>
       </div>

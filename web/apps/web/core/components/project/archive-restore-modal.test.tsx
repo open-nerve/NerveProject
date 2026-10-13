@@ -79,13 +79,13 @@ describe("ArchiveRestoreProjectModal", () => {
       change: "archives",
       archive: true,
       sent: () => store.archiveProject,
-      said: { title: "Archive success", message: "Web has been archived successfully" },
+      said: { title: "project_dialogs.archive.done_title", message: "project_dialogs.archive.done" },
     },
     {
       change: "restores",
       archive: false,
       sent: () => store.restoreProject,
-      said: { title: "Restore success", message: "You can find Web in your projects." },
+      said: { title: "project_dialogs.restore.done_title", message: "project_dialogs.restore.done" },
     },
   ])("$change the project, says so and gives way to the projects", async ({ archive, sent, said }) => {
     const onClose = press(archive);

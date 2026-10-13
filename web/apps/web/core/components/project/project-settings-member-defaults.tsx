@@ -92,7 +92,10 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
 
   return (
     <div className="my-6 flex flex-col gap-y-6">
-      <DefaultSettingItem title="Project Lead" description="Select the project lead for the project.">
+      <DefaultSettingItem
+        title={t("project_settings.members.defaults.lead.title")}
+        description={t("project_settings.members.defaults.lead.description")}
+      >
         {project ? (
           <MemberSelect
             value={project.project_lead_id}
@@ -105,7 +108,10 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
           </Loader>
         )}
       </DefaultSettingItem>
-      <DefaultSettingItem title="Default Assignee" description="Select the default assignee for the project.">
+      <DefaultSettingItem
+        title={t("project_settings.members.defaults.assignee.title")}
+        description={t("project_settings.members.defaults.assignee.description")}
+      >
         {project ? (
           <MemberSelect
             value={project.default_assignee_id}
@@ -120,8 +126,8 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
       </DefaultSettingItem>
       {project && (
         <DefaultSettingItem
-          title="Guest access"
-          description="This will allow guests to have view access to all the project work items."
+          title={t("project_settings.members.defaults.guest_access.title")}
+          description={t("project_settings.members.defaults.guest_access.description")}
         >
           <div className="flex items-center justify-end">
             <Switch
@@ -129,7 +135,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
               checked={project.guest_view_all_features}
               onCheckedChange={toggleGuestViewAllIssues}
               disabled={!isAdmin}
-              aria-label="Guest access"
+              aria-label={t("project_settings.members.defaults.guest_access.title")}
             />
           </div>
         </DefaultSettingItem>

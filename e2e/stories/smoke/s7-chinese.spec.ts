@@ -1,6 +1,6 @@
 import type { Page, TestInfo } from "@playwright/test";
 
-import { createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
+import { createProject, createWorkspace, inviteAndAccept, slugFor, type Api } from "../../fixtures/api";
 import { bearer, emailFor, shownNameOf, type AuthTokens } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { modalDialog } from "../../fixtures/dialogs";
@@ -89,4 +89,35 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await cancel(page);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): an admin whose language is Chinese sees a project's general and members pages and their dialogs in Chinese", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const { admin, slug } = await chineseAdmin(api, testInfo);
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+
+  // The general page: the settings' sidebar, the deletion's description, the archive's and the deletion's dialogs,
+  // the project's name in them.
+  await page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(page.getByText("项目设置", { exact: true })).toBeVisible();
+  await expect(page.getByText("删除项目时，项目中的全部数据和资源将被永久删除，且无法恢复。")).toBeVisible();
+  await page.getByRole("button", { name: "归档", exact: true }).click();
+  await expect(modalDialog(page).getByRole("heading")).toHaveText("归档 Web");
+  await cancel(page);
+  await page.getByRole("button", { name: "删除", exact: true }).click();
+  await expect(modalDialog(page).getByRole("heading")).toHaveText("删除项目");
+  await expect(modalDialog(page).getByText(/^确定要删除项目 Web 吗？/)).toBeVisible();
+  await cancel(page);
+
+  // The members page: the member defaults.
+  await page.goto(`/${slug}/settings/projects/${web.id}/members`);
+  await expect(page.getByText("项目负责人", { exact: true })).toBeVisible();
+  await expect(page.getByText("默认负责人", { exact: true })).toBeVisible();
+  await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: Array(2).fill(EMOJI_CHECK_WARNING) });
 });

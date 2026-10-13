@@ -328,7 +328,7 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   await theMember.page.goto(members);
   const releaseLeaving = await holdAnswer(theMember.page, leaving.method, leaving.path);
   const left = endProjectMembership(theMember.page, bob.email, "Leave", leaving);
-  const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving..." });
+  const busy = theMember.page.getByRole("dialog").getByRole("button", { name: "Leaving" });
   expect(await enabledWithin(busy)).toBe(false);
   await expect(theMember.page).toHaveURL(members);
   await releaseLeaving();
@@ -360,7 +360,7 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   const releaseGuest = await holdAnswer(theGuest.page, leaving.method, leaving.path);
   const guestLeft = answerTo(theGuest.page, leaving.method, leaving.path, () => leaveProject.click());
   await expect(theGuest.page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
-  expect(await enabledWithin(theGuest.page.getByRole("button", { name: "Leaving..." }))).toBe(false);
+  expect(await enabledWithin(theGuest.page.getByRole("button", { name: "Leaving" }))).toBe(false);
   expect(await closedByEscape(theGuest.page)).toBe(false);
   await releaseGuest();
   expect((await guestLeft).status()).toBe(204);

@@ -68,7 +68,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
         <CoverImage
           src={project.cover_image_url ?? undefined}
           showDefaultWhenEmpty
-          alt="Project cover image"
+          alt=""
           className="h-44 w-full rounded-md"
         />
         <div className="absolute bottom-4 z-5 flex w-full items-end justify-between gap-3 px-4">
@@ -119,7 +119,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
               required: t("name_is_required"),
               maxLength: {
                 value: 255,
-                message: "Project name should be less than 255 characters",
+                message: t("project_dialogs.name_max_length"),
               },
             }}
             render={({ field: { value, onChange, ref } }) => (
@@ -168,7 +168,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <h4 className="text-13">Project ID</h4>
+            <h4 className="text-13">{t("project_id")}</h4>
             <div className="relative">
               <Controller
                 control={control}

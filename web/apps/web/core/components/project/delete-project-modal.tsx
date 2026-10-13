@@ -9,10 +9,13 @@ import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // Nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Project } from "@nerve/api-client";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+// components
+import { Translated } from "@/components/common/translated";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
@@ -42,6 +45,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
   // store hooks
   const { deleteProject } = useProject();
   const toastRefusal = useRefusalToast();
+  const { t } = useTranslation();
   // router
   const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
@@ -77,8 +81,8 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
         if (projectId === project.id) void navigate(`/${workspaceSlug}/projects`);
         setToast({
           type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Project deleted successfully.",
+          title: t("toast.success"),
+          message: t("project_dialogs.delete.deleted"),
         });
       },
       failed: toastRefusal,
@@ -100,18 +104,23 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
             <WarningTriangleOutline className="h-6 w-6 text-danger-primary" aria-hidden="true" />
           </span>
           <span className="flex items-center justify-start">
-            <h3 className="text-18 font-medium 2xl:text-20">Delete project</h3>
+            <h3 className="text-18 font-medium 2xl:text-20">{t("project_dialogs.delete.title")}</h3>
           </span>
         </div>
         <span>
           <p className="text-13 leading-7 text-secondary">
-            Are you sure you want to delete project <span className="font-semibold break-words">{project.name}</span>?
-            All of the data related to the project will be permanently removed. This action cannot be undone
+            <Translated
+              i18nKey="project_dialogs.delete.body"
+              values={{ name: <span className="font-semibold break-words">{project.name}</span> }}
+            />
           </p>
         </span>
         <div className="text-secondary">
           <p className="text-13 break-words">
-            Enter the project name <span className="font-medium text-primary">{project.name}</span> to continue:
+            <Translated
+              i18nKey="project_dialogs.type_project_name"
+              values={{ name: <span className="font-medium text-primary">{project.name}</span> }}
+            />
           </p>
           <Controller
             control={control}
@@ -127,7 +136,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
                     value={value}
                     onChange={onChange}
                     ref={ref}
-                    placeholder="Project name"
+                    placeholder={t("project_name")}
                     autoComplete="off"
                   />
                 </InputGroup>
@@ -137,7 +146,10 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
         </div>
         <div className="text-secondary">
           <p className="text-13">
-            To confirm, type <span className="font-medium text-primary">{CONFIRMATION}</span> below:
+            <Translated
+              i18nKey="project_dialogs.type_confirmation"
+              values={{ confirmation: <span className="font-medium text-primary">{CONFIRMATION}</span> }}
+            />
           </p>
           <Controller
             control={control}
@@ -153,7 +165,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
                     value={value}
                     onChange={onChange}
                     ref={ref}
-                    placeholder="Enter 'delete my project'"
+                    placeholder={t("project_dialogs.delete.confirmation_placeholder")}
                     autoComplete="off"
                   />
                 </InputGroup>
@@ -163,10 +175,10 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button variant="error-fill" size="lg" type="submit" disabled={!confirmed(watch())} loading={isSubmitting}>
-            {isSubmitting ? "Deleting" : "Delete project"}
+            {isSubmitting ? t("deleting") : t("project_dialogs.delete.title")}
           </Button>
         </div>
       </form>

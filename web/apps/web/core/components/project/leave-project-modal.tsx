@@ -10,12 +10,14 @@ import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // Nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Project } from "@nerve/api-client";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { useParams } from "react-router";
 // components
+import { Translated } from "@/components/common/translated";
 import { useProjectMembershipChanges } from "@/components/project/settings/use-project-membership-changes";
 
 type FormData = {
@@ -27,6 +29,9 @@ const defaultValues: FormData = {
   projectName: "",
   confirmLeave: "",
 };
+
+/** The words that confirm the leaving. */
+const CONFIRMATION = "Leave Project";
 
 export interface ILeaveProjectModal {
   project: Project;
@@ -40,6 +45,7 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
   const { workspaceSlug } = useParams();
   // store hooks
   const { leave } = useProjectMembershipChanges(workspaceSlug ?? "", project.id);
+  const { t } = useTranslation();
 
   const {
     control,
@@ -59,16 +65,16 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
     if (data.projectName !== project.name) {
       setToast({
         type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Please enter the project name as shown in the description.",
+        title: t("toast.error"),
+        message: t("project_dialogs.leave.name_mismatch"),
       });
       return;
     }
-    if (data.confirmLeave !== "Leave Project") {
+    if (data.confirmLeave !== CONFIRMATION) {
       setToast({
         type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Please confirm leaving the project by typing the 'Leave Project'.",
+        title: t("toast.error"),
+        message: t("project_dialogs.leave.confirmation_mismatch"),
       });
       return;
     }
@@ -90,28 +96,30 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
             <WarningTriangleOutline className="h-6 w-6 text-danger-primary" aria-hidden="true" />
           </span>
           <span className="flex items-center justify-start">
-            <h3 className="text-18 font-medium 2xl:text-20">Leave Project</h3>
+            <h3 className="text-18 font-medium 2xl:text-20">{t("project_dialogs.leave.title")}</h3>
           </span>
         </div>
 
         <span>
           <p className="text-13 leading-7 text-secondary">
-            Are you sure you want to leave the project -
-            <span className="font-medium text-primary">{` "${project?.name}" `}</span>? All of the work items associated
-            with you will become inaccessible.
+            <Translated
+              i18nKey="project_dialogs.leave.body"
+              values={{ name: <span className="font-medium text-primary">{project.name}</span> }}
+            />
           </p>
         </span>
 
         <div className="text-secondary">
           <p className="text-13 break-words">
-            Enter the project name <span className="font-medium text-primary">{project?.name}</span> to continue:
+            <Translated
+              i18nKey="project_dialogs.type_project_name"
+              values={{ name: <span className="font-medium text-primary">{project.name}</span> }}
+            />
           </p>
           <Controller
             control={control}
             name="projectName"
-            rules={{
-              required: "Label title is required",
-            }}
+            rules={{ required: true }}
             render={({ field: { value, onChange, ref } }) => (
               <Field name="projectName" invalid={Boolean(errors.projectName)}>
                 <InputGroup size="2xl">
@@ -123,7 +131,7 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
                     value={value}
                     onChange={onChange}
                     ref={ref}
-                    placeholder="Enter project name"
+                    placeholder={t("project_dialogs.leave.name_placeholder")}
                   />
                 </InputGroup>
               </Field>
@@ -133,7 +141,10 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
 
         <div className="text-secondary">
           <p className="text-13">
-            To confirm, type <span className="font-medium text-primary">Leave Project</span> below:
+            <Translated
+              i18nKey="project_dialogs.type_confirmation"
+              values={{ confirmation: <span className="font-medium text-primary">{CONFIRMATION}</span> }}
+            />
           </p>
           <Controller
             control={control}
@@ -149,7 +160,7 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
                     value={value}
                     onChange={onChange}
                     ref={ref}
-                    placeholder="Enter 'leave project'"
+                    placeholder={t("project_dialogs.leave.confirmation_placeholder")}
                   />
                 </InputGroup>
               </Field>
@@ -158,10 +169,10 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="lg" onClick={handleClose} disabled={isSubmitting}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button variant="error-fill" size="lg" type="submit" loading={isSubmitting}>
-            {isSubmitting ? "Leaving..." : "Leave Project"}
+            {isSubmitting ? t("leaving") : t("project_dialogs.leave.title")}
           </Button>
         </div>
       </form>

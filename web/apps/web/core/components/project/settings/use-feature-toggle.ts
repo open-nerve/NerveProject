@@ -4,6 +4,7 @@
  */
 
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
@@ -21,6 +22,7 @@ import type { ProjectToggleField } from "@/store/project/project.store";
 export function useFeatureToggle(workspaceSlug: string, projectId: string) {
   const { toggleProject } = useProject();
   const toastRefusal = useRefusalToast();
+  const { t } = useTranslation();
 
   return (field: ProjectToggleField) => {
     if (!workspaceSlug || !projectId) return;
@@ -29,8 +31,8 @@ export function useFeatureToggle(workspaceSlug: string, projectId: string) {
       done: () =>
         setToast({
           type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Project feature updated successfully.",
+          title: t("toast.success"),
+          message: t("project_dialogs.feature_updated"),
         }),
       failed: toastRefusal,
     });

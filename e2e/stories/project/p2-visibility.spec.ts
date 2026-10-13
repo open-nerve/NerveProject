@@ -246,7 +246,7 @@ test("P2 (page): the projects page shows a member the public project to join and
   const { release } = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/join`, () =>
     page.getByRole("button", { name: "Join Project" }).click()
   );
-  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining..." }))).toBe(false);
+  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining" }))).toBe(false);
   await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
   expect(await closedByEscape(page)).toBe(false);
   expect((await release()).status()).toBe(200);

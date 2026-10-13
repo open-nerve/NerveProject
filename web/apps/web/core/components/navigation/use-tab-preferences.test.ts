@@ -92,7 +92,7 @@ describe("useTabPreferences", () => {
     changes?.show("views");
     await pageSettled();
     expect(toasts).toEqual([
-      { type: "success", title: "Success!", message: "Default tab updated successfully." },
+      { type: "success", title: "toast.success", message: "project_dialogs.default_tab_updated" },
       { type: "error", title: "toast.error", message: "errors.validation_failed" },
     ]);
   });

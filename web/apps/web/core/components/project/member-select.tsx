@@ -9,6 +9,7 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { Ban } from "lucide-react";
 import { Avatar } from "@makeplane/propel/components/avatar";
+import { useTranslation } from "@nerve/i18n";
 import { EUserProjectRoles } from "@nerve/types";
 // nerve ui
 import { CustomSearchSelect } from "@nerve/ui";
@@ -25,6 +26,7 @@ type Props = {
 
 export const MemberSelect = observer(function MemberSelect(props: Props) {
   const { value, onChange, isDisabled = false } = props;
+  const { t } = useTranslation();
   // router
   const { projectId } = useParams();
   // store hooks
@@ -84,7 +86,7 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
           ) : (
             <div className="flex items-center gap-2">
               <Ban className="h-3.5 w-3.5 rotate-90 text-placeholder" />
-              <span className="text-13 text-placeholder">None</span>
+              <span className="text-13 text-placeholder">{t("none")}</span>
             </div>
           )}
         </div>
@@ -99,7 +101,7 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
             content: (
               <div className="flex items-center gap-2">
                 <Ban className="h-3.5 w-3.5 rotate-90 text-placeholder" />
-                <span className="py-0.5 text-13 text-placeholder">None</span>
+                <span className="py-0.5 text-13 text-placeholder">{t("none")}</span>
               </div>
             ),
           },
