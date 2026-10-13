@@ -11,7 +11,7 @@ import {
 import { expectMember, projectSettingsOf } from "../../fixtures/assert/project";
 import { accountId, bearer, createPAT, emailFor, newAccount, register, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
-import { closedByEscape, enabledWithin } from "../../fixtures/dialogs";
+import { closedByEscape, closedWithin, enabledWithin, modalDialog } from "../../fixtures/dialogs";
 import {
   answerTo,
   bodiesSentTo,
@@ -373,7 +373,7 @@ test("P3 (page): the project's admin makes a member its lead and its default ass
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });
 
-test("P3 (page): another project's general page, reached without leaving the route, shows that project's values", async ({
+test("P3 (page): another project's general page, reached without leaving the route, shows that project's values; a dialog opened on one ends as a Back takes the route to the other", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -389,9 +389,18 @@ test("P3 (page): another project's general page, reached without leaving the rou
   await expect(page.locator("#name")).toHaveValue("Web");
   await moveWithinApp(page, `/${slug}/settings/projects/${ops.id}`);
   await expect(page.locator("#name")).toHaveValue("Ops");
-  // Web's read is in the session's cache: the wrapper shows its page at once, the route mounted throughout
+  // Web's read is in the session's cache: the wrapper, mounted afresh for Web (the layout's content is keyed by the
+  // project), shows its page at once
   await moveWithinApp(page, `/${slug}/settings/projects/${web.id}`);
   await expect(page.locator("#identifier")).toHaveValue("WEB");
+  // Web's archiving, asked, ends as a Back takes the route to Ops's general page, under the same layout: the dialog
+  // does not stay to archive Ops (v0 design 7.7).
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(modalDialog(page)).toHaveCount(1);
+  await page.goBack();
+  await expect(page).toHaveURL(`/${slug}/settings/projects/${ops.id}`);
+  expect(await closedWithin(page)).toBe(true);
+  await expect(page.locator("#name")).toHaveValue("Ops");
 
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });

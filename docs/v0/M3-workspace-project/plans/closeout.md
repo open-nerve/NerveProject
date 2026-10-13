@@ -90,12 +90,13 @@ sys.exit(1 if broken else 0)
 | `e2e/fixtures/dialogs.ts` | `modalDialog`、`pageBehindHidden`（Task 1）；`announced`（Task 2）；`composingEscape` 发两种顺序（Task 10） | 1、2、10 |
 | `e2e/fixtures/mounts.ts` | `WORKSPACE_MENU`：工作区菜单打开时不发请求（W2 的常驻检查） | 3 |
 | `e2e/fixtures/project-pages.ts` | `labelRow` 移来（Task 6）；成员一行的菜单按它的名字，`pageContent`：侧边栏之外的页面内容（Task 8） | 6、8 |
-| `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
+| `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
 | `e2e/stories/identity/a11-api-tokens.spec.ts` | 令牌复制到剪贴板（Task 9）；`registeredPAT`（Task 14） | 9、14 |
 | `e2e/stories/identity/a6-sign-out.spec.ts` | 切换账户的弹窗在退出路上时关不掉（Task 2）；导入（Task 14） | 2、14 |
 | `e2e/stories/project/p1-create-project.spec.ts` | 在页面内容中找卡片（Task 8）；功能的开关以功能为名（Task 13）；`registeredPAT`（Task 14） | 8、13、14 |
 | `e2e/stories/project/p2-visibility.spec.ts` | "Joining"（Task 5）；在页面内容中找页头的面包屑（Task 8）；`registeredPAT`（Task 14） | 5、8、14 |
-| `e2e/stories/project/p3-project-settings.spec.ts` | 自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 13、14 |
+| `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
+| `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；`registeredPAT`（Task 14） | 1、14 |
 | `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"（Task 5）；一行的菜单（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
 | `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓（Task 8） | 1、2、6、8 |
@@ -118,11 +119,11 @@ sys.exit(1 if broken else 0)
 | `tools/keywords.json` | 关键词规则 `copy-hook`（20 个有期限的例外）、`refusal-toast`、`sign-out-toast` 的写法（Task 9）；`workspace-address-route`（Task 11） | 9、11 |
 | `tools/keywords.mjs` | 说明写上 `until` 为 `M<n>/closeout` 的例外何时到期 | 9 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx` | 工作区经 `useRouteWorkspace()` 或写明 slug（Task 11）；侧边栏的标题经 `t()`（Task 12） | 11、12 |
+| `web/apps/web/app/(all)/[workspaceSlug]/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx` | 工作区的内容以路由的 slug 为 key，项目的页面和设置以路由的项目为 key：换工作区、换项目时开着的确认框和组件的状态不带过去（Task 3） | 3 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx` | 工作区经 `useRouteWorkspace()` 或写明 slug（Task 11） | 11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx` | `IconButton` 的名字 | 7 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx` | 成员页的标题经 `t()`（Task 4）；工作区经 `useRouteWorkspace()`（Task 11） | 4、11 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/project/card-list.tsx` | 工作区经 `useRouteWorkspace()`（Task 11） | 11 |
-| `web/apps/web/core/components/workspace/settings/useMemberColumns.tsx` | 移出的确认框记住打开它的工作区，只在那个工作区的页面上显示（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/project/card-list.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx` | 工作区经 `useRouteWorkspace()`（Task 11） | 11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx` | 项目设置各页的标题经 `t()`；没有项目时的设置页；它们的 vitest 照新的标题 | 13 |
 | `web/apps/web/app/(all)/create-workspace/layout.tsx`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/app/(all)/onboarding/layout.tsx`、`web/apps/web/app/(all)/onboarding/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 13 |
 | `web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 4 |
@@ -192,7 +193,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8） | 7、8 |
 | `web/apps/web/core/components/workspace/sidebar/projects-list.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8）；写明 slug（Task 11） | 7、8、11 |
 | `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | 写明 slug（Task 11） | 11 |
-| `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，确认框记住打开它的工作区，菜单的按钮和三项在键盘下看得见，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
+| `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，菜单的按钮和三项在键盘下看得见，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
 | `web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts` | 经 `problemCode()` 或 `useRefusalMessage` | 9 |
 | `web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts` | `useCopy`、`useCopyText`；它的测试 | 9 |
 | `web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts` | `useRefusalMessage`；它的测试 | 9 |
@@ -1274,17 +1275,111 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/workspace/leave-workspace-modal.tsx`
-- Modify: `README.md`、`e2e/fixtures/mounts.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/navigation/top-navigation-root.tsx`、`web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.ts`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`、`web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx`、`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
+- Modify: `README.md`、`e2e/fixtures/mounts.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p3-project-settings.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx`、`web/apps/web/core/components/navigation/top-navigation-root.tsx`、`web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/members-list-item.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-membership-changes.ts`、`web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx`、`web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
 
 **Interfaces:**（spec 2.7）
-- `workspace/sidebar/workspace-menu-root.tsx`（整个文件）：没有调用方的"sidebar"写法删除（216 → 205 行）；"离开工作区"一项（`Menu.Item`，每个角色），确认框挂在菜单之外，记住打开它时的工作区（`useState<string | null>`，总体设计 7.7 的"状态按 id"），只在那个工作区是路由的工作区时显示，后退或前进到别的工作区时关上，离开的是它记住的那个；菜单的按钮在键盘取得焦点时有 `@nerve/ui` 的选择框那样的内圈轮廓（Headless UI 的 `data-focus`），三项在方向键或指针选中时显出底色（`data-focus:bg-layer-transparent-hover`，原来只有指针悬停时）；`workspace/sidebar/dropdown-item.tsx`：工作区的一项同样（别的工作区的显出悬停的底色，当前工作区的从 `active` 深一级到 `selected`；原来当前的那一项选中时不变）；`navigation/top-navigation-root.tsx` 不再传 `variant`。
+- `workspace/sidebar/workspace-menu-root.tsx`（整个文件）：没有调用方的"sidebar"写法删除（216 → 205 行）；"离开工作区"一项（`Menu.Item`，每个角色），确认框挂在菜单之外；菜单的按钮在键盘取得焦点时有 `@nerve/ui` 的选择框那样的内圈轮廓（Headless UI 的 `data-focus`），三项在方向键或指针选中时显出底色（`data-focus:bg-layer-transparent-hover`，原来只有指针悬停时）；`workspace/sidebar/dropdown-item.tsx`：工作区的一项同样（别的工作区的显出悬停的底色，当前工作区的从 `active` 深一级到 `selected`；原来当前的那一项选中时不变）；`navigation/top-navigation-root.tsx` 不再传 `variant`。
 - `workspace/leave-workspace-modal.tsx`（新文件）：`ConfirmWorkspaceMemberRemove` 加 `useMembershipChanges().leave(done)`。
-- `useMembershipChanges` 的 `remove(…, done)`、`leave(done)` 和 `useInvitationChanges` 的删除：`done` 只在成功的跟进中调用（A-M2）；`ConfirmWorkspaceMemberRemove` 不再自己关上，离开的标题经 `t()`；成员和邀请的一行传 `closeDialog`；成员页移出（离开）的确认框同样记住打开它的工作区和成员（`useMemberColumns`），只在那个工作区的页面上显示。
+- `useMembershipChanges` 的 `remove(…, done)`、`leave(done)` 和 `useInvitationChanges` 的删除：`done` 只在成功的跟进中调用（A-M2）；`ConfirmWorkspaceMemberRemove` 不再自己关上，离开的标题经 `t()`；成员和邀请的一行传 `closeDialog`。
+- 布局的 key（负责人 2026-10-13 的 B，spec 2.7；总体设计 7.7 的"状态按 id"）：`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`（页头和它的工作区菜单、`GlobalModals`、页面）以路由的 `workspaceSlug` 为 key；项目的页面（`(projects)/projects/(detail)/[projectId]/layout.tsx`，页头的标签栏和它的离开确认框在 `ProjectAuthWrapper` 之外，所以 key 在返回的根上）和项目的设置（`(settings)/settings/projects/[projectId]/layout.tsx`）整个返回的内容以路由的 `projectId` 为 key（`Fragment`）。换工作区、换项目（后退、前进也是）时其下重新挂载，开着的确认框和组件的状态都不带过去；key 都取自路由的参数，不取自 store。
 - 文案：`leave_workspace`（common）、`workspace_settings.settings.members.leave_title`。README 的工作区菜单加"离开工作区"。
 
-**Tests:** 两个 hook 的 vitest：`done` 在成功时调用、被拒绝时不调用、换账户之后不调用。W11 的页面版本：访客由键盘从菜单离开（菜单的按钮显出轮廓，打开时选中的当前工作区的一项深一级，方向键选中的一项显出底色、别的不显），双击"离开"只发一次请求，请求在路上时取消不能用、Escape 不关，落到新建工作区的页面；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着，取消之后焦点回到菜单的按钮；他的另一个工作区 Beta 的一项在方向键选中时显出底色；从 Beta 经菜单到 acme 打开离开的确认框，后退到 Beta 时它关上、前进回来也不再打开；从 Beta 的成员页经应用的链接到 acme 的成员页打开移出 gus 的确认框，一次后退两步回到 Beta 的成员页时它关上。S2：每个角色在最后一页打开工作区菜单，不发请求（`mounts.ts` 的 `WORKSPACE_MENU`，W2 的常驻检查）。W7：唯一的管理员在成员页离开被拒绝时确认框留着。W4：已被删除的邀请再删除被拒绝时确认框留着。
+**Tests:** 两个 hook 的 vitest：`done` 在成功时调用、被拒绝时不调用、换账户之后不调用。W11 的页面版本：访客由键盘从菜单离开（菜单的按钮显出轮廓，打开时选中的当前工作区的一项深一级，方向键选中的一项显出底色、别的不显），双击"离开"只发一次请求，请求在路上时取消不能用、Escape 不关，落到新建工作区的页面；唯一的管理员从菜单离开被拒绝，原因在提示里，确认框留着，取消之后焦点回到菜单的按钮；他的另一个工作区 Beta 的一项在方向键选中时显出底色；从 Beta 经菜单到 acme 打开离开的确认框，后退到 Beta 时它关上、前进回来也不再打开；从 Beta 的成员页经应用的链接到 acme 的成员页打开移出 gus 的确认框，一次后退两步回到 Beta 的成员页时它关上（两者看着工作区的 key）。P3：Web 的设置的归档确认框开着，后退到 Ops 的设置（同一个布局）时关上（项目设置的 key）。P8：访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（项目页面的 key）。S2：每个角色在最后一页打开工作区菜单，不发请求（`mounts.ts` 的 `WORKSPACE_MENU`，W2 的常驻检查）。W7：唯一的管理员在成员页离开被拒绝时确认框留着。W4：已被删除的邀请再删除被拒绝时确认框留着。
 
 - [ ] **Step 1: 菜单的入口和确认框**
+
+`web/apps/web/app/(all)/[workspaceSlug]/layout.tsx`（修改，2 处）：
+
+````old web/apps/web/app/(all)/[workspaceSlug]/layout.tsx
+import { WorkspaceAuthWrapper } from "@/layouts/auth-layout/workspace-wrapper";
+
+export default function WorkspaceLayout() {
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/layout.tsx
+import { WorkspaceAuthWrapper } from "@/layouts/auth-layout/workspace-wrapper";
+import type { Route } from "./+types/layout";
+
+export default function WorkspaceLayout({ params }: Route.ComponentProps) {
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/layout.tsx
+        <WorkspaceContentWrapper>
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/layout.tsx
+        {/* keyed by the route's workspace (v0 design 7.7, state keyed by id): a switch to another workspace, by a Back
+            or Forward too, mounts its header, sidebar, dialogs and page afresh, so no dialog or state opened in one
+            workspace carries into the other */}
+        <WorkspaceContentWrapper key={params.workspaceSlug}>
+````
+
+`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx`（修改，3 处）：
+
+````old web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx
+import { observer } from "mobx-react";
+import { Outlet } from "react-router";
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx
+import { Fragment } from "react";
+import { observer } from "mobx-react";
+import { Outlet } from "react-router";
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx
+  const { preferences: projectPreferences } = useProjectNavigationPreferences();
+
+  return (
+    <>
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx
+  const { preferences: projectPreferences } = useProjectNavigationPreferences();
+
+  // keyed by the route's project (v0 design 7.7, state keyed by id): a switch to another project, by a Back or Forward
+  // too, mounts its header and its page afresh, so no dialog or state opened in one project (the header's leaving
+  // among them, outside the project's wrapper) carries into the other
+  return (
+    <Fragment key={projectId}>
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx
+    </>
+  );
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx
+    </Fragment>
+  );
+````
+
+`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx`（修改，3 处）：
+
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx
+import { observer } from "mobx-react";
+import { Outlet, useLocation } from "react-router";
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx
+import { Fragment } from "react";
+import { observer } from "mobx-react";
+import { Outlet, useLocation } from "react-router";
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx
+  const { pathname } = useLocation();
+
+  return (
+    <>
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx
+  const { pathname } = useLocation();
+
+  // keyed by the route's project (v0 design 7.7, state keyed by id): a switch to another project's settings, by a Back
+  // or Forward too, mounts its sidebar and its page afresh, so no dialog or state opened in one project carries into
+  // the other
+  return (
+    <Fragment key={projectId}>
+````
+````old web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx
+    </>
+  );
+````
+````new web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx
+    </Fragment>
+  );
+````
 
 `web/apps/web/core/components/navigation/top-navigation-root.tsx`（修改，1 处）：
 
@@ -1390,38 +1485,6 @@ export const LeaveWorkspaceModal = observer(function LeaveWorkspaceModal(props: 
         onSubmit={() => remove(workspaceSlug, invitationDetails.id, () => setRemoveMemberModal(false))}
 ````
 
-`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx`（修改，2 处）：
-
-````old web/apps/web/core/components/workspace/settings/useMemberColumns.tsx
-/** The columns of the members of the workspace of workspaceSlug, which the list reads from the page's address. */
-export const useMemberColumns = (workspaceSlug: string) => {
-  // states
-  const [removeMemberModal, setRemoveMemberModal] = useState<WorkspaceMember | null>(null);
-````
-````new web/apps/web/core/components/workspace/settings/useMemberColumns.tsx
-/** The member whose removal (his leaving, on the caller's own row) the dialog asks, and the workspace it asks it in. */
-type Removal = { workspaceSlug: string; member: WorkspaceMember };
-
-/**
- * The columns of the members of the workspace of workspaceSlug, which the list reads from the page's address, and the
- * member whose removal the dialog asks, kept with the workspace it was opened in (v0 design 7.7, state keyed by id):
- * the dialog shows only while that workspace is the page's, so a Back or Forward to another workspace's members ends
- * it, and its Remove or Leave never acts there.
- */
-export const useMemberColumns = (workspaceSlug: string) => {
-  // states
-  const [removal, setRemoval] = useState<Removal | null>(null);
-  const removalHere = removal?.workspaceSlug === workspaceSlug ? removal : null;
-  if (removal !== removalHere) setRemoval(removalHere);
-  const setRemoveMemberModal = (member: WorkspaceMember | null) => setRemoval(member && { workspaceSlug, member });
-````
-````old web/apps/web/core/components/workspace/settings/useMemberColumns.tsx
-  return { columns, removeMemberModal, setRemoveMemberModal };
-````
-````new web/apps/web/core/components/workspace/settings/useMemberColumns.tsx
-  return { columns, removeMemberModal: removalHere?.member ?? null, setRemoveMemberModal };
-````
-
 `web/apps/web/core/components/workspace/settings/members-list-item.tsx`（修改，1 处）：
 
 ````old web/apps/web/core/components/workspace/settings/members-list-item.tsx
@@ -1429,8 +1492,8 @@ export const useMemberColumns = (workspaceSlug: string) => {
   const handleRemove = (memberId: string) => (memberId === currentUser?.id ? leave() : remove(memberId));
 ````
 ````new web/apps/web/core/components/workspace/settings/members-list-item.tsx
-  // the caller's own row offers him to leave; another's, to remove that member (an admin's), in the page's workspace,
-  // the one the dialog was opened in (useMemberColumns shows it only there); the dialog closes once nerve has done it
+  // the caller's own row offers him to leave; another's, to remove that member (an admin's); the dialog that asked
+  // closes once nerve has done it
   const handleRemove = (memberId: string) => {
     const closeDialog = () => setRemoveMemberModal(null);
     return memberId === currentUser?.id ? leave(closeDialog) : remove(memberId, closeDialog);
@@ -1578,12 +1641,8 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
   const { t } = useTranslation();
   // local state
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
-  // the workspace whose leaving the dialog asks, kept as the dialog opens (v0 design 7.7, state keyed by id): the
-  // dialog outlives the menu, which closes as its entry is picked, and leaves that workspace; it shows only while that
-  // workspace is the route's, so a Back or Forward to another workspace ends it, and its Leave never acts on that one
-  const [leaving, setLeaving] = useState<string | null>(null);
-  const leavingHere = leaving !== null && leaving === activeWorkspace?.slug ? leaving : null;
-  if (leaving !== leavingHere) setLeaving(leavingHere);
+  // the leaving's dialog outlives the menu, which closes as its entry is picked
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
 
   // the workspace opened last is a best-effort preference: the link opens the workspace whether nerve saves it or not
   const handleWorkspaceNavigation = (workspace: Workspace) => {
@@ -1707,7 +1766,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
                           as="button"
                           type="button"
                           className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary data-focus:bg-layer-transparent-hover"
-                          onClick={() => setLeaving(activeWorkspace.slug)}
+                          onClick={() => setIsLeaveModalOpen(true)}
                         >
                           <LogOutOutline className="size-4 flex-shrink-0" />
                           {t("leave_workspace")}
@@ -1733,7 +1792,13 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
           );
         }}
       </Menu>
-      {leavingHere && <LeaveWorkspaceModal workspaceSlug={leavingHere} isOpen onClose={() => setLeaving(null)} />}
+      {activeWorkspace && (
+        <LeaveWorkspaceModal
+          workspaceSlug={activeWorkspace.slug}
+          isOpen={isLeaveModalOpen}
+          onClose={() => setIsLeaveModalOpen(false)}
+        />
+      )}
     </>
   );
 });
@@ -1855,6 +1920,90 @@ export async function endMembership(
   await askToEndMembership(page, email, entry);
 ````
 
+`e2e/stories/project/p3-project-settings.spec.ts`（修改，3 处）：
+
+````old e2e/stories/project/p3-project-settings.spec.ts
+import { closedByEscape, enabledWithin } from "../../fixtures/dialogs";
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+import { closedByEscape, closedWithin, enabledWithin, modalDialog } from "../../fixtures/dialogs";
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+test("P3 (page): another project's general page, reached without leaving the route, shows that project's values", async ({
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+test("P3 (page): another project's general page, reached without leaving the route, shows that project's values; a dialog opened on one ends as a Back takes the route to the other", async ({
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+  // Web's read is in the session's cache: the wrapper shows its page at once, the route mounted throughout
+  await moveWithinApp(page, `/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#identifier")).toHaveValue("WEB");
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+  // Web's read is in the session's cache: the wrapper, mounted afresh for Web (the layout's content is keyed by the
+  // project), shows its page at once
+  await moveWithinApp(page, `/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#identifier")).toHaveValue("WEB");
+  // Web's archiving, asked, ends as a Back takes the route to Ops's general page, under the same layout: the dialog
+  // does not stay to archive Ops (v0 design 7.7).
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(modalDialog(page)).toHaveCount(1);
+  await page.goBack();
+  await expect(page).toHaveURL(`/${slug}/settings/projects/${ops.id}`);
+  expect(await closedWithin(page)).toBe(true);
+  await expect(page.locator("#name")).toHaveValue("Ops");
+````
+
+`e2e/stories/project/p8-project-preferences.spec.ts`（修改，4 处）：
+
+````old e2e/stories/project/p8-project-preferences.spec.ts
+import { shownWithin } from "../../fixtures/dialogs";
+````
+````new e2e/stories/project/p8-project-preferences.spec.ts
+import { closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
+````
+````old e2e/stories/project/p8-project-preferences.spec.ts
+/** The projects of page's sidebar, in its order. */
+````
+````new e2e/stories/project/p8-project-preferences.spec.ts
+/** The quick actions' button of the project's header on page: the sidebar's projects have one each too. */
+function headerActions(page: Page): Locator {
+  return page
+    .getByRole("button", { name: "Toggle quick actions menu" })
+    .and(page.locator("xpath=//*[not(ancestor::aside)]"));
+}
+
+/** The projects of page's sidebar, in its order. */
+````
+````old e2e/stories/project/p8-project-preferences.spec.ts
+test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh; Web's guest is offered the menus and the drag as well", async ({
+````
+````new e2e/stories/project/p8-project-preferences.spec.ts
+test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh; Web's guest is offered the menus and the drag as well, and his leaving of Docs, asked in its header, ends as a Back takes him to Web's work items", async ({
+````
+````old e2e/stories/project/p8-project-preferences.spec.ts
+    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
+  });
+  await theGuest.close();
+````
+````new e2e/stories/project/p8-project-preferences.spec.ts
+    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
+  });
+  // His sidebar's Docs, under the same layout as Web's work items, offers a guest his leaving in its header; asked,
+  // it ends as a Back takes him to Web's work items, rather than ask it of Web (v0 design 7.7: a project's pages are
+  // keyed by it).
+  await inSidebar(theGuest.page, docs.id).locator("a").first().click();
+  await expect(theGuest.page).toHaveURL(`/${slug}/projects/${docs.id}/issues`);
+  await headerActions(theGuest.page).click();
+  await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
+  await expect(modalDialog(theGuest.page)).toHaveCount(1);
+  await theGuest.page.goBack();
+  await expect(theGuest.page).toHaveURL(`/${slug}/projects/${web.id}/issues`);
+  expect(await closedWithin(theGuest.page)).toBe(true);
+  expect(gusWatch.pageErrors).toEqual([]);
+  await theGuest.close();
+````
+
 `e2e/stories/smoke/s2-web-app.spec.ts`（修改，4 处）：
 
 ````old e2e/stories/smoke/s2-web-app.spec.ts
@@ -1951,11 +2100,12 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
 ````new e2e/stories/workspace/w11-guest-bounds.spec.ts
   await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
 
-  // The admin's dialogs keep the workspace they were opened in; he has another, Beta. From Beta's home his menu's
-  // acme entry, a link of the app's, takes him to acme's, where he asks his leaving: a Back to Beta's home ends that
-  // dialog rather than ask it of Beta, and a Forward to acme's does not bring it back. Then, from Beta's members page,
-  // the app takes him to acme's (the acme entry, then its "Invite members"), where he asks gus's removal: a Back of two
-  // entries at once (the Back button's list) to Beta's members page ends that dialog too.
+  // The admin's dialogs end with the workspace they were opened in, whose content is keyed by it (v0 design 7.7); he
+  // has another, Beta, whose pages share acme's layout. From Beta's home his menu's acme entry, a link of the app's,
+  // takes him to acme's, where he asks his leaving: a Back to Beta's home ends that dialog rather than ask it of Beta,
+  // and a Forward to acme's does not bring it back. Then, from Beta's members page, the app takes him to acme's (the
+  // acme entry, then its "Invite members"), where he asks gus's removal: a Back of two entries at once (the Back
+  // button's list) to Beta's members page ends that dialog too.
   const betaSlug = slugFor(testInfo, "beta");
   await createWorkspace(api, admin.access_token, { name: "Beta", slug: betaSlug });
   const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
@@ -2317,7 +2467,7 @@ Expected: 112 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add README.md e2e/fixtures/mounts.ts e2e/fixtures/workspace-pages.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/navigation/top-navigation-root.tsx web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx web/apps/web/core/components/workspace/leave-workspace-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts web/apps/web/core/components/workspace/settings/use-invitation-changes.ts web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts web/apps/web/core/components/workspace/settings/use-membership-changes.ts web/apps/web/core/components/workspace/settings/useMemberColumns.tsx web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
+git add README.md e2e/fixtures/mounts.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p3-project-settings.spec.ts e2e/stories/project/p8-project-preferences.spec.ts e2e/stories/smoke/s2-web-app.spec.ts e2e/stories/workspace/w11-guest-bounds.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/layout.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx' web/apps/web/core/components/navigation/top-navigation-root.tsx web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx web/apps/web/core/components/workspace/leave-workspace-modal.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/members-list-item.tsx web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts web/apps/web/core/components/workspace/settings/use-invitation-changes.ts web/apps/web/core/components/workspace/settings/use-membership-changes.test.ts web/apps/web/core/components/workspace/settings/use-membership-changes.ts web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the sidebar's workspace menu offers leaving the workspace, to every role
@@ -2329,10 +2479,10 @@ open with the reason; a double click sends it once, the dialog held while
 it is out. The members page's removal, leaving and an invitation's
 deletion keep their dialog on a refusal too, closing it in their success
 follow-up alone. The menu's button shows a ring, and each of its items, the
-workspaces' entries too, a mark, as the keyboard reaches it. The leaving's
-dialog, and the members page's removal's, keep the workspace they were
-opened in and show only while it is the route's: a Back or Forward to
-another workspace ends them. Opening the menu requests nothing, which S2
+workspaces' entries too, a mark, as the keyboard reaches it. The
+workspace's content is keyed by its slug, and a project's pages and
+settings by the project: a switch, by a Back or Forward too, ends any
+dialog opened in the other. Opening the menu requests nothing, which S2
 checks for every role. The menu's variant no caller used goes.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -2354,9 +2504,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T3.10` | 离开的确认框打开、关上时菜单重建（以确认框的状态为 `key`）：打开它的按钮没了，焦点回不去 | 故事 W11 | 端到端 |
 | `T3.11` | 菜单中别的工作区的一项只在指针悬停时显出底色，像原来那样：方向键选中它时看不出来 | 故事 W11 | 端到端 |
 | `T3.12` | 当前工作区的一项选中时不变深，像原来那样：键盘打开菜单时先选中它，看不出来 | 故事 W11 | 端到端 |
-| `T3.13` | 离开的确认框跟着路由的工作区，像原来的布尔值那样：后退到另一个工作区时开着的确认框跟过去，它的"离开"离开的是那一个 | 故事 W11 | 端到端 |
-| `T3.14` | 成员页移出的确认框不管页面的工作区一直留着，像原来那样：后退到另一个工作区的成员页时它跟过去，它的"移出"作用于那个工作区 | 故事 W11 | 端到端 |
+| `T3.13` | 工作区的内容不以 slug 为 key，像原来那样：后退、前进到别的工作区时它留着，开着的确认框（菜单的离开、成员页的移出）跟过去，作用于那个工作区（T3.14 收进这一行） | 故事 W11 | 端到端 |
 | `T3.15` | 工作区菜单打开时再取一次工作区列表：原来只有 W2 一次性的清单看得到这个请求 | 故事 S2 | 端到端 |
+| `T3.16` | 项目的设置不以项目为 key，像原来那样：后退到另一个项目的设置时它们留着，开着的确认框（归档）跟过去，作用于那个项目 | 故事 P3 | 端到端 |
+| `T3.17` | 项目的页面不以项目为 key，像原来那样：后退到另一个项目的页面时页头留着，开着的确认框（离开）跟过去，作用于那个项目 | 故事 P8 | 端到端 |
 
 ---
 
@@ -12903,7 +13054,7 @@ status: closed
 - **关闭条件**：6 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，91 行）：
+`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，92 行）：
 
 ````file docs/v0/M4-issue-core/handoffs/M3-closeout.md
 ---
@@ -12965,6 +13116,7 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - 工作区一级显示的工作项不显示没有取过标签的项目的标签（M3/P8b 删了为每个项目取标签的工作区取数，M7 加回）；`fetchParentStats` 不再重取项目，工作项的修改若动了项目的字段，加一个不等的重取；工作项的键宽读回 `next_work_item_sequence`，`TIssueIdentifierProps.projectIdentifier` 在项目未到时可以是 `undefined`（M3/P8b spec 第 5 节）。
 - 个人主页的工作项一栏（成员和管理员；`/api/workspaces/{slug}/user-issues/…` 今天答 404）和访客看到的筛选工具栏（布局、筛选、Display 的控件在"没有权限"之上，M3/P11 评审 C10）。
 - M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（M3 设计 3.1）；S2 的 `REQUESTS` 是一份要维护的名单，在挂载路径上加取数时同时改它（M3/P11 spec 第 6 节）。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。工作项的弹窗、选中、草稿等属于一个工作区或项目的界面状态放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）；要在切换之间留着的，写明为什么。
 - **关闭条件**：上面每一处的拒绝有提示或交回调用方，没有未处理的拒绝（vitest 或故事）；`autorun` 随退役的一代释放，`store-context.test.ts` 没有严格模式的警告。
 
 ## 7. 工作项页面的键盘、下拉框和弹窗
@@ -13008,7 +13160,7 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 - **按规则清一类**：另外按规则集中清掉至少一类，优先能机械修复的（`eslint(no-shadow)`；`eslint(no-unneeded-ternary)` 已由 M2/P5 全仓清零，见 [M2/P5 评审](../../M2-auth/reviews/P5-web-account-review.md)第 2 节；`eslint-plugin-promise(always-return)` 已由 M3/P11 全仓清零，见 [M3/P11 spec](../../M3-workspace-project/specs/P11-web-states-labels-and-cleanup.md) 2.9）；
 ````
 
-`docs/v0/M5-files/handoffs/M3-closeout.md`（新文件，30 行）：
+`docs/v0/M5-files/handoffs/M3-closeout.md`（新文件，31 行）：
 
 ````file docs/v0/M5-files/handoffs/M3-closeout.md
 ---
@@ -13038,6 +13190,7 @@ M3（工作区与项目）把工作区图标、项目封面和成员头像留成
 
 - M3 收尾把 `ModalCore` 改成 Headless UI v2 的 `Dialog`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）：弹窗打开时后面的页面 `inert`、`aria-hidden`；`AlertModalCore` 的确认框在请求路上时关不掉、取消不能用（M3/P11 spec 第 3 节第 2 条）。附件的删除确认框随之改变，M5 的页面能运行时核对：被拒绝时照 A-M2 留着、只在成功的跟进中关上，按钮的文字经 `t()` 传入（`@nerve/ui` 的默认值是英文，见 M8 的交接）。
 - 共用组件的焦点轮廓在 M5 的页面上是否被 `overflow-hidden` 裁掉，用键盘核对（M3/P11 评审第 6 节）。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。附件的确认框、上传的弹窗和进度属于一个工作区或项目，放在这些布局之下，不要放到它们之上。
 - **关闭条件**：M5 的评审写明附件的确认框和上传弹窗的浏览器核对。
 
 来源：[M3 设计](../../M3-workspace-project/M3-design.md) 13.2 的 M5 一行；M3/P8a、P8b 的 spec 第 5 节，P8a 修复轮的搁置项 P11，M3/P11 评审第 6 节；[M3 收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2 节。
@@ -13061,7 +13214,7 @@ M3（工作区与项目）把工作区图标、项目封面和成员头像留成
 - **关闭条件**：3 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`（新文件，44 行）：
+`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`（新文件，45 行）：
 
 ````file docs/v0/M6-cycles-modules/handoffs/M3-closeout.md
 ---
@@ -13082,6 +13235,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - 迭代的 `user-properties` 不在关键词规则（旧 `ProjectService` 的 `/user-properties/`）的模式里，不命中它的样例（M3/P8b spec 第 5 节）。
 - `core/modals/existing-issues-list-modal.tsx`（添加已有工作项）改用 M4 的工作项搜索接口（M3 设计 7.3）。
 - 迭代、模块的弹窗读 `error?.error` 的三处（`cycles/transfer-issues-modal.tsx`、`modules/modal.tsx` 两处）改经文案表（`errorMessageKey`）；视图的修改之后的跟进经 `followInSession`（M3/P9 spec 第 5 节）。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。迭代、模块、视图的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
 - **关闭条件**：包装层的取数有按权限的 vitest；`dispose()` 释放两个反应，`store-context.test.ts` 核对换代之后它们不再运行。
 
 ## 2. 数据
@@ -13128,7 +13282,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **关闭条件**：4 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M7-collaboration/handoffs/M3-closeout.md`（新文件，47 行）：
+`docs/v0/M7-collaboration/handoffs/M3-closeout.md`（新文件，48 行）：
 
 ````file docs/v0/M7-collaboration/handoffs/M3-closeout.md
 ---
@@ -13157,6 +13311,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - 已挂载的工作区包装层换 slug 时不重取列表，在别的标签页加入的工作区要到下一次挂载才显示；要改，改 `useWorkspaceFetch` 这一个判断（M3/P9 spec 第 5 节，P19）。
 - `ProjectViewStore.loader` 和 `fetchedMap` 没有写者了：视图的取数设置它们，否则删除它们（M3/P8a 评审的 P30）。通知页的收集箱项经原来的 `useSWR` 读项目（`workspace-notifications/root.tsx`），写项目自己的读，可以盖过包装层的读：照 7.1 改成按权限的取数（M3/P8b 的 PF-L3）。收藏的 `workspace/sidebar/favorites/favorite-items/common/helper.tsx` 的 `console.error` 改成提示（M3/P9 spec 第 5 节）。
 - `@nerve/types` 的 `workspace-notifications.ts` 的 17 行死成员（`domains.mjs` 按路径误归到 M3，M3/P11 spec 附录 A.9）。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。收集箱、视图、通知、收藏的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
 - **关闭条件**：上面每一处有 vitest 或故事；这 17 行在 M7 的评审中有结论。
 
 ## 3. 键盘、弹窗和下拉框
@@ -13189,7 +13344,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **按规则清一类**：另外按规则集中清掉至少一类，优先能机械修复的（`eslint(no-shadow)`；`eslint(no-unneeded-ternary)` 已由 M2/P5 全仓清零，见 [M2/P5 评审](../../M2-auth/reviews/P5-web-account-review.md)第 2 节；`eslint-plugin-promise(always-return)` 已由 M3/P11 全仓清零，见 [M3/P11 spec](../../M3-workspace-project/specs/P11-web-states-labels-and-cleanup.md) 2.9）；
 ````
 
-`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，51 行）：
+`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，52 行）：
 
 ````file docs/v0/M8-open-release/handoffs/M3-closeout.md
 ---
@@ -13216,6 +13371,7 @@ M3（工作区与项目）没有领域事件，Webhook 的页面在 M3 里走不
 - README 中邀请链接与签名密钥的说明（M3 设计 8.7）、数据库用 UTF-8 的 `LC_CTYPE` 初始化（标签名不分大小写按数据库的 locale 折叠，M3/P7b spec 第 7 节；M3 收尾已写进 README 的"部署"一节）随发布的部署文件核对。
 - **层叠顺序**：全应用核对一遍页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下：每类页面开着一个弹窗（命令面板就行），手机和桌面的宽度下都没有页面元素画在它上面。M3 收尾把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6），M4 的交接第 7 节列出工作项页面上 `z-30` 及以上的元素；从弹窗打开、经 portal 渲染到 `body` 的下拉框、提示、表情在弹窗之上，靠的是 DOM 的先后，一并核对。
 - **性能**：大工作区的成员列表、项目列表（不分页的集合，M3 设计 11.3）的回答大小和页面的加载时间，按测到的数字决定要不要给其中一个分页。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。Webhook 的弹窗同样；发布之前全应用核对没有属于一个工作区或项目的弹窗、选中放在这些布局之上。
 - **关闭条件**：M8 的发布核对清单含这几项和它们的结果。
 
 ## 3. 全应用的文案
@@ -13339,7 +13495,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new docs/v0/frontend-changes.md
 | 共用组件的键盘焦点 | propel 的 `Button` 在键盘取得焦点时显示浏览器的焦点轮廓，离按钮 2 像素（`focus-visible:outline-offset-2`；原来是 `focus-visible:outline-none`，Tab 到达时看不出焦点），应用中的每个 `Button` 都是这样。propel 的 `IconButton` 同样：应用中 32 个文件的 37 处（M3 的收尾删去侧边栏项目一行的那一处之后是 36 处；个人设置（M2）1 处；M3 的 10 个文件 12 处，侧边栏的收藏在内；工作项（M4）8 个文件 8 处；迭代、模块（M6）6 个文件 6 处；收集箱、通知和视图（M7）7 个文件 10 处），另有收集箱的两个菜单按钮（`getIconButtonStyling`）和 propel 的表情回应的添加按钮（3 个调用方）；其中五处的轮廓照旧看不到：侧边栏收藏的新建文件夹、侧边栏项目一行的菜单（外层 `opacity-0`）、工作项动态的筛选（外面的按钮 `outline-none`），侧边栏项目列表的两处在指针经过之前不显示、Tab 到不了（M3 的收尾改好了侧边栏项目的三处，工作项动态的筛选交给 M4、收藏的新建文件夹交给 M7："名字和键盘"一行）。`@nerve/ui` 的 `CustomMenu` 的省略号按钮去掉 `outline-none`，Tab 到达时显示焦点的轮廓：17 个文件的 17 处（工作项一侧的 11 个文件（M4、M5），成员页的 `member-columns.tsx`，邀请行的 `invitations-list-item.tsx`，工作区视图的 3 个文件，标签的一行）；`member-columns.tsx` 给这个按钮自己的 `opacity-0 group-hover:opacity-100`，所以它的轮廓在键盘取得焦点时仍看不见（M3/P10 的成员页原有的；M3 的收尾给它 `focus-visible:opacity-100`）。`getButtonStyling` 的类名同样不再有 `focus-visible:outline-none`：应用中 9 个文件的 12 处，其中 4 个文件的 6 处在能取得焦点的元素上：M3 的两个文件的 4 个链接（创建项目之后功能一步的"Open project"，`project-feature-update.tsx`；"找不到工作区"页的三个链接，`workspace-wrapper.tsx`）在键盘取得焦点时显示离它 2 像素的轮廓（原来没有）；M4 的两处照旧，由它们自己的样式决定：工作项筛选的"添加筛选"按钮（`rich-filters/add-filters/button.tsx`）的轮廓是 `CustomSearchSelect` 在 Headless UI 的 `data-focus` 上画的那一条（`data-*` 的类排在 `focus-visible` 的之后），布局的下拉框（`dropdowns/layout.tsx`）的按钮自带 `outline-none`，轮廓照旧看不到；其余 6 处给菜单按钮里面的 `div`、`span`（项目、模块、视图的排序，收集箱的筛选），它们自己不取得焦点。用指针点的人看不到不同：`:focus-visible` 在点击时不生效 | Tab 到达的控件看得出焦点（M3/P11 的状态、标签的设置页用到它们；改在共用组件里） | 已完成 | M3/P11 |
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
-| 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。离开的确认框和成员页移出的确认框只在打开它们的工作区里显示：后退或前进到别的工作区时关上（原来跟过去，它的"离开""移出"作用于那个工作区）。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
+| 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
 | 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目的功能开关有名字；侧边栏的展开、收起和工作区菜单的按钮的名字有了文案（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；项目成员页的筛选同样只是一个按钮；项目成员页一行的菜单有名字（"Options"），键盘取得焦点时显示；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |

@@ -15,21 +15,10 @@ import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import type { IMemberFilters } from "@/store/member/utils";
 
-/** The member whose removal (his leaving, on the caller's own row) the dialog asks, and the workspace it asks it in. */
-type Removal = { workspaceSlug: string; member: WorkspaceMember };
-
-/**
- * The columns of the members of the workspace of workspaceSlug, which the list reads from the page's address, and the
- * member whose removal the dialog asks, kept with the workspace it was opened in (v0 design 7.7, state keyed by id):
- * the dialog shows only while that workspace is the page's, so a Back or Forward to another workspace's members ends
- * it, and its Remove or Leave never acts there.
- */
+/** The columns of the members of the workspace of workspaceSlug, which the list reads from the page's address. */
 export const useMemberColumns = (workspaceSlug: string) => {
   // states
-  const [removal, setRemoval] = useState<Removal | null>(null);
-  const removalHere = removal?.workspaceSlug === workspaceSlug ? removal : null;
-  if (removal !== removalHere) setRemoval(removalHere);
-  const setRemoveMemberModal = (member: WorkspaceMember | null) => setRemoval(member && { workspaceSlug, member });
+  const [removeMemberModal, setRemoveMemberModal] = useState<WorkspaceMember | null>(null);
 
   const { data: currentUser } = useUser();
   const { allowPermissions } = useUserPermissions();
@@ -131,5 +120,5 @@ export const useMemberColumns = (workspaceSlug: string) => {
       ),
     },
   ];
-  return { columns, removeMemberModal: removalHere?.member ?? null, setRemoveMemberModal };
+  return { columns, removeMemberModal, setRemoveMemberModal };
 };

@@ -42,12 +42,8 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
   const { t } = useTranslation();
   // local state
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
-  // the workspace whose leaving the dialog asks, kept as the dialog opens (v0 design 7.7, state keyed by id): the
-  // dialog outlives the menu, which closes as its entry is picked, and leaves that workspace; it shows only while that
-  // workspace is the route's, so a Back or Forward to another workspace ends it, and its Leave never acts on that one
-  const [leaving, setLeaving] = useState<string | null>(null);
-  const leavingHere = leaving !== null && leaving === activeWorkspace?.slug ? leaving : null;
-  if (leaving !== leavingHere) setLeaving(leavingHere);
+  // the leaving's dialog outlives the menu, which closes as its entry is picked
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
 
   // the workspace opened last is a best-effort preference: the link opens the workspace whether nerve saves it or not
   const handleWorkspaceNavigation = (workspace: Workspace) => {
@@ -171,7 +167,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
                           as="button"
                           type="button"
                           className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary data-focus:bg-layer-transparent-hover"
-                          onClick={() => setLeaving(activeWorkspace.slug)}
+                          onClick={() => setIsLeaveModalOpen(true)}
                         >
                           <LogOutOutline className="size-4 flex-shrink-0" />
                           {t("leave_workspace")}
@@ -197,7 +193,13 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
           );
         }}
       </Menu>
-      {leavingHere && <LeaveWorkspaceModal workspaceSlug={leavingHere} isOpen onClose={() => setLeaving(null)} />}
+      {activeWorkspace && (
+        <LeaveWorkspaceModal
+          workspaceSlug={activeWorkspace.slug}
+          isOpen={isLeaveModalOpen}
+          onClose={() => setIsLeaveModalOpen(false)}
+        />
+      )}
     </>
   );
 });

@@ -32,8 +32,8 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
   const { data: currentUser } = useUser();
   const { leave, remove } = useMembershipChanges(workspaceSlug);
 
-  // the caller's own row offers him to leave; another's, to remove that member (an admin's), in the page's workspace,
-  // the one the dialog was opened in (useMemberColumns shows it only there); the dialog closes once nerve has done it
+  // the caller's own row offers him to leave; another's, to remove that member (an admin's); the dialog that asked
+  // closes once nerve has done it
   const handleRemove = (memberId: string) => {
     const closeDialog = () => setRemoveMemberModal(null);
     return memberId === currentUser?.id ? leave(closeDialog) : remove(memberId, closeDialog);

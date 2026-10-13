@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { Fragment } from "react";
 import { observer } from "mobx-react";
 import { Outlet } from "react-router";
 // nerve imports
@@ -28,8 +29,11 @@ function ProjectLayout({ params }: Route.ComponentProps) {
   // preferences
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
 
+  // keyed by the route's project (v0 design 7.7, state keyed by id): a switch to another project, by a Back or Forward
+  // too, mounts its header and its page afresh, so no dialog or state opened in one project (the header's leaving
+  // among them, outside the project's wrapper) carries into the other
   return (
-    <>
+    <Fragment key={projectId}>
       {projectPreferences.navigationMode === "TABBED" && (
         <div className="z-20">
           <Row className="flex h-header w-full items-center gap-2 border-b border-subtle bg-surface-1">
@@ -53,7 +57,7 @@ function ProjectLayout({ params }: Route.ComponentProps) {
       <ProjectAuthWrapper projectId={projectId}>
         <Outlet />
       </ProjectAuthWrapper>
-    </>
+    </Fragment>
   );
 }
 

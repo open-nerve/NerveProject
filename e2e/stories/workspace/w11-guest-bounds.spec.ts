@@ -134,11 +134,12 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await opened(`/${slug}/settings/projects/${web.id}/states`, denied);
   await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
 
-  // The admin's dialogs keep the workspace they were opened in; he has another, Beta. From Beta's home his menu's
-  // acme entry, a link of the app's, takes him to acme's, where he asks his leaving: a Back to Beta's home ends that
-  // dialog rather than ask it of Beta, and a Forward to acme's does not bring it back. Then, from Beta's members page,
-  // the app takes him to acme's (the acme entry, then its "Invite members"), where he asks gus's removal: a Back of two
-  // entries at once (the Back button's list) to Beta's members page ends that dialog too.
+  // The admin's dialogs end with the workspace they were opened in, whose content is keyed by it (v0 design 7.7); he
+  // has another, Beta, whose pages share acme's layout. From Beta's home his menu's acme entry, a link of the app's,
+  // takes him to acme's, where he asks his leaving: a Back to Beta's home ends that dialog rather than ask it of Beta,
+  // and a Forward to acme's does not bring it back. Then, from Beta's members page, the app takes him to acme's (the
+  // acme entry, then its "Invite members"), where he asks gus's removal: a Back of two entries at once (the Back
+  // button's list) to Beta's members page ends that dialog too.
   const betaSlug = slugFor(testInfo, "beta");
   await createWorkspace(api, admin.access_token, { name: "Beta", slug: betaSlug });
   const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);

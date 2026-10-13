@@ -16,7 +16,7 @@ import {
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { shownWithin } from "../../fixtures/dialogs";
+import { closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
 import { dragOnto } from "../../fixtures/project-pages";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -77,6 +77,13 @@ async function menuOf(page: Page, name: string): Promise<Locator> {
     await expect(setAsDefault).toBeVisible({ timeout: 1_000 });
   }).toPass({ timeout: 5_000 });
   return setAsDefault;
+}
+
+/** The quick actions' button of the project's header on page: the sidebar's projects have one each too. */
+function headerActions(page: Page): Locator {
+  return page
+    .getByRole("button", { name: "Toggle quick actions menu" })
+    .and(page.locator("xpath=//*[not(ancestor::aside)]"));
 }
 
 /** The projects of page's sidebar, in its order. */
@@ -173,7 +180,7 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
   ]);
 });
 
-test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh; Web's guest is offered the menus and the drag as well", async ({
+test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh; Web's guest is offered the menus and the drag as well, and his leaving of Docs, asked in its header, ends as a Back takes him to Web's work items", async ({
   api,
   baseURL,
   browser,
@@ -299,5 +306,17 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
     warnings: [EMOJI_CHECK_WARNING],
     errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
   });
+  // His sidebar's Docs, under the same layout as Web's work items, offers a guest his leaving in its header; asked,
+  // it ends as a Back takes him to Web's work items, rather than ask it of Web (v0 design 7.7: a project's pages are
+  // keyed by it).
+  await inSidebar(theGuest.page, docs.id).locator("a").first().click();
+  await expect(theGuest.page).toHaveURL(`/${slug}/projects/${docs.id}/issues`);
+  await headerActions(theGuest.page).click();
+  await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
+  await expect(modalDialog(theGuest.page)).toHaveCount(1);
+  await theGuest.page.goBack();
+  await expect(theGuest.page).toHaveURL(`/${slug}/projects/${web.id}/issues`);
+  expect(await closedWithin(theGuest.page)).toBe(true);
+  expect(gusWatch.pageErrors).toEqual([]);
   await theGuest.close();
 });
