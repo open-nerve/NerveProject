@@ -20,7 +20,7 @@ import {
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { closedByComposingEscape, closedByEscape, enabledWithin } from "../../fixtures/dialogs";
+import { closedByComposingEscape, closedByEscape, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
@@ -238,11 +238,16 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   const general = `/${slug}/settings/projects/${web.id}`;
   await page.goto(general);
   // An Escape that ends an input method's composition in the deletion's name field is the input method's: the dialog
-  // stays open, and a plain Escape still closes it.
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  // stays open, and a plain Escape still closes it. While it is open the page behind it is inert and hidden; closed,
+  // the page is back, and so is the focus, on the button that opened it.
+  const deleteButton = page.getByRole("button", { name: "Delete", exact: true });
+  await deleteButton.click();
   await page.locator("#projectName").fill("We");
+  expect(await pageBehindHidden(page)).toBe(true);
   expect(await closedByComposingEscape(page.locator("#projectName"))).toBe(false);
   expect(await closedByEscape(page)).toBe(true);
+  expect(await pageBehindHidden(page)).toBe(false);
+  await expect(deleteButton).toBeFocused();
   // The admin archives Web: the dialog cannot be closed, nor Web archived twice, and the page stays, until nerve has
   // archived it.
   await page.getByRole("button", { name: "Archive", exact: true }).click();

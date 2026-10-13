@@ -108,6 +108,13 @@ export async function hiddenWithin(locator: Locator): Promise<boolean> {
 }
 
 /**
+ * The one modal dialog page shows: a toast is a dialog too, not a modal one, and does not count.
+ */
+export function modalDialog(page: Page): Locator {
+  return page.locator('[role="dialog"][aria-modal="true"]');
+}
+
+/**
  * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
  * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
  * still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check made at once cannot
@@ -115,10 +122,22 @@ export async function hiddenWithin(locator: Locator): Promise<boolean> {
  * (timedOut); any other failure, such as two modal dialogs, rejects.
  */
 export async function closedWithin(page: Page): Promise<boolean> {
-  return page
-    .locator('[role="dialog"][aria-modal="true"]')
+  return modalDialog(page)
     .waitFor({ state: "detached", timeout: 1_000 })
     .then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether the page behind page's dialogs, its first main element, is inert and hidden from assistive
+ * technology (aria-hidden), as ModalCore makes it while a dialog is open: nothing behind the dialog is reached by Tab
+ * or the pointer, or read; and neither once the dialog has closed. The page is read by its element, not by a role:
+ * Playwright's role queries do not see what is aria-hidden.
+ */
+export async function pageBehindHidden(page: Page): Promise<boolean> {
+  return page
+    .locator("main")
+    .first()
+    .evaluate((main) => main.closest("[inert]") !== null && main.closest('[aria-hidden="true"]') !== null);
 }
 
 /** Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed (closedWithin). */

@@ -94,7 +94,7 @@ export function AlertModalCore(props: Props) {
         <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
           {secondaryButtonText}
         </Button>
-        <Button variant={BUTTON_VARIANTS[variant]} tabIndex={1} onClick={handleSubmit} loading={isSubmitting}>
+        <Button variant={BUTTON_VARIANTS[variant]} onClick={handleSubmit} loading={isSubmitting}>
           {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
         </Button>
       </div>

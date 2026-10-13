@@ -12,7 +12,14 @@ import {
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, login } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin, sentWithin } from "../../fixtures/dialogs";
+import {
+  closedByEscape,
+  closedWithin,
+  enabledWithin,
+  modalDialog,
+  pageBehindHidden,
+  sentWithin,
+} from "../../fixtures/dialogs";
 import { dragOnto, tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -225,7 +232,9 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   rows = changed(changed(rows, "Backlog", { default: false }), "Review", { default: true });
   await expectStates(db, web.id, rows);
 
-  // In Progress made the default meanwhile, elsewhere: nerve refuses its deletion, said in a toast, the dialog open.
+  // In Progress made the default meanwhile, elsewhere: nerve refuses its deletion, said in a toast, the dialog open,
+  // Tab going round its two buttons and the page behind it hidden; Cancel closes it, and the page and the focus are
+  // back.
   const elsewhere = await api.POST("/api/v0/states/{state_id}/mark-default", {
     params: { path: { state_id: inProgressId } },
     headers: bearer(admin.access_token),
@@ -241,8 +250,13 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     page.getByText("The default state cannot be deleted. Make another state the default first.")
   ).toBeVisible();
   expect(await closedWithin(page)).toBe(false);
+  await dialog.getByRole("button", { name: "Cancel" }).focus();
+  expect(await tabCycle(page, modalDialog(page), 4)).toEqual(["Delete", "Cancel"]);
+  expect(await pageBehindHidden(page)).toBe(true);
   await dialog.getByRole("button", { name: "Cancel" }).click();
   expect(await closedWithin(page)).toBe(true);
+  expect(await pageBehindHidden(page)).toBe(false);
+  await expect(inProgress.getByRole("button", { name: "Delete" })).toBeFocused();
 
   // Reloaded, the page shows In Progress the default, as nerve holds it; Review made the default again. In Progress
   // deleted, its dialog held while nerve answers: Escape does not dismiss it, Cancel is disabled; it closes once nerve

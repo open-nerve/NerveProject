@@ -14,7 +14,7 @@ import {
 import { expectLabels } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
+import { closedByEscape, closedWithin, enabledWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { dragOnto, tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -233,8 +233,8 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await seenBy("its member", mem, false);
   await seenBy("the workspace admin who is its member", wanda, true);
 
-  // Docs deleted meanwhile, elsewhere: nerve refuses its deletion here, said in a toast, the dialog open; Cancel closes
-  // it.
+  // Docs deleted meanwhile, elsewhere: nerve refuses its deletion here, said in a toast, the dialog open, Tab going
+  // round its two buttons and the page behind it hidden; Cancel closes it, and the page and the focus are back.
   const gone = await api.DELETE("/api/v0/labels/{label_id}", {
     params: { path: { label_id: docs.id } },
     headers: bearer(admin.access_token),
@@ -248,8 +248,13 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   expect(refused.answer.status()).toBe(404);
   await expect(page.getByText("The label does not exist, or you cannot see its project.")).toBeVisible();
   expect(await closedWithin(page)).toBe(false);
+  await dialog.getByRole("button", { name: "Cancel" }).focus();
+  expect(await tabCycle(page, modalDialog(page), 4)).toEqual(["Delete", "Cancel"]);
+  expect(await pageBehindHidden(page)).toBe(true);
   await dialog.getByRole("button", { name: "Cancel" }).click();
   expect(await closedWithin(page)).toBe(true);
+  expect(await pageBehindHidden(page)).toBe(false);
+  await expect(docsDelete).toBeFocused();
 
   // Reloaded, the page shows Docs gone, and Feature under Defect, after UI, of the same place and made before it. UI
   // taken out of Defect's group from its menu: its parent alone, none; at the top, first by its place.

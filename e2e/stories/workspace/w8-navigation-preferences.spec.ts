@@ -10,6 +10,7 @@ import {
 import { expectPreferences } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { closedWithin, pageBehindHidden } from "../../fixtures/dialogs";
 import { answerTo, bodiesSentTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -150,7 +151,8 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   await expect(tabs).toBeChecked();
   await expect(count).toHaveValue("3");
 
-  // A count beyond nerve's bounds: nerve refuses it, the page says why, and the field and the sidebar keep 3.
+  // A count beyond nerve's bounds: nerve refuses it, the page says why, and the field keeps 3; the sidebar, hidden
+  // behind the dialog while it is open, keeps 3 too once it has closed.
   const beyond = await answerTo(page, "PATCH", path, async () => {
     await count.fill("3000000000");
     await count.blur();
@@ -158,6 +160,9 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   expect(beyond.status()).toBe(422);
   await expect(page.getByText("Some fields are not valid.")).toBeVisible();
   await expect(count).toHaveValue("3");
+  expect(await pageBehindHidden(page)).toBe(true);
+  await dialog.getByRole("button", { name: "Close" }).click();
+  expect(await closedWithin(page)).toBe(true);
   await expect(projects).toHaveCount(3);
   await expectPreferences(db, slug, email, settings);
   expect(watch.apiRequests.filter((request) => request === `PATCH ${path}`)).toHaveLength(5);
