@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 import { Controller } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ORGANIZATION_SIZE } from "@nerve/constants";
+import { ORGANIZATION_SIZE, ORGANIZATION_SIZE_I18N_LABEL } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { Workspace } from "@nerve/api-client";
@@ -120,7 +120,9 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                   value={value}
                   onChange={onChange}
                   label={
-                    ORGANIZATION_SIZE.find((c) => c === value) ?? (
+                    value ? (
+                      t(ORGANIZATION_SIZE_I18N_LABEL[value])
+                    ) : (
                       <span className="text-placeholder">
                         {t("workspace_creation.form.organization_size.placeholder")}
                       </span>
@@ -131,7 +133,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                 >
                   {ORGANIZATION_SIZE.map((item) => (
                     <CustomSelect.Option key={item} value={item}>
-                      {item}
+                      {t(ORGANIZATION_SIZE_I18N_LABEL[item])}
                     </CustomSelect.Option>
                   ))}
                 </CustomSelect>

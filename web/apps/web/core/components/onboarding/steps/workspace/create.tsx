@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 import { Controller } from "react-hook-form";
 import { TickCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { ORGANIZATION_SIZE } from "@nerve/constants";
+import { ORGANIZATION_SIZE, ORGANIZATION_SIZE_I18N_LABEL } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { Workspace } from "@nerve/api-client";
@@ -177,7 +177,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
                       >
                         <TickCircleOutline className={cn("size-4 text-placeholder", isSelected && "text-secondary")} />
 
-                        <span className="font-medium">{size}</span>
+                        <span className="font-medium">{t(ORGANIZATION_SIZE_I18N_LABEL[size])}</span>
                       </button>
                     );
                   })}

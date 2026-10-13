@@ -12,6 +12,8 @@ import { DialogTitle } from "@headlessui/react";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+// components
+import { Translated } from "@/components/common/translated";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { useSignOut } from "@/hooks/use-sign-out";
@@ -64,9 +66,10 @@ export function SwitchAccountModal(props: Props) {
             </DialogTitle>
             {userData?.email && (
               <div className="text-14 font-regular text-secondary">
-                {t("onboarding.switch_account.description_before_email")}{" "}
-                <span className="text-accent-primary">{userData.email}</span>{" "}
-                {t("onboarding.switch_account.description_after_email")}
+                <Translated
+                  i18nKey="onboarding.switch_account.description"
+                  values={{ email: <span className="text-accent-primary">{userData.email}</span> }}
+                />
               </div>
             )}
           </div>

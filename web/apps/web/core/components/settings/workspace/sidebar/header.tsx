@@ -41,7 +41,7 @@ export const WorkspaceSettingsSidebarHeader = observer(function WorkspaceSetting
           icon={ArrowNarrowLeftOutline}
           onClick={() => navigate(`/${currentWorkspace?.slug}`)}
         />
-        <p>Workspace settings</p>
+        <p>{t("workspace_settings.sidebar_title")}</p>
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2 px-5 py-0.5">
         <div className="flex items-center gap-2 truncate">

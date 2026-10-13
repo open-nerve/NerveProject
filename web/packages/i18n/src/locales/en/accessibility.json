@@ -18,6 +18,11 @@
       "close_project_menu": "Close project menu",
       "project_navigation": "Project navigation"
     },
+    "sidebar": {
+      "main": "Main sidebar",
+      "resize": "Resize sidebar",
+      "peek": "Sidebar peek view"
+    },
     "auth_forms": {
       "clear_email": "Clear email",
       "show_password": "Show password",

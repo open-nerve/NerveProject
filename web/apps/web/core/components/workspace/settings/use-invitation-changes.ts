@@ -4,6 +4,7 @@
  */
 
 import type { WorkspaceRole } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
@@ -24,6 +25,7 @@ export function useInvitationChanges() {
     workspace: { updateMemberInvitation, deleteMemberInvitation },
   } = useMember();
   const failed = useRefusalToast();
+  const { t } = useTranslation();
 
   return {
     /** Gives the pending invitation the role: its number, as nerve's invitation update takes it. */
@@ -34,7 +36,11 @@ export function useInvitationChanges() {
       followInSession(() => deleteMemberInvitation(workspaceSlug, invitationId), {
         done: () => {
           done();
-          setToast({ type: TOAST_TYPE.SUCCESS, title: "Success!", message: "Invitation removed successfully." });
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: t("toast.success"),
+            message: t("workspace_settings.settings.members.invitation_removed"),
+          });
         },
         failed,
       }),

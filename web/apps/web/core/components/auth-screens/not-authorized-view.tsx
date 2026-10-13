@@ -7,10 +7,13 @@
 import React from "react";
 import { observer } from "mobx-react";
 // assets
+import { useTranslation } from "@nerve/i18n";
 import { cn } from "@nerve/utils";
 import ProjectNotAuthorizedImg from "@/app/assets/auth/project-not-authorized.svg?url";
 import Unauthorized from "@/app/assets/auth/unauthorized.svg?url";
 import WorkspaceNotAuthorizedImg from "@/app/assets/auth/workspace-not-authorized.svg?url";
+// components
+import { PageHead } from "@/components/core/page-title";
 // layouts
 import DefaultLayout from "@/layouts/default-layout";
 
@@ -22,6 +25,7 @@ type Props = {
 
 export const NotAuthorizedView = observer(function NotAuthorizedView(props: Props) {
   const { section = "general", isProjectView = false, className } = props;
+  const { t } = useTranslation();
 
   // assets
   const settingAsset = isProjectView ? ProjectNotAuthorizedImg : WorkspaceNotAuthorizedImg;
@@ -29,11 +33,12 @@ export const NotAuthorizedView = observer(function NotAuthorizedView(props: Prop
 
   return (
     <DefaultLayout className={cn("bg-surface-1", className)}>
+      <PageHead title={t("not_authorized_to_view")} />
       <div className="flex h-full w-full flex-col items-center justify-center gap-y-5 text-center">
         <div className="h-44 w-72">
           <img src={asset} className="h-[176px] w-[288px] object-contain" alt="" />
         </div>
-        <h1 className="text-18 font-medium text-primary">Oops! You are not authorized to view this page</h1>
+        <h1 className="text-18 font-medium text-primary">{t("not_authorized_to_view")}</h1>
       </div>
     </DefaultLayout>
   );

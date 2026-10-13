@@ -10,6 +10,7 @@ import { Link } from "react-router";
 import { Disclosure } from "@headlessui/react";
 // nerve imports
 import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
 import type { User, WorkspaceMember, WorkspaceRole } from "@nerve/api-client";
@@ -38,6 +39,7 @@ type AccountTypeProps = {
 
 export function NameColumn(props: NameProps) {
   const { rowData, workspaceSlug, isAdmin, currentUser, setRemoveMemberModal } = props;
+  const { t } = useTranslation();
   // derived values
   const { avatar_url, display_name, email, first_name, id, last_name } = rowData.member;
   const isSuspended = rowData.is_active === false;
@@ -86,7 +88,8 @@ export function NameColumn(props: NameProps) {
                     className="flex cursor-pointer items-center gap-x-3"
                     onClick={() => setRemoveMemberModal(rowData)}
                   >
-                    <DeleteOutline className="size-3.5 align-middle" /> {id === currentUser?.id ? "Leave " : "Remove "}
+                    <DeleteOutline className="size-3.5 align-middle" />{" "}
+                    {id === currentUser?.id ? t("leave") : t("remove")}
                   </button>
                 )}
               />
@@ -104,6 +107,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
   const { allowPermissions } = useUserPermissions();
   const { data: currentUser } = useUser();
   const { changeRole } = useMembershipChanges(workspaceSlug);
+  const { t } = useTranslation();
 
   // derived values
   const isCurrentUser = currentUser?.id === rowData.member.id;
@@ -116,7 +120,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
       {isSuspended ? (
         <div className="flex w-32">
           <Pill variant={EPillVariant.DEFAULT} size={EPillSize.SM} className="border-none">
-            Suspended
+            {t("workspace_settings.settings.members.suspended")}
           </Pill>
         </div>
       ) : isRoleNonEditable ? (

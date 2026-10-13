@@ -11,7 +11,12 @@ import { useParams } from "react-router";
 // Nerve Imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ORGANIZATION_SIZE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import {
+  ORGANIZATION_SIZE,
+  ORGANIZATION_SIZE_I18N_LABEL,
+  EUserPermissions,
+  EUserPermissionsLevel,
+} from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -85,9 +90,9 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     await followInSession(() => updateWorkspace(workspace.slug, payload), {
       done: () =>
         setToast({
-          title: "Success!",
+          title: t("toast.success"),
           type: TOAST_TYPE.SUCCESS,
-          message: "Workspace updated successfully",
+          message: t("workspace_settings.settings.general.updated"),
         }),
       failed: toastRefusal,
     });
@@ -96,7 +101,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
 
   const handleCopyUrl = () => {
     if (!workspace) return;
-    void copyLink(workspace.slug, "Workspace URL copied to the clipboard.");
+    void copyLink(workspace.slug, t("workspace_settings.settings.general.url_copied"));
   };
 
   useEffect(() => {
@@ -117,7 +122,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                 <img
                   src={getFileURL(workspace.logo_url)}
                   className="absolute top-0 left-0 size-full rounded-md object-cover"
-                  alt="Workspace Logo"
+                  alt=""
                 />
               </div>
             ) : (
@@ -175,8 +180,9 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                     value={value}
                     onChange={onChange}
                     label={
-                      ORGANIZATION_SIZE.find((c) => c === value) ??
-                      t("workspace_settings.settings.general.errors.company_size.select_a_range")
+                      value
+                        ? t(ORGANIZATION_SIZE_I18N_LABEL[value])
+                        : t("workspace_settings.settings.general.errors.company_size.select_a_range")
                     }
                     buttonClassName="border border-subtle bg-layer-2 !shadow-none !rounded-md"
                     input
@@ -184,7 +190,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                   >
                     {ORGANIZATION_SIZE.map((item) => (
                       <CustomSelect.Option key={item} value={item}>
-                        {item}
+                        {t(ORGANIZATION_SIZE_I18N_LABEL[item])}
                       </CustomSelect.Option>
                     ))}
                   </CustomSelect>

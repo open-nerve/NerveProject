@@ -8,6 +8,7 @@ import type { Dispatch, ReactElement, SetStateAction } from "react";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 // helpers
 import { usePlatformOS } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
 import { cn } from "@nerve/utils";
 
 interface ResizableSidebarProps {
@@ -54,6 +55,7 @@ export function ResizableSidebar({
   const initialMouseXRef = useRef<number>(0);
   // hooks
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
   // handlers
   const setShowPeek = useCallback(
     (value: boolean) => {
@@ -182,7 +184,7 @@ export function ResizableSidebar({
           maxWidth: `${isCollapsed ? 0 : width}px`,
         }}
         role="complementary"
-        aria-label="Main sidebar"
+        aria-label={t("aria_labels.sidebar.main")}
         data-prevent-outside-click={isMobile}
       >
         <aside className="group/sidebar relative flex h-full w-full flex-col overflow-hidden bg-surface-1 pt-3">
@@ -200,7 +202,7 @@ export function ResizableSidebar({
             onDoubleClick={() => toggleCollapsed()}
             onMouseDown={(e) => startResizing(e)}
             role="separator"
-            aria-label="Resize sidebar"
+            aria-label={t("aria_labels.sidebar.resize")}
           />
         </aside>
       </div>
@@ -220,7 +222,7 @@ export function ResizableSidebar({
         onMouseEnter={handlePeekEnter}
         onMouseLeave={handlePeekLeave}
         role="complementary"
-        aria-label="Sidebar peek view"
+        aria-label={t("aria_labels.sidebar.peek")}
       >
         <aside
           className={cn(
@@ -241,7 +243,7 @@ export function ResizableSidebar({
             onDoubleClick={() => toggleCollapsed()}
             onMouseDown={(e) => startResizing(e)}
             role="separator"
-            aria-label="Resize sidebar"
+            aria-label={t("aria_labels.sidebar.resize")}
           />
         </aside>
       </div>

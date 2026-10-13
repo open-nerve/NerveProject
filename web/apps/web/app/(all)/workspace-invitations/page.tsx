@@ -12,6 +12,7 @@ import { useTranslation } from "@nerve/i18n";
 import { BoxesOutline, CloseOutline, LogOutOutline, TickOutline, UserOutline } from "@makeplane/propel/icons";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
+import { PageHead } from "@/components/core/page-title";
 import { EmptySpace, EmptySpaceItem } from "@/components/ui/empty-space";
 import { invitationView } from "@/components/workspace/invitation-view";
 import { useInvitationAnswer } from "@/components/workspace/use-invitation-answer";
@@ -161,7 +162,12 @@ const WorkspaceInvitation = observer(function WorkspaceInvitation() {
     }
   };
 
-  return <div className="flex h-full w-full flex-col items-center justify-center px-3">{content()}</div>;
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center px-3">
+      <PageHead title={t("workspace_invitations")} />
+      {content()}
+    </div>
+  );
 });
 
 /** The invitation's page, public: to one signed out as to one signed in (WorkspaceInvitation). */

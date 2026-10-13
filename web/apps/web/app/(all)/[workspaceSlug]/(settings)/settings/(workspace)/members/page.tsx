@@ -61,7 +61,9 @@ const WorkspaceMembersSettingsPage = observer(function WorkspaceMembersSettingsP
   };
 
   // derived values
-  const pageTitle = currentWorkspace?.name ? `${currentWorkspace.name} - Members` : undefined;
+  const pageTitle = currentWorkspace?.name
+    ? t("workspace_settings.settings.members.page_label", { workspace: currentWorkspace.name })
+    : undefined;
   const appliedRoleFilters = filtersStore.filters?.roles || [];
 
   // if user is not authorized to view this page

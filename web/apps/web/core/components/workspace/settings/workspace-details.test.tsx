@@ -45,7 +45,10 @@ vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
-/** Renders the page, has edit change its fields, and clicks the update; settles once the page has followed nerve. */
+/**
+ * Renders the page, has edit change its fields (the size by the label the select shows), and clicks the update;
+ * settles once the page has followed nerve.
+ */
 async function update(edit: (form: { name: string; size?: string; zone?: string }) => void = () => {}) {
   renderToStaticMarkup(<WorkspaceDetails />);
   const [name] = shown.inputs;
@@ -73,11 +76,14 @@ beforeEach(() => {
 
 describe("WorkspaceDetails", () => {
   it("sends the fields its form edits, the size as nerve names it, and says the workspace is updated", async () => {
-    await update((form) => Object.assign(form, { name: "Acme Corp", size: "11-50", zone: "Asia/Shanghai" }));
+    const size = "workspace_creation.form.organization_size.sizes.11_50";
+    await update((form) => Object.assign(form, { name: "Acme Corp", size, zone: "Asia/Shanghai" }));
     expect(page.updateWorkspace.mock.calls).toEqual([
       ["acme", { name: "Acme Corp", organization_size: "11-50", timezone: "Asia/Shanghai" }],
     ]);
-    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Workspace updated successfully" }]);
+    expect(toasts).toEqual([
+      { type: "success", title: "toast.success", message: "workspace_settings.settings.general.updated" },
+    ]);
   });
 
   // nerve cannot set the size to none (WorkspaceUpdate): a null would be refused

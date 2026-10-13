@@ -69,7 +69,9 @@ describe("useInvitationChanges", () => {
     deletion.answer(undefined);
     await deleted;
     expect(page.closeDialog.mock.calls.length).toBe(1);
-    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Invitation removed successfully." }]);
+    expect(toasts).toEqual([
+      { type: "success", title: "toast.success", message: "workspace_settings.settings.members.invitation_removed" },
+    ]);
   });
 
   it.each(changes)("shows nerve's reason when it refuses $change, its dialog open", async ({ store, make }) => {

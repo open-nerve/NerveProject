@@ -13,7 +13,15 @@
       },
       "organization_size": {
         "label": "How many people will use this workspace?",
-        "placeholder": "Select a range"
+        "placeholder": "Select a range",
+        "sizes": {
+          "just_myself": "Just myself",
+          "2_10": "2-10",
+          "11_50": "11-50",
+          "51_200": "51-200",
+          "201_500": "201-500",
+          "500_plus": "500+"
+        }
       }
     },
     "errors": {
@@ -50,7 +58,7 @@
     "sign_up_to_accept": "Sign up to accept",
     "mismatch": "Sign out, and sign in with the address it was sent to.",
     "declined": {
-      "title": "You declined this invitation.",
+      "title": "This invitation was declined.",
       "description": "Ask an admin of {workspace} for a new one."
     },
     "invalid": {

@@ -18,6 +18,11 @@
       "close_project_menu": "关闭项目菜单",
       "project_navigation": "项目导航"
     },
+    "sidebar": {
+      "main": "主侧边栏",
+      "resize": "调整侧边栏宽度",
+      "peek": "侧边栏预览"
+    },
     "auth_forms": {
       "clear_email": "清除邮箱",
       "show_password": "显示密码",

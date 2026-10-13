@@ -195,7 +195,7 @@ test("W5 (page): signed out, the link shows the workspace and the role and sends
     page.getByRole("button", { name: "Ignore" }).click()
   );
   expect([declined.answer.status(), declined.body]).toEqual([204, { token: toOther.token }]);
-  await expect(page.getByText("You declined this invitation.")).toBeVisible();
+  await expect(page.getByText("This invitation was declined.")).toBeVisible();
   await expectMembership(db, other, carolEmail, null);
   await expectInvitations(db, other, adminEmail, [
     { email: carolEmail, role: 15, accepted: false, responded: true, deleted: false },

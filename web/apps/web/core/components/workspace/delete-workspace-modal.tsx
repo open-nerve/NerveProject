@@ -17,6 +17,8 @@ import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
+// components
+import { Translated } from "@/components/common/translated";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
@@ -107,14 +109,17 @@ export const DeleteWorkspaceModal = observer(function DeleteWorkspaceModal(props
             <div className="text-center sm:text-left">
               <h3 className="text-h5-medium">{t("workspace_settings.settings.general.delete_modal.title")}</h3>
               <p className="mt-1 text-body-xs-regular text-secondary">
-                You are about to delete the workspace{" "}
-                <span className="text-body-xs-semibold break-words">{workspace.name}</span>. If you confirm, you will
-                lose access to all your work data in this workspace without any way to restore it. Tread very carefully.
+                <Translated
+                  i18nKey="workspace_settings.settings.general.delete_modal.body"
+                  values={{ name: <span className="text-body-xs-semibold break-words">{workspace.name}</span> }}
+                />
               </p>
             </div>
 
             <div className="mt-4 text-secondary">
-              <p className="text-body-xs-regular break-words">Type in this workspace&apos;s name to continue.</p>
+              <p className="text-body-xs-regular break-words">
+                {t("workspace_settings.settings.general.delete_modal.type_name")}
+              </p>
               <Controller
                 control={control}
                 name="workspaceName"
@@ -140,8 +145,10 @@ export const DeleteWorkspaceModal = observer(function DeleteWorkspaceModal(props
 
             <div className="mt-4 text-secondary">
               <p className="text-body-xs-regular">
-                For final confirmation, type <span className="text-body-xs-medium text-primary">{CONFIRMATION} </span>
-                below.
+                <Translated
+                  i18nKey="workspace_settings.settings.general.delete_modal.type_confirmation"
+                  values={{ confirmation: <span className="text-body-xs-medium text-primary">{CONFIRMATION}</span> }}
+                />
               </p>
               <Controller
                 control={control}
