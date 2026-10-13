@@ -13,7 +13,11 @@ import { useInvitationChanges } from "./use-invitation-changes";
 // 7.5): the hook runs as a plain function, with stand-ins for the store's changes, which nerve answers when the test
 // says. Its session is fake-tab.ts's.
 
-const page = vi.hoisted(() => ({ updateMemberInvitation: vi.fn(), deleteMemberInvitation: vi.fn() }));
+const page = vi.hoisted(() => ({
+  updateMemberInvitation: vi.fn(),
+  deleteMemberInvitation: vi.fn(),
+  closeDialog: vi.fn(),
+}));
 vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({
     workspace: {
@@ -36,7 +40,7 @@ const changes = [
   {
     change: "a deletion",
     store: page.deleteMemberInvitation,
-    make: () => useInvitationChanges().remove("acme", "i-dan"),
+    make: () => useInvitationChanges().remove("acme", "i-dan", page.closeDialog),
   },
 ];
 
@@ -46,6 +50,7 @@ beforeEach(() => {
     store.mockReset();
     store.mockResolvedValue(undefined);
   }
+  page.closeDialog.mockReset();
   toasts.length = 0;
 });
 
@@ -55,15 +60,22 @@ describe("useInvitationChanges", () => {
     expect([page.updateMemberInvitation.mock.calls, toasts]).toEqual([[["acme", "i-dan", { role: 5 }]], []]);
   });
 
-  it("deletes an invitation of the workspace, and says so", async () => {
-    await useInvitationChanges().remove("acme", "i-dan");
+  it("deletes an invitation of the workspace, and says so, its dialog closed once nerve has", async () => {
+    const deletion = heldChange<undefined>();
+    page.deleteMemberInvitation.mockReturnValueOnce(deletion.sent);
+    const deleted = useInvitationChanges().remove("acme", "i-dan", page.closeDialog);
     expect(page.deleteMemberInvitation.mock.calls).toEqual([["acme", "i-dan"]]);
+    expect([page.closeDialog.mock.calls, toasts]).toEqual([[], []]);
+    deletion.answer(undefined);
+    await deleted;
+    expect(page.closeDialog.mock.calls.length).toBe(1);
     expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Invitation removed successfully." }]);
   });
 
-  it.each(changes)("shows nerve's reason when it refuses $change", async ({ store, make }) => {
+  it.each(changes)("shows nerve's reason when it refuses $change, its dialog open", async ({ store, make }) => {
     store.mockRejectedValueOnce(refusal(409, "workspace.invitation_responded"));
     await make();
+    expect(page.closeDialog.mock.calls).toEqual([]);
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_invitation_responded" }]);
   });
 
@@ -77,7 +89,7 @@ describe("useInvitationChanges", () => {
         switchAccount();
         settle(change);
         await made;
-        expect(toasts).toEqual([]);
+        expect([page.closeDialog.mock.calls, toasts]).toEqual([[], []]);
       }
     );
   });

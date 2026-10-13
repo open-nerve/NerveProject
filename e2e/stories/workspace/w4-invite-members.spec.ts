@@ -10,7 +10,7 @@ import {
 import { expectInvitations } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
-import { closedByEscape } from "../../fixtures/dialogs";
+import { announced, closedByEscape, closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import {
@@ -260,7 +260,8 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     `${baseURL}${invitationLinkOf(davesInvitation)}`
   );
-  // frank's invitation, deleted meanwhile through the API: the page's removal is refused, and says why.
+  // frank's invitation, deleted meanwhile through the API: the page's removal is refused, and says why, read beside
+  // the dialog, which stays until Cancel closes it.
   const removal = { method: "DELETE", path: `/api/v0/workspace-invitations/${franksInvitation.id}` };
   const meanwhile = await api.DELETE("/api/v0/workspace-invitations/{invitation_id}", {
     params: { path: { invitation_id: franksInvitation.id } },
@@ -268,7 +269,12 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   });
   expect(meanwhile.response.status).toBe(204);
   expect((await removeInvitation(page, frank, removal)).status()).toBe(404);
-  await expect(page.getByText("The invitation does not exist, or its link is not valid.")).toBeVisible();
+  const notFound = page.getByText("The invitation does not exist, or its link is not valid.");
+  await expect(notFound).toBeVisible();
+  expect(await announced(notFound)).toBe(true);
+  expect(await closedWithin(page)).toBe(false);
+  await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
 
   // The member's address and erin's: refused, each under its row, and the form stays open.
   const refused = await sendInvitations(page, slug, [

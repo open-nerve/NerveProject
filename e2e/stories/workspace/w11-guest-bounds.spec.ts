@@ -9,15 +9,17 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectNoAddress } from "../../fixtures/assert/identity";
-import { workspaceTables } from "../../fixtures/assert/workspace";
+import { expectMembership, expectMembershipEnded, workspaceTables } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { registerOnboarded } from "../../fixtures/settings-pages";
+import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
+import { anotherBrowser } from "../../fixtures/workspace-pages";
 
 // W11, a guest's bounds (M3 design 2, 9.2): the permission matrix's backend
 // test holds every cell; this story samples four of them through the API, and
-// its page version what a guest's pages show him.
+// its page version what a guest's pages show him, and his leaving.
 
 test("W11 (API): a guest of a workspace may not list its invitations nor create a state in the project he is a guest of, does not see a private project he is not a member of, and reads no member's address, his own neither; none of it changes a row of the workspace's", async ({
   api,
@@ -89,8 +91,11 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
   expect(await tables(), "the tables after gus's calls").toEqual(before);
 });
 
-test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither", async ({
+test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a guest of, not Secret; the workspace's members page and Web's state and label settings tell him he may not see them; no page he opens shows an address, his own neither; the workspace menu offers him his leaving, reached by the keyboard and sent once by a double click, its dialog held while it is out, which ends his memberships and lands him on the page that creates a workspace; the only admin's leaving there is refused with the reason, its dialog open", async ({
   api,
+  baseURL,
+  browser,
+  db,
   signedInPage,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
@@ -121,6 +126,51 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await opened(`/${slug}/settings/members`, denied);
   await opened(`/${slug}/settings/projects/${web.id}/states`, denied);
   await opened(`/${slug}/settings/projects/${web.id}/labels`, denied);
+
+  // The only admin's leaving, through the workspace menu: nerve refuses it, the reason read beside the dialog, which
+  // stays until Cancel closes it; he is acme's admin still.
+  const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
+  const theAdmin = await anotherBrowser(browser, baseURL ?? "", admin);
+  await theAdmin.page.goto(`/${slug}`);
+  await theAdmin.page.getByRole("button", { name: "Open workspace switcher" }).click();
+  await theAdmin.page.getByRole("menuitem", { name: "Leave workspace" }).click();
+  const adminLeaving = await answerTo(theAdmin.page, leaving.method, leaving.path, () =>
+    modalDialog(theAdmin.page).getByRole("button", { name: "Leave", exact: true }).click()
+  );
+  expect(adminLeaving.status()).toBe(409);
+  const reason = theAdmin.page.getByText(
+    "The workspace would be left without an admin. Make another member an admin first."
+  );
+  await expect(reason).toBeVisible();
+  expect(await announced(reason)).toBe(true);
+  expect(await closedWithin(theAdmin.page)).toBe(false);
+  await modalDialog(theAdmin.page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modalDialog(theAdmin.page)).toHaveCount(0);
+  await expect(theAdmin.page).toHaveURL(`/${slug}`);
+  await expectMembership(db, slug, adminEmail, { role: 20, is_active: true });
+  await theAdmin.close();
+
+  // gus's leaving, by the keyboard: the menu's button, then its entry, from its last, signing out, one up; the
+  // dialog hides the page behind it. He leaves with a double click, nerve's answer held: while it is out the dialog
+  // cannot be dismissed (Cancel is disabled, Escape leaves it open), and the page sends the leaving once. Leaving ends
+  // his memberships, Web's too, and the root lands him on the page that creates a workspace.
+  await page.getByRole("button", { name: "Open workspace switcher" }).focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("End");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("Enter");
+  const leave = modalDialog(page).getByRole("button", { name: "Leave", exact: true });
+  await expect(modalDialog(page).getByRole("heading", { name: "Leave workspace?" })).toBeVisible();
+  expect(await pageBehindHidden(page)).toBe(true);
+  const release = await holdAnswer(page, leaving.method, leaving.path);
+  const left = answerTo(page, leaving.method, leaving.path, () => leave.dblclick());
+  await expect(modalDialog(page).getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  await release();
+  expect((await left).status()).toBe(204);
+  await expect(page).toHaveURL("/create-workspace");
+  expect(watch.apiRequests.filter((request) => request === `POST ${leaving.path}`)).toEqual([`POST ${leaving.path}`]);
+  await expectMembershipEnded(db, slug, gusEmail, gusEmail, 5, [{ identifier: "WEB", role: 5 }]);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
 });

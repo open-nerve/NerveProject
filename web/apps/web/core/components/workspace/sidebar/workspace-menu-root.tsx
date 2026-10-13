@@ -16,8 +16,6 @@ import { useTranslation } from "@nerve/i18n";
 import type { Workspace } from "@nerve/api-client";
 import { Loader } from "@nerve/ui";
 import { orderWorkspacesList, cn } from "@nerve/utils";
-// helpers
-import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useWorkspace } from "@/hooks/store/use-workspace";
@@ -25,15 +23,12 @@ import { useUser, useUserProfile } from "@/hooks/store/user";
 import { useInstance } from "@/hooks/store/use-instance";
 import { useSignOut } from "@/hooks/use-sign-out";
 // components
+import { LeaveWorkspaceModal } from "../leave-workspace-modal";
 import { WorkspaceLogo } from "../logo";
 import SidebarDropdownItem from "./dropdown-item";
 
-type WorkspaceMenuRootProps = {
-  variant: "sidebar" | "top-navigation";
-};
-
-export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: WorkspaceMenuRootProps) {
-  const { variant } = props;
+/** The workspace menu of the top navigation: the account's workspaces, a new one, leaving this one, signing out. */
+export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
   // store hooks
   const { toggleSidebar, toggleAnySidebarDropdown } = useAppTheme();
   const { config } = useInstance();
@@ -47,6 +42,8 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
   const { t } = useTranslation();
   // local state
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
+  // the leaving's dialog outlives the menu, which closes as its entry is picked
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
 
   // the workspace opened last is a best-effort preference: the link opens the workspace whether nerve saves it or not
   const handleWorkspaceNavigation = (workspace: Workspace) => {
@@ -61,7 +58,6 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
     }
   };
   const workspacesList = workspaces && orderWorkspacesList(workspaces);
-  // TODO: fix workspaces list scroll
 
   // Toggle sidebar dropdown state when either menu is open
   useEffect(() => {
@@ -69,42 +65,19 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
   }, [isWorkspaceMenuOpen, toggleAnySidebarDropdown]);
 
   return (
-    <Menu
-      as="div"
-      className={cn("relative flex h-full w-fit max-w-48 truncate whitespace-nowrap", {
-        "w-full justify-center text-center": variant === "sidebar",
-        "flex-grow justify-stretch truncate text-left": variant === "top-navigation",
-      })}
-    >
-      {({ open, close }: { open: boolean; close: () => void }) => {
-        // Update local state directly
-        if (isWorkspaceMenuOpen !== open) {
-          setIsWorkspaceMenuOpen(open);
-        }
+    <>
+      <Menu
+        as="div"
+        className="relative flex h-full w-fit max-w-48 flex-grow justify-stretch truncate text-left whitespace-nowrap"
+      >
+        {({ open, close }: { open: boolean; close: () => void }) => {
+          // Update local state directly
+          if (isWorkspaceMenuOpen !== open) {
+            setIsWorkspaceMenuOpen(open);
+          }
 
-        return (
-          <>
-            {variant === "sidebar" && (
-              <Menu.Button
-                className={cn("flex size-8 w-full items-center justify-center rounded-md", {
-                  "bg-layer-1": open,
-                })}
-              >
-                <AppSidebarItem
-                  variant="button"
-                  item={{
-                    icon: (
-                      <WorkspaceLogo
-                        logo={activeWorkspace?.logo_url}
-                        name={activeWorkspace?.name}
-                        classNames="size-8 rounded-md border border-subtle"
-                      />
-                    ),
-                  }}
-                />
-              </Menu.Button>
-            )}
-            {variant === "top-navigation" && (
+          return (
+            <>
               <Menu.Button
                 className={cn(
                   "group/menu-button flex flex-grow items-center justify-between gap-1 truncate rounded-sm p-1 text-13 font-medium text-secondary hover:bg-layer-1 focus:outline-none",
@@ -128,89 +101,100 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
                   })}
                 />
               </Menu.Button>
-            )}
-            <Transition
-              as={Fragment}
-              enter="transition ease-out duration-100"
-              enterFrom="transform opacity-0 scale-95"
-              enterTo="trnsform opacity-100 scale-100"
-              leave="transition ease-in duration-75"
-              leaveFrom="transform opacity-100 scale-100"
-              leaveTo="transform opacity-0 scale-95"
-            >
-              <Menu.Items as={Fragment}>
-                <div
-                  className={cn(
-                    "fixed z-21 mt-1 flex w-[19rem] origin-top-left flex-col divide-y divide-subtle rounded-md border-[0.5px] border-strong bg-surface-1 shadow-raised-200 outline-none",
-                    {
-                      "top-11 left-14": variant === "sidebar",
-                      "top-10 left-4": variant === "top-navigation",
-                    }
-                  )}
-                >
-                  <div className="vertical-scrollbar scrollbar-sm flex max-h-96 flex-col items-start justify-start overflow-x-hidden overflow-y-scroll">
-                    <span className="sticky top-0 z-21 h-full w-full flex-shrink-0 truncate rounded-md bg-surface-1 px-4 pt-3 pb-1 text-left text-13 font-medium text-placeholder">
-                      {currentUser?.email}
-                    </span>
-                    {workspacesList ? (
-                      <div className="flex size-full flex-col items-start justify-start">
-                        {(activeWorkspace
-                          ? [
-                              activeWorkspace,
-                              ...workspacesList.filter((workspace) => workspace.id !== activeWorkspace?.id),
-                            ]
-                          : workspacesList
-                        ).map((workspace) => (
-                          <SidebarDropdownItem
-                            key={workspace.id}
-                            workspace={workspace}
-                            activeWorkspace={activeWorkspace}
-                            handleItemClick={handleItemClick}
-                            handleWorkspaceNavigation={handleWorkspaceNavigation}
-                            handleClose={close}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="w-full">
-                        <Loader className="space-y-2">
-                          <Loader.Item height="30px" />
-                          <Loader.Item height="30px" />
-                        </Loader>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex w-full flex-col items-start justify-start gap-2 px-4 py-2 text-13">
-                    {!isWorkspaceCreationDisabled && (
-                      <Link to="/create-workspace" className="w-full">
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="trnsform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items as={Fragment}>
+                  <div className="fixed top-10 left-4 z-21 mt-1 flex w-[19rem] origin-top-left flex-col divide-y divide-subtle rounded-md border-[0.5px] border-strong bg-surface-1 shadow-raised-200 outline-none">
+                    <div className="vertical-scrollbar scrollbar-sm flex max-h-96 flex-col items-start justify-start overflow-x-hidden overflow-y-scroll">
+                      <span className="sticky top-0 z-21 h-full w-full flex-shrink-0 truncate rounded-md bg-surface-1 px-4 pt-3 pb-1 text-left text-13 font-medium text-placeholder">
+                        {currentUser?.email}
+                      </span>
+                      {workspacesList ? (
+                        <div className="flex size-full flex-col items-start justify-start">
+                          {(activeWorkspace
+                            ? [
+                                activeWorkspace,
+                                ...workspacesList.filter((workspace) => workspace.id !== activeWorkspace?.id),
+                              ]
+                            : workspacesList
+                          ).map((workspace) => (
+                            <SidebarDropdownItem
+                              key={workspace.id}
+                              workspace={workspace}
+                              activeWorkspace={activeWorkspace}
+                              handleItemClick={handleItemClick}
+                              handleWorkspaceNavigation={handleWorkspaceNavigation}
+                              handleClose={close}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="w-full">
+                          <Loader className="space-y-2">
+                            <Loader.Item height="30px" />
+                            <Loader.Item height="30px" />
+                          </Loader>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex w-full flex-col items-start justify-start gap-2 px-4 py-2 text-13">
+                      {!isWorkspaceCreationDisabled && (
+                        <Link to="/create-workspace" className="w-full">
+                          <Menu.Item
+                            as="div"
+                            className="flex items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
+                          >
+                            <PlusCircleOutline className="size-4 flex-shrink-0" />
+                            {t("create_workspace")}
+                          </Menu.Item>
+                        </Link>
+                      )}
+                      {/* every member may leave the workspace he is in: nerve refuses its only admin (M3 design 3.7) */}
+                      {activeWorkspace && (
                         <Menu.Item
-                          as="div"
-                          className="flex items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
+                          as="button"
+                          type="button"
+                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-secondary hover:bg-layer-transparent-hover"
+                          onClick={() => setIsLeaveModalOpen(true)}
                         >
-                          <PlusCircleOutline className="size-4 flex-shrink-0" />
-                          {t("create_workspace")}
+                          <LogOutOutline className="size-4 flex-shrink-0" />
+                          {t("leave_workspace")}
                         </Menu.Item>
-                      </Link>
-                    )}
+                      )}
 
-                    <div className="w-full">
-                      <Menu.Item
-                        as="button"
-                        type="button"
-                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-danger-primary hover:bg-layer-transparent-hover"
-                        onClick={handleSignOut}
-                      >
-                        <LogOutOutline className="size-4 flex-shrink-0" />
-                        {t("sign_out")}
-                      </Menu.Item>
+                      <div className="w-full">
+                        <Menu.Item
+                          as="button"
+                          type="button"
+                          className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium text-danger-primary hover:bg-layer-transparent-hover"
+                          onClick={handleSignOut}
+                        >
+                          <LogOutOutline className="size-4 flex-shrink-0" />
+                          {t("sign_out")}
+                        </Menu.Item>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Menu.Items>
-            </Transition>
-          </>
-        );
-      }}
-    </Menu>
+                </Menu.Items>
+              </Transition>
+            </>
+          );
+        }}
+      </Menu>
+      {activeWorkspace && (
+        <LeaveWorkspaceModal
+          workspaceSlug={activeWorkspace.slug}
+          isOpen={isLeaveModalOpen}
+          onClose={() => setIsLeaveModalOpen(false)}
+        />
+      )}
+    </>
   );
 });

@@ -79,7 +79,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
           id: invitationDetails.id,
           display_name: `${invitationDetails.email}`,
         }}
-        onSubmit={() => remove(workspaceSlug, invitationDetails.id)}
+        onSubmit={() => remove(workspaceSlug, invitationDetails.id, () => setRemoveMemberModal(false))}
       />
       <div className="group flex h-full w-full items-center justify-between px-3 py-4 hover:bg-layer-transparent-hover">
         <div className="flex items-center gap-x-4 gap-y-2">

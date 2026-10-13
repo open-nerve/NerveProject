@@ -34,6 +34,7 @@
         "pending_invites": "待处理邀请",
         "declined": "已忽略",
         "invitations_sent_successfully": "邀请发送成功",
+        "leave_title": "离开工作区？",
         "leave_confirmation": "您确定要离开工作区吗？您将无法再访问此工作区。此操作无法撤消。",
         "details": {
           "full_name": "全名",

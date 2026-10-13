@@ -17,6 +17,7 @@ import { useUser } from "@/hooks/store/user";
 export type Props = {
   isOpen: boolean;
   onClose: () => void;
+  /** Makes the removal or the leaving; settles once the page has followed it: its follow-up of success closes this. */
   onSubmit: () => Promise<void>;
   userDetails: {
     id: string;
@@ -39,14 +40,13 @@ export const ConfirmWorkspaceMemberRemove = observer(function ConfirmWorkspaceMe
 
   const handleDeletion = async () => {
     setIsRemoving(true);
-
     await onSubmit();
-
-    handleClose();
+    setIsRemoving(false);
   };
 
-  // While the removal is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): it closes once nerve has
-  // answered, and no dialog opened again offers the removal while the request is out.
+  // While the removal or the leaving is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): it closes
+  // once nerve has made the change, and no dialog opened again offers it while the request is out. One nerve refuses
+  // leaves it open, its buttons enabled again, the reason in the refusal's toast (A-M2).
   return (
     <ModalCore
       isOpen={isOpen}
@@ -61,7 +61,9 @@ export const ConfirmWorkspaceMemberRemove = observer(function ConfirmWorkspaceMe
           </div>
           <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
             <h3 className="text-h5-medium leading-6 text-primary">
-              {currentUser?.id === userDetails.id ? "Leave workspace?" : `Remove ${userDetails?.display_name}?`}
+              {currentUser?.id === userDetails.id
+                ? t("workspace_settings.settings.members.leave_title")
+                : `Remove ${userDetails?.display_name}?`}
             </h3>
             <div className="mt-2">
               {currentUser?.id === userDetails.id ? (

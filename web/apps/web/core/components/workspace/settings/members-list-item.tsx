@@ -32,8 +32,12 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
   const { data: currentUser } = useUser();
   const { leave, remove } = useMembershipChanges(workspaceSlug);
 
-  // the caller's own row offers him to leave; another's, to remove that member (an admin's)
-  const handleRemove = (memberId: string) => (memberId === currentUser?.id ? leave() : remove(memberId));
+  // the caller's own row offers him to leave; another's, to remove that member (an admin's); the dialog that asked
+  // closes once nerve has done it
+  const handleRemove = (memberId: string) => {
+    const closeDialog = () => setRemoveMemberModal(null);
+    return memberId === currentUser?.id ? leave(closeDialog) : remove(memberId, closeDialog);
+  };
 
   if (isEmpty(columns)) return <MembersLayoutLoader />;
 

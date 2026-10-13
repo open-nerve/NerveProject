@@ -13,7 +13,7 @@ import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "..
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { closedByEscape, pageBehindHidden } from "../../fixtures/dialogs";
+import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
@@ -260,7 +260,7 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   const membership = (id: string) => membershipOf(api, admin.access_token, slug, id);
   const members = `/${slug}/settings/members`;
 
-  // carol, a member, sees each role as text; her own row's menu offers her leaving.
+  // carol, a member, sees each role as text; her own row's menu offers her leaving, and so does the workspace menu.
   const theMember = await anotherBrowser(browser, baseURL ?? "", carol.tokens);
   const memberWatch = await watchPage(theMember.page);
   await theMember.page.goto(members);
@@ -269,6 +269,8 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await expect(memberRow(theMember.page, adminEmail).locator("button")).toHaveCount(0);
   await memberRow(theMember.page, carol.email).locator("button").first().click();
   await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
+  await theMember.page.getByRole("button", { name: "Open workspace switcher" }).click();
+  await expect(theMember.page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
   await theMember.close();
@@ -307,12 +309,16 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await inviteAndAccept(api, admin.access_token, slug, { email: carol.email, token: carol.tokens.access_token }, 5);
   await expectMembership(db, slug, carol.email, { role: 5, is_active: true });
 
-  // His leaving, as the only admin: nerve refuses it, and the page says why and stays.
+  // His leaving, as the only admin: nerve refuses it, and the page says why, read beside the dialog, which stays
+  // until Cancel closes it.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
   expect((await endMembership(page, adminEmail, "Leave", leaving)).status()).toBe(409);
-  await expect(
-    page.getByText("The workspace would be left without an admin. Make another member an admin first.")
-  ).toBeVisible();
+  const reason = page.getByText("The workspace would be left without an admin. Make another member an admin first.");
+  await expect(reason).toBeVisible();
+  expect(await announced(reason)).toBe(true);
+  expect(await closedWithin(page)).toBe(false);
+  await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
   await expect(page).toHaveURL(members);
   await expectMembership(db, slug, adminEmail, { role: 20, is_active: true });
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
