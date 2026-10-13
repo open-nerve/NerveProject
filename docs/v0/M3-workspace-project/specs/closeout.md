@@ -169,9 +169,9 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 
 两处没有写成变异，理由写在这里：提示不经 `BaseToast.Portal`（`AppProvider` 把它渲染在 `body` 下，它本来就是 `body` 的另一个子元素，从不在主树里）；命令面板只在打开时挂载（`ModalCore` 的 F1 修法已由 `T1.6` 看住）。
 
-**层叠的顺序**（预检的 L8，F17）：每个 `ModalCore` 弹窗是 `z-30`；弹窗里的下拉框经 portal 渲染，也是 `z-30`，靠 DOM 的次序显示在弹窗之上，所以不抬高 `ModalCore`。规则：**页面上的元素在弹窗的层（`z-30`）之下**。设置页的手机菜单（`settings/mobile/nav.tsx`，容器 `relative z-50`）在手机的宽度画在每个弹窗之上（它 `inert`、`aria-hidden`，只是看得见）；命令面板原来是 `z-50`，改经 `ModalCore` 之后也被它盖住。收尾取修法 (b)：Task 2 把菜单的容器、弹层和按钮降到 `z-20`，注释写明这条规则。条件先核对过（`$M3TMP/closeout-tools/amend/zprobe/`）：
+**层叠的顺序**（预检的 L8，F17）：每个 `ModalCore` 弹窗是 `z-30`；弹窗里的下拉框经 portal 渲染，也是 `z-30`，靠 DOM 的次序显示在弹窗之上，所以不抬高 `ModalCore`。规则：**页面上的元素在弹窗的层（`z-30`）之下**。设置页的手机菜单（`settings/mobile/nav.tsx`，容器 `relative z-50`）在手机的宽度画在每个弹窗之上（它 `inert`、`aria-hidden`，只是看得见）；命令面板原来是 `z-50`，改经 `ModalCore` 之后也被它盖住。收尾取修法 (b)：Task 2 把菜单的容器、弹层和按钮降到 `z-20`，注释写明这条规则。条件先核对过（`$M3TMP/closeout-tools/zprobe/`）：
 
-- `zgrep.py`：工作区和项目设置页的文件中 `z-20` 及以上的只有标签颜色的弹层（`z-20`，在 `z-10` 的 `Popover` 之内）、页头（`z-[27]` 和它里面的 `z-30`、`z-20`）和这个菜单的三处 `z-50`。个人设置是弹窗，没有这个菜单。
+- `zgrep.py`（`zgrep-before.txt`、`zgrep-after.txt`）：设置页的路由和它们用到的组件目录中 `z-20` 及以上的只有标签颜色的弹层（`z-20`，在 `z-10` 的 `Popover` 之内）、页头（`z-[27]` 和它里面的 `z-30`、`z-20`）、项目页标签导航的右键菜单（经 portal，`z-30`，不在设置页上）和这个菜单的三处 `z-50`（之后是 `z-20`）。个人设置是弹窗，没有这个菜单。
 - 探针 `zz-zprobe.spec.ts`（跑完删除，不在 plan 中；`before.json`、`after.json`）：在 390×844 打开 12 个设置页（工作区的 general、成员、Webhook，项目的 general、成员、状态、标签、迭代、模块、视图、收集箱、自动化）的菜单，`elementFromPoint` 在弹层的 11×11 个点和按钮的中心都落在弹层里，`z-50` 时和 `z-20` 时相同；`z-20` 及以上的其余元素（顶部的加载进度条、页头）都不与弹层重叠。
 - 截图（`shots/before-*.png`、`after-*.png`）：打开的菜单之前之后相同；命令面板和成员页的邀请弹窗打开时，之前菜单的按钮画在弹窗之上，之后被弹窗盖住。
 
@@ -686,4 +686,16 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 | 15、16 | 20、4 | `make lint-web` 同上；`doclinks.py` 每个文件 `0 broken`，`broken: 0` |
 
   这一次复现用的 plan 是本 spec 第一个提交中的那一版（12,760 行，SHA-256 `2df6ca8a6346d890…`）。最后的副本与原型逐文件相同：`treediff.mjs closeout-replay closeout-proto`（原型在 `T16`，放进同一个提交的 spec 和 plan），3,255 个文件对 3,255 个，0 处差异（`logs/replay-all.log`）。本 spec 的第二个提交只改本 spec（本节的复现结果，2.4 的 K9 一行和 2.8 的 S7 的测试数），plan 不变。
-- **修订之后的复现**：在修订的提交（本 spec 和 plan 的修订）的 `git archive` 副本上照同样的做法再复现一次；结果由下一个提交写在这里，plan 不变。
+- **修订之后的复现**：同样的做法，在修订的提交 `dfe41b2b` 的 `git archive` 副本上（`base-commit.tar`；第一轮的副本、日志和 `base-commit-fb5490c5.tar` 移到 `$M3TMP/closeout-v1/`）。16 个 Task 都通过（`replay-logs/summary.txt`，`replay-logs/replay-all.log`）：
+
+| Task | 写入的文件 | 检查 |
+|---|---|---|
+| 1 | 9 | `make lint-web`（69 条规则、3 个例外、没有命中；turbo 54 个任务，oxlint 的条数各等于上限）、`make knip`、`make test-web`（16 个任务）、`make build` 通过；`make e2e` 109 个通过（S3 除外） |
+| 2–8 | 14、18、39、27、30、39、17 | 同 Task 1；`make e2e` 111、111、112、113、114、114、115 个通过 |
+| 9 | 38 | 关键词守卫 70 条规则、23 个例外；`tools/i18n-keys.mjs` 读到的 1,261 个键都有定义；其余同上，115 个 |
+| 10 | 20 | `pnpm install --frozen-lockfile` 通过；其余同 Task 9，115 个 |
+| 11–13 | 24、34、37 | 71 条规则、23 个例外；读到的键 1,261、1,275、1,277 个；`make e2e` 115、116、117 个 |
+| 14 | 40 | `make gen` 之后三个生成文件的 SHA-256 和行数与表相同；gen-same：39 个生成文件 0 处差异；`make lint-go` 两段 `0 issues.`；`make test` 42 个包 `ok`、没有 `FAIL`；其余同 Task 13，117 个 |
+| 15、16 | 20、4 | `make lint-web` 同上；`doclinks.py` 每个文件 `0 broken`，`broken: 0` |
+
+  这一次复现用的 plan 是修订的提交中的那一版（13,122 行，SHA-256 `71bcc9ddfd853970…`）。最后的副本与原型逐文件相同：`treediff.mjs closeout-replay closeout-proto`（原型在 `T16`，放进同一个提交的 spec 和 plan），3,256 个文件对 3,256 个，0 处差异（多的一个是 Task 4 的 `switch-account-modal.test.tsx`）。修订的第二个提交只改本 spec（本节的复现结果，2.6 的探针的路径和 `zgrep` 的一句），plan 不变。
