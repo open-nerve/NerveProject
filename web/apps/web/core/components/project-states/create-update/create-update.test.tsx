@@ -58,13 +58,13 @@ const pages = [
     change: "creation",
     page: <StateCreate projectId={web.id} groupKey="started" handleClose={handleClose} />,
     sent: () => store.createState,
-    said: "State created successfully.",
+    said: "project_settings.states.created",
   },
   {
     change: "change",
     page: <StateUpdate state={doing} handleClose={handleClose} />,
     sent: () => store.updateState,
-    said: "State updated successfully.",
+    said: "project_settings.states.updated",
   },
 ];
 
@@ -110,7 +110,7 @@ describe("the state settings' creation and change", () => {
     await submitted;
     expect([handleClose.mock.calls.length, toasts]).toEqual([
       1,
-      [{ type: "success", title: "Success!", message: row.said }],
+      [{ type: "success", title: "toast.success", message: row.said }],
     ]);
   });
 

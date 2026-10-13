@@ -9,7 +9,7 @@ import { Link } from "react-router";
 
 import { Disclosure } from "@headlessui/react";
 // nerve imports
-import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { EUserPermissions, EUserPermissionsLevel, ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
@@ -125,7 +125,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
         </div>
       ) : isRoleNonEditable ? (
         <div className="flex w-32">
-          <span>{ROLE[rowData.role]}</span>
+          <span>{t(ROLE_DETAILS[rowData.role].i18n_title)}</span>
         </div>
       ) : (
         <CustomSelect
@@ -134,7 +134,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
           onChange={(role: WorkspaceRole) => void changeRole(rowData.member.id, role)}
           label={
             <div className="flex">
-              <span>{ROLE[rowData.role]}</span>
+              <span>{t(ROLE_DETAILS[rowData.role].i18n_title)}</span>
             </div>
           }
           buttonClassName="!px-0 !justify-start hover:bg-surface-1 border-none"
@@ -143,7 +143,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
         >
           {WORKSPACE_ROLES.map((role) => (
             <CustomSelect.Option key={role} value={role}>
-              {ROLE[role]}
+              {t(ROLE_DETAILS[role].i18n_title)}
             </CustomSelect.Option>
           ))}
         </CustomSelect>

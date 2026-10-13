@@ -8,7 +8,8 @@ import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
 // nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { ROLE } from "@nerve/constants";
+import { ROLE_DETAILS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { Popover } from "@nerve/propel/popover";
 import { cn, getFileURL } from "@nerve/utils";
 // hooks
@@ -27,6 +28,7 @@ export const EditorUserMention = observer(function EditorUserMention(props: Prop
   const { workspaceSlug } = useParams();
   // store hooks
   const { data: currentUser } = useUser();
+  const { t } = useTranslation();
   const {
     getUserDetails,
     project: { getProjectMemberDetails },
@@ -72,7 +74,7 @@ export const EditorUserMention = observer(function EditorUserMention(props: Prop
                 <Link to={profileLink} className="not-prose text-13 font-medium text-primary hover:underline">
                   {userDetails?.first_name} {userDetails?.last_name}
                 </Link>
-                {roleDetails && <p className="text-11 text-secondary">{ROLE[roleDetails]}</p>}
+                {roleDetails && <p className="text-11 text-secondary">{t(ROLE_DETAILS[roleDetails].i18n_title)}</p>}
               </div>
             </div>
           </div>

@@ -16,14 +16,20 @@ import { StateDelete } from "./delete";
 // Which states the state settings offer to delete, and what confirming it sends (M3 design 2 P6, 3.17, 7.6): the
 // button renders on the server, with a stand-in for its dialog (fake-controls.ts), which keeps the props it was given;
 // the test presses the dialog's button, as a person would. A default and a group's only state cannot be deleted, as
-// nerve refuses (409), and their button is disabled; nerve's refusal all the same (another tab changed them meanwhile)
-// is said in a toast. Its session is fake-tab.ts's.
+// nerve refuses (409), and their button is disabled, its tooltip (its label rendered beside it) saying why; nerve's
+// refusal all the same (another tab changed them meanwhile) is said in a toast. Its session is fake-tab.ts's; its
+// texts are the keys of the page's language (fake-i18n.ts).
 
 const store = vi.hoisted(() => ({ deleteState: vi.fn() }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => store }));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
 vi.mock("@makeplane/propel/components/tooltip", () => ({
-  Tooltip: ({ children }: { children: ReactNode }) => children,
+  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
+    <>
+      {label}
+      {children}
+    </>
+  ),
 }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
@@ -33,13 +39,13 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 const web = projectOf("WEB", "w-acme");
 const review = stateOf(web, "Review", "started", 70000);
 
-/** Renders the deletion of state among totalStates of its group: whether its button is disabled, and its dialog. */
+/** Renders the deletion of state among totalStates of its group: whether its button is disabled, its dialog, its text. */
 function deletionOf(state = review, totalStates = 2) {
   emptyShown();
   const markup = renderToStaticMarkup(<StateDelete state={state} totalStates={totalStates} />);
   const [alert] = shown.alerts;
   if (!alert) throw new Error("no dialog");
-  return { disabled: /<button[^>]* disabled=""/.test(markup), alert };
+  return { disabled: /<button[^>]* disabled=""/.test(markup), alert, markup };
 }
 
 beforeEach(() => {
@@ -51,12 +57,33 @@ beforeEach(() => {
 
 describe("StateDelete", () => {
   it.each([
-    { state: "the default", deleted: { ...review, default: true }, totalStates: 2 },
-    { state: "its group's only state", deleted: review, totalStates: 1 },
-  ])("offers no deletion of $state, and sends none", async ({ deleted, totalStates }) => {
-    const { disabled, alert } = deletionOf(deleted, totalStates);
+    {
+      state: "the default",
+      deleted: { ...review, default: true },
+      totalStates: 2,
+      why: "project_settings.states.delete.default",
+    },
+    {
+      state: "its group's only state",
+      deleted: review,
+      totalStates: 1,
+      why: "project_settings.states.delete.only_one",
+    },
+  ])("offers no deletion of $state, says why, and sends none", async ({ deleted, totalStates, why }) => {
+    const { disabled, alert, markup } = deletionOf(deleted, totalStates);
     await alert.handleSubmit();
-    expect([disabled, store.deleteState.mock.calls]).toEqual([true, []]);
+    expect([disabled, markup.includes(why), store.deleteState.mock.calls]).toEqual([true, true, []]);
+  });
+
+  it("asks in the page's language, its buttons too", () => {
+    const { alert } = deletionOf();
+    const { title, content, primaryButtonText, secondaryButtonText } = alert;
+    expect([title, renderToStaticMarkup(content), primaryButtonText, secondaryButtonText]).toEqual([
+      "project_settings.states.delete.title",
+      "project_settings.states.delete.body",
+      { default: "delete", loading: "deleting" },
+      "cancel",
+    ]);
   });
 
   it("deletes a state its group has another of, once its dialog is confirmed, the dialog closed until then", async () => {

@@ -34,14 +34,14 @@ function stateRow(page: Page, name: string): Locator {
   return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) });
 }
 
-/** The heading of the group of key on page's state settings, which opens and closes its list. */
-function groupHeading(page: Page, key: string): Locator {
-  return page.getByRole("button", { name: key, exact: true });
+/** The heading of the group named name on page's state settings, which opens and closes its list. */
+function groupHeading(page: Page, name: string): Locator {
+  return page.getByRole("button", { name, exact: true });
 }
 
-/** The button beside the heading of the group of key that adds a state to it. */
-function addTo(page: Page, key: string): Locator {
-  return groupHeading(page, key).locator("xpath=..").getByRole("button", { name: "Add" });
+/** The button beside the heading of the group named name that adds a state to it. */
+function addTo(page: Page, name: string): Locator {
+  return groupHeading(page, name).locator("xpath=..").getByRole("button", { name: "Add" });
 }
 
 /** The form page shows to create or change a state: one at a time. */
@@ -101,14 +101,14 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await page.goto(statesPage);
   await expect(stateRow(page, "In Progress")).toBeVisible();
   await Promise.all(
-    ["backlog", "unstarted", "started", "completed", "cancelled"].map((key) =>
-      expect(groupHeading(page, key), key).toHaveAttribute("aria-expanded", "true")
+    ["Backlog", "Unstarted", "Started", "Completed", "Canceled"].map((name) =>
+      expect(groupHeading(page, name), name).toHaveAttribute("aria-expanded", "true")
     )
   );
 
   // A group's heading closes its list and opens it again from the keyboard: Enter closes the completed group's, Done's
   // row gone; Space opens it, the row back.
-  const completed = groupHeading(page, "completed");
+  const completed = groupHeading(page, "Completed");
   await completed.focus();
   await page.keyboard.press("Enter");
   await expect(completed).toHaveAttribute("aria-expanded", "false");
@@ -120,7 +120,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   // Review, in the started group: Tab goes through the form in its order from its colour's button, named and marked
   // as Shift+Tab reaches it; the form waits for nerve, its buttons disabled, Cancel too; it closes once nerve has made
   // the state, last of its project's.
-  await addTo(page, "started").click();
+  await addTo(page, "Started").click();
   await page.locator("#name").fill("Review");
   const colour = stateForm(page).getByRole("button", { name: "Color", exact: true });
   await page.keyboard.press("Shift+Tab");
@@ -153,7 +153,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await expectStates(db, web.id, rows);
 
   // Todo again, in the unstarted group: said under the name, the form open with what it holds.
-  await addTo(page, "unstarted").click();
+  await addTo(page, "Unstarted").click();
   await page.locator("#name").fill("Todo");
   const taken = await sentTo(page, "POST", listed, () =>
     stateForm(page).getByRole("button", { name: "Create" }).click()
@@ -293,7 +293,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     const otherWatch = await watchPage(other.page);
     await other.page.goto(statesPage);
     await expect(stateRow(other.page, "Review"), who).toBeVisible();
-    await expect(addTo(other.page, "started"), who).toBeEnabled({ enabled: controls });
+    await expect(addTo(other.page, "Started"), who).toBeEnabled({ enabled: controls });
     await expect(other.page.getByRole("button", { name: "Mark as default" }), who).toHaveCount(controls ? 4 : 0);
     await expect(other.page.getByRole("button", { name: "Edit" }), who).toHaveCount(controls ? 5 : 0);
     expect([otherWatch.apiFailures, otherWatch.pageErrors], who).toEqual([[], []]);

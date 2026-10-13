@@ -5030,7 +5030,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**（spec 2.8）
 - 状态：建、改的提示和按钮（`common.create`、`creating`、`update`、`updating`），表单的占位和取消，删除的标题和说明（`Translated`）和提示，设为默认的三处；组的标题读组的名字（`STATE_GROUPS[g].i18n_label`，新字段，C9）。标签：菜单的三项，删除的标题（"Delete label"）和说明。两个删除确认框给 `AlertModalCore` 传经 `t()` 的按钮文字。
-- 角色名经 `t(ROLE_DETAILS[role].i18n_title)`：工作区成员的一列、邀请的一行、工作区菜单的一项、编辑器的提及卡片；`@nerve/utils` 的 `ROLE`、`getUserRole`（`permission/`）删除。添加项目成员的角色总有值，"Select role"的分支和规则删除。
+- 角色名经 `t(ROLE_DETAILS[role].i18n_title)`：工作区成员的一列、邀请的一行、工作区菜单的一项、编辑器的提及卡片；`@nerve/utils` 的 `ROLE`、`getUserRole`（`permission/`）删除。添加项目成员的角色总有值，"Select role"的分支、规则和规则的错误一行删除。
 - `e2e/fixtures/project-pages.ts`：`labelRow` 从 P7 移来（S7 也读它）；`fake-controls.ts` 的 `Alert` 收标题、内容和按钮文字。
 
 **Tests:** 状态的表单和删除的测试读键。P6 照组的名字，P7 照"Delete label"。S7：第一个加菜单里的角色、成员和邀请的角色；第二个加状态页（组名、设为默认）、标签页（菜单、删除的弹窗）和添加成员一行的错误；第三个（新）：邀请页的标题说角色（P9 的存活变异 `T4f.M3a`）。
@@ -5343,7 +5343,7 @@ import { useTranslation } from "@nerve/i18n";
       )}
 ````
 
-`web/apps/web/core/components/project/add-project-members-modal.tsx`（修改，3 处）：
+`web/apps/web/core/components/project/add-project-members-modal.tsx`（修改，4 处）：
 
 ````old web/apps/web/core/components/project/add-project-members-modal.tsx
                     rules={{ required: "Please select a member" }}
@@ -5365,6 +5365,15 @@ import { useTranslation } from "@nerve/i18n";
 ````
 ````new web/apps/web/core/components/project/add-project-members-modal.tsx
                               <span className="capitalize">{t(ROLE_DETAILS[roleField.value].i18n_title)}</span>
+````
+````old web/apps/web/core/components/project/add-project-members-modal.tsx
+                    />
+                    {errors.members && errors.members[index]?.role && (
+                      <span className="px-1 text-13 text-danger-primary">{errors.members[index]?.role?.message}</span>
+                    )}
+````
+````new web/apps/web/core/components/project/add-project-members-modal.tsx
+                    />
 ````
 
 `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`（修改，4 处）：

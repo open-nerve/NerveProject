@@ -21,7 +21,6 @@ export * from "./intake";
 export * from "./loader";
 export * from "./module";
 export * from "./notification";
-export * from "./permission";
 export * from "./project-views";
 export * from "./project";
 export * from "./rich-filters";

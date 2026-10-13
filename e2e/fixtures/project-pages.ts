@@ -37,6 +37,11 @@ export async function endProjectMembership(
   );
 }
 
+/** The row of the label of name on page's label settings: its grip, its name, its menu; the innermost row with it. */
+export function labelRow(page: Page, name: string): Locator {
+  return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) }).last();
+}
+
 /**
  * Presses Tab on page until the focus is back where it was, at most presses times, and gives the stops in order: each
  * the focused element's label, a field's id or a button's text, marked "outside: " when within does not hold it.

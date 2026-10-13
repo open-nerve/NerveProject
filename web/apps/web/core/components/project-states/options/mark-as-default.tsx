@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { cn } from "@nerve/utils";
 // local imports
 import { useStateChanges } from "../use-state-changes";
@@ -19,6 +20,7 @@ type TStateMarksAsDefault = {
 export const StateMarksAsDefault = observer(function StateMarksAsDefault(props: TStateMarksAsDefault) {
   const { stateId, isDefault } = props;
   const { markDefault } = useStateChanges();
+  const { t } = useTranslation();
   // states
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,7 +42,13 @@ export const StateMarksAsDefault = observer(function StateMarksAsDefault(props: 
       disabled={isDefault || isLoading}
       onClick={handleMarkAsDefault}
     >
-      {isLoading ? "Marking as default" : isDefault ? `Default` : `Mark as default`}
+      {t(
+        isLoading
+          ? "project_settings.states.default.marking"
+          : isDefault
+            ? "project_settings.states.default.is_default"
+            : "project_settings.states.default.mark"
+      )}
     </button>
   );
 });

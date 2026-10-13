@@ -8,8 +8,11 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { Label } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 // ui
 import { AlertModalCore } from "@nerve/ui";
+// components
+import { Translated } from "@/components/common/translated";
 // local imports
 import { useLabelChanges } from "./use-label-changes";
 
@@ -22,6 +25,7 @@ type Props = {
 export const DeleteLabelModal = observer(function DeleteLabelModal(props: Props) {
   const { isOpen, onClose, data } = props;
   const { remove } = useLabelChanges();
+  const { t } = useTranslation();
   // states
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
 
@@ -45,12 +49,14 @@ export const DeleteLabelModal = observer(function DeleteLabelModal(props: Props)
       handleSubmit={handleDeletion}
       isSubmitting={isDeleteLoading}
       isOpen={isOpen}
-      title="Delete Label"
+      title={t("project_settings.labels.delete.title")}
+      primaryButtonText={{ default: t("delete"), loading: t("deleting") }}
+      secondaryButtonText={t("cancel")}
       content={
-        <>
-          Are you sure you want to delete <span className="font-medium text-primary">{data?.name}</span>? This will
-          remove the label from all the work item and from any views where the label is being filtered upon.
-        </>
+        <Translated
+          i18nKey="project_settings.labels.delete.body"
+          values={{ name: <span className="font-medium text-primary">{data?.name}</span> }}
+        />
       }
     />
   );

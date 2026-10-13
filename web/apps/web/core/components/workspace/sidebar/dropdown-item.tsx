@@ -9,10 +9,10 @@ import { useParams, Link } from "react-router";
 import { SettingsOutline, TickOutline, UserPlusOutline } from "@makeplane/propel/icons";
 import { Menu } from "@headlessui/react";
 // nerve imports
-import { EUserPermissions } from "@nerve/constants";
+import { EUserPermissions, ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { Workspace } from "@nerve/api-client";
-import { cn, getFileURL, getUserRole } from "@nerve/utils";
+import { cn, getFileURL } from "@nerve/utils";
 
 type TProps = {
   workspace: Workspace;
@@ -72,7 +72,7 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
                 {workspace.name}
               </div>
               <div className="flex w-fit gap-2 text-13 text-tertiary capitalize">
-                <span>{getUserRole(workspace.role)?.toLowerCase() || "guest"}</span>
+                <span>{t(ROLE_DETAILS[workspace.role].i18n_title)}</span>
                 <div className="m-auto h-1 w-1 rounded-full bg-layer-1/50" />
                 <span className="capitalize">{t("member", { count: workspace.total_members || 0 })}</span>
               </div>

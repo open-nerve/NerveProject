@@ -22,18 +22,13 @@ import {
   modalDialog,
   pageBehindHidden,
 } from "../../fixtures/dialogs";
-import { dragOnto, tabCycle } from "../../fixtures/project-pages";
+import { dragOnto, labelRow, tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
 // P7's page version (M3 design 2, 3.16, 7.6): a project's labels on its settings page, as its admin changes them, and
 // as its member and a workspace admin who is its member see them. The API version is p7-labels.spec.ts.
-
-/** The row of the label of name on page's label settings: its grip, its name, its menu; the innermost row with it. */
-function labelRow(page: Page, name: string): Locator {
-  return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) }).last();
-}
 
 /**
  * The label of name on page as a place to drop another on, which tells where by the point: its row, the labels under

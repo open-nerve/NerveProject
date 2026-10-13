@@ -92,7 +92,7 @@ export function StateForm(props: TStateForm) {
                   id="name"
                   type="text"
                   name="name"
-                  placeholder="Name"
+                  placeholder={t("name")}
                   value={value}
                   onChange={onChange}
                   maxLength={100}
@@ -117,7 +117,7 @@ export function StateForm(props: TStateForm) {
                   maxRows={8}
                   id="description"
                   name="description"
-                  placeholder="Describe this state for your members."
+                  placeholder={t("project_settings.states.description_placeholder")}
                   value={value ?? ""}
                   onChange={onChange}
                 />
@@ -134,7 +134,7 @@ export function StateForm(props: TStateForm) {
             {isSubmitting ? busyButtonTitle : buttonTitle}
           </Button>
           <Button type="button" variant="secondary" size="lg" disabled={isSubmitting} onClick={onCancel}>
-            Cancel
+            {t("cancel")}
           </Button>
         </div>
       </div>

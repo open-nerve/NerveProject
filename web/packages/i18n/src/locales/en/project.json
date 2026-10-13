@@ -231,6 +231,7 @@
       "restoring": "Restoring"
     },
     "members_added": "Members added successfully.",
+    "member_required": "Please select a member",
     "select_member": "Select co-worker",
     "feature_updated": "Project feature updated successfully.",
     "default_tab_updated": "Default tab updated successfully.",

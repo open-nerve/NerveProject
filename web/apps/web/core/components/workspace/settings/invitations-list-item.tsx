@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
 import type { WorkspaceRole } from "@nerve/api-client";
-import { ROLE } from "@nerve/constants";
+import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline, DeleteOutline, LinkOutline } from "@makeplane/propel/icons";
 import type { TContextMenuItem } from "@nerve/ui";
@@ -95,13 +95,15 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
             <p>{declined ? t("workspace_settings.settings.members.declined") : t("common.pending")}</p>
           </div>
           {declined ? (
-            <span className="px-2 py-0.5 text-caption-sm-medium">{ROLE[invitationDetails.role]}</span>
+            <span className="px-2 py-0.5 text-caption-sm-medium">
+              {t(ROLE_DETAILS[invitationDetails.role].i18n_title)}
+            </span>
           ) : (
             <CustomSelect
               customButton={
                 <div className="item-center flex gap-1 rounded-sm px-2 py-0.5">
                   <span className="flex items-center rounded-sm text-caption-sm-medium">
-                    {ROLE[invitationDetails.role]}
+                    {t(ROLE_DETAILS[invitationDetails.role].i18n_title)}
                   </span>
                   <span className="grid place-items-center">
                     <ChevronDownOutline className="h-3 w-3" />
@@ -115,7 +117,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
             >
               {WORKSPACE_ROLES.map((role) => (
                 <CustomSelect.Option key={role} value={role}>
-                  {ROLE[role]}
+                  {t(ROLE_DETAILS[role].i18n_title)}
                 </CustomSelect.Option>
               ))}
             </CustomSelect>

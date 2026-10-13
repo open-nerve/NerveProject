@@ -34,6 +34,27 @@
       "empty_state": {
         "title": "No states available for the {groupKey} group",
         "description": "Please create a new state"
+      },
+      "groups": {
+        "backlog": "Backlog",
+        "unstarted": "Unstarted",
+        "started": "Started",
+        "completed": "Completed",
+        "cancelled": "Canceled"
+      },
+      "created": "State created successfully.",
+      "updated": "State updated successfully.",
+      "description_placeholder": "Describe this state for your members.",
+      "delete": {
+        "title": "Delete State",
+        "body": "Are you sure you want to delete state {name}? All of the data related to the state will be permanently removed. This action cannot be undone.",
+        "default": "Cannot delete the default state.",
+        "only_one": "Cannot have an empty group."
+      },
+      "default": {
+        "mark": "Mark as default",
+        "marking": "Marking as default",
+        "is_default": "Default"
       }
     },
     "labels": {
@@ -42,7 +63,13 @@
       "label_title": "Label title",
       "label_title_is_required": "Label title is required",
       "label_max_char": "Label name should not exceed 255 characters",
-      "parent_not_allowed": "A label can go only under a label at the top of its project, and a label with labels under it stays at the top: labels have two levels."
+      "parent_not_allowed": "A label can go only under a label at the top of its project, and a label with labels under it stays at the top: labels have two levels.",
+      "edit": "Edit label",
+      "remove_from_group": "Remove from group",
+      "delete": {
+        "title": "Delete label",
+        "body": "Are you sure you want to delete {name}? This will remove the label from all the work item and from any views where the label is being filtered upon."
+      }
     },
     "automations": {
       "label": "Automations",

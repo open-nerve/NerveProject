@@ -31,8 +31,16 @@ type SearchSelect = Field & {
 };
 /** A switch: what a flip does, and whether it can be flipped. */
 type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean };
-/** A confirmation's dialog (AlertModalCore): whether it shows, its button's press, and whether it is busy. */
-type Alert = { isOpen: boolean; handleSubmit: () => unknown; isSubmitting: boolean };
+/** A confirmation's dialog (AlertModalCore): whether it shows, its button's press, whether it is busy, its words. */
+type Alert = {
+  isOpen: boolean;
+  handleSubmit: () => unknown;
+  isSubmitting: boolean;
+  title: string;
+  content: ReactNode;
+  primaryButtonText?: { default: string; loading: string };
+  secondaryButtonText?: string;
+};
 /** A context menu: its items, each by its key, with whether it shows. */
 type ContextItems = { items: { key: string; shouldRender?: boolean }[] };
 /** A button the page renders itself (<button>): what it is titled, and what a click does. */

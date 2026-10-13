@@ -20,12 +20,6 @@ export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
   "500+": "workspace_creation.form.organization_size.sizes.500_plus",
 };
 
-export const ROLE = {
-  [EUserWorkspaceRoles.GUEST]: "Guest",
-  [EUserWorkspaceRoles.MEMBER]: "Member",
-  [EUserWorkspaceRoles.ADMIN]: "Admin",
-};
-
 export const ROLE_DETAILS = {
   [EUserWorkspaceRoles.GUEST]: {
     i18n_title: "role_details.guest.title",
