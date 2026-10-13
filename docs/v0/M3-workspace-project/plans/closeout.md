@@ -1113,7 +1113,7 @@ import {
 import { createWorkspace, slugFor } from "../../fixtures/api";
 import { createPAT, emailFor, shownNameOf } from "../../fixtures/auth";
 import { expectQuietConsole, EMOJI_CHECK_WARNING, watchPage } from "../../fixtures/browser";
-import { closedByEscape, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -1206,7 +1206,7 @@ test("S6 (page): a dialog opened over another, the revoke dialog over the settin
   await expect(tooltip).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(tooltip).toHaveCount(0);
-  await expect(dialogs).toHaveCount(1);
+  expect(await closedWithin(page)).toBe(false);
   expect(await closedByEscape(page)).toBe(true);
   expect(await pageBehindHidden(page)).toBe(false);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
@@ -1262,6 +1262,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T2.4` | 切换账户的弹窗在退出的请求路上时被 Escape 关上（F-1） | 故事 A6 | 端到端 |
 | `T2.5` | 快捷键弹窗的关闭按钮回到标题里：弹窗的名字成了"Keyboard shortcuts Close" | 故事 S6 | 端到端 |
 | `T2.6` | 快捷键的搜索框的 `autoFocus` 不写理由：oxlint 的 `no-autofocus` 超出上限 | oxlint（`check:lint`） | 静态 |
+| `T2.7` | 关提示的 Escape 也关上下面的弹窗：设置弹窗跟着提示一起关上（F3 的顺序） | 故事 S6 | 端到端 |
 
 ---
 
@@ -8311,10 +8312,16 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
 `e2e/stories/smoke/s6-dialogs.spec.ts`（修改，4 处）：
 
 ````old e2e/stories/smoke/s6-dialogs.spec.ts
-import { closedByEscape, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 ````
 ````new e2e/stories/smoke/s6-dialogs.spec.ts
-import { closedByComposingEscape, closedByEscape, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import {
+  closedByComposingEscape,
+  closedByEscape,
+  closedWithin,
+  modalDialog,
+  pageBehindHidden,
+} from "../../fixtures/dialogs";
 ````
 ````old e2e/stories/smoke/s6-dialogs.spec.ts
 test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({

@@ -1,7 +1,7 @@
 import { createWorkspace, slugFor } from "../../fixtures/api";
 import { createPAT, emailFor, shownNameOf } from "../../fixtures/auth";
 import { expectQuietConsole, EMOJI_CHECK_WARNING, watchPage } from "../../fixtures/browser";
-import { closedByEscape, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -94,7 +94,7 @@ test("S6 (page): a dialog opened over another, the revoke dialog over the settin
   await expect(tooltip).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(tooltip).toHaveCount(0);
-  await expect(dialogs).toHaveCount(1);
+  expect(await closedWithin(page)).toBe(false);
   expect(await closedByEscape(page)).toBe(true);
   expect(await pageBehindHidden(page)).toBe(false);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
