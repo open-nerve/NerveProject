@@ -15853,7 +15853,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**（spec 2.1、2.14、第 4 节）
 - M3 收到的 6 份交接各加"处理结果（M3/收尾）"，`status: closed`。
-- M4–M8 各一份 `handoffs/M3-closeout.md`（新文件）：收到 `copy-hook` 例外的 M4、M6、M7、M8 写明收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M<n>/closeout`、每个 Phase 开始时改为 `M<n>/P<k>`；收尾改到、仍有 oxlint 警告的 6 个文件各归它的 M（控制者的裁定：M4 两个、M6 一个、M7 两个、M8 页头的搜索）；层叠的规则（M4 第 7 节的元素、M8 的发布核对）；命令面板自己的文字（M8 第 3 节）。M4–M8 的 `M1-closeout.md`：`always-return` 已清零；M4、M6、M7 的 `M2-closeout.md`：复制经 hook。M3 设计 13.2：接收者链接到交接，表前一句。M1 收尾交接的处理结果写新的上限（web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10）。
+- M4–M8 各一份 `handoffs/M3-closeout.md`（新文件）：收到 `copy-hook` 例外的 M4、M6、M7、M8 写明收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M<n>/closeout`、每个 Phase 开始时改为 `M<n>/P<k>`；收尾改到、仍有 oxlint 警告的 6 个文件各归它的 M（控制者的裁定：M4 两个、M6 一个、M7 两个、M8 页头的搜索）；层叠的规则（M4 第 7 节的元素、M8 的发布核对）；命令面板自己的文字（M8 第 3 节）；各 Task 的评审交来的：以 id 为 key 的布局、store 持有的开关的宿主和嵌套的 id（Task 3）、每一行的控件以那一行为名和收集箱的四个英文名字（Task 7）、收藏夹的两条 `no-shadow`（Task 8）、只读工作区的 15 个文件和 webhooks 的 `currentWorkspace` 先改名（Task 11）、命令面板和它的清除按钮的名字（Task 2）、`composing-check`（Task 10）、筛选的按钮的故事（Task 12）、`platform/jobs` 测试的两处余量和默认负责人照设定保留（Task 14）。M4–M8 的 `M1-closeout.md`：`always-return` 已清零；M4、M6、M7 的 `M2-closeout.md`：复制经 hook。M3 设计 13.2：接收者链接到交接，表前一句。M1 收尾交接的处理结果写新的上限（web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10）。
 
 **Tests:** 只改文档。`doclinks.py`（plan 的"一次性的脚本"）：本 Task 改的文档中每个相对链接都指向存在的文件。
 
@@ -16016,7 +16016,7 @@ status: closed
 
 两节的结论：
 
-1. **死成员和死 prop**：M3/P11 删掉了改到的文件中真正没有读者的行，`--rows M3` 中产品代码的行 80 → 54；剩下的每一行写进 [M3/P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 附录 A.9（文件、名字、谁在读或传它）。收尾在它的最后一个代码 Task 之后重跑（`deadsym.mjs`、`domains.mjs --rows M3`）：218 → 225 行，产品代码的 54 行和按路径误归的 41 行不变，多出的 7 行是收尾新的测试中 `it.each` 的列和替身的 prop（收尾 spec 附录 A.5）。误归的 41 行写进各自的交接：M4 16 行（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节），M6 8 行（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 2 节），M7 17 行（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 2 节）。
+1. **死成员和死 prop**：M3/P11 删掉了改到的文件中真正没有读者的行，`--rows M3` 中产品代码的行 80 → 54；剩下的每一行写进 [M3/P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 附录 A.9（文件、名字、谁在读或传它）。收尾在它的最后一个代码 Task 之后重跑（`deadsym.mjs`、`domains.mjs --rows M3`）：218 → 221 行，产品代码的 54 行和按路径误归的 41 行不变；测试中的行 123 → 126，多出的是收尾新的测试中 `it.each` 的四列（`project-dialog-texts.test.tsx`），少的一行是 `delete.test.tsx` 的 tooltip 替身的 prop（收尾把两个测试的替身合成 `fake-controls.ts` 的一个；收尾 spec 附录 A.5）。误归的 41 行写进各自的交接：M4 16 行（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节），M6 8 行（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 2 节），M7 17 行（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 2 节）。
 2. **oxlint**：M3 改到的文件在各 Phase 结束时没有警告，`promise(always-return)` 由 M3/P11 全仓清零，各包的上限照新的条数（M3/P11：web 348 → 303、editor 65 → 64）。收尾再调低上限：web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10。收尾改到的文件中仍有警告的 6 个照控制者的裁定写进交接：只为 `IconButton` 的名字或 `showTooltip` 改到的 `core/description-versions/modal.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节）、`modules/module-card-item.tsx`（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 4 节）、通知的筛选菜单和只为 `CustomMenu` 改到的收藏的文件夹（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 4 节），和只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx`（[M8 的交接](../../M8-open-release/handoffs/M3-closeout.md)第 4 节）；收尾 spec 第 3 节第 2 条和附录 A.5 逐个写明。M4–M8 的五份 M1 收尾交接写明 `always-return` 已清零。
 
 状态改为 `closed`。
@@ -16085,7 +16085,7 @@ status: closed
 - **关闭条件**：6 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，95 行）：
+`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，100 行）：
 
 ````file docs/v0/M4-issue-core/handoffs/M3-closeout.md
 ---
@@ -16104,7 +16104,8 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - **做什么**：M3 没有领域事件，删除工作区、降为访客、结束成员关系的连带经 `ProjectCascade` 同步完成（M3 设计 3.3）。M4 随第一个异步订阅者引入事件（M2 设计 3.15、M4 的 [M2 收尾交接](M2-closeout.md)第 6 节不变），届时可以把删除工作区的连带改挂到 `WorkspaceDeleted` 上，并为工作项加上删除项目、删除工作区的连带。
 - **不能改成异步的一步**：邀请的软删除留在删除工作区的事务里。注册时的邀请检查（`SignupInvitations`）只看邀请行、不看工作区，连带改为异步之后，从删除到任务运行之间，已删除工作区的邀请链接会让被邀请的邮箱在注册关闭时注册；要么邀请这一步保持同步，要么让这个检查也读工作区（M3/P3 评审第 6 节，F-M7）。
 - **由请求入队的任务**：`server/internal/bootstrap/table_rows_test.go` 的 `registrationRows` 排除 River 的表（选主、定时任务在测试期间写它们）。有了由请求入队的任务之后，"被拒的注册不写任何表"要另外核对 `river_job`，例如按任务种类或参数（M3/P3 评审第 6 节，R2-M3）。
-- **关闭条件**：M4 设计写明连带同步还是异步；改成异步时，邀请一步的选择和它的测试；`registrationRows` 的核对覆盖新的任务。
+- **`platform/jobs` 的测试的余量**（M3 收尾 Task 14 的评审）：M3 收尾把这个包的测试中时间的余量改成了期限（K15，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.13；M3/P7a 评审第 6 节的 FW-a：固定的余量在机器忙时偶尔不够），同一类的两处留着：`server/internal/platform/jobs/jobs_test.go:265`（`TestStartWithoutADatabase`，`Stop` 在 500 毫秒之内返回）和 `runner_test.go:136`（`TestStopEndsTheAttemptsToStart`，100 毫秒）。River 归 M4（[M2 收尾交接](M2-closeout.md)第 1 节），M4 改 `platform/jobs` 时照 K15 把它们改成期限：分得开"立即返回"和"等过了重试的间隔"（`firstRetry`，1 秒）就够。
+- **关闭条件**：M4 设计写明连带同步还是异步；改成异步时，邀请一步的选择和它的测试；`registrationRows` 的核对覆盖新的任务；M4 改到 `platform/jobs` 时，上面两处是期限。
 
 ## 2. 加锁的约定和方案 E
 
@@ -16127,8 +16128,9 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - **状态**：删除状态之前检查它下面的工作项（"状态下还有工作项时不能删"，M3 设计 3.17）；新工作项取项目的默认状态（`states."default"`，每个项目至多一个），那时 `State.default` 的说明补上这一句（M3/P7a spec 第 3 节第 7 条）。
 - **标签**：工作项带标签（`issue_labels`，部分唯一 `(issue_id, label_id)`）；定下删除标签时工作项上的标签怎么办；`issue_labels` 的写如果不持有项目或工作区的 `FOR NO KEY UPDATE`，就落在约定五的例外里，`DeleteLabel` 的一条语句改为按 `id` 先锁；任何新的设 `parent_id` 的路径再核对两层和已删除的父标签的规则，"给已有父标签的标签换父标签"要有自己的拒绝行（M3/P7b 评审第 6 节）。
 - **项目**：工作项编号取 `projects.last_issue_sequence`（`UPDATE … SET last_issue_sequence = last_issue_sequence + 1 … RETURNING`，M3 设计 4.6）。`Project` 的 `identifier`、`default_assignee_id`、`guest_view_all_features`、`archive_in` 四个字段的说明现在只说 nerve 存了什么（M3 收尾，控制者的裁定 A1）：工作项读它们之后，说明改成它们那时的作用（编号的前缀、新工作项的默认负责人、访客看到的工作项、自动归档）。
+- **默认负责人照设定保留**（M3 收尾 Task 14 的评审）：`projects.default_assignee_id` 设定时必须是项目的有效成员、不是它的访客（`updateProject` 的 `not_allowed`），之后照设定保留：那个账户离开项目、成为项目的访客或被停用时，没有什么清掉它（只有物理删除账户时，外键的 `ON DELETE SET NULL`），所以契约的说明是"kept as set"（`api/modules/project.yaml` 的 `Project.default_assignee_id`）。M4 在创建工作项时决定怎么用它，例如只在它仍是项目当前的、不是访客的成员时才指派，并写进 M4 的契约（创建工作项的说明）。
 - **表和删除**：工作项引用状态、标签、项目的外键在 M3 设计 4.12 的图上延伸；60 天清理包括 M3 的表，指向 `workspaces`、`projects`、`labels.parent_id` 的外键已有不带条件的 `*_idx`，工作项的表照做。新表带 `workspace_id`，否则按目录的删除守卫拒绝它（M3/P4a 评审 F-M1）；端到端的 `workspaceTables`（`e2e/fixtures/assert/workspace.ts`）加上工作项的表，并考虑像 `expectProjectDeleted` 那样的目录自查；`expectProjectDeleted` 对有 `project_id` 而没有指向 `projects` 的外键的新表失败（有意的），两个列表保持 `COLLATE "C"`（M3/P7b 评审第 6 节）。
-- **关闭条件**：M4 设计写明删除状态、标签时工作项的去向；4.12 的图延伸到工作项的表；端到端的删除断言含工作项的表。
+- **关闭条件**：M4 设计写明删除状态、标签时工作项的去向；4.12 的图延伸到工作项的表；端到端的删除断言含工作项的表；创建工作项的契约写明默认负责人已不是项目当前的、不是访客的成员时怎么办。
 
 ## 5. 显示设置与旧的 service
 
@@ -16148,7 +16150,7 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - 个人主页的工作项一栏（成员和管理员；`/api/workspaces/{slug}/user-issues/…` 今天答 404）和访客看到的筛选工具栏（布局、筛选、Display 的控件在"没有权限"之上，M3/P11 评审 C10）。
 - M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（M3 设计 3.1）；S2 的 `REQUESTS` 是一份要维护的名单，在挂载路径上加取数时同时改它（M3/P11 spec 第 6 节）。
 - **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。工作项的弹窗、选中、草稿等属于一个工作区或项目的界面状态放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）；要在切换之间留着的，写明为什么。
-- **工作项级弹窗的宿主**（M3 收尾）：`modals/work-item-level.tsx` 的 `WorkItemLevelModals`（创建工作项 `isCreateIssueModalOpen`、删除工作项 `isDeleteIssueModalOpen`）。开关在命令面板的 store（`web/apps/web/core/store/command-palette.store.ts`）里，宿主由 `power-k/projects-app-provider.tsx` 渲染，在 `(projects)/layout.tsx` 和 `(settings)/layout.tsx` 的 `ProjectsAppPowerKProvider` 里，在项目的 key 之上：换项目（后退、前进也是）时开着的弹窗留着，作用于路由新指向的项目。M4 接上工作项页面时两件都做：把宿主移到项目的 key 之下，或在项目的范围结束时关上它的开关；并像 `modals/workspace-level.tsx` 的 `WorkspaceLevelModals` 那样在卸载时关上它渲染的每个开关（`useLayoutEffect` 的清理，在下一个页面绘制之前）。加一个像 P3、P8 那样的后退检查（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）。
+- **工作项级弹窗的宿主**（M3 收尾；控制者的裁定：store 持有的弹窗开关属于渲染它的宿主，由宿主结束）：`modals/work-item-level.tsx` 的 `WorkItemLevelModals`（创建工作项 `isCreateIssueModalOpen`、删除工作项 `isDeleteIssueModalOpen`）。开关在命令面板的 store（`web/apps/web/core/store/command-palette.store.ts`）里，宿主由 `power-k/projects-app-provider.tsx` 渲染，在 `(projects)/layout.tsx` 和 `(settings)/layout.tsx` 的 `ProjectsAppPowerKProvider` 里，在项目的 key 之上：换项目（后退、前进也是）时开着的弹窗留着，作用于路由新指向的项目。M4 接上工作项页面时两件都做：把宿主移到项目的 key 之下，或在项目的范围结束时关上它的开关；并像 `modals/workspace-level.tsx` 的 `WorkspaceLevelModals` 那样在卸载时关上它渲染的每个开关（`useLayoutEffect` 的清理，在下一个页面绘制之前）。加一个像 P3、P8 那样的后退检查（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）。
 - **嵌套的 id 没有 key**（M3 收尾）：工作项的页面 `projects/(detail)/[projectId]/issues/(detail)/[issueId]`、`archives/issues/(detail)/[archivedIssueId]`、`browse/[workItem]` 和个人主页 `profile/[userId]`（连同 `[profileViewId]`）只在工作区、项目的 key 之下，换一个工作项或一个人（后退、前进也是）时页面留着，开着的弹窗和组件的状态跟过去。M4 接上这些页面时以页面自己的 id 给它的子树 key，并加一个后退的检查。
 - **关闭条件**：上面每一处的拒绝有提示或交回调用方，没有未处理的拒绝（vitest 或故事）；`autorun` 随退役的一代释放，`store-context.test.ts` 没有严格模式的警告。
 
@@ -16159,6 +16161,8 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - **嵌套的按钮**：`dropdowns/` 的 `DropdownButton` 放在 Headless UI 的按钮里（M3/P10 的裁定 R3），面包屑的下拉框之前一节的标题按钮也在选择的按钮里，M4 随工作项的属性下拉框和页头一起改。菜单自己的按钮里又放了 `IconButton` 的三处（M3 收尾找到，`customButton` 或 `PopoverMenu` 的 `button` 中的 `IconButton`，两个 Tab 停留点、按钮里有按钮）：`comments/quick-actions.tsx`、`issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（外面的按钮 `outline-none`，焦点看不到）；改法照 M3 收尾的项目标签栏的菜单（`navigation/project-actions-menu.tsx`：`CustomMenu` 的 `customButtonClassName` 给菜单自己的按钮样式，内容是图标，不再嵌一个按钮）。
 - **`CustomMenu` 的键盘**（M3 收尾 Task 8 的修复轮 1 在根上改：键盘打开、选择，Escape 关上，焦点回到按钮；[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9、附录 A.4 的调用方清单）：M4 的页面上留下的三处。工作项快捷操作的 `SubMenu`（`issues/issue-layouts/quick-action-dropdowns/` 的 `all-issue.tsx`、`cycle-issue.tsx`、`module-issue.tsx`、`project-issue.tsx`、`issue-detail.tsx`）的触发项是包着按钮的 `Menu.Item as="div"`，菜单上的 Enter 点的是 `div`，键盘打不开子菜单（原来也是）；看板、日历的卡片给快捷操作的 `customActionButton` 的"激活"底色只随指针的 click 切换，键盘打开菜单时不显示；`issues/issue-modal/components/default-properties.tsx` 给父工作项的菜单的 `customButton` 是一个 `<button>`，放在菜单的按钮里（按钮里有按钮）。在 M4 的页面上用键盘核对。
 - **下拉框**：成员下拉框以 `CustomSearchSelect` 为底之后 M4 的调用方看得到的不同（按键由 Headless UI 处理，`WhileOpen` 记下打开时的回调，Escape 之后焦点在选择自己的按钮上，列表的新样子），在 M4 的页面上核对，C7 没有核对 M4 页面上的调用方（成员下拉框的 8 个文件、4 个筛选）。`issues/select/base.tsx` 的根与 M3 收尾改过的项目下拉框是同一种写法：调用方给根 `tabIndex`，根是一个没有名字的停留点；照收尾把 `tabIndex` 给里面的按钮。`getButtonStyling` 的两处（`rich-filters/add-filters/button.tsx`、`dropdowns/layout.tsx`）用键盘核对轮廓。
+- **筛选的按钮**（M3 收尾 Task 12，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9）：`FiltersDropdown`（`issues/issue-layouts/filters/header/helpers/dropdown.tsx`）默认的按钮现在就是弹层的 `Popover.Button`：以 `title` 为名，说出是否展开（`aria-expanded`），Escape 之后焦点回到它，指针点开之后焦点留在它上面；M4 的 7 个调用方（3 个用默认的按钮）在收尾 spec 附录 A.4 逐个核对过，没有故事走到，M4 的筛选的故事落地时断言按钮的名字、`aria-expanded` 和 Escape 之后焦点回到它。
+- **组字的判断只有一个**（M3 收尾，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.11）：关键词规则 `composing-check` 看住 M4 的键盘处理：一个按键是不是输入法的，只经 `@nerve/utils` 的 `isComposing`（`web/packages/utils/src/keyboard.ts`：`isComposing` 或 `keyCode` 229，Safari 只交出后者），不直接读 `.isComposing`，不拿 `keyCode` 与 229 比较。M4 今天的 4 处守卫（`issues/issue-layouts/properties/label-dropdown.tsx`、`issues/issue-detail/label/select/label-select.tsx`、`issues/select/base.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`）已经经它，没有故事走到它们，由规则看住；M4 新加的守卫照样。
 - **右键菜单**：工作项和草稿的列表的右键菜单关着时 `inert`（M3/P10 的裁定 F-14），在 M4 的页面上核对右键打开它、点它的项。
 - **层叠顺序**：页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下，`z-30` 及以上留给弹窗和从弹窗打开、经 portal 渲染到 `body` 的东西（下拉框、提示、表情）；M3 收尾因此把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。工作项页面上画在任何弹窗之上的元素（行号是 M3 收尾时的）：`issues/issue-layouts/roots/project-layout-root.tsx:80`（`fixed … z-50`）；日历的两个 `Popover.Panel`（`issues/issue-layouts/calendar/dropdowns/options-dropdown.tsx:128`、`months-dropdown.tsx:102`，`fixed z-50`，不经 portal）；`issues/issue-layouts/quick-add/form/calendar.tsx:22`（`z-50`）；更新中的遮罩 `issues/issue-layouts/calendar/issue-block.tsx:110`、`issues/issue-layouts/list/block.tsx:217`（`z-[99999]`）；拖动中的 `issues/issue-layouts/kanban/block.tsx:261`（`z-[100]`）。与弹窗同层或之上的还有 `issues/attachment/attachment-item-list.tsx:123`（`z-30`）和拖动中的 `issues/issue-layouts/kanban/kanban-delete-drop-zone.tsx:52`（`z-40`）。M4 改这些页面时把它们降到 `z-30` 之下，或开着一个弹窗核对它们不画在弹窗上。
 - 共用组件的焦点轮廓（`Button`、`IconButton`、`getButtonStyling`、`CustomMenu`）是否被 `overflow-hidden` 裁掉，在 M4 的页面上用键盘核对（M3/P11 评审第 6 节）。`IconButton` 的 `aria-label` 和 `EmojiPicker` 的 `ariaLabel` 自 M3 收尾必传，新加的每一个都有名字（编辑器标注块的选图标按钮是英文的"Callout icon"，编辑器的文字见 M8 的交接第 3 节）。
@@ -16250,7 +16254,7 @@ M3（工作区与项目）把工作区图标、项目封面和成员头像留成
 - **关闭条件**：3 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`（新文件，48 行）：
+`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`（新文件，49 行）：
 
 ````file docs/v0/M6-cycles-modules/handoffs/M3-closeout.md
 ---
@@ -16272,7 +16276,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - `core/modals/existing-issues-list-modal.tsx`（添加已有工作项）改用 M4 的工作项搜索接口（M3 设计 7.3）。
 - 迭代、模块的弹窗读 `error?.error` 的三处（`cycles/transfer-issues-modal.tsx`、`modules/modal.tsx` 两处）改经文案表（`errorMessageKey`）；视图的修改之后的跟进经 `followInSession`（M3/P9 spec 第 5 节）。
 - **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。迭代、模块、视图的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
-- **项目级弹窗的宿主**（M3 收尾）：`modals/project-level.tsx` 的 `ProjectLevelModals`（创建迭代 `isCreateCycleModalOpen`、模块 `isCreateModuleModalOpen`、视图 `isCreateViewModalOpen`）。开关在命令面板的 store（`web/apps/web/core/store/command-palette.store.ts`）里，宿主由 `power-k/projects-app-provider.tsx` 渲染，在 `(projects)/layout.tsx` 和 `(settings)/layout.tsx` 的 `ProjectsAppPowerKProvider` 里，在项目的 key 之上：换项目（后退、前进也是）时开着的弹窗留着，作用于路由新指向的项目。M6 接上迭代、模块、视图的页面时两件都做：把宿主移到项目的 key 之下，或在项目的范围结束时关上它的开关；并像 `modals/workspace-level.tsx` 的 `WorkspaceLevelModals` 那样在卸载时关上它渲染的每个开关（`useLayoutEffect` 的清理，在下一个页面绘制之前）。加一个像 P3、P8 那样的后退检查（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）。
+- **项目级弹窗的宿主**（M3 收尾；控制者的裁定：store 持有的弹窗开关属于渲染它的宿主，由宿主结束）：`modals/project-level.tsx` 的 `ProjectLevelModals`（创建迭代 `isCreateCycleModalOpen`、模块 `isCreateModuleModalOpen`、视图 `isCreateViewModalOpen`）。开关在命令面板的 store（`web/apps/web/core/store/command-palette.store.ts`）里，宿主由 `power-k/projects-app-provider.tsx` 渲染，在 `(projects)/layout.tsx` 和 `(settings)/layout.tsx` 的 `ProjectsAppPowerKProvider` 里，在项目的 key 之上：换项目（后退、前进也是）时开着的弹窗留着，作用于路由新指向的项目。M6 接上迭代、模块、视图的页面时两件都做：把宿主移到项目的 key 之下，或在项目的范围结束时关上它的开关；并像 `modals/workspace-level.tsx` 的 `WorkspaceLevelModals` 那样在卸载时关上它渲染的每个开关（`useLayoutEffect` 的清理，在下一个页面绘制之前）。加一个像 P3、P8 那样的后退检查（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）。
 - **嵌套的 id 没有 key**（M3 收尾）：迭代、模块的页面 `cycles/(detail)/[cycleId]`、`modules/(detail)/[moduleId]`只在工作区、项目的 key 之下，换一个迭代或模块（后退、前进也是）时页面留着，开着的弹窗和组件的状态跟过去。M6 接上这些页面时以页面自己的 id 给它的子树 key，并加一个后退的检查。
 - **关闭条件**：包装层的取数有按权限的 vitest；`dispose()` 释放两个反应，`store-context.test.ts` 核对换代之后它们不再运行。
 
@@ -16289,6 +16293,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **嵌套的按钮**：菜单自己的按钮里又放了 `IconButton` 的两处（M3 收尾找到）：`cycles/quick-actions.tsx`、`modules/quick-actions.tsx`；改法照 M3 收尾的项目一行（`CustomMenu` 的 `customButtonClassName`，内容是图标，不再嵌一个按钮）。
 - **右键菜单**：迭代、模块、视图的列表的右键菜单关着时 `inert`（裁定 F-14），在 M6 的页面上核对右键打开它、点它的项。
 - **下拉框**：C7 没有核对 M6 页面上的 `CustomSearchSelect` 调用方（成员下拉框的 2 个文件，迭代、模块、视图的页头），对接时用键盘核对。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M6 的页面上核对。
+- **筛选的按钮**（M3 收尾 Task 12，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9）：`FiltersDropdown` 默认的按钮现在就是弹层的 `Popover.Button`（以 `title` 为名、`aria-expanded`、Escape 之后焦点回到它，指针点开之后焦点留在它上面，同 M4 的交接第 7 节）；M6 的 8 个调用方（6 个用默认的按钮）在收尾 spec 附录 A.4 逐个核对过，没有故事走到，M6 的筛选的故事落地时断言按钮的名字、`aria-expanded` 和 Escape 之后焦点回到它。
 - **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：迭代一行的菜单按钮 `cycles/quick-actions.tsx:141` 和模块一行的 `modules/quick-actions.tsx:135`（都叫"Options"）以迭代、模块的名字为名：两处已有的 `cycleDetails?.name`、`moduleDetails?.name`；M3 收尾已加的带 `{name}` 的键 `common.item_options`（"{name} options"、"{name} 的选项"，项目成员页、标签页一行的菜单读它）。
 - **关闭条件**：M6 的评审写明上面每一项的浏览器核对。
 
@@ -16321,7 +16326,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **关闭条件**：4 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M7-collaboration/handoffs/M3-closeout.md`（新文件，51 行）：
+`docs/v0/M7-collaboration/handoffs/M3-closeout.md`（新文件，52 行）：
 
 ````file docs/v0/M7-collaboration/handoffs/M3-closeout.md
 ---
@@ -16361,6 +16366,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **嵌套的按钮和看不到的轮廓**（M3/P11 spec 第 5 节、M3 收尾找到）：菜单自己的按钮里又放了 `IconButton` 的三处（`views/quick-actions.tsx`、`workspace-notifications/sidebar/filters/menu/root.tsx`、`workspace-notifications/sidebar/header/options/menu-option/root.tsx`）；收藏的菜单 `workspace/sidebar/favorites/favorites-menu.tsx` 的 `IconButton` 外层 `opacity-0`、没有 `focus-within`，焦点看不到；收藏夹的外层手柄按钮（`workspace/sidebar/favorites/favorite-folder.tsx`）显示时是一个没有名字、按 Enter 什么都不做的停留点。改法照 M3 收尾的项目一行（`CustomMenu` 的 `customButtonClassName`；行的 `focus-within:opacity-100`；手柄不是停留点）。页头的通知链接（`navigation/top-navigation-root.tsx`）没有名字，提示是写死的"Inbox"：随未读数一起给它经 `t()` 的名字。
 - **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：视图一行的菜单按钮 `views/quick-actions.tsx:94`（"Options"）以视图的名字为名：已有的 `view.name`；M3 收尾已加的带 `{name}` 的键 `common.item_options`（"{name} options"、"{name} 的选项"，项目成员页、标签页一行的菜单读它）。
 - **下拉框**：收集箱的两个指派人的成员下拉框（`inbox/content/issue-properties.tsx`、`inbox/modals/create-modal/issue-properties.tsx`）以 `CustomSearchSelect` 为底之后看得到的不同同 M4 的交接第 7 节，在 M7 的页面上核对（C7 没有核对）。右键菜单关着时 `inert`，在 M7 的页面上核对右键打开。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M7 的页面上核对。
+- **筛选的按钮**（M3 收尾 Task 12，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9）：`FiltersDropdown` 默认的按钮现在就是弹层的 `Popover.Button`（以 `title` 为名、`aria-expanded`、Escape 之后焦点回到它，指针点开之后焦点留在它上面，同 M4 的交接第 7 节）；M7 的 7 个调用方（5 个用默认的按钮）在收尾 spec 附录 A.4 逐个核对过，没有故事走到，M7 的筛选的故事落地时断言按钮的名字、`aria-expanded` 和 Escape 之后焦点回到它。
 - **关闭条件**：M7 的评审写明上面每一项的浏览器核对。
 
 ## 4. 地址、复制、文案和其余
@@ -16386,7 +16392,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **按规则清一类**：另外按规则集中清掉至少一类，优先能机械修复的（`eslint(no-shadow)`；`eslint(no-unneeded-ternary)` 已由 M2/P5 全仓清零，见 [M2/P5 评审](../../M2-auth/reviews/P5-web-account-review.md)第 2 节；`eslint-plugin-promise(always-return)` 已由 M3/P11 全仓清零，见 [M3/P11 spec](../../M3-workspace-project/specs/P11-web-states-labels-and-cleanup.md) 2.9）；
 ````
 
-`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，54 行）：
+`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，55 行）：
 
 ````file docs/v0/M8-open-release/handoffs/M3-closeout.md
 ---
@@ -16403,7 +16409,7 @@ M3（工作区与项目）没有领域事件，Webhook 的页面在 M3 里走不
 ## 1. Webhook
 
 - **事件**：工作区、项目、成员的 Webhook 事件加在 M4 引入的事件机制上（M3 没有事件，M3 设计 3.3）。
-- **页面**：webhooks 读 `error?.error` 的三处（`web-hooks/create-webhook-modal.tsx`、`web-hooks/form/secret-key.tsx`、`app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/[webhookId]/page.tsx`）改经文案表（`errorMessageKey`，M3/P9 spec 第 5 节）；密钥的复制（`web-hooks/form/secret-key.tsx`）改经 `useCopyText`（`core/hooks/use-copy-link.ts`），关键词规则 `copy-hook` 的这个例外（`until: "M8/closeout"`）随之删除；只读工作区的 3 个文件（webhooks 的两个页面和 `secret-key.tsx`）改用 `useRouteWorkspace()` 或路由的 slug，加进关键词规则 `workspace-address-route`（M3 收尾，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.12）；页面上写死的英文经 `t()`；`web/apps/web/core/store/workspace/webhook.store.ts` 的 1 条警告（`no-accumulating-spread`）清零。
+- **页面**：webhooks 读 `error?.error` 的三处（`web-hooks/create-webhook-modal.tsx`、`web-hooks/form/secret-key.tsx`、`app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/[webhookId]/page.tsx`）改经文案表（`errorMessageKey`，M3/P9 spec 第 5 节）；密钥的复制（`web-hooks/form/secret-key.tsx`）改经 `useCopyText`（`core/hooks/use-copy-link.ts`），关键词规则 `copy-hook` 的这个例外（`until: "M8/closeout"`）随之删除；只读工作区的 3 个文件（webhooks 的两个页面和 `secret-key.tsx`）改用 `useRouteWorkspace()` 或路由的 slug，加进关键词规则 `workspace-address-route`（M3 收尾，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.12）；加进之前先把列表页传给 `CreateWebhookModal` 的 prop `currentWorkspace`（`app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/page.tsx:71`，`web-hooks/create-webhook-modal.tsx`）和 `getCurrentHookAsCSV` 的同名参数（`web-hooks/utils.ts:13`）改名（例如 `workspace`）：规则认的是 `currentWorkspace` 这个名字，值改读路由之后这个 prop 照样命中；页面上写死的英文经 `t()`；`web/apps/web/core/store/workspace/webhook.store.ts` 的 1 条警告（`no-accumulating-spread`）清零。
 - **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M8/closeout`，`copy-hook` 的这个例外（`until: "M8/closeout"`）那时到期，守卫要求它已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M8/P<k>`。
 - **关闭条件**：Webhook 的事件有接口版本的故事；`copy-hook` 没有例外，`workspace-address-route` 的范围含这 3 个文件。
 
@@ -16434,6 +16440,7 @@ M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是�
 - 页头的搜索（`navigation/top-nav-power-k.tsx`）的 4 条 oxlint 警告：`exhaustive-deps` 2 条，`click-events-have-key-events`、`prefer-tag-over-role` 各 1 条。M3 收尾只把它的占位文字改经 `t()`（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条）；后两条是它的点击区不是按钮，与上面帮助、账户菜单的按钮是同一类改法、同在页头，一起改，改时清零。
 - 焦点和输入法只在 Chromium 中逐个核对过：发布之前在 Firefox、Safari 中看一遍焦点的轮廓、弹窗的 Tab 循环和输入法组字时的 Escape、Enter（M3/P11 评审第 6 节、M3/P10 spec 第 5 节；M3 收尾的 C11 看过的部分写在它的评审里）。
 - 命令面板打开之后约 200 毫秒之内输入的字会被清空（`power-k/ui/modal/wrapper.tsx` 打开时的重置，Plane 原有；之后的输入留着，M3 收尾的探查）。
+- 命令面板的弹窗没有名字：它经 `ModalCore`，里面没有 `DialogTitle`，`ModalCore` 也不收名字；搜索框的清除按钮（`power-k/ui/modal/header.tsx:53`）只有一个图标，没有名字（M3 收尾 Task 2 的评审，Plane 原有）。面板经 `t()` 取一个名字（例如面板里一个 `sr-only` 的 `DialogTitle`，或让 `ModalCore` 收一个名字），清除按钮一个经 `t()` 的 `aria-label`，en 与 zh-CN 同时加。
 - **客户端导航之后的焦点**（M3 收尾）：工作区的内容以 slug 为 key 之后，经菜单换工作区时焦点落到 `body`，像一次页面的加载（原来回到菜单的按钮；控制者裁定接受，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 附录 A.8）。全应用的客户端导航之后焦点去哪里（`body`、页面的标题、主区域）是一个全应用的决定：发布之前定下并实现，读屏核对换页之后读出什么。
 - **关闭条件**：M8 的评审写明每一项的修法或结论。
 

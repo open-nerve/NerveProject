@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/P3
 to: M3
 created: 2026-09-24
@@ -79,3 +79,16 @@ P8a 没有在这里记处理结果；它做到的一项一并记在下面。
 仍未处理：本文件的关闭条件在 M3 中都已做到（视图、收集箱的字段由 M7 的同名交接约束，见 P4a 一条）；`status` 在 M3 收尾时随 review 改为 `closed`。
 
 来源：[M3/P8b spec](../specs/P8b-web-project-data.md) 第 7 节；[M3/P8a spec](../specs/P8a-web-workspace-data.md) 第 7 节。
+
+## 处理结果（M3/收尾）
+
+逐项的结论，关闭条件都在 M3 中做到：
+
+1. **不再读的字段**：项目的接口没有 `anchor` 和发布设置，Nerve 没有项目动态（M3/P4a；收尾在 `49190525` 上核对：`git grep -n -E "anchor|is_form_enabled" -- api` 没有输出）。视图、收集箱的接口不在 M3，由 M7 的同名交接（`docs/v0/M7-collaboration/handoffs/M1-P3-trim-platform.md`）约束。
+2. **项目成员**：只有"从工作区成员中添加"一种方式（M3/P4b 的 `addProjectMembers`）；加入公开项目改调 `POST /api/v0/projects/{project_id}/join`，守卫的 `project-invitations` 例外删掉（M3/P8b），规则本身留着看住"受邀进项目"的说法。
+3. **保留的工作区地址**：与后端同源，Plane 的产品词逐个有结论（全部不保留，M3 设计 3.10；M3/P1、P8a）。
+4. **地址**：`project-identifiers` 等新地址都不带结尾 `/`（M3/P4a），项目设置页经项目 store 调它（M3/P8b）。
+
+状态改为 `closed`。
+
+来源：[M3 收尾 spec](../specs/closeout.md) 2.1。

@@ -49,6 +49,6 @@ created: 2026-09-28
 ## 6. 复制到剪贴板（M6 的 3 处）
 
 - P5 起 `copyTextToClipboard`（`web/packages/utils/src/string.ts`）复制失败时拒绝，纯 http 下也是。M6 的 3 处没有处理拒绝，失败时没有提示，只有一个未处理的 Promise 拒绝：`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/modules/links/list-item.tsx`。
-- **关闭条件**：3 处都处理失败，经 `t()` 提示，像 `web/apps/web/core/components/api-token/modal/generated-token-details.tsx`。
+- **关闭条件**：3 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 
 来源：[M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M6 的各行和"周期下拉框的取数"一行；[M2 收尾 spec](../../M2-auth/specs/closeout.md) 第 3 节。

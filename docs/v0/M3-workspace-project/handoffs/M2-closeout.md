@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M2/closeout
 to: M3
 created: 2026-09-28
@@ -205,3 +205,28 @@ P8a 没有在这里记处理结果；它做到的部分（[P8a spec](../specs/P8
 仍未处理，状态保持 `open`：第 12 节等 M3 的收尾。
 
 来源：[M3/P10 spec](../specs/P10-web-project-pages.md) 第 7 节。
+
+## 处理结果（M3/收尾）
+
+十四节都有结论，各 Phase 的处理结果写在上面：
+
+| 节 | 结论 | 在哪里 |
+|---|---|---|
+| 1 邀请与注册 | 完成 | 接口 M3/P3，页面 M3/P9；负责人的裁定在 M3 设计第 10 节 |
+| 2 落点与新手引导的取数 | 完成 | M3/P8a、P9 |
+| 3 stores 按会话分代 | 完成 | M3/P8a、P8b；`web/apps/web` 中模块级的 service 实例剩 22 处，都是 M4–M7 的 |
+| 4 `last_workspace_id` 的外键 | 不加，理由在 M3 设计 3.14 | M3/P1 |
+| 5 `workspace_creation_enabled` | 完成 | M3/P1 |
+| 6 停用的端口 | 完成 | M3/P6 |
+| 7 可空的引用字段 | 完成 | M3/P1、P2、P4a、P8a、P8b；有真值在 M5（[M5 的交接](../../M5-files/handoffs/M3-closeout.md)第 1 节） |
+| 8 模块边界 | 完成 | M3/P1 |
+| 9 删除关系图 | 完成 | M3/P4a（M3 设计 4.12） |
+| 10 表情选择器的数据 | 完成 | M3/P10 |
+| 11 M2 留下的调用和类型 | 完成；M4 的活动类型中的 `is_bot` 交给 M4 | M3/P8a、P8b、P9、P10；[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 5 节 |
+| 12 页大小的规则 | M3 没有分页的列表，原样交给 M4 | [M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 9 节 |
+| 13 M2 走不到的页面 | 完成，浏览器核对 C4 | M3/P9 |
+| 14 下拉框和复制 | 完成，浏览器核对 C7、C8；M4、M6、M7 的复制一节改为经 `useCopyLink`（收尾） | M3/P10；[M3 收尾 spec](../specs/closeout.md) 2.10 |
+
+状态改为 `closed`。
+
+来源：[M3 收尾 spec](../specs/closeout.md) 2.1。

@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/P2
 to: M3
 created: 2026-09-23
@@ -69,3 +69,16 @@ M3 合并时：
 - **访客看别人的个人主页**（页面一侧完成）：照决策点 3 的 A，页面不改：访客打开别人的或自己的个人主页，看到用户卡片（数据来自成员列表），工作项一栏说他没有权限，页面不取工作项列表。故事 P9 的页面版本核对（`e2e/stories/project/p9-guest-profile.spec.ts`），S2 核对访客打开这两页时只取应用和工作区的数据。浏览器核对 C10 通过，记在 [M3/P11 评审](../reviews/P11-web-states-labels-and-cleanup-review.md) 第 2 节：访客打开别的成员的和自己的个人主页，看到卡片，工作项一栏说没有权限、没有工作项的标签页，页面里没有任何人的邮箱，也没有工作项的请求。
 
 状态保持 `open`：由 M3 的收尾关闭（M3/P11 spec 第 7 节）。
+
+## 处理结果（M3/收尾）
+
+逐项的结论，关闭条件都在 M3 中做到：
+
+1. **项目字段**：M3/P4a。`api/` 里没有 `close_in`、`default_state`、`page_view`、`estimate_id`，也没有 `/sidebar-preferences/`（收尾在 `49190525` 上核对：`git grep -n -E "close_in|default_state|page_view|estimate_id|sidebar-preferences" -- api` 没有输出）；项目的"自动化"只剩 `archive_in`。
+2. **侧边栏偏好**：接口一侧在 M3/P2（`WorkspacePreferences`），页面一侧在 M3/P9（`ProjectNavigationDialog` 经 `useProjectNavigationPreferences()`），W8 的两个版本核对。
+3. **保留的工作区地址**：M3/P1（服务端的名单三段）和 M3/P8a（`RESTRICTED_URLS` 删除，前后端一份，"应用"一段有 vitest），与 M1-P3、M1-P4 的同一项一起关闭。
+4. **个人主页**：访客能看别人的个人主页（决策点 3，A），写进权限矩阵的 `listWorkspaceMembers` 一行（M3/P2，M3 设计 9.2）；页面在 M3/P11，浏览器核对 C10 通过（[M3/P11 评审](../reviews/P11-web-states-labels-and-cleanup-review.md)第 2 节）。个人主页上工作项列表的规则行交给 M4（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 3 节）。
+
+状态改为 `closed`。
+
+来源：[M3 收尾 spec](../specs/closeout.md) 2.1。
