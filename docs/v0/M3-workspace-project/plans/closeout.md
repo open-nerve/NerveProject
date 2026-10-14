@@ -94,9 +94,10 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
 | `e2e/stories/identity/a11-api-tokens.spec.ts` | 生成之后焦点在令牌的按钮上、键盘到达时有轮廓，令牌复制到剪贴板（Task 9）；`registeredPAT`（Task 14） | 9、14 |
 | `e2e/stories/identity/a6-sign-out.spec.ts` | 切换账户的弹窗在退出路上时关不掉（Task 2）；导入（Task 14） | 2、14 |
-| `e2e/stories/project/p1-create-project.spec.ts` | 以标题找卡片（Task 5）；在页面内容中找卡片（Task 8）；功能的开关以功能为名，工作区的访客在没有项目的设置页没有建项目的按钮（Task 13）；`registeredPAT`（Task 14） | 5、8、13、14 |
+| `e2e/stories/project/p1-create-project.spec.ts` | 以标题找卡片（Task 5）；在页面内容中找卡片（Task 8）；功能的开关以功能为名，没有项目的设置页给成员建项目的按钮、不给工作区的访客（Task 13）；`registeredPAT`（Task 14） | 5、8、13、14 |
 | `e2e/stories/project/p2-visibility.spec.ts` | "Joining"（Task 5）；在页面内容中找页头的面包屑（Task 8）；`registeredPAT`（Task 14） | 5、8、14 |
-| `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update，被拒绝时留着（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
+| `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update，被拒绝时留着，页面的测试移到下一个文件（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
+| `e2e/stories/project/p3-project-settings-page.spec.ts` | P3 的页面版本：页面的四个测试原样从 `e2e/stories/project/p3-project-settings.spec.ts` 移来（Task 13 的修复轮 1，照 P6、P7） | 13 新 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
 | `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter 打开列表，一秒之内不发请求（Task 10）；成员筛选以键盘走一遍（Task 12） | 2、5、8、10、12 |
@@ -13046,6 +13047,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p3-project-settings.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx`、`web/apps/web/app/(all)/create-workspace/layout.tsx`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/app/(all)/onboarding/layout.tsx`、`web/apps/web/app/(all)/onboarding/page.tsx`、`web/apps/web/app/provider.tsx`、`web/apps/web/core/components/automation/auto-archive-automation.tsx`、`web/apps/web/core/components/automation/select-month-modal.test.tsx`、`web/apps/web/core/components/automation/select-month-modal.tsx`、`web/apps/web/core/components/project/member-list.tsx`、`web/apps/web/core/components/project/settings/features-list.tsx`、`web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx`、`web/apps/web/core/components/settings/project/content/feature-control-item.tsx`、`web/apps/web/core/lib/fake-controls.ts`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/propel/src/toast/toast.tsx`
+- Create: `e2e/stories/project/p3-project-settings-page.spec.ts`
 - Delete: `web/apps/web/core/components/project/form-loader.tsx`、`web/apps/web/core/components/project/settings/helper.tsx`
 
 **Interfaces:**（spec 2.8）
@@ -13054,7 +13056,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - 自动归档：月数经 `workspace_projects.common.months_count`；自定义范围的标题、占位、单位、范围的提示、Update/Updating 经 `t()`，规则 `required: true`；被拒绝时它留着（A-M2）。
 - 新建工作区、新手引导的标题经 `PageHead`（布局的 `meta` 删除）；提示的区域：`@nerve/propel` 的 `Toast` 收 `label`，`app/provider.tsx` 的 `AppToast` 给它 `t("aria_labels.toasts")`。项目成员页的搜索的占位。
 
-**Tests:** `admin-pages.test.tsx`、`states-labels.test.tsx` 照新的标题；`use-feature-toggle.test.tsx` 看开关的名字；`select-month-modal.test.tsx` 读键。P1：功能一步的 Tab 循环按功能的名字；工作区的访客（不在任何项目中）在没有项目的设置页看到说明，没有建项目的按钮（预审的修复）。P3：自定义范围说 Update；另一个项目管理员（工作区的成员）在她的浏览器中打开自定义范围，被降为项目的成员之后，被拒绝的范围留着、说出原因、不再忙（预审的修复，A-M2）。S7 的第四个加项目设置的标题、成员的搜索、功能开关的提示和提示的区域、自动归档；第五个（新）：没有完成引导的人看到新手引导的标题。
+**Tests:** `admin-pages.test.tsx`、`states-labels.test.tsx` 照新的标题；`use-feature-toggle.test.tsx` 看开关的名字；`select-month-modal.test.tsx` 读键。P1：功能一步的 Tab 循环按功能的名字；不在任何项目中时，成员在没有项目的设置页看到建项目的按钮（修复轮 1），工作区的访客只看到说明（预审的修复）。P3：自定义范围说 Update；另一个项目管理员（工作区的成员）在她的浏览器中打开自定义范围，被降为项目的成员之后，发出的 `{ archive_in: 9 }` 被拒绝，范围留着、原因经 `announced` 读出、不再忙（预审的修复和修复轮 1，A-M2）。P3 照 P6、P7 拆开（修复轮 1）：API 的测试留在 `e2e/stories/project/p3-project-settings.spec.ts`，页面的四个测试原样移到 `e2e/stories/project/p3-project-settings-page.spec.ts`。S7 的第四个加项目设置的标题、成员的搜索、功能开关的提示和提示的区域、自动归档；第五个（新）：没有完成引导的人看到新手引导的标题。
 
 - [ ] **Step 1: 设置和标题**
 
@@ -13598,7 +13600,7 @@ import { ProjectFeatureToggle } from "./helper";
 
 - [ ] **Step 2: 测试**
 
-`e2e/stories/project/p1-create-project.spec.ts`（修改，4 处）：
+`e2e/stories/project/p1-create-project.spec.ts`（修改，7 处）：
 
 ````old e2e/stories/project/p1-create-project.spec.ts
     `Open project, ${"Toggle project feature, ".repeat(4)}Close`
@@ -13620,12 +13622,44 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   signedInPage,
 ````
 ````new e2e/stories/project/p1-create-project.spec.ts
-test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar; the guest, in no project, is offered none to create", async ({
+test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar; in no project, the member is offered a project to create, the guest none", async ({
   api,
   baseURL,
   browser,
   db,
   signedInPage,
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/projects`);
+  await page.getByRole("button", { name: "Add Project", exact: true }).click();
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+  const watch = await watchPage(page);
+  // The member, in no project yet, finds the project settings saying so, and offering him a project's creation.
+  await page.goto(`/${slug}/settings/projects`);
+  await expect(page.getByText("No project", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start your first project" })).toBeVisible();
+  await page.goto(`/${slug}/projects`);
+  await page.getByRole("button", { name: "Add Project", exact: true }).click();
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+  // the two refusals, the browser's reports of them
+
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+  // the two refusals, the browser's reports of them; a load of the project settings, and of the projects page
+
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: [
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
+    errors: [
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
 ````
 ````old e2e/stories/project/p1-create-project.spec.ts
       "Failed to load resource: the server responded with a status of 409 (Conflict)",
@@ -13651,47 +13685,337 @@ test("P1 (page): a member creates a project from the projects page, its identifi
 });
 ````
 
-`e2e/stories/project/p3-project-settings.spec.ts`（修改，5 处）：
+`e2e/stories/project/p3-project-settings.spec.ts`（整个文件，136 行：P3 照 P6、P7 拆开，页面的测试移到下一个文件）：
 
-````old e2e/stories/project/p3-project-settings.spec.ts
-    page.getByRole("button", { name: "Submit" }).click()
-````
-````new e2e/stories/project/p3-project-settings.spec.ts
-    page.getByRole("button", { name: "Update", exact: true }).click()
-````
-````old e2e/stories/project/p3-project-settings.spec.ts
-  await expect(page.getByRole("button", { name: "Submitting..." })).toBeDisabled();
-````
-````new e2e/stories/project/p3-project-settings.spec.ts
-  await expect(page.getByRole("button", { name: "Updating" })).toBeDisabled();
-````
-````old e2e/stories/project/p3-project-settings.spec.ts
+````whole e2e/stories/project/p3-project-settings.spec.ts
+import {
+  addProjectMembers,
+  amidAnotherWorkspace,
+  changeProject,
+  createProject,
+  createWorkspace,
   inviteAndAccept,
   projectMemberWrites,
+  slugFor,
+} from "../../fixtures/api";
+import { expectMember, projectSettingsOf } from "../../fixtures/assert/project";
+import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { expect, test } from "../../fixtures/test";
+
+// P3, a project's settings (M3 design 2, 3.4, 3.5, 3.19, 7.6). The page version is
+// p3-project-settings-page.spec.ts.
+
+test("P3 (API): the project's admin adds a member and a guest, whom the member lists with him, then changes every setting, the member its lead and default assignee; its member may not; a lead or default assignee who is its guest or no member, and archive_in 13, change nothing", async ({
+  api,
+  db,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const memberEmail = emailFor(testInfo, "member");
+  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const guestEmail = emailFor(testInfo, "guest");
+  const guest = (await createPAT(api, (await register(api, guestEmail)).access_token)).token;
+  const otherEmail = emailFor(testInfo, "other");
+  const other = (await createPAT(api, (await register(api, otherEmail)).access_token)).token;
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin, { name: "Acme", slug });
+  await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);
+  await inviteAndAccept(api, admin, slug, { email: guestEmail, token: guest }, 5);
+  await inviteAndAccept(api, admin, slug, { email: otherEmail, token: other }, 15);
+  const memberId = await accountId(api, member);
+  const guestId = await accountId(api, guest);
+  const otherId = await accountId(api, other);
+  // other is a member of Acme and of Ops, not of Web: a membership of another project makes no one Web's assignee.
+  // The member is Ops' member too, at 65535 in his sidebar: Web, added later, goes before it.
+  const web = await amidAnotherWorkspace(api, admin, testInfo, async () => {
+    const ops = await createProject(api, admin, slug, { name: "Ops", identifier: "OPS" });
+    await addProjectMembers(api, admin, ops.id, [
+      { member_id: otherId, role: 15 },
+      { member_id: memberId, role: 15 },
+    ]);
+    return createProject(api, admin, slug, { name: "Web", identifier: "WEB" });
+  });
+
+  const added = await addProjectMembers(api, admin, web.id, [
+    { member_id: memberId, role: 15 },
+    { member_id: guestId, role: 5 },
+  ]);
+  expect(added.map((m) => ({ project_id: m.project_id, member_id: m.member_id, role: m.role }))).toEqual([
+    { project_id: web.id, member_id: memberId, role: 15 },
+    { project_id: web.id, member_id: guestId, role: 5 },
+  ]);
+  await expectMember(db, web.id, memberEmail, { role: 15, is_active: true, sort_order: 55535, by: adminEmail });
+  await expectMember(db, web.id, guestEmail, { role: 5, is_active: true, sort_order: 65535, by: adminEmail });
+  // Web lists exactly its own three; other, Ops' member, is not among them.
+  const members = await api.GET("/api/v0/projects/{project_id}/members", {
+    params: { path: { project_id: web.id } },
+    headers: bearer(member),
+  });
+  expect(members.response.status, `Web's members: ${JSON.stringify(members.error)}`).toBe(200);
+  expect(
+    members.data?.data.map((m) => ({ member_id: m.member_id, role: m.role })).toSorted((a, b) => b.role - a.role)
+  ).toEqual([
+    { member_id: await accountId(api, admin), role: 20 },
+    { member_id: memberId, role: 15 },
+    { member_id: guestId, role: 5 },
+  ]);
+  // Web's member may not add to it: refused, nothing written.
+  expect(await projectMemberWrites(api, web.id).add(member, [{ member_id: otherId, role: 15 }])).toEqual({
+    status: 403,
+    code: "forbidden",
+  });
+  await expectMember(db, web.id, otherEmail, null);
+
+  const logo = { in_use: "icon", icon: { name: "rocket", color: "#46A758" } } as const;
+  const settings = {
+    name: "Site",
+    identifier: "SITE",
+    description: "The site",
+    network: 0 as const,
+    timezone: "Asia/Shanghai",
+    logo_props: logo,
+    cycle_view: false,
+    module_view: false,
+    issue_views_view: false,
+    intake_view: true,
+    guest_view_all_features: true,
+    archive_in: 3,
+  };
+  expect(
+    await changeProject(api, admin, web.id, {
+      ...settings,
+      identifier: "site",
+      project_lead_id: memberId,
+      default_assignee_id: memberId,
+    })
+  ).toMatchObject({ status: 200, project: { ...settings, project_lead_id: memberId, default_assignee_id: memberId } });
+  const changed = { ...settings, lead: memberEmail, default_assignee: memberEmail, by: adminEmail };
+  expect(await projectSettingsOf(db, web.id)).toEqual(changed);
+
+  // Each refused, all at once: none writes.
+  const refusals = [
+    { token: member, body: { name: "Mine" }, want: { status: 403, code: "forbidden" } },
+    {
+      token: admin,
+      body: { archive_in: 13 },
+      want: { status: 422, code: "validation_failed", errors: [{ field: "archive_in", code: "out_of_range" }] },
+    },
+    {
+      token: admin,
+      body: { project_lead_id: guestId },
+      want: { status: 422, code: "validation_failed", errors: [{ field: "project_lead_id", code: "not_allowed" }] },
+    },
+    {
+      token: admin,
+      body: { default_assignee_id: otherId },
+      want: { status: 422, code: "validation_failed", errors: [{ field: "default_assignee_id", code: "not_allowed" }] },
+    },
+  ];
+  expect(
+    await Promise.all(refusals.map(({ token, body }) => changeProject(api, token, web.id, body))),
+    "the refusals"
+  ).toEqual(refusals.map((r) => r.want));
+  expect(await projectSettingsOf(db, web.id)).toEqual(changed);
+
+  // Both cleared with null.
+  expect(await changeProject(api, admin, web.id, { project_lead_id: null, default_assignee_id: null })).toMatchObject({
+    status: 200,
+    project: { project_lead_id: null, default_assignee_id: null },
+  });
+  expect(await projectSettingsOf(db, web.id)).toEqual({ ...changed, lead: null, default_assignee: null });
+});
 ````
-````new e2e/stories/project/p3-project-settings.spec.ts
+
+`e2e/stories/project/p3-project-settings-page.spec.ts`（新文件，330 行：P3 的页面版本，测试原样从上一个文件移来）：
+
+````file e2e/stories/project/p3-project-settings-page.spec.ts
+import {
+  addProjectMembers,
+  createProject,
+  createWorkspace,
   inviteAndAccept,
   projectMembershipOf,
   projectMemberWrites,
-````
-````old e2e/stories/project/p3-project-settings.spec.ts
-test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months", async ({
+  slugFor,
+} from "../../fixtures/api";
+import { projectSettingsOf } from "../../fixtures/assert/project";
+import { accountId, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import { announced, closedByEscape, closedWithin, enabledWithin, modalDialog } from "../../fixtures/dialogs";
+import {
+  answerTo,
+  bodiesSentTo,
+  moveWithinApp,
+  registerOnboarded,
+  sentHeld,
+  sentTo,
+} from "../../fixtures/settings-pages";
+import { expect, test } from "../../fixtures/test";
+import { anotherBrowser } from "../../fixtures/workspace-pages";
+
+// P3's page version (M3 design 2, 3.4, 3.5, 3.19, 7.6): a project's settings on its pages, as its admin changes
+// them: the general page, the features and the auto-archiving, the members' defaults; and another project's settings
+// reached without leaving the route. The API version is p3-project-settings.spec.ts.
+
+test("P3 (page): the project's admin changes its name, identifier, description, visibility, time zone and icon on its general page, which hold after a reload; an identifier another project has is said under it and nothing is sent; the page waits for nerve; its member sees them and can change nothing", async ({
   api,
+  baseURL,
+  browser,
   db,
   signedInPage,
-````
-````new e2e/stories/project/p3-project-settings.spec.ts
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const memberEmail = emailFor(testInfo, "member");
+  const member = await registerOnboarded(api, memberEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  await inviteAndAccept(api, admin.access_token, slug, { email: memberEmail, token: member.access_token }, 15);
+  await createProject(api, admin.access_token, slug, { name: "Ops", identifier: "OPS" });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const memberId = await accountId(api, member.access_token);
+  await addProjectMembers(api, admin.access_token, web.id, [{ member_id: memberId, role: 15 }]);
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#name")).toHaveValue("Web");
+  await page.locator("#name").fill("Site");
+  await page.locator("#description").fill("The site");
+  await page.getByRole("button", { name: "Public" }).click();
+  await page.getByRole("option", { name: /Private/ }).click();
+  // the workspace's time zone, which the project took, for Shanghai's
+  await page.getByRole("button", { name: "UTC" }).click();
+  await page.getByRole("combobox", { name: "Search" }).fill("Asia/Shanghai");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  // The icon: the project has none, so the picker opens on its icons; an emoji from the emoji nerve serves.
+  await page.getByRole("button", { name: "Project icon" }).click();
+  await page.getByRole("tab", { name: "Emoji" }).click();
+  await page.getByRole("searchbox").fill("rocket");
+  await page.getByRole("gridcell", { name: "Rocket" }).click();
+  await expect(page.getByRole("button", { name: "Project icon" })).toContainText("🚀");
+
+  // An identifier another project has: the page asks nerve, says so under it, and sends no change.
+  const changes = await bodiesSentTo(page, "PATCH", `/api/v0/projects/${web.id}`);
+  const update = page.getByRole("button", { name: "Update project" });
+  await page.locator("#identifier").fill("o.ps");
+  await expect(page.locator("#identifier")).toHaveValue("OPS");
+  const checked = await answerTo(page, "GET", `/api/v0/workspaces/${slug}/project-identifiers/OPS`, () =>
+    update.click()
+  );
+  expect(await checked.json()).toEqual({ available: false });
+  await expect(page.getByText("A project of this workspace already has this identifier.")).toBeVisible();
+  await expect(update).toBeEnabled();
+  expect(changes).toEqual([]);
+
+  // Changed: the fields the page edits, the button busy until nerve answers.
+  await page.locator("#identifier").fill("site");
+  const { body, release } = await sentHeld(page, "PATCH", `/api/v0/projects/${web.id}`, () => update.click());
+  const logo = { in_use: "emoji", emoji: { value: "128640" } };
+  const settings = {
+    name: "Site",
+    identifier: "SITE",
+    description: "The site",
+    network: 0,
+    logo_props: logo,
+    timezone: "Asia/Shanghai",
+  };
+  expect(body).toEqual(settings);
+  expect(await enabledWithin(page.getByRole("button", { name: "Updating" }))).toBe(false);
+  expect((await release()).status()).toBe(200);
+  await expect(page.getByText("Project updated successfully")).toBeVisible();
+  await expect(update).toBeEnabled();
+  expect(await projectSettingsOf(db, web.id)).toMatchObject({ ...settings, by: adminEmail });
+  await page.reload();
+  await expect(page.locator("#name")).toHaveValue("Site");
+  await expect(page.locator("#identifier")).toHaveValue("SITE");
+  await expect(page.locator("#description")).toHaveValue("The site");
+  await expect(page.getByRole("button", { name: "Private" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Beijing" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Project icon" })).toContainText("🚀");
+
+  // Its member sees what nerve holds, in a form he cannot change, and no archiving or deletion.
+  const theMember = await anotherBrowser(browser, baseURL ?? "", member);
+  const memberWatch = await watchPage(theMember.page);
+  await theMember.page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(theMember.page.locator("#name")).toHaveValue("Site");
+  await Promise.all(
+    ["#name", "#identifier", "#description"].map((field) => expect(theMember.page.locator(field), field).toBeDisabled())
+  );
+  await Promise.all(
+    ["Project icon", "Private", "Beijing", "Update project"].map((name) =>
+      expect(theMember.page.getByRole("button", { name }), name).toBeDisabled()
+    )
+  );
+  await expect(theMember.page.getByRole("button", { name: "Archive" })).toHaveCount(0);
+  await expect(theMember.page.getByRole("button", { name: "Delete" })).toHaveCount(0);
+  expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await theMember.close();
+
+  // The emoji came from nerve: nothing asked of another address, nothing blocked.
+  expect(requestsElsewhere(page, watch)).toEqual([]);
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  // the first load, and the reload
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
+});
+
 test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months; another admin's range, which nerve refuses once he has made her a member, keeps its modal open, saying why", async ({
   api,
   baseURL,
   browser,
   db,
   signedInPage,
-````
-````old e2e/stories/project/p3-project-settings.spec.ts
-  await expect(page.getByRole("button", { name: "3 months" })).toBeVisible();
-````
-````new e2e/stories/project/p3-project-settings.spec.ts
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const settings = `/${slug}/settings/projects/${web.id}`;
+  const projectApi = `/api/v0/projects/${web.id}`;
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  /** Opens the page of the feature of path and turns it on: the feature alone is sent, the switch then shows it. */
+  const flip = async (path: string, name: string) => {
+    await page.goto(`${settings}/features/${path}`);
+    const toggle = page.getByRole("switch", { name });
+    await expect(toggle).not.toBeChecked();
+    const flipped = await sentTo(page, "PATCH", projectApi, () => toggle.click());
+    await expect(toggle).toBeChecked();
+    return [flipped.answer.status(), flipped.body];
+  };
+  expect(await flip("cycles", "Enable cycles")).toEqual([200, { cycle_view: true }]);
+  expect(await flip("modules", "Enable modules")).toEqual([200, { module_view: true }]);
+  expect(await flip("views", "Enable views")).toEqual([200, { issue_views_view: true }]);
+  expect(await flip("intake", "Enable intake")).toEqual([200, { intake_view: true }]);
+
+  // The auto-archiving: on, after a month.
+  await page.goto(`${settings}/automations`);
+  const turnedOn = await sentTo(page, "PATCH", projectApi, () =>
+    page.getByRole("switch", { name: "Auto-archive closed work items" }).click()
+  );
+  expect([turnedOn.answer.status(), turnedOn.body]).toEqual([200, { archive_in: 1 }]);
+  // A range of his own: the modal waits for nerve, busy and not to be closed; it closes once nerve has made it.
+  await page.getByRole("button", { name: "1 month" }).click();
+  await page.getByRole("button", { name: "Customize time range" }).click();
+  await page.locator("#archive_in").fill("6");
+  const { body, release } = await sentHeld(page, "PATCH", projectApi, () =>
+    page.getByRole("button", { name: "Update", exact: true }).click()
+  );
+  expect(body).toEqual({ archive_in: 6 });
+  await expect(page.getByRole("button", { name: "Updating" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await closedByEscape(page)).toBe(false);
+  expect((await release()).status()).toBe(200);
+  await expect(page.locator("#archive_in")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "6 months" })).toBeVisible();
+  // Then 3 months, from the list.
+  await page.getByRole("button", { name: "6 months" }).click();
+  const three = await sentTo(page, "PATCH", projectApi, () => page.getByRole("option", { name: "3 months" }).click());
+  expect([three.answer.status(), three.body]).toEqual([200, { archive_in: 3 }]);
   await expect(page.getByRole("button", { name: "3 months" })).toBeVisible();
   // A range nerve refuses: ann, an admin of Web and a member of Acme, opens her custom range, and he makes her a member
   // of Web meanwhile. Her modal stays, says why, and is no longer busy, to try again or to cancel; nothing changes.
@@ -13709,12 +14033,13 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   const anns = await projectMembershipOf(api, admin.access_token, web.id, annId);
   expect((await projectMemberWrites(api, web.id).change(admin.access_token, anns, 15)).status).toBe(200);
   const updateRange = modalDialog(theOtherAdmin.page).getByRole("button", { name: "Update", exact: true });
-  expect((await answerTo(theOtherAdmin.page, "PATCH", projectApi, () => updateRange.click())).status()).toBe(403);
-  await expect(
-    theOtherAdmin.page
-      .getByRole("region", { name: "Notifications" })
-      .getByText("Your role does not allow this.", { exact: true })
-  ).toBeVisible();
+  const refused = await sentTo(theOtherAdmin.page, "PATCH", projectApi, () => updateRange.click());
+  expect([refused.answer.status(), refused.body]).toEqual([403, { archive_in: 9 }]);
+  const reason = theOtherAdmin.page
+    .getByRole("region", { name: "Notifications" })
+    .getByText("Your role does not allow this.", { exact: true });
+  await expect(reason).toBeVisible();
+  expect(await announced(reason)).toBe(true);
   expect(await closedWithin(theOtherAdmin.page)).toBe(false);
   await expect(updateRange).toBeEnabled();
   const cancelRange = modalDialog(theOtherAdmin.page).getByRole("button", { name: "Cancel" });
@@ -13732,6 +14057,110 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
     errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
   });
   await theOtherAdmin.close();
+
+  expect(await projectSettingsOf(db, web.id)).toMatchObject({
+    cycle_view: true,
+    module_view: true,
+    issue_views_view: true,
+    intake_view: true,
+    archive_in: 3,
+    by: adminEmail,
+  });
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  // a load of each feature's page, and of the automations page
+  await expectQuietConsole(page, watch, { warnings: Array.from({ length: 5 }, () => EMOJI_CHECK_WARNING) });
+});
+
+test("P3 (page): the project's admin makes a member its lead and its default assignee, each picked from its members who are not its guests, and lets its guests see every work item", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = await registerOnboarded(api, adminEmail);
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  // ann is Web's member, gus its guest; otto is a member of acme, not of Web.
+  const [ann, gus, otto] = await Promise.all(["ann", "gus", "otto"].map((label) => newAccount(api, testInfo, label)));
+  if (!ann || !gus || !otto) throw new Error("the accounts were not registered");
+  await inviteAndAccept(api, admin.access_token, slug, ann, 15);
+  await inviteAndAccept(api, admin.access_token, slug, gus, 5);
+  await inviteAndAccept(api, admin.access_token, slug, otto, 15);
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await addProjectMembers(api, admin.access_token, web.id, [
+    { member_id: ann.id, role: 15 },
+    { member_id: gus.id, role: 5 },
+  ]);
+
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  await page.goto(`/${slug}/settings/projects/${web.id}/members`);
+  /** Picks ann in the member select under title: the select offers the admin and ann, and none; the page sends field. */
+  const pickAnn = async (title: string) => {
+    await page.getByRole("heading", { name: title }).locator("xpath=following::button[1]").click();
+    await expect(page.getByRole("option")).toHaveCount(3);
+    await expect(page.getByRole("option", { name: shownNameOf(adminEmail) })).toBeVisible();
+    await expect(page.getByRole("option", { name: "None" })).toBeVisible();
+    const picked = await sentTo(page, "PATCH", `/api/v0/projects/${web.id}`, () =>
+      page.getByRole("option", { name: shownNameOf(ann.email) }).click()
+    );
+    await expect(page.getByRole("heading", { name: title }).locator("xpath=following::button[1]")).toHaveText(
+      new RegExp(shownNameOf(ann.email))
+    );
+    return [picked.answer.status(), picked.body];
+  };
+  expect(await pickAnn("Project Lead")).toEqual([200, { project_lead_id: ann.id }]);
+  expect(await pickAnn("Default Assignee")).toEqual([200, { default_assignee_id: ann.id }]);
+  const guests = await sentTo(page, "PATCH", `/api/v0/projects/${web.id}`, () =>
+    page.getByRole("switch", { name: "Guest access" }).click()
+  );
+  expect([guests.answer.status(), guests.body]).toEqual([200, { guest_view_all_features: true }]);
+  await expect(page.getByRole("switch", { name: "Guest access" })).toBeChecked();
+
+  expect(await projectSettingsOf(db, web.id)).toMatchObject({
+    lead: ann.email,
+    default_assignee: ann.email,
+    guest_view_all_features: true,
+    by: adminEmail,
+  });
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+});
+
+test("P3 (page): another project's general page, reached without leaving the route, shows that project's values; a dialog opened on one ends as a Back takes the route to the other", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const admin = await registerOnboarded(api, emailFor(testInfo, "admin"));
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.access_token, { name: "Acme", slug });
+  const ops = await createProject(api, admin.access_token, slug, { name: "Ops", identifier: "OPS" });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+  // the router's own move, as a switcher on the settings pages would make it: no link of the app does it yet
+  await page.goto(`/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#name")).toHaveValue("Web");
+  await moveWithinApp(page, `/${slug}/settings/projects/${ops.id}`);
+  await expect(page.locator("#name")).toHaveValue("Ops");
+  // Web's read is in the session's cache: the wrapper, mounted afresh for Web (the layout's content is keyed by the
+  // project), shows its page at once
+  await moveWithinApp(page, `/${slug}/settings/projects/${web.id}`);
+  await expect(page.locator("#identifier")).toHaveValue("WEB");
+  // Web's archiving, asked, ends as a Back takes the route to Ops's general page, under the same layout: the dialog
+  // does not stay to archive Ops (v0 design 7.7).
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(modalDialog(page)).toHaveCount(1);
+  await page.goBack();
+  await expect(page).toHaveURL(`/${slug}/settings/projects/${ops.id}`);
+  expect(await closedWithin(page)).toBe(true);
+  await expect(page.locator("#name")).toHaveValue("Ops");
+
+  expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], [], []]);
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
+});
+````
+
 ````
 
 `e2e/stories/smoke/s7-chinese.spec.ts`（修改，5 处）：
@@ -13957,7 +14386,7 @@ Expected: 118 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p3-project-settings.spec.ts e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx' 'web/apps/web/app/(all)/create-workspace/layout.tsx' 'web/apps/web/app/(all)/create-workspace/page.tsx' 'web/apps/web/app/(all)/onboarding/layout.tsx' 'web/apps/web/app/(all)/onboarding/page.tsx' web/apps/web/app/provider.tsx web/apps/web/core/components/automation/auto-archive-automation.tsx web/apps/web/core/components/automation/select-month-modal.test.tsx web/apps/web/core/components/automation/select-month-modal.tsx web/apps/web/core/components/project/form-loader.tsx web/apps/web/core/components/project/member-list.tsx web/apps/web/core/components/project/settings/features-list.tsx web/apps/web/core/components/project/settings/helper.tsx web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx web/apps/web/core/components/settings/project/content/feature-control-item.tsx web/apps/web/core/lib/fake-controls.ts web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/propel/src/toast/toast.tsx
+git add e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p3-project-settings.spec.ts e2e/stories/project/p3-project-settings-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx' 'web/apps/web/app/(all)/create-workspace/layout.tsx' 'web/apps/web/app/(all)/create-workspace/page.tsx' 'web/apps/web/app/(all)/onboarding/layout.tsx' 'web/apps/web/app/(all)/onboarding/page.tsx' web/apps/web/app/provider.tsx web/apps/web/core/components/automation/auto-archive-automation.tsx web/apps/web/core/components/automation/select-month-modal.test.tsx web/apps/web/core/components/automation/select-month-modal.tsx web/apps/web/core/components/project/form-loader.tsx web/apps/web/core/components/project/member-list.tsx web/apps/web/core/components/project/settings/features-list.tsx web/apps/web/core/components/project/settings/helper.tsx web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx web/apps/web/core/components/settings/project/content/feature-control-item.tsx web/apps/web/core/lib/fake-controls.ts web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/propel/src/toast/toast.tsx
 ```
 ```bash
 git commit -m "feat(M3/closeout): the project settings' titles, the feature switches, the auto-archiving and the toasts' region speak the user's language
@@ -13988,6 +14417,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T13.11` | 提示区域的名字又是 Base UI 的英文（E3） | 故事 S7 | 端到端 |
 | `T13.12` | 自定义时间范围被拒绝时关上：页面在失败时也调用 `done`（A-M2；预审的修复） | 故事 P3 | 端到端 |
 | `T13.13` | 没有项目时的设置页又向工作区的访客提供建项目（nerve 不让访客建项目；预审的修复） | 故事 P1 | 端到端 |
+| `T13.14` | 自定义时间范围的月数不再必填：空着也发出，范围里没有月数（`required: true`；修复轮 1） | 故事 S7 | 端到端 |
+| `T13.15` | 没有项目时的设置页只给工作区的管理员建项目，成员看不到（nerve 让成员建项目；修复轮 1） | 故事 P1 | 端到端 |
 
 ---
 
@@ -14873,10 +15304,10 @@ import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth"
 `e2e/stories/project/p3-project-settings.spec.ts`（修改，5 处）：
 
 ````old e2e/stories/project/p3-project-settings.spec.ts
-import { accountId, bearer, createPAT, emailFor, newAccount, register, shownNameOf } from "../../fixtures/auth";
+import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 ````
 ````new e2e/stories/project/p3-project-settings.spec.ts
-import { accountId, bearer, emailFor, newAccount, registeredPAT, shownNameOf } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 ````
 ````old e2e/stories/project/p3-project-settings.spec.ts
   const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;

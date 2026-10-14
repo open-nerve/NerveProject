@@ -229,7 +229,7 @@ test("P1 (page): a new project's icon picker shows the emoji nerve serves itself
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });
 
-test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar; the guest, in no project, is offered none to create", async ({
+test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar; in no project, the member is offered a project to create, the guest none", async ({
   api,
   baseURL,
   browser,
@@ -254,6 +254,10 @@ test("P1 (page): a member creates a project from the projects page, its identifi
 
   const page = await signedInPage(member);
   const watch = await watchPage(page);
+  // The member, in no project yet, finds the project settings saying so, and offering him a project's creation.
+  await page.goto(`/${slug}/settings/projects`);
+  await expect(page.getByText("No project", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start your first project" })).toBeVisible();
   await page.goto(`/${slug}/projects`);
   await page.getByRole("button", { name: "Add Project", exact: true }).click();
   await transitionsEnded(page.getByRole("dialog"));
@@ -324,7 +328,7 @@ test("P1 (page): a member creates a project from the projects page, its identifi
     { email: adminEmail, sort_order: 55535 },
   ]);
 
-  // the two refusals, the browser's reports of them
+  // the two refusals, the browser's reports of them; a load of the project settings, and of the projects page
   expect([watch.cspViolations, watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
     [],
     [`422 POST /api/v0/workspaces/${slug}/projects`, `409 POST /api/v0/workspaces/${slug}/projects`],
@@ -332,7 +336,7 @@ test("P1 (page): a member creates a project from the projects page, its identifi
     [],
   ]);
   await expectQuietConsole(page, watch, {
-    warnings: [EMOJI_CHECK_WARNING],
+    warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: [
       "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
       "Failed to load resource: the server responded with a status of 409 (Conflict)",
