@@ -180,7 +180,7 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   );
 });
 
-test("W4 (page): the admin invites a member and a guest, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; an active member's address and a declined invitation's are refused under their rows; the declined one deleted, its address is invited again; a copy the browser refuses says so, the link's and the workspace URL's; a member sees no invitation and asks for none", async ({
+test("W4 (page): the admin invites a member and a guest, Enter on the guest's role opening its list and sending nothing, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; an active member's address and a declined invitation's are refused under their rows; the declined one deleted, its address is invited again; a copy the browser refuses says so, the link's and the workspace URL's; a member sees no invitation and asks for none", async ({
   api,
   baseURL,
   browser,
@@ -232,7 +232,8 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   await expect(page.getByText("Copy link", { exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  // dave as a member, frank as a guest: one request, nerve's WorkspaceInvitationsCreate, each role a number.
+  // dave as a member, frank as a guest, his role picked by the keyboard (sendInvitations): one request, nerve's
+  // WorkspaceInvitationsCreate, each role a number.
   const sent = await sendInvitations(page, slug, [
     { email: dave, role: "Member" },
     { email: frank, role: "Guest" },

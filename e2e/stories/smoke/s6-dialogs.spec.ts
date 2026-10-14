@@ -5,6 +5,8 @@ import {
   closedByComposingEscape,
   closedByEscape,
   closedWithin,
+  composingKey,
+  hiddenWithin,
   modalDialog,
   pageBehindHidden,
 } from "../../fixtures/dialogs";
@@ -16,7 +18,7 @@ import { expect, test } from "../../fixtures/test";
 // Headless UI's Dialog, which makes the page behind it inert and hidden while it is open): the command palette, its
 // list of keyboard shortcuts, and a dialog opened over another, the settings dialog's revoke dialog.
 
-test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs, the palette's search keeping an Escape that ends a composition: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({
+test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs, the palette's search keeping an Escape and a Backspace that end a composition: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -36,6 +38,18 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
   expect(await pageBehindHidden(page)).toBe(true);
   const stops = await tabCycle(page, modalDialog(page));
   expect(stops.filter((stop) => stop.startsWith("outside: "))).toEqual([]);
+  // A page of the palette (the first day of the week): a Backspace in its empty search goes back, but one that ends a
+  // composition there is the method's, and the page stays.
+  const paletteSearch = modalDialog(page).getByRole("combobox");
+  await paletteSearch.fill("Change first day of week");
+  await page.keyboard.press("Enter");
+  const monday = modalDialog(page).getByRole("option", { name: "Monday", exact: true });
+  await expect(monday).toBeVisible();
+  const left = hiddenWithin(monday);
+  await composingKey(paletteSearch, "Backspace");
+  expect(await left).toBe(false);
+  await page.keyboard.press("Backspace");
+  await expect(monday).toHaveCount(0);
   expect(await closedByEscape(page)).toBe(true);
   expect(await pageBehindHidden(page)).toBe(false);
 

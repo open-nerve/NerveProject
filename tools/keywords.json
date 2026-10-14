@@ -2408,6 +2408,50 @@
           ]
         }
       }
+    },
+    {
+      "id": "composing-check",
+      "phase": "M3/closeout",
+      "why": "按键是不是输入法的（组字中，或结束组字的那一个）只有一个判断：@nerve/utils 的 isComposing（web/packages/utils/src/keyboard.ts），isComposing 或 keyCode 229。Chromium、Firefox 在组字中的按键上 isComposing 为真；Safari 先结束组字，再交出 keyCode 229 的那个按键，只查 isComposing 的守卫拦不住它（M3 收尾 spec 2.11，K10）。别处再读 .isComposing（也包括解构出它）或拿 keyCode 与 229 比较，就是又一份判断，漏掉一种顺序就是又一个只在 Safari 出现的缺陷；@nerve/ui、@nerve/propel 和 web 的守卫都经它，之后每个 M 的新守卫也一样。仓库中的 JS、TS 文件都算，测试和 e2e 的也算：它们造事件时写的 isComposing、keyCode 是属性，不是读，不命中",
+      "files": {
+        "source": "^(?!web/packages/utils/src/keyboard\\.ts$).*\\.(?:[cm]?js|jsx|tsx?)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\.isComposing\\b|\\{[^{};=]*\\bisComposing\\b[^{};=]*\\}\\s*=[^=>]|\\bkeyCode\\s*[!=]==?\\s*229\\b|\\b229\\s*[!=]==?\\s*(?:[\\w$]+\\.)*keyCode\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "            if (e.nativeEvent.isComposing) return;",
+          "      if (event.key === \"Enter\" && !event.nativeEvent.isComposing) {",
+          "  if (event.isComposing || event.keyCode === 229) return;",
+          "    if (e.keyCode == 229) return;",
+          "    if (229 === event.nativeEvent.keyCode) return;",
+          "  const { isComposing } = event.nativeEvent;"
+        ],
+        "miss": [
+          "      if (isComposing(e.nativeEvent)) return;",
+          "import { cn, isComposing } from \"@nerve/utils\";",
+          "    { browser: \"Safari's, after the composition's end\", event: { isComposing: false, keyCode: 229 } },",
+          "    element.dispatchEvent(new KeyboardEvent(\"keydown\", { ...init, key: \"Escape\", keyCode: 229 }));",
+          "      isComposing({ isComposing: false, keyCode: 27 }),",
+          "export function isComposing(event: Pick<KeyboardEvent, \"isComposing\" | \"keyCode\">): boolean {"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/ui/src/modals/modal-core.tsx",
+            "web/apps/web/core/hooks/use-keypress.tsx",
+            "web/packages/utils/src/keyboard.test.ts",
+            "e2e/fixtures/dialogs.ts"
+          ],
+          "miss": [
+            "web/packages/utils/src/keyboard.ts",
+            "tools/keywords.json",
+            "web/packages/i18n/src/locales/en/common.json"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [

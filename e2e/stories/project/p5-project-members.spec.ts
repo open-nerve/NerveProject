@@ -12,7 +12,7 @@ import {
 import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
+import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden, sentWithin } from "../../fixtures/dialogs";
 import { chooseByKeyboard } from "../../fixtures/menus";
 import { answerTo, holdAnswer, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { endProjectMembership, leavingOf, removalOf } from "../../fixtures/project-pages";
@@ -261,12 +261,11 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   await page.getByRole("option", { name: shownNameOf(gus.email) }).click();
   // the role select by the keyboard: Enter opens its list, and sends no form
   await page.getByRole("button", { name: "Guest", exact: true }).focus();
-  await page.keyboard.press("Enter");
+  const adds = `/api/v0/projects/${web.id}/members`;
+  expect(await sentWithin(page, "POST", adds, () => page.keyboard.press("Enter"))).toBe(false);
   await expect(page.getByRole("option")).toHaveText(["Guest"]);
   await page.getByRole("option", { name: "Guest" }).click();
-  const adding = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/members`, () =>
-    page.getByRole("button", { name: "Add members" }).click()
-  );
+  const adding = await sentHeld(page, "POST", adds, () => page.getByRole("button", { name: "Add members" }).click());
   expect(adding.body).toEqual({
     members: [
       { member_id: ann.id, role: 15 },

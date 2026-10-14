@@ -4,6 +4,7 @@ import type { WorkspaceInvitation } from "./api";
 import { password, signInContext, type AuthTokens } from "./auth";
 import { submitSignIn } from "./auth-pages";
 import { watchPage, type PageWatch } from "./browser";
+import { sentWithin } from "./dialogs";
 import { answerTo, expectListBesideButton, sentTo } from "./settings-pages";
 
 // The workspace's pages (M3 design 7.5), as a person uses them.
@@ -170,13 +171,15 @@ export function invitationFormRow(page: Page, index: number): Locator {
 /**
  * Sends invitations from the members page, which page shows to an admin of the workspace of slug: opens the form, types
  * each address in a row of its own and picks its role by its label, and sends them. Resolves with what the page sent,
- * and nerve's answer.
+ * and nerve's answer. A role other than Member is picked by the keyboard: Enter on its select (CustomSelect's own
+ * button) opens its list, and sends no form.
  */
 export async function sendInvitations(
   page: Page,
   slug: string,
   rows: { email: string; role: string }[]
 ): Promise<{ body: unknown; answer: Response }> {
+  const path = `/api/v0/workspaces/${slug}/invitations`;
   await page.getByRole("button", { name: "Add member" }).click();
   const form = page.getByRole("dialog");
   // the rows one after another: the form adds a row once the one before it is typed
@@ -186,13 +189,13 @@ export async function sendInvitations(
     await form.locator(`[id="invitations.${index}.email"]`).fill(email);
     // a row holds Member as it is added; its role's select is its first button (its removal's comes after it)
     if (role !== "Member") {
-      await invitationFormRow(page, index).getByRole("button").first().click();
+      await invitationFormRow(page, index).getByRole("button").first().focus();
+      expect(await sentWithin(page, "POST", path, () => page.keyboard.press("Enter")), "sent by the Enter").toBe(false);
+      await expect(page.getByRole("option", { name: role, exact: true })).toBeVisible();
       await page.getByRole("option", { name: role, exact: true }).click();
     }
   }, Promise.resolve());
-  return sentTo(page, "POST", `/api/v0/workspaces/${slug}/invitations`, () =>
-    form.getByRole("button", { name: "Send invitations" }).click()
-  );
+  return sentTo(page, "POST", path, () => form.getByRole("button", { name: "Send invitations" }).click());
 }
 
 /**

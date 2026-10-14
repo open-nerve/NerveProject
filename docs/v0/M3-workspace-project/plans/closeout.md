@@ -22,7 +22,7 @@
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
 - **规则**（总体设计 7.7；P8a–P11 的裁定）：会话的每个取数经 `useSessionSWR`；修改经 store 的方法，之后的跳转、提示、界面变化经 `followInSession` 只在发出它的会话里（Task 3 的离开：hook 的 vitest 的"换账户之后"一行）。弹窗：请求在路上时关不掉（F-1）、被拒绝时留着、只在成功的跟进中关上（A-M2）、组字的 Escape 不关、打开时后面的页面 `inert` 和 `aria-hidden`、Tab 不出去、关上之后焦点回到打开它的控件（spec 2.5）；每一条由一个会失败的端到端检查看住（各 Task 的变异表）。每个控件 Tab 能到、有名字、键盘取得焦点时看得见，不加正的 `tabIndex`。页面读地址只经路由参数（`project-address-route`、`workspace-address-route`）。文案：页面上的文字经 `t()`，en 与 zh-CN 同时加，一句话带名字时一个键加占位（`Translated`）；不再读的键在两种语言中都删除。类型只来自生成的客户端：没有新的 `as`、`any`、`!`（spec 附录 A.5）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.5）；只为使用方改到的 Plane 文件不变长，记录在案的例外一个：`IconButton` 的名字和 `EmojiPicker` 的 `ariaLabel` 在根上必传，27 个使用方的文件只加名字（`aria-label`、`addReactionLabel`、`ariaLabel`、`useTranslation` 的导入和 `t` 一行，以及 oxfmt 的重排），其中 24 个变长（控制者已裁定，spec 第 3 节第 1 条、附录 A.5）。
 - **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告。收尾改到、仍有警告的 6 个文件照控制者的裁定交出（spec 第 3 节第 2 条）：只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个给 M4、M6、M7，只为 `CustomMenu` 改到的收藏的文件夹（Task 8 的修复轮 1，2 条 `no-shadow`）给 M7，只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx` 给 M8（Task 15 写进各自的交接）。上限：web 303 → 301（Task 2）→ 298（Task 8）→ 296（Task 11）→ 293（Task 12）；`@nerve/ui` 15 → 14（Task 1）→ 12（Task 8）；`@nerve/propel` 11 → 10（Task 7）；utils 7、constants 1 不变。抑制多两条（Task 2 的快捷键搜索框和 Task 12 的筛选，`autoFocus` 写明理由，spec 第 3 节第 2、20 条），删去两条：181 条照旧。
-- **关键词守卫**：69 条规则、3 个例外；Task 9 起 70 条（`copy-hook`）、23 个例外；Task 11 起 71 条（`workspace-address-route`）。规则的 `phase` 写 `M3/closeout`，例外的 `until` 写 `M4/closeout` 等（spec 第 3 节第 5 条）：在那个 M 的收尾开始、`phase` 改为它时到期，Task 9 把这一点写进守卫的说明和 M1 设计 7.4，Task 15 写进收到例外的 M 的交接。
+- **关键词守卫**：69 条规则、3 个例外；Task 9 起 70 条（`copy-hook`）、23 个例外；Task 10 起 71 条（`composing-check`）；Task 11 起 72 条（`workspace-address-route`）。规则的 `phase` 写 `M3/closeout`，例外的 `until` 写 `M4/closeout` 等（spec 第 3 节第 5 条）：在那个 M 的收尾开始、`phase` 改为它时到期，Task 9 把这一点写进守卫的说明和 M1 设计 7.4，Task 15 写进收到例外的 M 的交接。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -76,7 +76,7 @@ sys.exit(1 if broken else 0)
 | `README.md` | 工作区菜单加"离开工作区"（Task 3）；数据库的 locale、"或经接口"（Task 16） | 3、16 |
 | `api/modules/project.yaml` | 五个字段的说明说 nerve 对它们做什么（K24；`make gen`） | 14 |
 | `docs/v0/M1-frontend-trim/M1-design.md` | 7.4 写上 `until` 为 `M<n>/closeout` 的例外何时到期 | 9 |
-| `docs/v0/M3-workspace-project/M3-design.md` | 7.10 的规则表补上 P9、P10 和收尾的规则（Task 9、11）；13.2 的接收者链接交接（Task 15）；5.1 写裁定 B1（Task 16） | 9、11、15、16 |
+| `docs/v0/M3-workspace-project/M3-design.md` | 7.10 的规则表补上 P9、P10 和收尾的规则（Task 9、10、11）；13.2 的接收者链接交接（Task 15）；5.1 写裁定 B1（Task 16） | 9、10、11、15、16 |
 | `docs/v0/M3-workspace-project/handoffs/M0-P3-pagination-components.md`、`docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`、`docs/v0/M3-workspace-project/handoffs/M1-P3-trim-platform.md`、`docs/v0/M3-workspace-project/handoffs/M1-P4-router-native.md`、`docs/v0/M3-workspace-project/handoffs/M1-closeout.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md` | M3 收到的交接：处理结果，`status: closed` | 15 |
 | `docs/v0/M4-issue-core/handoffs/M1-closeout.md`、`docs/v0/M5-files/handoffs/M1-closeout.md`、`docs/v0/M6-cycles-modules/handoffs/M1-closeout.md`、`docs/v0/M7-collaboration/handoffs/M1-closeout.md`、`docs/v0/M8-open-release/handoffs/M1-closeout.md` | `always-return` 已由 M3/P11 全仓清零 | 15 |
 | `docs/v0/M4-issue-core/handoffs/M2-closeout.md`、`docs/v0/M6-cycles-modules/handoffs/M2-closeout.md`、`docs/v0/M7-collaboration/handoffs/M2-closeout.md` | 复制一节的关闭条件经 `useCopyLink`、`useCopyText` | 15 |
@@ -87,7 +87,7 @@ sys.exit(1 if broken else 0)
 | `e2e/fixtures/assert/session.ts` | 会话的断言和 `sessionsOf`（新文件，从 `identity.ts` 拆出） | 14 新 |
 | `e2e/fixtures/auth.ts` | `registeredPAT(api, email)` | 14 |
 | `e2e/fixtures/browser.ts` | `expectNoAddress` 移来 | 14 |
-| `e2e/fixtures/dialogs.ts` | `modalDialog`、`pageBehindHidden`（Task 1）；`announced`（Task 2）；`composingEscape` 发两种顺序（Task 10） | 1、2、10 |
+| `e2e/fixtures/dialogs.ts` | `modalDialog`、`pageBehindHidden`（Task 1）；`announced`（Task 2）；`composingKey`（Escape、Backspace）发两种顺序，`composingEscape` 经它（Task 10） | 1、2、10 |
 | `e2e/fixtures/menus.ts` | `chooseByKeyboard`：以键盘打开一行的菜单、选一项（新文件） | 8 新 |
 | `e2e/fixtures/mounts.ts` | `WORKSPACE_MENU`：工作区菜单打开时不发请求（W2 的常驻检查） | 3 |
 | `e2e/fixtures/project-pages.ts` | `labelRow` 移来（Task 6）；成员一行的菜单按它的名字，`pageContent`：侧边栏之外的页面内容（Task 8） | 6、8 |
@@ -99,16 +99,16 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
-| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
+| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter 打开列表，一秒之内不发请求（Task 10） | 2、5、8、10 |
 | `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓，一行的按钮和组的添加以它们的东西为名，整页的计数以名字的开头为锚（Task 8） | 1、2、6、8 |
 | `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6）；一行的菜单和删除以标签为名，以键盘选"Edit label"，整页的计数以名字的开头、结尾为锚（Task 8） | 1、2、6、8 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 每个角色打开工作区菜单，不发请求（`WORKSPACE_MENU`） | 3 |
-| `e2e/stories/smoke/s6-dialogs.spec.ts` | S6：命令面板、快捷键（以标题为名）、嵌套的弹窗是模态的（新文件，Task 2）；命令面板的复制（Task 9）；组字的 Escape（Task 10） | 2 新、9、10 |
+| `e2e/stories/smoke/s6-dialogs.spec.ts` | S6：命令面板、快捷键（以标题为名）、嵌套的弹窗是模态的（新文件，Task 2）；命令面板的复制（Task 9）；组字的 Escape，面板的一页上组字的 Backspace（Task 10） | 2 新、9、10 |
 | `e2e/stories/smoke/s7-chinese.spec.ts` | S7：中文的页面和弹窗（新文件，逐 Task 加） | 4 新、5、6、7、8、12、13 |
 | `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘，项目的一行（一个停留点，说出是否展开）和它的菜单以项目为名，以键盘选菜单的一项，开关按下之后焦点交给代替它的开关，工作区菜单的展开箭头不被读出、不是停留点（新文件） | 8 新 |
-| `e2e/fixtures/workspace-pages.ts` | `askToEndMembership`：打开一行的菜单、选移出或离开，到确认框为止（`endMembership` 经它）（Task 3）；成员和邀请一行的菜单按它的名字，菜单项是 `menuitem`（Task 8） | 3、8 |
+| `e2e/fixtures/workspace-pages.ts` | `askToEndMembership`：打开一行的菜单、选移出或离开，到确认框为止（`endMembership` 经它）（Task 3）；成员和邀请一行的菜单按它的名字，菜单项是 `menuitem`（Task 8）；`sendInvitations` 以键盘选角色，Enter 一秒之内不发邀请（Task 10） | 3、8、10 |
 | `e2e/stories/workspace/w11-guest-bounds.spec.ts` | 访客从菜单离开（双击只发一次，请求在路上时确认框关不掉）、唯一的管理员被拒绝（Task 3）；`registeredPAT`、导入（Task 14） | 3、14 |
-| `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；邀请一行的菜单以地址为名（Task 8）；`registeredPAT`（Task 14） | 3、8、14 |
+| `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；邀请一行的菜单以地址为名（Task 8）；角色以键盘选择（Task 10）；`registeredPAT`（Task 14） | 3、8、10、14 |
 | `e2e/stories/workspace/w5-invitation-link.spec.ts` | 邀请被拒绝之后的页面的说法（Task 4）；`registeredPAT`、会话断言的导入（Task 14） | 4、14 |
 | `e2e/stories/workspace/w7-member-management.spec.ts` | 条件挂载的确认框隐藏后面的页面（Task 1）；被拒绝时确认框留着（Task 3）；成员一行的菜单以成员为名、Tab 到达时显示，以键盘选择，取消、Escape 之后焦点回到菜单的按钮，表格的排序菜单由 Tab 到达、以键盘选择（Task 8）；`registeredPAT`（Task 14） | 1、3、8、14 |
 | `e2e/stories/workspace/w8-navigation-preferences.spec.ts` | 弹窗关上之后再读侧边栏（Task 1）；`registeredPAT`（Task 14） | 1、14 |
@@ -117,7 +117,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/project/adapter/http/projects_test.go`、`server/internal/modules/project/adapter/http/update_test.go` | `identifierTakenJSON`、`nameTakenJSON` | 14 |
 | `server/internal/platform/jobs/jobs_test.go` | 期限代替余量，定期的运行按 `ScheduledAt` 排序 | 14 |
 | `tools/i18n-keys.mjs` | 页面读的每个键在 en 中都有定义：完整的键、字面量和模板的前缀，问题码不算，先以样本自检（新文件，spec 2.10） | 9 新 |
-| `tools/keywords.json` | 关键词规则 `copy-hook`（20 个有期限的例外）、`refusal-toast`、`sign-out-toast` 的写法（Task 9）；`workspace-address-route`（Task 11） | 9、11 |
+| `tools/keywords.json` | 关键词规则 `copy-hook`（20 个有期限的例外）、`refusal-toast`、`sign-out-toast` 的写法（Task 9）；`composing-check`（Task 10）；`workspace-address-route`（Task 11） | 9、10、11 |
 | `tools/keywords.mjs` | 说明写上 `until` 为 `M<n>/closeout` 的例外何时到期 | 9 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx` | 工作区经 `useRouteWorkspace()` 或写明 slug（Task 11）；侧边栏的标题经 `t()`（Task 12） | 11、12 |
 | `web/apps/web/app/(all)/[workspaceSlug]/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx` | 工作区的内容以路由的 slug 为 key，项目的页面和设置以路由的项目为 key：换工作区、换项目时开着的确认框和组件的状态不带过去（Task 3） | 3 |
@@ -10215,15 +10215,28 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/packages/utils/src/keyboard.test.ts`、`web/packages/utils/src/keyboard.ts`
-- Modify: `e2e/fixtures/dialogs.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s6-dialogs.spec.ts`、`pnpm-lock.yaml`、`web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/components/power-k/ui/modal/wrapper.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/package.json`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx`、`web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/custom-select.tsx`、`web/packages/ui/src/modals/modal-core.tsx`、`web/packages/utils/src/index.ts`
+- Modify: `docs/v0/M3-workspace-project/M3-design.md`、`e2e/fixtures/dialogs.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s6-dialogs.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`pnpm-lock.yaml`、`tools/keywords.json`、`web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/components/power-k/ui/modal/wrapper.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/package.json`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx`、`web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/custom-select.tsx`、`web/packages/ui/src/modals/modal-core.tsx`、`web/packages/utils/src/index.ts`
 
 **Interfaces:**（spec 2.11）
 - `@nerve/utils` 的 `keyboard.ts`（新文件）：`isComposing(event)`：`event.isComposing` 或 `event.keyCode === 229`；`@nerve/ui` 的 `ModalCore`、`CustomSearchSelect`，`@nerve/propel` 的表情选择器，web 的 `use-keypress`、`use-dropdown-key-down`、标签的选择、`issues/select/base.tsx`、命令面板都经它；命令面板的 `handleKeyDown` 开头加同一个守卫。`@nerve/propel` 的 `package.json` 依赖 `@nerve/utils`。
 - `CustomSelect`：模块级的 `openOnEnter`：Enter 上先 `preventDefault`，再 `currentTarget.click()`；两种按钮都用它。
+- 关键词规则 `composing-check`（预审的裁定）：仓库中的 JS、TS 文件（`keyboard.ts` 之外）不读 `.isComposing`、不解构出它，不拿 `keyCode` 与 229 比较，组字的判断只有 `isComposing` 一个；M3 设计 7.10 的规则表加上它。守卫 70 → 71 条规则（Task 11 的 `workspace-address-route` 之后 72 条）。
 
-**Tests:** `keyboard.test.ts`（新文件）。`dialogs.ts` 的 `composingEscape` 两种顺序都发（Chromium、Firefox 的 `isComposing`；Safari 的 `compositionend` 之后 `keyCode` 229 的 keydown）；S6：命令面板的空搜索框中结束组字的 Escape 不关面板；P5：角色的选择上按 Enter 打开列表。
+**Tests:** `keyboard.test.ts`（新文件）。`dialogs.ts` 的 `composingKey(field, key)` 两种顺序都发（Chromium、Firefox 的 `isComposing`；Safari 的 `compositionend` 之后 `keyCode` 229 的 keydown），`composingEscape` 是它的 Escape；S6：命令面板的空搜索框中结束组字的 Escape 不关面板，面板的一页（一周的第一天）的空搜索框中结束组字的 Backspace 不回到上一页（平常的 Backspace 回去）；P5：角色的选择（调用方给的按钮）上按 Enter 打开列表，一秒之内不发请求（`sentWithin`）；W4：`sendInvitations` 以键盘选角色（`CustomSelect` 自己的按钮），Enter 打开列表、一秒之内不发邀请；关键词守卫看住 `composing-check`。
 
 - [ ] **Step 1: 判断和守卫**
+
+`docs/v0/M3-workspace-project/M3-design.md`（修改，1 处）：
+
+````old docs/v0/M3-workspace-project/M3-design.md
+| `copy-hook`（收尾） | 在 `useCopyLink`、`useCopyText` 之外复制到剪贴板（`copyTextToClipboard`、`copyUrlToClipboard`、`navigator.clipboard`）；M4、M6、M7、M8 还自己复制的文件各有一条例外，`until` 是各自的 `M<n>/closeout`，到那个 M 的收尾开始、`phase` 改为它时到期 |
+
+````
+````new docs/v0/M3-workspace-project/M3-design.md
+| `copy-hook`（收尾） | 在 `useCopyLink`、`useCopyText` 之外复制到剪贴板（`copyTextToClipboard`、`copyUrlToClipboard`、`navigator.clipboard`）；M4、M6、M7、M8 还自己复制的文件各有一条例外，`until` 是各自的 `M<n>/closeout`，到那个 M 的收尾开始、`phase` 改为它时到期 |
+| `composing-check`（收尾） | 在 `@nerve/utils` 的 `isComposing`（`keyboard.ts`）之外判断按键是不是输入法的：读 `.isComposing`（或解构出它）、拿 `keyCode` 与 229 比较；仓库中的 JS、TS 文件都算 |
+
+````
 
 `pnpm-lock.yaml`（修改，1 处）：
 
@@ -10239,6 +10252,65 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
         specifier: workspace:*
         version: link:../utils
       class-variance-authority:
+````
+
+`tools/keywords.json`（修改，1 处）：
+
+````old tools/keywords.json
+        }
+      }
+    }
+  ],
+````
+````new tools/keywords.json
+        }
+      }
+    },
+    {
+      "id": "composing-check",
+      "phase": "M3/closeout",
+      "why": "按键是不是输入法的（组字中，或结束组字的那一个）只有一个判断：@nerve/utils 的 isComposing（web/packages/utils/src/keyboard.ts），isComposing 或 keyCode 229。Chromium、Firefox 在组字中的按键上 isComposing 为真；Safari 先结束组字，再交出 keyCode 229 的那个按键，只查 isComposing 的守卫拦不住它（M3 收尾 spec 2.11，K10）。别处再读 .isComposing（也包括解构出它）或拿 keyCode 与 229 比较，就是又一份判断，漏掉一种顺序就是又一个只在 Safari 出现的缺陷；@nerve/ui、@nerve/propel 和 web 的守卫都经它，之后每个 M 的新守卫也一样。仓库中的 JS、TS 文件都算，测试和 e2e 的也算：它们造事件时写的 isComposing、keyCode 是属性，不是读，不命中",
+      "files": {
+        "source": "^(?!web/packages/utils/src/keyboard\\.ts$).*\\.(?:[cm]?js|jsx|tsx?)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\.isComposing\\b|\\{[^{};=]*\\bisComposing\\b[^{};=]*\\}\\s*=[^=>]|\\bkeyCode\\s*[!=]==?\\s*229\\b|\\b229\\s*[!=]==?\\s*(?:[\\w$]+\\.)*keyCode\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "            if (e.nativeEvent.isComposing) return;",
+          "      if (event.key === \"Enter\" && !event.nativeEvent.isComposing) {",
+          "  if (event.isComposing || event.keyCode === 229) return;",
+          "    if (e.keyCode == 229) return;",
+          "    if (229 === event.nativeEvent.keyCode) return;",
+          "  const { isComposing } = event.nativeEvent;"
+        ],
+        "miss": [
+          "      if (isComposing(e.nativeEvent)) return;",
+          "import { cn, isComposing } from \"@nerve/utils\";",
+          "    { browser: \"Safari's, after the composition's end\", event: { isComposing: false, keyCode: 229 } },",
+          "    element.dispatchEvent(new KeyboardEvent(\"keydown\", { ...init, key: \"Escape\", keyCode: 229 }));",
+          "      isComposing({ isComposing: false, keyCode: 27 }),",
+          "export function isComposing(event: Pick<KeyboardEvent, \"isComposing\" | \"keyCode\">): boolean {"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/ui/src/modals/modal-core.tsx",
+            "web/apps/web/core/hooks/use-keypress.tsx",
+            "web/packages/utils/src/keyboard.test.ts",
+            "e2e/fixtures/dialogs.ts"
+          ],
+          "miss": [
+            "web/packages/utils/src/keyboard.ts",
+            "tools/keywords.json",
+            "web/packages/i18n/src/locales/en/common.json"
+          ]
+        }
+      }
+    }
+  ],
 ````
 
 `web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`（修改，2 处）：
@@ -10496,32 +10568,97 @@ Expected: 通过；`@nerve/propel` 链接到 `@nerve/utils`，锁文件不变。
 
 - [ ] **Step 3: 测试**
 
-`e2e/fixtures/dialogs.ts`（修改，2 处）：
+`e2e/fixtures/dialogs.ts`（修改，1 处）：
 
 ````old e2e/fixtures/dialogs.ts
  * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
  * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
  * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
-````
-````new e2e/fixtures/dialogs.ts
- * Dispatches on field, at once, what the browsers give the page when an Escape ends an input method's composition
- * (Chinese, say), in both their orders: Chromium's and Firefox's, the Escape's keydown while composing (isComposing),
- * between the composition's start and end; then Safari's, the keydown after the composition's end, isComposing false
- * and keyCode 229. A dropdown that follows the composition by its events (Base UI's popover) sees each, as a page does
- * with a real input method.
-````
-````old e2e/fixtures/dialogs.ts
+ */
+export async function composingEscape(field: Locator): Promise<void> {
+  await field.evaluate((element) => {
+    const init = { bubbles: true, cancelable: true, composed: true };
+    element.dispatchEvent(new CompositionEvent("compositionstart", init));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", isComposing: true }));
     element.dispatchEvent(new CompositionEvent("compositionend", init));
+  });
 ````
 ````new e2e/fixtures/dialogs.ts
+ * Dispatches on field, at once, what the browsers give the page when a key (an Escape, a Backspace) ends an input
+ * method's composition (Chinese, say), in both their orders: Chromium's and Firefox's, the key's keydown while
+ * composing (isComposing), between the composition's start and end; then Safari's, the keydown after the
+ * composition's end, isComposing false and keyCode 229. A dropdown that follows the composition by its events (Base
+ * UI's popover) sees each, as a page does with a real input method.
+ */
+export async function composingKey(field: Locator, key: string): Promise<void> {
+  await field.evaluate((element, pressed) => {
+    const init = { bubbles: true, cancelable: true, composed: true };
+    element.dispatchEvent(new CompositionEvent("compositionstart", init));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: pressed, isComposing: true }));
     element.dispatchEvent(new CompositionEvent("compositionend", init));
     element.dispatchEvent(new CompositionEvent("compositionstart", init));
     element.dispatchEvent(new CompositionEvent("compositionend", init));
-    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", keyCode: 229 }));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: pressed, keyCode: 229 }));
+  }, key);
+}
+
+/** An Escape that ends a composition on field (composingKey). */
+export async function composingEscape(field: Locator): Promise<void> {
+  await composingKey(field, "Escape");
 ````
 
-`e2e/stories/project/p5-project-members.spec.ts`（修改，2 处）：
+`e2e/fixtures/workspace-pages.ts`（修改，5 处）：
 
+````old e2e/fixtures/workspace-pages.ts
+import { watchPage, type PageWatch } from "./browser";
+import { answerTo, expectListBesideButton, sentTo } from "./settings-pages";
+````
+````new e2e/fixtures/workspace-pages.ts
+import { watchPage, type PageWatch } from "./browser";
+import { sentWithin } from "./dialogs";
+import { answerTo, expectListBesideButton, sentTo } from "./settings-pages";
+````
+````old e2e/fixtures/workspace-pages.ts
+ * and nerve's answer.
+````
+````new e2e/fixtures/workspace-pages.ts
+ * and nerve's answer. A role other than Member is picked by the keyboard: Enter on its select (CustomSelect's own
+ * button) opens its list, and sends no form.
+````
+````old e2e/fixtures/workspace-pages.ts
+): Promise<{ body: unknown; answer: Response }> {
+  await page.getByRole("button", { name: "Add member" }).click();
+````
+````new e2e/fixtures/workspace-pages.ts
+): Promise<{ body: unknown; answer: Response }> {
+  const path = `/api/v0/workspaces/${slug}/invitations`;
+  await page.getByRole("button", { name: "Add member" }).click();
+````
+````old e2e/fixtures/workspace-pages.ts
+      await invitationFormRow(page, index).getByRole("button").first().click();
+````
+````new e2e/fixtures/workspace-pages.ts
+      await invitationFormRow(page, index).getByRole("button").first().focus();
+      expect(await sentWithin(page, "POST", path, () => page.keyboard.press("Enter")), "sent by the Enter").toBe(false);
+      await expect(page.getByRole("option", { name: role, exact: true })).toBeVisible();
+````
+````old e2e/fixtures/workspace-pages.ts
+  return sentTo(page, "POST", `/api/v0/workspaces/${slug}/invitations`, () =>
+    form.getByRole("button", { name: "Send invitations" }).click()
+  );
+````
+````new e2e/fixtures/workspace-pages.ts
+  return sentTo(page, "POST", path, () => form.getByRole("button", { name: "Send invitations" }).click());
+````
+
+`e2e/stories/project/p5-project-members.spec.ts`（修改，4 处）：
+
+````old e2e/stories/project/p5-project-members.spec.ts
+import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden, sentWithin } from "../../fixtures/dialogs";
+````
 ````old e2e/stories/project/p5-project-members.spec.ts
 test("P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, the modal held until nerve answers; he is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
 ````
@@ -10534,10 +10671,19 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
 ````new e2e/stories/project/p5-project-members.spec.ts
   // the role select by the keyboard: Enter opens its list, and sends no form
   await page.getByRole("button", { name: "Guest", exact: true }).focus();
-  await page.keyboard.press("Enter");
+  const adds = `/api/v0/projects/${web.id}/members`;
+  expect(await sentWithin(page, "POST", adds, () => page.keyboard.press("Enter"))).toBe(false);
+````
+````old e2e/stories/project/p5-project-members.spec.ts
+  const adding = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/members`, () =>
+    page.getByRole("button", { name: "Add members" }).click()
+  );
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+  const adding = await sentHeld(page, "POST", adds, () => page.getByRole("button", { name: "Add members" }).click());
 ````
 
-`e2e/stories/smoke/s6-dialogs.spec.ts`（修改，4 处）：
+`e2e/stories/smoke/s6-dialogs.spec.ts`（修改，5 处）：
 
 ````old e2e/stories/smoke/s6-dialogs.spec.ts
 import { closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
@@ -10547,6 +10693,8 @@ import {
   closedByComposingEscape,
   closedByEscape,
   closedWithin,
+  composingKey,
+  hiddenWithin,
   modalDialog,
   pageBehindHidden,
 } from "../../fixtures/dialogs";
@@ -10555,7 +10703,7 @@ import {
 test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({
 ````
 ````new e2e/stories/smoke/s6-dialogs.spec.ts
-test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs, the palette's search keeping an Escape that ends a composition: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({
+test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs, the palette's search keeping an Escape and a Backspace that end a composition: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({
 ````
 ````old e2e/stories/smoke/s6-dialogs.spec.ts
   // The palette: its search has the focus, and Tab goes round what it holds.
@@ -10566,10 +10714,48 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
 ````
 ````old e2e/stories/smoke/s6-dialogs.spec.ts
   await expect(modalDialog(page).getByRole("combobox")).toBeFocused();
+  expect(await pageBehindHidden(page)).toBe(true);
 ````
 ````new e2e/stories/smoke/s6-dialogs.spec.ts
   await expect(modalDialog(page).getByRole("combobox")).toBeFocused();
   expect(await closedByComposingEscape(modalDialog(page).getByRole("combobox"))).toBe(false);
+  expect(await pageBehindHidden(page)).toBe(true);
+````
+````old e2e/stories/smoke/s6-dialogs.spec.ts
+  expect(stops.filter((stop) => stop.startsWith("outside: "))).toEqual([]);
+  expect(await closedByEscape(page)).toBe(true);
+````
+````new e2e/stories/smoke/s6-dialogs.spec.ts
+  expect(stops.filter((stop) => stop.startsWith("outside: "))).toEqual([]);
+  // A page of the palette (the first day of the week): a Backspace in its empty search goes back, but one that ends a
+  // composition there is the method's, and the page stays.
+  const paletteSearch = modalDialog(page).getByRole("combobox");
+  await paletteSearch.fill("Change first day of week");
+  await page.keyboard.press("Enter");
+  const monday = modalDialog(page).getByRole("option", { name: "Monday", exact: true });
+  await expect(monday).toBeVisible();
+  const left = hiddenWithin(monday);
+  await composingKey(paletteSearch, "Backspace");
+  expect(await left).toBe(false);
+  await page.keyboard.press("Backspace");
+  await expect(monday).toHaveCount(0);
+  expect(await closedByEscape(page)).toBe(true);
+````
+
+`e2e/stories/workspace/w4-invite-members.spec.ts`（修改，2 处）：
+
+````old e2e/stories/workspace/w4-invite-members.spec.ts
+test("W4 (page): the admin invites a member and a guest, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; an active member's address and a declined invitation's are refused under their rows; the declined one deleted, its address is invited again; a copy the browser refuses says so, the link's and the workspace URL's; a member sees no invitation and asks for none", async ({
+````
+````new e2e/stories/workspace/w4-invite-members.spec.ts
+test("W4 (page): the admin invites a member and a guest, Enter on the guest's role opening its list and sending nothing, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; an active member's address and a declined invitation's are refused under their rows; the declined one deleted, its address is invited again; a copy the browser refuses says so, the link's and the workspace URL's; a member sees no invitation and asks for none", async ({
+````
+````old e2e/stories/workspace/w4-invite-members.spec.ts
+  // dave as a member, frank as a guest: one request, nerve's WorkspaceInvitationsCreate, each role a number.
+````
+````new e2e/stories/workspace/w4-invite-members.spec.ts
+  // dave as a member, frank as a guest, his role picked by the keyboard (sendInvitations): one request, nerve's
+  // WorkspaceInvitationsCreate, each role a number.
 ````
 
 `web/packages/utils/src/keyboard.test.ts`（新文件，25 行）：
@@ -10605,7 +10791,7 @@ describe("isComposing", () => {
 - [ ] **Step 4: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -10622,17 +10808,19 @@ Expected: 116 个全部通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add e2e/fixtures/dialogs.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts pnpm-lock.yaml web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx web/apps/web/core/components/issues/select/base.tsx web/apps/web/core/components/power-k/ui/modal/wrapper.tsx web/apps/web/core/hooks/use-dropdown-key-down.tsx web/apps/web/core/hooks/use-keypress.tsx web/packages/propel/package.json web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx web/packages/ui/src/dropdowns/custom-search-select.tsx web/packages/ui/src/dropdowns/custom-select.tsx web/packages/ui/src/modals/modal-core.tsx web/packages/utils/src/index.ts web/packages/utils/src/keyboard.test.ts web/packages/utils/src/keyboard.ts
+git add docs/v0/M3-workspace-project/M3-design.md e2e/fixtures/dialogs.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts pnpm-lock.yaml tools/keywords.json web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx web/apps/web/core/components/issues/select/base.tsx web/apps/web/core/components/power-k/ui/modal/wrapper.tsx web/apps/web/core/hooks/use-dropdown-key-down.tsx web/apps/web/core/hooks/use-keypress.tsx web/packages/propel/package.json web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx web/packages/ui/src/dropdowns/custom-search-select.tsx web/packages/ui/src/dropdowns/custom-select.tsx web/packages/ui/src/modals/modal-core.tsx web/packages/utils/src/index.ts web/packages/utils/src/keyboard.test.ts web/packages/utils/src/keyboard.ts
 ```
 ```bash
 git commit -m "feat(M3/closeout): one test for a key that belongs to an input method, and Enter on a select opens its list
 
 isComposing(), in @nerve/utils, takes a keydown with isComposing or keyCode
 229, the order Safari gives once a composition ends; every guard of
-@nerve/ui, @nerve/propel and the web goes through it, and the palette's
-empty search no longer closes on the Escape that ends a composition.
-Enter on a CustomSelect's button opens its list instead of submitting the
-form around it.
+@nerve/ui, @nerve/propel and the web goes through it, and the keyword
+rule composing-check keeps any other from reading isComposing or keyCode
+229; the palette's empty search no longer closes on the Escape that ends a
+composition, nor goes back a page on such a Backspace. Enter on a
+CustomSelect's button, either kind, opens its list instead of submitting
+the form around it, and sends nothing (P5, W4).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -10650,6 +10838,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T10.7` | `useKeypress` 把 Safari 结束组字的 Escape 当成页面的（K10） | 故事 P1 | 端到端 |
 | `T10.8` | `CustomSelect` 上按 Enter 又提交外面的表单（K11） | 故事 P5 | 端到端 |
 | `T10.9` | `CustomSelect` 上按 Enter 什么也不做（K11） | 故事 P5 | 端到端 |
+| `T10.10` | `CustomSelect` 自己的按钮（`label`）上按 Enter 又提交外面的表单（K11，预审的裁定） | 故事 W4 | 端到端 |
+| `T10.11` | web 在 M4 的组件上的 4 处守卫（标签的选择两处、`issues/select/base.tsx`、`use-dropdown-key-down`）又只查 `isComposing`（K10，预审的裁定） | 关键词守卫（`composing-check`） | 静态 |
+| `T10.12` | `openOnEnter` 打开列表却不 `preventDefault`：Headless UI 的 Enter 照旧提交表单（K11，预审的裁定） | 故事 P5、W4 | 端到端 |
+| `T10.13` | 命令面板的守卫只拦 Escape：结束组字的 Backspace 回到上一页（K10，预审的裁定） | 故事 S6 | 端到端 |
 
 ---
 
@@ -11257,7 +11449,7 @@ describe("useRouteWorkspace", () => {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 296 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `72 rules, 23 exceptions, no hits.`；web 的 oxlint 296 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -12399,7 +12591,7 @@ vi.mock("@makeplane/propel/components/tooltip", () => ({
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `72 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -13224,7 +13416,7 @@ type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boole
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `72 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -14585,7 +14777,7 @@ Run: `make test`
 Expected: 通过；42 个包 `ok`，没有 `FAIL`。
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `72 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -15237,7 +15429,7 @@ M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是�
 - [ ] **Step 2: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`。
+Expected: 通过；关键词守卫 `72 rules, 23 exceptions, no hits.`。
 
 Run: `python3 $M3TMP/closeout-plan/doclinks.py . docs/v0/M3-workspace-project/M3-design.md docs/v0/M3-workspace-project/handoffs/M0-P3-pagination-components.md docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md docs/v0/M3-workspace-project/handoffs/M1-P3-trim-platform.md docs/v0/M3-workspace-project/handoffs/M1-P4-router-native.md docs/v0/M3-workspace-project/handoffs/M1-closeout.md docs/v0/M3-workspace-project/handoffs/M2-closeout.md docs/v0/M4-issue-core/handoffs/M1-closeout.md docs/v0/M4-issue-core/handoffs/M2-closeout.md docs/v0/M4-issue-core/handoffs/M3-closeout.md docs/v0/M5-files/handoffs/M1-closeout.md docs/v0/M5-files/handoffs/M3-closeout.md docs/v0/M6-cycles-modules/handoffs/M1-closeout.md docs/v0/M6-cycles-modules/handoffs/M2-closeout.md docs/v0/M6-cycles-modules/handoffs/M3-closeout.md docs/v0/M7-collaboration/handoffs/M1-closeout.md docs/v0/M7-collaboration/handoffs/M2-closeout.md docs/v0/M7-collaboration/handoffs/M3-closeout.md docs/v0/M8-open-release/handoffs/M1-closeout.md docs/v0/M8-open-release/handoffs/M3-closeout.md`
 Expected: 退出码 0；20 个文件每个一行 `0 broken`，最后一行 `broken: 0`。
@@ -15331,7 +15523,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框、命令面板和快捷键列表关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上，窄屏（768 px 以下）上开着的侧边栏收起。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
 | 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10），32 处经 `t()`，收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，交给 M7）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开按钮和工作区菜单的按钮的名字有了文案（原来是没有定义的键），项目列表的"More"按钮以它看得见的文字为名（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行是一个停留点，以项目为名的链接（原来链接里另有一个以项目为名的按钮，两个停留点；更早每一行的按钮都叫"Open project menu"），折叠的模式中它说出项目的页面是否展开，它的菜单也以项目为名（"Web quick actions"，原来每一行都叫"Toggle quick actions menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；工作区菜单的标题旁只在指针经过时显示的展开箭头不再是停留点、不被读出（原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）；项目成员页的筛选同样只是一个按钮；项目和工作区的成员页、邀请、标签页一行的菜单以成员、地址、标签为名（"{name} options"，原来两个成员页和邀请的没有名字，标签页的每一行都叫"Options"），两个成员页的在键盘取得焦点时显示、有焦点的轮廓（工作区成员页的原来是 `outline-none` 的弹层，现在与项目成员页的一样是菜单）；状态一行的编辑、删除、设为默认，标签一行的删除，状态组的添加以它们的东西为名（原来每一行都叫"Edit""Delete""Mark as default""Add"）；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份），侧边栏的开关按下之后焦点交给代替它的开关（原来落在页面的 `body` 上）；`@nerve/ui` 的 `CustomMenu`（应用中 53 处）用键盘打开（Enter、空格、上下箭头）、选择（Enter、空格），Escape 关上，焦点回到菜单的按钮（原来按 Enter 什么也看不见），选中一项总关上菜单（原来没有 `closeOnSelect` 的菜单选了之后还开着） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
-| 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
+| 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`；关键词规则 `composing-check` 看住别处不再自己判断）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板，面板的一页上结束组字的 Backspace 不再回到上一页。`CustomSelect` 的两种按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加，邀请成员的弹窗中在角色上按 Enter 就立即发出邀请） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |
 ````
@@ -15352,7 +15544,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`。
+Expected: 通过；关键词守卫 `72 rules, 23 exceptions, no hits.`。
 
 Run: `python3 $M3TMP/closeout-plan/doclinks.py . README.md docs/v0/M3-workspace-project/M3-design.md docs/v0/frontend-changes.md docs/v0/plane-diff.md`
 Expected: 退出码 0；4 个文件每个一行 `0 broken`，最后一行 `broken: 0`。
