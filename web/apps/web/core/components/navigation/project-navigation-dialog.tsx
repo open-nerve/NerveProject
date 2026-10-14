@@ -10,7 +10,7 @@ import { CloseOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Checkbox } from "@makeplane/propel/components/checkbox";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
 import { countOf } from "@/hooks/navigation-preferences";
@@ -54,7 +54,7 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
         {/* Header */}
         <div className="flex justify-between px-6 pt-4">
           <div>
-            <h2 className="text-18 font-semibold text-primary">{t("projects")}</h2>
+            <ModalTitle className="text-18 font-semibold text-primary">{t("projects")}</ModalTitle>
           </div>
           <button
             onClick={onClose}

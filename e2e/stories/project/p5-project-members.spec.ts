@@ -12,7 +12,14 @@ import {
 import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden, sentWithin } from "../../fixtures/dialogs";
+import {
+  closedByEscape,
+  closedWithin,
+  enabledWithin,
+  modalDialog,
+  pageBehindHidden,
+  sentWithin,
+} from "../../fixtures/dialogs";
 import { chooseByKeyboard } from "../../fixtures/menus";
 import { answerTo, holdAnswer, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { endProjectMembership, leavingOf, removalOf } from "../../fixtures/project-pages";
@@ -286,6 +293,7 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   // He adds ann as a member and gus as a guest, from acme's active members who are not Web's (the admin, ann and gus),
   // gus with a guest's role alone; until nerve has added them the modal can neither be closed nor send them again.
   await page.getByRole("button", { name: "Add member" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Add members");
   // the member select by the keyboard: Tab reaches it, Enter opens its list with the search focused
   const coWorker = page.getByRole("dialog").getByRole("button", { name: "Select co-worker" });
   await expect
@@ -355,6 +363,7 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   // the keyboard chooses its Remove, whose dialog Escape closes, the focus back on the menu
   await chooseByKeyboard(page, maxsMenu, "Remove");
   await expect(page.getByRole("dialog").getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+  await expect(modalDialog(page)).toHaveAccessibleName(`Remove ${shownNameOf(max.email)}?`);
   expect(await closedByEscape(page)).toBe(true);
   await expect(maxsMenu).toBeFocused();
 
@@ -372,6 +381,7 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
 
   // His leaving, as the only admin: nerve refuses it, and the page says why and stays, the dialog open.
   expect((await endProjectMembership(page, pat.email, "Leave", leaving)).status()).toBe(409);
+  await expect(modalDialog(page)).toHaveAccessibleName("Leave project?");
   await expect(page.getByText("The project would be left without an admin")).toBeVisible();
   await expect(page.getByRole("dialog").getByRole("button", { name: "Leave", exact: true })).toBeEnabled();
   await expect(page).toHaveURL(members);
@@ -412,6 +422,7 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   await sidebar.getByText("Web", { exact: true }).hover();
   await sidebar.getByRole("button", { name: "Web quick actions", exact: true }).click();
   await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
+  await expect(modalDialog(theGuest.page)).toHaveAccessibleName("Leave Project");
   await theGuest.page.locator("#projectName").fill("Web");
   // the hint names the words to type, as the modal compares them
   await expect(theGuest.page.locator("#confirmLeave")).toHaveAttribute("placeholder", "Enter “Leave Project”");

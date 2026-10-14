@@ -207,6 +207,7 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await theAdmin.page.keyboard.press("ArrowDown");
   await expect.poll(betaMarked).toBe(true);
   await theAdmin.page.getByRole("menuitem", { name: "Leave workspace" }).click();
+  await expect(modalDialog(theAdmin.page)).toHaveAccessibleName("Leave workspace?");
   const adminLeaving = await answerTo(theAdmin.page, leaving.method, leaving.path, () =>
     modalDialog(theAdmin.page).getByRole("button", { name: "Leave", exact: true }).click()
   );
@@ -257,6 +258,7 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   await page.keyboard.press("Enter");
   const leave = modalDialog(page).getByRole("button", { name: "Leave", exact: true });
   await expect(modalDialog(page).getByRole("heading", { name: "Leave workspace?" })).toBeVisible();
+  await expect(modalDialog(page)).toHaveAccessibleName("Leave workspace?");
   expect(await pageBehindHidden(page)).toBe(true);
   const release = await holdAnswer(page, leaving.method, leaving.path);
   const left = answerTo(page, leaving.method, leaving.path, () => leave.dblclick());

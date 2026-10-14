@@ -10,7 +10,7 @@ import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // ui
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // components
 import { Translated } from "@/components/common/translated";
 // hooks
@@ -62,11 +62,11 @@ export const ConfirmWorkspaceMemberRemove = observer(function ConfirmWorkspaceMe
             <WarningTriangleOutline className="h-6 w-6 text-danger-primary" aria-hidden="true" />
           </div>
           <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-            <h3 className="text-h5-medium leading-6 text-primary">
+            <ModalTitle className="text-h5-medium leading-6 text-primary">
               {currentUser?.id === userDetails.id
                 ? t("workspace_settings.settings.members.leave_title")
                 : t("workspace_settings.settings.members.remove_title", { name: userDetails.display_name })}
-            </h3>
+            </ModalTitle>
             <div className="mt-2">
               {currentUser?.id === userDetails.id ? (
                 <p className="text-body-xs-regular text-secondary">

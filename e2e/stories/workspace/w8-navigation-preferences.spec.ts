@@ -10,7 +10,7 @@ import {
 import { expectPreferences } from "../../fixtures/assert/workspace";
 import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedWithin, pageBehindHidden } from "../../fixtures/dialogs";
+import { closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { answerTo, bodiesSentTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -114,6 +114,7 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   const limited = dialog.getByRole("checkbox", { name: "Show limited projects on sidebar" });
   const count = dialog.getByLabel("Enter number of projects");
   await sidebar.getByRole("button", { name: "Project navigation" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Projects");
   await expect(limited).toBeChecked();
   await expect(count).toHaveValue("10");
 

@@ -13,7 +13,7 @@ import { Button } from "@nerve/propel/button";
 import type { ProjectUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 // ui
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // types
 /** The auto-archiving's range, as ProjectUpdate takes it: a number of months. */
 type TArchiveIn = Pick<ProjectUpdate, "archive_in">;
@@ -58,7 +58,9 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         <div>
-          <h3 className="text-16 leading-6 font-medium text-primary">{t("common.customize_time_range")}</h3>
+          <ModalTitle className="text-16 leading-6 font-medium text-primary">
+            {t("common.customize_time_range")}
+          </ModalTitle>
           <div className="mt-8 flex items-center gap-2">
             <div className="flex w-full flex-col justify-center gap-1">
               <Controller

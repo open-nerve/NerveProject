@@ -273,6 +273,7 @@ test("W4 (page): the admin invites a member and a guest, Enter on the guest's ro
   });
   expect(meanwhile.response.status).toBe(204);
   expect((await removeInvitation(page, frank, removal)).status()).toBe(404);
+  await expect(modalDialog(page)).toHaveAccessibleName(`Remove ${frank}?`);
   const notFound = page.getByText("The invitation does not exist, or its link is not valid.");
   await expect(notFound).toBeVisible();
   expect(await announced(notFound)).toBe(true);

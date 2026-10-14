@@ -13,7 +13,7 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { MemberUser } from "@nerve/api-client";
 // ui
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // components
 import { Translated } from "@/components/common/translated";
 // hooks
@@ -71,11 +71,11 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
             <WarningTriangleOutline className="h-6 w-6 text-danger-primary" aria-hidden="true" />
           </div>
           <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-            <h3 className="text-16 leading-6 font-medium text-primary">
+            <ModalTitle className="text-16 leading-6 font-medium text-primary">
               {isCurrentUser
                 ? t("project_dialogs.remove_member.leave_title")
                 : t("project_dialogs.remove_member.remove_title", { name: data.display_name })}
-            </h3>
+            </ModalTitle>
             <div className="mt-2">
               <p className="text-13 text-secondary">
                 {isCurrentUser ? (

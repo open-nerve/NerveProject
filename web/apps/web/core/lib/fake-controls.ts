@@ -7,7 +7,8 @@
 // button, switch, menu and tooltip), for the tests of those pages: a test file mocks each such module with this one,
 // for instance vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in
 // `shown` the props each control was given. A control renders nothing, but ModalCore its children (its form is the
-// page's), a menu its items, as it shows them once open, and a tooltip its label beside what it is the tooltip of.
+// page's), ModalTitle its heading, a menu its items, as it shows them once open, and a tooltip its label beside what it
+// is the tooltip of.
 
 import type { ReactNode } from "react";
 import { Children, Fragment, createElement, isValidElement } from "react";
@@ -146,6 +147,11 @@ export function Tooltip({ label, children }: { label: ReactNode; children?: Reac
 export function ModalCore(props: { children?: ReactNode }) {
   shown.modals.push(props);
   return props.children;
+}
+
+/** A dialog's title (ModalTitle): its heading. */
+export function ModalTitle({ children }: { children?: ReactNode }) {
+  return createElement("h3", null, children);
 }
 
 export function AlertModalCore(props: Alert) {

@@ -9,7 +9,13 @@ import {
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, named, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
-import { closedByComposingEscape, closedByEscape, composingEscape, hiddenWithin } from "../../fixtures/dialogs";
+import {
+  closedByComposingEscape,
+  closedByEscape,
+  composingEscape,
+  hiddenWithin,
+  modalDialog,
+} from "../../fixtures/dialogs";
 import { pageContent, tabCycle } from "../../fixtures/project-pages";
 import {
   expectListBesideButton,
@@ -261,6 +267,8 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   await page.goto(`/${slug}/projects`);
   await page.getByRole("button", { name: "Add Project", exact: true }).click();
   await transitionsEnded(page.getByRole("dialog"));
+  // its form has no heading: a hidden title names the dialog
+  await expect(modalDialog(page)).toHaveAccessibleName("Create project");
   // The name gives the identifier, as typed; the identifier typed is upper case, of the characters it may have.
   await page.locator("#name").fill("Web-App");
   // An Escape that ends an input method's composition in the name is the input method's: the modal stays open.

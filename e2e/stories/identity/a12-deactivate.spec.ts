@@ -6,7 +6,7 @@ import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { bearer, createPAT, emailFor, login, password, recordOf, register, registeredPAT } from "../../fixtures/auth";
 import { deferred } from "../../fixtures/deferred";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByEscape } from "../../fixtures/dialogs";
+import { closedByEscape, modalDialog } from "../../fixtures/dialogs";
 import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers } from "../../fixtures/users";
@@ -54,6 +54,7 @@ test("A12 (page): the general page deactivates the account once confirmed; the s
 
   // The confirmation says what deactivating does, as nerve does it (decision 3).
   await page.getByRole("button", { name: "Deactivate account" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Deactivate your account");
   await expect(page.getByText("ask an administrator of this server to reactivate it", { exact: false })).toBeVisible();
   const deactivated = await answerTo(page, "POST", "/api/v0/me/deactivate", () =>
     page.getByRole("button", { name: "Confirm" }).click()

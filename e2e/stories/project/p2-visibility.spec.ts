@@ -12,7 +12,7 @@ import {
 import { expectMember } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
+import { closedByEscape, closedWithin, enabledWithin, modalDialog } from "../../fixtures/dialogs";
 import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
 import { pageContent } from "../../fixtures/project-pages";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
@@ -228,6 +228,7 @@ test("P2 (page): the projects page shows a member the public project to join and
   // A join nerve refuses: the admin deletes Gone while its dialog is open. The page says nerve's reason, and the
   // dialog stays open, Join enabled again: it closes of itself only once joined. Cancel closes it.
   await page.getByRole("link", { name: /Gone/ }).getByRole("button", { name: "Join", exact: true }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Join Project?");
   const deleted = await api.DELETE("/api/v0/projects/{project_id}", {
     params: { path: { project_id: gone.id } },
     headers: bearer(admin),

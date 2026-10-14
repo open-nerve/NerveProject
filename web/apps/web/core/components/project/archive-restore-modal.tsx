@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
@@ -71,11 +71,11 @@ export function ArchiveRestoreProjectModal(props: Props) {
       width={EModalWidth.LG}
     >
       <div className="px-5 py-4">
-        <h3 className="text-18 font-medium 2xl:text-20">
+        <ModalTitle className="text-18 font-medium 2xl:text-20">
           {t(archive ? "project_dialogs.archive.title" : "project_dialogs.restore.title", {
             name: projectDetails.name,
           })}
-        </h3>
+        </ModalTitle>
         <p className="mt-3 text-13 text-secondary">
           {t(archive ? "project_dialogs.archive.body" : "project_dialogs.restore.body")}
         </p>

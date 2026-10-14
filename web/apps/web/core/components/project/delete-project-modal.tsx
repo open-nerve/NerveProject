@@ -13,7 +13,7 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { Project } from "@nerve/api-client";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // components
 import { Translated } from "@/components/common/translated";
 // hooks
@@ -104,7 +104,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
             <WarningTriangleOutline className="h-6 w-6 text-danger-primary" aria-hidden="true" />
           </span>
           <span className="flex items-center justify-start">
-            <h3 className="text-18 font-medium 2xl:text-20">{t("project_dialogs.delete.title")}</h3>
+            <ModalTitle className="text-18 font-medium 2xl:text-20">{t("project_dialogs.delete.title")}</ModalTitle>
           </span>
         </div>
         <span>

@@ -170,6 +170,7 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   // A range of his own: the modal waits for nerve, busy and not to be closed; it closes once nerve has made it.
   await page.getByRole("button", { name: "1 month" }).click();
   await page.getByRole("button", { name: "Customize time range" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Customize time range");
   await page.locator("#archive_in").fill("6");
   const { body, release } = await sentHeld(page, "PATCH", projectApi, () =>
     page.getByRole("button", { name: "Update", exact: true }).click()

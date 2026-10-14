@@ -14,7 +14,7 @@ import {
   shownNameOf,
 } from "../../fixtures/auth";
 import { expectQuietConsole, followAccessToken, watchPage, type PageWatch } from "../../fixtures/browser";
-import { closedByEscape, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
+import { closedByEscape, enabledWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
 import { holdAnswer } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -83,6 +83,7 @@ test("A6 (page): signing out in one tab signs every tab out", async ({ api, db, 
   const release = await holdAnswer(tabA, "POST", "/api/v0/auth/logout");
   await accountMenu(tabA, email).click();
   await tabA.getByRole("menuitem", { name: "Wrong e-mail address?" }).click();
+  await expect(modalDialog(tabA)).toHaveAccessibleName("Switch account");
   expect(await pageBehindHidden(tabA)).toBe(true);
   await tabA.getByRole("button", { name: "Switch account" }).click();
   expect(await closedByEscape(tabA)).toBe(false);

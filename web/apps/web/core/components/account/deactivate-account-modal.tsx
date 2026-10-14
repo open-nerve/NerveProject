@@ -10,7 +10,7 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { DeleteOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
 import { useUser } from "@/hooks/store/user";
 // lib
@@ -81,7 +81,9 @@ export function DeactivateAccountModal(props: Props) {
               />
             </div>
             <div>
-              <h3 className="my-4 text-20 leading-6 font-medium text-primary">{t("deactivate_your_account")}</h3>
+              <ModalTitle className="my-4 text-20 leading-6 font-medium text-primary">
+                {t("deactivate_your_account")}
+              </ModalTitle>
               <p className="mt-6 list-disc pr-4 text-14 font-regular text-secondary">
                 {t("deactivate_your_account_description")}
               </p>

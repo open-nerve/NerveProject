@@ -4,7 +4,7 @@ import type { WorkspaceInvitation } from "./api";
 import { password, signInContext, type AuthTokens } from "./auth";
 import { submitSignIn } from "./auth-pages";
 import { watchPage, type PageWatch } from "./browser";
-import { sentWithin } from "./dialogs";
+import { modalDialog, sentWithin } from "./dialogs";
 import { answerTo, expectListBesideButton, sentTo } from "./settings-pages";
 
 // The workspace's pages (M3 design 7.5), as a person uses them.
@@ -51,11 +51,12 @@ export async function switchWorkspace(page: Page, id: string): Promise<{ body: u
 
 /**
  * Confirms the deletion of the workspace whose name is name on its general page, which page shows: the admin opens the
- * deletion, types the name and the words that confirm it, and confirms. Resolves once the confirmation is clicked, not
- * waiting for nerve's answer.
+ * deletion, whose dialog its title names, types the name and the words that confirm it, and confirms. Resolves once the
+ * confirmation is clicked, not waiting for nerve's answer.
  */
 export async function confirmDeletion(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Are you sure you want to delete this workspace?");
   await page.locator("#workspaceName").fill(name);
   await page.locator("#confirmDelete").fill("delete my workspace");
   await page.getByRole("button", { name: "Confirm", exact: true }).click();
@@ -169,10 +170,10 @@ export function invitationFormRow(page: Page, index: number): Locator {
 }
 
 /**
- * Sends invitations from the members page, which page shows to an admin of the workspace of slug: opens the form, types
- * each address in a row of its own and picks its role by its label, and sends them. Resolves with what the page sent,
- * and nerve's answer. A role other than Member is picked by the keyboard: Enter on its select (CustomSelect's own
- * button) opens its list, and sends no form.
+ * Sends invitations from the members page, which page shows to an admin of the workspace of slug: opens the form, a
+ * dialog its title names, types each address in a row of its own and picks its role by its label, and sends them.
+ * Resolves with what the page sent, and nerve's answer. A role other than Member is picked by the keyboard: Enter on
+ * its select (CustomSelect's own button) opens its list, and sends no form.
  */
 export async function sendInvitations(
   page: Page,
@@ -181,6 +182,7 @@ export async function sendInvitations(
 ): Promise<{ body: unknown; answer: Response }> {
   const path = `/api/v0/workspaces/${slug}/invitations`;
   await page.getByRole("button", { name: "Add member" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Invite people to collaborate");
   const form = page.getByRole("dialog");
   // the rows one after another: the form adds a row once the one before it is typed
   await rows.reduce(async (before, { email, role }, index) => {

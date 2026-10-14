@@ -251,6 +251,8 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   expect(gone.response.status).toBe(204);
   const dialog = page.getByRole("dialog");
   await docsDelete.click();
+  // the dialog is named by its title (ModalTitle)
+  await expect(modalDialog(page)).toHaveAccessibleName("Delete label");
   const refused = await sentTo(page, "DELETE", `/api/v0/labels/${docs.id}`, () =>
     dialog.getByRole("button", { name: "Delete" }).click()
   );

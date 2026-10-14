@@ -6,7 +6,13 @@ import type { Download } from "@playwright/test";
 import { expectTokenStored } from "../../fixtures/assert/identity";
 import { anotherTabSignsIn, bearer, createPAT, emailFor, login, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByBackdropClick, closedByEscape, downloadedWithin, enabledWithin } from "../../fixtures/dialogs";
+import {
+  closedByBackdropClick,
+  closedByEscape,
+  downloadedWithin,
+  enabledWithin,
+  modalDialog,
+} from "../../fixtures/dialogs";
 import {
   answerTo,
   expectListBesideButton,
@@ -38,6 +44,7 @@ test("A11 (page): a token created on the page shows once, with the focus on it, 
   // Created with a name, a description and a week. A day of one's own is picked in a calendar that opens beside
   // its button, and that Escape closes; the week replaces it.
   await page.getByRole("button", { name: "Add access token" }).first().click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Create token");
   await page.getByLabel("Title").fill("deploy");
   await page.getByLabel("Description").fill("ci, #1");
   await page.getByRole("button", { name: "Set expiration date" }).click();
@@ -73,6 +80,7 @@ test("A11 (page): a token created on the page shows once, with the focus on it, 
   // reached by the keyboard, it shows where it is, as the dialog's other buttons do.
   const token = page.getByRole("button", { name: created.token });
   await expect(token).toBeFocused();
+  await expect(modalDialog(page)).toHaveAccessibleName("Key created");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Shift+Tab");
   await expect(token).toBeFocused();
@@ -116,6 +124,7 @@ test("A11 (page): a token created on the page shows once, with the focus on it, 
   // neither Escape nor its backdrop closes it.
   expect((await api.GET("/api/v0/me", { headers: bearer(created.token) })).response.status).toBe(200);
   await page.getByRole("button", { name: "Revoke token" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Delete access token");
   const revocation = await sentHeld(page, "DELETE", `/api/v0/api-tokens/${created.id}`, () =>
     page.getByRole("button", { name: "Delete" }).click()
   );

@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 // local imports
@@ -44,6 +44,8 @@ export const ProfileSettingsModal = observer(function ProfileSettingsModal() {
       className="h-175"
     >
       <div className="@container relative size-full">
+        {/* the dialog has no heading of its own, each of its pages has one: a hidden title names it */}
+        <ModalTitle className="sr-only">{t("settings")}</ModalTitle>
         <div className="flex size-full">
           <ProfileSettingsSidebarRoot
             activeTab={activeTab}

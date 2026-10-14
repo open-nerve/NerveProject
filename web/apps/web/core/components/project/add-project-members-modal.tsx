@@ -14,7 +14,7 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { AddOutline, ChevronDownOutline, CloseOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { CustomSelect, CustomSearchSelect, EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { CustomSelect, CustomSearchSelect, EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // helpers
 import { getFileURL } from "@nerve/utils";
 // hooks
@@ -140,9 +140,9 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     >
       <form onSubmit={handleSubmit(onSubmit)} className="p-5">
         <div className="space-y-5">
-          <h3 className="text-16 leading-6 font-medium text-primary">
+          <ModalTitle className="text-16 leading-6 font-medium text-primary">
             {t("project_settings.members.add_members.title")}
-          </h3>
+          </ModalTitle>
           <div className="mt-2">
             <p className="text-13 text-secondary">{t("project_settings.members.add_members.sub_heading")}</p>
           </div>

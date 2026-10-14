@@ -294,6 +294,7 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   // By the keyboard alone: Enter opens it, the arrow keys and Enter choose Remove, and the dialog that asks, cancelled,
   // gives the focus back to the menu; opened again, Escape closes it.
   await chooseByKeyboard(page, bobsMenu, "Remove");
+  await expect(modalDialog(page)).toHaveAccessibleName(`Remove ${shownNameOf(bob.email)}?`);
   const cancel = modalDialog(page).getByRole("button", { name: "Cancel" });
   await expect(cancel).toBeVisible();
   await cancel.press("Enter");
@@ -347,6 +348,7 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   // until Cancel closes it.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
   expect((await endMembership(page, adminEmail, "Leave", leaving)).status()).toBe(409);
+  await expect(modalDialog(page)).toHaveAccessibleName("Leave workspace?");
   const reason = page.getByText("The workspace would be left without an admin. Make another member an admin first.");
   await expect(reason).toBeVisible();
   expect(await announced(reason)).toBe(true);

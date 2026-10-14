@@ -11,7 +11,7 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { Project } from "@nerve/api-client";
 // ui
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // components
 import { Translated } from "@/components/common/translated";
 // local imports
@@ -56,7 +56,9 @@ export function JoinProjectModal(props: TJoinProjectModalProps) {
       width={EModalWidth.XL}
     >
       <div className="space-y-5 px-5 py-8 sm:p-6">
-        <h3 className="text-16 leading-6 font-medium text-primary">{t("project_dialogs.join.title")}</h3>
+        <ModalTitle className="text-16 leading-6 font-medium text-primary">
+          {t("project_dialogs.join.title")}
+        </ModalTitle>
         <p>
           <Translated
             i18nKey="project_dialogs.join.body"

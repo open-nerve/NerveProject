@@ -5,13 +5,12 @@
  */
 
 import { useState } from "react";
-import { DialogTitle } from "@headlessui/react";
 // nerve imports
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 import { ScrollArea } from "@nerve/propel/scrollarea";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
 import { usePowerK } from "@/hooks/store/use-power-k";
 // local imports
@@ -48,9 +47,7 @@ export function ShortcutsModal(props: Props) {
     >
       {/* the title names the dialog alone: its close button stands beside it */}
       <div className="flex justify-between px-5">
-        <DialogTitle as="h3" className="text-16 font-medium">
-          {t("keyboard_shortcuts")}
-        </DialogTitle>
+        <ModalTitle className="text-16 font-medium">{t("keyboard_shortcuts")}</ModalTitle>
         <button type="button" onClick={handleClose} aria-label={t("close")}>
           <CloseOutline className="h-4 w-4 text-secondary hover:text-primary" aria-hidden="true" />
         </button>

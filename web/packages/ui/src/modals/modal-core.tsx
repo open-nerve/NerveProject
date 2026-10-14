@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
 import React, { useEffect, useState } from "react";
 import { isComposing } from "@nerve/utils";
 // constants
@@ -72,5 +72,24 @@ export function ModalCore(props: Props) {
         </div>
       </div>
     </Dialog>
+  );
+}
+
+type TitleProps = {
+  children: React.ReactNode;
+  className?: string;
+};
+
+/**
+ * A ModalCore dialog's heading, and so its name: Headless UI's Dialog is named (aria-labelledby) only by its
+ * DialogTitle, so a dialog whose heading is a plain one is announced with no name. A dialog with no visible heading
+ * gives one that is visually hidden (className "sr-only"), never a second visible one.
+ */
+export function ModalTitle(props: TitleProps) {
+  const { children, className } = props;
+  return (
+    <DialogTitle as="h3" className={className}>
+      {children}
+    </DialogTitle>
   );
 }

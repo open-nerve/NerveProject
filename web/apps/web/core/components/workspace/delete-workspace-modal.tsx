@@ -15,7 +15,7 @@ import type { Workspace } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
 import { Translated } from "@/components/common/translated";
@@ -107,7 +107,9 @@ export const DeleteWorkspaceModal = observer(function DeleteWorkspaceModal(props
           </span>
           <div>
             <div className="text-center sm:text-left">
-              <h3 className="text-h5-medium">{t("workspace_settings.settings.general.delete_modal.title")}</h3>
+              <ModalTitle className="text-h5-medium">
+                {t("workspace_settings.settings.general.delete_modal.title")}
+              </ModalTitle>
               <p className="mt-1 text-body-xs-regular text-secondary">
                 <Translated
                   i18nKey="workspace_settings.settings.general.delete_modal.body"

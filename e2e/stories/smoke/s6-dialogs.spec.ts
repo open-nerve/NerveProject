@@ -96,12 +96,15 @@ test("S6 (page): a dialog opened over another, the revoke dialog over the settin
     .first()
     .click();
   await page.getByRole("menuitem", { name: "Settings" }).click();
+  // the settings dialog has no heading of its own: a hidden title names it; the revoke dialog, its title
+  await expect(modalDialog(page)).toHaveAccessibleName("Settings");
   await modalDialog(page).getByRole("button", { name: "Personal Access Tokens" }).click();
   const revoke = modalDialog(page).getByRole("button", { name: "Revoke token" });
   await revoke.click();
   const dialogs = modalDialog(page);
   await expect(dialogs).toHaveCount(2);
   await expect(dialogs.last().getByRole("button", { name: "Delete" })).toBeVisible();
+  await expect(dialogs.last()).toHaveAccessibleName("Delete access token");
   // The settings dialog beneath, as the page behind both: inert and hidden.
   expect(
     await dialogs

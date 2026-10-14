@@ -7,11 +7,10 @@
 import { useState } from "react";
 
 import { ArrowRightLeft } from "lucide-react";
-import { DialogTitle } from "@headlessui/react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // components
 import { Translated } from "@/components/common/translated";
 // hooks
@@ -61,9 +60,9 @@ export function SwitchAccountModal(props: Props) {
             </div>
           </div>
           <div className="flex flex-col gap-y-6 py-3">
-            <DialogTitle as="h3" className="text-20 leading-6 font-medium text-primary">
+            <ModalTitle className="text-20 leading-6 font-medium text-primary">
               {t("onboarding.switch_account.title")}
-            </DialogTitle>
+            </ModalTitle>
             {userData?.email && (
               <div className="text-14 font-regular text-secondary">
                 <Translated

@@ -156,6 +156,8 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 
 `AlertModalCore` 的确认按钮去掉 `tabIndex={1}`（`@nerve/ui` 的上限 15 → 14：它的那条 `tabindex-no-positive` 没有了）。
 
+**弹窗的名字**（最终评审的 I1，收尾的修复轮）：Headless UI v2 的 `Dialog` 只以它的 `DialogTitle` 为名（`aria-labelledby`），普通的标题不给弹窗名字，读屏读出一个没有名字的对话框；原来只有邀请成员、快捷键和切换账户三个弹窗直接用 `DialogTitle`。`@nerve/ui` 在 `ModalCore` 旁边导出 `ModalTitle`（`modal-core.tsx`：它就是 `DialogTitle`，`h3`），弹窗的标题只有这一种写法：`AlertModalCore` 的标题经它（它的 13 个调用方，M4–M7 的在内，都有了名字），M2、M3 每个弹窗的标题经它（`ConfirmWorkspaceMemberRemove` 的移出、两处离开和邀请的删除，删除工作区，项目的删除、离开、加入、归档和恢复，项目成员的移出和添加，自定义范围，项目导航（原来是 `h2`），API 令牌的新建的两步，停用账户），三个直接用 `DialogTitle` 的也改经它。没有看得见的标题的两个以只给读屏的标题为名（`className="sr-only"`，不加第二个看得见的）：建项目的两步（"Create project"，表单的顶上是封面）和个人设置（"Settings"，各页有自己的标题）。检查（`expect(modalDialog(page)).toHaveAccessibleName(…)`）：P6 删除状态、P7 删除标签、W11 经菜单离开（访客和唯一的管理员）、W7 在成员页离开和移出、P4 删除、归档和恢复项目；打开别的弹窗的故事各加一行：W3 删除工作区（`confirmDeletion`）、W4 删除邀请、P2 加入、P5 添加成员、移出、离开（成员的确认框和访客的弹窗）、P3 自定义范围、W8 项目导航、P1 建项目、A11 新建和撤销令牌（生成之后是"Key created"）、A12 停用账户、S6 个人设置和其上的撤销确认框、A6 切换账户、W4 邀请成员（`sendInvitations`）。W11 不从成员页离开：成员页的离开由 W7 看住。M2、M3 的弹窗都有故事打开，每个都有这样一行。变异 `FW.1`（`AlertModalCore` 的标题回到普通的 `h3`，P6、P7 发现）、`FW.2`（`ConfirmWorkspaceMemberRemove` 的标题回到 `h3`，W11 发现）。M4–M8 自己的弹窗交给它们：M8 的交接第 4 节写这条规则和命令面板、Webhook 的弹窗，M4 第 7 节、M6 第 3 节、M7 第 3 节逐个列出以普通标题或没有标题的弹窗。
+
 ### 2.6 直接用 Headless UI 的三个弹窗（Task 2）
 
 命令面板（`power-k/ui/modal/wrapper.tsx`）、快捷键（`power-k/ui/modal/shortcuts-root.tsx`）和切换账户（`onboarding/switch-account-modal.tsx`）原来直接用 Headless UI 的 `Dialog` 和 `Transition`，有 2.5 的同一个缺陷。三个都改经 `ModalCore`：
@@ -771,6 +773,7 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 | 项目列表的"More"按钮以没有定义的键为名（读屏读出键名） | 以它看得见的文字为名（"More"、"Hide"） | 侧边栏（S7；Task 7） |
 | 视图和编辑器标注块的选图标按钮以所选的表情为名（没有选表情时没有名字） | "View icon"、"Callout icon"（`Logo` 隐去表情之后，`EmojiPicker` 的 `ariaLabel` 必传） | 视图的表单（M7）、编辑器的标注块（M4；Task 7 的预审修复） |
 | 快捷键弹窗的名字"Keyboard shortcuts Close"（关闭按钮在标题里） | "Keyboard shortcuts" | 快捷键弹窗（S6） |
+| 弹窗被读出时没有名字：标题是普通的 `h3`（项目导航的是 `h2`），Headless UI v2 的 `Dialog` 只以 `DialogTitle` 为名 | 以标题为名（"Delete State""Leave workspace?""Archive Web"…）；建项目、个人设置以只给读屏的标题为名（"Create project""Settings"）；项目导航的标题是 `h3` | `AlertModalCore` 的确认框（M4–M7 的在内）和 M2、M3 的每个弹窗（2.5；P1–P7、W3、W4、W7、W8、W11、A6、A11、A12、S6；最终评审的 I1） |
 
 删去的 en 键：`afternoon`、`evening`、`good`、`morning`、`onboarding.switch_account.description_before_email`、`description_after_email`（同一句的两半，现在是一个键）、`workspace_settings.token_not_copied`、`power_k.miscellaneous_actions.copy_current_page_url_toast_error`。
 

@@ -17,7 +17,7 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 // ui
 import { Switch } from "@makeplane/propel/components/switch";
-import { CustomSelect } from "@nerve/ui";
+import { CustomSelect, ModalTitle } from "@nerve/ui";
 import { cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
@@ -96,9 +96,9 @@ export function CreateApiTokenForm(props: Props) {
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)}>
       <div className="space-y-5 p-5">
-        <h3 className="text-18 font-medium text-secondary">
+        <ModalTitle className="text-18 font-medium text-secondary">
           {t("workspace_settings.settings.api_tokens.create_token")}
-        </h3>
+        </ModalTitle>
         <div className="space-y-3">
           <div className="space-y-1">
             <Controller
