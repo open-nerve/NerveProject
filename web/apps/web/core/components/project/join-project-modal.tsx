@@ -6,11 +6,10 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router";
-// types
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { Project } from "@nerve/api-client";
-// ui
 import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // components
 import { Translated } from "@/components/common/translated";

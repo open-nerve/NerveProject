@@ -108,7 +108,7 @@
   "version": "版本",
   "deactivate_your_account": "停用您的账户",
   "deactivate_your_account_description": "您将在所有地方退出登录，密码和个人访问令牌都将无法使用。数据不会被删除，也不会发送邮件：如需再次使用此账户，请联系这台服务器的管理员重新启用。",
-  "deactivating": "正在停用",
+  "deactivating": "停用中",
   "confirm": "确认",
   "draft_created": "草稿已创建",
   "issue_created_successfully": "工作项创建成功",
@@ -375,7 +375,7 @@
     "roles": "角色",
     "view_all": "查看全部",
     "view_less": "收起",
-    "remove_item": "移除{name}",
+    "remove_item": "移除 {name}",
     "pending": "待处理",
     "invite": "邀请",
     "deactivated_user": "已停用用户",
@@ -489,7 +489,7 @@
       "title": "切换账户",
       "description": "如果您无意中使用 {email} 注册了账户，可以在这里切换到其他账户。",
       "switch": "切换账户",
-      "switching": "正在切换..."
+      "switching": "切换中"
     },
     "workspace": {
       "description": "所有工作，汇于一处。",

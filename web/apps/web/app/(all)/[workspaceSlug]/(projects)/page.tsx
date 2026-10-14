@@ -5,8 +5,9 @@
  */
 
 import { observer } from "mobx-react";
-// components
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
+// components
 import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
 import { PageHead } from "@/components/core/page-title";

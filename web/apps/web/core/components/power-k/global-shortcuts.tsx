@@ -22,7 +22,8 @@ type GlobalShortcutsProps = {
 
 /**
  * Global shortcuts component - sets up keyboard listeners and context detection
- * Should be mounted once at the app root level
+ * Mounted by ProjectsAppPowerKProvider, one for each layout that renders it: the workspace's projects and settings
+ * layouts (within the workspace's content, keyed by the workspace) and the profile settings' layout
  */
 export const GlobalShortcutsProvider = observer(function GlobalShortcutsProvider(props: GlobalShortcutsProps) {
   const { context, commands } = props;

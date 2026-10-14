@@ -72,8 +72,8 @@ export const ProjectRoot = observer(function ProjectRoot() {
     if (isArchived) updateDisplayFilters(workspaceSlug, { archived_projects: true });
   }, [clearAllFilters, clearAllAppliedDisplayFilters, isArchived, updateDisplayFilters, workspaceSlug]);
 
-  // The archives show the archived projects, the list the others. Each mounts this root apart, so the effect runs at
-  // the mount and when the workspace changes, as it did on the address.
+  // The archives show the archived projects, the list the others. Each mounts this root apart, isArchived fixed for the
+  // mount, so the effect runs at the mount and when the workspace changes.
   useEffect(() => {
     if (!workspaceSlug) return;
     updateDisplayFilters(workspaceSlug, { archived_projects: isArchived });

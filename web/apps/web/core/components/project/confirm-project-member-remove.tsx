@@ -8,11 +8,10 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
-// types
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { MemberUser } from "@nerve/api-client";
-// ui
 import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // components
 import { Translated } from "@/components/common/translated";

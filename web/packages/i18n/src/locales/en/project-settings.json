@@ -47,7 +47,7 @@
       "description_placeholder": "Describe this state for your members.",
       "add": "Add a state to {name}",
       "delete": {
-        "title": "Delete State",
+        "title": "Delete state",
         "body": "Are you sure you want to delete state {name}? All of the data related to the state will be permanently removed. This action cannot be undone.",
         "default": "Cannot delete the default state.",
         "only_one": "Cannot have an empty group."
@@ -70,7 +70,7 @@
       "remove_from_group": "Remove from group",
       "delete": {
         "title": "Delete label",
-        "body": "Are you sure you want to delete {name}? This will remove the label from all the work item and from any views where the label is being filtered upon."
+        "body": "Are you sure you want to delete {name}? This will remove the label from every work item and from the views that filter by it."
       }
     },
     "automations": {

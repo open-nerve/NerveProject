@@ -245,8 +245,8 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await seenBy("the workspace admin who is its member", wanda, true);
 
   // Docs deleted meanwhile, elsewhere: nerve refuses its deletion here, said in a toast read out beside the dialog,
-  // which stays open, Tab going
-  // round its two buttons and the page behind it hidden; Cancel closes it, and the page and the focus are back.
+  // which stays open, Tab going round its two buttons and the page behind it hidden; Cancel closes it, and the page
+  // and the focus are back.
   const gone = await api.DELETE("/api/v0/labels/{label_id}", {
     params: { path: { label_id: docs.id } },
     headers: bearer(admin.access_token),

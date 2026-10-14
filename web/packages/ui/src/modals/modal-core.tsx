@@ -7,8 +7,9 @@
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
 import React, { useEffect, useState } from "react";
 import { isComposing } from "@nerve/utils";
-// constants
+// helpers
 import { cn } from "../utils";
+// constants
 import { EModalPosition, EModalWidth } from "./constants";
 
 type Props = {

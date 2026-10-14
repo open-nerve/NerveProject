@@ -55,7 +55,7 @@
       "default": {
         "mark": "设为默认",
         "mark_item": "设为默认：{name}",
-        "marking": "正在设为默认",
+        "marking": "设为默认中",
         "is_default": "默认"
       }
     },
@@ -80,7 +80,7 @@
       "auto-archive": {
         "title": "自动归档已关闭的工作项",
         "description": "Nerve 将自动归档已完成或已取消的工作项。",
-        "duration": "自动归档已关闭",
+        "duration": "工作项关闭多久后自动归档",
         "months_placeholder": "输入月数",
         "months": "个月",
         "months_range": "请选择 1 到 12 之间的月数。"

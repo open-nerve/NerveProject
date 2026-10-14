@@ -139,8 +139,8 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
     memberRow(page, bobEmail).getByRole("button", { name: `${shownNameOf(bobEmail)} 的选项`, exact: true })
   ).toBeVisible();
   await askToEndMembership(page, bobEmail, "移除");
-  await expect(modalDialog(page).getByRole("heading")).toHaveText(`移出 ${shownNameOf(bobEmail)}？`);
-  await expect(modalDialog(page).getByText(/^确定要将 .+ 移出工作区吗？/)).toBeVisible();
+  await expect(modalDialog(page).getByRole("heading")).toHaveText(`移除 ${shownNameOf(bobEmail)}？`);
+  await expect(modalDialog(page).getByText(/^确定要从工作区中移除 .+ 吗？/)).toBeVisible();
   await cancel(page);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
@@ -257,7 +257,7 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   await page.getByRole("button", { name: "添加成员", exact: true }).click();
   await modalDialog(page).getByRole("button", { name: "添加成员", exact: true }).click();
   await expect(modalDialog(page).getByText("请选择成员", { exact: true })).toBeVisible();
-  await modalDialog(page).getByRole("button", { name: "选择同事" }).click();
+  await modalDialog(page).getByRole("button", { name: "选择成员" }).click();
   await expect(page.getByRole("combobox", { name: "搜索", exact: true })).toBeFocused();
   await page.keyboard.type("zz");
   await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
@@ -332,11 +332,11 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   await expect(page.getByRole("button", { name: "添加项目", exact: true })).toBeFocused();
   await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
   // The bar of the filters applied: the filter by its name, each button named by what it removes, and the count.
-  await expect(page.getByRole("button", { name: "移除公开", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "移除 公开", exact: true })).toBeVisible();
   await page.getByText("1/1", { exact: true }).hover();
   await expect(page.getByText("1 个项目中有 1 个符合筛选条件。", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "移除网络", exact: true }).click();
-  await expect(page.getByRole("button", { name: "移除公开", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "移除 网络", exact: true }).click();
+  await expect(page.getByRole("button", { name: "移除 公开", exact: true })).toHaveCount(0);
 
   // The archived projects: the header's breadcrumb says so.
   await page.goto(`/${slug}/projects/archives`);
@@ -363,7 +363,7 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   await expect(page.getByPlaceholder("搜索", { exact: true })).toBeVisible();
   await page.goto(`${settings}/features/cycles`);
   await page.getByRole("switch", { name: "启用周期" }).click();
-  const toasts = page.getByRole("region", { name: "通知" });
+  const toasts = page.getByRole("region", { name: "消息提示" });
   await expect(toasts.getByText("项目功能已更新。", { exact: true })).toBeVisible();
 
   // The auto-archiving: its months, and its custom range, which says what it takes.

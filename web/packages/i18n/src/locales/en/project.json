@@ -206,7 +206,7 @@
     },
     "join": {
       "title": "Join Project?",
-      "body": "Are you sure you want to join the project {name}? Please click the 'Join Project' button below to continue.",
+      "body": "Are you sure you want to join the project {name}?",
       "submit": "Join Project",
       "joining": "Joining"
     },

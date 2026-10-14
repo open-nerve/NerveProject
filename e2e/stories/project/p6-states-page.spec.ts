@@ -252,7 +252,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   const dialog = page.getByRole("dialog");
   await inProgress.getByRole("button", { name: "Delete" }).click();
   // the dialog is named by its title (ModalTitle)
-  await expect(modalDialog(page)).toHaveAccessibleName("Delete State");
+  await expect(modalDialog(page)).toHaveAccessibleName("Delete state");
   await expect(modalDialog(page).getByText(/^Are you sure you want to delete state In Progress\?/)).toBeVisible();
   const refused = await sentTo(page, "DELETE", deleted, () => dialog.getByRole("button", { name: "Delete" }).click());
   expect(refused.answer.status()).toBe(409);

@@ -206,15 +206,15 @@
     },
     "join": {
       "title": "加入项目？",
-      "body": "确定要加入项目 {name} 吗？请点击下方的“加入项目”按钮继续。",
+      "body": "确定要加入项目 {name} 吗？",
       "submit": "加入项目",
-      "joining": "正在加入"
+      "joining": "加入中"
     },
     "remove_member": {
       "leave_title": "离开项目？",
-      "remove_title": "移出 {name}？",
+      "remove_title": "移除 {name}？",
       "leave_body": "确定要离开项目 {name} 吗？项目管理员再次添加您，或者项目公开时，您可以重新加入。",
-      "remove_body": "确定要将 {name} 移出项目吗？对方将不能再访问这个项目。此操作无法撤销。"
+      "remove_body": "确定要从项目中移除 {name} 吗？对方将不能再访问这个项目。此操作无法撤销。"
     },
     "archive": {
       "title": "归档 {name}",
@@ -232,7 +232,7 @@
     },
     "members_added": "成员已添加。",
     "member_required": "请选择成员",
-    "select_member": "选择同事",
+    "select_member": "选择成员",
     "feature_updated": "项目功能已更新。",
     "project_created": "恭喜！{name} 已创建。",
     "default_tab_updated": "默认标签已更新。",

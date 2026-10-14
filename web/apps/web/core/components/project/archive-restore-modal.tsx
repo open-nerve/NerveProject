@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-// ui
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
