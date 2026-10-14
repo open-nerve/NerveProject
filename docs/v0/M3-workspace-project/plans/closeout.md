@@ -92,7 +92,7 @@ sys.exit(1 if broken else 0)
 | `e2e/fixtures/mounts.ts` | `WORKSPACE_MENU`：工作区菜单打开时不发请求（W2 的常驻检查） | 3 |
 | `e2e/fixtures/project-pages.ts` | `labelRow` 移来（Task 6）；成员一行的菜单按它的名字，`pageContent`：侧边栏之外的页面内容（Task 8） | 6、8 |
 | `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
-| `e2e/stories/identity/a11-api-tokens.spec.ts` | 令牌复制到剪贴板（Task 9）；`registeredPAT`（Task 14） | 9、14 |
+| `e2e/stories/identity/a11-api-tokens.spec.ts` | 生成之后焦点在令牌的按钮上、键盘到达时有轮廓，令牌复制到剪贴板（Task 9）；`registeredPAT`（Task 14） | 9、14 |
 | `e2e/stories/identity/a6-sign-out.spec.ts` | 切换账户的弹窗在退出路上时关不掉（Task 2）；导入（Task 14） | 2、14 |
 | `e2e/stories/project/p1-create-project.spec.ts` | 以标题找卡片（Task 5）；在页面内容中找卡片（Task 8）；功能的开关以功能为名（Task 13）；`registeredPAT`（Task 14） | 5、8、13、14 |
 | `e2e/stories/project/p2-visibility.spec.ts` | "Joining"（Task 5）；在页面内容中找页头的面包屑（Task 8）；`registeredPAT`（Task 14） | 5、8、14 |
@@ -129,8 +129,8 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/app/(all)/create-workspace/layout.tsx`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/app/(all)/onboarding/layout.tsx`、`web/apps/web/app/(all)/onboarding/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 13 |
 | `web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 4 |
 | `web/apps/web/app/provider.tsx` | `AppToast`：提示的区域经 `t()` 命名 | 13 |
-| `web/apps/web/core/components/api-token/modal/create-token-modal.tsx` | 不再传空的 `handleClose` | 2 |
-| `web/apps/web/core/components/api-token/modal/generated-token-details.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts` | 复制经 `useCopyText`、`useCopyLink` | 9 |
+| `web/apps/web/core/components/api-token/modal/create-token-modal.tsx` | 不再传空的 `handleClose`（Task 2）；令牌显出之后焦点移到它的复制按钮（Task 9） | 2、9 |
+| `web/apps/web/core/components/api-token/modal/generated-token-details.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts` | 复制经 `useCopyText`、`useCopyLink`；令牌的复制按钮有焦点的轮廓，收下生成之后的焦点 | 9 |
 | `web/apps/web/core/components/appearance/theme-switcher.tsx` | 失败的提示经 `useRefusalMessage` | 9 |
 | `web/apps/web/core/components/auth-screens/not-authorized-view.tsx`、`web/apps/web/core/components/home/user-greetings.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/navigation/top-nav-power-k.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx` | M3 页面上的英文经 `t()` | 4 |
 | `web/apps/web/core/components/automation/auto-archive-automation.tsx`、`web/apps/web/core/components/automation/select-month-modal.test.tsx`、`web/apps/web/core/components/automation/select-month-modal.tsx` | 自动归档的月数和自定义范围经 `t()`；它的测试 | 13 |
@@ -210,7 +210,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts` | `useCopy`、`useCopyText`；它的测试 | 9 |
 | `web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts` | `useRefusalMessage`；它的测试 | 9 |
 | `web/apps/web/core/hooks/use-route-workspace.test.ts`、`web/apps/web/core/hooks/use-route-workspace.ts` | `useRouteWorkspace()`（新文件）和它的测试 | 11 新 |
-| `web/apps/web/core/layouts/auth-layout/use-project-fetch.ts`、`web/apps/web/core/lib/form-refusal.ts` | 经 `problemCode()` | 9 |
+| `web/apps/web/core/layouts/auth-layout/use-project-fetch.ts`、`web/apps/web/core/lib/error-messages.ts`、`web/apps/web/core/lib/form-refusal.ts` | 经 `problemCode()` | 9 |
 | `web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx` | "找不到工作区"的标题经 `PageHead` | 4 |
 | `web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts` | `problemCode()`；它的测试 | 9 |
 | `web/apps/web/core/lib/fake-i18n-values.ts` | 替身：文字是键和它收到的值（新文件） | 5 新 |
@@ -8888,21 +8888,22 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 9: 共用的写法：`showTooltip`、复制、问题码、拒绝的文字；读了却没有定义的键
+### Task 9: 共用的写法：`showTooltip`、复制、问题码、拒绝的文字；读了却没有定义的键；令牌弹窗的焦点
 
 **Files:**
 - Create: `tools/i18n-keys.mjs`
-- Modify: `Makefile`、`docs/v0/M1-frontend-trim/M1-design.md`、`docs/v0/M3-workspace-project/M3-design.md`、`e2e/stories/identity/a11-api-tokens.spec.ts`、`e2e/stories/smoke/s6-dialogs.spec.ts`、`knip.jsonc`、`tools/keywords.json`、`tools/keywords.mjs`、`web/apps/web/core/components/api-token/modal/generated-token-details.tsx`、`web/apps/web/core/components/appearance/theme-switcher.tsx`、`web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx`、`web/apps/web/core/components/issues/attachment/attachment-list-item.tsx`、`web/apps/web/core/components/issues/issue-detail/sidebar.tsx`、`web/apps/web/core/components/issues/peek-overview/properties.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`、`web/apps/web/core/components/views/view-list-item-action.tsx`、`web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts`、`web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts`、`web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts`、`web/apps/web/core/layouts/auth-layout/use-project-fetch.ts`、`web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts`、`web/apps/web/core/lib/form-refusal.ts`、`web/packages/constants/src/filter.ts`、`web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
+- Modify: `Makefile`、`docs/v0/M1-frontend-trim/M1-design.md`、`docs/v0/M3-workspace-project/M3-design.md`、`e2e/stories/identity/a11-api-tokens.spec.ts`、`e2e/stories/smoke/s6-dialogs.spec.ts`、`knip.jsonc`、`tools/keywords.json`、`tools/keywords.mjs`、`web/apps/web/core/components/api-token/modal/create-token-modal.tsx`、`web/apps/web/core/components/api-token/modal/generated-token-details.tsx`、`web/apps/web/core/components/appearance/theme-switcher.tsx`、`web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx`、`web/apps/web/core/components/issues/attachment/attachment-list-item.tsx`、`web/apps/web/core/components/issues/issue-detail/sidebar.tsx`、`web/apps/web/core/components/issues/peek-overview/properties.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts`、`web/apps/web/core/components/settings/profile/content/pages/security.tsx`、`web/apps/web/core/components/views/view-list-item-action.tsx`、`web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts`、`web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts`、`web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts`、`web/apps/web/core/layouts/auth-layout/use-project-fetch.ts`、`web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts`、`web/apps/web/core/lib/error-messages.ts`、`web/apps/web/core/lib/form-refusal.ts`、`web/packages/constants/src/filter.ts`、`web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`
 
 **Interfaces:**（spec 2.10）
 - `ButtonAvatars` 的 `showTooltip` 删除，10 处调用。
 - `core/hooks/use-copy-link.ts`：不导出的 `useCopy(write, titleKey)`，`useCopyLink`、`useCopyText`；API 令牌弹窗和命令面板的复制经它们；`workspace_settings.token_not_copied`、命令面板的复制失败的键删除。
-- `core/lib/api-error.ts` 的 `problemCode(error)`：五处问题码经它。`use-refusal-toast.ts` 的 `useRefusalMessage`：`useRefusalToast` 和主题切换的失败经它。
+- API 令牌弹窗（M2，预审的裁定）：令牌的复制按钮照 propel 按钮的写法在键盘取得焦点时显出浏览器的轮廓（`outline-none` 换为 `focus-visible:outline-offset-2`）；生成之后，创建的成功跟进（`followInSession` 的 `done`）以 `flushSync` 渲染令牌，再把焦点移到这个按钮（`GeneratedTokenDetails` 收 `copyButtonRef`；原来生成的按钮随表单消失，焦点落到 `body`）。
+- `core/lib/api-error.ts` 的 `problemCode(error)`：五处问题码和 `core/lib/error-messages.ts` 的 `errorMessageKey` 经它（后者是预审的裁定）。`use-refusal-toast.ts` 的 `useRefusalMessage`：`useRefusalToast` 和主题切换的失败经它。
 - `tools/keywords.json`：`copy-hook`（20 个例外，`until` 是各 M 的收尾）；`refusal-toast` 也看 `setPromiseToast(…errorMessageKey(`；`sign-out-toast` 加两种写法；`phase` 是 `M3/closeout`。
 - `tools/i18n-keys.mjs`（新文件）进 `make lint-web` 和 knip 的入口；`@nerve/constants` 的 `filter.ts` 中没有读者的 `date_filters.1_month_ago` 删除。
 - `tools/keywords.mjs` 的说明、M1 设计 7.4：`until` 写 `M<n>/closeout` 的例外，在那个 M 的收尾开始、`phase` 改为它时到期；每个 Phase 开始时改 `phase`（spec 第 3 节第 5 条）。M3 设计 7.10 的规则表补上 P9 的三条、P10 的两条和 `copy-hook`。
 
-**Tests:** `use-copy-link.test.ts`、`api-error.test.ts`、`use-refusal-toast.test.ts`。A11：点令牌复制到剪贴板并提示；S6：命令面板复制当前页面的地址并提示。
+**Tests:** `use-copy-link.test.ts`、`api-error.test.ts`、`use-refusal-toast.test.ts`。A11：生成之后焦点在令牌的按钮上，键盘到达时有轮廓；点令牌复制到剪贴板并提示；S6：命令面板复制当前页面的地址并提示。
 
 - [ ] **Step 1: 共用的写法和检查**
 
@@ -9330,8 +9331,63 @@ console.log(`i18n-keys: ${read.size} keys read, each defined in ${LOCALE}.`);
 // "M<n>/P<k>" as each phase starts).
 ````
 
-`web/apps/web/core/components/api-token/modal/generated-token-details.tsx`（修改，4 处）：
+`web/apps/web/core/components/api-token/modal/create-token-modal.tsx`（修改，4 处）：
 
+````old web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+import { useEffect, useRef, useState } from "react";
+````
+````new web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+````
+````old web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+  const [generatedToken, setGeneratedToken] = useState<ApiTokenCreated | null>(null);
+````
+````new web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+  const [generatedToken, setGeneratedToken] = useState<ApiTokenCreated | null>(null);
+  const copyButton = useRef<HTMLButtonElement>(null);
+````
+````old web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+  // Followed only in the session the create was sent in (M3 design 7.1) and in its opening: the token shown and its
+  // CSV downloaded, or nerve's refusal said by the form.
+  const handleCreateToken = (data: ApiTokenCreate, refused: (error: unknown) => void) => {
+    const opening = phase.current;
+    return followInSession(() => createToken(data), {
+      done: (created) => {
+        if (phase.current !== opening) return;
+        setGeneratedToken(created);
+        downloadSecretKey(created);
+````
+````new web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+  // Followed only in the session the create was sent in (M3 design 7.1) and in its opening: the token shown, the
+  // focus on it (the form's button that had it is gone with the form), and its CSV downloaded; or nerve's refusal
+  // said by the form.
+  const handleCreateToken = (data: ApiTokenCreate, refused: (error: unknown) => void) => {
+    const opening = phase.current;
+    return followInSession(() => createToken(data), {
+      done: (created) => {
+        if (phase.current !== opening) return;
+        // rendered now, so that its button is there to take the focus
+        flushSync(() => setGeneratedToken(created));
+        copyButton.current?.focus();
+        downloadSecretKey(created);
+````
+````old web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+        <GeneratedTokenDetails handleClose={handleClose} tokenDetails={generatedToken} />
+````
+````new web/apps/web/core/components/api-token/modal/create-token-modal.tsx
+        <GeneratedTokenDetails handleClose={handleClose} tokenDetails={generatedToken} copyButtonRef={copyButton} />
+````
+
+`web/apps/web/core/components/api-token/modal/generated-token-details.tsx`（修改，6 处）：
+
+````old web/apps/web/core/components/api-token/modal/generated-token-details.tsx
+import type { ApiTokenCreated } from "@nerve/api-client";
+````
+````new web/apps/web/core/components/api-token/modal/generated-token-details.tsx
+import type { Ref } from "react";
+import type { ApiTokenCreated } from "@nerve/api-client";
+````
 ````old web/apps/web/core/components/api-token/modal/generated-token-details.tsx
 import { CopyOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -9347,6 +9403,22 @@ import { renderFormattedDate, renderFormattedTime, copyTextToClipboard } from "@
 import { renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // hooks
 import { useCopyText } from "@/hooks/use-copy-link";
+````
+````old web/apps/web/core/components/api-token/modal/generated-token-details.tsx
+  tokenDetails: ApiTokenCreated;
+};
+
+export function GeneratedTokenDetails(props: Props) {
+  const { handleClose, tokenDetails } = props;
+````
+````new web/apps/web/core/components/api-token/modal/generated-token-details.tsx
+  tokenDetails: ApiTokenCreated;
+  /** The button that shows the token and copies it: the dialog moves the focus there once the token shows. */
+  copyButtonRef: Ref<HTMLButtonElement>;
+};
+
+export function GeneratedTokenDetails(props: Props) {
+  const { handleClose, tokenDetails, copyButtonRef } = props;
 ````
 ````old web/apps/web/core/components/api-token/modal/generated-token-details.tsx
   const copyApiToken = (token: string) => {
@@ -9371,10 +9443,15 @@ import { useCopyText } from "@/hooks/use-copy-link";
   const copyText = useCopyText();
 ````
 ````old web/apps/web/core/components/api-token/modal/generated-token-details.tsx
+        type="button"
         onClick={() => copyApiToken(tokenDetails.token)}
+        className="mt-4 flex w-full items-center justify-between truncate rounded-md border-[0.5px] border-subtle px-3 py-2 text-13 font-medium outline-none"
 ````
 ````new web/apps/web/core/components/api-token/modal/generated-token-details.tsx
+        ref={copyButtonRef}
+        type="button"
         onClick={() => void copyText(tokenDetails.token, t("workspace_settings.token_copied"))}
+        className="mt-4 flex w-full items-center justify-between truncate rounded-md border-[0.5px] border-subtle px-3 py-2 text-13 font-medium focus-visible:outline-offset-2"
 ````
 
 `web/apps/web/core/components/appearance/theme-switcher.tsx`（修改，4 处）：
@@ -9729,6 +9806,33 @@ export function problemCode(error: unknown): string | undefined {
 /** The data of an answer of the generated client, or the answer as an ApiError when it is not a success. */
 ````
 
+`web/apps/web/core/lib/error-messages.ts`（修改，2 处）：
+
+````old web/apps/web/core/lib/error-messages.ts
+import { ApiError } from "@/lib/api-error";
+````
+````new web/apps/web/core/lib/error-messages.ts
+import { ApiError, problemCode } from "@/lib/api-error";
+````
+````old web/apps/web/core/lib/error-messages.ts
+/** The i18n key of the message for an error of a call to nerve. */
+export function errorMessageKey(error: unknown): string {
+  if (error instanceof ApiError) return PROBLEM_MESSAGES[error.problem?.code ?? ""] ?? "errors.unknown";
+  if (error instanceof SessionUnavailableError) return "errors.unreachable";
+  return "errors.unknown";
+}
+````
+````new web/apps/web/core/lib/error-messages.ts
+/**
+ * The i18n key of the message for an error of a call to nerve: that nerve could not be reached, or the message of its
+ * problem's code (problemCode), or the general one.
+ */
+export function errorMessageKey(error: unknown): string {
+  if (error instanceof SessionUnavailableError) return "errors.unreachable";
+  return PROBLEM_MESSAGES[problemCode(error) ?? ""] ?? "errors.unknown";
+}
+````
+
 `web/apps/web/core/lib/form-refusal.ts`（修改，2 处）：
 
 ````old web/apps/web/core/lib/form-refusal.ts
@@ -9803,16 +9907,25 @@ import { problemCode } from "@/lib/api-error";
 test("A11 (page): a token created on the page shows once, and nowhere after; the list shows it without it, and revokes it", async ({
 ````
 ````new e2e/stories/identity/a11-api-tokens.spec.ts
-test("A11 (page): a token created on the page shows once, a click on it copies it and says so, and nowhere after; the list shows it without it, and revokes it", async ({
+test("A11 (page): a token created on the page shows once, with the focus on it, a click on it copies it and says so, and nowhere after; the list shows it without it, and revokes it", async ({
 ````
 ````old e2e/stories/identity/a11-api-tokens.spec.ts
   await expect(page.getByText(created.token)).toBeVisible();
 ````
 ````new e2e/stories/identity/a11-api-tokens.spec.ts
   await expect(page.getByText(created.token)).toBeVisible();
+  // The focus is on the token's button, the control the page asks for next (the form's button that had it is gone);
+  // reached by the keyboard, it shows where it is, as the dialog's other buttons do.
+  const token = page.getByRole("button", { name: created.token });
+  await expect(token).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(token).toBeFocused();
+  await expect(token).not.toHaveCSS("outline-style", "none");
+  await expect(token).toHaveCSS("outline-offset", "2px");
   // A click on it copies it as it is, and the page says so.
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.getByText(created.token).click();
+  await token.click();
   await expect(page.getByText("Token copied to clipboard.")).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(created.token);
 ````
@@ -9968,7 +10081,7 @@ Expected: 116 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add Makefile docs/v0/M1-frontend-trim/M1-design.md docs/v0/M3-workspace-project/M3-design.md e2e/stories/identity/a11-api-tokens.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts knip.jsonc tools/i18n-keys.mjs tools/keywords.json tools/keywords.mjs web/apps/web/core/components/api-token/modal/generated-token-details.tsx web/apps/web/core/components/appearance/theme-switcher.tsx web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx web/apps/web/core/components/dropdowns/member/avatar.tsx web/apps/web/core/components/dropdowns/member/base.tsx web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx web/apps/web/core/components/issues/attachment/attachment-list-item.tsx web/apps/web/core/components/issues/issue-detail/sidebar.tsx web/apps/web/core/components/issues/peek-overview/properties.tsx web/apps/web/core/components/modules/module-card-item.tsx web/apps/web/core/components/modules/module-list-item-action.tsx web/apps/web/core/components/power-k/config/miscellaneous-commands.ts web/apps/web/core/components/settings/profile/content/pages/security.tsx web/apps/web/core/components/views/view-list-item-action.tsx web/apps/web/core/components/workspace/use-create-workspace.ts web/apps/web/core/components/workspace/use-invitation-answer.ts web/apps/web/core/hooks/use-copy-link.test.ts web/apps/web/core/hooks/use-copy-link.ts web/apps/web/core/hooks/use-refusal-toast.test.ts web/apps/web/core/hooks/use-refusal-toast.ts web/apps/web/core/layouts/auth-layout/use-project-fetch.ts web/apps/web/core/lib/api-error.test.ts web/apps/web/core/lib/api-error.ts web/apps/web/core/lib/form-refusal.ts web/packages/constants/src/filter.ts web/packages/i18n/src/locales/en/power-k.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/power-k.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
+git add Makefile docs/v0/M1-frontend-trim/M1-design.md docs/v0/M3-workspace-project/M3-design.md e2e/stories/identity/a11-api-tokens.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts knip.jsonc tools/i18n-keys.mjs tools/keywords.json tools/keywords.mjs web/apps/web/core/components/api-token/modal/create-token-modal.tsx web/apps/web/core/components/api-token/modal/generated-token-details.tsx web/apps/web/core/components/appearance/theme-switcher.tsx web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx web/apps/web/core/components/dropdowns/member/avatar.tsx web/apps/web/core/components/dropdowns/member/base.tsx web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx web/apps/web/core/components/issues/attachment/attachment-list-item.tsx web/apps/web/core/components/issues/issue-detail/sidebar.tsx web/apps/web/core/components/issues/peek-overview/properties.tsx web/apps/web/core/components/modules/module-card-item.tsx web/apps/web/core/components/modules/module-list-item-action.tsx web/apps/web/core/components/power-k/config/miscellaneous-commands.ts web/apps/web/core/components/settings/profile/content/pages/security.tsx web/apps/web/core/components/views/view-list-item-action.tsx web/apps/web/core/components/workspace/use-create-workspace.ts web/apps/web/core/components/workspace/use-invitation-answer.ts web/apps/web/core/hooks/use-copy-link.test.ts web/apps/web/core/hooks/use-copy-link.ts web/apps/web/core/hooks/use-refusal-toast.test.ts web/apps/web/core/hooks/use-refusal-toast.ts web/apps/web/core/layouts/auth-layout/use-project-fetch.ts web/apps/web/core/lib/api-error.test.ts web/apps/web/core/lib/api-error.ts web/apps/web/core/lib/error-messages.ts web/apps/web/core/lib/form-refusal.ts web/packages/constants/src/filter.ts web/packages/i18n/src/locales/en/power-k.json web/packages/i18n/src/locales/en/workspace-settings.json web/packages/i18n/src/locales/zh-CN/power-k.json web/packages/i18n/src/locales/zh-CN/workspace-settings.json
 ```
 ```bash
 git commit -m "refactor(M3/closeout): one way to copy, to read a problem's code and to say a refusal; every key a page reads is defined
@@ -9976,8 +10089,10 @@ git commit -m "refactor(M3/closeout): one way to copy, to read a problem's code 
 ButtonAvatars' unread showTooltip goes from its ten callers. Copying goes
 through useCopyLink and the new useCopyText, the token dialog's and the
 palette's too, and the copy-hook rule keeps it there, with dated
-exceptions for M4-M8's files. problemCode() reads a problem's code;
-useRefusalMessage gives a refusal's text, the theme switcher's too.
+exceptions for M4-M8's files. The token dialog's copy button shows its
+focus, and takes it once the token shows. problemCode() reads a
+problem's code, errorMessageKey's too; useRefusalMessage gives a
+refusal's text, the theme switcher's too.
 tools/i18n-keys.mjs, in make lint-web, fails on a key a page reads that
 no language defines. The guard's header and the M1 design say when an
 exception until an M's closeout falls due.
@@ -10000,6 +10115,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T9.9` | 主题切换又自己说它的失败（`refusal-toast`，K7） | 关键词守卫 | 静态 |
 | `T9.10` | 页面从用户 store 取 `signOut`（`sign-out-toast`，K8） | 关键词守卫 | 静态 |
 | `T9.11` | 侧边栏读的一个键在两种语言里都改了名，两边仍一致（K13） | `tools/i18n-keys.mjs` | 静态 |
+| `T9.12` | 令牌的复制按钮又是 `outline-none`：键盘到达时看不出焦点（预审） | 故事 A11 | 端到端 |
+| `T9.13` | 生成令牌之后焦点不移到令牌的按钮，落在 `body` 上（预审） | 故事 A11 | 端到端 |
 
 ---
 

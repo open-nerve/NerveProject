@@ -237,12 +237,13 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 
 - **`showTooltip`**（K4）：`ButtonAvatars` 的 `showTooltip` 必传而没有读者，删除，10 处调用（9 个文件，M3–M7）。
 - **复制只经 hook**（K5）：`core/hooks/use-copy-link.ts` 里一个不导出的 `useCopy(write, titleKey)`，导出 `useCopyLink`（原有）和新的 `useCopyText`；API 令牌弹窗（`useCopyText`，成功的提示照旧是"Success!"）和命令面板的"复制当前页面的地址"（`useCopyLink`；它的 `useCallback` 和一条 `eslint-disable` 随之删除）经它们；两条专用的失败文案删除（共用的提示）。关键词规则 `copy-hook`：web 应用的 `app/`、`core/` 中 `copy(Text|Url)ToClipboard(` 或 `navigator.clipboard` 只在这个 hook 里；20 个有期限的例外（M4 10、M6 5、M7 4、M8 1，`until` 是各 M 的收尾，第 3 节第 5 条：在那个 M 的收尾开始、规则文件的 `phase` 改为 `M<n>/closeout` 时到期，`tools/keywords.mjs` 的开头和 M1 设计 7.4 各加一句写明）；编辑器包不在范围内。
-- **问题码只经 `problemCode()`**（K6）：`core/lib/api-error.ts` 加 `problemCode(error)`，五处 `error instanceof ApiError && error.problem?.code` 改用它（vitest）。
+- **API 令牌弹窗的焦点**（Task 9 的预审，控制者 2026-10-14：收尾改到的 M2 弹窗，每个控件在键盘取得焦点时看得见）：令牌的复制按钮原来是 Plane 的 `outline-none`，键盘到达时看不出焦点，现在照 propel 按钮的写法（`focus-visible:outline-offset-2`，浏览器的轮廓，与弹窗的别的按钮相同）；生成之后，生成的按钮随表单消失，焦点原来落到 `body`，现在创建的成功跟进（`followInSession` 的 `done`）以 `flushSync` 渲染令牌，再把焦点移到这个按钮（`GeneratedTokenDetails` 收 `copyButtonRef`），它是接下来要用的控件。A11 核对两者（`T9.12`、`T9.13`）。
+- **问题码只经 `problemCode()`**（K6）：`core/lib/api-error.ts` 加 `problemCode(error)`，五处 `error instanceof ApiError && error.problem?.code` 改用它（vitest）；`core/lib/error-messages.ts` 的 `errorMessageKey` 也经它读问题码（Task 9 的预审，控制者 2026-10-14：问题码只有一种读法），它原有的 vitest 照旧覆盖每一支（认识的码、不认识的码、没有问题的回答、连不上、别的错误）。
 - **拒绝的文字只经一处**（K7）：`use-refusal-toast.ts` 导出 `useRefusalMessage`，`useRefusalToast` 和主题切换的 `setPromiseToast` 的失败一支都经它；关键词规则 `refusal-toast` 也看 `setPromiseToast(…errorMessageKey(` 的写法。
 - **`sign-out-toast`**（K8）：规则加上 `{ … signOut … } = useUser()` 和 `useUser().signOut` 两种写法。
 - **读了却没有定义的键**（K13）：新文件 `tools/i18n-keys.mjs`，进 `make lint-web`（和 knip 的入口）：web 应用的 `app/`、`core/` 与 `@nerve/constants`、`@nerve/types` 的源文件中 `t("…")`、`i18nKey`、`i18n_*` 的值和以已有顶层键开头的带点的字面量，每个在 en 中都有定义（模板的前缀只查前缀）；测试和替身不算。它在 `49190525` 上第一次运行就找到 K9 的四个键和 `@nerve/constants` 的 `filter.ts` 中一个没有读者、没有定义的 `date_filters.1_month_ago`（删除）。
 
-关键词规则的 `phase` 写 `M3/closeout`。M3 设计 7.10 的规则表原来只列 P8a、P8b 的规则：Task 9 补上 P9 的三条（`workspaces-list-fetch`、`refusal-toast`、`sign-out-toast`）、P10 的两条（`project-leave`、`project-address-route`）和 `copy-hook`，Task 11 补上 `workspace-address-route`，每个 Task 结束时表是全的。A11 核对点击令牌复制到剪贴板并提示；S6 核对命令面板的复制。
+关键词规则的 `phase` 写 `M3/closeout`。M3 设计 7.10 的规则表原来只列 P8a、P8b 的规则：Task 9 补上 P9 的三条（`workspaces-list-fetch`、`refusal-toast`、`sign-out-toast`）、P10 的两条（`project-leave`、`project-address-route`）和 `copy-hook`，Task 11 补上 `workspace-address-route`，每个 Task 结束时表是全的。A11 核对生成之后焦点在令牌的按钮上、键盘到达时有轮廓，点击令牌复制到剪贴板并提示；S6 核对命令面板的复制。
 
 ### 2.11 输入法和选择上的 Enter（Task 10）
 
@@ -601,7 +602,7 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 
   Task 8 的修复轮 1 只为 `CustomMenu` 改到的别的 M 的文件（附录 A.4）：工作项的 4 个快捷操作各少一行，草稿的快捷操作 69 → 62，`command-palette.store.ts` 209 → 209；收藏的文件夹 299 → 300、收藏的一项 56 → 57 变长（加 `onMenuClose` 的一行），照第 3 节第 1 条的写法写明为例外：差异只是修复逼出的那一行。M3 的项目标签栏的菜单 98 → 87、成员表格的表头 128 → 127 变短（收尾的对象）。
 
-  只为 `showTooltip`（Task 9）改到的 9 个文件都变短或不变（Task 9 改到的 Plane 文件中只有主题切换变长 91 → 92，它是 K7 的对象）。
+  只为 `showTooltip`（Task 9）改到的 9 个文件都变短或不变（Task 9 改到的 Plane 文件中变长的是主题切换 91 → 92，它是 K7 的对象，和创建令牌的弹窗 115 → 120，生成之后它把焦点移到令牌，预审的裁定；令牌的那一块 77 → 65 变短）。
 - **oxlint**（`oxsnapfiles.py`，`logs/ox-final-amend.txt`）：上限 web 303 → 293（Task 2 快捷键的两条：`tabindex-no-positive` 改掉、`no-autofocus` 写明理由；Task 8 侧边栏的 `exhaustive-deps`和修复轮 1 项目标签栏的菜单的两条（可点击的 `span`）；Task 11 项目页的根的 2 条 `exhaustive-deps`；Task 12 两个筛选文件的 3 条）、`@nerve/ui` 15 → 12（Task 1 `AlertModalCore` 的 `tabindex-no-positive`；Task 8 的修复轮 1 删除 `use-dropdown-key-down`，带走它的 2 条）、`@nerve/propel` 11 → 10（Task 7 表情回应的 `no-array-index-key`），各等于条数。收尾改到的文件中仍有警告的 6 个，照第 3 节第 2 条的裁定由 Task 15 写进接收者的交接：
 
 | 文件 | 改它的 Task | 条数 | 规则 | 交给 |
@@ -715,6 +716,8 @@ P8 的 web 清扫 W1–W20，按收尾改到的页面和弹窗收窄（brief）�
 | 离开项目的提示"Enter 'leave project'"（照它输入会被拒绝）；"…by typing the 'Leave Project'." | "Enter “Leave Project”"；"…by typing “Leave Project”." | 离开项目的弹窗（P5） |
 | "Enter 'delete my project'" | "Enter “delete my project”" | 删除项目的弹窗（P4） |
 | "Token copied to clipboard." 之外的专用失败文案 | 共用的失败提示 | API 令牌、命令面板的复制（Task 9） |
+| API 令牌弹窗里令牌的复制按钮在键盘取得焦点时看不见（`outline-none`） | 有浏览器的轮廓，与弹窗的别的按钮相同（propel 按钮的 `focus-visible:outline-offset-2`） | API 令牌的弹窗（A11；Task 9 预审的裁定） |
+| 生成令牌之后焦点落在 `body` 上（生成的按钮随表单消失） | 焦点在令牌的复制按钮上 | API 令牌的弹窗（A11；Task 9 预审的裁定） |
 | 首页的问候由"Good"和"morning"等拼成，名字是名和姓 | 每个时段一个带 `{name}` 的句子（"Good morning, {name}"），名字是显示名 | 首页（中文的"good"也译作"早上"，原来读作"早上 下午""早上 晚上"，现在是"下午好，{name}"等；S7） |
 | "You declined this invitation." | "This invitation was declined." | 已拒绝的邀请页（W5；负责人 2026-10-13，3.2 第 2 条） |
 | 侧边栏项目一行是两个停留点：链接和其中都叫"Open project menu"的按钮 | 一个：以项目为名的链接，折叠的模式中说出是否展开 | 侧边栏（S8；F6；Task 8 的修复轮 1） |

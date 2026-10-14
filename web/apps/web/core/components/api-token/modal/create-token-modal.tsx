@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 // nerve imports
 import type { ApiTokenCreate, ApiTokenCreated } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
@@ -31,6 +32,7 @@ export function CreateApiTokenModal(props: Props) {
   const [neverExpires, setNeverExpires] = useState<boolean>(false);
   // The new token with the token itself: only here, while the modal shows it (M2 design 7.7).
   const [generatedToken, setGeneratedToken] = useState<ApiTokenCreated | null>(null);
+  const copyButton = useRef<HTMLButtonElement>(null);
   const [wasOpen, setWasOpen] = useState(isOpen);
   // The modal's phase, which moves on at each opening and each close (and when the page is left). What a phase
   // started and finishes in another acts on no opening of its own, so it does nothing: a create answered after its
@@ -84,14 +86,17 @@ export function CreateApiTokenModal(props: Props) {
     csvDownload(csvData, `secret-key-${Date.now()}`);
   };
 
-  // Followed only in the session the create was sent in (M3 design 7.1) and in its opening: the token shown and its
-  // CSV downloaded, or nerve's refusal said by the form.
+  // Followed only in the session the create was sent in (M3 design 7.1) and in its opening: the token shown, the
+  // focus on it (the form's button that had it is gone with the form), and its CSV downloaded; or nerve's refusal
+  // said by the form.
   const handleCreateToken = (data: ApiTokenCreate, refused: (error: unknown) => void) => {
     const opening = phase.current;
     return followInSession(() => createToken(data), {
       done: (created) => {
         if (phase.current !== opening) return;
-        setGeneratedToken(created);
+        // rendered now, so that its button is there to take the focus
+        flushSync(() => setGeneratedToken(created));
+        copyButton.current?.focus();
         downloadSecretKey(created);
       },
       failed: refused,
@@ -101,7 +106,7 @@ export function CreateApiTokenModal(props: Props) {
   return (
     <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXL}>
       {generatedToken ? (
-        <GeneratedTokenDetails handleClose={handleClose} tokenDetails={generatedToken} />
+        <GeneratedTokenDetails handleClose={handleClose} tokenDetails={generatedToken} copyButtonRef={copyButton} />
       ) : (
         <CreateApiTokenForm
           handleClose={handleClose}

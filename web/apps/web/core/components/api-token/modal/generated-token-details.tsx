@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { Ref } from "react";
 import type { ApiTokenCreated } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
@@ -19,10 +20,12 @@ type Props = {
   handleClose: () => void;
   /** The new token, with the token itself, which shows here this once. */
   tokenDetails: ApiTokenCreated;
+  /** The button that shows the token and copies it: the dialog moves the focus there once the token shows. */
+  copyButtonRef: Ref<HTMLButtonElement>;
 };
 
 export function GeneratedTokenDetails(props: Props) {
-  const { handleClose, tokenDetails } = props;
+  const { handleClose, tokenDetails, copyButtonRef } = props;
   const { isMobile } = usePlatformOS();
   const { t } = useTranslation();
   const copyText = useCopyText();
@@ -34,9 +37,10 @@ export function GeneratedTokenDetails(props: Props) {
         <p className="text-13 text-placeholder">{t("workspace_settings.copy_key")}</p>
       </div>
       <button
+        ref={copyButtonRef}
         type="button"
         onClick={() => void copyText(tokenDetails.token, t("workspace_settings.token_copied"))}
-        className="mt-4 flex w-full items-center justify-between truncate rounded-md border-[0.5px] border-subtle px-3 py-2 text-13 font-medium outline-none"
+        className="mt-4 flex w-full items-center justify-between truncate rounded-md border-[0.5px] border-subtle px-3 py-2 text-13 font-medium focus-visible:outline-offset-2"
       >
         <span className="truncate pr-2">{tokenDetails.token}</span>
         <Tooltip label={t("account_settings.api_tokens.copy")} disabled={isMobile}>

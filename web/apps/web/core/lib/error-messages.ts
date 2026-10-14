@@ -4,7 +4,7 @@
  */
 
 import type { FieldError } from "@nerve/api-client";
-import { ApiError } from "@/lib/api-error";
+import { ApiError, problemCode } from "@/lib/api-error";
 import { SessionUnavailableError } from "@/lib/auth/token-manager";
 
 /**
@@ -68,11 +68,13 @@ export const FIELD_ERROR_MESSAGES: Readonly<Record<FieldError["code"], string>> 
   contains_url: "errors.field.contains_url",
 };
 
-/** The i18n key of the message for an error of a call to nerve. */
+/**
+ * The i18n key of the message for an error of a call to nerve: that nerve could not be reached, or the message of its
+ * problem's code (problemCode), or the general one.
+ */
 export function errorMessageKey(error: unknown): string {
-  if (error instanceof ApiError) return PROBLEM_MESSAGES[error.problem?.code ?? ""] ?? "errors.unknown";
   if (error instanceof SessionUnavailableError) return "errors.unreachable";
-  return "errors.unknown";
+  return PROBLEM_MESSAGES[problemCode(error) ?? ""] ?? "errors.unknown";
 }
 
 /** The i18n keys of the messages for the fields a problem names, by field. */
