@@ -21,7 +21,7 @@
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
 - **规则**（总体设计 7.7；P8a–P11 的裁定）：会话的每个取数经 `useSessionSWR`；修改经 store 的方法，之后的跳转、提示、界面变化经 `followInSession` 只在发出它的会话里（Task 3 的离开：hook 的 vitest 的"换账户之后"一行）。弹窗：请求在路上时关不掉（F-1）、被拒绝时留着、只在成功的跟进中关上（A-M2）、组字的 Escape 不关、打开时后面的页面 `inert` 和 `aria-hidden`、Tab 不出去、关上之后焦点回到打开它的控件（spec 2.5）；每一条由一个会失败的端到端检查看住（各 Task 的变异表）。每个控件 Tab 能到、有名字、键盘取得焦点时看得见，不加正的 `tabIndex`。页面读地址只经路由参数（`project-address-route`、`workspace-address-route`）。文案：页面上的文字经 `t()`，en 与 zh-CN 同时加，一句话带名字时一个键加占位（`Translated`）；不再读的键在两种语言中都删除。类型只来自生成的客户端：没有新的 `as`、`any`、`!`（spec 附录 A.5）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.5）；只为使用方改到的 Plane 文件不变长，记录在案的例外一个：`IconButton` 的名字和 `EmojiPicker` 的 `ariaLabel` 在根上必传，27 个使用方的文件只加名字（`aria-label`、`addReactionLabel`、`ariaLabel`、`useTranslation` 的导入和 `t` 一行，以及 oxfmt 的重排），其中 24 个变长（控制者已裁定，spec 第 3 节第 1 条、附录 A.5）。
-- **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告。收尾改到、仍有警告的 5 个文件照控制者的裁定交出（spec 第 3 节第 2 条）：只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个给 M4、M6、M7，只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx` 给 M8（Task 15 写进各自的交接）。Task 8 只为 `CustomMenu` 改到的别的 M 的调用方只改修复逼出的几行，它们原有的警告留着（收藏的文件夹 2 条、项目标签栏的菜单 2 条，spec 附录 A.4 的调用方清单）。上限：web 303 → 301（Task 2）→ 300（Task 8）→ 298（Task 11）→ 295（Task 12）；`@nerve/ui` 15 → 14（Task 1）→ 12（Task 8）；`@nerve/propel` 11 → 10（Task 7）；utils 7、constants 1 不变。抑制多两条（Task 2 的快捷键搜索框和 Task 12 的筛选，`autoFocus` 写明理由，spec 第 3 节第 2、20 条），删去两条：181 条照旧。
+- **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告。收尾改到、仍有警告的 6 个文件照控制者的裁定交出（spec 第 3 节第 2 条）：只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个给 M4、M6、M7，只为 `CustomMenu` 改到的收藏的文件夹（Task 8 的修复轮 1，2 条 `no-shadow`）给 M7，只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx` 给 M8（Task 15 写进各自的交接）。上限：web 303 → 301（Task 2）→ 298（Task 8）→ 296（Task 11）→ 293（Task 12）；`@nerve/ui` 15 → 14（Task 1）→ 12（Task 8）；`@nerve/propel` 11 → 10（Task 7）；utils 7、constants 1 不变。抑制多两条（Task 2 的快捷键搜索框和 Task 12 的筛选，`autoFocus` 写明理由，spec 第 3 节第 2、20 条），删去两条：181 条照旧。
 - **关键词守卫**：69 条规则、3 个例外；Task 9 起 70 条（`copy-hook`）、23 个例外；Task 11 起 71 条（`workspace-address-route`）。规则的 `phase` 写 `M3/closeout`，例外的 `until` 写 `M4/closeout` 等（spec 第 3 节第 5 条）：在那个 M 的收尾开始、`phase` 改为它时到期，Task 9 把这一点写进守卫的说明和 M1 设计 7.4，Task 15 写进收到例外的 M 的交接。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -110,7 +110,7 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/workspace/w11-guest-bounds.spec.ts` | 访客从菜单离开（双击只发一次，请求在路上时确认框关不掉）、唯一的管理员被拒绝（Task 3）；`registeredPAT`、导入（Task 14） | 3、14 |
 | `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；邀请一行的菜单以地址为名（Task 8）；`registeredPAT`（Task 14） | 3、8、14 |
 | `e2e/stories/workspace/w5-invitation-link.spec.ts` | 邀请被拒绝之后的页面的说法（Task 4）；`registeredPAT`、会话断言的导入（Task 14） | 4、14 |
-| `e2e/stories/workspace/w7-member-management.spec.ts` | 条件挂载的确认框隐藏后面的页面（Task 1）；被拒绝时确认框留着（Task 3）；成员一行的菜单以成员为名、Tab 到达时显示，以键盘选择，取消、Escape 之后焦点回到菜单的按钮（Task 8）；`registeredPAT`（Task 14） | 1、3、8、14 |
+| `e2e/stories/workspace/w7-member-management.spec.ts` | 条件挂载的确认框隐藏后面的页面（Task 1）；被拒绝时确认框留着（Task 3）；成员一行的菜单以成员为名、Tab 到达时显示，以键盘选择，取消、Escape 之后焦点回到菜单的按钮，表格的排序菜单由 Tab 到达、以键盘选择（Task 8）；`registeredPAT`（Task 14） | 1、3、8、14 |
 | `e2e/stories/workspace/w8-navigation-preferences.spec.ts` | 弹窗关上之后再读侧边栏（Task 1）；`registeredPAT`（Task 14） | 1、14 |
 | `knip.jsonc` | knip 的入口加 `tools/i18n-keys.mjs` | 9 |
 | `pnpm-lock.yaml` | `@nerve/propel` 依赖 `@nerve/utils`（工作区内） | 10 |
@@ -147,7 +147,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/labels/create-update-label-inline.tsx` | 颜色弹层（Task 8） | 8 |
 | `web/apps/web/core/components/labels/label-block/label-item-block.tsx` | 标签一行的菜单以标签为名；菜单打开时设为打开、`onMenuClose` 设为关上（原来每次点按钮来回切换） | 8 |
 | `web/apps/web/core/components/labels/delete-label-modal.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-item.tsx` | 标签的英文经 `t()`（Task 6） | 6 |
-| `web/apps/web/core/components/navigation/project-actions-menu.tsx` | `CustomMenu` 的调用方：删去 `useCaptureForOutsideClick` | 8 |
+| `web/apps/web/core/components/navigation/project-actions-menu.tsx` | `CustomMenu` 的调用方：删去 `useCaptureForOutsideClick`；没有读者的 `isMenuActive`、`actionSectionRef` 和 `span` 的 click 删除（两条警告） | 8 |
 | `web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 |
 | `web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 新 |
 | `web/apps/web/core/components/navigation/top-navigation-root.tsx` | 工作区菜单不再收 `variant` | 3 |
@@ -171,6 +171,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/project/dropdowns/filters/lead.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 删除 |
 | `web/apps/web/core/components/project/form-loader.tsx`、`web/apps/web/core/components/project/settings/helper.tsx` | 没有用到的加载、包了一层的开关删除 | 13 删除 |
 | `web/apps/web/core/components/project/header.tsx` | 项目页的英文（Task 12）；工作区经 `useRouteWorkspace()`（Task 11） | 11、12 |
+| `web/apps/web/core/components/project/member-header-column.tsx` | 两个成员页表格的排序菜单是 Tab 的停留点（`customButtonTabIndex={-1}` 删去） | 8 |
 | `web/apps/web/core/components/project/member-list.tsx` | 搜索的占位或名字 | 13 |
 | `web/apps/web/core/components/project/project-dialog-texts.test.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5 新 |
 | `web/apps/web/core/components/project/root.tsx` | 工作区经 `useRouteWorkspace()`，回调和副作用写全依赖（Task 11） | 11 |
@@ -216,7 +217,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/lib/fake-controls.ts` | 替身：`AlertModalCore` 的文字（Task 6）；开关的名字（Task 13） | 6、13 |
 | `web/apps/web/core/store/command-palette.store.ts` | `getIsProjectListOpen` 对没有展开、收起过的项目给 `false`（原来给 `undefined`，与它的类型不符） | 8 |
 | `web/apps/web/core/store/member/project/project-member.store.test.ts` | 资料来自 `userOf` | 14 |
-| `web/apps/web/package.json` | web 的 oxlint 上限 303 → 301（Task 2）；301 → 300（Task 8）；300 → 298（Task 11）；298 → 295（Task 12） | 2、8、11、12 |
+| `web/apps/web/package.json` | web 的 oxlint 上限 303 → 301（Task 2）；301 → 298（Task 8）；298 → 296（Task 11）；296 → 293（Task 12） | 2、8、11、12 |
 | `web/packages/constants/src/filter.ts` | 删去没有读者的日期选项（Task 9）；创建日期的选项 `i18n_name`（Task 12） | 9、12 |
 | `web/packages/constants/src/project.ts` | `PROJECT_FILTER_I18N_LABEL` | 12 |
 | `web/packages/constants/src/state.ts` | 状态组的 `i18n_label` | 6 |
@@ -7009,19 +7010,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/fixtures/menus.ts`、`e2e/stories/smoke/s8-sidebar.spec.ts`、`web/apps/web/core/components/common/color-picker.tsx`、`web/apps/web/core/components/dropdowns/project/base.test.tsx`
-- Modify: `e2e/fixtures/project-pages.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx`、`web/apps/web/core/components/issues/workspace-draft/quick-action.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/navigation/project-actions-menu.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx`、`web/apps/web/core/components/project-states/state-item-title.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx`、`web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx`、`web/apps/web/core/store/command-palette.store.ts`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/ui/package.json`、`web/packages/ui/src/dropdowns/custom-menu.tsx`、`web/packages/ui/src/dropdowns/helper.tsx`
+- Modify: `e2e/fixtures/project-pages.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx`、`web/apps/web/core/components/issues/workspace-draft/quick-action.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/navigation/project-actions-menu.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx`、`web/apps/web/core/components/project-states/state-item-title.tsx`、`web/apps/web/core/components/project/member-header-column.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx`、`web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx`、`web/apps/web/core/store/command-palette.store.ts`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/ui/package.json`、`web/packages/ui/src/dropdowns/custom-menu.tsx`、`web/packages/ui/src/dropdowns/helper.tsx`
 - Delete: `web/packages/ui/src/hooks/use-dropdown-key-down.tsx`
 
 **Interfaces:**（spec 2.9）
 - `components/common/color-picker.tsx`（新文件）：`TwitterPicker`，输入框的 `outline` 是浏览器的（`"revert"`）；状态的表单、标签的行内表单用它。状态的表单打开时 `setFocus("name")`。
 - 侧边栏：项目列表的"+"是 `opacity-0`，`group-hover`、`focus-visible` 时显示；项目一行的菜单是 `CustomMenu` 的省略号按钮（`menuButtonOnClick`；`actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；手柄是 `span`；展开箭头 `tabIndex={-1}`。`resizable-sidebar.tsx`：收起时主侧边栏 `inert`，没有浮出时副本 `inert`；从不设置的 `isHoveringTrigger` 和它的副作用删除（web 的上限 301 → 300）。项目一行是一个停留点（修复轮 1）：链接里的 `Disclosure.Button` 删除（原来链接和它是两个停留点，都以项目为名），链接以项目为名（`Logo` 已 `aria-hidden`，Task 7），在折叠的模式中带 `aria-expanded`（点它和点展开箭头一样展开、收起项目的页面）；`command-palette.store.ts` 的 `getIsProjectListOpen` 对没有展开、收起过的项目给 `false`（原来给 `undefined`，与它的类型不符，链接就不说是否展开）；展开箭头的名字照旧（F6，A-M2），仍只给指针。侧边栏的开关（`sidebar/sidebar-toggle-button.tsx`，修复轮 1）带 `data-sidebar-toggle`，按下之后下一帧把焦点交给不在 `inert` 之中的那一个（收起时交给页头的，展开时交给侧边栏的；原来按下的那一个变为 `inert` 或离开，焦点落在页面的 `body` 上）。
 - 一行重复的控件以它那一行为名（spec 2.9，Task 7 评审的裁定）：项目一行的菜单名为 `aria_labels.projects_sidebar.project_quick_actions`（"{name} quick actions"，项目的名字；原来每一行都是"Toggle quick actions menu"，这个键照旧由收藏和项目页头的菜单读）；项目成员页、标签页一行的菜单名为 `common.item_options`（"{name} options"，成员的显示名、标签的名字；原来每一行都是 `common.options`）。M3 的别的一行（Task 8 预审的裁定）：工作区成员页一行的菜单原来没有名字、键盘取得焦点时看不见（`PopoverMenu`，`outline-none`、`opacity-0`），改为与项目成员页一行相同的 `CustomMenu` 的省略号按钮（`common.item_options`、成员的显示名，`focus-visible:opacity-100`，浏览器的焦点轮廓），菜单项是 `menuitem`；邀请一行的菜单原来没有名字，以邀请的地址为名（`common.item_options`）；标签一行的删除、状态一行的编辑和删除以标签、状态为名（`common.delete_item` "Delete {name}"、`common.edit_item` "Edit {name}"）；状态的"Mark as default"以它看得见的文字开头，后接状态的名字（`project_settings.states.default.mark_item` "Mark as default: {name}"，WCAG 2.5.3；默认的一个、正在设的一个各只有一个，照旧以文字为名）；状态组的添加按钮以组为名（`project_settings.states.add` "Add a state to {name}"）。
-- `@nerve/ui` 的 `CustomMenu`（修复轮 1，spec 2.9；调用方的清单在 spec 附录 A.4）：打开与否只有 Headless UI 的 `open` 一个（原来的 `isOpen`、`useDropdownKeyDown` 和它自己的点外面检测删除：键盘打开的是 Headless UI 的状态，菜单却只照 `isOpen` 显示，按钮上按 Enter 什么也看不见）。三种按钮都是 `Menu.Button`（指针、Enter、空格、上下箭头打开，`tabIndex` 给按钮，根不再是停留点）；每一项是 `Menu.Item`，它的子元素就是动作的按钮（Enter、空格点它）；选中、Escape 关上菜单，焦点回到按钮（一项打开的弹窗关上时 `ModalCore` 把焦点还给按钮）；Tab 关上它，焦点从按钮往下走；点外面也关上它。`menuButtonOnClick` 在菜单打开时调用（指针或键盘），`onMenuClose` 在它关上时调用（无论什么关的），都经 `OpenChange`；`closeOnSelect` 让点菜单里的任何东西都关上它。`SubMenu` 放进菜单的项的元素里（在菜单之内，点它不算点外面），只以视口为界。`useCaptureForOutsideClick`、`openOnHover`（没有调用方）和 `@nerve/ui` 的 `use-dropdown-key-down`（两条警告）删除，`@nerve/ui` 的上限 14 → 12。调用方只改修复逼出的：8 个删去 `useCaptureForOutsideClick`（工作项的 4 个快捷操作、草稿的快捷操作、项目标签栏的菜单、侧边栏项目一行、标签一行）；以 `menuButtonOnClick` 来回切换"菜单打开"的 4 个（侧边栏项目一行、标签一行、收藏的文件夹和一项）改为打开时设为真、`onMenuClose` 设为假（原来只有点按钮才切换，键盘打开时不知道）。
+- `@nerve/ui` 的 `CustomMenu`（修复轮 1，spec 2.9；调用方的清单在 spec 附录 A.4）：打开与否只有 Headless UI 的 `open` 一个（原来的 `isOpen`、`useDropdownKeyDown` 和它自己的点外面检测删除：键盘打开的是 Headless UI 的状态，菜单却只照 `isOpen` 显示，按钮上按 Enter 什么也看不见）。三种按钮都是 `Menu.Button`（指针、Enter、空格、上下箭头打开，`tabIndex` 给按钮，根不再是停留点）；每一项是 `Menu.Item`，它的子元素就是动作的按钮（Enter、空格点它）；选中、Escape 关上菜单，焦点回到按钮（一项打开的弹窗关上时 `ModalCore` 把焦点还给按钮）；Tab 关上它，焦点从按钮往下走；点外面也关上它。`menuButtonOnClick` 在菜单打开时调用（指针或键盘），`onMenuClose` 在它关上时调用（无论什么关的），都经 `OpenChange`；`closeOnSelect` 让点菜单里的任何东西都关上它。`SubMenu` 放进菜单的项的元素里（在菜单之内，点它不算点外面），只以视口为界。`useCaptureForOutsideClick`、`openOnHover`（没有调用方）和 `@nerve/ui` 的 `use-dropdown-key-down`（两条警告）删除，`@nerve/ui` 的上限 14 → 12。调用方只改修复逼出的：8 个删去 `useCaptureForOutsideClick`（工作项的 4 个快捷操作、草稿的快捷操作、项目标签栏的菜单、侧边栏项目一行、标签一行）；项目标签栏的菜单是 M3 的页面（控制者 2026-10-14），它没有读者的 `isMenuActive`、`actionSectionRef` 和按钮里 `span` 的 click 删除（两条警告，web 的上限 300 → 298）；两个成员页表格的排序菜单（`project/member-header-column.tsx`）去掉 `customButtonTabIndex={-1}`，是 Tab 的停留点，以列为名（看得见的列名）；以 `menuButtonOnClick` 来回切换"菜单打开"的 4 个（侧边栏项目一行、标签一行、收藏的文件夹和一项）改为打开时设为真、`onMenuClose` 设为假（原来只有点按钮才切换，键盘打开时不知道）。
 - 工作区菜单的标题旁只在指针经过时显示的展开箭头做标题的按钮同样的事：`tabIndex={-1}`、`aria-hidden`，它的 `aria-label` 删除（Task 7 评审的裁定；原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）。
 - 项目成员页一行的菜单 `focus-visible:opacity-100`，菜单项经 `t()`。项目下拉框：`tabIndex` 给 `DropdownButton`，根不再可以聚焦。
 - `e2e/fixtures/project-pages.ts` 的 `pageContent(page)`：页面的内容（应用的 `main` 里的 `main`，侧边栏之外）。侧边栏的一行现在也以项目为名，P1 在这里找项目的卡片，P2 找页头的面包屑。`e2e/fixtures/menus.ts`（新文件）的 `chooseByKeyboard(page, button, item)`：按钮有焦点时按 Enter，那一项看得见，按下箭头到它（菜单的 `aria-activedescendant`），再按 Enter；W7、P5、P7、S8 经它。P6、P7 的整页计数以名字的开头、结尾为锚（`/^Mark as default: /`、`/^Edit /`、`/ options$/`、`/^Delete /`）。
 
-**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行，以"Web quick actions"找到它的菜单；工作区菜单的标题只有一个按钮被读出，Tab 从它到菜单的第一页；P6：名称有焦点、十六进制框有轮廓，Review 一行的编辑、删除、设为默认和组的添加以它们的东西为名；P5：一行的菜单由 Tab 到达，以"max options"为名，访客以"Web quick actions"打开侧边栏一行的菜单；P7：Docs 一行的菜单和删除以 Docs 为名；W7：bob 一行的菜单以他为名，由 Tab 到达时显示、有焦点的标记；W4：erin 的邀请一行的菜单以她的地址为名；S7：工作区菜单的按钮一个，工作区成员和邀请一行的菜单、标签一行的菜单以"…的选项"为名，状态的"设为默认：…"，项目成员一行的菜单以管理员的名字为名，它的"离开"。修复轮 1：W7 以键盘打开 bob 一行的菜单、选"Remove"，确认框取消之后焦点回到菜单的按钮，再打开按 Escape 关上；P5 以键盘选 max 的"Remove"，Escape 关上确认框之后焦点回到按钮；P7 以键盘选 Docs 的"Edit label"；S8 的项目一行 Tab 只停一次（链接"Web"带 `aria-expanded`，之后是"Web quick actions"），以键盘选"Settings"打开项目的设置，按 Enter 收起侧边栏之后焦点在页头的开关上，再按 Enter 展开之后在侧边栏的开关上。
+**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行，以"Web quick actions"找到它的菜单；工作区菜单的标题只有一个按钮被读出，Tab 从它到菜单的第一页；P6：名称有焦点、十六进制框有轮廓，Review 一行的编辑、删除、设为默认和组的添加以它们的东西为名；P5：一行的菜单由 Tab 到达，以"max options"为名，访客以"Web quick actions"打开侧边栏一行的菜单；P7：Docs 一行的菜单和删除以 Docs 为名；W7：bob 一行的菜单以他为名，由 Tab 到达时显示、有焦点的标记；W4：erin 的邀请一行的菜单以她的地址为名；S7：工作区菜单的按钮一个，工作区成员和邀请一行的菜单、标签一行的菜单以"…的选项"为名，状态的"设为默认：…"，项目成员一行的菜单以管理员的名字为名，它的"离开"。修复轮 1：W7 以键盘打开 bob 一行的菜单、选"Remove"，确认框取消之后焦点回到菜单的按钮，再打开按 Escape 关上；P5 以键盘选 max 的"Remove"，Escape 关上确认框之后焦点回到按钮；P7 以键盘选 Docs 的"Edit label"；S8 的项目一行 Tab 只停一次（链接"Web"带 `aria-expanded`，之后是"Web quick actions"），以键盘选"Settings"打开项目的设置，按 Enter 收起侧边栏之后焦点在页头的开关上，再按 Enter 展开之后在侧边栏的开关上；W7 从"Full name"按 Tab 到"Display name"、"Email"（有焦点的轮廓），以键盘选"Email"的"Z A"，carol 一行在最前、管理员的在最后。
 
 - [ ] **Step 1: 键盘**
 
@@ -7170,15 +7171,45 @@ import { ColorPicker } from "@/components/common/color-picker";
                 aria-label={t("common.delete_item", { name: label.name })}
 ````
 
-`web/apps/web/core/components/navigation/project-actions-menu.tsx`（修改，1 处）：
+`web/apps/web/core/components/navigation/project-actions-menu.tsx`（修改，4 处）：
 
 ````old web/apps/web/core/components/navigation/project-actions-menu.tsx
-      ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
-      useCaptureForOutsideClick
-      closeOnSelect
+
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router";
 ````
 ````new web/apps/web/core/components/navigation/project-actions-menu.tsx
-      ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
+
+import { useNavigate } from "react-router";
+````
+````old web/apps/web/core/components/navigation/project-actions-menu.tsx
+  // states
+  const [isMenuActive, setIsMenuActive] = useState(false);
+  // translation
+  const { t } = useTranslation();
+  // refs
+  const actionSectionRef = useRef<HTMLDivElement | null>(null);
+````
+````new web/apps/web/core/components/navigation/project-actions-menu.tsx
+  // translation
+  const { t } = useTranslation();
+````
+````old web/apps/web/core/components/navigation/project-actions-menu.tsx
+        <span
+          ref={actionSectionRef}
+          className="grid place-items-center rounded-sm p-0.5 text-placeholder hover:bg-layer-1"
+          onClick={() => setIsMenuActive(!isMenuActive)}
+        >
+````
+````new web/apps/web/core/components/navigation/project-actions-menu.tsx
+        <span className="grid place-items-center rounded-sm p-0.5 text-placeholder hover:bg-layer-1">
+````
+````old web/apps/web/core/components/navigation/project-actions-menu.tsx
+      useCaptureForOutsideClick
+      closeOnSelect
+      onMenuClose={() => setIsMenuActive(false)}
+````
+````new web/apps/web/core/components/navigation/project-actions-menu.tsx
       closeOnSelect
 ````
 
@@ -7303,6 +7334,18 @@ import { ColorPicker } from "@/components/common/color-picker";
 ````
 ````new web/apps/web/core/components/project-states/state-item-title.tsx
               aria-label={t("common.edit_item", { name: state.name })}
+````
+
+`web/apps/web/core/components/project/member-header-column.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/project/member-header-column.tsx
+      customButtonClassName="clickable !w-full"
+      customButtonTabIndex={-1}
+      className="!w-full"
+````
+````new web/apps/web/core/components/project/member-header-column.tsx
+      customButtonClassName="clickable !w-full"
+      className="!w-full"
 ````
 
 `web/apps/web/core/components/project/settings/member-columns.tsx`（修改，3 处）：
@@ -7654,7 +7697,7 @@ import { CustomMenu, CustomSelect } from "@nerve/ui";
     "check:lint": "node ../../../tools/lint-cap.mjs 301",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 300",
+    "check:lint": "node ../../../tools/lint-cap.mjs 298",
 ````
 
 `web/packages/i18n/src/locales/en/accessibility.json`（修改，1 处）：
@@ -8703,6 +8746,18 @@ import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
   await expect(bobsMenu).toBeFocused();
+  // The table's sort menus, each named by its column, are Tab stops, marked as Tab reaches them, and worked by the
+  // keyboard: from Full name, Tab reaches Display name, then Email, whose Z to A puts carol first and the admin last.
+  await page.getByRole("button", { name: "Full name", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Display name", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  const byEmail = page.getByRole("button", { name: "Email", exact: true });
+  await expect(byEmail).toBeFocused();
+  await expect(byEmail).not.toHaveCSS("outline-style", "none");
+  await chooseByKeyboard(page, byEmail, "Z A");
+  await expect(page.locator("tbody tr").first()).toContainText(carol.email);
+  await expect(page.locator("tbody tr").last()).toContainText(adminEmail);
 ````
 
 `web/apps/web/core/components/dropdowns/project/base.test.tsx`（新文件，33 行）：
@@ -8746,7 +8801,7 @@ describe("ProjectDropdownBase", () => {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -8763,7 +8818,7 @@ Expected: 116 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/fixtures/menus.ts e2e/fixtures/project-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx web/apps/web/core/components/issues/workspace-draft/quick-action.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/navigation/project-actions-menu.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project-states/group-item.tsx web/apps/web/core/components/project-states/options/delete.tsx web/apps/web/core/components/project-states/options/mark-as-default.tsx web/apps/web/core/components/project-states/state-item-title.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx web/apps/web/core/store/command-palette.store.ts web/apps/web/package.json web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/ui/package.json web/packages/ui/src/dropdowns/custom-menu.tsx web/packages/ui/src/dropdowns/helper.tsx web/packages/ui/src/hooks/use-dropdown-key-down.tsx
+git add e2e/fixtures/menus.ts e2e/fixtures/project-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx web/apps/web/core/components/issues/workspace-draft/quick-action.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/navigation/project-actions-menu.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project-states/group-item.tsx web/apps/web/core/components/project-states/options/delete.tsx web/apps/web/core/components/project-states/options/mark-as-default.tsx web/apps/web/core/components/project-states/state-item-title.tsx web/apps/web/core/components/project/member-header-column.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx web/apps/web/core/store/command-palette.store.ts web/apps/web/package.json web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/ui/package.json web/packages/ui/src/dropdowns/custom-menu.tsx web/packages/ui/src/dropdowns/helper.tsx web/packages/ui/src/hooks/use-dropdown-key-down.tsx
 ```
 ```bash
 git commit -m "feat(M3/closeout): the closeout's keyboard list: the hex field, the state form's focus, the sidebar and the rows' menus
@@ -8785,7 +8840,8 @@ state is the one it shows, each item is the button that acts, a choice
 or Escape closes it and the focus goes back to its button. The sidebar's
 toggle hands the focus to the toggle that takes its place, and a
 project's row is one Tab stop, its link, which says whether its pages
-are open. W7, P5, P7 and S8 choose from the rows' menus by keyboard.
+are open. The members tables' sort menus are Tab stops. W7, P5, P7 and
+S8 choose from the menus by keyboard.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -8828,6 +8884,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.32` | 侧边栏的开关按下后焦点谁也不给：落在页面的 `body` 上 | 故事 S8 | 端到端 |
 | `T8.33` | 侧边栏项目一行又是两个停留点：链接和其中的按钮，都以项目为名 | 故事 S8 | 端到端 |
 | `T8.34` | 侧边栏项目一行不说它的页面是否展开：没有打开、收起过的项目 | 故事 S8 | 端到端 |
+| `T8.35` | 成员表格的排序菜单又不在 Tab 的顺序里（`customButtonTabIndex={-1}`） | 故事 W7 | 端到端 |
 
 ---
 
@@ -9894,7 +9951,7 @@ describe("problemCode", () => {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -10340,7 +10397,7 @@ describe("isComposing", () => {
 - [ ] **Step 4: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -10398,7 +10455,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `core/hooks/use-route-workspace.ts`（新文件）：`useRouteWorkspace()`：`useParams()` 的 `workspaceSlug` 经 `getWorkspaceBySlug`，没有时 `null`。
 - 19 个文件改用它，或在工作区级的 `allowPermissions` 写明 slug（spec 2.12 列出）。
 - `tools/keywords.json` 的 `workspace-address-route`：这 19 个文件中没有 `currentWorkspace`，没有两个参数的 `WORKSPACE` 级 `allowPermissions`；M3 设计 7.10 的规则表加上它。
-- `project/root.tsx`：`handleClearAllFilters` 和设显示筛选的副作用写全依赖（`isArchived`、`updateDisplayFilters`、`workspaceSlug`）。`updateDisplayFilters` 是 store 的动作，引用不变；列表和归档各自挂载这个根，一次挂载里 `isArchived` 不变，副作用照旧在挂载和换工作区时运行（spec 第 3 节第 2 条）。web 的上限 300 → 298。
+- `project/root.tsx`：`handleClearAllFilters` 和设显示筛选的副作用写全依赖（`isArchived`、`updateDisplayFilters`、`workspaceSlug`）。`updateDisplayFilters` 是 store 的动作，引用不变；列表和归档各自挂载这个根，一次挂载里 `isArchived` 不变，副作用照旧在挂载和换工作区时运行（spec 第 3 节第 2 条）。web 的上限 298 → 296。
 
 **Tests:** `use-route-workspace.test.ts`（新文件）；关键词守卫看住 19 个文件。没有端到端的改动：页面显示的照旧，S2、S7、W 系列的故事照旧通过；P4 和 S7 走过归档的往返。
 
@@ -10938,10 +10995,10 @@ export function useRouteWorkspace(): Workspace | null {
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 300",
+    "check:lint": "node ../../../tools/lint-cap.mjs 298",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 298",
+    "check:lint": "node ../../../tools/lint-cap.mjs 296",
 ````
 
 - [ ] **Step 2: 测试**
@@ -10992,7 +11049,7 @@ describe("useRouteWorkspace", () => {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 298 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 296 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -11045,7 +11102,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**（spec 2.8）
 - 侧边栏的标题经 `t("projects")`：`SidebarWrapper` 的 `title`（只有一个调用方，总是"Projects"）和 `title === "Projects"` 的条件删除；扩展侧边栏的标题同样。标签栏的菜单经 `navigation.json` 的 `tab_navigation.*`。项目页页头的"已归档"，卡片的创建日期和成员数。
 - 筛选：`@nerve/constants` 的 `PROJECT_FILTER_I18N_LABEL`（下拉框和已选筛选的一栏共用）；`lead.tsx`（`members.tsx` 的副本）删除，`FilterMembers` 收 `title`；网络按页面上的名字搜索；创建日期的选项 `i18n_name`；已选筛选的 9 个移除按钮名为 `common.remove_item`；数目的提示。成员筛选：角色经 `ROLE_DETAILS` 和"已停用"，按钮里不再有按钮（`customButtonClassName`）。
-- 这几个文件自己的警告：已选筛选的两个数组改为 `Set`；筛选的搜索框的 `autoFocus` 写明理由（`oxlint-disable-next-line`）。web 的上限 298 → 295。
+- 这几个文件自己的警告：已选筛选的两个数组改为 `Set`；筛选的搜索框的 `autoFocus` 写明理由（`oxlint-disable-next-line`）。web 的上限 296 → 293。
 
 **Tests:** `tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`（新文件）；`card.test.tsx`、`tab-navigation-overflow-menu.test.tsx` 读键。S7：第二个加扩展侧边栏的标题；第四个（新）：项目页的标题、卡片、筛选、已选筛选的一栏、已归档、成员筛选。
 
@@ -11695,10 +11752,10 @@ type TSidebarWrapperProps = {
 `web/apps/web/package.json`（修改，1 处）：
 
 ````old web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 298",
+    "check:lint": "node ../../../tools/lint-cap.mjs 296",
 ````
 ````new web/apps/web/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 295",
+    "check:lint": "node ../../../tools/lint-cap.mjs 293",
 ````
 
 `web/packages/constants/src/filter.ts`（修改，4 处）：
@@ -12134,7 +12191,7 @@ vi.mock("@makeplane/propel/components/tooltip", () => ({
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 295 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -12959,7 +13016,7 @@ type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boole
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 295 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -14320,7 +14377,7 @@ Run: `make test`
 Expected: 通过；42 个包 `ok`，没有 `FAIL`。
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 295 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `71 rules, 23 exceptions, no hits.`；web 的 oxlint 293 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -14377,7 +14434,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**（spec 2.1、2.14、第 4 节）
 - M3 收到的 6 份交接各加"处理结果（M3/收尾）"，`status: closed`。
-- M4–M8 各一份 `handoffs/M3-closeout.md`（新文件）：收到 `copy-hook` 例外的 M4、M6、M7、M8 写明收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M<n>/closeout`、每个 Phase 开始时改为 `M<n>/P<k>`；收尾改到、仍有 oxlint 警告的 5 个文件各归它的 M（控制者的裁定：M4 两个、M6 一个、M7 一个、M8 页头的搜索）；层叠的规则（M4 第 7 节的元素、M8 的发布核对）；命令面板自己的文字（M8 第 3 节）。M4–M8 的 `M1-closeout.md`：`always-return` 已清零；M4、M6、M7 的 `M2-closeout.md`：复制经 hook。M3 设计 13.2：接收者链接到交接，表前一句。M1 收尾交接的处理结果写新的上限（web 303 → 295、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10）。
+- M4–M8 各一份 `handoffs/M3-closeout.md`（新文件）：收到 `copy-hook` 例外的 M4、M6、M7、M8 写明收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M<n>/closeout`、每个 Phase 开始时改为 `M<n>/P<k>`；收尾改到、仍有 oxlint 警告的 6 个文件各归它的 M（控制者的裁定：M4 两个、M6 一个、M7 两个、M8 页头的搜索）；层叠的规则（M4 第 7 节的元素、M8 的发布核对）；命令面板自己的文字（M8 第 3 节）。M4–M8 的 `M1-closeout.md`：`always-return` 已清零；M4、M6、M7 的 `M2-closeout.md`：复制经 hook。M3 设计 13.2：接收者链接到交接，表前一句。M1 收尾交接的处理结果写新的上限（web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10）。
 
 **Tests:** 只改文档。`doclinks.py`（plan 的"一次性的脚本"）：本 Task 改的文档中每个相对链接都指向存在的文件。
 
@@ -14541,7 +14598,7 @@ status: closed
 两节的结论：
 
 1. **死成员和死 prop**：M3/P11 删掉了改到的文件中真正没有读者的行，`--rows M3` 中产品代码的行 80 → 54；剩下的每一行写进 [M3/P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 附录 A.9（文件、名字、谁在读或传它）。收尾在它的最后一个代码 Task 之后重跑（`deadsym.mjs`、`domains.mjs --rows M3`）：218 → 225 行，产品代码的 54 行和按路径误归的 41 行不变，多出的 7 行是收尾新的测试中 `it.each` 的列和替身的 prop（收尾 spec 附录 A.5）。误归的 41 行写进各自的交接：M4 16 行（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节），M6 8 行（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 2 节），M7 17 行（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 2 节）。
-2. **oxlint**：M3 改到的文件在各 Phase 结束时没有警告，`promise(always-return)` 由 M3/P11 全仓清零，各包的上限照新的条数（M3/P11：web 348 → 303、editor 65 → 64）。收尾再调低上限：web 303 → 295、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10。收尾改到的文件中仍有警告的 5 个照控制者的裁定写进交接：只为 `IconButton` 的名字或 `showTooltip` 改到的 `core/description-versions/modal.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节）、`modules/module-card-item.tsx`（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 4 节）、通知的筛选菜单（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 4 节），和只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx`（[M8 的交接](../../M8-open-release/handoffs/M3-closeout.md)第 4 节）；收尾 spec 第 3 节第 2 条和附录 A.5 逐个写明。M4–M8 的五份 M1 收尾交接写明 `always-return` 已清零。
+2. **oxlint**：M3 改到的文件在各 Phase 结束时没有警告，`promise(always-return)` 由 M3/P11 全仓清零，各包的上限照新的条数（M3/P11：web 348 → 303、editor 65 → 64）。收尾再调低上限：web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10。收尾改到的文件中仍有警告的 6 个照控制者的裁定写进交接：只为 `IconButton` 的名字或 `showTooltip` 改到的 `core/description-versions/modal.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节）、`modules/module-card-item.tsx`（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 4 节）、通知的筛选菜单和只为 `CustomMenu` 改到的收藏的文件夹（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 4 节），和只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx`（[M8 的交接](../../M8-open-release/handoffs/M3-closeout.md)第 4 节）；收尾 spec 第 3 节第 2 条和附录 A.5 逐个写明。M4–M8 的五份 M1 收尾交接写明 `always-return` 已清零。
 
 状态改为 `closed`。
 
@@ -14893,7 +14950,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **复制只经 hook**：`inbox/content/inbox-issue-header.tsx`、`views/quick-actions.tsx`、`workspace/views/default-view-quick-action.tsx`、`workspace/views/quick-action.tsx` 改经 `useCopyLink`，失败时经 `t()` 提示；关键词规则 `copy-hook` 中这 4 个例外（`until: "M7/closeout"`）随之删除。默认视图的复制今天没有处理拒绝（M3/P11 spec 附录 A.6）。
 - **文案**：收集箱的页头（面包屑的"Intake"）、收藏、视图的页面仍有写死的英文（M3 收尾的扫描），对接时经 `t()`。
 - **收集箱的上一个、下一个工作项**：4 个 `IconButton` 的名字是写死的英文（`inbox/content/inbox-issue-header.tsx:315`、`:322`，`inbox/content/inbox-issue-mobile-header.tsx:123`、`:130`："Previous work item""Next work item"）。`IconButton` 的名字自 M3 收尾必传，它们有名字，只是不经 `t()`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9）：随收集箱的页面经 `t()`，en 与 zh-CN 同时加。
-- **oxlint**：通知打盹的弹窗（第 3 节）5 条，M7 改它时清零。通知的筛选菜单（`workspace-notifications/sidebar/filters/menu/root.tsx`）1 条（`no-map-spread`）：收尾只为 `IconButton` 的名字改到它（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条），M7 改它时清零。
+- **oxlint**：通知打盹的弹窗（第 3 节）5 条，M7 改它时清零。通知的筛选菜单（`workspace-notifications/sidebar/filters/menu/root.tsx`）1 条（`no-map-spread`）：收尾只为 `IconButton` 的名字改到它（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条），M7 改它时清零。收藏的文件夹（`workspace/sidebar/favorites/favorite-folder.tsx`）2 条（`no-shadow`：`getData` 的参数 `element`、`onDrag` 里的 `instruction` 遮住外层的同名变量）：收尾只为 `CustomMenu` 改到它（菜单打开时设为打开、关上时设为关上，Task 8 的修复轮 1；控制者 2026-10-14），M7 改它时清零。
 - **共用的 getter**：成员 store 的 `projectMemberIds` 在 M7 的读者是视图的两处和收集箱的筛选，M4 的是 `issues/issue-layouts/utils.tsx` 的两处；M4、M7 中最后改完读者的那一个删除它（M3/P10 spec 第 3 节，裁定 F-2）。
 - **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M7/closeout`，`copy-hook` 的 4 个例外（`until: "M7/closeout"`）那时到期，守卫要求它们已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M7/P<k>`。
 - **关闭条件**：两条地址规则的范围含这些文件，`copy-hook` 没有 `M7/closeout` 的例外。

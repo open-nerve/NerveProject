@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   ArchiveOutline,
@@ -28,23 +27,15 @@ type Props = {
 };
 
 export function ProjectActionsMenu({ workspaceSlug, project, isAuthorized, onCopyText, onLeaveProject }: Props) {
-  // states
-  const [isMenuActive, setIsMenuActive] = useState(false);
   // translation
   const { t } = useTranslation();
-  // refs
-  const actionSectionRef = useRef<HTMLDivElement | null>(null);
   // router
   const navigate = useNavigate();
 
   return (
     <CustomMenu
       customButton={
-        <span
-          ref={actionSectionRef}
-          className="grid place-items-center rounded-sm p-0.5 text-placeholder hover:bg-layer-1"
-          onClick={() => setIsMenuActive(!isMenuActive)}
-        >
+        <span className="grid place-items-center rounded-sm p-0.5 text-placeholder hover:bg-layer-1">
           <MoreHorizontalOutline className="size-4" />
         </span>
       }
@@ -53,7 +44,6 @@ export function ProjectActionsMenu({ workspaceSlug, project, isAuthorized, onCop
       placement="bottom-start"
       ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
       closeOnSelect
-      onMenuClose={() => setIsMenuActive(false)}
     >
       <CustomMenu.MenuItem onClick={onCopyText}>
         <span className="flex items-center justify-start gap-2">

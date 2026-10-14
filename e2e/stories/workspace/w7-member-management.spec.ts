@@ -303,6 +303,18 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
   await expect(bobsMenu).toBeFocused();
+  // The table's sort menus, each named by its column, are Tab stops, marked as Tab reaches them, and worked by the
+  // keyboard: from Full name, Tab reaches Display name, then Email, whose Z to A puts carol first and the admin last.
+  await page.getByRole("button", { name: "Full name", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Display name", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  const byEmail = page.getByRole("button", { name: "Email", exact: true });
+  await expect(byEmail).toBeFocused();
+  await expect(byEmail).not.toHaveCSS("outline-style", "none");
+  await chooseByKeyboard(page, byEmail, "Z A");
+  await expect(page.locator("tbody tr").first()).toContainText(carol.email);
+  await expect(page.locator("tbody tr").last()).toContainText(adminEmail);
 
   // bob becomes a guest: the page sends the role's number (nerve refuses a string), and so is he in each project.
   const demoted = await pickRole(page, bob.email, await membership(bob.id), { from: "Member", to: "Guest" });
