@@ -10,8 +10,9 @@ import {
   modalDialog,
   pageBehindHidden,
 } from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
 import { tabCycle } from "../../fixtures/project-pages";
-import { registerOnboarded } from "../../fixtures/settings-pages";
+import { registerOnboarded, transitionsEnded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // S6, the modal dialogs the workspace's pages open that no other story does (M3 closeout: every dialog is ModalCore,
@@ -64,8 +65,25 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
   expect(shortcutStops).toHaveLength(3);
   expect(shortcutStops[0]).toMatch(/^Work item actions/);
   expect(shortcutStops.slice(1)).toEqual(["Close", "Search for shortcuts"]);
+  // ModalCore's timing is its enter's and its leave's alone: opened, the panel keeps the default 150 ms, as a
+  // caller's own transition keeps its own
+  const panel = modalDialog(page).locator('[id^="headlessui-dialog-panel"]');
+  await transitionsEnded(panel);
+  await expect(panel).toHaveCSS("transition-duration", "0.15s");
   expect(await closedByEscape(page)).toBe(true);
   expect(await pageBehindHidden(page)).toBe(false);
+
+  // The help menu's "Keyboard shortcuts", chosen by the keyboard, opens the list too: the item is the menu's own, no
+  // button within it. The menu's button, which has no name of its own yet (M8's handoff, section 4), is the menu
+  // button before the account's.
+  const help = page
+    .getByRole("button", { name: shownNameOf(emailFor(testInfo)) })
+    .first()
+    .locator('xpath=preceding::button[@aria-haspopup="menu"][1]');
+  await help.focus();
+  await chooseByKeyboard(page, help, "Keyboard shortcuts");
+  await expect(modalDialog(page)).toHaveAccessibleName("Keyboard shortcuts");
+  expect(await closedByEscape(page)).toBe(true);
 
   // The palette's command that copies the page's address.
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);

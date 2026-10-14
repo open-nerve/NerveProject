@@ -128,7 +128,7 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
 });
 
-test("S7 (page): an admin whose language is Chinese sees a project's general, states, labels and members pages and their dialogs in Chinese", async ({
+test("S7 (page): an admin whose language is Chinese sees a project's header, general, states, labels and members pages and their dialogs in Chinese", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -166,6 +166,18 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await sidebar.getByRole("button", { name: "更多", exact: true }).click();
   await expect(page.locator("#extended-project-sidebar-toggle").getByText("项目", { exact: true })).toBeVisible();
 
+  // The project's header, the tabbed navigation's: its project switcher's search and its words for no match. Its page,
+  // the work items', asks Plane's address of the filters, M4's (P8b spec §5), as P8 sees.
+  await page.goto(`/${slug}/projects/${web.id}/issues`);
+  await page
+    .getByRole("button", { name: "Web", exact: true })
+    .and(page.locator("xpath=//*[not(ancestor::aside)]"))
+    .click();
+  await expect(page.getByRole("combobox", { name: "搜索", exact: true })).toBeFocused();
+  await page.keyboard.type("zz");
+  await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+
   // The general page: the settings' sidebar, the deletion's description, the archive's and the deletion's dialogs,
   // the project's name in them.
   await page.goto(`/${slug}/settings/projects/${web.id}`);
@@ -202,10 +214,13 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await page.goto(`/${slug}/settings/projects/${web.id}/members`);
   await expect(page.getByText("项目负责人", { exact: true })).toBeVisible();
   await expect(page.getByText("默认负责人", { exact: true })).toBeVisible();
-  // The lead's select finds its "none" by the word it shows.
+  // The lead's select finds its "none" by the word it shows; its search and its words for no match are Chinese.
   await page.getByRole("heading", { name: "项目负责人" }).locator("xpath=following::button[1]").click();
+  await expect(page.getByRole("combobox", { name: "搜索", exact: true })).toBeFocused();
   await page.keyboard.type("无");
   await expect(page.getByRole("option")).toHaveText(["无"]);
+  await page.keyboard.type("zz");
+  await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("switch", { name: "访客访问" })).toBeVisible();
   // His row's menu, named by him, offers his leaving.
@@ -213,13 +228,23 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await expect(page.getByRole("menuitem", { name: "离开" })).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // The adding of members: a row with no member picked says so.
+  // The adding of members: a row with no member picked says so; its member select's search and words for no match
+  // are Chinese.
   await page.getByRole("button", { name: "添加成员", exact: true }).click();
   await modalDialog(page).getByRole("button", { name: "添加成员", exact: true }).click();
   await expect(modalDialog(page).getByText("请选择成员", { exact: true })).toBeVisible();
+  await modalDialog(page).getByRole("button", { name: "选择同事" }).click();
+  await expect(page.getByRole("combobox", { name: "搜索", exact: true })).toBeFocused();
+  await page.keyboard.type("zz");
+  await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   await cancel(page);
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(5).fill(EMOJI_CHECK_WARNING) });
+  const filters = `GET /api/workspaces/${slug}/projects/${web.id}/user-properties/`;
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[`404 ${filters}`], [filters], []]);
+  await expectQuietConsole(page, watch, {
+    warnings: Array(6).fill(EMOJI_CHECK_WARNING),
+    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
+  });
 });
 
 test("S7 (page): an admin whose language is Chinese filters the projects and the members, and reads a project's settings, its custom range and a toast in Chinese", async ({

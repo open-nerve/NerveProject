@@ -110,6 +110,9 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
       maxHeight="md"
       onChange={onChange}
       disabled={isDisabled}
+      searchPlaceholder={t("search")}
+      noResultsMessage={t("common.search.no_matches_found")}
+      loadingMessage={t("loading")}
     />
   );
 });

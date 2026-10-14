@@ -8,6 +8,7 @@ import { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { ProjectsOutline } from "@makeplane/propel/icons";
+import { useTranslation } from "@nerve/i18n";
 import type { ICustomSearchSelectOption } from "@nerve/types";
 import { CustomSearchSelect } from "@nerve/ui";
 // hooks
@@ -30,6 +31,7 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   const { workspaceSlug, projectId } = props;
   // router
   const navigate = useNavigate();
+  const { t } = useTranslation();
   // store hooks
   const { joinedProjectIds, getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
@@ -104,6 +106,9 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
       customButton={currentProjectDetails ? <ProjectHeaderButton project={currentProjectDetails} /> : null}
       className="h-full rounded"
       customButtonClassName="group flex items-center gap-0.5 rounded-sm hover:bg-surface-2 outline-none cursor-pointer h-full"
+      searchPlaceholder={t("search")}
+      noResultsMessage={t("common.search.no_matches_found")}
+      loadingMessage={t("loading")}
     />
   );
 });

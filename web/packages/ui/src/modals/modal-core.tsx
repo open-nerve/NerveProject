@@ -54,7 +54,9 @@ export function ModalCore(props: Props) {
           <DialogPanel
             transition
             className={cn(
-              "relative w-full transform rounded-lg bg-surface-1 text-left shadow-raised-200 transition-all duration-300 ease-out data-closed:translate-y-4 data-closed:opacity-0 data-leave:duration-200 data-leave:ease-in sm:data-closed:translate-y-0 sm:data-closed:scale-95",
+              // the timing is the enter's and the leave's alone: a caller's own transition (M4's issue dialog widens in
+              // 150 ms) keeps its own
+              "relative w-full transform rounded-lg bg-surface-1 text-left shadow-raised-200 transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:data-closed:translate-y-0 sm:data-closed:scale-95",
               width,
               className
             )}

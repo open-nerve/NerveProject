@@ -187,6 +187,9 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                           }}
                           options={options}
                           optionsClassName="w-48"
+                          searchPlaceholder={t("search")}
+                          noResultsMessage={t("common.search.no_matches_found")}
+                          loadingMessage={t("loading")}
                         />
                       );
                     }}
