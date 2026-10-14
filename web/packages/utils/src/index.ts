@@ -18,6 +18,7 @@ export * from "./file";
 export * from "./filter";
 export * from "./get-icon-for-link";
 export * from "./intake";
+export * from "./keyboard";
 export * from "./loader";
 export * from "./module";
 export * from "./notification";

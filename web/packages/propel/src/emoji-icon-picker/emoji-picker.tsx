@@ -6,6 +6,7 @@
 
 import { useMemo, useCallback } from "react";
 import { Tabs } from "@base-ui-components/react";
+import { isComposing } from "@nerve/utils";
 import { Popover } from "../popover";
 import { cn } from "../utils/classname";
 import { convertPlacementToSideAndAlign } from "../utils/placement";
@@ -121,7 +122,7 @@ export function EmojiPicker(props: TCustomEmojiPicker) {
           }
           if (e.key === "Escape") {
             // an Escape that ends an IME composition in the search is the composition's: the picker stays open
-            if (e.nativeEvent.isComposing) return;
+            if (isComposing(e.nativeEvent)) return;
             handleToggle(false);
             return;
           }

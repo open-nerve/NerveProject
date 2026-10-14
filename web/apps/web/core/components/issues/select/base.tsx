@@ -15,7 +15,7 @@ import { getRandomLabelColor } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import type { Label, LabelCreate } from "@nerve/api-client";
-import { cn } from "@nerve/utils";
+import { cn, isComposing } from "@nerve/utils";
 // components
 import { IssueLabelsList } from "@/components/ui/labels-list";
 // hooks
@@ -109,7 +109,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
     if (
       q !== "" &&
       e.key === "Enter" &&
-      !e.nativeEvent.isComposing &&
+      !isComposing(e.nativeEvent) &&
       createLabelEnabled &&
       filteredOptions.length === 0 &&
       !submitting

@@ -40,6 +40,7 @@
     "@nerve/api-client": "workspace:*",
     "@nerve/constants": "workspace:*",
     "@nerve/types": "workspace:*",
+    "@nerve/utils": "workspace:*",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "framer-motion": "catalog:",

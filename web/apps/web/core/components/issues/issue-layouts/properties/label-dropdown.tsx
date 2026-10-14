@@ -19,7 +19,7 @@ import type { Label } from "@nerve/api-client";
 import { EUserProjectRoles } from "@nerve/types";
 // components
 import { ComboDropDown } from "@nerve/ui";
-import { sortBySelectedFirst } from "@nerve/utils";
+import { isComposing, sortBySelectedFirst } from "@nerve/utils";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -186,7 +186,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
       e.preventDefault();
     }
 
-    if (query !== "" && e.key === "Enter" && !e.nativeEvent.isComposing && canCreateLabel) {
+    if (query !== "" && e.key === "Enter" && !isComposing(e.nativeEvent) && canCreateLabel) {
       e.preventDefault();
       await handleAddLabel(query);
     }

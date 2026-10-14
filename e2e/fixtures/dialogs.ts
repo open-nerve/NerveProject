@@ -172,9 +172,11 @@ export async function closedByBackdropClick(page: Page): Promise<boolean> {
 }
 
 /**
- * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
- * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
- * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
+ * Dispatches on field, at once, what the browsers give the page when an Escape ends an input method's composition
+ * (Chinese, say), in both their orders: Chromium's and Firefox's, the Escape's keydown while composing (isComposing),
+ * between the composition's start and end; then Safari's, the keydown after the composition's end, isComposing false
+ * and keyCode 229. A dropdown that follows the composition by its events (Base UI's popover) sees each, as a page does
+ * with a real input method.
  */
 export async function composingEscape(field: Locator): Promise<void> {
   await field.evaluate((element) => {
@@ -182,6 +184,9 @@ export async function composingEscape(field: Locator): Promise<void> {
     element.dispatchEvent(new CompositionEvent("compositionstart", init));
     element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", isComposing: true }));
     element.dispatchEvent(new CompositionEvent("compositionend", init));
+    element.dispatchEvent(new CompositionEvent("compositionstart", init));
+    element.dispatchEvent(new CompositionEvent("compositionend", init));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", keyCode: 229 }));
   });
 }
 

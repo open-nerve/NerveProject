@@ -199,7 +199,7 @@ test("P5 (API): the admin adds a member and a guest at once, and cannot leave, t
   );
 });
 
-test("P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, the modal held until nerve answers; he is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
+test("P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, Enter on a select opening its list, the modal held until nerve answers; he is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
   api,
   baseURL,
   browser,
@@ -259,7 +259,9 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   await page.getByRole("button", { name: "Add more" }).click();
   await page.getByRole("button", { name: "Select co-worker" }).click();
   await page.getByRole("option", { name: shownNameOf(gus.email) }).click();
-  await page.getByRole("button", { name: "Guest", exact: true }).click();
+  // the role select by the keyboard: Enter opens its list, and sends no form
+  await page.getByRole("button", { name: "Guest", exact: true }).focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("option")).toHaveText(["Guest"]);
   await page.getByRole("option", { name: "Guest" }).click();
   const adding = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/members`, () =>

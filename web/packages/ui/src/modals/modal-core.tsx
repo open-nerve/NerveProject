@@ -6,6 +6,7 @@
 
 import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
 import React, { useEffect, useState } from "react";
+import { isComposing } from "@nerve/utils";
 // constants
 import { cn } from "../utils";
 import { EModalPosition, EModalWidth } from "./constants";
@@ -57,12 +58,13 @@ export function ModalCore(props: Props) {
               width,
               className
             )}
-            // an Escape that ends an IME composition is the composition's: Headless UI's Dialog closes on a keydown
-            // of Escape on the window unless its default is prevented (useEscape), so this prevents it on the way
-            // out, once the controls inside have had it (in the capture phase, it would make Headless UI skip their
-            // own handlers, which it does for a prevented event: a select's, which keeps its Escape from the page)
+            // an Escape that ends an input method's composition is the method's (isComposing):
+            // Headless UI's Dialog closes on a keydown of Escape on the window unless its default is prevented
+            // (useEscape), so this prevents it on the way out, once the controls inside have had it (in the capture
+            // phase, it would make Headless UI skip their own handlers, which it does for a prevented event: a
+            // select's, which keeps its Escape from the page)
             onKeyDown={(event) => {
-              if (event.key === "Escape" && event.nativeEvent.isComposing) event.preventDefault();
+              if (event.key === "Escape" && isComposing(event.nativeEvent)) event.preventDefault();
             }}
           >
             {children}

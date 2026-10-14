@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { isComposing } from "@nerve/utils";
 // hooks
 import { usePowerK } from "@/hooks/store/use-power-k";
 // local imports
@@ -68,6 +69,9 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // a key an input method takes is the method's: an Escape that ends a composition in the search neither clears it
+      // nor closes the palette, a Backspace in one leaves the page where it is
+      if (isComposing(e.nativeEvent)) return;
       // Cmd/Ctrl+K closes palette
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();

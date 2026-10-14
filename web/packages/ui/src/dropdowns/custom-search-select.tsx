@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 // local imports
 import { Tooltip } from "@nerve/propel/tooltip";
+import { isComposing } from "@nerve/utils";
 import { cn } from "../utils";
 import type { ICustomSearchSelectProps } from "./helper";
 
@@ -177,7 +178,7 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
               onKeyDownCapture={(event: React.KeyboardEvent) => {
                 if (event.key !== "Escape") return;
                 event.stopPropagation();
-                if (event.nativeEvent.isComposing) return;
+                if (isComposing(event.nativeEvent)) return;
                 event.preventDefault();
                 close();
               }}

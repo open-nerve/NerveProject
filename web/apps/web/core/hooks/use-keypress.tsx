@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { isComposing } from "@nerve/utils";
 
 const useKeypress = (key: string, callback: (event: KeyboardEvent) => void) => {
   // Keep the latest callback in a ref so callers can pass an inline arrow
@@ -17,8 +18,8 @@ const useKeypress = (key: string, callback: (event: KeyboardEvent) => void) => {
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
-      // a key pressed while an IME composes (an Escape that ends the composition) is the composition's, not the page's
-      if (event.isComposing) return;
+      // a key an input method takes (an Escape that ends a composition) is the method's, not the page's
+      if (isComposing(event)) return;
       if (event.key === key) {
         callbackRef.current(event);
       }

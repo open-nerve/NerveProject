@@ -1,7 +1,13 @@
 import { createWorkspace, slugFor } from "../../fixtures/api";
 import { createPAT, emailFor, shownNameOf } from "../../fixtures/auth";
 import { expectQuietConsole, EMOJI_CHECK_WARNING, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import {
+  closedByComposingEscape,
+  closedByEscape,
+  closedWithin,
+  modalDialog,
+  pageBehindHidden,
+} from "../../fixtures/dialogs";
 import { tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -10,7 +16,7 @@ import { expect, test } from "../../fixtures/test";
 // Headless UI's Dialog, which makes the page behind it inert and hidden while it is open): the command palette, its
 // list of keyboard shortcuts, and a dialog opened over another, the settings dialog's revoke dialog.
 
-test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({
+test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs, the palette's search keeping an Escape that ends a composition: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -22,9 +28,11 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
   await page.goto(`/${slug}/projects`);
   await expect(page.getByRole("button", { name: "Add Project", exact: true })).toBeVisible();
 
-  // The palette: its search has the focus, and Tab goes round what it holds.
+  // The palette: its search has the focus, and Tab goes round what it holds. An Escape that ends an input method's
+  // composition in the search is the method's: the palette, which an Escape in its empty search closes, stays open.
   await page.keyboard.press("ControlOrMeta+k");
   await expect(modalDialog(page).getByRole("combobox")).toBeFocused();
+  expect(await closedByComposingEscape(modalDialog(page).getByRole("combobox"))).toBe(false);
   expect(await pageBehindHidden(page)).toBe(true);
   const stops = await tabCycle(page, modalDialog(page));
   expect(stops.filter((stop) => stop.startsWith("outside: "))).toEqual([]);

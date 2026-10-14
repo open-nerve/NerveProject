@@ -15,6 +15,15 @@ import { cn } from "../utils";
 // types
 import type { ICustomSelectItemProps, ICustomSelectProps } from "./helper";
 
+// Enter on the button opens the list, as a click does. Headless UI's button would submit the form around it, as a
+// native select's Enter does, and a keyboard user would send a form (a member's role, say) unawares; prevented here,
+// before Headless UI's handler, the Enter reaches none of Headless UI's.
+function openOnEnter(event: React.KeyboardEvent<HTMLButtonElement>) {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  event.currentTarget.click();
+}
+
 function CustomSelect(props: ICustomSelectProps) {
   const {
     customButtonClassName = "",
@@ -42,9 +51,9 @@ function CustomSelect(props: ICustomSelectProps) {
   });
 
   return (
-    // A select, so Headless UI's Listbox, whose open state is the only one. Its button opens the list (a click,
-    // Space, the arrows; Enter submits an enclosing form, as a native select's does), and the list takes the focus:
-    // the arrows move, Enter or Space picks, typing jumps to a name. A pick, Escape, Tab or a click outside closes it.
+    // A select, so Headless UI's Listbox, whose open state is the only one. Its button opens the list (a click, Enter,
+    // Space, the arrows), and the list takes the focus: the arrows move, Enter or Space picks, typing jumps to a name.
+    // A pick, Escape, Tab or a click outside closes it.
     // The caller's tabIndex is the button's: Tab stops at the button alone, not at the Listbox's root (a div).
     <Listbox
       as="div"
@@ -61,6 +70,7 @@ function CustomSelect(props: ICustomSelectProps) {
                 ref={setReferenceElement}
                 type="button"
                 tabIndex={tabIndex}
+                onKeyDown={openOnEnter}
                 className={`flex items-center justify-between gap-1 rounded text-11 ${
                   disabled ? "cursor-not-allowed text-secondary" : "cursor-pointer hover:bg-layer-transparent-hover"
                 } ${customButtonClassName}`}
@@ -74,6 +84,7 @@ function CustomSelect(props: ICustomSelectProps) {
                 ref={setReferenceElement}
                 type="button"
                 tabIndex={tabIndex}
+                onKeyDown={openOnEnter}
                 className={cn(
                   "flex w-full items-center justify-between gap-1 rounded border border-strong",
                   {
