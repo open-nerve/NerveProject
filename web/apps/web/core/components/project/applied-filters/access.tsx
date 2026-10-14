@@ -24,14 +24,16 @@ export const AppliedAccessFilters = observer(function AppliedAccessFilters(props
     <>
       {values.map((status) => {
         const accessDetails = NETWORK_CHOICES.find((s) => `${s.key}` === status);
+        const label = accessDetails ? t(accessDetails.i18n_label) : "";
         return (
           <div key={status} className="flex items-center gap-1 rounded-sm bg-layer-1 px-1.5 py-1 text-11">
-            {accessDetails && t(accessDetails?.i18n_label)}
+            {label}
             {editable && (
               <button
                 type="button"
                 className="grid place-items-center text-tertiary hover:text-secondary"
                 onClick={() => handleRemove(status)}
+                aria-label={t("common.remove_item", { name: label })}
               >
                 <CloseOutline height={10} width={10} />
               </button>

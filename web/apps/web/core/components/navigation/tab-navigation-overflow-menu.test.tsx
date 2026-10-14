@@ -75,8 +75,8 @@ describe("the more menu of a project's header", () => {
   it("then shows again a tab he moved there, and makes each the tab the project opens on, or no longer", () => {
     const items = offered({ default_tab: "cycles", hide_in_more_menu: ["modules"] }, changes);
     expect(items.map((buttons) => buttons.map(({ title }) => title))).toEqual([
-      ["Clear default"],
-      ["Show", "Set as default"],
+      ["tab_navigation.clear_default"],
+      ["tab_navigation.show", "tab_navigation.set_as_default"],
     ]);
     for (const button of items.flat()) button.onClick?.(click);
     expect([changes.toggleDefault.mock.calls, changes.show.mock.calls, changes.hide.mock.calls]).toEqual([

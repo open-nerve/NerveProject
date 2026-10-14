@@ -20,13 +20,12 @@ import { AppSidebarToggleButton } from "./sidebar-toggle-button";
 import { IconButton } from "@nerve/propel/icon-button";
 
 type TSidebarWrapperProps = {
-  title: string;
   children: React.ReactNode;
   quickActions?: React.ReactNode;
 };
 
 export const SidebarWrapper = observer(function SidebarWrapper(props: TSidebarWrapperProps) {
-  const { title, children, quickActions } = props;
+  const { children, quickActions } = props;
   // state
   const [isProjectNavDialogOpen, setIsProjectNavDialogOpen] = useState(false);
   const { t } = useTranslation();
@@ -55,17 +54,15 @@ export const SidebarWrapper = observer(function SidebarWrapper(props: TSidebarWr
           {/* Workspace switcher and settings */}
 
           <div className="flex items-center justify-between gap-2 px-2">
-            <span className="pt-1 text-16 font-medium text-primary">{title}</span>
+            <span className="pt-1 text-16 font-medium text-primary">{t("projects")}</span>
             <div className="flex items-center gap-2">
-              {title === "Projects" && (
-                <IconButton
-                  size="base"
-                  variant="ghost"
-                  icon={PreferencesOutline}
-                  onClick={() => setIsProjectNavDialogOpen(true)}
-                  aria-label={t("aria_labels.projects_sidebar.project_navigation")}
-                />
-              )}
+              <IconButton
+                size="base"
+                variant="ghost"
+                icon={PreferencesOutline}
+                onClick={() => setIsProjectNavDialogOpen(true)}
+                aria-label={t("aria_labels.projects_sidebar.project_navigation")}
+              />
               <AppSidebarToggleButton />
             </div>
           </div>

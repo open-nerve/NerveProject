@@ -1,4 +1,10 @@
 {
+  "tab_navigation": {
+    "set_as_default": "设为默认",
+    "clear_default": "取消默认",
+    "show": "显示",
+    "hide_in_more_menu": "收进更多菜单"
+  },
   "sidebar": {
     "more_projects": "更多",
     "fewer_projects": "收起",

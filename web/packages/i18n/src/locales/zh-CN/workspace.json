@@ -107,6 +107,13 @@
       "my_projects": "我的项目",
       "archived_projects": "已归档"
     },
+    "applied_filters_count": "{total} 个项目中有 {filtered} 个符合筛选条件。",
+    "created_at_filter": {
+      "yesterday": "昨天",
+      "last_7_days": "最近 7 天",
+      "last_30_days": "最近 30 天",
+      "custom": "自定义"
+    },
     "common": {
       "months_count": "{months, plural, one{# 个月} other{# 个月}}"
     },

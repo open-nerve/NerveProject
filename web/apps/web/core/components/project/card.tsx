@@ -220,12 +220,16 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
           <p className="line-clamp-2 text-13 break-words text-tertiary">
             {project.description && project.description.trim() !== ""
               ? project.description
-              : `Created on ${renderFormattedDate(project.created_at)}`}
+              : `${t("common.created_on")} ${renderFormattedDate(project.created_at)}`}
           </p>
           <div className="item-center flex justify-between">
             <div className="flex items-center justify-center gap-2">
               <Tooltip
-                label={projectMembersIds.length ? `Members: ${projectMembersIds.length}` : "No members"}
+                label={
+                  projectMembersIds.length
+                    ? t("project_dialogs.members_count", { count: projectMembersIds.length })
+                    : t("project_dialogs.no_member_yet")
+                }
                 layout="stacked"
                 disabled={isMobile}
               >

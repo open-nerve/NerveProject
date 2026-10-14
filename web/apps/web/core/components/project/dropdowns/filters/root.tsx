@@ -8,6 +8,8 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 // nerve imports
+import { PROJECT_FILTER_I18N_LABEL } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import type { TProjectDisplayFilters, TProjectFilters } from "@nerve/types";
 // components
 import { FilterOption } from "@/components/issues/issue-layouts/filters";
@@ -16,7 +18,6 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { FilterAccess } from "./access";
 import { FilterCreatedDate } from "./created-at";
-import { FilterLead } from "./lead";
 import { FilterMembers } from "./members";
 
 type Props = {
@@ -33,6 +34,7 @@ export const ProjectFiltersSelection = observer(function ProjectFiltersSelection
   const [filtersSearchQuery, setFiltersSearchQuery] = useState("");
   // store
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
@@ -42,9 +44,10 @@ export const ProjectFiltersSelection = observer(function ProjectFiltersSelection
           <input
             type="text"
             className="w-full bg-surface-2 outline-none placeholder:text-placeholder"
-            placeholder="Search"
+            placeholder={t("search")}
             value={filtersSearchQuery}
             onChange={(e) => setFiltersSearchQuery(e.target.value)}
+            // oxlint-disable-next-line jsx_a11y/no-autofocus -- the dropdown opens on its search, as a combobox does
             autoFocus={!isMobile}
           />
           {filtersSearchQuery !== "" && (
@@ -63,7 +66,7 @@ export const ProjectFiltersSelection = observer(function ProjectFiltersSelection
                 my_projects: !displayFilters.my_projects,
               })
             }
-            title="My projects"
+            title={t("workspace_projects.scope.my_projects")}
           />
         </div>
 
@@ -78,7 +81,8 @@ export const ProjectFiltersSelection = observer(function ProjectFiltersSelection
 
         {/* lead */}
         <div className="py-2">
-          <FilterLead
+          <FilterMembers
+            title={t(PROJECT_FILTER_I18N_LABEL.lead)}
             appliedFilters={filters.lead ?? null}
             handleUpdate={(val) => handleFiltersUpdate("lead", val)}
             searchQuery={filtersSearchQuery}
@@ -89,6 +93,7 @@ export const ProjectFiltersSelection = observer(function ProjectFiltersSelection
         {/* members */}
         <div className="py-2">
           <FilterMembers
+            title={t(PROJECT_FILTER_I18N_LABEL.members)}
             appliedFilters={filters.members ?? null}
             handleUpdate={(val) => handleFiltersUpdate("members", val)}
             searchQuery={filtersSearchQuery}

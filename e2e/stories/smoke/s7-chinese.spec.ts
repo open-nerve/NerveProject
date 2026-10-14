@@ -162,6 +162,9 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   const lab = sidebar.getByRole("link").filter({ has: page.locator(".material-symbols-rounded") });
   await expect(lab).toHaveAccessibleName("Lab");
   await expect(sidebar.getByRole("button", { name: "更多", exact: true })).toHaveText("更多");
+  // the extended sidebar, which the button opens, by its heading
+  await sidebar.getByRole("button", { name: "更多", exact: true }).click();
+  await expect(page.locator("#extended-project-sidebar-toggle").getByText("项目", { exact: true })).toBeVisible();
 
   // The general page: the settings' sidebar, the deletion's description, the archive's and the deletion's dialogs,
   // the project's name in them.
@@ -217,6 +220,57 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await cancel(page);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: Array(5).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): an admin whose language is Chinese filters the projects and the members in Chinese", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const { admin, slug } = await chineseAdmin(api, testInfo);
+  const page = await signedInPage(admin);
+  const watch = await watchPage(page);
+
+  // The projects page: the sidebar's heading, the card's date and its members.
+  await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  await page.goto(`/${slug}/projects`);
+  const navigation = page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" });
+  await expect(navigation.locator("xpath=../preceding-sibling::span")).toHaveText("项目");
+  await expect(page.getByText(/^创建于 /)).toBeVisible();
+  // The filters: each by its name, the accesses searched as the page names them.
+  await page.getByRole("button", { name: "筛选", exact: true }).click();
+  const filters = page.getByRole("button", { name: "我的项目" }).locator("xpath=../..");
+  await expect(filters.getByText(/^(网络|负责人|成员|创建日期)$/)).toHaveText(["网络", "负责人", "成员", "创建日期"]);
+  await expect(filters.getByRole("button", { name: /^(今天|昨天|最近 7 天|最近 30 天|自定义)$/ })).toHaveCount(5);
+  // the caller, in the lead's filter and the members', is 您
+  await expect(filters.getByRole("button", { name: / 您$/ })).toHaveCount(2);
+  await page.getByPlaceholder("搜索", { exact: true }).last().fill("公开");
+  await expect(page.getByRole("button", { name: "公开", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "私有", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "公开", exact: true }).click();
+  await page.keyboard.press("Escape");
+  // The bar of the filters applied: the filter by its name, each button named by what it removes, and the count.
+  await expect(page.getByRole("button", { name: "移除公开", exact: true })).toBeVisible();
+  await page.getByText("1/1", { exact: true }).hover();
+  await expect(page.getByText("1 个项目中有 1 个符合筛选条件。", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "移除网络", exact: true }).click();
+  await expect(page.getByRole("button", { name: "移除公开", exact: true })).toHaveCount(0);
+
+  // The archived projects: the header's breadcrumb says so.
+  await page.goto(`/${slug}/projects/archives`);
+  await expect(page.getByText("已归档", { exact: true })).toHaveCount(1);
+
+  // The members page: one button names its filter, a popover whose roles' heading and roles have their names.
+  await page.goto(`/${slug}/settings/members`);
+  await expect(page.getByRole("button", { name: "筛选" })).toHaveCount(1);
+  await page.getByRole("button", { name: "筛选" }).click();
+  // the filter, its button and its popover
+  const roleFilter = page.getByRole("button", { name: "筛选" }).locator("xpath=..");
+  await expect(roleFilter.getByRole("button", { name: "角色", exact: true })).toHaveAttribute("aria-expanded", "true");
+  const roles = roleFilter.getByRole("button", { name: /^(管理员|成员|访客|已停用)$/ });
+  await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
+  await page.keyboard.press("Escape");
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
 });
 
 test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({

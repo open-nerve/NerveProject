@@ -7,17 +7,19 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import { Button } from "@nerve/propel/button";
+import { ROLE_DETAILS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { getButtonStyling } from "@nerve/propel/button";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
-import { EUserProjectRoles, EUserWorkspaceRoles } from "@nerve/types";
-// nerve ui
-import { CustomMenu } from "@nerve/ui";
+import { EUserWorkspaceRoles } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // components
-import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
+import { FilterHeader, FilterOption, FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 
+/** A role the members are filtered by: its value in the filter, and the key of its name. */
 interface IRoleOption {
   value: string;
-  label: string;
+  i18n_label: string;
 }
 
 type Props = {
@@ -26,17 +28,16 @@ type Props = {
   memberType: "project" | "workspace";
 };
 
+// a project's roles have the workspace's values (EUserProjectRoles), and the same names
 const PROJECT_ROLE_OPTIONS: IRoleOption[] = [
-  { value: String(EUserProjectRoles.ADMIN), label: "Admin" },
-  { value: String(EUserProjectRoles.MEMBER), label: "Member" },
-  { value: String(EUserProjectRoles.GUEST), label: "Guest" },
-];
+  EUserWorkspaceRoles.ADMIN,
+  EUserWorkspaceRoles.MEMBER,
+  EUserWorkspaceRoles.GUEST,
+].map((role) => ({ value: String(role), i18n_label: ROLE_DETAILS[role].i18n_title }));
 
 const WORKSPACE_ROLE_OPTIONS: IRoleOption[] = [
-  { value: String(EUserWorkspaceRoles.ADMIN), label: "Admin" },
-  { value: String(EUserWorkspaceRoles.MEMBER), label: "Member" },
-  { value: String(EUserWorkspaceRoles.GUEST), label: "Guest" },
-  { value: "suspended", label: "Suspended" },
+  ...PROJECT_ROLE_OPTIONS,
+  { value: "suspended", i18n_label: "workspace_settings.settings.members.suspended" },
 ];
 
 // Role filter group component
@@ -50,13 +51,14 @@ const RoleFilterGroup = observer(function RoleFilterGroup({
   memberType: "project" | "workspace";
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { t } = useTranslation();
   const appliedFiltersCount = appliedFilters?.length ?? 0;
   const roleOptions = memberType === "project" ? PROJECT_ROLE_OPTIONS : WORKSPACE_ROLE_OPTIONS;
 
   return (
     <div className="space-y-2">
       <FilterHeader
-        title={`Roles${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${t("common.roles")}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={isExpanded}
         handleIsPreviewEnabled={() => setIsExpanded(!isExpanded)}
       />
@@ -69,7 +71,7 @@ const RoleFilterGroup = observer(function RoleFilterGroup({
               <FilterOption
                 key={`role-${role.value}`}
                 isChecked={isSelected}
-                title={role.label}
+                title={t(role.i18n_label)}
                 onClick={() => handleUpdate(role.value)}
               />
             );
@@ -80,39 +82,35 @@ const RoleFilterGroup = observer(function RoleFilterGroup({
   );
 });
 
-const MemberListFilters = observer(function MemberListFilters(props: Props) {
-  const { appliedFilters, handleUpdate, memberType } = props;
-
-  return (
-    <div className="space-y-4">
-      {/* Role Filter Group */}
-      <RoleFilterGroup appliedFilters={appliedFilters} handleUpdate={handleUpdate} memberType={memberType} />
-    </div>
-  );
-});
-
-// Dropdown component for member list filters
+/**
+ * The members' filter, a popover as the projects' filters are. Opened, it gives the focus to its roles' heading; Tab
+ * reaches the roles, Enter or Space toggles one, the popover staying open. Escape closes it, the focus going back to
+ * its button; Tab past its last role closes it too, the focus moving on. The popover's button is its one control, what
+ * it shows only looking like a button.
+ */
 export const MemberListFiltersDropdown = observer(function MemberListFiltersDropdown(props: Props) {
   const { appliedFilters, handleUpdate, memberType } = props;
+  const { t } = useTranslation();
 
   const appliedFiltersCount = appliedFilters?.length ?? 0;
 
   return (
-    <CustomMenu
-      customButton={
-        <div className="relative">
-          <Button variant="secondary" size="lg" className="flex items-center gap-2">
-            <span>Filters</span>
-            <ChevronDownOutline className="h-3 w-3" />
-          </Button>
-          {appliedFiltersCount > 0 && (
-            <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent-primary" />
-          )}
-        </div>
-      }
+    <FiltersDropdown
       placement="bottom-start"
+      focusPanel
+      menuButton={
+        <span className={cn(getButtonStyling("secondary", "lg"), "relative gap-2")}>
+          <span>{t("common.filters")}</span>
+          <ChevronDownOutline className="h-3 w-3" />
+          {appliedFiltersCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent-primary" />
+          )}
+        </span>
+      }
     >
-      <MemberListFilters appliedFilters={appliedFilters} handleUpdate={handleUpdate} memberType={memberType} />
-    </CustomMenu>
+      <div className="p-2.5">
+        <RoleFilterGroup appliedFilters={appliedFilters} handleUpdate={handleUpdate} memberType={memberType} />
+      </div>
+    </FiltersDropdown>
   );
 });

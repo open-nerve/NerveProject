@@ -1,4 +1,10 @@
 {
+  "tab_navigation": {
+    "set_as_default": "Set as default",
+    "clear_default": "Clear default",
+    "show": "Show",
+    "hide_in_more_menu": "Hide in more menu"
+  },
   "sidebar": {
     "more_projects": "More",
     "fewer_projects": "Hide",

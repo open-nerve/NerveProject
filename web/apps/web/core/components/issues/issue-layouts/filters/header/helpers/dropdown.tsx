@@ -22,6 +22,11 @@ type Props = {
   tabIndex?: number;
   menuButton?: React.ReactNode;
   isFiltersApplied?: boolean;
+  /**
+   * The panel takes the focus as it opens and closes as the focus leaves it (Headless UI's focus), for a panel that
+   * opens no dialog of its own: Tab past its last control moves on, not under it.
+   */
+  focusPanel?: boolean;
 };
 
 export function FiltersDropdown(props: Props) {
@@ -35,6 +40,7 @@ export function FiltersDropdown(props: Props) {
     tabIndex,
     menuButton,
     isFiltersApplied = false,
+    focusPanel = false,
   } = props;
 
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | HTMLDivElement | null>(null);
@@ -98,7 +104,7 @@ export function FiltersDropdown(props: Props) {
             leaveTo="opacity-0 translate-y-1"
           >
             {/** translate-y-0 is a hack to create new stacking context. Required for safari  */}
-            <Popover.Panel className="fixed z-10 translate-y-0">
+            <Popover.Panel className="fixed z-10 translate-y-0" focus={focusPanel}>
               <div
                 className="my-1 overflow-hidden rounded-sm border border-subtle bg-surface-1 shadow-raised-100"
                 ref={setPopperElement}

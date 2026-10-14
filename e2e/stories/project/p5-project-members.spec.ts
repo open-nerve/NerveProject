@@ -199,7 +199,7 @@ test("P5 (API): the admin adds a member and a guest at once, and cannot leave, t
   );
 });
 
-test("P5 (page): a project admin who is no workspace admin adds a member and a guest from the workspace's members who are not the project's, Enter on a select opening its list, the modal held until nerve answers; he is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
+test("P5 (page): a project admin who is no workspace admin filters the members by their roles with the keyboard alone, adds a member and a guest from the workspace's members who are not the project's, Enter on a select opening its list, the modal held until nerve answers; he is offered only the roles below his own, none for another admin; he makes a member a guest, removes the other admin and a guest, the dialog held until nerve answers, and, its only admin now, is told why he may not leave, its dialog open; a member leaves, and the workspace's projects show once nerve has made it, not before; the guest leaves by the sidebar, its modal open after a refusal and held too", async ({
   api,
   baseURL,
   browser,
@@ -235,6 +235,42 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   const page = await signedInPage(pat.tokens);
   const watch = await watchPage(page);
   await page.goto(members);
+  // The roles' filter, a popover, by the keyboard alone: Tab reaches its button from the search, and Enter opens it,
+  // the focus on its roles' heading, which says it shows them. Tab reaches Admin, which Space picks, saying so, the
+  // popover open still and the list down to the admins; Space picks it no more. Escape closes the popover, the focus
+  // back on its button; opened again, Tab past its last role closes it, the focus moving on.
+  const filters = page.getByRole("button", { name: "Filters", exact: true });
+  await page.getByPlaceholder("Search", { exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(filters).toBeFocused();
+  await page.keyboard.press("Enter");
+  const rolesHeading = page.getByRole("button", { name: /^Roles/ });
+  await expect(rolesHeading).toBeFocused();
+  await expect(rolesHeading).toHaveAttribute("aria-expanded", "true");
+  const roleOption = (role: string) =>
+    rolesHeading.locator("xpath=../..").getByRole("button", { name: role, exact: true });
+  await page.keyboard.press("Tab");
+  await expect(roleOption("Admin")).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(roleOption("Admin")).toHaveAttribute("aria-pressed", "true");
+  await expect(roleOption("Admin")).toBeFocused();
+  await expect(memberRow(page, bob.email)).toHaveCount(0);
+  await page.keyboard.press("Space");
+  await expect(roleOption("Admin")).toHaveAttribute("aria-pressed", "false");
+  await expect(memberRow(page, bob.email)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(rolesHeading).toHaveCount(0);
+  await expect(filters).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(rolesHeading).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(roleOption("Guest")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Add member" })).toBeFocused();
+  await expect(rolesHeading).toHaveCount(0);
+
   // He adds ann as a member and gus as a guest, from acme's active members who are not Web's (the admin, ann and gus),
   // gus with a guest's role alone; until nerve has added them the modal can neither be closed nor send them again.
   await page.getByRole("button", { name: "Add member" }).click();

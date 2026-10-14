@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
 // nerve ui
+import { useTranslation } from "@nerve/i18n";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Loader } from "@nerve/ui";
 // components
@@ -18,20 +19,24 @@ import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";
 
 type Props = {
+  /** The filter's name: the projects' lead, or their members. */
+  title: string;
   appliedFilters: string[] | null;
   handleUpdate: (val: string) => void;
   memberIds: string[] | undefined;
   searchQuery: string;
 };
 
+/** A filter of the projects by workspace members, who lead them or are their members. */
 export const FilterMembers = observer(function FilterMembers(props: Props) {
-  const { appliedFilters, handleUpdate, memberIds, searchQuery } = props;
+  const { title, appliedFilters, handleUpdate, memberIds, searchQuery } = props;
   // states
   const [itemsToRender, setItemsToRender] = useState(5);
   const [previewEnabled, setPreviewEnabled] = useState(true);
   // store hooks
   const { getUserDetails } = useMember();
   const { data: currentUser } = useUser();
+  const { t } = useTranslation();
 
   const appliedFiltersCount = appliedFilters?.length ?? 0;
 
@@ -58,7 +63,7 @@ export const FilterMembers = observer(function FilterMembers(props: Props) {
   return (
     <>
       <FilterHeader
-        title={`Members${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${title}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={previewEnabled}
         handleIsPreviewEnabled={() => setPreviewEnabled(!previewEnabled)}
       />
@@ -73,7 +78,7 @@ export const FilterMembers = observer(function FilterMembers(props: Props) {
                   if (!member) return null;
                   return (
                     <FilterOption
-                      key={`member-${member.id}`}
+                      key={member.id}
                       isChecked={!!appliedFilters?.includes(member.id)}
                       onClick={() => handleUpdate(member.id)}
                       icon={
@@ -84,7 +89,7 @@ export const FilterMembers = observer(function FilterMembers(props: Props) {
                           size="xs"
                         />
                       }
-                      title={currentUser?.id === member.id ? "You" : member?.display_name}
+                      title={currentUser?.id === member.id ? t("you") : member?.display_name}
                     />
                   );
                 })}
@@ -94,12 +99,12 @@ export const FilterMembers = observer(function FilterMembers(props: Props) {
                     className="ml-8 text-11 font-medium text-accent-primary"
                     onClick={handleViewToggle}
                   >
-                    {itemsToRender === sortedOptions.length ? "View less" : "View all"}
+                    {t(itemsToRender === sortedOptions.length ? "common.view_less" : "common.view_all")}
                   </button>
                 )}
               </>
             ) : (
-              <p className="text-11 text-placeholder italic">No matches found</p>
+              <p className="text-11 text-placeholder italic">{t("common.search.no_matches_found")}</p>
             )
           ) : (
             <Loader className="space-y-2">

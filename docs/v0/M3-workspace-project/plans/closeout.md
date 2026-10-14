@@ -99,7 +99,7 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
-| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter 打开列表，一秒之内不发请求（Task 10） | 2、5、8、10 |
+| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter 打开列表，一秒之内不发请求（Task 10）；成员筛选以键盘走一遍（Task 12） | 2、5、8、10、12 |
 | `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓，一行的按钮和组的添加以它们的东西为名，整页的计数以名字的开头为锚（Task 8） | 1、2、6、8 |
 | `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6）；一行的菜单和删除以标签为名，以键盘选"Edit label"，整页的计数以名字的开头、结尾为锚（Task 8） | 1、2、6、8 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 每个角色打开工作区菜单，不发请求（`WORKSPACE_MENU`） | 3 |
@@ -143,6 +143,8 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/editor/embeds/mentions/user.tsx` | 角色名经 `ROLE_DETAILS` | 6 |
 | `web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx` | 工作区经 `useRouteWorkspace()` | 11 |
 | `web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx` | 组字经 `isComposing` | 10 |
+| `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx` | 筛选的弹层：可选的 `focusPanel`（Headless UI 的 `focus`），成员筛选传它 | 12 |
+| `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx` | 筛选的共用件：展开按钮以标题为名、`aria-expanded`，选项 `aria-pressed`（F12） | 12 |
 | `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx`、`web/apps/web/core/components/issues/workspace-draft/quick-action.tsx` | `CustomMenu` 的调用方：删去 `useCaptureForOutsideClick`（Headless UI 自己在捕获阶段检测点外面） | 8 |
 | `web/apps/web/core/components/labels/create-update-label-inline.tsx` | 颜色弹层（Task 8） | 8 |
 | `web/apps/web/core/components/labels/label-block/label-item-block.tsx` | 标签一行的菜单以标签为名；菜单打开时设为打开、`onMenuClose` 设为关上（原来每次点按钮来回切换） | 8 |
@@ -164,7 +166,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/project-states/create-update/form.tsx` | 状态的英文经 `t()`、组的名字（Task 6）；颜色弹层、名称的焦点（Task 8） | 6、8 |
 | `web/apps/web/core/components/project/add-project-members-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.test.tsx`、`web/apps/web/core/components/project/archive-restore-modal.tsx`、`web/apps/web/core/components/project/confirm-project-member-remove.tsx`、`web/apps/web/core/components/project/delete-project-modal.test.tsx`、`web/apps/web/core/components/project/delete-project-modal.tsx`、`web/apps/web/core/components/project/form.tsx`、`web/apps/web/core/components/project/join-project-modal.tsx`、`web/apps/web/core/components/project/leave-project-modal.tsx`、`web/apps/web/core/components/project/member-select.tsx`、`web/apps/web/core/components/project/project-settings-member-defaults.tsx`、`web/apps/web/core/components/project/settings/control-section.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5 |
 | `web/apps/web/core/components/project/add-project-members-modal.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5、6 |
-| `web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 |
+| `web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮；成员页的筛选是弹层 | 12 |
 | `web/apps/web/core/components/project/applied-filters/root.test.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 新 |
 | `web/apps/web/core/components/project/card.test.tsx` | 卡片的文字（Task 5、12）；设置的链接的名字（Task 5） | 5、12 |
 | `web/apps/web/core/components/project/card.tsx` | 项目页的英文（Task 5、12）；设置的链接的名字（Task 5） | 5、12 |
@@ -11498,15 +11500,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx`、`web/apps/web/core/components/project/applied-filters/root.test.tsx`
-- Modify: `e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx`、`web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/card.test.tsx`、`web/apps/web/core/components/project/card.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx`、`web/apps/web/core/components/project/header.tsx`、`web/apps/web/core/components/sidebar/sidebar-wrapper.tsx`、`web/apps/web/package.json`、`web/packages/constants/src/filter.ts`、`web/packages/constants/src/project.ts`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json`、`web/packages/i18n/src/locales/zh-CN/project.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
+- Modify: `e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx`、`web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/card.test.tsx`、`web/apps/web/core/components/project/card.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx`、`web/apps/web/core/components/project/header.tsx`、`web/apps/web/core/components/sidebar/sidebar-wrapper.tsx`、`web/apps/web/package.json`、`web/packages/constants/src/filter.ts`、`web/packages/constants/src/project.ts`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json`、`web/packages/i18n/src/locales/zh-CN/project.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
 - Delete: `web/apps/web/core/components/project/dropdowns/filters/lead.tsx`
 
 **Interfaces:**（spec 2.8）
 - 侧边栏的标题经 `t("projects")`：`SidebarWrapper` 的 `title`（只有一个调用方，总是"Projects"）和 `title === "Projects"` 的条件删除；扩展侧边栏的标题同样。标签栏的菜单经 `navigation.json` 的 `tab_navigation.*`。项目页页头的"已归档"，卡片的创建日期和成员数。
-- 筛选：`@nerve/constants` 的 `PROJECT_FILTER_I18N_LABEL`（下拉框和已选筛选的一栏共用）；`lead.tsx`（`members.tsx` 的副本）删除，`FilterMembers` 收 `title`；网络按页面上的名字搜索；创建日期的选项 `i18n_name`；已选筛选的 9 个移除按钮名为 `common.remove_item`；数目的提示。成员筛选：角色经 `ROLE_DETAILS` 和"已停用"，按钮里不再有按钮（`customButtonClassName`）。
+- 筛选：`@nerve/constants` 的 `PROJECT_FILTER_I18N_LABEL`（下拉框和已选筛选的一栏共用）；`lead.tsx`（`members.tsx` 的副本）删除，`FilterMembers` 收 `title`；网络按页面上的名字搜索；创建日期的选项 `i18n_name`；已选筛选的 9 个移除按钮名为 `common.remove_item`；数目的提示。成员筛选：角色经 `ROLE_DETAILS` 和"已停用"；它是项目列表的筛选所用的弹层 `FiltersDropdown`（Task 8 交来：原来是 `CustomMenu`，选项不是菜单项，键盘到不了），按钮是弹层自己的（`menuButton`，按钮里不再有按钮），`focusPanel`（新的可选 prop，Headless UI 的 `focus`）：打开时焦点在角色的标题上，Tab 走出时关上。筛选的共用件在根上改（F12）：`FilterHeader` 的展开按钮 `aria-label`、`aria-expanded`，`FilterOption` 的 `aria-pressed`。
 - 这几个文件自己的警告：已选筛选的两个数组改为 `Set`；筛选的搜索框的 `autoFocus` 写明理由（`oxlint-disable-next-line`）。web 的上限 296 → 293。
 
-**Tests:** `tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`（新文件）；`card.test.tsx`、`tab-navigation-overflow-menu.test.tsx` 读键。S7：第二个加扩展侧边栏的标题；第四个（新）：项目页的标题、卡片、筛选、已选筛选的一栏、已归档、成员筛选。
+**Tests:** `tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`（新文件）；`card.test.tsx`、`tab-navigation-overflow-menu.test.tsx` 读键。S7：第二个加扩展侧边栏的标题；第四个（新）：项目页的标题、卡片、筛选、已选筛选的一栏、已归档、成员筛选（以"角色"找到标题的按钮）。P5：成员筛选以键盘走一遍（打开时焦点在"Roles"上，空格选上 Admin、弹层留着，Escape 和 Tab 走出关上它）。
 
 - [ ] **Step 1: 页面和筛选**
 
@@ -11526,6 +11528,78 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx
     <SidebarWrapper quickActions={<SidebarQuickActions />}>
+````
+
+`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+  menuButton?: React.ReactNode;
+  isFiltersApplied?: boolean;
+};
+````
+````new web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+  menuButton?: React.ReactNode;
+  isFiltersApplied?: boolean;
+  /**
+   * The panel takes the focus as it opens and closes as the focus leaves it (Headless UI's focus), for a panel that
+   * opens no dialog of its own: Tab past its last control moves on, not under it.
+   */
+  focusPanel?: boolean;
+};
+````
+````old web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+    isFiltersApplied = false,
+  } = props;
+````
+````new web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+    isFiltersApplied = false,
+    focusPanel = false,
+  } = props;
+````
+````old web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+            <Popover.Panel className="fixed z-10 translate-y-0">
+````
+````new web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+            <Popover.Panel className="fixed z-10 translate-y-0" focus={focusPanel}>
+````
+
+`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx
+      <button
+        type="button"
+        className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-sm hover:bg-layer-transparent-hover"
+        onClick={handleIsPreviewEnabled}
+      >
+````
+````new web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx
+      {/* the button shows or hides the options under the title, which names it */}
+      <button
+        type="button"
+        className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-sm hover:bg-layer-transparent-hover"
+        onClick={handleIsPreviewEnabled}
+        aria-label={title}
+        aria-expanded={isPreviewEnabled}
+      >
+````
+
+`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx
+    <button
+      type="button"
+      className="flex w-full items-center gap-2 rounded-sm p-1.5 hover:bg-layer-transparent-hover"
+      onClick={onClick}
+    >
+````
+````new web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx
+    <button
+      type="button"
+      className="flex w-full items-center gap-2 rounded-sm p-1.5 hover:bg-layer-transparent-hover"
+      onClick={onClick}
+      // the box shows whether the option is picked; the button says it
+      aria-pressed={isChecked}
+    >
 ````
 
 `web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`（修改，3 处）：
@@ -11842,7 +11916,7 @@ import { useTranslation } from "@nerve/i18n";
 ````delete web/apps/web/core/components/project/dropdowns/filters/lead.tsx
 ````
 
-`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`（整个文件，123 行）：
+`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`（整个文件，116 行）：
 
 ````whole web/apps/web/core/components/project/dropdowns/filters/member-list.tsx
 /**
@@ -11860,10 +11934,8 @@ import { getButtonStyling } from "@nerve/propel/button";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
 import { EUserWorkspaceRoles } from "@nerve/types";
 import { cn } from "@nerve/utils";
-// nerve ui
-import { CustomMenu } from "@nerve/ui";
 // components
-import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
+import { FilterHeader, FilterOption, FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 
 /** A role the members are filtered by: its value in the filter, and the key of its name. */
 interface IRoleOption {
@@ -11931,41 +12003,36 @@ const RoleFilterGroup = observer(function RoleFilterGroup({
   );
 });
 
-const MemberListFilters = observer(function MemberListFilters(props: Props) {
-  const { appliedFilters, handleUpdate, memberType } = props;
-
-  return (
-    <div className="space-y-4">
-      {/* Role Filter Group */}
-      <RoleFilterGroup appliedFilters={appliedFilters} handleUpdate={handleUpdate} memberType={memberType} />
-    </div>
-  );
-});
-
-// Dropdown component for member list filters
+/**
+ * The members' filter, a popover as the projects' filters are. Opened, it gives the focus to its roles' heading; Tab
+ * reaches the roles, Enter or Space toggles one, the popover staying open. Escape closes it, the focus going back to
+ * its button; Tab past its last role closes it too, the focus moving on. The popover's button is its one control, what
+ * it shows only looking like a button.
+ */
 export const MemberListFiltersDropdown = observer(function MemberListFiltersDropdown(props: Props) {
   const { appliedFilters, handleUpdate, memberType } = props;
   const { t } = useTranslation();
 
   const appliedFiltersCount = appliedFilters?.length ?? 0;
 
-  // the menu's own button looks like a button: no button inside it
   return (
-    <CustomMenu
-      customButtonClassName={cn(getButtonStyling("secondary", "lg"), "relative gap-2")}
-      customButton={
-        <>
+    <FiltersDropdown
+      placement="bottom-start"
+      focusPanel
+      menuButton={
+        <span className={cn(getButtonStyling("secondary", "lg"), "relative gap-2")}>
           <span>{t("common.filters")}</span>
           <ChevronDownOutline className="h-3 w-3" />
           {appliedFiltersCount > 0 && (
             <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent-primary" />
           )}
-        </>
+        </span>
       }
-      placement="bottom-start"
     >
-      <MemberListFilters appliedFilters={appliedFilters} handleUpdate={handleUpdate} memberType={memberType} />
-    </CustomMenu>
+      <div className="p-2.5">
+        <RoleFilterGroup appliedFilters={appliedFilters} handleUpdate={handleUpdate} memberType={memberType} />
+      </div>
+    </FiltersDropdown>
   );
 });
 ````
@@ -12332,6 +12399,61 @@ export const PROJECT_DISPLAY_FILTER_OPTIONS: {
 
 - [ ] **Step 2: 测试**
 
+`e2e/stories/project/p5-project-members.spec.ts`（修改，2 处）：
+
+````old e2e/stories/project/p5-project-members.spec.ts
+test("P5 (page): a project admin who is no workspace admin adds a member and a guest
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+test("P5 (page): a project admin who is no workspace admin filters the members by their roles with the keyboard alone, adds a member and a guest
+````
+````old e2e/stories/project/p5-project-members.spec.ts
+  const watch = await watchPage(page);
+  await page.goto(members);
+  // He adds ann
+````
+````new e2e/stories/project/p5-project-members.spec.ts
+  const watch = await watchPage(page);
+  await page.goto(members);
+  // The roles' filter, a popover, by the keyboard alone: Tab reaches its button from the search, and Enter opens it,
+  // the focus on its roles' heading, which says it shows them. Tab reaches Admin, which Space picks, saying so, the
+  // popover open still and the list down to the admins; Space picks it no more. Escape closes the popover, the focus
+  // back on its button; opened again, Tab past its last role closes it, the focus moving on.
+  const filters = page.getByRole("button", { name: "Filters", exact: true });
+  await page.getByPlaceholder("Search", { exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(filters).toBeFocused();
+  await page.keyboard.press("Enter");
+  const rolesHeading = page.getByRole("button", { name: /^Roles/ });
+  await expect(rolesHeading).toBeFocused();
+  await expect(rolesHeading).toHaveAttribute("aria-expanded", "true");
+  const roleOption = (role: string) =>
+    rolesHeading.locator("xpath=../..").getByRole("button", { name: role, exact: true });
+  await page.keyboard.press("Tab");
+  await expect(roleOption("Admin")).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(roleOption("Admin")).toHaveAttribute("aria-pressed", "true");
+  await expect(roleOption("Admin")).toBeFocused();
+  await expect(memberRow(page, bob.email)).toHaveCount(0);
+  await page.keyboard.press("Space");
+  await expect(roleOption("Admin")).toHaveAttribute("aria-pressed", "false");
+  await expect(memberRow(page, bob.email)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(rolesHeading).toHaveCount(0);
+  await expect(filters).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(rolesHeading).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(roleOption("Guest")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Add member" })).toBeFocused();
+  await expect(rolesHeading).toHaveCount(0);
+
+  // He adds ann
+````
+
 `e2e/stories/smoke/s7-chinese.spec.ts`（修改，2 处）：
 
 ````old e2e/stories/smoke/s7-chinese.spec.ts
@@ -12388,12 +12510,13 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   await page.goto(`/${slug}/projects/archives`);
   await expect(page.getByText("已归档", { exact: true })).toHaveCount(1);
 
-  // The members page: one button names its filter, whose roles have their names.
+  // The members page: one button names its filter, a popover whose roles' heading and roles have their names.
   await page.goto(`/${slug}/settings/members`);
   await expect(page.getByRole("button", { name: "筛选" })).toHaveCount(1);
   await page.getByRole("button", { name: "筛选" }).click();
-  const roleFilter = page.getByRole("menu", { name: "筛选" });
-  await expect(roleFilter.getByText("角色", { exact: true })).toBeVisible();
+  // the filter, its button and its popover
+  const roleFilter = page.getByRole("button", { name: "筛选" }).locator("xpath=..");
+  await expect(roleFilter.getByRole("button", { name: "角色", exact: true })).toHaveAttribute("aria-expanded", "true");
   const roles = roleFilter.getByRole("button", { name: /^(管理员|成员|访客|已停用)$/ });
   await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
   await page.keyboard.press("Escape");
@@ -12610,7 +12733,7 @@ Expected: 117 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx' web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx web/apps/web/core/components/project/applied-filters/access.tsx web/apps/web/core/components/project/applied-filters/date.tsx web/apps/web/core/components/project/applied-filters/members.tsx web/apps/web/core/components/project/applied-filters/project-display-filters.tsx web/apps/web/core/components/project/applied-filters/root.test.tsx web/apps/web/core/components/project/applied-filters/root.tsx web/apps/web/core/components/project/card.test.tsx web/apps/web/core/components/project/card.tsx web/apps/web/core/components/project/dropdowns/filters/access.tsx web/apps/web/core/components/project/dropdowns/filters/created-at.tsx web/apps/web/core/components/project/dropdowns/filters/lead.tsx web/apps/web/core/components/project/dropdowns/filters/member-list.tsx web/apps/web/core/components/project/dropdowns/filters/members.tsx web/apps/web/core/components/project/dropdowns/filters/root.tsx web/apps/web/core/components/project/header.tsx web/apps/web/core/components/sidebar/sidebar-wrapper.tsx web/apps/web/package.json web/packages/constants/src/filter.ts web/packages/constants/src/project.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/navigation.json web/packages/i18n/src/locales/en/project.json web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/navigation.json web/packages/i18n/src/locales/zh-CN/project.json web/packages/i18n/src/locales/zh-CN/workspace.json
+git add e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx' web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx web/apps/web/core/components/project/applied-filters/access.tsx web/apps/web/core/components/project/applied-filters/date.tsx web/apps/web/core/components/project/applied-filters/members.tsx web/apps/web/core/components/project/applied-filters/project-display-filters.tsx web/apps/web/core/components/project/applied-filters/root.test.tsx web/apps/web/core/components/project/applied-filters/root.tsx web/apps/web/core/components/project/card.test.tsx web/apps/web/core/components/project/card.tsx web/apps/web/core/components/project/dropdowns/filters/access.tsx web/apps/web/core/components/project/dropdowns/filters/created-at.tsx web/apps/web/core/components/project/dropdowns/filters/lead.tsx web/apps/web/core/components/project/dropdowns/filters/member-list.tsx web/apps/web/core/components/project/dropdowns/filters/members.tsx web/apps/web/core/components/project/dropdowns/filters/root.tsx web/apps/web/core/components/project/header.tsx web/apps/web/core/components/sidebar/sidebar-wrapper.tsx web/apps/web/package.json web/packages/constants/src/filter.ts web/packages/constants/src/project.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/navigation.json web/packages/i18n/src/locales/en/project.json web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/navigation.json web/packages/i18n/src/locales/zh-CN/project.json web/packages/i18n/src/locales/zh-CN/workspace.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the projects page, the sidebar's heading and the tab bar speak the user's language
@@ -12622,6 +12745,13 @@ named by its caller; the members' filter offers the roles by their names
 and is one button. The sidebar's and the extended sidebar's headings, the
 tab bar's menus and the cards read their text through t(). S7 filters the
 projects and the members in Chinese.
+
+The members' filter is the projects' filters' popover, no menu whose
+options the keyboard could not reach: opened, it gives the focus to its
+roles' heading; Tab reaches each role, Space picks it and the popover
+stays; Escape closes it, the focus back on its button, and Tab past its
+last role closes it too. The filters' shared heading and option say
+their names and states. P5 works the filter by the keyboard alone.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -12647,6 +12777,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T12.15` | 成员的筛选用键给出角色（E3） | 故事 S7 | 端到端 |
 | `T12.16` | 成员的筛选按钮里又有一个自己的控件（E3） | 故事 S7 | 端到端 |
 | `T12.17` | 页面读的一个键没有定义（`i18n-keys`） | `tools/i18n-keys.mjs` | 静态 |
+| `T12.18` | 成员的筛选又是 `CustomMenu` 的菜单（Task 8 的形状）：键盘到不了角色，Tab 关上它 | 故事 P5 | 端到端 |
+| `T12.19` | 成员的筛选不传 `focusPanel`：打开时焦点留在按钮上，Tab 走出时弹层留着 | 故事 P5 | 端到端 |
+| `T12.20` | 筛选的展开按钮又没有名字（F12） | 故事 P5、S7 | 端到端 |
+| `T12.21` | 筛选的展开按钮不说出是否展开（F12） | 故事 P5、S7 | 端到端 |
+| `T12.22` | 筛选的选项不说出是否选中（F12） | 故事 P5 | 端到端 |
 
 ---
 
@@ -15139,9 +15274,9 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 
 - **弹窗**：M3 收尾把 `ModalCore` 改成 Headless UI v2 的 `Dialog`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）：弹窗打开时后面的页面 `inert`、`aria-hidden`，请求在路上时关不掉、取消不能用。工作项的弹窗在 M3 的故事里走不到：M4 对接时逐个核对 Tab 在弹窗里转、Escape 和点外面关上、关上之后焦点回到打开它的控件，以及弹窗里经 portal 渲染的东西（日期选择、下拉框、表情）能用（收尾 spec 附录 A.3 的门户清单只证明了 M3 页面上的几种）。`AlertModalCore` 的确认框照 A-M2：被拒绝时留着，只在成功的跟进中关上；按钮的文字经 `t()` 传入（`@nerve/ui` 的默认值是英文，见 M8 的交接）。
 - **正的 `tabIndex`**：工作项的表单（`getTabIndex(ETabIndices.ISSUE_FORM)`）：浏览器先走完正的、再走焦点陷阱的哨兵，Tab 在最后一个之后离开弹窗，M3/P10 的创建表单因此删去了它的，M4 照样删去。同一个机制的另几处（M3/P10 的裁定 F-17、F-18）：`core/modals/existing-issues-list-modal.tsx`、`issues/parent-issues-list-modal.tsx` 的搜索框和 `issues/issue-detail/label/select/label-select.tsx` 收的 `baseTabIndex`；`issues/issue-modal/components/default-properties.tsx` 给父工作项的 `CustomMenu` 正的 `tabIndex`（M3 收尾起落在菜单的按钮上，原来在 Menu 的根上）；`issues/archive-issue-modal.tsx`、`core/description-versions/modal.tsx` 写死的 `tabIndex={1}`。M4、M6、M7 中最后删去正的 `tabIndex` 的那一个，同时删除 `getTabIndex`（`@nerve/utils` 的 `tab-indices.ts`）和 `@nerve/constants` 的 `tab-indices.ts`，`CustomMenu` 不再读 `tabIndex`（M3/P10 评审第 6 节）。
-- **嵌套的按钮**：`dropdowns/` 的 `DropdownButton` 放在 Headless UI 的按钮里（M3/P10 的裁定 R3），面包屑的下拉框之前一节的标题按钮也在选择的按钮里，M4 随工作项的属性下拉框和页头一起改。菜单自己的按钮里又放了 `IconButton` 的三处（M3 收尾找到，`customButton` 或 `PopoverMenu` 的 `button` 中的 `IconButton`，两个 Tab 停留点、按钮里有按钮）：`comments/quick-actions.tsx`、`issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（外面的按钮 `outline-none`，焦点看不到）；改法照 M3 收尾的项目一行和成员筛选（`CustomMenu` 的 `customButtonClassName` 加上按钮的样式，内容是图标，不再嵌一个按钮）。
+- **嵌套的按钮**：`dropdowns/` 的 `DropdownButton` 放在 Headless UI 的按钮里（M3/P10 的裁定 R3），面包屑的下拉框之前一节的标题按钮也在选择的按钮里，M4 随工作项的属性下拉框和页头一起改。菜单自己的按钮里又放了 `IconButton` 的三处（M3 收尾找到，`customButton` 或 `PopoverMenu` 的 `button` 中的 `IconButton`，两个 Tab 停留点、按钮里有按钮）：`comments/quick-actions.tsx`、`issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（外面的按钮 `outline-none`，焦点看不到）；改法照 M3 收尾的项目标签栏的菜单（`navigation/project-actions-menu.tsx`：`CustomMenu` 的 `customButtonClassName` 给菜单自己的按钮样式，内容是图标，不再嵌一个按钮）。
 - **`CustomMenu` 的键盘**（M3 收尾 Task 8 的修复轮 1 在根上改：键盘打开、选择，Escape 关上，焦点回到按钮；[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9、附录 A.4 的调用方清单）：M4 的页面上留下的三处。工作项快捷操作的 `SubMenu`（`issues/issue-layouts/quick-action-dropdowns/` 的 `all-issue.tsx`、`cycle-issue.tsx`、`module-issue.tsx`、`project-issue.tsx`、`issue-detail.tsx`）的触发项是包着按钮的 `Menu.Item as="div"`，菜单上的 Enter 点的是 `div`，键盘打不开子菜单（原来也是）；看板、日历的卡片给快捷操作的 `customActionButton` 的"激活"底色只随指针的 click 切换，键盘打开菜单时不显示；`issues/issue-modal/components/default-properties.tsx` 给父工作项的菜单的 `customButton` 是一个 `<button>`，放在菜单的按钮里（按钮里有按钮）。在 M4 的页面上用键盘核对。
-- **下拉框**：成员下拉框以 `CustomSearchSelect` 为底之后 M4 的调用方看得到的不同（按键由 Headless UI 处理，`WhileOpen` 记下打开时的回调，Escape 之后焦点在选择自己的按钮上，列表的新样子），在 M4 的页面上核对，C7 没有核对 M4 页面上的调用方（成员下拉框的 8 个文件、4 个筛选）。`issues/select/base.tsx` 的根与 M3 收尾改过的项目下拉框是同一种写法：调用方给根 `tabIndex`，根是一个没有名字的停留点；照收尾把 `tabIndex` 给里面的按钮。筛选的共用件（`issues/issue-layouts/filters/` 的 `FilterHeader`、`FilterOption`，M3 的项目筛选也用）：标题的展开按钮没有名字，选项不说出选中与否（M3 收尾找到）。`getButtonStyling` 的两处（`rich-filters/add-filters/button.tsx`、`dropdowns/layout.tsx`）用键盘核对轮廓。
+- **下拉框**：成员下拉框以 `CustomSearchSelect` 为底之后 M4 的调用方看得到的不同（按键由 Headless UI 处理，`WhileOpen` 记下打开时的回调，Escape 之后焦点在选择自己的按钮上，列表的新样子），在 M4 的页面上核对，C7 没有核对 M4 页面上的调用方（成员下拉框的 8 个文件、4 个筛选）。`issues/select/base.tsx` 的根与 M3 收尾改过的项目下拉框是同一种写法：调用方给根 `tabIndex`，根是一个没有名字的停留点；照收尾把 `tabIndex` 给里面的按钮。`getButtonStyling` 的两处（`rich-filters/add-filters/button.tsx`、`dropdowns/layout.tsx`）用键盘核对轮廓。
 - **右键菜单**：工作项和草稿的列表的右键菜单关着时 `inert`（M3/P10 的裁定 F-14），在 M4 的页面上核对右键打开它、点它的项。
 - **层叠顺序**：页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下，`z-30` 及以上留给弹窗和从弹窗打开、经 portal 渲染到 `body` 的东西（下拉框、提示、表情）；M3 收尾因此把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。工作项页面上画在任何弹窗之上的元素（行号是 M3 收尾时的）：`issues/issue-layouts/roots/project-layout-root.tsx:80`（`fixed … z-50`）；日历的两个 `Popover.Panel`（`issues/issue-layouts/calendar/dropdowns/options-dropdown.tsx:128`、`months-dropdown.tsx:102`，`fixed z-50`，不经 portal）；`issues/issue-layouts/quick-add/form/calendar.tsx:22`（`z-50`）；更新中的遮罩 `issues/issue-layouts/calendar/issue-block.tsx:110`、`issues/issue-layouts/list/block.tsx:217`（`z-[99999]`）；拖动中的 `issues/issue-layouts/kanban/block.tsx:261`（`z-[100]`）。与弹窗同层或之上的还有 `issues/attachment/attachment-item-list.tsx:123`（`z-30`）和拖动中的 `issues/issue-layouts/kanban/kanban-delete-drop-zone.tsx:52`（`z-40`）。M4 改这些页面时把它们降到 `z-30` 之下，或开着一个弹窗核对它们不画在弹窗上。
 - 共用组件的焦点轮廓（`Button`、`IconButton`、`getButtonStyling`、`CustomMenu`）是否被 `overflow-hidden` 裁掉，在 M4 的页面上用键盘核对（M3/P11 评审第 6 节）。`IconButton` 的 `aria-label` 和 `EmojiPicker` 的 `ariaLabel` 自 M3 收尾必传，新加的每一个都有名字（编辑器标注块的选图标按钮是英文的"Callout icon"，编辑器的文字见 M8 的交接第 3 节）。
@@ -15413,7 +15548,7 @@ M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是�
 ## 4. 可访问性
 
 - Base UI 的 `Toast.Close`（`@nerve/propel` 的 `toast/toast.tsx`）渲染成 `aria-hidden="true"` 而 `tabindex="0"`：Tab 能到、读屏读不到（M3 收尾找到）。
-- 页头（`navigation/top-navigation-root.tsx`，每个工作区页面都有）：帮助菜单（`workspace/sidebar/help-section/root.tsx`）和账户菜单（`workspace/sidebar/user-menu-root.tsx`）的按钮里又是按钮，帮助菜单的没有名字；改法照 M3 收尾的成员筛选（`CustomMenu` 的 `customButtonClassName`，内容不再是按钮）。页头的通知链接在 M7 的交接。
+- 页头（`navigation/top-navigation-root.tsx`，每个工作区页面都有）：帮助菜单（`workspace/sidebar/help-section/root.tsx`）和账户菜单（`workspace/sidebar/user-menu-root.tsx`）的按钮里又是按钮，帮助菜单的没有名字；改法照 M3 收尾的项目标签栏的菜单（`navigation/project-actions-menu.tsx`：`CustomMenu` 的 `customButtonClassName` 给菜单自己的按钮样式，内容不再是按钮）。页头的通知链接在 M7 的交接。
 - 页头的搜索（`navigation/top-nav-power-k.tsx`）的 4 条 oxlint 警告：`exhaustive-deps` 2 条，`click-events-have-key-events`、`prefer-tag-over-role` 各 1 条。M3 收尾只把它的占位文字改经 `t()`（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条）；后两条是它的点击区不是按钮，与上面帮助、账户菜单的按钮是同一类改法、同在页头，一起改，改时清零。
 - 焦点和输入法只在 Chromium 中逐个核对过：发布之前在 Firefox、Safari 中看一遍焦点的轮廓、弹窗的 Tab 循环和输入法组字时的 Escape、Enter（M3/P11 评审第 6 节、M3/P10 spec 第 5 节；M3 收尾的 C11 看过的部分写在它的评审里）。
 - 命令面板打开之后约 200 毫秒之内输入的字会被清空（`power-k/ui/modal/wrapper.tsx` 打开时的重置，Plane 原有；之后的输入留着，M3 收尾的探查）。

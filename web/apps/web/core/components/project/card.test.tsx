@@ -6,7 +6,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
+import type { ReactNode } from "react";
+import type { Project, ProjectRole, WorkspaceRole } from "@nerve/api-client";
+import { renderFormattedDate } from "@nerve/utils";
 import { emptyShown, shown } from "@/lib/fake-controls";
 import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
@@ -34,6 +36,15 @@ vi.mock("./archive-restore-modal", () => ({ ArchiveRestoreProjectModal: () => nu
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
+// a tooltip shows its label beside what it is the tooltip of
+vi.mock("@makeplane/propel/components/tooltip", () => ({
+  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
+    <>
+      <span data-tooltip="">{label}</span>
+      {children}
+    </>
+  ),
+}));
 
 /**
  * Signs the caller in as nerve lists acme and web to him, his role in each (null: he sees web, no member of it), and
@@ -80,6 +91,25 @@ describe("a project's card", () => {
     const { inCard, menu } = await offeredTo(row.workspaceRole, row.projectRole, true);
     const offered = row.offered ? ["restore", "delete"] : [];
     expect([inCard.restore, inCard.delete, menu]).toEqual([row.offered, row.offered, offered]);
+  });
+
+  it("says, in the page's language, when it was made, having no description, and how many members it has", async () => {
+    const { permissions, acme, web } = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole);
+    caller.permissions = permissions;
+    const cardOf = (project: Project) =>
+      renderToStaticMarkup(
+        <MemoryRouter initialEntries={[`/${acme.slug}/projects`]}>
+          <Routes>
+            <Route path=":workspaceSlug/projects" element={<ProjectCard project={project} />} />
+          </Routes>
+        </MemoryRouter>
+      );
+    const alone = cardOf({ ...web, member_ids: [] });
+    expect(alone).toContain(`common.created_on ${renderFormattedDate(web.created_at)}`);
+    expect(alone).toContain('<span data-tooltip="">project_dialogs.no_member_yet</span>');
+    expect(cardOf({ ...web, member_ids: ["u-bob"] })).toContain(
+      '<span data-tooltip="">project_dialogs.members_count 1</span>'
+    );
   });
 
   it.each<Caller & { linked: boolean }>([

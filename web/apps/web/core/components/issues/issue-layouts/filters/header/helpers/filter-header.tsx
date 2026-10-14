@@ -17,10 +17,13 @@ export function FilterHeader({ title, isPreviewEnabled, handleIsPreviewEnabled }
   return (
     <div className="sticky top-0 flex items-center justify-between gap-2 bg-surface-1">
       <div className="flex-grow truncate text-caption-sm-medium text-placeholder">{title}</div>
+      {/* the button shows or hides the options under the title, which names it */}
       <button
         type="button"
         className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-sm hover:bg-layer-transparent-hover"
         onClick={handleIsPreviewEnabled}
+        aria-label={title}
+        aria-expanded={isPreviewEnabled}
       >
         {isPreviewEnabled ? <ChevronUpOutline height={14} width={14} /> : <ChevronDownOutline height={14} width={14} />}
       </button>

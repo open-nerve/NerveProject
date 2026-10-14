@@ -107,6 +107,13 @@
       "my_projects": "My projects",
       "archived_projects": "Archived"
     },
+    "applied_filters_count": "{filtered} of {total} projects match the applied filters.",
+    "created_at_filter": {
+      "yesterday": "Yesterday",
+      "last_7_days": "Last 7 days",
+      "last_30_days": "Last 30 days",
+      "custom": "Custom"
+    },
     "common": {
       "months_count": "{months, plural, one{# month} other{# months}}"
     },

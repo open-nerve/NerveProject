@@ -5,6 +5,7 @@
  */
 
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { CloseOutline } from "@makeplane/propel/icons";
 // helpers
@@ -24,6 +25,7 @@ export const AppliedMembersFilters = observer(function AppliedMembersFilters(pro
   const {
     workspace: { getWorkspaceMemberDetails },
   } = useMember();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -46,6 +48,7 @@ export const AppliedMembersFilters = observer(function AppliedMembersFilters(pro
                 type="button"
                 className="grid place-items-center text-tertiary hover:text-secondary"
                 onClick={() => handleRemove(memberId)}
+                aria-label={t("common.remove_item", { name: memberDetails.display_name })}
               >
                 <CloseOutline height={10} width={10} />
               </button>

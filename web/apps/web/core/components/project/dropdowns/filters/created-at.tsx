@@ -7,7 +7,8 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 // nerve constants
-import { PROJECT_CREATED_AT_FILTER_OPTIONS } from "@nerve/constants";
+import { PROJECT_CREATED_AT_FILTER_OPTIONS, PROJECT_FILTER_I18N_LABEL } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // components
 import { isInDateFormat } from "@nerve/utils";
 import { DateFilterModal } from "@/components/core/filters/date-filter-modal";
@@ -24,10 +25,12 @@ export const FilterCreatedDate = observer(function FilterCreatedDate(props: Prop
   // state
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [isDateFilterModalOpen, setIsDateFilterModalOpen] = useState(false);
+  const { t } = useTranslation();
   // derived values
+  const title = t(PROJECT_FILTER_I18N_LABEL.created_at);
   const appliedFiltersCount = appliedFilters?.length ?? 0;
   const filteredOptions = PROJECT_CREATED_AT_FILTER_OPTIONS.filter((d) =>
-    d.name.toLowerCase().includes(searchQuery.toLowerCase())
+    t(d.i18n_name).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const isCustomDateSelected = () => {
@@ -48,11 +51,11 @@ export const FilterCreatedDate = observer(function FilterCreatedDate(props: Prop
           handleClose={() => setIsDateFilterModalOpen(false)}
           isOpen={isDateFilterModalOpen}
           onSelect={(val) => handleUpdate(val)}
-          title="Created date"
+          title={title}
         />
       )}
       <FilterHeader
-        title={`Created date${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${title}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={previewEnabled}
         handleIsPreviewEnabled={() => setPreviewEnabled(!previewEnabled)}
       />
@@ -65,19 +68,19 @@ export const FilterCreatedDate = observer(function FilterCreatedDate(props: Prop
                   key={option.value}
                   isChecked={!!appliedFilters?.includes(option.value)}
                   onClick={() => handleUpdate(option.value)}
-                  title={option.name}
+                  title={t(option.i18n_name)}
                   multiple={false}
                 />
               ))}
               <FilterOption
                 isChecked={isCustomDateSelected()}
                 onClick={handleCustomDate}
-                title="Custom"
+                title={t("workspace_projects.created_at_filter.custom")}
                 multiple={false}
               />
             </>
           ) : (
-            <p className="text-11 text-placeholder italic">No matches found</p>
+            <p className="text-11 text-placeholder italic">{t("common.search.no_matches_found")}</p>
           )}
         </div>
       )}
