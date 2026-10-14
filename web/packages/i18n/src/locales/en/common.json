@@ -28,7 +28,6 @@
   "preferences": "Preferences",
   "language_and_time": "Language & Time",
   "create_workspace": "Create workspace",
-  "created": "Created",
   "you_do_not_have_the_permission_to_access_this_page": "You do not have the permission to access this page.",
   "something_went_wrong_please_try_again": "Something went wrong. Please try again.",
   "load_more": "Load more",
@@ -93,7 +92,6 @@
   "not_authorized_to_view": "Oops! You are not authorized to view this page",
   "join_the_project_to_rearrange": "Join the project to rearrange",
   "drag_to_rearrange": "Drag to rearrange",
-  "congrats": "Congrats!",
   "open_project": "Open project",
   "issues": "Work items",
   "cycles": "Cycles",
@@ -350,6 +348,7 @@
     "click_to_add_description": "Click to add description",
     "search": {
       "label": "Search",
+      "clear": "Clear search",
       "placeholder": "Type to search",
       "no_matches_found": "No matches found",
       "no_matching_results": "No matching results"

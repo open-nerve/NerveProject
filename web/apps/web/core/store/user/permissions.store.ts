@@ -29,6 +29,7 @@ export interface IUserPermissionStore {
     projectId?: string,
     onPermissionAllowed?: () => boolean
   ) => boolean;
+  canCreateProject: (workspaceSlug: string | undefined) => boolean;
 }
 
 /**
@@ -113,5 +114,17 @@ export class UserPermissionStore implements IUserPermissionStore {
     }
 
     return false;
+  };
+
+  /**
+   * @description Whether the caller may create a project in the workspace named: its admins and members, not its
+   * guests, as nerve's project.create rule decides (access/domain/rules.go); none in no workspace named (the page
+   * names it from its route, never from the address the router store holds)
+   * @param { string | undefined } workspaceSlug
+   * @returns { boolean }
+   */
+  canCreateProject = (workspaceSlug: string | undefined): boolean => {
+    const role = workspaceSlug === undefined ? undefined : this.getWorkspaceRoleByWorkspaceSlug(workspaceSlug);
+    return role === EUserWorkspaceRoles.ADMIN || role === EUserWorkspaceRoles.MEMBER;
   };
 }

@@ -7,7 +7,6 @@
 import { observer } from "mobx-react";
 import { useMatch, useParams } from "react-router";
 // i18n
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // ui
 import { Button } from "@nerve/propel/button";
@@ -29,14 +28,10 @@ export const ProjectsBaseHeader = observer(function ProjectsBaseHeader() {
   const { t } = useTranslation();
   // store hooks
   const { toggleCreateProjectModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
+  const { canCreateProject } = useUserPermissions();
 
   // auth
-  const isAuthorizedUser = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE,
-    workspaceSlug
-  );
+  const isAuthorizedUser = canCreateProject(workspaceSlug);
   const isArchived = useMatch("/:workspaceSlug/projects/archives") !== null;
 
   return (

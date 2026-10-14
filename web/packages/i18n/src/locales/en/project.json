@@ -234,6 +234,7 @@
     "member_required": "Please select a member",
     "select_member": "Select co-worker",
     "feature_updated": "Project feature updated successfully.",
+    "project_created": "Congrats! {name} created.",
     "default_tab_updated": "Default tab updated successfully.",
     "name_max_length": "Project name should be less than 255 characters",
     "no_member_yet": "No Member Yet",

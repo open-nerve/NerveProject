@@ -97,7 +97,7 @@ const WorkspaceMembersSettingsPage = observer(function WorkspaceMembersSettingsP
             )}
           </h4>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 rounded-md border border-subtle bg-surface-1 px-2.5 py-1.5">
+            <div className="flex items-center gap-1.5 rounded-md border border-subtle bg-surface-1 px-2.5 py-1.5 focus-within:border-accent-strong focus-within:ring-2 focus-within:ring-accent-strong/20">
               <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
               <input
                 className="w-full max-w-[234px] border-none bg-transparent text-body-xs-regular outline-none placeholder:text-placeholder"

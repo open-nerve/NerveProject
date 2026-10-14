@@ -234,6 +234,7 @@
     "member_required": "请选择成员",
     "select_member": "选择同事",
     "feature_updated": "项目功能已更新。",
+    "project_created": "恭喜！{name} 已创建。",
     "default_tab_updated": "默认标签已更新。",
     "name_max_length": "项目名称应少于 255 个字符",
     "no_member_yet": "还没有成员",

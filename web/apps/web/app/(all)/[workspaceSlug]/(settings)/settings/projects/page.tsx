@@ -7,7 +7,6 @@
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 // assets
@@ -29,15 +28,11 @@ function ProjectSettingsPage({ params }: Route.ComponentProps) {
   // store hooks
   const { resolvedTheme } = useTheme();
   const { toggleCreateProjectModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
+  const { canCreateProject } = useUserPermissions();
   const { t } = useTranslation();
   // derived values
   const resolvedPath = resolvedTheme === "dark" ? ProjectDarkEmptyState : ProjectLightEmptyState;
-  const canCreateProject = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE,
-    workspaceSlug
-  );
+  const mayCreateProject = canCreateProject(workspaceSlug);
   return (
     <div className="mx-auto flex h-full max-w-[480px] flex-col items-center justify-center gap-4">
       <img src={resolvedPath} alt="" />
@@ -45,7 +40,7 @@ function ProjectSettingsPage({ params }: Route.ComponentProps) {
       <div className="text-center text-13 text-tertiary">
         {t("workspace_projects.empty_state.no_projects.description")}
       </div>
-      {canCreateProject && (
+      {mayCreateProject && (
         <Button onClick={() => toggleCreateProjectModal(true)}>
           {t("workspace_projects.empty_state.no_projects.primary_button.text")}
         </Button>

@@ -247,7 +247,10 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   // picks, saying so, the popover open still and the list down to the admins; Space picks it no more. Escape closes
   // the popover, the focus back on its button; opened again, Tab past its last role closes it, the focus moving on.
   const filters = page.getByRole("button", { name: "Filters", exact: true });
-  await page.getByPlaceholder("Search", { exact: true }).focus();
+  const search = page.getByPlaceholder("Search", { exact: true });
+  await search.focus();
+  // the search, focused, is marked
+  await expect(search.locator("..")).not.toHaveCSS("box-shadow", "none");
   await page.keyboard.press("Tab");
   await expect(filters).toBeFocused();
   await page.keyboard.press("Enter");

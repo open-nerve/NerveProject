@@ -1322,7 +1322,7 @@ modules/access/
 | `sign-out-toast`（P9，收尾放宽） | 在 `useSignOut` 之外退出登录再自己提示；收尾加上从 store 取 `signOut` 的写法（`const { signOut } = useUser()`、`useUser().signOut`） |
 | `project-leave`（P10） | 在 `useProjectMembershipChanges` 的 `leave` 之外调 store 的 `leaveProject` |
 | `project-address-route`（P10） | P10、P11 改过的项目页从 router store 读项目和工作区（`currentProjectDetails`、`projectMemberIds`、`currentWorkspace`、不传 slug 和项目的 `allowPermissions`）；M4、M6、M7 改它们的页面时把那些文件加进规则的 `files` |
-| `workspace-address-route`（收尾） | 收尾改过的 19 个工作区页面文件从 router store 读工作区（`currentWorkspace`、不传 slug 的工作区级 `allowPermissions`），而不是经 `useRouteWorkspace`；M4、M7、M8 改它们的页面时把那些文件加进规则的 `files` |
+| `workspace-address-route`（收尾） | 收尾改过的 20 个工作区页面文件从 router store 读工作区（`currentWorkspace`、不传 slug 的工作区级 `allowPermissions`），而不是经 `useRouteWorkspace`；M4、M7、M8 改它们的页面时把那些文件加进规则的 `files` |
 | `copy-hook`（收尾） | 在 `useCopyLink`、`useCopyText` 之外复制到剪贴板（`copyTextToClipboard`、`copyUrlToClipboard`、`navigator.clipboard`）；M4、M6、M7、M8 还自己复制的文件各有一条例外，`until` 是各自的 `M<n>/closeout`，到那个 M 的收尾开始、`phase` 改为它时到期 |
 | `composing-check`（收尾） | 在 `@nerve/utils` 的 `isComposing`（`keyboard.ts`）之外判断按键是不是输入法的：读 `.isComposing`（或解构出它）、拿 `keyCode` 与 229 比较；仓库中的 JS、TS 文件都算 |
 

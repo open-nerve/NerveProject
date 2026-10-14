@@ -32,7 +32,7 @@
       "heading": "States",
       "description": "Define and customize workflow states to track the progress of your work items.",
       "empty_state": {
-        "title": "No states available for the {groupKey} group",
+        "title": "No states available for the {group} group",
         "description": "Please create a new state"
       },
       "groups": {

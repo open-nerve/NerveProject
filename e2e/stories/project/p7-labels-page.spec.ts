@@ -101,6 +101,9 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   const watch = await watchPage(page);
   await page.goto(`/${slug}/settings/projects/${web.id}/labels`);
   await expect(page.locator("h6")).toHaveText(["UI", "Docs"]);
+  // A label's controls are unseen as the page opens, neither the pointer nor the focus in its row.
+  await expect(labelRow(page, "UI").locator(":scope > div.absolute")).toHaveCSS("opacity", "0");
+  await expect(labelRow(page, "Docs").locator(":scope > div.absolute")).toHaveCSS("opacity", "0");
 
   // The sidebar's way back to the project, an icon button of the app's (propel's), named and marked as Shift+Tab
   // reaches it from the first of the sidebar's links, its ring set off from it as on each of the app's buttons.
@@ -196,9 +199,9 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   ).toBeVisible();
   await expect(page.locator("h6")).toHaveText(["Feature", "Docs", "Defect", "UI"]);
 
-  // Docs's controls, unseen while neither the pointer nor the focus is in its row (a click elsewhere hides them), are
-  // shown while Tab goes through them, as while the pointer is over it, each named by Docs and marked as Tab reaches
-  // it. Tab comes to its menu from Feature's delete button, past its grip, which only a pointer drags.
+  // Docs's controls, unseen while neither the pointer nor the focus is in its row (a click on its name moves the focus
+  // out of it), are shown while Tab goes through them, as while the pointer is over it, each named by Docs and marked
+  // as Tab reaches it. Tab comes to its menu from Feature's delete button, past its grip, which only a pointer drags.
   const docsRow = labelRow(page, "Docs");
   const docsControls = docsRow.locator(":scope > div.absolute");
   const docsOptions = docsRow.getByRole("button", { name: "Docs options", exact: true });

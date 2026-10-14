@@ -8,7 +8,7 @@ import { expect, test } from "../../fixtures/test";
 // S8, the sidebar by the keyboard (M3 closeout, P11's keyboard list): what the keyboard and assistive technology
 // reach in the workspace's sidebar is what it shows.
 
-test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed, its toggle handing the focus to the header's and back; the workspace menu's chevron is neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them; a project's row is one Tab stop, its link, and its menu another, each named by the project, the menu worked by the keyboard; its chevron and grip are none", async ({
+test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed, its toggle handing the focus to the header's and back; the workspace menu's chevron is neither read nor a Tab stop; the projects list's heading is one Tab stop, named by its words, that says whether the list shows and opens and closes it by the keyboard, its chevron neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them; a project's row is one Tab stop, its link, and its menu another, each named by the project, the menu worked by the keyboard; its chevron and grip are none", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -37,21 +37,37 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await page.keyboard.press("Tab");
   await expect(sidebar.getByRole("link", { name: "Projects", exact: true })).toBeFocused();
 
+  // The projects list's heading is named by its words and says whether the list shows; Enter there closes the list
+  // and opens it again. Its chevron, which does what the heading does, is neither read nor a Tab stop: the heading's
+  // row reads the heading and the new project's button alone, and Tab goes from that button to the list's first
+  // project.
+  const heading = sidebar.getByRole("button", { name: "Projects", exact: true });
+  const row = sidebar.getByRole("link", { name: "Web", exact: true });
+  await expect(heading).toHaveAttribute("aria-expanded", "true");
+  await heading.focus();
+  await page.keyboard.press("Enter");
+  await expect(heading).toHaveAttribute("aria-expanded", "false");
+  await expect(row).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(heading).toHaveAttribute("aria-expanded", "true");
+  await expect(heading).toBeFocused();
+  await expect(heading.locator("xpath=..").getByRole("button")).toHaveCount(2);
+
   // The new project's button, unseen until the pointer is over the list's heading, shows and is marked as Tab reaches
   // it from the heading.
   const create = sidebar.getByRole("button", { name: "Create new project" });
-  await sidebar.getByRole("button", { name: "Close projects menu" }).first().focus();
   await page.keyboard.press("Tab");
   await expect(create).toBeFocused();
   await expect(create).toHaveCSS("opacity", "1");
   await expect(create).not.toHaveCSS("outline-style", "none");
+  await page.keyboard.press("Tab");
+  await expect(row).toBeFocused();
 
   // Web's row is one Tab stop, its link, named by Web, which opens and closes its pages; its menu, named by Web too,
   // the next, shown and marked as Tab reaches it. Its chevron, which does what the link does, and its grip, which the
   // pointer drags, are none, though the pointer over the row shows them.
   const menu = sidebar.getByRole("button", { name: "Web quick actions", exact: true });
   await expect(menu).toHaveCount(1);
-  const row = sidebar.getByRole("link", { name: "Web", exact: true });
   await expect(row).toHaveAttribute("aria-expanded", "false");
   await expect(sidebar.getByRole("button", { name: "Web", exact: true })).toHaveCount(0);
   await row.focus();

@@ -280,6 +280,10 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
   await page.goto(members);
+  // The search, focused as the page opens, is marked.
+  const search = page.getByPlaceholder("Search...", { exact: true });
+  await expect(search).toBeFocused();
+  await expect(search.locator("..")).not.toHaveCSS("box-shadow", "none");
   // His own row: his role as text, nothing to pick.
   await expect(memberRow(page, adminEmail)).toContainText("Admin");
   await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin", exact: true })).toHaveCount(0);

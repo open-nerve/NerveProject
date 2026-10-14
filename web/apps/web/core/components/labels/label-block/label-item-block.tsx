@@ -4,10 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 // nerve helpers
-import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import type { ISvgIcons } from "@nerve/propel/icons";
 import { CloseOutline } from "@makeplane/propel/icons";
@@ -50,12 +49,9 @@ export function LabelItemBlock(props: ILabelItemBlock) {
     disabled = false,
   } = props;
   const { t } = useTranslation();
-  // states
-  const [isMenuActive, setIsMenuActive] = useState(true);
-  // refs
-  const actionSectionRef = useRef<HTMLDivElement | null>(null);
-
-  useOutsideClickDetector(actionSectionRef, () => setIsMenuActive(false));
+  // states: whether the row's menu is open, which shows its controls; the menu's own open state sets it, as it opens
+  // and as it closes
+  const [isMenuActive, setIsMenuActive] = useState(false);
 
   return (
     <div className="group flex items-center">
@@ -73,7 +69,6 @@ export function LabelItemBlock(props: ILabelItemBlock) {
 
       {!disabled && (
         <div
-          ref={actionSectionRef}
           className={`absolute right-2.5 flex items-center gap-2 px-4 ${
             isMenuActive || isLabelGroup
               ? "opacity-100"

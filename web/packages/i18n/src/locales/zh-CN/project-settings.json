@@ -32,7 +32,7 @@
       "heading": "状态",
       "description": "定义和自定义工作流状态以跟踪工作项的进度。",
       "empty_state": {
-        "title": "{groupKey} 组中没有状态",
+        "title": "{group} 组中没有状态",
         "description": "请创建一个新状态"
       },
       "groups": {

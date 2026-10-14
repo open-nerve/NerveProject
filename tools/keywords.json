@@ -2376,9 +2376,9 @@
     {
       "id": "workspace-address-route",
       "phase": "M3/closeout",
-      "why": "工作区的页面从路由读工作区，不从 router store 读：workspace store 的 currentWorkspace 读 router store 的 workspaceSlug，工作区级的 allowPermissions 不传 slug 时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，换了工作区时晚一次提交，那一次页面按上一个工作区显示名称、判断权限（与 project-address-route 同理；M3 收尾，K12）。页面要的工作区是 useRouteWorkspace（web/apps/web/core/hooks/use-route-workspace.ts），工作区级的 allowPermissions 传路由的 slug。本规则只管收尾改过来的 19 个文件：工作区首页、个人主页的页头和布局、侧栏、项目列表页、工作区的常规和成员设置页、设置侧栏的头部；M4、M7、M8 的页面改它们的读法时，把那些文件加进本规则的 files。store 自己的 getter（如 joinedProjectIds、workspaceMemberIds）仍按 router store，同 project-address-route 留给 store 的那些。测试不算",
+      "why": "工作区的页面从路由读工作区，不从 router store 读：workspace store 的 currentWorkspace 读 router store 的 workspaceSlug，工作区级的 allowPermissions 不传 slug 时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，换了工作区时晚一次提交，那一次页面按上一个工作区显示名称、判断权限（与 project-address-route 同理；M3 收尾，K12）。页面要的工作区是 useRouteWorkspace（web/apps/web/core/hooks/use-route-workspace.ts），工作区级的 allowPermissions 传路由的 slug。本规则只管收尾改过来的 20 个文件：工作区首页、个人主页的页头和布局、侧栏、项目列表页、工作区的常规和成员设置页、没有项目时的设置页、设置侧栏的头部；M4、M7、M8 的页面改它们的读法时，把那些文件加进本规则的 files。store 自己的 getter（如 joinedProjectIds、workspaceMemberIds）仍按 router store，同 project-address-route 留给 store 的那些。测试不算",
       "files": {
-        "source": "^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/(?:page|sidebar|extended-project-sidebar|profile/\\[userId\\]/(?:header|layout))|app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/\\(workspace\\)/(?:page|members/page)|core/components/(?:home/widgets/empty-states/no-projects|profile/sidebar|project/(?:card-list|header|root)|settings/workspace/sidebar/header|workspace/settings/(?:member-columns|useMemberColumns|workspace-details)|workspace/sidebar/(?:projects-list|quick-actions|workspace-menu-root)))\\.tsx$",
+        "source": "^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/(?:page|sidebar|extended-project-sidebar|profile/\\[userId\\]/(?:header|layout))|app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/(?:\\(workspace\\)/(?:page|members/page)|projects/page)|core/components/(?:home/widgets/empty-states/no-projects|profile/sidebar|project/(?:card-list|header|root)|settings/workspace/sidebar/header|workspace/settings/(?:member-columns|useMemberColumns|workspace-details)|workspace/sidebar/(?:projects-list|quick-actions|workspace-menu-root)))\\.tsx$",
         "flags": ""
       },
       "content": {
@@ -2402,6 +2402,7 @@
           "hit": [
             "web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx",
             "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx",
             "web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx"
           ],
           "miss": [

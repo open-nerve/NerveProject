@@ -93,9 +93,25 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await page.keyboard.press("Escape");
   await expect(modalDialog(page)).toHaveCount(0);
 
-  // The projects page: its search, by its name.
+  // The projects page: its search, by its name. Its box, closed, is no Tab stop; Enter opens it with the focus in it,
+  // marked, and Escape closes it, the focus back on the button; so does its clear button, by its name.
   await page.goto(`/${slug}/projects`);
-  await expect(page.getByRole("button", { name: "搜索", exact: true })).toBeVisible();
+  const searchButton = page.getByRole("button", { name: "搜索", exact: true });
+  const searchBox = page.getByRole("textbox", { name: "搜索", exact: true });
+  await expect(searchButton).toBeVisible();
+  await searchButton.focus();
+  await page.keyboard.press("Tab");
+  await expect(searchBox).not.toBeFocused();
+  await searchButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(searchBox).toBeFocused();
+  await expect(searchBox.locator("..")).not.toHaveCSS("box-shadow", "none");
+  await page.keyboard.press("Escape");
+  await expect(searchButton).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("Web");
+  await page.getByRole("button", { name: "清除搜索", exact: true }).click();
+  await expect(searchButton).toBeFocused();
 
   // The general page: the settings' sidebar and its way back, the size, and the deletion's dialog, the workspace's
   // name in it.
@@ -162,17 +178,23 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   const lab = sidebar.getByRole("link").filter({ has: page.locator(".material-symbols-rounded") });
   await expect(lab).toHaveAccessibleName("Lab");
   await expect(sidebar.getByRole("button", { name: "更多", exact: true })).toHaveText("更多");
-  // the extended sidebar, which the button opens, by its heading
+  // the extended sidebar, which the button opens, by its heading; its search, focused, is marked
   await sidebar.getByRole("button", { name: "更多", exact: true }).click();
-  await expect(page.locator("#extended-project-sidebar-toggle").getByText("项目", { exact: true })).toBeVisible();
+  const extended = page.locator("#extended-project-sidebar-toggle");
+  await expect(extended.getByText("项目", { exact: true })).toBeVisible();
+  await extended.getByPlaceholder("搜索", { exact: true }).focus();
+  await expect(extended.getByPlaceholder("搜索", { exact: true }).locator("..")).not.toHaveCSS("box-shadow", "none");
 
   // The project's header, the tabbed navigation's: its project switcher's search and its words for no match. Its page,
   // the work items', asks Plane's address of the filters, M4's (P8b spec §5), as P8 sees.
   await page.goto(`/${slug}/projects/${web.id}/issues`);
-  await page
-    .getByRole("button", { name: "Web", exact: true })
-    .and(page.locator("xpath=//*[not(ancestor::aside)]"))
-    .click();
+  // the switcher beside the header's quick actions: the innermost element that holds both (the breadcrumbs of the
+  // work items' page, M4's, have a switcher named by the project too)
+  const header = page
+    .locator("div", { has: page.getByRole("button", { name: "切换快速操作菜单", exact: true }) })
+    .filter({ has: page.getByRole("button", { name: "Web", exact: true }) })
+    .last();
+  await header.getByRole("button", { name: "Web", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "搜索", exact: true })).toBeFocused();
   await page.keyboard.type("zz");
   await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
@@ -274,6 +296,10 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   await filtersButton.focus();
   await page.keyboard.press("Enter");
   await expect(filtersButton).toHaveAttribute("aria-expanded", "true");
+  // their search, which has the focus as they open, is marked
+  const filtersSearch = page.getByPlaceholder("搜索", { exact: true }).last();
+  await expect(filtersSearch).toBeFocused();
+  await expect(filtersSearch.locator("..")).not.toHaveCSS("box-shadow", "none");
   const filters = page.getByRole("button", { name: "我的项目" }).locator("xpath=../..");
   await expect(filters.getByText(/^(网络|负责人|成员|创建日期)$/)).toHaveText(["网络", "负责人", "成员", "创建日期"]);
   await expect(filters.getByRole("button", { name: /^(今天|昨天|最近 7 天|最近 30 天|自定义)$/ })).toHaveCount(5);
@@ -287,7 +313,7 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   await expect(filters.getByRole("button", { name: "自定义", exact: true })).toBeFocused();
   // the caller, in the lead's filter and the members', is 您
   await expect(filters.getByRole("button", { name: / 您$/ })).toHaveCount(2);
-  await page.getByPlaceholder("搜索", { exact: true }).last().fill("公开");
+  await filtersSearch.fill("公开");
   await expect(page.getByRole("button", { name: "公开", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "私有", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "公开", exact: true }).click();
