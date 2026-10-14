@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useMatch } from "react-router";
+import { useMatch, useParams } from "react-router";
 // i18n
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -23,6 +23,8 @@ import HeaderFilters from "./filters";
 import { ProjectSearch } from "./search-projects";
 
 export const ProjectsBaseHeader = observer(function ProjectsBaseHeader() {
+  // router
+  const { workspaceSlug } = useParams();
   // i18n
   const { t } = useTranslation();
   // store hooks
@@ -32,7 +34,8 @@ export const ProjectsBaseHeader = observer(function ProjectsBaseHeader() {
   // auth
   const isAuthorizedUser = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
   );
   const isArchived = useMatch("/:workspaceSlug/projects/archives") !== null;
 

@@ -30,7 +30,7 @@ export const useMemberColumns = (workspaceSlug: string) => {
   const { t } = useTranslation();
 
   // derived values
-  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
+  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
 
   // oxlint-disable-next-line unicorn/consistent-function-scoping
   const isSuspended = (rowData: WorkspaceMember) => rowData.is_active === false;

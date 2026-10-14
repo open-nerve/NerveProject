@@ -5,6 +5,7 @@
  */
 
 import { observer } from "mobx-react";
+import { useParams } from "react-router";
 // nerve imports
 import { EUserPermissionsLevel, EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -22,6 +23,8 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { ProjectCard } from "./card";
 
 export const ProjectCardList = observer(function ProjectCardList() {
+  // router
+  const { workspaceSlug } = useParams();
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
@@ -33,7 +36,8 @@ export const ProjectCardList = observer(function ProjectCardList() {
   // permissions
   const canPerformEmptyStateActions = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
   );
 
   if (!filteredProjectIds || !workspaceProjectIds) return <ProjectsLoader />;

@@ -21,6 +21,7 @@ import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
 import { useInstance } from "@/hooks/store/use-instance";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 import { useSignOut } from "@/hooks/use-sign-out";
 // components
 import { LeaveWorkspaceModal } from "../leave-workspace-modal";
@@ -35,7 +36,8 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
   const { data: currentUser } = useUser();
   const signOut = useSignOut();
   const { updateUserProfile } = useUserProfile();
-  const { currentWorkspace: activeWorkspace, workspaces } = useWorkspace();
+  const { workspaces } = useWorkspace();
+  const activeWorkspace = useRouteWorkspace();
   // derived values
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
   // translation

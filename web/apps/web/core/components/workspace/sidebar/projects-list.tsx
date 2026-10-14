@@ -55,7 +55,8 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   // auth
   const isAuthorizedUser = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
   );
 
   // Compute limited projects for main sidebar

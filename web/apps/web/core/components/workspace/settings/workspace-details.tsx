@@ -30,6 +30,7 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useCopyLink } from "@/hooks/use-copy-link";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // components
 import { DeleteWorkspaceSection } from "@/components/workspace/delete-workspace-section";
 // lib
@@ -56,8 +57,8 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
   // router: the address's workspace, as the caller's list has it (the wrapper shows the page once it has)
   const { workspaceSlug } = useParams();
   // store hooks
-  const { getWorkspaceBySlug, updateWorkspace } = useWorkspace();
-  const workspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
+  const { updateWorkspace } = useWorkspace();
+  const workspace = useRouteWorkspace();
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
   const toastRefusal = useRefusalToast();
@@ -108,7 +109,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     if (workspace) reset(formValues(workspace));
   }, [workspace, reset]);
 
-  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
+  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
 
   if (!workspace) return null;
 

@@ -6,6 +6,7 @@
 
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
+import { useParams } from "react-router";
 // nerve helpers
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // components
@@ -19,6 +20,8 @@ import { useFavorite } from "@/hooks/store/use-favorite";
 import { useUserPermissions } from "@/hooks/store/user";
 
 export const AppSidebar = observer(function AppSidebar() {
+  // router
+  const { workspaceSlug } = useParams();
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { groupedFavorites } = useFavorite();
@@ -26,7 +29,8 @@ export const AppSidebar = observer(function AppSidebar() {
   // derived values
   const canPerformWorkspaceMemberActions = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
   );
 
   const isFavoriteEmpty = isEmpty(groupedFavorites);

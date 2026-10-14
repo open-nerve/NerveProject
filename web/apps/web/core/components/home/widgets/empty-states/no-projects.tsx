@@ -17,8 +17,8 @@ import { cn, getFileURL } from "@nerve/utils";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
-import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 
 export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
   // navigation
@@ -28,7 +28,7 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
   const { toggleCreateProjectModal } = useCommandPalette();
   const { data: currentUser } = useUser();
   const { joinedProjectIds } = useProject();
-  const { currentWorkspace: activeWorkspace } = useWorkspace();
+  const activeWorkspace = useRouteWorkspace();
   // local storage
   const { storedValue, setValue } = useLocalStorage(`quickstart-guide-${workspaceSlug}`, {
     hide: false,
@@ -40,9 +40,10 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
   // derived values
   const canCreateProject = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
   );
-  const isWorkspaceAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
+  const isWorkspaceAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
 
   const EMPTY_STATE_DATA = [
     {

@@ -2374,6 +2374,45 @@
       }
     },
     {
+      "id": "workspace-address-route",
+      "phase": "M3/closeout",
+      "why": "工作区的页面从路由读工作区，不从 router store 读：workspace store 的 currentWorkspace 读 router store 的 workspaceSlug，工作区级的 allowPermissions 不传 slug 时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，换了工作区时晚一次提交，那一次页面按上一个工作区显示名称、判断权限（与 project-address-route 同理；M3 收尾，K12）。页面要的工作区是 useRouteWorkspace（web/apps/web/core/hooks/use-route-workspace.ts），工作区级的 allowPermissions 传路由的 slug。本规则只管收尾改过来的 19 个文件：工作区首页、个人主页的页头和布局、侧栏、项目列表页、工作区的常规和成员设置页、设置侧栏的头部；M4、M7、M8 的页面改它们的读法时，把那些文件加进本规则的 files。store 自己的 getter（如 joinedProjectIds、workspaceMemberIds）仍按 router store，同 project-address-route 留给 store 的那些。测试不算",
+      "files": {
+        "source": "^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/(?:page|sidebar|extended-project-sidebar|profile/\\[userId\\]/(?:header|layout))|app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/\\(workspace\\)/(?:page|members/page)|core/components/(?:home/widgets/empty-states/no-projects|profile/sidebar|project/(?:card-list|header|root)|settings/workspace/sidebar/header|workspace/settings/(?:member-columns|useMemberColumns|workspace-details)|workspace/sidebar/(?:projects-list|quick-actions|workspace-menu-root)))\\.tsx$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bcurrentWorkspace\\b|\\ballowPermissions\\(\\s*\\[[^\\]]*\\]\\s*,\\s*EUserPermissionsLevel\\.WORKSPACE\\s*,?\\s*\\)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  const { currentWorkspace } = useWorkspace();",
+          "  const { currentWorkspace: activeWorkspace, workspaces } = useWorkspace();",
+          "  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);",
+          "  const isAuthorizedUser = allowPermissions(\n    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],\n    EUserPermissionsLevel.WORKSPACE\n  );"
+        ],
+        "miss": [
+          "  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);",
+          "  const isAuthorizedUser = allowPermissions(\n    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],\n    EUserPermissionsLevel.WORKSPACE,\n    workspaceSlug\n  );",
+          "  const { currentWorkspaceFilters, currentWorkspaceAppliedDisplayFilters } = useProjectFilter();",
+          "  const workspace = useRouteWorkspace();"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/page.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx",
+            "web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx"
+          ],
+          "miss": [
+            "web/apps/web/core/hooks/use-route-workspace.ts",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/drafts/header.tsx",
+            "web/apps/web/core/components/workspace/settings/members-list.tsx"
+          ]
+        }
+      }
+    },
+    {
       "id": "copy-hook",
       "phase": "M3/closeout",
       "why": "页面复制到剪贴板只有一处：web/apps/web/core/hooks/use-copy-link.ts 的 useCopyLink（链接）和 useCopyText（原样的文字，如令牌），成功时说复制了什么，浏览器不让页面写剪贴板（没有权限，或 http）时说没能复制（M3 设计 7.7；P10 规格 §5，M3 收尾）。别处再调 copyTextToClipboard、copyUrlToClipboard 或 navigator.clipboard 就是又一份，没有失败一支的一份就是不说的失败。M4、M6、M7、M8 的页面中还自己复制的文件各有一条例外，到各自的收尾为止。编辑器包（@nerve/editor）的代码块和链接预览不经 web 的 hook，不在本规则内；测试不算",

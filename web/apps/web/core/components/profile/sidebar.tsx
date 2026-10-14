@@ -17,8 +17,8 @@ import { renderFormattedDate, getFileURL } from "@nerve/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
-import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser } from "@/hooks/store/user";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // local imports
 import { useProfileMember } from "./use-profile-member";
 
@@ -28,14 +28,14 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
   // router
   const { userId } = useParams();
   // store hooks
-  const { currentWorkspace } = useWorkspace();
+  const workspace = useRouteWorkspace();
   const { data: currentUser } = useUser();
   const { profileSidebarCollapsed, toggleProfileSidebar } = useAppTheme();
   // the state now, for the resize listener, which is added once
   const collapsed = useRef(profileSidebarCollapsed);
   collapsed.current = profileSidebarCollapsed;
   const { toggleProfileSettingsModal } = useCommandPalette();
-  const profileMember = useProfileMember(currentWorkspace, userId ?? "");
+  const profileMember = useProfileMember(workspace, userId ?? "");
   const { t } = useTranslation();
 
   useOutsideClickDetector(ref, () => {
