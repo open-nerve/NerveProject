@@ -136,17 +136,13 @@ describe("UserPermissionStore, in a workspace", () => {
     }
   });
 
-  // nerve's project.create (access/domain/rules.go): the workspace's admins and members, not its guests
-  it.each<{ who: string; role: WorkspaceRole | undefined; creates: boolean }>([
-    { who: "an admin", role: 20, creates: true },
-    { who: "a member", role: 15, creates: true },
-    { who: "a guest", role: 5, creates: false },
-    { who: "no member", role: undefined, creates: false },
-  ])("lets $who create a project in the workspace named as nerve does", async ({ role, creates }) => {
+  // nerve's project.create (access/domain/rules.go): the workspace's admins and members, not its guests, the member
+  // check's roles
+  it.each(IDENTITIES)("lets $who create a project in the workspace named as nerve does", async ({ role, allowed }) => {
     const { router, permissions } = await setUp();
     // the address, which the page does not read, names the admin's workspace
     router.setQuery({ workspaceSlug: slugOf(20) });
-    expect(permissions.canCreateProject(slugOf(role))).toBe(creates);
+    expect(permissions.canCreateProject(slugOf(role))).toBe(allowed.includes("member"));
   });
 
   it("lets no one create a project in no workspace named, whatever the address", async () => {

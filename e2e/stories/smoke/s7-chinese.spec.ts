@@ -14,8 +14,9 @@ import {
 import { bearer, emailFor, register, shownNameOf, type AuthTokens } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedWithin, modalDialog } from "../../fixtures/dialogs";
+import { workItemFilters } from "../../fixtures/mounts";
 import { labelRow } from "../../fixtures/project-pages";
-import { registerOnboarded } from "../../fixtures/settings-pages";
+import { registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { askToEndMembership, invitationLinkOf, invitationRow, memberRow } from "../../fixtures/workspace-pages";
 
@@ -85,8 +86,11 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   // The sidebar, by its name: its buttons by theirs; the project navigation's dialog, each mode's description.
   const sidebar = page.getByRole("complementary", { name: "主侧边栏" });
   await expect(sidebar.getByRole("button", { name: "切换侧边栏" })).toBeVisible();
-  // the workspace menu's button, one: the chevron beside it, which does the same for the pointer, is hidden
-  await expect(sidebar.getByRole("button", { name: /^(收起|展开)工作区菜单$/ })).toHaveCount(1);
+  // the workspace menu's heading, one button named by its words: the chevron beside it, which does the same for the
+  // pointer, is hidden
+  const workspaceMenu = sidebar.getByRole("button", { name: "工作区", exact: true });
+  await expect(workspaceMenu).toHaveCount(1);
+  await expect(workspaceMenu).toHaveAttribute("aria-expanded", "true");
   await sidebar.getByRole("button", { name: "项目导航" }).click();
   await expect(modalDialog(page).getByText("功能标签显示为项目下的嵌套项，可以展开和收起。")).toBeVisible();
   await expect(modalDialog(page).getByText("功能标签显示为项目内的横向标签。")).toBeVisible();
@@ -142,6 +146,17 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await expect(modalDialog(page).getByRole("heading")).toHaveText(`移除 ${shownNameOf(bobEmail)}？`);
   await expect(modalDialog(page).getByText(/^确定要从工作区中移除 .+ 吗？/)).toBeVisible();
   await cancel(page);
+  // The invitation's dialog, by its name: its button, while nerve has not answered, says so as the app's busy buttons
+  // do.
+  await page.getByRole("button", { name: "添加成员", exact: true }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("邀请人员协作");
+  await modalDialog(page).locator('[id="invitations.0.email"]').fill(emailFor(testInfo, "dave"));
+  const sending = await sentHeld(page, "POST", `/api/v0/workspaces/${slug}/invitations`, () =>
+    modalDialog(page).getByRole("button", { name: "发送邀请", exact: true }).click()
+  );
+  await expect(modalDialog(page).getByRole("button", { name: "发送中", exact: true })).toBeVisible();
+  expect((await sending.release()).status()).toBe(201);
+  await expect(modalDialog(page)).toHaveCount(0);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: Array(4).fill(EMOJI_CHECK_WARNING) });
 });
@@ -263,12 +278,13 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await cancel(page);
-  const filters = `GET /api/workspaces/${slug}/projects/${web.id}/user-properties/`;
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[`404 ${filters}`], [filters], []]);
-  await expectQuietConsole(page, watch, {
-    warnings: Array(6).fill(EMOJI_CHECK_WARNING),
-    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
-  });
+  const filters = workItemFilters(slug, web.id);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    [filters.failure],
+    [filters.request],
+    [],
+  ]);
+  await expectQuietConsole(page, watch, { warnings: Array(6).fill(EMOJI_CHECK_WARNING), errors: [filters.logged] });
 });
 
 test("S7 (page): an admin whose language is Chinese filters the projects and the members, and reads a project's settings, its custom range and a toast in Chinese", async ({
@@ -305,10 +321,17 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   const filters = page.getByRole("button", { name: "我的项目" }).locator("xpath=../..");
   await expect(filters.getByText(/^(网络|负责人|成员|创建日期)$/)).toHaveText(["网络", "负责人", "成员", "创建日期"]);
   await expect(filters.getByRole("button", { name: /^(今天|昨天|最近 7 天|最近 30 天|自定义)$/ })).toHaveCount(5);
-  // the custom date's dialog, which the filters open, named by the filter, stays and leaves them open: closed by
-  // Escape, it gives the focus back to the custom date's button in them
+  // the custom date's dialog, which the filters open, named by the filter, its select, the range it shows and its
+  // buttons in Chinese, stays and leaves them open: closed by Escape, it gives the focus back to the custom date's
+  // button in them
   await filters.getByRole("button", { name: "自定义", exact: true }).click();
-  await expect(modalDialog(page).getByRole("button", { name: /^创建日期/ })).toBeVisible();
+  const custom = modalDialog(page);
+  await expect(custom).toHaveAccessibleName("创建日期");
+  await expect(custom.getByRole("button", { name: "创建日期范围", exact: true })).toBeVisible();
+  await expect(custom.getByText("晚于：", { exact: true })).toBeVisible();
+  await expect(custom.getByText("早于：", { exact: true })).toBeVisible();
+  await expect(custom.getByRole("button", { name: "取消", exact: true })).toBeVisible();
+  await expect(custom.getByRole("button", { name: "应用", exact: true })).toBeVisible();
   expect(await closedWithin(page)).toBe(false);
   await page.keyboard.press("Escape");
   await expect(modalDialog(page)).toHaveCount(0);

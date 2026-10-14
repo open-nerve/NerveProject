@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
@@ -24,11 +23,6 @@ vi.mock("@makeplane/propel/components/input", () => import("@/lib/fake-controls"
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-// The form's title is headless UI's Dialog.Title, which renders only inside its Dialog: the modal's stand-in has none.
-vi.mock("@headlessui/react", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@headlessui/react")>()),
-  Dialog: { Title: ({ children }: { children?: ReactNode }) => children },
-}));
 
 /** Renders the form, types email in its one row, picks the role labelled role (its name's key), and submits it. */
 async function invite(email: string, role: string) {

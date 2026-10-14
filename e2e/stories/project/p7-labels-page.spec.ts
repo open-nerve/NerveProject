@@ -217,6 +217,17 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await expect(docsDelete).toBeFocused();
   await expect(docsDelete).not.toHaveCSS("outline-style", "none");
   await expect(docsControls).toHaveCSS("opacity", "1");
+  // its menu, opened and closed by the keyboard, leaves them unseen again once neither the pointer nor the focus is in
+  // its row
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem", { name: "Edit label" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await docsRow.locator("h6").click();
+  await page.mouse.move(0, 0);
+  await expect(docsControls).toHaveCSS("opacity", "0");
+  await docsDelete.focus();
   // back on its menu, the keyboard chooses Edit label, which opens Docs's form
   await page.keyboard.press("Shift+Tab");
   await chooseByKeyboard(page, docsOptions, "Edit label");

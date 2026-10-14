@@ -8,7 +8,8 @@ import { Controller, useForm } from "react-hook-form";
 import { Button } from "@nerve/propel/button";
 import { Calendar } from "@nerve/propel/calendar";
 import { CloseOutline } from "@makeplane/propel/icons";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { useTranslation } from "@nerve/i18n";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 import { renderFormattedPayloadDate, renderFormattedDate, getDate } from "@nerve/utils";
 import { DateFilterSelect } from "./date-filter-select";
 type Props = {
@@ -31,6 +32,7 @@ const defaultValues: TFormValues = {
 };
 
 export function DateFilterModal({ title, handleClose, isOpen, onSelect }: Props) {
+  const { t } = useTranslation();
   const { handleSubmit, watch, control } = useForm<TFormValues>({
     defaultValues,
   });
@@ -52,6 +54,8 @@ export function DateFilterModal({ title, handleClose, isOpen, onSelect }: Props)
 
   return (
     <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>
+      {/* its name, the date it filters, for assistive technology alone: the select at its top shows it */}
+      <ModalTitle className="sr-only">{title}</ModalTitle>
       <form className="space-y-4 px-5 py-8 sm:p-6">
         <div className="flex w-full justify-between">
           <Controller
@@ -113,15 +117,15 @@ export function DateFilterModal({ title, handleClose, isOpen, onSelect }: Props)
         </div>
         {watch("filterType") === "range" && (
           <h6 className="flex items-center gap-1 text-11">
-            <span className="text-secondary">After:</span>
+            <span className="text-secondary">{t("date_filter.range_after")}</span>
             <span>{renderFormattedDate(watch("date1"))}</span>
-            <span className="ml-1 text-secondary">Before:</span>
+            <span className="ml-1 text-secondary">{t("date_filter.range_before")}</span>
             {!isInvalid && <span>{renderFormattedDate(watch("date2"))}</span>}
           </h6>
         )}
         <div className="flex justify-end gap-4">
           <Button variant="secondary" size="lg" onClick={handleClose}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             variant="primary"
@@ -130,7 +134,7 @@ export function DateFilterModal({ title, handleClose, isOpen, onSelect }: Props)
             onClick={handleSubmit(handleFormSubmit)}
             disabled={isInvalid}
           >
-            Apply
+            {t("date_filter.apply")}
           </Button>
         </div>
       </form>

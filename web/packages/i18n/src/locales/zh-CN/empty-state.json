@@ -10,7 +10,7 @@
       "title": "您似乎无权访问该项目",
       "join_description": "点击下方按钮加入该项目。",
       "cta_primary": "加入项目",
-      "cta_loading": "正在加入项目"
+      "cta_loading": "加入中"
     },
     "invalid_project": {
       "title": "未找到项目",

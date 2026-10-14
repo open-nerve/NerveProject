@@ -228,7 +228,7 @@
       "body": "恢复项目会重新启用它，项目的全部成员都能看到它。确定要继续吗？",
       "done_title": "已恢复",
       "done": "您可以在项目中找到 {name}。",
-      "restoring": "正在恢复"
+      "restoring": "恢复中"
     },
     "members_added": "成员已添加。",
     "member_required": "请选择成员",

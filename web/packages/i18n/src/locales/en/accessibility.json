@@ -6,9 +6,7 @@
     "add_reaction": "Add reaction",
     "toasts": "Notifications",
     "app_sidebar": {
-      "toggle": "Toggle sidebar",
-      "close_workspace_menu": "Close workspace menu",
-      "open_workspace_menu": "Open workspace menu"
+      "toggle": "Toggle sidebar"
     },
     "project_icon": "Project icon",
     "view_icon": "View icon",

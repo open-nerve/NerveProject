@@ -385,6 +385,14 @@
     "execution": "执行",
     "administration": "管理"
   },
+  "date_filter": {
+    "before": "{title}早于",
+    "after": "{title}晚于",
+    "range": "{title}范围",
+    "range_after": "晚于：",
+    "range_before": "早于：",
+    "apply": "应用"
+  },
   "form": {
     "title": {
       "required": "标题为必填项",

@@ -57,7 +57,7 @@
           "title": "邀请人员协作",
           "description": "邀请人员在您的工作区中协作。",
           "button": "发送邀请",
-          "button_loading": "正在发送邀请",
+          "button_loading": "发送中",
           "placeholder": "name@company.com",
           "errors": {
             "required": "我们需要一个电子邮件地址来邀请他们。",

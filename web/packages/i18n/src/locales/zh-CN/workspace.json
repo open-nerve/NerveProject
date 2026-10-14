@@ -39,7 +39,7 @@
     },
     "button": {
       "default": "创建工作区",
-      "loading": "正在创建工作区"
+      "loading": "创建中"
     },
     "toast": {
       "success": {

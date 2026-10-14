@@ -8,7 +8,7 @@ import { expect, test } from "../../fixtures/test";
 // S8, the sidebar by the keyboard (M3 closeout, P11's keyboard list): what the keyboard and assistive technology
 // reach in the workspace's sidebar is what it shows.
 
-test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed, its toggle handing the focus to the header's and back; the workspace menu's chevron is neither read nor a Tab stop; the projects list's heading is one Tab stop, named by its words, that says whether the list shows and opens and closes it by the keyboard, its chevron neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them; a project's row is one Tab stop, its link, and its menu another, each named by the project, the menu worked by the keyboard; its chevron and grip are none", async ({
+test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed, its toggle handing the focus to the header's and back; the workspace menu's heading is one Tab stop, named by its words, that says whether the menu shows and opens and closes it by the keyboard, its chevron neither read nor a Tab stop; the projects list's heading is one Tab stop, named by its words, that says whether the list shows and opens and closes it by the keyboard, its chevron neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them; a project's row is one Tab stop, its link, and its menu another, each named by the project, the menu worked by the keyboard; its chevron and grip are none", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -29,13 +29,22 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await expect(navigation).toHaveCount(2);
   expect(await inert()).toEqual([false, true]);
 
-  // The workspace menu's chevron, unseen until the pointer is over its heading, does what the heading's button does:
-  // assistive technology reads that button alone, and Tab goes from it to the menu's first page.
-  const workspaceMenu = sidebar.getByRole("button", { name: "Close workspace menu" });
-  await expect(workspaceMenu.locator("xpath=..").getByRole("button")).toHaveCount(1);
+  // The workspace menu's heading is named by its words and says whether the menu shows; Enter there closes the menu
+  // and opens it again. Its chevron, unseen until the pointer is over the heading, does what the heading does:
+  // assistive technology reads the heading alone, and Tab goes from it to the menu's first page.
+  const workspaceMenu = sidebar.getByRole("button", { name: "Workspace", exact: true });
+  const firstPage = sidebar.getByRole("link", { name: "Projects", exact: true });
+  await expect(workspaceMenu).toHaveAttribute("aria-expanded", "true");
   await workspaceMenu.focus();
+  await page.keyboard.press("Enter");
+  await expect(workspaceMenu).toHaveAttribute("aria-expanded", "false");
+  await expect(firstPage).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(workspaceMenu).toHaveAttribute("aria-expanded", "true");
+  await expect(workspaceMenu).toBeFocused();
+  await expect(workspaceMenu.locator("xpath=..").getByRole("button")).toHaveCount(1);
   await page.keyboard.press("Tab");
-  await expect(sidebar.getByRole("link", { name: "Projects", exact: true })).toBeFocused();
+  await expect(firstPage).toBeFocused();
 
   // The projects list's heading is named by its words and says whether the list shows; Enter there closes the list
   // and opens it again. Its chevron, which does what the heading does, is neither read nor a Tab stop: the heading's

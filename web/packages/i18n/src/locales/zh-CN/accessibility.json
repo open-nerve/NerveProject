@@ -6,9 +6,7 @@
     "add_reaction": "添加表情回应",
     "toasts": "消息提示",
     "app_sidebar": {
-      "toggle": "切换侧边栏",
-      "close_workspace_menu": "收起工作区菜单",
-      "open_workspace_menu": "展开工作区菜单"
+      "toggle": "切换侧边栏"
     },
     "project_icon": "项目图标",
     "view_icon": "视图图标",

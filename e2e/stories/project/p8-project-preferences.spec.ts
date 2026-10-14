@@ -17,6 +17,7 @@ import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth"
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
+import { workItemFilters } from "../../fixtures/mounts";
 import { dragOnto } from "../../fixtures/project-pages";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -270,15 +271,16 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   ]);
 
   // The work items' page asks Plane's address of the filters, M4's (P8b spec §5), at each of its two loads.
-  const filters = `GET /api/workspaces/${slug}/projects/${web.id}/user-properties/`;
-  await expect.poll(() => watch.apiFailures).toEqual([`404 ${filters}`, `404 ${filters}`]);
-  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [filters, filters], []]);
+  const filters = workItemFilters(slug, web.id);
+  await expect.poll(() => watch.apiFailures).toEqual([filters.failure, filters.failure]);
+  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    [],
+    [filters.request, filters.request],
+    [],
+  ]);
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
-    errors: [
-      "Failed to load resource: the server responded with a status of 404 (Not Found)",
-      "Failed to load resource: the server responded with a status of 404 (Not Found)",
-    ],
+    errors: [filters.logged, filters.logged],
   });
 
   // Gus is offered the same, on the tabs a guest has (not Modules): he makes views the tab Web opens on, by its tab's
@@ -300,12 +302,9 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   expect(await stored(db, web.id, gusEmail)).toEqual([
     { preferences: { navigation: { default_tab: "views", hide_in_more_menu: [] } }, sort_order: 45535, by: gusEmail },
   ]);
-  await expect.poll(() => gusWatch.apiFailures).toEqual([`404 ${filters}`]);
-  expect([gusWatch.cspViolations, gusWatch.oldApiRequests, gusWatch.pageErrors]).toEqual([[], [filters], []]);
-  await expectQuietConsole(theGuest.page, gusWatch, {
-    warnings: [EMOJI_CHECK_WARNING],
-    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
-  });
+  await expect.poll(() => gusWatch.apiFailures).toEqual([filters.failure]);
+  expect([gusWatch.cspViolations, gusWatch.oldApiRequests, gusWatch.pageErrors]).toEqual([[], [filters.request], []]);
+  await expectQuietConsole(theGuest.page, gusWatch, { warnings: [EMOJI_CHECK_WARNING], errors: [filters.logged] });
   // His sidebar's Docs, under the same layout as Web's work items, offers a guest his leaving in its header; asked,
   // it ends as a Back takes him to Web's work items, rather than ask it of Web (v0 design 7.7: a project's pages are
   // keyed by it).

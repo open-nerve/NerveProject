@@ -385,6 +385,14 @@
     "execution": "Execution",
     "administration": "Administration"
   },
+  "date_filter": {
+    "before": "{title} before",
+    "after": "{title} after",
+    "range": "{title} range",
+    "range_after": "After:",
+    "range_before": "Before:",
+    "apply": "Apply"
+  },
   "form": {
     "title": {
       "required": "Title is required",
