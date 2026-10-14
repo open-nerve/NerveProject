@@ -94,7 +94,7 @@ M3 设计第 12 节给收尾的三件事，和负责人加的两件：
 | K14 | P10、P11 第 5 节（F-15） | `e2e/fixtures/assert/identity.ts`（485 行）拆分，`expectNoAddress` 移到 `browser.ts` | Task 14 |
 | K15 | P7a 评审第 6 节（FW-a、FW-c） | `platform/jobs` 的测试：时间的余量改为期限；定期任务的测试按 `ScheduledAt` 排序 | Task 14 |
 | K16 | P7a 评审第 6 节（FW-b） | 项目的 HTTP 测试中 `identifier_taken`、`name_taken` 的回答写成常量 | Task 14 |
-| K17 | P7a 评审第 6 节（P12） | 故事中内联的 `createPAT(api, (await register(…` | Task 14：`registeredPAT(api, email)`，23 个故事 |
+| K17 | P7a 评审第 6 节（P12） | 故事中内联的 `createPAT(api, (await register(…` | Task 14：`registeredPAT(api, email, body)`，23 个故事（A11 的带标签的 "admin" 令牌也经它） |
 | K18 | P10 评审第 6 节 | `project-member.store.test.ts:43` 的资料改用 `userOf` | Task 14 |
 | K19 | P10 第 5 节（F-10） | 用 `e2ekills.py` 重查之前各 Phase 的变异记录中端到端的"发现" | 收尾做（只是核对，附录 A.2）：P9 有一个假发现，同一个变异在别的运行中真被发现 |
 | K20 | P10 第 5 节 | `webui` 给嵌入的文件加 `ETag` | 交给 M8（交接第 5 节；第 3 节第 12 条） |

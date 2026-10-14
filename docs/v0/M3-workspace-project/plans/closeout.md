@@ -14447,7 +14447,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
           description: Whom a new work item is assigned to when nobody is given.
 ````
 ````new api/modules/project.yaml
-          description: The member set as the project's default assignee; null for none.
+          description: The account set as the project's default assignee, kept as set; null for none.
 ````
 ````old api/modules/project.yaml
           description: Whether the project's guests see every work item, not only their own.
@@ -14487,9 +14487,9 @@ Expected: 通过；`git status --short` 列出 `api/dist/openapi.yaml`、`web/pa
 
 | SHA-256 | 行 | 文件 |
 |---|---|---|
-| `7a073fee2aea7bd6a58addef13bd7baa4bf540a342795b95f0c0fb958043cf74` | 2948 | `api/dist/openapi.yaml` |
-| `c3b78516688a7dc8f4054e2a32da8ef649d439a1fffde68862d4b77270299c1e` | 3505 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `a6e9c6898768e8ae7e14169ce2aa19c81db4b7a5725095a16eaa5aa0eefc89be` | 3271 | `web/packages/api-client/src/schema.gen.ts` |
+| `36f00469566cb30c00ed621a9b93420ff5fa0ff3bf1c63949ed734b6f6b20522` | 2948 | `api/dist/openapi.yaml` |
+| `57373045874bc0f043f4bb88f287cf5409d15cc2d7f9330ba96c66bfd29cc041` | 3505 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `f331561f04da971a3e017ebf362dfc59e088f4c236c63d372e9c535ce3c3802e` | 3271 | `web/packages/api-client/src/schema.gen.ts` |
 
 - [ ] **Step 3: Go 的测试**
 

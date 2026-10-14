@@ -1421,7 +1421,7 @@ export interface components {
             project_lead_id: string | null;
             /**
              * Format: uuid
-             * @description The member set as the project's default assignee; null for none.
+             * @description The account set as the project's default assignee, kept as set; null for none.
              */
             default_assignee_id: string | null;
             /** @description Whether the project shows cycles. */

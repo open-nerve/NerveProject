@@ -229,7 +229,7 @@ type Project struct {
 	// CycleView Whether the project shows cycles.
 	CycleView bool `json:"cycle_view"`
 
-	// DefaultAssigneeID The member set as the project's default assignee; null for none.
+	// DefaultAssigneeID The account set as the project's default assignee, kept as set; null for none.
 	DefaultAssigneeID nullable.Nullable[uuid.UUID] `json:"default_assignee_id"`
 	Description       string                       `json:"description"`
 

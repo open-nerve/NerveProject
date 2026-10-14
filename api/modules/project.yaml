@@ -939,7 +939,7 @@ components:
           type: [string, 'null']
           format: uuid
         default_assignee_id:
-          description: The member set as the project's default assignee; null for none.
+          description: The account set as the project's default assignee, kept as set; null for none.
           type: [string, 'null']
           format: uuid
         cycle_view:
