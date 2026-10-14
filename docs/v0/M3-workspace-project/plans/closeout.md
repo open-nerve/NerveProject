@@ -10857,7 +10857,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `tools/keywords.json` 的 `workspace-address-route`：这 19 个文件中没有 `currentWorkspace`，没有两个参数的 `WORKSPACE` 级 `allowPermissions`；M3 设计 7.10 的规则表加上它。
 - `project/root.tsx`：`handleClearAllFilters` 和设显示筛选的副作用写全依赖（`isArchived`、`updateDisplayFilters`、`workspaceSlug`）。`updateDisplayFilters` 是 store 的动作，引用不变；列表和归档各自挂载这个根，一次挂载里 `isArchived` 不变，副作用照旧在挂载和换工作区时运行（spec 第 3 节第 2 条）。web 的上限 298 → 296。
 
-**Tests:** `use-route-workspace.test.ts`（新文件）；关键词守卫看住 19 个文件。没有端到端的改动：页面显示的照旧，S2、S7、W 系列的故事照旧通过；P4 和 S7 走过归档的往返。
+**Tests:** `use-route-workspace.test.ts`（新文件；store 的替身是共用的 `fake-store-hooks.ts`，router store 仍名为 acme，路由名为 beta：先读 router store 的工作区的写法给出 acme）；关键词守卫看住 19 个文件。没有端到端的改动：页面显示的照旧，S2、S7、W 系列的故事照旧通过；P4 和 S7 走过归档的往返。
 
 - [ ] **Step 1: 地址**
 
@@ -11403,7 +11403,7 @@ export function useRouteWorkspace(): Workspace | null {
 
 - [ ] **Step 2: 测试**
 
-`web/apps/web/core/hooks/use-route-workspace.test.ts`（新文件，38 行）：
+`web/apps/web/core/hooks/use-route-workspace.test.ts`（新文件，39 行；store 的替身是共用的 `fake-store-hooks.ts`，它的 router store 仍是 acme，所以先读 router store 的写法给出 acme 而失败，`T11.6`）：
 
 ````file web/apps/web/core/hooks/use-route-workspace.test.ts
 /**
@@ -11412,28 +11412,29 @@ export function useRouteWorkspace(): Workspace | null {
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { emptyStores, stores } from "@/hooks/store/fake-store-hooks";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 import { useRouteWorkspace } from "./use-route-workspace";
 
-// Which workspace a page of the workspace is about: the hook runs as a plain function, with stand-ins for the route's
-// params and for the caller's list, which holds acme and beta, while the router store (not read) names neither.
+// Which workspace a page of the workspace is about: the hook runs as a plain function, with a stand-in for the route's
+// params and fake-store-hooks.ts's for the caller's list, which holds acme and beta, while the router store still
+// names acme, the workspace the caller was on (StoreWrapper's effect writes it after the render).
 
 const acme = workspaceOf("acme");
 const beta = workspaceOf("beta");
 const route = vi.hoisted((): { params: { workspaceSlug?: string } } => ({ params: {} }));
 vi.mock("react-router", () => ({ useParams: () => route.params }));
-vi.mock("@/hooks/store/use-workspace", () => ({
-  useWorkspace: () => ({
-    getWorkspaceBySlug: (slug: string) => [acme, beta].find((workspace) => workspace.slug === slug) ?? null,
-  }),
-}));
+vi.mock("@/hooks/store/use-workspace", () => import("@/hooks/store/fake-store-hooks"));
 
 beforeEach(() => {
+  emptyStores();
+  stores.workspaces = [acme, beta];
+  stores.address = "acme";
   route.params = {};
 });
 
 describe("useRouteWorkspace", () => {
-  it("is the workspace the route names, as the caller's list holds it", () => {
+  it("is the workspace the route names, as the caller's list holds it, not the one the router store names", () => {
     route.params = { workspaceSlug: "beta" };
     expect(useRouteWorkspace()).toBe(beta);
   });
@@ -11489,6 +11490,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T11.3` | 工作区菜单又读 router store 的工作区（`workspace-address-route`） | 关键词守卫 | 静态 |
 | `T11.4` | 侧边栏的快捷操作按 router store 的工作区判断权限（`workspace-address-route`） | 关键词守卫 | 静态 |
 | `T11.5` | 项目页的根的副作用又只依赖地址：oxlint 的 `exhaustive-deps` 超出上限 | oxlint（`check:lint`） | 静态 |
+| `T11.6` | `useRouteWorkspace` 在 router store 有工作区时给它，只在没有时才看路由：换工作区之后的那一次提交给出上一个工作区（K12） | `use-route-workspace.test.ts` | vitest |
 
 ---
 
