@@ -214,7 +214,7 @@ P8a 没有在这里记处理结果；它做到的部分（[P8a spec](../specs/P8
 |---|---|---|
 | 1 邀请与注册 | 完成 | 接口 M3/P3，页面 M3/P9；负责人的裁定在 M3 设计第 10 节 |
 | 2 落点与新手引导的取数 | 完成 | M3/P8a、P9 |
-| 3 stores 按会话分代 | 完成 | M3/P8a、P8b；`web/apps/web` 中模块级的 service 实例剩 22 处，都是 M4–M7 的 |
+| 3 stores 按会话分代 | 完成 | M3/P8a、P8b；`web/apps/web` 中模块级的 service 实例剩 22 处：21 处是 M4–M7 的；`core/hooks/use-timezone.tsx` 的 `TimezoneService` 是 M2 的公开时区列表（`publicClient`，不带会话），不必分代 |
 | 4 `last_workspace_id` 的外键 | 不加，理由在 M3 设计 3.14 | M3/P1 |
 | 5 `workspace_creation_enabled` | 完成 | M3/P1 |
 | 6 停用的端口 | 完成 | M3/P6 |

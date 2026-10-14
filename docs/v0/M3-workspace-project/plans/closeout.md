@@ -15853,7 +15853,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**（spec 2.1、2.14、第 4 节）
 - M3 收到的 6 份交接各加"处理结果（M3/收尾）"，`status: closed`。
-- M4–M8 各一份 `handoffs/M3-closeout.md`（新文件）：收到 `copy-hook` 例外的 M4、M6、M7、M8 写明收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M<n>/closeout`、每个 Phase 开始时改为 `M<n>/P<k>`；收尾改到、仍有 oxlint 警告的 6 个文件各归它的 M（控制者的裁定：M4 两个、M6 一个、M7 两个、M8 页头的搜索）；层叠的规则（M4 第 7 节的元素、M8 的发布核对）；命令面板自己的文字（M8 第 3 节）；各 Task 的评审交来的：以 id 为 key 的布局、store 持有的开关的宿主和嵌套的 id（Task 3）、每一行的控件以那一行为名和收集箱的四个英文名字（Task 7）、收藏夹的两条 `no-shadow`（Task 8）、只读工作区的 15 个文件和 webhooks 的 `currentWorkspace` 先改名（Task 11）、命令面板和它的清除按钮的名字（Task 2）、`composing-check`（Task 10）、筛选的按钮的故事（Task 12）、`platform/jobs` 测试的两处余量和默认负责人照设定保留（Task 14）。M4–M8 的 `M1-closeout.md`：`always-return` 已清零；M4、M6、M7 的 `M2-closeout.md`：复制经 hook。M3 设计 13.2：接收者链接到交接，表前一句。M1 收尾交接的处理结果写新的上限（web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10）。
+- M4–M8 各一份 `handoffs/M3-closeout.md`（新文件）：收到 `copy-hook` 例外的 M4、M6、M7、M8 写明收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M<n>/closeout`、每个 Phase 开始时改为 `M<n>/P<k>`；收尾改到、仍有 oxlint 警告的 6 个文件各归它的 M（控制者的裁定：M4 两个、M6 一个、M7 两个、M8 页头的搜索）；层叠的规则（M4 第 7 节的元素、M8 的发布核对）；命令面板自己的文字（M8 第 3 节）；各 Task 的评审交来的：以 id 为 key 的布局、store 持有的开关的宿主和嵌套的 id（Task 3）、每一行的控件以那一行为名和收集箱的四个英文名字（Task 7）、收藏夹的两条 `no-shadow`（Task 8）、只读工作区的 15 个文件和 webhooks 的 `currentWorkspace` 先改名（Task 11）、命令面板和它的清除按钮的名字（Task 2）、`composing-check`（Task 10）、筛选的按钮的故事（Task 12）、`platform/jobs` 测试的两处余量和默认负责人照设定保留（Task 14）、`CustomSearchSelect` 的英文默认值和命令面板的清除上下文的英文名字（Task 15 的评审）。M4–M8 的 `M1-closeout.md`：`always-return` 已清零；M4、M6、M7 的 `M2-closeout.md`：复制经 hook。M3 设计 13.2：接收者链接到交接，表前一句。M1 收尾交接的处理结果写新的上限（web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10）。
 
 **Tests:** 只改文档。`doclinks.py`（plan 的"一次性的脚本"）：本 Task 改的文档中每个相对链接都指向存在的文件。
 
@@ -16017,7 +16017,7 @@ status: closed
 两节的结论：
 
 1. **死成员和死 prop**：M3/P11 删掉了改到的文件中真正没有读者的行，`--rows M3` 中产品代码的行 80 → 54；剩下的每一行写进 [M3/P11 spec](../specs/P11-web-states-labels-and-cleanup.md) 附录 A.9（文件、名字、谁在读或传它）。收尾在它的最后一个代码 Task 之后重跑（`deadsym.mjs`、`domains.mjs --rows M3`）：218 → 221 行，产品代码的 54 行和按路径误归的 41 行不变；测试中的行 123 → 126，多出的是收尾新的测试中 `it.each` 的四列（`project-dialog-texts.test.tsx`），少的一行是 `delete.test.tsx` 的 tooltip 替身的 prop（收尾把两个测试的替身合成 `fake-controls.ts` 的一个；收尾 spec 附录 A.5）。误归的 41 行写进各自的交接：M4 16 行（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节），M6 8 行（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 2 节），M7 17 行（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 2 节）。
-2. **oxlint**：M3 改到的文件在各 Phase 结束时没有警告，`promise(always-return)` 由 M3/P11 全仓清零，各包的上限照新的条数（M3/P11：web 348 → 303、editor 65 → 64）。收尾再调低上限：web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10。收尾改到的文件中仍有警告的 6 个照控制者的裁定写进交接：只为 `IconButton` 的名字或 `showTooltip` 改到的 `core/description-versions/modal.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节）、`modules/module-card-item.tsx`（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 4 节）、通知的筛选菜单和只为 `CustomMenu` 改到的收藏的文件夹（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 4 节），和只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx`（[M8 的交接](../../M8-open-release/handoffs/M3-closeout.md)第 4 节）；收尾 spec 第 3 节第 2 条和附录 A.5 逐个写明。M4–M8 的五份 M1 收尾交接写明 `always-return` 已清零。
+2. **oxlint**：M3 改到的文件在各 Phase 结束时没有警告，P11 留下的除外（上一节）：`@nerve/ui` 的 `alert-modal.tsx` 的一条（`tabIndex={1}`）在收尾的 Task 1 重写 `ModalCore` 时去掉（`@nerve/ui` 的上限 15 → 14）；只按 `always-return` 改到的 5 个文件的 14 条交给各自的 M：`issues/issue-detail/issue-activity/helper.tsx` 2 条（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节），`cycles/modal.tsx` 1 条和 `modules/module-card-item.tsx` 5 条（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 4 节），通知打盹的弹窗 `workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx` 5 条（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 4 节），`web/apps/web/core/store/workspace/webhook.store.ts` 1 条（[M8 的交接](../../M8-open-release/handoffs/M3-closeout.md)第 1 节）。`promise(always-return)` 由 M3/P11 全仓清零，各包的上限照新的条数（M3/P11：web 348 → 303、editor 65 → 64）。收尾再调低上限：web 303 → 293、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10。收尾改到的文件中仍有警告的 6 个照控制者的裁定写进交接：只为 `IconButton` 的名字或 `showTooltip` 改到的 `core/description-versions/modal.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（[M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 8 节）、`modules/module-card-item.tsx`（[M6 的交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 4 节）、通知的筛选菜单和只为 `CustomMenu` 改到的收藏的文件夹（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 4 节），和只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx`（[M8 的交接](../../M8-open-release/handoffs/M3-closeout.md)第 4 节）；收尾 spec 第 3 节第 2 条和附录 A.5 逐个写明。M4–M8 的五份 M1 收尾交接写明 `always-return` 已清零。
 
 状态改为 `closed`。
 
@@ -16048,7 +16048,7 @@ status: closed
 |---|---|---|
 | 1 邀请与注册 | 完成 | 接口 M3/P3，页面 M3/P9；负责人的裁定在 M3 设计第 10 节 |
 | 2 落点与新手引导的取数 | 完成 | M3/P8a、P9 |
-| 3 stores 按会话分代 | 完成 | M3/P8a、P8b；`web/apps/web` 中模块级的 service 实例剩 22 处，都是 M4–M7 的 |
+| 3 stores 按会话分代 | 完成 | M3/P8a、P8b；`web/apps/web` 中模块级的 service 实例剩 22 处：21 处是 M4–M7 的；`core/hooks/use-timezone.tsx` 的 `TimezoneService` 是 M2 的公开时区列表（`publicClient`，不带会话），不必分代 |
 | 4 `last_workspace_id` 的外键 | 不加，理由在 M3 设计 3.14 | M3/P1 |
 | 5 `workspace_creation_enabled` | 完成 | M3/P1 |
 | 6 停用的端口 | 完成 | M3/P6 |
@@ -16085,7 +16085,7 @@ status: closed
 - **关闭条件**：6 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 ````
 
-`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，100 行）：
+`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（新文件，101 行）：
 
 ````file docs/v0/M4-issue-core/handoffs/M3-closeout.md
 ---
@@ -16149,7 +16149,7 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - 工作区一级显示的工作项不显示没有取过标签的项目的标签（M3/P8b 删了为每个项目取标签的工作区取数，M7 加回）；`fetchParentStats` 不再重取项目，工作项的修改若动了项目的字段，加一个不等的重取；工作项的键宽读回 `next_work_item_sequence`，`TIssueIdentifierProps.projectIdentifier` 在项目未到时可以是 `undefined`（M3/P8b spec 第 5 节）。
 - 个人主页的工作项一栏（成员和管理员；`/api/workspaces/{slug}/user-issues/…` 今天答 404）和访客看到的筛选工具栏（布局、筛选、Display 的控件在"没有权限"之上，M3/P11 评审 C10）。
 - M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（M3 设计 3.1）；S2 的 `REQUESTS` 是一份要维护的名单，在挂载路径上加取数时同时改它（M3/P11 spec 第 6 节）。
-- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。工作项的弹窗、选中、草稿等属于一个工作区或项目的界面状态放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）；要在切换之间留着的，写明为什么。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。工作项的弹窗、选中、草稿等属于一个工作区或项目的界面状态放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）；要在切换之间留着的，写明为什么。
 - **工作项级弹窗的宿主**（M3 收尾；控制者的裁定：store 持有的弹窗开关属于渲染它的宿主，由宿主结束）：`modals/work-item-level.tsx` 的 `WorkItemLevelModals`（创建工作项 `isCreateIssueModalOpen`、删除工作项 `isDeleteIssueModalOpen`）。开关在命令面板的 store（`web/apps/web/core/store/command-palette.store.ts`）里，宿主由 `power-k/projects-app-provider.tsx` 渲染，在 `(projects)/layout.tsx` 和 `(settings)/layout.tsx` 的 `ProjectsAppPowerKProvider` 里，在项目的 key 之上：换项目（后退、前进也是）时开着的弹窗留着，作用于路由新指向的项目。M4 接上工作项页面时两件都做：把宿主移到项目的 key 之下，或在项目的范围结束时关上它的开关；并像 `modals/workspace-level.tsx` 的 `WorkspaceLevelModals` 那样在卸载时关上它渲染的每个开关（`useLayoutEffect` 的清理，在下一个页面绘制之前）。加一个像 P3、P8 那样的后退检查（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）。
 - **嵌套的 id 没有 key**（M3 收尾）：工作项的页面 `projects/(detail)/[projectId]/issues/(detail)/[issueId]`、`archives/issues/(detail)/[archivedIssueId]`、`browse/[workItem]` 和个人主页 `profile/[userId]`（连同 `[profileViewId]`）只在工作区、项目的 key 之下，换一个工作项或一个人（后退、前进也是）时页面留着，开着的弹窗和组件的状态跟过去。M4 接上这些页面时以页面自己的 id 给它的子树 key，并加一个后退的检查。
 - **关闭条件**：上面每一处的拒绝有提示或交回调用方，没有未处理的拒绝（vitest 或故事）；`autorun` 随退役的一代释放，`store-context.test.ts` 没有严格模式的警告。
@@ -16176,6 +16176,7 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 - **oxlint**：`issues/issue-detail/issue-activity/helper.tsx` 的 2 条（`preserve-caught-error`、`exhaustive-deps`），M4 改它时清零。收尾只为 `IconButton` 的名字改到、仍有警告的两个（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条）：`core/description-versions/modal.tsx` 1 条（`tabindex-no-positive`，第 7 节写死的 `tabIndex={1}`）、`issues/issue-detail/issue-activity/activity-filter.tsx` 2 条（`click-events-have-key-events`、`no-static-element-interactions`，第 7 节嵌套的按钮），M4 改它们时清零。`power-k/ui/pages/context-based/work-item/commands.ts` 418 行，M4 改写时拆开。两个工作项的删除确认框的 `onSubmit` 必传，改写时保持。
 - **死成员**：`@nerve/types` 的 `workspace-draft-issues/base.ts` 的 16 行（`domains.mjs` 按路径误归到 M3，M3/P11 spec 附录 A.9）。
 - **共用件**：`@nerve/ui` 下拉框的 `any`（`dropdowns/helper.tsx` 7 处、`dropdowns/custom-search-select.tsx` 2 处），改成泛型要改 13 个调用方，多数在 M4–M7 的页面上（M3/P10 spec 第 5 节）：M4 改它们时一起改。成员 store 的 `projectMemberIds` getter 在 M4 的读者是 `issues/issue-layouts/utils.tsx` 的两处，M7 的是视图、收集箱的筛选；M4、M7 中最后改完读者的那一个删除它（M3/P10 spec 第 3 节，裁定 F-2）。
+- **搜索下拉框的英文默认值**（M3 收尾 Task 15 的评审）：`@nerve/ui` 的 `CustomSearchSelect` 的搜索框占位、没有结果、加载中三个文字的默认值是英文（"Search""No matches found""Loading..."），`rich-filters/` 下的 4 个调用方（`add-filters/dropdown.tsx`、`filter-item/root.tsx`、`filter-value-input/select/multi.tsx`、`filter-value-input/select/single.tsx`，后两个的共用 props 在 `select/shared.tsx`）都不传 `searchPlaceholder`、`noResultsMessage`、`loadingMessage`：M4 改它们时传经 `t()` 的文字，像成员下拉框（`dropdowns/member/base.tsx`）；最后一个调用方改完之后，M8 把这三个 prop 改为必传（M8 的交接第 3 节）。
 - **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M4/closeout`，`copy-hook` 的 10 个例外（`until: "M4/closeout"`）那时到期，守卫要求它们已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M4/P<k>`。第 5 节 `/user-properties/` 的例外写的是 `until: "M4"`，`phase` 改为 `M4/P1` 时就到期：M4 的第一个 Phase 改筛选，或由 M4 的设计把它的 `until` 定到改筛选的那个 Phase。
 - **关闭条件**：`project-address-route`、`workspace-address-route` 的范围含上面的文件，`copy-hook` 没有 `M4/closeout` 的例外，`--rows M3` 中 `workspace-draft-issues/base.ts` 的行在 M4 的评审中有结论。
 
@@ -16229,7 +16230,7 @@ M3（工作区与项目）把工作区图标、项目封面和成员头像留成
 
 - M3 收尾把 `ModalCore` 改成 Headless UI v2 的 `Dialog`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）：弹窗打开时后面的页面 `inert`、`aria-hidden`；`AlertModalCore` 的确认框在请求路上时关不掉、取消不能用（M3/P11 spec 第 3 节第 2 条）。附件的删除确认框随之改变，M5 的页面能运行时核对：被拒绝时照 A-M2 留着、只在成功的跟进中关上，按钮的文字经 `t()` 传入（`@nerve/ui` 的默认值是英文，见 M8 的交接）。
 - 共用组件的焦点轮廓在 M5 的页面上是否被 `overflow-hidden` 裁掉，用键盘核对（M3/P11 评审第 6 节）。
-- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。附件的确认框、上传的弹窗和进度属于一个工作区或项目，放在这些布局之下，不要放到它们之上。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。附件的确认框、上传的弹窗和进度属于一个工作区或项目，放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
 - **嵌套的 id 没有 key**（M3 收尾）：附件的确认框和上传的弹窗在工作项的页面上（`[issueId]`、`browse/[workItem]`），随 M4 给这些页面的 key 结束（M4 的交接第 6 节）；M5 自己加的、在一个 id 之下的页面同样以那个 id 给它的子树 key，并加一个后退的检查。
 - **关闭条件**：M5 的评审写明附件的确认框和上传弹窗的浏览器核对。
 
@@ -16275,8 +16276,8 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - 迭代的 `user-properties` 不在关键词规则（旧 `ProjectService` 的 `/user-properties/`）的模式里，不命中它的样例（M3/P8b spec 第 5 节）。
 - `core/modals/existing-issues-list-modal.tsx`（添加已有工作项）改用 M4 的工作项搜索接口（M3 设计 7.3）。
 - 迭代、模块的弹窗读 `error?.error` 的三处（`cycles/transfer-issues-modal.tsx`、`modules/modal.tsx` 两处）改经文案表（`errorMessageKey`）；视图的修改之后的跟进经 `followInSession`（M3/P9 spec 第 5 节）。
-- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。迭代、模块、视图的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
-- **项目级弹窗的宿主**（M3 收尾；控制者的裁定：store 持有的弹窗开关属于渲染它的宿主，由宿主结束）：`modals/project-level.tsx` 的 `ProjectLevelModals`（创建迭代 `isCreateCycleModalOpen`、模块 `isCreateModuleModalOpen`、视图 `isCreateViewModalOpen`）。开关在命令面板的 store（`web/apps/web/core/store/command-palette.store.ts`）里，宿主由 `power-k/projects-app-provider.tsx` 渲染，在 `(projects)/layout.tsx` 和 `(settings)/layout.tsx` 的 `ProjectsAppPowerKProvider` 里，在项目的 key 之上：换项目（后退、前进也是）时开着的弹窗留着，作用于路由新指向的项目。M6 接上迭代、模块、视图的页面时两件都做：把宿主移到项目的 key 之下，或在项目的范围结束时关上它的开关；并像 `modals/workspace-level.tsx` 的 `WorkspaceLevelModals` 那样在卸载时关上它渲染的每个开关（`useLayoutEffect` 的清理，在下一个页面绘制之前）。加一个像 P3、P8 那样的后退检查（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。迭代、模块、视图的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
+- **项目级弹窗的宿主**（M3 收尾；控制者的裁定：store 持有的弹窗开关属于渲染它的宿主，由宿主结束）：`modals/project-level.tsx` 的 `ProjectLevelModals`（创建迭代 `isCreateCycleModalOpen`、模块 `isCreateModuleModalOpen`、视图 `isCreateViewModalOpen`）。开关在命令面板的 store（`web/apps/web/core/store/command-palette.store.ts`）里，宿主由 `power-k/projects-app-provider.tsx` 渲染，在 `(projects)/layout.tsx` 和 `(settings)/layout.tsx` 的 `ProjectsAppPowerKProvider` 里，在项目的 key 之上：换项目（后退、前进也是）时开着的弹窗留着，作用于路由新指向的项目。M6 接上迭代、模块的页面时两件都做：把宿主移到项目的 key 之下，或在项目的范围结束时关上它的开关；并像 `modals/workspace-level.tsx` 的 `WorkspaceLevelModals` 那样在卸载时关上它渲染的每个开关（`useLayoutEffect` 的清理，在下一个页面绘制之前）。加一个像 P3、P8 那样的后退检查（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）。视图的开关 `isCreateViewModalOpen` 只是随这个宿主一起：保存的视图和它的页面是 M7 的（[M7 的交接](../../M7-collaboration/handoffs/M3-closeout.md)第 2 节），M6 改这个宿主时它的开关一并照做。
 - **嵌套的 id 没有 key**（M3 收尾）：迭代、模块的页面 `cycles/(detail)/[cycleId]`、`modules/(detail)/[moduleId]`只在工作区、项目的 key 之下，换一个迭代或模块（后退、前进也是）时页面留着，开着的弹窗和组件的状态跟过去。M6 接上这些页面时以页面自己的 id 给它的子树 key，并加一个后退的检查。
 - **关闭条件**：包装层的取数有按权限的 vitest；`dispose()` 释放两个反应，`store-context.test.ts` 核对换代之后它们不再运行。
 
@@ -16355,7 +16356,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - 已挂载的工作区包装层换 slug 时不重取列表，在别的标签页加入的工作区要到下一次挂载才显示；要改，改 `useWorkspaceFetch` 这一个判断（M3/P9 spec 第 5 节，P19）。
 - `ProjectViewStore.loader` 和 `fetchedMap` 没有写者了：视图的取数设置它们，否则删除它们（M3/P8a 评审的 P30）。通知页的收集箱项经原来的 `useSWR` 读项目（`workspace-notifications/root.tsx`），写项目自己的读，可以盖过包装层的读：照 7.1 改成按权限的取数（M3/P8b 的 PF-L3）。收藏的 `workspace/sidebar/favorites/favorite-items/common/helper.tsx` 的 `console.error` 改成提示（M3/P9 spec 第 5 节）。
 - `@nerve/types` 的 `workspace-notifications.ts` 的 17 行死成员（`domains.mjs` 按路径误归到 M3，M3/P11 spec 附录 A.9）。
-- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。收集箱、视图、通知、收藏的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。收集箱、视图、通知、收藏的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
 - **嵌套的 id 没有 key**（M3 收尾）：视图的页面 `views/(detail)/[viewId]`、`workspace-views/[globalViewId]`只在工作区、项目的 key 之下，换一个视图（后退、前进也是）时页面留着，开着的弹窗和组件的状态跟过去。M7 接上这些页面时以页面自己的 id 给它的子树 key，并加一个后退的检查。
 - **关闭条件**：上面每一处有 vitest 或故事；这 17 行在 M7 的评审中有结论。
 
@@ -16392,7 +16393,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **按规则清一类**：另外按规则集中清掉至少一类，优先能机械修复的（`eslint(no-shadow)`；`eslint(no-unneeded-ternary)` 已由 M2/P5 全仓清零，见 [M2/P5 评审](../../M2-auth/reviews/P5-web-account-review.md)第 2 节；`eslint-plugin-promise(always-return)` 已由 M3/P11 全仓清零，见 [M3/P11 spec](../../M3-workspace-project/specs/P11-web-states-labels-and-cleanup.md) 2.9）；
 ````
 
-`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，55 行）：
+`docs/v0/M8-open-release/handoffs/M3-closeout.md`（新文件，56 行）：
 
 ````file docs/v0/M8-open-release/handoffs/M3-closeout.md
 ---
@@ -16419,7 +16420,7 @@ M3（工作区与项目）没有领域事件，Webhook 的页面在 M3 里走不
 - README 中邀请链接与签名密钥的说明（M3 设计 8.7）、数据库用 UTF-8 的 `LC_CTYPE` 初始化（标签名不分大小写按数据库的 locale 折叠，M3/P7b spec 第 7 节；M3 收尾已写进 README 的"部署"一节）随发布的部署文件核对。
 - **层叠顺序**：全应用核对一遍页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下：每类页面开着一个弹窗（命令面板就行），手机和桌面的宽度下都没有页面元素画在它上面。M3 收尾把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6），M4 的交接第 7 节列出工作项页面上 `z-30` 及以上的元素；从弹窗打开、经 portal 渲染到 `body` 的下拉框、提示、表情在弹窗之上，靠的是 DOM 的先后，一并核对。
 - **性能**：大工作区的成员列表、项目列表（不分页的集合，M3 设计 11.3）的回答大小和页面的加载时间，按测到的数字决定要不要给其中一个分页。
-- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。Webhook 的弹窗同样，`settings/(workspace)/webhooks/[webhookId]` 的页面以它的 id 给子树 key（加一个后退的检查）；发布之前全应用核对没有属于一个工作区或项目的弹窗、选中放在这些布局之上。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。Webhook 的弹窗和选中同样放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`），`settings/(workspace)/webhooks/[webhookId]` 的页面以它的 id 给子树 key（加一个后退的检查）；发布之前全应用核对没有属于一个工作区或项目的弹窗、选中放在这些布局之上。
 - **关闭条件**：M8 的发布核对清单含这几项和它们的结果。
 
 ## 3. 全应用的文案
@@ -16430,6 +16431,7 @@ M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是�
 - `app/not-found.tsx` 的英文；`@nerve/propel` 的英文默认值（`toast/toast.tsx` 的"Loading..."）。
 - 命令面板自己的文字：`power-k/menus/empty-state.tsx` 的默认值"No results found"，快捷键的标记里键与键之间的"then"（`power-k/ui/modal/command-item-shortcut-badge.tsx`），清除上下文的按钮写死的英文名字"Clear context (Backspace)"（`power-k/ui/modal/context-indicator.tsx:44` 的 `aria-label`，`:43` 的 `title` 是同一句；M3 收尾 Task 15 找到），M8 改命令面板自己的文字时一并经 `t()`，en 与 zh-CN 同时加键。M3 收尾只改了它整个重写的两个弹窗：快捷键列表的标题和搜索框经 `t()`，切换账户的那句话是一个带 `{email}` 的键（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。
 - `@nerve/ui` 的 `AlertModalCore`（`modals/alert-modal.tsx`）的按钮默认值是英文，`@nerve/ui` 不依赖 i18n：M3 的两个删除确认框和 M2 的令牌确认框传入经 `t()` 的文字，M4–M7 的调用方由各 M 照做（各自的交接）；最后一个调用方改完之后，把这几个 prop 改为必传、删去默认值（M3 收尾的建议，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节）。
+- `@nerve/ui` 的 `CustomSearchSelect`（`dropdowns/custom-search-select.tsx:62-64`）的三个文字的默认值也是英文（搜索框的占位"Search"、没有结果的"No matches found"、加载中的"Loading..."），与 `AlertModalCore` 同一类（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 17 条）：调用方传经 `t()` 的 `searchPlaceholder`、`noResultsMessage`、`loadingMessage`。成员下拉框（`dropdowns/member/base.tsx`）三个都传，M2 的时区选择（`global/timezone-select.tsx`）没有传加载中的；M4 的 4 个 `rich-filters` 调用方都不传（M4 的交接第 8 节），M6 迭代、模块的页头和 M7 视图、工作区视图的页头（`app/(all)/[workspaceSlug]/(projects)/` 下的 4 个 `header.tsx`）也不传，对接时照做；最后一个调用方改完之后，把这三个 prop 改为必传、删去默认值。
 - `@nerve/editor` 不依赖 i18n，它的控件的名字和提示是写死的英文（图片工具栏的"Download image""Zoom in"，表格的"Insert columns""Insert rows"等）。M3 收尾让 `@nerve/propel` 的 `EmojiPicker` 的 `ariaLabel` 必传，编辑器标注块的图标按钮照这种写法名为"Callout icon"（`web/packages/editor/src/extensions/callout/logo-selector.tsx`，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 1 条）。编辑器的文字怎样经 `t()`（由应用传入，或编辑器依赖 i18n）一次定，这些名字随之改。
 - **关闭条件**：日期的决定写进 M8 的设计并实现；`web/` 的页面上没有写死的英文（M8 的扫描）。
 

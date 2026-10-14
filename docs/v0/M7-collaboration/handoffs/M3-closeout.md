@@ -24,7 +24,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - 已挂载的工作区包装层换 slug 时不重取列表，在别的标签页加入的工作区要到下一次挂载才显示；要改，改 `useWorkspaceFetch` 这一个判断（M3/P9 spec 第 5 节，P19）。
 - `ProjectViewStore.loader` 和 `fetchedMap` 没有写者了：视图的取数设置它们，否则删除它们（M3/P8a 评审的 P30）。通知页的收集箱项经原来的 `useSWR` 读项目（`workspace-notifications/root.tsx`），写项目自己的读，可以盖过包装层的读：照 7.1 改成按权限的取数（M3/P8b 的 PF-L3）。收藏的 `workspace/sidebar/favorites/favorite-items/common/helper.tsx` 的 `console.error` 改成提示（M3/P9 spec 第 5 节）。
 - `@nerve/types` 的 `workspace-notifications.ts` 的 17 行死成员（`domains.mjs` 按路径误归到 M3，M3/P11 spec 附录 A.9）。
-- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，开着的弹窗和组件的状态不带过去。收集箱、视图、通知、收藏的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。收集箱、视图、通知、收藏的弹窗和选中放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
 - **嵌套的 id 没有 key**（M3 收尾）：视图的页面 `views/(detail)/[viewId]`、`workspace-views/[globalViewId]`只在工作区、项目的 key 之下，换一个视图（后退、前进也是）时页面留着，开着的弹窗和组件的状态跟过去。M7 接上这些页面时以页面自己的 id 给它的子树 key，并加一个后退的检查。
 - **关闭条件**：上面每一处有 vitest 或故事；这 17 行在 M7 的评审中有结论。
 
