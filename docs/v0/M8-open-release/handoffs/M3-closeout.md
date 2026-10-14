@@ -45,7 +45,7 @@ M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是�
 - 焦点和输入法只在 Chromium 中逐个核对过：发布之前在 Firefox、Safari 中看一遍焦点的轮廓、弹窗的 Tab 循环和输入法组字时的 Escape、Enter（M3/P11 评审第 6 节、M3/P10 spec 第 5 节；M3 收尾的 C11 看过的部分写在它的评审里）。
 - 命令面板打开之后约 200 毫秒之内输入的字会被清空（`power-k/ui/modal/wrapper.tsx` 打开时的重置，Plane 原有；之后的输入留着，M3 收尾的探查）。
 - **弹窗的名字**（M3 收尾 Task 2 的评审和最终评审）：Headless UI v2 的 `Dialog` 只以它的 `DialogTitle` 为名（`aria-labelledby`），普通的标题不给弹窗名字，读屏读出一个没有名字的对话框；M3 收尾的修复轮在 `@nerve/ui` 的 `ModalCore` 旁边导出 `ModalTitle`（它就是 `DialogTitle`，`h3`），`AlertModalCore` 的标题经它，M2、M3 的弹窗的标题都经它（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）。M4–M8 自己的弹窗的标题都经 `ModalTitle`：确认框（`AlertModalCore`）已经有名字；M4、M6、M7 以普通标题或没有标题的弹窗逐个写在它们的交接里（M4 第 7 节、M6 第 3 节、M7 第 3 节）。M8 自己的：命令面板（`power-k/ui/modal/wrapper.tsx`）没有标题，给一个经 `t()` 的 `sr-only` 的 `ModalTitle`；Webhook 的弹窗（`web-hooks/create-webhook-modal.tsx`）的标题是一个 `div`（`web-hooks/form/form.tsx:68`），生成之后的是普通的 `h3`（`web-hooks/generated-hook-details.tsx:27`），都改经 `ModalTitle`。命令面板的搜索框的清除按钮（`power-k/ui/modal/header.tsx:53`）只有一个图标，没有名字（Plane 原有）：一个经 `t()` 的 `aria-label`，en 与 zh-CN 同时加。发布之前每个弹窗打开时断言 `expect(modalDialog(page)).toHaveAccessibleName(…)`，或读屏核对。
-- **客户端导航之后的焦点**（M3 收尾）：工作区的内容以 slug 为 key 之后，经菜单换工作区时焦点落到 `body`，像一次页面的加载（原来回到菜单的按钮；控制者裁定接受，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 附录 A.8）。全应用的客户端导航之后焦点去哪里（`body`、页面的标题、主区域）是一个全应用的决定：发布之前定下并实现，读屏核对换页之后读出什么。
+- **客户端导航之后的焦点**（M3 收尾）：工作区的内容以 slug 为 key、项目的页面以项目为 key 之后，经菜单换工作区、经项目页头的项目切换换项目时焦点落到 `body`，像一次页面的加载（原来回到菜单或切换的按钮；控制者裁定接受，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 附录 A.8）。全应用的客户端导航之后焦点去哪里（`body`、页面的标题、主区域）是一个全应用的决定：发布之前定下并实现，读屏核对换页之后读出什么。
 - **关闭条件**：M8 的评审写明每一项的修法或结论。
 
 ## 5. 嵌入的文件加 `ETag`

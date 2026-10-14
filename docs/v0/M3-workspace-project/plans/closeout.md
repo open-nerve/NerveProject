@@ -100,7 +100,7 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/project/p3-project-settings-page.spec.ts` | P3 的页面版本：页面的四个测试原样从 `e2e/stories/project/p3-project-settings.spec.ts` 移来（Task 13 的修复轮 1，照 P6、P7） | 13 新 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
-| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter 打开列表，一秒之内不发请求（Task 10）；成员筛选以键盘走一遍（Task 12） | 2、5、8、10、12 |
+| `e2e/stories/project/p5-project-members.spec.ts` | 添加成员的列表在被隐藏的页面之外照旧能选（`pageBehindHidden`，Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter 打开列表，一秒之内不发请求（Task 10）；成员筛选以键盘走一遍（Task 12） | 2、5、8、10、12 |
 | `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓，一行的按钮和组的添加以它们的东西为名，整页的计数以名字的开头为锚（Task 8） | 1、2、6、8 |
 | `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6）；一行的菜单和删除以标签为名，以键盘选"Edit label"，整页的计数以名字的开头、结尾为锚（Task 8） | 1、2、6、8 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 每个角色打开工作区菜单，不发请求（`WORKSPACE_MENU`） | 3 |
@@ -128,7 +128,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/project/card-list.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx` | 工作区经 `useRouteWorkspace()`（Task 11） | 11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx` | 项目设置各页的标题经 `t()`；没有项目时的设置页，建项目只给工作区的管理员和成员；它们的 vitest 照新的标题 | 13 |
 | `web/apps/web/app/(all)/create-workspace/layout.tsx`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/app/(all)/onboarding/layout.tsx`、`web/apps/web/app/(all)/onboarding/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 13 |
-| `web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 4 |
+| `web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除 | 4 |
 | `web/apps/web/app/provider.tsx` | `AppToast`：提示的区域经 `t()` 命名 | 13 |
 | `web/apps/web/core/components/api-token/modal/create-token-modal.tsx` | 不再传空的 `handleClose`（Task 2）；令牌显出之后焦点移到它的复制按钮（Task 9） | 2、9 |
 | `web/apps/web/core/components/api-token/modal/generated-token-details.tsx`、`web/apps/web/core/components/power-k/config/miscellaneous-commands.ts` | 复制经 `useCopyText`、`useCopyLink`；令牌的复制按钮有焦点的轮廓，收下生成之后的焦点 | 9 |
@@ -185,7 +185,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/project/settings/use-feature-toggle.test.tsx` | 功能开关的提示经 `t()`（Task 5）；开关的名字（Task 13） | 5、13 |
 | `web/apps/web/core/components/project/settings/use-feature-toggle.ts` | 功能开关的提示经 `t()`（Task 5） | 5 |
 | `web/apps/web/core/components/settings/mobile/nav.tsx` | 设置页的手机菜单降到弹窗之下（`z-20`，Task 2）；`IconButton` 的名字（Task 7） | 2、7 |
-| `web/apps/web/core/components/settings/profile/content/pages/security.tsx` | `signOut` 的取法（`sign-out-toast`） | 9 |
+| `web/apps/web/core/components/settings/profile/content/pages/security.tsx` | 问题码经 `problemCode()` | 9 |
 | `web/apps/web/core/components/settings/project/content/feature-control-item.tsx` | `title` 是字符串，给开关命名 | 13 |
 | `web/apps/web/core/components/settings/project/sidebar/header.tsx` | 设置侧边栏的标题经 `t()`（Task 4） | 4 |
 | `web/apps/web/core/components/settings/workspace/sidebar/header.tsx` | 设置侧边栏的标题经 `t()`（Task 4）；名字（Task 7）；写明 slug（Task 11） | 4、7、11 |
@@ -210,7 +210,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx` | 工作区菜单旁只给指针的展开箭头不被读出、不是停留点（Task 8） | 8 |
 | `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | 写明 slug（Task 11） | 11 |
 | `web/apps/web/core/components/workspace/sidebar/workspace-menu-root.tsx` | "离开工作区"一项，菜单的按钮和三项在键盘下看得见，没有调用方的写法删除（Task 3）；工作区经 `useRouteWorkspace()`（Task 11） | 3、11 |
-| `web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts` | 经 `problemCode()` 或 `useRefusalMessage` | 9 |
+| `web/apps/web/core/components/workspace/use-create-workspace.ts`、`web/apps/web/core/components/workspace/use-invitation-answer.ts` | 问题码经 `problemCode()` | 9 |
 | `web/apps/web/core/hooks/use-copy-link.test.ts`、`web/apps/web/core/hooks/use-copy-link.ts` | `useCopy`、`useCopyText`；它的测试 | 9 |
 | `web/apps/web/core/hooks/use-refusal-toast.test.ts`、`web/apps/web/core/hooks/use-refusal-toast.ts` | `useRefusalMessage`；它的测试 | 9 |
 | `web/apps/web/core/hooks/use-route-workspace.test.ts`、`web/apps/web/core/hooks/use-route-workspace.ts` | `useRouteWorkspace()`（新文件）和它的测试 | 11 新 |
@@ -625,7 +625,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - API 令牌的新建弹窗不再传 `handleClose={() => {}}`（与不传相同）。
 - `e2e/fixtures/dialogs.ts`：`announced(element)`（元素在 `aria-live` 的区域里）。
 
-**Tests:** 新的故事 S6（`e2e/stories/smoke/s6-dialogs.spec.ts`，2 个）：命令面板和快捷键列表是模态的，快捷键弹窗的名字就是它的标题；设置弹窗上的撤销确认框（嵌套），Escape 只关上面的一个。A6：切换账户在退出被扣住时关不掉。P5、P6、P7：弹窗开着时被拒绝的提示被读出（`announced`）。
+**Tests:** 新的故事 S6（`e2e/stories/smoke/s6-dialogs.spec.ts`，2 个）：命令面板和快捷键列表是模态的，快捷键弹窗的名字就是它的标题；设置弹窗上的撤销确认框（嵌套），Escape 只关上面的一个。A6：切换账户在退出被扣住时关不掉。P6、P7：弹窗开着时被拒绝的提示被读出（`announced`）；P5：添加成员的列表在页面之外打开，后面的页面隐藏时照旧能选（`pageBehindHidden`）。
 
 - [ ] **Step 1: 三个弹窗**
 
@@ -2636,9 +2636,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `e2e/stories/workspace/w5-invitation-link.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx`、`web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx`、`web/apps/web/core/components/auth-screens/not-authorized-view.tsx`、`web/apps/web/core/components/home/user-greetings.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/navigation/top-nav-power-k.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/onboarding/switch-account-modal.tsx`、`web/apps/web/core/components/settings/project/sidebar/header.tsx`、`web/apps/web/core/components/settings/workspace/sidebar/header.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.test.ts`、`web/apps/web/core/components/workspace/settings/use-invitation-changes.ts`、`web/apps/web/core/components/workspace/settings/workspace-details.test.tsx`、`web/apps/web/core/components/workspace/settings/workspace-details.tsx`、`web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx`、`web/packages/constants/src/workspace.ts`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/power-k.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/en/workspace-settings.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/power-k.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace-settings.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
 
 **Interfaces:**（spec 2.8）
-- `components/common/translated.tsx`（新文件）：`Translated({ text, values })`：把一个键的文字按占位切开，占位换成调用方给的节点（名字照旧加粗）。
+- `components/common/translated.tsx`（新文件）：`Translated({ i18nKey, values })`：把一个键的文字按占位切开，占位换成调用方给的节点（名字照旧加粗）。
 - `@nerve/constants` 的 `ORGANIZATION_SIZE_I18N_LABEL`（规模的三处）。
-- 经 `t()` 的：`workspace-details`、新建工作区的表单和新手引导的一步、删除工作区的弹窗（三段）、删除邀请的提示、成员的一列（离开、移出、已停用）、成员页的标题、移出的标题和说明、项目导航对话框、设置侧边栏的标题、命令面板的占位、邀请页的标题（`PageHead`，布局的 `meta` 删除）、没有权限的页面、"找不到工作区"的标题、首页的问候（`greeting.*`，每个时段一个带 `{name}` 的键，名字是显示名，同其他带名字的句子；`good`、`morning`、`afternoon`、`evening` 删除）、侧边栏的三个名字。两处装饰的图片 `alt=""`。
+- 经 `t()` 的：`workspace-details`、新建工作区的表单和新手引导的一步、删除工作区的弹窗（三段）、删除邀请的提示、成员的一列（离开、移出、已停用）、成员页的标题、移出的标题和说明、项目导航对话框、设置侧边栏的标题、命令面板的占位、邀请页的标题（`PageHead`，布局的 `meta` 删除）、没有权限的页面、"找不到工作区"的标题、首页的问候（`greeting.*`，每个时段一个带 `{name}` 的键，名字是显示名，同其他带名字的句子；`good`、`morning`、`afternoon`、`evening` 删除）、侧边栏的三个名字。一处装饰的图片 `alt=""`（工作区 general 页的标志）。
 - 切换账户的那句话是一个带 `{email}` 的键（`onboarding.switch_account.description`，经 `Translated`；`description_before_email`、`description_after_email` 在两种语言中删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"，不再对打开链接的人说"您已忽略"（负责人 2026-10-13 的答复 2，spec 3.2）。
 
 **Tests:** `translated.test.tsx`、`onboarding/switch-account-modal.test.tsx`（新文件：那句话是一个键，地址在其中）；`workspace-details.test.tsx`、`use-invitation-changes.test.ts` 读键。新的故事 S7（`e2e/stories/smoke/s7-chinese.spec.ts`）的第一个：语言是中文的管理员看工作区的首页（问候带他的名字、快捷键弹窗的标题和搜索框）、菜单、general 页和成员页和它们的弹窗。W5：邀请被拒绝之后的页面的新说法。
