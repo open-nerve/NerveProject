@@ -236,14 +236,16 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   const watch = await watchPage(page);
   await page.goto(members);
   // The roles' filter, a popover, by the keyboard alone: Tab reaches its button from the search, and Enter opens it,
-  // the focus on its roles' heading, which says it shows them. Tab reaches Admin, which Space picks, saying so, the
-  // popover open still and the list down to the admins; Space picks it no more. Escape closes the popover, the focus
-  // back on its button; opened again, Tab past its last role closes it, the focus moving on.
+  // which the button says; Tab reaches its roles' heading, which says it shows them. Tab reaches Admin, which Space
+  // picks, saying so, the popover open still and the list down to the admins; Space picks it no more. Escape closes
+  // the popover, the focus back on its button; opened again, Tab past its last role closes it, the focus moving on.
   const filters = page.getByRole("button", { name: "Filters", exact: true });
   await page.getByPlaceholder("Search", { exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(filters).toBeFocused();
   await page.keyboard.press("Enter");
+  await expect(filters).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Tab");
   const rolesHeading = page.getByRole("button", { name: /^Roles/ });
   await expect(rolesHeading).toBeFocused();
   await expect(rolesHeading).toHaveAttribute("aria-expanded", "true");
@@ -261,7 +263,9 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   await page.keyboard.press("Escape");
   await expect(rolesHeading).toHaveCount(0);
   await expect(filters).toBeFocused();
+  await expect(filters).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
   await expect(rolesHeading).toBeFocused();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");

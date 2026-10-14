@@ -143,7 +143,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/editor/embeds/mentions/user.tsx` | 角色名经 `ROLE_DETAILS` | 6 |
 | `web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx` | 工作区经 `useRouteWorkspace()` | 11 |
 | `web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx` | 组字经 `isComposing` | 10 |
-| `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx` | 筛选的弹层：可选的 `focusPanel`（Headless UI 的 `focus`），成员筛选传它 | 12 |
+| `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx` | 筛选的弹层：默认的按钮就是 `Popover.Button`（以 `title` 为名，说出是否展开，Escape 之后焦点回到它，宽、窄两种内容在它里面）；弹层 `unmount={false}`，离开的过渡中又打开时也随焦点走出关上 | 12 |
 | `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx` | 筛选的共用件：展开按钮以标题为名、`aria-expanded`，选项 `aria-pressed`（F12） | 12 |
 | `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx`、`web/apps/web/core/components/issues/workspace-draft/quick-action.tsx` | `CustomMenu` 的调用方：删去 `useCaptureForOutsideClick`（Headless UI 自己在捕获阶段检测点外面） | 8 |
 | `web/apps/web/core/components/labels/create-update-label-inline.tsx` | 颜色弹层（Task 8） | 8 |
@@ -11505,10 +11505,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**（spec 2.8）
 - 侧边栏的标题经 `t("projects")`：`SidebarWrapper` 的 `title`（只有一个调用方，总是"Projects"）和 `title === "Projects"` 的条件删除；扩展侧边栏的标题同样。标签栏的菜单经 `navigation.json` 的 `tab_navigation.*`。项目页页头的"已归档"，卡片的创建日期和成员数。
-- 筛选：`@nerve/constants` 的 `PROJECT_FILTER_I18N_LABEL`（下拉框和已选筛选的一栏共用）；`lead.tsx`（`members.tsx` 的副本）删除，`FilterMembers` 收 `title`；网络按页面上的名字搜索；创建日期的选项 `i18n_name`；已选筛选的 9 个移除按钮名为 `common.remove_item`；数目的提示。成员筛选：角色经 `ROLE_DETAILS` 和"已停用"；它是项目列表的筛选所用的弹层 `FiltersDropdown`（Task 8 交来：原来是 `CustomMenu`，选项不是菜单项，键盘到不了），按钮是弹层自己的（`menuButton`，按钮里不再有按钮），`focusPanel`（新的可选 prop，Headless UI 的 `focus`）：打开时焦点在角色的标题上，Tab 走出时关上。筛选的共用件在根上改（F12）：`FilterHeader` 的展开按钮 `aria-label`、`aria-expanded`，`FilterOption` 的 `aria-pressed`。
+- 筛选：`@nerve/constants` 的 `PROJECT_FILTER_I18N_LABEL`（下拉框和已选筛选的一栏共用）；`lead.tsx`（`members.tsx` 的副本）删除，`FilterMembers` 收 `title`；网络按页面上的名字搜索；创建日期的选项 `i18n_name`；已选筛选的 9 个移除按钮名为 `common.remove_item`；数目的提示。成员筛选：角色经 `ROLE_DETAILS` 和"已停用"；它是项目列表的筛选所用的弹层 `FiltersDropdown`（Task 8 交来：原来是 `CustomMenu`，选项不是菜单项，键盘到不了），按钮是弹层自己的（`menuButton`，按钮里不再有按钮）：Tab 从按钮走到角色的标题和角色，Tab 走出时关上。`FiltersDropdown` 在根上改（spec 2.9，Task 12 的预审）：默认的按钮（不传 `menuButton` 的 15 个调用方）就是 `Popover.Button`，以 `title` 为名（`aria-label`），宽、窄两种内容是它里面的两个 `span`，样子不变；`Popover.Panel` 的 `unmount={false}`：Headless UI 在焦点走出时关上弹层（进它打开的弹窗时不关），面板却在关上时就注销自己，离开的过渡中又打开的那一次不再关上；不注销，离开之后由 `Transition` 移出页面。调用方不改（spec A.4 的表）。筛选的共用件在根上改（F12）：`FilterHeader` 的展开按钮 `aria-label`、`aria-expanded`，`FilterOption` 的 `aria-pressed`。
 - 这几个文件自己的警告：已选筛选的两个数组改为 `Set`；筛选的搜索框的 `autoFocus` 写明理由（`oxlint-disable-next-line`）。web 的上限 296 → 293。
 
-**Tests:** `tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`（新文件）；`card.test.tsx`、`tab-navigation-overflow-menu.test.tsx` 读键。S7：第二个加扩展侧边栏的标题；第四个（新）：项目页的标题、卡片、筛选、已选筛选的一栏、已归档、成员筛选（以"角色"找到标题的按钮）。P5：成员筛选以键盘走一遍（打开时焦点在"Roles"上，空格选上 Admin、弹层留着，Escape 和 Tab 走出关上它）。
+**Tests:** `tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`（新文件）；`card.test.tsx`、`tab-navigation-overflow-menu.test.tsx` 读键。S7：第二个加扩展侧边栏的标题；第四个（新）：项目页的标题、卡片、筛选、已选筛选的一栏、已归档、成员筛选（以"角色"找到标题的按钮）；项目列表的筛选以键盘打开（`aria-expanded`），"自定义"的弹窗留着（`closedWithin`），Escape 关上它之后焦点回到筛选里的"自定义"，Escape 之后焦点回到"筛选"；立即再打开，从"自定义"按 Tab，焦点在"添加项目"上，筛选关上。P5：成员筛选以键盘走一遍（Enter 打开，按钮说出展开，Tab 到"Roles"，空格选上 Admin、弹层留着，Escape 和 Tab 走出关上它）。
 
 - [ ] **Step 1: 页面和筛选**
 
@@ -11530,37 +11530,130 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     <SidebarWrapper quickActions={<SidebarQuickActions />}>
 ````
 
-`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx`（修改，3 处）：
+`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx`（整个文件，121 行）：
 
-````old web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+````whole web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import React, { Fragment, cloneElement, useState } from "react";
+import type { Placement } from "@popperjs/core";
+import { usePopper } from "react-popper";
+// headless ui
+import { Popover, Transition } from "@headlessui/react";
+// ui
+import { Button } from "@nerve/propel/button";
+
+type Props = {
+  children: React.ReactNode;
+  icon?: React.ReactElement<{ className?: string; strokeWidth?: number | string }>;
+  miniIcon?: React.ReactNode;
+  title?: string;
+  placement?: Placement;
+  disabled?: boolean;
+  tabIndex?: number;
   menuButton?: React.ReactNode;
   isFiltersApplied?: boolean;
 };
-````
-````new web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
-  menuButton?: React.ReactNode;
-  isFiltersApplied?: boolean;
-  /**
-   * The panel takes the focus as it opens and closes as the focus leaves it (Headless UI's focus), for a panel that
-   * opens no dialog of its own: Tab past its last control moves on, not under it.
-   */
-  focusPanel?: boolean;
-};
-````
-````old web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
+
+/**
+ * A filters' popover. Its button is Headless UI's Popover.Button itself: Enter or Space opens it, which it says
+ * (aria-expanded), and Escape closes it, the focus back on the button. The panel follows the button: Tab goes into it
+ * and through its controls, and Headless UI closes it as the focus moves on past them, not as it goes into a dialog
+ * the panel opens.
+ */
+export function FiltersDropdown(props: Props) {
+  const {
+    children,
+    miniIcon,
+    icon,
+    title = "Dropdown",
+    placement,
+    disabled = false,
+    tabIndex,
+    menuButton,
     isFiltersApplied = false,
   } = props;
-````
-````new web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
-    isFiltersApplied = false,
-    focusPanel = false,
-  } = props;
-````
-````old web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
-            <Popover.Panel className="fixed z-10 translate-y-0">
-````
-````new web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx
-            <Popover.Panel className="fixed z-10 translate-y-0" focus={focusPanel}>
+
+  const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | HTMLDivElement | null>(null);
+  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
+
+  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+    placement: placement ?? "auto",
+  });
+
+  return (
+    <Popover as="div">
+      {({ open }) => (
+        <>
+          {menuButton ? (
+            <Popover.Button as={React.Fragment}>
+              <button type="button" ref={setReferenceElement}>
+                {menuButton}
+              </button>
+            </Popover.Button>
+          ) : (
+            // one button, named by the title, whose content follows the header's width: in a wide header the icon,
+            // the title and the mark of the filters applied, in a narrow one the mini icon or the title
+            <div ref={setReferenceElement} className="flex">
+              <Popover.Button as={React.Fragment}>
+                <Button
+                  disabled={disabled}
+                  variant="secondary"
+                  tabIndex={tabIndex}
+                  className="@4xl:relative"
+                  size="lg"
+                  aria-label={title}
+                >
+                  <span className="hidden @4xl:contents">
+                    {/* the icon as the button's prependIcon shows it */}
+                    {icon && cloneElement(icon, { className: "shrink-0 size-4", strokeWidth: 2 })}
+                    <span className={`${open ? "text-primary" : "text-secondary"}`}>
+                      <span>{title}</span>
+                    </span>
+                    {isFiltersApplied && (
+                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent-primary" />
+                    )}
+                  </span>
+                  <span className="contents @4xl:hidden">{miniIcon || title}</span>
+                </Button>
+              </Popover.Button>
+            </div>
+          )}
+          <Transition
+            as={Fragment}
+            enter="transition ease-out duration-200"
+            enterFrom="opacity-0 translate-y-1"
+            enterTo="opacity-100 translate-y-0"
+            leave="transition ease-in duration-150"
+            leaveFrom="opacity-100 translate-y-0"
+            leaveTo="opacity-0 translate-y-1"
+          >
+            {/** translate-y-0 is a hack to create new stacking context. Required for safari  */}
+            {/* The Transition takes the panel out of the page after its leave, so the panel keeps its place in Headless
+                UI's state as the popover closes (unmount false): opened again during the leave, it would otherwise no
+                longer close as the focus moves on past it. */}
+            <Popover.Panel className="fixed z-10 translate-y-0" unmount={false}>
+              <div
+                className="my-1 overflow-hidden rounded-sm border border-subtle bg-surface-1 shadow-raised-100"
+                ref={setPopperElement}
+                style={styles.popper}
+                {...attributes.popper}
+              >
+                <div className="flex max-h-[30rem] w-[18.75rem] flex-col overflow-hidden lg:max-h-[37.5rem]">
+                  {children}
+                </div>
+              </div>
+            </Popover.Panel>
+          </Transition>
+        </>
+      )}
+    </Popover>
+  );
+}
 ````
 
 `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx`（修改，1 处）：
@@ -11916,7 +12009,7 @@ import { useTranslation } from "@nerve/i18n";
 ````delete web/apps/web/core/components/project/dropdowns/filters/lead.tsx
 ````
 
-`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`（整个文件，116 行）：
+`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`（整个文件，115 行）：
 
 ````whole web/apps/web/core/components/project/dropdowns/filters/member-list.tsx
 /**
@@ -12004,10 +12097,10 @@ const RoleFilterGroup = observer(function RoleFilterGroup({
 });
 
 /**
- * The members' filter, a popover as the projects' filters are. Opened, it gives the focus to its roles' heading; Tab
- * reaches the roles, Enter or Space toggles one, the popover staying open. Escape closes it, the focus going back to
- * its button; Tab past its last role closes it too, the focus moving on. The popover's button is its one control, what
- * it shows only looking like a button.
+ * The members' filter, a popover as the projects' filters are: Tab goes from its button to the roles' heading and the
+ * roles, Enter or Space toggles one, the popover staying open. Escape closes it, the focus going back to its button;
+ * Tab past its last role closes it too, the focus moving on. The popover's button is its one control, what it shows
+ * only looking like a button.
  */
 export const MemberListFiltersDropdown = observer(function MemberListFiltersDropdown(props: Props) {
   const { appliedFilters, handleUpdate, memberType } = props;
@@ -12018,7 +12111,6 @@ export const MemberListFiltersDropdown = observer(function MemberListFiltersDrop
   return (
     <FiltersDropdown
       placement="bottom-start"
-      focusPanel
       menuButton={
         <span className={cn(getButtonStyling("secondary", "lg"), "relative gap-2")}>
           <span>{t("common.filters")}</span>
@@ -12416,14 +12508,16 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   const watch = await watchPage(page);
   await page.goto(members);
   // The roles' filter, a popover, by the keyboard alone: Tab reaches its button from the search, and Enter opens it,
-  // the focus on its roles' heading, which says it shows them. Tab reaches Admin, which Space picks, saying so, the
-  // popover open still and the list down to the admins; Space picks it no more. Escape closes the popover, the focus
-  // back on its button; opened again, Tab past its last role closes it, the focus moving on.
+  // which the button says; Tab reaches its roles' heading, which says it shows them. Tab reaches Admin, which Space
+  // picks, saying so, the popover open still and the list down to the admins; Space picks it no more. Escape closes
+  // the popover, the focus back on its button; opened again, Tab past its last role closes it, the focus moving on.
   const filters = page.getByRole("button", { name: "Filters", exact: true });
   await page.getByPlaceholder("Search", { exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(filters).toBeFocused();
   await page.keyboard.press("Enter");
+  await expect(filters).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Tab");
   const rolesHeading = page.getByRole("button", { name: /^Roles/ });
   await expect(rolesHeading).toBeFocused();
   await expect(rolesHeading).toHaveAttribute("aria-expanded", "true");
@@ -12441,7 +12535,9 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   await page.keyboard.press("Escape");
   await expect(rolesHeading).toHaveCount(0);
   await expect(filters).toBeFocused();
+  await expect(filters).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
   await expect(rolesHeading).toBeFocused();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
@@ -12454,8 +12550,14 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   // He adds ann
 ````
 
-`e2e/stories/smoke/s7-chinese.spec.ts`（修改，2 处）：
+`e2e/stories/smoke/s7-chinese.spec.ts`（修改，3 处）：
 
+````old e2e/stories/smoke/s7-chinese.spec.ts
+import { modalDialog } from "../../fixtures/dialogs";
+````
+````new e2e/stories/smoke/s7-chinese.spec.ts
+import { closedWithin, modalDialog } from "../../fixtures/dialogs";
+````
 ````old e2e/stories/smoke/s7-chinese.spec.ts
   await expect(sidebar.getByRole("button", { name: "更多", exact: true })).toHaveText("更多");
 ````
@@ -12487,18 +12589,41 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   const navigation = page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" });
   await expect(navigation.locator("xpath=../preceding-sibling::span")).toHaveText("项目");
   await expect(page.getByText(/^创建于 /)).toBeVisible();
-  // The filters: each by its name, the accesses searched as the page names them.
-  await page.getByRole("button", { name: "筛选", exact: true }).click();
+  // The filters, by the keyboard: Enter on their button opens them, which it says. Each filter by its name, the
+  // accesses searched as the page names them.
+  const filtersButton = page.getByRole("button", { name: "筛选", exact: true });
+  await filtersButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "true");
   const filters = page.getByRole("button", { name: "我的项目" }).locator("xpath=../..");
   await expect(filters.getByText(/^(网络|负责人|成员|创建日期)$/)).toHaveText(["网络", "负责人", "成员", "创建日期"]);
   await expect(filters.getByRole("button", { name: /^(今天|昨天|最近 7 天|最近 30 天|自定义)$/ })).toHaveCount(5);
+  // the custom date's dialog, which the filters open, named by the filter, stays and leaves them open: closed by
+  // Escape, it gives the focus back to the custom date's button in them
+  await filters.getByRole("button", { name: "自定义", exact: true }).click();
+  await expect(modalDialog(page).getByRole("button", { name: /^创建日期/ })).toBeVisible();
+  expect(await closedWithin(page)).toBe(false);
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(0);
+  await expect(filters.getByRole("button", { name: "自定义", exact: true })).toBeFocused();
   // the caller, in the lead's filter and the members', is 您
   await expect(filters.getByRole("button", { name: / 您$/ })).toHaveCount(2);
   await page.getByPlaceholder("搜索", { exact: true }).last().fill("公开");
   await expect(page.getByRole("button", { name: "公开", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "私有", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "公开", exact: true }).click();
+  // Escape closes them, the focus back on their button, which says so
   await page.keyboard.press("Escape");
+  await expect(filtersButton).toBeFocused();
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
+  // opened again, their search emptied, Tab past their last filter closes them, the focus moving on to the button
+  // after theirs
+  await page.keyboard.press("Enter");
+  await page.getByPlaceholder("搜索", { exact: true }).last().fill("");
+  await filters.getByRole("button", { name: "自定义", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "添加项目", exact: true })).toBeFocused();
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
   // The bar of the filters applied: the filter by its name, each button named by what it removes, and the count.
   await expect(page.getByRole("button", { name: "移除公开", exact: true })).toBeVisible();
   await page.getByText("1/1", { exact: true }).hover();
@@ -12747,11 +12872,15 @@ tab bar's menus and the cards read their text through t(). S7 filters the
 projects and the members in Chinese.
 
 The members' filter is the projects' filters' popover, no menu whose
-options the keyboard could not reach: opened, it gives the focus to its
-roles' heading; Tab reaches each role, Space picks it and the popover
-stays; Escape closes it, the focus back on its button, and Tab past its
-last role closes it too. The filters' shared heading and option say
-their names and states. P5 works the filter by the keyboard alone.
+options the keyboard could not reach: Tab goes from its button to its
+roles' heading and each role, Space picks one and the popover stays;
+Escape closes it, the focus back on its button. The popover's default
+button is the one button it shows, which says whether the panel is open
+and takes the focus back on Escape, its look unchanged. Every filters'
+panel keeps its place in Headless UI's state as it closes, so one opened
+again during its leave still closes as the focus moves on past it. The
+filters' shared heading and option say their names and states. P5 works
+the members' filter by the keyboard alone, S7 the projects'.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -12778,10 +12907,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T12.16` | 成员的筛选按钮里又有一个自己的控件（E3） | 故事 S7 | 端到端 |
 | `T12.17` | 页面读的一个键没有定义（`i18n-keys`） | `tools/i18n-keys.mjs` | 静态 |
 | `T12.18` | 成员的筛选又是 `CustomMenu` 的菜单（Task 8 的形状）：键盘到不了角色，Tab 关上它 | 故事 P5 | 端到端 |
-| `T12.19` | 成员的筛选不传 `focusPanel`：打开时焦点留在按钮上，Tab 走出时弹层留着 | 故事 P5 | 端到端 |
+| `T12.19` | 筛选的弹层在弹层关上时就从 Headless UI 的状态中注销（`unmount`）：在离开的过渡中又打开时，Tab 走过最后一个控件之后它不再关上 | 故事 S7 | 端到端 |
 | `T12.20` | 筛选的展开按钮又没有名字（F12） | 故事 P5、S7 | 端到端 |
 | `T12.21` | 筛选的展开按钮不说出是否展开（F12） | 故事 P5、S7 | 端到端 |
 | `T12.22` | 筛选的选项不说出是否选中（F12） | 故事 P5 | 端到端 |
+| `T12.23` | 每个筛选的弹层取 Headless UI 的 `focus`（原来 `focusPanel` 给成员页的筛选的）：打开时取得焦点，焦点进它打开的弹窗时关上，自定义日期的弹窗随之没了 | 故事 P5、S7 | 端到端 |
+| `T12.24` | 筛选默认的按钮又包在作为 `Popover.Button` 的 `div` 里（原来的形状）：看得见的按钮不说出是否展开，Escape 之后焦点落到 `body` | 故事 S7 | 端到端 |
+| `T12.25` | 筛选默认的按钮随打开、关上重新挂载：Escape 把焦点交给已经不在的按钮 | 故事 S7 | 端到端 |
 
 ---
 

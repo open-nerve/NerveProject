@@ -83,10 +83,10 @@ const RoleFilterGroup = observer(function RoleFilterGroup({
 });
 
 /**
- * The members' filter, a popover as the projects' filters are. Opened, it gives the focus to its roles' heading; Tab
- * reaches the roles, Enter or Space toggles one, the popover staying open. Escape closes it, the focus going back to
- * its button; Tab past its last role closes it too, the focus moving on. The popover's button is its one control, what
- * it shows only looking like a button.
+ * The members' filter, a popover as the projects' filters are: Tab goes from its button to the roles' heading and the
+ * roles, Enter or Space toggles one, the popover staying open. Escape closes it, the focus going back to its button;
+ * Tab past its last role closes it too, the focus moving on. The popover's button is its one control, what it shows
+ * only looking like a button.
  */
 export const MemberListFiltersDropdown = observer(function MemberListFiltersDropdown(props: Props) {
   const { appliedFilters, handleUpdate, memberType } = props;
@@ -97,7 +97,6 @@ export const MemberListFiltersDropdown = observer(function MemberListFiltersDrop
   return (
     <FiltersDropdown
       placement="bottom-start"
-      focusPanel
       menuButton={
         <span className={cn(getButtonStyling("secondary", "lg"), "relative gap-2")}>
           <span>{t("common.filters")}</span>

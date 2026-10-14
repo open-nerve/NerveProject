@@ -13,7 +13,7 @@ import {
 } from "../../fixtures/api";
 import { bearer, emailFor, shownNameOf, type AuthTokens } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { modalDialog } from "../../fixtures/dialogs";
+import { closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { labelRow } from "../../fixtures/project-pages";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -236,18 +236,41 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   const navigation = page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" });
   await expect(navigation.locator("xpath=../preceding-sibling::span")).toHaveText("项目");
   await expect(page.getByText(/^创建于 /)).toBeVisible();
-  // The filters: each by its name, the accesses searched as the page names them.
-  await page.getByRole("button", { name: "筛选", exact: true }).click();
+  // The filters, by the keyboard: Enter on their button opens them, which it says. Each filter by its name, the
+  // accesses searched as the page names them.
+  const filtersButton = page.getByRole("button", { name: "筛选", exact: true });
+  await filtersButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "true");
   const filters = page.getByRole("button", { name: "我的项目" }).locator("xpath=../..");
   await expect(filters.getByText(/^(网络|负责人|成员|创建日期)$/)).toHaveText(["网络", "负责人", "成员", "创建日期"]);
   await expect(filters.getByRole("button", { name: /^(今天|昨天|最近 7 天|最近 30 天|自定义)$/ })).toHaveCount(5);
+  // the custom date's dialog, which the filters open, named by the filter, stays and leaves them open: closed by
+  // Escape, it gives the focus back to the custom date's button in them
+  await filters.getByRole("button", { name: "自定义", exact: true }).click();
+  await expect(modalDialog(page).getByRole("button", { name: /^创建日期/ })).toBeVisible();
+  expect(await closedWithin(page)).toBe(false);
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(0);
+  await expect(filters.getByRole("button", { name: "自定义", exact: true })).toBeFocused();
   // the caller, in the lead's filter and the members', is 您
   await expect(filters.getByRole("button", { name: / 您$/ })).toHaveCount(2);
   await page.getByPlaceholder("搜索", { exact: true }).last().fill("公开");
   await expect(page.getByRole("button", { name: "公开", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "私有", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "公开", exact: true }).click();
+  // Escape closes them, the focus back on their button, which says so
   await page.keyboard.press("Escape");
+  await expect(filtersButton).toBeFocused();
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
+  // opened again, their search emptied, Tab past their last filter closes them, the focus moving on to the button
+  // after theirs
+  await page.keyboard.press("Enter");
+  await page.getByPlaceholder("搜索", { exact: true }).last().fill("");
+  await filters.getByRole("button", { name: "自定义", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "添加项目", exact: true })).toBeFocused();
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
   // The bar of the filters applied: the filter by its name, each button named by what it removes, and the count.
   await expect(page.getByRole("button", { name: "移除公开", exact: true })).toBeVisible();
   await page.getByText("1/1", { exact: true }).hover();
