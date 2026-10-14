@@ -8,10 +8,9 @@ import {
   listMembers,
   slugFor,
 } from "../../fixtures/api";
-import { expectNoAddress } from "../../fixtures/assert/identity";
 import { expectMembership, expectMembershipEnded, workspaceTables } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { EMOJI_CHECK_WARNING, expectNoAddress, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   announced,
   closedByEscape,

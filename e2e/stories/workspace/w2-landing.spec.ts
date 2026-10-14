@@ -14,7 +14,7 @@ import {
   expectWrittenLastBy,
   lastWorkspaceOf,
 } from "../../fixtures/assert/workspace";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole } from "../../fixtures/browser";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -42,9 +42,9 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
   db,
 }, testInfo) => {
   const aliceEmail = emailFor(testInfo, "alice");
-  const alice = (await createPAT(api, (await register(api, aliceEmail)).access_token)).token;
+  const alice = (await registeredPAT(api, aliceEmail)).token;
   const bobEmail = emailFor(testInfo, "bob");
-  const bob = (await createPAT(api, (await register(api, bobEmail)).access_token)).token;
+  const bob = (await registeredPAT(api, bobEmail)).token;
   const bobId = await accountId(api, bob);
   const first = slugFor(testInfo, "first");
   const second = slugFor(testInfo, "second");

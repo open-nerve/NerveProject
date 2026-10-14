@@ -1,7 +1,6 @@
 import { createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
-import { expectNoAddress } from "../../fixtures/assert/identity";
 import { accountId, emailFor, named } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { EMOJI_CHECK_WARNING, expectNoAddress, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 

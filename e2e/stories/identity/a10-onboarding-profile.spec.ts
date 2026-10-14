@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 
 import { accountOf, expectProfileStepTaken, onboardingStepsOf } from "../../fixtures/assert/identity";
 import { submitSignUp } from "../../fixtures/auth-pages";
-import { bearer, createPAT, emailFor, password, register } from "../../fixtures/auth";
+import { bearer, emailFor, password, register, registeredPAT } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
@@ -108,7 +108,7 @@ test("A10 (API): the profile step sets the name and one step, which the others k
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const pat = await registeredPAT(api, email);
 
   // Another step is done already, so keeping it differs from resetting it
   // to its default.
@@ -149,7 +149,7 @@ test("A10 (API): onboarding_step twice is the platform's 400, whatever the other
   request,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const pat = await registeredPAT(api, email);
   const stepsBefore = await onboardingStepsOf(db, email);
   // The body as written, byte for byte: an object of the typed client cannot hold a key twice.
   const send = async (body: string) => {

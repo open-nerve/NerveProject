@@ -12,7 +12,7 @@ import { settle, track, until } from "@/lib/auth/fake-time";
 import { fetchedWhileChangeIsOut, inTurn, sent } from "@/store/fake-queue";
 import { fakeRoot } from "@/store/fake-root";
 import { ProjectMemberStore } from "@/store/member/project/project-member.store";
-import { membershipOf } from "@/store/member/workspace/fake-members";
+import { userOf } from "@/store/member/fake-users";
 import { loadArchivedProjects, projectMemberOf, projectOf, projectTab } from "@/store/project/fake-projects";
 import { UserStore } from "@/store/user";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -39,8 +39,6 @@ const dee = projectMemberOf(web, "dee");
 const demoted: ProjectMember = { ...projectMemberOf(web, "bob", 5), created_at: "2026-10-03T09:00:00Z" };
 /** Dee, a member of the workspace, added to web. */
 const adding: ProjectMembersAdd = { members: [{ member_id: "u-dee", role: 15 }] };
-/** The profiles the workspace's members gave. */
-const profile = (name: string) => membershipOf(name).member;
 const membership = (name: string) => `/api/v0/project-members/pm-${web.id}-${name}`;
 
 /** The store of a tab at web's address, whose caller is ann, and whose projects nerve listed: acme's and beta's. */
@@ -52,9 +50,9 @@ async function memberStore() {
   const user = new UserStore(fakeRoot({ router }), api);
   runInAction(() => {
     const account = { email: "ann@example.com", user_timezone: "UTC", cover_image_url: null };
-    user.data = { ...profile("ann"), ...account, created_at: "2026-09-01T09:00:00Z" };
+    user.data = { ...userOf("ann"), ...account, created_at: "2026-09-01T09:00:00Z" };
   });
-  const users = Object.fromEntries(["ann", "bob", "cat", "dee"].map((name) => [`u-${name}`, profile(name)]));
+  const users = Object.fromEntries(["ann", "bob", "cat", "dee"].map((name) => [`u-${name}`, userOf(name)]));
   const store = new ProjectMemberStore({ memberMap: users }, fakeRoot({ router, user, projectRoot }), api);
   return { nerve, api, projects: projectRoot.project, store };
 }
@@ -84,7 +82,7 @@ describe("ProjectMemberStore, the members", () => {
     const { nerve, store } = await memberStore();
     const fetched = await load(nerve, store, [bob, cat, ann]);
     expect(fetched.value).toEqual({ "u-ann": ann, "u-bob": bob, "u-cat": cat });
-    expect(store.getProjectMemberDetails("u-bob", web.id)).toEqual({ ...bob, member: profile("bob") });
+    expect(store.getProjectMemberDetails("u-bob", web.id)).toEqual({ ...bob, member: userOf("bob") });
     expect(store.getProjectMemberDetails("u-dee", web.id)).toBeNull();
     // the caller first, then by display name; the guest when asked for
     expect(store.getProjectMemberIds(web.id, true)).toEqual(["u-ann", "u-bob", "u-cat"]);
@@ -95,7 +93,7 @@ describe("ProjectMemberStore, the members", () => {
     const byPage = ["u-cat", "u-bob", "u-ann"];
     expect([store.getFilteredProjectMemberIds(web.id), store.projectMemberIds]).toEqual([byPage, byPage]);
     store.filters.updateFilters(web.id, { roles: ["5"] });
-    expect(store.getFilteredProjectMemberDetails("u-cat", web.id)).toEqual({ ...cat, member: profile("cat") });
+    expect(store.getFilteredProjectMemberDetails("u-cat", web.id)).toEqual({ ...cat, member: userOf("cat") });
     expect(store.getFilteredProjectMemberDetails("u-bob", web.id)).toBeNull();
   });
 
@@ -158,7 +156,7 @@ describe("ProjectMemberStore, the changes", () => {
     nerve.calls[1]?.answer(json(200, demoted));
     await until(() => changed.settled, "the answer");
     expect(changed.value).toEqual(demoted);
-    expect(store.getProjectMemberDetails("u-bob", web.id)).toEqual({ ...demoted, member: profile("bob") });
+    expect(store.getProjectMemberDetails("u-bob", web.id)).toEqual({ ...demoted, member: userOf("bob") });
     expect(projects.getProjectById(web.id)?.member_role).toBe(20);
 
     // ann, an admin of the workspace, changes her own role: the project takes the role nerve answers, which the test

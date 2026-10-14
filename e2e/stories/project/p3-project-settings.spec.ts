@@ -9,7 +9,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectMember, projectSettingsOf } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 
 // P3, a project's settings (M3 design 2, 3.4, 3.5, 3.19, 7.6). The page version is
@@ -20,13 +20,13 @@ test("P3 (API): the project's admin adds a member and a guest, whom the member l
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const guestEmail = emailFor(testInfo, "guest");
-  const guest = (await createPAT(api, (await register(api, guestEmail)).access_token)).token;
+  const guest = (await registeredPAT(api, guestEmail)).token;
   const otherEmail = emailFor(testInfo, "other");
-  const other = (await createPAT(api, (await register(api, otherEmail)).access_token)).token;
+  const other = (await registeredPAT(api, otherEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);

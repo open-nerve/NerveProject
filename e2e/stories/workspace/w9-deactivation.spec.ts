@@ -11,7 +11,7 @@ import {
 import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fixtures/assert/identity";
 import { expectMembership } from "../../fixtures/assert/workspace";
 import { signInPath } from "../../fixtures/auth-pages";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -32,11 +32,11 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   db,
 }, testInfo) => {
   const aEmail = emailFor(testInfo, "a");
-  const a = (await createPAT(api, (await register(api, aEmail)).access_token)).token;
+  const a = (await registeredPAT(api, aEmail)).token;
   const bEmail = emailFor(testInfo, "b");
-  const b = (await createPAT(api, (await register(api, bEmail)).access_token)).token;
+  const b = (await registeredPAT(api, bEmail)).token;
   const cEmail = emailFor(testInfo, "c");
-  const c = (await createPAT(api, (await register(api, cEmail)).access_token)).token;
+  const c = (await registeredPAT(api, cEmail)).token;
   const acme = slugFor(testInfo, "acme");
   const beta = slugFor(testInfo, "beta");
   const gamma = slugFor(testInfo, "gamma");

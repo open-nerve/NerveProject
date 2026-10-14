@@ -10,7 +10,7 @@ import {
   type Project,
 } from "../../fixtures/api";
 import { expectMember } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
 import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
@@ -49,11 +49,11 @@ test("P2 (API): the admin lists every project, a member the public ones and his 
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const guestEmail = emailFor(testInfo, "guest");
-  const guest = (await createPAT(api, (await register(api, guestEmail)).access_token)).token;
+  const guest = (await registeredPAT(api, guestEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);

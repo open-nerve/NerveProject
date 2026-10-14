@@ -4,7 +4,7 @@ import type { components } from "@nerve/api-client";
 import type { Download } from "@playwright/test";
 
 import { expectTokenStored } from "../../fixtures/assert/identity";
-import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, createPAT, emailFor, login, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedByBackdropClick, closedByEscape, downloadedWithin, enabledWithin } from "../../fixtures/dialogs";
 import {
@@ -324,7 +324,7 @@ test("A11 (API): a token creates, lists page by page and revokes another; a revo
   api,
   db,
 }, testInfo) => {
-  const admin = await createPAT(api, (await register(api, emailFor(testInfo))).access_token, { label: "admin" });
+  const admin = await registeredPAT(api, emailFor(testInfo), { label: "admin" });
   const expiredAt = new Date(Date.now() + weekMs).toISOString();
 
   const created = await createPAT(api, admin.token, { label: "deploy", description: "ci", expired_at: expiredAt });
@@ -368,7 +368,7 @@ test("A11 (API): a token creates, lists page by page and revokes another; a revo
   expect((await list()).map((t) => t.id)).toEqual([admin.id]);
 
   // Another account's token is not found, and it keeps working.
-  const other = await createPAT(api, (await register(api, emailFor(testInfo, "other"))).access_token);
+  const other = await registeredPAT(api, emailFor(testInfo, "other"));
   const foreign = await api.DELETE("/api/v0/api-tokens/{token_id}", {
     params: { path: { token_id: other.id } },
     headers: bearer(admin.token),

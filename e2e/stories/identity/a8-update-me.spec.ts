@@ -1,5 +1,5 @@
 import { accountOf, expectAccountChanged } from "../../fixtures/assert/identity";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   answerTo,
@@ -122,7 +122,7 @@ test("A8 (API): a personal access token changes the names and the time zone; nul
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const pat = await registeredPAT(api, email);
   const before = await accountOf(db, email);
   const change = { first_name: "Ada", last_name: "Lovelace", display_name: "ada", user_timezone: "Asia/Shanghai" };
 

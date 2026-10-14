@@ -84,10 +84,8 @@ func TestUpdateProjectRefusals(t *testing.T) {
 			`{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
 				`"errors":[{"field":"project_lead_id","code":"not_allowed","message":"must be an active member of the project who is not its guest"},` +
 				`{"field":"default_assignee_id","code":"not_allowed","message":"must be an active member of the project who is not its guest"}]}`},
-		{"a taken identifier", domain.ErrIdentifierTaken, http.StatusConflict,
-			`{"status":409,"code":"project.identifier_taken","title":"Conflict","detail":"A project of the workspace has this identifier."}`},
-		{"a taken name", domain.ErrNameTaken, http.StatusConflict,
-			`{"status":409,"code":"project.name_taken","title":"Conflict","detail":"A project of the workspace has this name."}`},
+		{"a taken identifier", domain.ErrIdentifierTaken, http.StatusConflict, identifierTakenJSON},
+		{"a taken name", domain.ErrNameTaken, http.StatusConflict, nameTakenJSON},
 	}
 	for _, tt := range tests {
 		h := newServer(t, fakes{update: &fakeUpdate{err: tt.err}})

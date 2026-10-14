@@ -1,4 +1,5 @@
-import { accountOf, accountStateOf, expectEmailChanged, sessionOf, tokensOf } from "../../fixtures/assert/identity";
+import { accountOf, accountStateOf, expectEmailChanged, tokensOf } from "../../fixtures/assert/identity";
+import { sessionOf } from "../../fixtures/assert/session";
 import { bearer, createPAT, emailFor, login, password, register } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers, nerveUsersFails } from "../../fixtures/users";

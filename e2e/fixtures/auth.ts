@@ -177,6 +177,15 @@ export async function createPAT(
   return data;
 }
 
+/** A personal access token of a new account of email: the account registered, then the token created with body. */
+export async function registeredPAT(
+  api: Api,
+  email: string,
+  body: components["schemas"]["ApiTokenCreate"] = {}
+): Promise<ApiTokenCreated> {
+  return createPAT(api, (await register(api, email)).access_token, body);
+}
+
 /** Signs up the account of label in this run of the test, and returns its address, a personal access token of it and its id. */
 export async function newAccount(
   api: Api,
@@ -184,7 +193,7 @@ export async function newAccount(
   label: string
 ): Promise<{ email: string; token: string; id: string }> {
   const email = emailFor(testInfo, label);
-  const token = (await createPAT(api, (await register(api, email)).access_token)).token;
+  const token = (await registeredPAT(api, email)).token;
   return { email, token, id: await accountId(api, token) };
 }
 

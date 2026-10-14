@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
-import { accountOf, expectRevoked, onboardingStepsOf, sessionOf } from "../../fixtures/assert/identity";
+import { accountOf, onboardingStepsOf } from "../../fixtures/assert/identity";
+import { expectRevoked, sessionOf } from "../../fixtures/assert/session";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import {
   anotherTabSignsIn,

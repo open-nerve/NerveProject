@@ -10,7 +10,7 @@ import {
   expectWorkspaceCreated,
   lastWorkspaceOf,
 } from "../../fixtures/assert/workspace";
-import { anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { deferred } from "../../fixtures/deferred";
 import { enabledWithin } from "../../fixtures/dialogs";
@@ -37,7 +37,7 @@ test("W1 (API): creating a workspace makes the caller its admin and only member;
   nerveWith,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = (await createPAT(api, (await register(api, email)).access_token)).token;
+  const pat = (await registeredPAT(api, email)).token;
   const slug = slugFor(testInfo);
   expect(await availability(api, pat, slug)).toEqual({ available: true });
 

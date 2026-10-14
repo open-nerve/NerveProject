@@ -8,7 +8,7 @@ import {
   type InvitationCreate,
 } from "../../fixtures/api";
 import { expectInvitations } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import { announced, closedByEscape, closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
@@ -30,11 +30,11 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const guestEmail = emailFor(testInfo, "guest");
-  const guest = (await createPAT(api, (await register(api, guestEmail)).access_token)).token;
+  const guest = (await registeredPAT(api, guestEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);

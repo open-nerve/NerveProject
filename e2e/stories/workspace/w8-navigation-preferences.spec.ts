@@ -8,7 +8,7 @@ import {
   type WorkspacePreferences,
 } from "../../fixtures/api";
 import { expectPreferences } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedWithin, pageBehindHidden } from "../../fixtures/dialogs";
 import { answerTo, bodiesSentTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
@@ -34,7 +34,7 @@ test("W8 (API): the settings are the defaults and nothing is stored until the fi
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = (await createPAT(api, (await register(api, email)).access_token)).token;
+  const pat = (await registeredPAT(api, email)).token;
   const slug = slugFor(testInfo);
   const other = slugFor(testInfo, "other");
   await createWorkspace(api, pat, { name: "Acme", slug });
@@ -58,7 +58,7 @@ test("W8 (API): the settings are the defaults and nothing is stored until the fi
 
   // Another member of the workspace reads the defaults, and nothing is stored for him.
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   await inviteAndAccept(api, pat, slug, { email: memberEmail, token: member }, 15);
   expect(await read(api, member, slug)).toEqual(defaults);
   await expectPreferences(db, slug, memberEmail, null);

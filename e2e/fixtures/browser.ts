@@ -157,3 +157,15 @@ export async function expectQuietConsole(
     .poll(() => ({ errors: watch.consoleErrors, warnings: watch.consoleWarnings }))
     .toEqual({ errors: [...(expected.errors ?? []), probe], warnings: [...(expected.warnings ?? []), probe] });
 }
+
+/**
+ * Checks that page's document, as it is now, holds none of emails: accounts' addresses that the page must not show its
+ * viewer (a guest, say). where names the page in the failure's message.
+ */
+export async function expectNoAddress(page: Page, emails: readonly string[], where: string): Promise<void> {
+  const html = await page.content();
+  expect(
+    emails.filter((email) => html.includes(email)),
+    `the addresses on ${where}`
+  ).toEqual([]);
+}

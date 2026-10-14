@@ -1,5 +1,5 @@
 import { accountOf, expectPasswordChanged, tokensOf } from "../../fixtures/assert/identity";
-import { bearer, createPAT, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
+import { bearer, createPAT, emailFor, login, password, recordOf, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { fieldBlock, registerOnboarded, submitPasswordChange } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -83,7 +83,7 @@ test("A7 (API): a personal access token changes the password; every session ends
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const pat = await registeredPAT(api, email);
   const change = (current: string) =>
     api.POST("/api/v0/me/change-password", {
       body: { current_password: current, new_password: newPassword },

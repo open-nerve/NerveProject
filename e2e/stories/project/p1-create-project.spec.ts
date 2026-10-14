@@ -7,7 +7,7 @@ import {
   type ProjectCreate,
 } from "../../fixtures/api";
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, named, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, named, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
 import { closedByComposingEscape, closedByEscape, composingEscape, hiddenWithin } from "../../fixtures/dialogs";
 import { pageContent, tabCycle } from "../../fixtures/project-pages";
@@ -60,11 +60,11 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const guestEmail = emailFor(testInfo, "guest");
-  const guest = (await createPAT(api, (await register(api, guestEmail)).access_token)).token;
+  const guest = (await registeredPAT(api, guestEmail)).token;
   const stranger = (await register(api, emailFor(testInfo, "stranger"))).access_token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug, timezone: "Asia/Shanghai" });

@@ -1,6 +1,7 @@
 import type { Browser, Page } from "@playwright/test";
 
-import { countIdentity, expectNothingAdded, expectSignedIn } from "../../fixtures/assert/identity";
+import { countIdentity, expectNothingAdded } from "../../fixtures/assert/identity";
+import { expectSignedIn } from "../../fixtures/assert/session";
 import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { bearer, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
 import { watchPage } from "../../fixtures/browser";

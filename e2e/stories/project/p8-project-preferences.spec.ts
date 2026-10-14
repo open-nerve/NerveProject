@@ -13,7 +13,7 @@ import {
   type ProjectPreferences,
   type ProjectPreferencesUpdate,
 } from "../../fixtures/api";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
@@ -112,9 +112,9 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);

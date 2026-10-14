@@ -83,9 +83,9 @@ sys.exit(1 if broken else 0)
 | `docs/v0/M4-issue-core/handoffs/M3-closeout.md`、`docs/v0/M5-files/handoffs/M3-closeout.md`、`docs/v0/M6-cycles-modules/handoffs/M3-closeout.md`、`docs/v0/M7-collaboration/handoffs/M3-closeout.md`、`docs/v0/M8-open-release/handoffs/M3-closeout.md` | M3 交给这个 M 的（新文件，spec 第 4 节） | 15 新 |
 | `docs/v0/frontend-changes.md` | 3.1 的 M3 一行、输入法和 P11 键盘两行；3.2 加收尾的 7 行 | 16 |
 | `docs/v0/plane-diff.md` | 邀请链接一行的 Phase 说法 | 16 |
-| `e2e/fixtures/assert/identity.ts` | 会话的断言移出，`accountStateOf` 经 `sessionsOf` | 14 |
+| `e2e/fixtures/assert/identity.ts` | 会话的断言移出，读账户的会话都经 `sessionsOf`，新账户经 `accountOf` | 14 |
 | `e2e/fixtures/assert/session.ts` | 会话的断言和 `sessionsOf`（新文件，从 `identity.ts` 拆出） | 14 新 |
-| `e2e/fixtures/auth.ts` | `registeredPAT(api, email)` | 14 |
+| `e2e/fixtures/auth.ts` | `registeredPAT(api, email, body)` | 14 |
 | `e2e/fixtures/browser.ts` | `expectNoAddress` 移来 | 14 |
 | `e2e/fixtures/dialogs.ts` | `modalDialog`、`pageBehindHidden`（Task 1）；`announced`（Task 2）；`composingKey`（Escape、Backspace）发两种顺序，`composingEscape` 经它（Task 10） | 1、2、10 |
 | `e2e/fixtures/menus.ts` | `chooseByKeyboard`：以键盘打开一行的菜单、选一项（新文件） | 8 新 |
@@ -14427,7 +14427,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `api/modules/project.yaml`、`e2e/fixtures/assert/identity.ts`、`e2e/fixtures/auth.ts`、`e2e/fixtures/browser.ts`、`e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a11-api-tokens.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a6-sign-out.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p3-project-settings.spec.ts`、`e2e/stories/project/p4-archive.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w5-invitation-link.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`e2e/stories/workspace/w8-navigation-preferences.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts`、`server/internal/modules/project/adapter/http/projects_test.go`、`server/internal/modules/project/adapter/http/update_test.go`、`server/internal/platform/jobs/jobs_test.go`、`web/apps/web/core/store/member/project/project-member.store.test.ts`
 
 **Interfaces:**（spec 2.13）
-- `e2e/fixtures/assert/session.ts`（新文件，165 行）：会话的断言从 `identity.ts` 移来，`sessionsOf(db, userId)`；`identity.ts` 485 → 329 行，`accountStateOf` 经 `sessionsOf`。`expectNoAddress` 移到 `browser.ts`。`auth.ts` 的 `registeredPAT(api, email)`：23 个故事用它。
+- `e2e/fixtures/assert/session.ts`（新文件，162 行）：会话的断言从 `identity.ts` 移来，`sessionsOf(db, userId)`；`identity.ts` 485 → 321 行。读一个账户的会话都经 `sessionsOf`（`accountStateOf`、`expectRegistered`、`expectCreated`、`expectPasswordChanged`、`expectAllSessionsRevoked`），`expectNewAccount` 读账户经 `accountOf`。`expectNoAddress` 移到 `browser.ts`。`auth.ts` 的 `registeredPAT(api, email, body)`（`body` 是 `createPAT` 的，默认为空）：23 个故事用它，A11 的带标签的 "admin" 令牌也经它。
 - `server/internal/platform/jobs/jobs_test.go`：`startLimit` 2 秒；定期的运行按 `ScheduledAt` 排序，每两次之间 1 秒；取消的上界 `timeout + cancelGrace`。项目的 HTTP 测试：`identifierTakenJSON`、`nameTakenJSON`。`project-member.store.test.ts` 的资料来自 `userOf`。
 - `api/modules/project.yaml`：`identifier`、`default_assignee_id`、`guest_view_all_features`、两处 `archive_in` 的说明说 nerve 对字段做什么；形状不变。
 
@@ -14629,7 +14629,7 @@ const startLimit = 2 * time.Second
 
 - [ ] **Step 4: e2e 的 fixture**
 
-`e2e/fixtures/assert/identity.ts`（修改，6 处）：
+`e2e/fixtures/assert/identity.ts`（修改，9 处）：
 
 ````old e2e/fixtures/assert/identity.ts
 import { expect, type Page } from "@playwright/test";
@@ -14749,6 +14749,53 @@ async function expectNewSession(db: Database, userId: string | undefined, s: Sig
 // design 8.2).
 ````
 ````old e2e/fixtures/assert/identity.ts
+async function expectNewAccount(db: Database, typed: string): Promise<string | undefined> {
+  const email = typed.toLowerCase();
+  const users = await db.query<{ id: string; password: string; display_name: string; is_active: boolean }>(
+    "SELECT id, password, display_name, is_active FROM users WHERE email = $1",
+    [email]
+  );
+  expect(users).toHaveLength(1);
+  const [user] = users;
+  expect(user?.password).toMatch(/^\$argon2id\$/);
+  expect(user?.display_name).toBe(shownNameOf(email));
+  expect(user?.is_active).toBe(true);
+````
+````new e2e/fixtures/assert/identity.ts
+async function expectNewAccount(db: Database, typed: string): Promise<string> {
+  const email = typed.toLowerCase();
+  const user = await accountOf(db, email);
+  expect(user.password).toMatch(/^\$argon2id\$/);
+  expect(user.display_name).toBe(shownNameOf(email));
+  expect(user.is_active).toBe(true);
+````
+````old e2e/fixtures/assert/identity.ts
+    [user?.id]
+  );
+````
+````new e2e/fixtures/assert/identity.ts
+    [user.id]
+  );
+````
+````old e2e/fixtures/assert/identity.ts
+  return user?.id;
+}
+
+/** A1: registration added a new account and its one session, a new one. */
+export async function expectRegistered(db: Database, r: SignIn): Promise<void> {
+  const id = await expectNewAccount(db, r.email);
+  expect(await db.query("SELECT id FROM auth_sessions WHERE user_id = $1", [id])).toHaveLength(1);
+````
+````new e2e/fixtures/assert/identity.ts
+  return user.id;
+}
+
+/** A1: registration added a new account and its one session, a new one. */
+export async function expectRegistered(db: Database, r: SignIn): Promise<void> {
+  const id = await expectNewAccount(db, r.email);
+  expect(await sessionsOf(db, id)).toHaveLength(1);
+````
+````old e2e/fixtures/assert/identity.ts
   expect(await db.query("SELECT id FROM auth_sessions WHERE user_id = $1", [id])).toEqual([]);
 }
 
@@ -14813,7 +14860,7 @@ export async function expectRevoked(
   expect(session.revoke_reason).toBe(reason);
 ````
 ````new e2e/fixtures/assert/identity.ts
-  expect(await db.query("SELECT id FROM auth_sessions WHERE user_id = $1", [id])).toEqual([]);
+  expect(await sessionsOf(db, id)).toEqual([]);
 ````
 ````old e2e/fixtures/assert/identity.ts
   const sessions = await db.query<SessionRow>(
@@ -14824,6 +14871,15 @@ export async function expectRevoked(
 ````
 ````new e2e/fixtures/assert/identity.ts
   return { account, sessions: await sessionsOf(db, account.id), tokens: await tokensOf(db, account.id) };
+````
+````old e2e/fixtures/assert/identity.ts
+  const sessions = await db.query<{ id: string; revoke_reason: string | null }>(
+    "SELECT id, revoke_reason FROM auth_sessions WHERE user_id = $1",
+    [before.id]
+  );
+````
+````new e2e/fixtures/assert/identity.ts
+  const sessions = await sessionsOf(db, before.id);
 ````
 ````old e2e/fixtures/assert/identity.ts
 
@@ -14844,7 +14900,7 @@ export async function expectNoAddress(page: Page, emails: readonly string[], whe
 
 ````
 
-`e2e/fixtures/assert/session.ts`（新文件，165 行）：
+`e2e/fixtures/assert/session.ts`（新文件，162 行）：
 
 ````file e2e/fixtures/assert/session.ts
 import { createHash } from "node:crypto";
@@ -14989,13 +15045,10 @@ export async function expectAllSessionsRevoked(
   userId: string,
   reason: "deactivated" | "password_reset" | "email_changed"
 ): Promise<void> {
-  const sessions = await db.query<{ id: string; revoked: boolean; revoke_reason: string | null }>(
-    "SELECT id, revoked_at IS NOT NULL AS revoked, revoke_reason FROM auth_sessions WHERE user_id = $1",
-    [userId]
-  );
+  const sessions = await sessionsOf(db, userId);
   expect(sessions.length).toBeGreaterThan(0);
   for (const s of sessions) {
-    expect({ revoked: s.revoked, revoke_reason: s.revoke_reason }, `session ${s.id}`).toEqual({
+    expect({ revoked: s.revoked_at !== null, revoke_reason: s.revoke_reason }, `session ${s.id}`).toEqual({
       revoked: true,
       revoke_reason: reason,
     });
@@ -15024,9 +15077,13 @@ export async function expectRevoked(
 ````new e2e/fixtures/auth.ts
 }
 
-/** A personal access token of a new account of email: the account registered, then the token created. */
-export async function registeredPAT(api: Api, email: string): Promise<ApiTokenCreated> {
-  return createPAT(api, (await register(api, email)).access_token);
+/** A personal access token of a new account of email: the account registered, then the token created with body. */
+export async function registeredPAT(
+  api: Api,
+  email: string,
+  body: components["schemas"]["ApiTokenCreate"] = {}
+): Promise<ApiTokenCreated> {
+  return createPAT(api, (await register(api, email)).access_token, body);
 }
 
 /** Signs up the account of label in this run of the test, and returns its address, a personal access token of it and its id. */
@@ -15098,13 +15155,19 @@ import { bearer, emailFor, password, register, registeredPAT } from "../../fixtu
   const stepsBefore = await onboardingStepsOf(db, email);
 ````
 
-`e2e/stories/identity/a11-api-tokens.spec.ts`（修改，2 处）：
+`e2e/stories/identity/a11-api-tokens.spec.ts`（修改，3 处）：
 
 ````old e2e/stories/identity/a11-api-tokens.spec.ts
 import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register } from "../../fixtures/auth";
 ````
 ````new e2e/stories/identity/a11-api-tokens.spec.ts
-import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register, registeredPAT } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, createPAT, emailFor, login, registeredPAT } from "../../fixtures/auth";
+````
+````old e2e/stories/identity/a11-api-tokens.spec.ts
+  const admin = await createPAT(api, (await register(api, emailFor(testInfo))).access_token, { label: "admin" });
+````
+````new e2e/stories/identity/a11-api-tokens.spec.ts
+  const admin = await registeredPAT(api, emailFor(testInfo), { label: "admin" });
 ````
 ````old e2e/stories/identity/a11-api-tokens.spec.ts
   const other = await createPAT(api, (await register(api, emailFor(testInfo, "other"))).access_token);
@@ -15755,12 +15818,13 @@ git add api/modules/project.yaml e2e/fixtures/assert/identity.ts e2e/fixtures/as
 git commit -m "test(M3/closeout): the session assertions have a file of their own, stories register a PAT by one helper, the jobs tests have deadlines
 
 The sessions' assertions move from identity.ts to session.ts, with
-sessionsOf, and expectNoAddress to browser.ts; registeredPAT(api, email)
-replaces 23 stories' inline register-then-createPAT. The jobs tests tell
-a slow start from none by a deadline and sort the periodic runs; the
-project HTTP tests share the taken-identifier and taken-name bodies. The
-project contract's five sentences about work items say what nerve does
-with the fields.
+sessionsOf, through which every read of an account's sessions goes, and
+expectNoAddress to browser.ts; registeredPAT(api, email, body) replaces
+23 stories' inline register-then-createPAT. The jobs tests tell a slow
+start from none by a deadline and sort the periodic runs; the project
+HTTP tests share the taken-identifier and taken-name bodies. The project
+contract's five sentences about work items say what nerve does with the
+fields.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```

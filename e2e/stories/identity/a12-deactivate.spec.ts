@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Api } from "../../fixtures/api";
 import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fixtures/assert/identity";
 import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
-import { bearer, createPAT, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
+import { bearer, createPAT, emailFor, login, password, recordOf, register, registeredPAT } from "../../fixtures/auth";
 import { deferred } from "../../fixtures/deferred";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedByEscape } from "../../fixtures/dialogs";
@@ -162,7 +162,7 @@ test("A12 (API): a token deactivates the account; nerve users activate brings it
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const pat = await registeredPAT(api, email);
   await onboard(api, pat.token);
   // Another account, which nothing here changes.
   const other = emailFor(testInfo, "other");

@@ -10,7 +10,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "../../fixtures/assert/workspace";
-import { accountId, bearer, createPAT, emailFor, register, shownNameOf } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
@@ -39,7 +39,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   // carol's address had an invitation to acme, which the admin deleted before she joined.
@@ -57,7 +57,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
     await Promise.all(
       ["bob", "carol", "dave", "erin"].map(async (name) => {
         const email = emailFor(testInfo, name);
-        const token = (await createPAT(api, (await register(api, email)).access_token)).token;
+        const token = (await registeredPAT(api, email)).token;
         await inviteAndAccept(api, admin, slug, { email, token }, 15);
         return [name, { email, token, id: await accountId(api, token) }] as const;
       })
