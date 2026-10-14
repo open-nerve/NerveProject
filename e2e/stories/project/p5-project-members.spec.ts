@@ -251,6 +251,13 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   await expect(rolesHeading).toHaveAttribute("aria-expanded", "true");
   const roleOption = (role: string) =>
     rolesHeading.locator("xpath=../..").getByRole("button", { name: role, exact: true });
+  // Enter on the heading hides the roles, which it says, and Enter again shows them
+  await page.keyboard.press("Enter");
+  await expect(rolesHeading).toHaveAttribute("aria-expanded", "false");
+  await expect(roleOption("Admin")).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(rolesHeading).toHaveAttribute("aria-expanded", "true");
+  await expect(roleOption("Admin")).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(roleOption("Admin")).toBeFocused();
   await page.keyboard.press("Space");
@@ -261,7 +268,8 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   await expect(roleOption("Admin")).toHaveAttribute("aria-pressed", "false");
   await expect(memberRow(page, bob.email)).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(rolesHeading).toHaveCount(0);
+  // closed, the popover is out of the page, not hidden in it
+  await expect(page.getByRole("button", { name: /^Roles/, includeHidden: true })).toHaveCount(0);
   await expect(filters).toBeFocused();
   await expect(filters).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("Enter");

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { pageSettled, signedIn } from "@/lib/auth/fake-tab";
@@ -14,23 +13,16 @@ import { projectOf, stateOf } from "@/store/project/fake-projects";
 import { StateDelete } from "./delete";
 
 // Which states the state settings offer to delete, and what confirming it sends (M3 design 2 P6, 3.17, 7.6): the
-// button renders on the server, with a stand-in for its dialog (fake-controls.ts), which keeps the props it was given;
-// the test presses the dialog's button, as a person would. A default and a group's only state cannot be deleted, as
-// nerve refuses (409), and their button is disabled, its tooltip (its label rendered beside it) saying why; nerve's
-// refusal all the same (another tab changed them meanwhile) is said in a toast. Its session is fake-tab.ts's; its
-// texts are the keys of the page's language (fake-i18n.ts).
+// button renders on the server, with stand-ins for its dialog, which keeps the props it was given, and its tooltip
+// (fake-controls.ts); the test presses the dialog's button, as a person would. A default and a group's only state
+// cannot be deleted, as nerve refuses (409), and their button is disabled, its tooltip (its label rendered beside it)
+// saying why; nerve's refusal all the same (another tab changed them meanwhile) is said in a toast. Its session is
+// fake-tab.ts's; its texts are the keys of the page's language (fake-i18n.ts).
 
 const store = vi.hoisted(() => ({ deleteState: vi.fn() }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => store }));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
-vi.mock("@makeplane/propel/components/tooltip", () => ({
-  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
-    <>
-      {label}
-      {children}
-    </>
-  ),
-}));
+vi.mock("@makeplane/propel/components/tooltip", () => import("@/lib/fake-controls"));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));

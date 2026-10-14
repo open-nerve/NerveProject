@@ -143,6 +143,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/editor/embeds/mentions/user.tsx` | 角色名经 `ROLE_DETAILS` | 6 |
 | `web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx` | 工作区经 `useRouteWorkspace()` | 11 |
 | `web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx` | 组字经 `isComposing` | 10 |
+| `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.test.tsx` | 新文件：筛选默认的按钮（服务端渲染：一个按钮，以标题为名，说出关上；关上的弹层不在页面里） | 12 |
 | `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx` | 筛选的弹层：默认的按钮就是 `Popover.Button`（以 `title` 为名，说出是否展开，Escape 之后焦点回到它，宽、窄两种内容在它里面）；弹层 `unmount={false}`，离开的过渡中又打开时也随焦点走出关上 | 12 |
 | `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx` | 筛选的共用件：展开按钮以标题为名、`aria-expanded`，选项 `aria-pressed`（F12） | 12 |
 | `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx`、`web/apps/web/core/components/issues/workspace-draft/quick-action.tsx` | `CustomMenu` 的调用方：删去 `useCaptureForOutsideClick`（Headless UI 自己在捕获阶段检测点外面） | 8 |
@@ -159,7 +160,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/power-k/ui/modal/shortcuts-root.tsx` | 经 `ModalCore`，标题和搜索框经 `t()`，关闭按钮在标题之外，`autoFocus` 写明理由 | 2 |
 | `web/apps/web/core/components/power-k/ui/modal/wrapper.tsx` | 经 `ModalCore`（Task 2）；组字的守卫（Task 10） | 2、10 |
 | `web/apps/web/core/components/profile/sidebar.tsx` | `IconButton` 的名字（Task 7）；工作区经 `useRouteWorkspace()`（Task 11） | 7、11 |
-| `web/apps/web/core/components/project-states/create-update/create-update.test.tsx`、`web/apps/web/core/components/project-states/options/delete.test.tsx` | 读键的测试 | 6 |
+| `web/apps/web/core/components/project-states/create-update/create-update.test.tsx`、`web/apps/web/core/components/project-states/options/delete.test.tsx` | 读键的测试（Task 6）；`delete.test.tsx` 的 tooltip 替身改用 `fake-controls.ts` 的（Task 12） | 6、12 |
 | `web/apps/web/core/components/project-states/create-update/create.tsx`、`web/apps/web/core/components/project-states/create-update/update.tsx` | 状态的英文经 `t()`、组的名字（Task 6） | 6 |
 | `web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx` | 状态的英文经 `t()`、组的名字（Task 6）；一行的按钮、组的添加以它们的东西为名（Task 8） | 6、8 |
 | `web/apps/web/core/components/project-states/state-item-title.tsx` | 一行的编辑以状态为名，设为默认收到状态的名字（Task 8） | 8 |
@@ -168,7 +169,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/project/add-project-members-modal.tsx` | 项目的弹窗和设置的英文经 `t()`，一句一个键；它们的 vitest | 5、6 |
 | `web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮；成员页的筛选是弹层 | 12 |
 | `web/apps/web/core/components/project/applied-filters/root.test.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 新 |
-| `web/apps/web/core/components/project/card.test.tsx` | 卡片的文字（Task 5、12）；设置的链接的名字（Task 5） | 5、12 |
+| `web/apps/web/core/components/project/card.test.tsx` | 卡片的文字（Task 5、12）；设置的链接的名字（Task 5）；tooltip 的替身用 `fake-controls.ts` 的（Task 12） | 5、12 |
 | `web/apps/web/core/components/project/card.tsx` | 项目页的英文（Task 5、12）；设置的链接的名字（Task 5） | 5、12 |
 | `web/apps/web/core/components/project/dropdowns/filters/lead.tsx` | 筛选的名字、选项和移除按钮经 `t()`；负责人的筛选是成员筛选的另一个调用；成员筛选的按钮 | 12 删除 |
 | `web/apps/web/core/components/project/form-loader.tsx`、`web/apps/web/core/components/project/settings/helper.tsx` | 没有用到的加载、包了一层的开关删除 | 13 删除 |
@@ -216,7 +217,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/layouts/auth-layout/workspace-wrapper.tsx` | "找不到工作区"的标题经 `PageHead` | 4 |
 | `web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts` | `problemCode()`；它的测试 | 9 |
 | `web/apps/web/core/lib/fake-i18n-values.ts` | 替身：文字是键和它收到的值（新文件） | 5 新 |
-| `web/apps/web/core/lib/fake-controls.ts` | 替身：`AlertModalCore` 的文字（Task 6）；开关的名字（Task 13） | 6、13 |
+| `web/apps/web/core/lib/fake-controls.ts` | 替身：`AlertModalCore` 的文字（Task 6）；propel 的 tooltip，标签在它旁边（Task 12）；开关的名字（Task 13） | 6、12、13 |
 | `web/apps/web/core/store/command-palette.store.ts` | `getIsProjectListOpen` 对没有展开、收起过的项目给 `false`（原来给 `undefined`，与它的类型不符） | 8 |
 | `web/apps/web/core/store/member/project/project-member.store.test.ts` | 资料来自 `userOf` | 14 |
 | `web/apps/web/package.json` | web 的 oxlint 上限 303 → 301（Task 2）；301 → 298（Task 8）；298 → 296（Task 11）；296 → 293（Task 12） | 2、8、11、12 |
@@ -11499,8 +11500,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 12: 项目列表页、侧边栏和标签栏上的英文；筛选的名字
 
 **Files:**
-- Create: `web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx`、`web/apps/web/core/components/project/applied-filters/root.test.tsx`
-- Modify: `e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx`、`web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/card.test.tsx`、`web/apps/web/core/components/project/card.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx`、`web/apps/web/core/components/project/header.tsx`、`web/apps/web/core/components/sidebar/sidebar-wrapper.tsx`、`web/apps/web/package.json`、`web/packages/constants/src/filter.ts`、`web/packages/constants/src/project.ts`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json`、`web/packages/i18n/src/locales/zh-CN/project.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
+- Create: `web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx`、`web/apps/web/core/components/project/applied-filters/root.test.tsx`
+- Modify: `e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx`、`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx`、`web/apps/web/core/components/project/applied-filters/access.tsx`、`web/apps/web/core/components/project/applied-filters/date.tsx`、`web/apps/web/core/components/project/applied-filters/members.tsx`、`web/apps/web/core/components/project/applied-filters/project-display-filters.tsx`、`web/apps/web/core/components/project/applied-filters/root.tsx`、`web/apps/web/core/components/project/card.test.tsx`、`web/apps/web/core/components/project/card.tsx`、`web/apps/web/core/components/project/dropdowns/filters/access.tsx`、`web/apps/web/core/components/project/dropdowns/filters/created-at.tsx`、`web/apps/web/core/components/project/dropdowns/filters/member-list.tsx`、`web/apps/web/core/components/project/dropdowns/filters/members.tsx`、`web/apps/web/core/components/project/dropdowns/filters/root.tsx`、`web/apps/web/core/components/project/header.tsx`、`web/apps/web/core/components/project-states/options/delete.test.tsx`、`web/apps/web/core/components/sidebar/sidebar-wrapper.tsx`、`web/apps/web/core/lib/fake-controls.ts`、`web/apps/web/package.json`、`web/packages/constants/src/filter.ts`、`web/packages/constants/src/project.ts`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/navigation.json`、`web/packages/i18n/src/locales/en/project.json`、`web/packages/i18n/src/locales/en/workspace.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/navigation.json`、`web/packages/i18n/src/locales/zh-CN/project.json`、`web/packages/i18n/src/locales/zh-CN/workspace.json`
 - Delete: `web/apps/web/core/components/project/dropdowns/filters/lead.tsx`
 
 **Interfaces:**（spec 2.8）
@@ -11508,7 +11509,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - 筛选：`@nerve/constants` 的 `PROJECT_FILTER_I18N_LABEL`（下拉框和已选筛选的一栏共用）；`lead.tsx`（`members.tsx` 的副本）删除，`FilterMembers` 收 `title`；网络按页面上的名字搜索；创建日期的选项 `i18n_name`；已选筛选的 9 个移除按钮名为 `common.remove_item`；数目的提示。成员筛选：角色经 `ROLE_DETAILS` 和"已停用"；它是项目列表的筛选所用的弹层 `FiltersDropdown`（Task 8 交来：原来是 `CustomMenu`，选项不是菜单项，键盘到不了），按钮是弹层自己的（`menuButton`，按钮里不再有按钮）：Tab 从按钮走到角色的标题和角色，Tab 走出时关上。`FiltersDropdown` 在根上改（spec 2.9，Task 12 的预审）：默认的按钮（不传 `menuButton` 的 15 个调用方）就是 `Popover.Button`，以 `title` 为名（`aria-label`），宽、窄两种内容是它里面的两个 `span`，样子不变；`Popover.Panel` 的 `unmount={false}`：Headless UI 在焦点走出时关上弹层（进它打开的弹窗时不关），面板却在关上时就注销自己，离开的过渡中又打开的那一次不再关上；不注销，离开之后由 `Transition` 移出页面。调用方不改（spec A.4 的表）。筛选的共用件在根上改（F12）：`FilterHeader` 的展开按钮 `aria-label`、`aria-expanded`，`FilterOption` 的 `aria-pressed`。
 - 这几个文件自己的警告：已选筛选的两个数组改为 `Set`；筛选的搜索框的 `autoFocus` 写明理由（`oxlint-disable-next-line`）。web 的上限 296 → 293。
 
-**Tests:** `tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`（新文件）；`card.test.tsx`、`tab-navigation-overflow-menu.test.tsx` 读键。S7：第二个加扩展侧边栏的标题；第四个（新）：项目页的标题、卡片、筛选、已选筛选的一栏、已归档、成员筛选（以"角色"找到标题的按钮）；项目列表的筛选以键盘打开（`aria-expanded`），"自定义"的弹窗留着（`closedWithin`），Escape 关上它之后焦点回到筛选里的"自定义"，Escape 之后焦点回到"筛选"；立即再打开，从"自定义"按 Tab，焦点在"添加项目"上，筛选关上。P5：成员筛选以键盘走一遍（Enter 打开，按钮说出展开，Tab 到"Roles"，空格选上 Admin、弹层留着，Escape 和 Tab 走出关上它）。
+**Tests:** `dropdown.test.tsx`（筛选默认的按钮：服务端渲染，一个按钮，以标题为名，说出关上，关上的弹层不在页面里）、`tab-navigation-visible-item.test.tsx`、`applied-filters/root.test.tsx`（新文件）；`card.test.tsx`、`delete.test.tsx` 的 tooltip 替身是 `fake-controls.ts` 的；`card.test.tsx`、`tab-navigation-overflow-menu.test.tsx` 读键。S7：第二个加扩展侧边栏的标题；第四个（新）：项目页的标题、卡片、筛选、已选筛选的一栏、已归档、成员筛选（以"角色"找到标题的按钮）；项目列表的筛选以键盘打开（`aria-expanded`），"自定义"的弹窗留着（`closedWithin`），Escape 关上它之后焦点回到筛选里的"自定义"，Escape 之后焦点回到"筛选"；立即再打开，从"自定义"按 Tab，焦点在"添加项目"上，筛选关上。P5：成员筛选以键盘走一遍（Enter 打开，按钮说出展开，Tab 到"Roles"，在它上面按 Enter 收起、再按展开角色，空格选上 Admin、弹层留着，Escape 和 Tab 走出关上它，关上之后弹层不在页面里）。
 
 - [ ] **Step 1: 页面和筛选**
 
@@ -12523,6 +12524,13 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   await expect(rolesHeading).toHaveAttribute("aria-expanded", "true");
   const roleOption = (role: string) =>
     rolesHeading.locator("xpath=../..").getByRole("button", { name: role, exact: true });
+  // Enter on the heading hides the roles, which it says, and Enter again shows them
+  await page.keyboard.press("Enter");
+  await expect(rolesHeading).toHaveAttribute("aria-expanded", "false");
+  await expect(roleOption("Admin")).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(rolesHeading).toHaveAttribute("aria-expanded", "true");
+  await expect(roleOption("Admin")).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(roleOption("Admin")).toBeFocused();
   await page.keyboard.press("Space");
@@ -12533,7 +12541,8 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   await expect(roleOption("Admin")).toHaveAttribute("aria-pressed", "false");
   await expect(memberRow(page, bob.email)).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(rolesHeading).toHaveCount(0);
+  // closed, the popover is out of the page, not hidden in it
+  await expect(page.getByRole("button", { name: /^Roles/, includeHidden: true })).toHaveCount(0);
   await expect(filters).toBeFocused();
   await expect(filters).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("Enter");
@@ -12652,6 +12661,41 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
 test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({
 ````
 
+`web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.test.tsx`（新文件，30 行）：
+
+````file web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.test.tsx
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { FiltersDropdown } from "./dropdown";
+
+// The button of a filters' popover given no button of its own (M3 closeout spec 2.9): one button, Headless UI's
+// Popover.Button itself, named by the title whatever it shows (a narrow header shows the mini icon alone), and saying
+// whether the panel is open; closed, the panel is out of the page. The popover renders on the server, as a page first
+// shows it: these tests run in Node, with no page to click in, so opening it is the stories' (S7, by the keyboard).
+
+describe("FiltersDropdown's own button", () => {
+  it("is the popover's one button, named by the title beside a mini icon, saying the panel is closed and out of the page", () => {
+    const markup = renderToStaticMarkup(
+      <FiltersDropdown title="Display" miniIcon={<svg data-mini-icon="" />}>
+        <p>the panel</p>
+      </FiltersDropdown>
+    );
+    const buttons = markup.match(/<button[^>]*>/g) ?? [];
+    expect(buttons).toHaveLength(1);
+    expect([buttons[0]?.includes('aria-label="Display"'), buttons[0]?.includes('aria-expanded="false"')]).toEqual([
+      true,
+      true,
+    ]);
+    expect([markup.includes("data-mini-icon"), markup.includes("the panel")]).toEqual([true, false]);
+  });
+});
+````
+
 `web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`（修改，1 处）：
 
 ````old web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx
@@ -12728,6 +12772,43 @@ describe("the menu of a tab of a project's header", () => {
 });
 ````
 
+`web/apps/web/core/components/project-states/options/delete.test.tsx`（修改，3 处）：
+
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+import { renderToStaticMarkup } from "react-dom/server";
+````
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+// button renders on the server, with a stand-in for its dialog (fake-controls.ts), which keeps the props it was given;
+// the test presses the dialog's button, as a person would. A default and a group's only state cannot be deleted, as
+// nerve refuses (409), and their button is disabled, its tooltip (its label rendered beside it) saying why; nerve's
+// refusal all the same (another tab changed them meanwhile) is said in a toast. Its session is fake-tab.ts's; its
+// texts are the keys of the page's language (fake-i18n.ts).
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+// button renders on the server, with stand-ins for its dialog, which keeps the props it was given, and its tooltip
+// (fake-controls.ts); the test presses the dialog's button, as a person would. A default and a group's only state
+// cannot be deleted, as nerve refuses (409), and their button is disabled, its tooltip (its label rendered beside it)
+// saying why; nerve's refusal all the same (another tab changed them meanwhile) is said in a toast. Its session is
+// fake-tab.ts's; its texts are the keys of the page's language (fake-i18n.ts).
+````
+````old web/apps/web/core/components/project-states/options/delete.test.tsx
+vi.mock("@makeplane/propel/components/tooltip", () => ({
+  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
+    <>
+      {label}
+      {children}
+    </>
+  ),
+}));
+````
+````new web/apps/web/core/components/project-states/options/delete.test.tsx
+vi.mock("@makeplane/propel/components/tooltip", () => import("@/lib/fake-controls"));
+````
+
 `web/apps/web/core/components/project/applied-filters/root.test.tsx`（新文件，50 行）：
 
 ````file web/apps/web/core/components/project/applied-filters/root.test.tsx
@@ -12783,13 +12864,25 @@ describe("the bar of the projects' filters applied", () => {
 });
 ````
 
-`web/apps/web/core/components/project/card.test.tsx`（修改，3 处）：
+`web/apps/web/core/components/project/card.test.tsx`（修改，4 处）：
 
+````old web/apps/web/core/components/project/card.test.tsx
+// The card renders on the server, at the workspace's projects, with stand-ins for its menu and its buttons
+// (fake-controls.ts, which keeps the items and props it was given), for its dialogs and for @nerve/i18n, whose text is
+// its key, then the values it was given (fake-i18n-values.ts); the caller's permissions are the store's own, over acme
+// and its project web as nerve lists them to him (fake-permissions.ts).
+````
+````new web/apps/web/core/components/project/card.test.tsx
+// The card renders on the server, at the workspace's projects, with stand-ins for its menu, its buttons and its
+// tooltips (fake-controls.ts, which keeps the items and props it was given, a tooltip's label shown beside what it is
+// the tooltip of), for its dialogs and for @nerve/i18n, whose text is its key, then the values it was given
+// (fake-i18n-values.ts); the caller's permissions are the store's own, over acme and its project web as nerve lists
+// them to him (fake-permissions.ts).
+````
 ````old web/apps/web/core/components/project/card.test.tsx
 import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
 ````
 ````new web/apps/web/core/components/project/card.test.tsx
-import type { ReactNode } from "react";
 import type { Project, ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import { renderFormattedDate } from "@nerve/utils";
 ````
@@ -12799,14 +12892,7 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 ````new web/apps/web/core/components/project/card.test.tsx
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 // a tooltip shows its label beside what it is the tooltip of
-vi.mock("@makeplane/propel/components/tooltip", () => ({
-  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
-    <>
-      <span data-tooltip="">{label}</span>
-      {children}
-    </>
-  ),
-}));
+vi.mock("@makeplane/propel/components/tooltip", () => import("@/lib/fake-controls"));
 ````
 ````old web/apps/web/core/components/project/card.test.tsx
   });
@@ -12838,6 +12924,40 @@ vi.mock("@makeplane/propel/components/tooltip", () => ({
   it.each<Caller & { linked: boolean }>([
 ````
 
+`web/apps/web/core/lib/fake-controls.ts`（修改，3 处）：
+
+````old web/apps/web/core/lib/fake-controls.ts
+// A stand-in for the UI kit's controls a page renders (@nerve/ui's selects, modals and context menu, propel's input,
+// button, switch and menu), for the tests of those pages: a test file mocks each such module with this one, for
+// instance vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in
+// `shown` the props each control was given. A control renders nothing, but ModalCore its children (its form is the
+// page's), and a menu its items, as it shows them once open.
+````
+````new web/apps/web/core/lib/fake-controls.ts
+// A stand-in for the UI kit's controls a page renders (@nerve/ui's selects, modals and context menu, propel's input,
+// button, switch, menu and tooltip), for the tests of those pages: a test file mocks each such module with this one,
+// for instance vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in
+// `shown` the props each control was given. A control renders nothing, but ModalCore its children (its form is the
+// page's), a menu its items, as it shows them once open, and a tooltip its label beside what it is the tooltip of.
+````
+````old web/apps/web/core/lib/fake-controls.ts
+import { Children, isValidElement } from "react";
+````
+````new web/apps/web/core/lib/fake-controls.ts
+import { Children, Fragment, createElement, isValidElement } from "react";
+````
+````old web/apps/web/core/lib/fake-controls.ts
+export function ModalCore(props: { children?: ReactNode }) {
+````
+````new web/apps/web/core/lib/fake-controls.ts
+/** propel's tooltip: its label, in a span marked data-tooltip, then what it is the tooltip of. */
+export function Tooltip({ label, children }: { label: ReactNode; children?: ReactNode }) {
+  return createElement(Fragment, null, createElement("span", { "data-tooltip": "" }, label), children);
+}
+
+export function ModalCore(props: { children?: ReactNode }) {
+````
+
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
@@ -12858,7 +12978,7 @@ Expected: 117 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx' web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx web/apps/web/core/components/project/applied-filters/access.tsx web/apps/web/core/components/project/applied-filters/date.tsx web/apps/web/core/components/project/applied-filters/members.tsx web/apps/web/core/components/project/applied-filters/project-display-filters.tsx web/apps/web/core/components/project/applied-filters/root.test.tsx web/apps/web/core/components/project/applied-filters/root.tsx web/apps/web/core/components/project/card.test.tsx web/apps/web/core/components/project/card.tsx web/apps/web/core/components/project/dropdowns/filters/access.tsx web/apps/web/core/components/project/dropdowns/filters/created-at.tsx web/apps/web/core/components/project/dropdowns/filters/lead.tsx web/apps/web/core/components/project/dropdowns/filters/member-list.tsx web/apps/web/core/components/project/dropdowns/filters/members.tsx web/apps/web/core/components/project/dropdowns/filters/root.tsx web/apps/web/core/components/project/header.tsx web/apps/web/core/components/sidebar/sidebar-wrapper.tsx web/apps/web/package.json web/packages/constants/src/filter.ts web/packages/constants/src/project.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/navigation.json web/packages/i18n/src/locales/en/project.json web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/navigation.json web/packages/i18n/src/locales/zh-CN/project.json web/packages/i18n/src/locales/zh-CN/workspace.json
+git add e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s7-chinese.spec.ts 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx' 'web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx' web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.test.tsx web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/dropdown.tsx web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-header.tsx web/apps/web/core/components/issues/issue-layouts/filters/header/helpers/filter-option.tsx web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx web/apps/web/core/components/project/applied-filters/access.tsx web/apps/web/core/components/project/applied-filters/date.tsx web/apps/web/core/components/project/applied-filters/members.tsx web/apps/web/core/components/project/applied-filters/project-display-filters.tsx web/apps/web/core/components/project/applied-filters/root.test.tsx web/apps/web/core/components/project/applied-filters/root.tsx web/apps/web/core/components/project/card.test.tsx web/apps/web/core/components/project/card.tsx web/apps/web/core/components/project/dropdowns/filters/access.tsx web/apps/web/core/components/project/dropdowns/filters/created-at.tsx web/apps/web/core/components/project/dropdowns/filters/lead.tsx web/apps/web/core/components/project/dropdowns/filters/member-list.tsx web/apps/web/core/components/project/dropdowns/filters/members.tsx web/apps/web/core/components/project/dropdowns/filters/root.tsx web/apps/web/core/components/project/header.tsx web/apps/web/core/components/project-states/options/delete.test.tsx web/apps/web/core/components/sidebar/sidebar-wrapper.tsx web/apps/web/core/lib/fake-controls.ts web/apps/web/package.json web/packages/constants/src/filter.ts web/packages/constants/src/project.ts web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/navigation.json web/packages/i18n/src/locales/en/project.json web/packages/i18n/src/locales/en/workspace.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/navigation.json web/packages/i18n/src/locales/zh-CN/project.json web/packages/i18n/src/locales/zh-CN/workspace.json
 ```
 ```bash
 git commit -m "feat(M3/closeout): the projects page, the sidebar's heading and the tab bar speak the user's language
@@ -12880,7 +13000,9 @@ and takes the focus back on Escape, its look unchanged. Every filters'
 panel keeps its place in Headless UI's state as it closes, so one opened
 again during its leave still closes as the focus moves on past it. The
 filters' shared heading and option say their names and states. P5 works
-the members' filter by the keyboard alone, S7 the projects'.
+the members' filter by the keyboard alone, S7 the projects'; a vitest
+renders the popover's own button, one, named by its title beside a mini
+icon. The tests' tooltip stand-in is fake-controls.ts's.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -12914,6 +13036,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T12.23` | 每个筛选的弹层取 Headless UI 的 `focus`（原来 `focusPanel` 给成员页的筛选的）：打开时取得焦点，焦点进它打开的弹窗时关上，自定义日期的弹窗随之没了 | 故事 P5、S7 | 端到端 |
 | `T12.24` | 筛选默认的按钮又包在作为 `Popover.Button` 的 `div` 里（原来的形状）：看得见的按钮不说出是否展开，Escape 之后焦点落到 `body` | 故事 S7 | 端到端 |
 | `T12.25` | 筛选默认的按钮随打开、关上重新挂载：Escape 把焦点交给已经不在的按钮 | 故事 S7 | 端到端 |
+| `T12.26` | 筛选默认的按钮以它显示的东西为名，不以标题为名：窄的页头上只有小图标，没有名字 | `dropdown.test.tsx` | vitest |
+| `T12.27` | 筛选的标题旁的展开按钮总说出展开（`aria-expanded` 为真），选项收起时也是（F12） | 故事 P5 | 端到端 |
+| `T12.28` | `Transition` 把关上的筛选弹层留在页面里、隐藏（它也 `unmount={false}`）：弹层的注释和 spec 2.9 靠的是它不在页面里 | `dropdown.test.tsx`、故事 P5 | vitest；端到端 |
 
 ---
 

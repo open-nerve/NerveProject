@@ -6,7 +6,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
 import type { Project, ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import { renderFormattedDate } from "@nerve/utils";
 import { emptyShown, shown } from "@/lib/fake-controls";
@@ -19,10 +18,11 @@ import { ProjectCard } from "./card";
 // admins), in the card and in its menu. Not archived, it links its settings to its admins and members, who read them,
 // and to whom nerve lets change them (project.update: its admins, and its members who are the workspace's admins, its
 // guests among them); its other guests are told they joined it, and one who is no member of it is offered joining it.
-// The card renders on the server, at the workspace's projects, with stand-ins for its menu and its buttons
-// (fake-controls.ts, which keeps the items and props it was given), for its dialogs and for @nerve/i18n, whose text is
-// its key, then the values it was given (fake-i18n-values.ts); the caller's permissions are the store's own, over acme
-// and its project web as nerve lists them to him (fake-permissions.ts).
+// The card renders on the server, at the workspace's projects, with stand-ins for its menu, its buttons and its
+// tooltips (fake-controls.ts, which keeps the items and props it was given, a tooltip's label shown beside what it is
+// the tooltip of), for its dialogs and for @nerve/i18n, whose text is its key, then the values it was given
+// (fake-i18n-values.ts); the caller's permissions are the store's own, over acme and its project web as nerve lists
+// them to him (fake-permissions.ts).
 
 const caller = vi.hoisted(() => {
   const held: { permissions?: IUserPermissionStore } = {};
@@ -37,14 +37,7 @@ vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 // a tooltip shows its label beside what it is the tooltip of
-vi.mock("@makeplane/propel/components/tooltip", () => ({
-  Tooltip: ({ label, children }: { label: ReactNode; children: ReactNode }) => (
-    <>
-      <span data-tooltip="">{label}</span>
-      {children}
-    </>
-  ),
-}));
+vi.mock("@makeplane/propel/components/tooltip", () => import("@/lib/fake-controls"));
 
 /**
  * Signs the caller in as nerve lists acme and web to him, his role in each (null: he sees web, no member of it), and

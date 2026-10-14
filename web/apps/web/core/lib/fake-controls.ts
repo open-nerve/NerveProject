@@ -4,13 +4,13 @@
  */
 
 // A stand-in for the UI kit's controls a page renders (@nerve/ui's selects, modals and context menu, propel's input,
-// button, switch and menu), for the tests of those pages: a test file mocks each such module with this one, for
-// instance vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in
+// button, switch, menu and tooltip), for the tests of those pages: a test file mocks each such module with this one,
+// for instance vi.mock("@nerve/ui", () => import("@/lib/fake-controls")), renders the page on the server, and reads in
 // `shown` the props each control was given. A control renders nothing, but ModalCore its children (its form is the
-// page's), and a menu its items, as it shows them once open.
+// page's), a menu its items, as it shows them once open, and a tooltip its label beside what it is the tooltip of.
 
 import type { ReactNode } from "react";
-import { Children, isValidElement } from "react";
+import { Children, Fragment, createElement, isValidElement } from "react";
 
 /** A control that gives a value: an input gives its change event, a select its picked option's value. */
 type Field = { onChange: (value: unknown) => void };
@@ -137,6 +137,11 @@ Menu.MenuItem = function MenuItem(props: { children?: ReactNode }) {
   shown.menuItems.push(props);
   return props.children;
 };
+
+/** propel's tooltip: its label, in a span marked data-tooltip, then what it is the tooltip of. */
+export function Tooltip({ label, children }: { label: ReactNode; children?: ReactNode }) {
+  return createElement(Fragment, null, createElement("span", { "data-tooltip": "" }, label), children);
+}
 
 export function ModalCore(props: { children?: ReactNode }) {
   shown.modals.push(props);
