@@ -29,7 +29,7 @@ M3（工作区与项目）没有领域事件，Webhook 的页面在 M3 里走不
 
 M3 和它的收尾把 M3 页面上的英文都经了 `t()`，下面这几处是全应用的，一次定：
 
-- **日期**：首页的日期（"Friday, Oct 9"）、日期筛选的弹窗（`core/filters/date-filter-modal.tsx` 的"After:""Before:"）、项目筛选中自定义日期的标签，都按英文格式化；日期的本地化是一个全应用的决定（M3/P9 评审的浏览器核对，M3 收尾）。
+- **日期**：首页的日期（"Friday, Oct 9"）、自定义日期的弹窗（`core/filters/date-filter-modal.tsx` 的"晚于：""早于："之后的两个日期；这两个词和弹窗的别的文字 M3 收尾已经经 `t()`）、项目筛选中自定义日期的标签，都按英文格式化；日期的本地化是一个全应用的决定（M3/P9 评审的浏览器核对，M3 收尾）。
 - `app/not-found.tsx` 的英文；`@nerve/propel` 的英文默认值（`toast/toast.tsx` 的"Loading..."）。
 - 命令面板自己的文字：`power-k/menus/empty-state.tsx` 的默认值"No results found"，快捷键的标记里键与键之间的"then"（`power-k/ui/modal/command-item-shortcut-badge.tsx`），清除上下文的按钮写死的英文名字"Clear context (Backspace)"（`power-k/ui/modal/context-indicator.tsx:44` 的 `aria-label`，`:43` 的 `title` 是同一句；M3 收尾 Task 15 找到），M8 改命令面板自己的文字时一并经 `t()`，en 与 zh-CN 同时加键。M3 收尾只改了它整个重写的两个弹窗：快捷键列表的标题和搜索框经 `t()`，切换账户的那句话是一个带 `{email}` 的键（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。
 - `@nerve/ui` 的 `AlertModalCore`（`modals/alert-modal.tsx`）的按钮默认值是英文，`@nerve/ui` 不依赖 i18n：M3 的两个删除确认框和 M2 的令牌确认框传入经 `t()` 的文字，M4–M7 的调用方由各 M 照做（各自的交接）；最后一个调用方改完之后，把这几个 prop 改为必传、删去默认值（M3 收尾的建议，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节）。
