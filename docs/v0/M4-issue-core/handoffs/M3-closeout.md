@@ -44,7 +44,7 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 
 ## 5. 显示设置与旧的 service
 
-- 工作项列表的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（M3 设计 3.18），格式由 M4 定；旧 `ProjectService`（`web/apps/web/core/services/project/project.service.ts`）的 `/user-properties/` 两个方法和关键词守卫的例外（`until: "M4"`）随之删除；今天工作项页面上 `user-properties` 的请求答 404（M3/P8b spec 2.12），打开工作项页面的故事（P2、P8、S7）经 `e2e/fixtures/mounts.ts` 的 `workItemFilters` 允许这个请求、它的 404 和浏览器的报错，M4 改筛选时删去它和故事中的允许。
+- 工作项列表的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（M3 设计 3.18），格式由 M4 定；旧 `ProjectService`（`web/apps/web/core/services/project/project.service.ts`）的 `/user-properties/` 两个方法和关键词守卫的例外（`until: "M4"`）随之删除；今天工作项页面上 `user-properties` 的请求答 404（M3/P8b spec 第 5 节和附录 A.5），打开工作项页面的故事（P2、P8、S7）经 `e2e/fixtures/mounts.ts` 的 `workItemFilters` 允许这个请求、它的 404 和浏览器的报错，M4 改筛选时删去它和故事中的允许。
 - 旧 `ProjectService` 的 `projectIssuesSearch` 和它的三个调用方（M4 的选父工作项、M6 的添加已有工作项、M7 的收集箱查重）随 M4 的工作项搜索接口替换，之后删除旧 service（M3 设计 7.3）。旧 `WorkspaceService`（`web/apps/web/core/services/workspace.service.ts`）的视图、草稿、搜索方法同样随各自的接口改接或删除。
 - 工作区搜索的类型和参数：`@nerve/types` 的 `workspace.ts` 24 行、`project/projects.ts` 9 行，`workspace.service.ts` 3 行（`domains.mjs --rows M3` 列出的 36 行，属于 M4，M3/P11 spec 附录 A.9）。
 - 活动类型中的 `is_bot`（`@nerve/types` 的 `issues/activity/base.ts` 的 `TIssueActivityUserDetail`、`comments/card/display.tsx`）：Nerve 不区分人和机器人，删除（M2 收尾交接第 11 节留下的两处）。
