@@ -1306,7 +1306,7 @@ modules/access/
   - 按规则清一类（P11）：`eslint-plugin-promise(always-return)` 全仓清零（62 条，其中 M3 领域 14 条）。它能机械修复（`then` 回调里补 `return` 或改为 `await`），也常与"复制到剪贴板"一类未处理的拒绝同处出现，修它顺带检查错误处理。`no-shadow`（165 条）数量太多、改名会碰到 M4–M7 的文件，不选。
   - 各包的上限随之调低（`tools/lint-cap.mjs`），review 写明各包的变化。
 
-### 7.10 关键词守卫的新规则（`tools/keywords.json`，P8a、P8b）
+### 7.10 关键词守卫的新规则（`tools/keywords.json`，P8a 起）
 | 规则 | 禁止 |
 |---|---|
 | `plane-workspace-urls` | M3 替换的 Plane 地址：由 56 个旧方法的地址写出模式（工作区、成员、邀请、slug 检查、`workspace-members/me`、`project-roles`、项目、项目成员、归档、标识检查、状态、标签、显示设置）。一条例外：`core/services/project/project.service.ts` 中 `/user-properties/` 的两处（M4 的筛选 store 用，7.3），`until: "M4"`，原因写"M3/P8b 起，M4 的工作项筛选改用新接口时删除"。`/search-issues/` 不是 M3 的地址，不在模式里；规则的不命中样例加上 `/api/workspaces/{slug}/projects/{id}/search-issues/`，守住项目地址的模式不会宽到它 |
@@ -1315,8 +1315,15 @@ modules/access/
 | `restricted-urls` | `RESTRICTED_URLS` |
 | `in-system-invitations` | `/invitations` 路由、`joinWorkspaces`、`getUserWorkspaceInvitations` 一类名称（决策点 2） |
 | `user-settings` | `IUserSettings`、`currentUserSettings`、`fetchCurrentUserSettings` |
+| `workspaces-list-fetch`（P9） | 在 `useWorkspacesFetch` 之外取调用者的工作区列表（调 store 的 `fetchWorkspaces`）；store 自己和测试不算 |
+| `refusal-toast`（P9，收尾放宽） | 在 `useRefusalToast` 之外用 `setToast` 按 `errorMessageKey` 说拒绝；收尾加上 `setPromiseToast` 的失败一支（它的 message 是 `useRefusalMessage`） |
+| `sign-out-toast`（P9，收尾放宽） | 在 `useSignOut` 之外退出登录再自己提示；收尾加上从 store 取 `signOut` 的写法（`const { signOut } = useUser()`、`useUser().signOut`） |
+| `project-leave`（P10） | 在 `useProjectMembershipChanges` 的 `leave` 之外调 store 的 `leaveProject` |
+| `project-address-route`（P10） | P10、P11 改过的项目页从 router store 读项目和工作区（`currentProjectDetails`、`projectMemberIds`、`currentWorkspace`、不传 slug 和项目的 `allowPermissions`）；M4、M6、M7 改它们的页面时把那些文件加进规则的 `files` |
+| `copy-hook`（收尾） | 在 `useCopyLink`、`useCopyText` 之外复制到剪贴板（`copyTextToClipboard`、`copyUrlToClipboard`、`navigator.clipboard`）；M4、M6、M7、M8 还自己复制的文件各有一条例外，`until` 是各自的 `M<n>/closeout`，到那个 M 的收尾开始、`phase` 改为它时到期 |
 
 - 在 P8a、P8b 加入：P8a 加入工作区一侧的地址的模式和 `restricted-urls`、`in-system-invitations`、`user-settings`；P8b 补全项目一侧的模式、`/user-properties/` 的例外和不命中样例，删除 `project-invitations` 的例外，收紧 `plane-user-urls`。规则在数据层的第二段（P8b）合并时完整，在任何页面的 Phase 之前；P11 只核对 M3 加的例外只剩跨 M 的一条（`/user-properties/` 的两处，`until: "M4"`），`project-invitations` 的 `until: "M3"` 已删除。
+- P9、P10 和收尾加入的规则在表的后几行，括号里是加入它的 Phase；每条规则的 `why` 写明它守的那一处和不算的地方。
 - 每条规则带 `samples`（命中和不命中）和 `files` 样例，照 M2 设计 7.9 的写法；`node tools/keywords.mjs` 通过。
 
 ### 7.11 规模估计（按 M2 收尾附录 B 校准）

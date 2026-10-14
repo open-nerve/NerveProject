@@ -25,7 +25,7 @@ import { useUser } from "@/hooks/store/user";
 import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { ApiError } from "@/lib/api-error";
+import { problemCode } from "@/lib/api-error";
 import { errorMessageKey, fieldErrorKeys } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 
@@ -93,7 +93,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
         });
       },
       failed: (error) => {
-        if (error instanceof ApiError && error.problem?.code === "identity.current_password_incorrect") {
+        if (problemCode(error) === "identity.current_password_incorrect") {
           setError("old_password", { type: "manual", message: t(errorMessageKey(error)) });
           return;
         }

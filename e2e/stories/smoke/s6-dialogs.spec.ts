@@ -10,7 +10,7 @@ import { expect, test } from "../../fixtures/test";
 // Headless UI's Dialog, which makes the page behind it inert and hidden while it is open): the command palette, its
 // list of keyboard shortcuts, and a dialog opened over another, the settings dialog's revoke dialog.
 
-test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back", async ({
+test("S6 (page): the command palette and its list of keyboard shortcuts are modal dialogs: while each is open the page behind it is inert and hidden and Tab stays in it; Escape closes each and gives the page back; the palette's command that copies the page's address copies it and says so", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -44,6 +44,14 @@ test("S6 (page): the command palette and its list of keyboard shortcuts are moda
   expect(shortcutStops.slice(1)).toEqual(["Close", "Search for shortcuts"]);
   expect(await closedByEscape(page)).toBe(true);
   expect(await pageBehindHidden(page)).toBe(false);
+
+  // The palette's command that copies the page's address.
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.keyboard.type("Copy current page URL");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Current page URL copied to clipboard.")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });

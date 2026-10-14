@@ -14,7 +14,6 @@ import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
 import { useMember } from "@/hooks/store/use-member";
 
 type AvatarProps = {
-  showTooltip: boolean;
   userIds: string | string[] | null;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
 };

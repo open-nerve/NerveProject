@@ -8,11 +8,11 @@ import type { ApiTokenCreated } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { CopyOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 // ui
-import { renderFormattedDate, renderFormattedTime, copyTextToClipboard } from "@nerve/utils";
-// types
+import { renderFormattedDate, renderFormattedTime } from "@nerve/utils";
+// hooks
+import { useCopyText } from "@/hooks/use-copy-link";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {
@@ -25,23 +25,7 @@ export function GeneratedTokenDetails(props: Props) {
   const { handleClose, tokenDetails } = props;
   const { isMobile } = usePlatformOS();
   const { t } = useTranslation();
-  const copyApiToken = (token: string) => {
-    void copyTextToClipboard(token)
-      .then(() =>
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: `${t("success")}!`,
-          message: t("workspace_settings.token_copied"),
-        })
-      )
-      .catch(() =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: `${t("error")}!`,
-          message: t("workspace_settings.token_not_copied"),
-        })
-      );
-  };
+  const copyText = useCopyText();
 
   return (
     <div className="w-full p-5">
@@ -51,7 +35,7 @@ export function GeneratedTokenDetails(props: Props) {
       </div>
       <button
         type="button"
-        onClick={() => copyApiToken(tokenDetails.token)}
+        onClick={() => void copyText(tokenDetails.token, t("workspace_settings.token_copied"))}
         className="mt-4 flex w-full items-center justify-between truncate rounded-md border-[0.5px] border-subtle px-3 py-2 text-13 font-medium outline-none"
       >
         <span className="truncate pr-2">{tokenDetails.token}</span>

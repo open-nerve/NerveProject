@@ -1,5 +1,5 @@
 {
-  "phase": "M2/closeout",
+  "phase": "M3/closeout",
   "rules": [
     {
       "id": "deploy-files",
@@ -2215,27 +2215,30 @@
     {
       "id": "refusal-toast",
       "phase": "M3/P9",
-      "why": "页面用 setToast 按 errorMessageKey 把失败说成提示只有一处：useRefusalToast（web/apps/web/core/hooks/use-refusal-toast.ts），按 errorMessageKey 给出 nerve 的原因，标题默认 toast.error（M3/P9 修复轮，裁定 F-4）；别处的 setToast 里再写 errorMessageKey 就是又一份。主题切换的 setPromiseToast 自己说失败，本规则不管，留在 P9 规格 §5 的收尾清单上。错误放在字段下、对话框里的不是提示，不算；测试不算",
+      "why": "页面用 setToast 按 errorMessageKey 把失败说成提示只有一处：useRefusalToast（web/apps/web/core/hooks/use-refusal-toast.ts），按 errorMessageKey 给出 nerve 的原因，标题默认 toast.error（M3/P9 修复轮，裁定 F-4）；别处的 setToast 里再写 errorMessageKey 就是又一份。setPromiseToast 的失败一支也一样，它的 message 是同一模块的 useRefusalMessage（主题切换，M3 收尾）。错误放在字段下、对话框里的不是提示，不算；测试不算",
       "files": {
         "source": "^web/apps/web/(?:app|core)/(?!hooks/use-refusal-toast\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
         "flags": ""
       },
       "content": {
-        "source": "setToast\\(\\{[^}]*\\berrorMessageKey\\(",
+        "source": "setToast\\(\\{[^}]*\\berrorMessageKey\\(|setPromiseToast\\([^;]*\\berrorMessageKey\\(",
         "flags": ""
       },
       "samples": {
         "hit": [
           "  setToast({ type: TOAST_TYPE.ERROR, title: t(\"toast.error\"), message: t(errorMessageKey(error)) });",
-          "      setToast({\n        type: TOAST_TYPE.ERROR,\n        title: t(\"auth.common.password.toast.change_password.error.title\"),\n        message: t(errorMessageKey(error)),\n      });"
+          "      setToast({\n        type: TOAST_TYPE.ERROR,\n        title: t(\"auth.common.password.toast.change_password.error.title\"),\n        message: t(errorMessageKey(error)),\n      });",
+          "      setPromiseToast(updatePromise, {\n        loading: t(\"power_k.preferences_actions.toast.theme.updating\"),\n        error: {\n          title: t(\"toast.error\"),\n          message: (error) => t(errorMessageKey(error)),\n        },\n      });"
         ],
         "miss": [
           "      failed: toastRefusal,",
           "        setError(\"old_password\", { type: \"manual\", message: t(errorMessageKey(error)) });",
-          "      setToast({ type: TOAST_TYPE.SUCCESS, title: t(\"toast.success\"), message: t(\"profile_updated\") });"
+          "      setToast({ type: TOAST_TYPE.SUCCESS, title: t(\"toast.success\"), message: t(\"profile_updated\") });",
+          "      setPromiseToast(updatePromise, {\n        error: { title: t(\"toast.error\"), message: refusalMessage },\n      });\n      const key = errorMessageKey(error);"
         ],
         "files": {
           "hit": [
+            "web/apps/web/core/components/appearance/theme-switcher.tsx",
             "web/apps/web/core/components/labels/delete-label-modal.tsx",
             "web/apps/web/app/(all)/workspace-invitations/page.tsx"
           ],
@@ -2250,21 +2253,29 @@
     {
       "id": "sign-out-toast",
       "phase": "M3/P9",
-      "why": "页面退出登录只有一处：useSignOut（web/apps/web/core/hooks/use-sign-out.ts），nerve 的登出失败时提示 auth.sign_out.toast.error.*、会话不变（M3/P9 修复轮，裁定 F-4）；别处直接调 store 的 signOut 再自己提示就是又一份，没有提示的一份就是没有处理的拒绝。测试不算",
+      "why": "页面退出登录只有一处：useSignOut（web/apps/web/core/hooks/use-sign-out.ts），nerve 的登出失败时提示 auth.sign_out.toast.error.*、会话不变（M3/P9 修复轮，裁定 F-4）；别处直接调 store 的 signOut 再自己提示就是又一份，没有提示的一份就是没有处理的拒绝；从 store 取 signOut（const { signOut } = useUser()、useUser().signOut）的地方也算，那一份不经 useSignOut（M3/P9 评审给出的第二个模式，M3 收尾加）。测试不算",
       "files": {
         "source": "^web/apps/web/(?:app|core)/(?!hooks/use-sign-out\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
         "flags": ""
       },
       "content": {
-        "source": "\\bauth\\.sign_out\\.toast\\.error\\b",
+        "source": "\\bauth\\.sign_out\\.toast\\.error\\b|\\{[^}]*\\bsignOut\\b[^}]*\\}\\s*=\\s*useUser\\(\\)|useUser\\(\\)\\.signOut\\b",
         "flags": ""
       },
       "samples": {
         "hit": [
           "        title: t(\"auth.sign_out.toast.error.title\"),",
-          "        message: t(\"auth.sign_out.toast.error.message\"),"
+          "        message: t(\"auth.sign_out.toast.error.message\"),",
+          "  const { signOut } = useUser();",
+          "  const {\n    data: currentUser,\n    signOut,\n  } = useUser();",
+          "    await useUser().signOut();"
         ],
-        "miss": ["  const signOut = useSignOut();", "        {t(\"sign_out\")}"],
+        "miss": [
+          "  const signOut = useSignOut();",
+          "        {t(\"sign_out\")}",
+          "  const { data: currentUser } = useUser();",
+          "  const { signOut } = useSession();"
+        ],
         "files": {
           "hit": [
             "web/apps/web/core/components/workspace/sidebar/user-menu-root.tsx",
@@ -2360,6 +2371,42 @@
           ]
         }
       }
+    },
+    {
+      "id": "copy-hook",
+      "phase": "M3/closeout",
+      "why": "页面复制到剪贴板只有一处：web/apps/web/core/hooks/use-copy-link.ts 的 useCopyLink（链接）和 useCopyText（原样的文字，如令牌），成功时说复制了什么，浏览器不让页面写剪贴板（没有权限，或 http）时说没能复制（M3 设计 7.7；P10 规格 §5，M3 收尾）。别处再调 copyTextToClipboard、copyUrlToClipboard 或 navigator.clipboard 就是又一份，没有失败一支的一份就是不说的失败。M4、M6、M7、M8 的页面中还自己复制的文件各有一条例外，到各自的收尾为止。编辑器包（@nerve/editor）的代码块和链接预览不经 web 的 hook，不在本规则内；测试不算",
+      "files": {
+        "source": "^web/apps/web/(?:app|core)/(?!hooks/use-copy-link\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\bcopy(?:Text|Url)ToClipboard\\(|\\bnavigator\\.clipboard\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    void copyTextToClipboard(token)",
+          "    copyUrlToClipboard(`${workspaceSlug}/projects/${projectId}/cycles/${cycleId}`).then(() => {",
+          "      navigator.clipboard\n        .writeText(text)"
+        ],
+        "miss": [
+          "import { copyTextToClipboard, copyUrlToClipboard } from \"@nerve/utils\";",
+          "  const copyLink = useCopyLink();",
+          "        onClick={() => void copyText(tokenDetails.token, t(\"workspace_settings.token_copied\"))}"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/api-token/modal/generated-token-details.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx"
+          ],
+          "miss": [
+            "web/apps/web/core/hooks/use-copy-link.ts",
+            "web/apps/web/core/hooks/use-copy-link.test.ts",
+            "web/packages/editor/src/extensions/code/code-block-node-view.tsx"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -2385,6 +2432,147 @@
       "count": 2,
       "reason": "M3/P8b 起，M4 的工作项筛选改用新接口时删除：项目的工作项筛选（getProjectUserProperties、updateProjectUserProperties）由 M4 的筛选 store 读写（M3 设计 7.3）",
       "until": "M4"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/create-issue-toast-action-items.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/issue-detail-widgets/relations/helper.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/issue-detail-widgets/sub-issues/helper.ts",
+      "match": "copyUrlToClipboard(",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/issue-detail/identifier-text.tsx",
+      "match": "navigator.clipboard",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/issue-detail/issue-activity/helper.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx",
+      "match": "copyTextToClipboard(",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/issue-detail/links/link-item.tsx",
+      "match": "copyTextToClipboard(",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/helper.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/issues/peek-overview/header.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts",
+      "match": "copyTextToClipboard(",
+      "count": 3,
+      "reason": "M4 的工作项页面自己复制到剪贴板，成功和失败各自说；M4 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M4/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/cycles/quick-actions.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M6/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/modules/links/list-item.tsx",
+      "match": "copyTextToClipboard(",
+      "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M6/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/modules/quick-actions.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M6/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts",
+      "match": "copyTextToClipboard(",
+      "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M6/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx",
+      "match": "copyTextToClipboard(",
+      "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M6/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/inbox/content/inbox-issue-header.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M7 的收集箱和视图页面自己复制到剪贴板，成功和失败各自说；M7 改这些页面时改用 useCopyLink（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M7/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/views/quick-actions.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M7 的收集箱和视图页面自己复制到剪贴板，成功和失败各自说；M7 改这些页面时改用 useCopyLink（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M7/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/workspace/views/default-view-quick-action.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M7 的收集箱和视图页面自己复制到剪贴板，成功和失败各自说；M7 改这些页面时改用 useCopyLink（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M7/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/workspace/views/quick-action.tsx",
+      "match": "copyUrlToClipboard(",
+      "reason": "M7 的收集箱和视图页面自己复制到剪贴板，成功和失败各自说；M7 改这些页面时改用 useCopyLink（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M7/closeout"
+    },
+    {
+      "rule": "copy-hook",
+      "path": "web/apps/web/core/components/web-hooks/form/secret-key.tsx",
+      "match": "copyTextToClipboard(",
+      "reason": "M8 的 Webhook 页面自己复制密钥，成功和失败各自说；M8 改这个页面时改用 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
+      "until": "M8/closeout"
     }
   ]
 }

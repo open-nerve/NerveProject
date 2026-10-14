@@ -5,7 +5,6 @@
     "key_created": "密钥已创建",
     "copy_key": "复制并妥善保存此密钥。关闭后您将无法看到此密钥。包含密钥的 CSV 文件已下载。",
     "token_copied": "令牌已复制到剪贴板。",
-    "token_not_copied": "无法将令牌复制到剪贴板。",
     "settings": {
       "general": {
         "title": "常规",

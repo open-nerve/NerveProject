@@ -23,7 +23,7 @@ import { expect, test } from "../../fixtures/test";
 
 const weekMs = 7 * 24 * 60 * 60 * 1000;
 
-test("A11 (page): a token created on the page shows once, and nowhere after; the list shows it without it, and revokes it", async ({
+test("A11 (page): a token created on the page shows once, a click on it copies it and says so, and nowhere after; the list shows it without it, and revokes it", async ({
   api,
   db,
   signedInPage,
@@ -69,6 +69,11 @@ test("A11 (page): a token created on the page shows once, and nowhere after; the
   // The token shows this once, and the CSV downloaded has it: the header, and one record of four whole fields,
   // each comma of the description and of the date in its own.
   await expect(page.getByText(created.token)).toBeVisible();
+  // A click on it copies it as it is, and the page says so.
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.getByText(created.token).click();
+  await expect(page.getByText("Token copied to clipboard.")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(created.token);
   const csv = parseCsv(await readFile(await (await downloaded).path(), "utf8"));
   expect(csv).toEqual([
     ["Title", "Description", "Expiry", "Secret key"],

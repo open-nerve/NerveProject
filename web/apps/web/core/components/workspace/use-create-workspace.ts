@@ -12,7 +12,7 @@ import { validateWorkspaceName } from "@nerve/utils";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { ApiError } from "@/lib/api-error";
+import { problemCode } from "@/lib/api-error";
 import { FIELD_ERROR_MESSAGES, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
 
@@ -58,8 +58,7 @@ const SLUG_FIELD_MESSAGES: Partial<Record<string, string>> = {
  * field errors under the form's fields when they name only those (needsErrorBanner); else nerve's reason in a toast.
  */
 export function creationRefusal(error: unknown): CreationRefusal {
-  if (error instanceof ApiError && error.problem?.code === "workspace.slug_taken")
-    return { kind: "fields", fields: { slug: SLUG_MESSAGES.taken } };
+  if (problemCode(error) === "workspace.slug_taken") return { kind: "fields", fields: { slug: SLUG_MESSAGES.taken } };
   if (needsErrorBanner(error, FIELDS)) return { kind: "toast" };
   const { name, slug } = fieldErrorKeys(error);
   return { kind: "fields", fields: { name, slug: slug && (SLUG_FIELD_MESSAGES[slug] ?? slug) } };

@@ -76,7 +76,7 @@ export const IssueAttachmentsListItem = observer(function IssueAttachmentsListIt
                   disabled={isMobile}
                 >
                   <div className="flex items-center justify-center">
-                    <ButtonAvatars showTooltip userIds={attachment?.created_by} />
+                    <ButtonAvatars userIds={attachment?.created_by} />
                   </div>
                 </Tooltip>
               </>

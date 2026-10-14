@@ -8,7 +8,7 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useOpenWorkspace } from "@/hooks/use-open-workspace";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { ApiError } from "@/lib/api-error";
+import { problemCode } from "@/lib/api-error";
 import { followInSession } from "@/lib/in-session";
 
 /**
@@ -30,7 +30,7 @@ export function useInvitationAnswer({ reread, mismatched }: AnswerFollowUps) {
   const openWorkspace = useOpenWorkspace();
   const toastRefusal = useRefusalToast();
   const refused = (error: unknown) => {
-    if (error instanceof ApiError && error.problem?.code === "workspace.invitation_email_mismatch") {
+    if (problemCode(error) === "workspace.invitation_email_mismatch") {
       mismatched();
       return;
     }

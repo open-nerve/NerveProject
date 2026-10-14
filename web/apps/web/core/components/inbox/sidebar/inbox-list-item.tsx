@@ -121,7 +121,7 @@ export const InboxIssueListItem = observer(function InboxIssueListItem(props: In
               )}
             </div>
             {/* created by */}
-            {createdByDetails && <ButtonAvatars showTooltip={false} userIds={createdByDetails.id} />}
+            {createdByDetails && <ButtonAvatars userIds={createdByDetails.id} />}
           </div>
         </Row>
       </Link>

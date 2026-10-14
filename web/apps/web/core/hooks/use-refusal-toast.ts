@@ -9,14 +9,24 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { errorMessageKey } from "@/lib/error-messages";
 
 /**
- * Says in a toast why a change failed (M2 design 7.3): nerve's refusal by its problem's code, or why nerve could not be
- * reached (errorMessageKey), under the title of titleKey. Every setToast that says a failure by errorMessageKey is this
- * one (the keyword rule refusal-toast); the theme switcher's promise toast says its failure itself (setPromiseToast,
- * P9 spec §5). A page that shows some refusals under its fields decides that itself, and calls this for the others.
+ * Why a change failed (M2 design 7.3), as a toast says it: nerve's refusal by its problem's code, or why nerve could not
+ * be reached (errorMessageKey), in the page's language. The message of every toast that says such a failure, a
+ * promise toast's (setPromiseToast) too (the keyword rule refusal-toast).
+ */
+export function useRefusalMessage(): (error: unknown) => string {
+  const { t } = useTranslation();
+  return (error) => t(errorMessageKey(error));
+}
+
+/**
+ * Says in a toast why a change failed, useRefusalMessage's, under the title of titleKey. Every setToast that says such
+ * a failure is this one (the keyword rule refusal-toast). A page that shows some refusals under its fields decides that
+ * itself, and calls this for the others.
  */
 export function useRefusalToast(titleKey = "toast.error"): (error: unknown) => void {
   const { t } = useTranslation();
+  const refusalMessage = useRefusalMessage();
   return (error) => {
-    setToast({ type: TOAST_TYPE.ERROR, title: t(titleKey), message: t(errorMessageKey(error)) });
+    setToast({ type: TOAST_TYPE.ERROR, title: t(titleKey), message: refusalMessage(error) });
   };
 }
