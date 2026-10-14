@@ -299,8 +299,8 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     await other.page.goto(statesPage);
     await expect(stateRow(other.page, "Review"), who).toBeVisible();
     await expect(addTo(other.page, "Started"), who).toBeEnabled({ enabled: controls });
-    await expect(other.page.getByRole("button", { name: "Mark as default" }), who).toHaveCount(controls ? 4 : 0);
-    await expect(other.page.getByRole("button", { name: "Edit" }), who).toHaveCount(controls ? 5 : 0);
+    await expect(other.page.getByRole("button", { name: /^Mark as default: / }), who).toHaveCount(controls ? 4 : 0);
+    await expect(other.page.getByRole("button", { name: /^Edit / }), who).toHaveCount(controls ? 5 : 0);
     expect([otherWatch.apiFailures, otherWatch.pageErrors], who).toEqual([[], []]);
     await expectQuietConsole(other.page, otherWatch, { warnings: [EMOJI_CHECK_WARNING] });
     await other.close();

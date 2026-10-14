@@ -34,7 +34,8 @@ export const FavoriteItemQuickAction = observer(function FavoriteItemQuickAction
           <MoreHorizontalOutline className="size-4" />
         </span>
       }
-      menuButtonOnClick={() => onChange(!isMenuActive)}
+      menuButtonOnClick={() => onChange(true)}
+      onMenuClose={() => onChange(false)}
       className={cn(
         "pointer-events-none flex-shrink-0 opacity-0 group-hover/project-item:pointer-events-auto group-hover/project-item:opacity-100",
         {

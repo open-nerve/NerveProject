@@ -96,7 +96,7 @@ export class CommandPaletteStore implements ICommandPaletteStore {
     );
   }
   // computedFn
-  getIsProjectListOpen = computedFn((projectId: string) => this.projectListOpenMap[projectId]);
+  getIsProjectListOpen = computedFn((projectId: string) => this.projectListOpenMap[projectId] ?? false);
 
   /**
    * Toggles the project list open state

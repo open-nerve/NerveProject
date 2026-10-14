@@ -1,20 +1,21 @@
 import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { emailFor } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { chooseByKeyboard } from "../../fixtures/menus";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // S8, the sidebar by the keyboard (M3 closeout, P11's keyboard list): what the keyboard and assistive technology
 // reach in the workspace's sidebar is what it shows.
 
-test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed; the workspace menu's chevron is neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them, the menu one Tab stop; a project's row and its menu are named by its project, and its grip is none", async ({
+test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed, its toggle handing the focus to the header's and back; the workspace menu's chevron is neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them; a project's row is one Tab stop, its link, and its menu another, each named by the project, the menu worked by the keyboard; its chevron and grip are none", async ({
   api,
   signedInPage,
 }, testInfo) => {
   const tokens = await registerOnboarded(api, emailFor(testInfo));
   const slug = slugFor(testInfo);
   await createWorkspace(api, tokens.access_token, { name: "Acme", slug });
-  await createProject(api, tokens.access_token, slug, { name: "Web", identifier: "WEB" });
+  const web = await createProject(api, tokens.access_token, slug, { name: "Web", identifier: "WEB" });
   const page = await signedInPage(tokens);
   const watch = await watchPage(page);
   await page.goto(`/${slug}/projects`);
@@ -45,12 +46,14 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await expect(create).toHaveCSS("opacity", "1");
   await expect(create).not.toHaveCSS("outline-style", "none");
 
-  // Web's menu, named by Web as its row is: one Tab stop after the row, shown and marked as Tab reaches it; its
-  // chevron, which does what the row does, and its grip, which the pointer drags, are none, though the pointer over
-  // the row shows them.
+  // Web's row is one Tab stop, its link, named by Web, which opens and closes its pages; its menu, named by Web too,
+  // the next, shown and marked as Tab reaches it. Its chevron, which does what the link does, and its grip, which the
+  // pointer drags, are none, though the pointer over the row shows them.
   const menu = sidebar.getByRole("button", { name: "Web quick actions", exact: true });
   await expect(menu).toHaveCount(1);
-  const row = sidebar.getByRole("button", { name: "Web", exact: true });
+  const row = sidebar.getByRole("link", { name: "Web", exact: true });
+  await expect(row).toHaveAttribute("aria-expanded", "false");
+  await expect(sidebar.getByRole("button", { name: "Web", exact: true })).toHaveCount(0);
   await row.focus();
   await page.keyboard.press("Tab");
   await expect(menu).toBeFocused();
@@ -62,12 +65,25 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await expect(sidebar.getByRole("button", { name: "Open project menu" })).not.toBeFocused();
   await expect(sidebar.locator(".cursor-grab:is(button, a, [tabindex]):not([tabindex='-1'])")).toHaveCount(0);
 
-  // Collapsed, the sidebar holds no control the keyboard reaches; opened again, it does.
-  await sidebar.getByRole("button", { name: "Toggle sidebar" }).click();
+  // Collapsed by its toggle and the keyboard, the sidebar holds no control the keyboard reaches, and the focus goes on
+  // to the toggle of the page's header, outside either sidebar, seen while the sidebar is collapsed; Enter there opens
+  // the sidebar again, the focus going back to its toggle.
+  const toggle = sidebar.getByRole("button", { name: "Toggle sidebar" });
+  await toggle.focus();
+  await page.keyboard.press("Enter");
   await expect.poll(inert).toEqual([true, true]);
-  // the page's header has its own, outside either sidebar, seen while the sidebar is collapsed
-  await page.locator("xpath=//button[@aria-label='Toggle sidebar'][not(ancestor::*[@role='complementary'])]").click();
+  await expect(
+    page.locator("xpath=//button[@aria-label='Toggle sidebar'][not(ancestor::*[@role='complementary'])]")
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect.poll(inert).toEqual([false, true]);
+  await expect(toggle).toBeFocused();
+
+  // Web's menu by the keyboard alone: Enter opens it, and the arrow keys and Enter choose its Settings.
+  await row.focus();
+  await page.keyboard.press("Tab");
+  await chooseByKeyboard(page, menu, "Settings");
+  await expect(page).toHaveURL(`/${slug}/settings/projects/${web.id}`);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });

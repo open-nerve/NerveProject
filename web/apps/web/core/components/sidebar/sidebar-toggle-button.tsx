@@ -22,9 +22,15 @@ export const AppSidebarToggleButton = observer(function AppSidebarToggleButton()
       variant="ghost"
       icon={LeftSidePaneOutline}
       aria-label={t("aria_labels.app_sidebar.toggle")}
+      data-sidebar-toggle=""
       onClick={() => {
         if (sidebarPeek) toggleSidebarPeek(false);
         toggleSidebar();
+        // the toggle pressed goes (the sidebar's inert as the sidebar collapses, the header's away as it opens), so the
+        // focus goes on to the toggle that comes in its place, not to the page's body
+        requestAnimationFrame(() =>
+          document.querySelector<HTMLElement>("[data-sidebar-toggle]:not([inert] [data-sidebar-toggle])")?.focus()
+        );
       }}
     />
   );

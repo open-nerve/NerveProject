@@ -92,7 +92,6 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
         placement={placements}
         menuItemsClassName="z-[14]"
         maxHeight="lg"
-        useCaptureForOutsideClick
         closeOnSelect
       >
         {MENU_ITEMS.map((item) => {

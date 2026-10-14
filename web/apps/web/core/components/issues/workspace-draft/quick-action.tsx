@@ -25,14 +25,7 @@ export const WorkspaceDraftIssueQuickActions = observer(function WorkspaceDraftI
   return (
     <>
       <ContextMenu parentRef={parentRef} items={MENU_ITEMS} />
-      <CustomMenu
-        ellipsis
-        placement="bottom-end"
-        menuItemsClassName="z-[14]"
-        maxHeight="lg"
-        useCaptureForOutsideClick
-        closeOnSelect
-      >
+      <CustomMenu ellipsis placement="bottom-end" menuItemsClassName="z-[14]" maxHeight="lg" closeOnSelect>
         {MENU_ITEMS.map((item) => (
           <CustomMenu.MenuItem
             key={item.key}

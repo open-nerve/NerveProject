@@ -22,6 +22,7 @@ import {
   modalDialog,
   pageBehindHidden,
 } from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
 import { dragOnto, labelRow, tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -213,6 +214,11 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await expect(docsDelete).toBeFocused();
   await expect(docsDelete).not.toHaveCSS("outline-style", "none");
   await expect(docsControls).toHaveCSS("opacity", "1");
+  // back on its menu, the keyboard chooses Edit label, which opens Docs's form
+  await page.keyboard.press("Shift+Tab");
+  await chooseByKeyboard(page, docsOptions, "Edit label");
+  await expect(labelForm(page).locator("#labelName")).toHaveValue("Docs");
+  await labelForm(page).getByRole("button", { name: "Cancel" }).click();
 
   // Its member sees the labels, Defect's group among them, and no control that changes them, no grip, no label to drag;
   // a workspace admin who is its member has them all: a grip, a menu and a drag each, a delete button each but the
@@ -226,8 +232,8 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
     await expect(other.page.getByRole("button", { name: "Add label" }), who).toHaveCount(controls ? 1 : 0);
     await expect(other.page.locator("button.cursor-grab"), who).toHaveCount(controls ? 4 : 0);
     await expect(other.page.locator('[draggable="true"]:has(h6)'), who).toHaveCount(controls ? 4 : 0);
-    await expect(other.page.getByRole("button", { name: "Options" }), who).toHaveCount(controls ? 4 : 0);
-    await expect(other.page.getByRole("button", { name: "Delete" }), who).toHaveCount(controls ? 3 : 0);
+    await expect(other.page.getByRole("button", { name: / options$/ }), who).toHaveCount(controls ? 4 : 0);
+    await expect(other.page.getByRole("button", { name: /^Delete / }), who).toHaveCount(controls ? 3 : 0);
     expect([otherWatch.apiFailures, otherWatch.pageErrors], who).toEqual([[], []]);
     await expectQuietConsole(other.page, otherWatch, { warnings: [EMOJI_CHECK_WARNING] });
     await other.close();

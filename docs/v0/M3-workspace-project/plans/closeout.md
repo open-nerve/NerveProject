@@ -21,7 +21,7 @@
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
 - **规则**（总体设计 7.7；P8a–P11 的裁定）：会话的每个取数经 `useSessionSWR`；修改经 store 的方法，之后的跳转、提示、界面变化经 `followInSession` 只在发出它的会话里（Task 3 的离开：hook 的 vitest 的"换账户之后"一行）。弹窗：请求在路上时关不掉（F-1）、被拒绝时留着、只在成功的跟进中关上（A-M2）、组字的 Escape 不关、打开时后面的页面 `inert` 和 `aria-hidden`、Tab 不出去、关上之后焦点回到打开它的控件（spec 2.5）；每一条由一个会失败的端到端检查看住（各 Task 的变异表）。每个控件 Tab 能到、有名字、键盘取得焦点时看得见，不加正的 `tabIndex`。页面读地址只经路由参数（`project-address-route`、`workspace-address-route`）。文案：页面上的文字经 `t()`，en 与 zh-CN 同时加，一句话带名字时一个键加占位（`Translated`）；不再读的键在两种语言中都删除。类型只来自生成的客户端：没有新的 `as`、`any`、`!`（spec 附录 A.5）。删除的代码删干净（组件、类型、两种语言的文案、常量），不加 knip 的忽略、开关或桩。本 plan 写或重写的文件都在约 400 行以内（spec 附录 A.5）；只为使用方改到的 Plane 文件不变长，记录在案的例外一个：`IconButton` 的名字和 `EmojiPicker` 的 `ariaLabel` 在根上必传，27 个使用方的文件只加名字（`aria-label`、`addReactionLabel`、`ariaLabel`、`useTranslation` 的导入和 `t` 一行，以及 oxfmt 的重排），其中 24 个变长（控制者已裁定，spec 第 3 节第 1 条、附录 A.5）。
-- **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告。收尾改到、仍有警告的 5 个文件照控制者的裁定交出（spec 第 3 节第 2 条）：只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个给 M4、M6、M7，只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx` 给 M8（Task 15 写进各自的交接）。上限：web 303 → 301（Task 2）→ 300（Task 8）→ 298（Task 11）→ 295（Task 12）；`@nerve/ui` 15 → 14（Task 1）→ 12（Task 10）；`@nerve/propel` 11 → 10（Task 7）；utils 7、constants 1 不变。抑制多两条（Task 2 的快捷键搜索框和 Task 12 的筛选，`autoFocus` 写明理由，spec 第 3 节第 2、20 条），删去两条：181 条照旧。
+- **oxlint**（M3 设计 7.9）：有手改的文件在它的 Task 提交时没有 oxlint 警告。收尾改到、仍有警告的 5 个文件照控制者的裁定交出（spec 第 3 节第 2 条）：只为 `IconButton` 的名字或 `showTooltip` 改到的 4 个给 M4、M6、M7，只改了占位文字的页头搜索 `navigation/top-nav-power-k.tsx` 给 M8（Task 15 写进各自的交接）。Task 8 只为 `CustomMenu` 改到的别的 M 的调用方只改修复逼出的几行，它们原有的警告留着（收藏的文件夹 2 条、项目标签栏的菜单 2 条，spec 附录 A.4 的调用方清单）。上限：web 303 → 301（Task 2）→ 300（Task 8）→ 298（Task 11）→ 295（Task 12）；`@nerve/ui` 15 → 14（Task 1）→ 12（Task 8）；`@nerve/propel` 11 → 10（Task 7）；utils 7、constants 1 不变。抑制多两条（Task 2 的快捷键搜索框和 Task 12 的筛选，`autoFocus` 写明理由，spec 第 3 节第 2、20 条），删去两条：181 条照旧。
 - **关键词守卫**：69 条规则、3 个例外；Task 9 起 70 条（`copy-hook`）、23 个例外；Task 11 起 71 条（`workspace-address-route`）。规则的 `phase` 写 `M3/closeout`，例外的 `until` 写 `M4/closeout` 等（spec 第 3 节第 5 条）：在那个 M 的收尾开始、`phase` 改为它时到期，Task 9 把这一点写进守卫的说明和 M1 设计 7.4，Task 15 写进收到例外的 M 的交接。
 - **注释**：TS 代码、测试、JSON 的说明用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -88,6 +88,7 @@ sys.exit(1 if broken else 0)
 | `e2e/fixtures/auth.ts` | `registeredPAT(api, email)` | 14 |
 | `e2e/fixtures/browser.ts` | `expectNoAddress` 移来 | 14 |
 | `e2e/fixtures/dialogs.ts` | `modalDialog`、`pageBehindHidden`（Task 1）；`announced`（Task 2）；`composingEscape` 发两种顺序（Task 10） | 1、2、10 |
+| `e2e/fixtures/menus.ts` | `chooseByKeyboard`：以键盘打开一行的菜单、选一项（新文件） | 8 新 |
 | `e2e/fixtures/mounts.ts` | `WORKSPACE_MENU`：工作区菜单打开时不发请求（W2 的常驻检查） | 3 |
 | `e2e/fixtures/project-pages.ts` | `labelRow` 移来（Task 6）；成员一行的菜单按它的名字，`pageContent`：侧边栏之外的页面内容（Task 8） | 6、8 |
 | `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
@@ -98,18 +99,18 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
-| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
-| `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓，一行的按钮和组的添加以它们的东西为名（Task 8） | 1、2、6、8 |
-| `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6）；一行的菜单和删除以标签为名（Task 8） | 1、2、6、8 |
+| `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter（Task 10） | 2、5、8、10 |
+| `e2e/stories/project/p6-states-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；组的名字（Task 6）；名称的焦点、颜色框的轮廓，一行的按钮和组的添加以它们的东西为名，整页的计数以名字的开头为锚（Task 8） | 1、2、6、8 |
+| `e2e/stories/project/p7-labels-page.spec.ts` | 删除确认框的 Tab 循环、隐藏（Task 1）；提示被读出（Task 2）；"Delete label"（Task 6）；一行的菜单和删除以标签为名，以键盘选"Edit label"，整页的计数以名字的开头、结尾为锚（Task 8） | 1、2、6、8 |
 | `e2e/stories/smoke/s2-web-app.spec.ts` | 每个角色打开工作区菜单，不发请求（`WORKSPACE_MENU`） | 3 |
 | `e2e/stories/smoke/s6-dialogs.spec.ts` | S6：命令面板、快捷键（以标题为名）、嵌套的弹窗是模态的（新文件，Task 2）；命令面板的复制（Task 9）；组字的 Escape（Task 10） | 2 新、9、10 |
 | `e2e/stories/smoke/s7-chinese.spec.ts` | S7：中文的页面和弹窗（新文件，逐 Task 加） | 4 新、5、6、7、8、12、13 |
-| `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘，项目的一行和它的菜单以项目为名，工作区菜单的展开箭头不被读出、不是停留点（新文件） | 8 新 |
+| `e2e/stories/smoke/s8-sidebar.spec.ts` | S8：侧边栏的键盘，项目的一行（一个停留点，说出是否展开）和它的菜单以项目为名，以键盘选菜单的一项，开关按下之后焦点交给代替它的开关，工作区菜单的展开箭头不被读出、不是停留点（新文件） | 8 新 |
 | `e2e/fixtures/workspace-pages.ts` | `askToEndMembership`：打开一行的菜单、选移出或离开，到确认框为止（`endMembership` 经它）（Task 3）；成员和邀请一行的菜单按它的名字，菜单项是 `menuitem`（Task 8） | 3、8 |
 | `e2e/stories/workspace/w11-guest-bounds.spec.ts` | 访客从菜单离开（双击只发一次，请求在路上时确认框关不掉）、唯一的管理员被拒绝（Task 3）；`registeredPAT`、导入（Task 14） | 3、14 |
 | `e2e/stories/workspace/w4-invite-members.spec.ts` | 删除邀请被拒绝时确认框留着（Task 3）；邀请一行的菜单以地址为名（Task 8）；`registeredPAT`（Task 14） | 3、8、14 |
 | `e2e/stories/workspace/w5-invitation-link.spec.ts` | 邀请被拒绝之后的页面的说法（Task 4）；`registeredPAT`、会话断言的导入（Task 14） | 4、14 |
-| `e2e/stories/workspace/w7-member-management.spec.ts` | 条件挂载的确认框隐藏后面的页面（Task 1）；被拒绝时确认框留着（Task 3）；成员一行的菜单以成员为名、Tab 到达时显示（Task 8）；`registeredPAT`（Task 14） | 1、3、8、14 |
+| `e2e/stories/workspace/w7-member-management.spec.ts` | 条件挂载的确认框隐藏后面的页面（Task 1）；被拒绝时确认框留着（Task 3）；成员一行的菜单以成员为名、Tab 到达时显示，以键盘选择，取消、Escape 之后焦点回到菜单的按钮（Task 8）；`registeredPAT`（Task 14） | 1、3、8、14 |
 | `e2e/stories/workspace/w8-navigation-preferences.spec.ts` | 弹窗关上之后再读侧边栏（Task 1）；`registeredPAT`（Task 14） | 1、14 |
 | `knip.jsonc` | knip 的入口加 `tools/i18n-keys.mjs` | 9 |
 | `pnpm-lock.yaml` | `@nerve/propel` 依赖 `@nerve/utils`（工作区内） | 10 |
@@ -133,7 +134,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/appearance/theme-switcher.tsx` | 失败的提示经 `useRefusalMessage` | 9 |
 | `web/apps/web/core/components/auth-screens/not-authorized-view.tsx`、`web/apps/web/core/components/home/user-greetings.tsx`、`web/apps/web/core/components/navigation/project-navigation-dialog.tsx`、`web/apps/web/core/components/navigation/top-nav-power-k.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/create.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/components/workspace/delete-workspace-modal.tsx` | M3 页面上的英文经 `t()` | 4 |
 | `web/apps/web/core/components/automation/auto-archive-automation.tsx`、`web/apps/web/core/components/automation/select-month-modal.test.tsx`、`web/apps/web/core/components/automation/select-month-modal.tsx` | 自动归档的月数和自定义范围经 `t()`；它的测试 | 13 |
-| `web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/views/form.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx` | `IconButton` 的名字、`EmojiPicker` 的 `ariaLabel`（M2、M4、M6、M7 的调用方） | 7 |
+| `web/apps/web/core/components/comments/card/display.tsx`、`web/apps/web/core/components/comments/comment-reaction.tsx`、`web/apps/web/core/components/comments/quick-actions.tsx`、`web/apps/web/core/components/core/description-versions/modal.tsx`、`web/apps/web/core/components/cycles/cycles-view-header.tsx`、`web/apps/web/core/components/cycles/quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/activity-filter.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-activity/sort-root.tsx`、`web/apps/web/core/components/issues/issue-detail/issue-detail-quick-actions.tsx`、`web/apps/web/core/components/issues/issue-detail/reactions/issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`web/apps/web/core/components/issues/peek-overview/header.tsx`、`web/apps/web/core/components/modules/module-view-header.tsx`、`web/apps/web/core/components/modules/quick-actions.tsx`、`web/apps/web/core/components/rich-filters/filters-toggle.tsx`、`web/apps/web/core/components/settings/profile/modal.tsx`、`web/apps/web/core/components/views/form.tsx`、`web/apps/web/core/components/views/quick-actions.tsx`、`web/apps/web/core/components/views/view-list-header.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/filters/menu/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/menu-option/root.tsx`、`web/apps/web/core/components/workspace-notifications/sidebar/header/options/root.tsx` | `IconButton` 的名字、`EmojiPicker` 的 `ariaLabel`（M2、M4、M6、M7 的调用方） | 7 |
 | `web/apps/web/core/components/common/color-picker.tsx` | 颜色弹层：十六进制输入框的轮廓（新文件） | 8 新 |
 | `web/apps/web/core/components/common/translated.test.tsx`、`web/apps/web/core/components/common/translated.tsx` | `Translated`：带名字的一句一个键（新文件）和它的测试 | 4 新 |
 | `web/apps/web/core/components/cycles/list/cycle-list-item-action.tsx`、`web/apps/web/core/components/dropdowns/member/avatar.tsx`、`web/apps/web/core/components/dropdowns/member/base.tsx`、`web/apps/web/core/components/inbox/sidebar/inbox-list-item.tsx`、`web/apps/web/core/components/issues/attachment/attachment-list-item.tsx`、`web/apps/web/core/components/issues/issue-detail/sidebar.tsx`、`web/apps/web/core/components/issues/peek-overview/properties.tsx`、`web/apps/web/core/components/modules/module-card-item.tsx`、`web/apps/web/core/components/modules/module-list-item-action.tsx`、`web/apps/web/core/components/views/view-list-item-action.tsx` | `ButtonAvatars` 不再收 `showTooltip` | 9 |
@@ -142,9 +143,11 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/editor/embeds/mentions/user.tsx` | 角色名经 `ROLE_DETAILS` | 6 |
 | `web/apps/web/core/components/home/widgets/empty-states/no-projects.tsx` | 工作区经 `useRouteWorkspace()` | 11 |
 | `web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx` | 组字经 `isComposing` | 10 |
+| `web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx`、`web/apps/web/core/components/issues/workspace-draft/quick-action.tsx` | `CustomMenu` 的调用方：删去 `useCaptureForOutsideClick`（Headless UI 自己在捕获阶段检测点外面） | 8 |
 | `web/apps/web/core/components/labels/create-update-label-inline.tsx` | 颜色弹层（Task 8） | 8 |
-| `web/apps/web/core/components/labels/label-block/label-item-block.tsx` | 标签一行的菜单以标签为名（Task 8） | 8 |
+| `web/apps/web/core/components/labels/label-block/label-item-block.tsx` | 标签一行的菜单以标签为名；菜单打开时设为打开、`onMenuClose` 设为关上（原来每次点按钮来回切换） | 8 |
 | `web/apps/web/core/components/labels/delete-label-modal.tsx`、`web/apps/web/core/components/labels/project-setting-label-group.tsx`、`web/apps/web/core/components/labels/project-setting-label-item.tsx` | 标签的英文经 `t()`（Task 6） | 6 |
+| `web/apps/web/core/components/navigation/project-actions-menu.tsx` | `CustomMenu` 的调用方：删去 `useCaptureForOutsideClick` | 8 |
 | `web/apps/web/core/components/navigation/tab-navigation-overflow-menu.test.tsx`、`web/apps/web/core/components/navigation/tab-navigation-overflow-menu.tsx`、`web/apps/web/core/components/navigation/tab-navigation-visible-item.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 |
 | `web/apps/web/core/components/navigation/tab-navigation-visible-item.test.tsx` | 标签栏的菜单和提示经 `t()`；它们的测试 | 12 新 |
 | `web/apps/web/core/components/navigation/top-navigation-root.tsx` | 工作区菜单不再收 `variant` | 3 |
@@ -182,6 +185,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/settings/project/sidebar/header.tsx` | 设置侧边栏的标题经 `t()`（Task 4） | 4 |
 | `web/apps/web/core/components/settings/workspace/sidebar/header.tsx` | 设置侧边栏的标题经 `t()`（Task 4）；名字（Task 7）；写明 slug（Task 11） | 4、7、11 |
 | `web/apps/web/core/components/sidebar/resizable-sidebar.tsx` | 名字经 `t()`（Task 4）；不显示的一份 `inert`，死的状态删除（Task 8） | 4、8 |
+| `web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx` | `IconButton` 的名字（Task 7）；按下之后焦点交给代替它的开关（Task 8） | 7、8 |
 | `web/apps/web/core/components/sidebar/sidebar-wrapper.tsx` | 标题经 `t()`，没有调用方的 `title` 删除 | 12 |
 | `web/apps/web/core/components/workspace/confirm-workspace-member-remove.tsx` | 确认框不再自己关上，被拒绝时留着（Task 3）；标题和说明经 `t()`（Task 4） | 3、4 |
 | `web/apps/web/core/components/workspace/leave-workspace-modal.tsx` | 侧边栏的离开：成员页的确认框和命令（新文件） | 3 新 |
@@ -195,7 +199,8 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/components/workspace/settings/workspace-details.test.tsx` | M3 页面上的英文（Task 4） | 4 |
 | `web/apps/web/core/components/workspace/settings/workspace-details.tsx` | M3 页面上的英文（Task 4）；工作区经 `useRouteWorkspace()`（Task 11） | 4、11 |
 | `web/apps/web/core/components/workspace/sidebar/dropdown-item.tsx` | 工作区的一项在方向键选中时显出底色（Task 3）；角色名（Task 6） | 3、6 |
-| `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行和它的菜单以项目为名（Task 8） | 7、8 |
+| `web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx`、`web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx` | `CustomMenu` 的调用方：菜单打开时设为打开、`onMenuClose` 设为关上（原来每次点按钮来回切换） | 8 |
+| `web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行（一个停留点，链接说出是否展开）和它的菜单以项目为名（Task 8） | 7、8 |
 | `web/apps/web/core/components/workspace/sidebar/projects-list.tsx` | `IconButton` 的名字（Task 7）；"+"、一行的菜单、手柄、展开箭头的键盘，一行以项目为名（Task 8）；写明 slug（Task 11） | 7、8、11 |
 | `web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx` | 工作区菜单旁只给指针的展开箭头不被读出、不是停留点（Task 8） | 8 |
 | `web/apps/web/core/components/workspace/sidebar/quick-actions.tsx` | 写明 slug（Task 11） | 11 |
@@ -209,6 +214,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/lib/api-error.test.ts`、`web/apps/web/core/lib/api-error.ts` | `problemCode()`；它的测试 | 9 |
 | `web/apps/web/core/lib/fake-i18n-values.ts` | 替身：文字是键和它收到的值（新文件） | 5 新 |
 | `web/apps/web/core/lib/fake-controls.ts` | 替身：`AlertModalCore` 的文字（Task 6）；开关的名字（Task 13） | 6、13 |
+| `web/apps/web/core/store/command-palette.store.ts` | `getIsProjectListOpen` 对没有展开、收起过的项目给 `false`（原来给 `undefined`，与它的类型不符） | 8 |
 | `web/apps/web/core/store/member/project/project-member.store.test.ts` | 资料来自 `userOf` | 14 |
 | `web/apps/web/package.json` | web 的 oxlint 上限 303 → 301（Task 2）；301 → 300（Task 8）；300 → 298（Task 11）；298 → 295（Task 12） | 2、8、11、12 |
 | `web/packages/constants/src/filter.ts` | 删去没有读者的日期选项（Task 9）；创建日期的选项 `i18n_name`（Task 12） | 9、12 |
@@ -230,8 +236,10 @@ sys.exit(1 if broken else 0)
 | `web/packages/propel/src/emoji-reaction/emoji-reaction.tsx` | 表情回应的按钮收 `aria-label`，加回应的按钮收 `addReactionLabel`，回应按表情作 `key` | 7 |
 | `web/packages/propel/src/icon-button/helper.tsx` | `aria-label` 必传 | 7 |
 | `web/packages/propel/src/toast/toast.tsx` | 提示的区域收 `label` | 13 |
-| `web/packages/ui/package.json` | `@nerve/ui` 的 oxlint 上限 15 → 14（Task 1）；14 → 12（Task 10） | 1、10 |
-| `web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/custom-select.tsx`、`web/packages/ui/src/hooks/use-dropdown-key-down.tsx` | 组字经 `isComposing`；`use-dropdown-key-down` 的两条警告（Task 10）；`CustomSelect` 上按 Enter 打开列表 | 10 |
+| `web/packages/ui/package.json` | `@nerve/ui` 的 oxlint 上限 15 → 14（Task 1）；14 → 12（Task 8：`use-dropdown-key-down` 删除） | 1、8 |
+| `web/packages/ui/src/dropdowns/custom-menu.tsx`、`web/packages/ui/src/dropdowns/helper.tsx` | `CustomMenu`：打开与否只有 Headless UI 的状态，键盘打开、选择，选中、Escape 关上，焦点回到按钮；`useCaptureForOutsideClick`、`openOnHover` 删除 | 8 |
+| `web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/custom-select.tsx` | 组字经 `isComposing`；`CustomSelect` 上按 Enter 打开列表 | 10 |
+| `web/packages/ui/src/hooks/use-dropdown-key-down.tsx` | `CustomMenu` 原来的键盘处理，没有别的调用方（两条警告） | 8 删除 |
 | `web/packages/ui/src/modals/alert-modal.tsx` | 确认按钮不再是 `tabIndex={1}` | 1 |
 | `web/packages/ui/src/modals/modal-core.tsx` | `ModalCore`：v2 的 `Dialog` 打开方式，从挂载之后的渲染打开（Task 1）；组字经 `isComposing`（Task 10） | 1、10 |
 | `web/packages/utils/src/index.ts` | 不再导出 `permission/`（Task 6）；导出 `keyboard`（Task 10） | 6、10 |
@@ -6997,21 +7005,23 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 8: 收尾的键盘清单：颜色框、状态表单的焦点、侧边栏、成员和标签一行的菜单、项目下拉框；S8
+### Task 8: 收尾的键盘清单：颜色框、状态表单的焦点、侧边栏、成员和标签一行的菜单、`CustomMenu` 的键盘、项目下拉框；S8
 
 **Files:**
-- Create: `e2e/stories/smoke/s8-sidebar.spec.ts`、`web/apps/web/core/components/common/color-picker.tsx`、`web/apps/web/core/components/dropdowns/project/base.test.tsx`
-- Modify: `e2e/fixtures/project-pages.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx`、`web/apps/web/core/components/project-states/state-item-title.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`
+- Create: `e2e/fixtures/menus.ts`、`e2e/stories/smoke/s8-sidebar.spec.ts`、`web/apps/web/core/components/common/color-picker.tsx`、`web/apps/web/core/components/dropdowns/project/base.test.tsx`
+- Modify: `e2e/fixtures/project-pages.ts`、`e2e/fixtures/workspace-pages.ts`、`e2e/stories/project/p1-create-project.spec.ts`、`e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`e2e/stories/project/p7-labels-page.spec.ts`、`e2e/stories/smoke/s7-chinese.spec.ts`、`e2e/stories/workspace/w4-invite-members.spec.ts`、`e2e/stories/workspace/w7-member-management.spec.ts`、`web/apps/web/core/components/dropdowns/project/base.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx`、`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx`、`web/apps/web/core/components/issues/workspace-draft/quick-action.tsx`、`web/apps/web/core/components/labels/create-update-label-inline.tsx`、`web/apps/web/core/components/labels/label-block/label-item-block.tsx`、`web/apps/web/core/components/navigation/project-actions-menu.tsx`、`web/apps/web/core/components/project-states/create-update/form.tsx`、`web/apps/web/core/components/project-states/group-item.tsx`、`web/apps/web/core/components/project-states/options/delete.tsx`、`web/apps/web/core/components/project-states/options/mark-as-default.tsx`、`web/apps/web/core/components/project-states/state-item-title.tsx`、`web/apps/web/core/components/project/settings/member-columns.tsx`、`web/apps/web/core/components/sidebar/resizable-sidebar.tsx`、`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`、`web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`、`web/apps/web/core/components/workspace/settings/member-columns.tsx`、`web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx`、`web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`、`web/apps/web/core/components/workspace/sidebar/projects-list.tsx`、`web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx`、`web/apps/web/core/store/command-palette.store.ts`、`web/apps/web/package.json`、`web/packages/i18n/src/locales/en/accessibility.json`、`web/packages/i18n/src/locales/en/common.json`、`web/packages/i18n/src/locales/en/project-settings.json`、`web/packages/i18n/src/locales/zh-CN/accessibility.json`、`web/packages/i18n/src/locales/zh-CN/common.json`、`web/packages/i18n/src/locales/zh-CN/project-settings.json`、`web/packages/ui/package.json`、`web/packages/ui/src/dropdowns/custom-menu.tsx`、`web/packages/ui/src/dropdowns/helper.tsx`
+- Delete: `web/packages/ui/src/hooks/use-dropdown-key-down.tsx`
 
 **Interfaces:**（spec 2.9）
 - `components/common/color-picker.tsx`（新文件）：`TwitterPicker`，输入框的 `outline` 是浏览器的（`"revert"`）；状态的表单、标签的行内表单用它。状态的表单打开时 `setFocus("name")`。
-- 侧边栏：项目列表的"+"是 `opacity-0`，`group-hover`、`focus-visible` 时显示；项目一行的菜单是 `CustomMenu` 的省略号按钮（`menuButtonOnClick`；`actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；手柄是 `span`；展开箭头 `tabIndex={-1}`。`resizable-sidebar.tsx`：收起时主侧边栏 `inert`，没有浮出时副本 `inert`；从不设置的 `isHoveringTrigger` 和它的副作用删除（web 的上限 301 → 300）。项目一行的 `Disclosure.Button` 不再有 `aria-label`：它的名字是项目的名字（`Logo` 已 `aria-hidden`，Task 7），展开与否由 `aria-expanded` 说出；展开箭头的名字照旧（F6，A-M2）。
+- 侧边栏：项目列表的"+"是 `opacity-0`，`group-hover`、`focus-visible` 时显示；项目一行的菜单是 `CustomMenu` 的省略号按钮（`menuButtonOnClick`；`actionSectionRef` 和它的点外面检测删除），行在 `focus-within` 时显示；手柄是 `span`；展开箭头 `tabIndex={-1}`。`resizable-sidebar.tsx`：收起时主侧边栏 `inert`，没有浮出时副本 `inert`；从不设置的 `isHoveringTrigger` 和它的副作用删除（web 的上限 301 → 300）。项目一行是一个停留点（修复轮 1）：链接里的 `Disclosure.Button` 删除（原来链接和它是两个停留点，都以项目为名），链接以项目为名（`Logo` 已 `aria-hidden`，Task 7），在折叠的模式中带 `aria-expanded`（点它和点展开箭头一样展开、收起项目的页面）；`command-palette.store.ts` 的 `getIsProjectListOpen` 对没有展开、收起过的项目给 `false`（原来给 `undefined`，与它的类型不符，链接就不说是否展开）；展开箭头的名字照旧（F6，A-M2），仍只给指针。侧边栏的开关（`sidebar/sidebar-toggle-button.tsx`，修复轮 1）带 `data-sidebar-toggle`，按下之后下一帧把焦点交给不在 `inert` 之中的那一个（收起时交给页头的，展开时交给侧边栏的；原来按下的那一个变为 `inert` 或离开，焦点落在页面的 `body` 上）。
 - 一行重复的控件以它那一行为名（spec 2.9，Task 7 评审的裁定）：项目一行的菜单名为 `aria_labels.projects_sidebar.project_quick_actions`（"{name} quick actions"，项目的名字；原来每一行都是"Toggle quick actions menu"，这个键照旧由收藏和项目页头的菜单读）；项目成员页、标签页一行的菜单名为 `common.item_options`（"{name} options"，成员的显示名、标签的名字；原来每一行都是 `common.options`）。M3 的别的一行（Task 8 预审的裁定）：工作区成员页一行的菜单原来没有名字、键盘取得焦点时看不见（`PopoverMenu`，`outline-none`、`opacity-0`），改为与项目成员页一行相同的 `CustomMenu` 的省略号按钮（`common.item_options`、成员的显示名，`focus-visible:opacity-100`，浏览器的焦点轮廓），菜单项是 `menuitem`；邀请一行的菜单原来没有名字，以邀请的地址为名（`common.item_options`）；标签一行的删除、状态一行的编辑和删除以标签、状态为名（`common.delete_item` "Delete {name}"、`common.edit_item` "Edit {name}"）；状态的"Mark as default"以它看得见的文字开头，后接状态的名字（`project_settings.states.default.mark_item` "Mark as default: {name}"，WCAG 2.5.3；默认的一个、正在设的一个各只有一个，照旧以文字为名）；状态组的添加按钮以组为名（`project_settings.states.add` "Add a state to {name}"）。
+- `@nerve/ui` 的 `CustomMenu`（修复轮 1，spec 2.9；调用方的清单在 spec 附录 A.4）：打开与否只有 Headless UI 的 `open` 一个（原来的 `isOpen`、`useDropdownKeyDown` 和它自己的点外面检测删除：键盘打开的是 Headless UI 的状态，菜单却只照 `isOpen` 显示，按钮上按 Enter 什么也看不见）。三种按钮都是 `Menu.Button`（指针、Enter、空格、上下箭头打开，`tabIndex` 给按钮，根不再是停留点）；每一项是 `Menu.Item`，它的子元素就是动作的按钮（Enter、空格点它）；选中、Escape 关上菜单，焦点回到按钮（一项打开的弹窗关上时 `ModalCore` 把焦点还给按钮）；Tab 关上它，焦点从按钮往下走；点外面也关上它。`menuButtonOnClick` 在菜单打开时调用（指针或键盘），`onMenuClose` 在它关上时调用（无论什么关的），都经 `OpenChange`；`closeOnSelect` 让点菜单里的任何东西都关上它。`SubMenu` 放进菜单的项的元素里（在菜单之内，点它不算点外面），只以视口为界。`useCaptureForOutsideClick`、`openOnHover`（没有调用方）和 `@nerve/ui` 的 `use-dropdown-key-down`（两条警告）删除，`@nerve/ui` 的上限 14 → 12。调用方只改修复逼出的：8 个删去 `useCaptureForOutsideClick`（工作项的 4 个快捷操作、草稿的快捷操作、项目标签栏的菜单、侧边栏项目一行、标签一行）；以 `menuButtonOnClick` 来回切换"菜单打开"的 4 个（侧边栏项目一行、标签一行、收藏的文件夹和一项）改为打开时设为真、`onMenuClose` 设为假（原来只有点按钮才切换，键盘打开时不知道）。
 - 工作区菜单的标题旁只在指针经过时显示的展开箭头做标题的按钮同样的事：`tabIndex={-1}`、`aria-hidden`，它的 `aria-label` 删除（Task 7 评审的裁定；原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）。
 - 项目成员页一行的菜单 `focus-visible:opacity-100`，菜单项经 `t()`。项目下拉框：`tabIndex` 给 `DropdownButton`，根不再可以聚焦。
-- `e2e/fixtures/project-pages.ts` 的 `pageContent(page)`：页面的内容（应用的 `main` 里的 `main`，侧边栏之外）。侧边栏的一行现在也以项目为名，P1 在这里找项目的卡片，P2 找页头的面包屑。
+- `e2e/fixtures/project-pages.ts` 的 `pageContent(page)`：页面的内容（应用的 `main` 里的 `main`，侧边栏之外）。侧边栏的一行现在也以项目为名，P1 在这里找项目的卡片，P2 找页头的面包屑。`e2e/fixtures/menus.ts`（新文件）的 `chooseByKeyboard(page, button, item)`：按钮有焦点时按 Enter，那一项看得见，按下箭头到它（菜单的 `aria-activedescendant`），再按 Enter；W7、P5、P7、S8 经它。P6、P7 的整页计数以名字的开头、结尾为锚（`/^Mark as default: /`、`/^Edit /`、`/ options$/`、`/^Delete /`）。
 
-**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行，以"Web quick actions"找到它的菜单；工作区菜单的标题只有一个按钮被读出，Tab 从它到菜单的第一页；P6：名称有焦点、十六进制框有轮廓，Review 一行的编辑、删除、设为默认和组的添加以它们的东西为名；P5：一行的菜单由 Tab 到达，以"max options"为名，访客以"Web quick actions"打开侧边栏一行的菜单；P7：Docs 一行的菜单和删除以 Docs 为名；W7：bob 一行的菜单以他为名，由 Tab 到达时显示、有焦点的标记；W4：erin 的邀请一行的菜单以她的地址为名；S7：工作区菜单的按钮一个，工作区成员和邀请一行的菜单、标签一行的菜单以"…的选项"为名，状态的"设为默认：…"，项目成员一行的菜单以管理员的名字为名，它的"离开"。
+**Tests:** `dropdowns/project/base.test.tsx`（新文件）。新的故事 S8（`e2e/stories/smoke/s8-sidebar.spec.ts`），以项目的名字找到一行，以"Web quick actions"找到它的菜单；工作区菜单的标题只有一个按钮被读出，Tab 从它到菜单的第一页；P6：名称有焦点、十六进制框有轮廓，Review 一行的编辑、删除、设为默认和组的添加以它们的东西为名；P5：一行的菜单由 Tab 到达，以"max options"为名，访客以"Web quick actions"打开侧边栏一行的菜单；P7：Docs 一行的菜单和删除以 Docs 为名；W7：bob 一行的菜单以他为名，由 Tab 到达时显示、有焦点的标记；W4：erin 的邀请一行的菜单以她的地址为名；S7：工作区菜单的按钮一个，工作区成员和邀请一行的菜单、标签一行的菜单以"…的选项"为名，状态的"设为默认：…"，项目成员一行的菜单以管理员的名字为名，它的"离开"。修复轮 1：W7 以键盘打开 bob 一行的菜单、选"Remove"，确认框取消之后焦点回到菜单的按钮，再打开按 Escape 关上；P5 以键盘选 max 的"Remove"，Escape 关上确认框之后焦点回到按钮；P7 以键盘选 Docs 的"Edit label"；S8 的项目一行 Tab 只停一次（链接"Web"带 `aria-expanded`，之后是"Web quick actions"），以键盘选"Settings"打开项目的设置，按 Enter 收起侧边栏之后焦点在页头的开关上，再按 Enter 展开之后在侧边栏的开关上。
 
 - [ ] **Step 1: 键盘**
 
@@ -7053,6 +7063,70 @@ export function ColorPicker(props: TwitterPickerProps) {
       ref={dropdownRef}
 ````
 
+`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx
+        maxHeight="lg"
+        useCaptureForOutsideClick
+        closeOnSelect
+````
+````new web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx
+        maxHeight="lg"
+        closeOnSelect
+````
+
+`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx
+        maxHeight="lg"
+        useCaptureForOutsideClick
+        closeOnSelect
+````
+````new web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx
+        maxHeight="lg"
+        closeOnSelect
+````
+
+`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx
+        maxHeight="lg"
+        useCaptureForOutsideClick
+        closeOnSelect
+````
+````new web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx
+        maxHeight="lg"
+        closeOnSelect
+````
+
+`web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx
+        maxHeight="lg"
+        useCaptureForOutsideClick
+        closeOnSelect
+````
+````new web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx
+        maxHeight="lg"
+        closeOnSelect
+````
+
+`web/apps/web/core/components/issues/workspace-draft/quick-action.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/issues/workspace-draft/quick-action.tsx
+      <CustomMenu
+        ellipsis
+        placement="bottom-end"
+        menuItemsClassName="z-[14]"
+        maxHeight="lg"
+        useCaptureForOutsideClick
+        closeOnSelect
+      >
+````
+````new web/apps/web/core/components/issues/workspace-draft/quick-action.tsx
+      <CustomMenu ellipsis placement="bottom-end" menuItemsClassName="z-[14]" maxHeight="lg" closeOnSelect>
+````
+
 `web/apps/web/core/components/labels/create-update-label-inline.tsx`（修改，3 处）：
 
 ````old web/apps/web/core/components/labels/create-update-label-inline.tsx
@@ -7081,15 +7155,31 @@ import { ColorPicker } from "@/components/common/color-picker";
 
 ````old web/apps/web/core/components/labels/label-block/label-item-block.tsx
             ariaLabel={t("common.options")}
+            menuButtonOnClick={() => setIsMenuActive(!isMenuActive)}
+            useCaptureForOutsideClick
 ````
 ````new web/apps/web/core/components/labels/label-block/label-item-block.tsx
             ariaLabel={t("common.item_options", { name: label.name })}
+            menuButtonOnClick={() => setIsMenuActive(true)}
+            onMenuClose={() => setIsMenuActive(false)}
 ````
 ````old web/apps/web/core/components/labels/label-block/label-item-block.tsx
                 aria-label={t("common.actions.delete")}
 ````
 ````new web/apps/web/core/components/labels/label-block/label-item-block.tsx
                 aria-label={t("common.delete_item", { name: label.name })}
+````
+
+`web/apps/web/core/components/navigation/project-actions-menu.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/navigation/project-actions-menu.tsx
+      ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
+      useCaptureForOutsideClick
+      closeOnSelect
+````
+````new web/apps/web/core/components/navigation/project-actions-menu.tsx
+      ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
+      closeOnSelect
 ````
 
 `web/apps/web/core/components/project-states/create-update/form.tsx`（修改，7 处）：
@@ -7290,6 +7380,31 @@ import { ColorPicker } from "@/components/common/color-picker";
         inert={!(isCollapsed && showPeek)}
 ````
 
+`web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx`（修改，2 处）：
+
+````old web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx
+      aria-label={t("aria_labels.app_sidebar.toggle")}
+      onClick={() => {
+````
+````new web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx
+      aria-label={t("aria_labels.app_sidebar.toggle")}
+      data-sidebar-toggle=""
+      onClick={() => {
+````
+````old web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx
+        toggleSidebar();
+      }}
+````
+````new web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx
+        toggleSidebar();
+        // the toggle pressed goes (the sidebar's inert as the sidebar collapses, the header's away as it opens), so the
+        // focus goes on to the toggle that comes in its place, not to the page's body
+        requestAnimationFrame(() =>
+          document.querySelector<HTMLElement>("[data-sidebar-toggle]:not([inert] [data-sidebar-toggle])")?.focus()
+        );
+      }}
+````
+
 `web/apps/web/core/components/workspace/settings/invitations-list-item.tsx`（修改，1 处）：
 
 ````old web/apps/web/core/components/workspace/settings/invitations-list-item.tsx
@@ -7347,34 +7462,54 @@ import { CustomMenu, CustomSelect } from "@nerve/ui";
               </CustomMenu>
 ````
 
-`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`（修改，12 处）：
+`web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx
+                  menuButtonOnClick={() => setIsMenuActive(!isMenuActive)}
+````
+````new web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx
+                  menuButtonOnClick={() => setIsMenuActive(true)}
+                  onMenuClose={() => setIsMenuActive(false)}
+````
+
+`web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx`（修改，1 处）：
+
+````old web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx
+      menuButtonOnClick={() => onChange(!isMenuActive)}
+````
+````new web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx
+      menuButtonOnClick={() => onChange(true)}
+      onMenuClose={() => onChange(false)}
+````
+
+`web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx`（修改，8 处）：
 
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
   LogOutOutline,
   MoreHorizontalOutline,
+  SettingsOutline,
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
   LogOutOutline,
+  SettingsOutline,
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
-  // refs
   const actionSectionRef = useRef<HTMLButtonElement | null>(null);
-````
-````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
-  // refs
-````
-````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+  const projectRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<HTMLButtonElement | null>(null);
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+  const projectRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<HTMLSpanElement | null>(null);
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
 
   useOutsideClickDetector(actionSectionRef, () => setIsMenuActive(false));
+  useOutsideClickDetector(projectRef, () => projectRef?.current?.classList?.remove(HIGHLIGHT_CLASS));
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
 
+  useOutsideClickDetector(projectRef, () => projectRef?.current?.classList?.remove(HIGHLIGHT_CLASS));
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
               <button
@@ -7386,20 +7521,51 @@ import { CustomMenu, CustomSelect } from "@nerve/ui";
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
               </button>
-````
-````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
-              </span>
-````
-````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+            </Tooltip>
+            <>
+              <ControlLink href={defaultTabUrl} className="flex flex-grow truncate" onClick={handleItemClick}>
+                {isAccordionMode ? (
+                  <Disclosure.Button
+                    as="button"
+                    type="button"
                     className={cn("flex w-full flex-grow items-center gap-1.5 text-left select-none", {})}
                     aria-label={
                       isProjectListOpen
                         ? t("aria_labels.projects_sidebar.close_project_menu")
                         : t("aria_labels.projects_sidebar.open_project_menu")
                     }
+                  >
+                    <div className="grid size-4 flex-shrink-0 place-items-center">
+                      <Logo logo={project.logo_props} size={16} />
+                    </div>
+                    <p className="truncate text-13 font-medium text-secondary">{project.name}</p>
+                  </Disclosure.Button>
+                ) : (
+                  <div className="flex w-full flex-grow items-center gap-1.5 text-left select-none">
+                    <div className="grid size-4 flex-shrink-0 place-items-center">
+                      <Logo logo={project.logo_props} size={16} />
+                    </div>
+                    <p className="truncate text-13 font-medium text-secondary">{project.name}</p>
+                  </div>
+                )}
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
-                    className={cn("flex w-full flex-grow items-center gap-1.5 text-left select-none", {})}
+              </span>
+            </Tooltip>
+            <>
+              <ControlLink
+                href={defaultTabUrl}
+                className="flex flex-grow truncate"
+                onClick={handleItemClick}
+                // the row's one stop, named by the project: in the accordion it opens and closes the project's pages
+                aria-expanded={isAccordionMode ? isProjectListOpen : undefined}
+              >
+                <div className="flex w-full flex-grow items-center gap-1.5 text-left select-none">
+                  <div className="grid size-4 flex-shrink-0 place-items-center">
+                    <Logo logo={project.logo_props} size={16} />
+                  </div>
+                  <p className="truncate text-13 font-medium text-secondary">{project.name}</p>
+                </div>
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
                   customButton={
@@ -7413,38 +7579,35 @@ import { CustomMenu, CustomSelect } from "@nerve/ui";
                       className="text-placeholder"
                     />
                   }
+                  className={cn(
+                    "pointer-events-none flex-shrink-0 opacity-0 group-hover/project-item:pointer-events-auto group-hover/project-item:opacity-100",
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
                   ellipsis
                   buttonClassName="text-placeholder"
-                  menuButtonOnClick={() => setIsMenuActive(!isMenuActive)}
-````
-````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
-                    "pointer-events-none flex-shrink-0 opacity-0 group-hover/project-item:pointer-events-auto group-hover/project-item:opacity-100",
-````
-````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+                  menuButtonOnClick={() => setIsMenuActive(true)}
+                  className={cn(
                     "pointer-events-none flex-shrink-0 opacity-0 group-hover/project-item:pointer-events-auto group-hover/project-item:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
-                  )}
                   customButtonClassName="grid place-items-center"
-````
-````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
-                  )}
-````
-````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+                  placement="bottom-start"
                   ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
+                  useCaptureForOutsideClick
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
+                  placement="bottom-start"
                   ariaLabel={t("aria_labels.projects_sidebar.project_quick_actions", { name: project.name })}
 ````
 ````old web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
                     onClick={() => setIsProjectListOpen(!isProjectListOpen)}
+                    className={cn("hidden text-placeholder group-hover/project-item:inline-flex", {
 ````
 ````new web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx
                     onClick={() => setIsProjectListOpen(!isProjectListOpen)}
-                    // the row's own button opens and closes the project as this does: the pointer's alone
+                    // the row's link opens and closes the project as this does: the pointer's alone
                     tabIndex={-1}
+                    className={cn("hidden text-placeholder group-hover/project-item:inline-flex", {
 ````
 
 `web/apps/web/core/components/workspace/sidebar/projects-list.tsx`（修改，1 处）：
@@ -7474,6 +7637,15 @@ import { CustomMenu, CustomSelect } from "@nerve/ui";
               // is neither a Tab stop nor read
               tabIndex={-1}
               aria-hidden="true"
+````
+
+`web/apps/web/core/store/command-palette.store.ts`（修改，1 处）：
+
+````old web/apps/web/core/store/command-palette.store.ts
+  getIsProjectListOpen = computedFn((projectId: string) => this.projectListOpenMap[projectId]);
+````
+````new web/apps/web/core/store/command-palette.store.ts
+  getIsProjectListOpen = computedFn((projectId: string) => this.projectListOpenMap[projectId] ?? false);
 ````
 
 `web/apps/web/package.json`（修改，1 处）：
@@ -7563,7 +7735,510 @@ import { CustomMenu, CustomSelect } from "@nerve/ui";
         "mark_item": "设为默认：{name}",
 ````
 
+`web/packages/ui/package.json`（修改，1 处）：
+
+````old web/packages/ui/package.json
+    "check:lint": "node ../../../tools/lint-cap.mjs 14",
+````
+````new web/packages/ui/package.json
+    "check:lint": "node ../../../tools/lint-cap.mjs 12",
+````
+
+`web/packages/ui/src/dropdowns/custom-menu.tsx`（整个文件，420 行）：
+
+````whole web/packages/ui/src/dropdowns/custom-menu.tsx
+/**
+ * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * See the LICENSE file for details.
+ */
+
+import { Menu } from "@headlessui/react";
+import { ChevronDownOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
+import * as React from "react";
+import ReactDOM from "react-dom";
+import { usePopper } from "react-popper";
+// helpers
+import { cn } from "../utils";
+// types
+import type { ICustomMenuDropdownProps, ICustomMenuItemProps, ICustomSubMenuProps } from "./helper";
+
+interface PortalProps {
+  children: React.ReactNode;
+  container?: Element | null;
+  asChild?: boolean;
+}
+
+function Portal({ children, container, asChild = false }: PortalProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
+  const targetContainer = container || document.body;
+
+  if (asChild) {
+    return ReactDOM.createPortal(children, targetContainer);
+  }
+
+  return ReactDOM.createPortal(<div data-radix-portal="">{children}</div>, targetContainer);
+}
+
+// Context for main menu to communicate with submenus: closing the others as one opens, and the menu's items element,
+// which holds what they show
+const MenuContext = React.createContext<{
+  closeAllSubmenus: () => void;
+  registerSubmenu: (closeSubmenu: () => void) => () => void;
+  itemsElement: HTMLElement | null;
+} | null>(null);
+
+/** Calls onOpen as the menu opens and onClose as it closes, once for each change of open. */
+function OpenChange(props: { open: boolean; onOpen?: () => void; onClose?: () => void }) {
+  const { open, onOpen, onClose } = props;
+  const wasOpen = React.useRef(open);
+
+  React.useEffect(() => {
+    if (open === wasOpen.current) return;
+    wasOpen.current = open;
+    if (open) onOpen?.();
+    else onClose?.();
+  }, [open, onOpen, onClose]);
+
+  return null;
+}
+
+/**
+ * A menu: Headless UI's Menu, whose open state is the one it shows. Its button opens it by the pointer, Enter, Space or
+ * the arrow keys; the arrow keys move among its items, Enter and Space choose one. A choice or Escape closes it, the
+ * focus going back to its button; Tab closes it and moves on from its button; a click outside closes it too.
+ */
+function CustomMenu(props: ICustomMenuDropdownProps) {
+  const {
+    ariaLabel,
+    buttonClassName = "",
+    customButtonClassName = "",
+    customButtonTabIndex = 0,
+    placement,
+    children,
+    className = "",
+    customButton,
+    disabled = false,
+    ellipsis = false,
+    label,
+    maxHeight = "md",
+    noBorder = false,
+    noChevron = false,
+    optionsClassName = "",
+    menuItemsClassName = "",
+    verticalEllipsis = false,
+    portalElement,
+    menuButtonOnClick,
+    onMenuClose,
+    tabIndex,
+    closeOnSelect,
+  } = props;
+
+  const [referenceElement, setReferenceElement] = React.useState<HTMLButtonElement | null>(null);
+  const [popperElement, setPopperElement] = React.useState<HTMLDivElement | null>(null);
+  const [itemsElement, setItemsElement] = React.useState<HTMLElement | null>(null);
+  // refs
+  const submenuClosersRef = React.useRef<Set<() => void>>(new Set());
+
+  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+    placement: placement ?? "auto",
+  });
+
+  const closeAllSubmenus = React.useCallback(() => {
+    submenuClosersRef.current.forEach((closeSubmenu) => closeSubmenu());
+  }, []);
+
+  const registerSubmenu = React.useCallback((closeSubmenu: () => void) => {
+    submenuClosersRef.current.add(closeSubmenu);
+    return () => {
+      submenuClosersRef.current.delete(closeSubmenu);
+    };
+  }, []);
+
+  const menuContextValue = React.useMemo(
+    () => ({ closeAllSubmenus, registerSubmenu, itemsElement }),
+    [closeAllSubmenus, registerSubmenu, itemsElement]
+  );
+
+  // the menu's place in the Tab order, where its caller gives one, is its button's: the button is the menu's one stop
+  const buttonTabIndex = tabIndex ?? customButtonTabIndex;
+
+  return (
+    <Menu
+      as="div"
+      className={cn("relative w-min text-left", className)}
+      role="presentation"
+      // a click on the menu's button or items is the menu's alone, not the row's or the link's around it
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      }}
+      data-main-menu="true"
+    >
+      {({ open, close }) => {
+        let menuItems = (
+          <Menu.Items
+            ref={setItemsElement}
+            data-prevent-outside-click={!!portalElement}
+            className={cn(
+              "fixed z-30 translate-y-0",
+              menuItemsClassName
+            )} /** translate-y-0 is a hack to create new stacking context. Required for safari  */
+            // an item closes the menu as it is chosen; with closeOnSelect, a click on anything else in it does too
+            onClick={closeOnSelect ? () => close() : undefined}
+          >
+            <div
+              className={cn(
+                "shadow-md my-1 min-w-[12rem] overflow-y-scroll rounded-md border border-strong-1 bg-surface-1 px-2 py-2.5 text-11 whitespace-nowrap ring-1 ring-strong-1/15 outline-none focus:outline-none",
+                {
+                  "max-h-60": maxHeight === "lg",
+                  "max-h-48": maxHeight === "md",
+                  "max-h-36": maxHeight === "rg",
+                  "max-h-28": maxHeight === "sm",
+                },
+                optionsClassName
+              )}
+              ref={setPopperElement}
+              style={styles.popper}
+              {...attributes.popper}
+            >
+              <MenuContext.Provider value={menuContextValue}>{children}</MenuContext.Provider>
+            </div>
+          </Menu.Items>
+        );
+
+        if (portalElement) {
+          menuItems = ReactDOM.createPortal(menuItems, portalElement);
+        }
+
+        return (
+          <>
+            <OpenChange open={open} onOpen={menuButtonOnClick} onClose={onMenuClose} />
+            {customButton ? (
+              <Menu.Button as={React.Fragment} disabled={disabled}>
+                <button
+                  ref={setReferenceElement}
+                  type="button"
+                  className={customButtonClassName}
+                  tabIndex={buttonTabIndex}
+                  disabled={disabled}
+                  aria-label={ariaLabel}
+                >
+                  {customButton}
+                </button>
+              </Menu.Button>
+            ) : (
+              <>
+                {ellipsis || verticalEllipsis ? (
+                  <Menu.Button as={React.Fragment} disabled={disabled}>
+                    <button
+                      ref={setReferenceElement}
+                      type="button"
+                      disabled={disabled}
+                      className={`relative grid place-items-center rounded-sm p-1 text-secondary hover:text-primary ${
+                        disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-layer-transparent-hover"
+                      } ${buttonClassName}`}
+                      tabIndex={buttonTabIndex}
+                      aria-label={ariaLabel}
+                    >
+                      <MoreHorizontalOutline className={`h-3.5 w-3.5 ${verticalEllipsis ? "rotate-90" : ""}`} />
+                    </button>
+                  </Menu.Button>
+                ) : (
+                  <Menu.Button as={React.Fragment} disabled={disabled}>
+                    <button
+                      ref={setReferenceElement}
+                      type="button"
+                      className={`flex items-center justify-between gap-1 rounded-md px-2.5 py-1 text-11 whitespace-nowrap duration-300 ${
+                        open ? "text-primary" : "text-secondary"
+                      } ${noBorder ? "" : "shadow-sm border border-strong focus:outline-none"} ${
+                        disabled
+                          ? "cursor-not-allowed text-secondary"
+                          : "cursor-pointer hover:bg-layer-transparent-hover"
+                      } ${buttonClassName}`}
+                      tabIndex={buttonTabIndex}
+                      disabled={disabled}
+                      aria-label={ariaLabel}
+                    >
+                      {label}
+                      {!noChevron && <ChevronDownOutline className="h-3.5 w-3.5" />}
+                    </button>
+                  </Menu.Button>
+                )}
+              </>
+            )}
+            {menuItems}
+          </>
+        );
+      }}
+    </Menu>
+  );
+}
+
+// SubMenu context for closing submenu from nested items
+const SubMenuContext = React.createContext<{ closeSubmenu: () => void } | null>(null);
+
+// Hook to use submenu context
+const useSubMenu = () => React.useContext(SubMenuContext);
+
+// SubMenu implementation
+function SubMenu(props: ICustomSubMenuProps) {
+  const {
+    children,
+    trigger,
+    disabled = false,
+    className = "",
+    contentClassName = "",
+    placement = "right-start",
+  } = props;
+
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [referenceElement, setReferenceElement] = React.useState<HTMLSpanElement | null>(null);
+  const [popperElement, setPopperElement] = React.useState<HTMLDivElement | null>(null);
+  const submenuRef = React.useRef<HTMLDivElement | null>(null);
+
+  const menuContext = React.useContext(MenuContext);
+
+  // in the menu's items element, which is fixed, no box around it clips what this shows: the viewport alone bounds it
+  // (no clipping parents)
+  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+    placement,
+    modifiers: [
+      {
+        name: "offset",
+        options: {
+          offset: [0, 4],
+        },
+      },
+      {
+        name: "flip",
+        options: {
+          fallbackPlacements: ["left-start", "right-end", "left-end", "top-start", "bottom-start"],
+          boundary: [],
+        },
+      },
+      {
+        name: "preventOverflow",
+        options: {
+          padding: 8,
+          boundary: [],
+        },
+      },
+    ],
+  });
+
+  const closeSubmenu = React.useCallback(() => {
+    setIsOpen(false);
+  }, []);
+
+  // Register this submenu with the main menu context
+  React.useEffect(() => {
+    if (menuContext) {
+      return menuContext.registerSubmenu(closeSubmenu);
+    }
+  }, [menuContext, closeSubmenu]);
+
+  const toggleSubmenu = () => {
+    if (!disabled) {
+      // Close other submenus when opening this one
+      if (!isOpen && menuContext) {
+        menuContext.closeAllSubmenus();
+      }
+      setIsOpen(!isOpen);
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleSubmenu();
+  };
+
+  const subMenuContextValue = React.useMemo(() => ({ closeSubmenu }), [closeSubmenu]);
+
+  // Close submenu when clicking on other menu items
+  React.useEffect(() => {
+    const handleMenuItemClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      // Check if the click is on a menu item that's not part of this submenu
+      if (target.closest('[role="menuitem"]') && !submenuRef.current?.contains(target)) {
+        closeSubmenu();
+      }
+    };
+
+    document.addEventListener("click", handleMenuItemClick);
+    return () => {
+      document.removeEventListener("click", handleMenuItemClick);
+    };
+  }, [closeSubmenu]);
+
+  return (
+    <div ref={submenuRef} className={cn("relative", className)}>
+      <span ref={setReferenceElement} className="w-full">
+        <Menu.Item as="div" disabled={disabled}>
+          {({ active }) => (
+            <button
+              type="button"
+              className={cn(
+                "font-inherit flex w-full cursor-pointer items-center justify-between rounded-sm border-0 bg-transparent px-1 py-1.5 text-left text-secondary outline-none select-none",
+                {
+                  "bg-layer-transparent-hover": active && !disabled,
+                  "text-placeholder": disabled,
+                  "cursor-not-allowed": disabled,
+                }
+              )}
+              onClick={handleClick}
+              disabled={disabled}
+            >
+              <span className="flex-1">{trigger}</span>
+              <ChevronRightOutline className="h-3.5 w-3.5 flex-shrink-0" />
+            </button>
+          )}
+        </Menu.Item>
+      </span>
+
+      {isOpen && (
+        // in the menu's items element, beside its list, whose scrolling does not clip it: a click on it is a click in
+        // the menu, which Headless UI's menu stays open for
+        <Portal container={menuContext?.itemsElement}>
+          <div
+            ref={setPopperElement}
+            style={styles.popper}
+            {...attributes.popper}
+            className={cn(
+              "shadow-md z-30 min-w-[12rem] overflow-hidden rounded-md border border-strong-1 bg-surface-1 p-1 text-11 ring-1 ring-strong-1/15",
+              contentClassName
+            )}
+            data-prevent-outside-click="true"
+          >
+            <SubMenuContext.Provider value={subMenuContextValue}>{children}</SubMenuContext.Provider>
+          </div>
+        </Portal>
+      )}
+    </div>
+  );
+}
+
+function MenuItem(props: ICustomMenuItemProps) {
+  const { children, disabled = false, onClick, className } = props;
+  const submenuContext = useSubMenu();
+
+  return (
+    // the item is the button that acts: Enter and Space on the menu click its active item, which chooses it
+    <Menu.Item disabled={disabled}>
+      {({ focus, close }) => (
+        <button
+          type="button"
+          className={cn(
+            "w-full truncate rounded-sm px-1 py-1.5 text-left text-secondary select-none",
+            {
+              "bg-layer-transparent-hover": focus && !disabled,
+              "text-placeholder": disabled,
+            },
+            className
+          )}
+          onClick={(e) => {
+            close();
+            onClick?.(e);
+            // Close submenu if this item is inside a submenu
+            submenuContext?.closeSubmenu();
+          }}
+          disabled={disabled}
+        >
+          {children}
+        </button>
+      )}
+    </Menu.Item>
+  );
+}
+
+// Add all components as static properties for external use
+CustomMenu.MenuItem = MenuItem;
+CustomMenu.SubMenu = SubMenu;
+
+export { CustomMenu };
+````
+
+`web/packages/ui/src/dropdowns/helper.tsx`（修改，2 处）：
+
+````old web/packages/ui/src/dropdowns/helper.tsx
+  tabIndex?: number;
+  useCaptureForOutsideClick?: boolean;
+  defaultOpen?: boolean;
+````
+````new web/packages/ui/src/dropdowns/helper.tsx
+  tabIndex?: number;
+  defaultOpen?: boolean;
+````
+````old web/packages/ui/src/dropdowns/helper.tsx
+  menuButtonOnClick?: (...args: any) => void;
+  menuItemsClassName?: string;
+  onMenuClose?: () => void;
+  closeOnSelect?: boolean;
+  portalElement?: Element | null;
+  openOnHover?: boolean;
+````
+````new web/packages/ui/src/dropdowns/helper.tsx
+  /** Called each time the menu's button opens the menu, by the pointer or the keyboard. */
+  menuButtonOnClick?: (...args: any) => void;
+  menuItemsClassName?: string;
+  /** Called each time the menu closes, whatever closed it. */
+  onMenuClose?: () => void;
+  /** Whether a click on anything in the menu closes it, as a click on an item does. */
+  closeOnSelect?: boolean;
+  portalElement?: Element | null;
+````
+
+`web/packages/ui/src/hooks/use-dropdown-key-down.tsx`（删除）：
+
+````delete web/packages/ui/src/hooks/use-dropdown-key-down.tsx
+````
+
 - [ ] **Step 2: 测试**
+
+`e2e/fixtures/menus.ts`（新文件，29 行）：
+
+````file e2e/fixtures/menus.ts
+import { expect, type Locator, type Page } from "@playwright/test";
+
+// A page's menus (Headless UI's, which CustomMenu renders), as the keyboard works them.
+
+/**
+ * Chooses item from the menu of button as a keyboard user does: Enter on button, which has the focus, opens the menu,
+ * which shows item among its items and makes its first one active; ArrowDown moves the active item down to item, and
+ * Enter chooses it.
+ */
+export async function chooseByKeyboard(page: Page, button: Locator, item: string): Promise<void> {
+  await expect(button).toBeFocused();
+  await page.keyboard.press("Enter");
+  const menu = page.getByRole("menu");
+  const items = menu.getByRole("menuitem");
+  const choice = menu.getByRole("menuitem", { name: item, exact: true });
+  await expect(choice).toBeVisible();
+  // the active item is the one the menu's aria-activedescendant names
+  await expect(menu).toHaveAttribute("aria-activedescendant", (await items.first().getAttribute("id")) ?? "");
+  const id = (await choice.getAttribute("id")) ?? "";
+  // a press after another, as many as items come before item
+  const down = async (presses: number): Promise<void> => {
+    if (presses === 0) return;
+    await page.keyboard.press("ArrowDown");
+    return down(presses - 1);
+  };
+  await down(await items.evaluateAll((all, wanted) => all.findIndex((each) => each.id === wanted), id));
+  await expect(menu).toHaveAttribute("aria-activedescendant", id);
+  await page.keyboard.press("Enter");
+}
+````
 
 `e2e/fixtures/project-pages.ts`（修改，2 处）：
 
@@ -7647,14 +8322,22 @@ import { pageContent } from "../../fixtures/project-pages";
   await pageContent(page).getByRole("button", { name: "Web", exact: true }).first().focus();
 ````
 
-`e2e/stories/project/p5-project-members.spec.ts`（修改，2 处）：
+`e2e/stories/project/p5-project-members.spec.ts`（修改，3 处）：
 
 ````old e2e/stories/project/p5-project-members.spec.ts
-  await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
-
+import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
+import { answerTo, holdAnswer, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 ````
 ````new e2e/stories/project/p5-project-members.spec.ts
-  await expect(memberRow(page, ann.email).getByRole("button", { name: "Guest", exact: true })).toBeVisible();
+import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
+import { answerTo, holdAnswer, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
+````
+````old e2e/stories/project/p5-project-members.spec.ts
+
+  // max is removed; then gus, while the removal is out the dialog that asked cannot be dismissed.
+````
+````new e2e/stories/project/p5-project-members.spec.ts
 
   // max's row menu, named by him, shows, and is marked, as Tab reaches it from his avatar.
   const maxsMenu = memberRow(page, max.email).getByRole("button", { name: `${shownNameOf(max.email)} options` });
@@ -7663,7 +8346,13 @@ import { pageContent } from "../../fixtures/project-pages";
   await expect(maxsMenu).toBeFocused();
   await expect(maxsMenu).toHaveCSS("opacity", "1");
   await expect(maxsMenu).not.toHaveCSS("outline-style", "none");
+  // the keyboard chooses its Remove, whose dialog Escape closes, the focus back on the menu
+  await chooseByKeyboard(page, maxsMenu, "Remove");
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+  expect(await closedByEscape(page)).toBe(true);
+  await expect(maxsMenu).toBeFocused();
 
+  // max is removed; then gus, while the removal is out the dialog that asked cannot be dismissed.
 ````
 ````old e2e/stories/project/p5-project-members.spec.ts
   await sidebar.getByRole("button", { name: "Toggle quick actions menu" }).last().click();
@@ -7672,25 +8361,8 @@ import { pageContent } from "../../fixtures/project-pages";
   await sidebar.getByRole("button", { name: "Web quick actions", exact: true }).click();
 ````
 
-`e2e/stories/project/p6-states-page.spec.ts`（修改，4 处）：
+`e2e/stories/project/p6-states-page.spec.ts`（修改，5 处）：
 
-````old e2e/stories/project/p6-states-page.spec.ts
-  await addTo(page, "Started").click();
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-  await addTo(page, "Started").click();
-  await expect(page.locator("#name")).toBeFocused();
-````
-````old e2e/stories/project/p6-states-page.spec.ts
-  await colour.click();
-````
-````new e2e/stories/project/p6-states-page.spec.ts
-  await colour.click();
-  // its hex field shows where the keyboard is (react-color draws it with no outline of its own)
-  const hex = page.locator('input[id^="rc-editable-input"]');
-  await hex.focus();
-  await expect(hex).not.toHaveCSS("outline-style", "none");
-````
 ````old e2e/stories/project/p6-states-page.spec.ts
 /** The button beside the heading of the group named name that adds a state to it. */
 function addTo(page: Page, name: string): Locator {
@@ -7700,6 +8372,15 @@ function addTo(page: Page, name: string): Locator {
 /** The button beside the heading of the group named name that adds a state to it, named by the group. */
 function addTo(page: Page, name: string): Locator {
   return page.getByRole("button", { name: `Add a state to ${name}`, exact: true });
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+  await addTo(page, "Started").click();
+  await page.locator("#name").fill("Review");
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  await addTo(page, "Started").click();
+  await expect(page.locator("#name")).toBeFocused();
+  await page.locator("#name").fill("Review");
 ````
 ````old e2e/stories/project/p6-states-page.spec.ts
   // pointer is over it (unseen while neither is), Edit and Delete each marked as Tab reaches it: the fields its form
@@ -7721,9 +8402,38 @@ function addTo(page: Page, name: string): Locator {
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "0");
   await review.getByRole("button", { name: "Mark as default: Review", exact: true }).focus();
 ````
+````old e2e/stories/project/p6-states-page.spec.ts
+  await colour.click();
+  await page.locator('[title="#0693E3"]').click();
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+  await colour.click();
+  // its hex field shows where the keyboard is (react-color draws it with no outline of its own)
+  const hex = page.locator('input[id^="rc-editable-input"]');
+  await hex.focus();
+  await expect(hex).not.toHaveCSS("outline-style", "none");
+  await page.locator('[title="#0693E3"]').click();
+````
+````old e2e/stories/project/p6-states-page.spec.ts
+    await expect(other.page.getByRole("button", { name: "Mark as default" }), who).toHaveCount(controls ? 4 : 0);
+    await expect(other.page.getByRole("button", { name: "Edit" }), who).toHaveCount(controls ? 5 : 0);
+````
+````new e2e/stories/project/p6-states-page.spec.ts
+    await expect(other.page.getByRole("button", { name: /^Mark as default: / }), who).toHaveCount(controls ? 4 : 0);
+    await expect(other.page.getByRole("button", { name: /^Edit / }), who).toHaveCount(controls ? 5 : 0);
+````
 
-`e2e/stories/project/p7-labels-page.spec.ts`（修改，1 处）：
+`e2e/stories/project/p7-labels-page.spec.ts`（修改，4 处）：
 
+````old e2e/stories/project/p7-labels-page.spec.ts
+} from "../../fixtures/dialogs";
+import { dragOnto, labelRow, tabCycle } from "../../fixtures/project-pages";
+````
+````new e2e/stories/project/p7-labels-page.spec.ts
+} from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
+import { dragOnto, labelRow, tabCycle } from "../../fixtures/project-pages";
+````
 ````old e2e/stories/project/p7-labels-page.spec.ts
   // shown while Tab goes through them, as while the pointer is over it, each marked as Tab reaches it. Tab comes to its
   // menu from Feature's delete button, past its grip, which only a pointer drags.
@@ -7739,6 +8449,27 @@ function addTo(page: Page, name: string): Locator {
   const docsControls = docsRow.locator(":scope > div.absolute");
   const docsOptions = docsRow.getByRole("button", { name: "Docs options", exact: true });
   const docsDelete = docsRow.getByRole("button", { name: "Delete Docs", exact: true });
+````
+````old e2e/stories/project/p7-labels-page.spec.ts
+  await expect(docsControls).toHaveCSS("opacity", "1");
+
+````
+````new e2e/stories/project/p7-labels-page.spec.ts
+  await expect(docsControls).toHaveCSS("opacity", "1");
+  // back on its menu, the keyboard chooses Edit label, which opens Docs's form
+  await page.keyboard.press("Shift+Tab");
+  await chooseByKeyboard(page, docsOptions, "Edit label");
+  await expect(labelForm(page).locator("#labelName")).toHaveValue("Docs");
+  await labelForm(page).getByRole("button", { name: "Cancel" }).click();
+
+````
+````old e2e/stories/project/p7-labels-page.spec.ts
+    await expect(other.page.getByRole("button", { name: "Options" }), who).toHaveCount(controls ? 4 : 0);
+    await expect(other.page.getByRole("button", { name: "Delete" }), who).toHaveCount(controls ? 3 : 0);
+````
+````new e2e/stories/project/p7-labels-page.spec.ts
+    await expect(other.page.getByRole("button", { name: / options$/ }), who).toHaveCount(controls ? 4 : 0);
+    await expect(other.page.getByRole("button", { name: /^Delete / }), who).toHaveCount(controls ? 3 : 0);
 ````
 
 `e2e/stories/smoke/s7-chinese.spec.ts`（修改，6 处）：
@@ -7811,26 +8542,27 @@ function addTo(page: Page, name: string): Locator {
   await expect(page.getByRole("button", { name: "设为默认：Todo", exact: true })).toHaveText("设为默认");
 ````
 
-`e2e/stories/smoke/s8-sidebar.spec.ts`（新文件，73 行）：
+`e2e/stories/smoke/s8-sidebar.spec.ts`（新文件，89 行）：
 
 ````file e2e/stories/smoke/s8-sidebar.spec.ts
 import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { emailFor } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { chooseByKeyboard } from "../../fixtures/menus";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // S8, the sidebar by the keyboard (M3 closeout, P11's keyboard list): what the keyboard and assistive technology
 // reach in the workspace's sidebar is what it shows.
 
-test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed; the workspace menu's chevron is neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them, the menu one Tab stop; a project's row and its menu are named by its project, and its grip is none", async ({
+test("S8 (page): the sidebar's copy for peeking holds no control while it is hidden, and the sidebar none while it is collapsed, its toggle handing the focus to the header's and back; the workspace menu's chevron is neither read nor a Tab stop; the new project's button and a project's menu each show and are marked as Tab reaches them; a project's row is one Tab stop, its link, and its menu another, each named by the project, the menu worked by the keyboard; its chevron and grip are none", async ({
   api,
   signedInPage,
 }, testInfo) => {
   const tokens = await registerOnboarded(api, emailFor(testInfo));
   const slug = slugFor(testInfo);
   await createWorkspace(api, tokens.access_token, { name: "Acme", slug });
-  await createProject(api, tokens.access_token, slug, { name: "Web", identifier: "WEB" });
+  const web = await createProject(api, tokens.access_token, slug, { name: "Web", identifier: "WEB" });
   const page = await signedInPage(tokens);
   const watch = await watchPage(page);
   await page.goto(`/${slug}/projects`);
@@ -7861,12 +8593,14 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await expect(create).toHaveCSS("opacity", "1");
   await expect(create).not.toHaveCSS("outline-style", "none");
 
-  // Web's menu, named by Web as its row is: one Tab stop after the row, shown and marked as Tab reaches it; its
-  // chevron, which does what the row does, and its grip, which the pointer drags, are none, though the pointer over
-  // the row shows them.
+  // Web's row is one Tab stop, its link, named by Web, which opens and closes its pages; its menu, named by Web too,
+  // the next, shown and marked as Tab reaches it. Its chevron, which does what the link does, and its grip, which the
+  // pointer drags, are none, though the pointer over the row shows them.
   const menu = sidebar.getByRole("button", { name: "Web quick actions", exact: true });
   await expect(menu).toHaveCount(1);
-  const row = sidebar.getByRole("button", { name: "Web", exact: true });
+  const row = sidebar.getByRole("link", { name: "Web", exact: true });
+  await expect(row).toHaveAttribute("aria-expanded", "false");
+  await expect(sidebar.getByRole("button", { name: "Web", exact: true })).toHaveCount(0);
   await row.focus();
   await page.keyboard.press("Tab");
   await expect(menu).toBeFocused();
@@ -7878,12 +8612,25 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
   await expect(sidebar.getByRole("button", { name: "Open project menu" })).not.toBeFocused();
   await expect(sidebar.locator(".cursor-grab:is(button, a, [tabindex]):not([tabindex='-1'])")).toHaveCount(0);
 
-  // Collapsed, the sidebar holds no control the keyboard reaches; opened again, it does.
-  await sidebar.getByRole("button", { name: "Toggle sidebar" }).click();
+  // Collapsed by its toggle and the keyboard, the sidebar holds no control the keyboard reaches, and the focus goes on
+  // to the toggle of the page's header, outside either sidebar, seen while the sidebar is collapsed; Enter there opens
+  // the sidebar again, the focus going back to its toggle.
+  const toggle = sidebar.getByRole("button", { name: "Toggle sidebar" });
+  await toggle.focus();
+  await page.keyboard.press("Enter");
   await expect.poll(inert).toEqual([true, true]);
-  // the page's header has its own, outside either sidebar, seen while the sidebar is collapsed
-  await page.locator("xpath=//button[@aria-label='Toggle sidebar'][not(ancestor::*[@role='complementary'])]").click();
+  await expect(
+    page.locator("xpath=//button[@aria-label='Toggle sidebar'][not(ancestor::*[@role='complementary'])]")
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect.poll(inert).toEqual([false, true]);
+  await expect(toggle).toBeFocused();
+
+  // Web's menu by the keyboard alone: Enter opens it, and the arrow keys and Enter choose its Settings.
+  await row.focus();
+  await page.keyboard.press("Tab");
+  await chooseByKeyboard(page, menu, "Settings");
+  await expect(page).toHaveURL(`/${slug}/settings/projects/${web.id}`);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });
@@ -7907,13 +8654,22 @@ test("S8 (page): the sidebar's copy for peeking holds no control while it is hid
     .click();
 ````
 
-`e2e/stories/workspace/w7-member-management.spec.ts`（修改，3 处）：
+`e2e/stories/workspace/w7-member-management.spec.ts`（修改，4 处）：
 
 ````old e2e/stories/workspace/w7-member-management.spec.ts
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 ````
 ````new e2e/stories/workspace/w7-member-management.spec.ts
 import { accountId, bearer, createPAT, emailFor, register, shownNameOf } from "../../fixtures/auth";
+````
+````old e2e/stories/workspace/w7-member-management.spec.ts
+import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+````
+````new e2e/stories/workspace/w7-member-management.spec.ts
+import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
+import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 ````
 ````old e2e/stories/workspace/w7-member-management.spec.ts
   await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
@@ -7924,7 +8680,6 @@ import { accountId, bearer, createPAT, emailFor, register, shownNameOf } from ".
 ````
 ````old e2e/stories/workspace/w7-member-management.spec.ts
   await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin" })).toHaveCount(0);
-
 ````
 ````new e2e/stories/workspace/w7-member-management.spec.ts
   await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin", exact: true })).toHaveCount(0);
@@ -7936,7 +8691,18 @@ import { accountId, bearer, createPAT, emailFor, register, shownNameOf } from ".
   await expect(bobsMenu).toBeFocused();
   await expect(bobsMenu).toHaveCSS("opacity", "1");
   await expect(bobsMenu).not.toHaveCSS("outline-style", "none");
-
+  // By the keyboard alone: Enter opens it, the arrow keys and Enter choose Remove, and the dialog that asks, cancelled,
+  // gives the focus back to the menu; opened again, Escape closes it.
+  await chooseByKeyboard(page, bobsMenu, "Remove");
+  const cancel = modalDialog(page).getByRole("button", { name: "Cancel" });
+  await expect(cancel).toBeVisible();
+  await cancel.press("Enter");
+  await expect(bobsMenu).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem", { name: "Remove", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(bobsMenu).toBeFocused();
 ````
 
 `web/apps/web/core/components/dropdowns/project/base.test.tsx`（新文件，33 行）：
@@ -7980,7 +8746,7 @@ describe("ProjectDropdownBase", () => {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 14 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `69 rules, 3 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -7997,7 +8763,7 @@ Expected: 116 个全部通过。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add e2e/fixtures/project-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project-states/group-item.tsx web/apps/web/core/components/project-states/options/delete.tsx web/apps/web/core/components/project-states/options/mark-as-default.tsx web/apps/web/core/components/project-states/state-item-title.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx web/apps/web/package.json web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/project-settings.json
+git add e2e/fixtures/menus.ts e2e/fixtures/project-pages.ts e2e/fixtures/workspace-pages.ts e2e/stories/project/p1-create-project.spec.ts e2e/stories/project/p2-visibility.spec.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/project/p6-states-page.spec.ts e2e/stories/project/p7-labels-page.spec.ts e2e/stories/smoke/s7-chinese.spec.ts e2e/stories/smoke/s8-sidebar.spec.ts e2e/stories/workspace/w4-invite-members.spec.ts e2e/stories/workspace/w7-member-management.spec.ts web/apps/web/core/components/common/color-picker.tsx web/apps/web/core/components/dropdowns/project/base.test.tsx web/apps/web/core/components/dropdowns/project/base.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/all-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/archived-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/cycle-issue.tsx web/apps/web/core/components/issues/issue-layouts/quick-action-dropdowns/module-issue.tsx web/apps/web/core/components/issues/workspace-draft/quick-action.tsx web/apps/web/core/components/labels/create-update-label-inline.tsx web/apps/web/core/components/labels/label-block/label-item-block.tsx web/apps/web/core/components/navigation/project-actions-menu.tsx web/apps/web/core/components/project-states/create-update/form.tsx web/apps/web/core/components/project-states/group-item.tsx web/apps/web/core/components/project-states/options/delete.tsx web/apps/web/core/components/project-states/options/mark-as-default.tsx web/apps/web/core/components/project-states/state-item-title.tsx web/apps/web/core/components/project/settings/member-columns.tsx web/apps/web/core/components/sidebar/resizable-sidebar.tsx web/apps/web/core/components/sidebar/sidebar-toggle-button.tsx web/apps/web/core/components/workspace/settings/invitations-list-item.tsx web/apps/web/core/components/workspace/settings/member-columns.tsx web/apps/web/core/components/workspace/sidebar/favorites/favorite-folder.tsx web/apps/web/core/components/workspace/sidebar/favorites/favorite-items/common/favorite-item-quick-action.tsx web/apps/web/core/components/workspace/sidebar/projects-list-item.tsx web/apps/web/core/components/workspace/sidebar/projects-list.tsx web/apps/web/core/components/workspace/sidebar/sidebar-menu-items.tsx web/apps/web/core/store/command-palette.store.ts web/apps/web/package.json web/packages/i18n/src/locales/en/accessibility.json web/packages/i18n/src/locales/en/common.json web/packages/i18n/src/locales/en/project-settings.json web/packages/i18n/src/locales/zh-CN/accessibility.json web/packages/i18n/src/locales/zh-CN/common.json web/packages/i18n/src/locales/zh-CN/project-settings.json web/packages/ui/package.json web/packages/ui/src/dropdowns/custom-menu.tsx web/packages/ui/src/dropdowns/helper.tsx web/packages/ui/src/hooks/use-dropdown-key-down.tsx
 ```
 ```bash
 git commit -m "feat(M3/closeout): the closeout's keyboard list: the hex field, the state form's focus, the sidebar and the rows' menus
@@ -8013,6 +8779,13 @@ labels' row menus are named by their row, the members' shown and marked
 on focus; the states' and labels' row buttons and each state group's add
 are named by their item; the project dropdown's Tab stop is its button.
 S8 walks the sidebar by keyboard.
+
+CustomMenu opens, chooses and closes by the keyboard: Headless UI's open
+state is the one it shows, each item is the button that acts, a choice
+or Escape closes it and the focus goes back to its button. The sidebar's
+toggle hands the focus to the toggle that takes its place, and a
+project's row is one Tab stop, its link, which says whether its pages
+are open. W7, P5, P7 and S8 choose from the rows' menus by keyboard.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -8033,7 +8806,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.10` | 项目下拉框的按钮不在调用方的 Tab 顺序里（K3d） | `base.test.tsx` | vitest |
 | `T8.11` | 收起的侧边栏仍能用 Tab 走到 | 故事 S8 | 端到端 |
 | `T8.12` | 没有浮出的侧边栏副本仍能用 Tab 走到 | 故事 S8 | 端到端 |
-| `T8.13` | 项目一行的按钮回到"Open project menu"的名字，每一行都一样（F6） | 故事 S8 | 端到端 |
+| `T8.13` | 项目一行的链接回到"Open project menu"的名字，每一行都一样（F6） | 故事 S8 | 端到端 |
 | `T8.14` | 侧边栏项目一行的菜单回到"Toggle quick actions menu"的名字，每一行都一样 | 故事 S8 | 端到端 |
 | `T8.15` | 项目成员一行的菜单回到"Options"的名字，每一行都一样 | 故事 P5 | 端到端 |
 | `T8.16` | 标签一行的菜单回到"Options"的名字，每一行都一样 | 故事 S7 | 端到端 |
@@ -8048,6 +8821,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.25` | 状态一行的删除按钮回到"Delete"的名字，每一行都一样 | 故事 P6 | 端到端 |
 | `T8.26` | 状态的"Mark as default"又只以它的文字为名，每一行都一样 | 故事 P6 | 端到端 |
 | `T8.27` | 状态组的添加按钮回到"Add"的名字，每一组都一样 | 故事 P6 | 端到端 |
+| `T8.28` | 菜单的按钮上按 Enter 打不开：按钮自己的 keydown 在 Headless UI 的之前阻止了它 | 故事 W7、P5、P7、S8 | 端到端 |
+| `T8.29` | 菜单项又是包着按钮的 `div`：菜单上的 Enter、空格点的是 `div`，什么也选不了 | 故事 W7、P5、P7、S8 | 端到端 |
+| `T8.30` | Escape 关不上菜单：菜单项的列表自己的 keydown 在 Headless UI 的之前阻止了它 | 故事 W7 | 端到端 |
+| `T8.31` | 焦点回不到菜单的按钮：菜单打开、关上时按钮换了一个（以状态为 `key`），得到焦点的那个没了 | 故事 W7、P5 | 端到端 |
+| `T8.32` | 侧边栏的开关按下后焦点谁也不给：落在页面的 `body` 上 | 故事 S8 | 端到端 |
+| `T8.33` | 侧边栏项目一行又是两个停留点：链接和其中的按钮，都以项目为名 | 故事 S8 | 端到端 |
+| `T8.34` | 侧边栏项目一行不说它的页面是否展开：没有打开、收起过的项目 | 故事 S8 | 端到端 |
 
 ---
 
@@ -9114,7 +9894,7 @@ describe("problemCode", () => {
 - [ ] **Step 3: 运行检查**
 
 Run: `make lint-web`
-Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 14 条、`@nerve/propel` 10 条，各等于上限。
+Expected: 通过；关键词守卫 `70 rules, 23 exceptions, no hits.`；web 的 oxlint 300 条、`@nerve/ui` 12 条、`@nerve/propel` 10 条，各等于上限。
 
 Run: `make knip`
 Expected: 通过。
@@ -9170,11 +9950,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `web/packages/utils/src/keyboard.test.ts`、`web/packages/utils/src/keyboard.ts`
-- Modify: `e2e/fixtures/dialogs.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s6-dialogs.spec.ts`、`pnpm-lock.yaml`、`web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/components/power-k/ui/modal/wrapper.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/package.json`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx`、`web/packages/ui/package.json`、`web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/custom-select.tsx`、`web/packages/ui/src/hooks/use-dropdown-key-down.tsx`、`web/packages/ui/src/modals/modal-core.tsx`、`web/packages/utils/src/index.ts`
+- Modify: `e2e/fixtures/dialogs.ts`、`e2e/stories/project/p5-project-members.spec.ts`、`e2e/stories/smoke/s6-dialogs.spec.ts`、`pnpm-lock.yaml`、`web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx`、`web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx`、`web/apps/web/core/components/issues/select/base.tsx`、`web/apps/web/core/components/power-k/ui/modal/wrapper.tsx`、`web/apps/web/core/hooks/use-dropdown-key-down.tsx`、`web/apps/web/core/hooks/use-keypress.tsx`、`web/packages/propel/package.json`、`web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx`、`web/packages/ui/src/dropdowns/custom-search-select.tsx`、`web/packages/ui/src/dropdowns/custom-select.tsx`、`web/packages/ui/src/modals/modal-core.tsx`、`web/packages/utils/src/index.ts`
 
 **Interfaces:**（spec 2.11）
-- `@nerve/utils` 的 `keyboard.ts`（新文件）：`isComposing(event)`：`event.isComposing` 或 `event.keyCode === 229`；`@nerve/ui` 的 `ModalCore`、`CustomSearchSelect`、`use-dropdown-key-down`，`@nerve/propel` 的表情选择器，web 的 `use-keypress`、`use-dropdown-key-down`、标签的选择、`issues/select/base.tsx`、命令面板都经它；命令面板的 `handleKeyDown` 开头加同一个守卫。`@nerve/propel` 的 `package.json` 依赖 `@nerve/utils`。
-- `@nerve/ui` 的 `use-dropdown-key-down`：`selectActiveItem?.()` 和依赖，两条警告没有了（上限 14 → 12）。
+- `@nerve/utils` 的 `keyboard.ts`（新文件）：`isComposing(event)`：`event.isComposing` 或 `event.keyCode === 229`；`@nerve/ui` 的 `ModalCore`、`CustomSearchSelect`，`@nerve/propel` 的表情选择器，web 的 `use-keypress`、`use-dropdown-key-down`、标签的选择、`issues/select/base.tsx`、命令面板都经它；命令面板的 `handleKeyDown` 开头加同一个守卫。`@nerve/propel` 的 `package.json` 依赖 `@nerve/utils`。
 - `CustomSelect`：模块级的 `openOnEnter`：Enter 上先 `preventDefault`，再 `currentTarget.click()`；两种按钮都用它。
 
 **Tests:** `keyboard.test.ts`（新文件）。`dialogs.ts` 的 `composingEscape` 两种顺序都发（Chromium、Firefox 的 `isComposing`；Safari 的 `compositionend` 之后 `keyCode` 229 的 keydown）；S6：命令面板的空搜索框中结束组字的 Escape 不关面板；P5：角色的选择上按 Enter 打开列表。
@@ -9321,15 +10100,6 @@ import { isComposing } from "@nerve/utils";
             if (isComposing(e.nativeEvent)) return;
 ````
 
-`web/packages/ui/package.json`（修改，1 处）：
-
-````old web/packages/ui/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 14",
-````
-````new web/packages/ui/package.json
-    "check:lint": "node ../../../tools/lint-cap.mjs 12",
-````
-
 `web/packages/ui/src/dropdowns/custom-search-select.tsx`（修改，2 处）：
 
 ````old web/packages/ui/src/dropdowns/custom-search-select.tsx
@@ -9394,34 +10164,6 @@ function openOnEnter(event: React.KeyboardEvent<HTMLButtonElement>) {
                 tabIndex={tabIndex}
                 onKeyDown={openOnEnter}
                 className={cn(
-````
-
-`web/packages/ui/src/hooks/use-dropdown-key-down.tsx`（修改，4 处）：
-
-````old web/packages/ui/src/hooks/use-dropdown-key-down.tsx
-import { useCallback } from "react";
-````
-````new web/packages/ui/src/hooks/use-dropdown-key-down.tsx
-import { useCallback } from "react";
-import { isComposing } from "@nerve/utils";
-````
-````old web/packages/ui/src/hooks/use-dropdown-key-down.tsx
-      if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-````
-````new web/packages/ui/src/hooks/use-dropdown-key-down.tsx
-      if (event.key === "Enter" && !isComposing(event.nativeEvent)) {
-````
-````old web/packages/ui/src/hooks/use-dropdown-key-down.tsx
-          selectActiveItem && selectActiveItem();
-````
-````new web/packages/ui/src/hooks/use-dropdown-key-down.tsx
-          selectActiveItem?.();
-````
-````old web/packages/ui/src/hooks/use-dropdown-key-down.tsx
-    [isOpen, onOpen, onClose]
-````
-````new web/packages/ui/src/hooks/use-dropdown-key-down.tsx
-    [isOpen, onOpen, onClose, selectActiveItem]
 ````
 
 `web/packages/ui/src/modals/modal-core.tsx`（修改，3 处）：
@@ -9615,7 +10357,7 @@ Expected: 116 个全部通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add e2e/fixtures/dialogs.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts pnpm-lock.yaml web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx web/apps/web/core/components/issues/select/base.tsx web/apps/web/core/components/power-k/ui/modal/wrapper.tsx web/apps/web/core/hooks/use-dropdown-key-down.tsx web/apps/web/core/hooks/use-keypress.tsx web/packages/propel/package.json web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx web/packages/ui/package.json web/packages/ui/src/dropdowns/custom-search-select.tsx web/packages/ui/src/dropdowns/custom-select.tsx web/packages/ui/src/hooks/use-dropdown-key-down.tsx web/packages/ui/src/modals/modal-core.tsx web/packages/utils/src/index.ts web/packages/utils/src/keyboard.test.ts web/packages/utils/src/keyboard.ts
+git add e2e/fixtures/dialogs.ts e2e/stories/project/p5-project-members.spec.ts e2e/stories/smoke/s6-dialogs.spec.ts pnpm-lock.yaml web/apps/web/core/components/issues/issue-detail/label/select/label-select.tsx web/apps/web/core/components/issues/issue-layouts/properties/label-dropdown.tsx web/apps/web/core/components/issues/select/base.tsx web/apps/web/core/components/power-k/ui/modal/wrapper.tsx web/apps/web/core/hooks/use-dropdown-key-down.tsx web/apps/web/core/hooks/use-keypress.tsx web/packages/propel/package.json web/packages/propel/src/emoji-icon-picker/emoji-picker.tsx web/packages/ui/src/dropdowns/custom-search-select.tsx web/packages/ui/src/dropdowns/custom-select.tsx web/packages/ui/src/modals/modal-core.tsx web/packages/utils/src/index.ts web/packages/utils/src/keyboard.test.ts web/packages/utils/src/keyboard.ts
 ```
 ```bash
 git commit -m "feat(M3/closeout): one test for a key that belongs to an input method, and Enter on a select opens its list
@@ -13937,8 +14679,9 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 ## 7. 工作项页面的键盘、下拉框和弹窗
 
 - **弹窗**：M3 收尾把 `ModalCore` 改成 Headless UI v2 的 `Dialog`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）：弹窗打开时后面的页面 `inert`、`aria-hidden`，请求在路上时关不掉、取消不能用。工作项的弹窗在 M3 的故事里走不到：M4 对接时逐个核对 Tab 在弹窗里转、Escape 和点外面关上、关上之后焦点回到打开它的控件，以及弹窗里经 portal 渲染的东西（日期选择、下拉框、表情）能用（收尾 spec 附录 A.3 的门户清单只证明了 M3 页面上的几种）。`AlertModalCore` 的确认框照 A-M2：被拒绝时留着，只在成功的跟进中关上；按钮的文字经 `t()` 传入（`@nerve/ui` 的默认值是英文，见 M8 的交接）。
-- **正的 `tabIndex`**：工作项的表单（`getTabIndex(ETabIndices.ISSUE_FORM)`）：浏览器先走完正的、再走焦点陷阱的哨兵，Tab 在最后一个之后离开弹窗，M3/P10 的创建表单因此删去了它的，M4 照样删去。同一个机制的另几处（M3/P10 的裁定 F-17、F-18）：`core/modals/existing-issues-list-modal.tsx`、`issues/parent-issues-list-modal.tsx` 的搜索框和 `issues/issue-detail/label/select/label-select.tsx` 收的 `baseTabIndex`；`issues/issue-modal/components/default-properties.tsx` 给父工作项的 `CustomMenu` 正的 `tabIndex`（落在 Menu 的根上）；`issues/archive-issue-modal.tsx`、`core/description-versions/modal.tsx` 写死的 `tabIndex={1}`。M4、M6、M7 中最后删去正的 `tabIndex` 的那一个，同时删除 `getTabIndex`（`@nerve/utils` 的 `tab-indices.ts`）和 `@nerve/constants` 的 `tab-indices.ts`，`CustomMenu` 不再读 `tabIndex`（M3/P10 评审第 6 节）。
+- **正的 `tabIndex`**：工作项的表单（`getTabIndex(ETabIndices.ISSUE_FORM)`）：浏览器先走完正的、再走焦点陷阱的哨兵，Tab 在最后一个之后离开弹窗，M3/P10 的创建表单因此删去了它的，M4 照样删去。同一个机制的另几处（M3/P10 的裁定 F-17、F-18）：`core/modals/existing-issues-list-modal.tsx`、`issues/parent-issues-list-modal.tsx` 的搜索框和 `issues/issue-detail/label/select/label-select.tsx` 收的 `baseTabIndex`；`issues/issue-modal/components/default-properties.tsx` 给父工作项的 `CustomMenu` 正的 `tabIndex`（M3 收尾起落在菜单的按钮上，原来在 Menu 的根上）；`issues/archive-issue-modal.tsx`、`core/description-versions/modal.tsx` 写死的 `tabIndex={1}`。M4、M6、M7 中最后删去正的 `tabIndex` 的那一个，同时删除 `getTabIndex`（`@nerve/utils` 的 `tab-indices.ts`）和 `@nerve/constants` 的 `tab-indices.ts`，`CustomMenu` 不再读 `tabIndex`（M3/P10 评审第 6 节）。
 - **嵌套的按钮**：`dropdowns/` 的 `DropdownButton` 放在 Headless UI 的按钮里（M3/P10 的裁定 R3），面包屑的下拉框之前一节的标题按钮也在选择的按钮里，M4 随工作项的属性下拉框和页头一起改。菜单自己的按钮里又放了 `IconButton` 的三处（M3 收尾找到，`customButton` 或 `PopoverMenu` 的 `button` 中的 `IconButton`，两个 Tab 停留点、按钮里有按钮）：`comments/quick-actions.tsx`、`issues/issue-layouts/quick-action-dropdowns/issue-detail.tsx`、`issues/issue-detail/issue-activity/activity-filter.tsx`（外面的按钮 `outline-none`，焦点看不到）；改法照 M3 收尾的项目一行和成员筛选（`CustomMenu` 的 `customButtonClassName` 加上按钮的样式，内容是图标，不再嵌一个按钮）。
+- **`CustomMenu` 的键盘**（M3 收尾 Task 8 的修复轮 1 在根上改：键盘打开、选择，Escape 关上，焦点回到按钮；[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9、附录 A.4 的调用方清单）：M4 的页面上留下的三处。工作项快捷操作的 `SubMenu`（`issues/issue-layouts/quick-action-dropdowns/` 的 `all-issue.tsx`、`cycle-issue.tsx`、`module-issue.tsx`、`project-issue.tsx`、`issue-detail.tsx`）的触发项是包着按钮的 `Menu.Item as="div"`，菜单上的 Enter 点的是 `div`，键盘打不开子菜单（原来也是）；看板、日历的卡片给快捷操作的 `customActionButton` 的"激活"底色只随指针的 click 切换，键盘打开菜单时不显示；`issues/issue-modal/components/default-properties.tsx` 给父工作项的菜单的 `customButton` 是一个 `<button>`，放在菜单的按钮里（按钮里有按钮）。在 M4 的页面上用键盘核对。
 - **下拉框**：成员下拉框以 `CustomSearchSelect` 为底之后 M4 的调用方看得到的不同（按键由 Headless UI 处理，`WhileOpen` 记下打开时的回调，Escape 之后焦点在选择自己的按钮上，列表的新样子），在 M4 的页面上核对，C7 没有核对 M4 页面上的调用方（成员下拉框的 8 个文件、4 个筛选）。`issues/select/base.tsx` 的根与 M3 收尾改过的项目下拉框是同一种写法：调用方给根 `tabIndex`，根是一个没有名字的停留点；照收尾把 `tabIndex` 给里面的按钮。筛选的共用件（`issues/issue-layouts/filters/` 的 `FilterHeader`、`FilterOption`，M3 的项目筛选也用）：标题的展开按钮没有名字，选项不说出选中与否（M3 收尾找到）。`getButtonStyling` 的两处（`rich-filters/add-filters/button.tsx`、`dropdowns/layout.tsx`）用键盘核对轮廓。
 - **右键菜单**：工作项和草稿的列表的右键菜单关着时 `inert`（M3/P10 的裁定 F-14），在 M4 的页面上核对右键打开它、点它的项。
 - **层叠顺序**：页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下，`z-30` 及以上留给弹窗和从弹窗打开、经 portal 渲染到 `body` 的东西（下拉框、提示、表情）；M3 收尾因此把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。工作项页面上画在任何弹窗之上的元素（行号是 M3 收尾时的）：`issues/issue-layouts/roots/project-layout-root.tsx:80`（`fixed … z-50`）；日历的两个 `Popover.Panel`（`issues/issue-layouts/calendar/dropdowns/options-dropdown.tsx:128`、`months-dropdown.tsx:102`，`fixed z-50`，不经 portal）；`issues/issue-layouts/quick-add/form/calendar.tsx:22`（`z-50`）；更新中的遮罩 `issues/issue-layouts/calendar/issue-block.tsx:110`、`issues/issue-layouts/list/block.tsx:217`（`z-[99999]`）；拖动中的 `issues/issue-layouts/kanban/block.tsx:261`（`z-[100]`）。与弹窗同层或之上的还有 `issues/attachment/attachment-item-list.tsx:123`（`z-30`）和拖动中的 `issues/issue-layouts/kanban/kanban-delete-drop-zone.tsx:52`（`z-40`）。M4 改这些页面时把它们降到 `z-30` 之下，或开着一个弹窗核对它们不画在弹窗上。
@@ -14138,7 +14881,7 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 ## 3. 键盘、弹窗和下拉框
 
 - **弹窗**：M3 收尾把 `ModalCore` 改成 Headless UI v2 的 `Dialog`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）：打开时后面的页面 `inert`、`aria-hidden`，请求在路上时关不掉。收集箱、视图、通知的弹窗（通知的打盹 `workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx` 在内）对接时逐个核对 Tab、Escape、点外面、关上之后的焦点和弹窗里经 portal 渲染的东西（收尾 spec 附录 A.3 只证明了 M3 页面上的几种）；`AlertModalCore` 的确认框照 A-M2，按钮的文字经 `t()` 传入。
-- **正的 `tabIndex`**：收集箱的创建表单（`INTAKE_ISSUE_FORM`）同 M4 的交接第 7 节，其中给父工作项的 `CustomMenu` 的一处（`inbox/modals/create-modal/issue-properties.tsx`）落在 Menu 的根上（M3/P10 的裁定 F-17）。M4、M6、M7 中最后删去正的 `tabIndex` 的那一个删除 `getTabIndex` 和两份 `tab-indices.ts`。
+- **正的 `tabIndex`**：收集箱的创建表单（`INTAKE_ISSUE_FORM`）同 M4 的交接第 7 节，其中给父工作项的 `CustomMenu` 的一处（`inbox/modals/create-modal/issue-properties.tsx`）落在菜单的按钮上（M3/P10 的裁定 F-17；M3 收尾 Task 8 的修复轮 1 把它从 Menu 的根移到按钮），它的 `customButton` 是一个 `<button>`，放在菜单的按钮里（按钮里有按钮）。M4、M6、M7 中最后删去正的 `tabIndex` 的那一个删除 `getTabIndex` 和两份 `tab-indices.ts`。
 - **嵌套的按钮和看不到的轮廓**（M3/P11 spec 第 5 节、M3 收尾找到）：菜单自己的按钮里又放了 `IconButton` 的三处（`views/quick-actions.tsx`、`workspace-notifications/sidebar/filters/menu/root.tsx`、`workspace-notifications/sidebar/header/options/menu-option/root.tsx`）；收藏的菜单 `workspace/sidebar/favorites/favorites-menu.tsx` 的 `IconButton` 外层 `opacity-0`、没有 `focus-within`，焦点看不到；收藏夹的外层手柄按钮（`workspace/sidebar/favorites/favorite-folder.tsx`）显示时是一个没有名字、按 Enter 什么都不做的停留点。改法照 M3 收尾的项目一行（`CustomMenu` 的 `customButtonClassName`；行的 `focus-within:opacity-100`；手柄不是停留点）。页头的通知链接（`navigation/top-navigation-root.tsx`）没有名字，提示是写死的"Inbox"：随未读数一起给它经 `t()` 的名字。
 - **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：视图一行的菜单按钮 `views/quick-actions.tsx:94`（"Options"）以视图的名字为名：已有的 `view.name`；M3 收尾已加的带 `{name}` 的键 `common.item_options`（"{name} options"、"{name} 的选项"，项目成员页、标签页一行的菜单读它）。
 - **下拉框**：收集箱的两个指派人的成员下拉框（`inbox/content/issue-properties.tsx`、`inbox/modals/create-modal/issue-properties.tsx`）以 `CustomSearchSelect` 为底之后看得到的不同同 M4 的交接第 7 节，在 M7 的页面上核对（C7 没有核对）。右键菜单关着时 `inert`，在 M7 的页面上核对右键打开。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M7 的页面上核对。
@@ -14322,7 +15065,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 弹窗 | `ModalCore`（`@nerve/ui`）改用 Headless UI v2 的 `Dialog`，以 `DialogBackdrop`、`DialogPanel` 做过渡（原来是 `Transition.Root`、`Transition.Child`）：弹窗打开时后面的页面 `inert`、`aria-hidden`，指针点不到、读屏读不到、Tab 走不出弹窗，关上之后都恢复，焦点回到打开它的控件；只在打开时才挂载的弹窗也是这样（它从挂载之后的那次渲染打开；原来这样的弹窗后面的页面照旧能操作）。从弹窗打开的列表、选择器和提示渲染在页面之外，照旧能用、被读出。请求在路上时关不掉、输入法组字时的 Escape 不关，照旧。`AlertModalCore` 的确认按钮不再是 `tabIndex={1}`：Tab 在取消和确认之间转（原来先到确认，走过最后一个就离开弹窗）。命令面板、快捷键和切换账户三个弹窗改经 `ModalCore`（原来直接用 Headless UI 的 `Dialog`）：快捷键的搜索框不再是 `tabIndex={1}`，关闭按钮有名字、在标题之外（弹窗的名字就是标题），标题左对齐（原来居中）；切换账户的弹窗在退出的请求在路上时关不掉，层和宽度随 `ModalCore`（`z-20` → `z-30`，`w-[40rem]` → `sm:max-w-2xl`）。只在打开时才挂载的弹窗现在也有打开的过渡（原来立即出现）。命令面板从 `z-50` 到了弹窗的一层（`z-30`；提示、tooltip、表情和右键菜单的弹层照旧在它之上）：页面上的元素停在这一层之下，设置页的手机菜单（`settings/mobile/nav.tsx`）因此从 `z-50` 降到 `z-20`（原来它画在任何弹窗之上） | 弹窗之外的页面不能操作，也不被读出（负责人 2026-10-10；M3/P10 的缺陷 ii） | 已完成 | M3/收尾 |
 | 离开工作区 | 侧边栏的工作区菜单加"离开工作区"，每个角色都有，访客由此第一次能在页面上离开工作区。它打开成员页离开时的同一个确认框，经同一个命令（`useMembershipChanges` 的 `leave`）：成功之后只在发出它的会话里跟进，去成员页离开之后去的地方；nerve 拒绝时（唯一的管理员）确认框留着，原因在提示里。工作区菜单的按钮在键盘取得焦点时显出内圈的轮廓，方向键选中的一项（工作区和三个操作）与指针悬停时一样显出底色，当前工作区的一项选中时深一级（原来都看不出）。换工作区、换项目（后退、前进也是）时工作区的内容、项目的页面和设置重新挂载，开着的确认框、命令面板和快捷键列表关上（原来跟过去，它的"离开""移出""归档"作用于那个工作区或项目）；经菜单换工作区之后焦点在页面的开头（原来回到菜单的按钮），侧边栏的"Projects"一节重新展开，滚动回到顶上，窄屏（768 px 以下）上开着的侧边栏收起。成员页的移出、离开和邀请的删除被拒绝时，确认框同样留着（原来关上）；离开的确认框的标题经 `t()`。工作区菜单只有顶部导航一种用法，没有调用方的"侧边栏"写法删除 | 负责人 2026-10-11（"菜单加入口，收尾做"）；被拒绝时弹窗留着（总体设计 7.7） | 已完成 | M3/收尾 |
 | M3 页面上的文案 | M3 页面上写死的英文都经 `t()`（en、zh-CN）：工作区的 general 页和删除弹窗、成员页（列、角色、移出和离开的确认框）、邀请页和"找不到工作区"、没有权限的页面的标题、项目导航对话框、设置侧边栏的标题、命令面板的占位、快捷键弹窗的标题和搜索框、切换账户的那句话、首页的问候（一个时段一句、带名字：中文原来把"good"也译作"早上"，读作"早上 下午""早上 晚上"；名字改为显示名，原来是英文语序的名和姓）、侧边栏、项目列表（卡片、筛选的下拉框和已选的筛选）、项目的弹窗（删除、离开、加入、归档和恢复、移出成员、添加成员）、项目设置各页的标题、功能、自动归档、状态和标签的设置页（状态组的标题读组的名字，原来读屏读到小写的键）、新建工作区和新手引导的页面标题、提示区域的名字。一句话里带名字的是一个键，名字照旧加粗（`components/common/translated.tsx`）。角色名只有一个来源（`ROLE_DETAILS` 的 `i18n_title`；`ROLE`、`getUserRole` 删除）。邀请被拒绝之后的页面说"This invitation was declined."/"这份邀请已被拒绝。"（原来对打开链接的人说"You declined this invitation."/"您已忽略这份邀请。"；负责人 2026-10-13）。英文改了的说法（忙时的"Leaving""Joining"不带"..."，"Delete label"，项目设置的标题等）逐条在 [M3 收尾 spec](M3-workspace-project/specs/closeout.md) 附录 A.8 | 中文界面不夹英文 | 已完成 | M3/收尾 |
-| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10），32 处经 `t()`，收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，交给 M7）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开按钮和工作区菜单的按钮的名字有了文案（原来是没有定义的键），项目列表的"More"按钮以它看得见的文字为名（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行的按钮以项目为名（原来每一行都叫"Open project menu"），它的菜单也以项目为名（"Web quick actions"，原来每一行都叫"Toggle quick actions menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；工作区菜单的标题旁只在指针经过时显示的展开箭头不再是停留点、不被读出（原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）；项目成员页的筛选同样只是一个按钮；项目和工作区的成员页、邀请、标签页一行的菜单以成员、地址、标签为名（"{name} options"，原来两个成员页和邀请的没有名字，标签页的每一行都叫"Options"），两个成员页的在键盘取得焦点时显示、有焦点的轮廓（工作区成员页的原来是 `outline-none` 的弹层，现在与项目成员页的一样是菜单）；状态一行的编辑、删除、设为默认，标签一行的删除，状态组的添加以它们的东西为名（原来每一行都叫"Edit""Delete""Mark as default""Add"）；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
+| 名字和键盘 | propel 的 `IconButton` 的 `aria-label` 必传，应用中 36 处都有名字（个人设置 1、M3 11、工作项 8、迭代和模块 6、收集箱、通知和视图 10），32 处经 `t()`，收集箱上一个、下一个工作项的 4 处是写死的英文（"Previous work item""Next work item"，交给 M7）；表情回应的按钮、项目列表已选筛选的移除按钮（"移除 X"）、项目卡片上设置的链接（以项目为名，"Web 设置"）、项目的功能开关有名字；侧边栏的展开按钮和工作区菜单的按钮的名字有了文案（原来是没有定义的键），项目列表的"More"按钮以它看得见的文字为名（原来是没有定义的键）；图标的连字和表情不再并进旁边的名字，选图标的按钮由 `EmojiPicker` 必传的 `ariaLabel` 命名（项目的照旧，视图的"View icon"、编辑器标注块的"Callout icon"原来以所选的表情为名）。状态、标签的颜色弹层的十六进制输入框在键盘取得焦点时有轮廓（`components/common/color-picker.tsx`）；状态的表单打开时焦点在名称上；侧边栏项目一行是一个停留点，以项目为名的链接（原来链接里另有一个以项目为名的按钮，两个停留点；更早每一行的按钮都叫"Open project menu"），折叠的模式中它说出项目的页面是否展开，它的菜单也以项目为名（"Web quick actions"，原来每一行都叫"Toggle quick actions menu"），列表的"+"、项目一行的菜单在键盘取得焦点时显示，一行的菜单只是一个停留点（菜单的按钮里不再嵌一个按钮），拖动的手柄不再是停留点；工作区菜单的标题旁只在指针经过时显示的展开箭头不再是停留点、不被读出（原来 Tab 停在看不见的它上，读屏读出两个同名的按钮）；项目成员页的筛选同样只是一个按钮；项目和工作区的成员页、邀请、标签页一行的菜单以成员、地址、标签为名（"{name} options"，原来两个成员页和邀请的没有名字，标签页的每一行都叫"Options"），两个成员页的在键盘取得焦点时显示、有焦点的轮廓（工作区成员页的原来是 `outline-none` 的弹层，现在与项目成员页的一样是菜单）；状态一行的编辑、删除、设为默认，标签一行的删除，状态组的添加以它们的东西为名（原来每一行都叫"Edit""Delete""Mark as default""Add"）；项目下拉框的停留点是它的按钮（根不再可以聚焦）；收起的侧边栏和没有浮出的侧边栏 `inert`（原来 Tab 和读屏都走到看不见的那一份），侧边栏的开关按下之后焦点交给代替它的开关（原来落在页面的 `body` 上）；`@nerve/ui` 的 `CustomMenu`（应用中 53 处）用键盘打开（Enter、空格、上下箭头）、选择（Enter、空格），Escape 关上，焦点回到菜单的按钮（原来按 Enter 什么也看不见），选中一项总关上菜单（原来没有 `closeOnSelect` 的菜单选了之后还开着） | 每个控件 Tab 能到、有名字、键盘取得焦点时看得见（总体设计 7.7；M3/P11 spec 第 5 节收尾的键盘清单） | 已完成 | M3/收尾 |
 | 输入法和选择上的 Enter | 组字中的按键由一个共用的判断认出：`@nerve/utils` 的 `isComposing`（`isComposing` 或 `keyCode` 229，Safari 先结束组字、再交出 229 的按键也认得），`@nerve/ui`、`@nerve/propel` 和 web 的守卫都经它（`@nerve/propel` 因此依赖 `@nerve/utils`）；命令面板的搜索框为空时，结束组字的 Escape 不再关上面板。`CustomSelect` 的按钮上按 Enter 打开列表（原来提交所在的表单：添加成员的弹窗中在角色上按 Enter 就立即添加） | 组字中的按键属于输入法；Enter 不意外提交（M3/P10 的浏览器核对） | 已完成 | M3/收尾 |
 | 工作区的地址 | M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWorkspace`：经 `useRouteWorkspace()`（`core/hooks/use-route-workspace.ts`：路由的 slug 经调用者的工作区列表找到），工作区级的权限判断写明 slug；关键词规则 `workspace-address-route` 看住它们，与项目一侧的 `project-address-route` 同一个规则 | 地址只从路由参数（总体设计 7.7） | 已完成 | M3/收尾 |
 | 共用的写法 | 复制只经 `useCopyLink`、`useCopyText`（`core/hooks/use-copy-link.ts`）：API 令牌弹窗的复制和命令面板的"复制当前页面的地址"也经它们（复制失败是共用的提示，两条专用的文案删除）；关键词规则 `copy-hook` 看住，M4、M6、M7、M8 的 20 个文件是带期限的例外。问题码只经 `problemCode()`（`core/lib/api-error.ts`），拒绝的文字只经 `useRefusalMessage`（主题切换的失败提示也是）。`ButtonAvatars` 的 `showTooltip` 删除（没有读者）。`make lint-web` 加 `tools/i18n-keys.mjs`：页面读的每个键在语言文件中都有（它第一次运行就找到侧边栏的四个没有定义的键和一个没有读者的日期筛选项） | 一件事只有一份写法 | 已完成 | M3/收尾 |

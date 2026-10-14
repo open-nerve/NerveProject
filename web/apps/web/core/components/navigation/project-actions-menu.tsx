@@ -52,7 +52,6 @@ export function ProjectActionsMenu({ workspaceSlug, project, isAuthorized, onCop
       customButtonClassName="grid place-items-center"
       placement="bottom-start"
       ariaLabel={t("aria_labels.projects_sidebar.toggle_quick_actions_menu")}
-      useCaptureForOutsideClick
       closeOnSelect
       onMenuClose={() => setIsMenuActive(false)}
     >

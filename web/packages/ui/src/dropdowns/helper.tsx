@@ -24,7 +24,6 @@ interface IDropdownProps {
   optionsClassName?: string;
   placement?: Placement;
   tabIndex?: number;
-  useCaptureForOutsideClick?: boolean;
   defaultOpen?: boolean;
 }
 
@@ -33,12 +32,14 @@ export interface ICustomMenuDropdownProps extends IDropdownProps {
   ellipsis?: boolean;
   noBorder?: boolean;
   verticalEllipsis?: boolean;
+  /** Called each time the menu's button opens the menu, by the pointer or the keyboard. */
   menuButtonOnClick?: (...args: any) => void;
   menuItemsClassName?: string;
+  /** Called each time the menu closes, whatever closed it. */
   onMenuClose?: () => void;
+  /** Whether a click on anything in the menu closes it, as a click on an item does. */
   closeOnSelect?: boolean;
   portalElement?: Element | null;
-  openOnHover?: boolean;
   ariaLabel?: string;
 }
 

@@ -14,6 +14,7 @@ import { accountId, bearer, createPAT, emailFor, register, shownNameOf } from ".
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
 import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
@@ -290,6 +291,18 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await expect(bobsMenu).toBeFocused();
   await expect(bobsMenu).toHaveCSS("opacity", "1");
   await expect(bobsMenu).not.toHaveCSS("outline-style", "none");
+  // By the keyboard alone: Enter opens it, the arrow keys and Enter choose Remove, and the dialog that asks, cancelled,
+  // gives the focus back to the menu; opened again, Escape closes it.
+  await chooseByKeyboard(page, bobsMenu, "Remove");
+  const cancel = modalDialog(page).getByRole("button", { name: "Cancel" });
+  await expect(cancel).toBeVisible();
+  await cancel.press("Enter");
+  await expect(bobsMenu).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem", { name: "Remove", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(bobsMenu).toBeFocused();
 
   // bob becomes a guest: the page sends the role's number (nerve refuses a string), and so is he in each project.
   const demoted = await pickRole(page, bob.email, await membership(bob.id), { from: "Member", to: "Guest" });

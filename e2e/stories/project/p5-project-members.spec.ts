@@ -13,6 +13,7 @@ import { expectMembers, type MemberRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, newAccount, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedByEscape, closedWithin, enabledWithin, pageBehindHidden } from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
 import { answerTo, holdAnswer, registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { endProjectMembership, leavingOf, removalOf } from "../../fixtures/project-pages";
 import { expect, test } from "../../fixtures/test";
@@ -302,6 +303,11 @@ test("P5 (page): a project admin who is no workspace admin adds a member and a g
   await expect(maxsMenu).toBeFocused();
   await expect(maxsMenu).toHaveCSS("opacity", "1");
   await expect(maxsMenu).not.toHaveCSS("outline-style", "none");
+  // the keyboard chooses its Remove, whose dialog Escape closes, the focus back on the menu
+  await chooseByKeyboard(page, maxsMenu, "Remove");
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Remove", exact: true })).toBeVisible();
+  expect(await closedByEscape(page)).toBe(true);
+  await expect(maxsMenu).toBeFocused();
 
   // max is removed; then gus, while the removal is out the dialog that asked cannot be dismissed.
   expect((await endProjectMembership(page, max.email, "Remove", removalOf(maxs.id))).status()).toBe(204);

@@ -311,32 +311,25 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
               </span>
             </Tooltip>
             <>
-              <ControlLink href={defaultTabUrl} className="flex flex-grow truncate" onClick={handleItemClick}>
-                {isAccordionMode ? (
-                  <Disclosure.Button
-                    as="button"
-                    type="button"
-                    className={cn("flex w-full flex-grow items-center gap-1.5 text-left select-none", {})}
-                  >
-                    <div className="grid size-4 flex-shrink-0 place-items-center">
-                      <Logo logo={project.logo_props} size={16} />
-                    </div>
-                    <p className="truncate text-13 font-medium text-secondary">{project.name}</p>
-                  </Disclosure.Button>
-                ) : (
-                  <div className="flex w-full flex-grow items-center gap-1.5 text-left select-none">
-                    <div className="grid size-4 flex-shrink-0 place-items-center">
-                      <Logo logo={project.logo_props} size={16} />
-                    </div>
-                    <p className="truncate text-13 font-medium text-secondary">{project.name}</p>
+              <ControlLink
+                href={defaultTabUrl}
+                className="flex flex-grow truncate"
+                onClick={handleItemClick}
+                // the row's one stop, named by the project: in the accordion it opens and closes the project's pages
+                aria-expanded={isAccordionMode ? isProjectListOpen : undefined}
+              >
+                <div className="flex w-full flex-grow items-center gap-1.5 text-left select-none">
+                  <div className="grid size-4 flex-shrink-0 place-items-center">
+                    <Logo logo={project.logo_props} size={16} />
                   </div>
-                )}
+                  <p className="truncate text-13 font-medium text-secondary">{project.name}</p>
+                </div>
               </ControlLink>
               <div className="flex items-center gap-1">
                 <CustomMenu
                   ellipsis
                   buttonClassName="text-placeholder"
-                  menuButtonOnClick={() => setIsMenuActive(!isMenuActive)}
+                  menuButtonOnClick={() => setIsMenuActive(true)}
                   className={cn(
                     "pointer-events-none flex-shrink-0 opacity-0 group-hover/project-item:pointer-events-auto group-hover/project-item:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100",
                     {
@@ -345,7 +338,6 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                   )}
                   placement="bottom-start"
                   ariaLabel={t("aria_labels.projects_sidebar.project_quick_actions", { name: project.name })}
-                  useCaptureForOutsideClick
                   closeOnSelect
                   onMenuClose={() => setIsMenuActive(false)}
                 >
@@ -393,7 +385,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                     size="sm"
                     icon={ChevronRightOutline}
                     onClick={() => setIsProjectListOpen(!isProjectListOpen)}
-                    // the row's own button opens and closes the project as this does: the pointer's alone
+                    // the row's link opens and closes the project as this does: the pointer's alone
                     tabIndex={-1}
                     className={cn("hidden text-placeholder group-hover/project-item:inline-flex", {
                       "inline-flex": isMenuActive,
