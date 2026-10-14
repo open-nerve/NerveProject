@@ -20,6 +20,7 @@ import {
   transitionsEnded,
 } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
+import { anotherBrowser } from "../../fixtures/workspace-pages";
 
 // P1, create a project (M3 design 2, 3.17, 3.18), and its page (P10).
 
@@ -228,8 +229,10 @@ test("P1 (page): a new project's icon picker shows the emoji nerve serves itself
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });
 
-test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar", async ({
+test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar; the guest, in no project, is offered none to create", async ({
   api,
+  baseURL,
+  browser,
   db,
   signedInPage,
 }, testInfo) => {
@@ -335,6 +338,17 @@ test("P1 (page): a member creates a project from the projects page, its identifi
       "Failed to load resource: the server responded with a status of 409 (Conflict)",
     ],
   });
+
+  // The workspace's guest, in no project, finds the project settings saying so, with no project to create: nerve lets
+  // the workspace's admins and members create one, not its guests.
+  const theGuest = await anotherBrowser(browser, baseURL ?? "", guest);
+  const guestWatch = await watchPage(theGuest.page);
+  await theGuest.page.goto(`/${slug}/settings/projects`);
+  await expect(theGuest.page.getByText("No project", { exact: true })).toBeVisible();
+  await expect(theGuest.page.getByRole("button", { name: "Start your first project" })).toHaveCount(0);
+  expect([guestWatch.apiFailures, guestWatch.oldApiRequests, guestWatch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(theGuest.page, guestWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await theGuest.close();
 });
 
 test("P1 (page): Tab goes round the creation dialog and nowhere else; the lead's list opens beside its button with its search focused; Escape closes it", async ({

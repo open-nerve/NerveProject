@@ -16,7 +16,7 @@ type Props = {
   description?: React.ReactNode;
   projectId: string;
   featureProperty: ProjectToggleField;
-  /** The feature's name, which names its switch too. */
+  /** The title of the feature's switch (such as "Enable cycles"), which names the switch too. */
   title: string;
   value: boolean;
   workspaceSlug: string;

@@ -5,6 +5,7 @@ import {
   createProject,
   createWorkspace,
   inviteAndAccept,
+  projectMembershipOf,
   projectMemberWrites,
   slugFor,
 } from "../../fixtures/api";
@@ -249,8 +250,10 @@ test("P3 (page): the project's admin changes its name, identifier, description, 
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
 });
 
-test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months", async ({
+test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months; another admin's range, which nerve refuses once he has made her a member, keeps its modal open, saying why", async ({
   api,
+  baseURL,
+  browser,
   db,
   signedInPage,
 }, testInfo) => {
@@ -303,6 +306,45 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   const three = await sentTo(page, "PATCH", projectApi, () => page.getByRole("option", { name: "3 months" }).click());
   expect([three.answer.status(), three.body]).toEqual([200, { archive_in: 3 }]);
   await expect(page.getByRole("button", { name: "3 months" })).toBeVisible();
+  // A range nerve refuses: ann, an admin of Web and a member of Acme, opens her custom range, and he makes her a member
+  // of Web meanwhile. Her modal stays, says why, and is no longer busy, to try again or to cancel; nothing changes.
+  const annEmail = emailFor(testInfo, "ann");
+  const ann = await registerOnboarded(api, annEmail);
+  await inviteAndAccept(api, admin.access_token, slug, { email: annEmail, token: ann.access_token }, 15);
+  const annId = await accountId(api, ann.access_token);
+  await addProjectMembers(api, admin.access_token, web.id, [{ member_id: annId, role: 20 }]);
+  const theOtherAdmin = await anotherBrowser(browser, baseURL ?? "", ann);
+  const annWatch = await watchPage(theOtherAdmin.page);
+  await theOtherAdmin.page.goto(`${settings}/automations`);
+  await theOtherAdmin.page.getByRole("button", { name: "3 months" }).click();
+  await theOtherAdmin.page.getByRole("button", { name: "Customize time range" }).click();
+  await theOtherAdmin.page.locator("#archive_in").fill("9");
+  const anns = await projectMembershipOf(api, admin.access_token, web.id, annId);
+  expect((await projectMemberWrites(api, web.id).change(admin.access_token, anns, 15)).status).toBe(200);
+  const updateRange = modalDialog(theOtherAdmin.page).getByRole("button", { name: "Update", exact: true });
+  expect((await answerTo(theOtherAdmin.page, "PATCH", projectApi, () => updateRange.click())).status()).toBe(403);
+  await expect(
+    theOtherAdmin.page
+      .getByRole("region", { name: "Notifications" })
+      .getByText("Your role does not allow this.", { exact: true })
+  ).toBeVisible();
+  expect(await closedWithin(theOtherAdmin.page)).toBe(false);
+  await expect(updateRange).toBeEnabled();
+  const cancelRange = modalDialog(theOtherAdmin.page).getByRole("button", { name: "Cancel" });
+  await expect(cancelRange).toBeEnabled();
+  await cancelRange.click();
+  expect(await closedWithin(theOtherAdmin.page)).toBe(true);
+  expect([annWatch.apiFailures, annWatch.oldApiRequests, annWatch.pageErrors]).toEqual([
+    [`403 PATCH ${projectApi}`],
+    [],
+    [],
+  ]);
+  // a load of the automations page; the browser's report of the refusal
+  await expectQuietConsole(theOtherAdmin.page, annWatch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
+  });
+  await theOtherAdmin.close();
 
   expect(await projectSettingsOf(db, web.id)).toMatchObject({
     cycle_view: true,

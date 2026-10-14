@@ -94,9 +94,9 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/identity/a10-onboarding-profile.spec.ts`、`e2e/stories/identity/a12-deactivate.spec.ts`、`e2e/stories/identity/a13-reset-password.spec.ts`、`e2e/stories/identity/a14-session-cleanup.spec.ts`、`e2e/stories/identity/a16-set-email.spec.ts`、`e2e/stories/identity/a3-sign-in.spec.ts`、`e2e/stories/identity/a4-refresh.spec.ts`、`e2e/stories/identity/a5-refresh-reuse.spec.ts`、`e2e/stories/identity/a7-change-password.spec.ts`、`e2e/stories/identity/a8-update-me.spec.ts`、`e2e/stories/identity/a9-preferences.spec.ts`、`e2e/stories/project/p9-guest-profile.spec.ts`、`e2e/stories/workspace/w1-create-workspace.spec.ts`、`e2e/stories/workspace/w10-admin-create-workspace.spec.ts`、`e2e/stories/workspace/w12-reactivate-member.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts`、`e2e/stories/workspace/w9-deactivation.spec.ts` | `registeredPAT`；会话断言的导入 | 14 |
 | `e2e/stories/identity/a11-api-tokens.spec.ts` | 生成之后焦点在令牌的按钮上、键盘到达时有轮廓，令牌复制到剪贴板（Task 9）；`registeredPAT`（Task 14） | 9、14 |
 | `e2e/stories/identity/a6-sign-out.spec.ts` | 切换账户的弹窗在退出路上时关不掉（Task 2）；导入（Task 14） | 2、14 |
-| `e2e/stories/project/p1-create-project.spec.ts` | 以标题找卡片（Task 5）；在页面内容中找卡片（Task 8）；功能的开关以功能为名（Task 13）；`registeredPAT`（Task 14） | 5、8、13、14 |
+| `e2e/stories/project/p1-create-project.spec.ts` | 以标题找卡片（Task 5）；在页面内容中找卡片（Task 8）；功能的开关以功能为名，工作区的访客在没有项目的设置页没有建项目的按钮（Task 13）；`registeredPAT`（Task 14） | 5、8、13、14 |
 | `e2e/stories/project/p2-visibility.spec.ts` | "Joining"（Task 5）；在页面内容中找页头的面包屑（Task 8）；`registeredPAT`（Task 14） | 5、8、14 |
-| `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
+| `e2e/stories/project/p3-project-settings.spec.ts` | 换到另一个项目的设置再后退，开着的归档确认框关上（Task 3）；自定义范围说 Update，被拒绝时留着（Task 13）；`registeredPAT`（Task 14） | 3、13、14 |
 | `e2e/stories/project/p8-project-preferences.spec.ts` | 访客在 Docs 的页头打开离开的确认框，后退到 Web 的工作项时关上（Task 3）；`registeredPAT`（Task 14） | 3、14 |
 | `e2e/stories/project/p4-archive.spec.ts` | 删除项目的弹窗：后面的页面隐藏、焦点回来（Task 1）；确认的提示正是要输入的词（Task 5）；`registeredPAT`（Task 14） | 1、5、14 |
 | `e2e/stories/project/p5-project-members.spec.ts` | 提示被读出（Task 2）；"Leaving"、确认的提示正是要输入的词（Task 5）；一行的菜单，以成员为名，侧边栏一行的菜单以项目为名，以键盘选择、Escape 关上确认框之后焦点回到菜单（Task 8）；角色上按 Enter 打开列表，一秒之内不发请求（Task 10）；成员筛选以键盘走一遍（Task 12） | 2、5、8、10、12 |
@@ -125,7 +125,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx` | `IconButton` 的名字 | 7 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/members/page.tsx` | 成员页的标题经 `t()`（Task 4）；工作区经 `useRouteWorkspace()`（Task 11） | 4、11 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/page.tsx`、`web/apps/web/core/components/project/card-list.tsx`、`web/apps/web/core/components/workspace/settings/useMemberColumns.tsx` | 工作区经 `useRouteWorkspace()`（Task 11） | 11 |
-| `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx` | 项目设置各页的标题经 `t()`；没有项目时的设置页；它们的 vitest 照新的标题 | 13 |
+| `web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/cycles/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/modules/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/members/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states-labels.test.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/states/page.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx` | 项目设置各页的标题经 `t()`；没有项目时的设置页，建项目只给工作区的管理员和成员；它们的 vitest 照新的标题 | 13 |
 | `web/apps/web/app/(all)/create-workspace/layout.tsx`、`web/apps/web/app/(all)/create-workspace/page.tsx`、`web/apps/web/app/(all)/onboarding/layout.tsx`、`web/apps/web/app/(all)/onboarding/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 13 |
 | `web/apps/web/app/(all)/workspace-invitations/layout.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx` | 页面标题经 `PageHead`、`t()`，布局的英文 `meta` 删除；装饰的图片 `alt=""` | 4 |
 | `web/apps/web/app/provider.tsx` | `AppToast`：提示的区域经 `t()` 命名 | 13 |
@@ -13049,12 +13049,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Delete: `web/apps/web/core/components/project/form-loader.tsx`、`web/apps/web/core/components/project/settings/helper.tsx`
 
 **Interfaces:**（spec 2.8）
-- 项目设置各页的标题经 `t()`（general、成员、四个功能页不再带"settings"、状态、标签、自动化）；没有项目时的设置页经 `workspace_projects.empty_state.no_projects.*`。`project/form-loader.tsx` 删除（包装层只在有项目时显示设置页）。
+- 项目设置各页的标题经 `t()`（general、成员、四个功能页不再带"settings"、状态、标签、自动化）；没有项目时的设置页经 `workspace_projects.empty_state.no_projects.*`，建项目的按钮只给 nerve 让建项目的人：工作区的管理员和成员（`project.create`，与首页的空状态同一个判断），访客只看到说明（预审的修复）。`project/form-loader.tsx` 删除（包装层只在有项目时显示设置页）。
 - 功能的开关：`project/settings/helper.tsx` 删除，功能列表直接用 `Switch`，`aria-label` 是功能的名字；`feature-control-item.tsx` 的 `title: string` 给开关命名。
-- 自动归档：月数经 `workspace_projects.common.months_count`；自定义范围的标题、占位、单位、范围的提示、Update/Updating 经 `t()`，规则 `required: true`。
+- 自动归档：月数经 `workspace_projects.common.months_count`；自定义范围的标题、占位、单位、范围的提示、Update/Updating 经 `t()`，规则 `required: true`；被拒绝时它留着（A-M2）。
 - 新建工作区、新手引导的标题经 `PageHead`（布局的 `meta` 删除）；提示的区域：`@nerve/propel` 的 `Toast` 收 `label`，`app/provider.tsx` 的 `AppToast` 给它 `t("aria_labels.toasts")`。项目成员页的搜索的占位。
 
-**Tests:** `admin-pages.test.tsx`、`states-labels.test.tsx` 照新的标题；`use-feature-toggle.test.tsx` 看开关的名字；`select-month-modal.test.tsx` 读键。P1：功能一步的 Tab 循环按功能的名字；P3：自定义范围说 Update。S7 的第四个加项目设置的标题、成员的搜索、功能开关的提示和提示的区域、自动归档；第五个（新）：没有完成引导的人看到新手引导的标题。
+**Tests:** `admin-pages.test.tsx`、`states-labels.test.tsx` 照新的标题；`use-feature-toggle.test.tsx` 看开关的名字；`select-month-modal.test.tsx` 读键。P1：功能一步的 Tab 循环按功能的名字；工作区的访客（不在任何项目中）在没有项目的设置页看到说明，没有建项目的按钮（预审的修复）。P3：自定义范围说 Update；另一个项目管理员（工作区的成员）在她的浏览器中打开自定义范围，被降为项目的成员之后，被拒绝的范围留着、说出原因、不再忙（预审的修复，A-M2）。S7 的第四个加项目设置的标题、成员的搜索、功能开关的提示和提示的区域、自动归档；第五个（新）：没有完成引导的人看到新手引导的标题。
 
 - [ ] **Step 1: 设置和标题**
 
@@ -13190,7 +13190,7 @@ import { ProjectDetailsForm } from "@/components/project/form";
   const pageTitle = project ? `${project.name} - ${t("common.states")}` : undefined;
 ````
 
-`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx`（整个文件，39 行）：
+`web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx`（整个文件，57 行）：
 
 ````whole web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/page.tsx
 /**
@@ -13202,6 +13202,7 @@ import { ProjectDetailsForm } from "@/components/project/form";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 // nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 // assets
@@ -13209,14 +13210,29 @@ import ProjectDarkEmptyState from "@/app/assets/empty-state/project-settings/no-
 import ProjectLightEmptyState from "@/app/assets/empty-state/project-settings/no-projects-light.png?url";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
+import { useUserPermissions } from "@/hooks/store/user";
+// local imports
+import type { Route } from "./+types/page";
 
-function ProjectSettingsPage() {
+/**
+ * The project settings while the caller is in none of the route's workspace's projects: it says so, and offers a
+ * project's creation only to whom nerve lets create one, the workspace's admins and members, not its guests.
+ */
+function ProjectSettingsPage({ params }: Route.ComponentProps) {
+  // router: the route's workspace
+  const { workspaceSlug } = params;
   // store hooks
   const { resolvedTheme } = useTheme();
   const { toggleCreateProjectModal } = useCommandPalette();
+  const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
   // derived values
   const resolvedPath = resolvedTheme === "dark" ? ProjectDarkEmptyState : ProjectLightEmptyState;
+  const canCreateProject = allowPermissions(
+    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
+  );
   return (
     <div className="mx-auto flex h-full max-w-[480px] flex-col items-center justify-center gap-4">
       <img src={resolvedPath} alt="" />
@@ -13224,9 +13240,11 @@ function ProjectSettingsPage() {
       <div className="text-center text-13 text-tertiary">
         {t("workspace_projects.empty_state.no_projects.description")}
       </div>
-      <Button onClick={() => toggleCreateProjectModal(true)}>
-        {t("workspace_projects.empty_state.no_projects.primary_button.text")}
-      </Button>
+      {canCreateProject && (
+        <Button onClick={() => toggleCreateProjectModal(true)}>
+          {t("workspace_projects.empty_state.no_projects.primary_button.text")}
+        </Button>
+      )}
     </div>
   );
 }
@@ -13482,7 +13500,7 @@ import { ProjectFeatureToggle } from "./helper";
   title: React.ReactNode;
 ````
 ````new web/apps/web/core/components/settings/project/content/feature-control-item.tsx
-  /** The feature's name, which names its switch too. */
+  /** The title of the feature's switch (such as "Enable cycles"), which names the switch too. */
   title: string;
 ````
 ````old web/apps/web/core/components/settings/project/content/feature-control-item.tsx
@@ -13580,7 +13598,7 @@ import { ProjectFeatureToggle } from "./helper";
 
 - [ ] **Step 2: 测试**
 
-`e2e/stories/project/p1-create-project.spec.ts`（修改，1 处）：
+`e2e/stories/project/p1-create-project.spec.ts`（修改，4 处）：
 
 ````old e2e/stories/project/p1-create-project.spec.ts
     `Open project, ${"Toggle project feature, ".repeat(4)}Close`
@@ -13588,8 +13606,52 @@ import { ProjectFeatureToggle } from "./helper";
 ````new e2e/stories/project/p1-create-project.spec.ts
     "Open project, Cycles, Modules, Views, Intake, Close"
 ````
+````old e2e/stories/project/p1-create-project.spec.ts
+import { expect, test } from "../../fixtures/test";
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+import { expect, test } from "../../fixtures/test";
+import { anotherBrowser } from "../../fixtures/workspace-pages";
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar", async ({
+  api,
+  db,
+  signedInPage,
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+test("P1 (page): a member creates a project from the projects page, its identifier upper case as typed and its lead an admin, not a guest; a taken identifier and a forbidden name show under their fields; the form waits for nerve; Tab goes round the features step; the project shows in the list and the sidebar; the guest, in no project, is offered none to create", async ({
+  api,
+  baseURL,
+  browser,
+  db,
+  signedInPage,
+````
+````old e2e/stories/project/p1-create-project.spec.ts
+      "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    ],
+  });
+});
+````
+````new e2e/stories/project/p1-create-project.spec.ts
+      "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    ],
+  });
 
-`e2e/stories/project/p3-project-settings.spec.ts`（修改，2 处）：
+  // The workspace's guest, in no project, finds the project settings saying so, with no project to create: nerve lets
+  // the workspace's admins and members create one, not its guests.
+  const theGuest = await anotherBrowser(browser, baseURL ?? "", guest);
+  const guestWatch = await watchPage(theGuest.page);
+  await theGuest.page.goto(`/${slug}/settings/projects`);
+  await expect(theGuest.page.getByText("No project", { exact: true })).toBeVisible();
+  await expect(theGuest.page.getByRole("button", { name: "Start your first project" })).toHaveCount(0);
+  expect([guestWatch.apiFailures, guestWatch.oldApiRequests, guestWatch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(theGuest.page, guestWatch, { warnings: [EMOJI_CHECK_WARNING] });
+  await theGuest.close();
+});
+````
+
+`e2e/stories/project/p3-project-settings.spec.ts`（修改，5 处）：
 
 ````old e2e/stories/project/p3-project-settings.spec.ts
     page.getByRole("button", { name: "Submit" }).click()
@@ -13602,6 +13664,74 @@ import { ProjectFeatureToggle } from "./helper";
 ````
 ````new e2e/stories/project/p3-project-settings.spec.ts
   await expect(page.getByRole("button", { name: "Updating" })).toBeDisabled();
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+  inviteAndAccept,
+  projectMemberWrites,
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+  inviteAndAccept,
+  projectMembershipOf,
+  projectMemberWrites,
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months", async ({
+  api,
+  db,
+  signedInPage,
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+test("P3 (page): the project's admin turns its cycles, modules, views and intake on, each on its feature's page, and has its closed work items archived, after a range of his own that the page holds until nerve answers, then after 3 months; another admin's range, which nerve refuses once he has made her a member, keeps its modal open, saying why", async ({
+  api,
+  baseURL,
+  browser,
+  db,
+  signedInPage,
+````
+````old e2e/stories/project/p3-project-settings.spec.ts
+  await expect(page.getByRole("button", { name: "3 months" })).toBeVisible();
+````
+````new e2e/stories/project/p3-project-settings.spec.ts
+  await expect(page.getByRole("button", { name: "3 months" })).toBeVisible();
+  // A range nerve refuses: ann, an admin of Web and a member of Acme, opens her custom range, and he makes her a member
+  // of Web meanwhile. Her modal stays, says why, and is no longer busy, to try again or to cancel; nothing changes.
+  const annEmail = emailFor(testInfo, "ann");
+  const ann = await registerOnboarded(api, annEmail);
+  await inviteAndAccept(api, admin.access_token, slug, { email: annEmail, token: ann.access_token }, 15);
+  const annId = await accountId(api, ann.access_token);
+  await addProjectMembers(api, admin.access_token, web.id, [{ member_id: annId, role: 20 }]);
+  const theOtherAdmin = await anotherBrowser(browser, baseURL ?? "", ann);
+  const annWatch = await watchPage(theOtherAdmin.page);
+  await theOtherAdmin.page.goto(`${settings}/automations`);
+  await theOtherAdmin.page.getByRole("button", { name: "3 months" }).click();
+  await theOtherAdmin.page.getByRole("button", { name: "Customize time range" }).click();
+  await theOtherAdmin.page.locator("#archive_in").fill("9");
+  const anns = await projectMembershipOf(api, admin.access_token, web.id, annId);
+  expect((await projectMemberWrites(api, web.id).change(admin.access_token, anns, 15)).status).toBe(200);
+  const updateRange = modalDialog(theOtherAdmin.page).getByRole("button", { name: "Update", exact: true });
+  expect((await answerTo(theOtherAdmin.page, "PATCH", projectApi, () => updateRange.click())).status()).toBe(403);
+  await expect(
+    theOtherAdmin.page
+      .getByRole("region", { name: "Notifications" })
+      .getByText("Your role does not allow this.", { exact: true })
+  ).toBeVisible();
+  expect(await closedWithin(theOtherAdmin.page)).toBe(false);
+  await expect(updateRange).toBeEnabled();
+  const cancelRange = modalDialog(theOtherAdmin.page).getByRole("button", { name: "Cancel" });
+  await expect(cancelRange).toBeEnabled();
+  await cancelRange.click();
+  expect(await closedWithin(theOtherAdmin.page)).toBe(true);
+  expect([annWatch.apiFailures, annWatch.oldApiRequests, annWatch.pageErrors]).toEqual([
+    [`403 PATCH ${projectApi}`],
+    [],
+    [],
+  ]);
+  // a load of the automations page; the browser's report of the refusal
+  await expectQuietConsole(theOtherAdmin.page, annWatch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
+  });
+  await theOtherAdmin.close();
 ````
 
 `e2e/stories/smoke/s7-chinese.spec.ts`（修改，5 处）：
@@ -13856,6 +13986,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T13.9` | 新建工作区的页面保留布局的英文标题（E3） | 故事 S7 | 端到端 |
 | `T13.10` | 新手引导保留布局的英文标题（E3） | 故事 S7 | 端到端 |
 | `T13.11` | 提示区域的名字又是 Base UI 的英文（E3） | 故事 S7 | 端到端 |
+| `T13.12` | 自定义时间范围被拒绝时关上：页面在失败时也调用 `done`（A-M2；预审的修复） | 故事 P3 | 端到端 |
+| `T13.13` | 没有项目时的设置页又向工作区的访客提供建项目（nerve 不让访客建项目；预审的修复） | 故事 P1 | 端到端 |
 
 ---
 
