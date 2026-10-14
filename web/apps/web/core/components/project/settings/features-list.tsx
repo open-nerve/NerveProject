@@ -6,6 +6,7 @@
 
 import { observer } from "mobx-react";
 // nerve imports
+import { Switch } from "@makeplane/propel/components/switch";
 import { useTranslation } from "@nerve/i18n";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
@@ -14,7 +15,6 @@ import { SettingsHeading } from "@/components/settings/heading";
 import { useProject } from "@/hooks/store/use-project";
 import type { ProjectToggleField } from "@/store/project/project.store";
 // local imports
-import { ProjectFeatureToggle } from "./helper";
 import { useFeatureToggle } from "./use-feature-toggle";
 
 type Props = {
@@ -68,10 +68,11 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
               title={t(featureItem.i18n_label)}
               description={t(featureItem.i18n_description)}
               control={
-                <ProjectFeatureToggle
-                  featureItem={featureItem}
-                  value={Boolean(currentProjectDetails?.[featureItem.property])}
-                  handleSubmit={toggleFeature}
+                <Switch
+                  size="sm"
+                  checked={Boolean(currentProjectDetails?.[featureItem.property])}
+                  onCheckedChange={() => toggleFeature(featureItem.property)}
+                  aria-label={t(featureItem.i18n_label)}
                 />
               }
             />

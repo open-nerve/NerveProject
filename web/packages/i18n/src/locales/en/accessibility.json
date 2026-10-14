@@ -4,6 +4,7 @@
     "toggle_sort_order": "Toggle sort order",
     "toggle_details": "Toggle details",
     "add_reaction": "Add reaction",
+    "toasts": "Notifications",
     "app_sidebar": {
       "toggle": "Toggle sidebar",
       "close_workspace_menu": "Close workspace menu",

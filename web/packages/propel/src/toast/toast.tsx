@@ -51,6 +51,8 @@ type PromiseToastOptions<ToastData> = {
 
 type ToastProps = {
   theme: "light" | "dark" | "system";
+  /** The name of the toasts' region, in the user's language. */
+  label: string;
 };
 
 const toastManager = BaseToast.createToastManager();
@@ -59,7 +61,7 @@ export function Toast(props: ToastProps) {
   return (
     <BaseToast.Provider toastManager={toastManager}>
       <BaseToast.Portal>
-        <BaseToast.Viewport data-theme={props.theme}>
+        <BaseToast.Viewport data-theme={props.theme} aria-label={props.label}>
           <ToastList />
         </BaseToast.Viewport>
       </BaseToast.Portal>

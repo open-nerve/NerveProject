@@ -289,10 +289,10 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   await page.getByRole("button", { name: "Customize time range" }).click();
   await page.locator("#archive_in").fill("6");
   const { body, release } = await sentHeld(page, "PATCH", projectApi, () =>
-    page.getByRole("button", { name: "Submit" }).click()
+    page.getByRole("button", { name: "Update", exact: true }).click()
   );
   expect(body).toEqual({ archive_in: 6 });
-  await expect(page.getByRole("button", { name: "Submitting..." })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Updating" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
   expect(await closedByEscape(page)).toBe(false);
   expect((await release()).status()).toBe(200);

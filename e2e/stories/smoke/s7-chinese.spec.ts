@@ -11,7 +11,7 @@ import {
   slugFor,
   type Api,
 } from "../../fixtures/api";
-import { bearer, emailFor, shownNameOf, type AuthTokens } from "../../fixtures/auth";
+import { bearer, emailFor, register, shownNameOf, type AuthTokens } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { labelRow } from "../../fixtures/project-pages";
@@ -222,7 +222,7 @@ test("S7 (page): an admin whose language is Chinese sees a project's general, st
   await expectQuietConsole(page, watch, { warnings: Array(5).fill(EMOJI_CHECK_WARNING) });
 });
 
-test("S7 (page): an admin whose language is Chinese filters the projects and the members in Chinese", async ({
+test("S7 (page): an admin whose language is Chinese filters the projects and the members, and reads a project's settings, its custom range and a toast in Chinese", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -230,8 +230,15 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
 
+  // The project settings of a workspace with no project yet, and the create-workspace page's title.
+  await page.goto(`/${slug}/settings/projects`);
+  await expect(page.getByText("没有项目", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "开始您的第一个项目" })).toBeVisible();
+  await page.goto("/create-workspace");
+  await expect(page).toHaveTitle("创建您的工作区");
+
   // The projects page: the sidebar's heading, the card's date and its members.
-  await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
+  const web = await createProject(api, admin.access_token, slug, { name: "Web", identifier: "WEB" });
   await page.goto(`/${slug}/projects`);
   const navigation = page.getByRole("complementary", { name: "主侧边栏" }).getByRole("button", { name: "项目导航" });
   await expect(navigation.locator("xpath=../preceding-sibling::span")).toHaveText("项目");
@@ -292,8 +299,48 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   const roles = roleFilter.getByRole("button", { name: /^(管理员|成员|访客|已停用)$/ });
   await expect(roles).toHaveText(["管理员", "成员", "访客", "已停用"]);
   await page.keyboard.press("Escape");
+
+  // A project's settings: each page's title, the members' search; a feature's switch, whose toast says it, in the
+  // region of the toasts, named.
+  const settings = `/${slug}/settings/projects/${web.id}`;
+  await page.goto(settings);
+  await expect(page).toHaveTitle("Web - 常规设置");
+  await page.goto(`${settings}/members`);
+  await expect(page).toHaveTitle("Web - 成员");
+  await expect(page.getByPlaceholder("搜索", { exact: true })).toBeVisible();
+  await page.goto(`${settings}/features/cycles`);
+  await page.getByRole("switch", { name: "启用周期" }).click();
+  const toasts = page.getByRole("region", { name: "通知" });
+  await expect(toasts.getByText("项目功能已更新。", { exact: true })).toBeVisible();
+
+  // The auto-archiving: its months, and its custom range, which says what it takes.
+  await page.goto(`${settings}/automations`);
+  await page.getByRole("switch", { name: "自动归档已关闭的工作项" }).click();
+  await page.getByRole("button", { name: "1 个月", exact: true }).click();
+  await page.getByRole("button", { name: "自定义时间范围" }).click();
+  const months = modalDialog(page).getByPlaceholder("输入月数");
+  await expect(modalDialog(page).getByText("个月", { exact: true })).toBeVisible();
+  await months.fill("");
+  await modalDialog(page).getByRole("button", { name: "更新", exact: true }).click();
+  await expect(modalDialog(page).getByText("请选择 1 到 12 之间的月数。", { exact: true })).toBeVisible();
+  await cancel(page);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch, { warnings: Array(3).fill(EMOJI_CHECK_WARNING) });
+  await expectQuietConsole(page, watch, { warnings: Array(8).fill(EMOJI_CHECK_WARNING) });
+});
+
+test("S7 (page): one whose language is Chinese, not onboarded yet, reads the onboarding's title in Chinese", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const dave = await register(api, emailFor(testInfo, "dave"));
+  await speakChinese(api, dave);
+  const page = await signedInPage(dave);
+  const watch = await watchPage(page);
+
+  await page.goto("/onboarding");
+  await expect(page).toHaveTitle("新手引导");
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch);
 });
 
 test("S7 (page): one whose language is Chinese reads her invitation to Acme, as a guest, in Chinese", async ({

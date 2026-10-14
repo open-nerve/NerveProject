@@ -308,7 +308,7 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   // The features step: Tab goes round it too, never out of the modal (the toast is a dialog, not modal).
   await page.getByRole("button", { name: "Close", exact: true }).focus();
   expect((await tabCycle(page, page.locator("[aria-modal=true]"))).join(", ")).toBe(
-    `Open project, ${"Toggle project feature, ".repeat(4)}Close`
+    "Open project, Cycles, Modules, Views, Intake, Close"
   );
   await page.getByRole("button", { name: "Close", exact: true }).click();
   // its card, by its heading (the card's link to its settings is named by the project too)

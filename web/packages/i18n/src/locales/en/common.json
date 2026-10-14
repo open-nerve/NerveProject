@@ -480,6 +480,7 @@
   "continue": "Continue",
   "enter_your_full_name": "Enter your full name",
   "onboarding": {
+    "title": "Onboarding",
     "profile": {
       "title": "Create your profile.",
       "description": "This is how you will appear in Nerve."

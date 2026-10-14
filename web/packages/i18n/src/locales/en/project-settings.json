@@ -80,7 +80,10 @@
       "auto-archive": {
         "title": "Auto-archive closed work items",
         "description": "Nerve will auto archive work items that have been completed or canceled.",
-        "duration": "Auto-archive work items that are closed for"
+        "duration": "Auto-archive work items that are closed for",
+        "months_placeholder": "Enter months",
+        "months": "Months",
+        "months_range": "Select a month between 1 and 12."
       }
     },
     "features": {

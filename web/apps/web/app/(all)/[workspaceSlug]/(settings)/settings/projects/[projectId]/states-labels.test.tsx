@@ -105,12 +105,12 @@ async function openedBy({ workspaceRole, projectRole }: Caller, route: string, C
 describe("the state settings page", () => {
   it.each([its.admin, its.memberAdmin, its.guestAdmin])("shows $who the states and their controls", async (row) => {
     const { text, name } = await openedBy(row, "states", StatesPage);
-    expect(text).toBe(`[${name} - States]Backlog, In Progress and their controls`);
+    expect(text).toBe(`[${name} - common.states]Backlog, In Progress and their controls`);
   });
 
   it("shows its member the states, and no control", async () => {
     const { text, name } = await openedBy(its.member, "states", StatesPage);
-    expect(text).toBe(`[${name} - States]Backlog, In Progress`);
+    expect(text).toBe(`[${name} - common.states]Backlog, In Progress`);
   });
 
   it("tells its guest he may not see them", async () => {
@@ -124,13 +124,13 @@ describe("the label settings page", () => {
     "shows $who the labels, their controls and its button",
     async (row) => {
       const { text, name } = await openedBy(row, "labels", LabelsPage);
-      expect(text).toBe(`[${name} - Labels][common.add_label]Bug and its controls`);
+      expect(text).toBe(`[${name} - common.labels][common.add_label]Bug and its controls`);
     }
   );
 
   it("shows its member the labels, and no control", async () => {
     const { text, name } = await openedBy(its.member, "labels", LabelsPage);
-    expect(text).toBe(`[${name} - Labels]Bug`);
+    expect(text).toBe(`[${name} - common.labels]Bug`);
   });
 
   it("tells its guest he may not see them", async () => {
@@ -143,8 +143,8 @@ describe("the label settings page", () => {
     const admin = await openedBy(its.admin, "labels", LabelsPage);
     const member = await openedBy(its.member, "labels", LabelsPage);
     expect([admin.text, member.text]).toEqual([
-      `[${admin.name} - Labels][common.add_label][settings_empty_state.labels.cta_primary]`,
-      `[${member.name} - Labels]`,
+      `[${admin.name} - common.labels][common.add_label][settings_empty_state.labels.cta_primary]`,
+      `[${member.name} - common.labels]`,
     ]);
   });
 });

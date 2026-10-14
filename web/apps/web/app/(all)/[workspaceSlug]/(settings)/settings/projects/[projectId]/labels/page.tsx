@@ -10,6 +10,7 @@ import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { observer } from "mobx-react";
 // components
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
 import { PageHead } from "@/components/core/page-title";
 import { ProjectSettingsLabelList } from "@/components/labels";
@@ -27,9 +28,10 @@ function LabelsSettingsPage({ params }: Route.ComponentProps) {
   // store hooks
   const { getProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
+  const { t } = useTranslation();
 
   const project = getProjectById(projectId);
-  const pageTitle = project ? `${project.name} - Labels` : undefined;
+  const pageTitle = project ? `${project.name} - ${t("common.labels")}` : undefined;
 
   const scrollableContainerRef = useRef<HTMLDivElement | null>(null);
 

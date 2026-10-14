@@ -32,7 +32,7 @@ function MembersSettingsPage({ params }: Route.ComponentProps) {
   const project = getProjectById(projectId);
   const { allowPermissions } = useUserPermissions();
   // derived values
-  const pageTitle = project?.name ? `${project.name} - Members` : undefined;
+  const pageTitle = project?.name ? `${project.name} - ${t("common.members")}` : undefined;
   const isProjectMemberOrAdmin = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT,

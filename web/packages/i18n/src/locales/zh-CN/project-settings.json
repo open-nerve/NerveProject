@@ -80,7 +80,10 @@
       "auto-archive": {
         "title": "自动归档已关闭的工作项",
         "description": "Nerve 将自动归档已完成或已取消的工作项。",
-        "duration": "自动归档已关闭"
+        "duration": "自动归档已关闭",
+        "months_placeholder": "输入月数",
+        "months": "个月",
+        "months_range": "请选择 1 到 12 之间的月数。"
       }
     },
     "features": {

@@ -29,8 +29,8 @@ type SearchSelect = Field & {
   tabIndex?: number;
   options?: { value: string }[];
 };
-/** A switch: what a flip does, and whether it can be flipped. */
-type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean };
+/** A switch: what a flip does, whether it can be flipped, and its name. */
+type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean; "aria-label"?: string };
 /** A confirmation's dialog (AlertModalCore): whether it shows, its button's press, whether it is busy, its words. */
 type Alert = {
   isOpen: boolean;

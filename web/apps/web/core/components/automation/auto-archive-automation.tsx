@@ -102,7 +102,7 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation() {
                 <div className="w-1/2">
                   <CustomSelect
                     value={project?.archive_in}
-                    label={`${project?.archive_in} ${project?.archive_in === 1 ? "month" : "months"}`}
+                    label={t("workspace_projects.common.months_count", { months: project.archive_in })}
                     onChange={(val: number) => void handleChange({ archive_in: val })}
                     input
                     disabled={!isAdmin}

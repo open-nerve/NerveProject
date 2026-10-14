@@ -13,6 +13,7 @@ import { Button } from "@nerve/propel/button";
 import WorkspaceCreationDisabled from "@/app/assets/workspace/workspace-creation-disabled.png?url";
 // components
 import { NerveLogo } from "@/components/common/nerve-logo";
+import { PageHead } from "@/components/core/page-title";
 import { CreateWorkspaceForm } from "@/components/workspace/create-workspace-form";
 // hooks
 import { useUser } from "@/hooks/store/user";
@@ -34,6 +35,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
 
   return (
     <AuthenticationWrapper>
+      <PageHead title={t("workspace_creation.heading")} />
       <div className="flex h-full flex-col gap-y-2 overflow-hidden bg-surface-1 sm:flex-row sm:gap-y-0">
         <div className="relative h-1/6 flex-shrink-0 sm:w-2/12 md:w-3/12 lg:w-1/5">
           <div className="absolute top-1/2 left-0 h-[0.5px] w-full -translate-y-1/2 border-b-[0.5px] border-subtle sm:top-0 sm:left-1/2 sm:h-screen sm:w-[0.5px] sm:-translate-x-1/2 sm:translate-y-0 sm:border-r-[0.5px] md:left-1/3" />
@@ -50,11 +52,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
         <div className="relative flex h-full justify-center px-8 pb-8 sm:w-10/12 sm:items-center sm:justify-start sm:p-0 sm:pr-[8.33%] md:w-9/12 lg:w-4/5">
           {isWorkspaceCreationDisabled ? (
             <div className="flex h-full w-4/5 flex-col items-center justify-center gap-1 text-16 font-medium">
-              <img
-                src={WorkspaceCreationDisabled}
-                className="mb-4 h-full w-full object-contain"
-                alt="Workspace creation disabled"
-              />
+              <img src={WorkspaceCreationDisabled} className="mb-4 h-full w-full object-contain" alt="" />
               <div className="text-center text-16 font-medium">
                 {t("workspace_creation.errors.creation_disabled.title")}
               </div>

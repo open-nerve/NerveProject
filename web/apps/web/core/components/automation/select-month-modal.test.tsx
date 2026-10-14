@@ -18,6 +18,7 @@ vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme", proj
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@makeplane/propel/components/input", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 beforeEach(() => {
   emptyShown();

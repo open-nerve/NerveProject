@@ -11,6 +11,7 @@ import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { Button } from "@nerve/propel/button";
 import type { ProjectUpdate } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // types
@@ -26,6 +27,7 @@ type Props = {
 
 export function SelectMonthModal({ initialValues, isOpen, handleClose, handleChange }: Props) {
   const { workspaceSlug, projectId } = useParams();
+  const { t } = useTranslation();
 
   const {
     formState: { errors, isSubmitting },
@@ -56,14 +58,14 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
     >
       <form onSubmit={handleSubmit(onSubmit)}>
         <div>
-          <h3 className="text-16 leading-6 font-medium text-primary">Customize time range</h3>
+          <h3 className="text-16 leading-6 font-medium text-primary">{t("common.customize_time_range")}</h3>
           <div className="mt-8 flex items-center gap-2">
             <div className="flex w-full flex-col justify-center gap-1">
               <Controller
                 control={control}
                 name="archive_in"
                 rules={{
-                  required: "Select a month between 1 and 12.",
+                  required: true,
                   min: 1,
                   max: 12,
                 }}
@@ -82,28 +84,32 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
                             onChange(event.target.value === "" ? undefined : Number(event.target.value))
                           }
                           ref={ref}
-                          placeholder="Enter Months"
+                          placeholder={t("project_settings.automations.auto-archive.months_placeholder")}
                           min={1}
                           max={12}
                         />
                       </InputGroup>
                     </Field>
-                    <span className="absolute top-2.5 right-8 text-13 text-secondary">Months</span>
+                    <span className="absolute top-2.5 right-8 text-13 text-secondary">
+                      {t("project_settings.automations.auto-archive.months")}
+                    </span>
                   </div>
                 )}
               />
               {errors.archive_in && (
-                <span className="px-1 text-13 text-danger-primary">Select a month between 1 and 12.</span>
+                <span className="px-1 text-13 text-danger-primary">
+                  {t("project_settings.automations.auto-archive.months_range")}
+                </span>
               )}
             </div>
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" size="lg" onClick={onClose} disabled={isSubmitting}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button variant="primary" size="lg" type="submit" loading={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit"}
+            {isSubmitting ? t("updating") : t("update")}
           </Button>
         </div>
       </form>

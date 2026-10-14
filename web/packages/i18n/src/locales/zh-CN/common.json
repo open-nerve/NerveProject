@@ -480,6 +480,7 @@
   "continue": "继续",
   "enter_your_full_name": "输入您的全名",
   "onboarding": {
+    "title": "新手引导",
     "profile": {
       "title": "创建您的个人资料。",
       "description": "这是您在 Nerve 中显示的样子。"
