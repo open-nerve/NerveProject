@@ -854,7 +854,7 @@ labels
 ### 5.1 操作
 两个新模块文件：`api/modules/workspace.yaml`、`api/modules/project.yaml`（模块文件名等于模块目录名，M2 设计 3.12）；`access` 没有操作。路径都不带结尾 `/`（M1-P3 交接：项目标识的地址随新接口统一）。每个操作写 `security` 和 `x-problem-codes`（M2 设计 3.11、3.12）；下表"主要错误"一栏就是后者的内容，不再列出所有操作都可能返回的平台码。带 `bearer` 的操作另隐含 `unauthorized`；带请求体的都可能返回 400 `bad_request`（结构）。平台码 `forbidden` 写作 403 F，`validation_failed` 写作 422 V。一个操作可以声明别的模块的码（例如 `project.yaml` 的操作答 `workspace.not_found`），前缀是拒绝它的那个模块（按 11.7 修订的 M2 设计 3.11）。
 
-契约按模块一个文件，不按资源拆：`api/modules/project.yaml` 在 P7b 之后 1,348 行，超过约 400 行的规则，是写明的例外（M3/P7b spec 第 3 节第 1 条，控制者的裁定 B1）。仓库的约定由文件名得出模块：`Makefile` 按 `api/modules/<模块>.yaml` 生成到 `internal/modules/<模块>/adapter/http/gen`，`apitest` 要求一个文件中每个操作的标签就是这个模块；按资源拆出的文件会被当成另一个模块。要拆，是改这几处约定的单独任务；`project` 模块的接口在 P7b 已齐，这个文件不再长。
+契约按模块一个文件，不按资源拆：`api/modules/project.yaml` 在 P7b 之后 1,348 行，超过约 400 行的规则，是写明的例外（M3/P7b spec 第 3 节第 1 条，控制者的裁定 B1）。仓库的约定由文件名得出模块：`Makefile` 按 `api/modules/<模块>.yaml` 生成到 `internal/modules/<模块>/adapter/http/gen`，`apitest` 要求一个文件中每个操作的标签就是这个模块；按资源拆出的文件会被当成另一个模块。要拆，是改这几处约定的单独任务。这个文件在 P7b 之后到收尾没有再长（1,348 行）；以后的 M 给 `project` 模块加的仍写在这个文件里（例如 M5 给项目加回封面，`ProjectCreate`、`ProjectUpdate` 随之变，[M5 的交接](../M5-files/handoffs/M1-closeout.md)）。
 
 **`workspace`**（19 个）：
 
