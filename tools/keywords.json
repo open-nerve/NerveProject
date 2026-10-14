@@ -2253,13 +2253,13 @@
     {
       "id": "sign-out-toast",
       "phase": "M3/P9",
-      "why": "页面退出登录只有一处：useSignOut（web/apps/web/core/hooks/use-sign-out.ts），nerve 的登出失败时提示 auth.sign_out.toast.error.*、会话不变（M3/P9 修复轮，裁定 F-4）；别处直接调 store 的 signOut 再自己提示就是又一份，没有提示的一份就是没有处理的拒绝；从 store 取 signOut（const { signOut } = useUser()、useUser().signOut）的地方也算，那一份不经 useSignOut（M3/P9 评审给出的第二个模式，M3 收尾加）。测试不算",
+      "why": "页面退出登录只有一处：useSignOut（web/apps/web/core/hooks/use-sign-out.ts），nerve 的登出失败时提示 auth.sign_out.toast.error.*、会话不变（M3/P9 修复轮，裁定 F-4）；别处直接调 store 的 signOut 再自己提示就是又一份，没有提示的一份就是没有处理的拒绝；从 store 取 signOut（const { signOut } = useUser()、useUser().signOut）的地方也算，那一份不经 useSignOut（M3/P9 评审给出的第二个模式，M3 收尾加；解构只看一条语句，同一个函数里 const signOut = useSignOut() 之后另从 useUser() 取别的不算）。测试不算",
       "files": {
         "source": "^web/apps/web/(?:app|core)/(?!hooks/use-sign-out\\.ts$)(?!.*\\.test\\.[jt]sx?$).*\\.[jt]sx?$",
         "flags": ""
       },
       "content": {
-        "source": "\\bauth\\.sign_out\\.toast\\.error\\b|\\{[^}]*\\bsignOut\\b[^}]*\\}\\s*=\\s*useUser\\(\\)|useUser\\(\\)\\.signOut\\b",
+        "source": "\\bauth\\.sign_out\\.toast\\.error\\b|\\{[^{};=]*\\bsignOut\\b[^{};=]*\\}\\s*=\\s*useUser\\(\\)|useUser\\(\\)\\.signOut\\b",
         "flags": ""
       },
       "samples": {
@@ -2274,7 +2274,8 @@
           "  const signOut = useSignOut();",
           "        {t(\"sign_out\")}",
           "  const { data: currentUser } = useUser();",
-          "  const { signOut } = useSession();"
+          "  const { signOut } = useSession();",
+          "export function UserMenu() {\n  const signOut = useSignOut();\n  const { data: currentUser } = useUser();"
         ],
         "files": {
           "hit": [

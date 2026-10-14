@@ -116,7 +116,7 @@ sys.exit(1 if broken else 0)
 | `pnpm-lock.yaml` | `@nerve/propel` 依赖 `@nerve/utils`（工作区内） | 10 |
 | `server/internal/modules/project/adapter/http/projects_test.go`、`server/internal/modules/project/adapter/http/update_test.go` | `identifierTakenJSON`、`nameTakenJSON` | 14 |
 | `server/internal/platform/jobs/jobs_test.go` | 期限代替余量，定期的运行按 `ScheduledAt` 排序 | 14 |
-| `tools/i18n-keys.mjs` | 页面读的每个键在 en 中都有定义（新文件，spec 2.10） | 9 新 |
+| `tools/i18n-keys.mjs` | 页面读的每个键在 en 中都有定义：完整的键、字面量和模板的前缀，问题码不算，先以样本自检（新文件，spec 2.10） | 9 新 |
 | `tools/keywords.json` | 关键词规则 `copy-hook`（20 个有期限的例外）、`refusal-toast`、`sign-out-toast` 的写法（Task 9）；`workspace-address-route`（Task 11） | 9、11 |
 | `tools/keywords.mjs` | 说明写上 `until` 为 `M<n>/closeout` 的例外何时到期 | 9 |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/extended-project-sidebar.tsx`、`web/apps/web/app/(all)/[workspaceSlug]/(projects)/sidebar.tsx` | 工作区经 `useRouteWorkspace()` 或写明 slug（Task 11）；侧边栏的标题经 `t()`（Task 12） | 11、12 |
@@ -8900,10 +8900,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - API 令牌弹窗（M2，预审的裁定）：令牌的复制按钮照 propel 按钮的写法在键盘取得焦点时显出浏览器的轮廓（`outline-none` 换为 `focus-visible:outline-offset-2`）；生成之后，创建的成功跟进（`followInSession` 的 `done`）以 `flushSync` 渲染令牌，再把焦点移到这个按钮（`GeneratedTokenDetails` 收 `copyButtonRef`；原来生成的按钮随表单消失，焦点落到 `body`）。
 - `core/lib/api-error.ts` 的 `problemCode(error)`：五处问题码和 `core/lib/error-messages.ts` 的 `errorMessageKey` 经它（后者是预审的裁定）。`use-refusal-toast.ts` 的 `useRefusalMessage`：`useRefusalToast` 和主题切换的失败经它。
 - `tools/keywords.json`：`copy-hook`（20 个例外，`until` 是各 M 的收尾）；`refusal-toast` 也看 `setPromiseToast(…errorMessageKey(`；`sign-out-toast` 加两种写法；`phase` 是 `M3/closeout`。
-- `tools/i18n-keys.mjs`（新文件）进 `make lint-web` 和 knip 的入口；`@nerve/constants` 的 `filter.ts` 中没有读者的 `date_filters.1_month_ago` 删除。
+- `tools/i18n-keys.mjs`（新文件）进 `make lint-web` 和 knip 的入口：`t("…")`、`i18nKey`、`i18n_*` 读完整的键，别的带点的字面量可以是代码补全的前缀，模板 `${…}` 之前的部分是前缀；契约的问题码（`x-problem-codes`）不是键；先以自己的样本自检（评审的修复轮 1）；`@nerve/constants` 的 `filter.ts` 中没有读者的 `date_filters.1_month_ago` 删除。
 - `tools/keywords.mjs` 的说明、M1 设计 7.4：`until` 写 `M<n>/closeout` 的例外，在那个 M 的收尾开始、`phase` 改为它时到期；每个 Phase 开始时改 `phase`（spec 第 3 节第 5 条）。M3 设计 7.10 的规则表补上 P9 的三条、P10 的两条和 `copy-hook`。
 
-**Tests:** `use-copy-link.test.ts`、`api-error.test.ts`、`use-refusal-toast.test.ts`。A11：生成之后焦点在令牌的按钮上，键盘到达时有轮廓；点令牌复制到剪贴板并提示；S6：命令面板复制当前页面的地址并提示。
+**Tests:** `use-copy-link.test.ts`、`api-error.test.ts`、`use-refusal-toast.test.ts`；`tools/i18n-keys.mjs` 的样本（每种读法一条命中、一条不命中，问题码一条）；`sign-out-toast` 的不命中样本（`useSignOut` 旁另取 `useUser()` 的数据）。A11：生成之后焦点在令牌的按钮上，键盘到达时有轮廓；点令牌复制到剪贴板并提示；S6：命令面板复制当前页面的地址并提示。
 
 - [ ] **Step 1: 共用的写法和检查**
 
@@ -8974,50 +8974,143 @@ lint-web: ## 关键词守卫；读到的翻译键都有定义；前端类型检�
       "entry": ["tools/keywords.mjs", "tools/i18n-keys.mjs", "tools/password-blocklist/build.mjs"],
 ````
 
-`tools/i18n-keys.mjs`（新文件，66 行）：
+`tools/i18n-keys.mjs`（新文件，153 行）：
 
 ````file tools/i18n-keys.mjs
 // Translation keys read (M3 closeout): fails when the web app reads an i18n key that the English locale does not
-// define, which the page would show as the key itself. A key read is one the code holds as a literal: a t("…") call's,
-// a Translated's i18nKey="…", a constant's i18n_…: "…", and any string of dotted words whose first word is a top-level
-// key of the locale ("project_settings.states.groups.backlog"), wherever the code holds it. A key the locale defines
-// only longer keys under (a prefix the code completes) counts as defined; a key the code builds from a template is not
-// seen. The sources: web/apps/web's app and core, the constants and types packages; tests and their fakes aside. The
-// keys are en's: check:sync keeps zh-CN's the same.
+// define, which the page would show as the key itself. The reads it sees are what the code holds as literals:
+// - a t("…") call's, a Translated's i18nKey="…" and a constant's i18n_…: "…": each a whole key (a key with keys under
+//   it is an object there, not a text);
+// - any other string of dotted words whose first word is a top-level key of the locale
+//   ("project_settings.states.groups.backlog"), wherever the code holds it: a whole key, or a prefix the code completes.
+//   nerve's problem codes ("<module>.<code>": the x-problem-codes of api/dist/openapi.yaml, read as
+//   error-messages.test.ts reads them) are no keys, though a module may share a namespace's name ("issue"): such a
+//   string is not a read;
+// - a template's start before its first ${…} (`greeting.${period}`): a prefix with keys under it.
+// A key built otherwise (t(variable), a template that starts with ${…}) is not seen. The sources: web/apps/web's app
+// and core, the constants and types packages; tests and their fakes aside. The keys are en's: check:sync keeps
+// zh-CN's the same. Like the keyword guard, the tool first checks its reading against its own samples (SAMPLES).
 // usage: node tools/i18n-keys.mjs   (from anywhere)
 import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const LOCALE = "web/packages/i18n/src/locales/en";
+const CONTRACT = "api/dist/openapi.yaml";
 const SOURCES = ["web/apps/web/app", "web/apps/web/core", "web/packages/constants/src", "web/packages/types/src"];
 
-// every key of the locale's files, dotted
-const keys = new Set();
-function flatten(node, prefix) {
-  if (node !== null && typeof node === "object" && !Array.isArray(node)) {
-    for (const [key, value] of Object.entries(node)) flatten(value, prefix ? `${prefix}.${key}` : key);
-  } else {
-    keys.add(prefix);
-  }
-}
-for (const file of fs.readdirSync(path.join(ROOT, LOCALE)).filter((name) => name.endsWith(".json"))) {
-  flatten(JSON.parse(fs.readFileSync(path.join(ROOT, LOCALE, file), "utf8")), "");
-}
-const prefixes = new Set();
-for (const key of keys) {
-  const parts = key.split(".");
-  for (let i = 1; i < parts.length; i++) prefixes.add(parts.slice(0, i).join("."));
-}
-const tops = [...new Set([...keys].filter((key) => key.includes(".")).map((key) => key.split(".")[0]))];
+// A small locale and contract, texts that read a key the locale does not define (hit) and texts that do not (miss):
+// each way of reading has a sample that fails once the tool reads it otherwise.
+const SAMPLES = {
+  locale: { common: { save: "Save", toast: { done: "Done", failed: "Failed" } } },
+  codes: ["common.not_found"],
+  hit: [
+    't("common.saved")',
+    't("common.toast")',
+    '<Translated i18nKey="common.toast" />',
+    'i18n_title: "common.toast"',
+    'const KEY = "common.toast.gone";',
+    "t(`common.toasts.${kind}`)",
+  ],
+  miss: [
+    't("common.save")',
+    '<Translated i18nKey="common.toast.done" />',
+    'i18n_title: "common.toast.failed"',
+    'const GROUP = "common.toast";',
+    "t(`common.toast.${kind}`)",
+    '  "common.not_found": "errors.unknown",',
+  ],
+};
 
-const KEY = "[a-z0-9_]+(?:\\.[a-z0-9_]+)*";
-const READS = [
-  new RegExp(`\\bt\\(\\s*"(${KEY})"`, "g"),
-  new RegExp(`\\bi18nKey="(${KEY})"`, "g"),
-  new RegExp(`\\bi18n_[a-z_]+:\\s*"(${KEY})"`, "g"),
-  new RegExp(`"((?:${tops.join("|")})(?:\\.[a-z0-9_]+)+)"`, "g"),
+function fail(message) {
+  console.error(`i18n-keys: ${message}`);
+  process.exit(1);
+}
+
+/** A locale's keys (dotted), the prefixes with keys under them, and the patterns of its reads. */
+function vocabulary(namespaces) {
+  const keys = new Set();
+  const flatten = (node, prefix) => {
+    if (node !== null && typeof node === "object" && !Array.isArray(node)) {
+      for (const [key, value] of Object.entries(node)) flatten(value, prefix ? `${prefix}.${key}` : key);
+    } else {
+      keys.add(prefix);
+    }
+  };
+  for (const namespace of namespaces) flatten(namespace, "");
+  const prefixes = new Set();
+  for (const key of keys) {
+    const parts = key.split(".");
+    for (let i = 1; i < parts.length; i++) prefixes.add(parts.slice(0, i).join("."));
+  }
+  const tops = [...new Set([...keys].filter((key) => key.includes(".")).map((key) => key.split(".")[0]))].join("|");
+  const KEY = "[a-z0-9_]+(?:\\.[a-z0-9_]+)*";
+  return {
+    keys,
+    prefixes,
+    whole: [
+      new RegExp(`\\bt\\(\\s*"(${KEY})"`, "g"),
+      new RegExp(`\\bi18nKey="(${KEY})"`, "g"),
+      new RegExp(`\\bi18n_[a-z_]+:\\s*"(${KEY})"`, "g"),
+    ],
+    literal: new RegExp(`"((?:${tops})(?:\\.[a-z0-9_]+)+)"`, "g"),
+    template: new RegExp(`\`((?:${tops})(?:\\.[a-z0-9_]+)*)\\.\\$\\{`, "g"),
+  };
+}
+
+/** The keys (and template prefixes) a text reads, and those of them the vocabulary does not define. */
+function reads(text, vocab, codes) {
+  const read = new Set();
+  const missing = new Set();
+  const take = (pattern, defined, skipped = () => false) => {
+    for (const [, key] of text.matchAll(pattern)) {
+      if (skipped(key)) continue;
+      read.add(key);
+      if (!defined(key)) missing.add(key);
+    }
+  };
+  for (const pattern of vocab.whole) take(pattern, (key) => vocab.keys.has(key));
+  // a problem code is no key
+  take(
+    vocab.literal,
+    (key) => vocab.keys.has(key) || vocab.prefixes.has(key),
+    (key) => codes.has(key)
+  );
+  take(vocab.template, (prefix) => vocab.prefixes.has(prefix));
+  return { read, missing };
+}
+
+/** The items of every block list under an x-problem-codes: line of the contract, as error-messages.test.ts reads. */
+function problemCodes(lines) {
+  const codes = new Set();
+  lines.forEach((line, i) => {
+    if (!/^\s*x-problem-codes:\s*$/.test(line)) return;
+    const indent = line.length - line.trimStart().length;
+    for (const next of lines.slice(i + 1)) {
+      const item = /^(\s*)- (\S+)$/.exec(next);
+      if (!item || item[1].length < indent) break;
+      codes.add(item[2]);
+    }
+  });
+  return codes;
+}
+
+const sampleVocab = vocabulary([SAMPLES.locale]);
+const sampleCodes = new Set(SAMPLES.codes);
+const wrong = [
+  ...SAMPLES.hit.filter((text) => reads(text, sampleVocab, sampleCodes).missing.size === 0).map((t) => `hit ${t}`),
+  ...SAMPLES.miss.filter((text) => reads(text, sampleVocab, sampleCodes).missing.size > 0).map((t) => `miss ${t}`),
 ];
+if (wrong.length > 0) fail(`its reading fails its own samples:\n${wrong.join("\n")}`);
+
+const vocab = vocabulary(
+  fs
+    .readdirSync(path.join(ROOT, LOCALE))
+    .filter((name) => name.endsWith(".json"))
+    .map((name) => JSON.parse(fs.readFileSync(path.join(ROOT, LOCALE, name), "utf8")))
+);
+const codes = problemCodes(fs.readFileSync(path.join(ROOT, CONTRACT), "utf8").split("\n"));
+if (codes.size === 0) fail(`read no x-problem-codes from ${CONTRACT}`);
 
 const read = new Set();
 const undefinedKeys = [];
@@ -9026,21 +9119,15 @@ for (const source of SOURCES) {
     const base = path.basename(name);
     if (!/\.tsx?$/.test(base) || base.includes(".test.") || base.startsWith("fake-")) continue;
     const file = path.join(source, name);
-    const text = fs.readFileSync(path.join(ROOT, file), "utf8");
-    const found = new Set(READS.flatMap((pattern) => [...text.matchAll(pattern)].map((match) => match[1])));
-    for (const key of found) {
-      read.add(key);
-      if (!keys.has(key) && !prefixes.has(key)) undefinedKeys.push(`${file}: ${key}`);
-    }
+    const found = reads(fs.readFileSync(path.join(ROOT, file), "utf8"), vocab, codes);
+    for (const key of found.read) read.add(key);
+    for (const key of found.missing) undefinedKeys.push(`${file}: ${key}`);
   }
 }
 
 if (undefinedKeys.length > 0) {
   console.error(undefinedKeys.toSorted().join("\n"));
-  console.error(
-    `i18n-keys: ${undefinedKeys.length} keys read that ${LOCALE} does not define: define them, or read others.`
-  );
-  process.exit(1);
+  fail(`${undefinedKeys.length} keys read that ${LOCALE} does not define: define them, or read others.`);
 }
 console.log(`i18n-keys: ${read.size} keys read, each defined in ${LOCALE}.`);
 ````
@@ -9094,13 +9181,13 @@ console.log(`i18n-keys: ${read.size} keys read, each defined in ${LOCALE}.`);
       "why": "页面退出登录只有一处：useSignOut（web/apps/web/core/hooks/use-sign-out.ts），nerve 的登出失败时提示 auth.sign_out.toast.error.*、会话不变（M3/P9 修复轮，裁定 F-4）；别处直接调 store 的 signOut 再自己提示就是又一份，没有提示的一份就是没有处理的拒绝。测试不算",
 ````
 ````new tools/keywords.json
-      "why": "页面退出登录只有一处：useSignOut（web/apps/web/core/hooks/use-sign-out.ts），nerve 的登出失败时提示 auth.sign_out.toast.error.*、会话不变（M3/P9 修复轮，裁定 F-4）；别处直接调 store 的 signOut 再自己提示就是又一份，没有提示的一份就是没有处理的拒绝；从 store 取 signOut（const { signOut } = useUser()、useUser().signOut）的地方也算，那一份不经 useSignOut（M3/P9 评审给出的第二个模式，M3 收尾加）。测试不算",
+      "why": "页面退出登录只有一处：useSignOut（web/apps/web/core/hooks/use-sign-out.ts），nerve 的登出失败时提示 auth.sign_out.toast.error.*、会话不变（M3/P9 修复轮，裁定 F-4）；别处直接调 store 的 signOut 再自己提示就是又一份，没有提示的一份就是没有处理的拒绝；从 store 取 signOut（const { signOut } = useUser()、useUser().signOut）的地方也算，那一份不经 useSignOut（M3/P9 评审给出的第二个模式，M3 收尾加；解构只看一条语句，同一个函数里 const signOut = useSignOut() 之后另从 useUser() 取别的不算）。测试不算",
 ````
 ````old tools/keywords.json
         "source": "\\bauth\\.sign_out\\.toast\\.error\\b",
 ````
 ````new tools/keywords.json
-        "source": "\\bauth\\.sign_out\\.toast\\.error\\b|\\{[^}]*\\bsignOut\\b[^}]*\\}\\s*=\\s*useUser\\(\\)|useUser\\(\\)\\.signOut\\b",
+        "source": "\\bauth\\.sign_out\\.toast\\.error\\b|\\{[^{};=]*\\bsignOut\\b[^{};=]*\\}\\s*=\\s*useUser\\(\\)|useUser\\(\\)\\.signOut\\b",
 ````
 ````old tools/keywords.json
           "        message: t(\"auth.sign_out.toast.error.message\"),"
@@ -9119,7 +9206,8 @@ console.log(`i18n-keys: ${read.size} keys read, each defined in ${LOCALE}.`);
           "  const signOut = useSignOut();",
           "        {t(\"sign_out\")}",
           "  const { data: currentUser } = useUser();",
-          "  const { signOut } = useSession();"
+          "  const { signOut } = useSession();",
+          "export function UserMenu() {\n  const signOut = useSignOut();\n  const { data: currentUser } = useUser();"
         ],
 ````
 ````old tools/keywords.json
@@ -10117,6 +10205,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T9.11` | 侧边栏读的一个键在两种语言里都改了名，两边仍一致（K13） | `tools/i18n-keys.mjs` | 静态 |
 | `T9.12` | 令牌的复制按钮又是 `outline-none`：键盘到达时看不出焦点（预审） | 故事 A11 | 端到端 |
 | `T9.13` | 生成令牌之后焦点不移到令牌的按钮，落在 `body` 上（预审） | 故事 A11 | 端到端 |
+| `T9.14` | `tools/i18n-keys.mjs` 把契约的问题码当作读到的键（M4 的 `"issue.not_found"` 会被拒绝；修复轮 1） | `tools/i18n-keys.mjs` 的样本 | 静态 |
+| `T9.15` | 页面以 `t()` 读一个命名空间（`workspace_settings.settings.general.delete_modal`），不是文字（修复轮 1） | `tools/i18n-keys.mjs` | 静态 |
+| `T9.16` | 模板的前缀拼错（`account_settings.api_tokenz.expiry.${…}`；修复轮 1） | `tools/i18n-keys.mjs` | 静态 |
 
 ---
 
