@@ -1324,7 +1324,7 @@ modules/access/
 | `project-address-route`（P10） | P10、P11 改过的项目页从 router store 读项目和工作区（`currentProjectDetails`、`projectMemberIds`、`currentWorkspace`、不传 slug 和项目的 `allowPermissions`）；M4、M6、M7 改它们的页面时把那些文件加进规则的 `files` |
 | `workspace-address-route`（收尾） | 收尾改过的 20 个工作区页面文件从 router store 读工作区（`currentWorkspace`、不传 slug 的工作区级 `allowPermissions`），而不是经 `useRouteWorkspace`；M4、M7、M8 改它们的页面时把那些文件加进规则的 `files` |
 | `copy-hook`（收尾） | 在 `useCopyLink`、`useCopyText` 之外复制到剪贴板（`copyTextToClipboard`、`copyUrlToClipboard`、`navigator.clipboard`）；M4、M6、M7、M8 还自己复制的文件各有一条例外，`until` 是各自的 `M<n>/closeout`，到那个 M 的收尾开始、`phase` 改为它时到期 |
-| `composing-check`（收尾） | 在 `@nerve/utils` 的 `isComposing`（`keyboard.ts`）之外判断按键是不是输入法的：读 `.isComposing`（或解构出它）、拿 `keyCode` 与 229 比较；仓库中的 JS、TS 文件都算 |
+| `composing-check`（收尾） | 在 `@nerve/utils` 的 `isComposing`（`keyboard.ts`）之外判断按键是不是输入法的：读 `.isComposing`（或解构出它：语句里的、参数里的、嵌套的）、拿 `keyCode` 或 `which` 与 229 比较；仓库中的 JS、TS 文件都算 |
 
 - 在 P8a、P8b 加入：P8a 加入工作区一侧的地址的模式和 `restricted-urls`、`in-system-invitations`、`user-settings`；P8b 补全项目一侧的模式、`/user-properties/` 的例外和不命中样例，删除 `project-invitations` 的例外，收紧 `plane-user-urls`。规则在数据层的第二段（P8b）合并时完整，在任何页面的 Phase 之前；P11 只核对 M3 加的例外只剩跨 M 的一条（`/user-properties/` 的两处，`until: "M4"`），`project-invitations` 的 `until: "M3"` 已删除。
 - P9、P10 和收尾加入的规则在表的后几行，括号里是加入它的 Phase；每条规则的 `why` 写明它守的那一处和不算的地方。

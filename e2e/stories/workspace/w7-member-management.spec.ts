@@ -271,6 +271,7 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await memberRow(theMember.page, carol.email).locator("button").first().click();
   await expect(theMember.page.getByRole("menuitem", { name: "Leave", exact: true })).toBeVisible();
   await theMember.page.keyboard.press("Escape");
+  await expect(theMember.page.getByRole("menu")).toHaveCount(0);
   await theMember.page.getByRole("button", { name: "Open workspace switcher" }).click();
   await expect(theMember.page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);

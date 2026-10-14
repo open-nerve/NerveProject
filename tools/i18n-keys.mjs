@@ -101,7 +101,11 @@ function reads(text, vocab, codes) {
   return { read, missing };
 }
 
-/** The items of every block list under an x-problem-codes: line of the contract, as error-messages.test.ts reads. */
+/**
+ * The items of every block list under an x-problem-codes: line of the contract, as error-messages.test.ts reads them
+ * (its listsUnder; the web workspace's test cannot import this script, which runs as it loads): a change to one reading
+ * is made in both.
+ */
 function problemCodes(lines) {
   const codes = new Set();
   lines.forEach((line, i) => {

@@ -115,11 +115,12 @@ export async function pickRole(
 }
 
 /**
- * Asks to end a membership from the members page, which page shows: opens the menu of the row of email and picks its
- * entry (Leave on the caller's own row, Remove on another's), which opens the dialog that asks.
+ * Asks to end a membership from the members page, which page shows: opens the menu of the row of email (the row's one
+ * menu, whatever the page's language names it) and picks its entry, as the page's language names it (Leave on the
+ * caller's own row, Remove on another's), which opens the dialog that asks.
  */
-export async function askToEndMembership(page: Page, email: string, entry: "Leave" | "Remove"): Promise<void> {
-  await memberRow(page, email).getByRole("button", { name: "Options" }).click();
+export async function askToEndMembership(page: Page, email: string, entry: string): Promise<void> {
+  await memberRow(page, email).locator('button[aria-haspopup="menu"]').click();
   await page.getByRole("menuitem", { name: entry, exact: true }).click();
 }
 
@@ -130,7 +131,7 @@ export async function askToEndMembership(page: Page, email: string, entry: "Leav
 export async function endMembership(
   page: Page,
   email: string,
-  entry: "Leave" | "Remove",
+  entry: string,
   request: { method: string; path: string }
 ): Promise<Response> {
   await askToEndMembership(page, email, entry);
@@ -144,14 +145,12 @@ export function invitationLinkOf(invitation: Pick<WorkspaceInvitation, "id" | "t
   return `/workspace-invitations?invitation_id=${invitation.id}&token=${invitation.token}`;
 }
 
-/** The row of the members page's invitations, which page shows, of the invitation to email. */
+/**
+ * The row of the members page's invitations, which page shows, of the invitation to email: the one that has its address
+ * as its heading, whatever the page's language.
+ */
 export function invitationRow(page: Page, email: string): Locator {
-  // the innermost element that holds the address and the invitation's state: rows come after the lists that hold them
-  return page
-    .locator("div")
-    .filter({ has: page.getByRole("heading", { name: email, exact: true }) })
-    .filter({ hasText: /Pending|Declined/ })
-    .last();
+  return page.locator("div.group", { has: page.getByRole("heading", { name: email, exact: true }) });
 }
 
 /**

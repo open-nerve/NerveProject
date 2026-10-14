@@ -258,7 +258,7 @@ M3 页面上写死的英文都经 `t()`，en 和 zh-CN 各加同样的键（`mak
 ### 2.11 输入法和选择上的 Enter（Task 10）
 
 - **组字的判断只有一个**（K10）：`@nerve/utils` 的新文件 `keyboard.ts` 的 `isComposing(event)`：`event.isComposing` 或 `keyCode === 229`。Chromium、Firefox 在组字中的按键上 `isComposing` 为真；Safari 先结束组字，再交出 `keyCode` 229 的那个按键，只查 `isComposing` 的守卫拦不住它（P10 spec 第 5 节）。8 处守卫（`@nerve/ui` 的 `ModalCore`、`CustomSearchSelect`，`@nerve/propel` 的表情选择器，web 的 `use-keypress`、`use-dropdown-key-down`、标签的选择等；原来 9 处，`@nerve/ui` 的 `use-dropdown-key-down` 随 Task 8 删除）都经它；`@nerve/propel` 因此依赖 `@nerve/utils`（`package.json` 加 `"@nerve/utils": "workspace:*"`，`pnpm-lock.yaml` 随之多 3 行；不是新的 npm 包）。命令面板的 `handleKeyDown` 开头加同一个守卫：搜索框为空时，结束组字的 Escape 原来关上面板，面板的一页上结束组字的 Backspace 原来回到上一页。
-- **关键词规则 `composing-check`**（预审的裁定，2026-10-14）：只有 `keyboard.ts` 判断按键是不是输入法的；仓库中别的 JS、TS 文件读 `.isComposing`（或解构出它）、拿 `keyCode` 与 229 比较，守卫就失败。M4 的 4 处守卫（标签的选择两处、`issues/select/base.tsx`、`use-dropdown-key-down`）没有故事走到，原来只在静态上"跟着变"，现在由规则看住（`T10.11`），之后每个 M 的新守卫也一样；测试和 e2e 造事件时写的 `isComposing`、`keyCode` 是属性，不命中。规则 70 → 71 条（Task 11 之后 72 条），M3 设计 7.10 的规则表加上它。
+- **关键词规则 `composing-check`**（预审的裁定，2026-10-14）：只有 `keyboard.ts` 判断按键是不是输入法的；仓库中别的 JS、TS 文件读 `.isComposing`（或解构出它，修复轮加上参数里的和嵌套的解构，最终评审的 A11）、拿 `keyCode`（修复轮加上 `which`）与 229 比较，守卫就失败。M4 的 4 处守卫（标签的选择两处、`issues/select/base.tsx`、`use-dropdown-key-down`）没有故事走到，原来只在静态上"跟着变"，现在由规则看住（`T10.11`），之后每个 M 的新守卫也一样；测试和 e2e 造事件时写的 `isComposing`、`keyCode` 是属性，不命中。规则 70 → 71 条（Task 11 之后 72 条），M3 设计 7.10 的规则表加上它。
 - `@nerve/ui` 的 `use-dropdown-key-down` 原来在这里改掉两条警告；它是 `CustomMenu` 原来的键盘处理，Task 8 的修复轮 1 删除了它（2.9），`@nerve/ui` 的上限在 Task 8 就到 12。
 - **`CustomSelect` 上按 Enter 打开列表**（K11）：Headless UI 的 `ListboxButton` 在 Enter 上提交所在的表单（`attemptSubmit`）；添加项目成员的弹窗中在角色上按 Enter 就立即添加了。模块级的 `openOnEnter` 在 Enter 上先 `preventDefault`（Headless UI 合并的处理器先跑调用方的，被阻止的事件不再往下），再点它自己（`currentTarget.click()`）；`CustomSelect` 的两种按钮都用它。
 - **测试**：`keyboard.test.ts`（两种顺序）；`dialogs.ts` 的 `composingKey(field, key)` 两种顺序都发（Chromium、Firefox 的 `isComposing`；Safari 的 `compositionend` 之后 `keyCode` 229 的 keydown，Chromium 照 `KeyboardEventInit` 的 `keyCode` 发出，原型里探查过），`composingEscape` 是它的 Escape；S6：命令面板的搜索框中结束组字的 Escape 不关面板，面板的一页（一周的第一天）上结束组字的 Backspace 不回到上一页（平常的 Backspace 回去）；P5：角色的选择（调用方给的按钮）上按 Enter 打开它的列表，一秒之内不发请求（`sentWithin`）；W4：`sendInvitations` 以键盘选角色（`CustomSelect` 自己的按钮，邀请的表单），Enter 打开列表，一秒之内不发邀请。预审（2026-10-14）补上的：两种按钮各有一个故事按 Enter（原来只有 P5 的调用方的按钮），"不发表单"由 `sentWithin` 直接核对（原来只由之后的检查间接发现），Backspace 和关键词规则；变异 `T10.10`–`T10.13`。
@@ -279,6 +279,16 @@ M3 页面上只读工作区的 19 个文件不再读路由 store 的 `currentWor
 - **`registeredPAT(api, email, body)`**（K17）：注册一个账户并给它一个 PAT（`body` 是 `createPAT` 的，默认为空），23 个故事用它（原来内联 `createPAT(api, (await register(…)).accessToken…)`；A11 的带标签的 "admin" 令牌也经它，Task 14 的实现者补上）。
 - **`userOf`**（K18）：`project-member.store.test.ts` 的资料来自它。
 - **契约的说明**（K24，P7a 第 5 节的 A1）：`api/modules/project.yaml` 中说到工作项的五句（`identifier`、`default_assignee_id`、`guest_view_all_features`、两处 `archive_in`）改为说 nerve 对这些字段做什么（例如 `archive_in`："A number of months, 0–12, set for automatic archiving and kept as set; 0 for none."）。只改说明：形状、码和操作不变；`make gen` 之后 `api/dist/openapi.yaml`、`schema.gen.ts`、项目模块的 `server.gen.go` 随之变（plan 钉住它们的 SHA-256），`make gen-check` 没有差异（第 3 节第 15 条）。
+
+**修复轮**（最终评审的 A4–A11）：
+- W7 在成员 carol 的菜单上按 Escape 之后断言菜单没有了：`T8.30`（Escape 关不上菜单）由它自己的检查发现，原来由后面一步的超时（A4）。
+- `chooseByKeyboard`（`e2e/fixtures/menus.ts`）断言要选的一项在菜单的项之中，再按下箭头（A5）。
+- P6 断言删除状态的确认框的正文说出那个状态（"Are you sure you want to delete state In Progress?…"，变异 `FW.22`：句子不给值；A6）。
+- `askToEndMembership`、`endMembership` 的 `entry` 是页面的语言中那一项的名字，一行的菜单是它唯一的菜单按钮（`aria-haspopup="menu"`），不按英文的名字找；`invitationRow` 是以地址为标题的那一行（`div.group`），不按英文的状态找；S7 用它们（A7）。
+- A6（切换账户）的 `openSwitchAccount(tab, email)`：账户菜单和"Wrong e-mail address?"，`signOutThroughMenu` 和扣住登出的一步都经它（A8）。
+- P5 照 P3、P6、P7 分成 API 的版本（`p5-project-members.spec.ts`）和页面的版本（`p5-project-members-page.spec.ts`，A9）。
+- `x-problem-codes` 的读法仍是两份：`error-messages.test.ts` 的 `listsUnder` 和 `tools/i18n-keys.mjs` 的 `problemCodes`。web 的测试导入不了仓库的脚本（它在 web 的工作区之外，载入时就跑检查，没有类型），两处的注释各写明另一处，改一处就改两处（A10）。
+- `composing-check` 加上参数里的解构（`({ isComposing }: KeyboardEvent) =>`）、嵌套的解构（`{ nativeEvent: { isComposing } } = e`）和 `which` 与 229 的比较，各有命中的样本，`why` 和 M3 设计 7.10 的一行随之（变异 `FW.23`–`FW.25`；A11）。
 
 `make test`（Go，42 个包）、`make lint-go` 在本 Task 跑。
 

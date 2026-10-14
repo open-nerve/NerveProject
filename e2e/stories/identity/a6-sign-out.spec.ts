@@ -36,10 +36,15 @@ function accountMenu(tab: Page, email: string) {
   return tab.getByRole("button", { name: shownNameOf(email) });
 }
 
-/** Signs out through the account menu: "Wrong e-mail address?", then "Switch account" (M2 has no workspace menu). */
-async function signOutThroughMenu(tab: Page, email: string): Promise<void> {
+/** Opens the switch's dialog through the account menu: "Wrong e-mail address?" (M2 has no workspace menu). */
+async function openSwitchAccount(tab: Page, email: string): Promise<void> {
   await accountMenu(tab, email).click();
   await tab.getByRole("menuitem", { name: "Wrong e-mail address?" }).click();
+}
+
+/** Signs out through the account menu: the switch's dialog (openSwitchAccount), then its "Switch account". */
+async function signOutThroughMenu(tab: Page, email: string): Promise<void> {
+  await openSwitchAccount(tab, email);
   await tab.getByRole("button", { name: "Switch account" }).click();
 }
 
@@ -81,8 +86,7 @@ test("A6 (page): signing out in one tab signs every tab out", async ({ api, db, 
   // The switch's dialog hides the onboarding behind it; while the sign-out is out it cannot be dismissed, its button
   // busy.
   const release = await holdAnswer(tabA, "POST", "/api/v0/auth/logout");
-  await accountMenu(tabA, email).click();
-  await tabA.getByRole("menuitem", { name: "Wrong e-mail address?" }).click();
+  await openSwitchAccount(tabA, email);
   await expect(modalDialog(tabA)).toHaveAccessibleName("Switch account");
   expect(await pageBehindHidden(tabA)).toBe(true);
   await tabA.getByRole("button", { name: "Switch account" }).click();

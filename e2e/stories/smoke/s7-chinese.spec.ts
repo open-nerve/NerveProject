@@ -17,7 +17,7 @@ import { closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { labelRow } from "../../fixtures/project-pages";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
-import { invitationLinkOf, memberRow } from "../../fixtures/workspace-pages";
+import { askToEndMembership, invitationLinkOf, invitationRow, memberRow } from "../../fixtures/workspace-pages";
 
 // S7, the workspace's pages in Chinese (M3 closeout: the text Plane wrote in English on M3's pages is in the user's
 // language): an account whose language is zh-CN sees its pages, menus and dialogs in Chinese.
@@ -110,7 +110,9 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await expect(searchButton).toBeFocused();
   await page.keyboard.press("Enter");
   await page.keyboard.type("Web");
-  await page.getByRole("button", { name: "清除搜索", exact: true }).click();
+  const clear = page.getByRole("button", { name: "清除搜索", exact: true });
+  await expect(clear).toBeVisible();
+  await clear.click();
   await expect(searchButton).toBeFocused();
 
   // The general page: the settings' sidebar and its way back, the size, and the deletion's dialog, the workspace's
@@ -130,13 +132,13 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await page.goto(`/${slug}/settings/members`);
   await expect(page).toHaveTitle("Acme - 成员");
   await expect(memberRow(page, bobEmail).getByRole("button", { name: "成员", exact: true })).toBeVisible();
-  const carols = page.locator("div.group", { has: page.getByRole("heading", { name: carolEmail, exact: true }) });
+  const carols = invitationRow(page, carolEmail);
   await expect(carols.getByRole("button", { name: "访客", exact: true })).toBeVisible();
   await expect(carols.getByRole("button", { name: `${carolEmail} 的选项`, exact: true })).toBeVisible();
-  await memberRow(page, bobEmail)
-    .getByRole("button", { name: `${shownNameOf(bobEmail)} 的选项`, exact: true })
-    .click();
-  await page.getByRole("menuitem", { name: "移除", exact: true }).click();
+  await expect(
+    memberRow(page, bobEmail).getByRole("button", { name: `${shownNameOf(bobEmail)} 的选项`, exact: true })
+  ).toBeVisible();
+  await askToEndMembership(page, bobEmail, "移除");
   await expect(modalDialog(page).getByRole("heading")).toHaveText(`移出 ${shownNameOf(bobEmail)}？`);
   await expect(modalDialog(page).getByText(/^确定要将 .+ 移出工作区吗？/)).toBeVisible();
   await cancel(page);

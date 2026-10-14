@@ -23,7 +23,9 @@ export async function chooseByKeyboard(page: Page, button: Locator, item: string
     await page.keyboard.press("ArrowDown");
     return down(presses - 1);
   };
-  await down(await items.evaluateAll((all, wanted) => all.findIndex((each) => each.id === wanted), id));
+  const index = await items.evaluateAll((all, wanted) => all.findIndex((each) => each.id === wanted), id);
+  expect(index, `${item} is an item of the menu`).toBeGreaterThanOrEqual(0);
+  await down(index);
   await expect(menu).toHaveAttribute("aria-activedescendant", id);
   await page.keyboard.press("Enter");
 }
