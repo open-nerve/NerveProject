@@ -23,8 +23,26 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
   const emailInput = page.getByLabel("Email", { exact: true });
   const watch = await watchPage(page);
 
-  // The address is taken: the message is above the form, the page and the address stay.
   await page.goto("/sign-up");
+  // An address the page's rule refuses, confirmed by Enter (nothing goes, the form not filled in): not read invalid while
+  // the field has the focus, its message shown once the field is left, and read invalid then, the message its
+  // description. An address only an email input's own rule refuses (a quoted name) is not read invalid at all: the
+  // page's rule is the field's only one.
+  await emailInput.fill("abc");
+  await emailInput.press("Enter");
+  await expect(emailInput).not.toHaveAttribute("aria-invalid");
+  await emailInput.press("Tab");
+  await expect(emailInput).toHaveAttribute("aria-invalid", "true");
+  await expect(emailInput).toHaveAccessibleDescription("Email is invalid");
+  await emailInput.fill('"ab"@example.com');
+  await emailInput.press("Enter");
+  await emailInput.press("Tab");
+  await expect(emailInput).not.toHaveAttribute("aria-invalid");
+  // The spaces around an address are dropped, as an email input drops them.
+  await emailInput.fill(" abc@example.com ");
+  await expect(emailInput).toHaveValue("abc@example.com");
+
+  // The address is taken: the message is above the form, the page and the address stay.
   expect(await submitSignUp(page, email.toUpperCase(), password)).toBe(409);
   await expect(formAlert(page)).toHaveText("An account with this email already exists.");
   await expect(page).toHaveURL("/sign-up");

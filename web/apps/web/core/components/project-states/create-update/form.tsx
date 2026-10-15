@@ -91,7 +91,8 @@ export function StateForm(props: TStateForm) {
       </div>
 
       <div className="w-full space-y-2">
-        {/* title */}
+        {/* title: its rules are the form's (required) and nerve's (1 to 255 characters, not taken), with no maximum
+        of the input's own, which Base UI would take on Enter and read the name invalid with no message */}
         <Controller
           name="name"
           control={control}
@@ -108,7 +109,6 @@ export function StateForm(props: TStateForm) {
                   value={value}
                   onChange={onChange}
                   ref={ref}
-                  maxLength={100}
                 />
               </InputGroup>
               {errors.name?.message && (

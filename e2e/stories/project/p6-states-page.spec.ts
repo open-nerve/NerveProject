@@ -4,6 +4,7 @@ import {
   addProjectMembers,
   changeRole,
   createProject,
+  createState,
   createWorkspace,
   inviteAndAccept,
   slugFor,
@@ -298,6 +299,22 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: Array(2).fill("Failed to load resource: the server responded with a status of 409 (Conflict)"),
   });
+
+  // A name nerve took through its API, longer than the page let one type (nerve takes up to 255 characters): one
+  // character deleted, then Enter and Tab, it is not read invalid. Its rules are the form's and nerve's alone: an
+  // input's own maximum, which Base UI takes on Enter, would read it invalid with no message.
+  const docs = await createProject(api, admin.access_token, slug, { name: "Docs", identifier: "DOCS" });
+  const longName = `Review ${"x".repeat(113)}`;
+  await createState(api, admin.access_token, docs.id, { name: longName, color: "#f59e0b", group: "started" });
+  await page.goto(`/${slug}/settings/projects/${docs.id}/states`);
+  await page.getByRole("button", { name: `Edit ${longName}`, exact: true }).click();
+  const nameField = page.locator("#name");
+  await expect(nameField).toHaveValue(longName);
+  await nameField.press("End");
+  await nameField.press("Backspace");
+  await nameField.press("Enter");
+  await nameField.press("Tab");
+  await expect(nameField).not.toHaveAttribute("aria-invalid");
 
   // Its member sees the states and no control that changes them; a workspace admin who is its member has them all.
   const seenBy = async (who: string, tokens: typeof mem, controls: boolean) => {

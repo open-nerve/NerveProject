@@ -136,6 +136,18 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   await count.fill("0");
   await expect(count).toHaveAttribute("aria-invalid", "true");
   await expect(count).toHaveAccessibleDescription("Minimum value is 1");
+  // He confirms 0 by Enter and leaves by Tab: nothing goes, the field shows the count again, and it is read valid, with
+  // no message and no description. Its rule is its only rule: none of a number input's own outlives the message.
+  await count.press("Enter");
+  await count.press("Tab");
+  await expect(count).toHaveValue("10");
+  await expect(count).not.toHaveAttribute("aria-invalid");
+  await expect(count).toHaveAccessibleDescription("");
+  await expect(dialog.getByText("Minimum value is 1")).toHaveCount(0);
+  // Emptied, the field holds no count yet, which its rule does not refuse.
+  await count.fill("");
+  await expect(count).not.toHaveAttribute("aria-invalid");
+  await expect(dialog.getByText("Minimum value is 1")).toHaveCount(0);
   // He types 30 and corrects it to 3: the count goes once, as he leaves the field.
   const limit = await sentTo(page, "PATCH", path, async () => {
     await count.fill("30");

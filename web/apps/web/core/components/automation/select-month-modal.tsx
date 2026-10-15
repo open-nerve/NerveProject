@@ -84,16 +84,19 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
                           size="2xl"
                           id="archive_in"
                           name="archive_in"
-                          type="number"
+                          // text with a numeric keypad, digits only, so that the form's rule (1 to 12) is the field's
+                          // only one: a number input's own range would stop the form before it, and Base UI would read
+                          // the field invalid on Enter with no message
+                          type="text"
+                          inputMode="numeric"
                           value={value ?? ""}
-                          // the field holds a number, which nerve's ProjectUpdate takes; none while it is empty
-                          onChange={(event) =>
-                            onChange(event.target.value === "" ? undefined : Number(event.target.value))
-                          }
+                          // the field holds a whole number, which nerve's ProjectUpdate takes; none while it is empty
+                          onChange={(event) => {
+                            const digits = event.target.value.replace(/\D/g, "");
+                            onChange(digits === "" ? undefined : Number(digits));
+                          }}
                           ref={ref}
                           placeholder={t("project_settings.automations.auto-archive.months_placeholder")}
-                          min={1}
-                          max={12}
                         />
                       </InputGroup>
                       {errors.archive_in && (

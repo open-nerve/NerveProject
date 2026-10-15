@@ -4,6 +4,7 @@ import {
   addProjectMembers,
   amidAnotherWorkspace,
   changeProject,
+  changeProjectPreferences,
   changeWorkspacePreferences,
   createProject,
   createWorkspace,
@@ -34,22 +35,6 @@ async function read(api: Api, token: string, id: string): Promise<unknown> {
   });
   expect(response.status, `read the settings in ${id}: ${JSON.stringify(error)}`).toBe(200);
   return data;
-}
-
-/** PATCH /api/v0/me/projects/{project_id}/preferences: its status, and the settings or the problem's fields. */
-async function change(api: Api, token: string, id: string, body: ProjectPreferencesUpdate) {
-  const { data, error, response } = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
-    params: { path: { project_id: id } },
-    body,
-    headers: bearer(token),
-  });
-  return data
-    ? { status: response.status, preferences: data }
-    : {
-        status: response.status,
-        code: error?.code,
-        errors: error?.errors?.map((e) => ({ field: e.field, code: e.code })),
-      };
 }
 
 /** The account of email's display settings in the project as stored, and who wrote them last. */
@@ -139,10 +124,16 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
     navigation: { default_tab: "modules", hide_in_more_menu: ["views"] },
     sort_order: 55535,
   };
-  expect(await change(api, admin, web.id, { navigation: tabs.navigation })).toEqual({ status: 200, preferences: tabs });
+  expect(await changeProjectPreferences(api, admin, web.id, { navigation: tabs.navigation })).toEqual({
+    status: 200,
+    preferences: tabs,
+  });
   // Dragged before Wiki (35535).
   const first = { ...tabs, sort_order: 25535 };
-  expect(await change(api, admin, web.id, { sort_order: 25535 })).toEqual({ status: 200, preferences: first });
+  expect(await changeProjectPreferences(api, admin, web.id, { sort_order: 25535 })).toEqual({
+    status: 200,
+    preferences: first,
+  });
   // After a refresh the page reads them again, and the sidebar lists Web first.
   expect(await read(api, admin, web.id)).toEqual(first);
   const { data } = await api.GET("/api/v0/workspaces/{slug}/projects", {
@@ -165,7 +156,10 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
       field: "navigation.hide_in_more_menu[0]",
     },
   ];
-  expect(await Promise.all(refusals.map(({ body }) => change(api, admin, web.id, body))), "the refusals").toEqual(
+  expect(
+    await Promise.all(refusals.map(({ body }) => changeProjectPreferences(api, admin, web.id, body))),
+    "the refusals"
+  ).toEqual(
     refusals.map(({ field }) => ({
       status: 422,
       code: "validation_failed",

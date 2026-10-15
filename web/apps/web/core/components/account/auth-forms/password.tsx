@@ -159,13 +159,17 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
               onFocus={() => setIsEmailInputFocused(true)}
               onBlur={() => setIsEmailInputFocused(false)}
             >
+              {/* text with an email keypad, so that the form's rule (checkEmailValidity) is the field's only one: an
+              email input's own would be taken by Base UI on Enter and read the field invalid with no message; the
+              spaces around the address dropped, as an email input drops them */}
               <Input
                 size="2xl"
                 id="email"
                 name="email"
-                type="email"
+                type="text"
+                inputMode="email"
                 value={passwordFormData.email}
-                onChange={(e) => handleFormChange("email", e.target.value)}
+                onChange={(e) => handleFormChange("email", e.target.value.trim())}
                 placeholder={t("auth.common.email.placeholder")}
                 autoComplete="email"
                 ref={emailInputRef}

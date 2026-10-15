@@ -42,9 +42,10 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   // Web shows its modules and its views, both under its header's more menu, the views the tab it opens on.
   const shown = await changeProject(api, admin.access_token, web.id, { module_view: true, issue_views_view: true });
   expect(shown.status).toBe(200);
-  await changeProjectPreferences(api, admin.access_token, web.id, {
+  const placed = await changeProjectPreferences(api, admin.access_token, web.id, {
     navigation: { default_tab: "views", hide_in_more_menu: ["modules", "views"] },
   });
+  expect(placed.status).toBe(200);
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
 

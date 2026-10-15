@@ -22,11 +22,6 @@ type TProjectNavigationDialogProps = {
   onClose: () => void;
 };
 
-/** Keeps out of the count field the keys a number's other characters are typed with: e, E, +, - and the point. */
-function blockNonDigits(e: React.KeyboardEvent<HTMLInputElement>) {
-  if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
-}
-
 export const ProjectNavigationDialog = observer(function ProjectNavigationDialog(props: TProjectNavigationDialogProps) {
   const { isOpen, onClose } = props;
   const { t } = useTranslation();
@@ -120,8 +115,10 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
 
                 {projectPreferences.showLimitedProjects && (
                   <div className="pl-8">
-                    {/* propel's Field: the count is Base UI's control (FieldControl), rendered as before, and the
-                    rule's message, shown as the caller types, its description (FieldError) */}
+                    {/* propel's Field: the count is Base UI's control (FieldControl), with the rule's message, shown as
+                    the caller types, its description (FieldError). The count is text with a numeric keypad, digits
+                    only, so that its rule is its only one: a number input's own (its minimum, Firefox's letters) would
+                    be taken by Base UI on Enter and outlive the message, read invalid once the count is back. */}
                     <Field invalid={countRefused}>
                       <div className="flex w-full flex-col gap-2 pb-1.5">
                         <label htmlFor={countId} className="w-full text-11 text-secondary">
@@ -129,11 +126,9 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
                         </label>
                         <FieldControl
                           id={countId}
-                          type="number"
-                          min="1"
-                          step="1"
+                          type="text"
+                          inputMode="numeric"
                           value={countText}
-                          onKeyDown={blockNonDigits}
                           onChange={(e) => setCountDraft(e.target.value.replace(/\D/g, ""))}
                           onBlur={sendCount}
                           render={
