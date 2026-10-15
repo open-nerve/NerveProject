@@ -7,9 +7,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { keepFocusIn } from "./keep-focus";
 
-// A dialog's focus while its controls are disabled under it, or blurred by an Escape (M3 closeout, C11-3), in jsdom: an
-// element's blur() is a focusout to nothing, the body taking the focus, as a browser's blur of a button disabled while
-// it has the focus, and as Headless UI's blur of whatever has it on an Escape.
+// A dialog's focus while its controls are disabled under it (M3 closeout, C11-3), in jsdom: a button's blur() is a
+// focusout to nothing, the body taking the focus, as a browser's blur of a button disabled while it has the focus.
 
 let dialog: HTMLElement;
 let button: HTMLButtonElement;
@@ -98,26 +97,6 @@ describe("keepFocusIn", () => {
     queueMicrotask(stop);
     await observed();
     expect(document.activeElement).toBe(dialog);
-  });
-
-  it("gives the dialog the focus again when it loses it itself, and still gives it back to the control once enabled", async () => {
-    disabledUnderFocus();
-    await observed();
-    // an Escape while the request is out: Headless UI's Dialog blurs what has the focus, the dialog, and stays open
-    dialog.blur();
-    await observed();
-    expect(document.activeElement).toBe(dialog);
-    button.disabled = false;
-    await observed();
-    expect(document.activeElement).toBe(button);
-  });
-
-  it("gives the focus back to a control that loses it while it can take it, not to the dialog", async () => {
-    field.focus();
-    // an Escape in a dialog that stays open (no handleClose): Headless UI's Dialog blurs the field
-    field.blur();
-    await observed();
-    expect(document.activeElement).toBe(field);
   });
 
   it("leaves the focus where it is when the window loses it", async () => {

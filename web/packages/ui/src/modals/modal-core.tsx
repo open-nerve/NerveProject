@@ -43,8 +43,8 @@ type Props = {
  * assistive technology (aria-hidden): Tab stays within the dialog, the pointer reaches nothing behind it, and a screen
  * reader reads the dialog alone; the lists, pickers and toasts that open from it render outside the page (portals) and
  * stay usable and read. The focus stays within it: a control that loses it while disabled (a button whose request is
- * out) leaves it to the dialog, and has it back once enabled (keepFocusIn). Closed, it gives the focus back to what had
- * it before it opened.
+ * out) leaves it to the dialog, and has it back once enabled (keepFocusIn); an Escape that does not close the dialog
+ * leaves the focus where it is. Closed, it gives the focus back to what had it before it opened.
  */
 export function ModalCore(props: Props) {
   const {
@@ -70,6 +70,18 @@ export function ModalCore(props: Props) {
       open={isOpen && mounted}
       onClose={() => handleClose?.()}
       className="relative z-30 outline-none"
+      // Headless UI's Dialog, on a keydown of Escape on the window, blurs what has the focus and asks to close, unless
+      // its default is prevented (useEscape). This prevents it when the Escape is not the dialog's: one that ends an
+      // input method's composition is the method's (isComposing); and while the dialog has no handleClose (its request
+      // is out, or it never closes on Escape), the Escape closes nothing, and its blur would only take the focus from
+      // where it is: a field, or the dialog itself while a disabled button waits to have it back (keepFocusIn).
+      // It prevents it on the way out, once the controls inside have had it, the lists they open too (React's tree): in
+      // the capture phase, it would make Headless UI skip their own handlers, which it does for a prevented event (a
+      // select's, which keeps its Escape from the page). And it is the dialog element's, not the panel's: the dialog
+      // element itself has the focus while a button's request is out, and a key pressed then never reaches the panel.
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && (!handleClose || isComposing(event.nativeEvent))) event.preventDefault();
+      }}
     >
       <DialogBackdrop
         transition
@@ -86,14 +98,6 @@ export function ModalCore(props: Props) {
               width,
               className
             )}
-            // an Escape that ends an input method's composition is the method's (isComposing):
-            // Headless UI's Dialog closes on a keydown of Escape on the window unless its default is prevented
-            // (useEscape), so this prevents it on the way out, once the controls inside have had it (in the capture
-            // phase, it would make Headless UI skip their own handlers, which it does for a prevented event: a
-            // select's, which keeps its Escape from the page)
-            onKeyDown={(event) => {
-              if (event.key === "Escape" && isComposing(event.nativeEvent)) event.preventDefault();
-            }}
           >
             <InsideModal.Provider value={true}>{children}</InsideModal.Provider>
           </DialogPanel>
