@@ -76,10 +76,10 @@ make          # 查看所有命令
 
 `e2e/` 是 Playwright 项目（工作区包 `@nerve/e2e`），一个用户故事一个测试文件，放在 `e2e/stories/` 下。被测对象是 `make build` 编译出的 `bin/nerve`（内嵌前端）加上 Postgres 18。
 
-- **第一次运行之前**，安装 Playwright 用的 Chromium（下载到本机的缓存目录；升级 Playwright 之后再执行一次）：
+- **第一次运行之前**，安装 Playwright 用的 Chromium 和 Firefox（下载到本机的缓存目录；升级 Playwright 之后再执行一次）。故事都在 Chromium 中运行，A4 的页面测试另在 Firefox 中运行（`e2e/playwright.config.ts` 的 `firefox` 项目）：
 
   ```bash
-  cd e2e && pnpm exec playwright install chromium
+  cd e2e && pnpm exec playwright install chromium firefox
   ```
 
 - **运行**：`make e2e`。它先执行 `make build`（没有改动时约 1 秒），再运行全部故事。需要 Docker：测试用 testcontainers 启动一个 Postgres 容器，运行结束后自动删除。

@@ -185,31 +185,51 @@ describe("leaseLock", () => {
   });
 });
 
+/**
+ * A navigator.locks the test grants by hand: the lock is held from the grant until the callback it runs settles, as
+ * the browser holds it. `held` tells whether it is held now; `requests` lists each request's arguments but the
+ * callback.
+ */
+function handGrantedLocks() {
+  const requests: unknown[][] = [];
+  const grant = gate();
+  const lock = { held: false };
+  const locks = {
+    request: (async (...args: unknown[]) => {
+      const granted = args.pop() as () => Promise<unknown>;
+      requests.push(args);
+      await grant.promise;
+      lock.held = true;
+      try {
+        return await granted();
+      } finally {
+        lock.held = false;
+      }
+    }) as LockManager["request"],
+  };
+  return { locks, requests, grant, lock };
+}
+
+/** Lets the pending microtasks run, `left` turns of them, and no timer. */
+async function microtasks(left = 20): Promise<void> {
+  if (left === 0) return;
+  await Promise.resolve();
+  return microtasks(left - 1);
+}
+
 describe("webLock", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("runs the task under the lock nerve.auth.refresh and passes its result on", async () => {
-    // A lock the test grants by hand, held from the grant until the callback it runs settles.
-    const requests: unknown[][] = [];
-    const grant = gate();
-    let held = false;
-    const locks = {
-      request: (async (...args: unknown[]) => {
-        const granted = args.pop() as () => Promise<unknown>;
-        requests.push(args);
-        await grant.promise;
-        held = true;
-        try {
-          return await granted();
-        } finally {
-          held = false;
-        }
-      }) as LockManager["request"],
-    };
+    const { locks, requests, grant, lock } = handGrantedLocks();
     const body = gate<number>();
     const seen: boolean[] = [];
     const done = webLock(locks).run(async () => {
-      seen.push(held);
+      seen.push(lock.held);
       const value = await body.promise;
-      seen.push(held);
+      seen.push(lock.held);
       return value;
     });
 
@@ -220,7 +240,45 @@ describe("webLock", () => {
     body.open(42);
     await expect(done).resolves.toBe(42);
     expect(seen).toEqual([true, true]);
-    expect(held).toBe(false);
+    expect(lock.held).toBe(false);
     expect(LOCK_NAME).toBe("nerve.auth.refresh");
+  });
+
+  it("holds the lock past the task's settling and its microtasks, and releases it in the next timer task", async () => {
+    vi.useFakeTimers();
+    const { locks, grant, lock } = handGrantedLocks();
+    grant.open();
+    const body = gate<string>();
+    let settled = false;
+    const done = webLock(locks).run(async () => {
+      const value = await body.promise;
+      settled = true;
+      return value;
+    });
+
+    body.open("refreshed");
+    await microtasks();
+    expect(settled).toBe(true);
+    expect(lock.held).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(lock.held).toBe(false);
+    await expect(done).resolves.toBe("refreshed");
+  });
+
+  it("passes the task's failure on, releasing the lock in the next timer task", async () => {
+    vi.useFakeTimers();
+    const { locks, grant, lock } = handGrantedLocks();
+    grant.open();
+    const failure = new Error("refresh failed");
+    const done = webLock(locks).run(async () => {
+      throw failure;
+    });
+    const caught = expect(done).rejects.toBe(failure);
+
+    await microtasks();
+    expect(lock.held).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(lock.held).toBe(false);
+    await caught;
   });
 });

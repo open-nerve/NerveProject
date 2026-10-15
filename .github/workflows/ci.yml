@@ -102,10 +102,11 @@ jobs:
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install
         run: pnpm install --frozen-lockfile
-      # 只装无界面的 Chromium 和它需要的系统库；不缓存浏览器：系统库缓存不了，下载和恢复缓存的耗时相当
-      - name: Install the Playwright browser
+      # 只装无界面的 Chromium、Firefox（A4 的页面测试也在 Firefox 中跑，见 e2e/playwright.config.ts）和它们需要的
+      # 系统库；不缓存浏览器：系统库缓存不了，下载和恢复缓存的耗时相当
+      - name: Install the Playwright browsers
         working-directory: e2e
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: pnpm exec playwright install --with-deps --only-shell chromium firefox
       # turbo 的缓存不跨任务保存，前端在这里再构建一次；持续集成中只有这一步完整执行 make build（见 P6 spec 2.9）
       - name: Build
         run: make build
