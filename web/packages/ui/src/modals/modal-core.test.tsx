@@ -5,6 +5,7 @@
  */
 
 import { act } from "react";
+import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ModalCore, ModalTitle } from "./modal-core";
@@ -147,5 +148,28 @@ describe("ModalCore, an Escape", () => {
     await act(async () => field.focus());
     await escape(field);
     expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps an Escape from a popup portaled out of the dialog the dialog's, by React's tree, not the DOM", async () => {
+    // a popup among the children of a dialog that may not close, portaled to the body and a dialog by its role, as
+    // Base UI's popover is (the emoji picker in create project): outside the dialog's element and its role="dialog",
+    // yet React bubbles its keydown through the dialog that renders it (a composing Escape, which the popup lets by)
+    await act(async () => {
+      root.render(
+        <ModalCore isOpen>
+          <ModalTitle>Create project</ModalTitle>
+          {createPortal(
+            <div role="dialog" aria-label="Emoji">
+              <input aria-label="Search" />
+            </div>,
+            document.body
+          )}
+        </ModalCore>
+      );
+    });
+    await settled();
+    const search = document.querySelector<HTMLInputElement>('[aria-label="Search"]');
+    if (!search) throw new Error("no search in the popup");
+    expect(await escape(search)).toBe(true);
   });
 });

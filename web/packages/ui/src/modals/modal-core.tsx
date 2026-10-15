@@ -35,7 +35,10 @@ const claimedEscapes = new WeakSet<Event>();
 
 type Props = {
   children: React.ReactNode;
-  /** Closes the dialog on Escape and a click on the backdrop; without it, neither closes it. */
+  /**
+   * Closes the dialog on Escape and a click on the backdrop; without it, ModalCore closes it on neither (a caller's
+   * own listener may still close it on Escape).
+   */
   handleClose?: () => void;
   isOpen: boolean;
   position?: EModalPosition;
