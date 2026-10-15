@@ -132,6 +132,8 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   await expect.poll(() => turns).toEqual([{ navigation_project_limit: 0 }, { navigation_project_limit: 10 }]);
   await expect(limited).toBeChecked();
   await expect(count).toHaveValue("10");
+  // The count is a text input that a phone gives its numeric keypad (its input mode), not a number input.
+  await expect(count).toHaveAttribute("inputmode", "numeric");
   // He types 0: as he types, the count is read invalid, its rule's message its description.
   await count.fill("0");
   await expect(count).toHaveAttribute("aria-invalid", "true");

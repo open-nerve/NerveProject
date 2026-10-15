@@ -24,6 +24,8 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
   const watch = await watchPage(page);
 
   await page.goto("/sign-up");
+  // The address is a text input that a phone gives its email keypad (its input mode), not an email input.
+  await expect(emailInput).toHaveAttribute("inputmode", "email");
   // An address the page's rule refuses, confirmed by Enter (nothing goes, the form not filled in): not read invalid while
   // the field has the focus, its message shown once the field is left, and read invalid then, the message its
   // description. An address only an email input's own rule refuses (a quoted name) is not read invalid at all: the

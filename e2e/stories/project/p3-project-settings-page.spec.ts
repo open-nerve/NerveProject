@@ -175,10 +175,16 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   await page.getByRole("button", { name: "1 month" }).click();
   await page.getByRole("option", { name: "Customize time range" }).click();
   await expect(modalDialog(page)).toHaveAccessibleName("Customize time range");
-  // 0, confirmed by Enter: the months' rule refuses it, the field read invalid, its message its description. That rule
-  // is the field's only one (a number input's own range would stop the form before it, the field read invalid with no
-  // message), and the field takes digits only: 1.5 is 15.
+  // 0, confirmed by Enter: the months' rule refuses it, the field read invalid, its message its description; and 13, the
+  // same. That rule is the field's only one (a number input's own range would stop the form before it, the field read
+  // invalid with no message): a text input that a phone gives its numeric keypad (its input mode), taking digits only:
+  // 1.5 is 15.
+  await expect(page.locator("#archive_in")).toHaveAttribute("inputmode", "numeric");
   await page.locator("#archive_in").fill("0");
+  await page.locator("#archive_in").press("Enter");
+  await expect(page.locator("#archive_in")).toHaveAccessibleDescription("Select a month between 1 and 12.");
+  await expect(page.locator("#archive_in")).toHaveAttribute("aria-invalid", "true");
+  await page.locator("#archive_in").fill("13");
   await page.locator("#archive_in").press("Enter");
   await expect(page.locator("#archive_in")).toHaveAccessibleDescription("Select a month between 1 and 12.");
   await expect(page.locator("#archive_in")).toHaveAttribute("aria-invalid", "true");

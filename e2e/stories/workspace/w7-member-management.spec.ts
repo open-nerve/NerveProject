@@ -357,8 +357,9 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await expectMembership(db, slug, carol.email, { role: 5, is_active: true });
 
   // His leaving, as the only admin, by the keyboard: while it is out its button is disabled under the focus, which
-  // stays in the dialog; nerve refuses it, the focus goes back to the button, and the page says why, read beside the
-  // dialog, which stays until Cancel closes it.
+  // stays in the dialog, an Escape meanwhile too (Headless UI's Dialog blurs the dialog itself, and it stays open);
+  // nerve refuses it, the focus goes back to the button, and the page says why, read beside the dialog, which stays
+  // until Cancel closes it.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
   await askToEndMembership(page, adminEmail, "Leave");
   await expect(modalDialog(page)).toHaveAccessibleName("Leave workspace?");
@@ -366,6 +367,8 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   const releaseLeaving = await holdAnswer(page, leaving.method, leaving.path);
   const refused = answerTo(page, leaving.method, leaving.path, () => leave.press("Enter"));
   await expect(modalDialog(page).getByRole("button", { name: "Leaving", exact: true })).toBeDisabled();
+  expect(await focusInDialog(page)).toBe(true);
+  expect(await closedByEscape(page)).toBe(false);
   expect(await focusInDialog(page)).toBe(true);
   await releaseLeaving();
   expect((await refused).status()).toBe(409);

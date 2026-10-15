@@ -339,6 +339,10 @@ test("W4 (page): the admin invites a member and a guest, Enter on the guest's ro
     description: "We need an email address to invite them.",
   });
   expect(watch.apiRequests.filter((request) => request === `POST ${invitations}`)).toHaveLength(2);
+  // Escape there leaves the form open (it has no handleClose) and the focus on that address: Headless UI's Dialog
+  // blurs it, and an address that can take the focus has it back, not the dialog.
+  expect(await closedByEscape(page)).toBe(false);
+  await expect(address(1)).toBeFocused();
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
   // erin's declined invitation deleted, her address is invited again.
   const erins = { method: "DELETE", path: `/api/v0/workspace-invitations/${toErin.id}` };
