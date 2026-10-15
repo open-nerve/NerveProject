@@ -27,6 +27,12 @@ export function useInsideModal(): boolean {
   return React.useContext(InsideModal);
 }
 
+/**
+ * The keydowns of Escape a ModalCore dialog has decided on: React bubbles one through each dialog it is nested in,
+ * innermost first, and the first owns it (ModalCore's onKeyDown).
+ */
+const claimedEscapes = new WeakSet<Event>();
+
 type Props = {
   children: React.ReactNode;
   /** Closes the dialog on Escape and a click on the backdrop; without it, neither closes it. */
@@ -43,7 +49,7 @@ type Props = {
  * assistive technology (aria-hidden): Tab stays within the dialog, the pointer reaches nothing behind it, and a screen
  * reader reads the dialog alone; the lists, pickers and toasts that open from it render outside the page (portals) and
  * stay usable and read. The focus stays within it: a control that loses it while disabled (a button whose request is
- * out) leaves it to the dialog, and has it back once enabled (keepFocusIn); an Escape that does not close the dialog
+ * out) leaves it to the dialog, and has it back once enabled (keepFocusIn); an Escape while it has no handleClose
  * leaves the focus where it is. Closed, it gives the focus back to what had it before it opened.
  */
 export function ModalCore(props: Props) {
@@ -71,16 +77,23 @@ export function ModalCore(props: Props) {
       onClose={() => handleClose?.()}
       className="relative z-30 outline-none"
       // Headless UI's Dialog, on a keydown of Escape on the window, blurs what has the focus and asks to close, unless
-      // its default is prevented (useEscape). This prevents it when the Escape is not the dialog's: one that ends an
-      // input method's composition is the method's (isComposing); and while the dialog has no handleClose (its request
-      // is out, or it never closes on Escape), the Escape closes nothing, and its blur would only take the focus from
-      // where it is: a field, or the dialog itself while a disabled button waits to have it back (keepFocusIn).
+      // its default is prevented (useEscape). This prevents both when Headless UI is to do neither: an Escape that ends
+      // an input method's composition is the method's (isComposing); and while the dialog has no handleClose (its
+      // request is out, or Headless UI is not to close it), Headless UI's close does nothing, and its blur would only
+      // take the focus from where it is: a field, or the dialog itself while a disabled button waits to have it back
+      // (keepFocusIn). A caller's own listener may still close the dialog on that Escape (useKeypress, on the document,
+      // reads no defaultPrevented).
       // It prevents it on the way out, once the controls inside have had it, the lists they open too (React's tree): in
       // the capture phase, it would make Headless UI skip their own handlers, which it does for a prevented event (a
-      // select's, which keeps its Escape from the page). And it is the dialog element's, not the panel's: the dialog
+      // select's, which keeps its Escape from the page). It is the dialog element's, not the panel's: the dialog
       // element itself has the focus while a button's request is out, and a key pressed then never reaches the panel.
+      // And the innermost dialog owns an Escape: React bubbles it through each dialog it is nested in, innermost first,
+      // so the first to see it claims it and the others leave it alone, and a dialog with a handleClose nested in one
+      // that may not close still closes on it.
       onKeyDown={(event) => {
-        if (event.key === "Escape" && (!handleClose || isComposing(event.nativeEvent))) event.preventDefault();
+        if (event.key !== "Escape" || claimedEscapes.has(event.nativeEvent)) return;
+        claimedEscapes.add(event.nativeEvent);
+        if (!handleClose || isComposing(event.nativeEvent)) event.preventDefault();
       }}
     >
       <DialogBackdrop

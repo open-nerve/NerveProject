@@ -125,4 +125,27 @@ describe("ModalCore, an Escape", () => {
     await escape(field);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it("closes a dialog with a handleClose nested in one without, the innermost dialog owning the Escape", async () => {
+    const handleClose = vi.fn();
+    // a confirmation rendered among the children of a dialog that may not close, as M4's "Save this draft?" in the
+    // work item dialog: React bubbles the confirmation's keydown through the outer dialog too
+    await act(async () => {
+      root.render(
+        <ModalCore isOpen>
+          <ModalTitle>Work item</ModalTitle>
+          <ModalCore isOpen handleClose={handleClose}>
+            <ModalTitle>Save this draft?</ModalTitle>
+            <input aria-label="Title" />
+          </ModalCore>
+        </ModalCore>
+      );
+    });
+    await settled();
+    const field = document.querySelector<HTMLInputElement>('[aria-label="Title"]');
+    if (!field) throw new Error("no inner field");
+    await act(async () => field.focus());
+    await escape(field);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
 });

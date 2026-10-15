@@ -339,8 +339,8 @@ test("W4 (page): the admin invites a member and a guest, Enter on the guest's ro
     description: "We need an email address to invite them.",
   });
   expect(watch.apiRequests.filter((request) => request === `POST ${invitations}`)).toHaveLength(2);
-  // Escape there leaves the form open (it has no handleClose) and the focus on that address: Headless UI's Dialog
-  // blurs it, and an address that can take the focus has it back, not the dialog.
+  // Escape there leaves the form open (it has no handleClose) and the focus on that address: ModalCore stops the
+  // Escape before Headless UI's Dialog, which would blur it.
   expect(await closedByEscape(page)).toBe(false);
   await expect(address(1)).toBeFocused();
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
