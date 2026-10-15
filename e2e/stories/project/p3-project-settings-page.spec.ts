@@ -169,7 +169,7 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   expect([turnedOn.answer.status(), turnedOn.body]).toEqual([200, { archive_in: 1 }]);
   // A range of his own: the modal waits for nerve, busy and not to be closed; it closes once nerve has made it.
   await page.getByRole("button", { name: "1 month" }).click();
-  await page.getByRole("button", { name: "Customize time range" }).click();
+  await page.getByRole("option", { name: "Customize time range" }).click();
   await expect(modalDialog(page)).toHaveAccessibleName("Customize time range");
   await page.locator("#archive_in").fill("6");
   const { body, release } = await sentHeld(page, "PATCH", projectApi, () =>
@@ -186,7 +186,28 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   await page.getByRole("button", { name: "6 months" }).click();
   const three = await sentTo(page, "PATCH", projectApi, () => page.getByRole("option", { name: "3 months" }).click());
   expect([three.answer.status(), three.body]).toEqual([200, { archive_in: 3 }]);
-  await expect(page.getByRole("button", { name: "3 months" })).toBeVisible();
+  const months = page.getByRole("button", { name: "3 months" });
+  await expect(months).toBeVisible();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+  // The custom range by the keyboard: an option of the list, which Enter on the select opens with 3 months active; the
+  // arrows reach it after the months, and Enter opens its dialog. Escape closes the dialog, the focus back on the
+  // select.
+  await months.focus();
+  await page.keyboard.press("Enter");
+  const list = page.getByRole("listbox");
+  const customRange = list.getByRole("option", { name: "Customize time range" });
+  await expect(customRange).toBeVisible();
+  // 3 months, then 6, 9, 12 and the custom range
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect(list).toHaveAttribute("aria-activedescendant", (await customRange.getAttribute("id")) ?? "");
+  await page.keyboard.press("Enter");
+  await expect(modalDialog(page)).toHaveAccessibleName("Customize time range");
+  await page.keyboard.press("Escape");
+  await expect(modalDialog(page)).toHaveCount(0);
+  await expect(months).toBeFocused();
   // A range nerve refuses: ann, an admin of Web and a member of Acme, opens her custom range, and he makes her a member
   // of Web meanwhile. Her modal stays, says why, and is no longer busy, to try again or to cancel; nothing changes.
   const annEmail = emailFor(testInfo, "ann");
@@ -198,7 +219,7 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   const annWatch = await watchPage(theOtherAdmin.page);
   await theOtherAdmin.page.goto(`${settings}/automations`);
   await theOtherAdmin.page.getByRole("button", { name: "3 months" }).click();
-  await theOtherAdmin.page.getByRole("button", { name: "Customize time range" }).click();
+  await theOtherAdmin.page.getByRole("option", { name: "Customize time range" }).click();
   await theOtherAdmin.page.locator("#archive_in").fill("9");
   const anns = await projectMembershipOf(api, admin.access_token, web.id, annId);
   expect((await projectMemberWrites(api, web.id).change(admin.access_token, anns, 15)).status).toBe(200);

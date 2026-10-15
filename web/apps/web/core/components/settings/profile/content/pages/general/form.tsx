@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { UserOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import type { User, UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
@@ -84,10 +84,14 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
     await followInSession(() => updateCurrentUser(userPayload), {
       done: () => setToast({ type: TOAST_TYPE.SUCCESS, title: t("toast.success"), message: t("profile_updated") }),
       failed: (error) => {
+        // each under its field, the first refused given the focus
         const fields = fieldErrorKeys(error);
+        let first = true;
         for (const field of FIELDS) {
           const key = fields[field];
-          if (key !== undefined) setError(field, { type: "manual", message: t(key) });
+          if (key === undefined) continue;
+          setError(field, { type: "manual", message: t(key) }, { shouldFocus: first });
+          first = false;
         }
         if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
       },
@@ -163,10 +167,14 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           autoComplete="on"
                         />
                       </InputGroup>
+                      {errors.first_name?.message && (
+                        <FieldError match size="lg">
+                          {errors.first_name.message}
+                        </FieldError>
+                      )}
                     </Field>
                   )}
                 />
-                {errors.first_name && <span className="text-11 text-danger-primary">{errors.first_name.message}</span>}
               </div>
               <div className="flex flex-col gap-1">
                 <h4 className="text-13 font-medium text-secondary">{t("last_name")}</h4>
@@ -188,10 +196,14 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           autoComplete="on"
                         />
                       </InputGroup>
+                      {errors.last_name?.message && (
+                        <FieldError match size="lg">
+                          {errors.last_name.message}
+                        </FieldError>
+                      )}
                     </Field>
                   )}
                 />
-                {errors.last_name && <span className="text-11 text-danger-primary">{errors.last_name.message}</span>}
               </div>
               <div className="flex flex-col gap-1">
                 <h4 className="text-13 font-medium text-secondary">
@@ -218,12 +230,14 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           placeholder={t("enter_your_display_name")}
                         />
                       </InputGroup>
+                      {errors.display_name?.message && (
+                        <FieldError match size="lg">
+                          {errors.display_name.message}
+                        </FieldError>
+                      )}
                     </Field>
                   )}
                 />
-                {errors?.display_name && (
-                  <span className="text-11 text-danger-primary">{errors?.display_name?.message}</span>
-                )}
               </div>
               <div className="flex flex-col gap-1">
                 <h4 className="text-13 font-medium text-secondary">

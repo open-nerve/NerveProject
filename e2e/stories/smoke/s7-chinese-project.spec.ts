@@ -117,12 +117,16 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   await expect(page.getByRole("menuitem", { name: "离开" })).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // The adding of members: a row with no member picked says so; its member select's search and words for no match
-  // are Chinese.
+  // The adding of members: a row with no member picked says so, its member select focused and described by it (M3
+  // closeout, C11-1); its member select's search and words for no match are Chinese.
   await page.getByRole("button", { name: "添加成员", exact: true }).click();
   await modalDialog(page).getByRole("button", { name: "添加成员", exact: true }).click();
   await expect(modalDialog(page).getByText("请选择成员", { exact: true })).toBeVisible();
-  await modalDialog(page).getByRole("button", { name: "选择成员" }).click();
+  const memberSelect = modalDialog(page).getByRole("button", { name: "选择成员" });
+  await expect(memberSelect).toBeFocused();
+  await expect(memberSelect).toHaveAttribute("aria-invalid", "true");
+  await expect(memberSelect).toHaveAccessibleDescription("请选择成员");
+  await memberSelect.click();
   await expect(page.getByRole("combobox", { name: "搜索", exact: true })).toBeFocused();
   await page.keyboard.type("zz");
   await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
@@ -254,7 +258,7 @@ test("S7 (page): an admin whose language is Chinese filters the projects and the
   await page.goto(`${settings}/automations`);
   await page.getByRole("switch", { name: "自动归档已关闭的工作项" }).click();
   await page.getByRole("button", { name: "1 个月", exact: true }).click();
-  await page.getByRole("button", { name: "自定义时间范围" }).click();
+  await page.getByRole("option", { name: "自定义时间范围" }).click();
   const months = modalDialog(page).getByPlaceholder("输入月数");
   await expect(modalDialog(page).getByText("个月", { exact: true })).toBeVisible();
   await months.fill("");

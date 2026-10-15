@@ -301,6 +301,12 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   const refusedIdentifier = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
   expect(refusedIdentifier.answer.status()).toBe(409);
   await expect(page.getByText("A project of this workspace already has this identifier.")).toBeVisible();
+  // the field refused has the focus, and is read invalid, its message its description
+  await expect(page.locator("#identifier")).toBeFocused();
+  await expect(page.locator("#identifier")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#identifier")).toHaveAccessibleDescription(
+    "A project of this workspace already has this identifier."
+  );
 
   // Created: the form's fields alone, sent once; the form cannot be closed until nerve answers.
   await page.locator("#identifier").fill("webapp");

@@ -141,6 +141,15 @@ export async function pageBehindHidden(page: Page): Promise<boolean> {
 }
 
 /**
+ * Resolves with whether the focus is within the one modal dialog page shows, on the dialog itself or on something in
+ * it, and so not on the page's body: ModalCore keeps it there while a button pressed in the dialog is disabled under
+ * it, its request out (M3 closeout, C11-3).
+ */
+export async function focusInDialog(page: Page): Promise<boolean> {
+  return modalDialog(page).evaluate((dialog) => dialog.contains(dialog.ownerDocument.activeElement));
+}
+
+/**
  * Resolves with whether element, shown while a dialog is open, is read out: within a live region (a toast's), and not
  * in the page behind the dialog, which is inert and hidden then (pageBehindHidden). The toast that says why nerve
  * refused what a dialog sent is read while the dialog stays open (A-M2).

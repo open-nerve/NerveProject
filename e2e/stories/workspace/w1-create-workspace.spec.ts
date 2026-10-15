@@ -96,7 +96,8 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
   // The name gives the slug.
   await expect(url).toHaveValue("acme-two");
 
-  // nerve's check of the slug decides: a refused one is said under the field, and the form is not sent.
+  // nerve's check of the slug decides: a refused one is said under the field, which has the focus, read invalid, its
+  // message its description; and the form is not sent.
   const refused = async (slug: string, message: string) => {
     await url.fill(slug);
     const checked = await answerTo(page, "GET", `/api/v0/workspace-slugs/${encodeURIComponent(slug)}`, () =>
@@ -104,6 +105,9 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
     );
     expect(checked.status()).toBe(200);
     await expect(page.getByText(message)).toBeVisible();
+    await expect(url).toBeFocused();
+    await expect(url).toHaveAttribute("aria-invalid", "true");
+    await expect(url).toHaveAccessibleDescription(message);
   };
   await refused(taken, "Workspace URL is already taken!");
   await refused("settings", "This URL is reserved: choose another.");

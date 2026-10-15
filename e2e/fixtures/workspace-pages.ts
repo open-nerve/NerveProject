@@ -4,7 +4,7 @@ import type { WorkspaceInvitation } from "./api";
 import { password, signInContext, type AuthTokens } from "./auth";
 import { submitSignIn } from "./auth-pages";
 import { watchPage, type PageWatch } from "./browser";
-import { modalDialog, sentWithin } from "./dialogs";
+import { modalDialog, pageBehindHidden, sentWithin } from "./dialogs";
 import { answerTo, expectListBesideButton, sentTo } from "./settings-pages";
 
 // The workspace's pages (M3 design 7.5), as a person uses them.
@@ -193,6 +193,8 @@ export async function sendInvitations(
       await invitationFormRow(page, index).getByRole("button").first().focus();
       expect(await sentWithin(page, "POST", path, () => page.keyboard.press("Enter")), "sent by the Enter").toBe(false);
       await expect(page.getByRole("option", { name: role, exact: true })).toBeVisible();
+      // the list, open in the dialog, leaves the page behind it hidden, as the dialog has it
+      expect(await pageBehindHidden(page), "the page behind hidden while the role list is open").toBe(true);
       await page.getByRole("option", { name: role, exact: true }).click();
     }
   }, Promise.resolve());

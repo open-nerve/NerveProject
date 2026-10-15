@@ -162,6 +162,10 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   expect(taken.answer.status()).toBe(409);
   await expect(stateForm(page).getByText("A state of this project already has this name.")).toBeVisible();
   await expect(page.locator("#name")).toHaveValue("Todo");
+  // the name has the focus, and is read invalid, its message its description
+  await expect(page.locator("#name")).toBeFocused();
+  await expect(page.locator("#name")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#name")).toHaveAccessibleDescription("A state of this project already has this name.");
   await stateForm(page).getByRole("button", { name: "Cancel" }).click();
 
   // Review recoloured, its row's Edit reached by Tab, its row's controls shown while the focus is in it as while the

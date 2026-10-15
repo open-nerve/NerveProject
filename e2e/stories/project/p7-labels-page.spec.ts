@@ -144,15 +144,17 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   );
   expect(created.answer.status()).toBe(201);
 
-  // bug: said under the name (the line after the form), the form open with what it holds.
+  // bug: said under the name (the line after the form), the form open with what it holds, the name focused and
+  // described by it.
   await page.getByRole("button", { name: "Add label" }).click();
   await page.locator("#labelName").fill("bug");
   const taken = await sentTo(page, "POST", listed, () => labelForm(page).getByRole("button", { name: "Add" }).click());
   expect(taken.answer.status()).toBe(409);
-  await expect(labelForm(page).locator("xpath=following-sibling::p[1]")).toHaveText(
-    "A label of this project already has this name, in this case or another."
-  );
+  const message = "A label of this project already has this name, in this case or another.";
+  await expect(labelForm(page).locator("xpath=following-sibling::div[1]")).toHaveText(message);
   await expect(page.locator("#labelName")).toHaveValue("bug");
+  await expect(page.locator("#labelName")).toBeFocused();
+  await expect(page.locator("#labelName")).toHaveAccessibleDescription(message);
   await labelForm(page).getByRole("button", { name: "Cancel" }).click();
   const named = await labelsOf(api, admin.access_token, web.id);
   const [bug, feature] = [named("Bug"), named("Feature")];

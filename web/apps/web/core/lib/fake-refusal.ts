@@ -24,3 +24,8 @@ export function refusal(status: number, code: string, fields: Pick<FieldError, "
 export function underFields(setError: Mock) {
   return setError.mock.calls.map(([field, { message }]) => [field, message]);
 }
+
+/** The fields the page gave the focus to as it said a message under them through setError (its shouldFocus). */
+export function focusedUnder(setError: Mock) {
+  return setError.mock.calls.filter(([, , options]) => options?.shouldFocus === true).map(([field]) => field);
+}

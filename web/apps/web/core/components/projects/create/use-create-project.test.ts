@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@nerve/api-client";
 import { heldChange, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
-import { refusal, underFields } from "@/lib/fake-refusal";
+import { focusedUnder, refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
 import { useCreateProject, type ProjectCreationForm } from "./use-create-project";
@@ -83,6 +83,23 @@ describe("useCreateProject", () => {
     page.createProject.mockRejectedValueOnce(error);
     expect(await create()).toBeUndefined();
     expect([underFields(page.setError), toasts]).toEqual([fields, []]);
+  });
+
+  it("gives the focus to the first field it shows a refusal under, in the form's order, and to no other", async () => {
+    page.createProject.mockRejectedValueOnce(
+      refusal(422, "validation_failed", [
+        { field: "identifier", code: "too_long" },
+        { field: "name", code: "not_allowed" },
+      ])
+    );
+    await create();
+    expect([underFields(page.setError), focusedUnder(page.setError)]).toEqual([
+      [
+        ["name", "errors.field.not_allowed"],
+        ["identifier", "errors.field.too_long"],
+      ],
+      ["name"],
+    ]);
   });
 
   it.each([

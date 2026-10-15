@@ -6,6 +6,7 @@
 
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
+import { Field, FieldControl, FieldError } from "@makeplane/propel/components/field";
 // nerve imports
 import type { UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
@@ -68,7 +69,7 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
       done: () => onDone(),
       failed: (error) => {
         const key = fieldErrorKeys(error).first_name;
-        if (key !== undefined) setError("first_name", { type: "manual", message: t(key) });
+        if (key !== undefined) setError("first_name", { type: "manual", message: t(key) }, { shouldFocus: true });
         if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
       },
     });
@@ -110,28 +111,40 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
               required: t("name_is_required"),
             }}
             render={({ field: { value, onChange, ref } }) => (
-              <input
-                ref={ref}
-                id="first_name"
-                name="first_name"
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                // oxlint-disable-next-line jsx_a11y/no-autofocus -- the step asks for this one field, which it opens on
-                autoFocus
-                className={cn(
-                  "w-full rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 placeholder:text-placeholder focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
-                  {
-                    "border-strong": !errors.first_name,
-                    "border-danger-strong": errors.first_name,
+              // propel's Field, its look kept: the input is Base UI's control (FieldControl) rendered as before, and the
+              // message its description (FieldError)
+              <Field name="first_name" invalid={Boolean(errors.first_name)}>
+                <FieldControl
+                  id="first_name"
+                  name="first_name"
+                  type="text"
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  // oxlint-disable-next-line jsx_a11y/no-autofocus -- the step asks for this one field, which it opens on
+                  autoFocus
+                  placeholder={t("enter_your_full_name")}
+                  autoComplete="on"
+                  render={
+                    <input
+                      ref={ref}
+                      className={cn(
+                        "w-full rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 placeholder:text-placeholder focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
+                        {
+                          "border-strong": !errors.first_name,
+                          "border-danger-strong": errors.first_name,
+                        }
+                      )}
+                    />
                   }
+                />
+                {errors.first_name?.message && (
+                  <FieldError match size="xl">
+                    {errors.first_name.message}
+                  </FieldError>
                 )}
-                placeholder={t("enter_your_full_name")}
-                autoComplete="on"
-              />
+              </Field>
             )}
           />
-          {errors.first_name && <span className="text-13 text-danger-primary">{errors.first_name.message}</span>}
         </div>
       </div>
       {/* Continue Button */}

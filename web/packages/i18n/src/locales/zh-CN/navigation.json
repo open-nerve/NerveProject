@@ -2,8 +2,11 @@
   "tab_navigation": {
     "set_as_default": "设为默认",
     "clear_default": "取消默认",
-    "show": "显示",
-    "hide_in_more_menu": "收进更多菜单"
+    "hide_in_more_menu": "收进更多菜单",
+    "more_tabs": "更多标签页",
+    "show_tab": "显示{tab}",
+    "set_tab_as_default": "将{tab}设为默认",
+    "clear_tab_default": "取消{tab}的默认"
   },
   "sidebar": {
     "more_projects": "更多",

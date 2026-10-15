@@ -7,7 +7,7 @@
 import type { ChangeEvent } from "react";
 import type { UseFormSetValue } from "react-hook-form";
 import { Controller, useFormContext } from "react-hook-form";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { InfoOutline } from "@makeplane/propel/icons";
@@ -64,10 +64,11 @@ function ProjectCommonAttributes(props: Props) {
               message: t("title_should_be_less_than_255_characters"),
             },
           }}
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <Field name="name" invalid={Boolean(errors.name)}>
               <InputGroup size="2xl">
                 <Input
+                  ref={ref}
                   size="2xl"
                   id="name"
                   name="name"
@@ -77,10 +78,14 @@ function ProjectCommonAttributes(props: Props) {
                   placeholder={t("project_name")}
                 />
               </InputGroup>
+              {errors.name?.message && (
+                <FieldError match size="lg">
+                  {errors.name.message}
+                </FieldError>
+              )}
             </Field>
           )}
         />
-        <span className="text-11 text-danger-primary">{errors?.name?.message}</span>
       </div>
       <div className="relative">
         <Controller
@@ -100,10 +105,11 @@ function ProjectCommonAttributes(props: Props) {
               message: t("project_id_max_char"),
             },
           }}
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <Field name="identifier" invalid={Boolean(errors.identifier)}>
               <InputGroup size="2xl">
                 <Input
+                  ref={ref}
                   size="2xl"
                   id="identifier"
                   name="identifier"
@@ -113,6 +119,11 @@ function ProjectCommonAttributes(props: Props) {
                   placeholder={t("project_id")}
                 />
               </InputGroup>
+              {errors.identifier?.message && (
+                <FieldError match size="lg">
+                  {errors.identifier.message}
+                </FieldError>
+              )}
             </Field>
           )}
         />
@@ -125,7 +136,6 @@ function ProjectCommonAttributes(props: Props) {
         >
           <InfoOutline className="absolute top-2.5 right-2 h-3 w-3 text-placeholder" />
         </Tooltip>
-        <span className="text-11 text-danger-primary">{errors?.identifier?.message}</span>
       </div>
       <div className="md:col-span-4">
         <Controller

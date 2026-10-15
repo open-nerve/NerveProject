@@ -23,9 +23,9 @@ import { nerveWorkspaces } from "../../fixtures/workspaces";
 
 /** The two refusals' details: the API's problem and the command's line say the same. */
 const workspaceRefusal =
-  "The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has other active members. It must first be given another admin, or be deleted.";
+  "The workspace would be left without an admin: its only active admin cannot leave it, and that admin's membership cannot end while it has other active members. It must first be given another admin, or be deleted.";
 const projectRefusal =
-  "The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has other active members. It must first be given another admin, or be deleted.";
+  "The project would be left without an admin: its only active admin cannot leave it, and that admin's membership cannot end while it has other active members. It must first be given another admin, or be deleted.";
 
 test("W9: a deactivation is refused while the account is the only admin of a workspace or a project with other members, by the API and by the command, and changes nothing; once each has another admin, it ends every membership and deletes every invitation to the address and the pending ones of the workspace it leaves empty; nerve users activate, then reactivate-member, bring the account back a workspace at a time", async ({
   api,

@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { useTranslation } from "@nerve/i18n";
@@ -64,7 +64,7 @@ export function StateForm(props: TStateForm) {
 
   // busy from the click until the page has followed nerve's answer: a second click finds the button disabled
   const submit = handleSubmit((formData) =>
-    onSubmit(formData, (field, message) => setError(field, { type: "server", message }))
+    onSubmit(formData, (field, message, options) => setError(field, { type: "server", message }, options))
   );
 
   return (
@@ -107,19 +107,24 @@ export function StateForm(props: TStateForm) {
                   maxLength={100}
                 />
               </InputGroup>
+              {errors.name?.message && (
+                <FieldError match size="lg">
+                  {errors.name.message}
+                </FieldError>
+              )}
             </Field>
           )}
         />
-        {errors.name?.message && <span className="text-11 text-danger-primary">{errors.name.message}</span>}
 
         {/* description */}
         <Controller
           name="description"
           control={control}
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <Field name="description" invalid={Boolean(errors.description)}>
               <TextAreaGroup resize="none">
                 <TextArea
+                  ref={ref}
                   size="lg"
                   surface="field"
                   autoResize
@@ -131,12 +136,14 @@ export function StateForm(props: TStateForm) {
                   onChange={onChange}
                 />
               </TextAreaGroup>
+              {errors.description?.message && (
+                <FieldError match size="lg">
+                  {errors.description.message}
+                </FieldError>
+              )}
             </Field>
           )}
         />
-        {errors.description?.message && (
-          <span className="text-11 text-danger-primary">{errors.description.message}</span>
-        )}
 
         <div className="flex items-center space-x-2">
           <Button onClick={submit} variant="primary" size="lg" loading={isSubmitting}>

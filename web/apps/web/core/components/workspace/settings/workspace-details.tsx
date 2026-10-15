@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { useParams } from "react-router";
 // Nerve Imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import {
   ORGANIZATION_SIZE,
@@ -164,10 +164,14 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                         disabled={!isAdmin}
                       />
                     </InputGroup>
+                    {errors.name?.message && (
+                      <FieldError match size="lg">
+                        {errors.name.message}
+                      </FieldError>
+                    )}
                   </Field>
                 )}
               />
-              {errors.name && <p className="text-caption-sm-regular text-danger-primary">{errors.name.message}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <h4 className="text-body-sm-medium text-tertiary">

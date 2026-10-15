@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@nerve/api-client";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import type { KeptForm } from "@/lib/fake-form";
-import { refusal, underFields } from "@/lib/fake-refusal";
+import { focusedUnder, refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { GeneralProfileSettingsForm } from "./form";
 
@@ -81,6 +81,23 @@ describe("GeneralProfileSettingsForm", () => {
     );
     await renamed();
     expect([underFields(form.setError), toasts]).toEqual([[["display_name", "errors.field.too_long"]], []]);
+  });
+
+  it("gives the focus to the first field, in the form's order, of those it says a refusal under", async () => {
+    form.updateCurrentUser.mockRejectedValueOnce(
+      refusal(422, "validation_failed", [
+        { field: "display_name", code: "too_long" },
+        { field: "first_name", code: "not_allowed" },
+      ])
+    );
+    await renamed();
+    expect([underFields(form.setError), focusedUnder(form.setError)]).toEqual([
+      [
+        ["first_name", "errors.field.not_allowed"],
+        ["display_name", "errors.field.too_long"],
+      ],
+      ["first_name"],
+    ]);
   });
 
   it("says in a toast a refusal that names no field of the form", async () => {

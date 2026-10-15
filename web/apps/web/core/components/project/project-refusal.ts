@@ -4,7 +4,7 @@
  */
 
 // lib
-import { formRefusal, useFormRefusal, type FormRefusal } from "@/lib/form-refusal";
+import { formRefusal, useFormRefusal, type FormRefusal, type UnderField } from "@/lib/form-refusal";
 
 /** The fields of a project's forms (its creation, its general settings) under which nerve's refusals show. */
 export type ProjectFormField = "name" | "identifier";
@@ -32,11 +32,8 @@ export function projectRefusal(error: unknown): ProjectRefusal {
 
 /**
  * Shows nerve's refusal of a project's form as projectRefusal decides (useFormRefusal): each message under its field,
- * by the form's underField (its setError), else nerve's reason in a toast.
+ * by the form's underField (its setError), the first focused, else nerve's reason in a toast.
  */
-export function useProjectRefusal(): (
-  error: unknown,
-  underField: (field: ProjectFormField, message: string) => void
-) => void {
+export function useProjectRefusal(): (error: unknown, underField: UnderField<ProjectFormField>) => void {
   return useFormRefusal(FIELDS, TAKEN);
 }

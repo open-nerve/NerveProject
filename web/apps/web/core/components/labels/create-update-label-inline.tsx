@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { Popover, Transition } from "@headlessui/react";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -56,7 +56,8 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
   // Busy until the page has followed nerve's answer: the form closes once nerve has made the label or the change,
   // and stays with what it holds when nerve refuses it, the reason under the name or in a toast.
   const handleFormSubmit = (formData: TLabelFormValues) => {
-    const underField: LabelUnderField = (field, message) => setError(field, { type: "server", message });
+    const underField: LabelUnderField = (field, message, options) =>
+      setError(field, { type: "server", message }, options);
     return labelToUpdate
       ? update(labelToUpdate.id, formData, underField, onClose)
       : create(projectId, formData, underField, onClose);
@@ -67,8 +68,9 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
     setFocus("name");
   }, [setFocus]);
 
+  // the name's field holds the whole row, so that its message, under the row, is the name's description (FieldError)
   return (
-    <>
+    <Field name="name" invalid={Boolean(errors.name)}>
       <div className="flex w-full scroll-m-8 items-center gap-2 bg-surface-1">
         <div className="flex-shrink-0">
           <Popover className="relative z-10 flex h-full w-full items-center justify-center">
@@ -128,20 +130,18 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
               },
             }}
             render={({ field: { value, onChange, ref: inputRef } }) => (
-              <Field name="name" invalid={Boolean(errors.name)}>
-                <InputGroup size="2xl">
-                  <Input
-                    size="2xl"
-                    id="labelName"
-                    name="name"
-                    type="text"
-                    value={value}
-                    onChange={onChange}
-                    ref={inputRef}
-                    placeholder={t("project_settings.labels.label_title")}
-                  />
-                </InputGroup>
-              </Field>
+              <InputGroup size="2xl">
+                <Input
+                  size="2xl"
+                  id="labelName"
+                  name="name"
+                  type="text"
+                  value={value}
+                  onChange={onChange}
+                  ref={inputRef}
+                  placeholder={t("project_settings.labels.label_title")}
+                />
+              </InputGroup>
             )}
           />
         </div>
@@ -159,7 +159,14 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
           {labelToUpdate ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
         </Button>
       </div>
-      {errors.name?.message && <p className="p-0.5 pl-8 text-13 text-danger-primary">{errors.name?.message}</p>}
-    </>
+      {errors.name?.message && (
+        // under the name, past the colour's button
+        <div className="p-0.5 pl-8">
+          <FieldError match size="xl">
+            {errors.name.message}
+          </FieldError>
+        </div>
+      )}
+    </Field>
   );
 });

@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { InfoOutline, LockOutline } from "@makeplane/propel/icons";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { NETWORK_CHOICES } from "@nerve/constants";
@@ -137,10 +137,14 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                     disabled={!isAdmin}
                   />
                 </InputGroup>
+                {errors.name?.message && (
+                  <FieldError match size="lg">
+                    {errors.name.message}
+                  </FieldError>
+                )}
               </Field>
             )}
           />
-          <span className="text-11 text-danger-primary">{errors.name?.message}</span>
         </div>
         <div className="flex flex-col gap-1">
           <h4 className="text-13">{t("description")}</h4>
@@ -201,6 +205,11 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                         disabled={!isAdmin}
                       />
                     </InputGroup>
+                    {errors.identifier?.message && (
+                      <FieldError match size="lg">
+                        {errors.identifier.message}
+                      </FieldError>
+                    )}
                   </Field>
                 )}
               />
@@ -214,7 +223,6 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                 <InfoOutline className="absolute top-2.5 right-2 h-4 w-4 text-placeholder" />
               </Tooltip>
             </div>
-            <span className="text-11 text-danger-primary">{errors.identifier?.message}</span>
           </div>
           <div className="flex flex-col gap-1">
             <h4 className="text-13">{t("workspace_projects.network.label")}</h4>

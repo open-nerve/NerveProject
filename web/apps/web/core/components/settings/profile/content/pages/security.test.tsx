@@ -8,7 +8,7 @@ import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import type { KeptForm } from "@/lib/fake-form";
-import { refusal, underFields } from "@/lib/fake-refusal";
+import { focusedUnder, refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { SecurityProfileSettings } from "./security";
 
@@ -73,10 +73,11 @@ describe("SecurityProfileSettings", () => {
       error: refusal(422, "validation_failed", [{ field: "new_password", code: "weak_password" }]),
       under: [["new_password", "errors.field.weak_password"]],
     },
-  ])("says nerve's refusal of $refused under its field, the form as it was", async ({ error, under }) => {
+  ])("says nerve's refusal of $refused under its field, focused, the form as it was", async ({ error, under }) => {
     form.changePassword.mockRejectedValueOnce(error);
     await changed();
     expect([underFields(form.setError), form.reset.mock.calls, toasts]).toEqual([under, [], []]);
+    expect(focusedUnder(form.setError)).toEqual(under.map(([field]) => field));
   });
 
   it("says in a toast a refusal of neither password", async () => {

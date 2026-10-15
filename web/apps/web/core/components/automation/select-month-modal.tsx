@@ -7,7 +7,7 @@
 import { useParams } from "react-router";
 // react-hook-form
 import { Controller, useForm } from "react-hook-form";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { Button } from "@nerve/propel/button";
 import type { ProjectUpdate } from "@nerve/api-client";
@@ -91,6 +91,11 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
                           max={12}
                         />
                       </InputGroup>
+                      {errors.archive_in && (
+                        <FieldError match size="xl">
+                          {t("project_settings.automations.auto-archive.months_range")}
+                        </FieldError>
+                      )}
                     </Field>
                     <span className="absolute top-2.5 right-8 text-13 text-secondary">
                       {t("project_settings.automations.auto-archive.months")}
@@ -98,11 +103,6 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
                   </div>
                 )}
               />
-              {errors.archive_in && (
-                <span className="px-1 text-13 text-danger-primary">
-                  {t("project_settings.automations.auto-archive.months_range")}
-                </span>
-              )}
             </div>
           </div>
         </div>

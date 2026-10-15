@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { HideOutline, ShowOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -93,13 +93,14 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
         });
       },
       failed: (error) => {
+        // the field refused has the focus, so that it is read with its message
         if (problemCode(error) === "identity.current_password_incorrect") {
-          setError("old_password", { type: "manual", message: t(errorMessageKey(error)) });
+          setError("old_password", { type: "manual", message: t(errorMessageKey(error)) }, { shouldFocus: true });
           return;
         }
         const newPassword = fieldErrorKeys(error).new_password;
         if (newPassword !== undefined) {
-          setError("new_password", { type: "manual", message: t(newPassword) });
+          setError("new_password", { type: "manual", message: t(newPassword) }, { shouldFocus: true });
           return;
         }
         toastRefusal(error);
@@ -116,6 +117,9 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
     password === oldPassword;
 
   const renderPasswordMatchError = !isRetryPasswordInputFocused || confirmPassword.length >= password.length;
+  // the page's own messages, beside the form's errors: each marks its field invalid, and describes it
+  const showsSameAsOld = isNewPasswordSameAsOldPassword && !isPasswordInputFocused;
+  const showsMismatch = !!confirmPassword && password !== confirmPassword && renderPasswordMatchError;
 
   return (
     <div className="size-full">
@@ -130,10 +134,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
               rules={{
                 required: t("common.errors.required"),
               }}
-              render={({ field: { value, onChange } }) => (
+              render={({ field: { value, onChange, ref } }) => (
                 <Field name="old_password" invalid={Boolean(errors.old_password)}>
                   <InputGroup size="2xl">
                     <Input
+                      ref={ref}
                       size="2xl"
                       id="old_password"
                       type={showPassword?.oldPassword ? "text" : "password"}
@@ -159,10 +164,14 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                       )}
                     </button>
                   </InputGroup>
+                  {errors.old_password?.message && (
+                    <FieldError match size="lg">
+                      {errors.old_password.message}
+                    </FieldError>
+                  )}
                 </Field>
               )}
             />
-            {errors.old_password && <span className="text-11 text-danger-primary">{errors.old_password.message}</span>}
           </div>
           <div className="grid gap-x-4 gap-y-7 sm:grid-cols-2">
             <div className="flex flex-col gap-y-2">
@@ -173,10 +182,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                 rules={{
                   required: t("common.errors.required"),
                 }}
-                render={({ field: { value, onChange } }) => (
-                  <Field name="new_password" invalid={Boolean(errors.new_password)}>
+                render={({ field: { value, onChange, ref } }) => (
+                  <Field name="new_password" invalid={Boolean(errors.new_password) || showsSameAsOld}>
                     <InputGroup size="2xl">
                       <Input
+                        ref={ref}
                         size="2xl"
                         id="new_password"
                         type={showPassword?.password ? "text" : "password"}
@@ -204,18 +214,20 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                         )}
                       </button>
                     </InputGroup>
+                    <PasswordStrengthIndicator password={password} labels={passwordStrengthLabels} />
+                    {errors.new_password?.message && (
+                      <FieldError match size="lg">
+                        {errors.new_password.message}
+                      </FieldError>
+                    )}
+                    {showsSameAsOld && (
+                      <FieldError match size="lg">
+                        {t("new_password_must_be_different_from_old_password")}
+                      </FieldError>
+                    )}
                   </Field>
                 )}
               />
-              <PasswordStrengthIndicator password={password} labels={passwordStrengthLabels} />
-              {errors.new_password && (
-                <span className="text-11 text-danger-primary">{errors.new_password.message}</span>
-              )}
-              {isNewPasswordSameAsOldPassword && !isPasswordInputFocused && (
-                <span className="text-11 text-danger-primary">
-                  {t("new_password_must_be_different_from_old_password")}
-                </span>
-              )}
             </div>
             <div className="flex flex-col gap-y-2">
               <h4 className="text-13">{t("auth.common.password.confirm_password.label")}</h4>
@@ -225,10 +237,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                 rules={{
                   required: t("common.errors.required"),
                 }}
-                render={({ field: { value, onChange } }) => (
-                  <Field name="confirm_password" invalid={Boolean(errors.confirm_password)}>
+                render={({ field: { value, onChange, ref } }) => (
+                  <Field name="confirm_password" invalid={Boolean(errors.confirm_password) || showsMismatch}>
                     <InputGroup size="2xl">
                       <Input
+                        ref={ref}
                         size="2xl"
                         id="confirm_password"
                         type={showPassword?.confirmPassword ? "text" : "password"}
@@ -256,12 +269,14 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                         )}
                       </button>
                     </InputGroup>
+                    {showsMismatch && (
+                      <FieldError match size="xl">
+                        {t("auth.common.password.errors.match")}
+                      </FieldError>
+                    )}
                   </Field>
                 )}
               />
-              {!!confirmPassword && password !== confirmPassword && renderPasswordMatchError && (
-                <span className="text-13 text-danger-primary">{t("auth.common.password.errors.match")}</span>
-              )}
             </div>
           </div>
           <div>

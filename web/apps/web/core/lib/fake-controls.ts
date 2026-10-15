@@ -10,7 +10,7 @@
 // page's), ModalTitle its heading, a menu its items, as it shows them once open, and a tooltip its label beside what it
 // is the tooltip of.
 
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Children, Fragment, createElement, isValidElement } from "react";
 
 /** A control that gives a value: an input gives its change event, a select its picked option's value. */
@@ -44,11 +44,8 @@ type Alert = {
 };
 /** A context menu: its items, each by its key, with whether it shows. */
 type ContextItems = { items: { key: string; shouldRender?: boolean }[] };
-/** A button the page renders itself (<button>): what it is titled, and what a click does. */
-type Clicked = {
-  title?: string;
-  onClick?: (event: { stopPropagation: () => void; preventDefault: () => void }) => void;
-};
+/** An item of propel's menu: the element it renders as (a link, say), its title, and what a click on it does. */
+type MenuEntry = { children?: ReactNode; render?: ReactElement; title?: string; onClick?: () => void };
 
 /** The props each control was given, in the order rendered; a test empties them before each case (emptyShown). */
 export const shown: {
@@ -60,7 +57,7 @@ export const shown: {
   modals: { children?: ReactNode }[];
   alerts: Alert[];
   menus: ContextItems[];
-  menuItems: { children?: ReactNode }[];
+  menuItems: MenuEntry[];
 } = {
   inputs: [],
   buttons: [],
@@ -134,7 +131,7 @@ export function ContextMenu(props: ContextItems) {
 export function Menu({ children }: { children?: ReactNode }) {
   return children;
 }
-Menu.MenuItem = function MenuItem(props: { children?: ReactNode }) {
+Menu.MenuItem = function MenuItem(props: MenuEntry) {
   shown.menuItems.push(props);
   return props.children;
 };
@@ -168,21 +165,6 @@ export function pick(select: Select, label: string) {
   const option = options.find((element) => element.props.children === label);
   if (!option) throw new Error(`the select offers no ${label}`);
   select.onChange(option.props.value);
-}
-
-/**
- * The buttons the page renders itself (<button>) among what node holds, such as a menu item's children, in order: as
- * the page made them, inside the components that wrap them too (a tooltip). A test reads what each is titled, and
- * clicks one by its onClick.
- */
-export function buttonsIn(node: ReactNode): Clicked[] {
-  const buttons: Clicked[] = [];
-  for (const child of Children.toArray(node)) {
-    if (!isValidElement<Clicked & { children?: ReactNode }>(child)) continue;
-    if (child.type === "button") buttons.push(child.props);
-    buttons.push(...buttonsIn(child.props.children));
-  }
-  return buttons;
 }
 
 /** Submits the form the last modal rendered, as its submit button would; settles once the form's handler has. */

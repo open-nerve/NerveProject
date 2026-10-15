@@ -66,17 +66,17 @@ describe("useCreateWorkspace", () => {
     { reason: "taken", message: "workspace_creation.errors.validation.url_already_taken" },
     { reason: "reserved", message: "workspace_creation.errors.validation.url_reserved" },
     { reason: "invalid", message: "workspace_creation.errors.validation.url_alphanumeric" },
-  ])("sends nothing for a slug nerve says is $reason, and says so under it", async ({ reason, message }) => {
+  ])("sends nothing for a slug nerve says is $reason, and says so under it, focused", async ({ reason, message }) => {
     page.checkWorkspaceSlug.mockResolvedValueOnce({ available: false, reason });
     expect(await create()).toBeUndefined();
     expect([page.createWorkspace.mock.calls, page.setError.mock.calls, toasts]).toEqual([
       [],
-      [["slug", { type: "server", message }]],
+      [["slug", { type: "server", message }, { shouldFocus: true }]],
       [],
     ]);
   });
 
-  it("shows nerve's refusal under the fields it names", async () => {
+  it("shows nerve's refusal under the fields it names, the first focused", async () => {
     page.createWorkspace.mockRejectedValueOnce(
       refusal(422, "validation_failed", [
         { field: "name", code: "contains_url" },
@@ -86,8 +86,12 @@ describe("useCreateWorkspace", () => {
     expect(await create()).toBeUndefined();
     expect([page.setError.mock.calls, toasts]).toEqual([
       [
-        ["name", { type: "server", message: "errors.field.contains_url" }],
-        ["slug", { type: "server", message: "workspace_creation.errors.validation.url_reserved" }],
+        ["name", { type: "server", message: "errors.field.contains_url" }, { shouldFocus: true }],
+        [
+          "slug",
+          { type: "server", message: "workspace_creation.errors.validation.url_reserved" },
+          { shouldFocus: false },
+        ],
       ],
       [],
     ]);

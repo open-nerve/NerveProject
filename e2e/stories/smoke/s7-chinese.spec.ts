@@ -33,8 +33,8 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await expect(modalDialog(page).getByRole("textbox", { name: "搜索快捷键" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(modalDialog(page)).toHaveCount(0);
-  // The menu names his role in Acme in Chinese too.
-  await page.getByRole("button", { name: "打开工作空间切换器" }).click();
+  // The menu, by its button's name (工作区, as everywhere), names his role in Acme in Chinese too.
+  await page.getByRole("button", { name: "打开工作区切换器", exact: true }).click();
   await expect(page.getByRole("menu").getByText("管理员", { exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "离开工作区" })).toBeVisible();
   await page.keyboard.press("Escape");

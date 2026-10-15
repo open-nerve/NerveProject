@@ -282,6 +282,34 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
     warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
     errors: [filters.logged, filters.logged],
   });
+  // The header's more menu, by the keyboard: Enter on its button, which is named, opens it; the arrow keys reach
+  // Views, then its actions, each named by it and shown as it is reached; Enter on Views opens its page.
+  const more = page.getByRole("button", { name: "More tabs", exact: true });
+  await more.press("Enter");
+  const views = page.getByRole("menuitem", { name: "Views", exact: true });
+  await expect(views).toHaveAttribute("href", `/${slug}/projects/${web.id}/views`);
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press("ArrowDown");
+        return views.evaluate((item) => item === document.activeElement);
+      },
+      { timeout: 5_000 }
+    )
+    .toBe(true);
+  const showViews = page.getByRole("menuitem", { name: "Show Views", exact: true });
+  await page.keyboard.press("ArrowDown");
+  await expect(showViews).toBeFocused();
+  await expect(showViews).toHaveCSS("opacity", "1");
+  const viewsDefault = page.getByRole("menuitem", { name: "Set Views as default", exact: true });
+  await page.keyboard.press("ArrowDown");
+  await expect(viewsDefault).toBeFocused();
+  await expect(viewsDefault).toHaveCSS("opacity", "1");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("ArrowUp");
+  await expect(views).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(`/${slug}/projects/${web.id}/views`);
 
   // Gus is offered the same, on the tabs a guest has (not Modules): he makes views the tab Web opens on, by its tab's
   // menu, and drags Web, second in his sidebar, a step before Docs.

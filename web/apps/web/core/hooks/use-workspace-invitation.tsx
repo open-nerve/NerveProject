@@ -82,8 +82,11 @@ export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProp
           toastRefusal(error);
           return;
         }
+        // each under its row's address, the first row refused given the focus
+        const first = Math.min(...refusal.rows.map(({ index }) => index));
         for (const { index, message } of refusal.rows) {
-          setError(`invitations.${index}.email`, { type: "server", message: t(message) });
+          const shouldFocus = index === first;
+          setError(`invitations.${index}.email`, { type: "server", message: t(message) }, { shouldFocus });
         }
       },
     });

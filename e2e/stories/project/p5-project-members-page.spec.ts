@@ -207,7 +207,12 @@ test("P5 (page): a project admin who is no workspace admin filters the members b
   // His leaving, as the only admin: nerve refuses it, and the page says why and stays, the dialog open.
   expect((await endProjectMembership(page, pat.email, "Leave", leaving)).status()).toBe(409);
   await expect(modalDialog(page)).toHaveAccessibleName("Leave project?");
-  await expect(page.getByText("The project would be left without an admin")).toBeVisible();
+  await expect(
+    page.getByText(
+      "The project would be left without an admin: its only admin cannot leave it, and that admin's membership cannot end while it has other members. Give the project another admin first, or delete it.",
+      { exact: true }
+    )
+  ).toBeVisible();
   await expect(page.getByRole("dialog").getByRole("button", { name: "Leave", exact: true })).toBeEnabled();
   await expect(page).toHaveURL(members);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([

@@ -92,10 +92,12 @@ export function useCreateWorkspace(): (
   };
 
   return async (form, setError) => {
-    // nerve's reasons, each under the field it is about
+    // nerve's reasons, each under the field it is about, the first given the focus
     const refused = (fields: CreationFields) => {
-      if (fields.name) setError("name", { type: "server", message: t(fields.name) });
-      if (fields.slug) setError("slug", { type: "server", message: t(fields.slug) });
+      if (fields.name) setError("name", { type: "server", message: t(fields.name) }, { shouldFocus: true });
+      if (fields.slug) {
+        setError("slug", { type: "server", message: t(fields.slug) }, { shouldFocus: fields.name === undefined });
+      }
     };
     let workspace: Workspace | undefined;
     await followInSession(() => attempt(form), {

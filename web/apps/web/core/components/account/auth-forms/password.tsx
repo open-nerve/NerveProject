@@ -5,13 +5,13 @@
  */
 
 import type { FormEvent } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // icons
 import { CloseCircleOutline, HideOutline, ShowOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { Banner } from "@makeplane/propel/components/banner";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -61,6 +61,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const { signIn, signUp } = useUser();
   // ref
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
   // states
   const [passwordFormData, setPasswordFormData] = useState<TPasswordFormValues>(defaultValues);
   const [showPassword, setShowPassword] = useState({
@@ -106,7 +107,16 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const password = passwordFormData.password;
   const confirmPassword = passwordFormData.confirm_password;
   const renderPasswordMatchError = !isRetryPasswordInputFocused || confirmPassword.length >= password.length;
+  const showsMismatch = !!confirmPassword && password !== confirmPassword && renderPasswordMatchError;
   const fieldErrors = fieldErrorKeys(submitError);
+
+  // nerve's refusal of a field gives that field the focus (the email's first) once its message shows, so that it is
+  // read with it, invalid (M3 closeout, C11-1)
+  useEffect(() => {
+    const refused = fieldErrorKeys(submitError);
+    if (refused.email) emailInputRef.current?.focus();
+    else if (refused.password) passwordInputRef.current?.focus();
+  }, [submitError]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -181,14 +191,18 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
                 </button>
               )}
             </InputGroup>
+            {isEmailInvalid && !isEmailInputFocused && (
+              <FieldError match size="lg">
+                <WarningCircleOutline height={12} width={12} />
+                {t("auth.common.email.errors.invalid")}
+              </FieldError>
+            )}
+            {fieldErrors.email && (
+              <FieldError match size="lg">
+                {t(fieldErrors.email)}
+              </FieldError>
+            )}
           </Field>
-          {isEmailInvalid && !isEmailInputFocused && (
-            <p className="flex items-center gap-1 px-0.5 text-11 text-danger-primary">
-              <WarningCircleOutline height={12} width={12} />
-              {t("auth.common.email.errors.invalid")}
-            </p>
-          )}
-          {fieldErrors.email && <p className="px-0.5 text-11 text-danger-primary">{t(fieldErrors.email)}</p>}
         </div>
 
         <div className="space-y-1">
@@ -198,6 +212,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           <Field name="password" invalid={Boolean(fieldErrors.password)}>
             <InputGroup size="2xl">
               <Input
+                ref={passwordInputRef}
                 size="2xl"
                 type={showPassword.password ? "text" : "password"}
                 id="password"
@@ -224,8 +239,12 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
                 )}
               </button>
             </InputGroup>
+            {fieldErrors.password && (
+              <FieldError match size="lg">
+                {t(fieldErrors.password)}
+              </FieldError>
+            )}
           </Field>
-          {fieldErrors.password && <p className="px-0.5 text-11 text-danger-primary">{t(fieldErrors.password)}</p>}
           {mode === EAuthModes.SIGN_UP && (
             <PasswordStrengthIndicator password={password} labels={passwordStrengthLabels} />
           )}
@@ -236,39 +255,43 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
             <label htmlFor="confirm-password" className="text-13 font-medium text-tertiary">
               {t("auth.common.password.confirm_password.label")}
             </label>
-            <InputGroup size="2xl">
-              <Input
-                size="2xl"
-                type={showPassword.retypePassword ? "text" : "password"}
-                id="confirm-password"
-                name="confirm_password"
-                value={passwordFormData.confirm_password}
-                onChange={(e) => handleFormChange("confirm_password", e.target.value)}
-                placeholder={t("auth.common.password.confirm_password.placeholder")}
-                onFocus={() => setIsRetryPasswordInputFocused(true)}
-                onBlur={() => setIsRetryPasswordInputFocused(false)}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                className="grid size-5 place-items-center"
-                aria-label={t(
-                  showPassword.retypePassword
-                    ? "aria_labels.auth_forms.hide_password"
-                    : "aria_labels.auth_forms.show_password"
-                )}
-                onClick={() => handleShowPassword("retypePassword")}
-              >
-                {showPassword.retypePassword ? (
-                  <HideOutline className="size-5 text-placeholder" />
-                ) : (
-                  <ShowOutline className="size-5 text-placeholder" />
-                )}
-              </button>
-            </InputGroup>
-            {!!confirmPassword && password !== confirmPassword && renderPasswordMatchError && (
-              <span className="text-13 text-danger-primary">{t("auth.common.password.errors.match")}</span>
-            )}
+            <Field name="confirm_password" invalid={showsMismatch}>
+              <InputGroup size="2xl">
+                <Input
+                  size="2xl"
+                  type={showPassword.retypePassword ? "text" : "password"}
+                  id="confirm-password"
+                  name="confirm_password"
+                  value={passwordFormData.confirm_password}
+                  onChange={(e) => handleFormChange("confirm_password", e.target.value)}
+                  placeholder={t("auth.common.password.confirm_password.placeholder")}
+                  onFocus={() => setIsRetryPasswordInputFocused(true)}
+                  onBlur={() => setIsRetryPasswordInputFocused(false)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="grid size-5 place-items-center"
+                  aria-label={t(
+                    showPassword.retypePassword
+                      ? "aria_labels.auth_forms.hide_password"
+                      : "aria_labels.auth_forms.show_password"
+                  )}
+                  onClick={() => handleShowPassword("retypePassword")}
+                >
+                  {showPassword.retypePassword ? (
+                    <HideOutline className="size-5 text-placeholder" />
+                  ) : (
+                    <ShowOutline className="size-5 text-placeholder" />
+                  )}
+                </button>
+              </InputGroup>
+              {showsMismatch && (
+                <FieldError match size="xl">
+                  {t("auth.common.password.errors.match")}
+                </FieldError>
+              )}
+            </Field>
           </div>
         )}
 

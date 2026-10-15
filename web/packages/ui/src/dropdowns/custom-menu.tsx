@@ -10,6 +10,7 @@ import * as React from "react";
 import ReactDOM from "react-dom";
 import { usePopper } from "react-popper";
 // helpers
+import { useInsideModal } from "../modals/modal-core";
 import { cn } from "../utils";
 // types
 import type { ICustomMenuDropdownProps, ICustomMenuItemProps, ICustomSubMenuProps } from "./helper";
@@ -98,6 +99,8 @@ function CustomMenu(props: ICustomMenuDropdownProps) {
   const [referenceElement, setReferenceElement] = React.useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = React.useState<HTMLDivElement | null>(null);
   const [itemsElement, setItemsElement] = React.useState<HTMLElement | null>(null);
+  // in a dialog, the menu is not modal: the dialog keeps the page behind it hidden (useInsideModal)
+  const insideModal = useInsideModal();
   // refs
   const submenuClosersRef = React.useRef<Set<() => void>>(new Set());
 
@@ -140,6 +143,7 @@ function CustomMenu(props: ICustomMenuDropdownProps) {
         let menuItems = (
           <Menu.Items
             ref={setItemsElement}
+            modal={!insideModal}
             data-prevent-outside-click={!!portalElement}
             className={cn(
               "fixed z-30 translate-y-0",

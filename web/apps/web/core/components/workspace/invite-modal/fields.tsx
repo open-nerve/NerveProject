@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 import type { Control, FieldArrayWithId, FormState } from "react-hook-form";
 import { Controller } from "react-hook-form";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import type { WorkspaceInvitationsCreate } from "@nerve/api-client";
 import { ROLE_DETAILS } from "@nerve/constants";
@@ -53,8 +53,9 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                   message: t("workspace_settings.settings.members.modal.errors.invalid"),
                 },
               }}
-              render={({ field: { value, onChange, ref } }) => (
-                <>
+              render={({ field: { value, onChange, ref } }) => {
+                const message = errors.invitations?.[index]?.email?.message;
+                return (
                   <Field name="input" invalid={Boolean(errors.invitations?.[index]?.email)}>
                     <InputGroup size="2xl">
                       <Input
@@ -68,14 +69,14 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                         placeholder={t("workspace_settings.settings.members.modal.placeholder")}
                       />
                     </InputGroup>
+                    {message && (
+                      <FieldError match size="lg">
+                        {message}
+                      </FieldError>
+                    )}
                   </Field>
-                  {errors.invitations?.[index]?.email && (
-                    <span className="ml-1 text-caption-sm-regular text-danger-primary">
-                      {errors.invitations?.[index]?.email?.message}
-                    </span>
-                  )}
-                </>
-              )}
+                );
+              }}
             />
           </div>
           <div className="flex shrink-0 items-center justify-between gap-2">

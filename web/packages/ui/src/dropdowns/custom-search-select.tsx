@@ -13,6 +13,7 @@ import { usePopper } from "react-popper";
 import { Tooltip } from "@nerve/propel/tooltip";
 import { isComposing } from "@nerve/utils";
 import { cn } from "../utils";
+import { useFieldButton } from "./field-button";
 import type { ICustomSearchSelectProps } from "./helper";
 
 /**
@@ -70,6 +71,8 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
 
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
+  // the button is Popper's reference and, in a form, one of its fields
+  const { setButton, described } = useFieldButton(setReferenceElement, props);
   const openedByDefault = useRef(false);
   // The search input is in the list: it takes the focus as the list opens (unless the caller says not), so that
   // typing, the arrows, Enter and Escape reach Headless UI's input (a click on the button leaves the focus on the
@@ -111,10 +114,11 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
         <>
           {customButton ? (
             <Popover.Button
-              ref={setReferenceElement}
+              ref={setButton}
               type="button"
               disabled={disabled}
               tabIndex={tabIndex}
+              {...described}
               className={cn(
                 "flex w-full items-center justify-between gap-1 text-11",
                 KEYBOARD_FOCUS,
@@ -129,10 +133,11 @@ export function CustomSearchSelect(props: ICustomSearchSelectProps) {
             </Popover.Button>
           ) : (
             <Popover.Button
-              ref={setReferenceElement}
+              ref={setButton}
               type="button"
               disabled={disabled}
               tabIndex={tabIndex}
+              {...described}
               className={cn(
                 "flex w-full items-center justify-between gap-1 rounded-sm border-[0.5px] border-strong",
                 KEYBOARD_FOCUS,

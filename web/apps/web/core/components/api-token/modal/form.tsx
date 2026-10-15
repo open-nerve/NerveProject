@@ -4,12 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { add } from "date-fns";
 import { Controller, useForm } from "react-hook-form";
 import { CalendarOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import type { ApiTokenCreate } from "@nerve/api-client";
@@ -68,11 +68,20 @@ export function CreateApiTokenForm(props: Props) {
   const { t } = useTranslation();
   const toastRefusal = useRefusalToast();
 
-  // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
+  // the expiry's message, which describes its select (not one of Base UI's controls)
+  const expiryErrorId = useId();
+
+  // A refusal shows under the field it is about, which has the focus (the first, if two), anything else in a toast
+  // (M2 design 7.3).
   const showRefusal = (error: unknown) => {
     const fields = fieldErrorKeys(error);
-    if (fields.label !== undefined) setError("label", { type: "manual", message: t(fields.label) });
-    if (fields.expired_at !== undefined) setError("expiry", { type: "manual", message: t(fields.expired_at) });
+    if (fields.label !== undefined) {
+      setError("label", { type: "manual", message: t(fields.label) }, { shouldFocus: true });
+    }
+    if (fields.expired_at !== undefined) {
+      const message = t(fields.expired_at);
+      setError("expiry", { type: "manual", message }, { shouldFocus: fields.label === undefined });
+    }
     if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
   };
 
@@ -80,7 +89,8 @@ export function CreateApiTokenForm(props: Props) {
   const handleFormSubmit = async (data: TFormValues) => {
     const expiresAt = data.expiry === null ? undefined : expiryDate(data.expiry, new Date(), customDate);
     if (!neverExpires && expiresAt === undefined) {
-      setError("expiry", { type: "manual", message: t("account_settings.api_tokens.expiry.required") });
+      const message = t("account_settings.api_tokens.expiry.required");
+      setError("expiry", { type: "manual", message }, { shouldFocus: true });
       return;
     }
     await onSubmit(
@@ -112,10 +122,11 @@ export function CreateApiTokenForm(props: Props) {
                 },
                 validate: (val) => val.trim() !== "" || t("title_is_required"),
               }}
-              render={({ field: { value, onChange } }) => (
+              render={({ field: { value, onChange, ref } }) => (
                 <Field name="input" invalid={Boolean(errors.label)}>
                   <InputGroup size="2xl">
                     <Input
+                      ref={ref}
                       size="2xl"
                       type="text"
                       value={value}
@@ -124,10 +135,14 @@ export function CreateApiTokenForm(props: Props) {
                       aria-label={t("title")}
                     />
                   </InputGroup>
+                  {errors.label?.message && (
+                    <FieldError match size="lg">
+                      {errors.label.message}
+                    </FieldError>
+                  )}
                 </Field>
               )}
             />
-            {errors.label && <span className="text-11 text-danger-primary">{errors.label.message}</span>}
           </div>
           <Controller
             control={control}
@@ -149,14 +164,17 @@ export function CreateApiTokenForm(props: Props) {
               </Field>
             )}
           />
-          <div className="space-y-1">
+          <Field name="expiry" invalid={!neverExpires && Boolean(errors.expiry)}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Controller
                   control={control}
                   name="expiry"
-                  render={({ field: { onChange, value } }) => (
+                  render={({ field: { onChange, value, ref } }) => (
                     <CustomSelect
+                      buttonRef={ref}
+                      describedBy={!neverExpires && errors.expiry ? expiryErrorId : undefined}
+                      invalid={!neverExpires && Boolean(errors.expiry)}
                       customButton={
                         <div
                           className={cn(
@@ -208,10 +226,12 @@ export function CreateApiTokenForm(props: Props) {
                 </span>
               )}
             </div>
-            {!neverExpires && errors.expiry && (
-              <span className="text-11 text-danger-primary">{errors.expiry.message}</span>
+            {!neverExpires && errors.expiry?.message && (
+              <FieldError id={expiryErrorId} match size="lg">
+                {errors.expiry.message}
+              </FieldError>
             )}
-          </div>
+          </Field>
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 border-t-[0.5px] border-subtle px-5 py-4">

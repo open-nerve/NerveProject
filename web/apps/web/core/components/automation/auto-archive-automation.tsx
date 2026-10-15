@@ -27,6 +27,12 @@ import { followInSession } from "@/lib/in-session";
 const initialValues: Pick<ProjectUpdate, "archive_in"> = { archive_in: 1 };
 
 /**
+ * The value of the custom range's option in the select of months: an option, so that the list's arrows and Enter reach
+ * it as they reach the months; picked, it opens the custom range, it sends nothing.
+ */
+const CUSTOM_RANGE = "custom";
+
+/**
  * The auto-archiving of the current project's closed work items: its switch turns it on, after a month, or off, from
  * the project as nerve last answered it, in the change's turn (ProjectStore.toggleAutoArchive; v0 design 7.7), not
  * from what the switch shows; its select and the custom range send the months picked. The page follows each only in
@@ -103,24 +109,22 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation() {
                   <CustomSelect
                     value={project?.archive_in}
                     label={t("workspace_projects.common.months_count", { months: project.archive_in })}
-                    onChange={(val: number) => void handleChange({ archive_in: val })}
+                    onChange={(picked: number | typeof CUSTOM_RANGE) => {
+                      if (picked === CUSTOM_RANGE) setmonthModal(true);
+                      else void handleChange({ archive_in: picked });
+                    }}
                     input
                     disabled={!isAdmin}
                   >
                     <>
                       {PROJECT_AUTOMATION_MONTHS.map((month) => (
-                        <CustomSelect.Option key={month.i18n_label} value={month.value}>
+                        <CustomSelect.Option key={month.value} value={month.value}>
                           <span className="text-13">{t(month.i18n_label, { months: month.value })}</span>
                         </CustomSelect.Option>
                       ))}
-
-                      <button
-                        type="button"
-                        className="flex w-full items-center rounded-sm px-1 py-1.5 text-13 text-secondary select-none hover:bg-layer-1"
-                        onClick={() => setmonthModal(true)}
-                      >
-                        {t("common.customize_time_range")}
-                      </button>
+                      <CustomSelect.Option value={CUSTOM_RANGE}>
+                        <span className="text-13">{t("common.customize_time_range")}</span>
+                      </CustomSelect.Option>
                     </>
                   </CustomSelect>
                 </div>

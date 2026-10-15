@@ -4,8 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import { useId } from "react";
 import { observer } from "mobx-react";
 import { Controller } from "react-hook-form";
+import { Field, FieldControl, FieldError } from "@makeplane/propel/components/field";
 import { TickCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { ORGANIZATION_SIZE, ORGANIZATION_SIZE_I18N_LABEL } from "@nerve/constants";
@@ -49,6 +51,9 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
   } = useCreationForm((workspace, values) => onCreated(workspace, values.organization_size === "Just myself"));
 
   const isButtonDisabled = !isValid || isSubmitting;
+  // the organization size's label and message, which name and describe its group of buttons
+  const organizationSizeLabelId = useId();
+  const organizationSizeErrorId = useId();
 
   if (isWorkspaceCreationDisabled) {
     return (
@@ -76,32 +81,44 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
             name="name"
             rules={rules.name}
             render={({ field: { value, ref, onChange } }) => (
-              <div className="relative flex items-center rounded-md">
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={value}
-                  onChange={(event) => {
-                    onChange(event.target.value);
-                    onNameChange(event.target.value);
-                  }}
-                  placeholder={t("onboarding.workspace.name_placeholder")}
-                  ref={ref}
-                  className={cn(
-                    "w-full rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 placeholder:text-placeholder focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
-                    {
-                      "border-strong": !errors.name,
-                      "border-danger-strong": errors.name,
+              // propel's Field, its look kept: the input is Base UI's control (FieldControl) rendered as before, and
+              // the message its description (FieldError)
+              <Field name="name" invalid={Boolean(errors.name)}>
+                <div className="relative flex items-center rounded-md">
+                  <FieldControl
+                    id="name"
+                    name="name"
+                    type="text"
+                    value={value}
+                    onChange={(event) => {
+                      onChange(event.target.value);
+                      onNameChange(event.target.value);
+                    }}
+                    placeholder={t("onboarding.workspace.name_placeholder")}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                    autoFocus
+                    render={
+                      <input
+                        ref={ref}
+                        className={cn(
+                          "w-full rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 placeholder:text-placeholder focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
+                          {
+                            "border-strong": !errors.name,
+                            "border-danger-strong": errors.name,
+                          }
+                        )}
+                      />
                     }
-                  )}
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                  autoFocus
-                />
-              </div>
+                  />
+                </div>
+                {errors.name?.message && (
+                  <FieldError match size="xl">
+                    {errors.name.message}
+                  </FieldError>
+                )}
+              </Field>
             )}
           />
-          {errors.name && <span className="text-13 text-danger-primary">{errors.name.message}</span>}
         </div>
         <div className="flex flex-col gap-2">
           <label
@@ -115,50 +132,67 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
             name="slug"
             rules={rules.slug}
             render={({ field: { value, ref, onChange } }) => (
-              <div
-                className={cn(
-                  "flex w-full items-center rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
-                  {
-                    "border-strong": !errors.slug,
-                    "border-danger-strong": errors.slug,
-                  }
-                )}
-              >
-                <span className={cn("rounded-md pr-0 whitespace-nowrap text-secondary")}>
-                  {window && window.location.host}/
-                </span>
-                <input
-                  id="slug"
-                  name="slug"
-                  type="text"
-                  value={value}
-                  onChange={(e) => onChange(slugFrom(e.target.value))}
-                  ref={ref}
-                  placeholder={t("workspace_creation.form.url.placeholder")}
+              <Field name="slug" invalid={Boolean(errors.slug)}>
+                <div
                   className={cn(
-                    "ring-none w-full rounded-md border-none bg-surface-1 px-3 py-0 pl-0 text-secondary outline-none placeholder:text-placeholder"
+                    "flex w-full items-center rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
+                    {
+                      "border-strong": !errors.slug,
+                      "border-danger-strong": errors.slug,
+                    }
                   )}
-                />
-              </div>
+                >
+                  <span className={cn("rounded-md pr-0 whitespace-nowrap text-secondary")}>
+                    {window && window.location.host}/
+                  </span>
+                  <FieldControl
+                    id="slug"
+                    name="slug"
+                    type="text"
+                    value={value}
+                    onChange={(e) => onChange(slugFrom(e.target.value))}
+                    placeholder={t("workspace_creation.form.url.placeholder")}
+                    render={
+                      <input
+                        ref={ref}
+                        className={cn(
+                          "ring-none w-full rounded-md border-none bg-surface-1 px-3 py-0 pl-0 text-secondary outline-none placeholder:text-placeholder"
+                        )}
+                      />
+                    }
+                  />
+                </div>
+                <p className="text-13 text-tertiary">{t("workspace_creation.form.url.edit_slug")}</p>
+                {errors.slug?.message && (
+                  <FieldError match size="xl">
+                    {errors.slug.message}
+                  </FieldError>
+                )}
+              </Field>
             )}
           />
-          <p className="text-13 text-tertiary">{t("workspace_creation.form.url.edit_slug")}</p>
-          {errors.slug && <span className="text-13 text-danger-primary">{errors.slug.message}</span>}
         </div>
         <div className="flex flex-col gap-2">
           <label
+            id={organizationSizeLabelId}
             className="text-13 font-medium text-tertiary after:ml-0.5 after:text-danger-primary after:content-['*']"
-            htmlFor="organization_size"
           >
             {t("workspace_creation.form.organization_size.label")}
           </label>
-          <div className="w-full">
+          <Field name="organization_size" invalid={Boolean(errors.organization_size)}>
             <Controller
               name="organization_size"
               control={control}
               rules={rules.organization_size}
               render={({ field: { value, onChange } }) => (
-                <div className="flex flex-wrap gap-3">
+                // the sizes, a group of buttons (none of Base UI's controls), named by the label and described by the
+                // message while one shows
+                <div
+                  role="group"
+                  aria-labelledby={organizationSizeLabelId}
+                  aria-describedby={errors.organization_size ? organizationSizeErrorId : undefined}
+                  className="flex flex-wrap gap-3"
+                >
                   {ORGANIZATION_SIZE.map((size) => {
                     const isSelected = value === size;
                     return (
@@ -184,10 +218,12 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
                 </div>
               )}
             />
-            {errors.organization_size && (
-              <span className="text-13 text-danger-primary">{errors.organization_size.message}</span>
+            {errors.organization_size?.message && (
+              <FieldError id={organizationSizeErrorId} match size="xl">
+                {errors.organization_size.message}
+              </FieldError>
             )}
-          </div>
+          </Field>
         </div>
       </div>
       <Button variant="primary" type="submit" size="xl" className="w-full" disabled={isButtonDisabled}>

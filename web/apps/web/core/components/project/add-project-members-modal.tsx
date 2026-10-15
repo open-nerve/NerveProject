@@ -4,11 +4,13 @@
  * See the LICENSE file for details.
  */
 
+import { useId } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 // nerve imports
 import type { ProjectMembersAdd } from "@nerve/api-client";
 import { Avatar } from "@makeplane/propel/components/avatar";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
@@ -65,6 +67,8 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
     control,
     name: "members",
   });
+  // the ids of the rows' messages ("Please select a member"), by row
+  const messageIds = useId();
   // derived values: the workspace's active members who are not the project's (M3 design 7.6), whom nerve adds
   const nonProjectMemberIds = workspaceMemberIds?.filter(
     (userId) => getWorkspaceMemberDetails(userId)?.is_active && getProjectMemberDetails(userId, projectId) === null
@@ -151,54 +155,60 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
             {fields.map((field, index) => (
               <div key={field.id} className="group mb-1 flex w-full items-start justify-between gap-x-4 text-13">
                 <div className="flex w-full grow flex-col gap-1">
-                  <Controller
-                    control={control}
-                    name={`members.${index}.member_id`}
-                    rules={{ required: t("project_dialogs.member_required") }}
-                    render={({ field: { value, onChange } }) => {
-                      const selectedMember = getWorkspaceMemberDetails(value);
-                      return (
-                        <CustomSearchSelect
-                          value={value}
-                          customButton={
-                            <span className="shadow-sm flex w-full items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
-                              {value && value !== "" ? (
-                                <div className="flex items-center gap-2">
-                                  <Avatar
-                                    alt={selectedMember?.member.display_name}
-                                    fallback={selectedMember?.member.display_name?.[0]?.toUpperCase()}
-                                    src={getFileURL(selectedMember?.member.avatar_url ?? "")}
-                                    size="xs"
-                                  />
-                                  {selectedMember?.member.display_name}
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 py-0.5">
-                                  {t("project_dialogs.select_member")}
-                                </div>
-                              )}
-                              <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
-                            </span>
-                          }
-                          onChange={(val: string) => {
-                            onChange(val);
-                            // Update the role to the workspace role when member ID changes
-                            setValue(`members.${index}.role`, getWorkspaceMemberDetails(val)?.role ?? 5);
-                          }}
-                          options={options}
-                          optionsClassName="w-48"
-                          searchPlaceholder={t("search")}
-                          noResultsMessage={t("common.search.no_matches_found")}
-                          loadingMessage={t("loading")}
-                        />
-                      );
-                    }}
-                  />
-                  {errors.members && errors.members[index]?.member_id && (
-                    <span className="px-1 text-13 text-danger-primary">
-                      {errors.members[index]?.member_id?.message}
-                    </span>
-                  )}
+                  <Field name={`members.${index}.member_id`} invalid={Boolean(errors.members?.[index]?.member_id)}>
+                    <Controller
+                      control={control}
+                      name={`members.${index}.member_id`}
+                      rules={{ required: t("project_dialogs.member_required") }}
+                      render={({ field: { value, onChange, ref } }) => {
+                        const selectedMember = getWorkspaceMemberDetails(value);
+                        const refused = Boolean(errors.members?.[index]?.member_id);
+                        return (
+                          <CustomSearchSelect
+                            buttonRef={ref}
+                            describedBy={refused ? `${messageIds}-${index}` : undefined}
+                            invalid={refused}
+                            value={value}
+                            customButton={
+                              <span className="shadow-sm flex w-full items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
+                                {value && value !== "" ? (
+                                  <div className="flex items-center gap-2">
+                                    <Avatar
+                                      alt={selectedMember?.member.display_name}
+                                      fallback={selectedMember?.member.display_name?.[0]?.toUpperCase()}
+                                      src={getFileURL(selectedMember?.member.avatar_url ?? "")}
+                                      size="xs"
+                                    />
+                                    {selectedMember?.member.display_name}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 py-0.5">
+                                    {t("project_dialogs.select_member")}
+                                  </div>
+                                )}
+                                <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
+                              </span>
+                            }
+                            onChange={(val: string) => {
+                              onChange(val);
+                              // Update the role to the workspace role when member ID changes
+                              setValue(`members.${index}.role`, getWorkspaceMemberDetails(val)?.role ?? 5);
+                            }}
+                            options={options}
+                            optionsClassName="w-48"
+                            searchPlaceholder={t("search")}
+                            noResultsMessage={t("common.search.no_matches_found")}
+                            loadingMessage={t("loading")}
+                          />
+                        );
+                      }}
+                    />
+                    {errors.members?.[index]?.member_id?.message && (
+                      <FieldError id={`${messageIds}-${index}`} match size="xl">
+                        {errors.members[index].member_id.message}
+                      </FieldError>
+                    )}
+                  </Field>
                 </div>
 
                 <div className="flex shrink-0 items-center justify-between gap-2">

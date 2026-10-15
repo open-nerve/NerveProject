@@ -11,6 +11,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { useProject } from "@/hooks/store/use-project";
 // lib
 import { PROBLEM_MESSAGES } from "@/lib/error-messages";
+import type { UnderField } from "@/lib/form-refusal";
 import { followInSession } from "@/lib/in-session";
 // local imports
 import { useProjectRefusal, type ProjectFormField } from "./project-refusal";
@@ -48,7 +49,8 @@ export function useUpdateProjectDetails(): (
   const showRefusal = useProjectRefusal();
 
   return (project, workspaceSlug, details, setError) => {
-    const underField = (field: ProjectFormField, message: string) => setError(field, { type: "server", message });
+    const underField: UnderField<ProjectFormField> = (field, message, options) =>
+      setError(field, { type: "server", message }, options);
     const data: ProjectUpdate = {
       name: details.name,
       identifier: details.identifier,
@@ -70,7 +72,7 @@ export function useUpdateProjectDetails(): (
         done: (outcome) => {
           if (outcome === "identifier_taken") {
             // said as nerve's refusal of an identifier taken is (useProjectRefusal)
-            underField("identifier", t(PROBLEM_MESSAGES["project.identifier_taken"]));
+            underField("identifier", t(PROBLEM_MESSAGES["project.identifier_taken"]), { shouldFocus: true });
             return;
           }
           setToast({

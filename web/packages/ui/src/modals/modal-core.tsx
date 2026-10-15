@@ -11,6 +11,21 @@ import { isComposing } from "@nerve/utils";
 import { cn } from "../utils";
 // constants
 import { EModalPosition, EModalWidth } from "./constants";
+import { keepFocusIn } from "./keep-focus";
+
+/** Whether what renders here is inside a ModalCore dialog (useInsideModal). */
+const InsideModal = React.createContext(false);
+
+/**
+ * Whether the calling component renders inside a ModalCore dialog. A list or menu that opens there is not modal
+ * (Headless UI's modal prop, true by default): a modal one makes itself Headless UI's top layer, which turns the
+ * dialog's own inert-others off, and its own makes inert only what is beside it below the body, so the page behind the
+ * dialog would be read again while the list is open. The dialog already keeps the pointer, the scrolling and
+ * assistive technology from that page.
+ */
+export function useInsideModal(): boolean {
+  return React.useContext(InsideModal);
+}
 
 type Props = {
   children: React.ReactNode;
@@ -27,7 +42,9 @@ type Props = {
  * mount it with its page or only while it is open. While it is open the page behind it is inert and hidden from
  * assistive technology (aria-hidden): Tab stays within the dialog, the pointer reaches nothing behind it, and a screen
  * reader reads the dialog alone; the lists, pickers and toasts that open from it render outside the page (portals) and
- * stay usable and read. Closed, it gives the focus back to what had it before it opened.
+ * stay usable and read. The focus stays within it: a control that loses it while disabled (a button whose request is
+ * out) leaves it to the dialog, and has it back once enabled (keepFocusIn). Closed, it gives the focus back to what had
+ * it before it opened.
  */
 export function ModalCore(props: Props) {
   const {
@@ -43,9 +60,17 @@ export function ModalCore(props: Props) {
   // first, a caller's dialog mounted only while open too.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // the dialog's element (Headless UI's, focusable from script: tabIndex -1), there while it is open
+  const [dialog, setDialog] = useState<HTMLElement | null>(null);
+  useEffect(() => (dialog ? keepFocusIn(dialog) : undefined), [dialog]);
 
   return (
-    <Dialog open={isOpen && mounted} onClose={() => handleClose?.()} className="relative z-30">
+    <Dialog
+      ref={setDialog}
+      open={isOpen && mounted}
+      onClose={() => handleClose?.()}
+      className="relative z-30 outline-none"
+    >
       <DialogBackdrop
         transition
         className="fixed inset-0 bg-backdrop transition-opacity duration-300 ease-out data-closed:opacity-0 data-leave:duration-200 data-leave:ease-in"
@@ -70,7 +95,7 @@ export function ModalCore(props: Props) {
               if (event.key === "Escape" && isComposing(event.nativeEvent)) event.preventDefault();
             }}
           >
-            {children}
+            <InsideModal.Provider value={true}>{children}</InsideModal.Provider>
           </DialogPanel>
         </div>
       </div>

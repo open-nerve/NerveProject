@@ -13,11 +13,18 @@ import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "..
 import { accountId, bearer, emailFor, registeredPAT, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { announced, closedByEscape, closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
+import {
+  announced,
+  closedByEscape,
+  closedWithin,
+  focusInDialog,
+  modalDialog,
+  pageBehindHidden,
+} from "../../fixtures/dialogs";
 import { chooseByKeyboard } from "../../fixtures/menus";
-import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
-import { anotherBrowser, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
+import { anotherBrowser, askToEndMembership, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
 
 // W7, the members' management (M3 design 2).
 
@@ -235,7 +242,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   ]);
 });
 
-test("W7 (page): the admin makes a member a guest, in the workspace and in each of his projects, and removes another, who comes back by a new invitation; his own row offers no role and no removal, and his leaving, as the only admin, is refused with the reason; a member sees the roles and changes none", async ({
+test("W7 (page): the admin makes a member a guest, in the workspace and in each of his projects, and removes another, who comes back by a new invitation; his own row offers no role and no removal, and his leaving, as the only admin, sent by the keyboard, is refused with the reason, the focus kept in the dialog while it is out and given back to its button; a member sees the roles and changes none", async ({
   api,
   baseURL,
   browser,
@@ -349,11 +356,20 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await inviteAndAccept(api, admin.access_token, slug, { email: carol.email, token: carol.tokens.access_token }, 5);
   await expectMembership(db, slug, carol.email, { role: 5, is_active: true });
 
-  // His leaving, as the only admin: nerve refuses it, and the page says why, read beside the dialog, which stays
-  // until Cancel closes it.
+  // His leaving, as the only admin, by the keyboard: while it is out its button is disabled under the focus, which
+  // stays in the dialog; nerve refuses it, the focus goes back to the button, and the page says why, read beside the
+  // dialog, which stays until Cancel closes it.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
-  expect((await endMembership(page, adminEmail, "Leave", leaving)).status()).toBe(409);
+  await askToEndMembership(page, adminEmail, "Leave");
   await expect(modalDialog(page)).toHaveAccessibleName("Leave workspace?");
+  const leave = modalDialog(page).getByRole("button", { name: "Leave", exact: true });
+  const releaseLeaving = await holdAnswer(page, leaving.method, leaving.path);
+  const refused = answerTo(page, leaving.method, leaving.path, () => leave.press("Enter"));
+  await expect(modalDialog(page).getByRole("button", { name: "Leaving", exact: true })).toBeDisabled();
+  expect(await focusInDialog(page)).toBe(true);
+  await releaseLeaving();
+  expect((await refused).status()).toBe(409);
+  await expect(leave).toBeFocused();
   const reason = page.getByText("The workspace would be left without an admin. Make another member an admin first.");
   await expect(reason).toBeVisible();
   expect(await announced(reason)).toBe(true);

@@ -4,9 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import { useId } from "react";
 import { observer } from "mobx-react";
 import { Controller } from "react-hook-form";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { ORGANIZATION_SIZE, ORGANIZATION_SIZE_I18N_LABEL } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -41,6 +42,8 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
     onNameChange,
     submit,
   } = useCreationForm(onCreated);
+  // the organization size's message, which describes its select (not one of Base UI's controls)
+  const organizationSizeErrorId = useId();
 
   return (
     <form className="space-y-6 sm:space-y-9" onSubmit={(e) => void submit(e)}>
@@ -71,10 +74,14 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                       placeholder={t("workspace_creation.form.name.placeholder")}
                     />
                   </InputGroup>
+                  {errors.name?.message && (
+                    <FieldError match size="lg">
+                      {errors.name.message}
+                    </FieldError>
+                  )}
                 </Field>
               )}
             />
-            <span className="text-11 text-danger-primary">{errors?.name?.message}</span>
           </div>
         </div>
         <div className="flex flex-col gap-2 text-13">
@@ -100,23 +107,30 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                     placeholder={t("workspace_creation.form.url.placeholder")}
                   />
                 </InputGroup>
+                {errors.slug?.message && (
+                  <FieldError match size="lg">
+                    {errors.slug.message}
+                  </FieldError>
+                )}
               </Field>
             )}
           />
-          {errors.slug && <span className="text-11 text-danger-primary">{errors.slug.message}</span>}
         </div>
         <div className="flex flex-col gap-2 text-13">
           <span>
             {t("workspace_creation.form.organization_size.label")}
             <span className="ml-0.5 text-danger-primary">*</span>
           </span>
-          <div className="w-full">
+          <Field name="organization_size" invalid={Boolean(errors.organization_size)}>
             <Controller
               name="organization_size"
               control={control}
               rules={rules.organization_size}
-              render={({ field: { value, onChange } }) => (
+              render={({ field: { value, onChange, ref } }) => (
                 <CustomSelect
+                  buttonRef={ref}
+                  describedBy={errors.organization_size ? organizationSizeErrorId : undefined}
+                  invalid={Boolean(errors.organization_size)}
                   value={value}
                   onChange={onChange}
                   label={
@@ -139,10 +153,12 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                 </CustomSelect>
               )}
             />
-            {errors.organization_size && (
-              <span className="text-13 text-danger-primary">{errors.organization_size.message}</span>
+            {errors.organization_size?.message && (
+              <FieldError id={organizationSizeErrorId} match size="xl">
+                {errors.organization_size.message}
+              </FieldError>
             )}
-          </div>
+          </Field>
         </div>
       </div>
       <div className="flex items-center gap-4">

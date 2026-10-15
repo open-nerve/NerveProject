@@ -69,6 +69,7 @@
     "@types/react-color": "catalog:",
     "@types/react-dom": "catalog:",
     "emojibase-data": "catalog:",
+    "jsdom": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

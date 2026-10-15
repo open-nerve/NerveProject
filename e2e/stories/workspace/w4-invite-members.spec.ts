@@ -291,6 +291,14 @@ test("W4 (page): the admin invites a member and a guest, Enter on the guest's ro
   await expect(invitationFormRow(page, 1)).toContainText(
     "This address is invited already (delete that invitation first), or given twice here."
   );
+  // each address is read invalid, its message its description; the first row's has the focus
+  const address = (index: number) => page.locator(`[id="invitations.${index}.email"]`);
+  await expect(address(0)).toBeFocused();
+  await expect(address(0)).toHaveAttribute("aria-invalid", "true");
+  await expect(address(0)).toHaveAccessibleDescription("Already a member of this workspace.");
+  await expect(address(1)).toHaveAccessibleDescription(
+    "This address is invited already (delete that invitation first), or given twice here."
+  );
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
   // erin's declined invitation deleted, her address is invited again.
   const erins = { method: "DELETE", path: `/api/v0/workspace-invitations/${toErin.id}` };

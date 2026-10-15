@@ -36,13 +36,20 @@ export function formRefusal<F extends string>(
 }
 
 /**
+ * Shows a message under a form's field, as react-hook-form's setError does: shouldFocus gives the field the focus, so
+ * that it is read with its message (M3 closeout, C11-1).
+ */
+export type UnderField<F extends string> = (field: F, message: string, options: { shouldFocus: boolean }) => void;
+
+/**
  * Shows nerve's refusal of what a form sent as formRefusal decides: each message under its field, by the form's
- * underField (its setError), in the order of fields; else nerve's reason in a toast (useRefusalToast).
+ * underField (its setError), in the order of fields, the first of them given the focus; else nerve's reason in a toast
+ * (useRefusalToast).
  */
 export function useFormRefusal<F extends string>(
   fields: readonly F[],
   taken: Readonly<Record<string, F>>
-): (error: unknown, underField: (field: F, message: string) => void) => void {
+): (error: unknown, underField: UnderField<F>) => void {
   const { t } = useTranslation();
   const toastRefusal = useRefusalToast();
   return (error, underField) => {
@@ -51,9 +58,12 @@ export function useFormRefusal<F extends string>(
       toastRefusal(error);
       return;
     }
+    let first = true;
     for (const field of fields) {
       const message = refusal.fields[field];
-      if (message) underField(field, t(message));
+      if (!message) continue;
+      underField(field, t(message), { shouldFocus: first });
+      first = false;
     }
   };
 }

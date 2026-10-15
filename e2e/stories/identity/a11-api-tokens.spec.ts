@@ -12,6 +12,7 @@ import {
   downloadedWithin,
   enabledWithin,
   modalDialog,
+  pageBehindHidden,
 } from "../../fixtures/dialogs";
 import {
   answerTo,
@@ -48,11 +49,15 @@ test("A11 (page): a token created on the page shows once, with the focus on it, 
   await page.getByLabel("Title").fill("deploy");
   await page.getByLabel("Description").fill("ci, #1");
   await page.getByRole("button", { name: "Set expiration date" }).click();
+  // the expiry's list, and the calendar below, open in the dialog: the page behind it stays hidden, as the dialog has it
+  await expect(page.getByRole("option", { name: "Custom date" })).toBeVisible();
+  expect(await pageBehindHidden(page)).toBe(true);
   await page.getByRole("option", { name: "Custom date" }).click();
   // The dropdown's button, which holds the button of its label.
   const day = page.getByRole("button", { name: "Set date" }).first();
   await day.click();
   await expectListBesideButton(page, day);
+  expect(await pageBehindHidden(page)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await day.click();

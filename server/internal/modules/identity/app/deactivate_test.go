@@ -114,11 +114,11 @@ func isMemberships(call string) bool { return strings.HasPrefix(call, "deactivat
 // with their kind, code and detail), or a failure (M3 design 3.9, 9.4).
 var membershipsErrors = []error{
 	shared.NewError(shared.KindConflict, "workspace.sole_admin",
-		"The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while it "+
-			"has other active members. It must first be given another admin, or be deleted."),
+		"The workspace would be left without an admin: its only active admin cannot leave it, and that admin's membership "+
+			"cannot end while it has other active members. It must first be given another admin, or be deleted."),
 	shared.NewError(shared.KindConflict, "project.sole_admin",
-		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
-			"other active members. It must first be given another admin, or be deleted."),
+		"The project would be left without an admin: its only active admin cannot leave it, and that admin's membership cannot "+
+			"end while it has other active members. It must first be given another admin, or be deleted."),
 	errors.New("connection reset"),
 }
 

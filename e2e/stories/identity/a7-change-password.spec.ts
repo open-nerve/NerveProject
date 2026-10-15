@@ -50,10 +50,17 @@ test("A7 (page): the security page changes the password, keeps its own session, 
 
   // A wrong current password shows under its field; a new password too common, under the new one. Nothing
   // changes.
+  // Each field refused has the focus, read invalid, its message its description.
   expect(await submitPasswordChange(page, "Wr0ng-password", newPassword)).toBe(422);
   await expect(fieldBlock(page, "old_password").getByText("The current password is wrong.")).toBeVisible();
+  const oldField = page.locator("#old_password");
+  await expect(oldField).toBeFocused();
+  await expect(oldField).toHaveAttribute("aria-invalid", "true");
+  await expect(oldField).toHaveAccessibleDescription("The current password is wrong.");
   expect(await submitPasswordChange(page, password, "Password1!")).toBe(422);
   await expect(fieldBlock(page, "new_password").getByText("This password is too common")).toBeVisible();
+  await expect(newField).toBeFocused();
+  await expect(newField).toHaveAccessibleDescription(/^This password is too common/);
   await expect(page.getByText("The current password is wrong.")).toHaveCount(0);
   expect(await accountOf(db, email)).toEqual(before);
 
