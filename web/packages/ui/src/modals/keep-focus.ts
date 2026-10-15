@@ -14,6 +14,9 @@
  *
  * The dialog takes the focus once the focusout has been dispatched (a microtask), not within it: Chromium, given the
  * focus within a focusout, sends no key to the page once the element that took it is removed (the dialog, closed).
+ * The control has it back a microtask after the observer hears it enabled: the commit that enables it queues the
+ * observer's callback as it changes the DOM, before its layout effects queue theirs, and a focus one of those gives (a
+ * refused field's, useRefusedFocus) comes first, the control never taking the focus in between.
  */
 export function keepFocusIn(dialog: HTMLElement): () => void {
   const document = dialog.ownerDocument;
@@ -36,7 +39,9 @@ export function keepFocusIn(dialog: HTMLElement): () => void {
       waiting = new MutationObserver(() => {
         if (lost.matches(":disabled")) return;
         stopWaiting();
-        if (lost.isConnected && document.activeElement === dialog) lost.focus({ preventScroll: true });
+        queueMicrotask(() => {
+          if (!stopped && lost.isConnected && document.activeElement === dialog) lost.focus({ preventScroll: true });
+        });
       });
       waiting.observe(lost, { attributes: true, attributeFilter: ["disabled"] });
     });

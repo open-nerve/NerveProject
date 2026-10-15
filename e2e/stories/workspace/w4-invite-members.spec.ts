@@ -287,19 +287,30 @@ test("W4 (page): the admin invites a member and a guest, Enter on the guest's ro
   await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
   await expect(modalDialog(page)).toHaveCount(0);
 
-  // The member's address and erin's: refused, each under its row, and the form stays open.
-  const refused = await sendInvitations(page, slug, [
+  // The member's address and erin's: refused, each under its row, and the form stays open. While nerve has them, the
+  // button is busy and the dialog has the focus (keepFocusIn).
+  const releaseRefusal = await holdAnswer(page, "POST", invitations);
+  const refusing = sendInvitations(page, slug, [
     { email: memberEmail, role: "Member" },
     { email: erinEmail, role: "Member" },
   ]);
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Sending invitations" })).toBeDisabled();
+  await expect(modalDialog(page)).toBeFocused();
+  const refusalFocuses = await recordFocuses(page);
+  await releaseRefusal();
+  const refused = await refusing;
   expect(refused.answer.status()).toBe(422);
   await expect(invitationFormRow(page, 0)).toContainText("Already a member of this workspace.");
   await expect(invitationFormRow(page, 1)).toContainText(
     "This address is invited already (delete that invitation first), or given twice here."
   );
-  // each address is read invalid, its message its description; the first row's has the focus
+  // each address is read invalid, its message its description; the first row's has the focus, and nothing takes it
+  // first, not even the button as it is enabled again (keepFocusIn's return waits for the refusal's focus)
   const address = (index: number) => page.locator(`[id="invitations.${index}.email"]`);
   await expect(address(0)).toBeFocused();
+  expect(await refusalFocuses()).toEqual([
+    { id: "invitations.0.email", invalid: "true", description: "Already a member of this workspace." },
+  ]);
   await expect(address(0)).toHaveAttribute("aria-invalid", "true");
   await expect(address(0)).toHaveAccessibleDescription("Already a member of this workspace.");
   await expect(address(1)).toHaveAccessibleDescription(

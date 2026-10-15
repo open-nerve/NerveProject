@@ -19,11 +19,10 @@ export const LOCK_NAME = "nerve.auth.refresh";
  * navigator.locks, which only secure contexts (HTTPS, localhost) have. The browser queues the tasks of
  * every tab, and a frozen tab keeps the lock until it thaws or is discarded.
  *
- * The lock is released one task after the task settles. Firefox hands a task's localStorage writes to the
- * other tabs at the end of the task, over the same channel as the lock's release, and the release made as
- * the task's promise settles can reach the next tab first: that tab then reads the session before this
- * refresh's write and refreshes the spent token, which nerve takes for a reuse (M3 closeout, F-A4). A
- * release from the next task follows the writes.
+ * The lock is released one task after the task settles. A4 shows why, in Firefox: a release made as the
+ * task settles can reach the next tab before the task's localStorage writes, and that tab then reads the
+ * session from before this refresh and refreshes the spent token, which nerve takes for a reuse (M3
+ * closeout, F-A4); one task later, the release follows the writes.
  */
 export function webLock(locks: Pick<LockManager, "request">): RefreshLock {
   return {

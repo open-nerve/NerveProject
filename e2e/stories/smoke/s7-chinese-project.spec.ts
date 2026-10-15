@@ -1,4 +1,10 @@
-import { changeWorkspacePreferences, createLabel, createProject } from "../../fixtures/api";
+import {
+  changeProject,
+  changeProjectPreferences,
+  changeWorkspacePreferences,
+  createLabel,
+  createProject,
+} from "../../fixtures/api";
 import { emailFor, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { cancel, chineseAdmin } from "../../fixtures/chinese";
@@ -33,6 +39,12 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   });
   const bug = await createLabel(api, admin.access_token, web.id, { name: "Bug" });
   await createLabel(api, admin.access_token, web.id, { name: "UI", parent_id: bug.id });
+  // Web shows its modules and its views, both under its header's more menu, the views the tab it opens on.
+  const shown = await changeProject(api, admin.access_token, web.id, { module_view: true, issue_views_view: true });
+  expect(shown.status).toBe(200);
+  await changeProjectPreferences(api, admin.access_token, web.id, {
+    navigation: { default_tab: "views", hide_in_more_menu: ["modules", "views"] },
+  });
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
 
@@ -65,6 +77,28 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   await expect(page.getByRole("combobox", { name: "搜索", exact: true })).toBeFocused();
   await page.keyboard.type("zz");
   await expect(page.getByText("未找到匹配项", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  // The header's more menu, by its button's name: each hidden tab's actions are named by it in Chinese, the views' (the
+  // tab Web opens on) offering to clear the default; the arrow keys reach the modules' actions after the modules.
+  const more = page.getByRole("button", { name: "更多标签页", exact: true });
+  await expect(more).toBeVisible();
+  await more.press("Enter");
+  await expect(page.getByRole("menuitem", { name: "显示视图", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("menuitem", { name: "取消视图的默认", exact: true })).toHaveCount(1);
+  const modules = page.getByRole("menuitem", { name: "模块", exact: true });
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press("ArrowDown");
+        return modules.evaluate((item) => item === document.activeElement);
+      },
+      { timeout: 5_000 }
+    )
+    .toBe(true);
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "显示模块", exact: true })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("menuitem", { name: "将模块设为默认", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
 
   // The general page: the settings' sidebar, the deletion's description, the archive's and the deletion's dialogs,

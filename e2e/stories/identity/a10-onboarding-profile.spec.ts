@@ -72,6 +72,10 @@ test("A10 (page): a name nerve refuses keeps the profile step, which says why un
     .filter({ has: page.locator("label") })
     .last();
   await expect(nameBlock.getByText("Must not contain a web address")).toBeVisible();
+  // the name refused takes the focus, its message its description
+  const name = page.getByLabel("Name", { exact: true });
+  await expect(name).toBeFocused();
+  await expect(name).toHaveAccessibleDescription("Must not contain a web address");
   await expect(page.getByText("Some fields are not valid.")).toHaveCount(0);
   await expect(page.getByText("Create your profile.")).toBeVisible();
   expect(await accountOf(db, email)).toEqual(before);

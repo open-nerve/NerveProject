@@ -267,6 +267,11 @@ test("W3 (page): the admin changes the name, size and time zone, which hold afte
   const watch = await watchPage(page);
   await page.goto(`/${slug}/settings`);
   await expect(page.locator("#name")).toHaveValue("Acme");
+  // Sent empty, the name's rule fails: the name takes the focus, its message its description.
+  await page.locator("#name").fill("");
+  await page.getByRole("button", { name: "Update workspace" }).click();
+  await expect(page.locator("#name")).toBeFocused();
+  await expect(page.locator("#name")).toHaveAccessibleDescription("Workspace name is required");
   await page.locator("#name").fill("Acme Corp");
   await page.getByRole("button", { name: "Select organization size" }).click();
   await page.getByRole("option", { name: "11-50" }).click();

@@ -105,6 +105,9 @@ test("A8 (page): the general page saves the names nerve takes, an empty last nam
   expect((await answerTo(page, "PATCH", "/api/v0/me", save)).status()).toBe(422);
   await expect(fieldBlock(page, "first_name").getByText("Must not contain a web address")).toBeVisible();
   await expect(page.getByText("Must not contain a web address")).toHaveCount(1);
+  // the field refused takes the focus, its message its description
+  await expect(page.locator("#first_name")).toBeFocused();
+  await expect(page.locator("#first_name")).toHaveAccessibleDescription("Must not contain a web address");
   await expect(page.getByText("Some fields are not valid.")).toHaveCount(0);
   expect(await accountOf(db, email)).toEqual(saved);
 

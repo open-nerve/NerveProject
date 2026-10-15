@@ -13,9 +13,9 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    // Firefox runs A4's page tests alone: Firefox hands a task's localStorage writes to the other tabs at the end of
-    // the task, the timing the refresh lock's release has to follow (M3 closeout, F-A4). The other stories expect
-    // Chromium's console messages and clipboard permissions.
+    // Firefox runs A4's page tests alone. They show that in Firefox a release of the refresh lock made as its task
+    // settles can reach the next tab before the task's localStorage writes, and that one task later it follows them (M3
+    // closeout, F-A4). The other stories expect Chromium's console messages and clipboard permissions.
     { name: "firefox", use: { ...devices["Desktop Firefox"] }, grep: /A4 \(page\)/ },
   ],
 });

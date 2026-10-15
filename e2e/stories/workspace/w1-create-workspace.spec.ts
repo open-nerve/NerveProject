@@ -206,6 +206,15 @@ test("W1 (page): a newcomer's onboarding creates a workspace after the profile s
   await page.getByRole("button", { name: "2-10", exact: true }).click();
   await expect(page.getByRole("button", { name: "2-10", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(await pressed()).toEqual(["false", "true", "false", "false", "false", "false"]);
+  // A slug nerve's check refuses: said under the field, which takes the focus, its message its description.
+  await page.locator("#slug").fill("settings");
+  const reserved = await answerTo(page, "GET", "/api/v0/workspace-slugs/settings", () =>
+    page.getByRole("button", { name: "Create workspace" }).click()
+  );
+  expect(reserved.status()).toBe(200);
+  await expect(page.locator("#slug")).toBeFocused();
+  await expect(page.locator("#slug")).toHaveAccessibleDescription("This URL is reserved: choose another.");
+  await page.locator("#slug").fill(slug);
   let created: { body: unknown; answer: Response } | undefined;
   const stepped = await sentTo(page, "PATCH", "/api/v0/me/profile", async () => {
     created = await sentTo(page, "POST", "/api/v0/workspaces", () =>
@@ -224,8 +233,13 @@ test("W1 (page): a newcomer's onboarding creates a workspace after the profile s
     { onboarding_step: { workspace_create: true }, last_workspace_id: id },
   ]);
 
-  // The invitation step invites to it, and shows the link of each invitation.
-  await page.locator('[id="invitations.0.email"]').fill(invitee);
+  // The invitation step: sent with its row empty, the row's rule fails, and its address takes the focus, its message its
+  // description. Then it invites to the workspace, and shows the link of each invitation.
+  const address = page.locator('[id="invitations.0.email"]');
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(address).toBeFocused();
+  await expect(address).toHaveAccessibleDescription("We need an email address to invite them.");
+  await address.fill(invitee);
   const invited = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/invitations`, () =>
     page.getByRole("button", { name: "Continue", exact: true }).click()
   );

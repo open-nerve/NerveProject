@@ -74,7 +74,11 @@ test("P3 (page): the project's admin changes its name, identifier, description, 
     update.click()
   );
   expect(await checked.json()).toEqual({ available: false });
-  await expect(page.getByText("A project of this workspace already has this identifier.")).toBeVisible();
+  const taken = "A project of this workspace already has this identifier.";
+  await expect(page.getByText(taken)).toBeVisible();
+  // the field refused takes the focus, its message its description
+  await expect(page.locator("#identifier")).toBeFocused();
+  await expect(page.locator("#identifier")).toHaveAccessibleDescription(taken);
   await expect(update).toBeEnabled();
   expect(changes).toEqual([]);
 
@@ -171,6 +175,11 @@ test("P3 (page): the project's admin turns its cycles, modules, views and intake
   await page.getByRole("button", { name: "1 month" }).click();
   await page.getByRole("option", { name: "Customize time range" }).click();
   await expect(modalDialog(page)).toHaveAccessibleName("Customize time range");
+  // Sent empty, the months' rule fails: the field takes the focus, its message its description.
+  await page.locator("#archive_in").fill("");
+  await page.getByRole("button", { name: "Update", exact: true }).click();
+  await expect(page.locator("#archive_in")).toBeFocused();
+  await expect(page.locator("#archive_in")).toHaveAccessibleDescription("Select a month between 1 and 12.");
   await page.locator("#archive_in").fill("6");
   const { body, release } = await sentHeld(page, "PATCH", projectApi, () =>
     page.getByRole("button", { name: "Update", exact: true }).click()

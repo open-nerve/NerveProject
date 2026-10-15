@@ -75,10 +75,35 @@ describe("keepFocusIn", () => {
     expect(document.activeElement).toBe(field);
   });
 
-  it("leaves the focus where it is when the window loses it", () => {
+  it("leaves the focus to a field the page focuses as the control is enabled, the control never taking it first", async () => {
+    disabledUnderFocus();
+    await observed();
+    const taken: EventTarget[] = [];
+    dialog.addEventListener("focusin", ({ target }) => {
+      if (target) taken.push(target);
+    });
+    button.disabled = false;
+    // a refusal's focus, which the commit that enables the control queues after it has enabled it (useRefusedFocus)
+    queueMicrotask(() => field.focus());
+    await observed();
+    expect(taken).toEqual([field]);
+  });
+
+  it("gives the control no focus back once stopped as it is enabled", async () => {
+    disabledUnderFocus();
+    await observed();
+    button.disabled = false;
+    // stopped once the observer has heard the control enabled, before its return (the dialog closing meanwhile)
+    queueMicrotask(stop);
+    await observed();
+    expect(document.activeElement).toBe(dialog);
+  });
+
+  it("leaves the focus where it is when the window loses it", async () => {
     button.focus();
     // the window's blur: the control is told, and the document keeps it as its active element
     button.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: null }));
+    await observed();
     expect(document.activeElement).toBe(button);
   });
 

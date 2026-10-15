@@ -197,6 +197,25 @@ export async function changeWorkspacePreferences(
   return data;
 }
 
+/** Changes the display settings of the account of token, a member's, in the project of id, and returns nerve's answer. */
+export async function changeProjectPreferences(
+  api: Api,
+  token: string,
+  id: string,
+  body: ProjectPreferencesUpdate
+): Promise<ProjectPreferences> {
+  const { data, error, response } = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
+    params: { path: { project_id: id } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `change the settings in ${id}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error(`changeProjectPreferences in ${id} answered 200 without the settings`);
+  }
+  return data;
+}
+
 /**
  * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
  * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending

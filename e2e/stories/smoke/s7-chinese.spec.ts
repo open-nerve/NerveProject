@@ -34,7 +34,9 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await page.keyboard.press("Escape");
   await expect(modalDialog(page)).toHaveCount(0);
   // The menu, by its button's name (工作区, as everywhere), names his role in Acme in Chinese too.
-  await page.getByRole("button", { name: "打开工作区切换器", exact: true }).click();
+  const switcher = page.getByRole("button", { name: "打开工作区切换器", exact: true });
+  await expect(switcher).toBeVisible();
+  await switcher.click();
   await expect(page.getByRole("menu").getByText("管理员", { exact: true })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "离开工作区" })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -107,6 +109,12 @@ test("S7 (page): an admin whose language is Chinese sees the workspace's home, m
   await page.getByRole("button", { name: "添加成员", exact: true }).click();
   await expect(modalDialog(page)).toHaveAccessibleName("邀请人员协作");
   await modalDialog(page).locator('[id="invitations.0.email"]').fill(emailFor(testInfo, "dave"));
+  // a row added, its removal named by its place while it has no address; pressed, it removes the row
+  await modalDialog(page).getByRole("button", { name: "添加更多", exact: true }).click();
+  const secondRemoval = modalDialog(page).getByRole("button", { name: "移除第 2 个邀请", exact: true });
+  await expect(secondRemoval).toBeVisible();
+  await secondRemoval.click();
+  await expect(modalDialog(page).locator('[id="invitations.1.email"]')).toHaveCount(0);
   const sending = await sentHeld(page, "POST", `/api/v0/workspaces/${slug}/invitations`, () =>
     modalDialog(page).getByRole("button", { name: "发送邀请", exact: true }).click()
   );

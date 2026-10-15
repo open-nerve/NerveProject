@@ -48,7 +48,12 @@ test("A11 (page): a token created on the page shows once, with the focus on it, 
   await expect(modalDialog(page)).toHaveAccessibleName("Create token");
   await page.getByLabel("Title").fill("deploy");
   await page.getByLabel("Description").fill("ci, #1");
-  await page.getByRole("button", { name: "Set expiration date" }).click();
+  // Sent with no expiry, the form says it needs one: the expiry's select takes the focus, its message its description.
+  const expiry = page.getByRole("button", { name: "Set expiration date" });
+  await page.getByRole("button", { name: "Generate token" }).click();
+  await expect(expiry).toBeFocused();
+  await expect(expiry).toHaveAccessibleDescription("Choose when the token expires, or that it never does.");
+  await expiry.click();
   // the expiry's list, and the calendar below, open in the dialog: the page behind it stays hidden, as the dialog has it
   await expect(page.getByRole("option", { name: "Custom date" })).toBeVisible();
   expect(await pageBehindHidden(page)).toBe(true);
