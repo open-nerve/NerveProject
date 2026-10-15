@@ -14,6 +14,8 @@ import ProjectCreateButtons from "@/components/project/create/project-create-but
 // hooks
 import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import { ProjectAttributes } from "./attributes";
 import { useCreateProject, type ProjectCreationForm } from "./use-create-project";
@@ -35,15 +37,18 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
   const methods = useForm<ProjectCreationForm>({
     defaultValues: getProjectFormValues(),
     reValidateMode: "onChange",
+    shouldFocusError: false,
   });
   const {
     handleSubmit,
     reset,
     setError,
     setValue,
-    formState: { isSubmitting },
+    formState: { isSubmitting, submitCount },
   } = methods;
   const { isMobile } = usePlatformOS();
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
 
   // The form is busy until nerve has answered and the page has followed: created, the modal's next step.
   const onSubmit = async (values: ProjectCreationForm) => {
@@ -69,7 +74,7 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
     <FormProvider {...methods}>
       <ProjectCreateHeader handleClose={handleClose} />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="px-3">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="px-3">
         <div className="mt-9 space-y-6 pb-5">
           <ProjectCommonAttributes
             setValue={setValue}

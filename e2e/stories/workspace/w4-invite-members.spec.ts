@@ -9,7 +9,13 @@ import {
 } from "../../fixtures/api";
 import { expectInvitations } from "../../fixtures/assert/workspace";
 import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
+import {
+  EMOJI_CHECK_WARNING,
+  expectQuietConsole,
+  recordFocuses,
+  refuseClipboardWrites,
+  watchPage,
+} from "../../fixtures/browser";
 import { announced, closedByEscape, closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -299,6 +305,29 @@ test("W4 (page): the admin invites a member and a guest, Enter on the guest's ro
   await expect(address(1)).toHaveAccessibleDescription(
     "This address is invited already (delete that invitation first), or given twice here."
   );
+  // Each row's removal is named by the address it holds, or by its place while it has none; pressing one removes its
+  // row, the others kept.
+  const rowRemoval = (name: string) => page.getByRole("dialog").getByRole("button", { name, exact: true });
+  await page.getByRole("dialog").getByRole("button", { name: "Add more" }).click();
+  await expect(rowRemoval(`Remove ${memberEmail}`)).toBeVisible();
+  await expect(rowRemoval("Remove invitation 3")).toBeVisible();
+  await expect(rowRemoval(`Remove ${erinEmail}`)).toBeVisible();
+  await rowRemoval(`Remove ${erinEmail}`).click();
+  await expect(address(2)).toHaveCount(0);
+  await expect(address(0)).toHaveValue(memberEmail);
+  await expect(address(1)).toHaveValue("");
+  await expect(rowRemoval("Remove invitation 2")).toBeVisible();
+  // Sent with the new row empty, its rule fails: its address takes the focus, already read invalid, its message its
+  // description (as recorded when it takes it), and nothing is sent.
+  const focuses = await recordFocuses(page);
+  await page.getByRole("dialog").getByRole("button", { name: "Send invitations" }).click();
+  await expect(address(1)).toBeFocused();
+  expect((await focuses()).at(-1)).toEqual({
+    id: "invitations.1.email",
+    invalid: "true",
+    description: "We need an email address to invite them.",
+  });
+  expect(watch.apiRequests.filter((request) => request === `POST ${invitations}`)).toHaveLength(2);
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
   // erin's declined invitation deleted, her address is invited again.
   const erins = { method: "DELETE", path: `/api/v0/workspace-invitations/${toErin.id}` };

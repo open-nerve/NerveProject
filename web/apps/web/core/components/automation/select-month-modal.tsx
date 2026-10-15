@@ -14,6 +14,8 @@ import type { ProjectUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 // ui
 import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // types
 /** The auto-archiving's range, as ProjectUpdate takes it: a number of months. */
 type TArchiveIn = Pick<ProjectUpdate, "archive_in">;
@@ -30,13 +32,16 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
   const { t } = useTranslation();
 
   const {
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     handleSubmit,
     control,
     reset,
   } = useForm<TArchiveIn>({
     defaultValues: initialValues,
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
 
   const onClose = () => {
     handleClose();
@@ -56,7 +61,7 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
       position={EModalPosition.CENTER}
       width={EModalWidth.XXL}
     >
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
         <div>
           <ModalTitle className="text-16 leading-6 font-medium text-primary">
             {t("common.customize_time_range")}

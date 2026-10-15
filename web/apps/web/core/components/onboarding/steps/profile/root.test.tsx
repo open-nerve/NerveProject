@@ -8,7 +8,7 @@ import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { heldChange, lateSettlings, pageSettled, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import type { KeptForm } from "@/lib/fake-form";
-import { focusedUnder, refusal, underFields } from "@/lib/fake-refusal";
+import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { ProfileSetupStep } from "./root";
 
@@ -71,15 +71,14 @@ describe("ProfileSetupStep", () => {
     expect(settled()).toBe(true);
   });
 
-  it("stays when nerve refuses the names, its refusal of the name said under it, focused", async () => {
+  it("stays when nerve refuses the names, its refusal of the name said under it", async () => {
     page.updateCurrentUser.mockRejectedValueOnce(
       refusal(422, "validation_failed", [{ field: "first_name", code: "required" }])
     );
     await named();
-    expect([onDone.mock.calls, underFields(page.setError), focusedUnder(page.setError), toasts]).toEqual([
+    expect([onDone.mock.calls, underFields(page.setError), toasts]).toEqual([
       [],
       [["first_name", "errors.field.required"]],
-      ["first_name"],
       [],
     ]);
   });

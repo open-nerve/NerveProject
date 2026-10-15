@@ -27,6 +27,7 @@ import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 type TUserProfileForm = {
   first_name: string;
@@ -59,7 +60,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
     watch,
     control,
     setError,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm<TUserProfileForm>({
     defaultValues: {
       first_name: user.first_name || "",
@@ -67,7 +68,10 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       display_name: user.display_name || "",
       email: user.email || "",
     },
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
   // store hooks
   const { data: currentUser, updateCurrentUser } = useUser();
 
@@ -84,14 +88,10 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
     await followInSession(() => updateCurrentUser(userPayload), {
       done: () => setToast({ type: TOAST_TYPE.SUCCESS, title: t("toast.success"), message: t("profile_updated") }),
       failed: (error) => {
-        // each under its field, the first refused given the focus
         const fields = fieldErrorKeys(error);
-        let first = true;
         for (const field of FIELDS) {
           const key = fields[field];
-          if (key === undefined) continue;
-          setError(field, { type: "manual", message: t(key) }, { shouldFocus: first });
-          first = false;
+          if (key !== undefined) setError(field, { type: "manual", message: t(key) });
         }
         if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
       },
@@ -102,7 +102,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
   return (
     <>
       <DeactivateAccountModal isOpen={deactivateAccountModal} onClose={() => setDeactivateAccountModal(false)} />
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="w-full">
         <div className="flex w-full flex-col gap-7">
           {/* The picture and the cover are shown, not uploaded, until the file storage (M5, M2 design 3.2) */}
           <div className="relative h-44 w-full">

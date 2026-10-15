@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect } from "react";
+import { useEffect, type RefObject } from "react";
 import type { Control, FieldArrayWithId, FormState } from "react-hook-form";
 import { useFieldArray, useForm } from "react-hook-form";
 // nerve imports
@@ -17,6 +17,7 @@ import { invitationRefusal } from "@/components/workspace/invite-modal/refusal";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 /** A row as the form adds it: an address to type, invited as a member. */
 const newRow = (): InvitationCreate => ({ email: "", role: 15 });
@@ -35,6 +36,8 @@ type TUseWorkspaceInvitationReturn = {
   control: Control<WorkspaceInvitationsCreate>;
   fields: FieldArrayWithId<WorkspaceInvitationsCreate, "invitations", "id">[];
   formState: FormState<WorkspaceInvitationsCreate>;
+  /** The ref of the form's element, by which the first row's address refused takes the focus (useRefusedFocus). */
+  formRef: RefObject<HTMLFormElement | null>;
   remove: (index: number) => void;
   onFormSubmit: () => void;
   /** Empties the form: one row again. */
@@ -54,7 +57,10 @@ export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProp
   // form info
   const { control, reset, handleSubmit, formState, setError } = useForm<WorkspaceInvitationsCreate>({
     defaultValues: opened(),
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(formState.submitCount);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -82,11 +88,8 @@ export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProp
           toastRefusal(error);
           return;
         }
-        // each under its row's address, the first row refused given the focus
-        const first = Math.min(...refusal.rows.map(({ index }) => index));
         for (const { index, message } of refusal.rows) {
-          const shouldFocus = index === first;
-          setError(`invitations.${index}.email`, { type: "server", message: t(message) }, { shouldFocus });
+          setError(`invitations.${index}.email`, { type: "server", message: t(message) });
         }
       },
     });
@@ -99,6 +102,7 @@ export const useWorkspaceInvitationActions = (props: TUseWorkspaceInvitationProp
     control,
     fields,
     formState,
+    formRef,
     remove,
     onFormSubmit: handleSubmit(onSubmitForm),
     clear: () => reset(opened()),

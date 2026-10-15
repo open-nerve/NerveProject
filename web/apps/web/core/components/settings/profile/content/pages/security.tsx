@@ -28,6 +28,7 @@ import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { problemCode } from "@/lib/api-error";
 import { errorMessageKey, fieldErrorKeys } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 export interface FormValues {
   old_password: string;
@@ -61,9 +62,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
     handleSubmit,
     watch,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     reset,
-  } = useForm<FormValues>({ defaultValues });
+  } = useForm<FormValues>({ defaultValues, shouldFocusError: false });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
   // derived values
   const oldPassword = watch("old_password");
   const password = watch("new_password");
@@ -93,14 +96,13 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
         });
       },
       failed: (error) => {
-        // the field refused has the focus, so that it is read with its message
         if (problemCode(error) === "identity.current_password_incorrect") {
-          setError("old_password", { type: "manual", message: t(errorMessageKey(error)) }, { shouldFocus: true });
+          setError("old_password", { type: "manual", message: t(errorMessageKey(error)) });
           return;
         }
         const newPassword = fieldErrorKeys(error).new_password;
         if (newPassword !== undefined) {
-          setError("new_password", { type: "manual", message: t(newPassword) }, { shouldFocus: true });
+          setError("new_password", { type: "manual", message: t(newPassword) });
           return;
         }
         toastRefusal(error);
@@ -124,7 +126,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
   return (
     <div className="size-full">
       <ProfileSettingsHeading title={t("auth.common.password.change_password.label.default")} />
-      <form onSubmit={handleSubmit(handleChangePassword)} className="mt-7 flex flex-col gap-8">
+      <form ref={formRef} onSubmit={handleSubmit(handleChangePassword)} className="mt-7 flex flex-col gap-8">
         <div className="flex flex-col gap-y-7">
           <div className="flex flex-col gap-y-2">
             <h4 className="text-13">{t("auth.common.password.current_password.label")}</h4>

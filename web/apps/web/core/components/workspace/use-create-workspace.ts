@@ -15,6 +15,7 @@ import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { problemCode } from "@/lib/api-error";
 import { FIELD_ERROR_MESSAGES, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 /** A creation form's values: no size until one is chosen (null, which keeps a select of sizes controlled). */
 export type CreationForm = Pick<WorkspaceCreate, "name" | "slug"> & { organization_size: OrganizationSize | null };
@@ -92,12 +93,10 @@ export function useCreateWorkspace(): (
   };
 
   return async (form, setError) => {
-    // nerve's reasons, each under the field it is about, the first given the focus
+    // nerve's reasons, each under the field it is about
     const refused = (fields: CreationFields) => {
-      if (fields.name) setError("name", { type: "server", message: t(fields.name) }, { shouldFocus: true });
-      if (fields.slug) {
-        setError("slug", { type: "server", message: t(fields.slug) }, { shouldFocus: fields.name === undefined });
-      }
+      if (fields.name) setError("name", { type: "server", message: t(fields.name) });
+      if (fields.slug) setError("slug", { type: "server", message: t(fields.slug) });
     };
     let workspace: Workspace | undefined;
     await followInSession(() => attempt(form), {
@@ -125,7 +124,8 @@ export function useCreateWorkspace(): (
 
 /**
  * A creation form (M3 design 2 W1, 7.4), which /create-workspace and the onboarding's creation step each lay out their
- * own way: the form, empty as it opens; the rules of its fields; onNameChange, by which the name typed gives the slug
+ * own way: the form, empty as it opens; formRef, the ref of the form's element, by which the first field refused takes
+ * the focus (useRefusedFocus); the rules of its fields; onNameChange, by which the name typed gives the slug
  * (slugFrom); and the submit, which creates the workspace (useCreateWorkspace) and hands it, with the values sent, to
  * onCreated. The form stays busy until onCreated has settled, so that no second click checks the new workspace's slug
  * again.
@@ -136,7 +136,10 @@ export function useCreationForm(onCreated: (workspace: Workspace, values: Creati
   const form = useForm<CreationForm>({
     defaultValues: { name: "", slug: "", organization_size: null },
     mode: "onChange",
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(form.formState.submitCount);
   const rules = {
     name: {
       required: t("common.errors.required"),
@@ -154,5 +157,5 @@ export function useCreationForm(onCreated: (workspace: Workspace, values: Creati
     const created = await create(values, form.setError);
     if (created) await onCreated(created, values);
   });
-  return { form, rules, onNameChange, submit };
+  return { form, formRef, rules, onNameChange, submit };
 }

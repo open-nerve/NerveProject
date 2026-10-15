@@ -35,6 +35,7 @@ import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 import { DeleteWorkspaceSection } from "@/components/workspace/delete-workspace-section";
 // lib
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 /**
  * The form's values: what an admin may change of the workspace. The size is null while the workspace has none, which
@@ -70,10 +71,13 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     control,
     reset,
     watch,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm<TWorkspaceForm>({
     defaultValues: workspace ? formValues(workspace) : { name: "", organization_size: "2-10", timezone: "UTC" },
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLDivElement>(submitCount);
 
   // the fields the form edits, which nerve's WorkspaceUpdate takes; the page follows the change only in the session it
   // was sent in (M3 design 7.1)
@@ -115,7 +119,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
 
   return (
     <>
-      <div className={cn("flex w-full flex-col gap-y-7", { "opacity-60": !isAdmin })}>
+      <div ref={formRef} className={cn("flex w-full flex-col gap-y-7", { "opacity-60": !isAdmin })}>
         <div className="flex items-center gap-5">
           <div className="flex shrink-0 flex-col gap-1">
             {workspace.logo_url ? (

@@ -5,7 +5,7 @@
  */
 
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // icons
 import { CloseCircleOutline, HideOutline, ShowOutline, WarningCircleOutline } from "@makeplane/propel/icons";
@@ -26,6 +26,7 @@ import { useUser } from "@/hooks/store/user";
 import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
 // lib
 import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 type Props = {
   mode: EAuthModes;
@@ -61,7 +62,6 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const { signIn, signUp } = useUser();
   // ref
   const emailInputRef = useRef<HTMLInputElement>(null);
-  const passwordInputRef = useRef<HTMLInputElement>(null);
   // states
   const [passwordFormData, setPasswordFormData] = useState<TPasswordFormValues>(defaultValues);
   const [showPassword, setShowPassword] = useState({
@@ -74,6 +74,8 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const [isEmailInputFocused, setIsEmailInputFocused] = useState(false);
   // the last refusal of nerve, until the form changes
   const [submitError, setSubmitError] = useState<unknown>(undefined);
+  // nerve's refusal of a field gives it the focus once its message shows (useRefusedFocus), so that it is read with it
+  const formRef = useRefusedFocus<HTMLFormElement>(submitError);
 
   const handleShowPassword = (key: keyof typeof showPassword) =>
     setShowPassword((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -109,14 +111,6 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const renderPasswordMatchError = !isRetryPasswordInputFocused || confirmPassword.length >= password.length;
   const showsMismatch = !!confirmPassword && password !== confirmPassword && renderPasswordMatchError;
   const fieldErrors = fieldErrorKeys(submitError);
-
-  // nerve's refusal of a field gives that field the focus (the email's first) once its message shows, so that it is
-  // read with it, invalid (M3 closeout, C11-1)
-  useEffect(() => {
-    const refused = fieldErrorKeys(submitError);
-    if (refused.email) emailInputRef.current?.focus();
-    else if (refused.password) passwordInputRef.current?.focus();
-  }, [submitError]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -154,7 +148,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           onDismiss={() => setSubmitError(undefined)}
         />
       )}
-      <form className="space-y-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
+      <form ref={formRef} className="space-y-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
         <div className="space-y-1">
           <label htmlFor="email" className="text-13 font-medium text-tertiary">
             {t("auth.common.email.label")}
@@ -212,7 +206,6 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           <Field name="password" invalid={Boolean(fieldErrors.password)}>
             <InputGroup size="2xl">
               <Input
-                ref={passwordInputRef}
                 size="2xl"
                 type={showPassword.password ? "text" : "password"}
                 id="password"

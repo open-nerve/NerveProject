@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import type { Control, FieldArrayWithId, FormState } from "react-hook-form";
-import { Controller } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 // nerve imports
 import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
@@ -34,6 +34,15 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
   } = props;
   // nerve hooks
   const { t } = useTranslation();
+  // the rows as typed
+  const rows = useWatch({ control, name: "invitations" });
+
+  // a row's removal is named by the address it holds, or by its place while it holds none
+  const removalName = (index: number) => {
+    const email = rows[index]?.email.trim();
+    if (email) return t("common.remove_item", { name: email });
+    return t("workspace_settings.settings.members.modal.remove_row", { n: index + 1 });
+  };
 
   return (
     <div className="mb-3 space-y-4">
@@ -114,6 +123,7 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
                   type="button"
                   className="place-items-center self-center rounded-sm"
                   onClick={() => remove(index)}
+                  aria-label={removalName(index)}
                 >
                   <CloseOutline className="h-4 w-4 text-secondary" />
                 </button>

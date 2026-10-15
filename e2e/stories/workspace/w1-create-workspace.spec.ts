@@ -199,7 +199,13 @@ test("W1 (page): a newcomer's onboarding creates a workspace after the profile s
   const slug = slugFor(testInfo);
   await page.locator("#name").fill("Acme");
   await page.locator("#slug").fill(slug);
+  // The sizes are toggle buttons: none pressed until one is chosen, then that one alone.
+  const sizes = page.getByRole("group", { name: /^How many people will use this workspace\?/ }).getByRole("button");
+  const pressed = () => sizes.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-pressed")));
+  expect(await pressed()).toEqual(["false", "false", "false", "false", "false", "false"]);
   await page.getByRole("button", { name: "2-10", exact: true }).click();
+  await expect(page.getByRole("button", { name: "2-10", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect(await pressed()).toEqual(["false", "true", "false", "false", "false", "false"]);
   let created: { body: unknown; answer: Response } | undefined;
   const stepped = await sentTo(page, "PATCH", "/api/v0/me/profile", async () => {
     created = await sentTo(page, "POST", "/api/v0/workspaces", () =>

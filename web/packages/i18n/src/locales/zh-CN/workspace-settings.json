@@ -59,6 +59,7 @@
           "button": "发送邀请",
           "button_loading": "发送中",
           "placeholder": "name@company.com",
+          "remove_row": "移除第 {n} 个邀请",
           "errors": {
             "required": "我们需要一个电子邮件地址来邀请他们。",
             "invalid": "电子邮件无效",

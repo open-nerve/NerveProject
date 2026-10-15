@@ -4,7 +4,7 @@ import { createApi, type Api } from "../../fixtures/api";
 import { countIdentity, expectNothingAdded } from "../../fixtures/assert/identity";
 import { fillSignUp, formAlert, submitSignUp } from "../../fixtures/auth-pages";
 import { emailFor, password, register } from "../../fixtures/auth";
-import { watchPage } from "../../fixtures/browser";
+import { recordFocuses, watchPage } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 
 // A2, sign-up refused (M2 design 2).
@@ -41,12 +41,20 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
   await page.getByLabel("Set a password", { exact: true }).fill("N3wPassw0rd!");
   await expect(upperCaseRule).toHaveCount(0);
 
-  // Common passwords, which only nerve knows: the message is under the field, none above the form.
+  // Common passwords, which only nerve knows: the message is under the field, none above the form. The field takes the
+  // focus, already read invalid, its message its description (as recorded when it takes it).
   const expectTooCommon = async (common: string) => {
+    const focuses = await recordFocuses(page);
     expect(await submitSignUp(page, newEmail, common), common).toBe(422);
     await expect(page.getByText("This password is too common")).toBeVisible();
     await expect(formAlert(page)).toHaveCount(0);
     await expect(emailInput).toHaveValue(newEmail);
+    await expect(page.locator("#password")).toBeFocused();
+    expect((await focuses()).at(-1)).toMatchObject({
+      id: "password",
+      invalid: "true",
+      description: expect.stringMatching(/^This password is too common/),
+    });
   };
   await expectTooCommon("Password1!");
   await expectTooCommon("Password1!~");

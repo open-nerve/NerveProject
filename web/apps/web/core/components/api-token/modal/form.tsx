@@ -25,6 +25,7 @@ import { DateDropdown } from "@/components/dropdowns/date";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import type { TExpiryChoice } from "./expiry";
 import { EXPIRY_PERIODS, expiryDate } from "./expiry";
@@ -59,29 +60,25 @@ export function CreateApiTokenForm(props: Props) {
   // form
   const {
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     handleSubmit,
     setError,
     watch,
-  } = useForm<TFormValues>({ defaultValues });
+  } = useForm<TFormValues>({ defaultValues, shouldFocusError: false });
   // hooks
   const { t } = useTranslation();
   const toastRefusal = useRefusalToast();
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
 
   // the expiry's message, which describes its select (not one of Base UI's controls)
   const expiryErrorId = useId();
 
-  // A refusal shows under the field it is about, which has the focus (the first, if two), anything else in a toast
-  // (M2 design 7.3).
+  // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
   const showRefusal = (error: unknown) => {
     const fields = fieldErrorKeys(error);
-    if (fields.label !== undefined) {
-      setError("label", { type: "manual", message: t(fields.label) }, { shouldFocus: true });
-    }
-    if (fields.expired_at !== undefined) {
-      const message = t(fields.expired_at);
-      setError("expiry", { type: "manual", message }, { shouldFocus: fields.label === undefined });
-    }
+    if (fields.label !== undefined) setError("label", { type: "manual", message: t(fields.label) });
+    if (fields.expired_at !== undefined) setError("expiry", { type: "manual", message: t(fields.expired_at) });
     if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
   };
 
@@ -89,8 +86,7 @@ export function CreateApiTokenForm(props: Props) {
   const handleFormSubmit = async (data: TFormValues) => {
     const expiresAt = data.expiry === null ? undefined : expiryDate(data.expiry, new Date(), customDate);
     if (!neverExpires && expiresAt === undefined) {
-      const message = t("account_settings.api_tokens.expiry.required");
-      setError("expiry", { type: "manual", message }, { shouldFocus: true });
+      setError("expiry", { type: "manual", message: t("account_settings.api_tokens.expiry.required") });
       return;
     }
     await onSubmit(
@@ -104,7 +100,7 @@ export function CreateApiTokenForm(props: Props) {
   const expiresAt = expiry === null ? undefined : expiryDate(expiry, new Date(), customDate);
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)}>
+    <form ref={formRef} onSubmit={handleSubmit(handleFormSubmit)}>
       <div className="space-y-5 p-5">
         <ModalTitle className="text-18 font-medium text-secondary">
           {t("workspace_settings.settings.api_tokens.create_token")}
@@ -170,9 +166,8 @@ export function CreateApiTokenForm(props: Props) {
                 <Controller
                   control={control}
                   name="expiry"
-                  render={({ field: { onChange, value, ref } }) => (
+                  render={({ field: { onChange, value } }) => (
                     <CustomSelect
-                      buttonRef={ref}
                       describedBy={!neverExpires && errors.expiry ? expiryErrorId : undefined}
                       invalid={!neverExpires && Boolean(errors.expiry)}
                       customButton={

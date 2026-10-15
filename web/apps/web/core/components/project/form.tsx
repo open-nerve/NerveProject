@@ -23,6 +23,8 @@ import { CoverImage } from "@/components/common/cover-image";
 import { TimezoneSelect } from "@/components/global";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import { logoPropsOf } from "./logo-props";
 import { ProjectNetworkIcon } from "./project-network-icon";
@@ -53,8 +55,10 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     watch,
     control,
     setError,
-    formState: { errors, isSubmitting },
-  } = useForm<ProjectDetails>({ defaultValues: projectDetailsOf(project) });
+    formState: { errors, isSubmitting, submitCount },
+  } = useForm<ProjectDetails>({ defaultValues: projectDetailsOf(project), shouldFocusError: false });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
   // derived values
   const currentNetwork = NETWORK_CHOICES.find((n) => n.key === project.network);
 
@@ -62,7 +66,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
   const onSubmit = (details: ProjectDetails) => updateDetails(project, workspaceSlug, details, setError);
 
   return (
-    <form onSubmit={(event) => void handleSubmit(onSubmit)(event)}>
+    <form ref={formRef} onSubmit={(event) => void handleSubmit(onSubmit)(event)}>
       <div className="relative h-44 w-full">
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <CoverImage

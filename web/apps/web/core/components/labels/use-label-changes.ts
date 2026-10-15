@@ -11,7 +11,7 @@ import { useLabel } from "@/hooks/store/use-label";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { fieldErrorKeys } from "@/lib/error-messages";
-import { useFormRefusal, type UnderField } from "@/lib/form-refusal";
+import { useFormRefusal } from "@/lib/form-refusal";
 import { followInSession } from "@/lib/in-session";
 
 /** The field of a label's form under which nerve's refusals show. */
@@ -20,8 +20,8 @@ const FIELDS: readonly LabelFormField[] = ["name"];
 /** nerve's code for a name another label of the project has, in any case, under the name (M3 design 3.16). */
 const TAKEN: Readonly<Record<string, LabelFormField>> = { "project.label_name_taken": "name" };
 
-/** Where a label's form says a message of nerve's refusal: under the field (its setError), focused. */
-export type LabelUnderField = UnderField<LabelFormField>;
+/** Where a label's form says a message of nerve's refusal: under the field (its setError). */
+export type LabelUnderField = (field: LabelFormField, message: string) => void;
 
 /**
  * The changes of a project's labels that its settings page makes (M3 design 2 P7, 7.6), each through the label store,

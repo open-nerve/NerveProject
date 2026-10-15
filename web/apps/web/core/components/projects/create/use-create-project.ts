@@ -53,8 +53,7 @@ export function useCreateProject(): (
         created = project;
         setToast({ type: TOAST_TYPE.SUCCESS, title: t("success"), message: t("project_created_successfully") });
       },
-      failed: (error) =>
-        showRefusal(error, (field, message, options) => setError(field, { type: "server", message }, options)),
+      failed: (error) => showRefusal(error, (field, message) => setError(field, { type: "server", message })),
     });
     return created;
   };

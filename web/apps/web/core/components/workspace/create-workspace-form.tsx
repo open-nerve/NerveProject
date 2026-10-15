@@ -38,6 +38,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
       control,
       formState: { errors, isSubmitting, isValid },
     },
+    formRef,
     rules,
     onNameChange,
     submit,
@@ -46,7 +47,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
   const organizationSizeErrorId = useId();
 
   return (
-    <form className="space-y-6 sm:space-y-9" onSubmit={(e) => void submit(e)}>
+    <form ref={formRef} className="space-y-6 sm:space-y-9" onSubmit={(e) => void submit(e)}>
       <div className="space-y-6 sm:space-y-7">
         <div className="flex flex-col gap-2 text-13">
           <label htmlFor="workspaceName">
@@ -126,9 +127,8 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
               name="organization_size"
               control={control}
               rules={rules.organization_size}
-              render={({ field: { value, onChange, ref } }) => (
+              render={({ field: { value, onChange } }) => (
                 <CustomSelect
-                  buttonRef={ref}
                   describedBy={errors.organization_size ? organizationSizeErrorId : undefined}
                   invalid={Boolean(errors.organization_size)}
                   value={value}

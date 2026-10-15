@@ -13,7 +13,7 @@ import { ChevronDownOutline, TickOutline } from "@makeplane/propel/icons";
 // helpers
 import { useInsideModal } from "../modals/modal-core";
 import { cn } from "../utils";
-import { useFieldButton } from "./field-button";
+import { fieldButtonProps } from "./field-button";
 // types
 import type { ICustomSelectItemProps, ICustomSelectProps } from "./helper";
 
@@ -49,8 +49,8 @@ function CustomSelect(props: ICustomSelectProps) {
   // states
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
-  // the button is Popper's reference and, in a form, one of its fields
-  const { setButton, described } = useFieldButton(setReferenceElement, props);
+  // in a form, the button is one of its fields
+  const described = fieldButtonProps(props);
   // in a dialog, the list is not modal: the dialog keeps the page behind it hidden (useInsideModal)
   const insideModal = useInsideModal();
 
@@ -75,7 +75,7 @@ function CustomSelect(props: ICustomSelectProps) {
           {customButton ? (
             <Listbox.Button as={React.Fragment}>
               <button
-                ref={setButton}
+                ref={setReferenceElement}
                 type="button"
                 tabIndex={tabIndex}
                 onKeyDown={openOnEnter}
@@ -90,7 +90,7 @@ function CustomSelect(props: ICustomSelectProps) {
           ) : (
             <Listbox.Button as={React.Fragment}>
               <button
-                ref={setButton}
+                ref={setReferenceElement}
                 type="button"
                 tabIndex={tabIndex}
                 onKeyDown={openOnEnter}

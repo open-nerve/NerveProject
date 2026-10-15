@@ -15,6 +15,8 @@ import type { StateCreate } from "@nerve/api-client";
 import { Popover } from "@nerve/ui";
 // components
 import { ColorPicker } from "@/components/common/color-picker";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import type { StateUnderField } from "../use-state-changes";
 
@@ -54,8 +56,10 @@ export function StateForm(props: TStateForm) {
     setError,
     watch,
     setFocus,
-    formState: { errors, isSubmitting },
-  } = useForm<TStateFormData>({ defaultValues: data });
+    formState: { errors, isSubmitting, submitCount },
+  } = useForm<TStateFormData>({ defaultValues: data, shouldFocusError: false });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLDivElement>(submitCount);
 
   // the name has the focus once the form shows
   useEffect(() => {
@@ -64,11 +68,11 @@ export function StateForm(props: TStateForm) {
 
   // busy from the click until the page has followed nerve's answer: a second click finds the button disabled
   const submit = handleSubmit((formData) =>
-    onSubmit(formData, (field, message, options) => setError(field, { type: "server", message }, options))
+    onSubmit(formData, (field, message) => setError(field, { type: "server", message }))
   );
 
   return (
-    <div className="relative flex space-x-2 rounded-sm bg-surface-1 p-3">
+    <div ref={formRef} className="relative flex space-x-2 rounded-sm bg-surface-1 p-3">
       {/* color */}
       <div className="mt-2 h-full flex-shrink-0">
         <Popover

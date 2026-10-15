@@ -17,6 +17,8 @@ import { Button } from "@nerve/propel/button";
 import type { Label } from "@nerve/api-client";
 // components
 import { ColorPicker } from "@/components/common/color-picker";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import { useLabelChanges, type LabelUnderField } from "./use-label-changes";
 
@@ -39,7 +41,7 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
     handleSubmit,
     control,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     watch,
     setFocus,
   } = useForm<TLabelFormValues>({
@@ -48,7 +50,10 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
     defaultValues: labelToUpdate
       ? { name: labelToUpdate.name, color: labelToUpdate.color }
       : { name: "", color: getRandomLabelColor() },
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLDivElement>(submitCount);
 
   const { t } = useTranslation();
   const { create, update } = useLabelChanges();
@@ -56,8 +61,7 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
   // Busy until the page has followed nerve's answer: the form closes once nerve has made the label or the change,
   // and stays with what it holds when nerve refuses it, the reason under the name or in a toast.
   const handleFormSubmit = (formData: TLabelFormValues) => {
-    const underField: LabelUnderField = (field, message, options) =>
-      setError(field, { type: "server", message }, options);
+    const underField: LabelUnderField = (field, message) => setError(field, { type: "server", message });
     return labelToUpdate
       ? update(labelToUpdate.id, formData, underField, onClose)
       : create(projectId, formData, underField, onClose);
@@ -71,7 +75,7 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
   // the name's field holds the whole row, so that its message, under the row, is the name's description (FieldError)
   return (
     <Field name="name" invalid={Boolean(errors.name)}>
-      <div className="flex w-full scroll-m-8 items-center gap-2 bg-surface-1">
+      <div ref={formRef} className="flex w-full scroll-m-8 items-center gap-2 bg-surface-1">
         <div className="flex-shrink-0">
           <Popover className="relative z-10 flex h-full w-full items-center justify-center">
             {({ open }) => (

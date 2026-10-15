@@ -24,6 +24,7 @@ import { useMember } from "@/hooks/store/use-member";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import { addableRoles } from "./project-roles";
 
@@ -56,13 +57,15 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
   } = useMember();
   // form info
   const {
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     watch,
     setValue,
     reset,
     handleSubmit,
     control,
-  } = useForm<FormValues>({ defaultValues });
+  } = useForm<FormValues>({ defaultValues, shouldFocusError: false });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
   const { fields, append, remove } = useFieldArray({
     control,
     name: "members",
@@ -142,7 +145,7 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
       position={EModalPosition.CENTER}
       width={EModalWidth.XXL}
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="p-5">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="p-5">
         <div className="space-y-5">
           <ModalTitle className="text-16 leading-6 font-medium text-primary">
             {t("project_settings.members.add_members.title")}
@@ -160,12 +163,11 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                       control={control}
                       name={`members.${index}.member_id`}
                       rules={{ required: t("project_dialogs.member_required") }}
-                      render={({ field: { value, onChange, ref } }) => {
+                      render={({ field: { value, onChange } }) => {
                         const selectedMember = getWorkspaceMemberDetails(value);
                         const refused = Boolean(errors.members?.[index]?.member_id);
                         return (
                           <CustomSearchSelect
-                            buttonRef={ref}
                             describedBy={refused ? `${messageIds}-${index}` : undefined}
                             invalid={refused}
                             value={value}

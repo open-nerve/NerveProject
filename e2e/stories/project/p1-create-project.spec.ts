@@ -8,7 +8,13 @@ import {
 } from "../../fixtures/api";
 import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, named, register, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
+import {
+  EMOJI_CHECK_WARNING,
+  expectQuietConsole,
+  recordFocuses,
+  requestsElsewhere,
+  watchPage,
+} from "../../fixtures/browser";
 import {
   closedByComposingEscape,
   closedByEscape,
@@ -269,6 +275,13 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   await transitionsEnded(page.getByRole("dialog"));
   // its form has no heading: a hidden title names the dialog
   await expect(modalDialog(page)).toHaveAccessibleName("Create project");
+  // Sent empty, the name's rule fails: the name takes the focus, already read invalid, its message its description (as
+  // recorded when it takes it, which is when a screen reader reads it), and nothing is sent.
+  const create = page.getByRole("button", { name: "Create project" });
+  let focuses = await recordFocuses(page);
+  await create.click();
+  await expect(page.locator("#name")).toBeFocused();
+  expect((await focuses()).at(-1)).toEqual({ id: "name", invalid: "true", description: "Name is required" });
   // The name gives the identifier, as typed; the identifier typed is upper case, of the characters it may have.
   await page.locator("#name").fill("Web-App");
   // An Escape that ends an input method's composition in the name is the input method's: the modal stays open.
@@ -292,21 +305,20 @@ test("P1 (page): a member creates a project from the projects page, its identifi
   await page.getByRole("gridcell", { name: "Rocket" }).click();
 
   // Refused: the name nerve does not allow and the identifier taken, each under its field.
-  const create = page.getByRole("button", { name: "Create project" });
   const refusedName = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
   expect(refusedName.answer.status()).toBe(422);
   await expect(page.getByText("Not allowed")).toBeVisible();
   await page.locator("#name").fill("Web App");
   await page.locator("#identifier").fill("web");
+  focuses = await recordFocuses(page);
   const refusedIdentifier = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/projects`, () => create.click());
   expect(refusedIdentifier.answer.status()).toBe(409);
-  await expect(page.getByText("A project of this workspace already has this identifier.")).toBeVisible();
-  // the field refused has the focus, and is read invalid, its message its description
+  const taken = "A project of this workspace already has this identifier.";
+  await expect(page.getByText(taken)).toBeVisible();
+  // the field refused takes the focus, already read invalid, its message its description
   await expect(page.locator("#identifier")).toBeFocused();
-  await expect(page.locator("#identifier")).toHaveAttribute("aria-invalid", "true");
-  await expect(page.locator("#identifier")).toHaveAccessibleDescription(
-    "A project of this workspace already has this identifier."
-  );
+  expect((await focuses()).at(-1)).toEqual({ id: "identifier", invalid: "true", description: taken });
+  await expect(page.locator("#identifier")).toHaveAccessibleDescription(taken);
 
   // Created: the form's fields alone, sent once; the form cannot be closed until nerve answers.
   await page.locator("#identifier").fill("webapp");

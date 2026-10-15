@@ -18,6 +18,7 @@ import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local components
 import { CommonOnboardingHeader } from "../common";
 
@@ -48,14 +49,17 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
     control,
     watch,
     setError,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting, isValid, submitCount },
   } = useForm<TProfileSetupFormValues>({
     defaultValues: {
       first_name: user?.first_name ?? "",
       last_name: user?.last_name ?? "",
     },
     mode: "onChange",
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
 
   const onSubmit = async (formData: TProfileSetupFormValues) => {
     if (!user) return;
@@ -69,7 +73,7 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
       done: () => onDone(),
       failed: (error) => {
         const key = fieldErrorKeys(error).first_name;
-        if (key !== undefined) setError("first_name", { type: "manual", message: t(key) }, { shouldFocus: true });
+        if (key !== undefined) setError("first_name", { type: "manual", message: t(key) });
         if (needsErrorBanner(error, FIELDS)) toastRefusal(error);
       },
     });
@@ -78,7 +82,7 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
   const isButtonDisabled = isSubmitting || !isValid;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-10">
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-10">
       {/* Header */}
       <CommonOnboardingHeader title={t("onboarding.profile.title")} description={t("onboarding.profile.description")} />
 

@@ -45,6 +45,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
       control,
       formState: { errors, isSubmitting, isValid },
     },
+    formRef,
     rules,
     onNameChange,
     submit,
@@ -63,7 +64,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
     );
   }
   return (
-    <form className="flex flex-col gap-10" onSubmit={(e) => void submit(e)}>
+    <form ref={formRef} className="flex flex-col gap-10" onSubmit={(e) => void submit(e)}>
       <CommonOnboardingHeader
         title={t("workspace_creation.heading")}
         description={t("onboarding.workspace.description")}
@@ -185,8 +186,8 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
               control={control}
               rules={rules.organization_size}
               render={({ field: { value, onChange } }) => (
-                // the sizes, a group of buttons (none of Base UI's controls), named by the label and described by the
-                // message while one shows
+                // the sizes, a group of toggle buttons (none of Base UI's controls), the one chosen pressed, named by
+                // the label and described by the message while one shows
                 <div
                   role="group"
                   aria-labelledby={organizationSizeLabelId}
@@ -198,6 +199,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({ onCre
                     return (
                       <button
                         key={size}
+                        aria-pressed={isSelected}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();

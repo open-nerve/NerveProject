@@ -1,6 +1,6 @@
 import { accountOf, expectPasswordChanged, tokensOf } from "../../fixtures/assert/identity";
 import { bearer, createPAT, emailFor, login, password, recordOf, registeredPAT } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, recordFocuses, watchPage } from "../../fixtures/browser";
 import { fieldBlock, registerOnboarded, submitPasswordChange } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -50,16 +50,25 @@ test("A7 (page): the security page changes the password, keeps its own session, 
 
   // A wrong current password shows under its field; a new password too common, under the new one. Nothing
   // changes.
-  // Each field refused has the focus, read invalid, its message its description.
+  // Each field refused takes the focus, already read invalid, its message its description (as recorded when it takes
+  // it, which is when a screen reader reads it).
+  let focuses = await recordFocuses(page);
   expect(await submitPasswordChange(page, "Wr0ng-password", newPassword)).toBe(422);
-  await expect(fieldBlock(page, "old_password").getByText("The current password is wrong.")).toBeVisible();
+  const wrong = "The current password is wrong.";
+  await expect(fieldBlock(page, "old_password").getByText(wrong)).toBeVisible();
   const oldField = page.locator("#old_password");
   await expect(oldField).toBeFocused();
-  await expect(oldField).toHaveAttribute("aria-invalid", "true");
-  await expect(oldField).toHaveAccessibleDescription("The current password is wrong.");
+  expect((await focuses()).at(-1)).toEqual({ id: "old_password", invalid: "true", description: wrong });
+  await expect(oldField).toHaveAccessibleDescription(wrong);
+  focuses = await recordFocuses(page);
   expect(await submitPasswordChange(page, password, "Password1!")).toBe(422);
   await expect(fieldBlock(page, "new_password").getByText("This password is too common")).toBeVisible();
   await expect(newField).toBeFocused();
+  expect((await focuses()).at(-1)).toMatchObject({
+    id: "new_password",
+    invalid: "true",
+    description: expect.stringMatching(/^This password is too common/),
+  });
   await expect(newField).toHaveAccessibleDescription(/^This password is too common/);
   await expect(page.getByText("The current password is wrong.")).toHaveCount(0);
   expect(await accountOf(db, email)).toEqual(before);

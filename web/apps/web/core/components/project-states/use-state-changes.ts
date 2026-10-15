@@ -8,7 +8,7 @@ import type { StateCreate, StateGroup, StateUpdate } from "@nerve/api-client";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
-import { useFormRefusal, type UnderField } from "@/lib/form-refusal";
+import { useFormRefusal } from "@/lib/form-refusal";
 import { followInSession } from "@/lib/in-session";
 
 /** The fields of a state's form under which nerve's refusals show, in the order their messages show. */
@@ -17,8 +17,8 @@ const FIELDS: readonly StateFormField[] = ["name", "description"];
 /** nerve's code for a name another state of the project has, under the name (M3 design 3.17). */
 const TAKEN: Readonly<Record<string, StateFormField>> = { "project.state_name_taken": "name" };
 
-/** Where a state's form says a message of nerve's refusal: under the field (its setError), the first focused. */
-export type StateUnderField = UnderField<StateFormField>;
+/** Where a state's form says a message of nerve's refusal: under the field (its setError). */
+export type StateUnderField = (field: StateFormField, message: string) => void;
 
 /**
  * The changes of a project's states that its settings page makes (M3 design 2 P6, 7.6), each through the state store,

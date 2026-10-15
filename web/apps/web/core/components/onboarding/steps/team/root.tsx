@@ -44,7 +44,7 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
   const {
     workspace: { inviteMembersToWorkspace },
   } = useMember();
-  const { control, fields, formState, remove, onFormSubmit, appendField } = useWorkspaceInvitationActions({
+  const { control, fields, formState, formRef, remove, onFormSubmit, appendField } = useWorkspaceInvitationActions({
     invite: (data) => inviteMembersToWorkspace(workspace.slug, data),
     onSent: setSent,
   });
@@ -58,6 +58,7 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
   if (sent) return <InvitationLinks invitations={sent} onDone={end} ending={ending} />;
   return (
     <form
+      ref={formRef}
       className="flex flex-col gap-10"
       onSubmit={onFormSubmit}
       onKeyDown={(e) => {

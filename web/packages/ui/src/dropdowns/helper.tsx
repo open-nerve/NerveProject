@@ -43,10 +43,8 @@ export interface ICustomMenuDropdownProps extends IDropdownProps {
   ariaLabel?: string;
 }
 
-/** What a form gives a select that is one of its fields (useFieldButton). */
+/** What a form gives a select that is one of its fields (fieldButtonProps). */
 export interface ISelectFieldProps {
-  /** Given the select's button as it mounts: a form focuses the select by it (react-hook-form's field.ref). */
-  buttonRef?: (button: HTMLButtonElement | null) => void;
   /** The id of the message that describes the select, while one shows: its button's aria-describedby. */
   describedBy?: string;
   /** Whether the select's value is refused: its button is aria-invalid. */
