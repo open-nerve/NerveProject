@@ -37,6 +37,10 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
 - **下拉框**：C7 没有核对 M6 页面上的 `CustomSearchSelect` 调用方（成员下拉框的 2 个文件，迭代、模块、视图的页头），对接时用键盘核对。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M6 的页面上核对。
 - **筛选的按钮**（M3 收尾 Task 12，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9）：`FiltersDropdown` 默认的按钮现在就是弹层的 `Popover.Button`（以 `title` 为名、`aria-expanded`、Escape 之后焦点回到它，指针点开之后焦点留在它上面，同 M4 的交接第 7 节）；M6 的 8 个调用方（6 个用默认的按钮）在收尾 spec 附录 A.4 逐个核对过，没有故事走到，M6 的筛选的故事落地时断言按钮的名字、`aria-expanded` 和 Escape 之后焦点回到它。
 - **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：迭代一行的菜单按钮 `cycles/quick-actions.tsx:141` 和模块一行的 `modules/quick-actions.tsx:135`（都叫"Options"）以迭代、模块的名字为名：两处已有的 `cycleDetails?.name`、`moduleDetails?.name`；M3 收尾已加的带 `{name}` 的键 `common.item_options`（"{name} options"、"{name} 的选项"，项目成员页、标签页一行的菜单读它）。
+- **字段的提示、弹窗里的列表、列表里的控件**（M3 收尾的浏览器核对之后的修复，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2、3、5 条；写法同 M4 的交接第 7 节）。
+  - 迭代、模块的表单的名字的提示（`cycles/form.tsx:134`、`modules/form.tsx:145`）照 M2、M3 的表单：提示是字段的 propel `FieldError`，控件以它为描述、`aria-invalid`，被拒绝的字段取得焦点。模块链接的弹窗（`modules/links/create-update-modal.tsx`）的地址的规则带一句英文的提示（"URL is required"），却不显示它，输入框只是 `aria-invalid`：照同一个写法显示它、以它为描述。
+  - 在弹窗里打开的列表读 `useInsideModal()`，在弹窗里 `modal={false}`：`dropdowns/cycle/cycle-options.tsx`、`dropdowns/module/module-options.tsx`（工作项的弹窗里）、`dropdowns/date-range.tsx`（迭代的弹窗里）的 `Combobox.Options`；`core/modals/existing-issues-list-modal.tsx` 的列表本身就是弹窗的内容，核对它打开时后面的页面隐藏着。
+  - `core/modals/existing-issues-list-modal.tsx` 每个选项里只在指针经过时显示的链接（`:290`），方向键到不了；已选的工作项的移除按钮（`:175`）没有名字。
 - **关闭条件**：M6 的评审写明上面每一项的浏览器核对。
 
 ## 4. 地址、复制和 oxlint

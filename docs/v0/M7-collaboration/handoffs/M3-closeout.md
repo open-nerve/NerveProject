@@ -37,6 +37,10 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
 - **每一行的控件以它那一行为名**（M3 收尾的规则，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9：一行一个、每行都一样的控件以那一行的东西为名，同 F6 的项目一行、"{name} settings"、"Remove X"）：视图一行的菜单按钮 `views/quick-actions.tsx:94`（"Options"）以视图的名字为名：已有的 `view.name`；M3 收尾已加的带 `{name}` 的键 `common.item_options`（"{name} options"、"{name} 的选项"，项目成员页、标签页一行的菜单读它）。
 - **下拉框**：收集箱的两个指派人的成员下拉框（`inbox/content/issue-properties.tsx`、`inbox/modals/create-modal/issue-properties.tsx`）以 `CustomSearchSelect` 为底之后看得到的不同同 M4 的交接第 7 节，在 M7 的页面上核对（C7 没有核对）。右键菜单关着时 `inert`，在 M7 的页面上核对右键打开。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉，在 M7 的页面上核对。
 - **筛选的按钮**（M3 收尾 Task 12，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.9）：`FiltersDropdown` 默认的按钮现在就是弹层的 `Popover.Button`（以 `title` 为名、`aria-expanded`、Escape 之后焦点回到它，指针点开之后焦点留在它上面，同 M4 的交接第 7 节）；M7 的 7 个调用方（5 个用默认的按钮）在收尾 spec 附录 A.4 逐个核对过，没有故事走到，M7 的筛选的故事落地时断言按钮的名字、`aria-expanded` 和 Escape 之后焦点回到它。
+- **字段的提示、弹窗里的列表、列表里的控件**（M3 收尾的浏览器核对之后的修复，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2、3、5 条；写法同 M4 的交接第 7 节）。
+  - 视图、工作区视图的表单的名字的提示（`views/form.tsx:186`、`workspace/views/form.tsx:110`）照 M2、M3 的表单：提示是字段的 propel `FieldError`，控件以它为描述、`aria-invalid`，被拒绝的字段取得焦点。通知的稍后提醒的两条规则（`snooze/modal.tsx:133`、`:156`）带写死的英文的提示，却不显示；收藏夹的新建（`workspace/sidebar/favorites/new-fav-folder.tsx`）的规则没有提示：没过规则时读屏什么也读不到，照同一个写法给它们经 `t()` 的提示。
+  - 收集箱的查重（`inbox/modals/select-duplicate.tsx`）的列表本身就是弹窗的内容，核对它打开时后面的页面隐藏着；在弹窗里打开的别的列表读 `useInsideModal()`。
+  - 稍后提醒的时间的 `CustomSelect` 列表里，AM、PM 是两个可点的 `div`（`snooze/modal.tsx:176`、`:187`），不是选项，方向键到不了：改为选项，或移到列表之外。
 - **关闭条件**：M7 的评审写明上面每一项的浏览器核对。
 
 ## 4. 地址、复制、文案和其余
