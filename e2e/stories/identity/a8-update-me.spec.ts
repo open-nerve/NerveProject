@@ -1,5 +1,5 @@
 import { accountOf, expectAccountChanged } from "../../fixtures/assert/identity";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   answerTo,
@@ -105,6 +105,9 @@ test("A8 (page): the general page saves the names nerve takes, an empty last nam
   expect((await answerTo(page, "PATCH", "/api/v0/me", save)).status()).toBe(422);
   await expect(fieldBlock(page, "first_name").getByText("Must not contain a web address")).toBeVisible();
   await expect(page.getByText("Must not contain a web address")).toHaveCount(1);
+  // the field refused takes the focus, its message its description
+  await expect(page.locator("#first_name")).toBeFocused();
+  await expect(page.locator("#first_name")).toHaveAccessibleDescription("Must not contain a web address");
   await expect(page.getByText("Some fields are not valid.")).toHaveCount(0);
   expect(await accountOf(db, email)).toEqual(saved);
 
@@ -122,7 +125,7 @@ test("A8 (API): a personal access token changes the names and the time zone; nul
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const pat = await registeredPAT(api, email);
   const before = await accountOf(db, email);
   const change = { first_name: "Ada", last_name: "Lovelace", display_name: "ada", user_timezone: "Asia/Shanghai" };
 

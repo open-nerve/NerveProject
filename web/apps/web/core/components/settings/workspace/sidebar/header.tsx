@@ -14,19 +14,17 @@ import { IconButton } from "@nerve/propel/icon-button";
 import { WorkspaceLogo } from "@/components/workspace/logo";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 import { useNavigate } from "react-router";
-import { useWorkspace } from "@/hooks/store/use-workspace";
 
 export const WorkspaceSettingsSidebarHeader = observer(function WorkspaceSettingsSidebarHeader() {
   // router
   const navigate = useNavigate();
   // store hooks
   const { getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
-  const { currentWorkspace } = useWorkspace();
+  const workspace = useRouteWorkspace();
   // derived values
-  const currentWorkspaceRole = currentWorkspace?.slug
-    ? getWorkspaceRoleByWorkspaceSlug(currentWorkspace.slug)
-    : undefined;
+  const currentWorkspaceRole = workspace ? getWorkspaceRoleByWorkspaceSlug(workspace.slug) : undefined;
   // translation
   const { t } = useTranslation();
 
@@ -39,19 +37,20 @@ export const WorkspaceSettingsSidebarHeader = observer(function WorkspaceSetting
           variant="ghost"
           size="base"
           icon={ArrowNarrowLeftOutline}
-          onClick={() => navigate(`/${currentWorkspace?.slug}`)}
+          aria-label={t("common.go_back")}
+          onClick={() => navigate(`/${workspace?.slug}`)}
         />
-        <p>Workspace settings</p>
+        <p>{t("workspace_settings.sidebar_title")}</p>
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2 px-5 py-0.5">
         <div className="flex items-center gap-2 truncate">
           <WorkspaceLogo
-            logo={currentWorkspace?.logo_url}
-            name={currentWorkspace?.name}
+            logo={workspace?.logo_url}
+            name={workspace?.name}
             classNames="shrink-0 size-8 border border-subtle"
           />
           <div className="truncate">
-            <p className="truncate text-body-sm-medium">{currentWorkspace?.name}</p>
+            <p className="truncate text-body-sm-medium">{workspace?.name}</p>
             <p className="truncate text-caption-md-regular">{t(ROLE_DETAILS[currentWorkspaceRole].i18n_title)}</p>
           </div>
         </div>

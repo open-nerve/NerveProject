@@ -355,7 +355,7 @@ api/common.yaml + api/modules/*.yaml
 |---|---|
 | `server` | 安装 Go 1.27.1 → `make gen-check-go` → `make lint-go`（锁定版本的 golangci-lint）→ `make test`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
 | `web` | `corepack enable` → 缓存 pnpm 存储（按锁文件的哈希）→ `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（关键词守卫、类型检查、oxlint 警告数等于上限、格式检查、中英文翻译键一致性、`tools/` 下脚本的 lint 和格式检查；守卫和后三项的改动来自 M1/P1）→ `make test-web`（前端单元测试，M1/P1 加入）→ `make knip`（未使用代码报告，M0/P6 加入）→ `make build-web`（M0/P5 加入） |
-| `e2e` | 在 `server` 和 `web` 通过后运行：安装 Playwright 的 Chromium Headless Shell（`--with-deps`）→ `make build` → `make e2e`；`VERSION=0.0.0-ci.<运行编号>`；超时 20 分钟；失败或被取消时上传 `playwright-report`、`test-results`（P6 加入） |
+| `e2e` | 在 `server` 和 `web` 通过后运行：安装 Playwright 的 Chromium Headless Shell 和 Firefox（`--with-deps`；Firefox 只跑 A4 的页面测试：A4 表明，在 Firefox 中刷新锁在任务落定时就释放，可能比这个任务写的 localStorage 先到下一个标签页，晚一个任务释放就排在写之后，M3 收尾的 F-A4）→ `make build` → `make e2e`；`VERSION=0.0.0-ci.<运行编号>`；超时 20 分钟；失败或被取消时上传 `playwright-report`、`test-results`（P6 加入） |
 
 持续集成不运行 Plane 表结构快照的提取（`make plane-schema`）：两个输入都按摘要写死，快照不会自己变化，见 [P4 spec](specs/P4-plane-schema.md) 2.8。
 

@@ -13,6 +13,8 @@ import type { State } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { AlertModalCore } from "@nerve/ui";
 import { cn } from "@nerve/utils";
+// components
+import { Translated } from "@/components/common/translated";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
@@ -51,18 +53,20 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
         handleSubmit={handleDeleteState}
         isSubmitting={isDelete}
         isOpen={isDeleteModal}
-        title="Delete State"
+        title={t("project_settings.states.delete.title")}
+        primaryButtonText={{ default: t("delete"), loading: t("deleting") }}
+        secondaryButtonText={t("cancel")}
         content={
-          <>
-            Are you sure you want to delete state- <span className="font-medium text-primary">{state?.name}</span>? All
-            of the data related to the state will be permanently removed. This action cannot be undone.
-          </>
+          <Translated
+            i18nKey="project_settings.states.delete.body"
+            values={{ name: <span className="font-medium text-primary">{state.name}</span> }}
+          />
         }
       />
 
       <button
         type="button"
-        aria-label={t("common.actions.delete")}
+        aria-label={t("common.delete_item", { name: state.name })}
         className={cn(
           "flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm transition-colors",
           isDeleteDisabled ? "bg-surface-2 text-secondary" : "text-danger-primary hover:bg-layer-1"
@@ -72,7 +76,11 @@ export const StateDelete = observer(function StateDelete(props: TStateDelete) {
       >
         <Tooltip
           label={
-            state.default ? "Cannot delete the default state." : totalStates === 1 ? `Cannot have an empty group.` : ``
+            state.default
+              ? t("project_settings.states.delete.default")
+              : totalStates === 1
+                ? t("project_settings.states.delete.only_one")
+                : ""
           }
           layout="stacked"
           disabled={!isDeleteDisabled || isMobile}

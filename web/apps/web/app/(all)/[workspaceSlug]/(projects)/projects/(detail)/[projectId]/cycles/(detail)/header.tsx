@@ -233,6 +233,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
             variant="tertiary"
             size="lg"
             icon={RightSidePaneOutline}
+            aria-label={t("aria_labels.toggle_details")}
             onClick={toggleSidebar}
             className={cn({
               "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,

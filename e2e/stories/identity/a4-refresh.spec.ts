@@ -1,7 +1,7 @@
 import type { BrowserContext, Page, Request } from "@playwright/test";
 
 import { createApi } from "../../fixtures/api";
-import { expectRefreshed, generationOf } from "../../fixtures/assert/identity";
+import { expectRefreshed, generationOf } from "../../fixtures/assert/session";
 import { bearer, emailFor, login, recordOf, refresh, register } from "../../fixtures/auth";
 import { expectQuietConsole, followAccessToken, watchPage } from "../../fixtures/browser";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";

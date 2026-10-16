@@ -16,6 +16,11 @@ export class ApiError extends Error {
   }
 }
 
+/** nerve's problem code of an error of a call to nerve ("workspace.slug_taken"), or undefined: no answer, no problem. */
+export function problemCode(error: unknown): string | undefined {
+  return error instanceof ApiError ? error.problem?.code : undefined;
+}
+
 /** The data of an answer of the generated client, or the answer as an ApiError when it is not a success. */
 export function unwrap<T>(result: { data?: T; error?: unknown; response: Response }): T {
   if (result.response.ok) return result.data as T;

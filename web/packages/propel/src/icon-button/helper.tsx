@@ -40,11 +40,13 @@ export const iconButtonVariants = cva(
   }
 );
 
-type IconButtonPropsWithChildren = React.ButtonHTMLAttributes<HTMLButtonElement> &
+type IconButtonPropsWithChildren = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> &
   VariantProps<typeof iconButtonVariants> & {
     icon: React.FC<{ className?: string }>;
     loading?: boolean;
     iconClassName?: string;
+    /** The button's name: it shows an icon alone, no text to be named by. */
+    "aria-label": string;
   };
 export type IconButtonProps = Omit<IconButtonPropsWithChildren, "children">;
 

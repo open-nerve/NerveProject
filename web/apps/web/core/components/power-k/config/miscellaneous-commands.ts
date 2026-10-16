@@ -7,14 +7,12 @@
 import { useCallback } from "react";
 import { LeftSidePaneOutline, LinkOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
-// nerve imports
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import { copyTextToClipboard } from "@nerve/utils";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { usePowerK } from "@/hooks/store/use-power-k";
+import { useCopyLink } from "@/hooks/use-copy-link";
 
 export const usePowerKMiscellaneousCommands = (): TPowerKCommandConfig[] => {
   // store hooks
@@ -22,25 +20,7 @@ export const usePowerKMiscellaneousCommands = (): TPowerKCommandConfig[] => {
   const { topNavInputRef, topNavSearchInputRef } = usePowerK();
   // translation
   const { t } = useTranslation();
-
-  const copyCurrentPageUrlToClipboard = useCallback(() => {
-    const url = new URL(window.location.href);
-    copyTextToClipboard(url.href)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("power_k.miscellaneous_actions.copy_current_page_url_toast_success"),
-        });
-        return;
-      })
-      .catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("power_k.miscellaneous_actions.copy_current_page_url_toast_error"),
-        });
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const copyLink = useCopyLink();
 
   const focusTopNavSearch = useCallback(() => {
     // Focus PowerK input if available, otherwise focus regular search input
@@ -70,7 +50,8 @@ export const usePowerKMiscellaneousCommands = (): TPowerKCommandConfig[] => {
       type: "action",
       i18n_title: "power_k.miscellaneous_actions.copy_current_page_url",
       icon: LinkOutline,
-      action: copyCurrentPageUrlToClipboard,
+      action: () =>
+        copyLink(window.location.href, t("power_k.miscellaneous_actions.copy_current_page_url_toast_success")),
       modifierShortcut: "cmd+shift+c",
       isEnabled: () => true,
       isVisible: () => true,

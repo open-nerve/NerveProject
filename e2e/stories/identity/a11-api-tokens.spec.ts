@@ -4,9 +4,16 @@ import type { components } from "@nerve/api-client";
 import type { Download } from "@playwright/test";
 
 import { expectTokenStored } from "../../fixtures/assert/identity";
-import { anotherTabSignsIn, bearer, createPAT, emailFor, login, register } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, createPAT, emailFor, login, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByBackdropClick, closedByEscape, downloadedWithin, enabledWithin } from "../../fixtures/dialogs";
+import {
+  closedByBackdropClick,
+  closedByEscape,
+  downloadedWithin,
+  enabledWithin,
+  modalDialog,
+  pageBehindHidden,
+} from "../../fixtures/dialogs";
 import {
   answerTo,
   expectListBesideButton,
@@ -23,7 +30,7 @@ import { expect, test } from "../../fixtures/test";
 
 const weekMs = 7 * 24 * 60 * 60 * 1000;
 
-test("A11 (page): a token created on the page shows once, and nowhere after; the list shows it without it, and revokes it", async ({
+test("A11 (page): a token created on the page shows once, with the focus on it, a click on it copies it and says so, and nowhere after; the list shows it without it, and revokes it", async ({
   api,
   db,
   signedInPage,
@@ -38,14 +45,24 @@ test("A11 (page): a token created on the page shows once, and nowhere after; the
   // Created with a name, a description and a week. A day of one's own is picked in a calendar that opens beside
   // its button, and that Escape closes; the week replaces it.
   await page.getByRole("button", { name: "Add access token" }).first().click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Create token");
   await page.getByLabel("Title").fill("deploy");
   await page.getByLabel("Description").fill("ci, #1");
-  await page.getByRole("button", { name: "Set expiration date" }).click();
+  // Sent with no expiry, the form says it needs one: the expiry's select takes the focus, its message its description.
+  const expiry = page.getByRole("button", { name: "Set expiration date" });
+  await page.getByRole("button", { name: "Generate token" }).click();
+  await expect(expiry).toBeFocused();
+  await expect(expiry).toHaveAccessibleDescription("Choose when the token expires, or that it never does.");
+  await expiry.click();
+  // the expiry's list, and the calendar below, open in the dialog: the page behind it stays hidden, as the dialog has it
+  await expect(page.getByRole("option", { name: "Custom date" })).toBeVisible();
+  expect(await pageBehindHidden(page)).toBe(true);
   await page.getByRole("option", { name: "Custom date" }).click();
   // The dropdown's button, which holds the button of its label.
   const day = page.getByRole("button", { name: "Set date" }).first();
   await day.click();
   await expectListBesideButton(page, day);
+  expect(await pageBehindHidden(page)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await day.click();
@@ -69,6 +86,21 @@ test("A11 (page): a token created on the page shows once, and nowhere after; the
   // The token shows this once, and the CSV downloaded has it: the header, and one record of four whole fields,
   // each comma of the description and of the date in its own.
   await expect(page.getByText(created.token)).toBeVisible();
+  // The focus is on the token's button, the control the page asks for next (the form's button that had it is gone);
+  // reached by the keyboard, it shows where it is, as the dialog's other buttons do.
+  const token = page.getByRole("button", { name: created.token });
+  await expect(token).toBeFocused();
+  await expect(modalDialog(page)).toHaveAccessibleName("Key created");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(token).toBeFocused();
+  await expect(token).not.toHaveCSS("outline-style", "none");
+  await expect(token).toHaveCSS("outline-offset", "2px");
+  // A click on it copies it as it is, and the page says so.
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await token.click();
+  await expect(page.getByText("Token copied to clipboard.")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(created.token);
   const csv = parseCsv(await readFile(await (await downloaded).path(), "utf8"));
   expect(csv).toEqual([
     ["Title", "Description", "Expiry", "Secret key"],
@@ -102,6 +134,7 @@ test("A11 (page): a token created on the page shows once, and nowhere after; the
   // neither Escape nor its backdrop closes it.
   expect((await api.GET("/api/v0/me", { headers: bearer(created.token) })).response.status).toBe(200);
   await page.getByRole("button", { name: "Revoke token" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Delete access token");
   const revocation = await sentHeld(page, "DELETE", `/api/v0/api-tokens/${created.id}`, () =>
     page.getByRole("button", { name: "Delete" }).click()
   );
@@ -310,7 +343,7 @@ test("A11 (API): a token creates, lists page by page and revokes another; a revo
   api,
   db,
 }, testInfo) => {
-  const admin = await createPAT(api, (await register(api, emailFor(testInfo))).access_token, { label: "admin" });
+  const admin = await registeredPAT(api, emailFor(testInfo), { label: "admin" });
   const expiredAt = new Date(Date.now() + weekMs).toISOString();
 
   const created = await createPAT(api, admin.token, { label: "deploy", description: "ci", expired_at: expiredAt });
@@ -354,7 +387,7 @@ test("A11 (API): a token creates, lists page by page and revokes another; a revo
   expect((await list()).map((t) => t.id)).toEqual([admin.id]);
 
   // Another account's token is not found, and it keeps working.
-  const other = await createPAT(api, (await register(api, emailFor(testInfo, "other"))).access_token);
+  const other = await registeredPAT(api, emailFor(testInfo, "other"));
   const foreign = await api.DELETE("/api/v0/api-tokens/{token_id}", {
     params: { path: { token_id: other.id } },
     headers: bearer(admin.token),

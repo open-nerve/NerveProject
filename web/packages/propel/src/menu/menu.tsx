@@ -11,13 +11,16 @@ import { cn } from "../utils/classname";
 import type { TMenuProps, TMenuItemProps } from "./types";
 
 function MenuItem(props: TMenuItemProps) {
-  const { children, disabled = false, onClick, className } = props;
+  const { children, disabled = false, onClick, className, render, title } = props;
 
   return (
     <BaseMenu.Item
       disabled={disabled}
+      render={render}
+      title={title}
+      // the item the arrow keys reach is marked as the one the pointer is over
       className={cn(
-        "w-full cursor-pointer truncate rounded-sm px-1 py-1.5 text-left text-secondary outline-none select-none hover:bg-layer-1",
+        "w-full cursor-pointer truncate rounded-sm px-1 py-1.5 text-left text-secondary outline-none select-none hover:bg-layer-1 data-highlighted:bg-layer-1",
         {
           "text-placeholder": disabled,
         },

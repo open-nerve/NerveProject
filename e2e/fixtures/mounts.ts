@@ -1,5 +1,6 @@
-// What the pages ask nerve for as they load: S2's REQUESTS is built of these lists, and a page's story that checks what
-// it loads reads them here rather than writing its own.
+// What the pages ask nerve for as they load, and the workspace menu as it opens: S2's REQUESTS is built of these lists,
+// S2 opens the menu after them, and a page's story that checks what it loads reads them here rather than writing its
+// own.
 
 /**
  * What a page asks nerve for as it loads, signed in, as "<method> <path>" with the query when there is one, {slug} for
@@ -40,6 +41,26 @@ export const GENERAL = ["GET /api/v0/timezones"];
 export const ARCHIVED = ["GET /api/v0/workspaces/{slug}/projects?archived=true"];
 /** The members page lists the workspace's invitations for an admin alone, as nerve shows them to no one else. */
 export const INVITATIONS = ["GET /api/v0/workspaces/{slug}/invitations"];
+/**
+ * The workspace menu asks nerve for nothing as it opens, whatever the role (M3 closeout, W2): its entries are the
+ * workspaces the app's start loaded (APP), and its leaving asks the dialog's question before it sends anything.
+ */
+export const WORKSPACE_MENU: string[] = [];
+/**
+ * What a project's work items page asks for as it loads beside these lists, M4's to change: Plane's address of the
+ * work item filters of the project of id in the workspace of slug, outside /api/v0 (M3/P8b spec §5 and A.5). nerve
+ * answers it 404, which the page's watch counts a failure and the browser logs as an error. A story that opens the
+ * page allows the three, once a load, through this: when M4 moves the filters to nerve, this goes, and the stories'
+ * allowances with it.
+ */
+export function workItemFilters(slug: string, id: string): { request: string; failure: string; logged: string } {
+  const request = `GET /api/workspaces/${slug}/projects/${id}/user-properties/`;
+  return {
+    request,
+    failure: `404 ${request}`,
+    logged: "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  };
+}
 
 /** path with the values of names in place of their names: the address of a page of REQUESTS, or a request of a list. */
 export function valued(path: string, names: Record<string, string>): string {

@@ -227,7 +227,7 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
               </span>
             )}
             {/* created by */}
-            {createdByDetails && <ButtonAvatars showTooltip={false} userIds={createdByDetails?.id} />}
+            {createdByDetails && <ButtonAvatars userIds={createdByDetails?.id} />}
           </div>
         </>
       ) : (
@@ -263,7 +263,7 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
         )
       )}
       {/* created by */}
-      {createdByDetails && !isActive && <ButtonAvatars showTooltip={false} userIds={createdByDetails?.id} />}
+      {createdByDetails && !isActive && <ButtonAvatars userIds={createdByDetails?.id} />}
       {!isActive && (
         <Tooltip label={`${cycleDetails.assignee_ids?.length} Members`} layout="stacked" disabled={isMobile}>
           <div className="flex w-min cursor-default items-center justify-center">

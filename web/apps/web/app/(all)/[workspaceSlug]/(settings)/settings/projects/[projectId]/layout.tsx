@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { Fragment } from "react";
 import { observer } from "mobx-react";
 import { Outlet, useLocation } from "react-router";
 // components
@@ -20,8 +21,11 @@ function ProjectDetailSettingsLayout({ params }: Route.ComponentProps) {
   // router
   const { pathname } = useLocation();
 
+  // keyed by the route's project (v0 design 7.7, state keyed by id): a switch to another project's settings, by a Back
+  // or Forward too, mounts its sidebar and its page afresh, so no dialog or state opened in one project carries into
+  // the other
   return (
-    <>
+    <Fragment key={projectId}>
       <SettingsMobileNav
         hamburgerContent={(props) => <ProjectSettingsSidebarRoot {...props} projectId={projectId} />}
         activePath={getProjectActivePath(pathname) || ""}
@@ -36,7 +40,7 @@ function ProjectDetailSettingsLayout({ params }: Route.ComponentProps) {
           </ProjectAuthWrapper>
         </div>
       </div>
-    </>
+    </Fragment>
   );
 }
 

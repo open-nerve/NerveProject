@@ -16,13 +16,13 @@ import { PageHead } from "@/components/core/page-title";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectFilter } from "@/hooks/store/use-project-filter";
-import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // local imports
 import { ProjectAppliedFiltersList } from "./applied-filters";
 import { ProjectCardList } from "./card-list";
 
 export const ProjectRoot = observer(function ProjectRoot() {
-  const { currentWorkspace } = useWorkspace();
+  const workspace = useRouteWorkspace();
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();
   const { t } = useTranslation();
@@ -37,9 +37,7 @@ export const ProjectRoot = observer(function ProjectRoot() {
     updateDisplayFilters,
   } = useProjectFilter();
   // derived values
-  const pageTitle = currentWorkspace?.name
-    ? `${currentWorkspace?.name} - ${t("workspace_projects.label", { count: 2 })}`
-    : undefined;
+  const pageTitle = workspace ? `${workspace.name} - ${t("workspace_projects.label", { count: 2 })}` : undefined;
 
   const isArchived = matchPath("/:workspaceSlug/projects/archives", pathname) !== null;
 
@@ -72,12 +70,14 @@ export const ProjectRoot = observer(function ProjectRoot() {
     clearAllFilters(workspaceSlug);
     clearAllAppliedDisplayFilters(workspaceSlug);
     if (isArchived) updateDisplayFilters(workspaceSlug, { archived_projects: true });
-  }, [clearAllFilters, clearAllAppliedDisplayFilters, workspaceSlug]);
+  }, [clearAllFilters, clearAllAppliedDisplayFilters, isArchived, updateDisplayFilters, workspaceSlug]);
 
+  // The archives show the archived projects, the list the others. Each mounts this root apart, isArchived fixed for the
+  // mount, so the effect runs at the mount and when the workspace changes.
   useEffect(() => {
     if (!workspaceSlug) return;
     updateDisplayFilters(workspaceSlug, { archived_projects: isArchived });
-  }, [pathname]);
+  }, [isArchived, updateDisplayFilters, workspaceSlug]);
 
   return (
     <>

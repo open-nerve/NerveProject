@@ -1,5 +1,5 @@
 ---
-status: done
+status: closed
 from: M0/P3
 to: M3
 created: 2026-09-22
@@ -28,3 +28,11 @@ M2 的 PAT 列表（`listApiTokens`）是第一个列表接口，分页的公共
 全部处理完，状态改为 `done`。M3 的列表接口直接引用这些组件。
 
 来源：[M2/P3a spec](../../M2-auth/specs/P3a-account-api.md) 2.11、第 3 节第 8 条。
+
+## 处理结果（M3/收尾）
+
+M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3）：M3 的操作不引用 `Limit`、`Cursor`、`NextCursor`，它们只由 M2 的 `listApiTokens` 引用（`api/modules/identity.yaml`）；`apitest` 的组件名检查随 `make test` 通过，没有 `Name-2`。页大小的规则移到 `shared` 一事（M2 收尾交接第 12 节）原样写进 [M4 的交接](../../M4-issue-core/handoffs/M3-closeout.md)第 9 节。
+
+状态改为 `closed`。
+
+来源：[M3 收尾 spec](../specs/closeout.md) 2.1。

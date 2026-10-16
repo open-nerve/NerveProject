@@ -38,6 +38,7 @@ type AccountTypeProps = {
 
 export function NameColumn(props: NameProps) {
   const { rowData, workspaceSlug, own, removable, setRemoveMemberModal } = props;
+  const { t } = useTranslation();
   // derived values
   const { avatar_url, display_name, email, first_name, id, last_name } = rowData.member;
 
@@ -69,14 +70,15 @@ export function NameColumn(props: NameProps) {
             {(own || removable) && (
               <CustomMenu
                 ellipsis
-                buttonClassName="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                ariaLabel={t("common.item_options", { name: display_name })}
+                buttonClassName="p-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 optionsClassName="p-1.5"
                 placement="bottom-end"
               >
                 <CustomMenu.MenuItem onClick={() => setRemoveMemberModal(rowData)}>
                   <div className="flex items-center gap-x-1 font-medium text-danger-primary">
                     <CircleMinus className="size-3.5 flex-shrink-0" />
-                    {own ? "Leave " : "Remove "}
+                    {t(own ? "leave" : "remove")}
                   </div>
                 </CustomMenu.MenuItem>
               </CustomMenu>

@@ -4,12 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { add } from "date-fns";
 import { Controller, useForm } from "react-hook-form";
 import { CalendarOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import type { ApiTokenCreate } from "@nerve/api-client";
@@ -17,7 +17,7 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 // ui
 import { Switch } from "@makeplane/propel/components/switch";
-import { CustomSelect } from "@nerve/ui";
+import { CustomSelect, ModalTitle } from "@nerve/ui";
 import { cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
@@ -25,6 +25,7 @@ import { DateDropdown } from "@/components/dropdowns/date";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import type { TExpiryChoice } from "./expiry";
 import { EXPIRY_PERIODS, expiryDate } from "./expiry";
@@ -59,14 +60,19 @@ export function CreateApiTokenForm(props: Props) {
   // form
   const {
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     handleSubmit,
     setError,
     watch,
-  } = useForm<TFormValues>({ defaultValues });
+  } = useForm<TFormValues>({ defaultValues, shouldFocusError: false });
   // hooks
   const { t } = useTranslation();
   const toastRefusal = useRefusalToast();
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
+
+  // the expiry's message, which describes its select (not one of Base UI's controls)
+  const expiryErrorId = useId();
 
   // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
   const showRefusal = (error: unknown) => {
@@ -94,11 +100,11 @@ export function CreateApiTokenForm(props: Props) {
   const expiresAt = expiry === null ? undefined : expiryDate(expiry, new Date(), customDate);
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)}>
+    <form ref={formRef} onSubmit={handleSubmit(handleFormSubmit)}>
       <div className="space-y-5 p-5">
-        <h3 className="text-18 font-medium text-secondary">
+        <ModalTitle className="text-18 font-medium text-secondary">
           {t("workspace_settings.settings.api_tokens.create_token")}
-        </h3>
+        </ModalTitle>
         <div className="space-y-3">
           <div className="space-y-1">
             <Controller
@@ -112,10 +118,11 @@ export function CreateApiTokenForm(props: Props) {
                 },
                 validate: (val) => val.trim() !== "" || t("title_is_required"),
               }}
-              render={({ field: { value, onChange } }) => (
+              render={({ field: { value, onChange, ref } }) => (
                 <Field name="input" invalid={Boolean(errors.label)}>
                   <InputGroup size="2xl">
                     <Input
+                      ref={ref}
                       size="2xl"
                       type="text"
                       value={value}
@@ -124,10 +131,14 @@ export function CreateApiTokenForm(props: Props) {
                       aria-label={t("title")}
                     />
                   </InputGroup>
+                  {errors.label?.message && (
+                    <FieldError match size="lg">
+                      {errors.label.message}
+                    </FieldError>
+                  )}
                 </Field>
               )}
             />
-            {errors.label && <span className="text-11 text-danger-primary">{errors.label.message}</span>}
           </div>
           <Controller
             control={control}
@@ -149,7 +160,7 @@ export function CreateApiTokenForm(props: Props) {
               </Field>
             )}
           />
-          <div className="space-y-1">
+          <Field name="expiry" invalid={!neverExpires && Boolean(errors.expiry)}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Controller
@@ -157,6 +168,8 @@ export function CreateApiTokenForm(props: Props) {
                   name="expiry"
                   render={({ field: { onChange, value } }) => (
                     <CustomSelect
+                      describedBy={!neverExpires && errors.expiry ? expiryErrorId : undefined}
+                      invalid={!neverExpires && Boolean(errors.expiry)}
                       customButton={
                         <div
                           className={cn(
@@ -208,10 +221,12 @@ export function CreateApiTokenForm(props: Props) {
                 </span>
               )}
             </div>
-            {!neverExpires && errors.expiry && (
-              <span className="text-11 text-danger-primary">{errors.expiry.message}</span>
+            {!neverExpires && errors.expiry?.message && (
+              <FieldError id={expiryErrorId} match size="lg">
+                {errors.expiry.message}
+              </FieldError>
             )}
-          </div>
+          </Field>
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 border-t-[0.5px] border-subtle px-5 py-4">

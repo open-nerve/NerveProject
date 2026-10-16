@@ -83,6 +83,12 @@ describe("AutoArchiveAutomation", () => {
     expect(store.toggleAutoArchive).not.toHaveBeenCalled();
   });
 
+  it("sends nothing when the list's custom range is picked: that option opens the custom range", () => {
+    const { months } = render();
+    months.onChange("custom");
+    expect(store.updateProject).not.toHaveBeenCalled();
+  });
+
   it("shows nerve's reason in a toast when it refuses the turn", async () => {
     store.toggleAutoArchive.mockImplementationOnce(() => Promise.reject(refusal(403, "forbidden")));
     const { toggle } = render();

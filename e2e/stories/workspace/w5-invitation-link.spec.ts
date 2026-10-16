@@ -1,6 +1,14 @@
 import { createWorkspace, invitationTo, invite, slugFor, type Api, type WorkspaceInvitation } from "../../fixtures/api";
 import { expectInvitations, expectMembership, lastWorkspaceOf } from "../../fixtures/assert/workspace";
-import { anotherTabSignsIn, bearer, createPAT, emailFor, password, register, removeRecord } from "../../fixtures/auth";
+import {
+  anotherTabSignsIn,
+  bearer,
+  emailFor,
+  password,
+  register,
+  registeredPAT,
+  removeRecord,
+} from "../../fixtures/auth";
 import { submitSignIn } from "../../fixtures/auth-pages";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
@@ -29,7 +37,7 @@ test("W5 (API): the link shows the workspace and the role without the address; t
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   // The admin has another workspace, with an invitation of its own: each link and each acceptance must name its
   // own workspace, whichever row the database reads first.
   const other = slugFor(testInfo, "other");
@@ -37,9 +45,9 @@ test("W5 (API): the link shows the workspace and the role without the address; t
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   const carolEmail = emailFor(testInfo, "carol");
-  const carol = (await createPAT(api, (await register(api, carolEmail)).access_token)).token;
+  const carol = (await registeredPAT(api, carolEmail)).token;
   const daveEmail = emailFor(testInfo, "dave");
-  const dave = (await createPAT(api, (await register(api, daveEmail)).access_token)).token;
+  const dave = (await registeredPAT(api, daveEmail)).token;
   const erinEmail = emailFor(testInfo, "erin");
   const erin = (await register(api, erinEmail)).access_token;
   const [toCarol, toDave] = await invite(api, admin, slug, [
@@ -195,7 +203,7 @@ test("W5 (page): signed out, the link shows the workspace and the role and sends
     page.getByRole("button", { name: "Ignore" }).click()
   );
   expect([declined.answer.status(), declined.body]).toEqual([204, { token: toOther.token }]);
-  await expect(page.getByText("You declined this invitation.")).toBeVisible();
+  await expect(page.getByText("This invitation was declined.")).toBeVisible();
   await expectMembership(db, other, carolEmail, null);
   await expectInvitations(db, other, adminEmail, [
     { email: carolEmail, role: 15, accepted: false, responded: true, deleted: false },

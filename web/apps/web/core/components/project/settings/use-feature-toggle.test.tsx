@@ -60,7 +60,7 @@ describe("useFeatureToggle", () => {
     useFeatureToggle("acme", web.id)("cycle_view");
     await pageSettled();
     expect(toasts).toEqual([
-      { type: "success", title: "Success!", message: "Project feature updated successfully." },
+      { type: "success", title: "toast.success", message: "project_dialogs.feature_updated" },
       { type: "error", title: "toast.error", message: "errors.forbidden" },
     ]);
   });
@@ -75,8 +75,9 @@ describe("useFeatureToggle", () => {
     expect(toasts).toEqual([]);
   });
 
-  it("is what each switch of the features list flips, its own feature", () => {
+  it("is what each switch of the features list flips, its own feature, which names it", () => {
     renderToStaticMarkup(<ProjectFeaturesList workspaceSlug="acme" projectId={web.id} />);
+    expect(shown.switches.map((toggle) => toggle["aria-label"])).toEqual(["cycles", "modules", "views", "intake"]);
     for (const toggle of shown.switches) void toggle.onCheckedChange(true);
     expect(store.toggleProject.mock.calls).toEqual([
       [web.id, "cycle_view"],
@@ -87,7 +88,7 @@ describe("useFeatureToggle", () => {
     expect(store.updateProject).not.toHaveBeenCalled();
   });
 
-  it("is what the switch of a feature's own page flips", () => {
+  it("is what the switch of a feature's own page flips, the feature's name its name", () => {
     renderToStaticMarkup(
       <ProjectSettingsFeatureControlItem
         title="Intake"
@@ -97,6 +98,7 @@ describe("useFeatureToggle", () => {
         workspaceSlug="acme"
       />
     );
+    expect(shown.switches.map((toggle) => toggle["aria-label"])).toEqual(["Intake"]);
     for (const toggle of shown.switches) void toggle.onCheckedChange(true);
     expect(store.toggleProject.mock.calls).toEqual([[web.id, "intake_view"]]);
     expect(store.updateProject).not.toHaveBeenCalled();

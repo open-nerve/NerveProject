@@ -4,11 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import { useId } from "react";
 import { observer } from "mobx-react";
 import { Controller } from "react-hook-form";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ORGANIZATION_SIZE } from "@nerve/constants";
+import { ORGANIZATION_SIZE, ORGANIZATION_SIZE_I18N_LABEL } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { Workspace } from "@nerve/api-client";
@@ -37,13 +38,16 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
       control,
       formState: { errors, isSubmitting, isValid },
     },
+    formRef,
     rules,
     onNameChange,
     submit,
   } = useCreationForm(onCreated);
+  // the organization size's message, which describes its select (not one of Base UI's controls)
+  const organizationSizeErrorId = useId();
 
   return (
-    <form className="space-y-6 sm:space-y-9" onSubmit={(e) => void submit(e)}>
+    <form ref={formRef} className="space-y-6 sm:space-y-9" onSubmit={(e) => void submit(e)}>
       <div className="space-y-6 sm:space-y-7">
         <div className="flex flex-col gap-2 text-13">
           <label htmlFor="workspaceName">
@@ -71,10 +75,14 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                       placeholder={t("workspace_creation.form.name.placeholder")}
                     />
                   </InputGroup>
+                  {errors.name?.message && (
+                    <FieldError match size="lg">
+                      {errors.name.message}
+                    </FieldError>
+                  )}
                 </Field>
               )}
             />
-            <span className="text-11 text-danger-primary">{errors?.name?.message}</span>
           </div>
         </div>
         <div className="flex flex-col gap-2 text-13">
@@ -100,27 +108,35 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                     placeholder={t("workspace_creation.form.url.placeholder")}
                   />
                 </InputGroup>
+                {errors.slug?.message && (
+                  <FieldError match size="lg">
+                    {errors.slug.message}
+                  </FieldError>
+                )}
               </Field>
             )}
           />
-          {errors.slug && <span className="text-11 text-danger-primary">{errors.slug.message}</span>}
         </div>
         <div className="flex flex-col gap-2 text-13">
           <span>
             {t("workspace_creation.form.organization_size.label")}
             <span className="ml-0.5 text-danger-primary">*</span>
           </span>
-          <div className="w-full">
+          <Field name="organization_size" invalid={Boolean(errors.organization_size)}>
             <Controller
               name="organization_size"
               control={control}
               rules={rules.organization_size}
               render={({ field: { value, onChange } }) => (
                 <CustomSelect
+                  describedBy={errors.organization_size ? organizationSizeErrorId : undefined}
+                  invalid={Boolean(errors.organization_size)}
                   value={value}
                   onChange={onChange}
                   label={
-                    ORGANIZATION_SIZE.find((c) => c === value) ?? (
+                    value ? (
+                      t(ORGANIZATION_SIZE_I18N_LABEL[value])
+                    ) : (
                       <span className="text-placeholder">
                         {t("workspace_creation.form.organization_size.placeholder")}
                       </span>
@@ -131,16 +147,18 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
                 >
                   {ORGANIZATION_SIZE.map((item) => (
                     <CustomSelect.Option key={item} value={item}>
-                      {item}
+                      {t(ORGANIZATION_SIZE_I18N_LABEL[item])}
                     </CustomSelect.Option>
                   ))}
                 </CustomSelect>
               )}
             />
-            {errors.organization_size && (
-              <span className="text-13 text-danger-primary">{errors.organization_size.message}</span>
+            {errors.organization_size?.message && (
+              <FieldError id={organizationSizeErrorId} match size="xl">
+                {errors.organization_size.message}
+              </FieldError>
             )}
-          </div>
+          </Field>
         </div>
       </div>
       <div className="flex items-center gap-4">

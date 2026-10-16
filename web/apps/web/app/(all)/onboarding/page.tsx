@@ -5,8 +5,10 @@
  */
 
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
+import { PageHead } from "@/components/core/page-title";
 import { OnboardingRoot } from "@/components/onboarding";
 // helpers
 import { EPageTypes } from "@/helpers/authentication.helper";
@@ -19,9 +21,11 @@ import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 function OnboardingPage() {
   // store hooks
   const { data: user } = useUser();
+  const { t } = useTranslation();
 
   return (
     <AuthenticationWrapper pageType={EPageTypes.ONBOARDING}>
+      <PageHead title={t("onboarding.title")} />
       <div className="relative flex size-full overflow-hidden rounded-lg bg-canvas transition-all duration-300 ease-in-out">
         <div className="size-full flex-grow overflow-hidden p-2 transition-all duration-300 ease-in-out">
           <div className="shadow-md relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-subtle bg-surface-1">

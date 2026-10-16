@@ -1,5 +1,5 @@
 import { accountOf, accountStateOf, expectPasswordReset } from "../../fixtures/assert/identity";
-import { bearer, createPAT, emailFor, login, password, register } from "../../fixtures/auth";
+import { bearer, createPAT, emailFor, login, password, register, registeredPAT } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers } from "../../fixtures/users";
 
@@ -18,7 +18,7 @@ test("A13: nerve users reset-password sets the password from stdin and revokes e
   const pat = await createPAT(api, first.access_token);
   // Another account, which nothing here changes.
   const other = emailFor(testInfo, "other");
-  const otherPAT = await createPAT(api, (await register(api, other)).access_token);
+  const otherPAT = await registeredPAT(api, other);
   const otherBefore = await accountStateOf(db, other);
   const before = await accountOf(db, email);
 

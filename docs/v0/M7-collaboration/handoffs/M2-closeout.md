@@ -34,7 +34,7 @@ created: 2026-09-28
 ## 4. 复制到剪贴板（M7 的 4 处）
 
 - P5 起 `copyTextToClipboard`（`web/packages/utils/src/string.ts`）复制失败时拒绝，纯 http 下也是。M7 的 4 处没有处理拒绝，失败时没有提示，只有一个未处理的 Promise 拒绝（路径在 `web/apps/web/core/components/` 下）：`inbox/content/inbox-issue-header.tsx`、`views/quick-actions.tsx`、`workspace/views/{quick-action,default-view-quick-action}.tsx`。
-- **关闭条件**：4 处都处理失败，经 `t()` 提示，像 `api-token/modal/generated-token-details.tsx`。
+- **关闭条件**：4 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 
 ## 5. 物理删除与跨模块外键的关系图（M7 的部分）
 

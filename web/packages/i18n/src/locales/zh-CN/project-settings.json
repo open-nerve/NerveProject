@@ -1,5 +1,6 @@
 {
   "project_settings": {
+    "sidebar_title": "项目设置",
     "general": {
       "enter_project_id": "输入项目 ID",
       "please_select_a_timezone": "请选择时区",
@@ -8,6 +9,20 @@
       }
     },
     "members": {
+      "defaults": {
+        "lead": {
+          "title": "项目负责人",
+          "description": "选择这个项目的负责人。"
+        },
+        "assignee": {
+          "title": "默认负责人",
+          "description": "选择这个项目工作项的默认负责人。"
+        },
+        "guest_access": {
+          "title": "访客访问",
+          "description": "允许访客查看这个项目的全部工作项。"
+        }
+      },
       "add_members": {
         "title": "添加成员",
         "sub_heading": "添加工作区成员参与您的项目。"
@@ -17,8 +32,31 @@
       "heading": "状态",
       "description": "定义和自定义工作流状态以跟踪工作项的进度。",
       "empty_state": {
-        "title": "{groupKey} 组中没有状态",
+        "title": "{group} 组中没有状态",
         "description": "请创建一个新状态"
+      },
+      "groups": {
+        "backlog": "待规划",
+        "unstarted": "未开始",
+        "started": "已开始",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      },
+      "created": "状态已创建。",
+      "updated": "状态已更新。",
+      "description_placeholder": "向成员说明这个状态。",
+      "add": "向 {name} 添加状态",
+      "delete": {
+        "title": "删除状态",
+        "body": "确定要删除状态 {name} 吗？这个状态的全部数据将被永久删除。此操作无法撤销。",
+        "default": "不能删除默认状态。",
+        "only_one": "组中至少要有一个状态。"
+      },
+      "default": {
+        "mark": "设为默认",
+        "mark_item": "设为默认：{name}",
+        "marking": "设为默认中",
+        "is_default": "默认"
       }
     },
     "labels": {
@@ -27,7 +65,13 @@
       "label_title": "标签标题",
       "label_title_is_required": "标签标题为必填项",
       "label_max_char": "标签名称不应超过255个字符",
-      "parent_not_allowed": "标签只能放在本项目的顶层标签之下，下面有标签的标签留在顶层：标签只有两层。"
+      "parent_not_allowed": "标签只能放在本项目的顶层标签之下，下面有标签的标签留在顶层：标签只有两层。",
+      "edit": "编辑标签",
+      "remove_from_group": "移出组",
+      "delete": {
+        "title": "删除标签",
+        "body": "确定要删除 {name} 吗？这个标签将从全部工作项和按它筛选的视图中移除。"
+      }
     },
     "automations": {
       "label": "自动化",
@@ -36,7 +80,10 @@
       "auto-archive": {
         "title": "自动归档已关闭的工作项",
         "description": "Nerve 将自动归档已完成或已取消的工作项。",
-        "duration": "自动归档已关闭"
+        "duration": "工作项关闭多久后自动归档",
+        "months_placeholder": "输入月数",
+        "months": "个月",
+        "months_range": "请选择 1 到 12 之间的月数。"
       }
     },
     "features": {

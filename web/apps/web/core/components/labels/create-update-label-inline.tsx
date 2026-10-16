@@ -6,16 +6,19 @@
 
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
-import { TwitterPicker } from "react-color";
 import { Controller, useForm } from "react-hook-form";
 import { Popover, Transition } from "@headlessui/react";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { getRandomLabelColor, LABEL_COLOR_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { Label } from "@nerve/api-client";
+// components
+import { ColorPicker } from "@/components/common/color-picker";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import { useLabelChanges, type LabelUnderField } from "./use-label-changes";
 
@@ -38,7 +41,7 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
     handleSubmit,
     control,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     watch,
     setFocus,
   } = useForm<TLabelFormValues>({
@@ -47,7 +50,10 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
     defaultValues: labelToUpdate
       ? { name: labelToUpdate.name, color: labelToUpdate.color }
       : { name: "", color: getRandomLabelColor() },
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLDivElement>(submitCount);
 
   const { t } = useTranslation();
   const { create, update } = useLabelChanges();
@@ -66,9 +72,10 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
     setFocus("name");
   }, [setFocus]);
 
+  // the name's field holds the whole row, so that its message, under the row, is the name's description (FieldError)
   return (
-    <>
-      <div className="flex w-full scroll-m-8 items-center gap-2 bg-surface-1">
+    <Field name="name" invalid={Boolean(errors.name)}>
+      <div ref={formRef} className="flex w-full scroll-m-8 items-center gap-2 bg-surface-1">
         <div className="flex-shrink-0">
           <Popover className="relative z-10 flex h-full w-full items-center justify-center">
             {({ open }) => (
@@ -102,7 +109,7 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
                       name="color"
                       control={control}
                       render={({ field: { value, onChange } }) => (
-                        <TwitterPicker
+                        <ColorPicker
                           colors={LABEL_COLOR_OPTIONS}
                           color={value}
                           onChange={(picked) => onChange(picked.hex)}
@@ -127,20 +134,18 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
               },
             }}
             render={({ field: { value, onChange, ref: inputRef } }) => (
-              <Field name="name" invalid={Boolean(errors.name)}>
-                <InputGroup size="2xl">
-                  <Input
-                    size="2xl"
-                    id="labelName"
-                    name="name"
-                    type="text"
-                    value={value}
-                    onChange={onChange}
-                    ref={inputRef}
-                    placeholder={t("project_settings.labels.label_title")}
-                  />
-                </InputGroup>
-              </Field>
+              <InputGroup size="2xl">
+                <Input
+                  size="2xl"
+                  id="labelName"
+                  name="name"
+                  type="text"
+                  value={value}
+                  onChange={onChange}
+                  ref={inputRef}
+                  placeholder={t("project_settings.labels.label_title")}
+                />
+              </InputGroup>
             )}
           />
         </div>
@@ -158,7 +163,14 @@ export const CreateUpdateLabelInline = observer(function CreateUpdateLabelInline
           {labelToUpdate ? (isSubmitting ? t("updating") : t("update")) : isSubmitting ? t("adding") : t("add")}
         </Button>
       </div>
-      {errors.name?.message && <p className="p-0.5 pl-8 text-13 text-danger-primary">{errors.name?.message}</p>}
-    </>
+      {errors.name?.message && (
+        // under the name, past the colour's button
+        <div className="p-0.5 pl-8">
+          <FieldError match size="xl">
+            {errors.name.message}
+          </FieldError>
+        </div>
+      )}
+    </Field>
   );
 });

@@ -4,7 +4,7 @@ import { createApi, type Api } from "../../fixtures/api";
 import { countIdentity, expectNothingAdded } from "../../fixtures/assert/identity";
 import { fillSignUp, formAlert, submitSignUp } from "../../fixtures/auth-pages";
 import { emailFor, password, register } from "../../fixtures/auth";
-import { watchPage } from "../../fixtures/browser";
+import { recordFocuses, watchPage } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 
 // A2, sign-up refused (M2 design 2).
@@ -23,8 +23,28 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
   const emailInput = page.getByLabel("Email", { exact: true });
   const watch = await watchPage(page);
 
-  // The address is taken: the message is above the form, the page and the address stay.
   await page.goto("/sign-up");
+  // The address is a text input that a phone gives its email keypad (its input mode), not an email input.
+  await expect(emailInput).toHaveAttribute("inputmode", "email");
+  // An address the page's rule refuses, confirmed by Enter (nothing goes, the form not filled in): not read invalid while
+  // the field has the focus, its message shown once the field is left, and read invalid then, the message its
+  // description. An address only an email input's own rule refuses (a quoted name) is not read invalid at all: the
+  // page's rule is the field's only one.
+  await emailInput.fill("abc");
+  await emailInput.press("Enter");
+  await expect(emailInput).not.toHaveAttribute("aria-invalid");
+  await emailInput.press("Tab");
+  await expect(emailInput).toHaveAttribute("aria-invalid", "true");
+  await expect(emailInput).toHaveAccessibleDescription("Email is invalid");
+  await emailInput.fill('"ab"@example.com');
+  await emailInput.press("Enter");
+  await emailInput.press("Tab");
+  await expect(emailInput).not.toHaveAttribute("aria-invalid");
+  // The spaces around an address are dropped, as an email input drops them.
+  await emailInput.fill(" abc@example.com ");
+  await expect(emailInput).toHaveValue("abc@example.com");
+
+  // The address is taken: the message is above the form, the page and the address stay.
   expect(await submitSignUp(page, email.toUpperCase(), password)).toBe(409);
   await expect(formAlert(page)).toHaveText("An account with this email already exists.");
   await expect(page).toHaveURL("/sign-up");
@@ -41,12 +61,20 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
   await page.getByLabel("Set a password", { exact: true }).fill("N3wPassw0rd!");
   await expect(upperCaseRule).toHaveCount(0);
 
-  // Common passwords, which only nerve knows: the message is under the field, none above the form.
+  // Common passwords, which only nerve knows: the message is under the field, none above the form. The field takes the
+  // focus, already read invalid, its message its description (as recorded when it takes it).
   const expectTooCommon = async (common: string) => {
+    const focuses = await recordFocuses(page);
     expect(await submitSignUp(page, newEmail, common), common).toBe(422);
     await expect(page.getByText("This password is too common")).toBeVisible();
     await expect(formAlert(page)).toHaveCount(0);
     await expect(emailInput).toHaveValue(newEmail);
+    await expect(page.locator("#password")).toBeFocused();
+    expect((await focuses()).at(-1)).toMatchObject({
+      id: "password",
+      invalid: "true",
+      description: expect.stringMatching(/^This password is too common/),
+    });
   };
   await expectTooCommon("Password1!");
   await expectTooCommon("Password1!~");

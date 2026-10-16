@@ -12,6 +12,7 @@ import { Button, getButtonStyling } from "@nerve/propel/button";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { Row } from "@nerve/ui";
 // components
+import { Translated } from "@/components/common/translated";
 import { ProjectFeaturesList } from "@/components/project/settings/features-list";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
@@ -38,11 +39,19 @@ export const ProjectFeatureUpdate = observer(function ProjectFeatureUpdate(props
         <ProjectFeaturesList workspaceSlug={workspaceSlug} projectId={projectId} />
       </Row>
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-subtle px-6 py-4">
-        <div className="flex gap-1 text-13 font-medium text-tertiary">
-          {t("congrats")}
-          <Logo logo={currentProjectDetails.logo_props} /> <p className="break-all">{currentProjectDetails.name}</p>{" "}
-          {t("created").toLowerCase()}.
-        </div>
+        <p className="text-13 font-medium break-all text-tertiary">
+          <Translated
+            i18nKey="project_dialogs.project_created"
+            values={{
+              name: (
+                <span className="inline-flex items-center gap-1 align-bottom">
+                  <Logo logo={currentProjectDetails.logo_props} />
+                  {currentProjectDetails.name}
+                </span>
+              ),
+            }}
+          />
+        </p>
         <div className="flex gap-2">
           <Button variant="secondary" size="lg" onClick={onClose}>
             {t("close")}

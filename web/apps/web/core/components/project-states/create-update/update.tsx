@@ -5,6 +5,7 @@
  */
 
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { State } from "@nerve/api-client";
 // components
@@ -21,14 +22,15 @@ type TStateUpdate = {
 export const StateUpdate = observer(function StateUpdate(props: TStateUpdate) {
   const { state, handleClose } = props;
   const { update } = useStateChanges();
+  const { t } = useTranslation();
 
   // the form closes once nerve has made the change, and stays with what it holds when nerve refuses it
   const onSubmit = (formData: TStateFormData, underField: StateUnderField) =>
     update(state.id, formData, underField, () => {
       setToast({
         type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "State updated successfully.",
+        title: t("toast.success"),
+        message: t("project_settings.states.updated"),
       });
       handleClose();
     });
@@ -39,8 +41,8 @@ export const StateUpdate = observer(function StateUpdate(props: TStateUpdate) {
       data={{ name: state.name, color: state.color, description: state.description }}
       onSubmit={onSubmit}
       onCancel={handleClose}
-      buttonTitle="Update"
-      busyButtonTitle="Updating"
+      buttonTitle={t("common.update")}
+      busyButtonTitle={t("common.updating")}
     />
   );
 });

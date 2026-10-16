@@ -10,10 +10,11 @@ import {
   type Project,
 } from "../../fixtures/api";
 import { expectMember } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
-import { PROJECT_MEMBER, valued } from "../../fixtures/mounts";
+import { closedByEscape, closedWithin, enabledWithin, modalDialog } from "../../fixtures/dialogs";
+import { PROJECT_MEMBER, valued, workItemFilters } from "../../fixtures/mounts";
+import { pageContent } from "../../fixtures/project-pages";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -48,11 +49,11 @@ test("P2 (API): the admin lists every project, a member the public ones and his 
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const guestEmail = emailFor(testInfo, "guest");
-  const guest = (await createPAT(api, (await register(api, guestEmail)).access_token)).token;
+  const guest = (await registeredPAT(api, guestEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);
@@ -227,6 +228,7 @@ test("P2 (page): the projects page shows a member the public project to join and
   // A join nerve refuses: the admin deletes Gone while its dialog is open. The page says nerve's reason, and the
   // dialog stays open, Join enabled again: it closes of itself only once joined. Cancel closes it.
   await page.getByRole("link", { name: /Gone/ }).getByRole("button", { name: "Join", exact: true }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Join Project?");
   const deleted = await api.DELETE("/api/v0/projects/{project_id}", {
     params: { path: { project_id: gone.id } },
     headers: bearer(admin),
@@ -246,7 +248,7 @@ test("P2 (page): the projects page shows a member the public project to join and
   const { release } = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/join`, () =>
     page.getByRole("button", { name: "Join Project" }).click()
   );
-  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining..." }))).toBe(false);
+  expect(await enabledWithin(page.getByRole("dialog").getByRole("button", { name: "Joining" }))).toBe(false);
   await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
   expect(await closedByEscape(page)).toBe(false);
   expect((await release()).status()).toBe(200);
@@ -256,19 +258,16 @@ test("P2 (page): the projects page shows a member the public project to join and
   await expectMember(db, web.id, memberEmail, { role: 15, is_active: true, sort_order: 65535, by: memberEmail });
   // The project's crumb in the header is one Tab stop, the button of its list (M3 design 7.7): its title, which opens
   // the project's work items by a click, is not another. Tab goes on to the next crumb.
-  await page.getByRole("button", { name: "Web", exact: true }).first().focus();
+  await pageContent(page).getByRole("button", { name: "Web", exact: true }).first().focus();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Work Items", exact: true })).toBeFocused();
 
   // The refused join's 404; the work items' page asks Plane's address of the filters, M4's (P8b spec §5)
-  const filters = `GET /api/workspaces/${slug}/projects/${web.id}/user-properties/`;
-  await expect.poll(() => watch.apiFailures).toEqual([`404 POST /api/v0/projects/${gone.id}/join`, `404 ${filters}`]);
-  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [filters], []]);
+  const filters = workItemFilters(slug, web.id);
+  await expect.poll(() => watch.apiFailures).toEqual([`404 POST /api/v0/projects/${gone.id}/join`, filters.failure]);
+  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [filters.request], []]);
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING],
-    errors: [
-      "Failed to load resource: the server responded with a status of 404 (Not Found)",
-      "Failed to load resource: the server responded with a status of 404 (Not Found)",
-    ],
+    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)", filters.logged],
   });
 });

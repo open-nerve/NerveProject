@@ -7,7 +7,7 @@
 import { SquarePlus } from "lucide-react";
 import { CreateFolderOutline, CyclesOutline, ModuleOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { EUserPermissionsLevel } from "@nerve/constants";
 // components
 import { EUserProjectRoles } from "@nerve/types";
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
@@ -33,7 +33,7 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
   const { config } = useInstance();
   const {
     canPerformAnyCreateAction,
-    permission: { allowPermissions },
+    permission: { allowPermissions, canCreateProject },
   } = useUser();
   const { workspaceProjectIds, getProjectById } = useProject();
   const {
@@ -45,10 +45,6 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
   } = useCommandPalette();
   // derived values
   const canCreateWorkItem = canPerformAnyCreateAction && workspaceProjectIds && workspaceProjectIds.length > 0;
-  const canCreateProject = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
-  );
   const hasProjectMemberLevelPermissions = (ctx: TPowerKContext) =>
     allowPermissions(
       [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
@@ -123,8 +119,8 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       icon: CreateFolderOutline,
       keySequence: "np",
       action: () => toggleCreateProjectModal(true),
-      isEnabled: () => Boolean(canCreateProject),
-      isVisible: () => Boolean(canCreateProject),
+      isEnabled: (ctx) => canCreateProject(ctx.params.workspaceSlug),
+      isVisible: (ctx) => canCreateProject(ctx.params.workspaceSlug),
       closeOnSelect: true,
     },
     create_workspace: {

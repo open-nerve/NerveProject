@@ -1,0 +1,62 @@
+---
+status: open
+from: M3/closeout
+to: M8
+created: 2026-10-13
+---
+
+# M3 交给 M8：Webhook 的事件和页面、发布前的核对、全应用的文案和可访问性
+
+M3（工作区与项目）没有领域事件，Webhook 的页面在 M3 里走不到；M3 和它的收尾在全应用的范围上留下几件发布之前要定的事（[M3 设计](../../M3-workspace-project/M3-design.md)）。下面每一节来自 M3 设计 13.2 的 M8 一行，和 M3 各 Phase、M3 收尾交给 M8 的各条（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2 节的分诊表写明来处）。路径在 `web/apps/web/core/components/` 下的，只写这之后的一段。
+
+## 1. Webhook
+
+- **事件**：工作区、项目、成员的 Webhook 事件加在 M4 引入的事件机制上（M3 没有事件，M3 设计 3.3）。
+- **页面**：webhooks 读 `error?.error` 的三处（`web-hooks/create-webhook-modal.tsx`、`web-hooks/form/secret-key.tsx`、`app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/[webhookId]/page.tsx`）改经文案表（`errorMessageKey`，M3/P9 spec 第 5 节）；密钥的复制（`web-hooks/form/secret-key.tsx`）改经 `useCopyText`（`core/hooks/use-copy-link.ts`），关键词规则 `copy-hook` 的这个例外（`until: "M8/closeout"`）随之删除；只读工作区的 3 个文件（webhooks 的两个页面和 `secret-key.tsx`）改用 `useRouteWorkspace()` 或路由的 slug，加进关键词规则 `workspace-address-route`（M3 收尾，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.12）；加进之前先把列表页传给 `CreateWebhookModal` 的 prop `currentWorkspace`（`app/(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/page.tsx:71`，`web-hooks/create-webhook-modal.tsx`）和 `getCurrentHookAsCSV` 的同名参数（`web-hooks/utils.ts:13`）改名（例如 `workspace`）：规则认的是 `currentWorkspace` 这个名字，值改读路由之后这个 prop 照样命中；页面上写死的英文经 `t()`；`web/apps/web/core/store/workspace/webhook.store.ts` 的 1 条警告（`no-accumulating-spread`）清零。表单的地址的提示（`web-hooks/form/form.tsx:85`）照 M2、M3 的表单（M3 收尾的浏览器核对之后的修复，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2 条，写法见 M4 的交接第 7 节）：提示是字段的 propel `FieldError`，地址的输入框以它为描述、`aria-invalid`，被拒绝时取得焦点。
+- **地址的输入框有两种规则**（M3 收尾，浏览器核对之后）：Webhook 的地址 `web-hooks/form/input.tsx:27` 是 `type="url"`，在 propel 的 `Field`（`:23`，`invalid={hasError}`）里。按 Enter 时 Base UI 取浏览器对 `type="url"` 的判断，字段可以 `aria-invalid` 而没有页面的提示；M2、M3 中同样的几处（项目导航的数量、自动归档的月数、登录的邮箱、状态的名字）由 M3 收尾的第三个跟进一轮改掉（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2 条的"一种规则"）。照那里改：一个字段只有一种规则，是页面的，输入框不带浏览器自己的约束（`type="text"`，键盘由 `inputMode="url"` 给），字段恰在页面的提示显示时 `aria-invalid`；与上面"表单的地址的提示"一起做，加一个按 Enter、Tab 之后的检查。
+- **守卫的阶段**：收尾开始时把 `tools/keywords.json` 的 `phase` 改为 `M8/closeout`，`copy-hook` 的这个例外（`until: "M8/closeout"`）那时到期，守卫要求它已经删除（`tools/keywords.mjs` 的说明、M1 设计 7.4）；每个 Phase 开始时改为 `M8/P<k>`。
+- **关闭条件**：Webhook 的事件有接口版本的故事；`copy-hook` 没有例外，`workspace-address-route` 的范围含这 3 个文件。
+
+## 2. 发布之前的核对
+
+- 表情选择器的数据从本站提供（M3/P10 已完成，M3 设计 7.7）：发布之前只剩核对（M8 的 [M1 收尾交接](M1-closeout.md)中同一项）。
+- README 中邀请链接与签名密钥的说明（M3 设计 8.7）、数据库用 UTF-8 的 `LC_CTYPE` 初始化（标签名不分大小写按数据库的 locale 折叠，M3/P7b spec 第 7 节；M3 收尾已写进 README 的"部署"一节）随发布的部署文件核对。
+- **层叠顺序**：全应用核对一遍页面上的元素停在弹窗层（`ModalCore` 的 `z-30`）之下：每类页面开着一个弹窗（命令面板就行），手机和桌面的宽度下都没有页面元素画在它上面。M3 收尾把设置页的手机菜单从 `z-50` 降到 `z-20`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6），M4 的交接第 7 节列出工作项页面上 `z-30` 及以上的元素；从弹窗打开、经 portal 渲染到 `body` 的下拉框、提示、表情在弹窗之上，靠的是 DOM 的先后，一并核对。
+- **性能**：大工作区的成员列表、项目列表（不分页的集合，M3 设计 11.3）的回答大小和页面的加载时间，按测到的数字决定要不要给其中一个分页。
+- **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。Webhook 的弹窗和选中同样放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`），`settings/(workspace)/webhooks/[webhookId]` 的页面以它的 id 给子树 key（加一个后退的检查）；发布之前全应用核对没有属于一个工作区或项目的弹窗、选中放在这些布局之上。
+- **Unicode 的邮箱域名**（M3 收尾，浏览器核对之后）：控制者的 IDN 的裁定（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2 条、附录 A.8）之后，web 上邮箱的规则只认 ASCII 的域名，拒绝 `ab@bücher.de` 这样的地址：登录、注册经 `@nerve/utils` 的 `checkEmailValidity`（`web/packages/utils/src/string.ts:90`，`account/auth-forms/password.tsx:90` 读它），邀请经 `workspace/invite-modal/fields.tsx:61` 的 `pattern`（两条规则只在拒绝非 ASCII 的域名这一点上一致）。nerve 收这样的地址。产品还没有发布，没有人因此进不来。它跨登录、注册和邀请，在发布之前定：web 收不收 Unicode 的域名，规范的写法（punycode 还是 Unicode）由页面还是 nerve 给出；定了之后两边一致，并加接口版本和页面版本的检查。
+- **退出之后登录回到别人的工作区**（M3 收尾的浏览器核对看到，不是 C12 的失败）：一个账户在 `/beta` 退出，另一个账户（不是 beta 的成员）在同一个标签页登录时，`next_path` 把它带到 `/beta`。`next_path` 来自退出时的地址，不属于新登录的账户。发布之前定：退出时不带 `next_path`，或登录之后只在新账户能进那个工作区时才跟随（M2 的登录页，[M2 设计](../../M2-auth/M2-design.md) 的 `next_path` 规则），加一个页面版本的检查。
+- **关闭条件**：M8 的发布核对清单含这几项和它们的结果。
+
+## 3. 全应用的文案
+
+M3 和它的收尾把 M3 页面上的英文经了 `t()`，下面这几处除外：它们是全应用的，一次定。
+
+- **日期**：首页的日期（"Friday, Oct 9"）、自定义日期的弹窗（`core/filters/date-filter-modal.tsx` 的"晚于：""早于："之后的两个日期；这两个词和弹窗的名字、下拉框、按钮的文字 M3 收尾已经经 `t()`）、项目筛选中自定义日期的标签，都按英文格式化；这个弹窗的两个日历（`@nerve/propel` 的 `Calendar`，`calendar/root.tsx` 的 react-day-picker 没有传 `locale` 和 `labels`）的月份、星期的名字和它们的控件的名字（"Choose the Month""Choose the Year""Go to the Previous Month""Go to the Next Month"）也是英文。日期的本地化是一个全应用的决定（M3/P9 评审的浏览器核对，M3 收尾），这个决定给日历传 locale 和它的 labels。
+- `app/not-found.tsx` 的英文；`@nerve/propel` 的英文默认值（`toast/toast.tsx` 的"Loading..."）。
+- 命令面板自己的文字：`power-k/menus/empty-state.tsx` 的默认值"No results found"，快捷键的标记里键与键之间的"then"（`power-k/ui/modal/command-item-shortcut-badge.tsx`），清除上下文的按钮写死的英文名字"Clear context (Backspace)"（`power-k/ui/modal/context-indicator.tsx:44` 的 `aria-label`，`:43` 的 `title` 是同一句；M3 收尾 Task 15 找到），M8 改命令面板自己的文字时一并经 `t()`，en 与 zh-CN 同时加键。M3 收尾只改了它整个重写的两个弹窗：快捷键列表的标题和搜索框经 `t()`，切换账户的那句话是一个带 `{email}` 的键（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.6）。
+- `@nerve/ui` 的 `AlertModalCore`（`modals/alert-modal.tsx`）的按钮默认值是英文，`@nerve/ui` 不依赖 i18n：M3 的两个删除确认框和 M2 的令牌确认框传入经 `t()` 的文字，M4–M7 的调用方由各 M 照做（各自的交接）；最后一个调用方改完之后，把这几个 prop 改为必传、删去默认值（M3 收尾的建议，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节）。
+- `@nerve/ui` 的 `CustomSearchSelect`（`dropdowns/custom-search-select.tsx:62-64`）的三个文字的默认值也是英文（搜索框的占位"Search"、没有结果的"No matches found"、加载中的"Loading..."），与 `AlertModalCore` 同一类（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 17 条）：调用方传经 `t()` 的 `searchPlaceholder`、`noResultsMessage`、`loadingMessage`。成员下拉框（`dropdowns/member/base.tsx`）和 M3 的三处（`project/member-select.tsx`、`project/add-project-members-modal.tsx`、`navigation/project-header.tsx`，M3 收尾的修复轮）三个都传，M2 的时区选择（`global/timezone-select.tsx`）没有传加载中的；M4 的 4 个 `rich-filters` 调用方都不传（M4 的交接第 8 节）。`@nerve/ui` 的面包屑下拉框 `BreadcrumbNavigationSearchDropdown`（`web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx`）也是调用方，它自己不收这三个 prop，也不传；用它的五处是迭代、模块、视图、工作区视图的详情页头（`app/(all)/[workspaceSlug]/(projects)/` 下的 4 个 `header.tsx`）和项目的面包屑（`breadcrumbs/project.tsx:68`，经 `breadcrumbs/common.tsx` 的 `CommonProjectBreadcrumbs`，工作项、归档、收集箱、`browse` 和迭代、模块、视图的页头都用它）。M8 让 `CustomSearchSelect` 的默认值经 `t()` 时，这五处随之解决；改为让这三个 prop 必传时（最后一个调用方改完之后，删去默认值），这个包装收下这三个 prop 并往下传，五处各传经 `t()` 的文字。
+- `@nerve/editor` 不依赖 i18n，它的控件的名字和提示是写死的英文（图片工具栏的"Download image""Zoom in"，表格的"Insert columns""Insert rows"等）。M3 收尾让 `@nerve/propel` 的 `EmojiPicker` 的 `ariaLabel` 必传，编辑器标注块的图标按钮照这种写法名为"Callout icon"（`web/packages/editor/src/extensions/callout/logo-selector.tsx`，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 1 条）。编辑器的文字怎样经 `t()`（由应用传入，或编辑器依赖 i18n）一次定，这些名字随之改。
+- **关闭条件**：日期的决定写进 M8 的设计并实现；`web/` 的页面上没有写死的英文（M8 的扫描）。
+
+## 4. 可访问性
+
+- Base UI 的 `Toast.Close`（`@nerve/propel` 的 `toast/toast.tsx`）渲染成 `aria-hidden="true"` 而 `tabindex="0"`：Tab 能到、读屏读不到（M3 收尾找到）。
+- 页头（`navigation/top-navigation-root.tsx`，每个工作区页面都有）：帮助菜单（`workspace/sidebar/help-section/root.tsx`）和账户菜单（`workspace/sidebar/user-menu-root.tsx`）的按钮里又是按钮，帮助菜单的没有名字；改法照 M3 收尾的项目标签栏的菜单（`navigation/project-actions-menu.tsx`：`CustomMenu` 的 `customButtonClassName` 给菜单自己的按钮样式，内容不再是按钮）。页头的通知链接在 M7 的交接。
+- 页头的搜索（`navigation/top-nav-power-k.tsx`）的 4 条 oxlint 警告：`exhaustive-deps` 2 条，`click-events-have-key-events`、`prefer-tag-over-role` 各 1 条。M3 收尾只把它的占位文字改经 `t()`（控制者的裁定，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 3 节第 2 条）；后两条是它的点击区不是按钮，与上面帮助、账户菜单的按钮是同一类改法、同在页头，一起改，改时清零。
+- 焦点和输入法只在 Chromium 中逐个核对过：发布之前在 Firefox、Safari 中看一遍焦点的轮廓、弹窗的 Tab 循环和输入法组字时的 Escape、Enter（M3/P11 评审第 6 节、M3/P10 spec 第 5 节；M3 收尾的 C11 看过的部分写在它的评审里）。
+- **Firefox 中的故事**（M3 收尾的浏览器核对之后的修复，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 1 条）：持续集成在 Chromium 之外装 Firefox，`e2e/playwright.config.ts` 的 `firefox` 项目只跑 A4 的页面测试（两个标签页同时刷新）：它们守的是 A4 在 Firefox 中显示的时机（F-A4：任务落定时就放开的刷新锁可能比刷新的写先到下一个标签页，所以锁在写之后一个任务才放开），在 Chromium 中看不出。其余故事没有放进去：它们期待 Chromium 自己的控制台消息（`expectQuietConsole` 的清单：表情检查的 Canvas2D `willReadFrequently` 警告、每个被拒绝的请求的"Failed to load resource"）和 Chromium 才有的剪贴板权限（`grantPermissions(["clipboard-…"])`）。控制者的副本中 WebKit、Firefox 跑整套：照原样 117 个失败；只改这两处测试的写法之后 23 个失败（S3 两个是副本没有 git；WebKit 的剪贴板 3 个、只到文本框的 Tab 11 个；请求失败的字符串 4 个、`page.goto` 被应用自己的跳转打断 1 个；Firefox 中程序还回的焦点不显示按钮的 tooltip 1 个；A4 的 navigator.locks 一种，就是 F-A4，已修），清单在 `$M3TMP/closeoutbrowser/notes.md`（K28）。发布之前是否让更多故事在 Firefox、WebKit 中跑（改测试的写法，或按浏览器分开期待），由 M8 决定。
+- 命令面板打开之后约 200 毫秒之内输入的字会被清空（`power-k/ui/modal/wrapper.tsx` 打开时的重置，Plane 原有；之后的输入留着，M3 收尾的探查）。
+- **弹窗的名字**（M3 收尾 Task 2 的评审和最终评审）：Headless UI v2 的 `Dialog` 只以它的 `DialogTitle` 为名（`aria-labelledby`），普通的标题不给弹窗名字，读屏读出一个没有名字的对话框；M3 收尾的修复轮在 `@nerve/ui` 的 `ModalCore` 旁边导出 `ModalTitle`（它就是 `DialogTitle`，`h3`），`AlertModalCore` 的标题经它，M2、M3 的弹窗的标题都经它（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.5）。M4–M8 自己的弹窗的标题都经 `ModalTitle`：确认框（`AlertModalCore`）已经有名字；M4、M6、M7 以普通标题或没有标题的弹窗逐个写在它们的交接里（M4 第 7 节、M6 第 3 节、M7 第 3 节）。M8 自己的：命令面板（`power-k/ui/modal/wrapper.tsx`）没有标题，给一个经 `t()` 的 `sr-only` 的 `ModalTitle`；Webhook 的弹窗（`web-hooks/create-webhook-modal.tsx`）的标题是一个 `div`（`web-hooks/form/form.tsx:68`），生成之后的是普通的 `h3`（`web-hooks/generated-hook-details.tsx:27`），都改经 `ModalTitle`。命令面板的搜索框的清除按钮（`power-k/ui/modal/header.tsx:53`）只有一个图标，没有名字（Plane 原有）：一个经 `t()` 的 `aria-label`，en 与 zh-CN 同时加。发布之前每个弹窗打开时断言 `expect(modalDialog(page)).toHaveAccessibleName(…)`，或读屏核对。
+- **再被拒绝时的提示**（M3 收尾的第二个跟进一轮，再评审的裁定 7）：被拒绝的字段在提示显示之后取得焦点（`useRefusedFocus`，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2 条）；用户在已经有焦点的被拒绝的字段里改了再提交（例如按 Enter），nerve 又拒绝、提示换了一句时，焦点不动，不发焦点事件，读屏不会因焦点再读一次新的提示（再评审的探查在三种浏览器中都没有焦点事件）。要不要给提示一个实时的播报（`aria-live`，或换提示时重新给焦点），由 M8 决定并在读屏上核对。
+- **客户端导航之后的焦点**（M3 收尾）：工作区的内容以 slug 为 key、项目的页面以项目为 key 之后，经菜单换工作区、经项目页头的项目切换换项目时焦点落到 `body`，像一次页面的加载（原来回到菜单或切换的按钮；控制者裁定接受，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 附录 A.8）。全应用的客户端导航之后焦点去哪里（`body`、页面的标题、主区域）是一个全应用的决定：发布之前定下并实现，读屏核对换页之后读出什么。
+- **浏览器核对看到的三处名字和结构**（M3 收尾，浏览器核对之后；不是 C11、C12 的失败，[收尾评审](../../M3-workspace-project/reviews/closeout-review.md)第 8 节）：设置页里一个 `main` 套着另一个 `main`（读屏的地标有两个主区）；`@nerve/propel` 的表情和图标选择器（`emoji-icon-picker`）的图标和色块没有名字（Plane 原有）；新手引导的账户按钮（`onboarding/switch-account-dropdown.tsx:42` 的 `Menu.Button`）把头像里的首字母和名字连起来读，名为"ggina"（首字母 `:51` 应当 `aria-hidden`）。全应用的名字和地标的扫描时一起改，各加一个以名字找元素的检查。
+- **关闭条件**：M8 的评审写明每一项的修法或结论。
+
+## 5. 嵌入的文件加 `ETag`
+
+- `server/internal/platform/webui` 提供的嵌入文件没有 `ETag`，浏览器每次都整个下载（M3/P10 spec 第 5 节，表情的数据最大）。发布的性能核对时决定加不加（M3 收尾的建议）。
+- **关闭条件**：加的话，`webui` 的测试核对 `ETag` 和 304；不加的话写明理由。
+
+来源：[M3 设计](../../M3-workspace-project/M3-design.md) 13.2 的 M8 一行；M3/P7b、P9、P10、P11 的 spec 第 5 节和评审第 6 节中交给 M8 的各条；[M3 收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2、3 节。

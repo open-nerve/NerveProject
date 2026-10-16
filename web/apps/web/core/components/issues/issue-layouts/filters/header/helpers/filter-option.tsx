@@ -22,6 +22,8 @@ export function FilterOption(props: Props) {
       type="button"
       className="flex w-full items-center gap-2 rounded-sm p-1.5 hover:bg-layer-transparent-hover"
       onClick={onClick}
+      // the box shows whether the option is picked; the button says it
+      aria-pressed={isChecked}
     >
       <div
         className={`grid h-3 w-3 flex-shrink-0 place-items-center border ${

@@ -45,6 +45,7 @@ export function Logo({ logo, size = 16, type = "material" }: Props) {
   if (in_use === "emoji") {
     return (
       <span
+        aria-hidden="true"
         className="flex items-center justify-center"
         style={{
           fontSize: `${getEmojiSize(size)}rem`,
@@ -76,6 +77,7 @@ export function Logo({ logo, size = 16, type = "material" }: Props) {
     // Material icon
     return (
       <span
+        aria-hidden="true"
         className="material-symbols-rounded"
         style={{
           fontSize: size,

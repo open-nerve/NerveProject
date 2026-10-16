@@ -216,7 +216,7 @@ type LogoPropsInUse string
 
 // Project A project, as the caller sees it: member_role and sort_order are his, null when he is not an active member.
 type Project struct {
-	// ArchiveIn After how many months a closed work item is archived, 0–12; 0 never.
+	// ArchiveIn A number of months, 0–12, set for automatic archiving and kept as set; 0 for none.
 	ArchiveIn int `json:"archive_in"`
 
 	// ArchivedAt When the project was archived; null while it is not.
@@ -229,15 +229,15 @@ type Project struct {
 	// CycleView Whether the project shows cycles.
 	CycleView bool `json:"cycle_view"`
 
-	// DefaultAssigneeID Whom a new work item is assigned to when nobody is given.
+	// DefaultAssigneeID The account set as the project's default assignee, kept as set; null for none.
 	DefaultAssigneeID nullable.Nullable[uuid.UUID] `json:"default_assignee_id"`
 	Description       string                       `json:"description"`
 
-	// GuestViewAllFeatures Whether the project's guests see every work item, not only their own.
+	// GuestViewAllFeatures A setting of the project for its guests, kept as set.
 	GuestViewAllFeatures bool      `json:"guest_view_all_features"`
 	ID                   uuid.UUID `json:"id"`
 
-	// Identifier Upper case; it prefixes the numbers of the project's work items.
+	// Identifier Upper case; unique among the workspace's projects.
 	Identifier string `json:"identifier"`
 
 	// IntakeView Whether the project shows intake.
@@ -378,7 +378,7 @@ type ProjectTab string
 
 // ProjectUpdate Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them.
 type ProjectUpdate struct {
-	// ArchiveIn After how many months a closed work item is archived, 0–12; 0 never.
+	// ArchiveIn A number of months, 0–12, set for automatic archiving and kept as set; 0 for none.
 	ArchiveIn *int  `json:"archive_in,omitempty"`
 	CycleView *bool `json:"cycle_view,omitempty"`
 

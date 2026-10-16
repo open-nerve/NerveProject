@@ -159,7 +159,14 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
         {/* Footer */}
         <div className="flex items-center justify-between gap-2 border-t-[0.5px] border-subtle pt-4">
           <Tooltip label={t("common.actions.copy_markdown")}>
-            <IconButton type="button" variant="ghost" size="base" onClick={handleCopyMarkdown} icon={CopyOutline} />
+            <IconButton
+              type="button"
+              variant="ghost"
+              size="base"
+              onClick={handleCopyMarkdown}
+              icon={CopyOutline}
+              aria-label={t("common.actions.copy_markdown")}
+            />
           </Tooltip>
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="lg" onClick={handleClose} tabIndex={1}>

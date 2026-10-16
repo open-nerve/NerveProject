@@ -11,7 +11,7 @@ import { observer } from "mobx-react";
 import { CloseCircleOutline, HideOutline, ShowOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { Banner } from "@makeplane/propel/components/banner";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -26,6 +26,7 @@ import { useUser } from "@/hooks/store/user";
 import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
 // lib
 import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 type Props = {
   mode: EAuthModes;
@@ -73,6 +74,8 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const [isEmailInputFocused, setIsEmailInputFocused] = useState(false);
   // the last refusal of nerve, until the form changes
   const [submitError, setSubmitError] = useState<unknown>(undefined);
+  // nerve's refusal of a field gives it the focus once its message shows (useRefusedFocus), so that it is read with it
+  const formRef = useRefusedFocus<HTMLFormElement>(submitError);
 
   const handleShowPassword = (key: keyof typeof showPassword) =>
     setShowPassword((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -106,6 +109,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const password = passwordFormData.password;
   const confirmPassword = passwordFormData.confirm_password;
   const renderPasswordMatchError = !isRetryPasswordInputFocused || confirmPassword.length >= password.length;
+  const showsMismatch = !!confirmPassword && password !== confirmPassword && renderPasswordMatchError;
   const fieldErrors = fieldErrorKeys(submitError);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -144,7 +148,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           onDismiss={() => setSubmitError(undefined)}
         />
       )}
-      <form className="space-y-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
+      <form ref={formRef} className="space-y-4" noValidate onSubmit={(event) => void handleSubmit(event)}>
         <div className="space-y-1">
           <label htmlFor="email" className="text-13 font-medium text-tertiary">
             {t("auth.common.email.label")}
@@ -155,13 +159,17 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
               onFocus={() => setIsEmailInputFocused(true)}
               onBlur={() => setIsEmailInputFocused(false)}
             >
+              {/* text with an email keypad, so that the form's rule (checkEmailValidity) is the field's only one: an
+              email input's own would be taken by Base UI on Enter and read the field invalid with no message; the
+              spaces around the address dropped, as an email input drops them */}
               <Input
                 size="2xl"
                 id="email"
                 name="email"
-                type="email"
+                type="text"
+                inputMode="email"
                 value={passwordFormData.email}
-                onChange={(e) => handleFormChange("email", e.target.value)}
+                onChange={(e) => handleFormChange("email", e.target.value.trim())}
                 placeholder={t("auth.common.email.placeholder")}
                 autoComplete="email"
                 ref={emailInputRef}
@@ -181,14 +189,18 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
                 </button>
               )}
             </InputGroup>
+            {isEmailInvalid && !isEmailInputFocused && (
+              <FieldError match size="lg">
+                <WarningCircleOutline height={12} width={12} />
+                {t("auth.common.email.errors.invalid")}
+              </FieldError>
+            )}
+            {fieldErrors.email && (
+              <FieldError match size="lg">
+                {t(fieldErrors.email)}
+              </FieldError>
+            )}
           </Field>
-          {isEmailInvalid && !isEmailInputFocused && (
-            <p className="flex items-center gap-1 px-0.5 text-11 text-danger-primary">
-              <WarningCircleOutline height={12} width={12} />
-              {t("auth.common.email.errors.invalid")}
-            </p>
-          )}
-          {fieldErrors.email && <p className="px-0.5 text-11 text-danger-primary">{t(fieldErrors.email)}</p>}
         </div>
 
         <div className="space-y-1">
@@ -224,8 +236,12 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
                 )}
               </button>
             </InputGroup>
+            {fieldErrors.password && (
+              <FieldError match size="lg">
+                {t(fieldErrors.password)}
+              </FieldError>
+            )}
           </Field>
-          {fieldErrors.password && <p className="px-0.5 text-11 text-danger-primary">{t(fieldErrors.password)}</p>}
           {mode === EAuthModes.SIGN_UP && (
             <PasswordStrengthIndicator password={password} labels={passwordStrengthLabels} />
           )}
@@ -236,39 +252,43 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
             <label htmlFor="confirm-password" className="text-13 font-medium text-tertiary">
               {t("auth.common.password.confirm_password.label")}
             </label>
-            <InputGroup size="2xl">
-              <Input
-                size="2xl"
-                type={showPassword.retypePassword ? "text" : "password"}
-                id="confirm-password"
-                name="confirm_password"
-                value={passwordFormData.confirm_password}
-                onChange={(e) => handleFormChange("confirm_password", e.target.value)}
-                placeholder={t("auth.common.password.confirm_password.placeholder")}
-                onFocus={() => setIsRetryPasswordInputFocused(true)}
-                onBlur={() => setIsRetryPasswordInputFocused(false)}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                className="grid size-5 place-items-center"
-                aria-label={t(
-                  showPassword.retypePassword
-                    ? "aria_labels.auth_forms.hide_password"
-                    : "aria_labels.auth_forms.show_password"
-                )}
-                onClick={() => handleShowPassword("retypePassword")}
-              >
-                {showPassword.retypePassword ? (
-                  <HideOutline className="size-5 text-placeholder" />
-                ) : (
-                  <ShowOutline className="size-5 text-placeholder" />
-                )}
-              </button>
-            </InputGroup>
-            {!!confirmPassword && password !== confirmPassword && renderPasswordMatchError && (
-              <span className="text-13 text-danger-primary">{t("auth.common.password.errors.match")}</span>
-            )}
+            <Field name="confirm_password" invalid={showsMismatch}>
+              <InputGroup size="2xl">
+                <Input
+                  size="2xl"
+                  type={showPassword.retypePassword ? "text" : "password"}
+                  id="confirm-password"
+                  name="confirm_password"
+                  value={passwordFormData.confirm_password}
+                  onChange={(e) => handleFormChange("confirm_password", e.target.value)}
+                  placeholder={t("auth.common.password.confirm_password.placeholder")}
+                  onFocus={() => setIsRetryPasswordInputFocused(true)}
+                  onBlur={() => setIsRetryPasswordInputFocused(false)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="grid size-5 place-items-center"
+                  aria-label={t(
+                    showPassword.retypePassword
+                      ? "aria_labels.auth_forms.hide_password"
+                      : "aria_labels.auth_forms.show_password"
+                  )}
+                  onClick={() => handleShowPassword("retypePassword")}
+                >
+                  {showPassword.retypePassword ? (
+                    <HideOutline className="size-5 text-placeholder" />
+                  ) : (
+                    <ShowOutline className="size-5 text-placeholder" />
+                  )}
+                </button>
+              </InputGroup>
+              {showsMismatch && (
+                <FieldError match size="xl">
+                  {t("auth.common.password.errors.match")}
+                </FieldError>
+              )}
+            </Field>
           </div>
         )}
 

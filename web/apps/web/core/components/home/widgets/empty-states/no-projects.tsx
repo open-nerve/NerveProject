@@ -17,18 +17,18 @@ import { cn, getFileURL } from "@nerve/utils";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
-import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 
 export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
   // navigation
   const { workspaceSlug } = useParams();
   // store hooks
-  const { allowPermissions } = useUserPermissions();
+  const { allowPermissions, canCreateProject } = useUserPermissions();
   const { toggleCreateProjectModal } = useCommandPalette();
   const { data: currentUser } = useUser();
   const { joinedProjectIds } = useProject();
-  const { currentWorkspace: activeWorkspace } = useWorkspace();
+  const activeWorkspace = useRouteWorkspace();
   // local storage
   const { storedValue, setValue } = useLocalStorage(`quickstart-guide-${workspaceSlug}`, {
     hide: false,
@@ -38,11 +38,8 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
   });
   const { t } = useTranslation();
   // derived values
-  const canCreateProject = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
-  );
-  const isWorkspaceAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
+  const mayCreateProject = canCreateProject(workspaceSlug);
+  const isWorkspaceAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
 
   const EMPTY_STATE_DATA = [
     {
@@ -54,12 +51,12 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
       cta: {
         text: "home.empty.create_project.cta",
         onClick: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-          if (!canCreateProject) return;
+          if (!mayCreateProject) return;
           e.preventDefault();
           e.stopPropagation();
           toggleCreateProjectModal(true);
         },
-        disabled: !canCreateProject,
+        disabled: !mayCreateProject,
       },
     },
     {

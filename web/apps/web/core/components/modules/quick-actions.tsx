@@ -9,6 +9,7 @@ import { observer } from "mobx-react";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
@@ -31,6 +32,7 @@ type Props = {
 
 export const ModuleQuickActions = observer(function ModuleQuickActions(props: Props) {
   const { parentRef, moduleId, projectId, workspaceSlug, customClassName } = props;
+  const { t } = useTranslation();
   // router
   const navigate = useNavigate();
   // states
@@ -129,7 +131,9 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
       )}
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
       <CustomMenu
-        customButton={<IconButton variant="tertiary" size="lg" icon={MoreHorizontalOutline} />}
+        customButton={
+          <IconButton variant="tertiary" size="lg" icon={MoreHorizontalOutline} aria-label={t("common.options")} />
+        }
         placement="bottom-end"
         closeOnSelect
         buttonClassName={customClassName}

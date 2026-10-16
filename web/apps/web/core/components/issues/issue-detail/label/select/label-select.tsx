@@ -16,7 +16,7 @@ import { Button } from "@nerve/propel/button";
 import type { Label, LabelCreate } from "@nerve/api-client";
 import { EUserProjectRoles } from "@nerve/types";
 // helpers
-import { getTabIndex } from "@nerve/utils";
+import { getTabIndex, isComposing } from "@nerve/utils";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -98,7 +98,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
       setQuery("");
     }
 
-    if (query !== "" && e.key === "Enter" && !e.nativeEvent.isComposing && canCreateLabel) {
+    if (query !== "" && e.key === "Enter" && !isComposing(e.nativeEvent) && canCreateLabel) {
       e.stopPropagation();
       e.preventDefault();
       await handleAddLabel(query);

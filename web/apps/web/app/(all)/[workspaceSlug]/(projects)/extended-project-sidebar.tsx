@@ -8,7 +8,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
 import { AddOutline, SearchOutline } from "@makeplane/propel/icons";
@@ -38,7 +37,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
   const { getProjectById, joinedProjectIds: joinedProjects } = useProject();
   const handleOnProjectDrop = useProjectDrop();
-  const { allowPermissions } = useUserPermissions();
+  const { canCreateProject } = useUserPermissions();
 
   // filter projects based on search query
   const filteredProjects = joinedProjects.filter((projectId) => {
@@ -48,10 +47,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
   });
 
   // auth
-  const isAuthorizedUser = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
-  );
+  const isAuthorizedUser = canCreateProject(workspaceSlug);
 
   const handleClose = useCallback(() => toggleExtendedProjectSidebar(false), [toggleExtendedProjectSidebar]);
 
@@ -79,7 +75,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
       >
         <div className="sticky top-4 flex w-full flex-col gap-1 px-4">
           <div className="flex items-center justify-between">
-            <span className="py-1.5 text-13 font-semibold text-tertiary">Projects</span>
+            <span className="py-1.5 text-13 font-semibold text-tertiary">{t("projects")}</span>
             {isAuthorizedUser && (
               <Tooltip label={t("create_project")}>
                 <button
@@ -95,7 +91,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
               </Tooltip>
             )}
           </div>
-          <div className="ml-auto flex w-full items-center gap-1.5 rounded-md border border-subtle bg-surface-1 px-2.5 py-1">
+          <div className="ml-auto flex w-full items-center gap-1.5 rounded-md border border-subtle bg-surface-1 px-2.5 py-1 focus-within:border-accent-strong focus-within:ring-2 focus-within:ring-accent-strong/20">
             <SearchOutline className="h-3.5 w-3.5 text-placeholder" />
             <input
               className="w-full max-w-[234px] border-none bg-transparent text-13 outline-none placeholder:text-placeholder"

@@ -8,8 +8,9 @@ import { useCallback } from "react";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { observer } from "mobx-react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 // local imports
@@ -19,6 +20,7 @@ import { ProfileSettingsSidebarRoot } from "./sidebar";
 export const ProfileSettingsModal = observer(function ProfileSettingsModal() {
   // store hooks
   const { profileSettingsModal, toggleProfileSettingsModal } = useCommandPalette();
+  const { t } = useTranslation();
   // derived values
   const activeTab = profileSettingsModal.activeTab ?? "general";
 
@@ -42,6 +44,8 @@ export const ProfileSettingsModal = observer(function ProfileSettingsModal() {
       className="h-175"
     >
       <div className="@container relative size-full">
+        {/* the dialog has no heading of its own, each of its pages has one: a hidden title names it */}
+        <ModalTitle className="sr-only">{t("settings")}</ModalTitle>
         <div className="flex size-full">
           <ProfileSettingsSidebarRoot
             activeTab={activeTab}
@@ -51,7 +55,13 @@ export const ProfileSettingsModal = observer(function ProfileSettingsModal() {
           <ProfileSettingsContent activeTab={activeTab} className="flex-1 rounded-r-xl" />
         </div>
         <div className="absolute top-3.5 right-3.5">
-          <IconButton size="base" variant="tertiary" icon={CloseOutline} onClick={handleClose} />
+          <IconButton
+            size="base"
+            variant="tertiary"
+            icon={CloseOutline}
+            aria-label={t("close")}
+            onClick={handleClose}
+          />
         </div>
       </div>
     </ModalCore>

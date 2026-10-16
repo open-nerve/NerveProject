@@ -143,8 +143,8 @@ func TestUsersCommandsFail(t *testing.T) {
 			"nerve: The new e-mail address is the account's current one.\n"},
 		{"an unknown account", "", []string{"users", "activate", "--email", "may@corp.com"}, "nerve: No account has this e-mail address.\n"},
 		{"a workspace's only admin", "", []string{"users", "deactivate", "--email", "nia@corp.com"},
-			"nerve: The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while " +
-				"it has other active members. It must first be given another admin, or be deleted.\n"},
+			"nerve: The workspace would be left without an admin: its only active admin cannot leave it, and that admin's " +
+				"membership cannot end while it has other active members. It must first be given another admin, or be deleted.\n"},
 		{"an unknown command", "", []string{"users", "delete"}, "nerve: unknown command \"delete\" for \"nerve users\"\n"},
 	}
 	for _, tt := range tests {

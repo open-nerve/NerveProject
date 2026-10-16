@@ -28,7 +28,6 @@
   "preferences": "Preferences",
   "language_and_time": "Language & Time",
   "create_workspace": "Create workspace",
-  "created": "Created",
   "you_do_not_have_the_permission_to_access_this_page": "You do not have the permission to access this page.",
   "something_went_wrong_please_try_again": "Something went wrong. Please try again.",
   "load_more": "Load more",
@@ -88,9 +87,11 @@
   "creating": "Creating",
   "copy_link": "Copy link",
   "leave_project": "Leave project",
+  "leave_workspace": "Leave workspace",
+  "workspace_invitations": "Workspace Invitations",
+  "not_authorized_to_view": "Oops! You are not authorized to view this page",
   "join_the_project_to_rearrange": "Join the project to rearrange",
   "drag_to_rearrange": "Drag to rearrange",
-  "congrats": "Congrats!",
   "open_project": "Open project",
   "issues": "Work items",
   "cycles": "Cycles",
@@ -155,10 +156,11 @@
   "deleting": "Deleting",
   "make_a_copy": "Make a copy",
   "move_to_project": "Move to project",
-  "good": "Good",
-  "morning": "morning",
-  "afternoon": "afternoon",
-  "evening": "evening",
+  "greeting": {
+    "morning": "Good morning, {name}",
+    "afternoon": "Good afternoon, {name}",
+    "evening": "Good evening, {name}"
+  },
   "no_data_yet": "No Data yet",
   "syncing": "Syncing",
   "add_work_item": "Add work item",
@@ -337,12 +339,16 @@
     "close_peek_view": "Close the peek view",
     "toggle_peek_view_layout": "Toggle peek view layout",
     "options": "Options",
+    "item_options": "{name} options",
+    "edit_item": "Edit {name}",
+    "delete_item": "Delete {name}",
     "color": "Color",
     "today": "Today",
     "press_for_commands": "Press '/' for commands",
     "click_to_add_description": "Click to add description",
     "search": {
       "label": "Search",
+      "clear": "Clear search",
       "placeholder": "Type to search",
       "no_matches_found": "No matches found",
       "no_matching_results": "No matching results"
@@ -366,6 +372,10 @@
     "projects": "Projects",
     "workspace": "Workspace",
     "members": "Members",
+    "roles": "Roles",
+    "view_all": "View all",
+    "view_less": "View less",
+    "remove_item": "Remove {name}",
     "pending": "Pending",
     "invite": "Invite",
     "deactivated_user": "Deactivated user",
@@ -374,6 +384,14 @@
     "work_structure": "Work structure",
     "execution": "Execution",
     "administration": "Administration"
+  },
+  "date_filter": {
+    "before": "{title} before",
+    "after": "{title} after",
+    "range": "{title} range",
+    "range_after": "After:",
+    "range_before": "Before:",
+    "apply": "Apply"
   },
   "form": {
     "title": {
@@ -451,6 +469,9 @@
   },
   "accordion_navigation_control": "Accordion sidebar navigation",
   "horizontal_navigation_bar": "Tabbed Navigation",
+  "accordion_navigation_description": "Feature tabs will appear as nested items under project and acts as accordion.",
+  "horizontal_navigation_description": "Feature tabs will appear as horizontal tabs inside a project.",
+  "navigation_count_minimum": "Minimum value is 1",
   "show_limited_projects_on_sidebar": "Show limited projects on sidebar",
   "enter_number_of_projects": "Enter number of projects",
   "profile_updated": "Your profile is updated.",
@@ -466,6 +487,7 @@
   "continue": "Continue",
   "enter_your_full_name": "Enter your full name",
   "onboarding": {
+    "title": "Onboarding",
     "profile": {
       "title": "Create your profile.",
       "description": "This is how you will appear in Nerve."
@@ -473,8 +495,7 @@
     "switch_account": {
       "wrong_email": "Wrong e-mail address?",
       "title": "Switch account",
-      "description_before_email": "If you have signed up via",
-      "description_after_email": "un-intentionally, you can switch your account to a different one from here.",
+      "description": "If you have signed up via {email} un-intentionally, you can switch your account to a different one from here.",
       "switch": "Switch account",
       "switching": "Switching..."
     },

@@ -108,6 +108,13 @@ export async function hiddenWithin(locator: Locator): Promise<boolean> {
 }
 
 /**
+ * The one modal dialog page shows: a toast is a dialog too, not a modal one, and does not count.
+ */
+export function modalDialog(page: Page): Locator {
+  return page.locator('[role="dialog"][aria-modal="true"]');
+}
+
+/**
  * Resolves with whether the one modal dialog page shows closes within a second, such as one that should stay once
  * nerve has refused what it sent. A toast is a dialog too, not a modal one: it does not count. A dialog that closes
  * still shows its content while it fades out (ModalCore's leave transition, 200 ms), so a check made at once cannot
@@ -115,10 +122,45 @@ export async function hiddenWithin(locator: Locator): Promise<boolean> {
  * (timedOut); any other failure, such as two modal dialogs, rejects.
  */
 export async function closedWithin(page: Page): Promise<boolean> {
-  return page
-    .locator('[role="dialog"][aria-modal="true"]')
+  return modalDialog(page)
     .waitFor({ state: "detached", timeout: 1_000 })
     .then(() => true, timedOut);
+}
+
+/**
+ * Resolves with whether the page behind page's dialogs, its first main element, is inert and hidden from assistive
+ * technology (aria-hidden), as ModalCore makes it while a dialog is open: nothing behind the dialog is reached by Tab
+ * or the pointer, or read; and neither once the dialog has closed. The page is read by its element, not by a role:
+ * Playwright's role queries do not see what is aria-hidden.
+ */
+export async function pageBehindHidden(page: Page): Promise<boolean> {
+  return page
+    .locator("main")
+    .first()
+    .evaluate((main) => main.closest("[inert]") !== null && main.closest('[aria-hidden="true"]') !== null);
+}
+
+/**
+ * Resolves with whether the focus is within the one modal dialog page shows, on the dialog itself or on something in
+ * it, and so not on the page's body: ModalCore keeps it there while a button pressed in the dialog is disabled under
+ * it, its request out (M3 closeout, C11-3).
+ */
+export async function focusInDialog(page: Page): Promise<boolean> {
+  return modalDialog(page).evaluate((dialog) => dialog.contains(dialog.ownerDocument.activeElement));
+}
+
+/**
+ * Resolves with whether element, shown while a dialog is open, is read out: within a live region (a toast's), and not
+ * in the page behind the dialog, which is inert and hidden then (pageBehindHidden). The toast that says why nerve
+ * refused what a dialog sent is read while the dialog stays open (A-M2).
+ */
+export async function announced(element: Locator): Promise<boolean> {
+  return element.evaluate(
+    (shown) =>
+      shown.closest("[aria-live]") !== null &&
+      shown.closest("[inert]") === null &&
+      shown.closest('[aria-hidden="true"]') === null
+  );
 }
 
 /** Presses Escape on page, which shows one modal dialog, and resolves with whether that dialog closed (closedWithin). */
@@ -139,17 +181,27 @@ export async function closedByBackdropClick(page: Page): Promise<boolean> {
 }
 
 /**
- * Dispatches on field, at once, what the browser gives the page when an Escape ends an input method's composition
- * (Chinese, say): the composition's start, the Escape's keydown while composing, and the composition's end. A dropdown
- * that follows the composition by its events (Base UI's popover) sees one, as a page does with a real input method.
+ * Dispatches on field, at once, what the browsers give the page when a key (an Escape, a Backspace) ends an input
+ * method's composition (Chinese, say), in both their orders: Chromium's and Firefox's, the key's keydown while
+ * composing (isComposing), between the composition's start and end; then Safari's, the keydown after the
+ * composition's end, isComposing false and keyCode 229. A dropdown that follows the composition by its events (Base
+ * UI's popover) sees each, as a page does with a real input method.
  */
-export async function composingEscape(field: Locator): Promise<void> {
-  await field.evaluate((element) => {
+export async function composingKey(field: Locator, key: string): Promise<void> {
+  await field.evaluate((element, pressed) => {
     const init = { bubbles: true, cancelable: true, composed: true };
     element.dispatchEvent(new CompositionEvent("compositionstart", init));
-    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: "Escape", isComposing: true }));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: pressed, isComposing: true }));
     element.dispatchEvent(new CompositionEvent("compositionend", init));
-  });
+    element.dispatchEvent(new CompositionEvent("compositionstart", init));
+    element.dispatchEvent(new CompositionEvent("compositionend", init));
+    element.dispatchEvent(new KeyboardEvent("keydown", { ...init, key: pressed, keyCode: 229 }));
+  }, key);
+}
+
+/** An Escape that ends a composition on field (composingKey). */
+export async function composingEscape(field: Locator): Promise<void> {
+  await composingKey(field, "Escape");
 }
 
 /**

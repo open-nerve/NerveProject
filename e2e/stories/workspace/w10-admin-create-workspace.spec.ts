@@ -1,6 +1,6 @@
 import { createWorkspace, slugFor } from "../../fixtures/api";
 import { countWorkspaces, expectNoWorkspaceAdded, expectWorkspaceCreated } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers } from "../../fixtures/users";
 import { nerveWorkspaces, nerveWorkspacesFails } from "../../fixtures/workspaces";
@@ -14,7 +14,7 @@ test("W10: with creation switched off, nerve workspaces create makes the account
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = (await createPAT(api, (await register(api, email)).access_token)).token;
+  const pat = (await registeredPAT(api, email)).token;
   const deactivated = emailFor(testInfo, "deactivated");
   await register(api, deactivated);
   await nerveUsers(db, ["deactivate", "--email", deactivated]);

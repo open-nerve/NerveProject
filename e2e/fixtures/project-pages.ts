@@ -29,12 +29,24 @@ export async function endProjectMembership(
   entry: "Leave" | "Remove",
   request: Sent
 ): Promise<Response> {
-  // the row's menu is its first button: the role's select, when there is one, comes after it
-  await memberRow(page, email).locator("button").first().click();
+  await memberRow(page, email).getByRole("button", { name: "Options" }).click();
   await page.getByRole("menuitem", { name: entry }).click();
   return answerTo(page, request.method, request.path, () =>
     page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
   );
+}
+
+/**
+ * What page shows beside its sidebars: the main region within the app's, which holds them too. A project's row in the
+ * sidebar is named by the project, as its card and its header's crumb are: a story finds those here.
+ */
+export function pageContent(page: Page): Locator {
+  return page.getByRole("main").getByRole("main");
+}
+
+/** The row of the label of name on page's label settings: its grip, its name, its menu; the innermost row with it. */
+export function labelRow(page: Page, name: string): Locator {
+  return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) }).last();
 }
 
 /**

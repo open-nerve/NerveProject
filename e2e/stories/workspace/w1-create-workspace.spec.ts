@@ -10,7 +10,7 @@ import {
   expectWorkspaceCreated,
   lastWorkspaceOf,
 } from "../../fixtures/assert/workspace";
-import { anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { deferred } from "../../fixtures/deferred";
 import { enabledWithin } from "../../fixtures/dialogs";
@@ -37,7 +37,7 @@ test("W1 (API): creating a workspace makes the caller its admin and only member;
   nerveWith,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = (await createPAT(api, (await register(api, email)).access_token)).token;
+  const pat = (await registeredPAT(api, email)).token;
   const slug = slugFor(testInfo);
   expect(await availability(api, pat, slug)).toEqual({ available: true });
 
@@ -96,7 +96,8 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
   // The name gives the slug.
   await expect(url).toHaveValue("acme-two");
 
-  // nerve's check of the slug decides: a refused one is said under the field, and the form is not sent.
+  // nerve's check of the slug decides: a refused one is said under the field, which has the focus, read invalid, its
+  // message its description; and the form is not sent.
   const refused = async (slug: string, message: string) => {
     await url.fill(slug);
     const checked = await answerTo(page, "GET", `/api/v0/workspace-slugs/${encodeURIComponent(slug)}`, () =>
@@ -104,6 +105,9 @@ test("W1 (page): at /create-workspace an onboarded account is told under the fie
     );
     expect(checked.status()).toBe(200);
     await expect(page.getByText(message)).toBeVisible();
+    await expect(url).toBeFocused();
+    await expect(url).toHaveAttribute("aria-invalid", "true");
+    await expect(url).toHaveAccessibleDescription(message);
   };
   await refused(taken, "Workspace URL is already taken!");
   await refused("settings", "This URL is reserved: choose another.");
@@ -195,7 +199,22 @@ test("W1 (page): a newcomer's onboarding creates a workspace after the profile s
   const slug = slugFor(testInfo);
   await page.locator("#name").fill("Acme");
   await page.locator("#slug").fill(slug);
+  // The sizes are toggle buttons: none pressed until one is chosen, then that one alone.
+  const sizes = page.getByRole("group", { name: /^How many people will use this workspace\?/ }).getByRole("button");
+  const pressed = () => sizes.evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-pressed")));
+  expect(await pressed()).toEqual(["false", "false", "false", "false", "false", "false"]);
   await page.getByRole("button", { name: "2-10", exact: true }).click();
+  await expect(page.getByRole("button", { name: "2-10", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect(await pressed()).toEqual(["false", "true", "false", "false", "false", "false"]);
+  // A slug nerve's check refuses: said under the field, which takes the focus, its message its description.
+  await page.locator("#slug").fill("settings");
+  const reserved = await answerTo(page, "GET", "/api/v0/workspace-slugs/settings", () =>
+    page.getByRole("button", { name: "Create workspace" }).click()
+  );
+  expect(reserved.status()).toBe(200);
+  await expect(page.locator("#slug")).toBeFocused();
+  await expect(page.locator("#slug")).toHaveAccessibleDescription("This URL is reserved: choose another.");
+  await page.locator("#slug").fill(slug);
   let created: { body: unknown; answer: Response } | undefined;
   const stepped = await sentTo(page, "PATCH", "/api/v0/me/profile", async () => {
     created = await sentTo(page, "POST", "/api/v0/workspaces", () =>
@@ -214,8 +233,13 @@ test("W1 (page): a newcomer's onboarding creates a workspace after the profile s
     { onboarding_step: { workspace_create: true }, last_workspace_id: id },
   ]);
 
-  // The invitation step invites to it, and shows the link of each invitation.
-  await page.locator('[id="invitations.0.email"]').fill(invitee);
+  // The invitation step: sent with its row empty, the row's rule fails, and its address takes the focus, its message its
+  // description. Then it invites to the workspace, and shows the link of each invitation.
+  const address = page.locator('[id="invitations.0.email"]');
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(address).toBeFocused();
+  await expect(address).toHaveAccessibleDescription("We need an email address to invite them.");
+  await address.fill(invitee);
   const invited = await sentTo(page, "POST", `/api/v0/workspaces/${slug}/invitations`, () =>
     page.getByRole("button", { name: "Continue", exact: true }).click()
   );

@@ -144,7 +144,6 @@ export const ModuleIssueQuickActions = observer(function ModuleIssueQuickActions
         portalElement={portalElement}
         menuItemsClassName="z-[14]"
         maxHeight="lg"
-        useCaptureForOutsideClick
         closeOnSelect
       >
         {MENU_ITEMS.map((item) => {

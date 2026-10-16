@@ -5,18 +5,23 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toasts } from "@/lib/fake-toast";
-import { useCopyLink, useCopyProjectLink } from "./use-copy-link";
+import { useCopyLink, useCopyProjectLink, useCopyText } from "./use-copy-link";
 
 // Copying a link (M3 design 7.7): the hooks run as plain functions, with stand-ins for the clipboard's write, which
 // the browser allows or refuses as the test says, and for the address's workspace.
 
-const browser = vi.hoisted(() => ({ copyUrlToClipboard: vi.fn() }));
-vi.mock("@nerve/utils", () => ({ copyUrlToClipboard: browser.copyUrlToClipboard }));
+const browser = vi.hoisted(() => ({ copyTextToClipboard: vi.fn(), copyUrlToClipboard: vi.fn() }));
+vi.mock("@nerve/utils", () => ({
+  copyTextToClipboard: browser.copyTextToClipboard,
+  copyUrlToClipboard: browser.copyUrlToClipboard,
+}));
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "acme" }) }));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 beforeEach(() => {
+  browser.copyTextToClipboard.mockReset();
+  browser.copyTextToClipboard.mockResolvedValue(undefined);
   browser.copyUrlToClipboard.mockReset();
   browser.copyUrlToClipboard.mockResolvedValue(undefined);
   toasts.length = 0;
@@ -32,6 +37,23 @@ describe("useCopyLink", () => {
   it("says it could not when the browser does not let the page write the clipboard, and does not reject", async () => {
     browser.copyUrlToClipboard.mockRejectedValueOnce(new DOMException("Write permission denied.", "NotAllowedError"));
     await expect(useCopyLink()("/acme/projects/p-web/issues", "the copied")).resolves.toBeUndefined();
+    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "something_went_wrong_please_try_again" }]);
+  });
+});
+
+describe("useCopyText", () => {
+  it("writes the text to the clipboard as it is, not as a link, and says what was copied", async () => {
+    await useCopyText()("nerve_pat_1", "the copied");
+    expect([browser.copyTextToClipboard.mock.calls, browser.copyUrlToClipboard.mock.calls]).toEqual([
+      [["nerve_pat_1"]],
+      [],
+    ]);
+    expect(toasts).toEqual([{ type: "success", title: "toast.success", message: "the copied" }]);
+  });
+
+  it("says it could not when the browser does not let the page write the clipboard, and does not reject", async () => {
+    browser.copyTextToClipboard.mockRejectedValueOnce(new DOMException("Write permission denied.", "NotAllowedError"));
+    await expect(useCopyText()("nerve_pat_1", "the copied")).resolves.toBeUndefined();
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "something_went_wrong_please_try_again" }]);
   });
 });

@@ -7,16 +7,19 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
-// ui
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
+// components
+import { Translated } from "@/components/common/translated";
 // hooks
 import { useUser } from "@/hooks/store/user";
 
 export type Props = {
   isOpen: boolean;
   onClose: () => void;
+  /** Makes the removal or the leaving; settles once the page has followed it: its follow-up of success closes this. */
   onSubmit: () => Promise<void>;
   userDetails: {
     id: string;
@@ -39,14 +42,13 @@ export const ConfirmWorkspaceMemberRemove = observer(function ConfirmWorkspaceMe
 
   const handleDeletion = async () => {
     setIsRemoving(true);
-
     await onSubmit();
-
-    handleClose();
+    setIsRemoving(false);
   };
 
-  // While the removal is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): it closes once nerve has
-  // answered, and no dialog opened again offers the removal while the request is out.
+  // While the removal or the leaving is out the dialog cannot be dismissed (Cancel, Escape, the backdrop): it closes
+  // once nerve has made the change, and no dialog opened again offers it while the request is out. One nerve refuses
+  // leaves it open, its buttons enabled again, the reason in the refusal's toast (A-M2).
   return (
     <ModalCore
       isOpen={isOpen}
@@ -60,9 +62,11 @@ export const ConfirmWorkspaceMemberRemove = observer(function ConfirmWorkspaceMe
             <WarningTriangleOutline className="h-6 w-6 text-danger-primary" aria-hidden="true" />
           </div>
           <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-            <h3 className="text-h5-medium leading-6 text-primary">
-              {currentUser?.id === userDetails.id ? "Leave workspace?" : `Remove ${userDetails?.display_name}?`}
-            </h3>
+            <ModalTitle className="text-h5-medium leading-6 text-primary">
+              {currentUser?.id === userDetails.id
+                ? t("workspace_settings.settings.members.leave_title")
+                : t("workspace_settings.settings.members.remove_title", { name: userDetails.display_name })}
+            </ModalTitle>
             <div className="mt-2">
               {currentUser?.id === userDetails.id ? (
                 <p className="text-body-xs-regular text-secondary">
@@ -70,9 +74,10 @@ export const ConfirmWorkspaceMemberRemove = observer(function ConfirmWorkspaceMe
                 </p>
               ) : (
                 <p className="text-body-xs-regular text-secondary">
-                  {/* TODO: Add translation here */}
-                  Are you sure you want to remove member- <span className="font-bold">{userDetails?.display_name}</span>
-                  ? They will no longer have access to this workspace. This action cannot be undone.
+                  <Translated
+                    i18nKey="workspace_settings.settings.members.remove_confirmation"
+                    values={{ name: <span className="font-bold">{userDetails.display_name}</span> }}
+                  />
                 </p>
               )}
             </div>

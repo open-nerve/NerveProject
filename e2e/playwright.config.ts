@@ -11,5 +11,11 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Firefox runs A4's page tests alone. They show that in Firefox a release of the refresh lock made as its task
+    // settles can reach the next tab before the task's localStorage writes, and that one task later it follows them (M3
+    // closeout, F-A4). The other stories expect Chromium's console messages and clipboard permissions.
+    { name: "firefox", use: { ...devices["Desktop Firefox"] }, grep: /A4 \(page\)/ },
+  ],
 });

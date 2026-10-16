@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { stringToEmoji } from "@nerve/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";
@@ -20,6 +21,7 @@ export type TProps = {
 
 export const CommentReactions = observer(function CommentReactions(props: TProps) {
   const { comment, activityOperations, disabled = false } = props;
+  const { t } = useTranslation();
   // state
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
@@ -82,6 +84,7 @@ export const CommentReactions = observer(function CommentReactions(props: TProps
             onReactionClick={handleReactionClick}
             showAddButton={showAddButton}
             onAddReaction={() => setIsPickerOpen(true)}
+            addReactionLabel={t("aria_labels.add_reaction")}
           />
         }
         placement="bottom-start"

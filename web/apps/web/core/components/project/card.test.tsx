@@ -6,7 +6,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
+import type { Project, ProjectRole, WorkspaceRole } from "@nerve/api-client";
+import { renderFormattedDate } from "@nerve/utils";
 import { emptyShown, shown } from "@/lib/fake-controls";
 import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
@@ -16,10 +17,12 @@ import { ProjectCard } from "./card";
 // to those nerve lets do it (project.unarchive and project.delete: its admins, and its members who are the workspace's
 // admins), in the card and in its menu. Not archived, it links its settings to its admins and members, who read them,
 // and to whom nerve lets change them (project.update: its admins, and its members who are the workspace's admins, its
-// guests among them); its other guests are told they joined it. The card renders on the server, at the workspace's
-// projects, with stand-ins for its menu (fake-controls.ts, which keeps the items it was given) and for its dialogs;
-// the caller's permissions are the store's own, over acme and its project web as nerve lists them to him
-// (fake-permissions.ts).
+// guests among them); its other guests are told they joined it, and one who is no member of it is offered joining it.
+// The card renders on the server, at the workspace's projects, with stand-ins for its menu, its buttons and its
+// tooltips (fake-controls.ts, which keeps the items and props it was given, a tooltip's label shown beside what it is
+// the tooltip of), for its dialogs and for @nerve/i18n, whose text is its key, then the values it was given
+// (fake-i18n-values.ts); the caller's permissions are the store's own, over acme and its project web as nerve lists
+// them to him (fake-permissions.ts).
 
 const caller = vi.hoisted(() => {
   const held: { permissions?: IUserPermissionStore } = {};
@@ -32,7 +35,9 @@ vi.mock("./join-project-modal", () => ({ JoinProjectModal: () => null }));
 vi.mock("./archive-restore-modal", () => ({ ArchiveRestoreProjectModal: () => null }));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
+// a tooltip shows its label beside what it is the tooltip of
+vi.mock("@makeplane/propel/components/tooltip", () => import("@/lib/fake-controls"));
 
 /**
  * Signs the caller in as nerve lists acme and web to him, his role in each (null: he sees web, no member of it), and
@@ -50,16 +55,21 @@ async function offeredTo(workspaceRole: WorkspaceRole, projectRole: ProjectRole 
       </Routes>
     </MemoryRouter>
   );
+  // the link to its settings (an icon alone), as the card renders it, if it does
+  const settingsLink = new RegExp(`<a [^>]*href="/${acme.slug}/settings/projects/${web.id}"[^>]*>`).exec(card)?.[0];
   const inCard = {
-    restore: />Restore</.test(card),
-    delete: card.includes('aria-label="Delete"'),
-    settings: card.includes(`href="/${acme.slug}/settings/projects/${web.id}"`),
+    restore: />restore</.test(card),
+    delete: card.includes('aria-label="delete"'),
+    settings: settingsLink !== undefined,
+    settingsName: settingsLink && /aria-label="([^"]*)"/.exec(settingsLink)?.[1],
+    joined: />project_dialogs\.joined</.test(card),
+    buttons: shown.buttons.map((button) => button.children),
   };
   // the items the menu shows, as ContextMenu picks them: every item but one whose shouldRender is false
   const menu = shown.menus.flatMap(({ items }) =>
     items.filter((item) => item.shouldRender !== false).map((item) => item.key)
   );
-  return { inCard, menu };
+  return { inCard, menu, project };
 }
 
 describe("a project's card", () => {
@@ -76,6 +86,25 @@ describe("a project's card", () => {
     expect([inCard.restore, inCard.delete, menu]).toEqual([row.offered, row.offered, offered]);
   });
 
+  it("says, in the page's language, when it was made, having no description, and how many members it has", async () => {
+    const { permissions, acme, web } = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole);
+    caller.permissions = permissions;
+    const cardOf = (project: Project) =>
+      renderToStaticMarkup(
+        <MemoryRouter initialEntries={[`/${acme.slug}/projects`]}>
+          <Routes>
+            <Route path=":workspaceSlug/projects" element={<ProjectCard project={project} />} />
+          </Routes>
+        </MemoryRouter>
+      );
+    const alone = cardOf({ ...web, member_ids: [] });
+    expect(alone).toContain(`common.created_on ${renderFormattedDate(web.created_at)}`);
+    expect(alone).toContain('<span data-tooltip="">project_dialogs.no_member_yet</span>');
+    expect(cardOf({ ...web, member_ids: ["u-bob"] })).toContain(
+      '<span data-tooltip="">project_dialogs.members_count 1</span>'
+    );
+  });
+
   it.each<Caller & { linked: boolean }>([
     { ...its.admin, linked: true },
     { ...its.memberAdmin, linked: true },
@@ -90,4 +119,15 @@ describe("a project's card", () => {
       expect([inCard.settings, menu.includes("settings")]).toEqual([row.linked, row.linked]);
     }
   );
+
+  it("names its settings link by the project, tells a guest he joined it and offers one who is no member joining, in the page's language", async () => {
+    const admin = await offeredTo(its.admin.workspaceRole, its.admin.projectRole, false);
+    const guest = await offeredTo(its.guest.workspaceRole, its.guest.projectRole, false);
+    const outsider = await offeredTo(its.outsider.workspaceRole, its.outsider.projectRole, false);
+    expect([admin.inCard.settingsName, guest.inCard.joined, outsider.inCard.buttons]).toEqual([
+      `project_dialogs.settings_link ${admin.project.name}`,
+      true,
+      ["common.join"],
+    ]);
+  });
 });

@@ -1,10 +1,10 @@
 {
   "workspace_settings": {
     "page_label": "{workspace} - 常规设置",
+    "sidebar_title": "工作区设置",
     "key_created": "密钥已创建",
     "copy_key": "复制并妥善保存此密钥。关闭后您将无法看到此密钥。包含密钥的 CSV 文件已下载。",
     "token_copied": "令牌已复制到剪贴板。",
-    "token_not_copied": "无法将令牌复制到剪贴板。",
     "settings": {
       "general": {
         "title": "常规",
@@ -13,10 +13,15 @@
         "url": "工作区网址",
         "workspace_timezone": "工作区时区",
         "update_workspace": "更新工作区",
+        "updated": "工作区已更新",
+        "url_copied": "工作区网址已复制到剪贴板。",
         "delete_workspace": "删除此工作区",
         "delete_workspace_description": "删除工作区时，该工作区内的所有数据和资源将被永久删除，且无法恢复。",
         "delete_modal": {
           "title": "确定要删除此工作区吗？",
+          "body": "您将要删除工作区 {name}。确认之后，您将失去这个工作区中的全部工作数据，无法恢复。请务必谨慎。",
+          "type_name": "输入这个工作区的名称以继续。",
+          "type_confirmation": "最后确认，请在下方输入 {confirmation}。",
           "success_title": "工作区已删除。",
           "success_message": "即将跳转到您的另一个工作区；没有其他工作区时，跳转到创建工作区。",
           "error_title": "操作失败。"
@@ -29,12 +34,18 @@
       },
       "members": {
         "title": "成员",
+        "page_label": "{workspace} - 成员",
+        "suspended": "已停用",
+        "remove_title": "移除 {name}？",
+        "remove_confirmation": "确定要从工作区中移除 {name} 吗？对方将不能再访问这个工作区。此操作无法撤销。",
+        "invitation_removed": "邀请已删除。",
         "add_member": "添加成员",
         "invite_members": "邀请成员",
         "pending_invites": "待处理邀请",
         "declined": "已忽略",
         "invitations_sent_successfully": "邀请发送成功",
-        "leave_confirmation": "您确定要离开工作区吗？您将无法再访问此工作区。此操作无法撤消。",
+        "leave_title": "离开工作区？",
+        "leave_confirmation": "您确定要离开工作区吗？您将无法再访问此工作区。此操作无法撤销。",
         "details": {
           "full_name": "全名",
           "display_name": "显示名称",
@@ -46,8 +57,9 @@
           "title": "邀请人员协作",
           "description": "邀请人员在您的工作区中协作。",
           "button": "发送邀请",
-          "button_loading": "正在发送邀请",
+          "button_loading": "发送中",
           "placeholder": "name@company.com",
+          "remove_row": "移除第 {n} 个邀请",
           "errors": {
             "required": "我们需要一个电子邮件地址来邀请他们。",
             "invalid": "电子邮件无效",
@@ -100,7 +112,7 @@
         "generating": "生成中",
         "delete": {
           "title": "删除访问令牌",
-          "description": "使用此令牌的任何应用程序将无法再访问 Nerve 数据。此操作无法撤消。",
+          "description": "使用此令牌的任何应用程序将无法再访问 Nerve 数据。此操作无法撤销。",
           "success": {
             "title": "成功！",
             "message": "访问令牌已成功删除"

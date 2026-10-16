@@ -5,26 +5,26 @@
  */
 
 import { observer } from "mobx-react";
-import { Dialog } from "@headlessui/react";
+import { ModalTitle } from "@nerve/ui";
 
 type TInvitationFormProps = {
   title: string;
   description: React.ReactNode;
   children: React.ReactNode;
   onSubmit: () => void;
+  /** The ref of the form's element (useWorkspaceInvitationActions' formRef). */
+  formRef: React.Ref<HTMLFormElement>;
   actions: React.ReactNode;
   className?: string;
 };
 
 export const InvitationForm = observer(function InvitationForm(props: TInvitationFormProps) {
-  const { title, description, children, actions, onSubmit, className } = props;
+  const { title, description, children, actions, onSubmit, formRef, className } = props;
 
   return (
-    <form onSubmit={onSubmit} className={className}>
+    <form ref={formRef} onSubmit={onSubmit} className={className}>
       <div className="space-y-4">
-        <Dialog.Title as="h3" className="text-body-md-medium leading-6 text-primary">
-          {title}
-        </Dialog.Title>
+        <ModalTitle className="text-body-md-medium leading-6 text-primary">{title}</ModalTitle>
         <div className="text-body-xs-regular text-secondary">{description}</div>
         {children}
       </div>

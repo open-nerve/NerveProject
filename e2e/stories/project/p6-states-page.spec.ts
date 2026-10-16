@@ -4,6 +4,7 @@ import {
   addProjectMembers,
   changeRole,
   createProject,
+  createState,
   createWorkspace,
   inviteAndAccept,
   slugFor,
@@ -12,7 +13,15 @@ import {
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, login } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin, sentWithin } from "../../fixtures/dialogs";
+import {
+  announced,
+  closedByEscape,
+  closedWithin,
+  enabledWithin,
+  modalDialog,
+  pageBehindHidden,
+  sentWithin,
+} from "../../fixtures/dialogs";
 import { dragOnto, tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -26,14 +35,14 @@ function stateRow(page: Page, name: string): Locator {
   return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) });
 }
 
-/** The heading of the group of key on page's state settings, which opens and closes its list. */
-function groupHeading(page: Page, key: string): Locator {
-  return page.getByRole("button", { name: key, exact: true });
+/** The heading of the group named name on page's state settings, which opens and closes its list. */
+function groupHeading(page: Page, name: string): Locator {
+  return page.getByRole("button", { name, exact: true });
 }
 
-/** The button beside the heading of the group of key that adds a state to it. */
-function addTo(page: Page, key: string): Locator {
-  return groupHeading(page, key).locator("xpath=..").getByRole("button", { name: "Add" });
+/** The button beside the heading of the group named name that adds a state to it, named by the group. */
+function addTo(page: Page, name: string): Locator {
+  return page.getByRole("button", { name: `Add a state to ${name}`, exact: true });
 }
 
 /** The form page shows to create or change a state: one at a time. */
@@ -93,14 +102,14 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await page.goto(statesPage);
   await expect(stateRow(page, "In Progress")).toBeVisible();
   await Promise.all(
-    ["backlog", "unstarted", "started", "completed", "cancelled"].map((key) =>
-      expect(groupHeading(page, key), key).toHaveAttribute("aria-expanded", "true")
+    ["Backlog", "Unstarted", "Started", "Completed", "Canceled"].map((name) =>
+      expect(groupHeading(page, name), name).toHaveAttribute("aria-expanded", "true")
     )
   );
 
   // A group's heading closes its list and opens it again from the keyboard: Enter closes the completed group's, Done's
   // row gone; Space opens it, the row back.
-  const completed = groupHeading(page, "completed");
+  const completed = groupHeading(page, "Completed");
   await completed.focus();
   await page.keyboard.press("Enter");
   await expect(completed).toHaveAttribute("aria-expanded", "false");
@@ -112,7 +121,8 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   // Review, in the started group: Tab goes through the form in its order from its colour's button, named and marked
   // as Shift+Tab reaches it; the form waits for nerve, its buttons disabled, Cancel too; it closes once nerve has made
   // the state, last of its project's.
-  await addTo(page, "started").click();
+  await addTo(page, "Started").click();
+  await expect(page.locator("#name")).toBeFocused();
   await page.locator("#name").fill("Review");
   const colour = stateForm(page).getByRole("button", { name: "Color", exact: true });
   await page.keyboard.press("Shift+Tab");
@@ -145,7 +155,7 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await expectStates(db, web.id, rows);
 
   // Todo again, in the unstarted group: said under the name, the form open with what it holds.
-  await addTo(page, "unstarted").click();
+  await addTo(page, "Unstarted").click();
   await page.locator("#name").fill("Todo");
   const taken = await sentTo(page, "POST", listed, () =>
     stateForm(page).getByRole("button", { name: "Create" }).click()
@@ -153,17 +163,21 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   expect(taken.answer.status()).toBe(409);
   await expect(stateForm(page).getByText("A state of this project already has this name.")).toBeVisible();
   await expect(page.locator("#name")).toHaveValue("Todo");
+  // the name has the focus, and is read invalid, its message its description
+  await expect(page.locator("#name")).toBeFocused();
+  await expect(page.locator("#name")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#name")).toHaveAccessibleDescription("A state of this project already has this name.");
   await stateForm(page).getByRole("button", { name: "Cancel" }).click();
 
   // Review recoloured, its row's Edit reached by Tab, its row's controls shown while the focus is in it as while the
-  // pointer is over it (unseen while neither is), Edit and Delete each marked as Tab reaches it: the fields its form
-  // edits.
+  // pointer is over it (unseen while neither is), each named by Review, Edit and Delete each marked as Tab reaches it:
+  // the fields its form edits.
   const review = stateRow(page, "Review");
-  const reviewEdit = review.getByRole("button", { name: "Edit" });
-  const reviewDelete = review.getByRole("button", { name: "Delete" });
+  const reviewEdit = review.getByRole("button", { name: "Edit Review", exact: true });
+  const reviewDelete = review.getByRole("button", { name: "Delete Review", exact: true });
   await page.mouse.move(0, 0);
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "0");
-  await review.getByRole("button", { name: "Mark as default" }).focus();
+  await review.getByRole("button", { name: "Mark as default: Review", exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(reviewEdit).toBeFocused();
   await expect(reviewEdit.locator("xpath=../..")).toHaveCSS("opacity", "1");
@@ -175,6 +189,10 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   await expect(reviewEdit).toBeFocused();
   await page.keyboard.press("Enter");
   await colour.click();
+  // its hex field shows where the keyboard is (react-color draws it with no outline of its own)
+  const hex = page.locator('input[id^="rc-editable-input"]');
+  await hex.focus();
+  await expect(hex).not.toHaveCSS("outline-style", "none");
   await page.locator('[title="#0693E3"]').click();
   const recoloured = await sentTo(page, "PATCH", `/api/v0/states/${reviewId}`, () =>
     stateForm(page).getByRole("button", { name: "Update" }).click()
@@ -225,7 +243,10 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   rows = changed(changed(rows, "Backlog", { default: false }), "Review", { default: true });
   await expectStates(db, web.id, rows);
 
-  // In Progress made the default meanwhile, elsewhere: nerve refuses its deletion, said in a toast, the dialog open.
+  // In Progress made the default meanwhile, elsewhere: nerve refuses its deletion, said in a toast read out beside the
+  // dialog, which stays open,
+  // Tab going round its two buttons and the page behind it hidden; Cancel closes it, and the page and the focus are
+  // back.
   const elsewhere = await api.POST("/api/v0/states/{state_id}/mark-default", {
     params: { path: { state_id: inProgressId } },
     headers: bearer(admin.access_token),
@@ -235,14 +256,22 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
   const deleted = `/api/v0/states/${inProgressId}`;
   const dialog = page.getByRole("dialog");
   await inProgress.getByRole("button", { name: "Delete" }).click();
+  // the dialog is named by its title (ModalTitle)
+  await expect(modalDialog(page)).toHaveAccessibleName("Delete state");
+  await expect(modalDialog(page).getByText(/^Are you sure you want to delete state In Progress\?/)).toBeVisible();
   const refused = await sentTo(page, "DELETE", deleted, () => dialog.getByRole("button", { name: "Delete" }).click());
   expect(refused.answer.status()).toBe(409);
-  await expect(
-    page.getByText("The default state cannot be deleted. Make another state the default first.")
-  ).toBeVisible();
+  const refusal = page.getByText("The default state cannot be deleted. Make another state the default first.");
+  await expect(refusal).toBeVisible();
+  expect(await announced(refusal)).toBe(true);
   expect(await closedWithin(page)).toBe(false);
+  await dialog.getByRole("button", { name: "Cancel" }).focus();
+  expect(await tabCycle(page, modalDialog(page), 4)).toEqual(["Delete", "Cancel"]);
+  expect(await pageBehindHidden(page)).toBe(true);
   await dialog.getByRole("button", { name: "Cancel" }).click();
   expect(await closedWithin(page)).toBe(true);
+  expect(await pageBehindHidden(page)).toBe(false);
+  await expect(inProgress.getByRole("button", { name: "Delete" })).toBeFocused();
 
   // Reloaded, the page shows In Progress the default, as nerve holds it; Review made the default again. In Progress
   // deleted, its dialog held while nerve answers: Escape does not dismiss it, Cancel is disabled; it closes once nerve
@@ -271,15 +300,31 @@ test("P6 (page): the admin creates Review in the started group, its form gone th
     errors: Array(2).fill("Failed to load resource: the server responded with a status of 409 (Conflict)"),
   });
 
+  // A name nerve took through its API, longer than the page let one type (nerve takes up to 255 characters): one
+  // character deleted, then Enter and Tab, it is not read invalid. Its rules are the form's and nerve's alone: an
+  // input's own maximum, which Base UI takes on Enter, would read it invalid with no message.
+  const docs = await createProject(api, admin.access_token, slug, { name: "Docs", identifier: "DOCS" });
+  const longName = `Review ${"x".repeat(113)}`;
+  await createState(api, admin.access_token, docs.id, { name: longName, color: "#f59e0b", group: "started" });
+  await page.goto(`/${slug}/settings/projects/${docs.id}/states`);
+  await page.getByRole("button", { name: `Edit ${longName}`, exact: true }).click();
+  const nameField = page.locator("#name");
+  await expect(nameField).toHaveValue(longName);
+  await nameField.press("End");
+  await nameField.press("Backspace");
+  await nameField.press("Enter");
+  await nameField.press("Tab");
+  await expect(nameField).not.toHaveAttribute("aria-invalid");
+
   // Its member sees the states and no control that changes them; a workspace admin who is its member has them all.
   const seenBy = async (who: string, tokens: typeof mem, controls: boolean) => {
     const other = await anotherBrowser(browser, baseURL ?? "", tokens);
     const otherWatch = await watchPage(other.page);
     await other.page.goto(statesPage);
     await expect(stateRow(other.page, "Review"), who).toBeVisible();
-    await expect(addTo(other.page, "started"), who).toBeEnabled({ enabled: controls });
-    await expect(other.page.getByRole("button", { name: "Mark as default" }), who).toHaveCount(controls ? 4 : 0);
-    await expect(other.page.getByRole("button", { name: "Edit" }), who).toHaveCount(controls ? 5 : 0);
+    await expect(addTo(other.page, "Started"), who).toBeEnabled({ enabled: controls });
+    await expect(other.page.getByRole("button", { name: /^Mark as default: / }), who).toHaveCount(controls ? 4 : 0);
+    await expect(other.page.getByRole("button", { name: /^Edit / }), who).toHaveCount(controls ? 5 : 0);
     expect([otherWatch.apiFailures, otherWatch.pageErrors], who).toEqual([[], []]);
     await expectQuietConsole(other.page, otherWatch, { warnings: [EMOJI_CHECK_WARNING] });
     await other.close();

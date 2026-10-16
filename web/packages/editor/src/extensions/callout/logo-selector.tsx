@@ -39,6 +39,7 @@ export function CalloutBlockLogoSelector(props: Props) {
   return (
     <div contentEditable={false}>
       <EmojiPicker
+        ariaLabel="Callout icon"
         closeOnSelect={true}
         isOpen={isOpen}
         handleToggle={handleOpen}

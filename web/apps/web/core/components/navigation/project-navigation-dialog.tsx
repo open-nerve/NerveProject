@@ -10,7 +10,8 @@ import { CloseOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Checkbox } from "@makeplane/propel/components/checkbox";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { Field, FieldControl, FieldError } from "@makeplane/propel/components/field";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
 import { countOf } from "@/hooks/navigation-preferences";
@@ -20,11 +21,6 @@ type TProjectNavigationDialogProps = {
   isOpen: boolean;
   onClose: () => void;
 };
-
-/** Keeps out of the count field the keys a number's other characters are typed with: e, E, +, - and the point. */
-function blockNonDigits(e: React.KeyboardEvent<HTMLInputElement>) {
-  if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
-}
 
 export const ProjectNavigationDialog = observer(function ProjectNavigationDialog(props: TProjectNavigationDialogProps) {
   const { isOpen, onClose } = props;
@@ -40,6 +36,8 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
   const [countDraft, setCountDraft] = useState<string | null>(null);
   const countText = countDraft ?? projectPreferences.limitedProjectsCount.toString();
   const countValid = countOf(countText) !== undefined;
+  // the count's rule refuses what the caller typed (an empty field is no count yet, and not refused)
+  const countRefused = !countValid && countText !== "";
 
   const sendCount = () => {
     if (countDraft === null) return;
@@ -54,7 +52,7 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
         {/* Header */}
         <div className="flex justify-between px-6 pt-4">
           <div>
-            <h2 className="text-18 font-semibold text-primary">{t("projects")}</h2>
+            <ModalTitle className="text-18 font-semibold text-primary">{t("projects")}</ModalTitle>
           </div>
           <button
             onClick={onClose}
@@ -83,9 +81,7 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
                   />
                   <div className="flex-1">
                     <div className="text-13 text-primary">{t("accordion_navigation_control")}</div>
-                    <div className="text-11 text-secondary">
-                      Feature tabs will appear as nested items under project and acts as accordion.
-                    </div>
+                    <div className="text-11 text-secondary">{t("accordion_navigation_description")}</div>
                   </div>
                 </label>
 
@@ -101,9 +97,7 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
                   />
                   <div className="flex-1">
                     <div className="text-13 text-primary">{t("horizontal_navigation_bar")}</div>
-                    <div className="text-11 text-secondary">
-                      Feature tabs will appear as horizontal tabs inside a project.
-                    </div>
+                    <div className="text-11 text-secondary">{t("horizontal_navigation_description")}</div>
                   </div>
                 </label>
               </div>
@@ -121,34 +115,42 @@ export const ProjectNavigationDialog = observer(function ProjectNavigationDialog
 
                 {projectPreferences.showLimitedProjects && (
                   <div className="pl-8">
-                    <div className="flex w-full flex-col gap-1">
+                    {/* propel's Field: the count is Base UI's control (FieldControl), with the rule's message, shown as
+                    the caller types, its description (FieldError). The count is text with a numeric keypad, digits
+                    only, so that its rule is its only one: a number input's own (its minimum, Firefox's letters) would
+                    be taken by Base UI on Enter and outlive the message, read invalid once the count is back. */}
+                    <Field invalid={countRefused}>
                       <div className="flex w-full flex-col gap-2 pb-1.5">
                         <label htmlFor={countId} className="w-full text-11 text-secondary">
                           {t("enter_number_of_projects")}
                         </label>
-                        <input
+                        <FieldControl
                           id={countId}
-                          type="number"
-                          min="1"
-                          step="1"
+                          type="text"
+                          inputMode="numeric"
                           value={countText}
-                          onKeyDown={blockNonDigits}
                           onChange={(e) => setCountDraft(e.target.value.replace(/\D/g, ""))}
                           onBlur={sendCount}
-                          className={cn(
-                            "w-full rounded-md px-2 py-1 text-13",
-                            "border bg-surface-2",
-                            "text-secondary",
-                            countValid
-                              ? "border-strong focus:border-accent-strong focus:ring-1 focus:ring-accent-strong"
-                              : "border-danger-strong focus:border-danger-strong focus:ring-1 focus:ring-danger-strong"
-                          )}
+                          render={
+                            <input
+                              className={cn(
+                                "w-full rounded-md px-2 py-1 text-13",
+                                "border bg-surface-2",
+                                "text-secondary",
+                                countValid
+                                  ? "border-strong focus:border-accent-strong focus:ring-1 focus:ring-accent-strong"
+                                  : "border-danger-strong focus:border-danger-strong focus:ring-1 focus:ring-danger-strong"
+                              )}
+                            />
+                          }
                         />
                       </div>
-                      {!countValid && countText !== "" && (
-                        <span className="pl-0.5 text-11 text-danger-primary">Minimum value is 1</span>
+                      {countRefused && (
+                        <FieldError match size="lg">
+                          {t("navigation_count_minimum")}
+                        </FieldError>
                       )}
-                    </div>
+                    </Field>
                   </div>
                 )}
               </div>

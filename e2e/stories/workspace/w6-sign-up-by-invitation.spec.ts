@@ -1,7 +1,7 @@
 import { accept, createApi, createWorkspace, invite, slugFor, type WorkspaceInvitation } from "../../fixtures/api";
 import { countIdentity, expectNothingAdded, expectRegistered } from "../../fixtures/assert/identity";
 import { expectInvitations, expectMembership, lastWorkspaceOf } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, password, register, type RegisterInvitation } from "../../fixtures/auth";
+import { bearer, emailFor, password, registeredPAT, type RegisterInvitation } from "../../fixtures/auth";
 import { fillSignUp, formAlert, submitSignIn, submitSignUp } from "../../fixtures/auth-pages";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { registerOnboarded, sentTo } from "../../fixtures/settings-pages";
@@ -20,9 +20,9 @@ test("W6 (API): with sign-up off, the address an invitation was sent to register
   // personal access tokens, which every nerve on the database accepts.
   const closed = createApi((await nerveWith({ NERVE_AUTH__SIGNUP_ENABLED: "false" })).baseURL);
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const daveEmail = emailFor(testInfo, "dave");
-  const dave = (await createPAT(api, (await register(api, daveEmail)).access_token)).token;
+  const dave = (await registeredPAT(api, daveEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(closed, admin, { name: "Acme", slug });
   const carolEmail = emailFor(testInfo, "carol");
@@ -134,7 +134,7 @@ test("W6 (page): with sign-up off, the sign-up page says so; the invitee opens h
   const closed = await nerveWith({ NERVE_AUTH__SIGNUP_ENABLED: "false" });
   const closedApi = createApi(closed.baseURL);
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const slug = slugFor(testInfo);
   const acme = await createWorkspace(closedApi, admin, { name: "Acme", slug });
   const carolEmail = emailFor(testInfo, "carol");

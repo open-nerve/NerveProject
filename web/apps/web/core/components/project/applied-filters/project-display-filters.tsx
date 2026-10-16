@@ -25,14 +25,16 @@ export const AppliedProjectDisplayFilters = observer(function AppliedProjectDisp
     <>
       {values.map((key) => {
         const filterLabel = PROJECT_DISPLAY_FILTER_OPTIONS.find((s) => s.key === key)?.i18n_label;
+        const label = filterLabel ? t(filterLabel) : "";
         return (
           <div key={key} className="flex items-center gap-1 rounded-sm bg-layer-1 px-1.5 py-1 text-11">
-            {filterLabel && t(filterLabel)}
+            {label}
             {editable && (
               <button
                 type="button"
                 className="grid place-items-center text-tertiary hover:text-secondary"
                 onClick={() => handleRemove(key)}
+                aria-label={t("common.remove_item", { name: label })}
               >
                 <CloseOutline height={10} width={10} />
               </button>

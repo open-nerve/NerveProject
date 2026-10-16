@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { expectRevoked, sessionOf } from "../../fixtures/assert/identity";
+import { expectRevoked, sessionOf } from "../../fixtures/assert/session";
 import { signInPath } from "../../fixtures/auth-pages";
 import { bearer, emailFor, recordOf, refresh, register } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";

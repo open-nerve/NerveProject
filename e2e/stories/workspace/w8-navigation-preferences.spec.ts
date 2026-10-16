@@ -8,8 +8,9 @@ import {
   type WorkspacePreferences,
 } from "../../fixtures/api";
 import { expectPreferences } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { closedWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { answerTo, bodiesSentTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -33,7 +34,7 @@ test("W8 (API): the settings are the defaults and nothing is stored until the fi
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = (await createPAT(api, (await register(api, email)).access_token)).token;
+  const pat = (await registeredPAT(api, email)).token;
   const slug = slugFor(testInfo);
   const other = slugFor(testInfo, "other");
   await createWorkspace(api, pat, { name: "Acme", slug });
@@ -57,7 +58,7 @@ test("W8 (API): the settings are the defaults and nothing is stored until the fi
 
   // Another member of the workspace reads the defaults, and nothing is stored for him.
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   await inviteAndAccept(api, pat, slug, { email: memberEmail, token: member }, 15);
   expect(await read(api, member, slug)).toEqual(defaults);
   await expectPreferences(db, slug, memberEmail, null);
@@ -113,6 +114,7 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   const limited = dialog.getByRole("checkbox", { name: "Show limited projects on sidebar" });
   const count = dialog.getByLabel("Enter number of projects");
   await sidebar.getByRole("button", { name: "Project navigation" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Projects");
   await expect(limited).toBeChecked();
   await expect(count).toHaveValue("10");
 
@@ -130,6 +132,24 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   await expect.poll(() => turns).toEqual([{ navigation_project_limit: 0 }, { navigation_project_limit: 10 }]);
   await expect(limited).toBeChecked();
   await expect(count).toHaveValue("10");
+  // The count is a text input that a phone gives its numeric keypad (its input mode), not a number input.
+  await expect(count).toHaveAttribute("inputmode", "numeric");
+  // He types 0: as he types, the count is read invalid, its rule's message its description.
+  await count.fill("0");
+  await expect(count).toHaveAttribute("aria-invalid", "true");
+  await expect(count).toHaveAccessibleDescription("Minimum value is 1");
+  // He confirms 0 by Enter and leaves by Tab: nothing goes, the field shows the count again, and it is read valid, with
+  // no message and no description. Its rule is its only rule: none of a number input's own outlives the message.
+  await count.press("Enter");
+  await count.press("Tab");
+  await expect(count).toHaveValue("10");
+  await expect(count).not.toHaveAttribute("aria-invalid");
+  await expect(count).toHaveAccessibleDescription("");
+  await expect(dialog.getByText("Minimum value is 1")).toHaveCount(0);
+  // Emptied, the field holds no count yet, which its rule does not refuse.
+  await count.fill("");
+  await expect(count).not.toHaveAttribute("aria-invalid");
+  await expect(dialog.getByText("Minimum value is 1")).toHaveCount(0);
   // He types 30 and corrects it to 3: the count goes once, as he leaves the field.
   const limit = await sentTo(page, "PATCH", path, async () => {
     await count.fill("30");
@@ -150,7 +170,8 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   await expect(tabs).toBeChecked();
   await expect(count).toHaveValue("3");
 
-  // A count beyond nerve's bounds: nerve refuses it, the page says why, and the field and the sidebar keep 3.
+  // A count beyond nerve's bounds: nerve refuses it, the page says why, and the field keeps 3; the sidebar, hidden
+  // behind the dialog while it is open, keeps 3 too once it has closed.
   const beyond = await answerTo(page, "PATCH", path, async () => {
     await count.fill("3000000000");
     await count.blur();
@@ -158,6 +179,9 @@ test("W8 (page): in his workspace's sidebar the caller makes the project navigat
   expect(beyond.status()).toBe(422);
   await expect(page.getByText("Some fields are not valid.")).toBeVisible();
   await expect(count).toHaveValue("3");
+  expect(await pageBehindHidden(page)).toBe(true);
+  await dialog.getByRole("button", { name: "Close" }).click();
+  expect(await closedWithin(page)).toBe(true);
   await expect(projects).toHaveCount(3);
   await expectPreferences(db, slug, email, settings);
   expect(watch.apiRequests.filter((request) => request === `PATCH ${path}`)).toHaveLength(5);

@@ -6,6 +6,7 @@
 
 import { observer } from "mobx-react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
 import { FilterOutline, SelectedFilterOutline } from "@makeplane/propel/icons";
 import { cn } from "@nerve/utils";
@@ -25,6 +26,7 @@ export const FiltersToggle = observer(function FiltersToggle<P extends TFilterPr
   props: TFiltersToggleProps<P, E>
 ) {
   const { filter } = props;
+  const { t } = useTranslation();
   // derived values
   const hasAnyConditions = (filter?.allConditionsForDisplay.length ?? 0) > 0;
   const isFilterRowVisible = filter?.isVisible ?? false;
@@ -82,6 +84,7 @@ export const FiltersToggle = observer(function FiltersToggle<P extends TFilterPr
       size="lg"
       variant="secondary"
       icon={showFilterRowChangesPill ? SelectedFilterOutline : FilterOutline}
+      aria-label={t("common.filters")}
       onClick={handleToggleFilter}
       className={buttonClassName}
       iconClassName={iconClassName}

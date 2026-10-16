@@ -29,7 +29,7 @@ type TEmojiIconPickerTypes = typeof EmojiIconPickerTypes.EMOJI | typeof EmojiIco
 
 export type TCustomEmojiPicker = {
   /** The name of the picker's button, which shows the icon picked: what the icon is of. */
-  ariaLabel?: string;
+  ariaLabel: string;
   isOpen: boolean;
   handleToggle: (value: boolean) => void;
   buttonClassName?: string;

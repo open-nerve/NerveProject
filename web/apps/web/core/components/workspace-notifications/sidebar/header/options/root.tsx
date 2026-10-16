@@ -59,6 +59,7 @@ export const NotificationSidebarHeaderOptions = observer(function NotificationSi
           size="base"
           variant="ghost"
           icon={loader === ENotificationLoader.MARK_ALL_AS_READY ? Spinner : CheckDoneOutline}
+          aria-label={t("notification.options.mark_all_as_read")}
           onClick={() => {
             handleMarkAllNotificationsAsRead();
           }}
@@ -71,6 +72,7 @@ export const NotificationSidebarHeaderOptions = observer(function NotificationSi
           size="base"
           variant="ghost"
           icon={RefreshOutline}
+          aria-label={t("notification.options.refresh")}
           className={loader === ENotificationLoader.MUTATION_LOADER ? "animate-spin" : ""}
           onClick={refreshNotifications}
         />

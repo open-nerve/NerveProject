@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "react-router dev --port 3000",
     "build": "react-router build",
-    "check:lint": "node ../../../tools/lint-cap.mjs 303",
+    "check:lint": "node ../../../tools/lint-cap.mjs 292",
     "check:types": "react-router typegen && tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt .",
@@ -69,6 +69,7 @@
     "@types/react-color": "catalog:",
     "@types/react-dom": "catalog:",
     "emojibase-data": "catalog:",
+    "jsdom": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

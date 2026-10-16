@@ -11,6 +11,7 @@ import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import type { TIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
@@ -40,6 +41,7 @@ type TWorkItemDetailQuickActionProps = IQuickActionProps & {
 export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickActions(
   props: TWorkItemDetailQuickActionProps
 ) {
+  const { t } = useTranslation();
   const {
     issue,
     handleDelete,
@@ -228,7 +230,9 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
       <CustomMenu
         ellipsis
         placement={placements}
-        customButton={<IconButton size="lg" variant="secondary" icon={MoreHorizontalOutline} />}
+        customButton={
+          <IconButton size="lg" variant="secondary" icon={MoreHorizontalOutline} aria-label={t("common.options")} />
+        }
         portalElement={portalElement}
         menuItemsClassName="z-[14]"
         maxHeight="lg"

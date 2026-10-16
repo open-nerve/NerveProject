@@ -5,6 +5,7 @@
  */
 
 import { useCallback } from "react";
+import { isComposing } from "@nerve/utils";
 
 type TUseDropdownKeyDown = {
   (
@@ -27,7 +28,7 @@ export const useDropdownKeyDown: TUseDropdownKeyDown = (onEnterKeyDown, onEscKey
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLElement>) => {
-      if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+      if (event.key === "Enter" && !isComposing(event.nativeEvent)) {
         stopEventPropagation(event);
         onEnterKeyDown();
       } else if (event.key === "Escape") {

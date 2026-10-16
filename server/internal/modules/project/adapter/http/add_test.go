@@ -75,11 +75,11 @@ func TestAddProjectMembersRefusals(t *testing.T) {
 		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 		{"the targets", shared.Invalid(shared.FieldError{Field: "members[0].member_id", Code: "not_allowed",
 			Message: "must be an active member of the workspace"}, shared.FieldError{Field: "members[1].role", Code: "not_allowed",
-			Message: "is not one his workspace role allows: a workspace admin is added as an admin, a guest as a guest"}),
+			Message: "is not one the account's workspace role allows: a workspace admin is added as an admin, a guest as a guest"}),
 			http.StatusUnprocessableEntity,
 			`{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
 				`"errors":[{"field":"members[0].member_id","code":"not_allowed","message":"must be an active member of the workspace"},` +
-				`{"field":"members[1].role","code":"not_allowed","message":"is not one his workspace role allows: a workspace admin is added ` +
+				`{"field":"members[1].role","code":"not_allowed","message":"is not one the account's workspace role allows: a workspace admin is added ` +
 				`as an admin, a guest as a guest"}]}`},
 	}
 	for _, tt := range tests {

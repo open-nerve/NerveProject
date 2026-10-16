@@ -19,6 +19,7 @@ import WorkSpaceNotAvailable from "@/app/assets/workspace/workspace-not-availabl
 import { SessionUnavailable } from "@/components/account/session-unavailable";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { NerveLogo } from "@/components/common/nerve-logo";
+import { PageHead } from "@/components/core/page-title";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -86,6 +87,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
             <div className="relative flex-shrink-0">
               <img src={WorkSpaceNotAvailable} className="h-[220px] object-contain object-center" alt="" />
             </div>
+            <PageHead title={t("workspace_not_found.title")} />
             <h3 className="text-center text-16 font-semibold">{t("workspace_not_found.title")}</h3>
             <p className="text-center text-13 text-secondary">{t("workspace_not_found.description")}</p>
             <div className="flex items-center justify-center gap-2 pt-4">

@@ -9,7 +9,7 @@ import { useTheme } from "next-themes";
 import { SWRConfig } from "swr";
 // Nerve Imports
 import { WEB_SWR_CONFIG } from "@nerve/constants";
-import { TranslationProvider } from "@nerve/i18n";
+import { TranslationProvider, useTranslation } from "@nerve/i18n";
 import { Toast } from "@nerve/propel/toast";
 // helpers
 import { resolveGeneralTheme } from "@nerve/utils";
@@ -29,6 +29,12 @@ const InstanceWrapper = lazy(function InstanceWrapper() {
   return import("@/lib/wrappers/instance-wrapper");
 });
 
+/** The toasts, their region named in the user's language: the translation's provider holds it. */
+function AppToast({ theme }: { theme: string | undefined }) {
+  const { t } = useTranslation();
+  return <Toast theme={resolveGeneralTheme(theme)} label={t("aria_labels.toasts")} />;
+}
+
 export interface IAppProvider {
   children: React.ReactNode;
 }
@@ -43,7 +49,7 @@ export function AppProvider(props: IAppProvider) {
       <>
         <AppProgressBar />
         <TranslationProvider>
-          <Toast theme={resolveGeneralTheme(resolvedTheme)} />
+          <AppToast theme={resolvedTheme} />
           <StoreWrapper>
             <InstanceWrapper>
               <Suspense>

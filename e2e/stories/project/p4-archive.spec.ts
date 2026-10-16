@@ -17,10 +17,16 @@ import {
   expectProjectDeleted,
   type LabelRow,
 } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { closedByComposingEscape, closedByEscape, enabledWithin } from "../../fixtures/dialogs";
+import {
+  closedByComposingEscape,
+  closedByEscape,
+  enabledWithin,
+  modalDialog,
+  pageBehindHidden,
+} from "../../fixtures/dialogs";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
@@ -90,9 +96,9 @@ test("P4 (API): the admin archives a project, which leaves the list for the arch
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug, timezone: "UTC" });
   await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);
@@ -238,14 +244,21 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   const general = `/${slug}/settings/projects/${web.id}`;
   await page.goto(general);
   // An Escape that ends an input method's composition in the deletion's name field is the input method's: the dialog
-  // stays open, and a plain Escape still closes it.
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  // stays open, and a plain Escape still closes it. While it is open the page behind it is inert and hidden; closed,
+  // the page is back, and so is the focus, on the button that opened it. Each dialog is named by its title.
+  const deleteButton = page.getByRole("button", { name: "Delete", exact: true });
+  await deleteButton.click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Delete project");
   await page.locator("#projectName").fill("We");
+  expect(await pageBehindHidden(page)).toBe(true);
   expect(await closedByComposingEscape(page.locator("#projectName"))).toBe(false);
   expect(await closedByEscape(page)).toBe(true);
+  expect(await pageBehindHidden(page)).toBe(false);
+  await expect(deleteButton).toBeFocused();
   // The admin archives Web: the dialog cannot be closed, nor Web archived twice, and the page stays, until nerve has
   // archived it.
   await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Archive Web");
   const archive = await sentHeld(page, "POST", `/api/v0/projects/${web.id}/archive`, () =>
     page.getByRole("dialog").getByRole("button", { name: "Archive" }).click()
   );
@@ -267,6 +280,7 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   await theOtherAdmin.page.goto(`/${slug}/projects/archives`);
   // the card's button: the card's menu, in a portal of its own, has one too
   await theOtherAdmin.page.getByRole("main").getByRole("button", { name: "Restore" }).click();
+  await expect(modalDialog(theOtherAdmin.page)).toHaveAccessibleName("Restore Web");
   const restored = await answerTo(theOtherAdmin.page, "POST", `/api/v0/projects/${web.id}/unarchive`, () =>
     theOtherAdmin.page.getByRole("dialog").getByRole("button", { name: "Restore" }).click()
   );
@@ -292,6 +306,8 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   await page.getByRole("main").getByRole("button", { name: "Delete" }).click();
   await page.locator("#projectName").fill("Web");
   await expect(page.getByRole("button", { name: "Delete project" })).toBeDisabled();
+  // the hint names the words to type, as the dialog compares them
+  await expect(page.locator("#confirmDelete")).toHaveAttribute("placeholder", "Enter “delete my project”");
   await page.locator("#confirmDelete").fill("delete my project");
   const deleting = await sentHeld(page, "DELETE", `/api/v0/projects/${web.id}`, () =>
     page.getByRole("button", { name: "Delete project" }).click()

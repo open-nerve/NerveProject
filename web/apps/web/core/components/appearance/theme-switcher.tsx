@@ -17,8 +17,8 @@ import { ThemeSwitch } from "@/components/core/theme/theme-switch";
 import { SettingsControlItem } from "@/components/settings/control-item";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
+import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 // lib
-import { errorMessageKey } from "@/lib/error-messages";
 import { sessionGuard } from "@/lib/in-session";
 
 export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
@@ -34,6 +34,7 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
   const { setTheme } = useTheme();
   // translation
   const { t } = useTranslation();
+  const refusalMessage = useRefusalMessage();
   // derived values
   const currentTheme = useMemo(() => {
     const userThemeOption = THEME_OPTIONS.find((option) => option.value === userProfile?.theme);
@@ -55,7 +56,7 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
         },
         error: {
           title: t("toast.error"),
-          message: (error) => t(errorMessageKey(error)),
+          message: refusalMessage,
         },
       });
       try {
@@ -69,7 +70,7 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
       setTheme(themeOption.value);
       window.location.reload();
     },
-    [setTheme, updateUserTheme, t]
+    [setTheme, updateUserTheme, t, refusalMessage]
   );
 
   if (!userProfile) return null;

@@ -14,19 +14,22 @@ import {
 import { expectLabels } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { closedByEscape, closedWithin, enabledWithin } from "../../fixtures/dialogs";
-import { dragOnto, tabCycle } from "../../fixtures/project-pages";
+import {
+  announced,
+  closedByEscape,
+  closedWithin,
+  enabledWithin,
+  modalDialog,
+  pageBehindHidden,
+} from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
+import { dragOnto, labelRow, tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
 // P7's page version (M3 design 2, 3.16, 7.6): a project's labels on its settings page, as its admin changes them, and
 // as its member and a workspace admin who is its member see them. The API version is p7-labels.spec.ts.
-
-/** The row of the label of name on page's label settings: its grip, its name, its menu; the innermost row with it. */
-function labelRow(page: Page, name: string): Locator {
-  return page.locator("div.group", { has: page.getByRole("heading", { name, exact: true, level: 6 }) }).last();
-}
 
 /**
  * The label of name on page as a place to drop another on, which tells where by the point: its row, the labels under
@@ -98,6 +101,9 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   const watch = await watchPage(page);
   await page.goto(`/${slug}/settings/projects/${web.id}/labels`);
   await expect(page.locator("h6")).toHaveText(["UI", "Docs"]);
+  // A label's controls are unseen as the page opens, neither the pointer nor the focus in its row.
+  await expect(labelRow(page, "UI").locator(":scope > div.absolute")).toHaveCSS("opacity", "0");
+  await expect(labelRow(page, "Docs").locator(":scope > div.absolute")).toHaveCSS("opacity", "0");
 
   // The sidebar's way back to the project, an icon button of the app's (propel's), named and marked as Shift+Tab
   // reaches it from the first of the sidebar's links, its ring set off from it as on each of the app's buttons.
@@ -138,15 +144,17 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   );
   expect(created.answer.status()).toBe(201);
 
-  // bug: said under the name (the line after the form), the form open with what it holds.
+  // bug: said under the name (the line after the form), the form open with what it holds, the name focused and
+  // described by it.
   await page.getByRole("button", { name: "Add label" }).click();
   await page.locator("#labelName").fill("bug");
   const taken = await sentTo(page, "POST", listed, () => labelForm(page).getByRole("button", { name: "Add" }).click());
   expect(taken.answer.status()).toBe(409);
-  await expect(labelForm(page).locator("xpath=following-sibling::p[1]")).toHaveText(
-    "A label of this project already has this name, in this case or another."
-  );
+  const message = "A label of this project already has this name, in this case or another.";
+  await expect(labelForm(page).locator("xpath=following-sibling::div[1]")).toHaveText(message);
   await expect(page.locator("#labelName")).toHaveValue("bug");
+  await expect(page.locator("#labelName")).toBeFocused();
+  await expect(page.locator("#labelName")).toHaveAccessibleDescription(message);
   await labelForm(page).getByRole("button", { name: "Cancel" }).click();
   const named = await labelsOf(api, admin.access_token, web.id);
   const [bug, feature] = [named("Bug"), named("Feature")];
@@ -193,13 +201,13 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   ).toBeVisible();
   await expect(page.locator("h6")).toHaveText(["Feature", "Docs", "Defect", "UI"]);
 
-  // Docs's controls, unseen while neither the pointer nor the focus is in its row (a click elsewhere hides them), are
-  // shown while Tab goes through them, as while the pointer is over it, each marked as Tab reaches it. Tab comes to its
-  // menu from Feature's delete button, past its grip, which only a pointer drags.
+  // Docs's controls, unseen while neither the pointer nor the focus is in its row (a click on its name moves the focus
+  // out of it), are shown while Tab goes through them, as while the pointer is over it, each named by Docs and marked
+  // as Tab reaches it. Tab comes to its menu from Feature's delete button, past its grip, which only a pointer drags.
   const docsRow = labelRow(page, "Docs");
   const docsControls = docsRow.locator(":scope > div.absolute");
-  const docsOptions = docsRow.getByRole("button", { name: "Options" });
-  const docsDelete = docsRow.getByRole("button", { name: "Delete" });
+  const docsOptions = docsRow.getByRole("button", { name: "Docs options", exact: true });
+  const docsDelete = docsRow.getByRole("button", { name: "Delete Docs", exact: true });
   await docsRow.locator("h6").click();
   await page.mouse.move(0, 0);
   await expect(docsControls).toHaveCSS("opacity", "0");
@@ -211,6 +219,22 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await expect(docsDelete).toBeFocused();
   await expect(docsDelete).not.toHaveCSS("outline-style", "none");
   await expect(docsControls).toHaveCSS("opacity", "1");
+  // its menu, opened and closed by the keyboard, leaves them unseen again once neither the pointer nor the focus is in
+  // its row
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem", { name: "Edit label" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await docsRow.locator("h6").click();
+  await page.mouse.move(0, 0);
+  await expect(docsControls).toHaveCSS("opacity", "0");
+  await docsDelete.focus();
+  // back on its menu, the keyboard chooses Edit label, which opens Docs's form
+  await page.keyboard.press("Shift+Tab");
+  await chooseByKeyboard(page, docsOptions, "Edit label");
+  await expect(labelForm(page).locator("#labelName")).toHaveValue("Docs");
+  await labelForm(page).getByRole("button", { name: "Cancel" }).click();
 
   // Its member sees the labels, Defect's group among them, and no control that changes them, no grip, no label to drag;
   // a workspace admin who is its member has them all: a grip, a menu and a drag each, a delete button each but the
@@ -224,8 +248,8 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
     await expect(other.page.getByRole("button", { name: "Add label" }), who).toHaveCount(controls ? 1 : 0);
     await expect(other.page.locator("button.cursor-grab"), who).toHaveCount(controls ? 4 : 0);
     await expect(other.page.locator('[draggable="true"]:has(h6)'), who).toHaveCount(controls ? 4 : 0);
-    await expect(other.page.getByRole("button", { name: "Options" }), who).toHaveCount(controls ? 4 : 0);
-    await expect(other.page.getByRole("button", { name: "Delete" }), who).toHaveCount(controls ? 3 : 0);
+    await expect(other.page.getByRole("button", { name: / options$/ }), who).toHaveCount(controls ? 4 : 0);
+    await expect(other.page.getByRole("button", { name: /^Delete / }), who).toHaveCount(controls ? 3 : 0);
     expect([otherWatch.apiFailures, otherWatch.pageErrors], who).toEqual([[], []]);
     await expectQuietConsole(other.page, otherWatch, { warnings: [EMOJI_CHECK_WARNING] });
     await other.close();
@@ -233,8 +257,9 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   await seenBy("its member", mem, false);
   await seenBy("the workspace admin who is its member", wanda, true);
 
-  // Docs deleted meanwhile, elsewhere: nerve refuses its deletion here, said in a toast, the dialog open; Cancel closes
-  // it.
+  // Docs deleted meanwhile, elsewhere: nerve refuses its deletion here, said in a toast read out beside the dialog,
+  // which stays open, Tab going round its two buttons and the page behind it hidden; Cancel closes it, and the page
+  // and the focus are back.
   const gone = await api.DELETE("/api/v0/labels/{label_id}", {
     params: { path: { label_id: docs.id } },
     headers: bearer(admin.access_token),
@@ -242,14 +267,23 @@ test("P7 (page): the admin creates Bug, its form gone through by Tab and held un
   expect(gone.response.status).toBe(204);
   const dialog = page.getByRole("dialog");
   await docsDelete.click();
+  // the dialog is named by its title (ModalTitle)
+  await expect(modalDialog(page)).toHaveAccessibleName("Delete label");
   const refused = await sentTo(page, "DELETE", `/api/v0/labels/${docs.id}`, () =>
     dialog.getByRole("button", { name: "Delete" }).click()
   );
   expect(refused.answer.status()).toBe(404);
-  await expect(page.getByText("The label does not exist, or you cannot see its project.")).toBeVisible();
+  const refusal = page.getByText("The label does not exist, or you cannot see its project.");
+  await expect(refusal).toBeVisible();
+  expect(await announced(refusal)).toBe(true);
   expect(await closedWithin(page)).toBe(false);
+  await dialog.getByRole("button", { name: "Cancel" }).focus();
+  expect(await tabCycle(page, modalDialog(page), 4)).toEqual(["Delete", "Cancel"]);
+  expect(await pageBehindHidden(page)).toBe(true);
   await dialog.getByRole("button", { name: "Cancel" }).click();
   expect(await closedWithin(page)).toBe(true);
+  expect(await pageBehindHidden(page)).toBe(false);
+  await expect(docsDelete).toBeFocused();
 
   // Reloaded, the page shows Docs gone, and Feature under Defect, after UI, of the same place and made before it. UI
   // taken out of Defect's group from its menu: its parent alone, none; at the top, first by its place.

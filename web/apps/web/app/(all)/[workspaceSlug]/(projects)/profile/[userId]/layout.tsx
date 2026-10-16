@@ -23,14 +23,15 @@ import { ProfileNavbar } from "./navbar";
 
 function UseProfileLayout({ params }: Route.ComponentProps) {
   // router
-  const { profileViewId } = params;
+  const { workspaceSlug, profileViewId } = params;
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
   // derived values
   const isAuthorized = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
   );
 
   const windowSize = useSize();

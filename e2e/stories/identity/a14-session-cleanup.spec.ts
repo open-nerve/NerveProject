@@ -1,4 +1,4 @@
-import { sessionOf } from "../../fixtures/assert/identity";
+import { sessionOf } from "../../fixtures/assert/session";
 import { emailFor, login, register } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 

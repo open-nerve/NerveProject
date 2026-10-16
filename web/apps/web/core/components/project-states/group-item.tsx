@@ -8,7 +8,7 @@ import { useState, useRef } from "react";
 import { observer } from "mobx-react";
 
 // nerve imports
-import { EIconSize } from "@nerve/constants";
+import { EIconSize, STATE_GROUPS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { StateGroupIcon } from "@nerve/propel/icons";
 import { AddOutline, ChevronDownOutline } from "@makeplane/propel/icons";
@@ -62,11 +62,11 @@ export const GroupItem = observer(function GroupItem(props: TGroupItem) {
           <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded-sm">
             <StateGroupIcon stateGroup={groupKey} size={EIconSize.XL} />
           </span>
-          <span className="px-1 text-14 font-medium text-secondary capitalize">{groupKey}</span>
+          <span className="px-1 text-14 font-medium text-secondary">{t(STATE_GROUPS[groupKey].i18n_label)}</span>
         </button>
         <button
           type="button"
-          aria-label={t("common.add")}
+          aria-label={t("project_settings.states.add", { name: t(STATE_GROUPS[groupKey].i18n_label) })}
           className={cn(
             "flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm text-accent-primary/80 transition-colors hover:bg-layer-1 hover:text-accent-primary",
             (!isEditable || createState) && "cursor-not-allowed text-placeholder hover:text-placeholder"
@@ -85,7 +85,7 @@ export const GroupItem = observer(function GroupItem(props: TGroupItem) {
 
       {shouldShowEmptyState && (
         <div className="flex h-full flex-col items-center justify-center py-4 text-13 text-tertiary">
-          <div>{t("project_settings.states.empty_state.title", { groupKey })}</div>
+          <div>{t("project_settings.states.empty_state.title", { group: t(STATE_GROUPS[groupKey].i18n_label) })}</div>
           {isEditable && <div>{t("project_settings.states.empty_state.description")}</div>}
         </div>
       )}

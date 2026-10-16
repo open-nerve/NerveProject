@@ -8,6 +8,7 @@ import type { Dispatch, ReactElement, SetStateAction } from "react";
 import React, { useCallback, useEffect, useState, useRef } from "react";
 // helpers
 import { usePlatformOS } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
 import { cn } from "@nerve/utils";
 
 interface ResizableSidebarProps {
@@ -47,13 +48,13 @@ export function ResizableSidebar({
 }: ResizableSidebarProps) {
   // states
   const [isResizing, setIsResizing] = useState(false);
-  const [isHoveringTrigger, setIsHoveringTrigger] = useState(false);
   // refs
   const peekTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const initialWidthRef = useRef<number>(0);
   const initialMouseXRef = useRef<number>(0);
   // hooks
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
   // handlers
   const setShowPeek = useCallback(
     (value: boolean) => {
@@ -89,7 +90,6 @@ export function ResizableSidebar({
   const toggleCollapsed = useCallback(() => {
     toggleCollapsedProp();
     setShowPeek(false);
-    setIsHoveringTrigger(false);
     if (peekTimeoutRef.current) {
       clearTimeout(peekTimeoutRef.current);
     }
@@ -138,17 +138,10 @@ export function ResizableSidebar({
     []
   );
 
-  useEffect(() => {
-    if (!isAnySidebarDropdownOpen && isCollapsed && isHoveringTrigger) {
-      handlePeekLeave();
-    }
-  }, [isAnySidebarDropdownOpen]);
-
   // Reset peek when sidebar is expanded
   useEffect(() => {
     if (!isCollapsed) {
       setShowPeek(false);
-      setIsHoveringTrigger(false);
       if (peekTimeoutRef.current) {
         clearTimeout(peekTimeoutRef.current);
       }
@@ -182,7 +175,9 @@ export function ResizableSidebar({
           maxWidth: `${isCollapsed ? 0 : width}px`,
         }}
         role="complementary"
-        aria-label="Main sidebar"
+        aria-label={t("aria_labels.sidebar.main")}
+        // collapsed, it shows nothing: none of its controls is the keyboard's or assistive technology's
+        inert={isCollapsed}
         data-prevent-outside-click={isMobile}
       >
         <aside className="group/sidebar relative flex h-full w-full flex-col overflow-hidden bg-surface-1 pt-3">
@@ -200,7 +195,7 @@ export function ResizableSidebar({
             onDoubleClick={() => toggleCollapsed()}
             onMouseDown={(e) => startResizing(e)}
             role="separator"
-            aria-label="Resize sidebar"
+            aria-label={t("aria_labels.sidebar.resize")}
           />
         </aside>
       </div>
@@ -220,7 +215,9 @@ export function ResizableSidebar({
         onMouseEnter={handlePeekEnter}
         onMouseLeave={handlePeekLeave}
         role="complementary"
-        aria-label="Sidebar peek view"
+        aria-label={t("aria_labels.sidebar.peek")}
+        // its copy of the sidebar's controls is for the pointer that asks for it, the keyboard's only while it shows
+        inert={!(isCollapsed && showPeek)}
       >
         <aside
           className={cn(
@@ -241,7 +238,7 @@ export function ResizableSidebar({
             onDoubleClick={() => toggleCollapsed()}
             onMouseDown={(e) => startResizing(e)}
             role="separator"
-            aria-label="Resize sidebar"
+            aria-label={t("aria_labels.sidebar.resize")}
           />
         </aside>
       </div>

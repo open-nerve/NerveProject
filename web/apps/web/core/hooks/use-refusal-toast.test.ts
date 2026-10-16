@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
-import { useRefusalToast } from "./use-refusal-toast";
+import { useRefusalMessage, useRefusalToast } from "./use-refusal-toast";
 
 // How a page says why a change failed (M2 design 7.3): the hook runs as a plain function; its toasts are
 // fake-toast.ts's, its texts their keys (fake-i18n.ts).
@@ -16,6 +16,12 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 beforeEach(() => {
   toasts.length = 0;
+});
+
+describe("useRefusalMessage", () => {
+  it("is nerve's reason for a refusal, by its problem's code", () => {
+    expect(useRefusalMessage()(refusal(409, "workspace.slug_taken"))).toBe("errors.workspace_slug_taken");
+  });
 });
 
 describe("useRefusalToast", () => {

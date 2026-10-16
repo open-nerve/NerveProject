@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -99,8 +100,15 @@ func receive[T any](t *testing.T, ch <-chan T, limit time.Duration, what string)
 	return zero
 }
 
-// start runs r.Start(ctx) and fails the test unless it returns at once:
-// Start must not wait for River, which may not start for a long while.
+// startLimit is how long start waits for Start to return. Start must not
+// wait for River, which may not start for a long while (in
+// TestStartWithoutADatabase it never does): the limit is the deadline that
+// tells a Start that waits from one that does not, not a measure of how
+// fast Start returns, which a loaded machine slows.
+const startLimit = 2 * time.Second
+
+// start runs r.Start(ctx) and fails the test unless it returns within
+// startLimit.
 func start(t *testing.T, r *Runner, ctx context.Context) {
 	t.Helper()
 	returned := make(chan struct{})
@@ -108,7 +116,7 @@ func start(t *testing.T, r *Runner, ctx context.Context) {
 		r.Start(ctx)
 		close(returned)
 	}()
-	receive(t, returned, 100*time.Millisecond, "return from Start")
+	receive(t, returned, startLimit, "return from Start")
 }
 
 // stop runs r.Stop(ctx) and fails the test unless it returns within limit.
@@ -125,7 +133,8 @@ func stop(t *testing.T, r *Runner, ctx context.Context, limit time.Duration) err
 // scheduled it for: River schedules the runs the interval apart, but each
 // works only after waits of its own, to be inserted and fetched (River
 // polls every second), so two runs may work less than the interval apart,
-// or at once and in either order.
+// or at once and in either order: the runs worked before Stop returns,
+// sorted by that time, are each the interval after the one before.
 func TestRunnerWorksAPeriodicJobUntilStopped(t *testing.T) {
 	t.Parallel()
 	runs := make(chan time.Time, 100)
@@ -137,19 +146,18 @@ func TestRunnerWorksAPeriodicJobUntilStopped(t *testing.T) {
 	}
 	start(t, r, context.Background())
 
-	first := receive(t, runs, 15*time.Second, "first run")
-	second := receive(t, runs, 10*time.Second, "second run")
-	if second.Before(first) {
-		first, second = second, first
-	}
-	if gap := second.Sub(first); gap != time.Second {
-		t.Errorf("runs scheduled at %v and %v, %s apart; want the 1s interval", first, second, gap)
-	}
+	scheduled := []time.Time{receive(t, runs, 15*time.Second, "first run"), receive(t, runs, 10*time.Second, "second run")}
 	if err := stop(t, r, context.Background(), 5*time.Second+cancelGrace+2*time.Second); err != nil {
 		t.Fatalf("Stop() = %v", err)
 	}
-	for len(runs) > 0 { // a run that was fetched before Stop
-		<-runs
+	for len(runs) > 0 { // the runs fetched before Stop
+		scheduled = append(scheduled, <-runs)
+	}
+	slices.SortFunc(scheduled, time.Time.Compare)
+	for i := 1; i < len(scheduled); i++ {
+		if gap := scheduled[i].Sub(scheduled[i-1]); gap != time.Second {
+			t.Errorf("runs scheduled at %v: run %d %s after the one before; want the 1s interval", scheduled, i+1, gap)
+		}
 	}
 	select {
 	case at := <-runs:
@@ -197,12 +205,14 @@ func TestStopCancelsARunningJobAfterTheShutdownTimeout(t *testing.T) {
 			err = stop(t, r, context.Background(), timeout+cancelGrace+2*time.Second)
 			took := time.Since(stopping)
 
+			// the deadlines are the design's: the context is cancelled once the
+			// timeout has passed, before Stop would give up on the job
 			at := receive(t, cancelled, time.Second, "cancellation")
 			if err != nil || took < timeout || took > timeout+cancelGrace {
 				t.Errorf("Stop() = %v after %s, want nil after %s to %s", err, took, timeout, timeout+cancelGrace)
 			}
-			if waited := at.Sub(stopping); waited < timeout || waited > timeout+500*time.Millisecond {
-				t.Errorf("the job's context was cancelled %s after Stop began, want %s", waited, timeout)
+			if waited := at.Sub(stopping); waited < timeout || waited >= timeout+cancelGrace {
+				t.Errorf("the job's context was cancelled %s after Stop began, want %s to %s", waited, timeout, timeout+cancelGrace)
 			}
 		})
 	}
@@ -231,8 +241,10 @@ func TestStopGivesUpOnAJobThatIgnoresCancellation(t *testing.T) {
 	err = stop(t, r, context.Background(), time.Second+cancelGrace+2*time.Second)
 	took := time.Since(stopping)
 
+	// stop's own limit is the deadline: a Stop that waited for the job would
+	// not return before the test's cleanup releases it
 	if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "jobs still running 1s after jobs.shutdown_timeout (1s)") ||
-		took < time.Second+cancelGrace || took > time.Second+cancelGrace+500*time.Millisecond {
+		took < time.Second+cancelGrace {
 		t.Errorf("Stop() = %v after %s, want the deadline after %s", err, took, time.Second+cancelGrace)
 	}
 }

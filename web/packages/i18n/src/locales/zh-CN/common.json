@@ -28,7 +28,6 @@
   "preferences": "偏好设置",
   "language_and_time": "语言和时间",
   "create_workspace": "创建工作区",
-  "created": "已创建",
   "you_do_not_have_the_permission_to_access_this_page": "您没有访问此页面的权限。",
   "something_went_wrong_please_try_again": "出现错误。请重试。",
   "load_more": "加载更多",
@@ -88,9 +87,11 @@
   "creating": "创建中",
   "copy_link": "复制链接",
   "leave_project": "离开项目",
+  "leave_workspace": "离开工作区",
+  "workspace_invitations": "工作区邀请",
+  "not_authorized_to_view": "抱歉，您没有权限查看这个页面",
   "join_the_project_to_rearrange": "加入项目以重新排列",
   "drag_to_rearrange": "拖动以重新排列",
-  "congrats": "恭喜！",
   "open_project": "打开项目",
   "issues": "工作项",
   "cycles": "周期",
@@ -107,7 +108,7 @@
   "version": "版本",
   "deactivate_your_account": "停用您的账户",
   "deactivate_your_account_description": "您将在所有地方退出登录，密码和个人访问令牌都将无法使用。数据不会被删除，也不会发送邮件：如需再次使用此账户，请联系这台服务器的管理员重新启用。",
-  "deactivating": "正在停用",
+  "deactivating": "停用中",
   "confirm": "确认",
   "draft_created": "草稿已创建",
   "issue_created_successfully": "工作项创建成功",
@@ -155,10 +156,11 @@
   "deleting": "删除中",
   "make_a_copy": "创建副本",
   "move_to_project": "移动到项目",
-  "good": "早上",
-  "morning": "早上",
-  "afternoon": "下午",
-  "evening": "晚上",
+  "greeting": {
+    "morning": "早上好，{name}",
+    "afternoon": "下午好，{name}",
+    "evening": "晚上好，{name}"
+  },
   "no_data_yet": "暂无数据",
   "syncing": "同步中",
   "add_work_item": "添加工作项",
@@ -337,12 +339,16 @@
     "close_peek_view": "关闭预览视图",
     "toggle_peek_view_layout": "切换预览视图布局",
     "options": "选项",
+    "item_options": "{name} 的选项",
+    "edit_item": "编辑 {name}",
+    "delete_item": "删除 {name}",
     "color": "颜色",
     "today": "今天",
     "press_for_commands": "按'/'使用命令",
     "click_to_add_description": "点击添加描述",
     "search": {
       "label": "搜索",
+      "clear": "清除搜索",
       "placeholder": "输入搜索内容",
       "no_matches_found": "未找到匹配项",
       "no_matching_results": "没有匹配的结果"
@@ -366,6 +372,10 @@
     "projects": "项目",
     "workspace": "工作区",
     "members": "成员",
+    "roles": "角色",
+    "view_all": "查看全部",
+    "view_less": "收起",
+    "remove_item": "移除 {name}",
     "pending": "待处理",
     "invite": "邀请",
     "deactivated_user": "已停用用户",
@@ -374,6 +384,14 @@
     "work_structure": "工作结构",
     "execution": "执行",
     "administration": "管理"
+  },
+  "date_filter": {
+    "before": "{title}早于",
+    "after": "{title}晚于",
+    "range": "{title}范围",
+    "range_after": "晚于：",
+    "range_before": "早于：",
+    "apply": "应用"
   },
   "form": {
     "title": {
@@ -451,6 +469,9 @@
   },
   "accordion_navigation_control": "折叠侧边栏导航",
   "horizontal_navigation_bar": "标签式导航",
+  "accordion_navigation_description": "功能标签显示为项目下的嵌套项，可以展开和收起。",
+  "horizontal_navigation_description": "功能标签显示为项目内的横向标签。",
+  "navigation_count_minimum": "最小值为 1",
   "show_limited_projects_on_sidebar": "在侧边栏显示有限数量的项目",
   "enter_number_of_projects": "输入项目数量",
   "profile_updated": "个人资料已更新。",
@@ -466,6 +487,7 @@
   "continue": "继续",
   "enter_your_full_name": "输入您的全名",
   "onboarding": {
+    "title": "新手引导",
     "profile": {
       "title": "创建您的个人资料。",
       "description": "这是您在 Nerve 中显示的样子。"
@@ -473,10 +495,9 @@
     "switch_account": {
       "wrong_email": "邮箱地址不对？",
       "title": "切换账户",
-      "description_before_email": "如果您无意中使用",
-      "description_after_email": "注册了账户，可以在这里切换到其他账户。",
+      "description": "如果您无意中使用 {email} 注册了账户，可以在这里切换到其他账户。",
       "switch": "切换账户",
-      "switching": "正在切换..."
+      "switching": "切换中"
     },
     "workspace": {
       "description": "所有工作，汇于一处。",

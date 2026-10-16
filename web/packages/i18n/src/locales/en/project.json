@@ -186,5 +186,61 @@
     "email": "Email",
     "joining_date": "Joining date",
     "role": "Role"
+  },
+  "project_dialogs": {
+    "type_project_name": "Enter the project name {name} to continue:",
+    "type_confirmation": "To confirm, type {confirmation} below:",
+    "confirmation_placeholder": "Enter “{confirmation}”",
+    "delete": {
+      "title": "Delete project",
+      "body": "Are you sure you want to delete project {name}? All of the data related to the project will be permanently removed. This action cannot be undone",
+      "deleted": "Project deleted successfully.",
+      "description": "When deleting a project, all of the data and resources within that project will be permanently removed and cannot be recovered."
+    },
+    "leave": {
+      "title": "Leave Project",
+      "body": "Are you sure you want to leave the project {name}? All of the work items associated with you will become inaccessible.",
+      "name_placeholder": "Enter project name",
+      "name_mismatch": "Please enter the project name as shown in the description.",
+      "confirmation_mismatch": "Please confirm leaving the project by typing “{confirmation}”."
+    },
+    "join": {
+      "title": "Join Project?",
+      "body": "Are you sure you want to join the project {name}?",
+      "submit": "Join Project",
+      "joining": "Joining"
+    },
+    "remove_member": {
+      "leave_title": "Leave project?",
+      "remove_title": "Remove {name}?",
+      "leave_body": "Are you sure you want to leave the {name} project? You will be able to join the project if a project admin adds you again or if it's public.",
+      "remove_body": "Are you sure you want to remove {name}? They will no longer have access to this project. This action cannot be undone."
+    },
+    "archive": {
+      "title": "Archive {name}",
+      "body": "This project and its work items, cycles and modules will be archived. Its work items won't appear in search. Only project admins can restore the project.",
+      "done_title": "Archive success",
+      "done": "{name} has been archived successfully",
+      "description": "Archiving a project will unlist your project from your side navigation although you will still be able to access it from your projects page. You can restore the project or delete it whenever you want."
+    },
+    "restore": {
+      "title": "Restore {name}",
+      "body": "Restoring a project will activate it and make it visible to all members of the project. Are you sure you want to continue?",
+      "done_title": "Restore success",
+      "done": "You can find {name} in your projects.",
+      "restoring": "Restoring"
+    },
+    "members_added": "Members added successfully.",
+    "member_required": "Please select a member",
+    "select_member": "Select co-worker",
+    "feature_updated": "Project feature updated successfully.",
+    "project_created": "Congrats! {name} created.",
+    "default_tab_updated": "Default tab updated successfully.",
+    "name_max_length": "Project name should be less than 255 characters",
+    "no_member_yet": "No Member Yet",
+    "members_count": "Members: {count}",
+    "archived": "Archived",
+    "joined": "Joined",
+    "settings_link": "{name} settings"
   }
 }

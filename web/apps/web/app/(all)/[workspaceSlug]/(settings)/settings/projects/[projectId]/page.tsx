@@ -7,10 +7,10 @@
 import { observer } from "mobx-react";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // components
 import { PageHead } from "@/components/core/page-title";
 import { ProjectDetailsForm } from "@/components/project/form";
-import { ProjectDetailsFormLoader } from "@/components/project/form-loader";
 import { SettingsContentWrapper } from "@/components/settings/content-wrapper";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
@@ -27,20 +27,19 @@ function ProjectSettingsPage({ params }: Route.ComponentProps) {
   const { getProjectById } = useProject();
   const project = getProjectById(projectId);
   const { allowPermissions } = useUserPermissions();
+  const { t } = useTranslation();
   // derived values
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
-  const pageTitle = project ? `${project.name} - General Settings` : undefined;
+  const pageTitle = project ? `${project.name} - ${t("general_settings")}` : undefined;
 
   return (
     <SettingsContentWrapper header={<GeneralProjectSettingsHeader />}>
       <PageHead title={pageTitle} />
       <div className={`w-full ${isAdmin ? "" : "opacity-60"}`}>
-        {project ? (
+        {project && (
           // one form per project: another project's page opens with its own values
           <ProjectDetailsForm key={project.id} project={project} workspaceSlug={workspaceSlug} isAdmin={isAdmin} />
-        ) : (
-          <ProjectDetailsFormLoader />
         )}
         {isAdmin && <GeneralProjectSettingsControlSection projectId={projectId} />}
       </div>

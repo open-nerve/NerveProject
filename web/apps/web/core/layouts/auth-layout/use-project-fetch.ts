@@ -12,7 +12,7 @@ import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // lib
-import { ApiError } from "@/lib/api-error";
+import { problemCode } from "@/lib/api-error";
 import { useSessionSWR } from "@/lib/use-session-swr";
 
 /**
@@ -71,7 +71,7 @@ type Read = { data?: unknown; error?: unknown; mutate: () => Promise<unknown> };
  */
 function decide(read: Read, project: Project | undefined): ProjectAccess {
   if (read.error) {
-    const notFound = read.error instanceof ApiError && read.error.problem?.code === "project.not_found";
+    const notFound = problemCode(read.error) === "project.not_found";
     return notFound ? { kind: "not-found" } : { kind: "unavailable", retry: () => void read.mutate() };
   }
   if (read.data === undefined) return { kind: "loading" };

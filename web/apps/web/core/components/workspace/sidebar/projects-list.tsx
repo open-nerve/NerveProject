@@ -10,11 +10,10 @@ import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { observer } from "mobx-react";
 import { matchPath, useParams, useLocation } from "react-router";
 import { AddOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
-import { Disclosure, Transition } from "@headlessui/react";
+import { Transition } from "@headlessui/react";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { IconButton } from "@nerve/propel/icon-button";
+import { IconButton, getIconButtonStyling } from "@nerve/propel/icon-button";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { Loader } from "@nerve/ui";
 import { cn } from "@nerve/utils";
@@ -42,7 +41,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   // store hooks
   const { t } = useTranslation();
   const { toggleCreateProjectModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
+  const { canCreateProject } = useUserPermissions();
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();
 
@@ -53,10 +52,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   const { pathname } = useLocation();
 
   // auth
-  const isAuthorizedUser = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
-  );
+  const isAuthorizedUser = canCreateProject(workspaceSlug);
 
   // Compute limited projects for main sidebar
   const displayedProjects = projectPreferences.showLimitedProjects
@@ -130,21 +126,18 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
         })}
       >
         <>
-          <Disclosure as="div" className="flex flex-col" defaultOpen={isAllProjectsListOpen}>
+          <div className="flex flex-col">
             <div className="group flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-placeholder hover:bg-layer-transparent-hover">
-              <Disclosure.Button
-                as="button"
+              {/* the list's heading, named by its words, says whether the list shows; isAllProjectsListOpen alone
+              decides that, as the projects' pages open the list too (above) */}
+              <button
                 type="button"
                 className="flex w-full items-center gap-1 text-left text-13 font-semibold whitespace-nowrap text-placeholder"
                 onClick={() => toggleListDisclosure(!isAllProjectsListOpen)}
-                aria-label={t(
-                  isAllProjectsListOpen
-                    ? "aria_labels.projects_sidebar.close_projects_menu"
-                    : "aria_labels.projects_sidebar.open_projects_menu"
-                )}
+                aria-expanded={isAllProjectsListOpen}
               >
                 <span className="text-13 font-semibold">{t("projects")}</span>
-              </Disclosure.Button>
+              </button>
               <div className="flex items-center gap-1">
                 {isAuthorizedUser && (
                   <Tooltip label={t("create_project")}>
@@ -155,26 +148,26 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                       onClick={() => {
                         setIsProjectModalOpen(true);
                       }}
-                      className="hidden text-placeholder group-hover:inline-flex"
+                      className="text-placeholder opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                       aria-label={t("aria_labels.projects_sidebar.create_new_project")}
                     />
                   </Tooltip>
                 )}
-                <IconButton
-                  variant="ghost"
-                  size="sm"
-                  icon={ChevronRightOutline}
+                {/* the heading opens and closes the list as this does: this one, the pointer's alone, is neither a Tab
+                stop nor read */}
+                <button
+                  type="button"
                   onClick={() => toggleListDisclosure(!isAllProjectsListOpen)}
-                  className="text-placeholder"
-                  iconClassName={cn("transition-transform", {
-                    "rotate-90": isAllProjectsListOpen,
-                  })}
-                  aria-label={t(
-                    isAllProjectsListOpen
-                      ? "aria_labels.projects_sidebar.close_projects_menu"
-                      : "aria_labels.projects_sidebar.open_projects_menu"
-                  )}
-                />
+                  className={cn(getIconButtonStyling("ghost", "sm"), "text-placeholder")}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                >
+                  <ChevronRightOutline
+                    className={cn("size-3.5 transition-transform", {
+                      "rotate-90": isAllProjectsListOpen,
+                    })}
+                  />
+                </button>
               </div>
             </div>
             <Transition
@@ -195,7 +188,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                 </Loader>
               )}
               {workspaceSlug && isAllProjectsListOpen && (
-                <Disclosure.Panel as="div" className="flex flex-col gap-0.5" static>
+                <div className="flex flex-col gap-0.5">
                   <>
                     {displayedProjects.map((projectId, index) => (
                       <SidebarProjectsListItem
@@ -215,22 +208,19 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                           onClick={() => toggleExtendedProjectSidebar()}
                           className="flex flex-grow items-center gap-1.5 text-13 font-medium text-tertiary"
                           id="extended-project-sidebar-toggle"
-                          aria-label={t(
-                            isExtendedProjectSidebarOpened
-                              ? "aria_labels.app_sidebar.close_extended_sidebar"
-                              : "aria_labels.app_sidebar.open_extended_sidebar"
-                          )}
                         >
                           <MoreHorizontalOutline className="size-4 flex-shrink-0" />
-                          <span>{isExtendedProjectSidebarOpened ? "Hide" : "More"}</span>
+                          <span>
+                            {t(isExtendedProjectSidebarOpened ? "sidebar.fewer_projects" : "sidebar.more_projects")}
+                          </span>
                         </button>
                       </SidebarNavItem>
                     )}
                   </>
-                </Disclosure.Panel>
+                </div>
               )}
             </Transition>
-          </Disclosure>
+          </div>
         </>
 
         {isAuthorizedUser && joinedProjects?.length === 0 && (

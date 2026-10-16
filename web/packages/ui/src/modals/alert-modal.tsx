@@ -11,7 +11,7 @@ import type { TButtonVariant } from "@nerve/propel/button";
 import { Button } from "@nerve/propel/button";
 import { cn } from "../utils";
 import { EModalPosition, EModalWidth } from "./constants";
-import { ModalCore } from "./modal-core";
+import { ModalCore, ModalTitle } from "./modal-core";
 
 type TModalVariant = "danger" | "primary";
 
@@ -86,7 +86,7 @@ export function AlertModalCore(props: Props) {
           </span>
         )}
         <div className="text-center sm:text-left">
-          <h3 className="text-16 font-medium">{title}</h3>
+          <ModalTitle className="text-16 font-medium">{title}</ModalTitle>
           <p className="mt-1 text-13 text-secondary">{content}</p>
         </div>
       </div>
@@ -94,7 +94,7 @@ export function AlertModalCore(props: Props) {
         <Button variant="secondary" onClick={handleClose} disabled={isSubmitting}>
           {secondaryButtonText}
         </Button>
-        <Button variant={BUTTON_VARIANTS[variant]} tabIndex={1} onClick={handleSubmit} loading={isSubmitting}>
+        <Button variant={BUTTON_VARIANTS[variant]} onClick={handleSubmit} loading={isSubmitting}>
           {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
         </Button>
       </div>

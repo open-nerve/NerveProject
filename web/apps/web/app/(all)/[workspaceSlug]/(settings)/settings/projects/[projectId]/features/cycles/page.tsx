@@ -32,7 +32,7 @@ function FeaturesCyclesSettingsPage({ params }: Route.ComponentProps) {
   const { t } = useTranslation();
   // derived values
   const pageTitle = project?.name
-    ? `${project.name} settings - ${t("project_settings.features.cycles.short_title")}`
+    ? `${project.name} - ${t("project_settings.features.cycles.short_title")}`
     : undefined;
   const canPerformProjectAdminActions = allowPermissions(
     [EUserPermissions.ADMIN],

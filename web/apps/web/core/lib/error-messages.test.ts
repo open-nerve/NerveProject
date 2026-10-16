@@ -23,7 +23,11 @@ const en = JSON.parse(
   readFileSync(new URL("../../../../packages/i18n/src/locales/en/errors.json", import.meta.url), "utf8")
 ) as Record<string, unknown>;
 
-/** The items of every list under a line that matches `key` (block lists: "- item", deeper than the key). */
+/**
+ * The items of every list under a line that matches `key` (block lists: "- item", deeper than the key). tools/i18n-keys.mjs
+ * reads the x-problem-codes lists the same way (its problemCodes): a script of the repository's, outside the web
+ * workspace, which runs its check as it loads, so this test cannot import it; a change to one reading is made in both.
+ */
 function listsUnder(key: RegExp): string[] {
   const items: string[] = [];
   spec.forEach((line, i) => {

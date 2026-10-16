@@ -222,7 +222,8 @@ export function FavoriteFolder(props: Props) {
                       <MoreHorizontalOutline className="size-3" />
                     </span>
                   }
-                  menuButtonOnClick={() => setIsMenuActive(!isMenuActive)}
+                  menuButtonOnClick={() => setIsMenuActive(true)}
+                  onMenuClose={() => setIsMenuActive(false)}
                   className={cn(
                     "pointer-events-none flex-shrink-0 opacity-0 group-hover/project-item:pointer-events-auto group-hover/project-item:opacity-100",
                     {

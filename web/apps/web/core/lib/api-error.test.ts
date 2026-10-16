@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import { createClient } from "@nerve/api-client";
-import { ApiError, unwrap } from "./api-error";
+import { ApiError, problemCode, unwrap } from "./api-error";
 import { authMiddleware } from "./auth/auth-middleware";
 import { SessionChangedError } from "./auth/token-manager";
 
@@ -15,6 +15,17 @@ function clientAnswering(response: Response) {
 }
 
 const problem = { status: 409, code: "identity.email_taken", title: "Conflict", detail: "The email is taken." };
+
+describe("problemCode", () => {
+  it("is the code of nerve's problem, and none for an answer without a problem or an error of no answer", () => {
+    expect([
+      problemCode(new ApiError(409, problem)),
+      problemCode(new ApiError(502, undefined)),
+      problemCode(new SessionChangedError()),
+      problemCode(new TypeError("Failed to fetch")),
+    ]).toEqual(["identity.email_taken", undefined, undefined, undefined]);
+  });
+});
 
 describe("unwrap", () => {
   it("returns the data of a success", async () => {

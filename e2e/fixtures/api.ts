@@ -198,6 +198,25 @@ export async function changeWorkspacePreferences(
 }
 
 /**
+ * The answer of PATCH /api/v0/me/projects/{project_id}/preferences, the display settings of the account of token in
+ * the project of id: its status, the settings, or the problem's code and fields.
+ */
+export async function changeProjectPreferences(api: Api, token: string, id: string, body: ProjectPreferencesUpdate) {
+  const { data, error, response } = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
+    params: { path: { project_id: id } },
+    body,
+    headers: bearer(token),
+  });
+  return data
+    ? { status: response.status, preferences: data }
+    : {
+        status: response.status,
+        code: error?.code,
+        errors: error?.errors?.map((e) => ({ field: e.field, code: e.code })),
+      };
+}
+
+/**
  * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
  * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
  * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows, its label Bug

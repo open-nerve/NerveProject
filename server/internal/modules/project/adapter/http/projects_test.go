@@ -47,6 +47,11 @@ const (
 	// there, or of which the caller is not an active member.
 	workspaceNotFoundJSON = `{"status":404,"code":"workspace.not_found","title":"Not Found",` +
 		`"detail":"The workspace does not exist, or you are not a member of it."}`
+	// identifierTakenJSON and nameTakenJSON answer a project made or changed
+	// with the identifier, or the name, of another project of its workspace.
+	identifierTakenJSON = `{"status":409,"code":"project.identifier_taken","title":"Conflict",` +
+		`"detail":"A project of the workspace has this identifier."}`
+	nameTakenJSON = `{"status":409,"code":"project.name_taken","title":"Conflict","detail":"A project of the workspace has this name."}`
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -144,10 +149,8 @@ func TestCreateProjectRefusals(t *testing.T) {
 		{"a lead who may not lead", domain.LeadNotAllowed(), http.StatusUnprocessableEntity,
 			`{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
 				`"errors":[{"field":"project_lead_id","code":"not_allowed","message":"must be an active admin or member of the workspace"}]}`},
-		{"a taken identifier", domain.ErrIdentifierTaken, http.StatusConflict,
-			`{"status":409,"code":"project.identifier_taken","title":"Conflict","detail":"A project of the workspace has this identifier."}`},
-		{"a taken name", domain.ErrNameTaken, http.StatusConflict,
-			`{"status":409,"code":"project.name_taken","title":"Conflict","detail":"A project of the workspace has this name."}`},
+		{"a taken identifier", domain.ErrIdentifierTaken, http.StatusConflict, identifierTakenJSON},
+		{"a taken name", domain.ErrNameTaken, http.StatusConflict, nameTakenJSON},
 	}
 	for _, tt := range tests {
 		h := newServer(t, fakes{create: &fakeCreate{err: tt.err}})

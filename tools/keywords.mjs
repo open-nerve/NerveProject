@@ -1,7 +1,9 @@
 // Keyword guard (docs/v0/M1-frontend-trim/M1-design.md 7.4): fails when a file hits a rule in
 // tools/keywords.json that no exception covers, when an exception no longer matches anything, when
 // an exception's hits do not number exactly its "count" (default 1), or when an exception has expired
-// (its "until" is at or before the file's top-level "phase").
+// (its "until" is at or before the file's top-level "phase"). An "until" of "M<n>/closeout" falls due
+// when the top-level "phase" is set to "M<n>/closeout", which each M sets as its closeout starts (and
+// "M<n>/P<k>" as each phase starts).
 // The files are those git lists (tracked, plus untracked ones that are not ignored) as they are in the
 // working tree. A path rule tests each path; a content rule tests the text of the files its `files`
 // pattern selects (binary files are skipped). Patterns are JavaScript regular expressions with explicit

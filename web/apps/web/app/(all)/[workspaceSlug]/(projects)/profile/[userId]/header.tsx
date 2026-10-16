@@ -17,8 +17,8 @@ import { ProfileIssuesFilter } from "@/components/profile/profile-issues-filter"
 import { useProfileMember } from "@/components/profile/use-profile-member";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
-import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 import { Button } from "@nerve/propel/button";
 
 type TUserProfileHeader = {
@@ -33,15 +33,16 @@ export const UserProfileHeader = observer(function UserProfileHeader(props: TUse
   const navigate = useNavigate();
   // store hooks
   const { toggleProfileSidebar, profileSidebarCollapsed } = useAppTheme();
-  const { currentWorkspace } = useWorkspace();
+  const workspace = useRouteWorkspace();
   const { data: currentUser } = useUser();
   const { allowPermissions } = useUserPermissions();
-  const { member } = useProfileMember(currentWorkspace, userId ?? "");
+  const { member } = useProfileMember(workspace, userId ?? "");
   const { t } = useTranslation();
   // derived values
   const isAuthorized = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
+    EUserPermissionsLevel.WORKSPACE,
+    workspaceSlug
   );
 
   const tabsList = isAuthorized ? PROFILE_TABS : [];

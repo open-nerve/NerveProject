@@ -6,6 +6,7 @@
 
 import { observer } from "mobx-react";
 import { STATE_GROUPS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { StateGroup } from "@nerve/api-client";
 // components
@@ -23,14 +24,15 @@ type TStateCreate = {
 export const StateCreate = observer(function StateCreate(props: TStateCreate) {
   const { projectId, groupKey, handleClose } = props;
   const { create } = useStateChanges();
+  const { t } = useTranslation();
 
   // the form closes once nerve has made the state, and stays with what it holds when nerve refuses it
   const onSubmit = (formData: TStateFormData, underField: StateUnderField) =>
     create(projectId, { ...formData, group: groupKey }, underField, () => {
       setToast({
         type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "State created successfully.",
+        title: t("toast.success"),
+        message: t("project_settings.states.created"),
       });
       handleClose();
     });
@@ -40,8 +42,8 @@ export const StateCreate = observer(function StateCreate(props: TStateCreate) {
       data={{ name: "", description: "", color: STATE_GROUPS[groupKey].color }}
       onSubmit={onSubmit}
       onCancel={handleClose}
-      buttonTitle="Create"
-      busyButtonTitle="Creating"
+      buttonTitle={t("common.create")}
+      busyButtonTitle={t("common.creating")}
     />
   );
 });

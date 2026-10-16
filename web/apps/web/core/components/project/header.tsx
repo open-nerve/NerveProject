@@ -5,9 +5,8 @@
  */
 
 import { observer } from "mobx-react";
-import { useMatch } from "react-router";
+import { useMatch, useParams } from "react-router";
 // i18n
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // ui
 import { Button } from "@nerve/propel/button";
@@ -23,17 +22,16 @@ import HeaderFilters from "./filters";
 import { ProjectSearch } from "./search-projects";
 
 export const ProjectsBaseHeader = observer(function ProjectsBaseHeader() {
+  // router
+  const { workspaceSlug } = useParams();
   // i18n
   const { t } = useTranslation();
   // store hooks
   const { toggleCreateProjectModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
+  const { canCreateProject } = useUserPermissions();
 
   // auth
-  const isAuthorizedUser = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.WORKSPACE
-  );
+  const isAuthorizedUser = canCreateProject(workspaceSlug);
   const isArchived = useMatch("/:workspaceSlug/projects/archives") !== null;
 
   return (
@@ -48,7 +46,9 @@ export const ProjectsBaseHeader = observer(function ProjectsBaseHeader() {
               />
             }
           />
-          {isArchived && <Breadcrumbs.Item component={<BreadcrumbLink label="Archived" />} />}
+          {isArchived && (
+            <Breadcrumbs.Item component={<BreadcrumbLink label={t("workspace_projects.scope.archived_projects")} />} />
+          )}
         </Breadcrumbs>
       </Header.LeftItem>
       <Header.RightItem>

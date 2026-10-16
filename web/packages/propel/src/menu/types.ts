@@ -42,4 +42,11 @@ export type TMenuItemProps = {
   disabled?: boolean;
   onClick?: (_args?: unknown) => void;
   className?: string;
+  /**
+   * The element the item renders as, in place of a div (Base UI's render): a link, say, which Enter on the item
+   * follows as a click does, and which can be opened elsewhere as any link.
+   */
+  render?: React.ReactElement<Record<string, unknown>>;
+  /** The item's hint under the pointer, and its name when its content has none (an icon alone). */
+  title?: string;
 };

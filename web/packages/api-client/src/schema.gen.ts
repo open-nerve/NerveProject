@@ -1414,14 +1414,14 @@ export interface components {
             workspace_id: string;
             name: string;
             description: string;
-            /** @description Upper case; it prefixes the numbers of the project's work items. */
+            /** @description Upper case; unique among the workspace's projects. */
             identifier: string;
             network: components["schemas"]["ProjectNetwork"];
             /** Format: uuid */
             project_lead_id: string | null;
             /**
              * Format: uuid
-             * @description Whom a new work item is assigned to when nobody is given.
+             * @description The account set as the project's default assignee, kept as set; null for none.
              */
             default_assignee_id: string | null;
             /** @description Whether the project shows cycles. */
@@ -1432,9 +1432,9 @@ export interface components {
             issue_views_view: boolean;
             /** @description Whether the project shows intake. */
             intake_view: boolean;
-            /** @description Whether the project's guests see every work item, not only their own. */
+            /** @description A setting of the project for its guests, kept as set. */
             guest_view_all_features: boolean;
-            /** @description After how many months a closed work item is archived, 0–12; 0 never. */
+            /** @description A number of months, 0–12, set for automatic archiving and kept as set; 0 for none. */
             archive_in: number;
             /**
              * Format: date-time
@@ -1502,7 +1502,7 @@ export interface components {
             issue_views_view?: boolean;
             intake_view?: boolean;
             guest_view_all_features?: boolean;
-            /** @description After how many months a closed work item is archived, 0–12; 0 never. */
+            /** @description A number of months, 0–12, set for automatic archiving and kept as set; 0 for none. */
             archive_in?: number;
             logo_props?: components["schemas"]["LogoProps"];
             /** @description An IANA time zone name. */

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { CloseOutline, EditOutline } from "@makeplane/propel/icons";
 // types
 import type { Label } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 // components
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
 import type { ICustomMenuItem } from "./label-block/label-item-block";
@@ -46,13 +47,14 @@ export function ProjectSettingLabelItem(props: Props) {
   // states
   const [isEditLabelForm, setEditLabelForm] = useState(false);
   const { removeFromGroup } = useLabelChanges();
+  const { t } = useTranslation();
 
   const customMenuItems: ICustomMenuItem[] = [
     {
       CustomIcon: CloseOutline,
       onClick: () => void removeFromGroup(label.id),
       isVisible: label.parent_id !== null,
-      text: "Remove from group",
+      text: t("project_settings.labels.remove_from_group"),
       key: "remove_from_group",
     },
     {
@@ -62,7 +64,7 @@ export function ProjectSettingLabelItem(props: Props) {
         setIsUpdating(true);
       },
       isVisible: true,
-      text: "Edit label",
+      text: t("project_settings.labels.edit"),
       key: "edit_label",
     },
   ];

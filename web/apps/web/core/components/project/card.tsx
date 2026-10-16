@@ -85,42 +85,42 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
     {
       key: "settings",
       action: () => navigate(`/${workspaceSlug}/settings/projects/${project.id}`),
-      title: "Settings",
+      title: t("settings"),
       icon: SettingsOutline,
       shouldRender: !isArchived && (hasAdminRole || hasMemberRole),
     },
     {
       key: "join",
       action: () => setJoinProjectModal(true),
-      title: "Join",
+      title: t("common.join"),
       icon: UserPlusOutline,
       shouldRender: !isMemberOfProject && !isArchived,
     },
     {
       key: "open-new-tab",
       action: handleOpenInNewTab,
-      title: "Open in new tab",
+      title: t("open_in_new_tab"),
       icon: NewTabOutline,
       shouldRender: !isMemberOfProject && !isArchived,
     },
     {
       key: "copy-link",
       action: handleCopyText,
-      title: "Copy link",
+      title: t("copy_link"),
       icon: LinkOutline,
       shouldRender: !isArchived,
     },
     {
       key: "restore",
       action: () => setRestoreProject(true),
-      title: "Restore",
+      title: t("restore"),
       icon: RestoreOutline,
       shouldRender: isArchived && hasAdminRole,
     },
     {
       key: "delete",
       action: () => setDeleteProjectModal(true),
-      title: "Delete",
+      title: t("delete"),
       icon: DeleteOutline,
       shouldRender: isArchived && hasAdminRole,
     },
@@ -220,12 +220,16 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
           <p className="line-clamp-2 text-13 break-words text-tertiary">
             {project.description && project.description.trim() !== ""
               ? project.description
-              : `Created on ${renderFormattedDate(project.created_at)}`}
+              : `${t("common.created_on")} ${renderFormattedDate(project.created_at)}`}
           </p>
           <div className="item-center flex justify-between">
             <div className="flex items-center justify-center gap-2">
               <Tooltip
-                label={projectMembersIds.length ? `Members: ${projectMembersIds.length}` : "No members"}
+                label={
+                  projectMembersIds.length
+                    ? t("project_dialogs.members_count", { count: projectMembersIds.length })
+                    : t("project_dialogs.no_member_yet")
+                }
                 layout="stacked"
                 disabled={isMobile}
               >
@@ -247,10 +251,12 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                     </AvatarGroupOverflow>
                   </div>
                 ) : (
-                  <span className="text-13 text-placeholder italic">No Member Yet</span>
+                  <span className="text-13 text-placeholder italic">{t("project_dialogs.no_member_yet")}</span>
                 )}
               </Tooltip>
-              {isArchived && <div className="text-11 font-medium text-placeholder">Archived</div>}
+              {isArchived && (
+                <div className="text-11 font-medium text-placeholder">{t("project_dialogs.archived")}</div>
+              )}
             </div>
             {isArchived ? (
               hasAdminRole && (
@@ -266,7 +272,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                   >
                     <div className="flex items-center gap-1.5">
                       <RestoreOutline className="h-3.5 w-3.5" />
-                      Restore
+                      {t("restore")}
                     </div>
                   </button>
                   <button
@@ -277,7 +283,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                       e.stopPropagation();
                       setDeleteProjectModal(true);
                     }}
-                    aria-label="Delete"
+                    aria-label={t("delete")}
                   >
                     <DeleteOutline className="h-3.5 w-3.5" />
                   </button>
@@ -293,13 +299,14 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                         e.stopPropagation();
                       }}
                       to={`/${workspaceSlug}/settings/projects/${project.id}`}
+                      aria-label={t("project_dialogs.settings_link", { name: project.name })}
                     >
                       <SettingsOutline className="h-3.5 w-3.5" />
                     </Link>
                   ) : (
                     <span className="flex items-center gap-1 text-13 text-placeholder">
                       <TickOutline className="h-3.5 w-3.5" />
-                      Joined
+                      {t("project_dialogs.joined")}
                     </span>
                   ))}
                 {!isMemberOfProject && (
@@ -313,7 +320,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                         setJoinProjectModal(true);
                       }}
                     >
-                      Join
+                      {t("common.join")}
                     </Button>
                   </div>
                 )}

@@ -49,14 +49,8 @@ export const HelpMenuRoot = observer(function HelpMenuRoot() {
         </div>
       </CustomMenu.MenuItem>
       <div className="my-1 border-t border-subtle" />
-      <CustomMenu.MenuItem>
-        <button
-          type="button"
-          onClick={() => toggleShortcutsListModal(true)}
-          className="justify-sbg-layer-211 flex w-full items-center hover:bg-layer-1"
-        >
-          <span className="text-11">{t("keyboard_shortcuts")}</span>
-        </button>
+      <CustomMenu.MenuItem onClick={() => toggleShortcutsListModal(true)}>
+        <span className="text-11">{t("keyboard_shortcuts")}</span>
       </CustomMenu.MenuItem>
       <div className="mt-1 border-t border-subtle px-1 pt-2 text-11 text-secondary">
         <VersionNumber />

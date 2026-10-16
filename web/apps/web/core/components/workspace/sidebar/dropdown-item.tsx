@@ -9,10 +9,10 @@ import { useParams, Link } from "react-router";
 import { SettingsOutline, TickOutline, UserPlusOutline } from "@makeplane/propel/icons";
 import { Menu } from "@headlessui/react";
 // nerve imports
-import { EUserPermissions } from "@nerve/constants";
+import { EUserPermissions, ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { Workspace } from "@nerve/api-client";
-import { cn, getFileURL, getUserRole } from "@nerve/utils";
+import { cn, getFileURL } from "@nerve/utils";
 
 type TProps = {
   workspace: Workspace;
@@ -39,11 +39,13 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
       className="w-full"
       id={workspace.id}
     >
+      {/* the entry shows as the menu marks it, by the arrows as by the pointer (Headless UI's data-focus): a step
+          darker than it rests, the current workspace's too */}
       <Menu.Item
         as="div"
         className={cn("px-4 py-2", {
-          "bg-layer-transparent-active": workspace.id === activeWorkspace?.id,
-          "hover:bg-layer-transparent-hover": workspace.id !== activeWorkspace?.id,
+          "bg-layer-transparent-active data-focus:bg-layer-transparent-selected": workspace.id === activeWorkspace?.id,
+          "data-focus:bg-layer-transparent-hover": workspace.id !== activeWorkspace?.id,
         })}
       >
         <div className="flex items-center justify-between gap-1 rounded-sm p-1 text-13 text-primary">
@@ -70,7 +72,7 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
                 {workspace.name}
               </div>
               <div className="flex w-fit gap-2 text-13 text-tertiary capitalize">
-                <span>{getUserRole(workspace.role)?.toLowerCase() || "guest"}</span>
+                <span>{t(ROLE_DETAILS[workspace.role].i18n_title)}</span>
                 <div className="m-auto h-1 w-1 rounded-full bg-layer-1/50" />
                 <span className="capitalize">{t("member", { count: workspace.total_members || 0 })}</span>
               </div>

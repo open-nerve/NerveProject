@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/P4
 to: M3
 created: 2026-09-24
@@ -44,3 +44,14 @@ M3 合并时：
 两项都已处理；逐项的结论随 M3 的收尾写进评审，然后 `status` 改为 `closed`。
 
 来源：[M3/P10 spec](../specs/P10-web-project-pages.md) 第 7 节。
+
+## 处理结果（M3/收尾）
+
+两项都已做到：
+
+1. **保留的工作区名**：名单的"应用"一段正好是 `web/apps/web/app/routes/core.ts` 的顶层静态路由段加 `public/` 的顶层目录，前后端用同一份（`server/internal/modules/workspace/domain/reserved_slugs.txt`），vitest 守"应用"一段、`bootstrap` 的 Go 测试守"服务端"一段（M3/P1、P8a，M3 设计 3.10）。
+2. **离开项目的顺序**：先等接口成功再跳转（M3/P10），vitest 和故事 P5 的页面版本核对；工作区的离开照同一顺序，M3 收尾加的侧边栏入口也经它（[M3 收尾 spec](../specs/closeout.md) 2.7）。
+
+状态改为 `closed`。
+
+来源：[M3 收尾 spec](../specs/closeout.md) 2.1。

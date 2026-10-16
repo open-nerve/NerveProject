@@ -10,13 +10,21 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "../../fixtures/assert/workspace";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT, shownNameOf } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { closedByEscape } from "../../fixtures/dialogs";
-import { holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
+import {
+  announced,
+  closedByEscape,
+  closedWithin,
+  focusInDialog,
+  modalDialog,
+  pageBehindHidden,
+} from "../../fixtures/dialogs";
+import { chooseByKeyboard } from "../../fixtures/menus";
+import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
-import { anotherBrowser, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
+import { anotherBrowser, askToEndMembership, endMembership, memberRow, pickRole } from "../../fixtures/workspace-pages";
 
 // W7, the members' management (M3 design 2).
 
@@ -38,7 +46,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   // carol's address had an invitation to acme, which the admin deleted before she joined.
@@ -56,7 +64,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
     await Promise.all(
       ["bob", "carol", "dave", "erin"].map(async (name) => {
         const email = emailFor(testInfo, name);
-        const token = (await createPAT(api, (await register(api, email)).access_token)).token;
+        const token = (await registeredPAT(api, email)).token;
         await inviteAndAccept(api, admin, slug, { email, token }, 15);
         return [name, { email, token, id: await accountId(api, token) }] as const;
       })
@@ -234,7 +242,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   ]);
 });
 
-test("W7 (page): the admin makes a member a guest, in the workspace and in each of his projects, and removes another, who comes back by a new invitation; his own row offers no role and no removal, and his leaving, as the only admin, is refused with the reason; a member sees the roles and changes none", async ({
+test("W7 (page): the admin makes a member a guest, in the workspace and in each of his projects, and removes another, who comes back by a new invitation; his own row offers no role and no removal, and his leaving, as the only admin, sent by the keyboard, is refused with the reason, the focus kept in the dialog while it is out and given back to its button; a member sees the roles and changes none", async ({
   api,
   baseURL,
   browser,
@@ -260,7 +268,7 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   const membership = (id: string) => membershipOf(api, admin.access_token, slug, id);
   const members = `/${slug}/settings/members`;
 
-  // carol, a member, sees each role as text; her own row's menu offers her leaving.
+  // carol, a member, sees each role as text; her own row's menu offers her leaving, and so does the workspace menu.
   const theMember = await anotherBrowser(browser, baseURL ?? "", carol.tokens);
   const memberWatch = await watchPage(theMember.page);
   await theMember.page.goto(members);
@@ -268,7 +276,11 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await expect(memberRow(theMember.page, bob.email).locator("button")).toHaveCount(0);
   await expect(memberRow(theMember.page, adminEmail).locator("button")).toHaveCount(0);
   await memberRow(theMember.page, carol.email).locator("button").first().click();
-  await expect(theMember.page.getByRole("button", { name: "Leave", exact: true })).toBeVisible();
+  await expect(theMember.page.getByRole("menuitem", { name: "Leave", exact: true })).toBeVisible();
+  await theMember.page.keyboard.press("Escape");
+  await expect(theMember.page.getByRole("menu")).toHaveCount(0);
+  await theMember.page.getByRole("button", { name: "Open workspace switcher" }).click();
+  await expect(theMember.page.getByRole("menuitem", { name: "Leave workspace" })).toBeVisible();
   expect([memberWatch.apiFailures, memberWatch.oldApiRequests, memberWatch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(theMember.page, memberWatch, { warnings: [EMOJI_CHECK_WARNING] });
   await theMember.close();
@@ -276,9 +288,46 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
   await page.goto(members);
+  // The search, focused as the page opens, is marked.
+  const search = page.getByPlaceholder("Search...", { exact: true });
+  await expect(search).toBeFocused();
+  await expect(search.locator("..")).not.toHaveCSS("box-shadow", "none");
   // His own row: his role as text, nothing to pick.
   await expect(memberRow(page, adminEmail)).toContainText("Admin");
-  await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin" })).toHaveCount(0);
+  await expect(memberRow(page, adminEmail).getByRole("button", { name: "Admin", exact: true })).toHaveCount(0);
+
+  // bob's row menu, named by him, shows, and is marked, as Tab reaches it from his avatar.
+  const bobsMenu = memberRow(page, bob.email).getByRole("button", { name: `${shownNameOf(bob.email)} options` });
+  await memberRow(page, bob.email).getByRole("link").first().focus();
+  await page.keyboard.press("Tab");
+  await expect(bobsMenu).toBeFocused();
+  await expect(bobsMenu).toHaveCSS("opacity", "1");
+  await expect(bobsMenu).not.toHaveCSS("outline-style", "none");
+  // By the keyboard alone: Enter opens it, the arrow keys and Enter choose Remove, and the dialog that asks, cancelled,
+  // gives the focus back to the menu; opened again, Escape closes it.
+  await chooseByKeyboard(page, bobsMenu, "Remove");
+  await expect(modalDialog(page)).toHaveAccessibleName(`Remove ${shownNameOf(bob.email)}?`);
+  const cancel = modalDialog(page).getByRole("button", { name: "Cancel" });
+  await expect(cancel).toBeVisible();
+  await cancel.press("Enter");
+  await expect(bobsMenu).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem", { name: "Remove", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(bobsMenu).toBeFocused();
+  // The table's sort menus, each named by its column, are Tab stops, marked as Tab reaches them, and worked by the
+  // keyboard: from Full name, Tab reaches Display name, then Email, whose Z to A puts carol first and the admin last.
+  await page.getByRole("button", { name: "Full name", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Display name", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  const byEmail = page.getByRole("button", { name: "Email", exact: true });
+  await expect(byEmail).toBeFocused();
+  await expect(byEmail).not.toHaveCSS("outline-style", "none");
+  await chooseByKeyboard(page, byEmail, "Z A");
+  await expect(page.locator("tbody tr").first()).toContainText(carol.email);
+  await expect(page.locator("tbody tr").last()).toContainText(adminEmail);
 
   // bob becomes a guest: the page sends the role's number (nerve refuses a string), and so is he in each project.
   const demoted = await pickRole(page, bob.email, await membership(bob.id), { from: "Member", to: "Guest" });
@@ -294,9 +343,11 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   const carols = await membership(carol.id);
   const removal = { method: "DELETE", path: `/api/v0/workspace-members/${carols}` };
   // While the removal is out the dialog that asked cannot be dismissed: Cancel is disabled, and Escape leaves it open.
+  // The page mounts the dialog only while it is open: the page behind it is hidden all the same.
   const release = await holdAnswer(page, removal.method, removal.path);
   const removed = endMembership(page, carol.email, "Remove", removal);
   await expect(page.getByRole("dialog").getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(await pageBehindHidden(page)).toBe(true);
   expect(await closedByEscape(page)).toBe(false);
   await release();
   expect((await removed).status()).toBe(204);
@@ -305,12 +356,29 @@ test("W7 (page): the admin makes a member a guest, in the workspace and in each 
   await inviteAndAccept(api, admin.access_token, slug, { email: carol.email, token: carol.tokens.access_token }, 5);
   await expectMembership(db, slug, carol.email, { role: 5, is_active: true });
 
-  // His leaving, as the only admin: nerve refuses it, and the page says why and stays.
+  // His leaving, as the only admin, by the keyboard: while it is out its button is disabled under the focus, which
+  // stays in the dialog, an Escape meanwhile too (ModalCore stops it before Headless UI's Dialog, which would blur the
+  // dialog itself); nerve refuses it, the focus goes back to the button, and the page says why, read beside the
+  // dialog, which stays until Cancel closes it.
   const leaving = { method: "POST", path: `/api/v0/workspaces/${slug}/leave` };
-  expect((await endMembership(page, adminEmail, "Leave", leaving)).status()).toBe(409);
-  await expect(
-    page.getByText("The workspace would be left without an admin. Make another member an admin first.")
-  ).toBeVisible();
+  await askToEndMembership(page, adminEmail, "Leave");
+  await expect(modalDialog(page)).toHaveAccessibleName("Leave workspace?");
+  const leave = modalDialog(page).getByRole("button", { name: "Leave", exact: true });
+  const releaseLeaving = await holdAnswer(page, leaving.method, leaving.path);
+  const refused = answerTo(page, leaving.method, leaving.path, () => leave.press("Enter"));
+  await expect(modalDialog(page).getByRole("button", { name: "Leaving", exact: true })).toBeDisabled();
+  expect(await focusInDialog(page)).toBe(true);
+  expect(await closedByEscape(page)).toBe(false);
+  expect(await focusInDialog(page)).toBe(true);
+  await releaseLeaving();
+  expect((await refused).status()).toBe(409);
+  await expect(leave).toBeFocused();
+  const reason = page.getByText("The workspace would be left without an admin. Make another member an admin first.");
+  await expect(reason).toBeVisible();
+  expect(await announced(reason)).toBe(true);
+  expect(await closedWithin(page)).toBe(false);
+  await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
   await expect(page).toHaveURL(members);
   await expectMembership(db, slug, adminEmail, { role: 20, is_active: true });
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([

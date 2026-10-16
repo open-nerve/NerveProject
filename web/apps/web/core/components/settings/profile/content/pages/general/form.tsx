@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { UserOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import type { User, UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
@@ -27,6 +27,7 @@ import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 type TUserProfileForm = {
   first_name: string;
@@ -59,7 +60,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
     watch,
     control,
     setError,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm<TUserProfileForm>({
     defaultValues: {
       first_name: user.first_name || "",
@@ -67,7 +68,10 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       display_name: user.display_name || "",
       email: user.email || "",
     },
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
   // store hooks
   const { data: currentUser, updateCurrentUser } = useUser();
 
@@ -98,7 +102,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
   return (
     <>
       <DeactivateAccountModal isOpen={deactivateAccountModal} onClose={() => setDeactivateAccountModal(false)} />
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="w-full">
         <div className="flex w-full flex-col gap-7">
           {/* The picture and the cover are shown, not uploaded, until the file storage (M5, M2 design 3.2) */}
           <div className="relative h-44 w-full">
@@ -163,10 +167,14 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           autoComplete="on"
                         />
                       </InputGroup>
+                      {errors.first_name?.message && (
+                        <FieldError match size="lg">
+                          {errors.first_name.message}
+                        </FieldError>
+                      )}
                     </Field>
                   )}
                 />
-                {errors.first_name && <span className="text-11 text-danger-primary">{errors.first_name.message}</span>}
               </div>
               <div className="flex flex-col gap-1">
                 <h4 className="text-13 font-medium text-secondary">{t("last_name")}</h4>
@@ -188,10 +196,14 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           autoComplete="on"
                         />
                       </InputGroup>
+                      {errors.last_name?.message && (
+                        <FieldError match size="lg">
+                          {errors.last_name.message}
+                        </FieldError>
+                      )}
                     </Field>
                   )}
                 />
-                {errors.last_name && <span className="text-11 text-danger-primary">{errors.last_name.message}</span>}
               </div>
               <div className="flex flex-col gap-1">
                 <h4 className="text-13 font-medium text-secondary">
@@ -218,12 +230,14 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           placeholder={t("enter_your_display_name")}
                         />
                       </InputGroup>
+                      {errors.display_name?.message && (
+                        <FieldError match size="lg">
+                          {errors.display_name.message}
+                        </FieldError>
+                      )}
                     </Field>
                   )}
                 />
-                {errors?.display_name && (
-                  <span className="text-11 text-danger-primary">{errors?.display_name?.message}</span>
-                )}
               </div>
               <div className="flex flex-col gap-1">
                 <h4 className="text-13 font-medium text-secondary">

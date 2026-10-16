@@ -31,7 +31,7 @@ function StatesSettingsPage({ params }: Route.ComponentProps) {
 
   // derived values
   const project = getProjectById(projectId);
-  const pageTitle = project ? `${project.name} - States` : undefined;
+  const pageTitle = project ? `${project.name} - ${t("common.states")}` : undefined;
   // its members see its states; its guests are told they may not (M3 design 2 W11)
   const canPerformProjectMemberActions = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],

@@ -13,7 +13,7 @@ import { Combobox } from "@headlessui/react";
 // ui
 import type { Matcher } from "@nerve/propel/calendar";
 import { Calendar } from "@nerve/propel/calendar";
-import { ComboDropDown } from "@nerve/ui";
+import { ComboDropDown, useInsideModal } from "@nerve/ui";
 import { cn, renderFormattedDate, getDate } from "@nerve/utils";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
@@ -76,6 +76,8 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
   // hooks
   const { data } = useUserProfile();
   const startOfWeek = data?.start_of_the_week;
+  // in a dialog, the calendar's list is not modal: the dialog keeps the page behind it hidden (useInsideModal)
+  const insideModal = useInsideModal();
   // popper-js refs
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
@@ -187,6 +189,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
           // be set (@nerve/ui's custom-search-select.tsx), and the calendar would stay at the top left of the page.
           <Combobox.Options
             as="ul"
+            modal={!insideModal}
             data-prevent-outside-click
             static
             ref={setPopperElement}

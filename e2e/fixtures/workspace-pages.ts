@@ -4,6 +4,7 @@ import type { WorkspaceInvitation } from "./api";
 import { password, signInContext, type AuthTokens } from "./auth";
 import { submitSignIn } from "./auth-pages";
 import { watchPage, type PageWatch } from "./browser";
+import { modalDialog, pageBehindHidden, sentWithin } from "./dialogs";
 import { answerTo, expectListBesideButton, sentTo } from "./settings-pages";
 
 // The workspace's pages (M3 design 7.5), as a person uses them.
@@ -50,11 +51,12 @@ export async function switchWorkspace(page: Page, id: string): Promise<{ body: u
 
 /**
  * Confirms the deletion of the workspace whose name is name on its general page, which page shows: the admin opens the
- * deletion, types the name and the words that confirm it, and confirms. Resolves once the confirmation is clicked, not
- * waiting for nerve's answer.
+ * deletion, whose dialog its title names, types the name and the words that confirm it, and confirms. Resolves once the
+ * confirmation is clicked, not waiting for nerve's answer.
  */
 export async function confirmDeletion(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Are you sure you want to delete this workspace?");
   await page.locator("#workspaceName").fill(name);
   await page.locator("#confirmDelete").fill("delete my workspace");
   await page.getByRole("button", { name: "Confirm", exact: true }).click();
@@ -113,19 +115,26 @@ export async function pickRole(
 }
 
 /**
- * Ends a membership from the members page, which page shows: opens the menu of the row of email, picks its entry
- * (Leave on the caller's own row, Remove on another's), and confirms it in the dialog that asks. Resolves with nerve's
- * answer to the request of method to path that the page sends.
+ * Asks to end a membership from the members page, which page shows: opens the menu of the row of email (the row's one
+ * menu, whatever the page's language names it) and picks its entry, as the page's language names it (Leave on the
+ * caller's own row, Remove on another's), which opens the dialog that asks.
+ */
+export async function askToEndMembership(page: Page, email: string, entry: string): Promise<void> {
+  await memberRow(page, email).locator('button[aria-haspopup="menu"]').click();
+  await page.getByRole("menuitem", { name: entry, exact: true }).click();
+}
+
+/**
+ * Ends a membership from the members page, which page shows: asks it (askToEndMembership) and confirms it in the
+ * dialog that asks. Resolves with nerve's answer to the request of method to path that the page sends.
  */
 export async function endMembership(
   page: Page,
   email: string,
-  entry: "Leave" | "Remove",
+  entry: string,
   request: { method: string; path: string }
 ): Promise<Response> {
-  // the row's menu is its first button: the role's select, when there is one, comes after it
-  await memberRow(page, email).locator("button").first().click();
-  await page.getByRole("button", { name: entry, exact: true }).click();
+  await askToEndMembership(page, email, entry);
   return answerTo(page, request.method, request.path, () =>
     page.getByRole("dialog").getByRole("button", { name: entry, exact: true }).click()
   );
@@ -136,14 +145,12 @@ export function invitationLinkOf(invitation: Pick<WorkspaceInvitation, "id" | "t
   return `/workspace-invitations?invitation_id=${invitation.id}&token=${invitation.token}`;
 }
 
-/** The row of the members page's invitations, which page shows, of the invitation to email. */
+/**
+ * The row of the members page's invitations, which page shows, of the invitation to email: the one that has its address
+ * as its heading, whatever the page's language.
+ */
 export function invitationRow(page: Page, email: string): Locator {
-  // the innermost element that holds the address and the invitation's state: rows come after the lists that hold them
-  return page
-    .locator("div")
-    .filter({ has: page.getByRole("heading", { name: email, exact: true }) })
-    .filter({ hasText: /Pending|Declined/ })
-    .last();
+  return page.locator("div.group", { has: page.getByRole("heading", { name: email, exact: true }) });
 }
 
 /**
@@ -162,16 +169,19 @@ export function invitationFormRow(page: Page, index: number): Locator {
 }
 
 /**
- * Sends invitations from the members page, which page shows to an admin of the workspace of slug: opens the form, types
- * each address in a row of its own and picks its role by its label, and sends them. Resolves with what the page sent,
- * and nerve's answer.
+ * Sends invitations from the members page, which page shows to an admin of the workspace of slug: opens the form, a
+ * dialog its title names, types each address in a row of its own and picks its role by its label, and sends them.
+ * Resolves with what the page sent, and nerve's answer. A role other than Member is picked by the keyboard: Enter on
+ * its select (CustomSelect's own button) opens its list, and sends no form.
  */
 export async function sendInvitations(
   page: Page,
   slug: string,
   rows: { email: string; role: string }[]
 ): Promise<{ body: unknown; answer: Response }> {
+  const path = `/api/v0/workspaces/${slug}/invitations`;
   await page.getByRole("button", { name: "Add member" }).click();
+  await expect(modalDialog(page)).toHaveAccessibleName("Invite people to collaborate");
   const form = page.getByRole("dialog");
   // the rows one after another: the form adds a row once the one before it is typed
   await rows.reduce(async (before, { email, role }, index) => {
@@ -180,13 +190,15 @@ export async function sendInvitations(
     await form.locator(`[id="invitations.${index}.email"]`).fill(email);
     // a row holds Member as it is added; its role's select is its first button (its removal's comes after it)
     if (role !== "Member") {
-      await invitationFormRow(page, index).getByRole("button").first().click();
+      await invitationFormRow(page, index).getByRole("button").first().focus();
+      expect(await sentWithin(page, "POST", path, () => page.keyboard.press("Enter")), "sent by the Enter").toBe(false);
+      await expect(page.getByRole("option", { name: role, exact: true })).toBeVisible();
+      // the list, open in the dialog, leaves the page behind it hidden, as the dialog has it
+      expect(await pageBehindHidden(page), "the page behind hidden while the role list is open").toBe(true);
       await page.getByRole("option", { name: role, exact: true }).click();
     }
   }, Promise.resolve());
-  return sentTo(page, "POST", `/api/v0/workspaces/${slug}/invitations`, () =>
-    form.getByRole("button", { name: "Send invitations" }).click()
-  );
+  return sentTo(page, "POST", path, () => form.getByRole("button", { name: "Send invitations" }).click());
 }
 
 /**
@@ -198,8 +210,7 @@ export async function removeInvitation(
   email: string,
   request: { method: string; path: string }
 ): Promise<Response> {
-  // the row's menu is its last button
-  await invitationRow(page, email).getByRole("button").last().click();
+  await invitationRow(page, email).getByRole("button", { name: "Options" }).click();
   await page.getByText("Remove", { exact: true }).click();
   return answerTo(page, request.method, request.path, () =>
     page.getByRole("dialog").getByRole("button", { name: "Remove", exact: true }).click()

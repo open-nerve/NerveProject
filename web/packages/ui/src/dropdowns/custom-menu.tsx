@@ -9,9 +9,8 @@ import { ChevronDownOutline, ChevronRightOutline, MoreHorizontalOutline } from "
 import * as React from "react";
 import ReactDOM from "react-dom";
 import { usePopper } from "react-popper";
-import { useOutsideClickDetector } from "@nerve/hooks";
 // helpers
-import { useDropdownKeyDown } from "../hooks/use-dropdown-key-down";
+import { useInsideModal } from "../modals/modal-core";
 import { cn } from "../utils";
 // types
 import type { ICustomMenuDropdownProps, ICustomMenuItemProps, ICustomSubMenuProps } from "./helper";
@@ -43,12 +42,34 @@ function Portal({ children, container, asChild = false }: PortalProps) {
   return ReactDOM.createPortal(<div data-radix-portal="">{children}</div>, targetContainer);
 }
 
-// Context for main menu to communicate with submenus
+// Context for main menu to communicate with submenus: closing the others as one opens, and the menu's items element,
+// which holds what they show
 const MenuContext = React.createContext<{
   closeAllSubmenus: () => void;
   registerSubmenu: (closeSubmenu: () => void) => () => void;
+  itemsElement: HTMLElement | null;
 } | null>(null);
 
+/** Calls onOpen as the menu opens and onClose as it closes, once for each change of open. */
+function OpenChange(props: { open: boolean; onOpen?: () => void; onClose?: () => void }) {
+  const { open, onOpen, onClose } = props;
+  const wasOpen = React.useRef(open);
+
+  React.useEffect(() => {
+    if (open === wasOpen.current) return;
+    wasOpen.current = open;
+    if (open) onOpen?.();
+    else onClose?.();
+  }, [open, onOpen, onClose]);
+
+  return null;
+}
+
+/**
+ * A menu: Headless UI's Menu, whose open state is the one it shows. Its button opens it by the pointer, Enter, Space or
+ * the arrow keys; the arrow keys move among its items, Enter and Space choose one. A choice or Escape closes it, the
+ * focus going back to its button; Tab closes it and moves on from its button; a click outside closes it too.
+ */
 function CustomMenu(props: ICustomMenuDropdownProps) {
   const {
     ariaLabel,
@@ -73,15 +94,14 @@ function CustomMenu(props: ICustomMenuDropdownProps) {
     onMenuClose,
     tabIndex,
     closeOnSelect,
-    openOnHover = false,
-    useCaptureForOutsideClick = false,
   } = props;
 
   const [referenceElement, setReferenceElement] = React.useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = React.useState<HTMLDivElement | null>(null);
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [itemsElement, setItemsElement] = React.useState<HTMLElement | null>(null);
+  // in a dialog, the menu is not modal: the dialog keeps the page behind it hidden (useInsideModal)
+  const insideModal = useInsideModal();
   // refs
-  const dropdownRef = React.useRef<HTMLDivElement | null>(null);
   const submenuClosersRef = React.useRef<Set<() => void>>(new Set());
 
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -99,201 +119,123 @@ function CustomMenu(props: ICustomMenuDropdownProps) {
     };
   }, []);
 
-  const openDropdown = () => {
-    setIsOpen(true);
-    if (referenceElement) referenceElement.focus();
-  };
-
-  const closeDropdown = React.useCallback(() => {
-    if (isOpen) {
-      closeAllSubmenus();
-      onMenuClose?.();
-    }
-    setIsOpen(false);
-  }, [isOpen, closeAllSubmenus, onMenuClose]);
-
-  const selectActiveItem = () => {
-    const activeItem: HTMLElement | undefined | null = dropdownRef.current?.querySelector(
-      `[data-headlessui-state="active"] button`
-    );
-    activeItem?.click();
-  };
-
-  const handleKeyDown = useDropdownKeyDown(openDropdown, closeDropdown, isOpen, selectActiveItem);
-
-  const handleOnClick = () => {
-    if (closeOnSelect) closeDropdown();
-  };
-
-  const handleMenuButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (isOpen) {
-      closeDropdown();
-    } else {
-      openDropdown();
-    }
-    if (menuButtonOnClick) menuButtonOnClick();
-  };
-
-  const handleMouseEnter = () => {
-    if (openOnHover) openDropdown();
-  };
-
-  const handleMouseLeave = () => {
-    if (openOnHover && isOpen) {
-      setTimeout(() => {
-        // Only close if menu is still open
-        if (isOpen) {
-          closeDropdown();
-        }
-      }, 150); // Small delay to allow moving to submenu
-    }
-  };
-
-  useOutsideClickDetector(dropdownRef, closeDropdown, useCaptureForOutsideClick);
-
-  // Custom handler for submenu portal clicks
-  React.useEffect(() => {
-    const handleDocumentClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      const isSubmenuClick = target.closest('[data-prevent-outside-click="true"]');
-      const isMainMenuClick = dropdownRef.current?.contains(target);
-
-      // If it's a submenu click or main menu click, don't close
-      if (isSubmenuClick || isMainMenuClick) {
-        return;
-      }
-
-      // If menu is open and it's an outside click, close it
-      if (isOpen) {
-        closeDropdown();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleDocumentClick, useCaptureForOutsideClick);
-
-      return () => {
-        document.removeEventListener("mousedown", handleDocumentClick, useCaptureForOutsideClick);
-      };
-    }
-  }, [isOpen, closeDropdown, useCaptureForOutsideClick]);
-
   const menuContextValue = React.useMemo(
-    () => ({ closeAllSubmenus, registerSubmenu }),
-    [closeAllSubmenus, registerSubmenu]
+    () => ({ closeAllSubmenus, registerSubmenu, itemsElement }),
+    [closeAllSubmenus, registerSubmenu, itemsElement]
   );
 
-  let menuItems = (
-    <Menu.Items
-      data-prevent-outside-click={!!portalElement}
-      className={cn(
-        "fixed z-30 translate-y-0",
-        menuItemsClassName
-      )} /** translate-y-0 is a hack to create new stacking context. Required for safari  */
-      static
-    >
-      <div
-        className={cn(
-          "shadow-md my-1 min-w-[12rem] overflow-y-scroll rounded-md border border-strong-1 bg-surface-1 px-2 py-2.5 text-11 whitespace-nowrap ring-1 ring-strong-1/15 outline-none focus:outline-none",
-          {
-            "max-h-60": maxHeight === "lg",
-            "max-h-48": maxHeight === "md",
-            "max-h-36": maxHeight === "rg",
-            "max-h-28": maxHeight === "sm",
-          },
-          optionsClassName
-        )}
-        ref={setPopperElement}
-        style={styles.popper}
-        {...attributes.popper}
-      >
-        <MenuContext.Provider value={menuContextValue}>{children}</MenuContext.Provider>
-      </div>
-    </Menu.Items>
-  );
-
-  if (portalElement) {
-    menuItems = ReactDOM.createPortal(menuItems, portalElement);
-  }
+  // the menu's place in the Tab order, where its caller gives one, is its button's: the button is the menu's one stop
+  const buttonTabIndex = tabIndex ?? customButtonTabIndex;
 
   return (
     <Menu
       as="div"
-      ref={dropdownRef}
-      tabIndex={tabIndex}
       className={cn("relative w-min text-left", className)}
-      onKeyDown={handleKeyDown}
       role="presentation"
+      // a click on the menu's button or items is the menu's alone, not the row's or the link's around it
       onClick={(e) => {
         e.stopPropagation();
         e.preventDefault();
-        handleOnClick();
       }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
       data-main-menu="true"
     >
-      {({ open }) => (
-        <>
-          {customButton ? (
-            <Menu.Button as={React.Fragment}>
-              <button
-                ref={setReferenceElement}
-                type="button"
-                onClick={handleMenuButtonClick}
-                className={customButtonClassName}
-                tabIndex={customButtonTabIndex}
-                disabled={disabled}
-                aria-label={ariaLabel}
-              >
-                {customButton}
-              </button>
-            </Menu.Button>
-          ) : (
-            <>
-              {ellipsis || verticalEllipsis ? (
-                <Menu.Button as={React.Fragment}>
-                  <button
-                    ref={setReferenceElement}
-                    type="button"
-                    onClick={handleMenuButtonClick}
-                    disabled={disabled}
-                    className={`relative grid place-items-center rounded-sm p-1 text-secondary hover:text-primary ${
-                      disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-layer-transparent-hover"
-                    } ${buttonClassName}`}
-                    tabIndex={customButtonTabIndex}
-                    aria-label={ariaLabel}
-                  >
-                    <MoreHorizontalOutline className={`h-3.5 w-3.5 ${verticalEllipsis ? "rotate-90" : ""}`} />
-                  </button>
-                </Menu.Button>
-              ) : (
-                <Menu.Button as={React.Fragment}>
-                  <button
-                    ref={setReferenceElement}
-                    type="button"
-                    className={`flex items-center justify-between gap-1 rounded-md px-2.5 py-1 text-11 whitespace-nowrap duration-300 ${
-                      open ? "text-primary" : "text-secondary"
-                    } ${noBorder ? "" : "shadow-sm border border-strong focus:outline-none"} ${
-                      disabled ? "cursor-not-allowed text-secondary" : "cursor-pointer hover:bg-layer-transparent-hover"
-                    } ${buttonClassName}`}
-                    onClick={handleMenuButtonClick}
-                    tabIndex={customButtonTabIndex}
-                    disabled={disabled}
-                    aria-label={ariaLabel}
-                  >
-                    {label}
-                    {!noChevron && <ChevronDownOutline className="h-3.5 w-3.5" />}
-                  </button>
-                </Menu.Button>
+      {({ open, close }) => {
+        let menuItems = (
+          <Menu.Items
+            ref={setItemsElement}
+            modal={!insideModal}
+            data-prevent-outside-click={!!portalElement}
+            className={cn(
+              "fixed z-30 translate-y-0",
+              menuItemsClassName
+            )} /** translate-y-0 is a hack to create new stacking context. Required for safari  */
+            // an item closes the menu as it is chosen; with closeOnSelect, a click on anything else in it does too
+            onClick={closeOnSelect ? () => close() : undefined}
+          >
+            <div
+              className={cn(
+                "shadow-md my-1 min-w-[12rem] overflow-y-scroll rounded-md border border-strong-1 bg-surface-1 px-2 py-2.5 text-11 whitespace-nowrap ring-1 ring-strong-1/15 outline-none focus:outline-none",
+                {
+                  "max-h-60": maxHeight === "lg",
+                  "max-h-48": maxHeight === "md",
+                  "max-h-36": maxHeight === "rg",
+                  "max-h-28": maxHeight === "sm",
+                },
+                optionsClassName
               )}
-            </>
-          )}
-          {isOpen && menuItems}
-        </>
-      )}
+              ref={setPopperElement}
+              style={styles.popper}
+              {...attributes.popper}
+            >
+              <MenuContext.Provider value={menuContextValue}>{children}</MenuContext.Provider>
+            </div>
+          </Menu.Items>
+        );
+
+        if (portalElement) {
+          menuItems = ReactDOM.createPortal(menuItems, portalElement);
+        }
+
+        return (
+          <>
+            <OpenChange open={open} onOpen={menuButtonOnClick} onClose={onMenuClose} />
+            {customButton ? (
+              <Menu.Button as={React.Fragment} disabled={disabled}>
+                <button
+                  ref={setReferenceElement}
+                  type="button"
+                  className={customButtonClassName}
+                  tabIndex={buttonTabIndex}
+                  disabled={disabled}
+                  aria-label={ariaLabel}
+                >
+                  {customButton}
+                </button>
+              </Menu.Button>
+            ) : (
+              <>
+                {ellipsis || verticalEllipsis ? (
+                  <Menu.Button as={React.Fragment} disabled={disabled}>
+                    <button
+                      ref={setReferenceElement}
+                      type="button"
+                      disabled={disabled}
+                      className={`relative grid place-items-center rounded-sm p-1 text-secondary hover:text-primary ${
+                        disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-layer-transparent-hover"
+                      } ${buttonClassName}`}
+                      tabIndex={buttonTabIndex}
+                      aria-label={ariaLabel}
+                    >
+                      <MoreHorizontalOutline className={`h-3.5 w-3.5 ${verticalEllipsis ? "rotate-90" : ""}`} />
+                    </button>
+                  </Menu.Button>
+                ) : (
+                  <Menu.Button as={React.Fragment} disabled={disabled}>
+                    <button
+                      ref={setReferenceElement}
+                      type="button"
+                      className={`flex items-center justify-between gap-1 rounded-md px-2.5 py-1 text-11 whitespace-nowrap duration-300 ${
+                        open ? "text-primary" : "text-secondary"
+                      } ${noBorder ? "" : "shadow-sm border border-strong focus:outline-none"} ${
+                        disabled
+                          ? "cursor-not-allowed text-secondary"
+                          : "cursor-pointer hover:bg-layer-transparent-hover"
+                      } ${buttonClassName}`}
+                      tabIndex={buttonTabIndex}
+                      disabled={disabled}
+                      aria-label={ariaLabel}
+                    >
+                      {label}
+                      {!noChevron && <ChevronDownOutline className="h-3.5 w-3.5" />}
+                    </button>
+                  </Menu.Button>
+                )}
+              </>
+            )}
+            {menuItems}
+          </>
+        );
+      }}
     </Menu>
   );
 }
@@ -322,9 +264,10 @@ function SubMenu(props: ICustomSubMenuProps) {
 
   const menuContext = React.useContext(MenuContext);
 
+  // in the menu's items element, which is fixed, no box around it clips what this shows: the viewport alone bounds it
+  // (no clipping parents)
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement,
-    strategy: "fixed", // Use fixed positioning to escape overflow constraints
     modifiers: [
       {
         name: "offset",
@@ -336,12 +279,14 @@ function SubMenu(props: ICustomSubMenuProps) {
         name: "flip",
         options: {
           fallbackPlacements: ["left-start", "right-end", "left-end", "top-start", "bottom-start"],
+          boundary: [],
         },
       },
       {
         name: "preventOverflow",
         options: {
           padding: 8,
+          boundary: [],
         },
       },
     ],
@@ -418,32 +363,18 @@ function SubMenu(props: ICustomSubMenuProps) {
       </span>
 
       {isOpen && (
-        <Portal>
+        // in the menu's items element, beside its list, whose scrolling does not clip it: a click on it is a click in
+        // the menu, which Headless UI's menu stays open for
+        <Portal container={menuContext?.itemsElement}>
           <div
             ref={setPopperElement}
             style={styles.popper}
             {...attributes.popper}
             className={cn(
-              "shadow-md fixed z-30 min-w-[12rem] overflow-hidden rounded-md border border-strong-1 bg-surface-1 p-1 text-11 ring-1 ring-strong-1/15",
+              "shadow-md z-30 min-w-[12rem] overflow-hidden rounded-md border border-strong-1 bg-surface-1 p-1 text-11 ring-1 ring-strong-1/15",
               contentClassName
             )}
             data-prevent-outside-click="true"
-            onMouseEnter={() => {
-              // Notify parent menu that we're hovering over submenu
-              const mainMenuElement = document.querySelector('[data-main-menu="true"]');
-              if (mainMenuElement) {
-                const mouseEnterEvent = new MouseEvent("mouseenter", { bubbles: true });
-                mainMenuElement.dispatchEvent(mouseEnterEvent);
-              }
-            }}
-            onMouseLeave={() => {
-              // Notify parent menu that we're leaving submenu
-              const mainMenuElement = document.querySelector('[data-main-menu="true"]');
-              if (mainMenuElement) {
-                const mouseLeaveEvent = new MouseEvent("mouseleave", { bubbles: true });
-                mainMenuElement.dispatchEvent(mouseLeaveEvent);
-              }
-            }}
           >
             <SubMenuContext.Provider value={subMenuContextValue}>{children}</SubMenuContext.Provider>
           </div>
@@ -458,14 +389,15 @@ function MenuItem(props: ICustomMenuItemProps) {
   const submenuContext = useSubMenu();
 
   return (
-    <Menu.Item as="div" disabled={disabled}>
-      {({ active, close }) => (
+    // the item is the button that acts: Enter and Space on the menu click its active item, which chooses it
+    <Menu.Item disabled={disabled}>
+      {({ focus, close }) => (
         <button
           type="button"
           className={cn(
             "w-full truncate rounded-sm px-1 py-1.5 text-left text-secondary select-none",
             {
-              "bg-layer-transparent-hover": active && !disabled,
+              "bg-layer-transparent-hover": focus && !disabled,
               "text-placeholder": disabled,
             },
             className

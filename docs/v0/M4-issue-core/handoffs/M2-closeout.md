@@ -87,7 +87,7 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 ## 11. 复制到剪贴板（M4 的 6 处）
 
 - P5 起 `copyTextToClipboard`（`web/packages/utils/src/string.ts`）复制失败时拒绝，纯 http 下也是。M4 的 6 处没有处理拒绝，失败时没有提示，只有一个未处理的 Promise 拒绝（路径在 `web/apps/web/core/components/` 下）：`issues/issue-layouts/quick-action-dropdowns/helper.tsx`、`issues/peek-overview/header.tsx`、`issues/issue-detail/issue-activity/helper.tsx`（`.then` 在一个不等待它的 `try` 里）、`issues/issue-detail/links/link-item.tsx`（不等待，照样提示已复制）、`issues/issue-detail-widgets/{relations/helper.tsx,sub-issues/helper.ts}`（`await` 了，调用方不处理）。
-- **关闭条件**：6 处都处理失败，经 `t()` 提示，像 `api-token/modal/generated-token-details.tsx`。
+- **关闭条件**：6 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
 
 ## 12. stores 按会话分代（规则在总体设计 7.7）和 M2 留下的调用
 

@@ -854,6 +854,8 @@ labels
 ### 5.1 操作
 两个新模块文件：`api/modules/workspace.yaml`、`api/modules/project.yaml`（模块文件名等于模块目录名，M2 设计 3.12）；`access` 没有操作。路径都不带结尾 `/`（M1-P3 交接：项目标识的地址随新接口统一）。每个操作写 `security` 和 `x-problem-codes`（M2 设计 3.11、3.12）；下表"主要错误"一栏就是后者的内容，不再列出所有操作都可能返回的平台码。带 `bearer` 的操作另隐含 `unauthorized`；带请求体的都可能返回 400 `bad_request`（结构）。平台码 `forbidden` 写作 403 F，`validation_failed` 写作 422 V。一个操作可以声明别的模块的码（例如 `project.yaml` 的操作答 `workspace.not_found`），前缀是拒绝它的那个模块（按 11.7 修订的 M2 设计 3.11）。
 
+契约按模块一个文件，不按资源拆：`api/modules/project.yaml` 在 P7b 之后 1,348 行，超过约 400 行的规则，是写明的例外（M3/P7b spec 第 3 节第 1 条，控制者的裁定 B1）。仓库的约定由文件名得出模块：`Makefile` 按 `api/modules/<模块>.yaml` 生成到 `internal/modules/<模块>/adapter/http/gen`，`apitest` 要求一个文件中每个操作的标签就是这个模块；按资源拆出的文件会被当成另一个模块。要拆，是改这几处约定的单独任务。这个文件在 P7b 之后到收尾没有再长（1,348 行）；以后的 M 给 `project` 模块加的仍写在这个文件里（例如 M5 给项目加回封面，`ProjectCreate`、`ProjectUpdate` 随之变，[M5 的交接](../M5-files/handoffs/M1-closeout.md)）。
+
 **`workspace`**（19 个）：
 
 | 方法与路径 | operationId | 认证 | 请求 | 成功 | 主要错误 |
@@ -1306,7 +1308,7 @@ modules/access/
   - 按规则清一类（P11）：`eslint-plugin-promise(always-return)` 全仓清零（62 条，其中 M3 领域 14 条）。它能机械修复（`then` 回调里补 `return` 或改为 `await`），也常与"复制到剪贴板"一类未处理的拒绝同处出现，修它顺带检查错误处理。`no-shadow`（165 条）数量太多、改名会碰到 M4–M7 的文件，不选。
   - 各包的上限随之调低（`tools/lint-cap.mjs`），review 写明各包的变化。
 
-### 7.10 关键词守卫的新规则（`tools/keywords.json`，P8a、P8b）
+### 7.10 关键词守卫的新规则（`tools/keywords.json`，P8a 起）
 | 规则 | 禁止 |
 |---|---|
 | `plane-workspace-urls` | M3 替换的 Plane 地址：由 56 个旧方法的地址写出模式（工作区、成员、邀请、slug 检查、`workspace-members/me`、`project-roles`、项目、项目成员、归档、标识检查、状态、标签、显示设置）。一条例外：`core/services/project/project.service.ts` 中 `/user-properties/` 的两处（M4 的筛选 store 用，7.3），`until: "M4"`，原因写"M3/P8b 起，M4 的工作项筛选改用新接口时删除"。`/search-issues/` 不是 M3 的地址，不在模式里；规则的不命中样例加上 `/api/workspaces/{slug}/projects/{id}/search-issues/`，守住项目地址的模式不会宽到它 |
@@ -1315,8 +1317,17 @@ modules/access/
 | `restricted-urls` | `RESTRICTED_URLS` |
 | `in-system-invitations` | `/invitations` 路由、`joinWorkspaces`、`getUserWorkspaceInvitations` 一类名称（决策点 2） |
 | `user-settings` | `IUserSettings`、`currentUserSettings`、`fetchCurrentUserSettings` |
+| `workspaces-list-fetch`（P9） | 在 `useWorkspacesFetch` 之外取调用者的工作区列表（调 store 的 `fetchWorkspaces`）；store 自己和测试不算 |
+| `refusal-toast`（P9，收尾放宽） | 在 `useRefusalToast` 之外用 `setToast` 按 `errorMessageKey` 说拒绝；收尾加上 `setPromiseToast` 的失败一支（它的 message 是 `useRefusalMessage`） |
+| `sign-out-toast`（P9，收尾放宽） | 在 `useSignOut` 之外退出登录再自己提示；收尾加上从 store 取 `signOut` 的写法（`const { signOut } = useUser()`、`useUser().signOut`） |
+| `project-leave`（P10） | 在 `useProjectMembershipChanges` 的 `leave` 之外调 store 的 `leaveProject` |
+| `project-address-route`（P10） | P10、P11 改过的项目页从 router store 读项目和工作区（`currentProjectDetails`、`projectMemberIds`、`currentWorkspace`、不传 slug 和项目的 `allowPermissions`）；M4、M6、M7 改它们的页面时把那些文件加进规则的 `files` |
+| `workspace-address-route`（收尾） | 收尾改过的 20 个工作区页面文件从 router store 读工作区（`currentWorkspace`、不传 slug 的工作区级 `allowPermissions`），而不是经 `useRouteWorkspace`；M4、M7、M8 改它们的页面时把那些文件加进规则的 `files` |
+| `copy-hook`（收尾） | 在 `useCopyLink`、`useCopyText` 之外复制到剪贴板（`copyTextToClipboard`、`copyUrlToClipboard`、`navigator.clipboard`）；M4、M6、M7、M8 还自己复制的文件各有一条例外，`until` 是各自的 `M<n>/closeout`，到那个 M 的收尾开始、`phase` 改为它时到期 |
+| `composing-check`（收尾） | 在 `@nerve/utils` 的 `isComposing`（`keyboard.ts`）之外判断按键是不是输入法的：读 `.isComposing`（或解构出它：语句里的、参数里的、嵌套的）、拿 `keyCode` 或 `which` 与 229 比较；仓库中的 JS、TS 文件都算 |
 
 - 在 P8a、P8b 加入：P8a 加入工作区一侧的地址的模式和 `restricted-urls`、`in-system-invitations`、`user-settings`；P8b 补全项目一侧的模式、`/user-properties/` 的例外和不命中样例，删除 `project-invitations` 的例外，收紧 `plane-user-urls`。规则在数据层的第二段（P8b）合并时完整，在任何页面的 Phase 之前；P11 只核对 M3 加的例外只剩跨 M 的一条（`/user-properties/` 的两处，`until: "M4"`），`project-invitations` 的 `until: "M3"` 已删除。
+- P9、P10 和收尾加入的规则在表的后几行，括号里是加入它的 Phase；每条规则的 `why` 写明它守的那一处和不算的地方。
 - 每条规则带 `samples`（命中和不命中）和 `files` 样例，照 M2 设计 7.9 的写法；`node tools/keywords.mjs` 通过。
 
 ### 7.11 规模估计（按 M2 收尾附录 B 校准）
@@ -1577,6 +1588,8 @@ modules/access/
 | C8 | 复制到剪贴板：在局域网 HTTP 地址上复制项目链接、邀请链接，失败时有提示 | P10 |
 | C9 | 状态和标签的拖动、设为默认、两层标签的拖放；默认状态和组内唯一状态的删除按钮不可用；访客看状态设置"没有权限" | P11 |
 | C10 | 访客打开别人的个人主页（决策点 3，A） | P11 |
+| C11 | 重写之后的弹窗（`ModalCore`、`AlertModalCore`、命令面板、快捷键、切换账户）：打开时后面的页面 `inert`、`aria-hidden`（读屏读不到、点不到），关上之后都不是；Tab 在弹窗里转；Escape、点外面关上，请求在路上时都不关、取消不能用；输入法组字时的 Escape 不关；关上之后焦点回到打开它的控件；弹窗里的下拉框和选择器（成员、角色、网络、表情和图标）能用；被拒绝时提示在弹窗开着时被读出（A-M2）；焦点在 Firefox、Safari 中也看一遍 | 收尾 |
+| C12 | 离开工作区的入口：侧边栏的工作区菜单，管理员（不是唯一的）、唯一的管理员、成员、访客各离开一次，键盘能到；唯一的管理员被拒绝，弹窗留着、原因被读出；离开之后的落点同 W11 的页面版本，跟进只在离开的那个会话里；中文下的文案 | 收尾 |
 
 ---
 
@@ -2072,32 +2085,34 @@ modules/access/
 | M5、M8 的 M2-closeout 开头"M3 及以后有 stores 的 M" | M3 的部分就是 M2-closeout §3 | 7.1 |
 
 ### 13.2 M3 交给后续 M 的事项（收尾时写成交接）
+每一行写进接收者的 `handoffs/M3-closeout.md`（收尾），连同各 Phase 的 spec 第 5 节、评审第 6 节交给它的各条和收尾找到的（[收尾 spec](specs/closeout.md) 第 2 节）。
+
 | 接收者 | 事项 |
 |---|---|
-| M4 | **事件**：M3 没有领域事件，删除工作区、降为访客、结束成员关系的连带经 `ProjectCascade` 同步完成（3.3）。M4 随第一个异步订阅者引入事件（M2 设计 3.15、M4 的 M2 收尾交接第 6 节不变），届时可以把删除工作区的连带改挂到 `WorkspaceDeleted` 上，并为工作项加上删除项目、删除工作区的连带。但邀请的软删除必须留在删除工作区的事务里：注册时的邀请检查（`SignupInvitations`）只看邀请行、不看工作区，连带改为异步之后，从删除到任务运行之间，已删除工作区的邀请链接会让被邀请的邮箱在注册关闭时注册；所以要么邀请这一步保持同步，要么让这个检查也读工作区。**约定**：先锁父行再判定、加锁顺序、成员关系集合的增长与收缩（3.6 约定六，以后加入新的成员关系时照它写，恢复"不比新授予给得更多，也不比原来那一行更多"）、共享锁之下的批量插入按唯一键排序（约定五）、账户行只作第一把锁（约定一）；页面按权限取数、`await` 之后先核对会话（7.1）；声明在一个模块上的跨模块错误码由这个模块的 HTTP 测试返回（9.4）；规则表和操作名在各模块、完整性测试（3.4）；权限矩阵的写法（9.2）；错误码前缀规则的修订和 `forbidden`（11.7）；规则表的 `AllowCreator` 和 `guest_view_all_features` 对工作项的约束（3.4）。**数据**：删除状态前检查它的工作项、删除标签时处理 `issue_labels`；工作项编号取 `projects.last_issue_sequence`（4.6）；工作项的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（3.18），旧 `ProjectService` 的 `/user-properties/` 两个方法和关键词例外（`until: "M4"`）；旧 `ProjectService` 的 `projectIssuesSearch` 和它的三个调用方（M4 的选父工作项、M6 的添加已有工作项、M7 的收集箱查重）随 M4 的工作项搜索接口替换，之后删除旧 service（7.3）；60 天清理包括 M3 的表，指向 `workspaces`、`projects`、`labels.parent_id` 的外键已有不带条件的索引，工作项的表照做（4.12）；工作项引用状态、标签、项目的外键在 4.12 的图上延伸。**其他**：页大小的规则移到 `shared`、游标不签名的提醒（M2 交接第 12 节原样，3.12）；决策点 3 的规则行（个人主页的工作项列表）；`issue/root.store.ts` 的 `autorun` 不在 action 之外写 `router` 的副本（计算属性，或由 `RootStore.dispose()` 释放的 `reaction`；7.1，P8a 评审记录第 6 节）；工作项的分页、分组列表扩展 `core/lib/reconciled.ts`，不另写一份（总体设计 7.7）；`workspace-draft-issues/base.ts` 的 16 行死成员；M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（3.1） |
-| M5 | `workspaces.logo_asset_id`、`projects.cover_image_asset_id` 的迁移归各自模块，图标和封面的上传控件从 Plane 的源码加回，`logo_url`、`cover_image_url`、`MemberUser.avatar_url` 有真值（3.2）；P8b 删除的 28 张预设封面和随机封面随封面的上传加回（7.8，只留了显示用的默认图 `image_1.webp`）；新建项目的封面值（M5 的 M1-closeout，M3/P8b 已删掉上传预设封面的一步） |
-| M6 | `ProjectAuthWrapper` 取迭代、模块（3.1，按 7.1 由权限启用）；`existing-issues-list-modal.tsx` 改用 M4 的工作项搜索（7.3）；`cycle_filter`、`module_filter` 的反应的释放（7.1）；`core/sidebar/progress-stats/` 的 8 行死成员；迭代、模块的外键在 4.12 的图上延伸 |
-| M7 | 侧边栏的收藏、未读通知数、首页的"最近"小部件（连同它的工作项预览 `peek-overviews.tsx`，P8a 随小部件删除，M1 3.14）、项目的视图和分诊状态的取数、项目侧边栏的 `intake_count`（3.1）；打开 `intake_view` 时建默认收集箱、分诊状态的接口（3.17）；跨项目的标签列表（3.16、7.3）；项目的收藏（`is_favorite`、卡片上的收藏按钮、建项目之后加入收藏、`favorite.store.ts` 的项目分支、`favoriteProjectIds` getter，3.2）和归档项目时的收藏处理；收集箱查重 `select-duplicate.tsx` 改用 M4 的工作项搜索（7.3）；`workspace-notifications.ts` 的 17 行死成员；工作区视图的筛选列（3.18） |
-| M8 | 工作区、项目、成员的 Webhook 事件：在 M4 引入的事件机制上加（M3 没有事件）；表情选择器的数据请求只剩核对（7.7）；README 中邀请链接与签名密钥的说明随发布核对（8.7）；性能测量加上大工作区的成员列表、项目列表（不分页的集合，11.3）：回答的大小和页面的加载时间，按测到的数字决定要不要给其中一个分页 |
+| [M4](../M4-issue-core/handoffs/M3-closeout.md) | **事件**：M3 没有领域事件，删除工作区、降为访客、结束成员关系的连带经 `ProjectCascade` 同步完成（3.3）。M4 随第一个异步订阅者引入事件（M2 设计 3.15、M4 的 M2 收尾交接第 6 节不变），届时可以把删除工作区的连带改挂到 `WorkspaceDeleted` 上，并为工作项加上删除项目、删除工作区的连带。但邀请的软删除必须留在删除工作区的事务里：注册时的邀请检查（`SignupInvitations`）只看邀请行、不看工作区，连带改为异步之后，从删除到任务运行之间，已删除工作区的邀请链接会让被邀请的邮箱在注册关闭时注册；所以要么邀请这一步保持同步，要么让这个检查也读工作区。**约定**：先锁父行再判定、加锁顺序、成员关系集合的增长与收缩（3.6 约定六，以后加入新的成员关系时照它写，恢复"不比新授予给得更多，也不比原来那一行更多"）、共享锁之下的批量插入按唯一键排序（约定五）、账户行只作第一把锁（约定一）；页面按权限取数、`await` 之后先核对会话（7.1）；声明在一个模块上的跨模块错误码由这个模块的 HTTP 测试返回（9.4）；规则表和操作名在各模块、完整性测试（3.4）；权限矩阵的写法（9.2）；错误码前缀规则的修订和 `forbidden`（11.7）；规则表的 `AllowCreator` 和 `guest_view_all_features` 对工作项的约束（3.4）。**数据**：删除状态前检查它的工作项、删除标签时处理 `issue_labels`；工作项编号取 `projects.last_issue_sequence`（4.6）；工作项的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（3.18），旧 `ProjectService` 的 `/user-properties/` 两个方法和关键词例外（`until: "M4"`）；旧 `ProjectService` 的 `projectIssuesSearch` 和它的三个调用方（M4 的选父工作项、M6 的添加已有工作项、M7 的收集箱查重）随 M4 的工作项搜索接口替换，之后删除旧 service（7.3）；60 天清理包括 M3 的表，指向 `workspaces`、`projects`、`labels.parent_id` 的外键已有不带条件的索引，工作项的表照做（4.12）；工作项引用状态、标签、项目的外键在 4.12 的图上延伸。**其他**：页大小的规则移到 `shared`、游标不签名的提醒（M2 交接第 12 节原样，3.12）；决策点 3 的规则行（个人主页的工作项列表）；`issue/root.store.ts` 的 `autorun` 不在 action 之外写 `router` 的副本（计算属性，或由 `RootStore.dispose()` 释放的 `reaction`；7.1，P8a 评审记录第 6 节）；工作项的分页、分组列表扩展 `core/lib/reconciled.ts`，不另写一份（总体设计 7.7）；`workspace-draft-issues/base.ts` 的 16 行死成员；M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（3.1） |
+| [M5](../M5-files/handoffs/M3-closeout.md) | `workspaces.logo_asset_id`、`projects.cover_image_asset_id` 的迁移归各自模块，图标和封面的上传控件从 Plane 的源码加回，`logo_url`、`cover_image_url`、`MemberUser.avatar_url` 有真值（3.2）；P8b 删除的 28 张预设封面和随机封面随封面的上传加回（7.8，只留了显示用的默认图 `image_1.webp`）；新建项目的封面值（M5 的 M1-closeout，M3/P8b 已删掉上传预设封面的一步） |
+| [M6](../M6-cycles-modules/handoffs/M3-closeout.md) | `ProjectAuthWrapper` 取迭代、模块（3.1，按 7.1 由权限启用）；`existing-issues-list-modal.tsx` 改用 M4 的工作项搜索（7.3）；`cycle_filter`、`module_filter` 的反应的释放（7.1）；`core/sidebar/progress-stats/` 的 8 行死成员；迭代、模块的外键在 4.12 的图上延伸 |
+| [M7](../M7-collaboration/handoffs/M3-closeout.md) | 侧边栏的收藏、未读通知数、首页的"最近"小部件（连同它的工作项预览 `peek-overviews.tsx`，P8a 随小部件删除，M1 3.14）、项目的视图和分诊状态的取数、项目侧边栏的 `intake_count`（3.1）；打开 `intake_view` 时建默认收集箱、分诊状态的接口（3.17）；跨项目的标签列表（3.16、7.3）；项目的收藏（`is_favorite`、卡片上的收藏按钮、建项目之后加入收藏、`favorite.store.ts` 的项目分支、`favoriteProjectIds` getter，3.2）和归档项目时的收藏处理；收集箱查重 `select-duplicate.tsx` 改用 M4 的工作项搜索（7.3）；`workspace-notifications.ts` 的 17 行死成员；工作区视图的筛选列（3.18） |
+| [M8](../M8-open-release/handoffs/M3-closeout.md) | 工作区、项目、成员的 Webhook 事件：在 M4 引入的事件机制上加（M3 没有事件）；表情选择器的数据请求只剩核对（7.7）；README 中邀请链接与签名密钥的说明随发布核对（8.7）；性能测量加上大工作区的成员列表、项目列表（不分页的集合，11.3）：回答的大小和页面的加载时间，按测到的数字决定要不要给其中一个分页 |
 
 ---
 
 ## 14. 完成标准
-- [ ] 第 2 节的 21 个故事（页面版本、接口版本）和 S1、S2 在持续集成中通过。
-- [ ] 权限矩阵的全部格子（含已不是成员的身份）、可见性一致的测试、19 个交错测试、"邀请从不改变有效的成员关系"和"结束的成员关系不留下邀请"的集成测试在真实数据库上通过。
-- [ ] 3.6 约定六的每一条增长路径（接受邀请、创建工作区、`reactivate-member`、建项目的负责人、添加项目成员、加入项目、恢复以前的成员关系）都有与停用的交错测试（恢复的走法在 7、13、14 里）；项目一侧的增长另有与降为访客的交错测试（17）。
-- [ ] 每个模块的 `apitest.Main` 两个方向核对通过：声明在它的操作上的跨模块码由它自己的 HTTP 测试返回过（9.4）。
-- [ ] `access/domain` 的判定表测试通过；各模块的操作名与规则表一一对应；每个操作在矩阵里有一行。
-- [ ] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、`apitest` 的前缀规则、命令行的组合测试、关键词守卫、oxlint 上限、knip）。
-- [x] 第 10 节的四个决策点有负责人的裁定，本文按裁定修改；第 11 节的七个架构问题已由负责人批准（2026-09-29）。
-- [ ] 13.1 的每一项已关闭并写进相应 Phase 的 review，6 份交接 `status: closed`；13.2 的交接已写好。
-- [ ] 3.20 的每一行已在对应的 Phase 同步（含 M2 设计 3.11 的修订）；差异清单按第 4 节逐列核对过；README 按 8.7 更新。
-- [ ] 浏览器核对 C1–C10 写进各 Phase 的 review。
-- [ ] `domains.mjs --rows M3` 没有输出（或剩下的每一行写明是误报）；oxlint 上限已调低。
-- [ ] M3 能到达的页面挂载时没有旧接口请求，也没有调用者无权读的请求（故事的 `watchPage` 覆盖每一页，7.1）。
-- [ ] M3 页面的组件在 `await` 之后的跳转、提示先核对会话（7.1；W3 的会话切换端到端）。
-- [ ] 规模估计与实际的对比写进收尾的 review。
-- [ ] 总体设计 9.4 中 M3 的状态改为"已完成"。
+- [x] 第 2 节的 21 个故事（页面版本、接口版本）和 S1、S2 在持续集成中通过。（收尾的头上，在 `a3b2d00d` 上：`make e2e` 先构建，`120 passed (42.1s)`，`[chromium]` 118、`[firefox]` 2（A4 的两个页面测试）。W1–W12 在 `e2e/stories/workspace/`，P1–P9 在 `e2e/stories/project/`，S1、S2 在 `e2e/stories/smoke/`；分支的持续集成 run 332 在 `af7fb4e0` 上通过，见[收尾评审](reviews/closeout-review.md)第 2 节。）
+- [x] 权限矩阵的全部格子（含已不是成员的身份）、可见性一致的测试、19 个交错测试、"邀请从不改变有效的成员关系"和"结束的成员关系不留下邀请"的集成测试在真实数据库上通过。（收尾的头上 `make test`：42 个包 `ok`、没有 `FAIL`，13 个包 `[no test files]`；输出取自 `0c86665a`，之后没有改服务端的文件。测试在 `server/internal/bootstrap/`：`permission_matrix*_test.go` 13 个文件、`project_visibility_test.go`、`interleaving*_test.go` 15 个文件和 `reactivation_races_test.go`、`invitation_rules_test.go`。）
+- [x] 3.6 约定六的每一条增长路径（接受邀请、创建工作区、`reactivate-member`、建项目的负责人、添加项目成员、加入项目、恢复以前的成员关系）都有与停用的交错测试（恢复的走法在 7、13、14 里）；项目一侧的增长另有与降为访客的交错测试（17）。（同上的 `make test`：`server/internal/bootstrap/interleaving_growth_test.go`、`interleaving_shrinking_test.go`、`reactivation_races_test.go`、`interleaving_roles_test.go`。）
+- [x] 每个模块的 `apitest.Main` 两个方向核对通过：声明在它的操作上的跨模块码由它自己的 HTTP 测试返回过（9.4）。（同上的 `make test`：identity、project、workspace 三个模块的 `adapter/http/handler_test.go` 经 `apitest.Main` 跑；`server/internal/platform/httpserver/apitest/main_callers_test.go` 的 `TestEveryModuleRunsItsHTTPTestsThroughMain` 核对每个模块都这样跑。）
+- [x] `access/domain` 的判定表测试通过；各模块的操作名与规则表一一对应；每个操作在矩阵里有一行。（同上的 `make test`：`server/internal/modules/access/domain/decide_test.go` 的 `TestDecideAtTheWorkspaceLevel`、`TestDecideAtTheProjectLevels`，`rules_test.go` 的 `TestEveryRuleDecidesItsCells`、`TestAnActionWithoutARowHasNoRule`；`server/internal/bootstrap/permission_matrix_coverage_test.go`。）
+- [x] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、`apitest` 的前缀规则、命令行的组合测试、关键词守卫、oxlint 上限、knip）。（收尾的头上：`make lint-go` 两段 `0 issues.`（取自 `0c86665a`）；`make gen-check` 没有差异（取自 `8345c2d5`）；在 `a3b2d00d` 上，`make lint-web`：`keywords: 72 rules, 23 exceptions, no hits.`，`i18n-keys: 1295 keys read, each defined in web/packages/i18n/src/locales/en.`，`Tasks: 54 successful, 54 total`（`af7fb4e0` 的文档提交之后再跑一次，相同），`make knip` 没有发现，`make test-web` 不用缓存 `Tasks: 17 successful, 17 total`（web 应用 118 个测试文件、1,002 个测试，`@nerve/ui` 2 个、13 个）。架构测试（`server/internal/archtest/`，含 `sqlc_test.go` 的 `TestSQLCSchemaScope`、`composition_test.go` 的命令行的组合）和 `apitest` 的前缀规则（`server/internal/platform/httpserver/apitest/rules_test.go`）在 `make test` 中；oxlint 上限见第 11 项。分支的持续集成 run 332 在 `af7fb4e0` 上通过。）
+- [x] 第 10 节的四个决策点有负责人的裁定，本文按裁定修改；第 11 节的七个架构问题已由负责人批准（2026-09-29）。（第 10 节每个决策点之后写着裁定：1 选 A+(a) 且查看不显示邮箱，2、3、4 都选 A，正文各节按它们写定；11.1–11.7 各标"负责人已批准，2026-09-29"；本文开头的状态一行同样写明。）
+- [x] 13.1 的每一项已关闭并写进相应 Phase 的 review，6 份交接 `status: closed`；13.2 的交接已写好。（`grep -l -E '^status: (open|done)$' docs/v0/M3-workspace-project/handoffs/*.md` 没有输出、退出码 1（取自 `8345c2d5`，之后没有改这些交接）；6 份交接各有一节"处理结果（M3/收尾）"，逐份的结论和证据在[收尾 spec](specs/closeout.md) 2.1；M4–M8 各有 `handoffs/M3-closeout.md`（`status: open`），13.2 的五行链接到它们。）
+- [x] 3.20 的每一行已在对应的 Phase 同步（含 M2 设计 3.11 的修订）；差异清单按第 4 节逐列核对过；README 按 8.7 更新。（[收尾 spec](specs/closeout.md) 2.2：3.20 的 26 行都已同步，收尾补上 README 侧边栏菜单的一句、两处"（页面：P9）"和数据库的 locale；2.3：差异清单九张表的列数、4.11 的 32 行逐列逐行核对。README 的"（或经接口）"在 `README.md:113`、`:115`，`LC_CTYPE` 一条在 `:140`（收尾的 Task 16）。）
+- [x] 浏览器核对 C1–C10 写进各 Phase 的 review。（[P9 评审](reviews/P9-web-workspace-pages-review.md)第 2 节 C1–C5、[P10 评审](reviews/P10-web-project-pages-review.md)第 2 节 C6–C8、[P11 评审](reviews/P11-web-states-labels-and-cleanup-review.md)第 2 节 C9、C10；收尾的 C11、C12 在[收尾评审](reviews/closeout-review.md)第 2 节。）
+- [x] `domains.mjs --rows M3` 没有输出（或剩下的每一行写明是误报）；oxlint 上限已调低。（收尾的头上，取自 `8345c2d5`（之后只改了一个测试文件和一段注释）：`--rows M3` 227 行，每一行有出处（[收尾 spec](specs/closeout.md) 附录 A.5）。产品代码的 54 行和按路径误归的 41 行与 P11 spec 附录 A.9 的逐行相同，误归的写进 M4、M6、M7 的交接；其余 132 行在测试文件中，测试自己读它们：P11 的 123 行，少了两个删去的替身的 `children`（`delete.test.tsx`、`invite-modal.test.tsx`），多了 `project-dialog-texts.test.tsx` 中 `it.each` 的四列、`common-attributes.test.tsx` 的 `ResizeObserver` 替身的三个成员和记录的四列。oxlint 各等于上限：web 292、`@nerve/ui` 12、`@nerve/propel` 10、`@nerve/utils` 7、`@nerve/constants` 1；收尾调低了 web 303 → 292、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10。）
+- [x] M3 能到达的页面挂载时没有旧接口请求，也没有调用者无权读的请求（故事的 `watchPage` 覆盖每一页，7.1）。（[收尾 spec](specs/closeout.md) 附录 A.7 的页面与故事的表：每一页有打开它的 `watchPage` 的故事，断言旧接口的请求、失败的请求和页面错误为空；S2 在四个角色下另断言请求的清单（`e2e/stories/smoke/s2-web-app.spec.ts:139` 的 `REQUESTS`，地址取自 `e2e/fixtures/mounts.ts`）；头上的 `make e2e` 见第 1 项。）
+- [x] M3 页面的组件在 `await` 之后的跳转、提示先核对会话（7.1；W3 的会话切换端到端）。（头上的 `make test-web`（第 6 项）：每个修改的 hook 的 vitest 中"换账户之后兑现"的一行，33 个测试文件读 `web/apps/web/core/lib/auth/fake-tab.ts` 的 `lateSettlings`，收尾的离开工作区经 `followInSession`，它的一行在 `core/components/workspace/settings/use-membership-changes.test.ts`（收尾 spec 2.7）；`make e2e`：W3 的会话切换（`e2e/stories/workspace/w3-workspace-settings.spec.ts:345`）。）
+- [x] 规模估计与实际的对比写进收尾的 review。（[收尾评审](reviews/closeout-review.md)第 7 节；实测和测法在[收尾 spec](specs/closeout.md) 附录 A.6。）
+- [x] 总体设计 9.4 中 M3 的状态改为"已完成"。（[总体设计](../v0-design.md) 9.4 的 M3 一行，在收尾评审的提交中改。）
 
 ## 15. Phase 进度表
 | Phase | 内容 | 状态 |
@@ -2118,7 +2133,7 @@ modules/access/
 | P9 `web-workspace-pages` | 工作区的页面（14） | 已完成：[spec](specs/P9-web-workspace-pages.md)、[plan](plans/P9-web-workspace-pages.md)、[评审](reviews/P9-web-workspace-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-12） |
 | P10 `web-project-pages` | 项目的页面（15） | 已完成：[spec](specs/P10-web-project-pages.md)、[plan](plans/P10-web-project-pages.md)、[评审](reviews/P10-web-project-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-18） |
 | P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 已完成：[spec](specs/P11-web-states-labels-and-cleanup.md)、[plan](plans/P11-web-states-labels-and-cleanup.md)、[评审](reviews/P11-web-states-labels-and-cleanup-review.md)（执行时 10 个 Task；修复轮的裁定 F-1–F-15） |
-| 收尾 `closeout` | 交接、同步核对、规模对比 | 未开始 |
+| 收尾 `closeout` | `ModalCore` 的重写、离开工作区的入口、各 Phase 留给收尾的事；交接、同步核对、规模对比 | 已完成：[spec](specs/closeout.md)、[plan](plans/closeout.md)、[评审](reviews/closeout-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮和它的两个后续轮；控制者的浏览器核对 C11、C12 之后一个修复轮和它的三个跟进、最后一轮和它的三个跟进；负责人裁定确认框跟着后退、前进的一类选 B（2026-10-13），F-A4 选 A（2026-10-15）） |
 
 ## 16. 风险
 | 风险 | 影响 | 应对 |

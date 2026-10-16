@@ -5,7 +5,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { useTranslation } from "@nerve/i18n";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
 import useKeypress from "@/hooks/use-keypress";
 // components
@@ -25,6 +26,7 @@ enum EProjectCreationSteps {
 
 export function CreateProjectModal(props: Props) {
   const { isOpen, onClose, workspaceSlug } = props;
+  const { t } = useTranslation();
   // states
   const [currentStep, setCurrentStep] = useState<EProjectCreationSteps>(EProjectCreationSteps.CREATE_PROJECT);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
@@ -49,6 +51,8 @@ export function CreateProjectModal(props: Props) {
 
   return (
     <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXXXL}>
+      {/* neither step has a heading of its own (the form's top is the cover image): one hidden title names both */}
+      <ModalTitle className="sr-only">{t("create_project")}</ModalTitle>
       {currentStep === EProjectCreationSteps.CREATE_PROJECT && (
         <CreateProjectForm workspaceSlug={workspaceSlug} onClose={onClose} handleNextStep={handleNextStep} />
       )}

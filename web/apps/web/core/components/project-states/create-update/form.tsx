@@ -4,15 +4,19 @@
  * See the LICENSE file for details.
  */
 
-import { TwitterPicker } from "react-color";
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { StateCreate } from "@nerve/api-client";
 import { Popover } from "@nerve/ui";
+// components
+import { ColorPicker } from "@/components/common/color-picker";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import type { StateUnderField } from "../use-state-changes";
 
@@ -51,8 +55,16 @@ export function StateForm(props: TStateForm) {
     handleSubmit,
     setError,
     watch,
-    formState: { errors, isSubmitting },
-  } = useForm<TStateFormData>({ defaultValues: data });
+    setFocus,
+    formState: { errors, isSubmitting, submitCount },
+  } = useForm<TStateFormData>({ defaultValues: data, shouldFocusError: false });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLDivElement>(submitCount);
+
+  // the name has the focus once the form shows
+  useEffect(() => {
+    setFocus("name");
+  }, [setFocus]);
 
   // busy from the click until the page has followed nerve's answer: a second click finds the button disabled
   const submit = handleSubmit((formData) =>
@@ -60,7 +72,7 @@ export function StateForm(props: TStateForm) {
   );
 
   return (
-    <div className="relative flex space-x-2 rounded-sm bg-surface-1 p-3">
+    <div ref={formRef} className="relative flex space-x-2 rounded-sm bg-surface-1 p-3">
       {/* color */}
       <div className="mt-2 h-full flex-shrink-0">
         <Popover
@@ -72,19 +84,20 @@ export function StateForm(props: TStateForm) {
             name="color"
             control={control}
             render={({ field: { value, onChange } }) => (
-              <TwitterPicker color={value} onChange={(picked) => onChange(picked.hex)} />
+              <ColorPicker color={value} onChange={(picked) => onChange(picked.hex)} />
             )}
           />
         </Popover>
       </div>
 
       <div className="w-full space-y-2">
-        {/* title */}
+        {/* title: its rules are the form's (required) and nerve's (1 to 255 characters, not taken), with no maximum
+        of the input's own, which Base UI would take on Enter and read the name invalid with no message */}
         <Controller
           name="name"
           control={control}
           rules={{ required: t("errors.field.required") }}
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <Field name="name" invalid={Boolean(errors.name)}>
               <InputGroup size="2xl">
                 <Input
@@ -92,49 +105,56 @@ export function StateForm(props: TStateForm) {
                   id="name"
                   type="text"
                   name="name"
-                  placeholder="Name"
+                  placeholder={t("name")}
                   value={value}
                   onChange={onChange}
-                  maxLength={100}
+                  ref={ref}
                 />
               </InputGroup>
+              {errors.name?.message && (
+                <FieldError match size="lg">
+                  {errors.name.message}
+                </FieldError>
+              )}
             </Field>
           )}
         />
-        {errors.name?.message && <span className="text-11 text-danger-primary">{errors.name.message}</span>}
 
         {/* description */}
         <Controller
           name="description"
           control={control}
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <Field name="description" invalid={Boolean(errors.description)}>
               <TextAreaGroup resize="none">
                 <TextArea
+                  ref={ref}
                   size="lg"
                   surface="field"
                   autoResize
                   maxRows={8}
                   id="description"
                   name="description"
-                  placeholder="Describe this state for your members."
+                  placeholder={t("project_settings.states.description_placeholder")}
                   value={value ?? ""}
                   onChange={onChange}
                 />
               </TextAreaGroup>
+              {errors.description?.message && (
+                <FieldError match size="lg">
+                  {errors.description.message}
+                </FieldError>
+              )}
             </Field>
           )}
         />
-        {errors.description?.message && (
-          <span className="text-11 text-danger-primary">{errors.description.message}</span>
-        )}
 
         <div className="flex items-center space-x-2">
           <Button onClick={submit} variant="primary" size="lg" loading={isSubmitting}>
             {isSubmitting ? busyButtonTitle : buttonTitle}
           </Button>
           <Button type="button" variant="secondary" size="lg" disabled={isSubmitting} onClick={onCancel}>
-            Cancel
+            {t("cancel")}
           </Button>
         </div>
       </div>

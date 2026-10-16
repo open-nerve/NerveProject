@@ -6,6 +6,7 @@
 
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
+import { Field, FieldControl, FieldError } from "@makeplane/propel/components/field";
 // nerve imports
 import type { UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
@@ -17,6 +18,7 @@ import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { fieldErrorKeys, needsErrorBanner } from "@/lib/error-messages";
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local components
 import { CommonOnboardingHeader } from "../common";
 
@@ -47,14 +49,17 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
     control,
     watch,
     setError,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting, isValid, submitCount },
   } = useForm<TProfileSetupFormValues>({
     defaultValues: {
       first_name: user?.first_name ?? "",
       last_name: user?.last_name ?? "",
     },
     mode: "onChange",
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
 
   const onSubmit = async (formData: TProfileSetupFormValues) => {
     if (!user) return;
@@ -77,7 +82,7 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
   const isButtonDisabled = isSubmitting || !isValid;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-10">
+    <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-10">
       {/* Header */}
       <CommonOnboardingHeader title={t("onboarding.profile.title")} description={t("onboarding.profile.description")} />
 
@@ -110,28 +115,40 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
               required: t("name_is_required"),
             }}
             render={({ field: { value, onChange, ref } }) => (
-              <input
-                ref={ref}
-                id="first_name"
-                name="first_name"
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                // oxlint-disable-next-line jsx_a11y/no-autofocus -- the step asks for this one field, which it opens on
-                autoFocus
-                className={cn(
-                  "w-full rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 placeholder:text-placeholder focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
-                  {
-                    "border-strong": !errors.first_name,
-                    "border-danger-strong": errors.first_name,
+              // propel's Field, its look kept: the input is Base UI's control (FieldControl) rendered as before, and the
+              // message its description (FieldError)
+              <Field name="first_name" invalid={Boolean(errors.first_name)}>
+                <FieldControl
+                  id="first_name"
+                  name="first_name"
+                  type="text"
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  // oxlint-disable-next-line jsx_a11y/no-autofocus -- the step asks for this one field, which it opens on
+                  autoFocus
+                  placeholder={t("enter_your_full_name")}
+                  autoComplete="on"
+                  render={
+                    <input
+                      ref={ref}
+                      className={cn(
+                        "w-full rounded-md border border-strong bg-surface-1 px-3 py-2 text-secondary transition-all duration-200 placeholder:text-placeholder focus:border-transparent focus:ring-2 focus:ring-accent-strong focus:outline-none",
+                        {
+                          "border-strong": !errors.first_name,
+                          "border-danger-strong": errors.first_name,
+                        }
+                      )}
+                    />
                   }
+                />
+                {errors.first_name?.message && (
+                  <FieldError match size="xl">
+                    {errors.first_name.message}
+                  </FieldError>
                 )}
-                placeholder={t("enter_your_full_name")}
-                autoComplete="on"
-              />
+              </Field>
             )}
           />
-          {errors.first_name && <span className="text-13 text-danger-primary">{errors.first_name.message}</span>}
         </div>
       </div>
       {/* Continue Button */}

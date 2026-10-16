@@ -48,32 +48,31 @@ const pages: Page[] = [
     page: "the cycles feature",
     route: "features/cycles",
     Component: CyclesPage,
-    shows: (web) => `[${web.name} settings - project_settings.features.cycles.short_title]switch ${web.cycle_view}`,
+    shows: (web) => `[${web.name} - project_settings.features.cycles.short_title]switch ${web.cycle_view}`,
   },
   {
     page: "the intake feature",
     route: "features/intake",
     Component: IntakePage,
-    shows: (web) => `[${web.name} settings - project_settings.features.intake.short_title]switch ${web.intake_view}`,
+    shows: (web) => `[${web.name} - project_settings.features.intake.short_title]switch ${web.intake_view}`,
   },
   {
     page: "the modules feature",
     route: "features/modules",
     Component: ModulesPage,
-    shows: (web) => `[${web.name} settings - project_settings.features.modules.short_title]switch ${web.module_view}`,
+    shows: (web) => `[${web.name} - project_settings.features.modules.short_title]switch ${web.module_view}`,
   },
   {
     page: "the views feature",
     route: "features/views",
     Component: ViewsPage,
-    shows: (web) =>
-      `[${web.name} settings - project_settings.features.views.short_title]switch ${web.issue_views_view}`,
+    shows: (web) => `[${web.name} - project_settings.features.views.short_title]switch ${web.issue_views_view}`,
   },
   {
     page: "the automations",
     route: "automations",
     Component: AutomationsPage,
-    shows: (web) => `[${web.name} - Automations]auto-archive`,
+    shows: (web) => `[${web.name} - project_settings.automations.label]auto-archive`,
   },
 ];
 

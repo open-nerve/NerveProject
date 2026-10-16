@@ -111,6 +111,37 @@ export function followAccessToken(page: Page): () => string {
   return () => last;
 }
 
+/** What an element said of itself as it took the focus, which a screen reader reads then. */
+export interface FocusTaken {
+  readonly id: string;
+  /** Its aria-invalid, null without one. */
+  readonly invalid: string | null;
+  /** Its description: the text of the elements its aria-describedby names, each trimmed, joined by a space. */
+  readonly description: string;
+}
+
+/**
+ * Records, from now on, each element of the document page shows that takes the focus, as it takes it (its focusin):
+ * the function returned gives what was recorded, in order. A field a form refuses is invalid and described by its
+ * message by the time it takes the focus, not only after (M3 closeout, C11-1).
+ */
+export async function recordFocuses(page: Page): Promise<() => Promise<FocusTaken[]>> {
+  const taken = await page.evaluateHandle(() => {
+    const focuses: FocusTaken[] = [];
+    document.addEventListener("focusin", ({ target }) => {
+      if (!(target instanceof Element)) return;
+      const ids = target.getAttribute("aria-describedby")?.split(/\s+/).filter(Boolean) ?? [];
+      focuses.push({
+        id: target.id,
+        invalid: target.getAttribute("aria-invalid"),
+        description: ids.map((id) => document.getElementById(id)?.textContent?.trim() ?? "").join(" "),
+      });
+    });
+    return focuses;
+  });
+  return () => taken.jsonValue();
+}
+
 /** Run in a page: its navigator.clipboard.writeText rejects with a NotAllowedError, as a browser's refusal does. */
 function refuseWrites(): void {
   navigator.clipboard.writeText = () => Promise.reject(new DOMException("Write permission denied.", "NotAllowedError"));
@@ -156,4 +187,16 @@ export async function expectQuietConsole(
   await expect
     .poll(() => ({ errors: watch.consoleErrors, warnings: watch.consoleWarnings }))
     .toEqual({ errors: [...(expected.errors ?? []), probe], warnings: [...(expected.warnings ?? []), probe] });
+}
+
+/**
+ * Checks that page's document, as it is now, holds none of emails: accounts' addresses that the page must not show its
+ * viewer (a guest, say). where names the page in the failure's message.
+ */
+export async function expectNoAddress(page: Page, emails: readonly string[], where: string): Promise<void> {
+  const html = await page.content();
+  expect(
+    emails.filter((email) => html.includes(email)),
+    `the addresses on ${where}`
+  ).toEqual([]);
 }

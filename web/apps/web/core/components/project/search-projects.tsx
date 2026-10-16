@@ -5,6 +5,7 @@
  */
 
 import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { observer } from "mobx-react";
 // nerve hooks
 import { useOutsideClickDetector } from "@nerve/hooks";
@@ -24,6 +25,7 @@ export const ProjectSearch = observer(function ProjectSearch() {
   const { searchQuery, updateSearchQuery } = useProjectFilter();
   // refs
   const inputRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   // states
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   // outside click detector hook
@@ -31,10 +33,21 @@ export const ProjectSearch = observer(function ProjectSearch() {
     if (isSearchOpen && searchQuery.trim() === "") setIsSearchOpen(false);
   });
 
+  // the box, inert while closed, shows with the focus in it (rendered first, so that it can take the focus)
+  const openSearch = () => {
+    flushSync(() => setIsSearchOpen(true));
+    inputRef.current?.focus();
+  };
+  // closed by the keyboard or its clear button, the box gives the focus to the search button, shown again
+  const closeSearch = () => {
+    flushSync(() => setIsSearchOpen(false));
+    buttonRef.current?.focus();
+  };
+
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       if (searchQuery && searchQuery.trim() !== "") updateSearchQuery("");
-      else setIsSearchOpen(false);
+      else closeSearch();
     }
   };
 
@@ -42,19 +55,19 @@ export const ProjectSearch = observer(function ProjectSearch() {
     <div className="flex items-center">
       {!isSearchOpen && (
         <IconButton
+          ref={buttonRef}
           variant="ghost"
           size="lg"
           className="-mr-1"
-          onClick={() => {
-            setIsSearchOpen(true);
-            inputRef.current?.focus();
-          }}
+          aria-label={t("common.search.label")}
+          onClick={openSearch}
           icon={SearchOutline}
         />
       )}
       <div
+        inert={!isSearchOpen}
         className={cn(
-          "ml-auto flex w-0 items-center justify-start gap-1 overflow-hidden rounded-md border border-transparent bg-surface-1 text-placeholder opacity-0 transition-[width] ease-linear",
+          "ml-auto flex w-0 items-center justify-start gap-1 overflow-hidden rounded-md border border-transparent bg-surface-1 text-placeholder opacity-0 transition-[width] ease-linear focus-within:border-accent-strong focus-within:ring-2 focus-within:ring-accent-strong/20",
           {
             "w-30 border-subtle px-2.5 py-1.5 opacity-100 md:w-64": isSearchOpen,
           }
@@ -73,9 +86,10 @@ export const ProjectSearch = observer(function ProjectSearch() {
           <button
             type="button"
             className="grid place-items-center"
+            aria-label={t("common.search.clear")}
             onClick={() => {
               updateSearchQuery("");
-              setIsSearchOpen(false);
+              closeSearch();
             }}
           >
             <CloseOutline className="h-3 w-3" />

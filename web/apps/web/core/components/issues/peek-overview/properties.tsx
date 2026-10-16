@@ -122,7 +122,7 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
 
         {createdByDetails && (
           <SidebarPropertyListItem icon={UserOutline} label={t("common.created_by")} childrenClassName="px-2">
-            <ButtonAvatars showTooltip userIds={createdByDetails.id} />
+            <ButtonAvatars userIds={createdByDetails.id} />
             <span className="grow truncate text-body-xs-medium leading-5 text-secondary">
               {createdByDetails.display_name}
             </span>

@@ -110,10 +110,12 @@ lint-go: tools ## 运行 golangci-lint（server 和它的工具模块）
 	cd server && $(GOLANGCI_LINT) run ./...
 	cd server/tools && $(GOLANGCI_LINT) run --config ../.golangci.yml ./...
 
-# 关键词守卫（tools/keywords.mjs，规则在 tools/keywords.json）检查整个仓库，不属于任何工作区包，所以不经过 turbo
+# 关键词守卫（tools/keywords.mjs，规则在 tools/keywords.json）检查整个仓库，翻译键的检查（tools/i18n-keys.mjs）读 web
+# 应用和它的几个包，都不属于任何工作区包，所以不经过 turbo
 .PHONY: lint-web
-lint-web: ## 关键词守卫；前端类型检查、oxlint（警告数等于上限）、格式检查、中英文翻译键一致（需要 Node）
+lint-web: ## 关键词守卫；读到的翻译键都有定义；前端类型检查、oxlint（警告数等于上限）、格式检查、中英文翻译键一致（需要 Node）
 	node tools/keywords.mjs
+	node tools/i18n-keys.mjs
 	$(TURBO) run check:types check:lint check:format check:sync $(TURBO_QUIET) --continue
 
 # 门禁（M1/P3 起）：有未使用的文件、导出、依赖，或配置本身过时（例如不再需要的忽略项），都会失败。

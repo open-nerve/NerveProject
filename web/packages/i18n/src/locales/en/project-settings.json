@@ -1,5 +1,6 @@
 {
   "project_settings": {
+    "sidebar_title": "Project settings",
     "general": {
       "enter_project_id": "Enter project ID",
       "please_select_a_timezone": "Please select a timezone",
@@ -8,6 +9,20 @@
       }
     },
     "members": {
+      "defaults": {
+        "lead": {
+          "title": "Project Lead",
+          "description": "Select the project lead for the project."
+        },
+        "assignee": {
+          "title": "Default Assignee",
+          "description": "Select the default assignee for the project."
+        },
+        "guest_access": {
+          "title": "Guest access",
+          "description": "This will allow guests to have view access to all the project work items."
+        }
+      },
       "add_members": {
         "title": "Add members",
         "sub_heading": "Add workspace members to work on your project."
@@ -17,8 +32,31 @@
       "heading": "States",
       "description": "Define and customize workflow states to track the progress of your work items.",
       "empty_state": {
-        "title": "No states available for the {groupKey} group",
+        "title": "No states available for the {group} group",
         "description": "Please create a new state"
+      },
+      "groups": {
+        "backlog": "Backlog",
+        "unstarted": "Unstarted",
+        "started": "Started",
+        "completed": "Completed",
+        "cancelled": "Canceled"
+      },
+      "created": "State created successfully.",
+      "updated": "State updated successfully.",
+      "description_placeholder": "Describe this state for your members.",
+      "add": "Add a state to {name}",
+      "delete": {
+        "title": "Delete state",
+        "body": "Are you sure you want to delete state {name}? All of the data related to the state will be permanently removed. This action cannot be undone.",
+        "default": "Cannot delete the default state.",
+        "only_one": "Cannot have an empty group."
+      },
+      "default": {
+        "mark": "Mark as default",
+        "mark_item": "Mark as default: {name}",
+        "marking": "Marking as default",
+        "is_default": "Default"
       }
     },
     "labels": {
@@ -27,7 +65,13 @@
       "label_title": "Label title",
       "label_title_is_required": "Label title is required",
       "label_max_char": "Label name should not exceed 255 characters",
-      "parent_not_allowed": "A label can go only under a label at the top of its project, and a label with labels under it stays at the top: labels have two levels."
+      "parent_not_allowed": "A label can go only under a label at the top of its project, and a label with labels under it stays at the top: labels have two levels.",
+      "edit": "Edit label",
+      "remove_from_group": "Remove from group",
+      "delete": {
+        "title": "Delete label",
+        "body": "Are you sure you want to delete {name}? This will remove the label from every work item and from the views that filter by it."
+      }
     },
     "automations": {
       "label": "Automations",
@@ -36,7 +80,10 @@
       "auto-archive": {
         "title": "Auto-archive closed work items",
         "description": "Nerve will auto archive work items that have been completed or canceled.",
-        "duration": "Auto-archive work items that are closed for"
+        "duration": "Auto-archive work items that are closed for",
+        "months_placeholder": "Enter months",
+        "months": "Months",
+        "months_range": "Select a month between 1 and 12."
       }
     },
     "features": {

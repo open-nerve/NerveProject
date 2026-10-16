@@ -4,17 +4,19 @@
  * See the LICENSE file for details.
  */
 
+import { useId } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 // nerve imports
 import type { ProjectMembersAdd } from "@nerve/api-client";
 import { Avatar } from "@makeplane/propel/components/avatar";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { AddOutline, ChevronDownOutline, CloseOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { CustomSelect, CustomSearchSelect, EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { CustomSelect, CustomSearchSelect, EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // helpers
 import { getFileURL } from "@nerve/utils";
 // hooks
@@ -22,6 +24,7 @@ import { useMember } from "@/hooks/store/use-member";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import { addableRoles } from "./project-roles";
 
@@ -54,17 +57,21 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
   } = useMember();
   // form info
   const {
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     watch,
     setValue,
     reset,
     handleSubmit,
     control,
-  } = useForm<FormValues>({ defaultValues });
+  } = useForm<FormValues>({ defaultValues, shouldFocusError: false });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
   const { fields, append, remove } = useFieldArray({
     control,
     name: "members",
   });
+  // the ids of the rows' messages ("Please select a member"), by row
+  const messageIds = useId();
   // derived values: the workspace's active members who are not the project's (M3 design 7.6), whom nerve adds
   const nonProjectMemberIds = workspaceMemberIds?.filter(
     (userId) => getWorkspaceMemberDetails(userId)?.is_active && getProjectMemberDetails(userId, projectId) === null
@@ -77,9 +84,9 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
       done: () => {
         handleClose();
         setToast({
-          title: "Success!",
+          title: t("toast.success"),
           type: TOAST_TYPE.SUCCESS,
-          message: "Members added successfully.",
+          message: t("project_dialogs.members_added"),
         });
       },
       failed: toastRefusal,
@@ -138,11 +145,11 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
       position={EModalPosition.CENTER}
       width={EModalWidth.XXL}
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="p-5">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="p-5">
         <div className="space-y-5">
-          <h3 className="text-16 leading-6 font-medium text-primary">
+          <ModalTitle className="text-16 leading-6 font-medium text-primary">
             {t("project_settings.members.add_members.title")}
-          </h3>
+          </ModalTitle>
           <div className="mt-2">
             <p className="text-13 text-secondary">{t("project_settings.members.add_members.sub_heading")}</p>
           </div>
@@ -151,49 +158,59 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
             {fields.map((field, index) => (
               <div key={field.id} className="group mb-1 flex w-full items-start justify-between gap-x-4 text-13">
                 <div className="flex w-full grow flex-col gap-1">
-                  <Controller
-                    control={control}
-                    name={`members.${index}.member_id`}
-                    rules={{ required: "Please select a member" }}
-                    render={({ field: { value, onChange } }) => {
-                      const selectedMember = getWorkspaceMemberDetails(value);
-                      return (
-                        <CustomSearchSelect
-                          value={value}
-                          customButton={
-                            <span className="shadow-sm flex w-full items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
-                              {value && value !== "" ? (
-                                <div className="flex items-center gap-2">
-                                  <Avatar
-                                    alt={selectedMember?.member.display_name}
-                                    fallback={selectedMember?.member.display_name?.[0]?.toUpperCase()}
-                                    src={getFileURL(selectedMember?.member.avatar_url ?? "")}
-                                    size="xs"
-                                  />
-                                  {selectedMember?.member.display_name}
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 py-0.5">Select co-worker</div>
-                              )}
-                              <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
-                            </span>
-                          }
-                          onChange={(val: string) => {
-                            onChange(val);
-                            // Update the role to the workspace role when member ID changes
-                            setValue(`members.${index}.role`, getWorkspaceMemberDetails(val)?.role ?? 5);
-                          }}
-                          options={options}
-                          optionsClassName="w-48"
-                        />
-                      );
-                    }}
-                  />
-                  {errors.members && errors.members[index]?.member_id && (
-                    <span className="px-1 text-13 text-danger-primary">
-                      {errors.members[index]?.member_id?.message}
-                    </span>
-                  )}
+                  <Field name={`members.${index}.member_id`} invalid={Boolean(errors.members?.[index]?.member_id)}>
+                    <Controller
+                      control={control}
+                      name={`members.${index}.member_id`}
+                      rules={{ required: t("project_dialogs.member_required") }}
+                      render={({ field: { value, onChange } }) => {
+                        const selectedMember = getWorkspaceMemberDetails(value);
+                        const refused = Boolean(errors.members?.[index]?.member_id);
+                        return (
+                          <CustomSearchSelect
+                            describedBy={refused ? `${messageIds}-${index}` : undefined}
+                            invalid={refused}
+                            value={value}
+                            customButton={
+                              <span className="shadow-sm flex w-full items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
+                                {value && value !== "" ? (
+                                  <div className="flex items-center gap-2">
+                                    <Avatar
+                                      alt={selectedMember?.member.display_name}
+                                      fallback={selectedMember?.member.display_name?.[0]?.toUpperCase()}
+                                      src={getFileURL(selectedMember?.member.avatar_url ?? "")}
+                                      size="xs"
+                                    />
+                                    {selectedMember?.member.display_name}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2 py-0.5">
+                                    {t("project_dialogs.select_member")}
+                                  </div>
+                                )}
+                                <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
+                              </span>
+                            }
+                            onChange={(val: string) => {
+                              onChange(val);
+                              // Update the role to the workspace role when member ID changes
+                              setValue(`members.${index}.role`, getWorkspaceMemberDetails(val)?.role ?? 5);
+                            }}
+                            options={options}
+                            optionsClassName="w-48"
+                            searchPlaceholder={t("search")}
+                            noResultsMessage={t("common.search.no_matches_found")}
+                            loadingMessage={t("loading")}
+                          />
+                        );
+                      }}
+                    />
+                    {errors.members?.[index]?.member_id?.message && (
+                      <FieldError id={`${messageIds}-${index}`} match size="xl">
+                        {errors.members[index].member_id.message}
+                      </FieldError>
+                    )}
+                  </Field>
                 </div>
 
                 <div className="flex shrink-0 items-center justify-between gap-2">
@@ -201,15 +218,12 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                     <Controller
                       name={`members.${index}.role`}
                       control={control}
-                      rules={{ required: "Select Role" }}
                       render={({ field: roleField }) => (
                         <CustomSelect
                           {...roleField}
                           customButton={
                             <div className="shadow-sm flex w-24 items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2.5 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
-                              <span className="capitalize">
-                                {roleField.value ? t(ROLE_DETAILS[roleField.value].i18n_title) : "Select role"}
-                              </span>
+                              <span className="capitalize">{t(ROLE_DETAILS[roleField.value].i18n_title)}</span>
                               <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />
                             </div>
                           }
@@ -225,9 +239,6 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                         </CustomSelect>
                       )}
                     />
-                    {errors.members && errors.members[index]?.role && (
-                      <span className="px-1 text-13 text-danger-primary">{errors.members[index]?.role?.message}</span>
-                    )}
                   </div>
 
                   {fields.length > 1 && (

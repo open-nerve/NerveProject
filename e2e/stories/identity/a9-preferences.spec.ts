@@ -1,7 +1,7 @@
 import type { Request } from "@playwright/test";
 
 import { expectPreferences } from "../../fixtures/assert/identity";
-import { anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { anotherTabSignsIn, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { deferred } from "../../fixtures/deferred";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, expectListBesideButton, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
@@ -340,7 +340,7 @@ test("A9 (API): a personal access token changes the theme, the language and the 
   db,
 }, testInfo) => {
   const email = emailFor(testInfo);
-  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const pat = await registeredPAT(api, email);
   const change = { theme: "dark", language: "zh-CN", start_of_the_week: 1 } as const;
 
   const { data, response } = await api.PATCH("/api/v0/me/profile", { body: change, headers: bearer(pat.token) });

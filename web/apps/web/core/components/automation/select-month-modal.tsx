@@ -7,12 +7,15 @@
 import { useParams } from "react-router";
 // react-hook-form
 import { Controller, useForm } from "react-hook-form";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { Button } from "@nerve/propel/button";
 import type { ProjectUpdate } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // types
 /** The auto-archiving's range, as ProjectUpdate takes it: a number of months. */
 type TArchiveIn = Pick<ProjectUpdate, "archive_in">;
@@ -26,15 +29,19 @@ type Props = {
 
 export function SelectMonthModal({ initialValues, isOpen, handleClose, handleChange }: Props) {
   const { workspaceSlug, projectId } = useParams();
+  const { t } = useTranslation();
 
   const {
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
     handleSubmit,
     control,
     reset,
   } = useForm<TArchiveIn>({
     defaultValues: initialValues,
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
 
   const onClose = () => {
     handleClose();
@@ -54,16 +61,18 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
       position={EModalPosition.CENTER}
       width={EModalWidth.XXL}
     >
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
         <div>
-          <h3 className="text-16 leading-6 font-medium text-primary">Customize time range</h3>
+          <ModalTitle className="text-16 leading-6 font-medium text-primary">
+            {t("common.customize_time_range")}
+          </ModalTitle>
           <div className="mt-8 flex items-center gap-2">
             <div className="flex w-full flex-col justify-center gap-1">
               <Controller
                 control={control}
                 name="archive_in"
                 rules={{
-                  required: "Select a month between 1 and 12.",
+                  required: true,
                   min: 1,
                   max: 12,
                 }}
@@ -75,35 +84,42 @@ export function SelectMonthModal({ initialValues, isOpen, handleClose, handleCha
                           size="2xl"
                           id="archive_in"
                           name="archive_in"
-                          type="number"
+                          // text with a numeric keypad, digits only, so that the form's rule (1 to 12) is the field's
+                          // only one: a number input's own range would stop the form before it, and Base UI would read
+                          // the field invalid on Enter with no message
+                          type="text"
+                          inputMode="numeric"
                           value={value ?? ""}
-                          // the field holds a number, which nerve's ProjectUpdate takes; none while it is empty
-                          onChange={(event) =>
-                            onChange(event.target.value === "" ? undefined : Number(event.target.value))
-                          }
+                          // the field holds a whole number, which nerve's ProjectUpdate takes; none while it is empty
+                          onChange={(event) => {
+                            const digits = event.target.value.replace(/\D/g, "");
+                            onChange(digits === "" ? undefined : Number(digits));
+                          }}
                           ref={ref}
-                          placeholder="Enter Months"
-                          min={1}
-                          max={12}
+                          placeholder={t("project_settings.automations.auto-archive.months_placeholder")}
                         />
                       </InputGroup>
+                      {errors.archive_in && (
+                        <FieldError match size="xl">
+                          {t("project_settings.automations.auto-archive.months_range")}
+                        </FieldError>
+                      )}
                     </Field>
-                    <span className="absolute top-2.5 right-8 text-13 text-secondary">Months</span>
+                    <span className="absolute top-2.5 right-8 text-13 text-secondary">
+                      {t("project_settings.automations.auto-archive.months")}
+                    </span>
                   </div>
                 )}
               />
-              {errors.archive_in && (
-                <span className="px-1 text-13 text-danger-primary">Select a month between 1 and 12.</span>
-              )}
             </div>
           </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" size="lg" onClick={onClose} disabled={isSubmitting}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button variant="primary" size="lg" type="submit" loading={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit"}
+            {isSubmitting ? t("updating") : t("update")}
           </Button>
         </div>
       </form>

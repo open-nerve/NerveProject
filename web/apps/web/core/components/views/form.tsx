@@ -112,6 +112,7 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
         <div className="space-y-3">
           <div className="flex w-full items-start gap-2">
             <EmojiPicker
+              ariaLabel={t("aria_labels.view_icon")}
               iconType="lucide"
               isOpen={isOpen}
               handleToggle={(val: boolean) => setIsOpen(val)}

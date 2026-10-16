@@ -9,9 +9,14 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { useParams } from "react-router";
 // Nerve Imports
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ORGANIZATION_SIZE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import {
+  ORGANIZATION_SIZE,
+  ORGANIZATION_SIZE_I18N_LABEL,
+  EUserPermissions,
+  EUserPermissionsLevel,
+} from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -25,10 +30,12 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useCopyLink } from "@/hooks/use-copy-link";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // components
 import { DeleteWorkspaceSection } from "@/components/workspace/delete-workspace-section";
 // lib
 import { followInSession } from "@/lib/in-session";
+import { useRefusedFocus } from "@/lib/refused-focus";
 
 /**
  * The form's values: what an admin may change of the workspace. The size is null while the workspace has none, which
@@ -51,8 +58,8 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
   // router: the address's workspace, as the caller's list has it (the wrapper shows the page once it has)
   const { workspaceSlug } = useParams();
   // store hooks
-  const { getWorkspaceBySlug, updateWorkspace } = useWorkspace();
-  const workspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : null;
+  const { updateWorkspace } = useWorkspace();
+  const workspace = useRouteWorkspace();
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
   const toastRefusal = useRefusalToast();
@@ -64,10 +71,13 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     control,
     reset,
     watch,
-    formState: { errors },
+    formState: { errors, submitCount },
   } = useForm<TWorkspaceForm>({
     defaultValues: workspace ? formValues(workspace) : { name: "", organization_size: "2-10", timezone: "UTC" },
+    shouldFocusError: false,
   });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLDivElement>(submitCount);
 
   // the fields the form edits, which nerve's WorkspaceUpdate takes; the page follows the change only in the session it
   // was sent in (M3 design 7.1)
@@ -85,9 +95,9 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     await followInSession(() => updateWorkspace(workspace.slug, payload), {
       done: () =>
         setToast({
-          title: "Success!",
+          title: t("toast.success"),
           type: TOAST_TYPE.SUCCESS,
-          message: "Workspace updated successfully",
+          message: t("workspace_settings.settings.general.updated"),
         }),
       failed: toastRefusal,
     });
@@ -96,20 +106,20 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
 
   const handleCopyUrl = () => {
     if (!workspace) return;
-    void copyLink(workspace.slug, "Workspace URL copied to the clipboard.");
+    void copyLink(workspace.slug, t("workspace_settings.settings.general.url_copied"));
   };
 
   useEffect(() => {
     if (workspace) reset(formValues(workspace));
   }, [workspace, reset]);
 
-  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
+  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
 
   if (!workspace) return null;
 
   return (
     <>
-      <div className={cn("flex w-full flex-col gap-y-7", { "opacity-60": !isAdmin })}>
+      <div ref={formRef} className={cn("flex w-full flex-col gap-y-7", { "opacity-60": !isAdmin })}>
         <div className="flex items-center gap-5">
           <div className="flex shrink-0 flex-col gap-1">
             {workspace.logo_url ? (
@@ -117,7 +127,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                 <img
                   src={getFileURL(workspace.logo_url)}
                   className="absolute top-0 left-0 size-full rounded-md object-cover"
-                  alt="Workspace Logo"
+                  alt=""
                 />
               </div>
             ) : (
@@ -158,10 +168,14 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                         disabled={!isAdmin}
                       />
                     </InputGroup>
+                    {errors.name?.message && (
+                      <FieldError match size="lg">
+                        {errors.name.message}
+                      </FieldError>
+                    )}
                   </Field>
                 )}
               />
-              {errors.name && <p className="text-caption-sm-regular text-danger-primary">{errors.name.message}</p>}
             </div>
             <div className="flex flex-col gap-2">
               <h4 className="text-body-sm-medium text-tertiary">
@@ -175,8 +189,9 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                     value={value}
                     onChange={onChange}
                     label={
-                      ORGANIZATION_SIZE.find((c) => c === value) ??
-                      t("workspace_settings.settings.general.errors.company_size.select_a_range")
+                      value
+                        ? t(ORGANIZATION_SIZE_I18N_LABEL[value])
+                        : t("workspace_settings.settings.general.errors.company_size.select_a_range")
                     }
                     buttonClassName="border border-subtle bg-layer-2 !shadow-none !rounded-md"
                     input
@@ -184,7 +199,7 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
                   >
                     {ORGANIZATION_SIZE.map((item) => (
                       <CustomSelect.Option key={item} value={item}>
-                        {item}
+                        {t(ORGANIZATION_SIZE_I18N_LABEL[item])}
                       </CustomSelect.Option>
                     ))}
                   </CustomSelect>

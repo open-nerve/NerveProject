@@ -16,7 +16,8 @@ type Props = {
   description?: React.ReactNode;
   projectId: string;
   featureProperty: ProjectToggleField;
-  title: React.ReactNode;
+  /** The title of the feature's switch (such as "Enable cycles"), which names the switch too. */
+  title: string;
   value: boolean;
   workspaceSlug: string;
 };
@@ -31,12 +32,7 @@ export const ProjectSettingsFeatureControlItem = observer(function ProjectSettin
       title={title}
       description={description}
       control={
-        <Switch
-          size="sm"
-          checked={value}
-          onCheckedChange={() => toggleFeature(featureProperty)}
-          aria-label={typeof title === "string" ? title : "Toggle project feature"}
-        />
+        <Switch size="sm" checked={value} onCheckedChange={() => toggleFeature(featureProperty)} aria-label={title} />
       }
     />
   );

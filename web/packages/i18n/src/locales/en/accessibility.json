@@ -1,6 +1,15 @@
 {
   "aria_labels": {
+    "settings_menu": "Settings menu",
+    "toggle_sort_order": "Toggle sort order",
+    "toggle_details": "Toggle details",
+    "add_reaction": "Add reaction",
+    "toasts": "Notifications",
+    "app_sidebar": {
+      "toggle": "Toggle sidebar"
+    },
     "project_icon": "Project icon",
+    "view_icon": "View icon",
     "projects_sidebar": {
       "workspace_logo": "Workspace logo",
       "open_workspace_switcher": "Open workspace switcher",
@@ -11,12 +20,16 @@
       "close_favorites_menu": "Close favorites menu",
       "enter_folder_name": "Enter folder name",
       "create_new_project": "Create new project",
-      "open_projects_menu": "Open projects menu",
-      "close_projects_menu": "Close projects menu",
       "toggle_quick_actions_menu": "Toggle quick actions menu",
+      "project_quick_actions": "{name} quick actions",
       "open_project_menu": "Open project menu",
       "close_project_menu": "Close project menu",
       "project_navigation": "Project navigation"
+    },
+    "sidebar": {
+      "main": "Main sidebar",
+      "resize": "Resize sidebar",
+      "peek": "Sidebar peek view"
     },
     "auth_forms": {
       "clear_email": "Clear email",

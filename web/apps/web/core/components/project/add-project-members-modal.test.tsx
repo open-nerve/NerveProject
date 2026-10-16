@@ -83,7 +83,7 @@ describe("AddProjectMembersModal", () => {
       [web.id, { members: [{ member_id: "u-ann", role: 15 }] }],
     ]);
     expect(page.onClose).toHaveBeenCalledTimes(1);
-    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "Members added successfully." }]);
+    expect(toasts).toEqual([{ type: "success", title: "toast.success", message: "project_dialogs.members_added" }]);
   });
 
   it("stays open, keeps the picks and shows nerve's reason when it refuses them", async () => {

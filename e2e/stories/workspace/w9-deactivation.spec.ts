@@ -11,7 +11,7 @@ import {
 import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fixtures/assert/identity";
 import { expectMembership } from "../../fixtures/assert/workspace";
 import { signInPath } from "../../fixtures/auth-pages";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -23,20 +23,20 @@ import { nerveWorkspaces } from "../../fixtures/workspaces";
 
 /** The two refusals' details: the API's problem and the command's line say the same. */
 const workspaceRefusal =
-  "The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has other active members. It must first be given another admin, or be deleted.";
+  "The workspace would be left without an admin: its only active admin cannot leave it, and that admin's membership cannot end while it has other active members. It must first be given another admin, or be deleted.";
 const projectRefusal =
-  "The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has other active members. It must first be given another admin, or be deleted.";
+  "The project would be left without an admin: its only active admin cannot leave it, and that admin's membership cannot end while it has other active members. It must first be given another admin, or be deleted.";
 
 test("W9: a deactivation is refused while the account is the only admin of a workspace or a project with other members, by the API and by the command, and changes nothing; once each has another admin, it ends every membership and deletes every invitation to the address and the pending ones of the workspace it leaves empty; nerve users activate, then reactivate-member, bring the account back a workspace at a time", async ({
   api,
   db,
 }, testInfo) => {
   const aEmail = emailFor(testInfo, "a");
-  const a = (await createPAT(api, (await register(api, aEmail)).access_token)).token;
+  const a = (await registeredPAT(api, aEmail)).token;
   const bEmail = emailFor(testInfo, "b");
-  const b = (await createPAT(api, (await register(api, bEmail)).access_token)).token;
+  const b = (await registeredPAT(api, bEmail)).token;
   const cEmail = emailFor(testInfo, "c");
-  const c = (await createPAT(api, (await register(api, cEmail)).access_token)).token;
+  const c = (await registeredPAT(api, cEmail)).token;
   const acme = slugFor(testInfo, "acme");
   const beta = slugFor(testInfo, "beta");
   const gamma = slugFor(testInfo, "gamma");

@@ -183,6 +183,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
         tooltipContent={value?.length ? `${value.length} project${value.length !== 1 ? "s" : ""}` : placeholder}
         showTooltip={showTooltip}
         variant={buttonVariant}
+        tabIndex={tabIndex}
       >
         {!hideIcon && getProjectIcon()}
         {BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant) && (
@@ -196,7 +197,6 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
     <ComboDropDown
       as="div"
       ref={dropdownRef}
-      tabIndex={tabIndex}
       className={cn("h-full", className)}
       value={value}
       onChange={dropdownOnChange}

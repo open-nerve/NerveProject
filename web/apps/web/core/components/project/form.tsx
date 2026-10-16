@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { InfoOutline, LockOutline } from "@makeplane/propel/icons";
-import { Field } from "@makeplane/propel/components/field";
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { NETWORK_CHOICES } from "@nerve/constants";
@@ -23,6 +23,8 @@ import { CoverImage } from "@/components/common/cover-image";
 import { TimezoneSelect } from "@/components/global";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// lib
+import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
 import { logoPropsOf } from "./logo-props";
 import { ProjectNetworkIcon } from "./project-network-icon";
@@ -53,8 +55,10 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     watch,
     control,
     setError,
-    formState: { errors, isSubmitting },
-  } = useForm<ProjectDetails>({ defaultValues: projectDetailsOf(project) });
+    formState: { errors, isSubmitting, submitCount },
+  } = useForm<ProjectDetails>({ defaultValues: projectDetailsOf(project), shouldFocusError: false });
+  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
+  const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
   // derived values
   const currentNetwork = NETWORK_CHOICES.find((n) => n.key === project.network);
 
@@ -62,13 +66,13 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
   const onSubmit = (details: ProjectDetails) => updateDetails(project, workspaceSlug, details, setError);
 
   return (
-    <form onSubmit={(event) => void handleSubmit(onSubmit)(event)}>
+    <form ref={formRef} onSubmit={(event) => void handleSubmit(onSubmit)(event)}>
       <div className="relative h-44 w-full">
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <CoverImage
           src={project.cover_image_url ?? undefined}
           showDefaultWhenEmpty
-          alt="Project cover image"
+          alt=""
           className="h-44 w-full rounded-md"
         />
         <div className="absolute bottom-4 z-5 flex w-full items-end justify-between gap-3 px-4">
@@ -119,7 +123,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
               required: t("name_is_required"),
               maxLength: {
                 value: 255,
-                message: "Project name should be less than 255 characters",
+                message: t("project_dialogs.name_max_length"),
               },
             }}
             render={({ field: { value, onChange, ref } }) => (
@@ -137,10 +141,14 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                     disabled={!isAdmin}
                   />
                 </InputGroup>
+                {errors.name?.message && (
+                  <FieldError match size="lg">
+                    {errors.name.message}
+                  </FieldError>
+                )}
               </Field>
             )}
           />
-          <span className="text-11 text-danger-primary">{errors.name?.message}</span>
         </div>
         <div className="flex flex-col gap-1">
           <h4 className="text-13">{t("description")}</h4>
@@ -168,7 +176,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <h4 className="text-13">Project ID</h4>
+            <h4 className="text-13">{t("project_id")}</h4>
             <div className="relative">
               <Controller
                 control={control}
@@ -201,6 +209,11 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                         disabled={!isAdmin}
                       />
                     </InputGroup>
+                    {errors.identifier?.message && (
+                      <FieldError match size="lg">
+                        {errors.identifier.message}
+                      </FieldError>
+                    )}
                   </Field>
                 )}
               />
@@ -214,7 +227,6 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                 <InfoOutline className="absolute top-2.5 right-2 h-4 w-4 text-placeholder" />
               </Tooltip>
             </div>
-            <span className="text-11 text-danger-primary">{errors.identifier?.message}</span>
           </div>
           <div className="flex flex-col gap-1">
             <h4 className="text-13">{t("workspace_projects.network.label")}</h4>

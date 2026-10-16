@@ -28,8 +28,8 @@ var (
 	// what must happen, not who does it: it is true for every caller, the
 	// server's administrator who runs `nerve users deactivate` too.
 	ErrSoleAdmin = shared.NewError(shared.KindConflict, "workspace.sole_admin",
-		"The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while it "+
-			"has other active members. It must first be given another admin, or be deleted.")
+		"The workspace would be left without an admin: its only active admin cannot leave it, and that admin's membership "+
+			"cannot end while it has other active members. It must first be given another admin, or be deleted.")
 	// ErrInvitationNotFound answers an invitation that does not exist or is
 	// deleted, as an accepted one is, or whose workspace the caller cannot
 	// see; for the invitee, also a token that is not the invitation's: the

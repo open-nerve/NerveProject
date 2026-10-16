@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { useState, Fragment } from "react";
-import { Dialog, Transition } from "@headlessui/react";
+import { useState } from "react";
 // nerve imports
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
+import { useTranslation } from "@nerve/i18n";
 import { ScrollArea } from "@nerve/propel/scrollarea";
-
+import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
 import { usePowerK } from "@/hooks/store/use-power-k";
 // local imports
@@ -27,6 +27,7 @@ export function ShortcutsModal(props: Props) {
   const [query, setQuery] = useState("");
   // store hooks
   const { commandRegistry } = usePowerK();
+  const { t } = useTranslation();
 
   // Get all commands from registry
   const allCommandsWithShortcuts = commandRegistry.getAllCommandsWithShortcuts();
@@ -37,66 +38,41 @@ export function ShortcutsModal(props: Props) {
   };
 
   return (
-    <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-30" onClose={handleClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-backdrop transition-opacity" />
-        </Transition.Child>
+    <ModalCore
+      isOpen={isOpen}
+      handleClose={handleClose}
+      position={EModalPosition.TOP}
+      width={EModalWidth.MD}
+      className="flex h-[61vh] flex-col space-y-4 overflow-hidden py-5"
+    >
+      {/* the title names the dialog alone: its close button stands beside it */}
+      <div className="flex justify-between px-5">
+        <ModalTitle className="text-16 font-medium">{t("keyboard_shortcuts")}</ModalTitle>
+        <button type="button" onClick={handleClose} aria-label={t("close")}>
+          <CloseOutline className="h-4 w-4 text-secondary hover:text-primary" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="px-5">
+        <InputGroup size="2xl">
+          <SearchOutline className="h-3.5 w-3.5 text-secondary" />
+          <Input
+            size="2xl"
+            id="search"
+            name="search"
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("power_k.search_shortcuts")}
+            aria-label={t("power_k.search_shortcuts")}
+            // oxlint-disable-next-line jsx_a11y/no-autofocus -- the dialog opens on its search, as the palette does
+            autoFocus
+          />
+        </InputGroup>
+      </div>
 
-        <div className="fixed inset-0 z-30 overflow-y-auto">
-          <div className="my-10 flex items-center justify-center p-4 text-center sm:p-0 md:my-20">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-              enterTo="opacity-100 translate-y-0 sm:scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            >
-              <Dialog.Panel className="relative flex h-full items-center justify-center">
-                <div className="flex h-[61vh] w-full flex-col space-y-4 overflow-hidden rounded-lg bg-surface-1 py-5 shadow-raised-200 transition-all sm:w-[28rem]">
-                  <Dialog.Title as="h3" className="flex justify-between px-5">
-                    <span className="text-16 font-medium">Keyboard shortcuts</span>
-                    <button type="button" onClick={handleClose}>
-                      <CloseOutline className="h-4 w-4 text-secondary hover:text-primary" aria-hidden="true" />
-                    </button>
-                  </Dialog.Title>
-                  <div className="px-5">
-                    <InputGroup size="2xl">
-                      <SearchOutline className="h-3.5 w-3.5 text-secondary" />
-                      <Input
-                        size="2xl"
-                        id="search"
-                        name="search"
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search for shortcuts"
-                        aria-label="Search for shortcuts"
-                        autoFocus
-                        tabIndex={1}
-                      />
-                    </InputGroup>
-                  </div>
-
-                  <ScrollArea size="sm" rootClassName="overflow-y-scroll px-5">
-                    <ShortcutRenderer searchQuery={query} commands={allCommandsWithShortcuts} />
-                  </ScrollArea>
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </div>
-      </Dialog>
-    </Transition.Root>
+      <ScrollArea size="sm" rootClassName="overflow-y-scroll px-5">
+        <ShortcutRenderer searchQuery={query} commands={allCommandsWithShortcuts} />
+      </ScrollArea>
+    </ModalCore>
   );
 }

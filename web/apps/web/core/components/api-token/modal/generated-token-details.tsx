@@ -4,55 +4,46 @@
  * See the LICENSE file for details.
  */
 
+import type { Ref } from "react";
 import type { ApiTokenCreated } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { CopyOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 // ui
-import { renderFormattedDate, renderFormattedTime, copyTextToClipboard } from "@nerve/utils";
-// types
+import { ModalTitle } from "@nerve/ui";
+import { renderFormattedDate, renderFormattedTime } from "@nerve/utils";
+// hooks
+import { useCopyText } from "@/hooks/use-copy-link";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {
   handleClose: () => void;
   /** The new token, with the token itself, which shows here this once. */
   tokenDetails: ApiTokenCreated;
+  /** The button that shows the token and copies it: the dialog moves the focus there once the token shows. */
+  copyButtonRef: Ref<HTMLButtonElement>;
 };
 
 export function GeneratedTokenDetails(props: Props) {
-  const { handleClose, tokenDetails } = props;
+  const { handleClose, tokenDetails, copyButtonRef } = props;
   const { isMobile } = usePlatformOS();
   const { t } = useTranslation();
-  const copyApiToken = (token: string) => {
-    void copyTextToClipboard(token)
-      .then(() =>
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: `${t("success")}!`,
-          message: t("workspace_settings.token_copied"),
-        })
-      )
-      .catch(() =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: `${t("error")}!`,
-          message: t("workspace_settings.token_not_copied"),
-        })
-      );
-  };
+  const copyText = useCopyText();
 
   return (
     <div className="w-full p-5">
       <div className="w-full space-y-3 text-wrap">
-        <h3 className="text-16 leading-6 font-medium text-primary">{t("workspace_settings.key_created")}</h3>
+        <ModalTitle className="text-16 leading-6 font-medium text-primary">
+          {t("workspace_settings.key_created")}
+        </ModalTitle>
         <p className="text-13 text-placeholder">{t("workspace_settings.copy_key")}</p>
       </div>
       <button
+        ref={copyButtonRef}
         type="button"
-        onClick={() => copyApiToken(tokenDetails.token)}
-        className="mt-4 flex w-full items-center justify-between truncate rounded-md border-[0.5px] border-subtle px-3 py-2 text-13 font-medium outline-none"
+        onClick={() => void copyText(tokenDetails.token, t("workspace_settings.token_copied"))}
+        className="mt-4 flex w-full items-center justify-between truncate rounded-md border-[0.5px] border-subtle px-3 py-2 text-13 font-medium focus-visible:outline-offset-2"
       >
         <span className="truncate pr-2">{tokenDetails.token}</span>
         <Tooltip label={t("account_settings.api_tokens.copy")} disabled={isMobile}>

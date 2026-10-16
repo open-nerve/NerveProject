@@ -16,7 +16,8 @@ import { followInSession } from "@/lib/in-session";
  * The changes the members page makes to the memberships of the workspace of workspaceSlug (M3 design 7.5): a member's
  * role, a member's removal, and the caller's leaving. Each shows nerve's refusal as its reason; the page follows each
  * only in the session it was sent in (M3 design 7.1): once another tab has moved this one to another account, the
- * page is that account's, and says nothing of the change.
+ * page is that account's, and says nothing of the change. A dialog that sent the removal or the leaving gives done, its
+ * closing, which follows nerve's having made it alone: one nerve refuses leaves it open.
  */
 export function useMembershipChanges(workspaceSlug: string) {
   const navigate = useNavigate();
@@ -30,16 +31,23 @@ export function useMembershipChanges(workspaceSlug: string) {
     /** Gives the member of userId the role: its number, as nerve's WorkspaceMemberUpdate takes it. */
     changeRole: (userId: string, role: WorkspaceRole) =>
       followInSession(() => updateMember(workspaceSlug, userId, { role }), { failed }),
-    /** Ends the membership of the member of userId. */
-    remove: (userId: string) => followInSession(() => removeMemberFromWorkspace(workspaceSlug, userId), { failed }),
+    /** Ends the membership of the member of userId; once nerve has, done. */
+    remove: (userId: string, done: () => void) =>
+      followInSession(() => removeMemberFromWorkspace(workspaceSlug, userId), { done, failed }),
     /**
-     * Ends the caller's own membership; then the root lands him where his workspaces, as they are now, say (M3 design
-     * 3.14).
+     * Ends the caller's own membership; once nerve has, and only then, done, and the root lands him where his
+     * workspaces, as they are now, say (M3 design 3.14). Settles once it has.
      */
-    leave: async () => {
+    leave: async (done: () => void) => {
       const workspace = getWorkspaceBySlug(workspaceSlug);
       if (!workspace) return;
-      await followInSession(() => leaveWorkspace(workspace), { done: () => void navigate("/"), failed });
+      await followInSession(() => leaveWorkspace(workspace), {
+        done: () => {
+          done();
+          return navigate("/");
+        },
+        failed,
+      });
     },
   };
 }

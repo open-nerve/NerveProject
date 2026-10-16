@@ -30,7 +30,7 @@ export const ActivityFilter = observer(function ActivityFilter(props: TActivityF
       buttonClassName="outline-none"
       button={
         <>
-          <IconButton variant="tertiary" icon={FilterOutline} />
+          <IconButton variant="tertiary" icon={FilterOutline} aria-label={t("common.filters")} />
           {selectedFilters.length < filterOptions.length && (
             <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent-primary" />
           )}

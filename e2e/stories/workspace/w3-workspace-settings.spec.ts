@@ -18,7 +18,7 @@ import {
   expectPreferences,
   expectWorkspaceDeleted,
 } from "../../fixtures/assert/workspace";
-import { accountId, anotherTabSignsIn, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, anotherTabSignsIn, bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { closedByEscape } from "../../fixtures/dialogs";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
@@ -32,9 +32,9 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const declinerEmail = emailFor(testInfo, "decliner");
   const decliner = (await register(api, declinerEmail)).access_token;
   const inviteeEmail = emailFor(testInfo, "invitee");
@@ -111,7 +111,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
 
   // A second admin changes it, so that the deletion must record its own author.
   const coAdminEmail = emailFor(testInfo, "co-admin");
-  const coAdmin = (await createPAT(api, (await register(api, coAdminEmail)).access_token)).token;
+  const coAdmin = (await registeredPAT(api, coAdminEmail)).token;
   await inviteAndAccept(api, admin, slug, { email: coAdminEmail, token: coAdmin }, 20);
   const renamed = await api.PATCH("/api/v0/workspaces/{slug}", {
     params: { path: { slug } },
@@ -267,6 +267,11 @@ test("W3 (page): the admin changes the name, size and time zone, which hold afte
   const watch = await watchPage(page);
   await page.goto(`/${slug}/settings`);
   await expect(page.locator("#name")).toHaveValue("Acme");
+  // Sent empty, the name's rule fails: the name takes the focus, its message its description.
+  await page.locator("#name").fill("");
+  await page.getByRole("button", { name: "Update workspace" }).click();
+  await expect(page.locator("#name")).toBeFocused();
+  await expect(page.locator("#name")).toHaveAccessibleDescription("Workspace name is required");
   await page.locator("#name").fill("Acme Corp");
   await page.getByRole("button", { name: "Select organization size" }).click();
   await page.getByRole("option", { name: "11-50" }).click();

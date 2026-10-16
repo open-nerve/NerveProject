@@ -136,6 +136,21 @@ describe("UserPermissionStore, in a workspace", () => {
     }
   });
 
+  // nerve's project.create (access/domain/rules.go): the workspace's admins and members, not its guests, the member
+  // check's roles
+  it.each(IDENTITIES)("lets $who create a project in the workspace named as nerve does", async ({ role, allowed }) => {
+    const { router, permissions } = await setUp();
+    // the address, which the page does not read, names the admin's workspace
+    router.setQuery({ workspaceSlug: slugOf(20) });
+    expect(permissions.canCreateProject(slugOf(role))).toBe(allowed.includes("member"));
+  });
+
+  it("lets no one create a project in no workspace named, whatever the address", async () => {
+    const { router, permissions } = await setUp();
+    router.setQuery({ workspaceSlug: slugOf(20) });
+    expect(permissions.canCreateProject(undefined)).toBe(false);
+  });
+
   it("allows nothing before the list is fetched", () => {
     const router = new RouterStore();
     const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), new FakeNerve().client());

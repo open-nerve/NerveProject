@@ -203,7 +203,7 @@ func deactivatingUser(ctx context.Context, cfg config.Config, email string) <-ch
 // problem's code and its detail, which the command prints as its line.
 const (
 	refusedWorkspaceSoleAdmin = "workspace.sole_admin: The workspace would be left without an admin: its only active admin cannot leave it, " +
-		"nor can his membership end while it has other active members. It must first be given another admin, or be deleted."
+		"and that admin's membership cannot end while it has other active members. It must first be given another admin, or be deleted."
 	refusedProjectSoleAdmin = "project.sole_admin: The project would be left without an admin: its only active admin cannot leave it, " +
-		"nor can his membership end while it has other active members. It must first be given another admin, or be deleted."
+		"and that admin's membership cannot end while it has other active members. It must first be given another admin, or be deleted."
 )

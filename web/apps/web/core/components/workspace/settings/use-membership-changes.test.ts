@@ -4,7 +4,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { heldChange, lateSettlings, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { heldChange, lateSettlings, settledYet, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -19,6 +19,7 @@ const page = vi.hoisted(() => ({
   removeMemberFromWorkspace: vi.fn(),
   leaveWorkspace: vi.fn(),
   navigate: vi.fn(),
+  closeDialog: vi.fn(),
 }));
 const acme = workspaceOf("acme", { role: 20 });
 vi.mock("react-router", () => ({ useNavigate: () => page.navigate }));
@@ -43,9 +44,13 @@ const changes = [
   {
     change: "a removal",
     store: page.removeMemberFromWorkspace,
-    make: () => useMembershipChanges("acme").remove("u-bob"),
+    make: () => useMembershipChanges("acme").remove("u-bob", page.closeDialog),
   },
-  { change: "the leaving", store: page.leaveWorkspace, make: () => useMembershipChanges("acme").leave() },
+  {
+    change: "the leaving",
+    store: page.leaveWorkspace,
+    make: () => useMembershipChanges("acme").leave(page.closeDialog),
+  },
 ];
 
 beforeEach(() => {
@@ -54,7 +59,8 @@ beforeEach(() => {
     store.mockReset();
     store.mockResolvedValue(undefined);
   }
-  page.navigate.mockClear();
+  page.navigate.mockReset();
+  page.closeDialog.mockReset();
   toasts.length = 0;
 });
 
@@ -65,23 +71,42 @@ describe("useMembershipChanges", () => {
     expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
   });
 
-  it("removes a member of the workspace, and stays", async () => {
-    await useMembershipChanges("acme").remove("u-bob");
+  it("removes a member of the workspace, and stays, its dialog closed once nerve has", async () => {
+    const removal = heldChange<undefined>();
+    page.removeMemberFromWorkspace.mockReturnValueOnce(removal.sent);
+    const removed = useMembershipChanges("acme").remove("u-bob", page.closeDialog);
     expect(page.removeMemberFromWorkspace.mock.calls).toEqual([["acme", "u-bob"]]);
-    expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
+    expect(page.closeDialog).not.toHaveBeenCalled();
+    removal.answer(undefined);
+    await removed;
+    expect([page.closeDialog.mock.calls.length, page.navigate.mock.calls, toasts]).toEqual([1, [], []]);
   });
 
-  it("leaves the workspace of the address, then lands at the root", async () => {
-    await useMembershipChanges("acme").leave();
-    expect([page.leaveWorkspace.mock.calls, page.navigate.mock.calls]).toEqual([[[acme]], [["/"]]]);
+  it("leaves the workspace of the address, and closes its dialog and lands at the root only once nerve has made it, settling once it has", async () => {
+    const leaving = heldChange<undefined>();
+    page.leaveWorkspace.mockReturnValueOnce(leaving.sent);
+    const landed = heldChange<undefined>();
+    page.navigate.mockReturnValueOnce(landed.sent);
+    const left = useMembershipChanges("acme").leave(page.closeDialog);
+    const settled = settledYet(left);
+    expect(page.leaveWorkspace.mock.calls).toEqual([[acme]]);
+    expect([page.closeDialog.mock.calls, page.navigate.mock.calls]).toEqual([[], []]);
+    leaving.answer(undefined);
+    await vi.waitFor(() => expect(page.navigate.mock.calls).toEqual([["/"]]));
+    expect([page.closeDialog.mock.calls.length, settled()]).toEqual([1, false]);
+    landed.answer(undefined);
+    await left;
   });
 
-  it.each(changes)("shows nerve's reason when it refuses $change, and stays", async ({ store, make }) => {
-    store.mockRejectedValueOnce(refusal(409, "workspace.sole_admin"));
-    await make();
-    expect(page.navigate.mock.calls).toEqual([]);
-    expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_sole_admin" }]);
-  });
+  it.each(changes)(
+    "shows nerve's reason when it refuses $change, and stays, its dialog open",
+    async ({ store, make }) => {
+      store.mockRejectedValueOnce(refusal(409, "workspace.sole_admin"));
+      await make();
+      expect([page.closeDialog.mock.calls, page.navigate.mock.calls]).toEqual([[], []]);
+      expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.workspace_sole_admin" }]);
+    }
+  );
 
   describe.each(changes)("$change", ({ store, make }) => {
     it.each(lateSettlings)(
@@ -93,7 +118,7 @@ describe("useMembershipChanges", () => {
         switchAccount();
         settle(change);
         await made;
-        expect([page.navigate.mock.calls, toasts]).toEqual([[], []]);
+        expect([page.closeDialog.mock.calls, page.navigate.mock.calls, toasts]).toEqual([[], [], []]);
       }
     );
   });

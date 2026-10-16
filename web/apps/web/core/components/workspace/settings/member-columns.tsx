@@ -9,12 +9,13 @@ import { Link } from "react-router";
 
 import { Disclosure } from "@headlessui/react";
 // nerve imports
-import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { EUserPermissions, EUserPermissionsLevel, ROLE_DETAILS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
 import type { User, WorkspaceMember, WorkspaceRole } from "@nerve/api-client";
 // nerve ui
-import { CustomSelect, PopoverMenu } from "@nerve/ui";
+import { CustomMenu, CustomSelect } from "@nerve/ui";
 // helpers
 import { getFileURL } from "@nerve/utils";
 // hooks
@@ -38,6 +39,7 @@ type AccountTypeProps = {
 
 export function NameColumn(props: NameProps) {
   const { rowData, workspaceSlug, isAdmin, currentUser, setRemoveMemberModal } = props;
+  const { t } = useTranslation();
   // derived values
   const { avatar_url, display_name, email, first_name, id, last_name } = rowData.member;
   const isSuspended = rowData.is_active === false;
@@ -75,21 +77,20 @@ export function NameColumn(props: NameProps) {
             </div>
 
             {!isSuspended && (isAdmin || id === currentUser?.id) && (
-              <PopoverMenu
-                data={[""]}
-                keyExtractor={(item) => item}
-                popoverClassName="justify-end"
-                buttonClassName="outline-none	origin-center rotate-90 size-8 aspect-square flex-shrink-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
-                render={() => (
-                  <button
-                    type="button"
-                    className="flex cursor-pointer items-center gap-x-3"
-                    onClick={() => setRemoveMemberModal(rowData)}
-                  >
-                    <DeleteOutline className="size-3.5 align-middle" /> {id === currentUser?.id ? "Leave " : "Remove "}
-                  </button>
-                )}
-              />
+              // the menu a project member's row has too: named by the member, shown as the keyboard reaches it
+              <CustomMenu
+                ellipsis
+                ariaLabel={t("common.item_options", { name: display_name })}
+                buttonClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                placement="bottom-end"
+              >
+                <CustomMenu.MenuItem onClick={() => setRemoveMemberModal(rowData)}>
+                  <div className="flex items-center gap-x-3">
+                    <DeleteOutline className="size-3.5 align-middle" />
+                    {id === currentUser?.id ? t("leave") : t("remove")}
+                  </div>
+                </CustomMenu.MenuItem>
+              </CustomMenu>
             )}
           </div>
         </div>
@@ -104,10 +105,11 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
   const { allowPermissions } = useUserPermissions();
   const { data: currentUser } = useUser();
   const { changeRole } = useMembershipChanges(workspaceSlug);
+  const { t } = useTranslation();
 
   // derived values
   const isCurrentUser = currentUser?.id === rowData.member.id;
-  const isAdminRole = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
+  const isAdminRole = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
   const isRoleNonEditable = isCurrentUser || !isAdminRole;
   const isSuspended = rowData.is_active === false;
 
@@ -116,12 +118,12 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
       {isSuspended ? (
         <div className="flex w-32">
           <Pill variant={EPillVariant.DEFAULT} size={EPillSize.SM} className="border-none">
-            Suspended
+            {t("workspace_settings.settings.members.suspended")}
           </Pill>
         </div>
       ) : isRoleNonEditable ? (
         <div className="flex w-32">
-          <span>{ROLE[rowData.role]}</span>
+          <span>{t(ROLE_DETAILS[rowData.role].i18n_title)}</span>
         </div>
       ) : (
         <CustomSelect
@@ -130,7 +132,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
           onChange={(role: WorkspaceRole) => void changeRole(rowData.member.id, role)}
           label={
             <div className="flex">
-              <span>{ROLE[rowData.role]}</span>
+              <span>{t(ROLE_DETAILS[rowData.role].i18n_title)}</span>
             </div>
           }
           buttonClassName="!px-0 !justify-start hover:bg-surface-1 border-none"
@@ -139,7 +141,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
         >
           {WORKSPACE_ROLES.map((role) => (
             <CustomSelect.Option key={role} value={role}>
-              {ROLE[role]}
+              {t(ROLE_DETAILS[role].i18n_title)}
             </CustomSelect.Option>
           ))}
         </CustomSelect>

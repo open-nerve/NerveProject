@@ -52,7 +52,7 @@ beforeEach(() => {
   emptyShown();
 });
 
-const deleted = { type: "success", title: "Success!", message: "Project deleted successfully." };
+const deleted = { type: "success", title: "toast.success", message: "project_dialogs.delete.deleted" };
 
 describe("DeleteProjectModal", () => {
   it("deletes the project once its name and the words are typed; its own page gives way to the projects", async () => {

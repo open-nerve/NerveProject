@@ -89,7 +89,6 @@
       "toggle_app_sidebar": "Toggle app sidebar",
       "copy_current_page_url": "Copy current page URL",
       "copy_current_page_url_toast_success": "Current page URL copied to clipboard.",
-      "copy_current_page_url_toast_error": "Some error occurred while copying the current page URL to clipboard.",
       "focus_top_nav_search": "Focus search input"
     },
     "preferences_actions": {
@@ -119,6 +118,8 @@
       "open_documentation": "Open documentation",
       "report_bug": "Report a bug"
     },
+    "search_shortcuts": "Search for shortcuts",
+    "search_commands": "Search commands...",
     "page_placeholders": {
       "default": "Type a command or search",
       "open_workspace": "Open a workspace",

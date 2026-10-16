@@ -8,9 +8,15 @@ import {
   type InvitationCreate,
 } from "../../fixtures/api";
 import { expectInvitations } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
-import { EMOJI_CHECK_WARNING, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
-import { closedByEscape } from "../../fixtures/dialogs";
+import { bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
+import {
+  EMOJI_CHECK_WARNING,
+  expectQuietConsole,
+  recordFocuses,
+  refuseClipboardWrites,
+  watchPage,
+} from "../../fixtures/browser";
+import { announced, closedByEscape, closedWithin, modalDialog } from "../../fixtures/dialogs";
 import { holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import {
@@ -30,11 +36,11 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const guestEmail = emailFor(testInfo, "guest");
-  const guest = (await createPAT(api, (await register(api, guestEmail)).access_token)).token;
+  const guest = (await registeredPAT(api, guestEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);
@@ -180,7 +186,7 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   );
 });
 
-test("W4 (page): the admin invites a member and a guest, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; an active member's address and a declined invitation's are refused under their rows; the declined one deleted, its address is invited again; a copy the browser refuses says so, the link's and the workspace URL's; a member sees no invitation and asks for none", async ({
+test("W4 (page): the admin invites a member and a guest, Enter on the guest's role opening its list and sending nothing, changes a role and copies a link; an invitation deleted meanwhile is refused with the reason; an active member's address and a declined invitation's are refused under their rows; the declined one deleted, its address is invited again; a copy the browser refuses says so, the link's and the workspace URL's; a member sees no invitation and asks for none", async ({
   api,
   baseURL,
   browser,
@@ -221,15 +227,19 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   const page = await signedInPage(admin);
   const watch = await watchPage(page);
   await page.goto(`/${slug}/settings/members`);
-  // erin's invitation says it was declined, and offers neither a role nor a link: its menu holds its removal alone.
+  // erin's invitation says it was declined, and offers neither a role nor a link: its menu, named by her address,
+  // holds its removal alone.
   await expect(invitationRow(page, erinEmail)).toContainText("Declined");
   await expect(invitationRow(page, erinEmail).getByRole("button", { name: "Member" })).toHaveCount(0);
-  await invitationRow(page, erinEmail).getByRole("button").last().click();
+  await invitationRow(page, erinEmail)
+    .getByRole("button", { name: `${erinEmail} options`, exact: true })
+    .click();
   await expect(page.getByText("Remove", { exact: true })).toBeVisible();
   await expect(page.getByText("Copy link", { exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  // dave as a member, frank as a guest: one request, nerve's WorkspaceInvitationsCreate, each role a number.
+  // dave as a member, frank as a guest, his role picked by the keyboard (sendInvitations): one request, nerve's
+  // WorkspaceInvitationsCreate, each role a number.
   const sent = await sendInvitations(page, slug, [
     { email: dave, role: "Member" },
     { email: frank, role: "Guest" },
@@ -260,7 +270,8 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     `${baseURL}${invitationLinkOf(davesInvitation)}`
   );
-  // frank's invitation, deleted meanwhile through the API: the page's removal is refused, and says why.
+  // frank's invitation, deleted meanwhile through the API: the page's removal is refused, and says why, read beside
+  // the dialog, which stays until Cancel closes it.
   const removal = { method: "DELETE", path: `/api/v0/workspace-invitations/${franksInvitation.id}` };
   const meanwhile = await api.DELETE("/api/v0/workspace-invitations/{invitation_id}", {
     params: { path: { invitation_id: franksInvitation.id } },
@@ -268,18 +279,70 @@ test("W4 (page): the admin invites a member and a guest, changes a role and copi
   });
   expect(meanwhile.response.status).toBe(204);
   expect((await removeInvitation(page, frank, removal)).status()).toBe(404);
-  await expect(page.getByText("The invitation does not exist, or its link is not valid.")).toBeVisible();
+  await expect(modalDialog(page)).toHaveAccessibleName(`Remove ${frank}?`);
+  const notFound = page.getByText("The invitation does not exist, or its link is not valid.");
+  await expect(notFound).toBeVisible();
+  expect(await announced(notFound)).toBe(true);
+  expect(await closedWithin(page)).toBe(false);
+  await modalDialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(modalDialog(page)).toHaveCount(0);
 
-  // The member's address and erin's: refused, each under its row, and the form stays open.
-  const refused = await sendInvitations(page, slug, [
+  // The member's address and erin's: refused, each under its row, and the form stays open. While nerve has them, the
+  // button is busy and the dialog has the focus (keepFocusIn).
+  const releaseRefusal = await holdAnswer(page, "POST", invitations);
+  const refusing = sendInvitations(page, slug, [
     { email: memberEmail, role: "Member" },
     { email: erinEmail, role: "Member" },
   ]);
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Sending invitations" })).toBeDisabled();
+  await expect(modalDialog(page)).toBeFocused();
+  const refusalFocuses = await recordFocuses(page);
+  await releaseRefusal();
+  const refused = await refusing;
   expect(refused.answer.status()).toBe(422);
   await expect(invitationFormRow(page, 0)).toContainText("Already a member of this workspace.");
   await expect(invitationFormRow(page, 1)).toContainText(
     "This address is invited already (delete that invitation first), or given twice here."
   );
+  // each address is read invalid, its message its description; the first row's has the focus, and nothing takes it
+  // first, not even the button as it is enabled again (keepFocusIn's return waits for the refusal's focus)
+  const address = (index: number) => page.locator(`[id="invitations.${index}.email"]`);
+  await expect(address(0)).toBeFocused();
+  expect(await refusalFocuses()).toEqual([
+    { id: "invitations.0.email", invalid: "true", description: "Already a member of this workspace." },
+  ]);
+  await expect(address(0)).toHaveAttribute("aria-invalid", "true");
+  await expect(address(0)).toHaveAccessibleDescription("Already a member of this workspace.");
+  await expect(address(1)).toHaveAccessibleDescription(
+    "This address is invited already (delete that invitation first), or given twice here."
+  );
+  // Each row's removal is named by the address it holds, or by its place while it has none; pressing one removes its
+  // row, the others kept.
+  const rowRemoval = (name: string) => page.getByRole("dialog").getByRole("button", { name, exact: true });
+  await page.getByRole("dialog").getByRole("button", { name: "Add more" }).click();
+  await expect(rowRemoval(`Remove ${memberEmail}`)).toBeVisible();
+  await expect(rowRemoval("Remove invitation 3")).toBeVisible();
+  await expect(rowRemoval(`Remove ${erinEmail}`)).toBeVisible();
+  await rowRemoval(`Remove ${erinEmail}`).click();
+  await expect(address(2)).toHaveCount(0);
+  await expect(address(0)).toHaveValue(memberEmail);
+  await expect(address(1)).toHaveValue("");
+  await expect(rowRemoval("Remove invitation 2")).toBeVisible();
+  // Sent with the new row empty, its rule fails: its address takes the focus, already read invalid, its message its
+  // description (as recorded when it takes it), and nothing is sent.
+  const focuses = await recordFocuses(page);
+  await page.getByRole("dialog").getByRole("button", { name: "Send invitations" }).click();
+  await expect(address(1)).toBeFocused();
+  expect((await focuses()).at(-1)).toEqual({
+    id: "invitations.1.email",
+    invalid: "true",
+    description: "We need an email address to invite them.",
+  });
+  expect(watch.apiRequests.filter((request) => request === `POST ${invitations}`)).toHaveLength(2);
+  // Escape there leaves the form open (it has no handleClose) and the focus on that address: ModalCore stops the
+  // Escape before Headless UI's Dialog, which would blur it.
+  expect(await closedByEscape(page)).toBe(false);
+  await expect(address(1)).toBeFocused();
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
   // erin's declined invitation deleted, her address is invited again.
   const erins = { method: "DELETE", path: `/api/v0/workspace-invitations/${toErin.id}` };

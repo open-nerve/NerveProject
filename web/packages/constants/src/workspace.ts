@@ -10,10 +10,14 @@ import { EUserWorkspaceRoles } from "@nerve/types";
 
 export const ORGANIZATION_SIZE: OrganizationSize[] = ["Just myself", "2-10", "11-50", "51-200", "201-500", "500+"];
 
-export const ROLE = {
-  [EUserWorkspaceRoles.GUEST]: "Guest",
-  [EUserWorkspaceRoles.MEMBER]: "Member",
-  [EUserWorkspaceRoles.ADMIN]: "Admin",
+/** The key of each organization size's label in the page's language: nerve keeps the size itself. */
+export const ORGANIZATION_SIZE_I18N_LABEL: Record<OrganizationSize, string> = {
+  "Just myself": "workspace_creation.form.organization_size.sizes.just_myself",
+  "2-10": "workspace_creation.form.organization_size.sizes.2_10",
+  "11-50": "workspace_creation.form.organization_size.sizes.11_50",
+  "51-200": "workspace_creation.form.organization_size.sizes.51_200",
+  "201-500": "workspace_creation.form.organization_size.sizes.201_500",
+  "500+": "workspace_creation.form.organization_size.sizes.500_plus",
 };
 
 export const ROLE_DETAILS = {

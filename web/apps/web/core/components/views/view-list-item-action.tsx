@@ -92,7 +92,7 @@ export const ViewListItemAction = observer(function ViewListItemAction(props: Pr
       </div>
 
       {/* created by */}
-      <ButtonAvatars showTooltip={false} userIds={ownedByDetails?.id ?? []} />
+      <ButtonAvatars userIds={ownedByDetails?.id ?? []} />
 
       {isEditingAllowed && (
         <FavoriteStar

@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 
-import { accountOf, expectRevoked, onboardingStepsOf, sessionOf } from "../../fixtures/assert/identity";
+import { accountOf, onboardingStepsOf } from "../../fixtures/assert/identity";
+import { expectRevoked, sessionOf } from "../../fixtures/assert/session";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import {
   anotherTabSignsIn,
@@ -13,7 +14,9 @@ import {
   shownNameOf,
 } from "../../fixtures/auth";
 import { expectQuietConsole, followAccessToken, watchPage, type PageWatch } from "../../fixtures/browser";
+import { closedByEscape, enabledWithin, modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
+import { holdAnswer } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // A6, signing out and switching accounts (M2 design 2, 7.1).
@@ -33,10 +36,15 @@ function accountMenu(tab: Page, email: string) {
   return tab.getByRole("button", { name: shownNameOf(email) });
 }
 
-/** Signs out through the account menu: "Wrong e-mail address?", then "Switch account" (M2 has no workspace menu). */
-async function signOutThroughMenu(tab: Page, email: string): Promise<void> {
+/** Opens the switch's dialog through the account menu: "Wrong e-mail address?" (M2 has no workspace menu). */
+async function openSwitchAccount(tab: Page, email: string): Promise<void> {
   await accountMenu(tab, email).click();
   await tab.getByRole("menuitem", { name: "Wrong e-mail address?" }).click();
+}
+
+/** Signs out through the account menu: the switch's dialog (openSwitchAccount), then its "Switch account". */
+async function signOutThroughMenu(tab: Page, email: string): Promise<void> {
+  await openSwitchAccount(tab, email);
   await tab.getByRole("button", { name: "Switch account" }).click();
 }
 
@@ -75,7 +83,16 @@ test("A6 (page): signing out in one tab signs every tab out", async ({ api, db, 
   expect(accessToken, "tab A sent an access token").not.toBe("");
   expect((await api.GET("/api/v0/me", { headers: bearer(accessToken) })).response.status).toBe(200);
 
-  await signOutThroughMenu(tabA, email);
+  // The switch's dialog hides the onboarding behind it; while the sign-out is out it cannot be dismissed, its button
+  // busy.
+  const release = await holdAnswer(tabA, "POST", "/api/v0/auth/logout");
+  await openSwitchAccount(tabA, email);
+  await expect(modalDialog(tabA)).toHaveAccessibleName("Switch account");
+  expect(await pageBehindHidden(tabA)).toBe(true);
+  await tabA.getByRole("button", { name: "Switch account" }).click();
+  expect(await closedByEscape(tabA)).toBe(false);
+  expect(await enabledWithin(tabA.getByRole("button", { name: "Switching..." }))).toBe(false);
+  await release();
 
   // Both tabs are on the sign-in page, which comes back to where they were, in the default theme; the record is gone.
   await Promise.all(

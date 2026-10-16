@@ -47,8 +47,8 @@ var (
 	// server's administrator who runs `nerve users deactivate` too, who can
 	// do neither himself.
 	ErrSoleAdmin = shared.NewError(shared.KindConflict, "project.sole_admin",
-		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
-			"other active members. It must first be given another admin, or be deleted.")
+		"The project would be left without an admin: its only active admin cannot leave it, and that admin's membership cannot "+
+			"end while it has other active members. It must first be given another admin, or be deleted.")
 	// ErrStateNotFound answers a state that does not exist, is deleted, is
 	// the triage state, or whose project the caller does not see: the same
 	// 404 for all (M3 design 3.17, 5.3, 8.2).

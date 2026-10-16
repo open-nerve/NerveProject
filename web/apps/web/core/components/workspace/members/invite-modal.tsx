@@ -31,10 +31,11 @@ export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvit
   // store hooks
   const { t } = useTranslation();
   // derived values
-  const { control, fields, formState, remove, onFormSubmit, clear, appendField } = useWorkspaceInvitationActions({
-    invite,
-    onSent: onClose,
-  });
+  const { control, fields, formState, formRef, remove, onFormSubmit, clear, appendField } =
+    useWorkspaceInvitationActions({
+      invite,
+      onSent: onClose,
+    });
 
   // the form empties once the modal has gone (its leave transition)
   const handleClose = () => {
@@ -48,6 +49,7 @@ export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvit
         title={t("workspace_settings.settings.members.modal.title")}
         description={t("workspace_settings.settings.members.modal.description")}
         onSubmit={onFormSubmit}
+        formRef={formRef}
         actions={
           <InvitationModalActions
             isSubmitting={formState.isSubmitting}

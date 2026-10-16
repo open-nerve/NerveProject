@@ -34,7 +34,7 @@ export const TopNavigationRoot = observer(function TopNavigationRoot() {
     <div className="z-[27] flex min-h-10 w-full items-center bg-canvas px-3.5 transition-all duration-300">
       {/* Workspace Menu */}
       <div className="flex-1 shrink-0">
-        <WorkspaceMenuRoot variant="top-navigation" />
+        <WorkspaceMenuRoot />
       </div>
       {/* Power K Search */}
       <div className="shrink-0">

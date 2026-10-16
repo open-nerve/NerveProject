@@ -11,6 +11,7 @@ import { Disclosure, Transition } from "@headlessui/react";
 // nerve imports
 import { ChevronDownOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
 import type { Label } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 // components
 import { CreateUpdateLabelInline } from "./create-update-label-inline";
 import type { ICustomMenuItem } from "./label-block/label-item-block";
@@ -48,6 +49,7 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
 
   // states
   const [isEditLabelForm, setEditLabelForm] = useState(false);
+  const { t } = useTranslation();
 
   const customMenuItems: ICustomMenuItem[] = [
     {
@@ -57,7 +59,7 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
         setIsUpdating(true);
       },
       isVisible: true,
-      text: "Edit label",
+      text: t("project_settings.labels.edit"),
       key: "edit_label",
     },
     {
@@ -66,7 +68,7 @@ export const ProjectSettingLabelGroup = observer(function ProjectSettingLabelGro
         handleLabelDelete(label);
       },
       isVisible: true,
-      text: "Delete label",
+      text: t("project_settings.labels.delete.title"),
       key: "delete_label",
     },
   ];

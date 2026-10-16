@@ -5,7 +5,7 @@
  */
 
 // nerve imports
-import type { TProjectAppliedDisplayFilterKeys, TProjectOrderByOptions } from "@nerve/types";
+import type { TProjectAppliedDisplayFilterKeys, TProjectFilters, TProjectOrderByOptions } from "@nerve/types";
 
 export type TNetworkChoiceIconKey = "Lock" | "Globe2";
 
@@ -63,6 +63,14 @@ export const PROJECT_ORDER_BY_OPTIONS: {
     i18n_label: "workspace_projects.sort.members_length",
   },
 ];
+
+/** The key of each filter's name of the projects, as their filters' dropdown and the bar of those applied say it. */
+export const PROJECT_FILTER_I18N_LABEL: Record<keyof TProjectFilters, string> = {
+  access: "workspace_projects.network.label",
+  lead: "lead",
+  members: "common.members",
+  created_at: "workspace_projects.sort.created_at",
+};
 
 export const PROJECT_DISPLAY_FILTER_OPTIONS: {
   key: TProjectAppliedDisplayFilterKeys;

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // hooks
@@ -22,7 +22,8 @@ type GlobalShortcutsProps = {
 
 /**
  * Global shortcuts component - sets up keyboard listeners and context detection
- * Should be mounted once at the app root level
+ * Mounted by ProjectsAppPowerKProvider, one for each layout that renders it: the workspace's projects and settings
+ * layouts (within the workspace's content, keyed by the workspace) and the profile settings' layout
  */
 export const GlobalShortcutsProvider = observer(function GlobalShortcutsProvider(props: GlobalShortcutsProps) {
   const { context, commands } = props;
@@ -31,6 +32,10 @@ export const GlobalShortcutsProvider = observer(function GlobalShortcutsProvider
   // store hooks
   const { commandRegistry, isShortcutsListModalOpen, setActiveContext, togglePowerKModal, toggleShortcutsListModal } =
     usePowerK();
+  // The shortcuts list's open flag is the power-K store's, which outlives the workspace's keyed content (v0 design 7.7,
+  // state keyed by id): this host closes it as it unmounts with that content, before the next page paints, so a switch,
+  // a Back or Forward too, never opens it again in another workspace.
+  useLayoutEffect(() => () => toggleShortcutsListModal(false), [toggleShortcutsListModal]);
 
   // Detect context from URL and update store
   useEffect(() => {

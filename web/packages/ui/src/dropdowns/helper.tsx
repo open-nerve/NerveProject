@@ -24,7 +24,6 @@ interface IDropdownProps {
   optionsClassName?: string;
   placement?: Placement;
   tabIndex?: number;
-  useCaptureForOutsideClick?: boolean;
   defaultOpen?: boolean;
 }
 
@@ -33,22 +32,32 @@ export interface ICustomMenuDropdownProps extends IDropdownProps {
   ellipsis?: boolean;
   noBorder?: boolean;
   verticalEllipsis?: boolean;
+  /** Called each time the menu's button opens the menu, by the pointer or the keyboard. */
   menuButtonOnClick?: (...args: any) => void;
   menuItemsClassName?: string;
+  /** Called each time the menu closes, whatever closed it. */
   onMenuClose?: () => void;
+  /** Whether a click on anything in the menu closes it, as a click on an item does. */
   closeOnSelect?: boolean;
   portalElement?: Element | null;
-  openOnHover?: boolean;
   ariaLabel?: string;
 }
 
-export interface ICustomSelectProps extends IDropdownProps {
+/** What a form gives a select that is one of its fields (fieldButtonProps). */
+export interface ISelectFieldProps {
+  /** The id of the message that describes the select, while one shows: its button's aria-describedby. */
+  describedBy?: string;
+  /** Whether the select's value is refused: its button is aria-invalid. */
+  invalid?: boolean;
+}
+
+export interface ICustomSelectProps extends IDropdownProps, ISelectFieldProps {
   children: React.ReactNode;
   value: any;
   onChange: any;
 }
 
-interface CustomSearchSelectProps {
+interface CustomSearchSelectProps extends ISelectFieldProps {
   footerOption?: React.ReactNode;
   onChange: any;
   onClose?: () => void;

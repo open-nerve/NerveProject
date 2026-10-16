@@ -9,6 +9,7 @@ import { Command } from "cmdk";
 import { observer } from "mobx-react";
 // hooks
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
+import { useTranslation } from "@nerve/i18n";
 import { cn } from "@nerve/utils";
 // power-k
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
@@ -26,6 +27,7 @@ export const TopNavPowerK = observer(() => {
   const params = useParams();
   const { projectId: routerProjectId, workItem: workItemIdentifier } = params;
 
+  const { t } = useTranslation();
   // states
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCommand, setActiveCommand] = useState<TPowerKCommandConfig | null>(null);
@@ -234,7 +236,7 @@ export const TopNavPowerK = observer(() => {
             onMouseDown={handleMouseDown}
             onFocus={handleFocus}
             onKeyDown={handleKeyDown}
-            placeholder="Search commands..."
+            placeholder={t("power_k.search_commands")}
             className="placeholder-text-placeholder min-w-0 flex-1 bg-transparent text-13 text-primary outline-none"
           />
           {searchTerm && (

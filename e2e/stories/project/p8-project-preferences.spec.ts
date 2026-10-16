@@ -4,6 +4,7 @@ import {
   addProjectMembers,
   amidAnotherWorkspace,
   changeProject,
+  changeProjectPreferences,
   changeWorkspacePreferences,
   createProject,
   createWorkspace,
@@ -13,10 +14,11 @@ import {
   type ProjectPreferences,
   type ProjectPreferencesUpdate,
 } from "../../fixtures/api";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
-import { shownWithin } from "../../fixtures/dialogs";
+import { closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
+import { workItemFilters } from "../../fixtures/mounts";
 import { dragOnto } from "../../fixtures/project-pages";
 import { answerTo, holdAnswer, registerOnboarded, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
@@ -33,22 +35,6 @@ async function read(api: Api, token: string, id: string): Promise<unknown> {
   });
   expect(response.status, `read the settings in ${id}: ${JSON.stringify(error)}`).toBe(200);
   return data;
-}
-
-/** PATCH /api/v0/me/projects/{project_id}/preferences: its status, and the settings or the problem's fields. */
-async function change(api: Api, token: string, id: string, body: ProjectPreferencesUpdate) {
-  const { data, error, response } = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
-    params: { path: { project_id: id } },
-    body,
-    headers: bearer(token),
-  });
-  return data
-    ? { status: response.status, preferences: data }
-    : {
-        status: response.status,
-        code: error?.code,
-        errors: error?.errors?.map((e) => ({ field: e.field, code: e.code })),
-      };
 }
 
 /** The account of email's display settings in the project as stored, and who wrote them last. */
@@ -79,6 +65,13 @@ async function menuOf(page: Page, name: string): Promise<Locator> {
   return setAsDefault;
 }
 
+/** The quick actions' button of the project's header on page: the sidebar's projects have one each too. */
+function headerActions(page: Page): Locator {
+  return page
+    .getByRole("button", { name: "Toggle quick actions menu" })
+    .and(page.locator("xpath=//*[not(ancestor::aside)]"));
+}
+
 /** The projects of page's sidebar, in its order. */
 function sidebarOrder(page: Page): Locator {
   return page.getByRole("complementary", { name: "Main sidebar" }).locator('[id^="sidebar-"][id$="-JOINED"]');
@@ -105,9 +98,9 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
   db,
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
-  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const admin = (await registeredPAT(api, adminEmail)).token;
   const memberEmail = emailFor(testInfo, "member");
-  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const member = (await registeredPAT(api, memberEmail)).token;
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);
@@ -131,10 +124,16 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
     navigation: { default_tab: "modules", hide_in_more_menu: ["views"] },
     sort_order: 55535,
   };
-  expect(await change(api, admin, web.id, { navigation: tabs.navigation })).toEqual({ status: 200, preferences: tabs });
+  expect(await changeProjectPreferences(api, admin, web.id, { navigation: tabs.navigation })).toEqual({
+    status: 200,
+    preferences: tabs,
+  });
   // Dragged before Wiki (35535).
   const first = { ...tabs, sort_order: 25535 };
-  expect(await change(api, admin, web.id, { sort_order: 25535 })).toEqual({ status: 200, preferences: first });
+  expect(await changeProjectPreferences(api, admin, web.id, { sort_order: 25535 })).toEqual({
+    status: 200,
+    preferences: first,
+  });
   // After a refresh the page reads them again, and the sidebar lists Web first.
   expect(await read(api, admin, web.id)).toEqual(first);
   const { data } = await api.GET("/api/v0/workspaces/{slug}/projects", {
@@ -157,7 +156,10 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
       field: "navigation.hide_in_more_menu[0]",
     },
   ];
-  expect(await Promise.all(refusals.map(({ body }) => change(api, admin, web.id, body))), "the refusals").toEqual(
+  expect(
+    await Promise.all(refusals.map(({ body }) => changeProjectPreferences(api, admin, web.id, body))),
+    "the refusals"
+  ).toEqual(
     refusals.map(({ field }) => ({
       status: 422,
       code: "validation_failed",
@@ -173,7 +175,7 @@ test("P8 (API): the admin opens a project on its modules tab, moves views under 
   ]);
 });
 
-test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh; Web's guest is offered the menus and the drag as well", async ({
+test("P8 (page): the admin makes modules the tab Web opens on and moves its views under more, by the menus of its header's tabs, which offer neither until nerve has given his tab bar; he drags his third project first in his sidebar; each lasts after a refresh; Web's guest is offered the menus and the drag as well, and his leaving of Docs, asked in its header, ends as a Back takes him to Web's work items", async ({
   api,
   baseURL,
   browser,
@@ -263,16 +265,45 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   ]);
 
   // The work items' page asks Plane's address of the filters, M4's (P8b spec §5), at each of its two loads.
-  const filters = `GET /api/workspaces/${slug}/projects/${web.id}/user-properties/`;
-  await expect.poll(() => watch.apiFailures).toEqual([`404 ${filters}`, `404 ${filters}`]);
-  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [filters, filters], []]);
+  const filters = workItemFilters(slug, web.id);
+  await expect.poll(() => watch.apiFailures).toEqual([filters.failure, filters.failure]);
+  expect([watch.cspViolations, watch.oldApiRequests, watch.pageErrors]).toEqual([
+    [],
+    [filters.request, filters.request],
+    [],
+  ]);
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
-    errors: [
-      "Failed to load resource: the server responded with a status of 404 (Not Found)",
-      "Failed to load resource: the server responded with a status of 404 (Not Found)",
-    ],
+    errors: [filters.logged, filters.logged],
   });
+  // The header's more menu, by the keyboard: Enter on its button, which is named, opens it; the arrow keys reach
+  // Views, then its actions, each named by it and shown as it is reached; Enter on Views opens its page.
+  const more = page.getByRole("button", { name: "More tabs", exact: true });
+  await more.press("Enter");
+  const views = page.getByRole("menuitem", { name: "Views", exact: true });
+  await expect(views).toHaveAttribute("href", `/${slug}/projects/${web.id}/views`);
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press("ArrowDown");
+        return views.evaluate((item) => item === document.activeElement);
+      },
+      { timeout: 5_000 }
+    )
+    .toBe(true);
+  const showViews = page.getByRole("menuitem", { name: "Show Views", exact: true });
+  await page.keyboard.press("ArrowDown");
+  await expect(showViews).toBeFocused();
+  await expect(showViews).toHaveCSS("opacity", "1");
+  const viewsDefault = page.getByRole("menuitem", { name: "Set Views as default", exact: true });
+  await page.keyboard.press("ArrowDown");
+  await expect(viewsDefault).toBeFocused();
+  await expect(viewsDefault).toHaveCSS("opacity", "1");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("ArrowUp");
+  await expect(views).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(`/${slug}/projects/${web.id}/views`);
 
   // Gus is offered the same, on the tabs a guest has (not Modules): he makes views the tab Web opens on, by its tab's
   // menu, and drags Web, second in his sidebar, a step before Docs.
@@ -293,11 +324,20 @@ test("P8 (page): the admin makes modules the tab Web opens on and moves its view
   expect(await stored(db, web.id, gusEmail)).toEqual([
     { preferences: { navigation: { default_tab: "views", hide_in_more_menu: [] } }, sort_order: 45535, by: gusEmail },
   ]);
-  await expect.poll(() => gusWatch.apiFailures).toEqual([`404 ${filters}`]);
-  expect([gusWatch.cspViolations, gusWatch.oldApiRequests, gusWatch.pageErrors]).toEqual([[], [filters], []]);
-  await expectQuietConsole(theGuest.page, gusWatch, {
-    warnings: [EMOJI_CHECK_WARNING],
-    errors: ["Failed to load resource: the server responded with a status of 404 (Not Found)"],
-  });
+  await expect.poll(() => gusWatch.apiFailures).toEqual([filters.failure]);
+  expect([gusWatch.cspViolations, gusWatch.oldApiRequests, gusWatch.pageErrors]).toEqual([[], [filters.request], []]);
+  await expectQuietConsole(theGuest.page, gusWatch, { warnings: [EMOJI_CHECK_WARNING], errors: [filters.logged] });
+  // His sidebar's Docs, under the same layout as Web's work items, offers a guest his leaving in its header; asked,
+  // it ends as a Back takes him to Web's work items, rather than ask it of Web (v0 design 7.7: a project's pages are
+  // keyed by it).
+  await inSidebar(theGuest.page, docs.id).locator("a").first().click();
+  await expect(theGuest.page).toHaveURL(`/${slug}/projects/${docs.id}/issues`);
+  await headerActions(theGuest.page).click();
+  await theGuest.page.getByRole("menuitem", { name: "Leave project" }).click();
+  await expect(modalDialog(theGuest.page)).toHaveCount(1);
+  await theGuest.page.goBack();
+  await expect(theGuest.page).toHaveURL(`/${slug}/projects/${web.id}/issues`);
+  expect(await closedWithin(theGuest.page)).toBe(true);
+  expect(gusWatch.pageErrors).toEqual([]);
   await theGuest.close();
 });

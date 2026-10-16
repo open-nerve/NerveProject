@@ -11,7 +11,6 @@ import { DefaultTabOutline, MoreHorizontalOutline, PinOutline } from "@makeplane
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Menu } from "@nerve/propel/menu";
-import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
 // local imports
 import type { TNavigationItem } from "./tab-navigation-root";
@@ -25,10 +24,16 @@ type Props = {
   changes: TTabChanges | undefined;
 };
 
+// an action of a tab's row: its icon shows while the pointer is over the row or the arrow keys are on an item of it,
+// and always for the tab the project opens on (shown); never hidden from the arrow keys, which reach each action
+const ACTION_CLASS =
+  "w-auto shrink-0 p-1 text-tertiary opacity-0 transition-colors group-hover/menu-item:opacity-100 group-has-data-highlighted/menu-item:opacity-100 hover:text-primary data-highlighted:text-primary";
+
 /**
- * Overflow menu for tab navigation items: those that don't fit in the visible area, and those the caller hid. Once his
- * tab bar is fetched (changes), it offers "Show" for each item he hid and "Set as default" (or "Clear default") for
- * every item; until then, no action.
+ * Overflow menu for tab navigation items: those that don't fit in the visible area, and those the caller hid. Each tab
+ * is an item of the menu's, a link to its page; once his tab bar is fetched (changes), each tab's row has items for
+ * its actions too, each named by its tab: "Show" for a tab he hid, and "Set as default" (or "Clear default") for every
+ * tab; until then, no action. The arrow keys reach each item, and Enter does what a click does (C11-2).
  */
 export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation, changes }: Props) {
   const { t } = useTranslation();
@@ -36,6 +41,7 @@ export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation,
   return (
     <Menu
       ellipsis
+      ariaLabel={t("tab_navigation.more_tabs")}
       buttonClassName="!p-1.5"
       optionsClassName="min-w-[200px] space-y-1"
       customButton={
@@ -49,52 +55,35 @@ export function TabNavigationOverflowMenu({ overflowItems, isActive, navigation,
         // isHidden = true only for user-hidden items (not space-constrained overflow)
         const isHidden = navigation.hide_in_more_menu.includes(item.key);
         const isDefault = item.key === navigation.default_tab;
+        const tab = t(item.i18n_key);
 
         return (
-          <Menu.MenuItem key={`${item.key}-overflow-${itemIsActive ? "active" : "inactive"}`} className="w-full p-0">
-            <div className="group/menu-item flex w-full items-center justify-between">
-              <Link to={item.href} className="w-full min-w-0 flex-1 p-1">
-                <span className="text-11">{t(item.i18n_key)}</span>
-              </Link>
-              <div className="flex items-center">
-                {/* Show Eye icon ONLY for user-hidden items */}
-                {changes && isHidden && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      changes.show(item.key);
-                    }}
-                    className="invisible rounded-sm p-1 text-tertiary transition-colors group-hover/menu-item:visible hover:text-primary"
-                    title="Show"
-                  >
-                    <PinOutline className="size-3" />
-                  </button>
-                )}
-                {changes && (
-                  <Tooltip label={isDefault ? "Clear default" : "Set as default"}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        changes.toggleDefault(item.key);
-                      }}
-                      className={cn(
-                        "invisible rounded-sm p-1 text-tertiary transition-colors group-hover/menu-item:visible hover:text-primary",
-                        {
-                          visible: isDefault,
-                        }
-                      )}
-                      title={isDefault ? "Clear default" : "Set as default"}
-                    >
-                      <DefaultTabOutline className="size-3" />
-                    </button>
-                  </Tooltip>
-                )}
-              </div>
-            </div>
-          </Menu.MenuItem>
+          <div
+            key={`${item.key}-overflow-${itemIsActive ? "active" : "inactive"}`}
+            className="group/menu-item flex w-full items-center justify-between"
+          >
+            <Menu.MenuItem render={<Link to={item.href} />} className="min-w-0 flex-1 p-1">
+              <span className="text-11">{tab}</span>
+            </Menu.MenuItem>
+            {changes && isHidden && (
+              <Menu.MenuItem
+                onClick={() => changes.show(item.key)}
+                className={ACTION_CLASS}
+                title={t("tab_navigation.show_tab", { tab })}
+              >
+                <PinOutline className="size-3" />
+              </Menu.MenuItem>
+            )}
+            {changes && (
+              <Menu.MenuItem
+                onClick={() => changes.toggleDefault(item.key)}
+                className={cn(ACTION_CLASS, { "opacity-100": isDefault })}
+                title={t(isDefault ? "tab_navigation.clear_tab_default" : "tab_navigation.set_tab_as_default", { tab })}
+              >
+                <DefaultTabOutline className="size-3" />
+              </Menu.MenuItem>
+            )}
+          </div>
         );
       })}
     </Menu>

@@ -8,7 +8,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectMembership, expectMembershipEnded, expectWrittenLastBy } from "../../fixtures/assert/workspace";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, emailFor, register, registeredPAT } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers } from "../../fixtures/users";
 import { nerveWorkspaces, nerveWorkspacesFails } from "../../fixtures/workspaces";
@@ -24,11 +24,11 @@ test("W12: nerve workspaces reactivate-member restores a removed admin's members
   db,
 }, testInfo) => {
   const aEmail = emailFor(testInfo, "a");
-  const a = (await createPAT(api, (await register(api, aEmail)).access_token)).token;
+  const a = (await registeredPAT(api, aEmail)).token;
   const bEmail = emailFor(testInfo, "b");
-  const b = (await createPAT(api, (await register(api, bEmail)).access_token)).token;
+  const b = (await registeredPAT(api, bEmail)).token;
   const carolEmail = emailFor(testInfo, "carol");
-  const carol = (await createPAT(api, (await register(api, carolEmail)).access_token)).token;
+  const carol = (await registeredPAT(api, carolEmail)).token;
   const strangerEmail = emailFor(testInfo, "stranger");
   await register(api, strangerEmail);
   const slug = slugFor(testInfo);
