@@ -41,6 +41,7 @@ M3（工作区与项目）的项目包装层不再取迭代、模块，迭代和
   - 迭代、模块的表单的名字的提示（`cycles/form.tsx:134`、`modules/form.tsx:145`）照 M2、M3 的表单：提示是字段的 propel `FieldError`，控件以它为描述、`aria-invalid`，被拒绝的字段在提示显示之后取得焦点（`core/lib/refused-focus.ts` 的 `useRefusedFocus`，`useForm` 写 `shouldFocusError: false`；写法和时机见 M4 交接第 7 节）。模块链接的弹窗（`modules/links/create-update-modal.tsx`）的地址的规则带一句英文的提示（"URL is required"），却不显示它，输入框只是 `aria-invalid`：照同一个写法显示它、以它为描述。
   - 在弹窗里打开的列表读 `useInsideModal()`，在弹窗里 `modal={false}`：`dropdowns/cycle/cycle-options.tsx`、`dropdowns/module/module-options.tsx`（工作项的弹窗里）、`dropdowns/date-range.tsx`（迭代的弹窗里）的 `Combobox.Options`；`core/modals/existing-issues-list-modal.tsx` 的列表本身就是弹窗的内容，核对它打开时后面的页面隐藏着。
   - `core/modals/existing-issues-list-modal.tsx` 每个选项里只在指针经过时显示的链接（`:290`），方向键到不了；已选的工作项的移除按钮（`:175`）没有名字。
+- **模块的状态选择没过规则时只变红**（M3 收尾，浏览器核对之后）：`modules/select/status.tsx` 的 `Controller` 带 `rules={{ required: true }}`，没过时按钮的字和图标变红（`:40`、`:45`、`:48`，读 `error`），没有提示，按钮也不 `aria-invalid`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2 条的第三次扫描找到；上面"正的 `tabIndex`"一条只说到它的 `tabIndex`）。它是 M6 的模块表单。照 M2、M3 的写法：给它经 `t()` 的提示，`CustomSelect` 收 `describedBy`、`invalid`，以提示为描述、恰在提示显示时 `aria-invalid`，被拒绝时取得焦点（写法同 M4 的交接第 7 节）。
 - **关闭条件**：M6 的评审写明上面每一项的浏览器核对。
 
 ## 4. 地址、复制和 oxlint

@@ -2098,21 +2098,21 @@ modules/access/
 ---
 
 ## 14. 完成标准
-- [ ] 第 2 节的 21 个故事（页面版本、接口版本）和 S1、S2 在持续集成中通过。
-- [ ] 权限矩阵的全部格子（含已不是成员的身份）、可见性一致的测试、19 个交错测试、"邀请从不改变有效的成员关系"和"结束的成员关系不留下邀请"的集成测试在真实数据库上通过。
-- [ ] 3.6 约定六的每一条增长路径（接受邀请、创建工作区、`reactivate-member`、建项目的负责人、添加项目成员、加入项目、恢复以前的成员关系）都有与停用的交错测试（恢复的走法在 7、13、14 里）；项目一侧的增长另有与降为访客的交错测试（17）。
-- [ ] 每个模块的 `apitest.Main` 两个方向核对通过：声明在它的操作上的跨模块码由它自己的 HTTP 测试返回过（9.4）。
-- [ ] `access/domain` 的判定表测试通过；各模块的操作名与规则表一一对应；每个操作在矩阵里有一行。
-- [ ] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、`apitest` 的前缀规则、命令行的组合测试、关键词守卫、oxlint 上限、knip）。
-- [x] 第 10 节的四个决策点有负责人的裁定，本文按裁定修改；第 11 节的七个架构问题已由负责人批准（2026-09-29）。
-- [ ] 13.1 的每一项已关闭并写进相应 Phase 的 review，6 份交接 `status: closed`；13.2 的交接已写好。
-- [ ] 3.20 的每一行已在对应的 Phase 同步（含 M2 设计 3.11 的修订）；差异清单按第 4 节逐列核对过；README 按 8.7 更新。
-- [ ] 浏览器核对 C1–C10 写进各 Phase 的 review。
-- [ ] `domains.mjs --rows M3` 没有输出（或剩下的每一行写明是误报）；oxlint 上限已调低。
-- [ ] M3 能到达的页面挂载时没有旧接口请求，也没有调用者无权读的请求（故事的 `watchPage` 覆盖每一页，7.1）。
-- [ ] M3 页面的组件在 `await` 之后的跳转、提示先核对会话（7.1；W3 的会话切换端到端）。
-- [ ] 规模估计与实际的对比写进收尾的 review。
-- [ ] 总体设计 9.4 中 M3 的状态改为"已完成"。
+- [x] 第 2 节的 21 个故事（页面版本、接口版本）和 S1、S2 在持续集成中通过。（收尾的头上，在 `a3b2d00d` 上：`make e2e` 先构建，`120 passed (42.1s)`，`[chromium]` 118、`[firefox]` 2（A4 的两个页面测试）。W1–W12 在 `e2e/stories/workspace/`，P1–P9 在 `e2e/stories/project/`，S1、S2 在 `e2e/stories/smoke/`；分支的持续集成 run 332 在 `af7fb4e0` 上通过，见[收尾评审](reviews/closeout-review.md)第 2 节。）
+- [x] 权限矩阵的全部格子（含已不是成员的身份）、可见性一致的测试、19 个交错测试、"邀请从不改变有效的成员关系"和"结束的成员关系不留下邀请"的集成测试在真实数据库上通过。（收尾的头上 `make test`：42 个包 `ok`、没有 `FAIL`，13 个包 `[no test files]`；输出取自 `0c86665a`，之后没有改服务端的文件。测试在 `server/internal/bootstrap/`：`permission_matrix*_test.go` 13 个文件、`project_visibility_test.go`、`interleaving*_test.go` 15 个文件和 `reactivation_races_test.go`、`invitation_rules_test.go`。）
+- [x] 3.6 约定六的每一条增长路径（接受邀请、创建工作区、`reactivate-member`、建项目的负责人、添加项目成员、加入项目、恢复以前的成员关系）都有与停用的交错测试（恢复的走法在 7、13、14 里）；项目一侧的增长另有与降为访客的交错测试（17）。（同上的 `make test`：`server/internal/bootstrap/interleaving_growth_test.go`、`interleaving_shrinking_test.go`、`reactivation_races_test.go`、`interleaving_roles_test.go`。）
+- [x] 每个模块的 `apitest.Main` 两个方向核对通过：声明在它的操作上的跨模块码由它自己的 HTTP 测试返回过（9.4）。（同上的 `make test`：identity、project、workspace 三个模块的 `adapter/http/handler_test.go` 经 `apitest.Main` 跑；`server/internal/platform/httpserver/apitest/main_callers_test.go` 的 `TestEveryModuleRunsItsHTTPTestsThroughMain` 核对每个模块都这样跑。）
+- [x] `access/domain` 的判定表测试通过；各模块的操作名与规则表一一对应；每个操作在矩阵里有一行。（同上的 `make test`：`server/internal/modules/access/domain/decide_test.go` 的 `TestDecideAtTheWorkspaceLevel`、`TestDecideAtTheProjectLevels`，`rules_test.go` 的 `TestEveryRuleDecidesItsCells`、`TestAnActionWithoutARowHasNoRule`；`server/internal/bootstrap/permission_matrix_coverage_test.go`。）
+- [x] 持续集成的全部门禁通过（含架构测试、`TestSQLCSchemaScope`、`apitest` 的前缀规则、命令行的组合测试、关键词守卫、oxlint 上限、knip）。（收尾的头上：`make lint-go` 两段 `0 issues.`（取自 `0c86665a`）；`make gen-check` 没有差异（取自 `8345c2d5`）；在 `a3b2d00d` 上，`make lint-web`：`keywords: 72 rules, 23 exceptions, no hits.`，`i18n-keys: 1295 keys read, each defined in web/packages/i18n/src/locales/en.`，`Tasks: 54 successful, 54 total`（`af7fb4e0` 的文档提交之后再跑一次，相同），`make knip` 没有发现，`make test-web` 不用缓存 `Tasks: 17 successful, 17 total`（web 应用 118 个测试文件、1,002 个测试，`@nerve/ui` 2 个、13 个）。架构测试（`server/internal/archtest/`，含 `sqlc_test.go` 的 `TestSQLCSchemaScope`、`composition_test.go` 的命令行的组合）和 `apitest` 的前缀规则（`server/internal/platform/httpserver/apitest/rules_test.go`）在 `make test` 中；oxlint 上限见第 11 项。分支的持续集成 run 332 在 `af7fb4e0` 上通过。）
+- [x] 第 10 节的四个决策点有负责人的裁定，本文按裁定修改；第 11 节的七个架构问题已由负责人批准（2026-09-29）。（第 10 节每个决策点之后写着裁定：1 选 A+(a) 且查看不显示邮箱，2、3、4 都选 A，正文各节按它们写定；11.1–11.7 各标"负责人已批准，2026-09-29"；本文开头的状态一行同样写明。）
+- [x] 13.1 的每一项已关闭并写进相应 Phase 的 review，6 份交接 `status: closed`；13.2 的交接已写好。（`grep -l -E '^status: (open|done)$' docs/v0/M3-workspace-project/handoffs/*.md` 没有输出、退出码 1（取自 `8345c2d5`，之后没有改这些交接）；6 份交接各有一节"处理结果（M3/收尾）"，逐份的结论和证据在[收尾 spec](specs/closeout.md) 2.1；M4–M8 各有 `handoffs/M3-closeout.md`（`status: open`），13.2 的五行链接到它们。）
+- [x] 3.20 的每一行已在对应的 Phase 同步（含 M2 设计 3.11 的修订）；差异清单按第 4 节逐列核对过；README 按 8.7 更新。（[收尾 spec](specs/closeout.md) 2.2：3.20 的 26 行都已同步，收尾补上 README 侧边栏菜单的一句、两处"（页面：P9）"和数据库的 locale；2.3：差异清单九张表的列数、4.11 的 32 行逐列逐行核对。README 的"（或经接口）"在 `README.md:113`、`:115`，`LC_CTYPE` 一条在 `:140`（收尾的 Task 16）。）
+- [x] 浏览器核对 C1–C10 写进各 Phase 的 review。（[P9 评审](reviews/P9-web-workspace-pages-review.md)第 2 节 C1–C5、[P10 评审](reviews/P10-web-project-pages-review.md)第 2 节 C6–C8、[P11 评审](reviews/P11-web-states-labels-and-cleanup-review.md)第 2 节 C9、C10；收尾的 C11、C12 在[收尾评审](reviews/closeout-review.md)第 2 节。）
+- [x] `domains.mjs --rows M3` 没有输出（或剩下的每一行写明是误报）；oxlint 上限已调低。（收尾的头上，取自 `8345c2d5`（之后只改了一个测试文件和一段注释）：`--rows M3` 227 行，每一行有出处（[收尾 spec](specs/closeout.md) 附录 A.5）。产品代码的 54 行和按路径误归的 41 行与 P11 spec 附录 A.9 的逐行相同，误归的写进 M4、M6、M7 的交接；其余 132 行在测试文件中，测试自己读它们：P11 的 123 行，少了两个删去的替身的 `children`（`delete.test.tsx`、`invite-modal.test.tsx`），多了 `project-dialog-texts.test.tsx` 中 `it.each` 的四列、`common-attributes.test.tsx` 的 `ResizeObserver` 替身的三个成员和记录的四列。oxlint 各等于上限：web 292、`@nerve/ui` 12、`@nerve/propel` 10、`@nerve/utils` 7、`@nerve/constants` 1；收尾调低了 web 303 → 292、`@nerve/ui` 15 → 12、`@nerve/propel` 11 → 10。）
+- [x] M3 能到达的页面挂载时没有旧接口请求，也没有调用者无权读的请求（故事的 `watchPage` 覆盖每一页，7.1）。（[收尾 spec](specs/closeout.md) 附录 A.7 的页面与故事的表：每一页有打开它的 `watchPage` 的故事，断言旧接口的请求、失败的请求和页面错误为空；S2 在四个角色下另断言请求的清单（`e2e/stories/smoke/s2-web-app.spec.ts:139` 的 `REQUESTS`，地址取自 `e2e/fixtures/mounts.ts`）；头上的 `make e2e` 见第 1 项。）
+- [x] M3 页面的组件在 `await` 之后的跳转、提示先核对会话（7.1；W3 的会话切换端到端）。（头上的 `make test-web`（第 6 项）：每个修改的 hook 的 vitest 中"换账户之后兑现"的一行，33 个测试文件读 `web/apps/web/core/lib/auth/fake-tab.ts` 的 `lateSettlings`，收尾的离开工作区经 `followInSession`，它的一行在 `core/components/workspace/settings/use-membership-changes.test.ts`（收尾 spec 2.7）；`make e2e`：W3 的会话切换（`e2e/stories/workspace/w3-workspace-settings.spec.ts:345`）。）
+- [x] 规模估计与实际的对比写进收尾的 review。（[收尾评审](reviews/closeout-review.md)第 7 节；实测和测法在[收尾 spec](specs/closeout.md) 附录 A.6。）
+- [x] 总体设计 9.4 中 M3 的状态改为"已完成"。（[总体设计](../v0-design.md) 9.4 的 M3 一行，在收尾评审的提交中改。）
 
 ## 15. Phase 进度表
 | Phase | 内容 | 状态 |
@@ -2133,7 +2133,7 @@ modules/access/
 | P9 `web-workspace-pages` | 工作区的页面（14） | 已完成：[spec](specs/P9-web-workspace-pages.md)、[plan](plans/P9-web-workspace-pages.md)、[评审](reviews/P9-web-workspace-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-12） |
 | P10 `web-project-pages` | 项目的页面（15） | 已完成：[spec](specs/P10-web-project-pages.md)、[plan](plans/P10-web-project-pages.md)、[评审](reviews/P10-web-project-pages-review.md)（执行时 11 个 Task；修复轮的裁定 F-1–F-18） |
 | P11 `web-states-labels-and-cleanup` | 状态、标签的页面与清理（9） | 已完成：[spec](specs/P11-web-states-labels-and-cleanup.md)、[plan](plans/P11-web-states-labels-and-cleanup.md)、[评审](reviews/P11-web-states-labels-and-cleanup-review.md)（执行时 10 个 Task；修复轮的裁定 F-1–F-15） |
-| 收尾 `closeout` | `ModalCore` 的重写、离开工作区的入口、各 Phase 留给收尾的事；交接、同步核对、规模对比 | 进行中：[spec](specs/closeout.md)、[plan](plans/closeout.md)（16 个 Task） |
+| 收尾 `closeout` | `ModalCore` 的重写、离开工作区的入口、各 Phase 留给收尾的事；交接、同步核对、规模对比 | 已完成：[spec](specs/closeout.md)、[plan](plans/closeout.md)、[评审](reviews/closeout-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮和它的两个后续轮；控制者的浏览器核对 C11、C12 之后一个修复轮和它的三个跟进、最后一轮和它的三个跟进；负责人裁定确认框跟着后退、前进的一类选 B（2026-10-13），F-A4 选 A（2026-10-15）） |
 
 ## 16. 风险
 | 风险 | 影响 | 应对 |

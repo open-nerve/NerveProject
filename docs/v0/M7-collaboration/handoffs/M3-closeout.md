@@ -41,6 +41,8 @@ M3（工作区与项目）的页面挂载时不再取 M7 的数据（收藏、�
   - 视图、工作区视图的表单的名字的提示（`views/form.tsx:186`、`workspace/views/form.tsx:110`）照 M2、M3 的表单：提示是字段的 propel `FieldError`，控件以它为描述、`aria-invalid`，被拒绝的字段在提示显示之后取得焦点（`core/lib/refused-focus.ts` 的 `useRefusedFocus`，`useForm` 写 `shouldFocusError: false`；写法和时机见 M4 交接第 7 节）。通知的稍后提醒的两条规则（`snooze/modal.tsx:133`、`:156`）带写死的英文的提示，却不显示；收藏夹的新建（`workspace/sidebar/favorites/new-fav-folder.tsx`）的规则没有提示：没过规则时读屏什么也读不到，照同一个写法给它们经 `t()` 的提示。
   - 收集箱的查重（`inbox/modals/select-duplicate.tsx`）的列表本身就是弹窗的内容，核对它打开时后面的页面隐藏着；在弹窗里打开的别的列表读 `useInsideModal()`。
   - 稍后提醒的时间的 `CustomSelect` 列表里，AM、PM 是两个可点的 `div`（`snooze/modal.tsx:176`、`:187`），不是选项，方向键到不了：改为选项，或移到列表之外。
+- **收集箱新建的标题的长度提示**（M3 收尾，浏览器核对之后）：`inbox/modals/create-modal/issue-title.tsx:48` 超过 255 个字时显示一个红字的 `span`，输入框（`required`）不在 propel 的 `Field` 里，没有以它为描述，也不 `aria-invalid`（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2 条的第三次扫描找到）。它是收集箱的表单，照上面视图的表单的写法改：提示是 `Field` 里的 `FieldError`，控件恰在提示显示时 `aria-invalid`，被拒绝时取得焦点（`useRefusedFocus`）。
+- **收集箱新建的弹窗自己的 Escape 监听**（M3 收尾，浏览器核对之后）：新建的弹窗（`inbox/modals/create-modal/modal.tsx:37` 的 `ModalCore`，没有 `handleClose`）以 `useKeypress("Escape")`（`:29`，监听整个 `document`）关上自己。它里面打开选父工作项（`create-modal/issue-properties.tsx:192` 的 `ParentIssuesListModal`，有 `handleClose`）时，最里层的 `ModalCore` 认领 Escape、选父工作项关上，但同一个 Escape 也到这个监听，把新建的弹窗一起关上（[收尾评审](../../M3-workspace-project/reviews/closeout-review.md)第 4 节，最后一轮的窄复审列出的嵌套的调用方第 6 行）。这是 M7 的代码，与 Plane 相同；修法同 M4 的交接第 7 节描述编辑器的一条，在这个监听里，由 M7 决定（例如不理会目标不在它自己的弹窗里的 Escape），加一个故事核对。
 - **关闭条件**：M7 的评审写明上面每一项的浏览器核对。
 
 ## 4. 地址、复制、文案和其余

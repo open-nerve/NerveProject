@@ -615,6 +615,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 - **取数和修改的应答对齐**：取数不排队，所以一个取数可以在修改的应答之前或之后答到。store 保存的每个值（按键的，每个键一个）都有这样的性质：每个键只有最新的取数写入，较旧的取数不论答到什么（回答或失败）都什么都不写、给出 `undefined`，由较新的那个决定；取数在外时 nerve 确认的修改按确认的顺序重放到它的回答上；修改是这个值的幂等函数（按 id 写），重放到已经含有它的回答上不重复；还没有取过的值，修改不写，留给取数；取数遇到 `SessionChangedError` 给出 `undefined`，不改这一代的状态。它不假定队列（排队是"一个接一个发出"一条的事）。这个性质只有一份实现：`core/lib/reconciled.ts`（`Reconciled`、按键的 `ReconciledByKey`，和按 id 的修改 `prepended`、`replaced`、`upserted`、`dropped`），M3/P8a 的工作区、成员、邀请、显示设置和令牌的 store 是它最先的使用者，M3/P8b 的项目、项目成员、状态、标签和项目的显示设置的 store 也用它（按工作区或按项目的值用 `ReconciledByKey`；状态和标签的 store 在任一个键的值里找一项，用 M3/P8b 给它加的 `values()`）。之后的 M 用它，不另写一份；一个集合的形状不是"一次取数写整个值"时（例如 M4 按游标分页、按组返回的列表），扩展这份实现，不复制它。
 - **`@nerve/ui` 不依赖 `@nerve/i18n`**：组件的文字由调用方经 `t()` 以 props 传入。`@nerve/ui` 的 `package.json` 不声明 `@nerve/i18n`，pnpm 不把没有声明的包放进它的 `node_modules`，从 `@nerve/i18n` 导入的名字过不了 `@nerve/ui` 的类型检查。
 - **nerve 的 problem 码的文案只有一张表**：`PROBLEM_MESSAGES`（`core/lib/error-messages.ts`，M3/P8a 起）把每个码对到 `errors` 命名空间的文案键，`en`、`zh-CN` 两份 `errors.json` 各有这条文案。接口新声明一个码（3.5 的 `x-problem-codes`）时，同一个提交把它加进这三处：`error-messages.test.ts` 对照 `api/dist/openapi.yaml` 核对表中的码不缺不多、每个文案键在 `en` 中都有，i18n 的 `check:sync` 核对两种语言的键相同（M3 设计第 12 节约束 4）。
+- **属于一个工作区或项目的界面状态在以它的 id 为 key 的布局之下**（负责人 2026-10-13 选 B："B 在根上一次修"；M3 收尾 spec 2.7、3.2 第 4 条）：浏览器的后退、前进不受弹窗的约束，布局不以工作区、项目为 key 时，开着的确认框会留着、作用于路由新指向的那一个。所以 `web/apps/web/app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper` 以路由的 `workspaceSlug` 为 key，项目的两个布局 `app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/layout.tsx`、`app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/layout.tsx` 返回的内容以路由的 `projectId` 为 key。换到别的工作区或项目时（后退、前进也是），其下的子树重新挂载，开着的弹窗和组件的状态随之结束。store 持有的弹窗开关不随 key 结束，由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理）：`core/components/modals/workspace-level.tsx` 的 `WorkspaceLevelModals`（创建项目）、`core/components/power-k/projects-app-provider.tsx` 的 `ProjectsAppPowerKProvider`（命令面板和它的页）、`core/components/power-k/global-shortcuts.tsx` 的 `GlobalShortcutsProvider`（快捷键列表）。一个页面在更深一层的 id 之下（工作项、迭代、模块、视图等）时，以那个 id 给自己的子树 key。之后的 M 把属于工作区、项目的界面状态放在这些 key 之下，store 持有的开关照样由宿主关上。
 - 代码在 `web/apps/web/core/lib/store-context.tsx`、`core/store/root.store.ts`、`core/lib/session-key.ts`、`core/lib/use-session-swr.ts`、`core/lib/in-session.ts`（`sessionGuard`、`followInSession`）、`core/lib/auth/api-client.ts`、`core/lib/auth/auth-middleware.ts`（`SessionChangedError`）和 `core/lib/wrappers/store-wrapper.tsx`；照这些规则写的 store 可以看 `core/lib/reconciled.ts` 和用它的 `core/store/user/api-token.store.ts`、`core/store/workspace/index.ts`；测试和变异见 M2/P4 spec 2.8、M2/P5 spec 2.4、M3/P8a spec 2.4。
 
 ---
@@ -724,7 +725,7 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 | M0 | 基础骨架 | 已完成 | [M0-design.md](M0-foundation/M0-design.md) |
 | M1 | 前端瘦身 | 已完成 | [M1-design.md](M1-frontend-trim/M1-design.md) |
 | M2 | 账户认证 | 已完成 | [M2-design.md](M2-auth/M2-design.md) |
-| M3 | 工作区与项目 | 进行中 | [M3-design.md](M3-workspace-project/M3-design.md) |
+| M3 | 工作区与项目 | 已完成 | [M3-design.md](M3-workspace-project/M3-design.md) |
 | M4 | 工作项核心 | 未开始 | — |
 | M5 | 文件 | 未开始 | — |
 | M6 | 迭代与模块 | 未开始 | — |

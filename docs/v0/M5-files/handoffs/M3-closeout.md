@@ -27,6 +27,7 @@ M3（工作区与项目）把工作区图标、项目封面和成员头像留成
 - 共用组件的焦点轮廓在 M5 的页面上是否被 `overflow-hidden` 裁掉，用键盘核对（M3/P11 评审第 6 节）。
 - **界面状态在以 id 为 key 的布局之下**（M3 收尾，负责人 2026-10-13 的 B，[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.7）：工作区的内容（`app/(all)/[workspaceSlug]/layout.tsx` 的 `WorkspaceContentWrapper`）以路由的 slug 为 key，项目的页面和项目的设置（两个 `[projectId]/layout.tsx`）以路由的项目为 key，换工作区、换项目（后退、前进也是）时其下重新挂载，组件状态里的弹窗和状态不带过去。store 持有的弹窗开关由渲染它的宿主在卸载时关上（`useLayoutEffect` 的清理，像 `WorkspaceLevelModals`）；宿主在 key 之上时还要在范围结束时关上。附件的确认框、上传的弹窗和进度属于一个工作区或项目，放在这些布局之下，不要放到它们之上（路由的根、`WorkspaceAuthWrapper`、跨工作区的 store 或 `localStorage`）。
 - **嵌套的 id 没有 key**（M3 收尾）：附件的确认框和上传的弹窗在工作项的页面上（`[issueId]`、`browse/[workItem]`），随 M4 给这些页面的 key 结束（M4 的交接第 6 节）；M5 自己加的、在一个 id 之下的页面同样以那个 id 给它的子树 key，并加一个后退的检查。
+- **附件的错误只是红字**（M3 收尾，浏览器核对之后）：上传附件被拒绝时，`issues/attachment/attachment-upload.tsx:63` 在拖放区里显示 `<p className="text-center text-danger-primary">{fileError}</p>`，读屏不读它，焦点也不去它那里（[收尾 spec](../../M3-workspace-project/specs/closeout.md) 2.17 第 2 条的第三次扫描找到）。它不是一个字段的提示，是 M5 的上传。照 M2、M3 对不属于字段的错误的写法：经共用的拒绝提示（`core/hooks/use-refusal-toast.ts`，在不 `inert` 的提示区域里被读出），或像停用账户的弹窗那样以 `role="alert"` 显示（`account/deactivate-account-modal.tsx:91`）；文字经 `t()`。
 - **关闭条件**：M5 的评审写明附件的确认框和上传弹窗的浏览器核对。
 
 来源：[M3 设计](../../M3-workspace-project/M3-design.md) 13.2 的 M5 一行；M3/P8a、P8b 的 spec 第 5 节，P8a 修复轮的搁置项 P11，M3/P11 评审第 6 节；[M3 收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2 节。
