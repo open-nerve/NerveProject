@@ -63,6 +63,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if ids, err := s.LockInvitationsToDelete(cancelled, []uuid.UUID{w.ID}, bob.MemberID, "carol@corp.com"); !failed(err) || ids != nil {
 		t.Errorf("LockInvitationsToDelete() = %v, %v; want context.Canceled, no invitation", ids, err)
 	}
+	if ids, err := s.LockWorkspaceInvitations(cancelled, w.ID); !failed(err) || ids != nil {
+		t.Errorf("LockWorkspaceInvitations() = %v, %v; want context.Canceled, no invitation", ids, err)
+	}
 	if list, err := s.ListInvitations(cancelled, w.ID); !failed(err) || list != nil {
 		t.Errorf("ListInvitations() = %v, %v; want context.Canceled, no list", list, err)
 	}
@@ -88,8 +91,8 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 		t.Errorf("UpsertPreferences() = %+v, %v; want context.Canceled", got, err)
 	}
 	for name, write := range map[string]func(context.Context, uuid.UUID, uuid.UUID, time.Time) error{
-		"DeleteWorkspace": s.DeleteWorkspace, "DeleteWorkspaceInvitations": s.DeleteWorkspaceInvitations,
-		"DeleteWorkspaceMembers": s.DeleteWorkspaceMembers, "DeleteWorkspacePreferences": s.DeleteWorkspacePreferences,
+		"DeleteWorkspace": s.DeleteWorkspace, "DeleteWorkspaceMembers": s.DeleteWorkspaceMembers,
+		"DeleteWorkspacePreferences": s.DeleteWorkspacePreferences,
 	} {
 		if err := write(cancelled, w.ID, alice, now); !failed(err) {
 			t.Errorf("%s() = %v; want context.Canceled", name, err)

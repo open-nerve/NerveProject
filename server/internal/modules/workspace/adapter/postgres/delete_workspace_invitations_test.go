@@ -25,6 +25,10 @@ import (
 // projects: no step has a row to write.
 type noProjectRows struct{}
 
+func (noProjectRows) LockWorkspaceProjects(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+
 func (noProjectRows) DeleteWorkspaceProjects(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
 	return nil
 }
@@ -46,21 +50,23 @@ func connOf(ctx context.Context, pool *pgxpool.Pool) (*pgconn.PgConn, error) {
 	return tx.Conn().PgConn(), nil
 }
 
-// DeleteWorkspaceInvitations takes the workspace's undeleted invitations
-// in id order, whatever order the rows lie in, FOR NO KEY UPDATE, before it
-// deletes them, and takes no other row (M3 design 3.6 convention 5; ruling
-// G-1). acme's undeleted invitations, to zoe, yan and xia, have ids in that
-// order, but lie the other way round, in the table as in each index but the
-// primary key's: xia's was inserted first, zoe's last, and the addresses
-// sort the other way. beta's invitation and acme's deleted one, to wes, have
-// the smallest ids. Three transactions hold zoe's, yan's and xia's FOR
-// SHARE, one each, and let go one at a time, each step's probe naming the
-// holder the deletion then waits behind: zoe's first, holding no row; then
-// yan's, holding zoe's; then xia's, holding zoe's and yan's. In the table's
-// order, or that of an index other than the primary key's, it would wait
-// behind xia's first. Once xia's lets go it deletes the three, at its moment
-// and by its account; wes's keeps its deletion, and beta's is not deleted.
-func TestDeleteWorkspaceInvitationsLocksInIDOrder(t *testing.T) {
+// The deletion's lock of the workspace's invitations
+// (LockWorkspaceInvitations) takes its undeleted ones in id order, whatever
+// order the rows lie in, FOR NO KEY UPDATE, and no other row, and the
+// deletion then deletes those (DeleteInvitations; M3 design 3.6 convention
+// 5; ruling G-1). acme's undeleted invitations, to zoe, yan and xia, have
+// ids in that order, but lie the other way round, in the table as in each
+// index but the primary key's: xia's was inserted first, zoe's last, and
+// the addresses sort the other way. beta's invitation and acme's deleted
+// one, to wes, have the smallest ids. Three transactions hold zoe's, yan's
+// and xia's FOR SHARE, one each, and let go one at a time, each step's
+// probe naming the holder the deletion then waits behind: zoe's first,
+// holding no row; then yan's, holding zoe's; then xia's, holding zoe's and
+// yan's. In the table's order, or that of an index other than the primary
+// key's, it would wait behind xia's first. Once xia's lets go it deletes
+// the three, at its moment and by its account; wes's keeps its deletion,
+// and beta's is not deleted.
+func TestLockWorkspaceInvitationsLocksInIDOrder(t *testing.T) {
 	s, pool := newStoreWithConns(t, 8)
 	alice := newAccount(t, pool, "alice@corp.com")
 	acme, beta := newWorkspace(t, s, "acme", "acme", alice).ID, newWorkspace(t, s, "beta", "beta", alice).ID
@@ -92,7 +98,11 @@ func TestDeleteWorkspaceInvitationsLocksInIDOrder(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		done <- postgres.NewTxManager(pool, 10*time.Second).WithinTx(ctx, func(ctx context.Context) error {
-			return s.DeleteWorkspaceInvitations(ctx, acme, alice, later)
+			ids, err := s.LockWorkspaceInvitations(ctx, acme)
+			if err != nil {
+				return err
+			}
+			return s.DeleteInvitations(ctx, ids, alice, later)
 		})
 	}()
 	// locked names the rows the deletion holds FOR NO KEY UPDATE: a FOR
@@ -131,10 +141,10 @@ func TestDeleteWorkspaceInvitationsLocksInIDOrder(t *testing.T) {
 	select {
 	case err := <-done:
 		if err != nil {
-			t.Fatalf("DeleteWorkspaceInvitations() = %v", err)
+			t.Fatalf("LockWorkspaceInvitations(), then DeleteInvitations() = %v", err)
 		}
 	case <-ctx.Done():
-		t.Fatal("DeleteWorkspaceInvitations() did not end within 20s")
+		t.Fatal("LockWorkspaceInvitations(), then DeleteInvitations() did not end within 20s")
 	}
 	for _, id := range all {
 		want := "deleted at " + at(t, pool, later) + " at " + at(t, pool, later) + " by " + alice.String()

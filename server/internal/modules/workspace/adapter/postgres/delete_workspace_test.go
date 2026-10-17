@@ -56,14 +56,23 @@ func (d deletion) deletedAtBy(when time.Time, by uuid.UUID) bool {
 	return d.deletedAt != nil && d.deletedAt.Equal(when) && d.updatedAt.Equal(when) && d.updatedBy != nil && *d.updatedBy == by
 }
 
-// deleteRows runs the store's four steps of a workspace's deletion, of the
-// workspace's own rows, in the cascade's order (M3 design 3.6), on the
-// workspace id, by the account by at now; the first that fails stops it.
+// deleteRows runs the store's part of a workspace's deletion, of the
+// workspace's own rows, in the use case's order (M3 design 3.6, M4 design
+// 3.5), on the workspace id, by the account by at now: the lock of its
+// invitations, then the four steps, the invitations' on those it locked;
+// the first that fails stops it.
 func deleteRows(ctx context.Context, s *postgresadapter.Store, id, by uuid.UUID, now time.Time) error {
-	for _, step := range []func(ctx context.Context, id, by uuid.UUID, now time.Time) error{
-		s.DeleteWorkspace, s.DeleteWorkspaceInvitations, s.DeleteWorkspaceMembers, s.DeleteWorkspacePreferences,
+	invitations, err := s.LockWorkspaceInvitations(ctx, id)
+	if err != nil {
+		return err
+	}
+	for _, step := range []func() error{
+		func() error { return s.DeleteWorkspace(ctx, id, by, now) },
+		func() error { return s.DeleteInvitations(ctx, invitations, by, now) },
+		func() error { return s.DeleteWorkspaceMembers(ctx, id, by, now) },
+		func() error { return s.DeleteWorkspacePreferences(ctx, id, by, now) },
 	} {
-		if err := step(ctx, id, by, now); err != nil {
+		if err := step(); err != nil {
 			return err
 		}
 	}
@@ -231,9 +240,14 @@ func (failingSettings) DeleteWorkspacePreferences(context.Context, uuid.UUID, uu
 	return errDiskFull
 }
 
-// noProjects is the project module's cascade: the deletion's last step,
-// which the failure comes before; a deletion demotes no one.
+// noProjects is the project module's cascade over a workspace without
+// projects: its lock finds none, and the deletion's last step comes after
+// the failure; a deletion demotes no one.
 type noProjects struct{}
+
+func (noProjects) LockWorkspaceProjects(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
 
 func (noProjects) DeleteWorkspaceProjects(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
 	return errors.New("the projects' step ran after the failed one")

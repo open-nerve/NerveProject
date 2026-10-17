@@ -113,11 +113,11 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 						t.Errorf("the write at its gate holds %s; want %s", got, want)
 					}
 					demoted = run(func() error {
-						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store, store))
+						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store, store, store))
 					})
 				} else {
 					demoted = run(func() error {
-						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, gatedDemoter{store, g}, store))
+						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store, gatedDemoter{store, g}, store))
 					})
 					held(t, ctx, g, demoted, "the demotion")
 					wrote = run(write)

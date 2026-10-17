@@ -17,9 +17,11 @@ import (
 // transaction, after its lock and its decision, just before it writes
 // (P2 spec 2.6): a write
 // that queued behind another on the lock never stamps an earlier time than
-// the one it waited for. The deletion's cascade uses that one read for
-// every step, a change to guest or a restoring as a guest for the
-// projects' step, and a removal and a leaving for each step of the ending.
+// the one it waited for. The deletion reads it after the locks of its
+// invitations and its projects too (M4 design 3.5), and its cascade uses
+// that one read for every step, a change to guest or a restoring as a
+// guest for the projects' step, and a removal and a leaving for each step
+// of the ending.
 // reactivate-member, which checks no permission, reads it after the
 // workspace's lock and the membership's read; the deactivation's
 // memberships, after every workspace's lock, the check of the only admin
@@ -52,7 +54,8 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			err := app.NewDeleteWorkspace(f.workspaces, f.projects, f.auth, f.tx, clockAt{now, f.log}, slog.New(slog.DiscardHandler)).
 				Execute(as(alice), "acme")
 			return f.log.calls, err
-		}, slices.Concat(lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionDelete), []string{"Now"}, cascadeCalls(alice, acme))},
+		}, slices.Concat(lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionDelete), deletionLocks(acme), []string{"Now"},
+			cascadeCalls(alice, acme))},
 		{"updateWorkspaceMember", func() ([]string, error) {
 			f := newMembers()
 			_, err := app.NewUpdateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, &fakeTx{}, clockAt{clockNow, f.log}).

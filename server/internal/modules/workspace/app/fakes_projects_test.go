@@ -3,6 +3,7 @@ package app_test
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 	"uuid"
 
@@ -17,11 +18,21 @@ var projectSoleAdmin = shared.NewError(shared.KindConflict, "project.sole_admin"
 		"while it has other active members. It must first be given another admin, or be deleted.")
 
 // fakeProjects is the project module's cascade (app.ProjectCascade): it
-// logs each call with its arguments, and fails a method with the error set
-// for it, wrapped as the module wraps it.
+// logs each call with its arguments, answers LockWorkspaceProjects with
+// locked, and fails a method with the error set for it, wrapped as the
+// module wraps it.
 type fakeProjects struct {
-	log  *callLog
-	errs map[string]error // by method, e.g. "DeleteWorkspaceProjects"
+	log    *callLog
+	locked []uuid.UUID
+	errs   map[string]error // by method, e.g. "DeleteWorkspaceProjects"
+}
+
+func (f *fakeProjects) LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	f.log.add(ctx, "LockWorkspaceProjects %s", workspaceID)
+	if err := f.errs["LockWorkspaceProjects"]; err != nil {
+		return nil, fmt.Errorf("lock the workspace's projects: %w", err)
+	}
+	return slices.Clone(f.locked), nil
 }
 
 func (f *fakeProjects) DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {

@@ -17,13 +17,25 @@ import (
 // changes.
 type Cascade struct {
 	projects ProjectsDeleter
+	locker   WorkspaceProjectsLocker
 	members  MemberDemoter
 	enders   MembershipEnder
 }
 
-// NewCascade returns the cascade over projects, members and enders.
-func NewCascade(projects ProjectsDeleter, members MemberDemoter, enders MembershipEnder) *Cascade {
-	return &Cascade{projects: projects, members: members, enders: enders}
+// NewCascade returns the cascade over projects, locker, members and
+// enders.
+func NewCascade(projects ProjectsDeleter, locker WorkspaceProjectsLocker, members MemberDemoter, enders MembershipEnder) *Cascade {
+	return &Cascade{projects: projects, locker: locker, members: members, enders: enders}
+}
+
+// LockWorkspaceProjects locks the workspace's undeleted projects, archived
+// ones too, FOR NO KEY UPDATE in id order, and returns their ids in that
+// order (M4 design 3.5): deleteWorkspace takes it under its FOR NO KEY
+// UPDATE of the workspace and after the lock of the invitations, before it
+// reads its moment, so that the moment is later than that of every write
+// that holds one of these projects.
+func (c *Cascade) LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	return c.locker.LockWorkspaceProjects(ctx, workspaceID)
 }
 
 // DeleteWorkspaceProjects soft-deletes the workspace's projects and the

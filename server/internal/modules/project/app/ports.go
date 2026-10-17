@@ -298,6 +298,15 @@ type StateRow struct {
 	Now         time.Time
 }
 
+// WorkspaceProjectsLocker takes deleteWorkspace's lock of the workspace's
+// projects (M4 design 3.5), in the transaction ctx carries.
+type WorkspaceProjectsLocker interface {
+	// LockWorkspaceProjects locks FOR NO KEY UPDATE, in id order, the
+	// workspace's undeleted projects, archived ones too, and returns their
+	// ids in that order.
+	LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error)
+}
+
 // MemberDemoter makes an account a guest in a workspace's projects (M3
 // design 3.3, 3.6): his projects locked first, then his memberships of them
 // in one statement. Each method runs in the transaction ctx carries.

@@ -33,6 +33,10 @@ import (
 // it changes, and returns a failure as itself, so the caller's whole write
 // rolls back.
 type Cascade interface {
+	// LockWorkspaceProjects locks the workspace's undeleted projects FOR NO
+	// KEY UPDATE in id order and returns their ids: deleteWorkspace's lock
+	// of its projects, before it reads its moment (M4 design 3.5).
+	LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error)
 	// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
 	// rows under them: deleteWorkspace's last step.
 	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
@@ -58,7 +62,7 @@ type CascadeDeps struct {
 // it.
 func NewCascade(d CascadeDeps) Cascade {
 	store := postgresadapter.New(d.Pool)
-	return app.NewCascade(store, store, store)
+	return app.NewCascade(store, store, store, store)
 }
 
 // ProjectAccess reads a project for the access module's decision (M3

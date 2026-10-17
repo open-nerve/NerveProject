@@ -67,6 +67,17 @@ func (s *Store) DeleteLabels(ctx context.Context, d app.Deletion) error {
 	return nil
 }
 
+// LockWorkspaceProjects locks FOR NO KEY UPDATE, in id order, the
+// workspace's undeleted projects, archived ones too, and returns their ids
+// (app.WorkspaceProjectsLocker).
+func (s *Store) LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).LockWorkspaceProjects(ctx, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("lock the workspace's projects: %w", err)
+	}
+	return ids, nil
+}
+
 // LockMemberProjects locks FOR NO KEY UPDATE, in id order, the workspace's
 // undeleted projects in which userID has an undeleted membership, active or
 // not, and returns their ids (app.MemberDemoter).

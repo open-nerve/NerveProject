@@ -104,6 +104,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if ids, err := s.LockMemberProjects(cancelled, acme, alice); !failed(err) || ids != nil {
 		t.Errorf("LockMemberProjects() = %v, %v; want context.Canceled, not no project", ids, err)
 	}
+	if ids, err := s.LockWorkspaceProjects(cancelled, acme); !failed(err) || ids != nil {
+		t.Errorf("LockWorkspaceProjects() = %v, %v; want context.Canceled, not no project", ids, err)
+	}
 	if n, err := s.CountInactive(cancelled, acme, bob); !failed(err) || n != 0 {
 		t.Errorf("CountInactive() = %d, %v; want context.Canceled, not a count", n, err)
 	}

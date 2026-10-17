@@ -163,17 +163,18 @@ func (a gatedAccepter) MemberOf(ctx context.Context, workspaceID, userID uuid.UU
 }
 
 // gatedDeleter stops a deletion after its lock and decision, before its
-// first write.
+// locks of the rows under the workspace (M4 design 3.5) and its first
+// write.
 type gatedDeleter struct {
 	*workspacepg.Store
 	gate *gate
 }
 
-func (d gatedDeleter) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+func (d gatedDeleter) LockWorkspaceInvitations(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
 	if err := d.gate.wait(ctx); err != nil {
-		return err
+		return nil, err
 	}
-	return d.Store.DeleteWorkspace(ctx, id, by, now)
+	return d.Store.LockWorkspaceInvitations(ctx, workspaceID)
 }
 
 // Interleaving 3: the acceptance first holds acme's row; the deletion waits

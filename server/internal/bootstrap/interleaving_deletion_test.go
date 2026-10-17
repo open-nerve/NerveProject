@@ -32,8 +32,9 @@ import (
 // behind the API, the deletion through workspace's use case with project's
 // cascade as bootstrap wires it, each on the system's clock. Every write on
 // a project holds its workspace FOR SHARE (M3 design 3.6 convention 2); the
-// deletion holds it FOR NO KEY UPDATE and reads its time once it does, so
-// it waits for the writes in flight and writes one time, after theirs, into
+// deletion holds it FOR NO KEY UPDATE, then its invitations and its
+// projects (M4 design 3.5), and reads its time once it holds them, so it
+// waits for the writes in flight and writes one time, after theirs, into
 // every row it deletes (3.3). Every wait has a deadline.
 
 // deleteAcme is alice's deletion of acme over workspaces, with project's
@@ -269,5 +270,47 @@ func TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize(t *testing.T) {
 	if n := r.deletedWithAcme(t, "SELECT deleted_at, updated_at, updated_by_id, created_at FROM project_members WHERE member_id = ANY ($1::uuid[])",
 		[]uuid.UUID{carol, dave}); n != 3 {
 		t.Errorf("%d memberships of carol's and dave's, want 3: hers of Ops and Web, his of Web", n)
+	}
+}
+
+// A workspace's deletion waits for a write that holds one of its projects
+// FOR NO KEY UPDATE and not the workspace's row, and reads its time after
+// that write ends (M4 design 3.5): a transaction holds Web so, as a work
+// item's write will, which locks the project's row alone. Alice's deletion
+// of acme locks acme, its invitations, then its projects in id order, and
+// waits for Web's row; once the holder commits, it deletes Web at its one
+// time, no earlier than the commit. A deletion that read its time before
+// it locked the projects would delete Web at a time before the holder's
+// commit, which the holder's rows would come after.
+func TestAWorkspacesDeletionWaitsForAWriteHoldingOneOfItsProjects(t *testing.T) {
+	r := newGrowthRace(t, false)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	holder, err := r.pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = holder.Rollback(context.Background()) }()
+	if _, err := holder.Exec(ctx, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", r.web); err != nil {
+		t.Fatal(err)
+	}
+	deleted := run(func() error { return r.deleteAcme(ctx, workspacepg.New(r.pool)) })
+	pgtest.WaitForLockWaitOn(t, r.pool, "projects", 5*time.Second)
+	released := time.Now().Truncate(time.Microsecond)
+	if err := holder.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := result(t, ctx, deleted, "the deletion"); err != nil {
+		t.Fatal(err)
+	}
+	if n := r.deletedWithAcme(t, "SELECT deleted_at, updated_at, updated_by_id, created_at FROM projects WHERE id = $1", r.web); n != 1 {
+		t.Fatalf("%d rows of Web, want 1", n)
+	}
+	var at time.Time
+	if err := r.pool.QueryRow(ctx, "SELECT deleted_at FROM workspaces WHERE slug = 'acme'").Scan(&at); err != nil {
+		t.Fatal(err)
+	}
+	if at.Before(released) {
+		t.Errorf("acme deleted at %v, before the holder of Web let go at %v", at, released)
 	}
 }

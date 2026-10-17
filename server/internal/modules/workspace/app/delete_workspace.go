@@ -26,25 +26,33 @@ func NewDeleteWorkspace(workspaces WorkspaceDeleter, projects ProjectCascade, au
 	return &DeleteWorkspace{workspaces: workspaces, projects: projects, auth: auth, tx: tx, clock: clock, logger: logger}
 }
 
-// cascade is what deleting a workspace soft-deletes, in the order of M3
-// design 3.6: the workspace row, then the rows under it, each step at the
-// same moment (the invitations locked in id order first, convention 5's
-// exception), and last the projects and the rows under them, through
-// ProjectCascade (M3 design 3.3).
-func (u *DeleteWorkspace) cascade() []func(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	return []func(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error{
-		u.workspaces.DeleteWorkspace,
-		u.workspaces.DeleteWorkspaceInvitations,
-		u.workspaces.DeleteWorkspaceMembers,
-		u.workspaces.DeleteWorkspacePreferences,
-		u.projects.DeleteWorkspaceProjects,
+// cascade soft-deletes, by by at now, in the order of M3 design 3.6: the
+// workspace row, the invitations it locked, the memberships, the display
+// settings, and last the projects and the rows under them, through
+// ProjectCascade (M3 design 3.3). A failing step comes back as itself and
+// the steps after it do not run.
+func (u *DeleteWorkspace) cascade(ctx context.Context, id uuid.UUID, invitations []uuid.UUID, by uuid.UUID, now time.Time) error {
+	for _, step := range []func() error{
+		func() error { return u.workspaces.DeleteWorkspace(ctx, id, by, now) },
+		func() error { return u.workspaces.DeleteInvitations(ctx, invitations, by, now) },
+		func() error { return u.workspaces.DeleteWorkspaceMembers(ctx, id, by, now) },
+		func() error { return u.workspaces.DeleteWorkspacePreferences(ctx, id, by, now) },
+		func() error { return u.projects.DeleteWorkspaceProjects(ctx, id, by, now) },
+	} {
+		if err := step(); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-// Execute deletes the workspace in one transaction (M3 design 3.6): the
-// workspace row FOR NO KEY UPDATE, the decision on workspace.delete, then
-// the cascade, every step at the one moment the clock gives under the lock.
-// Nobody's last_workspace_id is cleared (M3 design 3.14).
+// Execute deletes the workspace in one transaction (M3 design 3.6, M4
+// design 3.5): the workspace row FOR NO KEY UPDATE, the decision on
+// workspace.delete, then its invitations and then its projects FOR NO KEY
+// UPDATE, each in id order, then the cascade, every step at the one moment
+// the clock gives after those locks: a write that held one of the projects
+// has committed by then, so the deletion's moment is never earlier than
+// its. Nobody's last_workspace_id is cleared (M3 design 3.14).
 func (u *DeleteWorkspace) Execute(ctx context.Context, slug string) error {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -56,11 +64,15 @@ func (u *DeleteWorkspace) Execute(ctx context.Context, slug string) error {
 		if err != nil {
 			return err
 		}
-		now := u.clock.Now()
-		for _, step := range u.cascade() {
-			if err := step(ctx, id, actor.UserID, now); err != nil {
-				return err
-			}
+		invitations, err := u.workspaces.LockWorkspaceInvitations(ctx, id)
+		if err != nil {
+			return err
+		}
+		if _, err := u.projects.LockWorkspaceProjects(ctx, id); err != nil {
+			return err
+		}
+		if err := u.cascade(ctx, id, invitations, actor.UserID, u.clock.Now()); err != nil {
+			return err
 		}
 		deleted = id
 		return nil
