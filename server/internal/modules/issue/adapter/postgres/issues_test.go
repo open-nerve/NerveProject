@@ -10,6 +10,7 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
@@ -27,28 +28,26 @@ func linkRows(p project, issue uuid.UUID, by uuid.UUID, at time.Time, targets ..
 	return r
 }
 
+// textRows are the answer of query, whose one column is text, in its order.
+func textRows(t *testing.T, pool *pgxpool.Pool, query string, args ...any) []string {
+	t.Helper()
+	rows, err := pool.Query(context.Background(), query, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	texts, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return texts
+}
+
 // linkTable is every row of table, in id order, as text: its id, its work
 // item's, its target in column, its audit columns, whether it is deleted.
 func linkTable(t *testing.T, pool *pgxpool.Pool, table, column string) []string {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), `SELECT format('%s %s/%s/%s %s by %s/%s at %s/%s deleted %s', id, workspace_id, project_id, issue_id, `+
+	return textRows(t, pool, `SELECT format('%s %s/%s/%s %s by %s/%s at %s/%s deleted %s', id, workspace_id, project_id, issue_id, `+
 		column+`, created_by_id, updated_by_id, created_at, updated_at, deleted_at IS NOT NULL) FROM `+table+` ORDER BY id`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []string
-	for rows.Next() {
-		var s string
-		if err := rows.Scan(&s); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, s)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	return out
 }
 
 // linkLine is linkTable's line of a row id of table under the work item
@@ -148,23 +147,9 @@ func TestCreatingAWorkItemWritesItsRows(t *testing.T) {
 			t.Errorf("%s:\n%v\nwant %d rows, first\n%v", tt.table, got, tt.all, want)
 		}
 	}
-	var activity []string
-	q, err := pool.Query(ctx, `SELECT format('%s %s/%s/%s %s %L %L→%L %L→%L %L %s/%s/%s %s/%s %L', id, workspace_id, project_id, issue_id, verb,
-		field, old_value, new_value, old_identifier, new_identifier, comment, actor_id, created_by_id, updated_by_id, created_at = $1,
+	activity := textRows(t, pool, `SELECT format('%s %s/%s/%s %s %L %L→%L %L→%L %L %s/%s/%s %s/%s %L', id, workspace_id, project_id, issue_id,
+		verb, field, old_value, new_value, old_identifier, new_identifier, comment, actor_id, created_by_id, updated_by_id, created_at = $1,
 		updated_at = $1, deleted_at) FROM issue_activities ORDER BY id`, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for q.Next() {
-		var line string
-		if err := q.Scan(&line); err != nil {
-			t.Fatal(err)
-		}
-		activity = append(activity, line)
-	}
-	if err := q.Err(); err != nil {
-		t.Fatal(err)
-	}
 	place := fmt.Sprintf("%s/%s/%s", web.workspace, web.id, id)
 	by := fmt.Sprintf("%s/%s/%s", alice, alice, alice)
 	wantActivity := []string{
@@ -208,7 +193,7 @@ func TestInsertSubscribersSubscribesEachAccountOnce(t *testing.T) {
 // The greatest sort order of a state's undeleted work items, an archived
 // one's too, is where a new one goes after (M4 design 3.7); none for a
 // state without work items. A deleted work item, another state's and
-// another project's do not count.
+// another project's, though in the state, do not count.
 func TestGreatestSortOrder(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -226,7 +211,7 @@ func TestGreatestSortOrder(t *testing.T) {
 		sort  float64
 		set   string
 	}{{web, web.state, 100, ""}, {web, web.state, 300, "archived_at = now()"}, {web, web.state, 900, "deleted_at = now()"},
-		{web, other, 500, ""}, {ops, ops.state, 700, ""}} {
+		{web, other, 500, ""}, {ops, web.state, 700, ""}} {
 		id := uuid.NewV7()
 		newIssue(t, pool, w.p, id, n+1, alice)
 		exec(t, pool, "UPDATE issues SET state_id = $2, sort_order = $3 WHERE id = $1", id, w.state, w.sort)
@@ -239,9 +224,11 @@ func TestGreatestSortOrder(t *testing.T) {
 	}
 }
 
-// A deleted work item, and one that is not there, read as none; a read or
-// a write that fails answers its error as itself: never a work item, nor
-// "none", nor a sort order (M4 design 3.5).
+// A work item without assignees or labels reads with neither, nil and not
+// empty; a deleted work item, and one that is not there, read as none. A
+// read or a write that fails answers its error as itself: never a work
+// item, nor "none", nor a sort order, where the right answers are the work
+// item and its sort order, 65535 (M4 design 3.5).
 func TestAFailedIssueStatementIsAnError(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -249,12 +236,8 @@ func TestAFailedIssueStatementIsAnError(t *testing.T) {
 	id := uuid.NewV7()
 	newIssue(t, pool, web, id, 1, alice)
 	ctx := context.Background()
-	if got, found, err := s.GetIssue(ctx, uuid.NewV7()); err != nil || found || got.ID != (uuid.UUID{}) {
-		t.Errorf("GetIssue() of no work item = %+v, %v, %v; want none", got, found, err)
-	}
-	exec(t, pool, "UPDATE issues SET deleted_at = now() WHERE id = $1", id)
-	if got, found, err := s.GetIssue(ctx, id); err != nil || found || got.ID != (uuid.UUID{}) {
-		t.Errorf("GetIssue() of a deleted work item = %+v, %v, %v; want none", got, found, err)
+	if got, found, err := s.GetIssue(ctx, id); err != nil || !found || got.ID != id || got.AssigneeIDs != nil || got.LabelIDs != nil {
+		t.Errorf("GetIssue() of a work item without assignees or labels = %+v, %v, %v; want it, with nil for both", got, found, err)
 	}
 
 	cancelled, cancel := context.WithCancel(ctx)
@@ -265,6 +248,15 @@ func TestAFailedIssueStatementIsAnError(t *testing.T) {
 	if greatest, err := s.GreatestSortOrder(cancelled, web.id, web.state); !errors.Is(err, context.Canceled) || greatest != nil {
 		t.Errorf("GreatestSortOrder() = %v, %v; want context.Canceled", greatest, err)
 	}
+
+	if got, found, err := s.GetIssue(ctx, uuid.NewV7()); err != nil || found || got.ID != (uuid.UUID{}) {
+		t.Errorf("GetIssue() of no work item = %+v, %v, %v; want none", got, found, err)
+	}
+	exec(t, pool, "UPDATE issues SET deleted_at = now() WHERE id = $1", id)
+	if got, found, err := s.GetIssue(ctx, id); err != nil || found || got.ID != (uuid.UUID{}) {
+		t.Errorf("GetIssue() of a deleted work item = %+v, %v, %v; want none", got, found, err)
+	}
+
 	if err := s.InsertIssue(cancelled, app.IssueRow{ID: uuid.NewV7(), WorkspaceID: web.workspace, ProjectID: web.id, SequenceID: 2, Name: "a",
 		StateID: web.state, Priority: domain.PriorityNone, By: alice, At: now}); !errors.Is(err, context.Canceled) {
 		t.Errorf("InsertIssue() = %v; want context.Canceled", err)
