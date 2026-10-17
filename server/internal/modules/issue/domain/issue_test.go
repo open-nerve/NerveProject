@@ -30,17 +30,18 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 		in   NewIssue
 		want NewIssue
 	}{
-		{"one character, trimmed, none", NewIssue{Name: "  x\t"}, NewIssue{Name: "x", Priority: PriorityNone}},
-		{"255 characters", NewIssue{Name: strings.Repeat("é", 255), Priority: PriorityLow}, NewIssue{Name: strings.Repeat("é", 255), Priority: PriorityLow}},
-		{"everything", NewIssue{Name: "Fix", StateID: &state, Priority: PriorityUrgent, AssigneeIDs: ids(100), LabelIDs: ids(100)},
-			NewIssue{Name: "Fix", StateID: &state, Priority: PriorityUrgent}},
+		{"one character, trimmed, none", NewIssue{Name: "  x\t"}, NewIssue{Name: "x", Priority: ptr(PriorityNone)}},
+		{"255 characters", NewIssue{Name: strings.Repeat("é", 255), Priority: ptr(PriorityLow)},
+			NewIssue{Name: strings.Repeat("é", 255), Priority: ptr(PriorityLow)}},
+		{"everything", NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent), AssigneeIDs: ids(100), LabelIDs: ids(100)},
+			NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent)}},
 	}
 	for _, p := range priorities {
 		tests = append(tests, struct {
 			name string
 			in   NewIssue
 			want NewIssue
-		}{string(p), NewIssue{Name: "a", Priority: p}, NewIssue{Name: "a", Priority: p}})
+		}{string(p), NewIssue{Name: "a", Priority: ptr(p)}, NewIssue{Name: "a", Priority: ptr(p)}})
 	}
 	for _, tt := range tests {
 		got, err := CheckNewIssue(tt.in)
@@ -52,14 +53,14 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 }
 
 // A blank name, one of 256 characters, one with NUL, a priority outside the
-// five or in another case, an account or a label named twice, more than a
-// hundred of either: each refused, all of them in one 422 that names each by
-// its field and place. A list too long is reported alone: its ids are not
-// looked at.
+// five, in another case or given empty, an account or a label named twice,
+// a hundred and one of either: each refused, all of them in one 422 that
+// names each by its field and place. A list too long is reported alone: its
+// ids, a repeat among them, are not looked at.
 func TestCheckNewIssueReportsEveryProblem(t *testing.T) {
 	a, b := uuid.NewV7(), uuid.NewV7()
-	many := append(ids(MaxAssignees), a)
-	many = append(many, a)
+	many := append(ids(MaxAssignees-1), a, a)
+	priority := []shared.FieldError{{Field: "priority", Code: "invalid_format", Message: "must be one of urgent, high, medium, low, none"}}
 	tests := []struct {
 		name string
 		in   NewIssue
@@ -69,20 +70,21 @@ func TestCheckNewIssueReportsEveryProblem(t *testing.T) {
 		{"256 characters", NewIssue{Name: strings.Repeat("x", 256)},
 			[]shared.FieldError{{Field: "name", Code: "too_long", Message: "must be at most 255 characters"}}},
 		{"NUL", NewIssue{Name: "a\x00b"}, []shared.FieldError{{Field: "name", Code: "invalid_format", Message: "must not contain a NUL character"}}},
-		{"another case", NewIssue{Name: "a", Priority: "Urgent"},
-			[]shared.FieldError{{Field: "priority", Code: "invalid_format", Message: "must be one of urgent, high, medium, low, none"}}},
+		{"another case", NewIssue{Name: "a", Priority: ptr[Priority]("Urgent")}, priority},
+		{"given empty", NewIssue{Name: "a", Priority: ptr[Priority]("")}, priority},
 		{"repeats", NewIssue{Name: "a", AssigneeIDs: []uuid.UUID{a, b, a, b, a}, LabelIDs: []uuid.UUID{b, b}}, []shared.FieldError{
 			{Field: "assignee_ids[2]", Code: "duplicate", Message: "is listed before"},
 			{Field: "assignee_ids[3]", Code: "duplicate", Message: "is listed before"},
 			{Field: "assignee_ids[4]", Code: "duplicate", Message: "is listed before"},
 			{Field: "label_ids[1]", Code: "duplicate", Message: "is listed before"},
 		}},
-		{"too many, with repeats, and everything else", NewIssue{Name: "", Priority: "high!", AssigneeIDs: many, LabelIDs: many}, []shared.FieldError{
-			{Field: "name", Code: "too_short", Message: "must not be empty"},
-			{Field: "priority", Code: "invalid_format", Message: "must be one of urgent, high, medium, low, none"},
-			{Field: "assignee_ids", Code: "too_long", Message: "must name at most 100"},
-			{Field: "label_ids", Code: "too_long", Message: "must name at most 100"},
-		}},
+		{"too many, with repeats, and everything else", NewIssue{Name: "", Priority: ptr[Priority]("high!"), AssigneeIDs: many, LabelIDs: many},
+			[]shared.FieldError{
+				{Field: "name", Code: "too_short", Message: "must not be empty"},
+				priority[0],
+				{Field: "assignee_ids", Code: "too_long", Message: "must name at most 100"},
+				{Field: "label_ids", Code: "too_long", Message: "must name at most 100"},
+			}},
 	}
 	for _, tt := range tests {
 		var e *shared.Error
@@ -103,10 +105,11 @@ func TestCanAssign(t *testing.T) {
 	}
 }
 
-// The accounts asked for, in id order, when each may be assigned; each who
-// may not be, a guest or no member, is a problem at his index, and then no
-// one is assigned. None asked for: the default assignee if he is an active
-// admin or member, else no one, without a problem (M4 design 3.7).
+// The accounts asked for, in id order, when each may be assigned, and the
+// default assignee not added to them, though he may be; each who may not
+// be, a guest or no member, is a problem at his index, and then no one is
+// assigned. None asked for: the default assignee if he is an active admin
+// or member, else no one, without a problem (M4 design 3.7).
 func TestAssignees(t *testing.T) {
 	ann, ben, gus, out := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	roles := map[uuid.UUID]shared.Role{ann: shared.RoleAdmin, ben: shared.RoleMember, gus: shared.RoleGuest}
@@ -121,6 +124,7 @@ func TestAssignees(t *testing.T) {
 		problems []shared.FieldError
 	}{
 		{"asked for, in id order; the default is not used", []uuid.UUID{ben, ann}, &gus, []uuid.UUID{ann, ben}, nil},
+		{"asked for: an assignable default not asked for is not added", []uuid.UUID{ben}, &ann, []uuid.UUID{ben}, nil},
 		{"a guest and no member", []uuid.UUID{ann, gus, ben, out}, &ann, nil, []shared.FieldError{notAllowed("assignee_ids[1]"),
 			notAllowed("assignee_ids[3]")}},
 		{"none asked for: the default member", nil, &ben, []uuid.UUID{ben}, nil},

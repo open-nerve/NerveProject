@@ -4059,31 +4059,31 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**（spec 2.5；M4 设计 3.7、3.12、3.13）
 - `issue/domain/issue.go`（包说明在这里）：
   - 类型：`Priority`（五个值）、`StateGroup`（`GroupCompleted`、`GroupTriage`）、`Issue`、`NewIssue`；
-  - `CheckNewIssue(n) (NewIssue, error)`：名称去掉首尾空白之后 1–255 个字符、没有 NUL；优先级是五个之一；负责人、标签各至多 100 个、不重复（`duplicate`）；全部问题在一个 422 `validation_failed` 里一次报出；
+  - `CheckNewIssue(n) (NewIssue, error)`：名称去掉首尾空白之后 1–255 个字符、没有 NUL；优先级是五个之一（`NewIssue.Priority` 是指针：`nil` 是没给，为 `none`；给出的空串和别的值一样被拒绝）；负责人、标签各至多 100 个、不重复（`duplicate`）；全部问题在一个 422 `validation_failed` 里一次报出；
   - `CanAssign(role)`：项目的管理员、成员；
   - `Assignees(asked, defaultAssignee, roles)`：
     - 请求的负责人按 `id` 排序，各须能指派，否则 `assignee_ids[i]` `not_allowed`（`i` 是请求中的位置）；
-    - 不带负责人时，项目的默认负责人在他能指派时成为负责人，否则没有；
+    - 不带负责人时，项目的默认负责人在他能指派时成为负责人，否则没有；带了负责人时不加上他；
   - `UnknownLabel(i)`、`StateNotAllowed()`：依赖行的问题；
   - `SortOrderAfter(greatest)`：最大值加 10000，没有时 65535；
   - `CompletedAt(group, now)`："已完成"组为当前时刻，否则没有。
 - `issue/domain/activity.go`：
-  - `Verb`（`created`、`updated`、`deleted`）、`Activity`、`Assignee`；
+  - `Verb`（`created`、`updated`：P1a 写的两个；`deleted` 随写它的第一行再加）、`Activity`、`Assignee`；
   - `CreationActivity(assignees)`：第 1 行 `created`，"created the work item"；第 2 行每个负责人一行：`field` 为 `assignees`、`old_value` 为空串、`new_value` 是他的显示名、`new_identifier` 是他的 `id`，"added assignee "。
 - `issue/domain/errors.go`：`ErrProjectNotFound`、`ErrProjectArchived`（码 `project.not_found`、`project.archived`；P1a 没有新的 `issue.*` 码）。
 
 **Tests:**（单元）
 - `TestCheckNewIssueAccepts`：去掉首尾空白，边界的长度、个数。
-- `TestCheckNewIssueReportsEveryProblem`：每个问题和它的字段、码，几个问题一次报出。
+- `TestCheckNewIssueReportsEveryProblem`：每个问题和它的字段、码，几个问题一次报出；边界之外的第一个（256 个字符、101 个）；给出的空优先级与别的大小写、五个之外的值同一个问题。
 - `TestCanAssign`：每个角色。
-- `TestAssignees`：请求的负责人排序；不能指派的报出位置；默认负责人能指派、不能指派、不是成员。
+- `TestAssignees`：请求的负责人排序；不能指派的报出位置；带了负责人时能指派的默认负责人也不加上；默认负责人能指派、不能指派、不是成员。
 - `TestSortOrderAfter`、`TestCompletedAt`。
 - `TestDependentRowProblems`：两个问题的字段和码。
 - `TestCreationActivity`：两行的每一列，负责人的次序。
 
 - [ ] **Step 1: 规则、动态、码和测试**
 
-`server/internal/modules/issue/domain/activity.go`（新文件，52 行）：
+`server/internal/modules/issue/domain/activity.go`（新文件，51 行）：
 
 ````file server/internal/modules/issue/domain/activity.go
 package domain
@@ -4094,11 +4094,10 @@ import "uuid"
 // values, which the page's renderer reads (M4 design 3.13).
 type Verb string
 
-// The verbs, the values of issue_activities.verb.
+// The verbs the rows are written with, values of issue_activities.verb.
 const (
 	VerbCreated Verb = "created"
 	VerbUpdated Verb = "updated"
-	VerbDeleted Verb = "deleted"
 )
 
 // Activity is a row of a work item's activity as M4 design 3.13's table
@@ -4200,7 +4199,7 @@ var (
 )
 ````
 
-`server/internal/modules/issue/domain/issue.go`（新文件，241 行）：
+`server/internal/modules/issue/domain/issue.go`（新文件，244 行）：
 
 ````file server/internal/modules/issue/domain/issue.go
 // Package domain holds the issue module's rules (M4 design 6.2): pure
@@ -4272,11 +4271,12 @@ type Issue struct {
 
 // NewIssue is what the caller asks for when creating a work item (M4
 // design 5.2, IssueCreate without the fields of later phases): StateID nil
-// for the project's default state, Priority empty for none.
+// for the project's default state, Priority nil for none. A field given is
+// checked as given, a priority given empty too.
 type NewIssue struct {
 	Name        string
 	StateID     *uuid.UUID
-	Priority    Priority
+	Priority    *Priority
 	AssigneeIDs []uuid.UUID
 	LabelIDs    []uuid.UUID
 }
@@ -4301,17 +4301,17 @@ const (
 
 // CheckNewIssue checks n (M4 design 3.7) and returns it as it is stored:
 // the name without its surrounding white space, of 1–255 characters and
-// without NUL; the priority one of the five, none when it is not given; at
-// most MaxAssignees accounts and MaxLabels labels, each named once. Every
-// problem is reported at once, in one 422 validation_failed; whether the
-// state, each assignee and each label may be is the use case's, under the
-// project's lock.
+// without NUL; the priority one of the five, none when it is not given
+// (nil), so never nil once checked; at most MaxAssignees accounts and
+// MaxLabels labels, each named once. Every problem is reported at once, in
+// one 422 validation_failed; whether the state, each assignee and each
+// label may be is the use case's, under the project's lock.
 func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	n.Name = strings.TrimSpace(n.Name)
-	if n.Priority == "" {
-		n.Priority = PriorityNone
+	if n.Priority == nil {
+		n.Priority = ptr(PriorityNone)
 	}
-	found := []*shared.FieldError{checkName(n.Name), checkPriority(n.Priority)}
+	found := []*shared.FieldError{checkName(n.Name), checkPriority(*n.Priority)}
 	found = append(found, checkIDs("assignee_ids", n.AssigneeIDs, MaxAssignees)...)
 	found = append(found, checkIDs("label_ids", n.LabelIDs, MaxLabels)...)
 	if err := invalid(found...); err != nil {
@@ -4420,6 +4420,8 @@ func checkName(name string) *shared.FieldError {
 	return nil
 }
 
+// checkPriority refuses a priority given that is not one of the five as
+// they are spelt: in another case, or empty.
 func checkPriority(p Priority) *shared.FieldError {
 	if !slices.Contains(priorities, p) {
 		return &shared.FieldError{Field: "priority", Code: shared.FieldInvalidFormat, Message: "must be one of urgent, high, medium, low, none"}
@@ -4446,7 +4448,7 @@ func checkIDs(field string, ids []uuid.UUID, limit int) []*shared.FieldError {
 }
 ````
 
-`server/internal/modules/issue/domain/issue_test.go`（新文件，177 行）：
+`server/internal/modules/issue/domain/issue_test.go`（新文件，181 行）：
 
 ````file server/internal/modules/issue/domain/issue_test.go
 package domain
@@ -4481,17 +4483,18 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 		in   NewIssue
 		want NewIssue
 	}{
-		{"one character, trimmed, none", NewIssue{Name: "  x\t"}, NewIssue{Name: "x", Priority: PriorityNone}},
-		{"255 characters", NewIssue{Name: strings.Repeat("é", 255), Priority: PriorityLow}, NewIssue{Name: strings.Repeat("é", 255), Priority: PriorityLow}},
-		{"everything", NewIssue{Name: "Fix", StateID: &state, Priority: PriorityUrgent, AssigneeIDs: ids(100), LabelIDs: ids(100)},
-			NewIssue{Name: "Fix", StateID: &state, Priority: PriorityUrgent}},
+		{"one character, trimmed, none", NewIssue{Name: "  x\t"}, NewIssue{Name: "x", Priority: ptr(PriorityNone)}},
+		{"255 characters", NewIssue{Name: strings.Repeat("é", 255), Priority: ptr(PriorityLow)},
+			NewIssue{Name: strings.Repeat("é", 255), Priority: ptr(PriorityLow)}},
+		{"everything", NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent), AssigneeIDs: ids(100), LabelIDs: ids(100)},
+			NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent)}},
 	}
 	for _, p := range priorities {
 		tests = append(tests, struct {
 			name string
 			in   NewIssue
 			want NewIssue
-		}{string(p), NewIssue{Name: "a", Priority: p}, NewIssue{Name: "a", Priority: p}})
+		}{string(p), NewIssue{Name: "a", Priority: ptr(p)}, NewIssue{Name: "a", Priority: ptr(p)}})
 	}
 	for _, tt := range tests {
 		got, err := CheckNewIssue(tt.in)
@@ -4503,14 +4506,14 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 }
 
 // A blank name, one of 256 characters, one with NUL, a priority outside the
-// five or in another case, an account or a label named twice, more than a
-// hundred of either: each refused, all of them in one 422 that names each by
-// its field and place. A list too long is reported alone: its ids are not
-// looked at.
+// five, in another case or given empty, an account or a label named twice,
+// a hundred and one of either: each refused, all of them in one 422 that
+// names each by its field and place. A list too long is reported alone: its
+// ids, a repeat among them, are not looked at.
 func TestCheckNewIssueReportsEveryProblem(t *testing.T) {
 	a, b := uuid.NewV7(), uuid.NewV7()
-	many := append(ids(MaxAssignees), a)
-	many = append(many, a)
+	many := append(ids(MaxAssignees-1), a, a)
+	priority := []shared.FieldError{{Field: "priority", Code: "invalid_format", Message: "must be one of urgent, high, medium, low, none"}}
 	tests := []struct {
 		name string
 		in   NewIssue
@@ -4520,20 +4523,21 @@ func TestCheckNewIssueReportsEveryProblem(t *testing.T) {
 		{"256 characters", NewIssue{Name: strings.Repeat("x", 256)},
 			[]shared.FieldError{{Field: "name", Code: "too_long", Message: "must be at most 255 characters"}}},
 		{"NUL", NewIssue{Name: "a\x00b"}, []shared.FieldError{{Field: "name", Code: "invalid_format", Message: "must not contain a NUL character"}}},
-		{"another case", NewIssue{Name: "a", Priority: "Urgent"},
-			[]shared.FieldError{{Field: "priority", Code: "invalid_format", Message: "must be one of urgent, high, medium, low, none"}}},
+		{"another case", NewIssue{Name: "a", Priority: ptr[Priority]("Urgent")}, priority},
+		{"given empty", NewIssue{Name: "a", Priority: ptr[Priority]("")}, priority},
 		{"repeats", NewIssue{Name: "a", AssigneeIDs: []uuid.UUID{a, b, a, b, a}, LabelIDs: []uuid.UUID{b, b}}, []shared.FieldError{
 			{Field: "assignee_ids[2]", Code: "duplicate", Message: "is listed before"},
 			{Field: "assignee_ids[3]", Code: "duplicate", Message: "is listed before"},
 			{Field: "assignee_ids[4]", Code: "duplicate", Message: "is listed before"},
 			{Field: "label_ids[1]", Code: "duplicate", Message: "is listed before"},
 		}},
-		{"too many, with repeats, and everything else", NewIssue{Name: "", Priority: "high!", AssigneeIDs: many, LabelIDs: many}, []shared.FieldError{
-			{Field: "name", Code: "too_short", Message: "must not be empty"},
-			{Field: "priority", Code: "invalid_format", Message: "must be one of urgent, high, medium, low, none"},
-			{Field: "assignee_ids", Code: "too_long", Message: "must name at most 100"},
-			{Field: "label_ids", Code: "too_long", Message: "must name at most 100"},
-		}},
+		{"too many, with repeats, and everything else", NewIssue{Name: "", Priority: ptr[Priority]("high!"), AssigneeIDs: many, LabelIDs: many},
+			[]shared.FieldError{
+				{Field: "name", Code: "too_short", Message: "must not be empty"},
+				priority[0],
+				{Field: "assignee_ids", Code: "too_long", Message: "must name at most 100"},
+				{Field: "label_ids", Code: "too_long", Message: "must name at most 100"},
+			}},
 	}
 	for _, tt := range tests {
 		var e *shared.Error
@@ -4554,10 +4558,11 @@ func TestCanAssign(t *testing.T) {
 	}
 }
 
-// The accounts asked for, in id order, when each may be assigned; each who
-// may not be, a guest or no member, is a problem at his index, and then no
-// one is assigned. None asked for: the default assignee if he is an active
-// admin or member, else no one, without a problem (M4 design 3.7).
+// The accounts asked for, in id order, when each may be assigned, and the
+// default assignee not added to them, though he may be; each who may not
+// be, a guest or no member, is a problem at his index, and then no one is
+// assigned. None asked for: the default assignee if he is an active admin
+// or member, else no one, without a problem (M4 design 3.7).
 func TestAssignees(t *testing.T) {
 	ann, ben, gus, out := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	roles := map[uuid.UUID]shared.Role{ann: shared.RoleAdmin, ben: shared.RoleMember, gus: shared.RoleGuest}
@@ -4572,6 +4577,7 @@ func TestAssignees(t *testing.T) {
 		problems []shared.FieldError
 	}{
 		{"asked for, in id order; the default is not used", []uuid.UUID{ben, ann}, &gus, []uuid.UUID{ann, ben}, nil},
+		{"asked for: an assignable default not asked for is not added", []uuid.UUID{ben}, &ann, []uuid.UUID{ben}, nil},
 		{"a guest and no member", []uuid.UUID{ann, gus, ben, out}, &ann, nil, []shared.FieldError{notAllowed("assignee_ids[1]"),
 			notAllowed("assignee_ids[3]")}},
 		{"none asked for: the default member", nil, &ben, []uuid.UUID{ben}, nil},
@@ -6073,7 +6079,7 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 			return err
 		}
 		row := IssueRow{ID: uuid.NewV7(), WorkspaceID: project.WorkspaceID, ProjectID: projectID, SequenceID: sequence, Name: in.Name,
-			StateID: c.state.ID, Priority: in.Priority, SortOrder: domain.SortOrderAfter(greatest),
+			StateID: c.state.ID, Priority: *in.Priority, SortOrder: domain.SortOrderAfter(greatest),
 			CompletedAt: domain.CompletedAt(c.state.Group, now), By: actor.UserID, At: now}
 		if err := u.write(ctx, row, c); err != nil {
 			return err
@@ -6443,7 +6449,7 @@ type inTxKey struct{}
 )
 ````
 
-`server/internal/modules/issue/app/create_issue_test.go`（新文件，317 行）：
+`server/internal/modules/issue/app/create_issue_test.go`（新文件，318 行）：
 
 ````file server/internal/modules/issue/app/create_issue_test.go
 package app_test
@@ -6558,7 +6564,8 @@ func created(id, state uuid.UUID, asked, labelsAsked, assignees, labels, subscri
 // caller's.
 func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 	uc, w := newCreate()
-	got, err := uc.Execute(as(alice), web, domain.NewIssue{Name: "  Fix the login ", StateID: &done.ID, Priority: domain.PriorityHigh,
+	high := domain.PriorityHigh
+	got, err := uc.Execute(as(alice), web, domain.NewIssue{Name: "  Fix the login ", StateID: &done.ID, Priority: &high,
 		AssigneeIDs: []uuid.UUID{carol, bob}, LabelIDs: []uuid.UUID{ui, bug}})
 	if err != nil || w.issues.issue == nil {
 		t.Fatalf("Execute() = %v, %v; want the work item", got, err)
@@ -7109,6 +7116,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Tests:**
 - HTTP（`apitest.Main("issue")`：两个方向核对每个声明的码都被返回过、返回的码都声明过）：
   - `TestCreateIssue`：请求交给用例；201 带工作项的每个字段，没有的为 `null`，列表为 `[]`；
+  - `TestCreateIssueTakesAnEmptyPriorityAsGiven`：给出的空优先级照样交给用例（不当作没给，`NewIssue.Priority` 是指针），答领域的 422 `priority` `invalid_format`；
   - `TestCreateIssueHoldsTheBodyToItsStructure`：缺名称、多余的字段（编号、排序值、描述）、类型不对、不是 id 的 id 都答 `bad_request`，不到用例；
   - `TestCreateIssueRefusals`：用例的每个拒绝和失败。
 - 端口的转换：`TestIssueProjectsConvertsProjectsAnswers`、`TestIssueProfilesConvertsIdentitysAnswer`。
@@ -7584,7 +7592,7 @@ func request(method, path, token, body string) *http.Request {
 }
 ````
 
-`server/internal/modules/issue/adapter/http/issues.go`（新文件，55 行）：
+`server/internal/modules/issue/adapter/http/issues.go`（新文件，53 行）：
 
 ````file server/internal/modules/issue/adapter/http/issues.go
 package httpadapter
@@ -7599,12 +7607,10 @@ import (
 )
 
 // CreateIssue serves POST /api/v0/projects/{project_id}/issues: the state
-// nil, the priority empty and the lists empty when not given.
+// and the priority nil and the lists empty when not given; a value given
+// goes to the use case as it came, which checks it.
 func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObject) (gen.CreateIssueResponseObject, error) {
-	in := domain.NewIssue{Name: req.Body.Name, StateID: req.Body.StateID}
-	if req.Body.Priority != nil {
-		in.Priority = domain.Priority(*req.Body.Priority)
-	}
+	in := domain.NewIssue{Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority)}
 	if req.Body.AssigneeIds != nil {
 		in.AssigneeIDs = *req.Body.AssigneeIds
 	}
@@ -7644,7 +7650,7 @@ func orEmpty[T any](s []T) []T {
 }
 ````
 
-`server/internal/modules/issue/adapter/http/issues_test.go`（新文件，125 行）：
+`server/internal/modules/issue/adapter/http/issues_test.go`（新文件，143 行）：
 
 ````file server/internal/modules/issue/adapter/http/issues_test.go
 package httpadapter_test
@@ -7690,7 +7696,7 @@ var (
 )
 
 // POST goes to the use case for the caller and the path's project, with
-// the body's fields: the state nil, the priority empty and the lists empty
+// the body's fields: the state and the priority nil and the lists empty
 // when not given; the answer is 201 with the work item the use case
 // answers, every field of it, null for each it has none of, [] for a list
 // without ids.
@@ -7705,7 +7711,7 @@ func TestCreateIssue(t *testing.T) {
 	}{
 		{`{"name":" Fix the login ","state_id":"0199a2b4-0000-7000-8000-0000000000c1","priority":"high",` +
 			`"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"]}`,
-			domain.NewIssue{Name: " Fix the login ", StateID: &stateID, Priority: high, AssigneeIDs: []uuid.UUID{bobID},
+			domain.NewIssue{Name: " Fix the login ", StateID: &stateID, Priority: &high, AssigneeIDs: []uuid.UUID{bobID},
 				LabelIDs: []uuid.UUID{bugID}}, webSeven, webSevenJSON},
 		{`{"name":"Fix"}`, domain.NewIssue{Name: "Fix"}, webEight, webEightJSON},
 		{`{"name":"Fix","assignee_ids":[],"label_ids":[]}`, domain.NewIssue{Name: "Fix", AssigneeIDs: []uuid.UUID{}, LabelIDs: []uuid.UUID{}},
@@ -7720,6 +7726,24 @@ func TestCreateIssue(t *testing.T) {
 			!reflect.DeepEqual(create.got, []domain.NewIssue{tt.want}) {
 			t.Errorf("POST %s: calls %q with %+v; want %q with %+v", tt.body, create.calls, create.got, want, tt.want)
 		}
+	}
+}
+
+// A priority given empty is given, not left out: the body's shape does not
+// check an enum's values, so it goes to the use case as it came, whose
+// check refuses it like any value outside the five (422 priority
+// invalid_format; the fake answers that check's own refusal).
+func TestCreateIssueTakesAnEmptyPriorityAsGiven(t *testing.T) {
+	empty := domain.Priority("")
+	in := domain.NewIssue{Name: "Fix", Priority: &empty}
+	_, refused := domain.CheckNewIssue(in)
+	create := &fakeCreate{err: refused}
+	res, body := do(t, newServer(t, create), request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice",
+		`{"name":"Fix","priority":""}`))
+	want := `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
+		`"errors":[{"field":"priority","code":"invalid_format","message":"must be one of urgent, high, medium, low, none"}]}`
+	if res.StatusCode != http.StatusUnprocessableEntity || body != want+"\n" || !reflect.DeepEqual(create.got, []domain.NewIssue{in}) {
+		t.Errorf("POST = %d %s, the use case got %+v; want 422 %s, the use case %+v", res.StatusCode, body, create.got, want, in)
 	}
 }
 

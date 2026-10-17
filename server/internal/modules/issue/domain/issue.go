@@ -67,11 +67,12 @@ type Issue struct {
 
 // NewIssue is what the caller asks for when creating a work item (M4
 // design 5.2, IssueCreate without the fields of later phases): StateID nil
-// for the project's default state, Priority empty for none.
+// for the project's default state, Priority nil for none. A field given is
+// checked as given, a priority given empty too.
 type NewIssue struct {
 	Name        string
 	StateID     *uuid.UUID
-	Priority    Priority
+	Priority    *Priority
 	AssigneeIDs []uuid.UUID
 	LabelIDs    []uuid.UUID
 }
@@ -96,17 +97,17 @@ const (
 
 // CheckNewIssue checks n (M4 design 3.7) and returns it as it is stored:
 // the name without its surrounding white space, of 1–255 characters and
-// without NUL; the priority one of the five, none when it is not given; at
-// most MaxAssignees accounts and MaxLabels labels, each named once. Every
-// problem is reported at once, in one 422 validation_failed; whether the
-// state, each assignee and each label may be is the use case's, under the
-// project's lock.
+// without NUL; the priority one of the five, none when it is not given
+// (nil), so never nil once checked; at most MaxAssignees accounts and
+// MaxLabels labels, each named once. Every problem is reported at once, in
+// one 422 validation_failed; whether the state, each assignee and each
+// label may be is the use case's, under the project's lock.
 func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	n.Name = strings.TrimSpace(n.Name)
-	if n.Priority == "" {
-		n.Priority = PriorityNone
+	if n.Priority == nil {
+		n.Priority = ptr(PriorityNone)
 	}
-	found := []*shared.FieldError{checkName(n.Name), checkPriority(n.Priority)}
+	found := []*shared.FieldError{checkName(n.Name), checkPriority(*n.Priority)}
 	found = append(found, checkIDs("assignee_ids", n.AssigneeIDs, MaxAssignees)...)
 	found = append(found, checkIDs("label_ids", n.LabelIDs, MaxLabels)...)
 	if err := invalid(found...); err != nil {
@@ -215,6 +216,8 @@ func checkName(name string) *shared.FieldError {
 	return nil
 }
 
+// checkPriority refuses a priority given that is not one of the five as
+// they are spelt: in another case, or empty.
 func checkPriority(p Priority) *shared.FieldError {
 	if !slices.Contains(priorities, p) {
 		return &shared.FieldError{Field: "priority", Code: shared.FieldInvalidFormat, Message: "must be one of urgent, high, medium, low, none"}

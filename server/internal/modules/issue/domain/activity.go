@@ -6,11 +6,10 @@ import "uuid"
 // values, which the page's renderer reads (M4 design 3.13).
 type Verb string
 
-// The verbs, the values of issue_activities.verb.
+// The verbs the rows are written with, values of issue_activities.verb.
 const (
 	VerbCreated Verb = "created"
 	VerbUpdated Verb = "updated"
-	VerbDeleted Verb = "deleted"
 )
 
 // Activity is a row of a work item's activity as M4 design 3.13's table
