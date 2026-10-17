@@ -216,26 +216,6 @@ export async function changeProjectPreferences(api: Api, token: string, id: stri
       };
 }
 
-/**
- * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
- * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
- * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows, its label Bug
- * among them.
- */
-export async function furnishWorkspace(
-  api: Api,
-  adminToken: string,
-  slug: string,
-  member: { email: string; token: string },
-  inviteeEmail: string
-): Promise<void> {
-  await inviteAndAccept(api, adminToken, slug, member, 15);
-  await invite(api, adminToken, slug, [{ email: inviteeEmail, role: 15 }]);
-  await changeWorkspacePreferences(api, adminToken, slug, { navigation_project_limit: 3 });
-  const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
-  await createLabel(api, adminToken, web.id, { name: "Bug" });
-}
-
 /** Gives the account of memberId the role in the workspace of slug, with the bearer token given, an admin's. */
 export async function changeRole(
   api: Api,

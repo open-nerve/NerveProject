@@ -8,7 +8,8 @@ import {
   listMembers,
   slugFor,
 } from "../../fixtures/api";
-import { expectMembership, expectMembershipEnded, workspaceTables } from "../../fixtures/assert/workspace";
+import { workspaceTables } from "../../fixtures/assert/catalog";
+import { expectMembership, expectMembershipEnded } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, newAccount } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectNoAddress, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
@@ -45,7 +46,7 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
   const tables = async () =>
     Object.fromEntries(
       await Promise.all(
-        ["workspaces", ...workspaceTables].map(async (table) => [
+        ["workspaces", ...(await workspaceTables(db))].map(async (table) => [
           table,
           await db.query(`SELECT * FROM ${table} ORDER BY id`),
         ])

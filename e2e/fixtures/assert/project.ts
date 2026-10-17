@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 
 import type { Database } from "../db";
+import { projectTables } from "./catalog";
 
 // Database assertions of the project stories. The page version and the
 // API version of a story call the same function (M3 design 2).
@@ -182,10 +183,9 @@ export async function expectMember(
 
 /**
  * P4, W3: the project of projectId is deleted by the account of adminEmail, and with it, at the same moment and by the
- * same account, every row under it that was not deleted before: of each table whose foreign key names projects (the
- * catalog's list, so a table a later phase adds is read too, and the list is every table with a project_id column),
- * by its project_id. Each table but the work items' has such a row, and none is left undeleted; a row deleted before
- * the project, as a label a story deleted, is not counted.
+ * same account, every row under it that was not deleted before, of each table under projects (projectTables), by its
+ * project_id. Each table has such a row, and none is left undeleted; a row deleted before the project, as a label a
+ * story deleted, is not counted.
  */
 export async function expectProjectDeleted(db: Database, projectId: string, adminEmail: string): Promise<void> {
   const [project] = await db.query(
@@ -193,22 +193,10 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
     [projectId]
   );
   expect(project, `the project ${projectId}`).toEqual({ deleted: true, by: adminEmail });
-  // Both lists sort their names under "C": a regclass's text would sort under the database's collation and an
-  // information_schema name under "C", two orders that differ (issues, issue_views).
-  const tables = await db.query<{ name: string }>(
-    `SELECT DISTINCT c.conrelid::regclass::text COLLATE "C" AS name FROM pg_constraint c
-      WHERE c.contype = 'f' AND c.confrelid = 'projects'::regclass ORDER BY 1`
-  );
-  expect(tables.length, "the tables under projects").toBeGreaterThan(0);
-  // Every table with a project_id is read: a table left out of the list above fails here.
-  const withProjectId = await db.query<{ name: string }>(
-    `SELECT DISTINCT c.table_name::text COLLATE "C" AS name FROM information_schema.columns c
-      WHERE c.table_schema = current_schema() AND c.column_name = 'project_id' ORDER BY 1`
-  );
-  expect(tables, "the tables under projects, as their project_id columns name them").toEqual(withProjectId);
+  const tables = await projectTables(db);
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const rows = await Promise.all(
-    tables.map(async ({ name }) => {
+    tables.map(async (name) => {
       const [counts] = await db.query<{ with_it: number; other: number }>(
         `SELECT count(*) FILTER (WHERE t.deleted_at = p.deleted_at AND t.updated_by_id = p.updated_by_id)::int AS with_it,
                 count(*) FILTER (WHERE (t.deleted_at IS NULL OR t.deleted_at >= p.deleted_at)
@@ -220,11 +208,8 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
       return { table: name, deletedWithIt: (counts?.with_it ?? 0) > 0, other: counts?.other };
     })
   );
-  // No story writes the work items' tables yet (M4 P1a spec, section 3): they have no row to be deleted with the
-  // project, and none left undeleted either.
-  const withoutRows = new Set(["issue_activities", "issue_assignees", "issue_labels", "issue_subscribers", "issues"]);
   expect(rows, `the rows under ${projectId}`).toEqual(
-    tables.map(({ name }) => ({ table: name, deletedWithIt: !withoutRows.has(name), other: 0 }))
+    tables.map((name) => ({ table: name, deletedWithIt: true, other: 0 }))
   );
 }
 
