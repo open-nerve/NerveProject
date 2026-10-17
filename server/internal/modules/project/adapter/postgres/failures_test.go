@@ -270,8 +270,8 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if l, err := s.UpdateLabel(cancelled, bug, domain.LabelPatch{Name: ptr("Feature")}, alice, now); !failed(err) || l.ID != (uuid.UUID{}) {
 		t.Errorf("UpdateLabel() = %+v, %v; want context.Canceled", l, err)
 	}
-	if err := s.DeleteLabel(cancelled, bug, alice, now); !failed(err) {
-		t.Errorf("DeleteLabel() = %v; want context.Canceled", err)
+	if ids, err := s.DeleteLabel(cancelled, bug, alice, now); !failed(err) || ids != nil {
+		t.Errorf("DeleteLabel() = %v, %v; want context.Canceled", ids, err)
 	}
 }
 

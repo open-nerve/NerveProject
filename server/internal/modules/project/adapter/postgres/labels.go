@@ -111,10 +111,12 @@ func (s *Store) UpdateLabel(ctx context.Context, id uuid.UUID, p domain.LabelPat
 }
 
 // DeleteLabel deletes the undeleted label id and the undeleted labels
-// under it, by the account by at now, in one statement (app.LabelDeleter).
-func (s *Store) DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) error {
-	if err := s.queries(ctx).DeleteLabel(ctx, gen.DeleteLabelParams{ID: id, DeletedBy: by, Now: now}); err != nil {
-		return fmt.Errorf("delete label %s: %w", id, err)
+// under it, by the account by at now, in one statement, and answers their
+// ids (app.LabelDeleter).
+func (s *Store) DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteLabel(ctx, gen.DeleteLabelParams{ID: id, DeletedBy: by, Now: now})
+	if err != nil {
+		return nil, fmt.Errorf("delete label %s: %w", id, err)
 	}
-	return nil
+	return ids, nil
 }

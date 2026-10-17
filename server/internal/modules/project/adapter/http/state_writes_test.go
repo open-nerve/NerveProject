@@ -36,6 +36,8 @@ const (
 		`"detail":"The state is the only one of its group, and every group keeps one; add another to the group first."}`
 	stateDefaultJSON = `{"status":409,"code":"project.state_default","title":"Conflict",` +
 		`"detail":"The default state cannot be deleted; make another state the default first."}`
+	stateInUseJSON = `{"status":409,"code":"project.state_in_use","title":"Conflict",` +
+		`"detail":"Work items are in the state, archived ones too; move them to another state first."}`
 	stateNameTakenJSON = `{"status":409,"code":"project.state_name_taken","title":"Conflict",` +
 		`"detail":"A state of the project has this name."}`
 )
@@ -134,6 +136,7 @@ func TestDeleteState(t *testing.T) {
 		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 		{"the default", domain.ErrStateDefault, http.StatusConflict, stateDefaultJSON},
 		{"its group's only state", domain.ErrStateLastInGroup, http.StatusConflict, stateLastInGroupJSON},
+		{"a state work items are in", domain.ErrStateInUse, http.StatusConflict, stateInUseJSON},
 		{"a failure", errGone, http.StatusInternalServerError, internalErrorJSON},
 	} {
 		h := newServer(t, fakes{deleteState: &fakeDelete{err: tt.err}})

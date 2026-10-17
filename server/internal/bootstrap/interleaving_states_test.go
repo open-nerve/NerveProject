@@ -7,6 +7,7 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -136,7 +137,8 @@ func creates(name string, group projectdomain.StateGroup) stateWrite {
 
 func deletes(name string) stateWrite {
 	return stateWrite{"deletes " + name, func(ctx context.Context, w memberWorld, states stateStore, ids map[string]uuid.UUID) error {
-		return projectapp.NewDeleteState(w.projectLocks(), states, w.tx(), clock.System{}).Execute(w.asBob(ctx), ids[name])
+		return projectapp.NewDeleteState(w.projectLocks(), states, issue.Provide(w.pool).IssueCascade, w.tx(), clock.System{}).Execute(w.asBob(ctx),
+			ids[name])
 	}, func(states map[string]projectState) { delete(states, name) }}
 }
 

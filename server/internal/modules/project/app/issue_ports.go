@@ -9,9 +9,9 @@ import (
 // IssueCascade is what the project's deletions ask of the work items (M4
 // design 3.3): the issue module implements it (issue.Provide). Each method
 // runs in the transaction ctx carries, which the caller began and holds
-// the project's or the workspace's lock in, writes by and now into the
-// rows it deletes, and returns a failure as itself, so the caller's whole
-// write rolls back.
+// the project's or the workspace's lock in, and returns a failure as
+// itself, so the caller's whole write rolls back; one that deletes writes
+// by and now into the rows it deletes.
 type IssueCascade interface {
 	// DeleteProjectIssues soft-deletes the project's work-item-side rows:
 	// deleteProject's last step.
@@ -20,6 +20,12 @@ type IssueCascade interface {
 	// the projects: deleteWorkspace's last step, on the projects it locked
 	// (LockWorkspaceProjects).
 	DeleteWorkspaceIssues(ctx context.Context, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
+	// StateInUse reports whether an undeleted work item, archived or not,
+	// is in the state: deleteState's check, under the project's lock.
+	StateInUse(ctx context.Context, stateID uuid.UUID) (bool, error)
+	// DetachLabel soft-deletes the rows that put the labels on work items:
+	// deleteLabel's last step, on the label and the labels under it.
+	DetachLabel(ctx context.Context, labelIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 }
 
 // IssueProject is a project as project.Provide's lock for the issue

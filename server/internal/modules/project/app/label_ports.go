@@ -89,6 +89,7 @@ type LabelUpdater interface {
 type LabelDeleter interface {
 	LabelFinder
 	// DeleteLabel deletes the undeleted label id and the undeleted labels
-	// under it, by the account by at now, in one statement.
-	DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) error
+	// under it, by the account by at now, in one statement, and answers
+	// their ids.
+	DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) ([]uuid.UUID, error)
 }

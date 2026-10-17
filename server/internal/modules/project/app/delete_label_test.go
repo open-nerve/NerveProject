@@ -16,22 +16,26 @@ import (
 // newDeleteLabel is DeleteLabel over newLabels' fakes, its clock logged.
 func newDeleteLabel() (*app.DeleteLabel, *writeFixture, *fakeLabels) {
 	f, l := newLabels()
-	return app.NewDeleteLabel(f.locks(), l, f.tx, clockAt{clockNow, f.log}), f, l
+	return app.NewDeleteLabel(f.locks(), l, f.issues, f.tx, clockAt{clockNow, f.log}), f, l
 }
 
 // labelDeleted are the calls of user's deletion of the label id of
-// project: its locks and decision, the clock, the deletion by user at that
-// time.
-func labelDeleted(user, id, project uuid.UUID) []string {
-	return append(labelLocked(id, project, user, domain.ActionLabelDelete), "Now",
-		fmt.Sprintf("DeleteLabel %s by %s at %s", id, user, clockNow.Format(timeFormat)))
+// project, which takes the labels gone: its locks and decision, the clock,
+// the deletion by user at that time, then gone, in id order, taken off the
+// work items by user at that time.
+func labelDeleted(user, id, project uuid.UUID, gone ...uuid.UUID) []string {
+	at := clockNow.Format(timeFormat)
+	return append(labelLocked(id, project, user, domain.ActionLabelDelete), "Now", fmt.Sprintf("DeleteLabel %s by %s at %s", id, user, at),
+		fmt.Sprintf("DetachLabel %v by %s at %s", slices.SortedFunc(slices.Values(gone), uuid.UUID.Compare), user, at))
 }
 
 // DeleteLabel, in one transaction and in the order of M3 design 3.6 and
-// 3.16, locks the label's project, decides, reads the clock, then deletes
-// the label and the labels under it by the caller at that time: Bug takes
-// UI with it; UI, under Bug, and Feature go alone; and ops's Docs, of an
-// archived project, goes as any other (3.19).
+// 3.16 and M4 design 3.5, locks the label's project, decides, reads the
+// clock, deletes the label and the labels under it by the caller at that
+// time, then takes them off the work items, in the transaction, by the
+// caller at that time: Bug takes UI with it; UI, under Bug, and Feature go
+// alone; and ops's Docs, of an archived project, goes as any other (M3
+// design 3.19).
 func TestDeleteLabel(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -54,7 +58,7 @@ func TestDeleteLabel(t *testing.T) {
 			if err != nil || !maps.Equal(l.labels, want) {
 				t.Errorf("Execute() = %v, the labels after it %v; want nil, %v", err, l.labels, want)
 			}
-			if calls := labelDeleted(bob, tt.id, tt.project); !slices.Equal(f.log.calls, calls) {
+			if calls := labelDeleted(bob, tt.id, tt.project, tt.gone...); !slices.Equal(f.log.calls, calls) {
 				t.Errorf("calls\n%q\nwant\n%q", f.log.calls, calls)
 			}
 		})
@@ -109,7 +113,7 @@ func TestDeleteLabelRefuses(t *testing.T) {
 // Every port's failure comes back as itself, the commit's too, after the
 // calls before it and none after.
 func TestDeleteLabelReturnsEachFailure(t *testing.T) {
-	all := labelDeleted(bob, webBug, webID)
+	all := labelDeleted(bob, webBug, webID, webBug, webUI)
 	fail := func(method string) func(f *writeFixture) {
 		return func(f *writeFixture) { f.store.errs = map[string]error{method: errDisk} }
 	}
@@ -124,7 +128,8 @@ func TestDeleteLabelReturnsEachFailure(t *testing.T) {
 		{"the read under the locks", func(f *writeFixture) { f.store.reread.err = errDisk }, 5},
 		{"the decision", func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, 6},
 		{"the deletion", fail("DeleteLabel"), 8},
-		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 8},
+		{"taking them off the work items", func(f *writeFixture) { f.issues.errs = map[string]error{"DetachLabel": errDisk} }, 9},
+		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 9},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f, _ := newDeleteLabel()

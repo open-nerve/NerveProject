@@ -169,18 +169,21 @@ func (f *fakeLabels) UpdateLabel(ctx context.Context, id uuid.UUID, p domain.Lab
 	return l, nil
 }
 
-// DeleteLabel deletes the label id and the labels under it.
-func (f *fakeLabels) DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+// DeleteLabel deletes the label id and the labels under it, and answers
+// their ids, in id order.
+func (f *fakeLabels) DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) ([]uuid.UUID, error) {
 	f.log.add(ctx, "DeleteLabel %s by %s at %s", id, by, now.Format(timeFormat))
 	if err := f.fail("DeleteLabel"); err != nil {
-		return err
+		return nil, err
 	}
+	var ids []uuid.UUID
 	for key, l := range f.labels {
 		if key == id || (l.ParentID != nil && *l.ParentID == id) {
+			ids = append(ids, key)
 			delete(f.labels, key)
 		}
 	}
-	return nil
+	return slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare), nil
 }
 
 // taken reports whether a label of project but except has name, in any

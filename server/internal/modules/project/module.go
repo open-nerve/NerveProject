@@ -194,13 +194,13 @@ func New(d Deps) *Module {
 		ListStates:          app.NewListStates(store, d.Authorizer),
 		CreateState:         app.NewCreateState(locks, store, d.Tx, d.Clock),
 		UpdateState:         app.NewUpdateState(locks, store, d.Tx, d.Clock),
-		DeleteState:         app.NewDeleteState(locks, store, d.Tx, d.Clock),
+		DeleteState:         app.NewDeleteState(locks, store, d.Issues, d.Tx, d.Clock),
 		MarkDefaultState:    app.NewMarkDefaultState(locks, store, d.Tx, d.Clock),
 		ListWorkspaceStates: app.NewListWorkspaceStates(d.Workspaces, store, d.Authorizer),
 		ListLabels:          app.NewListLabels(store, d.Authorizer),
 		CreateLabel:         app.NewCreateLabel(locks, store, d.Tx, d.Clock),
 		UpdateLabel:         app.NewUpdateLabel(locks, store, d.Tx, d.Clock),
-		DeleteLabel:         app.NewDeleteLabel(locks, store, d.Tx, d.Clock),
+		DeleteLabel:         app.NewDeleteLabel(locks, store, d.Issues, d.Tx, d.Clock),
 	}}
 }
 

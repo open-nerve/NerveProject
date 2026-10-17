@@ -134,7 +134,7 @@ func TestTheCascadeDeletesEachProjectsRowsInBatches(t *testing.T) {
 		{"a workspace without projects", func(c *app.Cascade) error { return c.DeleteWorkspaceIssues(inTx, nil, by, now) }, nil},
 	} {
 		f := twoProjects(web, ops)
-		if err := tt.run(app.NewCascade(f, 2)); err != nil {
+		if err := tt.run(app.NewCascade(f, nil, 2)); err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}
 		var want []string
@@ -164,7 +164,7 @@ func TestTheCascadeStopsAtAFailingBatch(t *testing.T) {
 		f.fail = statement
 		want := batches(f, web)
 		want = want[:slices.IndexFunc(want, func(c string) bool { return strings.HasPrefix(c, statement+" ") })+1]
-		err := app.NewCascade(f, 2).DeleteWorkspaceIssues(context.WithValue(context.Background(), inTxKey{}, true), []uuid.UUID{web, ops}, by,
+		err := app.NewCascade(f, nil, 2).DeleteWorkspaceIssues(context.WithValue(context.Background(), inTxKey{}, true), []uuid.UUID{web, ops}, by,
 			time.Now())
 		if !errors.Is(err, errDisk) || !slices.Equal(f.calls, want) {
 			t.Errorf("failing %s: %v, the batches\n%q\nwant %v after\n%q", statement, err, f.calls, errDisk, want)

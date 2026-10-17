@@ -49,10 +49,12 @@ SET name          = coalesce(sqlc.narg(name)::text, l.name),
 WHERE l.id = sqlc.arg(id) AND l.deleted_at IS NULL
 RETURNING l.id, l.workspace_id, l.project_id, l.parent_id, l.name, l.color, l.sort_order, l.created_at, l.updated_at;
 
--- name: DeleteLabel :exec
+-- name: DeleteLabel :many
 -- deleteLabel, one statement under the project's FOR NO KEY UPDATE (M3 design 3.16, 3.6 convention 5): the undeleted
 -- label and the undeleted labels under it, at the moment and by the account given. A label's children are of its
--- project (3.16), so that lock covers every row the statement writes.
+-- project (3.16), so that lock covers every row the statement writes. It answers their ids, which the work items'
+-- rows of them are detached by (M4 design 3.6).
 UPDATE labels
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
-WHERE (id = sqlc.arg(id) OR parent_id = sqlc.arg(id)) AND deleted_at IS NULL;
+WHERE (id = sqlc.arg(id) OR parent_id = sqlc.arg(id)) AND deleted_at IS NULL
+RETURNING id;

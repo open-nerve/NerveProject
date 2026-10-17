@@ -1,7 +1,8 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
-// work items' tables, brings creating a work item, and soft-deletes a
-// deleted project's rows of them for the project module's deletions (its
-// IssueCascade port).
+// work items' tables and brings creating a work item. For the project
+// module's deletions (its IssueCascade port) it soft-deletes a deleted
+// project's rows of them, tells whether work items are in a state, and
+// takes deleted labels off them.
 package issue
 
 import (
@@ -25,15 +26,20 @@ const deleteBatch = 1000
 
 // Cascade is what the project module's deletions ask of the work items:
 // project's IssueCascade port (M4 design 3.3). Each method runs in the
-// caller's transaction, which ctx carries, writes by and now into the rows
-// it deletes, and returns a failure as itself, so the caller's whole write
-// rolls back.
+// caller's transaction, which ctx carries, and returns a failure as
+// itself, so the caller's whole write rolls back; one that deletes writes
+// by and now into the rows it deletes.
 type Cascade interface {
 	// DeleteProjectIssues soft-deletes the project's work-item-side rows.
 	DeleteProjectIssues(ctx context.Context, projectID, by uuid.UUID, now time.Time) error
 	// DeleteWorkspaceIssues soft-deletes the work-item-side rows of each
 	// of the projects.
 	DeleteWorkspaceIssues(ctx context.Context, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
+	// StateInUse reports whether an undeleted work item, archived or not,
+	// is in the state (M4 design 3.6).
+	StateInUse(ctx context.Context, stateID uuid.UUID) (bool, error)
+	// DetachLabel soft-deletes the rows that put the labels on work items.
+	DetachLabel(ctx context.Context, labelIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 }
 
 // Provided are the adapters issue offers the other modules. They depend on
@@ -45,7 +51,8 @@ type Provided struct {
 
 // Provide builds issue's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
-	return Provided{IssueCascade: app.NewCascade(postgresadapter.New(pool), deleteBatch)}
+	store := postgresadapter.New(pool)
+	return Provided{IssueCascade: app.NewCascade(store, store, deleteBatch)}
 }
 
 // ProjectPorts are what the module's writes ask of a project (M4 design

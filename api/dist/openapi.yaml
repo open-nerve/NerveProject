@@ -452,7 +452,7 @@ paths:
       tags:
         - workspace
       summary: Delete a workspace
-      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states and labels are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states, labels and work items (with the work items' assignees, labels, subscribers and activity) are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
       security:
         - bearer: []
       x-problem-codes:
@@ -951,7 +951,7 @@ paths:
       tags:
         - project
       summary: Delete a project
-      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings, its states and its labels, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings, its states, its labels and its work items (with their assignees, labels, subscribers and activity), all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
       security:
         - bearer: []
       x-problem-codes:
@@ -1239,12 +1239,13 @@ paths:
       tags:
         - project
       summary: Delete a state
-      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project''s states are deleted as any other''s. A state that does not exist or is deleted, the intake''s triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project''s default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.'
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project''s states are deleted as any other''s. A state that does not exist or is deleted, the intake''s triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project''s default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. Nor is a state a work item is in, an archived one too (project.state_in_use): move the work items first; it is checked before the default and the group. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.'
       security:
         - bearer: []
       x-problem-codes:
         - project.state_not_found
         - forbidden
+        - project.state_in_use
         - project.state_default
         - project.state_last_in_group
       responses:
@@ -1380,7 +1381,7 @@ paths:
       tags:
         - project
       summary: Delete a label and the labels under it
-      description: For the project's admins, and its members who are the workspace's admins; an archived project's labels are deleted as any other's. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. The label and the labels under it are deleted at the moment of the request, by the caller, and their names are free again in the project. The role is decided after the workspace and project rows are locked.
+      description: For the project's admins, and its members who are the workspace's admins; an archived project's labels are deleted as any other's. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. The label and the labels under it are deleted at the moment of the request, by the caller, and their names are free again in the project; at the same moment and by the same caller they are taken off every work item they are on. The role is decided after the workspace and project rows are locked.
       security:
         - bearer: []
       x-problem-codes:
