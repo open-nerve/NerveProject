@@ -33,3 +33,62 @@ type Issue struct {
 	UpdatedAt           time.Time
 	DeletedAt           *time.Time
 }
+
+type IssueActivity struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	ProjectID     uuid.UUID
+	IssueID       uuid.UUID
+	Verb          string
+	Field         *string
+	OldValue      *string
+	NewValue      *string
+	OldIdentifier *uuid.UUID
+	NewIdentifier *uuid.UUID
+	Comment       string
+	ActorID       *uuid.UUID
+	CreatedByID   *uuid.UUID
+	UpdatedByID   *uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     *time.Time
+}
+
+type IssueAssignee struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueID     uuid.UUID
+	AssigneeID  uuid.UUID
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
+type IssueLabel struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueID     uuid.UUID
+	LabelID     uuid.UUID
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
+type IssueSubscriber struct {
+	ID           uuid.UUID
+	WorkspaceID  uuid.UUID
+	ProjectID    uuid.UUID
+	IssueID      uuid.UUID
+	SubscriberID uuid.UUID
+	CreatedByID  *uuid.UUID
+	UpdatedByID  *uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    *time.Time
+}

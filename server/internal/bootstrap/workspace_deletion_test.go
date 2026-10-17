@@ -150,10 +150,12 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 // token its admin, and seeds a row of each table under it: the admin's
 // membership, which the creation writes; the member's, and an invitation
 // the admin sent, through the workspace store; the admin's display
-// settings, through the API; a project with the member as its admin, his
-// display settings in it, a state, two labels and a work item
-// (seedProject). A phase that adds a table under workspaces seeds a row of
-// it here. It returns the workspace's id.
+// settings, through the API; two projects, Web and Ops, each with the
+// member as its admin, his display settings in it, a state, two labels and
+// a work item with a row of each table under it (seedProject): the
+// work-item side is deleted project by project (M4 design 3.5). A phase
+// that adds a table under workspaces seeds a row of it here. It returns
+// the workspace's id.
 func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token, slug string) uuid.UUID {
 	t.Helper()
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", token, `{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
@@ -179,28 +181,30 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 		`{"navigation_project_limit":3}`); status != http.StatusOK {
 		t.Fatalf("the settings in %s = %d %s, want 200", slug, status, body)
 	}
-	seedProject(t, pool, id, admin, member)
+	seedProject(t, pool, id, admin, member, "Web")
+	seedProject(t, pool, id, admin, member, "Ops")
 	return id
 }
 
-// seedProject writes a project of the workspace id, created by admin,
-// with member as its admin, his display settings in it, one state, a label
-// with its child and a work item by member (seedLabels, seedIssues),
-// directly: the seed does not depend on which of the project module's
-// writes exist, nor on what they write besides. member, a project admin
-// who is a member of the workspace (PA in M3 design 9.2), may write the
-// project's labels. No row under the
-// project is the last writing of admin, the workspace's deleter (the test
-// reads it back), so a deletion by admin that kept a row's writer would
-// show.
-func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) {
+// seedProject writes a project of the workspace id named name, its
+// identifier the name in upper case, created by admin, with member as its
+// admin, his display settings in it, one state, a label with its child and
+// a work item with a row of each table under it, by member (seedLabels,
+// seedIssues), directly: the seed does not depend on which of the project
+// module's writes exist, nor on what they write besides. member, a project
+// admin who is a member of the workspace (PA in M3 design 9.2), may write
+// the project's labels. No row under the project is the last writing of
+// admin, the workspace's deleter (the test reads it back), so a deletion
+// by admin that kept a row's writer would show.
+func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID, name string) {
 	t.Helper()
 	ctx, project := context.Background(), uuid.NewV7()
 	for _, stmt := range []struct {
 		sql  string
 		args []any
 	}{
-		{"INSERT INTO projects (id, workspace_id, name, identifier, created_by_id) VALUES ($1, $2, 'Web', 'WEB', $3)", []any{project, id, admin}},
+		{"INSERT INTO projects (id, workspace_id, name, identifier, created_by_id) VALUES ($1, $2, $4::text, upper($4::text), $3)",
+			[]any{project, id, admin, name}},
 		{"INSERT INTO project_members (id, workspace_id, project_id, member_id, role) VALUES ($1, $2, $3, $4, 20)",
 			[]any{uuid.NewV7(), id, project, member}},
 		{"INSERT INTO project_user_properties (id, workspace_id, project_id, user_id) VALUES ($1, $2, $3, $4)",
@@ -219,10 +223,11 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) 
 // A failing projects' step fails the whole deletion (M3 design 3.3, 9.3):
 // when it fails on the wired app, deleteWorkspace answers the failure and
 // every row rolls back, under either workspace, the projects' and the
-// workspace's own. The labels table, renamed while the request runs, fails
-// the last statement of the cascade. It does not show that the statements
-// share the deletion's one transaction: the projects' statements in a
-// transaction of their own roll back here too, with the failing one.
+// workspace's own. The work items' activity table, renamed while the
+// request runs, fails the last statement of the cascade (M4 design 3.5).
+// It does not show that the statements share the deletion's one
+// transaction: the projects' statements in a transaction of their own roll
+// back here too, with the failing one.
 // TestADeletionRefusedAtItsCommitChangesNoRow shows that.
 func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
 	contract := apitest.Load(t)
@@ -248,11 +253,11 @@ func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	exec("ALTER TABLE labels RENAME TO labels_away")
+	exec("ALTER TABLE issue_activities RENAME TO issue_activities_away")
 	status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, "")
-	exec("ALTER TABLE labels_away RENAME TO labels")
+	exec("ALTER TABLE issue_activities_away RENAME TO issue_activities")
 	if status != http.StatusInternalServerError {
-		t.Fatalf("deleting the workspace with the labels' step failing = %d %s, want 500", status, body)
+		t.Fatalf("deleting the workspace with the activity's step failing = %d %s, want 500", status, body)
 	}
 	if after := rowsOf(); !slices.Equal(after, before) {
 		t.Errorf("the rows after the failed deletion:\n%q\nwant\n%q", after, before)

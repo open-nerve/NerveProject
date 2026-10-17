@@ -64,16 +64,16 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 15 {
-		t.Fatalf("Up() = %d migrations, %v; want 15", len(up), err)
+	if err != nil || len(up) != 19 {
+		t.Fatalf("Up() = %d migrations, %v; want 19", len(up), err)
 	}
 	for _, want := range []struct {
 		query string
 		names []string
 	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "issues", "labels", "profiles", "project_members", "project_user_properties", "projects",
-			"river_job", "river_leader", "river_notification", "river_queue", "states", "users", "workspace_member_invites", "workspace_members",
-			"workspace_user_properties", "workspaces"}},
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "issue_activities", "issue_assignees", "issue_labels", "issue_subscribers", "issues",
+			"labels", "profiles", "project_members", "project_user_properties", "projects", "river_job", "river_leader", "river_notification",
+			"river_queue", "states", "users", "workspace_member_invites", "workspace_members", "workspace_user_properties", "workspaces"}},
 		{enumsQuery, []string{"river_job_state"}},
 		{functionsQuery, []string{"river_job_state_in_bitmask"}},
 	} {
@@ -91,8 +91,8 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 15 {
-		t.Errorf("Up() again = %d migrations, %v; want 15", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 19 {
+		t.Errorf("Up() again = %d migrations, %v; want 19", len(again), err)
 	}
 }
 

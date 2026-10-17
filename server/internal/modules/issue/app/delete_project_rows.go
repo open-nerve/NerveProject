@@ -25,12 +25,19 @@ type RowBatch struct {
 // (convention 5) and returns the ids it deleted.
 type ProjectRowsDeleter interface {
 	DeleteProjectIssueRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectAssigneeRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectLabelRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectSubscriberRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectActivityRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 }
 
 // rowSteps are d's statements in the global order of M4 design 3.5: the
-// work items.
+// work items, then the rows under them.
 func rowSteps(d ProjectRowsDeleter) []func(context.Context, RowBatch) ([]uuid.UUID, error) {
-	return []func(context.Context, RowBatch) ([]uuid.UUID, error){d.DeleteProjectIssueRows}
+	return []func(context.Context, RowBatch) ([]uuid.UUID, error){
+		d.DeleteProjectIssueRows, d.DeleteProjectAssigneeRows, d.DeleteProjectLabelRows, d.DeleteProjectSubscriberRows,
+		d.DeleteProjectActivityRows,
+	}
 }
 
 // deleteProjectRows soft-deletes every undeleted work-item-side row of the

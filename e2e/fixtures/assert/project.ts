@@ -222,7 +222,7 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
   );
   // No story writes the work items' tables yet (M4 P1a spec, section 3): they have no row to be deleted with the
   // project, and none left undeleted either.
-  const withoutRows = new Set(["issues"]);
+  const withoutRows = new Set(["issue_activities", "issue_assignees", "issue_labels", "issue_subscribers", "issues"]);
   expect(rows, `the rows under ${projectId}`).toEqual(
     tables.map(({ name }) => ({ table: name, deletedWithIt: !withoutRows.has(name), other: 0 }))
   );

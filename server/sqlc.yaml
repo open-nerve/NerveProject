@@ -80,6 +80,10 @@ sql:
   - engine: postgresql
     schema:
       - migrations/sql/00015_issue_issues.sql
+      - migrations/sql/00016_issue_issue_assignees.sql
+      - migrations/sql/00017_issue_issue_labels.sql
+      - migrations/sql/00018_issue_issue_subscribers.sql
+      - migrations/sql/00019_issue_issue_activities.sql
     queries: internal/modules/issue/adapter/postgres/queries
     gen:
       go:
