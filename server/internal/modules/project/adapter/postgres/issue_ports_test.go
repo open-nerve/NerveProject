@@ -2,18 +2,14 @@ package postgresadapter_test
 
 import (
 	"context"
-	"errors"
 	"maps"
 	"slices"
 	"testing"
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -47,19 +43,14 @@ func TestLockIssueProject(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			if found != tt.found || p.WorkspaceID != tt.want.WorkspaceID || p.Archived != tt.want.Archived ||
-				!slices.Equal(ids(p.DefaultAssigneeID), ids(tt.want.DefaultAssigneeID)) {
+			if found != tt.found || jsonOf(t, p) != jsonOf(t, tt.want) {
 				t.Errorf("LockIssueProject(%s) = %+v, %v; want %+v, %v", name, p, found, tt.want, tt.found)
 			}
 			if share, keyShare := waits(t, pool, tt.id, "FOR SHARE"), waits(t, pool, tt.id, "FOR KEY SHARE"); share != tt.found || keyShare {
 				t.Errorf("%s while locked: a FOR SHARE waits %v, a FOR KEY SHARE waits %v; want %v, false", name, share, keyShare, tt.found)
 			}
-			_, err = pool.Exec(pgtest.Soon(t), "SELECT 1 FROM workspaces WHERE id = $1 FOR UPDATE NOWAIT", acme)
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
+			if rowWaits(t, pool, "workspaces", acme, "FOR UPDATE") {
 				t.Errorf("%s while locked: a FOR UPDATE of acme waits; want the workspace's row not locked", name)
-			} else if err != nil {
-				t.Fatal(err)
 			}
 			return nil
 		})
@@ -67,14 +58,6 @@ func TestLockIssueProject(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-}
-
-// ids is the id p points to, alone, or none for nil.
-func ids(p *uuid.UUID) []uuid.UUID {
-	if p == nil {
-		return nil
-	}
-	return []uuid.UUID{*p}
 }
 
 // A project's work items are numbered 1, 2, 3, another project's from 1
@@ -109,11 +92,12 @@ func TestNextIssueSequence(t *testing.T) {
 // and the default; those of the labels asked for that are its undeleted
 // labels; the roles of the accounts asked for who are its active members.
 // Another project's states, labels and members, a deleted state or label,
-// an ended or deleted membership are not in them.
+// an ended or deleted membership are not in them, nor its own label or
+// active member no one asked for (Feature, frank).
 func TestIssueCatalogs(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
-	dave, erin := newAccount(t, pool, "dave@corp.com"), newAccount(t, pool, "erin@corp.com")
+	dave, erin, frank := newAccount(t, pool, "dave@corp.com"), newAccount(t, pool, "erin@corp.com"), newAccount(t, pool, "frank@corp.com")
 	acme := newWorkspace(t, pool, "acme")
 	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
 	states := seedDefaultStates(t, s, acme, web, alice)
@@ -124,12 +108,14 @@ func TestIssueCatalogs(t *testing.T) {
 	bug, opsBug, oldBug := seedLabel(t, s, acme, web, nil, "Bug", alice), seedLabel(t, s, acme, ops, nil, "Bug", alice), seedLabel(t, s, acme,
 		web, nil, "Old", alice)
 	exec(t, pool, "UPDATE labels SET deleted_at = $2 WHERE id = $1", oldBug, now)
+	seedLabel(t, s, acme, web, nil, "Feature", alice)
 	seedMember(t, pool, acme, web, alice, 20, true)
 	seedMember(t, pool, acme, web, bob, 15, true)
 	seedMember(t, pool, acme, web, carol, 5, true)
 	seedMember(t, pool, acme, web, dave, 15, false)
 	exec(t, pool, "UPDATE project_members SET deleted_at = $2 WHERE id = $1", seedMember(t, pool, acme, web, erin, 15, true), now)
 	seedMember(t, pool, acme, ops, erin, 20, true)
+	seedMember(t, pool, acme, web, frank, 15, true)
 	ctx := context.Background()
 
 	got, err := s.IssueStates(ctx, web)
