@@ -47,8 +47,8 @@ M4 合并时：
 
 ## 处理结果（M4/P1a）
 
-- **接口的字段**（工作项的第一个操作一侧完成）：`createIssue`（`POST /api/v0/projects/{project_id}/issues`，`api/modules/issue.yaml`）的 `IssueCreate`、`IssueDetail` 没有 `estimate_point`、`description_binary`；没有 `/issue-dates/` 的接口，`issues` 表也没有 `estimate_point_id`、`description_binary` 两列（M4 设计 4.2）。以后的工作项操作照此，搜索结果的类型在 M4 的 P8。
+- **接口的字段**（工作项的第一个操作一侧完成）：`createIssue`（`POST /api/v0/projects/{project_id}/issues`，`api/modules/issue.yaml`）的 `IssueCreate`、`IssueDetail` 没有 `estimate_point`、`description_binary`；没有 `/issue-dates/` 的接口，`issues` 表也没有 `estimate_point_id`、`description_binary` 两列（M4 设计 4.2）。以后的工作项操作照此。
 
-仍未处理，状态保持 `open`：`skip_activity`（M4 的 P4，随描述）；描述保存的"撤销再重做"（M4 的 P14）。
+仍未处理，状态保持 `open`：搜索结果没有 `page` 类型（M4 的 P8）；`skip_activity`（M4 的 P4，随描述）；描述保存的"撤销再重做"（M4 的 P14）。
 
 来源：[M4/P1a spec](../specs/P1a-issues.md) 第 7 节。

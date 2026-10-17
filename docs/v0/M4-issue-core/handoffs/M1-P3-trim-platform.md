@@ -45,8 +45,8 @@ M4 合并时：
 
 ## 处理结果（M4/P1a）
 
-- **工作项的字段**（工作项的第一个操作一侧完成）：`createIssue` 的 `IssueCreate`、`IssueDetail` 没有 `is_epic`、`type_id`，`issues` 表也没有 `type_id`（M4 设计 4.2）；动态的两类（`WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`）不在 `issue_activities.verb` 的取值里（`created`、`updated`、`deleted`）。没有批量的接口。
+- **工作项的字段**（工作项的第一个操作一侧完成）：`createIssue` 的 `IssueCreate`、`IssueDetail` 没有 `is_epic`、`type_id`，`issues` 表也没有 `type_id`（M4 设计 4.2）。没有批量删除、批量归档的接口。
 
-仍未处理，状态保持 `open`：动态、评论的接口（M4 的 P4）；描述历史和按编号查找的地址（M4 的 P4、P2）；富文本筛选的显示层（M4 的 P13）；收集箱的来源（M7）。
+仍未处理，状态保持 `open`：动态的字段名里没有 `WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`（M4 设计 3.13 的表）、评论没有 `access`（都在 M4 的 P4）；描述历史和按编号查找的地址（M4 的 P4、P2）；富文本筛选的显示层（M4 的 P10b，关键词守卫的终态在 P16）；收集箱的来源（以转交关闭：收尾写进 M7 的交接；M4 删除工作项动态中显示来源的一支在 P15，M4 设计 13.1）。
 
 来源：[M4/P1a spec](../specs/P1a-issues.md) 第 7 节。
