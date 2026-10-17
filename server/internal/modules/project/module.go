@@ -8,8 +8,9 @@
 // workspace's projects one is a member of, listing, creating, changing and
 // deleting a project's labels, carries out the workspace module's cascades
 // on the projects (ProjectCascade), and offers the access module its reads
-// of a project (ProjectAccess) and the workspace module its count of an
-// account's ended project memberships (ProjectMembershipCounts).
+// of a project (ProjectAccess), the workspace module its count of an
+// account's ended project memberships (ProjectMembershipCounts), and the
+// issue module the project's lock, numbers and catalogs (IssueProjects).
 package project
 
 import (
@@ -89,18 +90,55 @@ type ProjectMembershipCounts interface {
 	CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error)
 }
 
+// IssueProjects is what the issue module's writes ask of a project (M4
+// design 6.5): its gate (ProjectGate's Find and Lock), its work items'
+// numbers (Sequences), and its states', labels' and members' catalogs
+// (StateCatalog, LabelCatalog, ProjectMembers). Each reads, or locks, in
+// the transaction ctx carries; the catalogs are read under the project's
+// lock, which every write of a state, a label or a membership holds too,
+// so they stay as read until the write commits (M4 design 3.5).
+type IssueProjects interface {
+	// ProjectWorkspace is the workspace of the undeleted project id,
+	// archived or not, read without a lock; found is false when there is
+	// none.
+	ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error)
+	// LockIssueProject locks the undeleted project id FOR NO KEY UPDATE,
+	// its workspace not locked, and answers it; found is false when there
+	// is none, also when it was deleted while the lock waited.
+	LockIssueProject(ctx context.Context, id uuid.UUID) (p IssueProject, found bool, err error)
+	// NextIssueSequence takes the project's next work-item number.
+	NextIssueSequence(ctx context.Context, id uuid.UUID) (int, error)
+	// IssueStates reads the project's undeleted states, its triage state
+	// too, in id order.
+	IssueStates(ctx context.Context, projectID uuid.UUID) ([]IssueState, error)
+	// IssueLabels reads those of ids that are the project's undeleted
+	// labels, in id order.
+	IssueLabels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error)
+	// ActiveRoles reads the project roles of those of the accounts ids
+	// that are its active members, by account.
+	ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+}
+
+// IssueProject and IssueState are the values IssueProjects hands over:
+// bootstrap converts them into issue's (M4 design 6.5).
+type (
+	IssueProject = app.IssueProject
+	IssueState   = app.IssueState
+)
+
 // Provided are the adapters project offers the other modules. They depend
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
 	ProjectAccess           ProjectAccess
 	ProjectMembershipCounts ProjectMembershipCounts
+	IssueProjects           IssueProjects
 }
 
 // Provide builds project's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{ProjectAccess: store, ProjectMembershipCounts: store}
+	return Provided{ProjectAccess: store, ProjectMembershipCounts: store, IssueProjects: store}
 }
 
 // Workspace is a workspace as the WorkspaceDirectory port hands it over:

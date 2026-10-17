@@ -21,3 +21,23 @@ type IssueCascade interface {
 	// (LockWorkspaceProjects).
 	DeleteWorkspaceIssues(ctx context.Context, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 }
+
+// IssueProject is a project as project.Provide's lock for the issue
+// module answers it (M4 design 6.5, ProjectGate.Lock): its workspace,
+// whether it is archived, and its default assignee, nil for none.
+// bootstrap converts it into issue's value.
+type IssueProject struct {
+	WorkspaceID       uuid.UUID
+	Archived          bool
+	DefaultAssigneeID *uuid.UUID
+}
+
+// IssueState is a state of a project as project.Provide's catalog for the
+// issue module reads it (M4 design 6.5, StateCatalog): its id, its group,
+// and whether it is the project's default. bootstrap converts it into
+// issue's value.
+type IssueState struct {
+	ID      uuid.UUID
+	Group   string
+	Default bool
+}
