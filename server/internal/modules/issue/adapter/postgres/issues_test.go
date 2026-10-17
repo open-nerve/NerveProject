@@ -81,14 +81,15 @@ func createWebIssue(t *testing.T, s *postgresadapter.Store, web project, id, ali
 // the order given, its subscribers', one per account however often named,
 // and its activity's, each row's own; all of them by alice at now, under
 // the work item, in its project and workspace. GetIssue reads the work
-// item back with its undeleted assignees and labels in their id order,
-// but not a deleted assignee's row, nor another work item's rows.
+// item back with its undeleted assignees and labels in their id order:
+// not its deleted assignee's or label's row, nor another work item's
+// assignee or label.
 func TestCreatingAWorkItemWritesItsRows(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
 	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
-	bug, ui := newLabel(t, pool, web, "Bug"), newLabel(t, pool, web, "UI")
+	bug, ui, feature := newLabel(t, pool, web, "Bug"), newLabel(t, pool, web, "UI"), newLabel(t, pool, web, "Feature")
 	id, other := uuid.NewV7(), uuid.NewV7()
 	r := createWebIssue(t, s, web, id, alice)
 	newIssue(t, pool, web, other, 8, alice)
@@ -99,13 +100,18 @@ func TestCreatingAWorkItemWritesItsRows(t *testing.T) {
 		insert func(context.Context, app.LinkRows) error
 		rows   app.LinkRows
 	}{{s.InsertAssignees, assignees}, {s.InsertLabels, labels}, {s.InsertSubscribers, subscribers},
-		{s.InsertAssignees, linkRows(web, other, alice, now, alice)}} {
+		{s.InsertAssignees, linkRows(web, other, alice, now, alice)}, {s.InsertLabels, linkRows(web, other, alice, now, feature)}} {
 		if err := step.insert(ctx, step.rows); err != nil {
 			t.Fatal(err)
 		}
 	}
-	exec(t, pool, `INSERT INTO issue_assignees (id, workspace_id, project_id, issue_id, assignee_id, deleted_at) VALUES ($1, $2, $3, $4, $5,
-		$6)`, uuid.NewV7(), web.workspace, web.id, id, alice, now)
+	for _, deleted := range []struct {
+		table, column string
+		target        uuid.UUID
+	}{{"issue_assignees", "assignee_id", alice}, {"issue_labels", "label_id", feature}} {
+		exec(t, pool, `INSERT INTO `+deleted.table+` (id, workspace_id, project_id, issue_id, `+deleted.column+`, deleted_at) VALUES ($1, $2,
+			$3, $4, $5, $6)`, uuid.NewV7(), web.workspace, web.id, id, deleted.target, now)
+	}
 	created, assigned := uuid.NewV7(), uuid.NewV7()
 	rows := []app.ActivityRow{
 		{ID: created, WorkspaceID: web.workspace, ProjectID: web.id, IssueID: id, ActorID: alice, At: now,
@@ -129,19 +135,18 @@ func TestCreatingAWorkItemWritesItsRows(t *testing.T) {
 	for _, tt := range []struct {
 		table, column string
 		rows          app.LinkRows
-		lines         int // of the rows, those written
-	}{{"issue_labels", "label_id", labels, 2}, {"issue_subscribers", "subscriber_id", subscribers, 2}} {
+		// lines: of the rows, those written, first in the table; all: the
+		// table's rows, the other work item's and the deleted one too
+		lines, all int
+	}{{"issue_assignees", "assignee_id", assignees, 2, 4}, {"issue_labels", "label_id", labels, 2, 4},
+		{"issue_subscribers", "subscriber_id", subscribers, 2, 2}} {
 		var want []string
 		for i := range tt.lines {
 			want = append(want, linkLine(t, pool, tt.rows.IDs[i], web, id, tt.rows.Targets[i], alice, now))
 		}
-		if got := linkTable(t, pool, tt.table, tt.column); !slices.Equal(got, want) {
-			t.Errorf("%s:\n%v\nwant\n%v", tt.table, got, want)
+		if got := linkTable(t, pool, tt.table, tt.column); len(got) != tt.all || !slices.Equal(got[:tt.lines], want) {
+			t.Errorf("%s:\n%v\nwant %d rows, first\n%v", tt.table, got, tt.all, want)
 		}
-	}
-	if got := linkTable(t, pool, "issue_assignees", "assignee_id"); len(got) != 4 || got[0] != linkLine(t, pool, assignees.IDs[0], web, id, carol,
-		alice, now) || got[1] != linkLine(t, pool, assignees.IDs[1], web, id, bob, alice, now) {
-		t.Errorf("issue_assignees:\n%v\nwant carol's and bob's rows first, as given", got)
 	}
 	var activity []string
 	q, err := pool.Query(ctx, `SELECT format('%s %s/%s/%s %s %L %L→%L %L→%L %L %s/%s/%s %s/%s %L', id, workspace_id, project_id, issue_id, verb,
