@@ -37,9 +37,10 @@ var issueWrites = []issueWrite{
 }
 
 // issueTables are the tables a write on the work-item side reads or
-// writes but users, whose display names it reads without a lock: its
-// project's, the memberships its decision reads, the states and labels it
-// checks, and the work-item side's own.
+// writes but users, which it reads without a lock and key-shares only
+// through its foreign keys, after its project's lock: its project's, the
+// memberships its decision reads, the states and labels it checks, and
+// the work-item side's own.
 const issueTables = "workspaces, workspace_members, projects, project_members, states, labels, issues, issue_assignees, issue_labels, " +
 	"issue_subscribers, issue_activities"
 
@@ -71,10 +72,11 @@ func writesOnIssues(ops []apitest.Operation) []string {
 //   - FOR NO KEY UPDATE by its lock, and nothing of the workspace: another
 //     transaction holds the first table the write reads under its lock
 //     that its precheck did not (reads) IN ACCESS EXCLUSIVE MODE, which a
-//     plain read waits for too.
-//     alice's write waits for it before any write of its own, holding
-//     Web's row FOR NO KEY UPDATE, no weaker and no stronger, and acme's
-//     row not at all (lockOn).
+//     plain read waits for too. alice's write waits for it before any
+//     write of its own: it holds no table's ROW EXCLUSIVE lock, which
+//     every write takes (writtenTables), so what it holds of Web is its
+//     lock's, not an UPDATE's. It holds Web's row FOR NO KEY UPDATE, no
+//     weaker and no stronger, and acme's row not at all (lockOn).
 //   - No lock of the workspace that a cascade's waits for: another
 //     transaction holds acme's row FOR NO KEY UPDATE, as every cascade over
 //     its projects does (M3 design 3.3); alice's write answers meanwhile.
@@ -133,6 +135,9 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 			if table := waitedTable(t, w.pool, read.Conn().PgConn()); table != iw.reads {
 				t.Fatalf("%s waits for %s, not for %s", iw.op, table, iw.reads)
 			}
+			if written := writtenTables(t, w.pool, read.Conn().PgConn()); len(written) > 0 {
+				t.Errorf("%s has written %q when it reads %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.reads)
+			}
 			if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
 				t.Errorf("%s holds Web %s when it reads %s, not FOR NO KEY UPDATE", iw.op, lock, iw.reads)
 			}
@@ -182,4 +187,21 @@ func waitedTable(t *testing.T, pool *pgxpool.Pool, holder *pgconn.PgConn) string
 		t.Fatalf("the table waited for behind backend %d: %v", holder.PID(), err)
 	}
 	return table
+}
+
+// writtenTables are the relations the backend blocked behind holder has
+// written in its transaction, sorted: the tables and indexes it holds ROW
+// EXCLUSIVE, the lock every INSERT, UPDATE and DELETE takes of them and no
+// read or row lock does.
+func writtenTables(t *testing.T, pool *pgxpool.Pool, holder *pgconn.PgConn) []string {
+	t.Helper()
+	const written = `SELECT coalesce(array_agg(DISTINCT h.relation::regclass::text ORDER BY h.relation::regclass::text), '{}')
+		FROM pg_locks h
+		WHERE h.granted AND h.locktype = 'relation' AND h.mode = 'RowExclusiveLock'
+		  AND h.pid IN (SELECT l.pid FROM pg_locks l WHERE NOT l.granted AND $1::int = ANY (pg_blocking_pids(l.pid)))`
+	var tables []string
+	if err := pool.QueryRow(pgtest.Soon(t), written, int64(holder.PID())).Scan(&tables); err != nil {
+		t.Fatalf("the tables written behind backend %d: %v", holder.PID(), err)
+	}
+	return tables
 }
