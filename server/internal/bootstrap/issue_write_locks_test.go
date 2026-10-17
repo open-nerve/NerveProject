@@ -20,8 +20,8 @@ import (
 // TestEachIssueWriteLocksItsProjectFirst sends it: its operation, its
 // method and its path as the contract has them, with %s for Web's id; its
 // body, which names the world's rows; the answer it gets; and reads, the
-// table it reads first under its project's lock, before any write of its
-// own.
+// first table it reads under its project's lock that its precheck did not
+// read, before any write of its own.
 type issueWrite struct {
 	op, method, path string
 	body             func(w issueWorld) string
@@ -37,8 +37,9 @@ var issueWrites = []issueWrite{
 }
 
 // issueTables are the tables a write on the work-item side reads or
-// writes: its project's, the memberships its decision reads, the states
-// and labels it checks, and the work-item side's own.
+// writes but users, whose display names it reads without a lock: its
+// project's, the memberships its decision reads, the states and labels it
+// checks, and the work-item side's own.
 const issueTables = "workspaces, workspace_members, projects, project_members, states, labels, issues, issue_assignees, issue_labels, " +
 	"issue_subscribers, issue_activities"
 
@@ -61,15 +62,16 @@ func writesOnIssues(ops []apitest.Operation) []string {
 // (issueWrites), which a write without one fails before any database.
 // Each write, on Web of the world (newIssueWorld):
 //   - Refused, no lock: another transaction holds every table it reads or
-//     writes (issueTables) IN EXCLUSIVE MODE, which a row lock and a write
-//     wait for and a plain read does not. walt and wanda, who see Web but
-//     may not write on its work items, are answered 403, and olga, who
-//     does not see it, 404, while it holds them.
+//     writes but users (issueTables) IN EXCLUSIVE MODE, which a row lock
+//     and a write wait for and a plain read does not. walt and wanda, who
+//     see Web but may not write on its work items, are answered 403, and
+//     olga, who does not see it, 404, while it holds them.
 //   - Its project first: alice's write, under the same locks, waits for
 //     the projects table, no other.
 //   - FOR NO KEY UPDATE by its lock, and nothing of the workspace: another
-//     transaction holds the table the write reads first under its lock
-//     (reads) IN ACCESS EXCLUSIVE MODE, which a plain read waits for too.
+//     transaction holds the first table the write reads under its lock
+//     that its precheck did not (reads) IN ACCESS EXCLUSIVE MODE, which a
+//     plain read waits for too.
 //     alice's write waits for it before any write of its own, holding
 //     Web's row FOR NO KEY UPDATE, no weaker and no stronger, and acme's
 //     row not at all (lockOn).
