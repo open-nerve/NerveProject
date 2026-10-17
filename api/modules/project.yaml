@@ -553,11 +553,10 @@ paths:
         first. Nor is the only state of its group
         (project.state_last_in_group): every group keeps a state. A state
         that is both is project.state_default. Nor is a state a work item is
-        in, an archived one too (project.state_in_use): move the work items
-        first; it is checked before the default and the group. The state is
-        deleted at the moment of the request, by the caller, and its name is
-        free again in the project. The role is decided after the workspace
-        and project rows are locked.
+        in, an archived one too (project.state_in_use); it is checked before
+        the default and the group. The state is deleted at the moment of the
+        request, by the caller, and its name is free again in the project.
+        The role is decided after the workspace and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [project.state_not_found, forbidden, project.state_in_use, project.state_default, project.state_last_in_group]
       responses:

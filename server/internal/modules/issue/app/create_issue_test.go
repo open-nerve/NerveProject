@@ -150,7 +150,8 @@ func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 // no completion; and the assignees: the default assignee when he is an
 // active admin or member, assigned, subscribed and in the activity like
 // one asked for; no one when he is a guest, has left, or there is none,
-// without a problem; the ones asked for, not him, when some are.
+// without a problem; the ones asked for, not him, when some are. The
+// caller among them is subscribed once.
 func TestCreateIssueDefaults(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
@@ -165,6 +166,7 @@ func TestCreateIssueDefaults(t *testing.T) {
 		{"the default assignee, a guest", &gus, nil, []uuid.UUID{gus}, nil},
 		{"the default assignee left", &out, nil, []uuid.UUID{out}, nil},
 		{"assignees asked for", &bob, []uuid.UUID{carol}, []uuid.UUID{carol}, []uuid.UUID{carol}},
+		{"the caller among the assignees asked for", nil, []uuid.UUID{alice, bob}, []uuid.UUID{alice, bob}, []uuid.UUID{bob, alice}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, w := newCreate()
@@ -173,7 +175,7 @@ func TestCreateIssueDefaults(t *testing.T) {
 			if err != nil || w.issues.issue == nil {
 				t.Fatalf("Execute() = %v, %v; want the work item", got, err)
 			}
-			subscribers := slices.SortedFunc(slices.Values(append([]uuid.UUID{alice}, tt.assignees...)), uuid.UUID.Compare)
+			subscribers := slices.Compact(slices.SortedFunc(slices.Values(append([]uuid.UUID{alice}, tt.assignees...)), uuid.UUID.Compare))
 			if want := created(w.issues.issue.ID, backlog.ID, tt.read, nil, tt.assignees, nil, subscribers, 1+len(tt.assignees)); !slices.Equal(
 				w.log.calls, want) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, want)

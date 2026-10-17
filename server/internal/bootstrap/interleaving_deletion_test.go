@@ -285,14 +285,7 @@ func TestAWorkspacesDeletionWaitsForAWriteHoldingOneOfItsProjects(t *testing.T) 
 	r := newGrowthRace(t, false)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	holder, err := r.pool.Begin(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = holder.Rollback(context.Background()) }()
-	if _, err := holder.Exec(ctx, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", r.web); err != nil {
-		t.Fatal(err)
-	}
+	holder := holding(t, r.pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", r.web)
 	deleted := run(func() error { return r.deleteAcme(ctx, workspacepg.New(r.pool)) })
 	pgtest.WaitForLockWaitOn(t, r.pool, "projects", 5*time.Second)
 	released := time.Now().Truncate(time.Microsecond)

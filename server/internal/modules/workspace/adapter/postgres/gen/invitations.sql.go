@@ -278,7 +278,7 @@ FOR NO KEY UPDATE
 // (M4 design 3.5): every undeleted invitation of the workspace, pending or declined, FOR NO KEY UPDATE in id order,
 // which the deletion then deletes by these ids (DeleteInvitations).
 // A deactivation deletes the invitation to its own address without the workspace's lock, in id order across
-// workspaces, so the cascade takes them in id order too (M3 design 3.6 convention 5): a scan-order UPDATE could hold
+// workspaces, so the deletion takes them in id order too (M3 design 3.6 convention 5): a scan-order UPDATE could hold
 // a higher id while it waits for a lower one and close a cycle with two deactivations. After a wait, Postgres
 // evaluates deleted_at IS NULL again on the row's newest version, so a row deleted meanwhile is left out and keeps its
 // time.
