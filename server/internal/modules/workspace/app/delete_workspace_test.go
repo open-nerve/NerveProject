@@ -62,17 +62,20 @@ func deletionLocks(w domain.Workspace) []string {
 
 // cascadeCalls are the deletion's steps on w by user, in order: the
 // workspace's own, the invitations locked among them, then the projects',
-// through the project module.
+// through the project module, with the projects locked.
 func cascadeCalls(user app.AccountState, w domain.Workspace) []string {
 	var calls []string
 	at := " by " + user.ID.String() + " at " + now.Format(time.RFC3339Nano)
 	for _, step := range []string{"DeleteWorkspace", "DeleteInvitations", "DeleteWorkspaceMembers", "DeleteWorkspacePreferences",
 		"DeleteWorkspaceProjects"} {
-		if step == "DeleteInvitations" {
+		switch step {
+		case "DeleteInvitations":
 			calls = append(calls, fmt.Sprintf("%s %v%s", step, lockedInvitations, at))
-			continue
+		case "DeleteWorkspaceProjects":
+			calls = append(calls, fmt.Sprintf("%s %s %v%s", step, w.ID, lockedProjects, at))
+		default:
+			calls = append(calls, step+" "+w.ID.String()+at)
 		}
-		calls = append(calls, step+" "+w.ID.String()+at)
 	}
 	return calls
 }

@@ -151,9 +151,9 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 // membership, which the creation writes; the member's, and an invitation
 // the admin sent, through the workspace store; the admin's display
 // settings, through the API; a project with the member as its admin, his
-// display settings in it, a state and two labels (seedProject). A phase
-// that adds a table under workspaces seeds a row of it here. It returns the
-// workspace's id.
+// display settings in it, a state, two labels and a work item
+// (seedProject). A phase that adds a table under workspaces seeds a row of
+// it here. It returns the workspace's id.
 func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token, slug string) uuid.UUID {
 	t.Helper()
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", token, `{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
@@ -184,11 +184,12 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 }
 
 // seedProject writes a project of the workspace id, created by admin,
-// with member as its admin, his display settings in it, one state, and a
-// label with its child by member (seedLabels), directly: the seed does not
-// depend on which of the project module's writes exist, nor on what they
-// write besides. member, a project admin who is a member of the workspace
-// (PA in M3 design 9.2), may write the project's labels. No row under the
+// with member as its admin, his display settings in it, one state, a label
+// with its child and a work item by member (seedLabels, seedIssues),
+// directly: the seed does not depend on which of the project module's
+// writes exist, nor on what they write besides. member, a project admin
+// who is a member of the workspace (PA in M3 design 9.2), may write the
+// project's labels. No row under the
 // project is the last writing of admin, the workspace's deleter (the test
 // reads it back), so a deletion by admin that kept a row's writer would
 // show.
@@ -212,6 +213,7 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) 
 		}
 	}
 	seedLabels(t, pool, project, member)
+	seedIssues(t, pool, project, member)
 }
 
 // A failing projects' step fails the whole deletion (M3 design 3.3, 9.3):

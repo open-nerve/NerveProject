@@ -20,12 +20,14 @@ type Cascade struct {
 	locker   WorkspaceProjectsLocker
 	members  MemberDemoter
 	enders   MembershipEnder
+	issues   IssueCascade
 }
 
-// NewCascade returns the cascade over projects, locker, members and
-// enders.
-func NewCascade(projects ProjectsDeleter, locker WorkspaceProjectsLocker, members MemberDemoter, enders MembershipEnder) *Cascade {
-	return &Cascade{projects: projects, locker: locker, members: members, enders: enders}
+// NewCascade returns the cascade over projects, locker, members, enders
+// and the issue module's cascade.
+func NewCascade(projects ProjectsDeleter, locker WorkspaceProjectsLocker, members MemberDemoter, enders MembershipEnder,
+	issues IssueCascade) *Cascade {
+	return &Cascade{projects: projects, locker: locker, members: members, enders: enders, issues: issues}
 }
 
 // LockWorkspaceProjects locks the workspace's undeleted projects, archived
@@ -40,11 +42,16 @@ func (c *Cascade) LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UU
 
 // DeleteWorkspaceProjects soft-deletes the workspace's projects and the
 // rows under them (M3 design 3.6): the last step of deleteWorkspace's
-// cascade, under its FOR NO KEY UPDATE of the workspace, each step one
-// statement (convention 5), the steps deleteProject runs too
-// (deleteProjects), at by and now.
-func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	return deleteProjects(ctx, c.projects, Deletion{WorkspaceID: workspaceID, By: by, Now: now})
+// cascade, under its FOR NO KEY UPDATE of the workspace and of the projects
+// (LockWorkspaceProjects), each step one statement (convention 5), the
+// steps deleteProject runs too (deleteProjects), then the work-item side of
+// the projects it locked, through the issue module (M4 design 3.5), all at
+// by and now.
+func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
+	if err := deleteProjects(ctx, c.projects, Deletion{WorkspaceID: workspaceID, By: by, Now: now}); err != nil {
+		return err
+	}
+	return c.issues.DeleteWorkspaceIssues(ctx, projectIDs, by, now)
 }
 
 // DemoteToGuest makes userID a guest in each of the workspace's projects he

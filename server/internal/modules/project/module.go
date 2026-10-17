@@ -38,8 +38,9 @@ type Cascade interface {
 	// of its projects, before it reads its moment (M4 design 3.5).
 	LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error)
 	// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
-	// rows under them: deleteWorkspace's last step.
-	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+	// rows under them, the work-item side of projectIDs, those it locked,
+	// too: deleteWorkspace's last step.
+	DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 	// DemoteToGuest makes userID a guest in each of the workspace's projects
 	// he has a membership of, ended ones too.
 	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
@@ -54,6 +55,9 @@ type Cascade interface {
 // it (M3 design 6.3, 6.6).
 type CascadeDeps struct {
 	Pool *pgxpool.Pool
+	// Issues is issue's IssueCascade (issue.Provide): deleting a
+	// workspace's projects deletes their work-item side (M4 design 6.6).
+	Issues app.IssueCascade
 }
 
 // NewCascade builds the module's Cascade alone, on the pool: for the
@@ -62,7 +66,7 @@ type CascadeDeps struct {
 // it.
 func NewCascade(d CascadeDeps) Cascade {
 	store := postgresadapter.New(d.Pool)
-	return app.NewCascade(store, store, store, store)
+	return app.NewCascade(store, store, store, store, d.Issues)
 }
 
 // ProjectAccess reads a project for the access module's decision (M3
@@ -114,6 +118,8 @@ type Deps struct {
 	Workspaces app.WorkspaceDirectory
 	// Members is workspace's WorkspaceMembers (workspace.Provide).
 	Members app.WorkspaceMembers
+	// Issues is issue's IssueCascade (issue.Provide).
+	Issues app.IssueCascade
 }
 
 // Module is the wired project module.
@@ -128,7 +134,7 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
-	return &Module{cascade: NewCascade(CascadeDeps{Pool: d.Pool}), uc: httpadapter.UseCases{
+	return &Module{cascade: NewCascade(CascadeDeps{Pool: d.Pool, Issues: d.Issues}), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),
@@ -138,7 +144,7 @@ func New(d Deps) *Module {
 		UpdateProject:       app.NewUpdateProject(store, locks, d.Tx, d.Clock),
 		ArchiveProject:      app.NewArchiveProject(store, locks, d.Tx, d.Clock),
 		UnarchiveProject:    app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
-		DeleteProject:       app.NewDeleteProject(store, locks, d.Tx, d.Clock),
+		DeleteProject:       app.NewDeleteProject(store, d.Issues, locks, d.Tx, d.Clock),
 		GetPreferences:      app.NewGetProjectPreferences(store, d.Authorizer),
 		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
 		ListMembers:         app.NewListProjectMembers(store, d.Authorizer),

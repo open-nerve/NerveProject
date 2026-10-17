@@ -249,7 +249,7 @@ func (noProjects) LockWorkspaceProjects(context.Context, uuid.UUID) ([]uuid.UUID
 	return nil, nil
 }
 
-func (noProjects) DeleteWorkspaceProjects(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
+func (noProjects) DeleteWorkspaceProjects(context.Context, uuid.UUID, []uuid.UUID, uuid.UUID, time.Time) error {
 	return errors.New("the projects' step ran after the failed one")
 }
 

@@ -12,7 +12,6 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
-	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -67,7 +66,7 @@ func (m otherFoundHolding) HasOtherAdmin(ctx context.Context, workspaceID, userI
 // identity's profiles and the Authorizer as bootstrap wires them.
 func (r adminRace) leave(ctx context.Context, user uuid.UUID, workspaces workspaceapp.WorkspaceLeaver) error {
 	return workspaceapp.NewLeaveWorkspace(workspaces, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		project.NewCascade(project.CascadeDeps{Pool: r.pool}), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		cascadeOn(r.pool), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: user}), "acme")
 }
 
@@ -141,7 +140,7 @@ func TestTwoAdminsLeavingLeaveAnAdmin(t *testing.T) {
 // on the system's clock: its time is read when it reads it.
 func (r growthRace) remove(ctx context.Context, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		project.NewCascade(project.CascadeDeps{Pool: r.pool}), r.authorizer(), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		cascadeOn(r.pool), r.authorizer(), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), r.bobIn)
 }
 

@@ -15,7 +15,6 @@ import (
 
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
-	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
@@ -41,7 +40,7 @@ import (
 // cascade and the Authorizer as bootstrap wires them, on the system's
 // clock.
 func (r race) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter) error {
-	return workspaceapp.NewDeleteWorkspace(workspaces, project.NewCascade(project.CascadeDeps{Pool: r.pool}), authorizerOn(r.pool),
+	return workspaceapp.NewDeleteWorkspace(workspaces, cascadeOn(r.pool), authorizerOn(r.pool),
 		postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}, slog.New(slog.DiscardHandler)).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
 }

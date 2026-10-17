@@ -13,7 +13,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
-	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -103,7 +102,7 @@ func (r answerRace) accounts() workspaceapp.Accounts {
 
 // projects is project's cascade as bootstrap wires it.
 func (r answerRace) projects() workspaceapp.ProjectCascade {
-	return project.NewCascade(project.CascadeDeps{Pool: r.pool})
+	return cascadeOn(r.pool)
 }
 
 // accept is bob's acceptance of his invitation, over invitations.

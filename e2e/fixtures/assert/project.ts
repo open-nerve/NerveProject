@@ -184,8 +184,8 @@ export async function expectMember(
  * P4, W3: the project of projectId is deleted by the account of adminEmail, and with it, at the same moment and by the
  * same account, every row under it that was not deleted before: of each table whose foreign key names projects (the
  * catalog's list, so a table a later phase adds is read too, and the list is every table with a project_id column),
- * by its project_id. Each table has such a row, and none is left undeleted; a row deleted before the project, as a
- * label a story deleted, is not counted.
+ * by its project_id. Each table but the work items' has such a row, and none is left undeleted; a row deleted before
+ * the project, as a label a story deleted, is not counted.
  */
 export async function expectProjectDeleted(db: Database, projectId: string, adminEmail: string): Promise<void> {
   const [project] = await db.query(
@@ -220,8 +220,11 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
       return { table: name, deletedWithIt: (counts?.with_it ?? 0) > 0, other: counts?.other };
     })
   );
+  // No story writes the work items' tables yet (M4 P1a spec, section 3): they have no row to be deleted with the
+  // project, and none left undeleted either.
+  const withoutRows = new Set(["issues"]);
   expect(rows, `the rows under ${projectId}`).toEqual(
-    tables.map(({ name }) => ({ table: name, deletedWithIt: true, other: 0 }))
+    tables.map(({ name }) => ({ table: name, deletedWithIt: !withoutRows.has(name), other: 0 }))
   );
 }
 

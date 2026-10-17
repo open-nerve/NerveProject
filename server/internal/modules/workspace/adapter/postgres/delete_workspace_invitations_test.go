@@ -29,7 +29,7 @@ func (noProjectRows) LockWorkspaceProjects(context.Context, uuid.UUID) ([]uuid.U
 	return nil, nil
 }
 
-func (noProjectRows) DeleteWorkspaceProjects(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
+func (noProjectRows) DeleteWorkspaceProjects(context.Context, uuid.UUID, []uuid.UUID, uuid.UUID, time.Time) error {
 	return nil
 }
 

@@ -265,9 +265,10 @@ type ProjectCascade interface {
 	// reads its moment (M4 design 3.5).
 	LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error)
 	// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
-	// rows under them, at the moment and by the account of the workspace's
-	// deletion: its last step.
-	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+	// rows under them, the work-item side of projectIDs, those
+	// LockWorkspaceProjects locked, too, at the moment and by the account of
+	// the workspace's deletion: its last step.
+	DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 	// DemoteToGuest makes userID a guest in each of the workspace's projects
 	// he has a membership of, ended ones too, at the moment and by the
 	// account of the change that made him the workspace's guest: an admin's

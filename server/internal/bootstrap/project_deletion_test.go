@@ -28,8 +28,9 @@ import (
 
 // twoProjects is the wired app on a database of its own, and acme with two
 // projects alice created, Web and Ops: each has her membership, her display
-// settings in it and its states, through createProject, and a label of
-// hers, Bug, with its child, UI, written directly (seedLabels).
+// settings in it and its states, through createProject, a label of hers,
+// Bug, with its child, UI, and a work item of hers, written directly
+// (seedLabels, seedIssues).
 func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string, aliceID, web, ops uuid.UUID) {
 	t.Helper()
 	contract = apitest.Load(t)
@@ -42,8 +43,10 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 		t.Fatalf("creating acme = %d %s", status, body)
 	}
 	web, ops = createdProject(t, contract, base, alice, "acme", "Web", "WEB"), createdProject(t, contract, base, alice, "acme", "Ops", "OPS")
-	seedLabels(t, pool, web, aliceID)
-	seedLabels(t, pool, ops, aliceID)
+	for _, project := range []uuid.UUID{web, ops} {
+		seedLabels(t, pool, project, aliceID)
+		seedIssues(t, pool, project, aliceID)
+	}
 	return contract, base, pool, alice, aliceID, web, ops
 }
 
@@ -57,6 +60,29 @@ func seedLabels(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 		UNION ALL SELECT $4::uuid, workspace_id, id, $1::uuid, 'UI', $2::uuid, $2::uuid FROM projects WHERE id = $3`,
 		uuid.NewV7(), by, project, uuid.NewV7()); err != nil || tag.RowsAffected() != 2 {
 		t.Fatalf("seeding the labels of %s: %d rows, %v; want 2", project, tag.RowsAffected(), err)
+	}
+}
+
+// seedIssues writes a work item of project in its default state, by by,
+// directly: the seed does not depend on which of the issue module's writes
+// exist. Its number is the project's counter, moved on, as a creation
+// moves it.
+func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
+	t.Helper()
+	issue := uuid.NewV7()
+	for _, stmt := range []struct {
+		sql  string
+		args []any
+	}{
+		{`UPDATE projects SET last_issue_sequence = last_issue_sequence + 1 WHERE id = $1`, []any{project}},
+		{`INSERT INTO issues (id, workspace_id, project_id, state_id, name, sequence_id, created_by_id, updated_by_id)
+			SELECT $1, p.workspace_id, p.id, s.id, 'Seeded', p.last_issue_sequence, $3, $3
+			FROM projects p JOIN states s ON s.project_id = p.id AND s."default" AND s.deleted_at IS NULL WHERE p.id = $2`,
+			[]any{issue, project, by}},
+	} {
+		if tag, err := pool.Exec(pgtest.Soon(t), stmt.sql, stmt.args...); err != nil || tag.RowsAffected() != 1 {
+			t.Fatalf("seeding the work items of %s: %s: %d rows, %v; want 1", project, stmt.sql, tag.RowsAffected(), err)
+		}
 	}
 }
 

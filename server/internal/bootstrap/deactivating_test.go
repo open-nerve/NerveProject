@@ -10,7 +10,6 @@ import (
 
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
-	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
@@ -27,7 +26,7 @@ func deactivating(pool *pgxpool.Pool, sessions identityapp.SessionRevoker, membe
 	store := identitypg.New(pool)
 	return identityapp.NewDeactivate(identityapp.DeactivateDeps{
 		Accounts: store, Users: store, Profiles: store, Sessions: sessions,
-		Memberships: workspaceapp.NewDeactivator(memberships, project.NewCascade(project.CascadeDeps{Pool: pool}), clock.System{}),
+		Memberships: workspaceapp.NewDeactivator(memberships, cascadeOn(pool), clock.System{}),
 		Tx:          postgres.NewTxManager(pool, 2*time.Second), Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),
 	})
 }

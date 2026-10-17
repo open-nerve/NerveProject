@@ -12,21 +12,23 @@ import (
 // (M3 design 3.3, 3.6).
 type DeleteProject struct {
 	projects ProjectsDeleter
+	issues   IssueCascade
 	locks    Locks
 	tx       shared.TxManager
 	clock    Clock
 }
 
 // NewDeleteProject returns the use case.
-func NewDeleteProject(projects ProjectsDeleter, locks Locks, tx shared.TxManager, clock Clock) *DeleteProject {
-	return &DeleteProject{projects: projects, locks: locks, tx: tx, clock: clock}
+func NewDeleteProject(projects ProjectsDeleter, issues IssueCascade, locks Locks, tx shared.TxManager, clock Clock) *DeleteProject {
+	return &DeleteProject{projects: projects, issues: issues, locks: locks, tx: tx, clock: clock}
 }
 
 // Execute, in one transaction (M3 design 3.6): the project's locks (Locks:
 // its workspace FOR SHARE, then the project FOR NO KEY UPDATE) and the
 // decision on project.delete; the clock read under the locks; then the
 // project and the rows under it soft-deleted, each at that one moment, by
-// the caller (deleteProjects). An archived project is deleted as any
+// the caller (deleteProjects), and last its work-item side, through the
+// issue module (M4 design 3.5). An archived project is deleted as any
 // other.
 func (u *DeleteProject) Execute(ctx context.Context, id uuid.UUID) error {
 	actor, err := shared.RequireActor(ctx)
@@ -38,6 +40,10 @@ func (u *DeleteProject) Execute(ctx context.Context, id uuid.UUID) error {
 		if err != nil {
 			return err
 		}
-		return deleteProjects(ctx, u.projects, Deletion{WorkspaceID: h.project.WorkspaceID, ProjectID: &id, By: actor.UserID, Now: u.clock.Now()})
+		now := u.clock.Now()
+		if err := deleteProjects(ctx, u.projects, Deletion{WorkspaceID: h.project.WorkspaceID, ProjectID: &id, By: actor.UserID, Now: now}); err != nil {
+			return err
+		}
+		return u.issues.DeleteProjectIssues(ctx, id, actor.UserID, now)
 	})
 }

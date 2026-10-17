@@ -13,7 +13,6 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
-	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -222,7 +221,7 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 		want  string
 	}{
 		{"(b) he makes alice a member", func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error {
-			cascade := project.NewCascade(project.CascadeDeps{Pool: r.pool})
+			cascade := cascadeOn(r.pool)
 			return run(func() error {
 				return changeRole(ctx, r.pool, r.bob, r.aliceIn, shared.RoleMember, gatedMembers{workspacepg.New(r.pool), g}, cascade)
 			})

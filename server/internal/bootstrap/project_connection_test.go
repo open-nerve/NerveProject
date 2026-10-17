@@ -15,6 +15,7 @@ import (
 
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
@@ -64,11 +65,12 @@ func newRoute(t *testing.T, register func(*httpserver.Router, *httpserver.API)) 
 }
 
 // newProjectRoute is the project module (project.New) on pool, with auth as
-// its Authorizer and members as its WorkspaceMembers.
+// its Authorizer, members as its WorkspaceMembers and issue's cascade.
 func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, members projectapp.WorkspaceMembers) moduleRoute {
 	t.Helper()
 	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clock.System{}, Authorizer: auth,
-		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members}).Register)
+		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members,
+		Issues: issue.Provide(pool).IssueCascade}).Register)
 }
 
 // send sends method path as caller, with body when it is not empty, and

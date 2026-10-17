@@ -28,16 +28,17 @@ func NewDeleteWorkspace(workspaces WorkspaceDeleter, projects ProjectCascade, au
 
 // cascade soft-deletes, by by at now, in the order of M3 design 3.6: the
 // workspace row, the invitations it locked, the memberships, the display
-// settings, and last the projects and the rows under them, through
-// ProjectCascade (M3 design 3.3). A failing step comes back as itself and
-// the steps after it do not run.
-func (u *DeleteWorkspace) cascade(ctx context.Context, id uuid.UUID, invitations []uuid.UUID, by uuid.UUID, now time.Time) error {
+// settings, and last the projects and the rows under them, the work-item
+// side of the projects it locked too, through ProjectCascade (M3 design
+// 3.3, M4 design 3.5). A failing step comes back as itself and the steps
+// after it do not run.
+func (u *DeleteWorkspace) cascade(ctx context.Context, id uuid.UUID, invitations, projects []uuid.UUID, by uuid.UUID, now time.Time) error {
 	for _, step := range []func() error{
 		func() error { return u.workspaces.DeleteWorkspace(ctx, id, by, now) },
 		func() error { return u.workspaces.DeleteInvitations(ctx, invitations, by, now) },
 		func() error { return u.workspaces.DeleteWorkspaceMembers(ctx, id, by, now) },
 		func() error { return u.workspaces.DeleteWorkspacePreferences(ctx, id, by, now) },
-		func() error { return u.projects.DeleteWorkspaceProjects(ctx, id, by, now) },
+		func() error { return u.projects.DeleteWorkspaceProjects(ctx, id, projects, by, now) },
 	} {
 		if err := step(); err != nil {
 			return err
@@ -68,10 +69,11 @@ func (u *DeleteWorkspace) Execute(ctx context.Context, slug string) error {
 		if err != nil {
 			return err
 		}
-		if _, err := u.projects.LockWorkspaceProjects(ctx, id); err != nil {
+		projects, err := u.projects.LockWorkspaceProjects(ctx, id)
+		if err != nil {
 			return err
 		}
-		if err := u.cascade(ctx, id, invitations, actor.UserID, u.clock.Now()); err != nil {
+		if err := u.cascade(ctx, id, invitations, projects, actor.UserID, u.clock.Now()); err != nil {
 			return err
 		}
 		deleted = id

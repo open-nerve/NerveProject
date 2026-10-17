@@ -34,6 +34,9 @@ var actionlessModules = []string{
 	"instance",
 	// It decides the other modules' actions, and has none of its own.
 	"access",
+	// It answers no operation: the project module's deletions call it, and
+	// no rule decides that.
+	"issue",
 }
 
 // moduleViolations reports where the module directories and the two lists

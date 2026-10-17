@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
-	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
@@ -130,7 +129,7 @@ func TestARemovalAndTheRemovedMembersProjectSerialize(t *testing.T) {
 // wires them.
 func (r adminRace) removeAlice(ctx context.Context, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		project.NewCascade(project.CascadeDeps{Pool: r.pool}), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		cascadeOn(r.pool), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.bob}), r.aliceIn)
 }
 
