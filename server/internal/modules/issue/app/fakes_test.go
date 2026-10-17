@@ -19,9 +19,10 @@ var errDisk = errors.New("disk full")
 // not carry it ran outside it.
 type inTxKey struct{}
 
-// callLog records the calls of the fakes that share it, in order, each with
-// its arguments, and " outside tx" when it ran outside a transaction. A
-// fake fails the call named in fail with errDisk, after logging it.
+// callLog records the calls of the fakes that share or embed it, in order,
+// each with its arguments, and " outside tx" when it ran outside a
+// transaction. It fails the call named in fail with errDisk, after logging
+// it.
 type callLog struct {
 	calls []string
 	fail  string
@@ -59,10 +60,10 @@ func (c clockAt) Now() time.Time {
 }
 
 // fakeAuthorizer answers its n-th call answers[n], nil or past the end
-// for allowed, with grant; it logs every call.
+// for allowed, with an empty grant, which Locks does not read; it logs
+// every call.
 type fakeAuthorizer struct {
 	log     *callLog
-	grant   shared.Grant
 	answers []error
 	calls   int
 }
@@ -76,7 +77,7 @@ func (f *fakeAuthorizer) Authorize(ctx context.Context, actor shared.Actor, acti
 	if n < len(f.answers) && f.answers[n] != nil {
 		return shared.Grant{}, f.answers[n]
 	}
-	return f.grant, nil
+	return shared.Grant{}, nil
 }
 
 // fakeProject is a project's side of the issue module's ports: its gate,
@@ -164,18 +165,17 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 
 // fakeIssues is the work items' store: it keeps what it is given, each
 // call logged, and answers the work item from it, its assignees and labels
-// in id order. greatest is the greatest sort order of each state; lost,
-// when set, loses the work item once its activity is written, so that it is
-// not there to read back.
+// in id order; the subscribers it checks and logs, and keeps none. greatest
+// is the greatest sort order of each state; lost, when set, loses the work
+// item once its activity is written, so that it is not there to read back.
 type fakeIssues struct {
-	log         *callLog
-	greatest    map[uuid.UUID]float64
-	issue       *app.IssueRow
-	assignees   []uuid.UUID
-	labels      []uuid.UUID
-	subscribers []uuid.UUID
-	activities  []app.ActivityRow
-	lost        bool
+	log        *callLog
+	greatest   map[uuid.UUID]float64
+	issue      *app.IssueRow
+	assignees  []uuid.UUID
+	labels     []uuid.UUID
+	activities []app.ActivityRow
+	lost       bool
 }
 
 func (f *fakeIssues) GreatestSortOrder(ctx context.Context, projectID, stateID uuid.UUID) (*float64, error) {
@@ -219,8 +219,8 @@ func (f *fakeIssues) InsertLabels(ctx context.Context, r app.LinkRows) (err erro
 	return err
 }
 
-func (f *fakeIssues) InsertSubscribers(ctx context.Context, r app.LinkRows) (err error) {
-	f.subscribers, err = f.link(ctx, "InsertSubscribers", r)
+func (f *fakeIssues) InsertSubscribers(ctx context.Context, r app.LinkRows) error {
+	_, err := f.link(ctx, "InsertSubscribers", r)
 	return err
 }
 

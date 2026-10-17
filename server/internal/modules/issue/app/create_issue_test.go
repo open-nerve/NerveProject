@@ -33,7 +33,8 @@ var (
 
 // world is web as createIssue's ports see it: its states, the greatest
 // sort order of Done's work items 85535, its labels, its last number 6,
-// its members' roles and display names; alice's grant, a project admin's.
+// its members' roles and display names; an Authorizer that allows each
+// call it is not told to refuse.
 type world struct {
 	log      *callLog
 	project  *fakeProject
@@ -49,7 +50,7 @@ func newCreate() (*app.CreateIssue, *world) {
 		states: []app.StateRef{backlog, done, triage}, labels: []uuid.UUID{bug, ui},
 		roles: map[uuid.UUID]shared.Role{alice: shared.RoleAdmin, bob: shared.RoleMember, carol: shared.RoleAdmin, gus: shared.RoleGuest}}
 	w.issues = &fakeIssues{log: log, greatest: map[uuid.UUID]float64{done.ID: 85535}}
-	w.auth = &fakeAuthorizer{log: log, grant: shared.Grant{WorkspaceRole: shared.RoleAdmin, ProjectRole: shared.RoleAdmin, ProjectAdmin: true}}
+	w.auth = &fakeAuthorizer{log: log}
 	w.profiles = fakeProfiles{log: log, names: map[uuid.UUID]string{alice: "Alice", bob: "bob", carol: "Carol C.", gus: "gus"}}
 	uc := app.NewCreateIssue(app.CreateIssueDeps{Locks: app.NewLocks(w.project, w.auth), Issues: w.issues, Sequences: w.project,
 		States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Tx: fakeTx{log: log}, Clock: clockAt{at: clockNow, log: log}})
@@ -244,7 +245,7 @@ func TestCreateIssueRefusesUnderTheLock(t *testing.T) {
 	locked := []string{line("Find", web, "outside tx"), line("Authorize", alice, domain.ActionCreate, acme, web, "outside tx"), "Begin",
 		line("Lock", web)}
 	decided := append(slices.Clone(locked), line("Authorize", alice, domain.ActionCreate, acme, web))
-	other := uuid.NewV7()
+	other := uuid.NewV7() // after bug: the labels {other, bug} are asked out of id order
 	notAllowed := func(field, message string) shared.FieldError {
 		return shared.FieldError{Field: field, Code: "not_allowed", Message: message}
 	}
@@ -263,12 +264,12 @@ func TestCreateIssueRefusesUnderTheLock(t *testing.T) {
 			decided},
 		{"archived", func(w *world) { w.project.locked.Archived = true }, domain.NewIssue{Name: "a"}, domain.ErrProjectArchived, decided},
 		{"the triage state, a guest, no member, a label not the project's", func(*world) {},
-			domain.NewIssue{Name: "a", StateID: &triage.ID, AssigneeIDs: []uuid.UUID{gus, bob, out}, LabelIDs: []uuid.UUID{bug, other}},
+			domain.NewIssue{Name: "a", StateID: &triage.ID, AssigneeIDs: []uuid.UUID{gus, bob, out}, LabelIDs: []uuid.UUID{other, bug}},
 			shared.Invalid(notAllowed("state_id", "must be a state of the project that is not its triage state"),
 				notAllowed("assignee_ids[0]", unassignable), notAllowed("assignee_ids[2]", unassignable),
-				notAllowed("label_ids[1]", "must be a label of the project")),
+				notAllowed("label_ids[0]", "must be a label of the project")),
 			append(slices.Clone(decided), line("States", web), line("Roles", web, []uuid.UUID{gus, bob, out}),
-				line("Labels", web, []uuid.UUID{bug, other}))},
+				line("Labels", web, []uuid.UUID{other, bug}))},
 		{"another project's state", func(*world) {}, domain.NewIssue{Name: "a", StateID: &other},
 			shared.Invalid(notAllowed("state_id", "must be a state of the project that is not its triage state")),
 			append(slices.Clone(decided), line("States", web))},

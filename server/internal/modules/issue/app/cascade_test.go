@@ -20,24 +20,18 @@ import (
 // of its answers of more than one id, the first, third and so on come
 // greatest first, the others least first. A caller who took the first or
 // the last id of an answer for the next batch's bound, not the greatest,
-// would so read again what it deleted. It logs each batch, and fails the
-// statement named in fail.
+// would so read again what it deleted. It logs each batch in its callLog,
+// which fails the statement named in fail.
 type fakeRows struct {
+	callLog
 	rows    map[string]map[uuid.UUID][]uuid.UUID // statement → project → ids, ascending
 	deleted map[uuid.UUID]string                 // id → "by at"
 	turns   int                                  // the answers of more than one id so far
-	calls   []string
-	fail    string
 }
 
 func (f *fakeRows) batch(ctx context.Context, statement string, b app.RowBatch) ([]uuid.UUID, error) {
-	call := fmt.Sprintf("%s %s after %s limit %d", statement, b.ProjectID, b.After, b.Limit)
-	if ctx.Value(inTxKey{}) != true {
-		call += " outside tx"
-	}
-	f.calls = append(f.calls, call)
-	if statement == f.fail {
-		return nil, errDisk
+	if err := f.add(ctx, statement, b.ProjectID, "after", b.After, "limit", b.Limit); err != nil {
+		return nil, err
 	}
 	var ids []uuid.UUID
 	for _, id := range f.rows[statement][b.ProjectID] {
