@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -13,24 +14,26 @@ import (
 )
 
 // The work items the use case answers: WEB-7, completed, with an assignee
-// and a label, made by alice; WEB-8, new, with none of them, made by no one
-// now (its creator's account is gone).
+// and a label, made by alice and changed last by bob a minute later, so
+// each of its stamps shows as its own; WEB-8, new, with none of them, made
+// by no one now (its creator's account is gone).
 var (
 	stateID   = uuid.MustParse("0199a2b4-0000-7000-8000-0000000000c1")
 	bobID     = uuid.MustParse("0199a2b4-0000-7000-8000-000000000002")
 	bugID     = uuid.MustParse("0199a2b4-0000-7000-8000-0000000000d1")
 	completed = created.Add(-1)
+	updated   = created.Add(time.Minute)
 	webSeven  = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e7"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 7,
 		Name: "Fix the login", StateID: stateID, Priority: domain.PriorityHigh, SortOrder: 75535.5, CompletedAt: &completed,
-		AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID}, CreatedByID: &aliceID, UpdatedByID: &aliceID, CreatedAt: created,
-		UpdatedAt: created}
+		AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID}, CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created,
+		UpdatedAt: updated}
 	webSevenJSON = `{"archived_at":null,"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],` +
 		`"completed_at":"2026-10-17T10:00:00.123455999Z","created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":"0199a2b4-0000-7000-8000-000000000001","id":"0199a2b4-0000-7000-8000-0000000000e7",` +
 		`"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"],"name":"Fix the login","parent_id":null,"priority":"high",` +
 		`"project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":7,"sort_order":75535.5,` +
-		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","updated_at":"2026-10-17T10:00:00.123456Z",` +
-		`"updated_by_id":"0199a2b4-0000-7000-8000-000000000001","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
+		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","updated_at":"2026-10-17T10:01:00.123456Z",` +
+		`"updated_by_id":"0199a2b4-0000-7000-8000-000000000002","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 	webEight = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e8"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 8,
 		Name: "Fix", StateID: stateID, Priority: domain.PriorityNone, SortOrder: 65535, CreatedAt: created, UpdatedAt: created}
 	webEightJSON = `{"archived_at":null,"assignee_ids":[],"completed_at":null,"created_at":"2026-10-17T10:00:00.123456Z",` +
