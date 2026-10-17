@@ -22,13 +22,16 @@ type inTxKey struct{}
 // fakeRows is the deleted project's rows, by statement and project, as
 // ProjectRowsDeleter's statements see them: each batch takes the
 // undeleted rows of the project after the batch's id, at most its limit,
-// in id order, marks them deleted, and answers their ids, the greatest
-// first, so that a caller who took the last of them for the next batch's
-// bound would read again what it deleted. It logs each batch, and fails
-// the statement named in fail.
+// in id order, marks them deleted, and answers their ids in no set order:
+// of its answers of more than one id, the first, third and so on come
+// greatest first, the others least first. A caller who took the first or
+// the last id of an answer for the next batch's bound, not the greatest,
+// would so read again what it deleted. It logs each batch, and fails the
+// statement named in fail.
 type fakeRows struct {
 	rows    map[string]map[uuid.UUID][]uuid.UUID // statement → project → ids, ascending
 	deleted map[uuid.UUID]string                 // id → "by at"
+	turns   int                                  // the answers of more than one id so far
 	calls   []string
 	fail    string
 }
@@ -49,7 +52,12 @@ func (f *fakeRows) batch(ctx context.Context, statement string, b app.RowBatch) 
 			f.deleted[id] = fmt.Sprintf("%s at %s", b.By, b.At.Format(time.RFC3339Nano))
 		}
 	}
-	slices.Reverse(ids)
+	if len(ids) > 1 {
+		f.turns++
+		if f.turns%2 == 1 {
+			slices.Reverse(ids)
+		}
+	}
 	return ids, nil
 }
 
@@ -84,7 +92,8 @@ func ids(n int) []uuid.UUID {
 
 // twoProjects are the rows of web and ops: web has three work items, an
 // assignee and two activity rows, ops a work item, a label on it and a
-// subscriber.
+// subscriber. Web's work items and its activity each fill a batch of two,
+// which fakeRows answers greatest first and least first, in that order.
 func twoProjects(web, ops uuid.UUID) *fakeRows {
 	w, o := ids(6), ids(3)
 	return &fakeRows{deleted: map[uuid.UUID]string{}, rows: map[string]map[uuid.UUID][]uuid.UUID{
