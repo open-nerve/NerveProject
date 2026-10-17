@@ -240,8 +240,8 @@ export async function expectWorkspaceDeleted(
   expect(w?.deleted_at, `${slug} deleted`).toBeInstanceOf(Date);
   expect(w?.admin, `the account of ${adminEmail}`).toEqual(expect.any(String));
   expect(w?.updated_by_id, `${slug} deleted by ${adminEmail}`).toBe(w?.admin);
-  // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const names = await workspaceTables(db);
+  // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const tables = await Promise.all(
     names.map(async (table) => {
       const [counts] = await db.query<{

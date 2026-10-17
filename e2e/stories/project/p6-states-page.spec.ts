@@ -4,11 +4,9 @@ import {
   addProjectMembers,
   changeRole,
   createProject,
-  createState,
   createWorkspace,
   inviteAndAccept,
   slugFor,
-  type Api,
 } from "../../fixtures/api";
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
 import { accountId, bearer, emailFor, login } from "../../fixtures/auth";
@@ -24,6 +22,7 @@ import {
 } from "../../fixtures/dialogs";
 import { dragOnto, tabCycle } from "../../fixtures/project-pages";
 import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
+import { createState, stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
@@ -48,15 +47,6 @@ function addTo(page: Page, name: string): Locator {
 /** The form page shows to create or change a state: one at a time. */
 function stateForm(page: Page): Locator {
   return page.locator("div.rounded-sm.p-3", { has: page.locator("#name") });
-}
-
-/** The ids of the states of the project of projectId, by name, as the caller of token lists them. */
-async function stateIds(api: Api, token: string, projectId: string): Promise<Record<string, string>> {
-  const { data } = await api.GET("/api/v0/projects/{project_id}/states", {
-    params: { path: { project_id: projectId } },
-    headers: bearer(token),
-  });
-  return Object.fromEntries((data?.data ?? []).map((s) => [s.name, s.id]));
 }
 
 /** rows with the state of name changed as to says. */

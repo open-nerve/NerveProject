@@ -9,7 +9,7 @@ import type { Database } from "../db";
  * The tables under parent: each table whose foreign key names parent. Every table with a column named column is one
  * of them, so a table that has the column without the foreign key fails here. Both lists sort their names under "C":
  * a regclass's text would sort under the database's collation and an information_schema name under "C", two orders
- * that differ (issues, issue_views).
+ * that differ (issues, issue_subscribers).
  */
 async function tablesUnder(db: Database, parent: string, column: string): Promise<string[]> {
   const tables = await db.query<{ name: string }>(

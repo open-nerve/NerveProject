@@ -11,8 +11,9 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectIssueCreated, type ActivityRow } from "../../fixtures/assert/issue";
-import { bearer, newAccount, shownNameOf } from "../../fixtures/auth";
+import { newAccount, shownNameOf } from "../../fixtures/auth";
 import { createIssue, issueCreated } from "../../fixtures/issues";
+import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
 // I1, creating a work item (M4 design 2, 3.7, 3.13): the API version, with P1a's assertions (the work item's rows,
@@ -69,14 +70,9 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
   ]);
   const bug = await createLabel(api, admin.token, web.id, { name: "Bug" });
   const ui = await createLabel(api, admin.token, web.id, { name: "UI" });
-  const states = await api.GET("/api/v0/projects/{project_id}/states", {
-    params: { path: { project_id: web.id } },
-    headers: bearer(ann.token),
-  });
-  const inProgress = states.data?.data.find((s) => s.name === "In Progress")?.id;
-  const cancelled = states.data?.data.find((s) => s.name === "Cancelled")?.id;
+  const { "In Progress": inProgress, Cancelled: cancelled } = await stateIds(api, ann.token, web.id);
   if (!inProgress || !cancelled) {
-    throw new Error(`Web's states hold no In Progress or no Cancelled: ${JSON.stringify(states.error)}`);
+    throw new Error("Web's states hold no In Progress or no Cancelled");
   }
 
   // ann creates Fix the login in In Progress, high, assigned to bob and the admin, labelled UI and Bug: the answer

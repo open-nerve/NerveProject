@@ -3,32 +3,19 @@ import {
   amidAnotherWorkspace,
   answer,
   createProject,
-  createState,
   createWorkspace,
   inviteAndAccept,
   slugFor,
   type Api,
-  type State,
-  type StateCreate,
-  type StateUpdate,
 } from "../../fixtures/api";
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
 import { bearer, newAccount } from "../../fixtures/auth";
+import { createState, listStates, type StateCreate, type StateUpdate } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
 // P6, a project's states (M3 design 2, 3.17): creating one, changing it,
 // making it the default and deleting one, with what the default and every
 // group keep. The page version is p6-states-page.spec.ts.
-
-/** The states of the project of projectId that the caller of token lists, in their order. */
-async function listStates(api: Api, token: string, projectId: string): Promise<State[]> {
-  const { data, error, response } = await api.GET("/api/v0/projects/{project_id}/states", {
-    params: { path: { project_id: projectId } },
-    headers: bearer(token),
-  });
-  expect(response.status, `list ${projectId}'s states: ${JSON.stringify(error)}`).toBe(200);
-  return data?.data ?? [];
-}
 
 /** The states of the workspace of slug that the caller of token lists, each as its project's id and its name, in their order. */
 async function listWorkspaceStates(api: Api, token: string, slug: string): Promise<[string, string][]> {
