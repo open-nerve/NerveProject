@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 
 import type { WorkspacePreferences } from "../api";
 import type { Database } from "../db";
+import { workspaceTables } from "./catalog";
 
 // Database assertions of the workspace stories. The page version and the
 // API version of a story call the same function (M3 design 2).
@@ -218,44 +219,19 @@ export async function expectMembership(
   expect(rows, `the membership of ${email} in ${slug}`).toEqual(want === null ? [] : [want]);
 }
 
-/** The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12). */
-export const workspaceTables = [
-  "workspace_members",
-  "workspace_member_invites",
-  "workspace_user_properties",
-  "projects",
-  "project_members",
-  "project_user_properties",
-  "states",
-  "labels",
-] as const;
-
-/**
- * The tables whose rows a story can delete on their own before their workspace, which keep that moment: an
- * invitation, when it is accepted or deleted, or its address's membership ends (M3 design 3.8); a project, its
- * memberships, its members' display settings, its states and its labels, when the project is deleted (P4b, P7b).
- */
-export const deletedAloneTables: (typeof workspaceTables)[number][] = [
-  "workspace_member_invites",
-  "projects",
-  "project_members",
-  "project_user_properties",
-  "states",
-  "labels",
-];
-
 /**
  * W2, W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by
- * the same account, every row under it that was not deleted before: its memberships, invitations and display
- * settings, its projects, their memberships, their members' display settings, their states and their labels. Each
- * table has such a row; none is left undeleted; each table of deletedAlone, whose rows the story deleted alone, has
- * rows deleted earlier, which kept their moment, and every row of the others carries the workspace's.
+ * the same account, every row under it that was not deleted before (workspaceTables): its memberships, invitations
+ * and display settings, its projects, their memberships, their members' display settings, their states, their labels
+ * and their work items' rows. Each table has such a row; none is left undeleted; each table of deletedAlone, whose
+ * rows the story deleted alone, has rows deleted earlier, which kept their moment, and every row of the others carries
+ * the workspace's.
  */
 export async function expectWorkspaceDeleted(
   db: Database,
   slug: string,
   adminEmail: string,
-  deletedAlone: (typeof workspaceTables)[number][]
+  deletedAlone: string[]
 ): Promise<void> {
   const [w] = await db.query<{ id: string; deleted_at: Date | null; updated_by_id: string; admin: string | null }>(
     `SELECT w.id, w.deleted_at, w.updated_by_id, (SELECT id FROM users WHERE email = $2) AS admin FROM workspaces w WHERE w.slug = $1`,
@@ -264,9 +240,10 @@ export async function expectWorkspaceDeleted(
   expect(w?.deleted_at, `${slug} deleted`).toBeInstanceOf(Date);
   expect(w?.admin, `the account of ${adminEmail}`).toEqual(expect.any(String));
   expect(w?.updated_by_id, `${slug} deleted by ${adminEmail}`).toBe(w?.admin);
+  const names = await workspaceTables(db);
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const tables = await Promise.all(
-    workspaceTables.map(async (table) => {
+    names.map(async (table) => {
       const [counts] = await db.query<{
         with_it: number;
         by_another: number;
@@ -291,7 +268,7 @@ export async function expectWorkspaceDeleted(
     })
   );
   expect(tables, `the rows under ${slug}`).toEqual(
-    workspaceTables.map((table) => ({
+    names.map((table) => ({
       table,
       deletedWithIt: true,
       deletedByAnother: 0,

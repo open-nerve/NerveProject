@@ -72,10 +72,11 @@ func (q *Queries) CreateLabel(ctx context.Context, arg CreateLabelParams) (Creat
 	return i, err
 }
 
-const deleteLabel = `-- name: DeleteLabel :exec
+const deleteLabel = `-- name: DeleteLabel :many
 UPDATE labels
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
 WHERE (id = $3 OR parent_id = $3) AND deleted_at IS NULL
+RETURNING id
 `
 
 type DeleteLabelParams struct {
@@ -86,10 +87,26 @@ type DeleteLabelParams struct {
 
 // deleteLabel, one statement under the project's FOR NO KEY UPDATE (M3 design 3.16, 3.6 convention 5): the undeleted
 // label and the undeleted labels under it, at the moment and by the account given. A label's children are of its
-// project (3.16), so that lock covers every row the statement writes.
-func (q *Queries) DeleteLabel(ctx context.Context, arg DeleteLabelParams) error {
-	_, err := q.db.Exec(ctx, deleteLabel, arg.Now, arg.DeletedBy, arg.ID)
-	return err
+// project (3.16), so that lock covers every row the statement writes. It answers their ids, which the work items'
+// rows of them are detached by (M4 design 3.6).
+func (q *Queries) DeleteLabel(ctx context.Context, arg DeleteLabelParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteLabel, arg.Now, arg.DeletedBy, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const greatestSortOrder = `-- name: GreatestSortOrder :one

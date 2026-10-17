@@ -103,20 +103,17 @@ func (s *Store) DeleteInvitation(ctx context.Context, id, by uuid.UUID, now time
 	return nil
 }
 
-// DeleteWorkspaceInvitations soft-deletes the undeleted invitations of the
-// workspace, pending or declined, by the account by at now. It locks them
-// FOR NO KEY UPDATE in id order, then deletes exactly those, in the
-// caller's transaction (M3 design 3.6 convention 5; ruling G-1).
-func (s *Store) DeleteWorkspaceInvitations(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	q := s.queries(ctx)
-	ids, err := q.LockWorkspaceInvitations(ctx, workspaceID)
+// LockWorkspaceInvitations locks the undeleted invitations of the
+// workspace, pending or declined, FOR NO KEY UPDATE in id order, in the
+// caller's transaction, and returns their ids in that order; the deletion
+// deletes exactly those (DeleteInvitations; M3 design 3.6 convention 5,
+// ruling G-1).
+func (s *Store) LockWorkspaceInvitations(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).LockWorkspaceInvitations(ctx, workspaceID)
 	if err != nil {
-		return fmt.Errorf("lock workspace invitations: %w", err)
+		return nil, fmt.Errorf("lock workspace invitations: %w", err)
 	}
-	if err := q.DeleteInvitations(ctx, gen.DeleteInvitationsParams{Ids: ids, DeletedBy: by, Now: now}); err != nil {
-		return fmt.Errorf("delete workspace invitations: %w", err)
-	}
-	return nil
+	return ids, nil
 }
 
 // invitation is a stored row as the domain's value.

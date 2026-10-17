@@ -229,7 +229,7 @@ type Project struct {
 	// CycleView Whether the project shows cycles.
 	CycleView bool `json:"cycle_view"`
 
-	// DefaultAssigneeID The account set as the project's default assignee, kept as set; null for none.
+	// DefaultAssigneeID The account set as the project's default assignee, kept as set; null for none. A work item created without assignees is assigned to him while he is an active member of the project who is not its guest.
 	DefaultAssigneeID nullable.Nullable[uuid.UUID] `json:"default_assignee_id"`
 	Description       string                       `json:"description"`
 
@@ -237,7 +237,7 @@ type Project struct {
 	GuestViewAllFeatures bool      `json:"guest_view_all_features"`
 	ID                   uuid.UUID `json:"id"`
 
-	// Identifier Upper case; unique among the workspace's projects.
+	// Identifier Upper case; unique among the workspace's projects; the prefix of its work items' numbers, as in WEB-12.
 	Identifier string `json:"identifier"`
 
 	// IntakeView Whether the project shows intake.
@@ -415,7 +415,7 @@ type State struct {
 	Color     string    `json:"color"`
 	CreatedAt time.Time `json:"created_at"`
 
-	// Default Whether the state is its project's default state; a project has exactly one.
+	// Default Whether the state is its project's default state, which a work item created without a state takes; a project has exactly one.
 	Default     bool   `json:"default"`
 	Description string `json:"description"`
 

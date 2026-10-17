@@ -1,0 +1,196 @@
+# issue 模块的接口（M4 设计 5.1、5.2）。生成的 Go 代码在
+# server/internal/modules/issue/adapter/http/gen（make gen-go）。
+openapi: 3.1.0
+info:
+  title: Nerve issue API
+  version: v0
+paths:
+  /api/v0/projects/{project_id}/issues:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: createIssue
+      tags: [issue]
+      summary: Create a work item in a project
+      description: >-
+        For the project's admins and members; not in an archived project
+        (project.archived). The name, without the white space around it,
+        has 1–255 characters, without NUL, and is stored so; at most 100
+        assignees and 100 labels, each named once (validation_failed),
+        checked before the project is looked at. A project that does not
+        exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but may not create work items in,
+        forbidden; both are answered before the project is locked, and with
+        the project locked the role is decided again. Then the state, when
+        it is given, is one of the project's, not its triage state; each
+        assignee is an active member of the project who is not its guest;
+        each label is one of the project's (validation_failed, every
+        problem at once). Left out, the state is the project's default, the
+        priority none, and the assignee the project's default assignee
+        while he is still an active member of it who is not its guest, else
+        no one. The work item takes the project's next number, never used
+        again, also after a deletion; it comes after its state's work items,
+        archived ones too: its sort order is their greatest plus 10000, or
+        65535 for the state's first; in a state of the completed group it is
+        completed at its creation. The caller and the assignees subscribe
+        to it; its activity says it was created, and assigned to each
+        assignee. Every row it writes is the caller's, at one moment.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueCreate'
+      responses:
+        '201':
+          description: The new work item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    ProjectID:
+      name: project_id
+      in: path
+      required: true
+      description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: Error (RFC 9457 problem details).
+      headers:
+        Retry-After:
+          description: >-
+            Whole seconds to wait before trying again, rounded up; sent with
+            rate_limited and server_busy.
+          schema:
+            type: integer
+            minimum: 1
+        WWW-Authenticate:
+          description: >-
+            Sent with every 401 (RFC 9110 15.5.2): Bearer error="invalid_token"
+            (RFC 6750 3) when the bearer token sent is refused before the
+            operation runs, being invalid or expired; plain Bearer for every
+            other 401, including a credential that the operation finds revoked
+            while it runs.
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../common.yaml#/components/schemas/Problem'
+  schemas:
+    IssuePriority:
+      description: A work item's priority, from the most to the least urgent.
+      type: string
+      enum: [urgent, high, medium, low, none]
+    IssueDetail:
+      description: A work item of a project.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, parent_id, sort_order, completed_at, archived_at,
+        assignee_ids, label_ids, created_by_id, updated_by_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        sequence_id:
+          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
+          type: integer
+        name:
+          type: string
+        state_id:
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        parent_id:
+          description: The work item it is under, in the same project; null for none.
+          type: [string, 'null']
+          format: uuid
+        sort_order:
+          description: Its place among its state's work items, the lowest first.
+          type: number
+        completed_at:
+          description: When it was put in a state of the completed group; null in any other state.
+          type: [string, 'null']
+          format: date-time
+        archived_at:
+          description: When it was archived; null when it is not.
+          type: [string, 'null']
+          format: date-time
+        assignee_ids:
+          description: >-
+            The accounts it is assigned to, by id; one who has left the
+            project since is still one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_by_id:
+          description: The account that created it; null for none.
+          type: [string, 'null']
+          format: uuid
+        updated_by_id:
+          description: The account that changed it last; null for none.
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    IssueCreate:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          description: 1–255 characters without the white space around it, which is not stored.
+          type: string
+        state_id:
+          description: One of the project's states, not its triage state; left out for the project's default state.
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        assignee_ids:
+          description: >-
+            At most 100 accounts, each named once, each an active member of
+            the project who is not its guest; left out, or empty, for the
+            project's default assignee while he is one, else no one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: At most 100 of the project's labels, each named once.
+          type: array
+          items:
+            type: string
+            format: uuid

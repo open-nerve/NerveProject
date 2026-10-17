@@ -3,11 +3,13 @@ package app_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -26,10 +28,16 @@ type deleteFixture struct {
 	logs       *strings.Builder
 }
 
+// lockedInvitations and lockedProjects are what the deletion's two locks
+// answer: the ids, in id order, of the invitations and the projects it
+// deletes.
+var lockedInvitations, lockedProjects = []uuid.UUID{uuid.NewV7(), uuid.NewV7()}, []uuid.UUID{uuid.NewV7(), uuid.NewV7()}
+
 func newDelete() (*app.DeleteWorkspace, *deleteFixture) {
 	log := &callLog{}
-	f := &deleteFixture{log: log, tx: &fakeTx{}, workspaces: &fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme, beta}},
-		projects: &fakeProjects{log: log}, auth: &fakeAuthorizer{log: log, grants: map[grantKey]shared.Grant{
+	f := &deleteFixture{log: log, tx: &fakeTx{}, workspaces: &fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme, beta},
+		invitations: lockedInvitations}, projects: &fakeProjects{log: log, locked: lockedProjects},
+		auth: &fakeAuthorizer{log: log, grants: map[grantKey]shared.Grant{
 			{alice.ID, acme.ID}: {WorkspaceRole: shared.RoleAdmin},
 			{bob.ID, beta.ID}:   {WorkspaceRole: shared.RoleAdmin},
 		}}, logs: &strings.Builder{}}
@@ -46,22 +54,38 @@ func (t ticking) Now() time.Time {
 	return n
 }
 
+// deletionLocks are the deletion's locks of w's rows after its decision, in
+// order: its invitations, then its projects, through the project module.
+func deletionLocks(w domain.Workspace) []string {
+	return []string{"LockWorkspaceInvitations " + w.ID.String(), "LockWorkspaceProjects " + w.ID.String()}
+}
+
 // cascadeCalls are the deletion's steps on w by user, in order: the
-// workspace's own, then the projects', through the project module.
+// workspace's own, the invitations locked among them, then the projects',
+// through the project module, with the projects locked.
 func cascadeCalls(user app.AccountState, w domain.Workspace) []string {
 	var calls []string
-	for _, step := range []string{"DeleteWorkspace", "DeleteWorkspaceInvitations", "DeleteWorkspaceMembers", "DeleteWorkspacePreferences",
+	at := " by " + user.ID.String() + " at " + now.Format(time.RFC3339Nano)
+	for _, step := range []string{"DeleteWorkspace", "DeleteInvitations", "DeleteWorkspaceMembers", "DeleteWorkspacePreferences",
 		"DeleteWorkspaceProjects"} {
-		calls = append(calls, step+" "+w.ID.String()+" by "+user.ID.String()+" at "+now.Format(time.RFC3339Nano))
+		switch step {
+		case "DeleteInvitations":
+			calls = append(calls, fmt.Sprintf("%s %v%s", step, lockedInvitations, at))
+		case "DeleteWorkspaceProjects":
+			calls = append(calls, fmt.Sprintf("%s %s %v%s", step, w.ID, lockedProjects, at))
+		default:
+			calls = append(calls, step+" "+w.ID.String()+at)
+		}
 	}
 	return calls
 }
 
-// DeleteWorkspace locks the workspace FOR NO KEY UPDATE, decides, then
-// soft-deletes the workspace, its invitations, its members and their
-// settings, and last its projects through the project module, by the
-// caller at one moment, in one transaction (M3 design 3.6), and logs it.
-// Two callers, two workspaces.
+// DeleteWorkspace locks the workspace FOR NO KEY UPDATE, decides, locks its
+// invitations and then its projects through the project module, then
+// soft-deletes the workspace, the invitations it locked, its members and
+// their settings, and last its projects through the project module, by
+// the caller at one moment, in one transaction (M3 design 3.6, M4 design
+// 3.5), and logs it. Two callers, two workspaces.
 func TestDeleteWorkspaceLocksThenDecidesThenCascades(t *testing.T) {
 	for _, tt := range []struct {
 		user app.AccountState
@@ -71,7 +95,8 @@ func TestDeleteWorkspaceLocksThenDecidesThenCascades(t *testing.T) {
 		if err := uc.Execute(as(tt.user), tt.w.Slug); err != nil {
 			t.Errorf("%s, %s: Execute() = %v", tt.user.Email, tt.w.Slug, err)
 		}
-		want := append(lockedDecision(tt.user, tt.w, "LockWorkspaceBySlug", domain.ActionDelete), cascadeCalls(tt.user, tt.w)...)
+		want := slices.Concat(lockedDecision(tt.user, tt.w, "LockWorkspaceBySlug", domain.ActionDelete), deletionLocks(tt.w),
+			cascadeCalls(tt.user, tt.w))
 		if !slices.Equal(f.log.calls, want) || f.tx.calls != 1 {
 			t.Errorf("%s, %s: calls = %q in %d transactions, want %q in one", tt.user.Email, tt.w.Slug, f.log.calls, f.tx.calls, want)
 		}
@@ -90,6 +115,8 @@ func TestDeleteWorkspaceLocksThenDecidesThenCascades(t *testing.T) {
 func TestDeleteWorkspaceRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	decided := lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionDelete)
+	locks := deletionLocks(acme)
+	locked := slices.Concat(decided, locks)
 	steps := cascadeCalls(alice, acme)
 	tests := []struct {
 		name  string
@@ -107,25 +134,30 @@ func TestDeleteWorkspaceRefusals(t *testing.T) {
 			[]string{"LockWorkspaceBySlug acme"}},
 		{"the Authorizer failed", alice, "acme", func(f *deleteFixture) { f.auth.errs = map[grantKey]error{{alice.ID, acme.ID}: failure} },
 			failure, decided},
-		{"the workspace row failed", alice, "acme", func(f *deleteFixture) { f.workspaces.deleteErrs = map[string]error{"DeleteWorkspace": failure} },
-			failure, append(slices.Clone(decided), steps[0])},
-		{"the invitations failed", alice, "acme",
+		{"the invitations' lock failed", alice, "acme",
 			func(f *deleteFixture) {
-				f.workspaces.deleteErrs = map[string]error{"DeleteWorkspaceInvitations": failure}
+				f.workspaces.deleteErrs = map[string]error{"LockWorkspaceInvitations": failure}
 			},
-			failure, append(slices.Clone(decided), steps[:2]...)},
+			failure, append(slices.Clone(decided), locks[0])},
+		{"the projects' lock failed", alice, "acme",
+			func(f *deleteFixture) { f.projects.errs = map[string]error{"LockWorkspaceProjects": failure} },
+			failure, locked},
+		{"the workspace row failed", alice, "acme", func(f *deleteFixture) { f.workspaces.deleteErrs = map[string]error{"DeleteWorkspace": failure} },
+			failure, append(slices.Clone(locked), steps[0])},
+		{"the invitations failed", alice, "acme", func(f *deleteFixture) { f.workspaces.endErrs = map[string]error{"DeleteInvitations": failure} },
+			failure, append(slices.Clone(locked), steps[:2]...)},
 		{"the members failed", alice, "acme", func(f *deleteFixture) { f.workspaces.deleteErrs = map[string]error{"DeleteWorkspaceMembers": failure} },
-			failure, append(slices.Clone(decided), steps[:3]...)},
+			failure, append(slices.Clone(locked), steps[:3]...)},
 		{"the settings failed", alice, "acme",
 			func(f *deleteFixture) {
 				f.workspaces.deleteErrs = map[string]error{"DeleteWorkspacePreferences": failure}
 			},
-			failure, append(slices.Clone(decided), steps[:4]...)},
+			failure, append(slices.Clone(locked), steps[:4]...)},
 		{"the projects failed", alice, "acme",
 			func(f *deleteFixture) { f.projects.errs = map[string]error{"DeleteWorkspaceProjects": failure} },
-			failure, append(slices.Clone(decided), steps...)},
+			failure, append(slices.Clone(locked), steps...)},
 		{"the commit failed", alice, "acme", func(f *deleteFixture) { f.tx.commitErr = failure }, failure,
-			append(slices.Clone(decided), steps...)},
+			append(slices.Clone(locked), steps...)},
 	}
 	for _, tt := range tests {
 		uc, f := newDelete()

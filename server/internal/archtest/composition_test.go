@@ -18,12 +18,13 @@ import (
 // Authorizer (a module's New), the HTTP server, a rate limiter or a jobs
 // client. Each builds only what its commands use: Users, identity's
 // NewAdmin and, for `nerve users deactivate`, workspace's NewDeactivator
-// and project's NewCascade, never workspace's NewAdmin; Workspaces,
-// workspace's NewAdmin, never the deactivation's two, whose cascade no
-// command of it calls. The rule follows the static calls from each; the
-// commands are func values it calls dynamically, so they are not followed:
-// they only receive the composition. Reaching what each builds shows the
-// walk sees the composition at all.
+// and project's NewCascade over issue's Provide (M4 design 6.6), never
+// workspace's NewAdmin; Workspaces, workspace's NewAdmin, never the
+// deactivation's three, whose cascade no command of it calls. The rule
+// follows the static calls from each; the commands are func values it
+// calls dynamically, so they are not followed: they only receive the
+// composition. Reaching what each builds shows the walk sees the
+// composition at all.
 func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 	registerSources(t)
 	cfg := &packages.Config{
@@ -42,12 +43,14 @@ func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 	prog.Build()
 	graph := static.CallGraph(prog)
 	identity, workspace, project := m("internal/modules/identity"), m("internal/modules/workspace"), m("internal/modules/project")
+	issue := m("internal/modules/issue")
 	for _, c := range []struct {
 		root            string
 		builds, unbuilt []string
 	}{
-		{"Users", []string{identity + ".NewAdmin", workspace + ".NewDeactivator", project + ".NewCascade"}, []string{workspace + ".NewAdmin"}},
-		{"Workspaces", []string{workspace + ".NewAdmin"}, []string{workspace + ".NewDeactivator", project + ".NewCascade"}},
+		{"Users", []string{identity + ".NewAdmin", workspace + ".NewDeactivator", project + ".NewCascade", issue + ".Provide"},
+			[]string{workspace + ".NewAdmin"}},
+		{"Workspaces", []string{workspace + ".NewAdmin"}, []string{workspace + ".NewDeactivator", project + ".NewCascade", issue + ".Provide"}},
 	} {
 		root := built[0].Func(c.root)
 		if root == nil {

@@ -19,6 +19,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
@@ -102,15 +103,22 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	identityPorts := identity.Provide(pool)
 	workspacePorts := workspace.Provide(pool)
 	projectPorts := project.Provide(pool)
+	issuePorts := issue.Provide(pool)
 	authorizer := access.New(access.Deps{
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
+	})
+	issues := issue.New(issue.Deps{
+		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,
+		Projects: issueProjects{projects: projectPorts.IssueProjects},
+		Profiles: issueProfiles{profiles: identityPorts.PublicProfiles},
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,
 		Workspaces: projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:    workspacePorts.WorkspaceMembers,
+		Issues:     issuePorts.IssueCascade,
 	})
 	ws := workspace.New(workspace.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
@@ -190,6 +198,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	inst.Register(a.router, api)
 	ws.Register(a.router, api)
 	proj.Register(a.router, api)
+	issues.Register(a.router, api)
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	a.router.Handle("/", webui.Handler(webFiles))

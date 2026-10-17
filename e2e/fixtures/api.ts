@@ -23,9 +23,6 @@ export type ProjectMember = components["schemas"]["ProjectMember"];
 export type ProjectMemberNew = components["schemas"]["ProjectMemberNew"];
 export type ProjectPreferences = components["schemas"]["ProjectPreferences"];
 export type ProjectPreferencesUpdate = components["schemas"]["ProjectPreferencesUpdate"];
-export type State = components["schemas"]["State"];
-export type StateCreate = components["schemas"]["StateCreate"];
-export type StateUpdate = components["schemas"]["StateUpdate"];
 export type Label = components["schemas"]["Label"];
 export type LabelCreate = components["schemas"]["LabelCreate"];
 export type LabelUpdate = components["schemas"]["LabelUpdate"];
@@ -216,26 +213,6 @@ export async function changeProjectPreferences(api: Api, token: string, id: stri
       };
 }
 
-/**
- * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
- * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
- * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows, its label Bug
- * among them.
- */
-export async function furnishWorkspace(
-  api: Api,
-  adminToken: string,
-  slug: string,
-  member: { email: string; token: string },
-  inviteeEmail: string
-): Promise<void> {
-  await inviteAndAccept(api, adminToken, slug, member, 15);
-  await invite(api, adminToken, slug, [{ email: inviteeEmail, role: 15 }]);
-  await changeWorkspacePreferences(api, adminToken, slug, { navigation_project_limit: 3 });
-  const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
-  await createLabel(api, adminToken, web.id, { name: "Bug" });
-}
-
 /** Gives the account of memberId the role in the workspace of slug, with the bearer token given, an admin's. */
 export async function changeRole(
   api: Api,
@@ -369,20 +346,6 @@ export async function archiveProject(api: Api, token: string, projectId: string)
   expect(response.status, `archive ${projectId}: ${JSON.stringify(error)}`).toBe(200);
   if (!data) {
     throw new Error(`archiveProject ${projectId} answered 200 without the project`);
-  }
-  return data;
-}
-
-/** Creates a state in the project of projectId with the bearer token given, an admin's of the project, and returns it. */
-export async function createState(api: Api, token: string, projectId: string, body: StateCreate): Promise<State> {
-  const { data, error, response } = await api.POST("/api/v0/projects/{project_id}/states", {
-    params: { path: { project_id: projectId } },
-    body,
-    headers: bearer(token),
-  });
-  expect(response.status, `create the state ${body.name} in ${projectId}: ${JSON.stringify(error)}`).toBe(201);
-  if (!data) {
-    throw new Error(`createState ${body.name} answered 201 without the state`);
   }
   return data;
 }

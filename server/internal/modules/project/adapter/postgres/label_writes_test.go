@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -127,11 +128,12 @@ func TestUpdateLabelWritesNoDeletedLabel(t *testing.T) {
 }
 
 // DeleteLabel deletes Web's Bug and UI under it, at the moment and by the
-// account given, deleted_at and updated_at alike, and touches no other
-// column: Gone, under Bug and deleted before, keeps its moment; Feature,
-// Feature's Docs, and Ops's Bug keep every column. Deleted again, at a
-// later moment, Bug changes nothing. Deleting a child, Docs, deletes it
-// alone.
+// account given, deleted_at and updated_at alike, touches no other column,
+// and answers their ids, which their rows on work items are taken off by
+// (M4 design 3.6): Gone, under Bug and deleted before, keeps its moment
+// and is not answered; Feature, Feature's Docs, and Ops's Bug keep every
+// column. Deleted again, at a later moment, Bug changes nothing and
+// answers no id. Deleting a child, Docs, deletes it alone.
 func TestDeleteLabel(t *testing.T) {
 	w := newStateWorld(t)
 	bug := w.addLabel(t, w.web, uuid.NewV7(), "Bug", nil, 1)
@@ -144,8 +146,9 @@ func TestDeleteLabel(t *testing.T) {
 	others := tableRows(t, w.pool, "labels", bug.ID, ui.ID)
 	before := map[uuid.UUID]map[string]string{bug.ID: columns(t, w.pool, "labels", bug.ID), ui.ID: columns(t, w.pool, "labels", ui.ID)}
 
-	if err := w.s.DeleteLabel(context.Background(), bug.ID, w.alice, now); err != nil {
-		t.Errorf("DeleteLabel(Bug) = %v", err)
+	sorted := func(ids ...uuid.UUID) []uuid.UUID { return slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare) }
+	if ids, err := w.s.DeleteLabel(context.Background(), bug.ID, w.alice, now); err != nil || !slices.Equal(sorted(ids...), sorted(bug.ID, ui.ID)) {
+		t.Errorf("DeleteLabel(Bug) = %v, %v; want Bug's and UI's ids", ids, err)
 	}
 	for id, cols := range before {
 		if got, want := columns(t, w.pool, "labels", id), changed(cols, changed(audit(w.alice, now),
@@ -157,15 +160,15 @@ func TestDeleteLabel(t *testing.T) {
 		t.Errorf("the other labels:\n%s\nwant\n%s", after, others)
 	}
 	all := tableRows(t, w.pool, "labels")
-	if err := w.s.DeleteLabel(context.Background(), bug.ID, w.alice, now.Add(time.Minute)); err != nil {
-		t.Errorf("DeleteLabel(Bug) again = %v", err)
+	if ids, err := w.s.DeleteLabel(context.Background(), bug.ID, w.alice, now.Add(time.Minute)); err != nil || len(ids) != 0 {
+		t.Errorf("DeleteLabel(Bug) again = %v, %v; want no id", ids, err)
 	}
 	if after := tableRows(t, w.pool, "labels"); after != all {
 		t.Errorf("the labels after Bug deleted again:\n%s\nwant\n%s", after, all)
 	}
 	all = tableRows(t, w.pool, "labels", docs.ID)
-	if err := w.s.DeleteLabel(context.Background(), docs.ID, w.alice, now); err != nil {
-		t.Errorf("DeleteLabel(Docs) = %v", err)
+	if ids, err := w.s.DeleteLabel(context.Background(), docs.ID, w.alice, now); err != nil || !slices.Equal(ids, []uuid.UUID{docs.ID}) {
+		t.Errorf("DeleteLabel(Docs) = %v, %v; want Docs's id", ids, err)
 	}
 	if after := tableRows(t, w.pool, "labels", docs.ID); after != all || columns(t, w.pool, "labels", docs.ID)["deleted_at"] != jsonTime(now) {
 		t.Errorf("the labels after Docs deleted:\n%s\nwant Docs deleted and the others\n%s", after, all)

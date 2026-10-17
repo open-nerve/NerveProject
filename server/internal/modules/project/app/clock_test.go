@@ -140,7 +140,7 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			uc, f, _ := newDeleteLabel()
 			err := uc.Execute(as(bob), webBug)
 			return f.log.calls, err
-		}, labelDeleted(bob, webBug, webID)},
+		}, labelDeleted(bob, webBug, webID, webBug, webUI)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

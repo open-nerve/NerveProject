@@ -34,7 +34,7 @@ type fakeWorkspaces struct {
 	roleErr     error                             // for UpdateMemberRole
 	restoreErr  error                             // for ReactivateMember
 	endErrs     map[string]error                  // by method, for the endings' and the deactivation's statements
-	invitations []uuid.UUID                       // what LockInvitationsToDelete returns: the ids it locked
+	invitations []uuid.UUID                       // what LockInvitationsToDelete and LockWorkspaceInvitations return: the ids they locked
 	onLock      func()                            // run by LockWorkspace once it has locked: what changed while it waited
 	prefs       map[prefsKey]domain.Preferences
 	prefIDs     map[prefsKey]uuid.UUID // the id each row UpsertPreferences inserted took
@@ -143,8 +143,15 @@ func (f *fakeWorkspaces) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, 
 	return f.deleteStep(ctx, "DeleteWorkspace", id, by, now)
 }
 
-func (f *fakeWorkspaces) DeleteWorkspaceInvitations(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	return f.deleteStep(ctx, "DeleteWorkspaceInvitations", workspaceID, by, now)
+// LockWorkspaceInvitations logs its call and returns the ids the fixture
+// gave it (invitations), a copy, or fails with the error set for it in
+// deleteErrs, wrapped as the store wraps it.
+func (f *fakeWorkspaces) LockWorkspaceInvitations(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	f.log.add(ctx, "LockWorkspaceInvitations %s", workspaceID)
+	if err := f.deleteErrs["LockWorkspaceInvitations"]; err != nil {
+		return nil, fmt.Errorf("lock workspace invitations: %w", err)
+	}
+	return slices.Clone(f.invitations), nil
 }
 
 func (f *fakeWorkspaces) DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {

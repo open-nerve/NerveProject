@@ -8,8 +8,9 @@
 // workspace's projects one is a member of, listing, creating, changing and
 // deleting a project's labels, carries out the workspace module's cascades
 // on the projects (ProjectCascade), and offers the access module its reads
-// of a project (ProjectAccess) and the workspace module its count of an
-// account's ended project memberships (ProjectMembershipCounts).
+// of a project (ProjectAccess), the workspace module its count of an
+// account's ended project memberships (ProjectMembershipCounts), and the
+// issue module the project's lock, numbers and catalogs (IssueProjects).
 package project
 
 import (
@@ -33,9 +34,14 @@ import (
 // it changes, and returns a failure as itself, so the caller's whole write
 // rolls back.
 type Cascade interface {
+	// LockWorkspaceProjects locks the workspace's undeleted projects FOR NO
+	// KEY UPDATE in id order and returns their ids: deleteWorkspace's lock
+	// of its projects, before it reads its moment (M4 design 3.5).
+	LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error)
 	// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
-	// rows under them: deleteWorkspace's last step.
-	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+	// rows under them, the work-item side of projectIDs, those it locked,
+	// too: deleteWorkspace's last step.
+	DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 	// DemoteToGuest makes userID a guest in each of the workspace's projects
 	// he has a membership of, ended ones too.
 	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
@@ -50,6 +56,9 @@ type Cascade interface {
 // it (M3 design 6.3, 6.6).
 type CascadeDeps struct {
 	Pool *pgxpool.Pool
+	// Issues is issue's IssueCascade (issue.Provide): deleting a
+	// workspace's projects deletes their work-item side (M4 design 6.6).
+	Issues app.IssueCascade
 }
 
 // NewCascade builds the module's Cascade alone, on the pool: for the
@@ -58,7 +67,7 @@ type CascadeDeps struct {
 // it.
 func NewCascade(d CascadeDeps) Cascade {
 	store := postgresadapter.New(d.Pool)
-	return app.NewCascade(store, store, store)
+	return app.NewCascade(store, store, store, store, d.Issues)
 }
 
 // ProjectAccess reads a project for the access module's decision (M3
@@ -81,18 +90,55 @@ type ProjectMembershipCounts interface {
 	CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error)
 }
 
+// IssueProjects is what the issue module's writes ask of a project (M4
+// design 6.5): its gate (ProjectGate's Find and Lock), its work items'
+// numbers (Sequences), and its states', labels' and members' catalogs
+// (StateCatalog, LabelCatalog, ProjectMembers). Each reads, or locks, in
+// the transaction ctx carries; the catalogs are read under the project's
+// lock, which every write of a state, a label or a membership holds too,
+// so they stay as read until the write commits (M4 design 3.5).
+type IssueProjects interface {
+	// ProjectWorkspace is the workspace of the undeleted project id,
+	// archived or not, read without a lock; found is false when there is
+	// none.
+	ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error)
+	// LockIssueProject locks the undeleted project id FOR NO KEY UPDATE,
+	// its workspace not locked, and answers it; found is false when there
+	// is none, also when it was deleted while the lock waited.
+	LockIssueProject(ctx context.Context, id uuid.UUID) (p IssueProject, found bool, err error)
+	// NextIssueSequence takes the project's next work-item number.
+	NextIssueSequence(ctx context.Context, id uuid.UUID) (int, error)
+	// IssueStates reads the project's undeleted states, its triage state
+	// too, in id order.
+	IssueStates(ctx context.Context, projectID uuid.UUID) ([]IssueState, error)
+	// IssueLabels reads those of ids that are the project's undeleted
+	// labels, in id order.
+	IssueLabels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error)
+	// ActiveRoles reads the project roles of those of the accounts ids
+	// that are its active members, by account.
+	ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+}
+
+// IssueProject and IssueState are the values IssueProjects hands over:
+// bootstrap converts them into issue's (M4 design 6.5).
+type (
+	IssueProject = app.IssueProject
+	IssueState   = app.IssueState
+)
+
 // Provided are the adapters project offers the other modules. They depend
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
 	ProjectAccess           ProjectAccess
 	ProjectMembershipCounts ProjectMembershipCounts
+	IssueProjects           IssueProjects
 }
 
 // Provide builds project's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{ProjectAccess: store, ProjectMembershipCounts: store}
+	return Provided{ProjectAccess: store, ProjectMembershipCounts: store, IssueProjects: store}
 }
 
 // Workspace is a workspace as the WorkspaceDirectory port hands it over:
@@ -110,6 +156,8 @@ type Deps struct {
 	Workspaces app.WorkspaceDirectory
 	// Members is workspace's WorkspaceMembers (workspace.Provide).
 	Members app.WorkspaceMembers
+	// Issues is issue's IssueCascade (issue.Provide).
+	Issues app.IssueCascade
 }
 
 // Module is the wired project module.
@@ -124,7 +172,7 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
-	return &Module{cascade: NewCascade(CascadeDeps{Pool: d.Pool}), uc: httpadapter.UseCases{
+	return &Module{cascade: NewCascade(CascadeDeps{Pool: d.Pool, Issues: d.Issues}), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),
@@ -134,7 +182,7 @@ func New(d Deps) *Module {
 		UpdateProject:       app.NewUpdateProject(store, locks, d.Tx, d.Clock),
 		ArchiveProject:      app.NewArchiveProject(store, locks, d.Tx, d.Clock),
 		UnarchiveProject:    app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
-		DeleteProject:       app.NewDeleteProject(store, locks, d.Tx, d.Clock),
+		DeleteProject:       app.NewDeleteProject(store, d.Issues, locks, d.Tx, d.Clock),
 		GetPreferences:      app.NewGetProjectPreferences(store, d.Authorizer),
 		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
 		ListMembers:         app.NewListProjectMembers(store, d.Authorizer),
@@ -146,13 +194,13 @@ func New(d Deps) *Module {
 		ListStates:          app.NewListStates(store, d.Authorizer),
 		CreateState:         app.NewCreateState(locks, store, d.Tx, d.Clock),
 		UpdateState:         app.NewUpdateState(locks, store, d.Tx, d.Clock),
-		DeleteState:         app.NewDeleteState(locks, store, d.Tx, d.Clock),
+		DeleteState:         app.NewDeleteState(locks, store, d.Issues, d.Tx, d.Clock),
 		MarkDefaultState:    app.NewMarkDefaultState(locks, store, d.Tx, d.Clock),
 		ListWorkspaceStates: app.NewListWorkspaceStates(d.Workspaces, store, d.Authorizer),
 		ListLabels:          app.NewListLabels(store, d.Authorizer),
 		CreateLabel:         app.NewCreateLabel(locks, store, d.Tx, d.Clock),
 		UpdateLabel:         app.NewUpdateLabel(locks, store, d.Tx, d.Clock),
-		DeleteLabel:         app.NewDeleteLabel(locks, store, d.Tx, d.Clock),
+		DeleteLabel:         app.NewDeleteLabel(locks, store, d.Issues, d.Tx, d.Clock),
 	}}
 }
 

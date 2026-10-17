@@ -27,12 +27,19 @@ func seedMember(t *testing.T, pool *pgxpool.Pool, workspace, project, user uuid.
 }
 
 // waits reports whether a statement of another transaction on project's
-// row, lock, waits for a lock held on it: NOWAIT answers lock_not_available
-// (55P03) at once instead of waiting. Its wait for a connection of the pool
-// ends soon (pgtest.Soon).
+// row, lock, waits for a lock held on it (rowWaits on projects).
 func waits(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, lock string) bool {
 	t.Helper()
-	_, err := pool.Exec(pgtest.Soon(t), "SELECT 1 FROM projects WHERE id = $1 "+lock+" NOWAIT", project)
+	return rowWaits(t, pool, "projects", project, lock)
+}
+
+// rowWaits reports whether a statement of another transaction on the row
+// id of table, lock, waits for a lock held on it: NOWAIT answers
+// lock_not_available (55P03) at once instead of waiting. Its wait for a
+// connection of the pool ends soon (pgtest.Soon).
+func rowWaits(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID, lock string) bool {
+	t.Helper()
+	_, err := pool.Exec(pgtest.Soon(t), "SELECT 1 FROM "+table+" WHERE id = $1 "+lock+" NOWAIT", id)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
 		return true

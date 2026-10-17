@@ -13,6 +13,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
@@ -25,15 +26,16 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// newWorkspaceRoute is the workspace module (workspace.New) on pool, as
-// bootstrap wires it for the endings: access's Authorizer, identity's
-// Accounts and MemberProfiles, converted, and the project module's cascade,
-// each on pool.
-func newWorkspaceRoute(t *testing.T, pool *pgxpool.Pool) moduleRoute {
+// newWorkspaceRoute is the workspace module (workspace.New) on pool, with
+// tx its transactions, as bootstrap wires it: access's Authorizer,
+// identity's Accounts and MemberProfiles, converted, and the project
+// module's cascade over issue's, each on pool.
+func newWorkspaceRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
-	tx, auth, identityPorts, provided := postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool)
+	auth, identityPorts, provided := authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool)
 	projects := project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
-		Workspaces: projectWorkspaces{directory: provided.WorkspaceDirectory}, Members: provided.WorkspaceMembers})
+		Workspaces: projectWorkspaces{directory: provided.WorkspaceDirectory}, Members: provided.WorkspaceMembers,
+		Issues: issue.Provide(pool).IssueCascade})
 	return newRoute(t, workspace.New(workspace.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),
 		Authorizer: auth, Accounts: workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles: workspaceProfiles{profiles: identityPorts.PublicProfiles}, Projects: projects.Cascade()}).Register)
@@ -83,7 +85,8 @@ func TestTheEndingsRunOnTheirTransactionsConnection(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	route := newWorkspaceRoute(t, poolOfOne(t, r.pool.Config().ConnString()))
+	one := poolOfOne(t, r.pool.Config().ConnString())
+	route := newWorkspaceRoute(t, one, postgres.NewTxManager(one, 2*time.Second))
 	contract := apitest.Load(t)
 
 	route.answerWithin(t, contract, http.MethodDelete, "/api/v0/workspace-members/"+r.bobIn.String(), r.alice, "", http.StatusNoContent)

@@ -41,7 +41,10 @@ func failed(err error) bool {
 // would answer as project.label_not_found, nor no labels, which listLabels
 // would answer as none, nor "no sort order", which createLabel would take
 // for the first label's, nor "no children", which updateLabel would take
-// for a label free to take a parent. Each read runs on a cancelled context
+// for a label free to take a parent; not "no such project" from the issue
+// module's lock, which createIssue would answer as project.not_found, nor
+// no states, labels or members, which it would answer as a state, labels
+// or assignees not allowed. Each read runs on a cancelled context
 // against a project alice is the only admin of, beside bob, a member, and
 // has display settings in, with its six default states and a label with a
 // child, bob's membership of another project ended, so that the right
@@ -104,6 +107,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if ids, err := s.LockMemberProjects(cancelled, acme, alice); !failed(err) || ids != nil {
 		t.Errorf("LockMemberProjects() = %v, %v; want context.Canceled, not no project", ids, err)
 	}
+	if ids, err := s.LockWorkspaceProjects(cancelled, acme); !failed(err) || ids != nil {
+		t.Errorf("LockWorkspaceProjects() = %v, %v; want context.Canceled, not no project", ids, err)
+	}
 	if n, err := s.CountInactive(cancelled, acme, bob); !failed(err) || n != 0 {
 		t.Errorf("CountInactive() = %d, %v; want context.Canceled, not a count", n, err)
 	}
@@ -139,6 +145,18 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	}
 	if has, err := s.HasChildren(cancelled, bug); !failed(err) || has {
 		t.Errorf("HasChildren() = %v, %v; want context.Canceled, not an answer", has, err)
+	}
+	if p, found, err := s.LockIssueProject(cancelled, web); !failed(err) || found || p != (app.IssueProject{}) {
+		t.Errorf("LockIssueProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
+	}
+	if list, err := s.IssueStates(cancelled, web); !failed(err) || list != nil {
+		t.Errorf("IssueStates() = %+v, %v; want context.Canceled, not none", list, err)
+	}
+	if list, err := s.IssueLabels(cancelled, web, []uuid.UUID{bug}); !failed(err) || list != nil {
+		t.Errorf("IssueLabels() = %v, %v; want context.Canceled, not none", list, err)
+	}
+	if roles, err := s.ActiveRoles(cancelled, web, []uuid.UUID{alice, bob}); !failed(err) || roles != nil {
+		t.Errorf("ActiveRoles() = %v, %v; want context.Canceled, not no member", roles, err)
 	}
 }
 
@@ -222,6 +240,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 		Now: now}); !failed(err) {
 		t.Errorf("UpsertPreferences() = %v; want context.Canceled", err)
 	}
+	if n, err := s.NextIssueSequence(cancelled, web); !failed(err) || n != 0 {
+		t.Errorf("NextIssueSequence() = %d, %v; want context.Canceled, not a number", n, err)
+	}
 	for _, step := range deletionSteps(s) {
 		if err := step.run(cancelled, app.Deletion{WorkspaceID: acme, ProjectID: &web, By: alice, Now: now}); !failed(err) {
 			t.Errorf("%s() = %v; want context.Canceled", step.name, err)
@@ -249,8 +270,8 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if l, err := s.UpdateLabel(cancelled, bug, domain.LabelPatch{Name: ptr("Feature")}, alice, now); !failed(err) || l.ID != (uuid.UUID{}) {
 		t.Errorf("UpdateLabel() = %+v, %v; want context.Canceled", l, err)
 	}
-	if err := s.DeleteLabel(cancelled, bug, alice, now); !failed(err) {
-		t.Errorf("DeleteLabel() = %v; want context.Canceled", err)
+	if ids, err := s.DeleteLabel(cancelled, bug, alice, now); !failed(err) || ids != nil {
+		t.Errorf("DeleteLabel() = %v, %v; want context.Canceled", ids, err)
 	}
 }
 

@@ -2,7 +2,6 @@ import {
   addProjectMembers,
   createProject,
   createWorkspace,
-  furnishWorkspace,
   inviteAndAccept,
   membershipOf,
   slugFor,
@@ -16,6 +15,7 @@ import {
 } from "../../fixtures/assert/workspace";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole } from "../../fixtures/browser";
+import { furnishWorkspace } from "../../fixtures/furnish";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import {
@@ -50,7 +50,8 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
   const second = slugFor(testInfo, "second");
   // First holds a row of each table its deletion writes: alice's membership and bob's, which he wrote, so that the
   // deletion's writing it shows; the invitee's pending invitation (bob's own was deleted when he accepted it, before
-  // the workspace); her display settings; and her project Web with its own rows, its label Bug among them.
+  // the workspace); her display settings; and her project Web with its own rows, its label Bug and a work item
+  // labelled Bug among them.
   const firstWorkspace = await createWorkspace(api, alice, { name: "First", slug: first });
   await furnishWorkspace(api, alice, first, { email: bobEmail, token: bob }, emailFor(testInfo, "invitee"));
   // Second has bob as its member, and his project Ops, alice its admin by his adding, so both are its admins.

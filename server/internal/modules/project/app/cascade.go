@@ -10,29 +10,49 @@ import (
 
 // Cascade is what the workspace module's writes ask of the projects,
 // workspace's ProjectCascade port (M3 design 3.3). Each method uses
-// project's own repositories only, in the transaction ctx carries, which
-// the caller began and holds its workspace's lock in: a failure comes back
-// as itself and the caller's whole transaction rolls back. The caller gives
-// who acts and the moment, which each method writes into the rows it
-// changes.
+// project's own repositories, and DeleteWorkspaceProjects the issue
+// module's cascade too (IssueCascade, M4 design 3.3), in the transaction
+// ctx carries, which the caller began and holds its workspace's lock in: a
+// failure comes back as itself and the caller's whole transaction rolls
+// back. The caller gives who acts and the moment, which each method writes
+// into the rows it changes.
 type Cascade struct {
 	projects ProjectsDeleter
+	locker   WorkspaceProjectsLocker
 	members  MemberDemoter
 	enders   MembershipEnder
+	issues   IssueCascade
 }
 
-// NewCascade returns the cascade over projects, members and enders.
-func NewCascade(projects ProjectsDeleter, members MemberDemoter, enders MembershipEnder) *Cascade {
-	return &Cascade{projects: projects, members: members, enders: enders}
+// NewCascade returns the cascade over projects, locker, members, enders
+// and the issue module's cascade.
+func NewCascade(projects ProjectsDeleter, locker WorkspaceProjectsLocker, members MemberDemoter, enders MembershipEnder,
+	issues IssueCascade) *Cascade {
+	return &Cascade{projects: projects, locker: locker, members: members, enders: enders, issues: issues}
+}
+
+// LockWorkspaceProjects locks the workspace's undeleted projects, archived
+// ones too, FOR NO KEY UPDATE in id order, and returns their ids in that
+// order (M4 design 3.5): deleteWorkspace takes it under its FOR NO KEY
+// UPDATE of the workspace and after the lock of the invitations, before it
+// reads its moment, so that the moment is later than that of every write
+// that holds one of these projects.
+func (c *Cascade) LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	return c.locker.LockWorkspaceProjects(ctx, workspaceID)
 }
 
 // DeleteWorkspaceProjects soft-deletes the workspace's projects and the
 // rows under them (M3 design 3.6): the last step of deleteWorkspace's
-// cascade, under its FOR NO KEY UPDATE of the workspace, each step one
-// statement (convention 5), the steps deleteProject runs too
-// (deleteProjects), at by and now.
-func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	return deleteProjects(ctx, c.projects, Deletion{WorkspaceID: workspaceID, By: by, Now: now})
+// cascade, under its FOR NO KEY UPDATE of the workspace and of the projects
+// (LockWorkspaceProjects), each step one statement (convention 5), the
+// steps deleteProject runs too (deleteProjects), then the work-item side of
+// the projects it locked, through the issue module (M4 design 3.5), all at
+// by and now.
+func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID, projectIDs []uuid.UUID, by uuid.UUID, now time.Time) error {
+	if err := deleteProjects(ctx, c.projects, Deletion{WorkspaceID: workspaceID, By: by, Now: now}); err != nil {
+		return err
+	}
+	return c.issues.DeleteWorkspaceIssues(ctx, projectIDs, by, now)
 }
 
 // DemoteToGuest makes userID a guest in each of the workspace's projects he

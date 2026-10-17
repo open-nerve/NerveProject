@@ -6,8 +6,10 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // The values that cross from one module's port to another's: modules do not
@@ -78,4 +80,61 @@ type accessProjects struct {
 func (a accessProjects) ProjectFacts(ctx context.Context, projectID, userID uuid.UUID) (access.ProjectFacts, bool, error) {
 	f, found, err := a.projects.ProjectFacts(ctx, projectID, userID)
 	return access.ProjectFacts(f), found, err
+}
+
+// issueProjects is project's IssueProjects as issue's ProjectPorts: the
+// same reads and lock, each value converted.
+type issueProjects struct {
+	projects project.IssueProjects
+}
+
+func (p issueProjects) Find(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
+	return p.projects.ProjectWorkspace(ctx, id)
+}
+
+func (p issueProjects) Lock(ctx context.Context, id uuid.UUID) (issue.LockedProject, bool, error) {
+	locked, found, err := p.projects.LockIssueProject(ctx, id)
+	return issue.LockedProject(locked), found, err
+}
+
+func (p issueProjects) Next(ctx context.Context, id uuid.UUID) (int, error) {
+	return p.projects.NextIssueSequence(ctx, id)
+}
+
+func (p issueProjects) States(ctx context.Context, id uuid.UUID) ([]issue.StateRef, error) {
+	states, err := p.projects.IssueStates(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.StateRef, len(states))
+	for i, s := range states {
+		out[i] = issue.StateRef{ID: s.ID, Group: issue.StateGroup(s.Group), Default: s.Default}
+	}
+	return out, nil
+}
+
+func (p issueProjects) Labels(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error) {
+	return p.projects.IssueLabels(ctx, id, ids)
+}
+
+func (p issueProjects) Roles(ctx context.Context, id uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
+	return p.projects.ActiveRoles(ctx, id, ids)
+}
+
+// issueProfiles is identity's PublicProfiles as issue's: each account's
+// display name, by account.
+type issueProfiles struct {
+	profiles identity.PublicProfiles
+}
+
+func (p issueProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	profiles, err := p.profiles.PublicProfiles(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	names := make(map[uuid.UUID]string, len(profiles))
+	for _, profile := range profiles {
+		names[profile.ID] = profile.DisplayName
+	}
+	return names, nil
 }

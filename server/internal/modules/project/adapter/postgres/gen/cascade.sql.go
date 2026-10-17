@@ -269,6 +269,40 @@ func (q *Queries) LockMemberProjects(ctx context.Context, arg LockMemberProjects
 	return items, nil
 }
 
+const lockWorkspaceProjects = `-- name: LockWorkspaceProjects :many
+SELECT id
+FROM projects
+WHERE workspace_id = $1 AND deleted_at IS NULL
+ORDER BY id
+FOR NO KEY UPDATE
+`
+
+// deleteWorkspace's lock of its projects (M4 design 3.5), under the workspace's FOR NO KEY UPDATE and after the lock
+// of its invitations, before it reads its moment: the workspace's undeleted projects, archived ones too, FOR NO KEY
+// UPDATE in id order: the deletion waits here for every write that holds one of them, so its moment is later than
+// theirs, also of a write that took no lock of the workspace row. The lock is taken as the sorted rows come, so the
+// order is the ids'. No project of the workspace is created or deleted while it waits: both take the workspace's row
+// FOR SHARE first.
+func (q *Queries) LockWorkspaceProjects(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, lockWorkspaceProjects, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const soleAdmin = `-- name: SoleAdmin :one
 SELECT EXISTS (
     SELECT 1 FROM project_members m

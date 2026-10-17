@@ -231,7 +231,7 @@ GET   /api/v0/issues/{issue_id}/comments
 - **权限不放进令牌**：每个请求都从数据库读取成员关系和角色。所以移出项目、调整角色是立即生效的。
 - **会话撤销**：退出登录只结束当前这一处登录，同一账户的其他会话不受影响（M2 设计 11.1）；修改密码结束该账户的其他会话，用 PAT 修改时没有当前会话，全部结束，PAT 不受影响；停用账户结束该账户的全部会话，PAT 不删除，但停用期间认证失败（M2 设计 3.5）。服务器管理员的 `nerve users reset-password` 结束该账户的全部会话并撤销全部 PAT，`set-email` 结束全部会话，`deactivate` 与自助停用相同；`activate` 恢复账户后，没有过期的 PAT 重新可用（M2 设计 3.5、3.17）。
 - **账户行锁**：签发和变更凭证的事务（登录、创建 PAT、修改密码、停用）先锁账户行，再确认调用者的凭证仍然有效；服务器管理员改动已有账户的命令（`reset-password`、`set-email`、`deactivate`、`activate`）按邮箱锁同一行。所以并发的修改不会让已被撤销的凭证再签发或变更凭证；续期靠会话行上的条件更新（M2 设计 3.5）。
-- **加锁顺序**（M3 设计 3.6）：全局顺序是 `users` → `profiles` → `auth_sessions` → `api_tokens` → `workspaces` → `workspace_member_invites` → `workspace_members` → `workspace_user_properties` → `projects` → `project_members` → `project_user_properties` → `states` → `labels`，同一张表的多行按 `id` 升序。另有六条约定，后续里程碑的表照做：
+- **加锁顺序**（M3 设计 3.6；M4 设计 3.5）：全局顺序是 `users` → `profiles` → `auth_sessions` → `api_tokens` → `workspaces` → `workspace_member_invites` → `workspace_members` → `workspace_user_properties` → `projects` → `project_members` → `project_user_properties` → `states` → `labels` → `draft_issues` → `issues` → `issue_assignees` → `issue_labels` → `issue_relations` → `issue_links` → `issue_subscribers` → `issue_mentions` → `issue_comments` → `issue_reactions` → `comment_reactions` → `issue_activities` → `issue_description_versions`（M4 的表随各自的 Phase 建出），同一张表的多行按 `id` 升序。另有六条约定，后续里程碑的表照做：
   1. 锁账户行的事务最先锁它；事务中途要读别的账户（例如邮箱），只经不加锁的 `MemberProfiles`（或同等的只读端口）。
   2. **写事务先锁父行，再判定权限**：父行是判定所在的那一行（工作区级是工作区行，项目级是项目行），锁它的语句带 `deleted_at IS NULL`；成员关系和角色的改变、维护项目范围不变式的写、修改父行本身的写用 `FOR NO KEY UPDATE`，其余的写用 `FOR SHARE`。按资源寻址的写先读资源行得到父行，锁住父行之后重读。
   3. 让某人成为项目成员的写，先以 `FOR SHARE` 锁住他的工作区成员行；目标的 422 在判定之后给出。
@@ -240,6 +240,8 @@ GET   /api/v0/issues/{issue_id}/comments
   6. 工作区成员关系的增长最先以 `FOR SHARE` 锁住得到它的账户行（项目成员关系的增长照约定三，锁他的工作区成员行、不锁账户行），收缩先改工作区成员行、再列举他的项目成员关系；恢复以前的成员关系不比新授予给得更多，也不比原来那一行更多。
 
   "先锁父行，再判定"从 M3/P2 起落地（修改、删除工作区，改成员的角色，修改显示设置）：两位管理员互相降级时，先拿到工作区锁的一方成功，后到的一方判定时已是成员而被拒绝。约定六的接受邀请一段从 M3/P3 起落地：接受、忽略邀请最先以 `FOR SHARE` 锁住调用者的账户行，在锁下重读 `is_active` 和邮箱，再锁工作区（接受 `FOR NO KEY UPDATE`，忽略 `FOR SHARE`）和邀请行（`FOR UPDATE`）；接受比较的是在账户行锁下读到的邮箱，与改邮箱在账户行上串行：改邮箱先持有这一行时，接受等它提交，比较的是改后的邮箱；接受先持有时，比较的是原来的邮箱，改邮箱等接受结束（M3 设计 9.3 交错 12）。约定六的停用一段从 M3/P6 起落地：停用（自助的和服务器管理员的命令）最先以 `FOR NO KEY UPDATE` 锁住账户行，在锁下读邮箱，写完账户、新手引导和会话之后，按 `id` 锁住他有效成员关系所在的全部工作区（`FOR NO KEY UPDATE`，上锁时已删除的跳过），以一条语句按 `id` 锁住要删除的邀请（发给这个邮箱的全部邀请和他是唯一有效成员的工作区的待接受邀请，`FOR NO KEY UPDATE`：发给他邮箱的邀请多在他不锁的工作区里，两个停用不在这样锁住的邀请上互相等成环），在这之后读时刻，按锁回答的 `id` 删除这些邀请、不写别的（控制者的裁定 F-1），结束他的工作区成员行，再列举他的项目成员关系、按 `id` 一次锁住那些项目并结束它们；工作区一侧的增长在账户行上、项目一侧的增长在工作区行上与它串行（M3 设计 3.9，9.3 交错 7、8、13–16、19）。
+
+  工作项一侧的写从 M4/P1a 起落地（M4 设计 3.5，决策点 1 负责人裁定 B）。约定二对它们的延伸是**最先锁项目行，不锁工作区行**：不加锁地读出资源（按项目 id 的写读项目，按资源 id 的写读资源、得到工作项和项目，没有时答资源的 404），再做一次不加锁的预检，**凡是判定拒绝的都在这里答**（看不到答资源的 404，看得到而不能做答 403），不取行锁；放行的写开始事务，以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），重读资源、在锁下再判定一次（等锁期间被移出、降级的人照样得到 404 或 403，锁下的判定是最终的），然后检查依赖的行、读时刻、写入。项目的 N 让同一个项目里的写一个接一个（取号、同一状态最大的 `sort_order`、动态按提交的顺序得到不减的时刻都靠它）；不锁工作区行，最频繁的写就不会像 M3 设计 17.4 的探针 B 那样让工作区一级的写一直等下去。删除工作区在锁住它的邀请之后、读时刻之前，按 `id` 升序以 `FOR NO KEY UPDATE` 锁住它的全部未删除项目（`ProjectCascade.LockWorkspaceProjects`），所以它的时刻不早于这些项目上已提交的每个写。B 的两个代价：一、授权与时刻的先后可以不一致：只改工作区角色（不降为访客）的写不锁项目，降为访客、结束成员关系的连带在锁项目之前读时刻，一个工作项的写可以在成员关系的变更读了时刻之后才写下更晚的时刻、按旧的角色生效；二、草稿的写、发布草稿（M4 的 P8）和 M3 的项目管理类的写仍先取工作区 S，M3 设计 17.4 的饥饿在这些较少的路径上仍在。
 - **重复使用检测**：一旦发现某个已经换过新的刷新令牌又被使用，就作废这次登录派生出的所有令牌。只有交出的旧令牌确是这个会话签发过的（它的 MAC 标签成立）才作废；会话 id 和代数对、密文和标签是伪造的旧令牌得到 401，会话不受影响（M2 设计 3.5）。
 - **密码哈希**：用 argon2id。
 - **登录方式**：v0 只有邮箱加密码。是否开放注册由配置 `auth.signup_enabled` 控制：prod 默认关闭，dev、test 默认开放；关闭时，不带有效的邀请链接的注册先答"注册已关闭"，不查邮箱。prod 的第一个账户由服务器管理员用 `nerve users create` 创建（M2 设计决策点 2）。注册关闭时，带着有效的邀请链接、注册邮箱（规范化后）与邀请的邮箱相同的人仍可注册，按注册平常的规则回答（密码不合规 422、邮箱已注册 409，这两种不建账户）；邀请无效的各种情况（令牌不对、邀请不存在、已删除、已回应、邮箱不同）与不带邀请得到同一个"注册已关闭"。公开的邀请查看不显示被邀请的邮箱（M3 设计 3.8、决策点 1）。
@@ -377,7 +379,12 @@ server/
       access/               成员角色查询与权限规则表（实现 Authorizer 端口）
       workspace/            工作区、成员、邀请
       project/              项目、项目成员、状态、标签、显示设置
-      issue/                工作项、评论、关联、链接、表情回应、操作动态、历史版本、草稿、归档、列表查询
+      issue/                工作项、评论、关联、链接、表情回应、操作动态、历史版本、草稿、归档、列表查询；
+                            拥有以工作项为根的 13 张表（`issues`、`issue_assignees`、`issue_labels`、
+                            `issue_relations`、`issue_links`、`issue_subscribers`、`issue_mentions`、
+                            `issue_comments`、`issue_reactions`、`comment_reactions`、`issue_activities`、
+                            `issue_description_versions`、`draft_issues`，随各自的 Phase 建出），
+                            经端口读写 project、workspace、identity（M4 设计 3.3）
       planning/             迭代、模块
       intake/               需求收集箱
       navigation/           保存的视图、收藏、最近访问

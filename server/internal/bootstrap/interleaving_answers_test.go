@@ -13,7 +13,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
-	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -103,7 +102,7 @@ func (r answerRace) accounts() workspaceapp.Accounts {
 
 // projects is project's cascade as bootstrap wires it.
 func (r answerRace) projects() workspaceapp.ProjectCascade {
-	return project.NewCascade(project.CascadeDeps{Pool: r.pool})
+	return cascadeOn(r.pool)
 }
 
 // accept is bob's acceptance of his invitation, over invitations.
@@ -163,17 +162,18 @@ func (a gatedAccepter) MemberOf(ctx context.Context, workspaceID, userID uuid.UU
 }
 
 // gatedDeleter stops a deletion after its lock and decision, before its
-// first write.
+// locks of the rows under the workspace (M4 design 3.5) and its first
+// write.
 type gatedDeleter struct {
 	*workspacepg.Store
 	gate *gate
 }
 
-func (d gatedDeleter) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+func (d gatedDeleter) LockWorkspaceInvitations(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
 	if err := d.gate.wait(ctx); err != nil {
-		return err
+		return nil, err
 	}
-	return d.Store.DeleteWorkspace(ctx, id, by, now)
+	return d.Store.LockWorkspaceInvitations(ctx, workspaceID)
 }
 
 // Interleaving 3: the acceptance first holds acme's row; the deletion waits

@@ -15,6 +15,7 @@ import (
 
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
@@ -64,11 +65,19 @@ func newRoute(t *testing.T, register func(*httpserver.Router, *httpserver.API)) 
 }
 
 // newProjectRoute is the project module (project.New) on pool, with auth as
-// its Authorizer and members as its WorkspaceMembers.
+// its Authorizer, members as its WorkspaceMembers and issue's cascade.
 func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, members projectapp.WorkspaceMembers) moduleRoute {
 	t.Helper()
-	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clock.System{}, Authorizer: auth,
-		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members}).Register)
+	return newProjectRouteOn(t, pool, postgres.NewTxManager(pool, 2*time.Second), auth, members)
+}
+
+// newProjectRouteOn is newProjectRoute with tx its transactions.
+func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, auth shared.Authorizer,
+	members projectapp.WorkspaceMembers) moduleRoute {
+	t.Helper()
+	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
+		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members,
+		Issues: issue.Provide(pool).IssueCascade}).Register)
 }
 
 // send sends method path as caller, with body when it is not empty, and
@@ -143,23 +152,25 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 // connection (M3 design 3.6 convention 2, 6.7; P4a's L3): its locks, its
 // reads, the membership it names among them, the facts its decision reads
 // (ProjectFacts and the workspace roles), the other admins a leaving reads,
-// its writes and its answer. The project module and the Authorizer are
-// wired as bootstrap wires them, on a pool of one connection: a statement
-// sent through the pool rather than the transaction would wait for a second
-// connection that never comes, and its request fail at the request's
-// deadline. alice, acme's admin, creates Ops, changes Web, archives and
-// unarchives it, changes her display settings in it and adds bob, whose
-// ended membership she restores; carol joins it anew; alice makes carol an
-// admin of Web and removes bob; she creates QA in it, alone in the
-// completed group, and moves it to the started group, which the count of
-// its group refuses (409 project.state_last_in_group); she renames it
-// Checked, creates Done in the completed group, deletes Checked, which
-// counts the group again, and makes Done Web's default; she creates the
-// label Bug in it, UI under Bug, and Icons under UI, which the parent's
-// read refuses (422: labels have two levels); she moves Bug under UI,
-// which the same read refuses, renames UI Widgets at the top, moves it
-// back under Bug, and deletes Bug, Widgets with it; carol, an admin,
-// leaves Web; alice deletes both projects.
+// what it asks of the work items (issue's cascade), its writes and its
+// answer. The project module and the Authorizer are wired as bootstrap
+// wires them, on a pool of one connection: a statement sent through the
+// pool rather than the transaction would wait for a second connection that
+// never comes, and its request fail at the request's deadline. alice,
+// acme's admin, creates Ops, changes Web, archives and unarchives it,
+// changes her display settings in it and adds bob, whose ended membership
+// she restores; carol joins it anew; alice makes carol an admin of Web and
+// removes bob; she creates QA in it, alone in the completed group, and
+// moves it to the started group, which the count of its group refuses (409
+// project.state_last_in_group); she renames it Checked, creates Done in the
+// completed group, deletes Checked, which asks whether a work item is in
+// it and counts the group again, and makes Done Web's default; she creates
+// the label Bug in it, UI under Bug, and Icons under UI, which the
+// parent's read refuses (422: labels have two levels); she moves Bug under
+// UI, which the same read refuses, renames UI Widgets at the top, moves it
+// back under Bug, and deletes Bug, Widgets with it, which takes them off
+// the work items; carol, an admin, leaves Web; alice deletes both
+// projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()

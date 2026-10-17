@@ -9,6 +9,7 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -56,11 +57,12 @@ func (s labelWrittenHolding) UpdateLabel(ctx context.Context, id uuid.UUID, p pr
 	return changed, s.gate.wait(ctx)
 }
 
-func (s labelWrittenHolding) DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) error {
-	if err := s.Store.DeleteLabel(ctx, id, by, now); err != nil {
-		return err
+func (s labelWrittenHolding) DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) ([]uuid.UUID, error) {
+	ids, err := s.Store.DeleteLabel(ctx, id, by, now)
+	if err != nil {
+		return nil, err
 	}
-	return s.gate.wait(ctx)
+	return ids, s.gate.wait(ctx)
 }
 
 // worldLabels are the labels seedLabelsOf gives Web and Ops, by name, each
@@ -164,7 +166,8 @@ func labelMoves(name, parent string) labelWrite {
 // labelDeletes deletes the label name, and the labels under it with it.
 func labelDeletes(name string) labelWrite {
 	return labelWrite{"deletes " + name, func(ctx context.Context, w memberWorld, labels labelStore, ids map[string]uuid.UUID) error {
-		return projectapp.NewDeleteLabel(w.projectLocks(), labels, w.tx(), clock.System{}).Execute(w.asBob(ctx), ids[name])
+		return projectapp.NewDeleteLabel(w.projectLocks(), labels, issue.Provide(w.pool).IssueCascade, w.tx(), clock.System{}).Execute(w.asBob(ctx),
+			ids[name])
 	}, func(labels map[string]string) {
 		for n, parent := range labels {
 			if n == name || parent == name {

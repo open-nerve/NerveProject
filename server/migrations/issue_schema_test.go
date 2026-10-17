@@ -1,0 +1,222 @@
+package migrations_test
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+)
+
+// issueNames are the constraints and indexes of the issue module's tables
+// (M4 design 4.2–4.5, 4.11), as TestConstraintAndIndexNames reads them: the
+// part of its want that the migrations 00015–00019 add.
+var issueNames = []string{
+	"issue_activities_actor_id_fkey f n",
+	"issue_activities_created_by_id_fkey f n",
+	"issue_activities_issue_id_created_at_idx i",
+	"issue_activities_issue_id_fkey f c",
+	"issue_activities_pkey iu",
+	"issue_activities_pkey p",
+	"issue_activities_project_id_fkey f c",
+	"issue_activities_project_id_idx i",
+	"issue_activities_updated_by_id_fkey f n",
+	"issue_activities_verb_check c",
+	"issue_activities_workspace_id_fkey f c",
+	"issue_activities_workspace_id_idx i",
+	"issue_assignees_assignee_id_fkey f c",
+	"issue_assignees_assignee_id_idx iw",
+	"issue_assignees_created_by_id_fkey f n",
+	"issue_assignees_issue_id_assignee_id_key iuw",
+	"issue_assignees_issue_id_fkey f c",
+	"issue_assignees_issue_id_idx i",
+	"issue_assignees_pkey iu",
+	"issue_assignees_pkey p",
+	"issue_assignees_project_id_fkey f c",
+	"issue_assignees_project_id_idx i",
+	"issue_assignees_updated_by_id_fkey f n",
+	"issue_assignees_workspace_id_fkey f c",
+	"issue_assignees_workspace_id_idx i",
+	"issue_labels_created_by_id_fkey f n",
+	"issue_labels_issue_id_fkey f c",
+	"issue_labels_issue_id_idx i",
+	"issue_labels_issue_id_label_id_key iuw",
+	"issue_labels_label_id_fkey f c",
+	"issue_labels_label_id_idx i",
+	"issue_labels_pkey iu",
+	"issue_labels_pkey p",
+	"issue_labels_project_id_fkey f c",
+	"issue_labels_project_id_idx i",
+	"issue_labels_updated_by_id_fkey f n",
+	"issue_labels_workspace_id_fkey f c",
+	"issue_labels_workspace_id_idx i",
+	"issue_subscribers_created_by_id_fkey f n",
+	"issue_subscribers_issue_id_fkey f c",
+	"issue_subscribers_issue_id_idx i",
+	"issue_subscribers_issue_id_subscriber_id_key iuw",
+	"issue_subscribers_pkey iu",
+	"issue_subscribers_pkey p",
+	"issue_subscribers_project_id_fkey f c",
+	"issue_subscribers_project_id_idx i",
+	"issue_subscribers_subscriber_id_fkey f c",
+	"issue_subscribers_subscriber_id_idx iw",
+	"issue_subscribers_updated_by_id_fkey f n",
+	"issue_subscribers_workspace_id_fkey f c",
+	"issue_subscribers_workspace_id_idx i",
+	"issues_created_by_id_fkey f n",
+	"issues_dates_check c",
+	"issues_name_check c",
+	"issues_not_own_parent_check c",
+	"issues_parent_id_fkey f c",
+	"issues_parent_id_idx i",
+	"issues_pkey iu",
+	"issues_pkey p",
+	"issues_priority_check c",
+	"issues_project_id_fkey f c",
+	"issues_project_id_idx i",
+	"issues_project_id_sequence_id_key iu",
+	"issues_project_id_sequence_id_key u",
+	"issues_project_id_state_id_idx iw",
+	"issues_sequence_id_check c",
+	"issues_state_id_fkey f c",
+	"issues_state_id_idx i",
+	"issues_updated_by_id_fkey f n",
+	"issues_workspace_id_fkey f c",
+	"issues_workspace_id_idx i",
+}
+
+// The ids the issue tables' tests write, as SQL literals: an account, a
+// workspace, two projects with a state each, a label of web, and a work
+// item of each project.
+const (
+	issueBob  = "'0199a2b4-0000-7000-8000-000000000002'"
+	issueAcme = "'0199a2b4-0000-7000-8000-000000000003'"
+	issueWeb  = "'0199a2b4-0000-7000-8000-000000000004'"
+	issueOps  = "'0199a2b4-0000-7000-8000-000000000005'"
+	webState  = "'0199a2b4-0000-7000-8000-000000000006'"
+	opsState  = "'0199a2b4-0000-7000-8000-000000000007'"
+	webBug    = "'0199a2b4-0000-7000-8000-000000000008'"
+	webIssue  = "'0199a2b4-0000-7000-8000-000000000009'"
+	opsIssue  = "'0199a2b4-0000-7000-8000-00000000000a'"
+)
+
+// newIssueDatabase is a database with the rows of the ids above, each work
+// item numbered 1, and an activity row of web's.
+func newIssueDatabase(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	pool := newPool(t, pgtest.NewDatabase(t))
+	for _, stmt := range []string{
+		"INSERT INTO users (id, email, password, display_name) VALUES (" + issueBob + ", 'bob@corp.com', 'x', 'bob')",
+		"INSERT INTO workspaces (id, name, slug) VALUES (" + issueAcme + ", 'Acme', 'acme')",
+		"INSERT INTO projects (id, workspace_id, name, identifier) VALUES (" + issueWeb + ", " + issueAcme + ", 'Web', 'WEB'), (" + issueOps +
+			", " + issueAcme + ", 'Ops', 'OPS')",
+		"INSERT INTO states (id, workspace_id, project_id, name, color) VALUES (" + webState + ", " + issueAcme + ", " + issueWeb +
+			", 'Backlog', '#60646C'), (" + opsState + ", " + issueAcme + ", " + issueOps + ", 'Backlog', '#60646C')",
+		"INSERT INTO labels (id, workspace_id, project_id, name) VALUES (" + webBug + ", " + issueAcme + ", " + issueWeb + ", 'Bug')",
+		"INSERT INTO issues (id, workspace_id, project_id, state_id, name, sequence_id) VALUES (" + webIssue + ", " + issueAcme + ", " +
+			issueWeb + ", " + webState + ", 'Work', 1), (" + opsIssue + ", " + issueAcme + ", " + issueOps + ", " + opsState + ", 'Work', 1)",
+		"INSERT INTO issue_activities (id, workspace_id, project_id, issue_id) VALUES (gen_random_uuid(), " + issueAcme + ", " + issueWeb +
+			", " + webIssue + ")",
+	} {
+		if _, err := pool.Exec(context.Background(), stmt); err != nil {
+			t.Fatalf("%s: %v", stmt, err)
+		}
+	}
+	return pool
+}
+
+// The issue tables' CHECKs accept what the domain writes and reject what
+// bypasses it (M4 design 4.2, 4.11): every priority and verb, a start on
+// its target date or with no target, a top-level work item, the number 1;
+// and refuse an empty title, a priority outside the five, in another case
+// too, the number 0, a work item its own parent, a start after its target,
+// a verb outside the three.
+func TestIssueChecksRejectCounterexamples(t *testing.T) {
+	ctx := context.Background()
+	pool := newIssueDatabase(t)
+	for _, stmt := range []string{
+		"UPDATE issues SET priority = 'urgent'", "UPDATE issues SET priority = 'high'", "UPDATE issues SET priority = 'medium'",
+		"UPDATE issues SET priority = 'low'", "UPDATE issues SET priority = 'none'",
+		"UPDATE issues SET start_date = '2026-10-17', target_date = '2026-10-17'",
+		"UPDATE issues SET start_date = '2026-10-18', target_date = NULL",
+		"UPDATE issues SET parent_id = NULL", "UPDATE issues SET sequence_id = 1",
+		"UPDATE issue_activities SET verb = 'updated'", "UPDATE issue_activities SET verb = 'deleted'",
+		"UPDATE issue_activities SET verb = 'created'",
+	} {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			t.Errorf("%s: %v, want it accepted", stmt, err)
+		}
+	}
+	for _, tt := range []struct{ name, stmt, constraint string }{
+		{"empty title", "UPDATE issues SET name = ''", "issues_name_check"},
+		{"unknown priority", "UPDATE issues SET priority = 'other'", "issues_priority_check"},
+		{"upper-case priority", "UPDATE issues SET priority = 'Urgent'", "issues_priority_check"},
+		{"number 0", "UPDATE issues SET sequence_id = 0", "issues_sequence_id_check"},
+		{"its own parent", "UPDATE issues SET parent_id = id", "issues_not_own_parent_check"},
+		{"a start after the target", "UPDATE issues SET start_date = '2026-10-18', target_date = '2026-10-17'", "issues_dates_check"},
+		{"unknown verb", "UPDATE issue_activities SET verb = 'commented'", "issue_activities_verb_check"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := pool.Exec(ctx, tt.stmt)
+			var pgErr *pgconn.PgError
+			if !errors.As(err, &pgErr) || pgErr.Code != "23514" || pgErr.ConstraintName != tt.constraint {
+				t.Errorf("%s = %v, want check_violation (23514) of %s", tt.stmt, err, tt.constraint)
+			}
+		})
+	}
+}
+
+// A work item's number is unique in its project among every work item,
+// deleted ones too (M4 design 3.7: a number is never used again): a second
+// one is refused before and after the first is soft-deleted; another
+// project holds its own 1. The assignees', labels' and subscribers' keys
+// hold among undeleted rows only (4.3–4.5): a second undeleted row of the
+// pair is refused, and soft-deleting the first frees the pair; another
+// work item holds the same pair of its own.
+func TestIssueUniqueKeys(t *testing.T) {
+	ctx := context.Background()
+	pool := newIssueDatabase(t)
+	refused := func(t *testing.T, stmt, index string) {
+		t.Helper()
+		_, err := pool.Exec(ctx, stmt)
+		var pgErr *pgconn.PgError
+		if !errors.As(err, &pgErr) || pgErr.Code != "23505" || pgErr.ConstraintName != index {
+			t.Errorf("%s = %v, want unique_violation (23505) of %s", stmt, err, index)
+		}
+	}
+	second := "INSERT INTO issues (id, workspace_id, project_id, state_id, name, sequence_id) VALUES (gen_random_uuid(), " + issueAcme + ", " +
+		issueWeb + ", " + webState + ", 'Again', 1)"
+	refused(t, second, "issues_project_id_sequence_id_key")
+	if _, err := pool.Exec(ctx, "UPDATE issues SET deleted_at = now() WHERE id = "+webIssue); err != nil {
+		t.Fatal(err)
+	}
+	refused(t, second, "issues_project_id_sequence_id_key")
+
+	for _, k := range []struct{ table, column, value, index string }{
+		{"issue_assignees", "assignee_id", issueBob, "issue_assignees_issue_id_assignee_id_key"},
+		{"issue_labels", "label_id", webBug, "issue_labels_issue_id_label_id_key"},
+		{"issue_subscribers", "subscriber_id", issueBob, "issue_subscribers_issue_id_subscriber_id_key"},
+	} {
+		t.Run(k.table, func(t *testing.T) {
+			insert := func(project, issue string) string {
+				return "INSERT INTO " + k.table + " (id, workspace_id, project_id, issue_id, " + k.column + ") VALUES (gen_random_uuid(), " +
+					issueAcme + ", " + project + ", " + issue + ", " + k.value + ")"
+			}
+			for _, stmt := range []string{insert(issueWeb, webIssue), insert(issueOps, opsIssue)} {
+				if _, err := pool.Exec(ctx, stmt); err != nil {
+					t.Fatalf("%s: %v", stmt, err)
+				}
+			}
+			refused(t, insert(issueWeb, webIssue), k.index)
+			if _, err := pool.Exec(ctx, "UPDATE "+k.table+" SET deleted_at = now() WHERE issue_id = "+webIssue); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := pool.Exec(ctx, insert(issueWeb, webIssue)); err != nil {
+				t.Errorf("after the first is deleted, %s = %v; want the pair free", insert(issueWeb, webIssue), err)
+			}
+		})
+	}
+}

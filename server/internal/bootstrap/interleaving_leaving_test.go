@@ -10,7 +10,6 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
-	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -101,7 +100,7 @@ func (w memberWorld) leaveProject(ctx context.Context, name string, project uuid
 // as bootstrap wires them. It takes no test, so it runs on any goroutine.
 func (w memberWorld) removeFromAcme(ctx context.Context, by string, id uuid.UUID, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(w.pool).PublicProfiles},
-		project.NewCascade(project.CascadeDeps{Pool: w.pool}), authorizerOn(w.pool), w.tx(), clock.System{}).
+		cascadeOn(w.pool), authorizerOn(w.pool), w.tx(), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[by]}), id)
 }
 

@@ -4,7 +4,7 @@
 |---|---|
 | 里程碑 | M4 工作项核心（`docs/v0/M4-issue-core`） |
 | 日期 | 2026-10-16 |
-| 状态 | 第三稿，已按聚焦复核修订（17.3）。第 10 节的八个决策点都已由负责人裁定（2026-10-17，全部按建议：1 选 B，2 至 7 选 A，8 选 B）；第 11 节的十一个架构问题都已由负责人批准（2026-10-17）；裁定记在 17.4 |
+| 状态 | 第三稿，已按聚焦复核修订（17.3）。第 10 节的八个决策点都已由负责人裁定（2026-10-17，全部按建议：1 选 B，2 至 7 选 A，8 选 B）；第 11 节的十一个架构问题都已由负责人批准（2026-10-17）；裁定记在 17.4。P1 在实施之前由控制者按决策点 2 的预先批准拆成 P1a、P1b（2026-10-17，第 12 节） |
 | 上级文档 | [v0 总体设计](../v0-design.md) 1.1、3、4.2、5、6、7.7、8.2、9；[差异清单](../plane-diff.md)；[前端改动清单](../frontend-changes.md)；[M2 设计](../M2-auth/M2-design.md)、[M3 设计](../M3-workspace-project/M3-design.md)（它们定下的平台约定和加锁约定约束 M4，本文照做，不重新裁定；要修订的写在第 11 节） |
 | 前置交接 | `handoffs/` 中的 8 份：M3-closeout（9 节）、M2-closeout（13 节）、M1-closeout、M1-P2、M1-P3、M1-P4、M1-P5、M0-P4。逐条落到 Phase，见第 13 节 |
 | 设计评审 | 第一稿（`b2ca1de6`）经独立评审（2026-10-16）：Ready with fixes，Critical 0、Important 8、Minor 26，评审另在 `postgres:18.6` 上做了 S1、S4、S5 和 S2 的一部分；第二稿按控制者对每条发现的裁定修订，逐条的落实在 17.1。第二稿（`e8256b58`）经对抗性评审（2026-10-16）：Ready with fixes, but not ready for the owner as written，Critical 0、Important 7、Minor 22，评审另做了 SP1–SP3（0.3）；第三稿按控制者的裁定修订，逐条的落实在 17.2。第三稿（`b33bfd9c`）经聚焦复核（2026-10-16）：Ready with fixes，Critical 0、Important 2、Minor 9，17.2 的 30 行中 25 行完整、5 行部分，复核另做了 SP4（0.3）；第三稿按控制者的裁定再修订，逐条的落实在 17.3 |
@@ -100,8 +100,8 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
 **约定**：
 - **三层断言**：页面、数据库、异步结果。M4 的异步结果有三种：链接的元数据（I10）、自动归档（I16）、物理清理（I21）；用"限时轮询数据库"等结果，不用固定的等待。其余故事的"异步"一栏为空（M4 没有通知和 Webhook，事件只有链接一个订阅者，3.19）。
 - **接口版本**：一律用 PAT；页面版本和接口版本调用同一个断言函数（`e2e/fixtures/assert/issue.ts`，按表分函数；动态和描述版本另放 `assert/history.ts`）。
-- **前置数据**经接口准备，不写 SQL：`e2e/fixtures/api.ts` 加建工作项、改工作项、加子工作项、加关联、加评论、存草稿的帮助函数，都走生成的客户端。**访客建的工作项**（I17、I20 要它）经接口的路径是：他以项目成员的身份建工作项，再经 `updateProjectMember` 把他改为角色 5（访客）；接口里访客不能建工作项（3.4）。
-- **`furnishIssueRows(api, token, projectId)`**（`e2e/fixtures/api.ts`）：经接口给一个项目的 `issue` 模块的每张表各造至少一行，随每个加表的 Phase 长大（P1 工作项、负责人、标签、关注、动态；P3 关联；P4 评论、表情、提及、描述版本；P7 链接；P8 草稿）。M3 的删除故事（`e2e/stories/project/p4-archive.spec.ts:180`、`e2e/stories/workspace/w2-landing.spec.ts:88`、`w3-workspace-settings.spec.ts:193,209,331`）在删除之前调用它：`expectProjectDeleted` 要求每张有 `project_id` 的表都有随项目删除的行（`e2e/fixtures/assert/project.ts:224-227`），`expectWorkspaceDeleted` 对 `workspaceTables` 的每一张同样要求（`e2e/fixtures/assert/workspace.ts:300-308`），新表一建出，这些故事不造行就失败（3.6）。`workspaceTables` 改为照 `expectProjectDeleted` 从目录读出（有 `workspace_id` 外键的表），不再手写。
+- **前置数据**经接口准备，不写 SQL：建工作项、改工作项、加子工作项、加关联、加评论、存草稿的帮助函数放在 `e2e/fixtures/` 下按资源分的文件里（P1a 起：`issues.ts` 建工作项，`states.ts` 建、读状态），都走生成的客户端。**访客建的工作项**（I17、I20 要它）经接口的路径是：他以项目成员的身份建工作项，再经 `updateProjectMember` 把他改为角色 5（访客）；接口里访客不能建工作项（3.4）。
+- **`furnishIssueRows(api, token, projectId, assigneeId, labelId)`**（`e2e/fixtures/furnish.ts`，P1a 起）：经接口给一个项目的 `issue` 模块的每张表各造至少一行，负责人和标签由调用者给出，随每个加表的 Phase 长大（P1a 工作项、负责人、标签、关注、动态；P3 关联；P4 评论、表情、提及、描述版本；P7 链接；P8 草稿）。M3 的删除故事在删除之前调用它（`e2e/stories/project/p4-archive.spec.ts:179,249`、`e2e/stories/workspace/w3-workspace-settings.spec.ts:92,168`；W2 和 W3 的页面版本经 `furnishWorkspace`，`e2e/fixtures/furnish.ts:46`）：`expectProjectDeleted` 要求每张有 `project_id` 的表都有随项目删除的行（`e2e/fixtures/assert/project.ts:190-214`），`expectWorkspaceDeleted` 对 `workspaceTables` 的每一张同样要求（`e2e/fixtures/assert/workspace.ts:230-279`），两者的表由 `e2e/fixtures/assert/catalog.ts` 的 `tablesUnder` 从目录读出，新表一建出，这些故事不造行就失败（3.6）。`workspaceTables` 照 `projectTables` 从目录读出（有 `workspace_id` 外键的表），不再手写（P1a 起）。
 - **故事随 Phase 长大**：一个故事的文件在它的核心断言所要的表和操作都已存在的第一个 Phase 加入（最后一列：接口版本 / 页面版本）；之后的 Phase 扩充同一个故事，断言和前置数据随之增加，"断言的增长"一列写明哪些断言在哪个 Phase 加入。每个 Phase 的完成线只写那时已有的断言，扩充的步骤是那个 Phase 的任务（第 12 节）。
 - **时间流逝**的故事（I16、I21）用 `e2e/fixtures/clock.ts`（3.20）：先在一个新库上用正常时钟的 nerve 准备数据，停下它，再在同一个库上以时钟偏移起一个 nerve，等定时任务的结果。同一个库上只有一个 nerve 在运行，River 的选主不会落到时钟不对的进程上。
 - 每个有页面的故事都用 `watchPage`（`e2e/fixtures/browser.ts`）断言：没有失败的接口请求、没有发往旧接口的请求（`oldApiRequests`）、控制台安静、没有 CSP 违规（3.1）。故意触发的失败（403、409 等）按请求逐个放行。
@@ -109,8 +109,8 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
 
 | 编号 | 故事 | 页面 | 数据库 | 异步 | 接口版本 | 断言的增长 | Phase（接口 / 页面） |
 |---|---|---|---|---|---|---|---|
-| I1 | 创建工作项 | 成员在项目的工作项页按 `c` 打开创建弹窗，填标题、描述（含一个 @提及）、状态、优先级、两位负责人、两个标签、起止日期，提交；新的工作项出现在列表里，提示里有编号 `PROJ-1`。标题为空、开始晚于截止：字段下方提示，焦点到第一个出错的字段（`useRefusedFocus`）；工作项的弹窗里打开"Save this draft?"再按 Escape，里层关上、外层留着（M3 交接第 7 节） | `issues` 新增一行：`sequence_id = 1`、`projects.last_issue_sequence = 1`，`state_id` 是选的状态，`sort_order` 按 3.7，`description_stripped` 是纯文本，`created_by_id`、`updated_by_id` 是当前账户；`issue_assignees` 两行、`issue_labels` 两行；`issue_activities` 一条 `field` 为空的创建行和两条负责人行（3.13），没有标签行；`issue_subscribers` 有创建者、两位负责人和被提及的成员；`issue_mentions` 一行；`issue_description_versions` 一行 | — | `POST /api/v0/projects/{project_id}/issues`，同一组断言；不带 `assignee_ids` 时项目的默认负责人被指派（他仍是项目中不是访客的有效成员时），他离开项目之后再建：没有负责人；负责人是项目访客 422（`assignee_ids[0]`，`not_allowed`）；访客 403；已归档的项目 409 `project.archived`（分诊状态 422 经接口造不出：M3 不许建分诊状态，这一格在 Go 的集成测试里，由仓储准备数据） | P1：工作项的行、编号、默认状态和默认负责人、负责人、标签、关注（创建者、负责人）、创建和负责人的动态、接口的各种拒绝；P2：起止日期；P4：描述（清洗、`description_stripped`）、@提及的 `issue_mentions` 一行和被提及者的关注、描述版本一行；P14：页面 | P1 / P14 |
-| I2 | 在详情页改每个字段 | 打开 `/…/issues/{id}` 改标题、描述、状态、优先级、负责人（加一个、去一个）、标签（加一个、去一个）、起止日期；时间线依次出现对应的动态，连续两次改描述只有一条描述动态。打开一条描述没有块 id 的工作项，不做改动：没有新的动态（M1-P2 交接） | `issues` 各列、`updated_at`、`updated_by_id`；改到"已完成"组的状态时 `completed_at` 有值，改回时为空；`issue_activities` 每个改动一行（标签、负责人的增减各一行），连续两次改描述只有一行（3.13 第 4 条）；只补块 id 的保存没有新的动态、版本，`updated_at` 不变（3.7） | — | `PATCH /api/v0/issues/{issue_id}`，同一组断言；开始晚于截止 422（只传一个日期时与存着的另一个比较）；已归档的工作项 409 `issue.archived`；`skip_activity` 带别的字段 422 | P1：标题、状态、优先级、负责人、标签的修改和它们的动态，`completed_at`，`updated_at`；P2：起止日期的修改和动态、合并之后的日期 422、已归档 409；P4：描述的修改、连续两次的合并、只补块 id 的保存不写动态和版本、不改 `updated_at`，只改链接地址或勾选框的保存照常记下，`skip_activity` 带别的字段 422；P14：页面 | P1 / P14 |
+| I1 | 创建工作项 | 成员在项目的工作项页按 `c` 打开创建弹窗，填标题、描述（含一个 @提及）、状态、优先级、两位负责人、两个标签、起止日期，提交；新的工作项出现在列表里，提示里有编号 `PROJ-1`。标题为空、开始晚于截止：字段下方提示，焦点到第一个出错的字段（`useRefusedFocus`）；工作项的弹窗里打开"Save this draft?"再按 Escape，里层关上、外层留着（M3 交接第 7 节） | `issues` 新增一行：`sequence_id = 1`、`projects.last_issue_sequence = 1`，`state_id` 是选的状态，`sort_order` 按 3.7，`description_stripped` 是纯文本，`created_by_id`、`updated_by_id` 是当前账户；`issue_assignees` 两行、`issue_labels` 两行；`issue_activities` 一条 `field` 为空的创建行和两条负责人行（3.13），没有标签行；`issue_subscribers` 有创建者、两位负责人和被提及的成员；`issue_mentions` 一行；`issue_description_versions` 一行 | — | `POST /api/v0/projects/{project_id}/issues`，同一组断言；不带 `assignee_ids` 时项目的默认负责人被指派（他仍是项目中不是访客的有效成员时），他离开项目之后再建：没有负责人；负责人是项目访客 422（`assignee_ids[0]`，`not_allowed`）；访客 403；已归档的项目 409 `project.archived`（分诊状态 422 经接口造不出：M3 不许建分诊状态，这一格在 Go 的集成测试里，由仓储准备数据） | P1a：工作项的行、编号、默认状态和默认负责人、负责人、标签、关注（创建者、负责人）、创建和负责人的动态、接口的各种拒绝；P2：起止日期；P4：描述（清洗、`description_stripped`）、@提及的 `issue_mentions` 一行和被提及者的关注、描述版本一行；P14：页面 | P1a / P14 |
+| I2 | 在详情页改每个字段 | 打开 `/…/issues/{id}` 改标题、描述、状态、优先级、负责人（加一个、去一个）、标签（加一个、去一个）、起止日期；时间线依次出现对应的动态，连续两次改描述只有一条描述动态。打开一条描述没有块 id 的工作项，不做改动：没有新的动态（M1-P2 交接） | `issues` 各列、`updated_at`、`updated_by_id`；改到"已完成"组的状态时 `completed_at` 有值，改回时为空；`issue_activities` 每个改动一行（标签、负责人的增减各一行），连续两次改描述只有一行（3.13 第 4 条）；只补块 id 的保存没有新的动态、版本，`updated_at` 不变（3.7） | — | `PATCH /api/v0/issues/{issue_id}`，同一组断言；开始晚于截止 422（只传一个日期时与存着的另一个比较）；已归档的工作项 409 `issue.archived`；`skip_activity` 带别的字段 422 | P1b：标题、状态、优先级、负责人、标签的修改和它们的动态，`completed_at`，`updated_at`；P2：起止日期的修改和动态、合并之后的日期 422、已归档 409；P4：描述的修改、连续两次的合并、只补块 id 的保存不写动态和版本、不改 `updated_at`，只改链接地址或勾选框的保存照常记下，`skip_activity` 带别的字段 422；P14：页面 | P1b / P14 |
 | I3 | 列表与看板：分组、子分组 | 列表按状态分组，每组有计数，一组超过一页时"加载更多"；看板按优先级分组、按标签子分组（泳道），一个带两个标签的工作项出现在两条泳道里；切换布局后刷新仍是看板 | 数据库不变（读） | — | `GET /api/v0/projects/{project_id}/issues?group_by=state_id`、`group_by=priority&sub_group_by=label_id`：每组的 `total` 是不重复的工作项数，`label_ids` 是工作项完整的标签（不只是所在的组）；"加载更多"是同一个请求加 `group_key=<组的键>&cursor=<组的 next_cursor>`，翻完不重复、不遗漏，`total` 等于组的；带 `label_id=A&group_by=label_id` 时，另一个标签的组"加载更多"仍只有带 A 的；未知的 `order_by` 422 | P5：全部的接口断言；P12：页面 | P5 / P12 |
 | I4 | 表格排序与日历 | 表格按标签名、负责人名、子工作项数、截止日期升降排序，翻到第二页仍是同一个顺序；日历的月视图按截止日期显示，把一个工作项拖到另一天 | 拖动之后 `target_date` 和一条 `target_date` 动态 | — | 每种 `order_by` 两个方向各一个翻页测试（3.16 的游标）；`target_date=2026-10-01..2026-10-31&group_by=target_date` | P5：`link_count` 之外的每个排序码、日期的范围和 `none`；P8：`link_count` 的两个方向；P12：页面（含日历的"添加已有"：只列出没有截止日期的） | P5 / P12 |
 | I5 | 筛选与显示设置的保存 | 加筛选：状态组"进行中"、负责人"我"、标签"无"、截止日期两个范围；关显示属性"标签"；刷新之后筛选、显示方式、显示属性都还在；另一个成员打开同一个项目看到的是他自己的设置 | `project_user_properties` 中这位成员那一行的 `filters`、`display_filters`、`display_properties`（3.17）；另一位成员的行不变 | — | `PATCH /api/v0/me/projects/{project_id}/preferences` 带三个新字段；未知的分组键 422；`GET` 列表带同样的参数，结果相同 | P5：接口；P13：页面 | P5 / P13 |
@@ -170,7 +170,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
 | `Project` 的工作项计数（`total_issues` 一类） | 3 | 照 M3 设计 3.2，仍不定义 |
 
 ### 3.3 模块划分与跨模块的协作（架构问题 1，第 11 节）
-- **新模块 `issue`**，拥有 13 张表：`issues`、`issue_assignees`、`issue_labels`、`issue_relations`、`issue_links`、`issue_subscribers`、`issue_mentions`、`issue_comments`、`issue_reactions`、`comment_reactions`、`issue_activities`、`issue_description_versions`、`draft_issues`。总体设计 6.2 的模块清单本来就有它；`server/sqlc.yaml` 加第四个条目（P1）。
+- **新模块 `issue`**，拥有 13 张表：`issues`、`issue_assignees`、`issue_labels`、`issue_relations`、`issue_links`、`issue_subscribers`、`issue_mentions`、`issue_comments`、`issue_reactions`、`comment_reactions`、`issue_activities`、`issue_description_versions`、`draft_issues`。总体设计 6.2 的模块清单本来就有它；`server/sqlc.yaml` 加第四个条目（P1a）。
   - 理由：这 13 张表都以工作项为根，彼此有外键、同事务写入（动态、关注、提及随工作项的写入写在同一个事务，总体设计 6.6）。拆成"工作项""评论""草稿"几个模块，每个写都要跨模块端口，互相成环（评论要锁工作项，工作项的删除要连带评论）。
   - 不拆的代价：模块较大，用 `app` 层的文件按用例拆开（6.2），每个文件不超过约 400 行。
 - **`issue` 经端口读写别的模块**，端口声明在 `issue/app`，由别的模块的 `Provide` 实现，`bootstrap` 接上（M3 设计 6.6 的两段组合）：
@@ -188,10 +188,10 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
     - `IssueCascade`，由 `issue/app` 的 `cascade.go` 实现，`project` 的状态、标签的写调用它：
       - `StateInUse(ctx, stateID) (bool, error)`：删除状态时，在项目 N 之下数用它的未删除工作项（含已归档的），有则 `project.state_in_use`（3.7）；
       - `DetachLabel(ctx, labelIDs, by, now)`：删除标签（连同子标签）时软删除它们的 `issue_labels` 行。
-      - P1–P8 的过渡：另有 `DeleteProjectIssues(ctx, projectID, by, now)`、`DeleteWorkspaceIssues(ctx, workspaceID, projectIDs, by, now)`（这次锁住、删除的项目，加没有项目的草稿），在删除项目、工作区的事务里同步软删除工作项一侧的行，调的是任务用的同一份编排和语句（6.2）。P9 把它们换成事件和后台任务（3.6，决策点 7），这两个方法随之删除。过渡是因为后台任务要 P6 的事件和只投递的客户端，而 P1 起删除项目就要带走工作项的表（M3 的删除故事，2 节）。
+      - P1–P8 的过渡：另有 `DeleteProjectIssues(ctx, projectID, by, now)`、`DeleteWorkspaceIssues(ctx, workspaceID, projectIDs, by, now)`（这次锁住、删除的项目，加没有项目的草稿），在删除项目、工作区的事务里同步软删除工作项一侧的行，调的是任务用的同一份编排和语句（6.2）。P9 把它们换成事件和后台任务（3.6，决策点 7），这两个方法随之删除。过渡是因为后台任务要 P6 的事件和只投递的客户端，而 P1a 起删除项目就要带走工作项的表（M3 的删除故事，2 节）。
     - `IssueListSettings`：检查项目的显示设置的取值（`filters`、`display_filters`、`display_properties`），由 `issue/domain` 的列表词汇实现：纯函数，不要连接池（3.17）。
   - **`project`、`workspace` 发布事件**（P9，决策点 3、7）：`deleteProject` 在事务里发布 `project.deleted`，`deleteWorkspace` 发布 `workspace.deleted`，带这次锁住、删除的项目（3.19）；`issue` 的订阅者在同一个事务里投递删除工作项一侧的任务。两个模块的 `Deps` 加 `EventPublisher`，不知道谁订阅。
-  - **写闸门**（P1，架构问题 11）：`issue/app` 声明端口 `WriteGate`，由 `bootstrap` 用 `platform/gate` 接成（3.5）。
+  - **写闸门**（P1b，架构问题 11）：`issue/app` 声明端口 `WriteGate`，由 `bootstrap` 用 `platform/gate` 接成（3.5）。
   - **`project` 给 `workspace`**：`ProjectCascade` 加一个方法 `LockWorkspaceProjects(ctx, workspaceID)`：删除工作区在工作区 N 之后、读时刻之前，按 `id` 升序以 `FOR NO KEY UPDATE` 锁住它的未删除项目（决策点 1，3.5）。
 - **组合的顺序**（M3 设计 6.6 的延伸，6.6）：全部模块先 `Provide`（`identity`、`workspace`、`project`、`issue` 各自交出端口的实现），然后 `access.New` → `issue.New` → `project.New` → `workspace.New` → `identity.New`。`issue.New` 要 `project`、`workspace` 的 `Provide` 交出的端口、只投递的 River 客户端（在全部模块之前由连接池建出，3.20）和写闸门；`project.New` 要 `issue.Provide` 交出的 `IssueCascade`、`IssueListSettings`；`project.New`、`workspace.New` 要分发器（P9 起，它们发布删除的事件）。没有构造的环：`Provide` 只建适配器（查询对象）和纯函数，不要别的模块的东西；分发器由 `issue.Subscribers(Inserter)` 建出，在三个模块的 `New` 之前（6.6）。
 - **跨模块只经端口**：`issue` 的 sqlc 查询只读写自己的 13 张表（`TestSQLCSchemaScope`）。列表引擎要的状态、标签、成员的名字由端口读出，作为参数传进查询（架构问题 5，3.16）；不在 sqlc 的守卫里开例外。
@@ -245,19 +245,19 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - 工作项和它下面的每个写（创建、修改、删除、归档、恢复，父子、关联、链接、评论、表情，发布草稿）：不加锁地读出资源（按项目 id 的写读项目，按资源 id 的写读资源、得到工作项和项目；在事务之外，用完就还回连接）→ 不加锁的预检（下面：会被拒绝的在这里就答）→ 进入项目的写闸门（下面：不持连接地等）→ 开始事务 → 以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`，回答 3.3 列的几列）→ 重读资源，确认仍存在、仍属于这个项目 → 判定 → 依赖行的检查 → 读时刻 → 写 → 提交 → 离开闸门。
   - 为什么是项目的 N 而不是 S：一个项目里的工作项的写都要串行。取号要改项目行；父工作项不成环要在没有别的父子改动时沿祖先走（3.9）；`sort_order` 取同一状态的最大值；描述的合并、版本的合并读"最近的一行"再改它（3.13、3.14）；每个工作项的动态按提交的顺序得到不减的时刻（3.13 的增量读取靠它）。S 与 S 不互斥，这些都要另外加锁；N 一把锁全部做到。代价：同一个项目里的写一个接一个，每个是一个短事务。
   - 为什么不锁工作区行：M3 设计 17.4 的探针 B：新的 `FOR SHARE` 越过等待中的 `FOR NO KEY UPDATE`。工作项的写是最频繁的写，若照方案 E 先取工作区 S，连续重叠的工作项写可以让工作区一级的写（改工作区、删工作区、改角色、接受邀请、移出、停用）一直等到请求期限（M3 设计 17.4 的代价，"M4 的工作项写入……不默认沿用"）。N 与 N 互斥、排队，不会越过等待者：删除工作区在数据库里最多等每个项目上正在进行和排在它前面的写。S5 的 E1、E2、E3 在 PG 18.6 上证实了这两点（0.3）。这一句只在连接池不被排队的写占满时成立：没有写闸门时，200 个在同一个项目上排队的写占住全部 10 个连接，删除工作区先在池的队列里等（SP1，对抗性评审 I3），所以要下面的写闸门。
-  - **删除工作区仍先锁它的项目**：工作区 N → 判定 → 邀请（N，`id` 升序，约定五的例外，照旧）→ 这个工作区的全部未删除项目（N，`id` 升序，`ProjectCascade.LockWorkspaceProjects`）→ 读时刻 → 软删除工作区 → 删除锁住的邀请 → 成员 → 显示设置 → `DeleteWorkspaceProjects`（项目 → 项目成员 → 项目显示设置 → 状态 → 标签）→ 发布 `workspace.deleted`（带锁住的项目），`issue` 的订阅者为每个项目投递一个删除工作项一侧的任务、为没有项目的草稿投递一个（P9 起；P1–P8 的过渡是在这里同步调 `IssueCascade.DeleteWorkspaceIssues`，3.3）。今天的实现在工作区 N 之后就读时刻（`workspace/app/delete_workspace.go:59`），P1 把它移到两步锁之后。
+  - **删除工作区仍先锁它的项目**：工作区 N → 判定 → 邀请（N，`id` 升序，约定五的例外，照旧）→ 这个工作区的全部未删除项目（N，`id` 升序，`ProjectCascade.LockWorkspaceProjects`）→ 读时刻 → 软删除工作区 → 删除锁住的邀请 → 成员 → 显示设置 → `DeleteWorkspaceProjects`（项目 → 项目成员 → 项目显示设置 → 状态 → 标签）→ 发布 `workspace.deleted`（带锁住的项目），`issue` 的订阅者为每个项目投递一个删除工作项一侧的任务、为没有项目的草稿投递一个（P9 起；P1–P8 的过渡是在这里同步调 `IssueCascade.DeleteWorkspaceIssues`，3.3）。P1a 起时刻在两步锁之后读（`workspace/app/delete_workspace.go:68-76`）。
     - **在决策点 7 的 A 之下重新推一遍，这一步仍要**：工作项一侧的行不再在这个事务里写，但任务随后写下的是这个事务读的时刻 `t1`（一个改变一个时刻）。一个已持项目 N 的工作项的写若在 `t1` 之后读自己的时刻 `t2`、提交，任务随后把那个工作项写成 `updated_at = deleted_at = t1 < t2`：时刻倒退，与同步的连带一样。先锁全部项目再读时刻，`t1` 就晚于每个已提交的工作项的写；删除提交之后，工作项一侧的每个写在锁下都看到项目已删除（404），任务写的行没有更晚的时刻。代价比同步的时候小得多：事务只做 M3 的几步，项目的锁持几毫秒，不再持到全部工作项一侧的行写完（SP2：五个项目的工作区 36.5 秒）。
     - 删除项目同理：M3 的删除项目本来就是工作区 S → 项目 N → 读时刻，`t1` 晚于这个项目上每个已提交的写，不必改。
     - 邀请先于项目：全局顺序里 `workspace_member_invites` 在 `projects` 之前。锁项目之后的成员、显示设置是按谓词的批量，只有持这个工作区锁的事务能写到它们（M3 约定五的论证不变）。
   - **M3 的其他连带与工作项的写**：`DemoteToGuest`、`EndMemberships` 按 `id` 升序锁住他的项目（N），与工作项的写在项目行上串行：先提交的写按它判定时的角色生效，后到的写在锁下读到新的角色。只改工作区角色（不降为访客）的写不锁项目，与工作项的写不串行：判定读到的是判定那一刻已提交的角色。授权的结果等于两者按某个顺序先后发生；**时刻则不一定**（下一条的代价一）。M3 的项目级的写都先取工作区 S，与取工作区 N 的角色变更串行，所以在 M3 里两者的时刻也按生效的顺序；B 之下工作项的写不取工作区的锁，这一点不再成立。
   - **B 的两个代价**（独立评审 I1，决策点 1 写进选项）：
-    - **代价一：授权与时刻的先后可以不一致。** `DemoteToGuest`、`EndMemberships` 的时刻由调用方传入，调用方在工作区 N 之后、锁项目之前读它（`server/internal/modules/project/app/cascade.go:44-73`）。一个已持项目 N 的工作项的写在这之后读到自己的时刻 `t2 > t1`、按旧的角色判定、提交；连带随后以 `t1` 记下移出或降级。结果：X 在 `t2` 写的动态，挨着他在 `t1 < t2` 结束的成员关系，而生效的顺序是"先写、后移出"。每一行自己的列不倒退（M3 的保证仍成立），丢掉的是"工作项的写与成员关系的变更之间，时刻与生效的顺序一致"；只改角色的写不锁项目，同样如此。方案 A 保住这一点。要在 B 之下也保住，就是决策点 1 的 B′（连带先锁项目、列举、再读时刻），它改写 M3 已批准的约定六的收缩路径和删除、离开、停用的用例，不建议。
+    - **代价一：授权与时刻的先后可以不一致。** `DemoteToGuest`、`EndMemberships` 的时刻由调用方传入，调用方在工作区 N 之后、锁项目之前读它（`server/internal/modules/project/app/cascade.go:58-94`）。一个已持项目 N 的工作项的写在这之后读到自己的时刻 `t2 > t1`、按旧的角色判定、提交；连带随后以 `t1` 记下移出或降级。结果：X 在 `t2` 写的动态，挨着他在 `t1 < t2` 结束的成员关系，而生效的顺序是"先写、后移出"。每一行自己的列不倒退（M3 的保证仍成立），丢掉的是"工作项的写与成员关系的变更之间，时刻与生效的顺序一致"；只改角色的写不锁项目，同样如此。方案 A 保住这一点。要在 B 之下也保住，就是决策点 1 的 B′（连带先锁项目、列举、再读时刻），它改写 M3 已批准的约定六的收缩路径和删除、离开、停用的用例，不建议。
     - **代价二：不是每条工作项一侧的路径都离开了工作区 S。** 草稿的写和发布草稿（下面）、M3 的全部项目管理类的写仍先取工作区 S，M3 17.4 的探针 B 的饥饿在这些较少的路径上仍在；B 只让最频繁的写（工作项和它下面的行）不再挡住工作区一级的写。
   - **只读的端口不加锁**：状态、标签的目录，成员的角色，在项目 N 之下读出就是稳定的：状态、标签的写和项目成员的写都持这个项目的 N（M3 设计 3.6 的取锁表）。
   - **不加锁的可见性预检**（M3 交接第 2 节的"先锁后判定的副作用"；独立评审 M8）：先锁后判定让任何已认证的账户在得到 404 之前取得一个锁。M3 取的是工作区 S（共享），B 之下是项目 N（排他）：一个知道某个看不到的项目的 id 的工作区成员，可以让那个项目的全部写排队，限速按凭证计数（每个 PAT 一个桶）挡不住他。所以每个工作项一侧的写在第一把锁之前做一次不加锁的预检：读出资源和项目之后调 `Authorize`，**凡是判定拒绝的都在这里答**（对抗性评审 M1）：看不到（不是项目的有效成员，或访客规则挡住）答资源的 404，看得到而不能做答 403（例如公开项目里不是成员的工作区成员、不是项目成员的工作区管理员、做不了这个写的访客，`access/domain/decide.go:86-88`），都不取任何锁、不进写闸门。
     - 为什么在锁之前拒绝是对的：拒绝的请求什么都没写，它在预检的那一刻排定先后（可线性化），等价于在那一刻到达、被拒绝。只有放行要在锁下重新判定：等锁期间被移出、降级的人照样在锁下得到 404 或 403。预检不放行任何锁下会拒绝的写。
     - **加关联的对方**：预检同样不加锁地读出每个对方工作项、判定它的可见性（3.10 的条件）；看不到的对方不进 `LockMany`，它的错误（`issue_ids[i]`，`not_allowed`）在预检时定下，与锁下发现的错误一起在 422 里返回。所以知道别的项目里的工作项 id 的人，不能经加关联去锁一个他看不到的项目（一次最多 20 个 id、可以分在 20 个项目里）。
-    - 测试：看不到项目的账户、看得到而不能写的账户发出的写不出现在 `pg_locks` 里；加关联指向一个看不到的项目时不锁它（交错 21 的同一个测试）。
+    - 测试：看不到项目的账户、看得到而不能写的账户发出的写不取行锁、不写；加关联指向一个看不到的项目时不锁它（交错 21 的同一个测试）。
   - **写闸门：一个热的项目不能耗尽连接池**（对抗性评审 I3，架构问题 11；A、B 两个方案都要）：每个工作项的写在等项目 N 时持着一个池里的连接。连接池是 10 个（`database.max_conns`），`authenticated` 的额度让一个凭证一次突发 200 个请求；SP1 量到 200 个写在同一个项目上排队时，别的项目上无关的读也要等约 875 ms（池的等待者先来先得，读排在被锁挡住的写后面）。
     - 做法：进程内按项目的信号量（`platform/gate`，带 `context` 的按键的信号量，约 100 行），`issue` 经它声明的端口 `WriteGate` 使用（`Enter(ctx, projectIDs) (release, error)`）。每个工作项的写在**取连接之前**进入它的项目的闸门，每个项目在一个进程里至多 K 个写同时在数据库里（`issue.write_gate.per_project`，默认 2：一个持 N 在写，一个已在等 N，提交之后不必再等调度）；其余的在进程里等，不持连接。关联的写按项目 `id` 升序进入两个闸门。
     - 等的上限：至多等 `issue.write_gate.max_wait`（默认 2 秒，与 `auth.password.max_wait` 同一种写法），一个项目的等待者至多 `issue.write_gate.max_queue` 个（默认 64），超过或请求的期限先到，就答 503 `server_busy`（`Retry-After: 1`，`shared.ServerBusy`，M2 已有）。另有一道兜底：工作项一侧的写的事务开始时 `SET LOCAL lock_timeout`（`issue.write_lock_timeout`，默认 5 秒），等锁超过它（SQLSTATE `55P03`）同样答 503 `server_busy`。这一句由平台发：`platform/postgres` 的 `TxManager` 加一个选项 `LockTimeout(d)`，`BEGIN` 之后发 `SET LOCAL`，模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC` 不许模块在 `gen` 之外发语句，聚焦复核 M6）；`55P03` 换成 503 只在 `bootstrap/gate.go` 一处，挨着闸门的 503（6.1）。没有选 sqlc 的 `SELECT set_config('lock_timeout', $1, true)`：那要每个写用例自己记得先调它，选项让给 `issue` 的写用例的 `TxManager` 一律带上。
@@ -342,7 +342,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   18. 自动归档与把工作项的状态改回"进行中"（改先提交：不归档；归档先提交：修改 409 `issue.archived`）；
   19. 抓取与改链接地址（抓取写 0 行，新的地址另有一次抓取）；
   20. 饥饿与连接池：经真实的连接池和写闸门，一串首尾相连的工作项写（同一工作区的若干项目）不让改工作区、改工作区成员的角色等到期限；删除工作区只等每个项目上正在进行和闸门放进来的写；200 个写压在同一个项目上时，另一个项目上无关的读的耗时不超过上限，多出的写得到 503 `server_busy`（S5、SP1 的回归测试）；
-  21. 取锁的形状：每个工作项的写等第一把锁时在工作区行上什么都不持，它取的第一把锁是项目的 N，之后也不取与 `FOR NO KEY UPDATE` 冲突的工作区行的锁（插入经外键取工作区行的 `FOR KEY SHARE`，与它不冲突，S5 的 E3）；看不到项目的账户、看得到而不能写的账户（公开项目里不是成员的工作区成员、不是项目成员的工作区管理员）的写不取任何锁；加关联指向看不到的项目时不锁那个项目（不加锁的预检）。用 `pg_locks` 观察，与 M3 的同类测试同一写法；
+  21. 取锁的形状：每个工作项的写等第一把锁时在工作区行上什么都不持，它取的第一把锁是项目的 N，之后也不取与 `FOR NO KEY UPDATE` 冲突的工作区行的锁（插入经外键取工作区行的 `FOR KEY SHARE`，与它不冲突，S5 的 E3）；看不到项目的账户、看得到而不能写的账户（公开项目里不是成员的工作区成员、不是项目成员的工作区管理员）的写不取行锁、不写；加关联指向看不到的项目时不锁那个项目（不加锁的预检）。用 `pg_locks` 观察，与 M3 的同类测试同一写法；
   22. 移出项目的默认负责人与不带负责人的创建（移出先提交：新的工作项没有负责人；创建先提交：他被指派，随后的移出不改这一行，与 Plane 相同）；
   23. 加关联 A→B 与删除 B 的项目（两种顺序：删除先提交：关联的写在锁下看到 B 的项目已删除，422，不写任何行；关联先提交：随项目删除这条关联行和反向的动态，与项目同一时刻（P9 起由任务写下），没有活的关联行指向已删除的工作项；S5 的 E5、E5b）；
   24. 删除项目 P 的任务与另一个项目 Q 上删除关联另一端的工作项 Y（P9）：P 先删除、任务还没写到时删除 Y，Y 的删除不写这条关联行，P 的任务随后写下 P 的时刻和删除者；Y 先删除（P 还在）时这一行是 Y 的时刻和删除者，P 的任务跳过它；任务与 Y 的删除同时锁关联行时按 `id` 先锁，两种顺序都不死锁；断言每一行的 `deleted_at`、`updated_by_id`，不只是"只删了一次"。任务挂起期间，从另一个项目对已删除项目里的工作项加关联 422、删除指向它的关联 404 `issue.relation_not_found`；
@@ -360,7 +360,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - **动态随工作项删除**：Plane 的 `issue_activities.issue_id` 是 `DO_NOTHING`，软删除不连带它，动态在工作项删除之后仍是"活的"行（R1 第 11 节）。Nerve 一并软删除，物理清理时由外键 `CASCADE` 删除（4.16）；没有任何读取路径会读一个已删除工作项的动态。登记差异。
   - 删除不写"已删除"的动态（Plane 写一条 `field = issue` 的行，`API/app/views/issue/base.py:728-739`，页面不渲染，R3 第 3 节第 2 行）：那一行写下之后随工作项一起软删除，没有读者。事件 `issue.deleted` 是 M7、M8 的来源。登记差异。
   - **不发布工作项事件的连带**：删除项目、工作区之后由任务删除的工作项，和删除标签摘下的 `issue_labels`（`DetachLabel`），不发布 `issue.deleted`、`issue.updated`。前者由 `project.deleted`、`workspace.deleted` 两个事件说出（P9，3.19），M8 的 Webhook 可以订阅它们；后者没有事件，属于 M8 给标签加的那一批（M3 交接 M8 的一条）。这份清单写进 M8 的交接（13.2）。
-  - e2e 的 `expectIssueDeleted`（`e2e/fixtures/assert/issue.ts`）照 `expectProjectDeleted`（`e2e/fixtures/assert/project.ts:190-228`）的写法从目录读表，但**沿外键图从 `issues` 往下递归地走**：`comment_reactions` 指向 `issue_comments` 而不是 `issues`，只看直接指向 `issues` 的表就断言不到它（对抗性评审 M16）；断言子树的每一行都在同一时刻、由同一个账户软删除。
+  - e2e 的 `expectIssueDeleted`（`e2e/fixtures/assert/issue.ts`）照 `expectProjectDeleted`（`e2e/fixtures/assert/project.ts:190-214`，它的表由 `e2e/fixtures/assert/catalog.ts` 的 `tablesUnder` 读出）的写法从目录读表，但**沿外键图从 `issues` 往下递归地走**：`comment_reactions` 指向 `issue_comments` 而不是 `issues`，只看直接指向 `issues` 的表就断言不到它（对抗性评审 M16）；断言子树的每一行都在同一时刻、由同一个账户软删除。
 - **删除项目、删除工作区**（决策点 7，负责人裁定 A；P9 起）：
   - **请求的事务**：M3 的连带照旧（项目或工作区的行、成员、显示设置、状态、标签；删除工作区的邀请一步照旧同步，M3 交接第 1 节），然后发布 `project.deleted`（删除项目）或 `workspace.deleted`（删除工作区；`Changes` 是这次锁住、删除的每个项目一项，正是在这个时刻删除的那些，3.19）。`issue` 的订阅者在同一个事务里经只投递的客户端投递任务 `issue.delete_rows{scope, id, at, by}`，`at`、`by` 是请求的时刻和删除者：删除项目投递一个（`scope = project`）；删除工作区为每个这次删除的项目投递一个（`scope = project`），另加一个 `scope = workspace_drafts`（`id` 是工作区，只写 `project_id IS NULL AND workspace_id = $w` 的草稿）。事务回滚，任务也不在。
     - **一个已删除的项目只属于它自己的任务**（聚焦复核 I1）：更早删除的项目（时刻 `t0`）不在 `workspace.deleted` 的项目里，它的行只由它自己的任务写下 `t0` 和它的删除者。第三稿的"删除工作区是一个按 `workspace_id` 的任务"会把这样的项目里任务还没写到的行写成工作区的时刻和删除者（两个任务在 `default` 队列的 10 个 worker 上通常同时运行），打破下面的"一个改变一个时刻"，M3 的 W3（先删项目 Old、再删工作区，断言 Old 的行留着 Old 的删除）在 P9 时过时不过。按项目的任务也让每个任务有界：一个目标规模的项目约 66 万行（下面）。
@@ -372,16 +372,16 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - **任务失败**：真的出错时 River 按它的退避重试（预算用完的 snooze 不是失败）；重试用完时记一条错误日志，行仍是窗口期间的样子（对任何读写都不存在），60 天之后项目（工作区）的行被物理清理时，外键的 `CASCADE` 把它们物理删除（3.21）。
   - **与清理的先后**：任务写的 `deleted_at` 是请求的时刻，清理按 `deleted_at < 现在 − 60 天` 删除，所以任务在 60 天之内做完时清理碰不到它还没写的行。任务挂起超过 60 天时：`issue` 的清理者跳过仍是活的行，`project`（`workspace`）的清理者物理删除项目（工作区）的行，外键的 `CASCADE` 把剩下的工作项一侧的行一起物理删除；任务随后写 0 行、完成。两者若恰好同时碰到同一批行，按不同的顺序可能死锁（40P01），一方回滚、由 River 重试。
   - **e2e**：M4 的每张表都有 `project_id`（草稿可空）、`deleted_at`、`updated_by_id`。`expectProjectDeleted`、`expectWorkspaceDeleted` 从目录读表（`workspaceTables` 改为从目录读出，2 节）；P9 起它们对工作项一侧的表**限时轮询数据库**，等到每一行都与项目同一时刻、由同一个账户软删除（总体设计 8.2 允许"限时轮询数据库"）。M3 的删除故事在删除之前经 `furnishIssueRows` 给每张表造行（2 节，每个加表的 Phase 扩充它；对抗性评审 I6）。
-- **删除状态**：有未删除的工作项（含已归档的）用它时拒绝，409 `project.state_in_use`（Plane 同样拒绝，计 `Issue.objects`，`API/app/views/state/base.py:123-130`；M3 的 `deleteState` 还没有这个检查，P1 加入，M3 交接第 4 节）。所以 `issues.state_id` 的外键 `CASCADE` 不会删掉活的工作项（4.2）。
+- **删除状态**：有未删除的工作项（含已归档的）用它时拒绝，409 `project.state_in_use`（Plane 同样拒绝，计 `Issue.objects`，`API/app/views/state/base.py:123-130`；M3 的 `deleteState` 还没有这个检查，P1a 加入，M3 交接第 4 节）。所以 `issues.state_id` 的外键 `CASCADE` 不会删掉活的工作项（4.2）。
 - **删除标签**：连同子标签，软删除它们的 `issue_labels` 行（Plane 相同，经 `CASCADE` 的遍历；M3 交接第 4 节）。不写动态（Plane 也不写）。
 - **项目成员离开、被移出、账户停用**：不改工作项。他仍是已有工作项的负责人、关注者（Plane 相同）；他不能被新指派（3.7）。Plane 的读取只返回"在某个项目里仍有效"的负责人（`API/app/views/issue/base.py:541-551`，范围不限于这个项目，是缺陷）；Nerve 返回全部未删除的负责人行，页面从工作区成员列表（含已结束的成员关系）取他的显示名。登记差异。
 - **归档项目**：不改工作项。已归档的项目里的工作项可以读，一切写 409 `project.archived`（3.8）。
-- **连带的数量**（决策点 7）：一个 2 万个工作项的项目约有 66 万行工作项一侧的行，SP2 量到在一个事务里软删除它们要 8.6 秒，五个这样的项目的工作区 36.5 秒，请求的期限是 15 秒。同步的做法在 v0 自己的规模目标（一个项目至多约 2 万个未删除的工作项，3.16）上删不掉一个工作区，每次重试还先锁住工作区和它的每个项目 15 秒。所以选 A（负责人裁定）：请求只做 M3 的几步，工作项一侧交给任务。不论怎样裁定，P1 在目标的规模上量：一个 2 万个工作项的项目、一个五个这样的项目的工作区，请求的耗时和工作项一侧的软删除的耗时（P1 时还是同步的过渡）分开写进 P1 的 spec；P9 在同样的数据上量任务做完的时间和它期间别的项目的写的延迟。
+- **连带的数量**（决策点 7）：一个 2 万个工作项的项目约有 66 万行工作项一侧的行，SP2 量到在一个事务里软删除它们要 8.6 秒，五个这样的项目的工作区 36.5 秒，请求的期限是 15 秒。同步的做法在 v0 自己的规模目标（一个项目至多约 2 万个未删除的工作项，3.16）上删不掉一个工作区，每次重试还先锁住工作区和它的每个项目 15 秒。所以选 A（负责人裁定）：请求只做 M3 的几步，工作项一侧交给任务。不论怎样裁定，P1b 在目标的规模上量：一个 2 万个工作项的项目、一个五个这样的项目的工作区，请求的耗时和工作项一侧的软删除的耗时（P1b 时还是 P1a 写下的同步的过渡）分开写进 P1b 的 spec；P9 在同样的数据上量任务做完的时间和它期间别的项目的写的延迟。
 
 ### 3.7 工作项的字段规则
 - **标题**（`name`）：创建时必填；去掉首尾空白之后 1–255 个字符（Plane 的页面，`issue-modal/components/title-input.tsx:45-63`）；修改时带上就不能为空。数据库 `CHECK (name <> '')`。
 - **描述**（`description_html`）：
-  - **随它的数据一起进入接口**（第 12 节约束 5）：描述、清洗、提及、描述的版本在 P4 一起到来（评论也要清洗）。P1 建的 `issues` 已有 `description_html`、`description_stripped` 两列（取默认值），但 P1–P3 的 `IssueCreate`、`IssueUpdate`、`IssueDetail` 没有描述，`IssueDetail` 那时与 `Issue` 同形；P4 给三个结构加上它（5.2）。
+  - **随它的数据一起进入接口**（第 12 节约束 5）：描述、清洗、提及、描述的版本在 P4 一起到来（评论也要清洗）。P1a 建的 `issues` 已有 `description_html`、`description_stripped` 两列（取默认值），但 P1–P3 的 `IssueCreate`、`IssueUpdate`、`IssueDetail` 没有描述，`IssueDetail` 那时与 `Issue` 同形；P4 给三个结构加上它（5.2）。
   - 用 bluemonday 清洗：放行表是 Plane 编辑器用到的标签和属性，照 Plane 的 nh3 放行表（`API/utils/content_validator.py:71-160`：nh3 的默认表，加 `mention-component`、`label`、`input`、`image-component`；按标签的属性表；网址只许 `http`、`https`、`mailto`、`tel`）。清洗不拒绝，只去掉（Plane 相同）。P4 的 S3 做往返测试（9.1）：编辑器每种节点产生的 HTML 经清洗不变；经接口写入的 HTML（列表、标题、嵌套的标记，没有块 id）经清洗、再经编辑器重新序列化，结果记进样例，下面的 `skip_activity` 用它们；另有只改了一个链接地址、只勾了一个勾选框的样例，它们必须算作修改。`image-component` 留在放行表里：M5 之前编辑器不产生它（3.1），M5 不必再改放行表。
   - `description_stripped`：清洗后的纯文本（bluemonday 的 `StrictPolicy` 加空白的规整），描述为空时为空。M4 只写不读；读者是 M7 通知的摘要和 M8 的 Webhook 载荷（13.2）。总体设计 6.9"供搜索使用"改写（3.23）：搜索只匹配编号和标题（3.18）。
   - 长度：接口描述 `maxLength: 500000`（字符），请求体的上限 1 MiB 照旧（`server.max_body_bytes`，`server/configs/config.yaml`）；Plane 是 10 MB（`content_validator.py:16`）。登记差异。
@@ -397,7 +397,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - 创建弹窗也要读 `isMigrationUpdate`（M1 收尾交接）：问题出在弹窗**编辑**一个已有的工作项或打开一份草稿时（新建时描述是空的），打开没有块 id 的描述、不做改动，表单不应被标成已改；P14 修正，vitest 和 C4 都写这两种情形。
 - **状态**（`state_id`）：这个项目未删除、不是分诊的状态，否则 422（`state_id`，`not_allowed`）。创建时不带：项目的默认状态（M3 保证每个项目恰有一个，差异清单二·按表 `states`）。Plane 相同（`API/app/serializers/issue.py:169-176`；默认值 `API/db/models/issue.py:228-238`）。
 - **优先级**（`priority`）：`urgent`、`high`、`medium`、`low`、`none`，默认 `none`。
-- **起止日期**（`start_date`、`target_date`）：`YYYY-MM-DD`（`format: date`）；可以为 `null`。两列在 P1 随 `issues` 建出，接口在 P2 才有这两个字段，同一个 Phase 让 `bodyshape` 和它的生成器认这个格式（6.1；第 12 节约束 5：字段随它的数据和检查进入接口；不放在 P1，是为了不与 P1 的加锁约定同一段评审，对抗性评审 M21）。开始不晚于截止，按**合并之后的值**检查：只传一个日期时与存着的另一个比较，否则 422（`target_date`，`not_allowed`；只传了 `start_date` 时指向 `start_date`）。Plane 只在两个都在请求里时检查（`API/app/serializers/issue.py:128-133`），页面两个选择器互相约束（`issue-detail/sidebar.tsx:74-78`）。相等允许。数据库另有 `CHECK (start_date <= target_date)`。登记差异。
+- **起止日期**（`start_date`、`target_date`）：`YYYY-MM-DD`（`format: date`）；可以为 `null`。两列在 P1a 随 `issues` 建出，接口在 P2 才有这两个字段，同一个 Phase 让 `bodyshape` 和它的生成器认这个格式（6.1；第 12 节约束 5：字段随它的数据和检查进入接口；不放在 P1a、P1b，是为了不与它们的加锁约定同一段评审，对抗性评审 M21）。开始不晚于截止，按**合并之后的值**检查：只传一个日期时与存着的另一个比较，否则 422（`target_date`，`not_allowed`；只传了 `start_date` 时指向 `start_date`）。Plane 只在两个都在请求里时检查（`API/app/serializers/issue.py:128-133`），页面两个选择器互相约束（`issue-detail/sidebar.tsx:74-78`）。相等允许。数据库另有 `CHECK (start_date <= target_date)`。登记差异。
 - **负责人**（`assignee_ids`）：每一个都必须是这个项目的有效成员、项目角色不低于成员，否则 422（`assignee_ids[i]`，`not_allowed`）；重复 422（`duplicate`）；最多 100 个。Plane 静默地去掉不合格的（`API/app/serializers/issue.py:150-156`），页面只列出项目中不是访客的成员（`dropdowns/member/dropdown.tsx:36-40`）。登记差异。修改时带上就是新的集合，服务端按差集增删行（Plane 删除全部再插入，`:286-326`，每次保存都换一批行），只为增删的写动态。
 - **默认负责人**：创建时 `assignee_ids` 不带或为空、项目的 `default_assignee_id` 现在是这个项目中不是访客的有效成员时，指派给他；否则没有负责人，**不报错**（Plane 相同，`API/app/serializers/issue.py:232-253`）。成员离开项目之后 `default_assignee_id` 仍指向他（M3 照 Plane 不清空），所以创建时要现查他的成员关系（M3 交接第 4 节）。这条规则写进 `createIssue` 的接口描述。默认负责人也自动关注（3.12）；Plane 不让他关注（R2 第 7 节，缺陷）。
 - **标签**（`label_ids`）：每一个都是这个项目未删除的标签，否则 422（`label_ids[i]`，`not_allowed`）；重复 422；最多 100 个。Plane 静默地去掉（`:159-166`），登记差异。
@@ -646,9 +646,9 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **数据库的 CHECK 只查形状**（键的集合、值的类型，M2 设计 3.13），不查取值：取值由 `issue` 的列表词汇检查（下一条）。M6 给分组、排序加 `cycle_id`、`module_id` 一类的取值时不必改 CHECK。
 - **列表的词汇在 `issue/domain`，`project` 经端口用它**（控制者的裁定，独立评审 M13）：`issue/domain/listvocab.go` 定义筛选参数名和每个参数的取值语法（id、`none`、`me`、优先级、状态组、日期的条件）、分组码和排序码，以及每种页面（项目、个人主页）允许哪些。`issue` 用它解析列表的查询参数；`project` 检查显示设置的 `PATCH` 时经它声明的端口 `IssueListSettings`（`Validate(filters, displayFilters, displayProperties) []FieldError`），由 `issue.Provide` 交出、就是这份词汇（纯函数，不要连接池，与 `IssueCascade` 放在一起，3.3）。两处用同一份规则：存下来的设置就是下一次的查询参数。
   - 为什么不放进 `shared`（第一稿的做法，M3 设计 11.4 的"两个模块必须一致的纯取值规则"）：这份词汇随 M5–M7 一直长（附件数、迭代、模块、视图），放进 `shared` 就让所有模块共享一份不断变大的工作项领域的词汇；端口的方向（`project` 声明、`issue` 实现）与 `IssueCascade` 相同，没有新的依赖方向（11.10）。
-- **接口**：M3 的 `getProjectPreferences`、`updateProjectPreferences`（`api/modules/project.yaml:741-794`）的结构加三个字段（5.2）；`PATCH` 带上哪一个就整体替换哪一个（与 `navigation` 相同）。不合格 422（`filters.label_id[0]`、`display_filters.group_by` 等，`not_allowed`）。谁能读写：项目的任何有效成员，只有自己那一行（M3 照旧）。
+- **接口**：M3 的 `getProjectPreferences`、`updateProjectPreferences`（`api/modules/project.yaml:744-797`）的结构加三个字段（5.2）；`PATCH` 带上哪一个就整体替换哪一个（与 `navigation` 相同）。不合格 422（`filters.label_id[0]`、`display_filters.group_by` 等，`not_allowed`）。谁能读写：项目的任何有效成员，只有自己那一行（M3 照旧）。
 - **只存在浏览器的**（Plane 相同，R4 第 C.8 节）：已归档的列表、个人主页的筛选和显示设置（`localStorage` 的 `issue_local_filters`；草稿页没有筛选和显示设置，3.15，对抗性评审 M11）；看板折叠的组（`kanban_filters`）。Plane 的已归档列表读写的键不一致（`archived/filter.store.ts:131` 读 `richFilters`、`:175` 写 `rich_filters`），筛选从不恢复；P13 改为同一个键。
-- **M3 的关键词守卫的例外**：`/user-properties/` 两处 `until: "M4"`（`tools/keywords.json:2526`）在 `phase` 改为 `M4/P1` 的那一刻就到期（`tools/keywords.mjs:3-6,195`：`until` 不晚于 `phase` 即到期，守卫失败）。所以 P1 开始时把 `phase` 改为 `M4/P1` 的**同一个提交**里，把它的 `until` 改为 `M4/P11`：P10b 删除这两个旧方法和例外（项目页的筛选 store 改接新接口的 Phase，M3 交接第 5 节），`until` 取删除它的 Phase 的下一个，P10b 进行中它仍有效（7.9）。
+- **M3 的关键词守卫的例外**：`/user-properties/` 两处 `until: "M4"`（`tools/keywords.json:2526`）在 `phase` 改为 `M4/P1` 的那一刻就到期（`tools/keywords.mjs:3-6,195`：`until` 不晚于 `phase` 即到期，守卫失败）。所以 P1a 开始时把 `phase` 改为 `M4/P1` 的**同一个提交**里，把它的 `until` 改为 `M4/P11`（P1b 的 `phase` 照旧是 `M4/P1`：守卫只认 `M<n>/P<k>`，第 12 节）：P10b 删除这两个旧方法和例外（项目页的筛选 store 改接新接口的 Phase，M3 交接第 5 节），`until` 取删除它的 Phase 的下一个，P10b 进行中它仍有效（7.9）。
 
 ### 3.18 搜索与按编号取（总体设计 6.9）
 - **一个搜索接口**：`GET /workspaces/{slug}/issue-search`，参数 `q`（可选，去掉首尾空白之后至多 100 个字符）、`project_id`（可选，只搜这个项目）、`for`（可选：`parent`、`sub_issue`、`relation`）与 `issue_id`（`for` 出现时必填）、`start_date`、`target_date`（可选，3.16 的日期条件，含 `none`）、`limit`（1–100，默认 50）。响应 `{data: Issue[]}`，最好的在前，不分页（取前 N 个，同 Plane）。
@@ -721,7 +721,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   - Plane 在每天固定的时刻运行（01:00、03:15 UTC，`API/celery.py`）；Nerve 按间隔，从启动算起（River 的 `PeriodicInterval`）。差别不对用户可见，登记差异。
   - 只有 River 的主节点运行定时任务（M2 设计 3.15）；v0 是单个进程。
 - **测试的时钟**（架构问题 7）：
-  - 配置 `clock.offset`（时长，默认 0），只在 `env = test` 时接受，别的环境不为 0 时启动失败（与 M3 的测试专用配置同一种做法）。组合根用 `clock.Offset{Base: clock.System{}, Offset: d}` 代替今天写死的 `clock.System{}`（`bootstrap/app.go:111,116,127,159`），全部用例的时钟一起偏移。River 自己的调度用真实的时间（不受影响）：定时任务按真实的间隔运行，任务里读到的"现在"是偏移之后的。
+  - 配置 `clock.offset`（时长，默认 0），只在 `env = test` 时接受，别的环境不为 0 时启动失败（与 M3 的测试专用配置同一种做法）。组合根用 `clock.Offset{Base: clock.System{}, Offset: d}` 代替今天写死的 `clock.System{}`（`bootstrap/app.go:112,118,124,135,167`），全部用例的时钟一起偏移。River 自己的调度用真实的时间（不受影响）：定时任务按真实的间隔运行，任务里读到的"现在"是偏移之后的。
   - e2e 的 `fixtures/clock.ts`：时间流逝的故事（I16、I21）先从模板建一个新库，在它上面用正常时钟起一个 nerve 准备数据，停下；再以 `NERVE_CLOCK__OFFSET` 起一个 nerve（`nerveWith` 的同一种启动，`e2e/fixtures/test.ts:70`），页面和断言都对着它。同一个库上任何时刻只有一个 nerve，River 的选主不会落到时钟不同的进程上；worker 自己的 nerve 在另一个库上，不受影响。
   - `clock.ts` 的几处细节（对抗性评审 M20）：它自己建库、建连接、读写这个库，不能复用 `db`、`nerveWith`、`databaseSnapshot`（它们都绑在 worker 的库上）；测试环境的签名密钥是每次启动临时生成的（`auth.jwt.private_key_file` 为空），`session_ttl` 是 720 小时，短于 31 天，所以页面版本在偏移的 nerve 上重新登录（接口版本用 PAT，PAT 默认不过期）；断言"定时任务完成"要找一条在偏移的 nerve 起来之后才完成的任务（准备数据的 nerve 每 2 秒也跑过同一个种类）；对照的行（"没有更新够久的不变""60 天之内的仍在"）要经偏移的 nerve 写下，在准备数据的 nerve 上写下的一切都是同一个时刻（或用 `archive_in = 2` 这样的设定拉开）。
   - 为什么不在运行中改时钟：那要一个改时钟的接口或信号，是只为测试存在的生产代码路径；以启动参数给出，生产代码里只有一个装饰器。
@@ -793,13 +793,15 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 
 | Phase | 文档 | 位置 | 内容 |
 |---|---|---|---|
-| P1 | 总体设计 | 4.2 | 加锁顺序延伸到 M4 的表；工作项的写最先锁项目行、不锁工作区行，取锁之前做不加锁的预检（凡拒绝的都在那里答）；取连接之前进入按项目的写闸门、`lock_timeout` 的兜底，满时 503 `server_busy`；删除工作区先锁它的项目再读时刻；写明 B 的两个代价和连接池的代价（3.5，决策点 1；架构问题 11） |
-| P1 | 总体设计 | 6.2 | 平台包 `platform/gate`（带 `context` 的按键的信号量，3.5，架构问题 11） |
-| P1 | 总体设计 | 6.2 | 模块 `issue` 和它的 13 张表（3.3，架构问题 1） |
-| P1 | M3 设计 | 3.6 的取锁表、17.4 | "删除工作区"一行改为先锁项目、再读时刻；17.4"M4 的工作项写入……不默认沿用"后补一句 M4 的选择（3.5） |
-| P1 | M3 设计 | 3.17 | 删除状态：有工作项（含已归档的）用它时 409 `project.state_in_use`（3.6） |
-| P1 | 差异清单 | 二·按表 | `issues`、`issue_assignees`、`issue_labels`、`issue_subscribers`、`issue_activities` 逐列（4.2–4.5、4.11） |
-| P1 | 差异清单 | 四 | 4.17 中标 P1 的行 |
+| P1a | 总体设计 | 4.2 | 加锁顺序延伸到 M4 的表；工作项的写最先锁项目行、不锁工作区行，取锁之前做不加锁的预检（凡拒绝的都在那里答）；删除工作区先锁它的项目再读时刻；写明 B 的两个代价（3.5，决策点 1） |
+| P1b | 总体设计 | 4.2 | 取连接之前进入按项目的写闸门、`lock_timeout` 的兜底，满时 503 `server_busy`；写明连接池的代价（3.5，架构问题 11） |
+| P1b | 总体设计 | 6.2 | 平台包 `platform/gate`（带 `context` 的按键的信号量，3.5，架构问题 11） |
+| P1a | 总体设计 | 6.2 | 模块 `issue` 和它的 13 张表（3.3，架构问题 1） |
+| P1a | M3 设计 | 3.6 的取锁表、17.4 | "删除工作区"一行改为先锁项目、再读时刻；17.4"M4 的工作项写入……不默认沿用"后补一句 M4 的选择（3.5） |
+| P1a | M3 设计 | 3.17 | 删除状态：有工作项（含已归档的）用它时 409 `project.state_in_use`（3.6） |
+| P1a | 差异清单 | 二·按表 | `issues`、`issue_assignees`、`issue_labels`、`issue_subscribers`、`issue_activities` 逐列（4.2–4.5、4.11） |
+| P1a | 差异清单 | 四 | 4.17 中标 P1a 的行 |
+| P1b | 差异清单 | 四 | 4.17 中标 P1b 的行 |
 | P2 | 总体设计 | 6.5 | `AllowCreator` 要求创建者仍是项目的有效成员、角色不低于成员；`OwnOnly` 与"一条访客规则"（3.4，架构问题 3） |
 | P2 | M2 设计 | 3.11 | 格式检查器登记 `date`；字段错误的路径按数组下标的数值排序；不限类型的节点检查数的范围（6.1，M2 交接第 4 节） |
 | P2 | 差异清单 | 四 | 4.17 中标 P2 的行（访客规则、创建者、归档只读、按编号取的 404 和折叠、起止日期） |
@@ -849,11 +851,11 @@ M4 的 13 张表都带 `workspace_id`、`project_id`（草稿的可空）、`del
 
 | 文件 | 内容 | Phase |
 |---|---|---|
-| `00015_issue_issues.sql` | `issues` | P1 |
-| `00016_issue_issue_assignees.sql` | `issue_assignees` | P1 |
-| `00017_issue_issue_labels.sql` | `issue_labels` | P1 |
-| `00018_issue_issue_subscribers.sql` | `issue_subscribers` | P1 |
-| `00019_issue_issue_activities.sql` | `issue_activities` | P1 |
+| `00015_issue_issues.sql` | `issues` | P1a |
+| `00016_issue_issue_assignees.sql` | `issue_assignees` | P1a |
+| `00017_issue_issue_labels.sql` | `issue_labels` | P1a |
+| `00018_issue_issue_subscribers.sql` | `issue_subscribers` | P1a |
+| `00019_issue_issue_activities.sql` | `issue_activities` | P1a |
 | `00020_issue_issue_relations.sql` | `issue_relations` | P3 |
 | `00021_issue_issue_comments.sql` | `issue_comments` | P4 |
 | `00022_issue_issue_reactions.sql` | `issue_reactions` | P4 |
@@ -866,7 +868,7 @@ M4 的 13 张表都带 `workspace_id`、`project_id`（草稿的可空）、`del
 | `00029_issue_issues_name_trgm.sql` | `CREATE EXTENSION IF NOT EXISTS pg_trgm`；`issues_name_trgm_idx` | P8 |
 | `00030_identity_purge_indexes.sql`、`00031_workspace_purge_indexes.sql`、`00032_project_purge_indexes.sql`、`00033_issue_purge_indexes.sql` | 每张被清理的表的 `<表>_deleted_at_idx ON (deleted_at) WHERE deleted_at IS NOT NULL`（3.21） | P9 |
 
-- `server/sqlc.yaml` 加 `issue` 条目（P1），`schema:` 列本模块的迁移；`00026` 归 `project` 的条目。
+- `server/sqlc.yaml` 加 `issue` 条目（P1a），`schema:` 列本模块的迁移；`00026` 归 `project` 的条目。
 - 每个建表的 Phase 同时把新表加进 `deploy/runtime-grants.sql`（M2 交接第 6 节；`TestTheGrantsFileCoversEveryRelationAndFunction`）；`00029` 的扩展函数在 `public`，靠 PUBLIC 的默认权限（S2 核对）。
 - 冒烟故事 S1 照旧断言最新的版本等于最后一个迁移文件（M4 加 19 个）。
 
@@ -879,10 +881,10 @@ M4 的 13 张表都带 `workspace_id`、`project_id`（草稿的可空）、`del
 | `parent_id` | `uuid REFERENCES issues ON DELETE CASCADE`，`issues_not_own_parent_check CHECK (parent_id <> id)` | CHECK 新加（3.9；多列的 CHECK 有名字，M2 设计 3.13） |
 | `state_id` | `uuid NOT NULL REFERENCES states ON DELETE CASCADE` | Plane 可空；Nerve 的创建总有状态（项目恰有一个默认状态）。`CASCADE` 照搬：删除状态在有工作项用它时被拒绝（3.6），所以只会删掉已软删除的工作项 |
 | `name` | `varchar(255) NOT NULL`，`CHECK (name <> '')` | CHECK 新加 |
-| `description_html` | `text NOT NULL DEFAULT '<p></p>'` | — （P1 建列，接口在 P4 才有这个字段，3.7） |
+| `description_html` | `text NOT NULL DEFAULT '<p></p>'` | — （P1a 建列，接口在 P4 才有这个字段，3.7） |
 | `description_stripped` | `text` | — |
 | `priority` | `varchar(30) NOT NULL DEFAULT 'none'`，`CHECK (priority IN ('urgent', 'high', 'medium', 'low', 'none'))` | 默认值、CHECK 新加 |
-| `start_date`、`target_date` | `date`，`issues_dates_check CHECK (start_date <= target_date)` | CHECK 新加（3.7）；P1 建列，接口在 P2 才有这两个字段 |
+| `start_date`、`target_date` | `date`，`issues_dates_check CHECK (start_date <= target_date)` | CHECK 新加（3.7）；P1a 建列，接口在 P2 才有这两个字段 |
 | `sequence_id` | `integer NOT NULL`，`CHECK (sequence_id > 0)` | 没有默认值（取自计数器）；CHECK 新加 |
 | `sort_order` | `double precision NOT NULL DEFAULT 65535` | — |
 | `completed_at` | `timestamptz` | — |
@@ -1060,20 +1062,20 @@ issue_comments
 ### 4.17 行为差异（登记到差异清单第四节）
 | 方面 | Plane | Nerve | Phase |
 |---|---|---|---|
-| 工作项的写的取锁 | Celery 里异步写动态，写之间不串行 | 项目行 N，同一事务里写动态、关注、提及、版本（3.5，决策点 1） | P1 |
-| 一个项目上的并发写 | 不限 | 每个进程里一个项目至多 K 个写同时在数据库里，多的在进程里等，等不到 503 `server_busy`（`Retry-After`）（3.5，架构问题 11） | P1 |
+| 工作项的写的取锁 | Celery 里异步写动态，写之间不串行 | 项目行 N，同一事务里写动态、关注、提及、版本（3.5，决策点 1） | P1a |
+| 一个项目上的并发写 | 不限 | 每个进程里一个项目至多 K 个写同时在数据库里，多的在进程里等，等不到 503 `server_busy`（`Retry-After`）（3.5，架构问题 11） | P1b |
 | 删除项目、工作区时工作项一侧的行 | Celery 在事务之外异步软删除，各自的时刻 | 后台任务分批软删除，写下删除请求的时刻和删除者；完成之前它们对任何读写都不存在（3.6，决策点 7） | P9 |
-| 负责人、标签不合格 | 静默去掉 | 422 `not_allowed`（3.7） | P1 |
+| 负责人、标签不合格 | 静默去掉 | 422 `not_allowed`（3.7） | P1a |
 | 起止日期 | 两个都在请求里才检查 | 按合并之后的值检查；数据库另有 CHECK（3.7） | P2 |
-| 默认负责人 | 指派但不关注 | 指派并关注（3.7、3.12） | P1 |
-| 负责人的动态 | 按请求里的 id 写，含被去掉的 | 只为实际指派的写（3.13） | P1 |
+| 默认负责人 | 指派但不关注 | 指派并关注（3.7、3.12） | P1a |
+| 负责人的动态 | 按请求里的 id 写，含被去掉的 | 只为实际指派的写（3.13） | P1a |
 | 只补块 id 的保存 | 看客户端的标志，改 `updated_at` | 内容标识（纯文本、提及、链接的地址、勾选框的状态）不变时不写动态、版本，不改 `updated_at`；否则是普通的修改。剩下的口子：只改格式的保存带上标志就不留动态和版本（3.7） | P4 |
 | 描述的动态的合并 | 只改 `created_at`，值是陈旧的 | 保留旧的 `old_value`，改 `new_value`（3.13） | P4 |
-| 自动关注 | 每个产生通知的动态的执行者；被提及的人都关注 | 创建者、负责人、评论者、被提及的成员中能读这个工作项的（"只看自己"的访客只在他是创建者时，3.12） | P1（评论、提及 P4） |
-| 编号 | 序列化器允许写 `sequence_id` | 客户端不能写；`(project_id, sequence_id)` 全表唯一（3.7） | P1 |
-| 删除状态 | 有工作项时 400 | 409 `project.state_in_use`（3.6） | P1 |
-| 修改的响应 | 204 | 200 `IssueDetail`（总体设计 3.1） | P1 |
-| 负责人的读取 | 只返回"在某个项目里仍有效"的 | 返回全部未删除的负责人行（3.6） | P1 |
+| 自动关注 | 每个产生通知的动态的执行者；被提及的人都关注 | 创建者、负责人、评论者、被提及的成员中能读这个工作项的（"只看自己"的访客只在他是创建者时，3.12） | P1a（评论、提及 P4） |
+| 编号 | 序列化器允许写 `sequence_id` | 客户端不能写；`(project_id, sequence_id)` 全表唯一（3.7） | P1a |
+| 删除状态 | 有工作项时 400 | 409 `project.state_in_use`（3.6） | P1a |
+| 修改的响应 | 204 | 200 `IssueDetail`（总体设计 3.1） | P1b |
+| 负责人的读取 | 只返回"在某个项目里仍有效"的 | 返回全部未删除的负责人行（3.6） | P1b |
 | 创建者的权限 | 只看工作区成员关系，已离开项目也能读、改、删 | 要求是项目的有效成员、角色不低于成员（3.4） | P2 |
 | 访客只看自己的工作项 | 只在约 6 处执行 | 处处执行，挂在看不到的工作项下的一切 404；按项目角色算，工作区管理员在项目里是访客时同样（3.4） | P2（各列表在各自的 Phase） |
 | 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403（3.4） | P2 |
@@ -1107,7 +1109,7 @@ issue_comments
 | 物理清理 | `DO_NOTHING` 的动态挡住工作项的物理删除 | 动态随工作项 `CASCADE`；每个模块清理自己的表（3.21） | P9 |
 
 ### 4.18 授权与 sqlc
-- `deploy/runtime-grants.sql`：每张新表 `SELECT, INSERT, UPDATE, DELETE`（物理清理要 `DELETE`），与 M3 的表相同；P1 起每个建表的 Phase 加。
+- `deploy/runtime-grants.sql`：每张新表 `SELECT, INSERT, UPDATE, DELETE`（物理清理要 `DELETE`），与 M3 的表相同；P1a 起每个建表的 Phase 加。
 - sqlc v1.31.1：`issue` 条目的查询放在 `issue/adapter/postgres/queries/`，按表或按用例分文件，每个不超过约 400 行；列表引擎的三条查询（3.16）各一个文件。`date` 列映射到 P2 选定的 Go 类型（6.1，M2 交接第 4 节：不能是 `openapi_types.Date`）。
 
 ---
@@ -1174,7 +1176,7 @@ issue_comments
 
 ### 5.2 结构
 - **关联字段只给 id，名字带 `_id`**（总体设计 3.2、3.6）：Plane 的 `state`、`parent`、`created_by`、`actor`、`owned_by` 改为 `state_id`、`parent_id`、`created_by_id`、`actor_id`、`owned_by_id`。
-- **`Issue`**（列表行）：`{id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order, completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, created_by_id, updated_by_id, created_at, updated_at}`。日期是 `format: date`，时间是 `date-time`。没有 Plane 的 `estimate_point`、`cycle_id`、`module_ids`、`attachment_count`、`is_draft`、`is_intake`、`is_subscribed`、`state__group`（3.2；状态组由页面从状态目录读）。字段随它的数据进入接口（第 12 节约束 5）：`start_date`、`target_date` 在 P2，`sub_issues_count` 在 P3，`link_count` 在 P8，其余在 P1。
+- **`Issue`**（列表行）：`{id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order, completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, created_by_id, updated_by_id, created_at, updated_at}`。日期是 `format: date`，时间是 `date-time`。没有 Plane 的 `estimate_point`、`cycle_id`、`module_ids`、`attachment_count`、`is_draft`、`is_intake`、`is_subscribed`、`state__group`（3.2；状态组由页面从状态目录读）。字段随它的数据进入接口（第 12 节约束 5）：`start_date`、`target_date` 在 P2，`sub_issues_count` 在 P3，`link_count` 在 P8，其余在 P1a（随 `createIssue`）。
 - **`IssueDetail`** = `Issue` 加 `description_html`（取单个、创建、修改、归档、恢复、发布）。不用 `allOf`（生成器不支持，M2 设计 3.11），字段写两遍，`apitest` 的一个检查核对 `IssueDetail` 的字段是 `Issue` 的加一个。描述在 P4 才进入接口（3.7，第 12 节约束 5）：P1–P3 的 `IssueDetail` 与 `Issue` 同形，`IssueCreate`、`IssueUpdate` 没有 `description_html`、`skip_activity`；P4 加上它们和这个检查。
 - **`IssueCreate`**：`name`（必填，1–255）、`description_html`（≤ 500000）、`state_id`、`priority`、`assignee_ids`、`label_ids`（各 ≤ 100，`uniqueItems` 不用：重复由用例答 422 `duplicate`，路径带下标）、`start_date`、`target_date`、`parent_id`。**`IssueUpdate`**：同样的字段都可选，加 `skip_activity`（布尔）和 `sort_order`；`start_date`、`target_date`、`parent_id` 可清空。**`IssueDraftPayload`**：`IssueCreate` 的字段全部可选，`name` 可以为空串（3.15）。
 - **`IssueList`**：`{total, data?, next_cursor?, groups?, subgroup_totals?}`：不带 `group_by`、或带 `group_key`（一组的"加载更多"）时有 `data`、`next_cursor`，否则有 `groups`；子分组时另有 `subgroup_totals`（3.16）。不用 `oneOf`（同上），接口描述写明哪一种出现；前端按 `groups` 是否存在分支（7.2）。`IssueGroup {key, total, data?, next_cursor?, subgroups?}`、`IssueSubgroup {key, total, data, next_cursor}`、`IssueSubgroupTotal {key, total}`。
@@ -1235,10 +1237,10 @@ M4 不加新的桶：需要登录的操作按凭证计数（`authenticated`，`s
 | `modules/workspace` | `delete_workspace.go`：先锁邀请和项目、再读时刻（3.5），P9 起发布 `workspace.deleted`；`EventTypes()`；`ProjectCascade` 端口加 `LockWorkspaceProjects`；`Purger`。`issue` 用的目录就是已有的 `WorkspaceDirectory`（`WorkspaceBySlug`、`ShareWorkspaceByID`，`workspace/module.go:33-49`），不加方法 | 同 M3 |
 | `modules/identity` | `PageSize` 移出；`Purger`（`api_tokens`）；`PublicProfiles` 的读：负责人名的目录要它，端口由 `issue` 声明（3.3，P5） | 同 M2 |
 | `platform/jobs` | `NewInserter(pool)`：只投递的客户端和它的 `InsertTx`；两个队列和它们的 worker 数（配置）；定时任务的种类和声明会投递的种类没有 worker 时 `New` 失败；测试的余量改成期限（3.20） | 同 M2 |
-| `platform/postgres` | `Tx(ctx) (pgx.Tx, bool)`（3.20）；`NewTxManager` 的两个选项：`LockTimeout(d)`（`BEGIN` 之后由平台发 `SET LOCAL lock_timeout`，P1）、`ReadOnlySnapshot()`（`BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`，经 pgx 的 `TxOptions`，P5），模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC`）；`LockNotAvailable(err)`（SQLSTATE `55P03`，与 `UniqueViolation` 同一种写法，`unique.go`）；连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`（3.16，P5） | 同 M2 |
+| `platform/postgres` | `Tx(ctx) (pgx.Tx, bool)`（3.20）；`NewTxManager` 的两个选项：`LockTimeout(d)`（`BEGIN` 之后由平台发 `SET LOCAL lock_timeout`，P1b）、`ReadOnlySnapshot()`（`BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`，经 pgx 的 `TxOptions`，P5），模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC`）；`LockNotAvailable(err)`（SQLSTATE `55P03`，与 `UniqueViolation` 同一种写法，`unique.go`）；连接池在每个连接上设 `jit = off`、`plan_cache_mode = force_custom_plan`（3.16，P5） | 同 M2 |
 | `platform/clock` | `Offset{Base, Offset}`（3.20） | 只有标准库 |
 | `platform/outbound` | 新：防 SSRF 的 HTTP 客户端（6.8） | 标准库 |
-| `platform/gate` | 新：带 `context` 的按键的信号量（`Keyed[K comparable]`：每个键至多 K 个持有者、等待者至多若干个、等待有上限），工作项的写闸门用它（3.5，架构问题 11，P1） | 标准库 |
+| `platform/gate` | 新：带 `context` 的按键的信号量（`Keyed[K comparable]`：每个键至多 K 个持有者、等待者至多若干个、等待有上限），工作项的写闸门用它（3.5，架构问题 11，P1b） | 标准库 |
 | `platform/config` | `jobs.default_workers`、`jobs.periodic_workers`；`clock.offset`（只在 `env = test`）；`outbound.allow_cidrs`（只在 `env = test`）；`issue.auto_archive_interval`、`issue.trim_versions_interval`、`issue.delete_batch`、`issue.delete_budget`；`issue.write_gate.per_project`、`issue.write_gate.max_wait`、`issue.write_gate.max_queue`、`issue.write_lock_timeout`（3.5）；`cleanup.purge_after`、`cleanup.purge_interval`、`cleanup.purge_batch` | — |
 | `platform/httpserver/bodyshape` 与 `tools/bodyshapegen` | `FormatDate` 的检查器（`shared.Date` 的规格）；字段错误的路径按下标的数值排序；不限类型的节点检查数的范围；代价测试加上字符串的数组（M2 交接第 4 节，P2） | — |
 | `bootstrap` | 接线（6.6）；`events.go`（分发器，3.19）；`jobs.go`（投递端口的接合：`postgres.Tx` 加只投递的客户端的 `InsertTx`；建工作的客户端时核对各模块 `EnqueuedKinds()` 的种类都有 worker）；`gate.go`（`platform/gate` 接成 `issue` 的 `WriteGate`；给 `issue` 的写用例一个带 `LockTimeout` 的 `TxManager`，并把它的 `postgres.LockNotAvailable` 换成 `shared.ServerBusy`：闸门的 503 和锁的期限的 503 都在这一个文件里，3.5）；`purge.go`（一个清理任务，3.21）；`ports.go` 的转换；测试：操作名的完整性、权限矩阵、交错、取锁的形状、清理的目录 | 全部 |
@@ -1295,14 +1297,14 @@ modules/issue/
 ```
 - 一个用例一个文件或一组紧密的用例一个文件（总体设计 6.1），每个不超过约 400 行；`update_issue.go` 只编排，写的细节在 `issue_writes.go`。
 - `cascade.go` 只用本模块的仓储，删除者和时刻由调用方传入，事务取自调用方的 `ctx`（M3 的 `ProjectCascade` 的同一写法）。它在 `Provide` 里建（只依赖连接池），所以 `project.New` 能在 `issue.New` 之前或之后拿到它：组合的顺序由别的端口决定（6.6）。
-- 删除的语句（`adapter/postgres/delete_rows.go`）和编排（`app/delete_project_rows.go`）在 P1 写成：同步的过渡里由 `cascade.go` 在发起者的事务里调（循环到 0 行，不看预算），P9 由任务的 worker 调（每批一个事务，带预算）；同一组语句、同一份编排，不是两份。SQL 只在 `adapter/postgres`，`app` 经仓储的端口调它（`TestModulesRunSQLOnlyThroughSQLC`）。
+- 删除的语句（`adapter/postgres/delete_rows.go`）和编排（`app/delete_project_rows.go`）在 P1a 写成：同步的过渡里由 `cascade.go` 在发起者的事务里调（循环到 0 行，不看预算），P9 由任务的 worker 调（每批一个事务，带预算）；同一组语句、同一份编排，不是两份。SQL 只在 `adapter/postgres`，`app` 经仓储的端口调它（`TestModulesRunSQLOnlyThroughSQLC`）。
 - `lock.go` 是 `issue/app` 私有的（M3 的 `project/app/lock.go` 也是私有的）；项目行的锁本身经 `ProjectGate` 端口由 `project` 实现。
 
 ### 6.3 别的模块的改动
 - **`project`**：
   - `Provide` 的新端口（6.5）都是 `project/adapter/postgres` 里的查询，只依赖连接池：`ProjectGate`（不加锁的读、`FOR NO KEY UPDATE` 的锁、按 `id` 升序锁几个项目）、`Sequences`、`StateCatalog`、`LabelCatalog`、`ProjectMembers`、`VisibleProjects`、`ArchivePolicies`。锁项目行的那条查询与 M3 的 `lockRowAndDecide` 用的是同一张表的同一种锁，但 M3 的那一个先锁工作区（方案 E），这一个不锁（3.5）。
   - `project.New` 的 `Deps` 加 `IssueCascade`、`IssueListSettings`（都由 `issue.Provide` 交出），P9 起加 `EventPublisher`（删除项目发布 `project.deleted`）。`ProjectCascade` 加 `LockWorkspaceProjects`（删除工作区用，3.5），它的查询与 `ProjectGate.LockMany` 同一种写法。`ProjectGate` 另有两个不加锁的读：这个工作区未删除的项目的 id（草稿的读按它过滤，3.15）；`DeletedAt(projectIDs)`，其中已删除的项目的 `deleted_at`（删除工作项和删除的任务据它跳过属于先删除的那一端的关联行，3.5）。`deleteWorkspace` 发布的 `workspace.deleted` 带 `LockWorkspaceProjects` 锁住的项目（3.19）。
-  - `NewCascade(CascadeDeps)` 在 P1–P8 要 `IssueCascade`（`DeleteWorkspaceProjects` 的末尾调它）；命令行的组合（`bootstrap/users.go:41-44`，`nerve users deactivate` 只用 `EndMemberships`）为它传 `issue.Provide(pool)` 交出的 `IssueCascade`，不构造 `issue.New`。P9 起 `DeleteWorkspaceProjects` 不再调 `issue`（删除工作区的事件由 `workspace` 的用例发布），这一项随之从 `CascadeDeps` 删除（对抗性评审 M9）。
+  - `NewCascade(CascadeDeps)` 在 P1–P8 要 `IssueCascade`（`DeleteWorkspaceProjects` 的末尾调它）；命令行的组合（`bootstrap/users.go:45-46`，`nerve users deactivate` 只用 `EndMemberships`）为它传 `issue.Provide(pool)` 交出的 `IssueCascade`，不构造 `issue.New`。P9 起 `DeleteWorkspaceProjects` 不再调 `issue`（删除工作区的事件由 `workspace` 的用例发布），这一项随之从 `CascadeDeps` 删除（对抗性评审 M9）。
   - `access.sql` 的 `ProjectFacts` 加 `guest_view_all_features`（3.4）。
 - **`workspace`**：删除工作区的用例改顺序（3.5），P9 起在事务里发布 `workspace.deleted`（`Deps` 加 `EventPublisher`）；`ProjectCascade` 端口加 `LockWorkspaceProjects`。
 - **`access`**：6.1 的一行；规则表加 M4 的 13 行（3.4）；`decide.go` 的输入加创建者、标志；判定表测试加创建者和访客规则的每一种。
@@ -1312,7 +1314,7 @@ modules/issue/
 - **发布**：`issue/app` 的用例（P9 起还有 `project` 的删除项目、`workspace` 的删除工作区）在事务里调 `EventPublisher.Publish`，在全部写之后、事务提交之前。用例不知道谁订阅。
 - **分发**：`bootstrap/events.go` 的 `Dispatcher` 实现 `shared.EventPublisher`，由 `issue.Subscribers()`（以后各模块的）建出，构造时检查类型（各模块的 `EventTypes()`：`issue`、P9 起 `project`、`workspace`）和名字（3.19），按登记的顺序同步调用；P6 起每个用例的发布点由用例测试经假的发布者核对（类型、`Entity`、`Changes`）。
 - **投递**：订阅者要投递任务时经一个端口（`issue/app` 的 `LinkCrawls`、P9 的 `RowDeletions`），实现在 `issue/adapter/river`，它要一个 `Inserter`（`InsertTx(ctx, args, opts) error`），由 `bootstrap/jobs.go` 用 `postgres.Tx(ctx)` 加只投递的客户端（`jobs.NewInserter(pool)`，3.20）接成；不在事务里时返回错误。模块经 `EnqueuedKinds()` 声明它会投递的种类，建工作的客户端时逐个核对有 worker。
-- **任务**：模块经 `Jobs()` 交出 `jobs.Job`（M2 的写法，`identity/adapter/river/cleanup.go`），worker 只调用例；`bootstrap/app.go` 把各模块的 `Jobs()` 和 `purge.go` 的清理任务交给 `jobs.New`（今天只传 `ident.Jobs()`，`app.go:150`）。
+- **任务**：模块经 `Jobs()` 交出 `jobs.Job`（M2 的写法，`identity/adapter/river/cleanup.go`），worker 只调用例；`bootstrap/app.go` 把各模块的 `Jobs()` 和 `purge.go` 的清理任务交给 `jobs.New`（今天只传 `ident.Jobs()`，`app.go:158`）。
 - **清理**：四个模块各交出一个 `Purger`（`Purge(ctx, cutoff, batch) (int, error)`，删完为止），`bootstrap/purge.go` 把它们按 3.21 的顺序组成一个任务。`Purger` 的接口声明在 `bootstrap`（消费方），模块只交出满足它的值，不互相导入。
 - **测试的时钟**：`bootstrap/app.go` 按配置建出 `clock.Offset` 或 `clock.System`，交给每个模块的 `Deps.Clock`（3.20）。
 
@@ -1358,7 +1360,7 @@ modules/issue/
 - **只投递的客户端的代价**是它不替我们检查种类：漏登记的种类会安静地留在 `river_job`。所以第 10 步的核对和它的变异测试是必需的（3.20）。
 
 - 没有构造的环：`issue.New` 不要 `project.New`、`workspace.New` 的东西；`project.New` 要的 `IssueCascade` 来自 `issue.Provide`。
-- **命令行的组合**（M3 设计 6.6）：`nerve users`、`nerve workspaces` 不构造 `issue.New`、分发器、`jobs`。停用（`nerve users deactivate`）经 `EndMemberships` 改项目成员关系，不碰工作项的表；但 `project.NewCascade(project.CascadeDeps{Pool})`（`bootstrap/users.go:41-44`）在 P1–P8 要 `IssueCascade`（`DeleteWorkspaceProjects` 调它），所以命令行在这段时间为它传 `issue.Provide(pool)` 交出的 `IssueCascade`（只是查询对象，不构造 `issue.New`）；P9 起 `DeleteWorkspaceProjects` 不再调 `issue`，这一项删除（对抗性评审 M9，6.3）。`archtest/composition_test.go` 加上"不到达 `issue.New`、`InsertTx`"。M4 没有投递任务的命令（M2 交接第 1 节，13.2）。
+- **命令行的组合**（M3 设计 6.6）：`nerve users`、`nerve workspaces` 不构造 `issue.New`、分发器、`jobs`。停用（`nerve users deactivate`）经 `EndMemberships` 改项目成员关系，不碰工作项的表；但 `project.NewCascade(project.CascadeDeps{Pool})`（`bootstrap/users.go:45-46`）在 P1–P8 要 `IssueCascade`（`DeleteWorkspaceProjects` 调它），所以命令行在这段时间为它传 `issue.Provide(pool)` 交出的 `IssueCascade`（只是查询对象，不构造 `issue.New`）；P9 起 `DeleteWorkspaceProjects` 不再调 `issue`，这一项删除（对抗性评审 M9，6.3）。`archtest/composition_test.go` 加上"不到达 `issue.New`、`InsertTx`"。M4 没有投递任务的命令（M2 交接第 1 节，13.2）。
 
 ### 6.7 一个写请求：`PATCH /api/v0/issues/{issue_id}` 改状态和标签
 ```
@@ -1569,7 +1571,7 @@ M4 的页面上逐项照 M3 收尾的写法改，并由故事或浏览器核对�
 - **阶段**：每个 Phase 开始时 `phase` 改为 `M4/P<k>`，收尾开始时改为 `M4/closeout`（M3 交接第 8 节）。
 - **到期的例外**：
   - **规则**：一个例外的 `until` 不晚于 `phase` 就到期，守卫失败（`tools/keywords.mjs:3-6,195`）。所以改 `phase` 的那个提交同时改到期的例外的 `until`，`until` 取删除这个例外的 Phase 的下一个（在删除它的 Phase 进行中仍有效）。
-  - `plane-workspace-urls` 的 `/user-properties/` 两处 `until: "M4"`（`keywords.json:2526`）：P1 把 `phase` 改为 `M4/P1` 的同一个提交里把 `until` 改为 `M4/P11`（3.17），P10b 删除这两个方法和例外；e2e 的 `workItemFilters`（`e2e/fixtures/mounts.ts:56`）和三个故事里的放行一起删除（M3 交接第 5 节）。
+  - `plane-workspace-urls` 的 `/user-properties/` 两处 `until: "M4"`（`keywords.json:2526`）：P1a 把 `phase` 改为 `M4/P1` 的同一个提交里把 `until` 改为 `M4/P11`（3.17；P1b 的 `phase` 照旧），P10b 删除这两个方法和例外；e2e 的 `workItemFilters`（`e2e/fixtures/mounts.ts:56`）和三个故事里的放行一起删除（M3 交接第 5 节）。
   - `copy-hook` 的 10 个 `until: "M4/closeout"`（`:2533-2597`）：P14、P15 改完复制之后删除，收尾时守卫要求它们已不在。
 - **扩大范围**：`project-address-route` 加上工作项页面从 router store 读地址的 22 个文件（M3/P10 spec 第 5 节的 6 个和裁定 F-12 补上的 16 个），改成读路由参数；`workspace-address-route` 加上只读工作区的 4 个（M3 交接第 8 节），其中 `power-k/config/creation/command.ts` 是 `.ts`，而规则的文件正则以 `\.tsx$` 结尾（`keywords.json:2381`），P15 把它放宽为 `\.tsx?$`；`copy-hook` 的范围加上 M4 的组件目录。
 - **新规则**（P10a 起）：
@@ -1661,7 +1663,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 ### 8.8 README 的新增内容
 | Phase | 位置 | 内容 |
 |---|---|---|
-| P1 | 部署 | 工作项的写闸门和锁的期限：`issue.write_gate.per_project`（默认 2）、`issue.write_gate.max_wait`（2 秒）、`issue.write_gate.max_queue`（64）、`issue.write_lock_timeout`（5 秒）；超过时答 503 `server_busy`，客户端按 `Retry-After` 重试；连接池的大小与多进程部署时的 K 由 M8 的部署说明定（11.11） |
+| P1b | 部署 | 工作项的写闸门和锁的期限：`issue.write_gate.per_project`（默认 2）、`issue.write_gate.max_wait`（2 秒）、`issue.write_gate.max_queue`（64）、`issue.write_lock_timeout`（5 秒）；超过时答 503 `server_busy`，客户端按 `Retry-After` 重试；连接池的大小与多进程部署时的 K 由 M8 的部署说明定（11.11） |
 | P6 | 部署 | 定时任务（自动归档）的间隔配置；任务队列的 worker 数（`jobs.default_workers`、`jobs.periodic_workers`） |
 | P7 | 安全 | 链接的抓取会从服务器发出请求：防护的规则、上限、公网地址上仍可探测端口（8.1）；公网地址不在本机网卡上的部署，在网络层挡住 nerve 访问自己的公网地址；要完全禁止时在网络层禁止 nerve 的出站（抓取得到 `failed`，不影响别的功能） |
 | P8 | 部署 | 迁移执行 `CREATE EXTENSION IF NOT EXISTS pg_trgm`：迁移的账户要有库的 `CREATE` 权限（库属主即可），不要超级用户（M0-P4 交接；完整的部署说明在 M8） |
@@ -1727,11 +1729,11 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 ### 9.3 集成测试（`pgtest`）
 - **每个用例**：在真实的 Postgres 上核对它写的每一行（主表、负责人、标签、关注、提及、动态、版本、`updated_at`），时刻等于固定时钟（M2 交接第 3 节）；事件经假的发布者核对。经接口准备不了的格子在这里经仓储准备：分诊状态的 `state_id` 得到 422（`createState` 拒绝分诊，对抗性评审 M17）。
-- **交错**：3.5 的 25 种，照 M3 的写法（两个连接，用 `pg_locks` 等到对方阻塞再放行，确定性）；两种顺序都跑。取锁的形状（交错 21）照 M3 的 `TestEachWriteOnAProjectSharesItsWorkspaceFirst`（`bootstrap/project_write_locks_test.go:258`）改写：每个工作项的写等第一把锁时在工作区行上什么都不持，第一把锁是项目行的 N，之后不取与 `FOR NO KEY UPDATE` 冲突的工作区行的锁（外键的 `FOR KEY SHARE` 不算）；看不到项目的账户、看得到而不能写的账户的写不出现在 `pg_locks` 里，加关联指向一个看不到的项目时不锁它（预检，对抗性评审 M1）。M3 的那个测试改为只覆盖项目管理类的写。
-- **饥饿与连接池**（交错 20，S5、SP1 的回归，经真实的连接池和写闸门）：16 个连接首尾相连地写同一个工作区的几个项目的工作项，期间改工作区、改成员的角色在 1 秒之内完成；删除工作区等到的只是每个项目上正在进行和闸门放进来的写（每个项目至多 K 个）。另 200 个写同时打到一个项目，另一个项目上的读的耗时不超过一个上限（第二稿量到约 875 ms，上限在 P1 的 spec 按实测定）；闸门满时 503 `server_busy` 带 `Retry-After`；把 `issue.write_lock_timeout` 设小，等 N 超过它的写得到 503 而不是一直等（11.11）。
+- **交错**：3.5 的 25 种，照 M3 的写法（两个连接，用 `pg_locks` 等到对方阻塞再放行，确定性）；两种顺序都跑。取锁的形状（交错 21）照 M3 的 `TestEachWriteOnAProjectSharesItsWorkspaceFirst`（`bootstrap/project_write_locks_test.go:265`）改写：每个工作项的写等第一把锁时在工作区行上什么都不持，第一把锁是项目行的 N，之后不取与 `FOR NO KEY UPDATE` 冲突的工作区行的锁（外键的 `FOR KEY SHARE` 不算）；看不到项目的账户、看得到而不能写的账户的写不取行锁、不写，加关联指向一个看不到的项目时不锁它（预检，对抗性评审 M1）。M3 的那个测试改为只覆盖项目管理类的写。
+- **饥饿与连接池**（交错 20，S5、SP1 的回归，经真实的连接池和写闸门）：16 个连接首尾相连地写同一个工作区的几个项目的工作项，期间改工作区、改成员的角色在 1 秒之内完成；删除工作区等到的只是每个项目上正在进行和闸门放进来的写（每个项目至多 K 个）。另 200 个写同时打到一个项目，另一个项目上的读的耗时不超过一个上限（第二稿量到约 875 ms，上限在 P1b 的 spec 按实测定）；闸门满时 503 `server_busy` 带 `Retry-After`；把 `issue.write_lock_timeout` 设小，等 N 超过它的写得到 503 而不是一直等（11.11）。
 - **连带**：删除工作项连带子树和每一张子表（同一时刻、同一个删除者，按外键的图从 `issues` 传递地找表，评论的表情一类也在内）；删除状态在用 409；删除标签软删除 `issue_labels`；连带失败时发起者的写一起回滚。
 - **删除项目、工作区**（决策点 7，负责人裁定 A，P9；P1–P8 是同步的过渡写法，测同样的终态）：请求的事务只做 M3 的连带并经事件为每个删除的项目投递一个 `issue.delete_rows`（删除工作区另加没有项目的草稿一个；更早删除的项目不在其中），回滚时不留任务；任务把 `issue` 的 13 张表（含跨项目的关联和没有项目的草稿）的行软删除，`deleted_at`、`updated_by_id` 是删除它的那次请求的时刻和删除者，跨项目的关联行属于先删除的那一端；任务重做无害（谓词 `deleted_at IS NULL`），重试从每张表第一个未删除的 `id` 开始；预算用完时返回 `JobSnooze(0)`，River 的尝试次数不增加（把预算设小，看任务分几次运行做完、`attempt` 不变）；任务做完之前与之后，3.6 列出的每个读（按编号取、搜索、列表、个人主页、别的项目的关联、引用它的动态、草稿、游标）回答相同，每个写（加关联、发布草稿、删除关联、删除另一端的工作项）的结果相同；交错 24、25；任务在清理之后才执行时（项目行已物理删除）什么也不做。
-- **规模的目标**（决策点 7）：P1 在 2 万个工作项（每个 20 条动态）的项目和 5 个这样的项目的工作区上量删除的耗时（P1 是同步的过渡写法），记进 P1 的 spec。P9 是一条通过线：同样的工作区，每个任务在一次运行里做完（没有 snooze、没有重试），每个任务的耗时和期间同一工作区别的项目上的写的等待记进 P9 的 spec。
+- **规模的目标**（决策点 7）：P1b 在 2 万个工作项（每个 20 条动态）的项目和 5 个这样的项目的工作区上量删除的耗时（P1a 写下的同步的过渡写法，P1b 不改它），记进 P1b 的 spec。P9 是一条通过线：同样的工作区，每个任务在一次运行里做完（没有 snooze、没有重试），每个任务的耗时和期间同一工作区别的项目上的写的等待记进 P9 的 spec。
 - **访客规则的一致性**（3.4）：对 9.2 的每种身份（含"管理员·访客"），列表、个人主页、搜索的结果等于逐个判定 `issue.read` 加访客规则的结果；"只看自己"的访客看到的 `sub_issues_count` 只数他自己建的；他的动态列表里没有引用看不到的工作项（别人建的父工作项、看不到的项目里的关联对方）的行；被提及的、读不到这个工作项的访客没有关注它。
 - **动态引用的工作项**（3.13，对抗性评审 M8）：调用者在被引用的工作项的项目里是有效成员时显示，与那个工作项、项目是否已删除、已归档无关；已离开那个项目的不显示；被引用的工作项已物理清理时不显示。三种各一个测试。
 - **列表引擎**：每个排序码两个方向各一个翻页测试（数据里有同键、空值，翻完不重复、不遗漏、顺序与 `issue-order.json` 的比较相同）；每个分组码的第一页和每组的总数（多值的组、`none` 组、子分组的格、每个子分组的总数 `subgroup_totals` 不重复计算一个在两列里的工作项）；一组（一格）的"加载更多"带 `group_key`（`sub_group_key`）翻完不重复、不遗漏，`total` 等于组的 `total`，含"`label_id=A&group_by=label_id` 的组 C"和 `target_date` 的 `none` 组；分组的请求带 `cursor` 而不带 `group_key` 得到 422；每个筛选参数（含 `none`、`me`、`target_date=none`、`start_date=none`、可重复的日期、单日）；数组参数为空（不筛选）与为 `nil` 的仓储都得到全部行；空的一页的 `total`；一次读在一个只读的 `REPEATABLE READ` 事务里（在读目录与读行之间另一个连接建一个状态、把工作项移进去，这次的应答仍自洽：行和总数出自同一个快照）；篡改的游标（8.6）；1 万、10 万个工作项的耗时（S1 的回归，上限取 3.16 的实测加余量）；`assignee_name` 的排序对已离开的负责人有键。
@@ -1763,8 +1765,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - 个人主页的路由段收窄（`TProfileViews`）。
 
 ### 9.6 端到端
-- **fixture**：`e2e/fixtures/api.ts` 加工作项、子工作项、关联、链接、评论、表情、草稿的帮助函数（生成的客户端，PAT）；`assert/issue.ts`、`assert/history.ts` 按表的断言函数，页面版本和接口版本共用；`expectIssueDeleted`（3.6，沿外键图递归）；`workspaceTables` 改为从目录读出（M4 的表自动在内）；`db.ts` 加这些表的读取；`fixtures/clock.ts`（3.20：自己的数据库、自己的 nerve，偏移之后重新登录，只认偏移的 nerve 启动之后完成的任务）；本机的页面服务器（I10，`127.0.0.1`，`config.test.yaml` 放行）。
-- **`furnishIssueRows(api, token, projectId)`**（对抗性评审 I6，2 节）：给一个项目的每张工作项一侧的表造至少一行；P1 起每个加表的 Phase 扩充它，并在同一个 Phase 让 M3 的删除故事（P4、W2、W3）在删除之前调它，所以 `expectProjectDeleted`、`expectWorkspaceDeleted` 每一次都断言到新加的表。P9 起这两个断言对工作项一侧的表限时轮询（决策点 7）。M5、M6 加表时照样扩充它（13.2）。
+- **fixture**：`e2e/fixtures/` 下按资源分的文件加工作项、子工作项、关联、链接、评论、表情、草稿的帮助函数（生成的客户端，PAT；P1a 起有 `issues.ts`、`states.ts`，`furnish.ts` 放 `furnishIssueRows`、`furnishWorkspace`）；`assert/issue.ts`、`assert/history.ts` 按表的断言函数，页面版本和接口版本共用；`expectIssueDeleted`（3.6，沿外键图递归）；`workspaceTables` 从目录读出（`assert/catalog.ts`，P1a 起；M4 的表自动在内）；`db.ts` 加这些表的读取；`fixtures/clock.ts`（3.20：自己的数据库、自己的 nerve，偏移之后重新登录，只认偏移的 nerve 启动之后完成的任务）；本机的页面服务器（I10，`127.0.0.1`，`config.test.yaml` 放行）。
+- **`furnishIssueRows(api, token, projectId, assigneeId, labelId)`**（`e2e/fixtures/furnish.ts`；对抗性评审 I6，2 节）：给一个项目的每张工作项一侧的表造至少一行；P1a 起每个加表的 Phase 扩充它，并在同一个 Phase 让 M3 的删除故事（P4、W2、W3）在删除之前调它，所以 `expectProjectDeleted`、`expectWorkspaceDeleted` 每一次都断言到新加的表。P9 起这两个断言对工作项一侧的表限时轮询（决策点 7）。M5、M6 加表时照样扩充它（13.2）。
 - **故事**：第 2 节的 22 个；S1、S2 的更新（S2 在 P10b 起打开项目的列表，P14 起按身份打开一个工作项的详情：成员看到，"只看自己"的访客得到 404、公开项目里不是项目成员的工作区成员得到 403 的"没有权限"，都按请求放行、不留别的失败的请求）。每个故事的接口版本和页面版本在第 2 节标出的 Phase 加入，之后按"断言的增长"一列在后面的 Phase 扩充。
 - **会话切换**（I22，P14）：M3 的 W3 的写法（`route.fetch()` 先到达 nerve，换账户之后 `route.fulfill()`）；变异核对：去掉 `followInSession` 的核对，这个故事必须失败。
 - **后退的检查**（7.1）：开着弹窗、浮层后退到另一个项目、工作项或人，它们不再开着（P13、P14）。
@@ -1891,7 +1893,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 - **以后改的代价**：加一列（`parent_id`，`CASCADE`）、一个规则、页面；与 M4 的其余部分无关。
 
 ### 决策点 7：删除项目、工作区时工作项一侧的行何时删除；v0 的规模目标（对抗性评审 I1、M15）
-**负责人裁定（2026-10-17）：A，工作项一侧的行由后台任务删除；规模目标是一个项目至多约 2 万个未删除的工作项。** 落在 3.5、3.6、3.15、3.19、3.20、3.21、3.23（总体设计 5.5）、6.2、6.3、6.6、8.8、9.2、9.3（交错 24、25）、9.6、P1、P9。
+**负责人裁定（2026-10-17）：A，工作项一侧的行由后台任务删除；规模目标是一个项目至多约 2 万个未删除的工作项。** 落在 3.5、3.6、3.15、3.19、3.20、3.21、3.23（总体设计 5.5）、6.2、6.3、6.6、8.8、9.2、9.3（交错 24、25）、9.6、P1a、P1b、P9。
 
 **背景**：
 - 总体设计 5.5 写"连带删除在同一个事务里同步完成"，M3 的删除项目、删除工作区照此做。工作项一侧加进来之后，一个事务要软删除的行随工作项的数量线性增长：每个工作项平均约 33 行（动态、负责人、标签、关注、评论、描述的版本……）。
@@ -1900,14 +1902,14 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 | 选项 | 对用户 | 在目标的规模上 | 对代码 |
 |---|---|---|---|
-| **A 请求只做 M3 的连带，工作项一侧的行由后台任务分批软删除（建议）** | 删除立即返回；项目、工作区一删除，其中的工作项对每个读写都不存在（3.6），与删完之后没有可见的差别 | 请求是 M3 的几步（毫秒级），与工作项的数量无关。任务每个删除的项目一个（删除工作区另加没有项目的草稿一个），按 `id` 的键集每批 1000 行、一个短事务，不持项目、工作区的锁，不挡别的项目的写；SP4：每批约 3 ms，一个目标规模的项目在一次运行里做完（第三稿的语句没有键集，是平方的：一个项目的 40 万行动态 53.9 秒，改为键集 1.8 秒；一个五个项目的工作区约 9 次超时、2.4 小时的退避，聚焦复核 I2）；每次运行有 45 秒的预算，用完就重新排队，不算一次尝试 | `project.deleted`、`workspace.deleted` 两个事件，`issue` 的一个订阅者、一个任务种类和一组分批的语句（`delete_rows.go`，P1 已写，P1–P8 由同步的过渡写法调用）；改总体设计 5.5 的一句（3.23）。**代价**：这是第一个跨模块的异步效果；请求提交到任务做完之间有一个窗口，那些行仍是"活的"，正确性靠每个读写都经项目的门（3.6 逐条列出、9.3 逐条测试）；一条跨项目的关联行属于先删除的那一端，删除工作项和任务都要据 `ProjectGate.DeletedAt` 跳过属于别人的行（3.5，交错 24、25）；任务用尽重试时行留在窗口的样子，60 天之后随项目的物理清理消失；与清理的先后要写明（3.6）；e2e 的删除断言改为限时轮询 |
+| **A 请求只做 M3 的连带，工作项一侧的行由后台任务分批软删除（建议）** | 删除立即返回；项目、工作区一删除，其中的工作项对每个读写都不存在（3.6），与删完之后没有可见的差别 | 请求是 M3 的几步（毫秒级），与工作项的数量无关。任务每个删除的项目一个（删除工作区另加没有项目的草稿一个），按 `id` 的键集每批 1000 行、一个短事务，不持项目、工作区的锁，不挡别的项目的写；SP4：每批约 3 ms，一个目标规模的项目在一次运行里做完（第三稿的语句没有键集，是平方的：一个项目的 40 万行动态 53.9 秒，改为键集 1.8 秒；一个五个项目的工作区约 9 次超时、2.4 小时的退避，聚焦复核 I2）；每次运行有 45 秒的预算，用完就重新排队，不算一次尝试 | `project.deleted`、`workspace.deleted` 两个事件，`issue` 的一个订阅者、一个任务种类和一组分批的语句（`delete_rows.go`，P1a 已写，P1–P8 由同步的过渡写法调用）；改总体设计 5.5 的一句（3.23）。**代价**：这是第一个跨模块的异步效果；请求提交到任务做完之间有一个窗口，那些行仍是"活的"，正确性靠每个读写都经项目的门（3.6 逐条列出、9.3 逐条测试）；一条跨项目的关联行属于先删除的那一端，删除工作项和任务都要据 `ProjectGate.DeletedAt` 跳过属于别人的行（3.5，交错 24、25）；任务用尽重试时行留在窗口的样子，60 天之后随项目的物理清理消失；与清理的先后要写明（3.6）；e2e 的删除断言改为限时轮询 |
 | B 两个删除各有自己的长期限（几分钟），另写明规模的上限 | 删大的项目、工作区要等几十秒；HTTP 的客户端和反向代理（常见 60 秒）可能先超时，用户看到失败而删除在服务器上仍在进行 | 一个项目约 9 秒、五个项目的工作区约 37 秒，都在一个事务里；这段时间里工作区的每个项目的写都在等（闸门之下排满就 503）；规模超过上限的不保证删得掉 | 两个路由的期限的配置；README 写上限；不改 5.5 |
 | C 超过一个规模（例如 2,000 个工作项）的删除拒绝（409），大的经 CLI 删除 | 大的项目、工作区在页面上删不掉，要找有服务器权限的人 | 请求里的删除有界；CLI 不受请求的期限约束，但同样持锁几十秒 | 一次计数、一个 409 的码、一个 CLI 命令和它的组合 |
 
 - **在目标的规模上什么成立**：
   - **列表**（三个选项相同，S1）：1 万个工作项 2–100 ms；10 万时默认的一页 55–125 ms、按组 0.2–0.7 s、泳道 0.7–1.0 s；2 万在两者之间，页面可用。
   - **删除**（SP2、SP4）：只有 A 让请求的耗时与规模无关、不持锁几十秒，任务按键集每个项目几秒；B 能删完但要几分钟的期限和挡住整个工作区的写；C 在上限以下与 B 的小规模相同，以上的删不掉。
-  - 不论怎样裁定，P1 在目标的规模上量（一个 2 万个工作项的项目、一个五个这样的项目的工作区），请求的耗时和工作项一侧的软删除的耗时分开写进 P1 的 spec。选 A 时 P9 的量测是一条通过线：同样的工作区，每个任务都在一次运行里做完（没有 snooze、没有重试），每个任务的耗时和期间别的项目的写的延迟记进 spec。
+  - 不论怎样裁定，P1b 在目标的规模上量（一个 2 万个工作项的项目、一个五个这样的项目的工作区），请求的耗时和工作项一侧的软删除的耗时分开写进 P1b 的 spec。选 A 时 P9 的量测是一条通过线：同样的工作区，每个任务都在一次运行里做完（没有 snooze、没有重试），每个任务的耗时和期间别的项目的写的延迟记进 spec。
 - **理由**：同步的做法在 v0 自己的规模目标上删不掉一个工作区，B、C 都是把这一点变成用户或运维要承担的限制。A 的窗口对用户不可见：项目的门本来就把已删除的项目当作不存在，A 只是让工作项一侧的行晚一些写下同一个时刻。A 的代价（异步、窗口、失败时的兜底）都写明、都有测试。
 - **删除工作区的取锁**：选 A 时仍先锁住它的每个项目、再读时刻（决策点 1 的 B，3.5 重新推过）：任务写的是请求的时刻，一个在那之后提交的工作项的写若不被挡住，就会让它的行的时刻倒退。这一步现在只挡请求里 M3 的几步，代价很小。
 - **以后改的代价**：A → B 删掉订阅者和任务，把 `delete_rows.go` 的语句放回请求的事务（P1–P8 的过渡写法就是这样）；B → A 是反过来。改规模目标只改 3.16 的数字和测量的数据，不改 A 的做法。
@@ -2018,51 +2020,73 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 
 **约束**：
 1. **每个故事的前置数据在它加入时都能经接口准备**（总体设计 8.2），不写 SQL。权限矩阵是 Go 测试，用仓储准备数据，每个 Phase 都能加它的行（9.2）；经接口准备不了的格子放进 Go 的集成测试（分诊状态的 `state_id`：`createState` 拒绝分诊，对抗性评审 M17）。访客建的工作项经接口准备：成员建，再经 `updateProjectMember` 把他降为访客（2 节）。
-2. **每段约 16 个任务以内，plan 不超过约 1,500 行**。M3 有四段在实施前超出上限、各拆成两段（M3 设计第 12 节约束 2）。M4 按任务数分好；任务比 M3 的大（7.10：每个前端任务约 287 行生产代码、223 行测试）。第三稿把 P10 预先拆成 P10a、P10b（对抗性评审 I7）。**预先批准**（决策点 2）：某段的架构子任务按已合并的 Phase 的 plan 实测估出超过上限时，控制者直接拆成 P<k>a、P<k>b 继续，不停下来请示，拆法和理由记进第 15、16 节。
-3. **评审敏感的内容不在同一段**：加锁约定和连带（P1 起步：项目 N、预检、写闸门、删除工作区的新顺序；P3 延伸：约定七、关联行的例外）；权限的扩展（P2；起止日期和 `bodyshape` 的生成器也在这一段，与锁分开）；HTML 的清洗（P4）；列表引擎的 SQL（P5）；事件和 River（P6）；抓取和出站（P7；`link_count` 改列表的 SQL，放在 P8）；后台的批量删除（P9：物理清理、描述版本的保留、删除项目和工作区之后工作项一侧的任务放在一段，一起证明它们与请求的写、与彼此不相遇；对抗性评审 M21）。
+2. **每段约 16 个任务以内，plan 不超过约 1,500 行**。M3 有四段在实施前超出上限、各拆成两段（M3 设计第 12 节约束 2）。M4 按任务数分好；任务比 M3 的大（7.10：每个前端任务约 287 行生产代码、223 行测试）。第三稿把 P10 预先拆成 P10a、P10b（对抗性评审 I7）。P1（16 个任务）在实施前按 M3 已合并的 plan 实测估出约 22–25 个任务、约 23,000–26,000 行，两个上限都超出，由控制者按下面的预先批准裁定（2026-10-17）拆成 P1a、P1b，并预先批准 P1a 仍超出时的退路（见 P1a 一节）。**预先批准**（决策点 2）：某段的架构子任务按已合并的 Phase 的 plan 实测估出超过上限时，控制者直接拆成 P<k>a、P<k>b 继续，不停下来请示，拆法和理由记进第 15、16 节。
+3. **评审敏感的内容不在同一段**：加锁约定和连带（P1a 起步：项目 N、预检、删除工作区的新顺序；P1b：写闸门、连接池；P3 延伸：约定七、关联行的例外）；权限的扩展（P2；起止日期和 `bodyshape` 的生成器也在这一段，与锁分开）；HTML 的清洗（P4）；列表引擎的 SQL（P5）；事件和 River（P6）；抓取和出站（P7；`link_count` 改列表的 SQL，放在 P8）；后台的批量删除（P9：物理清理、描述版本的保留、删除项目和工作区之后工作项一侧的任务放在一段，一起证明它们与请求的写、与彼此不相遇；对抗性评审 M21）。
 4. **新的错误码随它的文案进来**：声明新错误码的任务，在同一个任务里把它加进 `PROBLEM_MESSAGES`（`web/apps/web/core/lib/error-messages.ts`）和 `en`、`zh-CN` 两份 `errors.json`，并运行 `make test-web`（M3 设计第 12 节约束 4）。
-5. **字段随它的数据进入接口**（M2 设计 3.2 的规则 3 在 M4 之内同样适用）：`start_date`、`target_date` 在 P2，与 `bodyshape` 的 `date` 检查器一起（P1 的迁移已建这两列）；`description_html`、`skip_activity` 在 P4，与清洗、提及、描述的版本一起（3.7）；`sub_issues_count` 在 P3（父子）；`link_count` 和它的两个排序码在 P8（链接的表 P7 已有；它改的是列表的 SQL，不与抓取同段）。之前的 Phase 不定义它们。
+5. **字段随它的数据进入接口**（M2 设计 3.2 的规则 3 在 M4 之内同样适用）：`start_date`、`target_date` 在 P2，与 `bodyshape` 的 `date` 检查器一起（P1a 的迁移已建这两列）；`description_html`、`skip_activity` 在 P4，与清洗、提及、描述的版本一起（3.7）；`sub_issues_count` 在 P3（父子）；`link_count` 和它的两个排序码在 P8（链接的表 P7 已有；它改的是列表的 SQL，不与抓取同段）。之前的 Phase 不定义它们。
 6. **每个 Phase 开始的提交**把 `tools/keywords.json` 的 `phase` 改为 `M4/P<k>`，同一个提交改这时到期的例外的 `until`（取删除它的 Phase 的下一个，7.9）。
 7. **故事随 Phase 长大**（第 2 节"断言的增长"一列）：一个故事在它的核心断言都已存在的第一个 Phase 加入；之后的 Phase 在它的端到端任务里扩充同一个故事的断言和前置数据。每段的完成线只写那时已有的断言。
-8. **每个给工作项加表的 Phase**（P1、P3、P4、P7 加工作项的子表，P8 加草稿）同时延伸：`deleteIssue` 自己的连带（P2 起；草稿除外）；删除项目、工作区的语句（`issue/adapter/postgres/delete_rows.go`：P1–P8 由 `IssueCascade` 的过渡方法在请求的事务里调用，P9 起由任务分批调用）；e2e 的 `furnishIssueRows`，并让 M3 的删除故事（P4、W2、W3）在删除之前调它（对抗性评审 I6）。`expectIssueDeleted`（沿外键图）、`expectProjectDeleted`、`expectWorkspaceDeleted`（`workspaceTables` 从目录读出）自动断言到新表。
+8. **每个给工作项加表的 Phase**（P1a、P3、P4、P7 加工作项的子表，P8 加草稿）同时延伸：`deleteIssue` 自己的连带（P2 起；草稿除外）；删除项目、工作区的语句（`issue/adapter/postgres/delete_rows.go`：P1–P8 由 `IssueCascade` 的过渡方法在请求的事务里调用，P9 起由任务分批调用）；e2e 的 `furnishIssueRows`，并让 M3 的删除故事（P4、W2、W3）在删除之前调它（对抗性评审 I6）。`expectIssueDeleted`（沿外键图）、`expectProjectDeleted`、`expectWorkspaceDeleted`（`workspaceTables` 从目录读出）自动断言到新表。
 
 **顺序**：
-- **后端九段，前端八段（P10 预先拆成 P10a、P10b），然后收尾**（先后端、后前端，M2、M3 的做法：前端对接真实的接口）。设计简报估计后端七到八段；P6（事件和 River）与 P7（抓取和出站）各是评审敏感的内容，分成两段，所以是九段。
-- **P1 工作项**让"工作项的写只锁项目行"、锁之前的预检（凡拒绝的都在锁之前回答）、写闸门和删除工作区的新顺序第一次落地，带上建、取、改三个操作（不含描述、日期）和它们的动态、关注，I1、I2 的接口版本先有这些断言。连带（删除项目、工作区、状态、标签）随表加入；删除项目、工作区在 P1–P8 是同步的过渡写法：M3 的删除故事从 P1 起就要工作项一侧的行被删除，而决策点 7 的任务要 P6 的事件和只投递的客户端，P9 改为任务。P1 在规模目标上量删除（决策点 7）。
-- **P2 权限与日期**：访客规则、创建者、按编号取、删除、归档，它要 P1 的读写才有东西可以挡；起止日期和 `bodyshape` 的 `date`（约束 5）。
+- **后端十段，前端八段（P10 预先拆成 P10a、P10b），然后收尾**（先后端、后前端，M2、M3 的做法：前端对接真实的接口）。设计简报估计后端七到八段；P6（事件和 River）与 P7（抓取和出站）各是评审敏感的内容，分成两段，所以定稿时是九段；P1 在实施前拆成 P1a、P1b（约束 2），现在是十段。
+- **P1a 工作项的表与创建**让"工作项的写只锁项目行"、锁之前的预检（凡拒绝的都在锁之前回答）和删除工作区的新顺序第一次落地，带上创建和它的动态、关注，I1 的接口版本先有这些断言。连带（删除项目、工作区、状态、标签）随表加入；删除项目、工作区在 P1–P8 是同步的过渡写法：M3 的删除故事从 P1a 起就要工作项一侧的行被删除，而决策点 7 的任务要 P6 的事件和只投递的客户端，P9 改为任务。
+- **P1b 取、改与写闸门**：取、改两个操作（不含描述、日期）和它们的动态，I2 的接口版本；写闸门和 `lock_timeout` 的兜底（插在 P1a 的预检和事务之间）；连接池的交错 20；在规模目标上量 P1a 的删除（决策点 7）。
+- **P2 权限与日期**：访客规则、创建者、按编号取、删除、归档，它要 P1a、P1b 的读写才有东西可以挡；起止日期和 `bodyshape` 的 `date`（约束 5）。
 - **P3 父子与关联**：父子不成环、子树的删除、跨项目的关联（约定七）。
 - **P4 协作**：描述和它的清洗、提及、版本（I1、I2 的断言在这里补全），评论、表情、动态的列表；第二个分页的列表（评论）在这里，页大小移到 `shared`（M3 交接第 9 节）。
 - **P5 列表**：引擎要的过滤（访客规则、已归档）、排序键（子工作项数在 P3 之后有了）都已就位；显示设置的三列随它；连接的参数（3.16）。
 - **P6 事件与任务**：给 P1–P4 的写加上发布点；只投递的客户端；自动归档是 River 的第一个业务定时任务；测试的时钟。
 - **P7 链接**：第一个订阅者和第一个事务内投递的任务，出站的客户端。
-- **P8 草稿与搜索**：发布复用 P1 的创建核心；搜索要 P5 的可读集合和 P3 的父子（选择器的排除）；`link_count` 进入列表。
+- **P8 草稿与搜索**：发布复用 P1a 的创建核心；搜索要 P5 的可读集合和 P3 的父子（选择器的排除）；`link_count` 进入列表。
 - **P9 后台的批量删除**：60 天的清理、描述版本的保留、删除项目和工作区的任务。全部表都已在，事件和任务（P6）已在。
 - **P10a、P10b、P11 数据层**（换型和删除 M6、M7 的工作项列表、列表一侧、详情一侧）先于全部页面（3.1）：页面的故事加入时挂载路径上已经没有旧接口。
 - **P12–P15 页面**，P16 清理（死成员、`no-shadow`、守卫的终态）。
 
-**规模**：241 个任务（后端 121、前端 106、收尾 14）。M3 的设计是 148 个、实施时因拆分成为 171 个加 16 个的收尾；M4 的前端 106 个任务，约是 M3 前端实际（55 个）的 1.9 倍（7.10），后端的操作少一些（37 对 45），但列表引擎、事件、任务、清理是 M3 没有的。第二稿比第一稿多两个后端任务（描述、清洗移到 P4）。第三稿比第二稿多 12 个：P2 加上日期（+2）；版本的保留从 P6 移到 P9（P6 −1）；P8 加上 `link_count`（+1）；P9 加上版本的保留、两个删除的事件、删除的任务、窗口的测试和 e2e 的轮询（+4）；P10 预先拆成两段，加上删除 M6、M7 的列表和"先收窄、后换型"（+7）；I20 的页面从 P13 移到 P14（P13 −1）。P1 的写闸门和规模的测量占了移出的日期的位置。
+**规模**：252 个任务（后端 132、前端 106、收尾 14）。M3 的设计是 148 个、实施时因拆分成为 171 个加 16 个的收尾；M4 的前端 106 个任务，约是 M3 前端实际（55 个）的 1.9 倍（7.10），后端的操作少一些（37 对 45），但列表引擎、事件、任务、清理是 M3 没有的。第二稿比第一稿多两个后端任务（描述、清洗移到 P4）。第三稿比第二稿多 12 个：P2 加上日期（+2）；版本的保留从 P6 移到 P9（P6 −1）；P8 加上 `link_count`（+1）；P9 加上版本的保留、两个删除的事件、删除的任务、窗口的测试和 e2e 的轮询（+4）；P10 预先拆成两段，加上删除 M6、M7 的列表和"先收窄、后换型"（+7）；I20 的页面从 P13 移到 P14（P13 −1）。P1 的写闸门和规模的测量占了移出的日期的位置。定稿时是 241 个（后端 121），P1 一段 16 个；P1 拆成 P1a（15 个）、P1b（12 个）之后后端多 11 个（约束 2）。
 
-### P1 `issues`：工作项的建、取、改与项目行的锁（后端，16 个任务）
-- **目标**：任何调用方都能建、取、改工作项（描述在 P4、起止日期在 P2），带默认值、编号、动态、关注；工作项的写只锁项目行，凡会被拒绝的在锁之前回答，一个热的项目不占满连接池；删除项目、工作区、状态、标签连带工作项的表。
+### P1a `issues`：工作项的表、项目行的锁、创建与连带（后端，15 个任务）
+- **拆分**（P1a、P1b 共用）：设计定稿时这里是一段 P1 `issues`（16 个任务）。实施之前，P1 的架构子任务按 M3 已合并的 plan 实测的每个任务的行数（P4a、P4b、P7a、P7b 的同类任务）和每行手写代码在 plan 中占的行数（P4a 1.41、P4b 1.47、P7a 1.62、P7b 1.72）逐个估出约 22–25 个任务、约 23,000–26,000 行，草稿的第 1 个（与第 5 个分不开）、第 9、11、13、15 个各超过约 1,500 行，两个上限都超出；由控制者按决策点 2 的预先批准裁定（2026-10-17）拆成 P1a、P1b，依次合并：P1a → P1b，每段合并之后下一段才开始（约束 2、约束 3 和"顺序"）。边界由代码的耦合定下：新表一建出，按目录的删除测试要每张表有一行准备的数据和它的连带（"seed a row under the deleted project"），M3 的删除故事（P4、W2、W3）要经接口造出的行（`furnishIssueRows`，要 `createIssue`）；第一个工作项的操作要它的矩阵行和取锁形状的测试（`TestEachWriteOnAProjectSharesItsWorkspaceFirst` 按契约列出每个带 `{project_id}` 的写，要收窄）；删除工作区的新顺序要与同步的连带一起到来（不然持项目 N 的创建在删除读了时刻之后提交，连带写下的 `deleted_at` 早于它的 `created_at`）。所以表、项目行的锁和预检、创建、连带、删除工作区的新顺序在 P1a；取、改、写闸门和连接池在 P1b（写闸门插在预检和事务之间，P1a 的测试都不要它）。两段的任务列表同样是 plan 的草稿：两段的架构子任务可以在约 16 个任务、每个任务约 1,500 行以内重新切分，不再停下来请示。**预先批准的退路**（M3 的 P5a 的 A′ 的写法）：P1a 的原型仍超出约 16 个任务，或某个任务超过约 1,500 行而重新切分解决不了时，第 11、13 个任务（`StateInUse`、`DetachLabel` 和交错 6、7 的创建一支，连同 M3 交接第 4 节中删除状态、标签的去向的关闭）移到 P1b，仍不够时 I1 的故事文件也移过去，不再停下来请示，记进 P1a 的 spec 第 3 节和第 15 节。规模目标上的删除的测量在 P1b（它量 P1a 的代码，P1b 不改它；只为两段的大小，退路移出足够多时可以留在 P1a，记进 spec）。关键词守卫的 `phase` 只认 `M<n>/P<k>`（`tools/keywords.mjs:23`），两段都写 `M4/P1`（约束 6）。每个加操作的任务同时加它的操作名、规则行、矩阵行和取锁形状的测试中的一行，声明新码的任务同时加前端文案（约束 4）：完整性核对要求契约的每个操作从它出现起就有这些。
+- **目标**：任何调用方都能建工作项（描述在 P4、起止日期在 P2），带默认值、编号、排序值、完成时间、关注和动态；工作项的写只锁项目行，凡会被拒绝的在锁之前回答；删除项目、工作区、状态、标签连带工作项的表；删除工作区先锁它的项目、再读时刻。
+- **评审重点**（约束 3）：取锁的一步（读 → 预检 → 项目 N → 重读 → 判定），预检拒绝的写不取任何锁，锁下的判定仍是最终的（交错 4、5 的创建一支）；删除工作区的新顺序与 M3 设计 3.6 的取锁表中的每个写没有新的等待环；新表进入两个连带，同一时刻、同一个删除者，按目录的删除测试不开豁免；每个新的批量写按约定五核对，没有新的增长。
 - **任务**：
-  1. 本 Phase 的第一个提交：`phase` 改为 `M4/P1`，`/user-properties/` 两个例外的 `until` 改为 `M4/P11`（7.9）；迁移 `00015`–`00019`（`issues` 已带以后才进接口的列，取默认值），`sqlc.yaml` 的 `issue` 条目，grants。
-  2. `issue/domain` 的字段规则（描述、日期以外）和动态的行（3.13 的第 1–3、6–7、10–13 行）。
-  3. `project.Provide` 的 `ProjectGate`、`Sequences`、`StateCatalog`、`LabelCatalog`、`ProjectMembers` 和它们的集成测试。
-  4. 组合：`issue.Provide`、`issue.New`，`project.New` 收 `IssueCascade`，命令行的组合为 `project.NewCascade` 传 `issue.Provide` 的 `IssueCascade`（6.6）；`issue/domain/actions.go`，规则表加 `issue.create`、`issue.read`、`issue.update`（本 Phase 只有管理员、成员；访客在 P2），完整性测试。
-  5. 删除项目、工作区的语句和编排（`adapter/postgres/delete_rows.go`、`app/delete_project_rows.go`，这五张表）和 `IssueCascade` 的过渡方法 `DeleteProjectIssues`、`DeleteWorkspaceIssues`（在请求的事务里调这些语句），接进 `project` 的删除步骤（目录测试不为新表开豁免）。
-  6. 删除工作区的新顺序：`ProjectCascade.LockWorkspaceProjects`，读时刻移到两步锁之后（3.5）；交错 3。
-  7. 取锁的一步和不加锁的预检（`issue/app/lock.go`，3.5）：读 → 预检（凡拒绝的 404、403 在这里答）→ 项目 N → 重读 → 判定；看不到项目、不能写的账户不取锁的测试。
-  8. 写闸门（11.11）：`platform/gate` 和它的单元测试、`WriteGate` 端口、`bootstrap/gate.go`、四个配置；`platform/postgres` 的 `TxManager` 选项 `LockTimeout` 和 `LockNotAvailable`，`bootstrap/gate.go` 把 `55P03` 换成 503 `server_busy`；工作项一侧的写在契约里声明 `server_busy`。
-  9. `createIssue`（默认状态、默认负责人、编号、排序值、完成时间、关注、动态）；契约里 `Project.identifier`、`default_assignee_id`、`State.default` 的说明改成它们的作用（5.1，M3 交接第 4 节）。
-  10. `getIssue`（响应的重读：完整的数组）。
-  11. `updateIssue`（负责人和标签的差集、完成时间）。
-  12. `project` 的 `deleteState` 加 `StateInUse`（409 `project.state_in_use`，文案）、`deleteLabel` 加 `DetachLabel`。
-  13. 交错 1、2、4、5、6、7、8、22；分诊状态 422 的集成测试（经仓储准备）。
-  14. 取锁的形状（交错 21，含预检不取锁）、饥饿与连接池（交错 20，经真实的连接池和闸门），作为 S5、SP1 的回归；M3 的 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 收窄到项目管理类的写。
-  15. 矩阵：本 Phase 的行；整程序测试覆盖新操作；在规模目标上量删除（2 万个工作项的项目、五个这样的项目的工作区，决策点 7）；端到端：`api.ts` 的工作项帮助函数、`assert/issue.ts`、`furnishIssueRows`（五张表）和 M3 的 P4、W2、W3 调它、`workspaceTables` 从目录读出；I1、I2 的接口版本（本 Phase 的断言）。
-  16. 3.23、8.8 中 P1 的行；review。
-- **关闭**（13.1）：M1-P2 交接的接口字段一项（没有 `estimate_point`、`description_binary`、`/issue-dates/`）；M1-P3 交接的接口字段一项（没有 `is_epic`、`type_id`，没有批量的接口）；M2 交接第 3 节的一部分（P1 的用例用时钟写 `updated_at`）；M3 交接第 2 节（方案的选择和代价、批量写逐个按约定五核对、没有新的增长）、第 4 节（删除状态、标签的去向，默认负责人的契约，`identifier`、`default_assignee_id`、`State.default` 的说明，`workspaceTables`）。
-- **完成线**：I1 的接口版本（工作项的行、编号、默认状态和默认负责人、负责人、标签、关注、创建和负责人的动态、各种拒绝）和 I2 的接口版本（标题、状态、优先级、负责人、标签的修改和动态、`completed_at`、`updated_at`）通过；M3 的 P4、W2、W3 带着工作项一侧的行通过；交错 1–8、20–22 通过；看不到项目、不能写的写不取锁，闸门满时 503；本 Phase 的矩阵格子通过；规模目标上的删除耗时写进 spec。
+  1. 本 Phase 的第一个提交：`phase` 改为 `M4/P1`，`/user-properties/` 的一条例外（命中两处）的 `until` 改为 `M4/P11`（7.9）；迁移 `00015`–`00019` 和它们的约束、索引名；`sqlc.yaml` 的 `issue` 条目，grants；`issue` 模块的骨架（`Provide` 交出 `IssueCascade`；`actions.go` 的 `issue.create` 和它的规则行）；删除项目、工作区的语句（`adapter/postgres/delete_rows.go`，按 `id` 的键集）和编排（`app/delete_project_rows.go`），`IssueCascade` 的过渡方法 `DeleteProjectIssues`、`DeleteWorkspaceIssues`（在请求的事务里调这些语句），接进 `project` 的删除步骤和命令行的组合；按目录的删除测试给五张表准备行（不开豁免）；端到端的过渡（`expectProjectDeleted` 暂不读这五张表，到第 14 个任务结束）。
+  2. 键集的存储测试（分批、`after`、时刻和删除者、别的项目不变）；CHECK 的反例；部分唯一和全表唯一的键。
+  3. `issue/domain` 创建一侧的规则（标题、优先级、负责人和标签的集合、排序值、完成时间、默认负责人）和动态的第 1、2 行（3.13）；本模块的错误码。
+  4. `project.Provide` 的 `ProjectGate`（`Find`、`Lock`）、`Sequences`、`StateCatalog`、`LabelCatalog`、`ProjectMembers` 和它们的集成测试。
+  5. 取锁的一步和不加锁的预检（`issue/app/lock.go`，3.5）：读 → 预检（凡拒绝的 404、403 在这里答）→ 项目 N → 重读 → 判定；用例测试。
+  6. 创建的存储：插入工作项、负责人、标签、关注、动态，同一状态的最大排序值，详情的重读（完整的数组）；存储测试和失败测试。
+  7. `createIssue` 的用例（默认状态、默认负责人、编号、排序值、完成时间、关注、动态，锁下读时钟）。
+  8. `createIssue` 的接口：`issue.yaml`（`Issue`、`IssueDetail`、`IssueCreate`）、HTTP、`issue.New`、`bootstrap/ports.go` 的转换、矩阵的行；M3 的 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 收窄到项目管理类的写；契约里 `Project.identifier`、`default_assignee_id`、`State.default` 的说明改成它们的作用（5.1，M3 交接第 4 节）。
+  9. 取锁的形状（交错 21）：每个工作项的写第一把锁是项目的 N，工作区行上只有外键的 `FOR KEY SHARE`；看不到项目、看得到而不能写的账户（公开项目里不是成员的工作区成员、不是项目成员的工作区管理员）的写不取行锁、不写；盖戳和事务的连接的行。
+  10. 删除工作区的新顺序：`ProjectCascade.LockWorkspaceProjects`，读时刻移到两步锁之后（3.5）；交错 3（以创建为持项目 N 的写，两种顺序）；M3 的交错照旧通过。
+  11. `project` 的 `deleteState` 加 `StateInUse`（409 `project.state_in_use`，文案）、`deleteLabel` 加 `DetachLabel`。
+  12. 交错 1、2、8、22；交错 4、5 的创建一支（移出、降级先提交时锁下的判定为准）；分诊状态 422 的集成测试（经仓储准备）。
+  13. 交错 6、7 的创建一支。
+  14. 端到端：`e2e/fixtures/issues.ts` 的建工作项、`assert/issue.ts`、`furnish.ts` 的 `furnishIssueRows`（五张表）和 M3 的 P4、W2、W3 调它，`workspaceTables` 从目录读出，过渡结束；I1 的接口版本（本 Phase 的断言）。
+  15. 3.23 中 P1a 的行；review。
+- **关闭**（13.1）：M1-P2 交接的接口字段一项（没有 `estimate_point`、`description_binary`、`/issue-dates/`）；M1-P3 交接的接口字段一项（没有 `is_epic`、`type_id`，没有批量的接口）；M3 交接第 2 节的预检一项（凡拒绝的写不取锁）；M3 交接第 4 节（删除状态、标签的去向，默认负责人的契约，`identifier`、`default_assignee_id`、`State.default` 的说明，`workspaceTables`、`furnishIssueRows`）。
+- **完成线**：I1 的接口版本（工作项的行、编号、默认状态和默认负责人、负责人、标签、关注、创建和负责人的动态、各种拒绝）通过；M3 的 P4、W2、W3 带着工作项一侧的行通过，没有留下端到端的过渡；交错 1、2、3、8、21、22 和交错 4–7 的创建一支 `-count=5 -race` 通过，没有 40P01；看不到项目、不能写的写不取锁；本 Phase 的矩阵格子通过；删除在用的状态 409，删除标签从工作项上摘下。
+
+### P1b `issue-update`：工作项的取、改与写闸门（后端，12 个任务）
+- **拆分**：见 P1a 的同一条；P1b 在 P1a 合并之后开始。
+- **目标**：任何调用方都能取、改工作项（描述在 P4、起止日期在 P2）；一个热的项目不占满连接池：取连接之前进入按项目的写闸门，`lock_timeout` 兜底，满时 503。
+- **评审重点**（约束 3）：写闸门（取连接之前进入，不持连接地等，从不在持数据库的锁时再等别的闸门；每个项目至多 K 个、`max_wait`、`max_queue`、请求的期限，503 `server_busy` 带 `Retry-After: 1`）；`55P03` 换成 503 只在 `bootstrap/gate.go` 一处；修改的批量写（负责人、标签的差集）按约定五核对；预检与锁下的判定（交错 4、5 的修改一支）。
+- **任务**：
+  1. `issue/domain` 修改一侧的规则（补丁、负责人和标签的差集、完成时间的转换）和动态的第 3、6、7、10–13 行（3.13）。
+  2. 修改的存储（补丁；负责人、标签按差集增删，按 `id` 的顺序；关注）和测试。
+  3. `getIssue`（用例、契约、HTTP、矩阵的行；响应的重读：完整的数组）。
+  4. `updateIssue` 的用例。
+  5. `updateIssue` 的接口（`IssueUpdate`、HTTP、矩阵的行、取锁形状和盖戳的行）。
+  6. `platform/gate`（`Keyed[K]`）和它的单元测试（表、`-race`）。
+  7. 写闸门接入：`lock.go` 的 `WriteGate` 端口、`bootstrap/gate.go`、四个配置；`platform/postgres` 的 `TxManager` 选项 `LockTimeout` 和 `LockNotAvailable`，`bootstrap/gate.go` 把 `55P03` 换成 503 `server_busy`；工作项一侧的写在契约里声明 `server_busy`。
+  8. 交错 3、4、5、6、7 的修改一支。
+  9. 饥饿与连接池（交错 20，经真实的连接池和闸门）：一串首尾相连的工作项写不让工作区一级的写等到期限（S5 的回归），200 个写压在同一个项目上时另一个项目上无关的读的耗时不超过上限（SP1 的回归），闸门满时 503 带 `Retry-After`，`lock_timeout` 的兜底。
+  10. 在规模目标上量删除（2 万个工作项的项目、五个这样的项目的工作区，P1a 的同步连带，决策点 7），请求的耗时和工作项一侧的软删除的耗时分开记进 spec。
+  11. 端到端：I2 的接口版本（本 Phase 的断言）。
+  12. 3.23、8.8 中 P1b 的行；review。
+- **关闭**（13.1）：M2 交接第 3 节的一部分（P1 的用例用时钟写 `updated_at`：创建在 P1a，修改在这里）；M3 交接第 2 节（方案的选择和代价，批量写逐个按约定五核对，没有新的增长，连接池的代价和写闸门；预检一项在 P1a）。
+- **完成线**：I2 的接口版本（标题、状态、优先级、负责人、标签的修改和动态、`completed_at`、`updated_at`）通过；`getIssue`、`updateIssue` 的矩阵格子通过；交错 3–7 的修改一支和交错 20 通过；闸门满时 503 带 `Retry-After: 1`，`lock_timeout` 到时 503；规模目标上的删除耗时写进 spec。
 
 ### P2 `issue-access`：访客规则、创建者、删除、按编号取、归档、起止日期（后端，14 个任务）
 - **目标**：访客只看自己的工作项、创建者的权限、删除、按编号取、归档和恢复；已归档的工作项只读；起止日期进入接口。
@@ -2070,13 +2094,13 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   1. `shared` 的 `Target.CreatorID`、`Grant.OwnOnly`（按项目的角色：工作区管理员在项目里只是访客时同样为真）；`access` 读 `guest_view_all_features`、`AllowCreator` 的判定；判定表测试（3.4）。
   2. 规则表：`issue.read` 加访客；`issue.delete`（管理员 + `AllowCreator`）；`issue.archive`；契约里 `Project.guest_view_all_features` 的说明。
   3. `lock.go`：预检和锁下的判定都加上访客规则（404 优先），`getIssue`、`updateIssue` 改走它。
-  4. `deleteIssue` 和它自己的连带（P1 的四张子表；子树在 P3）；`expectIssueDeleted` 沿外键图递归（对抗性评审 M16）。
+  4. `deleteIssue` 和它自己的连带（P1a 的四张子表；子树在 P3）；`expectIssueDeleted` 沿外键图递归（对抗性评审 M16）。
   5. `getIssueByIdentifier`（解析、`foldIdentifier` 和 `identifier-fold.json`、各种 404）。
   6. `archiveIssue`、`unarchiveIssue`（409 `issue.not_archivable` 和文案；动态第 14、16 行）。
   7. 已归档只读：`updateIssue` 的 409 `issue.archived`（文案）；工作项的写在已归档的项目里 409 `project.archived`。
   8. `shared/date.go`；`bodyshape` 和生成器：`format: date`（`shared.Date`）、路径按下标排序、开放节点的数的范围、代价测试加字符串的数组；`oapi-codegen` 的类型映射（M2 交接第 4 节）。
   9. 起止日期进入接口：`IssueCreate`、`IssueUpdate`、`Issue` 加 `start_date`、`target_date`；合并之后的日期 422；动态第 8、9 行。
-  10. 交错 12；交错 5 加上访客规则下 404 的一支（P1 时访客一律 403）。
+  10. 交错 12；交错 5 加上访客规则下 404 的一支（P1a、P1b 时访客一律 403）。
   11. 矩阵：访客的三列、"管理员·访客"一列、创建者的两行。
   12. 整程序测试（含日期的格式）；`apitest` 两个方向。
   13. 端到端：I15 的接口版本（本 Phase 的断言）；I1、I2 加上起止日期和合并之后的日期 422；I2 加上已归档 409。访客取别人的工作项的 404 在本 Phase 只由矩阵（Go）核对，端到端的那一格随 I20 的接口版本在 P5（聚焦复核 M5）。
@@ -2397,11 +2421,11 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | 交接与节 | 落在哪里 | 关闭条件（在哪个 Phase 满足） |
 |---|---|---|
 | M0-P4 `pg_trgm` 的索引 | 3.18、4.1（`00029`）、8.8 | 迁移建出扩展和 `issues.name` 的 GIN 索引，在持续集成的 Postgres 18 镜像上运行；S2 的余下部分（迁移角色建扩展、生成的类型）写进 spec（P8）。部署要求（迁移账户不需要超级用户）不在 M4 关闭：原样写进 M8 的交接，另加 `LC_CTYPE` 的要求（3.18；13.2，收尾） |
-| M1-P2 不再使用的字段和接口 | 4.2、5.1、5.2、3.18 | 接口没有 `estimate_point`、`description_binary`、`/issue-dates/`（P1）；搜索结果只有工作项，没有 `page`（P8） |
+| M1-P2 不再使用的字段和接口 | 4.2、5.1、5.2、3.18 | 接口没有 `estimate_point`、`description_binary`、`/issue-dates/`（P1a）；搜索结果只有工作项，没有 `page`（P8） |
 | M1-P2 只补 id 的迁移更新 | 3.7、7.6 | `skip_activity` 为真、内容标识（纯文本、提及、链接的地址、勾选框的状态）不变时不记动态、不写版本、不改 `updated_at`，有测试，S3 的样例含经接口写入的 HTML（P4）；页面发布尔值（P14）；I2 的一步 |
 | M1-P2 描述保存的"撤销再重做" | 7.6 | `description-input/root.tsx` 的保存在撤销、重做之后发出编辑器里显示的内容，vitest 覆盖（P14） |
-| M1-P3 不再读、不再写的字段 | 4.2、4.7、4.11、5.2 | 接口没有 `is_epic`、`type_id`（P1），评论没有 `access`、动态的字段名里没有 `WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`（3.13 的表，P4） |
-| M1-P3 地址 | 5.1 | 按编号取是 `/workspaces/{slug}/issues/{identifier}`（P2），描述历史是 `/issues/{issue_id}/description-versions`（P4），与其余工作项地址统一；没有批量删除、批量归档（P1） |
+| M1-P3 不再读、不再写的字段 | 4.2、4.7、4.11、5.2 | 接口没有 `is_epic`、`type_id`（P1a），评论没有 `access`、动态的字段名里没有 `WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`（3.13 的表，P4） |
+| M1-P3 地址 | 5.1 | 按编号取是 `/workspaces/{slug}/issues/{identifier}`（P2），描述历史是 `/issues/{issue_id}/description-versions`（P4），与其余工作项地址统一；没有批量删除、批量归档（P1a） |
 | M1-P3 富文本筛选的显示层 | 3.22、7.7 | 不支持否定的运算符：`TAllAvailable*ForDisplay` 的否定一层和 `useFiltersOperatorConfigs` 删除（P10b），关键词规则 `negation-filters` 看住，终态没有命中（P16） |
 | M1-P3 收集箱的来源 | 3.2、7.7 | **以转交关闭**（同 M2 交接第 1 节的做法）：收集箱属于 M7（总体设计 9.2），来源的取值由 M7 定。收尾把这一项连同它的细节写进 M7 的交接（13.2）：`EInboxIssueSource` 的 `IN_APP`、`FORMS`、`EMAIL`，前端只创建 `IN_APP`（`inbox-issue.service.ts`）；收集箱详情对 `FORMS` 显示"Intake Form user"的一支（`inbox/content/issue-root.tsx`）；项目功能设置里收集箱的说明只描述保留的用法，保留表单或邮件来源时要改写（M1-P3 交接第 31 行）。M4 自己的部分：删除工作项动态中显示来源的一支（`issue-activity/activity/actions/default.tsx`，P15），工作项的动态不再读来源 |
 | M1-P4 个人设置页上的工作项弹窗 | 7.4、7.6 | 去掉挂载（P14）；它在打开之前建的编辑器随之没有（M2 交接第 7 节） |
@@ -2426,10 +2450,10 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | M2-closeout §12 stores 按会话分代 | 7.1、7.3 | `IssueRootStore` 的 `autorun` 改为 `rootStore.router` 上的计算属性，没有要释放的反应，"随退役的一代释放"由此满足，`store-context.test.ts` 没有严格模式的警告（P10b）；13 处模块级实例按 7.1 的分配消失（P11 7 处、P12 1 处、P13 1 处、P14 3 处、P15 1 处），`git grep` 的门禁在 P15；三处同步读取不发请求（P10b）；SWR 键带 `loginId`（P10b、P11）；`getUserProfileIssues` 改接（P11） |
 | M2-closeout §13 e2e 的 `clock.ts` | 3.20 | `e2e/fixtures/clock.ts` 按 M0-P6 的写法加入，I16 用它，不等真实的时间；nerve 一侧的 `clock.offset` 只在测试环境（P6） |
 | M3-closeout §1 事件与删除工作区的连带 | 3.6、3.19、3.20 | M3 自己的连带留在删除的事务里，邀请的一步照旧同步（P6 写明）；工作项一侧在决策点 7 选 A 时挂到 `project.deleted`、`workspace.deleted` 上、由任务完成，写明窗口和失败的处理（P9，3.6、3.19）；`registrationRows` 核对 `river_job`（P7）；`jobs_test.go:265`、`runner_test.go:136` 改为期限（P6） |
-| M3-closeout §2 加锁的约定和方案 E | 3.5、决策点 1、11.2、11.11 | 方案的选择和代价写在 3.5、决策点 1（负责人裁定 B：只锁项目行；两个代价和 B′ 写明；S5 的证据；连接池的代价和写闸门，A、B 相同）；锁之前的预检拒绝一切会被拒绝的写、不取锁（P1，加关联的另一端在 P3）；每个新的批量写逐个按约定五核对（3.5，P1–P9 各自的 review；删除标签摘下 `issue_labels` 不需要预锁，理由在 3.5）；没有新的成员关系增长（3.5），不加与停用的交错测试（P1）；M4 不物理删除账户（3.21，P9） |
-| M3-closeout §3 权限规则和错误码 | 3.4、5.3、9.2、9.4 | 工作项的每个操作在规则表、操作名、矩阵中各有一行（P1 起每个后端的 Phase）；`AllowCreator`、`guest_view_all_features`，访客规则按项目的角色（"管理员·访客"一列）（P2）；个人主页的规则行（访客看不到别人的）在矩阵（P5）；完整性测试和 `apitest.Main` 通过（每个后端的 Phase） |
-| M3-closeout §4 状态、标签和项目的数据 | 3.6、3.7、4.16、5.1 | 删除状态时还有工作项 409 `project.state_in_use`；删除标签时从工作项上摘下（`DetachLabel`）；默认负责人只在仍是项目当前的、不是访客的成员时指派，写进契约；`identifier`、`default_assignee_id`、`State.default` 的说明；`workspaceTables` 从目录读出，`furnishIssueRows` 让 M3 的删除故事断言到每张新表（P1 起每个加表的 Phase）；`expectIssueDeleted` 照 `expectProjectDeleted` 的目录自查、沿外键图递归，`guest_view_all_features` 的说明（P2）；`archive_in` 的说明（P6）；删除断言的限时轮询（P9）；4.16 的图 |
-| M3-closeout §5 显示设置与旧的 service | 3.17、7.3、7.9 | 显示设置的三列和格式（P5）；`/user-properties/` 的两个方法、关键词的例外和 `workItemFilters` 删除（P10b；例外的 `until` 在 P1 的第一个提交里改为 `M4/P11`，7.9）；`projectIssuesSearch` 的三个调用方：添加已有的弹窗改接 `issue-search`（P12），选父工作项改接、收集箱的查重改到能编译（P14）；旧 `ProjectService` 文件、`WorkspaceService` 的搜索方法、工作区搜索的类型和参数（36 行）删除（P15）；`is_bot` 删除（P11） |
+| M3-closeout §2 加锁的约定和方案 E | 3.5、决策点 1、11.2、11.11 | 方案的选择和代价写在 3.5、决策点 1（负责人裁定 B：只锁项目行；两个代价和 B′ 写明；S5 的证据；连接池的代价和写闸门，A、B 相同）；锁之前的预检拒绝一切会被拒绝的写、不取锁（P1a，加关联的另一端在 P3）；连接池的代价和写闸门（P1b）；每个新的批量写逐个按约定五核对（3.5，P1a–P9 各自的 review；删除标签摘下 `issue_labels` 不需要预锁，理由在 3.5）；没有新的成员关系增长（3.5），不加与停用的交错测试（P1a）；M4 不物理删除账户（3.21，P9） |
+| M3-closeout §3 权限规则和错误码 | 3.4、5.3、9.2、9.4 | 工作项的每个操作在规则表、操作名、矩阵中各有一行（P1a 起每个后端的 Phase）；`AllowCreator`、`guest_view_all_features`，访客规则按项目的角色（"管理员·访客"一列）（P2）；个人主页的规则行（访客看不到别人的）在矩阵（P5）；完整性测试和 `apitest.Main` 通过（每个后端的 Phase） |
+| M3-closeout §4 状态、标签和项目的数据 | 3.6、3.7、4.16、5.1 | 删除状态时还有工作项 409 `project.state_in_use`；删除标签时从工作项上摘下（`DetachLabel`）；默认负责人只在仍是项目当前的、不是访客的成员时指派，写进契约；`identifier`、`default_assignee_id`、`State.default` 的说明；`workspaceTables` 从目录读出，`furnishIssueRows` 让 M3 的删除故事断言到每张新表（P1a 起每个加表的 Phase）；`expectIssueDeleted` 照 `expectProjectDeleted` 的目录自查、沿外键图递归，`guest_view_all_features` 的说明（P2）；`archive_in` 的说明（P6）；删除断言的限时轮询（P9）；4.16 的图 |
+| M3-closeout §5 显示设置与旧的 service | 3.17、7.3、7.9 | 显示设置的三列和格式（P5）；`/user-properties/` 的两个方法、关键词的例外和 `workItemFilters` 删除（P10b；例外的 `until` 在 P1a 的第一个提交里改为 `M4/P11`，7.9）；`projectIssuesSearch` 的三个调用方：添加已有的弹窗改接 `issue-search`（P12），选父工作项改接、收集箱的查重改到能编译（P14）；旧 `ProjectService` 文件、`WorkspaceService` 的搜索方法、工作区搜索的类型和参数（36 行）删除（P15）；`is_bot` 删除（P11） |
 | M3-closeout §6 stores、会话和页面的取数 | 7.1、7.3、7.4 | `autorun`（P10b）；按需的取数被拒绝时有提示或交回（P11）；`error?.error` 的两处经文案表、标签的新建经 `useLabelChanges().create`（P11）；工作区一级的标签、`fetchParentStats`、键宽（P11）；`WorkItemLevelModals` 留在原处、在 `projectId ?? workItemIdentifier` 改变时和卸载时关上开关，详情 store 的开关、`peekIssue` 由宿主结束（P11）；S2 的 `REQUESTS`（P10b）、`watchPage`（P12）；个人主页的工作项和访客的工具栏，个人主页和已归档的详情以 id 给子树 key（P13）；工作项页面以 id 给子树 key、后退的检查（P14） |
 | M3-closeout §7 键盘、下拉框和弹窗 | 7.5 | 每一项的浏览器核对写进 review（C1–C6、C12）；`CustomMenu` 的键盘、右键菜单、层叠的元素降到 `z-30` 之下、快捷操作的嵌套按钮、`existing-issues-list-modal.tsx` 的正的 `tabIndex`（P12）；筛选按钮、日期弹窗、归档弹窗（P13）；工作项的弹窗、名字、正的 `tabIndex`（含 `parent-issues-list-modal.tsx`、`label-select.tsx`）、字段的提示和 `useRefusedFocus`、弹窗里的列表 `modal={false}`、列表里不是选项的控件、嵌套的弹窗和描述编辑器的 Escape（P14）；每一行的控件以那一行为名、评论和动态筛选的嵌套按钮、描述历史的弹窗（P15）；`getTabIndex` 数一次调用方（P16） |
 | M3-closeout §8 地址、复制、文案和留下的行 | 7.5、7.8、7.9 | `project-address-route` 的范围含 22 个文件（P12），`workspace-address-route` 含 4 个文件，文件正则放宽为 `\.tsx?$` 以含 `power-k/config/creation/command.ts`（P15）；`copy-hook` 没有 `M4/closeout` 的例外（P14、P15，收尾核对）；3 个文件的 oxlint 清零、`commands.ts` 拆开（P15）；删除确认框的 `onSubmit` 保持必传（P14）；`workspace-draft-issues/base.ts` 的 16 行有结论（P11）；`CustomSearchSelect` 的 4 个调用方传经 `t()` 的文字（P13）；`@nerve/ui` 下拉框的泛型（P16）；`projectMemberIds` 的 M4 读者改完、删除转给 M7（P16，13.2）；每个 Phase 的第一个提交改 `phase` 和到期的 `until` |
@@ -2458,7 +2482,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | [M5](../M5-files/handoffs/M4-closeout.md) | **M2 收尾交接第 1 节原样**（命令行的只投递 River 客户端；负责人："做好记录，以后别漏了"），注明 M3、M4 都没有投递任务的命令，并附一句：只投递的客户端已在 `platform/jobs`（`NewInserter`，M4/P6），第一个投递任务的命令加入时把它交给命令行的组合，并照 3.20 声明它会投递的种类。**附件**：`Issue.attachment_count` 和它的排序码、显示属性"附件"（3.2）；编辑器去掉 `disabledExtensions` 里的 `image`，图片的上传和显示经 M5 的文件接口（3.1、7.6）；工作项详情的附件区、评论的附件；草稿若带附件，发布时随之移到工作项；`file_assets` 指向工作项、评论、草稿的外键在 4.16 的图上延伸，`deleteIssue` 的连带和删除的语句随之延伸（第 12 节约束 8），60 天清理加上 M5 的清理者（3.21 的写法）。**内容标识**：打开图片之后，`skip_activity` 的内容标识加上按顺序的 `image-component[src]`（3.7，对抗性评审 I4），换一张图不能不留痕迹。**删除**：M5 的表加进 `furnishIssueRows`，M3、M4 的删除故事随之断言到它们；挂在项目、工作区下的行在删除项目、工作区时照 3.6 的写法由订阅 `project.deleted`、`workspace.deleted` 的任务软删除，写下请求的时刻和删除者（决策点 7）。**事件**：附件的增删是否另有事件，由 M5 照 3.19 的写法定 |
 | [M6](../M6-cycles-modules/handoffs/M4-closeout.md) | **加回 P10a 删除的工作项列表**（7.2，对抗性评审 I7）：迭代、模块的列表 store 和筛选 store、两个布局根、迭代和模块的详情页与已归档的根上的列表部分、`EIssuesStoreType` 的 `CYCLE`、`MODULE` 和它们的分支、分组头的"添加已有"、日历的 `addIssuesToView`、迭代和模块的空状态、活动迭代和进度侧栏对列表 store 的调用、迭代的转移弹窗；照 Plane 的源码写在 `paged-groups.ts` 和新的列表接口上，不恢复 Plane 的列表引擎；`existing-issues-list-modal.tsx` 的迭代、模块调用方随之加回（弹窗本身 M4 已改接 `issue-search`、删去正的 `tabIndex`）。`Issue.cycle_id`、`module_ids` 和它们的写入（3.2）；列表的筛选、分组、排序加上迭代、模块（3.16 的词汇在 `issue/domain/listvocab.go`：加取值、加 SQL 的一支，`issue-order.json` 加行；`IssueListSettings` 随之认它们）；显示属性的"迭代""模块"；自动归档的条件加上迭代、模块的条件（3.8）；`cycle_issues`、`module_issues` 的外键、连带、清理者，加进 `furnishIssueRows`，删除项目、工作区时照 3.6 订阅两个删除的事件；`getTabIndex` 若 M6 还有调用方，最后一个删去的删除它和两份 `tab-indices.ts`（P16 的计数）；`dropdowns/date-range.tsx`、`dropdowns/project/base.tsx` 在迭代、模块的表单里核对 |
 | [M7](../M7-collaboration/handoffs/M4-closeout.md) | **收集箱**（M1-P3、M1-P5 交接以转交关闭，原文的细节一并写进）：来源的取值（`EInboxIssueSource` 的 `IN_APP`、`FORMS`、`EMAIL`；前端只创建 `IN_APP`；收集箱详情对 `FORMS` 显示"Intake Form user"的一支，`inbox/content/issue-root.tsx`；保留表单或邮件来源时改写项目功能设置里收集箱的说明）；由系统代为创建的工作项记在谁名下、怎样显示（照决策点 4 的结论；不要恢复按邮箱或名字猜测的写法；M1/P5 删掉了 `inbox-list-item.tsx`、`peek-overview/properties.tsx` 的两处）；自动归档的条件加上收集箱的状态（3.8）；工作项动态的动词 CHECK 为收集箱的状态放宽（4.11）；`select-duplicate.tsx` 的页面核对。**通知**：订阅、取消订阅的接口和 `is_subscribed`（3.12）；M4 的关注只由服务端写，关注者后来可能读不到这个工作项（降为"只看自己"的访客、标志关掉、被移出），所以通知在发出的那一刻按 `issue.read` 加访客规则重新判定（对抗性评审 M5）；通知由 3.19 的事件产生（删除时子树里每个工作项一个 `issue.deleted`）；动态的 `comment` 列是否进入接口（3.13）。**视图**：加回 P10a 删除的项目视图、工作区视图的工作项列表（`EIssuesStoreType` 的 `PROJECT_VIEW`、`GLOBAL`，两个布局根，`workspace-views/[globalViewId]` 和项目视图详情页的列表部分，7.2），照 Plane 的源码写在新的引擎上；跨项目的列表（3.16 的引擎以项目为参数，加工作区的一支）；个人主页按标签分组时工作区一级的标签（3.16）。**其他**：`services/inbox/inbox-issue.service.ts` 的参数在 P10a 换成 `Partial<Issue>`，仍调 Plane 的收集箱地址（7.2 写明的过渡的类型，M7 随收集箱的接口换掉）；命令面板的迭代、视图、收集箱结果；删除工作项时清掉最近访问（4.16）；`frame-src`；`projectMemberIds` 的最后一个读者改完时删除它；`getTabIndex` 同 M6 一行 |
-| [M8](../M8-open-release/handoffs/M4-closeout.md) | **Webhook** 订阅 3.19 的事件（工作项、评论、关联、链接，和 P9 的 `project.deleted`、`workspace.deleted`；事件名单是契约的一部分）；**不发布事件的连带**只剩删除标签摘下的 `issue_labels`（3.6），要由 M8 给标签加的事件覆盖；`platform/outbound` 给 Webhook 的投递复用（6.8，IANA 的两张登记表和本机的接口地址）。**部署**：`pg_trgm` 的部署要求（M0-P4 交接，原样）和库的 `LC_CTYPE`（pg_trgm 取三元组依赖它，中文的搜索，3.18）；`outbound.allow_cidrs` 只在测试环境（8.8）；清理和删除任务的配置（3.21、3.6）；连接的参数 `jit = off`、`plan_cache_mode = force_custom_plan` 由 nerve 自己设，部署只核对它们没有被覆盖（3.16）；连接池的大小和写闸门的 K（多个进程时每个进程各 K 个，11.11）；`nerve users set-email` 在持续写入的账户上要等外键的 `FOR KEY SHARE`（3.5，对抗性评审 M2）：给它加 `lock_timeout` 和重试的提示。**性能**：列表的 v0 目标是一个项目至多约 2 万个未删除的工作项（3.16 的实测，决策点 7），更大的项目、按 `-created_at` 的单列索引式查询、个人主页的跨项目列表（顺序扫描整个工作区）由 M8 按收尾的数字决定；搜索、删除的请求和任务（P1、P9 的 spec）、清理的数字。**核对**：标注块的默认表情图在 M4 改为原生表情之后，M8 的 M1 收尾交接的那一项只剩核对；`CustomSearchSelect` 的三个文字和 `AlertModalCore` 的按钮文字在 M4–M7 的调用方都传了之后改为必传 |
+| [M8](../M8-open-release/handoffs/M4-closeout.md) | **Webhook** 订阅 3.19 的事件（工作项、评论、关联、链接，和 P9 的 `project.deleted`、`workspace.deleted`；事件名单是契约的一部分）；**不发布事件的连带**只剩删除标签摘下的 `issue_labels`（3.6），要由 M8 给标签加的事件覆盖；`platform/outbound` 给 Webhook 的投递复用（6.8，IANA 的两张登记表和本机的接口地址）。**部署**：`pg_trgm` 的部署要求（M0-P4 交接，原样）和库的 `LC_CTYPE`（pg_trgm 取三元组依赖它，中文的搜索，3.18）；`outbound.allow_cidrs` 只在测试环境（8.8）；清理和删除任务的配置（3.21、3.6）；连接的参数 `jit = off`、`plan_cache_mode = force_custom_plan` 由 nerve 自己设，部署只核对它们没有被覆盖（3.16）；连接池的大小和写闸门的 K（多个进程时每个进程各 K 个，11.11）；`nerve users set-email` 在持续写入的账户上要等外键的 `FOR KEY SHARE`（3.5，对抗性评审 M2）：给它加 `lock_timeout` 和重试的提示。**性能**：列表的 v0 目标是一个项目至多约 2 万个未删除的工作项（3.16 的实测，决策点 7），更大的项目、按 `-created_at` 的单列索引式查询、个人主页的跨项目列表（顺序扫描整个工作区）由 M8 按收尾的数字决定；搜索、删除的请求和任务（P1b、P9 的 spec）、清理的数字。**核对**：标注块的默认表情图在 M4 改为原生表情之后，M8 的 M1 收尾交接的那一项只剩核对；`CustomSearchSelect` 的三个文字和 `AlertModalCore` 的按钮文字在 M4–M7 的调用方都传了之后改为必传 |
 
 ---
 
@@ -2486,7 +2510,8 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | Phase | 内容 | 状态 |
 |---|---|---|
 | 设计 | 本文（第三稿，按对抗性评审和聚焦复核修订） | 第一稿经独立评审（2026-10-16，17.1），第二稿按控制者的裁定逐条落实；第二稿经对抗性评审（2026-10-16，17.2），第三稿照控制者的裁定逐条落实；第三稿经聚焦复核（2026-10-16，17.3），再照裁定修订；第 10 节的八个决策点已由负责人裁定、第 11 节的十一个架构问题已由负责人批准（2026-10-17，全部按建议，17.4）；验证 S1、S4、S5、SP1–SP4 已做，S2 做了一部分，S3 在 P4（0.3） |
-| P1 `issues` | 工作项的建、取、改与项目行的锁（后端，16） | 未开始 |
+| P1a `issues` | 工作项的表、项目行的锁、创建与连带（后端，15）；设计中的 P1 由控制者按决策点 2 的预先批准拆出（2026-10-17，第 12 节） | 已完成：[spec](specs/P1a-issues.md)、[plan](plans/P1a-issues.md)、[评审](reviews/P1a-issues-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
+| P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 未开始 |
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 未开始 |
 | P3 `issue-hierarchy` | 父子与关联（后端，11） | 未开始 |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 未开始 |
@@ -2508,9 +2533,9 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 ## 16. 风险
 | 风险 | 影响 | 应对 |
 |---|---|---|
-| M4 是 v0 最大的里程碑：37 个新操作、19 个迁移、前端 106 个任务，约是 M3 前端实际的 1.9 倍（7.10） | 周期拉长；某段的 plan 超出约 1,500 行 | 按任务数分成 17 段加收尾，每段 9–16 个任务（第 12 节，P10 已预先拆开）；超出时按约束 2 预先批准拆成 P<k>a、P<k>b（决策点 2）；决策点 2 的 B（拆成两个 M）写明了代价 |
+| M4 是 v0 最大的里程碑：37 个新操作、19 个迁移、前端 106 个任务，约是 M3 前端实际的 1.9 倍（7.10） | 周期拉长；某段的 plan 超出约 1,500 行 | 按任务数分成 17 段加收尾，每段 9–16 个任务（第 12 节，P10 已预先拆开）；超出时按约束 2 预先批准拆成 P<k>a、P<k>b（决策点 2）；决策点 2 的 B（拆成两个 M）写明了代价。已发生一次：P1 在实施前按 M3 已合并的 plan 实测估出约 22–25 个任务、约 23,000–26,000 行，控制者按决策点 2 的预先批准裁定（2026-10-17）拆成 P1a（15 个）、P1b（12 个），并预先批准 P1a 仍超出时把状态、标签的连带（连同交错 6、7 的创建一支）和 I1 的故事文件移到 P1b；两段在上限之内可以重新切分任务。现在是 18 段加收尾 |
 | 列表的代价：排序用不上索引，每个请求扫描、排序项目里满足筛选的全部行（S1，3.16） | 很大的项目上列表慢（10 万个工作项时分组 0.2–0.7 s、泳道 0.7–1.0 s） | 写法已在 S1 验证（`ROWS FROM`、`MATERIALIZED`、窄的 CTE、窗口总数），没有绕过 sqlc 的退路（`TestModulesRunSQLOnlyThroughSQLC`）；v0 的规模目标是一个项目至多约 2 万个未删除的工作项，交负责人确认（决策点 7）；连接的参数由 nerve 设（`jit`、通用计划）；更大的项目交给 M8 的性能工作（13.2） |
-| 删除一个大的项目、工作区（SP2：2 万个工作项的项目 8.6 秒，五个这样的项目的工作区 36.5 秒，请求的期限 15 秒） | 同步的连带在规模目标上删不掉一个工作区，期间工作区的每个项目的写都在等 | 决策点 7（负责人裁定 A）：工作项一侧的行由任务分批软删除，请求只做 M3 的几步；每个删除的项目一个任务，按 `id` 的键集（SP4：没有键集的语句是平方的，一个项目的 40 万行动态 53.9 秒，键集 1.8 秒），每次运行 45 秒的预算、用完就 snooze 而不算一次尝试；窗口里的读写经项目的门当作不存在（3.6，逐条测试）；任务失败时行留在窗口的样子，随项目的物理清理消失；P1 在规模目标上量，P9 的通过线是每个任务一次运行做完 |
+| 删除一个大的项目、工作区（SP2：2 万个工作项的项目 8.6 秒，五个这样的项目的工作区 36.5 秒，请求的期限 15 秒） | 同步的连带在规模目标上删不掉一个工作区，期间工作区的每个项目的写都在等 | 决策点 7（负责人裁定 A）：工作项一侧的行由任务分批软删除，请求只做 M3 的几步；每个删除的项目一个任务，按 `id` 的键集（SP4：没有键集的语句是平方的，一个项目的 40 万行动态 53.9 秒，键集 1.8 秒），每次运行 45 秒的预算、用完就 snooze 而不算一次尝试；窗口里的读写经项目的门当作不存在（3.6，逐条测试）；任务失败时行留在窗口的样子，随项目的物理清理消失；P1b 在规模目标上量，P9 的通过线是每个任务一次运行做完 |
 | 工作项一侧的删除任务是第一个跨模块的异步效果（决策点 7 的 A） | 窗口里某个读写漏了项目的门，就会看到已删除的项目里的工作项；一条行写成了别的删除的时刻和删除者 | 3.6 逐条列出读写的路径和它经过的门；9.3 的窗口测试在任务之前、之后各问一次；矩阵的"项目已删除"一列在任务前后各跑一次；每个项目只由它自己的任务写，跨项目的关联行属于先删除的那一端（3.5），交错 24、25 断言每一行写下的是谁的删除；P1–P8 的过渡写法与任务用同一组语句和编排 |
 | 一个热的项目占满连接池（SP1：200 个写排在一个项目上时，别的项目的读等约 875 ms；A、B 相同） | 整个实例的请求变慢 | 写闸门（11.11）：每个项目每个进程至多 K 个写在数据库里，其余在进程里等，不持连接，等不到 503 `server_busy`；`lock_timeout` 兜底；交错 20 经真实的连接池断言别的项目的读的耗时。代价是热的项目上排得太久的写得到 503、要由客户端重试（决策点 1）；K 和池的大小在多进程时由 M8 定 |
 | `issue_activities` 的增长（每个改动一行，描述的动态存完整的 HTML，3.13） | 表和索引变大，列表的动态读得慢 | 动态按工作项分页读（`(issue_id, created_at, id)` 的索引）；描述的动态 600 秒内合并；Nerve 与 Plane 一样不清理活的动态；M8 的性能测量量它的大小 |
@@ -2587,7 +2612,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | I3 | 一个热的项目占满 10 个连接的池（SP1：别的项目的读等约 875 ms） | 架构问题 11.11 写闸门（`platform/gate`、`WriteGate` 端口、每个项目每个进程 K 个、等的上限、503 `server_busy`、`lock_timeout` 兜底）；3.5、6.1、6.2、6.5、6.6、6.7、8.8；交错 20 经真实的连接池（9.3）；决策点 1 和 §16 写代价（A、B 相同）；池的大小和 K 交给 M8（13.2）；P1 的任务 8、14 |
 | I4 | 内容标识只有纯文本和提及，改链接的去处、勾选框不留痕迹 | 内容标识加按顺序的 `a[href]` 和勾选框的状态（3.7、6.2 的 `sanitize.go`）；S3 加只改链接、只改勾选框的样例，必须算修改（9.1，P4 的任务 1）；8.2、4.17、§16 改写；I2 的 P4 断言；M5 打开图片时加 `image-component[src]`（13.2） |
 | I5 | 选择器接到的 `issue-search` 要求 `q`；日历的"添加已有"要筛出没有截止日期的 | `q` 可选，空时给出最近更新的可见工作项（3.18、5.1）；列表和搜索都有 `target_date=none`、`start_date=none`（3.16、3.18）；`ExistingIssuesListModal` 在 P12 随日历改接（7.5，P12 的任务 9），选父工作项在 P14；I4 的页面版本含"添加已有"；7.1 的实例分配改为 P12 一处、P14 三处 |
-| I6 | 每个加表的 Phase 让 M3 的删除故事断言不到新表 | e2e 的 `furnishIssueRows(api, token, projectId)`，每个加表的 Phase 扩充它并让 M3 的 P4、W2、W3 在删除之前调它（2 节、9.6、第 12 节约束 8）；`workspaceTables` 从目录读出；P9 起删除的断言轮询；M5、M6 的交接（13.2） |
+| I6 | 每个加表的 Phase 让 M3 的删除故事断言不到新表 | e2e 的 `furnishIssueRows(api, token, projectId, assigneeId, labelId)`（`e2e/fixtures/furnish.ts`），每个加表的 Phase 扩充它并让 M3 的 P4、W2、W3 在删除之前调它（2 节、9.6、第 12 节约束 8）；`workspaceTables` 从目录读出；P9 起删除的断言轮询；M5、M6 的交接（13.2） |
 | I7 | P10 的两段换型编译不过；M6、M7 的列表 store 没有能"行为不变"的类型 | (a) P10 预先拆成 P10a（9 个任务：先收窄、后换型，`TIssue` 一族在这里换掉）和 P10b（14 个任务）；列表的形状在 P10b、详情的类型在 P11（7.2 的"哪一段删哪一个类型"）；(b) P10a 删除 M6、M7 的列表 store、布局根、页面上的列表部分、`EIssuesStoreType` 的四个值和它们的分支（7.2、7.3、7.7）；可见的代价写进前端改动清单和 §16；M6、M7 照 Plane 的源码加回（13.2） |
 | M1 | 预检有两个洞：加关联的另一端先被锁；注定 403 的写也先取锁 | 预检回答一切会被拒绝的（404、403），加关联先预检另一端的可见性、看不到的不锁（3.5、6.7、8.4、11.2）；交错 21 加"指向看不到的项目时不锁它"（9.3）；P1 的任务 7、P3 的任务 5、8 |
 | M2 | 外键的 `FOR KEY SHARE` 挡住 `nerve users set-email` | 3.5 写明（SP1 的数字），M4 不改代码；M8 的交接（13.2） |

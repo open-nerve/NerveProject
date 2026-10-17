@@ -179,7 +179,8 @@ paths:
         For the project's admins, and its members who are the workspace's
         admins; an archived project is deleted as any other. The project is
         deleted with its memberships, its members' display settings, its
-        states and its labels, all at one moment: it is no longer read,
+        states, its labels and its work items (with their assignees, labels,
+        subscribers and activity), all at one moment: it is no longer read,
         listed or changed, and its name and identifier are free again in the
         workspace. A project that does not exist, is deleted, or that the
         caller does not see answers project.not_found; one he sees but may
@@ -551,12 +552,13 @@ paths:
         deleted (project.state_default): make another state the default
         first. Nor is the only state of its group
         (project.state_last_in_group): every group keeps a state. A state
-        that is both is project.state_default. The state is deleted at the
-        moment of the request, by the caller, and its name is free again in
-        the project. The role is decided after the workspace and project
-        rows are locked.
+        that is both is project.state_default. Nor is a state a work item is
+        in, an archived one too (project.state_in_use); it is checked before
+        the default and the group. The state is deleted at the moment of the
+        request, by the caller, and its name is free again in the project.
+        The role is decided after the workspace and project rows are locked.
       security: [{bearer: []}]
-      x-problem-codes: [project.state_not_found, forbidden, project.state_default, project.state_last_in_group]
+      x-problem-codes: [project.state_not_found, forbidden, project.state_in_use, project.state_default, project.state_last_in_group]
       responses:
         '204':
           description: The state is deleted.
@@ -729,8 +731,9 @@ paths:
         who sees the project but may not change its labels, forbidden. The
         label and the labels under it are deleted at the moment of the
         request, by the caller, and their names are free again in the
-        project. The role is decided after the workspace and project rows
-        are locked.
+        project; at the same moment and by the same caller they are taken
+        off every work item they are on. The role is decided after the
+        workspace and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [project.label_not_found, forbidden]
       responses:
@@ -931,7 +934,7 @@ components:
         description:
           type: string
         identifier:
-          description: Upper case; unique among the workspace's projects.
+          description: Upper case; unique among the workspace's projects; the prefix of its work items' numbers, as in WEB-12.
           type: string
         network:
           $ref: '#/components/schemas/ProjectNetwork'
@@ -939,7 +942,11 @@ components:
           type: [string, 'null']
           format: uuid
         default_assignee_id:
-          description: The account set as the project's default assignee, kept as set; null for none.
+          description: >-
+            The account set as the project's default assignee, kept as set;
+            null for none. A work item created without assignees is assigned
+            to him while he is an active member of the project who is not its
+            guest.
           type: [string, 'null']
           format: uuid
         cycle_view:
@@ -1216,7 +1223,9 @@ components:
         group:
           $ref: '#/components/schemas/StateGroup'
         default:
-          description: Whether the state is its project's default state; a project has exactly one.
+          description: >-
+            Whether the state is its project's default state, which a work
+            item created without a state takes; a project has exactly one.
           type: boolean
         sequence:
           description: The state's place among the project's states, the lowest first.

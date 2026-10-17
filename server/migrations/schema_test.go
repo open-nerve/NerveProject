@@ -64,16 +64,16 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 14 {
-		t.Fatalf("Up() = %d migrations, %v; want 14", len(up), err)
+	if err != nil || len(up) != 19 {
+		t.Fatalf("Up() = %d migrations, %v; want 19", len(up), err)
 	}
 	for _, want := range []struct {
 		query string
 		names []string
 	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "labels", "profiles", "project_members", "project_user_properties", "projects", "river_job",
-			"river_leader", "river_notification", "river_queue", "states", "users", "workspace_member_invites", "workspace_members",
-			"workspace_user_properties", "workspaces"}},
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "issue_activities", "issue_assignees", "issue_labels", "issue_subscribers", "issues",
+			"labels", "profiles", "project_members", "project_user_properties", "projects", "river_job", "river_leader", "river_notification",
+			"river_queue", "states", "users", "workspace_member_invites", "workspace_members", "workspace_user_properties", "workspaces"}},
 		{enumsQuery, []string{"river_job_state"}},
 		{functionsQuery, []string{"river_job_state_in_bitmask"}},
 	} {
@@ -91,8 +91,8 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 14 {
-		t.Errorf("Up() again = %d migrations, %v; want 14", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 19 {
+		t.Errorf("Up() again = %d migrations, %v; want 19", len(again), err)
 	}
 }
 
@@ -134,7 +134,8 @@ func TestConstraintAndIndexNames(t *testing.T) {
 	// contype: p primary key, u unique, f foreign key (confdeltype c: ON
 	// DELETE CASCADE, n: ON DELETE SET NULL), c check. An index is i, then
 	// u when it is unique and w when it is partial (has a WHERE). The project
-	// module's tables are in projectNames (project_schema_test.go).
+	// module's tables are in projectNames (project_schema_test.go), the issue
+	// module's in issueNames (issue_schema_test.go).
 	want := slices.Concat([]string{
 		"api_tokens_created_by_id_fkey f n",
 		"api_tokens_label_check c",
@@ -209,7 +210,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"workspaces_slug_check c",
 		"workspaces_slug_key iuw",
 		"workspaces_updated_by_id_fkey f n",
-	}, projectNames)
+	}, projectNames, issueNames)
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Errorf("constraints and indexes =\n%q\nwant\n%q", got, want)

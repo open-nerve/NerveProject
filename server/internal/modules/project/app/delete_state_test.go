@@ -17,23 +17,24 @@ import (
 // newDeleteState is DeleteState over newStates' fakes, its clock logged.
 func newDeleteState() (*app.DeleteState, *writeFixture, *fakeStates) {
 	f, s := newStates()
-	return app.NewDeleteState(f.locks(), s, f.tx, clockAt{clockNow, f.log}), f, s
+	return app.NewDeleteState(f.locks(), s, f.issues, f.tx, clockAt{clockNow, f.log}), f, s
 }
 
 // stateDeleted are the calls of user's deletion of the state id of project
-// up to the deletion: its locks and decision, the clock, the deletion by
-// user at that time.
+// up to the deletion: its locks and decision, whether a work item is in
+// the state, the clock, the deletion by user at that time.
 func stateDeleted(user, id, project uuid.UUID) []string {
-	return append(stateLocked(id, project, user, domain.ActionStateDelete), "Now",
+	return append(stateLocked(id, project, user, domain.ActionStateDelete), "StateInUse "+id.String(), "Now",
 		fmt.Sprintf("DeleteState %s by %s at %s", id, user, clockNow.Format(timeFormat)))
 }
 
 // DeleteState, in one transaction and in the order of M3 design 3.6 and
-// 3.17, locks the state's project, decides, reads the clock, deletes the
-// state by the caller at that time, then counts the states its group keeps:
-// Review leaves In Progress in the started group. ops, archived, has its
-// states deleted as any other's (3.19): Icebox leaves Backlog in the
-// backlog group.
+// 3.17 and M4 design 3.5, locks the state's project, decides, asks whether
+// a work item is in the state, in the transaction, reads the clock,
+// deletes the state by the caller at that time, then counts the states its
+// group keeps: Review leaves In Progress in the started group. ops,
+// archived, has its states deleted as any other's (M3 design 3.19): Icebox
+// leaves Backlog in the backlog group.
 func TestDeleteState(t *testing.T) {
 	icebox := uuid.NewV7()
 	for _, tt := range []struct {
@@ -67,19 +68,26 @@ func TestDeleteState(t *testing.T) {
 // that is not there, a workspace or project deleted while its lock waited,
 // a state deleted or moved to ops meanwhile, and a caller who does not see
 // web, each project.state_not_found; a member, the Authorizer's 403. Then,
-// past the decision: Backlog, the default and its group's only state,
-// which the deletion passes over and the state read again answers
+// past the decision: a state a work item is in, project.state_in_use
+// before the deletion, Backlog's too, though it is the default and its
+// group's only state: the work items are checked first (M4 design 3.5).
+// Backlog, which the deletion passes over and the state read again answers
 // project.state_default, the guarded deletion coming before the group's
 // count (P7a spec 3 item 13); a state the deletion passed over that is
-// gone when read again,
-// project.state_not_found; Todo, the only state of its group, deleted and
-// project.state_last_in_group, which the transaction rolls back. A
-// deletion that passed over a state neither gone nor the default is the
-// write's own error. A refusal before the deletion leaves the states as
-// they were.
+// gone when read again, project.state_not_found; Todo, the only state of
+// its group, deleted and project.state_last_in_group, which the
+// transaction rolls back. A deletion that passed over a state neither gone
+// nor the default is the write's own error. A refusal before the deletion
+// leaves the states as they were.
 func TestDeleteStateRefuses(t *testing.T) {
 	upTo := func(n int) []string { return stateLocked(webReview, webID, bob, domain.ActionStateDelete)[:n] }
 	readAgain := func(id uuid.UUID) []string { return append(stateDeleted(bob, id, webID), "StateByID "+id.String()) }
+	inUse := func(id uuid.UUID) func(f *writeFixture, _ *fakeStates) {
+		return func(f *writeFixture, _ *fakeStates) { f.issues.inUse = map[uuid.UUID]bool{id: true} }
+	}
+	checked := func(id uuid.UUID) []string {
+		return append(stateLocked(id, webID, bob, domain.ActionStateDelete), "StateInUse "+id.String())
+	}
 	for _, tt := range []struct {
 		name  string
 		ctx   context.Context
@@ -101,6 +109,8 @@ func TestDeleteStateRefuses(t *testing.T) {
 		{"a caller who does not see web", as(erin), webReview, nil, domain.ErrStateNotFound,
 			stateLocked(webReview, webID, erin, domain.ActionStateDelete)},
 		{"a member", as(alice), webReview, nil, shared.Forbidden(), stateLocked(webReview, webID, alice, domain.ActionStateDelete)},
+		{"Review, which a work item is in", as(bob), webReview, inUse(webReview), domain.ErrStateInUse, checked(webReview)},
+		{"Backlog, which a work item is in", as(bob), webBacklog, inUse(webBacklog), domain.ErrStateInUse, checked(webBacklog)},
 		{"Backlog, the default and its group's only state", as(bob), webBacklog, nil, domain.ErrStateDefault, readAgain(webBacklog)},
 		{"a state passed over and gone", as(bob), webReview, func(_ *writeFixture, s *fakeStates) { s.passOver = "gone" },
 			domain.ErrStateNotFound, readAgain(webReview)},
@@ -117,7 +127,7 @@ func TestDeleteStateRefuses(t *testing.T) {
 			before := maps.Clone(s.states)
 			err := uc.Execute(tt.ctx, tt.id)
 			outcome{tt.name, tt.want, tt.calls}.check(t, err, f)
-			beforeTheDeletion := len(tt.calls) <= len(stateLocked(tt.id, webID, bob, domain.ActionStateDelete))
+			beforeTheDeletion := len(tt.calls) < len(stateDeleted(bob, tt.id, webID))
 			if beforeTheDeletion && !maps.Equal(s.states, before) {
 				t.Errorf("the states after the refusal: %v; want them as they were, %v", s.states, before)
 			}
@@ -142,9 +152,10 @@ func TestDeleteStateReturnsEachFailure(t *testing.T) {
 		{"the project's lock", fail("LockProject"), 4},
 		{"the read under the locks", func(f *writeFixture) { f.store.reread.err = errDisk }, 5},
 		{"the decision", func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, 6},
-		{"the deletion", fail("DeleteState"), 8},
-		{"the count of the group", fail("CountGroupStates"), 9},
-		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 9},
+		{"the work items' check", func(f *writeFixture) { f.issues.errs = map[string]error{"StateInUse": errDisk} }, 7},
+		{"the deletion", fail("DeleteState"), 9},
+		{"the count of the group", fail("CountGroupStates"), 10},
+		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 10},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f, _ := newDeleteState()
@@ -183,7 +194,7 @@ func TestDeleteStateChecksTheReadAfterIt(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			f, s := newStates()
-			err := app.NewDeleteState(f.locks(), afterDeletion{s, tt.set}, f.tx, clockAt{clockNow, f.log}).Execute(as(bob), webBacklog)
+			err := app.NewDeleteState(f.locks(), afterDeletion{s, tt.set}, f.issues, f.tx, clockAt{clockNow, f.log}).Execute(as(bob), webBacklog)
 			outcome{tt.name, tt.want, append(stateDeleted(bob, webBacklog, webID), "StateByID "+webBacklog.String())}.check(t, err, f)
 		})
 	}

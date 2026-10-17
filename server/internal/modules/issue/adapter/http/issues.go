@@ -1,0 +1,53 @@
+package httpadapter
+
+import (
+	"context"
+
+	"github.com/oapi-codegen/nullable"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+)
+
+// CreateIssue serves POST /api/v0/projects/{project_id}/issues: the state
+// and the priority nil and the lists empty when not given; a value given
+// goes to the use case as it came, which checks it.
+func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObject) (gen.CreateIssueResponseObject, error) {
+	in := domain.NewIssue{Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority)}
+	if req.Body.AssigneeIds != nil {
+		in.AssigneeIDs = *req.Body.AssigneeIds
+	}
+	if req.Body.LabelIds != nil {
+		in.LabelIDs = *req.Body.LabelIds
+	}
+	i, err := h.uc.CreateIssue.Execute(ctx, req.ProjectID, in)
+	if err != nil {
+		return nil, err
+	}
+	return gen.CreateIssue201JSONResponse(issueDetail(i)), nil
+}
+
+// issueDetail is i as the API shows it: each field that may be null null
+// when it is nil, each list [] when it is empty.
+func issueDetail(i domain.Issue) gen.IssueDetail {
+	return gen.IssueDetail{ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
+		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
+		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
+		CreatedByID: orNull(i.CreatedByID), UpdatedByID: orNull(i.UpdatedByID), CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
+}
+
+// orNull is v as a nullable field: null for nil.
+func orNull[T any](v *T) nullable.Nullable[T] {
+	if v == nil {
+		return nullable.NewNullNullable[T]()
+	}
+	return nullable.NewNullableWithValue(*v)
+}
+
+// orEmpty is s, an empty list for nil: a list is never null.
+func orEmpty[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}

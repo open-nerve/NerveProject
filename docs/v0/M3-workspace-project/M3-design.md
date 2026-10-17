@@ -167,12 +167,13 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
   - 代价：两个接口、每次判定两次按索引的查找（与直接查表的次数相同）。
 - **跨模块只经端口**（总体设计 6.3 第 2 条），端口声明在调用方的 `app` 层：
   - `project` 问 `workspace`：按 slug 取工作区（目录）；按 id 以 `FOR SHARE` 锁住项目所在的工作区行（项目级的写的第一把锁，3.6 约定二）；锁住若干人的工作区成员行并取回有效角色（约定三，3.6）。
-  - `workspace` 让 `project` 做连带：端口 `ProjectCascade`，由 `project/app` 的用例实现，三个方法：
-    - `DeleteWorkspaceProjects(ctx, workspaceID, by, now) error`：软删除这个工作区的项目及其下的行（项目 → 项目成员 → 项目显示设置 → 状态 → 标签，3.6 的取锁表），删除者 `by` 与时刻 `now` 由工作区的连带传入，与工作区一侧的每一步相同；
+  - `workspace` 让 `project` 做连带：端口 `ProjectCascade`，由 `project/app` 的 `Cascade` 实现，四个方法（`LockWorkspaceProjects` 和 `DeleteWorkspaceProjects` 的 `projectIDs` 是 M4/P1a 起的，M4 设计 3.5）：
+    - `LockWorkspaceProjects(ctx, workspaceID) ([]uuid.UUID, error)`：删除工作区在锁住它的邀请之后、读时刻之前，以一条语句按 `id` 升序 `FOR NO KEY UPDATE` 锁住这个工作区的全部未删除项目（已归档的也算），回答它们的 `id`；只加锁，不写；
+    - `DeleteWorkspaceProjects(ctx, workspaceID, projectIDs, by, now) error`：软删除这个工作区的项目及其下的行（项目 → 项目成员 → 项目显示设置 → 状态 → 标签，3.6 的取锁表），最后经 `issue` 模块的 `IssueCascade.DeleteWorkspaceIssues` 软删除 `projectIDs`（`LockWorkspaceProjects` 锁住的项目）的工作项一侧的行；删除者 `by` 与时刻 `now` 由工作区的连带传入，与工作区一侧的每一步相同；
     - `EndMemberships(ctx, workspaceIDs, userID, by, now) error`：在调用时列举他在这些工作区里有效的项目成员关系（不接收事先列好的项目，3.6 约定六），锁住那些项目、查唯一管理员（可能拒绝 `project.sole_admin`，3.7）、停用他的项目成员关系。移出、离开、停用账户都用它；`by` 是移出他的管理员、离开的本人、被停用的账户；
     - `DemoteToGuest(ctx, workspaceID, userID, by, now) error`：把他在这个工作区的项目角色都改为访客（Plane `views/workspace/member.py:87-89`，含已离开的项目）；`by` 是改他角色的管理员（`updateWorkspaceMember`），或接受邀请的本人（接受恢复为访客时，3.8）。
-    - 三个方法都把 `by` 写进它们改的行的 `updated_by_id`、把 `now` 写进审计时间，与 M3 的其余写入相同；失败时原样返回错误，调用方的整个事务随之回滚。
-    - **一个改变一个时刻，对连带改写的每一列都成立**（负责人 2026-10-02 的裁定，17.4）：调用方在持有工作区的 `FOR NO KEY UPDATE` 之后才读 `now`（删除工作区、改成员的角色、接受邀请都是这样），而每个项目级的写最先以 `FOR SHARE` 锁住它的工作区行、在全部锁之后读自己的时刻（3.6 约定二）。两把锁互斥：连带读 `now` 时，在它要改的行上没有还未提交的项目级的写，先到的写都已提交、时刻不晚于 `now`，后到的写等连带提交、时刻晚于 `now`。所以连带写下的 `updated_at` 不早于行上原有的，`deleted_at`、`updated_at` 也不早于 `created_at`。这是连带与项目级的写之间的保证；两个只持共享锁的写在同一行上相遇时不成立：同一个账户并发改自己的显示设置，两个写都持项目（或工作区）的 S、各自在锁之后读时刻，到 `UPSERT` 里才相遇，后提交的可以带较早的时刻（P4b review 第 7 节，只涉及调用者自己那一行的审计列）。
+    - 后三个方法都把 `by` 写进它们改的行的 `updated_by_id`、把 `now` 写进审计时间，与 M3 的其余写入相同；四个方法失败时都原样返回错误，调用方的整个事务随之回滚。
+    - **一个改变一个时刻，对连带改写的每一列都成立**（负责人 2026-10-02 的裁定，17.4）：调用方在持有工作区的 `FOR NO KEY UPDATE` 之后才读 `now`（删除工作区、改成员的角色、接受邀请都是这样），而每个项目级的写最先以 `FOR SHARE` 锁住它的工作区行、在全部锁之后读自己的时刻（3.6 约定二）。两把锁互斥：连带读 `now` 时，在它要改的行上没有还未提交的项目级的写，先到的写都已提交、时刻不晚于 `now`，后到的写等连带提交、时刻晚于 `now`。所以连带写下的 `updated_at` 不早于行上原有的，`deleted_at`、`updated_at` 也不早于 `created_at`。M4 的工作项一侧的写不锁工作区行、最先锁项目行（M4 设计 3.5，决策点 1 的 B）：删除项目、删除工作区持这些项目的 N 之后才读时刻，同一个保证对工作项一侧的行经项目行成立（M4/P1a 起）。这是连带与项目级的写之间的保证；两个只持共享锁的写在同一行上相遇时不成立：同一个账户并发改自己的显示设置，两个写都持项目（或工作区）的 S、各自在锁之后读时刻，到 `UPSERT` 里才相遇，后提交的可以带较早的时刻（P4b review 第 7 节，只涉及调用者自己那一行的审计列）。
     - **以后的连带照做**：调用方在取得它的全部工作区锁之后才读 `now`。P6 的停用先按 `id` 升序锁住他的工作区（N），之后读 `now`、调用 `EndMemberships`；P5a 的移出、离开在工作区 N 之后读。
     - **停用有两个时刻，在一个事务里**（负责人 2026-10-04 的裁定，P6 spec 第 3 节第 1 条）：账户、新手引导、会话的时刻照 M2 由 `identity` 在事务之前读；邀请和成员关系的时刻由 `workspace` 的 `Deactivator` 在最后一把工作区锁之后读（3.9），不早于前者：两者都读系统时钟，后者在前者之后读（墙钟不回拨时）。只有后者是连带的时刻，上一条的保证对它成立。
   - `workspace` 问 `project`：他在这个工作区还有几个无效的项目成员关系（`ProjectMembershipCounts`，只读，`reactivate-member` 的提示）。
@@ -297,7 +298,7 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
   |---|---|
   | 创建工作区（接口、命令） | 管理员的账户行 S（锁下确认有效，约定六）→ 插入工作区 → 插入成员 |
   | 修改工作区 | 工作区 N → 判定 → 改 |
-  | 删除工作区 | 工作区 N → 判定 → 软删除工作区 → 邀请（N，`id` 升序，一条语句，回答它们的 `id`；再删除这些 `id` 的，约定五的例外）→ 成员 → 显示设置 → `DeleteWorkspaceProjects`：项目 → 项目成员 → 项目显示设置 → 状态 → 标签（批量，约定五） |
+  | 删除工作区 | 工作区 N → 判定 → 邀请（N，`id` 升序，一条语句，回答它们的 `id`，约定五的例外）→ 这个工作区的全部未删除项目（N，`id` 升序，一条语句，`ProjectCascade.LockWorkspaceProjects`）→ 读时刻 → 软删除工作区 → 删除锁住的邀请 → 成员 → 显示设置 → `DeleteWorkspaceProjects`：项目 → 项目成员 → 项目显示设置 → 状态 → 标签（批量，约定五）→ 锁住的项目的工作项一侧的行。锁项目、在它之后读时刻是 M4/P1a 起的（M4 设计 3.5）：工作项的写只锁项目行、不锁工作区行，删除的时刻要不早于这些项目上已提交的每个写 |
   | 改工作区成员的角色 | 读成员行（得到工作区）→ 工作区 N → 重读成员行 → 判定 → 目标的检查（已结束 404、自己 409）→ 改；改为访客时 `DemoteToGuest`：他在这个工作区的项目（N，`id` 升序）→ 项目成员（批量） |
   | 移出成员、离开工作区 | 读成员行（移出按 id 指定成员关系；离开按 slug，没有这一步）→ 工作区 N → 重读成员行（移出）→ 判定 → 目标的检查（移出：已结束 404、自己 409 `workspace.own_membership`，与改角色同序）→ 查唯一管理员（离开）→ 软删除这个工作区里发给他邮箱的待接受邀请（邮箱经 `MemberProfiles`，不加锁，约定一；3.8）→ 成员行 → `EndMemberships`：列举他在这个工作区有效的项目成员关系（新的语句，约定六）→ 那些项目（N，`id` 升序）→ 查唯一管理员 → 项目成员 |
   | `nerve workspaces reactivate-member` | 账户行 S（取回状态，停用的也允许，3.11）→ 工作区 N → 成员行（恢复，角色不变）→ 数他无效的项目成员关系（不加锁） |
@@ -309,7 +310,7 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
   | 停用账户（3.9） | `users` N（锁下读邮箱）→ `profiles` → `auth_sessions`（M2 的部分）→ 列举他有效成员关系所在的工作区 → 那些工作区（N，`id` 升序；锁时已删除的跳过）→ 查唯一管理员 → 要删除的邀请：发给他邮箱的全部邀请、他之外没有有效成员的那些工作区的待接受邀请（N，`id` 升序，一条语句，回答它们的 `id`；等锁时已删除的跳过）→ 删除这些 `id` 的邀请 → 他的工作区成员行 → `EndMemberships`：列举这些工作区里他有效的项目成员关系（新的语句）→ 那些项目（N，`id` 升序；锁时已删除的跳过）→ 查唯一管理员 → 项目成员 |
   | 创建项目 | 工作区 S → 判定 → 创建者、负责人的工作区成员行（S，`id` 升序）→ 插入项目 → 项目成员 → 项目显示设置 → 6 个状态 |
   | 修改、归档、恢复项目 | 工作区 S → 项目 N → 判定 → 改 |
-  | 删除项目 | 工作区 S → 项目 N → 判定 → 软删除项目 → 项目成员 → 显示设置 → 状态 → 标签（批量） |
+  | 删除项目 | 工作区 S → 项目 N → 判定 → 软删除项目 → 项目成员 → 显示设置 → 状态 → 标签（批量）→ 工作项一侧的行（M4/P1a 起，M4 设计 3.6） |
   | 添加项目成员、加入项目 | 工作区 S → 目标（加入时是调用者自己）的工作区成员行（S，`id` 升序，取回是否有效和角色）→ 项目 N → 判定 → 目标的检查（添加：无效或角色不合规 422，约定三）→ 插入或恢复项目成员（恢复时的角色按约定六）→ 显示设置 |
   | 改项目成员的角色、移出项目成员 | 工作区 S →（改角色）成员的工作区成员行 S → 项目 N → 重读项目成员 → 判定 → 改。改角色锁成员的工作区成员行，因为工作区访客的上限（3.5）读他的工作区角色；移出不读它，不锁 |
   | 离开项目 | 工作区 S → 项目 N → 判定 → 查唯一管理员 → 改 |
@@ -317,8 +318,8 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
   | 新建状态 | 工作区 S → 项目 N → 判定 → 读非分诊状态的最大 sequence → 时钟 → 插入 |
   | 修改状态 | 工作区 S → 项目 N → 重读状态 → 判定 → 检查（改组时数原来的组）→ 写 |
   | 设为默认 | 工作区 S → 项目 N → 重读状态 → 判定 → 两条语句（第二条写 0 行时事务失败，3.17） |
-  | 删除状态 | 工作区 S → 项目 N → 重读状态 → 判定 → 守卫的写（守卫就是默认的检查）→ 写之后数它原来的组，组空了时拒绝、事务回滚（3.17） |
-  | 新建、修改、删除标签 | 工作区 S → 项目 N →（修改、删除）重读标签 → 判定 → 层级检查 → 写（删除连带子标签，批量） |
+  | 删除状态 | 工作区 S → 项目 N → 重读状态 → 判定 → 有工作项在它里面时拒绝（M4/P1a 起，3.17）→ 守卫的写（守卫就是默认的检查）→ 写之后数它原来的组，组空了时拒绝、事务回滚（3.17） |
+  | 新建、修改、删除标签 | 工作区 S → 项目 N →（修改、删除）重读标签 → 判定 → 层级检查 → 写（删除连带子标签，批量；M4/P1a 起再从工作项上摘下它们，批量，M4 设计 3.6） |
 
 - **"设为默认"必须两条语句**：spike 中用一条 `UPDATE … SET "default" = (id = $new)` 翻转默认，一个方向成功，反方向因部分唯一索引逐行检查而失败，取决于行的物理顺序。
 - **交错测试**（9.3）在真实数据库上确定性地覆盖 19 种交错：
@@ -525,7 +526,7 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
   - 按 3.4 的原则，服务端照页面执行，登记差异。
 - 新建的 `sequence` = 项目中**非分诊状态**的最大值加 15000（`db/models/state.py:117-128`；它的 `State.objects` 排除分诊，`:65-68`），默认的 6 个状态之后是 70000；`group` 不能是 `triage`（`serializers/state.py:31-34`）；名称在项目内唯一（区分大小写，照搬）。
 - 修改只允许项目管理员（3.4 的表）；`group` 不能改成 `triage`。
-- 删除默认状态 409 `project.state_default`（Plane `views/state/base.py:113` 起）。"状态下还有工作项时不能删"由 M4 加入（13.2）。
+- 删除默认状态 409 `project.state_default`（Plane `views/state/base.py:113` 起）。有工作项（已归档的也算，已删除的不算）在这个状态里时 409 `project.state_in_use`（Plane 答 400）：由 M4/P1a 加入，在项目 N 之下、守卫的写之前经 `IssueCascade.StateInUse` 数（M4 设计 3.6、3.7），所以既是默认、又有工作项的状态答 `project.state_in_use`。
 - **锁与守卫的写**：状态的全部写入先以 `FOR NO KEY UPDATE` 锁住项目行（3.6：默认状态、组的非空都是项目范围的不变式）。语句本身另带守卫，不依赖检查与写入之间没有别人：
   - 删除：`UPDATE states SET deleted_at = $now WHERE id = $1 AND NOT "default" AND deleted_at IS NULL`，改了 0 行时重读这一行，按它的状态答 409 `project.state_default` 或 404；删了之后数它原来的组，组空了时 409 `project.state_last_in_group`、事务回滚。既是默认、又是组里唯一的状态答 `project.state_default`：默认是项目范围的约束，守卫先答；
   - 设为默认：第一条语句清掉原来的默认，第二条 `… SET "default" = true WHERE id = $1 AND deleted_at IS NULL`，改了 0 行时让事务失败（404），不留下没有默认状态的项目。
@@ -903,7 +904,7 @@ labels
 | `GET /api/v0/projects/{project_id}/states` | `listStates` | bearer | — | 200 `StateList`（已归档的项目为空） | 404；403 F |
 | `POST /api/v0/projects/{project_id}/states` | `createState` | bearer | `StateCreate {name, color, group, description?}` | 201 `State` | 404；403 F；422 V；409 `project.state_name_taken` |
 | `PATCH /api/v0/states/{state_id}` | `updateState` | bearer | `StateUpdate {name?, color?, group?, description?, sequence?}` | 200 `State` | 404 `project.state_not_found`；403 F；422 V；409 `project.state_name_taken`、`project.state_last_in_group` |
-| `DELETE /api/v0/states/{state_id}` | `deleteState` | bearer | — | 204 | 404；403 F；409 `project.state_default`、`project.state_last_in_group` |
+| `DELETE /api/v0/states/{state_id}` | `deleteState` | bearer | — | 204 | 404；403 F；409 `project.state_in_use`（M4/P1a 起）、`project.state_default`、`project.state_last_in_group` |
 | `POST /api/v0/states/{state_id}/mark-default` | `markDefaultState` | bearer | — | 204 | 404；403 F |
 | `GET /api/v0/workspaces/{slug}/states` | `listWorkspaceStates` | bearer | — | 200 `StateList`（他是有效成员的、未归档的项目；不含分诊） | 404 `workspace.not_found` |
 | `GET /api/v0/projects/{project_id}/labels` | `listLabels` | bearer | — | 200 `LabelList` | 404；403 F |
@@ -967,6 +968,7 @@ labels
 | `project.sole_admin` | 409 | 唯一的项目管理员离开；或连带结束、停用时他是某个还有别的成员的项目唯一的管理员（3.7） |
 | `project.state_not_found` | 404 | 状态不存在、已删除、是分诊状态，或项目看不到 |
 | `project.state_name_taken` | 409 | 项目内同名的状态 |
+| `project.state_in_use` | 409 | 删除有工作项（已归档的也算）在里面的状态，在默认状态的检查之前（M4/P1a 起，3.17） |
 | `project.state_default` | 409 | 删除默认状态 |
 | `project.state_last_in_group` | 409 | 删除一组中唯一的状态，或把它改到别的组（3.17） |
 | `project.label_not_found` | 404 | 标签不存在、已删除，或项目看不到 |
@@ -1049,7 +1051,8 @@ modules/project/
     archive_project.go      归档和恢复
     check_identifier.go
     list_members.go  add_members.go  update_member.go  remove_member.go  join_project.go  leave_project.go
-    cascade.go              workspace 的 ProjectCascade 的实现：DeleteWorkspaceProjects、EndMemberships、DemoteToGuest（3.3、3.6、3.7）
+    cascade.go              workspace 的 ProjectCascade 的实现：LockWorkspaceProjects、DeleteWorkspaceProjects、EndMemberships、DemoteToGuest（3.3、3.6、3.7）；
+                            LockWorkspaceProjects 和 DeleteWorkspaceProjects 末尾经 IssueCascade 删除工作项一侧是 M4/P1a 起的（M4 设计 3.5）
     get_preferences.go  update_preferences.go
     list_states.go  create_state.go  update_state.go  delete_state.go  mark_default_state.go  list_workspace_states.go
     list_labels.go  create_label.go  update_label.go  delete_label.go
@@ -1088,7 +1091,7 @@ modules/access/
 | `ProjectAccess`（项目是否存在、所属工作区、可见性、调用者的有效项目角色） | `access/app` | `project/adapter/postgres`（`project.Provide`） | 同上；已删除的项目算不存在，已归档的照常 |
 | `WorkspaceDirectory`（按 slug 取工作区的 id 和时区；按 id 以 `FOR SHARE` 锁住项目所在的工作区，带 `deleted_at IS NULL`，项目级的写的第一把锁，3.6 约定二） | `project/app` | `workspace/adapter/postgres`（`workspace.Provide`） | 集成测试；组合出的 app 上每个项目级的写最先等在工作区行上（P4b） |
 | `WorkspaceMembers`（按 `id` 升序 `FOR SHARE` 锁住若干人的工作区成员行，返回是否有效和角色；约定三） | `project/app` | 同上 | 集成测试；交错测试 4、5、17（3.6） |
-| `ProjectCascade`（`DeleteWorkspaceProjects`、`EndMemberships`、`DemoteToGuest`，3.3；`EndMemberships` 在调用时列举项目，3.6 约定六） | `workspace/app` | `project/app` 的 `cascade.go`（`project.New` 的 `Cascade()`，或命令行的 `project.NewCascade`，后者随第一个调用连带的命令加入，6.3） | 用例测试；删除工作区、降为访客、移出的集成测试核对连带的行与工作区的写入在同一事务（连带失败时工作区的写入也回滚）；交错测试 1、4、5、6、13–15、17；跨工作区的 `EndMemberships` 按 `id` 升序锁项目、跳过上锁时已删除的项目（P6） |
+| `ProjectCascade`（`LockWorkspaceProjects`、`DeleteWorkspaceProjects`、`EndMemberships`、`DemoteToGuest`，3.3；`EndMemberships` 在调用时列举项目，3.6 约定六；`LockWorkspaceProjects` 和 `DeleteWorkspaceProjects` 的 `projectIDs`、末尾经 `IssueCascade` 删除工作项一侧是 M4/P1a 起的，M4 设计 3.5） | `workspace/app` | `project/app` 的 `cascade.go`（`project.New` 的 `Cascade()`，或命令行的 `project.NewCascade`，后者随第一个调用连带的命令加入，6.3） | 用例测试；删除工作区、降为访客、移出的集成测试核对连带的行与工作区的写入在同一事务（连带失败时工作区的写入也回滚）；交错测试 1、4、5、6、13–15、17；跨工作区的 `EndMemberships` 按 `id` 升序锁项目、跳过上锁时已删除的项目（P6）；`LockWorkspaceProjects` 的存储测试（回答、按 `id` 加锁、锁的强度）和删除工作区等持它一个项目的写（`TestAWorkspacesDeletionWaitsForAWriteHoldingOneOfItsProjects`，M4/P1a） |
 | `ProjectMembershipCounts`（`CountInactive(ctx, workspaceID, userID) (int, error)`：他在这个工作区无效的项目成员关系个数，不加锁） | `workspace/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；W12 的输出 |
 | `Accounts`（按 id、按邮箱以 `FOR SHARE` 锁住账户行，交回 `AccountState{ID, Email, Active}`；没有这个账户时交回"不存在"。用例决定怎样对待停用的账户：建工作区、接受和忽略邀请要求有效，`reactivate-member` 允许，3.6 约定六。只作事务的第一把锁，约定一） | `workspace/app` | `identity`（`identity.Provide`，存储之上的薄实现；值在 `bootstrap/ports.go` 转换） | 集成测试（有效、停用、不存在三种）；交错测试 7、8、12、16、19 |
 | `MemberProfiles`（`PublicProfiles(ctx, ids) ([]PublicProfile, error)`：按 id 批量读显示名、名字、邮箱，不加锁，停用的账户也返回；`avatar_url` 在 M5 之前为空。成员列表用它；事务中途要读邮箱时也只用它，约定一） | `workspace/app` | `identity`（`identity.Provide`，一条查询；值在 `bootstrap/ports.go` 转换） | 集成测试（含停用的账户、不存在的 id）；`listWorkspaceMembers` 的用例测试核对访客看到的 `email` 为 `null` |
@@ -2301,5 +2304,5 @@ P4b 的 plan（`5740002c`）经预检：High 0、Medium 1、Low 2。预检的 M1
 - 关闭的问题：M1（添加持工作区的 S，删除工作区的 N 与它互斥，批量不再与它交错）；F-M3 的两个窗口（L1 在内）：连带持工作区的 N、在它之后读时刻，项目级的写都已提交或在等它，一个改变一个时刻对连带改写的每一列都成立（3.3）。
 - 不做：M1 的另一种修法（工作区的存储按 `id` 顺序批量锁成员行的 `LockWorkspaceMembers`）；B 的 `GREATEST`。
 - 代价（P4b 整分支评审的 I2 改正，负责人 2026-10-02 确认）：两边**不对称**。项目级的写取工作区行的 `FOR SHARE`；工作区一级的写取 `FOR NO KEY UPDATE`，今天是修改工作区、删除工作区、改成员的角色（连同降为访客）、接受邀请，以后还有移出、离开、恢复成员（P5a）和停用（P6）。只有共享锁持有一行时，PostgreSQL 让新的 `FOR SHARE` 立即取得，不排在等待中的 `FOR NO KEY UPDATE` 之后（评审的探针 B，PG 18）：项目级的写一个接一个、首尾相连时，工作区一级的写一直取不到锁，上界是它的请求期限（`server.request_timeout`，默认 15 秒），到期失败、回滚、什么都不写，可以重试。这个上界只对接口的请求成立（P5 的拆分时改正记录，负责人 2026-10-02 裁定只改记录、不改代码）：管理命令（P5a 的 `nerve workspaces reactivate-member`、P6 的 `nerve users deactivate`）没有请求期限，它们的上下文只在 SIGINT、SIGTERM 时取消（`cmd/nerve/main.go`），代码里也没有任何地方设 `lock_timeout`、`statement_timeout`；所以项目级的写连续重叠时，命令一直等到操作者中断，之后回滚、什么都不写，可以重试。README 的部署一节随 P5a 写明（8.7）。先锁后判定（约定二），被拒绝的请求也先取这把 S。按目前的负载风险很低：每个项目级的写持锁几毫秒，每个账户限速每分钟 1,200 次（约每秒 20 次），占用远不到一半，等待方很快遇到空档；负责人裁定不改代码。项目级的写之间 S 与 S 不冲突，不互相等待。
-- 范围（负责人 2026-10-02 确认）：本约定覆盖项目管理类的写，即上面列的 P4b、P5b、P7a、P7b 的写。M4 的工作项写入是最频繁的路径（agent 高频调用），**不默认沿用**：M4 的设计单独决定它取不取工作区的 S，并把上面的代价作为设计输入；取的话要说明工作区一级的写在那样的负载下怎样不被饿死。
+- 范围（负责人 2026-10-02 确认）：本约定覆盖项目管理类的写，即上面列的 P4b、P5b、P7a、P7b 的写。M4 的工作项写入是最频繁的路径（agent 高频调用），**不默认沿用**：M4 的设计单独决定它取不取工作区的 S，并把上面的代价作为设计输入；取的话要说明工作区一级的写在那样的负载下怎样不被饿死。M4 的选择（M4 设计 3.5，决策点 1 负责人裁定 B，2026-10-17）：工作项一侧的写（草稿的写和发布草稿除外：它们仍先取工作区的 S，M4 设计 3.5 的代价二，M4 的 P8）不取工作区的 S，最先以 `FOR NO KEY UPDATE` 锁住项目行，取锁之前做不加锁的预检（判定拒绝的在那里答，不取行锁）；删除工作区在读时刻之前按 `id` 升序锁住它的全部项目（M4/P1a 起）。
 - 落点：3.3、3.6 约定二、约定五的论证、取锁表、6.5、6.7、9.3 的交错 4、13、17、11.2、第 12 节 P4b–P7b、第 15 节。测试在 P4b（spec 第 3 节第 13 条）。

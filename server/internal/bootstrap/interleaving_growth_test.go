@@ -17,6 +17,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
@@ -109,6 +110,12 @@ func (r growthRace) authorizer() shared.Authorizer {
 func authorizerOn(pool *pgxpool.Pool) shared.Authorizer {
 	return access.New(access.Deps{WorkspaceRoles: workspace.Provide(pool).WorkspaceRoles,
 		ProjectAccess: accessProjects{projects: project.Provide(pool).ProjectAccess}})
+}
+
+// cascadeOn is project's cascade as bootstrap wires it, on pool, over
+// issue's (M4 design 6.6).
+func cascadeOn(pool *pgxpool.Pool) project.Cascade {
+	return project.NewCascade(project.CascadeDeps{Pool: pool, Issues: issue.Provide(pool).IssueCascade})
 }
 
 // gatedShares is workspace's WorkspaceMembers; with a gate, the growth
@@ -249,7 +256,7 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 					}
 					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 					defer cancel()
-					g, cascade := newGate(), project.NewCascade(project.CascadeDeps{Pool: r.pool})
+					g, cascade := newGate(), cascadeOn(r.pool)
 					var req *http.Request
 					var rec *httptest.ResponseRecorder
 					var grew, demoted <-chan error
@@ -346,11 +353,11 @@ func TestADemotionAndAProjectsDeletionSerialize(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g, store := newGate(), projectpg.New(r.pool)
-			auth, cascade := r.authorizer(), projectapp.NewCascade(store, store, store)
+			auth, cascade := r.authorizer(), projectapp.NewCascade(store, store, store, store, issue.Provide(r.pool).IssueCascade)
 			if deletionFirst {
 				auth = gatedAuthorizer{Authorizer: auth, action: projectdomain.ActionDelete, gate: g}
 			} else {
-				cascade = projectapp.NewCascade(store, gatedDemoter{store, g}, store)
+				cascade = projectapp.NewCascade(store, store, gatedDemoter{store, g}, store, issue.Provide(r.pool).IssueCascade)
 			}
 			route := newProjectRoute(t, r.pool, auth, workspace.Provide(r.pool).WorkspaceMembers)
 			var req *http.Request

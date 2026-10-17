@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
@@ -20,8 +21,9 @@ type UserCommand func(ctx context.Context, admin *identity.Admin) (string, error
 
 // Users runs cmd on the minimal composition of M2 design 3.17: a pool and
 // identity's administrator use cases, the deactivation's with workspace's
-// Deactivator over project's cascade, each built on the pool alone (M3
-// design 6.6); no HTTP server, no Authorizer, no jobs client. The
+// Deactivator over project's cascade, itself over issue's, each built on
+// the pool alone (M3 design 6.6, M4 design 6.6); no HTTP server, no
+// Authorizer, no jobs client. The
 // command's line goes to out, the logs to logOut. An error is one line for
 // the administrator, and the database is unchanged.
 func Users(ctx context.Context, cfg config.Config, logOut, out io.Writer, cmd UserCommand) error {
@@ -41,7 +43,7 @@ func Users(ctx context.Context, cfg config.Config, logOut, out io.Writer, cmd Us
 		Logger:   logger,
 		Password: passwordHashing(cfg.Auth.Password),
 		Memberships: workspace.NewDeactivator(workspace.DeactivatorDeps{
-			Pool: pool, Clock: clock.System{}, Projects: project.NewCascade(project.CascadeDeps{Pool: pool}),
+			Pool: pool, Clock: clock.System{}, Projects: project.NewCascade(project.CascadeDeps{Pool: pool, Issues: issue.Provide(pool).IssueCascade}),
 		}),
 	})
 	line, err := cmd(ctx, admin)

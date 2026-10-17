@@ -295,7 +295,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a workspace
-         * @description For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states and labels are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+         * @description For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states, labels and work items (with the work items' assignees, labels, subscribers and activity) are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
          */
         delete: operations["deleteWorkspace"];
         options?: never;
@@ -605,7 +605,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a project
-         * @description For the project's admins, and its members who are the workspace's admins; an archived project is deleted as any other. The project is deleted with its memberships, its members' display settings, its states and its labels, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project is deleted as any other. The project is deleted with its memberships, its members' display settings, its states, its labels and its work items (with their assignees, labels, subscribers and activity), all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.
          */
         delete: operations["deleteProject"];
         options?: never;
@@ -805,7 +805,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a state
-         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states are deleted as any other's. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project's default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states are deleted as any other's. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project's default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. Nor is a state a work item is in, an archived one too (project.state_in_use); it is checked before the default and the group. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.
          */
         delete: operations["deleteState"];
         options?: never;
@@ -905,7 +905,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a label and the labels under it
-         * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels are deleted as any other's. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. The label and the labels under it are deleted at the moment of the request, by the caller, and their names are free again in the project. The role is decided after the workspace and project rows are locked.
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels are deleted as any other's. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. The label and the labels under it are deleted at the moment of the request, by the caller, and their names are free again in the project; at the same moment and by the same caller they are taken off every work item they are on. The role is decided after the workspace and project rows are locked.
          */
         delete: operations["deleteLabel"];
         options?: never;
@@ -915,6 +915,29 @@ export interface paths {
          * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels change as any other's. The fields given change and the others stay; the values follow createLabel's rules, and the sort order is any number (validation_failed), checked before the label is looked at. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. A parent given is a label of the project at the top, not the label itself, and a label with labels under it takes none: labels have two levels (parent_id not_allowed); a null parent moves the label to the top. The name may not be another undeleted label's of the project, in any case (project.label_name_taken). The role is decided after the workspace and project rows are locked, and the parent is checked after it.
          */
         patch: operations["updateLabel"];
+        trace?: never;
+    };
+    "/api/v0/projects/{project_id}/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a work item in a project
+         * @description For the project's admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project's, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project's (validation_failed, every problem at once). Left out, the state is the project's default, the priority none, and the assignee the project's default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project's next number, never used again, also after a deletion; it comes after its state's work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state's first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller's, at one moment.
+         */
+        post: operations["createIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v0/me/projects/{project_id}/preferences": {
@@ -1414,14 +1437,14 @@ export interface components {
             workspace_id: string;
             name: string;
             description: string;
-            /** @description Upper case; unique among the workspace's projects. */
+            /** @description Upper case; unique among the workspace's projects; the prefix of its work items' numbers, as in WEB-12. */
             identifier: string;
             network: components["schemas"]["ProjectNetwork"];
             /** Format: uuid */
             project_lead_id: string | null;
             /**
              * Format: uuid
-             * @description The account set as the project's default assignee, kept as set; null for none.
+             * @description The account set as the project's default assignee, kept as set; null for none. A work item created without assignees is assigned to him while he is an active member of the project who is not its guest.
              */
             default_assignee_id: string | null;
             /** @description Whether the project shows cycles. */
@@ -1565,7 +1588,7 @@ export interface components {
             /** @description As the web app's color picker gives it, e.g. "#F59E0B". */
             color: string;
             group: components["schemas"]["StateGroup"];
-            /** @description Whether the state is its project's default state; a project has exactly one. */
+            /** @description Whether the state is its project's default state, which a work item created without a state takes; a project has exactly one. */
             default: boolean;
             /** @description The state's place among the project's states, the lowest first. */
             sequence: number;
@@ -1646,6 +1669,75 @@ export interface components {
             parent_id?: string | null;
             /** @description The label's place among the project's labels, the lowest first. */
             sort_order?: number;
+        };
+        /**
+         * @description A work item's priority, from the most to the least urgent.
+         * @enum {string}
+         */
+        IssuePriority: "urgent" | "high" | "medium" | "low" | "none";
+        IssueCreate: {
+            /** @description 1–255 characters without the white space around it, which is not stored. */
+            name: string;
+            /**
+             * Format: uuid
+             * @description One of the project's states, not its triage state; left out for the project's default state.
+             */
+            state_id?: string;
+            priority?: components["schemas"]["IssuePriority"];
+            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for the project's default assignee while he is one, else no one. */
+            assignee_ids?: string[];
+            /** @description At most 100 of the project's labels, each named once. */
+            label_ids?: string[];
+        };
+        /** @description A work item of a project. */
+        IssueDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
+            sequence_id: number;
+            name: string;
+            /** Format: uuid */
+            state_id: string;
+            priority: components["schemas"]["IssuePriority"];
+            /**
+             * Format: uuid
+             * @description The work item it is under, in the same project; null for none.
+             */
+            parent_id: string | null;
+            /** @description Its place among its state's work items, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was put in a state of the completed group; null in any other state.
+             */
+            completed_at: string | null;
+            /**
+             * Format: date-time
+             * @description When it was archived; null when it is not.
+             */
+            archived_at: string | null;
+            /** @description The accounts it is assigned to, by id; one who has left the project since is still one. */
+            assignee_ids: string[];
+            /** @description Its labels, by id. */
+            label_ids: string[];
+            /**
+             * Format: uuid
+             * @description The account that created it; null for none.
+             */
+            created_by_id: string | null;
+            /**
+             * Format: uuid
+             * @description The account that changed it last; null for none.
+             */
+            updated_by_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
         };
         /**
          * @description A tab of a project's header.
@@ -1779,6 +1871,9 @@ export type Label = components['schemas']['Label'];
 export type LabelList = components['schemas']['LabelList'];
 export type LabelCreate = components['schemas']['LabelCreate'];
 export type LabelUpdate = components['schemas']['LabelUpdate'];
+export type IssuePriority = components['schemas']['IssuePriority'];
+export type IssueCreate = components['schemas']['IssueCreate'];
+export type IssueDetail = components['schemas']['IssueDetail'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -3211,6 +3306,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Label"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCreate"];
+            };
+        };
+        responses: {
+            /** @description The new work item. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
                 };
             };
             default: components["responses"]["Problem"];
