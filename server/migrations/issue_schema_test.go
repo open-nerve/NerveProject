@@ -88,20 +88,19 @@ var issueNames = []string{
 	"issues_workspace_id_idx i",
 }
 
-// The ids the issue tables' tests write, as SQL literals: two accounts, a
+// The ids the issue tables' tests write, as SQL literals: an account, a
 // workspace, two projects with a state each, a label of web, and a work
 // item of each project.
 const (
-	issueAlice = "'0199a2b4-0000-7000-8000-000000000001'"
-	issueBob   = "'0199a2b4-0000-7000-8000-000000000002'"
-	issueAcme  = "'0199a2b4-0000-7000-8000-000000000003'"
-	issueWeb   = "'0199a2b4-0000-7000-8000-000000000004'"
-	issueOps   = "'0199a2b4-0000-7000-8000-000000000005'"
-	webState   = "'0199a2b4-0000-7000-8000-000000000006'"
-	opsState   = "'0199a2b4-0000-7000-8000-000000000007'"
-	webBug     = "'0199a2b4-0000-7000-8000-000000000008'"
-	webIssue   = "'0199a2b4-0000-7000-8000-000000000009'"
-	opsIssue   = "'0199a2b4-0000-7000-8000-00000000000a'"
+	issueBob  = "'0199a2b4-0000-7000-8000-000000000002'"
+	issueAcme = "'0199a2b4-0000-7000-8000-000000000003'"
+	issueWeb  = "'0199a2b4-0000-7000-8000-000000000004'"
+	issueOps  = "'0199a2b4-0000-7000-8000-000000000005'"
+	webState  = "'0199a2b4-0000-7000-8000-000000000006'"
+	opsState  = "'0199a2b4-0000-7000-8000-000000000007'"
+	webBug    = "'0199a2b4-0000-7000-8000-000000000008'"
+	webIssue  = "'0199a2b4-0000-7000-8000-000000000009'"
+	opsIssue  = "'0199a2b4-0000-7000-8000-00000000000a'"
 )
 
 // newIssueDatabase is a database with the rows of the ids above, each work
@@ -110,8 +109,7 @@ func newIssueDatabase(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	pool := newPool(t, pgtest.NewDatabase(t))
 	for _, stmt := range []string{
-		"INSERT INTO users (id, email, password, display_name) VALUES (" + issueAlice + ", 'alice@corp.com', 'x', 'alice'), (" + issueBob +
-			", 'bob@corp.com', 'x', 'bob')",
+		"INSERT INTO users (id, email, password, display_name) VALUES (" + issueBob + ", 'bob@corp.com', 'x', 'bob')",
 		"INSERT INTO workspaces (id, name, slug) VALUES (" + issueAcme + ", 'Acme', 'acme')",
 		"INSERT INTO projects (id, workspace_id, name, identifier) VALUES (" + issueWeb + ", " + issueAcme + ", 'Web', 'WEB'), (" + issueOps +
 			", " + issueAcme + ", 'Ops', 'OPS')",

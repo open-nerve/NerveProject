@@ -14,6 +14,7 @@ import (
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // inserter inserts the row id of a table under the work item issue of p,
@@ -176,7 +177,7 @@ func TestTheBatchStatementsDeleteAProjectsRowsInIDOrder(t *testing.T) {
 			for id, was := range auditBefore {
 				want := was
 				if slices.Contains(webRows, id) {
-					want = fmt.Sprintf("deleted at %s, written at %s by %s", later.Format(time.RFC3339Nano), later.Format(time.RFC3339Nano), bob)
+					want = deletion(later, bob)
 				}
 				if auditAfter[id] != want {
 					t.Errorf("row %s: %s, want %s", id, auditAfter[id], want)
@@ -191,6 +192,81 @@ func TestTheBatchStatementsDeleteAProjectsRowsInIDOrder(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Each batch statement locks the rows it takes FOR NO KEY UPDATE one by
+// one, in id order, before it writes them (delete_rows.sql): a row that
+// another transaction deletes while the batch waits for it is passed over
+// and the next one taken, and the earlier deletion is kept. Web has the
+// rows a, b and c in the table, under its work item (in the work items'
+// table, three more work items), their ids after the item's. Another
+// transaction soft-deletes b, by alice an hour earlier, and holds it. The
+// batch of two after the work item's id waits for b. Once the other
+// commits, the batch deletes a and c at the moment and by the account
+// given, and b keeps alice's deletion. A statement that chose its rows
+// before locking them would take a and b, and stamp b again.
+func TestABatchPassesOverARowDeletedWhileItWaits(t *testing.T) {
+	for _, st := range batchStatements {
+		t.Run(st.table, func(t *testing.T) {
+			s, pool := newStore(t)
+			alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+			web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
+			issue := uuid.NewV7()
+			newIssue(t, pool, web, issue, 1, alice)
+			a, b, c := uuid.NewV7(), uuid.NewV7(), uuid.NewV7() // drawn after the work item: ascending ids
+			for n, row := range []uuid.UUID{a, b, c} {
+				st.insert(t, pool, web, issue, row, alice, n)
+			}
+			earlier, later := now.Add(-time.Hour), now.Add(time.Hour)
+
+			soon := pgtest.Soon(t) // ends the test's statements and the batch's wait for b
+			held, err := pool.Begin(soon)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = held.Rollback(context.Background()) }()
+			if _, err := held.Exec(soon, "UPDATE "+st.table+" SET deleted_at = $2, updated_at = $2, updated_by_id = $3 WHERE id = $1", b, earlier,
+				alice); err != nil {
+				t.Fatal(err)
+			}
+			var ids []uuid.UUID
+			done := make(chan error, 1)
+			go func() {
+				done <- postgres.NewTxManager(pool, 2*time.Second).WithinTx(soon, func(ctx context.Context) error {
+					var err error
+					ids, err = st.method(s, ctx, app.RowBatch{ProjectID: web.id, After: issue, Limit: 2, By: bob, At: later})
+					return err
+				})
+			}()
+			pgtest.WaitForLockWaitOn(t, pool, st.table, 5*time.Second)
+			if err := held.Commit(soon); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case err := <-done:
+				if got := slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare); err != nil || fmt.Sprint(got) != fmt.Sprint([]uuid.UUID{a, c}) {
+					t.Errorf("the batch = %v, %v; want a and c", got, err)
+				}
+			case <-time.After(10 * time.Second):
+				t.Fatal("the batch did not end within 10s")
+			}
+			got := audits(t, pool, st.table)
+			for name, row := range map[string]struct {
+				id   uuid.UUID
+				want string
+			}{"a": {a, deletion(later, bob)}, "b": {b, deletion(earlier, alice)}, "c": {c, deletion(later, bob)}} {
+				if got[row.id] != row.want {
+					t.Errorf("%s: %s, want %s", name, got[row.id], row.want)
+				}
+			}
+		})
+	}
+}
+
+// deletion is the audit columns of a row deleted at at by by, as audits
+// writes them.
+func deletion(at time.Time, by uuid.UUID) string {
+	return fmt.Sprintf("deleted at %s, written at %s by %s", at.UTC().Format(time.RFC3339Nano), at.UTC().Format(time.RFC3339Nano), by)
 }
 
 // audits are table's rows' audit columns of a deletion, by id, as text.
