@@ -1493,9 +1493,9 @@ DROP TABLE issues;
 -- The deletion of a project's work-item side (M4 design 3.6), the work items' table: a batch of the project's
 -- undeleted rows after the id `after`, in id order, locked FOR NO KEY UPDATE as they come and soft-deleted at the
 -- moment and by the account given (convention 5: two batches over the same rows take them in one order). The caller
--- runs it again from the batch's greatest id until a batch finds none: a row another transaction deleted while the
--- batch waited for it is left out, so a short batch does not mean the last. The primary key's index serves the id
--- order and the bound. It returns the ids it deleted.
+-- runs it again from the batch's greatest id until a batch finds none (a row deleted while the batch waits for it is
+-- passed over and the next one taken; each batch reads a new snapshot). The primary key's index serves the id order
+-- and the bound. It returns the ids it deleted.
 UPDATE issues AS t
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE t.id IN (
@@ -1511,7 +1511,7 @@ Expected: 成功：
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
 | `1dfb2b6312c3c3db25a8cad84c031995c3b0546c73b3585a0282c98e11397676` | 32 | `server/internal/modules/issue/adapter/postgres/gen/db.go` |
-| `c1e6b81cc135e70568bb30d18b168a43cd75b63b30c3c4bb4b13a62e77304907` | 63 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
+| `3dc81983d38c58d226751d066619cb37a21f6e492f95c494e3eabc576b3160b4` | 63 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
 | `2efad096aca0eaea33ce6550b369dadc129d4b972e8128c0167bc7551f990192` | 35 | `server/internal/modules/issue/adapter/postgres/gen/models.go` |
 
 Run: `shasum -a 256 server/internal/modules/issue/adapter/postgres/gen/db.go server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go server/internal/modules/issue/adapter/postgres/gen/models.go`
@@ -2973,8 +2973,8 @@ DROP TABLE issue_activities;
 -- undeleted rows after the id `after`, in id order, locked FOR NO KEY UPDATE as they come and soft-deleted at the
 -- moment and by the account given (convention 5: two batches over the same rows take them in one order). The caller
 -- runs the tables' statements in the global order (3.5) and, for each table, again from the batch's greatest id until
--- a batch finds none: a row another transaction deleted while the batch waited for it is left out, so a short batch
--- does not mean the last. The primary key's index serves the id order and the bound. It returns the ids it deleted.
+-- a batch finds none (a row deleted while the batch waits for it is passed over and the next one taken; each batch
+-- reads a new snapshot). The primary key's index serves the id order and the bound. It returns the ids it deleted.
 UPDATE issues AS t
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE t.id IN (
@@ -3029,7 +3029,7 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `b1f1c2f6c7414d53fd3f8c59d8ba2974157db36b315275ce721b015742706479` | 243 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
+| `f0baebccc3984ae921fd1d502a74b66cbb1602827199c99b3f3091f790298e51` | 243 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
 | `354335adbeb7af6b7725ee7fb4cfdbd4b48594a364a3577f98ebb50294c31d76` | 94 | `server/internal/modules/issue/adapter/postgres/gen/models.go` |
 
 Run: `shasum -a 256 server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go server/internal/modules/issue/adapter/postgres/gen/models.go`
@@ -12171,8 +12171,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 文档**
 
-`docs/v0/M3-workspace-project/M3-design.md`（修改，5 处）：
+`docs/v0/M3-workspace-project/M3-design.md`（修改，6 处）：
 
+````old docs/v0/M3-workspace-project/M3-design.md
+    - **一个改变一个时刻，对连带改写的每一列都成立**（负责人 2026-10-02 的裁定，17.4）：调用方在持有工作区的 `FOR NO KEY UPDATE` 之后才读 `now`（删除工作区、改成员的角色、接受邀请都是这样），而每个项目级的写最先以 `FOR SHARE` 锁住它的工作区行、在全部锁之后读自己的时刻（3.6 约定二）。两把锁互斥：连带读 `now` 时，在它要改的行上没有还未提交的项目级的写，先到的写都已提交、时刻不晚于 `now`，后到的写等连带提交、时刻晚于 `now`。所以连带写下的 `updated_at` 不早于行上原有的，`deleted_at`、`updated_at` 也不早于 `created_at`。这是连带与项目级的写之间的保证；两个只持共享锁的写在同一行上相遇时不成立：同一个账户并发改自己的显示设置，两个写都持项目（或工作区）的 S、各自在锁之后读时刻，到 `UPSERT` 里才相遇，后提交的可以带较早的时刻（P4b review 第 7 节，只涉及调用者自己那一行的审计列）。
+````
+````new docs/v0/M3-workspace-project/M3-design.md
+    - **一个改变一个时刻，对连带改写的每一列都成立**（负责人 2026-10-02 的裁定，17.4）：调用方在持有工作区的 `FOR NO KEY UPDATE` 之后才读 `now`（删除工作区、改成员的角色、接受邀请都是这样），而每个项目级的写最先以 `FOR SHARE` 锁住它的工作区行、在全部锁之后读自己的时刻（3.6 约定二）。两把锁互斥：连带读 `now` 时，在它要改的行上没有还未提交的项目级的写，先到的写都已提交、时刻不晚于 `now`，后到的写等连带提交、时刻晚于 `now`。所以连带写下的 `updated_at` 不早于行上原有的，`deleted_at`、`updated_at` 也不早于 `created_at`。M4 的工作项一侧的写不锁工作区行、最先锁项目行（M4 设计 3.5，决策点 1 的 B）：删除项目、删除工作区持这些项目的 N 之后才读时刻，同一个保证对工作项一侧的行经项目行成立（M4/P1a 起）。这是连带与项目级的写之间的保证；两个只持共享锁的写在同一行上相遇时不成立：同一个账户并发改自己的显示设置，两个写都持项目（或工作区）的 S、各自在锁之后读时刻，到 `UPSERT` 里才相遇，后提交的可以带较早的时刻（P4b review 第 7 节，只涉及调用者自己那一行的审计列）。
+````
 ````old docs/v0/M3-workspace-project/M3-design.md
   | 删除工作区 | 工作区 N → 判定 → 软删除工作区 → 邀请（N，`id` 升序，一条语句，回答它们的 `id`；再删除这些 `id` 的，约定五的例外）→ 成员 → 显示设置 → `DeleteWorkspaceProjects`：项目 → 项目成员 → 项目显示设置 → 状态 → 标签（批量，约定五） |
 ````

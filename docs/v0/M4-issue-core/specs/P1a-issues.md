@@ -150,7 +150,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 第 1、2、3、11 条已由控制者的拆分裁定覆盖（`p1-split-rulings.md`）；第 4–10、12–15 条是本 spec 对设计交给 P1a 的事的决定，列出待裁定；第 16 条是承接条目的落点。
 
-1. **拆分与重新切分（裁定 1、3）**。设计 12 节 P1a 的十五个任务草稿与 plan 的十五个 Task 的对应：草稿 1（第一个提交、五张表、骨架、两个连带、过渡）拆成 Task 2（`issues` 一张表和骨架：原型量到草稿 1 一个任务 1,815 行代码块，超过上限）和 Task 3（其余四张表）；草稿 10（删除工作区的新顺序）提到 Task 1（下一条）；草稿 2–9 依次是 Task 4–10，其中动作 `issue.create` 和它的规则行从草稿 1 移到 Task 8（用例：设计 12 节约束 4 要求动作随它的操作；`TestEveryModuleDeclaresItsActionsOrHasNone` 允许 Task 2–7 的 `issue` 没有动作）；草稿 11–15 是 Task 11–15。每个 Task 在 plan 里的行数见附录 A.1，最大的是 Task 2（1,435 行）。
+1. **拆分与重新切分（裁定 1、3）**。设计 12 节 P1a 的十五个任务草稿与 plan 的十五个 Task 的对应：草稿 1（第一个提交、五张表、骨架、两个连带、过渡）拆成 Task 2（`issues` 一张表和骨架：原型量到草稿 1 一个任务 1,815 行代码块，超过上限）和 Task 3（其余四张表）；草稿 10（删除工作区的新顺序）提到 Task 1（下一条）；草稿 2、3、4 是 Task 4、5、6，草稿 6 是 Task 7，草稿 5、7 合为 Task 8（取锁的一步没有使用者时过不了 lint，附录 A.1），草稿 8、9 是 Task 9、10，其中动作 `issue.create` 和它的规则行从草稿 1 移到 Task 8（用例：设计 12 节约束 4 要求动作随它的操作；`TestEveryModuleDeclaresItsActionsOrHasNone` 允许 Task 2–7 的 `issue` 没有动作）；草稿 11–15 是 Task 11–15。每个 Task 在 plan 里的行数见附录 A.1，最大的是 Task 2（1,435 行）。
 2. **删除工作区的新顺序在 Task 1**。`IssueCascade.DeleteWorkspaceIssues` 要这次锁住的项目（`DeleteWorkspaceProjects(ctx, ws, projectIDs, by, now)`），而这些项目由 `LockWorkspaceProjects` 回答；把新顺序放在连带之前，Task 2 的连带直接接在它上面，不必先写一个按工作区读项目的过渡再删去。
 3. **规模的测量在 P1b**（裁定 4）。设计的决策点 7 和 9.3 说 P1 量 2 万个工作项的删除；P1a 写下同步的过渡写法，P1b 不改它，测量放在 P1b 的 spec（P1a 没有用退路，没有腾出地方）。
 4. **`DeleteWorkspaceIssues` 的签名不带工作区**（待裁定）。设计 3.3 写 `DeleteWorkspaceIssues(ctx, workspaceID, projectIDs, by, now)`，工作区的 id 是为没有项目的草稿（P8）。P1a 的签名是 `(ctx, projectIDs, by, now)`：P1a 没有草稿，带一个不读的参数是没有使用者的代码（约束：不留没有使用者的代码）。P8 加草稿时加这个参数，接口一处、实现一处、两个调用方（`project` 的 `Cascade`）。建议照本条。
@@ -199,7 +199,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 | 端口 | `ProjectGate.Find`、`Lock` 照用；`IssueCreator.GetIssue` 已回答带负责人、标签的工作项（`getIssue` 用它）；修改要的存储方法、差集写法（4.3）在 P1b 加 |
 | 领域 | `NewIssue`、`CheckNewIssue`、`Assignees`、`UnknownLabel`、`StateNotAllowed`、`SortOrderAfter`、`CompletedAt`、`CreationActivity`；P1b 加修改的规则和动态的第 3、6、7、10–13 行 |
 | 契约 | `IssueDetail`（`getIssue`、`updateIssue` 的回答）；`IssueUpdate` 在 P1b |
-| 组合 | `issueWrites`（每个工作项的写一行，完整性核对：P1b 的写不加行时 `TestEachIssueWriteLocksItsProjectFirst` 失败；每行的 `reads` 是写在锁下最先读、在锁之前不读的表：`updateIssue` 在锁之前读 `issues`，它的 `reads` 不能是 `issues`）；`writesOnAProject` 按标签 `issue` 去掉工作项的写；矩阵 `permission_matrix_issues_test.go` |
+| 组合 | `issueWrites`（每个工作项的写一行，完整性核对：P1b 的写不加行时 `TestEachIssueWriteLocksItsProjectFirst` 失败；每行的 `reads` 是写在锁下最先读、在锁之前不读的表：`updateIssue` 在锁之前读 `issues`，它的 `reads` 不能是 `issues`）；`writesOnAProject` 按标签 `issue` 去掉工作项的写；P8 的草稿的写和发布草稿先取工作区 S（设计 3.5 代价二），不是这个形状：P8 把它们从 `writesOnIssues` 分出（标签或清单），另写它们的形状测试；矩阵 `permission_matrix_issues_test.go` |
 | 交错 | `heldTx`、`exchange`、`racingWrite`、`serialize`、`inBothOrders`、`createsIssue`、`deletedWith`：交错 3u–7u 照它们写（修改代替创建），交错 20 另经真实的连接池和闸门 |
 | 规模 | 同步的过渡写法（`deleteProjectRows`，每批 1,000 行）：P1b 在 2 万个工作项（每个 20 条动态）的项目和五个这样的项目的工作区上量请求的耗时，记进 P1b 的 spec（裁定 4） |
 | 端到端 | `issues.ts`、`assert/issue.ts`：I2 的接口版本照 `expectIssueCreated` 的写法加 `expectIssueUpdated` |
@@ -209,8 +209,8 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 | Phase | 条目 |
 |---|---|
-| P2 | 访客规则（`guest_view_all_features` 进 `ProjectGate.Lock`）；起止日期进接口；按编号取（`identifier`） |
-| P3 | `LockMany`（约定七）、`DeletedAt`；关联进删除的语句 |
+| P2 | 访客规则：判定的 `Grant` 重新由 `decide`、`precheck`、`lockAndDecide` 带出（附录 A.2 删去的 `held`；`OwnOnly` 的拒绝也在预检里答，设计 3.4、3.5）；`OwnOnly` 由 `access` 的 `ProjectFacts` 算出，`ProjectGate.Lock` 要不要 `guest_view_all_features` 由 P2 定；起止日期进接口；按编号取（`identifier`） |
+| P3 | `LockMany`（约定七）、`DeletedAt`；关联进删除的语句；加关联与删除工作区的交错（两个项目同属一个工作区，两种顺序）：`LockWorkspaceProjects` 的 `id` 升序从这时起承重（P1a 只由存储测试钉住） |
 | P5 | `Issue`（列表的行）；状态的名称进 `StateCatalog` |
 | P6 | `archive_in` |
 | P8 | `DeleteWorkspaceIssues` 加工作区的 id（没有项目的草稿，第 3 节第 4 条） |
@@ -252,7 +252,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 **切分**（裁定 3 允许在上限之内重新切分）：设计草稿的任务 1 量到 1,815 行代码块，拆成 Task 2（`issues` 一张表和骨架）和 Task 3（其余四张表）；取锁的一步不能单独成为一个 Task（没有使用者的未导出函数过不了 lint，M3 也是经用例测它），与 `createIssue` 的用例同在 Task 8；删除工作区的新顺序提到 Task 1（第 3 节第 1、2 条）。没有用到退路。
 
-**Phase 的大小**（裁定 3：约 16 个任务、每个任务约 1,500 行以内）：15 个 Task；plan 12,382 行（`wc -l`）；每个 Task 都在约 1,500 行以内，最大的是 Task 2（1,435 行），其次 Task 11（1,312 行）、Task 9（1,307 行）。各 Task：1 1,115、2 1,435、3 803、4 554、5 622、6 526、7 623、8 1,246、9 1,307、10 503、11 1,312、12 575、13 135、14 1,221、15 229（`compose_plan.py` 量的，从 Task 的标题到下一个标题）。手写的文件 141 个（新建 59 个、修改 82 个），生成物 14 个（2.1）。没有超出，没有停下。
+**Phase 的大小**（裁定 3：约 16 个任务、每个任务约 1,500 行以内）：15 个 Task；plan 12,388 行（`wc -l`）；每个 Task 都在约 1,500 行以内，最大的是 Task 2（1,435 行），其次 Task 11（1,312 行）、Task 9（1,307 行）。各 Task：1 1,115、2 1,435、3 803、4 554、5 622、6 526、7 623、8 1,246、9 1,307、10 503、11 1,312、12 575、13 135、14 1,221、15 235（`compose_plan.py` 量的，从 Task 的标题到下一个标题）。手写的文件 141 个（新建 59 个、修改 82 个），生成物 14 个（2.1）。没有超出，没有停下。
 
 ### A.2 清扫之后的修改和加强
 
@@ -309,9 +309,11 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 ### A.5 逐 Task 复现
 
-**逐 Task 复现**（`replay-all.sh`、`replay.py`，日志在 `p1tools/replay-logs`）：`d693f539` 的一份新的副本（`base-d693f539.tar`），`pnpm install --frozen-lockfile`，`bin/golangci-lint` 取原型的（2.13.2；`make tools` 会下载它）；按 plan 的顺序应用 15 个 Task 的 408 个块，照原样运行每个 Task 的 `Run:` 命令，一共 1,554 秒，没有重跑。Task 1–13 之后 `make lint-go` 两段 `0 issues.`、`make test` 全部 `ok`（42 个到 46 个）；`make gen-go`（Task 1、2、3、6、7）和 `make gen`（Task 9、11）之后，生成物的每个 SHA-256 和行数与 plan 的表相同，之后的 gen-same 没有差异；`make lint-web`、`make knip`、`make test-web` 在 Task 1、2、3、9、11、14 通过；Task 12、13 的 `-count=5 -race` 没有 40P01、死锁和数据竞争；`make e2e` 在 Task 1、2、3、11 是 120 个中 117 个通过、在 Task 14 是 121 个中 118 个通过，失败的只有 S3（F4）和 A4 的两个 firefox 测试（机器上没有 Firefox）；Task 15 的 `make lint-web` 通过，`doclinks.py` 没有断的链接，`make test` 46 个 `ok`。最后 `treediff` 比较复现的树与原型的 3,343 个文件，没有差异。复现的副本不是 git 检出：`make gen-check` 由 gen-same 代替（`make gen` 前后生成物逐字节相同），`make lint-web` 的关键词守卫经 `kwreal.py` 列出文件。
+**逐 Task 复现**（`replay-all.sh`、`replay.py`，日志在 `p1tools/replay-logs-5396a085`；预检之后的第二次见本节末）：`d693f539` 的一份新的副本（`base-d693f539.tar`），`pnpm install --frozen-lockfile`，`bin/golangci-lint` 取原型的（2.13.2；`make tools` 会下载它）；按 plan 的顺序应用 15 个 Task 的 408 个块，照原样运行每个 Task 的 `Run:` 命令，一共 1,554 秒，没有重跑。Task 1–13 之后 `make lint-go` 两段 `0 issues.`、`make test` 全部 `ok`（42 个到 46 个）；`make gen-go`（Task 1、2、3、6、7）和 `make gen`（Task 9、11）之后，生成物的每个 SHA-256 和行数与 plan 的表相同，之后的 gen-same 没有差异；`make lint-web`、`make knip`、`make test-web` 在 Task 1、2、3、9、11、14 通过；Task 12、13 的 `-count=5 -race` 没有 40P01、死锁和数据竞争；`make e2e` 在 Task 1、2、3、11 是 120 个中 117 个通过、在 Task 14 是 121 个中 118 个通过，失败的只有 S3（F4）和 A4 的两个 firefox 测试（机器上没有 Firefox）；Task 15 的 `make lint-web` 通过，`doclinks.py` 没有断的链接，`make test` 46 个 `ok`。最后 `treediff` 比较复现的树与原型的 3,343 个文件，没有差异。复现的副本不是 git 检出：`make gen-check` 由 gen-same 代替（`make gen` 前后生成物逐字节相同），`make lint-web` 的关键词守卫经 `kwreal.py` 列出文件。
 
 复现之后 plan 只改了 Global Constraints 的一句：原来写"每个 Task 提交前"跑 `make lint-go` 和 `make test`，改为照各 Task 实际的门禁写（Task 14 只改 `e2e/`，Task 15 只改文档，两者不跑 `make lint-go`）。块和 `Run:` 都没有变：与复现用的 plan 逐行比较，只差这一行。
+
+**预检之后的修订**（2026-10-17：预检 0 High、0 Medium、6 Low，控制者照原文全部接受）：L1 改 `delete_rows.sql` 的说明（Task 2、3：等锁期间被删除的行被跳过、取下一行，每一批读新的快照；原来的"短的一批不说明是最后一批"不是 Postgres 的行为），快照 T2–T15 和原型照改，Task 2、3 的树和最终的树重跑 `make gen-go`，`gen/delete_rows.sql.go` 重新钉住（Task 2 `3dc81983…`、Task 3 `f0baebcc…`，行数不变，以后的 Task 不钉它）；L2 给 Task 15 加 M3 设计 3.3 的一对（工作项一侧的写不锁工作区行，同一个保证经项目行成立；`（修改，6 处）`）；L3、L4、L6 是第 5 节的 P2、组合、P3 三行，L5 是第 3 节第 1 条。没有变异的锚点变（`mutcheck.py`：136 个变异在各自的树、`from` 的树和最终的树上都放得下；改的只是注释和文档），变异不重跑。修订之后整个复现在一份新的副本上重跑（`replay-logs`，第一次的留在 `replay-logs-5396a085`）：409 个块，1,694 秒，没有失败，每个生成物的 SHA-256 和行数与 plan 的表相同，gen-same 每次 0 个差异，`make e2e` 同上；`treediff` 比较 3,343 个文件，没有差异；最终的原型 gen-same 0 个差异。
 
 ### A.6 五十类清扫和变异表
 
