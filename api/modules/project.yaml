@@ -931,7 +931,7 @@ components:
         description:
           type: string
         identifier:
-          description: Upper case; unique among the workspace's projects.
+          description: Upper case; unique among the workspace's projects; the prefix of its work items' numbers, as in WEB-12.
           type: string
         network:
           $ref: '#/components/schemas/ProjectNetwork'
@@ -939,7 +939,11 @@ components:
           type: [string, 'null']
           format: uuid
         default_assignee_id:
-          description: The account set as the project's default assignee, kept as set; null for none.
+          description: >-
+            The account set as the project's default assignee, kept as set;
+            null for none. A work item created without assignees is assigned
+            to him while he is an active member of the project who is not its
+            guest.
           type: [string, 'null']
           format: uuid
         cycle_view:
@@ -1216,7 +1220,9 @@ components:
         group:
           $ref: '#/components/schemas/StateGroup'
         default:
-          description: Whether the state is its project's default state; a project has exactly one.
+          description: >-
+            Whether the state is its project's default state, which a work
+            item created without a state takes; a project has exactly one.
           type: boolean
         sequence:
           description: The state's place among the project's states, the lowest first.

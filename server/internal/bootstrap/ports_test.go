@@ -3,14 +3,18 @@ package bootstrap
 import (
 	"context"
 	"errors"
+	"fmt"
+	"maps"
 	"slices"
 	"testing"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // fakeIdentityAccounts answers the states it holds, by id and by address, and
@@ -241,5 +245,129 @@ func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 	fake.err = failure
 	if _, _, err := a.ProjectFacts(ctx, web, alice); !errors.Is(err, failure) {
 		t.Errorf("ProjectFacts() = %v, want %v", err, failure)
+	}
+}
+
+// fakeIssueProjects answers project's IssueProjects of one project, web,
+// and records each question; err, when set, is every answer's failure.
+type fakeIssueProjects struct {
+	web    uuid.UUID
+	locked project.IssueProject
+	states []project.IssueState
+	labels []uuid.UUID
+	roles  map[uuid.UUID]shared.Role
+	err    error
+	asked  []string
+}
+
+func (f *fakeIssueProjects) ProjectWorkspace(_ context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
+	f.asked = append(f.asked, "workspace")
+	return f.locked.WorkspaceID, id == f.web, f.err
+}
+
+func (f *fakeIssueProjects) LockIssueProject(_ context.Context, id uuid.UUID) (project.IssueProject, bool, error) {
+	f.asked = append(f.asked, "lock")
+	return f.locked, id == f.web, f.err
+}
+
+func (f *fakeIssueProjects) NextIssueSequence(context.Context, uuid.UUID) (int, error) {
+	f.asked = append(f.asked, "next")
+	return 7, f.err
+}
+
+func (f *fakeIssueProjects) IssueStates(context.Context, uuid.UUID) ([]project.IssueState, error) {
+	f.asked = append(f.asked, "states")
+	return f.states, f.err
+}
+
+func (f *fakeIssueProjects) IssueLabels(_ context.Context, _ uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error) {
+	f.asked = append(f.asked, fmt.Sprint("labels ", ids))
+	return f.labels, f.err
+}
+
+func (f *fakeIssueProjects) ActiveRoles(_ context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
+	f.asked = append(f.asked, fmt.Sprint("roles ", ids))
+	return f.roles, f.err
+}
+
+// issueProjects hands issue project's answers to the same questions: the
+// locked project and each state converted, every field; the workspace, the
+// number, the labels and the roles as they came; found and the error as
+// they came.
+func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
+	web, acme, ann, bug := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	backlog := project.IssueState{ID: uuid.NewV7(), Group: "backlog", Default: true}
+	done := project.IssueState{ID: uuid.NewV7(), Group: "completed"}
+	fake := &fakeIssueProjects{web: web, locked: project.IssueProject{WorkspaceID: acme, Archived: true, DefaultAssigneeID: &ann},
+		states: []project.IssueState{backlog, done}, labels: []uuid.UUID{bug}, roles: map[uuid.UUID]shared.Role{ann: shared.RoleMember}}
+	p := issueProjects{projects: fake}
+	ctx := context.Background()
+
+	if w, found, err := p.Find(ctx, web); err != nil || !found || w != acme {
+		t.Errorf("Find() = %s, %v, %v; want acme, found", w, found, err)
+	}
+	if l, found, err := p.Lock(ctx, web); err != nil || !found || l != (issue.LockedProject{WorkspaceID: acme, Archived: true, DefaultAssigneeID: &ann}) {
+		t.Errorf("Lock() = %+v, %v, %v; want web as locked, found", l, found, err)
+	}
+	if _, found, _ := p.Lock(ctx, uuid.NewV7()); found {
+		t.Error("Lock() of another project found it")
+	}
+	if n, err := p.Next(ctx, web); err != nil || n != 7 {
+		t.Errorf("Next() = %d, %v; want 7", n, err)
+	}
+	want := []issue.StateRef{{ID: backlog.ID, Group: "backlog", Default: true}, {ID: done.ID, Group: "completed"}}
+	if got, err := p.States(ctx, web); err != nil || !slices.Equal(got, want) {
+		t.Errorf("States() = %+v, %v; want %+v", got, err, want)
+	}
+	if got, err := p.Labels(ctx, web, []uuid.UUID{bug}); err != nil || !slices.Equal(got, []uuid.UUID{bug}) {
+		t.Errorf("Labels() = %v, %v; want Bug", got, err)
+	}
+	if got, err := p.Roles(ctx, web, []uuid.UUID{ann}); err != nil || !maps.Equal(got, fake.roles) {
+		t.Errorf("Roles() = %v, %v; want ann's", got, err)
+	}
+	if want := []string{"workspace", "lock", "lock", "next", "states", fmt.Sprint("labels ", []uuid.UUID{bug}),
+		fmt.Sprint("roles ", []uuid.UUID{ann})}; !slices.Equal(fake.asked, want) {
+		t.Errorf("project was asked %q, want %q", fake.asked, want)
+	}
+
+	failure := errors.New("connection reset")
+	fake.err = failure
+	if got, err := p.States(ctx, web); !errors.Is(err, failure) || got != nil {
+		t.Errorf("States() = %+v, %v; want no states and %v", got, err, failure)
+	}
+	for name, call := range map[string]func() error{
+		"Find":   func() error { _, _, err := p.Find(ctx, web); return err },
+		"Lock":   func() error { _, _, err := p.Lock(ctx, web); return err },
+		"Next":   func() error { _, err := p.Next(ctx, web); return err },
+		"Labels": func() error { _, err := p.Labels(ctx, web, nil); return err },
+		"Roles":  func() error { _, err := p.Roles(ctx, web, nil); return err },
+	} {
+		if err := call(); !errors.Is(err, failure) {
+			t.Errorf("%s() = %v, want %v", name, err, failure)
+		}
+	}
+}
+
+// issueProfiles asks identity for the ids issue asks for and hands over
+// each account's display name, by account; an error as it came, without
+// names.
+func TestIssueProfilesConvertsIdentitysAnswer(t *testing.T) {
+	alice := identityapp.PublicProfile{ID: uuid.NewV7(), Email: "alice@corp.com", FirstName: "Alice", DisplayName: "al"}
+	bob := identityapp.PublicProfile{ID: uuid.NewV7(), Email: "bob@corp.com", DisplayName: "bob"}
+	fake := &fakeIdentityProfiles{profiles: []identityapp.PublicProfile{alice, bob}}
+	p := issueProfiles{profiles: fake}
+	ids := []uuid.UUID{bob.ID, uuid.NewV7(), alice.ID}
+
+	got, err := p.DisplayNames(context.Background(), ids)
+	if want := map[uuid.UUID]string{alice.ID: "al", bob.ID: "bob"}; err != nil || !maps.Equal(got, want) {
+		t.Errorf("DisplayNames() = %v, %v; want %v", got, err, want)
+	}
+	if len(fake.asked) != 1 || !slices.Equal(fake.asked[0], ids) {
+		t.Errorf("identity was asked %v, want %v", fake.asked, ids)
+	}
+	failure := errors.New("connection reset")
+	fake.err = failure
+	if got, err := p.DisplayNames(context.Background(), ids); !errors.Is(err, failure) || got != nil {
+		t.Errorf("DisplayNames() = %v, %v; want no names and %v", got, err, failure)
 	}
 }

@@ -1,0 +1,143 @@
+package httpadapter_test
+
+import (
+	"encoding/json"
+	"net/http"
+	"reflect"
+	"slices"
+	"testing"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
+// The work items the use case answers: WEB-7, completed, with an assignee
+// and a label, made by alice; WEB-8, new, with none of them, made by no one
+// now (its creator's account is gone).
+var (
+	stateID   = uuid.MustParse("0199a2b4-0000-7000-8000-0000000000c1")
+	bobID     = uuid.MustParse("0199a2b4-0000-7000-8000-000000000002")
+	bugID     = uuid.MustParse("0199a2b4-0000-7000-8000-0000000000d1")
+	completed = created.Add(-1)
+	webSeven  = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e7"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 7,
+		Name: "Fix the login", StateID: stateID, Priority: domain.PriorityHigh, SortOrder: 75535.5, CompletedAt: &completed,
+		AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID}, CreatedByID: &aliceID, UpdatedByID: &aliceID, CreatedAt: created,
+		UpdatedAt: created}
+	webSevenJSON = `{"archived_at":null,"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],` +
+		`"completed_at":"2026-10-17T10:00:00.123455999Z","created_at":"2026-10-17T10:00:00.123456Z",` +
+		`"created_by_id":"0199a2b4-0000-7000-8000-000000000001","id":"0199a2b4-0000-7000-8000-0000000000e7",` +
+		`"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"],"name":"Fix the login","parent_id":null,"priority":"high",` +
+		`"project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":7,"sort_order":75535.5,` +
+		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","updated_at":"2026-10-17T10:00:00.123456Z",` +
+		`"updated_by_id":"0199a2b4-0000-7000-8000-000000000001","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
+	webEight = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e8"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 8,
+		Name: "Fix", StateID: stateID, Priority: domain.PriorityNone, SortOrder: 65535, CreatedAt: created, UpdatedAt: created}
+	webEightJSON = `{"archived_at":null,"assignee_ids":[],"completed_at":null,"created_at":"2026-10-17T10:00:00.123456Z",` +
+		`"created_by_id":null,"id":"0199a2b4-0000-7000-8000-0000000000e8","label_ids":[],"name":"Fix","parent_id":null,"priority":"none",` +
+		`"project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":8,"sort_order":65535,` +
+		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","updated_at":"2026-10-17T10:00:00.123456Z","updated_by_id":null,` +
+		`"workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
+)
+
+// POST goes to the use case for the caller and the path's project, with
+// the body's fields: the state and the priority nil and the lists empty
+// when not given; the answer is 201 with the work item the use case
+// answers, every field of it, null for each it has none of, [] for a list
+// without ids.
+func TestCreateIssue(t *testing.T) {
+	path := "/api/v0/projects/" + webID.String() + "/issues"
+	high := domain.PriorityHigh
+	for _, tt := range []struct {
+		body   string
+		want   domain.NewIssue
+		answer domain.Issue
+		json   string
+	}{
+		{`{"name":" Fix the login ","state_id":"0199a2b4-0000-7000-8000-0000000000c1","priority":"high",` +
+			`"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"]}`,
+			domain.NewIssue{Name: " Fix the login ", StateID: &stateID, Priority: &high, AssigneeIDs: []uuid.UUID{bobID},
+				LabelIDs: []uuid.UUID{bugID}}, webSeven, webSevenJSON},
+		{`{"name":"Fix"}`, domain.NewIssue{Name: "Fix"}, webEight, webEightJSON},
+		{`{"name":"Fix","assignee_ids":[],"label_ids":[]}`, domain.NewIssue{Name: "Fix", AssigneeIDs: []uuid.UUID{}, LabelIDs: []uuid.UUID{}},
+			webEight, webEightJSON},
+	} {
+		create := &fakeCreate{answer: tt.answer}
+		h := newServer(t, create)
+		if res, body := do(t, h, request(http.MethodPost, path, "alice", tt.body)); res.StatusCode != http.StatusCreated || body != tt.json+"\n" {
+			t.Errorf("POST %s = %d %s, want 201 %s", tt.body, res.StatusCode, body, tt.json)
+		}
+		if want := []string{aliceID.String() + " " + webID.String()}; !slices.Equal(create.calls, want) ||
+			!reflect.DeepEqual(create.got, []domain.NewIssue{tt.want}) {
+			t.Errorf("POST %s: calls %q with %+v; want %q with %+v", tt.body, create.calls, create.got, want, tt.want)
+		}
+	}
+}
+
+// A priority given empty is given, not left out: the body's shape does not
+// check an enum's values, so it goes to the use case as it came, whose
+// check refuses it like any value outside the five (422 priority
+// invalid_format; the fake answers that check's own refusal).
+func TestCreateIssueTakesAnEmptyPriorityAsGiven(t *testing.T) {
+	empty := domain.Priority("")
+	in := domain.NewIssue{Name: "Fix", Priority: &empty}
+	_, refused := domain.CheckNewIssue(in)
+	create := &fakeCreate{err: refused}
+	res, body := do(t, newServer(t, create), request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice",
+		`{"name":"Fix","priority":""}`))
+	want := `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
+		`"errors":[{"field":"priority","code":"invalid_format","message":"must be one of urgent, high, medium, low, none"}]}`
+	if res.StatusCode != http.StatusUnprocessableEntity || body != want+"\n" || !reflect.DeepEqual(create.got, []domain.NewIssue{in}) {
+		t.Errorf("POST = %d %s, the use case got %+v; want 422 %s, the use case %+v", res.StatusCode, body, create.got, want, in)
+	}
+}
+
+// A body without its name, with a field it may not have (a number or a
+// sort order, which the project gives: M4 design 3.7; a description, which
+// comes in P4), a field of another type, or an id that is no id: refused as
+// bad_request before the use case.
+func TestCreateIssueHoldsTheBodyToItsStructure(t *testing.T) {
+	create := &fakeCreate{}
+	h := newServer(t, create)
+	for _, body := range []string{`{}`, `{"priority":"high"}`, `{"name":1}`, `{"name":"A","sequence_id":3}`, `{"name":"A","sort_order":1}`,
+		`{"name":"A","description_html":"<p>x</p>"}`, `{"name":"A","state_id":"Backlog"}`, `{"name":"A","state_id":null}`,
+		`{"name":"A","assignee_ids":"bob"}`, `{"name":"A","label_ids":["Bug"]}`} {
+		res, got := do(t, h, request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice", body))
+		var problem struct{ Code string }
+		if err := json.Unmarshal([]byte(got), &problem); err != nil || res.StatusCode != http.StatusBadRequest || problem.Code != "bad_request" {
+			t.Errorf("POST %s = %d %s, want 400 bad_request", body, res.StatusCode, got)
+		}
+	}
+	if len(create.calls) != 0 {
+		t.Errorf("the use case got %q, want nothing", create.calls)
+	}
+}
+
+// The use case's refusals, as the contract declares them, and its failure.
+func TestCreateIssueRefusals(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		err    error
+		status int
+		want   string
+	}{
+		{"an assignee refused", shared.Invalid(shared.FieldError{Field: "assignee_ids[1]", Code: shared.FieldNotAllowed,
+			Message: "must be an active member of the project who is not its guest"}), http.StatusUnprocessableEntity,
+			`{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
+				`"errors":[{"field":"assignee_ids[1]","code":"not_allowed","message":"must be an active member of the project who is not its guest"}]}`},
+		{"no project", domain.ErrProjectNotFound, http.StatusNotFound,
+			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
+		{"a project guest", shared.Forbidden(), http.StatusForbidden,
+			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{"an archived project", domain.ErrProjectArchived, http.StatusConflict,
+			`{"status":409,"code":"project.archived","title":"Conflict","detail":"The project is archived; unarchive it to change it."}`},
+		{"a failure", errGone, http.StatusInternalServerError,
+			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
+	} {
+		h := newServer(t, &fakeCreate{err: tt.err})
+		res, body := do(t, h, request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice", `{"name":"Fix"}`))
+		if res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("%s: POST = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}

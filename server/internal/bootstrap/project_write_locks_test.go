@@ -127,7 +127,9 @@ var projectWrites = []projectWrite{
 // listed in projectTables, so a new table of the project level goes there,
 // one of the workspace level in workspaceLevelTables, and neither into
 // matrixTables alone (TestEachMatrixTableIsOfOneLevel); not a workspace's
-// write that the only admin's table asks (leaveWorkspace).
+// write that the only admin's table asks (leaveWorkspace); not a write on
+// the work-item side (tagged issue), which locks its project's row first
+// and its workspace's not at all (M4 design 3.5, decision point 1: B).
 func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 	ofTheProjectLevel := func(c caller) bool {
 		return !slices.Contains(workspaceColumns, c) && slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) })
@@ -140,7 +142,8 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 	}
 	var writes []string
 	for _, op := range ops {
-		if op.Method != http.MethodGet && (slices.Contains(strings.Split(op.Path, "/"), "{project_id}") || projectLevel[op.ID]) {
+		if op.Method != http.MethodGet && !slices.Contains(op.Tags, "issue") &&
+			(slices.Contains(strings.Split(op.Path, "/"), "{project_id}") || projectLevel[op.ID]) {
 			writes = append(writes, op.ID)
 		}
 	}
@@ -153,17 +156,20 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 // addressed whose rows name a column set that projectTables does not list
 // (a self-only one, until it is listed there), nor a read of a project,
 // nor a write at the workspace level, also when the only admin's table
-// asks it.
+// asks it, nor a write on the work-item side, also when its path names
+// the project and its rows a project table's columns.
 func TestWritesOnAProjectAreEachShape(t *testing.T) {
 	ops := []apitest.Operation{
-		{ID: "getProject", Method: http.MethodGet, Path: "/api/v0/projects/{project_id}"},
-		{ID: "createProject", Method: http.MethodPost, Path: "/api/v0/workspaces/{slug}/projects"},
-		{ID: "leaveProject", Method: http.MethodPost, Path: "/api/v0/projects/{project_id}/leave"},
-		{ID: "updateProjectMember", Method: http.MethodPatch, Path: "/api/v0/project-members/{project_member_id}"},
-		{ID: "leaveProjectSelf", Method: http.MethodPost, Path: "/api/v0/project-members/{project_member_id}/leave"},
-		{ID: "leaveWorkspace", Method: http.MethodPost, Path: "/api/v0/workspaces/{slug}/leave"},
+		{ID: "createIssue", Tags: []string{"issue"}, Method: http.MethodPost, Path: "/api/v0/projects/{project_id}/issues"},
+		{ID: "getProject", Tags: []string{"project"}, Method: http.MethodGet, Path: "/api/v0/projects/{project_id}"},
+		{ID: "createProject", Tags: []string{"project"}, Method: http.MethodPost, Path: "/api/v0/workspaces/{slug}/projects"},
+		{ID: "leaveProject", Tags: []string{"project"}, Method: http.MethodPost, Path: "/api/v0/projects/{project_id}/leave"},
+		{ID: "updateProjectMember", Tags: []string{"project"}, Method: http.MethodPatch, Path: "/api/v0/project-members/{project_member_id}"},
+		{ID: "leaveProjectSelf", Tags: []string{"project"}, Method: http.MethodPost, Path: "/api/v0/project-members/{project_member_id}/leave"},
+		{ID: "leaveWorkspace", Tags: []string{"workspace"}, Method: http.MethodPost, Path: "/api/v0/workspaces/{slug}/leave"},
 	}
 	rows := []matrixRow{
+		{op: "createIssue", write: true, columns: projectColumns},
 		{op: "getProject", columns: projectColumns},
 		{op: "createProject", write: true},
 		{op: "updateProjectMember", write: true, columns: []caller{callerProjectAdmin, callerProjectMember}},
@@ -228,7 +234,8 @@ func lockOn(t *testing.T, pool *pgxpool.Pool, from string, args ...any) string {
 
 // Every write on a project takes its workspace's row FOR SHARE first, in
 // its transaction, before any other lock (M3 design 3.6 convention 2, the
-// lock table), as bootstrap wires it: alice, acme's admin, writes on her
+// lock table), as bootstrap wires it; the work-item side's writes are not
+// among them (writesOnAProject): alice, acme's admin, writes on her
 // projects Web and Ops, each write once on each; a write's targets are made
 // members of them or their roles changed, and a write on a membership names
 // it by its id, or by its project and its sender. Every write on a project

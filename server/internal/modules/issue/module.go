@@ -1,6 +1,7 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
-// work items' tables, and soft-deletes a deleted project's rows of them for
-// the project module's deletions (its IssueCascade port).
+// work items' tables, brings creating a work item, and soft-deletes a
+// deleted project's rows of them for the project module's deletions (its
+// IssueCascade port).
 package issue
 
 import (
@@ -10,9 +11,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -43,6 +46,59 @@ type Provided struct {
 // Provide builds issue's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	return Provided{IssueCascade: app.NewCascade(postgresadapter.New(pool), deleteBatch)}
+}
+
+// ProjectPorts are what the module's writes ask of a project (M4 design
+// 6.5): its gate, its numbers, its states', labels' and members' catalogs.
+// project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
+type ProjectPorts interface {
+	app.ProjectGate
+	app.Sequences
+	app.StateCatalog
+	app.LabelCatalog
+	app.ProjectMembers
+}
+
+// LockedProject, StateRef and its StateGroup are the values ProjectPorts
+// hand over: bootstrap converts project's into them (M4 design 6.5).
+type (
+	LockedProject = app.LockedProject
+	StateRef      = app.StateRef
+	StateGroup    = domain.StateGroup
+)
+
+// Deps are what bootstrap gives the module (M4 design 6.6, step 6).
+type Deps struct {
+	Pool       *pgxpool.Pool
+	Tx         shared.TxManager
+	Clock      app.Clock
+	Authorizer shared.Authorizer
+	// Projects are project's IssueProjects, converted (bootstrap/ports.go).
+	Projects ProjectPorts
+	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
+	Profiles app.PublicProfiles
+}
+
+// Module is the wired issue module.
+type Module struct {
+	uc httpadapter.UseCases
+}
+
+// New wires the module's use cases and its HTTP side from d; nothing is
+// registered or injected after it (M4 design 6.6).
+func New(d Deps) *Module {
+	store := postgresadapter.New(d.Pool)
+	return &Module{uc: httpadapter.UseCases{
+		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
+			Locks: app.NewLocks(d.Projects, d.Authorizer), Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects,
+			Members: d.Projects, Profiles: d.Profiles, Tx: d.Tx, Clock: d.Clock,
+		}),
+	}}
+}
+
+// Register mounts the module's API on router behind api's middlewares.
+func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
+	httpadapter.Register(router, api, m.uc)
 }
 
 // Actions lists the module's actions: bootstrap's test holds the union of
