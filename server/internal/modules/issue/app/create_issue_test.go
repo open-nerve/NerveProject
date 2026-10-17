@@ -16,12 +16,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The accounts, drawn in this order, ascending: alice, the caller, and
-// carol are web's admins, bob its member, gus its guest; out is not its
-// member. acme is web's workspace. web's states are Backlog, the default,
+// The accounts, drawn in this order, ascending: bob, web's member, then
+// alice, the caller, so that the caller is not the least of them; alice
+// and carol are web's admins, gus its guest; out is not its member. acme
+// is web's workspace. web's states are Backlog, the default,
 // Done, completed, and the triage state; its labels Bug and UI.
 var (
-	alice, bob, carol, gus, out = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	bob, alice, carol, gus, out = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	acme, web                   = uuid.NewV7(), uuid.NewV7()
 	backlog                     = app.StateRef{ID: uuid.NewV7(), Group: "backlog", Default: true}
 	done                        = app.StateRef{ID: uuid.NewV7(), Group: domain.GroupCompleted}
@@ -119,7 +120,7 @@ func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 	}
 	id := w.issues.issue.ID
 	want := created(id, done.ID, []uuid.UUID{carol, bob}, []uuid.UUID{ui, bug}, []uuid.UUID{bob, carol}, []uuid.UUID{bug, ui},
-		[]uuid.UUID{alice, bob, carol}, 3)
+		[]uuid.UUID{bob, alice, carol}, 3)
 	if !slices.Equal(w.log.calls, want) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, want)
 	}
