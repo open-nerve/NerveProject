@@ -2,9 +2,9 @@ package bootstrap
 
 import (
 	"net/http"
+	"slices"
 	"testing"
-
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"uuid"
 )
 
 // addsReview adds Review to Web's started group, through the API.
@@ -48,13 +48,12 @@ func TestDeletingAStateAndCreatingAWorkItemInItSerialize(t *testing.T) {
 			}
 			return
 		}
-		w.answered(t, create, http.StatusCreated)
-		w.refused(t, deletion, http.StatusConflict, "project.state_in_use")
-		var kept bool
-		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at IS NULL FROM states WHERE project_id = $1 AND name = 'Review'",
-			w.web).Scan(&kept); err != nil || !kept {
-			t.Errorf("Review kept: %v, %v; want kept", kept, err)
+		var created struct {
+			StateID uuid.UUID `json:"state_id"`
 		}
+		decodeAnswer(t, w.answered(t, create, http.StatusCreated), &created)
+		w.refused(t, deletion, http.StatusConflict, "project.state_in_use")
+		w.stateKept(t, created.StateID, "Review, the work item's state")
 	})
 }
 
@@ -75,11 +74,8 @@ func TestDeletingALabelAndCreatingAWorkItemWithItSerialize(t *testing.T) {
 			return
 		}
 		w.answered(t, create, http.StatusCreated)
-		var takenOff bool
-		if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT il.deleted_at = l.deleted_at AND il.updated_at = l.deleted_at AND il.updated_by_id = $2
-			FROM issue_labels il JOIN labels l ON l.id = il.label_id WHERE l.id = $1`, w.bug, w.ids["alice"]).Scan(&takenOff); err != nil ||
-			!takenOff {
-			t.Errorf("Bug taken off the work item with its deletion, by alice: %v, %v; want it so", takenOff, err)
+		if got, want := w.workItemLabels(t, w.bug, "alice"), []string{"Bug taken off by alice with Bug"}; !slices.Equal(got, want) {
+			t.Errorf("the work item's labels after Bug's deletion: %q; want %q", got, want)
 		}
 	})
 }

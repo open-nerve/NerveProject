@@ -40,10 +40,7 @@ func TestDeletingAStateAWorkItemIsInIsRefused(t *testing.T) {
 		if got := refusalOf(t, []byte(answer), true); got != "project.state_in_use" {
 			t.Errorf("deleting %s = %s; want project.state_in_use", what, answer)
 		}
-		var kept bool
-		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at IS NULL FROM states WHERE id = $1", state).Scan(&kept); err != nil || !kept {
-			t.Errorf("%s after its refused deletion: kept %v, %v; want kept", what, kept, err)
-		}
+		w.stateKept(t, state, what)
 	}
 	fixed := func(set string) {
 		t.Helper()
@@ -82,16 +79,39 @@ func TestDeletingALabelTakesItOffTheWorkItems(t *testing.T) {
 		w.send(t, "bob", http.MethodPost, web+"/issues", `{"name":"Fix","label_ids":[`+strings.Join(quoted, ",")+`]}`, http.StatusCreated)
 	}
 	w.send(t, "alice", http.MethodDelete, "/api/v0/labels/"+w.bug.String(), "", http.StatusNoContent)
+	got := w.workItemLabels(t, w.bug, "alice")
+	if want := []string{"Bug taken off by alice with Bug", "Feature kept", "UI taken off by alice with Bug"}; !slices.Equal(got, want) {
+		t.Errorf("the work items' labels after Bug's deletion: %q; want %q", got, want)
+	}
+}
 
+// stateKept checks that state, which what names, is not deleted after its
+// refused deletion.
+func (w issueWorld) stateKept(t *testing.T, state uuid.UUID, what string) {
+	t.Helper()
+	var kept bool
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at IS NULL FROM states WHERE id = $1", state).Scan(&kept); err != nil || !kept {
+		t.Errorf("%s after its refused deletion: kept %v, %v; want kept", what, kept, err)
+	}
+}
+
+// workItemLabels is each row that puts a label on a work item, in the
+// order of the labels' names, as "<label> kept"; "<label> taken off by
+// <deleter> with <deleted>" when the deletion of the label deleted took it
+// off, at that deletion's moment and by the account deleter; or "<label>
+// taken off otherwise".
+func (w issueWorld) workItemLabels(t *testing.T, deleted uuid.UUID, deleter string) []string {
+	t.Helper()
 	rows, err := w.pool.Query(pgtest.Soon(t), `SELECT format('%s %s', l.name, CASE WHEN il.deleted_at IS NULL THEN 'kept'
-		WHEN il.deleted_at = b.deleted_at AND il.updated_at = b.deleted_at AND il.updated_by_id = $2 THEN 'taken off by alice with Bug'
-		ELSE 'taken off otherwise' END)
-		FROM issue_labels il JOIN labels l ON l.id = il.label_id, labels b WHERE b.id = $1 ORDER BY l.name`, w.bug, w.ids["alice"])
+		WHEN il.deleted_at = d.deleted_at AND il.updated_at = d.deleted_at AND il.updated_by_id = $2
+		THEN format('taken off by %s with %s', $3::text, d.name) ELSE 'taken off otherwise' END)
+		FROM issue_labels il JOIN labels l ON l.id = il.label_id, labels d WHERE d.id = $1 ORDER BY l.name`, deleted, w.ids[deleter], deleter)
 	if err != nil {
 		t.Fatal(err)
 	}
 	got, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if want := []string{"Bug taken off by alice with Bug", "Feature kept", "UI taken off by alice with Bug"}; err != nil || !slices.Equal(got, want) {
-		t.Errorf("the work items' labels after Bug's deletion: %q, %v; want %q", got, err, want)
+	if err != nil {
+		t.Fatal(err)
 	}
+	return got
 }
