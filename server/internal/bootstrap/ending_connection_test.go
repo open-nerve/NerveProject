@@ -26,13 +26,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// newWorkspaceRoute is the workspace module (workspace.New) on pool, as
-// bootstrap wires it for the endings: access's Authorizer, identity's
-// Accounts and MemberProfiles, converted, and the project module's cascade
-// over issue's, each on pool.
-func newWorkspaceRoute(t *testing.T, pool *pgxpool.Pool) moduleRoute {
+// newWorkspaceRoute is the workspace module (workspace.New) on pool, with
+// tx its transactions, as bootstrap wires it: access's Authorizer,
+// identity's Accounts and MemberProfiles, converted, and the project
+// module's cascade over issue's, each on pool.
+func newWorkspaceRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
-	tx, auth, identityPorts, provided := postgres.NewTxManager(pool, 2*time.Second), authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool)
+	auth, identityPorts, provided := authorizerOn(pool), identity.Provide(pool), workspace.Provide(pool)
 	projects := project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: provided.WorkspaceDirectory}, Members: provided.WorkspaceMembers,
 		Issues: issue.Provide(pool).IssueCascade})
@@ -85,7 +85,8 @@ func TestTheEndingsRunOnTheirTransactionsConnection(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	route := newWorkspaceRoute(t, poolOfOne(t, r.pool.Config().ConnString()))
+	one := poolOfOne(t, r.pool.Config().ConnString())
+	route := newWorkspaceRoute(t, one, postgres.NewTxManager(one, 2*time.Second))
 	contract := apitest.Load(t)
 
 	route.answerWithin(t, contract, http.MethodDelete, "/api/v0/workspace-members/"+r.bobIn.String(), r.alice, "", http.StatusNoContent)

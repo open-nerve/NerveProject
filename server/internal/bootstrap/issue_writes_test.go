@@ -17,6 +17,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // issueStamp is a row createIssue writes, as TestCreatingAWorkItemStampsItsRows
@@ -90,14 +91,13 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 	}
 }
 
-// newIssueRoute is the issue module (issue.New) on pool, with the
-// Authorizer on pool and project's and identity's ports converted, all as
-// bootstrap wires them.
-func newIssueRoute(t *testing.T, pool *pgxpool.Pool) moduleRoute {
+// newIssueRoute is the issue module (issue.New) on pool, with tx its
+// transactions, the Authorizer on pool and project's and identity's ports
+// converted, all as bootstrap wires them.
+func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
-	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clock.System{},
-		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
-		Profiles: issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
+	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizerOn(pool),
+		Projects: issueProjects{projects: project.Provide(pool).IssueProjects}, Profiles: issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
 }
 
 // Each write on the work-item side runs every statement of its transaction
@@ -117,7 +117,7 @@ func newIssueRoute(t *testing.T, pool *pgxpool.Pool) moduleRoute {
 func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	w := newIssueWorld(t)
 	one := poolOfOne(t, w.pool.Config().ConnString())
-	route := newIssueRoute(t, one)
+	route := newIssueRoute(t, one, postgres.NewTxManager(one, 2*time.Second))
 	path := "/api/v0/projects/" + w.web.String() + "/issues"
 	alice := w.ids["alice"]
 	send := func(caller uuid.UUID, body string, want int) string {

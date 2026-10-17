@@ -58,6 +58,16 @@ func issueMatrixRows() []matrixRow {
 			}),
 			cells:   ofProject(cellValidationFailed, cellValidationFailed, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "label_ids[0] not_allowed"},
+		// The project's triage state, which the matrix seeds through the
+		// project store, as createProject makes it, and which the API's lists
+		// of states leave out (M4 design 9.3, M17): it takes no work item
+		// before the intake (M7), checked after the decision too.
+		{op: "createIssue", variant: "the triage state", write: true, columns: projectColumns,
+			request: withIssueBody(func(c caller, s seeded) string {
+				return `{"name":"Fix","state_id":"` + s.state(projectOf(c), "Triage").String() + `"}`
+			}),
+			cells:   ofProject(cellValidationFailed, cellValidationFailed, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
+			refusal: "state_id not_allowed"},
 		// The project's guest, PG's account, as the assignee: a guest is not
 		// assigned (M4 design 3.7), and it is checked after the decision.
 		{op: "createIssue", variant: "a guest assigned", write: true, columns: projectColumns,

@@ -68,7 +68,14 @@ func newRoute(t *testing.T, register func(*httpserver.Router, *httpserver.API)) 
 // its Authorizer, members as its WorkspaceMembers and issue's cascade.
 func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, members projectapp.WorkspaceMembers) moduleRoute {
 	t.Helper()
-	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clock.System{}, Authorizer: auth,
+	return newProjectRouteOn(t, pool, postgres.NewTxManager(pool, 2*time.Second), auth, members)
+}
+
+// newProjectRouteOn is newProjectRoute with tx its transactions.
+func newProjectRouteOn(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, auth shared.Authorizer,
+	members projectapp.WorkspaceMembers) moduleRoute {
+	t.Helper()
+	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members,
 		Issues: issue.Provide(pool).IssueCascade}).Register)
 }
