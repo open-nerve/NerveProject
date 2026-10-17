@@ -72,6 +72,15 @@ func newProject(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID, identifie
 	return p
 }
 
+// newLabel inserts a label of p named name and returns its id. project
+// owns the table: the test writes it directly, as a fixture.
+func newLabel(t *testing.T, pool *pgxpool.Pool, p project, name string) uuid.UUID {
+	t.Helper()
+	id := uuid.NewV7()
+	exec(t, pool, "INSERT INTO labels (id, workspace_id, project_id, name) VALUES ($1, $2, $3, $4)", id, p.workspace, p.id, name)
+	return id
+}
+
 // newIssue inserts the work item id of p, numbered sequence, in p's
 // default state, by by at now.
 func newIssue(t *testing.T, pool *pgxpool.Pool, p project, id uuid.UUID, sequence int, by uuid.UUID) {

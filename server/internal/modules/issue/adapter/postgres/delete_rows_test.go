@@ -47,9 +47,7 @@ func anAccount(t *testing.T, pool *pgxpool.Pool, _ project, n int) uuid.UUID {
 
 // aLabel is a label of p of its own for the n-th row.
 func aLabel(t *testing.T, pool *pgxpool.Pool, p project, n int) uuid.UUID {
-	id := uuid.NewV7()
-	exec(t, pool, "INSERT INTO labels (id, workspace_id, project_id, name) VALUES ($1, $2, $3, $4)", id, p.workspace, p.id, fmt.Sprint("L", n))
-	return id
+	return newLabel(t, pool, p, fmt.Sprint("L", n))
 }
 
 var batchStatements = []batchStatement{
