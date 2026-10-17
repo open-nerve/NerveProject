@@ -68,10 +68,11 @@ func line(name string, args ...any) string {
 	return name
 }
 
-// created are the calls of a creation by alice in web, the work item id,
-// with assignees, labels and names asked for, the state's id, and the
-// accounts and labels it is created with, in id order, its subscribers,
-// and its activity's rows.
+// created are the calls of a creation by alice in web: id is the work
+// item's, state its state's; asked the accounts whose roles are read and
+// labelsAsked the labels asked for, none when empty; assignees, labels and
+// subscribers the accounts and labels it is created with, in id order;
+// rows its activity's rows.
 func created(id, state uuid.UUID, asked, labelsAsked, assignees, labels, subscribers []uuid.UUID, rows int) []string {
 	calls := []string{
 		line("Find", web, "outside tx"), line("Authorize", alice, domain.ActionCreate, acme, web, "outside tx"), "Begin", line("Lock", web),

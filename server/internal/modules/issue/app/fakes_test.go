@@ -28,10 +28,7 @@ type callLog struct {
 }
 
 func (l *callLog) add(ctx context.Context, name string, args ...any) error {
-	call := name
-	for _, a := range args {
-		call += fmt.Sprint(" ", a)
-	}
+	call := line(name, args...)
 	if ctx.Value(inTxKey{}) != true {
 		call += " outside tx"
 	}
