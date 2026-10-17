@@ -2063,7 +2063,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   11. `project` 的 `deleteState` 加 `StateInUse`（409 `project.state_in_use`，文案）、`deleteLabel` 加 `DetachLabel`。
   12. 交错 1、2、8、22；交错 4、5 的创建一支（移出、降级先提交时锁下的判定为准）；分诊状态 422 的集成测试（经仓储准备）。
   13. 交错 6、7 的创建一支。
-  14. 端到端：`api.ts` 的建工作项、`assert/issue.ts`、`furnishIssueRows`（五张表）和 M3 的 P4、W2、W3 调它，`workspaceTables` 从目录读出，过渡结束；I1 的接口版本（本 Phase 的断言）。
+  14. 端到端：`e2e/fixtures/issues.ts` 的建工作项、`assert/issue.ts`、`furnish.ts` 的 `furnishIssueRows`（五张表）和 M3 的 P4、W2、W3 调它，`workspaceTables` 从目录读出，过渡结束；I1 的接口版本（本 Phase 的断言）。
   15. 3.23 中 P1a 的行；review。
 - **关闭**（13.1）：M1-P2 交接的接口字段一项（没有 `estimate_point`、`description_binary`、`/issue-dates/`）；M1-P3 交接的接口字段一项（没有 `is_epic`、`type_id`，没有批量的接口）；M3 交接第 2 节的预检一项（凡拒绝的写不取锁）；M3 交接第 4 节（删除状态、标签的去向，默认负责人的契约，`identifier`、`default_assignee_id`、`State.default` 的说明，`workspaceTables`、`furnishIssueRows`）。
 - **完成线**：I1 的接口版本（工作项的行、编号、默认状态和默认负责人、负责人、标签、关注、创建和负责人的动态、各种拒绝）通过；M3 的 P4、W2、W3 带着工作项一侧的行通过，没有留下端到端的过渡；交错 1、2、3、8、21、22 和交错 4–7 的创建一支 `-count=5 -race` 通过，没有 40P01；看不到项目、不能写的写不取锁；本 Phase 的矩阵格子通过；删除在用的状态 409，删除标签从工作项上摘下。
@@ -2510,7 +2510,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | Phase | 内容 | 状态 |
 |---|---|---|
 | 设计 | 本文（第三稿，按对抗性评审和聚焦复核修订） | 第一稿经独立评审（2026-10-16，17.1），第二稿按控制者的裁定逐条落实；第二稿经对抗性评审（2026-10-16，17.2），第三稿照控制者的裁定逐条落实；第三稿经聚焦复核（2026-10-16，17.3），再照裁定修订；第 10 节的八个决策点已由负责人裁定、第 11 节的十一个架构问题已由负责人批准（2026-10-17，全部按建议，17.4）；验证 S1、S4、S5、SP1–SP4 已做，S2 做了一部分，S3 在 P4（0.3） |
-| P1a `issues` | 工作项的表、项目行的锁、创建与连带（后端，15）；设计中的 P1 由控制者按决策点 2 的预先批准拆出（2026-10-17，第 12 节） | 进行中：[spec](specs/P1a-issues.md)、[plan](plans/P1a-issues.md)（15 个 Task） |
+| P1a `issues` | 工作项的表、项目行的锁、创建与连带（后端，15）；设计中的 P1 由控制者按决策点 2 的预先批准拆出（2026-10-17，第 12 节） | 已完成：[spec](specs/P1a-issues.md)、[plan](plans/P1a-issues.md)、[评审](reviews/P1a-issues-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 未开始 |
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 未开始 |
 | P3 `issue-hierarchy` | 父子与关联（后端，11） | 未开始 |
