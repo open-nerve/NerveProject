@@ -159,11 +159,27 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `labels` | `name`：新加 `CHECK (name <> '')`；`color`：新加 `DEFAULT ''`；`sort_order`：新加 `DEFAULT 65535`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局）；新加 `labels_not_own_parent_check CHECK (parent_id <> id)` | 模型的默认值；标签不能做自己的父标签（M3 设计 3.16） |
 | `labels` | 两个部分唯一索引（`project_id` 为空时按 `name` 的 `unique_name_when_project_null_and_not_deleted`、不为空时按 `(project_id, name)` 的 `unique_project_name_when_not_deleted`）改为一个 `labels_project_id_name_key ON (project_id, lower(name)) WHERE deleted_at IS NULL`；新加不带条件的 `labels_parent_id_idx`、`labels_workspace_id_idx`、`labels_project_id_idx` | 名称在项目内唯一，不分大小写：Plane 的数据库区分大小写，序列化器不区分；没有工作区级标签（M3 设计 3.16）；删除父标签时按 `parent_id` 找子标签；物理级联要不带条件的索引（M3 设计 4） |
 | `labels` | 删除 `description`、`external_source`、`external_id` | `description` 没有读取者（M3 设计 3.16）；v0 不做导入 |
-| `issues` | 删除 `point`、`is_draft`、`estimate_point_id`、`type_id`、`description_binary` | 遗留列或对应功能已砍掉 |
+| `issues` | 28 列保留 20 列（M4/P1a，`00015_issue_issues.sql`）；主键名 `issues_pkey`（Plane 是 `issue_pkey`） | M4 设计 4.2 |
+| `issues` | `workspace_id`、`project_id`、`parent_id`：加上 `ON DELETE CASCADE`；`state_id`：改为 `NOT NULL`（Plane 可为空），加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`）；创建总有状态（项目恰有一个默认状态），删除有工作项在里面的状态被拒绝（第四节"删除状态"），`state_id` 的 `CASCADE` 只会删掉已软删除的工作项（M4 设计 3.6、3.7） |
+| `issues` | `name`：新加 `CHECK (name <> '')`；`description_html`：新加 `DEFAULT '<p></p>'`；`priority`：新加 `DEFAULT 'none'` 和 `CHECK (priority IN ('urgent', 'high', 'medium', 'low', 'none'))`；`sort_order`：新加 `DEFAULT 65535`；`sequence_id`：没有默认值（Plane 的模型默认 1），新加 `CHECK (sequence_id > 0)`；新加 `issues_not_own_parent_check CHECK (parent_id <> id)`、`issues_dates_check CHECK (start_date <= target_date)`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值和 choices；编号只取自项目的计数列 `last_issue_sequence`；工作项不能做自己的父工作项，开始日期不晚于目标日期（M4 设计 3.7、3.9）。描述和起止日期的列随表建出，进入接口在 M4 的 P4、P2 |
 | `issues` | `archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
-| `issues` | **新增**唯一约束 `(project_id, sequence_id)` | Plane 只靠咨询锁保证编号不重复 |
+| `issues` | 删除 `point`、`estimate_point_id`、`type_id`、`is_draft`、`description_binary`、`description_json` | 估算、工作项类型已砍掉；草稿是另一张表（`draft_issues`）；`description_binary` 是协同编辑的遗留；`description_json` 没有读取者（M4 设计 3.7） |
+| `issues` | **新增**唯一约束 `issues_project_id_sequence_id_key UNIQUE (project_id, sequence_id)`（全表唯一，不是部分唯一）；外键列的索引只留不带条件的 `issues_workspace_id_idx`、`issues_project_id_idx`、`issues_parent_id_idx`、`issues_state_id_idx`；新加 `issues_project_id_state_id_idx ON (project_id, state_id) WHERE deleted_at IS NULL` | Plane 只靠咨询锁保证编号不重复；计数列从不回退、编号从不重用，所以全表唯一（M4 设计 3.7）；物理级联、子工作项、在用的状态按外键列找行；同一状态最大的 `sort_order`、按状态筛选（M4 设计 4.2） |
 | `issues` | **新增** `name` 的 pg_trgm 索引（需要 `pg_trgm` 扩展） | 标题模糊搜索（v0-design 6.9）；快照中没有任何扩展，`issues` 上只有外键列的 btree 索引 |
-| `issue_labels` | **新增**部分唯一约束 `(issue_id, label_id)` | Plane 在数据库层没有这个约束 |
+| `issue_assignees` | 10 列照搬（M4/P1a，`00016_issue_issue_assignees.sql`）；主键名 `issue_assignees_pkey`（Plane 是 `issue_assignee_pkey`） | M4 设计 4.3 |
+| `issue_assignees` | `workspace_id`、`project_id`、`issue_id`、`assignee_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 二·全局（模型的 `on_delete`）；v0 不物理删除账户，`assignee_id` 的 `CASCADE` 不会触发 |
+| `issue_assignees` | 部分唯一索引照搬，改名为 `issue_assignees_issue_id_assignee_id_key ON (issue_id, assignee_id) WHERE deleted_at IS NULL`（Plane 是 `issue_assignee_unique_issue_assignee_when_deleted_at_null`），去掉 `(issue_id, assignee_id, deleted_at)` 的唯一约束（二·全局）；新加 `issue_assignees_assignee_id_idx ON (assignee_id) WHERE deleted_at IS NULL`，外键列的索引只留不带条件的 `issue_assignees_issue_id_idx`、`issue_assignees_workspace_id_idx`、`issue_assignees_project_id_idx` | 个人主页的"已分配"、按负责人筛选；物理级联要不带条件的索引（M4 设计 4.3） |
+| `issue_labels` | 10 列照搬（M4/P1a，`00017_issue_issue_labels.sql`）；主键名 `issue_labels_pkey`（Plane 是 `issue_label_pkey`） | M4 设计 4.4 |
+| `issue_labels` | `workspace_id`、`project_id`、`issue_id`、`label_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 二·全局（模型的 `on_delete`） |
+| `issue_labels` | **新增**部分唯一索引 `issue_labels_issue_id_label_id_key ON (issue_id, label_id) WHERE deleted_at IS NULL`；外键列的索引只留不带条件的 `issue_labels_issue_id_idx`、`issue_labels_label_id_idx`、`issue_labels_workspace_id_idx`、`issue_labels_project_id_idx` | Plane 在数据库层没有这个约束，同一个标签可以挂两次（M4 设计 4.4）；物理级联要不带条件的索引，标签的也是 |
+| `issue_subscribers` | 10 列照搬（M4/P1a，`00018_issue_issue_subscribers.sql`） | M4 设计 4.5 |
+| `issue_subscribers` | `workspace_id`、`project_id`、`issue_id`、`subscriber_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 二·全局（模型的 `on_delete`）；v0 不物理删除账户，`subscriber_id` 的 `CASCADE` 不会触发 |
+| `issue_subscribers` | 部分唯一索引照搬，改名为 `issue_subscribers_issue_id_subscriber_id_key ON (issue_id, subscriber_id) WHERE deleted_at IS NULL`（Plane 是 `issue_subscriber_unique_issue_subscriber_when_deleted_at_null`），去掉 `(issue_id, subscriber_id, deleted_at)` 的唯一约束（二·全局）；新加 `issue_subscribers_subscriber_id_idx ON (subscriber_id) WHERE deleted_at IS NULL`，外键列的索引只留不带条件的 `issue_subscribers_issue_id_idx`、`issue_subscribers_workspace_id_idx`、`issue_subscribers_project_id_idx` | "已关注"、按关注者筛选；物理级联要不带条件的索引（M4 设计 4.5） |
+| `issue_activities` | 20 列保留 17 列（M4/P1a，`00019_issue_issue_activities.sql`）；主键名 `issue_activities_pkey`（Plane 是 `issue_activity_pkey`） | M4 设计 4.11 |
+| `issue_activities` | `issue_id`：改为 `NOT NULL`（Plane 可为空），`DO_NOTHING` 改为 `ON DELETE CASCADE`；`workspace_id`、`project_id`：加上 `ON DELETE CASCADE`；`actor_id`、`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`project_id` 是这一行的工作项的项目 | 动态随工作项物理删除，不挡住清理（M4 设计 4.11、3.21）；`actor_id` 为空表示 nerve 自己（M4 设计决策点 4） |
+| `issue_activities` | `verb`：新加 `DEFAULT 'created'` 和 `CHECK (verb IN ('created', 'updated', 'deleted'))`；`comment`：新加 `DEFAULT ''`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局）；`created_by_id`、`updated_by_id` 写执行者，删除时写删除者 | 模型的默认值；动态只有这三种动词（M7 的收集箱随它的迁移放宽）；Plane 在 Celery 里写动态，这两列实际总为空（M4 设计 4.11） |
+| `issue_activities` | 删除 `issue_comment_id`、`epoch`、`attachments` | 评论不写动态，这个 `DO_NOTHING` 的外键本会挡住物理清理；`epoch` 只写不读；`attachments` 从不写（M4 设计 4.11、3.13） |
+| `issue_activities` | 外键列的索引只留不带条件的 `issue_activities_workspace_id_idx`、`issue_activities_project_id_idx`；新加 `issue_activities_issue_id_created_at_idx ON (issue_id, created_at, id)`（不带条件） | 动态列表的游标、找"最新的一行"、物理级联都按工作项找行（M4 设计 4.11） |
 | `issue_comments` | 删除 `description_id` 及其唯一约束 | 它是指向 `descriptions`（不保留，见一 B）的一对一外键 |
 | `cycle_issues` | **新增**部分唯一约束 `(issue_id)`：一个工作项最多属于一个迭代 | Plane 只在代码里检查 |
 | `modules` | 删除旧的 `description_text`、`description_html` | 遗留列 |
@@ -207,7 +223,13 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 通知偏好 | 决定是否发送邮件 | v0 没有邮件，不设通知偏好；站内通知的生成规则与 Plane 一致 |
 | Webhook 负载 | Plane 格式 | Nerve 格式，使用 HMAC-SHA256 签名，禁止指向内网地址 |
 | 接口调用日志 | 只记录 `/api/v1` 中用 API Key 发起的请求，请求头原样存储 | 记录所有写请求，不区分令牌类型；存储前去掉敏感请求头 |
-| 工作项编号 | 咨询锁加 `issue_sequences` 表 | 在项目行上用计数列原子自增 |
+| 工作项编号 | 咨询锁加 `issue_sequences` 表；序列化器允许客户端写 `sequence_id` | 在项目行上用计数列原子自增；客户端不能写它；`(project_id, sequence_id)` 全表唯一，编号从不重用（M4 设计 3.7） |
+| 工作项的写的取锁 | 动态在 Celery 里异步写，写之间不串行 | 不加锁地预检，判定拒绝的在那里答（404、403），不取锁；放行的写以 `FOR NO KEY UPDATE` 锁住项目行，在锁下重读、再判定，动态、关注与工作项在同一个事务里写（M4 设计 3.5，决策点 1） |
+| 工作项的负责人、标签不合格 | 静默去掉 | 负责人不是项目中不是访客的有效成员、标签不是这个项目未删除的标签：422 `not_allowed`（`assignee_ids[i]`、`label_ids[i]`）；同一个 id 给两次：422 `duplicate`（M4 设计 3.7） |
+| 默认负责人 | 指派但不关注 | 指派并关注；建工作项时现查他仍是项目中不是访客的有效成员，不是就不指派、不报错（M4 设计 3.7、3.12） |
+| 负责人的动态 | 按请求里的 id 写，含被去掉的 | 只为实际指派的写（M4 设计 3.13） |
+| 自动关注 | 每个产生通知的动态的执行者；被提及的人都关注 | 创建者、负责人；评论者、被提及的成员中能读这个工作项的随 M4 的 P4 加入（M4 设计 3.12） |
+| 删除状态 | 有工作项时 400 | 有工作项在它里面（已归档的也算）时 409 `project.state_in_use`，这一检查在默认状态的检查之前（M4 设计 3.6） |
 | 草稿发布 | 专门的转换逻辑 | 与"创建工作项"走同一代码路径 |
 | 归档 | 工作项、迭代、模块、项目的归档与恢复，以及项目级自动归档 | 规则一致（见 v0-design 5.5）；归档和恢复改为 `POST .../archive` 和 `POST .../unarchive` 两个动作接口；列表通过 `?archived=true` 查询已归档的对象 |
 | 自动关闭 | 项目设置 `close_in` 后，长期未更新的未完成工作项会被自动关闭 | v0 不做 |
@@ -236,7 +258,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 建工作区之后 | 投递 `workspace_seed`：建一个名为 "Plane" 的机器人账户做管理员，再建演示项目、状态、标签和工作项 | 什么都不投递，没有演示数据（M3 设计 3.11） |
 | 关闭创建工作区时 | 实例管理员在管理后台为自己建工作区 | 服务器管理员用 `nerve workspaces create --slug --name --admin-email` 建，不受开关限制，`--admin-email` 的账户是它的管理员（M3 设计 3.11） |
 | 工作区的显示设置 | `GET` 时 `get_or_create`：读取就建行 | `GET` 不写库，没有行时返回默认值（`ACCORDION`、10）；第一次修改时经部分唯一索引 `INSERT … ON CONFLICT` 建行（M3 设计 3.18） |
-| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置，项目和它们的成员关系、成员在项目里的显示设置、状态和标签，在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用 |
+| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置，项目和它们的成员关系、成员在项目里的显示设置、状态和标签，项目的工作项和它们的负责人、标签、关注、动态（M4/P1a 起），在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用 |
 | 邀请的列出、创建、修改、删除 | 工作区管理员和成员；修改不限制角色，成员能把邀请改成管理员 | 只有工作区管理员（M3 设计决策点 4）；邀请的角色因此不高于邀请人（M3 设计 3.8） |
 | 邀请令牌 | JWT，原文存库；公开的查看不要令牌，返回被邀请的邮箱；关闭注册时，有任何一份未删除的邀请的邮箱就能注册 | 由签名密钥派生的 MAC（`nrv_inv_` 加 22 个字符），不存库，管理员列出时重新算出；公开的查看要令牌、不返回邮箱；关闭注册时要有效的令牌、且注册邮箱与邀请的相同（M3 设计 3.8、决策点 1） |
 | 邀请的链接 | `/workspace-invitations/?invitation_id=…&slug=…&token=…`；另有系统内的接受：`/invitations` 页和新手引导的"加入工作区"一步按账户的邮箱列出发给他的邀请，批量接受 | 只有链接一条路：`/workspace-invitations?invitation_id=…&token=…`；接受要登录，账户的邮箱须与邀请的相同（M3 设计 3.8、决策点 2）（页面在 M3/P9；`/invitations` 页和新手引导的一步在 M3/P8a 删除） |

@@ -111,3 +111,15 @@ M3（工作区与项目）做完了工作区、成员、邀请、项目、项目
 M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以本节原样交给 M4（M3/P1、P2 评审第 6 节）。
 
 来源：[M3 设计](../../M3-workspace-project/M3-design.md) 13.2 的 M4 一行；M3 各 Phase 的 spec 第 5 节和评审第 6 节中交给 M4 的各条；[M3 收尾 spec](../../M3-workspace-project/specs/closeout.md) 第 2 节。
+
+## 处理结果（M4/P1a）
+
+- **第 2 节，先锁后判定的副作用**（完成）：工作项一侧的写在第一把锁之前做一次不加锁的预检，判定拒绝的（看不到答 404，看得到而不能写答 403）都在那里答，不取任何锁；放行的写才锁项目行（M4 设计 3.5）。`TestEachIssueWriteLocksItsProjectFirst` 核对看不到项目、看得到而不能写的账户的写不出现在 `pg_locks` 里。方案 E 的选择（不取工作区的 S，最先锁项目行，决策点 1 的 B）写在 M4 设计 3.5、M3 设计 17.4 和总体设计 4.2。
+- **第 4 节，状态**（完成）：删除有工作项（已归档的也算）的状态 409 `project.state_in_use`，在项目 N 之下经 `IssueCascade.StateInUse` 数，在默认状态的检查之前（M4 设计 3.6，M3 设计 3.17）；新工作项取项目的默认状态，`State.default` 的说明补上这一句。
+- **第 4 节，标签**（完成）：删除标签在同一个事务里、同一时刻从工作项上摘下它和它的子标签（`IssueCascade.DetachLabel`）；`issue_labels` 的写都持项目的 N，不落在约定五的例外里（M4 设计 3.5）。
+- **第 4 节，项目**（完成一部分）：编号取 `projects.last_issue_sequence`（项目 N 之下加一）；`identifier`、`default_assignee_id` 的说明改成它们的作用（编号的前缀；新工作项的默认负责人，他仍是项目中不是访客的有效成员时才指派，否则不指派、不报错，`createIssue` 的说明写明）。`guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明随它们的读者改。
+- **第 4 节，表和删除**（完成）：五张表都带 `workspace_id`、`project_id`，进入删除项目、删除工作区的连带，同一时刻、同一个删除者（`IssueCascade.DeleteProjectIssues`、`DeleteWorkspaceIssues`，P9 换成任务）；按目录的删除测试给每张表准备一行，不开豁免；端到端的 `workspaceTables` 从目录读出，并像 `expectProjectDeleted` 一样核对它就是有 `workspace_id` 列的每张表，两个列表保持 `COLLATE "C"`；M3 的 P4、W2、W3 经 `furnishIssueRows` 带着工作项一侧的行。
+
+仍未处理，状态保持 `open`：第 1、3、5–9 节和第 2 节其余各项，按 M4 设计 13.1 的落点。
+
+来源：[M4/P1a spec](../specs/P1a-issues.md) 第 7 节。

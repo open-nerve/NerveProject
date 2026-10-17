@@ -42,3 +42,11 @@ M4 合并时：
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P3 评审记录](../../M1-frontend-trim/reviews/P3-trim-platform-review.md)第 7 节。
+
+## 处理结果（M4/P1a）
+
+- **工作项的字段**（工作项的第一个操作一侧完成）：`createIssue` 的 `IssueCreate`、`IssueDetail` 没有 `is_epic`、`type_id`，`issues` 表也没有 `type_id`（M4 设计 4.2）；动态的两类（`WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`）不在 `issue_activities.verb` 的取值里（`created`、`updated`、`deleted`）。没有批量的接口。
+
+仍未处理，状态保持 `open`：动态、评论的接口（M4 的 P4）；描述历史和按编号查找的地址（M4 的 P4、P2）；富文本筛选的显示层（M4 的 P13）；收集箱的来源（M7）。
+
+来源：[M4/P1a spec](../specs/P1a-issues.md) 第 7 节。
