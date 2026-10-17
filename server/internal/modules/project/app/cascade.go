@@ -10,11 +10,12 @@ import (
 
 // Cascade is what the workspace module's writes ask of the projects,
 // workspace's ProjectCascade port (M3 design 3.3). Each method uses
-// project's own repositories only, in the transaction ctx carries, which
-// the caller began and holds its workspace's lock in: a failure comes back
-// as itself and the caller's whole transaction rolls back. The caller gives
-// who acts and the moment, which each method writes into the rows it
-// changes.
+// project's own repositories, and DeleteWorkspaceProjects the issue
+// module's cascade too (IssueCascade, M4 design 3.3), in the transaction
+// ctx carries, which the caller began and holds its workspace's lock in: a
+// failure comes back as itself and the caller's whole transaction rolls
+// back. The caller gives who acts and the moment, which each method writes
+// into the rows it changes.
 type Cascade struct {
 	projects ProjectsDeleter
 	locker   WorkspaceProjectsLocker
