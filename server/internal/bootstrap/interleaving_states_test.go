@@ -167,22 +167,15 @@ func marksDefault(name string) stateWrite {
 
 // serializeOnWeb runs first, a write on Web's rows that waits at the gate it
 // is given past its write, then second, once the first is held there; once
-// the second waits for a row of projects, Web's, it opens the gate. Neither
-// write writes a row of projects, so only the wait for that lock satisfies
-// the probe. It answers the moment the gate opened, and each write's
-// error. Every wait has a deadline, ctx's or the probe's.
+// the second waits for a row of projects, Web's, it opens the gate
+// (serializeOn). Neither write writes a row of projects, so only the wait
+// for that lock satisfies the probe. It answers the moment the gate opened,
+// and each write's error.
 func (w memberWorld) serializeOnWeb(t *testing.T, ctx context.Context, first func(g *gate) error,
 	second func() error) (opened time.Time, firstErr, secondErr error) {
 	t.Helper()
 	g := newGate()
-	done := run(func() error { return first(g) })
-	held(t, ctx, g, done, "the first write")
-	answered := run(second)
-	pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
-	opened = time.Now().Truncate(time.Microsecond)
-	close(g.open)
-	firstErr = result(t, ctx, done, "the first write")
-	return opened, firstErr, result(t, ctx, answered, "the second write")
+	return serializeOn(t, ctx, w.pool, g, func() error { return first(g) }, second)
 }
 
 // webWrittenSince checks that Web's last write of its rows of table is no

@@ -24,8 +24,9 @@ import (
 // takes FOR NO KEY UPDATE (M4 design 3.5, M3 design 3.6). Every wait has a
 // deadline.
 
-// heldTx holds each transaction it runs open past its writes: once fn has
-// done them, before the commit, it waits at its gate.
+// heldTx holds the one transaction its write runs open past its writes:
+// once fn has done them, before the commit, it waits at its gate. A second
+// transaction through it would panic: gate.wait closes the gate's held.
 type heldTx struct {
 	shared.TxManager
 	gate *gate
@@ -106,8 +107,8 @@ var (
 
 // serialize sends first, through a route whose transaction a gate holds
 // open past its writes, then, once it is held, second; once the second
-// waits for a row of projects, Web's, it opens the gate, at a's released.
-// Each answers into its exchange within 10 seconds.
+// waits for a row of projects, Web's, it opens the gate, at a's released
+// (serializeOn). Each answers into its exchange within 10 seconds.
 func (w issueWorld) serialize(t *testing.T, first, second racingWrite, a, b *exchange) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -115,13 +116,8 @@ func (w issueWorld) serialize(t *testing.T, first, second racingWrite, a, b *exc
 	g := newGate()
 	firstWrite, secondWrite := first(t, w, heldTx{postgres.NewTxManager(w.pool, 2*time.Second), g}, a), second(t, w,
 		postgres.NewTxManager(w.pool, 2*time.Second), b)
-	done := run(firstWrite)
-	held(t, ctx, g, done, "the first write")
-	waiting := run(secondWrite)
-	pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
-	opened := time.Now().Truncate(time.Microsecond)
-	close(g.open)
-	if err := errors.Join(result(t, ctx, done, "the first write"), result(t, ctx, waiting, "the second write")); err != nil {
+	opened, firstErr, secondErr := serializeOn(t, ctx, w.pool, g, firstWrite, secondWrite)
+	if err := errors.Join(firstErr, secondErr); err != nil {
 		t.Fatal(err)
 	}
 	a.released = opened
