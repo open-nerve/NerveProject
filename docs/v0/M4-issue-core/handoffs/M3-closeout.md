@@ -121,6 +121,6 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 - **第 4 节，项目**（完成一部分）：编号取 `projects.last_issue_sequence`（项目 N 之下加一）；`identifier`、`default_assignee_id` 的说明改成它们的作用（编号的前缀；新工作项的默认负责人，他仍是项目中不是访客的有效成员时才指派，否则不指派、不报错，`createIssue` 的说明写明）。`guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明随它们的读者改。
 - **第 4 节，表和删除**（P1a 的五张表完成；以后每个加表的 Phase 照做，M4 设计 13.1）：五张表都带 `workspace_id`、`project_id`，进入删除项目、删除工作区的连带，同一时刻、同一个删除者（`IssueCascade.DeleteProjectIssues`、`DeleteWorkspaceIssues`，P9 换成任务）；按目录的删除测试给每张表准备一行，不开豁免；端到端的 `workspaceTables` 从目录读出，并像 `expectProjectDeleted` 一样核对它就是有 `workspace_id` 列的每张表，两个列表保持 `COLLATE "C"`；M3 的 P4、W2、W3 经 `furnishIssueRows` 带着工作项一侧的行。
 
-仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、连接池的代价和写闸门（M4 的 P1b）、以后每个新的批量写按约定五核对（P1a 之后各 Phase 各自的 review，到 M4 的 P9）、物理删除账户（M4 不物理删除账户，M4 设计 3.21，在 M4 的 P9 关闭）；第 4 节的 `guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明；第 1、3、5–9 节，按 M4 设计 13.1 的落点。
+仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、连接池的代价和写闸门（M4 的 P1b）、以后每个新的批量写按约定五核对（P1a 之后各 Phase 各自的 review，到 M4 的 P9）、物理删除账户（M4 不物理删除账户，M4 设计 3.21，在 M4 的 P9 关闭）；第 4 节的 `guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明，`expectIssueDeleted`（照 `expectProjectDeleted` 从目录自查、沿外键图递归，M4 的 P2）和删除断言对工作项一侧的表的限时轮询（M4 的 P9）；第 1、3、5–9 节，按 M4 设计 13.1 的落点。
 
 来源：[M4/P1a spec](../specs/P1a-issues.md) 第 7 节。

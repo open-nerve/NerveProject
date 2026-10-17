@@ -21,8 +21,8 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`assert/catalog.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/project.yaml`（1358 行）、`api/modules/workspace.yaml`（872 行）不受约 400 行的限制；`tools/keywords.json` 是数据。本 plan 的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `e2e/fixtures/api.ts`（403 行，基点 423 行，本 plan 移出 `furnishWorkspace`）、`server/migrations/schema_test.go`（400 行，本 plan 只改迁移的数目、表名和名字的清单）、`bootstrap/permission_matrix_test.go`（392 行）、`bootstrap/project_write_locks_test.go`（389 行）、`bootstrap/interleaving_growth_test.go`（389 行）、`e2e/fixtures/assert/project.ts`（385 行）、`bootstrap/interleaving_answers_test.go`（375 行）、`bootstrap/ports_test.go`（373 行）、`e2e/fixtures/assert/workspace.ts`（367 行）、`project/app/ports.go`（361 行）。W3 在基点已有 399 行，本 plan 把它的两个页面测试原样移到 `w3-workspace-settings-page.spec.ts`（spec 第 3 节第 12 条）。
-- **关键词守卫**：72 条规则、23 个例外，没有命中。Task 1 把 `phase` 改为 `M4/P1`、两个 `/user-properties/` 例外的 `until` 改为 `M4/P11`（P1a、P1b 都写 `M4/P1`，裁定 5）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`assert/catalog.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/project.yaml`（1357 行）、`api/modules/workspace.yaml`（872 行）不受约 400 行的限制；`tools/keywords.json` 是数据。本 plan 的其余代码文件都在约 400 行以内（在分支的终态上量的）：最长的是 `server/migrations/schema_test.go`（400 行，本 plan 只改迁移的数目、表名和名字的清单）、`bootstrap/permission_matrix_test.go`（392 行）、`bootstrap/project_write_locks_test.go`（389 行）、`bootstrap/interleaving_growth_test.go`（389 行）、`e2e/fixtures/api.ts`（386 行；基点 423 行，本 plan 移出 `furnishWorkspace`，Task 14 的修复轮把 `createState` 移进 `e2e/fixtures/states.ts`）、`e2e/fixtures/assert/project.ts`（385 行）、`bootstrap/interleaving_answers_test.go`（375 行）、`bootstrap/ports_test.go`（373 行）、`e2e/fixtures/assert/workspace.ts`（367 行）、`project/app/ports.go`（361 行）。W3 在基点已有 399 行，本 plan 把它的两个页面测试原样移到 `w3-workspace-settings-page.spec.ts`（spec 第 3 节第 12 条）。
+- **关键词守卫**：72 条规则、23 个例外，没有命中。Task 1 把 `phase` 改为 `M4/P1`、`/user-properties/` 的一条例外（命中两处）的 `until` 改为 `M4/P11`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；迁移的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -72,13 +72,13 @@ sys.exit(1 if broken else 0)
 
 | 文件 | 职责 | Task |
 |---|---|---|
-| `tools/keywords.json`（修改） | `phase` 为 `M4/P1`；两个 `/user-properties/` 例外到 `M4/P11` | 1 |
+| `tools/keywords.json`（修改） | `phase` 为 `M4/P1`；`/user-properties/` 的一条例外（命中两处）到 `M4/P11` | 1 |
 | `server/internal/modules/project/adapter/postgres/queries/cascade.sql`、`server/internal/modules/project/adapter/postgres/cascade.go`（修改） | `LockWorkspaceProjects`：这个工作区未删除的项目，`id` 升序 `FOR NO KEY UPDATE` | 1 |
 | `server/internal/modules/project/adapter/postgres/lock_workspace_projects_test.go`（新） | 存储测试：回答、按 `id` 加锁、锁的强度 | 1 |
 | `server/internal/modules/project/adapter/postgres/failures_test.go`（修改） | 新方法的失败测试：`LockWorkspaceProjects`（Task 1）、`IssueProjects` 的五个方法（Task 6）、`DeleteLabel` 回答的 `id`（Task 11） | 1、6、11 |
 | `server/internal/modules/project/app/ports.go`（修改） | `WorkspaceProjectsLocker` | 1 |
 | `server/internal/modules/project/app/cascade.go`、`server/internal/modules/project/app/cascade_test.go`（修改） | `Cascade.LockWorkspaceProjects`（Task 1）；`DeleteWorkspaceProjects` 的最后一步是锁住的项目的工作项一侧（Task 2） | 1、2 |
-| `server/internal/modules/project/module.go`（修改） | `Cascade` 接口加 `LockWorkspaceProjects`（Task 1）；`Deps.Issues`、`CascadeDeps.Issues`（Task 2）；`IssueProjects` 和它的类型（Task 6）；包说明（Task 11） | 1、2、6、11 |
+| `server/internal/modules/project/module.go`（修改） | `Cascade` 接口加 `LockWorkspaceProjects`（Task 1）；`Deps.Issues`、`CascadeDeps.Issues`（Task 2）；`IssueProjects` 和它的类型、包说明（Task 6）；`DeleteState`、`DeleteLabel` 接上 `d.Issues`（Task 11） | 1、2、6、11 |
 | `server/internal/modules/workspace/adapter/postgres/queries/invitations.sql`、`server/internal/modules/workspace/adapter/postgres/invitations.go`、`server/internal/modules/workspace/adapter/postgres/failures_test.go`（修改） | 邀请的锁与删除分开：`LockWorkspaceInvitations`、`DeleteInvitations` | 1 |
 | `server/internal/modules/workspace/adapter/postgres/delete_workspace_invitations_test.go`、`server/internal/modules/workspace/adapter/postgres/delete_workspace_test.go`（修改） | 邀请按 `id` 加锁的存储测试（Task 1）；连带的调用多一个参数（Task 2） | 1、2 |
 | `server/internal/modules/workspace/app/ports.go`、`server/internal/modules/workspace/app/delete_workspace.go`、`server/internal/modules/workspace/app/delete_workspace_test.go`、`server/internal/modules/workspace/app/fakes_projects_test.go`（修改） | 删除工作区的新顺序：工作区 N → 判定 → 邀请 N → 项目 N → 时刻 → 写（Task 1）；锁住的项目交给 `DeleteWorkspaceProjects`（Task 2） | 1、2 |
@@ -110,10 +110,10 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/create_issue.go`、`server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/domain/actions.go`（新） | 端口（使用方声明）、`Locks`（预检、锁下的判定）、`createIssue`；`issue.create` | 8 |
 | `server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`（修改） | `issue.create`：项目级，管理员、成员 | 8 |
 | `api/modules/issue.yaml`（新）；`api/openapi.yaml`（修改） | `createIssue`、`IssuePriority`、`IssueDetail`、`IssueCreate`；`issue` 标签 | 9 |
-| `api/modules/project.yaml`（修改） | `Project.identifier`、`default_assignee_id`、`State.default` 的说明（Task 9）；`deleteState` 的 `project.state_in_use`、`deleteProject` 的描述（Task 11） | 9、11 |
+| `api/modules/project.yaml`（修改） | `Project.identifier`、`default_assignee_id`、`State.default` 的说明（Task 9）；`deleteState` 的 `project.state_in_use`、`deleteProject` 和 `deleteLabel` 的描述（Task 11） | 9、11 |
 | `server/internal/modules/issue/adapter/http/gen/oapi-codegen.yaml`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`（新） | 生成的配置；`UseCases`、`Register`；`createIssue` 的处理函数和它的测试（`apitest.Main`） | 9 |
 | `server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`（修改） | `issueProjects`、`issueProfiles` 和它们的转换测试 | 9 |
-| `server/internal/bootstrap/permission_matrix_issues_test.go`（新）；`server/internal/bootstrap/permission_matrix_test.go`（修改） | `createIssue` 的矩阵行（Task 9 五行，Task 12 加分诊状态）；`prepareMatrix` 接上它们 | 9、12（`permission_matrix_test.go`：9） |
+| `server/internal/bootstrap/permission_matrix_issues_test.go`（新）；`server/internal/bootstrap/permission_matrix_test.go`（修改） | `createIssue` 的矩阵行（Task 9 六行，Task 12 加分诊状态）；`prepareMatrix` 接上它们 | 9、12（`permission_matrix_test.go`：9） |
 | `server/internal/bootstrap/project_write_locks_test.go`（修改） | `writesOnAProject` 去掉标签为 `issue` 的写；形状测试的操作带真实的标签 | 9 |
 | `server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`（新） | 工作项的测试世界；取锁的形状（交错 21）、`issueWrites` | 10 |
 | `server/internal/bootstrap/issue_writes_test.go`（新） | 盖戳、事务的连接（Task 10）；`newIssueRoute` 带自己的 `TxManager`（Task 12） | 10、12 |
@@ -129,6 +129,7 @@ sys.exit(1 if broken else 0)
 | `e2e/stories/issue/i1-create-issue.spec.ts`、`e2e/stories/workspace/w3-workspace-settings-page.spec.ts`（新）；`e2e/stories/project/p4-archive.spec.ts`、`e2e/stories/workspace/w2-landing.spec.ts`、`e2e/stories/workspace/w3-workspace-settings.spec.ts`、`e2e/stories/workspace/w11-guest-bounds.spec.ts`（修改） | I1 的接口版本；P4、W2、W3 带着工作项一侧的行；W3 的页面版本移到自己的文件；W11 的表从目录读 | 14 |
 | `docs/v0/v0-design.md`、`docs/v0/plane-diff.md`、`docs/v0/M3-workspace-project/M3-design.md`（修改） | 3.23 中 P1a 的行 | 15 |
 | `docs/v0/M4-issue-core/handoffs/M1-P2-trim-content.md`、`docs/v0/M4-issue-core/handoffs/M1-P3-trim-platform.md`、`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（修改） | 处理结果（M4/P1a） | 15 |
+| `e2e/fixtures/states.ts`（新）；`e2e/stories/project/p6-states.spec.ts`、`e2e/stories/project/p6-states-page.spec.ts`、`server/internal/bootstrap/interleaving_test.go`、`server/internal/modules/project/adapter/postgres/demote_test.go`（修改） | 注：只有修复轮改过这些文件，它们不在任何 Task 的块里（块照原样运行过，不改）。`states.ts`：`createState`（从 `api.ts`）、`listStates` 和 `stateIds`（从 P6 的两个文件）移到一处，I1 和 P6 共用（Task 14 的修复轮，`fbefd9ad`）；`interleaving_test.go`：`serializeOn`，M3 的和 P1a 的交错共用（Task 12 的修复轮，`c4c10107`）；`demote_test.go`：`waits` 包装共用的 `rowWaits`，`TestLockIssueProject` 也经它探测工作区行（Task 6 的修复轮，`11708a08`） | 6、12、14 的修复轮 |
 
 ---
 
@@ -140,7 +141,7 @@ sys.exit(1 if broken else 0)
 - Generate: `server/internal/modules/project/adapter/postgres/gen/cascade.sql.go`、`server/internal/modules/workspace/adapter/postgres/gen/invitations.sql.go`
 
 **Interfaces:**（spec 2.3；M4 设计 3.5、7.9）
-- `tools/keywords.json`：`phase` 为 `M4/P1`，两个 `/user-properties/` 例外的 `until` 为 `M4/P11`。
+- `tools/keywords.json`：`phase` 为 `M4/P1`，`/user-properties/` 的一条例外（命中两处）的 `until` 为 `M4/P11`。
 - `project`：
   - `queries/cascade.sql` 的 `LockWorkspaceProjects`（这个工作区未删除的项目，含已归档的，`ORDER BY id FOR NO KEY UPDATE`，回答 `id`）；
   - `Store.LockWorkspaceProjects(ctx, workspaceID) ([]uuid.UUID, error)`；
@@ -2679,7 +2680,7 @@ Expected: 通过。
 | `T2.2` | 删除工作区的项目一步留下它们的工作项一侧 | `internal/modules/project/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkspace`、`TestAFailedProjectsStep`、`TestADeletionRefused`（`make test`）、故事 `w3-workspace-settings`（Task 14 起） | 单元；组合；端到端 |
 | `T2.3` | 删除工作区不把锁住的项目交给 `project` 模块 | `internal/modules/workspace/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkspace`、`TestAFailedProjectsStep`、`TestADeletionRefused`（`make test`） | 单元；组合 |
 | `T2.4` | 工作项的分批语句保留行的最后写者 | `internal/bootstrap` 的 `TestDeletingAProject`、`TestAProjectDeletionRefused`（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkspace`、`TestAFailedProjectsStep`、`TestADeletionRefused`（`make test`） | 组合 |
-| `T2.5` | 授权文件漏掉工作项的表 | `internal/bootstrap` 的 `TestTheGrantsFileCoversEveryRelationAndFunction`、`TestTheRuntimeRoleServesWithTheGrantsFile`（`make test`） | 组合 |
+| `T2.5` | 授权文件漏掉工作项的表 | `internal/bootstrap` 的 `TestTheGrantsFileCoversEveryRelationAndFunction`（`make test`） | 组合 |
 | `T2.6` | 服务端的组合不给 `project` 模块工作项的连带 | `internal/bootstrap` 的 `TestDeletingAProject`、`TestAProjectDeletionRefused`（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkspace`、`TestAFailedProjectsStep`、`TestADeletionRefused`（`make test`） | 组合 |
 | `T2.7` | 命令行的连带不经 `issue` 的建出 | `internal/archtest` 的 `TestCommandsComposeNoServerAndNoJobs`（`make test`） | 组合 |
 | `T2.8` | 工作项的编号只在未删除的工作项中唯一 | `migrations` 的 `TestConstraintAndIndexNames`（`make test`） | 结构 |
@@ -3489,7 +3490,7 @@ Expected: 通过。
 | `T3.3` | 一张表的分批在第一个不满的批次就停，不等到空的批次 | `internal/modules/issue/app` 的 全部测试（`make test`） | 单元 |
 | `T3.4` | 下一批从上一批回答的最小的 `id` 之后开始，不是最大的 | `internal/modules/issue/app` 的 全部测试（`make test`） | 单元 |
 | `T3.5` | 删除工作区只删它的第一个项目的工作项一侧 | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkspace`、`TestAFailedProjectsStep`、`TestADeletionRefused`（`make test`） | 单元；组合 |
-| `T3.6` | 授权文件漏掉 `issue_activities` | `internal/bootstrap` 的 `TestTheGrantsFileCoversEveryRelationAndFunction`、`TestTheRuntimeRoleServesWithTheGrantsFile`（`make test`） | 组合 |
+| `T3.6` | 授权文件漏掉 `issue_activities` | `internal/bootstrap` 的 `TestTheGrantsFileCoversEveryRelationAndFunction`（`make test`） | 组合 |
 | `T3.7` | 失败的一批当作没有行：这张表的分批结束，删除照样往下做 | `internal/modules/issue/app` 的 全部测试（`make test`） | 单元 |
 
 ---
@@ -8434,7 +8435,7 @@ Expected: 通过。
 - `TestEachIssueWriteLocksItsProjectFirst`：先核对 `issueWrites` 与契约中工作项一侧的写一一对应（完整性：P1b 的写不加行时在任何数据库之前失败）。然后对每个写：
   - 拒绝的不取锁：另一个事务以 `EXCLUSIVE` 持有它读写的每张表（行锁和写都等它，普通的读不等）；walt、wanda 答 403，olga 答 404；
   - 项目最先：同样的锁下，alice 的写只在 `projects` 上等；
-  - 它的锁就是 `FOR NO KEY UPDATE`，工作区上没有锁：另一个事务以 `ACCESS EXCLUSIVE` 持写在锁下最先读的表（`reads`，`createIssue` 是 `states`；普通的读也等它）时，alice 的写在它自己的任何写之前停在那里（编号的 `UPDATE` 还没有做），持着 Web 的 `FOR NO KEY UPDATE`（不更弱、不更强），acme 的行上没有锁；
+  - 它的锁就是 `FOR NO KEY UPDATE`，工作区上没有锁：另一个事务以 `ACCESS EXCLUSIVE` 持写在锁下最先读、预检没有读的表（`reads`，`createIssue` 是 `states`；普通的读也等它）时，alice 的写在它自己的任何写之前停在那里（编号的 `UPDATE` 还没有做），持着 Web 的 `FOR NO KEY UPDATE`（不更弱、不更强），acme 的行上没有锁；
   - 工作区行被持 `FOR NO KEY UPDATE`（每个项目连带都这样持）时，写照样完成。
 - `TestCreatingAWorkItemStampsItsRows`：
   - alice 在 Web 的 Todo 建一个工作项，指派 bob、标签 Bug；
@@ -12386,7 +12387,7 @@ Run: `make lint-web`
 Expected: 通过；关键词守卫 `keywords: 72 rules, 23 exceptions, no hits.`
 
 Run: `python3 $M4TMP/p1tools/doclinks.py . docs/v0/v0-design.md docs/v0/plane-diff.md docs/v0/M3-workspace-project/M3-design.md docs/v0/M4-issue-core/handoffs/M1-P2-trim-content.md docs/v0/M4-issue-core/handoffs/M1-P3-trim-platform.md docs/v0/M4-issue-core/handoffs/M3-closeout.md docs/v0/M4-issue-core/specs/P1a-issues.md docs/v0/M4-issue-core/plans/P1a-issues.md`
-Expected: 每个文件 `0 broken`，最后一行 `broken: 0`。
+Expected: plan 以外的每个文件 `0 broken`；plan 是 `3 broken`，列出的是 `"Urgent"`、`""`、`"high!"`：Task 5 的 `issue_test.go` 代码块里三处 `ptr[Priority]` 的调用，围栏里的 Go 被脚本当成链接读，是预期的，不是断的链接；最后一行 `broken: 3`。
 
 Run: `make test`
 Expected: 全部 `ok`，没有 `FAIL`（文档不影响它；本 Phase 最后一次全量运行）。

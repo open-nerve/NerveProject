@@ -33,7 +33,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 ### 2.1 文件总览
 
-路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 141 个手写的文件（新建 59 个、修改 82 个）、生成物 14 个；五个迁移、五张新表。
+路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 手写的代码、测试和配置文件 140 个（新建 60 个，含 `issue` 模块的 `gen/oapi-codegen.yaml`；修改 80 个），生成物 14 个，文档 9 个（本 spec 和 plan 新建，7 个修改）；五个迁移、五张新表。
 
 | 路径 | 内容 | Task |
 |---|---|---|
@@ -50,7 +50,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 | `issue/adapter/postgres/queries/cascade.sql`、`cascade.go`、`cascade_test.go`；`issue/app/cascade.go`（整个文件）；`project/app/delete_state.go`、`delete_label.go`（整个文件）及测试；`project` 的存储、HTTP、错误码；契约；前端的三个文案文件；`bootstrap/issue_cascade_test.go` 等 | `StateInUse`（409 `project.state_in_use`）、`DetachLabel` | 11 |
 | `bootstrap/issue_interleaving_test.go`、`issue_interleaving_deletion_test.go`；`issue_writes_test.go`、`permission_matrix_issues_test.go`、`project_connection_test.go`、`ending_connection_test.go` | 交错 1、2、3、8、22，交错 4、5 的创建一支；分诊状态的矩阵行 | 12 |
 | `bootstrap/issue_interleaving_catalog_test.go` | 交错 6、7 的创建一支 | 13 |
-| `e2e/fixtures/issues.ts`、`furnish.ts`、`assert/issue.ts`、`assert/catalog.ts`、`api.ts`、`assert/project.ts`、`assert/workspace.ts`；`e2e/stories/issue/i1-create-issue.spec.ts`；P4、W2、W3（拆出 `w3-workspace-settings-page.spec.ts`）、W11 | 夹具；I1 的接口版本；M3 的删除故事带着工作项一侧的行；过渡结束 | 14 |
+| `e2e/fixtures/issues.ts`、`states.ts`、`furnish.ts`、`assert/issue.ts`、`assert/catalog.ts`、`api.ts`、`assert/project.ts`、`assert/workspace.ts`；`e2e/stories/issue/i1-create-issue.spec.ts`；P4、W2、W3（拆出 `w3-workspace-settings-page.spec.ts`）、W11；P6 的 `p6-states.spec.ts`、`p6-states-page.spec.ts` | 夹具（`states.ts`：`createState` 从 `api.ts`、`listStates` 和 `stateIds` 从 P6 的两个文件移来，I1 和 P6 共用）；I1 的接口版本；M3 的删除故事带着工作项一侧的行；过渡结束 | 14 |
 | `docs/v0/v0-design.md`、`plane-diff.md`、`M3-design.md`；三份交接 | 3.23 中 P1a 的行；交接的处理结果 | 15 |
 
 生成物：`project/adapter/postgres/gen/cascade.sql.go`、`workspace/adapter/postgres/gen/invitations.sql.go`（Task 1）；`issue/adapter/postgres/gen/db.go`、`models.go`、`delete_rows.sql.go`（Task 2、3）；`project/adapter/postgres/gen/issue_ports.sql.go`（Task 6）；`issue/adapter/postgres/gen/issues.sql.go`（Task 7）；`api/dist/openapi.yaml`、`web/packages/api-client/src/schema.gen.ts`、`issue/adapter/http/gen/server.gen.go`、`bodyshape.gen.go`、`project/adapter/http/gen/server.gen.go`（Task 9）；`issue/adapter/postgres/gen/cascade.sql.go`、`project/adapter/postgres/gen/labels.sql.go`、`api/dist/openapi.yaml`、`schema.gen.ts`（Task 11）。
@@ -61,7 +61,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 ### 2.3 本 Phase 的第一个提交和删除工作区的新顺序（Task 1；3.5，7.9）
 
-- `tools/keywords.json`：`phase` 改为 `M4/P1`（两段都写 `M4/P1`，裁定 5），两个 `/user-properties/` 例外的 `until` 改为 `M4/P11`（约束 6）。
+- `tools/keywords.json`：`phase` 改为 `M4/P1`（两段都写 `M4/P1`，裁定 5），`/user-properties/` 的一条例外（命中两处）的 `until` 改为 `M4/P11`（约束 6）。
 - `project`：`queries/cascade.sql` 的 `LockWorkspaceProjects`（这个工作区未删除的项目，`ORDER BY id FOR NO KEY UPDATE`，回答 `id`）；`Store.LockWorkspaceProjects`；端口 `WorkspaceProjectsLocker`（`app/ports.go`）；`Cascade.LockWorkspaceProjects`（`app/cascade.go`，`NewCascade` 的第二个参数是 locker）；`module.go` 的 `Cascade` 接口加这个方法。
 - `workspace`：邀请的锁与删除分开：`WorkspaceDeleter.LockWorkspaceInvitations`（这个工作区未删除的邀请，`id` 升序 `FOR NO KEY UPDATE`，回答 `id`）和 `DeleteInvitations(ids, by, now)`；存储的 `DeleteWorkspaceInvitations` 删去。`ProjectCascade` 加 `LockWorkspaceProjects`。`DeleteWorkspace.Execute`：工作区 N → 判定 → 邀请 N → 项目 N → `u.clock.Now()` → `cascade`（工作区、锁住的邀请、成员、显示设置、`DeleteWorkspaceProjects(ws, projects, by, now)`）。
 - 测试：单元的 `deletionLocks`、`cascadeCalls`（次序）、`clock_test.go`（时钟在两步锁之后）；存储的 `TestLockWorkspaceProjects`、`TestLockWorkspaceProjectsLocksInIDOrder`（两个连接，按 `id` 等）、`TestLockWorkspaceInvitationsLocksInIDOrder`、失败测试；组合的 `TestAWorkspacesDeletionWaitsForAWriteHoldingOneOfItsProjects`（持项目 N 的写提交之后，删除才读时刻）。M3 的交错测试照旧通过（`NewCascade` 多一个参数）。
@@ -85,7 +85,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 ### 2.6 `project.Provide` 的端口（Task 6；6.5）
 
-`queries/issue_ports.sql`：`LockIssueProject`（`FOR NO KEY UPDATE`，回答工作区、是否归档、默认负责人）、`NextIssueSequence`（`UPDATE … SET last_issue_sequence = last_issue_sequence + 1 … RETURNING`）、`IssueStates`（未删除的状态，含分诊，`id` 升序）、`IssueLabels`（给出的 id 中这个项目未删除的标签）、`ActiveRoles`（给出的账户中有效成员的角色）。`Store` 的同名方法；`project/app/issue_ports.go` 的 `IssueProject`、`IssueState`；`module.go` 的 `IssueProjects` 接口（不加锁的 `ProjectWorkspace` 用 M3 已有的读）和 `Provided.IssueProjects`。存储测试：`TestLockIssueProject`（锁的强度：外键的 `FOR KEY SHARE` 不等它、`FOR NO KEY UPDATE` 等它；已删除的不回答）、`TestNextIssueSequence`、`TestIssueCatalogs`，失败测试各一行。
+`queries/issue_ports.sql`：`LockIssueProject`（`FOR NO KEY UPDATE`，回答工作区、是否归档、默认负责人）、`NextIssueSequence`（`UPDATE … SET last_issue_sequence = last_issue_sequence + 1 … RETURNING`）、`IssueStates`（未删除的状态，含分诊，`id` 升序）、`IssueLabels`（给出的 id 中这个项目未删除的标签）、`ActiveRoles`（给出的账户中有效成员的角色）。`Store` 的同名方法；`project/app/issue_ports.go` 的 `IssueProject`、`IssueState`；`module.go` 的 `IssueProjects` 接口（不加锁的 `ProjectWorkspace` 用 M3 已有的读）和 `Provided.IssueProjects`。存储测试：`TestLockIssueProject`（锁的强度：外键的 `FOR KEY SHARE` 不等它、`FOR SHARE` 等它，工作区行上没有锁；已删除的不回答）、`TestNextIssueSequence`、`TestIssueCatalogs`，失败测试各一行。
 
 ### 2.7 创建的存储（Task 7；3.7、3.12、3.13）
 
@@ -110,14 +110,14 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 ### 2.10 取锁的形状、盖戳和事务的连接（Task 10；3.5 交错 21，9.3）
 
 - `issue_world_test.go`：`newIssueWorld`（acme、Web、Todo、Bug；bob 是 Web 的成员；walt 是工作区成员而不是 Web 的；wanda 是工作区管理员而不是 Web 的；olga 是外人）、`send`、`fullIssue`。
-- `issue_write_locks_test.go`：`issueWrites`（契约中工作项一侧的每个写各一行，完整性核对）、`TestEachIssueWriteLocksItsProjectFirst`：写的第一把锁是项目的 N（它先等 `projects`）；持写在锁下最先读的表（`states`）的 `ACCESS EXCLUSIVE` 锁时，写在它自己的任何写之前（编号的 `UPDATE` 之前）停下，持项目行 `FOR NO KEY UPDATE`（由它的锁，不更弱、不更强）、工作区行上没有锁（只有外键的 `FOR KEY SHARE`）；看不到项目（olga）、看得到而不能写（walt 在公开的 Web 上、wanda）的写回答 404、403，不出现在 `pg_locks` 里；工作区行被持 N 时写照样完成。
+- `issue_write_locks_test.go`：`issueWrites`（契约中工作项一侧的每个写各一行，完整性核对）、`TestEachIssueWriteLocksItsProjectFirst`：写的第一把锁是项目的 N（它先等 `projects`）；持写在锁下最先读、预检没有读的表（`states`）的 `ACCESS EXCLUSIVE` 锁时，写在它自己的任何写之前（编号的 `UPDATE` 之前）停下，持项目行 `FOR NO KEY UPDATE`（由它的锁，不更弱、不更强）、工作区行上没有锁（只有外键的 `FOR KEY SHARE`）；看不到项目（olga）、看得到而不能写（walt 在公开的 Web 上、wanda）的写回答 404、403，不取行锁、不写（另一个事务以 `EXCLUSIVE` 持着它读写的每张表（`users` 除外）时照样回答）；工作区行被持 N 时写照样完成。
 - `issue_writes_test.go`：`TestCreatingAWorkItemStampsItsRows`（七行同一时刻、同一个写者，在请求之内；动态的显示名来自 `users.display_name`）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：每个决定所依赖的读都在写的事务里）。
 
 ### 2.11 删除状态和删除标签（Task 11；3.6、3.7）
 
 - `issue`：`queries/cascade.sql` 的 `StateInUse`（未删除的工作项，含已归档的）、`DetachLabels`（这些标签未删除的 `issue_labels` 行，写删除的时刻和删除者）；`Store`；`app/cascade.go`（整个文件）加两个方法。
 - `project`：`domain.ErrStateInUse`（409 `project.state_in_use`）；`DeleteState`：`lockRowAndDecide` 之后、守卫的删除之前问 `StateInUse`（所以默认状态有工作项时答 `state_in_use`）；`DeleteLabel`：存储的 `DeleteLabel` 回答删除的 `id`（这个标签和它下面的标签），用例在同一时刻 `DetachLabel(ids, by, now)`。`IssueCascade` 的说明。
-- 契约：`deleteState` 声明 `project.state_in_use`；`deleteProject`、`deleteWorkspace` 的描述提到工作项。前端：`web/apps/web/core/lib/error-messages.ts` 和两份 `errors.json` 的 `project_state_in_use`（约束 4）。
+- 契约：`deleteState` 声明 `project.state_in_use`；`deleteProject`、`deleteWorkspace` 的描述提到工作项；`deleteLabel` 的描述写明同一时刻、由同一个调用者从工作项上摘下。前端：`web/apps/web/core/lib/error-messages.ts` 和两份 `errors.json` 的 `project_state_in_use`（约束 4）。
 - 测试：单元的 `delete_state_test.go`、`delete_label_test.go`、`clock_test.go`；存储的 `TestStateInUse`、`TestDetachLabels`、`label_writes_test.go`（回答的 `id`）；HTTP 的 `state_writes_test.go`；组合的 `TestDeletingAStateAWorkItemIsInIsRefused`（Review、默认的 Backlog 各有工作项时 409，什么都不改）、`TestDeletingALabelTakesItOffTheWorkItems`；M3 的状态、标签的交错改用 `issue.Provide(pool).IssueCascade`。
 
 ### 2.12 交错（Task 12、13；3.5，9.3）
@@ -161,7 +161,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 9. **"列表从不为 null"由 HTTP 一处负责**。`GetIssue` 对没有负责人、标签的工作项回答 NULL（领域的 `nil`），`issues.go` 的 `orEmpty` 把它们答成 `[]`；存储不另 `COALESCE`。M3 的处理函数也是这样做列表的。变异 T9.2 在 HTTP 和矩阵两层失败。
 10. **分诊状态的格子经仓储准备**（设计对抗性评审 M17）。`createProject` 建出的 Triage 不在状态列表里；矩阵的种子经存储种下它（M3 的矩阵已有），能建工作项的格子答 422 `state_id`（Task 12 的"the triage state"一行）。
 11. **端到端的过渡（裁定 7）**。Task 2 建表之后，`expectProjectDeleted` 从目录读出 `issues`（Task 3 起五张表），要求每张表有随项目删除的行；故事要到 Task 14（`createIssue` 的接口在 Task 9，夹具和 M3 的故事在 Task 14）才写得出工作项。Task 2 到 13 在 `expectProjectDeleted` 里把这五张表写成"没有随项目删除的行、也没有没删的行"（`withoutRows`），注释写明为什么、到哪里；Task 14 删去，同时 `projectTables` 核对目录的表就是有 `project_id` 列的每张表。Task 1、2、3、11、14 跑 `make e2e`（Task 1 改了删除工作区，Task 11 改了删除状态、标签，其余的 Task 不碰故事读到的东西）。Task 14 的变异 T14.3（留着这个排除）在 P4、W3 失败，T14.1（一张表的 `project_id` 没有外键）在自查上失败。
-12. **夹具的落点和签名**（待裁定）。设计第 2 节写 `furnishIssueRows(api, token, projectId)`，在 `e2e/fixtures/api.ts`。P1a 的是 `furnishIssueRows(api, token, projectId, assigneeId, labelId)`，在新的 `e2e/fixtures/furnish.ts`：负责人和标签是故事自己的账户和标签（W3 里是成员和他建的 Bug），删除要把它们写成删除者的，故事读得出；一个夹具自己去找"项目里的某个成员、某个标签"会让故事看不出它造了什么。`api.ts` 有 423 行（基点），`createIssue` 的夹具放在 `issues.ts`；`furnishIssueRows` 和从 `api.ts` 移来的 `furnishWorkspace` 放在 `furnish.ts`（它要 `api.ts` 和 `issues.ts`，放在 `api.ts` 里会让两者互相导入）。`projectTables`、`workspaceTables` 是同一个查询（目录里指向父表的外键表，核对有那一列的每张表），放在新的 `assert/catalog.ts` 的 `tablesUnder` 一处，不写两份。W3 在基点有 399 行，P1a 再加 16 行；照 M3 的写法拆成接口版本（`w3-workspace-settings.spec.ts`）和页面版本（`w3-workspace-settings-page.spec.ts`，两个页面的测试原样移过去）。
+12. **夹具的落点和签名**（待裁定）。设计第 2 节原写 `furnishIssueRows(api, token, projectId)`，在 `e2e/fixtures/api.ts`（P1a 的最终评审之后照本条改了）。P1a 的是 `furnishIssueRows(api, token, projectId, assigneeId, labelId)`，在新的 `e2e/fixtures/furnish.ts`：负责人和标签是故事自己的账户和标签（W3 里是成员和他建的 Bug），删除要把它们写成删除者的，故事读得出；一个夹具自己去找"项目里的某个成员、某个标签"会让故事看不出它造了什么。`api.ts` 有 423 行（基点），`createIssue` 的夹具放在 `issues.ts`；`furnishIssueRows` 和从 `api.ts` 移来的 `furnishWorkspace` 放在 `furnish.ts`（它要 `api.ts` 和 `issues.ts`，放在 `api.ts` 里会让两者互相导入）。`projectTables`、`workspaceTables` 是同一个查询（目录里指向父表的外键表，核对有那一列的每张表），放在新的 `assert/catalog.ts` 的 `tablesUnder` 一处，不写两份。W3 在基点有 399 行，P1a 再加 16 行；照 M3 的写法拆成接口版本（`w3-workspace-settings.spec.ts`）和页面版本（`w3-workspace-settings-page.spec.ts`，两个页面的测试原样移过去）。
 13. **交错 3 在 P1a 是创建的一支**。设计的交错 3 是"修改工作项与删除工作区"。P1a 没有修改，用创建做持项目 N 的写，验证同一件事（删除先拿到工作区 N 而工作项的写已持项目 N 时，删除等它提交，时刻晚于它的）；修改的一支在 P1b（交错 3u）。
 14. **交错 1 看不出缺少显式的锁**。两次创建都要 `NextIssueSequence` 的 `UPDATE`，它本身行锁项目，第二个在这里等第一个提交。所以把项目的锁换成普通的读（T12.1）交错 1 照样通过：显式的锁保证的是编号之前的判定和检查也在锁下（交错 4、5、8 看得出，T12.1 在它们上失败；取锁的形状测试让写停在编号之前，读出它的锁的强度，T12.1 和 `FOR SHARE` 的 T6.1 也在那里失败）。交错 1 留着它的断言（编号、`sort_order`、时刻）。
 15. **I1 不断言"拒绝不耗号"**。拒绝都发生在取号之前（Task 8 的次序），取号又在事务里，拒绝时回滚：两者中去掉任何一个都看不出来（T8.8 把取号移到检查之前，事务回滚，故事照样通过）。没有单个的缺陷能让这条断言失败，留着它就是一条没有变异的检查，所以删去；次序由单元测试钉住，按性质只在单元一层（附录 A.3）。
@@ -201,6 +201,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 | 契约 | `IssueDetail`（`getIssue`、`updateIssue` 的回答）；`IssueUpdate` 在 P1b |
 | 组合 | `issueWrites`（每个工作项的写一行，完整性核对：P1b 的写不加行时 `TestEachIssueWriteLocksItsProjectFirst` 失败；每行的 `reads` 是写在锁下最先读、在锁之前不读的表：`updateIssue` 在锁之前读 `issues`，它的 `reads` 不能是 `issues`）；`writesOnAProject` 按标签 `issue` 去掉工作项的写；P8 的草稿的写和发布草稿先取工作区 S（设计 3.5 代价二），不是这个形状：P8 把它们从 `writesOnIssues` 分出（标签或清单），另写它们的形状测试；矩阵 `permission_matrix_issues_test.go` |
 | 交错 | `heldTx`、`exchange`、`racingWrite`、`serialize`、`inBothOrders`、`createsIssue`、`deletedWith`：交错 3u–7u 照它们写（修改代替创建），交错 20 另经真实的连接池和闸门 |
+| 交错的门（M3 的旧写法） | `interleaving_writes_test.go` 的 `TestTwoWritesOnAProjectSerialize`（:199-211）仍手写门的几步（第一个写停在门上，第二个写在 `projects` 上等，开门）；P1b 的交错 3u–7u 改到这个文件，在那里把这几步收进 `interleaving_test.go` 的 `serializeOn` |
 | 规模 | 同步的过渡写法（`deleteProjectRows`，每批 1,000 行）：P1b 在 2 万个工作项（每个 20 条动态）的项目和五个这样的项目的工作区上量请求的耗时，记进 P1b 的 spec（裁定 4） |
 | 端到端 | `issues.ts`、`assert/issue.ts`：I2 的接口版本照 `expectIssueCreated` 的写法加 `expectIssueUpdated` |
 | 关键词守卫 | `phase` 照旧是 `M4/P1`（裁定 5） |
@@ -209,7 +210,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 | Phase | 条目 |
 |---|---|
-| P2 | 访客规则：判定的 `Grant` 重新由 `decide`、`precheck`、`lockAndDecide` 带出（附录 A.2 删去的 `held`；`OwnOnly` 的拒绝也在预检里答，设计 3.4、3.5）；`OwnOnly` 由 `access` 的 `ProjectFacts` 算出，`ProjectGate.Lock` 要不要 `guest_view_all_features` 由 P2 定；起止日期进接口；按编号取（`identifier`） |
+| P2 | 访客规则：判定的 `Grant` 重新由 `decide`、`precheck`、`lockAndDecide` 带出（附录 A.2 删去的 `held`；`OwnOnly` 的拒绝也在预检里答，设计 3.4、3.5）；`OwnOnly` 由 `access` 的 `ProjectFacts` 算出，`ProjectGate.Lock` 要不要 `guest_view_all_features` 由 P2 定；起止日期进接口；按编号取（`identifier`）；`project.state_in_use` 的说明和文案要不要加补救由 P2 的文案定：P1b 的修改和 P2 的恢复都有了才做得到（例如"先把它们移到别的状态，已归档的先恢复"） |
 | P3 | `LockMany`（约定七）、`DeletedAt`；关联进删除的语句；加关联与删除工作区的交错（两个项目同属一个工作区，两种顺序）：`LockWorkspaceProjects` 的 `id` 升序从这时起承重（P1a 只由存储测试钉住） |
 | P5 | `Issue`（列表的行）；状态的名称进 `StateCatalog` |
 | P6 | `archive_in` |
@@ -252,7 +253,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 
 **切分**（裁定 3 允许在上限之内重新切分）：设计草稿的任务 1 量到 1,815 行代码块，拆成 Task 2（`issues` 一张表和骨架）和 Task 3（其余四张表）；取锁的一步不能单独成为一个 Task（没有使用者的未导出函数过不了 lint，M3 也是经用例测它），与 `createIssue` 的用例同在 Task 8；删除工作区的新顺序提到 Task 1（第 3 节第 1、2 条）。没有用到退路。
 
-**Phase 的大小**（裁定 3：约 16 个任务、每个任务约 1,500 行以内）：15 个 Task；plan 12,388 行（`wc -l`）；每个 Task 都在约 1,500 行以内，最大的是 Task 2（1,435 行），其次 Task 11（1,312 行）、Task 9（1,307 行）。各 Task：1 1,115、2 1,435、3 803、4 554、5 622、6 526、7 623、8 1,246、9 1,307、10 503、11 1,312、12 575、13 135、14 1,221、15 235（`compose_plan.py` 量的，从 Task 的标题到下一个标题）。手写的文件 141 个（新建 59 个、修改 82 个），生成物 14 个（2.1）。没有超出，没有停下。
+**Phase 的大小**（裁定 3：约 16 个任务、每个任务约 1,500 行以内）：15 个 Task；plan 12,388 行（`wc -l`）；每个 Task 都在约 1,500 行以内，最大的是 Task 2（1,435 行），其次 Task 11（1,312 行）、Task 9（1,307 行）。各 Task：1 1,115、2 1,435、3 803、4 554、5 622、6 526、7 623、8 1,246、9 1,307、10 503、11 1,312、12 575、13 135、14 1,221、15 235（`compose_plan.py` 量的，从 Task 的标题到下一个标题）。手写的文件 141 个（新建 59 个、修改 82 个），生成物 14 个（原型上的数；分支的终态见 2.1）。没有超出，没有停下。
 
 ### A.2 清扫之后的修改和加强
 
@@ -270,11 +271,11 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 - I1（Task 14）加三步：bob 在 Cancelled 建第 4 个工作项，不算完成（T5.7 原来只在单元一层）；同一个账户、同一个标签各给两次，422，两个问题一次报出（T5.3）；Web 没有的状态、Web 没有的标签和指派访客，422，三个问题一次报出（T8.11 原来只在单元一层；T8.7、T5.10 也在这里失败）。原来的"指派访客 422"并进第二个。标题随之。
 - 已有的更高一层的检查补进变异的层：T5.5（默认负责人不论角色都被指派）在交错 22 和 I1（ann 离开之后）失败；T5.6（负责人按请求的次序）在 I1（动态的次序）；T5.8（第一个排序值）在矩阵和 I1；T5.9（第 2 行的旧值）在 I1；T8.7（别的项目的标签）在交错 7 和 I1；T8.9（看不到的项目答 403）在矩阵（外人的格子）和取锁的形状测试（olga）。这些都是从后面的 Task 起才有的检查，标"（Task n 起）"。
 - 第二轮（同样只改测试）：I1 的第一个 422 加大小写不对的优先级 `High`（契约的值是小写的；体的形状不核对枚举的值，接口到得了领域的检查，T5.2 原来只在单元一层）；矩阵加"another project's label"一行（Web 以外的项目的标签，能建工作项的格子 422 `label_ids[0]`，T6.6、T8.7 在它上失败：清扫 24 的"别的项目的标签"一半原来在组合一层没有反例）；只在存储一层跑过、组合一层或故事看得到的变异补上那些层：T4.3、T4.4（按目录的删除测试）、T6.4（交错 1、I1）、T7.4、T7.9（盖戳的测试，T7.9 也在 I1）。I1 改了，所以每个有 I1 一层的变异在 Task 14 的快照和最终的树上重跑那一层（`rerun6.sh`）。
-- 取锁的形状测试（Task 10）原来让写停在它写的第一张表（`issues`）上，那时编号的 `UPDATE` 已经以 `FOR NO KEY UPDATE` 的强度锁了项目，`lockOn` 读到的 N 不一定来自它的锁（T6.1 的 `FOR SHARE` 照样读成 N）。改为让写停在它锁下最先读的表（`reads`：`states`，`ACCESS EXCLUSIVE`，普通的读也等它）上，在它自己的任何写之前：读出的是锁本身的强度，T6.1、T12.1（普通的读）在组合一层失败。有这一层的变异（Task 10 的、T8.1、T8.9、T6.1、T12.1）在各自的树、`from` 的树和最终的树上重跑（`rerun7.sh`）。
+- 取锁的形状测试（Task 10）原来让写停在它写的第一张表（`issues`）上，那时编号的 `UPDATE` 已经以 `FOR NO KEY UPDATE` 的强度锁了项目，`lockOn` 读到的 N 不一定来自它的锁（T6.1 的 `FOR SHARE` 照样读成 N）。改为让写停在它锁下最先读、预检没有读的表（`reads`：`states`，`ACCESS EXCLUSIVE`，普通的读也等它）上，在它自己的任何写之前：读出的是锁本身的强度，T6.1、T12.1（普通的读）在组合一层失败。有这一层的变异（Task 10 的、T8.1、T8.9、T6.1、T12.1）在各自的树、`from` 的树和最终的树上重跑（`rerun7.sh`）。
 
 ### A.3 只在单元、结构、存储一层被发现的变异
 
-**只在单元一层被发现的（按性质，20 个）**：
+**只在单元一层被发现的（按性质，20 个；修复轮另加 6 个，列在本段末）**：
 
 - 端口的失败被吞掉（清扫 2）7 个：T1.13、T2.9、T2.10、T3.7、T8.14、T11.19、T11.20。真实的存储在这些步骤不失败；而一条失败的语句让 Postgres 中止事务，之后的语句和提交都失败，用例吞掉它也得到同一个失败的请求、同样全部回滚。组合一层的失败测试看得到这一点：`TestAFailedProjectsStepRollsTheDeletionBack` 在请求期间把 `issue_activities` 改名，T2.10 在它上照样通过（请求 500，全部回滚）。吞掉与否只在假实现上看得出；存储方法自己的失败由清扫 19 在存储一层核对（M3 P7b 的 `s2-*` 同类）。
 - 端口的回答对不上所问（清扫 22）3 个：T8.15（显示名的端口少回答一个负责人）、T8.16（项目没有默认状态）、T8.17（写入之后读不回来）。真实的端口在同一个事务里回答：负责人刚由 `ProjectMembers` 确认是有效成员，`identity` 的显示名对每个有效的账户都有；每个项目恰有一个默认状态（M3：建项目时建它，部分唯一索引，默认状态删不掉）；`GetIssue` 读的是同一个事务刚写的行。组合出的 app 到不了这些情况（M3 P7b 的 `s22-*` 同类）。
@@ -283,13 +284,14 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 - T8.8（在检查依赖的行之前取编号）：拒绝都在事务里，回滚连编号一起回滚（第 3 节第 15 条）。
 - 契约和文案 3 个。T9.11（`IssueCreate` 收下多余的字段）：体的形状由生成的 `bodyshape` 在用例之前检查，HTTP 的测试驱动的就是生成的路由和真实的处理函数，这条路上没有替身；T11.16（`deleteState` 的契约不声明 `project.state_in_use`）：只有 `apitest.Main` 的覆盖核对看得出（M3 P7b 的 `s18-update-extra-default` 同类）；T11.17（`project.state_in_use` 没有文案）：`error-messages.test.ts` 读的是真实的文案表，页面在删除状态时显示它，工作项的页面在 P14。
 - T9.6（`writesOnAProject` 去掉每个模块带标签的写）：改的是测试的辅助函数，由它自己的形状测试 `TestWritesOnAProjectAreEachShape` 发现。
+- 修复轮加的 6 个（定义在 `$M4TMP/p1sdd/` 的探针文件里，不在 `mutants_p1a.py` 的 136 个之中），都在单元一层被发现。T3F.1、T3F.2（下一批从上一批回答的第一个、最后一个 `id` 之后开始，不是最大的）：同 T3.4，语句自己跳过已删除的行，真实环境上只是扫得多；单元的假实现轮流按两种次序回答，两者都被发现。T8P.4（关注不先去重）：存储的 `ON CONFLICT DO NOTHING` 跳过第二行（`TestInsertSubscribersSubscribesEachAccountOnce`），组合出的 app 里等价，同 T7.3；由 `TestCreateIssueDefaults` 里调用者也是负责人的一行发现。T8P.5（关注按调用者、负责人的次序写，不按 `id`）：同 T8.12，同一个项目的行在项目 N 之下没有第二个写者。T9Q.1、T9Q.2（回答把创建者、创建的时刻当作最后修改的）：P1a 只有创建，经接口造出的工作项的这两列与创建的相同，只有 HTTP 的测试（`webSeven` 一分钟之后由 bob 改过）分得出；修改在 P1b。
 
 **只在结构、存储一层被发现的（按性质或按设计，28 个；都在真实的数据库上）**：
 
 - 存储方法自己的失败（清扫 19）6 个：T1.10、T1.11、T4.10、T6.8、T7.10、T11.21（取消的 context；组合出的 app 里真实的存储不失败）。
 - 迁移的约束 5 个：T2.8、T4.6–T4.9（结构一层的 `TestConstraintAndIndexNames`、`TestIssueChecksRejectCounterexamples`、`TestIssueUniqueKeys`）。领域先拒绝这些值，或 P1a 造不出它们（编号在已删除的工作项中也唯一：P1a 的工作项只随项目删除；日期在 P2 才进接口；同一个标签再加到工作项上在 P1b 的修改），CHECK 和唯一键是纵深防御。
 - 删除工作区锁项目的强度 2 个：T1.6（取 `FOR SHARE`）：`FOR SHARE` 与工作项的写的 `FOR NO KEY UPDATE` 照样互斥，只放过别的 `FOR SHARE`，而取项目 `FOR SHARE` 的是项目管理类的写，它们先共享工作区，被删除持有的工作区 N 挡在外面。T1.7（取 `FOR UPDATE`）：多挡的是外键的 `FOR KEY SHARE`，往这个工作区的项目下插行的写或者先持项目 N（工作项的写，删除等它），或者先共享工作区（项目管理类的写，被挡在外面）。两者由存储的 `TestLockWorkspaceProjects` 用两个连接核对（外键的 `FOR KEY SHARE` 不等它，`FOR NO KEY UPDATE` 等它）。
-- 约定五（多行的锁按 `id`）3 个：T1.4、T1.14、T4.1。工作区 N 之下没有别的写锁这个工作区的几个项目或几个邀请，分批的语句在项目 N 之下；按 `id` 的次序是给以后的写的约定，由两个连接的存储测试钉住（清扫 48）。
+- 约定五（多行的锁按 `id`）3 个：T1.4、T1.14、T4.1。工作区 N 之下没有别的写锁这个工作区的几个项目或几个邀请，分批的语句在项目 N 之下；按 `id` 的次序是给以后的写的约定，由存储测试钉住（清扫 48）：T1.4、T1.14 由两个连接的存储测试，T4.1 由核对每一批按 `id` 升序回答的存储测试（`TestTheBatchStatementsDeleteAProjectsRowsInIDOrder`）。
 - 已删除的行 8 个，P1a 造不出能区分它们的状态，或之后的语句自己跳过已删除的行：T1.5、T1.15（锁也锁已删除的项目、邀请：之后的删除语句自己跳过它们）；T6.3（`issue` 的锁回答已删除的项目：锁下的判定读项目的事实，看不到已删除的项目，同样答 404）；T4.2（负责人的批次再盖已删除的行）、T7.5（读到已删除的负责人行）：去掉负责人的写在 P1b；T11.13（`DetachLabels` 再盖已删除的行）：P1a 里工作项上的标签只由这次摘下或项目的连带删除，先删掉一行的修改在 P1b；T7.1（已删除的工作项的排序值也算）、T7.8（读到已删除的工作项）：P1a 的工作项只随它的项目删除，读的是同一个事务刚写的行。
 - 等价的写法 2 个：T4.5（动态的批次不看下界）：语句自己跳过已删除的行，结果相同，只是扫得多；T7.6（标签按行的次序读）：创建按标签的 `id` 写行，行的次序就是标签的次序，修改时后加的标签在 P1b。
 - 用例已经做了的 1 个：T7.3（关注的 `ON CONFLICT`）：创建先去重（`slices.Compact`）；已关注的人被指派在 P1b 的修改。
@@ -333,7 +335,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 | 10 承重的种子行有前提 | 删除测试的 `seedIssues`（五张表各一行，由不是删除者的账户）、工作区的两个项目；`newIssueWorld` 的人和角色；矩阵的 Triage | 按目录的删除测试先核对每张表有种下的行（M3 的 `DeletionViolations`）；`newIssueWorld` 经接口建出，回答由 `send` 核对；矩阵的种子由 `seededStates` 读回核对 | 审阅；组合 |
 | 11 每条拒绝路径 | 预检拒绝的不取锁（404、403），锁下拒绝的（404、403、409），依赖行的 422，规则的 422 | 单元的两个拒绝表；矩阵的拒绝五行（已归档、另一个项目的状态和标签、指派访客、分诊）；取锁的形状测试的拒绝一段；I1 的四种拒绝 | 审阅 |
 | 12 与结束、删除的竞争（组合） | 创建与删除项目、工作区（交错 2、3），与移出、降级（交错 4、5），与归档（交错 8），与删除状态、标签（交错 6、7），与移出默认负责人（交错 22） | 两种顺序都答对，等待由探测确认（`serialize`）；T12.4、T6.5、T13.1、T6.7、T8.10 在交错里被发现 | 组合 |
-| 13 锁强度在组合一层看得到 | 写停在它锁下最先读的表上（编号的 `UPDATE` 之前），`lockOn` 读出它的锁是项目的 N、工作区上没有锁；删除工作区等持项目 N 的写 | T10.1（`FOR UPDATE`）、T6.1（`FOR SHARE`）、T12.1（普通的读）在组合一层；T1.6（`FOR SHARE`）、T1.7 在存储一层（A.3） | 存储；组合 |
+| 13 锁强度在组合一层看得到 | 写停在它锁下最先读、预检没有读的表（`states`）上（编号的 `UPDATE` 之前），`lockOn` 读出它的锁是项目的 N、工作区上没有锁；删除工作区等持项目 N 的写 | T10.1（`FOR UPDATE`）、T6.1（`FOR SHARE`）、T12.1（普通的读）在组合一层；T1.6（`FOR SHARE`）、T1.7 在存储一层（A.3） | 存储；组合 |
 | 14 每个"由谁"可以失败 | 删除的种子由不是删除者的账户写；盖戳的测试由 alice 建、种子由别人；分批语句、`DetachLabels` 保留写者（T2.4、T4.4、T11.11） | 3/3，都在组合一层（按目录的删除测试、`TestDeletingALabelTakesItOffTheWorkItems`），T4.4、T11.11 也在存储一层 | 存储；组合 |
 | 15 标题的每个说法都有展示 | I1、P4、W2、W3、W11 的标题逐句 | I1 的"一次报出"和"已取消不算完成"原来没有步骤，加上（A.2 的加强） | 审阅 |
 | 16 单元假对象的回答顺序 | `fakeRows` 回答的 `id` 最大的在前（取最后一个做下一批的起点会重读）；假实现的标签目录按 `id` | T3.4（下一批从最小的 `id` 之后）在单元一层被发现 | 审阅；单元 |
@@ -350,7 +352,7 @@ P1a 是 M4 最评审敏感的一段（设计 12 节约束 3）：工作项的取
 | 27 故事里的"不动"在动作之前读、之后核对 | P4、W3 删除之前读 `expectProjectCreated`、之后 `expectProjectDeleted`；I1 每个创建之后 `expectIssueCreated` | 都有 | 审阅 |
 | 28 只在端到端被发现的性质另有 Go 的测试 | 变异表里只在端到端失败的 | T14.3（留着过渡的排除）改的是故事的夹具，只有故事看得到；它守的性质由组合一层的按目录的删除测试核对 | 审阅 |
 | 29 每个能等锁的等待都有期限 | 交错的 context 10 秒；探测 `WaitForLockWaitOn` 5 秒；种子和读回在 `pgtest.Soon` | 都有 | 审阅 |
-| 30 每个输出、问题的细节和补救对每个收到它的调用者都成立 | `project.state_in_use` 的说明和两份文案；`createIssue` 的四个码 | 收到 409 的是判定通过的项目管理员；"move them to another state first"对他成立 | 审阅 |
+| 30 每个输出、问题的细节和补救对每个收到它的调用者都成立 | `project.state_in_use` 的说明和两份文案；`createIssue` 的四个码 | 收到 409 的是判定通过的项目管理员；说明和文案只说状态里有工作项（已归档的也算）、所以不能删除，不给补救：P1a 没有移动工作项的写，已归档的工作项在恢复之前是只读的（设计第 2 节 I15：改字段 409 `issue.archived`），"先把它们移到别的状态"对谁都做不到；补救要等 P1b 的修改和 P2 的恢复都有了，交给 P2（第 5 节） | 审阅 |
 | 31 检查和执行之间的 gate 在检查的事务之外 | 交错的门在第一个写的写之后、提交之前（`heldTx`） | T12.2（门在写之前扣住）被发现 | 组合 |
 | 32 每个探针有反例 | 交错的探测等 `projects` 上的等待 | T12.3（等 `workspaces`）被发现 | 组合 |
 | 33 goroutine 上不调用 `t.Fatal` | `racingWrite`、`run` | 闭包里只发请求、只送回回答 | 审阅 |
