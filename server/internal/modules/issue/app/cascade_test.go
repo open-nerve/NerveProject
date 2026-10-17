@@ -13,12 +13,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 )
 
-var errDisk = errors.New("disk full")
-
-// inTxKey marks the context of the caller's transaction: a call that does
-// not carry it ran outside it.
-type inTxKey struct{}
-
 // fakeRows is the deleted project's rows, by statement and project, as
 // ProjectRowsDeleter's statements see them: each batch takes the
 // undeleted rows of the project after the batch's id, at most its limit,

@@ -89,6 +89,9 @@ var tableCells = map[shared.Action][]outcome{
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	"label.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// The project's admins and members, not its guests (M4 design 3.4).
+	"issue.create": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.

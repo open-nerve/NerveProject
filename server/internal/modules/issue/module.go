@@ -12,6 +12,8 @@ import (
 
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // deleteBatch is the rows a statement of a project's deletion soft-deletes
@@ -41,4 +43,10 @@ type Provided struct {
 // Provide builds issue's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
 	return Provided{IssueCascade: app.NewCascade(postgresadapter.New(pool), deleteBatch)}
+}
+
+// Actions lists the module's actions: bootstrap's test holds the union of
+// every module's actions equal to access's rule table (M3 design 3.4).
+func Actions() []shared.Action {
+	return domain.Actions()
 }
