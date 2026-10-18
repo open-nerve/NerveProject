@@ -34,19 +34,16 @@ func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 	alice, bob, walt := w.ids["alice"], w.ids["bob"], w.ids["walt"]
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
 		`{"members":[{"member_id":"`+walt.String()+`","role":15}]}`, http.StatusCreated)
-	var created struct {
-		ID uuid.UUID `json:"id"`
-	}
-	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", `{"name":"Fix","state_id":"`+
-		w.todo.String()+`","assignee_ids":["`+alice.String()+`"],"label_ids":["`+w.bug.String()+`"]}`, http.StatusCreated), &created)
+	item := w.newWorkItemIn(t, w.web, `{"name":"Fix","state_id":"`+w.todo.String()+`","assignee_ids":["`+alice.String()+`"],"label_ids":["`+
+		w.bug.String()+`"]}`)
 	before := time.Now().Truncate(time.Microsecond)
-	answer := w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+created.ID.String(), `{"name":"Mend","priority":"urgent","state_id":"`+
+	answer := w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+item.String(), `{"name":"Mend","priority":"urgent","state_id":"`+
 		w.done.String()+`","assignee_ids":["`+walt.String()+`"],"label_ids":[]}`, http.StatusOK)
 	after := time.Now()
 
 	var made, changed time.Time
 	var completed *time.Time
-	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT created_at, updated_at, completed_at FROM issues WHERE id = $1", created.ID).Scan(&made,
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT created_at, updated_at, completed_at FROM issues WHERE id = $1", item).Scan(&made,
 		&changed, &completed); err != nil {
 		t.Fatal(err)
 	}
@@ -63,12 +60,12 @@ func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 		"issue_subscribers made by alice made, changed by alice made, of alice",
 		"issue_subscribers made by bob changed, changed by bob changed, of walt",
 		"issues made by alice made, changed by bob changed"}
-	if got := w.workItemStamps(t, created.ID); !slices.Equal(got, want) {
+	if got := w.workItemStamps(t, item); !slices.Equal(got, want) {
 		t.Errorf("the work item's rows:\n%q\nwant\n%q", got, want)
 	}
 
 	activity, err := w.pool.Query(pgtest.Soon(t), `SELECT a.field || ': ' || a.old_value || ' → ' || a.new_value FROM issue_activities a
-		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, created.ID, bob)
+		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, item, bob)
 	if err != nil {
 		t.Fatal(err)
 	}

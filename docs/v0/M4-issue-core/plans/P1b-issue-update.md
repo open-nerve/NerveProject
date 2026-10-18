@@ -31,7 +31,7 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从基点起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同；之后在另一个副本上从基点逐 Task 复现，每个 Task 之后跑它的门禁，最后的树与原型逐个文件相同（spec 附录 A）。块写入之后不必再格式化（原型中每个 Task 都经过 `gofmt`、`oxfmt`）。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5、10）、`update_issue.go`（Task 5、10）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、7、10、11）、`issue_writes_test.go`（Task 6、7、10）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5、10）、`update_issue.go`（Task 5、10）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、7、10、11）、`issue_writes_test.go`（Task 6、7、10）、`issue_updates_test.go`（Task 7、11）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事；静态：`make lint-web` 的文案核对）。它们在各自 Task 的树上跑过，标"（Task n 起）"的检查在 Task n 的树上跑过，全部在最终的原型上再跑过，每个变异在一份新的副本里（`$M4TMP/p1btools/mutants_p1b.py`，`mut.py` 在它写的每个检查上各跑一次；端到端的"发现"必须是故事的断言失败，`e2ekills.py` 核对，不算构建失败或超时；容器起不来不算；spec 附录 A）。"（Task n 起）"的检查从那个 Task 起才发现这个变异：Task n 的实现者在 Task n 的树上重跑它（那个 Task 的表下面列出）。**安全或加锁的性质只由单元一层发现的，算缺口**：表中每一条这类性质都另有存储、组合或端到端一层的检查，例外（"按性质只在单元一层"）写在 spec 附录 A.3。
 - **评审敏感**（M4 设计 12 节约束 3）：写闸门（取连接之前进入，不持连接地等，不在持数据库的锁时再等别的闸门；每个项目至多 K 个、`max_wait`、`max_queue`、请求的期限，503 `server_busy` 带 `Retry-After: 1`；每条路上离开）；`55P03` 换成 503 只在 `bootstrap/gate.go`；按资源寻址的写在锁下重读、再判定；修改的批量写按约定五（spec 第 3 节第 12 条）。改动这些代码或测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -123,7 +123,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新） | `updateIssue` 的九行 | 6 |
 | `server/internal/bootstrap/issue_world_test.go`（修改） | Done、`newWorkItem`（Task 6）；`workItemStamps`（Task 7）；`newIssueWorldWith`（Task 10）；`newWorkItemIn`（Task 11） | 6、7、10、11 |
 | `server/internal/bootstrap/issue_write_locks_test.go`（修改） | `issueWrites` 加 `updateIssue` 的一行；每行发的路径是它的操作的（`pathOf`） | 6 |
-| `server/internal/bootstrap/issue_updates_test.go`（新） | 盖戳、回答如存 | 7 |
+| `server/internal/bootstrap/issue_updates_test.go`（新） | 盖戳、回答如存（Task 7）；修改的盖戳测试用 `newWorkItemIn` 建它的工作项（Task 11） | 7、11 |
 | `server/internal/bootstrap/issue_writes_test.go`（修改） | 创建的盖戳测试用 `newWorkItem`（Task 6）、`workItemStamps`（Task 7）；事务的连接加修改（Task 7）；`newIssueRoute` 的闸门和配置（Task 10） | 6、7、10 |
 | `server/internal/platform/gate/gate.go`、`server/internal/platform/gate/gate_test.go`（新） | `Keyed[K]` 和它的测试 | 8 |
 | `server/internal/platform/postgres/tx.go`（修改）、`server/internal/platform/postgres/lock_timeout_test.go`（新） | `LockTimeout`、`LockNotAvailable` | 9 |
@@ -7627,10 +7627,11 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_interleaving_change_test.go`
-- Modify: `server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/issue_interleaving_catalog_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_world_test.go`
+- Modify: `server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/issue_interleaving_catalog_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_updates_test.go`、`server/internal/bootstrap/issue_world_test.go`
 
 **Interfaces:** 没有新的生产代码（spec 2.13、第 3 节第 16 条；M4 设计 3.5、9.3）。
 - `issue_world_test.go`：`newWorkItemIn(t, project, body)`（alice 经接口在项目里建的工作项），`newWorkItem` 用它。
+- `issue_updates_test.go`：Task 7 的 `TestUpdatingAWorkItemStampsItsRows` 用 `newWorkItemIn` 建它的工作项。
 - `issue_interleaving_test.go`：
   - `changesIssue`（改 Web 唯一的工作项）、`aWorkItem`（alice 的 Fix：三行）、`workItem`；
   - `itemWrite{name, prepare, rows, write, done, gone}`、`itemWrites`（"created"：Web 里的创建；"changed"：改 alice 的 Fix）、`after`、`wroteNothing`；
@@ -7646,7 +7647,7 @@ Expected: 通过。
 - 4u、5u：预检放行之后 bob 被移出 Web：404 `issue.not_found`；被降为访客：403；都不写。
 - 6u：Review 先删：修改 422 `state_id`，不写；先改到 Review：删除 409 `project.state_in_use`，Review 保留。
 - 7u：Bug 先删：修改 422 `label_ids[0]`，不写；先加：Bug 在删除的时刻由 alice 摘下。
-- 创建的一支和 P1a 的一样；`TestTwoWritesOnAProjectSerialize` 照旧。
+- 创建的一支和 P1a 的一样；`TestTwoWritesOnAProjectSerialize` 照旧；`TestUpdatingAWorkItemStampsItsRows` 照旧（它的工作项由 `newWorkItemIn` 建）。
 
 - [ ] **Step 1: 两支共用的写和世界**
 
@@ -7903,6 +7904,42 @@ func (w issueWorld) newWorkItemIn(t *testing.T, project uuid.UUID, body string) 
 ````
 ````new server/internal/bootstrap/issue_world_test.go
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
+````
+
+`server/internal/bootstrap/issue_updates_test.go`（修改，4 处）：
+
+````old server/internal/bootstrap/issue_updates_test.go
+	var created struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", `{"name":"Fix","state_id":"`+
+		w.todo.String()+`","assignee_ids":["`+alice.String()+`"],"label_ids":["`+w.bug.String()+`"]}`, http.StatusCreated), &created)
+	before := time.Now().Truncate(time.Microsecond)
+	answer := w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+created.ID.String(), `{"name":"Mend","priority":"urgent","state_id":"`+
+````
+````new server/internal/bootstrap/issue_updates_test.go
+	item := w.newWorkItemIn(t, w.web, `{"name":"Fix","state_id":"`+w.todo.String()+`","assignee_ids":["`+alice.String()+`"],"label_ids":["`+
+		w.bug.String()+`"]}`)
+	before := time.Now().Truncate(time.Microsecond)
+	answer := w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+item.String(), `{"name":"Mend","priority":"urgent","state_id":"`+
+````
+````old server/internal/bootstrap/issue_updates_test.go
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT created_at, updated_at, completed_at FROM issues WHERE id = $1", created.ID).Scan(&made,
+````
+````new server/internal/bootstrap/issue_updates_test.go
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT created_at, updated_at, completed_at FROM issues WHERE id = $1", item).Scan(&made,
+````
+````old server/internal/bootstrap/issue_updates_test.go
+	if got := w.workItemStamps(t, created.ID); !slices.Equal(got, want) {
+````
+````new server/internal/bootstrap/issue_updates_test.go
+	if got := w.workItemStamps(t, item); !slices.Equal(got, want) {
+````
+````old server/internal/bootstrap/issue_updates_test.go
+		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, created.ID, bob)
+````
+````new server/internal/bootstrap/issue_updates_test.go
+		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, item, bob)
 ````
 
 - [ ] **Step 2: 两个修改，删除和目录的交错**
@@ -8188,7 +8225,7 @@ func TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize(t *testing.T) 
 
 - [ ] **Step 3: 测试和 lint**
 
-Run: `go -C server test -count=1 -run 'TestTwoChangesOfAWorkItemSerialize$|TestAWorkItemGoneWhileItsChangeWaitsIsNotFound$|TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize$|TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused$|TestDeletingAStateAndPuttingAWorkItemInItSerialize$|TestDeletingALabelAndLabellingAWorkItemWithItSerialize$|TestTwoWritesOnAProjectSerialize$' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestTwoChangesOfAWorkItemSerialize$|TestAWorkItemGoneWhileItsChangeWaitsIsNotFound$|TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize$|TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused$|TestDeletingAStateAndPuttingAWorkItemInItSerialize$|TestDeletingALabelAndLabellingAWorkItemWithItSerialize$|TestTwoWritesOnAProjectSerialize$|TestUpdatingAWorkItemStampsItsRows$' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `go -C server test -count=5 -race -run 'TestTwoCreationsOnAProjectSerialize$|TestTwoChangesOfAWorkItemSerialize$|TestAWorkItemGoneWhileItsChangeWaitsIsNotFound$|TestArchivingAProjectAndCreatingAWorkItemSerialize$|TestRemovingTheDefaultAssigneeAndCreatingAWorkItemSerialize$|TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize$|TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused$|TestDeletingAStateAndPuttingAWorkItemInItSerialize$|TestDeletingALabelAndLabellingAWorkItemWithItSerialize$|TestTwoWritesOnAProjectSerialize$' ./internal/bootstrap/`
@@ -8203,7 +8240,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add server/internal/bootstrap/interleaving_writes_test.go server/internal/bootstrap/issue_interleaving_catalog_test.go server/internal/bootstrap/issue_interleaving_change_test.go server/internal/bootstrap/issue_interleaving_deletion_test.go server/internal/bootstrap/issue_interleaving_test.go server/internal/bootstrap/issue_world_test.go
+git add server/internal/bootstrap/interleaving_writes_test.go server/internal/bootstrap/issue_interleaving_catalog_test.go server/internal/bootstrap/issue_interleaving_change_test.go server/internal/bootstrap/issue_interleaving_deletion_test.go server/internal/bootstrap/issue_interleaving_test.go server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/issue_world_test.go
 ```
 ```bash
 git commit -m "test(M4/P1): interleavings 1 and 3 to 7 with a work item's change beside its creation
