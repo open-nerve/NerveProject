@@ -213,7 +213,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), issueMatrixRows())
+		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each

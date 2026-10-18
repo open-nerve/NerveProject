@@ -15,18 +15,18 @@ import (
 
 // issueWorld is the wired app on a database of its own, as the tests of
 // the work-item side's writes find it: acme, whose admin alice created
-// its public project Web, with Web's state Todo and its label Bug; bob,
-// a member of acme and of Web; and three accounts who may not write on
-// Web's work items: walt, a member of acme who is none of Web, and wanda,
-// an admin of acme who is none of Web either, see Web (403); olga, no
-// member of acme, does not (404).
+// its public project Web, with Web's states Todo and Done and its label
+// Bug, and no work item yet; bob, a member of acme and of Web; and three
+// accounts who may not write on Web's work items: walt, a member of acme
+// who is none of Web, and wanda, an admin of acme who is none of Web
+// either, see Web (403); olga, no member of acme, does not (404).
 type issueWorld struct {
-	contract             *apitest.Contract
-	base                 string
-	pool                 *pgxpool.Pool
-	tokens               map[string]string    // each account's, by its name
-	ids                  map[string]uuid.UUID // each account's, by its name
-	acme, web, todo, bug uuid.UUID
+	contract                   *apitest.Contract
+	base                       string
+	pool                       *pgxpool.Pool
+	tokens                     map[string]string    // each account's, by its name
+	ids                        map[string]uuid.UUID // each account's, by its name
+	acme, web, todo, done, bug uuid.UUID
 }
 
 // newIssueWorld makes the world: each account registered through the API,
@@ -53,7 +53,7 @@ func newIssueWorld(t *testing.T) issueWorld {
 	}
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
 		`{"members":[{"member_id":"`+w.ids["bob"].String()+`","role":15}]}`, http.StatusCreated)
-	w.todo = stateID(t, w.pool, w.web, "Todo")
+	w.todo, w.done = stateID(t, w.pool, w.web, "Todo"), stateID(t, w.pool, w.web, "Done")
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/labels", `{"name":"Bug"}`, http.StatusCreated),
 		&created)
 	w.bug = created.ID
@@ -69,6 +69,18 @@ func (w issueWorld) send(t *testing.T, name, method, path, body string, want int
 		t.Fatalf("%s %s as %s = %d %s, want %d", method, path, name, status, answer, want)
 	}
 	return answer
+}
+
+// newWorkItem is the id of a work item alice creates in Web through the
+// API: fullIssue's.
+func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
+	t.Helper()
+	var created struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", w.fullIssue(), http.StatusCreated),
+		&created)
+	return created.ID
 }
 
 // fullIssue is the body of a work item in Todo, assigned to bob and

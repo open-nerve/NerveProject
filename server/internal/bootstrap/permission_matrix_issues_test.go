@@ -142,31 +142,3 @@ func createsTheGivenIssue(t *testing.T, c caller, s seeded, answer string) {
 			projectOf(c), pm, ui)
 	}
 }
-
-// readsTheIssue: the column's project's seeded work item, its id, project,
-// number, name, state, priority, assignees, labels and creator as
-// issueSeed stored them: its first, named matrixIssue, in Todo, medium,
-// assigned to PM's account and the removed member's, in id order, labelled
-// Bug, made by acme's admin.
-func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
-	var i struct {
-		ID          uuid.UUID   `json:"id"`
-		ProjectID   uuid.UUID   `json:"project_id"`
-		SequenceID  int         `json:"sequence_id"`
-		Name        string      `json:"name"`
-		StateID     uuid.UUID   `json:"state_id"`
-		Priority    string      `json:"priority"`
-		AssigneeIDs []uuid.UUID `json:"assignee_ids"`
-		LabelIDs    []uuid.UUID `json:"label_ids"`
-		CreatedByID *uuid.UUID  `json:"created_by_id"`
-	}
-	decodeAnswer(t, answer, &i)
-	key := projectOf(c)
-	assignees := slices.SortedFunc(slices.Values([]uuid.UUID{s.account(callerProjectMember), s.account(callerRemoved)}), uuid.UUID.Compare)
-	if i.ID != s.issue(key, matrixIssue) || i.ProjectID != s.project(key) || i.SequenceID != 1 || i.Name != matrixIssue ||
-		i.StateID != s.state(key, "Todo") || i.Priority != "medium" || !slices.Equal(i.AssigneeIDs, assignees) ||
-		!slices.Equal(i.LabelIDs, []uuid.UUID{s.label(key, "Bug")}) || i.CreatedByID == nil || *i.CreatedByID != s.account(callerAdmin) {
-		t.Errorf("%s reads %s; want %s's %s, its first, in Todo, medium, assigned to %v, labelled Bug, by acme's admin", c, answer, key,
-			matrixIssue, assignees)
-	}
-}

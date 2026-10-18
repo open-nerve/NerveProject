@@ -960,7 +960,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change a work item
+         * @description For the admins and members of its project. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow createIssue's rules (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, or whose project the caller does not see answers issue.not_found; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived). Then the state, when it changes, is one of the project's, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project's (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the priority, the state, and each label and each assignee added and removed. Every row it writes is the caller's, at one moment.
+         */
+        patch: operations["updateIssue"];
         trace?: never;
     };
     "/api/v0/me/projects/{project_id}/preferences": {
@@ -1762,6 +1766,21 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Changes the fields it names; a field left out keeps its value. */
+        IssueUpdate: {
+            /** @description 1–255 characters without the white space around it, which is not stored. */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description One of the project's states, not its triage state.
+             */
+            state_id?: string;
+            priority?: components["schemas"]["IssuePriority"];
+            /** @description The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest. */
+            assignee_ids?: string[];
+            /** @description The work item's new labels, empty for none: at most 100 of the project's labels, each named once. */
+            label_ids?: string[];
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -1899,6 +1918,7 @@ export type LabelUpdate = components['schemas']['LabelUpdate'];
 export type IssuePriority = components['schemas']['IssuePriority'];
 export type IssueCreate = components['schemas']['IssueCreate'];
 export type IssueDetail = components['schemas']['IssueDetail'];
+export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -3378,6 +3398,34 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The work item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueUpdate"];
+            };
+        };
+        responses: {
+            /** @description The work item as changed. */
             200: {
                 headers: {
                     [name: string]: unknown;

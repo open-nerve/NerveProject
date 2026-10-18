@@ -78,6 +78,25 @@ func (f *fakeGet) Execute(ctx context.Context, id uuid.UUID) (domain.Issue, erro
 	return f.answer, f.err
 }
 
+// fakeUpdate is updateIssue: each call is recorded as "caller work item",
+// with what it got; it answers answer, or err.
+type fakeUpdate struct {
+	calls  []string
+	got    []domain.IssuePatch
+	answer domain.Issue
+	err    error
+}
+
+func (f *fakeUpdate) Execute(ctx context.Context, id uuid.UUID, p domain.IssuePatch) (domain.Issue, error) {
+	actor, err := shared.RequireActor(ctx)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	f.calls = append(f.calls, actor.UserID.String()+" "+id.String())
+	f.got = append(f.got, p)
+	return f.answer, f.err
+}
+
 // newServer serves the module's API over the use cases uc, as bootstrap
 // mounts it.
 func newServer(t *testing.T, uc httpadapter.UseCases) http.Handler {
