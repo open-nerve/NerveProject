@@ -17,26 +17,27 @@ import (
 // the work item's name, state, priority and completion as given, last
 // changed by bob at later, its number, its sort order and its creation as
 // they were; RemoveAssignees and RemoveLabels soft-delete, by bob at
-// later, the work item's undeleted rows of the accounts and the labels
-// given, every other column kept. Nothing else changes: not another work
-// item, nor its rows of the same account and label, nor the work item's
-// rows of an account or a label not given, nor its rows of the same
-// account and label deleted an hour before, which keep their stamps. Moved
-// back into a state of no completed group, its completion given nil, the
-// work item is completed no more.
+// later, the work item's undeleted rows of every account and label given,
+// two of each in one call, every other column kept. Nothing else changes:
+// not another work item, nor its rows of a given account and label, nor
+// the work item's rows of an account or a label not given, nor its rows of
+// a given account and label deleted an hour before, which keep their
+// stamps. Moved back into a state of no completed group, its completion
+// given nil, the work item is completed no more.
 func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
-	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
+	alice, bob, carol, dave := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"),
+		newAccount(t, pool, "carol@corp.com"), newAccount(t, pool, "dave@corp.com")
 	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
 	done := uuid.NewV7()
 	exec(t, pool, `INSERT INTO states (id, workspace_id, project_id, name, color, "group") VALUES ($1, $2, $3, 'Done', '#000', 'completed')`,
 		done, web.workspace, web.id)
-	bug, ui := newLabel(t, pool, web, "Bug"), newLabel(t, pool, web, "UI")
+	bug, ui, docs := newLabel(t, pool, web, "Bug"), newLabel(t, pool, web, "UI"), newLabel(t, pool, web, "Docs")
 	id, other := uuid.NewV7(), uuid.NewV7()
 	createWebIssue(t, s, web, id, alice)
 	newIssue(t, pool, web, other, 8, alice)
-	assignees, labels := linkRows(web, id, alice, now, bob, carol), linkRows(web, id, alice, now, bug, ui)
+	assignees, labels := linkRows(web, id, alice, now, bob, carol, dave), linkRows(web, id, alice, now, bug, ui, docs)
 	for _, step := range []struct {
 		insert func(context.Context, app.LinkRows) error
 		rows   app.LinkRows
@@ -64,10 +65,10 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 		CompletedAt: &later, By: bob, At: later}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RemoveAssignees(ctx, app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{bob}, By: bob, At: later}); err != nil {
+	if err := s.RemoveAssignees(ctx, app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{bob, dave}, By: bob, At: later}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RemoveLabels(ctx, app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{ui}, By: bob, At: later}); err != nil {
+	if err := s.RemoveLabels(ctx, app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{ui, docs}, By: bob, At: later}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -78,7 +79,7 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 	if err != nil || !found || !reflect.DeepEqual(got, want) {
 		t.Errorf("GetIssue() = %+v, %v, %v; want %+v", got, found, err, want)
 	}
-	removed := map[string]uuid.UUID{"issue_assignees": assignees.IDs[0], "issue_labels": labels.IDs[1]}
+	removed := map[string][]uuid.UUID{"issue_assignees": {assignees.IDs[0], assignees.IDs[2]}, "issue_labels": {labels.IDs[1], labels.IDs[2]}}
 	for _, table := range tables {
 		after, afterStamps := rowsAsText(t, pool, table), audits(t, pool, table)
 		wantStamps := maps.Clone(stamps[table])
@@ -87,8 +88,9 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 			delete(before[table], id)
 			delete(afterStamps, id)
 			delete(wantStamps, id)
-		} else {
-			wantStamps[removed[table]] = deletion(later, bob)
+		}
+		for _, row := range removed[table] {
+			wantStamps[row] = deletion(later, bob)
 		}
 		if !maps.Equal(after, before[table]) {
 			t.Errorf("%s changed:\n%v\nwas\n%v", table, after, before[table])
