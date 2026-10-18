@@ -111,8 +111,23 @@ func ChangesOf(i Issue, p IssuePatch) Changes {
 	return c
 }
 
-// None reports whether c changes nothing: then the update writes no row
-// (M4/P1b spec 3).
+// Unassignable are the problems of the accounts of asked, a patch's
+// assignee_ids, that it adds to the work item (added, Changes.Assignees'
+// Added) and that may not be assigned (CanAssign), from roles, their
+// active project roles, each at its index in asked (M4 design 3.6): an
+// account who has left the project, or is its guest, is not assigned anew;
+// one the work item has stays.
+func Unassignable(asked, added []uuid.UUID, roles map[uuid.UUID]shared.Role) []shared.FieldError {
+	var refused []shared.FieldError
+	for i, id := range asked {
+		if slices.Contains(added, id) && !CanAssign(roles[id]) {
+			refused = append(refused, unassignable(i))
+		}
+	}
+	return refused
+}
+
+// None reports whether c changes nothing: then the update writes no row.
 func (c Changes) None() bool {
 	return c.Name == nil && c.Priority == nil && c.StateID == nil && len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 &&
 		len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0

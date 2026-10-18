@@ -113,3 +113,24 @@ type IssueCreator interface {
 	// InsertActivities inserts the rows in their order.
 	InsertActivities(ctx context.Context, rows []ActivityRow) error
 }
+
+// IssueUpdater is the work items' store as updateIssue writes and reads
+// them, in the transaction ctx carries (M4 design 3.5).
+type IssueUpdater interface {
+	IssueReader
+	// UpdateIssue writes the work item's fields.
+	UpdateIssue(ctx context.Context, f IssueFields) error
+	InsertAssignees(ctx context.Context, r LinkRows) error
+	// RemoveAssignees soft-deletes the work item's undeleted assignees'
+	// rows of the accounts r names.
+	RemoveAssignees(ctx context.Context, r UnlinkRows) error
+	InsertLabels(ctx context.Context, r LinkRows) error
+	// RemoveLabels soft-deletes the work item's undeleted labels' rows of
+	// the labels r names.
+	RemoveLabels(ctx context.Context, r UnlinkRows) error
+	// InsertSubscribers inserts the rows, but of an account that
+	// subscribes to the work item already.
+	InsertSubscribers(ctx context.Context, r LinkRows) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
+}

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -119,6 +120,36 @@ func TestChangesOf(t *testing.T) {
 	for _, tt := range tests {
 		if got := ChangesOf(i, tt.p); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("%s: ChangesOf() = %+v, want %+v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// Of the accounts asked for, only those added are checked (M4 design 3.6):
+// an account added who is the project's guest, or no active member of it,
+// is a problem at its index in what is asked; one the work item keeps is
+// none, whatever his role, and nor is one added who may be assigned.
+func TestUnassignable(t *testing.T) {
+	people := ids(4) // in id order: ann, ben, gus, out
+	ann, ben, gus, out := people[0], people[1], people[2], people[3]
+	roles := map[uuid.UUID]shared.Role{ann: shared.RoleAdmin, ben: shared.RoleMember, gus: shared.RoleGuest}
+	refused := func(i int) shared.FieldError {
+		return shared.FieldError{Field: fmt.Sprintf("assignee_ids[%d]", i), Code: shared.FieldNotAllowed,
+			Message: "must be an active member of the project who is not its guest"}
+	}
+	tests := []struct {
+		name         string
+		asked, added []uuid.UUID
+		want         []shared.FieldError
+	}{
+		{"none added", []uuid.UUID{gus, out}, nil, nil},
+		{"an admin and a member added", []uuid.UUID{ben, ann}, []uuid.UUID{ann, ben}, nil},
+		{"a guest and one who left added, both kept too", []uuid.UUID{ann, out, gus, ben}, []uuid.UUID{gus, out},
+			[]shared.FieldError{refused(1), refused(2)}},
+		{"a guest kept, one who left added", []uuid.UUID{gus, out}, []uuid.UUID{out}, []shared.FieldError{refused(1)}},
+	}
+	for _, tt := range tests {
+		if got := Unassignable(tt.asked, tt.added, roles); !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("%s: Unassignable() = %+v, want %+v", tt.name, got, tt.want)
 		}
 	}
 }

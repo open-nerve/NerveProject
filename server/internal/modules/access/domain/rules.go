@@ -127,6 +127,8 @@ var rules = map[shared.Action]Rule{
 	"issue.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	// As issue.create; the project's guests are P2's (M4 design 3.4).
 	"issue.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// As issue.create (M4 design 3.4).
+	"issue.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

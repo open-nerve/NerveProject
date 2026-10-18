@@ -95,6 +95,9 @@ var tableCells = map[shared.Action][]outcome{
 	// As issue.create; the project's guests are P2's (M4 design 3.4).
 	"issue.read": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As issue.create (M4 design 3.4).
+	"issue.update": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.

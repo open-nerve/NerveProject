@@ -82,13 +82,15 @@ func (f *fakeAuthorizer) Authorize(ctx context.Context, actor shared.Actor, acti
 
 // fakeProject is a project's side of the issue module's ports: its gate,
 // its numbers and its catalogs, each call logged. found is whether Find
-// answers it, locked what Lock answers, nil for none.
+// answers it, locked what Lock answers, nil for none; waited, when set,
+// runs as Lock waits, before it answers: what commits meanwhile.
 type fakeProject struct {
 	log       *callLog
 	id        uuid.UUID
 	workspace uuid.UUID
 	found     bool
 	locked    *app.LockedProject
+	waited    func()
 	last      int
 	states    []app.StateRef
 	labels    []app.LabelRef
@@ -103,6 +105,9 @@ func (f *fakeProject) Find(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, 
 }
 
 func (f *fakeProject) Lock(ctx context.Context, id uuid.UUID) (app.LockedProject, bool, error) {
+	if f.waited != nil {
+		f.waited()
+	}
 	if err := f.log.add(ctx, "Lock", id); err != nil || id != f.id || f.locked == nil {
 		return app.LockedProject{}, false, err
 	}
@@ -168,10 +173,13 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // in id order; the subscribers it checks and logs, and keeps none. greatest
 // is the greatest sort order of each state; lost, when set, loses the work
 // item once its activity is written, so that it is not there to read back.
+// changed is the last update's fields, nil before any: the work item's
+// last writer and moment.
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
 	issue      *app.IssueRow
+	changed    *app.IssueFields
 	assignees  []uuid.UUID
 	labels     []uuid.UUID
 	activities []app.ActivityRow
@@ -196,26 +204,81 @@ func (f *fakeIssues) InsertIssue(ctx context.Context, r app.IssueRow) error {
 	return nil
 }
 
+// writer is the account and the moment of the work item's last write: its
+// last update's, or its creation's.
+func (f *fakeIssues) writer() (uuid.UUID, time.Time) {
+	if f.changed != nil {
+		return f.changed.By, f.changed.At
+	}
+	return f.issue.By, f.issue.At
+}
+
+func (f *fakeIssues) UpdateIssue(ctx context.Context, r app.IssueFields) error {
+	if err := f.log.add(ctx, "UpdateIssue", r.ID); err != nil {
+		return err
+	}
+	if f.issue == nil || r.ID != f.issue.ID {
+		return fmt.Errorf("UpdateIssue: %+v is not the work item %+v", r, f.issue)
+	}
+	f.issue.Name, f.issue.StateID, f.issue.Priority, f.issue.CompletedAt = r.Name, r.StateID, r.Priority, r.CompletedAt
+	f.changed = &r
+	return nil
+}
+
 // link logs an insert of name's rows r and answers their targets, or the
-// failure: each row under the work item inserted, by its creator, then.
+// failure: each row under the work item inserted, by its last writer, then.
 func (f *fakeIssues) link(ctx context.Context, name string, r app.LinkRows) ([]uuid.UUID, error) {
 	if err := f.log.add(ctx, name, r.Targets); err != nil {
 		return nil, err
 	}
 	if f.issue == nil || r.IssueID != f.issue.ID || r.WorkspaceID != f.issue.WorkspaceID || r.ProjectID != f.issue.ProjectID ||
-		r.By != f.issue.By || !r.At.Equal(f.issue.At) || len(r.IDs) != len(r.Targets) || slices.Contains(r.IDs, uuid.UUID{}) {
+		len(r.IDs) != len(r.Targets) || slices.Contains(r.IDs, uuid.UUID{}) {
 		return nil, fmt.Errorf("%s: %+v not under the work item %+v", name, r, f.issue)
+	}
+	if by, at := f.writer(); r.By != by || !r.At.Equal(at) {
+		return nil, fmt.Errorf("%s: %+v not by the work item's last writer %s at %s", name, r, by, at)
 	}
 	return r.Targets, nil
 }
 
-func (f *fakeIssues) InsertAssignees(ctx context.Context, r app.LinkRows) (err error) {
-	f.assignees, err = f.link(ctx, "InsertAssignees", r)
+// unlink logs a removal of name's rows r and answers the targets of from
+// left, or the failure: each a row of the work item, by its last writer,
+// then.
+func (f *fakeIssues) unlink(ctx context.Context, name string, r app.UnlinkRows, from []uuid.UUID) ([]uuid.UUID, error) {
+	if err := f.log.add(ctx, name, r.Targets); err != nil {
+		return nil, err
+	}
+	if by, at := f.writer(); f.issue == nil || r.IssueID != f.issue.ID || r.By != by || !r.At.Equal(at) {
+		return nil, fmt.Errorf("%s: %+v not of the work item %+v by its last writer", name, r, f.issue)
+	}
+	return slices.DeleteFunc(slices.Clone(from), func(id uuid.UUID) bool { return slices.Contains(r.Targets, id) }), nil
+}
+
+func (f *fakeIssues) InsertAssignees(ctx context.Context, r app.LinkRows) error {
+	added, err := f.link(ctx, "InsertAssignees", r)
+	f.assignees = append(f.assignees, added...)
 	return err
 }
 
-func (f *fakeIssues) InsertLabels(ctx context.Context, r app.LinkRows) (err error) {
-	f.labels, err = f.link(ctx, "InsertLabels", r)
+func (f *fakeIssues) RemoveAssignees(ctx context.Context, r app.UnlinkRows) error {
+	left, err := f.unlink(ctx, "RemoveAssignees", r, f.assignees)
+	if err == nil {
+		f.assignees = left
+	}
+	return err
+}
+
+func (f *fakeIssues) InsertLabels(ctx context.Context, r app.LinkRows) error {
+	added, err := f.link(ctx, "InsertLabels", r)
+	f.labels = append(f.labels, added...)
+	return err
+}
+
+func (f *fakeIssues) RemoveLabels(ctx context.Context, r app.UnlinkRows) error {
+	left, err := f.unlink(ctx, "RemoveLabels", r, f.labels)
+	if err == nil {
+		f.labels = left
+	}
 	return err
 }
 
@@ -240,8 +303,9 @@ func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, 
 		return domain.Issue{}, false, err
 	}
 	r := f.issue
+	by, at := f.writer()
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
 		StateID: r.StateID, Priority: r.Priority, SortOrder: r.SortOrder, CompletedAt: r.CompletedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
-			uuid.UUID.Compare), CreatedByID: &r.By, UpdatedByID: &r.By, CreatedAt: r.At, UpdatedAt: r.At}, true, nil
+			uuid.UUID.Compare), CreatedByID: &r.By, UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
 }

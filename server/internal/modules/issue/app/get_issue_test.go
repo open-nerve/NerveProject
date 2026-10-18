@@ -22,7 +22,7 @@ func newGet() (*app.GetIssue, *world, uuid.UUID) {
 	w.issues.issue = &app.IssueRow{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID,
 		Priority: domain.PriorityHigh, SortOrder: 65535, By: carol, At: clockNow}
 	w.issues.assignees, w.issues.labels = []uuid.UUID{bob}, []uuid.UUID{bug}
-	return app.NewGetIssue(app.NewLocks(w.project, w.issues, w.auth)), w, id
+	return app.NewGetIssue(w.locks), w, id
 }
 
 // A read, outside any transaction and without a lock (M4 design 3.5): the

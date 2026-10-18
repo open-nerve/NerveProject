@@ -97,11 +97,11 @@ type Module struct {
 // registered or injected after it (M4 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	locks := app.NewLocks(d.Projects, store, d.Authorizer)
+	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.Tx)
 	return &Module{uc: httpadapter.UseCases{
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
 			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
-			Profiles: d.Profiles, Tx: d.Tx, Clock: d.Clock,
+			Profiles: d.Profiles, Clock: d.Clock,
 		}),
 		GetIssue: app.NewGetIssue(locks),
 	}}

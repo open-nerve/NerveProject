@@ -9,10 +9,12 @@ const (
 	ActionCreate shared.Action = "issue.create"
 	// ActionRead is reading a work item of a project.
 	ActionRead shared.Action = "issue.read"
+	// ActionUpdate is changing a work item of a project.
+	ActionUpdate shared.Action = "issue.update"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
-	return []shared.Action{ActionCreate, ActionRead}
+	return []shared.Action{ActionCreate, ActionRead, ActionUpdate}
 }
