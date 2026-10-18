@@ -4963,9 +4963,9 @@ Expected: 通过。
 
 **Tests:**（组合）
 - `TestUpdatingAWorkItemStampsItsRows`：alice 把 walt 加进 Web、建工作项，bob 改（名称、优先级、到 Done、负责人换成 walt、去掉 Bug）：工作项和 bob 写的每一行（去的负责人和标签、加的负责人和 walt 的关注、六行动态）由 bob 在请求之内的同一时刻写，bob 改了它也不关注它（3.12）；bob 删掉的两行保留 alice 的建，创建的其余的行（两行动态、alice 的关注）照旧；动态的值来自 `users.display_name`（经 `issueProfiles`）和目录的名称；回答的创建者、最后修改者和两个时刻。
-- `TestAWorkItemReadsAsStored`：Web 的第二个工作项，在第一个之下、已归档（在数据库里写：P1b 没有归档的操作），由 bob 在 alice 建之后改到 Done：`getIssue` 回答每个字段如存（每个可空的字段有自己的值，完成的时刻也是；每个戳是它自己的）。
+- `TestAWorkItemReadsAsStored`：Web 的第二个工作项，在第一个之下、已归档（在数据库里写：P1b 没有归档的操作），由 bob 在 alice 建之后先改到 Done、再改优先级和标签：`getIssue` 回答每个字段如存（每个可空的字段有自己的值，每个戳是它自己的；建、完成、最后修改、归档是依次的四个时刻）。
 - `TestCreatingAWorkItemStampsItsRows`（P1a）经 `workItemStamps` 读它的七行：都由 alice 在请求之内的同一时刻写，负责人的行是 bob 的，关注者是 alice 和 bob，两行动态的执行者是 alice。
-- `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：一个连接的池上，修改（每个字段）、什么都不改、锁下的拒绝，和创建一样，每个读写都在事务的连接上；读回在事务里。
+- `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：一个连接的池上，修改（状态、负责人、标签）、什么都不改、锁下的拒绝，和创建一样，每个读写都在事务的连接上；读回在事务里。
 
 - [ ] **Step 1: 盖戳和回答如存**
 
@@ -5069,7 +5069,7 @@ func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 }
 ````
 
-`server/internal/bootstrap/issue_updates_test.go`（新文件，178 行）：
+`server/internal/bootstrap/issue_updates_test.go`（新文件，181 行）：
 
 ````file server/internal/bootstrap/issue_updates_test.go
 package bootstrap
@@ -5184,20 +5184,22 @@ func displayNames(t *testing.T, w issueWorld, ids ...uuid.UUID) []string {
 // getIssue as bootstrap wires it answers the work item as stored, every
 // field (M4 design 5.2): Web's second work item, under the first and
 // archived (in the database: no operation of P1b archives a work item),
-// and changed last by bob after alice made it, into Done, so that each
-// field that may be null has a value of its own, and each of its stamps is
-// its own.
+// moved into Done by bob after alice made it and changed by him again
+// after that, so that each field that may be null has a value of its own,
+// each of its stamps is its own, and it was made, completed, changed last
+// and archived at four moments, in that order.
 func TestAWorkItemReadsAsStored(t *testing.T) {
 	w := newIssueWorld(t)
 	first, second := w.newWorkItem(t), w.newWorkItem(t)
-	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+second.String(), `{"priority":"low","state_id":"`+w.done.String()+`","label_ids":[]}`,
-		http.StatusOK)
+	path := "/api/v0/issues/" + second.String()
+	w.send(t, "bob", http.MethodPatch, path, `{"state_id":"`+w.done.String()+`"}`, http.StatusOK)
+	w.send(t, "bob", http.MethodPatch, path, `{"priority":"low","label_ids":[]}`, http.StatusOK)
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issues SET parent_id = $2, archived_at = updated_at + interval '1 minute' WHERE id = $1",
 		second, first); err != nil {
 		t.Fatal(err)
 	}
 	var shown storedIssue
-	decodeAnswer(t, w.send(t, "bob", http.MethodGet, "/api/v0/issues/"+second.String(), "", http.StatusOK), &shown)
+	decodeAnswer(t, w.send(t, "bob", http.MethodGet, path, "", http.StatusOK), &shown)
 	var stored storedIssue
 	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT id, workspace_id, project_id, sequence_id, name, state_id, priority, parent_id, sort_order,
 		completed_at, archived_at, created_by_id, updated_by_id, created_at, updated_at,
@@ -5211,9 +5213,10 @@ func TestAWorkItemReadsAsStored(t *testing.T) {
 	shown.inUTC()
 	stored.inUTC()
 	if !reflect.DeepEqual(shown, stored) || stored.ParentID == nil || stored.CompletedAt == nil || stored.ArchivedAt == nil ||
-		*stored.UpdatedByID == *stored.CreatedByID || stored.UpdatedAt.Equal(stored.CreatedAt) || len(stored.LabelIDs) != 0 {
-		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, completed, archived, changed last by bob, "+
-			"without labels", shown, stored)
+		*stored.UpdatedByID == *stored.CreatedByID || len(stored.LabelIDs) != 0 || !stored.CreatedAt.Before(*stored.CompletedAt) ||
+		!stored.CompletedAt.Before(stored.UpdatedAt) || !stored.UpdatedAt.Before(*stored.ArchivedAt) {
+		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, made, completed, changed last by bob and "+
+			"archived at four moments in that order, without labels", shown, stored)
 	}
 }
 

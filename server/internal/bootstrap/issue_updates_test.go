@@ -110,20 +110,22 @@ func displayNames(t *testing.T, w issueWorld, ids ...uuid.UUID) []string {
 // getIssue as bootstrap wires it answers the work item as stored, every
 // field (M4 design 5.2): Web's second work item, under the first and
 // archived (in the database: no operation of P1b archives a work item),
-// and changed last by bob after alice made it, into Done, so that each
-// field that may be null has a value of its own, and each of its stamps is
-// its own.
+// moved into Done by bob after alice made it and changed by him again
+// after that, so that each field that may be null has a value of its own,
+// each of its stamps is its own, and it was made, completed, changed last
+// and archived at four moments, in that order.
 func TestAWorkItemReadsAsStored(t *testing.T) {
 	w := newIssueWorld(t)
 	first, second := w.newWorkItem(t), w.newWorkItem(t)
-	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+second.String(), `{"priority":"low","state_id":"`+w.done.String()+`","label_ids":[]}`,
-		http.StatusOK)
+	path := "/api/v0/issues/" + second.String()
+	w.send(t, "bob", http.MethodPatch, path, `{"state_id":"`+w.done.String()+`"}`, http.StatusOK)
+	w.send(t, "bob", http.MethodPatch, path, `{"priority":"low","label_ids":[]}`, http.StatusOK)
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issues SET parent_id = $2, archived_at = updated_at + interval '1 minute' WHERE id = $1",
 		second, first); err != nil {
 		t.Fatal(err)
 	}
 	var shown storedIssue
-	decodeAnswer(t, w.send(t, "bob", http.MethodGet, "/api/v0/issues/"+second.String(), "", http.StatusOK), &shown)
+	decodeAnswer(t, w.send(t, "bob", http.MethodGet, path, "", http.StatusOK), &shown)
 	var stored storedIssue
 	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT id, workspace_id, project_id, sequence_id, name, state_id, priority, parent_id, sort_order,
 		completed_at, archived_at, created_by_id, updated_by_id, created_at, updated_at,
@@ -137,9 +139,10 @@ func TestAWorkItemReadsAsStored(t *testing.T) {
 	shown.inUTC()
 	stored.inUTC()
 	if !reflect.DeepEqual(shown, stored) || stored.ParentID == nil || stored.CompletedAt == nil || stored.ArchivedAt == nil ||
-		*stored.UpdatedByID == *stored.CreatedByID || stored.UpdatedAt.Equal(stored.CreatedAt) || len(stored.LabelIDs) != 0 {
-		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, completed, archived, changed last by bob, "+
-			"without labels", shown, stored)
+		*stored.UpdatedByID == *stored.CreatedByID || len(stored.LabelIDs) != 0 || !stored.CreatedAt.Before(*stored.CompletedAt) ||
+		!stored.CompletedAt.Before(stored.UpdatedAt) || !stored.UpdatedAt.Before(*stored.ArchivedAt) {
+		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, made, completed, changed last by bob and "+
+			"archived at four moments in that order, without labels", shown, stored)
 	}
 }
 
