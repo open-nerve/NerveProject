@@ -121,9 +121,9 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/app/update_issue_test.go`（新） | `updateIssue` 的单元测试 | 5 |
 | `server/internal/modules/issue/domain/issue.go`（修改） | `unassignable` 与 `Assignees` 共用 | 5 |
 | `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新） | `updateIssue` 的九行 | 6 |
-| `server/internal/bootstrap/issue_world_test.go`（修改） | Done、`newWorkItem`（Task 6）；`workItemStamps`（Task 7）；`newIssueWorldWith`（Task 10）；`newWorkItemIn`（Task 11） | 6、7、10、11 |
+| `server/internal/bootstrap/issue_world_test.go`（修改） | Done、`newWorkItem`（Task 6）；`workItemStamps`（Task 7）；`newIssueWorldWith`（Task 10）；`newWorkItemIn`、`activityBy`（Task 11） | 6、7、10、11 |
 | `server/internal/bootstrap/issue_write_locks_test.go`（修改） | `issueWrites` 加 `updateIssue` 的一行；每行发的路径是它的操作的（`pathOf`） | 6 |
-| `server/internal/bootstrap/issue_updates_test.go`（新） | 盖戳、回答如存（Task 7）；修改的盖戳测试用 `newWorkItemIn` 建它的工作项（Task 11） | 7、11 |
+| `server/internal/bootstrap/issue_updates_test.go`（新） | 盖戳、回答如存（Task 7）；修改的盖戳测试用 `newWorkItemIn` 建它的工作项、用 `activityBy` 读修改者的动态（Task 11） | 7、11 |
 | `server/internal/bootstrap/issue_writes_test.go`（修改） | 创建的盖戳测试用 `newWorkItem`（Task 6）、`workItemStamps`（Task 7）；事务的连接加修改（Task 7）；`newIssueRoute` 的闸门和配置（Task 10） | 6、7、10 |
 | `server/internal/platform/gate/gate.go`、`server/internal/platform/gate/gate_test.go`（新） | `Keyed[K]` 和它的测试 | 8 |
 | `server/internal/platform/postgres/tx.go`（修改）、`server/internal/platform/postgres/lock_timeout_test.go`（新） | `LockTimeout`、`LockNotAvailable` | 9 |
@@ -7630,8 +7630,8 @@ Expected: 通过。
 - Modify: `server/internal/bootstrap/interleaving_test.go`、`server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/issue_interleaving_catalog_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_updates_test.go`、`server/internal/bootstrap/issue_world_test.go`
 
 **Interfaces:** 没有新的生产代码（spec 2.13、第 3 节第 16 条；M4 设计 3.5、9.3）。
-- `issue_world_test.go`：`newWorkItemIn(t, project, body)`（alice 经接口在项目里建的工作项），`newWorkItem` 用它。
-- `issue_updates_test.go`：Task 7 的 `TestUpdatingAWorkItemStampsItsRows` 用 `newWorkItemIn` 建它的工作项。
+- `issue_world_test.go`：`newWorkItemIn(t, project, body)`（alice 经接口在项目里建的工作项），`newWorkItem` 用它；`activityBy(t, item, actor)`（工作项中 actor 的动态，按 `id` 的次序，每行写成 `<field>: <old> → <new>`），1u 和修改的盖戳测试共用这一个读法。
+- `issue_updates_test.go`：Task 7 的 `TestUpdatingAWorkItemStampsItsRows` 用 `newWorkItemIn` 建它的工作项、用 `activityBy` 读 bob 的动态。
 - `issue_interleaving_test.go`：
   - `changesIssue`（改 Web 唯一的工作项）、`aWorkItem`（alice 的 Fix：三行）、`workItem`；
   - `itemWrite{name, prepare, rows, write, done, gone}`、`itemWrites`（"created"：Web 里的创建；"changed"：改 alice 的 Fix）、`after`、`wroteNothing`；
@@ -7642,7 +7642,7 @@ Expected: 通过。
 
 **Tests:**（组合；3u–7u 各两种顺序；`-count=5 -race` 没有 40P01）
 - 1u：alice 的修改（改名 Mend、加 Bug）持 Web 的行；bob 的修改（改名 Repair、去掉每个标签）按改之前的工作项过了预检、等行；她提交之后他在锁下重读：动态写"Mend → Repair"和去掉她加的 Bug，Bug 不在了，时刻不早于门打开。
-- 等锁期间 Fix 被删除、被移到 Ops（P1b 没有这两个操作，由持 Web 的行的事务在数据库里做）：bob 的修改过了预检、等行，提交之后在锁下找不到 Web 里的 Fix：404 `issue.not_found`，Fix 的名称不变。
+- 等锁期间 Fix 被删除、被移到 Ops（P1b 没有这两个操作，由持 Web 的行的事务在数据库里做）：bob 的修改过了预检、等行（探测只认 `projects` 的行锁：事务也持着 Fix 的行，锁了工作项的预检等的是它，之后由预检自己答，不经锁下重读），提交之后在锁下找不到 Web 里的 Fix：404 `issue.not_found`，Fix 的名称不变。
 - 3u：bob 先改（加他自己为负责人、他的关注、标签和三行动态，共九行）时删除 Web 或 acme 等行，九行随它在一个时刻由 alice 删除（删除者不是这些行最后的写者），删除的时刻不早于门打开；先删时修改 404 `issue.not_found`，不写。
 - 4u、5u：预检放行之后 bob 被移出 Web：404 `issue.not_found`；被降为访客：403；都不写。
 - 6u：Review 先删：修改 422 `state_id`，不写；先改到 Review：删除 409 `project.state_in_use`，Review 保留。
@@ -7899,7 +7899,7 @@ func TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused(t *testing.T) {
 		}
 ````
 
-`server/internal/bootstrap/issue_world_test.go`（修改，2 处）：
+`server/internal/bootstrap/issue_world_test.go`（修改，3 处）：
 
 ````old server/internal/bootstrap/issue_world_test.go
 func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
@@ -7923,9 +7923,46 @@ func (w issueWorld) newWorkItemIn(t *testing.T, project uuid.UUID, body string) 
 ````new server/internal/bootstrap/issue_world_test.go
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
 ````
+````old server/internal/bootstrap/issue_world_test.go
+	return slices.Sorted(slices.Values(lines))
+}
+````
+````new server/internal/bootstrap/issue_world_test.go
+	return slices.Sorted(slices.Values(lines))
+}
 
-`server/internal/bootstrap/issue_updates_test.go`（修改，4 处）：
+// activityBy is each row of the work item item's activity in which the
+// account actor acts, in the order of their ids, as "<field>: <old value>
+// → <new value>"; a row without either value fails the test.
+func (w issueWorld) activityBy(t *testing.T, item, actor uuid.UUID) []string {
+	t.Helper()
+	rows, err := w.pool.Query(pgtest.Soon(t), `SELECT a.field || ': ' || a.old_value || ' → ' || a.new_value FROM issue_activities a
+		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, item, actor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	said, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return said
+}
+````
 
+`server/internal/bootstrap/issue_updates_test.go`（修改，5 处）：
+
+````old server/internal/bootstrap/issue_updates_test.go
+	"uuid"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+````
+````new server/internal/bootstrap/issue_updates_test.go
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+````
 ````old server/internal/bootstrap/issue_updates_test.go
 	var created struct {
 		ID uuid.UUID `json:"id"`
@@ -7954,10 +7991,18 @@ func (w issueWorld) newWorkItemIn(t *testing.T, project uuid.UUID, body string) 
 	if got := w.workItemStamps(t, item); !slices.Equal(got, want) {
 ````
 ````old server/internal/bootstrap/issue_updates_test.go
+	activity, err := w.pool.Query(pgtest.Soon(t), `SELECT a.field || ': ' || a.old_value || ' → ' || a.new_value FROM issue_activities a
 		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, created.ID, bob)
+	if err != nil {
+		t.Fatal(err)
+	}
+	said, err := pgx.CollectRows(activity, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
 ````
 ````new server/internal/bootstrap/issue_updates_test.go
-		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, item, bob)
+	said := w.activityBy(t, item, bob)
 ````
 
 - [ ] **Step 2: 两个修改，删除和目录的交错**
@@ -8053,7 +8098,7 @@ func TestDeletingALabelAndLabellingAWorkItemWithItSerialize(t *testing.T) {
 }
 ````
 
-`server/internal/bootstrap/issue_interleaving_change_test.go`（新文件，101 行）：
+`server/internal/bootstrap/issue_interleaving_change_test.go`（新文件，94 行）：
 
 ````file server/internal/bootstrap/issue_interleaving_change_test.go
 package bootstrap
@@ -8064,8 +8109,6 @@ import (
 	"testing"
 	"time"
 	"uuid"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
@@ -8097,15 +8140,7 @@ func TestTwoChangesOfAWorkItemSerialize(t *testing.T) {
 	if changed.Name != "Repair" || len(changed.LabelIDs) != 0 || changed.UpdatedAt.Before(hers.released) {
 		t.Errorf("bob's change answers %+v; want Repair, no label, changed no earlier than %v", changed, hers.released)
 	}
-	rows, err := w.pool.Query(pgtest.Soon(t), `SELECT a.field || ': ' || a.old_value || ' → ' || a.new_value FROM issue_activities a
-		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, w.workItem(t), w.ids["bob"])
-	if err != nil {
-		t.Fatal(err)
-	}
-	said, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		t.Fatal(err)
-	}
+	said := w.activityBy(t, w.workItem(t), w.ids["bob"])
 	if want := []string{"name: Mend → Repair", "labels: Bug → "}; !slices.Equal(said, want) {
 		t.Errorf("bob's activity says %q, want %q", said, want)
 	}
@@ -8119,7 +8154,10 @@ func TestTwoChangesOfAWorkItemSerialize(t *testing.T) {
 // UPDATE and deletes alice's Fix, or moves it into Ops; bob's change,
 // which passed his precheck on Fix as it was, waits for Web's row, and
 // once the transaction commits finds no Fix in Web: 404 issue.not_found,
-// and Fix keeps its name.
+// and Fix keeps its name. The test probes for his wait on a row of
+// projects: the transaction holds Fix's row too, and a wait for it, by a
+// precheck that locked the work item, would be answered by the precheck,
+// not under the lock.
 func TestAWorkItemGoneWhileItsChangeWaitsIsNotFound(t *testing.T) {
 	for _, moved := range []bool{false, true} {
 		t.Run(map[bool]string{false: "deleted", true: "moved"}[moved], func(t *testing.T) {
@@ -8138,7 +8176,7 @@ func TestAWorkItemGoneWhileItsChangeWaitsIsNotFound(t *testing.T) {
 			change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["bob"], []byte(`{"name":"Mend"}`))
 			w.contract.CheckRequest(t, change)
 			changed := sendInBackground(change)
-			pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+			pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
 			if err := held.Commit(pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}

@@ -7,8 +7,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -39,15 +37,7 @@ func TestTwoChangesOfAWorkItemSerialize(t *testing.T) {
 	if changed.Name != "Repair" || len(changed.LabelIDs) != 0 || changed.UpdatedAt.Before(hers.released) {
 		t.Errorf("bob's change answers %+v; want Repair, no label, changed no earlier than %v", changed, hers.released)
 	}
-	rows, err := w.pool.Query(pgtest.Soon(t), `SELECT a.field || ': ' || a.old_value || ' → ' || a.new_value FROM issue_activities a
-		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, w.workItem(t), w.ids["bob"])
-	if err != nil {
-		t.Fatal(err)
-	}
-	said, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		t.Fatal(err)
-	}
+	said := w.activityBy(t, w.workItem(t), w.ids["bob"])
 	if want := []string{"name: Mend → Repair", "labels: Bug → "}; !slices.Equal(said, want) {
 		t.Errorf("bob's activity says %q, want %q", said, want)
 	}
@@ -61,7 +51,10 @@ func TestTwoChangesOfAWorkItemSerialize(t *testing.T) {
 // UPDATE and deletes alice's Fix, or moves it into Ops; bob's change,
 // which passed his precheck on Fix as it was, waits for Web's row, and
 // once the transaction commits finds no Fix in Web: 404 issue.not_found,
-// and Fix keeps its name.
+// and Fix keeps its name. The test probes for his wait on a row of
+// projects: the transaction holds Fix's row too, and a wait for it, by a
+// precheck that locked the work item, would be answered by the precheck,
+// not under the lock.
 func TestAWorkItemGoneWhileItsChangeWaitsIsNotFound(t *testing.T) {
 	for _, moved := range []bool{false, true} {
 		t.Run(map[bool]string{false: "deleted", true: "moved"}[moved], func(t *testing.T) {
@@ -80,7 +73,7 @@ func TestAWorkItemGoneWhileItsChangeWaitsIsNotFound(t *testing.T) {
 			change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["bob"], []byte(`{"name":"Mend"}`))
 			w.contract.CheckRequest(t, change)
 			changed := sendInBackground(change)
-			pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+			pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
 			if err := held.Commit(pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}

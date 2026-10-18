@@ -178,3 +178,20 @@ func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 	}
 	return slices.Sorted(slices.Values(lines))
 }
+
+// activityBy is each row of the work item item's activity in which the
+// account actor acts, in the order of their ids, as "<field>: <old value>
+// → <new value>"; a row without either value fails the test.
+func (w issueWorld) activityBy(t *testing.T, item, actor uuid.UUID) []string {
+	t.Helper()
+	rows, err := w.pool.Query(pgtest.Soon(t), `SELECT a.field || ': ' || a.old_value || ' → ' || a.new_value FROM issue_activities a
+		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, item, actor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	said, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return said
+}

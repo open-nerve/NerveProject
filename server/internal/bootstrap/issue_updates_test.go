@@ -8,8 +8,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -64,15 +62,7 @@ func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 		t.Errorf("the work item's rows:\n%q\nwant\n%q", got, want)
 	}
 
-	activity, err := w.pool.Query(pgtest.Soon(t), `SELECT a.field || ': ' || a.old_value || ' → ' || a.new_value FROM issue_activities a
-		WHERE a.issue_id = $1 AND a.actor_id = $2 ORDER BY a.id`, item, bob)
-	if err != nil {
-		t.Fatal(err)
-	}
-	said, err := pgx.CollectRows(activity, pgx.RowTo[string])
-	if err != nil {
-		t.Fatal(err)
-	}
+	said := w.activityBy(t, item, bob)
 	names := displayNames(t, w, alice, walt)
 	if want := []string{"name: Fix → Mend", "priority: none → urgent", "state: Todo → Done", "labels: Bug → ", "assignees:  → " + names[1],
 		"assignees: " + names[0] + " → "}; !slices.Equal(said, want) {
