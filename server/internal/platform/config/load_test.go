@@ -54,6 +54,12 @@ jobs:
   shutdown_timeout: 10s
 workspace:
   creation_enabled: true
+issue:
+  write_gate:
+    per_project: 2
+    max_wait: 2s
+    max_queue: 64
+  write_lock_timeout: 5s
 files:
   size_limit: 5242880
 log:
@@ -98,6 +104,7 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			"NERVE_AUTH__SESSION_CLEANUP_INTERVAL=90s",
 			"NERVE_JOBS__SHUTDOWN_TIMEOUT=7s",
 			"NERVE_WORKSPACE__CREATION_ENABLED=false",
+			"NERVE_ISSUE__WRITE_GATE__MAX_QUEUE=8",
 			"NERVE_FILES__SIZE_LIMIT=1024",
 		},
 		LocalFile: local,
@@ -150,8 +157,12 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 		},
 		Jobs:      JobsConfig{ShutdownTimeout: 7 * time.Second}, // environment
 		Workspace: WorkspaceConfig{CreationEnabled: false},      // environment
-		Files:     FilesConfig{SizeLimit: 1024},                 // environment
-		Log:       LogConfig{Level: "debug", Format: "text"},
+		Issue: IssueConfig{
+			WriteGate:        WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 8}, // max_queue: environment
+			WriteLockTimeout: 5 * time.Second,
+		},
+		Files: FilesConfig{SizeLimit: 1024}, // environment
+		Log:   LogConfig{Level: "debug", Format: "text"},
 	}
 	if !reflect.DeepEqual(cfg, want) {
 		t.Errorf("Load() =\n%+v\nwant\n%+v", cfg, want)

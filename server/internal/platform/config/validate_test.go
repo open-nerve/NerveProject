@@ -51,8 +51,11 @@ func validConfig() Config {
 		// Unlike the defaults and unlike auth.signup_enabled, so that a key
 		// logged from the wrong field shows.
 		Workspace: WorkspaceConfig{CreationEnabled: false},
-		Files:     FilesConfig{SizeLimit: 7340032},
-		Log:       LogConfig{Level: "info", Format: "json"},
+		// Each unlike the defaults and the others, as auth.password's.
+		Issue: IssueConfig{WriteGate: WriteGateConfig{PerProject: 3, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
+			WriteLockTimeout: 4 * time.Second},
+		Files: FilesConfig{SizeLimit: 7340032},
+		Log:   LogConfig{Level: "info", Format: "json"},
 	}
 }
 
@@ -67,6 +70,7 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		Env:      EnvProd,
 		Server:   ServerConfig{Addr: "8080", ReadHeaderTimeout: 0, ReadTimeout: 0, WriteTimeout: -time.Second, ShutdownTimeout: -time.Second},
 		Database: DatabaseConfig{URL: "", MaxConns: 0},
+		Issue:    IssueConfig{WriteGate: WriteGateConfig{MaxQueue: -1}},
 		Log:      LogConfig{Level: "verbose", Format: "xml"},
 	}
 	err := cfg.validate()
@@ -109,6 +113,10 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"ratelimit.register_ip.burst: must be at least 1, got 0",
 		"ratelimit.password_user.per_minute: must be at least 1, got 0",
 		"ratelimit.password_user.burst: must be at least 1, got 0",
+		"issue.write_gate.per_project: must be at least 1, got 0",
+		"issue.write_gate.max_wait: must be positive, got 0s",
+		"issue.write_gate.max_queue: must not be negative, got -1",
+		"issue.write_lock_timeout: must be positive, got 0s",
 		"jobs.shutdown_timeout: must be positive, got 0s",
 		"files.size_limit: must be at least 1, got 0",
 		`log.level: must be one of debug, info, warn, error, got "verbose"`,
@@ -206,6 +214,13 @@ func TestValidateCrossKeyRules(t *testing.T) {
 			name:   "IPv6 prefix longer than an address",
 			change: func(c *Config) { c.RateLimit.IPv6PrefixLen = 129 },
 			want:   "ratelimit.ipv6_prefix_len: must be from 1 to 128, got 129",
+		},
+		{
+			// A write that waits its lock timeout out still answers 503
+			// before the request's deadline (M4 design 11.11).
+			name:   "write lock timeout not below the request timeout",
+			change: func(c *Config) { c.Issue.WriteLockTimeout = 15 * time.Second },
+			want:   "issue.write_lock_timeout: must be less than server.request_timeout (15s), got 15s",
 		},
 	}
 	for _, tt := range tests {

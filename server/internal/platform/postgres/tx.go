@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -47,11 +48,39 @@ func DB(ctx context.Context, pool *pgxpool.Pool) Querier {
 type TxManager struct {
 	pool          *pgxpool.Pool
 	commitTimeout time.Duration
+	begin         pgx.TxOptions
 }
 
-// NewTxManager returns a TxManager on pool.
-func NewTxManager(pool *pgxpool.Pool, commitTimeout time.Duration) *TxManager {
-	return &TxManager{pool: pool, commitTimeout: commitTimeout}
+// Option sets how a TxManager begins its transactions.
+type Option func(m *TxManager)
+
+// LockTimeout makes each transaction the TxManager begins wait at most d,
+// rounded up to whole milliseconds, for each lock it waits for: its BEGIN
+// sets lock_timeout for the transaction alone (SET LOCAL), in the same
+// round trip, before any statement of fn. A statement that waits longer
+// fails with SQLSTATE 55P03 (LockNotAvailable), and the transaction rolls
+// back (M4 design 3.5, 11.11).
+func LockTimeout(d time.Duration) Option {
+	return func(m *TxManager) {
+		m.begin.BeginQuery = fmt.Sprintf("BEGIN; SET LOCAL lock_timeout = %d", (d + time.Millisecond - 1).Milliseconds())
+	}
+}
+
+// NewTxManager returns a TxManager on pool, with opts.
+func NewTxManager(pool *pgxpool.Pool, commitTimeout time.Duration, opts ...Option) *TxManager {
+	m := &TxManager{pool: pool, commitTimeout: commitTimeout}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// LockNotAvailable reports whether err, or an error it wraps, is a
+// statement's that waited for a lock longer than its transaction's lock
+// timeout (SQLSTATE 55P03; LockTimeout).
+func LockNotAvailable(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "55P03"
 }
 
 // WithinTx runs fn in a transaction and commits it when fn returns nil. The
@@ -61,7 +90,7 @@ func (m *TxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) e
 	if _, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
 		return fn(ctx)
 	}
-	tx, err := m.pool.Begin(ctx)
+	tx, err := m.pool.BeginTx(ctx, m.begin)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}

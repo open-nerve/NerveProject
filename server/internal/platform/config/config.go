@@ -26,6 +26,7 @@ type Config struct {
 	RateLimit RateLimitConfig `koanf:"ratelimit"`
 	Jobs      JobsConfig      `koanf:"jobs"`
 	Workspace WorkspaceConfig `koanf:"workspace"`
+	Issue     IssueConfig     `koanf:"issue"`
 	Files     FilesConfig     `koanf:"files"`
 	Log       LogConfig       `koanf:"log"`
 }
@@ -145,6 +146,28 @@ type WorkspaceConfig struct {
 	CreationEnabled bool `koanf:"creation_enabled"`
 }
 
+// IssueConfig configures the writes on the work-item side (M4 design 3.5,
+// 11.11).
+type IssueConfig struct {
+	// WriteGate bounds the writes on one project's work items that hold a
+	// connection at once in this process.
+	WriteGate WriteGateConfig `koanf:"write_gate"`
+	// WriteLockTimeout bounds each wait of such a write's transaction for a
+	// lock (lock_timeout): a write that waits longer answers 503
+	// server_busy. It is less than server.request_timeout.
+	WriteLockTimeout time.Duration `koanf:"write_lock_timeout"`
+}
+
+// WriteGateConfig is the work items' write gate (platform/gate): at most
+// PerProject writes on a project's work items hold a connection at once in
+// this process, at most MaxQueue others wait for it, holding none, each at
+// most MaxWait; a write beyond answers 503 server_busy.
+type WriteGateConfig struct {
+	PerProject int           `koanf:"per_project"`
+	MaxWait    time.Duration `koanf:"max_wait"`
+	MaxQueue   int           `koanf:"max_queue"`
+}
+
 // FilesConfig configures uploads. The instance API reports it to clients;
 // uploads arrive, and honour it, in M5 (M2 design 5.3).
 type FilesConfig struct {
@@ -211,6 +234,14 @@ func (c Config) LogValue() slog.Value {
 		),
 		slog.Group("workspace",
 			slog.Bool("creation_enabled", c.Workspace.CreationEnabled),
+		),
+		slog.Group("issue",
+			slog.Group("write_gate",
+				slog.Int("per_project", c.Issue.WriteGate.PerProject),
+				slog.Duration("max_wait", c.Issue.WriteGate.MaxWait),
+				slog.Int("max_queue", c.Issue.WriteGate.MaxQueue),
+			),
+			slog.Duration("write_lock_timeout", c.Issue.WriteLockTimeout),
 		),
 		slog.Group("files",
 			slog.Int64("size_limit", c.Files.SizeLimit),

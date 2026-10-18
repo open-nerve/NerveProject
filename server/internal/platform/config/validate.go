@@ -81,6 +81,7 @@ func (c Config) validate() error {
 			c.Database.CommitTimeout, webRefreshTimeout, c.Auth.RefreshDeadline)
 	}
 	c.RateLimit.validate(fail)
+	c.Issue.validate(c.Server.RequestTimeout, fail)
 	if c.Jobs.ShutdownTimeout <= 0 {
 		fail("jobs.shutdown_timeout", "must be positive, got %s", c.Jobs.ShutdownTimeout)
 	}
@@ -133,6 +134,27 @@ func (a AuthConfig) validate(env string, fail func(key, format string, args ...a
 	}
 	if p.MaxWait <= 0 {
 		fail("auth.password.max_wait", "must be positive, got %s", p.MaxWait)
+	}
+}
+
+func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, format string, args ...any)) {
+	g := i.WriteGate
+	if g.PerProject < 1 {
+		fail("issue.write_gate.per_project", "must be at least 1, got %d", g.PerProject)
+	}
+	if g.MaxWait <= 0 {
+		fail("issue.write_gate.max_wait", "must be positive, got %s", g.MaxWait)
+	}
+	if g.MaxQueue < 0 {
+		fail("issue.write_gate.max_queue", "must not be negative, got %d", g.MaxQueue)
+	}
+	switch {
+	case i.WriteLockTimeout <= 0:
+		fail("issue.write_lock_timeout", "must be positive, got %s", i.WriteLockTimeout)
+	case requestTimeout > 0 && i.WriteLockTimeout >= requestTimeout:
+		// A write that waits its lock timeout out still has to answer 503
+		// before the request's deadline.
+		fail("issue.write_lock_timeout", "must be less than server.request_timeout (%s), got %s", requestTimeout, i.WriteLockTimeout)
 	}
 }
 
