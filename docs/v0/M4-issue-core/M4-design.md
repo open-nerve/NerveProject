@@ -262,7 +262,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
     - 做法：进程内按项目的信号量（`platform/gate`，带 `context` 的按键的信号量，约 100 行），`issue` 经它声明的端口 `WriteGate` 使用（`Enter(ctx, projectIDs) (release, error)`）。每个工作项的写在**取连接之前**进入它的项目的闸门，每个项目在一个进程里至多 K 个写同时在数据库里（`issue.write_gate.per_project`，默认 2：一个持 N 在写，一个已在等 N，提交之后不必再等调度）；其余的在进程里等，不持连接。关联的写按项目 `id` 升序进入两个闸门。
     - 等的上限：至多等 `issue.write_gate.max_wait`（默认 2 秒，与 `auth.password.max_wait` 同一种写法），一个项目的等待者至多 `issue.write_gate.max_queue` 个（默认 64），超过或请求的期限先到，就答 503 `server_busy`（`Retry-After: 1`，`shared.ServerBusy`，M2 已有）。另有一道兜底：工作项一侧的写的事务开始时 `SET LOCAL lock_timeout`（`issue.write_lock_timeout`，默认 5 秒），等锁超过它（SQLSTATE `55P03`）同样答 503 `server_busy`。这一句由平台发：`platform/postgres` 的 `TxManager` 加一个选项 `LockTimeout(d)`，`BEGIN` 之后发 `SET LOCAL`，模块的 SQL 里没有 `SET`（`TestModulesRunSQLOnlyThroughSQLC` 不许模块在 `gen` 之外发语句，聚焦复核 M6）；`55P03` 换成 503 只在 `bootstrap/gate.go` 一处，挨着闸门的 503（6.1）。没有选 sqlc 的 `SELECT set_config('lock_timeout', $1, true)`：那要每个写用例自己记得先调它，选项让给 `issue` 的写用例的 `TxManager` 一律带上。
     - 闸门不改变加锁的顺序：它不是数据库的锁，持着它的请求从不在持数据库的锁或连接时再等别的闸门（多个闸门在开始事务之前按 `id` 升序一次取齐），不走闸门的写（M3 的项目管理类的写、删除项目和工作区、后台的任务）不等闸门，所以闸门与数据库的锁之间不会成环。
-    - 范围：v0 是单个进程（M2 设计 3.15），K 是每个进程的；多个进程时每个进程各 K 个，连接池的大小和 K 一起由 M8 的部署交接写明（13.2）。闸门只管工作项一侧的写（含发布草稿）；草稿的保存持工作区 S、项目 S，不等 N，不进闸门。
+    - 范围：v0 是单个进程（M2 设计 3.15），K 是每个进程的；多个进程时每个进程各 K 个；闸门限的是每个项目的份额（11.11），连接池的大小与 K、同时热的项目数一起由 M8 的部署交接写明（13.2）。闸门只管工作项一侧的写（含发布草稿）；草稿的保存持工作区 S、项目 S，不等 N，不进闸门。
     - 测试：交错 20 经真实的连接池跑：200 个写在同一个项目上，另一个项目上的读的耗时不超过一个上限（SP1 的回归）；闸门满时 503 带 `Retry-After`；`lock_timeout` 的兜底。
   - **外键的 `FOR KEY SHARE` 挡住改账户的邮箱**（对抗性评审 M2，不改代码，写明）：M4 的每个插入经指向 `users` 的外键（`created_by_id`、`actor_id`、`assignee_id`……）取账户行的 `FOR KEY SHARE`。`users.email` 是全表唯一的列（`00001_identity_users.sql:8`），`nerve users set-email`（`ChangeEmail`）改它要取 `FOR UPDATE`，与 `FOR KEY SHARE` 冲突。SP1 量到：首尾相连 3 秒的插入，改显示名等 1 ms，改邮箱等 2.913 秒。所以一个持续写入的代理，要等它停一下才能改它的邮箱；没有死锁。S5 的 E3"无害"的结论只对唯一键是部分唯一的表（`workspaces`、`projects`）成立。M4 不改；给 `set-email` 加 `lock_timeout` 和重试的提示交给 M8（13.2）。
   - **没有新的成员关系增长**（M3 交接第 2 节）：指派、提及、关注都不让谁成为项目成员（负责人必须已是成员，3.7），所以约定六不加新的路径，也不加与停用的交错测试。
@@ -1663,7 +1663,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 ### 8.8 README 的新增内容
 | Phase | 位置 | 内容 |
 |---|---|---|
-| P1b | 部署 | 工作项的写闸门和锁的期限：`issue.write_gate.per_project`（默认 2）、`issue.write_gate.max_wait`（2 秒）、`issue.write_gate.max_queue`（64）、`issue.write_lock_timeout`（5 秒）；超过时答 503 `server_busy`，客户端按 `Retry-After` 重试；连接池的大小与多进程部署时的 K 由 M8 的部署说明定（11.11） |
+| P1b | 部署 | 工作项的写闸门和锁的期限：`issue.write_gate.per_project`（默认 2）、`issue.write_gate.max_wait`（2 秒）、`issue.write_gate.max_queue`（64）、`issue.write_lock_timeout`（5 秒）；超过时答 503 `server_busy`，客户端按 `Retry-After` 重试；闸门限的是每个项目的份额，同时热的项目达到池的大小除以 K 时等锁的写仍能占满池；连接池的大小与多进程部署时的 K、同时热的项目数由 M8 的部署说明定（11.11） |
 | P6 | 部署 | 定时任务（自动归档）的间隔配置；任务队列的 worker 数（`jobs.default_workers`、`jobs.periodic_workers`） |
 | P7 | 安全 | 链接的抓取会从服务器发出请求：防护的规则、上限、公网地址上仍可探测端口（8.1）；公网地址不在本机网卡上的部署，在网络层挡住 nerve 访问自己的公网地址；要完全禁止时在网络层禁止 nerve 的出站（抓取得到 `failed`，不影响别的功能） |
 | P8 | 部署 | 迁移执行 `CREATE EXTENSION IF NOT EXISTS pg_trgm`：迁移的账户要有库的 `CREATE` 权限（库属主即可），不要超级用户（M0-P4 交接；完整的部署说明在 M8） |
