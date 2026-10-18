@@ -34,6 +34,15 @@ type Assignee struct {
 	DisplayName string
 }
 
+// assigneeAdded is the row of a, an account a work item is assigned to:
+// row 2 at its creation and row 12 at an update, which M4 design 3.13
+// gives the same columns: assignees, updated, from "" to his display name,
+// his id the new identifier.
+func assigneeAdded(a Assignee) Activity {
+	return Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr(a.DisplayName),
+		NewIdentifier: ptr(a.ID), Comment: "added assignee "}
+}
+
 // CreationActivity is the rows a work item's creation writes, in order (M4
 // design 3.13): row 1, the creation, then row 2 for each of assignees in
 // the order given, the accounts it is assigned to, the default assignee
@@ -41,8 +50,7 @@ type Assignee struct {
 func CreationActivity(assignees []Assignee) []Activity {
 	rows := []Activity{{Verb: VerbCreated, Comment: "created the work item"}}
 	for _, a := range assignees {
-		rows = append(rows, Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr(a.DisplayName),
-			NewIdentifier: ptr(a.ID), Comment: "added assignee "})
+		rows = append(rows, assigneeAdded(a))
 	}
 	return rows
 }
@@ -102,8 +110,7 @@ func UpdateActivity(u Update) []Activity {
 			OldIdentifier: ptr(l.ID), Comment: "removed label "})
 	}
 	for _, a := range u.AssigneesAdded {
-		rows = append(rows, Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr(a.DisplayName),
-			NewIdentifier: ptr(a.ID), Comment: "added assignee "})
+		rows = append(rows, assigneeAdded(a))
 	}
 	for _, a := range u.AssigneesRemoved {
 		rows = append(rows, Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(a.DisplayName), NewValue: ptr(""),

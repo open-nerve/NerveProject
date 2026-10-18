@@ -6,6 +6,15 @@ import (
 	"uuid"
 )
 
+// assigned is the row of the account id, of display name name, assigned to
+// a work item: row 2 at its creation and row 12 at an update alike (M4
+// design 3.13). Written out apart from assigneeAdded, it lets the tests of
+// both check that one encoding.
+func assigned(id uuid.UUID, name string) Activity {
+	field, empty := "assignees", ""
+	return Activity{Field: &field, Verb: "updated", OldValue: &empty, NewValue: &name, NewIdentifier: &id, Comment: "added assignee "}
+}
+
 // A creation writes row 1, the creation, alone with no field, value or
 // id; then row 2 for each account it is assigned to, in the order given:
 // assignees, updated, from "" to his display name, his id the new
@@ -14,10 +23,6 @@ import (
 func TestCreationActivity(t *testing.T) {
 	ann, ben := uuid.NewV7(), uuid.NewV7()
 	created := Activity{Verb: "created", Comment: "created the work item"}
-	assigned := func(id uuid.UUID, name string) Activity {
-		field, empty := "assignees", ""
-		return Activity{Field: &field, Verb: "updated", OldValue: &empty, NewValue: &name, NewIdentifier: &id, Comment: "added assignee "}
-	}
 	tests := []struct {
 		name      string
 		assignees []Assignee
@@ -52,7 +57,6 @@ func TestUpdateActivity(t *testing.T) {
 	state := row("state", "Todo", "Done", &todo, &done, "updated the state to")
 	labelled := func(id uuid.UUID, n string) Activity { return row("labels", "", n, nil, &id, "added label ") }
 	unlabelled := func(id uuid.UUID, n string) Activity { return row("labels", n, "", &id, nil, "removed label ") }
-	assigned := func(id uuid.UUID, n string) Activity { return row("assignees", "", n, nil, &id, "added assignee ") }
 	unassigned := func(id uuid.UUID, n string) Activity { return row("assignees", n, "", &id, nil, "removed assignee ") }
 	tests := []struct {
 		name string
