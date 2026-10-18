@@ -108,13 +108,21 @@ func (p issueProjects) States(ctx context.Context, id uuid.UUID) ([]issue.StateR
 	}
 	out := make([]issue.StateRef, len(states))
 	for i, s := range states {
-		out[i] = issue.StateRef{ID: s.ID, Group: issue.StateGroup(s.Group), Default: s.Default}
+		out[i] = issue.StateRef{ID: s.ID, Name: s.Name, Group: issue.StateGroup(s.Group), Default: s.Default}
 	}
 	return out, nil
 }
 
-func (p issueProjects) Labels(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error) {
-	return p.projects.IssueLabels(ctx, id, ids)
+func (p issueProjects) Labels(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]issue.LabelRef, error) {
+	labels, err := p.projects.IssueLabels(ctx, id, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.LabelRef, len(labels))
+	for i, l := range labels {
+		out[i] = issue.LabelRef(l)
+	}
+	return out, nil
 }
 
 func (p issueProjects) Roles(ctx context.Context, id uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {

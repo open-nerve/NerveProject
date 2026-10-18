@@ -17,17 +17,18 @@ WHERE id = sqlc.arg(id) AND deleted_at IS NULL
 RETURNING last_issue_sequence;
 
 -- name: IssueStates :many
--- StateCatalog (M4 design 6.5): the project's undeleted states, its triage state too, in id order. Read under the
--- project's FOR NO KEY UPDATE, which every write of a state holds too (M3 design 3.6), it stays as read (M4 design 3.5).
-SELECT id, "group", "default"
+-- StateCatalog (M4 design 6.5): the project's undeleted states, its triage state too, in id order, with their names,
+-- which an update's activity names a state by (3.13). Read under the project's FOR NO KEY UPDATE, which every write of
+-- a state holds too (M3 design 3.6), it stays as read (M4 design 3.5).
+SELECT id, name, "group", "default"
 FROM states
 WHERE project_id = sqlc.arg(project_id) AND deleted_at IS NULL
 ORDER BY id;
 
 -- name: IssueLabels :many
--- LabelCatalog (M4 design 6.5): those of ids that are the project's undeleted labels, in id order; stable under the
--- project's FOR NO KEY UPDATE, as IssueStates.
-SELECT id
+-- LabelCatalog (M4 design 6.5): those of ids that are the project's undeleted labels, in id order, with their names,
+-- which an update's activity names a label by (3.13); stable under the project's FOR NO KEY UPDATE, as IssueStates.
+SELECT id, name
 FROM labels
 WHERE project_id = sqlc.arg(project_id) AND deleted_at IS NULL AND id = ANY (sqlc.arg(ids)::uuid[])
 ORDER BY id;

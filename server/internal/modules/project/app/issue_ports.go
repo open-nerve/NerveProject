@@ -39,11 +39,20 @@ type IssueProject struct {
 }
 
 // IssueState is a state of a project as project.Provide's catalog for the
-// issue module reads it (M4 design 6.5, StateCatalog): its id, its group,
-// and whether it is the project's default. bootstrap converts it into
-// issue's value.
+// issue module reads it (M4 design 6.5, StateCatalog): its id, its name,
+// its group, and whether it is the project's default. bootstrap converts
+// it into issue's value.
 type IssueState struct {
 	ID      uuid.UUID
+	Name    string
 	Group   string
 	Default bool
+}
+
+// IssueLabel is a label of a project as project.Provide's catalog for the
+// issue module reads it (M4 design 6.5, LabelCatalog): its id and its
+// name. bootstrap converts it into issue's value.
+type IssueLabel struct {
+	ID   uuid.UUID
+	Name string
 }

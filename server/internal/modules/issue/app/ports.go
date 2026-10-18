@@ -51,10 +51,11 @@ type StateCatalog interface {
 	States(ctx context.Context, projectID uuid.UUID) ([]StateRef, error)
 }
 
-// StateRef is a state as StateCatalog reads it: its id, its group, and
-// whether it is the project's default.
+// StateRef is a state as StateCatalog reads it: its id, its name, its
+// group, and whether it is the project's default.
 type StateRef struct {
 	ID      uuid.UUID
+	Name    string
 	Group   domain.StateGroup
 	Default bool
 }
@@ -63,7 +64,13 @@ type StateRef struct {
 // project.Provide's.
 type LabelCatalog interface {
 	// Labels reads those of ids that are the project's undeleted labels.
-	Labels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error)
+	Labels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]LabelRef, error)
+}
+
+// LabelRef is a label as LabelCatalog reads it: its id and its name.
+type LabelRef struct {
+	ID   uuid.UUID
+	Name string
 }
 
 // ProjectMembers reads a project's memberships (M4 design 6.5), under its

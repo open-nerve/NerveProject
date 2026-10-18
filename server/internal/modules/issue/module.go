@@ -66,12 +66,14 @@ type ProjectPorts interface {
 	app.ProjectMembers
 }
 
-// LockedProject, StateRef and its StateGroup are the values ProjectPorts
-// hand over: bootstrap converts project's into them (M4 design 6.5).
+// LockedProject, StateRef and its StateGroup, and LabelRef are the values
+// ProjectPorts hand over: bootstrap converts project's into them (M4
+// design 6.5).
 type (
 	LockedProject = app.LockedProject
 	StateRef      = app.StateRef
 	StateGroup    = domain.StateGroup
+	LabelRef      = app.LabelRef
 )
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).

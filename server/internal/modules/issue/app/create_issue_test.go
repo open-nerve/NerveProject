@@ -47,7 +47,7 @@ func newCreate() (*app.CreateIssue, *world) {
 	log := &callLog{}
 	w := &world{log: log}
 	w.project = &fakeProject{log: log, id: web, workspace: acme, found: true, locked: &app.LockedProject{WorkspaceID: acme}, last: 6,
-		states: []app.StateRef{backlog, done, triage}, labels: []uuid.UUID{bug, ui},
+		states: []app.StateRef{backlog, done, triage}, labels: []app.LabelRef{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}},
 		roles: map[uuid.UUID]shared.Role{alice: shared.RoleAdmin, bob: shared.RoleMember, carol: shared.RoleAdmin, gus: shared.RoleGuest}}
 	w.issues = &fakeIssues{log: log, greatest: map[uuid.UUID]float64{done.ID: 85535}}
 	w.auth = &fakeAuthorizer{log: log}

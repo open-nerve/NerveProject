@@ -41,7 +41,7 @@ func (s *Store) NextIssueSequence(ctx context.Context, id uuid.UUID) (int, error
 }
 
 // IssueStates reads the undeleted states of the project, its triage state
-// too, in id order (M4 design 6.5).
+// too, in id order, with their names (M4 design 6.5).
 func (s *Store) IssueStates(ctx context.Context, projectID uuid.UUID) ([]app.IssueState, error) {
 	rows, err := s.queries(ctx).IssueStates(ctx, projectID)
 	if err != nil {
@@ -49,19 +49,23 @@ func (s *Store) IssueStates(ctx context.Context, projectID uuid.UUID) ([]app.Iss
 	}
 	out := make([]app.IssueState, len(rows))
 	for i, r := range rows {
-		out[i] = app.IssueState{ID: r.ID, Group: r.Group, Default: r.Default}
+		out[i] = app.IssueState{ID: r.ID, Name: r.Name, Group: r.Group, Default: r.Default}
 	}
 	return out, nil
 }
 
 // IssueLabels reads those of ids that are undeleted labels of the project,
-// in id order (M4 design 6.5).
-func (s *Store) IssueLabels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error) {
-	found, err := s.queries(ctx).IssueLabels(ctx, gen.IssueLabelsParams{ProjectID: projectID, Ids: ids})
+// in id order, with their names (M4 design 6.5).
+func (s *Store) IssueLabels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]app.IssueLabel, error) {
+	rows, err := s.queries(ctx).IssueLabels(ctx, gen.IssueLabelsParams{ProjectID: projectID, Ids: ids})
 	if err != nil {
 		return nil, fmt.Errorf("read labels of project %s: %w", projectID, err)
 	}
-	return found, nil
+	out := make([]app.IssueLabel, len(rows))
+	for i, r := range rows {
+		out[i] = app.IssueLabel{ID: r.ID, Name: r.Name}
+	}
+	return out, nil
 }
 
 // ActiveRoles reads the project roles of those of the accounts ids that

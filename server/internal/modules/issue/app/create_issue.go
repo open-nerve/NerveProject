@@ -144,7 +144,7 @@ func (u *CreateIssue) check(ctx context.Context, projectID uuid.UUID, p LockedPr
 			return checked{}, err
 		}
 		for i, id := range in.LabelIDs {
-			if !slices.Contains(known, id) {
+			if !slices.ContainsFunc(known, func(l LabelRef) bool { return l.ID == id }) {
 				problems = append(problems, domain.UnknownLabel(i))
 			}
 		}

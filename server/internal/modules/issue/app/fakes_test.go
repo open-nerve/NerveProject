@@ -91,7 +91,7 @@ type fakeProject struct {
 	locked    *app.LockedProject
 	last      int
 	states    []app.StateRef
-	labels    []uuid.UUID
+	labels    []app.LabelRef
 	roles     map[uuid.UUID]shared.Role
 }
 
@@ -124,11 +124,11 @@ func (f *fakeProject) States(ctx context.Context, id uuid.UUID) ([]app.StateRef,
 	return f.states, nil
 }
 
-func (f *fakeProject) Labels(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error) {
+func (f *fakeProject) Labels(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]app.LabelRef, error) {
 	if err := f.log.add(ctx, "Labels", id, ids); err != nil {
 		return nil, err
 	}
-	return slices.DeleteFunc(slices.Clone(ids), func(l uuid.UUID) bool { return !slices.Contains(f.labels, l) }), nil
+	return slices.DeleteFunc(slices.Clone(f.labels), func(l app.LabelRef) bool { return !slices.Contains(ids, l.ID) }), nil
 }
 
 func (f *fakeProject) Roles(ctx context.Context, id uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
