@@ -31,7 +31,7 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从基点起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同；之后在另一个副本上从基点逐 Task 复现，每个 Task 之后跑它的门禁，最后的树与原型逐个文件相同（spec 附录 A）。块写入之后不必再格式化（原型中每个 Task 都经过 `gofmt`、`oxfmt`）。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、10、11）、`issue_writes_test.go`（Task 7、10）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、10、11）、`issue_writes_test.go`（Task 6、7、10）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事；静态：`make lint-web` 的文案核对）。它们在各自 Task 的树上跑过，标"（Task n 起）"的检查在 Task n 的树上跑过，全部在最终的原型上再跑过，每个变异在一份新的副本里（`$M4TMP/p1btools/mutants_p1b.py`，`mut.py` 在它写的每个检查上各跑一次；端到端的"发现"必须是故事的断言失败，`e2ekills.py` 核对，不算构建失败或超时；容器起不来不算；spec 附录 A）。"（Task n 起）"的检查从那个 Task 起才发现这个变异：Task n 的实现者在 Task n 的树上重跑它（那个 Task 的表下面列出）。**安全或加锁的性质只由单元一层发现的，算缺口**：表中每一条这类性质都另有存储、组合或端到端一层的检查，例外（"按性质只在单元一层"）写在 spec 附录 A.3。
 - **评审敏感**（M4 设计 12 节约束 3）：写闸门（取连接之前进入，不持连接地等，不在持数据库的锁时再等别的闸门；每个项目至多 K 个、`max_wait`、`max_queue`、请求的期限，503 `server_busy` 带 `Retry-After: 1`；每条路上离开）；`55P03` 换成 503 只在 `bootstrap/gate.go`；按资源寻址的写在锁下重读、再判定；修改的批量写按约定五（spec 第 3 节第 12 条）。改动这些代码或测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -121,9 +121,9 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/domain/issue.go`（修改） | `unassignable` 与 `Assignees` 共用 | 5 |
 | `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新） | `updateIssue` 的九行 | 6 |
 | `server/internal/bootstrap/issue_world_test.go`（修改） | Done、`newWorkItem`（Task 6）；`newIssueWorldWith`（Task 10）；`newWorkItemIn`（Task 11） | 6、10、11 |
-| `server/internal/bootstrap/issue_write_locks_test.go`（修改） | `issueWrites` 加 `updateIssue` 的一行 | 6 |
+| `server/internal/bootstrap/issue_write_locks_test.go`（修改） | `issueWrites` 加 `updateIssue` 的一行；每行发的路径是它的操作的（`pathOf`） | 6 |
 | `server/internal/bootstrap/issue_updates_test.go`（新） | 盖戳、回答如存 | 7 |
-| `server/internal/bootstrap/issue_writes_test.go`（修改） | 事务的连接加修改（Task 7）；`newIssueRoute` 的闸门和配置（Task 10） | 7、10 |
+| `server/internal/bootstrap/issue_writes_test.go`（修改） | 创建的盖戳测试用 `newWorkItem`（Task 6）；事务的连接加修改（Task 7）；`newIssueRoute` 的闸门和配置（Task 10） | 6、7、10 |
 | `server/internal/platform/gate/gate.go`、`server/internal/platform/gate/gate_test.go`（新） | `Keyed[K]` 和它的测试 | 8 |
 | `server/internal/platform/postgres/tx.go`（修改）、`server/internal/platform/postgres/lock_timeout_test.go`（新） | `LockTimeout`、`LockNotAvailable` | 9 |
 | `server/internal/platform/config/config.go`、`server/internal/platform/config/validate.go`、`server/internal/platform/config/config_test.go`、`server/internal/platform/config/load_test.go`、`server/internal/platform/config/validate_test.go`（修改） | `issue` 的四个配置、校验、日志 | 9 |
@@ -4166,7 +4166,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `server/internal/bootstrap/permission_matrix_issue_updates_test.go`、`server/internal/modules/issue/adapter/http/update_test.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/module.go`
+- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.8、第 3 节第 2、3 条；M4 设计 5.1–5.3、6.6、9.2、9.3）
@@ -4176,11 +4176,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `issue/adapter/http`：`handler.go` 的 `UpdateIssueUseCase`、`UseCases.UpdateIssue`；`issues.go` 的 `UpdateIssue`（每个字段照原样交给用例）。`issue/module.go` 接上 `UpdateIssue`，包的说明写到取、改工作项。
 - 矩阵：`permission_matrix_issue_updates_test.go`（新）的 `updateIssue` 九行和它们的核对（`answeredIssue`、`seededIssue`、`answered`；`readsTheIssue` 移到这里）；`permission_matrix_issues_test.go`、`permission_matrix_test.go` 接上。
 - `issue_world_test.go`：Done、`newWorkItem`（alice 在 Web 建的 `fullIssue`）。
-- `issue_write_locks_test.go`：`issueWrites` 加 `updateIssue` 一行（`path` 是契约的路径，`target(t, w)`、`body(w, n)`；`reads` 是 `states`：它在锁下最先读、在锁之前不读的表；`issues` 它在锁之前就读过）。
+- `issue_write_locks_test.go`：`issueWrites` 加 `updateIssue` 一行（`path` 是契约的路径，`target(t, w)` 是发的路径、`body(w, n)`；`reads` 是 `states`：它在锁下最先读、在锁之前不读的表；`issues` 它在锁之前就读过）；`target` 不是它的 `path` 的一个路径（`pathOf`）的行在发之前失败，不在一个操作的名下测另一个操作。
+- `issue_writes_test.go`：P1a 的 `TestCreatingAWorkItemStampsItsRows` 用 `newWorkItem` 建它的工作项。
 
 **Tests:**
 - HTTP（`apitest.Main` 两个方向）：`TestUpdateIssue`（只给的字段交给用例，回答 200 和工作项）、`TestUpdateIssueHoldsTheBodyToItsStructure`（编号、排序值、父工作项、描述、日期等 P1b 之外的字段，`null`、类型不对、不是 id 的 id：`bad_request`，不到用例）、`TestUpdateIssueRefusals`。
-- 组合：`TestPermissionMatrix` 的 `updateIssue` 九行（只改名称、每个字段都给、什么都不改、已归档、另一个项目的状态、另一个项目的标签、分诊状态、指派访客、留下已离开的负责人）；`TestThePermissionMatrixCoversEveryOperation`；`TestEachIssueWriteLocksItsProjectFirst` 的 `updateIssue` 一行（拒绝的不取锁；项目最先；停在 `states` 上时持 Web 的 `FOR NO KEY UPDATE`、工作区上没有锁，`writtenTables` 没有它的写；工作区行被持 N 时照样完成）。
+- 组合：`TestPermissionMatrix` 的 `updateIssue` 九行（只改名称、每个字段都给、什么都不改、已归档、另一个项目的状态、另一个项目的标签、分诊状态、指派访客、留下已离开的负责人）；`TestThePermissionMatrixCoversEveryOperation`；`TestEachIssueWriteLocksItsProjectFirst` 的 `updateIssue` 一行（每行发的是它的操作的路径；拒绝的不取锁；项目最先；停在 `states` 上时持 Web 的 `FOR NO KEY UPDATE`、工作区上没有锁，`writtenTables` 没有它的写；工作区行被持 N 时照样完成）；`TestCreatingAWorkItemStampsItsRows` 照旧（它的工作项由 `newWorkItem` 建）。
 
 - [ ] **Step 1: 契约，生成**
 
@@ -4566,7 +4567,7 @@ func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 // fullIssue is the body of a work item in Todo, assigned to bob and
 ````
 
-`server/internal/bootstrap/issue_write_locks_test.go`（修改，7 处）：
+`server/internal/bootstrap/issue_write_locks_test.go`（修改，8 处）：
 
 ````old server/internal/bootstrap/issue_write_locks_test.go
 	"context"
@@ -4590,11 +4591,11 @@ func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 ````
 ````new server/internal/bootstrap/issue_write_locks_test.go
 // method and its path as the contract has them; target, the path it
-// sends, to Web of the world or to a row made in Web for it; body, its
-// body when alice has sent it n times before, which names the world's rows
-// and changes them anew; the answer it gets; and reads, the first table it
-// reads under its project's lock that its precheck did not read, before
-// any write of its own.
+// sends, a path of that pattern (pathOf), to Web of the world or to a row
+// made in Web for it; body, its body when alice has sent it n times
+// before, which names the world's rows and changes them anew; the answer
+// it gets; and reads, the first table it reads under its project's lock
+// that its precheck did not read, before any write of its own.
 ````
 ````old server/internal/bootstrap/issue_write_locks_test.go
 	body             func(w issueWorld) string
@@ -4622,6 +4623,16 @@ func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 		want: http.StatusOK, reads: "states"},
 ````
 ````old server/internal/bootstrap/issue_write_locks_test.go
+// interleaving 21). Every write of the contract has its row here
+// (issueWrites), which a write without one fails before any database.
+````
+````new server/internal/bootstrap/issue_write_locks_test.go
+// interleaving 21). Every write of the contract has its row here
+// (issueWrites), which a write without one fails before any database; a
+// row whose target is not a path of its operation (pathOf) fails before
+// it sends, so that no row tests another operation under its name.
+````
+````old server/internal/bootstrap/issue_write_locks_test.go
 			return o.ID == iw.op && o.Method == iw.method && o.Path == fmt.Sprintf(iw.path, "{project_id}")
 ````
 ````new server/internal/bootstrap/issue_write_locks_test.go
@@ -4632,12 +4643,43 @@ func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 			send := func(name string) <-chan answer {
 ````
 ````new server/internal/bootstrap/issue_write_locks_test.go
-			path, alices := w.base+iw.target(t, w), 0
+			target := iw.target(t, w)
+			if !pathOf(iw.path, target) {
+				t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
+			}
+			path, alices := w.base+target, 0
 			send := func(name string) <-chan answer {
 				body := iw.body(w, alices)
 				if name == "alice" {
 					alices++
 				}
+````
+
+`server/internal/bootstrap/issue_writes_test.go`（修改，3 处）：
+
+````old server/internal/bootstrap/issue_writes_test.go
+	answer := w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", w.fullIssue(), http.StatusCreated)
+	after := time.Now()
+	var created struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, answer, &created)
+````
+````new server/internal/bootstrap/issue_writes_test.go
+	item := w.newWorkItem(t)
+	after := time.Now()
+````
+````old server/internal/bootstrap/issue_writes_test.go
+			FROM issue_activities WHERE issue_id = $1`, created.ID, w.ids["alice"])
+````
+````new server/internal/bootstrap/issue_writes_test.go
+			FROM issue_activities WHERE issue_id = $1`, item, w.ids["alice"])
+````
+````old server/internal/bootstrap/issue_writes_test.go
+		WHERE a.issue_id = $1 AND a.field = 'assignees' AND a.new_identifier = $2 AND u.id = $2`, created.ID, w.ids["bob"]).Scan(&named,
+````
+````new server/internal/bootstrap/issue_writes_test.go
+		WHERE a.issue_id = $1 AND a.field = 'assignees' AND a.new_identifier = $2 AND u.id = $2`, item, w.ids["bob"]).Scan(&named,
 ````
 
 `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新文件，163 行）：
@@ -4859,7 +4901,7 @@ func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 Run: `go -C server test -count=1 ./internal/modules/issue/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$|TestEachIssueWriteLocksItsProjectFirst$' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$|TestEachIssueWriteLocksItsProjectFirst$|TestCreatingAWorkItemStampsItsRows$' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -4880,7 +4922,7 @@ Expected: 通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/permission_matrix_issue_updates_test.go server/internal/bootstrap/permission_matrix_issues_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/handler_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/permission_matrix_issue_updates_test.go server/internal/bootstrap/permission_matrix_issues_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/handler_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P1): updateIssue in the API, wired, in the matrix and the lock shape

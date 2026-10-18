@@ -40,12 +40,8 @@ type issueStamp struct {
 func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 	w := newIssueWorld(t)
 	before := time.Now().Truncate(time.Microsecond)
-	answer := w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", w.fullIssue(), http.StatusCreated)
+	item := w.newWorkItem(t)
 	after := time.Now()
-	var created struct {
-		ID uuid.UUID `json:"id"`
-	}
-	decodeAnswer(t, answer, &created)
 
 	rows, err := w.pool.Query(pgtest.Soon(t), `
 		SELECT 'issues', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issues WHERE id = $1
@@ -56,7 +52,7 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 		UNION ALL SELECT 'issue_subscribers', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issue_subscribers
 			WHERE issue_id = $1
 		UNION ALL SELECT 'issue_activities', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 AND actor_id = $2
-			FROM issue_activities WHERE issue_id = $1`, created.ID, w.ids["alice"])
+			FROM issue_activities WHERE issue_id = $1`, item, w.ids["alice"])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +78,7 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 
 	var named, displayName string
 	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT a.new_value, u.display_name FROM issue_activities a, users u
-		WHERE a.issue_id = $1 AND a.field = 'assignees' AND a.new_identifier = $2 AND u.id = $2`, created.ID, w.ids["bob"]).Scan(&named,
+		WHERE a.issue_id = $1 AND a.field = 'assignees' AND a.new_identifier = $2 AND u.id = $2`, item, w.ids["bob"]).Scan(&named,
 		&displayName); err != nil {
 		t.Fatal(err)
 	}

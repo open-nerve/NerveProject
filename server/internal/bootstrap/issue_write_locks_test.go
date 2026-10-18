@@ -19,11 +19,11 @@ import (
 // issueWrite is a write on the work-item side as
 // TestEachIssueWriteLocksItsProjectFirst sends it: its operation, its
 // method and its path as the contract has them; target, the path it
-// sends, to Web of the world or to a row made in Web for it; body, its
-// body when alice has sent it n times before, which names the world's rows
-// and changes them anew; the answer it gets; and reads, the first table it
-// reads under its project's lock that its precheck did not read, before
-// any write of its own.
+// sends, a path of that pattern (pathOf), to Web of the world or to a row
+// made in Web for it; body, its body when alice has sent it n times
+// before, which names the world's rows and changes them anew; the answer
+// it gets; and reads, the first table it reads under its project's lock
+// that its precheck did not read, before any write of its own.
 type issueWrite struct {
 	op, method, path string
 	target           func(t *testing.T, w issueWorld) string
@@ -73,7 +73,9 @@ func writesOnIssues(ops []apitest.Operation) []string {
 // row no more than a foreign key's FOR KEY SHARE; a caller it refuses
 // takes no lock at all (M4 design 3.5, decision point 1: B; 9.3,
 // interleaving 21). Every write of the contract has its row here
-// (issueWrites), which a write without one fails before any database.
+// (issueWrites), which a write without one fails before any database; a
+// row whose target is not a path of its operation (pathOf) fails before
+// it sends, so that no row tests another operation under its name.
 // Each write, on Web of the world (newIssueWorld):
 //   - Refused, no lock: another transaction holds every table it reads or
 //     writes but users (issueTables) IN EXCLUSIVE MODE, which a row lock
@@ -113,7 +115,11 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	w := newIssueWorld(t)
 	for _, iw := range issueWrites {
 		t.Run(iw.op, func(t *testing.T) {
-			path, alices := w.base+iw.target(t, w), 0
+			target := iw.target(t, w)
+			if !pathOf(iw.path, target) {
+				t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
+			}
+			path, alices := w.base+target, 0
 			send := func(name string) <-chan answer {
 				body := iw.body(w, alices)
 				if name == "alice" {
