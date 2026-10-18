@@ -56,19 +56,24 @@ func TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction(t *testi
 // under the lock, ended by a failing port, or by a panic, which goes on.
 func TestAWriteLeavesTheGateOnEveryPath(t *testing.T) {
 	for _, tt := range []struct {
-		name string
-		set  func(w *world)
+		name      string
+		set       func(w *world)
+		recovered any // what goes on past Execute: the write's panic; nil for none
 	}{
-		{"refused under the lock", func(w *world) { w.project.locked.Archived = true }},
-		{"a failing port", func(w *world) { w.log.fail = "UpdateIssue" }},
-		{"a panic", func(w *world) { w.project.waited = func() { panic("connection lost") } }},
+		{"refused under the lock", func(w *world) { w.project.locked.Archived = true }, nil},
+		{"a failing port", func(w *world) { w.log.fail = "UpdateIssue" }, nil},
+		{"a panic", func(w *world) { w.project.waited = func() { panic("connection lost") } }, "connection lost"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, w, id := newUpdate()
 			_, update := gated(w, nil)
 			tt.set(w)
 			func() {
-				defer func() { _ = recover() }()
+				defer func() {
+					if r := recover(); r != tt.recovered {
+						t.Errorf("recovered %v past Execute(); want %v", r, tt.recovered)
+					}
+				}()
 				if _, err := update.Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")}); err == nil {
 					t.Error("Execute() = nil, want its refusal or failure")
 				}

@@ -44,8 +44,9 @@ type WriteGate interface {
 	// Enter returns once a write on the project's work items may begin
 	// its transaction, with the function that leaves the gate, which the
 	// write calls once its transaction has ended. It waits holding no
-	// connection and no lock; a write that may wait no longer is refused
-	// (503 server_busy) and holds nothing.
+	// connection and no lock. A write that may wait no longer is refused
+	// (503 server_busy); one whose request is cancelled while it waits
+	// ends with context.Canceled. Either holds nothing.
 	Enter(ctx context.Context, projectID uuid.UUID) (leave func(), err error)
 }
 

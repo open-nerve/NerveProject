@@ -51,10 +51,10 @@ func (f fakeTx) WithinTx(ctx context.Context, fn func(ctx context.Context) error
 	return fn(context.WithValue(ctx, inTxKey{}, true))
 }
 
-// fakeGate is the write gate: it lets every write in, or refuses each with
-// refuse, when set; with a log, it logs each entry, " outside tx" when it
-// is outside a transaction, and each leaving, " in tx" when the
-// transaction has not ended.
+// fakeGate is the write gate. Without a log, it lets every write in. With
+// one, it logs each entry, " outside tx" when it is outside a transaction,
+// then refuses the write with refuse, when set, or lets it in and logs its
+// leaving, " in tx" when the transaction has not ended.
 type fakeGate struct {
 	log    *callLog
 	refuse error

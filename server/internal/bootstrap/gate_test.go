@@ -21,7 +21,9 @@ import (
 // second write on the project is refused at once when the queue is full,
 // and when it has waited max_wait; one whose request reaches its deadline
 // while it waits is server_busy too, and one whose request is cancelled
-// keeps context.Canceled. Once the first leaves, a write enters.
+// keeps context.Canceled. A write on another project meanwhile enters at
+// once: each project has places of its own (11.11). Once the first leaves,
+// a write enters.
 func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 	project := uuid.NewV7()
 	waiting := func(limit time.Duration, cancelled bool) func() (context.Context, context.CancelFunc) {
@@ -56,6 +58,11 @@ func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 			t.Errorf("%s: the second write: %v", tt.name, err)
 		}
 		cancel()
+		if other, err := g.Enter(context.Background(), uuid.NewV7()); err != nil {
+			t.Fatalf("%s: a write on another project: %v, want it in at once", tt.name, err)
+		} else {
+			other()
+		}
 		leave()
 		if leave, err := g.Enter(context.Background(), project); err != nil {
 			t.Errorf("%s: a write after the first left: %v, want it in", tt.name, err)
@@ -109,26 +116,29 @@ func (e endingIn) WithinTx(ctx context.Context, fn func(ctx context.Context) err
 
 // A project with more writes on its work items than the app's
 // issue.write_gate and issue.write_lock_timeout allow answers the writes
-// beyond them 503 server_busy with Retry-After: 1 (M4 design 3.5, 11.11),
-// and a write its precheck refuses takes no place in the gate. In an app
-// that lets one write a project in at once, queues one more for a second
-// at most, and ends a write's wait for a lock at three seconds: a
-// transaction holds Web's row, and alice's change of a work item of Web
-// enters the gate and waits for the row. Of bob's creation in Web and
-// alice's, sent then, one waits in the queue and is refused at max_wait,
-// before alice's change is at its lock timeout; the other before it could
-// have waited max_wait, the queue full. olga's change of the work item,
-// which she does not see, and walt's, who may not change it, are refused
-// by their prechecks, 404 and 403, while the gate's one place is taken,
-// before a wait at the gate could have ended. alice's change is refused at
-// the lock timeout, well before the request's. Once the row is free, a
-// change and a creation go through.
+// beyond them 503 server_busy with Retry-After: 1 (M4 design 3.5, 11.11);
+// a write its precheck refuses takes no place in the gate, and a write on
+// another project does not wait for it. In an app that lets one write a
+// project in at once, queues one more for a second at most, and ends a
+// write's wait for a lock at three seconds: a transaction holds Web's row,
+// and alice's change of a work item of Web enters the gate and waits for
+// the row. Of bob's creation in Web and alice's, sent then, one waits in
+// the queue and is refused at max_wait, before alice's change is at its
+// lock timeout; the other before it could have waited max_wait, the queue
+// full. olga's change of the work item, which she does not see, and
+// walt's, who may not change it, are refused by their prechecks, 404 and
+// 403, while the gate's one place is taken, before a wait at the gate
+// could have ended; alice's creation in Ops, another project of acme, goes
+// through before one could have ended too: Ops has places of its own.
+// alice's change is refused at the lock timeout, well before the
+// request's. Once the row is free, a change and a creation go through.
 func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Second, MaxQueue: 1},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	item := w.newWorkItem(t)
+	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 	path := "/api/v0/issues/" + item.String()
 	change := newRequest(t, http.MethodPatch, w.base+path, w.tokens["alice"], []byte(`{"name":"Mend"}`))
 	w.contract.CheckRequest(t, change)
@@ -175,6 +185,11 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 			t.Errorf("%s's change answered %d after %v; want it at once, refused by its precheck before the gate", refused.name,
 				refused.want, took)
 		}
+	}
+	begun := time.Now()
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+ops.String()+"/issues", `{"name":"Fix"}`, http.StatusCreated)
+	if took := time.Since(begun); took >= time.Second {
+		t.Errorf("alice's creation in Ops answered after %v; want it at once: Ops has places of its own", took)
 	}
 	a := receiveWithin(t, changed, 4*time.Second, "answer to alice's change")
 	if a.err != nil {

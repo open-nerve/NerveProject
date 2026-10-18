@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`platform/gate/gate_test.go`（311 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`platform/gate/gate_test.go`（311 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`bootstrap/gate_test.go`（278 行）、`bootstrap/issue_pool_test.go`（266 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。本 plan 不改 `tools/keywords.json`：`phase` 照旧是 `M4/P1`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；配置文件的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -6543,9 +6543,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `archtest/composition_test.go`：命令行不建写闸门（`platform/gate` 进 `TestCommandsComposeNoServerAndNoJobs` 的禁止表）。
 
 **Tests:**
-- 单元（`fakeGate` 记下进出，事务还没有结束时的离开记作 `in tx`：`fakeTx.WithinTx` 在事务里设 `callLog.inTx`、`defer` 复位；`fakes_test.go`）：`TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestAWriteLeavesTheGateOnEveryPath`（锁下的拒绝、端口的失败、`fn` 的 panic，每条路上都在事务结束之后离开）、`TestTheGateTakesOnlyWritesThePrecheckLetThrough`（预检拒绝的不进；闸门拒绝的原样、不开事务）；`get_issue_test.go` 的 `newGet` 用记下进出的闸门，`TestGetIssueReadsTheWorkItem` 核对读不进闸门；创建、读、修改的测试照旧通过。
-- `bootstrap`：`TestTheWriteGateAnswersItsRefusalsAsServerBusy`（一个位置被持时，队列满、等到 `max_wait`、请求到期都是一秒后重试的 `server_busy`，请求取消的照原样；第一个离开之后能进）、`TestABusyTransactionIsServerBusy`（包了一层的 `55P03` 换，`40P01` 照原样，提交照旧）。
-- 组合：`TestAProjectTooBusyForAWriteAnswersServerBusy`（一个项目一个位置、排队一个、`max_wait` 1 秒、锁的期限 3 秒：别的事务持 Web 的行时，alice 的修改进了闸门、等行；bob 和 alice 随后的两个创建，一个排队、到 `max_wait` 时 503，另一个在 `max_wait` 之前 503（队列满），都带 `Retry-After: 1`；olga、walt 的修改在位置被占时由预检答 404、403，都在 `max_wait` 之前（预检拒绝的不占闸门）；alice 的修改在约 3 秒（等锁到期）503，远早于请求的期限；行放开之后修改和创建都通过）；`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（请求的期限 3 秒、锁的期限 2.5 秒、一个项目一个位置、`max_wait` 10 秒：别的事务以 `ACCESS EXCLUSIVE` 持 `issue_labels`，bob 的修改在预检里等它；1.5 秒之后 alice 在 Web 的创建（预检不读 `issue_labels`）占了位置、等 Web 的行；`issue_labels` 放开之后 bob 的修改在闸门上排在她后面，在他的请求的期限（3 秒）503，她的创建在等锁到期时（bob 的修改发出之后约 4 秒）503；bob 的修改在 3 到 4 秒之间：她最早在 4 秒离开闸门，T8.7、T10.16 的 bob 只在那之后得到回答）。
+- 单元（`fakeGate` 记下进出，事务还没有结束时的离开记作 `in tx`：`fakeTx.WithinTx` 在事务里设 `callLog.inTx`、`defer` 复位；`fakes_test.go`）：`TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestAWriteLeavesTheGateOnEveryPath`（锁下的拒绝、端口的失败、`fn` 的 panic，每条路上都在事务结束之后离开；`fn` 的 panic 照样传给调用者，别的路上没有 panic）、`TestTheGateTakesOnlyWritesThePrecheckLetThrough`（预检拒绝的不进；闸门拒绝的原样、不开事务）；`get_issue_test.go` 的 `newGet` 用记下进出的闸门，`TestGetIssueReadsTheWorkItem` 核对读不进闸门；创建、读、修改的测试照旧通过。
+- `bootstrap`：`TestTheWriteGateAnswersItsRefusalsAsServerBusy`（一个位置被持时，队列满、等到 `max_wait`、请求到期都是一秒后重试的 `server_busy`，请求取消的照原样；这时另一个项目的写立即进入；第一个离开之后能进）、`TestABusyTransactionIsServerBusy`（包了一层的 `55P03` 换，`40P01` 照原样，提交照旧）。
+- 组合：`TestAProjectTooBusyForAWriteAnswersServerBusy`（一个项目一个位置、排队一个、`max_wait` 1 秒、锁的期限 3 秒：别的事务持 Web 的行时，alice 的修改进了闸门、等行；bob 和 alice 随后的两个创建，一个排队、到 `max_wait` 时 503，另一个在 `max_wait` 之前 503（队列满），都带 `Retry-After: 1`；olga、walt 的修改在位置被占时由预检答 404、403，都在 `max_wait` 之前（预检拒绝的不占闸门）；alice 在 Ops（acme 的另一个项目，测试先建好）的创建这时也在 `max_wait` 之前答 201（每个项目有自己的位置）；alice 的修改在约 3 秒（等锁到期）503，远早于请求的期限；行放开之后修改和创建都通过）；`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（请求的期限 3 秒、锁的期限 2.5 秒、一个项目一个位置、`max_wait` 10 秒：别的事务以 `ACCESS EXCLUSIVE` 持 `issue_labels`，bob 的修改在预检里等它；1.5 秒之后 alice 在 Web 的创建（预检不读 `issue_labels`）占了位置、等 Web 的行；`issue_labels` 放开之后 bob 的修改在闸门上排在她后面，在他的请求的期限（3 秒）503，她的创建在等锁到期时（bob 的修改发出之后约 4 秒）503；bob 的修改在 3 到 4 秒之间：她最早在 4 秒离开闸门，T8.7、T10.16 的 bob 只在那之后得到回答）。
 - HTTP（`apitest.Main` 两个方向）：`createIssue`、`updateIssue` 各一行 503 `server_busy`、`Retry-After: 1`。
 - `archtest`：`TestCommandsComposeNoServerAndNoJobs`。
 
@@ -6689,10 +6689,10 @@ const busy = `{"status":503,"code":"server_busy","title":"Service Unavailable","
 	return fn(context.WithValue(ctx, inTxKey{}, true))
 }
 
-// fakeGate is the write gate: it lets every write in, or refuses each with
-// refuse, when set; with a log, it logs each entry, " outside tx" when it
-// is outside a transaction, and each leaving, " in tx" when the
-// transaction has not ended.
+// fakeGate is the write gate. Without a log, it lets every write in. With
+// one, it logs each entry, " outside tx" when it is outside a transaction,
+// then refuses the write with refuse, when set, or lets it in and logs its
+// leaving, " in tx" when the transaction has not ended.
 type fakeGate struct {
 	log    *callLog
 	refuse error
@@ -6820,7 +6820,7 @@ func NewLocks(projects ProjectGate, issues IssueReader, auth shared.Authorizer, 
 	defer leave()
 ````
 
-`server/internal/modules/issue/app/lock_test.go`（新文件，102 行）：
+`server/internal/modules/issue/app/lock_test.go`（新文件，107 行）：
 
 ````file server/internal/modules/issue/app/lock_test.go
 package app_test
@@ -6881,19 +6881,24 @@ func TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction(t *testi
 // under the lock, ended by a failing port, or by a panic, which goes on.
 func TestAWriteLeavesTheGateOnEveryPath(t *testing.T) {
 	for _, tt := range []struct {
-		name string
-		set  func(w *world)
+		name      string
+		set       func(w *world)
+		recovered any // what goes on past Execute: the write's panic; nil for none
 	}{
-		{"refused under the lock", func(w *world) { w.project.locked.Archived = true }},
-		{"a failing port", func(w *world) { w.log.fail = "UpdateIssue" }},
-		{"a panic", func(w *world) { w.project.waited = func() { panic("connection lost") } }},
+		{"refused under the lock", func(w *world) { w.project.locked.Archived = true }, nil},
+		{"a failing port", func(w *world) { w.log.fail = "UpdateIssue" }, nil},
+		{"a panic", func(w *world) { w.project.waited = func() { panic("connection lost") } }, "connection lost"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, w, id := newUpdate()
 			_, update := gated(w, nil)
 			tt.set(w)
 			func() {
-				defer func() { _ = recover() }()
+				defer func() {
+					if r := recover(); r != tt.recovered {
+						t.Errorf("recovered %v past Execute(); want %v", r, tt.recovered)
+					}
+				}()
 				if _, err := update.Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")}); err == nil {
 					t.Error("Execute() = nil, want its refusal or failure")
 				}
@@ -6943,8 +6948,9 @@ type WriteGate interface {
 	// Enter returns once a write on the project's work items may begin
 	// its transaction, with the function that leaves the gate, which the
 	// write calls once its transaction has ended. It waits holding no
-	// connection and no lock; a write that may wait no longer is refused
-	// (503 server_busy) and holds nothing.
+	// connection and no lock. A write that may wait no longer is refused
+	// (503 server_busy); one whose request is cancelled while it waits
+	// ends with context.Canceled. Either holds nothing.
 	Enter(ctx context.Context, projectID uuid.UUID) (leave func(), err error)
 ````
 
@@ -7063,7 +7069,7 @@ func (b busyTx) WithinTx(ctx context.Context, fn func(ctx context.Context) error
 }
 ````
 
-`server/internal/bootstrap/gate_test.go`（新文件，263 行）：
+`server/internal/bootstrap/gate_test.go`（新文件，278 行）：
 
 ````file server/internal/bootstrap/gate_test.go
 package bootstrap
@@ -7089,7 +7095,9 @@ import (
 // second write on the project is refused at once when the queue is full,
 // and when it has waited max_wait; one whose request reaches its deadline
 // while it waits is server_busy too, and one whose request is cancelled
-// keeps context.Canceled. Once the first leaves, a write enters.
+// keeps context.Canceled. A write on another project meanwhile enters at
+// once: each project has places of its own (11.11). Once the first leaves,
+// a write enters.
 func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 	project := uuid.NewV7()
 	waiting := func(limit time.Duration, cancelled bool) func() (context.Context, context.CancelFunc) {
@@ -7124,6 +7132,11 @@ func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 			t.Errorf("%s: the second write: %v", tt.name, err)
 		}
 		cancel()
+		if other, err := g.Enter(context.Background(), uuid.NewV7()); err != nil {
+			t.Fatalf("%s: a write on another project: %v, want it in at once", tt.name, err)
+		} else {
+			other()
+		}
 		leave()
 		if leave, err := g.Enter(context.Background(), project); err != nil {
 			t.Errorf("%s: a write after the first left: %v, want it in", tt.name, err)
@@ -7177,26 +7190,29 @@ func (e endingIn) WithinTx(ctx context.Context, fn func(ctx context.Context) err
 
 // A project with more writes on its work items than the app's
 // issue.write_gate and issue.write_lock_timeout allow answers the writes
-// beyond them 503 server_busy with Retry-After: 1 (M4 design 3.5, 11.11),
-// and a write its precheck refuses takes no place in the gate. In an app
-// that lets one write a project in at once, queues one more for a second
-// at most, and ends a write's wait for a lock at three seconds: a
-// transaction holds Web's row, and alice's change of a work item of Web
-// enters the gate and waits for the row. Of bob's creation in Web and
-// alice's, sent then, one waits in the queue and is refused at max_wait,
-// before alice's change is at its lock timeout; the other before it could
-// have waited max_wait, the queue full. olga's change of the work item,
-// which she does not see, and walt's, who may not change it, are refused
-// by their prechecks, 404 and 403, while the gate's one place is taken,
-// before a wait at the gate could have ended. alice's change is refused at
-// the lock timeout, well before the request's. Once the row is free, a
-// change and a creation go through.
+// beyond them 503 server_busy with Retry-After: 1 (M4 design 3.5, 11.11);
+// a write its precheck refuses takes no place in the gate, and a write on
+// another project does not wait for it. In an app that lets one write a
+// project in at once, queues one more for a second at most, and ends a
+// write's wait for a lock at three seconds: a transaction holds Web's row,
+// and alice's change of a work item of Web enters the gate and waits for
+// the row. Of bob's creation in Web and alice's, sent then, one waits in
+// the queue and is refused at max_wait, before alice's change is at its
+// lock timeout; the other before it could have waited max_wait, the queue
+// full. olga's change of the work item, which she does not see, and
+// walt's, who may not change it, are refused by their prechecks, 404 and
+// 403, while the gate's one place is taken, before a wait at the gate
+// could have ended; alice's creation in Ops, another project of acme, goes
+// through before one could have ended too: Ops has places of its own.
+// alice's change is refused at the lock timeout, well before the
+// request's. Once the row is free, a change and a creation go through.
 func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Second, MaxQueue: 1},
 			WriteLockTimeout: 3 * time.Second}
 	})
 	item := w.newWorkItem(t)
+	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 	path := "/api/v0/issues/" + item.String()
 	change := newRequest(t, http.MethodPatch, w.base+path, w.tokens["alice"], []byte(`{"name":"Mend"}`))
 	w.contract.CheckRequest(t, change)
@@ -7243,6 +7259,11 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 			t.Errorf("%s's change answered %d after %v; want it at once, refused by its precheck before the gate", refused.name,
 				refused.want, took)
 		}
+	}
+	begun := time.Now()
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+ops.String()+"/issues", `{"name":"Fix"}`, http.StatusCreated)
+	if took := time.Since(begun); took >= time.Second {
+		t.Errorf("alice's creation in Ops answered after %v; want it at once: Ops has places of its own", took)
 	}
 	a := receiveWithin(t, changed, 4*time.Second, "answer to alice's change")
 	if a.err != nil {
