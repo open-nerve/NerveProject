@@ -15,16 +15,16 @@ import (
 // The command line's compositions, bootstrap.Users and bootstrap.Workspaces,
 // are a pool and the modules' administrator use cases (M2 design 3.17, M3
 // design 6.6): nothing they call builds a module's HTTP side or the
-// Authorizer (a module's New), the HTTP server, a rate limiter or a jobs
-// client. Each builds only what its commands use: Users, identity's
-// NewAdmin and, for `nerve users deactivate`, workspace's NewDeactivator
-// and project's NewCascade over issue's Provide (M4 design 6.6), never
-// workspace's NewAdmin; Workspaces, workspace's NewAdmin, never the
-// deactivation's three, whose cascade no command of it calls. The rule
-// follows the static calls from each; the commands are func values it
-// calls dynamically, so they are not followed: they only receive the
-// composition. Reaching what each builds shows the walk sees the
-// composition at all.
+// Authorizer (a module's New), the HTTP server, a rate limiter, a write
+// gate or a jobs client. Each builds only what its commands use: Users,
+// identity's NewAdmin and, for `nerve users deactivate`, workspace's
+// NewDeactivator and project's NewCascade over issue's Provide (M4 design
+// 6.6), never workspace's NewAdmin; Workspaces, workspace's NewAdmin,
+// never the deactivation's three, whose cascade no command of it calls.
+// The rule follows the static calls from each; the commands are func
+// values it calls dynamically, so they are not followed: they only
+// receive the composition. Reaching what each builds shows the walk sees
+// the composition at all.
 func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 	registerSources(t)
 	cfg := &packages.Config{
@@ -85,8 +85,8 @@ func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 // composesMore reports whether f builds what the command line must not: a
 // module's HTTP side or the Authorizer (New in a module's root package:
 // identity.New, workspace.New, access.New and those to come), the HTTP
-// server (platform/httpserver), a rate limiter or a jobs client
-// (platform/jobs, River).
+// server (platform/httpserver), a rate limiter, a write gate
+// (platform/gate) or a jobs client (platform/jobs, River).
 func composesMore(f *ssa.Function) bool {
 	if f.Pkg == nil {
 		return false
@@ -96,7 +96,8 @@ func composesMore(f *ssa.Function) bool {
 		return true
 	}
 	return slices.ContainsFunc([]string{
-		m("internal/platform/httpserver"), m("internal/platform/ratelimit"), m("internal/platform/jobs"), "github.com/riverqueue/river",
+		m("internal/platform/httpserver"), m("internal/platform/ratelimit"), m("internal/platform/gate"), m("internal/platform/jobs"),
+		"github.com/riverqueue/river",
 	}, func(dir string) bool { return within(path, dir) })
 }
 

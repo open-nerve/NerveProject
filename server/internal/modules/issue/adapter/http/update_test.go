@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 	"uuid"
 
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http"
@@ -80,13 +81,15 @@ func TestUpdateIssueRefusals(t *testing.T) {
 			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
 		{"an archived project", domain.ErrProjectArchived, http.StatusConflict,
 			`{"status":409,"code":"project.archived","title":"Conflict","detail":"The project is archived; unarchive it to change it."}`},
+		{"a busy project", shared.ServerBusy(time.Second), http.StatusServiceUnavailable, busy},
 		{"a failure", errGone, http.StatusInternalServerError,
 			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	} {
 		h := newServer(t, httpadapter.UseCases{UpdateIssue: &fakeUpdate{err: tt.err}})
 		res, body := do(t, h, request(http.MethodPatch, "/api/v0/issues/"+webSeven.ID.String(), "alice", `{"name":"Mend"}`))
-		if res.StatusCode != tt.status || body != tt.want+"\n" {
-			t.Errorf("%s: PATCH = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
+		if res.StatusCode != tt.status || body != tt.want+"\n" || tt.want == busy && res.Header.Get("Retry-After") != "1" {
+			t.Errorf("%s: PATCH = %d %s, Retry-After %q; want %d %s", tt.name, res.StatusCode, body, res.Header.Get("Retry-After"), tt.status,
+				tt.want)
 		}
 	}
 }

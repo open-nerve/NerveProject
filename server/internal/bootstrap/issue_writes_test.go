@@ -14,6 +14,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -60,13 +61,20 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 	}
 }
 
+// testIssueConfig is the work-item side's configuration of the tests'
+// apps: the defaults, the lock timeout under testConfig's request timeout.
+var testIssueConfig = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
+	WriteLockTimeout: 4 * time.Second}
+
 // newIssueRoute is the issue module (issue.New) on pool, with tx its
-// transactions, the Authorizer on pool and project's and identity's ports
-// converted, all as bootstrap wires them.
+// transactions, the write gate of testIssueConfig, the Authorizer on pool
+// and project's and identity's ports converted, all as bootstrap wires
+// them.
 func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
-	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizerOn(pool),
-		Projects: issueProjects{projects: project.Provide(pool).IssueProjects}, Profiles: issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
+	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: tx, WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
+		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
+		Profiles: issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
 }
 
 // Each write on the work-item side runs every statement of its transaction

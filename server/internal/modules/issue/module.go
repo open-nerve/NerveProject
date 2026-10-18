@@ -78,8 +78,12 @@ type (
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
-	Pool       *pgxpool.Pool
-	Tx         shared.TxManager
+	Pool *pgxpool.Pool
+	// Tx are the transactions of the module's writes, each of which waits
+	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
+	Tx shared.TxManager
+	// WriteGate is the write gate of each project (bootstrap/gate.go).
+	WriteGate  app.WriteGate
 	Clock      app.Clock
 	Authorizer shared.Authorizer
 	// Projects are project's IssueProjects, converted (bootstrap/ports.go).
@@ -97,7 +101,7 @@ type Module struct {
 // registered or injected after it (M4 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.Tx)
+	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	return &Module{uc: httpadapter.UseCases{
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
 			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,

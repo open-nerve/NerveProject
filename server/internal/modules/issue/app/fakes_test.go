@@ -22,10 +22,11 @@ type inTxKey struct{}
 // callLog records the calls of the fakes that share or embed it, in order,
 // each with its arguments, and " outside tx" when it ran outside a
 // transaction. It fails the call named in fail with errDisk, after logging
-// it.
+// it. inTx is set while a fakeTx's transaction runs.
 type callLog struct {
 	calls []string
 	fail  string
+	inTx  bool
 }
 
 func (l *callLog) add(ctx context.Context, name string, args ...any) error {
@@ -45,7 +46,37 @@ type fakeTx struct{ log *callLog }
 
 func (f fakeTx) WithinTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	f.log.calls = append(f.log.calls, "Begin")
+	f.log.inTx = true
+	defer func() { f.log.inTx = false }()
 	return fn(context.WithValue(ctx, inTxKey{}, true))
+}
+
+// fakeGate is the write gate: it lets every write in, or refuses each with
+// refuse, when set; with a log, it logs each entry, " outside tx" when it
+// is outside a transaction, and each leaving, " in tx" when the
+// transaction has not ended.
+type fakeGate struct {
+	log    *callLog
+	refuse error
+}
+
+func (f fakeGate) Enter(ctx context.Context, projectID uuid.UUID) (func(), error) {
+	if f.log == nil {
+		return func() {}, nil
+	}
+	if err := f.log.add(ctx, "Enter", projectID); err != nil {
+		return nil, err
+	}
+	if f.refuse != nil {
+		return nil, f.refuse
+	}
+	return func() {
+		call := line("Leave", projectID)
+		if f.log.inTx {
+			call += " in tx"
+		}
+		f.log.calls = append(f.log.calls, call)
+	}, nil
 }
 
 // clockAt stands at an instant; each read is logged as "Now".

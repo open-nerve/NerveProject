@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -37,10 +38,19 @@ type issueWorld struct {
 // memberships of acme through the workspace store (inWorkspaceOf).
 func newIssueWorld(t *testing.T) issueWorld {
 	t.Helper()
+	return newIssueWorldWith(t, func(*config.Config) {})
+}
+
+// newIssueWorldWith is newIssueWorld in an app whose configuration,
+// testConfig's, configure changes first.
+func newIssueWorldWith(t *testing.T, configure func(cfg *config.Config)) issueWorld {
+	t.Helper()
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
-	w := issueWorld{contract: contract, base: startApp(t, testConfig(t, dbURL, false), migrations.FS()), pool: openPool(t, dbURL),
-		tokens: map[string]string{}, ids: map[string]uuid.UUID{}}
+	cfg := testConfig(t, dbURL, false)
+	configure(&cfg)
+	w := issueWorld{contract: contract, base: startApp(t, cfg, migrations.FS()), pool: openPool(t, dbURL), tokens: map[string]string{},
+		ids: map[string]uuid.UUID{}}
 	for _, name := range []string{"alice", "bob", "walt", "wanda", "olga"} {
 		w.tokens[name] = registerAccount(t, contract, w.base, name+"@example.com").AccessToken
 		w.ids[name] = accountID(t, contract, w.base, w.tokens[name])

@@ -34,9 +34,11 @@ paths:
         65535 for the state's first; in a state of the completed group it is
         completed at its creation. The caller and the assignees subscribe
         to it; its activity says it was created, and assigned to each
-        assignee. Every row it writes is the caller's, at one moment.
+        assignee. Every row it writes is the caller's, at one moment. A
+        project with too many writes on its work items at once answers
+        server_busy, with Retry-After: try again then.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived, server_busy]
       requestBody:
         required: true
         content:
@@ -102,9 +104,11 @@ paths:
         completed; the accounts newly assigned subscribe to it; its
         activity says what changed: the name, the priority, the state, and
         each label and each assignee added and removed. Every row it writes
-        is the caller's, at one moment.
+        is the caller's, at one moment. A project with too many writes on
+        its work items at once answers server_busy, with Retry-After: try
+        again then.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived]
+      x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, server_busy]
       requestBody:
         required: true
         content:

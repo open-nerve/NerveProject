@@ -109,7 +109,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
 	})
 	issues := issue.New(issue.Deps{
-		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,
+		Pool: pool, Tx: newIssueTx(pool, cfg), WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: clock.System{}, Authorizer: authorizer,
 		Projects: issueProjects{projects: projectPorts.IssueProjects},
 		Profiles: issueProfiles{profiles: identityPorts.PublicProfiles},
 	})

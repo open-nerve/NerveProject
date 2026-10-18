@@ -14,26 +14,29 @@ import (
 // outside the write's transaction, the precheck: the project, or the work
 // item the write names and through it its project, read without a lock,
 // and the decision on it, which answers every refusal there, so a caller
-// who would be refused takes no lock at all. Then, in the write's
-// transaction, the project's row FOR NO KEY UPDATE, its workspace's row
-// not locked: the write's first lock, which every write on the project's
-// work items, states, labels and memberships also takes, so they run one
-// after another; the work item read again under it; and the decision again
-// under it, which is final: a removal or a demotion that committed while
-// the write waited is seen. A read of a work item takes the same decision
-// on its project, without a lock (see). issue.New builds one Locks for
-// every use case: none holds an Authorizer or a transaction of its own.
+// who would be refused takes no lock at all, nor the project's place in
+// the write gate. Then the write gate, waited for holding no connection
+// and no lock (11.11). Then, in the write's transaction, the project's row
+// FOR NO KEY UPDATE, its workspace's row not locked: the write's first
+// lock, which every write on the project's work items, states, labels and
+// memberships also takes, so they run one after another; the work item
+// read again under it; and the decision again under it, which is final: a
+// removal or a demotion that committed while the write waited is seen. A
+// read of a work item takes the same decision on its project, without a
+// lock (see). issue.New builds one Locks for every use case: none holds an
+// Authorizer, a write gate or a transaction of its own.
 type Locks struct {
 	projects ProjectGate
 	issues   IssueReader
 	auth     shared.Authorizer
+	gate     WriteGate
 	tx       shared.TxManager
 }
 
 // NewLocks returns the locks over project's gate, the work items' reads,
-// the Authorizer and the transactions.
-func NewLocks(projects ProjectGate, issues IssueReader, auth shared.Authorizer, tx shared.TxManager) Locks {
-	return Locks{projects: projects, issues: issues, auth: auth, tx: tx}
+// the Authorizer, the write gate and the transactions.
+func NewLocks(projects ProjectGate, issues IssueReader, auth shared.Authorizer, gate WriteGate, tx shared.TxManager) Locks {
+	return Locks{projects: projects, issues: issues, auth: auth, gate: gate, tx: tx}
 }
 
 // write is a write on the work-item side, as Locks takes its lock: the
@@ -53,15 +56,22 @@ type held struct {
 	issue   domain.Issue
 }
 
-// run takes w's precheck, before any lock and outside any transaction,
-// then in one transaction w's lock and decision, and runs fn in it with
-// what they hold (M4 design 3.5): w's whole write. A refusal of either is
-// its answer, and fn does not run.
+// run takes w's precheck, before any lock and outside any transaction;
+// then the write gate of w's project; then in one transaction w's lock and
+// decision, and runs fn in it with what they hold (M4 design 3.5, 11.11):
+// w's whole write. It leaves the gate once the transaction has ended, on
+// every path, a panic's too. A refusal of the precheck, the gate or the
+// decision is its answer, and fn does not run.
 func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx context.Context, h held) error) error {
 	w, err := l.precheck(ctx, actor, w)
 	if err != nil {
 		return err
 	}
+	leave, err := l.gate.Enter(ctx, w.project)
+	if err != nil {
+		return err
+	}
+	defer leave()
 	return l.tx.WithinTx(ctx, func(ctx context.Context) error {
 		h, err := l.lockAndDecide(ctx, actor, w)
 		if err != nil {

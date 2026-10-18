@@ -37,6 +37,18 @@ type LockedProject struct {
 	DefaultAssigneeID *uuid.UUID
 }
 
+// WriteGate bounds the writes on one project's work items that hold a
+// connection at once, in this process (M4 design 3.5, 11.11):
+// bootstrap/gate.go's, over platform/gate.
+type WriteGate interface {
+	// Enter returns once a write on the project's work items may begin
+	// its transaction, with the function that leaves the gate, which the
+	// write calls once its transaction has ended. It waits holding no
+	// connection and no lock; a write that may wait no longer is refused
+	// (503 server_busy) and holds nothing.
+	Enter(ctx context.Context, projectID uuid.UUID) (leave func(), err error)
+}
+
 // Sequences numbers a project's work items (M4 design 3.7, 6.5):
 // project.Provide's.
 type Sequences interface {

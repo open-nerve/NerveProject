@@ -13,11 +13,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// newGet is getIssue over web's world (newCreate's), with web's work item
-// 7 stored in it: Fix, in Backlog, high, assigned to bob, labelled Bug,
-// made and last written by carol, so that alice, who reads it, is neither.
+// newGet is getIssue over web's world (newCreate's), its write gate one
+// that logs, with web's work item 7 stored in it: Fix, in Backlog, high,
+// assigned to bob, labelled Bug, made and last written by carol, so that
+// alice, who reads it, is neither.
 func newGet() (*app.GetIssue, *world, uuid.UUID) {
 	_, w := newCreate()
+	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log})
 	id := uuid.NewV7()
 	w.issues.issue = &app.IssueRow{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID,
 		Priority: domain.PriorityHigh, SortOrder: 65535, By: carol, At: clockNow}
@@ -25,9 +27,10 @@ func newGet() (*app.GetIssue, *world, uuid.UUID) {
 	return app.NewGetIssue(w.locks), w, id
 }
 
-// A read, outside any transaction and without a lock (M4 design 3.5): the
-// work item, then the decision on issue.read in its project, of its
-// workspace; the answer is the work item as read.
+// A read, outside any transaction, without a lock and outside the write
+// gate (M4 design 3.5, 11.11): the work item, then the decision on
+// issue.read in its project, of its workspace; the answer is the work item
+// as read.
 func TestGetIssueReadsTheWorkItem(t *testing.T) {
 	uc, w, id := newGet()
 	got, err := uc.Execute(as(alice), id)
