@@ -196,19 +196,14 @@ func TestTwoWritesOnAProjectSerialize(t *testing.T) {
 	web := "/api/v0/projects/" + r.web.String()
 	var archiveReq, updateReq *http.Request
 	var archiveRec, updateRec *httptest.ResponseRecorder
-	archived := run(func() error {
+	_, archived, updated := serializeOn(t, ctx, r.pool, g, func() error {
 		archiveReq, archiveRec = gated.send(http.MethodPost, web+"/archive", r.bob, "")
 		return nil
-	})
-	held(t, ctx, g, archived, "the archive")
-	updated := run(func() error {
+	}, func() error {
 		updateReq, updateRec = route.send(http.MethodPatch, web, r.bob, `{"name":"Site"}`)
 		return nil
 	})
-	pgtest.WaitForLockWaitOn(t, r.pool, "projects", 5*time.Second)
-	close(g.open)
-
-	if err := errors.Join(result(t, ctx, archived, "the archive"), result(t, ctx, updated, "the change")); err != nil {
+	if err := errors.Join(archived, updated); err != nil {
 		t.Fatal(err)
 	}
 	contract.CheckResponse(t, archiveReq, archiveRec.Result())

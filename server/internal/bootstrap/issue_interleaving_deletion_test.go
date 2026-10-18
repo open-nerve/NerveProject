@@ -48,38 +48,47 @@ func (w issueWorld) deletedWith(t *testing.T, table string, id uuid.UUID, since 
 	}
 }
 
-// A work item's creation and its project's deletion, or its workspace's,
-// serialize on Web's row (M4 design 3.5, 3.6; interleavings 2 and 3), in
-// both orders. Created first, holding Web FOR NO KEY UPDATE, assigned to
-// bob and labelled Bug (fullIssue): the deletion waits for Web's row, then
-// deletes the work item's seven rows with Web, or with acme, by alice, at
-// its one moment, no earlier than the creation's commit: it read its clock
-// under the locks it took once the creation had committed (M4 design 3.5).
-// Deleted first: the creation, which passed the precheck, finds Web
-// deleted under its lock: 404 project.not_found, and no work item.
-func TestCreatingAWorkItemAndDeletingItsProjectOrWorkspaceSerialize(t *testing.T) {
-	for _, deletion := range []struct {
-		name  string
-		write racingWrite
-		table string                       // the deleted row's
-		id    func(w issueWorld) uuid.UUID // its id
-	}{
-		{"Web", deletesWeb, "projects", func(w issueWorld) uuid.UUID { return w.web }},
-		{"acme", deletesAcme, "workspaces", func(w issueWorld) uuid.UUID { return w.acme }},
-	} {
-		t.Run(deletion.name, func(t *testing.T) {
-			inBothOrders(t, nil, "deleted", deletion.write, "created", createsIssue("alice", fullBody), func(t *testing.T,
-				w issueWorld, deletedFirst bool, deleted, create exchange) {
-				w.answered(t, deleted, http.StatusNoContent)
-				rows := 7
-				if deletedFirst {
-					w.refused(t, create, http.StatusNotFound, "project.not_found")
-					rows = 0
-				} else {
-					w.answered(t, create, http.StatusCreated)
-				}
-				w.deletedWith(t, deletion.table, deletion.id(w), create.released, rows)
+// A work item's write and its project's deletion, or its workspace's,
+// serialize on Web's row (M4 design 3.5, 3.6; interleavings 2 and 3, the
+// creation's branch and the change's), in both orders. Written first,
+// holding Web FOR NO KEY UPDATE: a work item created assigned to bob and
+// labelled Bug (fullIssue), seven rows; or alice's Fix (aWorkItem) changed
+// so, which adds an assignee, his subscription, a label and three
+// activities to its three rows. The deletion waits for Web's row, then
+// deletes every row of Web's work-item side with Web, or with acme, by
+// alice, at its one moment, no earlier than the write's commit: it read
+// its clock under the locks it took once the write had committed (M4
+// design 3.5). Deleted first: the write, which passed the precheck, finds
+// Web deleted under its lock: 404 project.not_found, or issue.not_found
+// for the change, and it wrote nothing; the rows there were are deleted.
+func TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize(t *testing.T) {
+	for _, iw := range []struct {
+		itemWrite
+		written int // the rows of Web's work-item side once it has written
+	}{{itemWrites[0], 7}, {itemWrites[1], 9}} {
+		for _, deletion := range []struct {
+			name  string
+			write racingWrite
+			table string                       // the deleted row's
+			id    func(w issueWorld) uuid.UUID // its id
+		}{
+			{"Web", deletesWeb, "projects", func(w issueWorld) uuid.UUID { return w.web }},
+			{"acme", deletesAcme, "workspaces", func(w issueWorld) uuid.UUID { return w.acme }},
+		} {
+			t.Run(iw.name+", "+deletion.name, func(t *testing.T) {
+				inBothOrders(t, iw.prepare, "deleted", deletion.write, iw.name, iw.write("alice", fullBody), func(t *testing.T,
+					w issueWorld, deletedFirst bool, deleted, written exchange) {
+					w.answered(t, deleted, http.StatusNoContent)
+					rows := iw.written
+					if deletedFirst {
+						w.refused(t, written, http.StatusNotFound, iw.gone)
+						rows = iw.rows
+					} else {
+						w.answered(t, written, iw.done)
+					}
+					w.deletedWith(t, deletion.table, deletion.id(w), written.released, rows)
+				})
 			})
-		})
+		}
 	}
 }

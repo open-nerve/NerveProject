@@ -88,11 +88,17 @@ func (w issueWorld) send(t *testing.T, name, method, path, body string, want int
 // API: fullIssue's.
 func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 	t.Helper()
+	return w.newWorkItemIn(t, w.web, w.fullIssue())
+}
+
+// newWorkItemIn is the id of a work item alice creates in project through
+// the API, with body.
+func (w issueWorld) newWorkItemIn(t *testing.T, project uuid.UUID, body string) uuid.UUID {
+	t.Helper()
 	var created struct {
 		ID uuid.UUID `json:"id"`
 	}
-	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", w.fullIssue(), http.StatusCreated),
-		&created)
+	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
 	return created.ID
 }
 
