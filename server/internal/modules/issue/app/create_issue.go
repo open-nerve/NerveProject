@@ -183,9 +183,9 @@ func (u *CreateIssue) write(ctx context.Context, row IssueRow, c checked) error 
 	if err := u.d.Issues.InsertSubscribers(ctx, s.links(subscribers)); err != nil {
 		return err
 	}
-	named, err := assignees(ctx, u.d.Profiles, c.assignees)
+	accounts, err := assignees(ctx, u.d.Profiles, c.assignees)
 	if err != nil {
 		return err
 	}
-	return u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(named)))
+	return u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(accounts)))
 }

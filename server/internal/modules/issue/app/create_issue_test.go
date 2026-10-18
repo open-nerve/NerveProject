@@ -154,6 +154,30 @@ func wantActivity(t *testing.T, w *world, id uuid.UUID, activities []domain.Acti
 	}
 }
 
+// wantRefusal checks a use case's refusal over w: err is want, of its code
+// and with its fields, and the calls are calls. Each use case's test
+// checks what its refusal leaves unwritten (refused, unchanged).
+func wantRefusal(t *testing.T, w *world, err, want error, calls []string) {
+	t.Helper()
+	var se, wantSE *shared.Error
+	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
+		t.Errorf("Execute() = %v, want %v", err, want)
+	}
+	if !slices.Equal(w.log.calls, calls) {
+		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+	}
+}
+
+// wantStoppedAt checks a use case over w whose port failed: its answer is
+// the failure, errDisk, as itself, and the port's first call is its last.
+func wantStoppedAt(t *testing.T, w *world, err error, port string) {
+	t.Helper()
+	last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
+	if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
+		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
+	}
+}
+
 // What the caller leaves out (M4 design 3.7): the project's default state,
 // the priority none, the first sort order of a state without work items,
 // no completion; and the assignees: the default assignee when he is an
@@ -198,17 +222,11 @@ func TestCreateIssueDefaults(t *testing.T) {
 	}
 }
 
-// refused checks a refusal: err is want, the calls are those of a creation
-// up to the last one given, and nothing is written, no number taken.
+// refused checks a creation's refusal (wantRefusal), which writes nothing
+// and takes no number.
 func refused(t *testing.T, w *world, err, want error, calls []string) {
 	t.Helper()
-	var se, wantSE *shared.Error
-	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
-		t.Errorf("Execute() = %v, want %v", err, want)
-	}
-	if !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
-	}
+	wantRefusal(t, w, err, want, calls)
 	if w.issues.issue != nil || w.project.last != 6 {
 		t.Errorf("after the refusal: the work item %+v, the last number %d; want none and 6", w.issues.issue, w.project.last)
 	}
@@ -306,10 +324,7 @@ func TestCreateIssueStopsAtAFailingPort(t *testing.T) {
 			uc, w := newCreate()
 			w.log.fail = port
 			_, err := uc.Execute(as(alice), web, domain.NewIssue{Name: "a", AssigneeIDs: []uuid.UUID{bob}, LabelIDs: []uuid.UUID{bug}})
-			last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
-			if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
-				t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
-			}
+			wantStoppedAt(t, w, err, port)
 		})
 	}
 	uc, w := newCreate()

@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`issue/app/update_issue_test.go`（297 行）、`platform/gate/gate_test.go`（273 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（315 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`platform/gate/gate_test.go`（273 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。本 plan 不改 `tools/keywords.json`：`phase` 照旧是 `M4/P1`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；配置文件的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -100,7 +100,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`（修改） | 转换状态、标签的名称 | 2 |
 | `server/internal/modules/issue/app/ports.go`（修改） | `StateRef.Name`、`LabelRef`（Task 2）；`IssueReader`（Task 4）；`IssueUpdater`（Task 5）；`WriteGate`（Task 10） | 2、4、5、10 |
 | `server/internal/modules/issue/app/create_issue.go`（修改） | 按 `id` 找标签（Task 2）；改到 `Locks.run` 上，`stamp` 和 `readBack` 移到 `writes.go`（Task 5） | 2、5 |
-| `server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`（修改） | 标签的目录（Task 2）；`Locks` 的新参数（Task 4、5、10）；修改要的假实现（Task 5）；`fakeGate`，事务没有结束时的离开（Task 10） | 2、4、5、10 |
+| `server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`（修改） | 标签的目录（Task 2）；`Locks` 的新参数（Task 4、5、10）；修改要的假实现、创建和修改共用的拒绝和端口失败的检查（Task 5）；`fakeGate`，事务没有结束时的离开（Task 10） | 2、4、5、10 |
 | `server/internal/modules/issue/module.go`（修改） | `LabelRef`（Task 2）；`GetIssue`（Task 4）；`Tx` 交给 `Locks`（Task 5）；`UpdateIssue`、包的说明（Task 6）；`WriteGate`（Task 10） | 2、4、5、6、10 |
 | `server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`、`server/internal/modules/issue/adapter/postgres/update_test.go`（新） | `UpdateIssue`、`RemoveAssignees`、`RemoveLabels` 和存储测试 | 3 |
 | `server/internal/modules/issue/app/rows.go`（修改） | `IssueFields`、`UnlinkRows` | 3 |
@@ -2579,13 +2579,13 @@ Expected: 通过。
 - `issue/module.go`：`New` 建 `Locks` 时带上 `Tx`，创建的用例不再带它（`UpdateIssue` 在 Task 6 接到 HTTP）。
 
 **Tests:**（单元，假实现 `fakes_test.go` 按次序记下调用；`changed`、`writer()`、`unlink`、`fakeProject.waited`）
-- `TestUpdateIssueWritesTheChangesAndTheirRows`：取锁的一步（锁之前读工作项、判定，事务里项目 N、重读、判定）→ 新状态、新负责人的角色、加和去的标签 → 时刻 → 工作项 → 去、加负责人 → 去、加标签（各按 `id`）→ 新负责人的关注 → 显示名 → 动态（3.13 的次序），全部 alice 在这一刻写；已离开的 out 留着、不查；名称去掉空白；到 Done 时完成。
+- `TestUpdateIssueWritesTheChangesAndTheirRows`：取锁的一步（锁之前读工作项、判定，事务里项目 N、重读、判定）→ 新状态、新负责人的角色、加和去的标签 → 时刻 → 工作项 → 去、加负责人 → 去、加标签（各按 `id`）→ 新负责人的关注 → 显示名 → 动态（3.13 的次序），全部 alice 在这一刻写；新加两个负责人（carol、dave：每个都指派、关注、写进动态，不只第一个）、去掉一个（bob）；已离开的 out 留着、不查；名称去掉空白；到 Done 时完成。
 - `TestUpdateIssueThatChangesNothingWritesNothing`：什么都不给、或每个字段原样（集合换了次序）：取锁和判定照旧，不写、不读时钟，回答锁下读到的。
 - `TestUpdateIssueCompletesTheWorkItemByItsState`：完成组的状态（含从另一个完成组的状态）完成于这一刻，别的组不完成（已取消组的也不完成，从完成组移进去时不再完成），状态不变时完成时间不动。
 - `TestUpdateIssueRefusesBeforeAnyLock`：不在、看不到 `issue.not_found`，角色不允许 403，都不取锁；不合规则的值在读工作项之前拒绝。
-- `TestUpdateIssueRefusesUnderTheLock`：等锁期间项目被删除、工作项被删除或换了项目、项目看不到了：`issue.not_found`；角色不再允许 403；已归档 409；另一个项目的状态、分诊状态、新加的访客、另一个项目的标签：一个 422，各在它的位置。
-- `TestUpdateIssueStopsAtAFailingPort`：每个端口的失败原样返回，之后不再调用；不可能的情况也是错误（工作项的状态不是项目的、去掉的标签不是项目的、没有显示名的负责人、写之后读不回来）。
-- `TestUnassignable`（领域）；`issue.update` 的规则行；创建、读的测试照旧通过（假实现的 `Locks` 带事务）。
+- `TestUpdateIssueRefusesUnderTheLock`：等锁期间项目被删除、工作项被删除或换了项目、项目看不到了：`issue.not_found`；角色不再允许 403；已归档 409（什么都不改的修改也是）；另一个项目的状态、分诊状态、新加的访客、另一个项目的标签：一个 422，各在它在修改中的位置（标签是它在 `label_ids` 中的下标，不是在加的标签中的）。
+- `TestUpdateIssueStopsAtAFailingPort`：每个端口的失败原样返回，之后不再调用，预检通过之后锁下的重读、判定的失败也是；不可能的情况也是错误（工作项的状态不是项目的、去掉的标签不是项目的、没有显示名的负责人、写之后读不回来）。
+- `TestUnassignable`（领域）；`issue.update` 的规则行；创建、读的测试照旧通过（假实现的 `Locks` 带事务）；创建和修改的测试共用拒绝的检查 `wantRefusal`（各自核对什么都没有写）和端口失败的检查 `wantStoppedAt`（`create_issue_test.go`）。
 
 - [ ] **Step 1: 领域、动作和规则**
 
@@ -2732,7 +2732,7 @@ func TestUnassignable(t *testing.T) {
 
 - [ ] **Step 2: 取锁的一步和写共用的行**
 
-`server/internal/modules/issue/app/lock.go`（整个文件，160 行）：
+`server/internal/modules/issue/app/lock.go`（整个文件，161 行）：
 
 ````whole server/internal/modules/issue/app/lock.go
 package app
@@ -2809,13 +2809,14 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 }
 
 // precheck decides w's action for actor before any lock and outside any
-// transaction (M4 design 3.5), and answers w on its project: for a write
-// that names a work item, the work item read without a lock and the
-// decision on its project (see); for one on a project, the project read
-// without a lock, one that is not there w.notFound, and the decision on
-// it. A project not visible to actor is w.notFound; a role the rule does
-// not allow is the Authorizer's shared.Forbidden. What it lets through,
-// lockAndDecide decides again.
+// transaction (M4 design 3.5), and answers w on its project. For a write
+// that names a work item: the work item read without a lock and the
+// decision on its project (see); a work item that is not there, or whose
+// project actor does not see, is issue.not_found. For one on a project:
+// the project read without a lock and the decision on it; a project that
+// is not there, or not visible to actor, is w.notFound. A role the rule
+// does not allow is the Authorizer's shared.Forbidden. What it lets
+// through, lockAndDecide decides again.
 func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write, error) {
 	if w.issue != nil {
 		i, err := l.see(ctx, actor, *w.issue, w.action)
@@ -3128,7 +3129,7 @@ func readBack(ctx context.Context, issues IssueReader, id uuid.UUID) (domain.Iss
 	assignees, err := u.named(ctx, c.assignees)
 ````
 ````new server/internal/modules/issue/app/create_issue.go
-	named, err := assignees(ctx, u.d.Profiles, c.assignees)
+	accounts, err := assignees(ctx, u.d.Profiles, c.assignees)
 ````
 ````old server/internal/modules/issue/app/create_issue.go
 	var rows []ActivityRow
@@ -3139,7 +3140,7 @@ func readBack(ctx context.Context, issues IssueReader, id uuid.UUID) (domain.Iss
 	return u.d.Issues.InsertActivities(ctx, rows)
 ````
 ````new server/internal/modules/issue/app/create_issue.go
-	return u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(named)))
+	return u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(accounts)))
 ````
 ````old server/internal/modules/issue/app/create_issue.go
 
@@ -3184,7 +3185,7 @@ func (u *CreateIssue) answer(ctx context.Context, id uuid.UUID) (domain.Issue, e
 
 ````
 
-`server/internal/modules/issue/app/create_issue_test.go`（修改，8 处）：
+`server/internal/modules/issue/app/create_issue_test.go`（修改，11 处）：
 
 ````old server/internal/modules/issue/app/create_issue_test.go
 	backlog                     = app.StateRef{ID: uuid.NewV7(), Group: "backlog", Default: true}
@@ -3258,6 +3259,71 @@ func wantActivity(t *testing.T, w *world, id uuid.UUID, activities []domain.Acti
 ````
 ````new server/internal/modules/issue/app/create_issue_test.go
 		}
+````
+````old server/internal/modules/issue/app/create_issue_test.go
+			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", i, r, wantRow)
+		}
+	}
+}
+````
+````new server/internal/modules/issue/app/create_issue_test.go
+			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", i, r, wantRow)
+		}
+	}
+}
+
+// wantRefusal checks a use case's refusal over w: err is want, of its code
+// and with its fields, and the calls are calls. Each use case's test
+// checks what its refusal leaves unwritten (refused, unchanged).
+func wantRefusal(t *testing.T, w *world, err, want error, calls []string) {
+	t.Helper()
+	var se, wantSE *shared.Error
+	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
+		t.Errorf("Execute() = %v, want %v", err, want)
+	}
+	if !slices.Equal(w.log.calls, calls) {
+		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+	}
+}
+
+// wantStoppedAt checks a use case over w whose port failed: its answer is
+// the failure, errDisk, as itself, and the port's first call is its last.
+func wantStoppedAt(t *testing.T, w *world, err error, port string) {
+	t.Helper()
+	last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
+	if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
+		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
+	}
+}
+````
+````old server/internal/modules/issue/app/create_issue_test.go
+// refused checks a refusal: err is want, the calls are those of a creation
+// up to the last one given, and nothing is written, no number taken.
+func refused(t *testing.T, w *world, err, want error, calls []string) {
+	t.Helper()
+	var se, wantSE *shared.Error
+	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
+		t.Errorf("Execute() = %v, want %v", err, want)
+	}
+	if !slices.Equal(w.log.calls, calls) {
+		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+	}
+````
+````new server/internal/modules/issue/app/create_issue_test.go
+// refused checks a creation's refusal (wantRefusal), which writes nothing
+// and takes no number.
+func refused(t *testing.T, w *world, err, want error, calls []string) {
+	t.Helper()
+	wantRefusal(t, w, err, want, calls)
+````
+````old server/internal/modules/issue/app/create_issue_test.go
+			last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
+			if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
+				t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
+			}
+````
+````new server/internal/modules/issue/app/create_issue_test.go
+			wantStoppedAt(t, w, err, port)
 ````
 
 `server/internal/modules/issue/app/fakes_test.go`（修改，11 处）：
@@ -3654,7 +3720,7 @@ func (u *UpdateIssue) relink(ctx context.Context, s stamp, d domain.Diff, remove
 }
 ````
 
-`server/internal/modules/issue/app/update_issue_test.go`（新文件，297 行）：
+`server/internal/modules/issue/app/update_issue_test.go`（新文件，315 行）：
 
 ````file server/internal/modules/issue/app/update_issue_test.go
 package app_test
@@ -3674,13 +3740,17 @@ import (
 )
 
 // earlier is the moment web's work item 7 was made, an hour before the
-// clock's.
-var earlier = clockNow.Add(-time.Hour)
+// clock's; dave, drawn after every account of newCreate's world, is the
+// member newUpdate adds to web.
+var (
+	earlier = clockNow.Add(-time.Hour)
+	dave    = uuid.NewV7()
+)
 
-// newUpdate is updateIssue over web's world (newCreate's), with web's work
-// item 7 stored in it, made by carol at earlier: Fix, in Backlog, high,
-// not completed, assigned to bob and to out, who is no member of web
-// since, and labelled Bug.
+// newUpdate is updateIssue over web's world (newCreate's), dave a member
+// of web too, with web's work item 7 stored in it, made by carol at
+// earlier: Fix, in Backlog, high, not completed, assigned to bob and to
+// out, who is no member of web since, and labelled Bug.
 func newUpdate() (*app.UpdateIssue, *world, uuid.UUID) {
 	_, w := newCreate()
 	id := uuid.NewV7()
@@ -3688,6 +3758,7 @@ func newUpdate() (*app.UpdateIssue, *world, uuid.UUID) {
 		Priority: domain.PriorityHigh, SortOrder: 65535, By: carol, At: earlier}
 	w.issues.assignees, w.issues.labels = []uuid.UUID{bob, out}, []uuid.UUID{bug}
 	w.profiles.names[out] = "out"
+	w.project.roles[dave], w.profiles.names[dave] = shared.RoleMember, "dave"
 	uc := app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
 		Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})
 	return uc, w, id
@@ -3722,22 +3793,24 @@ func locked(id uuid.UUID) []string {
 // (domain.UpdateActivity), all of it alice's at the moment; the answer is
 // the work item read back. The name is stored without its surrounding
 // space; in Done the work item is completed at the moment. out, who is no
-// member of web, stays assigned: only the accounts added are checked.
+// member of web, stays assigned: only the accounts added, carol and dave,
+// are checked, and each of them, not only the first, is assigned,
+// subscribed and in the activity.
 func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 	uc, w, id := newUpdate()
 	low := domain.PriorityLow
 	got, err := uc.Execute(as(alice), id, domain.IssuePatch{Name: name(" Mend "), StateID: &done.ID, Priority: &low,
-		AssigneeIDs: set(out, carol), LabelIDs: set(ui)})
+		AssigneeIDs: set(out, dave, carol), LabelIDs: set(ui)})
 	want := domain.Issue{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Mend", StateID: done.ID, Priority: low,
-		SortOrder: 65535, CompletedAt: &clockNow, AssigneeIDs: []uuid.UUID{carol, out}, LabelIDs: []uuid.UUID{ui}, CreatedByID: &carol,
+		SortOrder: 65535, CompletedAt: &clockNow, AssigneeIDs: []uuid.UUID{carol, out, dave}, LabelIDs: []uuid.UUID{ui}, CreatedByID: &carol,
 		UpdatedByID: &alice, CreatedAt: earlier, UpdatedAt: clockNow}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("Execute() = %+v, %v; want %+v", got, err, want)
 	}
-	calls := append(locked(id), line("States", web), line("Roles", web, []uuid.UUID{carol}), line("Labels", web, []uuid.UUID{bug, ui}), "Now",
-		line("UpdateIssue", id), line("RemoveAssignees", []uuid.UUID{bob}), line("InsertAssignees", []uuid.UUID{carol}),
-		line("RemoveLabels", []uuid.UUID{bug}), line("InsertLabels", []uuid.UUID{ui}), line("InsertSubscribers", []uuid.UUID{carol}),
-		line("DisplayNames", []uuid.UUID{carol, bob}), line("InsertActivities", 7), line("GetIssue", id))
+	calls := append(locked(id), line("States", web), line("Roles", web, []uuid.UUID{carol, dave}), line("Labels", web, []uuid.UUID{bug, ui}), "Now",
+		line("UpdateIssue", id), line("RemoveAssignees", []uuid.UUID{bob}), line("InsertAssignees", []uuid.UUID{carol, dave}),
+		line("RemoveLabels", []uuid.UUID{bug}), line("InsertLabels", []uuid.UUID{ui}), line("InsertSubscribers", []uuid.UUID{carol, dave}),
+		line("DisplayNames", []uuid.UUID{carol, dave, bob}), line("InsertActivities", 8), line("GetIssue", id))
 	if !slices.Equal(w.log.calls, calls) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
@@ -3749,7 +3822,8 @@ func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 		Name: &domain.Changed[string]{Old: "Fix", New: "Mend"}, Priority: &domain.Changed[domain.Priority]{Old: domain.PriorityHigh, New: low},
 		State:       &domain.Changed[domain.Named]{Old: domain.Named{ID: backlog.ID, Name: "Backlog"}, New: domain.Named{ID: done.ID, Name: "Done"}},
 		LabelsAdded: []domain.Named{{ID: ui, Name: "UI"}}, LabelsRemoved: []domain.Named{{ID: bug, Name: "Bug"}},
-		AssigneesAdded: []domain.Assignee{{ID: carol, DisplayName: "Carol C."}}, AssigneesRemoved: []domain.Assignee{{ID: bob, DisplayName: "bob"}},
+		AssigneesAdded:   []domain.Assignee{{ID: carol, DisplayName: "Carol C."}, {ID: dave, DisplayName: "dave"}},
+		AssigneesRemoved: []domain.Assignee{{ID: bob, DisplayName: "bob"}},
 	}))
 }
 
@@ -3816,17 +3890,11 @@ func TestUpdateIssueCompletesTheWorkItemByItsState(t *testing.T) {
 	}
 }
 
-// unchanged checks a refusal: err is want, the calls are calls, and the
-// work item, its assignees and its labels are as they were.
+// unchanged checks an update's refusal (wantRefusal), which writes
+// nothing: the work item, its assignees and its labels are as they were.
 func unchanged(t *testing.T, w *world, err, want error, calls []string) {
 	t.Helper()
-	var se, wantSE *shared.Error
-	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
-		t.Errorf("Execute() = %v, want %v", err, want)
-	}
-	if !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
-	}
+	wantRefusal(t, w, err, want, calls)
 	if w.issues.changed != nil || !slices.Equal(w.issues.assignees, []uuid.UUID{bob, out}) || !slices.Equal(w.issues.labels, []uuid.UUID{bug}) {
 		t.Errorf("after the refusal: the fields written %+v, assignees %v, labels %v; want none, bob and out, Bug", w.issues.changed,
 			w.issues.assignees, w.issues.labels)
@@ -3866,11 +3934,13 @@ func TestUpdateIssueRefusesBeforeAnyLock(t *testing.T) {
 // Under the lock the decision is made again, and is final: a project
 // deleted while the lock waited, a work item deleted meanwhile or no longer
 // in it, or a project no longer seen, is issue.not_found; a role no longer
-// allowed forbidden; an archived project refuses the update (409
-// project.archived). Then the dependent rows the update adds: a state not
-// the project's, or its triage state; an account added who is its guest;
-// a label added that is not its: every problem in one 422, each at its
-// place. out, kept, is not checked, though no member of web.
+// allowed forbidden; an archived project refuses the update, one that
+// changes nothing too (409 project.archived). Then the dependent rows the
+// update adds: a state not the project's, or its triage state; an account
+// added who is its guest; a label added that is not its: every problem in
+// one 422, each at its place in the patch (the label second in label_ids,
+// though first among the labels added). out, kept, is not checked, though
+// no member of web.
 func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 	other := uuid.NewV7() // after every id of the world
 	notAllowed := func(field, message string) shared.FieldError {
@@ -3893,11 +3963,11 @@ func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 		{"no longer seen", func(w *world) { w.auth.answers = []error{nil, shared.ErrNotVisible} }, domain.IssuePatch{}, domain.ErrIssueNotFound,
 			locked},
 		{"no longer allowed", func(w *world) { w.auth.answers = []error{nil, shared.Forbidden()} }, domain.IssuePatch{}, shared.Forbidden(), locked},
-		{"archived", func(w *world) { w.project.locked.Archived = true }, domain.IssuePatch{Name: name("Mend")}, domain.ErrProjectArchived, locked},
+		{"archived", func(w *world) { w.project.locked.Archived = true }, domain.IssuePatch{}, domain.ErrProjectArchived, locked},
 		{"the triage state, a guest added, a label not the project's", func(*world) {},
-			domain.IssuePatch{StateID: &triage.ID, AssigneeIDs: set(gus, bob, out, carol), LabelIDs: set(other, bug)},
+			domain.IssuePatch{StateID: &triage.ID, AssigneeIDs: set(gus, bob, out, carol), LabelIDs: set(bug, other)},
 			shared.Invalid(stateNotAllowed, notAllowed("assignee_ids[0]", "must be an active member of the project who is not its guest"),
-				notAllowed("label_ids[0]", "must be a label of the project")),
+				notAllowed("label_ids[1]", "must be a label of the project")),
 			func(id uuid.UUID) []string {
 				return append(locked(id), line("States", web), line("Roles", web, []uuid.UUID{carol, gus}), line("Labels", web, []uuid.UUID{other}))
 			}},
@@ -3914,11 +3984,12 @@ func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 }
 
 // A port that fails ends the update with its failure, as itself, and no
-// call after it runs: the transaction rolls back whatever was written.
-// What cannot be is an error too, before any write: a work item whose
-// state is not its project's; a label it is removed from that is not its
-// project's; an account without a display name, before the activity; and
-// a work item not there to read back after its write.
+// call after it runs, the read and the decision under the lock too once
+// the precheck's have passed: the transaction rolls back whatever was
+// written. What cannot be is an error too, before any write: a work item
+// whose state is not its project's; a label it is removed from that is not
+// its project's; an account without a display name, before the activity;
+// and a work item not there to read back after its write.
 func TestUpdateIssueStopsAtAFailingPort(t *testing.T) {
 	low := domain.PriorityLow
 	p := domain.IssuePatch{Name: name("Mend"), StateID: &done.ID, Priority: &low, AssigneeIDs: set(out, carol), LabelIDs: set(ui)}
@@ -3928,9 +3999,22 @@ func TestUpdateIssueStopsAtAFailingPort(t *testing.T) {
 			uc, w, id := newUpdate()
 			w.log.fail = port
 			_, err := uc.Execute(as(alice), id, p)
-			last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
-			if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
-				t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
+			wantStoppedAt(t, w, err, port)
+		})
+	}
+	for _, tt := range []struct {
+		name, port string
+		calls      int // of locked's
+	}{
+		{"the work item read again under the lock", "GetIssue", 5},
+		{"the decision under the lock", "Authorize", 6},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			uc, w, id := newUpdate()
+			w.project.waited = func() { w.log.fail = tt.port }
+			_, err := uc.Execute(as(alice), id, p)
+			if calls := locked(id)[:tt.calls]; !errors.Is(err, errDisk) || !slices.Equal(w.log.calls, calls) {
+				t.Errorf("Execute() = %v after the calls\n%q\nwant %v after\n%q", err, w.log.calls, errDisk, calls)
 			}
 		})
 	}

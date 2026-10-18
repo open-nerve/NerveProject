@@ -72,13 +72,14 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 }
 
 // precheck decides w's action for actor before any lock and outside any
-// transaction (M4 design 3.5), and answers w on its project: for a write
-// that names a work item, the work item read without a lock and the
-// decision on its project (see); for one on a project, the project read
-// without a lock, one that is not there w.notFound, and the decision on
-// it. A project not visible to actor is w.notFound; a role the rule does
-// not allow is the Authorizer's shared.Forbidden. What it lets through,
-// lockAndDecide decides again.
+// transaction (M4 design 3.5), and answers w on its project. For a write
+// that names a work item: the work item read without a lock and the
+// decision on its project (see); a work item that is not there, or whose
+// project actor does not see, is issue.not_found. For one on a project:
+// the project read without a lock and the decision on it; a project that
+// is not there, or not visible to actor, is w.notFound. A role the rule
+// does not allow is the Authorizer's shared.Forbidden. What it lets
+// through, lockAndDecide decides again.
 func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write, error) {
 	if w.issue != nil {
 		i, err := l.see(ctx, actor, *w.issue, w.action)

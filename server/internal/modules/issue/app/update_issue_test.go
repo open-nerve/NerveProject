@@ -15,13 +15,17 @@ import (
 )
 
 // earlier is the moment web's work item 7 was made, an hour before the
-// clock's.
-var earlier = clockNow.Add(-time.Hour)
+// clock's; dave, drawn after every account of newCreate's world, is the
+// member newUpdate adds to web.
+var (
+	earlier = clockNow.Add(-time.Hour)
+	dave    = uuid.NewV7()
+)
 
-// newUpdate is updateIssue over web's world (newCreate's), with web's work
-// item 7 stored in it, made by carol at earlier: Fix, in Backlog, high,
-// not completed, assigned to bob and to out, who is no member of web
-// since, and labelled Bug.
+// newUpdate is updateIssue over web's world (newCreate's), dave a member
+// of web too, with web's work item 7 stored in it, made by carol at
+// earlier: Fix, in Backlog, high, not completed, assigned to bob and to
+// out, who is no member of web since, and labelled Bug.
 func newUpdate() (*app.UpdateIssue, *world, uuid.UUID) {
 	_, w := newCreate()
 	id := uuid.NewV7()
@@ -29,6 +33,7 @@ func newUpdate() (*app.UpdateIssue, *world, uuid.UUID) {
 		Priority: domain.PriorityHigh, SortOrder: 65535, By: carol, At: earlier}
 	w.issues.assignees, w.issues.labels = []uuid.UUID{bob, out}, []uuid.UUID{bug}
 	w.profiles.names[out] = "out"
+	w.project.roles[dave], w.profiles.names[dave] = shared.RoleMember, "dave"
 	uc := app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
 		Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})
 	return uc, w, id
@@ -63,22 +68,24 @@ func locked(id uuid.UUID) []string {
 // (domain.UpdateActivity), all of it alice's at the moment; the answer is
 // the work item read back. The name is stored without its surrounding
 // space; in Done the work item is completed at the moment. out, who is no
-// member of web, stays assigned: only the accounts added are checked.
+// member of web, stays assigned: only the accounts added, carol and dave,
+// are checked, and each of them, not only the first, is assigned,
+// subscribed and in the activity.
 func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 	uc, w, id := newUpdate()
 	low := domain.PriorityLow
 	got, err := uc.Execute(as(alice), id, domain.IssuePatch{Name: name(" Mend "), StateID: &done.ID, Priority: &low,
-		AssigneeIDs: set(out, carol), LabelIDs: set(ui)})
+		AssigneeIDs: set(out, dave, carol), LabelIDs: set(ui)})
 	want := domain.Issue{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Mend", StateID: done.ID, Priority: low,
-		SortOrder: 65535, CompletedAt: &clockNow, AssigneeIDs: []uuid.UUID{carol, out}, LabelIDs: []uuid.UUID{ui}, CreatedByID: &carol,
+		SortOrder: 65535, CompletedAt: &clockNow, AssigneeIDs: []uuid.UUID{carol, out, dave}, LabelIDs: []uuid.UUID{ui}, CreatedByID: &carol,
 		UpdatedByID: &alice, CreatedAt: earlier, UpdatedAt: clockNow}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("Execute() = %+v, %v; want %+v", got, err, want)
 	}
-	calls := append(locked(id), line("States", web), line("Roles", web, []uuid.UUID{carol}), line("Labels", web, []uuid.UUID{bug, ui}), "Now",
-		line("UpdateIssue", id), line("RemoveAssignees", []uuid.UUID{bob}), line("InsertAssignees", []uuid.UUID{carol}),
-		line("RemoveLabels", []uuid.UUID{bug}), line("InsertLabels", []uuid.UUID{ui}), line("InsertSubscribers", []uuid.UUID{carol}),
-		line("DisplayNames", []uuid.UUID{carol, bob}), line("InsertActivities", 7), line("GetIssue", id))
+	calls := append(locked(id), line("States", web), line("Roles", web, []uuid.UUID{carol, dave}), line("Labels", web, []uuid.UUID{bug, ui}), "Now",
+		line("UpdateIssue", id), line("RemoveAssignees", []uuid.UUID{bob}), line("InsertAssignees", []uuid.UUID{carol, dave}),
+		line("RemoveLabels", []uuid.UUID{bug}), line("InsertLabels", []uuid.UUID{ui}), line("InsertSubscribers", []uuid.UUID{carol, dave}),
+		line("DisplayNames", []uuid.UUID{carol, dave, bob}), line("InsertActivities", 8), line("GetIssue", id))
 	if !slices.Equal(w.log.calls, calls) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
@@ -90,7 +97,8 @@ func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 		Name: &domain.Changed[string]{Old: "Fix", New: "Mend"}, Priority: &domain.Changed[domain.Priority]{Old: domain.PriorityHigh, New: low},
 		State:       &domain.Changed[domain.Named]{Old: domain.Named{ID: backlog.ID, Name: "Backlog"}, New: domain.Named{ID: done.ID, Name: "Done"}},
 		LabelsAdded: []domain.Named{{ID: ui, Name: "UI"}}, LabelsRemoved: []domain.Named{{ID: bug, Name: "Bug"}},
-		AssigneesAdded: []domain.Assignee{{ID: carol, DisplayName: "Carol C."}}, AssigneesRemoved: []domain.Assignee{{ID: bob, DisplayName: "bob"}},
+		AssigneesAdded:   []domain.Assignee{{ID: carol, DisplayName: "Carol C."}, {ID: dave, DisplayName: "dave"}},
+		AssigneesRemoved: []domain.Assignee{{ID: bob, DisplayName: "bob"}},
 	}))
 }
 
@@ -157,17 +165,11 @@ func TestUpdateIssueCompletesTheWorkItemByItsState(t *testing.T) {
 	}
 }
 
-// unchanged checks a refusal: err is want, the calls are calls, and the
-// work item, its assignees and its labels are as they were.
+// unchanged checks an update's refusal (wantRefusal), which writes
+// nothing: the work item, its assignees and its labels are as they were.
 func unchanged(t *testing.T, w *world, err, want error, calls []string) {
 	t.Helper()
-	var se, wantSE *shared.Error
-	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
-		t.Errorf("Execute() = %v, want %v", err, want)
-	}
-	if !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
-	}
+	wantRefusal(t, w, err, want, calls)
 	if w.issues.changed != nil || !slices.Equal(w.issues.assignees, []uuid.UUID{bob, out}) || !slices.Equal(w.issues.labels, []uuid.UUID{bug}) {
 		t.Errorf("after the refusal: the fields written %+v, assignees %v, labels %v; want none, bob and out, Bug", w.issues.changed,
 			w.issues.assignees, w.issues.labels)
@@ -207,11 +209,13 @@ func TestUpdateIssueRefusesBeforeAnyLock(t *testing.T) {
 // Under the lock the decision is made again, and is final: a project
 // deleted while the lock waited, a work item deleted meanwhile or no longer
 // in it, or a project no longer seen, is issue.not_found; a role no longer
-// allowed forbidden; an archived project refuses the update (409
-// project.archived). Then the dependent rows the update adds: a state not
-// the project's, or its triage state; an account added who is its guest;
-// a label added that is not its: every problem in one 422, each at its
-// place. out, kept, is not checked, though no member of web.
+// allowed forbidden; an archived project refuses the update, one that
+// changes nothing too (409 project.archived). Then the dependent rows the
+// update adds: a state not the project's, or its triage state; an account
+// added who is its guest; a label added that is not its: every problem in
+// one 422, each at its place in the patch (the label second in label_ids,
+// though first among the labels added). out, kept, is not checked, though
+// no member of web.
 func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 	other := uuid.NewV7() // after every id of the world
 	notAllowed := func(field, message string) shared.FieldError {
@@ -234,11 +238,11 @@ func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 		{"no longer seen", func(w *world) { w.auth.answers = []error{nil, shared.ErrNotVisible} }, domain.IssuePatch{}, domain.ErrIssueNotFound,
 			locked},
 		{"no longer allowed", func(w *world) { w.auth.answers = []error{nil, shared.Forbidden()} }, domain.IssuePatch{}, shared.Forbidden(), locked},
-		{"archived", func(w *world) { w.project.locked.Archived = true }, domain.IssuePatch{Name: name("Mend")}, domain.ErrProjectArchived, locked},
+		{"archived", func(w *world) { w.project.locked.Archived = true }, domain.IssuePatch{}, domain.ErrProjectArchived, locked},
 		{"the triage state, a guest added, a label not the project's", func(*world) {},
-			domain.IssuePatch{StateID: &triage.ID, AssigneeIDs: set(gus, bob, out, carol), LabelIDs: set(other, bug)},
+			domain.IssuePatch{StateID: &triage.ID, AssigneeIDs: set(gus, bob, out, carol), LabelIDs: set(bug, other)},
 			shared.Invalid(stateNotAllowed, notAllowed("assignee_ids[0]", "must be an active member of the project who is not its guest"),
-				notAllowed("label_ids[0]", "must be a label of the project")),
+				notAllowed("label_ids[1]", "must be a label of the project")),
 			func(id uuid.UUID) []string {
 				return append(locked(id), line("States", web), line("Roles", web, []uuid.UUID{carol, gus}), line("Labels", web, []uuid.UUID{other}))
 			}},
@@ -255,11 +259,12 @@ func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 }
 
 // A port that fails ends the update with its failure, as itself, and no
-// call after it runs: the transaction rolls back whatever was written.
-// What cannot be is an error too, before any write: a work item whose
-// state is not its project's; a label it is removed from that is not its
-// project's; an account without a display name, before the activity; and
-// a work item not there to read back after its write.
+// call after it runs, the read and the decision under the lock too once
+// the precheck's have passed: the transaction rolls back whatever was
+// written. What cannot be is an error too, before any write: a work item
+// whose state is not its project's; a label it is removed from that is not
+// its project's; an account without a display name, before the activity;
+// and a work item not there to read back after its write.
 func TestUpdateIssueStopsAtAFailingPort(t *testing.T) {
 	low := domain.PriorityLow
 	p := domain.IssuePatch{Name: name("Mend"), StateID: &done.ID, Priority: &low, AssigneeIDs: set(out, carol), LabelIDs: set(ui)}
@@ -269,9 +274,22 @@ func TestUpdateIssueStopsAtAFailingPort(t *testing.T) {
 			uc, w, id := newUpdate()
 			w.log.fail = port
 			_, err := uc.Execute(as(alice), id, p)
-			last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
-			if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
-				t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
+			wantStoppedAt(t, w, err, port)
+		})
+	}
+	for _, tt := range []struct {
+		name, port string
+		calls      int // of locked's
+	}{
+		{"the work item read again under the lock", "GetIssue", 5},
+		{"the decision under the lock", "Authorize", 6},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			uc, w, id := newUpdate()
+			w.project.waited = func() { w.log.fail = tt.port }
+			_, err := uc.Execute(as(alice), id, p)
+			if calls := locked(id)[:tt.calls]; !errors.Is(err, errDisk) || !slices.Equal(w.log.calls, calls) {
+				t.Errorf("Execute() = %v after the calls\n%q\nwant %v after\n%q", err, w.log.calls, errDisk, calls)
 			}
 		})
 	}
