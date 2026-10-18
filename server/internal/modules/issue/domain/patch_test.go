@@ -114,6 +114,7 @@ func TestChangesOf(t *testing.T) {
 		{"every account removed", IssuePatch{AssigneeIDs: set()}, Changes{Assignees: Diff{Removed: []uuid.UUID{ann, ben}}}},
 		{"labels added and removed, out of order", IssuePatch{LabelIDs: set(ux, bug)},
 			Changes{Labels: Diff{Added: []uuid.UUID{ux}, Removed: []uuid.UUID{ui}}}},
+		{"every label removed", IssuePatch{LabelIDs: set()}, Changes{Labels: Diff{Removed: []uuid.UUID{bug, ui}}}},
 	}
 	for _, tt := range tests {
 		if got := ChangesOf(i, tt.p); !reflect.DeepEqual(got, tt.want) {
