@@ -8,7 +8,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
@@ -20,60 +19,34 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// issueStamp is a row createIssue writes, as TestCreatingAWorkItemStampsItsRows
-// reads it: its table, when it was made and last changed, and whether
-// alice made it and changed it last, and acted, for an activity.
-type issueStamp struct {
-	table            string
-	created, updated time.Time
-	hers             bool
-}
-
 // createIssue as bootstrap wires it makes every row it writes at the time
 // of its request, one moment, from the clock issue.New takes, and as its
 // caller (M4 design 3.7): alice creates a work item in Web of the world,
 // in Todo, assigned to bob and labelled Bug. The work item, its assignee,
-// its label, its two subscribers, alice and bob, and its two activities
-// are seven rows, each made and last changed by alice at one moment within
-// the request. The second activity names bob by his display name as
-// identity has it (bootstrap/ports.go's issueProfiles).
+// its label, its two subscribers, alice and bob, and its two activities,
+// in both of which alice acts, are seven rows, each made and last changed
+// by alice at one moment within the request. The second activity names
+// bob by his display name as identity has it (bootstrap/ports.go's
+// issueProfiles).
 func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 	w := newIssueWorld(t)
 	before := time.Now().Truncate(time.Microsecond)
 	item := w.newWorkItem(t)
 	after := time.Now()
 
-	rows, err := w.pool.Query(pgtest.Soon(t), `
-		SELECT 'issues', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issues WHERE id = $1
-		UNION ALL SELECT 'issue_assignees', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issue_assignees
-			WHERE issue_id = $1
-		UNION ALL SELECT 'issue_labels', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issue_labels
-			WHERE issue_id = $1
-		UNION ALL SELECT 'issue_subscribers', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issue_subscribers
-			WHERE issue_id = $1
-		UNION ALL SELECT 'issue_activities', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 AND actor_id = $2
-			FROM issue_activities WHERE issue_id = $1`, item, w.ids["alice"])
-	if err != nil {
+	var made time.Time
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT created_at FROM issues WHERE id = $1", item).Scan(&made); err != nil {
 		t.Fatal(err)
 	}
-	stamps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (issueStamp, error) {
-		var s issueStamp
-		return s, row.Scan(&s.table, &s.created, &s.updated, &s.hers)
-	})
-	if err != nil {
-		t.Fatal(err)
+	if made.Before(before) || made.After(after) {
+		t.Errorf("the work item made at %v; want a moment within %v to %v", made, before, after)
 	}
-	var tables []string
-	for _, s := range stamps {
-		tables = append(tables, s.table)
-		if !s.created.Equal(stamps[0].created) || !s.updated.Equal(s.created) || s.created.Before(before) || s.created.After(after) || !s.hers {
-			t.Errorf("a row of %s made at %v, changed at %v, by alice %v; want made and changed by alice at one moment within %v to %v",
-				s.table, s.created, s.updated, s.hers, before, after)
-		}
-	}
-	if want := []string{"issue_activities", "issue_activities", "issue_assignees", "issue_labels", "issue_subscribers", "issue_subscribers",
-		"issues"}; !slices.Equal(slices.Sorted(slices.Values(tables)), want) {
-		t.Errorf("createIssue wrote rows of %q, want %q", tables, want)
+	activity := "issue_activities made by alice made, changed by alice made, of alice"
+	want := []string{activity, activity, "issue_assignees made by alice made, changed by alice made, of bob",
+		"issue_labels made by alice made, changed by alice made", "issue_subscribers made by alice made, changed by alice made, of alice",
+		"issue_subscribers made by alice made, changed by alice made, of bob", "issues made by alice made, changed by alice made"}
+	if got := w.workItemStamps(t, item); !slices.Equal(got, want) {
+		t.Errorf("the work item's rows:\n%q\nwant\n%q", got, want)
 	}
 
 	var named, displayName string

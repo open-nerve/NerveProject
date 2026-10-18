@@ -2,9 +2,12 @@ package bootstrap
 
 import (
 	"net/http"
+	"slices"
 	"testing"
+	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
@@ -88,4 +91,74 @@ func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 func (w issueWorld) fullIssue() string {
 	return `{"name":"Fix","state_id":"` + w.todo.String() + `","assignee_ids":["` + w.ids["bob"].String() + `"],"label_ids":["` +
 		w.bug.String() + `"]}`
+}
+
+// workItemStamps are the rows of the work item id in the work-item side's
+// five tables, each a line, sorted: its table, who made it and changed it
+// last, and when, when it was deleted if it was, and whose it is, for an
+// assignee, a subscriber or an activity (the account assigned, subscribed
+// or acting). An account goes by its name in the world, a moment by the
+// work item's: made, its creation, or changed, its last change.
+func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
+	t.Helper()
+	var made, changed time.Time
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT created_at, updated_at FROM issues WHERE id = $1", id).Scan(&made, &changed); err != nil {
+		t.Fatal(err)
+	}
+	when := func(at time.Time) string {
+		switch {
+		case at.Equal(made):
+			return "made"
+		case at.Equal(changed):
+			return "changed"
+		}
+		return at.String()
+	}
+	names := make(map[uuid.UUID]string, len(w.ids))
+	for name, account := range w.ids {
+		names[account] = name
+	}
+	who := func(account *uuid.UUID) string {
+		if account == nil {
+			return "no one"
+		}
+		if name, ok := names[*account]; ok {
+			return name
+		}
+		return account.String()
+	}
+	rows, err := w.pool.Query(pgtest.Soon(t), `
+		SELECT 'issues', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL::uuid FROM issues WHERE id = $1
+		UNION ALL SELECT 'issue_assignees', created_by_id, created_at, updated_by_id, updated_at, deleted_at, assignee_id FROM issue_assignees
+			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_labels', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL FROM issue_labels
+			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_subscribers', created_by_id, created_at, updated_by_id, updated_at, deleted_at, subscriber_id
+			FROM issue_subscribers WHERE issue_id = $1
+		UNION ALL SELECT 'issue_activities', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_activities
+			WHERE issue_id = $1`, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (string, error) {
+		var table string
+		var madeBy, changedBy, of *uuid.UUID
+		var madeAt, changedAt time.Time
+		var deletedAt *time.Time
+		if err := row.Scan(&table, &madeBy, &madeAt, &changedBy, &changedAt, &deletedAt, &of); err != nil {
+			return "", err
+		}
+		line := table + " made by " + who(madeBy) + " " + when(madeAt) + ", changed by " + who(changedBy) + " " + when(changedAt)
+		if deletedAt != nil {
+			line += ", deleted " + when(*deletedAt)
+		}
+		if of != nil {
+			line += ", of " + who(of)
+		}
+		return line, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return slices.Sorted(slices.Values(lines))
 }

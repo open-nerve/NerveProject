@@ -25,9 +25,10 @@ import (
 // subscribe to it (3.12); its activity gains six rows of his, then: the
 // name, the priority, the state by its names, Bug removed, walt added and
 // alice removed, each account by his display name as identity has it.
-// Every row of the
-// creation is as it was. The answer shows the work item as stored: made
-// by alice at its creation, changed last by bob then.
+// The rows bob deleted keep their making by alice, and the creation's
+// other rows, its two activities and alice's subscription, are as they
+// were. The answer shows the work item as stored: made by alice at its
+// creation, changed last by bob then.
 func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 	w := newIssueWorld(t)
 	alice, bob, walt := w.ids["alice"], w.ids["bob"], w.ids["walt"]
@@ -53,49 +54,6 @@ func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 		t.Fatalf("the work item made at %v, changed at %v, completed at %v; want it changed and completed at one moment within %v to %v",
 			made, changed, completed, before, after)
 	}
-	who := map[uuid.UUID]string{alice: "alice", bob: "bob", walt: "walt"}
-	when := func(at time.Time) string {
-		switch {
-		case at.Equal(made):
-			return "made"
-		case at.Equal(changed):
-			return "changed"
-		}
-		return at.String()
-	}
-	rows, err := w.pool.Query(pgtest.Soon(t), `
-		SELECT 'issues', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL::uuid FROM issues WHERE id = $1
-		UNION ALL SELECT 'issue_assignees', created_by_id, created_at, updated_by_id, updated_at, deleted_at, assignee_id FROM issue_assignees
-			WHERE issue_id = $1
-		UNION ALL SELECT 'issue_labels', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL FROM issue_labels
-			WHERE issue_id = $1
-		UNION ALL SELECT 'issue_subscribers', created_by_id, created_at, updated_by_id, updated_at, deleted_at, subscriber_id
-			FROM issue_subscribers WHERE issue_id = $1
-		UNION ALL SELECT 'issue_activities', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_activities
-			WHERE issue_id = $1`, created.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	lines, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (string, error) {
-		var table string
-		var madeBy, changedBy, of *uuid.UUID
-		var madeAt, changedAt time.Time
-		var deletedAt *time.Time
-		if err := row.Scan(&table, &madeBy, &madeAt, &changedBy, &changedAt, &deletedAt, &of); err != nil {
-			return "", err
-		}
-		line := table + " made by " + who[*madeBy] + " " + when(madeAt) + ", changed by " + who[*changedBy] + " " + when(changedAt)
-		if deletedAt != nil {
-			line += ", deleted " + when(*deletedAt)
-		}
-		if of != nil {
-			line += ", of " + who[*of]
-		}
-		return line, nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	creation := "issue_activities made by alice made, changed by alice made, of alice"
 	update := "issue_activities made by bob changed, changed by bob changed, of bob"
 	want := []string{creation, creation, update, update, update, update, update, update,
@@ -105,7 +63,7 @@ func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 		"issue_subscribers made by alice made, changed by alice made, of alice",
 		"issue_subscribers made by bob changed, changed by bob changed, of walt",
 		"issues made by alice made, changed by bob changed"}
-	if got := slices.Sorted(slices.Values(lines)); !slices.Equal(got, want) {
+	if got := w.workItemStamps(t, created.ID); !slices.Equal(got, want) {
 		t.Errorf("the work item's rows:\n%q\nwant\n%q", got, want)
 	}
 
@@ -152,12 +110,14 @@ func displayNames(t *testing.T, w issueWorld, ids ...uuid.UUID) []string {
 // getIssue as bootstrap wires it answers the work item as stored, every
 // field (M4 design 5.2): Web's second work item, under the first and
 // archived (in the database: no operation of P1b archives a work item),
-// and changed last by bob after alice made it, so that each field that may
-// be null has a value of its own, and each of its stamps is its own.
+// and changed last by bob after alice made it, into Done, so that each
+// field that may be null has a value of its own, and each of its stamps is
+// its own.
 func TestAWorkItemReadsAsStored(t *testing.T) {
 	w := newIssueWorld(t)
 	first, second := w.newWorkItem(t), w.newWorkItem(t)
-	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+second.String(), `{"priority":"low","label_ids":[]}`, http.StatusOK)
+	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+second.String(), `{"priority":"low","state_id":"`+w.done.String()+`","label_ids":[]}`,
+		http.StatusOK)
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issues SET parent_id = $2, archived_at = updated_at + interval '1 minute' WHERE id = $1",
 		second, first); err != nil {
 		t.Fatal(err)
@@ -176,10 +136,10 @@ func TestAWorkItemReadsAsStored(t *testing.T) {
 	}
 	shown.inUTC()
 	stored.inUTC()
-	if !reflect.DeepEqual(shown, stored) || stored.ParentID == nil || stored.ArchivedAt == nil || *stored.UpdatedByID == *stored.CreatedByID ||
-		stored.UpdatedAt.Equal(stored.CreatedAt) || len(stored.LabelIDs) != 0 {
-		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, archived, changed last by bob, without labels",
-			shown, stored)
+	if !reflect.DeepEqual(shown, stored) || stored.ParentID == nil || stored.CompletedAt == nil || stored.ArchivedAt == nil ||
+		*stored.UpdatedByID == *stored.CreatedByID || stored.UpdatedAt.Equal(stored.CreatedAt) || len(stored.LabelIDs) != 0 {
+		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, completed, archived, changed last by bob, "+
+			"without labels", shown, stored)
 	}
 }
 

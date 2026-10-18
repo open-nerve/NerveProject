@@ -31,7 +31,7 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从基点起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同；之后在另一个副本上从基点逐 Task 复现，每个 Task 之后跑它的门禁，最后的树与原型逐个文件相同（spec 附录 A）。块写入之后不必再格式化（原型中每个 Task 都经过 `gofmt`、`oxfmt`）。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、10、11）、`issue_writes_test.go`（Task 6、7、10）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、7、10、11）、`issue_writes_test.go`（Task 6、7、10）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事；静态：`make lint-web` 的文案核对）。它们在各自 Task 的树上跑过，标"（Task n 起）"的检查在 Task n 的树上跑过，全部在最终的原型上再跑过，每个变异在一份新的副本里（`$M4TMP/p1btools/mutants_p1b.py`，`mut.py` 在它写的每个检查上各跑一次；端到端的"发现"必须是故事的断言失败，`e2ekills.py` 核对，不算构建失败或超时；容器起不来不算；spec 附录 A）。"（Task n 起）"的检查从那个 Task 起才发现这个变异：Task n 的实现者在 Task n 的树上重跑它（那个 Task 的表下面列出）。**安全或加锁的性质只由单元一层发现的，算缺口**：表中每一条这类性质都另有存储、组合或端到端一层的检查，例外（"按性质只在单元一层"）写在 spec 附录 A.3。
 - **评审敏感**（M4 设计 12 节约束 3）：写闸门（取连接之前进入，不持连接地等，不在持数据库的锁时再等别的闸门；每个项目至多 K 个、`max_wait`、`max_queue`、请求的期限，503 `server_busy` 带 `Retry-After: 1`；每条路上离开）；`55P03` 换成 503 只在 `bootstrap/gate.go`；按资源寻址的写在锁下重读、再判定；修改的批量写按约定五（spec 第 3 节第 12 条）。改动这些代码或测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -120,10 +120,10 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/app/update_issue_test.go`（新） | `updateIssue` 的用例和单元测试 | 5 |
 | `server/internal/modules/issue/domain/issue.go`（修改） | `unassignable` 与 `Assignees` 共用 | 5 |
 | `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新） | `updateIssue` 的九行 | 6 |
-| `server/internal/bootstrap/issue_world_test.go`（修改） | Done、`newWorkItem`（Task 6）；`newIssueWorldWith`（Task 10）；`newWorkItemIn`（Task 11） | 6、10、11 |
+| `server/internal/bootstrap/issue_world_test.go`（修改） | Done、`newWorkItem`（Task 6）；`workItemStamps`（Task 7）；`newIssueWorldWith`（Task 10）；`newWorkItemIn`（Task 11） | 6、7、10、11 |
 | `server/internal/bootstrap/issue_write_locks_test.go`（修改） | `issueWrites` 加 `updateIssue` 的一行；每行发的路径是它的操作的（`pathOf`） | 6 |
 | `server/internal/bootstrap/issue_updates_test.go`（新） | 盖戳、回答如存 | 7 |
-| `server/internal/bootstrap/issue_writes_test.go`（修改） | 创建的盖戳测试用 `newWorkItem`（Task 6）；事务的连接加修改（Task 7）；`newIssueRoute` 的闸门和配置（Task 10） | 6、7、10 |
+| `server/internal/bootstrap/issue_writes_test.go`（修改） | 创建的盖戳测试用 `newWorkItem`（Task 6）、`workItemStamps`（Task 7）；事务的连接加修改（Task 7）；`newIssueRoute` 的闸门和配置（Task 10） | 6、7、10 |
 | `server/internal/platform/gate/gate.go`、`server/internal/platform/gate/gate_test.go`（新） | `Keyed[K]` 和它的测试 | 8 |
 | `server/internal/platform/postgres/tx.go`（修改）、`server/internal/platform/postgres/lock_timeout_test.go`（新） | `LockTimeout`、`LockNotAvailable` | 9 |
 | `server/internal/platform/config/config.go`、`server/internal/platform/config/validate.go`、`server/internal/platform/config/config_test.go`、`server/internal/platform/config/load_test.go`、`server/internal/platform/config/validate_test.go`（修改） | `issue` 的四个配置、校验、日志 | 9 |
@@ -4957,18 +4957,119 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_updates_test.go`
-- Modify: `server/internal/bootstrap/issue_writes_test.go`
+- Modify: `server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_writes_test.go`
 
-**Interfaces:** 没有新的生产代码（spec 2.9；M4 设计 3.5、3.13、5.2；P1a 评审第 6 节）。`issue_updates_test.go` 的 `displayNames`、`storedIssue`；`issue_writes_test.go` 的事务的连接加修改。
+**Interfaces:** 没有新的生产代码（spec 2.9；M4 设计 3.5、3.13、5.2；P1a 评审第 6 节）。`issue_world_test.go` 的 `workItemStamps`（一个工作项在工作项一侧五张表里的行，每行一句：谁、在哪个时刻建它和最后改它，删除的时刻，谁的；两个盖戳测试共用这一个查询）；`issue_updates_test.go` 的 `displayNames`、`storedIssue`；`issue_writes_test.go` 的创建的盖戳测试改用 `workItemStamps`，事务的连接加修改。
 
 **Tests:**（组合）
-- `TestUpdatingAWorkItemStampsItsRows`：alice 把 walt 加进 Web、建工作项，bob 改（名称、优先级、到 Done、负责人换成 walt、去掉 Bug）：工作项和 bob 写的每一行（去的负责人和标签、加的负责人和 walt 的关注、六行动态）由 bob 在请求之内的同一时刻写，bob 改了它也不关注它（3.12）；alice 的行保留她的戳；动态的值来自 `users.display_name`（经 `issueProfiles`）和目录的名称；回答的创建者、最后修改者和两个时刻。
-- `TestAWorkItemReadsAsStored`：Web 的第二个工作项，在第一个之下、已归档（在数据库里写：P1b 没有归档的操作），由 bob 在 alice 建之后改过：`getIssue` 回答每个字段如存（每个可空的字段有自己的值，每个戳是它自己的）。
+- `TestUpdatingAWorkItemStampsItsRows`：alice 把 walt 加进 Web、建工作项，bob 改（名称、优先级、到 Done、负责人换成 walt、去掉 Bug）：工作项和 bob 写的每一行（去的负责人和标签、加的负责人和 walt 的关注、六行动态）由 bob 在请求之内的同一时刻写，bob 改了它也不关注它（3.12）；bob 删掉的两行保留 alice 的建，创建的其余的行（两行动态、alice 的关注）照旧；动态的值来自 `users.display_name`（经 `issueProfiles`）和目录的名称；回答的创建者、最后修改者和两个时刻。
+- `TestAWorkItemReadsAsStored`：Web 的第二个工作项，在第一个之下、已归档（在数据库里写：P1b 没有归档的操作），由 bob 在 alice 建之后改到 Done：`getIssue` 回答每个字段如存（每个可空的字段有自己的值，完成的时刻也是；每个戳是它自己的）。
+- `TestCreatingAWorkItemStampsItsRows`（P1a）经 `workItemStamps` 读它的七行：都由 alice 在请求之内的同一时刻写，负责人的行是 bob 的，关注者是 alice 和 bob，两行动态的执行者是 alice。
 - `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：一个连接的池上，修改（每个字段）、什么都不改、锁下的拒绝，和创建一样，每个读写都在事务的连接上；读回在事务里。
 
 - [ ] **Step 1: 盖戳和回答如存**
 
-`server/internal/bootstrap/issue_updates_test.go`（新文件，218 行）：
+`server/internal/bootstrap/issue_world_test.go`（修改，2 处）：
+
+````old server/internal/bootstrap/issue_world_test.go
+import (
+	"net/http"
+	"testing"
+	"uuid"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+````
+````new server/internal/bootstrap/issue_world_test.go
+import (
+	"net/http"
+	"slices"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+````
+````old server/internal/bootstrap/issue_world_test.go
+		w.bug.String() + `"]}`
+}
+````
+````new server/internal/bootstrap/issue_world_test.go
+		w.bug.String() + `"]}`
+}
+
+// workItemStamps are the rows of the work item id in the work-item side's
+// five tables, each a line, sorted: its table, who made it and changed it
+// last, and when, when it was deleted if it was, and whose it is, for an
+// assignee, a subscriber or an activity (the account assigned, subscribed
+// or acting). An account goes by its name in the world, a moment by the
+// work item's: made, its creation, or changed, its last change.
+func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
+	t.Helper()
+	var made, changed time.Time
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT created_at, updated_at FROM issues WHERE id = $1", id).Scan(&made, &changed); err != nil {
+		t.Fatal(err)
+	}
+	when := func(at time.Time) string {
+		switch {
+		case at.Equal(made):
+			return "made"
+		case at.Equal(changed):
+			return "changed"
+		}
+		return at.String()
+	}
+	names := make(map[uuid.UUID]string, len(w.ids))
+	for name, account := range w.ids {
+		names[account] = name
+	}
+	who := func(account *uuid.UUID) string {
+		if account == nil {
+			return "no one"
+		}
+		if name, ok := names[*account]; ok {
+			return name
+		}
+		return account.String()
+	}
+	rows, err := w.pool.Query(pgtest.Soon(t), `
+		SELECT 'issues', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL::uuid FROM issues WHERE id = $1
+		UNION ALL SELECT 'issue_assignees', created_by_id, created_at, updated_by_id, updated_at, deleted_at, assignee_id FROM issue_assignees
+			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_labels', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL FROM issue_labels
+			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_subscribers', created_by_id, created_at, updated_by_id, updated_at, deleted_at, subscriber_id
+			FROM issue_subscribers WHERE issue_id = $1
+		UNION ALL SELECT 'issue_activities', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_activities
+			WHERE issue_id = $1`, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (string, error) {
+		var table string
+		var madeBy, changedBy, of *uuid.UUID
+		var madeAt, changedAt time.Time
+		var deletedAt *time.Time
+		if err := row.Scan(&table, &madeBy, &madeAt, &changedBy, &changedAt, &deletedAt, &of); err != nil {
+			return "", err
+		}
+		line := table + " made by " + who(madeBy) + " " + when(madeAt) + ", changed by " + who(changedBy) + " " + when(changedAt)
+		if deletedAt != nil {
+			line += ", deleted " + when(*deletedAt)
+		}
+		if of != nil {
+			line += ", of " + who(of)
+		}
+		return line, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return slices.Sorted(slices.Values(lines))
+}
+````
+
+`server/internal/bootstrap/issue_updates_test.go`（新文件，178 行）：
 
 ````file server/internal/bootstrap/issue_updates_test.go
 package bootstrap
@@ -4998,9 +5099,10 @@ import (
 // subscribe to it (3.12); its activity gains six rows of his, then: the
 // name, the priority, the state by its names, Bug removed, walt added and
 // alice removed, each account by his display name as identity has it.
-// Every row of the
-// creation is as it was. The answer shows the work item as stored: made
-// by alice at its creation, changed last by bob then.
+// The rows bob deleted keep their making by alice, and the creation's
+// other rows, its two activities and alice's subscription, are as they
+// were. The answer shows the work item as stored: made by alice at its
+// creation, changed last by bob then.
 func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 	w := newIssueWorld(t)
 	alice, bob, walt := w.ids["alice"], w.ids["bob"], w.ids["walt"]
@@ -5026,49 +5128,6 @@ func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 		t.Fatalf("the work item made at %v, changed at %v, completed at %v; want it changed and completed at one moment within %v to %v",
 			made, changed, completed, before, after)
 	}
-	who := map[uuid.UUID]string{alice: "alice", bob: "bob", walt: "walt"}
-	when := func(at time.Time) string {
-		switch {
-		case at.Equal(made):
-			return "made"
-		case at.Equal(changed):
-			return "changed"
-		}
-		return at.String()
-	}
-	rows, err := w.pool.Query(pgtest.Soon(t), `
-		SELECT 'issues', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL::uuid FROM issues WHERE id = $1
-		UNION ALL SELECT 'issue_assignees', created_by_id, created_at, updated_by_id, updated_at, deleted_at, assignee_id FROM issue_assignees
-			WHERE issue_id = $1
-		UNION ALL SELECT 'issue_labels', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL FROM issue_labels
-			WHERE issue_id = $1
-		UNION ALL SELECT 'issue_subscribers', created_by_id, created_at, updated_by_id, updated_at, deleted_at, subscriber_id
-			FROM issue_subscribers WHERE issue_id = $1
-		UNION ALL SELECT 'issue_activities', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_activities
-			WHERE issue_id = $1`, created.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	lines, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (string, error) {
-		var table string
-		var madeBy, changedBy, of *uuid.UUID
-		var madeAt, changedAt time.Time
-		var deletedAt *time.Time
-		if err := row.Scan(&table, &madeBy, &madeAt, &changedBy, &changedAt, &deletedAt, &of); err != nil {
-			return "", err
-		}
-		line := table + " made by " + who[*madeBy] + " " + when(madeAt) + ", changed by " + who[*changedBy] + " " + when(changedAt)
-		if deletedAt != nil {
-			line += ", deleted " + when(*deletedAt)
-		}
-		if of != nil {
-			line += ", of " + who[*of]
-		}
-		return line, nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	creation := "issue_activities made by alice made, changed by alice made, of alice"
 	update := "issue_activities made by bob changed, changed by bob changed, of bob"
 	want := []string{creation, creation, update, update, update, update, update, update,
@@ -5078,7 +5137,7 @@ func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 		"issue_subscribers made by alice made, changed by alice made, of alice",
 		"issue_subscribers made by bob changed, changed by bob changed, of walt",
 		"issues made by alice made, changed by bob changed"}
-	if got := slices.Sorted(slices.Values(lines)); !slices.Equal(got, want) {
+	if got := w.workItemStamps(t, created.ID); !slices.Equal(got, want) {
 		t.Errorf("the work item's rows:\n%q\nwant\n%q", got, want)
 	}
 
@@ -5125,12 +5184,14 @@ func displayNames(t *testing.T, w issueWorld, ids ...uuid.UUID) []string {
 // getIssue as bootstrap wires it answers the work item as stored, every
 // field (M4 design 5.2): Web's second work item, under the first and
 // archived (in the database: no operation of P1b archives a work item),
-// and changed last by bob after alice made it, so that each field that may
-// be null has a value of its own, and each of its stamps is its own.
+// and changed last by bob after alice made it, into Done, so that each
+// field that may be null has a value of its own, and each of its stamps is
+// its own.
 func TestAWorkItemReadsAsStored(t *testing.T) {
 	w := newIssueWorld(t)
 	first, second := w.newWorkItem(t), w.newWorkItem(t)
-	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+second.String(), `{"priority":"low","label_ids":[]}`, http.StatusOK)
+	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+second.String(), `{"priority":"low","state_id":"`+w.done.String()+`","label_ids":[]}`,
+		http.StatusOK)
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issues SET parent_id = $2, archived_at = updated_at + interval '1 minute' WHERE id = $1",
 		second, first); err != nil {
 		t.Fatal(err)
@@ -5149,10 +5210,10 @@ func TestAWorkItemReadsAsStored(t *testing.T) {
 	}
 	shown.inUTC()
 	stored.inUTC()
-	if !reflect.DeepEqual(shown, stored) || stored.ParentID == nil || stored.ArchivedAt == nil || *stored.UpdatedByID == *stored.CreatedByID ||
-		stored.UpdatedAt.Equal(stored.CreatedAt) || len(stored.LabelIDs) != 0 {
-		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, archived, changed last by bob, without labels",
-			shown, stored)
+	if !reflect.DeepEqual(shown, stored) || stored.ParentID == nil || stored.CompletedAt == nil || stored.ArchivedAt == nil ||
+		*stored.UpdatedByID == *stored.CreatedByID || stored.UpdatedAt.Equal(stored.CreatedAt) || len(stored.LabelIDs) != 0 {
+		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, completed, archived, changed last by bob, "+
+			"without labels", shown, stored)
 	}
 }
 
@@ -5189,6 +5250,108 @@ func (s *storedIssue) inUTC() {
 		}
 	}
 }
+````
+
+`server/internal/bootstrap/issue_writes_test.go`（修改，2 处）：
+
+````old server/internal/bootstrap/issue_writes_test.go
+	"uuid"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+````
+````new server/internal/bootstrap/issue_writes_test.go
+	"uuid"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+````
+````old server/internal/bootstrap/issue_writes_test.go
+// issueStamp is a row createIssue writes, as TestCreatingAWorkItemStampsItsRows
+// reads it: its table, when it was made and last changed, and whether
+// alice made it and changed it last, and acted, for an activity.
+type issueStamp struct {
+	table            string
+	created, updated time.Time
+	hers             bool
+}
+
+// createIssue as bootstrap wires it makes every row it writes at the time
+// of its request, one moment, from the clock issue.New takes, and as its
+// caller (M4 design 3.7): alice creates a work item in Web of the world,
+// in Todo, assigned to bob and labelled Bug. The work item, its assignee,
+// its label, its two subscribers, alice and bob, and its two activities
+// are seven rows, each made and last changed by alice at one moment within
+// the request. The second activity names bob by his display name as
+// identity has it (bootstrap/ports.go's issueProfiles).
+func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
+	w := newIssueWorld(t)
+	before := time.Now().Truncate(time.Microsecond)
+	item := w.newWorkItem(t)
+	after := time.Now()
+
+	rows, err := w.pool.Query(pgtest.Soon(t), `
+		SELECT 'issues', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issues WHERE id = $1
+		UNION ALL SELECT 'issue_assignees', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issue_assignees
+			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_labels', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issue_labels
+			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_subscribers', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 FROM issue_subscribers
+			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_activities', created_at, updated_at, created_by_id = $2 AND updated_by_id = $2 AND actor_id = $2
+			FROM issue_activities WHERE issue_id = $1`, item, w.ids["alice"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	stamps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (issueStamp, error) {
+		var s issueStamp
+		return s, row.Scan(&s.table, &s.created, &s.updated, &s.hers)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tables []string
+	for _, s := range stamps {
+		tables = append(tables, s.table)
+		if !s.created.Equal(stamps[0].created) || !s.updated.Equal(s.created) || s.created.Before(before) || s.created.After(after) || !s.hers {
+			t.Errorf("a row of %s made at %v, changed at %v, by alice %v; want made and changed by alice at one moment within %v to %v",
+				s.table, s.created, s.updated, s.hers, before, after)
+		}
+	}
+	if want := []string{"issue_activities", "issue_activities", "issue_assignees", "issue_labels", "issue_subscribers", "issue_subscribers",
+		"issues"}; !slices.Equal(slices.Sorted(slices.Values(tables)), want) {
+		t.Errorf("createIssue wrote rows of %q, want %q", tables, want)
+	}
+````
+````new server/internal/bootstrap/issue_writes_test.go
+// createIssue as bootstrap wires it makes every row it writes at the time
+// of its request, one moment, from the clock issue.New takes, and as its
+// caller (M4 design 3.7): alice creates a work item in Web of the world,
+// in Todo, assigned to bob and labelled Bug. The work item, its assignee,
+// its label, its two subscribers, alice and bob, and its two activities,
+// in both of which alice acts, are seven rows, each made and last changed
+// by alice at one moment within the request. The second activity names
+// bob by his display name as identity has it (bootstrap/ports.go's
+// issueProfiles).
+func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
+	w := newIssueWorld(t)
+	before := time.Now().Truncate(time.Microsecond)
+	item := w.newWorkItem(t)
+	after := time.Now()
+
+	var made time.Time
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT created_at FROM issues WHERE id = $1", item).Scan(&made); err != nil {
+		t.Fatal(err)
+	}
+	if made.Before(before) || made.After(after) {
+		t.Errorf("the work item made at %v; want a moment within %v to %v", made, before, after)
+	}
+	activity := "issue_activities made by alice made, changed by alice made, of alice"
+	want := []string{activity, activity, "issue_assignees made by alice made, changed by alice made, of bob",
+		"issue_labels made by alice made, changed by alice made", "issue_subscribers made by alice made, changed by alice made, of alice",
+		"issue_subscribers made by alice made, changed by alice made, of bob", "issues made by alice made, changed by alice made"}
+	if got := w.workItemStamps(t, item); !slices.Equal(got, want) {
+		t.Errorf("the work item's rows:\n%q\nwant\n%q", got, want)
+	}
 ````
 
 - [ ] **Step 2: 事务的连接**
@@ -5266,7 +5429,7 @@ func (s *storedIssue) inUTC() {
 
 - [ ] **Step 3: 测试和 lint**
 
-Run: `go -C server test -count=1 -run 'TestUpdatingAWorkItemStampsItsRows$|TestAWorkItemReadsAsStored$|TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection$' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestCreatingAWorkItemStampsItsRows$|TestUpdatingAWorkItemStampsItsRows$|TestAWorkItemReadsAsStored$|TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection$' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -5278,7 +5441,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/issue_writes_test.go
+git add server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_writes_test.go
 ```
 ```bash
 git commit -m "test(M4/P1): a work item's change stamps its rows, reads as stored, runs on its transaction
