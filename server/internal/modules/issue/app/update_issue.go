@@ -44,20 +44,22 @@ type named struct {
 }
 
 // Execute checks p (domain.CheckIssuePatch), before any read; then Locks
-// runs the write on the work item id (M4 design 3.5, 6.7): its precheck,
-// the work item read and the decision on issue.update in its project,
-// before any lock; then in one transaction, the project FOR NO KEY UPDATE,
-// the work item read again and the decision again, and under them, in
-// this order: an archived project refuses it (409 project.archived); what
-// p changes in the work item (domain.ChangesOf), and when it changes
-// nothing, nothing is written and the answer is the work item as read;
-// the dependent rows it adds (check), every problem in one 422; the clock;
-// the work item's fields, its completion by its new state's group when its
-// state changes (domain.CompletedAt); the accounts and the labels it
-// removes and adds, in id order; the accounts it adds subscribed; its
-// activity (domain.UpdateActivity), each account by his display name. All
-// of it is the caller's at that moment. The answer is the work item as
-// stored, read back in the transaction.
+// runs the write on the work item id (M4 design 3.5, 6.7, 11.11): its
+// precheck, the work item read and the decision on issue.update in its
+// project, before any lock; then the project's write gate, which refuses a
+// write that may wait no longer (503 server_busy); then in one
+// transaction, the project FOR NO KEY UPDATE, the work item read again and
+// the decision again, and under them, in this order: an archived project
+// refuses it (409 project.archived); what p changes in the work item
+// (domain.ChangesOf), and when it changes nothing, nothing is written and
+// the answer is the work item as read; the dependent rows it adds (check),
+// every problem in one 422; the clock; the work item's fields, its
+// completion by its new state's group when its state changes
+// (domain.CompletedAt); the accounts and the labels it removes and adds,
+// in id order; the accounts it adds subscribed; its activity
+// (domain.UpdateActivity), each account by his display name. All of it is
+// the caller's at that moment. The answer is the work item as stored, read
+// back in the transaction.
 func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssuePatch) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {

@@ -31,7 +31,7 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从基点起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同；之后在另一个副本上从基点逐 Task 复现，每个 Task 之后跑它的门禁，最后的树与原型逐个文件相同（spec 附录 A）。块写入之后不必再格式化（原型中每个 Task 都经过 `gofmt`、`oxfmt`）。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、7、10、11）、`issue_writes_test.go`（Task 6、7、10）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5、10）、`update_issue.go`（Task 5、10）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、7、10、11）、`issue_writes_test.go`（Task 6、7、10）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事；静态：`make lint-web` 的文案核对）。它们在各自 Task 的树上跑过，标"（Task n 起）"的检查在 Task n 的树上跑过，全部在最终的原型上再跑过，每个变异在一份新的副本里（`$M4TMP/p1btools/mutants_p1b.py`，`mut.py` 在它写的每个检查上各跑一次；端到端的"发现"必须是故事的断言失败，`e2ekills.py` 核对，不算构建失败或超时；容器起不来不算；spec 附录 A）。"（Task n 起）"的检查从那个 Task 起才发现这个变异：Task n 的实现者在 Task n 的树上重跑它（那个 Task 的表下面列出）。**安全或加锁的性质只由单元一层发现的，算缺口**：表中每一条这类性质都另有存储、组合或端到端一层的检查，例外（"按性质只在单元一层"）写在 spec 附录 A.3。
 - **评审敏感**（M4 设计 12 节约束 3）：写闸门（取连接之前进入，不持连接地等，不在持数据库的锁时再等别的闸门；每个项目至多 K 个、`max_wait`、`max_queue`、请求的期限，503 `server_busy` 带 `Retry-After: 1`；每条路上离开）；`55P03` 换成 503 只在 `bootstrap/gate.go`；按资源寻址的写在锁下重读、再判定；修改的批量写按约定五（spec 第 3 节第 12 条）。改动这些代码或测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -99,7 +99,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/project/app/issue_ports.go`、`server/internal/modules/project/module.go`（修改） | `IssueState.Name`、`IssueLabel` | 2 |
 | `server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`（修改） | 转换状态、标签的名称 | 2 |
 | `server/internal/modules/issue/app/ports.go`（修改） | `StateRef.Name`、`LabelRef`（Task 2）；`IssueReader`（Task 4）；`IssueUpdater`（Task 5）；`WriteGate`（Task 10） | 2、4、5、10 |
-| `server/internal/modules/issue/app/create_issue.go`（修改） | 按 `id` 找标签（Task 2）；改到 `Locks.run` 上，`stamp`、`readBack` 和 `pickState` 移到 `writes.go`（Task 5） | 2、5 |
+| `server/internal/modules/issue/app/create_issue.go`（修改） | 按 `id` 找标签（Task 2）；改到 `Locks.run` 上，`stamp`、`readBack` 和 `pickState` 移到 `writes.go`（Task 5）；`Execute` 的说明写上写闸门（Task 10） | 2、5、10 |
 | `server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`（修改） | 标签的目录（Task 2）；`Locks` 的新参数（Task 4、5、10）；修改要的假实现、创建和修改共用的拒绝和端口失败的检查（Task 5）；`fakeGate`，事务没有结束时的离开（Task 10） | 2、4、5、10 |
 | `server/internal/modules/issue/module.go`（修改） | `LabelRef`（Task 2）；`GetIssue`（Task 4）；`Tx` 交给 `Locks`（Task 5）；`UpdateIssue`、包的说明（Task 6）；`WriteGate`（Task 10） | 2、4、5、6、10 |
 | `server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`、`server/internal/modules/issue/adapter/postgres/update_test.go`（新） | `UpdateIssue`、`RemoveAssignees`、`RemoveLabels` 和存储测试 | 3 |
@@ -117,7 +117,8 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/permission_matrix_seed_issues_test.go`（新）、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_project_test.go`（修改） | 矩阵的种子：每个项目一个工作项，`{issue_id}`；`rowsByID` 带上工作项 | 4 |
 | `server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`（修改） | `getIssue` 一行，`createIssue` 的编号（Task 4）；接上修改的行（Task 6） | 4、6 |
 | `server/internal/modules/issue/app/writes.go`（新） | 每个写共用的 `pickState`、`stamp`、`assignees`、`readBack` | 5 |
-| `server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/app/update_issue_test.go`（新） | `updateIssue` 的用例和单元测试 | 5 |
+| `server/internal/modules/issue/app/update_issue.go`（新） | `updateIssue` 的用例（Task 5）；`Execute` 的说明写上写闸门（Task 10） | 5、10 |
+| `server/internal/modules/issue/app/update_issue_test.go`（新） | `updateIssue` 的单元测试 | 5 |
 | `server/internal/modules/issue/domain/issue.go`（修改） | `unassignable` 与 `Assignees` 共用 | 5 |
 | `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新） | `updateIssue` 的九行 | 6 |
 | `server/internal/bootstrap/issue_world_test.go`（修改） | Done、`newWorkItem`（Task 6）；`workItemStamps`（Task 7）；`newIssueWorldWith`（Task 10）；`newWorkItemIn`（Task 11） | 6、7、10、11 |
@@ -6525,13 +6526,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `server/internal/bootstrap/gate.go`、`server/internal/bootstrap/gate_test.go`、`server/internal/modules/issue/app/lock_test.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/archtest/composition_test.go`、`server/internal/bootstrap/app.go`、`server/internal/bootstrap/app_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/adapter/http/update_test.go`、`server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/get_issue_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/module.go`
+- Modify: `api/modules/issue.yaml`、`server/internal/archtest/composition_test.go`、`server/internal/bootstrap/app.go`、`server/internal/bootstrap/app_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/adapter/http/update_test.go`、`server/internal/modules/issue/app/create_issue.go`、`server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/get_issue_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/module.go`
 - Generate: `api/dist/openapi.yaml`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.12、第 3 节第 10、13 条；M4 设计 3.5、6.1、6.6、11.11）
 - `issue/app`：
   - `ports.go`：`WriteGate`（`Enter(ctx, projectID) (leave func(), err error)`：一个项目一把，第 3 节第 10 条）；
   - `lock.go`：`Locks` 带上 `gate`（`NewLocks(projects, issues, auth, gate, tx)`）；`run`：预检 → `gate.Enter(ctx, w.project)` → `defer leave()` → 事务。预检拒绝的不进闸门；闸门拒绝的不开事务；离开在事务结束之后，每条路上都离开（拒绝、失败、panic）。
+  - `create_issue.go`、`update_issue.go`：`Execute` 的说明在预检和事务之间写上项目的写闸门和它的 503。
 - `issue/module.go`：`Deps.WriteGate`，交给 `NewLocks`。
 - `bootstrap/gate.go`（新）：
   - `busyRetry`（1 秒）；
@@ -6545,7 +6547,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Tests:**
 - 单元（`fakeGate` 记下进出，事务还没有结束时的离开记作 `in tx`：`fakeTx.WithinTx` 在事务里设 `callLog.inTx`、`defer` 复位；`fakes_test.go`）：`TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestAWriteLeavesTheGateOnEveryPath`（锁下的拒绝、端口的失败、`fn` 的 panic，每条路上都在事务结束之后离开；`fn` 的 panic 照样传给调用者，别的路上没有 panic）、`TestTheGateTakesOnlyWritesThePrecheckLetThrough`（预检拒绝的不进；闸门拒绝的原样、不开事务）；`get_issue_test.go` 的 `newGet` 用记下进出的闸门，`TestGetIssueReadsTheWorkItem` 核对读不进闸门；创建、读、修改的测试照旧通过。
 - `bootstrap`：`TestTheWriteGateAnswersItsRefusalsAsServerBusy`（一个位置被持时，队列满、等到 `max_wait`、请求到期都是一秒后重试的 `server_busy`，请求取消的照原样；这时另一个项目的写立即进入；第一个离开之后能进）、`TestABusyTransactionIsServerBusy`（包了一层的 `55P03` 换，`40P01` 照原样，提交照旧）。
-- 组合：`TestAProjectTooBusyForAWriteAnswersServerBusy`（一个项目一个位置、排队一个、`max_wait` 1 秒、锁的期限 3 秒：别的事务持 Web 的行时，alice 的修改进了闸门、等行；bob 和 alice 随后的两个创建，一个排队、到 `max_wait` 时 503，另一个在 `max_wait` 之前 503（队列满），都带 `Retry-After: 1`；olga、walt 的修改在位置被占时由预检答 404、403，都在 `max_wait` 之前（预检拒绝的不占闸门）；alice 在 Ops（acme 的另一个项目，测试先建好）的创建这时也在 `max_wait` 之前答 201（每个项目有自己的位置）；alice 的修改在约 3 秒（等锁到期）503，远早于请求的期限；行放开之后修改和创建都通过）；`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（请求的期限 3 秒、锁的期限 2.5 秒、一个项目一个位置、`max_wait` 10 秒：别的事务以 `ACCESS EXCLUSIVE` 持 `issue_labels`，bob 的修改在预检里等它；1.5 秒之后 alice 在 Web 的创建（预检不读 `issue_labels`）占了位置、等 Web 的行；`issue_labels` 放开之后 bob 的修改在闸门上排在她后面，在他的请求的期限（3 秒）503，她的创建在等锁到期时（bob 的修改发出之后约 4 秒）503；bob 的修改在 3 到 4 秒之间：她最早在 4 秒离开闸门，T8.7、T10.16 的 bob 只在那之后得到回答）。
+- 组合：`TestAProjectTooBusyForAWriteAnswersServerBusy`（一个项目一个位置、排队一个、`max_wait` 1 秒、锁的期限 3 秒：别的事务持 Web 的行时，alice 的修改进了闸门、等行；bob 和 alice 随后的两个创建，一个排队、到 `max_wait` 时 503，另一个在 `max_wait` 之前 503（队列满），都带 `Retry-After: 1`；olga、walt 的修改在位置被占时由预检答 404、403，都在 `max_wait` 之前（预检拒绝的不占闸门）；alice 在 Ops（acme 的另一个项目，测试先建好）的创建这时也在 `max_wait` 之前答 201（每个项目有自己的位置）；alice 的修改在约 3 秒（等锁到期）503，远早于请求的期限；行放开之后修改和创建都通过）；`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（请求的期限 3 秒、锁的期限 2 秒、一个项目一个位置、`max_wait` 10 秒：别的事务以 `ACCESS EXCLUSIVE` 持 `issue_labels`，bob 的修改在预检里等它；2 秒之后 alice 在 Web 的创建（预检不读 `issue_labels`）占了位置、等 Web 的行；`issue_labels` 放开之后 bob 的修改在闸门上排在她后面，在他的请求的期限（3 秒）503，她的创建在等锁到期时（bob 的修改发出之后约 4 秒，比她自己的请求的期限早约 1 秒）503；bob 的修改在 3 到 4 秒之间：她最早在 4 秒离开闸门，T8.7、T10.16 的 bob 只在那之后得到回答）。
 - HTTP（`apitest.Main` 两个方向）：`createIssue`、`updateIssue` 各一行 503 `server_busy`、`Retry-After: 1`。
 - `archtest`：`TestCommandsComposeNoServerAndNoJobs`。
 
@@ -6652,6 +6654,38 @@ const busy = `{"status":503,"code":"server_busy","title":"Service Unavailable","
 		if res.StatusCode != tt.status || body != tt.want+"\n" || tt.want == busy && res.Header.Get("Retry-After") != "1" {
 			t.Errorf("%s: PATCH = %d %s, Retry-After %q; want %d %s", tt.name, res.StatusCode, body, res.Header.Get("Retry-After"), tt.status,
 				tt.want)
+````
+
+`server/internal/modules/issue/app/create_issue.go`（修改，1 处）：
+
+````old server/internal/modules/issue/app/create_issue.go
+// Execute checks in (domain.CheckNewIssue), before any read; then Locks
+// runs the write (M4 design 3.5): its precheck, before any lock; then in
+// one transaction, the project FOR NO KEY UPDATE and the decision on
+// issue.create, and under them, in this order: an archived project refuses
+// it (409 project.archived); the dependent rows (check), every problem in
+// one 422; the project's next number; the clock; the sort order after the
+// greatest of the state's work items; the work item; its assignees, the
+// default one too; its labels; its subscribers, the caller and the
+// assignees, in id order; its activity: the creation, then each assignee
+// by his display name (domain.CreationActivity). All of it is the
+// caller's at that moment. The answer is the work item as stored, read
+// back in the transaction.
+````
+````new server/internal/modules/issue/app/create_issue.go
+// Execute checks in (domain.CheckNewIssue), before any read; then Locks
+// runs the write (M4 design 3.5, 11.11): its precheck, before any lock;
+// then the project's write gate, which refuses a write that may wait no
+// longer (503 server_busy); then in one transaction, the project
+// FOR NO KEY UPDATE and the decision on issue.create, and under them, in
+// this order: an archived project refuses it (409 project.archived); the
+// dependent rows (check), every problem in one 422; the project's next
+// number; the clock; the sort order after the greatest of the state's work
+// items; the work item; its assignees, the default one too; its labels;
+// its subscribers, the caller and the assignees, in id order; its
+// activity: the creation, then each assignee by his display name
+// (domain.CreationActivity). All of it is the caller's at that moment. The
+// answer is the work item as stored, read back in the transaction.
 ````
 
 `server/internal/modules/issue/app/create_issue_test.go`（修改，1 处）：
@@ -6952,6 +6986,45 @@ type WriteGate interface {
 	// (503 server_busy); one whose request is cancelled while it waits
 	// ends with context.Canceled. Either holds nothing.
 	Enter(ctx context.Context, projectID uuid.UUID) (leave func(), err error)
+````
+
+`server/internal/modules/issue/app/update_issue.go`（修改，1 处）：
+
+````old server/internal/modules/issue/app/update_issue.go
+// Execute checks p (domain.CheckIssuePatch), before any read; then Locks
+// runs the write on the work item id (M4 design 3.5, 6.7): its precheck,
+// the work item read and the decision on issue.update in its project,
+// before any lock; then in one transaction, the project FOR NO KEY UPDATE,
+// the work item read again and the decision again, and under them, in
+// this order: an archived project refuses it (409 project.archived); what
+// p changes in the work item (domain.ChangesOf), and when it changes
+// nothing, nothing is written and the answer is the work item as read;
+// the dependent rows it adds (check), every problem in one 422; the clock;
+// the work item's fields, its completion by its new state's group when its
+// state changes (domain.CompletedAt); the accounts and the labels it
+// removes and adds, in id order; the accounts it adds subscribed; its
+// activity (domain.UpdateActivity), each account by his display name. All
+// of it is the caller's at that moment. The answer is the work item as
+// stored, read back in the transaction.
+````
+````new server/internal/modules/issue/app/update_issue.go
+// Execute checks p (domain.CheckIssuePatch), before any read; then Locks
+// runs the write on the work item id (M4 design 3.5, 6.7, 11.11): its
+// precheck, the work item read and the decision on issue.update in its
+// project, before any lock; then the project's write gate, which refuses a
+// write that may wait no longer (503 server_busy); then in one
+// transaction, the project FOR NO KEY UPDATE, the work item read again and
+// the decision again, and under them, in this order: an archived project
+// refuses it (409 project.archived); what p changes in the work item
+// (domain.ChangesOf), and when it changes nothing, nothing is written and
+// the answer is the work item as read; the dependent rows it adds (check),
+// every problem in one 422; the clock; the work item's fields, its
+// completion by its new state's group when its state changes
+// (domain.CompletedAt); the accounts and the labels it removes and adds,
+// in id order; the accounts it adds subscribed; its activity
+// (domain.UpdateActivity), each account by his display name. All of it is
+// the caller's at that moment. The answer is the work item as stored, read
+// back in the transaction.
 ````
 
 `server/internal/modules/issue/module.go`（修改，2 处）：
@@ -7285,22 +7358,22 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // refused 503 server_busy then (M4 design 3.5, 11.11): its wait ends with
 // its request. In an app that lets one write a project in at once, queues
 // others for ten seconds, ends a request at three seconds and a write's
-// wait for a lock at two and a half: a transaction holds issue_labels IN
-// ACCESS EXCLUSIVE MODE, so bob's change of a work item of Web waits in
+// wait for a lock at two seconds: a transaction holds issue_labels
+// IN ACCESS EXCLUSIVE MODE, so bob's change of a work item of Web waits in
 // its precheck, which reads the work item's labels. alice's creation in
-// Web, sent a second and a half after his change, passes its precheck,
-// which reads no issue_labels, takes the project's one place and waits for
-// Web's row, which another transaction holds. Once issue_labels is
-// released, bob's change waits at the gate behind her creation and is
-// refused at its request's deadline, three seconds after it was sent,
-// before her creation, at its lock timeout, four seconds after it at the
-// earliest, could leave the gate. Once the row is free, a change and a
-// creation go through.
+// Web, sent two seconds after his change, passes its precheck, which reads
+// no issue_labels, takes the project's one place and waits for Web's row,
+// which another transaction holds. Once issue_labels is released, bob's
+// change waits at the gate behind her creation and is refused at its
+// request's deadline, three seconds after it was sent, before her
+// creation, at its lock timeout, four seconds after it at the earliest and
+// about a second before her own request's deadline, could leave the gate.
+// Once the row is free, a change and a creation go through.
 func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Server.RequestTimeout = 3 * time.Second
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1},
-			WriteLockTimeout: 2500 * time.Millisecond}
+			WriteLockTimeout: 2 * time.Second}
 	})
 	item := w.newWorkItem(t)
 	path := "/api/v0/issues/" + item.String()
@@ -7313,7 +7386,7 @@ func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	sent := time.Now()
 	changed := sendInBackground(change)
 	pgtest.WaitForLockWaitBehind(t, w.pool, labels.Conn().PgConn(), 5*time.Second)
-	time.Sleep(time.Until(sent.Add(1500 * time.Millisecond)))
+	time.Sleep(time.Until(sent.Add(2 * time.Second)))
 	row := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
 	created := sendInBackground(create)
 	pgtest.WaitForLockWaitBehind(t, w.pool, row.Conn().PgConn(), 5*time.Second)
@@ -7504,7 +7577,7 @@ Expected: 121 个通过。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/archtest/composition_test.go server/internal/bootstrap/app.go server/internal/bootstrap/app_test.go server/internal/bootstrap/gate.go server/internal/bootstrap/gate_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_writes_test.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/app/create_issue_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/get_issue_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/lock_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/module.go api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/archtest/composition_test.go server/internal/bootstrap/app.go server/internal/bootstrap/app_test.go server/internal/bootstrap/gate.go server/internal/bootstrap/gate_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_writes_test.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/app/create_issue.go server/internal/modules/issue/app/create_issue_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/get_issue_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/lock_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/update_issue.go server/internal/modules/issue/module.go api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P1): the write gate and the lock timeout on the work items' writes

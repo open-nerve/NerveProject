@@ -211,22 +211,22 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // refused 503 server_busy then (M4 design 3.5, 11.11): its wait ends with
 // its request. In an app that lets one write a project in at once, queues
 // others for ten seconds, ends a request at three seconds and a write's
-// wait for a lock at two and a half: a transaction holds issue_labels IN
-// ACCESS EXCLUSIVE MODE, so bob's change of a work item of Web waits in
+// wait for a lock at two seconds: a transaction holds issue_labels
+// IN ACCESS EXCLUSIVE MODE, so bob's change of a work item of Web waits in
 // its precheck, which reads the work item's labels. alice's creation in
-// Web, sent a second and a half after his change, passes its precheck,
-// which reads no issue_labels, takes the project's one place and waits for
-// Web's row, which another transaction holds. Once issue_labels is
-// released, bob's change waits at the gate behind her creation and is
-// refused at its request's deadline, three seconds after it was sent,
-// before her creation, at its lock timeout, four seconds after it at the
-// earliest, could leave the gate. Once the row is free, a change and a
-// creation go through.
+// Web, sent two seconds after his change, passes its precheck, which reads
+// no issue_labels, takes the project's one place and waits for Web's row,
+// which another transaction holds. Once issue_labels is released, bob's
+// change waits at the gate behind her creation and is refused at its
+// request's deadline, three seconds after it was sent, before her
+// creation, at its lock timeout, four seconds after it at the earliest and
+// about a second before her own request's deadline, could leave the gate.
+// Once the row is free, a change and a creation go through.
 func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Server.RequestTimeout = 3 * time.Second
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: 10 * time.Second, MaxQueue: 1},
-			WriteLockTimeout: 2500 * time.Millisecond}
+			WriteLockTimeout: 2 * time.Second}
 	})
 	item := w.newWorkItem(t)
 	path := "/api/v0/issues/" + item.String()
@@ -239,7 +239,7 @@ func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	sent := time.Now()
 	changed := sendInBackground(change)
 	pgtest.WaitForLockWaitBehind(t, w.pool, labels.Conn().PgConn(), 5*time.Second)
-	time.Sleep(time.Until(sent.Add(1500 * time.Millisecond)))
+	time.Sleep(time.Until(sent.Add(2 * time.Second)))
 	row := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
 	created := sendInBackground(create)
 	pgtest.WaitForLockWaitBehind(t, w.pool, row.Conn().PgConn(), 5*time.Second)
