@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（396 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`issue/app/update_issue_test.go`（297 行）、`platform/gate/gate_test.go`（273 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`issue/app/update_issue_test.go`（297 行）、`platform/gate/gate_test.go`（273 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。本 plan 不改 `tools/keywords.json`：`phase` 照旧是 `M4/P1`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；配置文件的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -114,7 +114,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/adapter/http/issues_test.go`（修改） | `getIssue` 的测试（Task 4）；`server_busy` 的一行（Task 10） | 4、10 |
 | `server/internal/modules/issue/adapter/http/update_test.go`（新） | `updateIssue` 的 HTTP 测试（Task 6）；`server_busy` 的一行（Task 10） | 6、10 |
 | `web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`（修改） | `issue.not_found` 的文案（约束 4） | 4 |
-| `server/internal/bootstrap/permission_matrix_seed_issues_test.go`（新）、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`（修改） | 矩阵的种子：每个项目一个工作项，`{issue_id}` | 4 |
+| `server/internal/bootstrap/permission_matrix_seed_issues_test.go`（新）、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_project_test.go`（修改） | 矩阵的种子：每个项目一个工作项，`{issue_id}`；`rowsByID` 带上工作项 | 4 |
 | `server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`（修改） | `getIssue` 一行，`createIssue` 的编号（Task 4）；接上修改的行（Task 6） | 4、6 |
 | `server/internal/modules/issue/app/writes.go`（新） | 每个写共用的 `stamp`、`assignees`、`readBack` | 5 |
 | `server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/app/update_issue_test.go`（新） | `updateIssue` 的用例和单元测试 | 5 |
@@ -290,7 +290,7 @@ func (c Changes) None() bool {
 }
 ````
 
-`server/internal/modules/issue/domain/patch_test.go`（新文件，142 行）：
+`server/internal/modules/issue/domain/patch_test.go`（新文件，143 行）：
 
 ````file server/internal/modules/issue/domain/patch_test.go
 package domain
@@ -409,6 +409,7 @@ func TestChangesOf(t *testing.T) {
 		{"every account removed", IssuePatch{AssigneeIDs: set()}, Changes{Assignees: Diff{Removed: []uuid.UUID{ann, ben}}}},
 		{"labels added and removed, out of order", IssuePatch{LabelIDs: set(ux, bug)},
 			Changes{Labels: Diff{Added: []uuid.UUID{ux}, Removed: []uuid.UUID{ui}}}},
+		{"every label removed", IssuePatch{LabelIDs: set()}, Changes{Labels: Diff{Removed: []uuid.UUID{bug, ui}}}},
 	}
 	for _, tt := range tests {
 		if got := ChangesOf(i, tt.p); !reflect.DeepEqual(got, tt.want) {
@@ -439,16 +440,44 @@ func TestChangesNone(t *testing.T) {
 
 - [ ] **Step 2: 修改的动态**
 
-`server/internal/modules/issue/domain/activity.go`（修改，2 处）：
+`server/internal/modules/issue/domain/activity.go`（修改，3 处）：
 
 ````old server/internal/modules/issue/domain/activity.go
 // Assignee is an account a work item is assigned to, as its activity names
 // him: his id and his display name when the row is written.
+type Assignee struct {
+	ID          uuid.UUID
+	DisplayName string
+}
 ````
 ````new server/internal/modules/issue/domain/activity.go
 // Assignee is an account a work item is assigned to, or unassigned from,
 // as its activity names him: his id and his display name when the row is
 // written.
+type Assignee struct {
+	ID          uuid.UUID
+	DisplayName string
+}
+
+// assigneeAdded is the row of a, an account a work item is assigned to:
+// row 2 at its creation and row 12 at an update, which M4 design 3.13
+// gives the same columns: assignees, updated, from "" to his display name,
+// his id the new identifier.
+func assigneeAdded(a Assignee) Activity {
+	return Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr(a.DisplayName),
+		NewIdentifier: ptr(a.ID), Comment: "added assignee "}
+}
+````
+````old server/internal/modules/issue/domain/activity.go
+	for _, a := range assignees {
+		rows = append(rows, Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr(a.DisplayName),
+			NewIdentifier: ptr(a.ID), Comment: "added assignee "})
+	}
+````
+````new server/internal/modules/issue/domain/activity.go
+	for _, a := range assignees {
+		rows = append(rows, assigneeAdded(a))
+	}
 ````
 ````old server/internal/modules/issue/domain/activity.go
 }
@@ -513,8 +542,7 @@ func UpdateActivity(u Update) []Activity {
 			OldIdentifier: ptr(l.ID), Comment: "removed label "})
 	}
 	for _, a := range u.AssigneesAdded {
-		rows = append(rows, Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr(a.DisplayName),
-			NewIdentifier: ptr(a.ID), Comment: "added assignee "})
+		rows = append(rows, assigneeAdded(a))
 	}
 	for _, a := range u.AssigneesRemoved {
 		rows = append(rows, Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(a.DisplayName), NewValue: ptr(""),
@@ -526,8 +554,35 @@ func UpdateActivity(u Update) []Activity {
 func ptr[T any](v T) *T {
 ````
 
-`server/internal/modules/issue/domain/activity_test.go`（修改，1 处）：
+`server/internal/modules/issue/domain/activity_test.go`（修改，3 处）：
 
+````old server/internal/modules/issue/domain/activity_test.go
+	"uuid"
+)
+````
+````new server/internal/modules/issue/domain/activity_test.go
+	"uuid"
+)
+
+// assigned is the row of the account id, of display name name, assigned to
+// a work item: row 2 at its creation and row 12 at an update alike (M4
+// design 3.13). Written out apart from assigneeAdded, it lets the tests of
+// both check that one encoding.
+func assigned(id uuid.UUID, name string) Activity {
+	field, empty := "assignees", ""
+	return Activity{Field: &field, Verb: "updated", OldValue: &empty, NewValue: &name, NewIdentifier: &id, Comment: "added assignee "}
+}
+````
+````old server/internal/modules/issue/domain/activity_test.go
+	created := Activity{Verb: "created", Comment: "created the work item"}
+	assigned := func(id uuid.UUID, name string) Activity {
+		field, empty := "assignees", ""
+		return Activity{Field: &field, Verb: "updated", OldValue: &empty, NewValue: &name, NewIdentifier: &id, Comment: "added assignee "}
+	}
+````
+````new server/internal/modules/issue/domain/activity_test.go
+	created := Activity{Verb: "created", Comment: "created the work item"}
+````
 ````old server/internal/modules/issue/domain/activity_test.go
 	}
 }
@@ -555,7 +610,6 @@ func TestUpdateActivity(t *testing.T) {
 	state := row("state", "Todo", "Done", &todo, &done, "updated the state to")
 	labelled := func(id uuid.UUID, n string) Activity { return row("labels", "", n, nil, &id, "added label ") }
 	unlabelled := func(id uuid.UUID, n string) Activity { return row("labels", n, "", &id, nil, "removed label ") }
-	assigned := func(id uuid.UUID, n string) Activity { return row("assignees", "", n, nil, &id, "added assignee ") }
 	unassigned := func(id uuid.UUID, n string) Activity { return row("assignees", n, "", &id, nil, "removed assignee ") }
 	tests := []struct {
 		name string
@@ -1188,7 +1242,7 @@ func unlinked(err error, table string, issue uuid.UUID) error {
 }
 ````
 
-`server/internal/modules/issue/adapter/postgres/update_test.go`（新文件，131 行）：
+`server/internal/modules/issue/adapter/postgres/update_test.go`（新文件，133 行）：
 
 ````file server/internal/modules/issue/adapter/postgres/update_test.go
 package postgresadapter_test
@@ -1210,26 +1264,27 @@ import (
 // the work item's name, state, priority and completion as given, last
 // changed by bob at later, its number, its sort order and its creation as
 // they were; RemoveAssignees and RemoveLabels soft-delete, by bob at
-// later, the work item's undeleted rows of the accounts and the labels
-// given, every other column kept. Nothing else changes: not another work
-// item, nor its rows of the same account and label, nor the work item's
-// rows of an account or a label not given, nor its rows of the same
-// account and label deleted an hour before, which keep their stamps. Moved
-// back into a state of no completed group, its completion given nil, the
-// work item is completed no more.
+// later, the work item's undeleted rows of every account and label given,
+// two of each in one call, every other column kept. Nothing else changes:
+// not another work item, nor its rows of a given account and label, nor
+// the work item's rows of an account or a label not given, nor its rows of
+// a given account and label deleted an hour before, which keep their
+// stamps. Moved back into a state of no completed group, its completion
+// given nil, the work item is completed no more.
 func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
-	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
+	alice, bob, carol, dave := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"),
+		newAccount(t, pool, "carol@corp.com"), newAccount(t, pool, "dave@corp.com")
 	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
 	done := uuid.NewV7()
 	exec(t, pool, `INSERT INTO states (id, workspace_id, project_id, name, color, "group") VALUES ($1, $2, $3, 'Done', '#000', 'completed')`,
 		done, web.workspace, web.id)
-	bug, ui := newLabel(t, pool, web, "Bug"), newLabel(t, pool, web, "UI")
+	bug, ui, docs := newLabel(t, pool, web, "Bug"), newLabel(t, pool, web, "UI"), newLabel(t, pool, web, "Docs")
 	id, other := uuid.NewV7(), uuid.NewV7()
 	createWebIssue(t, s, web, id, alice)
 	newIssue(t, pool, web, other, 8, alice)
-	assignees, labels := linkRows(web, id, alice, now, bob, carol), linkRows(web, id, alice, now, bug, ui)
+	assignees, labels := linkRows(web, id, alice, now, bob, carol, dave), linkRows(web, id, alice, now, bug, ui, docs)
 	for _, step := range []struct {
 		insert func(context.Context, app.LinkRows) error
 		rows   app.LinkRows
@@ -1257,10 +1312,10 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 		CompletedAt: &later, By: bob, At: later}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RemoveAssignees(ctx, app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{bob}, By: bob, At: later}); err != nil {
+	if err := s.RemoveAssignees(ctx, app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{bob, dave}, By: bob, At: later}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.RemoveLabels(ctx, app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{ui}, By: bob, At: later}); err != nil {
+	if err := s.RemoveLabels(ctx, app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{ui, docs}, By: bob, At: later}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1271,7 +1326,7 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 	if err != nil || !found || !reflect.DeepEqual(got, want) {
 		t.Errorf("GetIssue() = %+v, %v, %v; want %+v", got, found, err, want)
 	}
-	removed := map[string]uuid.UUID{"issue_assignees": assignees.IDs[0], "issue_labels": labels.IDs[1]}
+	removed := map[string][]uuid.UUID{"issue_assignees": {assignees.IDs[0], assignees.IDs[2]}, "issue_labels": {labels.IDs[1], labels.IDs[2]}}
 	for _, table := range tables {
 		after, afterStamps := rowsAsText(t, pool, table), audits(t, pool, table)
 		wantStamps := maps.Clone(stamps[table])
@@ -1280,8 +1335,9 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 			delete(before[table], id)
 			delete(afterStamps, id)
 			delete(wantStamps, id)
-		} else {
-			wantStamps[removed[table]] = deletion(later, bob)
+		}
+		for _, row := range removed[table] {
+			wantStamps[row] = deletion(later, bob)
 		}
 		if !maps.Equal(after, before[table]) {
 			t.Errorf("%s changed:\n%v\nwas\n%v", table, after, before[table])
@@ -1413,7 +1469,7 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/permission_matrix_seed_issues_test.go`、`server/internal/modules/issue/app/get_issue.go`、`server/internal/modules/issue/app/get_issue_test.go`
-- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/domain/actions.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/issue/module.go`、`web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`
+- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/domain/actions.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/issue/module.go`、`web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.6、第 3 节第 8 条；M4 设计 3.4、3.5、3.6、5.1–5.3、9.2）
@@ -1428,7 +1484,7 @@ Expected: 通过。
 - 前端：`error-messages.ts` 的 `"issue.not_found"`，两份 `errors.json` 的 `issue_not_found`（约束 4）。
 - 矩阵：
   - `permission_matrix_seed_issues_test.go`（新）：`matrixIssue`（"Seeded"）、`issueSeed`：每个项目一个工作项，Todo、medium，指派项目管理员和一个已离开的账户，标签 Bug，经 `NextIssueSequence` 和 `issue` 的存储写；
-  - `permission_matrix_seeded_test.go`、`permission_matrix_targets_test.go`：`seeded.issues`、`issue()`，`{issue_id}` 进 `underProject`；
+  - `permission_matrix_seeded_test.go`、`permission_matrix_targets_test.go`：`seeded.issues`、`issue()`，`{issue_id}` 进 `underProject`；`permission_matrix_project_test.go`：`rowsByID` 的说明带上工作项和读的一行；
   - `permission_matrix_issues_test.go`：`getIssue` 一行（`readsTheIssue` 核对回答的工作项），`createIssue` 的格子的编号从 2 起；`permission_matrix_test.go` 接上种子。
 
 **Tests:**
@@ -1665,12 +1721,12 @@ import (
 
 // newGet is getIssue over web's world (newCreate's), with web's work item
 // 7 stored in it: Fix, in Backlog, high, assigned to bob, labelled Bug,
-// made by alice.
+// made and last written by carol, so that alice, who reads it, is neither.
 func newGet() (*app.GetIssue, *world, uuid.UUID) {
 	_, w := newCreate()
 	id := uuid.NewV7()
 	w.issues.issue = &app.IssueRow{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID,
-		Priority: domain.PriorityHigh, SortOrder: 65535, By: alice, At: clockNow}
+		Priority: domain.PriorityHigh, SortOrder: 65535, By: carol, At: clockNow}
 	w.issues.assignees, w.issues.labels = []uuid.UUID{bob}, []uuid.UUID{bug}
 	return app.NewGetIssue(app.NewLocks(w.project, w.issues, w.auth)), w, id
 }
@@ -1682,7 +1738,7 @@ func TestGetIssueReadsTheWorkItem(t *testing.T) {
 	uc, w, id := newGet()
 	got, err := uc.Execute(as(alice), id)
 	want := domain.Issue{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID, Priority: domain.PriorityHigh,
-		SortOrder: 65535, AssigneeIDs: []uuid.UUID{bob}, LabelIDs: []uuid.UUID{bug}, CreatedByID: &alice, UpdatedByID: &alice, CreatedAt: clockNow,
+		SortOrder: 65535, AssigneeIDs: []uuid.UUID{bob}, LabelIDs: []uuid.UUID{bug}, CreatedByID: &carol, UpdatedByID: &carol, CreatedAt: clockNow,
 		UpdatedAt: clockNow}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
@@ -2065,8 +2121,9 @@ func TestGetIssueRefusals(t *testing.T) {
 ````new server/internal/bootstrap/permission_matrix_issues_test.go
 // 9.2): creating one, under the project of each column, and reading one,
 // naming it by its id (/issues/{issue_id}): its column's project's seeded
-// work item, matrixIssue. Each cell writes on a copy of its own, so each
-// creation is its project's second, after the seeded one.
+// work item, matrixIssue. Each creating cell writes on a copy of its own,
+// so each creation is its project's second, after the seeded one; the
+// reading cells share one.
 
 var cellIssueNotFound = cell{http.StatusNotFound, "issue.not_found"}
 
@@ -2129,10 +2186,11 @@ var issueRows = rowsByID{path: "issues", notFound: cellIssueNotFound, find: seed
 	}
 }
 
-// readsTheIssue: the column's project's seeded work item, every field as
-// issueSeed stored it: its first, in Todo, medium, assigned to PM's
-// account and the removed member's, in id order, labelled Bug, made by
-// acme's admin.
+// readsTheIssue: the column's project's seeded work item, its id, project,
+// number, name, state, priority, assignees, labels and creator as
+// issueSeed stored them: its first, named matrixIssue, in Todo, medium,
+// assigned to PM's account and the removed member's, in id order, labelled
+// Bug, made by acme's admin.
 func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	var i struct {
 		ID          uuid.UUID   `json:"id"`
@@ -2158,7 +2216,36 @@ func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 
 ````
 
-`server/internal/bootstrap/permission_matrix_seed_issues_test.go`（新文件，80 行）：
+`server/internal/bootstrap/permission_matrix_project_test.go`（修改，3 处）：
+
+````old server/internal/bootstrap/permission_matrix_project_test.go
+// rowsByID is a kind of row under a project that the writes of the matrix
+// name by its id, /api/v0/<path>/{id}: a state (stateRows), a label
+// (labelRows). notFound answers a caller who does not see the row's
+// project, and find is the seeded row of a project by its name.
+````
+````new server/internal/bootstrap/permission_matrix_project_test.go
+// rowsByID is a kind of row under a project that the matrix's rows name by
+// its id, /api/v0/<path>/{id}: a state (stateRows), a label (labelRows), a
+// work item (issueRows). notFound answers a caller who does not see the
+// row's project, and find is the seeded row of a project by its name.
+````
+````old server/internal/bootstrap/permission_matrix_project_test.go
+// of are the cells of a row of a write on one (projectCells), with
+````
+````new server/internal/bootstrap/permission_matrix_project_test.go
+// of are the cells of a row on one, a write or a read (projectCells), with
+````
+````old server/internal/bootstrap/permission_matrix_project_test.go
+// ofArchived are the cells of a row of a write on one of the archived
+// project (archivedCells), with notFound.
+````
+````new server/internal/bootstrap/permission_matrix_project_test.go
+// ofArchived are the cells of a row on one of the archived project, a write
+// or a read (archivedCells), with notFound.
+````
+
+`server/internal/bootstrap/permission_matrix_seed_issues_test.go`（新文件，81 行）：
 
 ````file server/internal/bootstrap/permission_matrix_seed_issues_test.go
 package bootstrap
@@ -2175,11 +2262,10 @@ import (
 )
 
 // matrixIssue is the work item prepareMatrix seeds in each project of
-// matrixProjects through the issue store, by its workspace's admin, as
-// createIssue would write it, its project's first: in Todo, medium,
-// assigned to PM's account and to the removed member's, whose membership
-// of acme and of its public project ended since, and labelled Bug. gone's
-// is deleted with it.
+// matrixProjects through the issue store, by its workspace's admin, its
+// project's first: in Todo, medium, assigned to PM's account and to the
+// removed member's, whose membership of acme and of its public project
+// ended since, and labelled Bug. gone's is deleted with it.
 const matrixIssue = "Seeded"
 
 // issueSeed writes the prepared work items through the issue store, each
@@ -2224,9 +2310,11 @@ func (s issueSeed) issues(sd seeded) {
 }
 
 // seededIssues checks the work items the cells rest on, read back through
-// the issue store: each project's matrixIssue as issues stored it, its
-// project's first, but gone's, deleted with gone. One missing, or stored
-// otherwise, would let a cell answer as it wants for another reason.
+// the issue store by the ids sd names: each project's work item, in its
+// project, its first, named matrixIssue, in Todo, medium, assigned to PM's
+// account and the removed member's, in id order, labelled Bug; undeleted,
+// but gone's, deleted with gone. One missing, or stored otherwise, would
+// let a cell answer as it wants for another reason.
 func (s issueSeed) seededIssues(sd seeded) {
 	s.t.Helper()
 	assignees := slices.SortedFunc(slices.Values([]uuid.UUID{s.ids[callerProjectMember], s.ids[callerRemoved]}), uuid.UUID.Compare)
@@ -2330,7 +2418,7 @@ func (s seeded) issue(key, name string) uuid.UUID {
 // work item) one seeded in projectOf(c), each from a column of a project table
 ````
 
-`server/internal/bootstrap/permission_matrix_test.go`（修改，3 处）：
+`server/internal/bootstrap/permission_matrix_test.go`（修改，5 处）：
 
 ````old server/internal/bootstrap/permission_matrix_test.go
 	"uuid"
@@ -2340,6 +2428,57 @@ func (s seeded) issue(key, name string) uuid.UUID {
 	"uuid"
 
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
+````
+````old server/internal/bootstrap/permission_matrix_test.go
+// memberships through the workspace store, the projects, their
+// memberships, their states and their labels through the project store,
+// the deleted workspace through the API, and the membership states no
+// store makes alone through SQL (prepareMatrix).
+// The cells that only read share one copy of it, and each cell that writes
+// gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
+// another's writes. Each module's rows are in a file of their own
+// (permission_matrix_<module>_test.go): a phase that adds an operation adds
+// its row there, and what the row needs prepared here and in
+// permission_matrix_seeded_test.go; the labels' writer and check are
+// beside their rows.
+````
+````new server/internal/bootstrap/permission_matrix_test.go
+// memberships through the workspace store, the projects, their memberships,
+// states and labels through the project store, their work items through
+// the issue store, the deleted workspace through the API, and the
+// membership states no store makes alone through SQL (prepareMatrix).
+// The cells that only read share one copy of it, and each cell that writes
+// gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
+// another's writes. Each module's rows are in a file of their own
+// (permission_matrix_<module>_test.go): a phase that adds an operation adds
+// its row there, and what the row needs prepared here and in
+// permission_matrix_seeded_test.go; the labels' writer and check are beside
+// their rows, the work items' in permission_matrix_seed_issues_test.go.
+````
+````old server/internal/bootstrap/permission_matrix_test.go
+// matrixProjectMembers, matrixStates and matrixLabels, and acme's archived
+// project archived. Through both stores, the removed member's removal;
+// then, through the workspace store, the invitations of matrixInvitations.
+// Through the project store, the memberships P5b's writes end (endings);
+// through SQL, the membership states no store makes alone (partingStates).
+// Through the API, gone deleted by its admin, which soft-deletes its
+// memberships and its project, with its states and labels, with it; then
+// the checks that the rows the cells rest on are there (preconditions), the
+// states and the labels among them (seededStates, seededLabels).
+````
+````new server/internal/bootstrap/permission_matrix_test.go
+// matrixProjectMembers, matrixStates and matrixLabels; through the issue
+// store, each project's work item, matrixIssue (issueSeed); through the
+// project store, acme's archived project archived. Through both stores,
+// the removed member's removal; then, through the workspace store, the
+// invitations of matrixInvitations. Through the project store, the
+// memberships P5b's writes end (endings); through SQL, the membership
+// states no store makes alone (partingStates). Through the API, gone
+// deleted by its admin, which soft-deletes its memberships and its
+// project, with its states, labels and work item, with it; then the checks
+// that the rows the cells rest on are there (preconditions), the states,
+// the labels and the work items among them (seededStates, seededLabels,
+// seededIssues).
 ````
 ````old server/internal/bootstrap/permission_matrix_test.go
 		projects.labels(s)
@@ -2383,7 +2522,7 @@ Expected: 通过。
 - [ ] **Step 7: 提交**
 
 ```bash
-git add api/modules/issue.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_issues_test.go server/internal/bootstrap/permission_matrix_seed_issues_test.go server/internal/bootstrap/permission_matrix_seeded_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/handler_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/app/create_issue_test.go server/internal/modules/issue/app/get_issue.go server/internal/modules/issue/app/get_issue_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/domain/actions.go server/internal/modules/issue/domain/errors.go server/internal/modules/issue/module.go web/apps/web/core/lib/error-messages.ts web/packages/i18n/src/locales/en/errors.json web/packages/i18n/src/locales/zh-CN/errors.json api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_issues_test.go server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/permission_matrix_seed_issues_test.go server/internal/bootstrap/permission_matrix_seeded_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/handler_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/app/create_issue_test.go server/internal/modules/issue/app/get_issue.go server/internal/modules/issue/app/get_issue_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/domain/actions.go server/internal/modules/issue/domain/errors.go server/internal/modules/issue/module.go web/apps/web/core/lib/error-messages.ts web/packages/i18n/src/locales/en/errors.json web/packages/i18n/src/locales/zh-CN/errors.json api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P1): getIssue reads a work item for its project's admins and members
