@@ -7643,11 +7643,11 @@ Expected: 通过。
 **Tests:**（组合；3u–7u 各两种顺序；`-count=5 -race` 没有 40P01）
 - 1u：alice 的修改（改名 Mend、加 Bug）持 Web 的行；bob 的修改（改名 Repair、去掉每个标签）按改之前的工作项过了预检、等行；她提交之后他在锁下重读：动态写"Mend → Repair"和去掉她加的 Bug，Bug 不在了，时刻不早于门打开。
 - 等锁期间 Fix 被删除、被移到 Ops（P1b 没有这两个操作，由持 Web 的行的事务在数据库里做）：bob 的修改过了预检、等行，提交之后在锁下找不到 Web 里的 Fix：404 `issue.not_found`，Fix 的名称不变。
-- 3u：先改（加负责人、关注、标签和三行动态，共九行）时删除 Web 或 acme 等行，九行随它在一个时刻删除，删除的时刻不早于门打开；先删时修改 404 `issue.not_found`，不写。
+- 3u：bob 先改（加他自己为负责人、他的关注、标签和三行动态，共九行）时删除 Web 或 acme 等行，九行随它在一个时刻由 alice 删除（删除者不是这些行最后的写者），删除的时刻不早于门打开；先删时修改 404 `issue.not_found`，不写。
 - 4u、5u：预检放行之后 bob 被移出 Web：404 `issue.not_found`；被降为访客：403；都不写。
 - 6u：Review 先删：修改 422 `state_id`，不写；先改到 Review：删除 409 `project.state_in_use`，Review 保留。
 - 7u：Bug 先删：修改 422 `label_ids[0]`，不写；先加：Bug 在删除的时刻由 alice 摘下。
-- 创建的一支和 P1a 的一样；`TestTwoWritesOnAProjectSerialize` 照旧；`TestUpdatingAWorkItemStampsItsRows` 照旧（它的工作项由 `newWorkItemIn` 建）。
+- 创建的一支和 P1a 的一样，只是交错 2、3 的创建由 bob 做：六行（他作为创建者和负责人只关注一次），由 alice 删除；`TestTwoWritesOnAProjectSerialize` 照旧；`TestUpdatingAWorkItemStampsItsRows` 照旧（它的工作项由 `newWorkItemIn` 建）。
 
 - [ ] **Step 1: 两支共用的写和世界**
 
@@ -8199,22 +8199,25 @@ func TestCreatingAWorkItemAndDeletingItsProjectOrWorkspaceSerialize(t *testing.T
 ````new server/internal/bootstrap/issue_interleaving_deletion_test.go
 // A work item's write and its project's deletion, or its workspace's,
 // serialize on Web's row (M4 design 3.5, 3.6; interleavings 2 and 3, the
-// creation's branch and the change's), in both orders. Written first,
-// holding Web FOR NO KEY UPDATE: a work item created assigned to bob and
-// labelled Bug (fullIssue), seven rows; or alice's Fix (aWorkItem) changed
-// so, which adds an assignee, his subscription, a label and three
-// activities to its three rows. The deletion waits for Web's row, then
-// deletes every row of Web's work-item side with Web, or with acme, by
-// alice, at its one moment, no earlier than the write's commit: it read
-// its clock under the locks it took once the write had committed (M4
-// design 3.5). Deleted first: the write, which passed the precheck, finds
-// Web deleted under its lock: 404 project.not_found, or issue.not_found
-// for the change, and it wrote nothing; the rows there were are deleted.
+// creation's branch and the change's), in both orders. bob writes and alice
+// deletes: the rows he wrote name him until the deletion stamps them as
+// hers. Written first, holding Web FOR NO KEY UPDATE: a work item bob
+// creates assigned to himself and labelled Bug (fullIssue), six rows, his
+// one subscription, as its creator and its assignee, among them; or alice's
+// Fix (aWorkItem) he changes so, which adds his assignment, his
+// subscription, a label and three activities to its three rows. The
+// deletion waits for Web's row, then deletes every row of Web's work-item
+// side with Web, or with acme, by alice, at its one moment, no earlier than
+// the write's commit: it read its clock under the locks it took once the
+// write had committed (M4 design 3.5). Deleted first: the write, which
+// passed the precheck, finds Web deleted under its lock: 404
+// project.not_found, or issue.not_found for the change, and it wrote
+// nothing; the rows there were are deleted.
 func TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize(t *testing.T) {
 	for _, iw := range []struct {
 		itemWrite
 		written int // the rows of Web's work-item side once it has written
-	}{{itemWrites[0], 7}, {itemWrites[1], 9}} {
+	}{{itemWrites[0], 6}, {itemWrites[1], 9}} {
 		for _, deletion := range []struct {
 			name  string
 			write racingWrite
@@ -8225,7 +8228,7 @@ func TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize(t *testing.T) 
 			{"acme", deletesAcme, "workspaces", func(w issueWorld) uuid.UUID { return w.acme }},
 		} {
 			t.Run(iw.name+", "+deletion.name, func(t *testing.T) {
-				inBothOrders(t, iw.prepare, "deleted", deletion.write, iw.name, iw.write("alice", fullBody), func(t *testing.T,
+				inBothOrders(t, iw.prepare, "deleted", deletion.write, iw.name, iw.write("bob", fullBody), func(t *testing.T,
 					w issueWorld, deletedFirst bool, deleted, written exchange) {
 					w.answered(t, deleted, http.StatusNoContent)
 					rows := iw.written
