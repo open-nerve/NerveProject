@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`platform/gate/gate_test.go`（273 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`platform/gate/gate_test.go`（292 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。本 plan 不改 `tools/keywords.json`：`phase` 照旧是 `M4/P1`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；配置文件的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -5487,17 +5487,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `leave` 只生效一次（`sync.Once`）。
 - 不依赖任何模块，只用标准库（`archtest` 的平台规则照旧）。
 
-**Tests:**（单元，表和 `-race`；`entry`、`enter`、`returned`、`waits`、`queued`、`forgotten`）
+**Tests:**（单元，表和 `-race`；`entry`、`enter`、`returned`、`waits`、`queued`、`forgotten`、`idle`）
 - `TestAKeyAdmitsPerKeyCallersAtOnce`：`PerKey` 个立即进入，下一个等到有人离开；别的键不算；都离开之后不留键。
 - `TestWaitersAreServedInTheOrderTheyCame`：等着的按到来的次序进入。
 - `TestAFullQueueRefusesAtOnce`：`MaxQueue` 0 和 2，满时立即 `ErrFull`，不等。
 - `TestAWaiterGivesUp`：`MaxWait` 到 `ErrTimeout`；取消、期限各 `ctx.Err()`；进入之前已取消的不进，哪怕有空位；放弃的不占位置，之后的照样进入。
 - `TestLeavingTwiceLeavesOnce`：第二次 `leave` 不放出别人的位置。
-- `TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`：32 个 goroutine 各 1000 次、三个键、随机的期限（不带 `-race` 每次也走到放弃时被交到位置的一支），任何时刻一个键至多 `PerKey` 个持有者；最后不留键。
+- `TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`：32 个 goroutine 各 1000 次、三个键、随机的期限（不带 `-race` 每次也走到放弃时被交到位置的一支），任何时刻一个键至多 `PerKey` 个持有者，有人等的键没有空位（每次 `Enter` 之后在闸门的锁下查，`idle`）；最后不留键。
 
 - [ ] **Step 1: 测试**
 
-`server/internal/platform/gate/gate_test.go`（新文件，273 行）：
+`server/internal/platform/gate/gate_test.go`（新文件，292 行）：
 
 ````file server/internal/platform/gate/gate_test.go
 package gate
@@ -5584,6 +5584,21 @@ func forgotten(t *testing.T, g *Keyed[string]) {
 	if len(g.keys) != 0 {
 		t.Errorf("the gate keeps %d keys, want none", len(g.keys))
 	}
+}
+
+// idle is how many places of g's keys are free while callers wait for them,
+// under g's lock: none, since a holder who leaves hands his place to the
+// first caller waiting.
+func (g *Keyed[K]) idle() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	n := 0
+	for _, q := range g.keys {
+		if len(q.waiting) > 0 {
+			n += g.limits.PerKey - q.holders
+		}
+	}
+	return n
 }
 
 // PerKey callers hold a key at once, each entering at once; the next waits
@@ -5733,16 +5748,16 @@ func TestLeavingTwiceLeavesOnce(t *testing.T) {
 
 // Under load, on a few keys, with waits that time out and contexts
 // cancelled at random, so that a key is handed to a caller as he gives up:
-// never more than PerKey callers hold a key at once, every caller that
-// enters leaves, and once all have, the gate keeps nothing (run with
-// -race).
+// never more than PerKey callers hold a key at once, no key has a free
+// place while callers wait for it, every caller that enters leaves, and
+// once all have, the gate keeps nothing (run with and without -race).
 func TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey(t *testing.T) {
 	const perKey = 2
 	g := New[string](Limits{PerKey: perKey, MaxQueue: 16, MaxWait: 2 * time.Millisecond})
 	keys := []string{"web", "ops", "api"}
 	var holders [3]atomic.Int32
 	var most atomic.Int32
-	var entered, refused atomic.Int64
+	var entered, refused, idle atomic.Int64
 	var wg sync.WaitGroup
 	for range 32 {
 		wg.Go(func() {
@@ -5750,6 +5765,7 @@ func TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey(t *testing.T) {
 				k := rand.IntN(len(keys))
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rand.IntN(3000))*time.Microsecond)
 				leave, err := g.Enter(ctx, keys[k])
+				idle.Add(int64(g.idle()))
 				if err != nil {
 					refused.Add(1)
 					cancel()
@@ -5767,6 +5783,9 @@ func TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey(t *testing.T) {
 		})
 	}
 	wg.Wait()
+	if idle.Load() != 0 {
+		t.Errorf("keys with callers waiting had %d free places, summed over the checks; want none", idle.Load())
+	}
 	if most.Load() > perKey || entered.Load() == 0 || refused.Load() == 0 {
 		t.Errorf("at most %d held a key at once, %d entered, %d refused; want at most %d, some of each", most.Load(), entered.Load(),
 			refused.Load(), perKey)

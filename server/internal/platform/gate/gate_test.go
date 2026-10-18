@@ -84,6 +84,21 @@ func forgotten(t *testing.T, g *Keyed[string]) {
 	}
 }
 
+// idle is how many places of g's keys are free while callers wait for them,
+// under g's lock: none, since a holder who leaves hands his place to the
+// first caller waiting.
+func (g *Keyed[K]) idle() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	n := 0
+	for _, q := range g.keys {
+		if len(q.waiting) > 0 {
+			n += g.limits.PerKey - q.holders
+		}
+	}
+	return n
+}
+
 // PerKey callers hold a key at once, each entering at once; the next waits
 // until one of them leaves, then holds it. Another key's holders do not
 // count. Once every caller has left, the gate keeps nothing.
@@ -231,16 +246,16 @@ func TestLeavingTwiceLeavesOnce(t *testing.T) {
 
 // Under load, on a few keys, with waits that time out and contexts
 // cancelled at random, so that a key is handed to a caller as he gives up:
-// never more than PerKey callers hold a key at once, every caller that
-// enters leaves, and once all have, the gate keeps nothing (run with
-// -race).
+// never more than PerKey callers hold a key at once, no key has a free
+// place while callers wait for it, every caller that enters leaves, and
+// once all have, the gate keeps nothing (run with and without -race).
 func TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey(t *testing.T) {
 	const perKey = 2
 	g := New[string](Limits{PerKey: perKey, MaxQueue: 16, MaxWait: 2 * time.Millisecond})
 	keys := []string{"web", "ops", "api"}
 	var holders [3]atomic.Int32
 	var most atomic.Int32
-	var entered, refused atomic.Int64
+	var entered, refused, idle atomic.Int64
 	var wg sync.WaitGroup
 	for range 32 {
 		wg.Go(func() {
@@ -248,6 +263,7 @@ func TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey(t *testing.T) {
 				k := rand.IntN(len(keys))
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rand.IntN(3000))*time.Microsecond)
 				leave, err := g.Enter(ctx, keys[k])
+				idle.Add(int64(g.idle()))
 				if err != nil {
 					refused.Add(1)
 					cancel()
@@ -265,6 +281,9 @@ func TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey(t *testing.T) {
 		})
 	}
 	wg.Wait()
+	if idle.Load() != 0 {
+		t.Errorf("keys with callers waiting had %d free places, summed over the checks; want none", idle.Load())
+	}
 	if most.Load() > perKey || entered.Load() == 0 || refused.Load() == 0 {
 		t.Errorf("at most %d held a key at once, %d entered, %d refused; want at most %d, some of each", most.Load(), entered.Load(),
 			refused.Load(), perKey)
