@@ -10,8 +10,9 @@ import (
 // The rows of the permission matrix of a project's work items (M4 design
 // 9.2): creating one, under the project of each column, and reading one,
 // naming it by its id (/issues/{issue_id}): its column's project's seeded
-// work item, matrixIssue. Each cell writes on a copy of its own, so each
-// creation is its project's second, after the seeded one.
+// work item, matrixIssue. Each creating cell writes on a copy of its own,
+// so each creation is its project's second, after the seeded one; the
+// reading cells share one.
 
 var cellIssueNotFound = cell{http.StatusNotFound, "issue.not_found"}
 
@@ -142,10 +143,11 @@ func createsTheGivenIssue(t *testing.T, c caller, s seeded, answer string) {
 	}
 }
 
-// readsTheIssue: the column's project's seeded work item, every field as
-// issueSeed stored it: its first, in Todo, medium, assigned to PM's
-// account and the removed member's, in id order, labelled Bug, made by
-// acme's admin.
+// readsTheIssue: the column's project's seeded work item, its id, project,
+// number, name, state, priority, assignees, labels and creator as
+// issueSeed stored them: its first, named matrixIssue, in Todo, medium,
+// assigned to PM's account and the removed member's, in id order, labelled
+// Bug, made by acme's admin.
 func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	var i struct {
 		ID          uuid.UUID   `json:"id"`

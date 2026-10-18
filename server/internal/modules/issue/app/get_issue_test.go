@@ -15,12 +15,12 @@ import (
 
 // newGet is getIssue over web's world (newCreate's), with web's work item
 // 7 stored in it: Fix, in Backlog, high, assigned to bob, labelled Bug,
-// made by alice.
+// made and last written by carol, so that alice, who reads it, is neither.
 func newGet() (*app.GetIssue, *world, uuid.UUID) {
 	_, w := newCreate()
 	id := uuid.NewV7()
 	w.issues.issue = &app.IssueRow{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID,
-		Priority: domain.PriorityHigh, SortOrder: 65535, By: alice, At: clockNow}
+		Priority: domain.PriorityHigh, SortOrder: 65535, By: carol, At: clockNow}
 	w.issues.assignees, w.issues.labels = []uuid.UUID{bob}, []uuid.UUID{bug}
 	return app.NewGetIssue(app.NewLocks(w.project, w.issues, w.auth)), w, id
 }
@@ -32,7 +32,7 @@ func TestGetIssueReadsTheWorkItem(t *testing.T) {
 	uc, w, id := newGet()
 	got, err := uc.Execute(as(alice), id)
 	want := domain.Issue{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID, Priority: domain.PriorityHigh,
-		SortOrder: 65535, AssigneeIDs: []uuid.UUID{bob}, LabelIDs: []uuid.UUID{bug}, CreatedByID: &alice, UpdatedByID: &alice, CreatedAt: clockNow,
+		SortOrder: 65535, AssigneeIDs: []uuid.UUID{bob}, LabelIDs: []uuid.UUID{bug}, CreatedByID: &carol, UpdatedByID: &carol, CreatedAt: clockNow,
 		UpdatedAt: clockNow}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)

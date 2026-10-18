@@ -12,11 +12,10 @@ import (
 )
 
 // matrixIssue is the work item prepareMatrix seeds in each project of
-// matrixProjects through the issue store, by its workspace's admin, as
-// createIssue would write it, its project's first: in Todo, medium,
-// assigned to PM's account and to the removed member's, whose membership
-// of acme and of its public project ended since, and labelled Bug. gone's
-// is deleted with it.
+// matrixProjects through the issue store, by its workspace's admin, its
+// project's first: in Todo, medium, assigned to PM's account and to the
+// removed member's, whose membership of acme and of its public project
+// ended since, and labelled Bug. gone's is deleted with it.
 const matrixIssue = "Seeded"
 
 // issueSeed writes the prepared work items through the issue store, each
@@ -61,9 +60,11 @@ func (s issueSeed) issues(sd seeded) {
 }
 
 // seededIssues checks the work items the cells rest on, read back through
-// the issue store: each project's matrixIssue as issues stored it, its
-// project's first, but gone's, deleted with gone. One missing, or stored
-// otherwise, would let a cell answer as it wants for another reason.
+// the issue store by the ids sd names: each project's work item, in its
+// project, its first, named matrixIssue, in Todo, medium, assigned to PM's
+// account and the removed member's, in id order, labelled Bug; undeleted,
+// but gone's, deleted with gone. One missing, or stored otherwise, would
+// let a cell answer as it wants for another reason.
 func (s issueSeed) seededIssues(sd seeded) {
 	s.t.Helper()
 	assignees := slices.SortedFunc(slices.Values([]uuid.UUID{s.ids[callerProjectMember], s.ids[callerRemoved]}), uuid.UUID.Compare)

@@ -4513,8 +4513,8 @@ func answered(t *testing.T, c caller, s seeded, answer string, completed bool, c
 	}
 }
 
-// readsTheIssue: the column's project's seeded work item, every field as
-// issueSeed stored it (seededIssue).
+// readsTheIssue: the column's project's seeded work item as issueSeed
+// stored it, in each field answeredIssue holds (seededIssue).
 func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	var got answeredIssue
 	decodeAnswer(t, answer, &got)
@@ -4548,10 +4548,11 @@ func keepsTheAssigneeWhoLeft(t *testing.T, c caller, s seeded, answer string) {
 
 ````old server/internal/bootstrap/permission_matrix_issues_test.go
 
-// readsTheIssue: the column's project's seeded work item, every field as
-// issueSeed stored it: its first, in Todo, medium, assigned to PM's
-// account and the removed member's, in id order, labelled Bug, made by
-// acme's admin.
+// readsTheIssue: the column's project's seeded work item, its id, project,
+// number, name, state, priority, assignees, labels and creator as
+// issueSeed stored them: its first, named matrixIssue, in Todo, medium,
+// assigned to PM's account and the removed member's, in id order, labelled
+// Bug, made by acme's admin.
 func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	var i struct {
 		ID          uuid.UUID   `json:"id"`
@@ -6167,12 +6168,13 @@ func (f fakeGate) Enter(ctx context.Context, projectID uuid.UUID) (func(), error
 ````old server/internal/modules/issue/app/get_issue_test.go
 // newGet is getIssue over web's world (newCreate's), with web's work item
 // 7 stored in it: Fix, in Backlog, high, assigned to bob, labelled Bug,
-// made by alice.
+// made and last written by carol, so that alice, who reads it, is neither.
 ````
 ````new server/internal/modules/issue/app/get_issue_test.go
 // newGet is getIssue over web's world (newCreate's), its write gate one
 // that logs, with web's work item 7 stored in it: Fix, in Backlog, high,
-// assigned to bob, labelled Bug, made by alice.
+// assigned to bob, labelled Bug, made and last written by carol, so that
+// alice, who reads it, is neither.
 ````
 ````old server/internal/modules/issue/app/get_issue_test.go
 	_, w := newCreate()
