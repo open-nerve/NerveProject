@@ -52,6 +52,30 @@ paths:
                 $ref: '#/components/schemas/IssueDetail'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: getIssue
+      tags: [issue]
+      summary: Read a work item
+      description: >-
+        For the admins and members of its project, archived or not; an
+        archived work item is read as any other. A work item that does not
+        exist, is deleted, or whose project the caller does not see answers
+        issue.not_found; one he sees the project of but may not read,
+        forbidden.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden]
+      responses:
+        '200':
+          description: The work item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
   securitySchemes:
@@ -64,6 +88,14 @@ components:
       in: path
       required: true
       description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+    IssueID:
+      name: issue_id
+      in: path
+      required: true
+      description: A work item's id (IssueDetail.id).
       schema:
         type: string
         format: uuid

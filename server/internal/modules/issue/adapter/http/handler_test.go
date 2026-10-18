@@ -61,8 +61,26 @@ func (f *fakeCreate) Execute(ctx context.Context, projectID uuid.UUID, in domain
 	return f.answer, f.err
 }
 
-// newServer serves the module's API over create, as bootstrap mounts it.
-func newServer(t *testing.T, create *fakeCreate) http.Handler {
+// fakeGet is getIssue: each call is recorded as "caller work item"; it
+// answers answer, or err.
+type fakeGet struct {
+	calls  []string
+	answer domain.Issue
+	err    error
+}
+
+func (f *fakeGet) Execute(ctx context.Context, id uuid.UUID) (domain.Issue, error) {
+	actor, err := shared.RequireActor(ctx)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	f.calls = append(f.calls, actor.UserID.String()+" "+id.String())
+	return f.answer, f.err
+}
+
+// newServer serves the module's API over the use cases uc, as bootstrap
+// mounts it.
+func newServer(t *testing.T, uc httpadapter.UseCases) http.Handler {
 	t.Helper()
 	logger := slog.New(slog.DiscardHandler)
 	router := httpserver.NewRouter(logger)
@@ -74,7 +92,7 @@ func newServer(t *testing.T, create *fakeCreate) http.Handler {
 	if err != nil {
 		t.Fatal(err)
 	}
-	httpadapter.Register(router, api, httpadapter.UseCases{CreateIssue: create})
+	httpadapter.Register(router, api, uc)
 	return router
 }
 

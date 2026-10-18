@@ -52,7 +52,7 @@ func newCreate() (*app.CreateIssue, *world) {
 	w.issues = &fakeIssues{log: log, greatest: map[uuid.UUID]float64{done.ID: 85535}}
 	w.auth = &fakeAuthorizer{log: log}
 	w.profiles = fakeProfiles{log: log, names: map[uuid.UUID]string{alice: "Alice", bob: "bob", carol: "Carol C.", gus: "gus"}}
-	uc := app.NewCreateIssue(app.CreateIssueDeps{Locks: app.NewLocks(w.project, w.auth), Issues: w.issues, Sequences: w.project,
+	uc := app.NewCreateIssue(app.CreateIssueDeps{Locks: app.NewLocks(w.project, w.issues, w.auth), Issues: w.issues, Sequences: w.project,
 		States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Tx: fakeTx{log: log}, Clock: clockAt{at: clockNow, log: log}})
 	return uc, w
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 	"uuid"
 
+	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -298,6 +299,8 @@ func prepareMatrix(t *testing.T) matrixData {
 		}
 		projects.states(s)
 		projects.labels(s)
+		issues := issueSeed{projectSeed: projects, store: issuepg.New(pool)}
+		issues.issues(s)
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {
@@ -316,6 +319,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		projects.preconditions(s)
 		projects.seededStates(pool)
 		projects.seededLabels(pool, s)
+		issues.seededIssues(s)
 	})
 	if !prepared {
 		t.FailNow()

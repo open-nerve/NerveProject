@@ -107,6 +107,9 @@ type IssueDetail struct {
 // IssuePriority A work item's priority, from the most to the least urgent.
 type IssuePriority string
 
+// IssueID defines model for IssueID.
+type IssueID = uuid.UUID
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
 
@@ -118,6 +121,9 @@ type CreateIssueJSONRequestBody = IssueCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetIssue Read a work item
+	// (GET /api/v0/issues/{issue_id})
+	GetIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// CreateIssue Create a work item in a project
 	// (POST /api/v0/projects/{project_id}/issues)
 	CreateIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -131,6 +137,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetIssue operation middleware
+func (siw *ServerInterfaceWrapper) GetIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // CreateIssue operation middleware
 func (siw *ServerInterfaceWrapper) CreateIssue(w http.ResponseWriter, r *http.Request) {
@@ -279,6 +311,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.CreateIssue)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.GetIssue)
 
 	return m
 }
@@ -291,6 +324,52 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type GetIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type GetIssueResponseObject interface {
+	VisitGetIssueResponse(w http.ResponseWriter) error
+}
+
+type GetIssue200JSONResponse IssueDetail
+
+func (response GetIssue200JSONResponse) VisitGetIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetIssuedefaultApplicationProblemPlusJSONResponse) VisitGetIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type CreateIssueRequestObject struct {
@@ -342,6 +421,9 @@ func (response CreateIssuedefaultApplicationProblemPlusJSONResponse) VisitCreate
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetIssue Read a work item
+	// (GET /api/v0/issues/{issue_id})
+	GetIssue(ctx context.Context, request GetIssueRequestObject) (GetIssueResponseObject, error)
 	// CreateIssue Create a work item in a project
 	// (POST /api/v0/projects/{project_id}/issues)
 	CreateIssue(ctx context.Context, request CreateIssueRequestObject) (CreateIssueResponseObject, error)
@@ -384,6 +466,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetIssue operation middleware
+func (sh *strictHandler) GetIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request GetIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIssue(ctx, request.(GetIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIssueResponseObject); ok {
+		if err := validResponse.VisitGetIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // CreateIssue operation middleware

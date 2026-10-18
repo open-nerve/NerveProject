@@ -940,6 +940,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a work item
+         * @description For the admins and members of its project, archived or not; an archived work item is read as any other. A work item that does not exist, is deleted, or whose project the caller does not see answers issue.not_found; one he sees the project of but may not read, forbidden.
+         */
+        get: operations["getIssue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/me/projects/{project_id}/preferences": {
         parameters: {
             query?: never;
@@ -1794,6 +1817,8 @@ export interface components {
         StateID: string;
         /** @description A label's id (Label.id). */
         LabelID: string;
+        /** @description A work item's id (IssueDetail.id). */
+        IssueID: string;
     };
     requestBodies: never;
     headers: never;
@@ -1887,6 +1912,7 @@ export type ParameterProjectId = components['parameters']['ProjectID'];
 export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
 export type ParameterStateId = components['parameters']['StateID'];
 export type ParameterLabelId = components['parameters']['LabelID'];
+export type ParameterIssueId = components['parameters']['IssueID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -3329,6 +3355,30 @@ export interface operations {
         responses: {
             /** @description The new work item. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

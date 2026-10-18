@@ -89,9 +89,18 @@ type PublicProfiles interface {
 	DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
 }
 
+// IssueReader reads a work item, in the transaction ctx carries, or
+// without one (M4 design 3.5, 5.2).
+type IssueReader interface {
+	// GetIssue reads the undeleted work item, archived or not, with its
+	// assignees and labels; found is false when there is none.
+	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
+}
+
 // IssueCreator is the work items' store as createIssue writes and reads
 // them, in the transaction ctx carries (M4 design 3.5).
 type IssueCreator interface {
+	IssueReader
 	// GreatestSortOrder reads the greatest sort order of the project's
 	// undeleted work items in the state, archived ones too, nil for none.
 	GreatestSortOrder(ctx context.Context, projectID, stateID uuid.UUID) (*float64, error)
@@ -103,7 +112,4 @@ type IssueCreator interface {
 	InsertSubscribers(ctx context.Context, r LinkRows) error
 	// InsertActivities inserts the rows in their order.
 	InsertActivities(ctx context.Context, rows []ActivityRow) error
-	// GetIssue reads the undeleted work item with its assignees and
-	// labels; found is false when there is none.
-	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
 }

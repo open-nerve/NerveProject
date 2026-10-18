@@ -9,6 +9,7 @@ import (
 	"time"
 	"uuid"
 
+	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -70,7 +71,7 @@ func TestCreateIssue(t *testing.T) {
 			webEight, webEightJSON},
 	} {
 		create := &fakeCreate{answer: tt.answer}
-		h := newServer(t, create)
+		h := newServer(t, httpadapter.UseCases{CreateIssue: create})
 		if res, body := do(t, h, request(http.MethodPost, path, "alice", tt.body)); res.StatusCode != http.StatusCreated || body != tt.json+"\n" {
 			t.Errorf("POST %s = %d %s, want 201 %s", tt.body, res.StatusCode, body, tt.json)
 		}
@@ -90,7 +91,7 @@ func TestCreateIssueTakesAnEmptyPriorityAsGiven(t *testing.T) {
 	in := domain.NewIssue{Name: "Fix", Priority: &empty}
 	_, refused := domain.CheckNewIssue(in)
 	create := &fakeCreate{err: refused}
-	res, body := do(t, newServer(t, create), request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice",
+	res, body := do(t, newServer(t, httpadapter.UseCases{CreateIssue: create}), request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice",
 		`{"name":"Fix","priority":""}`))
 	want := `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
 		`"errors":[{"field":"priority","code":"invalid_format","message":"must be one of urgent, high, medium, low, none"}]}`
@@ -105,7 +106,7 @@ func TestCreateIssueTakesAnEmptyPriorityAsGiven(t *testing.T) {
 // bad_request before the use case.
 func TestCreateIssueHoldsTheBodyToItsStructure(t *testing.T) {
 	create := &fakeCreate{}
-	h := newServer(t, create)
+	h := newServer(t, httpadapter.UseCases{CreateIssue: create})
 	for _, body := range []string{`{}`, `{"priority":"high"}`, `{"name":1}`, `{"name":"A","sequence_id":3}`, `{"name":"A","sort_order":1}`,
 		`{"name":"A","description_html":"<p>x</p>"}`, `{"name":"A","state_id":"Backlog"}`, `{"name":"A","state_id":null}`,
 		`{"name":"A","assignee_ids":"bob"}`, `{"name":"A","label_ids":["Bug"]}`} {
@@ -141,10 +142,52 @@ func TestCreateIssueRefusals(t *testing.T) {
 		{"a failure", errGone, http.StatusInternalServerError,
 			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	} {
-		h := newServer(t, &fakeCreate{err: tt.err})
+		h := newServer(t, httpadapter.UseCases{CreateIssue: &fakeCreate{err: tt.err}})
 		res, body := do(t, h, request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice", `{"name":"Fix"}`))
 		if res.StatusCode != tt.status || body != tt.want+"\n" {
 			t.Errorf("%s: POST = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}
+
+// GET goes to the use case for the caller and the path's work item; the
+// answer is 200 with the work item the use case answers, as POST shows it.
+func TestGetIssue(t *testing.T) {
+	for _, tt := range []struct {
+		answer domain.Issue
+		json   string
+	}{{webSeven, webSevenJSON}, {webEight, webEightJSON}} {
+		get := &fakeGet{answer: tt.answer}
+		res, body := do(t, newServer(t, httpadapter.UseCases{GetIssue: get}), request(http.MethodGet, "/api/v0/issues/"+tt.answer.ID.String(),
+			"alice", ""))
+		if res.StatusCode != http.StatusOK || body != tt.json+"\n" {
+			t.Errorf("GET = %d %s, want 200 %s", res.StatusCode, body, tt.json)
+		}
+		if want := []string{aliceID.String() + " " + tt.answer.ID.String()}; !slices.Equal(get.calls, want) {
+			t.Errorf("GET: calls %q, want %q", get.calls, want)
+		}
+	}
+}
+
+// The use case's refusals, as the contract declares them, and its failure.
+func TestGetIssueRefusals(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		err    error
+		status int
+		want   string
+	}{
+		{"no work item", domain.ErrIssueNotFound, http.StatusNotFound,
+			`{"status":404,"code":"issue.not_found","title":"Not Found","detail":"The work item does not exist, or you cannot see it."}`},
+		{"a project guest", shared.Forbidden(), http.StatusForbidden,
+			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{"a failure", errGone, http.StatusInternalServerError,
+			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
+	} {
+		h := newServer(t, httpadapter.UseCases{GetIssue: &fakeGet{err: tt.err}})
+		res, body := do(t, h, request(http.MethodGet, "/api/v0/issues/"+webSeven.ID.String(), "alice", ""))
+		if res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("%s: GET = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
 		}
 	}
 }

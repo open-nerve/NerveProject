@@ -27,6 +27,15 @@ func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObje
 	return gen.CreateIssue201JSONResponse(issueDetail(i)), nil
 }
 
+// GetIssue serves GET /api/v0/issues/{issue_id}.
+func (h handler) GetIssue(ctx context.Context, req gen.GetIssueRequestObject) (gen.GetIssueResponseObject, error) {
+	i, err := h.uc.GetIssue.Execute(ctx, req.IssueID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetIssue200JSONResponse(issueDetail(i)), nil
+}
+
 // issueDetail is i as the API shows it: each field that may be null null
 // when it is nil, each list [] when it is empty.
 func issueDetail(i domain.Issue) gen.IssueDetail {
