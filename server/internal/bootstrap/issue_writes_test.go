@@ -98,17 +98,21 @@ func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) module
 
 // Each write on the work-item side runs every statement of its transaction
 // on that transaction's connection (M4 design 3.5, 6.7): its lock, the
-// decision under it, its checks of the states, the members and the labels,
-// its number, its writes, the display names, and its answer. The issue
-// module and the Authorizer are wired as bootstrap wires them, on a pool
-// of one connection (poolOfOne): a statement sent through the pool rather
-// than the transaction would wait for a second connection that never
-// comes, and its request fail at the request's deadline. On Web of the
-// world, alice creates a work item in Todo, assigned to bob and labelled
-// Bug; with bob made Web's default assignee, one without assignees, which
-// he takes; one labelled with a label no project has, which the check
-// under the lock refuses (422); walt, who sees Web, is refused before the
-// lock (403); and with Web archived, alice's is refused under the lock
+// work item read again under it, the decision under it, its checks of the
+// states, the members and the labels, its number, its writes, the display
+// names, and its answer. The issue module and the Authorizer are wired as
+// bootstrap wires them, on a pool of one connection (poolOfOne): a
+// statement sent through the pool rather than the transaction would wait
+// for a second connection that never comes, and its request fail at the
+// request's deadline. On Web of the world, alice creates a work item in
+// Todo, assigned to bob and labelled Bug; with bob made Web's default
+// assignee, one without assignees, which he takes; one labelled with a
+// label no project has, which the check under the lock refuses (422); walt,
+// who sees Web, is refused before the lock (403). She changes the first:
+// into Done, assigned to herself instead of bob, without Bug; then its name
+// as it is, which writes nothing; then with a label no project has (422),
+// and walt is refused (403); and she reads it, without a transaction. With
+// Web archived, her creation and her change are refused under the lock
 // (409).
 func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	w := newIssueWorld(t)
@@ -121,7 +125,10 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 		return route.answerWithin(t, w.contract, http.MethodPost, path, caller, body, want)
 	}
 
-	send(alice, w.fullIssue(), http.StatusCreated)
+	var first struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, send(alice, w.fullIssue(), http.StatusCreated), &first)
 	if _, err := w.pool.Exec(context.Background(), "UPDATE projects SET default_assignee_id = $2 WHERE id = $1", w.web, w.ids["bob"]); err != nil {
 		t.Fatal(err)
 	}
@@ -134,8 +141,25 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	}
 	send(alice, `{"name":"Fix","label_ids":["`+uuid.NewV7().String()+`"]}`, http.StatusUnprocessableEntity)
 	send(w.ids["walt"], `{"name":"Fix"}`, http.StatusForbidden)
+	change := func(caller uuid.UUID, body string, want int) string {
+		t.Helper()
+		return route.answerWithin(t, w.contract, http.MethodPatch, "/api/v0/issues/"+first.ID.String(), caller, body, want)
+	}
+	var changed struct {
+		AssigneeIDs []uuid.UUID `json:"assignee_ids"`
+		LabelIDs    []uuid.UUID `json:"label_ids"`
+	}
+	if decodeAnswer(t, change(alice, `{"state_id":"`+w.done.String()+`","assignee_ids":["`+alice.String()+`"],"label_ids":[]}`,
+		http.StatusOK), &changed); !slices.Equal(changed.AssigneeIDs, []uuid.UUID{alice}) || len(changed.LabelIDs) != 0 {
+		t.Errorf("the work item changed is assigned to %v, labelled %v; want alice alone, no label", changed.AssigneeIDs, changed.LabelIDs)
+	}
+	change(alice, `{"name":"Fix"}`, http.StatusOK)
+	change(alice, `{"label_ids":["`+uuid.NewV7().String()+`"]}`, http.StatusUnprocessableEntity)
+	change(w.ids["walt"], `{"name":"Mend"}`, http.StatusForbidden)
+	route.answerWithin(t, w.contract, http.MethodGet, "/api/v0/issues/"+first.ID.String(), alice, "", http.StatusOK)
 	if _, err := w.pool.Exec(context.Background(), "UPDATE projects SET archived_at = now() WHERE id = $1", w.web); err != nil {
 		t.Fatal(err)
 	}
 	send(alice, `{"name":"Fix"}`, http.StatusConflict)
+	change(alice, `{"name":"Mend"}`, http.StatusConflict)
 }
