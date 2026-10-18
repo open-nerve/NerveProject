@@ -154,7 +154,8 @@ type IssueConfig struct {
 	WriteGate WriteGateConfig `koanf:"write_gate"`
 	// WriteLockTimeout bounds each wait of such a write's transaction for a
 	// lock (lock_timeout): a write that waits longer answers 503
-	// server_busy. It is less than server.request_timeout.
+	// server_busy. It plus WriteGate.MaxWait is less than
+	// server.request_timeout.
 	WriteLockTimeout time.Duration `koanf:"write_lock_timeout"`
 }
 

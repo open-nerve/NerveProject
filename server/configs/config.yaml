@@ -92,7 +92,7 @@ issue:
     per_project: 2
     max_wait: 2s
     max_queue: 64
-  # 这些写的事务等每一把锁的上限（lock_timeout）；到期 503 server_busy。必须短于 server.request_timeout
+  # 这些写的事务等每一把锁的上限（lock_timeout）；到期 503 server_busy。加上 write_gate.max_wait 必须短于 server.request_timeout
   write_lock_timeout: 5s
 
 files:

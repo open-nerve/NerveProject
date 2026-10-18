@@ -59,7 +59,8 @@ type Option func(m *TxManager)
 // sets lock_timeout for the transaction alone (SET LOCAL), in the same
 // round trip, before any statement of fn. A statement that waits longer
 // fails with SQLSTATE 55P03 (LockNotAvailable), and the transaction rolls
-// back (M4 design 3.5, 11.11).
+// back (M4 design 3.5, 11.11). d must be positive: PostgreSQL reads a
+// lock_timeout of 0 as no limit.
 func LockTimeout(d time.Duration) Option {
 	return func(m *TxManager) {
 		m.begin.BeginQuery = fmt.Sprintf("BEGIN; SET LOCAL lock_timeout = %d", (d + time.Millisecond - 1).Milliseconds())
@@ -75,9 +76,10 @@ func NewTxManager(pool *pgxpool.Pool, commitTimeout time.Duration, opts ...Optio
 	return m
 }
 
-// LockNotAvailable reports whether err, or an error it wraps, is a
-// statement's that waited for a lock longer than its transaction's lock
-// timeout (SQLSTATE 55P03; LockTimeout).
+// LockNotAvailable reports whether err, or an error it wraps, is
+// lock_not_available (SQLSTATE 55P03): e.g. a statement's that waited for
+// a lock longer than its transaction's lock timeout (LockTimeout), or that
+// asked with NOWAIT for a lock another transaction held.
 func LockNotAvailable(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "55P03"

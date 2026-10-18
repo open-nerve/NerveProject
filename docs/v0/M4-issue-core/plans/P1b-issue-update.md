@@ -6018,14 +6018,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `LockNotAvailable(err) bool`：`55P03`，包了几层也认，与 `UniqueViolation` 同一种写法。
 - `platform/config`：
   - `config.go`：`Config.Issue IssueConfig`（`koanf:"issue"`）、`IssueConfig{WriteGate WriteGateConfig; WriteLockTimeout time.Duration}`、`WriteGateConfig{PerProject, MaxQueue int; MaxWait time.Duration}`；`LogValue` 记下四个键；
-  - `validate.go`：`issue.write_gate.per_project` 至少 1、`max_wait` 为正、`max_queue` 不为负；`issue.write_lock_timeout` 为正，且短于 `server.request_timeout`（等锁到期的写仍要在请求到期之前答 503）。
+  - `validate.go`：`issue.write_gate.per_project` 至少 1、`max_wait` 为正、`max_queue` 不为负；`issue.write_lock_timeout` 为正，且加上 `issue.write_gate.max_wait` 短于 `server.request_timeout`（在闸门上等到 `max_wait`、再等锁到期的写仍要在请求到期之前答 503）。
 - `configs/config.yaml`：四个键的默认值（2、2s、64、5s）和中文说明。
 
 **Tests:**
 - 存储（真实的 PostgreSQL）：
   - `TestLockTimeoutBoundsEachWaitOfTheTransaction`（表）：一个连接的池上，`LockTimeout(80ms)` 的事务里 `SHOW lock_timeout` 是 `80ms`，等另一个事务持的表锁约 80 毫秒之后 `55P03`、回滚（等不到期时在测试的 3 秒期限失败）；之后这个连接回到默认（`0`），提交之后也是；1.2 毫秒取整为 `2ms`（向下、就近取整都是 `1ms`）；不带选项的是 `0`；
   - `TestLockNotAvailable`：`55P03` 本身、包了一层的是；`40P01`、文本是 `55P03` 而不是 PostgreSQL 的错误、`nil` 不是。
-- 单元：`TestValidateReportsEveryInvalidKey`（三个闸门的键、锁的期限）、`TestValidateCrossKeyRules`（锁的期限不短于请求的期限）、`TestValidateAcceptsTheWriteGatesMinimums`（`per_project` 1、`max_queue` 0 可以）、`TestLoadAppliesLayersInOrder`（文件和环境变量的层）、`TestLogValueMasksDatabaseURL`（四个键在日志里；日志按文字比对，四个值各不同于默认值和别的键的值，也不是别的键的值的开头）、`configs` 的 `TestBuiltInProfiles`（默认值）。
+- 单元：`TestValidateReportsEveryInvalidKey`（三个闸门的键、锁的期限）、`TestValidateCrossKeyRules`（闸门的等待加锁的期限等于、超过请求的期限）、`TestValidateAcceptsTheWriteGatesMinimums`（`per_project` 1、`max_queue` 0 可以）、`TestValidateAcceptsWriteWaitsJustUnderTheRequestTimeout`（两者之和略短于请求的期限可以）、`TestLoadAppliesLayersInOrder`（文件和环境变量的层）、`TestLogValueMasksDatabaseURL`（四个键在日志里；日志按文字比对，四个值各不同于默认值和别的键的值，也不是别的键的值的开头）、`configs` 的 `TestBuiltInProfiles`（默认值）。
 
 - [ ] **Step 1: 锁的期限**
 
@@ -6167,7 +6167,8 @@ type Option func(m *TxManager)
 // sets lock_timeout for the transaction alone (SET LOCAL), in the same
 // round trip, before any statement of fn. A statement that waits longer
 // fails with SQLSTATE 55P03 (LockNotAvailable), and the transaction rolls
-// back (M4 design 3.5, 11.11).
+// back (M4 design 3.5, 11.11). d must be positive: PostgreSQL reads a
+// lock_timeout of 0 as no limit.
 func LockTimeout(d time.Duration) Option {
 	return func(m *TxManager) {
 		m.begin.BeginQuery = fmt.Sprintf("BEGIN; SET LOCAL lock_timeout = %d", (d + time.Millisecond - 1).Milliseconds())
@@ -6183,9 +6184,10 @@ func NewTxManager(pool *pgxpool.Pool, commitTimeout time.Duration, opts ...Optio
 	return m
 }
 
-// LockNotAvailable reports whether err, or an error it wraps, is a
-// statement's that waited for a lock longer than its transaction's lock
-// timeout (SQLSTATE 55P03; LockTimeout).
+// LockNotAvailable reports whether err, or an error it wraps, is
+// lock_not_available (SQLSTATE 55P03): e.g. a statement's that waited for
+// a lock longer than its transaction's lock timeout (LockTimeout), or that
+// asked with NOWAIT for a lock another transaction held.
 func LockNotAvailable(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "55P03"
@@ -6216,7 +6218,7 @@ issue:
     per_project: 2
     max_wait: 2s
     max_queue: 64
-  # 这些写的事务等每一把锁的上限（lock_timeout）；到期 503 server_busy。必须短于 server.request_timeout
+  # 这些写的事务等每一把锁的上限（lock_timeout）；到期 503 server_busy。加上 write_gate.max_wait 必须短于 server.request_timeout
   write_lock_timeout: 5s
 
 ````
@@ -6261,7 +6263,8 @@ type IssueConfig struct {
 	WriteGate WriteGateConfig `koanf:"write_gate"`
 	// WriteLockTimeout bounds each wait of such a write's transaction for a
 	// lock (lock_timeout): a write that waits longer answers 503
-	// server_busy. It is less than server.request_timeout.
+	// server_busy. It plus WriteGate.MaxWait is less than
+	// server.request_timeout.
 	WriteLockTimeout time.Duration `koanf:"write_lock_timeout"`
 }
 
@@ -6372,10 +6375,12 @@ func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, forma
 	switch {
 	case i.WriteLockTimeout <= 0:
 		fail("issue.write_lock_timeout", "must be positive, got %s", i.WriteLockTimeout)
-	case requestTimeout > 0 && i.WriteLockTimeout >= requestTimeout:
-		// A write that waits its lock timeout out still has to answer 503
-		// before the request's deadline.
-		fail("issue.write_lock_timeout", "must be less than server.request_timeout (%s), got %s", requestTimeout, i.WriteLockTimeout)
+	case requestTimeout > 0 && g.MaxWait+i.WriteLockTimeout >= requestTimeout:
+		// A write may wait up to max_wait at the gate and then up to its
+		// lock timeout for a lock; one that waits both out must still
+		// answer 503 before its request's deadline cancels it.
+		fail("issue.write_lock_timeout", "plus issue.write_gate.max_wait (%s) must be less than server.request_timeout (%s), got %s",
+			g.MaxWait, requestTimeout, i.WriteLockTimeout)
 	}
 }
 
@@ -6421,11 +6426,21 @@ func (r RateLimitConfig) validate(fail func(key, format string, args ...any)) {
 			want:   "ratelimit.ipv6_prefix_len: must be from 1 to 128, got 129",
 		},
 		{
-			// A write that waits its lock timeout out still answers 503
-			// before the request's deadline (M4 design 11.11).
-			name:   "write lock timeout not below the request timeout",
-			change: func(c *Config) { c.Issue.WriteLockTimeout = 15 * time.Second },
-			want:   "issue.write_lock_timeout: must be less than server.request_timeout (15s), got 15s",
+			// A write may wait max_wait at the gate and then its lock
+			// timeout for a lock, and must still answer 503 before its
+			// request's deadline (M4 design 3.5, 11.11).
+			name:   "gate wait and lock timeout reaching the request timeout",
+			change: func(c *Config) { c.Issue.WriteLockTimeout = 13500 * time.Millisecond },
+			want:   "issue.write_lock_timeout: plus issue.write_gate.max_wait (1.5s) must be less than server.request_timeout (15s), got 13.5s",
+		},
+		{
+			// Each wait alone is well under the request timeout.
+			name: "gate wait and lock timeout past the request timeout",
+			change: func(c *Config) {
+				c.Issue.WriteGate.MaxWait = 11 * time.Second
+				c.Issue.WriteLockTimeout = 5 * time.Second
+			},
+			want: "issue.write_lock_timeout: plus issue.write_gate.max_wait (11s) must be less than server.request_timeout (15s), got 5s",
 		},
 ````
 ````old server/internal/platform/config/validate_test.go
@@ -6438,6 +6453,16 @@ func TestValidateAcceptsTheWriteGatesMinimums(t *testing.T) {
 	cfg := validConfig()
 	cfg.Issue.WriteGate.PerProject = 1
 	cfg.Issue.WriteGate.MaxQueue = 0
+	if err := cfg.validate(); err != nil {
+		t.Errorf("validate() = %v, want nil", err)
+	}
+}
+
+// A write's gate wait and lock timeout may together come up to just under
+// the request timeout.
+func TestValidateAcceptsWriteWaitsJustUnderTheRequestTimeout(t *testing.T) {
+	cfg := validConfig()
+	cfg.Issue.WriteLockTimeout = cfg.Server.RequestTimeout - cfg.Issue.WriteGate.MaxWait - time.Millisecond
 	if err := cfg.validate(); err != nil {
 		t.Errorf("validate() = %v, want nil", err)
 	}
@@ -9312,7 +9337,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new README.md
 - **数据库的 locale**：用 UTF-8 的 locale 初始化数据库（官方的 PostgreSQL 镜像是 `en_US.utf8`）。标签的名称在项目内不分大小写，按数据库的 `LC_CTYPE` 折叠（`lower(name)`）：以 `C` 初始化的数据库只折叠 ASCII，`Ä` 与 `ä` 算两个名称（M3/P7b spec 第 7 节）。
-- **工作项的写闸门和锁的期限**：一个项目上的工作项的写，每个进程里至多 `issue.write_gate.per_project`（默认 2）个同时在数据库里；多的在进程里排队，至多 `issue.write_gate.max_queue`（默认 64）个，每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；在数据库里每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒，必须短于 `server.request_timeout`）。排满、等不到、请求到期或等锁到期的写得到 503 `server_busy`，带 `Retry-After: 1`，客户端隔这么久重试。闸门让一个热的项目至多占用连接池（`database.max_conns`，默认 10）里的这么多个连接：同时热的项目少于 `max_conns / per_project`（默认 5）个时，别的项目的读写不排在它们后面；更多的项目同时热时（比如删除一个大的工作区，它的每个项目上都有写在等行锁），等锁的写仍能占满连接池，别的请求在池的队列里等到这些写等锁到期。部署多个 nerve 进程时每个进程各有这么多个：连接池的大小怎样配合 `per_project`、同时热的项目数和进程数，由 M8 的部署说明定。
+- **工作项的写闸门和锁的期限**：一个项目上的工作项的写，每个进程里至多 `issue.write_gate.per_project`（默认 2）个同时在数据库里；多的在进程里排队，至多 `issue.write_gate.max_queue`（默认 64）个，每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；在数据库里每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒；加上 `max_wait` 必须短于 `server.request_timeout`）。排满、等不到、请求到期或等锁到期的写得到 503 `server_busy`，带 `Retry-After: 1`，客户端隔这么久重试。闸门让一个热的项目至多占用连接池（`database.max_conns`，默认 10）里的这么多个连接：同时热的项目少于 `max_conns / per_project`（默认 5）个时，别的项目的读写不排在它们后面；更多的项目同时热时（比如删除一个大的工作区，它的每个项目上都有写在等行锁），等锁的写仍能占满连接池，别的请求在池的队列里等到这些写等锁到期。部署多个 nerve 进程时每个进程各有这么多个：连接池的大小怎样配合 `per_project`、同时热的项目数和进程数，由 M8 的部署说明定。
 ````
 
 `docs/v0/M4-issue-core/handoffs/M2-closeout.md`（修改，1 处）：

@@ -151,10 +151,12 @@ func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, forma
 	switch {
 	case i.WriteLockTimeout <= 0:
 		fail("issue.write_lock_timeout", "must be positive, got %s", i.WriteLockTimeout)
-	case requestTimeout > 0 && i.WriteLockTimeout >= requestTimeout:
-		// A write that waits its lock timeout out still has to answer 503
-		// before the request's deadline.
-		fail("issue.write_lock_timeout", "must be less than server.request_timeout (%s), got %s", requestTimeout, i.WriteLockTimeout)
+	case requestTimeout > 0 && g.MaxWait+i.WriteLockTimeout >= requestTimeout:
+		// A write may wait up to max_wait at the gate and then up to its
+		// lock timeout for a lock; one that waits both out must still
+		// answer 503 before its request's deadline cancels it.
+		fail("issue.write_lock_timeout", "plus issue.write_gate.max_wait (%s) must be less than server.request_timeout (%s), got %s",
+			g.MaxWait, requestTimeout, i.WriteLockTimeout)
 	}
 }
 
