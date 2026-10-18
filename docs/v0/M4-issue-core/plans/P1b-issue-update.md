@@ -6023,13 +6023,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Tests:**
 - 存储（真实的 PostgreSQL）：
-  - `TestLockTimeoutBoundsEachWaitOfTheTransaction`（表）：一个连接的池上，`LockTimeout(80ms)` 的事务里 `SHOW lock_timeout` 是 `80ms`，等另一个事务持的表锁约 80 毫秒之后 `55P03`、回滚（等不到期时在测试的 3 秒期限失败）；之后这个连接回到默认（`0`），提交之后也是；1.5 毫秒取整为 `2ms`；不带选项的是 `0`；
+  - `TestLockTimeoutBoundsEachWaitOfTheTransaction`（表）：一个连接的池上，`LockTimeout(80ms)` 的事务里 `SHOW lock_timeout` 是 `80ms`，等另一个事务持的表锁约 80 毫秒之后 `55P03`、回滚（等不到期时在测试的 3 秒期限失败）；之后这个连接回到默认（`0`），提交之后也是；1.2 毫秒取整为 `2ms`（向下、就近取整都是 `1ms`）；不带选项的是 `0`；
   - `TestLockNotAvailable`：`55P03` 本身、包了一层的是；`40P01`、文本是 `55P03` 而不是 PostgreSQL 的错误、`nil` 不是。
-- 单元：`TestValidateReportsEveryInvalidKey`（三个闸门的键、锁的期限）、`TestValidateCrossKeyRules`（锁的期限不短于请求的期限）、`TestLoadAppliesLayersInOrder`（文件和环境变量的层）、`TestLogValueMasksDatabaseURL`（四个键在日志里）、`configs` 的 `TestBuiltInProfiles`（默认值）。
+- 单元：`TestValidateReportsEveryInvalidKey`（三个闸门的键、锁的期限）、`TestValidateCrossKeyRules`（锁的期限不短于请求的期限）、`TestValidateAcceptsTheWriteGatesMinimums`（`per_project` 1、`max_queue` 0 可以）、`TestLoadAppliesLayersInOrder`（文件和环境变量的层）、`TestLogValueMasksDatabaseURL`（四个键在日志里；日志按文字比对，四个值各不同于默认值和别的键的值，也不是别的键的值的开头）、`configs` 的 `TestBuiltInProfiles`（默认值）。
 
 - [ ] **Step 1: 锁的期限**
 
-`server/internal/platform/postgres/lock_timeout_test.go`（新文件，102 行）：
+`server/internal/platform/postgres/lock_timeout_test.go`（新文件，103 行）：
 
 ````file server/internal/platform/postgres/lock_timeout_test.go
 package postgres_test
@@ -6099,10 +6099,11 @@ func TestLockTimeoutBoundsEachWaitOfTheTransaction(t *testing.T) {
 		t.Errorf("lock_timeout after the transaction = %s, want 0", after)
 	}
 
+	// 1.2ms: rounded up, 2ms; rounded down or to the nearest, 1ms.
 	for _, tt := range []struct {
 		opts []postgres.Option
 		want string
-	}{{[]postgres.Option{postgres.LockTimeout(1500 * time.Microsecond)}, "2ms"}, {nil, "0"}} {
+	}{{[]postgres.Option{postgres.LockTimeout(1200 * time.Microsecond)}, "2ms"}, {nil, "0"}} {
 		var got string
 		if err := postgres.NewTxManager(one, commitTimeout, tt.opts...).WithinTx(context.Background(), func(ctx context.Context) error {
 			got = lockTimeout(t, ctx, one)
@@ -6300,10 +6301,10 @@ type WriteGateConfig struct {
 ````
 ````new server/internal/platform/config/config_test.go
 		"config.workspace.creation_enabled=false",
-		"config.issue.write_gate.per_project=3",
+		"config.issue.write_gate.per_project=9",
 		"config.issue.write_gate.max_wait=1.5s",
 		"config.issue.write_gate.max_queue=32",
-		"config.issue.write_lock_timeout=4s",
+		"config.issue.write_lock_timeout=3s",
 ````
 
 `server/internal/platform/config/load_test.go`（修改，3 处）：
@@ -6381,16 +6382,17 @@ func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, forma
 func (r RateLimitConfig) validate(fail func(key, format string, args ...any)) {
 ````
 
-`server/internal/platform/config/validate_test.go`（修改，4 处）：
+`server/internal/platform/config/validate_test.go`（修改，5 处）：
 
 ````old server/internal/platform/config/validate_test.go
 		Files:     FilesConfig{SizeLimit: 7340032},
 		Log:       LogConfig{Level: "info", Format: "json"},
 ````
 ````new server/internal/platform/config/validate_test.go
-		// Each unlike the defaults and the others, as auth.password's.
-		Issue: IssueConfig{WriteGate: WriteGateConfig{PerProject: 3, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
-			WriteLockTimeout: 4 * time.Second},
+		// Each unlike its default and every other key's value, and not the
+		// start of one, so that a key logged from the wrong field shows.
+		Issue: IssueConfig{WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
+			WriteLockTimeout: 3 * time.Second},
 		Files: FilesConfig{SizeLimit: 7340032},
 		Log:   LogConfig{Level: "info", Format: "json"},
 ````
@@ -6425,6 +6427,23 @@ func (r RateLimitConfig) validate(fail func(key, format string, args ...any)) {
 			change: func(c *Config) { c.Issue.WriteLockTimeout = 15 * time.Second },
 			want:   "issue.write_lock_timeout: must be less than server.request_timeout (15s), got 15s",
 		},
+````
+````old server/internal/platform/config/validate_test.go
+// Only prod requires the signing key file; dev and test generate a key.
+````
+````new server/internal/platform/config/validate_test.go
+// The write gate's minimums are inclusive: per_project 1 and max_queue 0
+// (no queue) are allowed.
+func TestValidateAcceptsTheWriteGatesMinimums(t *testing.T) {
+	cfg := validConfig()
+	cfg.Issue.WriteGate.PerProject = 1
+	cfg.Issue.WriteGate.MaxQueue = 0
+	if err := cfg.validate(); err != nil {
+		t.Errorf("validate() = %v, want nil", err)
+	}
+}
+
+// Only prod requires the signing key file; dev and test generate a key.
 ````
 
 - [ ] **Step 3: 测试和 lint**

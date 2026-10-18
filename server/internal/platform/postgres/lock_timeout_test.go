@@ -65,10 +65,11 @@ func TestLockTimeoutBoundsEachWaitOfTheTransaction(t *testing.T) {
 		t.Errorf("lock_timeout after the transaction = %s, want 0", after)
 	}
 
+	// 1.2ms: rounded up, 2ms; rounded down or to the nearest, 1ms.
 	for _, tt := range []struct {
 		opts []postgres.Option
 		want string
-	}{{[]postgres.Option{postgres.LockTimeout(1500 * time.Microsecond)}, "2ms"}, {nil, "0"}} {
+	}{{[]postgres.Option{postgres.LockTimeout(1200 * time.Microsecond)}, "2ms"}, {nil, "0"}} {
 		var got string
 		if err := postgres.NewTxManager(one, commitTimeout, tt.opts...).WithinTx(context.Background(), func(ctx context.Context) error {
 			got = lockTimeout(t, ctx, one)

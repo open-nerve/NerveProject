@@ -51,9 +51,10 @@ func validConfig() Config {
 		// Unlike the defaults and unlike auth.signup_enabled, so that a key
 		// logged from the wrong field shows.
 		Workspace: WorkspaceConfig{CreationEnabled: false},
-		// Each unlike the defaults and the others, as auth.password's.
-		Issue: IssueConfig{WriteGate: WriteGateConfig{PerProject: 3, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
-			WriteLockTimeout: 4 * time.Second},
+		// Each unlike its default and every other key's value, and not the
+		// start of one, so that a key logged from the wrong field shows.
+		Issue: IssueConfig{WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
+			WriteLockTimeout: 3 * time.Second},
 		Files: FilesConfig{SizeLimit: 7340032},
 		Log:   LogConfig{Level: "info", Format: "json"},
 	}
@@ -274,6 +275,17 @@ func TestValidateChecksEachBucketUnderItsOwnKey(t *testing.T) {
 func TestValidateAcceptsACleanupIntervalOfOneSecond(t *testing.T) {
 	cfg := validConfig()
 	cfg.Auth.SessionCleanupInterval = time.Second
+	if err := cfg.validate(); err != nil {
+		t.Errorf("validate() = %v, want nil", err)
+	}
+}
+
+// The write gate's minimums are inclusive: per_project 1 and max_queue 0
+// (no queue) are allowed.
+func TestValidateAcceptsTheWriteGatesMinimums(t *testing.T) {
+	cfg := validConfig()
+	cfg.Issue.WriteGate.PerProject = 1
+	cfg.Issue.WriteGate.MaxQueue = 0
 	if err := cfg.validate(); err != nil {
 		t.Errorf("validate() = %v, want nil", err)
 	}
