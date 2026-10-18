@@ -97,12 +97,12 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 // check checks the dependent rows that c adds to the work item i under the
 // project's lock (M4 design 3.6, 3.7), and reads the names its activity
 // writes: the new state, when c changes it, is the project's and not its
-// triage state; each account added may be assigned (domain.Unassignable),
-// while one the work item keeps stays whatever his role; each label added
-// is the project's. The labels the work item keeps are on it, so they are
-// the project's undeleted labels: deleting a label takes it off every work
-// item (DetachLabel). Every problem is reported at once, in one 422, each
-// at its place in p.
+// triage state, by a creation's rule (pickState); each account added may
+// be assigned (domain.Unassignable), while one the work item keeps stays
+// whatever his role; each label added is the project's. The labels the
+// work item keeps are on it, so they are the project's undeleted labels:
+// deleting a label takes it off every work item (DetachLabel). Every
+// problem is reported at once, in one 422, each at its place in p.
 func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssuePatch, c domain.Changes) (named, error) {
 	var n named
 	var problems []shared.FieldError
@@ -115,7 +115,7 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 		if !found {
 			return named{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
 		}
-		if state, found := stateOf(states, *c.StateID); found && state.Group != domain.GroupTriage {
+		if state, found := pickState(states, c.StateID); found {
 			n.state = &domain.Changed[domain.Named]{Old: domain.Named{ID: old.ID, Name: old.Name}, New: domain.Named{ID: state.ID, Name: state.Name}}
 			n.group = state.Group
 		} else {

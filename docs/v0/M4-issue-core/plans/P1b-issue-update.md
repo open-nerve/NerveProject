@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（315 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`platform/gate/gate_test.go`（273 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`platform/gate/gate_test.go`（273 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。本 plan 不改 `tools/keywords.json`：`phase` 照旧是 `M4/P1`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；配置文件的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -99,7 +99,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/project/app/issue_ports.go`、`server/internal/modules/project/module.go`（修改） | `IssueState.Name`、`IssueLabel` | 2 |
 | `server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`（修改） | 转换状态、标签的名称 | 2 |
 | `server/internal/modules/issue/app/ports.go`（修改） | `StateRef.Name`、`LabelRef`（Task 2）；`IssueReader`（Task 4）；`IssueUpdater`（Task 5）；`WriteGate`（Task 10） | 2、4、5、10 |
-| `server/internal/modules/issue/app/create_issue.go`（修改） | 按 `id` 找标签（Task 2）；改到 `Locks.run` 上，`stamp` 和 `readBack` 移到 `writes.go`（Task 5） | 2、5 |
+| `server/internal/modules/issue/app/create_issue.go`（修改） | 按 `id` 找标签（Task 2）；改到 `Locks.run` 上，`stamp`、`readBack` 和 `pickState` 移到 `writes.go`（Task 5） | 2、5 |
 | `server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`（修改） | 标签的目录（Task 2）；`Locks` 的新参数（Task 4、5、10）；修改要的假实现、创建和修改共用的拒绝和端口失败的检查（Task 5）；`fakeGate`，事务没有结束时的离开（Task 10） | 2、4、5、10 |
 | `server/internal/modules/issue/module.go`（修改） | `LabelRef`（Task 2）；`GetIssue`（Task 4）；`Tx` 交给 `Locks`（Task 5）；`UpdateIssue`、包的说明（Task 6）；`WriteGate`（Task 10） | 2、4、5、6、10 |
 | `server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`、`server/internal/modules/issue/adapter/postgres/update_test.go`（新） | `UpdateIssue`、`RemoveAssignees`、`RemoveLabels` 和存储测试 | 3 |
@@ -116,7 +116,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`（修改） | `issue.not_found` 的文案（约束 4） | 4 |
 | `server/internal/bootstrap/permission_matrix_seed_issues_test.go`（新）、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_project_test.go`（修改） | 矩阵的种子：每个项目一个工作项，`{issue_id}`；`rowsByID` 带上工作项 | 4 |
 | `server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`（修改） | `getIssue` 一行，`createIssue` 的编号（Task 4）；接上修改的行（Task 6） | 4、6 |
-| `server/internal/modules/issue/app/writes.go`（新） | 每个写共用的 `stamp`、`assignees`、`readBack` | 5 |
+| `server/internal/modules/issue/app/writes.go`（新） | 每个写共用的 `pickState`、`stamp`、`assignees`、`readBack` | 5 |
 | `server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/app/update_issue_test.go`（新） | `updateIssue` 的用例和单元测试 | 5 |
 | `server/internal/modules/issue/domain/issue.go`（修改） | `unassignable` 与 `Assignees` 共用 | 5 |
 | `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新） | `updateIssue` 的九行 | 6 |
@@ -2572,20 +2572,20 @@ Expected: 通过。
   - `precheck`：指名工作项的写 `see`（得到项目），否则读项目、判定；
   - `lockAndDecide`：项目 N → 指名工作项时锁下重读它（没有或不在这个项目：`w.notFound`）→ 判定（最终的）；
   - `see`、`decide` 照 Task 4。
-- `writes.go`（新）：`stamp{workspace, project, issue, by, at}` 和它的 `links`、`unlinks`、`activity`；`assignees`（显示名，缺一个是错误）；`readBack`（写之后读不回来是错误）。
-- `create_issue.go`：改到 `Locks.run` 上（`CreateIssueDeps` 没有 `Tx`），`stamp`、`assignees`、`readBack` 来自 `writes.go`；调用的次序不变。
+- `writes.go`（新）：`stamp{workspace, project, issue, by, at}` 和它的 `links`、`unlinks`、`activity`；`assignees`（显示名，缺一个是错误）；`readBack`（写之后读不回来是错误）；`pickState`（设计 3.7 的状态规则：要的状态是项目的、不是分诊的，没要时默认的；创建和修改共用，从 `create_issue.go` 移来）。
+- `create_issue.go`：改到 `Locks.run` 上（`CreateIssueDeps` 没有 `Tx`），`stamp`、`assignees`、`readBack`、`pickState` 来自 `writes.go`；调用的次序不变。
 - `ports.go`：`IssueUpdater`（嵌入 `IssueReader`；`UpdateIssue`、`RemoveAssignees`、`RemoveLabels`，和 `IssueCreator` 的四个插入：负责人、标签、关注、动态）。
-- `update_issue.go`（新）：`UpdateIssueDeps`、`UpdateIssue`、`NewUpdateIssue`、`Execute(ctx, id, p)`：`CheckIssuePatch` → `Locks.run(write{issue: &id, action: issue.update, notFound: issue.not_found})`：已归档 409 → `ChangesOf`，`None` 时不写、回答锁下读到的 → `check`（状态、新负责人的角色、加和去的标签，问题一次报出；读出动态要的名称）→ `Clock.Now()` → `write`（工作项，完成时间按新状态的组 → 负责人先去后加 → 标签先去后加 → 新负责人的关注 → 显示名 → 动态）→ `readBack`。
+- `update_issue.go`（新）：`UpdateIssueDeps`、`UpdateIssue`、`NewUpdateIssue`、`Execute(ctx, id, p)`：`CheckIssuePatch` → `Locks.run(write{issue: &id, action: issue.update, notFound: issue.not_found})`：已归档 409 → `ChangesOf`，`None` 时不写、回答锁下读到的 → `check`（状态经 `pickState`，与创建同一条规则；新负责人的角色、加和去的标签，问题一次报出；读出动态要的名称）→ `Clock.Now()` → `write`（工作项，完成时间按新状态的组 → 负责人先去后加 → 标签先去后加 → 新负责人的关注 → 显示名 → 动态）→ `readBack`。
 - `issue/module.go`：`New` 建 `Locks` 时带上 `Tx`，创建的用例不再带它（`UpdateIssue` 在 Task 6 接到 HTTP）。
 
 **Tests:**（单元，假实现 `fakes_test.go` 按次序记下调用；`changed`、`writer()`、`unlink`、`fakeProject.waited`）
-- `TestUpdateIssueWritesTheChangesAndTheirRows`：取锁的一步（锁之前读工作项、判定，事务里项目 N、重读、判定）→ 新状态、新负责人的角色、加和去的标签 → 时刻 → 工作项 → 去、加负责人 → 去、加标签（各按 `id`）→ 新负责人的关注 → 显示名 → 动态（3.13 的次序），全部 alice 在这一刻写；新加两个负责人（carol、dave：每个都指派、关注、写进动态，不只第一个）、去掉一个（bob）；已离开的 out 留着、不查；名称去掉空白；到 Done 时完成。
+- `TestUpdateIssueWritesTheChangesAndTheirRows`：取锁的一步（锁之前读工作项、判定，事务里项目 N、重读、判定）→ 新状态、新负责人的角色、加和去的标签 → 时刻 → 工作项 → 去、加负责人 → 去、加标签（各按 `id`）→ 新负责人的关注 → 显示名 → 动态（3.13 的次序），全部 alice 在这一刻写；新加两个负责人（carol、dave：每个都指派、关注、写进动态，不只第一个）、去掉一个（bob）；工作项留着的标签 Docs 不读、它的行不再写（只去掉 Bug、只加 UI）；已离开的 out 留着、不查；名称去掉空白；到 Done 时完成。
 - `TestUpdateIssueThatChangesNothingWritesNothing`：什么都不给、或每个字段原样（集合换了次序）：取锁和判定照旧，不写、不读时钟，回答锁下读到的。
 - `TestUpdateIssueCompletesTheWorkItemByItsState`：完成组的状态（含从另一个完成组的状态）完成于这一刻，别的组不完成（已取消组的也不完成，从完成组移进去时不再完成），状态不变时完成时间不动。
 - `TestUpdateIssueRefusesBeforeAnyLock`：不在、看不到 `issue.not_found`，角色不允许 403，都不取锁；不合规则的值在读工作项之前拒绝。
 - `TestUpdateIssueRefusesUnderTheLock`：等锁期间项目被删除、工作项被删除或换了项目、项目看不到了：`issue.not_found`；角色不再允许 403；已归档 409（什么都不改的修改也是）；另一个项目的状态、分诊状态、新加的访客、另一个项目的标签：一个 422，各在它在修改中的位置（标签是它在 `label_ids` 中的下标，不是在加的标签中的）。
 - `TestUpdateIssueStopsAtAFailingPort`：每个端口的失败原样返回，之后不再调用，预检通过之后锁下的重读、判定的失败也是；不可能的情况也是错误（工作项的状态不是项目的、去掉的标签不是项目的、没有显示名的负责人、写之后读不回来）。
-- `TestUnassignable`（领域）；`issue.update` 的规则行；创建、读的测试照旧通过（假实现的 `Locks` 带事务）；创建和修改的测试共用拒绝的检查 `wantRefusal`（各自核对什么都没有写）和端口失败的检查 `wantStoppedAt`（`create_issue_test.go`）。
+- `TestUnassignable`（领域）；`issue.update` 的规则行；创建、读的测试照旧通过（假实现的 `Locks` 带事务）；创建和修改的测试共用拒绝的检查 `wantRefusal`（各自核对什么都没有写）和端口失败的检查 `wantStoppedAt`（`create_issue_test.go`）；状态的规则只有一处（`pickState`），去掉分诊的条件，创建和修改的 `RefusesUnderTheLock` 都失败。
 
 - [ ] **Step 1: 领域、动作和规则**
 
@@ -2932,7 +2932,7 @@ type IssueUpdater interface {
 
 ````
 
-`server/internal/modules/issue/app/writes.go`（新文件，87 行）：
+`server/internal/modules/issue/app/writes.go`（新文件，101 行）：
 
 ````file server/internal/modules/issue/app/writes.go
 package app
@@ -2947,8 +2947,22 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
 
-// The pieces every write on a work item's rows shares (M4 design 3.5):
-// where its rows go, the accounts its activity names, and its answer.
+// The pieces every write on a work item's rows shares (M4 design 3.5,
+// 3.7): the state it may put the work item in, where its rows go, the
+// accounts its activity names, and its answer.
+
+// pickState is the state of states asked for, when it is there and not
+// the triage state, or the default state when none is asked for (M4
+// design 3.7); found is false when there is no such state. A creation's
+// state and a change's new state are picked by it.
+func pickState(states []StateRef, asked *uuid.UUID) (StateRef, bool) {
+	for _, s := range states {
+		if asked == nil && s.Default || asked != nil && s.ID == *asked && s.Group != domain.GroupTriage {
+			return s, true
+		}
+	}
+	return StateRef{}, false
+}
 
 // stamp is where a write's rows under a work item go, and whose and when
 // they are: the work item's workspace, project and id; the caller, who
@@ -3026,7 +3040,7 @@ func readBack(ctx context.Context, issues IssueReader, id uuid.UUID) (domain.Iss
 
 - [ ] **Step 3: 创建改到取锁的一步上**
 
-`server/internal/modules/issue/app/create_issue.go`（修改，13 处）：
+`server/internal/modules/issue/app/create_issue.go`（修改，14 处）：
 
 ````old server/internal/modules/issue/app/create_issue.go
 	"context"
@@ -3183,6 +3197,26 @@ func (u *CreateIssue) answer(ctx context.Context, id uuid.UUID) (domain.Issue, e
 ````
 ````new server/internal/modules/issue/app/create_issue.go
 
+````
+````old server/internal/modules/issue/app/create_issue.go
+	return c, nil
+}
+
+// pickState is the state of states asked for, when it is there and not
+// the triage state, or the default state when none is asked for; found is
+// false when there is no such state.
+func pickState(states []StateRef, asked *uuid.UUID) (StateRef, bool) {
+	for _, s := range states {
+		if asked == nil && s.Default || asked != nil && s.ID == *asked && s.Group != domain.GroupTriage {
+			return s, true
+		}
+	}
+	return StateRef{}, false
+}
+````
+````new server/internal/modules/issue/app/create_issue.go
+	return c, nil
+}
 ````
 
 `server/internal/modules/issue/app/create_issue_test.go`（修改，11 处）：
@@ -3584,12 +3618,12 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 // check checks the dependent rows that c adds to the work item i under the
 // project's lock (M4 design 3.6, 3.7), and reads the names its activity
 // writes: the new state, when c changes it, is the project's and not its
-// triage state; each account added may be assigned (domain.Unassignable),
-// while one the work item keeps stays whatever his role; each label added
-// is the project's. The labels the work item keeps are on it, so they are
-// the project's undeleted labels: deleting a label takes it off every work
-// item (DetachLabel). Every problem is reported at once, in one 422, each
-// at its place in p.
+// triage state, by a creation's rule (pickState); each account added may
+// be assigned (domain.Unassignable), while one the work item keeps stays
+// whatever his role; each label added is the project's. The labels the
+// work item keeps are on it, so they are the project's undeleted labels:
+// deleting a label takes it off every work item (DetachLabel). Every
+// problem is reported at once, in one 422, each at its place in p.
 func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssuePatch, c domain.Changes) (named, error) {
 	var n named
 	var problems []shared.FieldError
@@ -3602,7 +3636,7 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 		if !found {
 			return named{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
 		}
-		if state, found := stateOf(states, *c.StateID); found && state.Group != domain.GroupTriage {
+		if state, found := pickState(states, c.StateID); found {
 			n.state = &domain.Changed[domain.Named]{Old: domain.Named{ID: old.ID, Name: old.Name}, New: domain.Named{ID: state.ID, Name: state.Name}}
 			n.group = state.Group
 		} else {
@@ -3720,7 +3754,7 @@ func (u *UpdateIssue) relink(ctx context.Context, s stamp, d domain.Diff, remove
 }
 ````
 
-`server/internal/modules/issue/app/update_issue_test.go`（新文件，315 行）：
+`server/internal/modules/issue/app/update_issue_test.go`（新文件，322 行）：
 
 ````file server/internal/modules/issue/app/update_issue_test.go
 package app_test
@@ -3741,10 +3775,13 @@ import (
 
 // earlier is the moment web's work item 7 was made, an hour before the
 // clock's; dave, drawn after every account of newCreate's world, is the
-// member newUpdate adds to web.
+// member newUpdate adds to web; docs, drawn after its labels, is Docs, the
+// label TestUpdateIssueWritesTheChangesAndTheirRows adds to web and to the
+// work item.
 var (
 	earlier = clockNow.Add(-time.Hour)
 	dave    = uuid.NewV7()
+	docs    = uuid.NewV7()
 )
 
 // newUpdate is updateIssue over web's world (newCreate's), dave a member
@@ -3795,14 +3832,18 @@ func locked(id uuid.UUID) []string {
 // space; in Done the work item is completed at the moment. out, who is no
 // member of web, stays assigned: only the accounts added, carol and dave,
 // are checked, and each of them, not only the first, is assigned,
-// subscribed and in the activity.
+// subscribed and in the activity. Docs, which the work item has and
+// keeps, is neither read nor written again (M4 design 3.7): Bug's row
+// alone is removed and UI's alone added.
 func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 	uc, w, id := newUpdate()
+	w.project.labels = append(w.project.labels, app.LabelRef{ID: docs, Name: "Docs"})
+	w.issues.labels = append(w.issues.labels, docs)
 	low := domain.PriorityLow
 	got, err := uc.Execute(as(alice), id, domain.IssuePatch{Name: name(" Mend "), StateID: &done.ID, Priority: &low,
-		AssigneeIDs: set(out, dave, carol), LabelIDs: set(ui)})
+		AssigneeIDs: set(out, dave, carol), LabelIDs: set(docs, ui)})
 	want := domain.Issue{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Mend", StateID: done.ID, Priority: low,
-		SortOrder: 65535, CompletedAt: &clockNow, AssigneeIDs: []uuid.UUID{carol, out, dave}, LabelIDs: []uuid.UUID{ui}, CreatedByID: &carol,
+		SortOrder: 65535, CompletedAt: &clockNow, AssigneeIDs: []uuid.UUID{carol, out, dave}, LabelIDs: []uuid.UUID{ui, docs}, CreatedByID: &carol,
 		UpdatedByID: &alice, CreatedAt: earlier, UpdatedAt: clockNow}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("Execute() = %+v, %v; want %+v", got, err, want)

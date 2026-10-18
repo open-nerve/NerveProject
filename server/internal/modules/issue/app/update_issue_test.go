@@ -16,10 +16,13 @@ import (
 
 // earlier is the moment web's work item 7 was made, an hour before the
 // clock's; dave, drawn after every account of newCreate's world, is the
-// member newUpdate adds to web.
+// member newUpdate adds to web; docs, drawn after its labels, is Docs, the
+// label TestUpdateIssueWritesTheChangesAndTheirRows adds to web and to the
+// work item.
 var (
 	earlier = clockNow.Add(-time.Hour)
 	dave    = uuid.NewV7()
+	docs    = uuid.NewV7()
 )
 
 // newUpdate is updateIssue over web's world (newCreate's), dave a member
@@ -70,14 +73,18 @@ func locked(id uuid.UUID) []string {
 // space; in Done the work item is completed at the moment. out, who is no
 // member of web, stays assigned: only the accounts added, carol and dave,
 // are checked, and each of them, not only the first, is assigned,
-// subscribed and in the activity.
+// subscribed and in the activity. Docs, which the work item has and
+// keeps, is neither read nor written again (M4 design 3.7): Bug's row
+// alone is removed and UI's alone added.
 func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 	uc, w, id := newUpdate()
+	w.project.labels = append(w.project.labels, app.LabelRef{ID: docs, Name: "Docs"})
+	w.issues.labels = append(w.issues.labels, docs)
 	low := domain.PriorityLow
 	got, err := uc.Execute(as(alice), id, domain.IssuePatch{Name: name(" Mend "), StateID: &done.ID, Priority: &low,
-		AssigneeIDs: set(out, dave, carol), LabelIDs: set(ui)})
+		AssigneeIDs: set(out, dave, carol), LabelIDs: set(docs, ui)})
 	want := domain.Issue{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Mend", StateID: done.ID, Priority: low,
-		SortOrder: 65535, CompletedAt: &clockNow, AssigneeIDs: []uuid.UUID{carol, out, dave}, LabelIDs: []uuid.UUID{ui}, CreatedByID: &carol,
+		SortOrder: 65535, CompletedAt: &clockNow, AssigneeIDs: []uuid.UUID{carol, out, dave}, LabelIDs: []uuid.UUID{ui, docs}, CreatedByID: &carol,
 		UpdatedByID: &alice, CreatedAt: earlier, UpdatedAt: clockNow}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("Execute() = %+v, %v; want %+v", got, err, want)

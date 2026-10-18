@@ -149,18 +149,6 @@ func (u *CreateIssue) check(ctx context.Context, projectID uuid.UUID, p LockedPr
 	return c, nil
 }
 
-// pickState is the state of states asked for, when it is there and not
-// the triage state, or the default state when none is asked for; found is
-// false when there is no such state.
-func pickState(states []StateRef, asked *uuid.UUID) (StateRef, bool) {
-	for _, s := range states {
-		if asked == nil && s.Default || asked != nil && s.ID == *asked && s.Group != domain.GroupTriage {
-			return s, true
-		}
-	}
-	return StateRef{}, false
-}
-
 // write writes the work item row and the rows under it, in the order of M4
 // design 3.5: the work item, its assignees, its labels, its subscribers,
 // its activity.

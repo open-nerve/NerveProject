@@ -10,8 +10,22 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
 
-// The pieces every write on a work item's rows shares (M4 design 3.5):
-// where its rows go, the accounts its activity names, and its answer.
+// The pieces every write on a work item's rows shares (M4 design 3.5,
+// 3.7): the state it may put the work item in, where its rows go, the
+// accounts its activity names, and its answer.
+
+// pickState is the state of states asked for, when it is there and not
+// the triage state, or the default state when none is asked for (M4
+// design 3.7); found is false when there is no such state. A creation's
+// state and a change's new state are picked by it.
+func pickState(states []StateRef, asked *uuid.UUID) (StateRef, bool) {
+	for _, s := range states {
+		if asked == nil && s.Default || asked != nil && s.ID == *asked && s.Group != domain.GroupTriage {
+			return s, true
+		}
+	}
+	return StateRef{}, false
+}
 
 // stamp is where a write's rows under a work item go, and whose and when
 // they are: the work item's workspace, project and id; the caller, who
