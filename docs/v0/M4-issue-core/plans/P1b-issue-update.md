@@ -135,7 +135,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/archtest/composition_test.go`（修改） | 命令行不建写闸门 | 10 |
 | `server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_catalog_test.go`（修改） | 交错 3u–7u：`itemWrite`、`itemWrites` | 11 |
 | `server/internal/bootstrap/issue_interleaving_change_test.go`（新） | 交错 1 的修改一支（1u）：同一个工作项的两个修改；等锁期间工作项被删除或移走 | 11 |
-| `server/internal/bootstrap/interleaving_writes_test.go`（修改） | `TestTwoWritesOnAProjectSerialize` 改用 `serializeOn` | 11 |
+| `server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/interleaving_test.go`（修改） | `TestTwoWritesOnAProjectSerialize` 改用 `serializeOn`；`serializeOn` 的说明不再说第一个写在它的写之后等 | 11 |
 | `server/internal/bootstrap/issue_pool_test.go`（新） | 交错 20 | 12 |
 | `server/internal/bootstrap/issue_scale_test.go`（新） | 规模的测量 | 13 |
 | `e2e/fixtures/issues.ts`、`e2e/fixtures/assert/issue.ts`（修改） | `updateIssue`、`expectIssueUpdated` | 14 |
@@ -7627,7 +7627,7 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_interleaving_change_test.go`
-- Modify: `server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/issue_interleaving_catalog_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_updates_test.go`、`server/internal/bootstrap/issue_world_test.go`
+- Modify: `server/internal/bootstrap/interleaving_test.go`、`server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/issue_interleaving_catalog_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_updates_test.go`、`server/internal/bootstrap/issue_world_test.go`
 
 **Interfaces:** 没有新的生产代码（spec 2.13、第 3 节第 16 条；M4 设计 3.5、9.3）。
 - `issue_world_test.go`：`newWorkItemIn(t, project, body)`（alice 经接口在项目里建的工作项），`newWorkItem` 用它。
@@ -7638,7 +7638,7 @@ Expected: 通过。
   - `workItemRows(t, projects, undeleted)`（工作项一侧五张表的行数，Task 13 的规模测试也用）。
 - P1a 的交错测试各加修改的一支，换成两支共用的名字：`TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize`、`TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`、`TestDeletingAStateAndPuttingAWorkItemInItSerialize`、`TestDeletingALabelAndLabellingAWorkItemWithItSerialize`（`issue_interleaving_deletion_test.go`、`issue_interleaving_catalog_test.go`）。
 - `issue_interleaving_change_test.go`（新）：`TestTwoChangesOfAWorkItemSerialize`，交错 1 的修改一支（1u）；`TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`，等锁期间工作项被删除或移走（spec 第 3 节第 16 条）。
-- `interleaving_writes_test.go`：`TestTwoWritesOnAProjectSerialize` 改用 `serializeOn`（P1a 交给 P1b 的一条）。
+- `interleaving_writes_test.go`：`TestTwoWritesOnAProjectSerialize` 改用 `serializeOn`（P1a 交给 P1b 的一条）。它的第一个写在判定之后、写之前等，所以 `interleaving_test.go` 中 `serializeOn` 的说明只说第一个写持着它的锁在门口等。
 
 **Tests:**（组合；3u–7u 各两种顺序；`-count=5 -race` 没有 40P01）
 - 1u：alice 的修改（改名 Mend、加 Bug）持 Web 的行；bob 的修改（改名 Repair、去掉每个标签）按改之前的工作项过了预检、等行；她提交之后他在锁下重读：动态写"Mend → Repair"和去掉她加的 Bug，Bug 不在了，时刻不早于门打开。
@@ -7677,6 +7677,24 @@ Expected: 通过。
 ````
 ````new server/internal/bootstrap/interleaving_writes_test.go
 	if err := errors.Join(archived, updated); err != nil {
+````
+
+`server/internal/bootstrap/interleaving_test.go`（修改，1 处）：
+
+````old server/internal/bootstrap/interleaving_test.go
+// serializeOn runs first, a write that waits at g past its writes, holding
+// its locks, then second, once the first is held there; once the second
+// waits for a row lock of projects on pool's database
+// (pgtest.WaitForLockWaitOn), it opens g. It answers the moment g opened,
+// and each write's error. Every wait has a deadline: ctx's, g's or the
+// probe's.
+````
+````new server/internal/bootstrap/interleaving_test.go
+// serializeOn runs first, a write that waits at g holding its locks, then
+// second, once the first is held there; once the second waits for a row
+// lock of projects on pool's database (pgtest.WaitForLockWaitOn), it opens
+// g. It answers the moment g opened, and each write's error. Every wait
+// has a deadline: ctx's, g's or the probe's.
 ````
 
 `server/internal/bootstrap/issue_interleaving_test.go`（修改，6 处）：
@@ -8240,7 +8258,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add server/internal/bootstrap/interleaving_writes_test.go server/internal/bootstrap/issue_interleaving_catalog_test.go server/internal/bootstrap/issue_interleaving_change_test.go server/internal/bootstrap/issue_interleaving_deletion_test.go server/internal/bootstrap/issue_interleaving_test.go server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/issue_world_test.go
+git add server/internal/bootstrap/interleaving_test.go server/internal/bootstrap/interleaving_writes_test.go server/internal/bootstrap/issue_interleaving_catalog_test.go server/internal/bootstrap/issue_interleaving_change_test.go server/internal/bootstrap/issue_interleaving_deletion_test.go server/internal/bootstrap/issue_interleaving_test.go server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/issue_world_test.go
 ```
 ```bash
 git commit -m "test(M4/P1): interleavings 1 and 3 to 7 with a work item's change beside its creation

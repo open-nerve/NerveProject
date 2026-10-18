@@ -187,12 +187,11 @@ func result(t *testing.T, ctx context.Context, done <-chan error, what string) e
 	}
 }
 
-// serializeOn runs first, a write that waits at g past its writes, holding
-// its locks, then second, once the first is held there; once the second
-// waits for a row lock of projects on pool's database
-// (pgtest.WaitForLockWaitOn), it opens g. It answers the moment g opened,
-// and each write's error. Every wait has a deadline: ctx's, g's or the
-// probe's.
+// serializeOn runs first, a write that waits at g holding its locks, then
+// second, once the first is held there; once the second waits for a row
+// lock of projects on pool's database (pgtest.WaitForLockWaitOn), it opens
+// g. It answers the moment g opened, and each write's error. Every wait
+// has a deadline: ctx's, g's or the probe's.
 func serializeOn(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, first, second func() error) (opened time.Time,
 	firstErr, secondErr error) {
 	t.Helper()
