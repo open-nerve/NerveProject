@@ -44,6 +44,16 @@ func (e *entry) returned(t *testing.T) *entry {
 	return e
 }
 
+// held waits like returned for e to return, and fails the test unless e
+// holds the key.
+func (e *entry) held(t *testing.T) *entry {
+	t.Helper()
+	if e.returned(t); e.err != nil {
+		t.Fatalf("Enter() = %v, want the key", e.err)
+	}
+	return e
+}
+
 // waits checks that e has not returned a little while after it began.
 func (e *entry) waits(t *testing.T) {
 	t.Helper()
@@ -105,17 +115,12 @@ func (g *Keyed[K]) idle() int {
 func TestAKeyAdmitsPerKeyCallersAtOnce(t *testing.T) {
 	g := New[string](Limits{PerKey: 2, MaxQueue: 8, MaxWait: long})
 	ctx := context.Background()
-	a, b := enter(g, ctx, "web").returned(t), enter(g, ctx, "web").returned(t)
-	ops := enter(g, ctx, "ops").returned(t)
-	if a.err != nil || b.err != nil || ops.err != nil {
-		t.Fatalf("Enter() = %v, %v, %v; want web twice and ops at once", a.err, b.err, ops.err)
-	}
+	a, b := enter(g, ctx, "web").held(t), enter(g, ctx, "web").held(t)
+	ops := enter(g, ctx, "ops").held(t)
 	c := enter(g, ctx, "web")
 	c.waits(t)
 	a.leave()
-	if c.returned(t); c.err != nil {
-		t.Fatalf("Enter() after a leaves = %v, want web", c.err)
-	}
+	c.held(t)
 	b.leave()
 	c.leave()
 	ops.leave()
@@ -123,15 +128,27 @@ func TestAKeyAdmitsPerKeyCallersAtOnce(t *testing.T) {
 }
 
 // The callers waiting for a key are served in the order they came, each
-// when the one before it leaves.
+// when the one before it leaves; one who gives up while others wait behind
+// him leaves their order as it was.
 func TestWaitersAreServedInTheOrderTheyCame(t *testing.T) {
 	g := New[string](Limits{PerKey: 1, MaxQueue: 8, MaxWait: long})
 	ctx := context.Background()
-	holder := enter(g, ctx, "web").returned(t)
+	holder := enter(g, ctx, "web").held(t)
+	quitting, quit := context.WithCancel(ctx)
+	defer quit()
 	var waiters []*entry
-	for n := range 3 {
-		waiters = append(waiters, enter(g, ctx, "web"))
+	var quitter *entry
+	for n := range 4 {
+		if n == 1 {
+			quitter = enter(g, quitting, "web")
+		} else {
+			waiters = append(waiters, enter(g, ctx, "web"))
+		}
 		queued(t, g, "web", n+1)
+	}
+	quit()
+	if quitter.returned(t); !errors.Is(quitter.err, context.Canceled) || quitter.leave != nil {
+		t.Fatalf("the second waiter's Enter() = %v, want context.Canceled and nothing to leave", quitter.err)
 	}
 	leave := holder.leave
 	for i, w := range waiters {
@@ -139,10 +156,7 @@ func TestWaitersAreServedInTheOrderTheyCame(t *testing.T) {
 			later.waits(t)
 		}
 		leave()
-		if w.returned(t); w.err != nil {
-			t.Fatalf("waiter %d: Enter() = %v, want the key", i, w.err)
-		}
-		leave = w.leave
+		leave = w.held(t).leave
 	}
 	leave()
 	forgotten(t, g)
@@ -155,7 +169,7 @@ func TestAFullQueueRefusesAtOnce(t *testing.T) {
 	for _, maxQueue := range []int{0, 2} {
 		g := New[string](Limits{PerKey: 1, MaxQueue: maxQueue, MaxWait: long})
 		ctx := context.Background()
-		holder := enter(g, ctx, "web").returned(t)
+		holder := enter(g, ctx, "web").held(t)
 		var waiters []*entry
 		for n := range maxQueue {
 			waiters = append(waiters, enter(g, ctx, "web"))
@@ -167,7 +181,7 @@ func TestAFullQueueRefusesAtOnce(t *testing.T) {
 		leave := holder.leave
 		for _, w := range waiters {
 			leave()
-			leave = w.returned(t).leave
+			leave = w.held(t).leave
 		}
 		leave()
 		forgotten(t, g)
@@ -175,10 +189,10 @@ func TestAFullQueueRefusesAtOnce(t *testing.T) {
 }
 
 // A waiting caller gives up after MaxWait with ErrTimeout, or with its
-// context's error once the context is cancelled or past its deadline, and
-// one whose context is done already does not take even a free key. Each
-// holds nothing and leaves the queue: the holder's leaving forgets the key,
-// and the next caller holds it at once.
+// context's error once the context is cancelled or past its deadline: the
+// test sees it waiting first. One whose context is done already does not
+// take even a free key. Each holds nothing and leaves the queue: the
+// holder's leaving forgets the key, and the next caller holds it at once.
 func TestAWaiterGivesUp(t *testing.T) {
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -187,29 +201,38 @@ func TestAWaiterGivesUp(t *testing.T) {
 		maxWait time.Duration
 		ctx     func() (context.Context, context.CancelFunc)
 		held    bool // whether the key is held when it enters
+		seen    bool // whether the test sees it waiting before its context ends
+		cancels bool // whether the test then cancels its context
 		want    error
 	}{
 		{"waited MaxWait", 30 * time.Millisecond, func() (context.Context, context.CancelFunc) { return context.Background(), func() {} }, true,
-			ErrTimeout},
-		{"cancelled while it waits", long, func() (context.Context, context.CancelFunc) {
-			ctx, cancel := context.WithCancel(context.Background())
-			time.AfterFunc(30*time.Millisecond, cancel)
-			return ctx, cancel
-		}, true, context.Canceled},
+			false, false, ErrTimeout},
+		{"cancelled while it waits", long, func() (context.Context, context.CancelFunc) { return context.WithCancel(context.Background()) },
+			true, true, true, context.Canceled},
+		// its deadline gives queued half a second to see it waiting first,
+		// and leaves returned half of its second to see it give up
 		{"past its deadline while it waits", long, func() (context.Context, context.CancelFunc) {
-			return context.WithTimeout(context.Background(), 30*time.Millisecond)
-		}, true, context.DeadlineExceeded},
-		{"cancelled before", long, func() (context.Context, context.CancelFunc) { return cancelled, func() {} }, false, context.Canceled},
+			return context.WithTimeout(context.Background(), 500*time.Millisecond)
+		}, true, true, false, context.DeadlineExceeded},
+		{"cancelled before", long, func() (context.Context, context.CancelFunc) { return cancelled, func() {} }, false, false, false,
+			context.Canceled},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			g := New[string](Limits{PerKey: 1, MaxQueue: 8, MaxWait: tt.maxWait})
 			var holder *entry
 			if tt.held {
-				holder = enter(g, context.Background(), "web").returned(t)
+				holder = enter(g, context.Background(), "web").held(t)
 			}
 			ctx, cancel := tt.ctx()
 			defer cancel()
-			if gaveUp := enter(g, ctx, "web").returned(t); !errors.Is(gaveUp.err, tt.want) || gaveUp.leave != nil {
+			gaveUp := enter(g, ctx, "web")
+			if tt.seen {
+				queued(t, g, "web", 1)
+			}
+			if tt.cancels {
+				cancel()
+			}
+			if gaveUp.returned(t); !errors.Is(gaveUp.err, tt.want) || gaveUp.leave != nil {
 				t.Errorf("Enter() = %v, want %v and nothing to leave", gaveUp.err, tt.want)
 			}
 			if g.waiting("web") != 0 {
@@ -219,11 +242,7 @@ func TestAWaiterGivesUp(t *testing.T) {
 				holder.leave()
 			}
 			forgotten(t, g)
-			next := enter(g, context.Background(), "web").returned(t)
-			if next.err != nil {
-				t.Fatalf("Enter() after = %v, want the key at once", next.err)
-			}
-			next.leave()
+			enter(g, context.Background(), "web").held(t).leave()
 		})
 	}
 }
@@ -233,14 +252,14 @@ func TestAWaiterGivesUp(t *testing.T) {
 func TestLeavingTwiceLeavesOnce(t *testing.T) {
 	g := New[string](Limits{PerKey: 1, MaxQueue: 8, MaxWait: long})
 	ctx := context.Background()
-	first := enter(g, ctx, "web").returned(t)
+	first := enter(g, ctx, "web").held(t)
 	first.leave()
-	second := enter(g, ctx, "web").returned(t)
+	second := enter(g, ctx, "web").held(t)
 	first.leave()
 	third := enter(g, ctx, "web")
 	third.waits(t)
 	second.leave()
-	third.returned(t).leave()
+	third.held(t).leave()
 	forgotten(t, g)
 }
 

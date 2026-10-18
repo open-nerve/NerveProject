@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`platform/gate/gate_test.go`（292 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`platform/gate/gate_test.go`（311 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`bootstrap/issue_pool_test.go`（266 行）、`bootstrap/gate_test.go`（263 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。本 plan 不改 `tools/keywords.json`：`phase` 照旧是 `M4/P1`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；配置文件的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -5487,17 +5487,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `leave` 只生效一次（`sync.Once`）。
 - 不依赖任何模块，只用标准库（`archtest` 的平台规则照旧）。
 
-**Tests:**（单元，表和 `-race`；`entry`、`enter`、`returned`、`waits`、`queued`、`forgotten`、`idle`）
+**Tests:**（单元，表和 `-race`；`entry`、`enter`、`returned`、`held`、`waits`、`queued`、`forgotten`、`idle`）
 - `TestAKeyAdmitsPerKeyCallersAtOnce`：`PerKey` 个立即进入，下一个等到有人离开；别的键不算；都离开之后不留键。
-- `TestWaitersAreServedInTheOrderTheyCame`：等着的按到来的次序进入。
+- `TestWaitersAreServedInTheOrderTheyCame`：等着的按到来的次序进入；排在中间的一个放弃之后，其余的照旧按次序进入。
 - `TestAFullQueueRefusesAtOnce`：`MaxQueue` 0 和 2，满时立即 `ErrFull`，不等。
-- `TestAWaiterGivesUp`：`MaxWait` 到 `ErrTimeout`；取消、期限各 `ctx.Err()`；进入之前已取消的不进，哪怕有空位；放弃的不占位置，之后的照样进入。
+- `TestAWaiterGivesUp`：`MaxWait` 到 `ErrTimeout`；取消、期限各 `ctx.Err()`（都在看到它排着之后）；进入之前已取消的不进，哪怕有空位；放弃的不占位置，之后的照样进入。
 - `TestLeavingTwiceLeavesOnce`：第二次 `leave` 不放出别人的位置。
 - `TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`：32 个 goroutine 各 1000 次、三个键、随机的期限（不带 `-race` 每次也走到放弃时被交到位置的一支），任何时刻一个键至多 `PerKey` 个持有者，有人等的键没有空位（每次 `Enter` 之后在闸门的锁下查，`idle`）；最后不留键。
 
 - [ ] **Step 1: 测试**
 
-`server/internal/platform/gate/gate_test.go`（新文件，292 行）：
+`server/internal/platform/gate/gate_test.go`（新文件，311 行）：
 
 ````file server/internal/platform/gate/gate_test.go
 package gate
@@ -5542,6 +5542,16 @@ func (e *entry) returned(t *testing.T) *entry {
 	case <-e.done:
 	case <-time.After(time.Second):
 		t.Fatal("Enter did not return within 1s")
+	}
+	return e
+}
+
+// held waits like returned for e to return, and fails the test unless e
+// holds the key.
+func (e *entry) held(t *testing.T) *entry {
+	t.Helper()
+	if e.returned(t); e.err != nil {
+		t.Fatalf("Enter() = %v, want the key", e.err)
 	}
 	return e
 }
@@ -5607,17 +5617,12 @@ func (g *Keyed[K]) idle() int {
 func TestAKeyAdmitsPerKeyCallersAtOnce(t *testing.T) {
 	g := New[string](Limits{PerKey: 2, MaxQueue: 8, MaxWait: long})
 	ctx := context.Background()
-	a, b := enter(g, ctx, "web").returned(t), enter(g, ctx, "web").returned(t)
-	ops := enter(g, ctx, "ops").returned(t)
-	if a.err != nil || b.err != nil || ops.err != nil {
-		t.Fatalf("Enter() = %v, %v, %v; want web twice and ops at once", a.err, b.err, ops.err)
-	}
+	a, b := enter(g, ctx, "web").held(t), enter(g, ctx, "web").held(t)
+	ops := enter(g, ctx, "ops").held(t)
 	c := enter(g, ctx, "web")
 	c.waits(t)
 	a.leave()
-	if c.returned(t); c.err != nil {
-		t.Fatalf("Enter() after a leaves = %v, want web", c.err)
-	}
+	c.held(t)
 	b.leave()
 	c.leave()
 	ops.leave()
@@ -5625,15 +5630,27 @@ func TestAKeyAdmitsPerKeyCallersAtOnce(t *testing.T) {
 }
 
 // The callers waiting for a key are served in the order they came, each
-// when the one before it leaves.
+// when the one before it leaves; one who gives up while others wait behind
+// him leaves their order as it was.
 func TestWaitersAreServedInTheOrderTheyCame(t *testing.T) {
 	g := New[string](Limits{PerKey: 1, MaxQueue: 8, MaxWait: long})
 	ctx := context.Background()
-	holder := enter(g, ctx, "web").returned(t)
+	holder := enter(g, ctx, "web").held(t)
+	quitting, quit := context.WithCancel(ctx)
+	defer quit()
 	var waiters []*entry
-	for n := range 3 {
-		waiters = append(waiters, enter(g, ctx, "web"))
+	var quitter *entry
+	for n := range 4 {
+		if n == 1 {
+			quitter = enter(g, quitting, "web")
+		} else {
+			waiters = append(waiters, enter(g, ctx, "web"))
+		}
 		queued(t, g, "web", n+1)
+	}
+	quit()
+	if quitter.returned(t); !errors.Is(quitter.err, context.Canceled) || quitter.leave != nil {
+		t.Fatalf("the second waiter's Enter() = %v, want context.Canceled and nothing to leave", quitter.err)
 	}
 	leave := holder.leave
 	for i, w := range waiters {
@@ -5641,10 +5658,7 @@ func TestWaitersAreServedInTheOrderTheyCame(t *testing.T) {
 			later.waits(t)
 		}
 		leave()
-		if w.returned(t); w.err != nil {
-			t.Fatalf("waiter %d: Enter() = %v, want the key", i, w.err)
-		}
-		leave = w.leave
+		leave = w.held(t).leave
 	}
 	leave()
 	forgotten(t, g)
@@ -5657,7 +5671,7 @@ func TestAFullQueueRefusesAtOnce(t *testing.T) {
 	for _, maxQueue := range []int{0, 2} {
 		g := New[string](Limits{PerKey: 1, MaxQueue: maxQueue, MaxWait: long})
 		ctx := context.Background()
-		holder := enter(g, ctx, "web").returned(t)
+		holder := enter(g, ctx, "web").held(t)
 		var waiters []*entry
 		for n := range maxQueue {
 			waiters = append(waiters, enter(g, ctx, "web"))
@@ -5669,7 +5683,7 @@ func TestAFullQueueRefusesAtOnce(t *testing.T) {
 		leave := holder.leave
 		for _, w := range waiters {
 			leave()
-			leave = w.returned(t).leave
+			leave = w.held(t).leave
 		}
 		leave()
 		forgotten(t, g)
@@ -5677,10 +5691,10 @@ func TestAFullQueueRefusesAtOnce(t *testing.T) {
 }
 
 // A waiting caller gives up after MaxWait with ErrTimeout, or with its
-// context's error once the context is cancelled or past its deadline, and
-// one whose context is done already does not take even a free key. Each
-// holds nothing and leaves the queue: the holder's leaving forgets the key,
-// and the next caller holds it at once.
+// context's error once the context is cancelled or past its deadline: the
+// test sees it waiting first. One whose context is done already does not
+// take even a free key. Each holds nothing and leaves the queue: the
+// holder's leaving forgets the key, and the next caller holds it at once.
 func TestAWaiterGivesUp(t *testing.T) {
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -5689,29 +5703,38 @@ func TestAWaiterGivesUp(t *testing.T) {
 		maxWait time.Duration
 		ctx     func() (context.Context, context.CancelFunc)
 		held    bool // whether the key is held when it enters
+		seen    bool // whether the test sees it waiting before its context ends
+		cancels bool // whether the test then cancels its context
 		want    error
 	}{
 		{"waited MaxWait", 30 * time.Millisecond, func() (context.Context, context.CancelFunc) { return context.Background(), func() {} }, true,
-			ErrTimeout},
-		{"cancelled while it waits", long, func() (context.Context, context.CancelFunc) {
-			ctx, cancel := context.WithCancel(context.Background())
-			time.AfterFunc(30*time.Millisecond, cancel)
-			return ctx, cancel
-		}, true, context.Canceled},
+			false, false, ErrTimeout},
+		{"cancelled while it waits", long, func() (context.Context, context.CancelFunc) { return context.WithCancel(context.Background()) },
+			true, true, true, context.Canceled},
+		// its deadline gives queued half a second to see it waiting first,
+		// and leaves returned half of its second to see it give up
 		{"past its deadline while it waits", long, func() (context.Context, context.CancelFunc) {
-			return context.WithTimeout(context.Background(), 30*time.Millisecond)
-		}, true, context.DeadlineExceeded},
-		{"cancelled before", long, func() (context.Context, context.CancelFunc) { return cancelled, func() {} }, false, context.Canceled},
+			return context.WithTimeout(context.Background(), 500*time.Millisecond)
+		}, true, true, false, context.DeadlineExceeded},
+		{"cancelled before", long, func() (context.Context, context.CancelFunc) { return cancelled, func() {} }, false, false, false,
+			context.Canceled},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			g := New[string](Limits{PerKey: 1, MaxQueue: 8, MaxWait: tt.maxWait})
 			var holder *entry
 			if tt.held {
-				holder = enter(g, context.Background(), "web").returned(t)
+				holder = enter(g, context.Background(), "web").held(t)
 			}
 			ctx, cancel := tt.ctx()
 			defer cancel()
-			if gaveUp := enter(g, ctx, "web").returned(t); !errors.Is(gaveUp.err, tt.want) || gaveUp.leave != nil {
+			gaveUp := enter(g, ctx, "web")
+			if tt.seen {
+				queued(t, g, "web", 1)
+			}
+			if tt.cancels {
+				cancel()
+			}
+			if gaveUp.returned(t); !errors.Is(gaveUp.err, tt.want) || gaveUp.leave != nil {
 				t.Errorf("Enter() = %v, want %v and nothing to leave", gaveUp.err, tt.want)
 			}
 			if g.waiting("web") != 0 {
@@ -5721,11 +5744,7 @@ func TestAWaiterGivesUp(t *testing.T) {
 				holder.leave()
 			}
 			forgotten(t, g)
-			next := enter(g, context.Background(), "web").returned(t)
-			if next.err != nil {
-				t.Fatalf("Enter() after = %v, want the key at once", next.err)
-			}
-			next.leave()
+			enter(g, context.Background(), "web").held(t).leave()
 		})
 	}
 }
@@ -5735,14 +5754,14 @@ func TestAWaiterGivesUp(t *testing.T) {
 func TestLeavingTwiceLeavesOnce(t *testing.T) {
 	g := New[string](Limits{PerKey: 1, MaxQueue: 8, MaxWait: long})
 	ctx := context.Background()
-	first := enter(g, ctx, "web").returned(t)
+	first := enter(g, ctx, "web").held(t)
 	first.leave()
-	second := enter(g, ctx, "web").returned(t)
+	second := enter(g, ctx, "web").held(t)
 	first.leave()
 	third := enter(g, ctx, "web")
 	third.waits(t)
 	second.leave()
-	third.returned(t).leave()
+	third.held(t).leave()
 	forgotten(t, g)
 }
 
@@ -5801,7 +5820,7 @@ func TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey(t *testing.T) {
 ````file server/internal/platform/gate/gate.go
 // Package gate bounds how many callers hold a key at once, within this
 // process (M4 design 3.5, 11.11): a caller enters a key's gate, waits in
-// the key's queue, first come first served, while others hold it as often
+// the key's queue, first come first served, while as many others hold it
 // as its bound allows, and leaves it once. A key nobody holds or waits for
 // takes no memory. It uses only the standard library.
 package gate

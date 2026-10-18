@@ -1,6 +1,6 @@
 // Package gate bounds how many callers hold a key at once, within this
 // process (M4 design 3.5, 11.11): a caller enters a key's gate, waits in
-// the key's queue, first come first served, while others hold it as often
+// the key's queue, first come first served, while as many others hold it
 // as its bound allows, and leaves it once. A key nobody holds or waits for
 // takes no memory. It uses only the standard library.
 package gate
