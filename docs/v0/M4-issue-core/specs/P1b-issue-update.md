@@ -30,7 +30,7 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 
 ### 2.1 文件总览
 
-路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 手写的代码、测试和配置文件 79 个（新建 24 个，修改 55 个），生成物 6 个，文档 7 个（本 spec 和 plan 新建，5 个修改；另有 M4 设计第 15 节的一行）。
+路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 手写的代码、测试和配置文件 79 个（新建 24 个，修改 55 个），生成物 6 个，文档 7 个（本 spec 和 plan 新建，5 个修改；另有 M4 设计第 15 节的一行和 11.11、13.2 的连接池的总代价，预检的 M4）。
 
 | 路径 | 内容 | Task |
 |---|---|---|
@@ -43,7 +43,7 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | `bootstrap/issue_updates_test.go`、`issue_writes_test.go` | 盖戳、回答如存、事务的连接 | 7 |
 | `platform/gate/gate.go`、`gate_test.go` | `Keyed[K]` | 8 |
 | `platform/postgres/tx.go`、`lock_timeout_test.go`；`platform/config/config.go`、`validate.go` 及三个测试；`server/configs/config.yaml`、`embed_test.go` | `LockTimeout`、`LockNotAvailable`；四个配置 | 9 |
-| `issue/app/ports.go`、`lock.go`、`lock_test.go`、`fakes_test.go`、`create_issue_test.go`；`issue/module.go`；`bootstrap/gate.go`、`gate_test.go`、`app.go`、`app_test.go`、`issue_world_test.go`、`issue_writes_test.go`；契约；HTTP 的两个测试；`archtest/composition_test.go` | 写闸门接入；`server_busy` | 10 |
+| `issue/app/ports.go`、`lock.go`、`lock_test.go`、`fakes_test.go`、`create_issue_test.go`、`get_issue_test.go`；`issue/module.go`；`bootstrap/gate.go`、`gate_test.go`、`app.go`、`app_test.go`、`issue_world_test.go`、`issue_writes_test.go`；契约；HTTP 的两个测试；`archtest/composition_test.go` | 写闸门接入；`server_busy` | 10 |
 | `bootstrap/issue_interleaving_test.go`、`issue_interleaving_deletion_test.go`、`issue_interleaving_catalog_test.go`（整个文件）、`issue_interleaving_change_test.go`（新）、`interleaving_writes_test.go`、`issue_world_test.go` | 交错 1u、3u–7u；`serializeOn` 收进 M3 的手写门 | 11 |
 | `bootstrap/issue_pool_test.go` | 交错 20 | 12 |
 | `bootstrap/issue_scale_test.go` | 规模的测量（只在 `NERVE_MEASURE_SCALE` 设置时运行） | 13 |
@@ -94,9 +94,9 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 - `precheck`：写指名工作项时 `see`（读工作项、判定它的项目），`w.project` 取工作项的项目；否则照 P1a。
 - `lockAndDecide`：项目 N → 指名工作项的写在锁下重读它，没有或已不在这个项目时 `w.notFound` → 判定（最终的）。回答锁住的项目和锁下读到的工作项。
 
-`writes.go`：每个写共用的 `stamp`（`links`、`unlinks`、`activity`）、`assignees`（显示名）、`readBack`。`update_issue.go`：`UpdateIssue.Execute(ctx, id, p)`：`CheckIssuePatch` → `run`：已归档 409 → `ChangesOf`，`None` 时不写、回答锁下读到的工作项 → `check`（状态改时：是项目的、不是分诊的，否则 `state_id` `not_allowed`；新加的负责人经 `Members.Roles` 和 `Unassignable`；加、去的标签经 `Labels`，加的不是项目的 `label_ids[i]` `not_allowed`；全部一次报出；顺便读出动态要的名称）→ `Clock.Now()` → 写：工作项（状态改时 `completed_at` 按新状态的组：完成组为这一刻，否则空）→ 负责人先去后加 → 标签先去后加 → 新负责人的关注 → 动态 → 在事务里读回。`IssueUpdater` 端口（`UpdateIssue`、`RemoveAssignees`、`RemoveLabels` 加上 `IssueCreator` 的插入）。`issue.update` 的规则行（管理员、成员）。
+`writes.go`：每个写共用的 `stamp`（`links`、`unlinks`、`activity`）、`assignees`（显示名）、`readBack`。`update_issue.go`：`UpdateIssue.Execute(ctx, id, p)`：`CheckIssuePatch` → `run`：已归档 409 → `ChangesOf`，`None` 时不写、回答锁下读到的工作项 → `check`（状态改时：是项目的、不是分诊的，否则 `state_id` `not_allowed`；新加的负责人经 `Members.Roles` 和 `Unassignable`；加、去的标签经 `Labels`，加的不是项目的 `label_ids[i]` `not_allowed`；全部一次报出；顺便读出动态要的名称）→ `Clock.Now()` → 写：工作项（状态改时 `completed_at` 按新状态的组：完成组为这一刻，否则空）→ 负责人先去后加 → 标签先去后加 → 新负责人的关注 → 动态 → 在事务里读回。`IssueUpdater` 端口（嵌入 `IssueReader`；`UpdateIssue`、`RemoveAssignees`、`RemoveLabels` 和负责人、标签、关注、动态的插入）。`issue.update` 的规则行（管理员、成员）。
 
-单元测试：`TestUpdateIssueWritesTheChangesAndTheirRows`（调用的次序、写下的行）、`TestUpdateIssueThatChangesNothingWritesNothing`、`TestUpdateIssueCompletesTheWorkItemByItsState`、`TestUpdateIssueRefusesBeforeAnyLock`、`TestUpdateIssueRefusesUnderTheLock`（锁下判定、已归档、锁下读不到工作项或它换了项目、依赖行的问题一次报出）、`TestUpdateIssueStopsAtAFailingPort`（每个端口的失败原样返回；不可能的情况也是错误）；领域的 `TestUnassignable`。
+单元测试：`TestUpdateIssueWritesTheChangesAndTheirRows`（调用的次序、写下的行）、`TestUpdateIssueThatChangesNothingWritesNothing`、`TestUpdateIssueCompletesTheWorkItemByItsState`（已取消组的也不完成，从完成组移进去时不再完成）、`TestUpdateIssueRefusesBeforeAnyLock`、`TestUpdateIssueRefusesUnderTheLock`（锁下判定、已归档、锁下读不到工作项或它换了项目、依赖行的问题一次报出）、`TestUpdateIssueStopsAtAFailingPort`（每个端口的失败原样返回；不可能的情况也是错误）；领域的 `TestUnassignable`。
 
 ### 2.8 `updateIssue` 的接口（Task 6；5.1–5.3、6.6、9.2）
 
@@ -107,13 +107,13 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 
 ### 2.9 盖戳、回答如存、事务的连接（Task 7；3.5，P1a 评审第 6 节）
 
-- `TestUpdatingAWorkItemStampsItsRows`：alice 建的工作项由 bob 改名称、优先级、状态（到 Done）、换负责人、去标签：工作项和 bob 写的每一行（负责人的增删、标签的去、关注、六行动态）是 bob 在请求之内的同一时刻；alice 写的行保留她的戳；动态的值经 `users.display_name`；回答的创建者、最后修改者、两个时刻。
+- `TestUpdatingAWorkItemStampsItsRows`：alice 把 walt 加进 Web、建工作项，由 bob 改名称、优先级、状态（到 Done）、把负责人换成 walt、去标签：工作项和 bob 写的每一行（负责人的增删、标签的去、walt 的关注、六行动态）是 bob 在请求之内的同一时刻，bob 改了它也不关注它（3.12，第 3 节第 7 条）；alice 写的行保留她的戳；动态的值经 `users.display_name`；回答的创建者、最后修改者、两个时刻。
 - `TestAWorkItemReadsAsStored`：工作项的每个字段（含父工作项、归档时刻、最后修改者、两个时刻，各有自己的值）经 `getIssue` 照存储回答，组合一层看得到 `issueDetail` 的每个字段（P1a 只在 HTTP 一层）。
 - `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection` 加修改（完整的修改、拒绝、什么都不改）和读回。
 
 ### 2.10 `platform/gate`（Task 8；3.5、11.11，9.1）
 
-`Keyed[K comparable]`、`Limits{PerKey, MaxQueue, MaxWait}`、`New[K](l)`、`Enter(ctx, key) (leave func(), err error)`、`ErrFull`、`ErrTimeout`。一把互斥锁下的 `map[K]*queue{holders, waiting []*waiter}`：有空位、没有人在等时立即进入；否则排在队尾（先来先得），队列已有 `MaxQueue` 个时立即 `ErrFull`；等到 `MaxWait` 时 `ErrTimeout`，`ctx` 结束时 `ctx.Err()`（进入之前已结束的也不进）；放弃的离开队列，正好在放弃时被交到位置的把位置交给下一个；`leave` 只生效一次（`sync.Once`）；没人持有、没人等的键不占内存。一个键的位置由 `release` 直接交给队首，所以有人等时没有空位（第 3 节第 11 条的等价变异）。测试（表和 `-race`）：`TestAKeyAdmitsPerKeyCallersAtOnce`、`TestWaitersAreServedInTheOrderTheyCame`、`TestAFullQueueRefusesAtOnce`（`MaxQueue` 0 和 2）、`TestAWaiterGivesUp`（`MaxWait`、取消、期限、进入之前已取消）、`TestLeavingTwiceLeavesOnce`、`TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`（32 个 goroutine、三个键、随机的期限）。
+`Keyed[K comparable]`、`Limits{PerKey, MaxQueue, MaxWait}`、`New[K](l)`、`Enter(ctx, key) (leave func(), err error)`、`ErrFull`、`ErrTimeout`。一把互斥锁下的 `map[K]*queue{holders, waiting []*waiter}`：有空位、没有人在等时立即进入；否则排在队尾（先来先得），队列已有 `MaxQueue` 个时立即 `ErrFull`；等到 `MaxWait` 时 `ErrTimeout`，`ctx` 结束时 `ctx.Err()`（进入之前已结束的也不进）；放弃的离开队列，正好在放弃时被交到位置的把位置交给下一个；`leave` 只生效一次（`sync.Once`）；没人持有、没人等的键不占内存。一个键的位置由 `release` 直接交给队首，所以有人等时没有空位（第 3 节第 11 条的等价变异）。测试（表和 `-race`）：`TestAKeyAdmitsPerKeyCallersAtOnce`、`TestWaitersAreServedInTheOrderTheyCame`、`TestAFullQueueRefusesAtOnce`（`MaxQueue` 0 和 2）、`TestAWaiterGivesUp`（`MaxWait`、取消、期限、进入之前已取消）、`TestLeavingTwiceLeavesOnce`、`TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`（32 个 goroutine 各 1000 次、三个键、随机的期限：不带 `-race` 每次也走到放弃时被交到位置的一支）。
 
 ### 2.11 锁的期限和配置（Task 9；3.5、11.11，8.8）
 
@@ -125,7 +125,7 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 - `issue/app`：`WriteGate` 端口（`Enter(ctx, projectID) (leave func(), error)`，第 3 节第 10 条）；`Locks.run`：预检 → `gate.Enter(ctx, w.project)` → `defer leave()` → 事务。预检拒绝的不进闸门；闸门拒绝的不开事务；离开在事务结束之后，每条路上都离开（拒绝、失败、panic）。`issue.Deps.WriteGate`。
 - `bootstrap/gate.go`（新）：`writeGate`（`platform/gate` 按项目，`ErrFull`、`ErrTimeout`、`context.DeadlineExceeded` 换成 `shared.ServerBusy(1s)`，`context.Canceled` 照原样：没有人等它的回答）；`busyTx`（`issue` 的事务：`postgres.NewTxManager` 带 `LockTimeout(issue.write_lock_timeout)`，`LockNotAvailable` 换成同一个 503）；`newIssueTx`；`busyRetry`（1 秒）。这是 `55P03` 换码的唯一一处（设计 3.5）。`app.go` 把它们交给 `issue.New`。
 - 契约：`createIssue`、`updateIssue` 声明 `server_busy`，描述写明"太多写时 503，按 `Retry-After` 重试"；`server_busy` 是 M2 的平台码，文案已在 `error-messages.ts` 和两份 `errors.json`（约束 4 不另加）。
-- 测试：单元的 `TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestAWriteLeavesTheGateOnEveryPath`、`TestTheGateTakesOnlyWritesThePrecheckLetThrough`（`fakeGate` 记下进出）；`bootstrap` 的 `TestTheWriteGateAnswersItsRefusalsAsServerBusy`、`TestABusyTransactionIsServerBusy`（`55P03` 包了几层也换，`40P01` 不换）；组合的 `TestAProjectTooBusyForAWriteAnswersServerBusy`（一个项目一个位置、排队一个、`max_wait` 500 毫秒、锁的期限 1 秒：别的事务持 Web 的行时，alice 的修改进了闸门、等行；随后的两个创建一个排队、到 `max_wait` 时 503，另一个立即 503（队列满）；olga、walt 的修改在位置被占时立即由预检答 404、403：预检拒绝的不占闸门；alice 的修改在约 1 秒（等锁到期）503，远早于请求的期限；行放开之后修改和创建都通过）；组合的 `TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（请求的期限 3 秒、锁的期限 2.5 秒、一个项目一个位置、`max_wait` 10 秒：别的事务以 `ACCESS EXCLUSIVE` 持 `issue_labels`，bob 的修改在预检里等它（预检读工作项的标签）；1.5 秒之后 alice 在 Web 的创建（预检不读 `issue_labels`）占了位置、等 Web 的行；`issue_labels` 放开之后 bob 的修改在闸门上排在她后面，在他的请求的期限（3 秒）503，她的创建在等锁到期时（bob 的修改发出之后约 4 秒）503：等闸门的写随它的请求结束）；HTTP 的两行（503、`Retry-After: 1`，`apitest.Main` 两个方向）；`archtest`。`issueWorld` 由 `newIssueWorldWith(t, configure)` 改配置；`testIssueConfig` 是默认值（测试的 `write_lock_timeout` 4 秒，短于测试的请求期限）。
+- 测试：单元的 `TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestAWriteLeavesTheGateOnEveryPath`、`TestTheGateTakesOnlyWritesThePrecheckLetThrough`（`fakeGate` 记下进出，事务还没有结束时的离开记作 `in tx`：离开在提交、回滚之后），`TestGetIssueReadsTheWorkItem`（`newGet` 也用记下进出的闸门：读不进闸门）；`bootstrap` 的 `TestTheWriteGateAnswersItsRefusalsAsServerBusy`、`TestABusyTransactionIsServerBusy`（`55P03` 包了几层也换，`40P01` 不换）；组合的 `TestAProjectTooBusyForAWriteAnswersServerBusy`（一个项目一个位置、排队一个、`max_wait` 1 秒、锁的期限 3 秒：别的事务持 Web 的行时，alice 的修改进了闸门、等行；随后的两个创建一个排队、到 `max_wait` 时 503，另一个在 `max_wait` 之前 503（队列满）；olga、walt 的修改在位置被占时由预检答 404、403，都在 `max_wait` 之前：预检拒绝的不占闸门；alice 的修改在约 3 秒（等锁到期）503，远早于请求的期限；行放开之后修改和创建都通过）；组合的 `TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（请求的期限 3 秒、锁的期限 2.5 秒、一个项目一个位置、`max_wait` 10 秒：别的事务以 `ACCESS EXCLUSIVE` 持 `issue_labels`，bob 的修改在预检里等它（预检读工作项的标签）；1.5 秒之后 alice 在 Web 的创建（预检不读 `issue_labels`）占了位置、等 Web 的行；`issue_labels` 放开之后 bob 的修改在闸门上排在她后面，在他的请求的期限（3 秒）503，她的创建在等锁到期时（bob 的修改发出之后约 4 秒）503：等闸门的写随它的请求结束；bob 的修改在 3 到 4 秒之间：她最早在 4 秒离开闸门，T8.7、T10.16 的 bob 只在那之后得到回答）；HTTP 的两行（503、`Retry-After: 1`，`apitest.Main` 两个方向）；`archtest`。`issueWorld` 由 `newIssueWorldWith(t, configure)` 改配置；`testIssueConfig` 是默认值（测试的 `write_lock_timeout` 4 秒，短于测试的请求期限）。
 
 ### 2.13 交错 1u、3u–7u（Task 11；3.5，9.3）
 
@@ -142,9 +142,9 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 
 ### 2.14 交错 20：饥饿与连接池（Task 12；3.5，9.3，11.11）
 
-`issue_pool_test.go`：`newPoolWorld`（池 10 个连接，`database.max_conns` 的默认值；闸门是默认值）、`reply`、`replyTo`。
-- `TestChainedWorkItemWritesHoldOffNoWorkspaceWrite`（S5 的回归）：acme 的四个项目各一个工作项、20 个标签，16 串首尾相连的修改（每次换上或去掉 20 个标签）；300 毫秒之后 alice 改 acme 的名称、把 walt 改为管理员、删除 acme，各在 1 秒之内；每串的修改都答 200，直到 acme 删除之后答 404 `issue.not_found`。
-- `TestAHotProjectHoldsUpNoReadOfAnother`（SP1 的回归）：别的事务持 Web 的行约一秒，期间 200 个修改同时打到 Web：闸门放两个进数据库（等行），64 个在进程里等，其余 134 个在行放开之前立即 503 `server_busy`（`Retry-After: 1`）；另一个项目的读每 20 毫秒一次，至少 10 次，每次不超过 `poolReadBound`（500 毫秒，第 3 节第 13 条）；行放开之后等着的 66 个答 200（至少两个）或 503。
+`issue_pool_test.go`：`newPoolWorld`（池 10 个连接，`database.max_conns` 的默认值；闸门是 `testIssueConfig` 的默认值，`configure` 再改它）、`reply`、`replyTo`。
+- `TestChainedWorkItemWritesHoldOffNoWorkspaceWrite`（S5 的回归）：acme 的四个项目各一个工作项、20 个标签，16 串首尾相连的修改（每次换上或去掉 20 个标签）；每串都有一次修改得到回答之后（5 秒为限），alice 改 acme 的名称、把 walt 改为管理员、删除 acme，各在 1 秒之内；每串的修改都答 200，直到 acme 删除之后答 404 `issue.not_found`。
+- `TestAHotProjectHoldsUpNoReadOfAnother`（SP1 的回归）：这个测试的 `max_wait` 是一分钟（它断言闸门的位置和队列的容量，不断言等多久）。别的事务持 Web 的行至少一秒、直到 134 个 503 都答了（3 秒为限），期间 200 个修改同时打到 Web：闸门放两个进数据库（等行），64 个在进程里等，其余 134 个立即 503 `server_busy`（`Retry-After: 1`）；Ops 的工作项和 Web 的这个工作项每 20 毫秒各读一次，至少 20 次，每次 200、不超过 `poolReadBound`（500 毫秒，第 3 节第 13 条；读不进闸门）；行放开之后等着的 66 个都答 200。
 
 ### 2.15 规模的测量（Task 13；决策点 7，9.3）
 
@@ -175,7 +175,7 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 10. **`WriteGate` 只取一个键**（待裁定，偏离设计 3.5、6.7、11.11 的 `Enter(ctx, projectIDs)`）。P1b 的每个写只在一个项目上；按 `id` 升序一次取齐几个闸门、任一个失败时放回已取的，是 P3 的关联（约定七）才有的写法。P1b 的端口是 `Enter(ctx, projectID) (leave func(), error)`，`Keyed.Enter(ctx, key)` 一次一个键；P3 加多个键的取法（在 `Keyed` 上，或在 `bootstrap/gate.go` 的 `writeGate` 里按 `id` 升序逐个进入、失败时倒序离开），端口随它改成多个项目。理由同 P1a 第 3 节第 5 条（端口只带它的读者用的东西）。建议照本条，P3 的 spec 接过去（第 5 节）。
 11. **`platform/gate` 的一处冗余条件**。`Enter` 的"有空位、**且没有人在等**才立即进入"里的后半句由不变式保证：`release` 把位置直接交给队首、不腾出空位，调用者只在位置全被持有时排队，所以有人等时一定没有空位。去掉它的变异 T8.11 是等价的（附录 A.3），留着它是为了把"先来先得"写在进入的地方，不依赖读者推出不变式。
 12. **约定五**（M3 交接第 2 节，逐个核对）。P1b 的批量写：`RemoveAssignees`、`RemoveLabels`（按谓词软删除一个工作项的若干行）、`InsertAssignees`、`InsertLabels`、`InsertSubscribers`（按 `id` 的顺序插入，`diffOf` 排序）。每个都在项目 N 之下，这些行的每个写者（工作项的写、删除标签的 `DetachLabel`、删除项目和工作区的连带）都先持这个项目的 N（3.5"删除标签摘下 `issue_labels` 不需要按 `id` 先锁"一条的论证），所以不落在约定五的例外里，不先按 `id` 锁；插入的部分唯一键冲突在 N 之下不会互相等。没有新的成员关系增长（指派、关注不让谁成为成员）。
-13. **交错 20 的上限：500 毫秒**（待裁定）。设计 9.3 说上限"在 P1b 的 spec 按实测定"。本机（macOS、Docker Desktop、8 GB）上，有闸门时另一个项目的读最慢 2–49 毫秒（45 次运行，带和不带 `-race`）；把闸门去掉（每个写不进闸门）时最慢 1.12–1.26 秒（一版测试的三次），另一版的三次都是约 4.97 秒（等到请求的期限）。500 毫秒比有闸门的最坏约宽 10 倍，比没有闸门的最好约窄 2 倍。改工作区、改角色在链上 3–9 毫秒，删除工作区 17–54 毫秒，上限 1 秒（附录 A.4）。**持续集成的风险**：GitHub 的 ubuntu 运行机比这台机器慢（P1a 的套件在那里通过）；有闸门的读在那里慢几倍仍在 500 毫秒以内，而"行放开之前恰好 134 个 503"一句要求排着的 64 个在约 1 秒的持有之内不等到 `max_wait`（2 秒），余量约 1 秒。退路（不改产品代码）：持续集成上失败时，先看日志里读的最慢值和 503 的个数；读超过上限就把上限放到 1 秒（仍比没有闸门的最好窄），503 的个数不对就把这个测试的 `max_wait` 设长（它断言的是队列的容量，与 `max_wait` 无关）。
+13. **交错 20 的上限：500 毫秒**（待裁定）。设计 9.3 说上限"在 P1b 的 spec 按实测定"。本机（macOS、Docker Desktop、8 GB）上，有闸门时另一个项目的读最慢 2–49 毫秒（45 次运行，带和不带 `-race`）；把闸门去掉（每个写不进闸门）时最慢 1.12–1.26 秒（一版测试的三次），另一版的三次都是约 4.97 秒（等到请求的期限）。500 毫秒比有闸门的最坏约宽 10 倍，比没有闸门的最好约窄 2 倍。改工作区、改角色在链上 3–9 毫秒，删除工作区 17–54 毫秒，上限 1 秒（附录 A.4）。预检之后加固的测试（附录 A.2）在本机带和不带 `-race` 各跑 5 次：读最慢 3.0–41.4 毫秒，删除工作区至多 74 毫秒（附录 A.4）。**持续集成**：计数不靠固定的时间（裁定 13）：Web 的行持到至少一秒、并且 134 个 503 都答了（3 秒为限，到了算失败），这个测试的 `max_wait` 是一分钟，所以 134 和 66 由构造成立；固定的至少一秒的持有留着，没有闸门的变异的读因此仍超过上限。链在每串都有一次修改得到回答之后才开始测工作区的写；两个忙的项目的测试的窗口以 `max_wait`（1 秒）和锁的期限（3 秒、4 秒）为界，而不是几百毫秒的余量。
 14. **规模的测量的落点**（待裁定）。D7 要求 P9 在同样的数据上再量。建议：测量提交进仓库，作为 `bootstrap` 的一个测试，只在设了 `NERVE_MEASURE_SCALE` 时运行（`make test`、持续集成跳过它，但它随代码编译、过 lint，接口变了会被发现）：P9 改成任务之后，在同一个测试里加任务的测量，种子和数字可比。另一种是放在 scratch（不进仓库）：P9 要重写种子，两次的数据可能不同。数字见附录 A.4。
 15. **测试的 `write_lock_timeout` 是 4 秒**。测试的配置（`testConfig`）的请求期限是 5 秒，配置要求锁的期限短于它；默认的 5 秒放不进去。`testIssueConfig` 用 4 秒，其余三个是默认值；交错 20 的两个测试和取锁的测试照默认值的闸门跑。
 16. **按资源寻址的写在 P1a 的路径上**（P1a 第 5 节）。`write` 带 `issue`，`precheck` 读它（`see`）、得到项目，`lockAndDecide` 在锁下重读它并确认仍在这个项目；`getIssue` 用同一个 `see`（读和预检同一个判定）。只有一条取锁路径；`createIssue` 也改到 `run` 上（事务移进 `Locks`），它的测试的调用次序不变。`updateIssue` 不嵌套 `WithinTx`，交错的 `heldTx` 每个写只开一个事务（P1a 评审第 6 节）。锁下重读决定修改从什么改起：设计 3.5 的交错表里同一个工作项的两个修改没有一条，本 spec 补上交错 1 的修改一支（1u，`TestTwoChangesOfAWorkItemSerialize`）：第二个修改等过锁之后按第一个留下的样子算差异，时刻在它之后；等锁期间工作项被删除或移到别的项目（P1b 没有这两个操作，测试由持项目行的事务在数据库里做）时锁下重读答 404（`TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`）。"锁下重读"的三种性质因此在组合一层都有反例（附录 A.2）。
@@ -215,30 +215,31 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | Phase | 条目 |
 |---|---|
 | P2 | 访客规则：`issue.read`、`issue.update` 的访客（P1b 一律 403）；`see` 和预检照样在锁之前答访客规则的 404；已归档的工作项的修改 409 `issue.archived`（3.5 的"修改工作项"一行的"工作项已归档 409"，P1b 没有归档）；起止日期进 `IssuePatch`（合并之后的值，3.7）；`project.state_in_use` 的补救（P1a 交给 P2 的一条照旧：修改在 P1b 有了，恢复在 P2） |
-| P3 | `WriteGate` 取多个项目（按 `id` 升序一次取齐、失败时放回，第 3 节第 10 条）；`parent_id` 进 `IssuePatch` |
+| P3 | `WriteGate` 取多个项目（按 `id` 升序一次取齐、失败时放回，第 3 节第 10 条；进第二个闸门时不持连接、不持锁（设计 11.11），只持着前一个闸门的位置）；`parent_id` 进 `IssuePatch` |
 | P4 | 描述、`skip_activity` 进 `IssuePatch`；动态的第 4 行（描述，合并）；I2 的描述的断言 |
 | P5 | `sort_order` 的修改；状态的名称已在目录里 |
-| P9 | 规模的测量在同一个测试里加任务的一支（第 3 节第 14 条）；同步连带的两个方法删去之后这个测试量任务 |
+| P9 | 规模的测量在同一个测试里加任务的一支（第 3 节第 14 条）；同步连带的两个方法删去之后这个测试量任务；在规模的数字旁再量第 7 节连接池的情形（删除一个大的工作区、写在它的项目上等行时，另一个项目的读）；连带进了 River 的任务之后，已删除的项目上的写应在预检答出、而不是在它的行上等，由 P9 核对 |
 | P14 | I2 的页面版本 |
-| 收尾 | 3.23、8.8 中 P1b 的行由 Task 15 写好，收尾逐行核对；M8 的部署交接写明连接池的大小与多进程时的 K（设计 13.2；第 7 节） |
+| 收尾 | 3.23、8.8 中 P1b 的行由 Task 15 写好，收尾逐行核对；M8 的部署交接写明连接池的大小与多进程时的 K、同时热的项目数（设计 13.2；第 7 节） |
 
 ## 6. 风险
 
 | 风险 | 应对 |
 |---|---|
 | 闸门在持连接或持锁时等 | 进入在预检之后、`WithinTx` 之前（单元的调用次序，T10.1、T10.3 在单元和交错 20 失败）；离开是 `defer`（T10.2）；多个闸门在 P3（第 3 节第 10 条） |
-| 闸门的位置泄漏 | 每条路上离开（拒绝、失败、panic，`TestAWriteLeavesTheGateOnEveryPath`）；放弃时正好被交到位置的交给下一个（`-race` 的负载测试，T8.5）；`leave` 只一次（T8.3） |
+| 闸门的位置泄漏 | 每条路上离开（拒绝、失败、panic，`TestAWriteLeavesTheGateOnEveryPath`）；放弃时正好被交到位置的交给下一个（负载测试，带和不带 `-race`，T8.5）；`leave` 只一次（T8.3） |
+| 闸门的界：提交之前让出位置、读占位置 | 离开在事务结束之后（单元的 `fakeTx` 记下事务里的离开，T10.17，按性质只在单元一层，A.3）；读不进闸门（`newGet` 的闸门记下进出，交错 20 读热的工作项，T10.18） |
 | 503 的换码散在各处 | 只在 `bootstrap/gate.go`：闸门的拒绝和 `55P03`；单元的两张表、组合的 `TestAProjectTooBusyForAWriteAnswersServerBusy`、`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy` |
 | 等闸门的写不随它的请求结束 | 进入闸门用请求的 `context`（T10.16），请求在闸门上到期答 503（T10.5、T8.7），都在组合一层的 `TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy` 失败 |
 | 预检与锁下的判定、锁下的重读不一致 | 锁下的判定和重读是最终的，修改从锁下读到的样子算起（交错 1u、3u、4u、5u；T5.15–T5.18、T5.20） |
-| 交错 20 的时间在持续集成上 | 第 3 节第 13 条的余量和退路 |
+| 交错 20 的时间在持续集成上 | 条件式的持有和窗口（第 3 节第 13 条，裁定 13） |
 | 同步的连带在规模目标上超过期限 | 已知（决策点 7，附录 A.4）：P9 换成任务 |
 | 持续集成（ubuntu）上的运行 | 原型和复现都在 macOS 上；合并之后看持续集成 |
 
 ## 7. 已知的限制、交接和关闭条件
 
 - **规模目标上删不掉一个工作区**（决策点 7 的已知，附录 A.4）：五个 2 万个工作项的项目的工作区，请求约 23–27 秒，超过生产的 15 秒期限，到期时回滚、什么都没删；一个这样的项目约 4.4–4.8 秒。P9 换成任务。
-- **K 是每个进程的**（11.11）：多个进程时每个进程各 K 个；连接池的大小与 K、进程数怎样配合交给 M8 的部署说明（设计 13.2，M4 收尾写进 M8 的交接）。
+- **K 是每个进程的**（11.11）：多个进程时每个进程各 K 个；连接池的大小与 K、进程数怎样配合交给 M8 的部署说明（设计 13.2，M4 收尾写进 M8 的交接）。闸门限的是每个项目的份额：一个进程里 ⌈池 / K⌉ 个项目同时热（默认 5 个；规模目标上删除 beta 的约 25 秒里它的五个项目上都有写）就能占满池，M8 按同时热的项目数定池的大小。
 - **热的项目上超出的写得到 503**（11.11 的代价）：客户端按 `Retry-After` 重试；今天它们会一直等到请求的期限。
 
 | 交接 | P1b 处理的条目 | 留下的条目 |
@@ -254,13 +255,13 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 
 ### A.1 做法和 Phase 的大小
 
-原型在 `$M4TMP/p1bproto`：`5ce30a1a`（P1a 的合并提交）的一份 `git archive`（`p1btools/base-5ce30a1a.tar`，快照 `p1bsnap/T0`）之上逐 Task 做，每个 Task 做完存一份源文件的快照（`p1bsnap/T1`…`T15`）；`node_modules` 由 `pnpm install --frozen-lockfile` 装好（不用符号链接），`bin/golangci-lint` 2.13.2；Go 1.27.1（`toolchain`）、Node 24.15.0、pnpm 11.10.0、Docker 29.7.2。plan 的代码块由脚本从相邻两份快照的差异生成（`p1btools/mkblocks.py`），每个块从基点起按顺序核对过（`problems: 0`）；生成的文件不进块，按 SHA-256 和行数钉住（`gensha.py`），plan 在每次生成之后有一步 `shasum -a 256` 与表核对；`compose_plan.py` 组装 plan，核对每个块放了一次、每个文件在文件表里（`filetablecheck.py`）、没有遗留的标记，并从变异的结果写出每个 Task 的变异表（被发现的层、"（Task n 起）"）。之后的修改（A.2）都写回拥有那个文件的 Task 的快照，从那个 Task 起每一份快照都改（`p1btools/edits/` 的编辑说明），`mkblocks.py` 重新生成全部块。
+原型在 `$M4TMP/p1bproto`：`5ce30a1a`（P1a 的合并提交）的一份 `git archive`（`p1btools/base-5ce30a1a.tar`，快照 `p1bsnap/T0`）之上逐 Task 做，每个 Task 做完存一份源文件的快照（`p1bsnap/T1`…`T15`）；`node_modules` 由 `pnpm install --frozen-lockfile` 装好（不用符号链接），`bin/golangci-lint` 2.13.2；Go 1.27.1（`toolchain`）、Node 24.15.0、pnpm 11.10.0、Docker 29.7.2。plan 的代码块由脚本从相邻两份快照的差异生成（`p1btools/mkblocks.py`），每个块从基点起按顺序核对过（`problems: 0`）；生成的文件不进块，按 SHA-256 和行数钉住（`gensha.py`），plan 在每次生成之后有一步 `shasum -a 256` 与表核对；`compose_plan.py` 组装 plan，核对每个块放了一次、每个文件在文件表里（`filetablecheck.py`）、没有遗留的标记，并从变异的结果写出每个 Task 的变异表（被发现的层、"（Task n 起）"）。之后的修改（A.2）都写回拥有那个文件的 Task 的快照，从那个 Task 起每一份快照都改（`p1btools/edits/` 的编辑说明），`mkblocks.py` 重新生成全部块。预检之后的修改（A.2）同样写回快照；随后的逐 Task 复现（A.5）在每个 Task 之后把复现的树存成快照（`replay.py`：它取源文件的列表 `mkblocks_lib.listing`，列表不收的两项基点的条目，`web/packages/i18n/locales` 的目录链接和 `server/internal/platform/webui/dist/.gitkeep`，没有块碰它们，由 `snapcomplete.sh` 从复现的树补上），十六份与直接改过的快照逐个文件相同（`snapcmp.py`；`snapcomplete.sh` 按 rsync 比较内容、链接和两边各有的文件），`p1bsnap/T0`…`T15` 换成它们（直接改过的一份在 `p1bsnap-amend-direct`，预检之前的在 `p1bsnap-a04d479d`）。
 
 **切分**（裁定 3 允许在上限之内重新切分；第 3 节第 1 条）：设计草稿的十二个任务成为 15 个 Task：目录回答名称提成 Task 2（修改的动态写状态、标签的名称，第 3 节第 9 条）；草稿 5 拆成接口（Task 6）和组合一层的三个测试（Task 7）；草稿 7 拆成 `platform/postgres` 的选项和配置（Task 9）与接入（Task 10）。没有用到退路。
 
-**Phase 的大小**（裁定 3：约 16 个任务、每个任务约 1,500 行以内）：15 个 Task；plan 8,769 行（`wc -l`）；每个 Task 都在约 1,500 行以内，最大的是 Task 5（1,476 行：`Locks.run` 的整个文件和 `updateIssue` 的用例、单元测试），其次 Task 4（1,002 行）、Task 10（943 行）。各 Task：1 492、2 435、3 330、4 1,002、5 1,476、6 734、7 346、8 492、9 469、10 943、11 602、12 289、13 226、14 620、15 126，开头的约束、脚本和文件表 142 行（`compose_plan.py` 量的，从 Task 的标题到下一个标题）。P1 的规模报告估 P1b 约 12 个任务、9,500–11,500 行。手写的文件 79 个（新建 24 个、修改 55 个），生成物 6 个，文档 5 个修改、2 个新建（本 spec 和 plan），另有设计第 15 节的一行。没有超出，没有停下。
+**Phase 的大小**（裁定 3：约 16 个任务、每个任务约 1,500 行以内）：15 个 Task；plan 8,885 行（`wc -l`；预检之前 8,769 行）；每个 Task 都在约 1,500 行以内，最大的是 Task 5（1,481 行：`Locks.run` 的整个文件和 `updateIssue` 的用例、单元测试），其次 Task 10（1,004 行）、Task 4（1,002 行）。各 Task：1 492、2 435、3 330、4 1,002、5 1,481、6 745、7 350、8 492、9 469、10 1,004、11 602、12 324、13 226、14 620、15 126，开头的约束、脚本和文件表 142 行（`compose_plan.py` 量的，从 Task 的标题到下一个标题）。P1 的规模报告估 P1b 约 12 个任务、9,500–11,500 行。手写的文件 79 个（新建 24 个、修改 55 个），生成物 6 个，文档 5 个修改、2 个新建（本 spec 和 plan），另有设计第 15 节的一行和 11.11、13.2 的连接池的总代价（预检的 M4）。没有超出，没有停下。
 
-### A.2 清扫之后的修改和加强
+### A.2 清扫之后的修改和加强，预检之后的修改
 
 **清扫之后的修改**（变异按 Task 跑完之后复审时发现，改在拥有那个文件的 Task 的快照上，从那个 Task 起每一份快照都改，`p1btools/edits/` 的编辑说明逐条记下，受影响的变异重跑）：
 
@@ -273,22 +274,34 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 **清扫之后的加强**（变异按层跑完之后，只在单元一层或存储一层被发现、而组合一层或故事本可以展示的，改测试或补上更高一层的检查，不改产品代码；`layercounts.py` 列出它们）：
 
 - I2（Task 14）原来分不出三个变异（T3.6、T3.8、T3.10）：工作项只有一个负责人、一个标签，去掉的就是全部；去掉它们的人又是写那些行的人。改为指派 bob 和 ann、标签 Bug 和 Docs，由 bob 去掉 ann 写的行，ann 和 Docs 留下（`t14b`；创建的动态按 `id` 的次序，`t14c`）。再加四步和一个旁观的工作项：ann 再指派 bob、再加 Bug 和 Login（两个按 `id` 的反序给出：T1.5）；bob 只去掉 Bug、ann 只去掉 bob（各是一次修改：T1.9、T1.15；先前去掉的行保留那次的戳：T3.5、T3.7）；两个 422（值的问题：T1.2、T1.3；项目的问题）；与它共有 bob 和 Bug 的 Fix the logout 始终如创建时（T3.1、T3.4、T3.11）。标题随之（`strengthen.sh` 把原型的故事放进 Task 14、15 的快照）。
-- 忙的项目的测试（Task 10）原来只看排满的拒绝和等锁的期限：改为排队一个、`max_wait` 500 毫秒，两个创建一个立即被拒、一个到 `max_wait` 被拒（T8.2、T8.4、T8.6、T10.6），位置被占时 olga、walt 的修改立即由预检答 404、403（T10.1：预检拒绝的不占闸门）（`t10j`）。它本来就发现、却没有记进变异的层的 T9.3（`TxManager` 开始事务时不带它的选项：alice 的修改等不到锁的期限）补上这一层。
+- 忙的项目的测试（Task 10）原来只看排满的拒绝和等锁的期限：改为排队一个、`max_wait` 500 毫秒，两个创建一个立即被拒、一个到 `max_wait` 被拒（T8.2、T8.4、T8.6、T10.6），位置被占时 olga、walt 的修改立即由预检答 404、403（T10.1：预检拒绝的不占闸门）（`t10j`；预检之后改为 `max_wait` 1 秒、锁的期限 3 秒，见下）。它本来就发现、却没有记进变异的层的 T9.3（`TxManager` 开始事务时不带它的选项：alice 的修改等不到锁的期限）补上这一层。
 - 请求在闸门上到期（Task 10）原来只在单元一层（`writeGate` 的表）：组合出的 app 里，写按先来先得进闸门，排在前面的写通常比它先开始、期限先到，等待者的期限要在闸门上先到，得让它进闸门之前用掉的时间比前面的写多。加 `TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（2.12）：bob 的修改在预检里等别的事务持的 `issue_labels`，1.5 秒之后 alice 的创建占了位置、等 Web 的行，bob 的修改在闸门上等到他的请求的期限，503（`t10k`）。T10.5（请求到期答 500）、T8.7（等待者不看 `ctx`）在它上失败；新加的变异 T10.16（写用自己的 `context` 进闸门：brief 的"忽略 ctx"）只在它上失败。
 - 交错（Task 11）加 `issue_interleaving_change_test.go`：同一个工作项的两个修改（1u：T5.3 时刻在锁之前、T5.20 重读在锁之前，后者是新加的变异），等锁期间工作项被删除、被移到别的项目（T5.16、T5.17；P1b 没有这两个操作，由持项目行的事务在数据库里做）；`strengthen.sh`、`strengthen2.sh` 把它放进 Task 11–15 的快照。设计 3.5 的交错表没有这两条，第 3 节第 16 条记下。
 - 加强之后，有新的一层的变异在那一层的 Task 的树和最终的树上重跑（`passD.sh`、`passE.sh`），Task 10 的全部变异在 Task 10 的树上重跑（它的组合测试改了），每个有 I2 一层的变异在 Task 14 的树上重跑。
 
+**预检之后的修改**（控制者在执行之前的预检：`$M4TMP/p1b-preflight/preflight.md` 的发现 M1–M4、L1–L6、c1，裁定在 `$M4TMP/p1b-preflight-rulings.md`。代码照预检的加固原样写进（它的 `harden.py`，`p1btools/harden_pf.py`：H1–H4、FA、FB、CANCELLED、STAMPS、G1000），文字的修改在 `p1btools/edits/a-*.json`（`mk_amend.py`）；每处改在拥有那个文件的 Task 的快照上，从那个 Task 起每一份快照都改（`amend-snaps.sh`），`mkblocks.py` 重新生成全部块；Task 6、9、10、15 的快照上 `make gen` 前后 43 个生成物逐字节相同（`gencheck.sh`），plan 钉住的摘要不变）：
+
+- 离开闸门在事务结束之后（M1，Task 10）：`fakeTx.WithinTx` 在事务里设 `callLog.inTx`、`defer` 复位，`fakeGate` 把事务还没有结束时的离开记作 `Leave <项目> in tx`；离开放进事务的函数里（提交、回滚之前就离开）的变异 T10.17 在单元一层被发现，按性质只在单元一层（A.3）。
+- 读不进闸门（M2，Task 10、12）：`newGet` 用记下进出的闸门，`TestGetIssueReadsTheWorkItem` 的调用记录里没有进出；交错 20 也读热的工作项。`getIssue` 进闸门的变异 T10.18 在单元一层和（Task 12 起）组合一层被发现（热的工作项的读答 503）。
+- 计时（M3，裁定 13）：交错 20 的持有到至少一秒、并且 134 个 503 都答了（3 秒为限），这个测试的 `max_wait` 一分钟，等着的 66 个都答 200；链在每串都有一次修改得到回答之后才测工作区的写（5 秒为限）；忙的项目的测试 `max_wait` 1 秒、锁的期限 3 秒，窗口以它们为界；请求在闸门上到期的测试里 bob 的回答在 3 到 4 秒之间（第 3 节第 13 条，2.12、2.14）。由这四个测试发现的变异都重跑，仍在同一个测试被发现。
+- 连接池的总代价（M4）：README、总体设计 4.2、M3 交接的"别的项目的读写不排在它后面"按同时热的项目数改写（Task 15）；本 spec 第 5、7 节和设计 11.11、13.2 写明同时热的项目达到池的大小除以 K（默认 5 个）时池仍会被等锁的写占满（预检在它的树上量的，`pf_hot_projects_test.go`，只作证据、不进仓库：五个项目同时热时第六个项目的读从 1.0 毫秒变为 3.99 秒）；第 5 节 P9 一行加上再量这种情形的交接。
+- 负载测试（L1，Task 8）每个 goroutine 1000 次：不带 `-race` 也走到放弃时被交到位置的一支，T8.5 在 `make test` 也被发现。
+- 数据（L5、L6）：修改的单元测试加已取消组的状态 Dropped（移进去不完成，从完成组移进去不再完成；变异 T5.21，数据的规则，A.3）；盖戳的测试由 alice 把 walt 加进 Web、bob 指派 walt（原来 bob 指派自己，他的关注本来就在），修改者因修改而关注的变异 T5.22 在（Task 7 起）组合一层被发现。完成组之间的移动写新的时刻（预检的 PF.C1）只有单元一层分得出：数据的规则，按 plan 的规则不算缺口（A.6 的完成时间一行）。
+- 文字（L2、L3、L4、c1，裁定 10 的 P3 一句）：Task 12 的 Expected 写 2–49 毫秒；`IssueUpdater` 的说明照代码（嵌入 `IssueReader`，2.7）；`issue/module.go` 的包说明写到取、改工作项（Task 6 多一处）；`updateIssue` 的描述把"at one moment."写在一行（Task 6 写整行，Task 10 的锚点是整行；折叠之后的字符串不变，生成物不变）；第 5 节 P3 一行加上进第二个闸门时只持着前一个闸门的位置。
+- 变异：新加 4 个（T5.21、T5.22、T10.17、T10.18），T8.5 加不带 `-race` 的一层；它们和每个以改过的测试为一层的变异（共 27 个）在改过的快照上按它们的层重跑（`passAM.sh`：各自的 Task 的快照、"Task n 起"的、最终的树），98 层全部发现，没有构建失败和崩溃，结果在新的文件里（A.6）。
+
 ### A.3 只在单元、存储一层被发现的变异
 
-**只在单元一层被发现的（按性质，19 个）**：
+**只在单元一层被发现的（按性质，21 个）**：
 
 - 端口的失败被吞掉（清扫 2）2 个：T5.13（工作项的写失败之后照样往下走）、T5.14（读成员的角色失败之后照样往下走）。同 P1a：真实的存储在这些步骤不失败；而一条失败的语句让 Postgres 中止事务，之后的语句和提交都失败，吞掉它的用例也写不进任何东西（T5.14 把没读到的角色当作没有角色，答 422 而不是 500，同样什么都没写）。存储方法自己的失败由清扫 19 在存储一层核对。
 - 次序的约定（清扫 9）1 个：T5.11（先写标签的行、再写负责人的）。工作项一侧五张表的每个写者都先持项目 N，同一个项目的行在它之下没有第二个写者，表的次序等不起来；全局顺序是给以后的写（P9 的任务）的约定，由单元的调用次序钉住（同 P1a 的 T3.2、T8.12）。
 - 关注（3.12）1 个：T5.10（修改去掉的负责人也加关注）。经接口到得了的状态里，去掉的负责人在被指派时已经关注（创建给创建者和负责人、修改给新的负责人加关注），P1b 没有取消关注（M7），关注的部分唯一键让再插的一行什么都不做（`ON CONFLICT DO NOTHING`，P1a 的 `TestInsertSubscribersSubscribesEachAccountOnce`）：组合出的 app 里等价，只有假实现记下了这次调用。
+- 完成时间 1 个：T5.21（移进已取消组的状态当作完成，预检 L5）。状态的组决定完成时间是数据的规则，不是安全或加锁的性质：`domain.CompletedAt` 由它的单元测试钉住，修改的单元测试的表有已取消组的两行；组合的测试和 I2 没有移进已取消组的一步（I1 在已取消的状态里创建，走的是创建）。完成组之间的移动写新的时刻（预检的 PF.C1）同样只有单元一层分得出（A.6 的完成时间一行）。
 - 契约和文案 2 个。T6.2（`IssueUpdate` 收下后面的 Phase 的字段）：体的形状由生成的 `bodyshape` 在用例之前检查，HTTP 的测试驱动的就是生成的路由和真实的处理函数，这条路上没有替身（同 P1a 的 T9.11）。T4.4（页面没有 `issue.not_found` 的文案）：`error-messages.test.ts` 读的是真实的文案表，显示它的工作项的页面在 P14（同 P1a 的 T11.17）；中文的一份缺这个键（T4.5）由 `check:sync` 发现。
-- `platform/gate` 的内部 5 个：T8.1（交给最后来的）、T8.3（离开两次让出两次）、T8.5（放弃时正好被交到位置的留着它）、T8.8（`ctx` 已结束的照样拿到空位）、T8.9（没人持有、没人等的键不被忘掉）。闸门的测试驱动的就是真实的组件（真实的 goroutine、`context` 和计时，`-race` 的负载测试），没有替身；组合出的 app 只加它的接线和换码，由两个忙的项目的测试在组合一层核对（T10.9–T10.12），排满、等到 `max_wait`、放弃的离开队列、请求到期时放弃也在那里（T8.2、T8.4、T8.6、T8.7）。这五个是等待者之间的次序、交接与放弃的竞争和内存：组合一层要让几个 HTTP 请求按指定的次序排进队列、在交接的那一刻放弃，造不确定；T8.8 要请求在预检之后、进闸门之前结束，它随后的事务在结束的 `context` 上开不了，同样什么都不写。
+- `platform/gate` 的内部 5 个：T8.1（交给最后来的）、T8.3（离开两次让出两次）、T8.5（放弃时正好被交到位置的留着它）、T8.8（`ctx` 已结束的照样拿到空位）、T8.9（没人持有、没人等的键不被忘掉）。闸门的测试驱动的就是真实的组件（真实的 goroutine、`context` 和计时，负载测试带和不带 `-race`：T8.5 在两者都被发现，预检 L1），没有替身；组合出的 app 只加它的接线和换码，由两个忙的项目的测试在组合一层核对（T10.9–T10.12），排满、等到 `max_wait`、放弃的离开队列、请求到期时放弃也在那里（T8.2、T8.4、T8.6、T8.7）。这五个是等待者之间的次序、交接与放弃的竞争和内存：组合一层要让几个 HTTP 请求按指定的次序排进队列、在交接的那一刻放弃，造不确定；T8.8 要请求在预检之后、进闸门之前结束，它随后的事务在结束的 `context` 上开不了，同样什么都不写。
 - 配置 6 个：T9.5–T9.10（`per_project` 可以是 0、锁的期限可以等于请求的期限、`issue` 不校验、`max_queue` 可以是负数、随附的配置让一个项目进三个写、日志写错键）。`platform/config` 的测试驱动的是真实的加载、校验和随附的 `configs/config.yaml`（`configs` 的测试读嵌入的那一份），没有替身；组合的测试各自给出配置（`testIssueConfig`），不读随附的文件，组合出的 app 拿到的是已经通过校验的配置。
-- 写闸门接入 2 个。T10.2（不用 `defer` 离开：panic 留着位置）：组合出的 app 里没有输入能让写在事务里 panic，单元测试由写函数自己 panic。T10.4（等闸门时被取消的请求答 `server_busy`）：被取消的请求的回答没有人收到（客户端已经走了），答 503 还是 499（`httpserver` 对 `context.Canceled` 的回答），只在服务端的日志里不同；取消与到期走的是同一条路（`Enter` 收到请求的 `context`），到期的一半在组合一层（T10.5、T10.16）。
+- 写闸门接入 3 个。T10.2（不用 `defer` 离开：panic 留着位置）：组合出的 app 里没有输入能让写在事务里 panic，单元测试由写函数自己 panic。T10.4（等闸门时被取消的请求答 `server_busy`）：被取消的请求的回答没有人收到（客户端已经走了），答 503 还是 499（`httpserver` 对 `context.Canceled` 的回答），只在服务端的日志里不同；取消与到期走的是同一条路（`Enter` 收到请求的 `context`），到期的一半在组合一层（T10.5、T10.16）。T10.17（离开闸门放进事务的函数里：提交、回滚之前就离开，预检 M1）：位置在提交之前交出，下一个写在前一个提交的同时取连接、开始事务，一个热的项目在每次交接时至多占 2K 个连接（提交慢时更久）；两个写的回答和写下的行都一样，提交的时刻与交接的先后经 HTTP 不靠计时看不到。单元的 `fakeTx` 记下事务还没有结束时的离开（`in tx`）。
 
 **只在存储一层被发现的（按性质，4 个；都在真实的数据库上）**：
 
@@ -301,13 +314,13 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 
 ### A.4 最终的原型、矩阵、交错、连接池和规模
 
-**最终的原型**（`gates.sh`，2026-10-18：七个门禁在最终的树上，`logs/final4-*.log`、`final4.summary`；此后原型的代码只被变异改动（每个在自己的副本里），文档换成复制进来的 spec、plan 和设计；逐 Task 复现的终态与它逐个文件相同，A.5）：`make gen` 之后生成物没有差异；`make lint-go` 两段 `0 issues.`；`make test` 47 个 `ok`；`make lint-web`（关键词守卫 72 条规则、23 个例外、没有命中，54 个任务）；`make knip`；`make test-web`（17 个任务）；`make e2e` 122 个中 119 个通过，I1、I2 在其中；失败的三个与 P1b 无关：S3 因原型不是仓库的检出、构建没有提交号而失败（M3/P4b 的 F4），A4 的两个 firefox 测试因为机器上没有 Firefox。
+**最终的原型**（`gates.sh`，2026-10-18：七个门禁在最终的树上，`logs/final4-*.log`、`final4.summary`；此后原型的代码只被变异改动（每个在自己的副本里），文档换成复制进来的 spec、plan 和设计；逐 Task 复现的终态与它逐个文件相同，A.5；预检之后的修改（A.2）只改测试和文档，改过的原型由新的逐 Task 复现在每个 Task 之后跑过它的门禁，A.5）：`make gen` 之后生成物没有差异；`make lint-go` 两段 `0 issues.`；`make test` 47 个 `ok`；`make lint-web`（关键词守卫 72 条规则、23 个例外、没有命中，54 个任务）；`make knip`；`make test-web`（17 个任务）；`make e2e` 122 个中 119 个通过，I1、I2 在其中；失败的三个与 P1b 无关：S3 因原型不是仓库的检出、构建没有提交号而失败（M3/P4b 的 F4），A4 的两个 firefox 测试因为机器上没有 Firefox。
 
 **矩阵**：`TestPermissionMatrix` 1,055 格全部通过（`getIssue` 15 格、`createIssue` 75 格、`updateIssue` 九行 99 格，其余 866 格是 M3 的），顶层 1.75 秒（`matrixcount.sh`，`logs/matrix.log`）。
 
-**交错和竞争**（`raceall.sh`，`logs/race-final.log`）：`bootstrap` 的 45 个交错、竞争、取锁形状和忙的项目的测试各 `-race -count=5`，225 次顶层、930 个子测试全部通过，257 秒，没有 40P01、没有死锁、没有数据竞争。其中 M3 的 30 个；P1a 的 9 个（4 个加了修改的一支，换成两支共用的名字；取锁形状的测试多了 `updateIssue` 的一行）；P1b 的 6 个：1u、等锁期间工作项不在了、两个忙的项目的测试、交错 20 的两个。
+**交错和竞争**（`raceall.sh`，`logs/race-final.log`；预检之后在改过的原型上再跑一次，`raceall_amend.sh`，`logs/race-amend.log`）：`bootstrap` 的 45 个交错、竞争、取锁形状和忙的项目的测试各 `-race -count=5`，225 次顶层、930 个子测试全部通过，257 秒（改过之后 265 秒），两次都没有 40P01、没有死锁、没有数据竞争。其中 M3 的 30 个；P1a 的 9 个（4 个加了修改的一支，换成两支共用的名字；取锁形状的测试多了 `updateIssue` 的一行）；P1b 的 6 个：1u、等锁期间工作项不在了、两个忙的项目的测试、交错 20 的两个。
 
-**交错 20 的上限**（`poolmeasure.sh`，`logs/pool-final-race.log`、`pool-final.log`，各 5 次；池 10 个连接，闸门是默认值）：别的事务持 Web 的行约一秒、200 个修改打到 Web 时，每次恰好 134 个立即 503；Ops 的读每次 41–45 次，最慢的一次 11.7–38.8 毫秒（`-race`）、10.5–28.0 毫秒（不带 `-race`），上限 500 毫秒（第 3 节第 13 条）。16 串修改之中，改 acme 的名称 2.7–4.9 毫秒、把 walt 改为管理员 3.6–6.6 毫秒、删除 acme 30.7–45.7 毫秒，上限 1 秒。原型上全部有闸门的运行（`logs/pool-*.log`，连同先前几版测试共 45 次，带和不带 `-race`；`poolranges.py`）：读最慢 2–49 毫秒，改名称 2.7–7.7 毫秒、改为管理员 3.6–8.9 毫秒、删除 17.2–50.2 毫秒；逐 Task 复现的 Task 12 的一次（A.5，`replay-logs/T12-1.log`，不带 `-race`）：读 46 次、最慢 5.3 毫秒，改名称 3.1 毫秒、改为管理员 4.9 毫秒、删除 54.0 毫秒。把闸门去掉（每个写不进闸门，`pool-nogate2.log`、`pool-nogate3.log`）：一版测试的三次，读最慢 1.12–1.26 秒；另一版的三次，都是约 4.97 秒（等到请求的期限）。
+**交错 20 的上限**（加固之后的测试（A.2）在改过的原型上，`poolmeasure.sh` 带和不带 `-race` 各 5 次，`logs/hardpool-race.log`、`hardpool.log`，`poolamend.py`；池 10 个连接，闸门是默认值，这个测试的 `max_wait` 一分钟）：别的事务持 Web 的行至少一秒、200 个修改打到 Web 时，每次恰好 134 个 503、行放开之后 66 个 200；Ops 和 Web 的工作项的读每次 74–78 次（`-race`）、86–88 次（不带 `-race`），最慢的一次 11.4–41.4 毫秒（`-race`）、3.0–11.7 毫秒（不带），上限 500 毫秒（第 3 节第 13 条）。16 串修改之中，改 acme 的名称 2.5–4.9 毫秒、把 walt 改为管理员 4.0–6.7 毫秒、删除 acme 17.7–74.4 毫秒，上限 1 秒。预检在它的加固的树上（`$M4TMP/p1b-preflight/preflight.md` 的计时一节）：`-race` 20 次，每次读 74 次、最慢 39–44 毫秒；不带 `-race` 40 次，每次读 84–90 次、最慢 1.2–46 毫秒；没有闸门的变异读最慢 3.42 秒（加固之前的测试上 1.25 秒）。逐 Task 复现的 Task 12 的一次（A.5，`replay-logs/T12-1.log`，不带 `-race`）：读 86 次、最慢 8.7 毫秒，改名称 4.5 毫秒、改为管理员 4.1 毫秒、删除 26.5 毫秒。加固之前的测试（只读 Ops，`logs/pool-final-race.log`、`pool-final.log`，各 5 次）：读每次 41–45 次，最慢 11.7–38.8 毫秒（`-race`）、10.5–28.0 毫秒（不带），改名称 2.7–4.9 毫秒、改为管理员 3.6–6.6 毫秒、删除 30.7–45.7 毫秒。原型上全部有闸门的运行（`logs/pool-*.log`，连同先前几版测试共 45 次，带和不带 `-race`；`poolranges.py`）：读最慢 2–49 毫秒，改名称 2.7–7.7 毫秒、改为管理员 3.6–8.9 毫秒、删除 17.2–50.2 毫秒；先前的逐 Task 复现的 Task 12 的一次（`replay-logs-a04d479d/T12-1.log`，不带 `-race`）：读 46 次、最慢 5.3 毫秒，改名称 3.1 毫秒、改为管理员 4.9 毫秒、删除 54.0 毫秒。把闸门去掉（每个写不进闸门，`pool-nogate2.log`、`pool-nogate3.log`）：一版测试的三次，读最慢 1.12–1.26 秒；另一版的三次，都是约 4.97 秒（等到请求的期限）。
 
 **规模**（`TestTheDeletionsAtTheScaleTarget`，`NERVE_MEASURE_SCALE=1`，四次：`logs/scale-1.log` 一次、`scale-2.log` 两次、`scale-final.log` 一次，最后一次在最终的原型上；本机 macOS、Docker Desktop、PostgreSQL 18.6 的 testcontainer，按 ±2–3 倍读）：六个项目各 2 万个工作项、每个项目 50 万行，共 300 万行，种下 38.6–44.3 秒。
 
@@ -316,29 +329,31 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | 删除 Web（一个项目，50 万行） | 4.83–6.32 秒 | 4.40–4.71 秒 |
 | 删除 beta（五个项目的工作区，250 万行） | 25.1–29.7 秒 | 23.0–24.6 秒 |
 
-逐 Task 复现的 Task 13 在复现的副本上又量了一次（A.5，`replay-logs/T13-2.log`）：种下 45.3 秒，删除 Web 一侧 5.25 秒、请求 4.79 秒，删除 beta 一侧 28.5 秒、请求 26.7 秒。请求在一侧的测量之后量（同样的页已经读过一遍），比一侧的单独测量略快。生产的请求期限是 15 秒：删除 beta 的请求在那里到期、回滚，什么都没删（测试把期限放长到一小时才量得到它）；删除一个这样的项目在期限之内。决策点 7（负责人裁定 A）把工作项一侧交给 P9 的任务，并要 P9 在同样的数据上再量（第 3 节第 14 条、第 7 节）。
+逐 Task 复现的 Task 13 在复现的副本上又量了两次（A.5；`replay-logs-a04d479d/T13-2.log`：种下 45.3 秒，删除 Web 一侧 5.25 秒、请求 4.79 秒，删除 beta 一侧 28.5 秒、请求 26.7 秒；`replay-logs/T13-2.log`：种下 40.8 秒，删除 Web 一侧 4.95 秒、请求 4.62 秒，删除 beta 一侧 25.5 秒、请求 23.4 秒）。请求在一侧的测量之后量（同样的页已经读过一遍），比一侧的单独测量略快。生产的请求期限是 15 秒：删除 beta 的请求在那里到期、回滚，什么都没删（测试把期限放长到一小时才量得到它）；删除一个这样的项目在期限之内。决策点 7（负责人裁定 A）把工作项一侧交给 P9 的任务，并要 P9 在同样的数据上再量（第 3 节第 14 条、第 7 节）。
 
 ### A.5 逐 Task 复现
 
-**逐 Task 复现**（`replay-all.sh`、`replay.py`，日志在 `p1btools/replay-logs`）：`5ce30a1a` 的一份新的副本（`base-5ce30a1a.tar`），本提交的 spec、plan 和设计照它们在 worktree 里的样子放进去，`pnpm install --frozen-lockfile`，`bin/golangci-lint` 取原型的（2.13.2；`make tools` 会下载它）；按 plan 的顺序应用 15 个 Task 的 267 个块，照原样运行各 Task 的 84 个 `Run:` 命令（其中 5 个是提交之后的 `make gen-check`），一共 1,823 秒，没有重跑。Task 1–13 之后 `make lint-go` 两段 `0 issues.`；除 Task 8 之外 `make test` 全部 `ok`（Task 1–7 是 46 个，Task 8 加了 `platform/gate` 之后 47 个），Task 8 跑 `platform/gate` 的测试（含 `-race -count=5`）和 `archtest`；`make gen-go`（Task 2、3）和 `make gen`（Task 4、6、10）之后，生成物的每个 SHA-256 和行数与 plan 的表相同，提交之后的 gen-same 没有差异；`make lint-web`、`make knip`、`make test-web` 在 Task 4、6、10、14 通过；Task 8、11、12 的 `-race -count=5` 没有 40P01、死锁和数据竞争；Task 13 的规模测量不设 `NERVE_MEASURE_SCALE` 时跳过，设了时 116 秒（数字在 A.4）；`make e2e` 在 Task 5、10 是 121 个中 118 个通过、在 Task 14 是 122 个中 119 个通过（I1、I2 在其中），失败的只有 S3（F4）和 A4 的两个 firefox 测试（机器上没有 Firefox）；Task 15 的 `make lint-web` 通过，`doclinks.py` 没有断的链接，`make test` 47 个 `ok`。最后 `treediff` 比较复现的树与原型的 3,372 个文件，没有差异。复现的副本不是 git 检出：`make gen-check` 由 gen-same 代替（`make gen` 前后生成物逐字节相同），`make lint-web` 的关键词守卫经 `kwreal.py` 列出文件。
+**逐 Task 复现**（预检之后的 plan；`replay-all-amend.sh`、`replay.py`，日志在 `p1btools/replay-logs`、`logs/replay-all-amend.log`，`replaysum_amend.py`）：`5ce30a1a` 的一份新的副本（`base-5ce30a1a.tar`），本提交的 spec、plan 和设计照它们在 worktree 里的样子放进去，`pnpm install --frozen-lockfile`，`bin/golangci-lint` 取原型的（2.13.2；`make tools` 会下载它）。先在基点的另一份新的副本上 `planapply.mjs check`：273 个块按顺序都对。按 plan 的顺序应用 15 个 Task 的 273 个块，照原样运行各 Task 的 84 个 `Run:` 命令（其中 5 个是提交之后的 `make gen-check`），一共 1,595 秒，没有重跑。Task 1–13 之后 `make lint-go` 两段 `0 issues.`；除 Task 8 之外 `make test` 全部 `ok`（Task 1–7 是 46 个，Task 8 加了 `platform/gate` 之后 47 个），Task 8 跑 `platform/gate` 的测试（含 `-race -count=5`）和 `archtest`；`make gen-go`（Task 2、3）和 `make gen`（Task 4、6、10）之后，生成物的每个 SHA-256 和行数与 plan 的表相同，提交之后的 gen-same 没有差异；`make lint-web`、`make knip`、`make test-web` 在 Task 4、6、10、14 通过；Task 8、11、12 的 `-race -count=5` 没有 40P01、死锁和数据竞争；Task 13 的规模测量不设 `NERVE_MEASURE_SCALE` 时跳过，设了时 105 秒（数字在 A.4）；`make e2e` 在 Task 5、10 是 121 个中 118 个通过、在 Task 14 是 122 个中 119 个通过（I1、I2 在其中），失败的只有 S3（F4）和 A4 的两个 firefox 测试（机器上没有 Firefox）；Task 15 的 `make lint-web` 通过，`doclinks.py` 没有断的链接，`make test` 47 个 `ok`。每个 Task 之后的树存成快照，换下 `p1bsnap`（A.1）。最后 `treediff` 比较复现的树与改过的原型的 3,372 个文件，没有差异；与预检的加固的树（`$M4TMP/p1b-preflight/hard`）比较，差的只有：`issue/module.go` 的包说明（L4）、`api/modules/issue.yaml` 的折行（c1）、README、总体设计和 M3 交接的连接池的总代价（M4）这五个文件的那几行（`harddiff.py`），本提交的 spec、plan 和设计，和只在加固的树里的预检的证据测试 `bootstrap/pf_hot_projects_test.go`。复现的副本不是 git 检出：`make gen-check` 由 gen-same 代替（`make gen` 前后生成物逐字节相同），`make lint-web` 的关键词守卫经 `kwreal.py` 列出文件。
 
-**复现期间和之后**三份文档的改动，块、`Run:` 和生成物的摘要都没有变。plan 与复现读的 plan（`p1btools/plan-as-replayed.md`）逐行比较只差三行文字：Global Constraints 的一句照各 Task 实际的门禁写（Task 8 只加还没有使用者的 `platform/gate`，跑它自己的测试和 `archtest`，不跑 `make test`；P1a 复现之后的同一种修改）；一次性的脚本一段写明 `doclinks.py` 不把代码块和行内代码当作链接（复现用的脚本已经如此）；Task 10 的测试说明写明 alice 的创建在 bob 的修改发出之后约 4 秒 503。spec 写入本附录，另改了五处文字：第 1 节和第 4 节第 3 条加上等锁期间工作项不在了的修改，2.12 写明 alice 的 503 的时刻，第 3 节第 13 条的连接池的数字和第 7 节的规模的数字照全部的运行写（连同复现的一次，A.4）。设计第 15 节 P1b 一行的状态加上"（15 个 Task）"（P1a 和 M3 各段进行中时的写法）。
+**复现之后**：plan 和设计与复现读的逐字节相同。spec 的正文在复现读过之后改了三行（`specbody.py`）：2.1 的文档数写上设计 11.11、13.2，第 3 节第 13 条加上加固之后的运行，第 6 节 T8.5 一行写明负载测试带和不带 `-race`；附录 A 里预检之后的部分（A.1 的快照和大小、A.2、A.3、A.4 的运行、本节、A.6）也在复现之后写入。
+
+**先前的复现**（`a04d479d` 的 plan；`replay-logs-a04d479d`、`p1breplay-a04d479d`）：267 个块、84 个 `Run:` 命令，1,823 秒，没有重跑，门禁的结果同上，`treediff` 与当时的原型的 3,372 个文件没有差异。那次之后改过三份文档的几行文字，块、`Run:` 和生成物的摘要都没有变：Global Constraints 的门禁一句（Task 8 不跑 `make test`）、`doclinks.py` 不把代码当作链接、Task 10 的 alice 的 503 的时刻；spec 的第 1 节和第 4 节第 3 条、2.12、第 3 节第 13 条和第 7 节的数字；设计第 15 节 P1b 一行的"（15 个 Task）"。
 
 ### A.6 清扫和变异表
 
-**五十六类清扫**（P1a 的五十类（P1a spec 附录 A.6）和 brief 加的六类（51–56）；每个变异在一份新的副本里（`p1bmut/<id>`），Go 以外的文件（契约、故事、文案）也在副本里改，`mut.py` 在变异写的每一层各跑一次：单元（各模块的 `app`、`domain`、`adapter/http`，`access/domain`，`platform/gate`、`platform/config`、`configs`，`bootstrap` 的转换和换码的测试，Web 的 `error-messages.test.ts`）、存储（各模块的 `adapter/postgres`，`platform/postgres` 的锁的期限）、组合（`bootstrap`、`archtest`）、端到端（单独运行的故事 I2）、守卫（`check:sync`）；每个变异在它的 Task 的快照上跑，后面的 Task 才有的检查在那个 Task 的快照上跑（"（Task n 起）"），全部的 Go 一层在最终的树上再跑一次；"层"是它在最终的树上被发现的每一层（端到端在 Task 14 的树上：Task 15 只改文档）；端到端的"发现"由 `e2ekills.py` 核对是断言失败，不是崩溃或超时）：
+**五十六类清扫**（P1a 的五十类（P1a spec 附录 A.6）和 brief 加的六类（51–56）；每个变异在一份新的副本里（`p1bmut/<id>`），Go 以外的文件（契约、故事、文案）也在副本里改，`mut.py` 在变异写的每一层各跑一次：单元（各模块的 `app`、`domain`、`adapter/http`，`access/domain`，`platform/gate`、`platform/config`、`configs`，`bootstrap` 的转换和换码的测试，Web 的 `error-messages.test.ts`）、存储（各模块的 `adapter/postgres`，`platform/postgres` 的锁的期限）、组合（`bootstrap`、`archtest`）、端到端（单独运行的故事 I2）、守卫（`check:sync`）；每个变异在它的 Task 的快照上跑，后面的 Task 才有的检查在那个 Task 的快照上跑（"（Task n 起）"），全部的 Go 一层在最终的树上再跑一次；"层"是它在最终的树上被发现的每一层（端到端在 Task 14 的树上：Task 15 只改文档）；端到端的"发现"由 `e2ekills.py` 核对是断言失败，不是崩溃或超时；预检之后的修改（A.2）之后，受影响的变异在改过的快照上照同样的做法重跑，`passAM.sh`）：
 
 | 清扫 | 大小 | 结果 | 层 |
 |---|---|---|---|
 | 1 每个 SQL 谓词 | `update.sql` 的三条语句：`UpdateIssue` 的 `id`（T3.1）、写者和完成时间（T3.2、T3.3）；`RemoveAssignees`、`RemoveLabels` 的工作项、`= ANY`、已删除（T3.4–T3.7、T3.10、T3.11）；`issue_ports.sql` 的状态、标签的名称（T2.1、T2.2） | 全部被发现；T3.1、T3.4–T3.7、T3.10、T3.11 原来只在存储一层，I2 的加强（A.2）之后也在端到端 | 存储；组合；端到端 |
 | 2 端口调用的错误 | 用例吞掉端口的失败：工作项的写、读角色（T5.13、T5.14）；存储的失败（T3.9） | T5.13、T5.14 只在单元一层（按性质，A.3）；T3.9 在存储一层 | 单元；存储 |
 | 3 写不动的行 | 修改的存储测试比较被写的工作项之外的每一行每一列（`TestUpdatingAWorkItemWritesItsRows`）；I2 的另一个工作项（与它共有 bob 和 Bug）从头到尾如创建时 | T3.1、T3.4、T3.11 在存储一层和 I2 | 存储；端到端 |
-| 4 组合根的接线 | `bootstrap` 不给 `issue` 闸门、带锁的期限的事务（T10.9–T10.12），命令行不建闸门（T10.15）；状态、标签名称的转换（T2.3）；HTTP 的映射（T4.6、T6.1、T7.2、T7.3） | 都在组合一层或 I2 | 单元；组合；端到端 |
-| 5 安全性质在真实环境上 | `issue.read`、`issue.update` 的规则（T4.2）；预检、锁下的判定（T4.1、T5.1、T5.15）；预检拒绝的不进闸门（T10.1）；闸门在事务之外（T10.3）、用请求的 `context`（T10.16） | 都在组合一层（矩阵、交错 4u、5u、两个忙的项目的测试、交错 20） | 单元；组合 |
-| 6 每句文档 | 每句说明、契约描述、故事标题对照代码；`prophecy.py` 列出每个 Task 加的往后看、计数的注释 | 改了五处（A.2：`patch.go`、规则、HTTP 测试、盖戳测试、契约的完成时间一句）和规模测试的一句 | 审阅 |
+| 4 组合根的接线 | `bootstrap` 不给 `issue` 闸门、带锁的期限的事务（T10.9–T10.12），命令行不建闸门（T10.15）；状态、标签名称的转换（T2.3）；HTTP 的映射（T4.6、T6.1、T7.2、T7.3）；读不进写闸门（T10.18：`newGet` 的闸门记下进出，交错 20 读热的工作项，预检 M2） | 都在组合一层或 I2 | 单元；组合；端到端 |
+| 5 安全性质在真实环境上 | `issue.read`、`issue.update` 的规则（T4.2）；预检、锁下的判定（T4.1、T5.1、T5.15）；预检拒绝的不进闸门（T10.1）；闸门在事务之外（T10.3）、用请求的 `context`（T10.16）、离开在事务结束之后（T10.17，预检 M1） | 都在组合一层（矩阵、交错 4u、5u、两个忙的项目的测试、交错 20）；T10.17 只在单元一层（按性质，A.3） | 单元；组合 |
+| 6 每句文档 | 每句说明、契约描述、故事标题对照代码；`prophecy.py` 列出每个 Task 加的往后看、计数的注释 | 改了五处（A.2：`patch.go`、规则、HTTP 测试、盖戳测试、契约的完成时间一句）和规模测试的一句；预检之后又改了 `issue/module.go` 的包说明（L4）、`IssueUpdater` 的说明（L3）、连接池的总代价（M4：README、总体设计 4.2、M3 交接）、交错 20 的 Expected（L2） | 审阅 |
 | 7 反例里没有随机 | P1b 的测试 | 表都是切片；I2 和矩阵的"没有的状态、标签"用随机的 id，是不存在的 id，不是取样；交错 20 的突发是 200 个固定的请求 | 审阅 |
 | 8 决定所依赖的读在调用者的事务里 | 修改经池读回答（T7.1）；锁下的重读、判定、目录、角色、显示名都在事务的连接上 | T7.1 在组合一层（一个连接的池：`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`） | 组合 |
-| 9 锁顺序在真实环境上 | 修改最先锁项目、工作区上没有锁（T6.3、T12.1）；写表的次序（T5.11）；重读在锁之后（T5.20） | T6.3、T12.1、T5.20 在组合一层；T5.11 只在单元一层（按性质，A.3） | 单元；组合 |
+| 9 锁顺序在真实环境上 | 修改最先锁项目、工作区上没有锁（T6.3、T12.1）；写表的次序（T5.11）；重读在锁之后（T5.20）；闸门的位置持到提交、回滚之后（T10.17） | T6.3、T12.1、T5.20 在组合一层；T5.11、T10.17 只在单元一层（按性质，A.3） | 单元；组合 |
 | 10 承重的种子行有前提 | 矩阵的 `issueSeed`（每个项目一个工作项，指派项目管理员和一个已离开的账户，标签 Bug）；`aWorkItem` 的三行；I2 的两个工作项 | 矩阵的种子由 `seededIssue` 读回核对；`wroteNothing` 先核对准备的行数；I2 每一步之后 `expectIssueUpdated` | 审阅；组合；端到端 |
 | 11 每条拒绝路径 | 预检拒绝的（404、403）、锁下的（404、403、409、422）、规则的 422 | 单元的两个拒绝表；矩阵的拒绝五行（已归档、另一个项目的状态、另一个项目的标签、分诊状态、指派访客）；交错 3u–7u 和"工作项不在了"；I2 的两个 422 | 审阅 |
 | 12 与结束、删除的竞争（组合） | 修改与删除项目、工作区（3u），与移出、降级（4u、5u），与删除状态、标签（6u、7u），与另一个修改（1u），与工作项的删除、移走（P1b 没有这两个操作，由事务在数据库里做） | 两种顺序都答对，等待由探测确认；T5.3、T5.6、T5.9、T5.15–T5.18、T5.20 在这些交错里被发现 | 组合 |
@@ -353,17 +368,17 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | 21 拒绝和失败钉住第一个 `*shared.Error` | 单元的拒绝表用 `errors.Is` 比较码；HTTP 的拒绝表按码；矩阵按格子的码和问题 | 审阅 | 审阅 |
 | 22 端口的回答对得上所问 | 工作项的状态不是项目的、去掉的标签不是项目的、没有显示名的负责人、写之后读不回来都是错误 | `TestUpdateIssueStopsAtAFailingPort` 的四段 | 单元 |
 | 23 组合的夹具跨第二个工作区、第二个项目 | 矩阵的各项目；"工作项不在了"移到 Ops；交错 20 的四个项目；规模的测量的 beta | 修改不碰别的项目的行（I2 的另一个工作项、存储测试） | 组合；端到端 |
-| 24 每条规则的每一半在组合一层有反例 | 3.7 的规则：值的检查（T1.1–T1.3）、留下的负责人不查（T5.7）、新负责人的角色（T5.8）、别的项目的状态和标签、分诊（T5.5、T5.6、T5.9）；什么都不改（T1.7–T1.9、T1.14、T1.15、T5.2） | 都在矩阵或 I2；T1.2、T1.3、T1.9、T1.15 原来只在单元一层，I2 的 422 和"只去掉一个"两步之后在端到端 | 单元；组合；端到端 |
-| 25 判定和执行在同一把锁下 | 锁之前读时刻（T5.3）；锁之前重读（T5.20）；锁下不判定（T5.15） | 都在组合一层（1u、4u、5u） | 单元；组合 |
+| 24 每条规则的每一半在组合一层有反例 | 3.7 的规则：值的检查（T1.1–T1.3）、留下的负责人不查（T5.7）、新负责人的角色（T5.8）、别的项目的状态和标签、分诊（T5.5、T5.6、T5.9）；什么都不改（T1.7–T1.9、T1.14、T1.15、T5.2）；完成时间：移进已取消组不完成（T5.21，预检 L5） | 都在矩阵或 I2；T1.2、T1.3、T1.9、T1.15 原来只在单元一层，I2 的 422 和"只去掉一个"两步之后在端到端；T5.21 只在单元一层（数据的规则，A.3） | 单元；组合；端到端 |
+| 25 判定和执行在同一把锁下 | 锁之前读时刻（T5.3）；锁之前重读（T5.20）；锁下不判定（T5.15）；闸门的位置持到事务结束（T10.17） | T5.3、T5.20、T5.15 在组合一层（1u、4u、5u）；T10.17 只在单元一层（按性质，A.3） | 单元；组合 |
 | 26 "不变"用不会碰巧得出的值 | 存储测试的工作项每一列都不是默认值，去掉的行一小时前由别人写；盖戳的测试由 bob 在 alice 之后改 | 逐列比较 | 存储；组合 |
 | 27 故事里的"不动"在动作之前读、之后核对 | I2 的什么都不改和两个 422：之前一步的 `expectIssueUpdated`、之后再核对同一个；另一个工作项在最后核对如创建时 | 都有 | 审阅 |
 | 28 只在端到端被发现的性质另有 Go 的测试 | 变异表里只在端到端失败的 | 没有：每个有 I2 一层的变异另在单元或存储一层被发现 | 审阅 |
-| 29 每个能等锁的等待都有期限 | 写的等待：闸门上到 `max_wait` 或请求的期限（T8.6、T8.7、T10.5、T10.6、T10.16），事务里的每次等锁到 `issue.write_lock_timeout`（T9.3、T10.9、T10.10）；测试一侧：交错的 context 10 秒、探测 5 秒、锁的期限的测试 3 秒（A.2）、忙的项目的测试的每个回答 | 写的等待都在组合一层（两个忙的项目的测试）；测试一侧都有 | 组合；审阅 |
+| 29 每个能等锁的等待都有期限 | 写的等待：闸门上到 `max_wait` 或请求的期限（T8.6、T8.7、T10.5、T10.6、T10.16），事务里的每次等锁到 `issue.write_lock_timeout`（T9.3、T10.9、T10.10）；测试一侧：交错的 context 10 秒、探测 5 秒、锁的期限的测试 3 秒（A.2）、忙的项目的测试的每个回答，交错 20 的持有（134 个 503 都答了，3 秒为限）和链的开始（每串一次回答，5 秒为限），两个忙的项目的测试的窗口以 `max_wait`（1 秒）和锁的期限（3 秒、4 秒）为界（预检 M3） | 写的等待都在组合一层（两个忙的项目的测试）；测试一侧都有 | 组合；审阅 |
 | 30 每个输出、问题的细节和补救对每个收到它的调用者都成立 | `issue.not_found` 的文案；`server_busy`（M2 的文案：稍后重试）只在排满、等不到、请求到期、等锁到期时答，都是暂时的 | 成立 | 审阅 |
 | 31 检查和执行之间的 gate 在检查的事务之外 | 交错的门在第一个写的写之后、提交之前（`heldTx`）；1u 用同一个 | P1a 的 `serialize`、`serializeOn`，没有新写一个 | 组合 |
 | 32 每个探针有反例 | 两个忙的项目的测试、交错 20、"工作项不在了"用已有的 `pgtest.WaitForLockWaitBehind`（等的是持有者的那个连接后面的等待，不是表名，等不到就在 5 秒的期限上失败）；交错照用 P1a 的 `serialize`（它的反例是 P1a 的 T12.3） | 没有新写的探针 | 审阅 |
 | 33 goroutine 上不调用 `t.Fatal` | `replyTo`、`sendInBackground`、交错 20 的两组 goroutine | 闭包里只发请求、只送回回答 | 审阅 |
-| 34 "没有替身"、"完成"的说法全包 grep | `issueWrites` 与契约中工作项一侧的写一一对应；矩阵覆盖每个操作；`apitest.Main` 两个方向；`archtest` 禁止命令行建闸门（T10.15） | 都被发现 | 组合 |
+| 34 "没有替身"、"完成"的说法全包 grep | `issueWrites` 与契约中工作项一侧的写一一对应；矩阵覆盖每个操作；`apitest.Main` 两个方向；`archtest` 禁止命令行建闸门（T10.15）；"读不进闸门"在读的单元测试（`newGet` 用记下进出的闸门）和交错 20（读热的工作项）都核对（T10.18，预检 M2） | 都被发现 | 单元；组合 |
 | 35 "由 X 写"的种子是规则允许的 | 矩阵的种子由项目管理员写；I2 经接口 | 规则到得了的状态；"工作项不在了"的删除和移走由事务写，测试写明 P1b 没有这两个操作 | 审阅 |
 | 36 别的操作或两步到达同样的结果 | 再指派一个去掉过的账户、再加一个去掉过的标签：新的一行，旧的保留它的戳；已关注的人再被指派不再写关注 | I2 再加的一步 | 端到端 |
 | 37 归档项目、删除的工作区、停用的调用者 | 已归档的项目 409（矩阵）；已删除的项目和工作区在锁下 404（3u）；停用的调用者由认证在请求之前拒绝 | T5.1 在组合一层 | 组合 |
@@ -375,19 +390,19 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | 43 每个"由 X"可以失败 | 同清扫 14 | 同上 | 存储；端到端 |
 | 44 "保留"、"还有"读状态 | 已删除的负责人、标签的行保留它的删除（T3.5、T3.7）；留下的已离开的负责人（矩阵） | T3.5、T3.7 在存储一层和 I2（"只去掉一个"的两步） | 存储；端到端 |
 | 45 没有不会失败的断言 | P1b 的断言 | 每个新的 Go 测试至少被一个变异弄失败（`checkkills.py`，规模的测量除外：它量耗时） | 审阅 |
-| 46 测试一侧的等待都有期限 | 种子、读回、持有事务时的语句 | 都在 `pgtest.Soon` 或 context 的期限上 | 审阅 |
+| 46 测试一侧的等待都有期限 | 种子、读回、持有事务时的语句；交错 20 等 134 个 503、链等每串的第一次回答，两个忙的项目的测试等每个回答（预检 M3：计数、开始和窗口不靠固定的时间） | 都在 `pgtest.Soon`、context 或测试自己的期限上（3 秒、4 秒、5 秒，到了算失败） | 审阅 |
 | 47 连续的探测在同一张表上要指名 | 每个测试一次探测 | 没有连续的同表探测 | 审阅 |
 | 48 堆序或索引序的夹具有前提 | 规模的测量按随机的次序写每张表；I2 按 `id` 的反序给出集合和再加的两个标签 | T1.5 在 I2 被发现 | 端到端 |
 | 49 组合的夹具看得到过宽的写 | I2 的另一个工作项；存储测试的别的工作项、别的项目的行 | T3.1、T3.4、T3.11 在 I2 | 存储；端到端 |
 | 50 每句注释和文档对照它说的代码 | 每个 Task 末尾 | 见清扫 6、15 | 审阅 |
-| 51 数据分不出性质（brief） | 每个谓词、次序、过滤、去重的测试数据里有变异会错拿的行或错排的次序 | 原来的 I2 分不出三个（T3.6、T3.8、T3.10：没有留下的负责人和标签，去掉的人就是写那些行的人），改了数据（A.2）；再加的两个标签按 `id` 的反序给出（T1.5）；标签目录的回答当作集合（T2.1、T2.2） | 存储；端到端 |
+| 51 数据分不出性质（brief） | 每个谓词、次序、过滤、去重的测试数据里有变异会错拿的行或错排的次序 | 原来的 I2 分不出三个（T3.6、T3.8、T3.10：没有留下的负责人和标签，去掉的人就是写那些行的人），改了数据（A.2）；再加的两个标签按 `id` 的反序给出（T1.5）；标签目录的回答当作集合（T2.1、T2.2）；盖戳的测试里 bob 原来指派自己，他的关注本来就在，改为指派 walt（T5.22，Task 7 起在组合一层，预检 L6）；完成组之间的移动写新的时刻只有单元的表分得出（预检的 PF.C1：数据的规则） | 单元；存储；组合；端到端 |
 | 52 复制的测试辅助（brief） | 扩展已有的：`issueWorld`（`newIssueWorldWith`、`newWorkItemIn`）、`serializeOn`、`heldTx`、`holding`、`sendInBackground`、`workItemRows` | `TestTwoWritesOnAProjectSerialize` 改用 `serializeOn`；`aWorkItem` 用 `newWorkItemIn`；规模的测量用 `workItemRows`（A.2）；没有重写的辅助 | 审阅 |
-| 53 任务结束时为假的注释和文档（brief） | `prophecy.py` 列出的每一行 | 五处改写（A.2），规模测试的"P9 量"一句改成设计的要求 | 审阅 |
+| 53 任务结束时为假的注释和文档（brief） | `prophecy.py` 列出的每一行 | 五处改写（A.2），规模测试的"P9 量"一句改成设计的要求；预检之后 `issue/module.go` 的包说明写到取、改工作项（L4） | 审阅 |
 | 54 文案给出没人能做的补救（brief） | `issue.not_found` 的文案；`project.state_in_use` 不改（P2 的事） | 没有补救 | 审阅 |
 | 55 新的存储查询的谓词没有钉住（brief） | `update.sql`、`issue_ports.sql` 的每个 `WHERE`、`ANY` | 每个有一个存储测试的变异（清扫 1） | 存储 |
-| 56 只从后面的 Task 才被发现的变异；容器起不来不算（brief） | "（Task n 起）"的行在那个 Task 的树上跑；构建失败、崩溃不算发现（`mut.py`），端到端的发现核对是断言失败（`e2ekills.py`） | 见变异表和各 Task 的表 | 审阅 |
+| 56 只从后面的 Task 才被发现的变异；容器起不来不算（brief） | "（Task n 起）"的行在那个 Task 的树上跑；构建失败、崩溃不算发现（`mut.py`），端到端的发现核对是断言失败（`e2ekills.py`） | 见变异表和各 Task 的表；T8.5 原来只在 `-race` 的负载测试被发现，负载测试每个 goroutine 1000 次之后 `make test`（不带 `-race`）也发现它（预检 L1） | 审阅 |
 
-**变异表（按缺陷类别）**：变异的定义在 `$M4TMP/p1btools/mutants_p1b.py`（100 个，按 Task 分在 `mutants_b1.py`、`mutants_b2_4.py`、`mutants_b5.py`、`mutants_b6_7.py`、`mutants_b8_10.py`、`mutants_b12.py`；中文描述在 `mutants_zh_p1b.py`），结果在 `mut-results-pertask.json`（各自的 Task）、`mut-results-from.json`（"Task n 起"）、`mut-results.json`（最终的树），每次运行的日志在 `mut-logs-*`。100 个变异，99 个被发现，T8.11 是等价的（A.3）。在最终的树上（端到端一层在 Task 14 的树上），单元一层的检查发现 73 个，组合 44 个，端到端（I2）35 个，存储 17 个，守卫 1 个（一个变异可以在几层被发现）；跑过而没有发现的只有 T8.11 的两个单元一层（闸门的测试和 `-race` 的负载测试）。只有一层发现的：单元 19 个、存储 4 个（都在 A.3），组合 8 个（T6.3、T7.1、T10.9–T10.11、T10.15、T10.16、T12.1），守卫 1 个（T4.5），端到端没有。"（Task n 起）"的：Task 6 起 6 个、Task 7 起 2 个、Task 10 起 5 个、Task 11 起 8 个、Task 12 起 3 个、Task 14 起 35 个（I2）。P1b 新加的 46 个 Go 测试中 45 个至少被一个变异弄失败（`checkkills.py`），没有的是规模的测量（它量耗时，第 3 节第 14 条）。
+**变异表（按缺陷类别）**：变异的定义在 `$M4TMP/p1btools/mutants_p1b.py`（104 个，按 Task 分在 `mutants_b1.py`、`mutants_b2_4.py`、`mutants_b5.py`、`mutants_b6_7.py`、`mutants_b8_10.py`、`mutants_b12.py`；中文描述在 `mutants_zh_p1b.py`），结果在 `mut-results-pertask.json`（各自的 Task）、`mut-results-from.json`（"Task n 起"）、`mut-results.json`（最终的树），每次运行的日志在 `mut-logs-*`；预检之后（A.2）重跑的 27 个变异的结果在 `mut-results-amend-pertask.json`、`mut-results-amend-from.json`、`mut-results-amend.json`（`passAM.sh`，日志在 `mut-logs-amend*`），`mutresults.py` 把它们按层叠在先前的结果上，表从叠好的结果写出。104 个变异，103 个被发现，T8.11 是等价的（A.3）。在最终的树上（端到端一层在 Task 14 的树上），单元一层的检查发现 77 个，组合 46 个，端到端（I2）35 个，存储 17 个，守卫 1 个（一个变异可以在几层被发现）；跑过而没有发现的只有 T8.11 的两个单元一层（闸门的测试和 `-race` 的负载测试）。只有一层发现的：单元 21 个、存储 4 个（都在 A.3），组合 8 个（T6.3、T7.1、T10.9–T10.11、T10.15、T10.16、T12.1），守卫 1 个（T4.5），端到端没有。"（Task n 起）"的：Task 6 起 6 个、Task 7 起 3 个、Task 10 起 5 个、Task 11 起 8 个、Task 12 起 4 个、Task 14 起 35 个（I2）。P1b 新加的 46 个 Go 测试中 45 个至少被一个变异弄失败（`checkkills.py`），没有的是规模的测量（它量耗时，第 3 节第 14 条）。
 
 | 缺陷类别 | 变异 | 结果 | 失败的检查 | 层 |
 |---|---|---|---|---|
@@ -399,8 +414,8 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | 目录回答名称（第 3 节第 9 条） | T2.1、T2.2、T2.3 | 3/3 | `TestIssueCatalogs`、`TestUpdatingAWorkItemStampsItsRows`、I2、`TestIssueProjectsConvertsProjectsAnswers` | 单元；存储；组合；端到端 |
 | 清扫 1、44、49：修改的存储的谓词 | T3.1、T3.4、T3.5、T3.6、T3.7、T3.10、T3.11 | 7/7 | `TestUpdatingAWorkItemWritesItsRows`、I2 | 存储；端到端 |
 | 清扫 14：由谁 | T3.2、T3.8、T7.4 | 3/3 | `TestUpdatingAWorkItemWritesItsRows`、I2、`TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestUpdateIssueWritesTheChangesAndTheirRows`、`TestUpdateIssueCompletesTheWorkItemByItsState`、`TestUpdatingAWorkItemStampsItsRows` | 单元；存储；组合；端到端 |
-| 完成时间（第 3 节第 5 条） | T3.3、T5.4 | 2/2 | `TestUpdatingAWorkItemWritesItsRows`、I2、`TestUpdateIssueWritesTheChangesAndTheirRows`、`TestUpdateIssueCompletesTheWorkItemByItsState` | 单元；存储；端到端 |
-| 新负责人的关注（3.12） | T5.10 | 1/1 | `TestUpdateIssueWritesTheChangesAndTheirRows` | 单元 |
+| 完成时间（第 3 节第 5 条；完成组之间的移动写新的时刻只有单元一层分得出，是数据的规则：预检的 PF.C1） | T3.3、T5.4、T5.21 | 3/3 | `TestUpdatingAWorkItemWritesItsRows`、I2、`TestUpdateIssueWritesTheChangesAndTheirRows`、`TestUpdateIssueCompletesTheWorkItemByItsState` | 单元；存储；端到端 |
+| 关注只给新负责人（3.12，第 3 节第 7 条） | T5.10、T5.22 | 2/2 | `TestUpdateIssueWritesTheChangesAndTheirRows`、`TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestUpdatingAWorkItemStampsItsRows` | 单元；组合 |
 | 清扫 25：时刻在锁下读 | T5.3 | 1/1 | `TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestTheGateTakesOnlyWritesThePrecheckLetThrough`、`TestUpdateIssueWritesTheChangesAndTheirRows`、`TestUpdateIssueThatChangesNothingWritesNothing`、`TestUpdateIssueRefusesBeforeAnyLock`、`TestUpdateIssueRefusesUnderTheLock`、`TestUpdateIssueStopsAtAFailingPort`、等 1 个 | 单元；组合 |
 | 清扫 5：预检和锁下的判定 | T4.1、T5.1、T5.15 | 3/3 | `TestGetIssueReadsTheWorkItem`、`TestGetIssueRefusals`、`TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestTheGateTakesOnlyWritesThePrecheckLetThrough`、`TestUpdateIssueWritesTheChangesAndTheirRows`、`TestUpdateIssueThatChangesNothingWritesNothing`、`TestUpdateIssueRefusesBeforeAnyLock`、等 5 个 | 单元；组合 |
 | 按资源寻址的写：锁下重读 | T5.16、T5.17、T5.20 | 3/3 | `TestUpdateIssueRefusesUnderTheLock`、`TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`、`TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestUpdateIssueWritesTheChangesAndTheirRows`、`TestUpdateIssueThatChangesNothingWritesNothing`、`TestTwoChangesOfAWorkItemSerialize` | 单元；组合 |
@@ -408,7 +423,7 @@ P1b 是 M4 加锁约定的后一半（设计 12 节约束 3：写闸门和连接
 | 清扫 9：写表的次序 | T5.11、T12.1 | 2/2 | `TestUpdateIssueWritesTheChangesAndTheirRows`、`TestChainedWorkItemWritesHoldOffNoWorkspaceWrite`、`TestEachIssueWriteLocksItsProjectFirst` | 单元；组合 |
 | 清扫 13：取锁的形状 | T6.3 | 1/1 | `TestEachIssueWriteLocksItsProjectFirst` | 组合 |
 | 清扫 8：事务的连接 | T7.1 | 1/1 | `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection` | 组合 |
-| 写闸门（`platform/gate`、取锁的一步） | T8.1、T8.2、T8.3、T8.4、T8.5、T8.6、T8.7、T8.8、T8.9、T8.10、T8.11、T10.1、T10.2、T10.3、T10.16 | 14/15（T8.11 等价，第 3 节第 11 条） | `TestWaitersAreServedInTheOrderTheyCame`、`TestAFullQueueRefusesAtOnce`、`TestAProjectTooBusyForAWriteAnswersServerBusy`、`TestLeavingTwiceLeavesOnce`、`TestAWaiterGivesUp`、`TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`、`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`、等 5 个 | 单元；组合 |
+| 写闸门（`platform/gate`、取锁的一步） | T8.1、T8.2、T8.3、T8.4、T8.5、T8.6、T8.7、T8.8、T8.9、T8.10、T8.11、T10.1、T10.2、T10.3、T10.16、T10.17、T10.18 | 16/17（T8.11 等价，第 3 节第 11 条） | `TestWaitersAreServedInTheOrderTheyCame`、`TestAFullQueueRefusesAtOnce`、`TestAProjectTooBusyForAWriteAnswersServerBusy`、`TestLeavingTwiceLeavesOnce`、`TestAWaiterGivesUp`、`TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`、`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`、等 6 个 | 单元；组合 |
 | 503 `server_busy` 的换码 | T10.4、T10.5、T10.6、T10.7、T10.8 | 5/5 | `TestTheWriteGateAnswersItsRefusalsAsServerBusy`、`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`、`TestAProjectTooBusyForAWriteAnswersServerBusy`、`TestABusyTransactionIsServerBusy` | 单元；组合 |
 | 锁的期限（`LockTimeout`、`55P03`） | T9.1、T9.2、T9.3、T9.4 | 4/4 | `TestLockTimeoutBoundsEachWaitOfTheTransaction`、`TestAProjectTooBusyForAWriteAnswersServerBusy`、`TestLockNotAvailable` | 存储；组合 |
 | `issue` 的配置 | T9.5、T9.6、T9.7、T9.8、T9.9、T9.10 | 6/6 | `TestValidateReportsEveryInvalidKey`、`TestValidateCrossKeyRules`、`TestBuiltInProfiles`、`TestLogValueMasksDatabaseURL` | 单元 |
