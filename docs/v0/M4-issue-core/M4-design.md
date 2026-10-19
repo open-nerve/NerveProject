@@ -175,7 +175,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - 不拆的代价：模块较大，用 `app` 层的文件按用例拆开（6.2），每个文件不超过约 400 行。
 - **`issue` 经端口读写别的模块**，端口声明在 `issue/app`，由别的模块的 `Provide` 实现，`bootstrap` 接上（M3 设计 6.6 的两段组合）：
   - **向 `project` 要**：
-    - `ProjectGate`：`Find`：不加锁地按项目 id 读出它的工作区（第一把锁之前，3.5）；`Lock`：以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），回答 `archived`、`identifier`、`default_assignee_id`、`guest_view_all_features`、`archive_in`；`LockMany`：一条语句按 `id` 升序锁住几个项目（约定七，3.5）；两个不加锁的读：这个工作区未删除的项目的 id（草稿的读，3.15），`DeletedAt(projectIDs)`：其中已删除的项目和它们的 `deleted_at`（关联行属于先删除的那一端，3.5）。删除工作区锁它的全部项目不经这个端口，经 `project` 给 `workspace` 的 `ProjectCascade.LockWorkspaceProjects`（见下）。
+    - `ProjectGate`：`Find`：不加锁地按项目 id 读出它的工作区（第一把锁之前，3.5）；`Lock`：以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），回答 `archived`、`identifier`、`default_assignee_id`、`archive_in`；`Lock` 不回答 `guest_view_all_features`：锁下的判定经 `Authorize` 读它（P2 spec 第 3 节第 3 条）；`LockMany`：一条语句按 `id` 升序锁住几个项目（约定七，3.5）；两个不加锁的读：这个工作区未删除的项目的 id（草稿的读，3.15），`DeletedAt(projectIDs)`：其中已删除的项目和它们的 `deleted_at`（关联行属于先删除的那一端，3.5）。删除工作区锁它的全部项目不经这个端口，经 `project` 给 `workspace` 的 `ProjectCascade.LockWorkspaceProjects`（见下）。
     - `Sequences`：在项目行的锁之下 `UPDATE projects SET last_issue_sequence = last_issue_sequence + 1 … RETURNING`（总体设计 5.3，M3 交接第 4 节）。
     - `StateCatalog`：项目的未删除状态（id、名称、组、`default`、是否分诊）；按 id 取一个；列表引擎按目录排序、分组用（3.16）。
     - `LabelCatalog`：项目的未删除标签（id、名称）；按 id 集合核对。
@@ -208,7 +208,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - 今天只有 `issue.delete` 带 `AllowCreator`（规则 `{LevelProject, [Admin], AllowCreator}`），效果是"项目管理员，或建了它的项目成员"。
 - **`ProjectFacts` 多读一列**：`access` 读项目事实的端口（`project/adapter/postgres/queries/access.sql:1-8`）加读 `guest_view_all_features`，判定时算出 `OwnOnly`。
 - **一条访客规则，用在每个地方**：访客（`OwnOnly`）只看到自己创建的工作项；看不到的工作项和挂在它下面的一切（评论、链接、关联、子工作项、动态、表情、描述的历史）都是 404。Plane 只在约 6 处执行这条规则，别处泄露（R2 第 0.8 节：动态和评论列表、子工作项、关联、链接、表情、全局搜索、个人主页都不检查），Nerve 处处执行。
-  - 单个工作项：用例读工作项（得到项目和 `created_by_id`）→ 判定 → `grant.OwnOnly && issue.CreatedByID != actor` 时答 `issue.not_found`（与不存在相同，不透露存在）。按资源 id 寻址的子资源（`/issue-comments/{id}`、`/issue-links/{id}`、`/issue-relations/{id}`、`/issue-description-versions/{id}`）先读子资源得到工作项，同样处理，答子资源自己的 404 码。
+  - 单个工作项：用例读工作项（得到项目和 `created_by_id`）→ 判定 → `grant.OwnOnly && issue.CreatedByID != actor` 时答 `issue.not_found`（与不存在相同，不透露存在；角色不允许时也先看访客规则，404 先于 403，6.7）。按资源 id 寻址的子资源（`/issue-comments/{id}`、`/issue-links/{id}`、`/issue-relations/{id}`、`/issue-description-versions/{id}`）先读子资源得到工作项，同样处理，答子资源自己的 404 码。
   - 列表和搜索：同一条规则在 SQL 中执行（`OwnOnly` 的项目加 `created_by_id = $actor`）。个人主页、搜索、关联列表跨项目，每个项目按它自己的 `OwnOnly` 过滤（`VisibleProjects` 回答每个项目的角色和标志）。
   - 关联：对方工作项必须对调用者可见（它的项目对调用者可见、并且过了它所在项目的访客规则），不然加关联 422（`issue_ids[i]`，`not_allowed`），关联列表不含它（3.10）。
   - 计数：`sub_issues_count` 按调用者的规则数（`OwnOnly` 的项目里只数他自己建的子工作项），按它排序也用同一个数（3.9、3.16）。
@@ -1322,7 +1322,7 @@ modules/issue/
 | 端口 | 声明在 | 实现 | 测试 |
 |---|---|---|---|
 | `Authorizer`（`Target.CreatorID`、`Grant.OwnOnly`） | `internal/shared` | `access/app` | `access/domain` 的判定表（创建者、访客规则的每一种）；9.2 的矩阵 |
-| `ProjectGate`（`Find(projectID)` 不加锁 → 工作区；`Lock(projectID)` `FOR NO KEY UPDATE`，带 `deleted_at IS NULL`，回答 `archived`、`identifier`、`default_assignee_id`、`guest_view_all_features`、`archive_in`；`LockMany(projectIDs)` 一条语句按 `id` 升序；不加锁的读：工作区未删除的项目的 id，`DeletedAt(projectIDs)`） | `issue/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；取锁的形状测试（交错 21）；`LockMany` 的 `id` 顺序（S5 的 E4） |
+| `ProjectGate`（`Find(projectID)` 不加锁 → 工作区；`Lock(projectID)` `FOR NO KEY UPDATE`，带 `deleted_at IS NULL`，回答 `archived`、`identifier`、`default_assignee_id`、`archive_in`，不回答 `guest_view_all_features`（锁下的判定经 `Authorize` 读它，列表经 `VisibleProjects` 读它，P5）；`LockMany(projectIDs)` 一条语句按 `id` 升序；不加锁的读：工作区未删除的项目的 id，`DeletedAt(projectIDs)`） | `issue/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；取锁的形状测试（交错 21）；`LockMany` 的 `id` 顺序（S5 的 E4） |
 | `Sequences`（`Next(projectID) (int, error)`：`UPDATE … RETURNING`，在项目 N 之下） | `issue/app` | 同上 | 集成测试；交错 1 |
 | `StateCatalog`（项目的未删除状态：id、名字、组、默认、分诊；名字的比较键） | `issue/app` | 同上 | 集成测试 |
 | `LabelCatalog`（项目的未删除标签：id、名字的比较键；按 id 集合核对） | `issue/app` | 同上 | 同上 |
