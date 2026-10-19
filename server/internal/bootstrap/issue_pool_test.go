@@ -40,9 +40,9 @@ func newPoolWorld(t *testing.T, configure ...func(cfg *config.Config)) issueWorl
 	})
 }
 
-// reply is an answer to a request sent from a goroutine of its own: its
-// status, its problem's code, its Retry-After, how long it took and when it
-// came, or the error that ended it.
+// reply is the answer to a request replyTo sent: its status, its problem's
+// code, its Retry-After, how long it took and when it came, or the error
+// that ended it.
 type reply struct {
 	status int
 	code   string
@@ -260,7 +260,7 @@ func TestAHotProjectHoldsUpNoReadOfAnother(t *testing.T) {
 	}
 }
 
-// poolReadBound is how long a read of another project may take while a
-// project takes a burst of writes (M4/P1b spec 3: measured, with its
-// margin).
+// poolReadBound is how long a read of a work item may take while a project
+// takes a burst of writes, whether the work item is of that project or of
+// another (M4/P1b spec 3: measured, with its margin).
 const poolReadBound = 500 * time.Millisecond
