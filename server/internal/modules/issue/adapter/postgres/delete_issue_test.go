@@ -30,11 +30,13 @@ func insertOf(t *testing.T, table string) inserter {
 // has the rows a and b of the table (of the work items' table, item
 // itself) and c, which alice deleted an hour before; the work item gone
 // has its row g, deleted then too (of the work items' table, gone itself);
-// the work item other has its row o. The statement on item, then on gone,
-// by bob at later: a and b (item) are deleted at later by bob; c and g
-// (gone) keep alice's deletion, and o its row as it was; every other
-// column of every row is kept. Each statement answers a failed write as
-// its failure.
+// the work item other has its row o, other's id after gone's and before
+// item's, so that a statement that took its work item by the ids' order,
+// not by equality, would reach o on item or on gone. The statement on
+// item, then on gone, by bob at later: a and b (item) are deleted at later
+// by bob; c and g (gone) keep alice's deletion, and o its row as it was;
+// every other column of every row is kept. Each statement answers a failed
+// write as its failure.
 func TestTheStatementsOfADeletedWorkItemDeleteItsRows(t *testing.T) {
 	for _, st := range []struct {
 		table  string
@@ -50,7 +52,7 @@ func TestTheStatementsOfADeletedWorkItemDeleteItsRows(t *testing.T) {
 			s, pool := newStore(t)
 			alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 			web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
-			item, gone, other := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+			gone, other, item := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 			for n, id := range []uuid.UUID{item, gone, other} {
 				newIssue(t, pool, web, id, n+1, alice)
 			}

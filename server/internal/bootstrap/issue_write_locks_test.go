@@ -21,13 +21,14 @@ import (
 // sends, a path of that pattern (pathOf), to Web of the world or to a row
 // made in Web for it, made anew for each of alice's sends, before any lock
 // is held, so that a write that ends what it names finds it there; body,
-// its body, which names the world's rows; the answer it gets; and waits,
-// the first table it takes under its project's lock that its precheck did
-// not read, before any write of its own, with mode, the lock another
-// transaction holds of that table, so that the write waits there and its
-// precheck does not: ACCESS EXCLUSIVE, which a plain read waits for too,
-// for a table it reads; SHARE, which a write waits for and a plain read
-// does not, for the table it writes first, when it reads none.
+// its body, which names the world's rows; the answer it gets; waits, the
+// table it waits for under its lock before any write of its own: the
+// first it reads there that its precheck did not (held ACCESS EXCLUSIVE),
+// or, when it reads none, the first it writes (held SHARE, which its
+// precheck's plain read does not wait for); and mode, the lock another
+// transaction holds of that table: ACCESS EXCLUSIVE, which a plain read
+// waits for too, or SHARE, which a write waits for and a plain read does
+// not, so that the write waits there and its precheck does not.
 type issueWrite struct {
 	op, method, path string
 	target           func(t *testing.T, w issueWorld) string
@@ -92,13 +93,14 @@ func writesOnIssues(ops []apitest.Operation) []string {
 //   - Its project first: alice's write, under the same locks, waits for
 //     the projects table, no other.
 //   - FOR NO KEY UPDATE by its lock, and nothing of the workspace: another
-//     transaction holds the first table the write takes under its lock
-//     that its precheck did not read (waits), in its mode (mode). alice's
-//     write waits for it before any write of its own: it holds no table's
-//     ROW EXCLUSIVE lock, which every write takes (writtenTables), so what
-//     it holds of Web is its lock's, not an UPDATE's. It holds Web's row
-//     FOR NO KEY UPDATE, no weaker and no stronger, and acme's row not at
-//     all (lockOn).
+//     transaction holds the table the write waits for under its lock
+//     (waits), in its mode (mode): the first it reads there that its
+//     precheck did not, or, when it reads none, the first it writes.
+//     alice's write waits for it before any write of its own: it holds no
+//     table's ROW EXCLUSIVE lock, which every write takes (writtenTables),
+//     so what it holds of Web is its lock's, not an UPDATE's. It holds
+//     Web's row FOR NO KEY UPDATE, no weaker and no stronger, and acme's
+//     row not at all (lockOn).
 //   - No lock of the workspace that a cascade's waits for: another
 //     transaction holds acme's row FOR NO KEY UPDATE, as every cascade over
 //     its projects does (M3 design 3.3); alice's write answers meanwhile.

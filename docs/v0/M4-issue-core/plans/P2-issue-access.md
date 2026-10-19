@@ -3155,7 +3155,7 @@ func (s *Store) DeleteIssueActivityRows(ctx context.Context, d app.IssueDeletion
 }
 ````
 
-`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`（新文件，96 行）：
+`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`（新文件，98 行）：
 
 ````file server/internal/modules/issue/adapter/postgres/delete_issue_test.go
 package postgresadapter_test
@@ -3190,11 +3190,13 @@ func insertOf(t *testing.T, table string) inserter {
 // has the rows a and b of the table (of the work items' table, item
 // itself) and c, which alice deleted an hour before; the work item gone
 // has its row g, deleted then too (of the work items' table, gone itself);
-// the work item other has its row o. The statement on item, then on gone,
-// by bob at later: a and b (item) are deleted at later by bob; c and g
-// (gone) keep alice's deletion, and o its row as it was; every other
-// column of every row is kept. Each statement answers a failed write as
-// its failure.
+// the work item other has its row o, other's id after gone's and before
+// item's, so that a statement that took its work item by the ids' order,
+// not by equality, would reach o on item or on gone. The statement on
+// item, then on gone, by bob at later: a and b (item) are deleted at later
+// by bob; c and g (gone) keep alice's deletion, and o its row as it was;
+// every other column of every row is kept. Each statement answers a failed
+// write as its failure.
 func TestTheStatementsOfADeletedWorkItemDeleteItsRows(t *testing.T) {
 	for _, st := range []struct {
 		table  string
@@ -3210,7 +3212,7 @@ func TestTheStatementsOfADeletedWorkItemDeleteItsRows(t *testing.T) {
 			s, pool := newStore(t)
 			alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 			web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
-			item, gone, other := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+			gone, other, item := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 			for n, id := range []uuid.UUID{item, gone, other} {
 				newIssue(t, pool, web, id, n+1, alice)
 			}
@@ -3623,13 +3625,14 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 ````new server/internal/bootstrap/issue_write_locks_test.go
 // made in Web for it, made anew for each of alice's sends, before any lock
 // is held, so that a write that ends what it names finds it there; body,
-// its body, which names the world's rows; the answer it gets; and waits,
-// the first table it takes under its project's lock that its precheck did
-// not read, before any write of its own, with mode, the lock another
-// transaction holds of that table, so that the write waits there and its
-// precheck does not: ACCESS EXCLUSIVE, which a plain read waits for too,
-// for a table it reads; SHARE, which a write waits for and a plain read
-// does not, for the table it writes first, when it reads none.
+// its body, which names the world's rows; the answer it gets; waits, the
+// table it waits for under its lock before any write of its own: the
+// first it reads there that its precheck did not (held ACCESS EXCLUSIVE),
+// or, when it reads none, the first it writes (held SHARE, which its
+// precheck's plain read does not wait for); and mode, the lock another
+// transaction holds of that table: ACCESS EXCLUSIVE, which a plain read
+// waits for too, or SHARE, which a write waits for and a plain read does
+// not, so that the write waits there and its precheck does not.
 ````
 ````old server/internal/bootstrap/issue_write_locks_test.go
 	body             func(w issueWorld, n int) string
@@ -3680,13 +3683,14 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 //     weaker and no stronger, and acme's row not at all (lockOn).
 ````
 ````new server/internal/bootstrap/issue_write_locks_test.go
-//     transaction holds the first table the write takes under its lock
-//     that its precheck did not read (waits), in its mode (mode). alice's
-//     write waits for it before any write of its own: it holds no table's
-//     ROW EXCLUSIVE lock, which every write takes (writtenTables), so what
-//     it holds of Web is its lock's, not an UPDATE's. It holds Web's row
-//     FOR NO KEY UPDATE, no weaker and no stronger, and acme's row not at
-//     all (lockOn).
+//     transaction holds the table the write waits for under its lock
+//     (waits), in its mode (mode): the first it reads there that its
+//     precheck did not, or, when it reads none, the first it writes.
+//     alice's write waits for it before any write of its own: it holds no
+//     table's ROW EXCLUSIVE lock, which every write takes (writtenTables),
+//     so what it holds of Web is its lock's, not an UPDATE's. It holds
+//     Web's row FOR NO KEY UPDATE, no weaker and no stronger, and acme's
+//     row not at all (lockOn).
 ````
 ````old server/internal/bootstrap/issue_write_locks_test.go
 			target := iw.target(t, w)
@@ -4067,7 +4071,7 @@ Expected: 通过。
 | `T4.5` | 删除保留工作项原来的最后修改者 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`）、故事 `i15-archive-issue`（Task 13 起） | 存储；组合；端到端 |
 | `T4.6` | 删除再删一次早已删除的负责人行，盖掉它们的戳 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`） | 存储；组合 |
 | `T4.7` | 删除把每个工作项的标签行都删掉 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`） | 存储；组合 |
-| `T4.8` | 删除先删负责人的行、再删工作项的 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T4.8` | 删除先删负责人的行、再删工作项的 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`） | 单元；组合 |
 | `T4.9` | 删除在预检之前、在项目的锁之外删掉工作项的动态 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`） | 单元；组合 |
 | `T4.10` | 契约不声明 `deleteIssue` 答 `project.archived` | `internal/modules/issue/adapter/http` 的全部测试（`make test`） | 单元 |
 | `T4.11` | `DELETE` 不问用例就答 204 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`）、故事 `i15-archive-issue`（Task 13 起） | 单元；组合；端到端 |
@@ -4081,6 +4085,7 @@ Expected: 通过。
 | `T4.19` | 删除再删一次早已删除的动态，盖掉它们的戳 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 | `T4.20` | 删除的语句经连接池发出，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`） | 组合 |
 | `T4.21` | 删除不进项目的写闸门 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`（`make test`） | 单元；组合 |
+| `T4.22` | 删除按 id 的次序而不是相等取工作项：id 不在它之后的每个工作项的负责人行都删掉 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.3`、`T1.4`、`T1.10`、`T2.4`、`T2.5`、`T2.9`（列在各自的 Task 的表里，标"（Task 4 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=4`）。
 
