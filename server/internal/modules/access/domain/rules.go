@@ -20,7 +20,8 @@ const (
 	LevelWorkspace Level = iota + 1
 	// LevelProject allows a caller who sees the target project and is its
 	// active member, with a project role in the rule's roles or as the
-	// workspace's admin.
+	// workspace's admin; and, by a rule with AllowCreator, the creator of the
+	// target work item when his project role is member or admin.
 	LevelProject
 	// LevelVisible allows every caller who sees the target project: only
 	// project.read and project.join.
@@ -29,10 +30,15 @@ const (
 
 // Rule is a row of the rule table: its level and the roles it allows, the
 // workspace roles at LevelWorkspace and the project roles at LevelProject.
-// LevelVisible has none.
+// LevelVisible has none. AllowCreator lets a project-level rule allow the
+// creator of the target work item besides those roles, while he is an
+// active member of the project of the role member or above (M4 design 3.4:
+// a guest who created it is not allowed; Plane's creator=True looks at the
+// workspace membership alone).
 type Rule struct {
-	Level Level
-	Roles []shared.Role
+	Level        Level
+	Roles        []shared.Role
+	AllowCreator bool
 }
 
 // rules is the rule table (M3 design 3.4): one row per action, keyed by the
@@ -129,6 +135,12 @@ var rules = map[shared.Action]Rule{
 	"issue.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	// As issue.create (M4 design 3.4).
 	"issue.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// The project's admins, and the work item's creator while he is a member
+	// or an admin of the project, not a guest who created it (M4 design 3.4).
+	"issue.delete": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}, AllowCreator: true},
+	// As issue.create: archiving and unarchiving a work item (M4 design 3.4,
+	// 3.8).
+	"issue.archive": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

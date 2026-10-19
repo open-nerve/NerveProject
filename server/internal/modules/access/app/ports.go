@@ -22,13 +22,15 @@ type WorkspaceRoles interface {
 }
 
 // ProjectFacts are what ProjectAccess reads of a project for a decision:
-// its workspace, whether it is public, and whether the user asked about is
-// its active member, with his project role then.
+// its workspace, whether it is public, whether the user asked about is its
+// active member, with his project role then, and whether it shows its
+// guests every work item (guest_view_all_features, M4 design 3.4).
 type ProjectFacts struct {
-	WorkspaceID uuid.UUID
-	Public      bool
-	Member      bool
-	Role        shared.Role
+	WorkspaceID  uuid.UUID
+	Public       bool
+	Member       bool
+	Role         shared.Role
+	GuestViewAll bool
 }
 
 // ProjectAccess reads a project for a decision (M3 design 6.5). The project

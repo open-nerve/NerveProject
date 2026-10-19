@@ -257,11 +257,13 @@ func TestRolesOutsideTheThreeAreAllowedNothing(t *testing.T) {
 	}
 }
 
-// The Grant carries the roles the decision read, and ProjectAdmin for a
-// project member who is its admin or the workspace's; a membership that is
-// not active gives no project role. It is the same Grant at every level that
-// allows the caller: LevelVisible, and for a project member LevelProject,
-// by his project role or as the workspace's admin.
+// The Grant carries the roles the decision read, ProjectAdmin for a project
+// member who is its admin or the workspace's, and OwnOnly for the project's
+// guest in a project that does not show its guests every work item, by his
+// project role whatever his workspace role (M4 design 3.4); a membership
+// that is not active gives no project role. It is the same Grant at every
+// level that allows the caller: LevelVisible, and for a project member
+// LevelProject, by his project role or as the workspace's admin.
 func TestTheGrantCarriesTheRoles(t *testing.T) {
 	visible := domain.Rule{Level: domain.LevelVisible}
 	everyRole := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}}
@@ -278,7 +280,19 @@ func TestTheGrantCarriesTheRoles(t *testing.T) {
 		{"PM", member, domain.Project{Member: member}, []domain.Rule{visible, everyRole},
 			shared.Grant{WorkspaceRole: 15, ProjectRole: 15}},
 		{"PG", guest, domain.Project{Member: guest}, []domain.Rule{visible, everyRole},
-			shared.Grant{WorkspaceRole: 5, ProjectRole: 5}},
+			shared.Grant{WorkspaceRole: 5, ProjectRole: 5, OwnOnly: true}},
+		{"PG, the project showing its guests every work item", guest, domain.Project{Member: guest, GuestViewAll: true},
+			[]domain.Rule{visible, everyRole}, shared.Grant{WorkspaceRole: 5, ProjectRole: 5}},
+		{"WM demoted to PG", member, domain.Project{Member: guest}, []domain.Rule{visible, everyRole},
+			shared.Grant{WorkspaceRole: 15, ProjectRole: 5, OwnOnly: true}},
+		// Every rule allows the workspace's admin who is the project's
+		// guest, and he still sees only his own work items.
+		{"PG+WA", admin, domain.Project{Member: guest}, []domain.Rule{visible, everyRole, admins},
+			shared.Grant{WorkspaceRole: 20, ProjectRole: 5, ProjectAdmin: true, OwnOnly: true}},
+		{"PG+WA, the project showing its guests every work item", admin, domain.Project{Member: guest, GuestViewAll: true},
+			[]domain.Rule{visible, everyRole, admins}, shared.Grant{WorkspaceRole: 20, ProjectRole: 5, ProjectAdmin: true}},
+		{"PA, the project showing its guests every work item", member, domain.Project{Member: admin, GuestViewAll: true},
+			[]domain.Rule{visible, everyRole, admins}, shared.Grant{WorkspaceRole: 15, ProjectRole: 20, ProjectAdmin: true}},
 		// admins allows him as the workspace's admin, not by his project role.
 		{"PM+WA", admin, domain.Project{Member: member}, []domain.Rule{visible, everyRole, admins},
 			shared.Grant{WorkspaceRole: 20, ProjectRole: 15, ProjectAdmin: true}},
@@ -288,6 +302,8 @@ func TestTheGrantCarriesTheRoles(t *testing.T) {
 			shared.Grant{WorkspaceRole: 15}},
 		{"P-before public", member, domain.Project{Public: true, Member: domain.Membership{Active: false, Role: shared.RoleAdmin}}, []domain.Rule{visible},
 			shared.Grant{WorkspaceRole: 15}},
+		{"a guest who left the public project", member, domain.Project{Public: true, Member: domain.Membership{Active: false, Role: shared.RoleGuest}},
+			[]domain.Rule{visible}, shared.Grant{WorkspaceRole: 15}},
 	}
 	for _, tt := range tests {
 		for _, rule := range tt.rules {
@@ -296,6 +312,43 @@ func TestTheGrantCarriesTheRoles(t *testing.T) {
 			if err != nil || grant != tt.want {
 				t.Errorf("%s, level %d, roles %v: Decide() = %+v, %v; want %+v", tt.name, rule.Level, rule.Roles, grant, err, tt.want)
 			}
+		}
+	}
+}
+
+// A refusal of the caller's role comes with the Grant of what the decision
+// read, OwnOnly among it, so a use case can answer first that the guest rule
+// hides the target from him (M4 design 3.4, 6.7); a caller who does not see
+// the target gets no Grant.
+func TestARefusalCarriesTheGrant(t *testing.T) {
+	admins := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin}}
+	everyRole := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}}
+	tests := []struct {
+		name  string
+		rule  domain.Rule
+		facts domain.Facts
+		want  shared.Grant
+		err   outcome
+	}{
+		{"PG", admins, domain.Facts{Workspace: guest, Project: &domain.Project{Member: guest}},
+			shared.Grant{WorkspaceRole: 5, ProjectRole: 5, OwnOnly: true}, forbidden},
+		{"PG, the project showing its guests every work item", admins,
+			domain.Facts{Workspace: guest, Project: &domain.Project{Member: guest, GuestViewAll: true}},
+			shared.Grant{WorkspaceRole: 5, ProjectRole: 5}, forbidden},
+		{"PM", admins, domain.Facts{Workspace: member, Project: &domain.Project{Member: member}},
+			shared.Grant{WorkspaceRole: 15, ProjectRole: 15}, forbidden},
+		{"WA- private", everyRole, domain.Facts{Workspace: admin, Project: &domain.Project{}}, shared.Grant{WorkspaceRole: 20}, forbidden},
+		{"WM- public", everyRole, domain.Facts{Workspace: member, Project: &domain.Project{Public: true}}, shared.Grant{WorkspaceRole: 15},
+			forbidden},
+		{"a member, at the workspace level", domain.Rule{Level: domain.LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
+			domain.Facts{Workspace: member}, shared.Grant{WorkspaceRole: 15}, forbidden},
+		{"WM- private", everyRole, domain.Facts{Workspace: member, Project: &domain.Project{}}, shared.Grant{}, invisible},
+		{"never a member", everyRole, domain.Facts{Workspace: none, Project: &domain.Project{Public: true}}, shared.Grant{}, invisible},
+	}
+	for _, tt := range tests {
+		grant, err := domain.Decide(tt.rule, tt.facts)
+		if got := outcomeOf(t, err); got != tt.err || grant != tt.want {
+			t.Errorf("%s: Decide() = %+v, %s; want %+v, %s", tt.name, grant, got, tt.want, tt.err)
 		}
 	}
 }

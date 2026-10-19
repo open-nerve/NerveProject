@@ -226,12 +226,13 @@ func (f *fakeProjectAccess) ProjectFacts(_ context.Context, projectID, userID uu
 // facts converted, found and the error as they came.
 func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 	web, acme, alice := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	fake := &fakeProjectAccess{facts: map[uuid.UUID]project.AccessFacts{web: {WorkspaceID: acme, Public: true, Member: true, Role: 15}}}
+	fake := &fakeProjectAccess{facts: map[uuid.UUID]project.AccessFacts{web: {WorkspaceID: acme, Public: true, Member: true, Role: 5,
+		GuestViewAll: true}}}
 	a := accessProjects{projects: fake}
 	ctx := context.Background()
 
 	f, found, err := a.ProjectFacts(ctx, web, alice)
-	if want := (access.ProjectFacts{WorkspaceID: acme, Public: true, Member: true, Role: 15}); err != nil || !found || f != want {
+	if want := (access.ProjectFacts{WorkspaceID: acme, Public: true, Member: true, Role: 5, GuestViewAll: true}); err != nil || !found || f != want {
 		t.Errorf("ProjectFacts(web) = %+v, %v, %v; want %+v, found", f, found, err, want)
 	}
 	gone := uuid.NewV7()

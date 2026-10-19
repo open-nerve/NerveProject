@@ -98,26 +98,49 @@ var tableCells = map[shared.Action][]outcome{
 	// As issue.create (M4 design 3.4).
 	"issue.update": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As project.update for a caller who did not create the work item;
+	// creatorCells has its creators' (M4 design 3.4).
+	"issue.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As issue.create (M4 design 3.4).
+	"issue.archive": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
-// cells decides rule for each identity of its level.
-func cells(t *testing.T, rule domain.Rule) []outcome {
+// creatorCells is every row with AllowCreator decided for every identity of
+// projectIdentities who created the target work item (M4 design 3.4): the
+// project's member who created it is allowed too, and no one else whom
+// tableCells refuses: not the project's guest who created it (WM demoted to
+// PG among them), not a creator who is not an active member of the project,
+// and not a project role outside the three.
+var creatorCells = map[shared.Action][]outcome{
+	"issue.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+}
+
+// cells decides rule for each identity of its level, who created the target
+// work item when creator is true.
+func cells(t *testing.T, rule domain.Rule, creator bool) []outcome {
 	t.Helper()
 	var out []outcome
 	if rule.Level == domain.LevelWorkspace {
 		for _, id := range workspaceIdentities {
-			_, err := domain.Decide(rule, domain.Facts{Workspace: id.ws})
+			_, err := domain.Decide(rule, domain.Facts{Workspace: id.ws, Creator: creator})
 			out = append(out, outcomeOf(t, err))
 		}
 		return out
 	}
 	for _, id := range projectIdentities {
-		_, err := domain.Decide(rule, domain.Facts{Workspace: id.ws, Project: &domain.Project{Public: id.public, Member: id.member}})
+		_, err := domain.Decide(rule, domain.Facts{Workspace: id.ws, Project: &domain.Project{Public: id.public, Member: id.member},
+			Creator: creator})
 		out = append(out, outcomeOf(t, err))
 	}
 	return out
 }
 
+// Each row decides its cells for a caller who did not create the target
+// work item, and for one who did: a row with AllowCreator its creatorCells,
+// any other the same cells, the creator counting for nothing.
 func TestEveryRuleDecidesItsCells(t *testing.T) {
 	if got, want := domain.RuleKeys(), slices.Sorted(maps.Keys(tableCells)); !slices.Equal(got, want) {
 		t.Fatalf("the rule table has rows %q; the cells here are for %q", got, want)
@@ -127,8 +150,18 @@ func TestEveryRuleDecidesItsCells(t *testing.T) {
 		if !ok {
 			t.Fatalf("RuleFor(%q) found no row, though RuleKeys lists it", action)
 		}
-		if got := cells(t, rule); !slices.Equal(got, tableCells[action]) {
+		if got := cells(t, rule, false); !slices.Equal(got, tableCells[action]) {
 			t.Errorf("%s decides %q, want %q", action, got, tableCells[action])
+		}
+		want, byCreator := creatorCells[action]
+		if !byCreator {
+			want = tableCells[action]
+		}
+		if byCreator != rule.AllowCreator {
+			t.Errorf("%s: AllowCreator %t, and creatorCells has a row for it %t", action, rule.AllowCreator, byCreator)
+		}
+		if got := cells(t, rule, true); !slices.Equal(got, want) {
+			t.Errorf("%s decides %q for the work item's creator, want %q", action, got, want)
 		}
 	}
 }

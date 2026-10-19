@@ -12,11 +12,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// ProjectFacts reads the undeleted project, archived or not, and the user's
-// membership of it while it is active: a membership ended or deleted is
-// none, and so is an active membership of another project; a project
-// deleted is not found. Each case is one fact changed from a project where
-// the user is its member.
+// ProjectFacts reads the undeleted project, archived or not, whether it
+// shows its guests every work item, and the user's membership of it while
+// it is active: a membership ended or deleted is none, and so is an active
+// membership of another project; a project deleted is not found. Each case
+// is one fact changed from a project where the user is its member. Web
+// shows its guests every work item, the others do not.
 func TestProjectFacts(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
@@ -24,6 +25,7 @@ func TestProjectFacts(t *testing.T) {
 	carol := newAccount(t, pool, "carol@corp.com")
 	acme := newWorkspace(t, pool, "acme")
 	public := newProject(t, s, acme, "Web", "WEB", alice)
+	exec(t, pool, "UPDATE projects SET guest_view_all_features = true WHERE id = $1", public)
 	private := newProject(t, s, acme, "Secret", "SEC", alice)
 	exec(t, pool, "UPDATE projects SET network = 0 WHERE id = $1", private)
 	archived := newProject(t, s, acme, "Old", "OLD", alice)
@@ -50,10 +52,11 @@ func TestProjectFacts(t *testing.T) {
 		want          app.AccessFacts
 		found         bool
 	}{
-		{"a public project's guest", public, alice, app.AccessFacts{WorkspaceID: acme, Public: true, Member: true, Role: shared.RoleGuest}, true},
+		{"a public project's guest", public, alice, app.AccessFacts{WorkspaceID: acme, Public: true, Member: true, Role: shared.RoleGuest,
+			GuestViewAll: true}, true},
 		{"a private project's admin", private, alice, app.AccessFacts{WorkspaceID: acme, Member: true, Role: shared.RoleAdmin}, true},
 		{"an archived project's member", archived, alice, app.AccessFacts{WorkspaceID: acme, Public: true, Member: true, Role: shared.RoleMember}, true},
-		{"a membership ended", public, bob, app.AccessFacts{WorkspaceID: acme, Public: true}, true},
+		{"a membership ended", public, bob, app.AccessFacts{WorkspaceID: acme, Public: true, GuestViewAll: true}, true},
 		{"a membership deleted", private, bob, app.AccessFacts{WorkspaceID: acme}, true},
 		{"no membership", archived, bob, app.AccessFacts{WorkspaceID: acme, Public: true}, true},
 		{"another project's membership", private, carol, app.AccessFacts{WorkspaceID: acme}, true},

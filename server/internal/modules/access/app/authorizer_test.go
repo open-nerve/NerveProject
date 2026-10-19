@@ -169,24 +169,27 @@ func TestAuthorizeReturnsThePortsError(t *testing.T) {
 
 // A target that names a project has the project's facts read too, for the
 // caller and in the caller's context, and the decision takes them: the
-// caller's project role is in the Grant, a workspace admin sees a private
-// project he is not in. A project of another workspace than the target's,
-// or one not found, is seen by no one: its facts do not count.
+// caller's project role is in the Grant, and whether the project shows its
+// guests every work item (OwnOnly, M4 design 3.4); a workspace admin sees a
+// private project he is not in. A project of another workspace than the
+// target's, or one not found, is seen by no one: its facts do not count.
 func TestAuthorizeReadsTheTargetsProject(t *testing.T) {
-	p1, p2, gone := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	p1, p2, p3, gone := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleMember, {w1, b}: shared.RoleAdmin}}
 	projects := &fakeProjects{facts: map[projectKey]app.ProjectFacts{
 		{p1, a}: {WorkspaceID: w1, Member: true, Role: shared.RoleGuest},
 		{p1, b}: {WorkspaceID: w1},
 		{p2, a}: {WorkspaceID: w2, Public: true, Member: true, Role: shared.RoleAdmin},
+		{p3, a}: {WorkspaceID: w1, Member: true, Role: shared.RoleGuest, GuestViewAll: true},
 	}}
 	auth := app.NewAuthorizer(roles, projects)
 	tests := []struct {
 		user, project uuid.UUID
 		want          *shared.Grant // nil: not visible
 	}{
-		{a, p1, &shared.Grant{WorkspaceRole: shared.RoleMember, ProjectRole: shared.RoleGuest}},
+		{a, p1, &shared.Grant{WorkspaceRole: shared.RoleMember, ProjectRole: shared.RoleGuest, OwnOnly: true}},
 		{b, p1, &shared.Grant{WorkspaceRole: shared.RoleAdmin}},
+		{a, p3, &shared.Grant{WorkspaceRole: shared.RoleMember, ProjectRole: shared.RoleGuest}},
 		{a, p2, nil},
 		{a, gone, nil},
 	}
@@ -205,6 +208,32 @@ func TestAuthorizeReadsTheTargetsProject(t *testing.T) {
 		}
 		if err != nil || grant != *tt.want {
 			t.Errorf("user %s, project %s: Authorize() = %+v, %v; want %+v", tt.user, tt.project, grant, err, *tt.want)
+		}
+	}
+}
+
+// The caller created the target's work item when its CreatorID is his
+// account (M4 design 3.4): issue.delete, the project's admins and the
+// creator, allows the project's member who created it and refuses him a
+// work item another created, or one whose creator is not known.
+func TestAuthorizeKnowsTheCreator(t *testing.T) {
+	p := uuid.NewV7()
+	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleMember}}
+	projects := &fakeProjects{facts: map[projectKey]app.ProjectFacts{{p, a}: {WorkspaceID: w1, Member: true, Role: shared.RoleMember}}}
+	auth := app.NewAuthorizer(roles, projects)
+	for _, tt := range []struct {
+		name    string
+		creator uuid.UUID
+		want    error
+	}{
+		{"his own", a, nil},
+		{"another's", b, shared.Forbidden()},
+		{"a creator not known", uuid.UUID{}, shared.Forbidden()},
+	} {
+		_, err := auth.Authorize(context.Background(), shared.Actor{UserID: a}, "issue.delete",
+			shared.Target{WorkspaceID: w1, ProjectID: p, CreatorID: tt.creator})
+		if (tt.want == nil) != (err == nil) || (tt.want != nil && !errors.Is(err, tt.want)) {
+			t.Errorf("%s: Authorize() = %v, want %v", tt.name, err, tt.want)
 		}
 	}
 }
