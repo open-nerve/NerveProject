@@ -10,10 +10,10 @@ import {
 import {
   assigned,
   byId,
+  changed,
   createdFor,
   expectIssueCreated,
   expectIssueUpdated,
-  type ActivityRow,
 } from "../../fixtures/assert/issue";
 import { newAccount, shownNameOf } from "../../fixtures/auth";
 import { createIssue, issueUpdated, updateIssue, type IssueUpdate } from "../../fixtures/issues";
@@ -23,21 +23,6 @@ import { expect, test } from "../../fixtures/test";
 // I2, changing a work item (M4 design 2, 3.7, 3.13): the API version, with P1b's assertions (its name, state,
 // priority, assignees and labels, each change's rows of its activity, completed_at, who changed it last and when). The
 // dates are P2's, the description P4's, the page version P14's.
-
-/**
- * A row of a change's activity: field changed from old to now, with Plane's comment; named and was, what its new and
- * old identifiers name, for a state's, a label's or an account's row.
- */
-function changed(
-  field: string,
-  old: string,
-  now: string,
-  comment: string,
-  named: string | null = null,
-  was: string | null = null
-): ActivityRow {
-  return { field, verb: "updated", old_value: old, new_value: now, named, was, comment };
-}
 
 test("I2 (API): a member renames a work item; another makes it high and moves it to a completed state, which completes it; the first assigns it to another account instead of himself and labels it otherwise, the others kept, taking off rows the second wrote; its values sent as they are write nothing; an account and a label added again and a new label, the two labels out of their ids' order, are added in id order; a label, then an account, taken off alone each change it, the rows taken off before keeping their stamps; moving it back completes it no more; problems of the values are refused before any read, alike for a work item that is not there, and a state and a label the project lacks under the lock, each set at once (422), writing nothing; a work item sharing an account and a label with it is left as created: each change one row of its activity a field, a label or an account added or taken off, all its rows the changer's at its moment", async ({
   api,
@@ -132,6 +117,9 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
   expect(
     await updateIssue(api, bob.token, id, { assignee_ids: [ann.id, admin.id], label_ids: [docs.id, ui.id] })
   ).toMatchObject({ assignee_ids: assignedIds, label_ids: labelledIds });
+  // The rows that take Bug and bob off it, written by this change and each again by a later one.
+  const bugRemoved = changed("labels", "Bug", "", "removed label ", null, "Bug");
+  const bobUnassigned = changed("assignees", shownNameOf(bob.email), "", "removed assignee ", null, bob.email);
   const afterSwap = {
     name: "Fix the sign-in",
     state: "Done",
@@ -146,9 +134,9 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
       renamed,
       ...toDone,
       changed("labels", "", "UI", "added label ", "UI"),
-      changed("labels", "Bug", "", "removed label ", null, "Bug"),
+      bugRemoved,
       assigned(admin.email),
-      changed("assignees", shownNameOf(bob.email), "", "removed assignee ", null, bob.email),
+      bobUnassigned,
     ],
     wrote: 9,
   };
@@ -199,7 +187,7 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
     ...addedAgain,
     by: bob.email,
     labels: ["Docs", "Login", "UI"],
-    activity: [...addedAgain.activity, changed("labels", "Bug", "", "removed label ", null, "Bug")],
+    activity: [...addedAgain.activity, bugRemoved],
     wrote: 2,
   };
   await expectIssueUpdated(db, id, bugOff);
@@ -210,10 +198,7 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
     ...bugOff,
     by: ann.email,
     assignees: [admin.email, ann.email].toSorted(),
-    activity: [
-      ...bugOff.activity,
-      changed("assignees", shownNameOf(bob.email), "", "removed assignee ", null, bob.email),
-    ],
+    activity: [...bugOff.activity, bobUnassigned],
     wrote: 2,
   };
   await expectIssueUpdated(db, id, bobOff);

@@ -27,17 +27,24 @@ export function byId(a: { id: string }, b: { id: string }): number {
   return a.id < b.id ? -1 : 1;
 }
 
+/**
+ * An "updated" row of a work item's activity: field changed from old to now, with Plane's comment; named and was,
+ * what its new and old identifiers name, for a state's, a label's or an account's row.
+ */
+export function changed(
+  field: string,
+  old: string,
+  now: string,
+  comment: string,
+  named: string | null = null,
+  was: string | null = null
+): ActivityRow {
+  return { field, verb: "updated", old_value: old, new_value: now, named, was, comment };
+}
+
 /** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
 export function assigned(email: string): ActivityRow {
-  return {
-    field: "assignees",
-    verb: "updated",
-    old_value: "",
-    new_value: shownNameOf(email),
-    named: email,
-    was: null,
-    comment: "added assignee ",
-  };
+  return changed("assignees", "", shownNameOf(email), "added assignee ", email);
 }
 
 /** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
