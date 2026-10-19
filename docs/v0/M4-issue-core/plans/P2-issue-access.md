@@ -105,7 +105,7 @@ sys.exit(1 if broken else 0)
 | `tools/keywords.json`（修改） | `phase` 改为 `M4/P2` | 1 |
 | `server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`（修改） | `HiddenFrom`（Task 2）；`GroupCancelled`、`Archivable`（Task 7）；`StartDate`、`TargetDate`、`checkNewDates` 的接入（Task 10） | 2、7、10 |
 | `server/internal/modules/issue/app/lock.go`（修改） | `decide` 带上工作项、先执行访客规则（Task 2）；`seeWorkspace`（Task 5） | 2、5 |
-| `server/internal/modules/issue/app/guest_rule_test.go`（新） | 访客规则在预检和锁下的单元测试（Task 2）；删除的判定（Task 4） | 2、4 |
+| `server/internal/modules/issue/app/guest_rule_test.go`（新） | 访客规则在预检和锁下的单元测试（Task 2）；删除的判定（Task 4）；回答逐值比较，隐藏的与不存在的是同一个值（Task 5） | 2、4、5 |
 | `server/internal/modules/issue/app/fakes_test.go`（修改） | 判定记下目标、工作项的创建者，创建者不明的工作项（`creatorOf`）（Task 2）；删除的存储（Task 4）；归档的存储（Task 7）；日期（Task 10） | 2、4、7、10 |
 | `server/internal/modules/issue/app/get_issue.go`（修改） | 说明写上访客规则 | 2 |
 | `server/internal/modules/issue/app/update_issue.go`（修改） | 说明写上访客规则（Task 2）；已归档 409（Task 8）；合并之后的日期、写日期（Task 10） | 2、8、10 |
@@ -138,7 +138,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/domain/identifier.go`、`server/internal/modules/issue/domain/identifier_test.go`（新）、`api/testdata/identifier-fold.json`（新） | `ParseIdentifier`、`MatchIdentifier`、`foldIdentifier` 和样例 | 5 |
 | `server/internal/modules/issue/domain/errors.go`（修改） | `ErrWorkspaceNotFound`（Task 5）；`ErrNotArchivable`（Task 7）；`ErrIssueArchived`（Task 8） | 5、7、8 |
 | `server/internal/modules/issue/app/get_issue_by_identifier.go`、`server/internal/modules/issue/app/get_issue_by_identifier_test.go`（新） | `GetIssueByIdentifier` 和单元测试 | 5 |
-| `server/internal/modules/issue/app/get_issue_test.go`（修改） | `Locks` 的假实现带上新的端口 | 5 |
+| `server/internal/modules/issue/app/get_issue_test.go`（修改） | `readIssue`（两个用例共用）；拒绝的回答逐值比较 | 5 |
 | `server/internal/modules/issue/app/ports.go`（修改） | `WorkspaceDirectory`、`ProjectIdentifiers`、`ProjectIdentifier`、`IssueNumbers`（Task 5）；`IssueArchiver`（Task 7） | 5、7 |
 | `server/internal/modules/issue/adapter/postgres/queries/issues.sql`、`server/internal/modules/issue/adapter/postgres/issues.go`、`server/internal/modules/issue/adapter/postgres/issues_test.go`（修改） | `IssueByNumber`（Task 5）；日期的两列（Task 10） | 5、10 |
 | `server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`（修改） | `ProjectIdentifiers` 和存储测试 | 5 |
@@ -1715,6 +1715,7 @@ Expected: 通过。
 | `T2.9` | 创建者不明的工作项在 `AllowCreator` 上算调用者的 | `internal/modules/issue/app` 的全部测试（`make test`）（Task 4 起） | 单元 |
 | `T2.10` | 访客规则按 id 的次序而不是相等认调用者自己的工作项：创建者的 id 在调用者之前的别人的工作项给访客看 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`） | 单元；组合 |
 | `T2.11` | 访客规则按 id 的次序而不是相等认调用者自己的工作项：创建者的 id 在调用者之后的别人的工作项给访客看（`T2.10` 的镜像） | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 3 起） | 单元；组合 |
+| `T2.12` | 访客规则隐藏的工作项答一个文字不同的 `issue.not_found`：别人的工作项不再与不存在的是同一个回答（M4 设计 8.4） | `internal/modules/issue/app` 的全部测试（`make test`）（Task 5 起）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T1.6`、`T1.12`、`T1.15`（列在各自的 Task 的表里，标"（Task 2 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=2`）。
 
@@ -4095,7 +4096,7 @@ Expected: 通过。
 
 **Files:**
 - Create: `api/testdata/identifier-fold.json`、`server/internal/bootstrap/issue_ports_test.go`、`server/internal/modules/issue/app/get_issue_by_identifier.go`、`server/internal/modules/issue/app/get_issue_by_identifier_test.go`、`server/internal/modules/issue/domain/identifier.go`、`server/internal/modules/issue/domain/identifier_test.go`
-- Modify: `server/internal/bootstrap/app.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/postgres/issues.go`、`server/internal/modules/issue/adapter/postgres/issues_test.go`、`server/internal/modules/issue/adapter/postgres/queries/issues.sql`、`server/internal/modules/issue/app/get_issue_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/domain/actions.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/issue/module.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/app/issue_ports.go`、`server/internal/modules/project/module.go`、`server/internal/modules/workspace/module.go`
+- Modify: `server/internal/bootstrap/app.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/postgres/issues.go`、`server/internal/modules/issue/adapter/postgres/issues_test.go`、`server/internal/modules/issue/adapter/postgres/queries/issues.sql`、`server/internal/modules/issue/app/get_issue_test.go`、`server/internal/modules/issue/app/guest_rule_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/domain/actions.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/issue/module.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/app/issue_ports.go`、`server/internal/modules/project/module.go`、`server/internal/modules/workspace/module.go`
 - Generate: `server/internal/modules/issue/adapter/postgres/gen/issues.sql.go`、`server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go`
 
 **Interfaces:**（spec 2.7、第 3 节第 4 条；M4 设计 3.4、3.7、6.5）
@@ -4107,8 +4108,8 @@ Expected: 通过。
 
 **Tests:**
 - 领域：`TestParseIdentifier`、`TestMatchIdentifierFindsWhatTheSamplesSay`（读 `identifier-fold.json`）。
-- 单元：`TestGetIssueByIdentifierReadsTheWorkItem`（项目的标识用任何大小写问，土耳其字母也是）、`TestGetIssueByIdentifierRefusals`（工作区不在、调用者不是成员：`workspace.not_found`，在找工作项之前；`issue.search` 之外的角色 403；之后，不是标识、不是 acme 的项目、没有这个编号、看不到项目、访客规则隐藏的：同一个 `issue.not_found`；不能读的角色 403；读或判定的失败照原样；没有调用者，在任何读之前）；`TestGetIssueReadsTheWorkItem`（`readIssue`，两个用例共用）；规则表的 `issue.search` 一行（`TestEveryRuleDecidesItsCells`）；`bootstrap` 的 `TestIssueProjectsConvertsProjectIdentifiers`、`TestIssueWorkspacesConvertsWorkspacesAnswer`（转换，不用数据库）。
-- 存储：`TestIssueByNumber`（web 的 1、2 和 ops 的 1 各是自己的，归档的也在；已删除的不算；项目里没有的编号不算，即使别的项目有）、`TestAFailedIssueStatementIsAnError`；`TestProjectIdentifiers`（未删除的项目，归档的也在，`id` 的次序；已删除的、别的工作区的不在）、`TestAFailedReadIsAnErrorNotAnAnswer`。
+- 单元：`TestGetIssueByIdentifierReadsTheWorkItem`（项目的标识用任何大小写问，土耳其字母也是）、`TestGetIssueByIdentifierRefusals`（工作区不在、调用者不是成员：`workspace.not_found`，在找工作项之前；`issue.search` 之外的角色 403；之后，不是标识、不是 acme 的项目、没有这个编号、看不到项目、访客规则隐藏的：同一个 `issue.not_found`；不能读的角色 403；读或判定的失败照原样；没有调用者，在任何读之前）；`TestGetIssueReadsTheWorkItem`（`readIssue`，两个用例共用）；`TestGetIssueByIdentifierRefusals`、`TestGetIssueRefusals` 和 `guest_rule_test.go` 的两个表逐值比较回答（`reflect.DeepEqual`：`shared.Error` 的 `Is` 只比较种类和码），访客规则隐藏的工作项与不存在的是同一个回答（M4 设计 8.4）；规则表的 `issue.search` 一行（`TestEveryRuleDecidesItsCells`）；`bootstrap` 的 `TestIssueProjectsConvertsProjectIdentifiers`、`TestIssueWorkspacesConvertsWorkspacesAnswer`（转换，不用数据库）。
+- 存储：`TestIssueByNumber`（web 的 1、2 和 ops 的 1 各是自己的，归档的也在；已删除的不算；项目里没有的编号不算，即使别的项目有）、`TestAFailedIssueStatementIsAnError`；`TestProjectIdentifiers`（未删除的项目，归档的也在，`id` 的次序；已删除的、别的工作区的不在；先建的 Web 归档、Ops 的名字和标识在前，`id` 的次序既不是行的次序，也不是按工作区的索引的次序）、`TestAFailedReadIsAnErrorNotAnAnswer`。
 - 完整性：`TestEveryActionHasARuleAndEveryRuleAnAction`、`TestEveryModuleDeclaresItsActionsOrHasNone`。
 
 - [ ] **Step 1: 两条查询，生成**
@@ -4743,6 +4744,35 @@ func readIssue(id uuid.UUID) domain.Issue {
 			if !reflect.DeepEqual(err, tt.want) || got.ID != (uuid.UUID{}) {
 ````
 
+`server/internal/modules/issue/app/guest_rule_test.go`（修改，4 处）：
+
+````old server/internal/modules/issue/app/guest_rule_test.go
+	"errors"
+````
+````new server/internal/modules/issue/app/guest_rule_test.go
+	"reflect"
+````
+````old server/internal/modules/issue/app/guest_rule_test.go
+// looked at: in the precheck, and again under the lock.
+````
+````new server/internal/modules/issue/app/guest_rule_test.go
+// looked at: in the precheck, and again under the lock. Each answer is
+// compared whole: another's work item is the very issue.not_found of one
+// that is not there, detail and all (8.4).
+````
+````old server/internal/modules/issue/app/guest_rule_test.go
+			if (tt.want == nil) != (err == nil) || tt.want != nil && !errors.Is(err, tt.want) || (err == nil) != (got.ID == id) {
+````
+````new server/internal/modules/issue/app/guest_rule_test.go
+			if !reflect.DeepEqual(err, tt.want) || (err == nil) != (got.ID == id) {
+````
+````old server/internal/modules/issue/app/guest_rule_test.go
+			if _, err := update.Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")}); !errors.Is(err, tt.want) {
+````
+````new server/internal/modules/issue/app/guest_rule_test.go
+			if _, err := update.Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")}); !reflect.DeepEqual(err, tt.want) {
+````
+
 `server/internal/modules/issue/app/lock.go`（修改，2 处）：
 
 ````old server/internal/modules/issue/app/lock.go
@@ -5375,7 +5405,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/testdata/identifier-fold.json server/internal/bootstrap/app.go server/internal/bootstrap/issue_ports_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/ports_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/postgres/issues.go server/internal/modules/issue/adapter/postgres/issues_test.go server/internal/modules/issue/adapter/postgres/queries/issues.sql server/internal/modules/issue/app/get_issue_by_identifier.go server/internal/modules/issue/app/get_issue_by_identifier_test.go server/internal/modules/issue/app/get_issue_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/domain/actions.go server/internal/modules/issue/domain/errors.go server/internal/modules/issue/domain/identifier.go server/internal/modules/issue/domain/identifier_test.go server/internal/modules/issue/module.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/issue_ports.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/queries/issue_ports.sql server/internal/modules/project/app/issue_ports.go server/internal/modules/project/module.go server/internal/modules/workspace/module.go server/internal/modules/issue/adapter/postgres/gen/issues.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go
+git add api/testdata/identifier-fold.json server/internal/bootstrap/app.go server/internal/bootstrap/issue_ports_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/ports_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/postgres/issues.go server/internal/modules/issue/adapter/postgres/issues_test.go server/internal/modules/issue/adapter/postgres/queries/issues.sql server/internal/modules/issue/app/get_issue_by_identifier.go server/internal/modules/issue/app/get_issue_by_identifier_test.go server/internal/modules/issue/app/get_issue_test.go server/internal/modules/issue/app/guest_rule_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/domain/actions.go server/internal/modules/issue/domain/errors.go server/internal/modules/issue/domain/identifier.go server/internal/modules/issue/domain/identifier_test.go server/internal/modules/issue/module.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/issue_ports.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/queries/issue_ports.sql server/internal/modules/project/app/issue_ports.go server/internal/modules/project/module.go server/internal/modules/workspace/module.go server/internal/modules/issue/adapter/postgres/gen/issues.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go
 ```
 ```bash
 git commit -m "feat(M4/P2): a work item is found by its identifier, folded
@@ -5418,6 +5448,8 @@ Expected: 通过。
 | `T5.16` | 标识只按大写逐个字母比较，不折叠 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 单元；组合 |
 | `T5.17` | `ProjectIdentifiers` 不按 `id` 的次序回答工作区的项目（去掉 `ORDER BY id`；按性质只在存储一层：`MatchIdentifier` 不靠次序） | `internal/modules/project/adapter/postgres` 的全部测试（`make test`） | 存储 |
 | `T5.18` | 没有项目的标识对得上时答一个文字不同的 `issue.not_found`：工作区之后的各种找不到不再是同一个回答 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 单元；组合 |
+
+本 Task 的检查也发现较早的 Task 的变异 `T2.12`（列在各自的 Task 的表里，标"（Task 5 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=5`）。
 
 ---
 
@@ -6002,7 +6034,7 @@ Expected: 通过。
 | `T6.1` | 契约不声明 `getIssueByIdentifier` 答 `workspace.not_found` | `internal/modules/issue/adapter/http` 的全部测试（`make test`） | 单元 |
 | `T6.2` | 矩阵的一格可以按任何标识指名工作项，不必是它的列自己的 | `internal/bootstrap` 的 `TestMatrixViolationsCatchesAnotherCasesIdentifier`（`make test`） | 单元 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T5.1`、`T5.2`、`T5.3`、`T5.4`、`T5.5`、`T5.6`、`T5.7`、`T5.8`、`T5.9`、`T5.11`、`T5.14`、`T5.15`、`T5.16`、`T5.18`（列在各自的 Task 的表里，标"（Task 6 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=6`）。
+本 Task 的检查也发现较早的 Task 的变异 `T2.12`、`T5.1`、`T5.2`、`T5.3`、`T5.4`、`T5.5`、`T5.6`、`T5.7`、`T5.8`、`T5.9`、`T5.11`、`T5.14`、`T5.15`、`T5.16`、`T5.18`（列在各自的 Task 的表里，标"（Task 6 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=6`）。
 
 ---
 

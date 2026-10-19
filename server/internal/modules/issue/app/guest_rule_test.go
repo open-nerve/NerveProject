@@ -1,7 +1,7 @@
 package app_test
 
 import (
-	"errors"
+	"reflect"
 	"slices"
 	"testing"
 	"uuid"
@@ -13,7 +13,9 @@ import (
 // The guest rule in Locks' decisions (M4 design 3.4, 6.7): a decision on a
 // work item names its creator, and a caller who sees only his own work
 // items (Grant.OwnOnly) finds none another created, before his role is
-// looked at: in the precheck, and again under the lock.
+// looked at: in the precheck, and again under the lock. Each answer is
+// compared whole: another's work item is the very issue.not_found of one
+// that is not there, detail and all (8.4).
 
 var (
 	// ownOnly is the grant of web's guest when web does not show its
@@ -54,7 +56,7 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAReader(t *testing.T) {
 			w.issues.issue.By = tt.creator
 			w.auth.grants, w.auth.answers = []shared.Grant{tt.grant}, []error{tt.refused}
 			got, err := uc.Execute(as(alice), id)
-			if (tt.want == nil) != (err == nil) || tt.want != nil && !errors.Is(err, tt.want) || (err == nil) != (got.ID == id) {
+			if !reflect.DeepEqual(err, tt.want) || (err == nil) != (got.ID == id) {
 				t.Errorf("Execute() = %+v, %v; want %v", got, err, tt.want)
 			}
 			if calls := []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx")}; !slices.Equal(
@@ -93,7 +95,7 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAWriter(t *testing.T) {
 			_, update := gated(w, nil)
 			w.issues.issue.By = tt.creator
 			w.auth.grants, w.auth.answers = tt.grants, tt.answers
-			if _, err := update.Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")}); !errors.Is(err, tt.want) {
+			if _, err := update.Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")}); !reflect.DeepEqual(err, tt.want) {
 				t.Errorf("Execute() = %v, want %v", err, tt.want)
 			}
 			want := locked(id)[:tt.calls]
