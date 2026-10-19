@@ -114,7 +114,7 @@ sys.exit(1 if broken else 0)
 | `api/openapi.yaml`（修改） | 新的路径 | 6、7 |
 | `server/internal/modules/issue/adapter/http/issues_test.go`（修改） | `getIssue` 的访客的拒绝（Task 2）；创建的日期、体的形状（Task 11） | 2、11 |
 | `server/internal/bootstrap/issue_interleaving_test.go`（修改） | 交错 5 的访客一支（Task 2）；删除他自己的、`wroteNothing` 数未删除的行（Task 12） | 2、12 |
-| `server/internal/bootstrap/issue_world_test.go`（修改） | `newWorkItemBy`：别的账户建的工作项（Task 2）；`doneWorkItem`：Done 里的工作项（Task 7） | 2、7 |
+| `server/internal/bootstrap/issue_world_test.go`（修改） | `newWorkItemBy`：别的账户建的工作项，交错用的 `bobsWorkItem`、`waltsWorkItem`（Task 2）；`doneWorkItem`：Done 里的工作项（Task 7） | 2、7 |
 | `server/internal/bootstrap/permission_matrix_issue_columns_test.go`（新） | 工作项表的列、各列的工作项、`onAWorkItem`、`onTheIssues`（Task 3）；按编号取的格子（Task 6） | 3、6 |
 | `server/internal/bootstrap/permission_matrix_seed_issues_test.go`（修改） | `ownIssues`、`guestViewAll`、`seededItems`、`numberOf`、`nextNumber`，种子和它的核对 | 3 |
 | `server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_members_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`（修改） | 新身份的账户、它们在别的表里的格子 | 3 |
@@ -979,18 +979,18 @@ Expected: 通过。
 - Modify: `api/modules/issue.yaml`、`api/modules/project.yaml`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/permission_matrix_issue_updates_test.go`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/get_issue.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
-**Interfaces:**（spec 2.4、第 3 节第 2 条；M4 设计 3.4、3.5、6.7、8.2）
+**Interfaces:**（spec 2.4、第 3 节第 2 条；M4 设计 3.4、3.5、6.7、8.4）
 - `access/domain/rules.go`：`issue.read` 加项目的访客。
 - `issue/domain/issue.go`：`Issue.HiddenFrom(actor uuid.UUID, ownOnly bool) bool`：`ownOnly` 的调用者看不到别人建的工作项，也看不到创建者不明的；别的调用者什么都不藏。
 - `issue/app/lock.go`：`decide(ctx, actor, action, workspaceID, projectID uuid.UUID, i *domain.Issue, notFound error) error`：`i` 不为空时 `Target.CreatorID` 是它的创建者；`ErrNotVisible` 答 `notFound`；`i.HiddenFrom(actor.UserID, grant.OwnOnly)` 也答 `notFound`，先于角色的拒绝；`see` 传读到的工作项，`lockAndDecide` 传锁下重读的工作项（`h.issue, on = i, &i`），`precheck` 的按项目的一支传 `nil`。`get_issue.go`、`update_issue.go` 的说明写上访客规则。
 - 契约：`getIssue`、`updateIssue` 的描述（访客规则，404 不论角色）；`api/modules/project.yaml` 的 `guest_view_all_features` 的说明（设计 12 节 P2 的第 2 个任务）。
-- 测试的帮手：`fakes_test.go` 的假判定记下每次的目标，按次回答 `grants[n]`（拒绝时也带它），假存储的读把零值的创建者答成没有（`creatorOf`：创建者的账户被清除之后，P9）；`issue_world_test.go` 的 `newWorkItemBy`（别的账户建的工作项，`newWorkItemIn` 用它）；`issue_interleaving_test.go` 的 `bobsWorkItem`。
+- 测试的帮手：`fakes_test.go` 的假判定记下每次的目标，按次回答 `grants[n]`（拒绝时也带它），假存储的读把零值的创建者答成没有（`creatorOf`：创建者的账户被清除之后，P9）；`issue_world_test.go` 的 `newWorkItemBy`（别的账户建的工作项，`newWorkItemIn` 用它）和交错用的 `bobsWorkItem`、`waltsWorkItem`（walt 在 bob 之后注册，id 在他之后；alice 先让他成为 Web 的成员）。
 
 **Tests:**
 - 领域：`TestTheGuestRuleHidesAnothersWorkItem`。
 - 单元（`guest_rule_test.go`，新）：`TestADecisionOnAWorkItemNamesItsCreator`（预检和锁下各把创建者交给判定，按项目的判定不指名谁）、`TestTheGuestRuleHidesAnothersWorkItemFromAReader`（创建者不明的工作项对只看自己的访客也是 404）、`TestTheGuestRuleHidesAnothersWorkItemFromAWriter`（预检答 404，在闸门和锁之前；等锁期间成了这样的访客的，锁下 404，不写；对自己的，角色的 403）；规则表的 `issue.read` 一行。
 - HTTP：`TestGetIssueRefusals`（访客规则的 404）。
-- 组合：交错 5 的访客一支（`TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`：被降为访客的 bob 改 alice 的 Fix 404、改他自己的和创建 403，都不写）；矩阵的 `getIssue`、`updateIssue` 的 PG 格子（"只看自己"的项目里别人的工作项：404）。
+- 组合：交错 5 的访客一支（`TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`：被降为访客的 bob 改 alice 的 Fix、walt 的 Fix 404（创建者的 id 一个在他之前、一个在他之后），改他自己的和创建 403，都不写）；矩阵的 `getIssue`、`updateIssue` 的 PG 格子（"只看自己"的项目里别人的工作项：404）。
 
 - [ ] **Step 1: 契约，生成**
 
@@ -1229,7 +1229,7 @@ func creatorOf(by uuid.UUID) *uuid.UUID {
 // forbidden.
 ````
 
-`server/internal/modules/issue/app/guest_rule_test.go`（新文件，142 行）：
+`server/internal/modules/issue/app/guest_rule_test.go`（新文件，143 行）：
 
 ````file server/internal/modules/issue/app/guest_rule_test.go
 package app_test
@@ -1316,6 +1316,7 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAWriter(t *testing.T) {
 		calls   int // of locked(id)
 	}{
 		{"another's, in the precheck", carol, []shared.Grant{ownOnly}, []error{shared.Forbidden()}, domain.ErrIssueNotFound, 2},
+		{"another's, in the precheck, his role allowed", carol, []shared.Grant{ownOnly}, nil, domain.ErrIssueNotFound, 2},
 		{"his own, in the precheck", alice, []shared.Grant{ownOnly}, []error{shared.Forbidden()}, shared.Forbidden(), 2},
 		{"another's, under the lock", carol, []shared.Grant{member, ownOnly}, []error{nil, shared.Forbidden()}, domain.ErrIssueNotFound, 6},
 		{"his own, under the lock", alice, []shared.Grant{member, ownOnly}, []error{nil, shared.Forbidden()}, shared.Forbidden(), 6},
@@ -1475,7 +1476,7 @@ func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Act
 // the project's guest who sees only his own work items (Grant.OwnOnly), a
 // workspace admin among them, does not see one another created, before
 // what the rule says of his role, so another's work item is as unknown to
-// him as one that is not there (8.2). i is nil for an action on the
+// him as one that is not there (8.4). i is nil for an action on the
 // project.
 func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID, projectID uuid.UUID, i *domain.Issue,
 	notFound error) error {
@@ -1505,19 +1506,8 @@ func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Act
 
 - [ ] **Step 4: HTTP、交错和矩阵**
 
-`server/internal/bootstrap/issue_interleaving_test.go`（修改，6 处）：
+`server/internal/bootstrap/issue_interleaving_test.go`（修改，5 处）：
 
-````old server/internal/bootstrap/issue_interleaving_test.go
-	w.newWorkItemIn(t, w.web, `{"name":"Fix"}`)
-````
-````new server/internal/bootstrap/issue_interleaving_test.go
-	w.newWorkItemIn(t, w.web, `{"name":"Fix"}`)
-}
-
-// bobsWorkItem is aWorkItem made by bob, Web's member: three rows, his.
-func bobsWorkItem(t *testing.T, w issueWorld) {
-	w.newWorkItemBy(t, "bob", w.web, `{"name":"Fix"}`)
-````
 ````old server/internal/bootstrap/issue_interleaving_test.go
 // member of Web, made secret, creates a work item, or changes alice's
 // Fix, while alice's removal of him, or her demotion of him to a guest,
@@ -1528,26 +1518,29 @@ func bobsWorkItem(t *testing.T, w issueWorld) {
 // writes no work item: 403 forbidden. His write wrote nothing.
 ````
 ````new server/internal/bootstrap/issue_interleaving_test.go
-// member of Web, made secret, creates a work item, or changes alice's Fix
-// or his own, while alice's removal of him, or her demotion of him to a
-// guest, holds Web past its writes. His write passed the precheck, which
-// read him a member, and waits for Web's row; once hers commits, the
+// member of Web, made secret, creates a work item, or changes alice's Fix,
+// walt's or his own, while alice's removal of him, or her demotion of him
+// to a guest, holds Web past its writes. His write passed the precheck,
+// which read him a member, and waits for Web's row; once hers commits, the
 // decision under the lock reads him removed, who no longer sees Web: 404
 // project.not_found, or issue.not_found for a change; or a guest of a
 // project that does not show its guests every work item, who finds no work
-// item another created, alice's Fix, as one not there: 404
-// issue.not_found (3.4); and who writes no work item, his own or a new
-// one: 403 forbidden. His write wrote nothing.
+// item another created, alice's Fix or walt's, their creators' ids before
+// his and after it, as one not there: 404 issue.not_found (3.4); and who
+// writes no work item, his own or a new one: 403 forbidden. His write
+// wrote nothing.
 ````
 ````old server/internal/bootstrap/issue_interleaving_test.go
 	for _, iw := range itemWrites {
 ````
 ````new server/internal/bootstrap/issue_interleaving_test.go
 	// guest is a guest's answer to each write: issue.not_found for alice's
-	// Fix, forbidden for the others.
-	guest := map[string]cell{"created": cellForbidden, "changed": cellIssueNotFound, "changed his own": cellForbidden}
-	for _, iw := range append(slices.Clone(itemWrites), itemWrite{"changed his own", bobsWorkItem, 3, changesIssue, http.StatusOK,
-		"issue.not_found"}) {
+	// Fix and walt's, forbidden for the others.
+	guest := map[string]cell{"created": cellForbidden, "changed": cellIssueNotFound, "changed his own": cellForbidden,
+		"changed walt's": cellIssueNotFound}
+	for _, iw := range append(slices.Clone(itemWrites),
+		itemWrite{"changed his own", bobsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"},
+		itemWrite{"changed walt's", waltsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"}) {
 ````
 ````old server/internal/bootstrap/issue_interleaving_test.go
 			want    int
@@ -1591,9 +1584,25 @@ func (w issueWorld) newWorkItemBy(t *testing.T, name string, project uuid.UUID, 
 ````
 ````old server/internal/bootstrap/issue_world_test.go
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
+	return created.ID
 ````
 ````new server/internal/bootstrap/issue_world_test.go
 	decodeAnswer(t, w.send(t, name, http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
+	return created.ID
+}
+
+// bobsWorkItem is aWorkItem made by bob, Web's member: three rows, his.
+func bobsWorkItem(t *testing.T, w issueWorld) {
+	w.newWorkItemBy(t, "bob", w.web, `{"name":"Fix"}`)
+}
+
+// waltsWorkItem is aWorkItem made by walt, registered after bob and so of
+// an id after his, once alice has made him a member of Web: three rows,
+// his.
+func waltsWorkItem(t *testing.T, w issueWorld) {
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
+		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":15}]}`, http.StatusCreated)
+	w.newWorkItemBy(t, "walt", w.web, `{"name":"Fix"}`)
 ````
 
 `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（修改，2 处）：
@@ -1705,6 +1714,7 @@ Expected: 通过。
 | `T2.8` | `getIssue` 判定 `issue.create` 而不是 `issue.read`（P1b 评审第 6 节：访客让两者分得出） | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起） | 单元；组合 |
 | `T2.9` | 创建者不明的工作项在 `AllowCreator` 上算调用者的 | `internal/modules/issue/app` 的全部测试（`make test`）（Task 4 起） | 单元 |
 | `T2.10` | 访客规则按 id 的次序而不是相等认调用者自己的工作项：创建者的 id 在调用者之前的别人的工作项给访客看 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`） | 单元；组合 |
+| `T2.11` | 访客规则按 id 的次序而不是相等认调用者自己的工作项：创建者的 id 在调用者之后的别人的工作项给访客看（`T2.10` 的镜像） | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T1.6`、`T1.12`、`T1.15`（列在各自的 Task 的表里，标"（Task 2 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=2`）。
 
@@ -11002,44 +11012,46 @@ func TestDeletingAWorkItemAndChangingItSerialize(t *testing.T) {
 ````
 ````old server/internal/bootstrap/issue_interleaving_test.go
 // interleavings 4 and 5, the creation's branch and the change's): bob, a
-// member of Web, made secret, creates a work item, or changes alice's Fix
-// or his own, while alice's removal of him, or her demotion of him to a
-// guest, holds Web past its writes. His write passed the precheck, which
-// read him a member, and waits for Web's row; once hers commits, the
+// member of Web, made secret, creates a work item, or changes alice's Fix,
+// walt's or his own, while alice's removal of him, or her demotion of him
+// to a guest, holds Web past its writes. His write passed the precheck,
+// which read him a member, and waits for Web's row; once hers commits, the
 // decision under the lock reads him removed, who no longer sees Web: 404
 // project.not_found, or issue.not_found for a change; or a guest of a
 // project that does not show its guests every work item, who finds no work
-// item another created, alice's Fix, as one not there: 404
-// issue.not_found (3.4); and who writes no work item, his own or a new
-// one: 403 forbidden. His write wrote nothing.
+// item another created, alice's Fix or walt's, their creators' ids before
+// his and after it, as one not there: 404 issue.not_found (3.4); and who
+// writes no work item, his own or a new one: 403 forbidden. His write
+// wrote nothing.
 ````
 ````new server/internal/bootstrap/issue_interleaving_test.go
 // interleavings 4 and 5, the creation's branch and the change's, and the
 // deletion of a work item by its creator, whom AllowCreator lets: 3.4):
 // bob, a member of Web, made secret, creates a work item, changes alice's
-// Fix or his own, or deletes his own, while alice's removal of him, or her
-// demotion of him to a guest, holds Web past its writes. His write passed
-// the precheck, which read him a member, and waits for Web's row; once
-// hers commits, the decision under the lock reads him removed, who no
-// longer sees Web: 404 project.not_found, or issue.not_found for a change
-// or a deletion; or a guest of a project that does not show its guests
-// every work item, who finds no work item another created, alice's Fix,
-// as one not there: 404 issue.not_found (3.4); and who writes no work
-// item, his own or a new one, nor deletes his own: 403 forbidden. His
-// write wrote nothing and deleted nothing.
+// Fix, walt's or his own, or deletes his own, while alice's removal of
+// him, or her demotion of him to a guest, holds Web past its writes. His
+// write passed the precheck, which read him a member, and waits for Web's
+// row; once hers commits, the decision under the lock reads him removed,
+// who no longer sees Web: 404 project.not_found, or issue.not_found for a
+// change or a deletion; or a guest of a project that does not show its
+// guests every work item, who finds no work item another created, alice's
+// Fix or walt's, their creators' ids before his and after it, as one not
+// there: 404 issue.not_found (3.4); and who writes no work item, his own
+// or a new one, nor deletes his own: 403 forbidden. His write wrote
+// nothing and deleted nothing.
 ````
 ````old server/internal/bootstrap/issue_interleaving_test.go
-	guest := map[string]cell{"created": cellForbidden, "changed": cellIssueNotFound, "changed his own": cellForbidden}
+		"changed walt's": cellIssueNotFound}
 ````
 ````new server/internal/bootstrap/issue_interleaving_test.go
-	guest := map[string]cell{"created": cellForbidden, "changed": cellIssueNotFound, "changed his own": cellForbidden,
-		"deleted his own": cellForbidden}
+		"changed walt's": cellIssueNotFound, "deleted his own": cellForbidden}
 ````
 ````old server/internal/bootstrap/issue_interleaving_test.go
-		"issue.not_found"}) {
+		itemWrite{"changed walt's", waltsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"}) {
 ````
 ````new server/internal/bootstrap/issue_interleaving_test.go
-		"issue.not_found"}, itemWrite{"deleted his own", bobsWorkItem, 3, deletesIssue, http.StatusNoContent, "issue.not_found"}) {
+		itemWrite{"changed walt's", waltsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"},
+		itemWrite{"deleted his own", bobsWorkItem, 3, deletesIssue, http.StatusNoContent, "issue.not_found"}) {
 ````
 
 - [ ] **Step 3: 测试和 lint**

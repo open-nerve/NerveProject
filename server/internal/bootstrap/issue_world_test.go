@@ -109,6 +109,20 @@ func (w issueWorld) newWorkItemBy(t *testing.T, name string, project uuid.UUID, 
 	return created.ID
 }
 
+// bobsWorkItem is aWorkItem made by bob, Web's member: three rows, his.
+func bobsWorkItem(t *testing.T, w issueWorld) {
+	w.newWorkItemBy(t, "bob", w.web, `{"name":"Fix"}`)
+}
+
+// waltsWorkItem is aWorkItem made by walt, registered after bob and so of
+// an id after his, once alice has made him a member of Web: three rows,
+// his.
+func waltsWorkItem(t *testing.T, w issueWorld) {
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
+		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":15}]}`, http.StatusCreated)
+	w.newWorkItemBy(t, "walt", w.web, `{"name":"Fix"}`)
+}
+
 // fullIssue is the body of a work item in Todo, assigned to bob and
 // labelled Bug.
 func (w issueWorld) fullIssue() string {

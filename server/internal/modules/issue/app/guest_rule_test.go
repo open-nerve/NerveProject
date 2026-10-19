@@ -82,6 +82,7 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAWriter(t *testing.T) {
 		calls   int // of locked(id)
 	}{
 		{"another's, in the precheck", carol, []shared.Grant{ownOnly}, []error{shared.Forbidden()}, domain.ErrIssueNotFound, 2},
+		{"another's, in the precheck, his role allowed", carol, []shared.Grant{ownOnly}, nil, domain.ErrIssueNotFound, 2},
 		{"his own, in the precheck", alice, []shared.Grant{ownOnly}, []error{shared.Forbidden()}, shared.Forbidden(), 2},
 		{"another's, under the lock", carol, []shared.Grant{member, ownOnly}, []error{nil, shared.Forbidden()}, domain.ErrIssueNotFound, 6},
 		{"his own, under the lock", alice, []shared.Grant{member, ownOnly}, []error{nil, shared.Forbidden()}, shared.Forbidden(), 6},

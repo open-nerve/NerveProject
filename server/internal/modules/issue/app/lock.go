@@ -171,7 +171,7 @@ func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action
 // the project's guest who sees only his own work items (Grant.OwnOnly), a
 // workspace admin among them, does not see one another created, before
 // what the rule says of his role, so another's work item is as unknown to
-// him as one that is not there (8.2). i is nil for an action on the
+// him as one that is not there (8.4). i is nil for an action on the
 // project.
 func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID, projectID uuid.UUID, i *domain.Issue,
 	notFound error) error {
