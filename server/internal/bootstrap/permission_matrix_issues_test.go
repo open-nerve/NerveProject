@@ -15,7 +15,8 @@ import (
 // (nextNumber); the reading cells share one. A row of 9.2's table has the
 // issue table's columns (issueColumns); a variant that asks what is
 // checked after the decision, the project level's (projectColumns), whose
-// PG names acme's admin's work item, which the guest rule hides from him.
+// PG, a guest, may create none; one on the archived project, its table's
+// (archivedColumns).
 
 var cellIssueNotFound = cell{http.StatusNotFound, "issue.not_found"}
 

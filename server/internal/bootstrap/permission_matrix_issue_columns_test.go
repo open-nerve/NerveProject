@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"testing"
@@ -60,38 +61,45 @@ func toWorkItem(method, after, body string) func(caller, seeded) (string, string
 	}
 }
 
-// onAWorkItem are the cells of a row of the issue table on a work item:
-// the answers of a caller who acts on it as an admin of its project (PA;
-// PM+WA, and the workspace admin who is a guest, on his own: a workspace
-// admin with a membership passes each rule of the project,
-// Grant.ProjectAdmin), of PM, of the member who made it, and of the
-// project's guest who sees it, every work item or his own; notFound,
-// issue.not_found, for each column that does not see it: the guest and
-// the workspace admin who is a guest, on another's, whom the guest rule
-// hides it from before any role (M4 design 3.4), and WM-私, WG-, P-前 and
-// X; forbidden for WA- and WM-公, who see the project and are none of its
-// members.
+// onAWorkItem are the cells of a row of the issue table on a work item: a
+// project-level row's on one (issueRows.of), but PG's, whose cases are
+// the issue table's own columns (issueTable). The answers of a caller who
+// acts on it as an admin of its project (PA; PM+WA, and the workspace
+// admin who is a guest, on his own: a workspace admin with a membership
+// passes each rule of the project, Grant.ProjectAdmin), of PM, of the
+// member who made it, and of the project's guest who sees it, every work
+// item or his own; issue.not_found for each column that does not see it:
+// the guest and the workspace admin who is a guest, on another's, whom
+// the guest rule hides it from before any role (M4 design 3.4), and
+// WM-私, WG-, P-前 and X; forbidden for WA- and WM-公, who see the project
+// and are none of its members.
 func onAWorkItem(admin, member, creator, guest cell) map[caller]cell {
-	return map[caller]cell{callerProjectAdmin: admin, callerProjectMember: member, callerCreator: creator, callerGuestAll: guest,
-		callerGuestOwn: guest, callerGuestOthers: cellIssueNotFound, callerAdminGuest: cellIssueNotFound, callerAdminGuestOwn: admin,
-		callerMemberAndAdmin: admin, callerAdminOnly: cellForbidden, callerMemberPublic: cellForbidden, callerMemberPrivate: cellIssueNotFound,
-		callerGuestOnly: cellIssueNotFound, callerBefore: cellIssueNotFound, callerNever: cellIssueNotFound, callerRemoved: cellIssueNotFound,
-		callerDeleted: cellIssueNotFound}
+	return issueTable(issueRows.of(admin, member, guest, admin, cellForbidden, cellForbidden), map[caller]cell{callerCreator: creator,
+		callerGuestAll: guest, callerGuestOwn: guest, callerGuestOthers: cellIssueNotFound, callerAdminGuest: cellIssueNotFound,
+		callerAdminGuestOwn: admin})
 }
 
 // onTheIssues are the cells of a row of the issue table on its project's
-// work items, none named (createIssue): the answers of a caller who acts
-// as an admin of the project (PA, PM+WA, and the workspace admin who is a
-// guest, in either column), of its members (PM, and the member who made a
-// work item) and of its guests, in each of their columns;
-// project.not_found for WM-私, WG-, P-前 and X, who do not see the
-// project; forbidden for WA- and WM-公.
+// work items, none named (createIssue): a project-level row's on the
+// project (ofProject), but PG's, whose cases are the issue table's own
+// columns (issueTable). The answers of a caller who acts as an admin of
+// the project (PA, PM+WA, and the workspace admin who is a guest, in
+// either column), of its members (PM, and the member who made a work
+// item) and of its guests, in each of their columns; project.not_found
+// for WM-私, WG-, P-前 and X, who do not see the project; forbidden for
+// WA- and WM-公.
 func onTheIssues(admin, member, guest cell) map[caller]cell {
-	return map[caller]cell{callerProjectAdmin: admin, callerProjectMember: member, callerCreator: member, callerGuestAll: guest,
-		callerGuestOwn: guest, callerGuestOthers: guest, callerAdminGuest: admin, callerAdminGuestOwn: admin, callerMemberAndAdmin: admin,
-		callerAdminOnly: cellForbidden, callerMemberPublic: cellForbidden, callerMemberPrivate: cellProjectNotFound,
-		callerGuestOnly: cellProjectNotFound, callerBefore: cellProjectNotFound, callerNever: cellProjectNotFound,
-		callerRemoved: cellProjectNotFound, callerDeleted: cellProjectNotFound}
+	return issueTable(ofProject(admin, member, guest, admin, cellForbidden, cellForbidden), map[caller]cell{callerCreator: member,
+		callerGuestAll: guest, callerGuestOwn: guest, callerGuestOthers: guest, callerAdminGuest: admin, callerAdminGuestOwn: admin})
+}
+
+// issueTable is a row of the issue table made from project's, a
+// project-level row's cells: PG's taken out, and own's, the cells of the
+// issue table's own columns, put in.
+func issueTable(project, own map[caller]cell) map[caller]cell {
+	delete(project, callerProjectGuest)
+	maps.Copy(project, own)
+	return project
 }
 
 // A cell names its column's own work item (issueOf), not only one of its

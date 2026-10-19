@@ -1714,7 +1714,7 @@ Expected: 通过。
 | `T2.8` | `getIssue` 判定 `issue.create` 而不是 `issue.read`（P1b 评审第 6 节：访客让两者分得出） | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起） | 单元；组合 |
 | `T2.9` | 创建者不明的工作项在 `AllowCreator` 上算调用者的 | `internal/modules/issue/app` 的全部测试（`make test`）（Task 4 起） | 单元 |
 | `T2.10` | 访客规则按 id 的次序而不是相等认调用者自己的工作项：创建者的 id 在调用者之前的别人的工作项给访客看 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`） | 单元；组合 |
-| `T2.11` | 访客规则按 id 的次序而不是相等认调用者自己的工作项：创建者的 id 在调用者之后的别人的工作项给访客看（`T2.10` 的镜像） | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`） | 单元；组合 |
+| `T2.11` | 访客规则按 id 的次序而不是相等认调用者自己的工作项：创建者的 id 在调用者之后的别人的工作项给访客看（`T2.10` 的镜像） | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 3 起） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T1.6`、`T1.12`、`T1.15`（列在各自的 Task 的表里，标"（Task 2 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=2`）。
 
@@ -1727,9 +1727,9 @@ Expected: 通过。
 - Modify: `server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_issue_updates_test.go`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_members_test.go`、`server/internal/bootstrap/permission_matrix_seed_issues_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`
 
 **Interfaces:**（spec 2.5、第 3 节第 15 条；M4 设计 9.2）
-- `permission_matrix_issue_columns_test.go`（新）：列 `callerCreator`、`callerGuestAll`、`callerGuestOwn`、`callerGuestOthers`、`callerAdminGuest`、`callerAdminGuestOwn`；`issueColumns`（17 列，9.2 的次序）；`issueOf(c)`（列的格子指名的工作项）、`toWorkItem(method, after, body)`；`onAWorkItem(admin, member, creator, guest)`、`onTheIssues(admin, member, guest)`。
-- `permission_matrix_seed_issues_test.go`：`ownIssues`（PM 的；种子经存储记在工作区访客名下的，访客不能创建（`createIssue`），所以访客自己的工作项是他从前作为成员建的：判定只读创建者和他现在的角色，不读它怎样来的；在公开项目里是访客的工作区管理员作为管理员建的；已离开私有项目的成员离开之前建的）；`guestViewAll`（acme 的私有项目让访客看每个工作项，由 acme 的管理员经项目的存储设；公开项目照默认不让）；`seededItem`、`seededItems()`、`numberOf`、`nextNumber`；`issueSeed.issues` 写全部，`seededIssues` 读回每个工作项的编号、名称、创建者和访客规则读的事实。
-- `permission_matrix_seeded_test.go`、`permission_matrix_targets_test.go`：每个种下的工作项一个 `id`，`targetViolation` 核对 `{issue_id}` 是它的列的工作项；新身份的账户（`permission_matrix_columns_test.go`）和它们在工作区、成员、邀请的表里的格子；`permission_matrix_coverage_test.go` 认工作项表；`permission_matrix_test.go` 的种子的说明。
+- `permission_matrix_issue_columns_test.go`（新）：列 `callerCreator`、`callerGuestAll`、`callerGuestOwn`、`callerGuestOthers`、`callerAdminGuest`、`callerAdminGuestOwn`；`issueColumns`（17 列，9.2 的次序）；`issueOf(c)`（列的格子指名的工作项）、`toWorkItem(method, after, body)`；`onAWorkItem(admin, member, creator, guest)`、`onTheIssues(admin, member, guest)`（项目一级的一行的格子（`issueRows.of`、`ofProject`）去掉 PG 的，放进工作项表自己的六列的：`issueTable`）。
+- `permission_matrix_seed_issues_test.go`：`ownIssues`（PM 的；种子经存储记在工作区访客名下的，访客不能创建（`createIssue`），所以访客自己的工作项是他从前作为成员建的：判定只读创建者和他现在的角色，不读它怎样来的；在公开项目里是访客的工作区管理员作为管理员建的；已离开私有项目的成员离开之前建的）；`guestViewAll`（acme 的私有项目让访客看每个工作项，由它的管理员 PA 经项目的存储设：acme 的管理员不是 acme 的任何项目的成员，规则不让他设；公开项目照默认不让）；`seededItem`、`seededItems()`、`numberOf`、`nextNumber`；`issueSeed.issues` 写全部，`seededIssues` 读回每个工作项的编号、名称、创建者，以及工作项表自己的每一列靠的事实（列的账户在它的项目里是有效成员，建了它的项目成员是成员、其余是访客，只有访客·全部的项目"可见全部"；管理员·访客在 acme 是有效的管理员）。
+- `permission_matrix_seeded_test.go`、`permission_matrix_targets_test.go`：每个种下的工作项一个 `id`，`targetViolation` 核对 `{issue_id}` 是它的列的工作项；新身份的账户（`permission_matrix_columns_test.go`，它最先注册，在 acme 的管理员之前：账户的 id 随注册增大，两格"别人的"的创建者因此一格在调用者之后、一格在之前）和它们在工作区、成员、邀请的表里的格子；`permission_matrix_coverage_test.go` 认工作项表；`permission_matrix_test.go` 的种子的说明。
 - `permission_matrix_issues_test.go`、`permission_matrix_issue_updates_test.go`：`getIssue`、`createIssue`、`updateIssue` 的行换到工作项表上（`createIssue` 的编号是 `nextNumber`）。
 
 **Tests:**
@@ -1737,20 +1737,28 @@ Expected: 通过。
 
 - [ ] **Step 1: 列、种子和目标**
 
-`server/internal/bootstrap/permission_matrix_columns_test.go`（修改，6 处）：
+`server/internal/bootstrap/permission_matrix_columns_test.go`（修改，5 处）：
 
 ````old server/internal/bootstrap/permission_matrix_columns_test.go
+// matrixAccounts are the accounts prepareMatrix registers: each workspace
+// column's, and each project column's that is none of those (M3 design
 // 9.2: eleven).
-````
-````new server/internal/bootstrap/permission_matrix_columns_test.go
-// 9.2: eleven); and the issue table's workspace admin who is only a guest
-// of acme's public project (M4 design 9.2): twelve.
-````
-````old server/internal/bootstrap/permission_matrix_columns_test.go
+var matrixAccounts = append(slices.Clone(workspaceColumns), callerProjectAdmin, callerProjectMember, callerMemberAndAdmin, callerGuestOnly,
 	callerBefore)
 ````
 ````new server/internal/bootstrap/permission_matrix_columns_test.go
-	callerBefore, callerAdminGuest)
+// matrixAccounts are the accounts prepareMatrix registers, in this order:
+// the issue table's workspace admin who is only a guest of acme's public
+// project (M4 design 9.2), then each workspace column's, and each project
+// column's that is none of those (M3 design 9.2: eleven): twelve. He comes
+// before acme's admin, who made the work item that the issue table's two
+// columns on another's name (issueOf), and the guest after acme's admin:
+// an account's id grows as accounts register (uuid.NewV7), so that the
+// maker's id is after one caller's and before the other's, and a guest
+// rule that told another's work item by the ids' order, not by its maker,
+// fails one of the two.
+var matrixAccounts = slices.Concat([]caller{callerAdminGuest}, workspaceColumns, []caller{callerProjectAdmin, callerProjectMember,
+	callerMemberAndAdmin, callerGuestOnly, callerBefore})
 ````
 ````old server/internal/bootstrap/permission_matrix_columns_test.go
 	case callerProjectGuest:
@@ -1774,8 +1782,9 @@ Expected: 通过。
 // acme's private project for the columns about it, and for the guest who
 // sees every work item, which it shows its guests (guestViewAll); its
 // archived one for the archived project's, gone's for the deleted
-// workspace's, acme's public one for every other; PA, PM, PG and PM+WA
-// answer alike in both, WG- too (9.2).
+// workspace's, acme's public one for every other; PA, PM and PM+WA
+// answer alike in both, PG too but on another's work item, which only
+// the private one shows him (callerGuestAll), and WG- too (9.2).
 ````
 ````old server/internal/bootstrap/permission_matrix_columns_test.go
 	case callerMemberPrivate, callerBefore:
@@ -1821,13 +1830,14 @@ var projectTables = [][]caller{projectColumns, archivedColumns, issueColumns}
 	want := map[string]int{"other": 3, "acme": 10}[ownInvitation(c)]
 ````
 
-`server/internal/bootstrap/permission_matrix_issue_columns_test.go`（新文件，122 行）：
+`server/internal/bootstrap/permission_matrix_issue_columns_test.go`（新文件，130 行）：
 
 ````file server/internal/bootstrap/permission_matrix_issue_columns_test.go
 package bootstrap
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"testing"
@@ -1886,38 +1896,45 @@ func toWorkItem(method, after, body string) func(caller, seeded) (string, string
 	}
 }
 
-// onAWorkItem are the cells of a row of the issue table on a work item:
-// the answers of a caller who acts on it as an admin of its project (PA;
-// PM+WA, and the workspace admin who is a guest, on his own: a workspace
-// admin with a membership passes each rule of the project,
-// Grant.ProjectAdmin), of PM, of the member who made it, and of the
-// project's guest who sees it, every work item or his own; notFound,
-// issue.not_found, for each column that does not see it: the guest and
-// the workspace admin who is a guest, on another's, whom the guest rule
-// hides it from before any role (M4 design 3.4), and WM-私, WG-, P-前 and
-// X; forbidden for WA- and WM-公, who see the project and are none of its
-// members.
+// onAWorkItem are the cells of a row of the issue table on a work item: a
+// project-level row's on one (issueRows.of), but PG's, whose cases are
+// the issue table's own columns (issueTable). The answers of a caller who
+// acts on it as an admin of its project (PA; PM+WA, and the workspace
+// admin who is a guest, on his own: a workspace admin with a membership
+// passes each rule of the project, Grant.ProjectAdmin), of PM, of the
+// member who made it, and of the project's guest who sees it, every work
+// item or his own; issue.not_found for each column that does not see it:
+// the guest and the workspace admin who is a guest, on another's, whom
+// the guest rule hides it from before any role (M4 design 3.4), and
+// WM-私, WG-, P-前 and X; forbidden for WA- and WM-公, who see the project
+// and are none of its members.
 func onAWorkItem(admin, member, creator, guest cell) map[caller]cell {
-	return map[caller]cell{callerProjectAdmin: admin, callerProjectMember: member, callerCreator: creator, callerGuestAll: guest,
-		callerGuestOwn: guest, callerGuestOthers: cellIssueNotFound, callerAdminGuest: cellIssueNotFound, callerAdminGuestOwn: admin,
-		callerMemberAndAdmin: admin, callerAdminOnly: cellForbidden, callerMemberPublic: cellForbidden, callerMemberPrivate: cellIssueNotFound,
-		callerGuestOnly: cellIssueNotFound, callerBefore: cellIssueNotFound, callerNever: cellIssueNotFound, callerRemoved: cellIssueNotFound,
-		callerDeleted: cellIssueNotFound}
+	return issueTable(issueRows.of(admin, member, guest, admin, cellForbidden, cellForbidden), map[caller]cell{callerCreator: creator,
+		callerGuestAll: guest, callerGuestOwn: guest, callerGuestOthers: cellIssueNotFound, callerAdminGuest: cellIssueNotFound,
+		callerAdminGuestOwn: admin})
 }
 
 // onTheIssues are the cells of a row of the issue table on its project's
-// work items, none named (createIssue): the answers of a caller who acts
-// as an admin of the project (PA, PM+WA, and the workspace admin who is a
-// guest, in either column), of its members (PM, and the member who made a
-// work item) and of its guests, in each of their columns;
-// project.not_found for WM-私, WG-, P-前 and X, who do not see the
-// project; forbidden for WA- and WM-公.
+// work items, none named (createIssue): a project-level row's on the
+// project (ofProject), but PG's, whose cases are the issue table's own
+// columns (issueTable). The answers of a caller who acts as an admin of
+// the project (PA, PM+WA, and the workspace admin who is a guest, in
+// either column), of its members (PM, and the member who made a work
+// item) and of its guests, in each of their columns; project.not_found
+// for WM-私, WG-, P-前 and X, who do not see the project; forbidden for
+// WA- and WM-公.
 func onTheIssues(admin, member, guest cell) map[caller]cell {
-	return map[caller]cell{callerProjectAdmin: admin, callerProjectMember: member, callerCreator: member, callerGuestAll: guest,
-		callerGuestOwn: guest, callerGuestOthers: guest, callerAdminGuest: admin, callerAdminGuestOwn: admin, callerMemberAndAdmin: admin,
-		callerAdminOnly: cellForbidden, callerMemberPublic: cellForbidden, callerMemberPrivate: cellProjectNotFound,
-		callerGuestOnly: cellProjectNotFound, callerBefore: cellProjectNotFound, callerNever: cellProjectNotFound,
-		callerRemoved: cellProjectNotFound, callerDeleted: cellProjectNotFound}
+	return issueTable(ofProject(admin, member, guest, admin, cellForbidden, cellForbidden), map[caller]cell{callerCreator: member,
+		callerGuestAll: guest, callerGuestOwn: guest, callerGuestOthers: guest, callerAdminGuest: admin, callerAdminGuestOwn: admin})
+}
+
+// issueTable is a row of the issue table made from project's, a
+// project-level row's cells: PG's taken out, and own's, the cells of the
+// issue table's own columns, put in.
+func issueTable(project, own map[caller]cell) map[caller]cell {
+	delete(project, callerProjectGuest)
+	maps.Copy(project, own)
+	return project
 }
 
 // A cell names its column's own work item (issueOf), not only one of its
@@ -1964,7 +1981,7 @@ func TestMatrixViolationsCatchesAnotherCasesWorkItem(t *testing.T) {
 	}{{callerProjectAdmin, 20}, {callerProjectMember, 15}, {callerGuest, 5}, {callerMemberAndAdmin, 15}, {callerAdminGuest, 5}}
 ````
 
-`server/internal/bootstrap/permission_matrix_seed_issues_test.go`（整个文件，184 行）：
+`server/internal/bootstrap/permission_matrix_seed_issues_test.go`（整个文件，191 行）：
 
 ````whole server/internal/bootstrap/permission_matrix_seed_issues_test.go
 package bootstrap
@@ -2004,9 +2021,9 @@ var ownIssues = []struct {
 }{{callerCreator, "Member's"}, {callerGuestOwn, "Guest's"}, {callerAdminGuestOwn, "Admin guest's"}, {callerBefore, "Before's"}}
 
 // guestViewAll is the project that shows its guests every work item
-// (guest_view_all_features), as its admin chose: acme's private one, for
-// the guest who sees them all (callerGuestAll); acme's public one does
-// not, as a project starts (M4 design 3.4).
+// (guest_view_all_features), as its admin, PA, chose: acme's private one,
+// for the guest who sees them all (callerGuestAll); acme's public one
+// does not, as a project starts (M4 design 3.4).
 const guestViewAll = "acme/private"
 
 // seededItem is a work item issueSeed stores: its project's key, its name
@@ -2066,17 +2083,18 @@ type issueSeed struct {
 }
 
 // issues makes guestViewAll show its guests every work item, through the
-// project store, by acme's admin; then stores each of seededItems with the
-// id sd names, by its maker: its number, its row, its assignees' rows in
-// id order, and its label's. Each is in Todo, medium, assigned to PM's
-// account and to the removed member's, whose membership of acme and of its
-// public project ended since, and labelled Bug.
+// project store, by its admin, PA (updateProject; acme's admin, a member
+// of no project of acme, may not); then stores each of seededItems with
+// the id sd names, by its maker: its number, its row, its assignees' rows
+// in id order, and its label's. Each is in Todo, medium, assigned to PM's
+// account and to the removed member's, whose membership of acme and of
+// its public project ended since, and labelled Bug.
 func (s issueSeed) issues(sd seeded) {
 	s.t.Helper()
 	ctx := context.Background()
 	on := true
 	if err := s.projectSeed.store.UpdateProject(ctx, s.projects[guestViewAll], projectdomain.ProjectPatch{GuestViewAllFeatures: &on},
-		s.ids[callerAdmin], s.now); err != nil {
+		s.ids[callerProjectAdmin], s.now); err != nil {
 		s.t.Fatal(err)
 	}
 	assignees := slices.SortedFunc(slices.Values([]uuid.UUID{s.ids[callerProjectMember], s.ids[callerRemoved]}), uuid.UUID.Compare)
@@ -2112,13 +2130,16 @@ func (s issueSeed) issues(sd seeded) {
 // the issue store by the ids sd names: each of seededItems in its project,
 // of its number and name, made by its maker, in Todo, medium, assigned to
 // PM's account and the removed member's, in id order, labelled Bug;
-// undeleted, but gone's, deleted with gone. Then what the guest rule reads
-// of the issue table's guests, through the project store and the
-// workspace store: the workspace's guest an active guest of acme's two
-// projects, of which guestViewAll alone shows its guests every work item,
-// and the workspace admin who is a guest an active guest of the public one
-// and acme's active admin. One missing, or stored otherwise, would let a
-// cell answer as it wants for another reason.
+// undeleted, but gone's, deleted with gone. Then, through the project
+// store, the facts each of the issue table's own columns (issueColumns
+// but projectColumns) rests on, as the guest rule and AllowCreator read
+// them: its account an active member of its project (accountOf,
+// projectOf), the member who made a work item as a member, every other as
+// a guest; and the project showing its guests every work item for the
+// guest who sees them all alone (guestViewAll). Last, through the
+// workspace store, the workspace admin who is a guest acme's active admin.
+// One missing, or stored otherwise, would let a cell answer as it wants
+// for another reason, or a column call as another case's account.
 func (s issueSeed) seededIssues(sd seeded) {
 	s.t.Helper()
 	ctx := context.Background()
@@ -2135,19 +2156,22 @@ func (s issueSeed) seededIssues(sd seeded) {
 				item.name, i, found, err, number, item.by, assignees, gone)
 		}
 	}
-	for _, tt := range []struct {
-		key     string
-		c       caller
-		viewAll bool
-	}{{"acme/public", callerGuest, false}, {guestViewAll, callerGuest, true}, {"acme/public", callerAdminGuest, false}} {
-		f, found, err := s.projectSeed.store.ProjectFacts(ctx, s.projects[tt.key], s.ids[tt.c])
-		if err != nil || !found || !f.Member || f.Role != shared.RoleGuest || f.GuestViewAll != tt.viewAll {
-			s.t.Fatalf("%s's facts of %s = %+v, %v, %v; want him its active guest, every work item shown %v", tt.c, tt.key, f, found, err,
-				tt.viewAll)
+	for _, c := range issueColumns {
+		if slices.Contains(projectColumns, c) {
+			continue
+		}
+		role, viewAll := shared.RoleGuest, c == callerGuestAll
+		if c == callerCreator {
+			role = shared.RoleMember
+		}
+		f, found, err := s.projectSeed.store.ProjectFacts(ctx, s.projects[projectOf(c)], s.ids[accountOf(c)])
+		if err != nil || !found || !f.Member || f.Role != role || f.GuestViewAll != viewAll {
+			s.t.Fatalf("%s's facts of %s = %+v, %v, %v; want its account an active member of role %d, every work item shown %v", c,
+				projectOf(c), f, found, err, role, viewAll)
 		}
 	}
-	if role, active, err := s.matrixSeed.store.ActiveRole(ctx, sd.workspace("acme"), s.ids[callerAdminGuest]); err != nil || !active ||
-		role != shared.RoleAdmin {
+	if role, active, err := s.matrixSeed.store.ActiveRole(ctx, sd.workspace("acme"), s.ids[accountOf(callerAdminGuest)]); err != nil ||
+		!active || role != shared.RoleAdmin {
 		s.t.Fatalf("%s's role in acme = %d, %v, %v; want its active admin", callerAdminGuest, role, active, err)
 	}
 }
@@ -2457,7 +2481,8 @@ func issueUpdateMatrixRows() []matrixRow {
 // (nextNumber); the reading cells share one. A row of 9.2's table has the
 // issue table's columns (issueColumns); a variant that asks what is
 // checked after the decision, the project level's (projectColumns), whose
-// PG names acme's admin's work item, which the guest rule hides from him.
+// PG, a guest, may create none; one on the archived project, its table's
+// (archivedColumns).
 ````
 ````old server/internal/bootstrap/permission_matrix_issues_test.go
 		// PM+WA as the member he is; a workspace admin or member who is no
@@ -2577,8 +2602,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
 | `T3.1` | 矩阵的一格可以指名它的列的项目里任何种下的工作项，不必是它的列自己的 | `internal/bootstrap` 的 `TestMatrixViolationsCatchesAnotherCasesWorkItem`（`make test`） | 单元 |
+| `T3.2` | 工作项表的"建了它的项目成员"一列用 PA 的账户调用，不是 PM 的 | `internal/bootstrap` 的 `TestPermissionMatrix`（`make test`） | 组合 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T1.5`、`T1.7`、`T1.8`、`T1.9`、`T2.7`、`T2.8`（列在各自的 Task 的表里，标"（Task 3 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=3`）。
+本 Task 的检查也发现较早的 Task 的变异 `T1.5`、`T1.7`、`T1.8`、`T1.9`、`T2.7`、`T2.8`、`T2.11`（列在各自的 Task 的表里，标"（Task 3 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=3`）。
 
 ---
 

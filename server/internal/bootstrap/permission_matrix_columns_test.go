@@ -48,12 +48,18 @@ var projectColumns = []caller{callerProjectAdmin, callerProjectMember, callerPro
 // archivedColumns are the columns of the archived project's table (9.2).
 var archivedColumns = []caller{callerArchivedAdmin, callerArchivedNever, callerArchivedMember}
 
-// matrixAccounts are the accounts prepareMatrix registers: each workspace
-// column's, and each project column's that is none of those (M3 design
-// 9.2: eleven); and the issue table's workspace admin who is only a guest
-// of acme's public project (M4 design 9.2): twelve.
-var matrixAccounts = append(slices.Clone(workspaceColumns), callerProjectAdmin, callerProjectMember, callerMemberAndAdmin, callerGuestOnly,
-	callerBefore, callerAdminGuest)
+// matrixAccounts are the accounts prepareMatrix registers, in this order:
+// the issue table's workspace admin who is only a guest of acme's public
+// project (M4 design 9.2), then each workspace column's, and each project
+// column's that is none of those (M3 design 9.2: eleven): twelve. He comes
+// before acme's admin, who made the work item that the issue table's two
+// columns on another's name (issueOf), and the guest after acme's admin:
+// an account's id grows as accounts register (uuid.NewV7), so that the
+// maker's id is after one caller's and before the other's, and a guest
+// rule that told another's work item by the ids' order, not by its maker,
+// fails one of the two.
+var matrixAccounts = slices.Concat([]caller{callerAdminGuest}, workspaceColumns, []caller{callerProjectAdmin, callerProjectMember,
+	callerMemberAndAdmin, callerGuestOnly, callerBefore})
 
 // accountOf is the account a column's cells call as: a project column that
 // is a workspace column's account under the project level's name is that
@@ -82,8 +88,9 @@ func accountOf(c caller) caller {
 // acme's private project for the columns about it, and for the guest who
 // sees every work item, which it shows its guests (guestViewAll); its
 // archived one for the archived project's, gone's for the deleted
-// workspace's, acme's public one for every other; PA, PM, PG and PM+WA
-// answer alike in both, WG- too (9.2).
+// workspace's, acme's public one for every other; PA, PM and PM+WA
+// answer alike in both, PG too but on another's work item, which only
+// the private one shows him (callerGuestAll), and WG- too (9.2).
 func projectOf(c caller) string {
 	switch c {
 	case callerMemberPrivate, callerBefore, callerGuestAll:

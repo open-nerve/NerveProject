@@ -35,9 +35,9 @@ var ownIssues = []struct {
 }{{callerCreator, "Member's"}, {callerGuestOwn, "Guest's"}, {callerAdminGuestOwn, "Admin guest's"}, {callerBefore, "Before's"}}
 
 // guestViewAll is the project that shows its guests every work item
-// (guest_view_all_features), as its admin chose: acme's private one, for
-// the guest who sees them all (callerGuestAll); acme's public one does
-// not, as a project starts (M4 design 3.4).
+// (guest_view_all_features), as its admin, PA, chose: acme's private one,
+// for the guest who sees them all (callerGuestAll); acme's public one
+// does not, as a project starts (M4 design 3.4).
 const guestViewAll = "acme/private"
 
 // seededItem is a work item issueSeed stores: its project's key, its name
@@ -97,17 +97,18 @@ type issueSeed struct {
 }
 
 // issues makes guestViewAll show its guests every work item, through the
-// project store, by acme's admin; then stores each of seededItems with the
-// id sd names, by its maker: its number, its row, its assignees' rows in
-// id order, and its label's. Each is in Todo, medium, assigned to PM's
-// account and to the removed member's, whose membership of acme and of its
-// public project ended since, and labelled Bug.
+// project store, by its admin, PA (updateProject; acme's admin, a member
+// of no project of acme, may not); then stores each of seededItems with
+// the id sd names, by its maker: its number, its row, its assignees' rows
+// in id order, and its label's. Each is in Todo, medium, assigned to PM's
+// account and to the removed member's, whose membership of acme and of
+// its public project ended since, and labelled Bug.
 func (s issueSeed) issues(sd seeded) {
 	s.t.Helper()
 	ctx := context.Background()
 	on := true
 	if err := s.projectSeed.store.UpdateProject(ctx, s.projects[guestViewAll], projectdomain.ProjectPatch{GuestViewAllFeatures: &on},
-		s.ids[callerAdmin], s.now); err != nil {
+		s.ids[callerProjectAdmin], s.now); err != nil {
 		s.t.Fatal(err)
 	}
 	assignees := slices.SortedFunc(slices.Values([]uuid.UUID{s.ids[callerProjectMember], s.ids[callerRemoved]}), uuid.UUID.Compare)
@@ -143,13 +144,16 @@ func (s issueSeed) issues(sd seeded) {
 // the issue store by the ids sd names: each of seededItems in its project,
 // of its number and name, made by its maker, in Todo, medium, assigned to
 // PM's account and the removed member's, in id order, labelled Bug;
-// undeleted, but gone's, deleted with gone. Then what the guest rule reads
-// of the issue table's guests, through the project store and the
-// workspace store: the workspace's guest an active guest of acme's two
-// projects, of which guestViewAll alone shows its guests every work item,
-// and the workspace admin who is a guest an active guest of the public one
-// and acme's active admin. One missing, or stored otherwise, would let a
-// cell answer as it wants for another reason.
+// undeleted, but gone's, deleted with gone. Then, through the project
+// store, the facts each of the issue table's own columns (issueColumns
+// but projectColumns) rests on, as the guest rule and AllowCreator read
+// them: its account an active member of its project (accountOf,
+// projectOf), the member who made a work item as a member, every other as
+// a guest; and the project showing its guests every work item for the
+// guest who sees them all alone (guestViewAll). Last, through the
+// workspace store, the workspace admin who is a guest acme's active admin.
+// One missing, or stored otherwise, would let a cell answer as it wants
+// for another reason, or a column call as another case's account.
 func (s issueSeed) seededIssues(sd seeded) {
 	s.t.Helper()
 	ctx := context.Background()
@@ -166,19 +170,22 @@ func (s issueSeed) seededIssues(sd seeded) {
 				item.name, i, found, err, number, item.by, assignees, gone)
 		}
 	}
-	for _, tt := range []struct {
-		key     string
-		c       caller
-		viewAll bool
-	}{{"acme/public", callerGuest, false}, {guestViewAll, callerGuest, true}, {"acme/public", callerAdminGuest, false}} {
-		f, found, err := s.projectSeed.store.ProjectFacts(ctx, s.projects[tt.key], s.ids[tt.c])
-		if err != nil || !found || !f.Member || f.Role != shared.RoleGuest || f.GuestViewAll != tt.viewAll {
-			s.t.Fatalf("%s's facts of %s = %+v, %v, %v; want him its active guest, every work item shown %v", tt.c, tt.key, f, found, err,
-				tt.viewAll)
+	for _, c := range issueColumns {
+		if slices.Contains(projectColumns, c) {
+			continue
+		}
+		role, viewAll := shared.RoleGuest, c == callerGuestAll
+		if c == callerCreator {
+			role = shared.RoleMember
+		}
+		f, found, err := s.projectSeed.store.ProjectFacts(ctx, s.projects[projectOf(c)], s.ids[accountOf(c)])
+		if err != nil || !found || !f.Member || f.Role != role || f.GuestViewAll != viewAll {
+			s.t.Fatalf("%s's facts of %s = %+v, %v, %v; want its account an active member of role %d, every work item shown %v", c,
+				projectOf(c), f, found, err, role, viewAll)
 		}
 	}
-	if role, active, err := s.matrixSeed.store.ActiveRole(ctx, sd.workspace("acme"), s.ids[callerAdminGuest]); err != nil || !active ||
-		role != shared.RoleAdmin {
+	if role, active, err := s.matrixSeed.store.ActiveRole(ctx, sd.workspace("acme"), s.ids[accountOf(callerAdminGuest)]); err != nil ||
+		!active || role != shared.RoleAdmin {
 		s.t.Fatalf("%s's role in acme = %d, %v, %v; want its active admin", callerAdminGuest, role, active, err)
 	}
 }
