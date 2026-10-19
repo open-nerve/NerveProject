@@ -213,7 +213,8 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // is the greatest sort order of each state; lost, when set, loses the work
 // item once its activity is written, so that it is not there to read back.
 // changed is the last update's fields, nil before any: the work item's
-// last writer and moment.
+// last writer and moment. deletions are the deletion's calls' arguments,
+// one a table, in order.
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
@@ -222,6 +223,7 @@ type fakeIssues struct {
 	assignees  []uuid.UUID
 	labels     []uuid.UUID
 	activities []app.ActivityRow
+	deletions  []app.IssueDeletion
 	lost       bool
 }
 
@@ -335,6 +337,36 @@ func (f *fakeIssues) InsertActivities(ctx context.Context, rows []app.ActivityRo
 		f.issue = nil
 	}
 	return nil
+}
+
+// deleteRows logs a deletion of name's rows, d's work item's, and keeps d,
+// or answers the failure.
+func (f *fakeIssues) deleteRows(ctx context.Context, name string, d app.IssueDeletion) error {
+	if err := f.log.add(ctx, name, d.IssueID); err != nil {
+		return err
+	}
+	f.deletions = append(f.deletions, d)
+	return nil
+}
+
+func (f *fakeIssues) DeleteIssueRow(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueRow", d)
+}
+
+func (f *fakeIssues) DeleteIssueAssigneeRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueAssigneeRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueLabelRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueSubscriberRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueActivityRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueActivityRows", d)
 }
 
 func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool, error) {

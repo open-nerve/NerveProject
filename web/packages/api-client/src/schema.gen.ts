@@ -957,7 +957,11 @@ export interface paths {
         get: operations["getIssue"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a work item
+         * @description For the admins of its project, and for the member of it who created the work item, while he is an admin or a member of the project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but that he may not delete, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be deleted (project.archived); an archived work item is deleted as any other. The work item, its assignees, labels, subscribers and activity are deleted by the caller at one moment; its number is not used again. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        delete: operations["deleteIssue"];
         options?: never;
         head?: never;
         /**
@@ -3405,6 +3409,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IssueDetail"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

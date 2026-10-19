@@ -109,7 +109,8 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAWriter(t *testing.T) {
 
 // Each decision on a work item names its creator, the precheck's and the
 // one under the lock, so that a rule may allow him (AllowCreator); a
-// decision on a project names no one.
+// decision on a project names no one, and so does a decision on a work
+// item whose creator is not known: AllowCreator takes no caller for him.
 func TestADecisionOnAWorkItemNamesItsCreator(t *testing.T) {
 	get, w, id := newGet()
 	if _, err := get.Execute(as(alice), id); err != nil {
@@ -123,6 +124,15 @@ func TestADecisionOnAWorkItemNamesItsCreator(t *testing.T) {
 	if _, err := create.Execute(as(alice), web, domain.NewIssue{Name: "Fix"}); err != nil {
 		t.Fatal(err)
 	}
+	deletion, dw, did := newDelete()
+	if err := deletion.Execute(as(alice), did); err != nil {
+		t.Fatal(err)
+	}
+	unknown, nw, nid := newDelete()
+	nw.issues.issue.By = uuid.UUID{}
+	if err := unknown.Execute(as(alice), nid); err != nil {
+		t.Fatal(err)
+	}
 	for _, tt := range []struct {
 		name    string
 		targets []shared.Target
@@ -131,6 +141,8 @@ func TestADecisionOnAWorkItemNamesItsCreator(t *testing.T) {
 		{"a read", w.auth.targets, []uuid.UUID{carol}},
 		{"an update", uw.auth.targets, []uuid.UUID{carol, carol}},
 		{"a creation", cw.auth.targets, []uuid.UUID{{}, {}}},
+		{"a deletion", dw.auth.targets, []uuid.UUID{carol, carol}},
+		{"a deletion of a work item of no known creator", nw.auth.targets, []uuid.UUID{{}, {}}},
 	} {
 		var got []uuid.UUID
 		for _, target := range tt.targets {

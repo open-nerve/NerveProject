@@ -8,11 +8,11 @@ import (
 	"uuid"
 )
 
-// The rows of the permission matrix of changing a work item (M4 design
-// 9.2), naming it by its id (/issues/{issue_id}): its column's work item
-// (issueOf). Each cell writes on a copy of its own. The row of 9.2's table
-// has the issue table's columns; its variants, the project level's, as
-// createIssue's (permission_matrix_issues_test.go).
+// The rows of the permission matrix of changing and deleting a work item
+// (M4 design 9.2), naming it by its id (/issues/{issue_id}): its column's
+// work item (issueOf). Each cell writes on a copy of its own. A row of
+// 9.2's table has the issue table's columns; its variants, the project
+// level's, as createIssue's (permission_matrix_issues_test.go).
 
 // toIssue is the request of a row whose callers each change their column's
 // work item with the body body gives for their column.
@@ -90,6 +90,18 @@ func issueUpdateMatrixRows() []matrixRow {
 				return `{"assignee_ids":["` + s.account(callerRemoved).String() + `"]}`
 			}),
 			cells: ok, check: keepsTheAssigneeWhoLeft},
+		// The project's admins, and the member who made the work item
+		// (AllowCreator, M4 design 3.4), not another member; a guest of the
+		// project may not, also on his own, which he made as the member he
+		// was (9.2: made it, then a guest, 403); the member before, who made
+		// his and has left the project, does not see it (made it, then left,
+		// 404); a guest who sees only his own finds none another made.
+		{op: "deleteIssue", write: true, columns: issueColumns, request: toWorkItem(http.MethodDelete, "", ""),
+			cells: onAWorkItem(cellNoContent, cellForbidden, cellNoContent, cellForbidden)},
+		// An archived project's work items are not deleted (M4 design 3.8),
+		// after the decision, as updateIssue's.
+		{op: "deleteIssue", variant: "archived", write: true, columns: archivedColumns, request: toWorkItem(http.MethodDelete, "", ""),
+			cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
 	}
 }
 

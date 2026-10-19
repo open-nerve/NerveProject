@@ -142,6 +142,9 @@ type CreateIssueJSONRequestBody = IssueCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteIssue Delete a work item
+	// (DELETE /api/v0/issues/{issue_id})
+	DeleteIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// GetIssue Read a work item
 	// (GET /api/v0/issues/{issue_id})
 	GetIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -161,6 +164,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteIssue operation middleware
+func (siw *ServerInterfaceWrapper) DeleteIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetIssue operation middleware
 func (siw *ServerInterfaceWrapper) GetIssue(w http.ResponseWriter, r *http.Request) {
@@ -361,6 +390,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.CreateIssue)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.DeleteIssue)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.GetIssue)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.UpdateIssue)
 
@@ -375,6 +405,46 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type DeleteIssueResponseObject interface {
+	VisitDeleteIssueResponse(w http.ResponseWriter) error
+}
+
+type DeleteIssue204Response struct {
+}
+
+func (response DeleteIssue204Response) VisitDeleteIssueResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteIssuedefaultApplicationProblemPlusJSONResponse) VisitDeleteIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetIssueRequestObject struct {
@@ -519,6 +589,9 @@ func (response CreateIssuedefaultApplicationProblemPlusJSONResponse) VisitCreate
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteIssue Delete a work item
+	// (DELETE /api/v0/issues/{issue_id})
+	DeleteIssue(ctx context.Context, request DeleteIssueRequestObject) (DeleteIssueResponseObject, error)
 	// GetIssue Read a work item
 	// (GET /api/v0/issues/{issue_id})
 	GetIssue(ctx context.Context, request GetIssueRequestObject) (GetIssueResponseObject, error)
@@ -567,6 +640,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteIssue operation middleware
+func (sh *strictHandler) DeleteIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request DeleteIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteIssue(ctx, request.(DeleteIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteIssueResponseObject); ok {
+		if err := validResponse.VisitDeleteIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetIssue operation middleware

@@ -1476,6 +1476,24 @@ paths:
                 $ref: '#/components/schemas/IssueDetail'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteIssue
+      tags:
+        - issue
+      summary: Delete a work item
+      description: 'For the admins of its project, and for the member of it who created the work item, while he is an admin or a member of the project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but that he may not delete, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be deleted (project.archived); an archived work item is deleted as any other. The work item, its assignees, labels, subscribers and activity are deleted by the caller at one moment; its number is not used again. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.not_found
+        - forbidden
+        - project.archived
+        - server_busy
+      responses:
+        '204':
+          description: The work item is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'

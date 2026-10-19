@@ -114,7 +114,7 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 		t.Fatal("no project under the deleted workspace: seedProject writes one")
 	}
 	for _, project := range projects {
-		noRowLastWrittenBy(t, pool, project, adminID)
+		noRowLastWrittenBy(t, pool, keysTo(t, pool, "projects"), project, adminID)
 	}
 	keys := keysTo(t, pool, "workspaces")
 	under, recorded := make([]rowsUnder, len(keys)), make([][]uuid.UUID, len(keys))

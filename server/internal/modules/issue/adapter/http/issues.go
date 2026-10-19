@@ -49,6 +49,14 @@ func (h handler) UpdateIssue(ctx context.Context, req gen.UpdateIssueRequestObje
 	return gen.UpdateIssue200JSONResponse(issueDetail(i)), nil
 }
 
+// DeleteIssue serves DELETE /api/v0/issues/{issue_id}.
+func (h handler) DeleteIssue(ctx context.Context, req gen.DeleteIssueRequestObject) (gen.DeleteIssueResponseObject, error) {
+	if err := h.uc.DeleteIssue.Execute(ctx, req.IssueID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteIssue204Response{}, nil
+}
+
 // issueDetail is i as the API shows it: each field that may be null null
 // when it is nil, each list [] when it is empty.
 func issueDetail(i domain.Issue) gen.IssueDetail {

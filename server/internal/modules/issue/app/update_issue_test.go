@@ -53,12 +53,18 @@ func set(ids ...uuid.UUID) *[]uuid.UUID {
 }
 
 // locked are the calls of an update of id by alice up to the decision under
-// the lock: the work item read and the decision, before any lock and
-// outside the transaction; in it, web's lock, the work item read again and
-// the decision again.
+// the lock (lockedAs).
 func locked(id uuid.UUID) []string {
-	return []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionUpdate, acme, web, "outside tx"), "Begin",
-		line("Lock", web), line("GetIssue", id), line("Authorize", alice, domain.ActionUpdate, acme, web)}
+	return lockedAs(domain.ActionUpdate, id)
+}
+
+// lockedAs are the calls of a write of action on the work item id by alice
+// up to the decision under the lock: the work item read and the decision,
+// before any lock and outside the transaction; in it, web's lock, the work
+// item read again and the decision again.
+func lockedAs(action shared.Action, id uuid.UUID) []string {
+	return []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, action, acme, web, "outside tx"), "Begin", line("Lock", web),
+		line("GetIssue", id), line("Authorize", alice, action, acme, web)}
 }
 
 // An update, in the order of M4 design 3.5 and 6.7: Locks' calls

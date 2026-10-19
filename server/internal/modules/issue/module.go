@@ -1,6 +1,6 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
-// work items' tables and brings creating, reading and changing a work
-// item. For the project module's deletions (its IssueCascade port) it
+// work items' tables and brings creating, reading, changing and deleting a
+// work item. For the project module's deletions (its IssueCascade port) it
 // soft-deletes a deleted project's rows of them, tells whether work items
 // are in a state, and takes deleted labels off them.
 package issue
@@ -111,6 +111,7 @@ func New(d Deps) *Module {
 		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{
 			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock,
 		}),
+		DeleteIssue: app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Rows: store, Clock: d.Clock}),
 	}}
 }
 
