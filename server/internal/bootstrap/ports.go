@@ -129,6 +129,29 @@ func (p issueProjects) Roles(ctx context.Context, id uuid.UUID, ids []uuid.UUID)
 	return p.projects.ActiveRoles(ctx, id, ids)
 }
 
+func (p issueProjects) Identifiers(ctx context.Context, workspaceID uuid.UUID) ([]issue.ProjectIdentifier, error) {
+	projects, err := p.projects.ProjectIdentifiers(ctx, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]issue.ProjectIdentifier, len(projects))
+	for i, pr := range projects {
+		out[i] = issue.ProjectIdentifier(pr)
+	}
+	return out, nil
+}
+
+// issueWorkspaces is workspace's WorkspaceDirectory as issue's: the same
+// read without a lock, the workspace's id alone.
+type issueWorkspaces struct {
+	directory workspace.WorkspaceDirectory
+}
+
+func (d issueWorkspaces) WorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, bool, error) {
+	w, found, err := d.directory.WorkspaceBySlug(ctx, slug)
+	return w.ID, found, err
+}
+
 // issueProfiles is identity's PublicProfiles as issue's: each account's
 // display name, by account.
 type issueProfiles struct {

@@ -13,6 +13,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -72,13 +73,14 @@ var testIssueConfig = config.IssueConfig{WriteGate: config.WriteGateConfig{PerPr
 
 // newIssueRoute is the issue module (issue.New) on pool, with tx its
 // transactions, the write gate of testIssueConfig, the Authorizer on pool
-// and project's and identity's ports converted, all as bootstrap wires
-// them.
+// and project's, workspace's and identity's ports converted, all as
+// bootstrap wires them.
 func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
 	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: tx, WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
-		Profiles: issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
+		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
+		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
 }
 
 // Each write on the work-item side runs every statement of its transaction

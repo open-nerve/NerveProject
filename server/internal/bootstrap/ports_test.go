@@ -252,13 +252,14 @@ func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 // fakeIssueProjects answers project's IssueProjects of one project, web,
 // and records each question; err, when set, is every answer's failure.
 type fakeIssueProjects struct {
-	web    uuid.UUID
-	locked project.IssueProject
-	states []project.IssueState
-	labels []project.IssueLabel
-	roles  map[uuid.UUID]shared.Role
-	err    error
-	asked  []string
+	web         uuid.UUID
+	locked      project.IssueProject
+	states      []project.IssueState
+	labels      []project.IssueLabel
+	roles       map[uuid.UUID]shared.Role
+	identifiers []project.IssueProjectIdentifier
+	err         error
+	asked       []string
 }
 
 func (f *fakeIssueProjects) ProjectWorkspace(_ context.Context, id uuid.UUID) (uuid.UUID, bool, error) {

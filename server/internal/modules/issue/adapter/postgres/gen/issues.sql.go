@@ -273,3 +273,23 @@ func (q *Queries) InsertSubscribers(ctx context.Context, arg InsertSubscribersPa
 	)
 	return err
 }
+
+const issueByNumber = `-- name: IssueByNumber :one
+SELECT id
+FROM issues
+WHERE project_id = $1 AND sequence_id = $2 AND deleted_at IS NULL
+`
+
+type IssueByNumberParams struct {
+	ProjectID  uuid.UUID
+	SequenceID int32
+}
+
+// The id of the project's undeleted work item, archived or not, of the number: getIssueByIdentifier's (M4 design 3.7),
+// read without a lock. A number is its project's once (issues_project_id_sequence_id_key), deleted work items' too.
+func (q *Queries) IssueByNumber(ctx context.Context, arg IssueByNumberParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, issueByNumber, arg.ProjectID, arg.SequenceID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}

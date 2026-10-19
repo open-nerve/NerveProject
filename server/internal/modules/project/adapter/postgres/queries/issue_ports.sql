@@ -33,6 +33,15 @@ FROM labels
 WHERE project_id = sqlc.arg(project_id) AND deleted_at IS NULL AND id = ANY (sqlc.arg(ids)::uuid[])
 ORDER BY id;
 
+-- name: ProjectIdentifiers :many
+-- ProjectIdentifiers (M4 design 3.7): the workspace's undeleted projects, archived or not, with their identifiers, in id
+-- order, read without a lock: the projects a work item's identifier may name. A deleted project's identifier may be
+-- another's since (M3 design 3.19), so it names none.
+SELECT id, identifier
+FROM projects
+WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL
+ORDER BY id;
+
 -- name: ActiveRoles :many
 -- ProjectMembers (M4 design 6.5): the active memberships of the project of those of the accounts ids that have one,
 -- and their roles; stable under the project's FOR NO KEY UPDATE, as IssueStates.

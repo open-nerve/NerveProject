@@ -93,6 +93,20 @@ func (s *Store) InsertActivities(ctx context.Context, rows []app.ActivityRow) er
 	return nil
 }
 
+// IssueByNumber reads the id of the project's undeleted work item, archived
+// or not, of the number (M4 design 3.7); found is false when there is
+// none.
+func (s *Store) IssueByNumber(ctx context.Context, projectID uuid.UUID, number int) (uuid.UUID, bool, error) {
+	id, err := s.queries(ctx).IssueByNumber(ctx, gen.IssueByNumberParams{ProjectID: projectID, SequenceID: int32(number)})
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return uuid.UUID{}, false, nil
+	case err != nil:
+		return uuid.UUID{}, false, fmt.Errorf("find work item %d of project %s: %w", number, projectID, err)
+	}
+	return id, true, nil
+}
+
 // GetIssue reads the undeleted work item id, archived or not, with its
 // assignees and labels (M4 design 5.2); found is false when there is none.
 func (s *Store) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool, error) {

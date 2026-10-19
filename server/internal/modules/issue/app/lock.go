@@ -23,9 +23,10 @@ import (
 // read again under it; and the decision again under it, which is final: a
 // removal or a demotion that committed while the write waited is seen. A
 // read of a work item takes the same decision on its project, without a
-// lock (see). Every decision on a work item applies the guest rule first
-// (decide). issue.New builds one Locks for every use case: none holds an
-// Authorizer, a write gate or a transaction of its own.
+// lock (see), and a read in a workspace its decision in the workspace
+// (seeWorkspace). Every decision on a work item applies the guest rule
+// first (decide). issue.New builds one Locks for every use case: none
+// holds an Authorizer, a write gate or a transaction of its own.
 type Locks struct {
 	projects ProjectGate
 	issues   IssueReader
@@ -161,6 +162,18 @@ func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action
 		return domain.Issue{}, err
 	}
 	return i, nil
+}
+
+// seeWorkspace decides action in the workspace workspaceID for actor,
+// without a lock (M4 design 3.4): a workspace of which actor is not an
+// active member, or deleted, is workspace.not_found; a role the rule does
+// not allow is the Authorizer's shared.Forbidden.
+func (l Locks) seeWorkspace(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID uuid.UUID) error {
+	_, err := l.auth.Authorize(ctx, actor, action, shared.Target{WorkspaceID: workspaceID})
+	if errors.Is(err, shared.ErrNotVisible) {
+		return domain.ErrWorkspaceNotFound
+	}
+	return err
 }
 
 // decide asks the Authorizer for action on the project projectID of the

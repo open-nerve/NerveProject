@@ -15,10 +15,13 @@ const (
 	ActionDelete shared.Action = "issue.delete"
 	// ActionArchive is archiving and unarchiving a work item of a project.
 	ActionArchive shared.Action = "issue.archive"
+	// ActionSearch is looking for a work item in a workspace: finding one
+	// by its identifier, which then reads it as ActionRead.
+	ActionSearch shared.Action = "issue.search"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
-	return []shared.Action{ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive}
+	return []shared.Action{ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch}
 }

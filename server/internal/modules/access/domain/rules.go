@@ -143,6 +143,10 @@ var rules = map[shared.Action]Rule{
 	// As issue.create: archiving and unarchiving a work item (M4 design 3.4,
 	// 3.8).
 	"issue.archive": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// Every active member of the workspace: getIssueByIdentifier's decision
+	// in the workspace, before issue.read on the project of the work item
+	// it finds, which the guest rule follows (M4 design 3.4, 3.7).
+	"issue.search": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

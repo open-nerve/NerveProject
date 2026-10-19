@@ -60,3 +60,10 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.
         WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids
 FROM issues i
 WHERE i.id = sqlc.arg(id) AND i.deleted_at IS NULL;
+
+-- name: IssueByNumber :one
+-- The id of the project's undeleted work item, archived or not, of the number: getIssueByIdentifier's (M4 design 3.7),
+-- read without a lock. A number is its project's once (issues_project_id_sequence_id_key), deleted work items' too.
+SELECT id
+FROM issues
+WHERE project_id = sqlc.arg(project_id) AND sequence_id = sqlc.arg(sequence_id) AND deleted_at IS NULL;

@@ -23,6 +23,11 @@ type GetIssueUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.Issue, error)
 }
 
+// GetIssueByIdentifierUseCase is app.GetIssueByIdentifier.
+type GetIssueByIdentifierUseCase interface {
+	Execute(ctx context.Context, slug, identifier string) (domain.Issue, error)
+}
+
 // UpdateIssueUseCase is app.UpdateIssue.
 type UpdateIssueUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, p domain.IssuePatch) (domain.Issue, error)
@@ -35,10 +40,11 @@ type DeleteIssueUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	CreateIssue CreateIssueUseCase
-	GetIssue    GetIssueUseCase
-	UpdateIssue UpdateIssueUseCase
-	DeleteIssue DeleteIssueUseCase
+	CreateIssue          CreateIssueUseCase
+	GetIssue             GetIssueUseCase
+	GetIssueByIdentifier GetIssueByIdentifierUseCase
+	UpdateIssue          UpdateIssueUseCase
+	DeleteIssue          DeleteIssueUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

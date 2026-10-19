@@ -27,6 +27,13 @@ func newGet() (*app.GetIssue, *world, uuid.UUID) {
 	return app.NewGetIssue(w.locks), w, id
 }
 
+// readIssue is newGet's work item id as a read answers it.
+func readIssue(id uuid.UUID) domain.Issue {
+	return domain.Issue{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID, Priority: domain.PriorityHigh,
+		SortOrder: 65535, AssigneeIDs: []uuid.UUID{bob}, LabelIDs: []uuid.UUID{bug}, CreatedByID: &carol, UpdatedByID: &carol, CreatedAt: clockNow,
+		UpdatedAt: clockNow}
+}
+
 // A read, outside any transaction, without a lock and outside the write
 // gate (M4 design 3.5, 11.11): the work item, then the decision on
 // issue.read in its project, of its workspace; the answer is the work item
@@ -34,10 +41,7 @@ func newGet() (*app.GetIssue, *world, uuid.UUID) {
 func TestGetIssueReadsTheWorkItem(t *testing.T) {
 	uc, w, id := newGet()
 	got, err := uc.Execute(as(alice), id)
-	want := domain.Issue{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID, Priority: domain.PriorityHigh,
-		SortOrder: 65535, AssigneeIDs: []uuid.UUID{bob}, LabelIDs: []uuid.UUID{bug}, CreatedByID: &carol, UpdatedByID: &carol, CreatedAt: clockNow,
-		UpdatedAt: clockNow}
-	if err != nil || !reflect.DeepEqual(got, want) {
+	if want := readIssue(id); err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
 	}
 	if calls := []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx")}; !slices.Equal(

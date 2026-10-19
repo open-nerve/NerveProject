@@ -31,8 +31,8 @@ type WorkspaceRoles interface {
 }
 
 // WorkspaceDirectory finds an undeleted workspace by its slug for the
-// project module, or locks one by its id (M3 design 6.5); found is false
-// when there is none.
+// project and issue modules, or locks one by its id (M3 design 6.5, M4
+// design 3.3); found is false when there is none.
 type WorkspaceDirectory interface {
 	// WorkspaceBySlug reads it without a lock.
 	WorkspaceBySlug(ctx context.Context, slug string) (w DirectoryEntry, found bool, err error)

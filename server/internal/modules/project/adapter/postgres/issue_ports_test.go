@@ -87,6 +87,26 @@ func TestNextIssueSequence(t *testing.T) {
 	}
 }
 
+// A workspace's projects' identifiers for the issue module (M4 design
+// 3.7): its undeleted projects', an archived one's too, in id order; not a
+// deleted project's, nor another workspace's.
+func TestProjectIdentifiers(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
+	web, arch, gone := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Arch", "ARCH", alice), newProject(t, s, acme,
+		"Gone", "GONE", alice)
+	newProject(t, s, beta, "Web", "BETA", alice)
+	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", arch, now)
+	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", gone, now)
+	got, err := s.ProjectIdentifiers(context.Background(), acme)
+	want := []app.IssueProjectIdentifier{{ID: web, Identifier: "WEB"}, {ID: arch, Identifier: "ARCH"}}
+	slices.SortFunc(want, func(a, b app.IssueProjectIdentifier) int { return a.ID.Compare(b.ID) })
+	if err != nil || !slices.Equal(got, want) {
+		t.Errorf("ProjectIdentifiers(acme) = %+v, %v; want %+v", got, err, want)
+	}
+}
+
 // The catalogs of a project for the issue module (M4 design 6.5): its
 // undeleted states, its triage state too, in id order, with their names,
 // their groups and the default; those of the labels asked for that are its

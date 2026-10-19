@@ -170,3 +170,38 @@ func (q *Queries) NextIssueSequence(ctx context.Context, id uuid.UUID) (int32, e
 	err := row.Scan(&last_issue_sequence)
 	return last_issue_sequence, err
 }
+
+const projectIdentifiers = `-- name: ProjectIdentifiers :many
+SELECT id, identifier
+FROM projects
+WHERE workspace_id = $1 AND deleted_at IS NULL
+ORDER BY id
+`
+
+type ProjectIdentifiersRow struct {
+	ID         uuid.UUID
+	Identifier string
+}
+
+// ProjectIdentifiers (M4 design 3.7): the workspace's undeleted projects, archived or not, with their identifiers, in id
+// order, read without a lock: the projects a work item's identifier may name. A deleted project's identifier may be
+// another's since (M3 design 3.19), so it names none.
+func (q *Queries) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) ([]ProjectIdentifiersRow, error) {
+	rows, err := q.db.Query(ctx, projectIdentifiers, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectIdentifiersRow
+	for rows.Next() {
+		var i ProjectIdentifiersRow
+		if err := rows.Scan(&i.ID, &i.Identifier); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

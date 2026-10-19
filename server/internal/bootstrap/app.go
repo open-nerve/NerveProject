@@ -110,8 +110,9 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	})
 	issues := issue.New(issue.Deps{
 		Pool: pool, Tx: newIssueTx(pool, cfg), WriteGate: newWriteGate(cfg.Issue.WriteGate), Clock: clock.System{}, Authorizer: authorizer,
-		Projects: issueProjects{projects: projectPorts.IssueProjects},
-		Profiles: issueProfiles{profiles: identityPorts.PublicProfiles},
+		Projects:   issueProjects{projects: projectPorts.IssueProjects},
+		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{

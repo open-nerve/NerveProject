@@ -224,6 +224,36 @@ func TestGreatestSortOrder(t *testing.T) {
 	}
 }
 
+// A work item is found by its number in its project, archived or not
+// (M4 design 3.7): web's 1 and 2, and ops's 1, each its own; not a
+// deleted one, nor a number of no work item of the project, though
+// another project's work item has it.
+func TestIssueByNumber(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, ops := newProject(t, pool, acme, "WEB"), newProject(t, pool, acme, "OPS")
+	one, two, gone, opsOne, opsThree := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	newIssue(t, pool, web, one, 1, alice)
+	newIssue(t, pool, web, two, 2, alice)
+	newIssue(t, pool, web, gone, 3, alice)
+	newIssue(t, pool, ops, opsOne, 1, alice)
+	newIssue(t, pool, ops, opsThree, 3, alice)
+	exec(t, pool, "UPDATE issues SET archived_at = now() WHERE id = $1", two)
+	exec(t, pool, "UPDATE issues SET deleted_at = now() WHERE id = $1", gone)
+	for _, tt := range []struct {
+		p      project
+		number int
+		want   uuid.UUID
+		found  bool
+	}{{web, 1, one, true}, {web, 2, two, true}, {ops, 1, opsOne, true}, {web, 3, uuid.UUID{}, false}, {web, 4, uuid.UUID{}, false},
+		{ops, 2, uuid.UUID{}, false}} {
+		if id, found, err := s.IssueByNumber(context.Background(), tt.p.id, tt.number); err != nil || id != tt.want || found != tt.found {
+			t.Errorf("IssueByNumber(%s, %d) = %s, %v, %v; want %s, %v", tt.p.id, tt.number, id, found, err, tt.want, tt.found)
+		}
+	}
+}
+
 // A work item without assignees or labels reads with neither, nil and not
 // empty; a deleted work item, and one that is not there, read as none. A
 // read or a write that fails answers its error as itself: never a work
@@ -247,6 +277,9 @@ func TestAFailedIssueStatementIsAnError(t *testing.T) {
 	}
 	if greatest, err := s.GreatestSortOrder(cancelled, web.id, web.state); !errors.Is(err, context.Canceled) || greatest != nil {
 		t.Errorf("GreatestSortOrder() = %v, %v; want context.Canceled", greatest, err)
+	}
+	if got, found, err := s.IssueByNumber(cancelled, web.id, 1); !errors.Is(err, context.Canceled) || found || got != (uuid.UUID{}) {
+		t.Errorf("IssueByNumber() = %s, %v, %v; want context.Canceled", got, found, err)
 	}
 
 	if got, found, err := s.GetIssue(ctx, uuid.NewV7()); err != nil || found || got.ID != (uuid.UUID{}) {

@@ -110,6 +110,40 @@ type IssueReader interface {
 	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
 }
 
+// WorkspaceDirectory finds a workspace by its slug (M4 design 3.3): the
+// workspace module's directory (workspace.Provide), converted
+// (bootstrap/ports.go).
+type WorkspaceDirectory interface {
+	// WorkspaceBySlug reads the id of the undeleted workspace slug names,
+	// without a lock; found is false when there is none.
+	WorkspaceBySlug(ctx context.Context, slug string) (id uuid.UUID, found bool, err error)
+}
+
+// ProjectIdentifiers reads the identifiers of a workspace's projects, the
+// projects a work item's identifier may name (M4 design 3.7):
+// project.Provide's, converted (bootstrap/ports.go).
+type ProjectIdentifiers interface {
+	// Identifiers reads the workspace's undeleted projects, archived or
+	// not, each with its identifier, without a lock.
+	Identifiers(ctx context.Context, workspaceID uuid.UUID) ([]ProjectIdentifier, error)
+}
+
+// ProjectIdentifier is a project as ProjectIdentifiers reads it: its id
+// and its identifier, as stored.
+type ProjectIdentifier struct {
+	ID         uuid.UUID
+	Identifier string
+}
+
+// IssueNumbers finds a work item by its number in its project (M4 design
+// 3.7).
+type IssueNumbers interface {
+	// IssueByNumber reads the id of the project's undeleted work item,
+	// archived or not, of the number, without a lock; found is false when
+	// there is none.
+	IssueByNumber(ctx context.Context, projectID uuid.UUID, number int) (id uuid.UUID, found bool, err error)
+}
+
 // IssueCreator is the work items' store as createIssue writes and reads
 // them, in the transaction ctx carries (M4 design 3.5).
 type IssueCreator interface {
