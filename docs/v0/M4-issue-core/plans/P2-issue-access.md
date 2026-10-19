@@ -4432,7 +4432,7 @@ func TestParseIdentifier(t *testing.T) {
 
 - [ ] **Step 4: 用例**
 
-`server/internal/modules/issue/app/get_issue_by_identifier.go`（新文件，92 行）：
+`server/internal/modules/issue/app/get_issue_by_identifier.go`（新文件，91 行）：
 
 ````file server/internal/modules/issue/app/get_issue_by_identifier.go
 package app
@@ -4446,8 +4446,7 @@ import (
 )
 
 // GetIssueByIdentifier reads a work item by its identifier, WEB-12, in a
-// workspace: GET /api/v0/workspaces/{slug}/issues/{identifier} (M4 design
-// 3.7, 5.1).
+// workspace (M4 design 3.7, 5.1).
 type GetIssueByIdentifier struct {
 	d GetIssueByIdentifierDeps
 }
@@ -5387,6 +5386,7 @@ Expected: 通过。
 | `T5.14` | 编号在每个项目里找，不只在它的项目里 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 存储；组合 |
 | `T5.15` | 项目里不论编号的任何一个工作项都找得到 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 存储；组合 |
 | `T5.16` | 标识只按大写逐个字母比较，不折叠 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 单元；组合 |
+| `T5.17` | `ProjectIdentifiers` 不按 `id` 的次序回答工作区的项目（去掉 `ORDER BY id`；按性质只在存储一层：`MatchIdentifier` 不靠次序） | `internal/modules/project/adapter/postgres` 的全部测试（`make test`） | 存储 |
 
 ---
 

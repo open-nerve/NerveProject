@@ -9,8 +9,7 @@ import (
 )
 
 // GetIssueByIdentifier reads a work item by its identifier, WEB-12, in a
-// workspace: GET /api/v0/workspaces/{slug}/issues/{identifier} (M4 design
-// 3.7, 5.1).
+// workspace (M4 design 3.7, 5.1).
 type GetIssueByIdentifier struct {
 	d GetIssueByIdentifierDeps
 }
