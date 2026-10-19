@@ -28,7 +28,7 @@ var matrixMemberships = []struct {
 	{"acme", callerAdmin, shared.RoleAdmin}, {"acme", callerMember, shared.RoleMember}, {"acme", callerGuest, shared.RoleGuest},
 	{"acme", callerRemoved, shared.RoleMember}, {"acme", callerProjectAdmin, shared.RoleMember},
 	{"acme", callerProjectMember, shared.RoleMember}, {"acme", callerMemberAndAdmin, shared.RoleAdmin},
-	{"acme", callerGuestOnly, shared.RoleGuest}, {"acme", callerBefore, shared.RoleMember},
+	{"acme", callerGuestOnly, shared.RoleGuest}, {"acme", callerBefore, shared.RoleMember}, {"acme", callerAdminGuest, shared.RoleAdmin},
 	{"gone", callerDeleted, shared.RoleAdmin}, {"gone", callerMember, shared.RoleMember},
 	{"other", callerNever, shared.RoleAdmin}, {"other", callerRemoved, shared.RoleMember},
 }
@@ -72,11 +72,12 @@ var matrixProjects = []struct {
 // public one, whose membership of it his removal ends; the member before
 // in the private one, whose removal from it ends his (endings); WG- in
 // both, who leaves the public one (endings), and the member in the
-// private one, for partingStates to delete; the archived project's admin,
-// PM, a member whose role he changes and whom he removes, and PM+WA, its
-// other admin, so that he may leave it; each other workspace's admin in its
-// project, and gone's member in gone's, a member of the project the X
-// columns' writes on a membership name there.
+// private one, for partingStates to delete; the workspace admin who is
+// only a guest of the public one (issueColumns); the archived project's
+// admin, PM, a member whose role he changes and whom he removes, and
+// PM+WA, its other admin, so that he may leave it; each other workspace's
+// admin in its project, and gone's member in gone's, a member of the
+// project the X columns' writes on a membership name there.
 var matrixProjectMembers = []struct {
 	key  string
 	c    caller
@@ -85,6 +86,7 @@ var matrixProjectMembers = []struct {
 	{"acme/public", callerProjectAdmin, shared.RoleAdmin}, {"acme/public", callerProjectMember, shared.RoleMember},
 	{"acme/public", callerGuest, shared.RoleGuest}, {"acme/public", callerMemberAndAdmin, shared.RoleMember},
 	{"acme/public", callerRemoved, shared.RoleMember}, {"acme/public", callerGuestOnly, shared.RoleGuest},
+	{"acme/public", callerAdminGuest, shared.RoleGuest},
 	{"acme/private", callerProjectAdmin, shared.RoleAdmin}, {"acme/private", callerProjectMember, shared.RoleMember},
 	{"acme/private", callerGuest, shared.RoleGuest}, {"acme/private", callerMemberAndAdmin, shared.RoleMember},
 	{"acme/private", callerBefore, shared.RoleMember}, {"acme/private", callerGuestOnly, shared.RoleGuest},
@@ -147,9 +149,9 @@ type seeded struct {
 // newSeeded names an id for each workspace of matrixMemberships, each of
 // matrixMemberships, each of matrixInvitations, each of matrixProjects, each
 // of matrixProjectMembers, each of matrixStates and matrixLabels in each
-// project and its work item, matrixIssue, before prepareMatrix writes them,
-// so that matrixViolations, without a database, sees the keys and the
-// targets the cells will.
+// project, and each work item of seededItems, before prepareMatrix writes
+// them, so that matrixViolations, without a database, sees the keys and
+// the targets the cells will.
 func newSeeded() seeded {
 	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
 		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{},
@@ -171,7 +173,9 @@ func newSeeded() seeded {
 		for _, l := range matrixLabels {
 			s.labels[p.key+"|"+l.name] = uuid.NewV7()
 		}
-		s.issues[p.key+"|"+matrixIssue] = uuid.NewV7()
+	}
+	for _, i := range seededItems() {
+		s.issues[i.key+"|"+i.name] = uuid.NewV7()
 	}
 	for _, pm := range matrixProjectMembers {
 		s.projectMembers[pm.key+"|"+string(pm.c)] = uuid.NewV7()

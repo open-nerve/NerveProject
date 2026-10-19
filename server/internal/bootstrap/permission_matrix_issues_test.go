@@ -9,10 +9,13 @@ import (
 
 // The rows of the permission matrix of a project's work items (M4 design
 // 9.2): creating one, under the project of each column, and reading one,
-// naming it by its id (/issues/{issue_id}): its column's project's seeded
-// work item, matrixIssue. Each creating cell writes on a copy of its own,
-// so each creation is its project's second, after the seeded one; the
-// reading cells share one.
+// naming it by its id (/issues/{issue_id}): its column's work item
+// (issueOf). Each creating cell writes on a copy of its own, so each
+// creation is its project's next work item after the seeded ones
+// (nextNumber); the reading cells share one. A row of 9.2's table has the
+// issue table's columns (issueColumns); a variant that asks what is
+// checked after the decision, the project level's (projectColumns), whose
+// PG names acme's admin's work item, which the guest rule hides from him.
 
 var cellIssueNotFound = cell{http.StatusNotFound, "issue.not_found"}
 
@@ -34,10 +37,12 @@ func withIssueBody(body func(c caller, s seeded) string) func(caller, seeded) (s
 func issueMatrixRows() []matrixRow {
 	return []matrixRow{
 		// The project's admins and members, not its guests (M4 design 3.4):
-		// PM+WA as the member he is; a workspace admin or member who is no
-		// member of the project sees it and may not.
-		{op: "createIssue", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/issues", newIssue),
-			cells: ofProject(cellCreated, cellCreated, cellForbidden, cellCreated, cellForbidden, cellForbidden), check: createsTheIssue},
+		// PM+WA as the member he is, and the workspace admin who is only a
+		// guest of the project as its admin (Grant.ProjectAdmin, 9.2); a
+		// workspace admin or member who is no member of the project sees it
+		// and may not.
+		{op: "createIssue", write: true, columns: issueColumns, request: toProject(http.MethodPost, "/issues", newIssue),
+			cells: onTheIssues(cellCreated, cellCreated, cellForbidden), check: createsTheIssue},
 		// Each field given: in Done, high, assigned to PM's account, a
 		// member of the project, and labelled UI; the activity names him by
 		// his display name, which identity gives (bootstrap/ports.go).
@@ -85,21 +90,22 @@ func issueMatrixRows() []matrixRow {
 			}),
 			cells:   ofProject(cellValidationFailed, cellValidationFailed, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "assignee_ids[0] not_allowed"},
-		// The project's admins, members and guests; PG, a guest who sees only
-		// his own work items, finds no other's, as one not there (M4 design
-		// 3.4).
-		{op: "getIssue", columns: projectColumns, request: issueRows.to(http.MethodGet, "", matrixIssue, ""),
-			cells: issueRows.of(cellOK, cellOK, cellIssueNotFound, cellOK, cellForbidden, cellForbidden), check: readsTheIssue},
+		// The project's admins, members and guests (M4 design 3.4); a guest
+		// of a project that does not show its guests every work item, the
+		// workspace admin who is only its guest too, finds none another made,
+		// as one not there.
+		{op: "getIssue", columns: issueColumns, request: toWorkItem(http.MethodGet, "", ""), cells: onAWorkItem(cellOK, cellOK, cellOK, cellOK),
+			check: readsTheIssue},
 		// An archived project's work items are read as any other's.
-		{op: "getIssue", variant: "archived", columns: archivedColumns, request: issueRows.to(http.MethodGet, "", matrixIssue, ""),
+		{op: "getIssue", variant: "archived", columns: archivedColumns, request: toWorkItem(http.MethodGet, "", ""),
 			cells: issueRows.ofArchived(cellOK, cellForbidden), check: readsTheIssue},
 	}
 }
 
-// createsTheIssue: the column's project's second work item, Fix the login,
-// in its default state Backlog, of no priority, at a state's first sort
-// order, not completed, assigned to no one, without labels, made and
-// last changed by the caller.
+// createsTheIssue: the column's project's next work item (nextNumber), Fix
+// the login, in its default state Backlog, of no priority, at a state's
+// first sort order, not completed, assigned to no one, without labels,
+// made and last changed by the caller.
 func createsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	var i struct {
 		ProjectID   uuid.UUID   `json:"project_id"`
@@ -115,15 +121,16 @@ func createsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 		UpdatedByID *uuid.UUID  `json:"updated_by_id"`
 	}
 	decodeAnswer(t, answer, &i)
-	me := s.account(accountOf(c))
-	if i.ProjectID != s.project(projectOf(c)) || i.SequenceID != 2 || i.Name != "Fix the login" || i.StateID != s.state(projectOf(c), "Backlog") ||
-		i.Priority != "none" || i.SortOrder != 65535 || i.CompletedAt != nil || len(i.AssigneeIDs) != 0 || len(i.LabelIDs) != 0 ||
-		i.CreatedByID == nil || *i.CreatedByID != me || i.UpdatedByID == nil || *i.UpdatedByID != me {
-		t.Errorf("%s creates %s; want %s's work item 2, Fix the login, in Backlog, none, at 65535, by %s", c, answer, projectOf(c), me)
+	me, next := s.account(accountOf(c)), nextNumber(projectOf(c))
+	if i.ProjectID != s.project(projectOf(c)) || i.SequenceID != next || i.Name != "Fix the login" ||
+		i.StateID != s.state(projectOf(c), "Backlog") || i.Priority != "none" || i.SortOrder != 65535 || i.CompletedAt != nil ||
+		len(i.AssigneeIDs) != 0 || len(i.LabelIDs) != 0 || i.CreatedByID == nil || *i.CreatedByID != me || i.UpdatedByID == nil ||
+		*i.UpdatedByID != me {
+		t.Errorf("%s creates %s; want %s's work item %d, Fix the login, in Backlog, none, at 65535, by %s", c, answer, projectOf(c), next, me)
 	}
 }
 
-// createsTheGivenIssue: the column's project's second work item, Fix, in
+// createsTheGivenIssue: the column's project's next work item, Fix, in
 // Done, high, at a state's first sort order, completed at its creation,
 // assigned to PM's account, labelled UI.
 func createsTheGivenIssue(t *testing.T, c caller, s seeded, answer string) {
@@ -137,10 +144,10 @@ func createsTheGivenIssue(t *testing.T, c caller, s seeded, answer string) {
 		LabelIDs    []uuid.UUID `json:"label_ids"`
 	}
 	decodeAnswer(t, answer, &i)
-	pm, ui := s.account(callerProjectMember), s.label(projectOf(c), "UI")
-	if i.SequenceID != 2 || i.StateID != s.state(projectOf(c), "Done") || i.Priority != "high" || i.SortOrder != 65535 || i.CompletedAt == nil ||
-		!slices.Equal(i.AssigneeIDs, []uuid.UUID{pm}) || !slices.Equal(i.LabelIDs, []uuid.UUID{ui}) {
-		t.Errorf("%s creates %s; want %s's work item 2 in Done, high, at 65535, completed, assigned to %s, labelled %s", c, answer,
-			projectOf(c), pm, ui)
+	pm, ui, next := s.account(callerProjectMember), s.label(projectOf(c), "UI"), nextNumber(projectOf(c))
+	if i.SequenceID != next || i.StateID != s.state(projectOf(c), "Done") || i.Priority != "high" || i.SortOrder != 65535 ||
+		i.CompletedAt == nil || !slices.Equal(i.AssigneeIDs, []uuid.UUID{pm}) || !slices.Equal(i.LabelIDs, []uuid.UUID{ui}) {
+		t.Errorf("%s creates %s; want %s's work item %d in Done, high, at 65535, completed, assigned to %s, labelled %s", c, answer,
+			projectOf(c), next, pm, ui)
 	}
 }

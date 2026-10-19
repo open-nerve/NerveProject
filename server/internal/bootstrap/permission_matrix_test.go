@@ -159,7 +159,7 @@ type matrixRow struct {
 	write   bool   // each cell on a copy of its own
 	config  func(*config.Config)
 	// columns are the row's columns: nil for the workspace level's
-	// (workspaceColumns), projectColumns for a row of the project level.
+	// (workspaceColumns), or a table of matrixTables, as projectColumns.
 	columns []caller
 	request func(c caller, s seeded) (method, path, body string)
 	cells   map[caller]cell
@@ -252,17 +252,17 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // wrong workspace lets either into acme. Through the project store, the
 // projects, project memberships, states and labels of matrixProjects,
 // matrixProjectMembers, matrixStates and matrixLabels; through the issue
-// store, each project's work item, matrixIssue (issueSeed); through the
-// project store, acme's archived project archived. Through both stores,
-// the removed member's removal; then, through the workspace store, the
-// invitations of matrixInvitations. Through the project store, the
-// memberships P5b's writes end (endings); through SQL, the membership
-// states no store makes alone (partingStates). Through the API, gone
-// deleted by its admin, which soft-deletes its memberships and its
-// project, with its states, labels and work item, with it; then the checks
-// that the rows the cells rest on are there (preconditions), the states,
-// the labels and the work items among them (seededStates, seededLabels,
-// seededIssues).
+// store, the work items of seededItems, once guestViewAll shows its guests
+// every one (issueSeed); through the project store, acme's archived project
+// archived. Through both stores, the removed member's removal; then,
+// through the workspace store, the invitations of matrixInvitations.
+// Through the project store, the memberships P5b's writes end (endings);
+// through SQL, the membership states no store makes alone (partingStates).
+// Through the API, gone deleted by its admin, which soft-deletes its
+// memberships and its project, with its states, labels and work item, with
+// it; then the checks that the rows the cells rest on are there
+// (preconditions), the states, the labels and the work items among them
+// (seededStates, seededLabels, seededIssues).
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.

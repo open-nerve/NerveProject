@@ -9,26 +9,32 @@ import (
 )
 
 // The rows of the permission matrix of changing a work item (M4 design
-// 9.2), naming it by its id (/issues/{issue_id}): its column's project's
-// seeded work item, matrixIssue. Each cell writes on a copy of its own.
+// 9.2), naming it by its id (/issues/{issue_id}): its column's work item
+// (issueOf). Each cell writes on a copy of its own. The row of 9.2's table
+// has the issue table's columns; its variants, the project level's, as
+// createIssue's (permission_matrix_issues_test.go).
 
 // toIssue is the request of a row whose callers each change their column's
-// project's seeded work item with the body body gives for their column.
+// work item with the body body gives for their column.
 func toIssue(body func(c caller, s seeded) string) func(caller, seeded) (string, string, string) {
 	return func(c caller, s seeded) (string, string, string) {
-		return issueRows.to(http.MethodPatch, "", matrixIssue, body(c, s))(c, s)
+		return toWorkItem(http.MethodPatch, "", body(c, s))(c, s)
 	}
 }
 
 func issueUpdateMatrixRows() []matrixRow {
+	// PG, the guest of a project that does not show its guests every work
+	// item, on acme's admin's: issue.not_found, whatever his role may do.
 	ok := issueRows.of(cellOK, cellOK, cellIssueNotFound, cellOK, cellForbidden, cellForbidden)
 	refused := issueRows.of(cellValidationFailed, cellValidationFailed, cellIssueNotFound, cellValidationFailed, cellForbidden, cellForbidden)
 	return []matrixRow{
-		// The project's admins and members, as createIssue (M4 design 3.4);
-		// PG, a guest who sees only his own work items, finds no other's,
-		// whatever his role may do: issue.not_found, not forbidden.
-		{op: "updateIssue", write: true, columns: projectColumns, request: issueRows.to(http.MethodPatch, "", matrixIssue, `{"name":"Mend"}`),
-			cells: ok, check: renamesTheIssue},
+		// The project's admins and members, as createIssue (M4 design 3.4),
+		// not a guest who sees the work item; a guest of a project that does
+		// not show its guests every work item, the workspace admin who is
+		// only its guest too, finds none another made, whatever his role may
+		// do: issue.not_found, not forbidden.
+		{op: "updateIssue", write: true, columns: issueColumns, request: toWorkItem(http.MethodPatch, "", `{"name":"Mend"}`),
+			cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden), check: renamesTheIssue},
 		// Each field given: Done, high, PA's account for PM's and the removed
 		// member's, UI for Bug.
 		{op: "updateIssue", variant: "each field given", write: true, columns: projectColumns,
@@ -39,14 +45,14 @@ func issueUpdateMatrixRows() []matrixRow {
 			cells: ok, check: changesEachField},
 		// A change that changes nothing answers the work item as it is.
 		{op: "updateIssue", variant: "nothing changed", write: true, columns: projectColumns,
-			request: issueRows.to(http.MethodPatch, "", matrixIssue, `{}`), cells: ok, check: readsTheIssue},
+			request: toWorkItem(http.MethodPatch, "", `{}`), cells: ok, check: readsTheIssue},
 		// An archived project's work items are not changed (M4 design 3.8),
 		// after the decision: who may not change one learns nothing of its
 		// project's state. The body changes nothing: the archived project is
 		// refused before what a change changes is weighed, so even a change
 		// of nothing is refused.
 		{op: "updateIssue", variant: "archived", write: true, columns: archivedColumns,
-			request: issueRows.to(http.MethodPatch, "", matrixIssue, `{}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+			request: toWorkItem(http.MethodPatch, "", `{}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// The archived project's Backlog, a state of another project of the
 		// same workspace: the state is checked after the decision.
 		{op: "updateIssue", variant: "another project's state", write: true, columns: projectColumns,
@@ -103,22 +109,24 @@ type answeredIssue struct {
 	UpdatedByID *uuid.UUID  `json:"updated_by_id"`
 }
 
-// seededIssue is the column's project's seeded work item as issueSeed
-// stored it, as an answer shows it: its first, in Todo, medium, not
+// seededIssue is the column's work item (issueOf) as issueSeed stored it,
+// as an answer shows it: of its number (numberOf), in Todo, medium, not
 // completed, assigned to PM's account and the removed member's, in id
-// order, labelled Bug, made and changed last by acme's admin.
+// order, labelled Bug, made and changed last by its maker.
 func seededIssue(c caller, s seeded) answeredIssue {
-	key, admin := projectOf(c), s.account(callerAdmin)
-	return answeredIssue{ID: s.issue(key, matrixIssue), ProjectID: s.project(key), SequenceID: 1, Name: matrixIssue,
-		StateID: s.state(key, "Todo"), Priority: "medium",
+	key, name := projectOf(c), issueOf(c)
+	number, by := numberOf(key, name)
+	maker := s.account(by)
+	return answeredIssue{ID: s.issue(key, name), ProjectID: s.project(key), SequenceID: number, Name: name, StateID: s.state(key, "Todo"),
+		Priority:    "medium",
 		AssigneeIDs: slices.SortedFunc(slices.Values([]uuid.UUID{s.account(callerProjectMember), s.account(callerRemoved)}), uuid.UUID.Compare),
-		LabelIDs:    []uuid.UUID{s.label(key, "Bug")}, CreatedByID: &admin, UpdatedByID: &admin}
+		LabelIDs:    []uuid.UUID{s.label(key, "Bug")}, CreatedByID: &maker, UpdatedByID: &maker}
 }
 
-// answered checks that answer, the work item c's cell changes, is the
-// seeded one with change made to it, the caller its last writer, and
-// completed when completed; completedAt is not compared, but present or
-// not.
+// answered checks that answer, the work item c's cell changes, is the one
+// seeded (seededIssue) with change made to it, the caller its last writer,
+// and completed when completed; completedAt is not compared, but present
+// or not.
 func answered(t *testing.T, c caller, s seeded, answer string, completed bool, change func(i *answeredIssue)) {
 	t.Helper()
 	var got answeredIssue
@@ -136,8 +144,8 @@ func answered(t *testing.T, c caller, s seeded, answer string, completed bool, c
 	}
 }
 
-// readsTheIssue: the column's project's seeded work item as issueSeed
-// stored it, in each field answeredIssue holds (seededIssue).
+// readsTheIssue: the column's work item as issueSeed stored it, in each
+// field answeredIssue holds (seededIssue).
 func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	var got answeredIssue
 	decodeAnswer(t, answer, &got)
@@ -146,12 +154,12 @@ func readsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	}
 }
 
-// renamesTheIssue: the seeded work item named Mend, the rest as it was.
+// renamesTheIssue: the column's work item named Mend, the rest as it was.
 func renamesTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	answered(t, c, s, answer, false, func(i *answeredIssue) { i.Name = "Mend" })
 }
 
-// changesEachField: the seeded work item named Mend, in Done and so
+// changesEachField: the column's work item named Mend, in Done and so
 // completed, high, assigned to PA's account alone, labelled UI alone.
 func changesEachField(t *testing.T, c caller, s seeded, answer string) {
 	answered(t, c, s, answer, true, func(i *answeredIssue) {
@@ -160,7 +168,7 @@ func changesEachField(t *testing.T, c caller, s seeded, answer string) {
 	})
 }
 
-// keepsTheAssigneeWhoLeft: the seeded work item assigned to the removed
+// keepsTheAssigneeWhoLeft: the column's work item assigned to the removed
 // member alone.
 func keepsTheAssigneeWhoLeft(t *testing.T, c caller, s seeded, answer string) {
 	answered(t, c, s, answer, false, func(i *answeredIssue) { i.AssigneeIDs = []uuid.UUID{s.account(callerRemoved)} })

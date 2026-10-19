@@ -117,7 +117,8 @@ func addsTheMember(target caller, role int) func(t *testing.T, c caller, s seede
 
 // listsTheProjectMembers: acme's public project's active members, each
 // with his role, in the order prepareMatrix made them: PA, PM, the
-// workspace's guest (PG's account) and PM+WA. Not the removed member,
+// workspace's guest (PG's account), PM+WA and the workspace admin who is
+// only its guest (issueColumns). Not the removed member,
 // whose membership of the project his removal ended with his membership
 // of acme (the list reads project_members alone, spec P4b §3 item 4); not
 // WG-, who left it (endings).
@@ -133,7 +134,7 @@ func listsTheProjectMembers(t *testing.T, c caller, s seeded, answer string) {
 	want := []struct {
 		c    caller
 		role int
-	}{{callerProjectAdmin, 20}, {callerProjectMember, 15}, {callerGuest, 5}, {callerMemberAndAdmin, 15}}
+	}{{callerProjectAdmin, 20}, {callerProjectMember, 15}, {callerGuest, 5}, {callerMemberAndAdmin, 15}, {callerAdminGuest, 5}}
 	ok := len(list.Data) == len(want)
 	for i := 0; ok && i < len(want); i++ {
 		m := list.Data[i]

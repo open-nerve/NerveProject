@@ -50,9 +50,10 @@ var archivedColumns = []caller{callerArchivedAdmin, callerArchivedNever, callerA
 
 // matrixAccounts are the accounts prepareMatrix registers: each workspace
 // column's, and each project column's that is none of those (M3 design
-// 9.2: eleven).
+// 9.2: eleven); and the issue table's workspace admin who is only a guest
+// of acme's public project (M4 design 9.2): twelve.
 var matrixAccounts = append(slices.Clone(workspaceColumns), callerProjectAdmin, callerProjectMember, callerMemberAndAdmin, callerGuestOnly,
-	callerBefore)
+	callerBefore, callerAdminGuest)
 
 // accountOf is the account a column's cells call as: a project column that
 // is a workspace column's account under the project level's name is that
@@ -63,8 +64,12 @@ func accountOf(c caller) caller {
 		return callerProjectAdmin
 	case callerArchivedNever, callerSoleAdmin:
 		return callerNever
-	case callerProjectGuest:
+	case callerProjectGuest, callerGuestAll, callerGuestOwn, callerGuestOthers:
 		return callerGuest
+	case callerCreator:
+		return callerProjectMember
+	case callerAdminGuestOwn:
+		return callerAdminGuest
 	case callerAdminOnly:
 		return callerAdmin
 	case callerMemberPublic, callerMemberPrivate, callerArchivedMember:
@@ -74,13 +79,14 @@ func accountOf(c caller) caller {
 }
 
 // projectOf is the key of the project a project column's cells target:
-// acme's private project for the columns about it, its archived one for
-// the archived project's, gone's for the deleted workspace's, acme's public
-// one for every other; PA, PM, PG and PM+WA answer alike in both, WG- too
-// (9.2).
+// acme's private project for the columns about it, and for the guest who
+// sees every work item, which it shows its guests (guestViewAll); its
+// archived one for the archived project's, gone's for the deleted
+// workspace's, acme's public one for every other; PA, PM, PG and PM+WA
+// answer alike in both, WG- too (9.2).
 func projectOf(c caller) string {
 	switch c {
-	case callerMemberPrivate, callerBefore:
+	case callerMemberPrivate, callerBefore, callerGuestAll:
 		return "acme/private"
 	case callerArchivedAdmin, callerArchivedNever, callerArchivedMember:
 		return "acme/archived"
@@ -108,8 +114,8 @@ func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 			t.Errorf("the account %s is no column's", a)
 		}
 	}
-	if len(matrixAccounts) != 11 {
-		t.Errorf("%d accounts, want 9.2's 11", len(matrixAccounts))
+	if len(matrixAccounts) != 12 {
+		t.Errorf("%d accounts, want M3 9.2's 11 and M4 9.2's workspace admin who is a project guest", len(matrixAccounts))
 	}
 	// account names a registered account: PG's column, whose account is the
 	// workspace's guest, is none, and fails the test at once; an account is

@@ -39,15 +39,20 @@ func ofAProjectTable(c caller) bool {
 
 // underProject are the rows under a project that a path names by their
 // id, by their parameter: what each is called, and the seeded rows among
-// which it must be, keyed by their project's key.
+// which it must be, keyed by their project's key; and, when set, the one
+// row of them a column's cells may name, and its name: a work item is its
+// column's (issueOf), whose maker the column's case may be about.
 var underProject = map[string]struct {
 	what string
 	rows func(s seeded) map[string]uuid.UUID
+	one  func(c caller, s seeded) (string, uuid.UUID)
 }{
-	"{project_member_id}": {"membership", func(s seeded) map[string]uuid.UUID { return s.projectMembers }},
-	"{state_id}":          {"state", func(s seeded) map[string]uuid.UUID { return s.states }},
-	"{label_id}":          {"label", func(s seeded) map[string]uuid.UUID { return s.labels }},
-	"{issue_id}":          {"work item", func(s seeded) map[string]uuid.UUID { return s.issues }},
+	"{project_member_id}": {"membership", func(s seeded) map[string]uuid.UUID { return s.projectMembers }, nil},
+	"{state_id}":          {"state", func(s seeded) map[string]uuid.UUID { return s.states }, nil},
+	"{label_id}":          {"label", func(s seeded) map[string]uuid.UUID { return s.labels }, nil},
+	"{issue_id}": {"work item", func(s seeded) map[string]uuid.UUID { return s.issues }, func(c caller, s seeded) (string, uuid.UUID) {
+		return issueOf(c), s.issue(projectOf(c), issueOf(c))
+	}},
 }
 
 // targetViolation is what is wrong with where path, a path of pattern that
@@ -55,9 +60,10 @@ var underProject = map[string]struct {
 // by its slug ({slug} right after workspaces) must be workspaceOf(c). A
 // project named by its id ({project_id}) must be projectOf(c)'s, and a row
 // under a project (underProject: a project membership, a state, a label, a
-// work item) one seeded in projectOf(c), each from a column of a project table
-// (projectTables): a project's operation in a workspace-level row, or the
-// only admin's, would leave the project level's own columns unasked.
+// work item) one seeded in projectOf(c), a work item the column's own
+// (issueOf), each from a column of a project table (projectTables): a
+// project's operation in a workspace-level row, or the only admin's, would
+// leave the project level's own columns unasked.
 // Any other row named by its id (a parameter ending in _id) must be a row
 // of s under workspaceOf(c): a cell of the deleted workspace's column that
 // named acme would get the 404 of a workspace its caller is not in, and
@@ -84,8 +90,14 @@ func targetViolation(pattern, path string, c caller, s seeded, passOver func(par
 				return segment + " from a column of no project table (projectTables): a project's row names its columns"
 			}
 			id, err := uuid.Parse(got[i])
-			if key, isRow := projectOfRow(underProject[segment].rows(s), id); err != nil || !isRow || key != projectOf(c) {
-				return fmt.Sprintf("%s %s is no %s seeded in its column's project %s", segment, got[i], underProject[segment].what, projectOf(c))
+			under := underProject[segment]
+			if key, isRow := projectOfRow(under.rows(s), id); err != nil || !isRow || key != projectOf(c) {
+				return fmt.Sprintf("%s %s is no %s seeded in its column's project %s", segment, got[i], under.what, projectOf(c))
+			}
+			if under.one != nil {
+				if name, one := under.one(c, s); id != one {
+					return fmt.Sprintf("%s %s is not its column's %s %s, %s", segment, got[i], under.what, name, one)
+				}
 			}
 		case segment == "{slug}" && i > 0 && want[i-1] == "workspaces":
 			if got[i] != workspaceOf(c) {

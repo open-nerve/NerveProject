@@ -12,9 +12,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
 
-// projectTables are the tables of the project level (M3 design 9.2), each
-// whole: a row that names a project names one of them.
-var projectTables = [][]caller{projectColumns, archivedColumns}
+// projectTables are the tables of the project level (M3 design 9.2, and
+// M4 design 9.2's of the work items, issueColumns), each whole: a row that
+// names a project names one of them.
+var projectTables = [][]caller{projectColumns, archivedColumns, issueColumns}
 
 // workspaceLevelTables are the tables of the workspace level besides its
 // own columns (nil), each whole: the only admin's. A row of one is no write
