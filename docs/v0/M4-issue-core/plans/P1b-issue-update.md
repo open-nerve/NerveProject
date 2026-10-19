@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `getIssue`（`GET /api/v0/issues/{issue_id}`）和 `updateIssue`（`PATCH /api/v0/issues/{issue_id}`：名称、状态、优先级、负责人、标签）；按资源寻址的写落在 P1a 的一条取锁路径上：读工作项（不加锁）→ 预检（凡判定拒绝的 404、403 在这里答，不取任何锁）→ 写闸门（不持连接、不持锁地等）→ 事务 → 项目行 `FOR NO KEY UPDATE` → 锁下重读工作项、确认仍在这个项目 → 锁下判定（最终的）→ 依赖行的检查 → 时刻 → 写（M4 设计 3.5、6.7）；修改写工作项、负责人和标签的差集（按 `id`）、新负责人的关注、动态的第 3、6、7、10–13 行，同一时刻、同一个写者；写闸门 `platform/gate` 和 `lock_timeout` 的兜底，排满、等不到、请求到期、等锁到期都答 503 `server_busy`（`Retry-After: 1`），只在 `bootstrap/gate.go` 一处换码（11.11）。交错 3–7 的修改一支、同一个工作项的两个修改（1u）和交错 20（经真实的连接池）在真实数据库上；在规模目标上量 P1a 的同步连带；I2 的接口版本通过。
+**Goal:** `getIssue`（`GET /api/v0/issues/{issue_id}`）和 `updateIssue`（`PATCH /api/v0/issues/{issue_id}`：名称、状态、优先级、负责人、标签）；按资源寻址的写落在 P1a 的一条取锁路径上：读工作项（不加锁）→ 预检（凡判定拒绝的 404、403 在这里答，不取任何锁）→ 写闸门（不持连接、不持锁地等）→ 事务 → 项目行 `FOR NO KEY UPDATE` → 锁下重读工作项、确认仍在这个项目 → 锁下判定（最终的）→ 依赖行的检查 → 时刻 → 写（M4 设计 3.5、6.7）；修改写工作项、负责人和标签的差集（按 `id`）、新负责人的关注、动态的第 3、6、7、10–13 行，同一时刻、同一个写者；写闸门 `platform/gate` 和 `lock_timeout` 的兜底，排满、等不到、在闸门上请求到期、等锁到期都答 503 `server_busy`（`Retry-After: 1`），只在 `bootstrap/gate.go` 一处换码（11.11）。交错 3–7 的修改一支、同一个工作项的两个修改（1u）和交错 20（经真实的连接池）在真实数据库上；在规模目标上量 P1a 的同步连带；I2 的接口版本通过。
 
 **Architecture:** `issue` 模块：`domain`（`patch.go` 修改的规则和差集，`activity.go` 的修改动态）、`app`（`lock.go` 的 `Locks.run` 是每个工作项一侧的写共用的取锁路径，`see` 是读和预检共用的判定，`writes.go` 是写共用的行，`get_issue.go`、`update_issue.go`，端口 `IssueReader`、`IssueUpdater`、`WriteGate`）、`adapter/postgres`（`update.sql`）、`adapter/http`（`getIssue`、`updateIssue`）。`project`：状态、标签的目录回答名称。`platform/gate`（新，只用标准库）；`platform/postgres` 的 `TxManager` 选项 `LockTimeout` 和 `LockNotAvailable`；`platform/config` 的 `issue` 四个配置。`bootstrap`：`gate.go`（闸门和带锁的期限的事务，503 的唯一一处）、矩阵、取锁形状、盖戳、交错 1u 和 3u–7u、交错 20、规模的测量。`e2e`：`updateIssue`、`expectIssueUpdated`、I2。不加 Go 模块、npm 包；没有新表；模块之间只经端口。
 
@@ -32,7 +32,7 @@
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从基点起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同；之后在另一个副本上从基点逐 Task 复现，每个 Task 之后跑它的门禁，最后的树与原型逐个文件相同（spec 附录 A）。块写入之后不必再格式化（原型中每个 Task 都经过 `gofmt`、`oxfmt`）。
 - **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`issue/app/lock.go`（Task 4 加 `see`，Task 5 整个文件，Task 10 加闸门）、`issue/module.go`（Task 2、4、5、6、10）、`issue/app/ports.go`（Task 2、4、5、10）、`create_issue.go`（Task 2、5、10）、`update_issue.go`（Task 5、10）、`create_issue_test.go`、`fakes_test.go`（Task 2、4、5、10）、`api/modules/issue.yaml`（Task 4、6、10）、`issue_world_test.go`（Task 6、7、10、11）、`issue_writes_test.go`（Task 6、7、10）、`issue_updates_test.go`（Task 7、11）、`rules.go`（Task 4、5）。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事；静态：`make lint-web` 的文案核对）。它们在各自 Task 的树上跑过，标"（Task n 起）"的检查在 Task n 的树上跑过，全部在最终的原型上再跑过，每个变异在一份新的副本里（`$M4TMP/p1btools/mutants_p1b.py`，`mut.py` 在它写的每个检查上各跑一次；端到端的"发现"必须是故事的断言失败，`e2ekills.py` 核对，不算构建失败或超时；容器起不来不算；spec 附录 A）。"（Task n 起）"的检查从那个 Task 起才发现这个变异：Task n 的实现者在 Task n 的树上重跑它（那个 Task 的表下面列出）。**安全或加锁的性质只由单元一层发现的，算缺口**：表中每一条这类性质都另有存储、组合或端到端一层的检查，例外（"按性质只在单元一层"）写在 spec 附录 A.3。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事；静态：`make lint-web` 的文案核对）。它们在各自 Task 的树上跑过，标"（Task n 起）"的检查在 Task n 的树上跑过，全部在最终的原型上再跑过，每个变异在一份新的副本里（`$M4TMP/p1btools/mutants_p1b.py`，`mut.py` 在它写的每个检查上各跑一次；端到端的"发现"必须是故事的断言失败，`e2ekills.py` 核对，不算构建失败或超时；容器起不来不算；spec 附录 A）。"（Task n 起）"的检查从那个 Task 起才发现这个变异：Task n 的实现者在 Task n 的树上重跑它（那个 Task 的表下面列出）。**安全或加锁的性质只由单元一层发现的，算缺口**：表中每一条这类性质都另有存储、组合或端到端一层的检查，例外（"按性质只在单元一层"）写在 spec 附录 A.3。执行中加的行（各 Task 的实现者、评审和整分支评审的探针，编号接在原来的之后：`T3.12`、`T3.13`、`T4.7`–`T4.9`、`T5.23`–`T5.32`、`T6.4`、`T7.5`、`T7.6`、`T8.12`–`T8.14`、`T9.11`–`T9.16`、`T10.19`–`T10.21`、`T11.1`、`T13.1`）的改法在 `$M4TMP/p1bsdd/` 的探针文件里（spec 附录 A.6 列出每个文件），不在 `mutants_p1b.py` 里；它们和较早的行在执行中新记的层在加它们的 Task 的树上、执行完的树上跑过。
 - **评审敏感**（M4 设计 12 节约束 3）：写闸门（取连接之前进入，不持连接地等，不在持数据库的锁时再等别的闸门；每个项目至多 K 个、`max_wait`、`max_queue`、请求的期限，503 `server_busy` 带 `Retry-After: 1`；每条路上离开）；`55P03` 换成 503 只在 `bootstrap/gate.go`；按资源寻址的写在锁下重读、再判定；修改的批量写按约定五（spec 第 3 节第 12 条）。改动这些代码或测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
@@ -115,7 +115,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/adapter/http/update_test.go`（新） | `updateIssue` 的 HTTP 测试（Task 6）；`server_busy` 的一行（Task 10） | 6、10 |
 | `web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`（修改） | `issue.not_found` 的文案（约束 4） | 4 |
 | `server/internal/bootstrap/permission_matrix_seed_issues_test.go`（新）、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_project_test.go`（修改） | 矩阵的种子：每个项目一个工作项，`{issue_id}`；`rowsByID` 带上工作项 | 4 |
-| `server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`（修改） | `getIssue` 一行，`createIssue` 的编号（Task 4）；接上修改的行（Task 6） | 4、6 |
+| `server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`（修改） | `getIssue` 两行，`createIssue` 的编号（Task 4）；接上修改的行（Task 6） | 4、6 |
 | `server/internal/modules/issue/app/writes.go`（新） | 每个写共用的 `pickState`、`stamp`、`assignees`、`readBack` | 5 |
 | `server/internal/modules/issue/app/update_issue.go`（新） | `updateIssue` 的用例（Task 5）；`Execute` 的说明写上写闸门（Task 10） | 5、10 |
 | `server/internal/modules/issue/app/update_issue_test.go`（新） | `updateIssue` 的单元测试 | 5 |
@@ -689,7 +689,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T1.12` | 去掉的负责人的一行把他写成新值 | `internal/modules/issue/domain` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
 | `T1.13` | 状态的一行的两个 `id` 写反 | `internal/modules/issue/domain` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
 | `T1.14` | 给出原样的优先级也算改动 | `internal/modules/issue/domain` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
-| `T1.15` | `None` 不看去掉的负责人 | `internal/modules/issue/domain` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
+| `T1.15` | `None` 不看去掉的负责人 | `internal/modules/issue/domain` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 6 起）、故事 `i2-update-issue`（Task 14 起） | 单元；组合；端到端 |
 
 ---
 
@@ -1126,8 +1126,8 @@ Expected: 通过。
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
 | `T2.1` | 状态的目录不回答名称 | `internal/modules/project/adapter/postgres` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestUpdatingAWorkItemStampsItsRows`（`make test`）（Task 7 起）、故事 `i2-update-issue`（Task 14 起） | 存储；组合；端到端 |
-| `T2.2` | 标签的目录不回答名称 | `internal/modules/project/adapter/postgres` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 存储；端到端 |
-| `T2.3` | `bootstrap` 的转换丢掉状态的名称 | `internal/bootstrap` 的 `TestIssueProjectsConvertsProjectsAnswers`（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
+| `T2.2` | 标签的目录不回答名称 | `internal/modules/project/adapter/postgres` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestUpdatingAWorkItemStampsItsRows`（`make test`）（Task 7 起）、故事 `i2-update-issue`（Task 14 起） | 存储；组合；端到端 |
+| `T2.3` | `bootstrap` 的转换丢掉状态的名称 | `internal/bootstrap` 的 `TestIssueProjectsConvertsProjectsAnswers`（`make test`）、`internal/bootstrap` 的 `TestUpdatingAWorkItemStampsItsRows`（`make test`）（Task 7 起）、故事 `i2-update-issue`（Task 14 起） | 单元；组合；端到端 |
 
 ---
 
@@ -1463,6 +1463,8 @@ Expected: 通过。
 | `T3.9` | `RemoveAssignees` 把语句的失败答成没事 | `internal/modules/issue/adapter/postgres` 的 全部测试（`make test`） | 存储 |
 | `T3.10` | `RemoveAssignees` 去掉工作项的每个负责人，不只是给出的 | `internal/modules/issue/adapter/postgres` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 存储；端到端 |
 | `T3.11` | `RemoveLabels` 从每个工作项上去掉这些标签 | `internal/modules/issue/adapter/postgres` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 存储；端到端 |
+| `T3.12` | `RemoveLabels` 只去掉给出的第一个标签（PT3.6） | `internal/modules/issue/adapter/postgres` 的 `TestUpdatingAWorkItemWritesItsRows`（`make test`） | 存储 |
+| `T3.13` | `RemoveAssignees` 只去掉给出的第一个账户（PT3.7） | `internal/modules/issue/adapter/postgres` 的 `TestUpdatingAWorkItemWritesItsRows`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 6 起） | 存储；组合 |
 
 ---
 
@@ -1484,15 +1486,15 @@ Expected: 通过。
 - `issue/adapter/http`：`handler.go` 的 `GetIssueUseCase`、`UseCases.GetIssue`；`issues.go` 的 `GetIssue`；测试的 `newServer(t, UseCases)`。`issue/module.go` 接上 `GetIssue`。
 - 前端：`error-messages.ts` 的 `"issue.not_found"`，两份 `errors.json` 的 `issue_not_found`（约束 4）。
 - 矩阵：
-  - `permission_matrix_seed_issues_test.go`（新）：`matrixIssue`（"Seeded"）、`issueSeed`：每个项目一个工作项，Todo、medium，指派项目管理员和一个已离开的账户，标签 Bug，经 `NextIssueSequence` 和 `issue` 的存储写；
+  - `permission_matrix_seed_issues_test.go`（新）：`matrixIssue`（"Seeded"）、`issueSeed`：每个项目一个工作项，由工作区的管理员经 `NextIssueSequence` 和 `issue` 的存储写，Todo、medium，指派 PM 和一个已离开工作区和它的公开项目的账户，标签 Bug；`seededIssues` 读回核对；
   - `permission_matrix_seeded_test.go`、`permission_matrix_targets_test.go`：`seeded.issues`、`issue()`，`{issue_id}` 进 `underProject`；`permission_matrix_project_test.go`：`rowsByID` 的说明带上工作项和读的一行；
-  - `permission_matrix_issues_test.go`：`getIssue` 一行（`readsTheIssue` 核对回答的工作项），`createIssue` 的格子的编号从 2 起；`permission_matrix_test.go` 接上种子。
+  - `permission_matrix_issues_test.go`：`getIssue` 两行（项目的各列；已归档的项目的工作项照样读；`readsTheIssue` 核对回答的工作项），`createIssue` 的格子的编号从 2 起；`permission_matrix_test.go` 接上种子。
 
 **Tests:**
 - 单元：`TestGetIssueReadsTheWorkItem`（不加锁、不开事务：读、判定；回答读到的）、`TestGetIssueRefusals`（不在、看不到 `issue.not_found`，角色不允许 403，读或判定的失败原样，没有调用者）；`create_issue_test.go` 的 `NewLocks` 多一个参数。
 - 完整性和规则：`bootstrap` 的 `TestEveryActionHasARuleAndEveryRuleAnAction`、`TestEveryModuleDeclaresItsActionsOrHasNone`；`access/domain` 的规则表测试的 `issue.read` 一行。
 - HTTP（`apitest.Main` 两个方向）：`TestGetIssue`（回答每个字段，没有的为 `null`，列表为 `[]`）、`TestGetIssueRefusals`。
-- 组合：`TestPermissionMatrix` 的 `getIssue` 一行和 `createIssue` 的七行；`TestThePermissionMatrixCoversEveryOperation`。
+- 组合：`TestPermissionMatrix` 的 `getIssue` 两行和 `createIssue` 的七行；`TestThePermissionMatrixCoversEveryOperation`。
 - 前端：`error-messages.test.ts`（每个声明的码有文案）、`check:sync`（两份 `errors.json` 的键相同）。
 
 - [ ] **Step 1: 契约，生成**
@@ -2551,6 +2553,9 @@ Expected: 通过。
 | `T4.4` | 页面没有 `issue.not_found` 的文案 | `error-messages.test.ts`（`make test-web`） | 单元 |
 | `T4.5` | 中文的文案没有 `issue_not_found` | `web/packages/i18n` 的 `check:sync`（`make lint-web`） | 守卫 |
 | `T4.6` | GET 回答的负责人总是空的列表 | `internal/modules/issue/adapter/http` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`） | 单元；组合 |
+| `T4.7` | `getIssue` 判定 `issue.create`，不是 `issue.read`（PT4.3；P1b 里两条规则的角色相同，到 P2 的访客规则才分得出） | `internal/modules/issue/app` 的 `TestGetIssueReadsTheWorkItem`、`TestGetIssueRefusals`（`make test`） | 单元 |
+| `T4.8` | `getIssue` 判定之后取它的项目行的锁（`FOR NO KEY UPDATE`，不在事务里；PT12.2） | `internal/modules/issue/app` 的 `TestGetIssueReadsTheWorkItem`（`make test`）、`internal/bootstrap` 的 `TestAHotProjectHoldsUpNoReadOfAnother`（`make test`）（Task 12 起） | 单元；组合 |
+| `T4.9` | `see` 判定之后取工作项的项目行的锁：`getIssue` 和每个写的预检都取（PT12.3） | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestAProjectTooBusyForAWriteAnswersServerBusy`、`TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（`make test`）（Task 10 起）、`internal/bootstrap` 的 `TestAHotProjectHoldsUpNoReadOfAnother`（`make test`）（Task 12 起） | 单元；组合 |
 
 ---
 
@@ -4139,7 +4144,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
 | `T5.1` | 已归档的项目里的修改照样通过 | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 6 起）、`internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`）（Task 7 起） | 单元；组合 |
-| `T5.2` | 什么都不改的修改照样写工作项 | `internal/modules/issue/app` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
+| `T5.2` | 什么都不改的修改照样写工作项 | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 6 起）、故事 `i2-update-issue`（Task 14 起） | 单元；组合；端到端 |
 | `T5.3` | `updateIssue` 在锁之前读时刻 | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestTwoChangesOfAWorkItemSerialize`（`make test`）（Task 11 起） | 单元；组合 |
 | `T5.4` | 改状态不改完成时间 | `internal/modules/issue/app` 的 全部测试（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
 | `T5.5` | 工作项可以移到项目的分诊状态 | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 6 起） | 单元；组合 |
@@ -4160,6 +4165,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T5.20` | 锁住项目之前就重读工作项：等过锁的修改按它等锁之前的样子算差异 | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestTwoChangesOfAWorkItemSerialize`（`make test`）（Task 11 起） | 单元；组合 |
 | `T5.21` | 修改把移进已取消组的状态的工作项当作完成 | `internal/modules/issue/app` 的 全部测试（`make test`） | 单元 |
 | `T5.22` | 修改者因他的修改关注工作项 | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestUpdatingAWorkItemStampsItsRows`（`make test`）（Task 7 起） | 单元；组合 |
+| `T5.23` | 锁下重读工作项的失败答成 404 `issue.not_found`，不是这个失败（PT5.1） | `internal/modules/issue/app` 的 `TestUpdateIssueStopsAtAFailingPort`（`make test`） | 单元 |
+| `T5.24` | 修改只去掉要去掉的账户或标签中的第一个（PT5.2） | `internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 6 起） | 组合 |
+| `T5.25` | 修改只加要加的账户或标签中的第一个（PT5.3） | `internal/modules/issue/app` 的 `TestUpdateIssueWritesTheChangesAndTheirRows`（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
+| `T5.26` | 只给修改新指派的第一个账户加关注（PT5.4） | `internal/modules/issue/app` 的 `TestUpdateIssueWritesTheChangesAndTheirRows`（`make test`） | 单元 |
+| `T5.27` | 动态按去掉的负责人的个数切分它写下的账户（PT5.5） | `internal/modules/issue/app` 的 `TestUpdateIssueWritesTheChangesAndTheirRows`（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
+| `T5.28` | 加的标签不是项目的时，问题落在它在加的标签里的下标，不是在 `label_ids` 里的（PT5.6） | `internal/modules/issue/app` 的 `TestUpdateIssueRefusesUnderTheLock`（`make test`） | 单元 |
+| `T5.29` | 已归档的项目里什么都不改的修改答工作项，不是 409：已归档的检查挪到什么都不改之后（PT5.7） | `internal/modules/issue/app` 的 `TestUpdateIssueRefusesUnderTheLock`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 6 起） | 单元；组合 |
+| `T5.30` | 没给名称的修改把名称写成空的（PT5.8） | `internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 6 起）、`internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`）（Task 6 起）、`internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`、`TestAWorkItemReadsAsStored`（`make test`）（Task 7 起）、`internal/bootstrap` 的 `TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize`、`TestDeletingAStateAndPuttingAWorkItemInItSerialize`、`TestDeletingALabelAndLabellingAWorkItemWithItSerialize`（`make test`）（Task 11 起）、`internal/bootstrap` 的 `TestChainedWorkItemWritesHoldOffNoWorkspaceWrite`（`make test`）（Task 12 起）、故事 `i2-update-issue`（Task 14 起） | 组合；端到端 |
+| `T5.31` | 改标签时重写工作项的每个标签行，留下的也重写（Plane 的全删再插；RV5.1） | `internal/modules/issue/app` 的 `TestUpdateIssueWritesTheChangesAndTheirRows`（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
+| `T5.32` | `updateIssue` 在锁下、判定之后才检查补丁的值，不在任何读之前（PT14.1） | `internal/modules/issue/app` 的 `TestUpdateIssueRefusesBeforeAnyLock`（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；端到端 |
 
 ---
 
@@ -4182,7 +4197,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Tests:**
 - HTTP（`apitest.Main` 两个方向）：`TestUpdateIssue`（只给的字段交给用例，回答 200 和工作项）、`TestUpdateIssueHoldsTheBodyToItsStructure`（编号、排序值、父工作项、描述、日期等 P1b 之外的字段，`null`、类型不对、不是 id 的 id：`bad_request`，不到用例）、`TestUpdateIssueRefusals`。
-- 组合：`TestPermissionMatrix` 的 `updateIssue` 九行（只改名称、每个字段都给、什么都不改、已归档、另一个项目的状态、另一个项目的标签、分诊状态、指派访客、留下已离开的负责人）；`TestThePermissionMatrixCoversEveryOperation`；`TestEachIssueWriteLocksItsProjectFirst` 的 `updateIssue` 一行（每行发的是它的操作的路径；拒绝的不取锁；项目最先；停在 `states` 上时持 Web 的 `FOR NO KEY UPDATE`、工作区上没有锁，`writtenTables` 没有它的写；工作区行被持 N 时照样完成）；`TestCreatingAWorkItemStampsItsRows` 照旧（它的工作项由 `newWorkItem` 建）。
+- 组合：`TestPermissionMatrix` 的 `updateIssue` 九行（只改名称、每个字段都给、什么都不改、已归档（什么都不改也 409）、另一个项目的状态、另一个项目的标签、分诊状态、指派访客、留下已离开的负责人）；`TestThePermissionMatrixCoversEveryOperation`；`TestEachIssueWriteLocksItsProjectFirst` 的 `updateIssue` 一行（每行发的是它的操作的路径；拒绝的不取锁；项目最先；停在 `states` 上时持 Web 的 `FOR NO KEY UPDATE`、工作区上没有锁，`writtenTables` 没有它的写；工作区行被持 N 时照样完成）；`TestCreatingAWorkItemStampsItsRows` 照旧（它的工作项由 `newWorkItem` 建）。
 
 - [ ] **Step 1: 契约，生成**
 
@@ -4950,9 +4965,10 @@ Expected: 通过。
 |---|---|---|---|
 | `T6.1` | PATCH 丢掉请求体的 `label_ids` | `internal/modules/issue/adapter/http` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；组合；端到端 |
 | `T6.2` | 契约让 `IssueUpdate` 带后面的 Phase 的字段（`sort_order`、`parent_id`、日期） | `internal/modules/issue/adapter/http` 的 全部测试（`make test`） | 单元 |
-| `T6.3` | 写的预检以 `FOR SHARE` 读工作项：判定之前取了行锁 | `internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`） | 组合 |
+| `T6.3` | 写的预检以 `FOR SHARE` 读工作项：判定之前取了行锁 | `internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`）、`internal/bootstrap` 的 `TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`（`make test`）（Task 11 起；PT11.2 是同一个改法） | 组合 |
+| `T6.4` | 取锁形状的一行发的路径不是它的操作的：`updateIssue` 一行发 `updateProject` 的、`createIssue` 一行发 `createLabel` 的（两种改法 PT6.F2a、PT6.F2b，各自跑过） | `internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`） | 组合 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T5.1`、`T5.5`、`T5.6`、`T5.7`、`T5.8`、`T5.9`（列在各自的 Task 的表里，标"（Task 6 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=6`）。
+本 Task 的检查也发现较早的 Task 的变异 `T5.1`、`T5.5`、`T5.6`、`T5.7`、`T5.8`、`T5.9`（列在各自的 Task 的表里，标"（Task 6 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=6`）。执行中又记下 `T1.15`、`T3.13`、`T5.2`、`T5.24`、`T5.29`、`T5.30` 在本 Task 的检查上被发现（同样标"（Task 6 起）"；执行中加的行和较早的行新记的这一层在执行完的树上跑过，spec 附录 A.6）。
 
 ---
 
@@ -5470,8 +5486,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T7.2` | 回答把创建者当作最后修改者 | `internal/modules/issue/adapter/http` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemReadsAsStored`（`make test`） | 单元；组合 |
 | `T7.3` | 回答把完成时间当作归档时间 | `internal/modules/issue/adapter/http` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemReadsAsStored`（`make test`） | 单元；组合 |
 | `T7.4` | `updateIssue` 写的行用工作项创建的时刻，不用自己的 | `internal/modules/issue/app` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestUpdatingAWorkItemStampsItsRows`（`make test`）、故事 `i2-update-issue`（Task 14 起） | 单元；组合；端到端 |
+| `T7.5` | `getIssue` 的读丢掉工作项的完成时间（PT7.1） | `internal/bootstrap` 的 `TestAWorkItemReadsAsStored`（`make test`） | 组合 |
+| `T7.6` | `getIssue` 的读把最后修改的时刻答成完成时间（PT7.4） | `internal/modules/issue/app` 的 `TestGetIssueReadsTheWorkItem`（`make test`）、`internal/bootstrap` 的 `TestAWorkItemReadsAsStored`（`make test`） | 单元；组合 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T2.1`、`T5.1`、`T5.22`（列在各自的 Task 的表里，标"（Task 7 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=7`）。
+本 Task 的检查也发现较早的 Task 的变异 `T2.1`、`T5.1`、`T5.22`（列在各自的 Task 的表里，标"（Task 7 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=7`）。执行中又记下 `T2.2`、`T2.3`、`T5.30` 在本 Task 的检查上被发现（同样标"（Task 7 起）"；执行中加的行和较早的行新记的这一层在执行完的树上跑过，spec 附录 A.6）。
 
 ---
 
@@ -6006,6 +6024,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T8.9` | 没人持有、没人等的键不被忘掉 | `internal/platform/gate` 的 全部测试（`make test`） | 单元 |
 | `T8.10` | 闸门让比 `PerKey` 多一个的调用者持有键 | `internal/platform/gate` 的 全部测试（`make test`）、`internal/bootstrap` 的 `TestAHotProjectHoldsUpNoReadOfAnother`（`make test`）（Task 12 起） | 单元；组合 |
 | `T8.11` | 有人等时新来的拿走空位（等价：有人等的键没有空位） | 没有：等价（spec 第 3 节第 11 条，附录 A.3） | — |
+| `T8.12` | 放弃时正好被交到位置的调用者把位置空出来，不交给下一个：后面的等待者在有空位时照样等（PT8.1） | `internal/platform/gate` 的 `TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`（`make test`）、`internal/platform/gate` 的 `TestUnderLoadAKeyIsNeverHeldByMoreThanPerKey`（`make test`，`-race -count=5`） | 单元 |
+| `T8.13` | 放弃的等待者由队尾的等待者顶替：最后来的插到前面（RV8.1） | `internal/platform/gate` 的 `TestWaitersAreServedInTheOrderTheyCame`（`make test`） | 单元 |
+| `T8.14` | 排满在拿空位之前就拒绝：`MaxQueue` 为 0 时谁也拿不到键（RV8.2） | `internal/platform/gate` 的 `TestAFullQueueRefusesAtOnce`（`make test`） | 单元 |
 
 ---
 
@@ -6517,11 +6538,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T9.3` | `TxManager` 开始事务时不带它的选项 | `internal/platform/postgres` 的 `TestLockTimeoutBoundsEachWaitOfTheTransaction`、`TestLockNotAvailable`（`make test`）、`internal/bootstrap` 的 `TestAProjectTooBusyForAWriteAnswersServerBusy`（`make test`）（Task 10 起） | 存储；组合 |
 | `T9.4` | `LockNotAvailable` 把死锁（40P01）当作锁的期限 | `internal/platform/postgres` 的 `TestLockTimeoutBoundsEachWaitOfTheTransaction`、`TestLockNotAvailable`（`make test`） | 存储 |
 | `T9.5` | `issue.write_gate.per_project` 可以是 0，谁也进不了的闸门 | `internal/platform/config` 的 全部测试（`make test`） | 单元 |
-| `T9.6` | `issue.write_lock_timeout` 可以等于 `server.request_timeout` | `internal/platform/config` 的 全部测试（`make test`） | 单元 |
+| `T9.6` | `max_wait` 加 `issue.write_lock_timeout` 可以等于 `server.request_timeout` | `internal/platform/config` 的 全部测试（`make test`） | 单元 |
 | `T9.7` | `issue` 的配置不校验 | `internal/platform/config` 的 全部测试（`make test`） | 单元 |
 | `T9.8` | `issue.write_gate.max_queue` 可以是负数 | `internal/platform/config` 的 全部测试（`make test`） | 单元 |
 | `T9.9` | 随附的配置让一个项目同时进三个写 | `configs` 的 全部测试（`make test`） | 单元 |
 | `T9.10` | 日志把 `per_project` 写成 `max_queue` | `internal/platform/config` 的 全部测试（`make test`） | 单元 |
+| `T9.11` | `issue.write_gate.max_queue` 为 0（允许的下限）被拒绝（PT9.1） | `internal/platform/config` 的 `TestValidateAcceptsTheWriteGatesMinimums`（`make test`） | 单元 |
+| `T9.12` | `issue.write_gate.per_project` 为 1（允许的下限）被拒绝（PT9.2） | `internal/platform/config` 的 `TestValidateAcceptsTheWriteGatesMinimums`（`make test`） | 单元 |
+| `T9.13` | 日志的 `write_lock_timeout` 写的是 `auth.refresh_deadline` 的值（PT9.3） | `internal/platform/config` 的 `TestLogValueMasksDatabaseURL`（`make test`） | 单元 |
+| `T9.14` | 日志的 `per_project` 写的是 `ratelimit.password_user.burst` 的值（PT9.4） | `internal/platform/config` 的 `TestLogValueMasksDatabaseURL`（`make test`） | 单元 |
+| `T9.15` | 日志的 `per_project` 写的是 `max_queue` 的值（T9.10 反过来；PT9.5） | `internal/platform/config` 的 `TestLogValueMasksDatabaseURL`（`make test`） | 单元 |
+| `T9.16` | 锁的期限取最近的毫秒，不是向上取整（PT9.6） | `internal/platform/postgres` 的 `TestLockTimeoutBoundsEachWaitOfTheTransaction`（`make test`） | 存储 |
 
 ---
 
@@ -6544,7 +6571,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `busyTx`、`newIssueTx(pool, cfg)`：`postgres.NewTxManager` 带 `LockTimeout(issue.write_lock_timeout)`，`LockNotAvailable` 换成同一个 503。这是 `55P03` 换码的唯一一处（设计 3.5）。
 - `bootstrap/app.go`：`issue.New` 拿 `newIssueTx(pool, cfg)` 和 `newWriteGate(cfg.Issue.WriteGate)`。
 - 契约：`createIssue`、`updateIssue` 声明 `server_busy`，描述写明"太多写时 503，按 `Retry-After` 重试"；`server_busy` 是 M2 的平台码，文案已有（约束 4 不另加）。
-- 测试的世界：`issue_writes_test.go` 的 `testIssueConfig`（默认值，锁的期限 4 秒，短于测试的请求期限）和 `newIssueRoute` 的闸门；`app_test.go` 的 `testConfig` 带上它；`issue_world_test.go` 的 `newIssueWorldWith(t, configure)`。
+- 测试的世界：`issue_writes_test.go` 的 `testIssueConfig`（闸门的默认值，锁的期限 4 秒，短于测试的请求期限 5 秒：只给测试用的值，`max_wait` 加锁的期限不短于请求的期限，配置的加载会拒绝它，测试的世界不校验配置）和 `newIssueRoute` 的闸门；`app_test.go` 的 `testConfig` 带上它；`issue_world_test.go` 的 `newIssueWorldWith(t, configure)`。
 - `archtest/composition_test.go`：命令行不建写闸门（`platform/gate` 进 `TestCommandsComposeNoServerAndNoJobs` 的禁止表）。
 
 **Tests:**
@@ -7626,8 +7653,11 @@ Expected: 通过。
 | `T10.16` | 写用自己的 context 进项目的闸门，不用请求的：请求到期、被取消都不结束它的等待 | `internal/bootstrap` 的 `TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy`（`make test`） | 组合 |
 | `T10.17` | 离开闸门放进事务的函数里（提交、回滚之前就离开） | `internal/modules/issue/app` 的 `TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction`、`TestAWriteLeavesTheGateOnEveryPath`（`make test`） | 单元 |
 | `T10.18` | getIssue 进入它的项目的写闸门 | `internal/modules/issue/app` 的 `TestGetIssueReadsTheWorkItem`（`make test`）、`internal/bootstrap` 的 `TestAHotProjectHoldsUpNoReadOfAnother`（`make test`）（Task 12 起） | 单元；组合 |
+| `T10.19` | `bootstrap` 的写闸门对每个项目用同一个键：整个进程一个闸门（PT10.1） | `internal/bootstrap` 的 `TestTheWriteGateAnswersItsRefusalsAsServerBusy`（`make test`）、`internal/bootstrap` 的 `TestAProjectTooBusyForAWriteAnswersServerBusy`（`make test`） | 单元；组合 |
+| `T10.20` | `Locks.run` 把写的 panic 换成错误：panic 不再传给调用者（PT10.2） | `internal/modules/issue/app` 的 `TestAWriteLeavesTheGateOnEveryPath`（`make test`） | 单元 |
+| `T10.21` | 写闸门把排满（`ErrFull`）照原样答出（500），不是 `server_busy` | `internal/bootstrap` 的 `TestTheWriteGateAnswersItsRefusalsAsServerBusy`（`make test`）、`internal/bootstrap` 的 `TestAProjectTooBusyForAWriteAnswersServerBusy`（`make test`）、`internal/bootstrap` 的 `TestAHotProjectHoldsUpNoReadOfAnother`（`make test`）（Task 12 起） | 单元；组合 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T8.2`、`T8.4`、`T8.6`、`T8.7`、`T9.3`（列在各自的 Task 的表里，标"（Task 10 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=10`）。
+本 Task 的检查也发现较早的 Task 的变异 `T8.2`、`T8.4`、`T8.6`、`T8.7`、`T9.3`（列在各自的 Task 的表里，标"（Task 10 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=10`）。执行中又记下 `T4.9` 在本 Task 的检查上被发现（同样标"（Task 10 起）"；执行中加的行和较早的行新记的这一层在执行完的树上跑过，spec 附录 A.6）。
 
 ---
 
@@ -8326,9 +8356,13 @@ TestTwoWritesOnAProjectSerialize uses serializeOn.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**：本 Task 没有自己的变异。
+**变异**（spec 附录 A.6；执行中加的行，改法在 `$M4TMP/p1bsdd/` 的探针文件里，不在 `mutants_p1b.py` 里；"层"同前面各 Task 的表）：
 
-本 Task 的检查也发现较早的 Task 的变异 `T5.3`、`T5.6`、`T5.9`、`T5.15`、`T5.16`、`T5.17`、`T5.18`、`T5.20`（列在各自的 Task 的表里，标"（Task 11 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=11`）。
+| 变异 | 改坏 | 必须失败的检查 | 层 |
+|---|---|---|---|
+| `T11.1` | 删除项目（或连同工作区）时工作项一侧的每一行保留原来的最后修改者，不记在删除者名下（P1a 的 `delete_rows.sql`；PT11.1） | `internal/modules/issue/adapter/postgres` 的 `TestTheBatchStatementsDeleteAProjectsRowsInIDOrder`、`TestABatchPassesOverARowDeletedWhileItWaits`（`make test`）、`internal/bootstrap` 的 `TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize`、`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`（`make test`） | 存储；组合 |
+
+本 Task 的检查也发现较早的 Task 的变异 `T5.3`、`T5.6`、`T5.9`、`T5.15`、`T5.16`、`T5.17`、`T5.18`、`T5.20`（列在各自的 Task 的表里，标"（Task 11 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=11`）。执行中又记下 `T5.30`、`T6.3` 在本 Task 的检查上被发现（同样标"（Task 11 起）"；执行中加的行和较早的行新记的这一层在执行完的树上跑过，spec 附录 A.6）。
 
 ---
 
@@ -8655,7 +8689,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 |---|---|---|---|
 | `T12.1` | 工作项的写在项目行之外另取工作区行的 `FOR SHARE`（M3 的方案 E，决策点 1 不取） | `internal/bootstrap` 的 `TestChainedWorkItemWritesHoldOffNoWorkspaceWrite`（`make test`）、`internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`） | 组合 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T8.10`、`T10.3`、`T10.12`、`T10.18`（列在各自的 Task 的表里，标"（Task 12 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=12`）。
+本 Task 的检查也发现较早的 Task 的变异 `T8.10`、`T10.3`、`T10.12`、`T10.18`（列在各自的 Task 的表里，标"（Task 12 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=12`）。执行中又记下 `T4.8`、`T4.9`、`T5.30`、`T10.21` 在本 Task 的检查上被发现（同样标"（Task 12 起）"；执行中加的行和较早的行新记的这一层在执行完的树上跑过，spec 附录 A.6）。
 
 ---
 
@@ -8884,7 +8918,11 @@ same data.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**：本 Task 加的是一个只在设了 `NERVE_MEASURE_SCALE` 时运行的测量，它量耗时；最后的"没有未删除的行"一句由 P1a 的按目录的删除测试守着，没有自己的变异。
+**变异**：本 Task 加的是一个只在设了 `NERVE_MEASURE_SCALE` 时运行的测量，它量耗时；最后的"没有未删除的行"一句由 P1a 的按目录的删除测试守着。修复轮加的种子的核对有一个变异（spec 附录 A.6；改法在 `$M4TMP/p1bsdd/probes_t13.py`，不在 `mutants_p1b.py` 里；"层"同前面各 Task 的表）：
+
+| 变异 | 改坏 | 必须失败的检查 | 层 |
+|---|---|---|---|
+| `T13.1` | 种子的状态名写错（`Backlogx`）：一个工作项都没种下（PT13.1） | `internal/bootstrap` 的 `TestTheDeletionsAtTheScaleTarget`（设了 `NERVE_MEASURE_SCALE`，单独运行） | 组合 |
 
 ---
 
@@ -9586,7 +9624,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **变异**：本 Task 没有自己的变异。
 
-本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.2`、`T1.3`、`T1.4`、`T1.5`、`T1.6`、`T1.7`、`T1.8`、`T1.9`、`T1.10`、`T1.11`、`T1.12`、`T1.13`、`T1.14`、`T1.15`、`T2.1`、`T2.2`、`T2.3`、`T3.1`、`T3.2`、`T3.3`、`T3.4`、`T3.5`、`T3.6`、`T3.7`、`T3.8`、`T3.10`、`T3.11`、`T5.2`、`T5.4`、`T5.9`、`T5.12`、`T5.19`、`T6.1`、`T7.4`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=14`）。
+本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.2`、`T1.3`、`T1.4`、`T1.5`、`T1.6`、`T1.7`、`T1.8`、`T1.9`、`T1.10`、`T1.11`、`T1.12`、`T1.13`、`T1.14`、`T1.15`、`T2.1`、`T2.2`、`T2.3`、`T3.1`、`T3.2`、`T3.3`、`T3.4`、`T3.5`、`T3.6`、`T3.7`、`T3.8`、`T3.10`、`T3.11`、`T5.2`、`T5.4`、`T5.9`、`T5.12`、`T5.19`、`T6.1`、`T7.4`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p1b.py`，`MUT_LATER=14`）。执行中又记下 `T5.25`、`T5.27`、`T5.30`、`T5.31`、`T5.32` 在本 Task 的检查上被发现（同样标"（Task 14 起）"；执行中加的行和较早的行新记的这一层在执行完的树上跑过，spec 附录 A.6）。
 
 ---
 
@@ -9614,7 +9652,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new README.md
 - **数据库的 locale**：用 UTF-8 的 locale 初始化数据库（官方的 PostgreSQL 镜像是 `en_US.utf8`）。标签的名称在项目内不分大小写，按数据库的 `LC_CTYPE` 折叠（`lower(name)`）：以 `C` 初始化的数据库只折叠 ASCII，`Ä` 与 `ä` 算两个名称（M3/P7b spec 第 7 节）。
-- **工作项的写闸门和锁的期限**：一个项目上的工作项的写，每个进程里至多 `issue.write_gate.per_project`（默认 2）个同时在数据库里；多的在进程里排队，至多 `issue.write_gate.max_queue`（默认 64）个，每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；在数据库里每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒；加上 `max_wait` 必须短于 `server.request_timeout`）。排满、等不到、在队列里请求到期或等锁到期的写得到 503 `server_busy`，带 `Retry-After: 1`，客户端隔这么久重试。闸门让一个热的项目上的工作项的写至多占用连接池（`database.max_conns`，默认 10）里的这么多个连接：同时热的项目少于 `max_conns / per_project`（默认 5）个时，别的项目的读写不排在这些写后面；更多的项目同时热时（比如删除一个大的工作区，它的每个项目上都有写在等行锁），等锁的写仍能占满连接池，别的请求在池的队列里等到这些写等锁到期。部署多个 nerve 进程时每个进程各有这么多个：连接池的大小怎样配合 `per_project`、同时热的项目数和进程数，由 M8 的部署说明定。
+- **工作项的写闸门和锁的期限**：一个项目上的工作项的写，每个进程里至多 `issue.write_gate.per_project`（默认 2）个同时在数据库里；多的在进程里排队，至多 `issue.write_gate.max_queue`（默认 64）个，每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；在数据库里每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒；加上 `max_wait` 必须短于 `server.request_timeout`）。排满、等不到、在闸门上请求到期或等锁到期的写得到 503 `server_busy`，带 `Retry-After: 1`，客户端隔这么久重试。闸门让一个热的项目上的工作项的写至多占用连接池（`database.max_conns`，默认 10）里的这么多个连接：同时热的项目少于 `max_conns / per_project`（默认 5）个时，别的项目的读写不排在这些写后面；达到这个数（默认 5 个）或更多的项目同时热时（比如删除一个大的工作区，它的每个项目上都有写在等行锁），等锁的写仍能占满连接池，别的请求在池的队列里等到这些写等锁到期。部署多个 nerve 进程时每个进程各有这么多个：连接池的大小怎样配合 `per_project`、同时热的项目数和进程数，由 M8 的部署说明定。
 ````
 
 `docs/v0/M4-issue-core/handoffs/M2-closeout.md`（修改，1 处）：
@@ -9647,7 +9685,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## 处理结果（M4/P1b）
 
-- **第 2 节，连接池的代价和写闸门**（完成）：工作项一侧的写在预检之后、开始事务之前进入它的项目的写闸门（`platform/gate`；`issue/app` 声明的 `WriteGate`，`bootstrap/gate.go` 接线），不持连接、不持锁地等：每个进程里一个项目至多 `issue.write_gate.per_project`（默认 2）个写在数据库里，排队至多 `issue.write_gate.max_queue`（64）个、每个至多 `issue.write_gate.max_wait`（2 秒）；写的事务带 `issue.write_lock_timeout`（5 秒）的 `lock_timeout`。排满、等不到、在队列里请求到期、等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在 `bootstrap/gate.go` 一处换码（M4 设计 3.5、11.11）。交错 20 经真实的连接池（10 个连接）核对：200 个写压在一个项目上、它的行被别的事务持着时，另一个项目的读最慢几十毫秒（没有闸门时一秒以上），超出闸门的 134 个写立即 503；首尾相连的工作项写之下，改工作区、改成员的角色、删除工作区各在 1 秒之内（M4/P1b spec 第 3 节）。闸门限的是每个项目的份额：一个进程里同时热的项目达到池的大小除以 K（默认 5 个）时池仍会被等锁的写占满；连接池的大小与 K、同时热的项目数、进程数交给 M8（M4 设计 13.2，收尾时写进 M8 的交接）。
+- **第 2 节，连接池的代价和写闸门**（完成）：工作项一侧的写在预检之后、开始事务之前进入它的项目的写闸门（`platform/gate`；`issue/app` 声明的 `WriteGate`，`bootstrap/gate.go` 接线），不持连接、不持锁地等：每个进程里一个项目至多 `issue.write_gate.per_project`（默认 2）个写在数据库里，排队至多 `issue.write_gate.max_queue`（64）个、每个至多 `issue.write_gate.max_wait`（2 秒）；写的事务带 `issue.write_lock_timeout`（5 秒）的 `lock_timeout`。排满、等不到、在闸门上请求到期、等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在 `bootstrap/gate.go` 一处换码（M4 设计 3.5、11.11）。交错 20 经真实的连接池（10 个连接）核对（`TestAHotProjectHoldsUpNoReadOfAnother`、`TestChainedWorkItemWritesHoldOffNoWorkspaceWrite`）：200 个写压在一个项目上、它的行被别的事务持着时，另一个项目的读最慢不到 50 毫秒（没有闸门时一秒以上），超出闸门的 134 个写立即 503；首尾相连的工作项写之下，改工作区、改成员的角色、删除工作区各在 1 秒之内（M4/P1b spec 第 3 节）。闸门限的是每个项目的份额：一个进程里同时热的项目达到池的大小除以 K（默认 5 个）时池仍会被等锁的写占满；连接池的大小与 K、同时热的项目数、进程数交给 M8（M4 设计 13.2，收尾时写进 M8 的交接）。
 - **第 2 节，约定五**（P1b 的批量写完成）：修改的两条批量写（`RemoveAssignees`、`RemoveLabels`：按谓词软删除一个工作项被去掉的负责人、标签）都在项目 N 之下，那些行只有持项目 N 的写会写到，不落在约定五的例外里；新加的负责人、标签、关注按 `id` 的顺序插入（M4/P1b spec 第 3 节）。
 
 仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、P1b 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 4 节的 `guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明，`expectIssueDeleted`（M4 的 P2）和删除断言的限时轮询（M4 的 P9）；第 1、3、5–9 节，按 M4 设计 13.1 的落点。
@@ -9676,7 +9714,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new docs/v0/v0-design.md
   工作项一侧的写从 M4/P1a 起落地（M4 设计 3.5，决策点 1 负责人裁定 B）。约定二对它们的延伸是**最先锁项目行，不锁工作区行**：不加锁地读出资源（按项目 id 的写读项目，按资源 id 的写读资源、得到工作项和项目，没有时答资源的 404），再做一次不加锁的预检，**凡是判定拒绝的都在这里答**（看不到答资源的 404，看得到而不能做答 403），不取行锁；放行的写开始事务，以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），重读资源、在锁下再判定一次（等锁期间被移出、降级的人照样得到 404 或 403，锁下的判定是最终的），然后检查依赖的行、读时刻、写入。项目的 N 让同一个项目里的写一个接一个（取号、同一状态最大的 `sort_order`、动态按提交的顺序得到不减的时刻都靠它）；不锁工作区行，最频繁的写就不会像 M3 设计 17.4 的探针 B 那样让工作区一级的写一直等下去。删除工作区在锁住它的邀请之后、读时刻之前，按 `id` 升序以 `FOR NO KEY UPDATE` 锁住它的全部未删除项目（`ProjectCascade.LockWorkspaceProjects`），所以它的时刻不早于这些项目上已提交的每个写。B 的两个代价：一、授权与时刻的先后可以不一致：只改工作区角色（不降为访客）的写不锁项目，降为访客、结束成员关系的连带在锁项目之前读时刻，一个工作项的写可以在成员关系的变更读了时刻之后才写下更晚的时刻、按旧的角色生效；二、草稿的写、发布草稿（M4 的 P8）和 M3 的项目管理类的写仍先取工作区 S，M3 设计 17.4 的饥饿在这些较少的路径上仍在。
 
-  从 M4/P1b 起，工作项一侧的写在预检之后、开始事务（取连接）之前进入它的项目的**写闸门**（M4 设计 3.5，架构问题 11）：每个进程里一个项目至多 K 个写同时在数据库里（`issue.write_gate.per_project`，默认 2），多出的在进程里排队，不持连接、不持锁，排队至多 `issue.write_gate.max_queue` 个（默认 64），每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；进入数据库的写，每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒，事务开始时 `SET LOCAL lock_timeout`）。排满、等不到、在队列里请求到期和等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在组合根（`bootstrap/gate.go`）一处换成这个码。连接池的代价：等项目行的写持着池里的一个连接，没有闸门时一个热的项目能占满整个池（`database.max_conns`，默认 10），别的项目上无关的读写排在池的等待者后面（M4 设计的 SP1：200 个写排在一个项目上时，别的项目的读等约 875 ms）；有了闸门，一个项目上的工作项的写至多占 K 个连接（M4/P1b 的交错 20：同样的突发之下别的项目的读几十毫秒，没有闸门时一秒以上）；闸门限的是每个项目的份额，同时热的项目达到池的大小除以 K（默认 5 个）时，等锁的写仍能占满池。代价是热的项目上超出的写得到 503、要由客户端按 `Retry-After` 重试。多个进程时每个进程各有 K 个，池的大小与 K、同时热的项目数由 M8 的部署说明定。
+  从 M4/P1b 起，工作项一侧的写在预检之后、开始事务（取连接）之前进入它的项目的**写闸门**（M4 设计 3.5，架构问题 11）：每个进程里一个项目至多 K 个写同时在数据库里（`issue.write_gate.per_project`，默认 2），多出的在进程里排队，不持连接、不持锁，排队至多 `issue.write_gate.max_queue` 个（默认 64），每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；进入数据库的写，每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒，事务开始时 `SET LOCAL lock_timeout`）。排满、等不到、在闸门上请求到期和等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在组合根（`bootstrap/gate.go`）一处换成这个码。连接池的代价：等项目行的写持着池里的一个连接，没有闸门时一个热的项目能占满整个池（`database.max_conns`，默认 10），别的项目上无关的读写排在池的等待者后面（M4 设计的 SP1：200 个写排在一个项目上时，别的项目的读等约 875 ms）；有了闸门，一个项目上的工作项的写至多占 K 个连接（M4/P1b 的交错 20：同样的突发之下别的项目的读不到 50 毫秒，没有闸门时一秒以上）；闸门限的是每个项目的份额，同时热的项目达到池的大小除以 K（默认 5 个）时，等锁的写仍能占满池。代价是热的项目上超出的写得到 503、要由客户端按 `Retry-After` 重试。多个进程时每个进程各有 K 个，池的大小与 K、同时热的项目数由 M8 的部署说明定。
 ````
 ````old docs/v0/v0-design.md
                             logging、httpserver（中间件、problem+json）、ratelimit、clock、idgen
