@@ -42,9 +42,9 @@ import (
 var survivesItsWorkspace = map[string]string{}
 
 // rowsUnder is what one foreign key to the parent's table (the parent row
-// itself as its id) held under the test's two parent rows, a workspace or
-// a project each, before and after the deletion: the deleted one's
-// undeleted rows, counted, and the kept one's rows, as text.
+// itself as its id) held under the test's two parent rows, two workspaces,
+// two projects or two work items, before and after the deletion: the
+// deleted one's undeleted rows, counted, and the kept one's rows, as text.
 type rowsUnder struct {
 	key                         string // table.column
 	deletedBefore, deletedAfter int
@@ -52,11 +52,11 @@ type rowsUnder struct {
 }
 
 // deletionViolations reports, for each foreign key to parent, the parent's
-// table ("workspaces" or "projects", as keysTo takes it): no row under
-// either parent row before the deletion, which would leave its checks
-// nothing to see; an undeleted row left under the deleted one, or, for a
-// key on exempt, a row deleted that must survive; a row of the kept one
-// changed. An exempt key that no foreign key matches is reported too.
+// table ("workspaces", "projects" or "issues", as keysTo takes it): no row
+// under either parent row before the deletion, which would leave its
+// checks nothing to see; an undeleted row left under the deleted one, or,
+// for a key on exempt, a row deleted that must survive; a row of the kept
+// one changed. An exempt key that no foreign key matches is reported too.
 func deletionViolations(parent string, under []rowsUnder, exempt map[string]string) []string {
 	var found []string
 	row := rowOf(parent)

@@ -13,10 +13,11 @@ import (
 )
 
 // The catalog reading of the deletions' guards (workspace_deletion_test.go,
-// project_deletion_test.go): the foreign keys to the deleted row's table,
-// workspaces or projects, which fail on a table under it without one of its
-// own (keysTo, with its counterexample), and each key's rows under a
-// deleted row: undeleted, unstamped by the deletion, or all of them as
+// project_deletion_test.go, issue_deletion_test.go): the foreign keys to
+// the deleted row's table, workspaces, projects or issues, which fail on a
+// table under it without one of its own (keysTo, with its counterexample);
+// each key's rows under a deleted row: undeleted or deleted, unstamped by
+// the deletion, or all of them as text; and its rows of the ids given, as
 // text.
 
 // foreignKey is a column that references parent, table as SQL names it.
@@ -25,8 +26,8 @@ type foreignKey struct{ parent, table, column string }
 func (k foreignKey) String() string { return k.table + "." + k.column }
 
 // rowOf is one row of the parent table, as the guards' messages name it:
-// "workspace" for workspaces, "project" for projects. A parent is spelt as
-// its table everywhere else.
+// "workspace" for workspaces, "project" for projects, "issue" for issues.
+// A parent is spelt as its table everywhere else.
 func rowOf(parent string) string { return strings.TrimSuffix(parent, "s") }
 
 // keysTo are the parent row itself, as <parent>.id, then every foreign key

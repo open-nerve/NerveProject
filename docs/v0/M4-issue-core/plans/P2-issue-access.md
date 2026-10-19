@@ -3908,8 +3908,29 @@ func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, keys []foreignKey, id,
 			t.Errorf("%s: the rows of the work item deleted before Web:\n%s\nwant them as they were:\n%s", k, rows, goneRows[i])
 ````
 
-`server/internal/bootstrap/workspace_deletion_catalog_test.go`（修改，3 处）：
+`server/internal/bootstrap/workspace_deletion_catalog_test.go`（修改，5 处）：
 
+````old server/internal/bootstrap/workspace_deletion_catalog_test.go
+// project_deletion_test.go): the foreign keys to the deleted row's table,
+// workspaces or projects, which fail on a table under it without one of its
+// own (keysTo, with its counterexample), and each key's rows under a
+// deleted row: undeleted, unstamped by the deletion, or all of them as
+````
+````new server/internal/bootstrap/workspace_deletion_catalog_test.go
+// project_deletion_test.go, issue_deletion_test.go): the foreign keys to
+// the deleted row's table, workspaces, projects or issues, which fail on a
+// table under it without one of its own (keysTo, with its counterexample);
+// each key's rows under a deleted row: undeleted or deleted, unstamped by
+// the deletion, or all of them as text; and its rows of the ids given, as
+````
+````old server/internal/bootstrap/workspace_deletion_catalog_test.go
+// "workspace" for workspaces, "project" for projects. A parent is spelt as
+// its table everywhere else.
+````
+````new server/internal/bootstrap/workspace_deletion_catalog_test.go
+// "workspace" for workspaces, "project" for projects, "issue" for issues.
+// A parent is spelt as its table everywhere else.
+````
 ````old server/internal/bootstrap/workspace_deletion_catalog_test.go
 func (k foreignKey) undeleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) []uuid.UUID {
 	t.Helper()
@@ -3955,8 +3976,32 @@ func (k foreignKey) asText(t *testing.T, pool *pgxpool.Pool, ids []uuid.UUID) st
 	return s
 ````
 
-`server/internal/bootstrap/workspace_deletion_test.go`（修改，1 处）：
+`server/internal/bootstrap/workspace_deletion_test.go`（修改，3 处）：
 
+````old server/internal/bootstrap/workspace_deletion_test.go
+// itself as its id) held under the test's two parent rows, a workspace or
+// a project each, before and after the deletion: the deleted one's
+// undeleted rows, counted, and the kept one's rows, as text.
+````
+````new server/internal/bootstrap/workspace_deletion_test.go
+// itself as its id) held under the test's two parent rows, two workspaces,
+// two projects or two work items, before and after the deletion: the
+// deleted one's undeleted rows, counted, and the kept one's rows, as text.
+````
+````old server/internal/bootstrap/workspace_deletion_test.go
+// table ("workspaces" or "projects", as keysTo takes it): no row under
+// either parent row before the deletion, which would leave its checks
+// nothing to see; an undeleted row left under the deleted one, or, for a
+// key on exempt, a row deleted that must survive; a row of the kept one
+// changed. An exempt key that no foreign key matches is reported too.
+````
+````new server/internal/bootstrap/workspace_deletion_test.go
+// table ("workspaces", "projects" or "issues", as keysTo takes it): no row
+// under either parent row before the deletion, which would leave its
+// checks nothing to see; an undeleted row left under the deleted one, or,
+// for a key on exempt, a row deleted that must survive; a row of the kept
+// one changed. An exempt key that no foreign key matches is reported too.
+````
 ````old server/internal/bootstrap/workspace_deletion_test.go
 		noRowLastWrittenBy(t, pool, project, adminID)
 ````
