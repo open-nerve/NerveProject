@@ -9606,7 +9606,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new README.md
 - **数据库的 locale**：用 UTF-8 的 locale 初始化数据库（官方的 PostgreSQL 镜像是 `en_US.utf8`）。标签的名称在项目内不分大小写，按数据库的 `LC_CTYPE` 折叠（`lower(name)`）：以 `C` 初始化的数据库只折叠 ASCII，`Ä` 与 `ä` 算两个名称（M3/P7b spec 第 7 节）。
-- **工作项的写闸门和锁的期限**：一个项目上的工作项的写，每个进程里至多 `issue.write_gate.per_project`（默认 2）个同时在数据库里；多的在进程里排队，至多 `issue.write_gate.max_queue`（默认 64）个，每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；在数据库里每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒；加上 `max_wait` 必须短于 `server.request_timeout`）。排满、等不到、请求到期或等锁到期的写得到 503 `server_busy`，带 `Retry-After: 1`，客户端隔这么久重试。闸门让一个热的项目至多占用连接池（`database.max_conns`，默认 10）里的这么多个连接：同时热的项目少于 `max_conns / per_project`（默认 5）个时，别的项目的读写不排在它们后面；更多的项目同时热时（比如删除一个大的工作区，它的每个项目上都有写在等行锁），等锁的写仍能占满连接池，别的请求在池的队列里等到这些写等锁到期。部署多个 nerve 进程时每个进程各有这么多个：连接池的大小怎样配合 `per_project`、同时热的项目数和进程数，由 M8 的部署说明定。
+- **工作项的写闸门和锁的期限**：一个项目上的工作项的写，每个进程里至多 `issue.write_gate.per_project`（默认 2）个同时在数据库里；多的在进程里排队，至多 `issue.write_gate.max_queue`（默认 64）个，每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；在数据库里每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒；加上 `max_wait` 必须短于 `server.request_timeout`）。排满、等不到、在队列里请求到期或等锁到期的写得到 503 `server_busy`，带 `Retry-After: 1`，客户端隔这么久重试。闸门让一个热的项目上的工作项的写至多占用连接池（`database.max_conns`，默认 10）里的这么多个连接：同时热的项目少于 `max_conns / per_project`（默认 5）个时，别的项目的读写不排在这些写后面；更多的项目同时热时（比如删除一个大的工作区，它的每个项目上都有写在等行锁），等锁的写仍能占满连接池，别的请求在池的队列里等到这些写等锁到期。部署多个 nerve 进程时每个进程各有这么多个：连接池的大小怎样配合 `per_project`、同时热的项目数和进程数，由 M8 的部署说明定。
 ````
 
 `docs/v0/M4-issue-core/handoffs/M2-closeout.md`（修改，1 处）：
@@ -9639,7 +9639,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## 处理结果（M4/P1b）
 
-- **第 2 节，连接池的代价和写闸门**（完成）：工作项一侧的写在预检之后、开始事务之前进入它的项目的写闸门（`platform/gate`；`issue/app` 声明的 `WriteGate`，`bootstrap/gate.go` 接线），不持连接、不持锁地等：每个进程里一个项目至多 `issue.write_gate.per_project`（默认 2）个写在数据库里，排队至多 `issue.write_gate.max_queue`（64）个、每个至多 `issue.write_gate.max_wait`（2 秒）；写的事务带 `issue.write_lock_timeout`（5 秒）的 `lock_timeout`。排满、等不到、请求到期、等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在 `bootstrap/gate.go` 一处换码（M4 设计 3.5、11.11）。交错 20 经真实的连接池（10 个连接）核对：200 个写压在一个项目上、它的行被别的事务持着时，另一个项目的读最慢几十毫秒（没有闸门时一秒以上），超出闸门的 134 个写立即 503；首尾相连的工作项写之下，改工作区、改成员的角色、删除工作区各在 1 秒之内（M4/P1b spec 第 3 节）。闸门限的是每个项目的份额：一个进程里同时热的项目达到池的大小除以 K（默认 5 个）时池仍会被等锁的写占满；连接池的大小与 K、同时热的项目数、进程数交给 M8（M4 设计 13.2，收尾时写进 M8 的交接）。
+- **第 2 节，连接池的代价和写闸门**（完成）：工作项一侧的写在预检之后、开始事务之前进入它的项目的写闸门（`platform/gate`；`issue/app` 声明的 `WriteGate`，`bootstrap/gate.go` 接线），不持连接、不持锁地等：每个进程里一个项目至多 `issue.write_gate.per_project`（默认 2）个写在数据库里，排队至多 `issue.write_gate.max_queue`（64）个、每个至多 `issue.write_gate.max_wait`（2 秒）；写的事务带 `issue.write_lock_timeout`（5 秒）的 `lock_timeout`。排满、等不到、在队列里请求到期、等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在 `bootstrap/gate.go` 一处换码（M4 设计 3.5、11.11）。交错 20 经真实的连接池（10 个连接）核对：200 个写压在一个项目上、它的行被别的事务持着时，另一个项目的读最慢几十毫秒（没有闸门时一秒以上），超出闸门的 134 个写立即 503；首尾相连的工作项写之下，改工作区、改成员的角色、删除工作区各在 1 秒之内（M4/P1b spec 第 3 节）。闸门限的是每个项目的份额：一个进程里同时热的项目达到池的大小除以 K（默认 5 个）时池仍会被等锁的写占满；连接池的大小与 K、同时热的项目数、进程数交给 M8（M4 设计 13.2，收尾时写进 M8 的交接）。
 - **第 2 节，约定五**（P1b 的批量写完成）：修改的两条批量写（`RemoveAssignees`、`RemoveLabels`：按谓词软删除一个工作项被去掉的负责人、标签）都在项目 N 之下，那些行只有持项目 N 的写会写到，不落在约定五的例外里；新加的负责人、标签、关注按 `id` 的顺序插入（M4/P1b spec 第 3 节）。
 
 仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、P1b 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 4 节的 `guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明，`expectIssueDeleted`（M4 的 P2）和删除断言的限时轮询（M4 的 P9）；第 1、3、5–9 节，按 M4 设计 13.1 的落点。
@@ -9655,9 +9655,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````
 ````new docs/v0/plane-diff.md
 | 工作项的写的取锁 | 动态在 Celery 里异步写，写之间不串行 | 不加锁地预检，判定拒绝的在那里答（404、403），不取行锁；放行的写以 `FOR NO KEY UPDATE` 锁住项目行，在锁下重读、再判定，动态、关注与工作项在同一个事务里写（M4 设计 3.5，决策点 1） |
-| 一个项目上的并发写 | 不限 | 每个进程里一个项目至多 K 个写同时在数据库里（`issue.write_gate.per_project`，默认 2），多的在进程里排队、不持连接；排满、等过 `issue.write_gate.max_wait`、等锁超过 `issue.write_lock_timeout` 时 503 `server_busy`，带 `Retry-After: 1`（M4 设计 3.5，架构问题 11） |
-| 修改工作项的响应 | 204 | 200，回答修改之后的 `IssueDetail`；什么都没改的修改不写任何行，回答锁下读到的工作项（总体设计 3.1；M4 设计 3.7） |
-| 工作项的负责人的读取 | 只返回"在某个项目里仍有效"的负责人 | 返回全部未删除的负责人行，离开了项目的负责人照样列出；修改只检查新加的负责人，留下的不查（M4 设计 3.6、3.7） |
+| 一个项目上的并发写 | 不限 | 每个进程里一个项目上的工作项的写至多 K 个同时在数据库里（`issue.write_gate.per_project`，默认 2），多的在进程里排队、不持连接；排满、等过 `issue.write_gate.max_wait`、等锁超过 `issue.write_lock_timeout` 时 503 `server_busy`，带 `Retry-After: 1`（M4 设计 3.5，架构问题 11） |
+| 修改工作项的响应 | 204 | 200，回答修改之后的 `IssueDetail`；什么都没改的修改不写任何行，回答锁下读到的工作项（总体设计 3.1；M4/P1b spec 第 3 节第 4 条） |
+| 工作项的负责人的读取 | 只返回"在某个项目里仍有效"的负责人 | 返回全部未删除的负责人行，离开了项目的负责人照样列出；修改只检查新加的负责人，留下的不查（M4 设计 3.6；M4/P1b spec 第 3 节第 3 条） |
 ````
 
 `docs/v0/v0-design.md`（修改，2 处）：
@@ -9668,7 +9668,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new docs/v0/v0-design.md
   工作项一侧的写从 M4/P1a 起落地（M4 设计 3.5，决策点 1 负责人裁定 B）。约定二对它们的延伸是**最先锁项目行，不锁工作区行**：不加锁地读出资源（按项目 id 的写读项目，按资源 id 的写读资源、得到工作项和项目，没有时答资源的 404），再做一次不加锁的预检，**凡是判定拒绝的都在这里答**（看不到答资源的 404，看得到而不能做答 403），不取行锁；放行的写开始事务，以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），重读资源、在锁下再判定一次（等锁期间被移出、降级的人照样得到 404 或 403，锁下的判定是最终的），然后检查依赖的行、读时刻、写入。项目的 N 让同一个项目里的写一个接一个（取号、同一状态最大的 `sort_order`、动态按提交的顺序得到不减的时刻都靠它）；不锁工作区行，最频繁的写就不会像 M3 设计 17.4 的探针 B 那样让工作区一级的写一直等下去。删除工作区在锁住它的邀请之后、读时刻之前，按 `id` 升序以 `FOR NO KEY UPDATE` 锁住它的全部未删除项目（`ProjectCascade.LockWorkspaceProjects`），所以它的时刻不早于这些项目上已提交的每个写。B 的两个代价：一、授权与时刻的先后可以不一致：只改工作区角色（不降为访客）的写不锁项目，降为访客、结束成员关系的连带在锁项目之前读时刻，一个工作项的写可以在成员关系的变更读了时刻之后才写下更晚的时刻、按旧的角色生效；二、草稿的写、发布草稿（M4 的 P8）和 M3 的项目管理类的写仍先取工作区 S，M3 设计 17.4 的饥饿在这些较少的路径上仍在。
 
-  从 M4/P1b 起，工作项一侧的写在预检之后、开始事务（取连接）之前进入它的项目的**写闸门**（M4 设计 3.5，架构问题 11）：每个进程里一个项目至多 K 个写同时在数据库里（`issue.write_gate.per_project`，默认 2），多出的在进程里排队，不持连接、不持锁，排队至多 `issue.write_gate.max_queue` 个（默认 64），每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；进入数据库的写，每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒，事务开始时 `SET LOCAL lock_timeout`）。排满、等不到、请求到期和等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在组合根（`bootstrap/gate.go`）一处换成这个码。连接池的代价：等项目行的写持着池里的一个连接，没有闸门时一个热的项目能占满整个池（`database.max_conns`，默认 10），别的项目上无关的读写排在池的等待者后面（M4 设计的 SP1：200 个写排在一个项目上时，别的项目的读等约 875 ms）；有了闸门，一个项目至多占 K 个连接（M4/P1b 的交错 20：同样的突发之下别的项目的读几十毫秒，没有闸门时一秒以上）；闸门限的是每个项目的份额，同时热的项目达到池的大小除以 K（默认 5 个）时，等锁的写仍能占满池。代价是热的项目上超出的写得到 503、要由客户端按 `Retry-After` 重试。多个进程时每个进程各有 K 个，池的大小与 K、同时热的项目数由 M8 的部署说明定。
+  从 M4/P1b 起，工作项一侧的写在预检之后、开始事务（取连接）之前进入它的项目的**写闸门**（M4 设计 3.5，架构问题 11）：每个进程里一个项目至多 K 个写同时在数据库里（`issue.write_gate.per_project`，默认 2），多出的在进程里排队，不持连接、不持锁，排队至多 `issue.write_gate.max_queue` 个（默认 64），每个至多等 `issue.write_gate.max_wait`（默认 2 秒）；进入数据库的写，每一次等锁至多 `issue.write_lock_timeout`（默认 5 秒，事务开始时 `SET LOCAL lock_timeout`）。排满、等不到、在队列里请求到期和等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在组合根（`bootstrap/gate.go`）一处换成这个码。连接池的代价：等项目行的写持着池里的一个连接，没有闸门时一个热的项目能占满整个池（`database.max_conns`，默认 10），别的项目上无关的读写排在池的等待者后面（M4 设计的 SP1：200 个写排在一个项目上时，别的项目的读等约 875 ms）；有了闸门，一个项目上的工作项的写至多占 K 个连接（M4/P1b 的交错 20：同样的突发之下别的项目的读几十毫秒，没有闸门时一秒以上）；闸门限的是每个项目的份额，同时热的项目达到池的大小除以 K（默认 5 个）时，等锁的写仍能占满池。代价是热的项目上超出的写得到 503、要由客户端按 `Retry-After` 重试。多个进程时每个进程各有 K 个，池的大小与 K、同时热的项目数由 M8 的部署说明定。
 ````
 ````old docs/v0/v0-design.md
                             logging、httpserver（中间件、problem+json）、ratelimit、clock、idgen
