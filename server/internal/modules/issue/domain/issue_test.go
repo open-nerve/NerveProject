@@ -181,11 +181,12 @@ func TestDependentRowProblems(t *testing.T) {
 }
 
 // The guest rule hides from a caller who sees only his own work items each
-// work item another created, and one whose creator is not known; from any
-// other caller, none (M4 design 3.4).
+// work item another created, the other's id drawn before his or after it,
+// and one whose creator is not known; from any other caller, none (M4
+// design 3.4): it tells his own by its creator, not by the ids' order.
 func TestTheGuestRuleHidesAnothersWorkItem(t *testing.T) {
-	creator := ids(2)
-	gus, other := creator[0], creator[1]
+	creator := ids(3)
+	earlier, gus, other := creator[0], creator[1], creator[2]
 	tests := []struct {
 		name    string
 		by      *uuid.UUID
@@ -194,6 +195,7 @@ func TestTheGuestRuleHidesAnothersWorkItem(t *testing.T) {
 	}{
 		{"his own", &gus, true, false},
 		{"another's", &other, true, true},
+		{"another's, whose id is drawn before his", &earlier, true, true},
 		{"one whose creator is not known", nil, true, true},
 		{"another's, to a caller who sees every work item", &other, false, false},
 		{"one whose creator is not known, to a caller who sees every work item", nil, false, false},

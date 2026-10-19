@@ -25,12 +25,14 @@ var (
 )
 
 // A guest who sees only his own work items reads his own, and not
-// another's, carol's Fix, which is issue.not_found to alice as such a
-// guest, the work item read and the one decision taken; when web shows its
-// guests every work item, she reads carol's. A refusal of her role on
-// another's work item is issue.not_found too, the guest rule first; on her
-// own, forbidden. A work item whose creator is not known, as one whose
-// creator's account is purged (P9), is no guest's own: issue.not_found.
+// another's, carol's Fix or bob's, which is issue.not_found to alice as
+// such a guest, the work item read and the one decision taken; carol's id
+// is after hers and bob's before it, so the rule tells her own by its
+// creator, not by the ids' order. When web shows its guests every work
+// item, she reads carol's. A refusal of her role on another's work item
+// is issue.not_found too, the guest rule first; on her own, forbidden. A
+// work item whose creator is not known, as one whose creator's account is
+// purged (P9), is no guest's own: issue.not_found.
 func TestTheGuestRuleHidesAnothersWorkItemFromAReader(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -40,6 +42,7 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAReader(t *testing.T) {
 		want    error
 	}{
 		{"another's", carol, ownOnly, nil, domain.ErrIssueNotFound},
+		{"another's, bob's, whose id is before hers", bob, ownOnly, nil, domain.ErrIssueNotFound},
 		{"her own", alice, ownOnly, nil, nil},
 		{"another's, web showing its guests every work item", carol, everyItem, nil, nil},
 		{"another's, her role refused", carol, ownOnly, shared.Forbidden(), domain.ErrIssueNotFound},

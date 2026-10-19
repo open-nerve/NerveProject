@@ -1113,11 +1113,12 @@ func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
 }
 
 // The guest rule hides from a caller who sees only his own work items each
-// work item another created, and one whose creator is not known; from any
-// other caller, none (M4 design 3.4).
+// work item another created, the other's id drawn before his or after it,
+// and one whose creator is not known; from any other caller, none (M4
+// design 3.4): it tells his own by its creator, not by the ids' order.
 func TestTheGuestRuleHidesAnothersWorkItem(t *testing.T) {
-	creator := ids(2)
-	gus, other := creator[0], creator[1]
+	creator := ids(3)
+	earlier, gus, other := creator[0], creator[1], creator[2]
 	tests := []struct {
 		name    string
 		by      *uuid.UUID
@@ -1126,6 +1127,7 @@ func TestTheGuestRuleHidesAnothersWorkItem(t *testing.T) {
 	}{
 		{"his own", &gus, true, false},
 		{"another's", &other, true, true},
+		{"another's, whose id is drawn before his", &earlier, true, true},
 		{"one whose creator is not known", nil, true, true},
 		{"another's, to a caller who sees every work item", &other, false, false},
 		{"one whose creator is not known, to a caller who sees every work item", nil, false, false},
@@ -1227,7 +1229,7 @@ func creatorOf(by uuid.UUID) *uuid.UUID {
 // forbidden.
 ````
 
-`server/internal/modules/issue/app/guest_rule_test.go`（新文件，139 行）：
+`server/internal/modules/issue/app/guest_rule_test.go`（新文件，142 行）：
 
 ````file server/internal/modules/issue/app/guest_rule_test.go
 package app_test
@@ -1257,12 +1259,14 @@ var (
 )
 
 // A guest who sees only his own work items reads his own, and not
-// another's, carol's Fix, which is issue.not_found to alice as such a
-// guest, the work item read and the one decision taken; when web shows its
-// guests every work item, she reads carol's. A refusal of her role on
-// another's work item is issue.not_found too, the guest rule first; on her
-// own, forbidden. A work item whose creator is not known, as one whose
-// creator's account is purged (P9), is no guest's own: issue.not_found.
+// another's, carol's Fix or bob's, which is issue.not_found to alice as
+// such a guest, the work item read and the one decision taken; carol's id
+// is after hers and bob's before it, so the rule tells her own by its
+// creator, not by the ids' order. When web shows its guests every work
+// item, she reads carol's. A refusal of her role on another's work item
+// is issue.not_found too, the guest rule first; on her own, forbidden. A
+// work item whose creator is not known, as one whose creator's account is
+// purged (P9), is no guest's own: issue.not_found.
 func TestTheGuestRuleHidesAnothersWorkItemFromAReader(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -1272,6 +1276,7 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAReader(t *testing.T) {
 		want    error
 	}{
 		{"another's", carol, ownOnly, nil, domain.ErrIssueNotFound},
+		{"another's, bob's, whose id is before hers", bob, ownOnly, nil, domain.ErrIssueNotFound},
 		{"her own", alice, ownOnly, nil, nil},
 		{"another's, web showing its guests every work item", carol, everyItem, nil, nil},
 		{"another's, her role refused", carol, ownOnly, shared.Forbidden(), domain.ErrIssueNotFound},
@@ -1699,6 +1704,7 @@ Expected: 通过。
 | `T2.7` | `issue.read` 没有项目的访客 | `internal/modules/access/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起） | 单元；组合 |
 | `T2.8` | `getIssue` 判定 `issue.create` 而不是 `issue.read`（P1b 评审第 6 节：访客让两者分得出） | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起） | 单元；组合 |
 | `T2.9` | 创建者不明的工作项在 `AllowCreator` 上算调用者的 | `internal/modules/issue/app` 的全部测试（`make test`）（Task 4 起） | 单元 |
+| `T2.10` | 访客规则按 id 的次序而不是相等认调用者自己的工作项：创建者的 id 在调用者之前的别人的工作项给访客看 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T1.6`、`T1.12`、`T1.15`（列在各自的 Task 的表里，标"（Task 2 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=2`）。
 
