@@ -105,3 +105,11 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 - **关闭条件**：`clock.ts` 按这个写法加入，自动归档的故事用它，不等真实的时间。
 
 来源：[M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M4 的各行；[M0-P6 的交接](../../M2-auth/handoffs/M0-P6-e2e-notes.md)；[M2 收尾 spec](../../M2-auth/specs/closeout.md) 第 3 节。
+
+## 处理结果（M4/P1b）
+
+- **第 3 节，`updated_at`**（P1a、P1b 的写完成）：`createIssue`（P1a）和 `updateIssue`（P1b）把用例的时钟在项目 N 之下读到的一个时刻写进它写的每一行：修改写下工作项的 `updated_at`、`updated_by_id`，新加的负责人、标签、关注和每一行动态的 `created_at`、`updated_at`，去掉的负责人、标签的 `deleted_at`、`updated_at`。用例的测试用固定的时钟（`issue/app` 测试的 `clockAt`）断言这些列等于它；组合的测试断言它落在请求之内（`TestUpdatingAWorkItemStampsItsRows`）；端到端的 I2 断言修改写下的每一行是工作项的 `updated_at`、是修改者的。
+
+仍未处理，状态保持 `open`：第 3 节其余写工作项的用例（M4 的 P2–P4、P7）和自动归档推进固定时钟的测试（M4 的 P6）；第 1、2、4–13 节，按 M4 设计 13.1 的落点。
+
+来源：[M4/P1b spec](../specs/P1b-issue-update.md) 第 7 节。
