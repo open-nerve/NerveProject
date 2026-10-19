@@ -215,12 +215,14 @@ func TestAuthorizeReadsTheTargetsProject(t *testing.T) {
 // The caller created the target's work item when its CreatorID is his
 // account (M4 design 3.4): issue.delete, the project's admins and the
 // creator, allows the project's member who created it and refuses him a
-// work item another created, or one whose creator is not known.
+// work item another created, or one whose creator is not known. Each answer,
+// a refusal too, hands on the Grant the decision read.
 func TestAuthorizeKnowsTheCreator(t *testing.T) {
 	p := uuid.NewV7()
 	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleMember}}
 	projects := &fakeProjects{facts: map[projectKey]app.ProjectFacts{{p, a}: {WorkspaceID: w1, Member: true, Role: shared.RoleMember}}}
 	auth := app.NewAuthorizer(roles, projects)
+	grant := shared.Grant{WorkspaceRole: shared.RoleMember, ProjectRole: shared.RoleMember}
 	for _, tt := range []struct {
 		name    string
 		creator uuid.UUID
@@ -230,10 +232,10 @@ func TestAuthorizeKnowsTheCreator(t *testing.T) {
 		{"another's", b, shared.Forbidden()},
 		{"a creator not known", uuid.UUID{}, shared.Forbidden()},
 	} {
-		_, err := auth.Authorize(context.Background(), shared.Actor{UserID: a}, "issue.delete",
+		got, err := auth.Authorize(context.Background(), shared.Actor{UserID: a}, "issue.delete",
 			shared.Target{WorkspaceID: w1, ProjectID: p, CreatorID: tt.creator})
-		if (tt.want == nil) != (err == nil) || (tt.want != nil && !errors.Is(err, tt.want)) {
-			t.Errorf("%s: Authorize() = %v, want %v", tt.name, err, tt.want)
+		if (tt.want == nil) != (err == nil) || (tt.want != nil && !errors.Is(err, tt.want)) || got != grant {
+			t.Errorf("%s: Authorize() = %+v, %v; want %+v, %v", tt.name, got, err, grant, tt.want)
 		}
 	}
 }

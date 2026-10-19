@@ -29,6 +29,8 @@ func TestAllowCreatorAllowsAMemberWhoCreatedIt(t *testing.T) {
 		{"a member who did not", byCreator, member, domain.Project{Member: member}, false, forbidden},
 		{"a member who created it, by a rule without AllowCreator", admins, member, domain.Project{Member: member}, true, forbidden},
 		{"the project's admin who did not create it", byCreator, member, domain.Project{Member: admin}, false, allowed},
+		{"the project's admin who created it, by a rule of its creator alone", domain.Rule{Level: domain.LevelProject, AllowCreator: true},
+			member, domain.Project{Member: admin}, true, allowed},
 		{"a guest who created it", byCreator, guest, domain.Project{Member: guest}, true, forbidden},
 		{"a guest who created it, the project showing its guests every work item", byCreator, guest,
 			domain.Project{Member: guest, GuestViewAll: true}, true, forbidden},

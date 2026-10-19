@@ -374,12 +374,14 @@ Expected: 与上表相同。
 // The caller created the target's work item when its CreatorID is his
 // account (M4 design 3.4): issue.delete, the project's admins and the
 // creator, allows the project's member who created it and refuses him a
-// work item another created, or one whose creator is not known.
+// work item another created, or one whose creator is not known. Each answer,
+// a refusal too, hands on the Grant the decision read.
 func TestAuthorizeKnowsTheCreator(t *testing.T) {
 	p := uuid.NewV7()
 	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleMember}}
 	projects := &fakeProjects{facts: map[projectKey]app.ProjectFacts{{p, a}: {WorkspaceID: w1, Member: true, Role: shared.RoleMember}}}
 	auth := app.NewAuthorizer(roles, projects)
+	grant := shared.Grant{WorkspaceRole: shared.RoleMember, ProjectRole: shared.RoleMember}
 	for _, tt := range []struct {
 		name    string
 		creator uuid.UUID
@@ -389,10 +391,10 @@ func TestAuthorizeKnowsTheCreator(t *testing.T) {
 		{"another's", b, shared.Forbidden()},
 		{"a creator not known", uuid.UUID{}, shared.Forbidden()},
 	} {
-		_, err := auth.Authorize(context.Background(), shared.Actor{UserID: a}, "issue.delete",
+		got, err := auth.Authorize(context.Background(), shared.Actor{UserID: a}, "issue.delete",
 			shared.Target{WorkspaceID: w1, ProjectID: p, CreatorID: tt.creator})
-		if (tt.want == nil) != (err == nil) || (tt.want != nil && !errors.Is(err, tt.want)) {
-			t.Errorf("%s: Authorize() = %v, want %v", tt.name, err, tt.want)
+		if (tt.want == nil) != (err == nil) || (tt.want != nil && !errors.Is(err, tt.want)) || got != grant {
+			t.Errorf("%s: Authorize() = %+v, %v; want %+v, %v", tt.name, got, err, grant, tt.want)
 		}
 	}
 }
@@ -424,7 +426,7 @@ func TestAuthorizeKnowsTheCreator(t *testing.T) {
 	GuestViewAll bool
 ````
 
-`server/internal/modules/access/domain/creator_test.go`（新文件，48 行）：
+`server/internal/modules/access/domain/creator_test.go`（新文件，50 行）：
 
 ````file server/internal/modules/access/domain/creator_test.go
 package domain_test
@@ -458,6 +460,8 @@ func TestAllowCreatorAllowsAMemberWhoCreatedIt(t *testing.T) {
 		{"a member who did not", byCreator, member, domain.Project{Member: member}, false, forbidden},
 		{"a member who created it, by a rule without AllowCreator", admins, member, domain.Project{Member: member}, true, forbidden},
 		{"the project's admin who did not create it", byCreator, member, domain.Project{Member: admin}, false, allowed},
+		{"the project's admin who created it, by a rule of its creator alone", domain.Rule{Level: domain.LevelProject, AllowCreator: true},
+			member, domain.Project{Member: admin}, true, allowed},
 		{"a guest who created it", byCreator, guest, domain.Project{Member: guest}, true, forbidden},
 		{"a guest who created it, the project showing its guests every work item", byCreator, guest,
 			domain.Project{Member: guest, GuestViewAll: true}, true, forbidden},
@@ -963,6 +967,8 @@ Expected: 通过。
 | `T1.11` | `issue.archive` 只给项目的管理员 | `internal/modules/access/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `archiveIssue`、`unarchiveIssue` 各格（`make test`）（Task 7 起）、故事 `i15-archive-issue`（Task 13 起） | 单元；组合；端到端 |
 | `T1.12` | 角色的拒绝丢掉这次判定读到的 `Grant`（`OwnOnly` 在内）：别人的工作项给访客答 403 | `internal/modules/access/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 2 起）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`）（Task 2 起） | 单元；组合 |
 | `T1.13` | 三个之外的角色的拒绝丢掉 `Grant`（按性质只在单元一层：表的 `role` 有 `CHECK (role IN (5, 15, 20))`，这样的角色进不了表） | `internal/modules/access/domain` 的全部测试（`make test`） | 单元 |
+| `T1.14` | `creatorRoles` 没有管理员：建了工作项的项目管理员不算 `AllowCreator` 的创建者（按性质只在单元一层，同 `T1.2`：到 P2 为止带 `AllowCreator` 的规则都列了管理员） | `internal/modules/access/domain` 的全部测试（`make test`） | 单元 |
+| `T1.15` | `Authorizer` 拒绝时丢掉判定读到的 `Grant`：别人的工作项给访客答 403 | `internal/modules/access/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 2 起）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`）（Task 2 起） | 单元；组合 |
 
 ---
 
@@ -1694,7 +1700,7 @@ Expected: 通过。
 | `T2.8` | `getIssue` 判定 `issue.create` 而不是 `issue.read`（P1b 评审第 6 节：访客让两者分得出） | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起） | 单元；组合 |
 | `T2.9` | 创建者不明的工作项在 `AllowCreator` 上算调用者的 | `internal/modules/issue/app` 的全部测试（`make test`）（Task 4 起） | 单元 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T1.6`、`T1.12`（列在各自的 Task 的表里，标"（Task 2 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=2`）。
+本 Task 的检查也发现较早的 Task 的变异 `T1.6`、`T1.12`、`T1.15`（列在各自的 Task 的表里，标"（Task 2 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=2`）。
 
 ---
 
