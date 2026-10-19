@@ -169,23 +169,20 @@ func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action
 // active member, or deleted, is workspace.not_found; a role the rule does
 // not allow is the Authorizer's shared.Forbidden.
 func (l Locks) seeWorkspace(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID uuid.UUID) error {
-	_, err := l.auth.Authorize(ctx, actor, action, shared.Target{WorkspaceID: workspaceID})
-	if errors.Is(err, shared.ErrNotVisible) {
-		return domain.ErrWorkspaceNotFound
-	}
-	return err
+	return l.decide(ctx, actor, action, workspaceID, uuid.UUID{}, nil, domain.ErrWorkspaceNotFound)
 }
 
 // decide asks the Authorizer for action on the project projectID of the
-// workspace workspaceID for actor, and, for an action on a work item, i, on
-// it: the decision knows its creator (shared.Target.CreatorID), whom a rule
-// may allow (AllowCreator). A project not visible to actor is notFound, and
-// so is a work item the guest rule hides from him (M4 design 3.4, 6.7):
-// the project's guest who sees only his own work items (Grant.OwnOnly), a
-// workspace admin among them, does not see one another created, before
-// what the rule says of his role, so another's work item is as unknown to
-// him as one that is not there (8.4). i is nil for an action on the
-// project.
+// workspace workspaceID for actor, or in the workspace for a zero
+// projectID, and, for an action on a work item, i, on it: the decision
+// knows its creator (shared.Target.CreatorID), whom a rule may allow
+// (AllowCreator). A project, or a workspace, not visible to actor is
+// notFound, and so is a work item the guest rule hides from him (M4 design
+// 3.4, 6.7): the project's guest who sees only his own work items
+// (Grant.OwnOnly), a workspace admin among them, does not see one another
+// created, before what the rule says of his role, so another's work item
+// is as unknown to him as one that is not there (8.4). i is nil for an
+// action on the project or in the workspace.
 func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID, projectID uuid.UUID, i *domain.Issue,
 	notFound error) error {
 	target := shared.Target{WorkspaceID: workspaceID, ProjectID: projectID}

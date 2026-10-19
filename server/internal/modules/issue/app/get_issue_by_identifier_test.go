@@ -2,7 +2,6 @@ package app_test
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"slices"
 	"testing"
@@ -111,9 +110,10 @@ func TestGetIssueByIdentifierReadsTheWorkItem(t *testing.T) {
 // issue.search, forbidden. Then an identifier that is no identifier, of no
 // project of acme, of a number no work item of web has, of a work item
 // whose project the caller does not see, or that the guest rule hides
-// from him, is issue.not_found, one answer for each; a role that may not
-// read it, forbidden. A read or a decision that fails, its failure as
-// itself; a request without a caller, unauthenticated before any read.
+// from him, is issue.not_found, one answer for each, detail and all; a
+// role that may not read it, forbidden. A read or a decision that fails,
+// its failure as itself; a request without a caller, unauthenticated
+// before any read. Each answer is compared whole, not by its code alone.
 func TestGetIssueByIdentifierRefusals(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
@@ -149,9 +149,7 @@ func TestGetIssueByIdentifierRefusals(t *testing.T) {
 			uc, b, id := newGetByIdentifier()
 			tt.set(b)
 			got, err := uc.Execute(tt.ctx, tt.slug, tt.identifier)
-			var se, wantSE *shared.Error
-			if !errors.Is(err, tt.want) && (!errors.As(err, &se) || !errors.As(tt.want, &wantSE) || se.Code != wantSE.Code) ||
-				got.ID != (uuid.UUID{}) {
+			if !reflect.DeepEqual(err, tt.want) || got.ID != (uuid.UUID{}) {
 				t.Errorf("Execute(%s, %s) = %+v, %v; want no work item and %v", tt.slug, tt.identifier, got, err, tt.want)
 			}
 			number := 7

@@ -4231,7 +4231,7 @@ var (
 	ErrWorkspaceNotFound = shared.NewError(shared.KindNotFound, "workspace.not_found", "The workspace does not exist, or you are not a member of it.")
 ````
 
-`server/internal/modules/issue/domain/identifier.go`（新文件，90 行）：
+`server/internal/modules/issue/domain/identifier.go`（新文件，81 行）：
 
 ````file server/internal/modules/issue/domain/identifier.go
 package domain
@@ -4252,7 +4252,7 @@ import (
 // leading zero, from 1 to 2147483647, the range of a work item's number.
 // ok is false for anything else.
 func ParseIdentifier(s string) (project string, number int, ok bool) {
-	project, digits, found := cutLast(s, "-")
+	project, digits, found := strings.CutLast(s, "-")
 	if !found || project == "" || digits == "" || digits[0] == '0' || strings.TrimLeft(digits, "0123456789") != "" {
 		return "", 0, false
 	}
@@ -4261,15 +4261,6 @@ func ParseIdentifier(s string) (project string, number int, ok bool) {
 		return "", 0, false
 	}
 	return project, int(n), true
-}
-
-// cutLast is strings.Cut at the last sep in s.
-func cutLast(s, sep string) (before, after string, found bool) {
-	i := strings.LastIndex(s, sep)
-	if i < 0 {
-		return s, "", false
-	}
-	return s[:i], s[i+len(sep):], true
 }
 
 // MatchIdentifier is the index among identifiers, a workspace's projects'
@@ -4528,14 +4519,13 @@ func (u *GetIssueByIdentifier) find(ctx context.Context, workspaceID uuid.UUID, 
 }
 ````
 
-`server/internal/modules/issue/app/get_issue_by_identifier_test.go`（新文件，170 行）：
+`server/internal/modules/issue/app/get_issue_by_identifier_test.go`（新文件，168 行）：
 
 ````file server/internal/modules/issue/app/get_issue_by_identifier_test.go
 package app_test
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"slices"
 	"testing"
@@ -4644,9 +4634,10 @@ func TestGetIssueByIdentifierReadsTheWorkItem(t *testing.T) {
 // issue.search, forbidden. Then an identifier that is no identifier, of no
 // project of acme, of a number no work item of web has, of a work item
 // whose project the caller does not see, or that the guest rule hides
-// from him, is issue.not_found, one answer for each; a role that may not
-// read it, forbidden. A read or a decision that fails, its failure as
-// itself; a request without a caller, unauthenticated before any read.
+// from him, is issue.not_found, one answer for each, detail and all; a
+// role that may not read it, forbidden. A read or a decision that fails,
+// its failure as itself; a request without a caller, unauthenticated
+// before any read. Each answer is compared whole, not by its code alone.
 func TestGetIssueByIdentifierRefusals(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
@@ -4682,9 +4673,7 @@ func TestGetIssueByIdentifierRefusals(t *testing.T) {
 			uc, b, id := newGetByIdentifier()
 			tt.set(b)
 			got, err := uc.Execute(tt.ctx, tt.slug, tt.identifier)
-			var se, wantSE *shared.Error
-			if !errors.Is(err, tt.want) && (!errors.As(err, &se) || !errors.As(tt.want, &wantSE) || se.Code != wantSE.Code) ||
-				got.ID != (uuid.UUID{}) {
+			if !reflect.DeepEqual(err, tt.want) || got.ID != (uuid.UUID{}) {
 				t.Errorf("Execute(%s, %s) = %+v, %v; want no work item and %v", tt.slug, tt.identifier, got, err, tt.want)
 			}
 			number := 7
@@ -4703,8 +4692,15 @@ func TestGetIssueByIdentifierRefusals(t *testing.T) {
 }
 ````
 
-`server/internal/modules/issue/app/get_issue_test.go`（修改，2 处）：
+`server/internal/modules/issue/app/get_issue_test.go`（修改，5 处）：
 
+````old server/internal/modules/issue/app/get_issue_test.go
+	"context"
+	"errors"
+````
+````new server/internal/modules/issue/app/get_issue_test.go
+	"context"
+````
 ````old server/internal/modules/issue/app/get_issue_test.go
 }
 
@@ -4731,6 +4727,21 @@ func readIssue(id uuid.UUID) domain.Issue {
 ````new server/internal/modules/issue/app/get_issue_test.go
 	if want := readIssue(id); err != nil || !reflect.DeepEqual(got, want) {
 ````
+````old server/internal/modules/issue/app/get_issue_test.go
+// caller, unauthenticated before any read.
+````
+````new server/internal/modules/issue/app/get_issue_test.go
+// caller, unauthenticated before any read. Each answer is compared whole,
+// not by its code alone.
+````
+````old server/internal/modules/issue/app/get_issue_test.go
+			var se, wantSE *shared.Error
+			if !errors.Is(err, tt.want) && (!errors.As(err, &se) || !errors.As(tt.want, &wantSE) || se.Code != wantSE.Code) ||
+				got.ID != (uuid.UUID{}) {
+````
+````new server/internal/modules/issue/app/get_issue_test.go
+			if !reflect.DeepEqual(err, tt.want) || got.ID != (uuid.UUID{}) {
+````
 
 `server/internal/modules/issue/app/lock.go`（修改，2 处）：
 
@@ -4749,6 +4760,15 @@ func readIssue(id uuid.UUID) domain.Issue {
 }
 
 // decide asks the Authorizer for action on the project projectID of the
+// workspace workspaceID for actor, and, for an action on a work item, i, on
+// it: the decision knows its creator (shared.Target.CreatorID), whom a rule
+// may allow (AllowCreator). A project not visible to actor is notFound, and
+// so is a work item the guest rule hides from him (M4 design 3.4, 6.7):
+// the project's guest who sees only his own work items (Grant.OwnOnly), a
+// workspace admin among them, does not see one another created, before
+// what the rule says of his role, so another's work item is as unknown to
+// him as one that is not there (8.4). i is nil for an action on the
+// project.
 ````
 ````new server/internal/modules/issue/app/lock.go
 }
@@ -4758,14 +4778,20 @@ func readIssue(id uuid.UUID) domain.Issue {
 // active member, or deleted, is workspace.not_found; a role the rule does
 // not allow is the Authorizer's shared.Forbidden.
 func (l Locks) seeWorkspace(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID uuid.UUID) error {
-	_, err := l.auth.Authorize(ctx, actor, action, shared.Target{WorkspaceID: workspaceID})
-	if errors.Is(err, shared.ErrNotVisible) {
-		return domain.ErrWorkspaceNotFound
-	}
-	return err
+	return l.decide(ctx, actor, action, workspaceID, uuid.UUID{}, nil, domain.ErrWorkspaceNotFound)
 }
 
 // decide asks the Authorizer for action on the project projectID of the
+// workspace workspaceID for actor, or in the workspace for a zero
+// projectID, and, for an action on a work item, i, on it: the decision
+// knows its creator (shared.Target.CreatorID), whom a rule may allow
+// (AllowCreator). A project, or a workspace, not visible to actor is
+// notFound, and so is a work item the guest rule hides from him (M4 design
+// 3.4, 6.7): the project's guest who sees only his own work items
+// (Grant.OwnOnly), a workspace admin among them, does not see one another
+// created, before what the rule says of his role, so another's work item
+// is as unknown to him as one that is not there (8.4). i is nil for an
+// action on the project or in the workspace.
 ````
 
 `server/internal/modules/issue/app/ports.go`（修改，1 处）：
@@ -4963,18 +4989,22 @@ func (s *Store) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) (
 
 // A workspace's projects' identifiers for the issue module (M4 design
 // 3.7): its undeleted projects', an archived one's too, in id order; not a
-// deleted project's, nor another workspace's.
+// deleted project's, nor another workspace's. Web, drawn first, is the
+// archived one, so its row is written after Ops's, and Ops comes first by
+// name and by identifier: the id order is neither the rows' order nor that
+// of an index by workspace, so that a read without its ORDER BY is seen
+// whether the database scans the rows or such an index.
 func TestProjectIdentifiers(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
 	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
-	web, arch, gone := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Arch", "ARCH", alice), newProject(t, s, acme,
+	web, ops, gone := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice), newProject(t, s, acme,
 		"Gone", "GONE", alice)
 	newProject(t, s, beta, "Web", "BETA", alice)
-	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", arch, now)
+	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", web, now)
 	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", gone, now)
 	got, err := s.ProjectIdentifiers(context.Background(), acme)
-	want := []app.IssueProjectIdentifier{{ID: web, Identifier: "WEB"}, {ID: arch, Identifier: "ARCH"}}
+	want := []app.IssueProjectIdentifier{{ID: web, Identifier: "WEB"}, {ID: ops, Identifier: "OPS"}}
 	slices.SortFunc(want, func(a, b app.IssueProjectIdentifier) int { return a.ID.Compare(b.ID) })
 	if err != nil || !slices.Equal(got, want) {
 		t.Errorf("ProjectIdentifiers(acme) = %+v, %v; want %+v", got, err, want)
@@ -5387,6 +5417,7 @@ Expected: 通过。
 | `T5.15` | 项目里不论编号的任何一个工作项都找得到 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 存储；组合 |
 | `T5.16` | 标识只按大写逐个字母比较，不折叠 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 单元；组合 |
 | `T5.17` | `ProjectIdentifiers` 不按 `id` 的次序回答工作区的项目（去掉 `ORDER BY id`；按性质只在存储一层：`MatchIdentifier` 不靠次序） | `internal/modules/project/adapter/postgres` 的全部测试（`make test`） | 存储 |
+| `T5.18` | 没有项目的标识对得上时答一个文字不同的 `issue.not_found`：工作区之后的各种找不到不再是同一个回答 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）（Task 6 起） | 单元；组合 |
 
 ---
 
@@ -5971,7 +6002,7 @@ Expected: 通过。
 | `T6.1` | 契约不声明 `getIssueByIdentifier` 答 `workspace.not_found` | `internal/modules/issue/adapter/http` 的全部测试（`make test`） | 单元 |
 | `T6.2` | 矩阵的一格可以按任何标识指名工作项，不必是它的列自己的 | `internal/bootstrap` 的 `TestMatrixViolationsCatchesAnotherCasesIdentifier`（`make test`） | 单元 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T5.1`、`T5.2`、`T5.3`、`T5.4`、`T5.5`、`T5.6`、`T5.7`、`T5.8`、`T5.9`、`T5.11`、`T5.14`、`T5.15`、`T5.16`（列在各自的 Task 的表里，标"（Task 6 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=6`）。
+本 Task 的检查也发现较早的 Task 的变异 `T5.1`、`T5.2`、`T5.3`、`T5.4`、`T5.5`、`T5.6`、`T5.7`、`T5.8`、`T5.9`、`T5.11`、`T5.14`、`T5.15`、`T5.16`、`T5.18`（列在各自的 Task 的表里，标"（Task 6 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=6`）。
 
 ---
 

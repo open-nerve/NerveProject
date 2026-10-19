@@ -89,18 +89,22 @@ func TestNextIssueSequence(t *testing.T) {
 
 // A workspace's projects' identifiers for the issue module (M4 design
 // 3.7): its undeleted projects', an archived one's too, in id order; not a
-// deleted project's, nor another workspace's.
+// deleted project's, nor another workspace's. Web, drawn first, is the
+// archived one, so its row is written after Ops's, and Ops comes first by
+// name and by identifier: the id order is neither the rows' order nor that
+// of an index by workspace, so that a read without its ORDER BY is seen
+// whether the database scans the rows or such an index.
 func TestProjectIdentifiers(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
 	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
-	web, arch, gone := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Arch", "ARCH", alice), newProject(t, s, acme,
+	web, ops, gone := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice), newProject(t, s, acme,
 		"Gone", "GONE", alice)
 	newProject(t, s, beta, "Web", "BETA", alice)
-	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", arch, now)
+	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", web, now)
 	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", gone, now)
 	got, err := s.ProjectIdentifiers(context.Background(), acme)
-	want := []app.IssueProjectIdentifier{{ID: web, Identifier: "WEB"}, {ID: arch, Identifier: "ARCH"}}
+	want := []app.IssueProjectIdentifier{{ID: web, Identifier: "WEB"}, {ID: ops, Identifier: "OPS"}}
 	slices.SortFunc(want, func(a, b app.IssueProjectIdentifier) int { return a.ID.Compare(b.ID) })
 	if err != nil || !slices.Equal(got, want) {
 		t.Errorf("ProjectIdentifiers(acme) = %+v, %v; want %+v", got, err, want)

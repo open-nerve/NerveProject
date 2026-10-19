@@ -16,7 +16,7 @@ import (
 // leading zero, from 1 to 2147483647, the range of a work item's number.
 // ok is false for anything else.
 func ParseIdentifier(s string) (project string, number int, ok bool) {
-	project, digits, found := cutLast(s, "-")
+	project, digits, found := strings.CutLast(s, "-")
 	if !found || project == "" || digits == "" || digits[0] == '0' || strings.TrimLeft(digits, "0123456789") != "" {
 		return "", 0, false
 	}
@@ -25,15 +25,6 @@ func ParseIdentifier(s string) (project string, number int, ok bool) {
 		return "", 0, false
 	}
 	return project, int(n), true
-}
-
-// cutLast is strings.Cut at the last sep in s.
-func cutLast(s, sep string) (before, after string, found bool) {
-	i := strings.LastIndex(s, sep)
-	if i < 0 {
-		return s, "", false
-	}
-	return s[:i], s[i+len(sep):], true
 }
 
 // MatchIdentifier is the index among identifiers, a workspace's projects'

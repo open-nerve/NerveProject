@@ -2,7 +2,6 @@ package app_test
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"slices"
 	"testing"
@@ -53,7 +52,8 @@ func TestGetIssueReadsTheWorkItem(t *testing.T) {
 // A work item that is not there, or whose project the caller does not
 // see, is issue.not_found; a role that may not read it, forbidden; a read
 // or a decision that fails, its failure as itself; a request without a
-// caller, unauthenticated before any read.
+// caller, unauthenticated before any read. Each answer is compared whole,
+// not by its code alone.
 func TestGetIssueRefusals(t *testing.T) {
 	decided := line("Authorize", alice, domain.ActionRead, acme, web, "outside tx")
 	for _, tt := range []struct {
@@ -75,9 +75,7 @@ func TestGetIssueRefusals(t *testing.T) {
 			uc, w, id := newGet()
 			tt.set(w, &id)
 			got, err := uc.Execute(tt.ctx, id)
-			var se, wantSE *shared.Error
-			if !errors.Is(err, tt.want) && (!errors.As(err, &se) || !errors.As(tt.want, &wantSE) || se.Code != wantSE.Code) ||
-				got.ID != (uuid.UUID{}) {
+			if !reflect.DeepEqual(err, tt.want) || got.ID != (uuid.UUID{}) {
 				t.Errorf("Execute() = %+v, %v; want no work item and %v", got, err, tt.want)
 			}
 			calls := []string{line("GetIssue", id, "outside tx"), decided}[:tt.calls]
