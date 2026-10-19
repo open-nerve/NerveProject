@@ -41,9 +41,9 @@ type Target struct {
 // relative checks with it (M3 design 3.5, 3.7) instead of reading the roles
 // again. OwnOnly is true for the project's guest (project role 5) when the
 // project does not show its guests every work item (guest_view_all_features
-// false): he sees only the work items he created, which the use cases apply
-// (M4 design 3.4). It follows the project role, not the workspace's: a
-// workspace admin who is only a guest in the project has it too.
+// false): he sees only the work items he created (M4 design 3.4). It follows
+// the project role, not the workspace's: a workspace admin who is only a
+// guest in the project has it too.
 type Grant struct {
 	WorkspaceRole Role
 	ProjectRole   Role

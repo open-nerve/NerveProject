@@ -316,10 +316,10 @@ func TestTheGrantCarriesTheRoles(t *testing.T) {
 	}
 }
 
-// A refusal of the caller's role comes with the Grant of what the decision
-// read, OwnOnly among it, so a use case can answer first that the guest rule
-// hides the target from him (M4 design 3.4, 6.7); a caller who does not see
-// the target gets no Grant.
+// A refusal of the caller's role, a role outside the three too, comes with
+// the Grant of what the decision read, OwnOnly among it, so a use case can
+// answer first that the guest rule hides the target from him (M4 design 3.4,
+// 6.7); a caller who does not see the target gets no Grant.
 func TestARefusalCarriesTheGrant(t *testing.T) {
 	admins := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin}}
 	everyRole := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}}
@@ -340,6 +340,9 @@ func TestARefusalCarriesTheGrant(t *testing.T) {
 		{"WA- private", everyRole, domain.Facts{Workspace: admin, Project: &domain.Project{}}, shared.Grant{WorkspaceRole: 20}, forbidden},
 		{"WM- public", everyRole, domain.Facts{Workspace: member, Project: &domain.Project{Public: true}}, shared.Grant{WorkspaceRole: 15},
 			forbidden},
+		{"a workspace role outside the three, the project's guest", everyRole,
+			domain.Facts{Workspace: domain.Membership{Active: true, Role: 10}, Project: &domain.Project{Member: guest}},
+			shared.Grant{WorkspaceRole: 10, ProjectRole: 5, OwnOnly: true}, forbidden},
 		{"a member, at the workspace level", domain.Rule{Level: domain.LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
 			domain.Facts{Workspace: member}, shared.Grant{WorkspaceRole: 15}, forbidden},
 		{"WM- private", everyRole, domain.Facts{Workspace: member, Project: &domain.Project{}}, shared.Grant{}, invisible},

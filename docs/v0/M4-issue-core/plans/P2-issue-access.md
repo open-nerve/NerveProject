@@ -521,12 +521,12 @@ type Facts struct {
 // Decide applies rule to f (M3 design 3.4): the Grant when the caller may
 // act, shared.ErrNotVisible when the caller cannot see the target, and
 // shared.Forbidden when the caller sees it but the rule does not allow the
-// caller's role, with the Grant of what it read: a use case answers first
-// that the guest rule hides the target from him (M4 design 3.4). A caller
-// who is not an active member of the workspace sees nothing in it. Roles are
-// compared by membership in a set, never by order: a role outside the three
-// is allowed nothing and sees no project it is not a member of. A rule of no
-// known level is an error: nothing is allowed.
+// caller's role, with the Grant of what it read, so that a use case can
+// answer first that the guest rule hides the target from him (M4 design 3.4).
+// A caller who is not an active member of the workspace sees nothing in it.
+// Roles are compared by membership in a set, never by order: a role outside
+// the three is allowed nothing and sees no project it is not a member of. A
+// rule of no known level is an error: nothing is allowed.
 func Decide(rule Rule, f Facts) (shared.Grant, error) {
 	switch rule.Level {
 	case LevelWorkspace:
@@ -653,10 +653,10 @@ func sees(wsRole shared.Role, p Project) bool {
 	}
 }
 
-// A refusal of the caller's role comes with the Grant of what the decision
-// read, OwnOnly among it, so a use case can answer first that the guest rule
-// hides the target from him (M4 design 3.4, 6.7); a caller who does not see
-// the target gets no Grant.
+// A refusal of the caller's role, a role outside the three too, comes with
+// the Grant of what the decision read, OwnOnly among it, so a use case can
+// answer first that the guest rule hides the target from him (M4 design 3.4,
+// 6.7); a caller who does not see the target gets no Grant.
 func TestARefusalCarriesTheGrant(t *testing.T) {
 	admins := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin}}
 	everyRole := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}}
@@ -677,6 +677,9 @@ func TestARefusalCarriesTheGrant(t *testing.T) {
 		{"WA- private", everyRole, domain.Facts{Workspace: admin, Project: &domain.Project{}}, shared.Grant{WorkspaceRole: 20}, forbidden},
 		{"WM- public", everyRole, domain.Facts{Workspace: member, Project: &domain.Project{Public: true}}, shared.Grant{WorkspaceRole: 15},
 			forbidden},
+		{"a workspace role outside the three, the project's guest", everyRole,
+			domain.Facts{Workspace: domain.Membership{Active: true, Role: 10}, Project: &domain.Project{Member: guest}},
+			shared.Grant{WorkspaceRole: 10, ProjectRole: 5, OwnOnly: true}, forbidden},
 		{"a member, at the workspace level", domain.Rule{Level: domain.LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
 			domain.Facts{Workspace: member}, shared.Grant{WorkspaceRole: 15}, forbidden},
 		{"WM- private", everyRole, domain.Facts{Workspace: member, Project: &domain.Project{}}, shared.Grant{}, invisible},
@@ -835,9 +838,9 @@ func TestEveryRuleDecidesItsCells(t *testing.T) {
 ````new server/internal/shared/authorize.go
 // again. OwnOnly is true for the project's guest (project role 5) when the
 // project does not show its guests every work item (guest_view_all_features
-// false): he sees only the work items he created, which the use cases apply
-// (M4 design 3.4). It follows the project role, not the workspace's: a
-// workspace admin who is only a guest in the project has it too.
+// false): he sees only the work items he created (M4 design 3.4). It follows
+// the project role, not the workspace's: a workspace admin who is only a
+// guest in the project has it too.
 ````
 ````old server/internal/shared/authorize.go
 	ProjectAdmin  bool
@@ -958,6 +961,8 @@ Expected: 通过。
 | `T1.9` | `ProjectFacts` 把每个项目都答成不让访客看全部的 | `internal/modules/project/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起）、故事 `i15-archive-issue`（Task 13 起） | 存储；组合；端到端 |
 | `T1.10` | `issue.delete` 没有 `AllowCreator` | `internal/modules/access/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `deleteIssue` 各格（`make test`）（Task 4 起） | 单元；组合 |
 | `T1.11` | `issue.archive` 只给项目的管理员 | `internal/modules/access/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `archiveIssue`、`unarchiveIssue` 各格（`make test`）（Task 7 起）、故事 `i15-archive-issue`（Task 13 起） | 单元；组合；端到端 |
+| `T1.12` | 角色的拒绝丢掉这次判定读到的 `Grant`（`OwnOnly` 在内）：别人的工作项给访客答 403 | `internal/modules/access/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）（Task 2 起）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`）（Task 2 起） | 单元；组合 |
+| `T1.13` | 三个之外的角色的拒绝丢掉 `Grant`（按性质只在单元一层：表的 `role` 有 `CHECK (role IN (5, 15, 20))`，这样的角色进不了表） | `internal/modules/access/domain` 的全部测试（`make test`） | 单元 |
 
 ---
 
@@ -1689,7 +1694,7 @@ Expected: 通过。
 | `T2.8` | `getIssue` 判定 `issue.create` 而不是 `issue.read`（P1b 评审第 6 节：访客让两者分得出） | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssue` 各格（`make test`）（Task 3 起） | 单元；组合 |
 | `T2.9` | 创建者不明的工作项在 `AllowCreator` 上算调用者的 | `internal/modules/issue/app` 的全部测试（`make test`）（Task 4 起） | 单元 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T1.6`（列在各自的 Task 的表里，标"（Task 2 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=2`）。
+本 Task 的检查也发现较早的 Task 的变异 `T1.6`、`T1.12`（列在各自的 Task 的表里，标"（Task 2 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=2`）。
 
 ---
 

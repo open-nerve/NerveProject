@@ -39,12 +39,12 @@ type Facts struct {
 // Decide applies rule to f (M3 design 3.4): the Grant when the caller may
 // act, shared.ErrNotVisible when the caller cannot see the target, and
 // shared.Forbidden when the caller sees it but the rule does not allow the
-// caller's role, with the Grant of what it read: a use case answers first
-// that the guest rule hides the target from him (M4 design 3.4). A caller
-// who is not an active member of the workspace sees nothing in it. Roles are
-// compared by membership in a set, never by order: a role outside the three
-// is allowed nothing and sees no project it is not a member of. A rule of no
-// known level is an error: nothing is allowed.
+// caller's role, with the Grant of what it read, so that a use case can
+// answer first that the guest rule hides the target from him (M4 design 3.4).
+// A caller who is not an active member of the workspace sees nothing in it.
+// Roles are compared by membership in a set, never by order: a role outside
+// the three is allowed nothing and sees no project it is not a member of. A
+// rule of no known level is an error: nothing is allowed.
 func Decide(rule Rule, f Facts) (shared.Grant, error) {
 	switch rule.Level {
 	case LevelWorkspace:
