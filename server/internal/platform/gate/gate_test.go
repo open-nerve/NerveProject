@@ -64,8 +64,7 @@ func (e *entry) waits(t *testing.T) {
 	}
 }
 
-// waiting is how many callers wait for key, under g's lock; queued waits a
-// second at most until n do.
+// waiting is how many callers wait for key, under g's lock.
 func (g *Keyed[K]) waiting(key K) int {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -75,6 +74,8 @@ func (g *Keyed[K]) waiting(key K) int {
 	return 0
 }
 
+// queued waits a second at most until n callers wait for key, and fails
+// the test when they do not.
 func queued(t *testing.T, g *Keyed[string], key string, n int) {
 	t.Helper()
 	for deadline := time.Now().Add(time.Second); g.waiting(key) != n; time.Sleep(time.Millisecond) {

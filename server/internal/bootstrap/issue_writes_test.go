@@ -62,7 +62,11 @@ func TestCreatingAWorkItemStampsItsRows(t *testing.T) {
 }
 
 // testIssueConfig is the work-item side's configuration of the tests'
-// apps: the defaults, the lock timeout under testConfig's request timeout.
+// apps: the write gate's defaults, and a lock timeout under testConfig's
+// request timeout. They are test-only values, which configuration loading
+// would refuse, max_wait and the lock timeout together not being under
+// the request timeout; the test worlds' configurations are never
+// validated.
 var testIssueConfig = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
 	WriteLockTimeout: 4 * time.Second}
 

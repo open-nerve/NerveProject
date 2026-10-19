@@ -40,9 +40,11 @@ func issueUpdateMatrixRows() []matrixRow {
 			request: issueRows.to(http.MethodPatch, "", matrixIssue, `{}`), cells: ok, check: readsTheIssue},
 		// An archived project's work items are not changed (M4 design 3.8),
 		// after the decision: who may not change one learns nothing of its
-		// project's state.
+		// project's state. The body changes nothing: the archived project is
+		// refused before what a change changes is weighed, so even a change
+		// of nothing is refused.
 		{op: "updateIssue", variant: "archived", write: true, columns: archivedColumns,
-			request: issueRows.to(http.MethodPatch, "", matrixIssue, `{"name":"Mend"}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+			request: issueRows.to(http.MethodPatch, "", matrixIssue, `{}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// The archived project's Backlog, a state of another project of the
 		// same workspace: the state is checked after the decision.
 		{op: "updateIssue", variant: "another project's state", write: true, columns: projectColumns,

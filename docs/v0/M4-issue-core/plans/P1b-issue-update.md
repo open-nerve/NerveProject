@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`platform/gate/gate_test.go`（311 行）、`bootstrap/gate_test.go`（278 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（272 行）、`bootstrap/issue_pool_test.go`（266 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（执行完的分支上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`platform/gate/gate_test.go`（312 行）、`bootstrap/gate_test.go`（278 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（272 行）、`bootstrap/issue_pool_test.go`（266 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。本 plan 不改 `tools/keywords.json`：`phase` 照旧是 `M4/P1`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；配置文件的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -4683,7 +4683,7 @@ func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 		WHERE a.issue_id = $1 AND a.field = 'assignees' AND a.new_identifier = $2 AND u.id = $2`, item, w.ids["bob"]).Scan(&named,
 ````
 
-`server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新文件，163 行）：
+`server/internal/bootstrap/permission_matrix_issue_updates_test.go`（新文件，165 行）：
 
 ````file server/internal/bootstrap/permission_matrix_issue_updates_test.go
 package bootstrap
@@ -4728,9 +4728,11 @@ func issueUpdateMatrixRows() []matrixRow {
 			request: issueRows.to(http.MethodPatch, "", matrixIssue, `{}`), cells: ok, check: readsTheIssue},
 		// An archived project's work items are not changed (M4 design 3.8),
 		// after the decision: who may not change one learns nothing of its
-		// project's state.
+		// project's state. The body changes nothing: the archived project is
+		// refused before what a change changes is weighed, so even a change
+		// of nothing is refused.
 		{op: "updateIssue", variant: "archived", write: true, columns: archivedColumns,
-			request: issueRows.to(http.MethodPatch, "", matrixIssue, `{"name":"Mend"}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+			request: issueRows.to(http.MethodPatch, "", matrixIssue, `{}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// The archived project's Backlog, a state of another project of the
 		// same workspace: the state is checked after the decision.
 		{op: "updateIssue", variant: "another project's state", write: true, columns: projectColumns,
@@ -5498,7 +5500,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 测试**
 
-`server/internal/platform/gate/gate_test.go`（新文件，311 行）：
+`server/internal/platform/gate/gate_test.go`（新文件，312 行）：
 
 ````file server/internal/platform/gate/gate_test.go
 package gate
@@ -5567,8 +5569,7 @@ func (e *entry) waits(t *testing.T) {
 	}
 }
 
-// waiting is how many callers wait for key, under g's lock; queued waits a
-// second at most until n do.
+// waiting is how many callers wait for key, under g's lock.
 func (g *Keyed[K]) waiting(key K) int {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -5578,6 +5579,8 @@ func (g *Keyed[K]) waiting(key K) int {
 	return 0
 }
 
+// queued waits a second at most until n callers wait for key, and fails
+// the test when they do not.
 func queued(t *testing.T, g *Keyed[string], key string, n int) {
 	t.Helper()
 	for deadline := time.Now().Add(time.Second); g.waiting(key) != n; time.Sleep(time.Millisecond) {
@@ -7071,7 +7074,7 @@ type WriteGate interface {
 		Issue:     testIssueConfig,
 ````
 
-`server/internal/bootstrap/gate.go`（新文件，66 行）：
+`server/internal/bootstrap/gate.go`（新文件，67 行）：
 
 ````file server/internal/bootstrap/gate.go
 package bootstrap
@@ -7110,9 +7113,10 @@ func newWriteGate(c config.WriteGateConfig) writeGate {
 }
 
 // Enter enters the project's gate: a write the gate refuses, its queue
-// full or its wait at max_wait, or whose request reaches its deadline
-// while it waits, is server_busy; one whose request is cancelled keeps
-// context.Canceled, which no one waits for the answer of.
+// full or its wait at max_wait, or whose request's deadline has passed
+// when it comes to the gate or passes while it waits, is server_busy; one
+// whose request is cancelled keeps context.Canceled, which no one waits
+// for the answer of.
 func (g writeGate) Enter(ctx context.Context, projectID uuid.UUID) (func(), error) {
 	leave, err := g.gate.Enter(ctx, projectID)
 	if errors.Is(err, platformgate.ErrFull) || errors.Is(err, platformgate.ErrTimeout) || errors.Is(err, context.DeadlineExceeded) {
@@ -7526,7 +7530,11 @@ func newIssueWorldWith(t *testing.T, configure func(cfg *config.Config)) issueWo
 }
 
 // testIssueConfig is the work-item side's configuration of the tests'
-// apps: the defaults, the lock timeout under testConfig's request timeout.
+// apps: the write gate's defaults, and a lock timeout under testConfig's
+// request timeout. They are test-only values, which configuration loading
+// would refuse, max_wait and the lock timeout together not being under
+// the request timeout; the test worlds' configurations are never
+// validated.
 var testIssueConfig = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
 	WriteLockTimeout: 4 * time.Second}
 

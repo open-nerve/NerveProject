@@ -34,9 +34,10 @@ func newWriteGate(c config.WriteGateConfig) writeGate {
 }
 
 // Enter enters the project's gate: a write the gate refuses, its queue
-// full or its wait at max_wait, or whose request reaches its deadline
-// while it waits, is server_busy; one whose request is cancelled keeps
-// context.Canceled, which no one waits for the answer of.
+// full or its wait at max_wait, or whose request's deadline has passed
+// when it comes to the gate or passes while it waits, is server_busy; one
+// whose request is cancelled keeps context.Canceled, which no one waits
+// for the answer of.
 func (g writeGate) Enter(ctx context.Context, projectID uuid.UUID) (func(), error) {
 	leave, err := g.gate.Enter(ctx, projectID)
 	if errors.Is(err, platformgate.ErrFull) || errors.Is(err, platformgate.ErrTimeout) || errors.Is(err, context.DeadlineExceeded) {
