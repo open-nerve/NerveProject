@@ -4109,7 +4109,7 @@ Expected: 通过。
 **Tests:**
 - 领域：`TestParseIdentifier`、`TestMatchIdentifierFindsWhatTheSamplesSay`（读 `identifier-fold.json`）。
 - 单元：`TestGetIssueByIdentifierReadsTheWorkItem`（项目的标识用任何大小写问，土耳其字母也是）、`TestGetIssueByIdentifierRefusals`（工作区不在、调用者不是成员：`workspace.not_found`，在找工作项之前；`issue.search` 之外的角色 403；之后，不是标识、不是 acme 的项目、没有这个编号、看不到项目、访客规则隐藏的：同一个 `issue.not_found`；不能读的角色 403；读或判定的失败照原样；没有调用者，在任何读之前）；`TestGetIssueReadsTheWorkItem`（`readIssue`，两个用例共用）；`TestGetIssueByIdentifierRefusals`、`TestGetIssueRefusals` 和 `guest_rule_test.go` 的两个表逐值比较回答（`reflect.DeepEqual`：`shared.Error` 的 `Is` 只比较种类和码），访客规则隐藏的工作项与不存在的是同一个回答（M4 设计 8.4）；规则表的 `issue.search` 一行（`TestEveryRuleDecidesItsCells`）；`bootstrap` 的 `TestIssueProjectsConvertsProjectIdentifiers`、`TestIssueWorkspacesConvertsWorkspacesAnswer`（转换，不用数据库）。
-- 存储：`TestIssueByNumber`（web 的 1、2 和 ops 的 1 各是自己的，归档的也在；已删除的不算；项目里没有的编号不算，即使别的项目有）、`TestAFailedIssueStatementIsAnError`；`TestProjectIdentifiers`（未删除的项目，归档的也在，`id` 的次序；已删除的、别的工作区的不在；先建的 Web 归档、Ops 的名字和标识在前，`id` 的次序既不是行的次序，也不是按工作区的索引的次序）、`TestAFailedReadIsAnErrorNotAnAnswer`。
+- 存储：`TestIssueByNumber`（web 的 1、2 和 ops 的 1 各是自己的，归档的也在；已删除的不算；项目里没有的编号不算，即使别的项目有）、`TestAFailedIssueStatementIsAnError`；`TestProjectIdentifiers`（未删除的项目，归档的也在，`id` 的次序；已删除的、别的工作区的不在；先建的 Web 归档、Ops 的名字和标识在前，`id` 的次序既不是行的次序，也不是计划器可能读的 `(workspace_id, name)` 或 `(workspace_id, identifier)` 索引的次序）、`TestAFailedReadIsAnErrorNotAnAnswer`。
 - 完整性：`TestEveryActionHasARuleAndEveryRuleAnAction`、`TestEveryModuleDeclaresItsActionsOrHasNone`。
 
 - [ ] **Step 1: 两条查询，生成**
@@ -5022,8 +5022,9 @@ func (s *Store) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) (
 // deleted project's, nor another workspace's. Web, drawn first, is the
 // archived one, so its row is written after Ops's, and Ops comes first by
 // name and by identifier: the id order is neither the rows' order nor that
-// of an index by workspace, so that a read without its ORDER BY is seen
-// whether the database scans the rows or such an index.
+// of the (workspace, name) or (workspace, identifier) index the planner may
+// read, so that a read without its ORDER BY is seen whether the database
+// scans the rows or one of those indexes.
 func TestProjectIdentifiers(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")

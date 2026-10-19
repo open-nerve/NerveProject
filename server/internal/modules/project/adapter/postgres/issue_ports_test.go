@@ -92,8 +92,9 @@ func TestNextIssueSequence(t *testing.T) {
 // deleted project's, nor another workspace's. Web, drawn first, is the
 // archived one, so its row is written after Ops's, and Ops comes first by
 // name and by identifier: the id order is neither the rows' order nor that
-// of an index by workspace, so that a read without its ORDER BY is seen
-// whether the database scans the rows or such an index.
+// of the (workspace, name) or (workspace, identifier) index the planner may
+// read, so that a read without its ORDER BY is seen whether the database
+// scans the rows or one of those indexes.
 func TestProjectIdentifiers(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
