@@ -17,12 +17,14 @@ import (
 
 // The deletions of a project and of a workspace at the work-item side's
 // scale target (M4 design decision point 7, 3.16: a project of some 20,000
-// work items), measured, not asserted, and only with NERVE_MEASURE_SCALE
-// set: `make test` and CI skip it. P1b measured P1a's synchronous cascade
-// with it (M4/P1b spec 3); M4 design decision point 7 has P9 measure its
-// jobs on the same data. Run it alone, with a long timeout:
+// work items), run only with NERVE_MEASURE_SCALE set: `make test` and CI
+// skip it. Their durations are measured, not asserted; the test asserts
+// its data only: the seed's rows, each deletion's 204, and no row left
+// undeleted. P1b measured P1a's synchronous cascade with it (M4/P1b
+// spec 3); M4 design decision point 7 has P9 measure its jobs on the same
+// data. Run it alone, from server/, with a long timeout:
 //
-//	NERVE_MEASURE_SCALE=1 go test ./internal/bootstrap -run TestTheDeletionsAtTheScaleTarget -v -timeout 60m
+//	NERVE_MEASURE_SCALE=1 go test -count=1 ./internal/bootstrap -run TestTheDeletionsAtTheScaleTarget -v -timeout 60m
 //
 // The data: Web, acme's project, and five projects of a workspace beta,
 // each with 20,000 work items in Backlog, each assigned to alice, labelled
@@ -32,16 +34,17 @@ import (
 // leave them. Each deletion is measured twice: its work-item side's
 // soft-deletion alone (the issue module's cascade, issue.Provide), in a
 // transaction rolled back, then vacuumed away; and its request through the
-// API, which commits, in an app whose request deadline is long enough for
-// it to finish.
+// API, which commits, in an app whose request deadline and access tokens
+// last long enough for it to finish.
 func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 	if os.Getenv("NERVE_MEASURE_SCALE") == "" {
 		t.Skip("NERVE_MEASURE_SCALE is not set: the measurement at the scale target runs only when asked for")
 	}
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Server.RequestTimeout, cfg.Server.WriteTimeout, cfg.Database.CommitTimeout = time.Hour, time.Hour, time.Hour
+		cfg.Auth.AccessTokenTTL = time.Hour
 	})
-	beta := w.newWorkspace(t, "Beta", "beta")
+	w.send(t, "alice", http.MethodPost, "/api/v0/workspaces", `{"name":"Beta","slug":"beta"}`, http.StatusCreated)
 	projects := []uuid.UUID{w.web}
 	for _, name := range []string{"One", "Two", "Three", "Four", "Five"} {
 		project := createdProject(t, w.contract, w.base, w.tokens["alice"], "beta", name, strings.ToUpper(name))
@@ -50,7 +53,11 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 	}
 	start := time.Now()
 	w.seedAtScale(t, projects)
-	t.Logf("seeded six projects, %d rows of the work-item side, in %v", w.workItemRows(t, projects, true), time.Since(start))
+	seeded := w.workItemRows(t, projects, true)
+	t.Logf("seeded six projects, %d rows of the work-item side, in %v", seeded, time.Since(start))
+	if want := len(projects) * 500000; seeded != want {
+		t.Fatalf("the seed wrote %d rows of the work-item side, want %d", seeded, want)
+	}
 
 	cascade := issue.Provide(w.pool).IssueCascade
 	t.Logf("deleteProject of Web: its work-item side's rows %v, rolled back", w.rolledBack(t, func(ctx context.Context) error {
@@ -61,17 +68,10 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 			return cascade.DeleteWorkspaceIssues(ctx, projects[1:], w.ids["alice"], time.Now())
 		}))
 	t.Logf("deleteProject of Web: the request %v", w.deletion(t, "/api/v0/projects/"+w.web.String()))
-	t.Logf("deleteWorkspace of beta: the request %v", w.deletion(t, "/api/v0/workspaces/"+beta))
+	t.Logf("deleteWorkspace of beta: the request %v", w.deletion(t, "/api/v0/workspaces/beta"))
 	if n := w.workItemRows(t, projects, true); n != 0 {
 		t.Errorf("%d rows of the six projects' work-item side left undeleted, want none", n)
 	}
-}
-
-// newWorkspace is the slug of a workspace alice creates through the API.
-func (w issueWorld) newWorkspace(t *testing.T, name, slug string) string {
-	t.Helper()
-	w.send(t, "alice", http.MethodPost, "/api/v0/workspaces", `{"name":"`+name+`","slug":"`+slug+`"}`, http.StatusCreated)
-	return slug
 }
 
 // seedAtScale writes TestTheDeletionsAtTheScaleTarget's rows into each of
