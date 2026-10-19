@@ -7,20 +7,22 @@ import {
   inviteAndAccept,
   slugFor,
 } from "../../fixtures/api";
-import { expectIssueCreated, expectIssueUpdated, type ActivityRow } from "../../fixtures/assert/issue";
+import {
+  assigned,
+  byId,
+  createdFor,
+  expectIssueCreated,
+  expectIssueUpdated,
+  type ActivityRow,
+} from "../../fixtures/assert/issue";
 import { newAccount, shownNameOf } from "../../fixtures/auth";
-import { createIssue, issueUpdated, updateIssue } from "../../fixtures/issues";
+import { createIssue, issueUpdated, updateIssue, type IssueUpdate } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
 // I2, changing a work item (M4 design 2, 3.7, 3.13): the API version, with P1b's assertions (its name, state,
 // priority, assignees and labels, each change's rows of its activity, completed_at, who changed it last and when). The
 // dates are P2's, the description P4's, the page version P14's.
-
-/** The order of the ids, which a work item answers its accounts and labels in, and a write adds them in. */
-function byId(a: { id: string }, b: { id: string }): number {
-  return a.id < b.id ? -1 : 1;
-}
 
 /**
  * A row of a change's activity: field changed from old to now, with Plane's comment; named and was, what its new and
@@ -37,26 +39,7 @@ function changed(
   return { field, verb: "updated", old_value: old, new_value: now, named, was, comment };
 }
 
-/** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
-function assigned(email: string): ActivityRow {
-  return changed("assignees", "", shownNameOf(email), "added assignee ", email);
-}
-
-/** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
-function createdFor(...accounts: { id: string; email: string }[]): ActivityRow[] {
-  const creation: ActivityRow = {
-    field: null,
-    verb: "created",
-    old_value: null,
-    new_value: null,
-    named: null,
-    was: null,
-    comment: "created the work item",
-  };
-  return [creation, ...accounts.toSorted(byId).map(({ email }) => assigned(email))];
-}
-
-test("I2 (API): a member renames a work item; another makes it high and moves it to a completed state, which completes it; the first assigns it to another account instead of himself and labels it otherwise, the others kept, taking off rows the second wrote; its values sent as they are write nothing; an account and two labels added again, the labels out of their ids' order, are added in id order; a label, then an account, taken off alone each change it, the rows taken off before keeping their stamps; moving it back completes it no more; problems of the values are refused before any read, and a state and a label the project lacks under the lock, each set at once (422), writing nothing; a work item sharing an account and a label with it is left as created: each change one row of its activity a field, a label or an account added or taken off, all its rows the changer's at its moment", async ({
+test("I2 (API): a member renames a work item; another makes it high and moves it to a completed state, which completes it; the first assigns it to another account instead of himself and labels it otherwise, the others kept, taking off rows the second wrote; its values sent as they are write nothing; an account and a label added again and a new label, the two labels out of their ids' order, are added in id order; a label, then an account, taken off alone each change it, the rows taken off before keeping their stamps; moving it back completes it no more; problems of the values are refused before any read, alike for a work item that is not there, and a state and a label the project lacks under the lock, each set at once (422), writing nothing; a work item sharing an account and a label with it is left as created: each change one row of its activity a field, a label or an account added or taken off, all its rows the changer's at its moment", async ({
   api,
   db,
 }, testInfo) => {
@@ -251,17 +234,16 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
   await expectIssueUpdated(db, id, movedBack);
 
   // A priority in another case (the contract's values are lower case), an account and a label named twice are refused
-  // before the work item is read, the three at once; a state and a label Web lacks under the lock, the two at once.
-  // Neither refused change writes anything: it stays bob's last change.
-  expect(
-    await issueUpdated(api, ann.token, id, {
-      name: "Fix it",
-      // @ts-expect-error -- a priority in another case breaks the contract on purpose
-      priority: "High",
-      assignee_ids: [ann.id, ann.id],
-      label_ids: [ui.id, ui.id],
-    })
-  ).toEqual({
+  // before the work item is read, the three at once, as they are for a work item that is not there; a state and a
+  // label Web lacks under the lock, the two at once. Neither refused change writes anything: it stays bob's last change.
+  const malformed: IssueUpdate = {
+    name: "Fix it",
+    // @ts-expect-error -- a priority in another case breaks the contract on purpose
+    priority: "High",
+    assignee_ids: [ann.id, ann.id],
+    label_ids: [ui.id, ui.id],
+  };
+  const refusedValues = {
     status: 422,
     code: "validation_failed",
     errors: [
@@ -269,7 +251,9 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
       { field: "assignee_ids[1]", code: "duplicate" },
       { field: "label_ids[1]", code: "duplicate" },
     ],
-  });
+  };
+  expect(await issueUpdated(api, ann.token, id, malformed)).toEqual(refusedValues);
+  expect(await issueUpdated(api, ann.token, crypto.randomUUID(), malformed)).toEqual(refusedValues);
   expect(
     await issueUpdated(api, ann.token, id, {
       name: "Fix it",

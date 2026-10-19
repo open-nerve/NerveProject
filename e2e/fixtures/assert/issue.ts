@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 
+import { shownNameOf } from "../auth";
 import type { Database } from "../db";
 
 // Database assertions of the work-item stories. The page version and the
@@ -21,6 +22,38 @@ export interface ActivityRow {
   comment: string;
 }
 
+/** The order of the ids, which a work item answers its accounts and labels in, and a write adds them in. */
+export function byId(a: { id: string }, b: { id: string }): number {
+  return a.id < b.id ? -1 : 1;
+}
+
+/** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
+export function assigned(email: string): ActivityRow {
+  return {
+    field: "assignees",
+    verb: "updated",
+    old_value: "",
+    new_value: shownNameOf(email),
+    named: email,
+    was: null,
+    comment: "added assignee ",
+  };
+}
+
+/** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
+export function createdFor(...accounts: { id: string; email: string }[]): ActivityRow[] {
+  const creation: ActivityRow = {
+    field: null,
+    verb: "created",
+    old_value: null,
+    new_value: null,
+    named: null,
+    was: null,
+    comment: "created the work item",
+  };
+  return [creation, ...accounts.toSorted(byId).map(({ email }) => assigned(email))];
+}
+
 /** The activity of the work item of issueId, in its order. */
 async function activityOf(db: Database, issueId: string): Promise<ActivityRow[]> {
   return db.query<ActivityRow>(
@@ -37,8 +70,8 @@ async function activityOf(db: Database, issueId: string): Promise<ActivityRow[]>
 }
 
 /**
- * The undeleted assignees and labels and the subscribers of the work item of issueId, by address or name, each in
- * order, and its activity.
+ * The undeleted assignees, labels and subscribers of the work item of issueId, by address or name, each in order, and
+ * its activity.
  */
 async function rowsOf(db: Database, issueId: string) {
   const named = async (sql: string) => (await db.query<{ v: string }>(sql, [issueId])).map(({ v }) => v);
@@ -135,7 +168,7 @@ export async function expectIssueCreated(db: Database, issueId: string, want: Cr
 
 /**
  * A work item as changed: its name, state (by name) and priority; whether it is completed; the address of the account
- * that changed it last; its undeleted assignees and its subscribers by address, its undeleted labels by name, each in
+ * that changed it last; its undeleted assignees and subscribers by address, its undeleted labels by name, each in
  * order; its activity, in its order; and how many rows of its assignees, labels, subscribers and activity its last
  * change wrote, those it took off among them.
  */
@@ -155,7 +188,7 @@ export interface UpdatedIssue {
 /**
  * I2: the work item of issueId holds want after a change (M4 design 3.7, 3.13): undeleted, last written by the
  * account of want.by at a moment after its creation, completed (completed_at set) exactly when want.completed. Its
- * undeleted assignees and labels, its subscribers and its activity are want's. The rows its last change wrote, those
+ * undeleted assignees, labels and subscribers and its activity are want's. The rows its last change wrote, those
  * last written at the work item's updated_at, want.wrote of them, are of its project and workspace and want.by's at
  * that moment: those it made, made then; those it took off, soft-deleted then; its activity, acted then.
  */

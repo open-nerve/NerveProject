@@ -10,8 +10,8 @@ import {
   projectMemberWrites,
   slugFor,
 } from "../../fixtures/api";
-import { expectIssueCreated, type ActivityRow } from "../../fixtures/assert/issue";
-import { newAccount, shownNameOf } from "../../fixtures/auth";
+import { byId, createdFor, expectIssueCreated } from "../../fixtures/assert/issue";
+import { newAccount } from "../../fixtures/auth";
 import { createIssue, issueCreated } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
@@ -19,35 +19,6 @@ import { expect, test } from "../../fixtures/test";
 // I1, creating a work item (M4 design 2, 3.7, 3.13): the API version, with P1a's assertions (the work item's rows,
 // its number, the default state and assignee, its assignees, labels and subscribers, the activity of its creation and
 // assignees, the refusals). The page version is P14's.
-
-/** The first row of a work item's activity: its creation. */
-const created: ActivityRow = {
-  field: null,
-  verb: "created",
-  old_value: null,
-  new_value: null,
-  named: null,
-  was: null,
-  comment: "created the work item",
-};
-
-/** The order of the ids, which the answers give accounts and labels in. */
-function byId(a: { id: string }, b: { id: string }): number {
-  return a.id < b.id ? -1 : 1;
-}
-
-/** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
-function assigned(email: string): ActivityRow {
-  return {
-    field: "assignees",
-    verb: "updated",
-    old_value: "",
-    new_value: shownNameOf(email),
-    named: email,
-    was: null,
-    comment: "added assignee ",
-  };
-}
 
 test("I1 (API): a member creates a work item in a state, of a priority, assigned to two members and labelled twice: numbered 1, first in its state, with its assignees and labels, the creator and the assignees its subscribers, its creation and each assignee in its activity, all at one moment; without a state or assignees, the next is in the default state and assigned to the project's default assignee while he is its member, the one after to no one once he has left; one in a cancelled state is not completed; an account or a label named twice and a priority in another case are refused at once (422), and so are a state, a label the project lacks and a guest assigned (422); a guest creates none (403), nor does anyone in an archived project (409)", async ({
   api,
@@ -106,7 +77,7 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     assignees: [admin.email, bob.email].toSorted(),
     labels: ["Bug", "UI"],
     subscribers: [admin.email, ann.email, bob.email].toSorted(),
-    activity: [created, ...assignees.map((a) => assigned(a.email))],
+    activity: createdFor(bob, admin),
   });
 
   // The admin makes ann Web's default assignee; bob's next work item, without a state or assignees, is in Backlog,
@@ -124,7 +95,7 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     assignees: [ann.email],
     labels: [],
     subscribers: [ann.email, bob.email].toSorted(),
-    activity: [created, assigned(ann.email)],
+    activity: createdFor(ann),
   });
   // Once she has left Web, the next is assigned to no one, after the second in Backlog.
   expect((await projectMemberWrites(api, web.id).leave(ann.token)).status).toBe(204);
@@ -140,7 +111,7 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     assignees: [],
     labels: [],
     subscribers: [bob.email],
-    activity: [created],
+    activity: createdFor(),
   });
 
   // One in Cancelled, a state of the cancelled group, is not completed (M4 design 3.7).
@@ -156,7 +127,7 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     assignees: [],
     labels: [],
     subscribers: [bob.email],
-    activity: [created],
+    activity: createdFor(),
   });
 
   // An account and a label named twice and a priority in another case (the contract's values are lower case) are

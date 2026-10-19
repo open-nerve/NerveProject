@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`platform/gate/gate_test.go`（311 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（303 行）、`bootstrap/gate_test.go`（278 行）、`bootstrap/issue_pool_test.go`（266 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc（`SET LOCAL lock_timeout` 由 `platform/postgres` 发，模块的 SQL 里没有 `SET`）；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径），不写近似的副本；测试的帮手共用，不复制（`issue_world_test.go`、`issue_interleaving_test.go`、`serializeOn`、`holding`、`assert/issue.ts`）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（307 行）不受约 400 行的限制。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `platform/config/load_test.go`（414 行：基点已是 403 行，它的输入和期望是整份配置，Task 9 在两处加 `issue` 的四个键）、`bootstrap/permission_matrix_test.go`（399 行）、`bootstrap/issue_interleaving_test.go`（377 行）、`bootstrap/ports_test.go`（376 行）；新建的文件中最长的是 `issue/app/update_issue_test.go`（322 行）、`platform/gate/gate_test.go`（311 行）、`e2e/stories/issue/i2-update-issue.spec.ts`（287 行）、`bootstrap/gate_test.go`（278 行）、`bootstrap/issue_pool_test.go`（266 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。本 plan 不改 `tools/keywords.json`：`phase` 照旧是 `M4/P1`（P1a、P1b 都写 `M4/P1`，裁定 5）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；配置文件的注释和中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -138,8 +138,8 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/interleaving_test.go`（修改） | `TestTwoWritesOnAProjectSerialize` 改用 `serializeOn`；`serializeOn` 的说明不再说第一个写在它的写之后等 | 11 |
 | `server/internal/bootstrap/issue_pool_test.go`（新） | 交错 20 | 12 |
 | `server/internal/bootstrap/issue_scale_test.go`（新） | 规模的测量 | 13 |
-| `e2e/fixtures/issues.ts`、`e2e/fixtures/assert/issue.ts`（修改） | `updateIssue`、`expectIssueUpdated` | 14 |
-| `e2e/stories/issue/i1-create-issue.spec.ts`（修改）、`e2e/stories/issue/i2-update-issue.spec.ts`（新） | I1 的动态行加 `was`；I2 的接口版本 | 14 |
+| `e2e/fixtures/issues.ts`、`e2e/fixtures/assert/issue.ts`（修改） | `updateIssue`、`expectIssueUpdated`；I1、I2 共用的期望的行（`byId`、`assigned`、`createdFor`） | 14 |
+| `e2e/stories/issue/i1-create-issue.spec.ts`（修改）、`e2e/stories/issue/i2-update-issue.spec.ts`（新） | I1 用共用的期望的行；I2 的接口版本 | 14 |
 | `docs/v0/v0-design.md`、`docs/v0/plane-diff.md`、`README.md`、`docs/v0/M4-issue-core/handoffs/M2-closeout.md`、`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（修改） | 3.23、8.8 中 P1b 的行；交接的处理结果 | 15 |
 
 ---
@@ -8891,7 +8891,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `e2e/fixtures/assert/issue.ts`：
   - `ActivityRow` 带 `named`、`was`（新、旧的标识指的账户的地址，或状态、标签的名称）；`activityOf`、`rowsOf`（未删除的负责人、标签和关注，各按次序；动态）、`rowStamps`（创建和修改共用的戳的读）；
   - `UpdatedIssue`、`expectIssueUpdated`：名称、状态、优先级、是否完成、最后修改者，负责人、标签、关注、动态，以及最后一次修改写下的行（`updated_at` 等于工作项的那些）恰是 `wrote` 行，都是修改者在那一刻写的：新写的在那一刻创建，去掉的在那一刻软删除，动态在那一刻由他做出。
-- `i1-create-issue.spec.ts`：动态的行加 `was: null`。
+  - `byId`、`assigned`、`createdFor`：I1 和 I2 共用的期望的行，只写一处（`id` 的次序；指派一个账户的动态的行；创建的动态的行，之后是按 `id` 的次序指派各账户的行）。
+- `i1-create-issue.spec.ts`：去掉自己的 `created`、`byId`、`assigned`，用 `assert/issue.ts` 的 `byId`、`createdFor`（共用的行带 `was: null`）。
 - `i2-update-issue.spec.ts`（新）：I2 的接口版本。
 
 **Tests:**（`make e2e`）
@@ -8904,14 +8905,21 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - bob 只去掉 Bug：是一次修改，两行；先前去掉的 Bug 保留那次的戳；
   - ann 只去掉 bob：同上；
   - bob 移回 In Progress：不再完成；
-  - 大小写不对的优先级、给两次的账户和标签：422，三个问题一次报出；Web 没有的状态和标签：422，两个问题一次报出；都不写；
+  - 大小写不对的优先级、给两次的账户和标签：422，三个问题一次报出，对不在的工作项也是同一个回答（在读工作项之前拒绝）；Web 没有的状态和标签：422，两个问题一次报出；都不写；
   - Fix the logout 仍如创建时（`expectIssueCreated`）：与它共有 bob 和 Bug 的修改没有写到它的行。
 - I1 照旧通过。
 
 - [ ] **Step 1: 夹具和断言**
 
-`e2e/fixtures/assert/issue.ts`（修改，5 处）：
+`e2e/fixtures/assert/issue.ts`（修改，6 处）：
 
+````old e2e/fixtures/assert/issue.ts
+import type { Database } from "../db";
+````
+````new e2e/fixtures/assert/issue.ts
+import { shownNameOf } from "../auth";
+import type { Database } from "../db";
+````
 ````old e2e/fixtures/assert/issue.ts
 /** A row of a work item's activity as expectIssueCreated reads it: the account a row names, by its address. */
 ````
@@ -8935,6 +8943,38 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   comment: string;
 }
 
+/** The order of the ids, which a work item answers its accounts and labels in, and a write adds them in. */
+export function byId(a: { id: string }, b: { id: string }): number {
+  return a.id < b.id ? -1 : 1;
+}
+
+/** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
+export function assigned(email: string): ActivityRow {
+  return {
+    field: "assignees",
+    verb: "updated",
+    old_value: "",
+    new_value: shownNameOf(email),
+    named: email,
+    was: null,
+    comment: "added assignee ",
+  };
+}
+
+/** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
+export function createdFor(...accounts: { id: string; email: string }[]): ActivityRow[] {
+  const creation: ActivityRow = {
+    field: null,
+    verb: "created",
+    old_value: null,
+    new_value: null,
+    named: null,
+    was: null,
+    comment: "created the work item",
+  };
+  return [creation, ...accounts.toSorted(byId).map(({ email }) => assigned(email))];
+}
+
 /** The activity of the work item of issueId, in its order. */
 async function activityOf(db: Database, issueId: string): Promise<ActivityRow[]> {
   return db.query<ActivityRow>(
@@ -8951,8 +8991,8 @@ async function activityOf(db: Database, issueId: string): Promise<ActivityRow[]>
 }
 
 /**
- * The undeleted assignees and labels and the subscribers of the work item of issueId, by address or name, each in
- * order, and its activity.
+ * The undeleted assignees, labels and subscribers of the work item of issueId, by address or name, each in order, and
+ * its activity.
  */
 async function rowsOf(db: Database, issueId: string) {
   const named = async (sql: string) => (await db.query<{ v: string }>(sql, [issueId])).map(({ v }) => v);
@@ -9034,7 +9074,7 @@ const rowStamps = `
 
 /**
  * A work item as changed: its name, state (by name) and priority; whether it is completed; the address of the account
- * that changed it last; its undeleted assignees and its subscribers by address, its undeleted labels by name, each in
+ * that changed it last; its undeleted assignees and subscribers by address, its undeleted labels by name, each in
  * order; its activity, in its order; and how many rows of its assignees, labels, subscribers and activity its last
  * change wrote, those it took off among them.
  */
@@ -9054,7 +9094,7 @@ export interface UpdatedIssue {
 /**
  * I2: the work item of issueId holds want after a change (M4 design 3.7, 3.13): undeleted, last written by the
  * account of want.by at a moment after its creation, completed (completed_at set) exactly when want.completed. Its
- * undeleted assignees and labels, its subscribers and its activity are want's. The rows its last change wrote, those
+ * undeleted assignees, labels and subscribers and its activity are want's. The rows its last change wrote, those
  * last written at the work item's updated_at, want.wrote of them, are of its project and workspace and want.by's at
  * that moment: those it made, made then; those it took off, soft-deleted then; its activity, acted then.
  */
@@ -9135,24 +9175,87 @@ export async function updateIssue(api: Api, token: string, issueId: string, body
 
 - [ ] **Step 2: I1 和 I2**
 
-`e2e/stories/issue/i1-create-issue.spec.ts`（修改，2 处）：
+`e2e/stories/issue/i1-create-issue.spec.ts`（修改，6 处）：
 
 ````old e2e/stories/issue/i1-create-issue.spec.ts
-  named: null,
+import { expectIssueCreated, type ActivityRow } from "../../fixtures/assert/issue";
+import { newAccount, shownNameOf } from "../../fixtures/auth";
 ````
 ````new e2e/stories/issue/i1-create-issue.spec.ts
-  named: null,
-  was: null,
+import { byId, createdFor, expectIssueCreated } from "../../fixtures/assert/issue";
+import { newAccount } from "../../fixtures/auth";
 ````
 ````old e2e/stories/issue/i1-create-issue.spec.ts
+// assignees, the refusals). The page version is P14's.
+
+/** The first row of a work item's activity: its creation. */
+const created: ActivityRow = {
+  field: null,
+  verb: "created",
+  old_value: null,
+  new_value: null,
+  named: null,
+  comment: "created the work item",
+};
+
+/** The order of the ids, which the answers give accounts and labels in. */
+function byId(a: { id: string }, b: { id: string }): number {
+  return a.id < b.id ? -1 : 1;
+}
+
+/** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
+function assigned(email: string): ActivityRow {
+  return {
+    field: "assignees",
+    verb: "updated",
+    old_value: "",
+    new_value: shownNameOf(email),
     named: email,
+    comment: "added assignee ",
+  };
+}
 ````
 ````new e2e/stories/issue/i1-create-issue.spec.ts
-    named: email,
-    was: null,
+// assignees, the refusals). The page version is P14's.
+````
+````old e2e/stories/issue/i1-create-issue.spec.ts
+    activity: [created, ...assignees.map((a) => assigned(a.email))],
+````
+````new e2e/stories/issue/i1-create-issue.spec.ts
+    activity: createdFor(bob, admin),
+````
+````old e2e/stories/issue/i1-create-issue.spec.ts
+    activity: [created, assigned(ann.email)],
+````
+````new e2e/stories/issue/i1-create-issue.spec.ts
+    activity: createdFor(ann),
+````
+````old e2e/stories/issue/i1-create-issue.spec.ts
+    activity: [created],
+  });
+
+  // One in Cancelled
+````
+````new e2e/stories/issue/i1-create-issue.spec.ts
+    activity: createdFor(),
+  });
+
+  // One in Cancelled
+````
+````old e2e/stories/issue/i1-create-issue.spec.ts
+    activity: [created],
+  });
+
+  // An account and a label named twice
+````
+````new e2e/stories/issue/i1-create-issue.spec.ts
+    activity: createdFor(),
+  });
+
+  // An account and a label named twice
 ````
 
-`e2e/stories/issue/i2-update-issue.spec.ts`（新文件，303 行）：
+`e2e/stories/issue/i2-update-issue.spec.ts`（新文件，287 行）：
 
 ````file e2e/stories/issue/i2-update-issue.spec.ts
 import {
@@ -9164,20 +9267,22 @@ import {
   inviteAndAccept,
   slugFor,
 } from "../../fixtures/api";
-import { expectIssueCreated, expectIssueUpdated, type ActivityRow } from "../../fixtures/assert/issue";
+import {
+  assigned,
+  byId,
+  createdFor,
+  expectIssueCreated,
+  expectIssueUpdated,
+  type ActivityRow,
+} from "../../fixtures/assert/issue";
 import { newAccount, shownNameOf } from "../../fixtures/auth";
-import { createIssue, issueUpdated, updateIssue } from "../../fixtures/issues";
+import { createIssue, issueUpdated, updateIssue, type IssueUpdate } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
 // I2, changing a work item (M4 design 2, 3.7, 3.13): the API version, with P1b's assertions (its name, state,
 // priority, assignees and labels, each change's rows of its activity, completed_at, who changed it last and when). The
 // dates are P2's, the description P4's, the page version P14's.
-
-/** The order of the ids, which a work item answers its accounts and labels in, and a write adds them in. */
-function byId(a: { id: string }, b: { id: string }): number {
-  return a.id < b.id ? -1 : 1;
-}
 
 /**
  * A row of a change's activity: field changed from old to now, with Plane's comment; named and was, what its new and
@@ -9194,26 +9299,7 @@ function changed(
   return { field, verb: "updated", old_value: old, new_value: now, named, was, comment };
 }
 
-/** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
-function assigned(email: string): ActivityRow {
-  return changed("assignees", "", shownNameOf(email), "added assignee ", email);
-}
-
-/** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
-function createdFor(...accounts: { id: string; email: string }[]): ActivityRow[] {
-  const creation: ActivityRow = {
-    field: null,
-    verb: "created",
-    old_value: null,
-    new_value: null,
-    named: null,
-    was: null,
-    comment: "created the work item",
-  };
-  return [creation, ...accounts.toSorted(byId).map(({ email }) => assigned(email))];
-}
-
-test("I2 (API): a member renames a work item; another makes it high and moves it to a completed state, which completes it; the first assigns it to another account instead of himself and labels it otherwise, the others kept, taking off rows the second wrote; its values sent as they are write nothing; an account and two labels added again, the labels out of their ids' order, are added in id order; a label, then an account, taken off alone each change it, the rows taken off before keeping their stamps; moving it back completes it no more; problems of the values are refused before any read, and a state and a label the project lacks under the lock, each set at once (422), writing nothing; a work item sharing an account and a label with it is left as created: each change one row of its activity a field, a label or an account added or taken off, all its rows the changer's at its moment", async ({
+test("I2 (API): a member renames a work item; another makes it high and moves it to a completed state, which completes it; the first assigns it to another account instead of himself and labels it otherwise, the others kept, taking off rows the second wrote; its values sent as they are write nothing; an account and a label added again and a new label, the two labels out of their ids' order, are added in id order; a label, then an account, taken off alone each change it, the rows taken off before keeping their stamps; moving it back completes it no more; problems of the values are refused before any read, alike for a work item that is not there, and a state and a label the project lacks under the lock, each set at once (422), writing nothing; a work item sharing an account and a label with it is left as created: each change one row of its activity a field, a label or an account added or taken off, all its rows the changer's at its moment", async ({
   api,
   db,
 }, testInfo) => {
@@ -9408,17 +9494,16 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
   await expectIssueUpdated(db, id, movedBack);
 
   // A priority in another case (the contract's values are lower case), an account and a label named twice are refused
-  // before the work item is read, the three at once; a state and a label Web lacks under the lock, the two at once.
-  // Neither refused change writes anything: it stays bob's last change.
-  expect(
-    await issueUpdated(api, ann.token, id, {
-      name: "Fix it",
-      // @ts-expect-error -- a priority in another case breaks the contract on purpose
-      priority: "High",
-      assignee_ids: [ann.id, ann.id],
-      label_ids: [ui.id, ui.id],
-    })
-  ).toEqual({
+  // before the work item is read, the three at once, as they are for a work item that is not there; a state and a
+  // label Web lacks under the lock, the two at once. Neither refused change writes anything: it stays bob's last change.
+  const malformed: IssueUpdate = {
+    name: "Fix it",
+    // @ts-expect-error -- a priority in another case breaks the contract on purpose
+    priority: "High",
+    assignee_ids: [ann.id, ann.id],
+    label_ids: [ui.id, ui.id],
+  };
+  const refusedValues = {
     status: 422,
     code: "validation_failed",
     errors: [
@@ -9426,7 +9511,9 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
       { field: "assignee_ids[1]", code: "duplicate" },
       { field: "label_ids[1]", code: "duplicate" },
     ],
-  });
+  };
+  expect(await issueUpdated(api, ann.token, id, malformed)).toEqual(refusedValues);
+  expect(await issueUpdated(api, ann.token, crypto.randomUUID(), malformed)).toEqual(refusedValues);
   expect(
     await issueUpdated(api, ann.token, id, {
       name: "Fix it",
