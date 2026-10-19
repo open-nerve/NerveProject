@@ -27,6 +27,7 @@ const created: ActivityRow = {
   old_value: null,
   new_value: null,
   named: null,
+  was: null,
   comment: "created the work item",
 };
 
@@ -43,6 +44,7 @@ function assigned(email: string): ActivityRow {
     old_value: "",
     new_value: shownNameOf(email),
     named: email,
+    was: null,
     comment: "added assignee ",
   };
 }
