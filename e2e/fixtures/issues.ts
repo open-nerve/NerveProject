@@ -8,6 +8,7 @@ import { bearer } from "./auth";
 
 export type Issue = components["schemas"]["IssueDetail"];
 export type IssueCreate = components["schemas"]["IssueCreate"];
+export type IssueUpdate = components["schemas"]["IssueUpdate"];
 
 /**
  * The answer of POST /api/v0/projects/{project_id}/issues by the caller of token: its status, the work item, or the
@@ -30,4 +31,27 @@ export async function createIssue(api: Api, token: string, projectId: string, bo
     throw new Error(`createIssue ${body.name} answered 201 without the work item`);
   }
   return created.issue;
+}
+
+/**
+ * The answer of PATCH /api/v0/issues/{issue_id} by the caller of token: its status, the work item, or the problem's
+ * code and fields.
+ */
+export async function issueUpdated(api: Api, token: string, issueId: string, body: IssueUpdate) {
+  const { data, error, response } = await api.PATCH("/api/v0/issues/{issue_id}", {
+    params: { path: { issue_id: issueId } },
+    body,
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, issue: data } : answer(response, error);
+}
+
+/** Changes the work item of issueId with the bearer token given, a member's of its project, and returns it. */
+export async function updateIssue(api: Api, token: string, issueId: string, body: IssueUpdate): Promise<Issue> {
+  const updated = await issueUpdated(api, token, issueId, body);
+  expect(updated.status, `change the work item ${issueId}: ${JSON.stringify(updated)}`).toBe(200);
+  if (!("issue" in updated)) {
+    throw new Error(`updateIssue ${issueId} answered 200 without the work item`);
+  }
+  return updated.issue;
 }

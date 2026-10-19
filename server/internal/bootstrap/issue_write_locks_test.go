@@ -2,11 +2,11 @@ package bootstrap
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"slices"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -18,13 +18,16 @@ import (
 
 // issueWrite is a write on the work-item side as
 // TestEachIssueWriteLocksItsProjectFirst sends it: its operation, its
-// method and its path as the contract has them, with %s for Web's id; its
-// body, which names the world's rows; the answer it gets; and reads, the
-// first table it reads under its project's lock that its precheck did not
-// read, before any write of its own.
+// method and its path as the contract has them; target, the path it
+// sends, a path of that pattern (pathOf), to Web of the world or to a row
+// made in Web for it; body, its body when alice has sent it n times
+// before, which names the world's rows and changes them anew; the answer
+// it gets; and reads, the first table it reads under its project's lock
+// that its precheck did not read, before any write of its own.
 type issueWrite struct {
 	op, method, path string
-	body             func(w issueWorld) string
+	target           func(t *testing.T, w issueWorld) string
+	body             func(w issueWorld, n int) string
 	want             int
 	reads            string
 }
@@ -32,8 +35,18 @@ type issueWrite struct {
 // issueWrites are the work-item side's writes, each with its row: every
 // operation of the contract tagged issue but GET (writesOnIssues).
 var issueWrites = []issueWrite{
-	{op: "createIssue", method: http.MethodPost, path: "/api/v0/projects/%s/issues", body: issueWorld.fullIssue, want: http.StatusCreated,
-		reads: "states"},
+	{op: "createIssue", method: http.MethodPost, path: "/api/v0/projects/{project_id}/issues",
+		target: func(_ *testing.T, w issueWorld) string { return "/api/v0/projects/" + w.web.String() + "/issues" },
+		body:   func(w issueWorld, _ int) string { return w.fullIssue() }, want: http.StatusCreated, reads: "states"},
+	// A work item in Todo, which each of alice's sends moves to the other
+	// state, Done first: a change of state, so the states are read under
+	// the lock.
+	{op: "updateIssue", method: http.MethodPatch, path: "/api/v0/issues/{issue_id}",
+		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
+		body: func(w issueWorld, n int) string {
+			return `{"state_id":"` + []uuid.UUID{w.done, w.todo}[n%2].String() + `"}`
+		},
+		want: http.StatusOK, reads: "states"},
 }
 
 // issueTables are the tables a write on the work-item side reads or
@@ -60,7 +73,9 @@ func writesOnIssues(ops []apitest.Operation) []string {
 // row no more than a foreign key's FOR KEY SHARE; a caller it refuses
 // takes no lock at all (M4 design 3.5, decision point 1: B; 9.3,
 // interleaving 21). Every write of the contract has its row here
-// (issueWrites), which a write without one fails before any database.
+// (issueWrites), which a write without one fails before any database; a
+// row whose target is not a path of its operation (pathOf) fails before
+// it sends, so that no row tests another operation under its name.
 // Each write, on Web of the world (newIssueWorld):
 //   - Refused, no lock: another transaction holds every table it reads or
 //     writes but users (issueTables) IN EXCLUSIVE MODE, which a row lock
@@ -89,7 +104,7 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	for i, iw := range issueWrites {
 		ops[i] = iw.op
 		if !slices.ContainsFunc(contract.Operations(), func(o apitest.Operation) bool {
-			return o.ID == iw.op && o.Method == iw.method && o.Path == fmt.Sprintf(iw.path, "{project_id}")
+			return o.ID == iw.op && o.Method == iw.method && o.Path == iw.path
 		}) {
 			t.Fatalf("%s's row sends %s %s, not the contract's %s", iw.op, iw.method, iw.path, iw.op)
 		}
@@ -100,8 +115,16 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	w := newIssueWorld(t)
 	for _, iw := range issueWrites {
 		t.Run(iw.op, func(t *testing.T) {
-			path, body := w.base+fmt.Sprintf(iw.path, w.web), iw.body(w)
+			target := iw.target(t, w)
+			if !pathOf(iw.path, target) {
+				t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
+			}
+			path, alices := w.base+target, 0
 			send := func(name string) <-chan answer {
+				body := iw.body(w, alices)
+				if name == "alice" {
+					alices++
+				}
 				req := newRequest(t, iw.method, path, w.tokens[name], []byte(body))
 				w.contract.CheckRequest(t, req)
 				return sendInBackground(req)

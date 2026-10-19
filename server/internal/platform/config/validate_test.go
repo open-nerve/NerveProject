@@ -51,8 +51,12 @@ func validConfig() Config {
 		// Unlike the defaults and unlike auth.signup_enabled, so that a key
 		// logged from the wrong field shows.
 		Workspace: WorkspaceConfig{CreationEnabled: false},
-		Files:     FilesConfig{SizeLimit: 7340032},
-		Log:       LogConfig{Level: "info", Format: "json"},
+		// Each unlike its default and every other key's value, and not the
+		// start of one, so that a key logged from the wrong field shows.
+		Issue: IssueConfig{WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
+			WriteLockTimeout: 3 * time.Second},
+		Files: FilesConfig{SizeLimit: 7340032},
+		Log:   LogConfig{Level: "info", Format: "json"},
 	}
 }
 
@@ -67,6 +71,7 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		Env:      EnvProd,
 		Server:   ServerConfig{Addr: "8080", ReadHeaderTimeout: 0, ReadTimeout: 0, WriteTimeout: -time.Second, ShutdownTimeout: -time.Second},
 		Database: DatabaseConfig{URL: "", MaxConns: 0},
+		Issue:    IssueConfig{WriteGate: WriteGateConfig{MaxQueue: -1}},
 		Log:      LogConfig{Level: "verbose", Format: "xml"},
 	}
 	err := cfg.validate()
@@ -109,6 +114,10 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"ratelimit.register_ip.burst: must be at least 1, got 0",
 		"ratelimit.password_user.per_minute: must be at least 1, got 0",
 		"ratelimit.password_user.burst: must be at least 1, got 0",
+		"issue.write_gate.per_project: must be at least 1, got 0",
+		"issue.write_gate.max_wait: must be positive, got 0s",
+		"issue.write_gate.max_queue: must not be negative, got -1",
+		"issue.write_lock_timeout: must be positive, got 0s",
 		"jobs.shutdown_timeout: must be positive, got 0s",
 		"files.size_limit: must be at least 1, got 0",
 		`log.level: must be one of debug, info, warn, error, got "verbose"`,
@@ -207,6 +216,23 @@ func TestValidateCrossKeyRules(t *testing.T) {
 			change: func(c *Config) { c.RateLimit.IPv6PrefixLen = 129 },
 			want:   "ratelimit.ipv6_prefix_len: must be from 1 to 128, got 129",
 		},
+		{
+			// A write may wait max_wait at the gate and then its lock
+			// timeout for a lock, and must still answer 503 before its
+			// request's deadline (M4 design 3.5, 11.11).
+			name:   "gate wait and lock timeout reaching the request timeout",
+			change: func(c *Config) { c.Issue.WriteLockTimeout = 13500 * time.Millisecond },
+			want:   "issue.write_lock_timeout: plus issue.write_gate.max_wait (1.5s) must be less than server.request_timeout (15s), got 13.5s",
+		},
+		{
+			// Each wait alone is well under the request timeout.
+			name: "gate wait and lock timeout past the request timeout",
+			change: func(c *Config) {
+				c.Issue.WriteGate.MaxWait = 11 * time.Second
+				c.Issue.WriteLockTimeout = 5 * time.Second
+			},
+			want: "issue.write_lock_timeout: plus issue.write_gate.max_wait (11s) must be less than server.request_timeout (15s), got 5s",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -259,6 +285,27 @@ func TestValidateChecksEachBucketUnderItsOwnKey(t *testing.T) {
 func TestValidateAcceptsACleanupIntervalOfOneSecond(t *testing.T) {
 	cfg := validConfig()
 	cfg.Auth.SessionCleanupInterval = time.Second
+	if err := cfg.validate(); err != nil {
+		t.Errorf("validate() = %v, want nil", err)
+	}
+}
+
+// The write gate's minimums are inclusive: per_project 1 and max_queue 0
+// (no queue) are allowed.
+func TestValidateAcceptsTheWriteGatesMinimums(t *testing.T) {
+	cfg := validConfig()
+	cfg.Issue.WriteGate.PerProject = 1
+	cfg.Issue.WriteGate.MaxQueue = 0
+	if err := cfg.validate(); err != nil {
+		t.Errorf("validate() = %v, want nil", err)
+	}
+}
+
+// A write's gate wait and lock timeout may together come up to just under
+// the request timeout.
+func TestValidateAcceptsWriteWaitsJustUnderTheRequestTimeout(t *testing.T) {
+	cfg := validConfig()
+	cfg.Issue.WriteLockTimeout = cfg.Server.RequestTimeout - cfg.Issue.WriteGate.MaxWait - time.Millisecond
 	if err := cfg.validate(); err != nil {
 		t.Errorf("validate() = %v, want nil", err)
 	}

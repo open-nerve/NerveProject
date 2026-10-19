@@ -37,6 +37,29 @@ type LinkRows struct {
 	At          time.Time
 }
 
+// IssueFields are a work item's fields as an update writes them (M4 design
+// 3.7): those it changes and the others as they are, and the moment and
+// the account that change it last.
+type IssueFields struct {
+	ID          uuid.UUID
+	Name        string
+	StateID     uuid.UUID
+	Priority    domain.Priority
+	CompletedAt *time.Time
+	By          uuid.UUID
+	At          time.Time
+}
+
+// UnlinkRows are the rows of one of a work item's tables of accounts or
+// labels, its assignees' or labels', that an update removes: its undeleted
+// rows of Targets, soft-deleted at the moment and by the account given.
+type UnlinkRows struct {
+	IssueID uuid.UUID
+	Targets []uuid.UUID
+	By      uuid.UUID
+	At      time.Time
+}
+
 // ActivityRow is a new row of a work item's activity (M4 design 3.13):
 // its id, the work item's, the row's values, and its actor, who writes it,
 // at the moment given.

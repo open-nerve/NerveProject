@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"uuid"
@@ -20,7 +19,6 @@ type CreateIssueDeps struct {
 	Labels    LabelCatalog
 	Members   ProjectMembers
 	Profiles  PublicProfiles
-	Tx        shared.TxManager
 	Clock     Clock
 }
 
@@ -44,17 +42,19 @@ type checked struct {
 	labels    []uuid.UUID
 }
 
-// Execute checks in (domain.CheckNewIssue) and takes Locks' precheck,
-// before any lock; then in one transaction, in the order of M4 design 3.5:
-// the project FOR NO KEY UPDATE and the decision on issue.create; an
-// archived project refuses it (409 project.archived); the dependent rows
-// (check), every problem in one 422; the project's next number; the clock;
-// the sort order after the greatest of the state's work items; the work
-// item; its assignees, the default one too; its labels; its subscribers,
-// the caller and the assignees, in id order; its activity: the creation,
-// then each assignee by his display name (domain.CreationActivity). All
-// of it is the caller's at that moment. The answer is the work item as
-// stored, read back in the transaction.
+// Execute checks in (domain.CheckNewIssue), before any read; then Locks
+// runs the write (M4 design 3.5, 11.11): its precheck, before any lock;
+// then the project's write gate, which refuses a write that may wait no
+// longer (503 server_busy); then in one transaction, the project
+// FOR NO KEY UPDATE and the decision on issue.create, and under them, in
+// this order: an archived project refuses it (409 project.archived); the
+// dependent rows (check), every problem in one 422; the project's next
+// number; the clock; the sort order after the greatest of the state's work
+// items; the work item; its assignees, the default one too; its labels;
+// its subscribers, the caller and the assignees, in id order; its
+// activity: the creation, then each assignee by his display name
+// (domain.CreationActivity). All of it is the caller's at that moment. The
+// answer is the work item as stored, read back in the transaction.
 func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domain.NewIssue) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -64,15 +64,9 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 		return domain.Issue{}, err
 	}
 	w := write{project: projectID, action: domain.ActionCreate, notFound: domain.ErrProjectNotFound}
-	if err := u.d.Locks.precheck(ctx, actor, w); err != nil {
-		return domain.Issue{}, err
-	}
 	var created domain.Issue
-	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
-		project, err := u.d.Locks.lockAndDecide(ctx, actor, w)
-		if err != nil {
-			return err
-		}
+	err = u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
+		project := h.project
 		if project.Archived {
 			return domain.ErrProjectArchived
 		}
@@ -95,7 +89,7 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 		if err := u.write(ctx, row, c); err != nil {
 			return err
 		}
-		created, err = u.answer(ctx, row.ID)
+		created, err = readBack(ctx, u.d.Issues, row.ID)
 		return err
 	})
 	if err != nil {
@@ -144,7 +138,7 @@ func (u *CreateIssue) check(ctx context.Context, projectID uuid.UUID, p LockedPr
 			return checked{}, err
 		}
 		for i, id := range in.LabelIDs {
-			if !slices.Contains(known, id) {
+			if !slices.ContainsFunc(known, func(l LabelRef) bool { return l.ID == id }) {
 				problems = append(problems, domain.UnknownLabel(i))
 			}
 		}
@@ -156,18 +150,6 @@ func (u *CreateIssue) check(ctx context.Context, projectID uuid.UUID, p LockedPr
 	return c, nil
 }
 
-// pickState is the state of states asked for, when it is there and not
-// the triage state, or the default state when none is asked for; found is
-// false when there is no such state.
-func pickState(states []StateRef, asked *uuid.UUID) (StateRef, bool) {
-	for _, s := range states {
-		if asked == nil && s.Default || asked != nil && s.ID == *asked && s.Group != domain.GroupTriage {
-			return s, true
-		}
-	}
-	return StateRef{}, false
-}
-
 // write writes the work item row and the rows under it, in the order of M4
 // design 3.5: the work item, its assignees, its labels, its subscribers,
 // its activity.
@@ -175,71 +157,24 @@ func (u *CreateIssue) write(ctx context.Context, row IssueRow, c checked) error 
 	if err := u.d.Issues.InsertIssue(ctx, row); err != nil {
 		return err
 	}
-	links := func(targets []uuid.UUID) LinkRows {
-		r := LinkRows{WorkspaceID: row.WorkspaceID, ProjectID: row.ProjectID, IssueID: row.ID, Targets: targets, By: row.By, At: row.At}
-		for range targets {
-			r.IDs = append(r.IDs, uuid.NewV7())
-		}
-		return r
-	}
+	s := stamp{workspace: row.WorkspaceID, project: row.ProjectID, issue: row.ID, by: row.By, at: row.At}
 	if len(c.assignees) > 0 {
-		if err := u.d.Issues.InsertAssignees(ctx, links(c.assignees)); err != nil {
+		if err := u.d.Issues.InsertAssignees(ctx, s.links(c.assignees)); err != nil {
 			return err
 		}
 	}
 	if len(c.labels) > 0 {
-		if err := u.d.Issues.InsertLabels(ctx, links(c.labels)); err != nil {
+		if err := u.d.Issues.InsertLabels(ctx, s.links(c.labels)); err != nil {
 			return err
 		}
 	}
 	subscribers := slices.Compact(slices.SortedFunc(slices.Values(append([]uuid.UUID{row.By}, c.assignees...)), uuid.UUID.Compare))
-	if err := u.d.Issues.InsertSubscribers(ctx, links(subscribers)); err != nil {
+	if err := u.d.Issues.InsertSubscribers(ctx, s.links(subscribers)); err != nil {
 		return err
 	}
-	assignees, err := u.named(ctx, c.assignees)
+	accounts, err := assignees(ctx, u.d.Profiles, c.assignees)
 	if err != nil {
 		return err
 	}
-	var rows []ActivityRow
-	for _, a := range domain.CreationActivity(assignees) {
-		rows = append(rows, ActivityRow{ID: uuid.NewV7(), WorkspaceID: row.WorkspaceID, ProjectID: row.ProjectID, IssueID: row.ID, Activity: a,
-			ActorID: row.By, At: row.At})
-	}
-	return u.d.Issues.InsertActivities(ctx, rows)
-}
-
-// named is the accounts ids with their display names, in their order. An
-// account without one is an error: an assignee is a member of the project,
-// and accounts are never deleted.
-func (u *CreateIssue) named(ctx context.Context, ids []uuid.UUID) ([]domain.Assignee, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	names, err := u.d.Profiles.DisplayNames(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]domain.Assignee, len(ids))
-	for i, id := range ids {
-		name, ok := names[id]
-		if !ok {
-			return nil, fmt.Errorf("assignee %s has no profile", id)
-		}
-		out[i] = domain.Assignee{ID: id, DisplayName: name}
-	}
-	return out, nil
-}
-
-// answer reads the work item id back as stored, in the transaction ctx
-// carries: the write's answer. A work item not there after its write is an
-// internal error, not a 404.
-func (u *CreateIssue) answer(ctx context.Context, id uuid.UUID) (domain.Issue, error) {
-	i, found, err := u.d.Issues.GetIssue(ctx, id)
-	switch {
-	case err != nil:
-		return domain.Issue{}, err
-	case !found:
-		return domain.Issue{}, errors.New("work item " + id.String() + " is not there after its write")
-	}
-	return i, nil
+	return u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(accounts)))
 }

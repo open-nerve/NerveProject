@@ -8,8 +8,17 @@ import (
 )
 
 // The rows of the permission matrix of a project's work items (M4 design
-// 9.2): creating one, under the project of each column. Each cell writes
-// on a copy of its own, so each creation is its project's first.
+// 9.2): creating one, under the project of each column, and reading one,
+// naming it by its id (/issues/{issue_id}): its column's project's seeded
+// work item, matrixIssue. Each creating cell writes on a copy of its own,
+// so each creation is its project's second, after the seeded one; the
+// reading cells share one.
+
+var cellIssueNotFound = cell{http.StatusNotFound, "issue.not_found"}
+
+// issueRows are the work items the rows name by id: a column that does not
+// see its project answers issue.not_found.
+var issueRows = rowsByID{path: "issues", notFound: cellIssueNotFound, find: seeded.issue}
 
 // newIssue is the body of the work item the rows create.
 const newIssue = `{"name":"Fix the login"}`
@@ -76,10 +85,16 @@ func issueMatrixRows() []matrixRow {
 			}),
 			cells:   ofProject(cellValidationFailed, cellValidationFailed, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "assignee_ids[0] not_allowed"},
+		// As createIssue; the project's guests are P2's (M4 design 3.4).
+		{op: "getIssue", columns: projectColumns, request: issueRows.to(http.MethodGet, "", matrixIssue, ""),
+			cells: issueRows.of(cellOK, cellOK, cellForbidden, cellOK, cellForbidden, cellForbidden), check: readsTheIssue},
+		// An archived project's work items are read as any other's.
+		{op: "getIssue", variant: "archived", columns: archivedColumns, request: issueRows.to(http.MethodGet, "", matrixIssue, ""),
+			cells: issueRows.ofArchived(cellOK, cellForbidden), check: readsTheIssue},
 	}
 }
 
-// createsTheIssue: the column's project's first work item, Fix the login,
+// createsTheIssue: the column's project's second work item, Fix the login,
 // in its default state Backlog, of no priority, at a state's first sort
 // order, not completed, assigned to no one, without labels, made and
 // last changed by the caller.
@@ -99,14 +114,14 @@ func createsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 	}
 	decodeAnswer(t, answer, &i)
 	me := s.account(accountOf(c))
-	if i.ProjectID != s.project(projectOf(c)) || i.SequenceID != 1 || i.Name != "Fix the login" || i.StateID != s.state(projectOf(c), "Backlog") ||
+	if i.ProjectID != s.project(projectOf(c)) || i.SequenceID != 2 || i.Name != "Fix the login" || i.StateID != s.state(projectOf(c), "Backlog") ||
 		i.Priority != "none" || i.SortOrder != 65535 || i.CompletedAt != nil || len(i.AssigneeIDs) != 0 || len(i.LabelIDs) != 0 ||
 		i.CreatedByID == nil || *i.CreatedByID != me || i.UpdatedByID == nil || *i.UpdatedByID != me {
-		t.Errorf("%s creates %s; want %s's work item 1, Fix the login, in Backlog, none, at 65535, by %s", c, answer, projectOf(c), me)
+		t.Errorf("%s creates %s; want %s's work item 2, Fix the login, in Backlog, none, at 65535, by %s", c, answer, projectOf(c), me)
 	}
 }
 
-// createsTheGivenIssue: the column's project's first work item, Fix, in
+// createsTheGivenIssue: the column's project's second work item, Fix, in
 // Done, high, at a state's first sort order, completed at its creation,
 // assigned to PM's account, labelled UI.
 func createsTheGivenIssue(t *testing.T, c caller, s seeded, answer string) {
@@ -121,9 +136,9 @@ func createsTheGivenIssue(t *testing.T, c caller, s seeded, answer string) {
 	}
 	decodeAnswer(t, answer, &i)
 	pm, ui := s.account(callerProjectMember), s.label(projectOf(c), "UI")
-	if i.SequenceID != 1 || i.StateID != s.state(projectOf(c), "Done") || i.Priority != "high" || i.SortOrder != 65535 || i.CompletedAt == nil ||
+	if i.SequenceID != 2 || i.StateID != s.state(projectOf(c), "Done") || i.Priority != "high" || i.SortOrder != 65535 || i.CompletedAt == nil ||
 		!slices.Equal(i.AssigneeIDs, []uuid.UUID{pm}) || !slices.Equal(i.LabelIDs, []uuid.UUID{ui}) {
-		t.Errorf("%s creates %s; want %s's work item 1 in Done, high, at 65535, completed, assigned to %s, labelled %s", c, answer,
+		t.Errorf("%s creates %s; want %s's work item 2 in Done, high, at 65535, completed, assigned to %s, labelled %s", c, answer,
 			projectOf(c), pm, ui)
 	}
 }

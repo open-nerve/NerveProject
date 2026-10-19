@@ -34,9 +34,11 @@ paths:
         65535 for the state's first; in a state of the completed group it is
         completed at its creation. The caller and the assignees subscribe
         to it; its activity says it was created, and assigned to each
-        assignee. Every row it writes is the caller's, at one moment.
+        assignee. Every row it writes is the caller's, at one moment. A
+        project with too many writes on its work items at once answers
+        server_busy, with Retry-After: try again then.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived, server_busy]
       requestBody:
         required: true
         content:
@@ -46,6 +48,76 @@ paths:
       responses:
         '201':
           description: The new work item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: getIssue
+      tags: [issue]
+      summary: Read a work item
+      description: >-
+        For the admins and members of its project, archived or not; an
+        archived work item is read as any other. A work item that does not
+        exist, is deleted, or whose project the caller does not see answers
+        issue.not_found; one he sees the project of but may not read,
+        forbidden.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden]
+      responses:
+        '200':
+          description: The work item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateIssue
+      tags: [issue]
+      summary: Change a work item
+      description: >-
+        For the admins and members of its project. The fields given change
+        and the others stay; a list given is the work item's new list, empty
+        for none. The values follow createIssue's rules (validation_failed),
+        checked before the work item is looked at. A work item that does not
+        exist, is deleted, or whose project the caller does not see answers
+        issue.not_found; one whose project he sees but whose work items he
+        may not change, forbidden; both are answered before the project is
+        locked, and with the project locked the role is decided again. A
+        work item of an archived project cannot be changed
+        (project.archived). Then the state, when it changes, is one of the
+        project's, not its triage state; each account the work item is newly
+        assigned to is an active member of the project who is not its guest,
+        while one it keeps stays assigned whatever has become of him; each
+        label added is one of the project's (validation_failed, every
+        problem at once). A change that changes nothing writes nothing, and
+        the work item is answered as it is. Otherwise the work item is
+        changed last by the caller; moved into a state of the completed
+        group, it is completed at the change, and moved into another, not
+        completed; the accounts newly assigned subscribe to it; its
+        activity says what changed: the name, the priority, the state, and
+        each label and each assignee added and removed. Every row it writes
+        is the caller's, at one moment. A project with too many writes on
+        its work items at once answers server_busy, with Retry-After: try
+        again then.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueUpdate'
+      responses:
+        '200':
+          description: The work item as changed.
           content:
             application/json:
               schema:
@@ -64,6 +136,14 @@ components:
       in: path
       required: true
       description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+    IssueID:
+      name: issue_id
+      in: path
+      required: true
+      description: A work item's id (IssueDetail.id).
       schema:
         type: string
         format: uuid
@@ -190,6 +270,37 @@ components:
             format: uuid
         label_ids:
           description: At most 100 of the project's labels, each named once.
+          type: array
+          items:
+            type: string
+            format: uuid
+    IssueUpdate:
+      description: Changes the fields it names; a field left out keeps its value.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: 1–255 characters without the white space around it, which is not stored.
+          type: string
+        state_id:
+          description: One of the project's states, not its triage state.
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        assignee_ids:
+          description: >-
+            The work item's new assignees, empty for none: at most 100
+            accounts, each named once; each it is not assigned to yet an
+            active member of the project who is not its guest.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: >-
+            The work item's new labels, empty for none: at most 100 of the
+            project's labels, each named once.
           type: array
           items:
             type: string

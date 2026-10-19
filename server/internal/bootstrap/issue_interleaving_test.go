@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"net/http"
@@ -16,13 +17,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The interleavings of a work item's creation (M4 design 3.5, 9.3), on
-// issueWorld's real database: each write through its module's route, as
-// bootstrap wires it. The first write's transaction is held open past its
-// writes (heldTx); the second is sent once it is held, and the gate opens
-// once the second waits for Web's row of projects, which each of the two
-// takes FOR NO KEY UPDATE (M4 design 3.5, M3 design 3.6). Every wait has a
-// deadline.
+// The interleavings of a work item's creation and of its change (M4 design
+// 3.5, 9.3), on issueWorld's real database: each write through its
+// module's route, as bootstrap wires it. The first write's transaction is
+// held open past its writes (heldTx); the second is sent once it is held,
+// and the gate opens once the second waits for Web's row of projects,
+// which each of the two takes FOR NO KEY UPDATE (M4 design 3.5, M3 design
+// 3.6). Every wait has a deadline.
 
 // heldTx holds the one transaction its write runs open past its writes:
 // once fn has done them, before the commit, it waits at its gate. A second
@@ -72,9 +73,76 @@ func createsIssue(name string, body func(t *testing.T, w issueWorld) string) rac
 	}
 }
 
+// changesIssue is name's change of Web's one work item (workItem) with the
+// body body gives.
+func changesIssue(name string, body func(t *testing.T, w issueWorld) string) racingWrite {
+	return func(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) func() error {
+		return w.sending(e, newIssueRoute(t, w.pool, tx), name, http.MethodPatch, "/api/v0/issues/"+w.workItem(t).String(), body(t, w))
+	}
+}
+
 // named is the body of a work item named name, with no other field.
 func named(name string) func(*testing.T, issueWorld) string {
 	return func(*testing.T, issueWorld) string { return `{"name":"` + name + `"}` }
+}
+
+// aWorkItem is alice's work item Fix in Web, in Backlog, without assignees
+// or labels, through the API: three rows, the work item, alice's
+// subscription and its creation's activity.
+func aWorkItem(t *testing.T, w issueWorld) {
+	w.newWorkItemIn(t, w.web, `{"name":"Fix"}`)
+}
+
+// workItem is the id of Web's one work item.
+func (w issueWorld) workItem(t *testing.T) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT id FROM issues WHERE project_id = $1", w.web).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// itemWrite is a write on Web's work items that an interleaving runs as a
+// creation and as a change alike (M4 design 3.5: P1a's creation branch,
+// P1b's change branch): prepare writes what it needs first, nil for
+// nothing, leaving rows rows on Web's work-item side (workItemRows);
+// write is name's write with the body body gives; done is its answer, and
+// gone the code that refuses it once its project is gone to its caller.
+type itemWrite struct {
+	name    string
+	prepare func(t *testing.T, w issueWorld)
+	rows    int
+	write   func(name string, body func(*testing.T, issueWorld) string) racingWrite
+	done    int
+	gone    string
+}
+
+// itemWrites are a creation in Web and a change of its one work item,
+// alice's Fix (aWorkItem).
+var itemWrites = []itemWrite{
+	{"created", nil, 0, createsIssue, http.StatusCreated, "project.not_found"},
+	{"changed", aWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"},
+}
+
+// after is prepare, when given, then iw's own preparation.
+func (iw itemWrite) after(prepare func(t *testing.T, w issueWorld)) func(t *testing.T, w issueWorld) {
+	return func(t *testing.T, w issueWorld) {
+		for _, p := range []func(*testing.T, issueWorld){prepare, iw.prepare} {
+			if p != nil {
+				p(t, w)
+			}
+		}
+	}
+}
+
+// wroteNothing checks that Web's work-item side still has iw's rows: a
+// write refused under its lock wrote none.
+func (w issueWorld) wroteNothing(t *testing.T, iw itemWrite) {
+	t.Helper()
+	if n := w.workItemRows(t, []uuid.UUID{w.web}, false); n != iw.rows {
+		t.Errorf("Web's work-item side has %d rows after the refused write; want %d, as before it", n, iw.rows)
+	}
 }
 
 // aliceOnWeb is alice's write method path, with body, through the
@@ -175,6 +243,23 @@ func (w issueWorld) workItems(t *testing.T) int {
 	return n
 }
 
+// workItemRows counts the rows of the work-item side of projects: their
+// work items and the work items' assignees, labels, subscribers and
+// activities; the deleted ones too, unless undeleted.
+func (w issueWorld) workItemRows(t *testing.T, projects []uuid.UUID, undeleted bool) int {
+	t.Helper()
+	n := 0
+	for _, table := range []string{"issues", "issue_assignees", "issue_labels", "issue_subscribers", "issue_activities"} {
+		var rows int
+		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+table+" WHERE project_id = ANY ($1) AND (deleted_at IS NULL OR NOT $2)",
+			projects, undeleted).Scan(&rows); err != nil {
+			t.Fatal(err)
+		}
+		n += rows
+	}
+	return n
+}
+
 // createdIssue is what the interleavings read of a work item created.
 type createdIssue struct {
 	SequenceID  int         `json:"sequence_id"`
@@ -257,34 +342,36 @@ func TestRemovingTheDefaultAssigneeAndCreatingAWorkItemSerialize(t *testing.T) {
 }
 
 // The decision under the lock outlives the precheck (M4 design 3.5;
-// interleavings 4 and 5, the creation's branch): bob, a member of Web,
-// made secret, creates a work item while alice's removal of him, or her
-// demotion of him to a guest, holds Web past its writes. His creation
-// passed the precheck, which read him a member, and waits for Web's row;
-// once hers commits, the decision under the lock reads him removed, who
-// no longer sees Web: 404 project.not_found; or a guest, who creates no
-// work item: 403 forbidden. No work item.
-func TestACallerRemovedOrDemotedWhileHisCreationWaitsIsRefused(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		change  racingWrite
-		changed int
-		want    int
-		code    string
-	}{
-		{"removed", removesBob, http.StatusNoContent, http.StatusNotFound, "project.not_found"},
-		{"made a guest", demotesBob, http.StatusOK, http.StatusForbidden, "forbidden"},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			w := newIssueWorld(t)
-			w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"network":0}`, http.StatusOK)
-			var change, create exchange
-			w.serialize(t, tt.change, createsIssue("bob", named("Fix")), &change, &create)
-			w.answered(t, change, tt.changed)
-			w.refused(t, create, tt.want, tt.code)
-			if n := w.workItems(t); n != 0 {
-				t.Errorf("Web has %d work items, want none", n)
-			}
-		})
+// interleavings 4 and 5, the creation's branch and the change's): bob, a
+// member of Web, made secret, creates a work item, or changes alice's
+// Fix, while alice's removal of him, or her demotion of him to a guest,
+// holds Web past its writes. His write passed the precheck, which read him
+// a member, and waits for Web's row; once hers commits, the decision under
+// the lock reads him removed, who no longer sees Web: 404
+// project.not_found, or issue.not_found for the change; or a guest, who
+// writes no work item: 403 forbidden. His write wrote nothing.
+func TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused(t *testing.T) {
+	for _, iw := range itemWrites {
+		for _, tt := range []struct {
+			name    string
+			change  racingWrite
+			changed int
+			want    int
+			code    string // "": iw.gone
+		}{
+			{"removed", removesBob, http.StatusNoContent, http.StatusNotFound, ""},
+			{"made a guest", demotesBob, http.StatusOK, http.StatusForbidden, "forbidden"},
+		} {
+			t.Run(iw.name+", "+tt.name, func(t *testing.T) {
+				w := newIssueWorld(t)
+				w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"network":0}`, http.StatusOK)
+				iw.after(nil)(t, w)
+				var change, written exchange
+				w.serialize(t, tt.change, iw.write("bob", named("Mend")), &change, &written)
+				w.answered(t, change, tt.changed)
+				w.refused(t, written, tt.want, cmp.Or(tt.code, iw.gone))
+				w.wroteNothing(t, iw)
+			})
+		}
 	}
 }

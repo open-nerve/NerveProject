@@ -13,6 +13,7 @@ import (
 	"time"
 	"uuid"
 
+	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -27,17 +28,17 @@ import (
 // database by each kind of caller, its status and problem code asserted cell
 // by cell, and where a row says so, what the answer holds. The data is
 // prepared once: the accounts through the API, the workspaces and
-// memberships through the workspace store, the projects, their
-// memberships, their states and their labels through the project store,
-// the deleted workspace through the API, and the membership states no
-// store makes alone through SQL (prepareMatrix).
+// memberships through the workspace store, the projects, their memberships,
+// states and labels through the project store, their work items through
+// the issue store, the deleted workspace through the API, and the
+// membership states no store makes alone through SQL (prepareMatrix).
 // The cells that only read share one copy of it, and each cell that writes
 // gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
 // another's writes. Each module's rows are in a file of their own
 // (permission_matrix_<module>_test.go): a phase that adds an operation adds
 // its row there, and what the row needs prepared here and in
-// permission_matrix_seeded_test.go; the labels' writer and check are
-// beside their rows.
+// permission_matrix_seeded_test.go; the labels' writer and check are beside
+// their rows, the work items' in permission_matrix_seed_issues_test.go.
 
 // matrixExempt is what has no row, each entry for its reason (M3 design
 // 9.2: every operation but the account-level and the public ones).
@@ -212,7 +213,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), issueMatrixRows())
+		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -250,15 +251,18 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // other's admin and removed member are there so that a role read in the
 // wrong workspace lets either into acme. Through the project store, the
 // projects, project memberships, states and labels of matrixProjects,
-// matrixProjectMembers, matrixStates and matrixLabels, and acme's archived
-// project archived. Through both stores, the removed member's removal;
-// then, through the workspace store, the invitations of matrixInvitations.
-// Through the project store, the memberships P5b's writes end (endings);
-// through SQL, the membership states no store makes alone (partingStates).
-// Through the API, gone deleted by its admin, which soft-deletes its
-// memberships and its project, with its states and labels, with it; then
-// the checks that the rows the cells rest on are there (preconditions), the
-// states and the labels among them (seededStates, seededLabels).
+// matrixProjectMembers, matrixStates and matrixLabels; through the issue
+// store, each project's work item, matrixIssue (issueSeed); through the
+// project store, acme's archived project archived. Through both stores,
+// the removed member's removal; then, through the workspace store, the
+// invitations of matrixInvitations. Through the project store, the
+// memberships P5b's writes end (endings); through SQL, the membership
+// states no store makes alone (partingStates). Through the API, gone
+// deleted by its admin, which soft-deletes its memberships and its
+// project, with its states, labels and work item, with it; then the checks
+// that the rows the cells rest on are there (preconditions), the states,
+// the labels and the work items among them (seededStates, seededLabels,
+// seededIssues).
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.
@@ -298,6 +302,8 @@ func prepareMatrix(t *testing.T) matrixData {
 		}
 		projects.states(s)
 		projects.labels(s)
+		issues := issueSeed{projectSeed: projects, store: issuepg.New(pool)}
+		issues.issues(s)
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {
@@ -316,6 +322,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		projects.preconditions(s)
 		projects.seededStates(pool)
 		projects.seededLabels(pool, s)
+		issues.seededIssues(s)
 	})
 	if !prepared {
 		t.FailNow()

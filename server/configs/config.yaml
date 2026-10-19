@@ -84,6 +84,17 @@ workspace:
   # 仍可用 nerve workspaces create 建工作区；实例配置接口报告它，前端照它隐藏入口
   creation_enabled: true
 
+# 工作项一侧的写（M4 设计 3.5、11.11）
+issue:
+  # 按项目的写闸门：本进程里同一个项目上同时持有数据库连接的工作项写至多 per_project 个；
+  # 其余的写不持连接地排队，至多 max_queue 个，各等至多 max_wait。超出时 503 server_busy，带 Retry-After
+  write_gate:
+    per_project: 2
+    max_wait: 2s
+    max_queue: 64
+  # 这些写的事务等每一把锁的上限（lock_timeout）；到期 503 server_busy。加上 write_gate.max_wait 必须短于 server.request_timeout
+  write_lock_timeout: 5s
+
 files:
   # 单个上传文件的大小上限（字节，默认 5 MiB）。实例配置接口报告它；上传在 M5 加入时照它执行
   size_limit: 5242880

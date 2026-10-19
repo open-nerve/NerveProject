@@ -88,9 +88,11 @@ func TestNextIssueSequence(t *testing.T) {
 }
 
 // The catalogs of a project for the issue module (M4 design 6.5): its
-// undeleted states, its triage state too, in id order, with their groups
-// and the default; those of the labels asked for that are its undeleted
-// labels; the roles of the accounts asked for who are its active members.
+// undeleted states, its triage state too, in id order, with their names,
+// their groups and the default; those of the labels asked for that are its
+// undeleted labels, with their names, in whatever order (a work item's
+// write looks each up by its id); the roles of the accounts asked for who
+// are its active members.
 // Another project's states, labels and members, a deleted state or label,
 // an ended or deleted membership are not in them, nor its own label or
 // active member no one asked for (Feature, frank).
@@ -109,6 +111,7 @@ func TestIssueCatalogs(t *testing.T) {
 		web, nil, "Old", alice)
 	exec(t, pool, "UPDATE labels SET deleted_at = $2 WHERE id = $1", oldBug, now)
 	seedLabel(t, s, acme, web, nil, "Feature", alice)
+	ui := seedLabel(t, s, acme, web, nil, "UI", alice)
 	seedMember(t, pool, acme, web, alice, 20, true)
 	seedMember(t, pool, acme, web, bob, 15, true)
 	seedMember(t, pool, acme, web, carol, 5, true)
@@ -123,15 +126,17 @@ func TestIssueCatalogs(t *testing.T) {
 		"Triage": "triage"}
 	var want []app.IssueState
 	for name, id := range states {
-		want = append(want, app.IssueState{ID: id, Group: groups[name], Default: name == "Backlog"})
+		want = append(want, app.IssueState{ID: id, Name: name, Group: groups[name], Default: name == "Backlog"})
 	}
 	slices.SortFunc(want, func(a, b app.IssueState) int { return a.ID.Compare(b.ID) })
 	if err != nil || !slices.Equal(got, want) {
 		t.Errorf("IssueStates(Web) = %+v, %v; want %+v", got, err, want)
 	}
 
-	if got, err := s.IssueLabels(ctx, web, []uuid.UUID{opsBug, oldBug, bug, uuid.NewV7()}); err != nil || !slices.Equal(got, []uuid.UUID{bug}) {
-		t.Errorf("IssueLabels(Web, …) = %v, %v; want only Web's Bug", got, err)
+	gotLabels, err := s.IssueLabels(ctx, web, []uuid.UUID{opsBug, ui, oldBug, bug, uuid.NewV7()})
+	slices.SortFunc(gotLabels, func(a, b app.IssueLabel) int { return a.ID.Compare(b.ID) })
+	if want := []app.IssueLabel{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}}; err != nil || !slices.Equal(gotLabels, want) {
+		t.Errorf("IssueLabels(Web, …) = %+v, %v; want only Web's Bug and UI", gotLabels, err)
 	}
 	roles, err := s.ActiveRoles(ctx, web, []uuid.UUID{alice, bob, carol, dave, erin, uuid.NewV7()})
 	if want := map[uuid.UUID]shared.Role{alice: shared.RoleAdmin, bob: shared.RoleMember, carol: shared.RoleGuest}; err != nil ||

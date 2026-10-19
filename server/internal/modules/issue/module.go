@@ -1,8 +1,8 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
-// work items' tables and brings creating a work item. For the project
-// module's deletions (its IssueCascade port) it soft-deletes a deleted
-// project's rows of them, tells whether work items are in a state, and
-// takes deleted labels off them.
+// work items' tables and brings creating, reading and changing a work
+// item. For the project module's deletions (its IssueCascade port) it
+// soft-deletes a deleted project's rows of them, tells whether work items
+// are in a state, and takes deleted labels off them.
 package issue
 
 import (
@@ -66,18 +66,24 @@ type ProjectPorts interface {
 	app.ProjectMembers
 }
 
-// LockedProject, StateRef and its StateGroup are the values ProjectPorts
-// hand over: bootstrap converts project's into them (M4 design 6.5).
+// LockedProject, StateRef and its StateGroup, and LabelRef are the values
+// ProjectPorts hand over: bootstrap converts project's into them (M4
+// design 6.5).
 type (
 	LockedProject = app.LockedProject
 	StateRef      = app.StateRef
 	StateGroup    = domain.StateGroup
+	LabelRef      = app.LabelRef
 )
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
-	Pool       *pgxpool.Pool
-	Tx         shared.TxManager
+	Pool *pgxpool.Pool
+	// Tx are the transactions of the module's writes, each of which waits
+	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
+	Tx shared.TxManager
+	// WriteGate is the write gate of each project (bootstrap/gate.go).
+	WriteGate  app.WriteGate
 	Clock      app.Clock
 	Authorizer shared.Authorizer
 	// Projects are project's IssueProjects, converted (bootstrap/ports.go).
@@ -95,10 +101,15 @@ type Module struct {
 // registered or injected after it (M4 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
+	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	return &Module{uc: httpadapter.UseCases{
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
-			Locks: app.NewLocks(d.Projects, d.Authorizer), Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects,
-			Members: d.Projects, Profiles: d.Profiles, Tx: d.Tx, Clock: d.Clock,
+			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
+			Profiles: d.Profiles, Clock: d.Clock,
+		}),
+		GetIssue: app.NewGetIssue(locks),
+		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{
+			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock,
 		}),
 	}}
 }

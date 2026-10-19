@@ -24,36 +24,38 @@ import (
 var (
 	bob, alice, carol, gus, out = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	acme, web                   = uuid.NewV7(), uuid.NewV7()
-	backlog                     = app.StateRef{ID: uuid.NewV7(), Group: "backlog", Default: true}
-	done                        = app.StateRef{ID: uuid.NewV7(), Group: domain.GroupCompleted}
-	triage                      = app.StateRef{ID: uuid.NewV7(), Group: domain.GroupTriage}
+	backlog                     = app.StateRef{ID: uuid.NewV7(), Name: "Backlog", Group: "backlog", Default: true}
+	done                        = app.StateRef{ID: uuid.NewV7(), Name: "Done", Group: domain.GroupCompleted}
+	triage                      = app.StateRef{ID: uuid.NewV7(), Name: "Triage", Group: domain.GroupTriage}
 	bug, ui                     = uuid.NewV7(), uuid.NewV7()
 	clockNow                    = time.Date(2026, 10, 17, 10, 0, 0, 123456789, time.UTC)
 )
 
-// world is web as createIssue's ports see it: its states, the greatest
+// world is web as the use cases' ports see it: its states, the greatest
 // sort order of Done's work items 85535, its labels, its last number 6,
 // its members' roles and display names; an Authorizer that allows each
-// call it is not told to refuse.
+// call it is not told to refuse; and the locks over them.
 type world struct {
 	log      *callLog
 	project  *fakeProject
 	issues   *fakeIssues
 	auth     *fakeAuthorizer
 	profiles fakeProfiles
+	locks    app.Locks
 }
 
 func newCreate() (*app.CreateIssue, *world) {
 	log := &callLog{}
 	w := &world{log: log}
 	w.project = &fakeProject{log: log, id: web, workspace: acme, found: true, locked: &app.LockedProject{WorkspaceID: acme}, last: 6,
-		states: []app.StateRef{backlog, done, triage}, labels: []uuid.UUID{bug, ui},
+		states: []app.StateRef{backlog, done, triage}, labels: []app.LabelRef{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}},
 		roles: map[uuid.UUID]shared.Role{alice: shared.RoleAdmin, bob: shared.RoleMember, carol: shared.RoleAdmin, gus: shared.RoleGuest}}
 	w.issues = &fakeIssues{log: log, greatest: map[uuid.UUID]float64{done.ID: 85535}}
 	w.auth = &fakeAuthorizer{log: log}
 	w.profiles = fakeProfiles{log: log, names: map[uuid.UUID]string{alice: "Alice", bob: "bob", carol: "Carol C.", gus: "gus"}}
-	uc := app.NewCreateIssue(app.CreateIssueDeps{Locks: app.NewLocks(w.project, w.auth), Issues: w.issues, Sequences: w.project,
-		States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Tx: fakeTx{log: log}, Clock: clockAt{at: clockNow, log: log}})
+	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{}, fakeTx{log: log})
+	uc := app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project,
+		Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: log}})
 	return uc, w
 }
 
@@ -130,18 +132,49 @@ func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 	if !reflect.DeepEqual(*w.issues.issue, row) {
 		t.Errorf("the work item %+v, want %+v", *w.issues.issue, row)
 	}
-	activity := domain.CreationActivity([]domain.Assignee{{ID: bob, DisplayName: "bob"}, {ID: carol, DisplayName: "Carol C."}})
-	if len(w.issues.activities) != len(activity) {
-		t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(activity))
+	wantActivity(t, w, id, domain.CreationActivity([]domain.Assignee{{ID: bob, DisplayName: "bob"}, {ID: carol, DisplayName: "Carol C."}}))
+	if answer, _, _ := w.issues.GetIssue(context.Background(), id); !reflect.DeepEqual(got, answer) {
+		t.Errorf("Execute() = %+v, want the work item as stored, %+v", got, answer)
+	}
+}
+
+// wantActivity checks the activity w's store was given: a row of web's
+// work item id for each of activities, in their order, alice's at the
+// clock's moment, each id after the row's before.
+func wantActivity(t *testing.T, w *world, id uuid.UUID, activities []domain.Activity) {
+	t.Helper()
+	if len(w.issues.activities) != len(activities) {
+		t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(activities))
 	}
 	for i, r := range w.issues.activities {
-		wantRow := app.ActivityRow{ID: r.ID, WorkspaceID: acme, ProjectID: web, IssueID: id, Activity: activity[i], ActorID: alice, At: clockNow}
+		wantRow := app.ActivityRow{ID: r.ID, WorkspaceID: acme, ProjectID: web, IssueID: id, Activity: activities[i], ActorID: alice, At: clockNow}
 		if !reflect.DeepEqual(r, wantRow) || i > 0 && r.ID.Compare(w.issues.activities[i-1].ID) <= 0 {
 			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", i, r, wantRow)
 		}
 	}
-	if answer, _, _ := w.issues.GetIssue(context.Background(), id); !reflect.DeepEqual(got, answer) {
-		t.Errorf("Execute() = %+v, want the work item as stored, %+v", got, answer)
+}
+
+// wantRefusal checks a use case's refusal over w: err is want, of its code
+// and with its fields, and the calls are calls. Each use case's test
+// checks what its refusal leaves unwritten (refused, unchanged).
+func wantRefusal(t *testing.T, w *world, err, want error, calls []string) {
+	t.Helper()
+	var se, wantSE *shared.Error
+	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
+		t.Errorf("Execute() = %v, want %v", err, want)
+	}
+	if !slices.Equal(w.log.calls, calls) {
+		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+	}
+}
+
+// wantStoppedAt checks a use case over w whose port failed: its answer is
+// the failure, errDisk, as itself, and the port's first call is its last.
+func wantStoppedAt(t *testing.T, w *world, err error, port string) {
+	t.Helper()
+	last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
+	if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
+		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
 	}
 }
 
@@ -189,17 +222,11 @@ func TestCreateIssueDefaults(t *testing.T) {
 	}
 }
 
-// refused checks a refusal: err is want, the calls are those of a creation
-// up to the last one given, and nothing is written, no number taken.
+// refused checks a creation's refusal (wantRefusal), which writes nothing
+// and takes no number.
 func refused(t *testing.T, w *world, err, want error, calls []string) {
 	t.Helper()
-	var se, wantSE *shared.Error
-	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
-		t.Errorf("Execute() = %v, want %v", err, want)
-	}
-	if !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
-	}
+	wantRefusal(t, w, err, want, calls)
 	if w.issues.issue != nil || w.project.last != 6 {
 		t.Errorf("after the refusal: the work item %+v, the last number %d; want none and 6", w.issues.issue, w.project.last)
 	}
@@ -297,10 +324,7 @@ func TestCreateIssueStopsAtAFailingPort(t *testing.T) {
 			uc, w := newCreate()
 			w.log.fail = port
 			_, err := uc.Execute(as(alice), web, domain.NewIssue{Name: "a", AssigneeIDs: []uuid.UUID{bob}, LabelIDs: []uuid.UUID{bug}})
-			last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
-			if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
-				t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
-			}
+			wantStoppedAt(t, w, err, port)
 		})
 	}
 	uc, w := newCreate()

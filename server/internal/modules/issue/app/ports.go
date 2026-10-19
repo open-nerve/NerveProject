@@ -37,6 +37,19 @@ type LockedProject struct {
 	DefaultAssigneeID *uuid.UUID
 }
 
+// WriteGate bounds the writes on one project's work items that hold a
+// connection at once, in this process (M4 design 3.5, 11.11):
+// bootstrap/gate.go's, over platform/gate.
+type WriteGate interface {
+	// Enter returns once a write on the project's work items may begin
+	// its transaction, with the function that leaves the gate, which the
+	// write calls once its transaction has ended. It waits holding no
+	// connection and no lock. A write that may wait no longer is refused
+	// (503 server_busy); one whose request is cancelled while it waits
+	// ends with context.Canceled. Either holds nothing.
+	Enter(ctx context.Context, projectID uuid.UUID) (leave func(), err error)
+}
+
 // Sequences numbers a project's work items (M4 design 3.7, 6.5):
 // project.Provide's.
 type Sequences interface {
@@ -51,10 +64,11 @@ type StateCatalog interface {
 	States(ctx context.Context, projectID uuid.UUID) ([]StateRef, error)
 }
 
-// StateRef is a state as StateCatalog reads it: its id, its group, and
-// whether it is the project's default.
+// StateRef is a state as StateCatalog reads it: its id, its name, its
+// group, and whether it is the project's default.
 type StateRef struct {
 	ID      uuid.UUID
+	Name    string
 	Group   domain.StateGroup
 	Default bool
 }
@@ -63,7 +77,13 @@ type StateRef struct {
 // project.Provide's.
 type LabelCatalog interface {
 	// Labels reads those of ids that are the project's undeleted labels.
-	Labels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error)
+	Labels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]LabelRef, error)
+}
+
+// LabelRef is a label as LabelCatalog reads it: its id and its name.
+type LabelRef struct {
+	ID   uuid.UUID
+	Name string
 }
 
 // ProjectMembers reads a project's memberships (M4 design 6.5), under its
@@ -82,9 +102,18 @@ type PublicProfiles interface {
 	DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
 }
 
+// IssueReader reads a work item, in the transaction ctx carries, or
+// without one (M4 design 3.5, 5.2).
+type IssueReader interface {
+	// GetIssue reads the undeleted work item, archived or not, with its
+	// assignees and labels; found is false when there is none.
+	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
+}
+
 // IssueCreator is the work items' store as createIssue writes and reads
 // them, in the transaction ctx carries (M4 design 3.5).
 type IssueCreator interface {
+	IssueReader
 	// GreatestSortOrder reads the greatest sort order of the project's
 	// undeleted work items in the state, archived ones too, nil for none.
 	GreatestSortOrder(ctx context.Context, projectID, stateID uuid.UUID) (*float64, error)
@@ -96,7 +125,25 @@ type IssueCreator interface {
 	InsertSubscribers(ctx context.Context, r LinkRows) error
 	// InsertActivities inserts the rows in their order.
 	InsertActivities(ctx context.Context, rows []ActivityRow) error
-	// GetIssue reads the undeleted work item with its assignees and
-	// labels; found is false when there is none.
-	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
+}
+
+// IssueUpdater is the work items' store as updateIssue writes and reads
+// them, in the transaction ctx carries (M4 design 3.5).
+type IssueUpdater interface {
+	IssueReader
+	// UpdateIssue writes the work item's fields.
+	UpdateIssue(ctx context.Context, f IssueFields) error
+	InsertAssignees(ctx context.Context, r LinkRows) error
+	// RemoveAssignees soft-deletes the work item's undeleted assignees'
+	// rows of the accounts r names.
+	RemoveAssignees(ctx context.Context, r UnlinkRows) error
+	InsertLabels(ctx context.Context, r LinkRows) error
+	// RemoveLabels soft-deletes the work item's undeleted labels' rows of
+	// the labels r names.
+	RemoveLabels(ctx context.Context, r UnlinkRows) error
+	// InsertSubscribers inserts the rows, but of an account that
+	// subscribes to the work item already.
+	InsertSubscribers(ctx context.Context, r LinkRows) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
 }

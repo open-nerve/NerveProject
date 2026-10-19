@@ -12,4 +12,7 @@ var (
 	// ErrProjectArchived answers a write on the work items of an archived
 	// project (M4 design 3.8).
 	ErrProjectArchived = shared.NewError(shared.KindConflict, "project.archived", "The project is archived; unarchive it to change it.")
+	// ErrIssueNotFound answers a work item that does not exist, is deleted,
+	// or whose project the caller does not see (M4 design 5.3).
+	ErrIssueNotFound = shared.NewError(shared.KindNotFound, "issue.not_found", "The work item does not exist, or you cannot see it.")
 )

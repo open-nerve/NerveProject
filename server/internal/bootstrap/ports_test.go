@@ -254,7 +254,7 @@ type fakeIssueProjects struct {
 	web    uuid.UUID
 	locked project.IssueProject
 	states []project.IssueState
-	labels []uuid.UUID
+	labels []project.IssueLabel
 	roles  map[uuid.UUID]shared.Role
 	err    error
 	asked  []string
@@ -280,7 +280,7 @@ func (f *fakeIssueProjects) IssueStates(context.Context, uuid.UUID) ([]project.I
 	return f.states, f.err
 }
 
-func (f *fakeIssueProjects) IssueLabels(_ context.Context, _ uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error) {
+func (f *fakeIssueProjects) IssueLabels(_ context.Context, _ uuid.UUID, ids []uuid.UUID) ([]project.IssueLabel, error) {
 	f.asked = append(f.asked, fmt.Sprint("labels ", ids))
 	return f.labels, f.err
 }
@@ -291,15 +291,16 @@ func (f *fakeIssueProjects) ActiveRoles(_ context.Context, _ uuid.UUID, ids []uu
 }
 
 // issueProjects hands issue project's answers to the same questions: the
-// locked project and each state converted, every field; the workspace, the
-// number, the labels and the roles as they came; found and the error as
-// they came.
+// locked project, each state and each label converted, every field; the
+// workspace, the number and the roles as they came; found and the error as
+// they came, and no state or label with an error.
 func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
-	web, acme, ann, bug := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	backlog := project.IssueState{ID: uuid.NewV7(), Group: "backlog", Default: true}
-	done := project.IssueState{ID: uuid.NewV7(), Group: "completed"}
+	web, acme, ann, bug, ui := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	backlog := project.IssueState{ID: uuid.NewV7(), Name: "Backlog", Group: "backlog", Default: true}
+	done := project.IssueState{ID: uuid.NewV7(), Name: "Done", Group: "completed"}
 	fake := &fakeIssueProjects{web: web, locked: project.IssueProject{WorkspaceID: acme, Archived: true, DefaultAssigneeID: &ann},
-		states: []project.IssueState{backlog, done}, labels: []uuid.UUID{bug}, roles: map[uuid.UUID]shared.Role{ann: shared.RoleMember}}
+		states: []project.IssueState{backlog, done}, labels: []project.IssueLabel{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}},
+		roles: map[uuid.UUID]shared.Role{ann: shared.RoleMember}}
 	p := issueProjects{projects: fake}
 	ctx := context.Background()
 
@@ -315,17 +316,17 @@ func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 	if n, err := p.Next(ctx, web); err != nil || n != 7 {
 		t.Errorf("Next() = %d, %v; want 7", n, err)
 	}
-	want := []issue.StateRef{{ID: backlog.ID, Group: "backlog", Default: true}, {ID: done.ID, Group: "completed"}}
+	want := []issue.StateRef{{ID: backlog.ID, Name: "Backlog", Group: "backlog", Default: true}, {ID: done.ID, Name: "Done", Group: "completed"}}
 	if got, err := p.States(ctx, web); err != nil || !slices.Equal(got, want) {
 		t.Errorf("States() = %+v, %v; want %+v", got, err, want)
 	}
-	if got, err := p.Labels(ctx, web, []uuid.UUID{bug}); err != nil || !slices.Equal(got, []uuid.UUID{bug}) {
-		t.Errorf("Labels() = %v, %v; want Bug", got, err)
+	if got, err := p.Labels(ctx, web, []uuid.UUID{bug, ui}); err != nil || !slices.Equal(got, []issue.LabelRef{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}}) {
+		t.Errorf("Labels() = %+v, %v; want Bug and UI", got, err)
 	}
 	if got, err := p.Roles(ctx, web, []uuid.UUID{ann}); err != nil || !maps.Equal(got, fake.roles) {
 		t.Errorf("Roles() = %v, %v; want ann's", got, err)
 	}
-	if want := []string{"workspace", "lock", "lock", "next", "states", fmt.Sprint("labels ", []uuid.UUID{bug}),
+	if want := []string{"workspace", "lock", "lock", "next", "states", fmt.Sprint("labels ", []uuid.UUID{bug, ui}),
 		fmt.Sprint("roles ", []uuid.UUID{ann})}; !slices.Equal(fake.asked, want) {
 		t.Errorf("project was asked %q, want %q", fake.asked, want)
 	}
@@ -335,12 +336,14 @@ func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 	if got, err := p.States(ctx, web); !errors.Is(err, failure) || got != nil {
 		t.Errorf("States() = %+v, %v; want no states and %v", got, err, failure)
 	}
+	if got, err := p.Labels(ctx, web, nil); !errors.Is(err, failure) || got != nil {
+		t.Errorf("Labels() = %+v, %v; want no labels and %v", got, err, failure)
+	}
 	for name, call := range map[string]func() error{
-		"Find":   func() error { _, _, err := p.Find(ctx, web); return err },
-		"Lock":   func() error { _, _, err := p.Lock(ctx, web); return err },
-		"Next":   func() error { _, err := p.Next(ctx, web); return err },
-		"Labels": func() error { _, err := p.Labels(ctx, web, nil); return err },
-		"Roles":  func() error { _, err := p.Roles(ctx, web, nil); return err },
+		"Find":  func() error { _, _, err := p.Find(ctx, web); return err },
+		"Lock":  func() error { _, _, err := p.Lock(ctx, web); return err },
+		"Next":  func() error { _, err := p.Next(ctx, web); return err },
+		"Roles": func() error { _, err := p.Roles(ctx, web, nil); return err },
 	} {
 		if err := call(); !errors.Is(err, failure) {
 			t.Errorf("%s() = %v, want %v", name, err, failure)

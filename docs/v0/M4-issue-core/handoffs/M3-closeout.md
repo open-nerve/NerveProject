@@ -124,3 +124,12 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、连接池的代价和写闸门（M4 的 P1b）、以后每个新的批量写按约定五核对（P1a 之后各 Phase 各自的 review，到 M4 的 P9）、物理删除账户（M4 不物理删除账户，M4 设计 3.21，在 M4 的 P9 关闭）；第 4 节的 `guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明，`expectIssueDeleted`（照 `expectProjectDeleted` 从目录自查、沿外键图递归，M4 的 P2）和删除断言对工作项一侧的表的限时轮询（M4 的 P9）；第 1、3、5–9 节，按 M4 设计 13.1 的落点。
 
 来源：[M4/P1a spec](../specs/P1a-issues.md) 第 7 节。
+
+## 处理结果（M4/P1b）
+
+- **第 2 节，连接池的代价和写闸门**（完成）：工作项一侧的写在预检之后、开始事务之前进入它的项目的写闸门（`platform/gate`；`issue/app` 声明的 `WriteGate`，`bootstrap/gate.go` 接线），不持连接、不持锁地等：每个进程里一个项目至多 `issue.write_gate.per_project`（默认 2）个写在数据库里，排队至多 `issue.write_gate.max_queue`（64）个、每个至多 `issue.write_gate.max_wait`（2 秒）；写的事务带 `issue.write_lock_timeout`（5 秒）的 `lock_timeout`。排满、等不到、在闸门上请求到期、等锁到期都答 503 `server_busy`，带 `Retry-After: 1`，只在 `bootstrap/gate.go` 一处换码（M4 设计 3.5、11.11）。交错 20 经真实的连接池（10 个连接）核对（`TestAHotProjectHoldsUpNoReadOfAnother`、`TestChainedWorkItemWritesHoldOffNoWorkspaceWrite`）：200 个写压在一个项目上、它的行被别的事务持着时，另一个项目的读最慢不到 50 毫秒（没有闸门时一秒以上），超出闸门的 134 个写立即 503；首尾相连的工作项写之下，改工作区、改成员的角色、删除工作区各在 1 秒之内（M4/P1b spec 第 3 节）。闸门限的是每个项目的份额：一个进程里同时热的项目达到池的大小除以 K（默认 5 个）时池仍会被等锁的写占满；连接池的大小与 K、同时热的项目数、进程数交给 M8（M4 设计 13.2，收尾时写进 M8 的交接）。
+- **第 2 节，约定五**（P1b 的批量写完成）：修改的两条批量写（`RemoveAssignees`、`RemoveLabels`：按谓词软删除一个工作项被去掉的负责人、标签）都在项目 N 之下，那些行只有持项目 N 的写会写到，不落在约定五的例外里；新加的负责人、标签、关注按 `id` 的顺序插入（M4/P1b spec 第 3 节）。
+
+仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、P1b 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 4 节的 `guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明，`expectIssueDeleted`（M4 的 P2）和删除断言的限时轮询（M4 的 P9）；第 1、3、5–9 节，按 M4 设计 13.1 的落点。
+
+来源：[M4/P1b spec](../specs/P1b-issue-update.md) 第 7 节。

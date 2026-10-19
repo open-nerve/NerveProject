@@ -95,8 +95,12 @@ func TestBuiltInProfiles(t *testing.T) {
 				RateLimit: tt.limits,
 				Jobs:      config.JobsConfig{ShutdownTimeout: 10 * time.Second},
 				Workspace: config.WorkspaceConfig{CreationEnabled: true},
-				Files:     config.FilesConfig{SizeLimit: 5 << 20},
-				Log:       config.LogConfig{Level: tt.level, Format: tt.format},
+				Issue: config.IssueConfig{
+					WriteGate:        config.WriteGateConfig{PerProject: 2, MaxWait: 2 * time.Second, MaxQueue: 64},
+					WriteLockTimeout: 5 * time.Second,
+				},
+				Files: config.FilesConfig{SizeLimit: 5 << 20},
+				Log:   config.LogConfig{Level: tt.level, Format: tt.format},
 			}
 			if !reflect.DeepEqual(cfg, want) {
 				t.Errorf("Load() =\n%+v\nwant\n%+v", cfg, want)

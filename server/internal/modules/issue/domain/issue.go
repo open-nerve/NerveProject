@@ -144,14 +144,20 @@ func Assignees(asked []uuid.UUID, defaultAssignee *uuid.UUID, roles map[uuid.UUI
 	var refused []shared.FieldError
 	for i, id := range asked {
 		if !CanAssign(roles[id]) {
-			refused = append(refused, shared.FieldError{Field: fmt.Sprintf("assignee_ids[%d]", i), Code: shared.FieldNotAllowed,
-				Message: "must be an active member of the project who is not its guest"})
+			refused = append(refused, unassignable(i))
 		}
 	}
 	if len(refused) > 0 {
 		return nil, refused
 	}
 	return slices.SortedFunc(slices.Values(asked), uuid.UUID.Compare), nil
+}
+
+// unassignable is the problem of the i-th account asked for, who may not
+// be assigned (CanAssign).
+func unassignable(i int) shared.FieldError {
+	return shared.FieldError{Field: fmt.Sprintf("assignee_ids[%d]", i), Code: shared.FieldNotAllowed,
+		Message: "must be an active member of the project who is not its guest"}
 }
 
 // UnknownLabel is the problem of the i-th label asked for, which is not an

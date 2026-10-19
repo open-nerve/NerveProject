@@ -38,6 +38,7 @@
     "project_state_in_use": "Work items are in this state, archived ones too, so it cannot be deleted.",
     "project_label_name_taken": "A label of this project already has this name, in this case or another.",
     "project_label_not_found": "The label does not exist, or you cannot see its project.",
+    "issue_not_found": "The work item does not exist, or you cannot see it.",
     "unreachable": "Cannot reach the server for now. Please try again.",
     "unknown": "Something went wrong. Please try again.",
     "field": {

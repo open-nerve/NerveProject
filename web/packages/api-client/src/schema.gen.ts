@@ -931,13 +931,40 @@ export interface paths {
         put?: never;
         /**
          * Create a work item in a project
-         * @description For the project's admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project's, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project's (validation_failed, every problem at once). Left out, the state is the project's default, the priority none, and the assignee the project's default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project's next number, never used again, also after a deletion; it comes after its state's work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state's first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller's, at one moment.
+         * @description For the project's admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project's, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project's (validation_failed, every problem at once). Left out, the state is the project's default, the priority none, and the assignee the project's default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project's next number, never used again, also after a deletion; it comes after its state's work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state's first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
          */
         post: operations["createIssue"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a work item
+         * @description For the admins and members of its project, archived or not; an archived work item is read as any other. A work item that does not exist, is deleted, or whose project the caller does not see answers issue.not_found; one he sees the project of but may not read, forbidden.
+         */
+        get: operations["getIssue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a work item
+         * @description For the admins and members of its project. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow createIssue's rules (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, or whose project the caller does not see answers issue.not_found; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived). Then the state, when it changes, is one of the project's, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project's (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the priority, the state, and each label and each assignee added and removed. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        patch: operations["updateIssue"];
         trace?: never;
     };
     "/api/v0/me/projects/{project_id}/preferences": {
@@ -1739,6 +1766,21 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Changes the fields it names; a field left out keeps its value. */
+        IssueUpdate: {
+            /** @description 1–255 characters without the white space around it, which is not stored. */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description One of the project's states, not its triage state.
+             */
+            state_id?: string;
+            priority?: components["schemas"]["IssuePriority"];
+            /** @description The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest. */
+            assignee_ids?: string[];
+            /** @description The work item's new labels, empty for none: at most 100 of the project's labels, each named once. */
+            label_ids?: string[];
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -1794,6 +1836,8 @@ export interface components {
         StateID: string;
         /** @description A label's id (Label.id). */
         LabelID: string;
+        /** @description A work item's id (IssueDetail.id). */
+        IssueID: string;
     };
     requestBodies: never;
     headers: never;
@@ -1874,6 +1918,7 @@ export type LabelUpdate = components['schemas']['LabelUpdate'];
 export type IssuePriority = components['schemas']['IssuePriority'];
 export type IssueCreate = components['schemas']['IssueCreate'];
 export type IssueDetail = components['schemas']['IssueDetail'];
+export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -1887,6 +1932,7 @@ export type ParameterProjectId = components['parameters']['ProjectID'];
 export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
 export type ParameterStateId = components['parameters']['StateID'];
 export type ParameterLabelId = components['parameters']['LabelID'];
+export type ParameterIssueId = components['parameters']['IssueID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -3329,6 +3375,58 @@ export interface operations {
         responses: {
             /** @description The new work item. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueUpdate"];
+            };
+        };
+        responses: {
+            /** @description The work item as changed. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

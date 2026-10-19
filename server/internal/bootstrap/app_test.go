@@ -84,6 +84,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		},
 		Jobs:      config.JobsConfig{ShutdownTimeout: 5 * time.Second},
 		Workspace: config.WorkspaceConfig{CreationEnabled: true},
+		Issue:     testIssueConfig,
 		Files:     config.FilesConfig{SizeLimit: 5242880},
 		Log:       config.LogConfig{Level: "error", Format: "text"},
 	}

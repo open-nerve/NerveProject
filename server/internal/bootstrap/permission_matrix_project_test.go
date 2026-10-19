@@ -54,24 +54,24 @@ func toProject(method, path, body string) func(caller, seeded) (string, string, 
 	}
 }
 
-// rowsByID is a kind of row under a project that the writes of the matrix
-// name by its id, /api/v0/<path>/{id}: a state (stateRows), a label
-// (labelRows). notFound answers a caller who does not see the row's
-// project, and find is the seeded row of a project by its name.
+// rowsByID is a kind of row under a project that the matrix's rows name by
+// its id, /api/v0/<path>/{id}: a state (stateRows), a label (labelRows), a
+// work item (issueRows). notFound answers a caller who does not see the
+// row's project, and find is the seeded row of a project by its name.
 type rowsByID struct {
 	path     string
 	notFound cell
 	find     func(s seeded, project, name string) uuid.UUID
 }
 
-// of are the cells of a row of a write on one (projectCells), with
+// of are the cells of a row on one, a write or a read (projectCells), with
 // notFound: X's row in gone's project is deleted with it.
 func (k rowsByID) of(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
 	return projectCells(k.notFound, pa, pm, pg, pmwa, wa, wm)
 }
 
-// ofArchived are the cells of a row of a write on one of the archived
-// project (archivedCells), with notFound.
+// ofArchived are the cells of a row on one of the archived project, a write
+// or a read (archivedCells), with notFound.
 func (k rowsByID) ofArchived(pa, wm cell) map[caller]cell {
 	return archivedCells(k.notFound, pa, wm)
 }

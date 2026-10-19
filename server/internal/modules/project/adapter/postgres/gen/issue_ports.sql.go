@@ -51,7 +51,7 @@ func (q *Queries) ActiveRoles(ctx context.Context, arg ActiveRolesParams) ([]Act
 }
 
 const issueLabels = `-- name: IssueLabels :many
-SELECT id
+SELECT id, name
 FROM labels
 WHERE project_id = $1 AND deleted_at IS NULL AND id = ANY ($2::uuid[])
 ORDER BY id
@@ -62,21 +62,26 @@ type IssueLabelsParams struct {
 	Ids       []uuid.UUID
 }
 
-// LabelCatalog (M4 design 6.5): those of ids that are the project's undeleted labels, in id order; stable under the
-// project's FOR NO KEY UPDATE, as IssueStates.
-func (q *Queries) IssueLabels(ctx context.Context, arg IssueLabelsParams) ([]uuid.UUID, error) {
+type IssueLabelsRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// LabelCatalog (M4 design 6.5): those of ids that are the project's undeleted labels, in id order, with their names,
+// which an update's activity names a label by (3.13); stable under the project's FOR NO KEY UPDATE, as IssueStates.
+func (q *Queries) IssueLabels(ctx context.Context, arg IssueLabelsParams) ([]IssueLabelsRow, error) {
 	rows, err := q.db.Query(ctx, issueLabels, arg.ProjectID, arg.Ids)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []IssueLabelsRow
 	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
+		var i IssueLabelsRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
-		items = append(items, id)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -85,7 +90,7 @@ func (q *Queries) IssueLabels(ctx context.Context, arg IssueLabelsParams) ([]uui
 }
 
 const issueStates = `-- name: IssueStates :many
-SELECT id, "group", "default"
+SELECT id, name, "group", "default"
 FROM states
 WHERE project_id = $1 AND deleted_at IS NULL
 ORDER BY id
@@ -93,12 +98,14 @@ ORDER BY id
 
 type IssueStatesRow struct {
 	ID      uuid.UUID
+	Name    string
 	Group   string
 	Default bool
 }
 
-// StateCatalog (M4 design 6.5): the project's undeleted states, its triage state too, in id order. Read under the
-// project's FOR NO KEY UPDATE, which every write of a state holds too (M3 design 3.6), it stays as read (M4 design 3.5).
+// StateCatalog (M4 design 6.5): the project's undeleted states, its triage state too, in id order, with their names,
+// which an update's activity names a state by (3.13). Read under the project's FOR NO KEY UPDATE, which every write of
+// a state holds too (M3 design 3.6), it stays as read (M4 design 3.5).
 func (q *Queries) IssueStates(ctx context.Context, projectID uuid.UUID) ([]IssueStatesRow, error) {
 	rows, err := q.db.Query(ctx, issueStates, projectID)
 	if err != nil {
@@ -108,7 +115,12 @@ func (q *Queries) IssueStates(ctx context.Context, projectID uuid.UUID) ([]Issue
 	var items []IssueStatesRow
 	for rows.Next() {
 		var i IssueStatesRow
-		if err := rows.Scan(&i.ID, &i.Group, &i.Default); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Group,
+			&i.Default,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

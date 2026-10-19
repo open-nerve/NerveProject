@@ -113,17 +113,18 @@ type IssueProjects interface {
 	IssueStates(ctx context.Context, projectID uuid.UUID) ([]IssueState, error)
 	// IssueLabels reads those of ids that are the project's undeleted
 	// labels, in id order.
-	IssueLabels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error)
+	IssueLabels(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) ([]IssueLabel, error)
 	// ActiveRoles reads the project roles of those of the accounts ids
 	// that are its active members, by account.
 	ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)
 }
 
-// IssueProject and IssueState are the values IssueProjects hands over:
-// bootstrap converts them into issue's (M4 design 6.5).
+// IssueProject, IssueState and IssueLabel are the values IssueProjects
+// hands over: bootstrap converts them into issue's (M4 design 6.5).
 type (
 	IssueProject = app.IssueProject
 	IssueState   = app.IssueState
+	IssueLabel   = app.IssueLabel
 )
 
 // Provided are the adapters project offers the other modules. They depend
