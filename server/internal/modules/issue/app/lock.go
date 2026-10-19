@@ -23,7 +23,8 @@ import (
 // read again under it; and the decision again under it, which is final: a
 // removal or a demotion that committed while the write waited is seen. A
 // read of a work item takes the same decision on its project, without a
-// lock (see). issue.New builds one Locks for every use case: none holds an
+// lock (see). Every decision on a work item applies the guest rule first
+// (decide). issue.New builds one Locks for every use case: none holds an
 // Authorizer, a write gate or a transaction of its own.
 type Locks struct {
 	projects ProjectGate
@@ -84,12 +85,12 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 // precheck decides w's action for actor before any lock and outside any
 // transaction (M4 design 3.5), and answers w on its project. For a write
 // that names a work item: the work item read without a lock and the
-// decision on its project (see); a work item that is not there, or whose
-// project actor does not see, is issue.not_found. For one on a project:
-// the project read without a lock and the decision on it; a project that
-// is not there, or not visible to actor, is w.notFound. A role the rule
-// does not allow is the Authorizer's shared.Forbidden. What it lets
-// through, lockAndDecide decides again.
+// decision on it (see); a work item that is not there, whose project actor
+// does not see, or that the guest rule hides from him, is
+// issue.not_found. For one on a project: the project read without a lock
+// and the decision on it; a project that is not there, or not visible to
+// actor, is w.notFound. A role the rule does not allow is the Authorizer's
+// shared.Forbidden. What it lets through, lockAndDecide decides again.
 func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write, error) {
 	if w.issue != nil {
 		i, err := l.see(ctx, actor, *w.issue, w.action)
@@ -106,16 +107,17 @@ func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write
 	case !found:
 		return write{}, w.notFound
 	}
-	return w, l.decide(ctx, actor, w.action, shared.Target{WorkspaceID: workspaceID, ProjectID: w.project}, w.notFound)
+	return w, l.decide(ctx, actor, w.action, workspaceID, w.project, nil, w.notFound)
 }
 
 // lockAndDecide takes w's lock and decides w's action under it, in the
 // transaction ctx carries: the project's row FOR NO KEY UPDATE; the work
-// item w names read again; then the decision on the locked project. It
-// answers what they hold. A project deleted while the lock waited is
-// w.notFound, and so is a work item deleted meanwhile, or no longer in the
-// project, and a project no longer visible to actor; a role the rule no
-// longer allows is the Authorizer's shared.Forbidden.
+// item w names read again; then the decision on the locked project, and on
+// the work item as read again. It answers what they hold. A project
+// deleted while the lock waited is w.notFound, and so is a work item
+// deleted meanwhile, or no longer in the project, a project no longer
+// visible to actor, and a work item the guest rule now hides from him; a
+// role the rule no longer allows is the Authorizer's shared.Forbidden.
 func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (held, error) {
 	p, found, err := l.projects.Lock(ctx, w.project)
 	switch {
@@ -125,6 +127,7 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (
 		return held{}, w.notFound
 	}
 	h := held{project: p}
+	var on *domain.Issue
 	if w.issue != nil {
 		i, found, err := l.issues.GetIssue(ctx, *w.issue)
 		switch {
@@ -133,19 +136,19 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (
 		case !found || i.ProjectID != w.project:
 			return held{}, w.notFound
 		}
-		h.issue = i
+		h.issue, on = i, &i
 	}
-	if err := l.decide(ctx, actor, w.action, shared.Target{WorkspaceID: p.WorkspaceID, ProjectID: w.project}, w.notFound); err != nil {
+	if err := l.decide(ctx, actor, w.action, p.WorkspaceID, w.project, on, w.notFound); err != nil {
 		return held{}, err
 	}
 	return h, nil
 }
 
 // see reads the undeleted work item id, archived or not, without a lock,
-// and decides action on its project for actor (M4 design 3.4, 3.5): a work
-// item that is not there, or whose project actor does not see, is
-// issue.not_found; a role the rule does not allow is the Authorizer's
-// shared.Forbidden. It answers the work item as read.
+// and decides action on it for actor (M4 design 3.4, 3.5): a work item that
+// is not there, whose project actor does not see, or that the guest rule
+// hides from him, is issue.not_found; a role the rule does not allow is
+// the Authorizer's shared.Forbidden. It answers the work item as read.
 func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action shared.Action) (domain.Issue, error) {
 	i, found, err := l.issues.GetIssue(ctx, id)
 	switch {
@@ -154,17 +157,33 @@ func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action
 	case !found:
 		return domain.Issue{}, domain.ErrIssueNotFound
 	}
-	if err := l.decide(ctx, actor, action, shared.Target{WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID}, domain.ErrIssueNotFound); err != nil {
+	if err := l.decide(ctx, actor, action, i.WorkspaceID, i.ProjectID, &i, domain.ErrIssueNotFound); err != nil {
 		return domain.Issue{}, err
 	}
 	return i, nil
 }
 
-// decide asks the Authorizer for action on the target for actor. A
-// project not visible to actor is notFound.
-func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Action, target shared.Target, notFound error) error {
-	_, err := l.auth.Authorize(ctx, actor, action, target)
-	if errors.Is(err, shared.ErrNotVisible) {
+// decide asks the Authorizer for action on the project projectID of the
+// workspace workspaceID for actor, and, for an action on a work item, i, on
+// it: the decision knows its creator (shared.Target.CreatorID), whom a rule
+// may allow (AllowCreator). A project not visible to actor is notFound, and
+// so is a work item the guest rule hides from him (M4 design 3.4, 6.7):
+// the project's guest who sees only his own work items (Grant.OwnOnly), a
+// workspace admin among them, does not see one another created, before
+// what the rule says of his role, so another's work item is as unknown to
+// him as one that is not there (8.2). i is nil for an action on the
+// project.
+func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID, projectID uuid.UUID, i *domain.Issue,
+	notFound error) error {
+	target := shared.Target{WorkspaceID: workspaceID, ProjectID: projectID}
+	if i != nil && i.CreatedByID != nil {
+		target.CreatorID = *i.CreatedByID
+	}
+	grant, err := l.auth.Authorize(ctx, actor, action, target)
+	switch {
+	case errors.Is(err, shared.ErrNotVisible):
+		return notFound
+	case i != nil && i.HiddenFrom(actor.UserID, grant.OwnOnly):
 		return notFound
 	}
 	return err

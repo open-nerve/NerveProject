@@ -952,7 +952,7 @@ export interface paths {
         };
         /**
          * Read a work item
-         * @description For the admins and members of its project, archived or not; an archived work item is read as any other. A work item that does not exist, is deleted, or whose project the caller does not see answers issue.not_found; one he sees the project of but may not read, forbidden.
+         * @description For the admins, members and guests of its project, archived or not; an archived work item is read as any other. A guest of a project that does not show its guests every work item (guest_view_all_features false) reads only the work items he created. A work item that does not exist, is deleted, whose project the caller does not see, or that he, such a guest, did not create, answers issue.not_found; one he sees the project of but may not read, forbidden.
          */
         get: operations["getIssue"];
         put?: never;
@@ -962,7 +962,7 @@ export interface paths {
         head?: never;
         /**
          * Change a work item
-         * @description For the admins and members of its project. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow createIssue's rules (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, or whose project the caller does not see answers issue.not_found; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived). Then the state, when it changes, is one of the project's, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project's (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the priority, the state, and each label and each assignee added and removed. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         * @description For the admins and members of its project. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow createIssue's rules (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived). Then the state, when it changes, is one of the project's, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project's (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the priority, the state, and each label and each assignee added and removed. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
          */
         patch: operations["updateIssue"];
         trace?: never;
@@ -1482,7 +1482,7 @@ export interface components {
             issue_views_view: boolean;
             /** @description Whether the project shows intake. */
             intake_view: boolean;
-            /** @description A setting of the project for its guests, kept as set. */
+            /** @description Whether the project's guests see every work item of it. When false, a guest of the project sees only the work items he created, and every other answers him as one that does not exist (issue.not_found). */
             guest_view_all_features: boolean;
             /** @description A number of months, 0–12, set for automatic archiving and kept as set; 0 for none. */
             archive_in: number;

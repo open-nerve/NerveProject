@@ -179,3 +179,28 @@ func TestDependentRowProblems(t *testing.T) {
 		t.Errorf("UnknownLabel(3) = %+v, want %+v", got, want)
 	}
 }
+
+// The guest rule hides from a caller who sees only his own work items each
+// work item another created, and one whose creator is not known; from any
+// other caller, none (M4 design 3.4).
+func TestTheGuestRuleHidesAnothersWorkItem(t *testing.T) {
+	creator := ids(2)
+	gus, other := creator[0], creator[1]
+	tests := []struct {
+		name    string
+		by      *uuid.UUID
+		ownOnly bool
+		want    bool
+	}{
+		{"his own", &gus, true, false},
+		{"another's", &other, true, true},
+		{"one whose creator is not known", nil, true, true},
+		{"another's, to a caller who sees every work item", &other, false, false},
+		{"one whose creator is not known, to a caller who sees every work item", nil, false, false},
+	}
+	for _, tt := range tests {
+		if got := (Issue{CreatedByID: tt.by}).HiddenFrom(gus, tt.ownOnly); got != tt.want {
+			t.Errorf("%s: HiddenFrom() = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}

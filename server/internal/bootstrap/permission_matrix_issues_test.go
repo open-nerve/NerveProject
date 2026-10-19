@@ -85,9 +85,11 @@ func issueMatrixRows() []matrixRow {
 			}),
 			cells:   ofProject(cellValidationFailed, cellValidationFailed, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "assignee_ids[0] not_allowed"},
-		// As createIssue; the project's guests are P2's (M4 design 3.4).
+		// The project's admins, members and guests; PG, a guest who sees only
+		// his own work items, finds no other's, as one not there (M4 design
+		// 3.4).
 		{op: "getIssue", columns: projectColumns, request: issueRows.to(http.MethodGet, "", matrixIssue, ""),
-			cells: issueRows.of(cellOK, cellOK, cellForbidden, cellOK, cellForbidden, cellForbidden), check: readsTheIssue},
+			cells: issueRows.of(cellOK, cellOK, cellIssueNotFound, cellOK, cellForbidden, cellForbidden), check: readsTheIssue},
 		// An archived project's work items are read as any other's.
 		{op: "getIssue", variant: "archived", columns: archivedColumns, request: issueRows.to(http.MethodGet, "", matrixIssue, ""),
 			cells: issueRows.ofArchived(cellOK, cellForbidden), check: readsTheIssue},

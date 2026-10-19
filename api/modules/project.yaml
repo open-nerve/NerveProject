@@ -962,7 +962,11 @@ components:
           description: Whether the project shows intake.
           type: boolean
         guest_view_all_features:
-          description: A setting of the project for its guests, kept as set.
+          description: >-
+            Whether the project's guests see every work item of it. When
+            false, a guest of the project sees only the work items he
+            created, and every other answers him as one that does not exist
+            (issue.not_found).
           type: boolean
         archive_in:
           description: A number of months, 0–12, set for automatic archiving and kept as set; 0 for none.

@@ -20,10 +20,11 @@ func NewGetIssue(locks Locks) *GetIssue {
 }
 
 // Execute reads the undeleted work item id, archived or not, with its
-// assignees and labels, and decides issue.read on its project for the
-// caller, without a lock or a transaction (Locks.see): a work item that is
-// not there, or whose project the caller does not see, is
-// issue.not_found; a role that may not read it, forbidden.
+// assignees and labels, and decides issue.read on it for the caller,
+// without a lock or a transaction (Locks.see): a work item that is not
+// there, whose project the caller does not see, or that the guest rule
+// hides from him, is issue.not_found; a role that may not read it,
+// forbidden.
 func (u *GetIssue) Execute(ctx context.Context, id uuid.UUID) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {

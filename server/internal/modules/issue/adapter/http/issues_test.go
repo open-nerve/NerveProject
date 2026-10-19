@@ -185,7 +185,7 @@ func TestGetIssueRefusals(t *testing.T) {
 	}{
 		{"no work item", domain.ErrIssueNotFound, http.StatusNotFound,
 			`{"status":404,"code":"issue.not_found","title":"Not Found","detail":"The work item does not exist, or you cannot see it."}`},
-		{"a project guest", shared.Forbidden(), http.StatusForbidden,
+		{"a workspace admin who is no member of the project", shared.Forbidden(), http.StatusForbidden,
 			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
 		{"a failure", errGone, http.StatusInternalServerError,
 			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},

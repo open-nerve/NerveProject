@@ -62,11 +62,14 @@ paths:
       tags: [issue]
       summary: Read a work item
       description: >-
-        For the admins and members of its project, archived or not; an
-        archived work item is read as any other. A work item that does not
-        exist, is deleted, or whose project the caller does not see answers
-        issue.not_found; one he sees the project of but may not read,
-        forbidden.
+        For the admins, members and guests of its project, archived or not;
+        an archived work item is read as any other. A guest of a project
+        that does not show its guests every work item
+        (guest_view_all_features false) reads only the work items he
+        created. A work item that does not exist, is deleted, whose project
+        the caller does not see, or that he, such a guest, did not create,
+        answers issue.not_found; one he sees the project of but may not
+        read, forbidden.
       security: [{bearer: []}]
       x-problem-codes: [issue.not_found, forbidden]
       responses:
@@ -87,11 +90,12 @@ paths:
         and the others stay; a list given is the work item's new list, empty
         for none. The values follow createIssue's rules (validation_failed),
         checked before the work item is looked at. A work item that does not
-        exist, is deleted, or whose project the caller does not see answers
-        issue.not_found; one whose project he sees but whose work items he
-        may not change, forbidden; both are answered before the project is
-        locked, and with the project locked the role is decided again. A
-        work item of an archived project cannot be changed
+        exist, is deleted, whose project the caller does not see, or that he
+        did not create as a guest who sees only his own (getIssue) answers
+        issue.not_found, whatever his role may do; one whose project he sees
+        but whose work items he may not change, forbidden; both are answered
+        before the project is locked, and with the project locked the role
+        is decided again. A work item of an archived project cannot be changed
         (project.archived). Then the state, when it changes, is one of the
         project's, not its triage state; each account the work item is newly
         assigned to is an active member of the project who is not its guest,

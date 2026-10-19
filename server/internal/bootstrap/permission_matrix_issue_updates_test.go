@@ -21,10 +21,12 @@ func toIssue(body func(c caller, s seeded) string) func(caller, seeded) (string,
 }
 
 func issueUpdateMatrixRows() []matrixRow {
-	ok := issueRows.of(cellOK, cellOK, cellForbidden, cellOK, cellForbidden, cellForbidden)
-	refused := issueRows.of(cellValidationFailed, cellValidationFailed, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden)
+	ok := issueRows.of(cellOK, cellOK, cellIssueNotFound, cellOK, cellForbidden, cellForbidden)
+	refused := issueRows.of(cellValidationFailed, cellValidationFailed, cellIssueNotFound, cellValidationFailed, cellForbidden, cellForbidden)
 	return []matrixRow{
-		// The project's admins and members, as createIssue (M4 design 3.4).
+		// The project's admins and members, as createIssue (M4 design 3.4);
+		// PG, a guest who sees only his own work items, finds no other's,
+		// whatever his role may do: issue.not_found, not forbidden.
 		{op: "updateIssue", write: true, columns: projectColumns, request: issueRows.to(http.MethodPatch, "", matrixIssue, `{"name":"Mend"}`),
 			cells: ok, check: renamesTheIssue},
 		// Each field given: Done, high, PA's account for PM's and the removed

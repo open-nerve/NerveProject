@@ -45,9 +45,9 @@ type named struct {
 
 // Execute checks p (domain.CheckIssuePatch), before any read; then Locks
 // runs the write on the work item id (M4 design 3.5, 6.7, 11.11): its
-// precheck, the work item read and the decision on issue.update in its
-// project, before any lock; then the project's write gate, which refuses a
-// write that may wait no longer (503 server_busy); then in one
+// precheck, the work item read and the decision on issue.update on it, the
+// guest rule first, before any lock; then the project's write gate, which
+// refuses a write that may wait no longer (503 server_busy); then in one
 // transaction, the project FOR NO KEY UPDATE, the work item read again and
 // the decision again, and under them, in this order: an archived project
 // refuses it (409 project.archived); what p changes in the work item

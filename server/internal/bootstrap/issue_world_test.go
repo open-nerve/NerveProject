@@ -95,10 +95,17 @@ func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 // the API, with body.
 func (w issueWorld) newWorkItemIn(t *testing.T, project uuid.UUID, body string) uuid.UUID {
 	t.Helper()
+	return w.newWorkItemBy(t, "alice", project, body)
+}
+
+// newWorkItemBy is the id of a work item the account name creates in
+// project through the API, with body.
+func (w issueWorld) newWorkItemBy(t *testing.T, name string, project uuid.UUID, body string) uuid.UUID {
+	t.Helper()
 	var created struct {
 		ID uuid.UUID `json:"id"`
 	}
-	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
+	decodeAnswer(t, w.send(t, name, http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
 	return created.ID
 }
 

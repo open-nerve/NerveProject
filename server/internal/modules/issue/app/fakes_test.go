@@ -91,24 +91,32 @@ func (c clockAt) Now() time.Time {
 }
 
 // fakeAuthorizer answers its n-th call answers[n], nil or past the end
-// for allowed, with an empty grant, which Locks does not read; it logs
-// every call.
+// for allowed, with grants[n], the Grant of what it read, which a refusal
+// of the role carries too (shared.Authorizer), empty past the end; it logs
+// every call, and keeps each call's target.
 type fakeAuthorizer struct {
 	log     *callLog
 	answers []error
+	grants  []shared.Grant
+	targets []shared.Target
 	calls   int
 }
 
 func (f *fakeAuthorizer) Authorize(ctx context.Context, actor shared.Actor, action shared.Action, t shared.Target) (shared.Grant, error) {
 	n := f.calls
 	f.calls++
+	f.targets = append(f.targets, t)
 	if err := f.log.add(ctx, "Authorize", actor.UserID, action, t.WorkspaceID, t.ProjectID); err != nil {
 		return shared.Grant{}, err
 	}
-	if n < len(f.answers) && f.answers[n] != nil {
-		return shared.Grant{}, f.answers[n]
+	var grant shared.Grant
+	if n < len(f.grants) {
+		grant = f.grants[n]
 	}
-	return shared.Grant{}, nil
+	if n < len(f.answers) && f.answers[n] != nil {
+		return grant, f.answers[n]
+	}
+	return grant, nil
 }
 
 // fakeProject is a project's side of the issue module's ports: its gate,
@@ -338,5 +346,14 @@ func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, 
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
 		StateID: r.StateID, Priority: r.Priority, SortOrder: r.SortOrder, CompletedAt: r.CompletedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
-			uuid.UUID.Compare), CreatedByID: &r.By, UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
+			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
+}
+
+// creatorOf is a stored work item's creator as a read answers it: none for
+// the zero id, as for a work item whose creator's account is purged (P9).
+func creatorOf(by uuid.UUID) *uuid.UUID {
+	if by == (uuid.UUID{}) {
+		return nil
+	}
+	return &by
 }

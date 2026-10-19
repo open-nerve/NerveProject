@@ -233,7 +233,7 @@ type Project struct {
 	DefaultAssigneeID nullable.Nullable[uuid.UUID] `json:"default_assignee_id"`
 	Description       string                       `json:"description"`
 
-	// GuestViewAllFeatures A setting of the project for its guests, kept as set.
+	// GuestViewAllFeatures Whether the project's guests see every work item of it. When false, a guest of the project sees only the work items he created, and every other answers him as one that does not exist (issue.not_found).
 	GuestViewAllFeatures bool      `json:"guest_view_all_features"`
 	ID                   uuid.UUID `json:"id"`
 

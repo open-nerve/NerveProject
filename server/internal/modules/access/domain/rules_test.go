@@ -92,8 +92,9 @@ var tableCells = map[shared.Action][]outcome{
 	// The project's admins and members, not its guests (M4 design 3.4).
 	"issue.create": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
-	// As issue.create; the project's guests are P2's (M4 design 3.4).
-	"issue.read": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+	// As project_member.list: every active member of the project, the guest
+	// rule the issue module's (M4 design 3.4).
+	"issue.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// As issue.create (M4 design 3.4).
 	"issue.update": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,

@@ -65,6 +65,15 @@ type Issue struct {
 	UpdatedAt   time.Time
 }
 
+// HiddenFrom reports whether the guest rule hides i from the account actor,
+// whose grant on i's project is ownOnly (M4 design 3.4): the project's
+// guest who sees only his own work items does not see one another created,
+// nor one whose creator is not known. It hides nothing from any other
+// caller.
+func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
+	return ownOnly && (i.CreatedByID == nil || *i.CreatedByID != actor)
+}
+
 // NewIssue is what the caller asks for when creating a work item (M4
 // design 5.2, IssueCreate without the fields of later phases): StateID nil
 // for the project's default state, Priority nil for none. A field given is
