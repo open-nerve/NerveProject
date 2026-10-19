@@ -971,6 +971,31 @@ export interface paths {
         patch: operations["updateIssue"];
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/issues/{identifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+                /** @description A work item's identifier: its project's identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12. */
+                identifier: components["parameters"]["IssueIdentifier"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a work item by its identifier
+         * @description For the workspace's active members, then as getIssue. The identifier is the project's identifier, a hyphen and the work item's number: WEB-12. The project's identifier is compared with those of the workspace's undeleted projects in any case, i, ı, I and İ as one letter; when two projects' identifiers match it, the one that is it upper-cased letter for letter (i and ı as I, İ as İ) is taken, and when neither is, none. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. An identifier that is not one, that names no project of the workspace, or a number of no undeleted work item of the project answers issue.not_found, as does a work item whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue): the same answer for each. One whose project he sees but may not read answers forbidden. An archived work item is read as any other.
+         */
+        get: operations["getIssueByIdentifier"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/me/projects/{project_id}/preferences": {
         parameters: {
             query?: never;
@@ -1842,6 +1867,8 @@ export interface components {
         LabelID: string;
         /** @description A work item's id (IssueDetail.id). */
         IssueID: string;
+        /** @description A work item's identifier: its project's identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12. */
+        IssueIdentifier: string;
     };
     requestBodies: never;
     headers: never;
@@ -1937,6 +1964,7 @@ export type ParameterProjectMemberId = components['parameters']['ProjectMemberID
 export type ParameterStateId = components['parameters']['StateID'];
 export type ParameterLabelId = components['parameters']['LabelID'];
 export type ParameterIssueId = components['parameters']['IssueID'];
+export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -3452,6 +3480,32 @@ export interface operations {
         };
         responses: {
             /** @description The work item as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getIssueByIdentifier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+                /** @description A work item's identifier: its project's identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12. */
+                identifier: components["parameters"]["IssueIdentifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item. */
             200: {
                 headers: {
                     [name: string]: unknown;

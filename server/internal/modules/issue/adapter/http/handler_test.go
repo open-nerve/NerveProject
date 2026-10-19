@@ -78,6 +78,23 @@ func (f *fakeGet) Execute(ctx context.Context, id uuid.UUID) (domain.Issue, erro
 	return f.answer, f.err
 }
 
+// fakeGetByIdentifier is getIssueByIdentifier: each call is recorded as
+// "caller slug identifier"; it answers answer, or err.
+type fakeGetByIdentifier struct {
+	calls  []string
+	answer domain.Issue
+	err    error
+}
+
+func (f *fakeGetByIdentifier) Execute(ctx context.Context, slug, identifier string) (domain.Issue, error) {
+	actor, err := shared.RequireActor(ctx)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	f.calls = append(f.calls, actor.UserID.String()+" "+slug+" "+identifier)
+	return f.answer, f.err
+}
+
 // fakeUpdate is updateIssue: each call is recorded as "caller work item",
 // with what it got; it answers answer, or err.
 type fakeUpdate struct {

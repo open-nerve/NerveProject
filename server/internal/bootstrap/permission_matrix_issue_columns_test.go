@@ -128,3 +128,43 @@ func TestMatrixViolationsCatchesAnotherCasesWorkItem(t *testing.T) {
 		t.Errorf("the guest's own column at acme's admin's work item: %q, want %q", got, want)
 	}
 }
+
+// A cell that names a work item by its identifier names its column's own
+// (identifierOf), from a column of a project table: the guest's own column
+// asking for WEB-1, acme's admin's, would ask the guest rule's other case
+// under its name; a workspace-level row's admin, member and guest would
+// ask no project's column (X are the project level's too).
+func TestMatrixViolationsCatchesAnotherCasesIdentifier(t *testing.T) {
+	s := newSeeded().in(t)
+	byID := apitest.Operation{ID: "getIssueByIdentifier", Tags: []string{"issue"}, Method: http.MethodGet,
+		Path: "/api/v0/workspaces/{slug}/issues/{identifier}"}
+	row := matrixRow{op: byID.ID, columns: issueColumns, request: byIdentifier,
+		cells: inItsWorkspace(onAWorkItem(cellOK, cellOK, cellOK, cellOK))}
+	ops := []apitest.Operation{byID}
+	if got := matrixViolations(ops, matrixExemptions{}, []matrixRow{row}, s, nil); len(got) != 0 {
+		t.Fatalf("a matching matrix: %q, want none", got)
+	}
+	another := row
+	another.request = func(c caller, s seeded) (string, string, string) {
+		if c == callerGuestOwn {
+			return byIdentifier(callerGuestOthers, s)
+		}
+		return byIdentifier(c, s)
+	}
+	want := []string{fmt.Sprintf("row getIssueByIdentifier, %s: {identifier} WEB-1 is not its column's work item Guest's, WEB-3",
+		callerGuestOwn)}
+	if got := matrixViolations(ops, matrixExemptions{}, []matrixRow{another}, s, nil); !slices.Equal(got, want) {
+		t.Errorf("the guest's own column at WEB-1: %q, want %q", got, want)
+	}
+	inWorkspaceRow := matrixRow{op: byID.ID, request: func(c caller, _ seeded) (string, string, string) {
+		return http.MethodGet, "/api/v0/workspaces/" + workspaceOf(c) + "/issues/WEB-1", ""
+	}, cells: inWorkspace(cellOK, cellOK, cellOK)}
+	var refused []string
+	for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
+		refused = append(refused, fmt.Sprintf("row getIssueByIdentifier, %s: {identifier} from a column of no project table (projectTables): "+
+			"a project's row names its columns", c))
+	}
+	if got := matrixViolations(ops, matrixExemptions{}, []matrixRow{inWorkspaceRow}, s, nil); !slices.Equal(got, refused) {
+		t.Errorf("a workspace-level row naming a work item: %q, want %q", got, refused)
+	}
+}

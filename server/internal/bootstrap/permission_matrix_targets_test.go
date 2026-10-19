@@ -61,9 +61,10 @@ var underProject = map[string]struct {
 // project named by its id ({project_id}) must be projectOf(c)'s, and a row
 // under a project (underProject: a project membership, a state, a label, a
 // work item) one seeded in projectOf(c), a work item the column's own
-// (issueOf), each from a column of a project table (projectTables): a
-// project's operation in a workspace-level row, or the only admin's, would
-// leave the project level's own columns unasked.
+// (issueOf), as must a work item named by its identifier ({identifier}
+// right after issues: identifierOf), each from a column of a project table
+// (projectTables): a project's operation in a workspace-level row, or the
+// only admin's, would leave the project level's own columns unasked.
 // Any other row named by its id (a parameter ending in _id) must be a row
 // of s under workspaceOf(c): a cell of the deleted workspace's column that
 // named acme would get the 404 of a workspace its caller is not in, and
@@ -98,6 +99,13 @@ func targetViolation(pattern, path string, c caller, s seeded, passOver func(par
 				if name, one := under.one(c, s); id != one {
 					return fmt.Sprintf("%s %s is not its column's %s %s, %s", segment, got[i], under.what, name, one)
 				}
+			}
+		case segment == "{identifier}" && i > 0 && want[i-1] == "issues":
+			if !ofAProjectTable(c) {
+				return "{identifier} from a column of no project table (projectTables): a project's row names its columns"
+			}
+			if got[i] != identifierOf(c) {
+				return fmt.Sprintf("{identifier} %s is not its column's work item %s, %s", got[i], issueOf(c), identifierOf(c))
 			}
 		case segment == "{slug}" && i > 0 && want[i-1] == "workspaces":
 			if got[i] != workspaceOf(c) {

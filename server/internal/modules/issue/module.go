@@ -1,8 +1,9 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
-// work items' tables and brings creating, reading, changing and deleting a
-// work item. For the project module's deletions (its IssueCascade port) it
-// soft-deletes a deleted project's rows of them, tells whether work items
-// are in a state, and takes deleted labels off them.
+// work items' tables and brings creating, reading, by id or by identifier,
+// changing and deleting a work item. For the project module's deletions
+// (its IssueCascade port) it soft-deletes a deleted project's rows of
+// them, tells whether work items are in a state, and takes deleted labels
+// off them.
 package issue
 
 import (

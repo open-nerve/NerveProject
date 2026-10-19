@@ -1,19 +1,22 @@
 package bootstrap
 
 import (
+	"maps"
 	"net/http"
 	"slices"
+	"strconv"
 	"testing"
 	"uuid"
 )
 
 // The rows of the permission matrix of a project's work items (M4 design
 // 9.2): creating one, under the project of each column, and reading one,
-// naming it by its id (/issues/{issue_id}): its column's work item
-// (issueOf). Each creating cell writes on a copy of its own, so each
-// creation is its project's next work item after the seeded ones
-// (nextNumber); the reading cells share one. A row of 9.2's table has the
-// issue table's columns (issueColumns); a variant that asks what is
+// naming it by its id (/issues/{issue_id}), or by its identifier in its
+// column's workspace (/workspaces/{slug}/issues/{identifier}): its
+// column's work item (issueOf). Each creating cell writes on a copy of its
+// own, so each creation is its project's next work item after the seeded
+// ones (nextNumber); the reading cells share one. A row of 9.2's table has
+// the issue table's columns (issueColumns); a variant that asks what is
 // checked after the decision, the project level's (projectColumns), whose
 // PG, a guest, may create none; one on the archived project, its table's
 // (archivedColumns).
@@ -100,7 +103,46 @@ func issueMatrixRows() []matrixRow {
 		// An archived project's work items are read as any other's.
 		{op: "getIssue", variant: "archived", columns: archivedColumns, request: toWorkItem(http.MethodGet, "", ""),
 			cells: issueRows.ofArchived(cellOK, cellForbidden), check: readsTheIssue},
+		// Every active member of the workspace finds it, then as getIssue;
+		// X, who is none, finds no workspace (M4 design 3.4, 3.7).
+		{op: "getIssueByIdentifier", columns: issueColumns, request: byIdentifier,
+			cells: inItsWorkspace(onAWorkItem(cellOK, cellOK, cellOK, cellOK)), check: readsTheIssue},
+		// An archived project's work items are found as any other's.
+		{op: "getIssueByIdentifier", variant: "archived", columns: archivedColumns, request: byIdentifier,
+			cells: inItsWorkspace(issueRows.ofArchived(cellOK, cellForbidden)), check: readsTheIssue},
 	}
+}
+
+// identifierOf is the identifier of the column's work item (issueOf): its
+// project's identifier, a hyphen and its number, as WEB-2.
+func identifierOf(c caller) string {
+	n, _ := numberOf(projectOf(c), issueOf(c))
+	for _, p := range matrixProjects {
+		if p.key == projectOf(c) {
+			return p.identifier + "-" + strconv.Itoa(n)
+		}
+	}
+	return ""
+}
+
+// byIdentifier is the request of a row whose callers each read their
+// column's work item by its identifier, in their column's workspace.
+func byIdentifier(c caller, _ seeded) (string, string, string) {
+	return http.MethodGet, "/api/v0/workspaces/" + workspaceOf(c) + "/issues/" + identifierOf(c), ""
+}
+
+// inItsWorkspace are cells of a row that names its column's workspace by
+// its slug: workspace.not_found for X, and for the archived project's
+// column of an account never a member of acme, whom it does not let in;
+// every other cell as cells has it.
+func inItsWorkspace(cells map[caller]cell) map[caller]cell {
+	out := maps.Clone(cells)
+	for _, c := range []caller{callerNever, callerRemoved, callerDeleted, callerArchivedNever} {
+		if _, ok := out[c]; ok {
+			out[c] = cellWorkspaceNotFound
+		}
+	}
+	return out
 }
 
 // createsTheIssue: the column's project's next work item (nextNumber), Fix

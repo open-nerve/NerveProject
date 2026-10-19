@@ -36,6 +36,18 @@ func (h handler) GetIssue(ctx context.Context, req gen.GetIssueRequestObject) (g
 	return gen.GetIssue200JSONResponse(issueDetail(i)), nil
 }
 
+// GetIssueByIdentifier serves GET
+// /api/v0/workspaces/{slug}/issues/{identifier}: the identifier goes to
+// the use case as it came, which reads it.
+func (h handler) GetIssueByIdentifier(ctx context.Context, req gen.GetIssueByIdentifierRequestObject) (gen.GetIssueByIdentifierResponseObject,
+	error) {
+	i, err := h.uc.GetIssueByIdentifier.Execute(ctx, req.Slug, req.Identifier)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetIssueByIdentifier200JSONResponse(issueDetail(i)), nil
+}
+
 // UpdateIssue serves PATCH /api/v0/issues/{issue_id}: each field nil when
 // not given; a value given goes to the use case as it came, which checks
 // it.
