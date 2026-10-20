@@ -8110,7 +8110,7 @@ Expected: 通过。
 | `T8.5` | 中文的一份没有 `issue_archived` | `web/packages/i18n` 的 `check:sync`（`make lint-web`） | 守卫 |
 | `T8.6` | 契约不声明 `updateIssue` 答 `issue.archived` | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`） | 单元；组合 |
 | `T8.7` | `project.state_in_use` 不再说怎样才能删除状态 | `internal/modules/project/adapter/http` 的全部测试（`make test`） | 单元 |
-| `T8.8` | 已归档的工作项不能删除：`deleteIssue` 在已归档的项目的 409 之后答 409 `issue.archived` | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `deleteIssue` 各格（`make test`） | 单元；组合 |
+| `T8.8` | 已归档的工作项不能删除：`deleteIssue` 在已归档的项目的 409 之后答 409 `issue.archived` | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `deleteIssue` 各格（`make test`）、故事 `i15-archive-issue`（Task 13 起） | 单元；组合；端到端 |
 | `T8.9` | 删除标签只从没归档的工作项上摘下它：已归档的工作项留着已删除的标签 | `internal/bootstrap` 的 `TestDeletingALabelTakesItOffTheWorkItems`（`make test`） | 组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T7.21`（列在各自的 Task 的表里，标"（Task 8 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=8`）。
@@ -12342,7 +12342,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **变异**：本 Task 只加故事和夹具，没有自己的变异：它的故事是较早的 Task 的变异的端到端一层。
 
-本 Task 的检查也发现较早的 Task 的变异 `T1.5`、`T1.8`、`T1.9`、`T1.11`、`T4.2`、`T4.3`、`T4.5`、`T4.11`、`T7.3`、`T7.4`、`T7.6`、`T7.7`、`T7.8`、`T7.10`、`T7.11`、`T8.1`、`T10.1`、`T10.3`、`T10.4`、`T10.5`、`T10.6`、`T10.8`、`T10.9`、`T10.10`、`T10.11`、`T10.12`、`T10.13`、`T10.14`、`T11.1`、`T11.2`、`T11.3`、`T11.4`（列在各自的 Task 的表里，标"（Task 13 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=13`）。
+本 Task 的检查也发现较早的 Task 的变异 `T1.5`、`T1.8`、`T1.9`、`T1.11`、`T4.2`、`T4.3`、`T4.5`、`T4.11`、`T7.3`、`T7.4`、`T7.6`、`T7.7`、`T7.8`、`T7.10`、`T7.11`、`T8.1`、`T8.8`、`T10.1`、`T10.3`、`T10.4`、`T10.5`、`T10.6`、`T10.8`、`T10.9`、`T10.10`、`T10.11`、`T10.12`、`T10.13`、`T10.14`、`T11.1`、`T11.2`、`T11.3`、`T11.4`（列在各自的 Task 的表里，标"（Task 13 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=13`）。
 
 ---
 
