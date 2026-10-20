@@ -1079,9 +1079,9 @@ issue_comments
 | 创建者的权限 | 只看工作区成员关系，已离开项目也能读、改、删 | 要求是项目的有效成员、角色不低于成员（3.4） | P2 |
 | 访客只看自己的工作项 | 只在约 6 处执行 | 处处执行，挂在看不到的工作项下的一切 404；按项目角色算，工作区管理员在项目里是访客时同样（3.4） | P2（各列表在各自的 Phase） |
 | 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403（工作区管理员是项目的有效成员时不论项目角色都通过项目的每条规则，总体设计 6.5 的约定；所以只是项目访客的工作区管理员删得了自己建的，204，不是凭 `AllowCreator`）（3.4） | P2 |
-| 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 除恢复、删除外一切写 409 `issue.archived`；不能成为父工作项、关联的对方（3.8） | P2（子资源在各自的 Phase） |
+| 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是，子资源的写同样；恢复、删除照常；在已归档的项目里先答 409 `project.archived`；不能成为父工作项、关联的对方（3.8） | P2（子资源在各自的 Phase） |
 | 归档、恢复 | 归档答 `{archived_at}`，恢复 204；再归档 404 | 都返回 `IssueDetail`；重复的不写、200（3.8） | P2 |
-| 按编号取 | 格式不对 400，不是成员 403 | 都是 404；标识经同一个折叠比较，`i`、`ı`、`I`、`İ` 一样（3.7） | P2 |
+| 按编号取 | 格式不对 400，不是成员 403 | 格式不对、不存在、看不到的都是 404，看得到项目而不是它的有效成员的 403（与取工作项相同）；标识经同一个折叠比较，`i`、`ı`、`I`、`İ` 一样（3.7） | P2 |
 | 删除工作项 | 动态保留；写一条"已删除"；确认框不提子工作项 | 动态一并软删除；不写"已删除"；确认框写明子树（3.6） | P3（确认框 P14） |
 | 父工作项 | 不检查自己、不检查成环 | 422（3.9） | P3 |
 | 加子工作项的动态 | `old_value` 是子工作项自己的编号 | 是原来的父工作项（3.13） | P3 |
@@ -1127,10 +1127,10 @@ issue_comments
 |---|---|---|---|---|
 | `GET /api/v0/projects/{project_id}/issues` | `listIssues` | 查询：3.16 的筛选、`group_by`、`sub_group_by`、`group_key`、`sub_group_key`、`order_by`、`archived`、`limit`、`cursor` | 200 `IssueList` | 404 `project.not_found`；403 F（`archived=true` 的访客）；422 V |
 | `POST /api/v0/projects/{project_id}/issues` | `createIssue` | `IssueCreate {name, description_html?, state_id?, priority?, assignee_ids?, label_ids?, start_date?, target_date?, parent_id?}` | 201 `IssueDetail` | 404 `project.not_found`；403 F；422 V；409 `project.archived` |
-| `GET /api/v0/issues/{issue_id}` | `getIssue` | — | 200 `IssueDetail` | 404 `issue.not_found` |
+| `GET /api/v0/issues/{issue_id}` | `getIssue` | — | 200 `IssueDetail` | 404 `issue.not_found`；403 F |
 | `PATCH /api/v0/issues/{issue_id}` | `updateIssue` | `IssueUpdate {name?, description_html?, skip_activity?, state_id?, priority?, assignee_ids?, label_ids?, start_date?, target_date?, parent_id?, sort_order?}`（三个可空的用 `nullable.Nullable`） | 200 `IssueDetail` | 404；403 F；422 V；409 IA；409 PA |
 | `DELETE /api/v0/issues/{issue_id}` | `deleteIssue` | — | 204 | 404；403 F；409 PA |
-| `GET /api/v0/workspaces/{slug}/issues/{identifier}` | `getIssueByIdentifier` | — | 200 `IssueDetail` | 404 `workspace.not_found`；404 `issue.not_found` |
+| `GET /api/v0/workspaces/{slug}/issues/{identifier}` | `getIssueByIdentifier` | — | 200 `IssueDetail` | 404 `workspace.not_found`；404 `issue.not_found`；403 F |
 | `POST /api/v0/issues/{issue_id}/archive` | `archiveIssue` | — | 200 `IssueDetail` | 404；403 F；409 `issue.not_archivable`；409 PA |
 | `POST /api/v0/issues/{issue_id}/unarchive` | `unarchiveIssue` | — | 200 `IssueDetail` | 404；403 F；409 PA |
 | `GET /api/v0/issues/{issue_id}/sub-issues` | `listSubIssues` | — | 200 `IssueCollection` | 404 |
@@ -1198,7 +1198,7 @@ issue_comments
 | 码 | 状态 | 含义 |
 |---|---|---|
 | `issue.not_found` | 404 | 工作项不存在、已删除，或调用者看不到（看不到项目，或访客规则，3.4）；按编号取时格式不对、项目不存在也是它 |
-| `issue.archived` | 409 | 已归档的工作项上除恢复、删除之外的写（3.8） |
+| `issue.archived` | 409 | 已归档的工作项的修改（什么都没改的也是）和它的子资源的写（3.8） |
 | `issue.not_archivable` | 409 | 归档一个状态组不是"已完成""已取消"的工作项（Plane 400） |
 | `issue.relation_not_found` | 404 | 关联不存在、已删除，或两端都看不到 |
 | `issue.link_not_found` | 404 | 链接不存在、已删除，或它的工作项看不到 |

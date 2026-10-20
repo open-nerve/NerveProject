@@ -12390,7 +12390,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**（spec 2.15、第 7 节；M4 设计 3.23、4.17）
 - 总体设计 6.5：`AllowCreator` 一句改写（创建者要是项目的有效成员、项目角色不低于成员，锁下再判定）；`OwnOnly` 和一条访客规则（预检和锁下的判定各执行一次，404 先于角色的 403）；Plane 的两条照原样。
-- M2 设计 3.11：字段错误的路径按下标的数值排序；不限类型的节点里的数（只为它们读的值按文档的顺序、一遍读完）；`shared.Date` 的检查器（`FormatDate`）；`date` 从生成器拒绝的例子里去掉（映射之外的仍被拒绝）。3.12 的模块模板加上 `date` 的映射。
+- M2 设计 3.11：字段错误的路径按下标的数值排序；不限类型的节点里的数（只为它们读的值按文档的顺序、一遍读完）；`shared.Date` 的检查器（`FormatDate`，与解码器一致由测试核对，不是按构造）；`date` 从生成器拒绝的例子里去掉（映射之外的仍被拒绝，9.1 的测试清单同样）。3.12 的模块模板加上 `date` 的映射。
 - 差异清单第四节 4.17：P2 的七行（起止日期、创建者的权限、访客只看自己的工作项、访客删除自己建的工作项、已归档的工作项、归档和恢复、按编号取），接在"删除状态"一行之后；归档和恢复一行写明 Plane 恢复没归档的也答 404，动态的 `comment` 与 Plane 不同（spec 第 3 节第 8 条）。
 - 三份交接（`M1-P3-trim-platform.md`、`M2-closeout.md`、`M3-closeout.md`）各写下"处理结果（M4/P2）"，`status` 照旧 `open`（spec 第 7 节）。
 
@@ -12398,8 +12398,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 设计和差异清单**
 
-`docs/v0/M2-auth/M2-design.md`（修改，6 处）：
+`docs/v0/M2-auth/M2-design.md`（修改，8 处）：
 
+````old docs/v0/M2-auth/M2-design.md
+    - 生成为 Go 类型的字符串格式（M2 的模板下是 `date-time` 和 `uuid`）写错：拒绝，字段码 `invalid_format`。生成的类型装不下错误的值，这几种格式只能在解码之前检查。检查**与生成的解码器接受的完全相同**：用 `encoding/json` 把这个字段的原始 JSON 值解码进映射到的 Go 类型，即 `json.Unmarshal(raw, new(T))`，`T` 是 `time.Time` 或标准库的 `uuid.UUID`。生成的解码器对这个字段做的正是这件事，所以两者按构造一致，JSON 字符串里的转义也一样处理；不另写正则（控制者复核 R1，核验 F1）。
+````
+````new docs/v0/M2-auth/M2-design.md
+    - 生成为 Go 类型的字符串格式（M2 的模板下是 `date-time` 和 `uuid`）写错：拒绝，字段码 `invalid_format`。生成的类型装不下错误的值，这几种格式只能在解码之前检查。检查**与生成的解码器接受的完全相同**：用 `encoding/json` 把这个字段的原始 JSON 值解码进映射到的 Go 类型，即 `json.Unmarshal(raw, new(T))`，`T` 是 `time.Time` 或标准库的 `uuid.UUID`。生成的解码器对这个字段做的正是这件事，所以两者按构造一致（M4/P2 起模板的 `date` 除外：它的检查器照 `shared.ParseDate` 的规则另读，两者一致由测试核对，见下面格式检查器的 `shared.Date` 一条），JSON 字符串里的转义也一样处理；不另写正则（控制者复核 R1，核验 F1）。
+````
 ````old docs/v0/M2-auth/M2-design.md
     - **代价跟着请求体走**（codex-fixes 的预检 H1 和最终评审）：读的时候路径是一段文本，只留前 257 字节（比报出的路径多一个字节，用来知道它更长），另记每一段从哪里开始，读完这一段就截回去；报问题时才写出。一个请求体最多报 16 个问题，扫描和按表检查共用这个上限，满了就停；路径和码都相同的问题只报一次，重复的不占上限。否则代价是请求体的平方：`json.Valid` 允许嵌套一万层，每层写出一条路径，约 1 MiB 的请求体要 4.4 GB；一个很长的名字下面每隔几个字节一个问题，每个问题都带着这个名字，要 17 GB。现在这两个请求体（经 identity 的表）各用 2.4 MB、0.9 MB。按表检查的问题同样受限：开放 map 的键是客户端写的，它下面的每个问题都带着它。按表检查只沿 schema 下降，每层把对象的成员复制一次（`json.Unmarshal` 进 `map[string]json.RawMessage`），代价是请求体乘 schema 的层数；M2 的请求体 schema 最深两层，没有数组、开放 map 和递归。第一个递归的请求体 schema 会让它变成请求体乘请求体的深度，那时按表检查改为一遍读完（M4 交接第 4 节）。`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住这几种请求体，`TestCheckListsAtMostSixteenProblems` 守住上限和"每次报同样的 16 个"（按表检查按名字的顺序读对象的成员）。
 ````
@@ -12439,6 +12445,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new docs/v0/M2-auth/M2-design.md
   - `output-options.type-mapping.string.formats`：`uuid` → `{type: uuid.UUID, import: uuid}`（标准库）；`email` → `{type: string}`；M4/P2 起加 `date` → `{type: shared.Date, import: github.com/open-nerve/NerveProject/server/internal/shared}`（3.11）。默认的 `openapi_types.Email` 在解码时自己校验格式，会绕过 3.11 的分层；映射为 `string` 以后，邮箱格式由领域层校验（422）。
 ````
+````old docs/v0/M2-auth/M2-design.md
+| `platform` | 认证中间件（公开操作不看令牌；非公开操作没有令牌、令牌无效、令牌有效；闸门已空时 429 且计数的假认证器没有被调用；先预留：认证失败时单位留下，成功、签名有效而只是过期的 JWT（`ExpiredCredential()`）、认证器返回非 401 的错误（500）时退回；并发：额度 3、50 个并发的无效令牌，假认证器只被调用 3 次，其余 429）；`Router` 在 `HandleFunc` 和 `Handle` 时都记下模式；`bodyshape` 的校验器（spike 的 25 个请求：未知字段、`null`、必填、数组、可为空的对象、开放的 map、类型、一次收集多个问题；格式：`date-time`、`uuid` 各取 3.11 spike 的写法（含 JSON 转义和宽松的 uuid 写法），检查器的结论与把同一个值解码进生成的结构体一致，不合法时 `invalid_format`）和中间件（把请求体原样放回）；`bodyshapegen`（两次生成的输出相同；格式来自 `type-mapping`；遇到没有检查器的 Go 类型、`format: date`、`x-go-type` 或不支持的组合时失败；这些测试在工具模块，由 `make test` 运行）；限流（自己的令牌桶：突发、`AllowAll` 被拒时一个都不扣、`Reserve` 的退回只生效一次且不超过突发、清理闲置的键、`Retry-After`）；请求期限；可信代理下的客户端 IP，不可信的对端带 `X-Forwarded-For` 时只记一次 WARN；客户端 IP 键（IPv4；IPv4 映射的地址；同一个 /64 的两个 IPv6 地址同键、不同 /64 不同键；前缀长度可配）；413；`ProblemError` 的映射（字段错误、`RetryAfter`、不满足接口时 500），包括不带 Go 类型名的解码错误和 `context.Canceled`；`webui` 的 CSP 哈希；配置的新校验、`LogValue` 不含密钥文件的路径、prod 在没有覆盖时 `signup_enabled` 为假 |
+````
+````new docs/v0/M2-auth/M2-design.md
+| `platform` | 认证中间件（公开操作不看令牌；非公开操作没有令牌、令牌无效、令牌有效；闸门已空时 429 且计数的假认证器没有被调用；先预留：认证失败时单位留下，成功、签名有效而只是过期的 JWT（`ExpiredCredential()`）、认证器返回非 401 的错误（500）时退回；并发：额度 3、50 个并发的无效令牌，假认证器只被调用 3 次，其余 429）；`Router` 在 `HandleFunc` 和 `Handle` 时都记下模式；`bodyshape` 的校验器（spike 的 25 个请求：未知字段、`null`、必填、数组、可为空的对象、开放的 map、类型、一次收集多个问题；格式：`date-time`、`uuid` 各取 3.11 spike 的写法（含 JSON 转义和宽松的 uuid 写法），检查器的结论与把同一个值解码进生成的结构体一致，不合法时 `invalid_format`）和中间件（把请求体原样放回）；`bodyshapegen`（两次生成的输出相同；格式来自 `type-mapping`；遇到没有检查器的 Go 类型、映射之外的 `date`、`x-go-type` 或不支持的组合时失败；这些测试在工具模块，由 `make test` 运行）；限流（自己的令牌桶：突发、`AllowAll` 被拒时一个都不扣、`Reserve` 的退回只生效一次且不超过突发、清理闲置的键、`Retry-After`）；请求期限；可信代理下的客户端 IP，不可信的对端带 `X-Forwarded-For` 时只记一次 WARN；客户端 IP 键（IPv4；IPv4 映射的地址；同一个 /64 的两个 IPv6 地址同键、不同 /64 不同键；前缀长度可配）；413；`ProblemError` 的映射（字段错误、`RetryAfter`、不满足接口时 500），包括不带 Go 类型名的解码错误和 `context.Canceled`；`webui` 的 CSP 哈希；配置的新校验、`LogValue` 不含密钥文件的路径、prod 在没有覆盖时 `signup_enabled` 为假 |
+````
 
 `docs/v0/plane-diff.md`（修改，1 处）：
 
@@ -12453,7 +12465,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403 `forbidden`（工作区管理员是项目的有效成员时不论项目角色都通过项目的每条规则，总体设计 6.5 的约定；所以只是项目访客的工作区管理员删得了自己建的，204，不是凭 `AllowCreator`）（M4 设计 3.4） |
 | 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是；恢复、删除照常；在已归档的项目里先答 409 `project.archived`（M4 设计 3.8；子资源的写、成为父工作项和关联的对方在 M4 的各自的 Phase） |
 | 工作项的归档、恢复 | 归档答 `{archived_at}`，恢复 204；再归档、恢复没归档的 404；状态不在"已完成""已取消"组时 400 | 都答 `IssueDetail`；已归档的再归档、未归档的再恢复不写、200；状态不在"已完成""已取消"组时 409 `issue.not_archivable`；各写一条动态（`archived_at` 的 `manual_archive`、`restore`），动态的 `comment` 不同（M4 设计 3.8、3.13） |
-| 按编号取工作项 | 格式不对 400，不是成员 403 | `GET /api/v0/workspaces/{slug}/issues/{identifier}`：不是工作区的有效成员 404 `workspace.not_found`；之后格式不对、项目或编号不存在、看不到、访客规则都是同一个 404 `issue.not_found`；标识经同一个折叠比较（`identifier-fold.json`，`i`、`ı`、`I`、`İ` 一样）（M4 设计 3.7） |
+| 按编号取工作项 | 格式不对 400，不是成员 403 | `GET /api/v0/workspaces/{slug}/issues/{identifier}`：不是工作区的有效成员 404 `workspace.not_found`；之后格式不对、项目或编号不存在、看不到、访客规则都是同一个 404 `issue.not_found`；看得到项目而不是它的有效成员的（工作区管理员；项目公开时，工作区成员）403 `forbidden`，与取工作项相同；标识经同一个折叠比较（`identifier-fold.json`，`i`、`ı`、`I`、`İ` 一样）（M4 设计 3.7） |
 ````
 
 `docs/v0/v0-design.md`（修改，1 处）：
@@ -12462,7 +12474,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   "创建者本人可以修改或删除自己创建的对象"由 M4 随第一条用到它的规则在规则表加入（`AllowCreator`）。
 ````
 ````new docs/v0/v0-design.md
-  创建者本人的规则（`AllowCreator`）随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）在 M4/P2 加入规则表：判定读目标的创建者（`Target.CreatorID`），调用者是它、仍是项目的有效成员、角色不低于成员时同样允许（锁下再判定，4.2），离开了项目或成了访客的创建者不行（Plane 只看工作区成员关系，M4 设计 3.4）。访客的规则是判定交回的 `Grant.OwnOnly`：调用者是项目的访客（按项目角色算，工作区管理员在项目里是访客时同样）、项目没开 `guest_view_all_features` 时为真。同一条访客规则用在工作项的每个读、写和列表上，看不到的工作项和挂在它下面的一切都答 404，先于角色的 403，写在不加锁的预检和锁下的判定中各执行一次（Plane 只在约 6 处执行；单个工作项的读写从 M4/P2 起，列表、子资源随 M4 的各 Phase，M4 设计 3.4）。
+  创建者本人的规则（`AllowCreator`）随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）在 M4/P2 加入规则表：判定读目标的创建者（`Target.CreatorID`），调用者是它、仍是项目的有效成员、角色不低于成员时同样允许（锁下再判定，4.2），离开了项目或成了访客的创建者不能再凭它删（Plane 只看工作区成员关系，M4 设计 3.4）。访客的规则是判定交回的 `Grant.OwnOnly`：调用者是项目的访客（按项目角色算，工作区管理员在项目里是访客时同样）、项目没开 `guest_view_all_features` 时为真。同一条访客规则用在工作项的每个读、写和列表上，看不到的工作项和挂在它下面的一切都答 404，先于角色的 403，写在不加锁的预检和锁下的判定中各执行一次（Plane 只在约 6 处执行；单个工作项的读写从 M4/P2 起，列表、子资源随 M4 的各 Phase，M4 设计 3.4）。
 ````
 
 - [ ] **Step 2: 交接**
@@ -12480,7 +12492,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - **地址，按编号查找的一半**（接口一侧完成）：按编号取工作项是 `GET /api/v0/workspaces/{slug}/issues/{identifier}`（`getIssueByIdentifier`，M4 设计 3.7、3.18），与其余工作项的接口同在 `/api/v0` 下；前端的 `/work-items/` 字面量随前端改接新的 service 删除（关键词守卫 `old-issue-urls`，M4 的 P10a 起）。
 
-仍未处理，状态保持 `open`：动态的字段名里没有 `WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`（M4 设计 3.13 的表）、评论没有 `access`（都在 M4 的 P4）；描述历史的地址（M4 的 P4）和前端的两处 `/work-items/` 字面量（M4 的前端各 Phase）；富文本筛选的显示层（M4 的 P10b，关键词守卫的终态在 P16）；收集箱的来源（以转交关闭：收尾写进 M7 的交接；M4 删除工作项动态中显示来源的一支在 P15，M4 设计 13.1）。
+仍未处理，状态保持 `open`：动态的字段名里没有 `WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`（M4 设计 3.13 的表）、评论没有 `access`（都在 M4 的 P4）；描述历史的地址（M4 的 P4）和前端的两处 `/work-items/` 字面量（两个 service 在 M4 的 P11 换掉，`browse` 的路由在 P14 改经按编号取）；富文本筛选的显示层（M4 的 P10b，关键词守卫的终态在 P16）；收集箱的来源（以转交关闭：收尾写进 M7 的交接；M4 删除工作项动态中显示来源的一支在 P15，M4 设计 13.1）。
 
 来源：[M4/P2 spec](../specs/P2-issue-access.md) 第 7 节。
 
@@ -12522,13 +12534,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ## 处理结果（M4/P2）
 
 - **第 2 节，约定五**（P2 的批量写完成）：删除工作项的五条语句（`DeleteIssueRow` 按 `id`；`DeleteIssueAssigneeRows`、`DeleteIssueLabelRows`、`DeleteIssueSubscriberRows`、`DeleteIssueActivityRows` 按谓词软删除这个工作项未删除的负责人、标签、关注、动态）不分批，按全局的表序（工作项 → 负责人 → 标签 → 关注 → 动态）各执行一次，都写同一个时刻、同一个删除者；归档、恢复按 `id` 写工作项的一行（`SetArchivedAt`）。这些行只有持项目 N 的写会写到，不落在约定五的例外里，不按 `id` 先锁（M4/P2 spec 第 3 节第 7 条）。钉住它的测试：单元的 `TestDeleteIssueDeletesTheWorkItemAndItsRows`（表序、时刻、删除者）；存储的 `TestTheStatementsOfADeletedWorkItemDeleteItsRows`、`TestArchivingAWorkItemWritesItsRow`（每条语句只写它的工作项的行，写的是给定的时刻和账户）；组合的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`、`TestArchivingAWorkItemStampsItsRows`（请求之内的一个时刻、做的人）；取锁形状的 `TestEachIssueWriteLocksItsProjectFirst`（删除、归档、恢复都最先取项目 N）；交错的 `TestDeletingAWorkItemAndChangingItSerialize`、`TestArchivingAWorkItemAndMovingItSerialize`（在项目 N 上串行）。
-- **第 3 节，`AllowCreator`**（完成）：随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）加入规则表；判定读目标的创建者（`shared.Target.CreatorID`），调用者是它、在项目里的有效角色不低于成员时允许，已离开项目、成了访客的创建者不行（M4 设计 3.4）；判定表测试逐格核对。
+- **第 3 节，`AllowCreator`**（完成）：随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）加入规则表；判定读目标的创建者（`shared.Target.CreatorID`），调用者是它、在项目里的有效角色不低于成员时允许，已离开项目、成了访客的创建者不能再凭它删（M4 设计 3.4）；判定表测试逐格核对。
 - **第 3 节，`guest_view_all_features`**（工作项的取、改、删、按编号取、归档、恢复完成；列表在各自的 Phase）：`access` 读项目的 `guest_view_all_features`，判定交回 `Grant.OwnOnly`（项目的访客、项目没开它时为真，按项目角色算：工作区管理员在项目里是访客时同样）；一条访客规则在读的判定中、在写的不加锁的预检和锁下的判定中各执行一次，别人建的工作项答 404 `issue.not_found`，不是 403（M4 设计 3.4、3.5）；交错 5 加上访客规则下 404 的一支。
 - **第 3 节，矩阵和码**（工作项的操作到 P2 为止完成）：P2 的 `getIssueByIdentifier`、`deleteIssue`、`archiveIssue`、`unarchiveIssue` 在规则表、操作名、矩阵中各有一行；矩阵有了工作项表（M4 设计 9.2），P1a、P1b 的 `createIssue`、`getIssue`、`updateIssue` 的行移到它上面：项目级的各列之外，建了它的项目成员，项目访客的三种情形（看得到全部的；只看自己的，对自己建的、对别人建的），只是项目访客的工作区管理员（对别人建的、对自己建的）；设计 9.2 另列的"建了它、后来被降为访客"（403）和"建了它、已离开项目"（404）是"访客·自己"（种子记在他名下的）和"已离开项目"（他离开之前建的）两列上 `deleteIssue` 的格子。新码 `issue.archived`、`issue.not_archivable` 由 `issue` 的 HTTP 测试返回过（`apitest.Main` 两个方向），带前端文案。决策点 3 的个人主页一行在 M4 的 P5。
 - **第 4 节，`guest_view_all_features` 的说明**（完成）：契约的 `Project.guest_view_all_features` 改写为它的作用（项目的访客是否看得到项目的每个工作项；不看时别人建的答 `issue.not_found`）。
 - **第 4 节，`expectIssueDeleted`**（完成）：`e2e/fixtures/assert/issue.ts` 照 `expectProjectDeleted` 从目录读表，但沿外键图从 `issues` 往下走（图由 `assert/catalog.ts` 的 `keysBelow` 读出，与 `tablesUnder` 同在一处；走到的外键多于一列时失败）：一行的外键指向工作项或它下面的一行，它就在工作项下面（评论的表情指向评论，P4 起同样断言到），它下面的行都与它同一时刻、同一个删除者删除，每个外键下都有这样的一行，删除之前已删除的不算（它保留原来的删除由按目录的删除测试核对）；子工作项的外键（`issues.parent_id`）在 P3 之前没有行，豁免到 P3。第一个使用者是 I15 的接口版本（删除已归档的工作项）。
 
-仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、P2 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 3 节决策点 3 的个人主页一行（M4 的 P5）和工作项列表的访客规则（各列表的 Phase）；第 4 节的 `archive_in`（M4 的 P6）的说明、删除断言的限时轮询（M4 的 P9）和 `expectIssueDeleted` 中子工作项的豁免（M4 的 P3）；第 1、5–9 节，按 M4 设计 13.1 的落点。
+仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、P2 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 3 节其余各项：P2 之后各 Phase 的操作在规则表、操作名、矩阵中的行（完整性测试和 `apitest.Main` 随之通过；每个后端的 Phase，到 M4 的 P9）、决策点 3 的个人主页一行（M4 的 P5）和工作项列表的访客规则（各列表的 Phase）；第 4 节的 `archive_in`（M4 的 P6）的说明、删除断言的限时轮询（M4 的 P9）和 `expectIssueDeleted` 中子工作项的豁免（M4 的 P3）；第 1、5–9 节，按 M4 设计 13.1 的落点。
 
 来源：[M4/P2 spec](../specs/P2-issue-access.md) 第 7 节。
 
