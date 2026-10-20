@@ -136,12 +136,14 @@ func (iw itemWrite) after(prepare func(t *testing.T, w issueWorld)) func(t *test
 	}
 }
 
-// wroteNothing checks that Web's work-item side still has iw's rows: a
-// write refused under its lock wrote none.
+// wroteNothing checks that Web's work-item side still has iw's rows, each
+// undeleted: a write refused under its lock wrote none and deleted none.
 func (w issueWorld) wroteNothing(t *testing.T, iw itemWrite) {
 	t.Helper()
-	if n := w.workItemRows(t, []uuid.UUID{w.web}, false); n != iw.rows {
-		t.Errorf("Web's work-item side has %d rows after the refused write; want %d, as before it", n, iw.rows)
+	web := []uuid.UUID{w.web}
+	if n, undeleted := w.workItemRows(t, web, false), w.workItemRows(t, web, true); n != iw.rows || undeleted != iw.rows {
+		t.Errorf("Web's work-item side has %d rows, %d undeleted, after the refused write; want %d, each undeleted, as before it", n,
+			undeleted, iw.rows)
 	}
 }
 
@@ -342,26 +344,29 @@ func TestRemovingTheDefaultAssigneeAndCreatingAWorkItemSerialize(t *testing.T) {
 }
 
 // The decision under the lock outlives the precheck (M4 design 3.5;
-// interleavings 4 and 5, the creation's branch and the change's): bob, a
-// member of Web, made secret, creates a work item, or changes alice's Fix,
-// walt's or his own, while alice's removal of him, or her demotion of him
-// to a guest, holds Web past its writes. His write passed the precheck,
-// which read him a member, and waits for Web's row; once hers commits, the
-// decision under the lock reads him removed, who no longer sees Web: 404
-// project.not_found, or issue.not_found for a change; or a guest of a
-// project that does not show its guests every work item, who finds no work
-// item another created, alice's Fix or walt's, their creators' ids before
-// his and after it, as one not there: 404 issue.not_found (3.4); and who
-// writes no work item, his own or a new one: 403 forbidden. His write
-// wrote nothing.
+// interleavings 4 and 5, the creation's branch and the change's, and the
+// deletion of a work item by its creator, whom AllowCreator lets: 3.4):
+// bob, a member of Web, made secret, creates a work item, changes alice's
+// Fix, walt's or his own, or deletes his own, while alice's removal of
+// him, or her demotion of him to a guest, holds Web past its writes. His
+// write passed the precheck, which read him a member, and waits for Web's
+// row; once hers commits, the decision under the lock reads him removed,
+// who no longer sees Web: 404 project.not_found, or issue.not_found for a
+// change or a deletion; or a guest of a project that does not show its
+// guests every work item, who finds no work item another created, alice's
+// Fix or walt's, their creators' ids before his and after it, as one not
+// there: 404 issue.not_found (3.4); and who writes no work item, his own
+// or a new one, nor deletes his own: 403 forbidden. His write wrote
+// nothing and deleted nothing.
 func TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused(t *testing.T) {
 	// guest is a guest's answer to each write: issue.not_found for alice's
 	// Fix and walt's, forbidden for the others.
 	guest := map[string]cell{"created": cellForbidden, "changed": cellIssueNotFound, "changed his own": cellForbidden,
-		"changed walt's": cellIssueNotFound}
+		"changed walt's": cellIssueNotFound, "deleted his own": cellForbidden}
 	for _, iw := range append(slices.Clone(itemWrites),
 		itemWrite{"changed his own", bobsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"},
-		itemWrite{"changed walt's", waltsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"}) {
+		itemWrite{"changed walt's", waltsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"},
+		itemWrite{"deleted his own", bobsWorkItem, 3, deletesIssue, http.StatusNoContent, "issue.not_found"}) {
 		for _, tt := range []struct {
 			name    string
 			change  racingWrite
