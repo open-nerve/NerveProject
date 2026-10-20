@@ -96,9 +96,10 @@ func displayNames(t *testing.T, w issueWorld, ids ...uuid.UUID) []string {
 
 // getIssue as bootstrap wires it answers the work item as stored, every
 // field (M4 design 5.2): Web's second work item, under the first and
-// archived (in the database: no operation of P1b archives a work item),
-// moved into Done by bob after alice made it and changed by him again
-// after that, so that each field that may be null has a value of its own,
+// archived (in the database, a minute after its last change: archiveIssue
+// changes it last as it archives it), moved into Done by bob after alice
+// made it and changed by him again after that, from the 12th to the 19th
+// of October, so that each field that may be null has a value of its own,
 // each of its stamps is its own, and it was made, completed, changed last
 // and archived at four moments, in that order.
 func TestAWorkItemReadsAsStored(t *testing.T) {
@@ -106,7 +107,8 @@ func TestAWorkItemReadsAsStored(t *testing.T) {
 	first, second := w.newWorkItem(t), w.newWorkItem(t)
 	path := "/api/v0/issues/" + second.String()
 	w.send(t, "bob", http.MethodPatch, path, `{"state_id":"`+w.done.String()+`"}`, http.StatusOK)
-	w.send(t, "bob", http.MethodPatch, path, `{"priority":"low","label_ids":[]}`, http.StatusOK)
+	w.send(t, "bob", http.MethodPatch, path, `{"priority":"low","label_ids":[],"start_date":"2026-10-12","target_date":"2026-10-19"}`,
+		http.StatusOK)
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issues SET parent_id = $2, archived_at = updated_at + interval '1 minute' WHERE id = $1",
 		second, first); err != nil {
 		t.Fatal(err)
@@ -114,22 +116,26 @@ func TestAWorkItemReadsAsStored(t *testing.T) {
 	var shown storedIssue
 	decodeAnswer(t, w.send(t, "bob", http.MethodGet, path, "", http.StatusOK), &shown)
 	var stored storedIssue
-	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT id, workspace_id, project_id, sequence_id, name, state_id, priority, parent_id, sort_order,
-		completed_at, archived_at, created_by_id, updated_by_id, created_at, updated_at,
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT id, workspace_id, project_id, sequence_id, name, state_id, priority,
+		to_char(start_date, 'YYYY-MM-DD'), to_char(target_date, 'YYYY-MM-DD'), parent_id, sort_order, completed_at, archived_at, created_by_id,
+		updated_by_id, created_at, updated_at,
 		ARRAY(SELECT assignee_id FROM issue_assignees WHERE issue_id = i.id AND deleted_at IS NULL ORDER BY assignee_id),
 		ARRAY(SELECT label_id FROM issue_labels WHERE issue_id = i.id AND deleted_at IS NULL ORDER BY label_id)
 		FROM issues i WHERE id = $1`, second).Scan(&stored.ID, &stored.WorkspaceID, &stored.ProjectID, &stored.SequenceID, &stored.Name,
-		&stored.StateID, &stored.Priority, &stored.ParentID, &stored.SortOrder, &stored.CompletedAt, &stored.ArchivedAt, &stored.CreatedByID,
-		&stored.UpdatedByID, &stored.CreatedAt, &stored.UpdatedAt, &stored.AssigneeIDs, &stored.LabelIDs); err != nil {
+		&stored.StateID, &stored.Priority, &stored.StartDate, &stored.TargetDate, &stored.ParentID, &stored.SortOrder, &stored.CompletedAt,
+		&stored.ArchivedAt, &stored.CreatedByID, &stored.UpdatedByID, &stored.CreatedAt, &stored.UpdatedAt, &stored.AssigneeIDs,
+		&stored.LabelIDs); err != nil {
 		t.Fatal(err)
 	}
 	shown.inUTC()
 	stored.inUTC()
-	if !reflect.DeepEqual(shown, stored) || stored.ParentID == nil || stored.CompletedAt == nil || stored.ArchivedAt == nil ||
-		*stored.UpdatedByID == *stored.CreatedByID || len(stored.LabelIDs) != 0 || !stored.CreatedAt.Before(*stored.CompletedAt) ||
-		!stored.CompletedAt.Before(stored.UpdatedAt) || !stored.UpdatedAt.Before(*stored.ArchivedAt) {
-		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, under the first, made, completed, changed last by bob and "+
-			"archived at four moments in that order, without labels", shown, stored)
+	if !reflect.DeepEqual(shown, stored) || stored.StartDate == nil || stored.TargetDate == nil || *stored.StartDate == *stored.TargetDate ||
+		stored.ParentID == nil || stored.CompletedAt == nil || stored.ArchivedAt == nil || *stored.UpdatedByID == *stored.CreatedByID ||
+		len(stored.LabelIDs) != 0 || !stored.CreatedAt.Before(*stored.CompletedAt) || !stored.CompletedAt.Before(stored.UpdatedAt) ||
+		!stored.UpdatedAt.Before(*stored.ArchivedAt) {
+		t.Errorf("getIssue answers %+v, dated %s; want the work item as stored, %+v, dated %s, from one day to another, under the first, "+
+			"made, completed, changed last by bob and archived at four moments in that order, without labels", shown, shown.dates(), stored,
+			stored.dates())
 	}
 }
 
@@ -143,6 +149,8 @@ type storedIssue struct {
 	Name        string      `json:"name"`
 	StateID     uuid.UUID   `json:"state_id"`
 	Priority    string      `json:"priority"`
+	StartDate   *string     `json:"start_date"`
+	TargetDate  *string     `json:"target_date"`
 	ParentID    *uuid.UUID  `json:"parent_id"`
 	SortOrder   float64     `json:"sort_order"`
 	CompletedAt *time.Time  `json:"completed_at"`
@@ -153,6 +161,18 @@ type storedIssue struct {
 	UpdatedAt   time.Time   `json:"updated_at"`
 	AssigneeIDs []uuid.UUID `json:"assignee_ids"`
 	LabelIDs    []uuid.UUID `json:"label_ids"`
+}
+
+// dates are the start and the target dates of s as datesOf writes them:
+// "<start> <target>", each YYYY-MM-DD, or none.
+func (s storedIssue) dates() string {
+	dates := []string{"none", "none"}
+	for n, d := range []*string{s.StartDate, s.TargetDate} {
+		if d != nil {
+			dates[n] = *d
+		}
+	}
+	return dates[0] + " " + dates[1]
 }
 
 // inUTC puts each moment of s in UTC, where an answer and the database

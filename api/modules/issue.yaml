@@ -14,29 +14,29 @@ paths:
       summary: Create a work item in a project
       description: >-
         For the project's admins and members; not in an archived project
-        (project.archived). The name, without the white space around it,
-        has 1–255 characters, without NUL, and is stored so; at most 100
-        assignees and 100 labels, each named once (validation_failed),
-        checked before the project is looked at. A project that does not
-        exist, is deleted, or that the caller does not see answers
-        project.not_found; one he sees but may not create work items in,
-        forbidden; both are answered before the project is locked, and with
-        the project locked the role is decided again. Then the state, when
-        it is given, is one of the project's, not its triage state; each
-        assignee is an active member of the project who is not its guest;
-        each label is one of the project's (validation_failed, every
-        problem at once). Left out, the state is the project's default, the
-        priority none, and the assignee the project's default assignee
-        while he is still an active member of it who is not its guest, else
-        no one. The work item takes the project's next number, never used
-        again, also after a deletion; it comes after its state's work items,
-        archived ones too: its sort order is their greatest plus 10000, or
-        65535 for the state's first; in a state of the completed group it is
-        completed at its creation. The caller and the assignees subscribe
-        to it; its activity says it was created, and assigned to each
-        assignee. Every row it writes is the caller's, at one moment. A
-        project with too many writes on its work items at once answers
-        server_busy, with Retry-After: try again then.
+        (project.archived). The name, without the white space around it, has
+        1–255 characters, without NUL, and is stored so; at most 100
+        assignees and 100 labels, each named once; the start date not after
+        the target date (validation_failed), checked before the project is
+        looked at. A project that does not exist, is deleted, or that the
+        caller does not see answers project.not_found; one he sees but may
+        not create work items in, forbidden; both are answered before the
+        project is locked, and with the project locked the role is decided
+        again. Then the state, when it is given, is one of the project's,
+        not its triage state; each assignee is an active member of the
+        project who is not its guest; each label is one of the project's
+        (validation_failed, every problem at once). Left out, the state is
+        the project's default, the priority none, and the assignee the
+        project's default assignee while he is still an active member of it
+        who is not its guest, else no one. The work item takes the project's
+        next number, never used again, also after a deletion; it comes after
+        its state's work items, archived ones too: its sort order is their
+        greatest plus 10000, or 65535 for the state's first; in a state of
+        the completed group it is completed at its creation. The caller and
+        the assignees subscribe to it; its activity says it was created, and
+        assigned to each assignee. Every row it writes is the caller's, at
+        one moment. A project with too many writes on its work items at once
+        answers server_busy, with Retry-After: try again then.
       security: [{bearer: []}]
       x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived, server_busy]
       requestBody:
@@ -62,11 +62,14 @@ paths:
       tags: [issue]
       summary: Read a work item
       description: >-
-        For the admins and members of its project, archived or not; an
-        archived work item is read as any other. A work item that does not
-        exist, is deleted, or whose project the caller does not see answers
-        issue.not_found; one he sees the project of but may not read,
-        forbidden.
+        For the admins, members and guests of its project, archived or not;
+        an archived work item is read as any other. A guest of a project
+        that does not show its guests every work item
+        (guest_view_all_features false) reads only the work items he
+        created. A work item that does not exist, is deleted, whose project
+        the caller does not see, or that he, such a guest, did not create,
+        answers issue.not_found; one he sees the project of but may not
+        read, forbidden.
       security: [{bearer: []}]
       x-problem-codes: [issue.not_found, forbidden]
       responses:
@@ -85,30 +88,35 @@ paths:
       description: >-
         For the admins and members of its project. The fields given change
         and the others stay; a list given is the work item's new list, empty
-        for none. The values follow createIssue's rules (validation_failed),
-        checked before the work item is looked at. A work item that does not
-        exist, is deleted, or whose project the caller does not see answers
-        issue.not_found; one whose project he sees but whose work items he
-        may not change, forbidden; both are answered before the project is
-        locked, and with the project locked the role is decided again. A
-        work item of an archived project cannot be changed
-        (project.archived). Then the state, when it changes, is one of the
-        project's, not its triage state; each account the work item is newly
-        assigned to is an active member of the project who is not its guest,
-        while one it keeps stays assigned whatever has become of him; each
-        label added is one of the project's (validation_failed, every
-        problem at once). A change that changes nothing writes nothing, and
-        the work item is answered as it is. Otherwise the work item is
-        changed last by the caller; moved into a state of the completed
-        group, it is completed at the change, and moved into another, not
-        completed; the accounts newly assigned subscribe to it; its
-        activity says what changed: the name, the priority, the state, and
-        each label and each assignee added and removed. Every row it writes
-        is the caller's, at one moment. A project with too many writes on
-        its work items at once answers server_busy, with Retry-After: try
-        again then.
+        for none. The values follow createIssue's rules, but for the order of
+        the dates (validation_failed), checked before the work item is looked
+        at. A work item that does not exist, is deleted, whose project the
+        caller does not see, or that he did not create as a guest who sees
+        only his own (getIssue) answers issue.not_found, whatever his role
+        may do; one whose project he sees but whose work items he may not
+        change, forbidden; both are answered before the project is locked,
+        and with the project locked the role is decided again. A work item of
+        an archived project cannot be changed (project.archived), nor then an
+        archived work item (issue.archived), even by a change that changes
+        nothing. Then the state, when it changes, is one of the project's,
+        not its triage state; each account the work item is newly assigned to
+        is an active member of the project who is not its guest, while one it
+        keeps stays assigned whatever has become of him; each label added is
+        one of the project's; the start date the work item then has is not
+        after its target date, each as given or, not given, as it is: at
+        start_date when the start date alone is given, else at target_date
+        (validation_failed, every problem at once). A change that changes
+        nothing writes nothing, and the work item is answered as it is.
+        Otherwise the work item is changed last by the caller; moved into a
+        state of the completed group, it is completed at the change, and
+        moved into another, not completed; the accounts newly assigned
+        subscribe to it; its activity says what changed: the name, the
+        priority, the state, the start and the target dates, and each label
+        and each assignee added and removed. Every row it writes is the
+        caller's, at one moment. A project with too many writes on its work
+        items at once answers server_busy, with Retry-After: try again then.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, server_busy]
+      x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, issue.archived, server_busy]
       requestBody:
         required: true
         content:
@@ -124,6 +132,130 @@ paths:
                 $ref: '#/components/schemas/IssueDetail'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteIssue
+      tags: [issue]
+      summary: Delete a work item
+      description: >-
+        For the admins of its project, and for the member of it who created
+        the work item, while he is an admin or a member of the project. A
+        work item that does not exist, is deleted, whose project the caller
+        does not see, or that he did not create as a guest who sees only
+        his own (getIssue) answers issue.not_found, whatever his role may
+        do; one whose project he sees but that he may not delete,
+        forbidden; both are answered before the project is locked, and with
+        the project locked the role is decided again. A work item of an
+        archived project cannot be deleted (project.archived); an archived
+        work item is deleted as any other. The work item, its assignees,
+        labels, subscribers and activity are deleted by the caller at one
+        moment; its number is not used again. A project with too many
+        writes on its work items at once answers server_busy, with
+        Retry-After: try again then.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden, project.archived, server_busy]
+      responses:
+        '204':
+          description: The work item is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    post:
+      operationId: archiveIssue
+      tags: [issue]
+      summary: Archive a work item
+      description: >-
+        For the admins and members of its project. A work item that does not
+        exist, is deleted, whose project the caller does not see, or that he
+        did not create as a guest who sees only his own (getIssue) answers
+        issue.not_found, whatever his role may do; one whose project he sees
+        but whose work items he may not archive, forbidden; both are
+        answered before the project is locked, and with the project locked
+        the role is decided again. A work item of an archived project
+        cannot be archived (project.archived). An archived work item is
+        answered as it is, and nothing is written. Only a work item in a
+        state of the completed or the cancelled group is archived
+        (issue.not_archivable). It is archived at the moment of the
+        request, and changed last by the caller then; its activity says it
+        was archived, by the caller then. A project with too many writes on
+        its work items at once answers server_busy, with Retry-After: try
+        again then.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden, project.archived, issue.not_archivable, server_busy]
+      responses:
+        '200':
+          description: The work item, archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/unarchive:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    post:
+      operationId: unarchiveIssue
+      tags: [issue]
+      summary: Unarchive a work item
+      description: >-
+        For the admins and members of its project, as archiveIssue. A work
+        item of an archived project cannot be unarchived
+        (project.archived). A work item that is not archived is answered as
+        it is, and nothing is written. Whatever its state, it is unarchived
+        at the moment of the request, and changed last by the caller then;
+        its activity says it was restored, by the caller then. A project
+        with too many writes on its work items at once answers server_busy,
+        with Retry-After: try again then.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden, project.archived, server_busy]
+      responses:
+        '200':
+          description: The work item, not archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/issues/{identifier}:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+      - $ref: '#/components/parameters/IssueIdentifier'
+    get:
+      operationId: getIssueByIdentifier
+      tags: [issue]
+      summary: Read a work item by its identifier
+      description: >-
+        For the workspace's active members, then as getIssue. The
+        identifier is the project's identifier, a hyphen and the work
+        item's number: WEB-12. The number is written in decimal with the
+        digits 0 to 9, without a sign or a leading zero, from 1 to
+        2147483647. The project's identifier is compared with those of the
+        workspace's undeleted projects in any case, i, ı, I and İ as one
+        letter; when more than one project's identifier matches it, the one
+        that is it upper-cased letter for letter (i and ı as I, İ as İ) is
+        taken, and when none is, none. A workspace that does not exist, is
+        deleted, or of which the caller is not an active member answers
+        workspace.not_found. An identifier that is not one, that names no
+        project of the workspace, or a number of no undeleted work item of
+        the project answers issue.not_found, as does a work item whose
+        project the caller does not see, or that he did not create as a
+        guest who sees only his own (getIssue): the same answer for each.
+        One whose project he sees but may not read answers forbidden. An
+        archived work item is read as any other.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, issue.not_found, forbidden]
+      responses:
+        '200':
+          description: The work item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
   securitySchemes:
@@ -131,6 +263,22 @@ components:
       type: http
       scheme: bearer
   parameters:
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: A workspace's slug, as in the web app's address.
+      schema:
+        type: string
+    IssueIdentifier:
+      name: identifier
+      in: path
+      required: true
+      description: >-
+        A work item's identifier: its project's identifier, in any case, a
+        hyphen and its number (IssueDetail.sequence_id), as WEB-12.
+      schema:
+        type: string
     ProjectID:
       name: project_id
       in: path
@@ -180,8 +328,8 @@ components:
       description: A work item of a project.
       type: object
       additionalProperties: false
-      required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, parent_id, sort_order, completed_at, archived_at,
-        assignee_ids, label_ids, created_by_id, updated_by_id, created_at, updated_at]
+      required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
+        completed_at, archived_at, assignee_ids, label_ids, created_by_id, updated_by_id, created_at, updated_at]
       properties:
         id:
           type: string
@@ -202,6 +350,14 @@ components:
           format: uuid
         priority:
           $ref: '#/components/schemas/IssuePriority'
+        start_date:
+          description: The day it starts; null for none.
+          type: [string, 'null']
+          format: date
+        target_date:
+          description: The day it is due, not before its start date; null for none.
+          type: [string, 'null']
+          format: date
         parent_id:
           description: The work item it is under, in the same project; null for none.
           type: [string, 'null']
@@ -274,6 +430,14 @@ components:
           items:
             type: string
             format: uuid
+        start_date:
+          description: The day it starts, as YYYY-MM-DD; left out for none.
+          type: string
+          format: date
+        target_date:
+          description: The day it is due, as YYYY-MM-DD, not before start_date; left out for none.
+          type: string
+          format: date
     IssueUpdate:
       description: Changes the fields it names; a field left out keeps its value.
       type: object
@@ -305,3 +469,15 @@ components:
           items:
             type: string
             format: uuid
+        start_date:
+          description: >-
+            The day it starts, as YYYY-MM-DD; null for none. Not after the
+            target date the work item then has.
+          type: [string, 'null']
+          format: date
+        target_date:
+          description: >-
+            The day it is due, as YYYY-MM-DD; null for none. Not before the
+            start date the work item then has.
+          type: [string, 'null']
+          format: date

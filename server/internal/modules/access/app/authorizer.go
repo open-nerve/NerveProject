@@ -27,7 +27,8 @@ func NewAuthorizer(roles WorkspaceRoles, projects ProjectAccess) *Authorizer {
 // row in the rule table is an error before anything is read. The facts are
 // the caller's membership of t's workspace and, when t names a project, the
 // project's: a project that is not there, or is another workspace's than
-// t's, is none, and a project-level rule sees nothing (M3 design 3.4).
+// t's, is none, and a project-level rule sees nothing (M3 design 3.4). The
+// caller is the creator when t names him (M4 design 3.4).
 func (a *Authorizer) Authorize(ctx context.Context, actor shared.Actor, action shared.Action, t shared.Target) (shared.Grant, error) {
 	rule, ok := domain.RuleFor(action)
 	if !ok {
@@ -37,14 +38,18 @@ func (a *Authorizer) Authorize(ctx context.Context, actor shared.Actor, action s
 	if err != nil {
 		return shared.Grant{}, fmt.Errorf("access: read the workspace role: %w", err)
 	}
-	facts := domain.Facts{Workspace: domain.Membership{Active: active, Role: role}}
+	facts := domain.Facts{
+		Workspace: domain.Membership{Active: active, Role: role},
+		Creator:   t.CreatorID == actor.UserID,
+	}
 	if t.ProjectID != (uuid.UUID{}) {
 		p, found, err := a.projects.ProjectFacts(ctx, t.ProjectID, actor.UserID)
 		if err != nil {
 			return shared.Grant{}, fmt.Errorf("access: read the project: %w", err)
 		}
 		if found && p.WorkspaceID == t.WorkspaceID {
-			facts.Project = &domain.Project{Public: p.Public, Member: domain.Membership{Active: p.Member, Role: p.Role}}
+			facts.Project = &domain.Project{Public: p.Public, Member: domain.Membership{Active: p.Member, Role: p.Role},
+				GuestViewAll: p.GuestViewAll}
 		}
 	}
 	return domain.Decide(rule, facts)

@@ -88,9 +88,17 @@ components:
         extra:
           type: object
           additionalProperties: true
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
         anything: {}
         settings:
           $ref: '#/components/schemas/Settings'
+        starts:
+          type: [string, 'null']
+          format: date
     Settings:
       type: object
       additionalProperties: false

@@ -1,0 +1,24 @@
+{
+  "description": "How getIssueByIdentifier finds a project by the identifier asked (M4 design 3.7): each case is a workspace's projects' identifiers, as they are stored, upper-cased; the project's identifier asked, as a path gives it; and the identifier of the project found, or null for none (404 issue.not_found). Identifiers compare folded: a-z as A-Z, çşğöü as ÇŞĞÖÜ, i, ı, I and İ as one letter. Of two or more that fold as the one asked does, the one equal to it in upper case letter for letter (Go's strings.ToUpper: i and ı are I, İ is İ) is found; when none is, none is found. The issue module's domain test reads this file.",
+  "cases": [
+    {"name": "as stored", "identifiers": ["WEB", "OPS"], "asked": "WEB", "want": "WEB"},
+    {"name": "in lower case", "identifiers": ["WEB", "OPS"], "asked": "web", "want": "WEB"},
+    {"name": "in mixed case", "identifiers": ["WEB", "OPS"], "asked": "wEb", "want": "WEB"},
+    {"name": "with digits", "identifiers": ["W3B"], "asked": "w3b", "want": "W3B"},
+    {"name": "Turkish letters in lower case", "identifiers": ["ÇŞĞÖÜ"], "asked": "çşğöü", "want": "ÇŞĞÖÜ"},
+    {"name": "İ stored, i asked", "identifiers": ["İŞ"], "asked": "iş", "want": "İŞ"},
+    {"name": "İ stored, ı asked", "identifiers": ["İŞ"], "asked": "ış", "want": "İŞ"},
+    {"name": "I stored, ı asked", "identifiers": ["IŞ"], "asked": "ış", "want": "IŞ"},
+    {"name": "I stored, İ asked", "identifiers": ["IŞ"], "asked": "İŞ", "want": "IŞ"},
+    {"name": "I and İ stored, i asked: I, its upper case", "identifiers": ["IŞ", "İŞ"], "asked": "iş", "want": "IŞ"},
+    {"name": "İ and I stored, i asked: I, whichever comes first", "identifiers": ["İŞ", "IŞ"], "asked": "iş", "want": "IŞ"},
+    {"name": "I and İ stored, ı asked: I, its upper case", "identifiers": ["IŞ", "İŞ"], "asked": "ış", "want": "IŞ"},
+    {"name": "I and İ stored, İ asked", "identifiers": ["IŞ", "İŞ"], "asked": "İş", "want": "İŞ"},
+    {"name": "I and İ stored, I asked", "identifiers": ["IŞ", "İŞ"], "asked": "IŞ", "want": "IŞ"},
+    {"name": "two that fold alike, neither the one asked in upper case", "identifiers": ["Iİ", "İI"], "asked": "ii", "want": null},
+    {"name": "two that fold alike, one the one asked in upper case", "identifiers": ["Iİ", "II"], "asked": "ii", "want": "II"},
+    {"name": "S is not Ş", "identifiers": ["IŞ"], "asked": "IS", "want": null},
+    {"name": "another project's identifier", "identifiers": ["WEB"], "asked": "WEBS", "want": null},
+    {"name": "no project", "identifiers": [], "asked": "WEB", "want": null}
+  ]
+}

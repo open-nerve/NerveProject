@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -16,15 +17,23 @@ func deletesAcme(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) f
 	return w.sending(e, newWorkspaceRoute(t, w.pool, tx), "alice", http.MethodDelete, "/api/v0/workspaces/acme", "")
 }
 
+// deletesIssue is name's deletion of Web's one work item (workItem), which
+// sends no body: as an itemWrite's write, it ignores the body it is given.
+func deletesIssue(name string, _ func(*testing.T, issueWorld) string) racingWrite {
+	return func(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) func() error {
+		return w.sending(e, newIssueRoute(t, w.pool, tx), name, http.MethodDelete, "/api/v0/issues/"+w.workItem(t).String(), "")
+	}
+}
+
 // fullBody is the world's fullIssue, as createsIssue takes a body.
 func fullBody(_ *testing.T, w issueWorld) string {
 	return w.fullIssue()
 }
 
-// deletedWith checks the deletion of the row id of table, the deleted
-// project's or workspace's: at a moment no earlier than since, with the
-// rows of Web's work-item side, n of them, each deleted and last written
-// at that moment, by alice, and not before it was made.
+// deletedWith checks the deletion of the row id of table, the deleted work
+// item's, project's or workspace's: at a moment no earlier than since,
+// with the rows of Web's work-item side, n of them, each deleted and last
+// written at that moment, by alice, and not before it was made.
 func (w issueWorld) deletedWith(t *testing.T, table string, id uuid.UUID, since time.Time, n int) {
 	t.Helper()
 	var at time.Time
@@ -94,4 +103,31 @@ func TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize(t *testing.T) 
 			})
 		}
 	}
+}
+
+// Deleting a work item and changing it serialize on Web's row (M4 design
+// 3.5, 3.6), in both orders. alice deletes her Fix (aWorkItem), whose
+// three rows are hers; bob renames it Mend. Deleted first, holding Web FOR
+// NO KEY UPDATE: the change, which passed its precheck on Fix as it was,
+// finds no Fix under its lock: 404 issue.not_found, and it wrote nothing;
+// the three rows are deleted. Changed first: the deletion waits for Web's
+// row, then deletes the work item and its rows, bob's activity among them,
+// four, by alice, at its one moment, no earlier than the change's commit:
+// it read its clock under the lock it took once the change had committed.
+func TestDeletingAWorkItemAndChangingItSerialize(t *testing.T) {
+	inBothOrders(t, aWorkItem, "deleted", deletesIssue("alice", nil), "changed", changesIssue("bob", named("Mend")), func(t *testing.T,
+		w issueWorld, deletedFirst bool, deleted, changed exchange) {
+		w.answered(t, deleted, http.StatusNoContent)
+		rows, said := 4, []string{"name: Fix → Mend"}
+		if deletedFirst {
+			w.refused(t, changed, http.StatusNotFound, "issue.not_found")
+			rows, said = 3, nil
+		} else {
+			w.answered(t, changed, http.StatusOK)
+		}
+		if got := w.activityBy(t, w.workItem(t), w.ids["bob"]); !slices.Equal(got, said) {
+			t.Errorf("bob's activity says %q, want %q", got, said)
+		}
+		w.deletedWith(t, "issues", w.workItem(t), changed.released, rows)
+	})
 }

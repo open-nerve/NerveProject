@@ -14,10 +14,21 @@ import (
 // violation is a bug: an internal error (500), not a domain error.
 func (s *Store) UpdateIssue(ctx context.Context, f app.IssueFields) error {
 	err := s.queries(ctx).UpdateIssue(ctx, gen.UpdateIssueParams{
-		ID: f.ID, Name: f.Name, StateID: f.StateID, Priority: string(f.Priority), CompletedAt: f.CompletedAt, By: f.By, At: f.At,
+		ID: f.ID, Name: f.Name, StateID: f.StateID, Priority: string(f.Priority), StartDate: timeOf(f.StartDate),
+		TargetDate: timeOf(f.TargetDate), CompletedAt: f.CompletedAt, By: f.By, At: f.At,
 	})
 	if err != nil {
 		return fmt.Errorf("update work item %s: %w", f.ID, err)
+	}
+	return nil
+}
+
+// SetArchivedAt writes the work item's archived_at, the moment or none,
+// and its last writer and moment, a (M4 design 3.8).
+func (s *Store) SetArchivedAt(ctx context.Context, a app.IssueArchival) error {
+	err := s.queries(ctx).SetArchivedAt(ctx, gen.SetArchivedAtParams{ID: a.ID, ArchivedAt: a.ArchivedAt, By: a.By, At: a.At})
+	if err != nil {
+		return fmt.Errorf("archive work item %s: %w", a.ID, err)
 	}
 	return nil
 }

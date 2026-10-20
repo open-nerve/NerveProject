@@ -7,7 +7,6 @@ package gen
 import (
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"uuid"
 )
 
@@ -21,8 +20,8 @@ type Issue struct {
 	DescriptionHtml     string
 	DescriptionStripped *string
 	Priority            string
-	StartDate           pgtype.Date
-	TargetDate          pgtype.Date
+	StartDate           *time.Time
+	TargetDate          *time.Time
 	SequenceID          int32
 	SortOrder           float64
 	CompletedAt         *time.Time

@@ -159,7 +159,7 @@ type matrixRow struct {
 	write   bool   // each cell on a copy of its own
 	config  func(*config.Config)
 	// columns are the row's columns: nil for the workspace level's
-	// (workspaceColumns), projectColumns for a row of the project level.
+	// (workspaceColumns), or a table of matrixTables, as projectColumns.
 	columns []caller
 	request func(c caller, s seeded) (method, path, body string)
 	cells   map[caller]cell
@@ -170,6 +170,9 @@ type matrixRow struct {
 	// refusal, when set, is the one error each 422 cell of the row holds, as
 	// "field code": the refusal the row names, not another.
 	refusal string
+	// prepare, when set, changes each cell's copy, at url, before its app
+	// starts: what the row's case needs that the prepared data lacks.
+	prepare func(t *testing.T, c caller, s seeded, url string)
 }
 
 func (r matrixRow) name() string {
@@ -213,7 +216,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows())
+		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -252,17 +255,17 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // wrong workspace lets either into acme. Through the project store, the
 // projects, project memberships, states and labels of matrixProjects,
 // matrixProjectMembers, matrixStates and matrixLabels; through the issue
-// store, each project's work item, matrixIssue (issueSeed); through the
-// project store, acme's archived project archived. Through both stores,
-// the removed member's removal; then, through the workspace store, the
-// invitations of matrixInvitations. Through the project store, the
-// memberships P5b's writes end (endings); through SQL, the membership
-// states no store makes alone (partingStates). Through the API, gone
-// deleted by its admin, which soft-deletes its memberships and its
-// project, with its states, labels and work item, with it; then the checks
-// that the rows the cells rest on are there (preconditions), the states,
-// the labels and the work items among them (seededStates, seededLabels,
-// seededIssues).
+// store, the work items of seededItems, once guestViewAll shows its guests
+// every one (issueSeed); through the project store, acme's archived project
+// archived. Through both stores, the removed member's removal; then,
+// through the workspace store, the invitations of matrixInvitations.
+// Through the project store, the memberships P5b's writes end (endings);
+// through SQL, the membership states no store makes alone (partingStates).
+// Through the API, gone deleted by its admin, which soft-deletes its
+// memberships and its project, with its states, labels and work item, with
+// it; then the checks that the rows the cells rest on are there
+// (preconditions), the states, the labels and the work items among them
+// (seededStates, seededLabels, seededIssues).
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.
@@ -371,7 +374,11 @@ func TestPermissionMatrix(t *testing.T) {
 					// Registered before the app's: cleanups run last first,
 					// so the slot is freed once the app is closed.
 					t.Cleanup(func() { <-apps })
-					base = startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), r.config), migrations.FS())
+					url := pgtest.NewDatabaseFrom(t, d.url)
+					if r.prepare != nil {
+						r.prepare(t, c, d.seeded.in(t), url)
+					}
+					base = startApp(t, d.config(t, url, r.config), migrations.FS())
 				}
 				method, path, body := r.request(c, d.seeded.in(t))
 				status, answer := call(t, contract, method, base+path, d.tokens[accountOf(c)], body)

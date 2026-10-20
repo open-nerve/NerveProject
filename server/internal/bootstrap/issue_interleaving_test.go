@@ -17,13 +17,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The interleavings of a work item's creation and of its change (M4 design
-// 3.5, 9.3), on issueWorld's real database: each write through its
-// module's route, as bootstrap wires it. The first write's transaction is
-// held open past its writes (heldTx); the second is sent once it is held,
-// and the gate opens once the second waits for Web's row of projects,
-// which each of the two takes FOR NO KEY UPDATE (M4 design 3.5, M3 design
-// 3.6). Every wait has a deadline.
+// The interleavings of a work item's writes (M4 design 3.5, 9.3), on
+// issueWorld's real database: each write through its module's route, as
+// bootstrap wires it. The first write's transaction is held open past its
+// writes (heldTx); the second is sent once it is held, and the gate opens
+// once the second waits for Web's row of projects, which each of the two
+// takes FOR NO KEY UPDATE (M4 design 3.5, M3 design 3.6). Every wait has a
+// deadline.
 
 // heldTx holds the one transaction its write runs open past its writes:
 // once fn has done them, before the commit, it waits at its gate. A second
@@ -104,11 +104,12 @@ func (w issueWorld) workItem(t *testing.T) uuid.UUID {
 }
 
 // itemWrite is a write on Web's work items that an interleaving runs as a
-// creation and as a change alike (M4 design 3.5: P1a's creation branch,
-// P1b's change branch): prepare writes what it needs first, nil for
-// nothing, leaving rows rows on Web's work-item side (workItemRows);
-// write is name's write with the body body gives; done is its answer, and
-// gone the code that refuses it once its project is gone to its caller.
+// creation, a change and a deletion alike (M4 design 3.5: P1a's creation
+// branch, P1b's change branch, P2's deletion by its creator): prepare
+// writes what it needs first, nil for nothing, leaving rows rows on Web's
+// work-item side (workItemRows); write is name's write, with the body body
+// gives when it sends one; done is its answer, and gone the code that
+// refuses it once its project is gone to its caller.
 type itemWrite struct {
 	name    string
 	prepare func(t *testing.T, w issueWorld)
@@ -136,12 +137,14 @@ func (iw itemWrite) after(prepare func(t *testing.T, w issueWorld)) func(t *test
 	}
 }
 
-// wroteNothing checks that Web's work-item side still has iw's rows: a
-// write refused under its lock wrote none.
+// wroteNothing checks that Web's work-item side still has iw's rows, each
+// undeleted: a write refused under its lock wrote none and deleted none.
 func (w issueWorld) wroteNothing(t *testing.T, iw itemWrite) {
 	t.Helper()
-	if n := w.workItemRows(t, []uuid.UUID{w.web}, false); n != iw.rows {
-		t.Errorf("Web's work-item side has %d rows after the refused write; want %d, as before it", n, iw.rows)
+	web := []uuid.UUID{w.web}
+	if n, undeleted := w.workItemRows(t, web, false), w.workItemRows(t, web, true); n != iw.rows || undeleted != iw.rows {
+		t.Errorf("Web's work-item side has %d rows, %d undeleted, after the refused write; want %d, each undeleted, as before it", n,
+			undeleted, iw.rows)
 	}
 }
 
@@ -342,25 +345,37 @@ func TestRemovingTheDefaultAssigneeAndCreatingAWorkItemSerialize(t *testing.T) {
 }
 
 // The decision under the lock outlives the precheck (M4 design 3.5;
-// interleavings 4 and 5, the creation's branch and the change's): bob, a
-// member of Web, made secret, creates a work item, or changes alice's
-// Fix, while alice's removal of him, or her demotion of him to a guest,
-// holds Web past its writes. His write passed the precheck, which read him
-// a member, and waits for Web's row; once hers commits, the decision under
-// the lock reads him removed, who no longer sees Web: 404
-// project.not_found, or issue.not_found for the change; or a guest, who
-// writes no work item: 403 forbidden. His write wrote nothing.
+// interleavings 4 and 5, the creation's branch and the change's, and the
+// deletion of a work item by its creator, whom AllowCreator lets: 3.4):
+// bob, a member of Web, made secret, creates a work item, changes alice's
+// Fix, walt's or his own, or deletes his own, while alice's removal of
+// him, or her demotion of him to a guest, holds Web past its writes. His
+// write passed the precheck, which read him a member, and waits for Web's
+// row; once hers commits, the decision under the lock reads him removed,
+// who no longer sees Web: 404 project.not_found, or issue.not_found for a
+// change or a deletion; or a guest of a project that does not show its
+// guests every work item, who finds no work item another created, alice's
+// Fix or walt's, their creators' ids before his and after it, as one not
+// there: 404 issue.not_found (3.4); and who writes no work item, his own
+// or a new one, nor deletes his own: 403 forbidden. His write wrote
+// nothing and deleted nothing.
 func TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused(t *testing.T) {
-	for _, iw := range itemWrites {
+	// guest is a guest's answer to each write: issue.not_found for alice's
+	// Fix and walt's, forbidden for the others.
+	guest := map[string]cell{"created": cellForbidden, "changed": cellIssueNotFound, "changed his own": cellForbidden,
+		"changed walt's": cellIssueNotFound, "deleted his own": cellForbidden}
+	for _, iw := range append(slices.Clone(itemWrites),
+		itemWrite{"changed his own", bobsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"},
+		itemWrite{"changed walt's", waltsWorkItem, 3, changesIssue, http.StatusOK, "issue.not_found"},
+		itemWrite{"deleted his own", bobsWorkItem, 3, deletesIssue, http.StatusNoContent, "issue.not_found"}) {
 		for _, tt := range []struct {
 			name    string
 			change  racingWrite
 			changed int
-			want    int
-			code    string // "": iw.gone
+			want    cell // a zero status: 404 iw.gone
 		}{
-			{"removed", removesBob, http.StatusNoContent, http.StatusNotFound, ""},
-			{"made a guest", demotesBob, http.StatusOK, http.StatusForbidden, "forbidden"},
+			{"removed", removesBob, http.StatusNoContent, cell{}},
+			{"made a guest", demotesBob, http.StatusOK, guest[iw.name]},
 		} {
 			t.Run(iw.name+", "+tt.name, func(t *testing.T) {
 				w := newIssueWorld(t)
@@ -369,7 +384,8 @@ func TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused(t *testing.T) {
 				var change, written exchange
 				w.serialize(t, tt.change, iw.write("bob", named("Mend")), &change, &written)
 				w.answered(t, change, tt.changed)
-				w.refused(t, written, tt.want, cmp.Or(tt.code, iw.gone))
+				want := cmp.Or(tt.want, cell{http.StatusNotFound, iw.gone})
+				w.refused(t, written, want.status, want.code)
 				w.wroteNothing(t, iw)
 			})
 		}

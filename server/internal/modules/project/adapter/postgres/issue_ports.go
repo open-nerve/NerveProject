@@ -68,6 +68,21 @@ func (s *Store) IssueLabels(ctx context.Context, projectID uuid.UUID, ids []uuid
 	return out, nil
 }
 
+// ProjectIdentifiers reads the workspace's undeleted projects, archived or
+// not, each with its identifier, in id order, without a lock (M4 design
+// 3.7).
+func (s *Store) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) ([]app.IssueProjectIdentifier, error) {
+	rows, err := s.queries(ctx).ProjectIdentifiers(ctx, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("read the identifiers of the projects of workspace %s: %w", workspaceID, err)
+	}
+	out := make([]app.IssueProjectIdentifier, len(rows))
+	for i, r := range rows {
+		out[i] = app.IssueProjectIdentifier{ID: r.ID, Identifier: r.Identifier}
+	}
+	return out, nil
+}
+
 // ActiveRoles reads the project roles of those of the accounts ids that
 // are active members of the project, by account (M4 design 6.5).
 func (s *Store) ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {

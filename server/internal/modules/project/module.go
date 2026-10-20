@@ -90,13 +90,15 @@ type ProjectMembershipCounts interface {
 	CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error)
 }
 
-// IssueProjects is what the issue module's writes ask of a project (M4
-// design 6.5): its gate (ProjectGate's Find and Lock), its work items'
-// numbers (Sequences), and its states', labels' and members' catalogs
-// (StateCatalog, LabelCatalog, ProjectMembers). Each reads, or locks, in
-// the transaction ctx carries; the catalogs are read under the project's
-// lock, which every write of a state, a label or a membership holds too,
-// so they stay as read until the write commits (M4 design 3.5).
+// IssueProjects is what the issue module asks of a project (M4 design
+// 6.5): its gate (ProjectGate's Find and Lock), its work items' numbers
+// (Sequences), and its states', labels' and members' catalogs
+// (StateCatalog, LabelCatalog, ProjectMembers), for its writes; and a
+// workspace's projects' identifiers (ProjectIdentifiers), for a read by
+// identifier. Each reads, or locks, in the transaction ctx carries; the
+// catalogs are read under the project's lock, which every write of a
+// state, a label or a membership holds too, so they stay as read until the
+// write commits (M4 design 3.5).
 type IssueProjects interface {
 	// ProjectWorkspace is the workspace of the undeleted project id,
 	// archived or not, read without a lock; found is false when there is
@@ -117,14 +119,19 @@ type IssueProjects interface {
 	// ActiveRoles reads the project roles of those of the accounts ids
 	// that are its active members, by account.
 	ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+	// ProjectIdentifiers reads the workspace's undeleted projects, archived
+	// or not, each with its identifier, in id order, without a lock.
+	ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) ([]IssueProjectIdentifier, error)
 }
 
-// IssueProject, IssueState and IssueLabel are the values IssueProjects
-// hands over: bootstrap converts them into issue's (M4 design 6.5).
+// IssueProject, IssueState, IssueLabel and IssueProjectIdentifier are the
+// values IssueProjects hands over: bootstrap converts them into issue's
+// (M4 design 6.5).
 type (
-	IssueProject = app.IssueProject
-	IssueState   = app.IssueState
-	IssueLabel   = app.IssueLabel
+	IssueProject           = app.IssueProject
+	IssueState             = app.IssueState
+	IssueLabel             = app.IssueLabel
+	IssueProjectIdentifier = app.IssueProjectIdentifier
 )
 
 // Provided are the adapters project offers the other modules. They depend

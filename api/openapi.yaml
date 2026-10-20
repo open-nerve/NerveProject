@@ -107,6 +107,12 @@ paths:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1projects~1{project_id}~1issues'
   /api/v0/issues/{issue_id}:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}'
+  /api/v0/issues/{issue_id}/archive:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1archive'
+  /api/v0/issues/{issue_id}/unarchive:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1unarchive'
+  /api/v0/workspaces/{slug}/issues/{identifier}:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1issues~1{identifier}'
   /api/v0/me/projects/{project_id}/preferences:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1me~1projects~1{project_id}~1preferences'
 components:

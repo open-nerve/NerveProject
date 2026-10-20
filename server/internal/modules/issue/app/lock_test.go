@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -49,6 +50,46 @@ func TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction(t *testi
 		line("InsertActivities", 1), line("GetIssue", id), line("Leave", web)})
 	if !slices.Equal(w.log.calls, want) {
 		t.Errorf("an update's calls:\n%q\nwant\n%q", w.log.calls, want)
+	}
+}
+
+// Each write P2 adds on a work item enters its project's write gate as an
+// update does (TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction):
+// after its precheck, outside any transaction, before its transaction
+// begins; and leaves it last, once its transaction has ended.
+func TestEachWriteOnAWorkItemEntersItsProjectsGate(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		action shared.Action
+		write  func(w *world, id uuid.UUID) error
+	}{
+		{"a deletion", domain.ActionDelete, func(w *world, id uuid.UUID) error {
+			return deleteOver(w).Execute(as(alice), id)
+		}},
+		{"an archiving", domain.ActionArchive, func(w *world, id uuid.UUID) error {
+			archive, _ := archiveOver(w)
+			_, err := archive.Execute(as(alice), id)
+			return err
+		}},
+		{"an unarchiving", domain.ActionArchive, func(w *world, id uuid.UUID) error {
+			w.issues.archivedAt = &earlier
+			_, unarchive := archiveOver(w)
+			_, err := unarchive.Execute(as(alice), id)
+			return err
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, w, id := newArchive()
+			gated(w, nil)
+			if err := tt.write(w, id); err != nil {
+				t.Fatal(err)
+			}
+			want := slices.Concat(lockedAs(tt.action, id)[:2], []string{line("Enter", web, "outside tx")}, lockedAs(tt.action, id)[2:])
+			if len(w.log.calls) < len(want) || !slices.Equal(w.log.calls[:len(want)], want) ||
+				slices.Index(w.log.calls, line("Leave", web)) != len(w.log.calls)-1 {
+				t.Errorf("calls:\n%q\nwant them to begin\n%q\nand end with Leave web alone", w.log.calls, want)
+			}
+		})
 	}
 }
 

@@ -16,12 +16,15 @@ const pattern = "POST /api/v0/things"
 
 // things is what bodyshapegen writes for a schema with every supported
 // construct: required and optional properties, a nullable object and
-// nullable scalars, nesting, an array of objects, an open map, formats.
+// nullable scalars, nesting, an array of objects and one of strings, a
+// map, formats; and what takes any value: a schema without a type, an
+// open object, an array without an item schema.
 func things() *Table {
 	return &Table{
 		Nodes: []Node{
 			/* 0 */ {Types: Object, Extra: Closed, Items: Open, Required: []string{"name", "nested"},
-				Props: map[string]int{"count": 2, "id": 4, "labels": 10, "maybe": 5, "name": 1, "nested": 6, "note": 11, "tags": 8, "when": 3}},
+				Props: map[string]int{"anything": 13, "count": 2, "free": 14, "id": 4, "ids": 15, "labels": 10, "list": 17, "maybe": 5, "name": 1,
+					"nested": 6, "note": 11, "on": 12, "tags": 8, "when": 3}},
 			/* 1 */ {Types: String, Extra: Open, Items: Open},
 			/* 2 */ {Types: Integer, Extra: Open, Items: Open},
 			/* 3 */ {Types: String, Format: FormatTime, Extra: Open, Items: Open},
@@ -33,6 +36,12 @@ func things() *Table {
 			/* 9 */ {Types: Object, Extra: Closed, Items: Open, Props: map[string]int{"name": 1}, Required: []string{"name"}},
 			/* 10 */ {Types: Object, Extra: 1, Items: Open, Props: map[string]int{}},
 			/* 11 */ {Types: Number, Extra: Open, Items: Open},
+			/* 12 */ {Types: String | Null, Format: FormatDate, Extra: Open, Items: Open},
+			/* 13 */ {Types: Any, Extra: Open, Items: Open},
+			/* 14 */ {Types: Object, Extra: Open, Items: Open, Props: map[string]int{}},
+			/* 15 */ {Types: Array, Extra: Open, Items: 16},
+			/* 16 */ {Types: String, Format: FormatUUID, Extra: Open, Items: Open},
+			/* 17 */ {Types: Array, Extra: Open, Items: Open},
 		},
 		Roots: map[string]int{pattern: 0},
 	}
@@ -49,13 +58,22 @@ func fields(errs []FieldError) string {
 }
 
 func TestCheck(t *testing.T) {
+	const id = `"0199a2b4-7c3e-7d2a-9f10-2b3c4d5e6f70"`
+	ids := func(wrong ...int) string {
+		items := slices.Repeat([]string{id}, 12)
+		for _, i := range wrong {
+			items[i] = `"x"`
+		}
+		return `{"name":"a","nested":{"a":"y"},"ids":[` + strings.Join(items, ",") + `]}`
+	}
 	tests := []struct {
 		name string
 		body string
 		want []FieldError
 	}{
 		{"valid", `{"name":"a","count":3,"when":"2026-09-25T10:00:00Z","id":"0199a2b4-7c3e-7d2a-9f10-2b3c4d5e6f70",` +
-			`"maybe":{"a":"x"},"nested":{"a":"y","b":2},"tags":[{"name":"t"}],"labels":{"k":"v"},"note":1.5}`, nil},
+			`"maybe":{"a":"x"},"nested":{"a":"y","b":2},"tags":[{"name":"t"}],"labels":{"k":"v"},"note":1.5,"on":"2026-10-19",` +
+			`"ids":[` + id + `],"anything":{"a":[1.5e300,"x"]},"free":{"k":-7},"list":[1e-400,true]}`, nil},
 		{"only the required properties", `{"name":"a","nested":{"a":"y"}}`, nil},
 		{"unknown top-level property", `{"name":"a","nested":{"a":"y"},"extra":1}`,
 			[]FieldError{{"extra", "not_allowed"}}},
@@ -88,6 +106,21 @@ func TestCheck(t *testing.T) {
 		{"date-time with an escaped Z", `{"name":"a","nested":{"a":"y"},"when":"2026-09-25T10:00:00\u005a"}`, nil},
 		{"wrong uuid", `{"name":"a","nested":{"a":"y"},"id":"xyz"}`,
 			[]FieldError{{"id", "invalid_format"}}},
+		{"null for a nullable date", `{"name":"a","nested":{"a":"y"},"on":null}`, nil},
+		{"a day the month has not", `{"name":"a","nested":{"a":"y"},"on":"2026-02-30"}`,
+			[]FieldError{{"on", "invalid_format"}}},
+		{"a date-time is not a date", `{"name":"a","nested":{"a":"y"},"on":"2026-10-19T00:00:00Z"}`,
+			[]FieldError{{"on", "invalid_format"}}},
+		{"a wrong item of an array of strings", ids(1), []FieldError{{"ids[1]", "invalid_format"}}},
+		{"indexes in the order of their numbers", ids(10, 2), []FieldError{{"ids[2]", "invalid_format"}, {"ids[10]", "invalid_format"}}},
+		{"a number no float64 holds where any value goes", `{"name":"a","nested":{"a":"y"},"anything":1e400}`,
+			[]FieldError{{"anything", "invalid_format"}}},
+		{"deep in a value of any type", `{"name":"a","nested":{"a":"y"},"anything":{"a":[1,{"b":-1e400}]}}`,
+			[]FieldError{{"anything.a[1].b", "invalid_format"}}},
+		{"in an undeclared member of an open object", `{"name":"a","nested":{"a":"y"},"free":{"j":1,"k":1e400}}`,
+			[]FieldError{{"free.k", "invalid_format"}}},
+		{"in an item of an array without an item schema", `{"name":"a","nested":{"a":"y"},"list":[1,"x",[1e400]]}`,
+			[]FieldError{{"list[2][0]", "invalid_format"}}},
 		{"the body is not an object", `["name"]`, []FieldError{{"", "invalid_format"}}},
 		{"a space before the body", " " + `{"name":"a","nested":{"a":"y"}}`, nil},
 		{"a newline before the body", "\n" + `{"name":"a","nested":{"a":"y"}}`, nil},
@@ -227,6 +260,23 @@ func TestFormatsMatchTheDecoder(t *testing.T) {
 	// Both outcomes occur, so the comparison is not trivially one-sided.
 	if accepted == 0 || accepted == len(tests) {
 		t.Errorf("%d of %d values accepted, want some of each", accepted, len(tests))
+	}
+}
+
+// A date passes the check exactly when shared.ParseDate reads it, which
+// this package may not import: the samples of its test (shared's
+// TestParseDate), and an escape, which the decoder reads first.
+func TestFormatDate(t *testing.T) {
+	for raw, want := range map[string]bool{
+		`"2026-10-19"`: true, `"0001-01-01"`: true, `"9999-12-31"`: true, `"2024-02-29"`: true, `"2026-10-1\u0039"`: true,
+		`"2026-02-29"`: false, `"2026-04-31"`: false, `"2026-00-10"`: false, `"2026-13-01"`: false, `"0000-12-31"`: false,
+		`"2026-1-19"`: false, `"2026-10-9"`: false, `"26-10-19"`: false, `"2026/10/19"`: false, `"2026-10-19T00:00:00Z"`: false,
+		`"2026-10-19+08:00"`: false, `" 2026-10-19"`: false, `"2026-10-19\n"`: false, `"+2026-10-19"`: false, `"10000-01-01"`: false,
+		`"２０２６-10-19"`: false, `""`: false,
+	} {
+		if got := checkFormat(FormatDate, []byte(raw)) == nil; got != want {
+			t.Errorf("checkFormat(FormatDate, %s) = %v, want %v", raw, got, want)
+		}
 	}
 }
 

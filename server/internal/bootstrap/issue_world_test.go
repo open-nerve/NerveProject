@@ -95,11 +95,39 @@ func (w issueWorld) newWorkItem(t *testing.T) uuid.UUID {
 // the API, with body.
 func (w issueWorld) newWorkItemIn(t *testing.T, project uuid.UUID, body string) uuid.UUID {
 	t.Helper()
+	return w.newWorkItemBy(t, "alice", project, body)
+}
+
+// newWorkItemBy is the id of a work item the account name creates in
+// project through the API, with body.
+func (w issueWorld) newWorkItemBy(t *testing.T, name string, project uuid.UUID, body string) uuid.UUID {
+	t.Helper()
 	var created struct {
 		ID uuid.UUID `json:"id"`
 	}
-	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
+	decodeAnswer(t, w.send(t, name, http.MethodPost, "/api/v0/projects/"+project.String()+"/issues", body, http.StatusCreated), &created)
 	return created.ID
+}
+
+// bobsWorkItem is aWorkItem made by bob, Web's member: three rows, his.
+func bobsWorkItem(t *testing.T, w issueWorld) {
+	w.newWorkItemBy(t, "bob", w.web, `{"name":"Fix"}`)
+}
+
+// waltsWorkItem is aWorkItem made by walt, registered after bob and so of
+// an id after his, once alice has made him a member of Web: three rows,
+// his.
+func waltsWorkItem(t *testing.T, w issueWorld) {
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
+		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":15}]}`, http.StatusCreated)
+	w.newWorkItemBy(t, "walt", w.web, `{"name":"Fix"}`)
+}
+
+// doneWorkItem is the id of a work item alice creates in Web's Done
+// through the API, completed at its creation.
+func (w issueWorld) doneWorkItem(t *testing.T) uuid.UUID {
+	t.Helper()
+	return w.newWorkItemIn(t, w.web, `{"name":"Fix","state_id":"`+w.done.String()+`"}`)
 }
 
 // fullIssue is the body of a work item in Todo, assigned to bob and

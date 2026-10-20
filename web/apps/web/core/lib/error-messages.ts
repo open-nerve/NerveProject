@@ -53,6 +53,8 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "project.label_name_taken": "errors.project_label_name_taken",
   "project.label_not_found": "errors.project_label_not_found",
   "issue.not_found": "errors.issue_not_found",
+  "issue.archived": "errors.issue_archived",
+  "issue.not_archivable": "errors.issue_not_archivable",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

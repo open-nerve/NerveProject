@@ -48,11 +48,18 @@ var projectColumns = []caller{callerProjectAdmin, callerProjectMember, callerPro
 // archivedColumns are the columns of the archived project's table (9.2).
 var archivedColumns = []caller{callerArchivedAdmin, callerArchivedNever, callerArchivedMember}
 
-// matrixAccounts are the accounts prepareMatrix registers: each workspace
-// column's, and each project column's that is none of those (M3 design
-// 9.2: eleven).
-var matrixAccounts = append(slices.Clone(workspaceColumns), callerProjectAdmin, callerProjectMember, callerMemberAndAdmin, callerGuestOnly,
-	callerBefore)
+// matrixAccounts are the accounts prepareMatrix registers, in this order:
+// the issue table's workspace admin who is only a guest of acme's public
+// project (M4 design 9.2), then each workspace column's, and each project
+// column's that is none of those (M3 design 9.2: eleven): twelve. He comes
+// before acme's admin, who made the work item that the issue table's two
+// columns on another's name (issueOf), and the guest after acme's admin:
+// an account's id grows as accounts register (uuid.NewV7), so that the
+// maker's id is after one caller's and before the other's, and a guest
+// rule that told another's work item by the ids' order, not by its maker,
+// fails one of the two.
+var matrixAccounts = slices.Concat([]caller{callerAdminGuest}, workspaceColumns, []caller{callerProjectAdmin, callerProjectMember,
+	callerMemberAndAdmin, callerGuestOnly, callerBefore})
 
 // accountOf is the account a column's cells call as: a project column that
 // is a workspace column's account under the project level's name is that
@@ -63,8 +70,12 @@ func accountOf(c caller) caller {
 		return callerProjectAdmin
 	case callerArchivedNever, callerSoleAdmin:
 		return callerNever
-	case callerProjectGuest:
+	case callerProjectGuest, callerGuestAll, callerGuestOwn, callerGuestOthers:
 		return callerGuest
+	case callerCreator:
+		return callerProjectMember
+	case callerAdminGuestOwn:
+		return callerAdminGuest
 	case callerAdminOnly:
 		return callerAdmin
 	case callerMemberPublic, callerMemberPrivate, callerArchivedMember:
@@ -74,13 +85,15 @@ func accountOf(c caller) caller {
 }
 
 // projectOf is the key of the project a project column's cells target:
-// acme's private project for the columns about it, its archived one for
-// the archived project's, gone's for the deleted workspace's, acme's public
-// one for every other; PA, PM, PG and PM+WA answer alike in both, WG- too
-// (9.2).
+// acme's private project for the columns about it, and for the guest who
+// sees every work item, which it shows its guests (guestViewAll); its
+// archived one for the archived project's, gone's for the deleted
+// workspace's, acme's public one for every other; PA, PM and PM+WA
+// answer alike in both, PG too but on another's work item, which only
+// the private one shows him (callerGuestAll), and WG- too (9.2).
 func projectOf(c caller) string {
 	switch c {
-	case callerMemberPrivate, callerBefore:
+	case callerMemberPrivate, callerBefore, callerGuestAll:
 		return "acme/private"
 	case callerArchivedAdmin, callerArchivedNever, callerArchivedMember:
 		return "acme/archived"
@@ -108,8 +121,8 @@ func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 			t.Errorf("the account %s is no column's", a)
 		}
 	}
-	if len(matrixAccounts) != 11 {
-		t.Errorf("%d accounts, want 9.2's 11", len(matrixAccounts))
+	if len(matrixAccounts) != 12 {
+		t.Errorf("%d accounts, want M3 9.2's 11 and M4 9.2's workspace admin who is a project guest", len(matrixAccounts))
 	}
 	// account names a registered account: PG's column, whose account is the
 	// workspace's guest, is none, and fails the test at once; an account is
@@ -140,6 +153,19 @@ func TestEachMatrixTableIsOfOneLevel(t *testing.T) {
 			t.Errorf("the table %q: of the project level %v, of the workspace level %v; want it of one", table, project, workspace)
 		}
 	}
+}
+
+// noProjectTable is what matrixViolations reports of a row of op whose
+// cells name param, a project or a row under one, from columns of no
+// project table (projectTables): one violation for each, in the order
+// given.
+func noProjectTable(op, param string, columns ...caller) []string {
+	var want []string
+	for _, c := range columns {
+		want = append(want, fmt.Sprintf("row %s, %s: %s from a column of no project table (projectTables): "+
+			"a project's row names its columns", op, c, param))
+	}
+	return want
 }
 
 // Each check of the project level's columns and of the not-target
@@ -228,20 +254,12 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		// columns are never asked.
 		{"a project operation in a workspace-level row", listed, []matrixRow{with(func(r *matrixRow) {
 			r.columns, r.cells = nil, every(cellOK)
-		}), checks}, func() []string {
-			var want []string
-			for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-				want = append(want, fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
-					"a project's row names its columns", c))
-			}
-			return want
-		}()},
+		}), checks}, noProjectTable("getProject", "{project_id}", callerAdmin, callerMember, callerGuest)},
 		// The only admin's table is a table a row may name, and no project
 		// table: a project's operation in it is the same gap.
 		{"a project operation in the only admin's row", listed, []matrixRow{with(func(r *matrixRow) {
 			r.columns, r.cells = soleAdminColumns, map[caller]cell{callerSoleAdmin: cellOK}
-		}), checks}, []string{fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
-			"a project's row names its columns", callerSoleAdmin)}},
+		}), checks}, noProjectTable("getProject", "{project_id}", callerSoleAdmin)},
 		{"a {slug} of another column's workspace beside a listed {identifier}", listed, []matrixRow{row, func() matrixRow {
 			r := checks
 			r.request = sameRequest(http.MethodGet, "/api/v0/workspaces/acme/project-identifiers/WEB", "")
@@ -302,11 +320,7 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		}
 		inWorkspaceRow := changes
 		inWorkspaceRow.columns, inWorkspaceRow.cells = nil, every(cellOK)
-		var noTable []string
-		for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-			noTable = append(noTable, fmt.Sprintf("row %s, %s: %s from a column of no project table (projectTables): "+
-				"a project's row names its columns", under.op.ID, c, param))
-		}
+		noTable := noProjectTable(under.op.ID, param, callerAdmin, callerMember, callerGuest)
 		elsewhere := func(id uuid.UUID) []string {
 			return []string{fmt.Sprintf("row %s, %s: %s %s is no %s seeded in its column's project acme/private", under.op.ID, callerMemberPrivate,
 				param, id, under.what)}

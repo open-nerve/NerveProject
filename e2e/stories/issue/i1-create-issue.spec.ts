@@ -18,9 +18,9 @@ import { expect, test } from "../../fixtures/test";
 
 // I1, creating a work item (M4 design 2, 3.7, 3.13): the API version, with P1a's assertions (the work item's rows,
 // its number, the default state and assignee, its assignees, labels and subscribers, the activity of its creation and
-// assignees, the refusals). The page version is P14's.
+// assignees, the refusals) and P2's (its dates). The page version is P14's.
 
-test("I1 (API): a member creates a work item in a state, of a priority, assigned to two members and labelled twice: numbered 1, first in its state, with its assignees and labels, the creator and the assignees its subscribers, its creation and each assignee in its activity, all at one moment; without a state or assignees, the next is in the default state and assigned to the project's default assignee while he is its member, the one after to no one once he has left; one in a cancelled state is not completed; an account or a label named twice and a priority in another case are refused at once (422), and so are a state, a label the project lacks and a guest assigned (422); a guest creates none (403), nor does anyone in an archived project (409)", async ({
+test("I1 (API): a member creates a work item in a state, of a priority, assigned to two members, labelled twice, from a start date to a target date: numbered 1, first in its state, with its assignees, labels and dates, the creator and the assignees its subscribers, its creation and each assignee in its activity, all at one moment; without a state or assignees, the next is in the default state and assigned to the project's default assignee while he is its member, the one after to no one once he has left; one in a cancelled state is not completed; an account or a label named twice, a priority in another case and a start date after the target date are refused at once (422), and so are a state, a label the project lacks and a guest assigned (422); a guest creates none (403), nor does anyone in an archived project (409)", async ({
   api,
   db,
 }, testInfo) => {
@@ -48,8 +48,8 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     throw new Error("Web's states hold no In Progress or no Cancelled");
   }
 
-  // ann creates Fix the login in In Progress, high, assigned to bob and the admin, labelled UI and Bug: the answer
-  // gives its accounts and labels in their ids' order.
+  // ann creates Fix the login in In Progress, high, assigned to bob and the admin, labelled UI and Bug, from the 12th
+  // to the 19th of October: the answer gives its accounts and labels in their ids' order.
   const assignees = [bob, admin].toSorted(byId);
   const first = await createIssue(api, ann.token, web.id, {
     name: "  Fix the login ",
@@ -57,12 +57,16 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     priority: "high",
     assignee_ids: [bob.id, admin.id],
     label_ids: [ui.id, bug.id],
+    start_date: "2026-10-12",
+    target_date: "2026-10-19",
   });
   expect(first).toMatchObject({
     project_id: web.id,
     sequence_id: 1,
     name: "Fix the login",
     state_id: inProgress,
+    start_date: "2026-10-12",
+    target_date: "2026-10-19",
     assignee_ids: assignees.map((a) => a.id),
     label_ids: [ui, bug].toSorted(byId).map((l) => l.id),
   });
@@ -71,6 +75,8 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     name: "Fix the login",
     state: "In Progress",
     priority: "high",
+    start_date: "2026-10-12",
+    target_date: "2026-10-19",
     sort_order: 65535,
     completed: false,
     by: ann.email,
@@ -89,6 +95,8 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     name: "Plan the release",
     state: "Backlog",
     priority: "none",
+    start_date: null,
+    target_date: null,
     sort_order: 65535,
     completed: false,
     by: bob.email,
@@ -105,6 +113,8 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     name: "Write the notes",
     state: "Backlog",
     priority: "none",
+    start_date: null,
+    target_date: null,
     sort_order: 75535,
     completed: false,
     by: bob.email,
@@ -121,6 +131,8 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     name: "Drop the beta",
     state: "Cancelled",
     priority: "none",
+    start_date: null,
+    target_date: null,
     sort_order: 65535,
     completed: false,
     by: bob.email,
@@ -130,9 +142,9 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
     activity: createdFor(),
   });
 
-  // An account and a label named twice and a priority in another case (the contract's values are lower case) are
-  // refused, the three at once; so are a state and a label Web does not have and gus, Web's guest, as an assignee:
-  // every problem in one answer.
+  // An account and a label named twice, a priority in another case (the contract's values are lower case) and a start
+  // date after the target date are refused, the four at once; so are a state and a label Web does not have and gus,
+  // Web's guest, as an assignee: every problem in one answer.
   expect(
     await issueCreated(api, bob.token, web.id, {
       name: "Fix",
@@ -140,6 +152,8 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
       priority: "High",
       assignee_ids: [bob.id, bob.id],
       label_ids: [bug.id, bug.id],
+      start_date: "2026-10-20",
+      target_date: "2026-10-19",
     })
   ).toEqual({
     status: 422,
@@ -148,6 +162,7 @@ test("I1 (API): a member creates a work item in a state, of a priority, assigned
       { field: "priority", code: "invalid_format" },
       { field: "assignee_ids[1]", code: "duplicate" },
       { field: "label_ids[1]", code: "duplicate" },
+      { field: "target_date", code: "not_allowed" },
     ],
   });
   expect(

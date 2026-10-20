@@ -2,8 +2,8 @@ import { expect } from "@playwright/test";
 
 import type { Database } from "../db";
 
-// The tables a deletion writes, read from the database's catalog (M3 design 3.6; M4 design 3.6), so that a table a
-// later phase adds is read too.
+// The tables a deletion writes and the foreign keys under them, read from the database's catalog (M3 design 3.6; M4
+// design 3.6), so that a table or a key a later phase adds is read too.
 
 /**
  * The tables under parent: each table whose foreign key names parent. Every table with a column named column is one
@@ -35,4 +35,39 @@ export function projectTables(db: Database): Promise<string[]> {
 /** The tables under workspaces, whose rows a workspace's deletion writes: W2, W3 (expectWorkspaceDeleted), W11. */
 export function workspaceTables(db: Database): Promise<string[]> {
   return tablesUnder(db, "workspaces", "workspace_id");
+}
+
+/** A foreign key of one column: the table that holds it, the column, and the table it names. */
+interface ForeignKey {
+  child: string;
+  column: string;
+  parent: string;
+}
+
+/**
+ * The foreign keys below table, the catalog's graph walked down from it: each key that names table, then each that
+ * names a table holding one of those, and so on, in the order the walk reaches them, each table walked once (a key of
+ * a table to itself, as issues.parent_id, among them). Each is a key of one column, which names its row's parent; a
+ * key of more columns fails here, named, for its rows would be found another way.
+ */
+export async function keysBelow(db: Database, table: string): Promise<ForeignKey[]> {
+  const all = await db.query<ForeignKey & { columns: number }>(
+    `SELECT c.conrelid::regclass::text AS child, a.attname::text AS column, c.confrelid::regclass::text AS parent,
+            cardinality(c.conkey) AS columns
+       FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+      WHERE c.contype = 'f'`
+  );
+  // tables grows as the loop goes, each table once.
+  const tables = [table];
+  const keys: ForeignKey[] = [];
+  for (let i = 0; i < tables.length; i++) {
+    for (const { columns, ...key } of all.filter((k) => k.parent === tables[i])) {
+      expect(columns, `the columns of ${key.child}.${key.column}, a key to ${key.parent}`).toBe(1);
+      keys.push(key);
+      if (!tables.includes(key.child)) {
+        tables.push(key.child);
+      }
+    }
+  }
+  return keys;
 }

@@ -61,8 +61,10 @@ func TestDeletingAStateAWorkItemIsInIsRefused(t *testing.T) {
 // item, at the moment of the deletion and by its caller, as bootstrap
 // wires it (M4 design 3.6): in Web of the world, alice adds UI under Bug,
 // and Feature; bob creates a work item labelled Bug and Feature, and one
-// labelled UI. Once alice deletes Bug, the rows that put Bug and UI on
-// them are deleted at Bug's moment, by her; Feature's row is kept.
+// labelled UI; the first is archived. Once alice deletes Bug, the rows
+// that put Bug and UI on them are deleted at Bug's moment, by her, the
+// archived work item's too: deleting a label is a write on the project,
+// not on a work item. Feature's row is kept.
 func TestDeletingALabelTakesItOffTheWorkItems(t *testing.T) {
 	w := newIssueWorld(t)
 	web := "/api/v0/projects/" + w.web.String()
@@ -77,6 +79,11 @@ func TestDeletingALabelTakesItOffTheWorkItems(t *testing.T) {
 			quoted[i] = `"` + id.String() + `"`
 		}
 		w.send(t, "bob", http.MethodPost, web+"/issues", `{"name":"Fix","label_ids":[`+strings.Join(quoted, ",")+`]}`, http.StatusCreated)
+	}
+	tag, err := w.pool.Exec(pgtest.Soon(t), `UPDATE issues SET archived_at = now()
+		WHERE id = (SELECT issue_id FROM issue_labels WHERE label_id = $1)`, w.bug)
+	if err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("archiving the work item labelled Bug: %v, %d rows", err, tag.RowsAffected())
 	}
 	w.send(t, "alice", http.MethodDelete, "/api/v0/labels/"+w.bug.String(), "", http.StatusNoContent)
 	got := w.workItemLabels(t, w.bug, "alice")

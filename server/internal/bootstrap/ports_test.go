@@ -226,12 +226,13 @@ func (f *fakeProjectAccess) ProjectFacts(_ context.Context, projectID, userID uu
 // facts converted, found and the error as they came.
 func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 	web, acme, alice := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	fake := &fakeProjectAccess{facts: map[uuid.UUID]project.AccessFacts{web: {WorkspaceID: acme, Public: true, Member: true, Role: 15}}}
+	fake := &fakeProjectAccess{facts: map[uuid.UUID]project.AccessFacts{web: {WorkspaceID: acme, Public: true, Member: true, Role: 5,
+		GuestViewAll: true}}}
 	a := accessProjects{projects: fake}
 	ctx := context.Background()
 
 	f, found, err := a.ProjectFacts(ctx, web, alice)
-	if want := (access.ProjectFacts{WorkspaceID: acme, Public: true, Member: true, Role: 15}); err != nil || !found || f != want {
+	if want := (access.ProjectFacts{WorkspaceID: acme, Public: true, Member: true, Role: 5, GuestViewAll: true}); err != nil || !found || f != want {
 		t.Errorf("ProjectFacts(web) = %+v, %v, %v; want %+v, found", f, found, err, want)
 	}
 	gone := uuid.NewV7()
@@ -251,13 +252,14 @@ func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 // fakeIssueProjects answers project's IssueProjects of one project, web,
 // and records each question; err, when set, is every answer's failure.
 type fakeIssueProjects struct {
-	web    uuid.UUID
-	locked project.IssueProject
-	states []project.IssueState
-	labels []project.IssueLabel
-	roles  map[uuid.UUID]shared.Role
-	err    error
-	asked  []string
+	web         uuid.UUID
+	locked      project.IssueProject
+	states      []project.IssueState
+	labels      []project.IssueLabel
+	roles       map[uuid.UUID]shared.Role
+	identifiers []project.IssueProjectIdentifier
+	err         error
+	asked       []string
 }
 
 func (f *fakeIssueProjects) ProjectWorkspace(_ context.Context, id uuid.UUID) (uuid.UUID, bool, error) {

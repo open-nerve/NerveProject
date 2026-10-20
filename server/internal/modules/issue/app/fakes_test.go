@@ -91,24 +91,32 @@ func (c clockAt) Now() time.Time {
 }
 
 // fakeAuthorizer answers its n-th call answers[n], nil or past the end
-// for allowed, with an empty grant, which Locks does not read; it logs
-// every call.
+// for allowed, with grants[n], the Grant of what it read, which a refusal
+// of the role carries too (shared.Authorizer), empty past the end; it logs
+// every call, and keeps each call's target.
 type fakeAuthorizer struct {
 	log     *callLog
 	answers []error
+	grants  []shared.Grant
+	targets []shared.Target
 	calls   int
 }
 
 func (f *fakeAuthorizer) Authorize(ctx context.Context, actor shared.Actor, action shared.Action, t shared.Target) (shared.Grant, error) {
 	n := f.calls
 	f.calls++
+	f.targets = append(f.targets, t)
 	if err := f.log.add(ctx, "Authorize", actor.UserID, action, t.WorkspaceID, t.ProjectID); err != nil {
 		return shared.Grant{}, err
 	}
-	if n < len(f.answers) && f.answers[n] != nil {
-		return shared.Grant{}, f.answers[n]
+	var grant shared.Grant
+	if n < len(f.grants) {
+		grant = f.grants[n]
 	}
-	return shared.Grant{}, nil
+	if n < len(f.answers) && f.answers[n] != nil {
+		return grant, f.answers[n]
+	}
+	return grant, nil
 }
 
 // fakeProject is a project's side of the issue module's ports: its gate,
@@ -205,15 +213,21 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // is the greatest sort order of each state; lost, when set, loses the work
 // item once its activity is written, so that it is not there to read back.
 // changed is the last update's fields, nil before any: the work item's
-// last writer and moment.
+// last writer and moment; archival, when set, is the last archiving's or
+// unarchiving's, and its last writer and moment instead; archivedAt the
+// work item's archived_at, nil for none. deletions are the deletion's
+// calls' arguments, one a table, in order.
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
 	issue      *app.IssueRow
 	changed    *app.IssueFields
+	archival   *app.IssueArchival
+	archivedAt *time.Time
 	assignees  []uuid.UUID
 	labels     []uuid.UUID
 	activities []app.ActivityRow
+	deletions  []app.IssueDeletion
 	lost       bool
 }
 
@@ -238,7 +252,10 @@ func (f *fakeIssues) InsertIssue(ctx context.Context, r app.IssueRow) error {
 // writer is the account and the moment of the work item's last write: its
 // last update's, or its creation's.
 func (f *fakeIssues) writer() (uuid.UUID, time.Time) {
-	if f.changed != nil {
+	switch {
+	case f.archival != nil:
+		return f.archival.By, f.archival.At
+	case f.changed != nil:
 		return f.changed.By, f.changed.At
 	}
 	return f.issue.By, f.issue.At
@@ -252,6 +269,7 @@ func (f *fakeIssues) UpdateIssue(ctx context.Context, r app.IssueFields) error {
 		return fmt.Errorf("UpdateIssue: %+v is not the work item %+v", r, f.issue)
 	}
 	f.issue.Name, f.issue.StateID, f.issue.Priority, f.issue.CompletedAt = r.Name, r.StateID, r.Priority, r.CompletedAt
+	f.issue.StartDate, f.issue.TargetDate = r.StartDate, r.TargetDate
 	f.changed = &r
 	return nil
 }
@@ -329,6 +347,36 @@ func (f *fakeIssues) InsertActivities(ctx context.Context, rows []app.ActivityRo
 	return nil
 }
 
+// deleteRows logs a deletion of name's rows, d's work item's, and keeps d,
+// or answers the failure.
+func (f *fakeIssues) deleteRows(ctx context.Context, name string, d app.IssueDeletion) error {
+	if err := f.log.add(ctx, name, d.IssueID); err != nil {
+		return err
+	}
+	f.deletions = append(f.deletions, d)
+	return nil
+}
+
+func (f *fakeIssues) DeleteIssueRow(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueRow", d)
+}
+
+func (f *fakeIssues) DeleteIssueAssigneeRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueAssigneeRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueLabelRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueSubscriberRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueActivityRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueActivityRows", d)
+}
+
 func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool, error) {
 	if err := f.log.add(ctx, "GetIssue", id); err != nil || f.issue == nil || f.issue.ID != id {
 		return domain.Issue{}, false, err
@@ -336,7 +384,17 @@ func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, 
 	r := f.issue
 	by, at := f.writer()
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
-		StateID: r.StateID, Priority: r.Priority, SortOrder: r.SortOrder, CompletedAt: r.CompletedAt,
+		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, SortOrder: r.SortOrder,
+		CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
-			uuid.UUID.Compare), CreatedByID: &r.By, UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
+			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
+}
+
+// creatorOf is a stored work item's creator as a read answers it: none for
+// the zero id, as for a work item whose creator's account is purged (P9).
+func creatorOf(by uuid.UUID) *uuid.UUID {
+	if by == (uuid.UUID{}) {
+		return nil
+	}
+	return &by
 }

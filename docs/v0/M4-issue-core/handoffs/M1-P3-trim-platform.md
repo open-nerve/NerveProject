@@ -50,3 +50,11 @@ M4 合并时：
 仍未处理，状态保持 `open`：动态的字段名里没有 `WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`（M4 设计 3.13 的表）、评论没有 `access`（都在 M4 的 P4）；描述历史和按编号查找的地址（M4 的 P4、P2）；富文本筛选的显示层（M4 的 P10b，关键词守卫的终态在 P16）；收集箱的来源（以转交关闭：收尾写进 M7 的交接；M4 删除工作项动态中显示来源的一支在 P15，M4 设计 13.1）。
 
 来源：[M4/P1a spec](../specs/P1a-issues.md) 第 7 节。
+
+## 处理结果（M4/P2）
+
+- **地址，按编号查找的一半**（接口一侧完成）：按编号取工作项是 `GET /api/v0/workspaces/{slug}/issues/{identifier}`（`getIssueByIdentifier`，M4 设计 3.7、3.18），与其余工作项的接口同在 `/api/v0` 下；前端的 `/work-items/` 字面量随前端改接新的 service 删除（关键词守卫 `old-issue-urls`，M4 的 P10a 起）。
+
+仍未处理，状态保持 `open`：动态的字段名里没有 `WORKLOG`、`ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY`（M4 设计 3.13 的表）、评论没有 `access`（都在 M4 的 P4）；描述历史的地址（M4 的 P4）和前端的两处 `/work-items/` 字面量（两个 service 在 M4 的 P11 换掉，`browse` 的路由在 P14 改经按编号取）；富文本筛选的显示层（M4 的 P10b，关键词守卫的终态在 P16）；收集箱的来源（以转交关闭：收尾写进 M7 的交接；M4 删除工作项动态中显示来源的一支在 P15，M4 设计 13.1）。
+
+来源：[M4/P2 spec](../specs/P2-issue-access.md) 第 7 节。

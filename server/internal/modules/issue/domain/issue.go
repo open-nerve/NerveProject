@@ -34,12 +34,21 @@ var priorities = []Priority{PriorityUrgent, PriorityHigh, PriorityMedium, Priori
 type StateGroup string
 
 // The groups the work items' rules name: a work item in the completed
-// group is completed (M4 design 3.7); the triage group's state takes no
-// work item through the API.
+// group is completed (M4 design 3.7), and one in it or in the cancelled
+// group may be archived (3.8); the triage group's state takes no work item
+// through the API.
 const (
 	GroupCompleted StateGroup = "completed"
+	GroupCancelled StateGroup = "cancelled"
 	GroupTriage    StateGroup = "triage"
 )
+
+// Archivable reports whether a work item in a state of group may be
+// archived (M4 design 3.8): in the completed or the cancelled group, not
+// in any other.
+func Archivable(group StateGroup) bool {
+	return group == GroupCompleted || group == GroupCancelled
+}
 
 // Issue is a work item as stored and as the API shows it (M4 design 5.2),
 // with the accounts of its undeleted assignees' rows and the labels of its
@@ -53,6 +62,8 @@ type Issue struct {
 	Name        string
 	StateID     uuid.UUID
 	Priority    Priority
+	StartDate   *shared.Date
+	TargetDate  *shared.Date
 	ParentID    *uuid.UUID
 	SortOrder   float64
 	CompletedAt *time.Time
@@ -65,16 +76,27 @@ type Issue struct {
 	UpdatedAt   time.Time
 }
 
+// HiddenFrom reports whether the guest rule hides i from the account actor,
+// whose grant on i's project is ownOnly (M4 design 3.4): the project's
+// guest who sees only his own work items does not see one another created,
+// nor one whose creator is not known. It hides nothing from any other
+// caller.
+func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
+	return ownOnly && (i.CreatedByID == nil || *i.CreatedByID != actor)
+}
+
 // NewIssue is what the caller asks for when creating a work item (M4
 // design 5.2, IssueCreate without the fields of later phases): StateID nil
-// for the project's default state, Priority nil for none. A field given is
-// checked as given, a priority given empty too.
+// for the project's default state, Priority nil for none, a date nil for
+// none. A field given is checked as given, a priority given empty too.
 type NewIssue struct {
 	Name        string
 	StateID     *uuid.UUID
 	Priority    *Priority
 	AssigneeIDs []uuid.UUID
 	LabelIDs    []uuid.UUID
+	StartDate   *shared.Date
+	TargetDate  *shared.Date
 }
 
 // maxName is the length of issues.name, varchar(255), in characters.
@@ -99,9 +121,11 @@ const (
 // the name without its surrounding white space, of 1–255 characters and
 // without NUL; the priority one of the five, none when it is not given
 // (nil), so never nil once checked; at most MaxAssignees accounts and
-// MaxLabels labels, each named once. Every problem is reported at once, in
-// one 422 validation_failed; whether the state, each assignee and each
-// label may be is the use case's, under the project's lock.
+// MaxLabels labels, each named once; the start date not after the target
+// date, as the request gives both (at target_date). Every problem is
+// reported at once, in one 422 validation_failed; whether the state, each
+// assignee and each label may be is the use case's, under the project's
+// lock.
 func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	n.Name = strings.TrimSpace(n.Name)
 	if n.Priority == nil {
@@ -110,6 +134,7 @@ func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	found := []*shared.FieldError{checkName(n.Name), checkPriority(*n.Priority)}
 	found = append(found, checkIDs("assignee_ids", n.AssigneeIDs, MaxAssignees)...)
 	found = append(found, checkIDs("label_ids", n.LabelIDs, MaxLabels)...)
+	found = append(found, checkNewDates(n.StartDate, n.TargetDate))
 	if err := invalid(found...); err != nil {
 		return NewIssue{}, err
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/oapi-codegen/nullable"
 	"github.com/oapi-codegen/runtime"
 	externalRef0 "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // Defines values for IssuePriority.
@@ -60,8 +61,14 @@ type IssueCreate struct {
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
 
+	// StartDate The day it starts, as YYYY-MM-DD; left out for none.
+	StartDate *shared.Date `json:"start_date,omitempty"`
+
 	// StateID One of the project's states, not its triage state; left out for the project's default state.
 	StateID *uuid.UUID `json:"state_id,omitempty"`
+
+	// TargetDate The day it is due, as YYYY-MM-DD, not before start_date; left out for none.
+	TargetDate *shared.Date `json:"target_date,omitempty"`
 }
 
 // IssueDetail A work item of a project.
@@ -95,9 +102,15 @@ type IssueDetail struct {
 	SequenceID int `json:"sequence_id"`
 
 	// SortOrder Its place among its state's work items, the lowest first.
-	SortOrder float64   `json:"sort_order"`
-	StateID   uuid.UUID `json:"state_id"`
-	UpdatedAt time.Time `json:"updated_at"`
+	SortOrder float64 `json:"sort_order"`
+
+	// StartDate The day it starts; null for none.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
+	StateID   uuid.UUID                      `json:"state_id"`
+
+	// TargetDate The day it is due, not before its start date; null for none.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date"`
+	UpdatedAt  time.Time                      `json:"updated_at"`
 
 	// UpdatedByID The account that changed it last; null for none.
 	UpdatedByID nullable.Nullable[uuid.UUID] `json:"updated_by_id"`
@@ -121,15 +134,27 @@ type IssueUpdate struct {
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
 
+	// StartDate The day it starts, as YYYY-MM-DD; null for none. Not after the target date the work item then has.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date,omitempty"`
+
 	// StateID One of the project's states, not its triage state.
 	StateID *uuid.UUID `json:"state_id,omitempty"`
+
+	// TargetDate The day it is due, as YYYY-MM-DD; null for none. Not before the start date the work item then has.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date,omitempty"`
 }
 
 // IssueID defines model for IssueID.
 type IssueID = uuid.UUID
 
+// IssueIdentifier defines model for IssueIdentifier.
+type IssueIdentifier = string
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
+
+// Slug defines model for Slug.
+type Slug = string
 
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
@@ -142,15 +167,27 @@ type CreateIssueJSONRequestBody = IssueCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteIssue Delete a work item
+	// (DELETE /api/v0/issues/{issue_id})
+	DeleteIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// GetIssue Read a work item
 	// (GET /api/v0/issues/{issue_id})
 	GetIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// UpdateIssue Change a work item
 	// (PATCH /api/v0/issues/{issue_id})
 	UpdateIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ArchiveIssue Archive a work item
+	// (POST /api/v0/issues/{issue_id}/archive)
+	ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// UnarchiveIssue Unarchive a work item
+	// (POST /api/v0/issues/{issue_id}/unarchive)
+	UnarchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// CreateIssue Create a work item in a project
 	// (POST /api/v0/projects/{project_id}/issues)
 	CreateIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// GetIssueByIdentifier Read a work item by its identifier
+	// (GET /api/v0/workspaces/{slug}/issues/{identifier})
+	GetIssueByIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier IssueIdentifier)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -161,6 +198,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteIssue operation middleware
+func (siw *ServerInterfaceWrapper) DeleteIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetIssue operation middleware
 func (siw *ServerInterfaceWrapper) GetIssue(w http.ResponseWriter, r *http.Request) {
@@ -214,6 +277,58 @@ func (siw *ServerInterfaceWrapper) UpdateIssue(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// ArchiveIssue operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnarchiveIssue operation middleware
+func (siw *ServerInterfaceWrapper) UnarchiveIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnarchiveIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateIssue operation middleware
 func (siw *ServerInterfaceWrapper) CreateIssue(w http.ResponseWriter, r *http.Request) {
 
@@ -231,6 +346,41 @@ func (siw *ServerInterfaceWrapper) CreateIssue(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateIssue(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIssueByIdentifier operation middleware
+func (siw *ServerInterfaceWrapper) GetIssueByIdentifier(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "identifier" -------------
+	var identifier IssueIdentifier
+
+	err = runtime.BindStyledParameterWithOptions("simple", "identifier", r.PathValue("identifier"), &identifier, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "identifier", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIssueByIdentifier(w, r, slug, identifier)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -361,8 +511,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.CreateIssue)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.DeleteIssue)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.GetIssue)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.UpdateIssue)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/archive", wrapper.ArchiveIssue)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/unarchive", wrapper.UnarchiveIssue)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issues/{identifier}", wrapper.GetIssueByIdentifier)
 
 	return m
 }
@@ -375,6 +529,46 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type DeleteIssueResponseObject interface {
+	VisitDeleteIssueResponse(w http.ResponseWriter) error
+}
+
+type DeleteIssue204Response struct {
+}
+
+func (response DeleteIssue204Response) VisitDeleteIssueResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteIssuedefaultApplicationProblemPlusJSONResponse) VisitDeleteIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetIssueRequestObject struct {
@@ -470,6 +664,98 @@ func (response UpdateIssuedefaultApplicationProblemPlusJSONResponse) VisitUpdate
 	return err
 }
 
+type ArchiveIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type ArchiveIssueResponseObject interface {
+	VisitArchiveIssueResponse(w http.ResponseWriter) error
+}
+
+type ArchiveIssue200JSONResponse IssueDetail
+
+func (response ArchiveIssue200JSONResponse) VisitArchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ArchiveIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ArchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitArchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnarchiveIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type UnarchiveIssueResponseObject interface {
+	VisitUnarchiveIssueResponse(w http.ResponseWriter) error
+}
+
+type UnarchiveIssue200JSONResponse IssueDetail
+
+func (response UnarchiveIssue200JSONResponse) VisitUnarchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnarchiveIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UnarchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitUnarchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateIssueRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 	Body      *CreateIssueJSONRequestBody
@@ -517,17 +803,76 @@ func (response CreateIssuedefaultApplicationProblemPlusJSONResponse) VisitCreate
 	return err
 }
 
+type GetIssueByIdentifierRequestObject struct {
+	Slug       Slug            `json:"slug"`
+	Identifier IssueIdentifier `json:"identifier"`
+}
+
+type GetIssueByIdentifierResponseObject interface {
+	VisitGetIssueByIdentifierResponse(w http.ResponseWriter) error
+}
+
+type GetIssueByIdentifier200JSONResponse IssueDetail
+
+func (response GetIssueByIdentifier200JSONResponse) VisitGetIssueByIdentifierResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIssueByIdentifierdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetIssueByIdentifierdefaultApplicationProblemPlusJSONResponse) VisitGetIssueByIdentifierResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteIssue Delete a work item
+	// (DELETE /api/v0/issues/{issue_id})
+	DeleteIssue(ctx context.Context, request DeleteIssueRequestObject) (DeleteIssueResponseObject, error)
 	// GetIssue Read a work item
 	// (GET /api/v0/issues/{issue_id})
 	GetIssue(ctx context.Context, request GetIssueRequestObject) (GetIssueResponseObject, error)
 	// UpdateIssue Change a work item
 	// (PATCH /api/v0/issues/{issue_id})
 	UpdateIssue(ctx context.Context, request UpdateIssueRequestObject) (UpdateIssueResponseObject, error)
+	// ArchiveIssue Archive a work item
+	// (POST /api/v0/issues/{issue_id}/archive)
+	ArchiveIssue(ctx context.Context, request ArchiveIssueRequestObject) (ArchiveIssueResponseObject, error)
+	// UnarchiveIssue Unarchive a work item
+	// (POST /api/v0/issues/{issue_id}/unarchive)
+	UnarchiveIssue(ctx context.Context, request UnarchiveIssueRequestObject) (UnarchiveIssueResponseObject, error)
 	// CreateIssue Create a work item in a project
 	// (POST /api/v0/projects/{project_id}/issues)
 	CreateIssue(ctx context.Context, request CreateIssueRequestObject) (CreateIssueResponseObject, error)
+	// GetIssueByIdentifier Read a work item by its identifier
+	// (GET /api/v0/workspaces/{slug}/issues/{identifier})
+	GetIssueByIdentifier(ctx context.Context, request GetIssueByIdentifierRequestObject) (GetIssueByIdentifierResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -567,6 +912,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteIssue operation middleware
+func (sh *strictHandler) DeleteIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request DeleteIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteIssue(ctx, request.(DeleteIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteIssueResponseObject); ok {
+		if err := validResponse.VisitDeleteIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetIssue operation middleware
@@ -628,6 +999,58 @@ func (sh *strictHandler) UpdateIssue(w http.ResponseWriter, r *http.Request, iss
 	}
 }
 
+// ArchiveIssue operation middleware
+func (sh *strictHandler) ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request ArchiveIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ArchiveIssue(ctx, request.(ArchiveIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ArchiveIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ArchiveIssueResponseObject); ok {
+		if err := validResponse.VisitArchiveIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnarchiveIssue operation middleware
+func (sh *strictHandler) UnarchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request UnarchiveIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnarchiveIssue(ctx, request.(UnarchiveIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnarchiveIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnarchiveIssueResponseObject); ok {
+		if err := validResponse.VisitUnarchiveIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateIssue operation middleware
 func (sh *strictHandler) CreateIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
 	var request CreateIssueRequestObject
@@ -654,6 +1077,33 @@ func (sh *strictHandler) CreateIssue(w http.ResponseWriter, r *http.Request, pro
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateIssueResponseObject); ok {
 		if err := validResponse.VisitCreateIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIssueByIdentifier operation middleware
+func (sh *strictHandler) GetIssueByIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier IssueIdentifier) {
+	var request GetIssueByIdentifierRequestObject
+
+	request.Slug = slug
+	request.Identifier = identifier
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIssueByIdentifier(ctx, request.(GetIssueByIdentifierRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIssueByIdentifier")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIssueByIdentifierResponseObject); ok {
+		if err := validResponse.VisitGetIssueByIdentifierResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

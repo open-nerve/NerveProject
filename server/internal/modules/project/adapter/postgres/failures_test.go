@@ -44,11 +44,12 @@ func failed(err error) bool {
 // for a label free to take a parent; not "no such project" from the issue
 // module's lock, which createIssue would answer as project.not_found, nor
 // no states, labels or members, which it would answer as a state, labels
-// or assignees not allowed. Each read runs on a cancelled context
-// against a project alice is the only admin of, beside bob, a member, and
-// has display settings in, with its six default states and a label with a
-// child, bob's membership of another project ended, so that the right
-// answer is none of the zero values.
+// or assignees not allowed, nor no projects' identifiers, which
+// getIssueByIdentifier would answer as issue.not_found. Each read runs on
+// a cancelled context against a project alice is the only admin of,
+// beside bob, a member, and has display settings in, with its six default
+// states and a label with a child, bob's membership of another project
+// ended, so that the right answer is none of the zero values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -157,6 +158,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	}
 	if roles, err := s.ActiveRoles(cancelled, web, []uuid.UUID{alice, bob}); !failed(err) || roles != nil {
 		t.Errorf("ActiveRoles() = %v, %v; want context.Canceled, not no member", roles, err)
+	}
+	if list, err := s.ProjectIdentifiers(cancelled, acme); !failed(err) || list != nil {
+		t.Errorf("ProjectIdentifiers() = %+v, %v; want context.Canceled, not none", list, err)
 	}
 }
 

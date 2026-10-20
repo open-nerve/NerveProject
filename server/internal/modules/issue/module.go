@@ -1,8 +1,9 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
-// work items' tables and brings creating, reading and changing a work
-// item. For the project module's deletions (its IssueCascade port) it
-// soft-deletes a deleted project's rows of them, tells whether work items
-// are in a state, and takes deleted labels off them.
+// work items' tables and brings creating, reading, by id or by identifier,
+// changing, archiving, unarchiving and deleting a work item. For the
+// project module's deletions (its IssueCascade port) it soft-deletes a
+// deleted project's rows of them, tells whether work items are in a state,
+// and takes deleted labels off them.
 package issue
 
 import (
@@ -55,8 +56,9 @@ func Provide(pool *pgxpool.Pool) Provided {
 	return Provided{IssueCascade: app.NewCascade(store, store, deleteBatch)}
 }
 
-// ProjectPorts are what the module's writes ask of a project (M4 design
-// 6.5): its gate, its numbers, its states', labels' and members' catalogs.
+// ProjectPorts are what the module asks of a project (M4 design 6.5): its
+// gate, its numbers, its states', labels' and members' catalogs, for its
+// writes; a workspace's projects' identifiers, for a read by identifier.
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.ProjectGate
@@ -64,16 +66,18 @@ type ProjectPorts interface {
 	app.StateCatalog
 	app.LabelCatalog
 	app.ProjectMembers
+	app.ProjectIdentifiers
 }
 
-// LockedProject, StateRef and its StateGroup, and LabelRef are the values
-// ProjectPorts hand over: bootstrap converts project's into them (M4
-// design 6.5).
+// LockedProject, StateRef and its StateGroup, LabelRef and
+// ProjectIdentifier are the values ProjectPorts hand over: bootstrap
+// converts project's into them (M4 design 6.5).
 type (
-	LockedProject = app.LockedProject
-	StateRef      = app.StateRef
-	StateGroup    = domain.StateGroup
-	LabelRef      = app.LabelRef
+	LockedProject     = app.LockedProject
+	StateRef          = app.StateRef
+	StateGroup        = domain.StateGroup
+	LabelRef          = app.LabelRef
+	ProjectIdentifier = app.ProjectIdentifier
 )
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
@@ -88,6 +92,9 @@ type Deps struct {
 	Authorizer shared.Authorizer
 	// Projects are project's IssueProjects, converted (bootstrap/ports.go).
 	Projects ProjectPorts
+	// Workspaces is workspace's WorkspaceDirectory, converted
+	// (bootstrap/ports.go).
+	Workspaces app.WorkspaceDirectory
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
 	Profiles app.PublicProfiles
 }
@@ -102,15 +109,22 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
+	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
 			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
 			Profiles: d.Profiles, Clock: d.Clock,
 		}),
 		GetIssue: app.NewGetIssue(locks),
+		GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
+			Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store,
+		}),
 		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{
 			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock,
 		}),
+		DeleteIssue:    app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Rows: store, Clock: d.Clock}),
+		ArchiveIssue:   app.NewArchiveIssue(archive),
+		UnarchiveIssue: app.NewUnarchiveIssue(archive),
 	}}
 }
 

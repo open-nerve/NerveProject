@@ -10,25 +10,29 @@ import "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/b
 func BodyShapes() *bodyshape.Table {
 	return &bodyshape.Table{
 		Nodes: []bodyshape.Node{
-			/* 0 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"assignee_ids": 1, "label_ids": 3, "name": 5, "priority": 6, "state_id": 7}},
+			/* 0 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"assignee_ids": 1, "label_ids": 3, "name": 5, "priority": 6, "start_date": 7, "state_id": 8, "target_date": 9}},
 			/* 1 */ {Types: bodyshape.Array, Extra: bodyshape.Open, Items: 2},
 			/* 2 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 3 */ {Types: bodyshape.Array, Extra: bodyshape.Open, Items: 4},
 			/* 4 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 5 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 6 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 7 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 8 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"assignee_ids": 9, "label_ids": 11, "name": 13, "priority": 6, "state_id": 14}, Required: []string{"name"}},
-			/* 9 */ {Types: bodyshape.Array, Extra: bodyshape.Open, Items: 10},
-			/* 10 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 7 */ {Types: bodyshape.Null | bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 8 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 9 */ {Types: bodyshape.Null | bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 10 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"assignee_ids": 11, "label_ids": 13, "name": 15, "priority": 6, "start_date": 16, "state_id": 17, "target_date": 18}, Required: []string{"name"}},
 			/* 11 */ {Types: bodyshape.Array, Extra: bodyshape.Open, Items: 12},
 			/* 12 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 13 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 13 */ {Types: bodyshape.Array, Extra: bodyshape.Open, Items: 14},
 			/* 14 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 15 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 16 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 17 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 18 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
 		},
 		Roots: map[string]int{
 			"PATCH /api/v0/issues/{issue_id}":           0,
-			"POST /api/v0/projects/{project_id}/issues": 8,
+			"POST /api/v0/projects/{project_id}/issues": 10,
 		},
 	}
 }

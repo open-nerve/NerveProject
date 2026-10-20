@@ -805,7 +805,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a state
-         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states are deleted as any other's. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project's default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. Nor is a state a work item is in, an archived one too (project.state_in_use); it is checked before the default and the group. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states are deleted as any other's. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project's default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. Nor is a state a work item is in, an archived one too (project.state_in_use): unarchive the archived ones and move them all to another state first. It is checked before the default and the group. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.
          */
         delete: operations["deleteState"];
         options?: never;
@@ -931,7 +931,7 @@ export interface paths {
         put?: never;
         /**
          * Create a work item in a project
-         * @description For the project's admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project's, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project's (validation_failed, every problem at once). Left out, the state is the project's default, the priority none, and the assignee the project's default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project's next number, never used again, also after a deletion; it comes after its state's work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state's first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         * @description For the project's admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once; the start date not after the target date (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project's, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project's (validation_failed, every problem at once). Left out, the state is the project's default, the priority none, and the assignee the project's default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project's next number, never used again, also after a deletion; it comes after its state's work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state's first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
          */
         post: operations["createIssue"];
         delete?: never;
@@ -952,19 +952,94 @@ export interface paths {
         };
         /**
          * Read a work item
-         * @description For the admins and members of its project, archived or not; an archived work item is read as any other. A work item that does not exist, is deleted, or whose project the caller does not see answers issue.not_found; one he sees the project of but may not read, forbidden.
+         * @description For the admins, members and guests of its project, archived or not; an archived work item is read as any other. A guest of a project that does not show its guests every work item (guest_view_all_features false) reads only the work items he created. A work item that does not exist, is deleted, whose project the caller does not see, or that he, such a guest, did not create, answers issue.not_found; one he sees the project of but may not read, forbidden.
          */
         get: operations["getIssue"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a work item
+         * @description For the admins of its project, and for the member of it who created the work item, while he is an admin or a member of the project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but that he may not delete, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be deleted (project.archived); an archived work item is deleted as any other. The work item, its assignees, labels, subscribers and activity are deleted by the caller at one moment; its number is not used again. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        delete: operations["deleteIssue"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a work item
+         * @description For the admins and members of its project. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow createIssue's rules, but for the order of the dates (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project's, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project's; the start date the work item then has is not after its target date, each as given or, not given, as it is: at start_date when the start date alone is given, else at target_date (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the priority, the state, the start and the target dates, and each label and each assignee added and removed. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        patch: operations["updateIssue"];
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a work item
+         * @description For the admins and members of its project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not archive, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be archived (project.archived). An archived work item is answered as it is, and nothing is written. Only a work item in a state of the completed or the cancelled group is archived (issue.not_archivable). It is archived at the moment of the request, and changed last by the caller then; its activity says it was archived, by the caller then. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        post: operations["archiveIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unarchive a work item
+         * @description For the admins and members of its project, as archiveIssue. A work item of an archived project cannot be unarchived (project.archived). A work item that is not archived is answered as it is, and nothing is written. Whatever its state, it is unarchived at the moment of the request, and changed last by the caller then; its activity says it was restored, by the caller then. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        post: operations["unarchiveIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/issues/{identifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+                /** @description A work item's identifier: its project's identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12. */
+                identifier: components["parameters"]["IssueIdentifier"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a work item by its identifier
+         * @description For the workspace's active members, then as getIssue. The identifier is the project's identifier, a hyphen and the work item's number: WEB-12. The number is written in decimal with the digits 0 to 9, without a sign or a leading zero, from 1 to 2147483647. The project's identifier is compared with those of the workspace's undeleted projects in any case, i, ı, I and İ as one letter; when more than one project's identifier matches it, the one that is it upper-cased letter for letter (i and ı as I, İ as İ) is taken, and when none is, none. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. An identifier that is not one, that names no project of the workspace, or a number of no undeleted work item of the project answers issue.not_found, as does a work item whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue): the same answer for each. One whose project he sees but may not read answers forbidden. An archived work item is read as any other.
+         */
+        get: operations["getIssueByIdentifier"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * Change a work item
-         * @description For the admins and members of its project. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow createIssue's rules (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, or whose project the caller does not see answers issue.not_found; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived). Then the state, when it changes, is one of the project's, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project's (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the priority, the state, and each label and each assignee added and removed. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
-         */
-        patch: operations["updateIssue"];
+        patch?: never;
         trace?: never;
     };
     "/api/v0/me/projects/{project_id}/preferences": {
@@ -1482,7 +1557,7 @@ export interface components {
             issue_views_view: boolean;
             /** @description Whether the project shows intake. */
             intake_view: boolean;
-            /** @description A setting of the project for its guests, kept as set. */
+            /** @description Whether the project's guests see every work item of it. When false, a guest of the project sees only the work items he created, and every other answers him as one that does not exist (issue.not_found). */
             guest_view_all_features: boolean;
             /** @description A number of months, 0–12, set for automatic archiving and kept as set; 0 for none. */
             archive_in: number;
@@ -1715,6 +1790,16 @@ export interface components {
             assignee_ids?: string[];
             /** @description At most 100 of the project's labels, each named once. */
             label_ids?: string[];
+            /**
+             * Format: date
+             * @description The day it starts, as YYYY-MM-DD; left out for none.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it is due, as YYYY-MM-DD, not before start_date; left out for none.
+             */
+            target_date?: string;
         };
         /** @description A work item of a project. */
         IssueDetail: {
@@ -1730,6 +1815,16 @@ export interface components {
             /** Format: uuid */
             state_id: string;
             priority: components["schemas"]["IssuePriority"];
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before its start date; null for none.
+             */
+            target_date: string | null;
             /**
              * Format: uuid
              * @description The work item it is under, in the same project; null for none.
@@ -1780,6 +1875,16 @@ export interface components {
             assignee_ids?: string[];
             /** @description The work item's new labels, empty for none: at most 100 of the project's labels, each named once. */
             label_ids?: string[];
+            /**
+             * Format: date
+             * @description The day it starts, as YYYY-MM-DD; null for none. Not after the target date the work item then has.
+             */
+            start_date?: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, as YYYY-MM-DD; null for none. Not before the start date the work item then has.
+             */
+            target_date?: string | null;
         };
         /**
          * @description A tab of a project's header.
@@ -1838,6 +1943,8 @@ export interface components {
         LabelID: string;
         /** @description A work item's id (IssueDetail.id). */
         IssueID: string;
+        /** @description A work item's identifier: its project's identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12. */
+        IssueIdentifier: string;
     };
     requestBodies: never;
     headers: never;
@@ -1933,6 +2040,7 @@ export type ParameterProjectMemberId = components['parameters']['ProjectMemberID
 export type ParameterStateId = components['parameters']['StateID'];
 export type ParameterLabelId = components['parameters']['LabelID'];
 export type ParameterIssueId = components['parameters']['IssueID'];
+export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -3409,6 +3517,28 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    deleteIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     updateIssue: {
         parameters: {
             query?: never;
@@ -3426,6 +3556,80 @@ export interface operations {
         };
         responses: {
             /** @description The work item as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item, archived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unarchiveIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item, not archived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getIssueByIdentifier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+                /** @description A work item's identifier: its project's identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12. */
+                identifier: components["parameters"]["IssueIdentifier"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item. */
             200: {
                 headers: {
                     [name: string]: unknown;

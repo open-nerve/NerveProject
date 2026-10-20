@@ -66,9 +66,11 @@ var (
 	ErrStateLastInGroup = shared.NewError(shared.KindConflict, "project.state_last_in_group",
 		"The state is the only one of its group, and every group keeps one; add another to the group first.")
 	// ErrStateInUse answers the deletion of a state an undeleted work item,
-	// archived or not, is in (M4 design 3.6).
+	// archived or not, is in (M4 design 3.6): an archived one is moved out
+	// once unarchived (3.8).
 	ErrStateInUse = shared.NewError(shared.KindConflict, "project.state_in_use",
-		"Work items are in the state, archived ones too, so it cannot be deleted.")
+		"Work items are in the state, archived ones too, so it cannot be deleted; unarchive the archived ones and move them all to "+
+			"another state first.")
 	// ErrLabelNotFound answers a label that does not exist, is deleted, or
 	// whose project the caller does not see: the same 404 for all (M3 design
 	// 3.16, 5.3, 8.2).

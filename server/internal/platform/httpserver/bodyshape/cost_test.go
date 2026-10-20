@@ -61,9 +61,13 @@ func TestCheckListsAtMostSixteenProblems(t *testing.T) {
 // of problems times the name: the first four bodies make such code allocate
 // hundreds of megabytes, and gigabytes at the 1 MiB body limit. The next
 // three are from the final review of codex-fixes: whole paths make their
-// answers 16 copies of a path of about 1 MiB. The last repeats one problem,
-// which is reported once and not counted, so each repeat must cost little
-// (M2 design 3.11). Not parallel: TotalAlloc counts the whole process.
+// answers 16 copies of a path of about 1 MiB. The eighth repeats one
+// problem, which is reported once and not counted, so each repeat must cost
+// little (M2 design 3.11). The last three are M4's (M2 handoff 4): an array
+// of strings, a date, and a number in a value of any type. The number is
+// under 9,990 arrays: a check that read the value once a level would cost
+// the square of the depth. Not parallel: TotalAlloc counts the whole
+// process.
 func TestCheckCostsAboutTheBody(t *testing.T) {
 	// An open map of closed objects: a client's key is part of every path under it.
 	groups := &Table{
@@ -94,6 +98,12 @@ func TestCheckCostsAboutTheBody(t *testing.T) {
 	// One problem 200,000 times: the paths are cut short to the same text, so
 	// the problem is reported once, and each repeat is compared, not counted.
 	repeated := `{"` + angles[:300] + `":[` + strings.Repeat("\"\xff\",", 200000) + "\"\xff\"]}"
+	// 200,000 strings that are not uuids, of which 16 are reported and the
+	// rest cost little; a wrong date of 1 MiB, read once; a number no float64
+	// holds in a value of any type, under 9,990 arrays.
+	notUUIDs := `{"name":"a","nested":{"a":"y"},"ids":[` + strings.Repeat(`"x",`, 199999) + `"x"]}`
+	longDate := `{"name":"a","nested":{"a":"y"},"on":"` + strings.Repeat("9", 1<<20) + `"}`
+	deepNumber := `{"name":"a","nested":{"a":"y"},"anything":` + strings.Repeat("[", 9990) + "1e400" + strings.Repeat("]", 9990) + "}"
 	tests := []struct {
 		name  string
 		table *Table
@@ -117,6 +127,10 @@ func TestCheckCostsAboutTheBody(t *testing.T) {
 		// 6 times the body guards the repeats too: a path string for each would
 		// be about 50 times the body.
 		{"a string that is not UTF-8, 200,000 times under a name of 300 bytes", things(), repeated, 6 * len(repeated)},
+		// 64 MiB as for the first four, 6 times the body as for the next four.
+		{"200,000 strings that are not uuids", things(), notUUIDs, 64 << 20},
+		{"a wrong date of 1 MiB", things(), longDate, 6 * len(longDate)},
+		{"a number no float64 holds under 9,990 arrays of any type", things(), deepNumber, 64 << 20},
 	}
 	for _, tt := range tests {
 		runtime.GC()

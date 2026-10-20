@@ -113,3 +113,16 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 仍未处理，状态保持 `open`：第 3 节其余写工作项的用例（M4 的 P2–P4、P7）和自动归档推进固定时钟的测试（M4 的 P6）；第 1、2、4–13 节，按 M4 设计 13.1 的落点。
 
 来源：[M4/P1b spec](../specs/P1b-issue-update.md) 第 7 节。
+
+## 处理结果（M4/P2）
+
+- **第 3 节，`updated_at`**（P2 的写完成）：`deleteIssue`、`archiveIssue`、`unarchiveIssue` 和带日期的 `updateIssue` 把用例的时钟在项目 N 之下读到的一个时刻写进它写的每一行：删除写下工作项和它的负责人、标签、关注、动态的 `deleted_at`、`updated_at`，归档、恢复写下工作项的 `archived_at`（恢复为空）、`updated_at` 和那一行动态的 `created_at`、`updated_at`。用例的测试用固定的时钟（`clockAt`）断言交给仓储的时刻等于它，仓储的测试断言这些列等于交给它的时刻；组合的测试断言它落在请求之内（`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`、`TestArchivingAWorkItemStampsItsRows`）；端到端的 I15 断言归档、恢复的那一行动态是工作项的 `updated_at`、是写它的人的，删除的每一行同一时刻、同一个删除者（`expectIssueDeleted`）。
+- **第 4 节，路径的排序**（完成）：字段错误的路径按数组下标的数值排序（`bodyshape` 的 `comparePaths`，`tags[2]` 在 `tags[10]` 之前，一个全序）；单元测试 `TestComparePaths` 和 `Check` 的表测试（`ids[2]` 在 `ids[10]` 之前）；M2 设计 3.11 改写。
+- **第 4 节，数的范围**（完成）：不限类型的节点（`{}`、开放对象未声明的成员、没有 `items` 的数组的元素）里 float64 放不下的数在它的路径上报 `invalid_format`（`ambiguity.go` 的 `numbers`，一遍读完那个值）；`Check` 的表测试在这三种节点里各放一个 `1e400`；M2 设计 3.11 改写。
+- **第 4 节，第一个 `format: date` 的字段**（完成）：Go 类型是 `shared.Date`，五个模块的 `oapi-codegen.yaml` 都映射过去；`bodyshape` 登记 `FormatDate`（检查器照 `shared.ParseDate` 的规则读，平台不导入 `shared`），生成器认它；`issue` 的 HTTP 适配器的 `TestDatesPassTheBodyCheckAsTheyDecode` 核对检查器与生成的解码器对同一组写法结论相同。不合格的日期得到带路径的 400：`bodyshape` 的 `TestCheck`（日期写错的 `on`）和 `TestFormatDate`；`apitest` 为契约的每个日期字段生成一个不合格的请求体用例（`TestBodyCasesOfDates`），整程序测试 `TestBodiesThatBreakTheStructureAnswer400` 把它们发给 `createIssue`、`updateIssue`。
+- **第 4 节，结构检查的代价**（数组完成）：`TestCheckCostsAboutTheBody` 加上 M4 的三个请求体：200,000 个不是 uuid 的字符串的数组（每个元素一个格式问题）、1 MiB 的错误日期、不限类型的值里 9,990 层数组之下一个 float64 放不下的数；数组的请求体（M3 的 `hide_in_more_menu`、P1a 的 `assignee_ids` 一类）的代价由它守住。开放 map 和递归的请求体 schema：M4/P2 没有用到。
+- **第 4 节，map 型对象**：M4/P2 没有用到（契约里没有 `additionalProperties` 为 schema 的对象），`closedObject` 不改。
+
+仍未处理，状态保持 `open`：第 3 节其余写工作项的用例（M4 的 P3、P4、P7）和自动归档推进固定时钟的测试（M4 的 P6）；第 4 节的草稿发布（M4 的 P8）、map 型对象和递归的请求体 schema（第一个用到它们的 Phase，或 M4 的 review 写明没有用到）；第 1、2、5–13 节，按 M4 设计 13.1 的落点。
+
+来源：[M4/P2 spec](../specs/P2-issue-access.md) 第 7 节。

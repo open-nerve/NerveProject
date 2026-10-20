@@ -13,8 +13,8 @@ import (
 )
 
 const getIssue = `-- name: GetIssue :one
-SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.parent_id, i.sort_order,
-       i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.start_date, i.target_date,
+       i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
@@ -31,6 +31,8 @@ type GetIssueRow struct {
 	Name        string
 	StateID     uuid.UUID
 	Priority    string
+	StartDate   *time.Time
+	TargetDate  *time.Time
 	ParentID    *uuid.UUID
 	SortOrder   float64
 	CompletedAt *time.Time
@@ -57,6 +59,8 @@ func (q *Queries) GetIssue(ctx context.Context, id uuid.UUID) (GetIssueRow, erro
 		&i.Name,
 		&i.StateID,
 		&i.Priority,
+		&i.StartDate,
+		&i.TargetDate,
 		&i.ParentID,
 		&i.SortOrder,
 		&i.CompletedAt,
@@ -171,11 +175,11 @@ func (q *Queries) InsertAssignees(ctx context.Context, arg InsertAssigneesParams
 }
 
 const insertIssue = `-- name: InsertIssue :exec
-INSERT INTO issues (id, workspace_id, project_id, state_id, name, priority, sequence_id, sort_order, completed_at,
-                    created_by_id, updated_by_id, created_at, updated_at)
+INSERT INTO issues (id, workspace_id, project_id, state_id, name, priority, start_date, target_date, sequence_id, sort_order,
+                    completed_at, created_by_id, updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10::uuid, $10,
-        $11::timestamptz, $11)
+        $7, $8, $9, $10, $11,
+        $12::uuid, $12, $13::timestamptz, $13)
 `
 
 type InsertIssueParams struct {
@@ -185,6 +189,8 @@ type InsertIssueParams struct {
 	StateID     uuid.UUID
 	Name        string
 	Priority    string
+	StartDate   *time.Time
+	TargetDate  *time.Time
 	SequenceID  int32
 	SortOrder   float64
 	CompletedAt *time.Time
@@ -202,6 +208,8 @@ func (q *Queries) InsertIssue(ctx context.Context, arg InsertIssueParams) error 
 		arg.StateID,
 		arg.Name,
 		arg.Priority,
+		arg.StartDate,
+		arg.TargetDate,
 		arg.SequenceID,
 		arg.SortOrder,
 		arg.CompletedAt,
@@ -272,4 +280,24 @@ func (q *Queries) InsertSubscribers(ctx context.Context, arg InsertSubscribersPa
 		arg.At,
 	)
 	return err
+}
+
+const issueByNumber = `-- name: IssueByNumber :one
+SELECT id
+FROM issues
+WHERE project_id = $1 AND sequence_id = $2 AND deleted_at IS NULL
+`
+
+type IssueByNumberParams struct {
+	ProjectID  uuid.UUID
+	SequenceID int32
+}
+
+// The id of the project's undeleted work item, archived or not, of the number: getIssueByIdentifier's (M4 design 3.7),
+// read without a lock. A number is its project's once (issues_project_id_sequence_id_key), deleted work items' too.
+func (q *Queries) IssueByNumber(ctx context.Context, arg IssueByNumberParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, issueByNumber, arg.ProjectID, arg.SequenceID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }

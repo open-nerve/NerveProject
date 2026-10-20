@@ -8,23 +8,26 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import {
+  archivedRow,
   assigned,
   byId,
   changed,
   createdFor,
+  expectIssueArchival,
   expectIssueCreated,
   expectIssueUpdated,
 } from "../../fixtures/assert/issue";
 import { newAccount, shownNameOf } from "../../fixtures/auth";
-import { createIssue, issueUpdated, updateIssue, type IssueUpdate } from "../../fixtures/issues";
+import { createIssue, issueArchived, issueUpdated, updateIssue, type IssueUpdate } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
 import { expect, test } from "../../fixtures/test";
 
 // I2, changing a work item (M4 design 2, 3.7, 3.13): the API version, with P1b's assertions (its name, state,
-// priority, assignees and labels, each change's rows of its activity, completed_at, who changed it last and when). The
-// dates are P2's, the description P4's, the page version P14's.
+// priority, assignees and labels, each change's rows of its activity, completed_at, who changed it last and when) and
+// P2's (its dates and their rows, the dates held in order once merged, an archived work item not changed). The
+// description is P4's, the page version P14's.
 
-test("I2 (API): a member renames a work item; another makes it high and moves it to a completed state, which completes it; the first assigns it to another account instead of himself and labels it otherwise, the others kept, taking off rows the second wrote; its values sent as they are write nothing; an account and a label added again and a new label, the two labels out of their ids' order, are added in id order; a label, then an account, taken off alone each change it, the rows taken off before keeping their stamps; moving it back completes it no more; problems of the values are refused before any read, alike for a work item that is not there, and a state and a label the project lacks under the lock, each set at once (422), writing nothing; a work item sharing an account and a label with it is left as created: each change one row of its activity a field, a label or an account added or taken off, all its rows the changer's at its moment", async ({
+test("I2 (API): a member renames a work item; another makes it high and moves it to a completed state, which completes it; the first assigns it to another account instead of himself and labels it otherwise, the others kept, taking off rows the second wrote; its values sent as they are write nothing; an account and a label added again and a new label, the two labels out of their ids' order, are added in id order; a label, then an account, taken off alone each change it, the rows taken off before keeping their stamps; moving it back completes it no more; its dates are set, then a start date alone after the target date kept and a target date alone before the start date kept are refused (422), both moved past the target date it had are taken, and the target date is cleared; problems of the values are refused before any read, alike for a work item that is not there, and a state and a label the project lacks under the lock, each set at once (422), writing nothing; a work item sharing an account and a label with it is left as created; an archived work item is not changed (409): each change one row of its activity a field, a label or an account added or taken off, all its rows the changer's at its moment", async ({
   api,
   db,
 }, testInfo) => {
@@ -77,6 +80,8 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
     name: "Fix the sign-in",
     state: "Backlog",
     priority: "none",
+    start_date: null,
+    target_date: null,
     completed: false,
     by: bob.email,
     assignees: [ann.email, bob.email].toSorted(),
@@ -99,6 +104,8 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
     name: "Fix the sign-in",
     state: "Done",
     priority: "high",
+    start_date: null,
+    target_date: null,
     completed: true,
     by: ann.email,
     assignees: [ann.email, bob.email].toSorted(),
@@ -124,6 +131,8 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
     name: "Fix the sign-in",
     state: "Done",
     priority: "high",
+    start_date: null,
+    target_date: null,
     completed: true,
     by: bob.email,
     assignees: [admin.email, ann.email].toSorted(),
@@ -218,6 +227,59 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
   };
   await expectIssueUpdated(db, id, movedBack);
 
+  // ann gives it a start date and a target date, the 12th and the 19th of October: a row each, the start date's first.
+  await updateIssue(api, ann.token, id, { start_date: "2026-10-12", target_date: "2026-10-19" });
+  const dated = {
+    ...movedBack,
+    start_date: "2026-10-12",
+    target_date: "2026-10-19",
+    by: ann.email,
+    activity: [
+      ...movedBack.activity,
+      changed("start_date", "", "2026-10-12", "updated the start date to "),
+      changed("target_date", "", "2026-10-19", "updated the target date to"),
+    ],
+    wrote: 2,
+  };
+  await expectIssueUpdated(db, id, dated);
+  // The dates it then has are held in order, each given one merged with the one it keeps: a start date alone after the
+  // target date is refused at start_date, a target date alone before the start date at target_date, writing nothing;
+  // both moved past the target date it had, in order, are taken.
+  expect(await issueUpdated(api, bob.token, id, { start_date: "2026-10-20" })).toEqual({
+    status: 422,
+    code: "validation_failed",
+    errors: [{ field: "start_date", code: "not_allowed" }],
+  });
+  expect(await issueUpdated(api, bob.token, id, { target_date: "2026-10-11" })).toEqual({
+    status: 422,
+    code: "validation_failed",
+    errors: [{ field: "target_date", code: "not_allowed" }],
+  });
+  await expectIssueUpdated(db, id, dated);
+  await updateIssue(api, bob.token, id, { start_date: "2026-10-20", target_date: "2026-10-26" });
+  const redated = {
+    ...dated,
+    start_date: "2026-10-20",
+    target_date: "2026-10-26",
+    by: bob.email,
+    activity: [
+      ...dated.activity,
+      changed("start_date", "2026-10-12", "2026-10-20", "updated the start date to "),
+      changed("target_date", "2026-10-19", "2026-10-26", "updated the target date to"),
+    ],
+    wrote: 2,
+  };
+  await expectIssueUpdated(db, id, redated);
+  // bob clears its target date: its row's new value is "".
+  await updateIssue(api, bob.token, id, { target_date: null });
+  const cleared = {
+    ...redated,
+    target_date: null,
+    activity: [...redated.activity, changed("target_date", "2026-10-26", "", "updated the target date to")],
+    wrote: 1,
+  };
+  await expectIssueUpdated(db, id, cleared);
+
   // A priority in another case (the contract's values are lower case), an account and a label named twice are refused
   // before the work item is read, the three at once, as they are for a work item that is not there; a state and a
   // label Web lacks under the lock, the two at once. Neither refused change writes anything: it stays bob's last change.
@@ -253,7 +315,7 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
       { field: "label_ids[0]", code: "not_allowed" },
     ],
   });
-  await expectIssueUpdated(db, id, movedBack);
+  await expectIssueUpdated(db, id, cleared);
 
   // Fix the logout, which shares bob and Bug with it, is as ann created it: no change above wrote a row of it.
   await expectIssueCreated(db, logout.id, {
@@ -261,6 +323,8 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
     name: "Fix the logout",
     state: "Backlog",
     priority: "none",
+    start_date: null,
+    target_date: null,
     sort_order: logout.sort_order,
     completed: false,
     by: ann.email,
@@ -269,4 +333,16 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
     subscribers: [ann.email, bob.email].toSorted(),
     activity: createdFor(bob),
   });
+
+  // An archived work item is not changed (409 issue.archived): ann's Ship it, in Done, which she archives; bob's
+  // change writes nothing, so it stays ann's archiving.
+  const shipped = await createIssue(api, ann.token, web.id, { name: "Ship it", state_id: done });
+  expect((await issueArchived(api, ann.token, shipped.id)).status).toBe(200);
+  const shippedArchived = { archived: true, by: ann.email, activity: [...createdFor(), archivedRow] };
+  await expectIssueArchival(db, shipped.id, shippedArchived);
+  expect(await issueUpdated(api, bob.token, shipped.id, { target_date: "2026-10-19" })).toEqual({
+    status: 409,
+    code: "issue.archived",
+  });
+  await expectIssueArchival(db, shipped.id, shippedArchived);
 });

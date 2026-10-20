@@ -169,6 +169,8 @@ func validValue(s *openapi3.Schema) any {
 	switch s.Format {
 	case "date-time":
 		return "2026-01-01T00:00:00Z"
+	case "date":
+		return "2026-01-01"
 	case "uuid":
 		return "00000000-0000-0000-0000-000000000000"
 	case "email":
@@ -199,7 +201,8 @@ func isNullable(s *openapi3.Schema) bool {
 }
 
 // checkedFormat reports a string format that bodyshape checks: those the
-// module template generates as Go types (M2 design 3.12).
+// module template generates as Go types (M2 design 3.12; date, M4 design
+// 6.1).
 func checkedFormat(s *openapi3.Schema) bool {
-	return s.Type.Includes("string") && (s.Format == "date-time" || s.Format == "uuid")
+	return s.Type.Includes("string") && (s.Format == "date-time" || s.Format == "date" || s.Format == "uuid")
 }

@@ -1,11 +1,20 @@
 -- name: UpdateIssue :exec
 -- updateIssue's work item (M4 design 3.7), under the project's FOR NO KEY UPDATE, read again under it: its name, state,
--- priority and completion as the use case gives them, those it changes and the others as they are, last changed at the
--- moment and by the account given. Every write of a work item's row holds its project's lock first (3.5), so the row is
--- as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
+-- priority, dates and completion as the use case gives them, those it changes and the others as they are, last changed
+-- at the moment and by the account given. Every write of a work item's row holds its project's lock first (3.5), so the
+-- row is as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
 UPDATE issues
-SET name = sqlc.arg(name), state_id = sqlc.arg(state_id), priority = sqlc.arg(priority), completed_at = sqlc.narg(completed_at),
-    updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)::timestamptz
+SET name = sqlc.arg(name), state_id = sqlc.arg(state_id), priority = sqlc.arg(priority), start_date = sqlc.narg(start_date),
+    target_date = sqlc.narg(target_date), completed_at = sqlc.narg(completed_at), updated_by_id = sqlc.arg(by)::uuid,
+    updated_at = sqlc.arg(at)::timestamptz
+WHERE id = sqlc.arg(id);
+
+-- name: SetArchivedAt :exec
+-- archiveIssue's and unarchiveIssue's work item (M4 design 3.8), under the project's FOR NO KEY UPDATE, read again under
+-- it: its archived_at, the moment or NULL, last changed at the moment and by the account given; every other column as
+-- it is. It is not locked by id first, as UpdateIssue.
+UPDATE issues
+SET archived_at = sqlc.narg(archived_at), updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)::timestamptz
 WHERE id = sqlc.arg(id);
 
 -- name: RemoveAssignees :exec

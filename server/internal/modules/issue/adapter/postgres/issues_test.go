@@ -16,6 +16,7 @@ import (
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // linkRows are the rows of a link table under the work item issue of p,
@@ -62,17 +63,24 @@ func linkLine(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, p project, issue, 
 }
 
 // createWebIssue inserts web's work item 7 through the store, by alice at
-// now, high, in web's default state, at 75535, completed at an hour
-// before: every column createIssue writes, none at its default.
+// now, high, in web's default state, from the 12th to the 19th of October,
+// at 75535, completed at an hour before: every column createIssue writes,
+// none at its default.
 func createWebIssue(t *testing.T, s *postgresadapter.Store, web project, id, alice uuid.UUID) app.IssueRow {
 	t.Helper()
 	done := now.Add(-time.Hour)
+	start, target := day(12), day(19)
 	r := app.IssueRow{ID: id, WorkspaceID: web.workspace, ProjectID: web.id, SequenceID: 7, Name: "Fix the login", StateID: web.state,
-		Priority: domain.PriorityHigh, SortOrder: 75535, CompletedAt: &done, By: alice, At: now}
+		Priority: domain.PriorityHigh, StartDate: &start, TargetDate: &target, SortOrder: 75535, CompletedAt: &done, By: alice, At: now}
 	if err := s.InsertIssue(context.Background(), r); err != nil {
 		t.Fatal(err)
 	}
 	return r
+}
+
+// day is the day d of October 2026, a work item's date.
+func day(d int) shared.Date {
+	return shared.DateOf(time.Date(2026, time.October, d, 0, 0, 0, 0, time.UTC))
 }
 
 // createIssue's rows through the store (M4 design 3.5): the work item with
@@ -124,9 +132,10 @@ func TestCreatingAWorkItemWritesItsRows(t *testing.T) {
 
 	got, found, err := s.GetIssue(ctx, id)
 	want := domain.Issue{ID: id, WorkspaceID: web.workspace, ProjectID: web.id, SequenceID: 7, Name: "Fix the login", StateID: web.state,
-		Priority: domain.PriorityHigh, SortOrder: 75535, CompletedAt: r.CompletedAt, CreatedByID: &alice, UpdatedByID: &alice, CreatedAt: now,
-		UpdatedAt: now, AssigneeIDs: slices.SortedFunc(slices.Values([]uuid.UUID{bob, carol}), uuid.UUID.Compare),
-		LabelIDs: slices.SortedFunc(slices.Values([]uuid.UUID{bug, ui}), uuid.UUID.Compare)}
+		Priority: domain.PriorityHigh, StartDate: r.StartDate, TargetDate: r.TargetDate, SortOrder: 75535, CompletedAt: r.CompletedAt,
+		CreatedByID: &alice, UpdatedByID: &alice, CreatedAt: now, UpdatedAt: now,
+		AssigneeIDs: slices.SortedFunc(slices.Values([]uuid.UUID{bob, carol}), uuid.UUID.Compare),
+		LabelIDs:    slices.SortedFunc(slices.Values([]uuid.UUID{bug, ui}), uuid.UUID.Compare)}
 	if err != nil || !found || !reflect.DeepEqual(got, want) {
 		t.Errorf("GetIssue() = %+v, %v, %v; want %+v", got, found, err, want)
 	}
@@ -224,6 +233,36 @@ func TestGreatestSortOrder(t *testing.T) {
 	}
 }
 
+// A work item is found by its number in its project, archived or not
+// (M4 design 3.7): web's 1 and 2, and ops's 1, each its own; not a
+// deleted one, nor a number of no work item of the project, though
+// another project's work item has it.
+func TestIssueByNumber(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, ops := newProject(t, pool, acme, "WEB"), newProject(t, pool, acme, "OPS")
+	one, two, gone, opsOne, opsThree := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	newIssue(t, pool, web, one, 1, alice)
+	newIssue(t, pool, web, two, 2, alice)
+	newIssue(t, pool, web, gone, 3, alice)
+	newIssue(t, pool, ops, opsOne, 1, alice)
+	newIssue(t, pool, ops, opsThree, 3, alice)
+	exec(t, pool, "UPDATE issues SET archived_at = now() WHERE id = $1", two)
+	exec(t, pool, "UPDATE issues SET deleted_at = now() WHERE id = $1", gone)
+	for _, tt := range []struct {
+		p      project
+		number int
+		want   uuid.UUID
+		found  bool
+	}{{web, 1, one, true}, {web, 2, two, true}, {ops, 1, opsOne, true}, {web, 3, uuid.UUID{}, false}, {web, 4, uuid.UUID{}, false},
+		{ops, 2, uuid.UUID{}, false}} {
+		if id, found, err := s.IssueByNumber(context.Background(), tt.p.id, tt.number); err != nil || id != tt.want || found != tt.found {
+			t.Errorf("IssueByNumber(%s, %d) = %s, %v, %v; want %s, %v", tt.p.id, tt.number, id, found, err, tt.want, tt.found)
+		}
+	}
+}
+
 // A work item without assignees or labels reads with neither, nil and not
 // empty; a deleted work item, and one that is not there, read as none. A
 // read or a write that fails answers its error as itself: never a work
@@ -247,6 +286,9 @@ func TestAFailedIssueStatementIsAnError(t *testing.T) {
 	}
 	if greatest, err := s.GreatestSortOrder(cancelled, web.id, web.state); !errors.Is(err, context.Canceled) || greatest != nil {
 		t.Errorf("GreatestSortOrder() = %v, %v; want context.Canceled", greatest, err)
+	}
+	if got, found, err := s.IssueByNumber(cancelled, web.id, 1); !errors.Is(err, context.Canceled) || found || got != (uuid.UUID{}) {
+		t.Errorf("IssueByNumber() = %s, %v, %v; want context.Canceled", got, found, err)
 	}
 
 	if got, found, err := s.GetIssue(ctx, uuid.NewV7()); err != nil || found || got.ID != (uuid.UUID{}) {

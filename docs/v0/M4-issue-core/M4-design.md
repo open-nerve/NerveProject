@@ -175,7 +175,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - 不拆的代价：模块较大，用 `app` 层的文件按用例拆开（6.2），每个文件不超过约 400 行。
 - **`issue` 经端口读写别的模块**，端口声明在 `issue/app`，由别的模块的 `Provide` 实现，`bootstrap` 接上（M3 设计 6.6 的两段组合）：
   - **向 `project` 要**：
-    - `ProjectGate`：`Find`：不加锁地按项目 id 读出它的工作区（第一把锁之前，3.5）；`Lock`：以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），回答 `archived`、`identifier`、`default_assignee_id`、`guest_view_all_features`、`archive_in`；`LockMany`：一条语句按 `id` 升序锁住几个项目（约定七，3.5）；两个不加锁的读：这个工作区未删除的项目的 id（草稿的读，3.15），`DeletedAt(projectIDs)`：其中已删除的项目和它们的 `deleted_at`（关联行属于先删除的那一端，3.5）。删除工作区锁它的全部项目不经这个端口，经 `project` 给 `workspace` 的 `ProjectCascade.LockWorkspaceProjects`（见下）。
+    - `ProjectGate`：`Find`：不加锁地按项目 id 读出它的工作区（第一把锁之前，3.5）；`Lock`：以 `FOR NO KEY UPDATE` 锁住项目行（带 `deleted_at IS NULL`），回答 `archived`、`identifier`、`default_assignee_id`、`archive_in`；`Lock` 不回答 `guest_view_all_features`：锁下的判定经 `Authorize` 读它（P2 spec 第 3 节第 3 条）；`LockMany`：一条语句按 `id` 升序锁住几个项目（约定七，3.5）；两个不加锁的读：这个工作区未删除的项目的 id（草稿的读，3.15），`DeletedAt(projectIDs)`：其中已删除的项目和它们的 `deleted_at`（关联行属于先删除的那一端，3.5）。删除工作区锁它的全部项目不经这个端口，经 `project` 给 `workspace` 的 `ProjectCascade.LockWorkspaceProjects`（见下）。
     - `Sequences`：在项目行的锁之下 `UPDATE projects SET last_issue_sequence = last_issue_sequence + 1 … RETURNING`（总体设计 5.3，M3 交接第 4 节）。
     - `StateCatalog`：项目的未删除状态（id、名称、组、`default`、是否分诊）；按 id 取一个；列表引擎按目录排序、分组用（3.16）。
     - `LabelCatalog`：项目的未删除标签（id、名称）；按 id 集合核对。
@@ -204,11 +204,11 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - **按项目角色算，不看工作区角色**（对抗性评审 M4）：工作区管理员在一个项目里只是访客时，`access/domain/decide.go:76-87` 让他通过这个项目的每条规则（`ProjectAdmin`），而他的项目角色是 5，`OwnOnly` 仍为真。两者同时成立时 404 在先：别人建的工作项对他是"看不到"（404），他自己建的照管理员的规则可以写。Plane 的列表同样按项目角色过滤。9.2 的矩阵为他单列一列。
 - **规则表的扩展**（`access/domain/rules.go`）：`Rule` 加 `AllowCreator bool`。项目级的规则带它时，角色不在集合里的调用者，若 `actor == Target.CreatorID`，并且他是项目的**有效成员、项目角色不低于成员**，也允许。
   - Plane 的 `creator=True` 只看工作区成员关系、不看项目成员关系（`API/app/permissions/base.py:24-38`），已离开项目的创建者仍能读、改、删"他的"工作项。Nerve 要求创建者仍是项目的有效成员（看不到项目的人 404，与别人相同）。
-  - "不低于成员"：项目访客创建的工作项，他不能删（Plane 的页面只给项目管理员和成员显示删除，`WEB/components/issues/issue-layouts/quick-action-dropdowns/project-issue.tsx:60-69`，删除框再要求是创建者或项目管理员，`delete-issue-modal.tsx:54-82`）。登记差异。
+  - "不低于成员"：项目访客创建的工作项，他不能凭 `AllowCreator` 删（在项目里是访客的工作区管理员照管理员的规则删他自己建的；Plane 的页面只给项目管理员和成员显示删除，`WEB/components/issues/issue-layouts/quick-action-dropdowns/project-issue.tsx:60-69`，删除框再要求是创建者或项目管理员，`delete-issue-modal.tsx:54-82`）。登记差异。
   - 今天只有 `issue.delete` 带 `AllowCreator`（规则 `{LevelProject, [Admin], AllowCreator}`），效果是"项目管理员，或建了它的项目成员"。
 - **`ProjectFacts` 多读一列**：`access` 读项目事实的端口（`project/adapter/postgres/queries/access.sql:1-8`）加读 `guest_view_all_features`，判定时算出 `OwnOnly`。
 - **一条访客规则，用在每个地方**：访客（`OwnOnly`）只看到自己创建的工作项；看不到的工作项和挂在它下面的一切（评论、链接、关联、子工作项、动态、表情、描述的历史）都是 404。Plane 只在约 6 处执行这条规则，别处泄露（R2 第 0.8 节：动态和评论列表、子工作项、关联、链接、表情、全局搜索、个人主页都不检查），Nerve 处处执行。
-  - 单个工作项：用例读工作项（得到项目和 `created_by_id`）→ 判定 → `grant.OwnOnly && issue.CreatedByID != actor` 时答 `issue.not_found`（与不存在相同，不透露存在）。按资源 id 寻址的子资源（`/issue-comments/{id}`、`/issue-links/{id}`、`/issue-relations/{id}`、`/issue-description-versions/{id}`）先读子资源得到工作项，同样处理，答子资源自己的 404 码。
+  - 单个工作项：用例读工作项（得到项目和 `created_by_id`）→ 判定 → `grant.OwnOnly && issue.CreatedByID != actor` 时答 `issue.not_found`（与不存在相同，不透露存在；角色不允许时也先看访客规则，404 先于 403，6.7）。按资源 id 寻址的子资源（`/issue-comments/{id}`、`/issue-links/{id}`、`/issue-relations/{id}`、`/issue-description-versions/{id}`）先读子资源得到工作项，同样处理，答子资源自己的 404 码。
   - 列表和搜索：同一条规则在 SQL 中执行（`OwnOnly` 的项目加 `created_by_id = $actor`）。个人主页、搜索、关联列表跨项目，每个项目按它自己的 `OwnOnly` 过滤（`VisibleProjects` 回答每个项目的角色和标志）。
   - 关联：对方工作项必须对调用者可见（它的项目对调用者可见、并且过了它所在项目的访客规则），不然加关联 422（`issue_ids[i]`，`not_allowed`），关联列表不含它（3.10）。
   - 计数：`sub_issues_count` 按调用者的规则数（`OwnOnly` 的项目里只数他自己建的子工作项），按它排序也用同一个数（3.9、3.16）。
@@ -407,7 +407,7 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
 - **`updated_at` 的含义**：工作项本身或挂在它下面的行的每一个写都改工作项的 `updated_at`、`updated_by_id`：改字段、负责人、标签、父工作项（被改的子工作项）、评论的增删改、链接的增删改、关联的增删（两边）、工作项的表情、归档和恢复。评论的表情不改（Plane 相同：评论的表情的动态 `issue_id` 为空，`API/bgtasks/issue_activities_task.py:1531-1537`）。只补块 id 的保存不改（上面）。自动归档写 `updated_by_id = NULL`（决策点 4）。
   - 为什么照 Plane 让评论、链接也改它：自动归档按 `updated_at` 判断"多久没有动静"（3.8）；有人还在评论的工作项不应被自动归档（Plane 的同一个效果，R2 第 0.7 节）。
 - **不能移动到别的项目**：`project_id` 只在路径里，请求体没有它（Plane 相同，`API/app/serializers/issue.py:100`）。
-- **按编号取**：`GET /workspaces/{slug}/issues/{identifier}`，`identifier` 是"项目标识-编号"，标识不分大小写。M3 的标识只有大写的 `A`–`Z`、数字和 `ÇŞĞİÖÜ`（M3 设计 3.19），`I` 与 `İ` 是两个字母；Go 的 `strings.ToUpper("iş")` 是 `"IŞ"` 而不是 `"İŞ"`，只转大写会让 `/browse/iş-12` 找不到 `İŞ-12`（对抗性评审 M12）。所以两边经同一个折叠比较（`issue/domain` 的 `foldIdentifier`）：`a`–`z` 转成 `A`–`Z`，`çşğöü` 转成 `ÇŞĞÖÜ`，`i`、`ı`、`I`、`İ` 都折成同一个字母。一个工作区里只有 `I`、`İ` 之别的两个标识折叠之后相同时，逐字等于 `strings.ToUpper` 之后的那一个优先，否则 404。样例写在 `api/testdata/identifier-fold.json`（`issue-order.json` 的写法），Go 的测试读它；前端不折叠，把路由里的文字原样交给接口。搜索的编号匹配用同一个折叠（3.18）。格式不对、项目不存在、看不到、编号不存在，都是 404 `issue.not_found`（Plane 对格式不对答 400、对不是成员答 403，透露项目存在，`API/app/views/issue/base.py:1202-1230`；登记差异）。已归档的工作项照样返回（Plane 相同）。
+- **按编号取**：`GET /workspaces/{slug}/issues/{identifier}`，`identifier` 是"项目标识-编号"，标识不分大小写。M3 的标识只有大写的 `A`–`Z`、数字和 `ÇŞĞİÖÜ`（M3 设计 3.19），`I` 与 `İ` 是两个字母；Go 的 `strings.ToUpper("iş")` 是 `"IŞ"` 而不是 `"İŞ"`，只转大写会让 `/browse/iş-12` 找不到 `İŞ-12`（对抗性评审 M12）。所以两边经同一个折叠比较（`issue/domain` 的 `foldIdentifier`）：`a`–`z` 转成 `A`–`Z`，`çşğöü` 转成 `ÇŞĞÖÜ`，`i`、`ı`、`I`、`İ` 都折成同一个字母。一个工作区里只有 `I`、`İ` 之别的两个或更多标识折叠之后相同时，逐字等于 `strings.ToUpper` 之后的那一个优先，否则 404。样例写在 `api/testdata/identifier-fold.json`（`issue-order.json` 的写法），Go 的测试读它；前端不折叠，把路由里的文字原样交给接口。搜索的编号匹配用同一个折叠（3.18）。格式不对、项目不存在、看不到、编号不存在，都是 404 `issue.not_found`（Plane 对格式不对答 400、对不是成员答 403，透露项目存在，`API/app/views/issue/base.py:1202-1230`；登记差异）。已归档的工作项照样返回（Plane 相同）。
 - **客户端不能写的字段**：Plane 的序列化器 `fields = "__all__"`，客户端可以直接写 `sequence_id`、`archived_at`、`deleted_at` 等几乎一切（R2 第 1 节）。Nerve 的请求体是封闭的结构（总体设计 3.2：未知字段 400），只有上面列出的可写字段。差异清单二·全局已有"封闭的请求体"一条，这里不另登记。
 
 ### 3.8 归档、恢复与自动归档（决策点 4 负责人裁定 A）
@@ -1078,10 +1078,10 @@ issue_comments
 | 负责人的读取 | 只返回"在某个项目里仍有效"的 | 返回全部未删除的负责人行（3.6） | P1b |
 | 创建者的权限 | 只看工作区成员关系，已离开项目也能读、改、删 | 要求是项目的有效成员、角色不低于成员（3.4） | P2 |
 | 访客只看自己的工作项 | 只在约 6 处执行 | 处处执行，挂在看不到的工作项下的一切 404；按项目角色算，工作区管理员在项目里是访客时同样（3.4） | P2（各列表在各自的 Phase） |
-| 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403（3.4） | P2 |
-| 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 除恢复、删除外一切写 409 `issue.archived`；不能成为父工作项、关联的对方（3.8） | P2（子资源在各自的 Phase） |
+| 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403（工作区管理员是项目的有效成员时不论项目角色都通过项目的每条规则，总体设计 6.5 的约定；所以只是项目访客的工作区管理员删得了自己建的，204，不是凭 `AllowCreator`）（3.4） | P2 |
+| 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是，子资源的写同样；恢复、删除照常；在已归档的项目里先答 409 `project.archived`；不能成为父工作项、关联的对方（3.8） | P2（子资源在各自的 Phase） |
 | 归档、恢复 | 归档答 `{archived_at}`，恢复 204；再归档 404 | 都返回 `IssueDetail`；重复的不写、200（3.8） | P2 |
-| 按编号取 | 格式不对 400，不是成员 403 | 都是 404；标识经同一个折叠比较，`i`、`ı`、`I`、`İ` 一样（3.7） | P2 |
+| 按编号取 | 格式不对 400，不是成员 403 | 格式不对、不存在、看不到的都是 404，看得到项目而不是它的有效成员的 403（与取工作项相同）；标识经同一个折叠比较，`i`、`ı`、`I`、`İ` 一样（3.7） | P2 |
 | 删除工作项 | 动态保留；写一条"已删除"；确认框不提子工作项 | 动态一并软删除；不写"已删除"；确认框写明子树（3.6） | P3（确认框 P14） |
 | 父工作项 | 不检查自己、不检查成环 | 422（3.9） | P3 |
 | 加子工作项的动态 | `old_value` 是子工作项自己的编号 | 是原来的父工作项（3.13） | P3 |
@@ -1127,31 +1127,31 @@ issue_comments
 |---|---|---|---|---|
 | `GET /api/v0/projects/{project_id}/issues` | `listIssues` | 查询：3.16 的筛选、`group_by`、`sub_group_by`、`group_key`、`sub_group_key`、`order_by`、`archived`、`limit`、`cursor` | 200 `IssueList` | 404 `project.not_found`；403 F（`archived=true` 的访客）；422 V |
 | `POST /api/v0/projects/{project_id}/issues` | `createIssue` | `IssueCreate {name, description_html?, state_id?, priority?, assignee_ids?, label_ids?, start_date?, target_date?, parent_id?}` | 201 `IssueDetail` | 404 `project.not_found`；403 F；422 V；409 `project.archived` |
-| `GET /api/v0/issues/{issue_id}` | `getIssue` | — | 200 `IssueDetail` | 404 `issue.not_found` |
+| `GET /api/v0/issues/{issue_id}` | `getIssue` | — | 200 `IssueDetail` | 404 `issue.not_found`；403 F |
 | `PATCH /api/v0/issues/{issue_id}` | `updateIssue` | `IssueUpdate {name?, description_html?, skip_activity?, state_id?, priority?, assignee_ids?, label_ids?, start_date?, target_date?, parent_id?, sort_order?}`（三个可空的用 `nullable.Nullable`） | 200 `IssueDetail` | 404；403 F；422 V；409 IA；409 PA |
 | `DELETE /api/v0/issues/{issue_id}` | `deleteIssue` | — | 204 | 404；403 F；409 PA |
-| `GET /api/v0/workspaces/{slug}/issues/{identifier}` | `getIssueByIdentifier` | — | 200 `IssueDetail` | 404 `workspace.not_found`；404 `issue.not_found` |
+| `GET /api/v0/workspaces/{slug}/issues/{identifier}` | `getIssueByIdentifier` | — | 200 `IssueDetail` | 404 `workspace.not_found`；404 `issue.not_found`；403 F |
 | `POST /api/v0/issues/{issue_id}/archive` | `archiveIssue` | — | 200 `IssueDetail` | 404；403 F；409 `issue.not_archivable`；409 PA |
 | `POST /api/v0/issues/{issue_id}/unarchive` | `unarchiveIssue` | — | 200 `IssueDetail` | 404；403 F；409 PA |
-| `GET /api/v0/issues/{issue_id}/sub-issues` | `listSubIssues` | — | 200 `IssueCollection` | 404 |
+| `GET /api/v0/issues/{issue_id}/sub-issues` | `listSubIssues` | — | 200 `IssueCollection` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/sub-issues` | `addSubIssues` | `SubIssuesAdd {sub_issue_ids}`（1–100） | 200 `IssueCollection` | 404；403 F；422 V（`sub_issue_ids[i]`）；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/relations` | `listIssueRelations` | — | 200 `IssueRelationCollection` | 404 |
+| `GET /api/v0/issues/{issue_id}/relations` | `listIssueRelations` | — | 200 `IssueRelationCollection` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/relations` | `createIssueRelations` | `IssueRelationsCreate {relation_type, issue_ids}`（1–20） | 201 `IssueRelationCollection` | 404；403 F；422 V（`issue_ids[i]` 的 `not_allowed`、`duplicate`）；409 IA；409 PA |
 | `DELETE /api/v0/issue-relations/{relation_id}` | `deleteIssueRelation` | — | 204 | 404 `issue.relation_not_found`；403 F；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/links` | `listIssueLinks` | — | 200 `IssueLinkCollection` | 404 |
+| `GET /api/v0/issues/{issue_id}/links` | `listIssueLinks` | — | 200 `IssueLinkCollection` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/links` | `createIssueLink` | `IssueLinkCreate {url, title?}` | 201 `IssueLink` | 404；403 F；422 V；409 `issue.link_exists`；409 IA；409 PA |
 | `PATCH /api/v0/issue-links/{link_id}` | `updateIssueLink` | `IssueLinkUpdate {url?, title?}` | 200 `IssueLink` | 404 `issue.link_not_found`；403 F；422 V；409 `issue.link_exists`；409 IA；409 PA |
 | `DELETE /api/v0/issue-links/{link_id}` | `deleteIssueLink` | — | 204 | 404 `issue.link_not_found`；403 F；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/comments` | `listIssueComments` | 查询：`limit`、`cursor` | 200 `IssueCommentPage` | 404 |
+| `GET /api/v0/issues/{issue_id}/comments` | `listIssueComments` | 查询：`limit`、`cursor` | 200 `IssueCommentPage` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/comments` | `createIssueComment` | `IssueCommentCreate {comment_html}` | 201 `IssueComment` | 404；403 F；422 V；409 IA；409 PA |
 | `PATCH /api/v0/issue-comments/{comment_id}` | `updateIssueComment` | `IssueCommentUpdate {comment_html}` | 200 `IssueComment` | 404 `issue.comment_not_found`；403 F；403 `issue.not_author`；422 V；409 IA；409 PA |
 | `DELETE /api/v0/issue-comments/{comment_id}` | `deleteIssueComment` | — | 204 | 404 `issue.comment_not_found`；403 F；403 `issue.not_author`；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/reactions` | `listIssueReactions` | — | 200 `IssueReactionCollection` | 404 |
+| `GET /api/v0/issues/{issue_id}/reactions` | `listIssueReactions` | — | 200 `IssueReactionCollection` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/reactions` | `addIssueReaction` | `ReactionCreate {reaction}` | 201 `IssueReaction` | 404；403 F；422 V；409 `issue.reaction_exists`；409 IA；409 PA |
 | `DELETE /api/v0/issues/{issue_id}/reactions/{reaction}` | `removeIssueReaction` | — | 204 | 404；404 `issue.reaction_not_found`；403 F；409 IA；409 PA |
 | `POST /api/v0/issue-comments/{comment_id}/reactions` | `addCommentReaction` | `ReactionCreate {reaction}` | 201 `CommentReaction` | 404 `issue.comment_not_found`；403 F；422 V；409 `issue.reaction_exists`；409 IA；409 PA |
 | `DELETE /api/v0/issue-comments/{comment_id}/reactions/{reaction}` | `removeCommentReaction` | — | 204 | 404 `issue.comment_not_found`；404 `issue.reaction_not_found`；403 F；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/activities` | `listIssueActivities` | 查询：`limit`、`cursor` | 200 `IssueActivityPage` | 404 |
+| `GET /api/v0/issues/{issue_id}/activities` | `listIssueActivities` | 查询：`limit`、`cursor` | 200 `IssueActivityPage` | 404；403 F |
 | `GET /api/v0/issues/{issue_id}/description-versions` | `listDescriptionVersions` | 查询：`limit`、`cursor` | 200 `DescriptionVersionPage` | 404；403 F |
 | `GET /api/v0/issue-description-versions/{version_id}` | `getDescriptionVersion` | — | 200 `DescriptionVersionDetail` | 404 `issue.description_version_not_found`；403 F |
 | `GET /api/v0/workspaces/{slug}/drafts` | `listDrafts` | 查询：`limit`、`cursor` | 200 `DraftPage` | 404 `workspace.not_found`；403 F |
@@ -1198,7 +1198,7 @@ issue_comments
 | 码 | 状态 | 含义 |
 |---|---|---|
 | `issue.not_found` | 404 | 工作项不存在、已删除，或调用者看不到（看不到项目，或访客规则，3.4）；按编号取时格式不对、项目不存在也是它 |
-| `issue.archived` | 409 | 已归档的工作项上除恢复、删除之外的写（3.8） |
+| `issue.archived` | 409 | 已归档的工作项的修改（什么都没改的也是）和它的子资源的写（3.8） |
 | `issue.not_archivable` | 409 | 归档一个状态组不是"已完成""已取消"的工作项（Plane 400） |
 | `issue.relation_not_found` | 404 | 关联不存在、已删除，或两端都看不到 |
 | `issue.link_not_found` | 404 | 链接不存在、已删除，或它的工作项看不到 |
@@ -1322,7 +1322,7 @@ modules/issue/
 | 端口 | 声明在 | 实现 | 测试 |
 |---|---|---|---|
 | `Authorizer`（`Target.CreatorID`、`Grant.OwnOnly`） | `internal/shared` | `access/app` | `access/domain` 的判定表（创建者、访客规则的每一种）；9.2 的矩阵 |
-| `ProjectGate`（`Find(projectID)` 不加锁 → 工作区；`Lock(projectID)` `FOR NO KEY UPDATE`，带 `deleted_at IS NULL`，回答 `archived`、`identifier`、`default_assignee_id`、`guest_view_all_features`、`archive_in`；`LockMany(projectIDs)` 一条语句按 `id` 升序；不加锁的读：工作区未删除的项目的 id，`DeletedAt(projectIDs)`） | `issue/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；取锁的形状测试（交错 21）；`LockMany` 的 `id` 顺序（S5 的 E4） |
+| `ProjectGate`（`Find(projectID)` 不加锁 → 工作区；`Lock(projectID)` `FOR NO KEY UPDATE`，带 `deleted_at IS NULL`，回答 `archived`、`identifier`、`default_assignee_id`、`archive_in`，不回答 `guest_view_all_features`（锁下的判定经 `Authorize` 读它，列表经 `VisibleProjects` 读它，P5）；`LockMany(projectIDs)` 一条语句按 `id` 升序；不加锁的读：工作区未删除的项目的 id，`DeletedAt(projectIDs)`） | `issue/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；取锁的形状测试（交错 21）；`LockMany` 的 `id` 顺序（S5 的 E4） |
 | `Sequences`（`Next(projectID) (int, error)`：`UPDATE … RETURNING`，在项目 N 之下） | `issue/app` | 同上 | 集成测试；交错 1 |
 | `StateCatalog`（项目的未删除状态：id、名字、组、默认、分诊；名字的比较键） | `issue/app` | 同上 | 集成测试 |
 | `LabelCatalog`（项目的未删除标签：id、名字的比较键；按 id 集合核对） | `issue/app` | 同上 | 同上 |
@@ -1404,7 +1404,7 @@ modules/issue/
   - 锁在判定之前（M3 约定二）；工作项的写最先锁项目行、不锁工作区行（3.5，决策点 1）。锁之前的预检答一切拒绝，放行的那一个由锁下的第 5 步权威地再判定一次。
   - 闸门在开始事务（取连接）之前进、在提交之后出：在项目上排队的写不占连接池（3.5，架构问题 11）。
   - 资源先读、锁、再重读：工作项的项目不会变（不能移动），重读只为确认它仍在。
-  - 访客规则在判定之后、作为"看不到"处理：访客改别人的工作项与改不存在的工作项得到同一个 404（8.2）。
+  - 访客规则在判定之后、作为"看不到"处理：访客改别人的工作项与改不存在的工作项得到同一个 404（8.4）。
   - 值的校验在事务之前，依赖行的检查在判定之后（M3 约定二）：不存在的标签 id 对没有权限的人不透露任何东西。
   - 动态、关注、提及、版本、事件都在同一个事务里（总体设计 6.6）；事件的订阅者出错时整个修改回滚。
   - 响应重读：差集写完之后，完整的数组和计数由同一条查询给出，与列表的行一致。
@@ -2065,7 +2065,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   13. 交错 6、7 的创建一支。
   14. 端到端：`e2e/fixtures/issues.ts` 的建工作项、`assert/issue.ts`、`furnish.ts` 的 `furnishIssueRows`（五张表）和 M3 的 P4、W2、W3 调它，`workspaceTables` 从目录读出，过渡结束；I1 的接口版本（本 Phase 的断言）。
   15. 3.23 中 P1a 的行；review。
-- **关闭**（13.1）：M1-P2 交接的接口字段一项（没有 `estimate_point`、`description_binary`、`/issue-dates/`）；M1-P3 交接的接口字段一项（没有 `is_epic`、`type_id`，没有批量的接口）；M3 交接第 2 节的预检一项（凡拒绝的写不取锁）；M3 交接第 4 节（删除状态、标签的去向，默认负责人的契约，`identifier`、`default_assignee_id`、`State.default` 的说明，`workspaceTables`、`furnishIssueRows`）。
+- **关闭**（13.1）：M1-P2 交接的接口字段一项（没有 `estimate_point`、`description_binary`、`/issue-dates/`）；M1-P3 交接的接口字段一项（没有 `is_epic`、`type_id`，没有批量的接口）；M3 交接第 2 节的预检一项（凡拒绝的写不取锁）和约定五的逐个核对（P1a 的批量写：创建插入的负责人、标签、关注，删除项目、工作区的连带的分批语句，删除工作区按 `id` 锁它的项目，删除标签的 `DetachLabel`）；M3 交接第 4 节（删除状态、标签的去向，默认负责人的契约，`identifier`、`default_assignee_id`、`State.default` 的说明，`workspaceTables`、`furnishIssueRows`）。
 - **完成线**：I1 的接口版本（工作项的行、编号、默认状态和默认负责人、负责人、标签、关注、创建和负责人的动态、各种拒绝）通过；M3 的 P4、W2、W3 带着工作项一侧的行通过，没有留下端到端的过渡；交错 1、2、3、8、21、22 和交错 4–7 的创建一支 `-count=5 -race` 通过，没有 40P01；看不到项目、不能写的写不取锁；本 Phase 的矩阵格子通过；删除在用的状态 409，删除标签从工作项上摘下。
 
 ### P1b `issue-update`：工作项的取、改与写闸门（后端，12 个任务）
@@ -2105,7 +2105,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   12. 整程序测试（含日期的格式）；`apitest` 两个方向。
   13. 端到端：I15 的接口版本（本 Phase 的断言）；I1、I2 加上起止日期和合并之后的日期 422；I2 加上已归档 409。访客取别人的工作项的 404 在本 Phase 只由矩阵（Go）核对，端到端的那一格随 I20 的接口版本在 P5（聚焦复核 M5）。
   14. 3.23 中 P2 的行（含 M2 设计 3.11）；review。
-- **关闭**：M1-P3 交接的地址一项的一半（按编号取统一到 `/workspaces/{slug}/issues/{identifier}`）；M2 交接第 3 节的一部分（P2 的用例）、第 4 节（路径的排序、数的范围、`date`、代价测试；map 型、递归的结构写明"没有用到"）；M3 交接第 3 节（`AllowCreator`、`guest_view_all_features`、矩阵、码；个人主页的一行在 P5）、第 4 节的 `expectIssueDeleted` 和 `guest_view_all_features` 的说明。
+- **关闭**：M1-P3 交接的地址一项的一半（按编号取统一到 `/workspaces/{slug}/issues/{identifier}`）；M2 交接第 3 节的一部分（P2 的用例）、第 4 节（路径的排序、数的范围、`date`、代价测试；map 型、递归的结构写明"没有用到"）；M3 交接第 2 节中约定五的逐个核对（P2 的批量写：删除工作项的五条语句，归档、恢复的 `SetArchivedAt`）、第 3 节（`AllowCreator`、`guest_view_all_features`、矩阵、码；个人主页的一行在 P5）、第 4 节的 `expectIssueDeleted` 和 `guest_view_all_features` 的说明。
 - **完成线**：I15 的接口版本（归档、恢复、两条动态、`issue.not_archivable`、改字段 409、访客 403）、I1 和 I2 的起止日期（含合并之后的日期 422）、I2 的已归档 409 通过；判定表、矩阵、完整性测试、`bodyshape` 的测试通过。
 
 ### P3 `issue-hierarchy`：父子与关联（后端，11 个任务）
@@ -2512,7 +2512,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | 设计 | 本文（第三稿，按对抗性评审和聚焦复核修订） | 第一稿经独立评审（2026-10-16，17.1），第二稿按控制者的裁定逐条落实；第二稿经对抗性评审（2026-10-16，17.2），第三稿照控制者的裁定逐条落实；第三稿经聚焦复核（2026-10-16，17.3），再照裁定修订；第 10 节的八个决策点已由负责人裁定、第 11 节的十一个架构问题已由负责人批准（2026-10-17，全部按建议，17.4）；验证 S1、S4、S5、SP1–SP4 已做，S2 做了一部分，S3 在 P4（0.3） |
 | P1a `issues` | 工作项的表、项目行的锁、创建与连带（后端，15）；设计中的 P1 由控制者按决策点 2 的预先批准拆出（2026-10-17，第 12 节） | 已完成：[spec](specs/P1a-issues.md)、[plan](plans/P1a-issues.md)、[评审](reviews/P1a-issues-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 已完成：[spec](specs/P1b-issue-update.md)、[plan](plans/P1b-issue-update.md)、[评审](reviews/P1b-issue-update-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
-| P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 未开始 |
+| P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
 | P3 `issue-hierarchy` | 父子与关联（后端，11） | 未开始 |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 未开始 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，15） | 未开始 |

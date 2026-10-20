@@ -26,7 +26,8 @@ func (s *Store) ProjectFacts(ctx context.Context, projectID, userID uuid.UUID) (
 	case err != nil:
 		return app.AccessFacts{}, false, fmt.Errorf("read project %s for a decision: %w", projectID, err)
 	}
-	f = app.AccessFacts{WorkspaceID: r.WorkspaceID, Public: domain.Network(r.Network) == domain.NetworkPublic}
+	f = app.AccessFacts{WorkspaceID: r.WorkspaceID, Public: domain.Network(r.Network) == domain.NetworkPublic,
+		GuestViewAll: r.GuestViewAllFeatures}
 	if r.MemberRole != nil {
 		f.Member, f.Role = true, shared.Role(*r.MemberRole)
 	}

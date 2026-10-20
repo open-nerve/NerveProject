@@ -5,6 +5,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // IssueRow is a work item a write inserts (M4 design 3.5): its values,
@@ -17,6 +18,8 @@ type IssueRow struct {
 	Name        string
 	StateID     uuid.UUID
 	Priority    domain.Priority
+	StartDate   *shared.Date
+	TargetDate  *shared.Date
 	SortOrder   float64
 	CompletedAt *time.Time
 	By          uuid.UUID
@@ -45,9 +48,21 @@ type IssueFields struct {
 	Name        string
 	StateID     uuid.UUID
 	Priority    domain.Priority
+	StartDate   *shared.Date
+	TargetDate  *shared.Date
 	CompletedAt *time.Time
 	By          uuid.UUID
 	At          time.Time
+}
+
+// IssueArchival is a work item's archiving or unarchiving as it is written
+// (M4 design 3.8): its archived_at, the moment, or nil for none, and the
+// moment and the account that change it last.
+type IssueArchival struct {
+	ID         uuid.UUID
+	ArchivedAt *time.Time
+	By         uuid.UUID
+	At         time.Time
 }
 
 // UnlinkRows are the rows of one of a work item's tables of accounts or

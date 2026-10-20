@@ -97,17 +97,18 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	}
 }
 
-// noRowLastWrittenBy fails the test when a row under project, in a table
-// the catalog ties to projects (keysTo), the project row itself included,
-// was last written by by: a deletion by by that kept a row's writer would
-// not show on that row. The deletion tests read it before they delete.
-func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
+// noRowLastWrittenBy fails the test when a row under the parent row id, by
+// one of keys, the foreign keys to its table (keysTo), the row itself
+// included, was last written by by: a deletion by by that kept a row's
+// writer would not show on that row. The deletion tests read it before
+// they delete.
+func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, keys []foreignKey, id, by uuid.UUID) {
 	t.Helper()
-	for _, k := range keysTo(t, pool, "projects") {
+	for _, k := range keys {
 		var n int
 		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
-			" = $1 AND updated_by_id = $2", project, by).Scan(&n); err != nil || n != 0 {
-			t.Fatalf("%s: %d rows under the project %s last written by %s, %v; want none", k, n, project, by, err)
+			" = $1 AND updated_by_id = $2", id, by).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("%s: %d rows under the %s %s last written by %s, %v; want none", k, n, rowOf(k.parent), id, by, err)
 		}
 	}
 }
@@ -116,12 +117,23 @@ func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID)
 // every table the catalog ties to projects, and the project row, each at
 // the project's deleted_at, a time within the request, and by the account
 // that deleted it, and changes nothing under the workspace's other project.
-// The deleted project is not found any more. Web is archived first: an
-// archived project is deleted as any other. Its deleter is dave, acme's
-// admin, whom alice adds as Web's admin: no row under Web is of his
-// writing before, so a deletion that kept a row's writer would show.
+// The deleted project is not found any more. A work item of Web that alice
+// deleted before keeps its rows as they were, their deletion hers (M4/P1a
+// review §6: the statements pass over a row deleted before). Web is
+// archived then: an archived project is deleted as any other. Its deleter
+// is dave, acme's admin, whom alice adds as Web's admin: no row under Web
+// is of his writing before, so a deletion that kept a row's writer would
+// show.
 func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
+	gone := deletedWorkItem(t, contract, base, pool, alice, aliceID, web)
+	goneKeys := workItemKeys(t, pool)
+	goneRows := make([]string, len(goneKeys))
+	for i, k := range goneKeys {
+		if goneRows[i] = k.rows(t, pool, gone); goneRows[i] == "" {
+			t.Fatalf("%s: no row of the work item deleted before Web: deletedWorkItem writes one", k)
+		}
+	}
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+web.String()+"/archive", alice, ""); status != http.StatusOK {
 		t.Fatalf("archiving Web = %d %s, want 200", status, body)
 	}
@@ -138,7 +150,7 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 		recorded[i] = k.undeleted(t, pool, web)
 		under[i] = rowsUnder{key: k.String(), deletedBefore: len(recorded[i]), keptBefore: k.rows(t, pool, ops)}
 	}
-	noRowLastWrittenBy(t, pool, web, daveID)
+	noRowLastWrittenBy(t, pool, keys, web, daveID)
 
 	before := time.Now().Truncate(time.Microsecond)
 	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), dave, ""); status != http.StatusNoContent {
@@ -155,6 +167,11 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	for i, k := range keys {
 		if rows := k.unstamped(t, pool, recorded[i], web, daveID); rows != "" {
 			t.Errorf("%s: rows not deleted at the project's deleted_at by its deleter %s:\n%s", k, daveID, rows)
+		}
+	}
+	for i, k := range goneKeys {
+		if rows := k.rows(t, pool, gone); rows != goneRows[i] {
+			t.Errorf("%s: the rows of the work item deleted before Web:\n%s\nwant them as they were:\n%s", k, rows, goneRows[i])
 		}
 	}
 	var at time.Time

@@ -207,6 +207,64 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 	w.send(t, "bob", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", `{"name":"Fix"}`, http.StatusCreated)
 }
 
+// Each write P2 adds on a work item enters its project's write gate, as a
+// change does (TestAProjectTooBusyForAWriteAnswersServerBusy; M4 design
+// 3.5, 11.11): while a write holds Web's one place, each of them on a work
+// item of Web is refused at once, the queue full, 503 server_busy with
+// Retry-After: 1, before a wait for Web's row could have ended, at the
+// lock timeout at the earliest. In an app that lets one write a project in
+// at once, queues none and ends a write's wait for a lock at three
+// seconds: a transaction holds Web's row, and alice's change of a work
+// item of Web enters the gate and waits for the row. Once the row is free,
+// her change goes through, and so does each write refused.
+func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
+	w := newIssueWorldWith(t, func(cfg *config.Config) {
+		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
+			WriteLockTimeout: 3 * time.Second}
+	})
+	item, archived := w.newWorkItem(t), w.doneWorkItem(t)
+	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.String()+"/archive", "", http.StatusOK)
+	writes := []struct {
+		name, method, path string
+		want               int // its answer once Web's row is free
+	}{
+		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), http.StatusNoContent},
+		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", http.StatusOK},
+		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", http.StatusOK},
+	}
+	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], []byte(`{"name":"Mend"}`))
+	w.contract.CheckRequest(t, change)
+
+	held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
+	changed := sendInBackground(change)
+	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
+	for _, write := range writes {
+		req := newRequest(t, write.method, w.base+write.path, w.tokens["alice"], nil)
+		w.contract.CheckRequest(t, req)
+		begun := time.Now()
+		a := receiveWithin(t, sendInBackground(req), 5*time.Second, "answer to "+write.name)
+		if a.err != nil {
+			t.Fatal(a.err)
+		}
+		if took := time.Since(begun); took >= time.Second {
+			t.Errorf("%s answered after %v; want at once, the queue full, before a wait for Web's row could end at 3s", write.name, took)
+		}
+		w.wantBusy(t, write.name, req, a.res, a.body)
+	}
+
+	release(t, held)
+	a := receiveWithin(t, changed, 4*time.Second, "answer to alice's change")
+	if a.err != nil {
+		t.Fatal(a.err)
+	}
+	if a.res.StatusCode != http.StatusOK {
+		t.Errorf("alice's change = %d %s, want 200 once Web's row is free", a.res.StatusCode, a.body)
+	}
+	for _, write := range writes {
+		w.send(t, "alice", write.method, write.path, "", write.want)
+	}
+}
+
 // A write whose request reaches its deadline while it waits at the gate is
 // refused 503 server_busy then (M4 design 3.5, 11.11): its wait ends with
 // its request. In an app that lets one write a project in at once, queues

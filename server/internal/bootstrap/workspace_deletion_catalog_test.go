@@ -13,10 +13,11 @@ import (
 )
 
 // The catalog reading of the deletions' guards (workspace_deletion_test.go,
-// project_deletion_test.go): the foreign keys to the deleted row's table,
-// workspaces or projects, which fail on a table under it without one of its
-// own (keysTo, with its counterexample), and each key's rows under a
-// deleted row: undeleted, unstamped by the deletion, or all of them as
+// project_deletion_test.go, issue_deletion_test.go): the foreign keys to
+// the deleted row's table, workspaces, projects or issues, which fail on a
+// table under it without one of its own (keysTo, with its counterexample);
+// each key's rows under a deleted row: undeleted or deleted, unstamped by
+// the deletion, or all of them as text; and its rows of the ids given, as
 // text.
 
 // foreignKey is a column that references parent, table as SQL names it.
@@ -25,8 +26,8 @@ type foreignKey struct{ parent, table, column string }
 func (k foreignKey) String() string { return k.table + "." + k.column }
 
 // rowOf is one row of the parent table, as the guards' messages name it:
-// "workspace" for workspaces, "project" for projects. A parent is spelt as
-// its table everywhere else.
+// "workspace" for workspaces, "project" for projects, "issue" for issues.
+// A parent is spelt as its table everywhere else.
 func rowOf(parent string) string { return strings.TrimSuffix(parent, "s") }
 
 // keysTo are the parent row itself, as <parent>.id, then every foreign key
@@ -92,8 +93,21 @@ func keysTo(t testing.TB, pool *pgxpool.Pool, parent string) []foreignKey {
 // undeleted are the ids of k's undeleted rows under the parent row id.
 func (k foreignKey) undeleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) []uuid.UUID {
 	t.Helper()
+	return k.idsUnder(t, pool, id, "IS NULL")
+}
+
+// deleted are the ids of k's deleted rows under the parent row id.
+func (k foreignKey) deleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) []uuid.UUID {
+	t.Helper()
+	return k.idsUnder(t, pool, id, "IS NOT NULL")
+}
+
+// idsUnder are the ids of k's rows under the parent row id whose
+// deleted_at is as state says, in order.
+func (k foreignKey) idsUnder(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, state string) []uuid.UUID {
+	t.Helper()
 	rows, err := pool.Query(context.Background(), "SELECT id FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
-		" = $1 AND deleted_at IS NULL ORDER BY id", id)
+		" = $1 AND deleted_at "+state+" ORDER BY id", id)
 	if err != nil {
 		t.Fatalf("%s: %v", k, err)
 	}
@@ -102,6 +116,17 @@ func (k foreignKey) undeleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) []
 		t.Fatalf("%s: %v", k, err)
 	}
 	return ids
+}
+
+// asText is k's rows ids, each as text, in order; "" when there is none.
+func (k foreignKey) asText(t *testing.T, pool *pgxpool.Pool, ids []uuid.UUID) string {
+	t.Helper()
+	var s string
+	if err := pool.QueryRow(context.Background(), "SELECT coalesce(string_agg(r::text, E'\\n' ORDER BY r::text), '') FROM "+k.table+
+		" r WHERE r.id = ANY ($1)", ids).Scan(&s); err != nil {
+		t.Fatalf("%s: %v", k, err)
+	}
+	return s
 }
 
 // unstamped is those of k's rows ids that the deletion of the parent row id

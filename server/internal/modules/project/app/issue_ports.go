@@ -56,3 +56,11 @@ type IssueLabel struct {
 	ID   uuid.UUID
 	Name string
 }
+
+// IssueProjectIdentifier is a project as project.Provide reads it for the
+// issue module's getIssueByIdentifier (M4 design 3.7): its id and its
+// identifier. bootstrap converts it into issue's value.
+type IssueProjectIdentifier struct {
+	ID         uuid.UUID
+	Identifier string
+}

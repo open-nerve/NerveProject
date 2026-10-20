@@ -45,21 +45,22 @@ type named struct {
 
 // Execute checks p (domain.CheckIssuePatch), before any read; then Locks
 // runs the write on the work item id (M4 design 3.5, 6.7, 11.11): its
-// precheck, the work item read and the decision on issue.update in its
-// project, before any lock; then the project's write gate, which refuses a
-// write that may wait no longer (503 server_busy); then in one
+// precheck, the work item read and the decision on issue.update on it, the
+// guest rule first, before any lock; then the project's write gate, which
+// refuses a write that may wait no longer (503 server_busy); then in one
 // transaction, the project FOR NO KEY UPDATE, the work item read again and
 // the decision again, and under them, in this order: an archived project
-// refuses it (409 project.archived); what p changes in the work item
+// refuses it (409 project.archived), then an archived work item (409
+// issue.archived), a change of nothing too; what p changes in the work item
 // (domain.ChangesOf), and when it changes nothing, nothing is written and
-// the answer is the work item as read; the dependent rows it adds (check),
-// every problem in one 422; the clock; the work item's fields, its
-// completion by its new state's group when its state changes
-// (domain.CompletedAt); the accounts and the labels it removes and adds,
-// in id order; the accounts it adds subscribed; its activity
-// (domain.UpdateActivity), each account by his display name. All of it is
-// the caller's at that moment. The answer is the work item as stored, read
-// back in the transaction.
+// the answer is the work item as read; the dependent rows it adds and the
+// order of the dates it leaves (check), every problem in one 422; the
+// clock; the work item's fields, its completion by its new state's group
+// when its state changes (domain.CompletedAt); the accounts and the labels
+// it removes and adds, in id order; the accounts it adds subscribed; its
+// activity (domain.UpdateActivity), each account by his display name. All
+// of it is the caller's at that moment. The answer is the work item as
+// stored, read back in the transaction.
 func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssuePatch) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -71,8 +72,11 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 	w := write{issue: &id, action: domain.ActionUpdate, notFound: domain.ErrIssueNotFound}
 	var updated domain.Issue
 	err = u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
-		if h.project.Archived {
+		switch {
+		case h.project.Archived:
 			return domain.ErrProjectArchived
+		case h.issue.ArchivedAt != nil:
+			return domain.ErrIssueArchived
 		}
 		c := domain.ChangesOf(h.issue, p)
 		if c.None() {
@@ -103,8 +107,10 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 // be assigned (domain.Unassignable), while one the work item keeps stays
 // whatever his role; each label added is the project's. The labels the
 // work item keeps are on it, so they are the project's undeleted labels:
-// deleting a label takes it off every work item (DetachLabel). Every
-// problem is reported at once, in one 422, each at its place in p.
+// deleting a label takes it off every work item (DetachLabel). Then the
+// dates p leaves the work item with are in order, merged with those it
+// keeps (domain.DatesOutOfOrder). Every problem is reported at once, in
+// one 422, each at its place in p.
 func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssuePatch, c domain.Changes) (named, error) {
 	var n named
 	var problems []shared.FieldError
@@ -113,9 +119,9 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 		if err != nil {
 			return named{}, err
 		}
-		old, found := stateOf(states, i.StateID)
-		if !found {
-			return named{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
+		old, err := issueState(states, i)
+		if err != nil {
+			return named{}, err
 		}
 		if state, found := pickState(states, c.StateID); found {
 			n.state = &domain.Changed[domain.Named]{Old: domain.Named{ID: old.ID, Name: old.Name}, New: domain.Named{ID: state.ID, Name: state.Name}}
@@ -144,6 +150,9 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 			}
 		}
 	}
+	if f := domain.DatesOutOfOrder(i, p); f != nil {
+		problems = append(problems, *f)
+	}
 	if len(problems) > 0 {
 		return named{}, shared.Invalid(problems...)
 	}
@@ -155,15 +164,6 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 		return named{}, err
 	}
 	return n, nil
-}
-
-// stateOf is the state id of states; found is false when none is.
-func stateOf(states []StateRef, id uuid.UUID) (StateRef, bool) {
-	i := slices.IndexFunc(states, func(s StateRef) bool { return s.ID == id })
-	if i < 0 {
-		return StateRef{}, false
-	}
-	return states[i], true
 }
 
 // labelNames are the labels ids, in their order, by their names in
@@ -186,7 +186,8 @@ func labelNames(labels []LabelRef, ids []uuid.UUID) ([]domain.Named, error) {
 // then those added; its labels' rows, the same; its subscribers', the
 // accounts added; its activity's.
 func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c domain.Changes, n named) error {
-	f := IssueFields{ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, CompletedAt: i.CompletedAt, By: s.by, At: s.at}
+	f := IssueFields{ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, StartDate: i.StartDate, TargetDate: i.TargetDate,
+		CompletedAt: i.CompletedAt, By: s.by, At: s.at}
 	activity := domain.Update{State: n.state, LabelsAdded: n.labelsAdded, LabelsRemoved: n.labelsRemoved}
 	if c.Name != nil {
 		f.Name, activity.Name = *c.Name, &domain.Changed[string]{Old: i.Name, New: *c.Name}
@@ -196,6 +197,12 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 	}
 	if c.StateID != nil {
 		f.StateID, f.CompletedAt = *c.StateID, domain.CompletedAt(n.group, s.at)
+	}
+	if c.StartDate != nil {
+		f.StartDate, activity.StartDate = c.StartDate.To, &domain.Changed[*shared.Date]{Old: i.StartDate, New: c.StartDate.To}
+	}
+	if c.TargetDate != nil {
+		f.TargetDate, activity.TargetDate = c.TargetDate.To, &domain.Changed[*shared.Date]{Old: i.TargetDate, New: c.TargetDate.To}
 	}
 	if err := u.d.Issues.UpdateIssue(ctx, f); err != nil {
 		return err

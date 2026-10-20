@@ -6,7 +6,6 @@ import (
 	"slices"
 	"testing"
 	"time"
-	"uuid"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -20,16 +19,22 @@ import (
 // TestEachIssueWriteLocksItsProjectFirst sends it: its operation, its
 // method and its path as the contract has them; target, the path it
 // sends, a path of that pattern (pathOf), to Web of the world or to a row
-// made in Web for it; body, its body when alice has sent it n times
-// before, which names the world's rows and changes them anew; the answer
-// it gets; and reads, the first table it reads under its project's lock
-// that its precheck did not read, before any write of its own.
+// made in Web for it, made anew for each of alice's sends, before any lock
+// is held, so that a write that ends what it names finds it there; body,
+// its body, which names the world's rows; the answer it gets; waits, the
+// table it waits for under its lock before any write of its own: the
+// first it reads there that its precheck did not (held ACCESS EXCLUSIVE),
+// or, when it reads none, the first it writes (held SHARE, which its
+// precheck's plain read does not wait for); and mode, the lock another
+// transaction holds of that table: ACCESS EXCLUSIVE, which a plain read
+// waits for too, or SHARE, which a write waits for and a plain read does
+// not, so that the write waits there and its precheck does not.
 type issueWrite struct {
 	op, method, path string
 	target           func(t *testing.T, w issueWorld) string
-	body             func(w issueWorld, n int) string
+	body             func(w issueWorld) string
 	want             int
-	reads            string
+	waits, mode      string
 }
 
 // issueWrites are the work-item side's writes, each with its row: every
@@ -37,16 +42,36 @@ type issueWrite struct {
 var issueWrites = []issueWrite{
 	{op: "createIssue", method: http.MethodPost, path: "/api/v0/projects/{project_id}/issues",
 		target: func(_ *testing.T, w issueWorld) string { return "/api/v0/projects/" + w.web.String() + "/issues" },
-		body:   func(w issueWorld, _ int) string { return w.fullIssue() }, want: http.StatusCreated, reads: "states"},
-	// A work item in Todo, which each of alice's sends moves to the other
-	// state, Done first: a change of state, so the states are read under
-	// the lock.
+		body:   func(w issueWorld) string { return w.fullIssue() }, want: http.StatusCreated, waits: "states", mode: "ACCESS EXCLUSIVE"},
+	// A work item in Todo, which the send moves to Done: a change of
+	// state, so the states are read under the lock.
 	{op: "updateIssue", method: http.MethodPatch, path: "/api/v0/issues/{issue_id}",
 		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
-		body: func(w issueWorld, n int) string {
-			return `{"state_id":"` + []uuid.UUID{w.done, w.todo}[n%2].String() + `"}`
+		body:   func(w issueWorld) string { return `{"state_id":"` + w.done.String() + `"}` }, want: http.StatusOK, waits: "states",
+		mode: "ACCESS EXCLUSIVE"},
+	// A work item the send deletes: it reads nothing under the lock that
+	// its precheck did not, so it waits for the work items' table, which
+	// it writes first.
+	{op: "deleteIssue", method: http.MethodDelete, path: "/api/v0/issues/{issue_id}",
+		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
+		body:   func(issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
+	// A work item in Done, which the send archives: its state is read
+	// under the lock.
+	{op: "archiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/archive",
+		target: func(t *testing.T, w issueWorld) string {
+			return "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive"
 		},
-		want: http.StatusOK, reads: "states"},
+		body: func(issueWorld) string { return "" }, want: http.StatusOK, waits: "states", mode: "ACCESS EXCLUSIVE"},
+	// An archived work item, which the send unarchives: it reads nothing
+	// under the lock that its precheck did not, so it waits for the work
+	// items' table, which it writes first.
+	{op: "unarchiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/unarchive",
+		target: func(t *testing.T, w issueWorld) string {
+			id := w.doneWorkItem(t)
+			w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+id.String()+"/archive", "", http.StatusOK)
+			return "/api/v0/issues/" + id.String() + "/unarchive"
+		},
+		body: func(issueWorld) string { return "" }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
 }
 
 // issueTables are the tables a write on the work-item side reads or
@@ -85,13 +110,14 @@ func writesOnIssues(ops []apitest.Operation) []string {
 //   - Its project first: alice's write, under the same locks, waits for
 //     the projects table, no other.
 //   - FOR NO KEY UPDATE by its lock, and nothing of the workspace: another
-//     transaction holds the first table the write reads under its lock
-//     that its precheck did not (reads) IN ACCESS EXCLUSIVE MODE, which a
-//     plain read waits for too. alice's write waits for it before any
-//     write of its own: it holds no table's ROW EXCLUSIVE lock, which
-//     every write takes (writtenTables), so what it holds of Web is its
-//     lock's, not an UPDATE's. It holds Web's row FOR NO KEY UPDATE, no
-//     weaker and no stronger, and acme's row not at all (lockOn).
+//     transaction holds the table the write waits for under its lock
+//     (waits), in its mode (mode): the first it reads there that its
+//     precheck did not, or, when it reads none, the first it writes.
+//     alice's write waits for it before any write of its own: it holds no
+//     table's ROW EXCLUSIVE lock, which every write takes (writtenTables),
+//     so what it holds of Web is its lock's, not an UPDATE's. It holds
+//     Web's row FOR NO KEY UPDATE, no weaker and no stronger, and acme's
+//     row not at all (lockOn).
 //   - No lock of the workspace that a cascade's waits for: another
 //     transaction holds acme's row FOR NO KEY UPDATE, as every cascade over
 //     its projects does (M3 design 3.3); alice's write answers meanwhile.
@@ -115,17 +141,24 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	w := newIssueWorld(t)
 	for _, iw := range issueWrites {
 		t.Run(iw.op, func(t *testing.T) {
-			target := iw.target(t, w)
-			if !pathOf(iw.path, target) {
-				t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
+			// alice's three sends' targets; the callers refused send her
+			// first's.
+			var targets []string
+			for range 3 {
+				target := iw.target(t, w)
+				if !pathOf(iw.path, target) {
+					t.Fatalf("%s's row sends %s %s, not a path of %s", iw.op, iw.method, target, iw.path)
+				}
+				targets = append(targets, target)
 			}
-			path, alices := w.base+target, 0
+			alices := 0
 			send := func(name string) <-chan answer {
-				body := iw.body(w, alices)
+				target := targets[0]
 				if name == "alice" {
+					target = targets[alices]
 					alices++
 				}
-				req := newRequest(t, iw.method, path, w.tokens[name], []byte(body))
+				req := newRequest(t, iw.method, w.base+target, w.tokens[name], []byte(iw.body(w)))
 				w.contract.CheckRequest(t, req)
 				return sendInBackground(req)
 			}
@@ -152,22 +185,22 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 			release(t, tables)
 			answers("alice", answered, iw.want)
 
-			read := lockedTables(t, w.pool, iw.reads, "ACCESS EXCLUSIVE")
+			waited := lockedTables(t, w.pool, iw.waits, iw.mode)
 			answered = send("alice")
-			pgtest.WaitForLockWaitBehind(t, w.pool, read.Conn().PgConn(), 10*time.Second)
-			if table := waitedTable(t, w.pool, read.Conn().PgConn()); table != iw.reads {
-				t.Fatalf("%s waits for %s, not for %s", iw.op, table, iw.reads)
+			pgtest.WaitForLockWaitBehind(t, w.pool, waited.Conn().PgConn(), 10*time.Second)
+			if table := waitedTable(t, w.pool, waited.Conn().PgConn()); table != iw.waits {
+				t.Fatalf("%s waits for %s, not for %s", iw.op, table, iw.waits)
 			}
-			if written := writtenTables(t, w.pool, read.Conn().PgConn()); len(written) > 0 {
-				t.Errorf("%s has written %q when it reads %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.reads)
+			if written := writtenTables(t, w.pool, waited.Conn().PgConn()); len(written) > 0 {
+				t.Errorf("%s has written %q when it waits for %s: what it holds of Web is no longer its lock's alone", iw.op, written, iw.waits)
 			}
 			if lock := lockOn(t, w.pool, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
-				t.Errorf("%s holds Web %s when it reads %s, not FOR NO KEY UPDATE", iw.op, lock, iw.reads)
+				t.Errorf("%s holds Web %s when it waits for %s, not FOR NO KEY UPDATE", iw.op, lock, iw.waits)
 			}
 			if lock := lockOn(t, w.pool, "workspaces WHERE id = $1", w.acme); lock != "no lock" {
-				t.Errorf("%s holds acme %s when it reads %s", iw.op, lock, iw.reads)
+				t.Errorf("%s holds acme %s when it waits for %s", iw.op, lock, iw.waits)
 			}
-			release(t, read)
+			release(t, waited)
 			answers("alice", answered, iw.want)
 
 			cascade := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", w.acme)

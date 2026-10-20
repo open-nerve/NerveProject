@@ -12,7 +12,7 @@ import (
 )
 
 const projectFacts = `-- name: ProjectFacts :one
-SELECT p.workspace_id, p.network, m.role AS member_role
+SELECT p.workspace_id, p.network, p.guest_view_all_features, m.role AS member_role
 FROM projects p
 LEFT JOIN project_members m
        ON m.project_id = p.id AND m.member_id = $1 AND m.is_active AND m.deleted_at IS NULL
@@ -25,16 +25,22 @@ type ProjectFactsParams struct {
 }
 
 type ProjectFactsRow struct {
-	WorkspaceID uuid.UUID
-	Network     int16
-	MemberRole  *int16
+	WorkspaceID          uuid.UUID
+	Network              int16
+	GuestViewAllFeatures bool
+	MemberRole           *int16
 }
 
-// access's ProjectAccess (M3 design 6.5): the undeleted project, archived or not, and the user's active membership of
-// it, if any.
+// access's ProjectAccess (M3 design 6.5): the undeleted project, archived or not, whether it shows its guests every
+// work item (M4 design 3.4), and the user's active membership of it, if any.
 func (q *Queries) ProjectFacts(ctx context.Context, arg ProjectFactsParams) (ProjectFactsRow, error) {
 	row := q.db.QueryRow(ctx, projectFacts, arg.UserID, arg.ProjectID)
 	var i ProjectFactsRow
-	err := row.Scan(&i.WorkspaceID, &i.Network, &i.MemberRole)
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.Network,
+		&i.GuestViewAllFeatures,
+		&i.MemberRole,
+	)
 	return i, err
 }

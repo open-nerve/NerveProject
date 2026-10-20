@@ -553,10 +553,12 @@ paths:
         first. Nor is the only state of its group
         (project.state_last_in_group): every group keeps a state. A state
         that is both is project.state_default. Nor is a state a work item is
-        in, an archived one too (project.state_in_use); it is checked before
-        the default and the group. The state is deleted at the moment of the
-        request, by the caller, and its name is free again in the project.
-        The role is decided after the workspace and project rows are locked.
+        in, an archived one too (project.state_in_use): unarchive the
+        archived ones and move them all to another state first. It is
+        checked before the default and the group. The state is deleted at
+        the moment of the request, by the caller, and its name is free again
+        in the project. The role is decided after the workspace and project
+        rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [project.state_not_found, forbidden, project.state_in_use, project.state_default, project.state_last_in_group]
       responses:
@@ -962,7 +964,11 @@ components:
           description: Whether the project shows intake.
           type: boolean
         guest_view_all_features:
-          description: A setting of the project for its guests, kept as set.
+          description: >-
+            Whether the project's guests see every work item of it. When
+            false, a guest of the project sees only the work items he
+            created, and every other answers him as one that does not exist
+            (issue.not_found).
           type: boolean
         archive_in:
           description: A number of months, 0–12, set for automatic archiving and kept as set; 0 for none.

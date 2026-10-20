@@ -13,6 +13,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -72,13 +73,14 @@ var testIssueConfig = config.IssueConfig{WriteGate: config.WriteGateConfig{PerPr
 
 // newIssueRoute is the issue module (issue.New) on pool, with tx its
 // transactions, the write gate of testIssueConfig, the Authorizer on pool
-// and project's and identity's ports converted, all as bootstrap wires
-// them.
+// and project's, workspace's and identity's ports converted, all as
+// bootstrap wires them.
 func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
 	return newRoute(t, issue.New(issue.Deps{Pool: pool, Tx: tx, WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool).IssueProjects},
-		Profiles: issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
+		Workspaces: issueWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory},
+		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}}).Register)
 }
 
 // Each write on the work-item side runs every statement of its transaction
@@ -96,7 +98,8 @@ func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) module
 // who sees Web, is refused before the lock (403). She changes the first:
 // into Done, assigned to herself instead of bob, without Bug; then its name
 // as it is, which writes nothing; then with a label no project has (422),
-// and walt is refused (403); and she reads it, without a transaction. With
+// and walt is refused (403); and she reads it, without a transaction. She
+// archives it, in Done, and unarchives it; she deletes the second. With
 // Web archived, her creation and her change are refused under the lock
 // (409).
 func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
@@ -118,6 +121,7 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 	var defaulted struct {
+		ID          uuid.UUID   `json:"id"`
 		AssigneeIDs []uuid.UUID `json:"assignee_ids"`
 	}
 	if decodeAnswer(t, send(alice, `{"name":"Defaulted"}`, http.StatusCreated), &defaulted); !slices.Equal(defaulted.AssigneeIDs,
@@ -142,6 +146,10 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	change(alice, `{"label_ids":["`+uuid.NewV7().String()+`"]}`, http.StatusUnprocessableEntity)
 	change(w.ids["walt"], `{"name":"Mend"}`, http.StatusForbidden)
 	route.answerWithin(t, w.contract, http.MethodGet, "/api/v0/issues/"+first.ID.String(), alice, "", http.StatusOK)
+	for _, verb := range []string{"archive", "unarchive"} {
+		route.answerWithin(t, w.contract, http.MethodPost, "/api/v0/issues/"+first.ID.String()+"/"+verb, alice, "", http.StatusOK)
+	}
+	route.answerWithin(t, w.contract, http.MethodDelete, "/api/v0/issues/"+defaulted.ID.String(), alice, "", http.StatusNoContent)
 	if _, err := w.pool.Exec(context.Background(), "UPDATE projects SET archived_at = now() WHERE id = $1", w.web); err != nil {
 		t.Fatal(err)
 	}
