@@ -8131,12 +8131,12 @@ Expected: 通过。
 - `apitest/operations.go`：`date` 是检查的格式（`checkedFormat`），`validValue` 给它一个合法的日期。
 
 **Tests:**
-- 单元：`TestParseDate`、`TestDateCompare`、`TestDateAndTime`（UTC-5 的 23:30 是那一天）、`TestDateInJSON`；`TestFormatDate`（`TestParseDate` 的样例和一个转义）、`TestComparePaths`、`TestCheck`（`ids[2]` 在 `ids[10]` 之前，开放节点的数）、`TestCheckCostsAboutTheBody`（加三个：字符串的数组、请求体的第一个日期、不限类型的值里的数）；`TestBodyCasesOfDates`（合法的体带一个合法的日期，别的用例都留着它，每个日期的字段各有一个写法不对的用例）。
-- 生成器（`server/tools`，`make test` 的第二段）：`TestGenerateFollowsTheTypeMapping`（没有映射时 `date` 生成 `openapi_types.Date`，没有检查器）、`TestGenerateAcceptsTheStringsItCanCheck`、`TestGenerateRejectsWhatItCannotCheck`（映射之外的 `date` 仍被拒绝）。
+- 单元：`TestParseDate`、`TestDateCompare`、`TestDateAndTime`（UTC-5 的 23:30 是那一天）、`TestDateInJSON`；`TestFormatDate`（`TestParseDate` 的样例和一个转义）、`TestComparePaths`、`TestCheck`（`ids[2]` 在 `ids[10]` 之前，开放节点的数）、`TestCheckCostsAboutTheBody`（加三个：字符串的数组、日期、不限类型的值里的数）；`TestBodyCasesOfDates`（合法的体带一个合法的日期，别的用例都留着它，每个日期的字段各有一个写法不对的用例）。
+- 生成器（`server/tools`，`make test` 的第二段）：`TestGenerateFollowsTheTypeMapping`（没有映射时 `date` 生成 `openapi_types.Date`，没有检查器：映射之外的 `date` 仍被拒绝）、`TestGenerateAcceptsTheStringsItCanCheck`、`TestGenerateRejectsWhatItCannotCheck`。
 
 - [ ] **Step 1: `shared.Date`**
 
-`server/internal/shared/date.go`（新文件，68 行）：
+`server/internal/shared/date.go`（新文件，67 行）：
 
 ````file server/internal/shared/date.go
 package shared
@@ -8147,10 +8147,9 @@ import (
 	"time"
 )
 
-// Date is a day of the calendar, without a time of day or a time zone: a
-// work item's start and target dates (M4 design 3.7, 6.1). Its text is
-// YYYY-MM-DD, of a day from 0001-01-01 to 9999-12-31; in JSON, a string.
-// The zero Date is no day.
+// Date is a day of the calendar, without a time of day or a time zone
+// (M4 design 3.7, 6.1). Its text is YYYY-MM-DD, of a day from 0001-01-01
+// to 9999-12-31; in JSON, a string. The zero Date is no day.
 type Date struct {
 	year  int
 	month time.Month
@@ -8693,10 +8692,10 @@ func TestFormatDate(t *testing.T) {
 ````new server/internal/platform/httpserver/bodyshape/cost_test.go
 // answers 16 copies of a path of about 1 MiB. The eighth repeats one
 // problem, which is reported once and not counted, so each repeat must cost
-// little (M2 design 3.11). The last three are M4's (M2 handoff 4): the
-// first array of strings and the first date of a request body, and a number
-// in a value of any type, which a check that read it once a level would
-// cost the square of the depth. Not parallel: TotalAlloc counts the whole
+// little (M2 design 3.11). The last three are M4's (M2 handoff 4): an array
+// of strings, a date, and a number in a value of any type. The number is
+// under 9,990 arrays: a check that read the value once a level would cost
+// the square of the depth. Not parallel: TotalAlloc counts the whole
 // process.
 ````
 ````old server/internal/platform/httpserver/bodyshape/cost_test.go
@@ -8865,7 +8864,7 @@ func cutDigits(s string) (digits, rest string) {
 }
 ````
 
-`server/internal/platform/httpserver/bodyshape/paths_test.go`（新文件，29 行）：
+`server/internal/platform/httpserver/bodyshape/paths_test.go`（新文件，31 行）：
 
 ````file server/internal/platform/httpserver/bodyshape/paths_test.go
 package bodyshape
@@ -8876,16 +8875,18 @@ import (
 )
 
 // Paths sort byte by byte, but an index against an index by its number
-// (M2 handoff 4): a[9].z before a[10], before a[10].name; a member before
-// an index of the same value ('.' before '['), the shorter path first; a
-// name with a '[' and digits in it is ordered as an index is. The order is
-// the same from any order of the paths.
+// (M2 handoff 4): a[1].z before a[2].a, though the rest of the path would
+// order them the other way, and a[9].z before a[10], before a[10].name; a
+// member before an index of the same value ('.' before '['), the shorter
+// path first; a name with a '[' and digits in it is ordered as an index
+// is. The order is the same from any order of the paths.
 func TestComparePaths(t *testing.T) {
-	want := []string{"", "[2]", "[10]", "a", "a.b", "a[0]", "a[9].z", "a[10]", "a[10].name", "a[10][3]", "a[10][20]", "k[9", "k[10", "z"}
+	want := []string{"", "[2]", "[10]", "a", "a.b", "a[0]", "a[1].z", "a[2].a", "a[9].z", "a[10]", "a[10].name", "a[10][3]", "a[10][20]",
+		"k[9", "k[10", "z"}
 	reversed := slices.Clone(want)
 	slices.Reverse(reversed)
-	for _, from := range [][]string{slices.Clone(want), reversed, {"a[10]", "z", "k[10", "", "a[0]", "[10]", "a.b", "a[10][20]", "a[9].z",
-		"k[9", "a", "a[10][3]", "[2]", "a[10].name"}} {
+	for _, from := range [][]string{slices.Clone(want), reversed, {"a[10]", "a[2].a", "z", "k[10", "", "a[0]", "[10]", "a.b", "a[10][20]",
+		"a[9].z", "k[9", "a", "a[1].z", "a[10][3]", "[2]", "a[10].name"}} {
 		got := slices.SortedFunc(slices.Values(from), comparePaths)
 		if !slices.Equal(got, want) {
 			t.Errorf("sorted from %q = %q, want %q", from, got, want)
@@ -9243,6 +9244,7 @@ Expected: 通过。
 | `T9.11` | `apitest` 的请求体用例不把 `date` 算作检查的格式 | `internal/platform/httpserver/apitest` 的全部测试（`make test`） | 单元 |
 | `T9.12` | `shared.DateOf` 取那个时刻在 UTC 的那一天，不取它所在的时区的 | `internal/shared` 的全部测试（`make test`） | 单元 |
 | `T9.13` | `Date` 的 JSON 是它的零点的时刻（RFC 3339），不是 `YYYY-MM-DD` | `internal/shared` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`）（Task 11 起） | 单元；组合 |
+| `T9.14` | 下标与下标只按位数比较，位数相同时由路径其余的部分决定：`tags[2].a` 在 `tags[1].x` 之前 | `internal/platform/httpserver/bodyshape` 的全部测试（`make test`） | 单元 |
 
 ---
 

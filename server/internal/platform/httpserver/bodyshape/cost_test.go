@@ -63,10 +63,10 @@ func TestCheckListsAtMostSixteenProblems(t *testing.T) {
 // three are from the final review of codex-fixes: whole paths make their
 // answers 16 copies of a path of about 1 MiB. The eighth repeats one
 // problem, which is reported once and not counted, so each repeat must cost
-// little (M2 design 3.11). The last three are M4's (M2 handoff 4): the
-// first array of strings and the first date of a request body, and a number
-// in a value of any type, which a check that read it once a level would
-// cost the square of the depth. Not parallel: TotalAlloc counts the whole
+// little (M2 design 3.11). The last three are M4's (M2 handoff 4): an array
+// of strings, a date, and a number in a value of any type. The number is
+// under 9,990 arrays: a check that read the value once a level would cost
+// the square of the depth. Not parallel: TotalAlloc counts the whole
 // process.
 func TestCheckCostsAboutTheBody(t *testing.T) {
 	// An open map of closed objects: a client's key is part of every path under it.

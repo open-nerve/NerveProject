@@ -6,10 +6,9 @@ import (
 	"time"
 )
 
-// Date is a day of the calendar, without a time of day or a time zone: a
-// work item's start and target dates (M4 design 3.7, 6.1). Its text is
-// YYYY-MM-DD, of a day from 0001-01-01 to 9999-12-31; in JSON, a string.
-// The zero Date is no day.
+// Date is a day of the calendar, without a time of day or a time zone
+// (M4 design 3.7, 6.1). Its text is YYYY-MM-DD, of a day from 0001-01-01
+// to 9999-12-31; in JSON, a string. The zero Date is no day.
 type Date struct {
 	year  int
 	month time.Month
