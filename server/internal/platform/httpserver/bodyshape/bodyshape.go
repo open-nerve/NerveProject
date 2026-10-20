@@ -23,7 +23,6 @@ import (
 	"slices"
 	"strconv"
 	"time"
-	"unicode/utf8"
 	"uuid"
 )
 
@@ -57,6 +56,7 @@ const (
 	FormatNone Format = iota
 	FormatTime        // time.Time (date-time)
 	FormatUUID        // the standard library's uuid.UUID (uuid)
+	FormatDate        // shared.Date (date), read by its rule (checkDate)
 )
 
 // Node.Extra and Node.Items hold a node index or one of these.
@@ -164,9 +164,10 @@ var ErrNotJSON = errors.New("the request body is not valid JSON")
 // most maxProblems of them: the first ones that a reading in a fixed order
 // meets. The scan reads the body in document order; the walk reads an
 // object's members by name, depth first, then its missing required members.
-// The problems are then sorted by path. So the same body always gets the same
-// problems, but not necessarily those with the smallest paths: 16 undeclared
-// members can crowd out a missing email.
+// The problems are then sorted by path, an index by its number
+// (comparePaths). So the same body always gets the same problems, but not
+// necessarily those with the smallest paths: 16 undeclared members can
+// crowd out a missing email.
 func (t *Table) Check(pattern string, body []byte) error {
 	root, ok := t.Roots[pattern]
 	// walk takes the exact bytes of one value; the whitespace around the
@@ -187,117 +188,27 @@ func (t *Table) Check(pattern string, body []byte) error {
 		return nil
 	}
 	slices.SortFunc(p.errs, func(a, b FieldError) int {
-		return cmp.Or(cmp.Compare(a.Field, b.Field), cmp.Compare(a.Code, b.Code))
+		return cmp.Or(comparePaths(a.Field, b.Field), cmp.Compare(a.Code, b.Code))
 	})
 	return &Error{Fields: p.errs}
 }
 
-// maxProblems bounds the problems of one body. A body can have a problem
-// every few bytes: listing them all could cost the square of the body (M2
-// design 3.11).
-const maxProblems = 16
-
-// maxPath bounds a reported path, in bytes. A name is the client's and can be
-// as long as the body, and every problem under it repeats it: a path longer
-// than this is cut short and ends with an ellipsis, so the paths of one
-// answer are at most maxProblems × maxPath bytes, whatever the body (M2
-// design 3.11). The contract's paths are tens of bytes.
-const maxPath = 256
-
-// ellipsis ends a path that was cut short.
-const ellipsis = "…"
-
-// problems collects the problems of one body while it is read. It keeps the
-// path of the value being read as text, cut after maxPath+1 bytes, and where
-// each segment began. Writing a path for every value would cost the square of
-// the depth, and the whole path for every problem the problems times the
-// name. This way a report copies at most maxPath bytes and compares them with
-// the paths already reported, at most maxProblems of them, however long or
-// deep the path, so a body can repeat one problem as often as it likes.
-type problems struct {
-	path  []byte // names joined by dots, indexes in brackets, e.g. tags[1].name
-	marks []int  // len(path) before each segment, for leave
-	shown []byte // at's buffer for a path cut short
-	errs  []FieldError
-}
-
-// enter adds a member's name to the path.
-func (p *problems) enter(name string) {
-	p.marks = append(p.marks, len(p.path))
-	if len(p.path) > 0 {
-		p.path = append(p.path, '.')
-	}
-	p.path = append(p.path, name[:min(len(name), maxPath+1)]...) // no more than clip keeps
-	p.clip()
-}
-
-// enterItem adds an item's index to the path.
-func (p *problems) enterItem(i int) {
-	p.marks = append(p.marks, len(p.path))
-	p.path = append(strconv.AppendInt(append(p.path, '['), int64(i), 10), ']')
-	p.clip()
-}
-
-// leave takes the last segment off the path.
-func (p *problems) leave() {
-	p.path = p.path[:p.marks[len(p.marks)-1]]
-	p.marks = p.marks[:len(p.marks)-1]
-}
-
-// clip keeps the first maxPath+1 bytes of the path: one more than a reported
-// path has, which tells at that the path is longer.
-func (p *problems) clip() { p.path = p.path[:min(len(p.path), maxPath+1)] }
-
-// full reports whether maxProblems have been reported: the rest is not read.
-func (p *problems) full() bool { return len(p.errs) >= maxProblems }
-
-// report adds a problem at the current path, unless p is full or has it
-// already. A problem is reported once: a name repeated in its object can
-// break the same rule each time, and two long paths can be cut short to the
-// same text, which a client could not tell apart anyway. A repeat does not
-// count against maxProblems.
-func (p *problems) report(code string) {
-	if p.full() {
-		return
-	}
-	path := p.at()
-	for _, f := range p.errs {
-		if f.Field == string(path) && f.Code == code {
-			return
-		}
-	}
-	p.errs = append(p.errs, FieldError{string(path), code})
-}
-
-// at returns the current path as it is reported; the body itself is the
-// empty path. A path longer than maxPath is cut short: its first bytes, cut
-// at a rune boundary, then an ellipsis, maxPath bytes in all at most. The
-// path's names are decoded, so it is UTF-8 up to the cut. The result is valid
-// until the path changes.
-func (p *problems) at() []byte {
-	if len(p.path) <= maxPath {
-		return p.path
-	}
-	cut := maxPath - len(ellipsis)
-	for !utf8.RuneStart(p.path[cut]) {
-		cut--
-	}
-	p.shown = append(append(p.shown[:0], p.path[:cut]...), ellipsis...)
-	return p.shown
-}
-
 // walk checks raw, the exact bytes of one JSON value, against node i. It
-// goes only where the schema goes: declared properties, the values of an
-// open map, the items of an array with an item schema. It reads the members
-// of an object in name order, so a body with more than maxProblems problems
-// gets the same ones every time.
+// goes where the schema goes: declared properties, the values of a map,
+// the items of an array with an item schema. Where the schema takes any
+// value, the generated decoder reads every number into a float64, so there
+// it checks only that each number fits one (M2 handoff 4): a value of a
+// node of any type, an undeclared member of an open object, an item of an
+// array without an item schema, read once however deep (numbers). It reads
+// the members of an object in name order, so a body with more than
+// maxProblems problems gets the same ones every time.
 func (t *Table) walk(i int, raw []byte, p *problems) {
 	if p.full() {
 		return
 	}
 	n := t.Nodes[i]
 	kind := kindOf(raw)
-	if n.Types != Any && kind&n.Types == 0 {
+	if kind == 0 || n.Types != Any && kind&n.Types == 0 {
 		p.report(codeInvalidFormat)
 		return
 	}
@@ -319,6 +230,8 @@ func (t *Table) walk(i int, raw []byte, p *problems) {
 				p.report(codeNotAllowed)
 			case n.Extra >= 0:
 				t.walk(n.Extra, props[name], p)
+			default:
+				numbers(props[name], p)
 			}
 			p.leave()
 		}
@@ -330,14 +243,15 @@ func (t *Table) walk(i int, raw []byte, p *problems) {
 			}
 		}
 	case Array:
-		if n.Items < 0 {
-			return
-		}
 		var items []json.RawMessage
 		_ = json.Unmarshal(raw, &items)
 		for j, item := range items {
 			p.enterItem(j)
-			t.walk(n.Items, item, p)
+			if n.Items >= 0 {
+				t.walk(n.Items, item, p)
+			} else {
+				numbers(item, p)
+			}
 			p.leave()
 		}
 	}
@@ -370,13 +284,31 @@ func kindOf(raw []byte) Type {
 
 // checkFormat decodes the value's own bytes into the format's Go type with
 // encoding/json: exactly what the generated decoder does with this field, so
-// the two accept the same values by construction (M2 design 3.11).
+// the two accept the same values by construction (M2 design 3.11). A date's
+// Go type, shared.Date, is the business's, which the platform does not
+// import: its string is read by its rule (checkDate).
 func checkFormat(f Format, raw []byte) error {
 	switch f {
 	case FormatTime:
 		return json.Unmarshal(raw, new(time.Time))
 	case FormatUUID:
 		return json.Unmarshal(raw, new(uuid.UUID))
+	case FormatDate:
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return err
+		}
+		return checkDate(s)
 	}
 	return fmt.Errorf("bodyshape: unknown format %d", f)
+}
+
+// checkDate reads s by shared.ParseDate's rule (M4 design 6.1): a day as
+// YYYY-MM-DD, of a year from 0001.
+func checkDate(s string) error {
+	t, err := time.Parse(time.DateOnly, s)
+	if err == nil && t.Year() < 1 {
+		err = fmt.Errorf("%q is before the year 1", s)
+	}
+	return err
 }

@@ -1,6 +1,7 @@
 package apitest
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -41,6 +42,32 @@ func TestBodyCases(t *testing.T) {
 		{"owner_id", "invalid_format"}, {"settings.nerve_undeclared", "not_allowed"}}
 	if !slices.Equal(last.Fields, wantFields) {
 		t.Errorf("every problem at once expects %v, want %v", last.Fields, wantFields)
+	}
+}
+
+// A date is a checked format (M4 design 6.1): the valid body has a valid
+// one, which every case but its own keeps, and each date gets a wrong one.
+func TestBodyCasesOfDates(t *testing.T) {
+	op := bodyOperation(t, "{type: object, required: [on], properties: {on: {type: string, format: date}, "+
+		"until: {type: [string, 'null'], format: date}}}")
+
+	var got []string
+	for _, c := range op.BodyCases() {
+		got = append(got, c.Name+" "+string(c.Body)+" "+fmt.Sprint(c.Fields))
+	}
+	want := []string{
+		`undeclared property {"nerve_undeclared":1,"on":"2026-01-01"} [{nerve_undeclared not_allowed}]`,
+		`null for nullable until {"on":"2026-01-01","until":null} []`,
+		`missing on {} [{on required}]`,
+		`wrong date in on {"on":"not-a-date"} [{on invalid_format}]`,
+		`wrong date in until {"on":"2026-01-01","until":"not-a-date"} [{until invalid_format}]`,
+		`on twice {"on":"2026-01-01","on":"2026-01-01"} [{on duplicate}]`,
+		"not UTF-8 in on {\"on\":\"\xff\"} [{on invalid_format}]",
+		`every problem at once {"nerve_undeclared":1,"until":"not-a-date"} [{nerve_undeclared not_allowed} {on required} ` +
+			`{until invalid_format}]`,
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("BodyCases() =\n%q\nwant\n%q", got, want)
 	}
 }
 

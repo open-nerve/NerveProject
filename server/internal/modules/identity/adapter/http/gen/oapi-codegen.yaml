@@ -28,6 +28,10 @@ output-options:
         # 邮箱的格式由领域层校验（422）；默认的 openapi_types.Email 在解码时自己校验，绕过这一层
         email:
           type: string
+        # 日期用 shared.Date（M4 设计 6.1）：默认的 openapi_types.Date 所在的包带进 github.com/google/uuid（M2 交接第 4 节），bodyshape 也查不了它
+        date:
+          type: shared.Date
+          import: github.com/open-nerve/NerveProject/server/internal/shared
 import-mapping:
   # common.yaml 的组件生成在共享包 apigen 里，这里只引用
   ../common.yaml: github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen

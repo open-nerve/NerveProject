@@ -17,9 +17,9 @@ const (
 )
 
 // The golden file is the reviewed output: every supported construct, the
-// type-mapping (uuid checked, email left to the domain, numbers as int, int64
-// and float64), a reference into another file, and one root per operation
-// with a JSON body.
+// type-mapping (uuid checked, date checked as shared.Date, email left to the
+// domain, numbers as int, int64 and float64), a reference into another file,
+// and one root per operation with a JSON body.
 func TestGenerateMatchesTheGoldenFile(t *testing.T) {
 	got, err := generate(thingsSpec, thingsConf)
 	if err != nil {
@@ -58,24 +58,26 @@ func TestGenerateIsDeterministic(t *testing.T) {
 	}
 }
 
-// Without the module template's type-mapping, uuid is generated as
-// openapi_types.UUID, which has no checker: the table follows the mapping.
+// Without the module template's type-mapping, email is generated as
+// openapi_types.Email and date as openapi_types.Date, which have no
+// checker: the table follows the mapping.
 func TestGenerateFollowsTheTypeMapping(t *testing.T) {
 	conf := filepath.Join(t.TempDir(), "oapi-codegen.yaml")
 	if err := os.WriteFile(conf, []byte("package: gen\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-
-	_, err := generate(thingsSpec, conf)
-
-	if err == nil || !strings.Contains(err.Error(), `format "email" is generated as openapi_types.Email`) {
-		t.Errorf("generate() = %v, want the default email mapping rejected", err)
+	for spec, want := range map[string]string{
+		thingsSpec: `format "email" is generated as openapi_types.Email`,
+		bodySpec(t, "{type: string, format: date}"): `due: format "date" is generated as openapi_types.Date, which has no bodyshape checker`,
+	} {
+		if _, err := generate(spec, conf); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("generate(%s) = %v, want an error containing %q", spec, err, want)
+		}
 	}
 }
 
 func TestGenerateRejectsWhatItCannotCheck(t *testing.T) {
 	tests := []struct{ name, property, want string }{
-		{"date", "{type: string, format: date}", `due: format "date" is generated as openapi_types.Date`},
 		{"byte", "{type: string, format: byte}", `due: format "byte" is generated as []byte`},
 		{"int32", "{type: integer, format: int32}", `due: integer format "int32" is generated as int32, whose range bodyshape does not check`},
 		{"uint", "{type: integer, format: uint}", `due: integer format "uint" is generated as uint, whose range bodyshape does not check`},
@@ -94,7 +96,7 @@ func TestGenerateRejectsWhatItCannotCheck(t *testing.T) {
 			`due: contentMediaType, read as format "binary", is generated as openapi_types.File`},
 		{"contentEncoding base64", "{type: string, contentEncoding: base64}",
 			`due: contentEncoding base64, read as format "byte", is generated as []byte`},
-		{"nested", "{type: object, properties: {at: {type: array, items: {type: string, format: date}}}}", `due.at[]: format "date"`},
+		{"nested", "{type: object, properties: {at: {type: array, items: {type: string, format: byte}}}}", `due.at[]: format "byte"`},
 		{"nested number", "{type: array, items: {anyOf: [{type: integer, format: uint64}, {type: 'null'}]}}", `due[]: integer format "uint64" is generated as uint64`},
 	}
 	for _, tt := range tests {
@@ -115,6 +117,7 @@ func TestGenerateAcceptsTheStringsItCanCheck(t *testing.T) {
 		"{type: string, contentEncoding: base64url}",
 		"{type: string, format: uuid, contentEncoding: base64}",
 		"{type: string, format: date-time, contentMediaType: text/plain}",
+		"{type: [string, 'null'], format: date}",
 	} {
 		if _, err := generate(bodySpec(t, property), thingsConf); err != nil {
 			t.Errorf("generate() of %s = %v, want nil", property, err)

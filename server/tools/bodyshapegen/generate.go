@@ -26,6 +26,7 @@ const bodyshapeImport = "github.com/open-nerve/NerveProject/server/internal/plat
 var checkers = map[codegen.SimpleTypeSpec]string{
 	{Type: "time.Time", Import: "time"}: "FormatTime",
 	{Type: "uuid.UUID", Import: "uuid"}: "FormatUUID",
+	{Type: "shared.Date", Import: "github.com/open-nerve/NerveProject/server/internal/shared"}: "FormatDate",
 }
 
 // The JSON types in bodyshape's bit order.

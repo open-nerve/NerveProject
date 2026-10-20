@@ -27,13 +27,23 @@ func ambiguities(value []byte, p *problems) {
 	s.value()
 }
 
+// numbers reports to p each number in value, one valid JSON value read
+// where the schema takes any value, that no float64 holds (invalid_format),
+// at its JSON path (Table.walk). It reads value once, as ambiguities does,
+// however deep it is; its ambiguities, ambiguities has found none of.
+func numbers(value []byte, p *problems) {
+	s := scanner{data: value, p: p, numbers: true}
+	s.value()
+}
+
 // scanner reads a valid JSON value byte by byte; it does not check the
 // syntax again. It decodes member names only: a value's string is checked on
-// its bytes.
+// its bytes. With numbers, a number no float64 holds is reported too.
 type scanner struct {
-	data []byte
-	pos  int
-	p    *problems
+	data    []byte
+	pos     int
+	p       *problems
+	numbers bool
 }
 
 func (s *scanner) value() {
@@ -48,8 +58,12 @@ func (s *scanner) value() {
 			s.p.report(codeInvalidFormat)
 		}
 	default: // a number, true, false or null
+		start := s.pos
 		for s.pos < len(s.data) && !isEnd(s.data[s.pos]) {
 			s.pos++
+		}
+		if s.numbers && kindOf(s.data[start:s.pos]) == 0 {
+			s.p.report(codeInvalidFormat)
 		}
 	}
 }
