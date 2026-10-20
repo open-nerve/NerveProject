@@ -3,6 +3,7 @@ package app_test
 import (
 	"slices"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
@@ -27,18 +28,24 @@ func deletingRows(id uuid.UUID) []string {
 
 // A deletion, in the order of M4 design 3.5: Locks' calls, its decisions
 // on issue.delete (lockedAs); the clock; the work item's rows, table by
-// table in the global order (deletingRows), each alice's at the moment.
+// table in the global order (deletingRows), each alice's at the moment. An
+// archived work item is deleted as any other (M4 design 3.8).
 func TestDeleteIssueDeletesTheWorkItemAndItsRows(t *testing.T) {
-	uc, w, id := newDelete()
-	if err := uc.Execute(as(alice), id); err != nil {
-		t.Fatal(err)
-	}
-	if calls := slices.Concat(lockedAs(domain.ActionDelete, id), []string{"Now"}, deletingRows(id)); !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
-	}
-	deletion := app.IssueDeletion{IssueID: id, By: alice, At: clockNow}
-	if want := slices.Repeat([]app.IssueDeletion{deletion}, 5); !slices.Equal(w.issues.deletions, want) {
-		t.Errorf("the deletions %+v, want %+v", w.issues.deletions, want)
+	for what, archivedAt := range map[string]*time.Time{"a work item": nil, "an archived work item": &earlier} {
+		t.Run(what, func(t *testing.T) {
+			uc, w, id := newDelete()
+			w.issues.archivedAt = archivedAt
+			if err := uc.Execute(as(alice), id); err != nil {
+				t.Fatal(err)
+			}
+			if calls := slices.Concat(lockedAs(domain.ActionDelete, id), []string{"Now"}, deletingRows(id)); !slices.Equal(w.log.calls, calls) {
+				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+			}
+			deletion := app.IssueDeletion{IssueID: id, By: alice, At: clockNow}
+			if want := slices.Repeat([]app.IssueDeletion{deletion}, 5); !slices.Equal(w.issues.deletions, want) {
+				t.Errorf("the deletions %+v, want %+v", w.issues.deletions, want)
+			}
+		})
 	}
 }
 
