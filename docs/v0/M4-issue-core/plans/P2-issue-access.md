@@ -173,7 +173,7 @@ sys.exit(1 if broken else 0)
 | `server/sqlc.yaml`（修改） | `issue` 的 `date` → `time.Time` | 10 |
 | `server/internal/modules/issue/adapter/http/dates_test.go`（新）、`server/internal/bootstrap/issue_dates_test.go`（新） | 体的检查与解码一致；组合的日期 | 11 |
 | `server/internal/bootstrap/issue_interleaving_archive_test.go`（新）、`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改） | 交错 12；删除与修改 | 12 |
-| `e2e/fixtures/issues.ts`、`e2e/fixtures/assert/issue.ts`（修改） | `issueArchived`、`issueUnarchived`、`issueDeleted`；`archivedRow`、`restoredRow`、`expectIssueArchival`、`expectIssueDeleted`，创建和修改的日期 | 13 |
+| `e2e/fixtures/issues.ts`、`e2e/fixtures/assert/issue.ts`、`e2e/fixtures/assert/catalog.ts`（修改） | `issueArchived`、`issueUnarchived`、`issueDeleted`；`archivedRow`、`restoredRow`、`expectIssueArchival`、`expectIssueDeleted`，创建和修改的日期；`keysBelow`：目录里一张表以下的外键图 | 13 |
 | `e2e/stories/issue/i15-archive-issue.spec.ts`（新）、`e2e/stories/issue/i1-create-issue.spec.ts`、`e2e/stories/issue/i2-update-issue.spec.ts`（修改） | I15 的接口版本；I1、I2 的日期；I2 的已归档 409 | 13 |
 | `docs/v0/v0-design.md`、`docs/v0/M2-auth/M2-design.md`、`docs/v0/plane-diff.md`、`docs/v0/M4-issue-core/handoffs/M1-P3-trim-platform.md`、`docs/v0/M4-issue-core/handoffs/M2-closeout.md`、`docs/v0/M4-issue-core/handoffs/M3-closeout.md`（修改） | 3.23 中 P2 的行；交接的处理结果 | 14 |
 
@@ -11616,20 +11616,84 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/stories/issue/i15-archive-issue.spec.ts`
-- Modify: `e2e/fixtures/assert/issue.ts`、`e2e/fixtures/issues.ts`、`e2e/stories/issue/i1-create-issue.spec.ts`、`e2e/stories/issue/i2-update-issue.spec.ts`
+- Modify: `e2e/fixtures/assert/catalog.ts`、`e2e/fixtures/assert/issue.ts`、`e2e/fixtures/issues.ts`、`e2e/stories/issue/i1-create-issue.spec.ts`、`e2e/stories/issue/i2-update-issue.spec.ts`
 
 **Interfaces:**（spec 2.14、第 3 节第 17 条；M4 设计第 2 节 I1、I2、I15，3.6、3.8、3.13）只改 `e2e/`，扩展共用的夹具，不复制：
 - `e2e/fixtures/issues.ts`：`issueArchived`、`issueUnarchived`（状态和工作项，或问题的码）、`issueDeleted`（状态或码）。
-- `e2e/fixtures/assert/issue.ts`：`archivedRow`、`restoredRow`（第 14、16 行，经共用的 `changed` 写；`changed` 的说明照改）；`CreatedIssue`、`UpdatedIssue` 加 `start_date`、`target_date`（`YYYY-MM-DD`，没有是 `null`）；`Archival`、`expectIssueArchival`；`expectIssueDeleted`：从目录读出外键图，自 `issues` 向下递归（两层以下的行也算在它下面），每个外键下都要有一行（`subItems`：`issues.parent_id` 豁免到 P3），删除者和时刻是那一次删除的；在工作项之前已删除的行不算，也不在这里核对（它保留原来的删除由 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt` 核对）。
-- `i15-archive-issue.spec.ts`（新）：ann 在 In Progress 的工作项 409 `issue.not_archivable`；移到 Done 后归档（一行动态），再归档不写；已归档时修改 409 `issue.archived`；gus（项目的访客，项目"可见全部"）恢复、归档都 403；恢复（一行动态），再恢复不写；再归档之后，管理员删除它：`expectIssueDeleted`。
+- `e2e/fixtures/assert/issue.ts`：`archivedRow`、`restoredRow`（第 14、16 行，经共用的 `changed` 写；`changed` 的说明照改）；`CreatedIssue`、`UpdatedIssue` 加 `start_date`、`target_date`（`YYYY-MM-DD`，没有是 `null`）；`Archival`、`expectIssueArchival`；`expectIssueDeleted`：从目录读出外键图（`keysBelow`），自 `issues` 向下递归（两层以下的行也算在它下面），每个外键下都要有一行（`subItems`：`issues.parent_id` 豁免到 P3），删除者和时刻是那一次删除的；在工作项之前已删除的行不算，也不在这里核对（它保留原来的删除由 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt` 核对）。
+- `e2e/fixtures/assert/catalog.ts`：`keysBelow`，与 `tablesUnder` 同在目录的读一处：自一张表沿外键图向下，每张表走一次（表到自己的外键如 `issues.parent_id` 也在其中）；走到的每个外键只有一列，多于一列的在这里失败、写出它的名字（它的行要另外找，同 Go 的 `keysTo`）。
+- `i15-archive-issue.spec.ts`（新）：ann 在 In Progress 的工作项 409 `issue.not_archivable`；移到 Done 后归档（一行动态），再归档不写、回答原样的工作项；已归档时修改 409 `issue.archived`；gus（项目的访客，项目"可见全部"）恢复、归档都 403；恢复（一行动态），再恢复不写；再归档（一行动态）之后，管理员删除它：`expectIssueDeleted`。每个拒绝之前读一次、之后再核对。
 - `i1-create-issue.spec.ts`：起止日期；开始晚于截止的 422 与别的值的问题一次报出（`target_date`）。`i2-update-issue.spec.ts`：日期的修改（两行动态）；只给晚于留着的截止日期的开始日期、只给早于留着的开始日期的截止日期各 422；两个都移过原来的截止日期（只看请求会拒绝的一步不被拒绝）；清空；已归档的工作项 409 `issue.archived`。
 
 **Tests:** 端到端：I15（新）、I1、I2；`make e2e` 123 个。访客取别人的工作项的 404 在本 Phase 由矩阵核对，端到端的那一格随 I20 在 P5。
 
 - [ ] **Step 1: 夹具**
 
-`e2e/fixtures/assert/issue.ts`（修改，10 处）：
+`e2e/fixtures/assert/catalog.ts`（修改，2 处）：
 
+````old e2e/fixtures/assert/catalog.ts
+// The tables a deletion writes, read from the database's catalog (M3 design 3.6; M4 design 3.6), so that a table a
+// later phase adds is read too.
+````
+````new e2e/fixtures/assert/catalog.ts
+// The tables a deletion writes and the foreign keys under them, read from the database's catalog (M3 design 3.6; M4
+// design 3.6), so that a table or a key a later phase adds is read too.
+````
+````old e2e/fixtures/assert/catalog.ts
+  return tablesUnder(db, "workspaces", "workspace_id");
+}
+
+````
+````new e2e/fixtures/assert/catalog.ts
+  return tablesUnder(db, "workspaces", "workspace_id");
+}
+
+/** A foreign key of one column: the table that holds it, the column, and the table it names. */
+interface ForeignKey {
+  child: string;
+  column: string;
+  parent: string;
+}
+
+/**
+ * The foreign keys below table, the catalog's graph walked down from it: each key that names table, then each that
+ * names a table holding one of those, and so on, in the order the walk reaches them, each table walked once (a key of
+ * a table to itself, as issues.parent_id, among them). Each is a key of one column, which names its row's parent; a
+ * key of more columns fails here, named, for its rows would be found another way.
+ */
+export async function keysBelow(db: Database, table: string): Promise<ForeignKey[]> {
+  const all = await db.query<ForeignKey & { columns: number }>(
+    `SELECT c.conrelid::regclass::text AS child, a.attname::text AS column, c.confrelid::regclass::text AS parent,
+            cardinality(c.conkey) AS columns
+       FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+      WHERE c.contype = 'f'`
+  );
+  // tables grows as the loop goes, each table once.
+  const tables = [table];
+  const keys: ForeignKey[] = [];
+  for (let i = 0; i < tables.length; i++) {
+    for (const { columns, ...key } of all.filter((k) => k.parent === tables[i])) {
+      expect(columns, `the columns of ${key.child}.${key.column}, a key to ${key.parent}`).toBe(1);
+      keys.push(key);
+      if (!tables.includes(key.child)) {
+        tables.push(key.child);
+      }
+    }
+  }
+  return keys;
+}
+
+````
+
+`e2e/fixtures/assert/issue.ts`（修改，11 处）：
+
+````old e2e/fixtures/assert/issue.ts
+import type { Database } from "../db";
+````
+````new e2e/fixtures/assert/issue.ts
+import type { Database } from "../db";
+import { keysBelow } from "./catalog";
+````
 ````old e2e/fixtures/assert/issue.ts
  * An "updated" row of a work item's activity: field changed from old to now, with Plane's comment; named and was,
  * what its new and old identifiers name, for a state's, a label's or an account's row.
@@ -11754,13 +11818,6 @@ export async function expectIssueArchival(db: Database, issueId: string, want: A
   expect(await activityOf(db, issueId), `the activity of the work item ${issueId}`).toEqual(activity);
 }
 
-/** A foreign key of one column: the table that holds it, the column, and the table it names. */
-interface ForeignKey {
-  child: string;
-  column: string;
-  parent: string;
-}
-
 /** The key of a work item's sub-items, which come with P3, as their deletion with their parent's (M4 design 3.6, 3.9). */
 const subItems = "issues.parent_id";
 
@@ -11768,10 +11825,10 @@ const subItems = "issues.parent_id";
  * I15 (I17 from P3): the work item of issueId is deleted by the account of email, and with it, at the same moment and
  * by the same account, every row under it that was not deleted before (M4 design 3.6). A row is under it when a
  * foreign key of its table names the work item or a row under it: the catalog's graph of foreign keys is walked down
- * from issues, so that a row two keys below (a reaction to a comment, which names the comment) is under it too. Each
- * key of the graph has such a row, but its sub-items' (subItems), which no work item has before P3; a row deleted
- * before the work item is neither held to its deletion nor checked here (that it keeps its deletion is
- * `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).
+ * from issues (keysBelow, which fails on a key of more than one column), so that a row two keys below (a reaction to
+ * a comment, which names the comment) is under it too. Each key of the graph has such a row, but its sub-items'
+ * (subItems), which no work item has before P3; a row deleted before the work item is neither held to its deletion nor
+ * checked here (that it keeps its deletion is `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).
  */
 export async function expectIssueDeleted(db: Database, issueId: string, email: string): Promise<void> {
   const [issue] = await db.query(
@@ -11779,22 +11836,7 @@ export async function expectIssueDeleted(db: Database, issueId: string, email: s
     [issueId]
   );
   expect(issue, `the work item ${issueId}`).toEqual({ deleted: true, by: email });
-  const all = await db.query<ForeignKey>(
-    `SELECT c.conrelid::regclass::text AS child, a.attname::text AS column, c.confrelid::regclass::text AS parent
-       FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
-      WHERE c.contype = 'f' AND cardinality(c.conkey) = 1`
-  );
-  // The keys below issues, in the order the walk reaches them: tables grows as the loop goes, each table once.
-  const tables = ["issues"];
-  const keys: ForeignKey[] = [];
-  for (let i = 0; i < tables.length; i++) {
-    for (const key of all.filter((k) => k.parent === tables[i])) {
-      keys.push(key);
-      if (!tables.includes(key.child)) {
-        tables.push(key.child);
-      }
-    }
-  }
+  const keys = await keysBelow(db, "issues");
   expect(keys.length, "the keys below issues").toBeGreaterThan(1);
   // The rows under the work item, by table, and how each key's were deleted: a round reads each key's rows under the
   // rows found before it, and the walk goes on while a round finds a row that is new.
@@ -11885,7 +11927,7 @@ export async function issueDeleted(api: Api, token: string, issueId: string) {
 
 - [ ] **Step 2: I15**
 
-`e2e/stories/issue/i15-archive-issue.spec.ts`（新文件，110 行）：
+`e2e/stories/issue/i15-archive-issue.spec.ts`（新文件，112 行）：
 
 ````file e2e/stories/issue/i15-archive-issue.spec.ts
 import {
@@ -11993,8 +12035,10 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   expect(await issueArchived(api, gus.token, id)).toEqual({ status: 403, code: "forbidden" });
   await expectIssueArchival(db, id, restored);
 
-  // Archived again, it is deleted as any other: the admin deletes it, and with it every row under it.
+  // Archived again, one row more, hers at its moment, it is deleted as any other: the admin deletes it, and with it
+  // every row under it.
   expect((await issueArchived(api, ann.token, id)).status).toBe(200);
+  await expectIssueArchival(db, id, { archived: true, by: ann.email, activity: [...restored.activity, archivedRow] });
   expect(await issueDeleted(api, admin.token, id)).toEqual({ status: 204 });
   await expectIssueDeleted(db, id, admin.email);
 });
@@ -12316,7 +12360,7 @@ Expected: 123 个全部通过（新的是 I15）。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add e2e/fixtures/assert/issue.ts e2e/fixtures/issues.ts e2e/stories/issue/i1-create-issue.spec.ts e2e/stories/issue/i15-archive-issue.spec.ts e2e/stories/issue/i2-update-issue.spec.ts
+git add e2e/fixtures/assert/catalog.ts e2e/fixtures/assert/issue.ts e2e/fixtures/issues.ts e2e/stories/issue/i1-create-issue.spec.ts e2e/stories/issue/i15-archive-issue.spec.ts e2e/stories/issue/i2-update-issue.spec.ts
 ```
 ```bash
 git commit -m "test(M4/P2): the stories of archiving, deleting and dating a work item

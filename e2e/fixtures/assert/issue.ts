@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 
 import { shownNameOf } from "../auth";
 import type { Database } from "../db";
+import { keysBelow } from "./catalog";
 
 // Database assertions of the work-item stories. The page version and the
 // API version of a story call the same function (M4 design 2).
@@ -268,13 +269,6 @@ export async function expectIssueArchival(db: Database, issueId: string, want: A
   expect(await activityOf(db, issueId), `the activity of the work item ${issueId}`).toEqual(activity);
 }
 
-/** A foreign key of one column: the table that holds it, the column, and the table it names. */
-interface ForeignKey {
-  child: string;
-  column: string;
-  parent: string;
-}
-
 /** The key of a work item's sub-items, which come with P3, as their deletion with their parent's (M4 design 3.6, 3.9). */
 const subItems = "issues.parent_id";
 
@@ -282,10 +276,10 @@ const subItems = "issues.parent_id";
  * I15 (I17 from P3): the work item of issueId is deleted by the account of email, and with it, at the same moment and
  * by the same account, every row under it that was not deleted before (M4 design 3.6). A row is under it when a
  * foreign key of its table names the work item or a row under it: the catalog's graph of foreign keys is walked down
- * from issues, so that a row two keys below (a reaction to a comment, which names the comment) is under it too. Each
- * key of the graph has such a row, but its sub-items' (subItems), which no work item has before P3; a row deleted
- * before the work item is neither held to its deletion nor checked here (that it keeps its deletion is
- * `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).
+ * from issues (keysBelow, which fails on a key of more than one column), so that a row two keys below (a reaction to
+ * a comment, which names the comment) is under it too. Each key of the graph has such a row, but its sub-items'
+ * (subItems), which no work item has before P3; a row deleted before the work item is neither held to its deletion nor
+ * checked here (that it keeps its deletion is `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).
  */
 export async function expectIssueDeleted(db: Database, issueId: string, email: string): Promise<void> {
   const [issue] = await db.query(
@@ -293,22 +287,7 @@ export async function expectIssueDeleted(db: Database, issueId: string, email: s
     [issueId]
   );
   expect(issue, `the work item ${issueId}`).toEqual({ deleted: true, by: email });
-  const all = await db.query<ForeignKey>(
-    `SELECT c.conrelid::regclass::text AS child, a.attname::text AS column, c.confrelid::regclass::text AS parent
-       FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
-      WHERE c.contype = 'f' AND cardinality(c.conkey) = 1`
-  );
-  // The keys below issues, in the order the walk reaches them: tables grows as the loop goes, each table once.
-  const tables = ["issues"];
-  const keys: ForeignKey[] = [];
-  for (let i = 0; i < tables.length; i++) {
-    for (const key of all.filter((k) => k.parent === tables[i])) {
-      keys.push(key);
-      if (!tables.includes(key.child)) {
-        tables.push(key.child);
-      }
-    }
-  }
+  const keys = await keysBelow(db, "issues");
   expect(keys.length, "the keys below issues").toBeGreaterThan(1);
   // The rows under the work item, by table, and how each key's were deleted: a round reads each key's rows under the
   // rows found before it, and the walk goes on while a round finds a row that is new.

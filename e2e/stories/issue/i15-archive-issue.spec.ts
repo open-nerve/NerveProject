@@ -103,8 +103,10 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   expect(await issueArchived(api, gus.token, id)).toEqual({ status: 403, code: "forbidden" });
   await expectIssueArchival(db, id, restored);
 
-  // Archived again, it is deleted as any other: the admin deletes it, and with it every row under it.
+  // Archived again, one row more, hers at its moment, it is deleted as any other: the admin deletes it, and with it
+  // every row under it.
   expect((await issueArchived(api, ann.token, id)).status).toBe(200);
+  await expectIssueArchival(db, id, { archived: true, by: ann.email, activity: [...restored.activity, archivedRow] });
   expect(await issueDeleted(api, admin.token, id)).toEqual({ status: 204 });
   await expectIssueDeleted(db, id, admin.email);
 });

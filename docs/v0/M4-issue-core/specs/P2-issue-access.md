@@ -32,7 +32,7 @@ P2 是 M4 权限的一段（设计 12 节约束 3：权限的扩展在这一段�
 
 ### 2.1 文件总览
 
-路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 手写的代码、测试和配置文件 139 个（新建 34 个，修改 105 个），生成物 11 个，文档 8 个（本 spec 和 plan 新建；修改的是总体设计、M2 设计、差异清单和三份交接），另有本提交对 M4 设计的修改（第 15 节的一行；裁定的 3.3、3.4 的两句和 6.5 的 `ProjectGate` 一行）。
+路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 手写的代码、测试和配置文件 140 个（新建 34 个，修改 106 个），生成物 11 个，文档 8 个（本 spec 和 plan 新建；修改的是总体设计、M2 设计、差异清单和三份交接），另有本提交对 M4 设计的修改（第 15 节的一行；裁定的 3.3、3.4 的两句和 6.5 的 `ProjectGate` 一行）。
 
 | 路径 | 内容 | Task |
 |---|---|---|
@@ -48,7 +48,7 @@ P2 是 M4 权限的一段（设计 12 节约束 3：权限的扩展在这一段�
 | `issue/domain/dates.go`（新）及测试、`issue.go`、`patch.go`、`activity.go` 及测试；`issue/app/create_issue.go`、`update_issue.go`、`rows.go`、`dates_test.go`（新）、`create_issue_test.go`、`fakes_test.go`；`issue/adapter/postgres/queries/issues.sql`、`update.sql`、`issues.go`、`update.go` 及测试；`server/sqlc.yaml` | 起止日期：领域、用例、存储；动态第 8、9 行 | 10 |
 | 契约（三个模式的 `start_date`、`target_date`；`createIssue`、`updateIssue` 的描述）；`issue/adapter/http/issues.go`、`issues_test.go`、`update_test.go`、`dates_test.go`（新）；`issue/app/update_issue_test.go`；`platform/httpserver/bodyshape/bodyshape.go`；`bootstrap/issue_dates_test.go`（新）、`issue_updates_test.go`、`permission_matrix_issues_test.go`、`permission_matrix_issue_updates_test.go` | 起止日期：接口、组合、矩阵；用例的单元测试里已归档先于日期的次序、原样给出的日期 | 11 |
 | `bootstrap/issue_interleaving_archive_test.go`（新）、`issue_interleaving_deletion_test.go`、`issue_interleaving_test.go` | 交错 12；删除与修改同一个工作项；等锁期间被降级、移出的创建者 | 12 |
-| `e2e/fixtures/issues.ts`、`assert/issue.ts`；`e2e/stories/issue/i15-archive-issue.spec.ts`（新）、`i1-create-issue.spec.ts`、`i2-update-issue.spec.ts` | I15 的接口版本；I1、I2 的日期；I2 的已归档 409；`expectIssueDeleted` | 13 |
+| `e2e/fixtures/issues.ts`、`assert/issue.ts`、`assert/catalog.ts`；`e2e/stories/issue/i15-archive-issue.spec.ts`（新）、`i1-create-issue.spec.ts`、`i2-update-issue.spec.ts` | I15 的接口版本；I1、I2 的日期；I2 的已归档 409；`expectIssueDeleted`，它读的外键图（`keysBelow`） | 13 |
 | `docs/v0/v0-design.md`、`M2-auth/M2-design.md`、`plane-diff.md`；三份交接 | 3.23 中 P2 的行；交接的处理结果 | 14 |
 
 生成物：`project/adapter/postgres/gen/access.sql.go`（Task 1）、`issue_ports.sql.go`（Task 5）；`issue/adapter/postgres/gen/delete_issue.sql.go`（Task 4）、`issues.sql.go`（Task 5、10）、`update.sql.go`（Task 7、10）、`models.go`（Task 10）；`api/dist/openapi.yaml`、`web/packages/api-client/src/schema.gen.ts`（Task 2、4、6、7、8、11）；`project/adapter/http/gen/server.gen.go`（Task 2）；`issue/adapter/http/gen/server.gen.go`（Task 4、6、7、11）、`bodyshape.gen.go`（Task 11）。
@@ -147,7 +147,7 @@ P2 是 M4 权限的一段（设计 12 节约束 3：权限的扩展在这一段�
 
 ### 2.14 端到端（Task 13；第 2 节 I1、I2、I15）
 
-- 夹具：`e2e/fixtures/issues.ts` 的 `issueArchived`、`issueUnarchived`、`issueDeleted`（状态和回答）；`assert/issue.ts`：`archivedRow`、`restoredRow`（第 14、16 行，经共用的 `changed` 一类的形状写）、`CreatedIssue`、`UpdatedIssue` 加 `start_date`、`target_date`，`expectIssueArchival`，`expectIssueDeleted`（从目录读出外键图，自 `issues` 向下递归：两层以下的行（评论的表情一类）也算在它下面；每个外键下都要有一行，`subItems` 豁免到 P3；在工作项之前已删除的行不算，也不在这里核对：它保留原来的删除由 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt` 核对）。
+- 夹具：`e2e/fixtures/issues.ts` 的 `issueArchived`、`issueUnarchived`、`issueDeleted`（状态和回答）；`assert/issue.ts`：`archivedRow`、`restoredRow`（第 14、16 行，经共用的 `changed` 一类的形状写）、`CreatedIssue`、`UpdatedIssue` 加 `start_date`、`target_date`，`expectIssueArchival`，`expectIssueDeleted`（从目录读出外键图（`assert/catalog.ts` 的 `keysBelow`，与 `tablesUnder` 同在一处；走到的外键多于一列时失败，同 Go 的 `keysTo`），自 `issues` 向下递归：两层以下的行（评论的表情一类）也算在它下面；每个外键下都要有一行，`subItems` 豁免到 P3；在工作项之前已删除的行不算，也不在这里核对：它保留原来的删除由 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt` 核对）。
 - I15 的接口版本（新 `i15-archive-issue.spec.ts`）：ann 在 In Progress 的工作项 409 `issue.not_archivable`；移到 Done 后归档（一行动态），再归档不写；已归档时修改 409 `issue.archived`；gus（项目的访客，项目"可见全部"）恢复、归档都 403；恢复（一行动态），再恢复不写；再归档之后，管理员删除它：`expectIssueDeleted`。
 - I1 加起止日期和开始晚于截止的 422（与别的值的问题一次报出）；I2 加日期的修改（两行动态）、只给开始日期晚于留着的截止日期和只给截止日期早于留着的开始日期各 422、两个都移过原来的截止日期（只看请求会拒绝的一步不被拒绝）、清空、已归档 409。访客取别人的工作项的 404 在本 Phase 只由矩阵（Go）核对，端到端的那一格随 I20 在 P5（设计 12 节 P2 的第 13 个任务）。
 
