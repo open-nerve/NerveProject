@@ -5,6 +5,7 @@ import (
 	"errors"
 	"maps"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -111,17 +112,22 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 
 // archiveIssue's and unarchiveIssue's row through the store (M4 design
 // 3.8): SetArchivedAt archives the work item at later, changed last by bob
-// then, every other column of it as it was, the other work item as it was;
-// then unarchives it, changed last by alice at latest.
+// then, and unarchives it, changed last by alice at latest; each time every
+// other column of it is as it was, and so are the work items older and
+// other, drawn before and after it, so that a statement that took its work
+// item by the ids' order, not by equality, would reach one of them.
 func TestArchivingAWorkItemWritesItsRow(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
-	id, other := uuid.NewV7(), uuid.NewV7()
+	older, id, other := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	createWebIssue(t, s, web, id, alice)
 	newIssue(t, pool, web, other, 8, alice)
-	before, stamps := rowsAsText(t, pool, "issues"), audits(t, pool, "issues")
+	newIssue(t, pool, web, older, 9, alice)
+	// row is the work item's row as text, but the columns SetArchivedAt writes.
+	row := `SELECT (to_jsonb(i) - 'archived_at' - 'updated_at' - 'updated_by_id')::text FROM issues i WHERE id = $1`
+	before, stamps, columns := rowsAsText(t, pool, "issues"), audits(t, pool, "issues"), textRows(t, pool, row, id)
 	created, _, err := s.GetIssue(ctx, id)
 	if err != nil {
 		t.Fatal(err)
@@ -141,9 +147,15 @@ func TestArchivingAWorkItemWritesItsRow(t *testing.T) {
 		if err != nil || !found || !reflect.DeepEqual(got, want) {
 			t.Errorf("GetIssue() archived at %v = %+v, %v, %v; want %+v", tt.archivedAt, got, found, err, want)
 		}
+		if kept := textRows(t, pool, row, id); !slices.Equal(kept, columns) {
+			t.Errorf("archived at %v, the work item's other columns:\n%s\nwere\n%s", tt.archivedAt, kept, columns)
+		}
 		after, afterStamps := rowsAsText(t, pool, "issues"), audits(t, pool, "issues")
-		if after[other] != before[other] || afterStamps[other] != stamps[other] {
-			t.Errorf("the other work item:\n%s %s\nwas\n%s %s", after[other], afterStamps[other], before[other], stamps[other])
+		for _, unwritten := range []uuid.UUID{older, other} {
+			if after[unwritten] != before[unwritten] || afterStamps[unwritten] != stamps[unwritten] {
+				t.Errorf("the work item %s:\n%s %s\nwas\n%s %s", unwritten, after[unwritten], afterStamps[unwritten], before[unwritten],
+					stamps[unwritten])
+			}
 		}
 	}
 }

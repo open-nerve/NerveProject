@@ -72,7 +72,10 @@ func TestArchivingAWorkItemStampsItsRows(t *testing.T) {
 		}
 	}
 
-	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+todo.String()+"/archive", "", http.StatusConflict)
+	refused := w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+todo.String()+"/archive", "", http.StatusConflict)
+	if code := problemCode(t, []byte(refused)); code != "issue.not_archivable" {
+		t.Errorf("archiving the work item in Todo answered %s; want issue.not_archivable", refused)
+	}
 	if after := w.workItemStamps(t, todo); !slices.Equal(after, todoStamps) {
 		t.Errorf("the work item in Todo, after the other's archivings and its own refused one:\n%q\nwas\n%q", after, todoStamps)
 	}

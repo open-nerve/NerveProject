@@ -6831,8 +6831,15 @@ func (s *Store) SetArchivedAt(ctx context.Context, a app.IssueArchival) error {
 		return fmt.Errorf("archive work item %s: %w", a.ID, err)
 ````
 
-`server/internal/modules/issue/adapter/postgres/update_test.go`（修改，2 处）：
+`server/internal/modules/issue/adapter/postgres/update_test.go`（修改，3 处）：
 
+````old server/internal/modules/issue/adapter/postgres/update_test.go
+	"reflect"
+````
+````new server/internal/modules/issue/adapter/postgres/update_test.go
+	"reflect"
+	"slices"
+````
 ````old server/internal/modules/issue/adapter/postgres/update_test.go
 }
 
@@ -6843,17 +6850,22 @@ func (s *Store) SetArchivedAt(ctx context.Context, a app.IssueArchival) error {
 
 // archiveIssue's and unarchiveIssue's row through the store (M4 design
 // 3.8): SetArchivedAt archives the work item at later, changed last by bob
-// then, every other column of it as it was, the other work item as it was;
-// then unarchives it, changed last by alice at latest.
+// then, and unarchives it, changed last by alice at latest; each time every
+// other column of it is as it was, and so are the work items older and
+// other, drawn before and after it, so that a statement that took its work
+// item by the ids' order, not by equality, would reach one of them.
 func TestArchivingAWorkItemWritesItsRow(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
-	id, other := uuid.NewV7(), uuid.NewV7()
+	older, id, other := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	createWebIssue(t, s, web, id, alice)
 	newIssue(t, pool, web, other, 8, alice)
-	before, stamps := rowsAsText(t, pool, "issues"), audits(t, pool, "issues")
+	newIssue(t, pool, web, older, 9, alice)
+	// row is the work item's row as text, but the columns SetArchivedAt writes.
+	row := `SELECT (to_jsonb(i) - 'archived_at' - 'updated_at' - 'updated_by_id')::text FROM issues i WHERE id = $1`
+	before, stamps, columns := rowsAsText(t, pool, "issues"), audits(t, pool, "issues"), textRows(t, pool, row, id)
 	created, _, err := s.GetIssue(ctx, id)
 	if err != nil {
 		t.Fatal(err)
@@ -6873,9 +6885,15 @@ func TestArchivingAWorkItemWritesItsRow(t *testing.T) {
 		if err != nil || !found || !reflect.DeepEqual(got, want) {
 			t.Errorf("GetIssue() archived at %v = %+v, %v, %v; want %+v", tt.archivedAt, got, found, err, want)
 		}
+		if kept := textRows(t, pool, row, id); !slices.Equal(kept, columns) {
+			t.Errorf("archived at %v, the work item's other columns:\n%s\nwere\n%s", tt.archivedAt, kept, columns)
+		}
 		after, afterStamps := rowsAsText(t, pool, "issues"), audits(t, pool, "issues")
-		if after[other] != before[other] || afterStamps[other] != stamps[other] {
-			t.Errorf("the other work item:\n%s %s\nwas\n%s %s", after[other], afterStamps[other], before[other], stamps[other])
+		for _, unwritten := range []uuid.UUID{older, other} {
+			if after[unwritten] != before[unwritten] || afterStamps[unwritten] != stamps[unwritten] {
+				t.Errorf("the work item %s:\n%s %s\nwas\n%s %s", unwritten, after[unwritten], afterStamps[unwritten], before[unwritten],
+					stamps[unwritten])
+			}
 		}
 	}
 }
@@ -7138,7 +7156,7 @@ func (h handler) UnarchiveIssue(ctx context.Context, req gen.UnarchiveIssueReque
 		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", http.StatusOK},
 ````
 
-`server/internal/bootstrap/issue_archive_test.go`（新文件，143 行）：
+`server/internal/bootstrap/issue_archive_test.go`（新文件，146 行）：
 
 ````file server/internal/bootstrap/issue_archive_test.go
 package bootstrap
@@ -7215,7 +7233,10 @@ func TestArchivingAWorkItemStampsItsRows(t *testing.T) {
 		}
 	}
 
-	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+todo.String()+"/archive", "", http.StatusConflict)
+	refused := w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+todo.String()+"/archive", "", http.StatusConflict)
+	if code := problemCode(t, []byte(refused)); code != "issue.not_archivable" {
+		t.Errorf("archiving the work item in Todo answered %s; want issue.not_archivable", refused)
+	}
 	if after := w.workItemStamps(t, todo); !slices.Equal(after, todoStamps) {
 		t.Errorf("the work item in Todo, after the other's archivings and its own refused one:\n%q\nwas\n%q", after, todoStamps)
 	}
@@ -7605,13 +7626,17 @@ Expected: 通过。
 | `T7.11` | 已经是所求样子的工作项答一个空的工作项 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `archiveIssue`、`unarchiveIssue` 各格（`make test`）、故事 `i15-archive-issue`（Task 13 起） | 单元；组合；端到端 |
 | `T7.12` | 页面没有 `issue.not_archivable` 的文案 | `error-messages.test.ts`（`make test-web`） | 单元 |
 | `T7.13` | 中文的一份没有 `issue_not_archivable` | `web/packages/i18n` 的 `check:sync`（`make lint-web`） | 守卫 |
-| `T7.14` | 契约不声明 `archiveIssue` 答 `issue.not_archivable` | `internal/modules/issue/adapter/http` 的全部测试（`make test`） | 单元 |
+| `T7.14` | 契约不声明 `archiveIssue` 答 `issue.not_archivable` | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `archiveIssue`、`unarchiveIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestArchivingAWorkItemStampsItsRows`（`make test`） | 单元；组合 |
 | `T7.15` | 归档把每个工作项都归档 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestArchivingAWorkItemStampsItsRows`（`make test`） | 存储；组合 |
 | `T7.16` | `archiveIssue` 经连接池读回答，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`） | 组合 |
 | `T7.17` | 归档经连接池读项目的状态，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`） | 组合 |
 | `T7.18` | 归档把不是项目的状态当作不能归档的状态（409），而不是错误 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T7.19` | 归档、恢复不进项目的写闸门 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`（`make test`） | 单元；组合 |
 | `T7.20` | 恢复也检查状态组 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestArchivingAWorkItemStampsItsRows`（`make test`） | 单元；组合 |
+| `T7.21` | 归档按 id 的次序而不是相等取工作项：id 不在它之后的每个工作项都归档 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`（`make test`）（Task 8 起） | 存储；组合 |
+| `T7.22` | 归档也写工作项的一列 `GetIssue` 不读的（`description_html`） | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
+| `T7.23` | 矩阵的自检放过没有 `write` 而带 `prepare` 的行：它的 `prepare` 会改动读的格子共用的副本 | `internal/bootstrap` 的 `TestMatrixViolationsCatchesEachGap`（`make test`） | 单元 |
+| `T7.24` | 状态不能归档的工作项答项目已归档的 409，而不是 `issue.not_archivable` | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `archiveIssue`、`unarchiveIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestArchivingAWorkItemStampsItsRows`（`make test`） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T1.11`（列在各自的 Task 的表里，标"（Task 7 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=7`）。
 
@@ -7963,6 +7988,8 @@ Expected: 通过。
 | `T8.5` | 中文的一份没有 `issue_archived` | `web/packages/i18n` 的 `check:sync`（`make lint-web`） | 守卫 |
 | `T8.6` | 契约不声明 `updateIssue` 答 `issue.archived` | `internal/modules/issue/adapter/http` 的全部测试（`make test`） | 单元 |
 | `T8.7` | `project.state_in_use` 不再说怎样才能删除状态 | `internal/modules/project/adapter/http` 的全部测试（`make test`） | 单元 |
+
+本 Task 的检查也发现较早的 Task 的变异 `T7.21`（列在各自的 Task 的表里，标"（Task 8 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=8`）。
 
 ---
 
