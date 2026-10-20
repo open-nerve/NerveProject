@@ -117,7 +117,8 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/issue_world_test.go`（修改） | `newWorkItemBy`：别的账户建的工作项，交错用的 `bobsWorkItem`、`waltsWorkItem`（Task 2）；`doneWorkItem`：Done 里的工作项（Task 7） | 2、7 |
 | `server/internal/bootstrap/permission_matrix_issue_columns_test.go`（新） | 工作项表的列、各列的工作项、`onAWorkItem`、`onTheIssues`（Task 3）；按编号取的格子（Task 6） | 3、6 |
 | `server/internal/bootstrap/permission_matrix_seed_issues_test.go`（修改） | `ownIssues`、`guestViewAll`、`seededItems`、`numberOf`、`nextNumber`，种子和它的核对 | 3 |
-| `server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_members_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`（修改） | 新身份的账户、它们在别的表里的格子 | 3 |
+| `server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_members_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`（修改） | 新身份的账户、它们在别的表里的格子 | 3 |
+| `server/internal/bootstrap/permission_matrix_columns_test.go`（修改） | 新身份的账户、它们在别的表里的格子（Task 3）；`noProjectTable`：矩阵的自检里出自不是项目表的列的违规（Task 6） | 3、6 |
 | `server/internal/bootstrap/permission_matrix_targets_test.go`（修改） | 格子指名它的列的工作项（Task 3）；按编号取的目标（Task 6） | 3、6 |
 | `server/internal/bootstrap/permission_matrix_coverage_test.go`（修改） | 工作项表的列（Task 3）；`prepare` 只给写的行（Task 7） | 3、7 |
 | `server/internal/bootstrap/permission_matrix_test.go`（修改） | 种子的说明（Task 3）；`matrixRow.prepare`、归档的行（Task 7） | 3、7 |
@@ -4074,7 +4075,7 @@ Expected: 通过。
 | `T4.7` | 删除把每个工作项的标签行都删掉 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`） | 存储；组合 |
 | `T4.8` | 删除先删负责人的行、再删工作项的 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`） | 单元；组合 |
 | `T4.9` | 删除在预检之前、在项目的锁之外删掉工作项的动态 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachIssueWriteLocksItsProjectFirst`（`make test`） | 单元；组合 |
-| `T4.10` | 契约不声明 `deleteIssue` 答 `project.archived` | `internal/modules/issue/adapter/http` 的全部测试（`make test`） | 单元 |
+| `T4.10` | 契约不声明 `deleteIssue` 答 `project.archived` | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `deleteIssue` 各格（`make test`） | 单元；组合 |
 | `T4.11` | `DELETE` 不问用例就答 204 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`）、故事 `i15-archive-issue`（Task 13 起） | 单元；组合；端到端 |
 | `T4.12` | 删除把每个未删除的工作项都删掉 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`） | 存储；组合 |
 | `T4.13` | 删除再删一次早已删除的工作项，盖掉它的戳 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
@@ -5458,17 +5459,17 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_identifier_test.go`、`server/internal/modules/issue/adapter/http/by_identifier_test.go`
-- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_issue_columns_test.go`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/module.go`
+- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_issue_columns_test.go`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.7、第 3 节第 4、15 条；M4 设计 3.7、5.1、9.2）
-- 契约：`GET /api/v0/workspaces/{slug}/issues/{identifier}`（`getIssueByIdentifier`，200 `IssueDetail`，`x-problem-codes: [workspace.not_found, issue.not_found, forbidden]`），描述写明先按工作区、再照 `getIssue`，标识的写法和折叠比较，各种 404 是同一个回答，已归档的照样读；参数 `Slug`、`IssueIdentifier`；`api/openapi.yaml` 的路径。
+- 契约：`GET /api/v0/workspaces/{slug}/issues/{identifier}`（`getIssueByIdentifier`，200 `IssueDetail`，`x-problem-codes: [workspace.not_found, issue.not_found, forbidden]`），描述写明先按工作区、再照 `getIssue`，标识的写法（编号是 0–9 的十进制，不带符号、不以 0 开头，1 到 2147483647，`ParseIdentifier`）和折叠比较（多于一个项目的标识对得上时取逐字等于大写的那个），各种 404 是同一个回答，已归档的照样读；参数 `Slug`、`IssueIdentifier`；`api/openapi.yaml` 的路径。
 - `issue/adapter/http/issues.go`：`GetIssueByIdentifier`（标识原样交给用例）；`issue/module.go` 的说明。
-- 测试的帮手：`handler_test.go` 的 `fakeGetByIdentifier`（记下"调用者 slug 标识"）。
+- 测试的帮手：`handler_test.go` 的 `fakeGetByIdentifier`（记下"调用者 slug 标识"）；`permission_matrix_columns_test.go` 的 `noProjectTable`（矩阵的自检里"出自不是项目表的列"的违规，`TestMatrixViolationsCatchesEachColumnGap` 的三处和 `TestMatrixViolationsCatchesAnotherCasesIdentifier` 共用）。
 - 矩阵：`permission_matrix_issues_test.go` 的 `getIssueByIdentifier` 两行（照常、已归档的项目），`identifierOf(c)`（列的工作项的标识）、`byIdentifier`、`inItsWorkspace`（X 和已归档的项目的"从未是 acme 的成员"一列答 `workspace.not_found`）；`permission_matrix_targets_test.go` 核对 `{identifier}` 是它的列的工作项、出自项目的表。
 
 **Tests:**
-- HTTP（`apitest.Main` 两个方向）：`TestGetIssueByIdentifier`（调用者、路径的工作区和标识原样交给用例，转义的土耳其字母也是）、`TestGetIssueByIdentifierRefusals`。
+- HTTP（`apitest.Main` 两个方向）：`TestGetIssueByIdentifier`（调用者、路径的工作区（acme、beta）和标识原样交给用例，转义的土耳其字母也是）、`TestGetIssueByIdentifierRefusals`。
 - 组合：`TestAWorkItemIsFoundByItsIdentifier`（acme 里 Web、IŞ、İŞ、İI、Iİ、ŞI、已删除的 Şİ、Sec（私有）；Web 的 1、已删除的 2、Done 里已归档的 3；walt 是 Web 的"只看自己"的访客；另一个工作区 beta 里也有 WEB 和 İŞ，各有它的 1：只在调用的工作区的未删除的项目里找，任何大小写、土耳其字母，IŞ 和 İŞ、İI 和 Iİ 各取逐字等于大写的那个；已删除的项目的标识与活着的折叠相同、又正是所问的大写（Şİ）时不指名任何项目，找到的是 ŞI 的；工作区里唯一带点的项目（beta 的 İŞ）用不带点的标识（`iş`）找到：比较的是折叠，不是大写；不是标识、不是 acme 的项目、与 İI 和 Iİ 折叠相同而大写不是其中任何一个的（`ii-1`）、没有这个未删除的编号、看不到的项目、访客规则隐藏的：同一个 `issue.not_found`，回答逐字节相同；wanda 403；olga 和不存在的 slug：`workspace.not_found`，逐字节相同）、`TestPermissionMatrix` 的 `getIssueByIdentifier` 两行、`TestMatrixViolationsCatchesAnotherCasesIdentifier`、`TestThePermissionMatrixCoversEveryOperation`；契约的整程序测试（`TestAPIRoutesAreTheContractsOperations`、`TestOperationsThatNeedATokenAnswer401WithoutOne`、`TestParametersThatDoNotBindAnswer400`）。
 
 - [ ] **Step 1: 契约，生成**
@@ -5494,19 +5495,21 @@ components:
       description: >-
         For the workspace's active members, then as getIssue. The
         identifier is the project's identifier, a hyphen and the work
-        item's number: WEB-12. The project's identifier is compared with
-        those of the workspace's undeleted projects in any case, i, ı, I
-        and İ as one letter; when more than one project's identifier
-        matches it, the one that is it upper-cased letter for letter (i and
-        ı as I, İ as İ) is taken, and when none is, none. A workspace that
-        does not exist, is deleted, or of which the caller is not an active
-        member answers workspace.not_found. An identifier that is not one,
-        that names no project of the workspace, or a number of no undeleted
-        work item of the project answers issue.not_found, as does a work
-        item whose project the caller does not see, or that he did not
-        create as a guest who sees only his own (getIssue): the same answer
-        for each. One whose project he sees but may not read answers
-        forbidden. An archived work item is read as any other.
+        item's number: WEB-12. The number is written in decimal with the
+        digits 0 to 9, without a sign or a leading zero, from 1 to
+        2147483647. The project's identifier is compared with those of the
+        workspace's undeleted projects in any case, i, ı, I and İ as one
+        letter; when more than one project's identifier matches it, the one
+        that is it upper-cased letter for letter (i and ı as I, İ as İ) is
+        taken, and when none is, none. A workspace that does not exist, is
+        deleted, or of which the caller is not an active member answers
+        workspace.not_found. An identifier that is not one, that names no
+        project of the workspace, or a number of no undeleted work item of
+        the project answers issue.not_found, as does a work item whose
+        project the caller does not see, or that he did not create as a
+        guest who sees only his own (getIssue): the same answer for each.
+        One whose project he sees but may not read answers forbidden. An
+        archived work item is read as any other.
       security: [{bearer: []}]
       x-problem-codes: [workspace.not_found, issue.not_found, forbidden]
       responses:
@@ -5561,9 +5564,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `a851e40d43f045161f7dd68de5c1e2141b80bdf375df3301b2324db7793fd1cb` | 3248 | `api/dist/openapi.yaml` |
+| `d7ef3af4fcb935e9eb6ddad4d91fcf43c017c2589bbbc7502321ada68389ae7d` | 3248 | `api/dist/openapi.yaml` |
 | `1419a422920c5dab18fda8c96b16e81502240bc91088ba0bc8ce73e458230f02` | 883 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
-| `6394ec1cb1c144d40393dd0e4a16a8d71ec0787120fe18ab7f7cf21534589393` | 3572 | `web/packages/api-client/src/schema.gen.ts` |
+| `eaba4cc339519bc395eccf3188ffe65e36260741f9fef024115f55b3bb4a7b04` | 3572 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -5590,17 +5593,17 @@ import (
 // escaped as it came; the answer is 200 with the work item the use case
 // answers, as getIssue shows it.
 func TestGetIssueByIdentifier(t *testing.T) {
-	for _, tt := range []struct{ path, identifier string }{
-		{"/api/v0/workspaces/acme/issues/WEB-7", "WEB-7"},
-		{"/api/v0/workspaces/acme/issues/web-7", "web-7"},
-		{"/api/v0/workspaces/acme/issues/i%C5%9F-7", "iş-7"},
+	for _, tt := range []struct{ path, slug, identifier string }{
+		{"/api/v0/workspaces/acme/issues/WEB-7", "acme", "WEB-7"},
+		{"/api/v0/workspaces/beta/issues/web-7", "beta", "web-7"},
+		{"/api/v0/workspaces/acme/issues/i%C5%9F-7", "acme", "iş-7"},
 	} {
 		get := &fakeGetByIdentifier{answer: webSeven}
 		res, body := do(t, newServer(t, httpadapter.UseCases{GetIssueByIdentifier: get}), request(http.MethodGet, tt.path, "alice", ""))
 		if res.StatusCode != http.StatusOK || body != webSevenJSON+"\n" {
 			t.Errorf("GET %s = %d %s, want 200 %s", tt.path, res.StatusCode, body, webSevenJSON)
 		}
-		if want := []string{aliceID.String() + " acme " + tt.identifier}; !slices.Equal(get.calls, want) {
+		if want := []string{aliceID.String() + " " + tt.slug + " " + tt.identifier}; !slices.Equal(get.calls, want) {
 			t.Errorf("GET %s: calls %q, want %q", tt.path, get.calls, want)
 		}
 	}
@@ -5818,6 +5821,62 @@ func TestAWorkItemIsFoundByItsIdentifier(t *testing.T) {
 }
 ````
 
+`server/internal/bootstrap/permission_matrix_columns_test.go`（修改，4 处）：
+
+````old server/internal/bootstrap/permission_matrix_columns_test.go
+}
+
+// Each check of the project level's columns and of the not-target
+````
+````new server/internal/bootstrap/permission_matrix_columns_test.go
+}
+
+// noProjectTable is what matrixViolations reports of a row of op whose
+// cells name param, a project or a row under one, from columns of no
+// project table (projectTables): one violation for each, in the order
+// given.
+func noProjectTable(op, param string, columns ...caller) []string {
+	var want []string
+	for _, c := range columns {
+		want = append(want, fmt.Sprintf("row %s, %s: %s from a column of no project table (projectTables): "+
+			"a project's row names its columns", op, c, param))
+	}
+	return want
+}
+
+// Each check of the project level's columns and of the not-target
+````
+````old server/internal/bootstrap/permission_matrix_columns_test.go
+		}), checks}, func() []string {
+			var want []string
+			for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
+				want = append(want, fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
+					"a project's row names its columns", c))
+			}
+			return want
+		}()},
+````
+````new server/internal/bootstrap/permission_matrix_columns_test.go
+		}), checks}, noProjectTable("getProject", "{project_id}", callerAdmin, callerMember, callerGuest)},
+````
+````old server/internal/bootstrap/permission_matrix_columns_test.go
+		}), checks}, []string{fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
+			"a project's row names its columns", callerSoleAdmin)}},
+````
+````new server/internal/bootstrap/permission_matrix_columns_test.go
+		}), checks}, noProjectTable("getProject", "{project_id}", callerSoleAdmin)},
+````
+````old server/internal/bootstrap/permission_matrix_columns_test.go
+		var noTable []string
+		for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
+			noTable = append(noTable, fmt.Sprintf("row %s, %s: %s from a column of no project table (projectTables): "+
+				"a project's row names its columns", under.op.ID, c, param))
+		}
+````
+````new server/internal/bootstrap/permission_matrix_columns_test.go
+		noTable := noProjectTable(under.op.ID, param, callerAdmin, callerMember, callerGuest)
+````
+
 `server/internal/bootstrap/permission_matrix_issue_columns_test.go`（修改，1 处）：
 
 ````old server/internal/bootstrap/permission_matrix_issue_columns_test.go
@@ -5861,11 +5920,7 @@ func TestMatrixViolationsCatchesAnotherCasesIdentifier(t *testing.T) {
 	inWorkspaceRow := matrixRow{op: byID.ID, request: func(c caller, _ seeded) (string, string, string) {
 		return http.MethodGet, "/api/v0/workspaces/" + workspaceOf(c) + "/issues/WEB-1", ""
 	}, cells: inWorkspace(cellOK, cellOK, cellOK)}
-	var refused []string
-	for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-		refused = append(refused, fmt.Sprintf("row getIssueByIdentifier, %s: {identifier} from a column of no project table (projectTables): "+
-			"a project's row names its columns", c))
-	}
+	refused := noProjectTable(byID.ID, "{identifier}", callerAdmin, callerMember, callerGuest)
 	if got := matrixViolations(ops, matrixExemptions{}, []matrixRow{inWorkspaceRow}, s, nil); !slices.Equal(got, refused) {
 		t.Errorf("a workspace-level row naming a work item: %q, want %q", got, refused)
 	}
@@ -6007,7 +6062,7 @@ Expected: 通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add api/modules/issue.yaml api/openapi.yaml server/internal/bootstrap/issue_identifier_test.go server/internal/bootstrap/permission_matrix_issue_columns_test.go server/internal/bootstrap/permission_matrix_issues_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/modules/issue/adapter/http/by_identifier_test.go server/internal/modules/issue/adapter/http/handler_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml api/openapi.yaml server/internal/bootstrap/issue_identifier_test.go server/internal/bootstrap/permission_matrix_columns_test.go server/internal/bootstrap/permission_matrix_issue_columns_test.go server/internal/bootstrap/permission_matrix_issues_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/modules/issue/adapter/http/by_identifier_test.go server/internal/modules/issue/adapter/http/handler_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P2): GET a work item by its identifier in a workspace
@@ -6032,8 +6087,9 @@ Expected: 通过。
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
-| `T6.1` | 契约不声明 `getIssueByIdentifier` 答 `workspace.not_found` | `internal/modules/issue/adapter/http` 的全部测试（`make test`） | 单元 |
+| `T6.1` | 契约不声明 `getIssueByIdentifier` 答 `workspace.not_found` | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `getIssueByIdentifier` 各格（`make test`） | 单元；组合 |
 | `T6.2` | 矩阵的一格可以按任何标识指名工作项，不必是它的列自己的 | `internal/bootstrap` 的 `TestMatrixViolationsCatchesAnotherCasesIdentifier`（`make test`） | 单元 |
+| `T6.3` | 处理函数不论路径的工作区是哪个，都把 `acme` 交给用例 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsFoundByItsIdentifier`（`make test`） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T2.12`、`T5.1`、`T5.2`、`T5.3`、`T5.4`、`T5.5`、`T5.6`、`T5.7`、`T5.8`、`T5.9`、`T5.11`、`T5.14`、`T5.15`、`T5.16`、`T5.18`（列在各自的 Task 的表里，标"（Task 6 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=6`）。
 
@@ -6171,10 +6227,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `7520628111f5e111f165654737f824611dff1355cd8f2856ada4b5798629ab97` | 3299 | `api/dist/openapi.yaml` |
+| `59ced5c7261164b92b84538c1aed1f82bf3e3bb2e7c58d1f45be04c60acfe0ad` | 3299 | `api/dist/openapi.yaml` |
 | `a0c6e1fb65f25f8aebd7e9949b8b7599867a45569000a5123f943a2f626f11d7` | 1093 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
 | `d1e8d6caab269d042c2ecf9032533c765f04e8c0ae10f102550af7685a3a9b9d` | 124 | `server/internal/modules/issue/adapter/postgres/gen/update.sql.go` |
-| `6c9bc6df752ae3bba34df2d0e1b787d64195feabfb89661bbeebbed0f82438f0` | 3666 | `web/packages/api-client/src/schema.gen.ts` |
+| `23d47e1db27950d2ebd10e57e88d1f13205b982c2f8a75d048c6f77effbbfdd8` | 3666 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/update.sql.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -7650,8 +7706,8 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `8db479431bb2c4037360c443bbc8a6e323a27b143181883c58bc6d11f9b73b2f` | 3300 | `api/dist/openapi.yaml` |
-| `8a82276820fbd9c0a3604df64af5bda027da85fbf04b6d4ea916068e52f19b44` | 3666 | `web/packages/api-client/src/schema.gen.ts` |
+| `ba0ab50a1ff0b2af2f69bed7ab3d8b770b4bf486524aff191a4c7ab780754c40` | 3300 | `api/dist/openapi.yaml` |
+| `bbcb0639cef4a6b87d246c4c20be430e9ecb4c6fea1ec009652531d1c8ca5ae6` | 3666 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -10395,10 +10451,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `350f7aac9bd96c9e8005902b4d0aa8564996092e477195fbf71028d3a18edeeb` | 3334 | `api/dist/openapi.yaml` |
+| `0ddf0747329150a2323774dc11f1414f5f5af576439dd7686391a124ae421e66` | 3334 | `api/dist/openapi.yaml` |
 | `132fca761648f96c2b192144536e767bf75a327e06758c95fdbf39364a336f40` | 38 | `server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go` |
 | `4607cfafc7f95dda5fec3fefa39152bee1444226657f4af444f1bbb66b69f7d4` | 1112 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
-| `9b29b819a18fd04e4f7e03d51d6db5e1f66d9c488d8d34dc4fd5618acc27cff0` | 3696 | `web/packages/api-client/src/schema.gen.ts` |
+| `9b409bb526b4ba3083483f44fc6e607a49990079b8b91dc717077fc3949697bb` | 3696 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。

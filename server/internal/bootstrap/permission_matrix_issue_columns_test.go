@@ -159,11 +159,7 @@ func TestMatrixViolationsCatchesAnotherCasesIdentifier(t *testing.T) {
 	inWorkspaceRow := matrixRow{op: byID.ID, request: func(c caller, _ seeded) (string, string, string) {
 		return http.MethodGet, "/api/v0/workspaces/" + workspaceOf(c) + "/issues/WEB-1", ""
 	}, cells: inWorkspace(cellOK, cellOK, cellOK)}
-	var refused []string
-	for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-		refused = append(refused, fmt.Sprintf("row getIssueByIdentifier, %s: {identifier} from a column of no project table (projectTables): "+
-			"a project's row names its columns", c))
-	}
+	refused := noProjectTable(byID.ID, "{identifier}", callerAdmin, callerMember, callerGuest)
 	if got := matrixViolations(ops, matrixExemptions{}, []matrixRow{inWorkspaceRow}, s, nil); !slices.Equal(got, refused) {
 		t.Errorf("a workspace-level row naming a work item: %q, want %q", got, refused)
 	}

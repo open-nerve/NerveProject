@@ -15,17 +15,17 @@ import (
 // escaped as it came; the answer is 200 with the work item the use case
 // answers, as getIssue shows it.
 func TestGetIssueByIdentifier(t *testing.T) {
-	for _, tt := range []struct{ path, identifier string }{
-		{"/api/v0/workspaces/acme/issues/WEB-7", "WEB-7"},
-		{"/api/v0/workspaces/acme/issues/web-7", "web-7"},
-		{"/api/v0/workspaces/acme/issues/i%C5%9F-7", "iş-7"},
+	for _, tt := range []struct{ path, slug, identifier string }{
+		{"/api/v0/workspaces/acme/issues/WEB-7", "acme", "WEB-7"},
+		{"/api/v0/workspaces/beta/issues/web-7", "beta", "web-7"},
+		{"/api/v0/workspaces/acme/issues/i%C5%9F-7", "acme", "iş-7"},
 	} {
 		get := &fakeGetByIdentifier{answer: webSeven}
 		res, body := do(t, newServer(t, httpadapter.UseCases{GetIssueByIdentifier: get}), request(http.MethodGet, tt.path, "alice", ""))
 		if res.StatusCode != http.StatusOK || body != webSevenJSON+"\n" {
 			t.Errorf("GET %s = %d %s, want 200 %s", tt.path, res.StatusCode, body, webSevenJSON)
 		}
-		if want := []string{aliceID.String() + " acme " + tt.identifier}; !slices.Equal(get.calls, want) {
+		if want := []string{aliceID.String() + " " + tt.slug + " " + tt.identifier}; !slices.Equal(get.calls, want) {
 			t.Errorf("GET %s: calls %q, want %q", tt.path, get.calls, want)
 		}
 	}

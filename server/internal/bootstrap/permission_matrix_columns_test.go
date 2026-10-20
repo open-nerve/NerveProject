@@ -155,6 +155,19 @@ func TestEachMatrixTableIsOfOneLevel(t *testing.T) {
 	}
 }
 
+// noProjectTable is what matrixViolations reports of a row of op whose
+// cells name param, a project or a row under one, from columns of no
+// project table (projectTables): one violation for each, in the order
+// given.
+func noProjectTable(op, param string, columns ...caller) []string {
+	var want []string
+	for _, c := range columns {
+		want = append(want, fmt.Sprintf("row %s, %s: %s from a column of no project table (projectTables): "+
+			"a project's row names its columns", op, c, param))
+	}
+	return want
+}
+
 // Each check of the project level's columns and of the not-target
 // parameters fails on its counterexample: a project row's columns are
 // projectColumns, each cell aims at its column's project, or at a row
@@ -241,20 +254,12 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		// columns are never asked.
 		{"a project operation in a workspace-level row", listed, []matrixRow{with(func(r *matrixRow) {
 			r.columns, r.cells = nil, every(cellOK)
-		}), checks}, func() []string {
-			var want []string
-			for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-				want = append(want, fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
-					"a project's row names its columns", c))
-			}
-			return want
-		}()},
+		}), checks}, noProjectTable("getProject", "{project_id}", callerAdmin, callerMember, callerGuest)},
 		// The only admin's table is a table a row may name, and no project
 		// table: a project's operation in it is the same gap.
 		{"a project operation in the only admin's row", listed, []matrixRow{with(func(r *matrixRow) {
 			r.columns, r.cells = soleAdminColumns, map[caller]cell{callerSoleAdmin: cellOK}
-		}), checks}, []string{fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
-			"a project's row names its columns", callerSoleAdmin)}},
+		}), checks}, noProjectTable("getProject", "{project_id}", callerSoleAdmin)},
 		{"a {slug} of another column's workspace beside a listed {identifier}", listed, []matrixRow{row, func() matrixRow {
 			r := checks
 			r.request = sameRequest(http.MethodGet, "/api/v0/workspaces/acme/project-identifiers/WEB", "")
@@ -315,11 +320,7 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		}
 		inWorkspaceRow := changes
 		inWorkspaceRow.columns, inWorkspaceRow.cells = nil, every(cellOK)
-		var noTable []string
-		for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-			noTable = append(noTable, fmt.Sprintf("row %s, %s: %s from a column of no project table (projectTables): "+
-				"a project's row names its columns", under.op.ID, c, param))
-		}
+		noTable := noProjectTable(under.op.ID, param, callerAdmin, callerMember, callerGuest)
 		elsewhere := func(id uuid.UUID) []string {
 			return []string{fmt.Sprintf("row %s, %s: %s %s is no %s seeded in its column's project acme/private", under.op.ID, callerMemberPrivate,
 				param, id, under.what)}
