@@ -5496,12 +5496,12 @@ components:
         identifier is the project's identifier, a hyphen and the work
         item's number: WEB-12. The project's identifier is compared with
         those of the workspace's undeleted projects in any case, i, ı, I
-        and İ as one letter; when two projects' identifiers match it, the
-        one that is it upper-cased letter for letter (i and ı as I, İ as
-        İ) is taken, and when neither is, none. A workspace that does not
-        exist, is deleted, or of which the caller is not an active member
-        answers workspace.not_found. An identifier that is not one, that
-        names no project of the workspace, or a number of no undeleted
+        and İ as one letter; when more than one project's identifier
+        matches it, the one that is it upper-cased letter for letter (i and
+        ı as I, İ as İ) is taken, and when none is, none. A workspace that
+        does not exist, is deleted, or of which the caller is not an active
+        member answers workspace.not_found. An identifier that is not one,
+        that names no project of the workspace, or a number of no undeleted
         work item of the project answers issue.not_found, as does a work
         item whose project the caller does not see, or that he did not
         create as a guest who sees only his own (getIssue): the same answer
@@ -5561,9 +5561,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `58f9c3156563723579e2e164c6cfe6269f0144ff461c0d6d5bd192be53f05ee6` | 3248 | `api/dist/openapi.yaml` |
+| `a851e40d43f045161f7dd68de5c1e2141b80bdf375df3301b2324db7793fd1cb` | 3248 | `api/dist/openapi.yaml` |
 | `1419a422920c5dab18fda8c96b16e81502240bc91088ba0bc8ce73e458230f02` | 883 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
-| `0803e2188643aa5aa204c28094ec71e9f66c669f1bf69fc2e81e78953f6bd53b` | 3572 | `web/packages/api-client/src/schema.gen.ts` |
+| `6394ec1cb1c144d40393dd0e4a16a8d71ec0787120fe18ab7f7cf21534589393` | 3572 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -6171,10 +6171,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `0640919fc0a90d8805e47782c9df995eddfaf309c26c90600a86d06a1da44e87` | 3299 | `api/dist/openapi.yaml` |
+| `7520628111f5e111f165654737f824611dff1355cd8f2856ada4b5798629ab97` | 3299 | `api/dist/openapi.yaml` |
 | `a0c6e1fb65f25f8aebd7e9949b8b7599867a45569000a5123f943a2f626f11d7` | 1093 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
 | `d1e8d6caab269d042c2ecf9032533c765f04e8c0ae10f102550af7685a3a9b9d` | 124 | `server/internal/modules/issue/adapter/postgres/gen/update.sql.go` |
-| `d36db82b1c5c8ed5a004c08baf83ac6061bb4443a1ac807651c586faec4c1f93` | 3666 | `web/packages/api-client/src/schema.gen.ts` |
+| `6c9bc6df752ae3bba34df2d0e1b787d64195feabfb89661bbeebbed0f82438f0` | 3666 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/update.sql.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -7650,8 +7650,8 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `396964afb3b2b685dd85fb4fe3dd1ef24d8277d08285c270fc0c9c4e5a28412f` | 3300 | `api/dist/openapi.yaml` |
-| `a7dea688cc77f3563134f0c772e03c512aafee2c126538be6b4bd7f7e7aaaa0a` | 3666 | `web/packages/api-client/src/schema.gen.ts` |
+| `8db479431bb2c4037360c443bbc8a6e323a27b143181883c58bc6d11f9b73b2f` | 3300 | `api/dist/openapi.yaml` |
+| `8a82276820fbd9c0a3604df64af5bda027da85fbf04b6d4ea916068e52f19b44` | 3666 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -10395,10 +10395,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `ff6ab7fcf720164ef28de861cadfd514387d5478c8a8c07bc8dce22cdf3bb2b4` | 3334 | `api/dist/openapi.yaml` |
+| `350f7aac9bd96c9e8005902b4d0aa8564996092e477195fbf71028d3a18edeeb` | 3334 | `api/dist/openapi.yaml` |
 | `132fca761648f96c2b192144536e767bf75a327e06758c95fdbf39364a336f40` | 38 | `server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go` |
 | `4607cfafc7f95dda5fec3fefa39152bee1444226657f4af444f1bbb66b69f7d4` | 1112 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
-| `8aa41c27362424f86fb600b36ef67a7956f6311821a9fb5228674b21e19e647a` | 3696 | `web/packages/api-client/src/schema.gen.ts` |
+| `9b29b819a18fd04e4f7e03d51d6db5e1f66d9c488d8d34dc4fd5618acc27cff0` | 3696 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
