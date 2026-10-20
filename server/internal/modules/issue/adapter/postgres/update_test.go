@@ -109,6 +109,45 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 	}
 }
 
+// archiveIssue's and unarchiveIssue's row through the store (M4 design
+// 3.8): SetArchivedAt archives the work item at later, changed last by bob
+// then, every other column of it as it was, the other work item as it was;
+// then unarchives it, changed last by alice at latest.
+func TestArchivingAWorkItemWritesItsRow(t *testing.T) {
+	s, pool := newStore(t)
+	ctx := context.Background()
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
+	id, other := uuid.NewV7(), uuid.NewV7()
+	createWebIssue(t, s, web, id, alice)
+	newIssue(t, pool, web, other, 8, alice)
+	before, stamps := rowsAsText(t, pool, "issues"), audits(t, pool, "issues")
+	created, _, err := s.GetIssue(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	later, latest := now.Add(time.Hour), now.Add(2*time.Hour)
+	for _, tt := range []struct {
+		archivedAt *time.Time
+		by         uuid.UUID
+		at         time.Time
+	}{{&later, bob, later}, {nil, alice, latest}} {
+		if err := s.SetArchivedAt(ctx, app.IssueArchival{ID: id, ArchivedAt: tt.archivedAt, By: tt.by, At: tt.at}); err != nil {
+			t.Fatal(err)
+		}
+		got, found, err := s.GetIssue(ctx, id)
+		want := created
+		want.ArchivedAt, want.UpdatedByID, want.UpdatedAt = tt.archivedAt, &tt.by, tt.at
+		if err != nil || !found || !reflect.DeepEqual(got, want) {
+			t.Errorf("GetIssue() archived at %v = %+v, %v, %v; want %+v", tt.archivedAt, got, found, err, want)
+		}
+		after, afterStamps := rowsAsText(t, pool, "issues"), audits(t, pool, "issues")
+		if after[other] != before[other] || afterStamps[other] != stamps[other] {
+			t.Errorf("the other work item:\n%s %s\nwas\n%s %s", after[other], afterStamps[other], before[other], stamps[other])
+		}
+	}
+}
+
 // A write of an update that fails answers its error as itself (M4 design
 // 3.5).
 func TestAFailedUpdateStatementIsAnError(t *testing.T) {
@@ -122,6 +161,9 @@ func TestAFailedUpdateStatementIsAnError(t *testing.T) {
 	if err := s.UpdateIssue(cancelled, app.IssueFields{ID: id, Name: "a", StateID: web.state, Priority: domain.PriorityNone, By: alice,
 		At: now}); !errors.Is(err, context.Canceled) {
 		t.Errorf("UpdateIssue() = %v; want context.Canceled", err)
+	}
+	if err := s.SetArchivedAt(cancelled, app.IssueArchival{ID: id, ArchivedAt: &now, By: alice, At: now}); !errors.Is(err, context.Canceled) {
+		t.Errorf("SetArchivedAt() = %v; want context.Canceled", err)
 	}
 	unlink := app.UnlinkRows{IssueID: id, Targets: []uuid.UUID{alice}, By: alice, At: now}
 	for name, remove := range map[string]func(context.Context, app.UnlinkRows) error{"RemoveAssignees": s.RemoveAssignees,

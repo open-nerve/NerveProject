@@ -1,9 +1,9 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
 // work items' tables and brings creating, reading, by id or by identifier,
-// changing and deleting a work item. For the project module's deletions
-// (its IssueCascade port) it soft-deletes a deleted project's rows of
-// them, tells whether work items are in a state, and takes deleted labels
-// off them.
+// changing, archiving, unarchiving and deleting a work item. For the
+// project module's deletions (its IssueCascade port) it soft-deletes a
+// deleted project's rows of them, tells whether work items are in a state,
+// and takes deleted labels off them.
 package issue
 
 import (
@@ -109,6 +109,7 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
+	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{
 			Locks: locks, Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
@@ -121,7 +122,9 @@ func New(d Deps) *Module {
 		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{
 			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock,
 		}),
-		DeleteIssue: app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Rows: store, Clock: d.Clock}),
+		DeleteIssue:    app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Rows: store, Clock: d.Clock}),
+		ArchiveIssue:   app.NewArchiveIssue(archive),
+		UnarchiveIssue: app.NewUnarchiveIssue(archive),
 	}}
 }
 

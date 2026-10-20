@@ -222,12 +222,15 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
 			WriteLockTimeout: 3 * time.Second}
 	})
-	item := w.newWorkItem(t)
+	item, archived := w.newWorkItem(t), w.doneWorkItem(t)
+	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.String()+"/archive", "", http.StatusOK)
 	writes := []struct {
 		name, method, path string
 		want               int // its answer once Web's row is free
 	}{
 		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), http.StatusNoContent},
+		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", http.StatusOK},
+		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", http.StatusOK},
 	}
 	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], []byte(`{"name":"Mend"}`))
 	w.contract.CheckRequest(t, change)

@@ -8,6 +8,14 @@ SET name = sqlc.arg(name), state_id = sqlc.arg(state_id), priority = sqlc.arg(pr
     updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)::timestamptz
 WHERE id = sqlc.arg(id);
 
+-- name: SetArchivedAt :exec
+-- archiveIssue's and unarchiveIssue's work item (M4 design 3.8), under the project's FOR NO KEY UPDATE, read again under
+-- it: its archived_at, the moment or NULL, last changed at the moment and by the account given; every other column as
+-- it is. It is not locked by id first, as UpdateIssue.
+UPDATE issues
+SET archived_at = sqlc.narg(archived_at), updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)::timestamptz
+WHERE id = sqlc.arg(id);
+
 -- name: RemoveAssignees :exec
 -- The assignees updateIssue removes (M4 design 3.7): the work item's undeleted rows of the accounts, soft-deleted at
 -- the moment and by the account given, in one statement. Every write of these rows holds the project's FOR NO KEY

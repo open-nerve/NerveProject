@@ -213,13 +213,17 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // is the greatest sort order of each state; lost, when set, loses the work
 // item once its activity is written, so that it is not there to read back.
 // changed is the last update's fields, nil before any: the work item's
-// last writer and moment. deletions are the deletion's calls' arguments,
-// one a table, in order.
+// last writer and moment; archival, when set, is the last archiving's or
+// unarchiving's, and its last writer and moment instead; archivedAt the
+// work item's archived_at, nil for none. deletions are the deletion's
+// calls' arguments, one a table, in order.
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
 	issue      *app.IssueRow
 	changed    *app.IssueFields
+	archival   *app.IssueArchival
+	archivedAt *time.Time
 	assignees  []uuid.UUID
 	labels     []uuid.UUID
 	activities []app.ActivityRow
@@ -248,7 +252,10 @@ func (f *fakeIssues) InsertIssue(ctx context.Context, r app.IssueRow) error {
 // writer is the account and the moment of the work item's last write: its
 // last update's, or its creation's.
 func (f *fakeIssues) writer() (uuid.UUID, time.Time) {
-	if f.changed != nil {
+	switch {
+	case f.archival != nil:
+		return f.archival.By, f.archival.At
+	case f.changed != nil:
 		return f.changed.By, f.changed.At
 	}
 	return f.issue.By, f.issue.At
@@ -376,7 +383,7 @@ func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, 
 	r := f.issue
 	by, at := f.writer()
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
-		StateID: r.StateID, Priority: r.Priority, SortOrder: r.SortOrder, CompletedAt: r.CompletedAt,
+		StateID: r.StateID, Priority: r.Priority, SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
 			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
 }

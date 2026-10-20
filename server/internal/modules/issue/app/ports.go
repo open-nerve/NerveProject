@@ -110,6 +110,18 @@ type IssueReader interface {
 	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
 }
 
+// IssueArchiver is the work items' store as archiveIssue and
+// unarchiveIssue write and read them, in the transaction ctx carries (M4
+// design 3.5).
+type IssueArchiver interface {
+	IssueReader
+	// SetArchivedAt writes the work item's archived_at and its last writer
+	// and moment.
+	SetArchivedAt(ctx context.Context, a IssueArchival) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
+}
+
 // WorkspaceDirectory finds a workspace by its slug (M4 design 3.3): the
 // workspace module's directory (workspace.Provide), converted
 // (bootstrap/ports.go).

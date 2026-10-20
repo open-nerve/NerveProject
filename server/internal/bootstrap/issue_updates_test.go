@@ -96,11 +96,12 @@ func displayNames(t *testing.T, w issueWorld, ids ...uuid.UUID) []string {
 
 // getIssue as bootstrap wires it answers the work item as stored, every
 // field (M4 design 5.2): Web's second work item, under the first and
-// archived (in the database: no operation of P1b archives a work item),
-// moved into Done by bob after alice made it and changed by him again
-// after that, so that each field that may be null has a value of its own,
-// each of its stamps is its own, and it was made, completed, changed last
-// and archived at four moments, in that order.
+// archived (in the database, a minute after its last change: archiveIssue
+// changes it last as it archives it), moved into Done by bob after alice
+// made it and changed by him again after that, so that each field that
+// may be null has a value of its own, each of its stamps is its own, and
+// it was made, completed, changed last and archived at four moments, in
+// that order.
 func TestAWorkItemReadsAsStored(t *testing.T) {
 	w := newIssueWorld(t)
 	first, second := w.newWorkItem(t), w.newWorkItem(t)

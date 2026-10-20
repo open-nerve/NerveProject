@@ -971,6 +971,52 @@ export interface paths {
         patch: operations["updateIssue"];
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a work item
+         * @description For the admins and members of its project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not archive, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be archived (project.archived). An archived work item is answered as it is, and nothing is written. Only a work item in a state of the completed or the cancelled group is archived (issue.not_archivable). It is archived at the moment of the request, and changed last by the caller then; its activity says it was archived, by the caller then. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        post: operations["archiveIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unarchive a work item
+         * @description For the admins and members of its project, as archiveIssue. A work item of an archived project cannot be unarchived (project.archived). A work item that is not archived is answered as it is, and nothing is written. Whatever its state, it is unarchived at the moment of the request, and changed last by the caller then; its activity says it was restored, by the caller then. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        post: operations["unarchiveIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspaces/{slug}/issues/{identifier}": {
         parameters: {
             query?: never;
@@ -3480,6 +3526,54 @@ export interface operations {
         };
         responses: {
             /** @description The work item as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item, archived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unarchiveIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item, not archived. */
             200: {
                 headers: {
                     [name: string]: unknown;

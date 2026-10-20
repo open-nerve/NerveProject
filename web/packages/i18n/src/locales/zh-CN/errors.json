@@ -39,6 +39,7 @@
     "project_label_name_taken": "这个项目里已有同名的标签（不区分大小写）。",
     "project_label_not_found": "标签不存在，或者你看不到它所在的项目。",
     "issue_not_found": "工作项不存在，或者你看不到它。",
+    "issue_not_archivable": "只有已完成或已取消的工作项才能归档。请先把它移到已完成或已取消的状态。",
     "unreachable": "暂时连不上服务器，请稍后再试。",
     "unknown": "出错了，请重试。",
     "field": {

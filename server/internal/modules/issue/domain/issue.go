@@ -34,12 +34,21 @@ var priorities = []Priority{PriorityUrgent, PriorityHigh, PriorityMedium, Priori
 type StateGroup string
 
 // The groups the work items' rules name: a work item in the completed
-// group is completed (M4 design 3.7); the triage group's state takes no
-// work item through the API.
+// group is completed (M4 design 3.7), and one in it or in the cancelled
+// group may be archived (3.8); the triage group's state takes no work item
+// through the API.
 const (
 	GroupCompleted StateGroup = "completed"
+	GroupCancelled StateGroup = "cancelled"
 	GroupTriage    StateGroup = "triage"
 )
+
+// Archivable reports whether a work item in a state of group may be
+// archived (M4 design 3.8): in the completed or the cancelled group, not
+// in any other.
+func Archivable(group StateGroup) bool {
+	return group == GroupCompleted || group == GroupCancelled
+}
 
 // Issue is a work item as stored and as the API shows it (M4 design 5.2),
 // with the accounts of its undeleted assignees' rows and the labels of its

@@ -38,6 +38,11 @@ type DeleteIssueUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) error
 }
 
+// ArchiveIssueUseCase is app.ArchiveIssue, and app.UnarchiveIssue.
+type ArchiveIssueUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Issue, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	CreateIssue          CreateIssueUseCase
@@ -45,6 +50,8 @@ type UseCases struct {
 	GetIssueByIdentifier GetIssueByIdentifierUseCase
 	UpdateIssue          UpdateIssueUseCase
 	DeleteIssue          DeleteIssueUseCase
+	ArchiveIssue         ArchiveIssueUseCase
+	UnarchiveIssue       ArchiveIssueUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

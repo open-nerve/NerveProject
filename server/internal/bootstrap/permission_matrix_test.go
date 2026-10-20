@@ -170,6 +170,9 @@ type matrixRow struct {
 	// refusal, when set, is the one error each 422 cell of the row holds, as
 	// "field code": the refusal the row names, not another.
 	refusal string
+	// prepare, when set, changes each cell's copy, at url, before its app
+	// starts: what the row's case needs that the prepared data lacks.
+	prepare func(t *testing.T, c caller, s seeded, url string)
 }
 
 func (r matrixRow) name() string {
@@ -213,7 +216,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows())
+		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -371,7 +374,11 @@ func TestPermissionMatrix(t *testing.T) {
 					// Registered before the app's: cleanups run last first,
 					// so the slot is freed once the app is closed.
 					t.Cleanup(func() { <-apps })
-					base = startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), r.config), migrations.FS())
+					url := pgtest.NewDatabaseFrom(t, d.url)
+					if r.prepare != nil {
+						r.prepare(t, c, d.seeded.in(t), url)
+					}
+					base = startApp(t, d.config(t, url, r.config), migrations.FS())
 				}
 				method, path, body := r.request(c, d.seeded.in(t))
 				status, answer := call(t, contract, method, base+path, d.tokens[accountOf(c)], body)

@@ -22,6 +22,16 @@ func (s *Store) UpdateIssue(ctx context.Context, f app.IssueFields) error {
 	return nil
 }
 
+// SetArchivedAt writes the work item's archived_at, the moment or none,
+// and its last writer and moment, a (M4 design 3.8).
+func (s *Store) SetArchivedAt(ctx context.Context, a app.IssueArchival) error {
+	err := s.queries(ctx).SetArchivedAt(ctx, gen.SetArchivedAtParams{ID: a.ID, ArchivedAt: a.ArchivedAt, By: a.By, At: a.At})
+	if err != nil {
+		return fmt.Errorf("archive work item %s: %w", a.ID, err)
+	}
+	return nil
+}
+
 // RemoveAssignees soft-deletes the work item's undeleted assignees' rows
 // of the accounts r names.
 func (s *Store) RemoveAssignees(ctx context.Context, r app.UnlinkRows) error {

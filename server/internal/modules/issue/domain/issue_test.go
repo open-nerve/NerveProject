@@ -167,6 +167,17 @@ func TestCompletedAt(t *testing.T) {
 	}
 }
 
+// A work item is archived in the completed and the cancelled groups, and
+// in no other (M4 design 3.8).
+func TestArchivable(t *testing.T) {
+	for group, want := range map[StateGroup]bool{"backlog": false, "unstarted": false, "started": false, GroupCompleted: true,
+		GroupCancelled: true, GroupTriage: false} {
+		if got := Archivable(group); got != want {
+			t.Errorf("Archivable(%s) = %v, want %v", group, got, want)
+		}
+	}
+}
+
 // A state asked for that is not the project's, or is its triage state, is
 // state_id not_allowed; a label that is not the project's, label_ids[i]
 // not_allowed (M4 design 3.7).

@@ -69,6 +69,24 @@ func (h handler) DeleteIssue(ctx context.Context, req gen.DeleteIssueRequestObje
 	return gen.DeleteIssue204Response{}, nil
 }
 
+// ArchiveIssue serves POST /api/v0/issues/{issue_id}/archive.
+func (h handler) ArchiveIssue(ctx context.Context, req gen.ArchiveIssueRequestObject) (gen.ArchiveIssueResponseObject, error) {
+	i, err := h.uc.ArchiveIssue.Execute(ctx, req.IssueID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ArchiveIssue200JSONResponse(issueDetail(i)), nil
+}
+
+// UnarchiveIssue serves POST /api/v0/issues/{issue_id}/unarchive.
+func (h handler) UnarchiveIssue(ctx context.Context, req gen.UnarchiveIssueRequestObject) (gen.UnarchiveIssueResponseObject, error) {
+	i, err := h.uc.UnarchiveIssue.Execute(ctx, req.IssueID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UnarchiveIssue200JSONResponse(issueDetail(i)), nil
+}
+
 // issueDetail is i as the API shows it: each field that may be null null
 // when it is nil, each list [] when it is empty.
 func issueDetail(i domain.Issue) gen.IssueDetail {

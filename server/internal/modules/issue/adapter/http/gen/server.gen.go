@@ -157,6 +157,12 @@ type ServerInterface interface {
 	// UpdateIssue Change a work item
 	// (PATCH /api/v0/issues/{issue_id})
 	UpdateIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ArchiveIssue Archive a work item
+	// (POST /api/v0/issues/{issue_id}/archive)
+	ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// UnarchiveIssue Unarchive a work item
+	// (POST /api/v0/issues/{issue_id}/unarchive)
+	UnarchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// CreateIssue Create a work item in a project
 	// (POST /api/v0/projects/{project_id}/issues)
 	CreateIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -243,6 +249,58 @@ func (siw *ServerInterfaceWrapper) UpdateIssue(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveIssue operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnarchiveIssue operation middleware
+func (siw *ServerInterfaceWrapper) UnarchiveIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnarchiveIssue(w, r, issueID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -437,6 +495,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.DeleteIssue)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.GetIssue)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.UpdateIssue)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/archive", wrapper.ArchiveIssue)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/unarchive", wrapper.UnarchiveIssue)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issues/{identifier}", wrapper.GetIssueByIdentifier)
 
 	return m
@@ -585,6 +645,98 @@ func (response UpdateIssuedefaultApplicationProblemPlusJSONResponse) VisitUpdate
 	return err
 }
 
+type ArchiveIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type ArchiveIssueResponseObject interface {
+	VisitArchiveIssueResponse(w http.ResponseWriter) error
+}
+
+type ArchiveIssue200JSONResponse IssueDetail
+
+func (response ArchiveIssue200JSONResponse) VisitArchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ArchiveIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ArchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitArchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnarchiveIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type UnarchiveIssueResponseObject interface {
+	VisitUnarchiveIssueResponse(w http.ResponseWriter) error
+}
+
+type UnarchiveIssue200JSONResponse IssueDetail
+
+func (response UnarchiveIssue200JSONResponse) VisitUnarchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnarchiveIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UnarchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitUnarchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateIssueRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 	Body      *CreateIssueJSONRequestBody
@@ -690,6 +842,12 @@ type StrictServerInterface interface {
 	// UpdateIssue Change a work item
 	// (PATCH /api/v0/issues/{issue_id})
 	UpdateIssue(ctx context.Context, request UpdateIssueRequestObject) (UpdateIssueResponseObject, error)
+	// ArchiveIssue Archive a work item
+	// (POST /api/v0/issues/{issue_id}/archive)
+	ArchiveIssue(ctx context.Context, request ArchiveIssueRequestObject) (ArchiveIssueResponseObject, error)
+	// UnarchiveIssue Unarchive a work item
+	// (POST /api/v0/issues/{issue_id}/unarchive)
+	UnarchiveIssue(ctx context.Context, request UnarchiveIssueRequestObject) (UnarchiveIssueResponseObject, error)
 	// CreateIssue Create a work item in a project
 	// (POST /api/v0/projects/{project_id}/issues)
 	CreateIssue(ctx context.Context, request CreateIssueRequestObject) (CreateIssueResponseObject, error)
@@ -815,6 +973,58 @@ func (sh *strictHandler) UpdateIssue(w http.ResponseWriter, r *http.Request, iss
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateIssueResponseObject); ok {
 		if err := validResponse.VisitUpdateIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ArchiveIssue operation middleware
+func (sh *strictHandler) ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request ArchiveIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ArchiveIssue(ctx, request.(ArchiveIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ArchiveIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ArchiveIssueResponseObject); ok {
+		if err := validResponse.VisitArchiveIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnarchiveIssue operation middleware
+func (sh *strictHandler) UnarchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request UnarchiveIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnarchiveIssue(ctx, request.(UnarchiveIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnarchiveIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnarchiveIssueResponseObject); ok {
+		if err := validResponse.VisitUnarchiveIssueResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

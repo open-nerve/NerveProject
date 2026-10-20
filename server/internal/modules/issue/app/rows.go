@@ -50,6 +50,16 @@ type IssueFields struct {
 	At          time.Time
 }
 
+// IssueArchival is a work item's archiving or unarchiving as it is written
+// (M4 design 3.8): its archived_at, the moment, or nil for none, and the
+// moment and the account that change it last.
+type IssueArchival struct {
+	ID         uuid.UUID
+	ArchivedAt *time.Time
+	By         uuid.UUID
+	At         time.Time
+}
+
 // UnlinkRows are the rows of one of a work item's tables of accounts or
 // labels, its assignees' or labels', that an update removes: its undeleted
 // rows of Targets, soft-deleted at the moment and by the account given.

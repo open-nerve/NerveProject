@@ -42,8 +42,9 @@ var matrixTables = slices.Concat(projectTables, workspaceLevelTables)
 // the operation its row names, so that no row tests another operation under
 // its name; a cell that does not target its column's workspace or project
 // (targetViolation), so that no column quietly tests another's case; a row
-// that sends anything but GET without write, whose cells could write on the
-// copy the reading cells share. The requests name the rows of s.
+// that sends anything but GET without write, or prepares its cells without
+// it, whose cells could write on the copy the reading cells share. The
+// requests name the rows of s.
 func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []matrixRow, s seeded, tests map[string]bool) []string {
 	var found []string
 	byID, inMatrix := map[string]apitest.Operation{}, map[string]bool{}
@@ -78,6 +79,9 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 		}
 		if unsafe != "" {
 			found = append(found, fmt.Sprintf("row %s sends %s without write: its cells could run on the reads' copy", r.name(), unsafe))
+		}
+		if r.prepare != nil && !r.write {
+			found = append(found, fmt.Sprintf("row %s prepares its cells without write: it would change the reads' copy", r.name()))
 		}
 		for _, c := range slices.Sorted(maps.Keys(r.cells)) {
 			if !slices.Contains(r.columnsOf(), c) {
@@ -266,6 +270,8 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	}
 	posting := guestSends(http.MethodPost, "/api/v0/workspaces/acme")
 	posting.write = true
+	prepared := row
+	prepared.prepare = func(*testing.T, caller, seeded, string) {}
 	creates := apitest.Operation{ID: "createWorkspace", Tags: []string{"workspace"}, Method: http.MethodPost, Path: "/api/v0/workspaces"}
 	tests := []struct {
 		name   string
@@ -317,6 +323,8 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 			[]string{"row createWorkspace sends POST without write: its cells could run on the reads' copy"}},
 		{"a write without write on a path listed as not a target", append(ops, accept), answers, []matrixRow{row, accepts},
 			[]string{"row acceptWorkspaceInvitation sends POST without write: its cells could run on the reads' copy"}},
+		{"a prepare without write", ops, exempt, []matrixRow{prepared},
+			[]string{"row getWorkspace prepares its cells without write: it would change the reads' copy"}},
 		{"a cell that targets another column's workspace", ops, exempt,
 			[]matrixRow{{op: "getWorkspace", request: sameRequest(http.MethodGet, "/api/v0/workspaces/acme", ""), cells: every(cellOK)}},
 			[]string{"row getWorkspace, workspace deleted: targets the workspace acme, not its column's gone"}},

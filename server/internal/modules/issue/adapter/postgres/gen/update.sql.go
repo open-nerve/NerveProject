@@ -63,6 +63,32 @@ func (q *Queries) RemoveLabels(ctx context.Context, arg RemoveLabelsParams) erro
 	return err
 }
 
+const setArchivedAt = `-- name: SetArchivedAt :exec
+UPDATE issues
+SET archived_at = $1, updated_by_id = $2::uuid, updated_at = $3::timestamptz
+WHERE id = $4
+`
+
+type SetArchivedAtParams struct {
+	ArchivedAt *time.Time
+	By         uuid.UUID
+	At         time.Time
+	ID         uuid.UUID
+}
+
+// archiveIssue's and unarchiveIssue's work item (M4 design 3.8), under the project's FOR NO KEY UPDATE, read again under
+// it: its archived_at, the moment or NULL, last changed at the moment and by the account given; every other column as
+// it is. It is not locked by id first, as UpdateIssue.
+func (q *Queries) SetArchivedAt(ctx context.Context, arg SetArchivedAtParams) error {
+	_, err := q.db.Exec(ctx, setArchivedAt,
+		arg.ArchivedAt,
+		arg.By,
+		arg.At,
+		arg.ID,
+	)
+	return err
+}
+
 const updateIssue = `-- name: UpdateIssue :exec
 UPDATE issues
 SET name = $1, state_id = $2, priority = $3, completed_at = $4,

@@ -123,6 +123,13 @@ func waltsWorkItem(t *testing.T, w issueWorld) {
 	w.newWorkItemBy(t, "walt", w.web, `{"name":"Fix"}`)
 }
 
+// doneWorkItem is the id of a work item alice creates in Web's Done
+// through the API, completed at its creation.
+func (w issueWorld) doneWorkItem(t *testing.T) uuid.UUID {
+	t.Helper()
+	return w.newWorkItemIn(t, w.web, `{"name":"Fix","state_id":"`+w.done.String()+`"}`)
+}
+
 // fullIssue is the body of a work item in Todo, assigned to bob and
 // labelled Bug.
 func (w issueWorld) fullIssue() string {

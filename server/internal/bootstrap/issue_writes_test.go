@@ -99,8 +99,9 @@ func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) module
 // into Done, assigned to herself instead of bob, without Bug; then its name
 // as it is, which writes nothing; then with a label no project has (422),
 // and walt is refused (403); and she reads it, without a transaction. She
-// deletes the second. With Web archived, her creation and her change are
-// refused under the lock (409).
+// archives it, in Done, and unarchives it; she deletes the second. With
+// Web archived, her creation and her change are refused under the lock
+// (409).
 func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	w := newIssueWorld(t)
 	one := poolOfOne(t, w.pool.Config().ConnString())
@@ -145,6 +146,9 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	change(alice, `{"label_ids":["`+uuid.NewV7().String()+`"]}`, http.StatusUnprocessableEntity)
 	change(w.ids["walt"], `{"name":"Mend"}`, http.StatusForbidden)
 	route.answerWithin(t, w.contract, http.MethodGet, "/api/v0/issues/"+first.ID.String(), alice, "", http.StatusOK)
+	for _, verb := range []string{"archive", "unarchive"} {
+		route.answerWithin(t, w.contract, http.MethodPost, "/api/v0/issues/"+first.ID.String()+"/"+verb, alice, "", http.StatusOK)
+	}
 	route.answerWithin(t, w.contract, http.MethodDelete, "/api/v0/issues/"+defaulted.ID.String(), alice, "", http.StatusNoContent)
 	if _, err := w.pool.Exec(context.Background(), "UPDATE projects SET archived_at = now() WHERE id = $1", w.web); err != nil {
 		t.Fatal(err)

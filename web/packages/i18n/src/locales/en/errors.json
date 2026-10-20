@@ -39,6 +39,7 @@
     "project_label_name_taken": "A label of this project already has this name, in this case or another.",
     "project_label_not_found": "The label does not exist, or you cannot see its project.",
     "issue_not_found": "The work item does not exist, or you cannot see it.",
+    "issue_not_archivable": "Only a completed or cancelled work item can be archived. Move it to such a state first.",
     "unreachable": "Cannot reach the server for now. Please try again.",
     "unknown": "Something went wrong. Please try again.",
     "field": {

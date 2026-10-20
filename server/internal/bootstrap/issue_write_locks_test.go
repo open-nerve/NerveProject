@@ -55,6 +55,23 @@ var issueWrites = []issueWrite{
 	{op: "deleteIssue", method: http.MethodDelete, path: "/api/v0/issues/{issue_id}",
 		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
 		body:   func(issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
+	// A work item in Done, which the send archives: its state is read
+	// under the lock.
+	{op: "archiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/archive",
+		target: func(t *testing.T, w issueWorld) string {
+			return "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive"
+		},
+		body: func(issueWorld) string { return "" }, want: http.StatusOK, waits: "states", mode: "ACCESS EXCLUSIVE"},
+	// An archived work item, which the send unarchives: it reads nothing
+	// under the lock that its precheck did not, so it waits for the work
+	// items' table, which it writes first.
+	{op: "unarchiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/unarchive",
+		target: func(t *testing.T, w issueWorld) string {
+			id := w.doneWorkItem(t)
+			w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+id.String()+"/archive", "", http.StatusOK)
+			return "/api/v0/issues/" + id.String() + "/unarchive"
+		},
+		body: func(issueWorld) string { return "" }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
 }
 
 // issueTables are the tables a write on the work-item side reads or

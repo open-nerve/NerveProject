@@ -85,3 +85,18 @@ func TestUpdateActivity(t *testing.T) {
 		}
 	}
 }
+
+// Archiving by a caller writes row 14 of M4 design 3.13, and unarchiving
+// row 16: Plane's values of archived_at, the old one NULL for an
+// archiving.
+func TestArchiveActivity(t *testing.T) {
+	field, archived, archive, restore := "archived_at", "manual_archive", "archive", "restore"
+	if got, want := ArchiveActivity(), (Activity{Field: &field, Verb: "updated", NewValue: &archived,
+		Comment: "archived the work item"}); !reflect.DeepEqual(got, want) {
+		t.Errorf("ArchiveActivity() = %+v, want %+v", got, want)
+	}
+	if got, want := UnarchiveActivity(), (Activity{Field: &field, Verb: "updated", OldValue: &archive, NewValue: &restore,
+		Comment: "restored the work item"}); !reflect.DeepEqual(got, want) {
+		t.Errorf("UnarchiveActivity() = %+v, want %+v", got, want)
+	}
+}

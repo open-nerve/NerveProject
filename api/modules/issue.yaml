@@ -154,6 +154,67 @@ paths:
           description: The work item is deleted.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    post:
+      operationId: archiveIssue
+      tags: [issue]
+      summary: Archive a work item
+      description: >-
+        For the admins and members of its project. A work item that does not
+        exist, is deleted, whose project the caller does not see, or that he
+        did not create as a guest who sees only his own (getIssue) answers
+        issue.not_found, whatever his role may do; one whose project he sees
+        but whose work items he may not archive, forbidden; both are
+        answered before the project is locked, and with the project locked
+        the role is decided again. A work item of an archived project
+        cannot be archived (project.archived). An archived work item is
+        answered as it is, and nothing is written. Only a work item in a
+        state of the completed or the cancelled group is archived
+        (issue.not_archivable). It is archived at the moment of the
+        request, and changed last by the caller then; its activity says it
+        was archived, by the caller then. A project with too many writes on
+        its work items at once answers server_busy, with Retry-After: try
+        again then.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden, project.archived, issue.not_archivable, server_busy]
+      responses:
+        '200':
+          description: The work item, archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/unarchive:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    post:
+      operationId: unarchiveIssue
+      tags: [issue]
+      summary: Unarchive a work item
+      description: >-
+        For the admins and members of its project, as archiveIssue. A work
+        item of an archived project cannot be unarchived
+        (project.archived). A work item that is not archived is answered as
+        it is, and nothing is written. Whatever its state, it is unarchived
+        at the moment of the request, and changed last by the caller then;
+        its activity says it was restored, by the caller then. A project
+        with too many writes on its work items at once answers server_busy,
+        with Retry-After: try again then.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden, project.archived, server_busy]
+      responses:
+        '200':
+          description: The work item, not archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/issues/{identifier}:
     parameters:
       - $ref: '#/components/parameters/Slug'

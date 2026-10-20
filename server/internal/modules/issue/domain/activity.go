@@ -119,6 +119,21 @@ func UpdateActivity(u Update) []Activity {
 	return rows
 }
 
+// ArchiveActivity is the row a work item's archiving by a caller writes:
+// row 14 of M4 design 3.13, archived_at, updated, from NULL to
+// manual_archive.
+func ArchiveActivity() Activity {
+	return Activity{Field: ptr("archived_at"), Verb: VerbUpdated, NewValue: ptr("manual_archive"), Comment: "archived the work item"}
+}
+
+// UnarchiveActivity is the row a work item's unarchiving writes: row 16 of
+// M4 design 3.13, archived_at, updated, from archive to restore, after a
+// caller's archiving too (Plane the same).
+func UnarchiveActivity() Activity {
+	return Activity{Field: ptr("archived_at"), Verb: VerbUpdated, OldValue: ptr("archive"), NewValue: ptr("restore"),
+		Comment: "restored the work item"}
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }
