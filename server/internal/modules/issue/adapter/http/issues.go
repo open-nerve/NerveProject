@@ -9,11 +9,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
 
-// CreateIssue serves POST /api/v0/projects/{project_id}/issues: the state
-// and the priority nil and the lists empty when not given; a value given
-// goes to the use case as it came, which checks it.
+// CreateIssue serves POST /api/v0/projects/{project_id}/issues: the state,
+// the priority and the dates nil and the lists empty when not given; a
+// value given goes to the use case as it came, which checks it.
 func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObject) (gen.CreateIssueResponseObject, error) {
-	in := domain.NewIssue{Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority)}
+	in := domain.NewIssue{Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
+		StartDate: req.Body.StartDate, TargetDate: req.Body.TargetDate}
 	if req.Body.AssigneeIds != nil {
 		in.AssigneeIDs = *req.Body.AssigneeIds
 	}
@@ -49,11 +50,13 @@ func (h handler) GetIssueByIdentifier(ctx context.Context, req gen.GetIssueByIde
 }
 
 // UpdateIssue serves PATCH /api/v0/issues/{issue_id}: each field nil when
-// not given; a value given goes to the use case as it came, which checks
-// it.
+// not given, a date given null given as none; a value given goes to the
+// use case as it came, which checks it.
 func (h handler) UpdateIssue(ctx context.Context, req gen.UpdateIssueRequestObject) (gen.UpdateIssueResponseObject, error) {
 	p := domain.IssuePatch{Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
 		AssigneeIDs: req.Body.AssigneeIds, LabelIDs: req.Body.LabelIds}
+	p.SetStartDate, p.StartDate = given(req.Body.StartDate)
+	p.SetTargetDate, p.TargetDate = given(req.Body.TargetDate)
 	i, err := h.uc.UpdateIssue.Execute(ctx, req.IssueID, p)
 	if err != nil {
 		return nil, err
@@ -91,9 +94,23 @@ func (h handler) UnarchiveIssue(ctx context.Context, req gen.UnarchiveIssueReque
 // when it is nil, each list [] when it is empty.
 func issueDetail(i domain.Issue) gen.IssueDetail {
 	return gen.IssueDetail{ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
-		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
+		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
+		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
 		CreatedByID: orNull(i.CreatedByID), UpdatedByID: orNull(i.UpdatedByID), CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt}
+}
+
+// given reports whether a body gives v, and its value: nil when it gives
+// null.
+func given[T any](v nullable.Nullable[T]) (bool, *T) {
+	switch {
+	case !v.IsSpecified():
+		return false, nil
+	case v.IsNull():
+		return true, nil
+	}
+	x := v.MustGet()
+	return true, &x
 }
 
 // orNull is v as a nullable field: null for nil.

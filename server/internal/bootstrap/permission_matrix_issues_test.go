@@ -48,12 +48,14 @@ func issueMatrixRows() []matrixRow {
 		{op: "createIssue", write: true, columns: issueColumns, request: toProject(http.MethodPost, "/issues", newIssue),
 			cells: onTheIssues(cellCreated, cellCreated, cellForbidden), check: createsTheIssue},
 		// Each field given: in Done, high, assigned to PM's account, a
-		// member of the project, and labelled UI; the activity names him by
-		// his display name, which identity gives (bootstrap/ports.go).
+		// member of the project, labelled UI, from the 12th to the 19th of
+		// October; the activity names him by his display name, which
+		// identity gives (bootstrap/ports.go).
 		{op: "createIssue", variant: "each field given", write: true, columns: projectColumns,
 			request: withIssueBody(func(c caller, s seeded) string {
 				return `{"name":"Fix","state_id":"` + s.state(projectOf(c), "Done").String() + `","priority":"high","assignee_ids":["` +
-					s.account(callerProjectMember).String() + `"],"label_ids":["` + s.label(projectOf(c), "UI").String() + `"]}`
+					s.account(callerProjectMember).String() + `"],"label_ids":["` + s.label(projectOf(c), "UI").String() +
+					`"],"start_date":"2026-10-12","target_date":"2026-10-19"}`
 			}),
 			cells: ofProject(cellCreated, cellCreated, cellForbidden, cellCreated, cellForbidden, cellForbidden), check: createsTheGivenIssue},
 		// An archived project takes no work items (M4 design 3.8), after the
@@ -175,7 +177,8 @@ func createsTheIssue(t *testing.T, c caller, s seeded, answer string) {
 
 // createsTheGivenIssue: the column's project's next work item, Fix, in
 // Done, high, at a state's first sort order, completed at its creation,
-// assigned to PM's account, labelled UI.
+// assigned to PM's account, labelled UI, from the 12th to the 19th of
+// October.
 func createsTheGivenIssue(t *testing.T, c caller, s seeded, answer string) {
 	var i struct {
 		SequenceID  int         `json:"sequence_id"`
@@ -185,12 +188,15 @@ func createsTheGivenIssue(t *testing.T, c caller, s seeded, answer string) {
 		CompletedAt *string     `json:"completed_at"`
 		AssigneeIDs []uuid.UUID `json:"assignee_ids"`
 		LabelIDs    []uuid.UUID `json:"label_ids"`
+		StartDate   string      `json:"start_date"`
+		TargetDate  string      `json:"target_date"`
 	}
 	decodeAnswer(t, answer, &i)
 	pm, ui, next := s.account(callerProjectMember), s.label(projectOf(c), "UI"), nextNumber(projectOf(c))
 	if i.SequenceID != next || i.StateID != s.state(projectOf(c), "Done") || i.Priority != "high" || i.SortOrder != 65535 ||
-		i.CompletedAt == nil || !slices.Equal(i.AssigneeIDs, []uuid.UUID{pm}) || !slices.Equal(i.LabelIDs, []uuid.UUID{ui}) {
-		t.Errorf("%s creates %s; want %s's work item %d in Done, high, at 65535, completed, assigned to %s, labelled %s", c, answer,
-			projectOf(c), next, pm, ui)
+		i.CompletedAt == nil || !slices.Equal(i.AssigneeIDs, []uuid.UUID{pm}) || !slices.Equal(i.LabelIDs, []uuid.UUID{ui}) ||
+		i.StartDate != "2026-10-12" || i.TargetDate != "2026-10-19" {
+		t.Errorf("%s creates %s; want %s's work item %d in Done, high, at 65535, completed, assigned to %s, labelled %s, from 2026-10-12 to "+
+			"2026-10-19", c, answer, projectOf(c), next, pm, ui)
 	}
 }

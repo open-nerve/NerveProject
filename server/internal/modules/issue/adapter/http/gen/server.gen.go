@@ -17,6 +17,7 @@ import (
 	"github.com/oapi-codegen/nullable"
 	"github.com/oapi-codegen/runtime"
 	externalRef0 "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // Defines values for IssuePriority.
@@ -60,8 +61,14 @@ type IssueCreate struct {
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
 
+	// StartDate The day it starts, as YYYY-MM-DD; left out for none.
+	StartDate *shared.Date `json:"start_date,omitempty"`
+
 	// StateID One of the project's states, not its triage state; left out for the project's default state.
 	StateID *uuid.UUID `json:"state_id,omitempty"`
+
+	// TargetDate The day it is due, as YYYY-MM-DD, not before start_date; left out for none.
+	TargetDate *shared.Date `json:"target_date,omitempty"`
 }
 
 // IssueDetail A work item of a project.
@@ -95,9 +102,15 @@ type IssueDetail struct {
 	SequenceID int `json:"sequence_id"`
 
 	// SortOrder Its place among its state's work items, the lowest first.
-	SortOrder float64   `json:"sort_order"`
-	StateID   uuid.UUID `json:"state_id"`
-	UpdatedAt time.Time `json:"updated_at"`
+	SortOrder float64 `json:"sort_order"`
+
+	// StartDate The day it starts; null for none.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
+	StateID   uuid.UUID                      `json:"state_id"`
+
+	// TargetDate The day it is due, not before its start date; null for none.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date"`
+	UpdatedAt  time.Time                      `json:"updated_at"`
 
 	// UpdatedByID The account that changed it last; null for none.
 	UpdatedByID nullable.Nullable[uuid.UUID] `json:"updated_by_id"`
@@ -121,8 +134,14 @@ type IssueUpdate struct {
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
 
+	// StartDate The day it starts, as YYYY-MM-DD; null for none. Not after the target date the work item then has.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date,omitempty"`
+
 	// StateID One of the project's states, not its triage state.
 	StateID *uuid.UUID `json:"state_id,omitempty"`
+
+	// TargetDate The day it is due, as YYYY-MM-DD; null for none. Not before the start date the work item then has.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date,omitempty"`
 }
 
 // IssueID defines model for IssueID.

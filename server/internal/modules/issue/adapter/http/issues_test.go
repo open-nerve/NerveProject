@@ -14,45 +14,47 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The work items the use case answers. WEB-7, under WEB-6, completed, with
-// an assignee and a label, made by alice, archived half a minute later and
-// changed last by bob a minute after its creation: each field that may be
-// null has a value of its own, so each shows as its own. WEB-8, new, with
-// none of them, without a creator or a last writer (created_by_id and
-// updated_by_id null).
+// The work items the use case answers. WEB-7, under WEB-6, from the 12th
+// to the 19th of October, completed, with an assignee and a label, made by
+// alice, archived half a minute later and changed last by bob a minute
+// after its creation: each field that may be null has a value of its own,
+// so each shows as its own. WEB-8, new, with none of them, without a
+// creator or a last writer (created_by_id and updated_by_id null).
 var (
 	stateID   = uuid.MustParse("0199a2b4-0000-7000-8000-0000000000c1")
 	bobID     = uuid.MustParse("0199a2b4-0000-7000-8000-000000000002")
 	bugID     = uuid.MustParse("0199a2b4-0000-7000-8000-0000000000d1")
 	webSixID  = uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e6")
+	startDay  = shared.DateOf(time.Date(2026, 10, 12, 0, 0, 0, 0, time.UTC))
+	targetDay = shared.DateOf(time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC))
 	completed = created.Add(-1)
 	archived  = created.Add(30 * time.Second)
 	updated   = created.Add(time.Minute)
 	webSeven  = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e7"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 7,
-		Name: "Fix the login", StateID: stateID, Priority: domain.PriorityHigh, ParentID: &webSixID, SortOrder: 75535.5,
-		CompletedAt: &completed, ArchivedAt: &archived, AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID},
+		Name: "Fix the login", StateID: stateID, Priority: domain.PriorityHigh, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID,
+		SortOrder: 75535.5, CompletedAt: &completed, ArchivedAt: &archived, AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID},
 		CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created, UpdatedAt: updated}
 	webSevenJSON = `{"archived_at":"2026-10-17T10:00:30.123456Z","assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],` +
 		`"completed_at":"2026-10-17T10:00:00.123455999Z","created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":"0199a2b4-0000-7000-8000-000000000001","id":"0199a2b4-0000-7000-8000-0000000000e7",` +
 		`"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"],"name":"Fix the login","parent_id":"0199a2b4-0000-7000-8000-0000000000e6",` +
-		`"priority":"high","project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":7,"sort_order":75535.5,` +
-		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","updated_at":"2026-10-17T10:01:00.123456Z",` +
+		`"priority":"high","project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":7,"sort_order":75535.5,"start_date":"2026-10-12",` +
+		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","target_date":"2026-10-19","updated_at":"2026-10-17T10:01:00.123456Z",` +
 		`"updated_by_id":"0199a2b4-0000-7000-8000-000000000002","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 	webEight = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e8"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 8,
 		Name: "Fix", StateID: stateID, Priority: domain.PriorityNone, SortOrder: 65535, CreatedAt: created, UpdatedAt: created}
 	webEightJSON = `{"archived_at":null,"assignee_ids":[],"completed_at":null,"created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":null,"id":"0199a2b4-0000-7000-8000-0000000000e8","label_ids":[],"name":"Fix","parent_id":null,"priority":"none",` +
-		`"project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":8,"sort_order":65535,` +
-		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","updated_at":"2026-10-17T10:00:00.123456Z","updated_by_id":null,` +
+		`"project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":8,"sort_order":65535,"start_date":null,` +
+		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","target_date":null,"updated_at":"2026-10-17T10:00:00.123456Z","updated_by_id":null,` +
 		`"workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 )
 
 // POST goes to the use case for the caller and the path's project, with
-// the body's fields: the state and the priority nil and the lists empty
-// when not given; the answer is 201 with the work item the use case
-// answers, every field of it, null for each it has none of, [] for a list
-// without ids.
+// the body's fields: the state, the priority and the dates nil and the
+// lists empty when not given; the answer is 201 with the work item the use
+// case answers, every field of it, null for each it has none of, [] for a
+// list without ids.
 func TestCreateIssue(t *testing.T) {
 	path := "/api/v0/projects/" + webID.String() + "/issues"
 	high := domain.PriorityHigh
@@ -63,9 +65,10 @@ func TestCreateIssue(t *testing.T) {
 		json   string
 	}{
 		{`{"name":" Fix the login ","state_id":"0199a2b4-0000-7000-8000-0000000000c1","priority":"high",` +
-			`"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"]}`,
+			`"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"],` +
+			`"start_date":"2026-10-12","target_date":"2026-10-19"}`,
 			domain.NewIssue{Name: " Fix the login ", StateID: &stateID, Priority: &high, AssigneeIDs: []uuid.UUID{bobID},
-				LabelIDs: []uuid.UUID{bugID}}, webSeven, webSevenJSON},
+				LabelIDs: []uuid.UUID{bugID}, StartDate: &startDay, TargetDate: &targetDay}, webSeven, webSevenJSON},
 		{`{"name":"Fix"}`, domain.NewIssue{Name: "Fix"}, webEight, webEightJSON},
 		{`{"name":"Fix","assignee_ids":[],"label_ids":[]}`, domain.NewIssue{Name: "Fix", AssigneeIDs: []uuid.UUID{}, LabelIDs: []uuid.UUID{}},
 			webEight, webEightJSON},
@@ -102,14 +105,16 @@ func TestCreateIssueTakesAnEmptyPriorityAsGiven(t *testing.T) {
 
 // A body without its name, with a field it may not have (a number or a
 // sort order, which the project gives: M4 design 3.7; a description, which
-// comes in P4), a field of another type, or an id that is no id: refused as
-// bad_request before the use case.
+// comes in P4), null for a field that is not nullable (a date left out for
+// none), a field of another type, an id that is no id, or a date that is
+// no day or has a time: refused as bad_request before the use case.
 func TestCreateIssueHoldsTheBodyToItsStructure(t *testing.T) {
 	create := &fakeCreate{}
 	h := newServer(t, httpadapter.UseCases{CreateIssue: create})
 	for _, body := range []string{`{}`, `{"priority":"high"}`, `{"name":1}`, `{"name":"A","sequence_id":3}`, `{"name":"A","sort_order":1}`,
 		`{"name":"A","description_html":"<p>x</p>"}`, `{"name":"A","state_id":"Backlog"}`, `{"name":"A","state_id":null}`,
-		`{"name":"A","assignee_ids":"bob"}`, `{"name":"A","label_ids":["Bug"]}`} {
+		`{"name":"A","target_date":null}`, `{"name":"A","assignee_ids":"bob"}`, `{"name":"A","label_ids":["Bug"]}`,
+		`{"name":"A","start_date":"2026-02-30"}`, `{"name":"A","target_date":"2026-10-19T00:00:00Z"}`} {
 		res, got := do(t, h, request(http.MethodPost, "/api/v0/projects/"+webID.String()+"/issues", "alice", body))
 		var problem struct{ Code string }
 		if err := json.Unmarshal([]byte(got), &problem); err != nil || res.StatusCode != http.StatusBadRequest || problem.Code != "bad_request" {

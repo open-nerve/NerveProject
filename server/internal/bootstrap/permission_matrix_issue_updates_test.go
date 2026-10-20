@@ -40,11 +40,12 @@ func issueUpdateMatrixRows() []matrixRow {
 		{op: "updateIssue", write: true, columns: issueColumns, request: toWorkItem(http.MethodPatch, "", `{"name":"Mend"}`),
 			cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden), check: renamesTheIssue},
 		// Each field given: Done, high, PA's account for PM's and the removed
-		// member's, UI for Bug.
+		// member's, UI for Bug, the 12th to the 19th of October for no dates.
 		{op: "updateIssue", variant: "each field given", write: true, columns: projectColumns,
 			request: toIssue(func(c caller, s seeded) string {
 				return `{"name":"Mend","state_id":"` + s.state(projectOf(c), "Done").String() + `","priority":"high","assignee_ids":["` +
-					s.account(callerProjectAdmin).String() + `"],"label_ids":["` + s.label(projectOf(c), "UI").String() + `"]}`
+					s.account(callerProjectAdmin).String() + `"],"label_ids":["` + s.label(projectOf(c), "UI").String() +
+					`"],"start_date":"2026-10-12","target_date":"2026-10-19"}`
 			}),
 			cells: ok, check: changesEachField},
 		// A change that changes nothing answers the work item as it is.
@@ -93,6 +94,12 @@ func issueUpdateMatrixRows() []matrixRow {
 					s.account(accountOf(callerProjectGuest)).String() + `"]}`
 			}),
 			cells: refused, refusal: "assignee_ids[2] not_allowed"},
+		// Dates out of order, checked after the decision with the dependent
+		// rows (M4 design 3.7): who may not change the work item learns
+		// nothing of its dates.
+		{op: "updateIssue", variant: "dates out of order", write: true, columns: projectColumns,
+			request: toWorkItem(http.MethodPatch, "", `{"start_date":"2026-10-20","target_date":"2026-10-19"}`), cells: refused,
+			refusal: "target_date not_allowed"},
 		// The removed member, whose membership of acme and of its public
 		// project ended, stays assigned while PM is unassigned: an assignee
 		// who has left is kept (M4 design 3.6).
@@ -130,6 +137,8 @@ type answeredIssue struct {
 	Name        string      `json:"name"`
 	StateID     uuid.UUID   `json:"state_id"`
 	Priority    string      `json:"priority"`
+	StartDate   *string     `json:"start_date"`
+	TargetDate  *string     `json:"target_date"`
 	CompletedAt *string     `json:"completed_at"`
 	AssigneeIDs []uuid.UUID `json:"assignee_ids"`
 	LabelIDs    []uuid.UUID `json:"label_ids"`
@@ -138,9 +147,9 @@ type answeredIssue struct {
 }
 
 // seededIssue is the column's work item (issueOf) as issueSeed stored it,
-// as an answer shows it: of its number (numberOf), in Todo, medium, not
-// completed, assigned to PM's account and the removed member's, in id
-// order, labelled Bug, made and changed last by its maker.
+// as an answer shows it: of its number (numberOf), in Todo, medium, without
+// dates, not completed, assigned to PM's account and the removed member's,
+// in id order, labelled Bug, made and changed last by its maker.
 func seededIssue(c caller, s seeded) answeredIssue {
 	key, name := projectOf(c), issueOf(c)
 	number, by := numberOf(key, name)
@@ -188,10 +197,12 @@ func renamesTheIssue(t *testing.T, c caller, s seeded, answer string) {
 }
 
 // changesEachField: the column's work item named Mend, in Done and so
-// completed, high, assigned to PA's account alone, labelled UI alone.
+// completed, high, assigned to PA's account alone, labelled UI alone, from
+// the 12th to the 19th of October.
 func changesEachField(t *testing.T, c caller, s seeded, answer string) {
 	answered(t, c, s, answer, true, func(i *answeredIssue) {
-		i.Name, i.StateID, i.Priority = "Mend", s.state(projectOf(c), "Done"), "high"
+		start, target := "2026-10-12", "2026-10-19"
+		i.Name, i.StateID, i.Priority, i.StartDate, i.TargetDate = "Mend", s.state(projectOf(c), "Done"), "high", &start, &target
 		i.AssigneeIDs, i.LabelIDs = []uuid.UUID{s.account(callerProjectAdmin)}, []uuid.UUID{s.label(projectOf(c), "UI")}
 	})
 }

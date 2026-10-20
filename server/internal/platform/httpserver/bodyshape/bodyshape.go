@@ -309,7 +309,8 @@ func checkFormat(f Format, raw []byte) error {
 }
 
 // checkDate reads s by shared.ParseDate's rule (M4 design 6.1): a day as
-// YYYY-MM-DD, of a year from 0001.
+// YYYY-MM-DD, of a year from 0001. The issue module's HTTP adapter tests
+// that the two agree (TestDatesPassTheBodyCheckAsTheyDecode).
 func checkDate(s string) error {
 	t, err := time.Parse(time.DateOnly, s)
 	if err == nil && t.Year() < 1 {

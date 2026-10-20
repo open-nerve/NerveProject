@@ -1400,7 +1400,7 @@ paths:
       tags:
         - issue
       summary: Create a work item in a project
-      description: 'For the project''s admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project''s, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project''s (validation_failed, every problem at once). Left out, the state is the project''s default, the priority none, and the assignee the project''s default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project''s next number, never used again, also after a deletion; it comes after its state''s work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state''s first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'For the project''s admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once; the start date not after the target date (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project''s, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project''s (validation_failed, every problem at once). Left out, the state is the project''s default, the priority none, and the assignee the project''s default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project''s next number, never used again, also after a deletion; it comes after its state''s work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state''s first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
@@ -1452,7 +1452,7 @@ paths:
       tags:
         - issue
       summary: Change a work item
-      description: 'For the admins and members of its project. The fields given change and the others stay; a list given is the work item''s new list, empty for none. The values follow createIssue''s rules (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project''s, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project''s (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the priority, the state, and each label and each assignee added and removed. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'For the admins and members of its project. The fields given change and the others stay; a list given is the work item''s new list, empty for none. The values follow createIssue''s rules, but for the order of the dates (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project''s, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project''s; the start date the work item then has is not after its target date, each as given or, not given, as it is: at start_date when the start date alone is given, else at target_date (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the priority, the state, the start and the target dates, and each label and each assignee added and removed. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
@@ -3033,6 +3033,14 @@ components:
           items:
             type: string
             format: uuid
+        start_date:
+          description: The day it starts, as YYYY-MM-DD; left out for none.
+          type: string
+          format: date
+        target_date:
+          description: The day it is due, as YYYY-MM-DD, not before start_date; left out for none.
+          type: string
+          format: date
     IssueDetail:
       description: A work item of a project.
       type: object
@@ -3045,6 +3053,8 @@ components:
         - name
         - state_id
         - priority
+        - start_date
+        - target_date
         - parent_id
         - sort_order
         - completed_at
@@ -3075,6 +3085,18 @@ components:
           format: uuid
         priority:
           $ref: '#/components/schemas/IssuePriority'
+        start_date:
+          description: The day it starts; null for none.
+          type:
+            - string
+            - 'null'
+          format: date
+        target_date:
+          description: The day it is due, not before its start date; null for none.
+          type:
+            - string
+            - 'null'
+          format: date
         parent_id:
           description: The work item it is under, in the same project; null for none.
           type:
@@ -3152,6 +3174,18 @@ components:
           items:
             type: string
             format: uuid
+        start_date:
+          description: The day it starts, as YYYY-MM-DD; null for none. Not after the target date the work item then has.
+          type:
+            - string
+            - 'null'
+          format: date
+        target_date:
+          description: The day it is due, as YYYY-MM-DD; null for none. Not before the start date the work item then has.
+          type:
+            - string
+            - 'null'
+          format: date
     ProjectTab:
       description: A tab of a project's header.
       type: string
