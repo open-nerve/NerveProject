@@ -133,3 +133,15 @@ M3 的列表都是集合型的，不分页（M3 设计 3.12、11.3），所以�
 仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、P1b 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 4 节的 `guest_view_all_features`（M4 的 P2）、`archive_in`（M4 的 P6）的说明，`expectIssueDeleted`（M4 的 P2）和删除断言的限时轮询（M4 的 P9）；第 1、3、5–9 节，按 M4 设计 13.1 的落点。
 
 来源：[M4/P1b spec](../specs/P1b-issue-update.md) 第 7 节。
+
+## 处理结果（M4/P2）
+
+- **第 3 节，`AllowCreator`**（完成）：随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）加入规则表；判定读目标的创建者（`shared.Target.CreatorID`），调用者是它、在项目里的有效角色不低于成员时允许，已离开项目、成了访客的创建者不行（M4 设计 3.4）；判定表测试逐格核对。
+- **第 3 节，`guest_view_all_features`**（工作项的取、改、删、按编号取、归档、恢复完成；列表在各自的 Phase）：`access` 读项目的 `guest_view_all_features`，判定交回 `Grant.OwnOnly`（项目的访客、项目没开它时为真，按项目角色算：工作区管理员在项目里是访客时同样）；一条访客规则在读的判定中、在写的不加锁的预检和锁下的判定中各执行一次，别人建的工作项答 404 `issue.not_found`，不是 403（M4 设计 3.4、3.5）；交错 5 加上访客规则下 404 的一支。
+- **第 3 节，矩阵和码**（工作项的操作到 P2 为止完成）：P2 的 `getIssueByIdentifier`、`deleteIssue`、`archiveIssue`、`unarchiveIssue` 在规则表、操作名、矩阵中各有一行；矩阵有了工作项表（M4 设计 9.2），P1a、P1b 的 `createIssue`、`getIssue`、`updateIssue` 的行移到它上面：项目级的各列之外，建了它的项目成员，项目访客的三种情形（看得到全部的；只看自己的，对自己建的、对别人建的），只是项目访客的工作区管理员（对别人建的、对自己建的）；设计 9.2 另列的"建了它、后来被降为访客"（403）和"建了它、已离开项目"（404）是"访客·自己"（种子记在他名下的）和"已离开项目"（他离开之前建的）两列上 `deleteIssue` 的格子。新码 `issue.archived`、`issue.not_archivable` 由 `issue` 的 HTTP 测试返回过（`apitest.Main` 两个方向），带前端文案。决策点 3 的个人主页一行在 M4 的 P5。
+- **第 4 节，`guest_view_all_features` 的说明**（完成）：契约的 `Project.guest_view_all_features` 改写为它的作用（项目的访客是否看得到项目的每个工作项；不看时别人建的答 `issue.not_found`）。
+- **第 4 节，`expectIssueDeleted`**（完成）：`e2e/fixtures/assert/issue.ts` 照 `expectProjectDeleted` 从目录读表，但沿外键图从 `issues` 往下走（图由 `assert/catalog.ts` 的 `keysBelow` 读出，与 `tablesUnder` 同在一处；走到的外键多于一列时失败）：一行的外键指向工作项或它下面的一行，它就在工作项下面（评论的表情指向评论，P4 起同样断言到），它下面的行都与它同一时刻、同一个删除者删除，每个外键下都有这样的一行，删除之前已删除的不算（它保留原来的删除由按目录的删除测试核对）；子工作项的外键（`issues.parent_id`）在 P3 之前没有行，豁免到 P3。第一个使用者是 I15 的接口版本（删除已归档的工作项）。
+
+仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、P2 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 3 节决策点 3 的个人主页一行（M4 的 P5）和工作项列表的访客规则（各列表的 Phase）；第 4 节的 `archive_in`（M4 的 P6）的说明、删除断言的限时轮询（M4 的 P9）和 `expectIssueDeleted` 中子工作项的豁免（M4 的 P3）；第 1、5–9 节，按 M4 设计 13.1 的落点。
+
+来源：[M4/P2 spec](../specs/P2-issue-access.md) 第 7 节。
