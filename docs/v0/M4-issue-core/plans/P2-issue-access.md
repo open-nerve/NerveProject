@@ -8360,7 +8360,7 @@ func numbers(value []byte, p *problems) {
 			s.p.report(codeInvalidFormat)
 ````
 
-`server/internal/platform/httpserver/bodyshape/bodyshape.go`（修改，13 处）：
+`server/internal/platform/httpserver/bodyshape/bodyshape.go`（修改，14 处）：
 
 ````old server/internal/platform/httpserver/bodyshape/bodyshape.go
 	"time"
@@ -8377,15 +8377,29 @@ func numbers(value []byte, p *problems) {
 	FormatDate        // shared.Date (date), read by its rule (checkDate)
 ````
 ````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+	// Open does not check them, or the items of an array without an item
+	// schema: additionalProperties: true, or no schema.
+````
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+	// Open checks them, or the items of an array without an item schema,
+	// only for numbers no float64 holds (numbers): additionalProperties: true,
+	// or no schema.
+````
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+// meets. The scan reads the body in document order; the walk reads an
+// object's members by name, depth first, then its missing required members.
 // The problems are then sorted by path. So the same body always gets the same
 // problems, but not necessarily those with the smallest paths: 16 undeclared
 // members can crowd out a missing email.
 ````
 ````new server/internal/platform/httpserver/bodyshape/bodyshape.go
-// The problems are then sorted by path, an index by its number
-// (comparePaths). So the same body always gets the same problems, but not
-// necessarily those with the smallest paths: 16 undeclared members can
-// crowd out a missing email.
+// meets. The scan reads the body in document order. The walk reads an
+// object's members by name, depth first, then its missing required members;
+// what it reads only for numbers (numbers), it reads in document order. The
+// problems are then sorted by path, an index by its number (comparePaths).
+// So the same body always gets the same problems, but not necessarily those
+// with the smallest paths: 16 undeclared members can crowd out a missing
+// email.
 ````
 ````old server/internal/platform/httpserver/bodyshape/bodyshape.go
 		return cmp.Or(cmp.Compare(a.Field, b.Field), cmp.Compare(a.Code, b.Code))
@@ -8502,12 +8516,15 @@ func (p *problems) at() []byte {
 ````new server/internal/platform/httpserver/bodyshape/bodyshape.go
 // goes where the schema goes: declared properties, the values of a map,
 // the items of an array with an item schema. Where the schema takes any
-// value, the generated decoder reads every number into a float64, so there
-// it checks only that each number fits one (M2 handoff 4): a value of a
-// node of any type, an undeclared member of an open object, an item of an
-// array without an item schema, read once however deep (numbers). It reads
-// the members of an object in name order, so a body with more than
-// maxProblems problems gets the same ones every time.
+// value, it checks only that each number fits a float64 (M2 handoff 4): a
+// value of a node of any type, an undeclared member of an open object, an
+// item of an array without an item schema, read once however deep
+// (numbers). Where the generated decoder keeps such a value, as for a
+// schema without a type, additionalProperties: true or an array without an
+// item schema, it reads every number in it into a float64. walk reads the
+// members of an object in name order, and numbers reads a value in document
+// order, so a body with more than maxProblems problems gets the same ones
+// every time.
 ````
 ````old server/internal/platform/httpserver/bodyshape/bodyshape.go
 	if n.Types != Any && kind&n.Types == 0 {

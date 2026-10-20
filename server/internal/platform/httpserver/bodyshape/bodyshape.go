@@ -63,8 +63,9 @@ const (
 const (
 	// Closed rejects undeclared properties: additionalProperties: false.
 	Closed = -1
-	// Open does not check them, or the items of an array without an item
-	// schema: additionalProperties: true, or no schema.
+	// Open checks them, or the items of an array without an item schema,
+	// only for numbers no float64 holds (numbers): additionalProperties: true,
+	// or no schema.
 	Open = -2
 )
 
@@ -162,12 +163,13 @@ var ErrNotJSON = errors.New("the request body is not valid JSON")
 //
 // Either lists each problem once, at a path of at most maxPath bytes, and at
 // most maxProblems of them: the first ones that a reading in a fixed order
-// meets. The scan reads the body in document order; the walk reads an
-// object's members by name, depth first, then its missing required members.
-// The problems are then sorted by path, an index by its number
-// (comparePaths). So the same body always gets the same problems, but not
-// necessarily those with the smallest paths: 16 undeclared members can
-// crowd out a missing email.
+// meets. The scan reads the body in document order. The walk reads an
+// object's members by name, depth first, then its missing required members;
+// what it reads only for numbers (numbers), it reads in document order. The
+// problems are then sorted by path, an index by its number (comparePaths).
+// So the same body always gets the same problems, but not necessarily those
+// with the smallest paths: 16 undeclared members can crowd out a missing
+// email.
 func (t *Table) Check(pattern string, body []byte) error {
 	root, ok := t.Roots[pattern]
 	// walk takes the exact bytes of one value; the whitespace around the
@@ -196,12 +198,15 @@ func (t *Table) Check(pattern string, body []byte) error {
 // walk checks raw, the exact bytes of one JSON value, against node i. It
 // goes where the schema goes: declared properties, the values of a map,
 // the items of an array with an item schema. Where the schema takes any
-// value, the generated decoder reads every number into a float64, so there
-// it checks only that each number fits one (M2 handoff 4): a value of a
-// node of any type, an undeclared member of an open object, an item of an
-// array without an item schema, read once however deep (numbers). It reads
-// the members of an object in name order, so a body with more than
-// maxProblems problems gets the same ones every time.
+// value, it checks only that each number fits a float64 (M2 handoff 4): a
+// value of a node of any type, an undeclared member of an open object, an
+// item of an array without an item schema, read once however deep
+// (numbers). Where the generated decoder keeps such a value, as for a
+// schema without a type, additionalProperties: true or an array without an
+// item schema, it reads every number in it into a float64. walk reads the
+// members of an object in name order, and numbers reads a value in document
+// order, so a body with more than maxProblems problems gets the same ones
+// every time.
 func (t *Table) walk(i int, raw []byte, p *problems) {
 	if p.full() {
 		return
