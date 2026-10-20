@@ -71,23 +71,20 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
     label_ids: [bug.id],
   });
   const created = createdFor(ann);
+  const asCreated = { archived: false, by: ann.email, activity: created };
+  await expectIssueArchival(db, id, asCreated);
   expect(await issueArchived(api, ann.token, id)).toEqual({ status: 409, code: "issue.not_archivable" });
-  await expectIssueArchival(db, id, { archived: false, by: ann.email, activity: created });
+  await expectIssueArchival(db, id, asCreated);
 
   // Moved to Done, she archives it: archived at its moment, one row of its activity; archived again, nothing is
   // written, and the answer is the work item as it is.
   await updateIssue(api, ann.token, id, { state_id: done });
   const toDone = changed("state", "In Progress", "Done", "updated the state to", "Done", "In Progress");
-  expect(await issueArchived(api, ann.token, id)).toMatchObject({
-    status: 200,
-    issue: { id, archived_at: expect.any(String) },
-  });
+  const archiving = await issueArchived(api, ann.token, id);
+  expect(archiving).toMatchObject({ status: 200, issue: { id, archived_at: expect.any(String) } });
   const archived = { archived: true, by: ann.email, activity: [...created, toDone, archivedRow] };
   await expectIssueArchival(db, id, archived);
-  expect(await issueArchived(api, ann.token, id)).toMatchObject({
-    status: 200,
-    issue: { id, archived_at: expect.any(String) },
-  });
+  expect(await issueArchived(api, ann.token, id)).toEqual(archiving);
   await expectIssueArchival(db, id, archived);
 
   // While it is archived, she does not change it, and gus, who may not, does not restore it.

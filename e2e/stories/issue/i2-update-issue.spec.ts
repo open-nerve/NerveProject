@@ -338,13 +338,11 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
   // change writes nothing, so it stays ann's archiving.
   const shipped = await createIssue(api, ann.token, web.id, { name: "Ship it", state_id: done });
   expect((await issueArchived(api, ann.token, shipped.id)).status).toBe(200);
+  const shippedArchived = { archived: true, by: ann.email, activity: [...createdFor(), archivedRow] };
+  await expectIssueArchival(db, shipped.id, shippedArchived);
   expect(await issueUpdated(api, bob.token, shipped.id, { target_date: "2026-10-19" })).toEqual({
     status: 409,
     code: "issue.archived",
   });
-  await expectIssueArchival(db, shipped.id, {
-    archived: true,
-    by: ann.email,
-    activity: [...createdFor(), archivedRow],
-  });
+  await expectIssueArchival(db, shipped.id, shippedArchived);
 });

@@ -11885,7 +11885,7 @@ export async function issueDeleted(api: Api, token: string, issueId: string) {
 
 - [ ] **Step 2: I15**
 
-`e2e/stories/issue/i15-archive-issue.spec.ts`（新文件，113 行）：
+`e2e/stories/issue/i15-archive-issue.spec.ts`（新文件，110 行）：
 
 ````file e2e/stories/issue/i15-archive-issue.spec.ts
 import {
@@ -11961,23 +11961,20 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
     label_ids: [bug.id],
   });
   const created = createdFor(ann);
+  const asCreated = { archived: false, by: ann.email, activity: created };
+  await expectIssueArchival(db, id, asCreated);
   expect(await issueArchived(api, ann.token, id)).toEqual({ status: 409, code: "issue.not_archivable" });
-  await expectIssueArchival(db, id, { archived: false, by: ann.email, activity: created });
+  await expectIssueArchival(db, id, asCreated);
 
   // Moved to Done, she archives it: archived at its moment, one row of its activity; archived again, nothing is
   // written, and the answer is the work item as it is.
   await updateIssue(api, ann.token, id, { state_id: done });
   const toDone = changed("state", "In Progress", "Done", "updated the state to", "Done", "In Progress");
-  expect(await issueArchived(api, ann.token, id)).toMatchObject({
-    status: 200,
-    issue: { id, archived_at: expect.any(String) },
-  });
+  const archiving = await issueArchived(api, ann.token, id);
+  expect(archiving).toMatchObject({ status: 200, issue: { id, archived_at: expect.any(String) } });
   const archived = { archived: true, by: ann.email, activity: [...created, toDone, archivedRow] };
   await expectIssueArchival(db, id, archived);
-  expect(await issueArchived(api, ann.token, id)).toMatchObject({
-    status: 200,
-    issue: { id, archived_at: expect.any(String) },
-  });
+  expect(await issueArchived(api, ann.token, id)).toEqual(archiving);
   await expectIssueArchival(db, id, archived);
 
   // While it is archived, she does not change it, and gus, who may not, does not restore it.
@@ -12293,15 +12290,13 @@ test("I2 (API): a member renames a work item; another makes it high and moves it
   // change writes nothing, so it stays ann's archiving.
   const shipped = await createIssue(api, ann.token, web.id, { name: "Ship it", state_id: done });
   expect((await issueArchived(api, ann.token, shipped.id)).status).toBe(200);
+  const shippedArchived = { archived: true, by: ann.email, activity: [...createdFor(), archivedRow] };
+  await expectIssueArchival(db, shipped.id, shippedArchived);
   expect(await issueUpdated(api, bob.token, shipped.id, { target_date: "2026-10-19" })).toEqual({
     status: 409,
     code: "issue.archived",
   });
-  await expectIssueArchival(db, shipped.id, {
-    archived: true,
-    by: ann.email,
-    activity: [...createdFor(), archivedRow],
-  });
+  await expectIssueArchival(db, shipped.id, shippedArchived);
 ````
 
 - [ ] **Step 4: 检查**
