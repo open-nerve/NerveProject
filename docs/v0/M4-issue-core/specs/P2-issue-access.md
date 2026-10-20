@@ -257,7 +257,7 @@ P1b 的 `TestAWorkItemGoneWhileItsChangeWaitsIsNotFound`（`issue_interleaving_c
 
 | 交接 | P2 处理的条目 | 留下的条目 |
 |---|---|---|
-| M1-P3 交接的地址一项 | 按编号取统一到 `/workspaces/{slug}/issues/{identifier}`（契约和用例） | 前端的两处 `/work-items/` 字面量（两个 service 在 P11 换掉）；`browse` 的路由经它（P14）；旧的工作项地址的守卫（P10a） |
+| M1-P3 交接的地址一项 | 按编号取统一到 `/workspaces/{slug}/issues/{identifier}`（契约和用例） | 描述历史的地址（P4）；前端的两处 `/work-items/` 字面量（两个 service 在 P11 换掉）；`browse` 的路由经它（P14）；旧的工作项地址的守卫（P10a） |
 | M2 收尾交接第 3 节 | P2 的用例（删除、归档、恢复、日期的修改）用时钟写 `updated_at`、`deleted_at` | P3、P4、P7 的其余写工作项的用例；自动归档推进固定时钟的测试（P6） |
 | M2 收尾交接第 4 节 | 路径按下标的数值排序、开放节点的数的范围、`date`、代价测试；map 型、递归的结构"没有用到" | 草稿发布（P8）；map 型、递归的结构（第一个用到它们的 Phase，或 M4 的 review 写明没有用到） |
 | M3 收尾交接第 2 节 | 约定五：P2 的批量写（删除工作项的五条语句，归档、恢复的 `SetArchivedAt`）都在项目 N 之下，不落在例外里（第 3 节第 7 条） | 加关联的另一端的预检（P3）；P2 之后各 Phase 的批量写（到 P9）；物理删除账户（P9） |
