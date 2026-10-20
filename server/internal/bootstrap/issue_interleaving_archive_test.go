@@ -53,8 +53,8 @@ func TestArchivingAWorkItemAndMovingItSerialize(t *testing.T) {
 			}
 			if got := w.activityBy(t, item, w.ids["bob"]); in != stateID(t, w.pool, w.web, state) || isArchived != archivedFirst ||
 				!slices.Equal(got, said) || len(archivalRows(t, w, item)) != archivals {
-				t.Errorf("the work item in %s, archived %v, bob's activity %q, %d archival rows; want in %s, archived %v, %q, %d", in,
-					isArchived, got, len(archivalRows(t, w, item)), state, archivedFirst, said, archivals)
+				t.Errorf("the work item in %s, archived %v, bob's activity %q, %d archival rows; want in %s (%s), archived %v, %q, %d", in,
+					isArchived, got, len(archivalRows(t, w, item)), stateID(t, w.pool, w.web, state), state, archivedFirst, said, archivals)
 			}
 		})
 }

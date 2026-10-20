@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -117,12 +118,15 @@ func TestDeletingAWorkItemAndChangingItSerialize(t *testing.T) {
 	inBothOrders(t, aWorkItem, "deleted", deletesIssue("alice", nil), "changed", changesIssue("bob", named("Mend")), func(t *testing.T,
 		w issueWorld, deletedFirst bool, deleted, changed exchange) {
 		w.answered(t, deleted, http.StatusNoContent)
-		rows := 4
+		rows, said := 4, []string{"name: Fix → Mend"}
 		if deletedFirst {
 			w.refused(t, changed, http.StatusNotFound, "issue.not_found")
-			rows = 3
+			rows, said = 3, nil
 		} else {
 			w.answered(t, changed, http.StatusOK)
+		}
+		if got := w.activityBy(t, w.workItem(t), w.ids["bob"]); !slices.Equal(got, said) {
+			t.Errorf("bob's activity says %q, want %q", got, said)
 		}
 		w.deletedWith(t, "issues", w.workItem(t), changed.released, rows)
 	})

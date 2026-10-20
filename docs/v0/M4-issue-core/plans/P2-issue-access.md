@@ -11382,8 +11382,8 @@ func TestArchivingAWorkItemAndMovingItSerialize(t *testing.T) {
 			}
 			if got := w.activityBy(t, item, w.ids["bob"]); in != stateID(t, w.pool, w.web, state) || isArchived != archivedFirst ||
 				!slices.Equal(got, said) || len(archivalRows(t, w, item)) != archivals {
-				t.Errorf("the work item in %s, archived %v, bob's activity %q, %d archival rows; want in %s, archived %v, %q, %d", in,
-					isArchived, got, len(archivalRows(t, w, item)), state, archivedFirst, said, archivals)
+				t.Errorf("the work item in %s, archived %v, bob's activity %q, %d archival rows; want in %s (%s), archived %v, %q, %d", in,
+					isArchived, got, len(archivalRows(t, w, item)), stateID(t, w.pool, w.web, state), state, archivedFirst, said, archivals)
 			}
 		})
 }
@@ -11391,8 +11391,15 @@ func TestArchivingAWorkItemAndMovingItSerialize(t *testing.T) {
 
 - [ ] **Step 2: 删除与修改；创建者的删除**
 
-`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改，3 处）：
+`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改，4 处）：
 
+````old server/internal/bootstrap/issue_interleaving_deletion_test.go
+	"net/http"
+````
+````new server/internal/bootstrap/issue_interleaving_deletion_test.go
+	"net/http"
+	"slices"
+````
 ````old server/internal/bootstrap/issue_interleaving_deletion_test.go
 }
 
@@ -11447,12 +11454,15 @@ func TestDeletingAWorkItemAndChangingItSerialize(t *testing.T) {
 	inBothOrders(t, aWorkItem, "deleted", deletesIssue("alice", nil), "changed", changesIssue("bob", named("Mend")), func(t *testing.T,
 		w issueWorld, deletedFirst bool, deleted, changed exchange) {
 		w.answered(t, deleted, http.StatusNoContent)
-		rows := 4
+		rows, said := 4, []string{"name: Fix → Mend"}
 		if deletedFirst {
 			w.refused(t, changed, http.StatusNotFound, "issue.not_found")
-			rows = 3
+			rows, said = 3, nil
 		} else {
 			w.answered(t, changed, http.StatusOK)
+		}
+		if got := w.activityBy(t, w.workItem(t), w.ids["bob"]); !slices.Equal(got, said) {
+			t.Errorf("bob's activity says %q, want %q", got, said)
 		}
 		w.deletedWith(t, "issues", w.workItem(t), changed.released, rows)
 	})
@@ -11578,6 +11588,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
 | `T12.1` | 删除不在锁下再判定：等锁期间被降级或移出的创建者照样删除 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`） | 单元；组合 |
+| `T12.2` | 在锁下被拒绝的删除照样删除并提交，回答仍是那个拒绝 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused`（`make test`） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.4`、`T2.4`、`T4.4`、`T7.4`、`T8.1`（列在各自的 Task 的表里，标"（Task 12 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=12`）。
 
