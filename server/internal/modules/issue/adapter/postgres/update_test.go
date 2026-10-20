@@ -15,16 +15,17 @@ import (
 )
 
 // updateIssue's rows through the store (M4 design 3.7): UpdateIssue writes
-// the work item's name, state, priority and completion as given, last
-// changed by bob at later, its number, its sort order and its creation as
-// they were; RemoveAssignees and RemoveLabels soft-delete, by bob at
-// later, the work item's undeleted rows of every account and label given,
-// two of each in one call, every other column kept. Nothing else changes:
-// not another work item, nor its rows of a given account and label, nor
-// the work item's rows of an account or a label not given, nor its rows of
-// a given account and label deleted an hour before, which keep their
-// stamps. Moved back into a state of no completed group, its completion
-// given nil, the work item is completed no more.
+// the work item's name, state, priority, dates and completion as given, its
+// start date given nil NULL, last changed by bob at later, its number, its
+// sort order and its creation as they were; RemoveAssignees and
+// RemoveLabels soft-delete, by bob at later, the work item's undeleted rows
+// of every account and label given, two of each in one call, every other
+// column kept. Nothing else changes: not another work item, nor its rows of
+// a given account and label, nor the work item's rows of an account or a
+// label not given, nor its rows of a given account and label deleted an
+// hour before, which keep their stamps. Moved back into a state of no
+// completed group, its completion given nil, the work item is completed no
+// more.
 func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
@@ -62,7 +63,8 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 		before[table], stamps[table] = rowsAsText(t, pool, table), audits(t, pool, table)
 	}
 
-	if err := s.UpdateIssue(ctx, app.IssueFields{ID: id, Name: "Mend the login", StateID: done, Priority: domain.PriorityLow,
+	target := day(26)
+	if err := s.UpdateIssue(ctx, app.IssueFields{ID: id, Name: "Mend the login", StateID: done, Priority: domain.PriorityLow, TargetDate: &target,
 		CompletedAt: &later, By: bob, At: later}); err != nil {
 		t.Fatal(err)
 	}
@@ -75,8 +77,8 @@ func TestUpdatingAWorkItemWritesItsRows(t *testing.T) {
 
 	got, found, err := s.GetIssue(ctx, id)
 	want := domain.Issue{ID: id, WorkspaceID: web.workspace, ProjectID: web.id, SequenceID: 7, Name: "Mend the login", StateID: done,
-		Priority: domain.PriorityLow, SortOrder: 75535, CompletedAt: &later, CreatedByID: &alice, UpdatedByID: &bob, CreatedAt: now,
-		UpdatedAt: later, AssigneeIDs: []uuid.UUID{carol}, LabelIDs: []uuid.UUID{bug}}
+		Priority: domain.PriorityLow, TargetDate: &target, SortOrder: 75535, CompletedAt: &later, CreatedByID: &alice, UpdatedByID: &bob,
+		CreatedAt: now, UpdatedAt: later, AssigneeIDs: []uuid.UUID{carol}, LabelIDs: []uuid.UUID{bug}}
 	if err != nil || !found || !reflect.DeepEqual(got, want) {
 		t.Errorf("GetIssue() = %+v, %v, %v; want %+v", got, found, err, want)
 	}

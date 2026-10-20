@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
@@ -11,6 +12,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // GreatestSortOrder reads the greatest sort order of the project's
@@ -33,7 +35,8 @@ func (s *Store) GreatestSortOrder(ctx context.Context, projectID, stateID uuid.U
 func (s *Store) InsertIssue(ctx context.Context, r app.IssueRow) error {
 	err := s.queries(ctx).InsertIssue(ctx, gen.InsertIssueParams{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, StateID: r.StateID, Name: r.Name, Priority: string(r.Priority),
-		SequenceID: int32(r.SequenceID), SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, By: &r.By, At: r.At,
+		StartDate: timeOf(r.StartDate), TargetDate: timeOf(r.TargetDate), SequenceID: int32(r.SequenceID), SortOrder: r.SortOrder,
+		CompletedAt: r.CompletedAt, By: &r.By, At: r.At,
 	})
 	if err != nil {
 		return fmt.Errorf("insert work item %s: %w", r.ID, err)
@@ -119,8 +122,27 @@ func (s *Store) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool,
 	}
 	return domain.Issue{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: int(r.SequenceID), Name: r.Name, StateID: r.StateID,
-		Priority: domain.Priority(r.Priority), ParentID: r.ParentID, SortOrder: r.SortOrder, CompletedAt: r.CompletedAt,
-		ArchivedAt: r.ArchivedAt, AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds, CreatedByID: r.CreatedByID,
-		UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+		Priority: domain.Priority(r.Priority), StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), ParentID: r.ParentID,
+		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt, AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds,
+		CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}, true, nil
+}
+
+// dayOf is the day of a date column as pgx reads it, midnight UTC; nil for
+// NULL.
+func dayOf(t *time.Time) *shared.Date {
+	if t == nil {
+		return nil
+	}
+	d := shared.DateOf(*t)
+	return &d
+}
+
+// timeOf is d as a date column is written, its midnight UTC; nil for none.
+func timeOf(d *shared.Date) *time.Time {
+	if d == nil {
+		return nil
+	}
+	t := d.Time()
+	return &t
 }

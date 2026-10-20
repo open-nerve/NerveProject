@@ -1,7 +1,8 @@
 # sqlc 配置（M2 设计 3.14）：每个模块一个条目，由 make gen-go 在 server/ 下执行
 #   CGO_ENABLED=0 go tool -modfile=tools/go.mod sqlc generate
 # schema 只列本模块的迁移：查询碰到别的模块的表，生成时就报错。archtest 的 TestSQLCSchemaScope 核对这份配置。
-# 类型覆盖：uuid 用标准库的 uuid.UUID，timestamptz 用 time.Time（db_type 写 timestamptz，写 pg_catalog.timestamptz 不匹配）。
+# 类型覆盖：uuid 用标准库的 uuid.UUID，timestamptz 用 time.Time（db_type 写 timestamptz，写 pg_catalog.timestamptz 不匹配）；
+# issue 的 date 也用 time.Time（UTC 的零点），适配器换成 shared.Date（M4 设计 6.1）。
 version: "2"
 sql:
   - engine: postgresql
@@ -100,5 +101,10 @@ sql:
           - db_type: timestamptz
             go_type: {import: time, type: Time}
           - db_type: timestamptz
+            nullable: true
+            go_type: {import: time, type: Time, pointer: true}
+          - db_type: date
+            go_type: {import: time, type: Time}
+          - db_type: date
             nullable: true
             go_type: {import: time, type: Time, pointer: true}

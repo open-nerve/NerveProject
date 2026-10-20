@@ -21,8 +21,9 @@ func ids(n int) []uuid.UUID {
 }
 
 // A name of one character and of 255, each priority, none given, a hundred
-// assignees and labels: accepted, and returned as stored: the name without
-// its surrounding white space, the priority none when none is given.
+// assignees and labels, the dates in order, on the same day, or one alone:
+// accepted, and returned as stored: the name without its surrounding white
+// space, the priority none when none is given, the dates as given.
 func TestCheckNewIssueAccepts(t *testing.T) {
 	state := uuid.NewV7()
 	tests := []struct {
@@ -33,8 +34,13 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 		{"one character, trimmed, none", NewIssue{Name: "  x\t"}, NewIssue{Name: "x", Priority: ptr(PriorityNone)}},
 		{"255 characters", NewIssue{Name: strings.Repeat("é", 255), Priority: ptr(PriorityLow)},
 			NewIssue{Name: strings.Repeat("é", 255), Priority: ptr(PriorityLow)}},
-		{"everything", NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent), AssigneeIDs: ids(100), LabelIDs: ids(100)},
-			NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent)}},
+		{"everything", NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent), AssigneeIDs: ids(100), LabelIDs: ids(100),
+			StartDate: october(12), TargetDate: october(19)},
+			NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent), StartDate: october(12), TargetDate: october(19)}},
+		{"the same day", NewIssue{Name: "a", StartDate: october(19), TargetDate: october(19)},
+			NewIssue{Name: "a", Priority: ptr(PriorityNone), StartDate: october(19), TargetDate: october(19)}},
+		{"a start date alone", NewIssue{Name: "a", StartDate: october(30)}, NewIssue{Name: "a", Priority: ptr(PriorityNone), StartDate: october(30)}},
+		{"a target date alone", NewIssue{Name: "a", TargetDate: october(1)}, NewIssue{Name: "a", Priority: ptr(PriorityNone), TargetDate: october(1)}},
 	}
 	for _, p := range priorities {
 		tests = append(tests, struct {
@@ -54,13 +60,15 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 
 // A blank name, one of 256 characters, one with NUL, a priority outside the
 // five, in another case or given empty, an account or a label named twice,
-// a hundred and one of either: each refused, all of them in one 422 that
-// names each by its field and place. A list too long is reported alone: its
-// ids, a repeat among them, are not looked at.
+// a hundred and one of either, a start date after the target date (at
+// target_date): each refused, all of them in one 422 that names each by its
+// field and place. A list too long is reported alone: its ids, a repeat
+// among them, are not looked at.
 func TestCheckNewIssueReportsEveryProblem(t *testing.T) {
 	a, b := uuid.NewV7(), uuid.NewV7()
 	many := append(ids(MaxAssignees-1), a, a)
 	priority := []shared.FieldError{{Field: "priority", Code: "invalid_format", Message: "must be one of urgent, high, medium, low, none"}}
+	dates := shared.FieldError{Field: "target_date", Code: "not_allowed", Message: "must not be before the start date"}
 	tests := []struct {
 		name string
 		in   NewIssue
@@ -78,12 +86,15 @@ func TestCheckNewIssueReportsEveryProblem(t *testing.T) {
 			{Field: "assignee_ids[4]", Code: "duplicate", Message: "is listed before"},
 			{Field: "label_ids[1]", Code: "duplicate", Message: "is listed before"},
 		}},
-		{"too many, with repeats, and everything else", NewIssue{Name: "", Priority: ptr[Priority]("high!"), AssigneeIDs: many, LabelIDs: many},
+		{"a start date after the target date", NewIssue{Name: "a", StartDate: october(20), TargetDate: october(19)}, []shared.FieldError{dates}},
+		{"too many, with repeats, and everything else", NewIssue{Name: "", Priority: ptr[Priority]("high!"), AssigneeIDs: many, LabelIDs: many,
+			StartDate: october(20), TargetDate: october(19)},
 			[]shared.FieldError{
 				{Field: "name", Code: "too_short", Message: "must not be empty"},
 				priority[0],
 				{Field: "assignee_ids", Code: "too_long", Message: "must name at most 100"},
 				{Field: "label_ids", Code: "too_long", Message: "must name at most 100"},
+				dates,
 			}},
 	}
 	for _, tt := range tests {

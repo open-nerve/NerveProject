@@ -91,15 +91,18 @@ func (q *Queries) SetArchivedAt(ctx context.Context, arg SetArchivedAtParams) er
 
 const updateIssue = `-- name: UpdateIssue :exec
 UPDATE issues
-SET name = $1, state_id = $2, priority = $3, completed_at = $4,
-    updated_by_id = $5::uuid, updated_at = $6::timestamptz
-WHERE id = $7
+SET name = $1, state_id = $2, priority = $3, start_date = $4,
+    target_date = $5, completed_at = $6, updated_by_id = $7::uuid,
+    updated_at = $8::timestamptz
+WHERE id = $9
 `
 
 type UpdateIssueParams struct {
 	Name        string
 	StateID     uuid.UUID
 	Priority    string
+	StartDate   *time.Time
+	TargetDate  *time.Time
 	CompletedAt *time.Time
 	By          uuid.UUID
 	At          time.Time
@@ -107,14 +110,16 @@ type UpdateIssueParams struct {
 }
 
 // updateIssue's work item (M4 design 3.7), under the project's FOR NO KEY UPDATE, read again under it: its name, state,
-// priority and completion as the use case gives them, those it changes and the others as they are, last changed at the
-// moment and by the account given. Every write of a work item's row holds its project's lock first (3.5), so the row is
-// as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
+// priority, dates and completion as the use case gives them, those it changes and the others as they are, last changed
+// at the moment and by the account given. Every write of a work item's row holds its project's lock first (3.5), so the
+// row is as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
 func (q *Queries) UpdateIssue(ctx context.Context, arg UpdateIssueParams) error {
 	_, err := q.db.Exec(ctx, updateIssue,
 		arg.Name,
 		arg.StateID,
 		arg.Priority,
+		arg.StartDate,
+		arg.TargetDate,
 		arg.CompletedAt,
 		arg.By,
 		arg.At,

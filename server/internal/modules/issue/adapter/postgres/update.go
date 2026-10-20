@@ -14,7 +14,8 @@ import (
 // violation is a bug: an internal error (500), not a domain error.
 func (s *Store) UpdateIssue(ctx context.Context, f app.IssueFields) error {
 	err := s.queries(ctx).UpdateIssue(ctx, gen.UpdateIssueParams{
-		ID: f.ID, Name: f.Name, StateID: f.StateID, Priority: string(f.Priority), CompletedAt: f.CompletedAt, By: f.By, At: f.At,
+		ID: f.ID, Name: f.Name, StateID: f.StateID, Priority: string(f.Priority), StartDate: timeOf(f.StartDate),
+		TargetDate: timeOf(f.TargetDate), CompletedAt: f.CompletedAt, By: f.By, At: f.At,
 	})
 	if err != nil {
 		return fmt.Errorf("update work item %s: %w", f.ID, err)

@@ -16,6 +16,7 @@ import (
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // linkRows are the rows of a link table under the work item issue of p,
@@ -62,17 +63,24 @@ func linkLine(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, p project, issue, 
 }
 
 // createWebIssue inserts web's work item 7 through the store, by alice at
-// now, high, in web's default state, at 75535, completed at an hour
-// before: every column createIssue writes, none at its default.
+// now, high, in web's default state, from the 12th to the 19th of October,
+// at 75535, completed at an hour before: every column createIssue writes,
+// none at its default.
 func createWebIssue(t *testing.T, s *postgresadapter.Store, web project, id, alice uuid.UUID) app.IssueRow {
 	t.Helper()
 	done := now.Add(-time.Hour)
+	start, target := day(12), day(19)
 	r := app.IssueRow{ID: id, WorkspaceID: web.workspace, ProjectID: web.id, SequenceID: 7, Name: "Fix the login", StateID: web.state,
-		Priority: domain.PriorityHigh, SortOrder: 75535, CompletedAt: &done, By: alice, At: now}
+		Priority: domain.PriorityHigh, StartDate: &start, TargetDate: &target, SortOrder: 75535, CompletedAt: &done, By: alice, At: now}
 	if err := s.InsertIssue(context.Background(), r); err != nil {
 		t.Fatal(err)
 	}
 	return r
+}
+
+// day is the day d of October 2026, a work item's date.
+func day(d int) shared.Date {
+	return shared.DateOf(time.Date(2026, time.October, d, 0, 0, 0, 0, time.UTC))
 }
 
 // createIssue's rows through the store (M4 design 3.5): the work item with
@@ -124,9 +132,10 @@ func TestCreatingAWorkItemWritesItsRows(t *testing.T) {
 
 	got, found, err := s.GetIssue(ctx, id)
 	want := domain.Issue{ID: id, WorkspaceID: web.workspace, ProjectID: web.id, SequenceID: 7, Name: "Fix the login", StateID: web.state,
-		Priority: domain.PriorityHigh, SortOrder: 75535, CompletedAt: r.CompletedAt, CreatedByID: &alice, UpdatedByID: &alice, CreatedAt: now,
-		UpdatedAt: now, AssigneeIDs: slices.SortedFunc(slices.Values([]uuid.UUID{bob, carol}), uuid.UUID.Compare),
-		LabelIDs: slices.SortedFunc(slices.Values([]uuid.UUID{bug, ui}), uuid.UUID.Compare)}
+		Priority: domain.PriorityHigh, StartDate: r.StartDate, TargetDate: r.TargetDate, SortOrder: 75535, CompletedAt: r.CompletedAt,
+		CreatedByID: &alice, UpdatedByID: &alice, CreatedAt: now, UpdatedAt: now,
+		AssigneeIDs: slices.SortedFunc(slices.Values([]uuid.UUID{bob, carol}), uuid.UUID.Compare),
+		LabelIDs:    slices.SortedFunc(slices.Values([]uuid.UUID{bug, ui}), uuid.UUID.Compare)}
 	if err != nil || !found || !reflect.DeepEqual(got, want) {
 		t.Errorf("GetIssue() = %+v, %v, %v; want %+v", got, found, err, want)
 	}

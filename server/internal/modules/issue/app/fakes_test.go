@@ -269,6 +269,7 @@ func (f *fakeIssues) UpdateIssue(ctx context.Context, r app.IssueFields) error {
 		return fmt.Errorf("UpdateIssue: %+v is not the work item %+v", r, f.issue)
 	}
 	f.issue.Name, f.issue.StateID, f.issue.Priority, f.issue.CompletedAt = r.Name, r.StateID, r.Priority, r.CompletedAt
+	f.issue.StartDate, f.issue.TargetDate = r.StartDate, r.TargetDate
 	f.changed = &r
 	return nil
 }
@@ -383,7 +384,8 @@ func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, 
 	r := f.issue
 	by, at := f.writer()
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
-		StateID: r.StateID, Priority: r.Priority, SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
+		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, SortOrder: r.SortOrder,
+		CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
 			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
 }

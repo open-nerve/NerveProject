@@ -110,14 +110,14 @@ func created(id, state uuid.UUID, asked, labelsAsked, assignees, labels, subscri
 // order, its subscribers, the caller and the assignees, in id order, then
 // the assignees' display names and its activity: the creation and each
 // assignee in id order; the answer is the work item read back. The name is
-// stored without its surrounding space; the work item in the completed
-// state is completed at the moment, which is also every row's, the
-// caller's.
+// stored without its surrounding space, the dates as given; the work item
+// in the completed state is completed at the moment, which is also every
+// row's, the caller's.
 func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 	uc, w := newCreate()
 	high := domain.PriorityHigh
 	got, err := uc.Execute(as(alice), web, domain.NewIssue{Name: "  Fix the login ", StateID: &done.ID, Priority: &high,
-		AssigneeIDs: []uuid.UUID{carol, bob}, LabelIDs: []uuid.UUID{ui, bug}})
+		AssigneeIDs: []uuid.UUID{carol, bob}, LabelIDs: []uuid.UUID{ui, bug}, StartDate: october(12), TargetDate: october(19)})
 	if err != nil || w.issues.issue == nil {
 		t.Fatalf("Execute() = %v, %v; want the work item", got, err)
 	}
@@ -128,7 +128,8 @@ func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, want)
 	}
 	row := app.IssueRow{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix the login", StateID: done.ID,
-		Priority: domain.PriorityHigh, SortOrder: 95535, CompletedAt: &clockNow, By: alice, At: clockNow}
+		Priority: domain.PriorityHigh, StartDate: october(12), TargetDate: october(19), SortOrder: 95535, CompletedAt: &clockNow, By: alice,
+		At: clockNow}
 	if !reflect.DeepEqual(*w.issues.issue, row) {
 		t.Errorf("the work item %+v, want %+v", *w.issues.issue, row)
 	}
@@ -235,8 +236,9 @@ func refused(t *testing.T, w *world, err, want error, calls []string) {
 // Every refusal the decision makes is answered before any lock and outside
 // any transaction (M4 design 3.5): a project not there, or that the
 // caller does not see, is project.not_found, a role the rule does not
-// allow is forbidden, and nothing is locked. Values that break the rules
-// are refused before even the project is read.
+// allow is forbidden, and nothing is locked. Values that break the rules,
+// the dates out of order as given too, are refused before even the project
+// is read.
 func TestCreateIssueRefusesBeforeAnyLock(t *testing.T) {
 	precheck := []string{line("Find", web, "outside tx"), line("Authorize", alice, domain.ActionCreate, acme, web, "outside tx")}
 	for _, tt := range []struct {
@@ -248,6 +250,8 @@ func TestCreateIssueRefusesBeforeAnyLock(t *testing.T) {
 	}{
 		{"a blank name", func(*world) {}, domain.NewIssue{Name: " "}, shared.Invalid(shared.FieldError{Field: "name", Code: "too_short",
 			Message: "must not be empty"}), nil},
+		{"a start date after the target date", func(*world) {}, domain.NewIssue{Name: "a", StartDate: october(20), TargetDate: october(19)},
+			shared.Invalid(shared.FieldError{Field: "target_date", Code: "not_allowed", Message: "must not be before the start date"}), nil},
 		{"no project", func(w *world) { w.project.found = false }, domain.NewIssue{Name: "a"}, domain.ErrProjectNotFound, precheck[:1]},
 		{"a project not seen", func(w *world) { w.auth.answers = []error{shared.ErrNotVisible} }, domain.NewIssue{Name: "a"},
 			domain.ErrProjectNotFound, precheck},
