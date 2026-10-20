@@ -12390,7 +12390,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**（spec 2.15、第 7 节；M4 设计 3.23、4.17）
 - 总体设计 6.5：`AllowCreator` 一句改写（创建者要是项目的有效成员、项目角色不低于成员，锁下再判定）；`OwnOnly` 和一条访客规则（预检和锁下的判定各执行一次，404 先于角色的 403）；Plane 的两条照原样。
-- M2 设计 3.11：字段错误的路径按下标的数值排序；不限类型的节点里的数；`shared.Date` 的检查器（`FormatDate`）；`date` 从生成器拒绝的例子里去掉（映射之外的仍被拒绝）。
+- M2 设计 3.11：字段错误的路径按下标的数值排序；不限类型的节点里的数（只为它们读的值按文档的顺序、一遍读完）；`shared.Date` 的检查器（`FormatDate`）；`date` 从生成器拒绝的例子里去掉（映射之外的仍被拒绝）。3.12 的模块模板加上 `date` 的映射。
 - 差异清单第四节 4.17：P2 的七行（起止日期、创建者的权限、访客只看自己的工作项、访客删除自己建的工作项、已归档的工作项、归档和恢复、按编号取），接在"删除状态"一行之后；归档和恢复一行写明 Plane 恢复没归档的也答 404，动态的 `comment` 与 Plane 不同（spec 第 3 节第 8 条）。
 - 三份交接（`M1-P3-trim-platform.md`、`M2-closeout.md`、`M3-closeout.md`）各写下"处理结果（M4/P2）"，`status` 照旧 `open`（spec 第 7 节）。
 
@@ -12398,13 +12398,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 设计和差异清单**
 
-`docs/v0/M2-auth/M2-design.md`（修改，4 处）：
+`docs/v0/M2-auth/M2-design.md`（修改，6 处）：
 
+````old docs/v0/M2-auth/M2-design.md
+    - **代价跟着请求体走**（codex-fixes 的预检 H1 和最终评审）：读的时候路径是一段文本，只留前 257 字节（比报出的路径多一个字节，用来知道它更长），另记每一段从哪里开始，读完这一段就截回去；报问题时才写出。一个请求体最多报 16 个问题，扫描和按表检查共用这个上限，满了就停；路径和码都相同的问题只报一次，重复的不占上限。否则代价是请求体的平方：`json.Valid` 允许嵌套一万层，每层写出一条路径，约 1 MiB 的请求体要 4.4 GB；一个很长的名字下面每隔几个字节一个问题，每个问题都带着这个名字，要 17 GB。现在这两个请求体（经 identity 的表）各用 2.4 MB、0.9 MB。按表检查的问题同样受限：开放 map 的键是客户端写的，它下面的每个问题都带着它。按表检查只沿 schema 下降，每层把对象的成员复制一次（`json.Unmarshal` 进 `map[string]json.RawMessage`），代价是请求体乘 schema 的层数；M2 的请求体 schema 最深两层，没有数组、开放 map 和递归。第一个递归的请求体 schema 会让它变成请求体乘请求体的深度，那时按表检查改为一遍读完（M4 交接第 4 节）。`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住这几种请求体，`TestCheckListsAtMostSixteenProblems` 守住上限和"每次报同样的 16 个"（按表检查按名字的顺序读对象的成员）。
+````
+````new docs/v0/M2-auth/M2-design.md
+    - **代价跟着请求体走**（codex-fixes 的预检 H1 和最终评审）：读的时候路径是一段文本，只留前 257 字节（比报出的路径多一个字节，用来知道它更长），另记每一段从哪里开始，读完这一段就截回去；报问题时才写出。一个请求体最多报 16 个问题，扫描和按表检查共用这个上限，满了就停；路径和码都相同的问题只报一次，重复的不占上限。否则代价是请求体的平方：`json.Valid` 允许嵌套一万层，每层写出一条路径，约 1 MiB 的请求体要 4.4 GB；一个很长的名字下面每隔几个字节一个问题，每个问题都带着这个名字，要 17 GB。现在这两个请求体（经 identity 的表）各用 2.4 MB、0.9 MB。按表检查的问题同样受限：开放 map 的键是客户端写的，它下面的每个问题都带着它。按表检查沿 schema 下降，每层把对象的成员复制一次（`json.Unmarshal` 进 `map[string]json.RawMessage`），代价是请求体乘 schema 的层数，schema 不限类型的值只为数的范围一遍读完（M4/P2 起）；M2 的请求体 schema 最深两层，没有数组、开放 map 和递归。第一个递归的请求体 schema 会让它变成请求体乘请求体的深度，那时按表检查改为一遍读完（M4 交接第 4 节）。`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住这几种请求体，`TestCheckListsAtMostSixteenProblems` 守住上限和"每次报同样的 16 个"（按表检查按名字的顺序读对象的成员）。
+````
 ````old docs/v0/M2-auth/M2-design.md
       - **报哪 16 个**：按固定的顺序读，遇到的前 16 个。扫描按文档的顺序读；按表检查按名字的顺序读一个对象的成员，深度优先，读完成员再报它缺少的必填成员。然后按路径排序。所以同一个请求体每次得到同样的 16 个，但不一定是路径最小的 16 个：16 个未声明的成员可以把缺少的 `email` 挤出去。
 ````
 ````new docs/v0/M2-auth/M2-design.md
-      - **报哪 16 个**：按固定的顺序读，遇到的前 16 个。扫描按文档的顺序读；按表检查按名字的顺序读一个对象的成员，深度优先，读完成员再报它缺少的必填成员。然后按路径排序，数组的下标按数值比较（`tags[2]` 在 `tags[10]` 之前，M4/P2 起；之前按字典序）。所以同一个请求体每次得到同样的 16 个，但不一定是路径最小的 16 个：16 个未声明的成员可以把缺少的 `email` 挤出去。
+      - **报哪 16 个**：按固定的顺序读，遇到的前 16 个。扫描按文档的顺序读；按表检查按名字的顺序读一个对象的成员，深度优先，读完成员再报它缺少的必填成员，只为看数的范围而读的值（不限类型的节点，M4/P2 起）按文档的顺序读。然后按路径排序，数组的下标按数值比较（`tags[2]` 在 `tags[10]` 之前，M4/P2 起；之前按字典序）。所以同一个请求体每次得到同样的 16 个，但不一定是路径最小的 16 个：16 个未声明的成员可以把缺少的 `email` 挤出去。
 ````
 ````old docs/v0/M2-auth/M2-design.md
     - 格式检查器按**生成的 Go 类型**登记：`time.Time`、标准库的 `uuid.UUID` 各一个，都是上面那一行 `json.Unmarshal`。`bodyshape` 只依赖标准库。
@@ -12419,13 +12425,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
       - **格式的清单取自同一份 `type-mapping`**：生成器读这个模块的 `oapi-codegen.yaml` 中的 `output-options.type-mapping`，与 oapi-codegen 的默认映射合并（`codegen.DefaultTypeMapping.Merge`，与 `oapi-codegen/v2@v2.8.0/pkg/codegen/codegen.go:162-165` 的做法相同），得到每个字段实际生成的 Go 类型。生成为 `string` 的格式（`email`）不检查，交给领域层；生成为已登记检查器的类型（`time.Time`、`uuid.UUID`）的，表中记下检查器；生成为其他类型的，生成失败并说明原因。数值同理：`bodyshape` 的 `Integer` 是 int64 容纳得下的字面量、`Number` 是 float64 容纳得下的，所以 `integer` 只能生成为 `int` 或 `int64`，`number` 只能生成为 `float64`（模板把 `number` 的默认映射改为 `float64`，3.12）；生成为更窄的整数、无符号整数、`float32`，或 `format` 不在映射里的，生成失败。模板改了映射，表随之改变，两边不会走样。
 ````
 ````new docs/v0/M2-auth/M2-design.md
-      - **格式的清单取自同一份 `type-mapping`**：生成器读这个模块的 `oapi-codegen.yaml` 中的 `output-options.type-mapping`，与 oapi-codegen 的默认映射合并（`codegen.DefaultTypeMapping.Merge`，与 `oapi-codegen/v2@v2.8.0/pkg/codegen/codegen.go:162-165` 的做法相同），得到每个字段实际生成的 Go 类型。生成为 `string` 的格式（`email`）不检查，交给领域层；生成为已登记检查器的类型（`time.Time`、`uuid.UUID`）的，表中记下检查器；生成为其他类型的，生成失败并说明原因。数值同理：`bodyshape` 的 `Integer` 是 int64 容纳得下的字面量、`Number` 是 float64 容纳得下的，所以 `integer` 只能生成为 `int` 或 `int64`，`number` 只能生成为 `float64`（模板把 `number` 的默认映射改为 `float64`，3.12）；生成为更窄的整数、无符号整数、`float32`，或 `format` 不在映射里的，生成失败。模板改了映射，表随之改变，两边不会走样。不限类型的节点（`{}`、开放对象的成员、没有 `items` 的数组的元素）里的数也看范围：float64 放不下的数字面量（`1e400`）在它的路径上报 `invalid_format`，一遍读完那个值（M4/P2 起；之前由解码器笼统地答 400）。
+      - **格式的清单取自同一份 `type-mapping`**：生成器读这个模块的 `oapi-codegen.yaml` 中的 `output-options.type-mapping`，与 oapi-codegen 的默认映射合并（`codegen.DefaultTypeMapping.Merge`，与 `oapi-codegen/v2@v2.8.0/pkg/codegen/codegen.go:162-165` 的做法相同），得到每个字段实际生成的 Go 类型。生成为 `string` 的格式（`email`）不检查，交给领域层；生成为已登记检查器的类型（`time.Time`、`uuid.UUID`，M4/P2 起还有 `shared.Date`）的，表中记下检查器；生成为其他类型的，生成失败并说明原因。数值同理：`bodyshape` 的 `Integer` 是 int64 容纳得下的字面量、`Number` 是 float64 容纳得下的，所以 `integer` 只能生成为 `int` 或 `int64`，`number` 只能生成为 `float64`（模板把 `number` 的默认映射改为 `float64`，3.12）；生成为更窄的整数、无符号整数、`float32`，或 `format` 不在映射里的，生成失败。模板改了映射，表随之改变，两边不会走样。不限类型的节点（`{}`、开放对象未声明的成员、没有 `items` 的数组的元素）里的数也看范围：float64 放不下的数字面量（`1e400`）在它的路径上报 `invalid_format`，一遍读完那个值（M4/P2 起；之前由解码器笼统地答 400）。
 ````
 ````old docs/v0/M2-auth/M2-design.md
       - 支持的写法：对象（属性、必填、`additionalProperties` 为 `false`、`true` 或一个 schema）、数组、标量、`type: [X, 'null']` 和 `anyOf: [X, {type: 'null'}]`，以及上一条的格式。遇到其他 `anyOf`/`oneOf`/`allOf`，或生成为没有检查器的类型的格式（例如 `date`、`byte`、`binary`、`duration`），生成失败并说明原因。
 ````
 ````new docs/v0/M2-auth/M2-design.md
       - 支持的写法：对象（属性、必填、`additionalProperties` 为 `false`、`true` 或一个 schema）、数组、标量、`type: [X, 'null']` 和 `anyOf: [X, {type: 'null'}]`，以及上一条的格式。遇到其他 `anyOf`/`oneOf`/`allOf`，或生成为没有检查器的类型的格式（例如 `byte`、`binary`、`duration`；`date` 从 M4/P2 起映射为 `shared.Date`），生成失败并说明原因。
+````
+````old docs/v0/M2-auth/M2-design.md
+  - `output-options.type-mapping.string.formats`：`uuid` → `{type: uuid.UUID, import: uuid}`（标准库）；`email` → `{type: string}`。默认的 `openapi_types.Email` 在解码时自己校验格式，会绕过 3.11 的分层；映射为 `string` 以后，邮箱格式由领域层校验（422）。
+````
+````new docs/v0/M2-auth/M2-design.md
+  - `output-options.type-mapping.string.formats`：`uuid` → `{type: uuid.UUID, import: uuid}`（标准库）；`email` → `{type: string}`；M4/P2 起加 `date` → `{type: shared.Date, import: github.com/open-nerve/NerveProject/server/internal/shared}`（3.11）。默认的 `openapi_types.Email` 在解码时自己校验格式，会绕过 3.11 的分层；映射为 `string` 以后，邮箱格式由领域层校验（422）。
 ````
 
 `docs/v0/plane-diff.md`（修改，1 处）：
@@ -12450,7 +12462,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   "创建者本人可以修改或删除自己创建的对象"由 M4 随第一条用到它的规则在规则表加入（`AllowCreator`）。
 ````
 ````new docs/v0/v0-design.md
-  创建者本人的规则（`AllowCreator`）随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）在 M4/P2 加入规则表：判定读目标的创建者（`Target.CreatorID`），调用者是它、仍是项目的有效成员、角色不低于成员时同样允许，离开了项目或成了访客的创建者不行（Plane 只看工作区成员关系，M4 设计 3.4）。访客的规则是判定交回的 `Grant.OwnOnly`：调用者是项目的访客（按项目角色算，工作区管理员在项目里是访客时同样）、项目没开 `guest_view_all_features` 时为真。同一条访客规则用在工作项的每个读、写和列表上，看不到的工作项和挂在它下面的一切都答 404（Plane 只在约 6 处执行；单个工作项的读写从 M4/P2 起，列表随 M4 的各 Phase，M4 设计 3.4）。
+  创建者本人的规则（`AllowCreator`）随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）在 M4/P2 加入规则表：判定读目标的创建者（`Target.CreatorID`），调用者是它、仍是项目的有效成员、角色不低于成员时同样允许（锁下再判定，4.2），离开了项目或成了访客的创建者不行（Plane 只看工作区成员关系，M4 设计 3.4）。访客的规则是判定交回的 `Grant.OwnOnly`：调用者是项目的访客（按项目角色算，工作区管理员在项目里是访客时同样）、项目没开 `guest_view_all_features` 时为真。同一条访客规则用在工作项的每个读、写和列表上，看不到的工作项和挂在它下面的一切都答 404，先于角色的 403，写在不加锁的预检和锁下的判定中各执行一次（Plane 只在约 6 处执行；单个工作项的读写从 M4/P2 起，列表、子资源随 M4 的各 Phase，M4 设计 3.4）。
 ````
 
 - [ ] **Step 2: 交接**
@@ -12487,9 +12499,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - **第 3 节，`updated_at`**（P2 的写完成）：`deleteIssue`、`archiveIssue`、`unarchiveIssue` 和带日期的 `updateIssue` 把用例的时钟在项目 N 之下读到的一个时刻写进它写的每一行：删除写下工作项和它的负责人、标签、关注、动态的 `deleted_at`、`updated_at`，归档、恢复写下工作项的 `archived_at`（恢复为空）、`updated_at` 和那一行动态的 `created_at`、`updated_at`。用例的测试用固定的时钟（`clockAt`）断言交给仓储的时刻等于它，仓储的测试断言这些列等于交给它的时刻；组合的测试断言它落在请求之内（`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`、`TestArchivingAWorkItemStampsItsRows`）；端到端的 I15 断言归档、恢复的那一行动态是工作项的 `updated_at`、是写它的人的，删除的每一行同一时刻、同一个删除者（`expectIssueDeleted`）。
 - **第 4 节，路径的排序**（完成）：字段错误的路径按数组下标的数值排序（`bodyshape` 的 `comparePaths`，`tags[2]` 在 `tags[10]` 之前，一个全序）；单元测试 `TestComparePaths` 和 `Check` 的表测试（`ids[2]` 在 `ids[10]` 之前）；M2 设计 3.11 改写。
-- **第 4 节，数的范围**（完成）：不限类型的节点（`{}`、开放对象的成员、没有 `items` 的数组的元素）里 float64 放不下的数在它的路径上报 `invalid_format`（`ambiguity.go` 的 `numbers`，一遍读完那个值）；`Check` 的表测试在这三种节点里各放一个 `1e400`；M2 设计 3.11 改写。
-- **第 4 节，第一个 `format: date` 的字段**（完成）：Go 类型是 `shared.Date`，五个模块的 `oapi-codegen.yaml` 都映射过去；`bodyshape` 登记 `FormatDate`（检查器照 `shared.ParseDate` 的规则读，平台不导入 `shared`），生成器认它；`issue` 的 HTTP 适配器的 `TestDatesPassTheBodyCheckAsTheyDecode` 核对检查器与生成的解码器对同一组写法结论相同。不合格的日期得到带路径的 400：`bodyshape` 的 `TestFormatDate`；`apitest` 为契约的每个日期字段生成一个不合格的请求体用例（`TestBodyCasesOfDates`），整程序测试 `TestBodiesThatBreakTheStructureAnswer400` 把它们发给 `createIssue`、`updateIssue`。
-- **第 4 节，结构检查的代价**（数组完成）：`TestCheckCostsAboutTheBody` 加上字符串的数组（每个元素一个格式问题、一个很长的日期字符串）和开放节点里很深的数；第一个数组的请求体（P1a 的 `assignee_ids`）的代价由它守住。开放 map 和递归的请求体 schema：M4/P2 没有用到。
+- **第 4 节，数的范围**（完成）：不限类型的节点（`{}`、开放对象未声明的成员、没有 `items` 的数组的元素）里 float64 放不下的数在它的路径上报 `invalid_format`（`ambiguity.go` 的 `numbers`，一遍读完那个值）；`Check` 的表测试在这三种节点里各放一个 `1e400`；M2 设计 3.11 改写。
+- **第 4 节，第一个 `format: date` 的字段**（完成）：Go 类型是 `shared.Date`，五个模块的 `oapi-codegen.yaml` 都映射过去；`bodyshape` 登记 `FormatDate`（检查器照 `shared.ParseDate` 的规则读，平台不导入 `shared`），生成器认它；`issue` 的 HTTP 适配器的 `TestDatesPassTheBodyCheckAsTheyDecode` 核对检查器与生成的解码器对同一组写法结论相同。不合格的日期得到带路径的 400：`bodyshape` 的 `TestCheck`（日期写错的 `on`）和 `TestFormatDate`；`apitest` 为契约的每个日期字段生成一个不合格的请求体用例（`TestBodyCasesOfDates`），整程序测试 `TestBodiesThatBreakTheStructureAnswer400` 把它们发给 `createIssue`、`updateIssue`。
+- **第 4 节，结构检查的代价**（数组完成）：`TestCheckCostsAboutTheBody` 加上 M4 的三个请求体：200,000 个不是 uuid 的字符串的数组（每个元素一个格式问题）、1 MiB 的错误日期、不限类型的值里 9,990 层数组之下一个 float64 放不下的数；数组的请求体（M3 的 `hide_in_more_menu`、P1a 的 `assignee_ids` 一类）的代价由它守住。开放 map 和递归的请求体 schema：M4/P2 没有用到。
 - **第 4 节，map 型对象**：M4/P2 没有用到（契约里没有 `additionalProperties` 为 schema 的对象），`closedObject` 不改。
 
 仍未处理，状态保持 `open`：第 3 节其余写工作项的用例（M4 的 P3、P4、P7）和自动归档推进固定时钟的测试（M4 的 P6）；第 4 节的草稿发布（M4 的 P8）、map 型对象和递归的请求体 schema（第一个用到它们的 Phase，或 M4 的 review 写明没有用到）；第 1、2、5–13 节，按 M4 设计 13.1 的落点。
@@ -12510,10 +12522,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ## 处理结果（M4/P2）
 
 - **第 3 节，`AllowCreator`**（完成）：随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）加入规则表；判定读目标的创建者（`shared.Target.CreatorID`），调用者是它、在项目里的有效角色不低于成员时允许，已离开项目、成了访客的创建者不行（M4 设计 3.4）；判定表测试逐格核对。
-- **第 3 节，`guest_view_all_features`**（工作项的取、改、删、按编号取、归档、恢复完成；列表在各自的 Phase）：`access` 读项目的 `guest_view_all_features`，判定交回 `Grant.OwnOnly`（项目的访客、项目没开它时为真，按项目角色算：工作区管理员在项目里是访客时同样）；一条访客规则在不加锁的预检和锁下的判定中各执行一次，别人建的工作项答 404 `issue.not_found`，不是 403（M4 设计 3.4、3.5）；交错 5 加上访客规则下 404 的一支。
+- **第 3 节，`guest_view_all_features`**（工作项的取、改、删、按编号取、归档、恢复完成；列表在各自的 Phase）：`access` 读项目的 `guest_view_all_features`，判定交回 `Grant.OwnOnly`（项目的访客、项目没开它时为真，按项目角色算：工作区管理员在项目里是访客时同样）；一条访客规则在读的判定中、在写的不加锁的预检和锁下的判定中各执行一次，别人建的工作项答 404 `issue.not_found`，不是 403（M4 设计 3.4、3.5）；交错 5 加上访客规则下 404 的一支。
 - **第 3 节，矩阵和码**（工作项的操作到 P2 为止完成）：P2 的 `getIssueByIdentifier`、`deleteIssue`、`archiveIssue`、`unarchiveIssue` 在规则表、操作名、矩阵中各有一行；矩阵有了工作项表（M4 设计 9.2），P1a、P1b 的 `createIssue`、`getIssue`、`updateIssue` 的行移到它上面：项目级的各列之外，建了它的项目成员，项目访客的三种情形（看得到全部的；只看自己的，对自己建的、对别人建的），只是项目访客的工作区管理员（对别人建的、对自己建的）；设计 9.2 另列的"建了它、后来被降为访客"（403）和"建了它、已离开项目"（404）是"访客·自己"（种子记在他名下的）和"已离开项目"（他离开之前建的）两列上 `deleteIssue` 的格子。新码 `issue.archived`、`issue.not_archivable` 由 `issue` 的 HTTP 测试返回过（`apitest.Main` 两个方向），带前端文案。决策点 3 的个人主页一行在 M4 的 P5。
 - **第 4 节，`guest_view_all_features` 的说明**（完成）：契约的 `Project.guest_view_all_features` 改写为它的作用（项目的访客是否看得到项目的每个工作项；不看时别人建的答 `issue.not_found`）。
-- **第 4 节，`expectIssueDeleted`**（完成）：`e2e/fixtures/assert/issue.ts` 照 `expectProjectDeleted` 从目录读表，但沿外键图从 `issues` 往下走：一行的外键指向工作项或它下面的一行，它就在工作项下面（评论的表情指向评论，P4 起同样断言到），每个外键在工作项下面都有一行与它同一时刻、同一个删除者删除，删除之前已删除的不算（它保留原来的删除由按目录的删除测试核对）；子工作项的外键（`issues.parent_id`）在 P3 之前没有行，豁免到 P3。第一个使用者是 I15 的接口版本（删除已归档的工作项）。
+- **第 4 节，`expectIssueDeleted`**（完成）：`e2e/fixtures/assert/issue.ts` 照 `expectProjectDeleted` 从目录读表，但沿外键图从 `issues` 往下走（图由 `assert/catalog.ts` 的 `keysBelow` 读出，与 `tablesUnder` 同在一处；走到的外键多于一列时失败）：一行的外键指向工作项或它下面的一行，它就在工作项下面（评论的表情指向评论，P4 起同样断言到），它下面的行都与它同一时刻、同一个删除者删除，每个外键下都有这样的一行，删除之前已删除的不算（它保留原来的删除由按目录的删除测试核对）；子工作项的外键（`issues.parent_id`）在 P3 之前没有行，豁免到 P3。第一个使用者是 I15 的接口版本（删除已归档的工作项）。
 
 仍未处理，状态保持 `open`：第 2 节其余各项：加关联的另一端的预检（M4 的 P3）、P2 之后各 Phase 的批量写按约定五核对（到 M4 的 P9）、物理删除账户（M4 的 P9）；第 3 节决策点 3 的个人主页一行（M4 的 P5）和工作项列表的访客规则（各列表的 Phase）；第 4 节的 `archive_in`（M4 的 P6）的说明、删除断言的限时轮询（M4 的 P9）和 `expectIssueDeleted` 中子工作项的豁免（M4 的 P3）；第 1、5–9 节，按 M4 设计 13.1 的落点。
 
