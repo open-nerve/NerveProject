@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 	"uuid"
 
@@ -11,8 +12,8 @@ import (
 )
 
 // The pieces every write on a work item's rows shares (M4 design 3.5,
-// 3.7): the state it may put the work item in, where its rows go, the
-// accounts its activity names, and its answer.
+// 3.7): the state it may put the work item in and the state it is in,
+// where its rows go, the accounts its activity names, and its answer.
 
 // pickState is the state of states asked for, when it is there and not
 // the triage state, or the default state when none is asked for (M4
@@ -25,6 +26,17 @@ func pickState(states []StateRef, asked *uuid.UUID) (StateRef, bool) {
 		}
 	}
 	return StateRef{}, false
+}
+
+// issueState is the state of states, its project's, that the work item i is
+// in. A state that is none of them is an error, not a refusal: a work
+// item's state is its project's.
+func issueState(states []StateRef, i domain.Issue) (StateRef, error) {
+	at := slices.IndexFunc(states, func(s StateRef) bool { return s.ID == i.StateID })
+	if at < 0 {
+		return StateRef{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
+	}
+	return states[at], nil
 }
 
 // stamp is where a write's rows under a work item go, and whose and when

@@ -64,18 +64,17 @@ func TestEachWriteOnAWorkItemEntersItsProjectsGate(t *testing.T) {
 		write  func(w *world, id uuid.UUID) error
 	}{
 		{"a deletion", domain.ActionDelete, func(w *world, id uuid.UUID) error {
-			return app.NewDeleteIssue(app.DeleteIssueDeps{Locks: w.locks, Rows: w.issues, Clock: clockAt{at: clockNow, log: w.log}}).
-				Execute(as(alice), id)
+			return deleteOver(w).Execute(as(alice), id)
 		}},
 		{"an archiving", domain.ActionArchive, func(w *world, id uuid.UUID) error {
-			_, err := app.NewArchiveIssue(app.ArchiveIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project,
-				Clock: clockAt{at: clockNow, log: w.log}}).Execute(as(alice), id)
+			archive, _ := archiveOver(w)
+			_, err := archive.Execute(as(alice), id)
 			return err
 		}},
 		{"an unarchiving", domain.ActionArchive, func(w *world, id uuid.UUID) error {
 			w.issues.archivedAt = &earlier
-			_, err := app.NewUnarchiveIssue(app.ArchiveIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project,
-				Clock: clockAt{at: clockNow, log: w.log}}).Execute(as(alice), id)
+			_, unarchive := archiveOver(w)
+			_, err := unarchive.Execute(as(alice), id)
 			return err
 		}},
 	} {

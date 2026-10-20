@@ -11,11 +11,18 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
+// deleteOver is deleteIssue over w's locks and rows as they are when it is
+// called, its clock at clockNow: after gated rebuilds w's locks, it is
+// deleteIssue over the gated ones.
+func deleteOver(w *world) *app.DeleteIssue {
+	return app.NewDeleteIssue(app.DeleteIssueDeps{Locks: w.locks, Rows: w.issues, Clock: clockAt{at: clockNow, log: w.log}})
+}
+
 // newDelete is deleteIssue over newUpdate's world: web's work item 7, made
 // by carol, assigned to bob and out, labelled Bug.
 func newDelete() (*app.DeleteIssue, *world, uuid.UUID) {
 	_, w, id := newUpdate()
-	return app.NewDeleteIssue(app.DeleteIssueDeps{Locks: w.locks, Rows: w.issues, Clock: clockAt{at: clockNow, log: w.log}}), w, id
+	return deleteOver(w), w, id
 }
 
 // deletingRows are the calls of the deletion of the work item id's rows,

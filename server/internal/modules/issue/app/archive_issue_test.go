@@ -29,6 +29,14 @@ func (f *fakeIssues) SetArchivedAt(ctx context.Context, a app.IssueArchival) err
 	return nil
 }
 
+// archiveOver is archiveIssue and unarchiveIssue over w's locks, work
+// items and states as they are when it is called, their clock at
+// clockNow: after gated rebuilds w's locks, they are over the gated ones.
+func archiveOver(w *world) (*app.ArchiveIssue, *app.UnarchiveIssue) {
+	d := app.ArchiveIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Clock: clockAt{at: clockNow, log: w.log}}
+	return app.NewArchiveIssue(d), app.NewUnarchiveIssue(d)
+}
+
 // newArchive is archiveIssue and unarchiveIssue over updateIssue's world
 // (newUpdate), web's states with Cancelled, its work item 7 moved into
 // Done: made by carol at earlier, not archived.
@@ -36,8 +44,8 @@ func newArchive() (*app.ArchiveIssue, *app.UnarchiveIssue, *world, uuid.UUID) {
 	_, w, id := newUpdate()
 	w.project.states = append(w.project.states, cancelled)
 	w.issues.issue.StateID = done.ID
-	d := app.ArchiveIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Clock: clockAt{at: clockNow, log: w.log}}
-	return app.NewArchiveIssue(d), app.NewUnarchiveIssue(d), w, id
+	archive, unarchive := archiveOver(w)
+	return archive, unarchive, w, id
 }
 
 // stored is newArchive's work item as a read answers it, archived at

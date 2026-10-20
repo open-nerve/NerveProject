@@ -166,17 +166,6 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 	return n, nil
 }
 
-// issueState is the state of states, its project's, that the work item i is
-// in. A state that is none of them is an error, not a refusal: a work
-// item's state is its project's.
-func issueState(states []StateRef, i domain.Issue) (StateRef, error) {
-	at := slices.IndexFunc(states, func(s StateRef) bool { return s.ID == i.StateID })
-	if at < 0 {
-		return StateRef{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
-	}
-	return states[at], nil
-}
-
 // labelNames are the labels ids, in their order, by their names in
 // labels; none for none. A label not in labels is an error: the work
 // item's labels, and those check let through, are the project's.

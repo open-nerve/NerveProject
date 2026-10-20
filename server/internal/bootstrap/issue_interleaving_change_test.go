@@ -43,52 +43,45 @@ func TestTwoChangesOfAWorkItemSerialize(t *testing.T) {
 	}
 }
 
-// A work item deleted, or moved into another project, while a change of it
-// waits for its project's row is not found under the lock (M4 design 3.5:
-// the work item read again under the lock, and found still in the project
-// locked). No operation of P1b deletes or moves a work item, so a
-// transaction does it in the database: it holds Web's row FOR NO KEY
-// UPDATE and deletes alice's Fix, or moves it into Ops; bob's change,
-// which passed his precheck on Fix as it was, waits for Web's row, and
-// once the transaction commits finds no Fix in Web: 404 issue.not_found,
-// and Fix keeps its name. The test probes for his wait on a row of
-// projects: the transaction holds Fix's row too, and a wait for it, by a
-// precheck that locked the work item, would be answered by the precheck,
-// not under the lock.
+// A work item moved into another project while a change of it waits for
+// its project's row is not found under the lock (M4 design 3.5: the work
+// item read again under the lock, and found still in the project locked).
+// No operation moves a work item, so a transaction moves it in the
+// database: it holds Web's row FOR NO KEY UPDATE and moves alice's Fix
+// into Ops; bob's change, which passed his precheck on Fix as it was,
+// waits for Web's row, and once the transaction commits finds no Fix in
+// Web: 404 issue.not_found, and Fix keeps its name. The test probes for
+// his wait on a row of projects: the transaction holds Fix's row too, and
+// a wait for it, by a precheck that locked the work item, would be
+// answered by the precheck, not under the lock. A work item deleted while
+// a change of it waits is TestDeletingAWorkItemAndChangingItSerialize's,
+// through the route.
 func TestAWorkItemGoneWhileItsChangeWaitsIsNotFound(t *testing.T) {
-	for _, moved := range []bool{false, true} {
-		t.Run(map[bool]string{false: "deleted", true: "moved"}[moved], func(t *testing.T) {
-			w := newIssueWorld(t)
-			aWorkItem(t, w)
-			item := w.workItem(t)
-			gone, args := "UPDATE issues SET deleted_at = now() WHERE id = $1", []any{item}
-			if moved {
-				ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
-				gone, args = "UPDATE issues SET project_id = $2 WHERE id = $1", []any{item, ops}
-			}
-			held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", w.web)
-			if _, err := held.Exec(pgtest.Soon(t), gone, args...); err != nil {
-				t.Fatal(err)
-			}
-			change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["bob"], []byte(`{"name":"Mend"}`))
-			w.contract.CheckRequest(t, change)
-			changed := sendInBackground(change)
-			pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
-			if err := held.Commit(pgtest.Soon(t)); err != nil {
-				t.Fatal(err)
-			}
-			a := receiveWithin(t, changed, 5*time.Second, "answer to bob's change")
-			if a.err != nil {
-				t.Fatal(a.err)
-			}
-			w.contract.CheckResponse(t, change, a.res)
-			if a.res.StatusCode != http.StatusNotFound || problemCode(t, a.body) != "issue.not_found" {
-				t.Errorf("bob's change = %d %s; want 404 issue.not_found", a.res.StatusCode, a.body)
-			}
-			var name string
-			if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT name FROM issues WHERE id = $1", item).Scan(&name); err != nil || name != "Fix" {
-				t.Errorf("the work item is named %q (%v) after the refused change; want Fix", name, err)
-			}
-		})
+	w := newIssueWorld(t)
+	aWorkItem(t, w)
+	item := w.workItem(t)
+	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
+	held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", w.web)
+	if _, err := held.Exec(pgtest.Soon(t), "UPDATE issues SET project_id = $2 WHERE id = $1", item, ops); err != nil {
+		t.Fatal(err)
+	}
+	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["bob"], []byte(`{"name":"Mend"}`))
+	w.contract.CheckRequest(t, change)
+	changed := sendInBackground(change)
+	pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
+	if err := held.Commit(pgtest.Soon(t)); err != nil {
+		t.Fatal(err)
+	}
+	a := receiveWithin(t, changed, 5*time.Second, "answer to bob's change")
+	if a.err != nil {
+		t.Fatal(a.err)
+	}
+	w.contract.CheckResponse(t, change, a.res)
+	if a.res.StatusCode != http.StatusNotFound || problemCode(t, a.body) != "issue.not_found" {
+		t.Errorf("bob's change = %d %s; want 404 issue.not_found", a.res.StatusCode, a.body)
+	}
+	var name string
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT name FROM issues WHERE id = $1", item).Scan(&name); err != nil || name != "Fix" {
+		t.Errorf("the work item is named %q (%v) after the refused change; want Fix", name, err)
 	}
 }
