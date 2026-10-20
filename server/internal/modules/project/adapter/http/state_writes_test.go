@@ -37,7 +37,8 @@ const (
 	stateDefaultJSON = `{"status":409,"code":"project.state_default","title":"Conflict",` +
 		`"detail":"The default state cannot be deleted; make another state the default first."}`
 	stateInUseJSON = `{"status":409,"code":"project.state_in_use","title":"Conflict",` +
-		`"detail":"Work items are in the state, archived ones too, so it cannot be deleted."}`
+		`"detail":"Work items are in the state, archived ones too, so it cannot be deleted; unarchive the archived ones and move them all ` +
+		`to another state first."}`
 	stateNameTakenJSON = `{"status":409,"code":"project.state_name_taken","title":"Conflict",` +
 		`"detail":"A state of the project has this name."}`
 )

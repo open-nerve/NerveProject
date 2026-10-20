@@ -11,8 +11,12 @@ import (
 // The rows of the permission matrix of changing and deleting a work item
 // (M4 design 9.2), naming it by its id (/issues/{issue_id}): its column's
 // work item (issueOf). Each cell writes on a copy of its own. A row of
-// 9.2's table has the issue table's columns; its variants, the project
-// level's, as createIssue's (permission_matrix_issues_test.go).
+// 9.2's table has the issue table's columns, and so has a variant on an
+// archived work item, which each cell's prepare archives on its copy
+// (inDone); the other variants, the project level's, as createIssue's
+// (permission_matrix_issues_test.go), or the archived project's.
+
+var cellIssueArchived = cell{http.StatusConflict, "issue.archived"}
 
 // toIssue is the request of a row whose callers each change their column's
 // work item with the body body gives for their column.
@@ -53,6 +57,13 @@ func issueUpdateMatrixRows() []matrixRow {
 		// of nothing is refused.
 		{op: "updateIssue", variant: "archived", write: true, columns: archivedColumns,
 			request: toWorkItem(http.MethodPatch, "", `{}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// Nor are its archived work items: the project's 409 comes first.
+		{op: "updateIssue", variant: "archived, its work item archived", write: true, columns: archivedColumns, prepare: inDone(true),
+			request: toWorkItem(http.MethodPatch, "", `{}`), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// An archived work item is not changed either (M4 design 3.8), after
+		// the decision, by a change of nothing too.
+		{op: "updateIssue", variant: "archived work item", write: true, columns: issueColumns, prepare: inDone(true),
+			request: toWorkItem(http.MethodPatch, "", `{}`), cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellForbidden)},
 		// The archived project's Backlog, a state of another project of the
 		// same workspace: the state is checked after the decision.
 		{op: "updateIssue", variant: "another project's state", write: true, columns: projectColumns,
@@ -102,6 +113,11 @@ func issueUpdateMatrixRows() []matrixRow {
 		// after the decision, as updateIssue's.
 		{op: "deleteIssue", variant: "archived", write: true, columns: archivedColumns, request: toWorkItem(http.MethodDelete, "", ""),
 			cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+		{op: "deleteIssue", variant: "archived, its work item archived", write: true, columns: archivedColumns, prepare: inDone(true),
+			request: toWorkItem(http.MethodDelete, "", ""), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// An archived work item is deleted as any other (M4 design 3.8).
+		{op: "deleteIssue", variant: "archived work item", write: true, columns: issueColumns, prepare: inDone(true),
+			request: toWorkItem(http.MethodDelete, "", ""), cells: onAWorkItem(cellNoContent, cellForbidden, cellNoContent, cellForbidden)},
 	}
 }
 

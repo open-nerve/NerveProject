@@ -50,11 +50,12 @@ type named struct {
 // refuses a write that may wait no longer (503 server_busy); then in one
 // transaction, the project FOR NO KEY UPDATE, the work item read again and
 // the decision again, and under them, in this order: an archived project
-// refuses it (409 project.archived); what p changes in the work item
-// (domain.ChangesOf), and when it changes nothing, nothing is written and
-// the answer is the work item as read; the dependent rows it adds (check),
-// every problem in one 422; the clock; the work item's fields, its
-// completion by its new state's group when its state changes
+// refuses it (409 project.archived), then an archived work item (409
+// issue.archived), a change of nothing too; what p changes in the work
+// item (domain.ChangesOf), and when it changes nothing, nothing is written
+// and the answer is the work item as read; the dependent rows it adds
+// (check), every problem in one 422; the clock; the work item's fields,
+// its completion by its new state's group when its state changes
 // (domain.CompletedAt); the accounts and the labels it removes and adds,
 // in id order; the accounts it adds subscribed; its activity
 // (domain.UpdateActivity), each account by his display name. All of it is
@@ -71,8 +72,11 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 	w := write{issue: &id, action: domain.ActionUpdate, notFound: domain.ErrIssueNotFound}
 	var updated domain.Issue
 	err = u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
-		if h.project.Archived {
+		switch {
+		case h.project.Archived:
 			return domain.ErrProjectArchived
+		case h.issue.ArchivedAt != nil:
+			return domain.ErrIssueArchived
 		}
 		c := domain.ChangesOf(h.issue, p)
 		if c.None() {

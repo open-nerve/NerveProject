@@ -81,6 +81,8 @@ func TestUpdateIssueRefusals(t *testing.T) {
 			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
 		{"an archived project", domain.ErrProjectArchived, http.StatusConflict,
 			`{"status":409,"code":"project.archived","title":"Conflict","detail":"The project is archived; unarchive it to change it."}`},
+		{"an archived work item", domain.ErrIssueArchived, http.StatusConflict,
+			`{"status":409,"code":"issue.archived","title":"Conflict","detail":"The work item is archived; unarchive it to change it."}`},
 		{"a busy project", shared.ServerBusy(time.Second), http.StatusServiceUnavailable, busy},
 		{"a failure", errGone, http.StatusInternalServerError,
 			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
