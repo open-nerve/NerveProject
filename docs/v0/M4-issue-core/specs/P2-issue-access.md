@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M4/P2 `issue-access` |
 | 日期 | 2026-10-19；修订 2026-10-20（预检） |
-| 状态 | 已裁定：第 3 节第 1–19 条由控制者照建议裁定（2026-10-19；第 3、8、10、14 条带条件，各条写明）；预检（2026-10-20）的发现 M1、L1–L12 按控制者的裁定改进本 spec、plan 和设计（附录 A.2 的"预检之后的修改"）。原型、清扫和逐 Task 复现见附录 A。设计 12 节 P2 的十四个草稿任务在约 16 个、每个约 1,500 行以内重新切成 14 个 Task（第 3 节第 1 条），没有超出，没有停下 |
+| 状态 | 已完成（[评审记录](../reviews/P2-issue-access-review.md)）：第 3 节第 1–19 条由控制者照建议裁定（2026-10-19；第 3、8、10、14 条带条件，各条写明）；预检（2026-10-20；High 0、Medium 1、Low 12）的发现 M1、L1–L12 由修订一轮（`dfe4c257`，附录 A.2 的"预检之后的修改"）改入本 spec、plan 和设计；14 个 Task 逐个实现、逐个评审（2026-10-20）；整分支评审（Critical 0、Important 0、Minor 2）之后的修复轮（`b57ae344`、`8c42351b`）和范围复审的 N1（评审记录的提交）按评审记录第 4 节改入本 spec 和设计。原型、清扫和逐 Task 复现见附录 A。设计 12 节 P2 的十四个草稿任务在约 16 个、每个约 1,500 行以内重新切成 14 个 Task（第 3 节第 1 条），切分时没有超出，没有停下（执行中的修复轮让 Task 7 长到 1,630 行，评审记录第 5 节） |
 | 上级文档 | [M4 设计文档](../M4-design.md) 第 2（I1、I2、I15 的"P2"一段）、3.3（`project` 的 `Lock` 回答的字段）、3.4（访客规则、`OwnOnly`、`AllowCreator`、`guest_view_all_features`，规则表中 P2 的行）、3.5（取锁的一步；"修改工作项""删除工作项""归档、恢复"三行；交错 5、12；约定五）、3.6（删除工作项的连带）、3.7（起止日期、按编号取）、3.8（归档、恢复、已归档只读）、3.13（动态的第 8、9、14、16 行）、3.23 与 4.17（P2 的行）、5.1–5.3（`deleteIssue`、`getIssueByIdentifier`、`archiveIssue`、`unarchiveIssue`，三个模式的日期）、6.1（`bodyshape`、`shared.Date`）、6.5、6.7、9.1–9.3（P2 的部分）、12（P2 与约束 1–8）、13.1 节 |
 | 前置交接 | [P1a spec](P1a-issues.md) 第 5 节和 [P1a 评审](../reviews/P1a-issues-review.md)第 6 节的 P2 一行；[P1b spec](P1b-issue-update.md) 第 5 节的 P2 一行和收尾一行的最后一句；[P1b 评审](../reviews/P1b-issue-update-review.md)第 6 节；[M1-P3 交接](../handoffs/M1-P3-trim-platform.md)的地址一项；[M2 收尾交接](../handoffs/M2-closeout.md)第 3、4 节；[M3 收尾交接](../handoffs/M3-closeout.md)第 2、3、4 节。落点见第 3 节第 20 条、第 7 节 |
 | 计划 | [P2 plan](../plans/P2-issue-access.md) |
