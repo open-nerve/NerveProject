@@ -159,6 +159,7 @@ sys.exit(1 if broken else 0)
 | `web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`（修改） | `issue.not_archivable`（Task 7）；`issue.archived`、`project.state_in_use` 的补救（Task 8） | 7、8 |
 | `server/internal/modules/issue/adapter/http/update_test.go`（修改） | `issue.archived` 的拒绝（Task 8）；修改的日期、体的形状（Task 11） | 8、11 |
 | `server/internal/modules/project/domain/errors.go`、`server/internal/modules/project/adapter/http/state_writes_test.go`（修改） | `project.state_in_use` 的补救 | 8 |
+| `server/internal/bootstrap/issue_cascade_test.go`（修改） | `deleteLabel` 的组合测试：已归档的工作项的标签行照样删除 | 8 |
 | `server/internal/shared/date.go`、`server/internal/shared/date_test.go`（新） | `shared.Date` | 9 |
 | `server/internal/platform/httpserver/bodyshape/bodyshape.go`（修改） | `FormatDate`、`checkDate`、开放节点的数，路径的代码移出（Task 9）；`checkDate` 的说明（Task 11） | 9、11 |
 | `server/internal/platform/httpserver/bodyshape/paths.go`、`server/internal/platform/httpserver/bodyshape/paths_test.go`（新） | `problems` 和路径；`comparePaths` | 9 |
@@ -7696,11 +7697,11 @@ Expected: 通过。
 ### Task 8: 已归档的工作项只读；`state_in_use` 的补救
 
 **Files:**
-- Modify: `api/modules/issue.yaml`、`api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_issue_updates_test.go`、`server/internal/modules/issue/adapter/http/update_test.go`、`server/internal/modules/issue/app/delete_issue_test.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/app/update_issue_test.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/project/adapter/http/state_writes_test.go`、`server/internal/modules/project/domain/errors.go`、`web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`
+- Modify: `api/modules/issue.yaml`、`api/modules/project.yaml`、`server/internal/bootstrap/issue_cascade_test.go`、`server/internal/bootstrap/permission_matrix_issue_updates_test.go`、`server/internal/modules/issue/adapter/http/update_test.go`、`server/internal/modules/issue/app/delete_issue_test.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/app/update_issue_test.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/project/adapter/http/state_writes_test.go`、`server/internal/modules/project/domain/errors.go`、`web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`
 - Generate: `api/dist/openapi.yaml`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.9、第 3 节第 5、9 条；M4 设计 3.5、3.8）
-- `issue/domain/errors.go`：`ErrIssueArchived`（409 `issue.archived`）。
+- `issue/domain/errors.go`：`ErrIssueArchived`（409 `issue.archived`：已归档的工作项的修改，什么都不改的也是）。
 - `issue/app/update_issue.go`：锁下的次序：项目已归档 409 → 工作项已归档 409 `issue.archived`（什么都不改的修改也是）→ `ChangesOf`；说明照改。
 - 契约：`updateIssue` 的描述和 `x-problem-codes` 加 `issue.archived`；`api/modules/project.yaml` 的 `deleteState` 的描述加上补救。
 - `project/domain/errors.go`：`ErrStateInUse` 的说明和文字加上补救（"unarchive the archived ones and move them all to another state first"）。
@@ -7710,7 +7711,7 @@ Expected: 通过。
 **Tests:**
 - 单元：`TestUpdateIssueRefusesUnderTheLock`（已归档的项目里已归档的工作项答项目的 409；已归档的工作项，什么都不改的也 409 `issue.archived`，在读它要移进的状态之前）；`TestDeleteIssueDeletesTheWorkItemAndItsRows` 也删除已归档的工作项（同样的调用和删除：已归档的工作项照样删除）。
 - HTTP：`TestUpdateIssueRefusals`（`issue.archived`）；`project` 的 `TestDeleteState`（`stateInUseJSON` 带补救）。
-- 组合：`TestPermissionMatrix` 的 `updateIssue`、`deleteIssue` 各两行。
+- 组合：`TestPermissionMatrix` 的 `updateIssue`、`deleteIssue` 各两行；`TestDeletingALabelTakesItOffTheWorkItems`（alice 删除 Bug 之前，带 Bug 的工作项已归档：它的标签行照样删除）。
 
 - [ ] **Step 1: 契约，生成**
 
@@ -7915,8 +7916,8 @@ Expected: 与上表相同。
 ````
 ````new server/internal/modules/issue/domain/errors.go
 	ErrIssueNotFound = shared.NewError(shared.KindNotFound, "issue.not_found", "The work item does not exist, or you cannot see it.")
-	// ErrIssueArchived answers a write on an archived work item, but its
-	// unarchiving and its deletion (M4 design 3.8).
+	// ErrIssueArchived answers a change of an archived work item, even one
+	// that changes nothing (M4 design 3.8).
 	ErrIssueArchived = shared.NewError(shared.KindConflict, "issue.archived", "The work item is archived; unarchive it to change it.")
 ````
 
@@ -7947,7 +7948,31 @@ Expected: 与上表相同。
 			"another state first.")
 ````
 
-- [ ] **Step 3: 文案和矩阵**
+- [ ] **Step 3: 文案、矩阵和删除标签的组合测试**
+
+`server/internal/bootstrap/issue_cascade_test.go`（修改，2 处）：
+
+````old server/internal/bootstrap/issue_cascade_test.go
+// labelled UI. Once alice deletes Bug, the rows that put Bug and UI on
+// them are deleted at Bug's moment, by her; Feature's row is kept.
+````
+````new server/internal/bootstrap/issue_cascade_test.go
+// labelled UI; the first is archived. Once alice deletes Bug, the rows
+// that put Bug and UI on them are deleted at Bug's moment, by her, the
+// archived work item's too: deleting a label is a write on the project,
+// not on a work item. Feature's row is kept.
+````
+````old server/internal/bootstrap/issue_cascade_test.go
+		w.send(t, "bob", http.MethodPost, web+"/issues", `{"name":"Fix","label_ids":[`+strings.Join(quoted, ",")+`]}`, http.StatusCreated)
+````
+````new server/internal/bootstrap/issue_cascade_test.go
+		w.send(t, "bob", http.MethodPost, web+"/issues", `{"name":"Fix","label_ids":[`+strings.Join(quoted, ",")+`]}`, http.StatusCreated)
+	}
+	tag, err := w.pool.Exec(pgtest.Soon(t), `UPDATE issues SET archived_at = now()
+		WHERE id = (SELECT issue_id FROM issue_labels WHERE label_id = $1)`, w.bug)
+	if err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("archiving the work item labelled Bug: %v, %d rows", err, tag.RowsAffected())
+````
 
 `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（修改，3 处）：
 
@@ -8056,7 +8081,7 @@ Expected: 通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add api/modules/issue.yaml api/modules/project.yaml server/internal/bootstrap/permission_matrix_issue_updates_test.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/app/delete_issue_test.go server/internal/modules/issue/app/update_issue.go server/internal/modules/issue/app/update_issue_test.go server/internal/modules/issue/domain/errors.go server/internal/modules/project/adapter/http/state_writes_test.go server/internal/modules/project/domain/errors.go web/apps/web/core/lib/error-messages.ts web/packages/i18n/src/locales/en/errors.json web/packages/i18n/src/locales/zh-CN/errors.json api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml api/modules/project.yaml server/internal/bootstrap/issue_cascade_test.go server/internal/bootstrap/permission_matrix_issue_updates_test.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/app/delete_issue_test.go server/internal/modules/issue/app/update_issue.go server/internal/modules/issue/app/update_issue_test.go server/internal/modules/issue/domain/errors.go server/internal/modules/project/adapter/http/state_writes_test.go server/internal/modules/project/domain/errors.go web/apps/web/core/lib/error-messages.ts web/packages/i18n/src/locales/en/errors.json web/packages/i18n/src/locales/zh-CN/errors.json api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P2): an archived work item is read-only, and state_in_use says what to do
@@ -8086,6 +8111,7 @@ Expected: 通过。
 | `T8.6` | 契约不声明 `updateIssue` 答 `issue.archived` | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`） | 单元；组合 |
 | `T8.7` | `project.state_in_use` 不再说怎样才能删除状态 | `internal/modules/project/adapter/http` 的全部测试（`make test`） | 单元 |
 | `T8.8` | 已归档的工作项不能删除：`deleteIssue` 在已归档的项目的 409 之后答 409 `issue.archived` | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `deleteIssue` 各格（`make test`） | 单元；组合 |
+| `T8.9` | 删除标签只从没归档的工作项上摘下它：已归档的工作项留着已删除的标签 | `internal/bootstrap` 的 `TestDeletingALabelTakesItOffTheWorkItems`（`make test`） | 组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T7.21`（列在各自的 Task 的表里，标"（Task 8 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=8`）。
 
