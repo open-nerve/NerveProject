@@ -55,3 +55,33 @@ export async function updateIssue(api: Api, token: string, issueId: string, body
   }
   return updated.issue;
 }
+
+/**
+ * The answer of POST /api/v0/issues/{issue_id}/archive by the caller of token: its status, the work item, or the
+ * problem's code.
+ */
+export async function issueArchived(api: Api, token: string, issueId: string) {
+  const { data, error, response } = await api.POST("/api/v0/issues/{issue_id}/archive", {
+    params: { path: { issue_id: issueId } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, issue: data } : answer(response, error);
+}
+
+/** The answer of POST /api/v0/issues/{issue_id}/unarchive by the caller of token, as issueArchived's. */
+export async function issueUnarchived(api: Api, token: string, issueId: string) {
+  const { data, error, response } = await api.POST("/api/v0/issues/{issue_id}/unarchive", {
+    params: { path: { issue_id: issueId } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, issue: data } : answer(response, error);
+}
+
+/** The answer of DELETE /api/v0/issues/{issue_id} by the caller of token: its status, or the problem's code. */
+export async function issueDeleted(api: Api, token: string, issueId: string) {
+  const { error, response } = await api.DELETE("/api/v0/issues/{issue_id}", {
+    params: { path: { issue_id: issueId } },
+    headers: bearer(token),
+  });
+  return answer(response, error);
+}
