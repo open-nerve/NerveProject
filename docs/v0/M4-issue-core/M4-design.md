@@ -204,7 +204,7 @@ M4 是 v0 中最大的一个领域：工作项和它下面的一切（父子、�
   - **按项目角色算，不看工作区角色**（对抗性评审 M4）：工作区管理员在一个项目里只是访客时，`access/domain/decide.go:76-87` 让他通过这个项目的每条规则（`ProjectAdmin`），而他的项目角色是 5，`OwnOnly` 仍为真。两者同时成立时 404 在先：别人建的工作项对他是"看不到"（404），他自己建的照管理员的规则可以写。Plane 的列表同样按项目角色过滤。9.2 的矩阵为他单列一列。
 - **规则表的扩展**（`access/domain/rules.go`）：`Rule` 加 `AllowCreator bool`。项目级的规则带它时，角色不在集合里的调用者，若 `actor == Target.CreatorID`，并且他是项目的**有效成员、项目角色不低于成员**，也允许。
   - Plane 的 `creator=True` 只看工作区成员关系、不看项目成员关系（`API/app/permissions/base.py:24-38`），已离开项目的创建者仍能读、改、删"他的"工作项。Nerve 要求创建者仍是项目的有效成员（看不到项目的人 404，与别人相同）。
-  - "不低于成员"：项目访客创建的工作项，他不能删（Plane 的页面只给项目管理员和成员显示删除，`WEB/components/issues/issue-layouts/quick-action-dropdowns/project-issue.tsx:60-69`，删除框再要求是创建者或项目管理员，`delete-issue-modal.tsx:54-82`）。登记差异。
+  - "不低于成员"：项目访客创建的工作项，他不能凭 `AllowCreator` 删（在项目里是访客的工作区管理员照管理员的规则删他自己建的；Plane 的页面只给项目管理员和成员显示删除，`WEB/components/issues/issue-layouts/quick-action-dropdowns/project-issue.tsx:60-69`，删除框再要求是创建者或项目管理员，`delete-issue-modal.tsx:54-82`）。登记差异。
   - 今天只有 `issue.delete` 带 `AllowCreator`（规则 `{LevelProject, [Admin], AllowCreator}`），效果是"项目管理员，或建了它的项目成员"。
 - **`ProjectFacts` 多读一列**：`access` 读项目事实的端口（`project/adapter/postgres/queries/access.sql:1-8`）加读 `guest_view_all_features`，判定时算出 `OwnOnly`。
 - **一条访客规则，用在每个地方**：访客（`OwnOnly`）只看到自己创建的工作项；看不到的工作项和挂在它下面的一切（评论、链接、关联、子工作项、动态、表情、描述的历史）都是 404。Plane 只在约 6 处执行这条规则，别处泄露（R2 第 0.8 节：动态和评论列表、子工作项、关联、链接、表情、全局搜索、个人主页都不检查），Nerve 处处执行。
@@ -1133,25 +1133,25 @@ issue_comments
 | `GET /api/v0/workspaces/{slug}/issues/{identifier}` | `getIssueByIdentifier` | — | 200 `IssueDetail` | 404 `workspace.not_found`；404 `issue.not_found`；403 F |
 | `POST /api/v0/issues/{issue_id}/archive` | `archiveIssue` | — | 200 `IssueDetail` | 404；403 F；409 `issue.not_archivable`；409 PA |
 | `POST /api/v0/issues/{issue_id}/unarchive` | `unarchiveIssue` | — | 200 `IssueDetail` | 404；403 F；409 PA |
-| `GET /api/v0/issues/{issue_id}/sub-issues` | `listSubIssues` | — | 200 `IssueCollection` | 404 |
+| `GET /api/v0/issues/{issue_id}/sub-issues` | `listSubIssues` | — | 200 `IssueCollection` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/sub-issues` | `addSubIssues` | `SubIssuesAdd {sub_issue_ids}`（1–100） | 200 `IssueCollection` | 404；403 F；422 V（`sub_issue_ids[i]`）；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/relations` | `listIssueRelations` | — | 200 `IssueRelationCollection` | 404 |
+| `GET /api/v0/issues/{issue_id}/relations` | `listIssueRelations` | — | 200 `IssueRelationCollection` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/relations` | `createIssueRelations` | `IssueRelationsCreate {relation_type, issue_ids}`（1–20） | 201 `IssueRelationCollection` | 404；403 F；422 V（`issue_ids[i]` 的 `not_allowed`、`duplicate`）；409 IA；409 PA |
 | `DELETE /api/v0/issue-relations/{relation_id}` | `deleteIssueRelation` | — | 204 | 404 `issue.relation_not_found`；403 F；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/links` | `listIssueLinks` | — | 200 `IssueLinkCollection` | 404 |
+| `GET /api/v0/issues/{issue_id}/links` | `listIssueLinks` | — | 200 `IssueLinkCollection` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/links` | `createIssueLink` | `IssueLinkCreate {url, title?}` | 201 `IssueLink` | 404；403 F；422 V；409 `issue.link_exists`；409 IA；409 PA |
 | `PATCH /api/v0/issue-links/{link_id}` | `updateIssueLink` | `IssueLinkUpdate {url?, title?}` | 200 `IssueLink` | 404 `issue.link_not_found`；403 F；422 V；409 `issue.link_exists`；409 IA；409 PA |
 | `DELETE /api/v0/issue-links/{link_id}` | `deleteIssueLink` | — | 204 | 404 `issue.link_not_found`；403 F；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/comments` | `listIssueComments` | 查询：`limit`、`cursor` | 200 `IssueCommentPage` | 404 |
+| `GET /api/v0/issues/{issue_id}/comments` | `listIssueComments` | 查询：`limit`、`cursor` | 200 `IssueCommentPage` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/comments` | `createIssueComment` | `IssueCommentCreate {comment_html}` | 201 `IssueComment` | 404；403 F；422 V；409 IA；409 PA |
 | `PATCH /api/v0/issue-comments/{comment_id}` | `updateIssueComment` | `IssueCommentUpdate {comment_html}` | 200 `IssueComment` | 404 `issue.comment_not_found`；403 F；403 `issue.not_author`；422 V；409 IA；409 PA |
 | `DELETE /api/v0/issue-comments/{comment_id}` | `deleteIssueComment` | — | 204 | 404 `issue.comment_not_found`；403 F；403 `issue.not_author`；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/reactions` | `listIssueReactions` | — | 200 `IssueReactionCollection` | 404 |
+| `GET /api/v0/issues/{issue_id}/reactions` | `listIssueReactions` | — | 200 `IssueReactionCollection` | 404；403 F |
 | `POST /api/v0/issues/{issue_id}/reactions` | `addIssueReaction` | `ReactionCreate {reaction}` | 201 `IssueReaction` | 404；403 F；422 V；409 `issue.reaction_exists`；409 IA；409 PA |
 | `DELETE /api/v0/issues/{issue_id}/reactions/{reaction}` | `removeIssueReaction` | — | 204 | 404；404 `issue.reaction_not_found`；403 F；409 IA；409 PA |
 | `POST /api/v0/issue-comments/{comment_id}/reactions` | `addCommentReaction` | `ReactionCreate {reaction}` | 201 `CommentReaction` | 404 `issue.comment_not_found`；403 F；422 V；409 `issue.reaction_exists`；409 IA；409 PA |
 | `DELETE /api/v0/issue-comments/{comment_id}/reactions/{reaction}` | `removeCommentReaction` | — | 204 | 404 `issue.comment_not_found`；404 `issue.reaction_not_found`；403 F；409 IA；409 PA |
-| `GET /api/v0/issues/{issue_id}/activities` | `listIssueActivities` | 查询：`limit`、`cursor` | 200 `IssueActivityPage` | 404 |
+| `GET /api/v0/issues/{issue_id}/activities` | `listIssueActivities` | 查询：`limit`、`cursor` | 200 `IssueActivityPage` | 404；403 F |
 | `GET /api/v0/issues/{issue_id}/description-versions` | `listDescriptionVersions` | 查询：`limit`、`cursor` | 200 `DescriptionVersionPage` | 404；403 F |
 | `GET /api/v0/issue-description-versions/{version_id}` | `getDescriptionVersion` | — | 200 `DescriptionVersionDetail` | 404 `issue.description_version_not_found`；403 F |
 | `GET /api/v0/workspaces/{slug}/drafts` | `listDrafts` | 查询：`limit`、`cursor` | 200 `DraftPage` | 404 `workspace.not_found`；403 F |
@@ -2065,7 +2065,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   13. 交错 6、7 的创建一支。
   14. 端到端：`e2e/fixtures/issues.ts` 的建工作项、`assert/issue.ts`、`furnish.ts` 的 `furnishIssueRows`（五张表）和 M3 的 P4、W2、W3 调它，`workspaceTables` 从目录读出，过渡结束；I1 的接口版本（本 Phase 的断言）。
   15. 3.23 中 P1a 的行；review。
-- **关闭**（13.1）：M1-P2 交接的接口字段一项（没有 `estimate_point`、`description_binary`、`/issue-dates/`）；M1-P3 交接的接口字段一项（没有 `is_epic`、`type_id`，没有批量的接口）；M3 交接第 2 节的预检一项（凡拒绝的写不取锁）；M3 交接第 4 节（删除状态、标签的去向，默认负责人的契约，`identifier`、`default_assignee_id`、`State.default` 的说明，`workspaceTables`、`furnishIssueRows`）。
+- **关闭**（13.1）：M1-P2 交接的接口字段一项（没有 `estimate_point`、`description_binary`、`/issue-dates/`）；M1-P3 交接的接口字段一项（没有 `is_epic`、`type_id`，没有批量的接口）；M3 交接第 2 节的预检一项（凡拒绝的写不取锁）和约定五的逐个核对（P1a 的批量写：创建插入的负责人、标签、关注，删除项目、工作区的连带的分批语句，删除工作区按 `id` 锁它的项目，删除标签的 `DetachLabel`）；M3 交接第 4 节（删除状态、标签的去向，默认负责人的契约，`identifier`、`default_assignee_id`、`State.default` 的说明，`workspaceTables`、`furnishIssueRows`）。
 - **完成线**：I1 的接口版本（工作项的行、编号、默认状态和默认负责人、负责人、标签、关注、创建和负责人的动态、各种拒绝）通过；M3 的 P4、W2、W3 带着工作项一侧的行通过，没有留下端到端的过渡；交错 1、2、3、8、21、22 和交错 4–7 的创建一支 `-count=5 -race` 通过，没有 40P01；看不到项目、不能写的写不取锁；本 Phase 的矩阵格子通过；删除在用的状态 409，删除标签从工作项上摘下。
 
 ### P1b `issue-update`：工作项的取、改与写闸门（后端，12 个任务）
@@ -2105,7 +2105,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
   12. 整程序测试（含日期的格式）；`apitest` 两个方向。
   13. 端到端：I15 的接口版本（本 Phase 的断言）；I1、I2 加上起止日期和合并之后的日期 422；I2 加上已归档 409。访客取别人的工作项的 404 在本 Phase 只由矩阵（Go）核对，端到端的那一格随 I20 的接口版本在 P5（聚焦复核 M5）。
   14. 3.23 中 P2 的行（含 M2 设计 3.11）；review。
-- **关闭**：M1-P3 交接的地址一项的一半（按编号取统一到 `/workspaces/{slug}/issues/{identifier}`）；M2 交接第 3 节的一部分（P2 的用例）、第 4 节（路径的排序、数的范围、`date`、代价测试；map 型、递归的结构写明"没有用到"）；M3 交接第 3 节（`AllowCreator`、`guest_view_all_features`、矩阵、码；个人主页的一行在 P5）、第 4 节的 `expectIssueDeleted` 和 `guest_view_all_features` 的说明。
+- **关闭**：M1-P3 交接的地址一项的一半（按编号取统一到 `/workspaces/{slug}/issues/{identifier}`）；M2 交接第 3 节的一部分（P2 的用例）、第 4 节（路径的排序、数的范围、`date`、代价测试；map 型、递归的结构写明"没有用到"）；M3 交接第 2 节中约定五的逐个核对（P2 的批量写：删除工作项的五条语句，归档、恢复的 `SetArchivedAt`）、第 3 节（`AllowCreator`、`guest_view_all_features`、矩阵、码；个人主页的一行在 P5）、第 4 节的 `expectIssueDeleted` 和 `guest_view_all_features` 的说明。
 - **完成线**：I15 的接口版本（归档、恢复、两条动态、`issue.not_archivable`、改字段 409、访客 403）、I1 和 I2 的起止日期（含合并之后的日期 422）、I2 的已归档 409 通过；判定表、矩阵、完整性测试、`bodyshape` 的测试通过。
 
 ### P3 `issue-hierarchy`：父子与关联（后端，11 个任务）
