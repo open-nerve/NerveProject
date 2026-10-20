@@ -17,13 +17,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The interleavings of a work item's creation and of its change (M4 design
-// 3.5, 9.3), on issueWorld's real database: each write through its
-// module's route, as bootstrap wires it. The first write's transaction is
-// held open past its writes (heldTx); the second is sent once it is held,
-// and the gate opens once the second waits for Web's row of projects,
-// which each of the two takes FOR NO KEY UPDATE (M4 design 3.5, M3 design
-// 3.6). Every wait has a deadline.
+// The interleavings of a work item's writes (M4 design 3.5, 9.3), on
+// issueWorld's real database: each write through its module's route, as
+// bootstrap wires it. The first write's transaction is held open past its
+// writes (heldTx); the second is sent once it is held, and the gate opens
+// once the second waits for Web's row of projects, which each of the two
+// takes FOR NO KEY UPDATE (M4 design 3.5, M3 design 3.6). Every wait has a
+// deadline.
 
 // heldTx holds the one transaction its write runs open past its writes:
 // once fn has done them, before the commit, it waits at its gate. A second

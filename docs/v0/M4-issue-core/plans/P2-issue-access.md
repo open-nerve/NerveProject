@@ -11470,8 +11470,26 @@ func TestDeletingAWorkItemAndChangingItSerialize(t *testing.T) {
 
 ````
 
-`server/internal/bootstrap/issue_interleaving_test.go`（修改，6 处）：
+`server/internal/bootstrap/issue_interleaving_test.go`（修改，7 处）：
 
+````old server/internal/bootstrap/issue_interleaving_test.go
+// The interleavings of a work item's creation and of its change (M4 design
+// 3.5, 9.3), on issueWorld's real database: each write through its
+// module's route, as bootstrap wires it. The first write's transaction is
+// held open past its writes (heldTx); the second is sent once it is held,
+// and the gate opens once the second waits for Web's row of projects,
+// which each of the two takes FOR NO KEY UPDATE (M4 design 3.5, M3 design
+// 3.6). Every wait has a deadline.
+````
+````new server/internal/bootstrap/issue_interleaving_test.go
+// The interleavings of a work item's writes (M4 design 3.5, 9.3), on
+// issueWorld's real database: each write through its module's route, as
+// bootstrap wires it. The first write's transaction is held open past its
+// writes (heldTx); the second is sent once it is held, and the gate opens
+// once the second waits for Web's row of projects, which each of the two
+// takes FOR NO KEY UPDATE (M4 design 3.5, M3 design 3.6). Every wait has a
+// deadline.
+````
 ````old server/internal/bootstrap/issue_interleaving_test.go
 // creation and as a change alike (M4 design 3.5: P1a's creation branch,
 // P1b's change branch): prepare writes what it needs first, nil for
