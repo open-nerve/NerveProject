@@ -115,17 +115,18 @@ func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 	}))
 }
 
-// A patch that changes nothing, given empty or with each field as it is,
-// its sets in another order: the precheck, the lock and the decisions run
-// as for any update; nothing is written, not even the clock read, and the
-// answer is the work item as read under the lock, its last writer and
-// moment as they were.
+// A patch that changes nothing, given empty or with each field as it is:
+// its sets in another order, its start and target dates given as the work
+// item has them, none. The precheck, the lock and the decisions run as for
+// any update; nothing is written, not even the clock read, and the answer
+// is the work item as read under the lock, its last writer and moment as
+// they were.
 func TestUpdateIssueThatChangesNothingWritesNothing(t *testing.T) {
 	high := domain.PriorityHigh
 	for what, p := range map[string]domain.IssuePatch{
 		"nothing given": {},
 		"each field as it is": {Name: name(" Fix"), StateID: &backlog.ID, Priority: &high, AssigneeIDs: set(out, bob),
-			LabelIDs: set(bug)},
+			LabelIDs: set(bug), SetStartDate: true, SetTargetDate: true},
 	} {
 		t.Run(what, func(t *testing.T) {
 			uc, w, id := newUpdate()
@@ -225,12 +226,13 @@ func TestUpdateIssueRefusesBeforeAnyLock(t *testing.T) {
 // allowed forbidden; an archived project refuses the update, one that
 // changes nothing too (409 project.archived), its archived work items too;
 // then an archived work item refuses it, one that changes nothing too,
-// before the state it moves into is read (409 issue.archived). Then the
-// dependent rows the update adds: a state not the project's, or its triage
-// state; an account added who is its guest; a label added that is not its:
-// every problem in one 422, each at its place in the patch (the label
-// second in label_ids, though first among the labels added). out, kept, is
-// not checked, though no member of web.
+// before the state it moves into is read, and before the order of the
+// dates it gives is checked (409 issue.archived). Then the dependent rows
+// the update adds: a state not the project's, or its triage state; an
+// account added who is its guest; a label added that is not its: every
+// problem in one 422, each at its place in the patch (the label second in
+// label_ids, though first among the labels added). out, kept, is not
+// checked, though no member of web.
 func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 	other := uuid.NewV7() // after every id of the world
 	notAllowed := func(field, message string) shared.FieldError {
@@ -259,6 +261,9 @@ func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 		{"an archived work item", func(w *world) { w.issues.archivedAt = &earlier }, domain.IssuePatch{}, domain.ErrIssueArchived, locked},
 		{"an archived work item moved into Done", func(w *world) { w.issues.archivedAt = &earlier }, domain.IssuePatch{StateID: &done.ID},
 			domain.ErrIssueArchived, locked},
+		{"an archived work item given dates out of order", func(w *world) { w.issues.archivedAt = &earlier },
+			domain.IssuePatch{SetStartDate: true, StartDate: october(20), SetTargetDate: true, TargetDate: october(19)}, domain.ErrIssueArchived,
+			locked},
 		{"the triage state, a guest added, a label not the project's", func(*world) {},
 			domain.IssuePatch{StateID: &triage.ID, AssigneeIDs: set(gus, bob, out, carol), LabelIDs: set(bug, other)},
 			shared.Invalid(stateNotAllowed, notAllowed("assignee_ids[0]", "must be an active member of the project who is not its guest"),

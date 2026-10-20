@@ -18,9 +18,12 @@ import (
 // its target date: each written, each date changed a row of his activity
 // (rows 8, 9). Then he gives it the dates it has, which changes nothing
 // and writes no row. Each answer shows the dates as the database has them.
-// A creation with its start date after its target date, the 1st of
-// November and the 19th of October, is refused (422 at target_date) and
-// takes no number; one with both on one day is made, with the next number.
+// Once alice has moved it into Done and archived it, bob's target date
+// before its start date is refused (409 issue.archived) before the order
+// of its dates is checked, and nothing is written. A creation with its
+// start date after its target date, the 1st of November and the 19th of
+// October, is refused (422 at target_date) and takes no number; one with
+// both on one day is made, with the next number.
 func TestDatesAreKeptInOrder(t *testing.T) {
 	w := newIssueWorld(t)
 	item := w.newWorkItemIn(t, w.web, `{"name":"Fix","start_date":"2026-10-12","target_date":"2026-10-19"}`)
@@ -53,6 +56,20 @@ func TestDatesAreKeptInOrder(t *testing.T) {
 			t.Errorf("after PATCH %s the work item was changed last by %s at %v, before it by %s at %v; want it written: %v", step.body, who,
 				at, by, changed, step.writes)
 		}
+	}
+	w.send(t, "alice", http.MethodPatch, path, `{"state_id":"`+w.done.String()+`"}`, http.StatusOK)
+	w.send(t, "alice", http.MethodPost, path+"/archive", "", http.StatusOK)
+	_, archived, by := archivalOf(t, w, item)
+	refused := w.send(t, "bob", http.MethodPatch, path, `{"target_date":"2026-10-11"}`, http.StatusConflict)
+	if got := refusalOf(t, []byte(refused), true); got != "issue.archived" {
+		t.Errorf("PATCH of the archived work item answers %s, want issue.archived", got)
+	}
+	if got := w.datesOf(t, item); got != "2026-10-20 none" {
+		t.Errorf("after PATCH of the archived work item the dates are %s, want 2026-10-20 none", got)
+	}
+	if _, at, who := archivalOf(t, w, item); !at.Equal(archived) || who != by {
+		t.Errorf("after PATCH of the archived work item it was changed last by %s at %v; want it as archived, by %s at %v", who, at, by,
+			archived)
 	}
 	if said, want := w.activityBy(t, item, w.ids["bob"]), []string{"start_date: 2026-10-12 → 2026-10-20",
 		"target_date: 2026-10-19 → 2026-10-25", "target_date: 2026-10-25 → "}; !slices.Equal(said, want) {

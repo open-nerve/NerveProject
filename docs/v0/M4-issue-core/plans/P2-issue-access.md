@@ -126,7 +126,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（修改） | 修改的访客格子（Task 2）；换到工作项表（Task 3）；`deleteIssue`（Task 4）；`answered` 的说明：最后修改者由 `change` 另说，归档的矩阵用它（Task 7）；已归档的工作项（Task 8）；日期（Task 11） | 2、3、4、7、8、11 |
 | `server/internal/modules/issue/app/delete_issue.go`（新） | `IssueDeletion`、`IssueRowsDeleter`、`issueRowSteps`、`DeleteIssue` | 4 |
 | `server/internal/modules/issue/app/delete_issue_test.go`（新） | `DeleteIssue` 的单元测试（Task 4）；也删除已归档的工作项（Task 8） | 4、8 |
-| `server/internal/modules/issue/app/update_issue_test.go`（修改） | `lockedAs`：锁下判定之前的调用，删除共用（Task 4）；已归档的拒绝（Task 8） | 4、8 |
+| `server/internal/modules/issue/app/update_issue_test.go`（修改） | `lockedAs`：锁下判定之前的调用，删除共用（Task 4）；已归档的拒绝（Task 8）；已归档先于日期的次序，什么都不改的修改给出原样的日期（Task 11） | 4、8、11 |
 | `server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql`、`server/internal/modules/issue/adapter/postgres/delete_issue.go`、`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`（新） | 删除工作项的五条语句和存储测试 | 4 |
 | `server/internal/modules/issue/adapter/http/handler.go`（修改） | `DeleteIssueUseCase`（Task 4）；`GetIssueByIdentifierUseCase`（Task 5）；`ArchiveIssueUseCase`（Task 7） | 4、5、7 |
 | `server/internal/modules/issue/adapter/http/issues.go`（修改） | `DeleteIssue`（Task 4）；`GetIssueByIdentifier`（Task 6）；`ArchiveIssue`、`UnarchiveIssue`（Task 7）；日期、`given`（Task 11） | 4、6、7、11 |
@@ -10419,7 +10419,7 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_dates_test.go`、`server/internal/modules/issue/adapter/http/dates_test.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_updates_test.go`、`server/internal/bootstrap/permission_matrix_issue_updates_test.go`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/adapter/http/update_test.go`、`server/internal/platform/httpserver/bodyshape/bodyshape.go`
+- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_updates_test.go`、`server/internal/bootstrap/permission_matrix_issue_updates_test.go`、`server/internal/bootstrap/permission_matrix_issues_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/adapter/http/update_test.go`、`server/internal/modules/issue/app/update_issue_test.go`、`server/internal/platform/httpserver/bodyshape/bodyshape.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.12、第 3 节第 10、11 条；M4 设计 3.7、5.2、6.1）
@@ -10429,7 +10429,8 @@ Expected: 通过。
 
 **Tests:**
 - HTTP：`TestDatesPassTheBodyCheckAsTheyDecode`（`dates_test.go`，新：`bodyshape` 放过的与生成的类型解码得了的是同一组，作为创建的和修改的开始日期各发一次：2026-10-19、0001-01-01、9999-12-31、闰年的 2 月 29 日、用转义写的日期，与平年的 2 月 29 日、4 月 31 日、0 月、13 月、0000 年、少一位的月或日、两位的年、斜线、带时间、带时区、前后的空白、带符号、五位的年、全角数字、空串）；`TestCreateIssue`、`TestUpdateIssue`（日期交给用例，修改给 `null` 是清空；回答的两个日期，没有的是 `null`）；`TestCreateIssueHoldsTheBodyToItsStructure`、`TestUpdateIssueHoldsTheBodyToItsStructure`（不是日期的、带时间的 400；创建给 `null` 的日期 400）。
-- 组合：`TestDatesAreKeptInOrder`（`issue_dates_test.go`，新：alice 建 10 月 12 日到 19 日的工作项；bob 只给晚于截止的开始日期（11 月 1 日：月份晚、日子早）、只给早于开始的截止日期，各 422，在 `start_date`、`target_date`，什么都不写；两个都移过它原来的截止日期、再清空截止日期，各写一行动态；再给它已有的日期，什么都不改、不写一行；每个回答的日期与数据库的相同；开始晚于截止的创建（11 月 1 日到 10 月 19 日）422、不占编号，同一天的允许）；`TestAWorkItemReadsAsStored`（加两个日期）；`TestPermissionMatrix` 的 `createIssue`、`updateIssue` 的"每个字段都给"带日期，`updateIssue` 加"日期的次序不对"一行；`TestBodiesThatBreakTheStructureAnswer400`。
+- 用例（单元）：`TestUpdateIssueRefusesUnderTheLock` 加"已归档的工作项给次序不对的日期"一行（409 `issue.archived`，先于日期的次序；调用正是 `locked`）；`TestUpdateIssueThatChangesNothingWritesNothing` 的"每个字段原样"也给出两个日期，照工作项的（没有）。
+- 组合：`TestDatesAreKeptInOrder`（`issue_dates_test.go`，新：alice 建 10 月 12 日到 19 日的工作项；bob 只给晚于截止的开始日期（11 月 1 日：月份晚、日子早）、只给早于开始的截止日期，各 422，在 `start_date`、`target_date`，什么都不写；两个都移过它原来的截止日期、再清空截止日期，各写一行动态；再给它已有的日期，什么都不改、不写一行；alice 把它移进 Done、归档之后，bob 给早于开始日期的截止日期，409 `issue.archived`（先于日期的次序），什么都不写；每个回答的日期与数据库的相同；开始晚于截止的创建（11 月 1 日到 10 月 19 日）422、不占编号，同一天的允许）；`TestAWorkItemReadsAsStored`（加两个日期）；`TestPermissionMatrix` 的 `createIssue`、`updateIssue` 的"每个字段都给"带日期，`updateIssue` 加"日期的次序不对"一行；`TestBodiesThatBreakTheStructureAnswer400`。
 - 端到端：现有的 122 个照样通过（日期进了契约、创建和修改的映射）。
 
 - [ ] **Step 1: 契约，生成**
@@ -10629,7 +10630,7 @@ Expected: 成功：
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
 
-- [ ] **Step 2: HTTP**
+- [ ] **Step 2: HTTP 和用例的测试**
 
 `server/internal/modules/issue/adapter/http/dates_test.go`（新文件，39 行）：
 
@@ -10869,6 +10870,56 @@ func given[T any](v nullable.Nullable[T]) (bool, *T) {
 		`{"label_ids":["Bug"]}`, `{"start_date":"2026-02-30"}`, `{"target_date":"2026-10-19T00:00:00Z"}`} {
 ````
 
+`server/internal/modules/issue/app/update_issue_test.go`（修改，4 处）：
+
+````old server/internal/modules/issue/app/update_issue_test.go
+// A patch that changes nothing, given empty or with each field as it is,
+// its sets in another order: the precheck, the lock and the decisions run
+// as for any update; nothing is written, not even the clock read, and the
+// answer is the work item as read under the lock, its last writer and
+// moment as they were.
+````
+````new server/internal/modules/issue/app/update_issue_test.go
+// A patch that changes nothing, given empty or with each field as it is:
+// its sets in another order, its start and target dates given as the work
+// item has them, none. The precheck, the lock and the decisions run as for
+// any update; nothing is written, not even the clock read, and the answer
+// is the work item as read under the lock, its last writer and moment as
+// they were.
+````
+````old server/internal/modules/issue/app/update_issue_test.go
+			LabelIDs: set(bug)},
+````
+````new server/internal/modules/issue/app/update_issue_test.go
+			LabelIDs: set(bug), SetStartDate: true, SetTargetDate: true},
+````
+````old server/internal/modules/issue/app/update_issue_test.go
+// before the state it moves into is read (409 issue.archived). Then the
+// dependent rows the update adds: a state not the project's, or its triage
+// state; an account added who is its guest; a label added that is not its:
+// every problem in one 422, each at its place in the patch (the label
+// second in label_ids, though first among the labels added). out, kept, is
+// not checked, though no member of web.
+````
+````new server/internal/modules/issue/app/update_issue_test.go
+// before the state it moves into is read, and before the order of the
+// dates it gives is checked (409 issue.archived). Then the dependent rows
+// the update adds: a state not the project's, or its triage state; an
+// account added who is its guest; a label added that is not its: every
+// problem in one 422, each at its place in the patch (the label second in
+// label_ids, though first among the labels added). out, kept, is not
+// checked, though no member of web.
+````
+````old server/internal/modules/issue/app/update_issue_test.go
+			domain.ErrIssueArchived, locked},
+````
+````new server/internal/modules/issue/app/update_issue_test.go
+			domain.ErrIssueArchived, locked},
+		{"an archived work item given dates out of order", func(w *world) { w.issues.archivedAt = &earlier },
+			domain.IssuePatch{SetStartDate: true, StartDate: october(20), SetTargetDate: true, TargetDate: october(19)}, domain.ErrIssueArchived,
+			locked},
+````
+
 `server/internal/platform/httpserver/bodyshape/bodyshape.go`（修改，1 处）：
 
 ````old server/internal/platform/httpserver/bodyshape/bodyshape.go
@@ -10881,7 +10932,7 @@ func given[T any](v nullable.Nullable[T]) (bool, *T) {
 
 - [ ] **Step 3: 组合和矩阵**
 
-`server/internal/bootstrap/issue_dates_test.go`（新文件，97 行）：
+`server/internal/bootstrap/issue_dates_test.go`（新文件，114 行）：
 
 ````file server/internal/bootstrap/issue_dates_test.go
 package bootstrap
@@ -10904,9 +10955,12 @@ import (
 // its target date: each written, each date changed a row of his activity
 // (rows 8, 9). Then he gives it the dates it has, which changes nothing
 // and writes no row. Each answer shows the dates as the database has them.
-// A creation with its start date after its target date, the 1st of
-// November and the 19th of October, is refused (422 at target_date) and
-// takes no number; one with both on one day is made, with the next number.
+// Once alice has moved it into Done and archived it, bob's target date
+// before its start date is refused (409 issue.archived) before the order
+// of its dates is checked, and nothing is written. A creation with its
+// start date after its target date, the 1st of November and the 19th of
+// October, is refused (422 at target_date) and takes no number; one with
+// both on one day is made, with the next number.
 func TestDatesAreKeptInOrder(t *testing.T) {
 	w := newIssueWorld(t)
 	item := w.newWorkItemIn(t, w.web, `{"name":"Fix","start_date":"2026-10-12","target_date":"2026-10-19"}`)
@@ -10939,6 +10993,20 @@ func TestDatesAreKeptInOrder(t *testing.T) {
 			t.Errorf("after PATCH %s the work item was changed last by %s at %v, before it by %s at %v; want it written: %v", step.body, who,
 				at, by, changed, step.writes)
 		}
+	}
+	w.send(t, "alice", http.MethodPatch, path, `{"state_id":"`+w.done.String()+`"}`, http.StatusOK)
+	w.send(t, "alice", http.MethodPost, path+"/archive", "", http.StatusOK)
+	_, archived, by := archivalOf(t, w, item)
+	refused := w.send(t, "bob", http.MethodPatch, path, `{"target_date":"2026-10-11"}`, http.StatusConflict)
+	if got := refusalOf(t, []byte(refused), true); got != "issue.archived" {
+		t.Errorf("PATCH of the archived work item answers %s, want issue.archived", got)
+	}
+	if got := w.datesOf(t, item); got != "2026-10-20 none" {
+		t.Errorf("after PATCH of the archived work item the dates are %s, want 2026-10-20 none", got)
+	}
+	if _, at, who := archivalOf(t, w, item); !at.Equal(archived) || who != by {
+		t.Errorf("after PATCH of the archived work item it was changed last by %s at %v; want it as archived, by %s at %v", who, at, by,
+			archived)
 	}
 	if said, want := w.activityBy(t, item, w.ids["bob"]), []string{"start_date: 2026-10-12 → 2026-10-20",
 		"target_date: 2026-10-19 → 2026-10-25", "target_date: 2026-10-25 → "}; !slices.Equal(said, want) {
@@ -11203,7 +11271,7 @@ Expected: 122 个全部通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/bootstrap/issue_dates_test.go server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/permission_matrix_issue_updates_test.go server/internal/bootstrap/permission_matrix_issues_test.go server/internal/modules/issue/adapter/http/dates_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/adapter/http/update_test.go server/internal/platform/httpserver/bodyshape/bodyshape.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/bootstrap/issue_dates_test.go server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/permission_matrix_issue_updates_test.go server/internal/bootstrap/permission_matrix_issues_test.go server/internal/modules/issue/adapter/http/dates_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/app/update_issue_test.go server/internal/platform/httpserver/bodyshape/bodyshape.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P2): the start and target dates in the API
@@ -11231,7 +11299,8 @@ Expected: 通过。
 | `T11.2` | `POST` 丢掉请求体的截止日期 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `createIssue` 各格（`make test`）、故事 `i1-create-issue`（Task 13 起） | 单元；组合；端到端 |
 | `T11.3` | 回答把截止日期也给成开始日期 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemReadsAsStored`（`make test`）、故事 `i1-create-issue`（Task 13 起） | 单元；组合；端到端 |
 | `T11.4` | `PATCH` 丢掉请求体的开始日期 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）、故事 `i2-update-issue`（Task 13 起） | 单元；组合；端到端 |
-| `T11.5` | 什么也不改但给了日期的修改照样重写工作项（它的最后修改者和时刻），不写动态 | `internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`） | 组合 |
+| `T11.5` | 什么也不改但给了日期的修改照样重写工作项（它的最后修改者和时刻），不写动态 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`） | 单元；组合 |
+| `T11.6` | 先查日期的次序、再拒绝已归档的工作项：给已归档的工作项次序不对的日期答 422，而不是 409 `issue.archived` | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T9.2`、`T9.3`、`T9.4`、`T9.9`、`T9.10`、`T9.13`、`T10.1`、`T10.2`、`T10.3`、`T10.4`、`T10.5`、`T10.6`、`T10.7`、`T10.8`、`T10.9`、`T10.12`、`T10.13`、`T10.14`（列在各自的 Task 的表里，标"（Task 11 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=11`）。
 
