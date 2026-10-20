@@ -26,14 +26,18 @@ func TestDatesAreKeptInOrder(t *testing.T) {
 	item := w.newWorkItemIn(t, w.web, `{"name":"Fix","start_date":"2026-10-12","target_date":"2026-10-19"}`)
 	path := "/api/v0/issues/" + item.String()
 	for _, step := range []struct {
-		body, refusal, stored string // refusal "" for a change written
+		body, refusal, stored string // refusal "" for a change answered 200
+		writes                bool   // whether it writes the work item
 	}{
-		{`{"start_date":"2026-11-01"}`, "validation_failed start_date not_allowed: must not be after the target date", "2026-10-12 2026-10-19"},
-		{`{"target_date":"2026-10-11"}`, "validation_failed target_date not_allowed: must not be before the start date", "2026-10-12 2026-10-19"},
-		{`{"start_date":"2026-10-20","target_date":"2026-10-25"}`, "", "2026-10-20 2026-10-25"},
-		{`{"target_date":null}`, "", "2026-10-20 none"},
-		{`{"start_date":"2026-10-20","target_date":null}`, "", "2026-10-20 none"},
+		{`{"start_date":"2026-11-01"}`, "validation_failed start_date not_allowed: must not be after the target date", "2026-10-12 2026-10-19",
+			false},
+		{`{"target_date":"2026-10-11"}`, "validation_failed target_date not_allowed: must not be before the start date", "2026-10-12 2026-10-19",
+			false},
+		{`{"start_date":"2026-10-20","target_date":"2026-10-25"}`, "", "2026-10-20 2026-10-25", true},
+		{`{"target_date":null}`, "", "2026-10-20 none", true},
+		{`{"start_date":"2026-10-20","target_date":null}`, "", "2026-10-20 none", false},
 	} {
+		_, changed, by := archivalOf(t, w, item)
 		if step.refusal != "" {
 			answer := w.send(t, "bob", http.MethodPatch, path, step.body, http.StatusUnprocessableEntity)
 			if got := refusalOf(t, []byte(answer), true); got != step.refusal {
@@ -44,6 +48,10 @@ func TestDatesAreKeptInOrder(t *testing.T) {
 		}
 		if got := w.datesOf(t, item); got != step.stored {
 			t.Errorf("after PATCH %s the dates are %s, want %s", step.body, got, step.stored)
+		}
+		if _, at, who := archivalOf(t, w, item); (at.Equal(changed) && who == by) == step.writes {
+			t.Errorf("after PATCH %s the work item was changed last by %s at %v, before it by %s at %v; want it written: %v", step.body, who,
+				at, by, changed, step.writes)
 		}
 	}
 	if said, want := w.activityBy(t, item, w.ids["bob"]), []string{"start_date: 2026-10-12 → 2026-10-20",
@@ -83,16 +91,7 @@ func (w issueWorld) datesOf(t *testing.T, id uuid.UUID) string {
 // writes them.
 func answeredDates(t *testing.T, answer string) string {
 	t.Helper()
-	var i struct {
-		StartDate  *string `json:"start_date"`
-		TargetDate *string `json:"target_date"`
-	}
+	var i storedIssue
 	decodeAnswer(t, answer, &i)
-	dates := []string{"none", "none"}
-	for n, d := range []*string{i.StartDate, i.TargetDate} {
-		if d != nil {
-			dates[n] = *d
-		}
-	}
-	return dates[0] + " " + dates[1]
+	return i.dates()
 }

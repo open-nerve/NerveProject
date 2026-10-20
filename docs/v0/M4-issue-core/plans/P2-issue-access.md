@@ -10881,7 +10881,7 @@ func given[T any](v nullable.Nullable[T]) (bool, *T) {
 
 - [ ] **Step 3: 组合和矩阵**
 
-`server/internal/bootstrap/issue_dates_test.go`（新文件，98 行）：
+`server/internal/bootstrap/issue_dates_test.go`（新文件，97 行）：
 
 ````file server/internal/bootstrap/issue_dates_test.go
 package bootstrap
@@ -10912,14 +10912,18 @@ func TestDatesAreKeptInOrder(t *testing.T) {
 	item := w.newWorkItemIn(t, w.web, `{"name":"Fix","start_date":"2026-10-12","target_date":"2026-10-19"}`)
 	path := "/api/v0/issues/" + item.String()
 	for _, step := range []struct {
-		body, refusal, stored string // refusal "" for a change written
+		body, refusal, stored string // refusal "" for a change answered 200
+		writes                bool   // whether it writes the work item
 	}{
-		{`{"start_date":"2026-11-01"}`, "validation_failed start_date not_allowed: must not be after the target date", "2026-10-12 2026-10-19"},
-		{`{"target_date":"2026-10-11"}`, "validation_failed target_date not_allowed: must not be before the start date", "2026-10-12 2026-10-19"},
-		{`{"start_date":"2026-10-20","target_date":"2026-10-25"}`, "", "2026-10-20 2026-10-25"},
-		{`{"target_date":null}`, "", "2026-10-20 none"},
-		{`{"start_date":"2026-10-20","target_date":null}`, "", "2026-10-20 none"},
+		{`{"start_date":"2026-11-01"}`, "validation_failed start_date not_allowed: must not be after the target date", "2026-10-12 2026-10-19",
+			false},
+		{`{"target_date":"2026-10-11"}`, "validation_failed target_date not_allowed: must not be before the start date", "2026-10-12 2026-10-19",
+			false},
+		{`{"start_date":"2026-10-20","target_date":"2026-10-25"}`, "", "2026-10-20 2026-10-25", true},
+		{`{"target_date":null}`, "", "2026-10-20 none", true},
+		{`{"start_date":"2026-10-20","target_date":null}`, "", "2026-10-20 none", false},
 	} {
+		_, changed, by := archivalOf(t, w, item)
 		if step.refusal != "" {
 			answer := w.send(t, "bob", http.MethodPatch, path, step.body, http.StatusUnprocessableEntity)
 			if got := refusalOf(t, []byte(answer), true); got != step.refusal {
@@ -10930,6 +10934,10 @@ func TestDatesAreKeptInOrder(t *testing.T) {
 		}
 		if got := w.datesOf(t, item); got != step.stored {
 			t.Errorf("after PATCH %s the dates are %s, want %s", step.body, got, step.stored)
+		}
+		if _, at, who := archivalOf(t, w, item); (at.Equal(changed) && who == by) == step.writes {
+			t.Errorf("after PATCH %s the work item was changed last by %s at %v, before it by %s at %v; want it written: %v", step.body, who,
+				at, by, changed, step.writes)
 		}
 	}
 	if said, want := w.activityBy(t, item, w.ids["bob"]), []string{"start_date: 2026-10-12 → 2026-10-20",
@@ -10969,22 +10977,13 @@ func (w issueWorld) datesOf(t *testing.T, id uuid.UUID) string {
 // writes them.
 func answeredDates(t *testing.T, answer string) string {
 	t.Helper()
-	var i struct {
-		StartDate  *string `json:"start_date"`
-		TargetDate *string `json:"target_date"`
-	}
+	var i storedIssue
 	decodeAnswer(t, answer, &i)
-	dates := []string{"none", "none"}
-	for n, d := range []*string{i.StartDate, i.TargetDate} {
-		if d != nil {
-			dates[n] = *d
-		}
-	}
-	return dates[0] + " " + dates[1]
+	return i.dates()
 }
 ````
 
-`server/internal/bootstrap/issue_updates_test.go`（修改，6 处）：
+`server/internal/bootstrap/issue_updates_test.go`（修改，7 处）：
 
 ````old server/internal/bootstrap/issue_updates_test.go
 // made it and changed by him again after that, so that each field that
@@ -11035,8 +11034,9 @@ func answeredDates(t *testing.T, answer string) string {
 		stored.ParentID == nil || stored.CompletedAt == nil || stored.ArchivedAt == nil || *stored.UpdatedByID == *stored.CreatedByID ||
 		len(stored.LabelIDs) != 0 || !stored.CreatedAt.Before(*stored.CompletedAt) || !stored.CompletedAt.Before(stored.UpdatedAt) ||
 		!stored.UpdatedAt.Before(*stored.ArchivedAt) {
-		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, from one day to another, under the first, made, completed, "+
-			"changed last by bob and archived at four moments in that order, without labels", shown, stored)
+		t.Errorf("getIssue answers %+v, dated %s; want the work item as stored, %+v, dated %s, from one day to another, under the first, "+
+			"made, completed, changed last by bob and archived at four moments in that order, without labels", shown, shown.dates(), stored,
+			stored.dates())
 ````
 ````old server/internal/bootstrap/issue_updates_test.go
 	Priority    string      `json:"priority"`
@@ -11045,6 +11045,24 @@ func answeredDates(t *testing.T, answer string) string {
 	Priority    string      `json:"priority"`
 	StartDate   *string     `json:"start_date"`
 	TargetDate  *string     `json:"target_date"`
+````
+````old server/internal/bootstrap/issue_updates_test.go
+	LabelIDs    []uuid.UUID `json:"label_ids"`
+````
+````new server/internal/bootstrap/issue_updates_test.go
+	LabelIDs    []uuid.UUID `json:"label_ids"`
+}
+
+// dates are the start and the target dates of s as datesOf writes them:
+// "<start> <target>", each YYYY-MM-DD, or none.
+func (s storedIssue) dates() string {
+	dates := []string{"none", "none"}
+	for n, d := range []*string{s.StartDate, s.TargetDate} {
+		if d != nil {
+			dates[n] = *d
+		}
+	}
+	return dates[0] + " " + dates[1]
 ````
 
 `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（修改，7 处）：
@@ -11213,6 +11231,7 @@ Expected: 通过。
 | `T11.2` | `POST` 丢掉请求体的截止日期 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `createIssue` 各格（`make test`）、故事 `i1-create-issue`（Task 13 起） | 单元；组合；端到端 |
 | `T11.3` | 回答把截止日期也给成开始日期 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemReadsAsStored`（`make test`）、故事 `i1-create-issue`（Task 13 起） | 单元；组合；端到端 |
 | `T11.4` | `PATCH` 丢掉请求体的开始日期 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `updateIssue` 各格（`make test`）、故事 `i2-update-issue`（Task 13 起） | 单元；组合；端到端 |
+| `T11.5` | 什么也不改但给了日期的修改照样重写工作项（它的最后修改者和时刻），不写动态 | `internal/bootstrap` 的 `TestDatesAreKeptInOrder`（`make test`） | 组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T9.2`、`T9.3`、`T9.4`、`T9.9`、`T9.10`、`T9.13`、`T10.1`、`T10.2`、`T10.3`、`T10.4`、`T10.5`、`T10.6`、`T10.7`、`T10.8`、`T10.9`、`T10.12`、`T10.13`、`T10.14`（列在各自的 Task 的表里，标"（Task 11 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=11`）。
 

@@ -133,8 +133,9 @@ func TestAWorkItemReadsAsStored(t *testing.T) {
 		stored.ParentID == nil || stored.CompletedAt == nil || stored.ArchivedAt == nil || *stored.UpdatedByID == *stored.CreatedByID ||
 		len(stored.LabelIDs) != 0 || !stored.CreatedAt.Before(*stored.CompletedAt) || !stored.CompletedAt.Before(stored.UpdatedAt) ||
 		!stored.UpdatedAt.Before(*stored.ArchivedAt) {
-		t.Errorf("getIssue answers %+v; want the work item as stored, %+v, from one day to another, under the first, made, completed, "+
-			"changed last by bob and archived at four moments in that order, without labels", shown, stored)
+		t.Errorf("getIssue answers %+v, dated %s; want the work item as stored, %+v, dated %s, from one day to another, under the first, "+
+			"made, completed, changed last by bob and archived at four moments in that order, without labels", shown, shown.dates(), stored,
+			stored.dates())
 	}
 }
 
@@ -160,6 +161,18 @@ type storedIssue struct {
 	UpdatedAt   time.Time   `json:"updated_at"`
 	AssigneeIDs []uuid.UUID `json:"assignee_ids"`
 	LabelIDs    []uuid.UUID `json:"label_ids"`
+}
+
+// dates are the start and the target dates of s as datesOf writes them:
+// "<start> <target>", each YYYY-MM-DD, or none.
+func (s storedIssue) dates() string {
+	dates := []string{"none", "none"}
+	for n, d := range []*string{s.StartDate, s.TargetDate} {
+		if d != nil {
+			dates[n] = *d
+		}
+	}
+	return dates[0] + " " + dates[1]
 }
 
 // inUTC puts each moment of s in UTC, where an answer and the database
