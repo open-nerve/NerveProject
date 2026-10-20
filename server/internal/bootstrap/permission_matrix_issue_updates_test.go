@@ -136,9 +136,9 @@ func seededIssue(c caller, s seeded) answeredIssue {
 }
 
 // answered checks that answer, the work item c's cell changes, is the one
-// seeded (seededIssue) with change made to it, the caller its last writer,
-// and completed when completed; completedAt is not compared, but present
-// or not.
+// seeded (seededIssue) with change made to it, the caller its last writer
+// unless change says otherwise, and completed when completed; completedAt
+// is not compared, but present or not.
 func answered(t *testing.T, c caller, s seeded, answer string, completed bool, change func(i *answeredIssue)) {
 	t.Helper()
 	var got answeredIssue

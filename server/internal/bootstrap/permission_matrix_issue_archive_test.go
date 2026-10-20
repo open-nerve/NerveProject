@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -74,27 +73,22 @@ func inDone(archived bool) func(t *testing.T, c caller, s seeded, url string) {
 
 // asArchived is the check of a row whose prepare moved the column's work
 // item into Done (inDone): the answer is the work item so moved, as
-// seeded otherwise (seededIssue), completed, archived when archived;
+// seeded otherwise and completed (answered), archived when archived;
 // changed last by the caller when written, else by its maker.
 func asArchived(archived, written bool) func(t *testing.T, c caller, s seeded, answer string) {
 	return func(t *testing.T, c caller, s seeded, answer string) {
 		var got struct {
-			answeredIssue
 			ArchivedAt *string `json:"archived_at"`
 		}
 		decodeAnswer(t, answer, &got)
-		want := seededIssue(c, s)
-		want.StateID = s.state(projectOf(c), "Done")
-		if written {
-			me := s.account(accountOf(c))
-			want.UpdatedByID = &me
+		if (got.ArchivedAt != nil) != archived {
+			t.Errorf("%s answers %s; want it archived %v", c, answer, archived)
 		}
-		if (got.ArchivedAt != nil) != archived || got.CompletedAt == nil {
-			t.Errorf("%s answers %s; want it completed, archived %v", c, answer, archived)
-		}
-		got.CompletedAt = nil
-		if !reflect.DeepEqual(got.answeredIssue, want) {
-			t.Errorf("%s answers %s; want %+v", c, answer, want)
-		}
+		answered(t, c, s, answer, true, func(i *answeredIssue) {
+			i.StateID = s.state(projectOf(c), "Done")
+			if !written {
+				i.UpdatedByID = i.CreatedByID
+			}
+		})
 	}
 }

@@ -28,8 +28,10 @@ import (
 // and nothing of it is written, neither by its refused archiving nor by
 // the other work item's archivings; moved to Cancelled, bob archives it.
 // Cancelled moved to the started group since (Dropped, a second cancelled
-// state, keeps that group in Web), alice restores it: a restoring asks no
-// state group.
+// state, keeps that group in Web), bob's archiving it again is answered as
+// it is and writes nothing: an archived work item is answered before its
+// state group is asked; and alice restores it: a restoring asks no state
+// group.
 func TestArchivingAWorkItemStampsItsRows(t *testing.T) {
 	w := newIssueWorld(t)
 	item, todo := w.doneWorkItem(t), w.newWorkItem(t)
@@ -88,6 +90,12 @@ func TestArchivingAWorkItemStampsItsRows(t *testing.T) {
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/states", `{"name":"Dropped","color":"#9AA4BC","group":"cancelled"}`,
 		http.StatusCreated)
 	w.send(t, "alice", http.MethodPatch, "/api/v0/states/"+cancelled.String(), `{"group":"started"}`, http.StatusOK)
+	archived := w.workItemStamps(t, todo)
+	w.send(t, "bob", http.MethodPost, "/api/v0/issues/"+todo.String()+"/archive", "", http.StatusOK)
+	if again := w.workItemStamps(t, todo); !slices.Equal(again, archived) {
+		t.Errorf("bob's archiving again of the work item archived in Cancelled, of the started group since, wrote:\n%q\nwas\n%q", again,
+			archived)
+	}
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+todo.String()+"/unarchive", "", http.StatusOK)
 	if archivedAt, _, by := archivalOf(t, w, todo); archivedAt != nil || by != w.ids["alice"] {
 		t.Errorf("the work item in Cancelled, of the started group since: archived at %v, changed last by %s; want it restored by alice",

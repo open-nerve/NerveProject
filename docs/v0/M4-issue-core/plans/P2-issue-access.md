@@ -32,7 +32,7 @@
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从基点起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同；之后在另一个副本上从基点逐 Task 复现，每个 Task 之后跑它的门禁，最后的树与原型逐个文件相同（spec 附录 A）。块写入之后不必再格式化（原型中每个 Task 都经过 `gofmt`、`oxfmt`）。
 - **plan 是"照执行的"**（P1b 的裁定）：执行中的每个修复轮在提交它的同时改本 plan 里它的 Task 的块，plan 始终从基点复现到 HEAD。一个 Task 的块由**一条命令**从两个固定的树重新生成：`python3 $M4TMP/p2tools/taskblocks.py <n> <之前的树> <之后的树>`（树是目录，或 `git archive -o <文件>.tar <提交>` 得到的 tar，每个 git 命令单独执行；它把两个树放进 `$M4TMP/p2exec/T<n-1>`、`T<n>`，写出 `plan-blocks/T<n>.md`、`T<n>.files` 和生成物的表 `gen-T<n>.txt`，并从基点核对块，`problems: 0`）；然后 `python3 $M4TMP/p2tools/compose_plan.py <plan>` 重新拼出本 plan（变异表照结果文件写出，执行中加的变异行在修复轮里加进 `mutants_p2*.py` 和结果文件）。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`api/modules/issue.yaml`（Task 2、4、6、7、8、11）、`issue/app/lock.go`（Task 2、5）、`issue/module.go`（Task 4、5、6、7）、`issue/app/fakes_test.go`（Task 2、4、7、10）、`issue/app/lock_test.go` 和 `bootstrap/gate_test.go`（Task 4、7）、`issue/app/update_issue.go`（Task 2、8、10）、`issue/domain/issue.go`（Task 2、7、10）、`issue/adapter/http/issues.go`（Task 4、6、7、11）、`access/domain/rules.go`（Task 1、2、5）、`bootstrap/issue_writes_test.go`（Task 4、5、7）、`bootstrap/permission_matrix_issue_updates_test.go`（Task 2、3、4、8、11）、`permission_matrix_issues_test.go`（Task 2、3、6、11）。每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（文件结构一节的"Task"一列列出每个文件的全部 Task）：`api/modules/issue.yaml`（Task 2、4、6、7、8、11）、`issue/app/lock.go`（Task 2、5）、`issue/module.go`（Task 4、5、6、7）、`issue/app/fakes_test.go`（Task 2、4、7、10）、`issue/app/lock_test.go` 和 `bootstrap/gate_test.go`（Task 4、7）、`issue/app/update_issue.go`（Task 2、7、8、10）、`issue/domain/issue.go`（Task 2、7、10）、`issue/adapter/http/issues.go`（Task 4、6、7、11）、`access/domain/rules.go`（Task 1、2、5）、`bootstrap/issue_writes_test.go`（Task 4、5、7）、`bootstrap/permission_matrix_issue_updates_test.go`（Task 2、3、4、7、8、11）、`permission_matrix_issues_test.go`（Task 2、3、6、11）。每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的检查和它所在的层（单元：假实现，或没有替身的平台、领域的测试；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事；守卫：生成器、文案的键的核对）。它们在各自 Task 的树上跑过，标"（Task n 起）"的检查在 Task n 的树上跑过，Go 的全部在最终的原型上再跑过，每个变异在一份新的副本里（`$M4TMP/p2tools/mutants_p2.py`，`mut.py` 在它写的每个检查上各跑一次；端到端的"发现"必须是故事的断言失败，`e2ekills.py` 核对，不算构建失败或超时；容器起不来不算；spec 附录 A）。"（Task n 起）"的检查从那个 Task 起才发现这个变异：Task n 的实现者在 Task n 的树上重跑它（那个 Task 的表下面列出）。**安全或加锁的性质只由单元一层发现的，算缺口**：表中每一条这类性质都另有存储、组合或端到端一层的检查，例外（"按性质只在单元一层"）写在 spec 附录 A.3。
 - **评审敏感**（M4 设计 12 节约束 3：权限的扩展这一段）：访客规则（预检和锁下的判定各执行一次，404 优先，`OwnOnly` 按项目的角色）；`AllowCreator`（创建者仍是有效成员、角色不低于成员，锁下再判定）；`deleteIssue` 在取锁路径上，约定五和死锁（spec 第 3 节第 7 条）；归档的拒绝次序（第 5 条）；合并之后的日期（第 11 条）。改动这些代码或测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
@@ -108,7 +108,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/app/guest_rule_test.go`（新） | 访客规则在预检和锁下的单元测试（Task 2）；删除的判定（Task 4）；回答逐值比较，隐藏的与不存在的是同一个值（Task 5） | 2、4、5 |
 | `server/internal/modules/issue/app/fakes_test.go`（修改） | 判定记下目标、工作项的创建者，创建者不明的工作项（`creatorOf`）（Task 2）；删除的存储（Task 4）；归档的存储（Task 7）；日期（Task 10） | 2、4、7、10 |
 | `server/internal/modules/issue/app/get_issue.go`（修改） | 说明写上访客规则 | 2 |
-| `server/internal/modules/issue/app/update_issue.go`（修改） | 说明写上访客规则（Task 2）；已归档 409（Task 8）；合并之后的日期、写日期（Task 10） | 2、8、10 |
+| `server/internal/modules/issue/app/update_issue.go`（修改） | 说明写上访客规则（Task 2）；`issueState`：工作项的状态，不是项目的是错误，`stateOf` 改成它，归档共用（Task 7）；已归档 409（Task 8）；合并之后的日期、写日期（Task 10） | 2、7、8、10 |
 | `api/modules/issue.yaml`（修改） | `getIssue`、`updateIssue` 的访客规则（Task 2）；`deleteIssue`（Task 4）；`getIssueByIdentifier`、`Slug`、`IssueIdentifier`（Task 6）；`archiveIssue`、`unarchiveIssue`（Task 7）；`issue.archived`（Task 8）；三个模式的日期（Task 11） | 2、4、6、7、8、11 |
 | `api/modules/project.yaml`（修改） | `guest_view_all_features` 的说明（Task 2）；`deleteState` 的补救（Task 8） | 2、8 |
 | `api/openapi.yaml`（修改） | 新的路径 | 6、7 |
@@ -123,7 +123,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/permission_matrix_coverage_test.go`（修改） | 工作项表的列（Task 3）；`prepare` 只给写的行（Task 7） | 3、7 |
 | `server/internal/bootstrap/permission_matrix_test.go`（修改） | 种子的说明（Task 3）；`matrixRow.prepare`、归档的行（Task 7） | 3、7 |
 | `server/internal/bootstrap/permission_matrix_issues_test.go`（修改） | 访客读得到（Task 2）；换到工作项表（Task 3）；`getIssueByIdentifier`（Task 6）；创建带日期（Task 11） | 2、3、6、11 |
-| `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（修改） | 修改的访客格子（Task 2）；换到工作项表（Task 3）；`deleteIssue`（Task 4）；已归档的工作项（Task 8）；日期（Task 11） | 2、3、4、8、11 |
+| `server/internal/bootstrap/permission_matrix_issue_updates_test.go`（修改） | 修改的访客格子（Task 2）；换到工作项表（Task 3）；`deleteIssue`（Task 4）；`answered` 的说明：最后修改者由 `change` 另说，归档的矩阵用它（Task 7）；已归档的工作项（Task 8）；日期（Task 11） | 2、3、4、7、8、11 |
 | `server/internal/modules/issue/app/delete_issue.go`、`server/internal/modules/issue/app/delete_issue_test.go`（新） | `IssueDeletion`、`IssueRowsDeleter`、`issueRowSteps`、`DeleteIssue` 和单元测试 | 4 |
 | `server/internal/modules/issue/app/update_issue_test.go`（修改） | `lockedAs`：锁下判定之前的调用，删除共用（Task 4）；已归档的拒绝（Task 8） | 4、8 |
 | `server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql`、`server/internal/modules/issue/adapter/postgres/delete_issue.go`、`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`（新） | 删除工作项的五条语句和存储测试 | 4 |
@@ -6099,18 +6099,18 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_archive_test.go`、`server/internal/bootstrap/permission_matrix_issue_archive_test.go`、`server/internal/modules/issue/adapter/http/archive_test.go`、`server/internal/modules/issue/app/archive_issue.go`、`server/internal/modules/issue/app/archive_issue_test.go`
-- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/gate_test.go`、`server/internal/bootstrap/issue_updates_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`、`server/internal/modules/issue/adapter/postgres/update_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/lock_test.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/activity_test.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`、`server/internal/modules/issue/module.go`、`web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`
+- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/gate_test.go`、`server/internal/bootstrap/issue_updates_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_issue_updates_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`、`server/internal/modules/issue/adapter/postgres/update_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/lock_test.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/activity_test.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`、`server/internal/modules/issue/module.go`、`web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`server/internal/modules/issue/adapter/postgres/gen/update.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.8、第 3 节第 5、8、9、13、15 条；M4 设计 3.5、3.8、3.13、5.1、9.2）
 - 契约：`POST /api/v0/issues/{issue_id}/archive`（`archiveIssue`，200 `IssueDetail`，`x-problem-codes: [issue.not_found, forbidden, project.archived, issue.not_archivable, server_busy]`）、`POST …/unarchive`（`unarchiveIssue`，同上，没有 `issue.not_archivable`），描述写明谁能做、访客规则、锁下的次序、已是所求的样子时不写、只归档已完成或已取消的；`api/openapi.yaml` 的两条路径。
 - `issue/domain`：`GroupCancelled`、`Archivable(group) bool`（已完成、已取消）；`ErrNotArchivable`（409 `issue.not_archivable`）；`ArchiveActivity()`（第 14 行：`archived_at`、`updated`，`NULL` → `manual_archive`）、`UnarchiveActivity()`（第 16 行：`archive` → `restore`），`comment` 是"archived the work item""restored the work item"（第 3 节第 8 条）。
-- `issue/app`：`ports.go` 的 `IssueArchiver`（嵌入 `IssueReader`；`SetArchivedAt`、`InsertActivities`）；`rows.go` 的 `IssueArchival{ID, ArchivedAt *time.Time, By, At}`；`archive_issue.go`（新）：`ArchiveIssueDeps{Locks, Issues, States, Clock}`，`ArchiveIssue`、`UnarchiveIssue`（`NewArchiveIssue`、`NewUnarchiveIssue`，`Execute(ctx, id) (domain.Issue, error)`），共用 `archive(ctx, id, on)`：`Locks.run` 的 `write{issue: &id, action: issue.archive}` → 锁下项目已归档 409 → 已是所求的样子：回答锁下读到的工作项，不写 → 归档时 `archivable`（锁下读项目的状态；工作项的状态不是项目的是错误）→ 时刻 → `SetArchivedAt` → 一行动态 → 在事务里读回（`readBack`）。
+- `issue/app`：`ports.go` 的 `IssueArchiver`（嵌入 `IssueReader`；`SetArchivedAt`、`InsertActivities`）；`rows.go` 的 `IssueArchival{ID, ArchivedAt *time.Time, By, At}`；`archive_issue.go`（新）：`ArchiveIssueDeps{Locks, Issues, States, Clock}`，`ArchiveIssue`、`UnarchiveIssue`（`NewArchiveIssue`、`NewUnarchiveIssue`，`Execute(ctx, id) (domain.Issue, error)`），共用 `archive(ctx, id, on)`：`Locks.run` 的 `write{issue: &id, action: issue.archive}` → 锁下项目已归档 409 → 已是所求的样子：回答锁下读到的工作项，不写 → 归档时 `archivable`（锁下读项目的状态，由 `issueState` 取出工作项的状态；不是项目的是错误）→ 时刻 → `SetArchivedAt` → 一行动态 → 在事务里读回（`readBack`）。`update_issue.go` 的 `stateOf` 改成 `issueState(states, i) (StateRef, error)`（带上那个错误），修改的 `check` 和归档共用。
 - 存储：`queries/update.sql` 的 `SetArchivedAt`（按 `id` 写 `archived_at`、`updated_at`、`updated_by_id`）；`update.go` 的 `SetArchivedAt`。
 - `issue/adapter/http`：`handler.go` 的 `ArchiveIssueUseCase`，`UseCases.ArchiveIssue`、`UnarchiveIssue`（两个都是它）；`issues.go` 的 `ArchiveIssue`、`UnarchiveIssue`。`issue/module.go` 接上两个用例。
 - 前端：`error-messages.ts` 的 `issue.not_archivable`，两份 `errors.json` 的 `issue_not_archivable`（措辞第 3 节第 9 条）。
-- 测试的帮手：`fakes_test.go` 的 `fakeIssues` 记下最后一次 `SetArchivedAt`（`archival`），读出的工作项带上它（`archivedAt`、最后修改者和时刻）；`issue_world_test.go` 的 `doneWorkItem`；`issue_updates_test.go` 的说明（`archiveIssue` 改最后修改者）；`lock_test.go` 的 `TestEachWriteOnAWorkItemEntersItsProjectsGate` 加归档、恢复两行（在 `newArchive` 的世界上）。
-- 矩阵：`matrixRow.prepare func(t, c, s, url string)`：在写的格子的副本上、它的 app 启动之前运行；没有 `write` 的行带 `prepare` 是违规（`permission_matrix_coverage_test.go`）；`permission_matrix_issue_archive_test.go`（新）的九行：`archiveIssue`（照常、Todo 里的、已归档的、已归档的项目、已归档的项目里已归档的）、`unarchiveIssue`（照常、没归档的、已归档的项目、已归档的项目里已归档的），`prepare` 把格子的列的工作项移到 Done（和归档）。
+- 测试的帮手：`fakes_test.go` 的 `fakeIssues` 记下最后一次 `SetArchivedAt`（`archival`），读出的工作项带上它（`archivedAt`、最后修改者和时刻）；`issue_world_test.go` 的 `doneWorkItem`；`issue_updates_test.go` 的说明（`archiveIssue` 改最后修改者）；`lock_test.go` 的 `TestEachWriteOnAWorkItemEntersItsProjectsGate` 加归档、恢复两行（在 `newArchive` 的世界上）；`permission_matrix_issue_updates_test.go` 的 `answered` 的说明（调用者是最后修改者，除非 `change` 另说）。
+- 矩阵：`matrixRow.prepare func(t, c, s, url string)`：在写的格子的副本上、它的 app 启动之前运行；没有 `write` 的行带 `prepare` 是违规（`permission_matrix_coverage_test.go`）；`permission_matrix_issue_archive_test.go`（新）的九行：`archiveIssue`（照常、Todo 里的、已归档的、已归档的项目、已归档的项目里已归档的）、`unarchiveIssue`（照常、没归档的、已归档的项目、已归档的项目里已归档的），`prepare` 把格子的列的工作项移到 Done（和归档）；写的行的检查 `asArchived` 建在 `answered` 上（Done 里、完成了，没写的行最后修改者是建它的人）。
 - 取锁形状：`archiveIssue` 一行（锁下读状态：等 `states`，`ACCESS EXCLUSIVE`）、`unarchiveIssue` 一行（等 `issues`，`SHARE`）。`issue_writes_test.go` 的连接测试在一个连接的池上归档、恢复第一个工作项。`gate_test.go` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 加归档、恢复两行。
 
 **Tests:**
@@ -6118,7 +6118,7 @@ Expected: 通过。
 - 单元：`TestArchiveIssueArchivesTheWorkItem`（3.5、3.8 的次序：`Locks` 的调用、锁下读状态、时刻、alice 在那一刻归档、第 14 行、读回；Cancelled 里的同 Done）、`TestUnarchiveIssueUnarchivesTheWorkItem`（不看状态：Backlog 里已归档的也恢复；第 16 行）、`TestArchivingAsItIsWritesNothing`（不读时刻、不写，回答锁下读到的）、`TestArchiveIssueRefusals`（锁下已归档的项目，已归档的工作项也是，409 `project.archived`；Backlog 里的 409 `issue.not_archivable`；角色在预检；读写的失败照原样；没有调用者）、`TestArchivingAWorkItemWhoseStateIsNotItsProjectsFails`（锁下读到的状态里没有工作项的状态：是错误，不是 409 `issue.not_archivable`，读完就不再写）；`TestEachWriteOnAWorkItemEntersItsProjectsGate` 的归档、恢复两行（预检之后、任何事务之外进项目的写闸门，事务结束之后最后离开）。
 - 存储：`TestArchivingAWorkItemWritesItsRow`（归档、再恢复：只改这三列，别的列、别的工作项不动）、`TestAFailedUpdateStatementIsAnError`。
 - HTTP（`apitest.Main` 两个方向）：`TestArchiveAndUnarchiveIssue`、`TestArchiveIssueRefusals`（`issue.not_archivable` 只是 `archiveIssue` 的）。
-- 组合：`TestArchivingAWorkItemStampsItsRows`（alice 在 Done 里建，bob 归档、再归档，alice 恢复、再恢复：第一次的各是做的人在请求之内的一个时刻，工作项和它的一行动态同一时刻；第二次什么都不写；一开始就建好的 Todo 里的工作项 409 `issue.not_archivable`，它自己被拒绝的归档和别的工作项的归档、恢复都不写它；移到 Cancelled 之后 bob 归档它；Cancelled 改到"进行中"组之后（另一个已取消的状态 Dropped 留住那一组），alice 恢复它：恢复不看状态组）、`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 的归档、恢复两行（项目的一个位置被占、不排队时立刻答 503 `server_busy`、`Retry-After: 1`）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（归档、恢复的每条语句在它的事务的连接上）、`TestEachIssueWriteLocksItsProjectFirst` 的两行、`TestPermissionMatrix` 的九行、`TestMatrixViolationsCatchesEachGap`（没有写的行带 `prepare`）、`TestThePermissionMatrixCoversEveryOperation`、`TestAWorkItemReadsAsStored`。
+- 组合：`TestArchivingAWorkItemStampsItsRows`（alice 在 Done 里建，bob 归档、再归档，alice 恢复、再恢复：第一次的各是做的人在请求之内的一个时刻，工作项和它的一行动态同一时刻；第二次什么都不写；一开始就建好的 Todo 里的工作项 409 `issue.not_archivable`，它自己被拒绝的归档和别的工作项的归档、恢复都不写它；移到 Cancelled 之后 bob 归档它；Cancelled 改到"进行中"组之后（另一个已取消的状态 Dropped 留住那一组），bob 再归档它照样回答、什么都不写：已归档的工作项先于状态组回答；alice 恢复它：恢复不看状态组）、`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 的归档、恢复两行（项目的一个位置被占、不排队时立刻答 503 `server_busy`、`Retry-After: 1`）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（归档、恢复的每条语句在它的事务的连接上）、`TestEachIssueWriteLocksItsProjectFirst` 的两行、`TestPermissionMatrix` 的九行、`TestMatrixViolationsCatchesEachGap`（没有写的行带 `prepare`）、`TestThePermissionMatrixCoversEveryOperation`、`TestAWorkItemReadsAsStored`。
 
 - [ ] **Step 1: 契约和语句，生成**
 
@@ -6366,14 +6366,13 @@ func TestArchivable(t *testing.T) {
 
 - [ ] **Step 3: 用例**
 
-`server/internal/modules/issue/app/archive_issue.go`（新文件，125 行）：
+`server/internal/modules/issue/app/archive_issue.go`（新文件，124 行）：
 
 ````file server/internal/modules/issue/app/archive_issue.go
 package app
 
 import (
 	"context"
-	"fmt"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -6478,17 +6477,17 @@ func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (d
 }
 
 // archivable refuses to archive the work item i unless its state, one of
-// its project's read under the project's lock, is of a group a work item
-// is archived in (domain.Archivable): 409 issue.not_archivable.
+// its project's read under the project's lock (issueState), is of a group a
+// work item is archived in (domain.Archivable): 409 issue.not_archivable.
 func (d ArchiveIssueDeps) archivable(ctx context.Context, i domain.Issue) error {
 	states, err := d.States.States(ctx, i.ProjectID)
 	if err != nil {
 		return err
 	}
-	state, found := stateOf(states, i.StateID)
+	state, err := issueState(states, i)
 	switch {
-	case !found:
-		return fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
+	case err != nil:
+		return err
 	case !domain.Archivable(state.Group):
 		return domain.ErrNotArchivable
 	}
@@ -6808,6 +6807,41 @@ type IssueArchival struct {
 }
 
 // UnlinkRows are the rows of one of a work item's tables of accounts or
+````
+
+`server/internal/modules/issue/app/update_issue.go`（修改，3 处）：
+
+````old server/internal/modules/issue/app/update_issue.go
+		old, found := stateOf(states, i.StateID)
+		if !found {
+			return named{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
+````
+````new server/internal/modules/issue/app/update_issue.go
+		old, err := issueState(states, i)
+		if err != nil {
+			return named{}, err
+````
+````old server/internal/modules/issue/app/update_issue.go
+// stateOf is the state id of states; found is false when none is.
+func stateOf(states []StateRef, id uuid.UUID) (StateRef, bool) {
+	i := slices.IndexFunc(states, func(s StateRef) bool { return s.ID == id })
+	if i < 0 {
+		return StateRef{}, false
+````
+````new server/internal/modules/issue/app/update_issue.go
+// issueState is the state of states, its project's, that the work item i is
+// in. A state that is none of them is an error, not a refusal: a work
+// item's state is its project's.
+func issueState(states []StateRef, i domain.Issue) (StateRef, error) {
+	at := slices.IndexFunc(states, func(s StateRef) bool { return s.ID == i.StateID })
+	if at < 0 {
+		return StateRef{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
+````
+````old server/internal/modules/issue/app/update_issue.go
+	return states[i], true
+````
+````new server/internal/modules/issue/app/update_issue.go
+	return states[at], nil
 ````
 
 - [ ] **Step 4: 存储**
@@ -7156,7 +7190,7 @@ func (h handler) UnarchiveIssue(ctx context.Context, req gen.UnarchiveIssueReque
 		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", http.StatusOK},
 ````
 
-`server/internal/bootstrap/issue_archive_test.go`（新文件，146 行）：
+`server/internal/bootstrap/issue_archive_test.go`（新文件，154 行）：
 
 ````file server/internal/bootstrap/issue_archive_test.go
 package bootstrap
@@ -7189,8 +7223,10 @@ import (
 // and nothing of it is written, neither by its refused archiving nor by
 // the other work item's archivings; moved to Cancelled, bob archives it.
 // Cancelled moved to the started group since (Dropped, a second cancelled
-// state, keeps that group in Web), alice restores it: a restoring asks no
-// state group.
+// state, keeps that group in Web), bob's archiving it again is answered as
+// it is and writes nothing: an archived work item is answered before its
+// state group is asked; and alice restores it: a restoring asks no state
+// group.
 func TestArchivingAWorkItemStampsItsRows(t *testing.T) {
 	w := newIssueWorld(t)
 	item, todo := w.doneWorkItem(t), w.newWorkItem(t)
@@ -7249,6 +7285,12 @@ func TestArchivingAWorkItemStampsItsRows(t *testing.T) {
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/states", `{"name":"Dropped","color":"#9AA4BC","group":"cancelled"}`,
 		http.StatusCreated)
 	w.send(t, "alice", http.MethodPatch, "/api/v0/states/"+cancelled.String(), `{"group":"started"}`, http.StatusOK)
+	archived := w.workItemStamps(t, todo)
+	w.send(t, "bob", http.MethodPost, "/api/v0/issues/"+todo.String()+"/archive", "", http.StatusOK)
+	if again := w.workItemStamps(t, todo); !slices.Equal(again, archived) {
+		t.Errorf("bob's archiving again of the work item archived in Cancelled, of the started group since, wrote:\n%q\nwas\n%q", again,
+			archived)
+	}
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+todo.String()+"/unarchive", "", http.StatusOK)
 	if archivedAt, _, by := archivalOf(t, w, todo); archivedAt != nil || by != w.ids["alice"] {
 		t.Errorf("the work item in Cancelled, of the started group since: archived at %v, changed last by %s; want it restored by alice",
@@ -7429,14 +7471,13 @@ func (w issueWorld) doneWorkItem(t *testing.T) uuid.UUID {
 			[]string{"row getWorkspace prepares its cells without write: it would change the reads' copy"}},
 ````
 
-`server/internal/bootstrap/permission_matrix_issue_archive_test.go`（新文件，100 行）：
+`server/internal/bootstrap/permission_matrix_issue_archive_test.go`（新文件，94 行）：
 
 ````file server/internal/bootstrap/permission_matrix_issue_archive_test.go
 package bootstrap
 
 import (
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -7508,30 +7549,38 @@ func inDone(archived bool) func(t *testing.T, c caller, s seeded, url string) {
 
 // asArchived is the check of a row whose prepare moved the column's work
 // item into Done (inDone): the answer is the work item so moved, as
-// seeded otherwise (seededIssue), completed, archived when archived;
+// seeded otherwise and completed (answered), archived when archived;
 // changed last by the caller when written, else by its maker.
 func asArchived(archived, written bool) func(t *testing.T, c caller, s seeded, answer string) {
 	return func(t *testing.T, c caller, s seeded, answer string) {
 		var got struct {
-			answeredIssue
 			ArchivedAt *string `json:"archived_at"`
 		}
 		decodeAnswer(t, answer, &got)
-		want := seededIssue(c, s)
-		want.StateID = s.state(projectOf(c), "Done")
-		if written {
-			me := s.account(accountOf(c))
-			want.UpdatedByID = &me
+		if (got.ArchivedAt != nil) != archived {
+			t.Errorf("%s answers %s; want it archived %v", c, answer, archived)
 		}
-		if (got.ArchivedAt != nil) != archived || got.CompletedAt == nil {
-			t.Errorf("%s answers %s; want it completed, archived %v", c, answer, archived)
-		}
-		got.CompletedAt = nil
-		if !reflect.DeepEqual(got.answeredIssue, want) {
-			t.Errorf("%s answers %s; want %+v", c, answer, want)
-		}
+		answered(t, c, s, answer, true, func(i *answeredIssue) {
+			i.StateID = s.state(projectOf(c), "Done")
+			if !written {
+				i.UpdatedByID = i.CreatedByID
+			}
+		})
 	}
 }
+````
+
+`server/internal/bootstrap/permission_matrix_issue_updates_test.go`（修改，1 处）：
+
+````old server/internal/bootstrap/permission_matrix_issue_updates_test.go
+// seeded (seededIssue) with change made to it, the caller its last writer,
+// and completed when completed; completedAt is not compared, but present
+// or not.
+````
+````new server/internal/bootstrap/permission_matrix_issue_updates_test.go
+// seeded (seededIssue) with change made to it, the caller its last writer
+// unless change says otherwise, and completed when completed; completedAt
+// is not compared, but present or not.
 ````
 
 `server/internal/bootstrap/permission_matrix_test.go`（修改，3 处）：
@@ -7588,7 +7637,7 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/issue.yaml api/openapi.yaml server/internal/bootstrap/gate_test.go server/internal/bootstrap/issue_archive_test.go server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_issue_archive_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/issue/adapter/http/archive_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/postgres/queries/update.sql server/internal/modules/issue/adapter/postgres/update.go server/internal/modules/issue/adapter/postgres/update_test.go server/internal/modules/issue/app/archive_issue.go server/internal/modules/issue/app/archive_issue_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/lock_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/domain/activity.go server/internal/modules/issue/domain/activity_test.go server/internal/modules/issue/domain/errors.go server/internal/modules/issue/domain/issue.go server/internal/modules/issue/domain/issue_test.go server/internal/modules/issue/module.go web/apps/web/core/lib/error-messages.ts web/packages/i18n/src/locales/en/errors.json web/packages/i18n/src/locales/zh-CN/errors.json api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/update.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml api/openapi.yaml server/internal/bootstrap/gate_test.go server/internal/bootstrap/issue_archive_test.go server/internal/bootstrap/issue_updates_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_issue_archive_test.go server/internal/bootstrap/permission_matrix_issue_updates_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/issue/adapter/http/archive_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/postgres/queries/update.sql server/internal/modules/issue/adapter/postgres/update.go server/internal/modules/issue/adapter/postgres/update_test.go server/internal/modules/issue/app/archive_issue.go server/internal/modules/issue/app/archive_issue_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/lock_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/app/update_issue.go server/internal/modules/issue/domain/activity.go server/internal/modules/issue/domain/activity_test.go server/internal/modules/issue/domain/errors.go server/internal/modules/issue/domain/issue.go server/internal/modules/issue/domain/issue_test.go server/internal/modules/issue/module.go web/apps/web/core/lib/error-messages.ts web/packages/i18n/src/locales/en/errors.json web/packages/i18n/src/locales/zh-CN/errors.json api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/update.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P2): archiveIssue and unarchiveIssue, on the one lock path
@@ -7637,6 +7686,7 @@ Expected: 通过。
 | `T7.22` | 归档也写工作项的一列 `GetIssue` 不读的（`description_html`） | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 | `T7.23` | 矩阵的自检放过没有 `write` 而带 `prepare` 的行：它的 `prepare` 会改动读的格子共用的副本 | `internal/bootstrap` 的 `TestMatrixViolationsCatchesEachGap`（`make test`） | 单元 |
 | `T7.24` | 状态不能归档的工作项答项目已归档的 409，而不是 `issue.not_archivable` | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `archiveIssue`、`unarchiveIssue` 各格（`make test`）、`internal/bootstrap` 的 `TestArchivingAWorkItemStampsItsRows`（`make test`） | 单元；组合 |
+| `T7.25` | 归档先看状态组、再答已归档的工作项：在不能归档的组里的已归档的工作项答 409 `issue.not_archivable`，而不是照样答 200 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestArchivingAWorkItemStampsItsRows`（`make test`） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T1.11`（列在各自的 Task 的表里，标"（Task 7 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p2.py`，`MUT_LATER=7`）。
 

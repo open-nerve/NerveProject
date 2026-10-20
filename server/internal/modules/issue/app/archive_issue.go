@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -107,17 +106,17 @@ func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (d
 }
 
 // archivable refuses to archive the work item i unless its state, one of
-// its project's read under the project's lock, is of a group a work item
-// is archived in (domain.Archivable): 409 issue.not_archivable.
+// its project's read under the project's lock (issueState), is of a group a
+// work item is archived in (domain.Archivable): 409 issue.not_archivable.
 func (d ArchiveIssueDeps) archivable(ctx context.Context, i domain.Issue) error {
 	states, err := d.States.States(ctx, i.ProjectID)
 	if err != nil {
 		return err
 	}
-	state, found := stateOf(states, i.StateID)
+	state, err := issueState(states, i)
 	switch {
-	case !found:
-		return fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
+	case err != nil:
+		return err
 	case !domain.Archivable(state.Group):
 		return domain.ErrNotArchivable
 	}

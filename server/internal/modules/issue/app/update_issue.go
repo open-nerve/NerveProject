@@ -113,9 +113,9 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 		if err != nil {
 			return named{}, err
 		}
-		old, found := stateOf(states, i.StateID)
-		if !found {
-			return named{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
+		old, err := issueState(states, i)
+		if err != nil {
+			return named{}, err
 		}
 		if state, found := pickState(states, c.StateID); found {
 			n.state = &domain.Changed[domain.Named]{Old: domain.Named{ID: old.ID, Name: old.Name}, New: domain.Named{ID: state.ID, Name: state.Name}}
@@ -157,13 +157,15 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 	return n, nil
 }
 
-// stateOf is the state id of states; found is false when none is.
-func stateOf(states []StateRef, id uuid.UUID) (StateRef, bool) {
-	i := slices.IndexFunc(states, func(s StateRef) bool { return s.ID == id })
-	if i < 0 {
-		return StateRef{}, false
+// issueState is the state of states, its project's, that the work item i is
+// in. A state that is none of them is an error, not a refusal: a work
+// item's state is its project's.
+func issueState(states []StateRef, i domain.Issue) (StateRef, error) {
+	at := slices.IndexFunc(states, func(s StateRef) bool { return s.ID == i.StateID })
+	if at < 0 {
+		return StateRef{}, fmt.Errorf("work item %s is in state %s, which is not its project's", i.ID, i.StateID)
 	}
-	return states[i], true
+	return states[at], nil
 }
 
 // labelNames are the labels ids, in their order, by their names in
