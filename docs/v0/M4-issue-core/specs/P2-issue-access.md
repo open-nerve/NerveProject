@@ -6,7 +6,7 @@
 | 日期 | 2026-10-19；修订 2026-10-20（预检） |
 | 状态 | 已裁定：第 3 节第 1–19 条由控制者照建议裁定（2026-10-19；第 3、8、10、14 条带条件，各条写明）；预检（2026-10-20）的发现 M1、L1–L12 按控制者的裁定改进本 spec、plan 和设计（附录 A.2 的"预检之后的修改"）。原型、清扫和逐 Task 复现见附录 A。设计 12 节 P2 的十四个草稿任务在约 16 个、每个约 1,500 行以内重新切成 14 个 Task（第 3 节第 1 条），没有超出，没有停下 |
 | 上级文档 | [M4 设计文档](../M4-design.md) 第 2（I1、I2、I15 的"P2"一段）、3.3（`project` 的 `Lock` 回答的字段）、3.4（访客规则、`OwnOnly`、`AllowCreator`、`guest_view_all_features`，规则表中 P2 的行）、3.5（取锁的一步；"修改工作项""删除工作项""归档、恢复"三行；交错 5、12；约定五）、3.6（删除工作项的连带）、3.7（起止日期、按编号取）、3.8（归档、恢复、已归档只读）、3.13（动态的第 8、9、14、16 行）、3.23 与 4.17（P2 的行）、5.1–5.3（`deleteIssue`、`getIssueByIdentifier`、`archiveIssue`、`unarchiveIssue`，三个模式的日期）、6.1（`bodyshape`、`shared.Date`）、6.5、6.7、9.1–9.3（P2 的部分）、12（P2 与约束 1–8）、13.1 节 |
-| 前置交接 | [P1a spec](P1a-issues.md) 第 5 节和 [P1a 评审](../reviews/P1a-issues-review.md)第 6 节的 P2 一行；[P1b spec](P1b-issue-update.md) 第 5 节的 P2 一行和收尾一行的最后一句；[P1b 评审](../reviews/P1b-issue-update-review.md)第 6 节；[M1-P3 交接](../handoffs/M1-P3-trim-platform.md)的地址一项；[M2 收尾交接](../handoffs/M2-closeout.md)第 3、4 节；[M3 收尾交接](../handoffs/M3-closeout.md)第 3、4 节。落点见第 3 节第 20 条、第 7 节 |
+| 前置交接 | [P1a spec](P1a-issues.md) 第 5 节和 [P1a 评审](../reviews/P1a-issues-review.md)第 6 节的 P2 一行；[P1b spec](P1b-issue-update.md) 第 5 节的 P2 一行和收尾一行的最后一句；[P1b 评审](../reviews/P1b-issue-update-review.md)第 6 节；[M1-P3 交接](../handoffs/M1-P3-trim-platform.md)的地址一项；[M2 收尾交接](../handoffs/M2-closeout.md)第 3、4 节；[M3 收尾交接](../handoffs/M3-closeout.md)第 2、3、4 节。落点见第 3 节第 20 条、第 7 节 |
 | 计划 | [P2 plan](../plans/P2-issue-access.md) |
 
 本 spec 只写 M4 设计交给 P2 决定的东西：名字、签名、SQL、测试名，以及原型证明了什么。规则本身以 M4 设计为准，这里引用节号，不重述。P2 从 `7db78788`（P1b 的合并提交）开始。
@@ -204,6 +204,7 @@ P2 是 M4 权限的一段（设计 12 节约束 3：权限的扩展在这一段�
     | M1-P3 交接的地址一项 | 按编号取统一到 `/workspaces/{slug}/issues/{identifier}` | 2.7（另一半：`browse` 的路由在 P14） |
     | M2 收尾交接第 3 节 | P2 的用例用时钟写 `updated_at` | 2.6、2.8、2.11（单元测试的 `clockAt`，存储测试断言交给它的时刻） |
     | M2 收尾交接第 4 节 | 路径按下标排序、数的范围、`date`、代价测试；map 型、递归的结构 | 2.10、第 10、12 条（后两项"没有用到"） |
+    | M3 收尾交接第 2 节 | P2 的批量写逐个按约定五核对 | 第 7 条 |
     | M3 收尾交接第 3 节 | `AllowCreator`、`guest_view_all_features`、矩阵、码 | 2.3–2.5（个人主页的一行在 P5） |
     | M3 收尾交接第 4 节 | `expectIssueDeleted`；`guest_view_all_features` 的说明 | 2.14、2.4 |
     | P1a、P1b 的教训（brief） | 数据分不出性质、复制的测试帮手、任务结束时不成立的句子、计时按条件 | 附录 A.2、A.6（清扫 57–60） |
@@ -257,12 +258,13 @@ P2 是 M4 权限的一段（设计 12 节约束 3：权限的扩展在这一段�
 | M1-P3 交接的地址一项 | 按编号取统一到 `/workspaces/{slug}/issues/{identifier}`（契约和用例） | `browse` 的路由经它（P14）；旧的工作项地址的守卫（P10a） |
 | M2 收尾交接第 3 节 | P2 的用例（删除、归档、恢复、日期的修改）用时钟写 `updated_at`、`deleted_at` | P3、P4、P7 的其余写工作项的用例；自动归档推进固定时钟的测试（P6） |
 | M2 收尾交接第 4 节 | 路径按下标的数值排序、开放节点的数的范围、`date`、代价测试；map 型、递归的结构"没有用到" | 无 |
+| M3 收尾交接第 2 节 | 约定五：P2 的批量写（删除工作项的五条语句，归档、恢复的 `SetArchivedAt`）都在项目 N 之下，不落在例外里（第 3 节第 7 条） | P2 之后各 Phase 的批量写（到 P9） |
 | M3 收尾交接第 3 节 | `AllowCreator`、`guest_view_all_features`、矩阵（访客的三列、"管理员·访客"、创建者）、码 | 个人主页的一行（P5） |
 | M3 收尾交接第 4 节 | `expectIssueDeleted`；`guest_view_all_features` 的说明 | 删除断言的限时轮询（P9） |
 
 三份交接的"处理结果（M4/P2）"由 Task 14 写下，`status` 照旧 `open`，在 M4 收尾随 review 关闭（P1a、P1b 的做法）。
 
-**M4 设计 13.1 的关闭条件**：落在 P2 的（M1-P3 的地址一项的一半，M2 交接第 3 节 P2 的用例和第 4 节，M3 交接第 3 节和第 4 节的两项）都在上表。没有放不下的条件。
+**M4 设计 13.1 的关闭条件**：落在 P2 的（M1-P3 的地址一项的一半，M2 交接第 3 节 P2 的用例和第 4 节，M3 交接第 2 节 P2 的批量写、第 3 节和第 4 节的两项）都在上表。没有放不下的条件。
 
 ## 附录 A：原型验证记录（2026-10-19；预检之后，2026-10-20）
 

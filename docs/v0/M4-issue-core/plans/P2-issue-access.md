@@ -12448,9 +12448,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ````new docs/v0/plane-diff.md
 | 删除状态 | 有工作项时 400 | 有工作项在它里面（已归档的也算）时 409 `project.state_in_use`，这一检查在默认状态的检查之前（M4 设计 3.6） |
 | 工作项的起止日期 | 两个都在请求里才检查开始不晚于截止 | 按合并之后的值检查：只给一个日期时与存着的另一个比较，开始晚于截止 422 `not_allowed`（在 `target_date`，只给了 `start_date` 时在 `start_date`）；同一天允许；数据库另有 `issues_dates_check`（M4 设计 3.7） |
-| 工作项的创建者的权限 | 只看工作区成员关系，已离开项目也能读、改、删 | 创建者只在删除上另有权限（`issue.delete` 的 `AllowCreator`）：他须仍是项目的有效成员、角色不低于成员；离开项目或成了访客之后不能删（看不到项目时 404，看得到时 403）（M4 设计 3.4） |
+| 工作项的创建者的权限 | 只看工作区成员关系，已离开项目也能读、改、删 | 创建者只在删除上另有权限（`issue.delete` 的 `AllowCreator`）：他须仍是项目的有效成员、角色不低于成员；离开项目或成了访客之后不能再凭它删（没有别的权限的，看不到项目时 404，看得到时 403）（M4 设计 3.4） |
 | 访客只看自己的工作项 | 只在约 6 处执行 | 项目没开 `guest_view_all_features` 时，它的访客（按项目角色算，工作区管理员在项目里是访客时同样）只看得到自己创建的工作项：取、按编号取、修改、删除、归档、恢复别人的都答 404 `issue.not_found`；读在判定之后执行这条规则，写在不加锁的预检和锁下的判定中各执行一次（M4 设计 3.4；列表、子资源在各自的 Phase） |
-| 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403 `forbidden`（M4 设计 3.4） |
+| 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403 `forbidden`（工作区管理员是项目的有效成员时不论项目角色都通过项目的每条规则，总体设计 6.5 的约定；所以只是项目访客的工作区管理员删得了自己建的，204，不是凭 `AllowCreator`）（M4 设计 3.4） |
 | 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是；恢复、删除照常；在已归档的项目里先答 409 `project.archived`（M4 设计 3.8；子资源的写、成为父工作项和关联的对方在 M4 的各自的 Phase） |
 | 工作项的归档、恢复 | 归档答 `{archived_at}`，恢复 204；再归档、恢复没归档的 404；状态不在"已完成""已取消"组时 400 | 都答 `IssueDetail`；已归档的再归档、未归档的再恢复不写、200；状态不在"已完成""已取消"组时 409 `issue.not_archivable`；各写一条动态（`archived_at` 的 `manual_archive`、`restore`），动态的 `comment` 不同（M4 设计 3.8、3.13） |
 | 按编号取工作项 | 格式不对 400，不是成员 403 | `GET /api/v0/workspaces/{slug}/issues/{identifier}`：不是工作区的有效成员 404 `workspace.not_found`；之后格式不对、项目或编号不存在、看不到、访客规则都是同一个 404 `issue.not_found`；标识经同一个折叠比较（`identifier-fold.json`，`i`、`ı`、`I`、`İ` 一样）（M4 设计 3.7） |
@@ -12521,6 +12521,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## 处理结果（M4/P2）
 
+- **第 2 节，约定五**（P2 的批量写完成）：删除工作项的五条语句（`DeleteIssueRow` 按 `id`；`DeleteIssueAssigneeRows`、`DeleteIssueLabelRows`、`DeleteIssueSubscriberRows`、`DeleteIssueActivityRows` 按谓词软删除这个工作项未删除的负责人、标签、关注、动态）不分批，按全局的表序（工作项 → 负责人 → 标签 → 关注 → 动态）各执行一次，都写同一个时刻、同一个删除者；归档、恢复按 `id` 写工作项的一行（`SetArchivedAt`）。这些行只有持项目 N 的写会写到，不落在约定五的例外里，不按 `id` 先锁（M4/P2 spec 第 3 节第 7 条）。钉住它的测试：单元的 `TestDeleteIssueDeletesTheWorkItemAndItsRows`（表序、时刻、删除者）；存储的 `TestTheStatementsOfADeletedWorkItemDeleteItsRows`、`TestArchivingAWorkItemWritesItsRow`（每条语句只写它的工作项的行，写的是给定的时刻和账户）；组合的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`、`TestArchivingAWorkItemStampsItsRows`（请求之内的一个时刻、做的人）；取锁形状的 `TestEachIssueWriteLocksItsProjectFirst`（删除、归档、恢复都最先取项目 N）；交错的 `TestDeletingAWorkItemAndChangingItSerialize`、`TestArchivingAWorkItemAndMovingItSerialize`（在项目 N 上串行）。
 - **第 3 节，`AllowCreator`**（完成）：随第一条用到它的规则 `issue.delete`（管理员 + `AllowCreator`）加入规则表；判定读目标的创建者（`shared.Target.CreatorID`），调用者是它、在项目里的有效角色不低于成员时允许，已离开项目、成了访客的创建者不行（M4 设计 3.4）；判定表测试逐格核对。
 - **第 3 节，`guest_view_all_features`**（工作项的取、改、删、按编号取、归档、恢复完成；列表在各自的 Phase）：`access` 读项目的 `guest_view_all_features`，判定交回 `Grant.OwnOnly`（项目的访客、项目没开它时为真，按项目角色算：工作区管理员在项目里是访客时同样）；一条访客规则在读的判定中、在写的不加锁的预检和锁下的判定中各执行一次，别人建的工作项答 404 `issue.not_found`，不是 403（M4 设计 3.4、3.5）；交错 5 加上访客规则下 404 的一支。
 - **第 3 节，矩阵和码**（工作项的操作到 P2 为止完成）：P2 的 `getIssueByIdentifier`、`deleteIssue`、`archiveIssue`、`unarchiveIssue` 在规则表、操作名、矩阵中各有一行；矩阵有了工作项表（M4 设计 9.2），P1a、P1b 的 `createIssue`、`getIssue`、`updateIssue` 的行移到它上面：项目级的各列之外，建了它的项目成员，项目访客的三种情形（看得到全部的；只看自己的，对自己建的、对别人建的），只是项目访客的工作区管理员（对别人建的、对自己建的）；设计 9.2 另列的"建了它、后来被降为访客"（403）和"建了它、已离开项目"（404）是"访客·自己"（种子记在他名下的）和"已离开项目"（他离开之前建的）两列上 `deleteIssue` 的格子。新码 `issue.archived`、`issue.not_archivable` 由 `issue` 的 HTTP 测试返回过（`apitest.Main` 两个方向），带前端文案。决策点 3 的个人主页一行在 M4 的 P5。
