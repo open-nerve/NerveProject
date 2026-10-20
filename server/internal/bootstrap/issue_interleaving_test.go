@@ -104,11 +104,12 @@ func (w issueWorld) workItem(t *testing.T) uuid.UUID {
 }
 
 // itemWrite is a write on Web's work items that an interleaving runs as a
-// creation and as a change alike (M4 design 3.5: P1a's creation branch,
-// P1b's change branch): prepare writes what it needs first, nil for
-// nothing, leaving rows rows on Web's work-item side (workItemRows);
-// write is name's write with the body body gives; done is its answer, and
-// gone the code that refuses it once its project is gone to its caller.
+// creation, a change and a deletion alike (M4 design 3.5: P1a's creation
+// branch, P1b's change branch, P2's deletion by its creator): prepare
+// writes what it needs first, nil for nothing, leaving rows rows on Web's
+// work-item side (workItemRows); write is name's write, with the body body
+// gives when it sends one; done is its answer, and gone the code that
+// refuses it once its project is gone to its caller.
 type itemWrite struct {
 	name    string
 	prepare func(t *testing.T, w issueWorld)

@@ -11391,21 +11391,37 @@ func TestArchivingAWorkItemAndMovingItSerialize(t *testing.T) {
 
 - [ ] **Step 2: 删除与修改；创建者的删除**
 
-`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改，2 处）：
+`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改，3 处）：
 
 ````old server/internal/bootstrap/issue_interleaving_deletion_test.go
-	return w.sending(e, newWorkspaceRoute(t, w.pool, tx), "alice", http.MethodDelete, "/api/v0/workspaces/acme", "")
+}
+
+// fullBody is the world's fullIssue, as createsIssue takes a body.
 ````
 ````new server/internal/bootstrap/issue_interleaving_deletion_test.go
-	return w.sending(e, newWorkspaceRoute(t, w.pool, tx), "alice", http.MethodDelete, "/api/v0/workspaces/acme", "")
 }
 
 // deletesIssue is name's deletion of Web's one work item (workItem), which
-// sends no body: as an itemWrite's write, it takes none.
+// sends no body: as an itemWrite's write, it ignores the body it is given.
 func deletesIssue(name string, _ func(*testing.T, issueWorld) string) racingWrite {
 	return func(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) func() error {
 		return w.sending(e, newIssueRoute(t, w.pool, tx), name, http.MethodDelete, "/api/v0/issues/"+w.workItem(t).String(), "")
 	}
+}
+
+// fullBody is the world's fullIssue, as createsIssue takes a body.
+````
+````old server/internal/bootstrap/issue_interleaving_deletion_test.go
+// deletedWith checks the deletion of the row id of table, the deleted
+// project's or workspace's: at a moment no earlier than since, with the
+// rows of Web's work-item side, n of them, each deleted and last written
+// at that moment, by alice, and not before it was made.
+````
+````new server/internal/bootstrap/issue_interleaving_deletion_test.go
+// deletedWith checks the deletion of the row id of table, the deleted work
+// item's, project's or workspace's: at a moment no earlier than since,
+// with the rows of Web's work-item side, n of them, each deleted and last
+// written at that moment, by alice, and not before it was made.
 ````
 ````old server/internal/bootstrap/issue_interleaving_deletion_test.go
 		}
@@ -11444,8 +11460,23 @@ func TestDeletingAWorkItemAndChangingItSerialize(t *testing.T) {
 
 ````
 
-`server/internal/bootstrap/issue_interleaving_test.go`（修改，5 处）：
+`server/internal/bootstrap/issue_interleaving_test.go`（修改，6 处）：
 
+````old server/internal/bootstrap/issue_interleaving_test.go
+// creation and as a change alike (M4 design 3.5: P1a's creation branch,
+// P1b's change branch): prepare writes what it needs first, nil for
+// nothing, leaving rows rows on Web's work-item side (workItemRows);
+// write is name's write with the body body gives; done is its answer, and
+// gone the code that refuses it once its project is gone to its caller.
+````
+````new server/internal/bootstrap/issue_interleaving_test.go
+// creation, a change and a deletion alike (M4 design 3.5: P1a's creation
+// branch, P1b's change branch, P2's deletion by its creator): prepare
+// writes what it needs first, nil for nothing, leaving rows rows on Web's
+// work-item side (workItemRows); write is name's write, with the body body
+// gives when it sends one; done is its answer, and gone the code that
+// refuses it once its project is gone to its caller.
+````
 ````old server/internal/bootstrap/issue_interleaving_test.go
 // wroteNothing checks that Web's work-item side still has iw's rows: a
 // write refused under its lock wrote none.

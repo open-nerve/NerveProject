@@ -17,7 +17,7 @@ func deletesAcme(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) f
 }
 
 // deletesIssue is name's deletion of Web's one work item (workItem), which
-// sends no body: as an itemWrite's write, it takes none.
+// sends no body: as an itemWrite's write, it ignores the body it is given.
 func deletesIssue(name string, _ func(*testing.T, issueWorld) string) racingWrite {
 	return func(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) func() error {
 		return w.sending(e, newIssueRoute(t, w.pool, tx), name, http.MethodDelete, "/api/v0/issues/"+w.workItem(t).String(), "")
@@ -29,10 +29,10 @@ func fullBody(_ *testing.T, w issueWorld) string {
 	return w.fullIssue()
 }
 
-// deletedWith checks the deletion of the row id of table, the deleted
-// project's or workspace's: at a moment no earlier than since, with the
-// rows of Web's work-item side, n of them, each deleted and last written
-// at that moment, by alice, and not before it was made.
+// deletedWith checks the deletion of the row id of table, the deleted work
+// item's, project's or workspace's: at a moment no earlier than since,
+// with the rows of Web's work-item side, n of them, each deleted and last
+// written at that moment, by alice, and not before it was made.
 func (w issueWorld) deletedWith(t *testing.T, table string, id uuid.UUID, since time.Time, n int) {
 	t.Helper()
 	var at time.Time
