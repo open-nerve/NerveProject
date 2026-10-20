@@ -11628,7 +11628,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 夹具**
 
-`e2e/fixtures/assert/issue.ts`（修改，9 处）：
+`e2e/fixtures/assert/issue.ts`（修改，10 处）：
 
 ````old e2e/fixtures/assert/issue.ts
  * An "updated" row of a work item's activity: field changed from old to now, with Plane's comment; named and was,
@@ -11640,6 +11640,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
  * label's or an account's row.
 ````
 ````old e2e/fixtures/assert/issue.ts
+  old: string,
+````
+````new e2e/fixtures/assert/issue.ts
+  old: string | null,
+````
+````old e2e/fixtures/assert/issue.ts
   return changed("assignees", "", shownNameOf(email), "added assignee ", email);
 }
 ````
@@ -11648,15 +11654,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 }
 
 /** The rows of a work item's activity that archive it and that restore it (M4 design 3.13, rows 14 and 16). */
-export const archivedRow: ActivityRow = {
-  field: "archived_at",
-  verb: "updated",
-  old_value: null,
-  new_value: "manual_archive",
-  named: null,
-  was: null,
-  comment: "archived the work item",
-};
+export const archivedRow = changed("archived_at", null, "manual_archive", "archived the work item");
 export const restoredRow = changed("archived_at", "archive", "restore", "restored the work item");
 ````
 ````old e2e/fixtures/assert/issue.ts

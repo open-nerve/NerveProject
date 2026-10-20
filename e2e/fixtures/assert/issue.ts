@@ -34,7 +34,7 @@ export function byId(a: { id: string }, b: { id: string }): number {
  */
 export function changed(
   field: string,
-  old: string,
+  old: string | null,
   now: string,
   comment: string,
   named: string | null = null,
@@ -49,15 +49,7 @@ export function assigned(email: string): ActivityRow {
 }
 
 /** The rows of a work item's activity that archive it and that restore it (M4 design 3.13, rows 14 and 16). */
-export const archivedRow: ActivityRow = {
-  field: "archived_at",
-  verb: "updated",
-  old_value: null,
-  new_value: "manual_archive",
-  named: null,
-  was: null,
-  comment: "archived the work item",
-};
+export const archivedRow = changed("archived_at", null, "manual_archive", "archived the work item");
 export const restoredRow = changed("archived_at", "archive", "restore", "restored the work item");
 
 /** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
