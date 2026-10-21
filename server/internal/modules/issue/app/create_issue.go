@@ -56,7 +56,8 @@ type checked struct {
 // assignees, in id order; its activity: the creation, then each assignee
 // by his display name (domain.CreationActivity), and no row of its parent
 // (3.13). All of it is the caller's at that moment. The answer is the work
-// item as stored, read back in the transaction.
+// item as stored, read back in the transaction, which has no sub-items to
+// count yet (Issue.SubIssuesCount).
 func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domain.NewIssue) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {

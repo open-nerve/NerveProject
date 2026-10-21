@@ -28,13 +28,14 @@ var (
 
 // A guest who sees only his own work items reads his own, and not
 // another's, carol's Fix or bob's, which is issue.not_found to alice as
-// such a guest, the work item read and the one decision taken; carol's id
-// is after hers and bob's before it, so the rule tells her own by its
-// creator, not by the ids' order. When web shows its guests every work
-// item, she reads carol's. A refusal of her role on another's work item
-// is issue.not_found too, the guest rule first; on her own, forbidden. A
-// work item whose creator is not known, as one whose creator's account is
-// purged (P9), is no guest's own: issue.not_found.
+// such a guest, the work item read and the one decision taken, its
+// sub-items not counted; carol's id is after hers and bob's before it, so
+// the rule tells her own by its creator, not by the ids' order. When web
+// shows its guests every work item, she reads carol's. A refusal of her
+// role on another's work item is issue.not_found too, the guest rule
+// first; on her own, forbidden. A work item whose creator is not known, as
+// one whose creator's account is purged (P9), is no guest's own:
+// issue.not_found.
 func TestTheGuestRuleHidesAnothersWorkItemFromAReader(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -59,8 +60,11 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAReader(t *testing.T) {
 			if !reflect.DeepEqual(err, tt.want) || (err == nil) != (got.ID == id) {
 				t.Errorf("Execute() = %+v, %v; want %v", got, err, tt.want)
 			}
-			if calls := []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx")}; !slices.Equal(
-				w.log.calls, calls) {
+			calls := []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx")}
+			if tt.want == nil {
+				calls = append(calls, counted(id)+" outside tx")
+			}
+			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
 		})

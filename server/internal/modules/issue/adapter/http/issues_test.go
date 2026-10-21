@@ -33,20 +33,22 @@ var (
 	webSeven  = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e7"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 7,
 		Name: "Fix the login", StateID: stateID, Priority: domain.PriorityHigh, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID,
 		SortOrder: 75535.5, CompletedAt: &completed, ArchivedAt: &archived, AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID},
-		CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created, UpdatedAt: updated}
+		SubIssuesCount: 2, CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created, UpdatedAt: updated}
 	webSevenJSON = `{"archived_at":"2026-10-17T10:00:30.123456Z","assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],` +
 		`"completed_at":"2026-10-17T10:00:00.123455999Z","created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":"0199a2b4-0000-7000-8000-000000000001","id":"0199a2b4-0000-7000-8000-0000000000e7",` +
 		`"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"],"name":"Fix the login","parent_id":"0199a2b4-0000-7000-8000-0000000000e6",` +
 		`"priority":"high","project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":7,"sort_order":75535.5,"start_date":"2026-10-12",` +
-		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","target_date":"2026-10-19","updated_at":"2026-10-17T10:01:00.123456Z",` +
+		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","sub_issues_count":2,"target_date":"2026-10-19",` +
+		`"updated_at":"2026-10-17T10:01:00.123456Z",` +
 		`"updated_by_id":"0199a2b4-0000-7000-8000-000000000002","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 	webEight = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e8"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 8,
 		Name: "Fix", StateID: stateID, Priority: domain.PriorityNone, SortOrder: 65535, CreatedAt: created, UpdatedAt: created}
 	webEightJSON = `{"archived_at":null,"assignee_ids":[],"completed_at":null,"created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":null,"id":"0199a2b4-0000-7000-8000-0000000000e8","label_ids":[],"name":"Fix","parent_id":null,"priority":"none",` +
 		`"project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":8,"sort_order":65535,"start_date":null,` +
-		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","target_date":null,"updated_at":"2026-10-17T10:00:00.123456Z","updated_by_id":null,` +
+		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","sub_issues_count":0,"target_date":null,"updated_at":"2026-10-17T10:00:00.123456Z",` +
+		`"updated_by_id":null,` +
 		`"workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 )
 

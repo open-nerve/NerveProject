@@ -1851,6 +1851,8 @@ export interface components {
             assignee_ids: string[];
             /** @description Its labels, by id. */
             label_ids: string[];
+            /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
+            sub_issues_count: number;
             /**
              * Format: uuid
              * @description The account that created it; null for none.

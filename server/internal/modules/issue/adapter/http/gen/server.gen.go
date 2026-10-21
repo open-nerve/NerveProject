@@ -111,6 +111,9 @@ type IssueDetail struct {
 	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
 	StateID   uuid.UUID                      `json:"state_id"`
 
+	// SubIssuesCount The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.
+	SubIssuesCount int `json:"sub_issues_count"`
+
 	// TargetDate The day it is due, not before its start date; null for none.
 	TargetDate nullable.Nullable[shared.Date] `json:"target_date"`
 	UpdatedAt  time.Time                      `json:"updated_at"`

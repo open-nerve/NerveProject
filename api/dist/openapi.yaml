@@ -3065,6 +3065,7 @@ components:
         - archived_at
         - assignee_ids
         - label_ids
+        - sub_issues_count
         - created_by_id
         - updated_by_id
         - created_at
@@ -3134,6 +3135,9 @@ components:
           items:
             type: string
             format: uuid
+        sub_issues_count:
+          description: 'The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.'
+          type: integer
         created_by_id:
           description: The account that created it; null for none.
           type:

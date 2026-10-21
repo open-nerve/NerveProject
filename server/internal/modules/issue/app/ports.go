@@ -104,12 +104,25 @@ type PublicProfiles interface {
 	DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
 }
 
-// IssueReader reads a work item, in the transaction ctx carries, or
+// IssueReader reads work items, in the transaction ctx carries, or
 // without one (M4 design 3.5, 5.2).
 type IssueReader interface {
 	// GetIssue reads the undeleted work item, archived or not, with its
 	// assignees and labels; found is false when there is none.
 	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
+	// GetIssues reads the undeleted work items among ids, archived or
+	// not, each as GetIssue reads it, in id order.
+	GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue, error)
+	// SubIssueCounts counts the undeleted, unarchived direct sub-items of
+	// each of the work items ids that has any (M4 design 3.9).
+	SubIssueCounts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]SubIssueCount, error)
+}
+
+// SubIssueCount is a work item's number of undeleted, unarchived direct
+// sub-items, as IssueReader counts them for an account: All of them, and
+// Own, those the account created.
+type SubIssueCount struct {
+	All, Own int
 }
 
 // IssueArchiver is the work items' store as archiveIssue and

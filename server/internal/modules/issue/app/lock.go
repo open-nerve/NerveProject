@@ -98,7 +98,7 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 // shared.Forbidden. What it lets through, lockAndDecide decides again.
 func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write, error) {
 	if w.issue != nil {
-		i, err := l.see(ctx, actor, *w.issue, w.action)
+		i, _, err := l.see(ctx, actor, *w.issue, w.action)
 		if err != nil {
 			return write{}, err
 		}
@@ -155,19 +155,21 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (
 // and decides action on it for actor (M4 design 3.4, 3.5): a work item that
 // is not there, whose project actor does not see, or that the guest rule
 // hides from him, is issue.not_found; a role the rule does not allow is
-// the Authorizer's shared.Forbidden. It answers the work item as read.
-func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action shared.Action) (domain.Issue, error) {
+// the Authorizer's shared.Forbidden. It answers the work item as read, and
+// the decision's grant.
+func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action shared.Action) (domain.Issue, shared.Grant, error) {
 	i, found, err := l.issues.GetIssue(ctx, id)
 	switch {
 	case err != nil:
-		return domain.Issue{}, err
+		return domain.Issue{}, shared.Grant{}, err
 	case !found:
-		return domain.Issue{}, domain.ErrIssueNotFound
+		return domain.Issue{}, shared.Grant{}, domain.ErrIssueNotFound
 	}
-	if _, err := l.decide(ctx, actor, action, i.WorkspaceID, i.ProjectID, &i, domain.ErrIssueNotFound); err != nil {
-		return domain.Issue{}, err
+	grant, err := l.decide(ctx, actor, action, i.WorkspaceID, i.ProjectID, &i, domain.ErrIssueNotFound)
+	if err != nil {
+		return domain.Issue{}, shared.Grant{}, err
 	}
-	return i, nil
+	return i, grant, nil
 }
 
 // seeWorkspace decides action in the workspace workspaceID for actor,

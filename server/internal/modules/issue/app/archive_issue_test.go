@@ -59,8 +59,9 @@ func stored(id uuid.UUID, state uuid.UUID, archivedAt *time.Time, by uuid.UUID, 
 // An archiving, in the order of M4 design 3.5 and 3.8: Locks' calls on
 // issue.archive (lockedAs); the work item's state read under the lock; the
 // clock; the work item archived at the moment, by alice; its activity's
-// row 14, alice's at the moment; the answer read back. A work item in
-// Cancelled is archived as one in Done.
+// row 14, alice's at the moment; the answer read back, its sub-items
+// counted (Locks.seen). A work item in Cancelled is archived as one in
+// Done.
 func TestArchiveIssueArchivesTheWorkItem(t *testing.T) {
 	for _, state := range []app.StateRef{done, cancelled} {
 		t.Run(state.Name, func(t *testing.T) {
@@ -71,7 +72,7 @@ func TestArchiveIssueArchivesTheWorkItem(t *testing.T) {
 				t.Fatalf("Execute() = %+v, %v; want %+v", got, err, want)
 			}
 			calls := append(lockedAs(domain.ActionArchive, id), line("States", web), "Now", line("SetArchivedAt", id), line("InsertActivities", 1),
-				line("GetIssue", id))
+				line("GetIssue", id), counted(id))
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
@@ -94,7 +95,8 @@ func TestUnarchiveIssueUnarchivesTheWorkItem(t *testing.T) {
 	if want := stored(id, backlog.ID, nil, alice, clockNow); err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("Execute() = %+v, %v; want %+v", got, err, want)
 	}
-	calls := append(lockedAs(domain.ActionArchive, id), "Now", line("SetArchivedAt", id), line("InsertActivities", 1), line("GetIssue", id))
+	calls := append(lockedAs(domain.ActionArchive, id), "Now", line("SetArchivedAt", id), line("InsertActivities", 1), line("GetIssue", id),
+		counted(id))
 	if !slices.Equal(w.log.calls, calls) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
@@ -108,7 +110,8 @@ func TestUnarchiveIssueUnarchivesTheWorkItem(t *testing.T) {
 // read, and unarchiving one that is not archived: the precheck, the lock
 // and the decisions run as for any; nothing is written, not even the
 // clock read, and the answer is the work item as read under the lock, its
-// last writer and moment as they were (M4 design 3.8).
+// last writer and moment as they were, its sub-items counted (M4 design
+// 3.8, 3.9).
 func TestArchivingAsItIsWritesNothing(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
@@ -126,7 +129,7 @@ func TestArchivingAsItIsWritesNothing(t *testing.T) {
 			if want := stored(id, backlog.ID, tt.archivedAt, carol, earlier); err != nil || !reflect.DeepEqual(got, want) {
 				t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
 			}
-			if calls := lockedAs(domain.ActionArchive, id); !slices.Equal(w.log.calls, calls) || w.issues.archival != nil ||
+			if calls := append(lockedAs(domain.ActionArchive, id), counted(id)); !slices.Equal(w.log.calls, calls) || w.issues.archival != nil ||
 				w.issues.activities != nil {
 				t.Errorf("calls:\n%q\nwant\n%q; written %+v and %+v, want nothing", w.log.calls, calls, w.issues.archival, w.issues.activities)
 			}
@@ -138,8 +141,8 @@ func TestArchivingAsItIsWritesNothing(t *testing.T) {
 // the lock, before the work item is looked at, an archived one too (409
 // project.archived); a work item in Backlog, its state read, when it is
 // archived (409 issue.not_archivable); a role that may not, in the
-// precheck; a read or a write that fails, its failure as itself; a request
-// without a caller, unauthenticated before any read.
+// precheck; a read, a write or a count that fails, its failure as itself;
+// a request without a caller, unauthenticated before any read.
 func TestArchiveIssueRefusals(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -161,6 +164,7 @@ func TestArchiveIssueRefusals(t *testing.T) {
 		{"the state's read fails", true, func(w *world) { w.log.fail = "States" }, as(alice), errDisk, 7},
 		{"the archiving's write fails", true, func(w *world) { w.log.fail = "SetArchivedAt" }, as(alice), errDisk, 9},
 		{"the activity's write fails", true, func(w *world) { w.log.fail = "InsertActivities" }, as(alice), errDisk, 10},
+		{"the count fails", true, func(w *world) { w.log.fail = "SubIssueCounts" }, as(alice), errDisk, 12},
 		{"no caller", true, func(*world) {}, context.Background(), shared.Unauthenticated(), 0},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -177,7 +181,7 @@ func TestArchiveIssueRefusals(t *testing.T) {
 				t.Errorf("Execute() = %+v, %v; want no work item and %v", got, err, tt.want)
 			}
 			calls := slices.Concat(lockedAs(domain.ActionArchive, id), []string{line("States", web), "Now", line("SetArchivedAt", id),
-				line("InsertActivities", 1)})[:tt.calls]
+				line("InsertActivities", 1), line("GetIssue", id), counted(id)})[:tt.calls]
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}

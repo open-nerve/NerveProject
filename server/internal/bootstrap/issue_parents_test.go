@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"reflect"
 	"slices"
+	"strconv"
 	"testing"
 	"uuid"
 
@@ -183,6 +184,55 @@ func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 	}{{below, &his}, {moved, &his}, {bobs, &up}} {
 		if got := w.parentOf(t, tt.item); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("the work item %s is under %v, want %v", tt.item, got, tt.want)
+		}
+	}
+}
+
+// A parent the guest rule hides from the caller is not in the answers of a
+// work item under it (M4 design 3.4, 3.9): walt, acme's admin and Web's
+// guest (adminGuest), sees only his own work items in Web, and not alice's
+// Up (his GET of it is 404), under which alice puts his His. Each answer
+// of His to walt, his read of it by its id and by its identifier and his
+// change of its name, is alice's answer of it then, compared whole, with
+// parent_id null. Below, under his own Mine, he is answered under Mine;
+// bob, Web's member, who sees every work item, His under Up.
+func TestAHiddenParentIsNotInTheAnswer(t *testing.T) {
+	w := newIssueWorld(t)
+	w.adminGuest(t)
+	up := w.newWorkItemIn(t, w.web, `{"name":"Up"}`)
+	var his storedIssue
+	decodeAnswer(t, w.send(t, "walt", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", `{"name":"His"}`,
+		http.StatusCreated), &his)
+	path := "/api/v0/issues/" + his.ID.String()
+	w.send(t, "alice", http.MethodPatch, path, `{"parent_id":"`+up.String()+`"}`, http.StatusOK)
+	w.send(t, "walt", http.MethodGet, "/api/v0/issues/"+up.String(), "", http.StatusNotFound)
+	for _, step := range []struct{ name, method, path, body string }{
+		{"read", http.MethodGet, path, ""},
+		{"read by its identifier", http.MethodGet, "/api/v0/workspaces/acme/issues/WEB-" + strconv.Itoa(his.SequenceID), ""},
+		{"changed", http.MethodPatch, path, `{"name":"Mended"}`},
+	} {
+		var got, want map[string]any
+		decodeAnswer(t, w.send(t, "walt", step.method, step.path, step.body, http.StatusOK), &got)
+		decodeAnswer(t, w.send(t, "alice", http.MethodGet, path, "", http.StatusOK), &want)
+		if want["parent_id"] != up.String() {
+			t.Fatalf("%s: alice is answered His under %v, want Up, %s", step.name, want["parent_id"], up)
+		}
+		want["parent_id"] = nil
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s, by walt: %v; want alice's answer with parent_id null, %v", step.name, got, want)
+		}
+	}
+	mine := w.newWorkItemBy(t, "walt", w.web, `{"name":"Mine"}`)
+	below := w.newWorkItemBy(t, "walt", w.web, underParent("Below", mine))
+	for _, tt := range []struct {
+		by   string
+		item uuid.UUID
+		want *uuid.UUID
+	}{{"walt", below, &mine}, {"bob", his.ID, &up}} {
+		var got storedIssue
+		decodeAnswer(t, w.send(t, tt.by, http.MethodGet, "/api/v0/issues/"+tt.item.String(), "", http.StatusOK), &got)
+		if !reflect.DeepEqual(got.ParentID, tt.want) {
+			t.Errorf("%s's read of %s names its parent %v, want %v", tt.by, tt.item, got.ParentID, tt.want)
 		}
 	}
 }

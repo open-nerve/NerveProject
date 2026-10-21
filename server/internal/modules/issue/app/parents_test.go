@@ -111,7 +111,7 @@ func TestCreateIssueRefusesAParentItMayNotHave(t *testing.T) {
 // parent the new one, the others as they were; its activity a row of its
 // parent alone, by the old and the new one's identifiers and ids, WEB-3
 // and WEB-12, "" and none for none, alice's at the moment. The answer is
-// the work item under its new parent.
+// the work item under its new parent, its sub-items counted.
 func TestUpdateIssueMovesTheWorkItem(t *testing.T) {
 	ref := func(i domain.Issue, identifier string) *domain.Ref {
 		return &domain.Ref{ID: i.ID, Identifier: identifier}
@@ -146,7 +146,7 @@ func TestUpdateIssueMovesTheWorkItem(t *testing.T) {
 				t.Fatalf("Execute() = %+v, %v; want the work item under %v", got, err, tt.to(k))
 			}
 			calls := slices.Concat(locked(id), tt.reads(k), []string{"Now", line("UpdateIssue", id), line("InsertActivities", 1),
-				line("GetIssue", id)})
+				line("GetIssue", id), counted(id)})
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
@@ -212,9 +212,9 @@ func TestUpdateIssueRefusesAParentItMayNotHave(t *testing.T) {
 	w.issues.issue.ParentID = &k.up.ID
 	again := k.up.ID
 	if got, err := uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true, ParentID: &again}); err != nil ||
-		!reflect.DeepEqual(got.ParentID, &k.up.ID) || !slices.Equal(w.log.calls, locked(id)) || w.issues.changed != nil {
+		!reflect.DeepEqual(got.ParentID, &k.up.ID) || !slices.Equal(w.log.calls, append(locked(id), counted(id))) || w.issues.changed != nil {
 		t.Errorf("Execute() of the parent it has = %+v, %v after\n%q; want it as it was after\n%q, nothing written", got, err, w.log.calls,
-			locked(id))
+			append(locked(id), counted(id)))
 	}
 }
 

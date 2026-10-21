@@ -75,6 +75,82 @@ func (q *Queries) GetIssue(ctx context.Context, id uuid.UUID) (GetIssueRow, erro
 	return i, err
 }
 
+const getIssues = `-- name: GetIssues :many
+SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority, i.start_date, i.target_date,
+       i.parent_id, i.sort_order, i.completed_at, i.archived_at, i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
+       (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a
+        WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
+       (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
+        WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids
+FROM issues i
+WHERE i.id = ANY ($1::uuid[]) AND i.deleted_at IS NULL
+ORDER BY i.id
+`
+
+type GetIssuesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	SequenceID  int32
+	Name        string
+	StateID     uuid.UUID
+	Priority    string
+	StartDate   *time.Time
+	TargetDate  *time.Time
+	ParentID    *uuid.UUID
+	SortOrder   float64
+	CompletedAt *time.Time
+	ArchivedAt  *time.Time
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	AssigneeIds []uuid.UUID
+	LabelIds    []uuid.UUID
+}
+
+// The undeleted work items among ids, archived or not, each as GetIssue reads it, in id order (M4 design 3.4, 3.9), in a
+// write's transaction, under its project's lock, or without a lock.
+func (q *Queries) GetIssues(ctx context.Context, ids []uuid.UUID) ([]GetIssuesRow, error) {
+	rows, err := q.db.Query(ctx, getIssues, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetIssuesRow
+	for rows.Next() {
+		var i GetIssuesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.SequenceID,
+			&i.Name,
+			&i.StateID,
+			&i.Priority,
+			&i.StartDate,
+			&i.TargetDate,
+			&i.ParentID,
+			&i.SortOrder,
+			&i.CompletedAt,
+			&i.ArchivedAt,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AssigneeIds,
+			&i.LabelIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const greatestSortOrder = `-- name: GreatestSortOrder :one
 SELECT sort_order
 FROM issues

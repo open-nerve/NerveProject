@@ -99,7 +99,7 @@ func TestGetIssueByIdentifierReadsTheWorkItem(t *testing.T) {
 		if want := readIssue(id); err != nil || !reflect.DeepEqual(got, want) {
 			t.Errorf("Execute(%s) = %+v, %v; want %+v", tt.identifier, got, err, want)
 		}
-		if calls := identified(7, id); !slices.Equal(b.log.calls, calls) {
+		if calls := append(identified(7, id), counted(id)+" outside tx"); !slices.Equal(b.log.calls, calls) {
 			t.Errorf("%s: calls:\n%q\nwant\n%q", tt.identifier, b.log.calls, calls)
 		}
 	}

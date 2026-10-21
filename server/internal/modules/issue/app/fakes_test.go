@@ -220,8 +220,9 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // work item's archived_at, nil for none. subtree is the work item's
 // subtree, nil for the work item alone, and deletions are the deletion's
 // calls' arguments, one a table, in order (fakes_deletion_test.go). others
-// are the store's other work items, answered as they are, and ancestry
-// their ancestries (fakes_parents_test.go).
+// are the store's other work items, answered as they are, ancestry their
+// ancestries, and counts the work items' numbers of sub-items
+// (fakes_parents_test.go).
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
@@ -236,6 +237,7 @@ type fakeIssues struct {
 	deletions  []app.IssueDeletion
 	others     map[uuid.UUID]domain.Issue
 	ancestry   map[uuid.UUID][]uuid.UUID
+	counts     map[uuid.UUID]app.SubIssueCount
 	lost       bool
 }
 
@@ -359,11 +361,18 @@ func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, 
 	if err := f.log.add(ctx, "GetIssue", id); err != nil {
 		return domain.Issue{}, false, err
 	}
+	i, found := f.read(id)
+	return i, found, nil
+}
+
+// read is the work item id as the fake has it: one of its others, or the
+// work item it keeps; found is false when it has none.
+func (f *fakeIssues) read(id uuid.UUID) (domain.Issue, bool) {
 	if o, ok := f.others[id]; ok {
-		return o, true, nil
+		return o, true
 	}
 	if f.issue == nil || f.issue.ID != id {
-		return domain.Issue{}, false, nil
+		return domain.Issue{}, false
 	}
 	r := f.issue
 	by, at := f.writer()
@@ -371,7 +380,7 @@ func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, 
 		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, ParentID: r.ParentID, SortOrder: r.SortOrder,
 		CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
-			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
+			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true
 }
 
 // creatorOf is a stored work item's creator as a read answers it: none for

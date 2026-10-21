@@ -64,7 +64,8 @@ func (u *UnarchiveIssue) Execute(ctx context.Context, id uuid.UUID) (domain.Issu
 // archiving checks the work item's state (archivable); then the clock; the
 // work item's archived_at, the moment or none, and its last writer and
 // moment, the caller's; its activity's row, 14 or 16. The answer is the
-// work item as stored, read back in the transaction.
+// work item as stored, read back in the transaction, as the caller sees
+// it (Locks.seen), the work item as read when nothing is written.
 func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -77,8 +78,8 @@ func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (d
 		case h.project.Archived:
 			return domain.ErrProjectArchived
 		case (h.issue.ArchivedAt != nil) == on:
-			answer = h.issue
-			return nil
+			answer, err = d.Locks.seenOne(ctx, actor.UserID, h.grant, h.issue)
+			return err
 		}
 		if on {
 			if err := d.archivable(ctx, h.issue); err != nil {
@@ -96,7 +97,10 @@ func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (d
 		if err := d.Issues.InsertActivities(ctx, s.activity([]domain.Activity{activity})); err != nil {
 			return err
 		}
-		answer, err = readBack(ctx, d.Issues, id)
+		if answer, err = readBack(ctx, d.Issues, id); err != nil {
+			return err
+		}
+		answer, err = d.Locks.seenOne(ctx, actor.UserID, h.grant, answer)
 		return err
 	})
 	if err != nil {

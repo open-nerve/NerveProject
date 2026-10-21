@@ -47,7 +47,7 @@ func TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction(t *testi
 		t.Fatal(err)
 	}
 	want := slices.Concat(locked(id)[:2], []string{line("Enter", web, "outside tx")}, locked(id)[2:], []string{"Now", line("UpdateIssue", id),
-		line("InsertActivities", 1), line("GetIssue", id), line("Leave", web)})
+		line("InsertActivities", 1), line("GetIssue", id), counted(id), line("Leave", web)})
 	if !slices.Equal(w.log.calls, want) {
 		t.Errorf("an update's calls:\n%q\nwant\n%q", w.log.calls, want)
 	}

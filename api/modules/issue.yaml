@@ -335,7 +335,7 @@ components:
       type: object
       additionalProperties: false
       required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
-        completed_at, archived_at, assignee_ids, label_ids, created_by_id, updated_by_id, created_at, updated_at]
+        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, created_by_id, updated_by_id, created_at, updated_at]
       properties:
         id:
           type: string
@@ -393,6 +393,12 @@ components:
           items:
             type: string
             format: uuid
+        sub_issues_count:
+          description: >-
+            The number of the work items directly under it that are not
+            archived and that the caller sees: a guest of the project who
+            sees only his own work items counts only his own.
+          type: integer
         created_by_id:
           description: The account that created it; null for none.
           type: [string, 'null']

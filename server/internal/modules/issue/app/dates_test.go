@@ -22,11 +22,11 @@ func october(d int) *shared.Date {
 // each date given, the other kept; each date it changes is a row of its
 // activity, from and to YYYY-MM-DD or "" for none (rows 8, 9), alice's at
 // the moment, after the clock and the work item's fields; the answer is the
-// work item read back. Web's work item 7 runs from the 12th to the 19th:
-// both dates moved past the target date it had, which a start date given
-// with the target date is not held to; the start date cleared, and a
-// target date before the start date it had; a start date alone, on the
-// target date it keeps; the target date cleared.
+// work item read back, its sub-items counted. Web's work item 7 runs from
+// the 12th to the 19th: both dates moved past the target date it had, which
+// a start date given with the target date is not held to; the start date
+// cleared, and a target date before the start date it had; a start date
+// alone, on the target date it keeps; the target date cleared.
 func TestUpdateIssueWritesTheDates(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
@@ -53,7 +53,8 @@ func TestUpdateIssueWritesTheDates(t *testing.T) {
 				t.Fatalf("Execute() = %+v, %v; want it from %v to %v", got, err, tt.start, tt.target)
 			}
 			rows := domain.UpdateActivity(tt.rows)
-			if calls := append(locked(id), "Now", line("UpdateIssue", id), line("InsertActivities", len(rows)), line("GetIssue", id)); !slices.Equal(
+			if calls := append(locked(id), "Now", line("UpdateIssue", id), line("InsertActivities", len(rows)), line("GetIssue", id),
+				counted(id)); !slices.Equal(
 				w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}

@@ -62,7 +62,8 @@ type named struct {
 // it adds subscribed; its activity (domain.UpdateActivity), each account
 // by his display name, each parent by its identifier. All of it is the
 // caller's at that moment. The answer is the work item as stored, read
-// back in the transaction.
+// back in the transaction, as the caller sees it (Locks.seen), the work
+// item as read when nothing is written.
 func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssuePatch) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -82,8 +83,8 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 		}
 		c := domain.ChangesOf(h.issue, p)
 		if c.None() {
-			updated = h.issue
-			return nil
+			updated, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, h.issue)
+			return err
 		}
 		n, err := u.check(ctx, h, actor.UserID, p, c)
 		if err != nil {
@@ -93,7 +94,10 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 		if err := u.write(ctx, s, h.issue, c, n); err != nil {
 			return err
 		}
-		updated, err = readBack(ctx, u.d.Issues, id)
+		if updated, err = readBack(ctx, u.d.Issues, id); err != nil {
+			return err
+		}
+		updated, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, updated)
 		return err
 	})
 	if err != nil {

@@ -52,8 +52,9 @@ func Archivable(group StateGroup) bool {
 
 // Issue is a work item as stored and as the API shows it (M4 design 5.2),
 // with the accounts of its undeleted assignees' rows and the labels of its
-// undeleted labels' rows, in the accounts' and the labels' id order. The
-// fields of later phases come with them (M4 design 12, constraint 5).
+// undeleted labels' rows, in the accounts' and the labels' id order, and
+// the caller's view of it. The fields of later phases come with them (M4
+// design 12, constraint 5).
 type Issue struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
@@ -74,6 +75,11 @@ type Issue struct {
 	UpdatedByID *uuid.UUID
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	// The caller's view (M4 design 3.9): the number of its undeleted,
+	// unarchived direct sub-items that he sees. A read of the store leaves
+	// it 0; the use case that answers the work item counts it, by the
+	// caller's grant on its project.
+	SubIssuesCount int
 }
 
 // HiddenFrom reports whether the guest rule hides i from the account actor,

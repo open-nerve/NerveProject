@@ -35,25 +35,29 @@ func readIssue(id uuid.UUID) domain.Issue {
 
 // A read, outside any transaction, without a lock and outside the write
 // gate (M4 design 3.5, 11.11): the work item, then the decision on
-// issue.read in its project, of its workspace; the answer is the work item
-// as read.
+// issue.read in its project, of its workspace, then the count of its
+// sub-items; the answer is the work item as read, with the number of its
+// sub-items alice sees, every one (Locks.seen).
 func TestGetIssueReadsTheWorkItem(t *testing.T) {
 	uc, w, id := newGet()
+	w.issues.counts = map[uuid.UUID]app.SubIssueCount{id: {All: 2, Own: 1}}
 	got, err := uc.Execute(as(alice), id)
-	if want := readIssue(id); err != nil || !reflect.DeepEqual(got, want) {
+	want := readIssue(id)
+	want.SubIssuesCount = 2
+	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
 	}
-	if calls := []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx")}; !slices.Equal(
-		w.log.calls, calls) {
+	if calls := []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx"),
+		counted(id) + " outside tx"}; !slices.Equal(w.log.calls, calls) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
 }
 
 // A work item that is not there, or whose project the caller does not
-// see, is issue.not_found; a role that may not read it, forbidden; a read
-// or a decision that fails, its failure as itself; a request without a
-// caller, unauthenticated before any read. Each answer is compared whole,
-// not by its code alone.
+// see, is issue.not_found; a role that may not read it, forbidden; a read,
+// a decision or a count that fails, its failure as itself; a request
+// without a caller, unauthenticated before any read. Each answer is
+// compared whole, not by its code alone.
 func TestGetIssueRefusals(t *testing.T) {
 	decided := line("Authorize", alice, domain.ActionRead, acme, web, "outside tx")
 	for _, tt := range []struct {
@@ -61,7 +65,7 @@ func TestGetIssueRefusals(t *testing.T) {
 		set   func(w *world, id *uuid.UUID)
 		ctx   context.Context
 		want  error
-		calls int // of read, decided
+		calls int // of read, decided, counted
 	}{
 		{"no work item", func(_ *world, id *uuid.UUID) { *id = uuid.NewV7() }, as(alice), domain.ErrIssueNotFound, 1},
 		{"a project not seen", func(w *world, _ *uuid.UUID) { w.auth.answers = []error{shared.ErrNotVisible} }, as(alice),
@@ -69,6 +73,7 @@ func TestGetIssueRefusals(t *testing.T) {
 		{"a role not allowed", func(w *world, _ *uuid.UUID) { w.auth.answers = []error{shared.Forbidden()} }, as(alice), shared.Forbidden(), 2},
 		{"the read fails", func(w *world, _ *uuid.UUID) { w.log.fail = "GetIssue" }, as(alice), errDisk, 1},
 		{"the decision fails", func(w *world, _ *uuid.UUID) { w.log.fail = "Authorize" }, as(alice), errDisk, 2},
+		{"the count fails", func(w *world, _ *uuid.UUID) { w.log.fail = "SubIssueCounts" }, as(alice), errDisk, 3},
 		{"no caller", func(*world, *uuid.UUID) {}, context.Background(), shared.Unauthenticated(), 0},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,7 +83,7 @@ func TestGetIssueRefusals(t *testing.T) {
 			if !reflect.DeepEqual(err, tt.want) || got.ID != (uuid.UUID{}) {
 				t.Errorf("Execute() = %+v, %v; want no work item and %v", got, err, tt.want)
 			}
-			calls := []string{line("GetIssue", id, "outside tx"), decided}[:tt.calls]
+			calls := []string{line("GetIssue", id, "outside tx"), decided, counted(id) + " outside tx"}[:tt.calls]
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
