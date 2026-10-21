@@ -112,6 +112,40 @@ func read(t *testing.T, s *postgresadapter.Store, ids ...uuid.UUID) []domain.Iss
 	return out
 }
 
+// A work item's sub-items as SubIssues reads them (M4 design 3.9): its
+// undeleted, unarchived direct sub-items, each as GetIssue reads it, its
+// assignees and labels too, in the order of their creation, then of their
+// ids: p's are b, a and x, anyone's; a, alice's; b and x, bob's. q has
+// none, nor has a work item not there.
+func TestSubIssues(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
+	f := newFamily(t, s, pool, web, alice, bob)
+	ctx := context.Background()
+	for _, tt := range []struct {
+		name   string
+		parent uuid.UUID
+		by     *uuid.UUID
+		want   []domain.Issue
+	}{
+		{"p's, anyone's", f.p, nil, read(t, s, f.b, f.a, f.x)},
+		{"p's, alice's", f.p, &alice, read(t, s, f.a)},
+		{"p's, bob's", f.p, &bob, read(t, s, f.b, f.x)},
+		{"q's", f.q, nil, read(t, s)},
+		{"no work item's", uuid.NewV7(), nil, read(t, s)},
+	} {
+		if got, err := s.SubIssues(ctx, tt.parent, tt.by); err != nil || !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("SubIssues(%s) = %+v, %v; want %+v", tt.name, got, err, tt.want)
+		}
+	}
+	cancelled, stop := context.WithCancel(ctx)
+	stop()
+	if got, err := s.SubIssues(cancelled, f.p, nil); !errors.Is(err, context.Canceled) || got != nil {
+		t.Errorf("SubIssues() on a cancelled context = %+v, %v; want context.Canceled", got, err)
+	}
+}
+
 // The work items GetIssues reads (M4 design 3.9): the undeleted ones among
 // the ids given, archived ones too, each as GetIssue reads it, in id
 // order, whatever the order given or stored; none for none. a, the first
@@ -142,5 +176,60 @@ func TestGetIssues(t *testing.T) {
 	stop()
 	if got, err := s.GetIssues(cancelled, []uuid.UUID{f.a}); !errors.Is(err, context.Canceled) || got != nil {
 		t.Errorf("GetIssues() on a cancelled context = %+v, %v; want context.Canceled", got, err)
+	}
+}
+
+// SetParents puts the undeleted work items it names under the parent, each
+// changed last by the account and at the moment given, and no other (M4
+// design 3.9): a and b under q, by bob, an hour after; every other work
+// item keeps its parent and its last change, d, deleted, too. Naming a
+// deleted work item is an error, as is a failed statement.
+func TestSetParents(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
+	f := newFamily(t, s, pool, web, alice, bob)
+	ctx := context.Background()
+	type change struct {
+		parent *uuid.UUID
+		by     uuid.UUID
+		at     time.Time
+	}
+	changes := func() map[uuid.UUID]change {
+		t.Helper()
+		rows, err := pool.Query(ctx, "SELECT id, parent_id, updated_by_id, updated_at FROM issues")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		out := map[uuid.UUID]change{}
+		for rows.Next() {
+			var id uuid.UUID
+			var c change
+			if err := rows.Scan(&id, &c.parent, &c.by, &c.at); err != nil {
+				t.Fatal(err)
+			}
+			c.at = c.at.UTC()
+			out[id] = c
+		}
+		return out
+	}
+	want := changes()
+	later := now.Add(time.Hour)
+	if err := s.SetParents(ctx, app.ParentRows{IDs: []uuid.UUID{f.a, f.b}, ParentID: f.q, By: bob, At: later}); err != nil {
+		t.Fatal(err)
+	}
+	want[f.a], want[f.b] = change{&f.q, bob, later}, change{&f.q, bob, later}
+	if got := changes(); !reflect.DeepEqual(got, want) {
+		t.Errorf("the work items' parents and last changes %+v, want %+v", got, want)
+	}
+	if err := s.SetParents(ctx, app.ParentRows{IDs: []uuid.UUID{f.x, f.d}, ParentID: f.q, By: bob, At: later}); err == nil {
+		t.Error("SetParents() of a deleted work item = nil; want an error")
+	}
+	cancelled, stop := context.WithCancel(ctx)
+	stop()
+	if err := s.SetParents(cancelled, app.ParentRows{IDs: []uuid.UUID{f.a}, ParentID: f.p, By: bob, At: later}); !errors.Is(err,
+		context.Canceled) {
+		t.Errorf("SetParents() on a cancelled context = %v; want context.Canceled", err)
 	}
 }

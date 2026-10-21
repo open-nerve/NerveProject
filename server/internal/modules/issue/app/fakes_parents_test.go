@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"uuid"
 
@@ -50,4 +51,36 @@ func (f *fakeIssues) GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.I
 		}
 	}
 	return out, nil
+}
+
+// SubIssues logs the read, the parent's and whose sub-items it asks for,
+// anyone's for none, and answers the fake's subItems, whatever is asked.
+func (f *fakeIssues) SubIssues(ctx context.Context, parent uuid.UUID, by *uuid.UUID) ([]domain.Issue, error) {
+	whose := "anyone's"
+	if by != nil {
+		whose = by.String() + "'s"
+	}
+	if err := f.log.add(ctx, "SubIssues", parent, whose); err != nil {
+		return nil, err
+	}
+	return f.subItems, nil
+}
+
+// SetParents logs the write, keeps its rows (parented) and puts each of
+// the fake's others it names under its parent, last changed by its writer
+// at its moment; a work item it names that the fake has not is an error.
+func (f *fakeIssues) SetParents(ctx context.Context, r app.ParentRows) error {
+	if err := f.log.add(ctx, "SetParents", r.IDs, r.ParentID); err != nil {
+		return err
+	}
+	f.parented = &r
+	for _, id := range r.IDs {
+		o, ok := f.others[id]
+		if !ok {
+			return fmt.Errorf("SetParents: no work item %s", id)
+		}
+		o.ParentID, o.UpdatedByID, o.UpdatedAt = &r.ParentID, &r.By, r.At
+		f.others[id] = o
+	}
+	return nil
 }

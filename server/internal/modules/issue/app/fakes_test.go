@@ -221,7 +221,8 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // subtree, nil for the work item alone, and deletions are the deletion's
 // calls' arguments, one a table, in order (fakes_deletion_test.go). others
 // are the store's other work items, answered as they are, ancestry their
-// ancestries, and counts the work items' numbers of sub-items
+// ancestries, counts the work items' numbers of sub-items, subItems the
+// sub-items it answers, and parented the last addition of sub-items' rows
 // (fakes_parents_test.go).
 type fakeIssues struct {
 	log        *callLog
@@ -238,6 +239,8 @@ type fakeIssues struct {
 	others     map[uuid.UUID]domain.Issue
 	ancestry   map[uuid.UUID][]uuid.UUID
 	counts     map[uuid.UUID]app.SubIssueCount
+	subItems   []domain.Issue
+	parented   *app.ParentRows
 	lost       bool
 }
 

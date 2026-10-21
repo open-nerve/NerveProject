@@ -125,6 +125,27 @@ type SubIssueCount struct {
 	All, Own int
 }
 
+// SubIssueLister reads the sub-items of a work item (M4 design 3.9).
+type SubIssueLister interface {
+	// SubIssues reads the undeleted, unarchived work items directly under
+	// the work item parent, with their assignees and labels, those the
+	// account by created when by is not nil, in the order of their
+	// creation, (created_at, id), without a lock.
+	SubIssues(ctx context.Context, parent uuid.UUID, by *uuid.UUID) ([]domain.Issue, error)
+}
+
+// SubIssueAdder is the work items' store as addSubIssues writes and reads
+// them, in the transaction ctx carries (M4 design 3.5, 3.9).
+type SubIssueAdder interface {
+	IssueReader
+	// Ancestry reads the work item and those above it, as IssueUpdater's.
+	Ancestry(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error)
+	// SetParents puts the undeleted work items r names under its parent.
+	SetParents(ctx context.Context, r ParentRows) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
+}
+
 // IssueArchiver is the work items' store as archiveIssue and
 // unarchiveIssue write and read them, in the transaction ctx carries (M4
 // design 3.5).

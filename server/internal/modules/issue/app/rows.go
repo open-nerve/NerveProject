@@ -57,6 +57,16 @@ type IssueFields struct {
 	At          time.Time
 }
 
+// ParentRows are the work items an addition of sub-items puts under a
+// work item (M4 design 3.9): IDs, in id order, under ParentID, each last
+// changed at the moment and by the account given.
+type ParentRows struct {
+	IDs      []uuid.UUID
+	ParentID uuid.UUID
+	By       uuid.UUID
+	At       time.Time
+}
+
 // IssueArchival is a work item's archiving or unarchiving as it is written
 // (M4 design 3.8): its archived_at, the moment, or nil for none, and the
 // moment and the account that change it last.
