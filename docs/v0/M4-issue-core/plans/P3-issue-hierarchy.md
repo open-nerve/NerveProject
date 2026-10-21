@@ -8151,7 +8151,7 @@ func TestACallerWaitsMaxWaitInAll(t *testing.T) {
 func (s *Store) LockIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]app.IssueProject, error) {
 	rows, err := s.queries(ctx).LockIssueProjects(ctx, ids)
 	if err != nil {
-		return nil, fmt.Errorf("lock projects %v for their work items: %w", ids, err)
+		return nil, fmt.Errorf("lock %d projects for their work items: %w", len(ids), err)
 	}
 	locked := make(map[uuid.UUID]app.IssueProject, len(rows))
 	for _, r := range rows {
