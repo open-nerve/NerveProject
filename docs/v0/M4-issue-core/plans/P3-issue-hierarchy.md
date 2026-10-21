@@ -116,7 +116,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/adapter/http/issues_test.go`（修改） | 创建带父工作项（Task 2）；回答的计数（Task 4） | 2、4 |
 | `server/internal/bootstrap/issue_parents_test.go`（新） | 创建在父工作项之下、访客规则（Task 2）；修改移动工作项、不成环（Task 3）；回答不指名只看自己的访客看不到的父工作项（Task 4） | 2、3、4 |
 | `server/internal/bootstrap/issue_writes_test.go`（修改） | 一个连接的池上的写：在父工作项下建（Task 2）、移动（Task 3）、加子工作项（Task 6）、跨项目的关联（Task 11）、删除关联（Task 14） | 2、3、6、11、14 |
-| `server/internal/modules/issue/domain/patch.go`、`server/internal/modules/issue/domain/patch_test.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/activity_test.go`、`server/internal/modules/issue/domain/identifier.go`、`server/internal/modules/issue/domain/identifier_test.go`（修改） | `IssuePatch.SetParent`、`Changes.Parent`、动态第 5 行、`Identifier`（Task 3）；`VerbDeleted`（Task 13，`activity.go`） | 3、13 |
+| `server/internal/modules/issue/domain/patch.go`、`server/internal/modules/issue/domain/patch_test.go`、`server/internal/modules/issue/domain/dates.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/activity_test.go`、`server/internal/modules/issue/domain/identifier.go`、`server/internal/modules/issue/domain/identifier_test.go`（修改） | `IssuePatch.SetParentID`、`Changes.Parent`、`same`（`dates.go` 的 `sameDay` 并入它）、动态第 5 行、`Identifier`（Task 3）；`VerbDeleted`（Task 13，`activity.go`） | 3、13 |
 | `server/internal/modules/issue/adapter/postgres/queries/parents.sql`、`server/internal/modules/issue/adapter/postgres/parents.go`（新） | `Ancestry`（`WITH RECURSIVE`，`UNION`） | 3 |
 | `server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`（修改） | 修改写 `parent_id` | 3 |
 | `server/internal/modules/issue/app/update_issue.go`（修改） | 修改的父工作项（`check`、`parentChange`）（Task 3）；回答带计数（Task 4） | 3、4 |
@@ -2091,24 +2091,24 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_interleaving_hierarchy_test.go`、`server/internal/modules/issue/adapter/postgres/parents.go`、`server/internal/modules/issue/adapter/postgres/queries/parents.sql`、`server/internal/modules/issue/app/fakes_parents_test.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_parents_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/ports_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/update_test.go`、`server/internal/modules/issue/adapter/postgres/parents_test.go`、`server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`、`server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/parents.go`、`server/internal/modules/issue/app/parents_test.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/activity_test.go`、`server/internal/modules/issue/domain/hierarchy.go`、`server/internal/modules/issue/domain/identifier.go`、`server/internal/modules/issue/domain/identifier_test.go`、`server/internal/modules/issue/domain/patch.go`、`server/internal/modules/issue/domain/patch_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/app/issue_ports.go`
+- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_parents_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/ports_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/update_test.go`、`server/internal/modules/issue/adapter/postgres/parents_test.go`、`server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`、`server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/parents.go`、`server/internal/modules/issue/app/parents_test.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/activity_test.go`、`server/internal/modules/issue/domain/dates.go`、`server/internal/modules/issue/domain/hierarchy.go`、`server/internal/modules/issue/domain/identifier.go`、`server/internal/modules/issue/domain/identifier_test.go`、`server/internal/modules/issue/domain/patch.go`、`server/internal/modules/issue/domain/patch_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/app/issue_ports.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`server/internal/modules/issue/adapter/postgres/gen/parents.sql.go`、`server/internal/modules/issue/adapter/postgres/gen/update.sql.go`、`server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.5、第 3 节第 6、9、12 条；M4 设计 3.3、3.5、3.9、3.13、5.2；P1b spec 第 5 节的"`parent_id` 进 `IssuePatch`"）
 - 契约：`IssueUpdate.parent_id`（可为 `null`：从父工作项下拿出）；`updateIssue` 的描述写上父工作项的规则（同一个项目、没归档、调用者看得到，不是它自己、不在它下面）和动态里的父工作项。
 - `project`：`LockIssueProject` 多回答项目的标识（`issue_ports.sql`、`issue_ports.go`、`app/issue_ports.go` 的 `IssueProject.Identifier`）；`issue/app` 的 `LockedProject.Identifier`（动态按标识指名工作项，锁下读）。
-- `issue/domain`：`IssuePatch.SetParentID`、`ParentID`；`Changes.Parent`（`ParentChange{To}`，与工作项的相同时不算改动，`sameID`）；`hierarchy.go`（整个文件）：`ParentChange`、`Ref{ID, Identifier}`、`ParentActivity`（第 5 行：`parent`、`updated`，原来和新的父工作项的标识，`""` 是没有，它们的 `id` 是 `old_identifier`、`new_identifier`）、`refText`；`UpdateActivity` 带上它；`identifier.go` 的 `Identifier(project, number)`（`ParseIdentifier` 的反面）。
+- `issue/domain`：`IssuePatch.SetParentID`、`ParentID`；`Changes.Parent`（`ParentChange{To}`，与工作项的相同时不算改动：泛型的 `same`，日期和 `id` 共用，`dates.go` 的 `sameDay` 并入它）；`hierarchy.go`（整个文件）：`ParentChange`、`Ref{ID, Identifier}`、`ParentActivity`（第 5 行：`parent`、`updated`，原来和新的父工作项的标识，`""` 是没有，它们的 `id` 是 `old_identifier`、`new_identifier`）、`refText`；`UpdateActivity` 带上它；`identifier.go` 的 `Identifier(project, number)`（`ParseIdentifier` 的反面）。
 - `issue/adapter/postgres`：`queries/parents.sql`（新）的 `Ancestry`（`WITH RECURSIVE … UNION`：它和它上面的每个工作项，已删除、已归档的也在，各一次；数据库里有环也会结束）、`parents.go`（新）；`update.sql`、`update.go` 的 `UpdateIssue` 写 `parent_id`。
-- `issue/app`：`IssueReader.Ancestry`；`parents.go` 的 `parentChange(ctx, issues, h, actor, to)`（新的父工作项经 `parentOf`，再读它的祖先链，含工作项本身的不行（`domain.Loops` 在 Task 5 之前是这里的 `slices.Contains`）；原来的父工作项在锁下读，不在是错误：删除工作项连带它下面的）、`refOf(h, i)`（锁下的项目的标识和工作项的编号）；`update_issue.go` 的 `check` 在日期之后查父工作项，问题与别的一次报出，写 `IssueFields.ParentID`，动态写第 5 行。
+- `issue/app`：`IssueUpdater.Ancestry`；`parents.go` 的 `parentChange(ctx, issues, h, actor, to)`（新的父工作项经 `parentOf`，再读它的祖先链，含工作项本身的不行（`domain.Loops` 在 Task 5 之前是这里的 `slices.Contains`）；原来的父工作项在锁下读，不在是错误：删除工作项连带它下面的）、`refOf(h, i)`（锁下的项目的标识和工作项的编号）；`update_issue.go` 的 `check` 在日期之后查父工作项，问题与别的一次报出，写 `IssueFields.ParentID`，动态写第 5 行。
 - 测试的帮手：`fakes_parents_test.go`（新）：`fakeIssues.Ancestry`；`fakes_test.go` 的锁下的项目带标识 `WEB`（`create_issue_test.go` 的世界照改）。
 - HTTP：`UpdateIssue` 映射 `parent_id`（`null` 是拿出）。
 
 **Tests:**
 - 领域：`TestChangesOf`、`TestChangesNone`（父工作项的改动，相同的不算）、`TestUpdateActivity`（第 5 行的各种情形）、`TestParseIdentifier`（`Identifier` 与它互为反面）。
-- 单元：`TestUpdateIssueMovesTheWorkItem`（从 up 下移到 top 下、从没有到 top 下、从 up 下拿出：日期之后，锁下读新的父工作项、它的祖先链、原来的父工作项；时刻；只改父工作项；一行第 5 行的动态，按标识和 `id`，`WEB-3`、`WEB-12`）、`TestUpdateIssueRefusesAParentItMayNotHave`（没有的、别的项目的、已归档的、它自己、它下面的、锁下的判定说只看自己的调用者的别人的：都在别的问题之后、同一个 422，什么都不写；给出与它现在相同的父工作项什么都不改、不读）、`TestAParentsFailingReadEndsTheWrite`（新的父工作项、它的祖先链、原来的父工作项的读失败；原来的父工作项不在是错误，在时刻之前）。
+- 单元：`TestUpdateIssueMovesTheWorkItem`（从 up 下移到 top 下、从没有到 top 下、从 up 下拿出，top 在 mine 下：新的父工作项有父工作项照样可以；日期之后，锁下读新的父工作项、它的祖先链、原来的父工作项；时刻；只改父工作项；一行第 5 行的动态，按标识和 `id`，`WEB-3`、`WEB-12`）、`TestUpdateIssueRefusesAParentItMayNotHave`（没有的、别的项目的、已归档的、它自己、它下面的、锁下的判定说只看自己的调用者的别人的：都在别的问题之后、同一个 422，什么都不写；给出与它现在相同的父工作项什么都不改、不读）、`TestAParentsFailingReadEndsTheWrite`（新的父工作项、它的祖先链、原来的父工作项的读失败；原来的父工作项不在是错误，在时刻之前）。
 - 存储：`TestAWorkItemsAncestry`（c 在 b 下、b 在已归档的 a 下、a 在已删除的 root 下；数据库里造的环 x、y 各一次；`id` 的次序不是线的次序）、`TestAWorkItemsParentIsWritten`（`UpdateIssue` 写下 top，再写下没有）；`project` 的 `TestLockIssueProject`（回答标识）。
 - HTTP：`TestUpdateIssue`、`TestUpdateIssueHoldsTheBodyToItsStructure`（`parent_id` 的值、`null`）。
-- 组合：`TestIssueProjectsConvertsProjectsAnswers`（标识）；`TestAWorkItemIsPutUnderAnother`（在不存在的工作项下、带不存在的标签建的，两个问题一次报出；bob 把 Part 移到 Top 下、再拿出，各一行他的动态，`WEB-2` 到 `WEB-1`、`WEB-1` 到 `""`，再从没有父工作项拿出一次，什么都不改、不写；Part 不能要的父工作项各 422 `parent_id`、什么都不写：它自己，它下面的 Low（不论多深，中间的 Mid 已归档：祖先链穿过已归档的工作项），Ops 的，已归档的，已删除的，没有的；Low 可以移到 Top 下）、`TestTheGuestRuleHoldsForAParent`（walt 把他的工作项移到 alice 的 Up 下 422，移到他自己的下照常）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 把 Part 从第一个工作项下移到第二个下，锁下读新的父工作项、它的祖先链、原来的父工作项的语句都在它的事务的连接上）；交错 9 `TestTwoMovesThatWouldMakeALoopSerialize`（新文件 `issue_interleaving_hierarchy_test.go`：alice 把 A 移到 B 下、bob 把 B 移到 A 下，两种顺序；第二个等 Web 的行，锁下读到祖先链里有它自己，422 `parent_id`，什么都不写；只有第一个写了第 5 行）。
+- 组合：`TestIssueProjectsConvertsProjectsAnswers`（标识）；`TestAWorkItemIsPutUnderAnother`（在不存在的工作项下、带不存在的标签建的，两个问题一次报出；bob 把 Part 移到 Top 下、再拿出，各一行他的动态，`WEB-2` 到 `WEB-1`、`WEB-1` 到 `""`，再从没有父工作项拿出一次，什么都不改、不写；Part 不能要的父工作项各 422 `parent_id`、什么都不写：它自己，它下面的 Low（不论多深，中间的 Mid 已归档：祖先链穿过已归档的工作项），Ops 的，已归档的，已删除的，没有的；bob 把 Up 移到 Top 下，再把 Low 移到 Up 下：父工作项有父工作项照样可以，Up 存在 Top 下，Low 从已归档的 Mid 下存到 Up 下，一行他的第 5 行，`WEB-4` 到 `WEB-2`）、`TestTheGuestRuleHoldsForAParent`（walt 把他的工作项移到 alice 的 Up 下 422，移到他自己的下照常）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 把 Part 从第一个工作项下移到第二个下，锁下读新的父工作项、它的祖先链、原来的父工作项的语句都在它的事务的连接上）；交错 9 `TestTwoMovesThatWouldMakeALoopSerialize`（新文件 `issue_interleaving_hierarchy_test.go`：alice 把 A 移到 B 下、bob 把 B 移到 A 下，两种顺序；第二个等 Web 的行，锁下读到祖先链里有它自己，422 `parent_id`，什么都不写；只有第一个写了第 5 行）。
 
 - [ ] **Step 1: 契约和查询，生成**
 
@@ -2385,6 +2385,20 @@ Expected: 与上表相同。
 			[]Activity{parented("WEB-3", "", &up, nil)}},
 ````
 
+`server/internal/modules/issue/domain/dates.go`（修改，1 处）：
+
+````old server/internal/modules/issue/domain/dates.go
+
+// sameDay reports whether a and b, either nil for none, are the same day.
+func sameDay(a, b *shared.Date) bool {
+	return a == nil && b == nil || a != nil && b != nil && *a == *b
+}
+
+````
+````new server/internal/modules/issue/domain/dates.go
+
+````
+
 `server/internal/modules/issue/domain/hierarchy.go`（整个文件，58 行）：
 
 ````whole server/internal/modules/issue/domain/hierarchy.go
@@ -2485,7 +2499,7 @@ func Identifier(project string, number int) string {
 		}
 ````
 
-`server/internal/modules/issue/domain/patch.go`（修改，7 处）：
+`server/internal/modules/issue/domain/patch.go`（修改，8 处）：
 
 ````old server/internal/modules/issue/domain/patch.go
 // none. A date may be cleared: SetStartDate and SetTargetDate tell whether
@@ -2538,12 +2552,20 @@ func Identifier(project string, number int) string {
 	Parent     *ParentChange
 ````
 ````old server/internal/modules/issue/domain/patch.go
+	if p.SetStartDate && !sameDay(p.StartDate, i.StartDate) {
+````
+````new server/internal/modules/issue/domain/patch.go
+	if p.SetStartDate && !same(p.StartDate, i.StartDate) {
+````
+````old server/internal/modules/issue/domain/patch.go
+	if p.SetTargetDate && !sameDay(p.TargetDate, i.TargetDate) {
 		c.TargetDate = &DateChange{To: p.TargetDate}
 ````
 ````new server/internal/modules/issue/domain/patch.go
+	if p.SetTargetDate && !same(p.TargetDate, i.TargetDate) {
 		c.TargetDate = &DateChange{To: p.TargetDate}
 	}
-	if p.SetParentID && !sameID(p.ParentID, i.ParentID) {
+	if p.SetParentID && !same(p.ParentID, i.ParentID) {
 		c.Parent = &ParentChange{To: p.ParentID}
 ````
 ````old server/internal/modules/issue/domain/patch.go
@@ -2557,8 +2579,9 @@ func Identifier(project string, number int) string {
 		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
 }
 
-// sameID reports whether a and b, either nil for none, are the same id.
-func sameID(a, b *uuid.UUID) bool {
+// same reports whether a and b, either nil for none, are both none or the
+// same value: the same day, the same id.
+func same[T comparable](a, b *T) bool {
 	return a == nil && b == nil || a != nil && b != nil && *a == *b
 }
 
@@ -2796,7 +2819,8 @@ import (
 
 // An update that moves web's work item 7 from under up to under top, puts
 // it under top from under none, or takes it from under up (M4 design 3.5,
-// 3.9, 3.13): after the dates, the new parent read under the lock, then its
+// 3.9, 3.13), top being under mine, which is neither the work item nor
+// under it: after the dates, the new parent read under the lock, then its
 // ancestry, then the old parent; the clock; the work item's fields, its
 // parent the new one, the others as they were; its activity a row of its
 // parent alone, by the old and the new one's identifiers and ids, WEB-3
@@ -2830,6 +2854,7 @@ func TestUpdateIssueMovesTheWorkItem(t *testing.T) {
 			uc, w, id := newUpdate()
 			k := withKin(w)
 			w.issues.issue.ParentID = tt.from(k)
+			w.issues.ancestry = map[uuid.UUID][]uuid.UUID{k.top.ID: {k.top.ID, k.mine.ID}}
 			got, err := uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true, ParentID: tt.to(k)})
 			if err != nil || !reflect.DeepEqual(got.ParentID, tt.to(k)) {
 				t.Fatalf("Execute() = %+v, %v; want the work item under %v", got, err, tt.to(k))
@@ -3399,8 +3424,10 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 // the third, which changes nothing, none. Then each parent Part may not
 // have is refused, 422 at parent_id, nothing written: Part itself; Low,
 // under Mid under Part, however deep, Mid archived; Ops's work item; an
-// archived work item; a deleted one; one not there. Low may move under
-// Top, which is under none.
+// archived work item; a deleted one; one not there. Then bob puts Up under
+// Top, and Low under Up, a parent that has a parent: Up is stored under
+// Top, and Low, from under archived Mid, under Up, with one row of his,
+// from WEB-4 to WEB-2, its ids Mid's and Up's.
 func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 	w := newIssueWorld(t)
 	top := w.newWorkItemIn(t, w.web, `{"name":"Top"}`)
@@ -3448,9 +3475,12 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 				w.parentOf(t, part.ID), who, at, by, changed)
 		}
 	}
-	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+low.String(), `{"parent_id":"`+top.String()+`"}`, http.StatusOK)
-	if !reflect.DeepEqual(w.parentOf(t, low), &top) {
-		t.Errorf("Low is under %v, want Top, %s", w.parentOf(t, low), top)
+	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+up.String(), `{"parent_id":"`+top.String()+`"}`, http.StatusOK)
+	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+low.String(), `{"parent_id":"`+up.String()+`"}`, http.StatusOK)
+	said, want := w.parentRows(t, low), []string{"bob: WEB-4 → WEB-2, " + mid.String() + " → " + up.String()}
+	if !reflect.DeepEqual(w.parentOf(t, up), &top) || !reflect.DeepEqual(w.parentOf(t, low), &up) || !slices.Equal(said, want) {
+		t.Errorf("Up is under %v, Low under %v, Low's rows of its parent %q; want Up under Top, %s, Low under Up, %s, and %q",
+			w.parentOf(t, up), w.parentOf(t, low), said, top, up, want)
 	}
 ````
 ````old server/internal/bootstrap/issue_parents_test.go
@@ -3565,7 +3595,7 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/bootstrap/issue_interleaving_hierarchy_test.go server/internal/bootstrap/issue_parents_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/ports_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/adapter/postgres/parents.go server/internal/modules/issue/adapter/postgres/parents_test.go server/internal/modules/issue/adapter/postgres/queries/parents.sql server/internal/modules/issue/adapter/postgres/queries/update.sql server/internal/modules/issue/adapter/postgres/update.go server/internal/modules/issue/app/create_issue_test.go server/internal/modules/issue/app/fakes_parents_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/parents.go server/internal/modules/issue/app/parents_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/app/update_issue.go server/internal/modules/issue/domain/activity.go server/internal/modules/issue/domain/activity_test.go server/internal/modules/issue/domain/hierarchy.go server/internal/modules/issue/domain/identifier.go server/internal/modules/issue/domain/identifier_test.go server/internal/modules/issue/domain/patch.go server/internal/modules/issue/domain/patch_test.go server/internal/modules/project/adapter/postgres/issue_ports.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/queries/issue_ports.sql server/internal/modules/project/app/issue_ports.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/parents.sql.go server/internal/modules/issue/adapter/postgres/gen/update.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/bootstrap/issue_interleaving_hierarchy_test.go server/internal/bootstrap/issue_parents_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/ports_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/update_test.go server/internal/modules/issue/adapter/postgres/parents.go server/internal/modules/issue/adapter/postgres/parents_test.go server/internal/modules/issue/adapter/postgres/queries/parents.sql server/internal/modules/issue/adapter/postgres/queries/update.sql server/internal/modules/issue/adapter/postgres/update.go server/internal/modules/issue/app/create_issue_test.go server/internal/modules/issue/app/fakes_parents_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/parents.go server/internal/modules/issue/app/parents_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/app/update_issue.go server/internal/modules/issue/domain/activity.go server/internal/modules/issue/domain/activity_test.go server/internal/modules/issue/domain/dates.go server/internal/modules/issue/domain/hierarchy.go server/internal/modules/issue/domain/identifier.go server/internal/modules/issue/domain/identifier_test.go server/internal/modules/issue/domain/patch.go server/internal/modules/issue/domain/patch_test.go server/internal/modules/project/adapter/postgres/issue_ports.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/queries/issue_ports.sql server/internal/modules/project/app/issue_ports.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/parents.sql.go server/internal/modules/issue/adapter/postgres/gen/update.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): an update moves a work item under another parent, never in a loop
@@ -3603,6 +3633,7 @@ Expected: 通过。
 | `T3.13` | 不存在的原父工作项当作没有 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T3.14` | 父工作项的那行动态不写新父工作项的 id | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`） | 单元；组合 |
 | `T3.15` | 移动经连接池读祖先链，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`） | 组合 |
+| `T3.16` | 移动只允许到没有父工作项的工作项下 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`） | 单元；组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T2.1`、`T2.2`（列在各自的 Task 的表里，标"（Task 3 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=3`）。
 

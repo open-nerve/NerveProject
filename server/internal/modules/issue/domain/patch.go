@@ -115,13 +115,13 @@ func ChangesOf(i Issue, p IssuePatch) Changes {
 	if p.StateID != nil && *p.StateID != i.StateID {
 		c.StateID = p.StateID
 	}
-	if p.SetStartDate && !sameDay(p.StartDate, i.StartDate) {
+	if p.SetStartDate && !same(p.StartDate, i.StartDate) {
 		c.StartDate = &DateChange{To: p.StartDate}
 	}
-	if p.SetTargetDate && !sameDay(p.TargetDate, i.TargetDate) {
+	if p.SetTargetDate && !same(p.TargetDate, i.TargetDate) {
 		c.TargetDate = &DateChange{To: p.TargetDate}
 	}
-	if p.SetParentID && !sameID(p.ParentID, i.ParentID) {
+	if p.SetParentID && !same(p.ParentID, i.ParentID) {
 		c.Parent = &ParentChange{To: p.ParentID}
 	}
 	if p.AssigneeIDs != nil {
@@ -155,7 +155,8 @@ func (c Changes) None() bool {
 		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
 }
 
-// sameID reports whether a and b, either nil for none, are the same id.
-func sameID(a, b *uuid.UUID) bool {
+// same reports whether a and b, either nil for none, are both none or the
+// same value: the same day, the same id.
+func same[T comparable](a, b *T) bool {
 	return a == nil && b == nil || a != nil && b != nil && *a == *b
 }

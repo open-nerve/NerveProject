@@ -56,11 +56,6 @@ func targetBeforeStart() *shared.FieldError {
 	return &shared.FieldError{Field: "target_date", Code: shared.FieldNotAllowed, Message: "must not be before the start date"}
 }
 
-// sameDay reports whether a and b, either nil for none, are the same day.
-func sameDay(a, b *shared.Date) bool {
-	return a == nil && b == nil || a != nil && b != nil && *a == *b
-}
-
 // dayText is d as an activity's value: YYYY-MM-DD, "" for none.
 func dayText(d *shared.Date) string {
 	if d == nil {

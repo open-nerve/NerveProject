@@ -105,7 +105,8 @@ func TestCreateIssueRefusesAParentItMayNotHave(t *testing.T) {
 
 // An update that moves web's work item 7 from under up to under top, puts
 // it under top from under none, or takes it from under up (M4 design 3.5,
-// 3.9, 3.13): after the dates, the new parent read under the lock, then its
+// 3.9, 3.13), top being under mine, which is neither the work item nor
+// under it: after the dates, the new parent read under the lock, then its
 // ancestry, then the old parent; the clock; the work item's fields, its
 // parent the new one, the others as they were; its activity a row of its
 // parent alone, by the old and the new one's identifiers and ids, WEB-3
@@ -139,6 +140,7 @@ func TestUpdateIssueMovesTheWorkItem(t *testing.T) {
 			uc, w, id := newUpdate()
 			k := withKin(w)
 			w.issues.issue.ParentID = tt.from(k)
+			w.issues.ancestry = map[uuid.UUID][]uuid.UUID{k.top.ID: {k.top.ID, k.mine.ID}}
 			got, err := uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true, ParentID: tt.to(k)})
 			if err != nil || !reflect.DeepEqual(got.ParentID, tt.to(k)) {
 				t.Fatalf("Execute() = %+v, %v; want the work item under %v", got, err, tt.to(k))

@@ -73,8 +73,10 @@ func underParent(name string, parent uuid.UUID) string {
 // the third, which changes nothing, none. Then each parent Part may not
 // have is refused, 422 at parent_id, nothing written: Part itself; Low,
 // under Mid under Part, however deep, Mid archived; Ops's work item; an
-// archived work item; a deleted one; one not there. Low may move under
-// Top, which is under none.
+// archived work item; a deleted one; one not there. Then bob puts Up under
+// Top, and Low under Up, a parent that has a parent: Up is stored under
+// Top, and Low, from under archived Mid, under Up, with one row of his,
+// from WEB-4 to WEB-2, its ids Mid's and Up's.
 func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 	w := newIssueWorld(t)
 	top := w.newWorkItemIn(t, w.web, `{"name":"Top"}`)
@@ -130,9 +132,12 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 				w.parentOf(t, part.ID), who, at, by, changed)
 		}
 	}
-	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+low.String(), `{"parent_id":"`+top.String()+`"}`, http.StatusOK)
-	if !reflect.DeepEqual(w.parentOf(t, low), &top) {
-		t.Errorf("Low is under %v, want Top, %s", w.parentOf(t, low), top)
+	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+up.String(), `{"parent_id":"`+top.String()+`"}`, http.StatusOK)
+	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+low.String(), `{"parent_id":"`+up.String()+`"}`, http.StatusOK)
+	said, want := w.parentRows(t, low), []string{"bob: WEB-4 → WEB-2, " + mid.String() + " → " + up.String()}
+	if !reflect.DeepEqual(w.parentOf(t, up), &top) || !reflect.DeepEqual(w.parentOf(t, low), &up) || !slices.Equal(said, want) {
+		t.Errorf("Up is under %v, Low under %v, Low's rows of its parent %q; want Up under Top, %s, Low under Up, %s, and %q",
+			w.parentOf(t, up), w.parentOf(t, low), said, top, up, want)
 	}
 }
 
