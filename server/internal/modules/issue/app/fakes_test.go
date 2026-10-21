@@ -215,8 +215,9 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // changed is the last update's fields, nil before any: the work item's
 // last writer and moment; archival, when set, is the last archiving's or
 // unarchiving's, and its last writer and moment instead; archivedAt the
-// work item's archived_at, nil for none. deletions are the deletion's
-// calls' arguments, one a table, in order.
+// work item's archived_at, nil for none. subtree is the work item's
+// subtree, nil for the work item alone, and deletions are the deletion's
+// calls' arguments, one a table, in order (fakes_deletion_test.go).
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
@@ -227,6 +228,7 @@ type fakeIssues struct {
 	assignees  []uuid.UUID
 	labels     []uuid.UUID
 	activities []app.ActivityRow
+	subtree    []uuid.UUID
 	deletions  []app.IssueDeletion
 	lost       bool
 }
@@ -345,36 +347,6 @@ func (f *fakeIssues) InsertActivities(ctx context.Context, rows []app.ActivityRo
 		f.issue = nil
 	}
 	return nil
-}
-
-// deleteRows logs a deletion of name's rows, d's work item's, and keeps d,
-// or answers the failure.
-func (f *fakeIssues) deleteRows(ctx context.Context, name string, d app.IssueDeletion) error {
-	if err := f.log.add(ctx, name, d.IssueID); err != nil {
-		return err
-	}
-	f.deletions = append(f.deletions, d)
-	return nil
-}
-
-func (f *fakeIssues) DeleteIssueRow(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueRow", d)
-}
-
-func (f *fakeIssues) DeleteIssueAssigneeRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueAssigneeRows", d)
-}
-
-func (f *fakeIssues) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueLabelRows", d)
-}
-
-func (f *fakeIssues) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueSubscriberRows", d)
-}
-
-func (f *fakeIssues) DeleteIssueActivityRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueActivityRows", d)
 }
 
 func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool, error) {

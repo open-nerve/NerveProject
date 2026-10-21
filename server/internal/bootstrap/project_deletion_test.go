@@ -127,7 +127,7 @@ func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, keys []foreignKey, id,
 func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
 	gone := deletedWorkItem(t, contract, base, pool, alice, aliceID, web)
-	goneKeys := workItemKeys(t, pool)
+	goneKeys := keysTo(t, pool, "issues")
 	goneRows := make([]string, len(goneKeys))
 	for i, k := range goneKeys {
 		if goneRows[i] = k.rows(t, pool, gone); goneRows[i] == "" {

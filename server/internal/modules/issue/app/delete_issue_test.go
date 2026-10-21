@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -25,31 +26,38 @@ func newDelete() (*app.DeleteIssue, *world, uuid.UUID) {
 	return deleteOver(w), w, id
 }
 
-// deletingRows are the calls of the deletion of the work item id's rows,
-// in the global order of M4 design 3.5: the work item, its assignees, its
-// labels, its subscribers, its activity.
-func deletingRows(id uuid.UUID) []string {
-	return []string{line("DeleteIssueRow", id), line("DeleteIssueAssigneeRows", id), line("DeleteIssueLabelRows", id),
-		line("DeleteIssueSubscriberRows", id), line("DeleteIssueActivityRows", id)}
+// deletingRows are the calls of the deletion of the rows of the work items
+// ids, a subtree, in the global order of M4 design 3.5: the work items,
+// their assignees, their labels, their subscribers, their activity.
+func deletingRows(ids []uuid.UUID) []string {
+	return []string{line("DeleteIssueRows", ids), line("DeleteIssueAssigneeRows", ids), line("DeleteIssueLabelRows", ids),
+		line("DeleteIssueSubscriberRows", ids), line("DeleteIssueActivityRows", ids)}
 }
 
 // A deletion, in the order of M4 design 3.5: Locks' calls, its decisions
-// on issue.delete (lockedAs); the clock; the work item's rows, table by
-// table in the global order (deletingRows), each alice's at the moment. An
-// archived work item is deleted as any other (M4 design 3.8).
-func TestDeleteIssueDeletesTheWorkItemAndItsRows(t *testing.T) {
+// on issue.delete (lockedAs); the work item's subtree, read under the
+// lock; the clock; the rows of each work item of the subtree, table by
+// table in the global order (deletingRows), each alice's at the moment.
+// The subtree holds two work items under the one deleted, which is not its
+// first, so that a deletion of the work item asked for alone, or of the
+// subtree's first alone, shows. An archived work item is deleted as any
+// other (M4 design 3.8).
+func TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows(t *testing.T) {
 	for what, archivedAt := range map[string]*time.Time{"a work item": nil, "an archived work item": &earlier} {
 		t.Run(what, func(t *testing.T) {
 			uc, w, id := newDelete()
 			w.issues.archivedAt = archivedAt
+			subtree := []uuid.UUID{uuid.NewV7(), id, uuid.NewV7()}
+			w.issues.subtree = subtree
 			if err := uc.Execute(as(alice), id); err != nil {
 				t.Fatal(err)
 			}
-			if calls := slices.Concat(lockedAs(domain.ActionDelete, id), []string{"Now"}, deletingRows(id)); !slices.Equal(w.log.calls, calls) {
+			calls := slices.Concat(lockedAs(domain.ActionDelete, id), []string{line("Subtree", id), "Now"}, deletingRows(subtree))
+			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
-			deletion := app.IssueDeletion{IssueID: id, By: alice, At: clockNow}
-			if want := slices.Repeat([]app.IssueDeletion{deletion}, 5); !slices.Equal(w.issues.deletions, want) {
+			deletion := app.IssueDeletion{IssueIDs: subtree, By: alice, At: clockNow}
+			if want := slices.Repeat([]app.IssueDeletion{deletion}, 5); !reflect.DeepEqual(w.issues.deletions, want) {
 				t.Errorf("the deletions %+v, want %+v", w.issues.deletions, want)
 			}
 		})
@@ -94,8 +102,8 @@ func TestDeleteIssueRefusals(t *testing.T) {
 // A port that fails ends the deletion with its failure, as itself, and no
 // call after it runs: the transaction rolls back whatever was deleted.
 func TestDeleteIssueStopsAtAFailingPort(t *testing.T) {
-	for _, port := range []string{"GetIssue", "Authorize", "Lock", "DeleteIssueRow", "DeleteIssueAssigneeRows", "DeleteIssueLabelRows",
-		"DeleteIssueSubscriberRows", "DeleteIssueActivityRows"} {
+	for _, port := range []string{"GetIssue", "Authorize", "Lock", "Subtree", "DeleteIssueRows", "DeleteIssueAssigneeRows",
+		"DeleteIssueLabelRows", "DeleteIssueSubscriberRows", "DeleteIssueActivityRows"} {
 		t.Run(port, func(t *testing.T) {
 			uc, w, id := newDelete()
 			w.log.fail = port
