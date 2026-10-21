@@ -75,11 +75,7 @@ func subIssueMatrixRows() []matrixRow {
 
 // listsNone: no seeded work item has a sub-item.
 func listsNone(t *testing.T, c caller, _ seeded, answer string) {
-	var got struct {
-		Data []answeredIssue `json:"data"`
-	}
-	decodeAnswer(t, answer, &got)
-	if got.Data == nil || len(got.Data) != 0 {
+	if got := listIn[storedIssue](t, answer); len(got) != 0 {
 		t.Errorf("%s lists %s; want none", c, answer)
 	}
 }
@@ -87,17 +83,10 @@ func listsNone(t *testing.T, c caller, _ seeded, answer string) {
 // putsUnder: the column's sub-item (subItemOf) alone, under the column's
 // work item, changed last by the caller.
 func putsUnder(t *testing.T, c caller, s seeded, answer string) {
-	var got struct {
-		Data []struct {
-			ID          uuid.UUID  `json:"id"`
-			ParentID    *uuid.UUID `json:"parent_id"`
-			UpdatedByID *uuid.UUID `json:"updated_by_id"`
-		} `json:"data"`
-	}
-	decodeAnswer(t, answer, &got)
+	got := listIn[storedIssue](t, answer)
 	parent, me := s.issue(projectOf(c), issueOf(c)), s.account(accountOf(c))
-	if len(got.Data) != 1 || got.Data[0].ID != subItemOf(c, s) || !reflect.DeepEqual(got.Data[0].ParentID, &parent) ||
-		!reflect.DeepEqual(got.Data[0].UpdatedByID, &me) {
+	if len(got) != 1 || got[0].ID != subItemOf(c, s) || !reflect.DeepEqual(got[0].ParentID, &parent) ||
+		!reflect.DeepEqual(got[0].UpdatedByID, &me) {
 		t.Errorf("%s puts %s; want %s alone, under %s, changed last by the caller", c, answer, subItemOf(c, s), parent)
 	}
 }

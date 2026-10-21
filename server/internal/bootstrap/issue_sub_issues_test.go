@@ -63,20 +63,21 @@ func counts(items []countedIssue) []string {
 	return said
 }
 
-// Sub-items as bootstrap wires them (M4 design 3.5, 3.9, 3.13). alice
+// Sub-items as bootstrap wires them (M4 design 3.5, 3.8, 3.9, 3.13). alice
 // makes Root, Top under Root, Up, A, B under Up, and C, WEB-1 to WEB-6.
 // bob puts C, B and A under Top: the answer is A, B and C, in id order,
 // each under Top and changed last by bob, and each a row of his activity,
-// from none, from WEB-3 for B, to WEB-2. Top lists them, and shows 3
-// sub-items; archived, D, which bob puts under it too, is listed by none.
-// Putting A under it again answers none and writes nothing; putting A and
-// E answers E alone, and does not write A. Naming none, Up twice, or Up
-// 101 times is refused, 422, nothing written. Then, once alice puts Root
-// under Base, each work item Top may not take is refused at its place, in
-// one 422, nothing written: Ops's work item, Top itself, an archived work
-// item, Root, above it, Base, above Root, a deleted one, one not there;
-// Up, which it may take, beside them, stays under none. An archived work
-// item takes none (409), but lists those under it.
+// from none, from WEB-3 for B, to WEB-2. To alice, Top lists them and
+// shows 3 sub-items: D, which bob puts under it too and archives, is in
+// neither. Putting A under it again answers none and writes nothing;
+// putting A and E answers E alone, and does not write A. Naming none, Up
+// twice, or Up 101 times is refused, 422, nothing written. Then, once
+// alice puts Root under Base, each work item Top may not take is refused
+// at its place, in one 422, nothing written: Ops's work item, Top itself,
+// Shelved, archived, Root, above it, Base, above Root, a deleted one, one
+// not there; Up, which it may take, beside them, stays under none.
+// Shelved, which alice archives with Kept under it, takes none (409), but
+// lists Kept to bob, unarchived, under it, as getIssue answers it.
 func TestWorkItemsArePutUnderAWorkItem(t *testing.T) {
 	w := newIssueWorld(t)
 	root := w.newWorkItemIn(t, w.web, `{"name":"Root"}`)
@@ -137,6 +138,7 @@ func TestWorkItemsArePutUnderAWorkItem(t *testing.T) {
 
 	far := w.newWorkItemIn(t, createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS"), `{"name":"Far"}`)
 	shelved := w.doneWorkItem(t)
+	kept := w.newWorkItemIn(t, w.web, underParent("Kept", shelved))
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/archive", "", http.StatusOK)
 	gone := w.newWorkItemIn(t, w.web, `{"name":"Gone"}`)
 	w.send(t, "alice", http.MethodDelete, "/api/v0/issues/"+gone.String(), "", http.StatusNoContent)
@@ -156,8 +158,11 @@ func TestWorkItemsArePutUnderAWorkItem(t *testing.T) {
 		false) != "issue.archived" || w.parentOf(t, up) != nil {
 		t.Errorf("Up under an archived work item answers %s, and is under %v; want issue.archived, under none", answer, w.parentOf(t, up))
 	}
-	if got := listIn[countedIssue](t, w.send(t, "bob", http.MethodGet, subIssues(shelved), "", http.StatusOK)); len(got) != 0 {
-		t.Errorf("an archived work item lists %v, want none", itemIDs(got))
+	var read countedIssue
+	decodeAnswer(t, w.send(t, "bob", http.MethodGet, "/api/v0/issues/"+kept.String(), "", http.StatusOK), &read)
+	if got := listIn[countedIssue](t, w.send(t, "bob", http.MethodGet, subIssues(shelved), "", http.StatusOK)); !reflect.DeepEqual(got,
+		[]countedIssue{read}) || read.ArchivedAt != nil || !reflect.DeepEqual(read.ParentID, &shelved) {
+		t.Errorf("Shelved, archived, lists %+v; want Kept alone, unarchived, under it, as getIssue answers it: %+v", got, read)
 	}
 }
 

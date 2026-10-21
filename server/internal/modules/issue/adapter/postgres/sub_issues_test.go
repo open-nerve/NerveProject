@@ -119,18 +119,21 @@ func read(t *testing.T, s *postgresadapter.Store, ids ...uuid.UUID) []domain.Iss
 // b, a, x, y and z, anyone's; a, alice's, though bob changed it last; b,
 // x, y and z, bob's. y and z, made at one moment an hour after the others,
 // are stored z first, though y's id is the lesser: their rows are not in
-// the order of their ids. q has none, nor has a work item not there.
+// the order of their ids. c's is k, alice's: an archived work item has its
+// sub-items as any other (3.8). q has none, nor has a work item not there.
 func TestSubIssues(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
 	f := newFamily(t, s, pool, web, alice, bob)
 	exec(t, pool, "UPDATE issues SET updated_by_id = $2 WHERE id = $1", f.a, bob)
-	y, z := uuid.NewV7(), uuid.NewV7()
+	y, z, k := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	for n, id := range []uuid.UUID{z, y} {
 		newIssue(t, pool, web, id, 9+n, bob)
 		exec(t, pool, "UPDATE issues SET parent_id = $2, created_at = $3 WHERE id = $1", id, f.p, now.Add(time.Hour))
 	}
+	newIssue(t, pool, web, k, 11, alice)
+	exec(t, pool, "UPDATE issues SET parent_id = $2 WHERE id = $1", k, f.c)
 	ctx := context.Background()
 	for _, tt := range []struct {
 		name   string
@@ -141,6 +144,7 @@ func TestSubIssues(t *testing.T) {
 		{"p's, anyone's", f.p, nil, read(t, s, f.b, f.a, f.x, y, z)},
 		{"p's, alice's", f.p, &alice, read(t, s, f.a)},
 		{"p's, bob's", f.p, &bob, read(t, s, f.b, f.x, y, z)},
+		{"c's, though c is archived", f.c, nil, read(t, s, k)},
 		{"q's", f.q, nil, read(t, s)},
 		{"no work item's", uuid.NewV7(), nil, read(t, s)},
 	} {
