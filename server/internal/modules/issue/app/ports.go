@@ -26,6 +26,12 @@ type ProjectGate interface {
 	// found is false when there is none, also when it was deleted while the
 	// lock waited.
 	Lock(ctx context.Context, projectID uuid.UUID) (p LockedProject, found bool, err error)
+	// LockMany locks the undeleted projects among projectIDs, each named
+	// once, in ascending id order, as Lock does, in that order, in one
+	// statement, and answers them by id: a write across projects takes
+	// them so (convention 7, M4 design 3.5). One that is not there, also
+	// one deleted while the lock waited, is not among them.
+	LockMany(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]LockedProject, error)
 }
 
 // LockedProject is a project as ProjectGate's lock answers it: its
@@ -43,13 +49,16 @@ type LockedProject struct {
 // connection at once, in this process (M4 design 3.5, 11.11):
 // bootstrap/gate.go's, over platform/gate.
 type WriteGate interface {
-	// Enter returns once a write on the project's work items may begin
-	// its transaction, with the function that leaves the gate, which the
-	// write calls once its transaction has ended. It waits holding no
-	// connection and no lock. A write that may wait no longer is refused
-	// (503 server_busy); one whose request is cancelled while it waits
-	// ends with context.Canceled. Either holds nothing.
-	Enter(ctx context.Context, projectID uuid.UUID) (leave func(), err error)
+	// Enter returns once a write on the projects' work items may begin its
+	// transaction, with the function that leaves their gates, which the
+	// write calls once its transaction has ended. A write across projects
+	// names each once, in ascending id order (convention 7), and enters
+	// their gates in that order, waiting for each holding no connection
+	// and no lock, only its places in the gates before. A write that may
+	// wait no longer is refused (503 server_busy); one whose request is
+	// cancelled while it waits ends with context.Canceled. Either holds
+	// nothing.
+	Enter(ctx context.Context, projectIDs ...uuid.UUID) (leave func(), err error)
 }
 
 // Sequences numbers a project's work items (M4 design 3.7, 6.5):

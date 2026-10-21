@@ -62,18 +62,18 @@ type fakeGate struct {
 	refuse error
 }
 
-func (f fakeGate) Enter(ctx context.Context, projectID uuid.UUID) (func(), error) {
+func (f fakeGate) Enter(ctx context.Context, projectIDs ...uuid.UUID) (func(), error) {
 	if f.log == nil {
 		return func() {}, nil
 	}
-	if err := f.log.add(ctx, "Enter", projectID); err != nil {
+	if err := f.log.add(ctx, "Enter", anys(projectIDs)...); err != nil {
 		return nil, err
 	}
 	if f.refuse != nil {
 		return nil, f.refuse
 	}
 	return func() {
-		call := line("Leave", projectID)
+		call := line("Leave", anys(projectIDs)...)
 		if f.log.inTx {
 			call += " in tx"
 		}
@@ -123,14 +123,16 @@ func (f *fakeAuthorizer) Authorize(ctx context.Context, actor shared.Actor, acti
 
 // fakeProject is a project's side of the issue module's ports: its gate,
 // its numbers and its catalogs, each call logged. found is whether Find
-// answers it, locked what Lock answers, nil for none; waited, when set,
-// runs as Lock waits, before it answers: what commits meanwhile.
+// answers it, locked what Lock answers, nil for none, and across the
+// other projects LockMany answers; waited, when set, runs as a lock waits,
+// before it answers: what commits meanwhile.
 type fakeProject struct {
 	log       *callLog
 	id        uuid.UUID
 	workspace uuid.UUID
 	found     bool
 	locked    *app.LockedProject
+	across    map[uuid.UUID]app.LockedProject
 	waited    func()
 	last      int
 	states    []app.StateRef

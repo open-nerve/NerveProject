@@ -21,9 +21,11 @@ import (
 // second write on the project is refused at once when the queue is full,
 // and when it has waited max_wait; one whose request reaches its deadline
 // while it waits is server_busy too, and one whose request is cancelled
-// keeps context.Canceled. A write on another project meanwhile enters at
-// once: each project has places of its own (11.11). Once the first leaves,
-// a write enters.
+// keeps context.Canceled. A write on another project and this one is
+// answered so too, and holds neither: a write on the other enters at once
+// after it. A write on another project meanwhile enters at once: each
+// project has places of its own (11.11). Once the first leaves, a write
+// enters.
 func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 	project := uuid.NewV7()
 	waiting := func(limit time.Duration, cancelled bool) func() (context.Context, context.CancelFunc) {
@@ -58,6 +60,17 @@ func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 			t.Errorf("%s: the second write: %v", tt.name, err)
 		}
 		cancel()
+		across := uuid.NewV7()
+		ctx, cancel = tt.ctx()
+		if _, err := g.Enter(ctx, across, project); !tt.wants(err) {
+			t.Errorf("%s: a write on another project and this one: %v", tt.name, err)
+		}
+		cancel()
+		if left, err := g.Enter(context.Background(), across); err != nil {
+			t.Fatalf("%s: a write on the other project after it: %v, want it in at once", tt.name, err)
+		} else {
+			left()
+		}
 		if other, err := g.Enter(context.Background(), uuid.NewV7()); err != nil {
 			t.Fatalf("%s: a write on another project: %v, want it in at once", tt.name, err)
 		} else {

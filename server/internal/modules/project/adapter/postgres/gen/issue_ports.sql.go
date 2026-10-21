@@ -161,6 +161,52 @@ func (q *Queries) LockIssueProject(ctx context.Context, id uuid.UUID) (LockIssue
 	return i, err
 }
 
+const lockIssueProjects = `-- name: LockIssueProjects :many
+SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
+FROM projects
+WHERE id = ANY ($1::uuid[]) AND deleted_at IS NULL
+ORDER BY id
+FOR NO KEY UPDATE
+`
+
+type LockIssueProjectsRow struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	Archived          bool
+	DefaultAssigneeID *uuid.UUID
+	Identifier        string
+}
+
+// ProjectGate.LockMany (M4 design 6.5): the first locks of a write across projects (convention 7, 3.5), the undeleted
+// projects among ids FOR NO KEY UPDATE, as LockIssueProject, in one statement, in id order. The lock is taken as the
+// sorted rows come, so the order is the ids' (S5 E4). After a wait, Postgres evaluates deleted_at IS NULL again on the
+// row's newest version: a project deleted meanwhile is left out.
+func (q *Queries) LockIssueProjects(ctx context.Context, ids []uuid.UUID) ([]LockIssueProjectsRow, error) {
+	rows, err := q.db.Query(ctx, lockIssueProjects, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LockIssueProjectsRow
+	for rows.Next() {
+		var i LockIssueProjectsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Archived,
+			&i.DefaultAssigneeID,
+			&i.Identifier,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const nextIssueSequence = `-- name: NextIssueSequence :one
 UPDATE projects
 SET last_issue_sequence = last_issue_sequence + 1

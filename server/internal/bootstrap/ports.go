@@ -97,6 +97,18 @@ func (p issueProjects) Lock(ctx context.Context, id uuid.UUID) (issue.LockedProj
 	return issue.LockedProject(locked), found, err
 }
 
+func (p issueProjects) LockMany(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]issue.LockedProject, error) {
+	locked, err := p.projects.LockIssueProjects(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]issue.LockedProject, len(locked))
+	for id, l := range locked {
+		out[id] = issue.LockedProject(l)
+	}
+	return out, nil
+}
+
 func (p issueProjects) Next(ctx context.Context, id uuid.UUID) (int, error) {
 	return p.projects.NextIssueSequence(ctx, id)
 }

@@ -91,8 +91,8 @@ type ProjectMembershipCounts interface {
 }
 
 // IssueProjects is what the issue module asks of a project (M4 design
-// 6.5): its gate (ProjectGate's Find and Lock), its work items' numbers
-// (Sequences), and its states', labels' and members' catalogs
+// 6.5): its gate (ProjectGate's Find, Lock and LockMany), its work items'
+// numbers (Sequences), and its states', labels' and members' catalogs
 // (StateCatalog, LabelCatalog, ProjectMembers), for its writes; and a
 // workspace's projects' identifiers (ProjectIdentifiers), for a read by
 // identifier. Each reads, or locks, in the transaction ctx carries; the
@@ -108,6 +108,10 @@ type IssueProjects interface {
 	// its workspace not locked, and answers it; found is false when there
 	// is none, also when it was deleted while the lock waited.
 	LockIssueProject(ctx context.Context, id uuid.UUID) (p IssueProject, found bool, err error)
+	// LockIssueProjects locks the undeleted projects among ids so, in one
+	// statement, in id order, and answers them by id; one deleted while
+	// the lock waited is not among them.
+	LockIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]IssueProject, error)
 	// NextIssueSequence takes the project's next work-item number.
 	NextIssueSequence(ctx context.Context, id uuid.UUID) (int, error)
 	// IssueStates reads the project's undeleted states, its triage state

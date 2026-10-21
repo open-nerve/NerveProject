@@ -150,6 +150,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if p, found, err := s.LockIssueProject(cancelled, web); !failed(err) || found || p != (app.IssueProject{}) {
 		t.Errorf("LockIssueProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
 	}
+	if locked, err := s.LockIssueProjects(cancelled, []uuid.UUID{web}); !failed(err) || locked != nil {
+		t.Errorf("LockIssueProjects() = %+v, %v; want context.Canceled, not no project", locked, err)
+	}
 	if list, err := s.IssueStates(cancelled, web); !failed(err) || list != nil {
 		t.Errorf("IssueStates() = %+v, %v; want context.Canceled, not none", list, err)
 	}

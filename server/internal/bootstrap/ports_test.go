@@ -272,6 +272,11 @@ func (f *fakeIssueProjects) LockIssueProject(_ context.Context, id uuid.UUID) (p
 	return f.locked, id == f.web, f.err
 }
 
+func (f *fakeIssueProjects) LockIssueProjects(_ context.Context, ids []uuid.UUID) (map[uuid.UUID]project.IssueProject, error) {
+	f.asked = append(f.asked, fmt.Sprint("lock ", ids))
+	return map[uuid.UUID]project.IssueProject{f.web: f.locked}, f.err
+}
+
 func (f *fakeIssueProjects) NextIssueSequence(context.Context, uuid.UUID) (int, error) {
 	f.asked = append(f.asked, "next")
 	return 7, f.err
@@ -316,6 +321,10 @@ func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 	if _, found, _ := p.Lock(ctx, uuid.NewV7()); found {
 		t.Error("Lock() of another project found it")
 	}
+	if l, err := p.LockMany(ctx, []uuid.UUID{acme, web}); err != nil || !maps.Equal(l, map[uuid.UUID]issue.LockedProject{web: {WorkspaceID: acme,
+		Archived: true, DefaultAssigneeID: &ann, Identifier: "WEB"}}) {
+		t.Errorf("LockMany() = %+v, %v; want web as locked", l, err)
+	}
 	if n, err := p.Next(ctx, web); err != nil || n != 7 {
 		t.Errorf("Next() = %d, %v; want 7", n, err)
 	}
@@ -329,8 +338,8 @@ func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 	if got, err := p.Roles(ctx, web, []uuid.UUID{ann}); err != nil || !maps.Equal(got, fake.roles) {
 		t.Errorf("Roles() = %v, %v; want ann's", got, err)
 	}
-	if want := []string{"workspace", "lock", "lock", "next", "states", fmt.Sprint("labels ", []uuid.UUID{bug, ui}),
-		fmt.Sprint("roles ", []uuid.UUID{ann})}; !slices.Equal(fake.asked, want) {
+	if want := []string{"workspace", "lock", "lock", fmt.Sprint("lock ", []uuid.UUID{acme, web}), "next", "states",
+		fmt.Sprint("labels ", []uuid.UUID{bug, ui}), fmt.Sprint("roles ", []uuid.UUID{ann})}; !slices.Equal(fake.asked, want) {
 		t.Errorf("project was asked %q, want %q", fake.asked, want)
 	}
 
@@ -341,6 +350,9 @@ func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 	}
 	if got, err := p.Labels(ctx, web, nil); !errors.Is(err, failure) || got != nil {
 		t.Errorf("Labels() = %+v, %v; want no labels and %v", got, err, failure)
+	}
+	if got, err := p.LockMany(ctx, []uuid.UUID{web}); !errors.Is(err, failure) || got != nil {
+		t.Errorf("LockMany() = %+v, %v; want no projects and %v", got, err, failure)
 	}
 	for name, call := range map[string]func() error{
 		"Find":  func() error { _, _, err := p.Find(ctx, web); return err },

@@ -8,6 +8,17 @@ FROM projects
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL
 FOR NO KEY UPDATE;
 
+-- name: LockIssueProjects :many
+-- ProjectGate.LockMany (M4 design 6.5): the first locks of a write across projects (convention 7, 3.5), the undeleted
+-- projects among ids FOR NO KEY UPDATE, as LockIssueProject, in one statement, in id order. The lock is taken as the
+-- sorted rows come, so the order is the ids' (S5 E4). After a wait, Postgres evaluates deleted_at IS NULL again on the
+-- row's newest version: a project deleted meanwhile is left out.
+SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
+FROM projects
+WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL
+ORDER BY id
+FOR NO KEY UPDATE;
+
 -- name: NextIssueSequence :one
 -- Sequences.Next (M4 design 6.5), under the project's FOR NO KEY UPDATE: the project's next work-item number. The
 -- counter never goes back, so a number is never used again (3.7).

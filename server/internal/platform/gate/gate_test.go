@@ -22,12 +22,12 @@ type entry struct {
 	err   error
 }
 
-// enter calls g.Enter(ctx, key) on a goroutine of its own.
-func enter(g *Keyed[string], ctx context.Context, key string) *entry {
+// enter calls g.Enter(ctx, keys...) on a goroutine of its own.
+func enter(g *Keyed[string], ctx context.Context, keys ...string) *entry {
 	e := &entry{done: make(chan struct{})}
 	go func() {
 		defer close(e.done)
-		e.leave, e.err = g.Enter(ctx, key)
+		e.leave, e.err = g.Enter(ctx, keys...)
 	}()
 	return e
 }

@@ -30,6 +30,25 @@ func (s *Store) LockIssueProject(ctx context.Context, id uuid.UUID) (p app.Issue
 		true, nil
 }
 
+// LockIssueProjects locks the undeleted projects among ids as
+// LockIssueProject does, in one statement, in id order, and answers them
+// by id: the first locks of a write across projects (M4 design 3.5,
+// convention 7). One that is not there or is deleted, also one deleted
+// while the lock waited, is not among them. It locks in the transaction
+// ctx carries.
+func (s *Store) LockIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]app.IssueProject, error) {
+	rows, err := s.queries(ctx).LockIssueProjects(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("lock projects %v for their work items: %w", ids, err)
+	}
+	locked := make(map[uuid.UUID]app.IssueProject, len(rows))
+	for _, r := range rows {
+		locked[r.ID] = app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID,
+			Identifier: r.Identifier}
+	}
+	return locked, nil
+}
+
 // NextIssueSequence takes the undeleted project id's next work-item number
 // (M4 design 3.7), under its lock: a project that is not there is an
 // error, never a number.
