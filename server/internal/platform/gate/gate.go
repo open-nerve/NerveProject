@@ -64,11 +64,12 @@ func New[K comparable](l Limits) *Keyed[K] {
 // already, the caller waits behind them, holding only the keys it entered
 // before it; it is refused at once with ErrFull when MaxQueue others wait,
 // and gives up with ErrTimeout once it has waited MaxWait in all, or with
-// ctx's error once ctx is done, before or while it waits: then it leaves
-// the keys it entered, and holds nothing. Callers that enter several keys
-// enter them in one order, each once (the write gate: by project id, M4
-// design 11.11), so that none waits for a key whose holder waits for one
-// it holds.
+// ctx's error once ctx is done as it begins or while it waits: then it
+// leaves the keys it entered, and holds nothing. A later key with a free
+// place it enters at once, without looking at ctx. Callers that enter
+// several keys enter them in one order, each once (the write gate: by
+// project id, M4 design 11.11), so that none waits for a key whose holder
+// waits for one it holds.
 func (g *Keyed[K]) Enter(ctx context.Context, keys ...K) (leave func(), err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err

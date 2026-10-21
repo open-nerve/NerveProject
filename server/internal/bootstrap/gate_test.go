@@ -25,7 +25,9 @@ import (
 // answered so too, and holds neither: a write on the other enters at once
 // after it. A write on another project meanwhile enters at once: each
 // project has places of its own (11.11). Once the first leaves, a write
-// enters.
+// enters. Last, one on another project and this one, waiting for this one,
+// holds the other's place, entered first: a write on the other is
+// server_busy at its deadline.
 func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 	project := uuid.NewV7()
 	waiting := func(limit time.Duration, cancelled bool) func() (context.Context, context.CancelFunc) {
@@ -81,6 +83,24 @@ func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 			t.Errorf("%s: a write after the first left: %v, want it in", tt.name, err)
 		} else {
 			leave()
+		}
+	}
+	g := newWriteGate(config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute, MaxQueue: 1})
+	first, err := g.Enter(context.Background(), project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writing, stop := context.WithCancel(context.Background())
+	across, done := uuid.NewV7(), make(chan struct{})
+	go func() { defer close(done); _, _ = g.Enter(writing, across, project) }()
+	t.Cleanup(func() { stop(); <-done; first() })
+	for begun := time.Now(); ; {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		left, err := g.Enter(ctx, across)
+		if cancel(); isBusy(err) {
+			break
+		} else if left(); time.Since(begun) > 5*time.Second {
+			t.Fatal("a write on the other project entered for 5s while one on it and this one waited for this one; want it busy")
 		}
 	}
 }
