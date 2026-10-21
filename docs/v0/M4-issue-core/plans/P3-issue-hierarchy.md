@@ -2079,10 +2079,11 @@ Expected: 通过。
 | `T2.7` | `POST` 丢掉请求体的 `parent_id` | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`）、故事 `i8-sub-issues`（Task 15 起） | 单元；组合；端到端 |
 | `T2.8` | 创建不能有的父工作项单独答出，不带别的问题 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`） | 单元；组合 |
 | `T2.9` | 读父工作项失败当作它不存在 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
-| `T2.10` | 父工作项的拒绝写在 `parent` 而不是 `parent_id` | `internal/bootstrap` 的 `TestTheGuestRuleHoldsForAParent`（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`）（Task 3 起）、故事 `i8-sub-issues`（Task 15 起） | 组合；端到端 |
+| `T2.10` | 父工作项的拒绝写在 `parent` 而不是 `parent_id` | `internal/bootstrap` 的 `TestTheGuestRuleHoldsForAParent`（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`）、故事 `i8-sub-issues`（Task 15 起） | 组合；端到端 |
 | `T2.11` | `CheckNewIssue` 丢掉要的父工作项 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`） | 单元；组合 |
 | `T2.12` | 删除者只看自己的工作项时，子树去掉他看不到的子工作项 | `internal/bootstrap` 的 `TestAnAdminGuestsDeletionTakesTheSubItemsHeDoesNotSee`（`make test`） | 组合 |
 | `T2.13` | 父工作项只能是调用者自己建的 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestTheGuestRuleHoldsForAParent`（`make test`） | 单元；组合 |
+| `T2.14` | 带父工作项的创建写第 5 行（改父工作项的一行） | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`） | 单元；组合 |
 
 ---
 
@@ -3604,7 +3605,7 @@ Expected: 通过。
 | `T3.14` | 父工作项的那行动态不写新父工作项的 id | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`） | 单元；组合 |
 | `T3.15` | 移动经连接池读祖先链，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`） | 组合 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T2.1`、`T2.2`、`T2.10`（列在各自的 Task 的表里，标"（Task 3 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=3`）。
+本 Task 的检查也发现较早的 Task 的变异 `T2.1`、`T2.2`（列在各自的 Task 的表里，标"（Task 3 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=3`）。
 
 ---
 
