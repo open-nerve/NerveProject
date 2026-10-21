@@ -120,7 +120,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/adapter/postgres/queries/parents.sql`、`server/internal/modules/issue/adapter/postgres/parents.go`（新） | `Ancestry`（`WITH RECURSIVE`，`UNION`） | 3 |
 | `server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`（修改） | 修改写 `parent_id` | 3 |
 | `server/internal/modules/issue/app/update_issue.go`（修改） | 修改的父工作项（`check`、`parentChange`）（Task 3）；回答带计数（Task 4） | 3、4 |
-| `server/internal/modules/issue/app/create_issue_test.go`（修改） | 世界的项目的标识 `WEB` | 3 |
+| `server/internal/modules/issue/app/create_issue_test.go`（修改） | 端口失败的核对 `wantStopped`，`wantStoppedAt`、`wantStoppedOn` 都经它（Task 2）；世界的项目的标识 `WEB`（Task 3） | 2、3 |
 | `server/internal/modules/issue/app/fakes_parents_test.go`（新） | `Ancestry`（Task 3）；`SubIssueCounts`、`GetIssues`（Task 4）；`SubIssues`、`SetParents`（Task 5） | 3、4、5 |
 | `server/internal/modules/issue/app/ports.go`（修改） | `Ancestry`（Task 3）；`SubIssueCounts`、`SubIssueCount`、`IssueReader.GetIssues`（Task 4）；`SubIssueLister`、`SubIssueAdder`（Task 5）；`LockMany`、`WriteGate.Enter` 取多个项目（Task 7）；`RelationCreator`（Task 10）；`RelationLister`、`ArchivedProjects`（Task 12）；`RelationDeleter`（Task 13） | 3、4、5、7、10、12、13 |
 | `server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/adapter/postgres/issue_ports.go`（修改） | `LockIssueProject` 回答标识（Task 3）；`LockIssueProjects`（Task 7）；`ArchivedIssueProjects`（Task 12） | 3、7、12 |
@@ -1133,7 +1133,7 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_parents_test.go`、`server/internal/modules/issue/adapter/postgres/parents_test.go`、`server/internal/modules/issue/app/parents.go`、`server/internal/modules/issue/app/parents_test.go`、`server/internal/modules/issue/domain/hierarchy.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/adapter/postgres/issues.go`、`server/internal/modules/issue/adapter/postgres/issues_test.go`、`server/internal/modules/issue/adapter/postgres/queries/issues.sql`、`server/internal/modules/issue/app/create_issue.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`
+- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/adapter/postgres/issues.go`、`server/internal/modules/issue/adapter/postgres/issues_test.go`、`server/internal/modules/issue/adapter/postgres/queries/issues.sql`、`server/internal/modules/issue/app/create_issue.go`、`server/internal/modules/issue/app/create_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`server/internal/modules/issue/adapter/postgres/gen/issues.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.4、第 3 节第 9、12 条；M4 设计 3.4、3.5、3.8、3.9、3.13、5.2）
@@ -1143,7 +1143,7 @@ Expected: 通过。
 - `issue/app/lock.go`：`decide` 交回 `Authorize` 的 `Grant`；`held.grant` 是锁下判定的 `Grant`（它的 `OwnOnly` 说访客规则是否向他隐藏别人的工作项）。
 - `issue/app/parents.go`（新）：`parentOf(ctx, issues, h, actor, projectID, id)`：在锁下读所问的父工作项，是这个项目的、未删除、没归档、调用者看得到（访客规则用 `h.grant`，`Issue.HiddenFrom`）时回答它。
 - `issue/app/create_issue.go`：`check(ctx, h, actor, projectID, in)` 在标签之后、编号之前读父工作项，问题与别的一次报出（422 `parent_id`）；写工作项时带上父工作项；创建不写父工作项的动态（3.13 的第 5 行是修改的）。`rows.go`：`IssueRow.ParentID`。
-- 测试的帮手：`fakes_test.go` 的 `callLog.fail` 按整行比较（`GetIssue <id>` 一类的行），读父工作项失败的一行用它。
+- 测试的帮手：`fakes_test.go` 的 `callLog.fail` 按整行比较（`GetIssue <id>` 一类的行），读父工作项失败的一行用它；`create_issue_test.go` 的 `wantStopped` 是端口失败的一个核对（答复是 `errDisk` 本身，所说的调用是最后一个），`wantStoppedAt`（端口的第一个调用，照旧按位置）和 `wantStoppedOn`（按整行的调用）都经它，读父工作项失败的核对用 `wantStoppedOn`。
 - HTTP：`CreateIssue` 映射 `parent_id`。
 
 **Tests:**
@@ -1151,7 +1151,7 @@ Expected: 通过。
 - 单元：`TestCreateIssueUnderAParent`（在标签之后、编号之前锁下读父工作项，存下、答出它，动态只有创建的行）、`TestCreateIssueRefusesAParentItMayNotHave`（没有的、别的项目的、已归档的、锁下的判定说只看自己的调用者的别人的：都在别的问题之后、同一个 422，不占编号；只按预检的判定他看得到，在他自己的工作项下照样可以）、`TestAParentsFailingReadEndsTheWrite`（读父工作项失败原样结束这个写，之后的调用都不发生）。
 - 存储：`TestAWorkItemsParentIsWritten`（`InsertIssue` 写下给的父工作项，`GetIssue` 读出；别的工作项的父工作项不动）。
 - HTTP：`TestCreateIssue`（`parent_id` 进用例、回答带出）。
-- 组合：`TestAWorkItemIsPutUnderAnother`（创建的一半：alice 在 Up 下建 Part，回答和存下的都在 Up 下，创建不写父工作项的动态；在不存在的工作项下、带不存在的标签建的，两个问题一次报出（422 `label_ids[0]`、`parent_id`），什么都没建）、`TestTheGuestRuleHoldsForAParent`（walt 是 acme 的管理员、Web 的访客，只看自己的：他在 alice 的 Up 下建的 422 `parent_id`，与不存在的一样，什么都没建；在他自己的工作项下照样建；Web 的成员 bob 在 Up 下建）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 在第一个工作项下建 Part，锁下读父工作项的语句在它的事务的连接上）。
+- 组合：`TestAWorkItemIsPutUnderAnother`（创建的一半：alice 在 Up 下建 Part，回答和存下的都在 Up 下，创建不写父工作项的动态；在不存在的工作项下、带不存在的标签建的，两个问题一次报出（422 `label_ids[0]`、`parent_id`），什么都没建）、`TestTheGuestRuleHoldsForAParent`（walt 是 acme 的管理员、Web 的访客，只看自己的：他在 alice 的 Up 下建的 422 `parent_id`，与不存在的一样，什么都没建；在他自己的工作项下照样建；Web 的成员 bob 在 Up 下建，回答和存下的都在 Up 下）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 在第一个工作项下建 Part，锁下读父工作项的语句在它的事务的连接上）。
 
 - [ ] **Step 1: 契约和查询，生成**
 
@@ -1320,6 +1320,36 @@ func (u *CreateIssue) check(ctx context.Context, h held, actor, projectID uuid.U
 		}
 		c.parent = in.ParentID
 	}
+````
+
+`server/internal/modules/issue/app/create_issue_test.go`（修改，1 处）：
+
+````old server/internal/modules/issue/app/create_issue_test.go
+	last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
+	if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
+		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
+````
+````new server/internal/modules/issue/app/create_issue_test.go
+	first := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
+	wantStopped(t, w, err, port, first == len(w.log.calls)-1)
+}
+
+// wantStoppedOn checks a use case over w that failed on call, a port's
+// call with its arguments as line writes it (callLog.fail): its answer is
+// the failure, errDisk, as itself, and call is its last.
+func wantStoppedOn(t *testing.T, w *world, err error, call string) {
+	t.Helper()
+	n := len(w.log.calls)
+	wantStopped(t, w, err, call, n > 0 && w.log.calls[n-1] == call)
+}
+
+// wantStopped is the check of wantStoppedAt and wantStoppedOn: err is the
+// failure, errDisk, as itself, and the call named is the last of w's
+// calls, as last says.
+func wantStopped(t *testing.T, w *world, err error, named string, last bool) {
+	t.Helper()
+	if !errors.Is(err, errDisk) || !last {
+		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, named)
 ````
 
 `server/internal/modules/issue/app/fakes_test.go`（修改，7 处）：
@@ -1505,13 +1535,12 @@ func parentOf(ctx context.Context, issues IssueReader, h held, actor, projectID,
 }
 ````
 
-`server/internal/modules/issue/app/parents_test.go`（新文件，120 行）：
+`server/internal/modules/issue/app/parents_test.go`（新文件，113 行）：
 
 ````file server/internal/modules/issue/app/parents_test.go
 package app_test
 
 import (
-	"errors"
 	"reflect"
 	"slices"
 	"testing"
@@ -1616,17 +1645,11 @@ func TestCreateIssueRefusesAParentItMayNotHave(t *testing.T) {
 // and no call after it runs (M4 design 3.5): the parent a creation asks
 // for.
 func TestAParentsFailingReadEndsTheWrite(t *testing.T) {
-	stopped := func(t *testing.T, w *world, err error, call string) {
-		t.Helper()
-		if !errors.Is(err, errDisk) || len(w.log.calls) == 0 || w.log.calls[len(w.log.calls)-1] != call {
-			t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, call)
-		}
-	}
 	create, w := newCreate()
 	k := withKin(w)
 	w.log.fail = line("GetIssue", k.up.ID)
 	_, err := create.Execute(as(alice), web, domain.NewIssue{Name: "a", ParentID: &k.up.ID})
-	stopped(t, w, err, w.log.fail)
+	wantStoppedOn(t, w, err, w.log.fail)
 }
 ````
 
@@ -1856,7 +1879,7 @@ func TestAWorkItemsParentIsWritten(t *testing.T) {
 
 - [ ] **Step 4: 组合**
 
-`server/internal/bootstrap/issue_parents_test.go`（新文件，108 行）：
+`server/internal/bootstrap/issue_parents_test.go`（新文件，115 行）：
 
 ````file server/internal/bootstrap/issue_parents_test.go
 package bootstrap
@@ -1950,7 +1973,8 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 // The guest rule holds for a parent (M4 design 3.4, 3.9): walt, acme's
 // admin and Web's guest (adminGuest), sees only his own work items in Web.
 // His new work item under alice's Up is refused, 422 at parent_id, as
-// under one not there: no work item made. Under his own work item he
+// under one not there: no work item made. bob, Web's member, makes one
+// under Up, answered and stored under it. Under his own work item walt
 // makes one.
 func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 	w := newIssueWorld(t)
@@ -1961,6 +1985,12 @@ func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 	answer := w.send(t, "walt", http.MethodPost, create, underParent("Part", up), http.StatusUnprocessableEntity)
 	if got := refusalOf(t, []byte(answer), true); got != parentNotAllowed || w.workItems(t) != 2 {
 		t.Errorf("walt's work item under Up answers %s, and Web has %d work items; want %s, and 2", got, w.workItems(t), parentNotAllowed)
+	}
+	var sub storedIssue
+	decodeAnswer(t, w.send(t, "bob", http.MethodPost, create, underParent("Sub", up), http.StatusCreated), &sub)
+	if !reflect.DeepEqual(sub.ParentID, &up) || !reflect.DeepEqual(w.parentOf(t, sub.ID), &up) {
+		t.Errorf("bob's work item under Up is answered under %v, stored under %v; want under Up, %s", sub.ParentID,
+			w.parentOf(t, sub.ID), up)
 	}
 	below := w.newWorkItemBy(t, "walt", w.web, underParent("Below", his))
 	if got := w.parentOf(t, below); !reflect.DeepEqual(got, &his) {
@@ -2018,7 +2048,7 @@ Expected: 通过。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/bootstrap/issue_parents_test.go server/internal/bootstrap/issue_writes_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/adapter/postgres/issues.go server/internal/modules/issue/adapter/postgres/issues_test.go server/internal/modules/issue/adapter/postgres/parents_test.go server/internal/modules/issue/adapter/postgres/queries/issues.sql server/internal/modules/issue/app/create_issue.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/parents.go server/internal/modules/issue/app/parents_test.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/domain/hierarchy.go server/internal/modules/issue/domain/issue.go server/internal/modules/issue/domain/issue_test.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/issues.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/bootstrap/issue_parents_test.go server/internal/bootstrap/issue_writes_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/adapter/postgres/issues.go server/internal/modules/issue/adapter/postgres/issues_test.go server/internal/modules/issue/adapter/postgres/parents_test.go server/internal/modules/issue/adapter/postgres/queries/issues.sql server/internal/modules/issue/app/create_issue.go server/internal/modules/issue/app/create_issue_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/parents.go server/internal/modules/issue/app/parents_test.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/domain/hierarchy.go server/internal/modules/issue/domain/issue.go server/internal/modules/issue/domain/issue_test.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/issues.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): a work item is made under a parent
@@ -2052,6 +2082,7 @@ Expected: 通过。
 | `T2.10` | 父工作项的拒绝写在 `parent` 而不是 `parent_id` | `internal/bootstrap` 的 `TestTheGuestRuleHoldsForAParent`（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`）（Task 3 起）、故事 `i8-sub-issues`（Task 15 起） | 组合；端到端 |
 | `T2.11` | `CheckNewIssue` 丢掉要的父工作项 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`） | 单元；组合 |
 | `T2.12` | 删除者只看自己的工作项时，子树去掉他看不到的子工作项 | `internal/bootstrap` 的 `TestAnAdminGuestsDeletionTakesTheSubItemsHeDoesNotSee`（`make test`） | 组合 |
+| `T2.13` | 父工作项只能是调用者自己建的 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestTheGuestRuleHoldsForAParent`（`make test`） | 单元；组合 |
 
 ---
 
@@ -2737,8 +2768,15 @@ func refOf(h held, i domain.Issue) *domain.Ref {
 
 ````
 
-`server/internal/modules/issue/app/parents_test.go`（修改，4 处）：
+`server/internal/modules/issue/app/parents_test.go`（修改，5 处）：
 
+````old server/internal/modules/issue/app/parents_test.go
+import (
+````
+````new server/internal/modules/issue/app/parents_test.go
+import (
+	"errors"
+````
 ````old server/internal/modules/issue/app/parents_test.go
 	"uuid"
 
@@ -2880,10 +2918,10 @@ func TestUpdateIssueRefusesAParentItMayNotHave(t *testing.T) {
 // item deletes those under it (3.6).
 ````
 ````old server/internal/modules/issue/app/parents_test.go
-	stopped(t, w, err, w.log.fail)
+	wantStoppedOn(t, w, err, w.log.fail)
 ````
 ````new server/internal/modules/issue/app/parents_test.go
-	stopped(t, w, err, w.log.fail)
+	wantStoppedOn(t, w, err, w.log.fail)
 	for _, at := range []string{"new", "ancestry", "old"} {
 		t.Run(at, func(t *testing.T) {
 			uc, w, id := newUpdate()
@@ -2892,7 +2930,7 @@ func TestUpdateIssueRefusesAParentItMayNotHave(t *testing.T) {
 			w.log.fail = map[string]string{"new": line("GetIssue", k.top.ID), "ancestry": line("Ancestry", k.top.ID),
 				"old": line("GetIssue", k.up.ID)}[at]
 			_, err := uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true, ParentID: &k.top.ID})
-			stopped(t, w, err, w.log.fail)
+			wantStoppedOn(t, w, err, w.log.fail)
 		})
 	}
 	uc, w, id := newUpdate()
@@ -3369,6 +3407,7 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 ````
 ````old server/internal/bootstrap/issue_parents_test.go
 			"parent_id not_allowed at once, and %d", got, w.workItems(t), count)
+	}
 ````
 ````new server/internal/bootstrap/issue_parents_test.go
 			"parent_id not_allowed at once, and %d", got, w.workItems(t), count)
@@ -3412,17 +3451,20 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+low.String(), `{"parent_id":"`+top.String()+`"}`, http.StatusOK)
 	if !reflect.DeepEqual(w.parentOf(t, low), &top) {
 		t.Errorf("Low is under %v, want Top, %s", w.parentOf(t, low), top)
+	}
 ````
 ````old server/internal/bootstrap/issue_parents_test.go
 // His new work item under alice's Up is refused, 422 at parent_id, as
-// under one not there: no work item made. Under his own work item he
+// under one not there: no work item made. bob, Web's member, makes one
+// under Up, answered and stored under it. Under his own work item walt
 // makes one.
 ````
 ````new server/internal/bootstrap/issue_parents_test.go
 // His new work item under alice's Up is refused, and so is his work item
 // put under it, 422 at parent_id, as under one not there: no work item
-// made, nothing written. Under his own work item he makes one and moves
-// one. bob, Web's member, puts his own work item under Up.
+// made, nothing written. bob, Web's member, makes one under Up, answered
+// and stored under it. Under his own work item walt makes one and moves
+// one, and bob puts his own work item under Up.
 ````
 ````old server/internal/bootstrap/issue_parents_test.go
 		t.Errorf("walt's work item under Up answers %s, and Web has %d work items; want %s, and 2", got, w.workItems(t), parentNotAllowed)

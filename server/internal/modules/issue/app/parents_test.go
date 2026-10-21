@@ -1,7 +1,6 @@
 package app_test
 
 import (
-	"errors"
 	"reflect"
 	"slices"
 	"testing"
@@ -106,15 +105,9 @@ func TestCreateIssueRefusesAParentItMayNotHave(t *testing.T) {
 // and no call after it runs (M4 design 3.5): the parent a creation asks
 // for.
 func TestAParentsFailingReadEndsTheWrite(t *testing.T) {
-	stopped := func(t *testing.T, w *world, err error, call string) {
-		t.Helper()
-		if !errors.Is(err, errDisk) || len(w.log.calls) == 0 || w.log.calls[len(w.log.calls)-1] != call {
-			t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, call)
-		}
-	}
 	create, w := newCreate()
 	k := withKin(w)
 	w.log.fail = line("GetIssue", k.up.ID)
 	_, err := create.Execute(as(alice), web, domain.NewIssue{Name: "a", ParentID: &k.up.ID})
-	stopped(t, w, err, w.log.fail)
+	wantStoppedOn(t, w, err, w.log.fail)
 }

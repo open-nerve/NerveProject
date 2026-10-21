@@ -89,7 +89,8 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 // The guest rule holds for a parent (M4 design 3.4, 3.9): walt, acme's
 // admin and Web's guest (adminGuest), sees only his own work items in Web.
 // His new work item under alice's Up is refused, 422 at parent_id, as
-// under one not there: no work item made. Under his own work item he
+// under one not there: no work item made. bob, Web's member, makes one
+// under Up, answered and stored under it. Under his own work item walt
 // makes one.
 func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 	w := newIssueWorld(t)
@@ -100,6 +101,12 @@ func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 	answer := w.send(t, "walt", http.MethodPost, create, underParent("Part", up), http.StatusUnprocessableEntity)
 	if got := refusalOf(t, []byte(answer), true); got != parentNotAllowed || w.workItems(t) != 2 {
 		t.Errorf("walt's work item under Up answers %s, and Web has %d work items; want %s, and 2", got, w.workItems(t), parentNotAllowed)
+	}
+	var sub storedIssue
+	decodeAnswer(t, w.send(t, "bob", http.MethodPost, create, underParent("Sub", up), http.StatusCreated), &sub)
+	if !reflect.DeepEqual(sub.ParentID, &up) || !reflect.DeepEqual(w.parentOf(t, sub.ID), &up) {
+		t.Errorf("bob's work item under Up is answered under %v, stored under %v; want under Up, %s", sub.ParentID,
+			w.parentOf(t, sub.ID), up)
 	}
 	below := w.newWorkItemBy(t, "walt", w.web, underParent("Below", his))
 	if got := w.parentOf(t, below); !reflect.DeepEqual(got, &his) {

@@ -173,9 +173,26 @@ func wantRefusal(t *testing.T, w *world, err, want error, calls []string) {
 // the failure, errDisk, as itself, and the port's first call is its last.
 func wantStoppedAt(t *testing.T, w *world, err error, port string) {
 	t.Helper()
-	last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
-	if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
-		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
+	first := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
+	wantStopped(t, w, err, port, first == len(w.log.calls)-1)
+}
+
+// wantStoppedOn checks a use case over w that failed on call, a port's
+// call with its arguments as line writes it (callLog.fail): its answer is
+// the failure, errDisk, as itself, and call is its last.
+func wantStoppedOn(t *testing.T, w *world, err error, call string) {
+	t.Helper()
+	n := len(w.log.calls)
+	wantStopped(t, w, err, call, n > 0 && w.log.calls[n-1] == call)
+}
+
+// wantStopped is the check of wantStoppedAt and wantStoppedOn: err is the
+// failure, errDisk, as itself, and the call named is the last of w's
+// calls, as last says.
+func wantStopped(t *testing.T, w *world, err error, named string, last bool) {
+	t.Helper()
+	if !errors.Is(err, errDisk) || !last {
+		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, named)
 	}
 }
 
