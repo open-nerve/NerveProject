@@ -77,9 +77,10 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 // unlabelled, then assigned and labelled again, with a work item of his
 // under it (underWorkItem): a row of each table under it, and of its
 // assignees and its labels one deleted before, all of bob's writing. The
-// other work item has the same rows. alice, Web's admin, deletes it: no
-// row under it is of her writing before, so a deletion that kept a row's
-// writer would show. The deleted work item is not found any more.
+// other work item, made the same way, has a row of each table under it,
+// none deleted before. alice, Web's admin, deletes it: no row under it is
+// of her writing before, so a deletion that kept a row's writer would
+// show. The deleted work item is not found any more.
 func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w := newIssueWorld(t)
 	deleted, kept := w.newWorkItemBy(t, "bob", w.web, w.fullIssue()), w.newWorkItemBy(t, "bob", w.web, w.fullIssue())

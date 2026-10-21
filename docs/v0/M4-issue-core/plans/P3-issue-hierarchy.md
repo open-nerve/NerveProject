@@ -588,7 +588,7 @@ func (f *fakeIssues) DeleteIssueActivityRows(ctx context.Context, d app.IssueDel
 
 - [ ] **Step 3: 存储**
 
-`server/internal/modules/issue/adapter/postgres/delete_issue.go`（整个文件，67 行）：
+`server/internal/modules/issue/adapter/postgres/delete_issue.go`（整个文件，68 行）：
 
 ````whole server/internal/modules/issue/adapter/postgres/delete_issue.go
 package postgresadapter
@@ -624,10 +624,11 @@ func deletion(d app.IssueDeletion) gen.DeleteIssueRowsParams {
 }
 
 // deletedRows is err, the deletion of the work items d's rows of what, as
-// the deletion's error; nil is nil.
+// the deletion's error, which gives how many work items d deletes, not
+// their ids: a subtree is bounded only by its project. nil is nil.
 func deletedRows(err error, what string, d app.IssueDeletion) error {
 	if err != nil {
-		return fmt.Errorf("delete %s of work items %v: %w", what, d.IssueIDs, err)
+		return fmt.Errorf("delete %s of %d work items: %w", what, len(d.IssueIDs), err)
 	}
 	return nil
 }
@@ -742,11 +743,11 @@ func TestTheSubtreeOfAWorkItem(t *testing.T) {
 // deleted then too (gone itself); the work item other has its row o,
 // other's id after gone's and before item's and sub's, so that a statement
 // that took its work items by the ids' order, not by equality, would reach
-// o. One statement names sub, item and gone, in no order, by bob at later:
-// a, b and d are deleted at later by bob, those of the first work item it
-// names and of the others; c and g keep alice's deletion, and o its row as
-// it was; every other column of every row is kept. Each statement answers
-// a failed write as its failure.
+// o. One statement names sub, item and gone, in descending id order, by
+// bob at later: a, b and d are deleted at later by bob, those of the first
+// work item it names and of the others; c and g keep alice's deletion, and
+// o its row as it was; every other column of every row is kept. Each
+// statement answers a failed write as its failure.
 func TestTheStatementsOfADeletedSubtreeDeleteItsRows(t *testing.T) {
 ````
 ````old server/internal/modules/issue/adapter/postgres/delete_issue_test.go
@@ -806,7 +807,7 @@ func TestTheStatementsOfADeletedSubtreeDeleteItsRows(t *testing.T) {
 
 - [ ] **Step 4: 按目录的删除和子树的组合测试**
 
-`server/internal/bootstrap/issue_deletion_test.go`（整个文件，217 行）：
+`server/internal/bootstrap/issue_deletion_test.go`（整个文件，218 行）：
 
 ````whole server/internal/bootstrap/issue_deletion_test.go
 package bootstrap
@@ -888,9 +889,10 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 // unlabelled, then assigned and labelled again, with a work item of his
 // under it (underWorkItem): a row of each table under it, and of its
 // assignees and its labels one deleted before, all of bob's writing. The
-// other work item has the same rows. alice, Web's admin, deletes it: no
-// row under it is of her writing before, so a deletion that kept a row's
-// writer would show. The deleted work item is not found any more.
+// other work item, made the same way, has a row of each table under it,
+// none deleted before. alice, Web's admin, deletes it: no row under it is
+// of her writing before, so a deletion that kept a row's writer would
+// show. The deleted work item is not found any more.
 func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w := newIssueWorld(t)
 	deleted, kept := w.newWorkItemBy(t, "bob", w.web, w.fullIssue()), w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
@@ -9365,18 +9367,21 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to, by uuid.UUID) {
 ````
 ````old server/internal/bootstrap/issue_deletion_test.go
 // assignees and its labels one deleted before, all of bob's writing. The
-// other work item has the same rows. alice, Web's admin, deletes it: no
-// row under it is of her writing before, so a deletion that kept a row's
-// writer would show. The deleted work item is not found any more.
+// other work item, made the same way, has a row of each table under it,
+// none deleted before. alice, Web's admin, deletes it: no row under it is
+// of her writing before, so a deletion that kept a row's writer would
+// show. The deleted work item is not found any more.
 ````
 ````new server/internal/bootstrap/issue_deletion_test.go
 // assignees and its labels one deleted before, all of bob's writing; and,
 // of his writing too, written directly (relate), its relation to a work
 // item of Ops, a row of Web's; a relation of another work item of Ops to
 // it, a row of Ops'; and its relation to another of Web's, deleted before.
-// The other work item has the same rows. alice, Web's admin, deletes it:
-// no row under it is of her writing before, so a deletion that kept a
-// row's writer would show. The deleted work item is not found any more.
+// The other work item, made and related the same way, has a row of each
+// table under it, of which only its relation to another of Web's is
+// deleted before. alice, Web's admin, deletes it: no row under it is of
+// her writing before, so a deletion that kept a row's writer would show.
+// The deleted work item is not found any more.
 ````
 ````old server/internal/bootstrap/issue_deletion_test.go
 		underWorkItem(t, w.pool, parent, w.newWorkItemBy(t, "bob", w.web, `{"name":"Part"}`))

@@ -31,10 +31,11 @@ func deletion(d app.IssueDeletion) gen.DeleteIssueRowsParams {
 }
 
 // deletedRows is err, the deletion of the work items d's rows of what, as
-// the deletion's error; nil is nil.
+// the deletion's error, which gives how many work items d deletes, not
+// their ids: a subtree is bounded only by its project. nil is nil.
 func deletedRows(err error, what string, d app.IssueDeletion) error {
 	if err != nil {
-		return fmt.Errorf("delete %s of work items %v: %w", what, d.IssueIDs, err)
+		return fmt.Errorf("delete %s of %d work items: %w", what, len(d.IssueIDs), err)
 	}
 	return nil
 }

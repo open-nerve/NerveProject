@@ -87,11 +87,11 @@ func TestTheSubtreeOfAWorkItem(t *testing.T) {
 // deleted then too (gone itself); the work item other has its row o,
 // other's id after gone's and before item's and sub's, so that a statement
 // that took its work items by the ids' order, not by equality, would reach
-// o. One statement names sub, item and gone, in no order, by bob at later:
-// a, b and d are deleted at later by bob, those of the first work item it
-// names and of the others; c and g keep alice's deletion, and o its row as
-// it was; every other column of every row is kept. Each statement answers
-// a failed write as its failure.
+// o. One statement names sub, item and gone, in descending id order, by
+// bob at later: a, b and d are deleted at later by bob, those of the first
+// work item it names and of the others; c and g keep alice's deletion, and
+// o its row as it was; every other column of every row is kept. Each
+// statement answers a failed write as its failure.
 func TestTheStatementsOfADeletedSubtreeDeleteItsRows(t *testing.T) {
 	for _, st := range []struct {
 		table  string
