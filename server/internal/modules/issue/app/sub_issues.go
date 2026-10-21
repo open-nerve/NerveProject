@@ -10,8 +10,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// ListSubIssues lists the work items directly under a work item: GET
-// /api/v0/issues/{issue_id}/sub-issues (M4 design 3.9, 5.1).
+// ListSubIssues lists the work items directly under a work item (M4
+// design 3.9, 5.1).
 type ListSubIssues struct {
 	locks  Locks
 	issues SubIssueLister
@@ -55,8 +55,8 @@ type AddSubIssuesDeps struct {
 	Clock  Clock
 }
 
-// AddSubIssues puts work items under a work item: POST
-// /api/v0/issues/{issue_id}/sub-issues (M4 design 3.5, 3.9, 5.1).
+// AddSubIssues puts work items under a work item (M4 design 3.5, 3.9,
+// 5.1).
 type AddSubIssues struct {
 	d AddSubIssuesDeps
 }

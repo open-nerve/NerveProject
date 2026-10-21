@@ -140,17 +140,29 @@ func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 }
 
 // wantActivity checks the activity w's store was given: a row of web's
-// work item id for each of activities, in their order, alice's at the
-// clock's moment, each id after the row's before.
+// work item id for each of activities, in their order (wantActivityRows).
 func wantActivity(t *testing.T, w *world, id uuid.UUID, activities []domain.Activity) {
 	t.Helper()
-	if len(w.issues.activities) != len(activities) {
-		t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(activities))
+	rows := make([]app.ActivityRow, len(activities))
+	for i, a := range activities {
+		rows[i] = app.ActivityRow{ProjectID: web, IssueID: id, Activity: a}
+	}
+	wantActivityRows(t, w, rows)
+}
+
+// wantActivityRows checks the activity w's store was given: the rows, in
+// their order, each of its work item and project with its activity, in
+// acme, alice's at the clock's moment, each id after the row's before.
+func wantActivityRows(t *testing.T, w *world, rows []app.ActivityRow) {
+	t.Helper()
+	if len(w.issues.activities) != len(rows) {
+		t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(rows))
 	}
 	for i, r := range w.issues.activities {
-		wantRow := app.ActivityRow{ID: r.ID, WorkspaceID: acme, ProjectID: web, IssueID: id, Activity: activities[i], ActorID: alice, At: clockNow}
-		if !reflect.DeepEqual(r, wantRow) || i > 0 && r.ID.Compare(w.issues.activities[i-1].ID) <= 0 {
-			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", i, r, wantRow)
+		want := rows[i]
+		want.ID, want.WorkspaceID, want.ActorID, want.At = r.ID, acme, alice, clockNow
+		if !reflect.DeepEqual(r, want) || i > 0 && r.ID.Compare(w.issues.activities[i-1].ID) <= 0 {
+			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", i, r, want)
 		}
 	}
 }

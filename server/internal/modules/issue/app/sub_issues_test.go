@@ -5,7 +5,6 @@ import (
 	"errors"
 	"reflect"
 	"slices"
-	"strings"
 	"testing"
 	"uuid"
 
@@ -39,9 +38,10 @@ func sorted(ids []uuid.UUID) []uuid.UUID {
 // A list of sub-items, outside any transaction and without a lock (M4
 // design 3.4, 3.9): web's work item 7, alice's, read and issue.read
 // decided on it, as getIssue does; then its sub-items, anyone's for web's
-// admin, only hers for a guest who sees only her own; then their sub-items
-// counted, as she sees them: every one, or only hers. The answer is the
-// sub-items as the store answers them, each with its count.
+// admin, only hers for a guest who sees only her own, and for an admin who
+// is only web's guest (adminGuest); then their sub-items counted, as she
+// sees them: every one, or only hers. The answer is the sub-items as the
+// store answers them, each with its count.
 func TestListSubIssuesReadsTheSubItemsTheCallerSees(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
@@ -53,6 +53,7 @@ func TestListSubIssuesReadsTheSubItemsTheCallerSees(t *testing.T) {
 		{"an admin", shared.Grant{ProjectRole: shared.RoleAdmin}, "anyone's", func(k kin) []domain.Issue { return []domain.Issue{k.top, k.up} },
 			[]int{3, 2}},
 		{"a guest who sees her own", ownOnly, alice.String() + "'s", func(k kin) []domain.Issue { return []domain.Issue{k.mine} }, []int{1}},
+		{"an admin who is a guest", adminGuest, alice.String() + "'s", func(k kin) []domain.Issue { return []domain.Issue{k.mine} }, []int{1}},
 	} {
 		_, w, id := newUpdate()
 		k := withKin(w)
@@ -168,18 +169,11 @@ func TestAddSubIssuesPutsTheWorkItemsUnderIt(t *testing.T) {
 		t.Errorf("the rows written %+v, want %+v", w.issues.parented, want)
 	}
 	seven := &domain.Ref{ID: id, Identifier: "WEB-7"}
-	activities := []domain.Activity{domain.ParentActivity(domain.Changed[*domain.Ref]{New: seven}),
-		domain.ParentActivity(domain.Changed[*domain.Ref]{Old: &domain.Ref{ID: k.up.ID, Identifier: "WEB-3"}, New: seven})}
-	if len(w.issues.activities) != len(activities) {
-		t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(activities))
-	}
-	for n, r := range w.issues.activities {
-		wantRow := app.ActivityRow{ID: r.ID, WorkspaceID: acme, ProjectID: web, IssueID: moved[n], Activity: activities[n], ActorID: alice,
-			At: clockNow}
-		if !reflect.DeepEqual(r, wantRow) || n > 0 && r.ID.Compare(w.issues.activities[n-1].ID) <= 0 {
-			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", n, r, wantRow)
-		}
-	}
+	wantActivityRows(t, w, []app.ActivityRow{
+		{ProjectID: web, IssueID: k.up.ID, Activity: domain.ParentActivity(domain.Changed[*domain.Ref]{New: seven})},
+		{ProjectID: web, IssueID: k.top.ID, Activity: domain.ParentActivity(domain.Changed[*domain.Ref]{Old: &domain.Ref{ID: k.up.ID,
+			Identifier: "WEB-3"}, New: seven})},
+	})
 }
 
 // An addition of work items each under the work item already writes
@@ -215,8 +209,9 @@ func TestAddSubIssuesCountsTheSubItemsTheCallerSees(t *testing.T) {
 // archived parent; then each work item asked for that is not there,
 // another project's, archived, the parent itself, one above it, or
 // another's for a caller who sees only his own, by the decision under the
-// lock: each at its place, in one 422, a work item it may move among them.
-// Nothing is written.
+// lock, an admin who is only web's guest too (adminGuest), refused as one
+// not there is: each at its place, in one 422, a work item it may move
+// among them. Nothing is written.
 func TestAddSubIssuesRefusals(t *testing.T) {
 	gone := uuid.NewV7()
 	checked := func(id uuid.UUID, asked []uuid.UUID) []string {
@@ -255,6 +250,10 @@ func TestAddSubIssuesRefusals(t *testing.T) {
 			w.issues.issue.By, w.auth.grants = alice, []shared.Grant{{}, ownOnly}
 			return id, []uuid.UUID{k.mine.ID, k.up.ID}
 		}, shared.Invalid(domain.SubIssueNotAllowed(1)), checked},
+		{"another's, for an admin who is a guest", func(w *world, k kin, id uuid.UUID) (uuid.UUID, []uuid.UUID) {
+			w.issues.issue.By, w.auth.grants = alice, []shared.Grant{adminGuest, adminGuest}
+			return id, []uuid.UUID{gone, k.up.ID, k.mine.ID}
+		}, shared.Invalid(domain.SubIssueNotAllowed(0), domain.SubIssueNotAllowed(1)), checked},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, w, id := newUpdate()
@@ -280,16 +279,12 @@ func TestAddSubIssuesStopsAtAFailingPort(t *testing.T) {
 			putUnder(w, k.top, k.up.ID)
 			putUnder(w, k.mine, id)
 			asked := []uuid.UUID{k.top.ID, k.mine.ID}
-			w.log.fail = map[string]string{"asked": line("GetIssues", sorted(asked)), "before": line("GetIssues", []uuid.UUID{k.up.ID}),
-				"read back": line("GetIssues", []uuid.UUID{k.top.ID})}[at]
-			if w.log.fail == "" {
-				w.log.fail = at
-			}
+			w.log.fail = map[string]string{"asked": line("GetIssues", sorted(asked)), "Ancestry": line("Ancestry", id),
+				"before": line("GetIssues", []uuid.UUID{k.up.ID}), "SetParents": line("SetParents", []uuid.UUID{k.top.ID}, id),
+				"InsertActivities": line("InsertActivities", 1), "read back": line("GetIssues", []uuid.UUID{k.top.ID}),
+				"SubIssueCounts": counted(k.top.ID)}[at]
 			_, err := addOver(w).Execute(as(alice), id, asked)
-			last := w.log.calls[len(w.log.calls)-1]
-			if !errors.Is(err, errDisk) || last != w.log.fail && !strings.HasPrefix(last, w.log.fail+" ") {
-				t.Errorf("Execute() = %v after\n%q; want %v, %s the last call", err, w.log.calls, errDisk, w.log.fail)
-			}
+			wantStoppedOn(t, w, err, w.log.fail)
 		})
 	}
 }
