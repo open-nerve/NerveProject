@@ -29,12 +29,14 @@ type ProjectGate interface {
 }
 
 // LockedProject is a project as ProjectGate's lock answers it: its
-// workspace, whether it is archived, and its default assignee, nil for
-// none.
+// workspace, whether it is archived, its default assignee, nil for none,
+// and its identifier, which names its work items in their activity (M4
+// design 3.13).
 type LockedProject struct {
 	WorkspaceID       uuid.UUID
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
+	Identifier        string
 }
 
 // WriteGate bounds the writes on one project's work items that hold a
@@ -177,6 +179,10 @@ type IssueCreator interface {
 // them, in the transaction ctx carries (M4 design 3.5).
 type IssueUpdater interface {
 	IssueReader
+	// Ancestry reads the work item and those above it, its parent, its
+	// parent's parent and so on, each once, in no order: a work item that
+	// is in it may not be put under it (M4 design 3.9).
+	Ancestry(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error)
 	// UpdateIssue writes the work item's fields.
 	UpdateIssue(ctx context.Context, f IssueFields) error
 	InsertAssignees(ctx context.Context, r LinkRows) error

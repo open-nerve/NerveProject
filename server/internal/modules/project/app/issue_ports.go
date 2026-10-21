@@ -30,12 +30,13 @@ type IssueCascade interface {
 
 // IssueProject is a project as project.Provide's lock for the issue
 // module answers it (M4 design 6.5, ProjectGate.Lock): its workspace,
-// whether it is archived, and its default assignee, nil for none.
-// bootstrap converts it into issue's value.
+// whether it is archived, its default assignee, nil for none, and its
+// identifier. bootstrap converts it into issue's value.
 type IssueProject struct {
 	WorkspaceID       uuid.UUID
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
+	Identifier        string
 }
 
 // IssueState is a state of a project as project.Provide's catalog for the

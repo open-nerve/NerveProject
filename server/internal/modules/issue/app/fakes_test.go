@@ -220,7 +220,8 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // work item's archived_at, nil for none. subtree is the work item's
 // subtree, nil for the work item alone, and deletions are the deletion's
 // calls' arguments, one a table, in order (fakes_deletion_test.go). others
-// are the store's other work items, answered as they are.
+// are the store's other work items, answered as they are, and ancestry
+// their ancestries (fakes_parents_test.go).
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
@@ -234,6 +235,7 @@ type fakeIssues struct {
 	subtree    []uuid.UUID
 	deletions  []app.IssueDeletion
 	others     map[uuid.UUID]domain.Issue
+	ancestry   map[uuid.UUID][]uuid.UUID
 	lost       bool
 }
 
@@ -275,7 +277,7 @@ func (f *fakeIssues) UpdateIssue(ctx context.Context, r app.IssueFields) error {
 		return fmt.Errorf("UpdateIssue: %+v is not the work item %+v", r, f.issue)
 	}
 	f.issue.Name, f.issue.StateID, f.issue.Priority, f.issue.CompletedAt = r.Name, r.StateID, r.Priority, r.CompletedAt
-	f.issue.StartDate, f.issue.TargetDate = r.StartDate, r.TargetDate
+	f.issue.StartDate, f.issue.TargetDate, f.issue.ParentID = r.StartDate, r.TargetDate, r.ParentID
 	f.changed = &r
 	return nil
 }

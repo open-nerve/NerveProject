@@ -31,10 +31,10 @@ var (
 	clockNow                    = time.Date(2026, 10, 17, 10, 0, 0, 123456789, time.UTC)
 )
 
-// world is web as the use cases' ports see it: its states, the greatest
-// sort order of Done's work items 85535, its labels, its last number 6,
-// its members' roles and display names; an Authorizer that allows each
-// call it is not told to refuse; and the locks over them.
+// world is web as the use cases' ports see it: its identifier WEB, its
+// states, the greatest sort order of Done's work items 85535, its labels,
+// its last number 6, its members' roles and display names; an Authorizer
+// that allows each call it is not told to refuse; and the locks over them.
 type world struct {
 	log      *callLog
 	project  *fakeProject
@@ -47,8 +47,8 @@ type world struct {
 func newCreate() (*app.CreateIssue, *world) {
 	log := &callLog{}
 	w := &world{log: log}
-	w.project = &fakeProject{log: log, id: web, workspace: acme, found: true, locked: &app.LockedProject{WorkspaceID: acme}, last: 6,
-		states: []app.StateRef{backlog, done, triage}, labels: []app.LabelRef{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}},
+	w.project = &fakeProject{log: log, id: web, workspace: acme, found: true, locked: &app.LockedProject{WorkspaceID: acme, Identifier: "WEB"},
+		last: 6, states: []app.StateRef{backlog, done, triage}, labels: []app.LabelRef{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}},
 		roles: map[uuid.UUID]shared.Role{alice: shared.RoleAdmin, bob: shared.RoleMember, carol: shared.RoleAdmin, gus: shared.RoleGuest}}
 	w.issues = &fakeIssues{log: log, greatest: map[uuid.UUID]float64{done.ID: 85535}}
 	w.auth = &fakeAuthorizer{log: log}

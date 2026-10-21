@@ -26,7 +26,8 @@ func (s *Store) LockIssueProject(ctx context.Context, id uuid.UUID) (p app.Issue
 	case err != nil:
 		return app.IssueProject{}, false, fmt.Errorf("lock project %s for its work items: %w", id, err)
 	}
-	return app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID}, true, nil
+	return app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID, Identifier: r.Identifier},
+		true, nil
 }
 
 // NextIssueSequence takes the undeleted project id's next work-item number

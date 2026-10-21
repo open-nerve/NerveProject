@@ -12,8 +12,9 @@ import (
 // 5.2, IssueUpdate without the fields of later phases): each field nil
 // when it is not given, and keeps its value. AssigneeIDs and LabelIDs,
 // given, are the work item's new sets of accounts and labels; given empty,
-// none. A date may be cleared: SetStartDate and SetTargetDate tell whether
-// the date is given, StartDate and TargetDate its day, nil for none.
+// none. A date and the parent may be cleared: SetStartDate, SetTargetDate
+// and SetParentID tell whether the field is given, StartDate, TargetDate
+// and ParentID its value, nil for none.
 type IssuePatch struct {
 	Name          *string
 	StateID       *uuid.UUID
@@ -24,6 +25,8 @@ type IssuePatch struct {
 	StartDate     *shared.Date
 	SetTargetDate bool
 	TargetDate    *shared.Date
+	SetParentID   bool
+	ParentID      *uuid.UUID
 }
 
 // CheckIssuePatch checks the fields p gives by createIssue's rules (M4
@@ -33,9 +36,9 @@ type IssuePatch struct {
 // as it is); at most MaxAssignees accounts and MaxLabels labels, each
 // named once. Every problem is reported at once, in one 422
 // validation_failed; whether the state, each account and each label the
-// change adds may be is the use case's, under the project's lock, and so
-// is the order of the dates the change leaves (DatesOutOfOrder): they are
-// the work item's, merged with those given.
+// change adds, and the parent it sets, may be is the use case's, under the
+// project's lock, and so is the order of the dates the change leaves
+// (DatesOutOfOrder): they are the work item's, merged with those given.
 func CheckIssuePatch(p IssuePatch) (IssuePatch, error) {
 	var found []*shared.FieldError
 	if p.Name != nil {
@@ -83,18 +86,19 @@ func diffOf(from, to []uuid.UUID) Diff {
 	return d
 }
 
-// Changes is what a checked patch changes in a work item (M4 design 3.7):
-// the new name, priority, state and dates where each differs from the
-// work item's, nil where it is not given or is the same; and the accounts
-// and the labels it adds and removes (Diff), where the patch gives the
-// new set. An account or a label the work item has and the new set keeps
-// is left as it is: its row is not written again.
+// Changes is what a checked patch changes in a work item (M4 design 3.7,
+// 3.9): the new name, priority, state, dates and parent where each differs
+// from the work item's, nil where it is not given or is the same; and the
+// accounts and the labels it adds and removes (Diff), where the patch
+// gives the new set. An account or a label the work item has and the new
+// set keeps is left as it is: its row is not written again.
 type Changes struct {
 	Name       *string
 	Priority   *Priority
 	StateID    *uuid.UUID
 	StartDate  *DateChange
 	TargetDate *DateChange
+	Parent     *ParentChange
 	Assignees  Diff
 	Labels     Diff
 }
@@ -116,6 +120,9 @@ func ChangesOf(i Issue, p IssuePatch) Changes {
 	}
 	if p.SetTargetDate && !sameDay(p.TargetDate, i.TargetDate) {
 		c.TargetDate = &DateChange{To: p.TargetDate}
+	}
+	if p.SetParentID && !sameID(p.ParentID, i.ParentID) {
+		c.Parent = &ParentChange{To: p.ParentID}
 	}
 	if p.AssigneeIDs != nil {
 		c.Assignees = diffOf(i.AssigneeIDs, *p.AssigneeIDs)
@@ -144,6 +151,11 @@ func Unassignable(asked, added []uuid.UUID, roles map[uuid.UUID]shared.Role) []s
 
 // None reports whether c changes nothing: then the update writes no row.
 func (c Changes) None() bool {
-	return c.Name == nil && c.Priority == nil && c.StateID == nil && c.StartDate == nil && c.TargetDate == nil && len(c.Assignees.Added) == 0 &&
-		len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
+	return c.Name == nil && c.Priority == nil && c.StateID == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
+		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
+}
+
+// sameID reports whether a and b, either nil for none, are the same id.
+func sameID(a, b *uuid.UUID) bool {
+	return a == nil && b == nil || a != nil && b != nil && *a == *b
 }

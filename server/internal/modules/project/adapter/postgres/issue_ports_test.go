@@ -13,11 +13,11 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The issue module's lock of a project (M4 design 3.5, 6.5). It answers
-// the undeleted project's workspace, whether it is archived, and its
-// default assignee, an archived one too, none for a deleted one. Until the
-// transaction ends the project is held FOR NO KEY UPDATE, which a FOR SHARE
-// waits for and a foreign key's FOR KEY SHARE does not, and its
+// The issue module's lock of a project (M4 design 3.5, 6.5). It answers the
+// undeleted project's workspace, whether it is archived, its default
+// assignee and its identifier, an archived one too, none for a deleted one.
+// Until the transaction ends the project is held FOR NO KEY UPDATE, which a
+// FOR SHARE waits for and a foreign key's FOR KEY SHARE does not, and its
 // workspace's row is not locked at all: a FOR UPDATE of it does not wait.
 func TestLockIssueProject(t *testing.T) {
 	s, pool := newStore(t)
@@ -34,8 +34,8 @@ func TestLockIssueProject(t *testing.T) {
 		want  app.IssueProject
 		found bool
 	}{
-		"Web":  {web, app.IssueProject{WorkspaceID: acme, DefaultAssigneeID: &alice}, true},
-		"Arch": {arch, app.IssueProject{WorkspaceID: acme, Archived: true}, true},
+		"Web":  {web, app.IssueProject{WorkspaceID: acme, DefaultAssigneeID: &alice, Identifier: "WEB"}, true},
+		"Arch": {arch, app.IssueProject{WorkspaceID: acme, Archived: true, Identifier: "ARCH"}, true},
 		"Gone": {gone, app.IssueProject{}, false},
 	} {
 		err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {

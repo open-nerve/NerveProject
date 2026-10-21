@@ -106,17 +106,20 @@ paths:
         keeps stays assigned whatever has become of him; each label added is
         one of the project's; the start date the work item then has is not
         after its target date, each as given or, not given, as it is: at
-        start_date when the start date alone is given, else at target_date
-        (validation_failed, every problem at once). A change that changes
-        nothing writes nothing, and the work item is answered as it is.
-        Otherwise the work item is changed last by the caller; moved into a
-        state of the completed group, it is completed at the change, and
-        moved into another, not completed; the accounts newly assigned
-        subscribe to it; its activity says what changed: the name, the
-        priority, the state, the start and the target dates, and each label
-        and each assignee added and removed. Every row it writes is the
-        caller's, at one moment. A project with too many writes on its work
-        items at once answers server_busy, with Retry-After: try again then.
+        start_date when the start date alone is given, else at target_date;
+        the parent, when it changes to a work item, is one of the project's
+        that is not archived and that the caller sees, and neither the work
+        item nor one under it (validation_failed, every problem at once). A
+        change that changes nothing writes nothing, and the work item is
+        answered as it is. Otherwise the work item is changed last by the
+        caller; moved into a state of the completed group, it is completed
+        at the change, and moved into another, not completed; the accounts
+        newly assigned subscribe to it; its activity says what changed: the
+        name, the parent, the priority, the state, the start and the target
+        dates, and each label and each assignee added and removed. Every row
+        it writes is the caller's, at one moment. A project with too many
+        writes on its work items at once answers server_busy, with
+        Retry-After: try again then.
       security: [{bearer: []}]
       x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, issue.archived, server_busy]
       requestBody:
@@ -490,3 +493,10 @@ components:
             start date the work item then has.
           type: [string, 'null']
           format: date
+        parent_id:
+          description: >-
+            The work item it is under, null for none: one of the project's
+            that is not archived, and neither this work item nor one under
+            it.
+          type: [string, 'null']
+          format: uuid

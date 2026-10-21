@@ -16,8 +16,8 @@ import (
 
 // PATCH goes to the use case for the caller and the path's work item, with
 // the body's fields, each nil when not given, a list given empty given, a
-// date given null given as none; the answer is 200 with the work item the
-// use case answers, as POST shows it.
+// date or the parent given null given as none; the answer is 200 with the
+// work item the use case answers, as POST shows it.
 func TestUpdateIssue(t *testing.T) {
 	path := "/api/v0/issues/" + webSeven.ID.String()
 	name, high, none := " Mend ", domain.PriorityHigh, []uuid.UUID{}
@@ -32,6 +32,8 @@ func TestUpdateIssue(t *testing.T) {
 		{`{"assignee_ids":[],"label_ids":[]}`, domain.IssuePatch{AssigneeIDs: &none, LabelIDs: &none}},
 		{`{"start_date":"2026-10-12","target_date":null}`, domain.IssuePatch{SetStartDate: true, StartDate: &startDay, SetTargetDate: true}},
 		{`{"start_date":null,"target_date":"2026-10-19"}`, domain.IssuePatch{SetStartDate: true, SetTargetDate: true, TargetDate: &targetDay}},
+		{`{"parent_id":"0199a2b4-0000-7000-8000-0000000000e6"}`, domain.IssuePatch{SetParentID: true, ParentID: &webSixID}},
+		{`{"parent_id":null}`, domain.IssuePatch{SetParentID: true}},
 	} {
 		update := &fakeUpdate{answer: webSeven}
 		res, body := do(t, newServer(t, httpadapter.UseCases{UpdateIssue: update}), request(http.MethodPatch, path, "alice", tt.body))
@@ -46,16 +48,16 @@ func TestUpdateIssue(t *testing.T) {
 }
 
 // A body with a field it may not have (a number, which the project gives;
-// a sort order, a parent, a description, which IssueUpdate has not in P2:
-// M4 design 12, constraint 5), null for a field that is not nullable, a
-// field of another type, an id that is no id, or a date that is no day or
-// has a time: refused as bad_request before the use case.
+// a sort order, a description, which IssueUpdate has not in P3: M4 design
+// 12, constraint 5), null for a field that is not nullable, a field of
+// another type, an id that is no id, or a date that is no day or has a
+// time: refused as bad_request before the use case.
 func TestUpdateIssueHoldsTheBodyToItsStructure(t *testing.T) {
 	update := &fakeUpdate{}
 	h := newServer(t, httpadapter.UseCases{UpdateIssue: update})
-	for _, body := range []string{`{"sequence_id":3}`, `{"sort_order":1}`, `{"parent_id":null}`, `{"description_html":"<p>x</p>"}`,
+	for _, body := range []string{`{"sequence_id":3}`, `{"sort_order":1}`, `{"description_html":"<p>x</p>"}`,
 		`{"name":null}`, `{"state_id":null}`, `{"assignee_ids":null}`, `{"name":1}`, `{"state_id":"Backlog"}`, `{"assignee_ids":"bob"}`,
-		`{"label_ids":["Bug"]}`, `{"start_date":"2026-02-30"}`, `{"target_date":"2026-10-19T00:00:00Z"}`} {
+		`{"label_ids":["Bug"]}`, `{"parent_id":"WEB-6"}`, `{"start_date":"2026-02-30"}`, `{"target_date":"2026-10-19T00:00:00Z"}`} {
 		res, got := do(t, h, request(http.MethodPatch, "/api/v0/issues/"+webSeven.ID.String(), "alice", body))
 		var problem struct{ Code string }
 		if err := json.Unmarshal([]byte(got), &problem); err != nil || res.StatusCode != http.StatusBadRequest || problem.Code != "bad_request" {

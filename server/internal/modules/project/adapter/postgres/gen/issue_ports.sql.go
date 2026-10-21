@@ -132,7 +132,7 @@ func (q *Queries) IssueStates(ctx context.Context, projectID uuid.UUID) ([]Issue
 }
 
 const lockIssueProject = `-- name: LockIssueProject :one
-SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
 FROM projects
 WHERE id = $1 AND deleted_at IS NULL
 FOR NO KEY UPDATE
@@ -142,16 +142,22 @@ type LockIssueProjectRow struct {
 	WorkspaceID       uuid.UUID
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
+	Identifier        string
 }
 
 // ProjectGate.Lock, what project.Provide offers the issue module (M4 design 6.5): the first lock of a write on the
 // work-item side (3.5, decision point 1: B), the project's row FOR NO KEY UPDATE, its workspace's row not locked.
 // After a wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile
-// reads no row.
+// reads no row. The identifier names the project's work items in their activity (3.13), as it is under the lock.
 func (q *Queries) LockIssueProject(ctx context.Context, id uuid.UUID) (LockIssueProjectRow, error) {
 	row := q.db.QueryRow(ctx, lockIssueProject, id)
 	var i LockIssueProjectRow
-	err := row.Scan(&i.WorkspaceID, &i.Archived, &i.DefaultAssigneeID)
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.Archived,
+		&i.DefaultAssigneeID,
+		&i.Identifier,
+	)
 	return i, err
 }
 

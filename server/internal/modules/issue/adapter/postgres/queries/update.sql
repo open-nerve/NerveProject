@@ -1,12 +1,12 @@
 -- name: UpdateIssue :exec
--- updateIssue's work item (M4 design 3.7), under the project's FOR NO KEY UPDATE, read again under it: its name, state,
--- priority, dates and completion as the use case gives them, those it changes and the others as they are, last changed
--- at the moment and by the account given. Every write of a work item's row holds its project's lock first (3.5), so the
--- row is as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
+-- updateIssue's work item (M4 design 3.7, 3.9), under the project's FOR NO KEY UPDATE, read again under it: its name,
+-- state, priority, dates, parent and completion as the use case gives them, those it changes and the others as they
+-- are, last changed at the moment and by the account given. Every write of a work item's row holds its project's lock
+-- first (3.5), so the row is as the use case read it; it is not locked by id first (M3 design 3.6, convention 5).
 UPDATE issues
 SET name = sqlc.arg(name), state_id = sqlc.arg(state_id), priority = sqlc.arg(priority), start_date = sqlc.narg(start_date),
-    target_date = sqlc.narg(target_date), completed_at = sqlc.narg(completed_at), updated_by_id = sqlc.arg(by)::uuid,
-    updated_at = sqlc.arg(at)::timestamptz
+    target_date = sqlc.narg(target_date), parent_id = sqlc.narg(parent_id), completed_at = sqlc.narg(completed_at),
+    updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)::timestamptz
 WHERE id = sqlc.arg(id);
 
 -- name: SetArchivedAt :exec

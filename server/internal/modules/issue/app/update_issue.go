@@ -34,11 +34,12 @@ func NewUpdateIssue(d UpdateIssueDeps) *UpdateIssue {
 
 // named are the names an update's activity writes, read under the
 // project's lock: the work item's state before and after, when the update
-// changes it, and the new one's group; the labels it adds and removes,
-// each in id order.
+// changes it, and the new one's group; its parent before and after, when
+// the update changes it; the labels it adds and removes, each in id order.
 type named struct {
 	state         *domain.Changed[domain.Named]
 	group         domain.StateGroup
+	parent        *domain.Changed[*domain.Ref]
 	labelsAdded   []domain.Named
 	labelsRemoved []domain.Named
 }
@@ -53,14 +54,15 @@ type named struct {
 // refuses it (409 project.archived), then an archived work item (409
 // issue.archived), a change of nothing too; what p changes in the work item
 // (domain.ChangesOf), and when it changes nothing, nothing is written and
-// the answer is the work item as read; the dependent rows it adds and the
-// order of the dates it leaves (check), every problem in one 422; the
-// clock; the work item's fields, its completion by its new state's group
-// when its state changes (domain.CompletedAt); the accounts and the labels
-// it removes and adds, in id order; the accounts it adds subscribed; its
-// activity (domain.UpdateActivity), each account by his display name. All
-// of it is the caller's at that moment. The answer is the work item as
-// stored, read back in the transaction.
+// the answer is the work item as read; the dependent rows it adds, the
+// order of the dates it leaves and the parent it sets (check), every
+// problem in one 422; the clock; the work item's fields, its completion by
+// its new state's group when its state changes (domain.CompletedAt); the
+// accounts and the labels it removes and adds, in id order; the accounts
+// it adds subscribed; its activity (domain.UpdateActivity), each account
+// by his display name, each parent by its identifier. All of it is the
+// caller's at that moment. The answer is the work item as stored, read
+// back in the transaction.
 func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssuePatch) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -83,7 +85,7 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 			updated = h.issue
 			return nil
 		}
-		n, err := u.check(ctx, h.issue, p, c)
+		n, err := u.check(ctx, h, actor.UserID, p, c)
 		if err != nil {
 			return err
 		}
@@ -100,18 +102,21 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 	return updated, nil
 }
 
-// check checks the dependent rows that c adds to the work item i under the
-// project's lock (M4 design 3.6, 3.7), and reads the names its activity
-// writes: the new state, when c changes it, is the project's and not its
-// triage state, by a creation's rule (pickState); each account added may
-// be assigned (domain.Unassignable), while one the work item keeps stays
-// whatever his role; each label added is the project's. The labels the
-// work item keeps are on it, so they are the project's undeleted labels:
-// deleting a label takes it off every work item (DetachLabel). Then the
-// dates p leaves the work item with are in order, merged with those it
-// keeps (domain.DatesOutOfOrder). Every problem is reported at once, in
-// one 422, each at its place in p.
-func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssuePatch, c domain.Changes) (named, error) {
+// check checks the dependent rows that c adds to the work item that h, the
+// caller actor's write, holds under the project's lock (M4 design 3.6,
+// 3.7, 3.9), and reads the names its activity writes: the new state, when
+// c changes it, is the project's and not its triage state, by a creation's
+// rule (pickState); each account added may be assigned
+// (domain.Unassignable), while one the work item keeps stays whatever his
+// role; each label added is the project's. The labels the work item keeps
+// are on it, so they are the project's undeleted labels: deleting a label
+// takes it off every work item (DetachLabel). Then the dates p leaves the
+// work item with are in order, merged with those it keeps
+// (domain.DatesOutOfOrder); then the parent c sets may be the work item's
+// (parentChange). Every problem is reported at once, in one 422, each at
+// its place in p.
+func (u *UpdateIssue) check(ctx context.Context, h held, actor uuid.UUID, p domain.IssuePatch, c domain.Changes) (named, error) {
+	i := h.issue
 	var n named
 	var problems []shared.FieldError
 	if c.StateID != nil {
@@ -153,6 +158,17 @@ func (u *UpdateIssue) check(ctx context.Context, i domain.Issue, p domain.IssueP
 	if f := domain.DatesOutOfOrder(i, p); f != nil {
 		problems = append(problems, *f)
 	}
+	if c.Parent != nil {
+		parent, ok, err := parentChange(ctx, u.d.Issues, h, actor, c.Parent.To)
+		if err != nil {
+			return named{}, err
+		}
+		if ok {
+			n.parent = &parent
+		} else {
+			problems = append(problems, domain.ParentNotAllowed())
+		}
+	}
 	if len(problems) > 0 {
 		return named{}, shared.Invalid(problems...)
 	}
@@ -187,8 +203,11 @@ func labelNames(labels []LabelRef, ids []uuid.UUID) ([]domain.Named, error) {
 // accounts added; its activity's.
 func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c domain.Changes, n named) error {
 	f := IssueFields{ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, StartDate: i.StartDate, TargetDate: i.TargetDate,
-		CompletedAt: i.CompletedAt, By: s.by, At: s.at}
-	activity := domain.Update{State: n.state, LabelsAdded: n.labelsAdded, LabelsRemoved: n.labelsRemoved}
+		ParentID: i.ParentID, CompletedAt: i.CompletedAt, By: s.by, At: s.at}
+	activity := domain.Update{Parent: n.parent, State: n.state, LabelsAdded: n.labelsAdded, LabelsRemoved: n.labelsRemoved}
+	if c.Parent != nil {
+		f.ParentID = c.Parent.To
+	}
 	if c.Name != nil {
 		f.Name, activity.Name = *c.Name, &domain.Changed[string]{Old: i.Name, New: *c.Name}
 	}

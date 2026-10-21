@@ -42,8 +42,8 @@ type LinkRows struct {
 }
 
 // IssueFields are a work item's fields as an update writes them (M4 design
-// 3.7): those it changes and the others as they are, and the moment and
-// the account that change it last.
+// 3.7, 3.9): those it changes and the others as they are, and the moment
+// and the account that change it last.
 type IssueFields struct {
 	ID          uuid.UUID
 	Name        string
@@ -51,6 +51,7 @@ type IssueFields struct {
 	Priority    domain.Priority
 	StartDate   *shared.Date
 	TargetDate  *shared.Date
+	ParentID    *uuid.UUID
 	CompletedAt *time.Time
 	By          uuid.UUID
 	At          time.Time

@@ -134,6 +134,9 @@ type IssueUpdate struct {
 	// Name 1–255 characters without the white space around it, which is not stored.
 	Name *string `json:"name,omitempty"`
 
+	// ParentID The work item it is under, null for none: one of the project's that is not archived, and neither this work item nor one under it.
+	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id,omitempty"`
+
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
 

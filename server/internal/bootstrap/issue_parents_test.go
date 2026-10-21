@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"net/http"
 	"reflect"
+	"slices"
 	"testing"
 	"uuid"
 
@@ -62,12 +63,21 @@ func underParent(name string, parent uuid.UUID) string {
 }
 
 // Parents as bootstrap wires them (M4 design 3.5, 3.9, 3.13). alice makes
-// Up, and Part under Up: Part is answered and stored under Up, and its
-// creation writes no row of its parent. A work item under one not there,
-// with a label not there, is refused with both problems at once (422),
-// and not made.
+// Top, Up, and Part under Up, WEB-1 to WEB-3: Part is answered and stored
+// under Up, and its creation writes no row of its parent. A work item
+// under one not there, with a label not there, is refused with both
+// problems at once (422), and not made. bob moves Part under Top, then
+// from under it, then from under none again: each answered with the
+// parent as stored; the first two each a row of his activity, from WEB-2
+// to WEB-1, then from WEB-1 to "", their ids the old and the new parent's,
+// the third, which changes nothing, none. Then each parent Part may not
+// have is refused, 422 at parent_id, nothing written: Part itself; Low,
+// under Mid under Part, however deep, Mid archived; Ops's work item; an
+// archived work item; a deleted one; one not there. Low may move under
+// Top, which is under none.
 func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 	w := newIssueWorld(t)
+	top := w.newWorkItemIn(t, w.web, `{"name":"Top"}`)
 	up := w.newWorkItemIn(t, w.web, `{"name":"Up"}`)
 	var part storedIssue
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", underParent("Part", up),
@@ -84,14 +94,55 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 		t.Errorf("a work item under one not there, with a label not there, answers %s, and Web has %d work items; want label_ids[0] and "+
 			"parent_id not_allowed at once, and %d", got, w.workItems(t), count)
 	}
+	path := "/api/v0/issues/" + part.ID.String()
+	for _, step := range []struct {
+		body string
+		to   *uuid.UUID
+	}{{`{"parent_id":"` + top.String() + `"}`, &top}, {`{"parent_id":null}`, nil}, {`{"parent_id":null}`, nil}} {
+		var moved storedIssue
+		decodeAnswer(t, w.send(t, "bob", http.MethodPatch, path, step.body, http.StatusOK), &moved)
+		if !reflect.DeepEqual(moved.ParentID, step.to) || !reflect.DeepEqual(w.parentOf(t, part.ID), step.to) {
+			t.Errorf("PATCH %s answers it under %v, stored under %v; want %v", step.body, moved.ParentID, w.parentOf(t, part.ID), step.to)
+		}
+	}
+	if said, want := w.parentRows(t, part.ID), []string{"bob: WEB-2 → WEB-1, " + up.String() + " → " + top.String(),
+		"bob: WEB-1 → , " + top.String() + " → none"}; !slices.Equal(said, want) {
+		t.Errorf("Part's rows of its parent say %q, want %q", said, want)
+	}
+
+	mid := w.newWorkItemIn(t, w.web, `{"name":"Mid","state_id":"`+w.done.String()+`","parent_id":"`+part.ID.String()+`"}`)
+	low := w.newWorkItemIn(t, w.web, underParent("Low", mid))
+	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+mid.String()+"/archive", "", http.StatusOK)
+	far := w.newWorkItemIn(t, createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS"), `{"name":"Far"}`)
+	shelved := w.doneWorkItem(t)
+	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/archive", "", http.StatusOK)
+	gone := w.newWorkItemIn(t, w.web, `{"name":"Gone"}`)
+	w.send(t, "alice", http.MethodDelete, "/api/v0/issues/"+gone.String(), "", http.StatusNoContent)
+	for name, parent := range map[string]uuid.UUID{"itself": part.ID, "under it": low, "Ops's": far, "archived": shelved, "deleted": gone,
+		"not there": uuid.NewV7()} {
+		_, changed, by := archivalOf(t, w, part.ID)
+		answer := w.send(t, "bob", http.MethodPatch, path, `{"parent_id":"`+parent.String()+`"}`, http.StatusUnprocessableEntity)
+		if got := refusalOf(t, []byte(answer), true); got != parentNotAllowed {
+			t.Errorf("Part under %s answers %s, want %s", name, got, parentNotAllowed)
+		}
+		if _, at, who := archivalOf(t, w, part.ID); w.parentOf(t, part.ID) != nil || !at.Equal(changed) || who != by {
+			t.Errorf("after Part under %s it is under %v, changed last by %s at %v; want under none, as before, by %s at %v", name,
+				w.parentOf(t, part.ID), who, at, by, changed)
+		}
+	}
+	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+low.String(), `{"parent_id":"`+top.String()+`"}`, http.StatusOK)
+	if !reflect.DeepEqual(w.parentOf(t, low), &top) {
+		t.Errorf("Low is under %v, want Top, %s", w.parentOf(t, low), top)
+	}
 }
 
 // The guest rule holds for a parent (M4 design 3.4, 3.9): walt, acme's
 // admin and Web's guest (adminGuest), sees only his own work items in Web.
-// His new work item under alice's Up is refused, 422 at parent_id, as
-// under one not there: no work item made. bob, Web's member, makes one
-// under Up, answered and stored under it. Under his own work item walt
-// makes one.
+// His new work item under alice's Up is refused, and so is his work item
+// put under it, 422 at parent_id, as under one not there: no work item
+// made, nothing written. bob, Web's member, makes one under Up, answered
+// and stored under it. Under his own work item walt makes one and moves
+// one, and bob puts his own work item under Up.
 func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 	w := newIssueWorld(t)
 	w.adminGuest(t)
@@ -102,6 +153,14 @@ func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 	if got := refusalOf(t, []byte(answer), true); got != parentNotAllowed || w.workItems(t) != 2 {
 		t.Errorf("walt's work item under Up answers %s, and Web has %d work items; want %s, and 2", got, w.workItems(t), parentNotAllowed)
 	}
+	_, changed, by := archivalOf(t, w, his)
+	answer = w.send(t, "walt", http.MethodPatch, "/api/v0/issues/"+his.String(), `{"parent_id":"`+up.String()+`"}`,
+		http.StatusUnprocessableEntity)
+	if _, at, who := archivalOf(t, w, his); refusalOf(t, []byte(answer), true) != parentNotAllowed || w.parentOf(t, his) != nil ||
+		!at.Equal(changed) || who != by {
+		t.Errorf("walt's work item put under Up answers %s, and is under %v, changed last by %s at %v; want %s, under none, as before",
+			answer, w.parentOf(t, his), who, at, parentNotAllowed)
+	}
 	var sub storedIssue
 	decodeAnswer(t, w.send(t, "bob", http.MethodPost, create, underParent("Sub", up), http.StatusCreated), &sub)
 	if !reflect.DeepEqual(sub.ParentID, &up) || !reflect.DeepEqual(w.parentOf(t, sub.ID), &up) {
@@ -109,7 +168,16 @@ func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 			w.parentOf(t, sub.ID), up)
 	}
 	below := w.newWorkItemBy(t, "walt", w.web, underParent("Below", his))
-	if got := w.parentOf(t, below); !reflect.DeepEqual(got, &his) {
-		t.Errorf("Below is under %v, want His, %s", got, his)
+	moved := w.newWorkItemBy(t, "walt", w.web, `{"name":"Moved"}`)
+	w.send(t, "walt", http.MethodPatch, "/api/v0/issues/"+moved.String(), `{"parent_id":"`+his.String()+`"}`, http.StatusOK)
+	bobs := w.newWorkItemBy(t, "bob", w.web, `{"name":"Bob's"}`)
+	w.send(t, "bob", http.MethodPatch, "/api/v0/issues/"+bobs.String(), `{"parent_id":"`+up.String()+`"}`, http.StatusOK)
+	for _, tt := range []struct {
+		item uuid.UUID
+		want *uuid.UUID
+	}{{below, &his}, {moved, &his}, {bobs, &up}} {
+		if got := w.parentOf(t, tt.item); !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("the work item %s is under %v, want %v", tt.item, got, tt.want)
+		}
 	}
 }
