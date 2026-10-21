@@ -218,8 +218,8 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // item of Web enters the gate and waits for the row. A write refused for
 // the shape of its body takes no place at all: an addition of sub-items
 // naming a work item twice is refused 422 at once, though Web's one place
-// is taken. Once the row is free, her change goes through, and so does
-// each write refused.
+// is taken. Once the row is free, her change goes through, and so do the
+// writes the gate refused.
 func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},

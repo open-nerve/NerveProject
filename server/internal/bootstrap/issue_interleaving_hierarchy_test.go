@@ -47,6 +47,29 @@ func addsUnder(name, child, parent string) racingWrite {
 	}
 }
 
+// webWorkItems prepares a world (inBothOrders) with alice's work items in
+// Web named names, in their order, each under none, through the API.
+func webWorkItems(names ...string) func(t *testing.T, w issueWorld) {
+	return func(t *testing.T, w issueWorld) {
+		for _, name := range names {
+			w.newWorkItemIn(t, w.web, `{"name":"`+name+`"}`)
+		}
+	}
+}
+
+// firstUnderTheOther checks what two writes that together would make a
+// loop leave once the second is refused: the first's work item, under, is
+// under the other, over, which is under none; under has one row of a
+// parent, over none.
+func (w issueWorld) firstUnderTheOther(t *testing.T, under, over uuid.UUID) {
+	t.Helper()
+	if !reflect.DeepEqual(w.parentOf(t, under), &over) || w.parentOf(t, over) != nil || len(w.parentRows(t, under)) != 1 ||
+		len(w.parentRows(t, over)) != 0 {
+		t.Errorf("the first's work item is under %v, the other under %v, their rows of a parent %q and %q; want under %s, under none, "+
+			"one row and none", w.parentOf(t, under), w.parentOf(t, over), w.parentRows(t, under), w.parentRows(t, over), over)
+	}
+}
+
 // Deleting a work item and putting another under it serialize on Web's
 // row (M4 design 3.5, 3.6, 3.9; interleaving 13), in both orders: alice
 // deletes Up while bob puts Part under it. Deleted first, holding Web FOR
@@ -58,29 +81,25 @@ func addsUnder(name, child, parent string) racingWrite {
 // among them, seven, by alice, at its one moment, no earlier than the
 // addition's commit.
 func TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize(t *testing.T) {
-	prepare := func(t *testing.T, w issueWorld) {
-		w.newWorkItemIn(t, w.web, `{"name":"Up"}`)
-		w.newWorkItemIn(t, w.web, `{"name":"Part"}`)
-	}
-	inBothOrders(t, prepare, "deleted", deletesNamed("alice", "Up"), "added", addsUnder("bob", "Part", "Up"), func(t *testing.T,
-		w issueWorld, deletedFirst bool, deleted, added exchange) {
-		w.answered(t, deleted, http.StatusNoContent)
-		if !deletedFirst {
-			w.answered(t, added, http.StatusOK)
-			w.deletedWith(t, "issues", w.workItemNamed(t, "Up"), added.released, 7)
-			return
-		}
-		w.refused(t, added, http.StatusNotFound, "issue.not_found")
-		part := w.workItemNamed(t, "Part")
-		var gone bool
-		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at IS NOT NULL FROM issues WHERE id = $1", part).Scan(&gone); err != nil {
-			t.Fatal(err)
-		}
-		if gone || w.parentOf(t, part) != nil || len(w.parentRows(t, part)) != 0 {
-			t.Errorf("Part is deleted %v, under %v, with the rows of a parent %q; want undeleted, under none, without", gone,
-				w.parentOf(t, part), w.parentRows(t, part))
-		}
-	})
+	inBothOrders(t, webWorkItems("Up", "Part"), "deleted", deletesNamed("alice", "Up"), "added", addsUnder("bob", "Part", "Up"),
+		func(t *testing.T, w issueWorld, deletedFirst bool, deleted, added exchange) {
+			w.answered(t, deleted, http.StatusNoContent)
+			if !deletedFirst {
+				w.answered(t, added, http.StatusOK)
+				w.deletedWith(t, "issues", w.workItemNamed(t, "Up"), added.released, 7)
+				return
+			}
+			w.refused(t, added, http.StatusNotFound, "issue.not_found")
+			part := w.workItemNamed(t, "Part")
+			var gone bool
+			if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at IS NOT NULL FROM issues WHERE id = $1", part).Scan(&gone); err != nil {
+				t.Fatal(err)
+			}
+			if gone || w.parentOf(t, part) != nil || len(w.parentRows(t, part)) != 0 {
+				t.Errorf("Part is deleted %v, under %v, with the rows of a parent %q; want undeleted, under none, without", gone,
+					w.parentOf(t, part), w.parentRows(t, part))
+			}
+		})
 }
 
 // Two moves, each allowed alone, that together would make a loop
@@ -93,26 +112,18 @@ func TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize(t *testing.T) {
 // is under the other, which is under none, and only the first writes a row
 // of a parent.
 func TestTwoMovesThatWouldMakeALoopSerialize(t *testing.T) {
-	prepare := func(t *testing.T, w issueWorld) {
-		w.newWorkItemIn(t, w.web, `{"name":"A"}`)
-		w.newWorkItemIn(t, w.web, `{"name":"B"}`)
-	}
-	inBothOrders(t, prepare, "A under B", movesUnder("alice", "A", "B"), "B under A", movesUnder("bob", "B", "A"), func(t *testing.T,
-		w issueWorld, aFirst bool, ea, eb exchange) {
-		first, second, under, over := ea, eb, w.workItemNamed(t, "A"), w.workItemNamed(t, "B")
-		if !aFirst {
-			first, second, under, over = eb, ea, over, under
-		}
-		w.answered(t, first, http.StatusOK)
-		if answer := w.answered(t, second, http.StatusUnprocessableEntity); refusalOf(t, []byte(answer), true) != parentNotAllowed {
-			t.Errorf("the second move answers %s, want %s", answer, parentNotAllowed)
-		}
-		if !reflect.DeepEqual(w.parentOf(t, under), &over) || w.parentOf(t, over) != nil || len(w.parentRows(t, under)) != 1 ||
-			len(w.parentRows(t, over)) != 0 {
-			t.Errorf("the first's work item is under %v, the other under %v, their rows of a parent %q and %q; want under %s, under none, "+
-				"one row and none", w.parentOf(t, under), w.parentOf(t, over), w.parentRows(t, under), w.parentRows(t, over), over)
-		}
-	})
+	inBothOrders(t, webWorkItems("A", "B"), "A under B", movesUnder("alice", "A", "B"), "B under A", movesUnder("bob", "B", "A"),
+		func(t *testing.T, w issueWorld, aFirst bool, ea, eb exchange) {
+			first, second, under, over := ea, eb, w.workItemNamed(t, "A"), w.workItemNamed(t, "B")
+			if !aFirst {
+				first, second, under, over = eb, ea, over, under
+			}
+			w.answered(t, first, http.StatusOK)
+			if answer := w.answered(t, second, http.StatusUnprocessableEntity); refusalOf(t, []byte(answer), true) != parentNotAllowed {
+				t.Errorf("the second move answers %s, want %s", answer, parentNotAllowed)
+			}
+			w.firstUnderTheOther(t, under, over)
+		})
 }
 
 // Putting a work item under another and moving that other under the first
@@ -125,11 +136,7 @@ func TestTwoMovesThatWouldMakeALoopSerialize(t *testing.T) {
 // sub_issue_ids[0]. The first's work item is under the other, which is
 // under none, and only the first writes a row of a parent.
 func TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize(t *testing.T) {
-	prepare := func(t *testing.T, w issueWorld) {
-		w.newWorkItemIn(t, w.web, `{"name":"A"}`)
-		w.newWorkItemIn(t, w.web, `{"name":"B"}`)
-	}
-	inBothOrders(t, prepare, "A added under B", addsUnder("alice", "A", "B"), "B moved under A", movesUnder("bob", "B", "A"),
+	inBothOrders(t, webWorkItems("A", "B"), "A added under B", addsUnder("alice", "A", "B"), "B moved under A", movesUnder("bob", "B", "A"),
 		func(t *testing.T, w issueWorld, addedFirst bool, added, moved exchange) {
 			under, over := w.workItemNamed(t, "A"), w.workItemNamed(t, "B")
 			if addedFirst {
@@ -145,10 +152,6 @@ func TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize(t *testing.T) {
 					t.Errorf("the addition answers %s, want sub_issue_ids[0] not_allowed", answer)
 				}
 			}
-			if !reflect.DeepEqual(w.parentOf(t, under), &over) || w.parentOf(t, over) != nil || len(w.parentRows(t, under)) != 1 ||
-				len(w.parentRows(t, over)) != 0 {
-				t.Errorf("the first's work item is under %v, the other under %v, their rows of a parent %q and %q; want under %s, under "+
-					"none, one row and none", w.parentOf(t, under), w.parentOf(t, over), w.parentRows(t, under), w.parentRows(t, over), over)
-			}
+			w.firstUnderTheOther(t, under, over)
 		})
 }

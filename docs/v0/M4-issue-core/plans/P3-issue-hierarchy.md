@@ -128,7 +128,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/project/app/issue_ports.go`（修改） | `IssueProject.Identifier` | 3 |
 | `server/internal/bootstrap/ports_test.go`（修改） | 标识的转换（Task 3）；`LockMany` 的转换（Task 7） | 3、7 |
 | `server/internal/modules/issue/adapter/http/update_test.go`（修改） | 修改的 `parent_id`、体的形状 | 3 |
-| `server/internal/bootstrap/issue_interleaving_hierarchy_test.go`（新） | 交错 9 的两次移动（Task 3）；交错 13、交错 9 的加子工作项与移动（Task 6） | 3、6 |
+| `server/internal/bootstrap/issue_interleaving_hierarchy_test.go`（新） | 交错 9 的两次移动（Task 3）；交错 13、交错 9 的加子工作项与移动，三个交错共用的准备和成环之后的核对（`webWorkItems`、`firstUnderTheOther`）（Task 6） | 3、6 |
 | `server/internal/modules/issue/app/seen.go`、`server/internal/modules/issue/app/seen_test.go`（新） | `grants`、`seen`、`seenOne`、`hideParents`：回答按调用者的规则数子工作项，只看自己的访客看不到的父工作项回答为 `null`（Task 4）；`seeEach`（Task 12，`seen.go`） | 4、12 |
 | `server/internal/modules/issue/adapter/postgres/queries/sub_issues.sql`、`server/internal/modules/issue/adapter/postgres/sub_issues.go`、`server/internal/modules/issue/adapter/postgres/sub_issues_test.go`（新） | `SubIssueCounts`、`GetIssues` 的存储测试（Task 4）；`SubIssues`、`SetParents`（Task 5）；已归档的工作项的子工作项（Task 6，`sub_issues_test.go`） | 4、5、6 |
 | `server/internal/modules/issue/app/get_issue.go`、`server/internal/modules/issue/app/get_issue_by_identifier.go`、`server/internal/modules/issue/app/archive_issue.go`（修改） | 回答按调用者的规则数子工作项 | 4 |
@@ -6533,13 +6533,13 @@ Expected: 通过。
 **Interfaces:**（spec 2.8、第 3 节第 9、11、13、15、17 条；M4 设计 3.5、3.9、5.1、5.2、9.2、9.3）
 - 契约：`GET /api/v0/issues/{issue_id}/sub-issues`（`listSubIssues`，200 `IssueCollection`，`x-problem-codes: [issue.not_found, forbidden]`）、`POST` 同一路径（`addSubIssues`，体 `SubIssuesAdd{sub_issue_ids}`（1–100 个，`additionalProperties: false`），200 `IssueCollection`，`x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, issue.archived, server_busy]`）；模式 `Issue`（列表的一行：`IssueDetail` 的字段，P3 两者相同，`IssueDetail` 的 `description_html` 在 P4）、`IssueCollection{data}`（没有分页）；`api/openapi.yaml` 的路径。描述写上谁能读、能加，访客规则，次序，已在它下面的不动、都在时什么都不写。
 - `issue/adapter/http`：`handler.go` 的 `ListSubIssuesUseCase`、`AddSubIssuesUseCase` 和 `UseCases` 的两个字段；`sub_issues.go`（新）：`ListSubIssues`、`AddSubIssues`、`issueCollection`（经 `issueDetail` 转换：`gen.Issue` 与 `gen.IssueDetail` 的形状相同由编译钉住）。`issue/module.go` 接上两个用例，说明写上它们。
-- `bootstrap`：`issue_sub_issues_test.go`（新：`subIssues`、`subIssueIDs`、`countedIssue`（列表回答的工作项：`storedIssue` 和调用者看到的子工作项的个数）、`listIn[T any]`（一个列表回答的元素，泛型：这里是 `countedIssue` 和矩阵的 `storedIssue`，Task 11 的关联照用）、`itemIDs`、`counts`）；`issue_interleaving_hierarchy_test.go` 的交错 13（`deletesNamed`、`addsUnder`）和交错 9 的加子工作项一半（`TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize`）；`permission_matrix_sub_issues_test.go`（新：`listSubIssues`、`addSubIssues` 的行，`subItemOf`、`addsSubItem`、`listsNone`、`putsUnder`（两者经 `listIn` 读列表））并在 `permission_matrix_test.go` 登记；`issue_write_locks_test.go` 的 `body` 带上 `t`，`addSubIssues` 一行（每次发送新建父工作项，把 Web 的 Part 移到它下面；锁下不多读，等它先写的 `issues`，`SHARE`）；`gate_test.go` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`：写带上体，加子工作项一行，形状不对的请求一行（项目唯一的位置被占着时，把一个工作项列两次的加子工作项立刻 422，不是 503：这项核对在任何读之前，不占闸门）；`issue_writes_test.go` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：alice 建 Low，把它放到 Part 下。
+- `bootstrap`：`issue_sub_issues_test.go`（新：`subIssues`、`subIssueIDs`、`countedIssue`（列表回答的工作项：`storedIssue` 和调用者看到的子工作项的个数）、`listIn[T any]`（一个列表回答的元素，泛型：这里是 `countedIssue` 和矩阵的 `storedIssue`，Task 11 的关联照用）、`itemIDs`、`counts`）；`issue_interleaving_hierarchy_test.go` 的交错 13（`deletesNamed`、`addsUnder`）和交错 9 的加子工作项一半（`TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize`），三个交错共用的准备 `webWorkItems`（alice 在 Web 按次序建给出名字的工作项）和核对 `firstUnderTheOther`（成环的两个写之后：先来的工作项在另一个下面，另一个不在谁下面，它有一行第 5 行，另一个没有），Task 3 的 `TestTwoMovesThatWouldMakeALoopSerialize` 也改用它们；`permission_matrix_sub_issues_test.go`（新：`listSubIssues`、`addSubIssues` 的行，`subItemOf`、`addsSubItem`、`listsNone`、`putsUnder`（两者经 `listIn` 读列表））并在 `permission_matrix_test.go` 登记；`issue_write_locks_test.go` 的 `body` 带上 `t`，`addSubIssues` 一行（每次发送新建父工作项，把 Web 的 Part 移到它下面；锁下不多读，等它先写的 `issues`，`SHARE`）；`gate_test.go` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`：写带上体，加子工作项一行，形状不对的请求一行（项目唯一的位置被占着时，把一个工作项列两次的加子工作项立刻 422，不是 503：这项核对在任何读之前，不占闸门）；`issue_writes_test.go` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：alice 建 Low，把它放到 Part 下。
 - `issue/adapter/postgres`：`sub_issues_test.go` 的 `TestSubIssues`：已归档的 c 下有 alice 的 k，c 的子工作项是 k（已归档的工作项照样有它的子工作项，M4 设计 3.8）。
 
 **Tests:**
 - HTTP（`apitest.Main` 两个方向）：`TestListSubIssues`、`TestAddSubIssues`（体的工作项照原样、照次序进用例，重复的、空的也是；回答与 `GET` 的一样）、`TestAddSubIssuesHoldsTheBodyToItsStructure`（没有工作项、`null`、别的类型、不是 `id` 的、多出的字段：用例之前 400 `bad_request`）、`TestSubIssuesRefusals`（列的拒绝同 `getIssue`，加的同 `updateIssue`）。
 - 存储：`TestSubIssues` 的已归档的 c，它的子工作项 k 照样读出。
-- 组合：`TestWorkItemsArePutUnderAWorkItem`（bob 把 C、B、A 放到 Top 下：回答 A、B、C，按 `id` 的次序，各一行他的第 5 行，B 的从 `WEB-3`；对 alice，Top 列出它们、数 3 个，bob 放到它下面又归档的 D 两处都没有；再放 A 回答空的、不写；放 A 和 E 只回答 E，不写 A；不给工作项、给两次 Up、给 101 次 Up 各 422，什么都不写；alice 把 Root 放到 Base 下之后，Top 不能要的各在自己的位置 422、什么都不写：Ops 的、Top 自己、已归档的 Shelved、它上面的 Root、Root 上面的 Base（只读两层的祖先链放过它）、已删除的、没有的，可以要的 Up 在它们中间也不动；alice 归档 Shelved 之前把 Kept 放到它下面：已归档的 Shelved 不能加（409），但对 bob 照样列出 Kept，与 `getIssue` 的回答逐值相同，未归档、在它下面）、`TestTheGuestRuleHoldsForSubItems`（Mine 下有 alice 的 Low、walt 的 Below；walt 把 Mine 放到 His 下，回答的 Mine 数 1 个子工作项（他看得到的）；他看不到的 Hers 在它的位置被拒绝，回答与不存在的逐值相同；walt 只列出 Mine，数 1 个，alice、bob 列出两个，Mine 数 2 个；alice 的 Up 对 walt 列、加都是与不存在的工作项逐值相同的 404）；交错 13 `TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize`（alice 删除 Up、bob 把 Part 放到它下面，两种顺序：先删，加在锁下找不到 Up，404，Part 照旧；先加，删除等 Web 的行，锁下读子树、Part 在其中，两个和它们的七行（含 bob 的第 5 行）由 alice 在同一时刻删除，不早于加的提交）；交错 9 的另一对 `TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize`（alice 把 A 加到 B 下、bob 把 B 移到 A 下，两种顺序：后来的等 Web 的行，在锁下读祖先链，看出成环，在它的位置被拒绝、什么都不写：移动 422 `parent_id`，加子工作项 422 `sub_issue_ids[0]`；先来的工作项在另一个下面，另一个不在谁下面，只有先来的写了一行第 5 行）；`TestEachIssueWriteLocksItsProjectFirst` 的 `addSubIssues` 一行；`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 的加子工作项一行（项目的一个位置被占、不排队时立刻 503 `server_busy`、`Retry-After: 1`）和形状不对的一行（同时立刻 422 `sub_issue_ids[1]` `duplicate`）；`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 把 Low 放到 Part 下，锁下的读、写和回答的读都在它的事务的连接上）；`TestPermissionMatrix` 的两个操作的行（列：照 `getIssue`；加：管理员、成员、建了它的成员能加，访客、"管理员·访客"对别人的 404……；已归档的项目 409，已归档的项目里已归档的工作项是项目的 409，已归档的工作项 409 `issue.archived`，别的项目的工作项 422）、`TestThePermissionMatrixCoversEveryOperation`。
+- 组合：`TestWorkItemsArePutUnderAWorkItem`（bob 把 C、B、A 放到 Top 下：回答 A、B、C，按 `id` 的次序，各一行他的第 5 行，B 的从 `WEB-3`；对 alice，Top 列出它们、数 3 个，bob 放到它下面又归档的 D 两处都没有；再放 A 回答空的、不写；放 A 和 E 只回答 E，不写 A；不给工作项、给两次 Up、给 101 次 Up 各 422，什么都不写；alice 把 Root 放到 Base 下之后，Top 不能要的各在自己的位置 422、什么都不写：Ops 的、Top 自己、已归档的 Shelved、它上面的 Root、Root 上面的 Base（只读两层的祖先链放过它）、已删除的、没有的，可以要的 Up 在它们中间也不动；alice 归档 Shelved 之前把 Kept 放到它下面：已归档的 Shelved 不能加（409），但对 bob 照样列出 Kept，与 `getIssue` 的回答逐值相同，未归档、在它下面）、`TestTheGuestRuleHoldsForSubItems`（Mine 下有 alice 的 Low、walt 的 Below；walt 把 Mine 放到 His 下，回答的 Mine 数 1 个子工作项（他看得到的）；他看不到的 Hers 在它的位置被拒绝，回答与不存在的逐值相同；walt 只列出 Mine，数 1 个，alice、bob 列出两个，Mine 数 2 个；alice 的 Up 对 walt 列、加都是与不存在的工作项逐值相同的 404）；交错 13 `TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize`（alice 删除 Up、bob 把 Part 放到它下面，两种顺序：先删，加在锁下找不到 Up，404，Part 照旧；先加，删除等 Web 的行，锁下读子树、Part 在其中，两个和它们的七行（含 bob 的第 5 行）由 alice 在同一时刻删除，不早于加的提交）；交错 9 的另一对 `TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize`（alice 把 A 加到 B 下、bob 把 B 移到 A 下，两种顺序：后来的等 Web 的行，在锁下读祖先链，看出成环，在它的位置被拒绝、什么都不写：移动 422 `parent_id`，加子工作项 422 `sub_issue_ids[0]`；先来的工作项在另一个下面，另一个不在谁下面，只有先来的写了一行第 5 行）；交错 9 的 `TestTwoMovesThatWouldMakeALoopSerialize`（Task 3）改用共用的 `webWorkItems`、`firstUnderTheOther`，核对不变；`TestEachIssueWriteLocksItsProjectFirst` 的 `addSubIssues` 一行；`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 的加子工作项一行（项目的一个位置被占、不排队时立刻 503 `server_busy`、`Retry-After: 1`）和形状不对的一行（同时立刻 422 `sub_issue_ids[1]` `duplicate`）；`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 把 Low 放到 Part 下，锁下的读、写和回答的读都在它的事务的连接上）；`TestPermissionMatrix` 的两个操作的行（列：照 `getIssue`；加：管理员、成员、建了它的成员能加，访客、"管理员·访客"对别人的 404……；已归档的项目 409，已归档的项目里已归档的工作项是项目的 409，已归档的工作项 409 `issue.archived`，别的项目的工作项 422）、`TestThePermissionMatrixCoversEveryOperation`。
 
 - [ ] **Step 1: 契约，生成**
 
@@ -7094,8 +7094,8 @@ func TestSubIssuesRefusals(t *testing.T) {
 // item of Web enters the gate and waits for the row. A write refused for
 // the shape of its body takes no place at all: an addition of sub-items
 // naming a work item twice is refused 422 at once, though Web's one place
-// is taken. Once the row is free, her change goes through, and so does
-// each write refused.
+// is taken. Once the row is free, her change goes through, and so do the
+// writes the gate refused.
 ````
 ````old server/internal/bootstrap/gate_test.go
 		name, method, path string
@@ -7149,22 +7149,37 @@ func TestSubIssuesRefusals(t *testing.T) {
 		w.send(t, "alice", write.method, write.path, write.body, write.want)
 ````
 
-`server/internal/bootstrap/issue_interleaving_hierarchy_test.go`（修改，3 处）：
+`server/internal/bootstrap/issue_interleaving_hierarchy_test.go`（整个文件，157 行）：
 
-````old server/internal/bootstrap/issue_interleaving_hierarchy_test.go
-	"uuid"
+````whole server/internal/bootstrap/issue_interleaving_hierarchy_test.go
+package bootstrap
 
-````
-````new server/internal/bootstrap/issue_interleaving_hierarchy_test.go
+import (
+	"net/http"
+	"reflect"
+	"testing"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
-````
-````old server/internal/bootstrap/issue_interleaving_hierarchy_test.go
-			`{"parent_id":"`+w.workItemNamed(t, parent).String()+`"}`)
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
+// workItemNamed is the id of the world's one work item named name, of any
+// project: the test fails unless there is exactly one.
+func (w issueWorld) workItemNamed(t *testing.T, name string) uuid.UUID {
+	t.Helper()
+	ids := queryIDs(t, w.pool, "SELECT id FROM issues WHERE name = $1", name)
+	if len(ids) != 1 {
+		t.Fatalf("the work items named %s: %v; want one", name, ids)
 	}
-````
-````new server/internal/bootstrap/issue_interleaving_hierarchy_test.go
+	return ids[0]
+}
+
+// movesUnder is name's change of Web's work item named child, which puts
+// it under Web's work item named parent (workItemNamed).
+func movesUnder(name, child, parent string) racingWrite {
+	return func(t *testing.T, w issueWorld, tx shared.TxManager, e *exchange) func() error {
+		return w.sending(e, newIssueRoute(t, w.pool, tx), name, http.MethodPatch, "/api/v0/issues/"+w.workItemNamed(t, child).String(),
 			`{"parent_id":"`+w.workItemNamed(t, parent).String()+`"}`)
 	}
 }
@@ -7186,6 +7201,29 @@ func addsUnder(name, child, parent string) racingWrite {
 	}
 }
 
+// webWorkItems prepares a world (inBothOrders) with alice's work items in
+// Web named names, in their order, each under none, through the API.
+func webWorkItems(names ...string) func(t *testing.T, w issueWorld) {
+	return func(t *testing.T, w issueWorld) {
+		for _, name := range names {
+			w.newWorkItemIn(t, w.web, `{"name":"`+name+`"}`)
+		}
+	}
+}
+
+// firstUnderTheOther checks what two writes that together would make a
+// loop leave once the second is refused: the first's work item, under, is
+// under the other, over, which is under none; under has one row of a
+// parent, over none.
+func (w issueWorld) firstUnderTheOther(t *testing.T, under, over uuid.UUID) {
+	t.Helper()
+	if !reflect.DeepEqual(w.parentOf(t, under), &over) || w.parentOf(t, over) != nil || len(w.parentRows(t, under)) != 1 ||
+		len(w.parentRows(t, over)) != 0 {
+		t.Errorf("the first's work item is under %v, the other under %v, their rows of a parent %q and %q; want under %s, under none, "+
+			"one row and none", w.parentOf(t, under), w.parentOf(t, over), w.parentRows(t, under), w.parentRows(t, over), over)
+	}
+}
+
 // Deleting a work item and putting another under it serialize on Web's
 // row (M4 design 3.5, 3.6, 3.9; interleaving 13), in both orders: alice
 // deletes Up while bob puts Part under it. Deleted first, holding Web FOR
@@ -7197,41 +7235,49 @@ func addsUnder(name, child, parent string) racingWrite {
 // among them, seven, by alice, at its one moment, no earlier than the
 // addition's commit.
 func TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize(t *testing.T) {
-	prepare := func(t *testing.T, w issueWorld) {
-		w.newWorkItemIn(t, w.web, `{"name":"Up"}`)
-		w.newWorkItemIn(t, w.web, `{"name":"Part"}`)
-	}
-	inBothOrders(t, prepare, "deleted", deletesNamed("alice", "Up"), "added", addsUnder("bob", "Part", "Up"), func(t *testing.T,
-		w issueWorld, deletedFirst bool, deleted, added exchange) {
-		w.answered(t, deleted, http.StatusNoContent)
-		if !deletedFirst {
-			w.answered(t, added, http.StatusOK)
-			w.deletedWith(t, "issues", w.workItemNamed(t, "Up"), added.released, 7)
-			return
-		}
-		w.refused(t, added, http.StatusNotFound, "issue.not_found")
-		part := w.workItemNamed(t, "Part")
-		var gone bool
-		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at IS NOT NULL FROM issues WHERE id = $1", part).Scan(&gone); err != nil {
-			t.Fatal(err)
-		}
-		if gone || w.parentOf(t, part) != nil || len(w.parentRows(t, part)) != 0 {
-			t.Errorf("Part is deleted %v, under %v, with the rows of a parent %q; want undeleted, under none, without", gone,
-				w.parentOf(t, part), w.parentRows(t, part))
-		}
-	})
-````
-````old server/internal/bootstrap/issue_interleaving_hierarchy_test.go
-				"one row and none", w.parentOf(t, under), w.parentOf(t, over), w.parentRows(t, under), w.parentRows(t, over), over)
-		}
-	})
+	inBothOrders(t, webWorkItems("Up", "Part"), "deleted", deletesNamed("alice", "Up"), "added", addsUnder("bob", "Part", "Up"),
+		func(t *testing.T, w issueWorld, deletedFirst bool, deleted, added exchange) {
+			w.answered(t, deleted, http.StatusNoContent)
+			if !deletedFirst {
+				w.answered(t, added, http.StatusOK)
+				w.deletedWith(t, "issues", w.workItemNamed(t, "Up"), added.released, 7)
+				return
+			}
+			w.refused(t, added, http.StatusNotFound, "issue.not_found")
+			part := w.workItemNamed(t, "Part")
+			var gone bool
+			if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at IS NOT NULL FROM issues WHERE id = $1", part).Scan(&gone); err != nil {
+				t.Fatal(err)
+			}
+			if gone || w.parentOf(t, part) != nil || len(w.parentRows(t, part)) != 0 {
+				t.Errorf("Part is deleted %v, under %v, with the rows of a parent %q; want undeleted, under none, without", gone,
+					w.parentOf(t, part), w.parentRows(t, part))
+			}
+		})
 }
 
-````
-````new server/internal/bootstrap/issue_interleaving_hierarchy_test.go
-				"one row and none", w.parentOf(t, under), w.parentOf(t, over), w.parentRows(t, under), w.parentRows(t, over), over)
-		}
-	})
+// Two moves, each allowed alone, that together would make a loop
+// serialize on Web's row (M4 design 3.5, 3.9; interleaving 9), in both
+// orders: alice puts A under B while bob puts B under A. The first holds
+// Web FOR NO KEY UPDATE past its writes; the second, which passed its
+// precheck, waits for Web's row, and once the first commits reads the
+// ancestry of its parent under its lock, finds its own work item in it,
+// and is refused: 422 at parent_id, nothing written. The first's work item
+// is under the other, which is under none, and only the first writes a row
+// of a parent.
+func TestTwoMovesThatWouldMakeALoopSerialize(t *testing.T) {
+	inBothOrders(t, webWorkItems("A", "B"), "A under B", movesUnder("alice", "A", "B"), "B under A", movesUnder("bob", "B", "A"),
+		func(t *testing.T, w issueWorld, aFirst bool, ea, eb exchange) {
+			first, second, under, over := ea, eb, w.workItemNamed(t, "A"), w.workItemNamed(t, "B")
+			if !aFirst {
+				first, second, under, over = eb, ea, over, under
+			}
+			w.answered(t, first, http.StatusOK)
+			if answer := w.answered(t, second, http.StatusUnprocessableEntity); refusalOf(t, []byte(answer), true) != parentNotAllowed {
+				t.Errorf("the second move answers %s, want %s", answer, parentNotAllowed)
+			}
+			w.firstUnderTheOther(t, under, over)
+		})
 }
 
 // Putting a work item under another and moving that other under the first
@@ -7244,11 +7290,7 @@ func TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize(t *testing.T) {
 // sub_issue_ids[0]. The first's work item is under the other, which is
 // under none, and only the first writes a row of a parent.
 func TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize(t *testing.T) {
-	prepare := func(t *testing.T, w issueWorld) {
-		w.newWorkItemIn(t, w.web, `{"name":"A"}`)
-		w.newWorkItemIn(t, w.web, `{"name":"B"}`)
-	}
-	inBothOrders(t, prepare, "A added under B", addsUnder("alice", "A", "B"), "B moved under A", movesUnder("bob", "B", "A"),
+	inBothOrders(t, webWorkItems("A", "B"), "A added under B", addsUnder("alice", "A", "B"), "B moved under A", movesUnder("bob", "B", "A"),
 		func(t *testing.T, w issueWorld, addedFirst bool, added, moved exchange) {
 			under, over := w.workItemNamed(t, "A"), w.workItemNamed(t, "B")
 			if addedFirst {
@@ -7264,14 +7306,9 @@ func TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize(t *testing.T) {
 					t.Errorf("the addition answers %s, want sub_issue_ids[0] not_allowed", answer)
 				}
 			}
-			if !reflect.DeepEqual(w.parentOf(t, under), &over) || w.parentOf(t, over) != nil || len(w.parentRows(t, under)) != 1 ||
-				len(w.parentRows(t, over)) != 0 {
-				t.Errorf("the first's work item is under %v, the other under %v, their rows of a parent %q and %q; want under %s, under "+
-					"none, one row and none", w.parentOf(t, under), w.parentOf(t, over), w.parentRows(t, under), w.parentRows(t, over), over)
-			}
+			w.firstUnderTheOther(t, under, over)
 		})
 }
-
 ````
 
 `server/internal/bootstrap/issue_sub_issues_test.go`（新文件，215 行）：
@@ -7603,7 +7640,7 @@ func TestTheGuestRuleHoldsForSubItems(t *testing.T) {
 	route.answerWithin(t, w.contract, http.MethodPost, subIssues(part.ID), alice, subIssueIDs(low.ID), http.StatusOK)
 ````
 
-`server/internal/bootstrap/permission_matrix_sub_issues_test.go`（新文件，92 行）：
+`server/internal/bootstrap/permission_matrix_sub_issues_test.go`（新文件，94 行）：
 
 ````file server/internal/bootstrap/permission_matrix_sub_issues_test.go
 package bootstrap
@@ -7617,9 +7654,11 @@ import (
 
 // The rows of the permission matrix of a work item's sub-items (M4 design
 // 3.9, 9.2), naming the work item by its id: its column's work item
-// (issueOf). A row of 9.2's table has the issue table's columns; a variant
-// that asks what is checked after the decision, the project level's, as
-// updateIssue's; one on the archived project, its table's.
+// (issueOf). A row of 9.2's table has the issue table's columns, and so
+// has a variant on an archived work item, which each cell's prepare
+// archives on its copy (inDone); the other variants, the project level's,
+// as updateIssue's (permission_matrix_issue_updates_test.go), or the
+// archived project's.
 
 // subItemOf is the work item a column's cells put under their column's
 // work item: acme's public project's work item of PM, the member who made
@@ -7714,7 +7753,7 @@ func putsUnder(t *testing.T, c caller, s seeded, answer string) {
 Run: `go -C server test -count=1 ./internal/modules/issue/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestWorkItemsArePutUnderAWorkItem$|TestTheGuestRuleHoldsForSubItems$|TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize$|TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize$|TestEachIssueWriteLocksItsProjectFirst$|TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy$|TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection$|TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestWorkItemsArePutUnderAWorkItem$|TestTheGuestRuleHoldsForSubItems$|TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize$|TestTwoMovesThatWouldMakeALoopSerialize$|TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize$|TestEachIssueWriteLocksItsProjectFirst$|TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy$|TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection$|TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -12250,8 +12289,8 @@ func TestAWriteAcrossProjectsGivesBackEachPlaceItTook(t *testing.T) {
 // item of Web enters the gate and waits for the row. A write refused for
 // the shape of its body takes no place at all: an addition of sub-items
 // naming a work item twice is refused 422 at once, though Web's one place
-// is taken. Once the row is free, her change goes through, and so does
-// each write refused.
+// is taken. Once the row is free, her change goes through, and so do the
+// writes the gate refused.
 ````
 ````new server/internal/bootstrap/gate_test.go
 // item of Web enters the gate and waits for the row. A write across
@@ -12260,9 +12299,9 @@ func TestAWriteAcrossProjectsGivesBackEachPlaceItTook(t *testing.T) {
 // free. A write refused for the shape of its body takes no place at all:
 // an addition of sub-items naming a work item twice, and one of relations
 // naming 21 work items, are each refused 422 at once, though Web's one
-// place is taken. Once the row is free, her change goes through, and so
-// does each write refused. That a write across projects gives back each
-// place it took is TestAWriteAcrossProjectsGivesBackEachPlaceItTook.
+// place is taken. Once the row is free, her change goes through, and so do
+// the writes the gate refused. That a write across projects gives back
+// each place it took is TestAWriteAcrossProjectsGivesBackEachPlaceItTook.
 ````
 ````old server/internal/bootstrap/gate_test.go
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.String()+"/archive", "", http.StatusOK)

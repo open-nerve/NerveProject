@@ -9,9 +9,11 @@ import (
 
 // The rows of the permission matrix of a work item's sub-items (M4 design
 // 3.9, 9.2), naming the work item by its id: its column's work item
-// (issueOf). A row of 9.2's table has the issue table's columns; a variant
-// that asks what is checked after the decision, the project level's, as
-// updateIssue's; one on the archived project, its table's.
+// (issueOf). A row of 9.2's table has the issue table's columns, and so
+// has a variant on an archived work item, which each cell's prepare
+// archives on its copy (inDone); the other variants, the project level's,
+// as updateIssue's (permission_matrix_issue_updates_test.go), or the
+// archived project's.
 
 // subItemOf is the work item a column's cells put under their column's
 // work item: acme's public project's work item of PM, the member who made
