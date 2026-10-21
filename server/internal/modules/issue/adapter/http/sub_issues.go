@@ -1,0 +1,39 @@
+package httpadapter
+
+import (
+	"context"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+)
+
+// ListSubIssues serves GET /api/v0/issues/{issue_id}/sub-issues.
+func (h handler) ListSubIssues(ctx context.Context, req gen.ListSubIssuesRequestObject) (gen.ListSubIssuesResponseObject, error) {
+	items, err := h.uc.ListSubIssues.Execute(ctx, req.IssueID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListSubIssues200JSONResponse(issueCollection(items)), nil
+}
+
+// AddSubIssues serves POST /api/v0/issues/{issue_id}/sub-issues: the work
+// items go to the use case as they came, which checks them.
+func (h handler) AddSubIssues(ctx context.Context, req gen.AddSubIssuesRequestObject) (gen.AddSubIssuesResponseObject, error) {
+	items, err := h.uc.AddSubIssues.Execute(ctx, req.IssueID, req.Body.SubIssueIds)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AddSubIssues200JSONResponse(issueCollection(items)), nil
+}
+
+// issueCollection is items as the API lists them, in their order, [] for
+// none: each as issueDetail shows it, a list's Issue having IssueDetail's
+// fields (M4 design 5.2), so that the conversion stops compiling once the
+// two part.
+func issueCollection(items []domain.Issue) gen.IssueCollection {
+	data := make([]gen.Issue, len(items))
+	for n, i := range items {
+		data[n] = gen.Issue(issueDetail(i))
+	}
+	return gen.IssueCollection{Data: data}
+}

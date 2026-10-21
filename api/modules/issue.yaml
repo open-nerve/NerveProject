@@ -225,6 +225,76 @@ paths:
                 $ref: '#/components/schemas/IssueDetail'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/sub-issues:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listSubIssues
+      tags: [issue]
+      summary: List the work items under a work item
+      description: >-
+        For the admins, members and guests of its project, as getIssue,
+        which answers the same refusals: issue.not_found, forbidden. The
+        work items directly under it, not those under them, that are not
+        archived and that the caller sees: a guest of a project that does
+        not show its guests every work item sees only those he created.
+        They come in the order they were created in, the first first, all
+        of them, without pages; an archived work item's too.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.not_found, forbidden]
+      responses:
+        '200':
+          description: The work items under it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueCollection'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: addSubIssues
+      tags: [issue]
+      summary: Put work items under a work item
+      description: >-
+        For the admins and members of its project. Refused from the request
+        alone, before the work item is looked at (validation_failed): no
+        work item, or more than 100 (sub_issue_ids too_short, too_long;
+        more than 100 is the one problem named), and a work item named
+        twice (sub_issue_ids[i] duplicate). A work item that does not
+        exist, is deleted, whose project the caller does not see, or that
+        he did not create as a guest who sees only his own (getIssue)
+        answers issue.not_found, whatever his role may do; one whose
+        project he sees but whose work items he may not change, forbidden;
+        both are answered before the project is locked, and with the
+        project locked the role is decided again. A work item of an
+        archived project takes none under it (project.archived), nor then
+        an archived work item (issue.archived). Then each work item named
+        is one of the project's that is not archived and that the caller
+        sees, and neither this work item nor one above it
+        (sub_issue_ids[i] not_allowed, every problem at once). One under
+        another work item moves under this one; one under it already stays
+        as it is. Each that moves is changed last by the caller, and its
+        activity says its parent changed, from the one it was under. Every
+        row it writes is the caller's, at one moment. A project with too
+        many writes on its work items at once answers server_busy, with
+        Retry-After: try again then.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, issue.archived, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubIssuesAdd'
+      responses:
+        '200':
+          description: The work items that moved under it, in the order of their ids; none when each was under it already.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueCollection'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/issues/{identifier}:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -416,6 +486,115 @@ components:
         updated_at:
           type: string
           format: date-time
+    Issue:
+      description: A work item of a project, as a list shows it.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
+        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, created_by_id, updated_by_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        sequence_id:
+          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
+          type: integer
+        name:
+          type: string
+        state_id:
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        start_date:
+          description: The day it starts; null for none.
+          type: [string, 'null']
+          format: date
+        target_date:
+          description: The day it is due, not before its start date; null for none.
+          type: [string, 'null']
+          format: date
+        parent_id:
+          description: >-
+            The work item it is under, in the same project; null for none, or
+            for one the caller does not see (a guest who sees only his own
+            work items).
+          type: [string, 'null']
+          format: uuid
+        sort_order:
+          description: Its place among its state's work items, the lowest first.
+          type: number
+        completed_at:
+          description: When it was put in a state of the completed group; null in any other state.
+          type: [string, 'null']
+          format: date-time
+        archived_at:
+          description: When it was archived; null when it is not.
+          type: [string, 'null']
+          format: date-time
+        assignee_ids:
+          description: >-
+            The accounts it is assigned to, by id; one who has left the
+            project since is still one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        sub_issues_count:
+          description: >-
+            The number of the work items directly under it that are not
+            archived and that the caller sees: a guest of the project who
+            sees only his own work items counts only his own.
+          type: integer
+        created_by_id:
+          description: The account that created it; null for none.
+          type: [string, 'null']
+          format: uuid
+        updated_by_id:
+          description: The account that changed it last; null for none.
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    IssueCollection:
+      description: Work items, all of them, without pages.
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
+    SubIssuesAdd:
+      type: object
+      additionalProperties: false
+      required: [sub_issue_ids]
+      properties:
+        sub_issue_ids:
+          description: >-
+            1–100 work items of the project, each named once, to put under
+            the work item.
+          type: array
+          items:
+            type: string
+            format: uuid
     IssueCreate:
       type: object
       additionalProperties: false

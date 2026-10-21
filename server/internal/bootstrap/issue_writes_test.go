@@ -104,10 +104,10 @@ func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) module
 // under the lock with the count of the answer's sub-items, both on the
 // transaction's connection, and the answer names no parent. She makes Part
 // under the first, its parent read under the lock, then moves Part
-// under the second, the second's ancestry read under it. She archives the
-// first, in Done, and unarchives it; she deletes the second, and Part
-// under it. With Web archived, her creation and her change are refused
-// under the lock (409).
+// under the second, the second's ancestry read under it, and puts Low
+// under Part. She archives the first, in Done, and unarchives it; she
+// deletes the second, and Part and Low under it. With Web archived, her
+// creation and her change are refused under the lock (409).
 func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	w := newIssueWorld(t)
 	one := poolOfOne(t, w.pool.Config().ConnString())
@@ -168,6 +168,11 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	decodeAnswer(t, send(alice, `{"name":"Part","parent_id":"`+first.ID.String()+`"}`, http.StatusCreated), &part)
 	route.answerWithin(t, w.contract, http.MethodPatch, "/api/v0/issues/"+part.ID.String(), alice, `{"parent_id":"`+defaulted.ID.String()+`"}`,
 		http.StatusOK)
+	var low struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, send(alice, `{"name":"Low"}`, http.StatusCreated), &low)
+	route.answerWithin(t, w.contract, http.MethodPost, subIssues(part.ID), alice, subIssueIDs(low.ID), http.StatusOK)
 	for _, verb := range []string{"archive", "unarchive"} {
 		route.answerWithin(t, w.contract, http.MethodPost, "/api/v0/issues/"+first.ID.String()+"/"+verb, alice, "", http.StatusOK)
 	}

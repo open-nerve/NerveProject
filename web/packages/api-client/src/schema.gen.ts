@@ -1017,6 +1017,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/sub-issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the work items under a work item
+         * @description For the admins, members and guests of its project, as getIssue, which answers the same refusals: issue.not_found, forbidden. The work items directly under it, not those under them, that are not archived and that the caller sees: a guest of a project that does not show its guests every work item sees only those he created. They come in the order they were created in, the first first, all of them, without pages; an archived work item's too.
+         */
+        get: operations["listSubIssues"];
+        put?: never;
+        /**
+         * Put work items under a work item
+         * @description For the admins and members of its project. Refused from the request alone, before the work item is looked at (validation_failed): no work item, or more than 100 (sub_issue_ids too_short, too_long; more than 100 is the one problem named), and a work item named twice (sub_issue_ids[i] duplicate). A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project takes none under it (project.archived), nor then an archived work item (issue.archived). Then each work item named is one of the project's that is not archived and that the caller sees, and neither this work item nor one above it (sub_issue_ids[i] not_allowed, every problem at once). One under another work item moves under this one; one under it already stays as it is. Each that moves is changed last by the caller, and its activity says its parent changed, from the one it was under. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        post: operations["addSubIssues"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspaces/{slug}/issues/{identifier}": {
         parameters: {
             query?: never;
@@ -1898,6 +1925,76 @@ export interface components {
              */
             parent_id?: string | null;
         };
+        /** @description A work item of a project, as a list shows it. */
+        Issue: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
+            sequence_id: number;
+            name: string;
+            /** Format: uuid */
+            state_id: string;
+            priority: components["schemas"]["IssuePriority"];
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before its start date; null for none.
+             */
+            target_date: string | null;
+            /**
+             * Format: uuid
+             * @description The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+             */
+            parent_id: string | null;
+            /** @description Its place among its state's work items, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was put in a state of the completed group; null in any other state.
+             */
+            completed_at: string | null;
+            /**
+             * Format: date-time
+             * @description When it was archived; null when it is not.
+             */
+            archived_at: string | null;
+            /** @description The accounts it is assigned to, by id; one who has left the project since is still one. */
+            assignee_ids: string[];
+            /** @description Its labels, by id. */
+            label_ids: string[];
+            /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
+            sub_issues_count: number;
+            /**
+             * Format: uuid
+             * @description The account that created it; null for none.
+             */
+            created_by_id: string | null;
+            /**
+             * Format: uuid
+             * @description The account that changed it last; null for none.
+             */
+            updated_by_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description Work items, all of them, without pages. */
+        IssueCollection: {
+            data: components["schemas"]["Issue"][];
+        };
+        SubIssuesAdd: {
+            /** @description 1–100 work items of the project, each named once, to put under the work item. */
+            sub_issue_ids: string[];
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -2038,6 +2135,9 @@ export type IssuePriority = components['schemas']['IssuePriority'];
 export type IssueCreate = components['schemas']['IssueCreate'];
 export type IssueDetail = components['schemas']['IssueDetail'];
 export type IssueUpdate = components['schemas']['IssueUpdate'];
+export type Issue = components['schemas']['Issue'];
+export type IssueCollection = components['schemas']['IssueCollection'];
+export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -3622,6 +3722,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listSubIssues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work items under it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addSubIssues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubIssuesAdd"];
+            };
+        };
+        responses: {
+            /** @description The work items that moved under it, in the order of their ids; none when each was under it already. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCollection"];
                 };
             };
             default: components["responses"]["Problem"];

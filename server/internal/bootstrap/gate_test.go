@@ -207,16 +207,19 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 	w.send(t, "bob", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", `{"name":"Fix"}`, http.StatusCreated)
 }
 
-// Each write P2 adds on a work item enters its project's write gate, as a
-// change does (TestAProjectTooBusyForAWriteAnswersServerBusy; M4 design
-// 3.5, 11.11): while a write holds Web's one place, each of them on a work
-// item of Web is refused at once, the queue full, 503 server_busy with
+// Each write on a work item enters its project's write gate, as a change
+// does (TestAProjectTooBusyForAWriteAnswersServerBusy; M4 design 3.5,
+// 11.11): while a write holds Web's one place, each of them on a work item
+// of Web is refused at once, the queue full, 503 server_busy with
 // Retry-After: 1, before a wait for Web's row could have ended, at the
 // lock timeout at the earliest. In an app that lets one write a project in
 // at once, queues none and ends a write's wait for a lock at three
 // seconds: a transaction holds Web's row, and alice's change of a work
-// item of Web enters the gate and waits for the row. Once the row is free,
-// her change goes through, and so does each write refused.
+// item of Web enters the gate and waits for the row. A write refused for
+// the shape of its body takes no place at all: an addition of sub-items
+// naming a work item twice is refused 422 at once, though Web's one place
+// is taken. Once the row is free, her change goes through, and so does
+// each write refused.
 func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
@@ -225,12 +228,13 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	item, archived := w.newWorkItem(t), w.doneWorkItem(t)
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.String()+"/archive", "", http.StatusOK)
 	writes := []struct {
-		name, method, path string
-		want               int // its answer once Web's row is free
+		name, method, path, body string
+		want                     int // its answer once Web's row is free
 	}{
-		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), http.StatusNoContent},
-		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", http.StatusOK},
-		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", http.StatusOK},
+		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), "", http.StatusNoContent},
+		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", "", http.StatusOK},
+		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", "", http.StatusOK},
+		{"an addition of sub-items", http.MethodPost, subIssues(w.newWorkItem(t)), subIssueIDs(w.newWorkItem(t)), http.StatusOK},
 	}
 	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], []byte(`{"name":"Mend"}`))
 	w.contract.CheckRequest(t, change)
@@ -239,7 +243,11 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	changed := sendInBackground(change)
 	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
 	for _, write := range writes {
-		req := newRequest(t, write.method, w.base+write.path, w.tokens["alice"], nil)
+		var body []byte
+		if write.body != "" {
+			body = []byte(write.body)
+		}
+		req := newRequest(t, write.method, w.base+write.path, w.tokens["alice"], body)
 		w.contract.CheckRequest(t, req)
 		begun := time.Now()
 		a := receiveWithin(t, sendInBackground(req), 5*time.Second, "answer to "+write.name)
@@ -251,6 +259,14 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		}
 		w.wantBusy(t, write.name, req, a.res, a.body)
 	}
+	for _, shape := range []struct{ name, path, body, want string }{
+		{"an addition of sub-items naming one twice", subIssues(item), subIssueIDs(archived, archived), "sub_issue_ids[1] duplicate"},
+	} {
+		answer := w.send(t, "alice", http.MethodPost, shape.path, shape.body, http.StatusUnprocessableEntity)
+		if got := refusalOf(t, []byte(answer), false); got != "validation_failed "+shape.want {
+			t.Errorf("%s answers %s while Web's one place is taken; want %s at once, before the gate", shape.name, got, shape.want)
+		}
+	}
 
 	release(t, held)
 	a := receiveWithin(t, changed, 4*time.Second, "answer to alice's change")
@@ -261,7 +277,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		t.Errorf("alice's change = %d %s, want 200 once Web's row is free", a.res.StatusCode, a.body)
 	}
 	for _, write := range writes {
-		w.send(t, "alice", write.method, write.path, "", write.want)
+		w.send(t, "alice", write.method, write.path, write.body, write.want)
 	}
 }
 
