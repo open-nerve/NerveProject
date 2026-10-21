@@ -15,7 +15,7 @@ import (
 func (s *Store) SubIssueCounts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]app.SubIssueCount, error) {
 	rows, err := s.queries(ctx).SubIssueCounts(ctx, gen.SubIssueCountsParams{Actor: actor, Ids: ids})
 	if err != nil {
-		return nil, fmt.Errorf("count the sub-items of work items %v: %w", ids, err)
+		return nil, fmt.Errorf("count the sub-items of %d work items: %w", len(ids), err)
 	}
 	counts := make(map[uuid.UUID]app.SubIssueCount, len(rows))
 	for _, r := range rows {

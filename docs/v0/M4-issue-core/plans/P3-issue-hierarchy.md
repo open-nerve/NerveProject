@@ -115,7 +115,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/adapter/http/issues.go`（修改） | 创建的 `parent_id`（Task 2）；修改的 `parent_id`（Task 3）；回答的 `sub_issues_count`（Task 4） | 2、3、4 |
 | `server/internal/modules/issue/adapter/http/issues_test.go`（修改） | 创建带父工作项（Task 2）；回答的计数（Task 4） | 2、4 |
 | `server/internal/bootstrap/issue_parents_test.go`（新） | 创建在父工作项之下、访客规则（Task 2）；修改移动工作项、不成环（Task 3）；回答不指名只看自己的访客看不到的父工作项（Task 4） | 2、3、4 |
-| `server/internal/bootstrap/issue_writes_test.go`（修改） | 一个连接的池上的写：在父工作项下建（Task 2）、移动（Task 3）、加子工作项（Task 6）、跨项目的关联（Task 11）、删除关联（Task 14） | 2、3、6、11、14 |
+| `server/internal/bootstrap/issue_writes_test.go`（修改） | 一个连接的池上的写：在父工作项下建（Task 2）、移动（Task 3）、"管理员·访客"改他在别人的工作项下的工作项，父工作项在事务里读（Task 4）、加子工作项（Task 6）、跨项目的关联（Task 11）、删除关联（Task 14） | 2、3、4、6、11、14 |
 | `server/internal/modules/issue/domain/patch.go`、`server/internal/modules/issue/domain/patch_test.go`、`server/internal/modules/issue/domain/dates.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/activity_test.go`、`server/internal/modules/issue/domain/identifier.go`、`server/internal/modules/issue/domain/identifier_test.go`（修改） | `IssuePatch.SetParentID`、`Changes.Parent`、`same`（`dates.go` 的 `sameDay` 并入它）、动态第 5 行、`Identifier`（Task 3）；`VerbDeleted`（Task 13，`activity.go`） | 3、13 |
 | `server/internal/modules/issue/adapter/postgres/queries/parents.sql`、`server/internal/modules/issue/adapter/postgres/parents.go`（新） | `Ancestry`（`WITH RECURSIVE`，`UNION`） | 3 |
 | `server/internal/modules/issue/adapter/postgres/queries/update.sql`、`server/internal/modules/issue/adapter/postgres/update.go`（修改） | 修改写 `parent_id` | 3 |
@@ -3643,13 +3643,13 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_sub_issue_count_test.go`、`server/internal/modules/issue/adapter/postgres/queries/sub_issues.sql`、`server/internal/modules/issue/adapter/postgres/sub_issues.go`、`server/internal/modules/issue/adapter/postgres/sub_issues_test.go`、`server/internal/modules/issue/app/seen.go`、`server/internal/modules/issue/app/seen_test.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_parents_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/adapter/postgres/issues.go`、`server/internal/modules/issue/adapter/postgres/queries/issues.sql`、`server/internal/modules/issue/app/archive_issue.go`、`server/internal/modules/issue/app/archive_issue_test.go`、`server/internal/modules/issue/app/create_issue.go`、`server/internal/modules/issue/app/dates_test.go`、`server/internal/modules/issue/app/fakes_parents_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/get_issue.go`、`server/internal/modules/issue/app/get_issue_by_identifier.go`、`server/internal/modules/issue/app/get_issue_by_identifier_test.go`、`server/internal/modules/issue/app/get_issue_test.go`、`server/internal/modules/issue/app/guest_rule_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/lock_test.go`、`server/internal/modules/issue/app/parents_test.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/app/update_issue_test.go`、`server/internal/modules/issue/domain/issue.go`
+- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_parents_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/modules/issue/adapter/http/issues.go`、`server/internal/modules/issue/adapter/http/issues_test.go`、`server/internal/modules/issue/adapter/postgres/issues.go`、`server/internal/modules/issue/adapter/postgres/queries/issues.sql`、`server/internal/modules/issue/app/archive_issue.go`、`server/internal/modules/issue/app/archive_issue_test.go`、`server/internal/modules/issue/app/create_issue.go`、`server/internal/modules/issue/app/dates_test.go`、`server/internal/modules/issue/app/fakes_parents_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`server/internal/modules/issue/app/get_issue.go`、`server/internal/modules/issue/app/get_issue_by_identifier.go`、`server/internal/modules/issue/app/get_issue_by_identifier_test.go`、`server/internal/modules/issue/app/get_issue_test.go`、`server/internal/modules/issue/app/guest_rule_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/lock_test.go`、`server/internal/modules/issue/app/parents_test.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/update_issue.go`、`server/internal/modules/issue/app/update_issue_test.go`、`server/internal/modules/issue/domain/issue.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`server/internal/modules/issue/adapter/postgres/gen/issues.sql.go`、`server/internal/modules/issue/adapter/postgres/gen/sub_issues.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.6、第 3 节第 9 条；M4 设计 3.4、3.9、5.2，12 节约束 5）
-- 契约：`IssueDetail.sub_issues_count`（必有，整数）：未删除、没归档的直接子工作项中调用者看得到的个数（只看自己的访客只数他建的）。
+- 契约：`IssueDetail.sub_issues_count`（必有，整数）：未删除、没归档的直接子工作项中调用者看得到的个数（只看自己的访客只数他建的）；`IssueDetail.parent_id` 的描述：没有父工作项时为 `null`，父工作项调用者看不到（只看自己的工作项的访客）时也是（Task 6 的 `Issue.parent_id` 照写）。
 - `issue/domain`：`Issue.SubIssuesCount`（调用者按他在项目上的 `Grant` 看到的个数：存储的读留 0，建回答的时候数（`Locks.seen`）；新建的回答 0，新的工作项没有子工作项）。
-- `issue/adapter/postgres`：`queries/sub_issues.sql`（新）的 `SubIssueCounts`（给的每个有子工作项的工作项一行：全部的个数和给的账户建的个数，`issues_parent_id_idx`）；`sub_issues.go`（新）：`SubIssueCounts(ctx, actor, ids) (map[uuid.UUID]app.SubIssueCount, error)`；`queries/issues.sql` 的 `GetIssues`（给的 `id` 中未删除的，已归档的也在，与 `GetIssue` 同样的列，`id` 的次序；不加锁，或在写的事务里、项目的锁下读）、`issues.go` 的 `issueOf`（两个读共用的转换）和 `GetIssues`。
+- `issue/adapter/postgres`：`queries/sub_issues.sql`（新）的 `SubIssueCounts`（给的每个有子工作项的工作项一行：全部的个数和给的账户建的个数，`issues_parent_id_idx`）；`sub_issues.go`（新）：`SubIssueCounts(ctx, actor, ids) (map[uuid.UUID]app.SubIssueCount, error)`；`queries/issues.sql` 的 `GetIssues`（给的 `id` 中未删除的，已归档的也在，与 `GetIssue` 同样的列，`id` 的次序；不加锁，或在写的事务里、项目的锁下读）、`issues.go` 的 `issueOf`（两个读共用的转换）和 `GetIssues`。两者失败的错误只说几个工作项，不列出每个 `id`（数和读的工作项可以是整个列表）。
 - `issue/app`：`IssueReader.SubIssueCounts`、`IssueReader.GetIssues`、`SubIssueCount{All, Own}`；`seen.go`（新）：`grants`（按项目的 `Grant`）、`Locks.seen(ctx, actor, g, items...)`（一次数完，`OwnOnly` 的项目用 `Own`；工作项的项目在 `g` 里没有 `Grant` 是错误：每个回答都先判定）、`Locks.hideParents`（`OwnOnly` 的项目里有父工作项的那些，在数的同一处、同一个连接上一次读出它们的父工作项（`GetIssues`，去重、按 `id`），访客规则的那一个谓词 `domain.Issue.HiddenFrom` 藏起的、读不到的答成 `null`；别的 `Grant` 什么都不多读；读失败是回答的错误）、`Locks.seenOne`；`Locks.see` 多交回判定的 `Grant`。`getIssue`、`getIssueByIdentifier` 在判定之后、事务之外数和读父工作项；`updateIssue`、`archiveIssue`、`unarchiveIssue` 在锁下判定的 `Grant` 上、事务里最后数（读回之后，或什么都不写时在判定之后）；`createIssue` 回答 0（新的工作项没有子工作项，不数）。数失败是回答的错误，照原样，哪条回答的路都不吞掉它。以后每个回答都经 `seen`（spec 第 3 节第 9 条：回答里 `parent_id` 指名调用者看不到的工作项时为 `null`）。
 - 测试的帮手：`fakes_parents_test.go` 的 `fakeIssues.SubIssueCounts`（从假的工作项数）、`fakeIssues.GetIssues`（假的工作项里有的，按 `id`）；`fakes_test.go` 的 `fakeIssues.read`（`GetIssue` 和多个的读共用：它的别的工作项，或它留着的那个）；各用例的单元测试的期望的调用加上计数的一行（`counted`），读计数失败的回答。
 - HTTP：`issueDetail` 映射 `sub_issues_count`。
@@ -3658,17 +3658,26 @@ Expected: 通过。
 - 单元：`TestAReadCountsTheSubItemsTheCallerSees`（读：判定之后、事务之外按 `Grant` 数：全部，或"只看自己"时只数他自己的；项目"可见全部"时全部）、`TestAWritesAnswerCountsTheSubItemsTheCallerSees`（改、什么都不改、归档、再归档、恢复、再恢复：按锁下判定的 `Grant`、在事务里最后数；管理员数全部，只是项目访客的工作区管理员（`adminGuest`）只数自己的；每个写数失败时答它的失败，照原样，是它最后的调用）、`TestAnAnswerNamesTheParentTheCallerSees`（只看自己的访客：别人的父工作项答 `null`，她自己的照答，读不到的答 `null`，都在计数之后、事务之外一次读；看得到每个工作项的 `Grant` 照答、不多读；只是项目访客的工作区管理员改她的工作项时在事务里、计数之后读；读父工作项失败是回答的错误）；读、写的单元测试（`TestGetIssueReadsTheWorkItem`、`TestGetIssueRefusals`、`TestGetIssueByIdentifierReadsTheWorkItem`、归档、修改、日期、父工作项、访客规则、写闸门的测试）的期望的调用照改；数失败照原样是回答的错误：`TestGetIssueRefusals`、`TestGetIssueByIdentifierRefusals`、`TestArchiveIssueRefusals` 各有数失败的一行，`TestUpdateIssueStopsAtAFailingPort` 的端口表有 `SubIssueCounts`。
 - 存储：`TestSubIssueCounts`（按建的人数，不论谁最后改的：p 的 a、b 是 alice 的，c、d 是 bob 的、c 最后由 alice 改、d 已归档，e 已删除；a 下的 g 不算 p 的；对 alice p 有 3 个、2 个是她的，对 bob p 有 3 个、1 个是他的；没有子工作项的、没有的工作项不回答）、`TestGetIssues`（未删除的，已归档的也在，`id` 的次序，不论给的、存的次序：`id` 最小的 a 在别的存好之后移到 q 下，它的行在表里、在 `(project_id, state_id)` 的索引里都到了最后，没有 `ORDER BY` 的读不论扫表还是读那个索引都把它答在最后；`newFamily` 造的一家，Task 5 的存储测试也用它）。
 - HTTP：`issues_test.go` 的工作项和回答的 JSON 带 `sub_issues_count`（2；新建的 0），读、改、建的测试都比较它。
-- 组合：`TestEachAnswerCountsTheSubItemsTheCallerSees`（walt 是 acme 的管理员、Web 的访客，建 His；alice 在它下面放她的 Part，walt 放他的 Mine（alice 改了它的名字：最后改它的是 alice，它仍是 walt 的），alice 放一个已归档的和一个已删除的，Part 下的 Low 不是 His 的；每一步 walt 和 alice 按 `id`、按编号读 His，改它、什么都不改、移到 Done、归档两次、恢复两次：每个回答 walt 是 1（Mine），alice 是 2；新建的是 0）、`TestAHiddenParentIsNotInTheAnswer`（alice 把 walt 的 His 放到她的 Up 下，walt 读 Up 是 404；walt 按 `id`、按编号读 His 和改它的名字，每个回答与 alice 此刻读到的整个相同，只是 `parent_id` 为 `null`；他自己的 Mine 下的 Below 照答 Mine；看得到每个工作项的 bob 读到 His 在 Up 下）。
+- 组合：`TestEachAnswerCountsTheSubItemsTheCallerSees`（walt 是 acme 的管理员、Web 的访客，建 His；alice 在它下面放她的 Part，walt 放他的 Mine（alice 改了它的名字：最后改它的是 alice，它仍是 walt 的），alice 放一个已归档的和一个已删除的，Part 下的 Low 不是 His 的；每一步 walt 和 alice 按 `id`、按编号读 His，改它、什么都不改、移到 Done、归档两次、恢复两次：每个回答 walt 是 1（Mine），alice 是 2；新建的是 0）、`TestAHiddenParentIsNotInTheAnswer`（alice 把 walt 的 His 放到她的 Up 下，walt 读 Up 是 404；walt 按 `id`、按编号读 His 和改它的名字，每个回答与 alice 此刻读到的整个相同，只是 `parent_id` 为 `null`；他自己的 Mine 下的 Below 照答 Mine；看得到每个工作项的 bob 读到 His 在 Up 下）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：walt 成为 acme 的管理员、Web 的访客（`adminGuest`），建 His，alice 把它放到第一个工作项下，walt 改它：他看不到的第一个工作项与回答的计数一起在锁下、在事务的连接上读，回答的 `parent_id` 为 `null`）。
 
 - [ ] **Step 1: 契约和查询，生成**
 
-`api/modules/issue.yaml`（修改，2 处）：
+`api/modules/issue.yaml`（修改，3 处）：
 
 ````old api/modules/issue.yaml
         completed_at, archived_at, assignee_ids, label_ids, created_by_id, updated_by_id, created_at, updated_at]
 ````
 ````new api/modules/issue.yaml
         completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, created_by_id, updated_by_id, created_at, updated_at]
+````
+````old api/modules/issue.yaml
+          description: The work item it is under, in the same project; null for none.
+````
+````new api/modules/issue.yaml
+          description: >-
+            The work item it is under, in the same project; null for none, or
+            for one the caller does not see (a guest who sees only his own
+            work items).
 ````
 ````old api/modules/issue.yaml
             type: string
@@ -3730,11 +3739,11 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `5dd3319641ae9b97b214048d162cb494592388dd2a242558b2e9adcfbda9ed38` | 3348 | `api/dist/openapi.yaml` |
-| `417a3f98b337805d27f0050709a756e8e8f867b3d714d82ff381432a7975bdc0` | 1121 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
+| `fb704ca32d597cfec1e742ef582345fa49ab1ee7587163fc9ebb7d9eed4e95f6` | 3348 | `api/dist/openapi.yaml` |
+| `1dc3d62bc22d44b03444e88615b235cdc27e64c27216fffc4fe1d83c29e4dbde` | 1121 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
 | `b918552b0063744b04cc59adecebdc58678ff1367b89c48161d58b615a573bd3` | 381 | `server/internal/modules/issue/adapter/postgres/gen/issues.sql.go` |
 | `27f4d03d09592715645d9c0acfc08e49a1d58f40d4f721424f7ea7fe33391a65` | 54 | `server/internal/modules/issue/adapter/postgres/gen/sub_issues.sql.go` |
-| `4f4ced2e21bad18c03794996a6fdb34ab6c359f3d54511dc7df216813598bd17` | 3708 | `web/packages/api-client/src/schema.gen.ts` |
+| `9458967469ec033daf357e6c008264a072cf167f09dfb6ba27e55c06432f0af1` | 3708 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/issues.sql.go server/internal/modules/issue/adapter/postgres/gen/sub_issues.sql.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -4751,7 +4760,7 @@ func updateOver(w *world) *app.UpdateIssue {
 func (s *Store) GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue, error) {
 	rows, err := s.queries(ctx).GetIssues(ctx, ids)
 	if err != nil {
-		return nil, fmt.Errorf("read work items %v: %w", ids, err)
+		return nil, fmt.Errorf("read %d work items: %w", len(ids), err)
 	}
 	issues := make([]domain.Issue, len(rows))
 	for n, r := range rows {
@@ -4791,7 +4800,7 @@ import (
 func (s *Store) SubIssueCounts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]app.SubIssueCount, error) {
 	rows, err := s.queries(ctx).SubIssueCounts(ctx, gen.SubIssueCountsParams{Actor: actor, Ids: ids})
 	if err != nil {
-		return nil, fmt.Errorf("count the sub-items of work items %v: %w", ids, err)
+		return nil, fmt.Errorf("count the sub-items of %d work items: %w", len(ids), err)
 	}
 	counts := make(map[uuid.UUID]app.SubIssueCount, len(rows))
 	for _, r := range rows {
@@ -5111,12 +5120,43 @@ func TestEachAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 }
 ````
 
+`server/internal/bootstrap/issue_writes_test.go`（修改，2 处）：
+
+````old server/internal/bootstrap/issue_writes_test.go
+// and walt is refused (403); and she reads it, without a transaction. She
+// makes Part under it, its parent read under the lock, then moves Part
+````
+````new server/internal/bootstrap/issue_writes_test.go
+// and walt is refused (403); and she reads it, without a transaction. walt,
+// made acme's admin and Web's guest (adminGuest), changes His, his own,
+// which she has put under the first, hidden from him: the first is read
+// under the lock with the count of the answer's sub-items, both on the
+// transaction's connection, and the answer names no parent. She makes Part
+// under the first, its parent read under the lock, then moves Part
+````
+````old server/internal/bootstrap/issue_writes_test.go
+	route.answerWithin(t, w.contract, http.MethodGet, "/api/v0/issues/"+first.ID.String(), alice, "", http.StatusOK)
+````
+````new server/internal/bootstrap/issue_writes_test.go
+	route.answerWithin(t, w.contract, http.MethodGet, "/api/v0/issues/"+first.ID.String(), alice, "", http.StatusOK)
+	w.adminGuest(t)
+	var his storedIssue
+	decodeAnswer(t, send(w.ids["walt"], `{"name":"His"}`, http.StatusCreated), &his)
+	hisPath := "/api/v0/issues/" + his.ID.String()
+	route.answerWithin(t, w.contract, http.MethodPatch, hisPath, alice, `{"parent_id":"`+first.ID.String()+`"}`, http.StatusOK)
+	var mended storedIssue
+	if decodeAnswer(t, route.answerWithin(t, w.contract, http.MethodPatch, hisPath, w.ids["walt"], `{"name":"Mended"}`, http.StatusOK),
+		&mended); mended.ParentID != nil {
+		t.Errorf("walt's His, under the first, is answered under %s; want no parent, the first being hidden from him", mended.ParentID)
+	}
+````
+
 - [ ] **Step 5: 测试和 lint**
 
 Run: `go -C server test -count=1 ./internal/modules/issue/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestEachAnswerCountsTheSubItemsTheCallerSees$|TestAHiddenParentIsNotInTheAnswer$|TestTheGuestRuleHoldsForAParent$|TestAWorkItemIsPutUnderAnother$|TestPermissionMatrix' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestEachAnswerCountsTheSubItemsTheCallerSees$|TestAHiddenParentIsNotInTheAnswer$|TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection$|TestTheGuestRuleHoldsForAParent$|TestAWorkItemIsPutUnderAnother$|TestPermissionMatrix' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -5140,7 +5180,7 @@ Expected: 123 个全部通过（每个工作项的回答多了 `sub_issues_count
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/bootstrap/issue_parents_test.go server/internal/bootstrap/issue_sub_issue_count_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/adapter/postgres/issues.go server/internal/modules/issue/adapter/postgres/queries/issues.sql server/internal/modules/issue/adapter/postgres/queries/sub_issues.sql server/internal/modules/issue/adapter/postgres/sub_issues.go server/internal/modules/issue/adapter/postgres/sub_issues_test.go server/internal/modules/issue/app/archive_issue.go server/internal/modules/issue/app/archive_issue_test.go server/internal/modules/issue/app/create_issue.go server/internal/modules/issue/app/dates_test.go server/internal/modules/issue/app/fakes_parents_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/get_issue.go server/internal/modules/issue/app/get_issue_by_identifier.go server/internal/modules/issue/app/get_issue_by_identifier_test.go server/internal/modules/issue/app/get_issue_test.go server/internal/modules/issue/app/guest_rule_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/lock_test.go server/internal/modules/issue/app/parents_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/seen.go server/internal/modules/issue/app/seen_test.go server/internal/modules/issue/app/update_issue.go server/internal/modules/issue/app/update_issue_test.go server/internal/modules/issue/domain/issue.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/issues.sql.go server/internal/modules/issue/adapter/postgres/gen/sub_issues.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/bootstrap/issue_parents_test.go server/internal/bootstrap/issue_sub_issue_count_test.go server/internal/bootstrap/issue_writes_test.go server/internal/modules/issue/adapter/http/issues.go server/internal/modules/issue/adapter/http/issues_test.go server/internal/modules/issue/adapter/postgres/issues.go server/internal/modules/issue/adapter/postgres/queries/issues.sql server/internal/modules/issue/adapter/postgres/queries/sub_issues.sql server/internal/modules/issue/adapter/postgres/sub_issues.go server/internal/modules/issue/adapter/postgres/sub_issues_test.go server/internal/modules/issue/app/archive_issue.go server/internal/modules/issue/app/archive_issue_test.go server/internal/modules/issue/app/create_issue.go server/internal/modules/issue/app/dates_test.go server/internal/modules/issue/app/fakes_parents_test.go server/internal/modules/issue/app/fakes_test.go server/internal/modules/issue/app/get_issue.go server/internal/modules/issue/app/get_issue_by_identifier.go server/internal/modules/issue/app/get_issue_by_identifier_test.go server/internal/modules/issue/app/get_issue_test.go server/internal/modules/issue/app/guest_rule_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/lock_test.go server/internal/modules/issue/app/parents_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/seen.go server/internal/modules/issue/app/seen_test.go server/internal/modules/issue/app/update_issue.go server/internal/modules/issue/app/update_issue_test.go server/internal/modules/issue/domain/issue.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/issues.sql.go server/internal/modules/issue/adapter/postgres/gen/sub_issues.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): each answer of a work item shows its sub-items and parent as the caller sees them
@@ -5184,6 +5224,8 @@ Expected: 通过。
 | `T4.18` | 最后修改子工作项的账户算作它的"自己的"，而不是建它的账户 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachAnswerCountsTheSubItemsTheCallerSees`（`make test`） | 存储；组合 |
 | `T4.19` | 什么都没改的修改的回答数子工作项失败时略过：答一个空的工作项 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T4.20` | 什么都没改的归档、恢复的回答数子工作项失败时略过：答一个空的工作项 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T4.21` | `hideParents` 在写的事务之外、经连接池读父工作项 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`） | 组合 |
+| `T4.22` | `GetIssues` 经连接池读，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`） | 组合 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T2.4`（列在各自的 Task 的表里，标"（Task 4 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=4`）。
 
@@ -6509,7 +6551,10 @@ Expected: 通过。
           type: [string, 'null']
           format: date
         parent_id:
-          description: The work item it is under, in the same project; null for none.
+          description: >-
+            The work item it is under, in the same project; null for none, or
+            for one the caller does not see (a guest who sees only his own
+            work items).
           type: [string, 'null']
           format: uuid
         sort_order:
@@ -6599,10 +6644,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `3354ff068cc5d95e1ea87cdc3ac2f8b78f440a081cc0869441c837c5869003c4` | 3535 | `api/dist/openapi.yaml` |
+| `62e360146adf6d6012558c5c2c7273171eded55a490182aff9023b6824d85e72` | 3535 | `api/dist/openapi.yaml` |
 | `acf6e13870602938104f5561f5bd52466c706890c85b7c4aff6686f8de125332` | 44 | `server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go` |
-| `4f99d85c490c88f3a6fcbcb18d02b82e12f74e54ee50af8c78deee49cb042d23` | 1402 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
-| `2f4ba2ffad5aab5a28b8ec3700fbba6d6a1eb5ce52ae5077a3668d56a0f7164a` | 3860 | `web/packages/api-client/src/schema.gen.ts` |
+| `956bc7188cf3808abdf964010039371fa3a8df7926fb1f601f82919e572131de` | 1402 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
+| `26386e7c2cb5aca5bfe8fc5ef37086f8697da46e13ff2043d821a6a019fc8719` | 3860 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -8598,11 +8643,11 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `7b397360d8877401dc63575a5e9fdd8866cf238d152a0bf6e1bd75ab5a2a07d2` | 3535 | `api/dist/openapi.yaml` |
+| `df39e8459a70f9275c4bdaf444bffb2aa3a11982faeae57844c0c50f28466d68` | 3535 | `api/dist/openapi.yaml` |
 | `46638be2f0370a7bf248a8072117272025246f4e3c6cbc8ad0f09503065a2807` | 171 | `server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go` |
 | `db23530cfa12626898abafd28a1f93c4f7c010d969ee99f89551c5f06aa8f133` | 294 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
 | `d4082fbdf770a5f658ce47afd4a616018b9356bdc7764efebaf2f22e5cb47c4d` | 107 | `server/internal/modules/issue/adapter/postgres/gen/models.go` |
-| `e6fdd65fa7fc3487d810fc0e49e0fbee8b1aa64e7d6f0245ecae5fb00df11182` | 3860 | `web/packages/api-client/src/schema.gen.ts` |
+| `de76a3e9f5a4f54a72e4148e6ec7aec4e7aef86b8b9060ae6726ffdc2370e4a5` | 3860 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go server/internal/modules/issue/adapter/postgres/gen/models.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -11678,10 +11723,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `4951dee2d5f947bdef1f5b105fc33433c1aa7b8b69236cb51116111db712f14f` | 3622 | `api/dist/openapi.yaml` |
+| `17f75cb201a7c5ce0385551879ad0d056f817d1ed90d52e07aaba9cabaf61fea` | 3622 | `api/dist/openapi.yaml` |
 | `de9219db556c068656160b574b754102861a8eac0974cdd74db05bb172acb68a` | 49 | `server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go` |
-| `3209dbd7de28819494ce40a15c8f3717dd3c26b9e45c0a60172924d441d5eb20` | 1571 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
-| `8f494c4f771ebaac6085b2cbb78bb6a8c98dbcd21dd6544092bd2f219780db85` | 3938 | `web/packages/api-client/src/schema.gen.ts` |
+| `1b5516c983be2910c1188b2066399b39f6e8d25c27850ad3e31034313683a11f` | 1571 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
+| `64b244fc8a2f82ee4670bf1f258fcc5b2d6fb15a9ae258d7d66ad2a95e849511` | 3938 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -12989,11 +13034,11 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `e2fbfb6decbb01bc3f30bc938d43fff7c3e575ed09566f0fb186b091f71ec1f1` | 3642 | `api/dist/openapi.yaml` |
-| `b4b843fe0fbe06bfa36c384f59a06e8f4bb0d794184ecccda2f115f3f0369cbb` | 1676 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
+| `7d7e49381afa3793896cc968e81b9f12356080242a0d66ccbcd05f32941149ab` | 3642 | `api/dist/openapi.yaml` |
+| `8ff9b9d60519ee15ee6a752cec5817836bae6102266ce3ceaa30d673938e64c5` | 1676 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
 | `764615799b0f8cacb9b0ca150ee257a148956f7552a77697c11150c1a7120ba4` | 160 | `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go` |
 | `7f5da04e66ed0249457420d4880656613ab47388c59032e4efe0f567a5f68427` | 288 | `server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go` |
-| `a98275d345f48c0fea000ed056bf833c212ef57b16365dd0544a4013fe075bb0` | 3966 | `web/packages/api-client/src/schema.gen.ts` |
+| `425b1be2279860371e177a03113ceb34d59dab3e660efeb879e2c74edbe7acfa` | 3966 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -15601,9 +15646,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `6a02e8823ef3daf168bc6d68d033d9e62fdd8c51d1bccda7546231e783b8796c` | 3672 | `api/dist/openapi.yaml` |
-| `55f82949db70457defda121d19be8fc951ae49e09f02c169bb2058c06bf03e83` | 1778 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
-| `dcb1b09ed8491148491a97b468447d3c6af4e74914cfced344e974a4810b6bc8` | 4014 | `web/packages/api-client/src/schema.gen.ts` |
+| `e3bedae7dcc78320a389b284243b4f5f9503169dd580b3effd174b92257fff69` | 3672 | `api/dist/openapi.yaml` |
+| `bf50cd56ab23f6f2a2ac8d1e05784c09f398e53c09e1d7881edc5ca99dc5c923` | 1778 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
+| `625294cd27ca3ac718aebb8859a63a734ffbd8dd4e7d80f74815ddc2eea8d580` | 4014 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。

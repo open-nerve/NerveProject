@@ -3103,7 +3103,7 @@ components:
             - 'null'
           format: date
         parent_id:
-          description: The work item it is under, in the same project; null for none.
+          description: The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
           type:
             - string
             - 'null'

@@ -128,7 +128,7 @@ func (s *Store) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool,
 func (s *Store) GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue, error) {
 	rows, err := s.queries(ctx).GetIssues(ctx, ids)
 	if err != nil {
-		return nil, fmt.Errorf("read work items %v: %w", ids, err)
+		return nil, fmt.Errorf("read %d work items: %w", len(ids), err)
 	}
 	issues := make([]domain.Issue, len(rows))
 	for n, r := range rows {

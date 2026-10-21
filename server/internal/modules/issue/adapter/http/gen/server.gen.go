@@ -94,7 +94,7 @@ type IssueDetail struct {
 	LabelIds []uuid.UUID `json:"label_ids"`
 	Name     string      `json:"name"`
 
-	// ParentID The work item it is under, in the same project; null for none.
+	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
 
 	// Priority A work item's priority, from the most to the least urgent.

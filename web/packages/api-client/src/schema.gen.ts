@@ -1832,7 +1832,7 @@ export interface components {
             target_date: string | null;
             /**
              * Format: uuid
-             * @description The work item it is under, in the same project; null for none.
+             * @description The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
              */
             parent_id: string | null;
             /** @description Its place among its state's work items, the lowest first. */
