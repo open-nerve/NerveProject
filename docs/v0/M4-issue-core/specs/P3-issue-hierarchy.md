@@ -1,0 +1,471 @@
+# M4/P3 父子与关联：设计说明（spec）
+
+| 项 | 内容 |
+|---|---|
+| Phase | M4/P3 `issue-hierarchy` |
+| 日期 | 2026-10-21 |
+| 状态 | 待裁定：第 3 节第 1–23 条各条待控制者裁定（第 24 条是承接条目的落点）；原型、清扫和逐 Task 复现见附录 A。设计 12 节 P3 的十一个草稿任务在约 16 个、每个约 1,500 行以内重新切成 16 个 Task（第 3 节第 1 条），没有停下 |
+| 上级文档 | [M4 设计文档](../M4-design.md) 第 2（I8、I9、I15、I17）、3.3（`ProjectGate.LockMany`）、3.4（访客规则在列表和计数里）、3.5（约定五的例外延伸到关联行，约定七；"删除工作项""加关联"两行；交错 9、10、11、13、21、23）、3.6（连带：子树、关联）、3.8（归档与父子、关联）、3.9（父子）、3.10（关联）、3.13（动态的第 5、20–23 行）、3.23（P3 的行）、4.6（`issue_relations`）、4.16、4.17、5.1–5.3（五个新操作，`Issue`、`IssueCollection`、`IssueRelation`，`issue.relation_not_found`）、6.2、6.5（`ProjectGate`、`WriteGate`）、9.1–9.3（P3 的部分）、11.11（写闸门）、12（P3 与约束 1–8）、13.1 节 |
+| 前置交接 | [P1a spec](P1a-issues.md) 第 3 节第 5 条和第 5 节的 P3 一行；[P1b spec](P1b-issue-update.md) 第 3 节第 10 条和第 5 节的 P3 一行；[P2 spec](P2-issue-access.md) 第 3 节第 7、14 条和第 5 节的 P3 一行；[M2 收尾交接](../handoffs/M2-closeout.md)第 3、4 节；[M3 收尾交接](../handoffs/M3-closeout.md)第 2、3、4 节。落点见第 3 节第 24 条、第 7 节 |
+| 计划 | [P3 plan](../plans/P3-issue-hierarchy.md) |
+
+本 spec 只写 M4 设计交给 P3 决定的东西：名字、签名、SQL、测试名，以及原型证明了什么。规则本身以 M4 设计为准，这里引用节号，不重述。P3 从 `f8696490`（P2 的合并提交）开始。
+
+P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b 加写闸门，P3 延伸到约定七和关联行的例外）。父子都在一个项目里，经 P1b 的同一条取锁路径（读工作项 → 预检 → 闸门 → 项目 N → 锁下重读 → 判定），祖先链在 N 之下读，两个并发的移动不会合起来成环；删除工作项在 N 之下读出子树，同一时刻删除子树和它下面的每一行。关联是第一个跨项目的写：`Locks.run` 多两种形式（跨项目的写、两端任一个的写，`lock_across.go`、`lock_either.go`），不另写第二条路径：预检之后一次按 `id` 升序进入涉及的每个项目的写闸门（`platform/gate` 的 `Keyed.Enter(ctx, keys...)`，等的时候不持连接、不持锁），一条语句按 `id` 升序锁住这些项目（`ProjectGate.LockMany`）；加关联时调用者看不到的对方不进闸门、不上锁。删除工作项、项目、工作区的连带按 `id` 先锁要删的关联行（约定五的例外），死锁的论证把闸门的位置也算作资源，对 HEAD 的每个写重推（第 3 节第 3 条）。访客规则进入列表、计数和内嵌的 `Issue`：看不到的工作项不在任何列表、数目或回答里，作为目标时它的拒绝与不存在的逐值相同。附录 A 的清扫逐个核对每个这样的测试在它所说的性质去掉之后失败，并记下失败在哪一层（单元、存储、组合、端到端、守卫）；只在单元一层失败的安全或加锁的性质算缺口，按性质只能在单元一层的逐条写在附录 A.3。
+
+## 1. 目标
+
+按 M4 设计 12 节 P3：
+
+- **子树的删除**（3.5、3.6、3.8、3.9）：`deleteIssue` 在锁下、项目已归档的 409 之后读出子树（工作项和它下面每个未删除的工作项，不论多深，已归档的也在，`WITH RECURSIVE … UNION`），读时刻，然后每张表一条语句写子树的全部行，同一时刻、同一个删除者；按目录的删除测试和 `expectIssueDeleted` 去掉 P2 的 `subItems` 豁免（P2 spec 第 3 节第 14 条的交接）。
+- **父工作项**（3.9、3.13）：`createIssue`、`updateIssue` 带 `parent_id`（同一个项目、未删除、未归档、调用者看得到；修改时不是它自己、不在它下面），在锁下读，问题与别的一次报出（422 `parent_id`）；修改写动态第 5 行（原来和新的父工作项按标识）；`parent_id` 进 `IssuePatch`（P1b 的交接）。
+- **`sub_issues_count`**（3.4、3.9）：每个回答 `IssueDetail` 的操作按调用者的规则数未删除、未归档的直接子工作项：项目里"只看自己"的访客只数他自己建的，在项目里是访客的工作区管理员也是；读在判定之后数，写在锁下判定的 `Grant` 上数；创建回答 0。
+- **`listSubIssues`、`addSubIssues`**（`GET`、`POST /api/v0/issues/{issue_id}/sub-issues`，3.9）：列直接的、未删除、未归档的子工作项（访客规则过滤），回答 `IssueCollection`；加 1–100 个：同一个项目、调用者看得到、未归档、不是父工作项、不是它的祖先，否则各在自己的位置 422；已在它下面的不动，都在时什么都不写；每个动了的一行第 5 行；父工作项已归档 409 `issue.archived`。
+- **多个项目的锁和写闸门**（3.5 约定七、6.5、11.11；P1b 的交接）：`ProjectGate.LockMany`（一条语句按 `id` 升序 `FOR NO KEY UPDATE`）；`WriteGate.Enter(ctx, projectIDs...)`（按 `id` 升序一次进齐，一个 `max_wait` 管全部，任一个失败时放回已进的，等的时候不持连接、不持锁）。
+- **`createIssueRelations`**（`POST /api/v0/issues/{issue_id}/relations`，3.10）：四种类型（`blocking` 存为对方的 `blocked_by`，那一行是对方的项目的）；预检读每个对方、按它的项目判定 `issue.read` 和访客规则，看不到的不进闸门、不上锁，在它的位置答 422（与不存在的同一个答复）；其余的项目和工作项自己的项目按约定七一次锁住；锁下的检查（未删除、未归档、项目未归档、同一个工作区、还没有关联）；一条语句插入，两端的最后修改，每条两行动态（3.13 第 20、21 行），各在自己的项目。
+- **`listIssueRelations`**（`GET /api/v0/issues/{issue_id}/relations`，3.8、3.10）：两个方向、按建的次序，各按这个工作项读的类型；对方未删除、未归档、不在这个工作项的项目之外的已归档的项目里、调用者看得到（每个项目判定一次 `issue.read`，再照访客规则），内嵌的 `Issue` 按他在那个项目看到的样子。
+- **`deleteIssueRelation`**（`DELETE /api/v0/issue-relations/{relation_id}`，3.10）：两端任一个的 `issue.update`（先存为 `issue_id` 的一端，再另一端）；两端都看不到 404 `issue.relation_not_found`，看得到一端而都不能改 403；两端的项目都进闸门、都锁上；任一端的项目已归档、任一端已归档 409；软删除一行，两端的最后修改，两行动态（第 22、23 行）。
+- **连带的关联行**（3.5 约定五的例外、3.6）：迁移 `00020` 建 `issue_relations`；删除工作项（子树，两个方向）、删除项目和工作区（每批，两个方向）先按 `id` 锁住要删的关联行，再只写锁住的那些，锁的一步在全局表序里关联表的位置；`furnishIssueRows` 建一条关联。
+- **测试**：交错 9、10、11、13、23，P1a 交给 P3 的"加关联与删除工作区"，交错 21 加上"加关联指向看不到的项目时不锁它"（`TestARelationLocksNoProjectItDoesNotReach`）；矩阵的五个操作；取锁形状、写闸门的行；`apitest.Main` 两个方向；端到端 I8、I9、I17 的接口版本，I15 的子工作项和关联的 409，I1、I2 的 `parent`。
+- **文档**：3.23 中 P3 的行（总体设计 3.4、3.6、4.2，差异清单第二、三、四节）；两份交接的"处理结果（M4/P3）"。
+
+不加 Go 模块、npm 包。新表一张（`issue_relations`，迁移 `00020`）。跨模块的端口：`project` 给 `issue` 的 `IssueProjects` 加三个读（`LockIssueProject` 多回答项目的标识，`LockIssueProjects`、`ArchivedIssueProjects`），`bootstrap` 转换；`platform/gate` 的 `Keyed.Enter` 取多个键。
+
+## 2. 交付物
+
+### 2.1 文件总览
+
+路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 手写的代码、测试和配置文件 152 个（新建 58 个，修改 94 个），生成物 13 个，文档 6 个（本 spec 和 plan 新建；修改的是总体设计、差异清单和两份交接），另有本提交对 M4 设计的修改（12 节 P3 的标题和"规模"一句、第 15 节的一行：重新切分让它们不再成立，第 3 节第 1 条；M4 设计与本 spec、plan 一样不在任何 Task 的块里，复现时与它们一起取）。
+
+| 路径 | 内容 | Task |
+|---|---|---|
+| `tools/keywords.json`；契约（`deleteIssue` 的描述）；`issue/adapter/postgres/queries/delete_issue.sql`、`delete_issue.go` 及测试；`issue/app/delete_issue.go` 及测试、`fakes_deletion_test.go`（新）、`fakes_test.go`；`bootstrap/issue_deletion_test.go`、`project_deletion_test.go` | 关键词守卫的 `phase` 改为 `M4/P3`；`IssueSubtree`、五条语句按工作项的集合写；`IssueDeletion.IssueIDs`；子树在同一时刻删除；按目录的删除去掉 `subItems` 的豁免 | 1 |
+| 契约（`IssueCreate.parent_id`）；`issue/adapter/postgres/queries/issues.sql`、`issues.go` 及测试、`parents_test.go`（新）；`issue/domain/hierarchy.go`（新）、`issue.go` 及测试；`issue/app/lock.go`、`parents.go`（新）及测试、`create_issue.go`、`rows.go`、`fakes_test.go`；`issue/adapter/http/issues.go` 及测试；`bootstrap/issue_parents_test.go`（新）、`issue_writes_test.go` | 创建带父工作项：锁下读、判定（`held.grant`）、422 `parent_id`；`ParentNotAllowed` | 2 |
+| 契约（`IssueUpdate.parent_id`）；`issue/domain/hierarchy.go`、`patch.go` 及测试、`activity.go` 及测试、`identifier.go` 及测试；`issue/adapter/postgres/queries/parents.sql`（新）、`parents.go`（新）、`parents_test.go`、`update.sql`、`update.go`；`issue/app/parents.go` 及测试、`update_issue.go`、`ports.go`、`rows.go`、`fakes_parents_test.go`（新）、`fakes_test.go`、`create_issue_test.go`；`project` 的 `issue_ports.sql`、`issue_ports.go` 及测试、`app/issue_ports.go`；`bootstrap/ports_test.go`、`issue_parents_test.go`、`issue_writes_test.go`、`issue_interleaving_hierarchy_test.go`（新）；`issue/adapter/http/issues.go`、`update_test.go` | 修改移动工作项：`Ancestry`、`parentChange`、动态第 5 行（`ParentActivity`，按标识：`LockIssueProject` 回答标识，`Identifier`）；交错 9 | 3 |
+| 契约（`IssueDetail.sub_issues_count`）；`issue/domain/issue.go`；`issue/adapter/postgres/queries/sub_issues.sql`（新）、`sub_issues.go`（新）及测试；`issue/app/seen.go`（新）及测试、`ports.go`、`lock.go`、`get_issue.go`、`get_issue_by_identifier.go`、`update_issue.go`、`archive_issue.go`、`create_issue.go`，八个用例的单元测试文件（读、改、归档、日期、父工作项、访客规则、取锁）和两个假实现的文件；`issue/adapter/http/issues.go` 及测试；`bootstrap/issue_sub_issue_count_test.go`（新） | 每个回答按调用者的规则数子工作项（`Locks.seen`、`seenOne`，`see` 交回 `Grant`） | 4 |
+| `issue/domain/hierarchy.go`、`hierarchy_test.go`（新）；`issue/adapter/postgres/queries/issues.sql`、`sub_issues.sql`、`issues.go`、`sub_issues.go` 及测试；`issue/app/sub_issues.go`（新）及测试、`ports.go`、`rows.go`、`parents.go`、`fakes_test.go`、`fakes_parents_test.go` | `ListSubIssues`、`AddSubIssues`；`Loops`、`CheckSubIssueIDs`、`SubIssueNotAllowed`；`GetIssues`、`SubIssues`、`SetParents`；`inReach` | 5 |
+| 契约（`listSubIssues`、`addSubIssues`，`Issue`、`IssueCollection`、`SubIssuesAdd`；`api/openapi.yaml`）；`issue/adapter/http/handler.go`、`sub_issues.go`（新）及测试；`issue/module.go`；`bootstrap/issue_sub_issues_test.go`（新）、`issue_interleaving_hierarchy_test.go`、`permission_matrix_sub_issues_test.go`（新）、`permission_matrix_test.go`、`issue_write_locks_test.go`、`gate_test.go`、`issue_writes_test.go` | 子工作项的接口、组合、矩阵、取锁形状和写闸门的行；交错 13 | 6 |
+| `platform/gate/gate.go`、`gate_test.go`、`keys_test.go`（新）；`platform/config/config.go`；`issue/app/ports.go`、`fakes_test.go`、`fakes_across_test.go`（新）；`project` 的 `issue_ports.sql`、`issue_ports.go`、`module.go`、`lock_issue_projects_test.go`（新）、`failures_test.go`；`bootstrap/gate.go`、`ports.go`、`gate_test.go`、`ports_test.go` | `Keyed.Enter(ctx, keys...)`；`ProjectGate.LockMany`（`LockIssueProjects`）；`WriteGate.Enter(ctx, projectIDs...)` | 7 |
+| `server/migrations/sql/00020_issue_issue_relations.sql`（新）、`schema_test.go`、`issue_schema_test.go`；`server/sqlc.yaml`；`deploy/runtime-grants.sql`；`issue/adapter/postgres/queries/delete_issue.sql`、`delete_rows.sql`、`delete_issue.go`、`delete_rows.go` 及测试、`delete_relations_test.go`（新）、`store_test.go`；`issue/app/delete_issue.go` 及测试、`delete_project_rows.go`、`cascade_test.go`、`fakes_deletion_test.go`；`platform/postgres/pgtest/rowwaits.go`（新）及测试；`project` 的 `demote_test.go`、`issue_ports_test.go`、`lock_issue_projects_test.go`；契约（三个删除的描述）；`bootstrap/issue_deletion_test.go`、`project_deletion_test.go`、`issue_world_test.go`、`issue_interleaving_test.go`、`issue_interleaving_deletion_test.go`、`issue_write_locks_test.go`；`e2e/fixtures/assert/issue.ts`、`project.ts`、`workspace.ts` | `issue_relations`；`DeleteIssueRelationRows`、`DeleteProjectRelationRows`（按 `id` 先锁，两个方向）；`pgtest.RowWaits`；端到端的两个暂时的写法（第 3 节第 18 条） | 8 |
+| `issue/domain/relation.go`（新）及测试；`issue/adapter/postgres/queries/relations.sql`（新）、`relations.go`（新）及测试；`issue/app/rows.go` | 关联的类型、`CheckNewRelations`、`Relation`、`NewRelation`、动态第 20、21 行；`RelatedIssues`、`InsertRelations`、`MarkChanged`；`ChangedRows` | 9 |
+| `issue/app/lock.go`、`lock_across.go`（新）、`create_relations.go`（新）及测试、`fakes_relations_test.go`（新）、`ports.go`、`parents.go`、`sub_issues.go`、`lock_test.go` | `Locks.run` 的跨项目的形式（`write.reach`、`scope`、`reachAll`、`reachUnder`）；`CreateIssueRelations`；`refOf` 按锁住的项目 | 10 |
+| 契约（`createIssueRelations`，`IssueRelationType`、`IssueRelation`、`IssueRelationCollection`、`IssueRelationsCreate`；`api/openapi.yaml`）；`issue/adapter/http/handler.go`、`relations.go`（新）及测试；`issue/module.go`；`bootstrap/issue_relations_test.go`（新）、`issue_relation_locks_test.go`（新）、`issue_write_locks_test.go`、`permission_matrix_relations_test.go`（新）、`permission_matrix_sub_issues_test.go`、`permission_matrix_test.go`、`gate_test.go`、`issue_writes_test.go`；`e2e/fixtures/issues.ts`、`furnish.ts`、`assert/project.ts`、`assert/workspace.ts` | 加关联的接口、组合（交错 21 加的一条）、矩阵、取锁形状和写闸门的行；`furnishIssueRows` 建关联 | 11 |
+| 契约（`listIssueRelations`）；`project` 的 `issue_ports.sql`、`issue_ports.go` 及测试、`module.go`、`failures_test.go`；`issue/app/ports.go`、`seen.go`、`lock_across.go`、`list_relations.go`（新）及测试、`fakes_relations_test.go`、`fakes_across_test.go`；`issue/adapter/postgres/queries/relations.sql`、`relations.go` 及测试；`issue/adapter/http/handler.go`、`relations.go` 及测试；`issue/module.go`；`bootstrap/ports.go`、`issue_archived_projects_test.go`（新）、`issue_relation_lists_test.go`（新）、`issue_relations_test.go`、`permission_matrix_seed_relations_test.go`（新）、`permission_matrix_seeded_test.go`、`permission_matrix_test.go`、`permission_matrix_relations_test.go` | `ListIssueRelations`（`seeEach`、`ArchivedProjects`）；矩阵的种子的关联 | 12 |
+| `issue/domain/errors.go`、`activity.go`、`relation.go` 及测试；`issue/app/lock.go`、`lock_across.go`、`lock_either.go`（新）、`delete_relation.go`（新）及测试、`ports.go`、`rows.go`、`fakes_relations_test.go`、`lock_test.go`；`issue/adapter/postgres/queries/relations.sql`、`relations.go` 及测试 | `Locks.run` 的两端任一个的形式（`write.instead`、`eitherOf`、`eitherUnder`、`decideEither`）；`DeleteIssueRelation`；`GetRelation`、`DeleteRelation`；`ErrRelationNotFound`、动态第 22、23 行 | 13 |
+| 契约（`deleteIssueRelation`、`RelationID`；`api/openapi.yaml`）；前端的三个文案文件；`issue/adapter/http/handler.go`、`relations.go` 及测试、`handler_test.go`；`issue/module.go`；`bootstrap/issue_relation_deletes_test.go`（新）、`issue_interleaving_relations_test.go`（新）、`interleaving_test.go`、`issue_interleaving_test.go`、`issue_write_locks_test.go`、`gate_test.go`、`permission_matrix_seed_relations_test.go`、`permission_matrix_seed_issues_test.go`、`permission_matrix_targets_test.go`、`permission_matrix_relations_test.go`、`permission_matrix_test.go`、`issue_writes_test.go` | 删除关联的接口、组合、矩阵（`{relation_id}` 的目标）；交错 10、11、23 和加关联与删除工作区（`serializeOnTable`、`serializeAt`、`inBothOrdersAt`） | 14 |
+| `e2e/fixtures/issues.ts`、`assert/issue.ts`、`assert/relation.ts`（新）；`e2e/stories/issue/i8-sub-issues.spec.ts`、`i9-relations.spec.ts`、`i17-delete-issue.spec.ts`（新），`i15-archive-issue.spec.ts`、`i1-create-issue.spec.ts`、`i2-update-issue.spec.ts` | I8、I9、I17 的接口版本；I15 的子工作项和关联；`expectIssueDeleted` 去掉豁免；`parent` | 15 |
+| `docs/v0/v0-design.md`、`plane-diff.md`；两份交接 | 3.23 中 P3 的行；交接的处理结果 | 16 |
+
+生成物：`issue/adapter/postgres/gen/delete_issue.sql.go`（Task 1、8）、`issues.sql.go`（Task 2、5）、`parents.sql.go`（Task 3）、`update.sql.go`（Task 3）、`sub_issues.sql.go`（Task 4、5）、`delete_rows.sql.go`、`models.go`（Task 8）、`relations.sql.go`（Task 9、12、13）；`project/adapter/postgres/gen/issue_ports.sql.go`（Task 3、7、12）；`issue/adapter/http/gen/server.gen.go`（Task 2、3、4、6、11、12、14）、`bodyshape.gen.go`（Task 2、3、6、11）；`api/dist/openapi.yaml`、`web/packages/api-client/src/schema.gen.ts`（Task 1、2、3、4、6、8、11、12、14）。
+
+### 2.2 依赖
+
+不加 Go 模块、npm 包。没有模块之间的导入（`archtest`），`issue` 的 sqlc 只读写自己的表（`TestSQLCSchemaScope`）；`issue_relations` 在 `issue` 的 sqlc 里。跨模块的端口：
+
+- `issue/app` 的 `ProjectGate` 多一个 `LockMany(ctx, projectIDs) (map[uuid.UUID]LockedProject, error)`，`Lock` 留着（一个项目的写照旧；设计 3.3、6.5 列出 `Find`、`Lock`、`LockMany`）；`LockedProject.Identifier`（动态按标识指名工作项，锁下读）；新的窄端口 `ArchivedProjects`（`Archived(ctx, projectIDs) (map[uuid.UUID]bool, error)`，嵌入 `ProjectPorts`，关联的列表读它，第 3 节第 10 条）。`bootstrap/ports.go` 的 `issueProjects` 接成 `project` 的 `IssueProjects.LockIssueProject`（多回答 `Identifier`）、`LockIssueProjects`、`ArchivedIssueProjects`。
+- `issue/app` 的 `WriteGate.Enter(ctx, projectIDs ...uuid.UUID)`；`bootstrap/gate.go` 的 `writeGate` 照给的次序交给 `platform/gate` 的 `Keyed.Enter(ctx, keys...)`（第 3 节第 2 条）。
+- `issue` 自己的存储：`IssueReader` 多 `Ancestry`、`SubIssueCounts`、`GetIssues`；新的 `SubIssueLister`、`SubIssueAdder`、`RelationCreator`、`RelationLister`、`RelationDeleter`；`IssueRowsDeleter`、`ProjectRowsDeleter` 多关联行的一步。
+- `platform/postgres/pgtest` 多 `RowWaits`（测试的帮手）。
+
+### 2.3 子树的删除（Task 1；3.5、3.6、3.8、3.9）
+
+- `queries/delete_issue.sql`：`IssueSubtree`（`WITH RECURSIVE … UNION`：未删除的工作项和它下面每个未删除的工作项，`id` 的次序；`UNION` 让数据库里造出的环也会结束）；`DeleteIssueRows` 取代 P2 的 `DeleteIssueRow`，它和四张子表的语句都按 `issue_id = ANY (issue_ids)` 一条语句写子树的全部行（约定五：都在项目 N 之下，第 3 节第 5 条）。
+- `issue/app/delete_issue.go`：`IssueDeletion.IssueIDs`（取代 `IssueID`）；`IssueRowsDeleter.Subtree`、`DeleteIssueRows`；锁下项目已归档的 409 之后读子树，然后读时刻，逐张表一条语句（`issueRowSteps`）。删除的假实现移进新的 `fakes_deletion_test.go`（`fakes_test.go` 已近 400 行）。契约：`deleteIssue` 的描述写上它删除工作项和它下面的每个工作项。
+- 测试：单元的 `TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows`（取代 P2 的 `TestDeleteIssueDeletesTheWorkItemAndItsRows`；子树里所问的工作项不是第一个，只删所问的或只删子树的第一个都看得出；已归档的照样删除）、`TestDeleteIssueStopsAtAFailingPort`（子树的读也失败）；存储的 `TestTheSubtreeOfAWorkItem`（不论多深，已归档的也在，`id` 的次序不是建或连的次序；已删除的工作项下面的不经它走到；数据库里造的环 x、y 各读一次）、`TestTheStatementsOfADeletedSubtreeDeleteItsRows`（取代 P2 的同名测试的单个工作项的版本：别的工作项的 `id` 在给的几个之间）；组合的 `TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`（bob 的 root 在 alice 的 p 下，root 下有 alice 的 a、bob 的 b，a 下有已归档的 c：root、a、b、c 和它们下面的每一行在同一时刻由删除者删除，p 和别的工作项不动）；`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`、`TestDeletingAProjectLeavesNoUndeletedRowUnderIt` 按目录读 `keysTo(issues)`，没有豁免（`deletedWorkItem` 的工作项下有一个子工作项，`underWorkItem` 直接写下父工作项）。
+
+### 2.4 父工作项：创建（Task 2；3.4、3.5、3.8、3.9）
+
+- 契约：`IssueCreate.parent_id`（可省略，不可为 `null`）；`createIssue` 的描述写上父工作项的规则和 422 `parent_id`。`InsertIssue` 写 `parent_id`；HTTP 照映射。
+- `issue/domain/hierarchy.go`（新）：父工作项的规则的说明、`ParentNotAllowed()`（`parent_id` 的 `not_allowed`，一句固定的文字）；`NewIssue.ParentID`，`CheckNewIssue` 不看它（要读，留给锁下）。
+- `issue/app/lock.go`：`decide` 交回 `Authorize` 的 `Grant`，`held.grant` 是锁下判定的 `Grant`（它的 `OwnOnly` 说访客规则是否向调用者隐藏别人的工作项）。`parents.go`（新）的 `parentOf`：锁下读所问的父工作项，是这个项目的、未删除、未归档、调用者看得到（访客规则用 `h.grant`）时回答它。`create_issue.go` 的 `check` 在标签之后、编号之前读它，问题与别的一次报出；创建不写父工作项的动态（第 3 节第 12 条）。
+- 测试：领域的 `TestCheckNewIssueAccepts`；单元的 `TestCreateIssueUnderAParent`、`TestCreateIssueRefusesAParentItMayNotHave`（没有的、别的项目的、已归档的、锁下的判定说只看自己的调用者的别人的：都在别的问题之后、同一个 422，不占编号；只按预检的判定他看得到的照样被拒绝）、`TestAParentsFailingReadEndsTheWrite`；存储的 `TestAWorkItemsParentIsWritten`；HTTP 的 `TestCreateIssue`；组合的 `TestAWorkItemIsPutUnderAnother`（创建的一半；在不存在的工作项下、带不存在的标签建的，两个问题一次报出，什么都没建）、`TestTheGuestRuleHoldsForAParent`（walt 是 acme 的管理员、Web 的访客：在 alice 的 Up 下建的 422 `parent_id`，与不存在的一样，什么都没建；在他自己的工作项下照样建）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：锁下读父工作项的语句在事务的连接上）。
+
+### 2.5 父工作项：移动，不成环（Task 3；3.3、3.5、3.9、3.13）
+
+- 契约：`IssueUpdate.parent_id`（可为 `null`：从父工作项下拿出）；`updateIssue` 的描述写上父工作项的规则和动态。`UpdateIssue` 写 `parent_id`；HTTP 照映射。
+- `project`：`LockIssueProject` 多回答项目的标识；`issue/app` 的 `LockedProject.Identifier`。`issue/domain`：`IssuePatch.SetParentID`、`ParentID`；`Changes.Parent`（与工作项的相同时不算改动）；`Ref{ID, Identifier}`、`ParentActivity`（第 5 行，第 3 节第 12 条）；`identifier.go` 的 `Identifier(project, number)`（`ParseIdentifier` 的反面）。
+- `queries/parents.sql`（新）的 `Ancestry`（`WITH RECURSIVE … UNION`：它和它上面的每个工作项，已删除、已归档的也在，各一次）；`issue/app` 的 `IssueReader.Ancestry`；`parents.go` 的 `parentChange`（新的父工作项经 `parentOf`，再读它的祖先链，含工作项本身的不行；原来的父工作项在锁下读，不在是错误）、`refOf`；`update_issue.go` 的 `check` 在日期之后查父工作项，写第 5 行。
+- 测试：领域的 `TestChangesOf`、`TestChangesNone`、`TestUpdateActivity`（第 5 行）、`TestParseIdentifier`（`Identifier` 与它互为反面）；单元的 `TestUpdateIssueMovesTheWorkItem`、`TestUpdateIssueRefusesAParentItMayNotHave`（没有的、别的项目的、已归档的、它自己、它下面的、访客规则隐藏的；给出与现在相同的父工作项什么都不改、不读）、`TestAParentsFailingReadEndsTheWrite`；存储的 `TestAWorkItemsAncestry`（c 在 b 下、b 在已归档的 a 下、a 在已删除的 root 下；数据库里造的环；`id` 的次序不是线的次序）、`TestAWorkItemsParentIsWritten`、`project` 的 `TestLockIssueProject`；HTTP 的 `TestUpdateIssue`、`TestUpdateIssueHoldsTheBodyToItsStructure`；组合的 `TestIssueProjectsConvertsProjectsAnswers`、`TestAWorkItemIsPutUnderAnother`（bob 把 Part 移到 Top 下、再拿出，各一行他的动态，`WEB-2` 到 `WEB-1`、`WEB-1` 到 `""`，再从没有父工作项拿出一次，什么都不写；Part 不能要的父工作项各 422、什么都不写：它自己、它下面的 Low（不论多深，中间的 Mid 已归档）、Ops 的、已归档的、已删除的、没有的）、`TestTheGuestRuleHoldsForAParent`（移到 alice 的 Up 下 422）、`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（移动：锁下读新的父工作项、它的祖先链、原来的父工作项都在事务的连接上）；交错 9（2.16）。
+
+### 2.6 `sub_issues_count`（Task 4；3.4、3.9、5.2）
+
+- 契约：`IssueDetail.sub_issues_count`（必有，整数）。`queries/sub_issues.sql`（新）的 `SubIssueCounts`（给的每个有子工作项的工作项一行：未删除、未归档的直接子工作项的个数，和给的账户建的个数）；`issue/app` 的 `IssueReader.SubIssueCounts`、`SubIssueCount{All, Own}`。
+- `issue/app/seen.go`（新）：`grants`（按项目的 `Grant`）、`Locks.seen(ctx, actor, g, items...)`（一次数完，`OwnOnly` 的项目用 `Own`；工作项的项目在 `g` 里没有 `Grant` 是错误：每个回答都先判定）、`Locks.seenOne`；`Locks.see` 多交回判定的 `Grant`。`getIssue`、`getIssueByIdentifier` 在判定之后、事务之外数；`updateIssue`、`archiveIssue`、`unarchiveIssue` 在锁下判定的 `Grant` 上、事务里最后数（读回之后，或什么都不写时在判定之后）；`createIssue` 回答 0，不数（第 3 节第 9 条）。
+- 测试：单元的 `TestAReadCountsTheSubItemsTheCallerSees`、`TestAWritesAnswerCountsTheSubItemsTheCallerSees`（改、什么都不改、归档、再归档、恢复、再恢复：管理员数全部，只是项目访客的工作区管理员只数自己的）；读、写的单元测试的期望的调用照改，拒绝的表加读计数失败的一行；存储的 `TestSubIssueCounts`（已归档的、已删除的、孙子不算；对 alice、bob 的"自己的"不同）；HTTP 的工作项的 JSON 带它；组合的 `TestEachAnswerCountsTheSubItemsTheCallerSees`（walt 是 acme 的管理员、Web 的访客，建 His；alice 在它下面放她的 Part，walt 放他的 Mine，alice 放一个已归档的和一个已删除的；每一步 walt 和 alice 按 `id`、按编号读 His，改它、什么都不改、移到 Done、归档两次、恢复两次：每个回答 walt 是 1，alice 是 2；新建的是 0）。
+
+### 2.7 子工作项：用例、端口、查询（Task 5；3.5、3.8、3.9、3.13）
+
+- `issue/domain/hierarchy.go`：`Loops(id, ancestry)`（修改和加子工作项共用）；`MaxSubIssues`（100）；`CheckSubIssueIDs(ids)`（1–100 个、各一次，在任何读之前，一个 422）；`SubIssueNotAllowed(i)`（`sub_issue_ids[i]` 的 `not_allowed`，一句固定的文字）。
+- 存储：`GetIssues`（给的 `id` 中未删除的，已归档的也在，`id` 的次序；与 `GetIssue` 共用 `issueOf`）、`SubIssues`（直接的、未删除、未归档的子工作项，给了账户时只要他建的，按 `created_at, id`）、`SetParents`（`:execrows`，未删除的放到父工作项下，各自的最后修改；写的行数不是给的个数时是错误）。
+- `issue/app`：`SubIssueLister`、`SubIssueAdder`、`ParentRows{IDs, ParentID, By, At}`；`parents.go` 的 `inReach(h, actor, projectID, i)`（这个项目的、未归档、调用者看得到：父工作项和子工作项共用这一条）。`sub_issues.go`（新）：`ListSubIssues.Execute`（与 `getIssue` 同一个读和判定，然后读子工作项（`OwnOnly` 时只要他建的），按他的 `Grant` 数它们的子工作项）；`AddSubIssues.Execute`（`CheckSubIssueIDs` 在任何读之前；`Locks.run` 的 `write{issue: &id, action: issue.update}`；锁下项目已归档 409 → 父工作项已归档 409 `issue.archived` → `check`（按 `id` 的次序读所问的和父工作项的祖先链；每个都要 `inReach`、不是父工作项、不在它的祖先链里，问题按位置一次报出）→ 已在它下面的不动；要动的按 `id` 的次序、锁下读它们原来的父工作项（不在是错误）→ 有要动的才读时刻 → `SetParents` → 每个一行第 5 行 → 读回（少了是错误），按调用者的 `Grant` 数；都已在它下面时什么都不写、回答空的）。
+- 测试：领域的 `TestLoops`、`TestCheckSubIssueIDs`；单元的 `TestListSubIssuesReadsTheSubItemsTheCallerSees`、`TestListSubIssuesRefusals`、`TestAddSubIssuesPutsTheWorkItemsUnderIt`（3.5 的次序）、`TestAddingSubItemsUnderItAlreadyWritesNothing`、`TestAddSubIssuesCountsTheSubItemsTheCallerSees`（只看自己的访客：回答只数她的）、`TestAddSubIssuesRefusals`、`TestAddSubIssuesStopsAtAFailingPort`、`TestAddSubIssuesErrsOnWhatCannotBe`；存储的 `TestSubIssues`、`TestGetIssues`、`TestSetParents`。
+
+### 2.8 子工作项：接口、组合、矩阵（Task 6；3.5、3.9、5.1、5.2、9.2、9.3）
+
+- 契约：`listSubIssues`（200 `IssueCollection`，`x-problem-codes: [issue.not_found, forbidden]`）、`addSubIssues`（体 `SubIssuesAdd{sub_issue_ids}`，1–100 个，`additionalProperties: false`；200 `IssueCollection`；`[validation_failed, issue.not_found, forbidden, project.archived, issue.archived, server_busy]`）；模式 `Issue`（列表的一行，P3 与 `IssueDetail` 的字段相同）、`IssueCollection{data}`（没有分页，第 3 节第 15 条）。HTTP 的 `sub_issues.go`（新）：`issueCollection` 经 `issueDetail` 转换（`gen.Issue` 与 `gen.IssueDetail` 的形状相同由编译钉住）。
+- `bootstrap`：组合的 `TestWorkItemsArePutUnderAWorkItem`（bob 把 C、B、A 放到 Top 下：回答 A、B、C，按 `id` 的次序，各一行他的第 5 行，B 的从 `WEB-3`；Top 列出它们、数 3 个，放到它下面的已归档的 D 谁都列不出；再放 A 回答空的、不写；放 A 和 E 只回答 E、不写 A；不给工作项、给两次 Up、给 101 次 Up 各 422；alice 把 Root 放到 Base 下之后，Top 不能要的各在自己的位置 422、什么都不写：Ops 的、Top 自己、已归档的、它上面的 Root、Root 上面的 Base、已删除的、没有的，可以要的 Up 在它们中间也不动；已归档的工作项不能加，但照样列出它下面的）、`TestTheGuestRuleHoldsForSubItems`（他看不到的 Hers 在它的位置被拒绝，回答与不存在的逐值相同；walt 只列出 Mine；他加 Mine 的回答和他的列表里 Mine 数他看得到的 1 个子工作项，alice、bob 的列表数 2 个；alice 的 Up 对 walt 列、加都是与不存在的工作项逐值相同的 404）；交错 13（2.16）；取锁形状、写闸门和一个连接的池（`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`）的 `addSubIssues` 一步；矩阵的 7 行（第 3 节第 17 条）；HTTP 的 `TestListSubIssues`、`TestAddSubIssues`、`TestAddSubIssuesHoldsTheBodyToItsStructure`、`TestSubIssuesRefusals`（`apitest.Main` 两个方向）。
+
+### 2.9 多个项目的锁和写闸门（Task 7；3.5 约定七、6.5、11.11）
+
+- `platform/gate/gate.go`：`Keyed.Enter(ctx, keys...)`：按给的次序一个一个进，一个 `MaxWait` 的期限管全部的键；等一个键时只持着已进的键；任一个失败（队列满、到了期限、`ctx` 结束）时离开已进的键，什么都不持；离开只做一次。`platform/config/config.go` 的 `max_wait` 的说明写上跨项目的写在它的几个闸门上一共等这么久。
+- `issue/app/ports.go`：`ProjectGate.LockMany`；`WriteGate.Enter(ctx, projectIDs...)`（各一次、`id` 升序，按这个次序进，等的时候不持连接、不持锁，只持着前面的闸门的位置）。`project` 的 `LockIssueProjects`（`WHERE id = ANY … AND deleted_at IS NULL ORDER BY id FOR NO KEY UPDATE`：按排好的行取锁，次序就是 `id` 的次序，S5 的 E4）。`bootstrap`：`writeGate.Enter(ctx, projectIDs...)`、`issueProjects.LockMany`。
+- 测试：单元（`platform/gate`）的 `TestACallerHoldsEachKeyHeEnters`、`TestACallerWhoDoesNotGetEachKeyHoldsNone`（第二个键的队列满、到了 `MaxWait`、`ctx` 取消：放回第一个，它的调用者立刻进）、`TestACallerWaitsMaxWaitInAll`；存储的 `TestLockIssueProjects`（未删除的，已归档的也在；每个持 `FOR NO KEY UPDATE` 到事务结束；没问的 Ops 和工作区的行不持）、`TestLockIssueProjectsLocksInIDOrder`（Web 的 `id` 小，但在表里和名字、标识的索引里在 Alpha 之后，又后问它；持着 Alpha 的行时，它持着 Web 等 Alpha）、`TestLockIssueProjectsLeavesOutAProjectDeletedWhileItWaited`、`TestAFailedReadIsAnErrorNotAnAnswer`；组合一层的单元（不起 app）`TestTheWriteGateAnswersItsRefusalsAsServerBusy` 加 `across`（同时写别的项目和这个项目的写答 503，什么都不持：之后别的项目的写立刻进）、`TestIssueProjectsConvertsProjectsAnswers` 加 `LockMany`。
+
+### 2.10 `issue_relations` 和连带（Task 8；3.5、3.6、3.10、4.6）
+
+- 迁移 `00020_issue_issue_relations.sql`（新）：Plane 的 11 列（4.6）；`relation_type` 只有三种存储值（`blocked_by`、`duplicate`、`relates_to`），不设默认；`issue_relations_not_self_check`；`issue_relations_pair_key`（`LEAST`、`GREATEST` 两端，未删除的：一对工作项至多一条）；两端、工作区、项目的索引。`server/sqlc.yaml`、`deploy/runtime-grants.sql` 加它。
+- `DeleteIssueRelationRows`（`delete_issue.sql`）：子树的关联行，两个方向，`UPDATE … WHERE id IN (SELECT … ORDER BY id FOR NO KEY UPDATE)`；`DeleteProjectRelationRows`（`delete_rows.sql`）：删除项目的一批，`project_id` 是这个项目的行和 `related_issue_id` 是这个项目的工作项（已删除的也算）的别的项目的行，同样按 `id` 先锁、键集分批（第 3 节第 4 条）。`issueRowSteps`、`rowSteps` 的关联一步在标签之后、关注之前。
+- `pgtest.RowWaits(t, pool, table, id, lock)`（新：`NOWAIT` 的探测）取代 `project` 的 `demote_test.go` 手写的 `rowWaits`（含一个手写的 `55P03`，P1b 第 5 节的收尾一句），存储的四个测试文件共用。契约：`deleteIssue`、`deleteProject`、`deleteWorkspace` 的描述写上关联（生成的打包结果和 `schema.gen.ts` 随之，Go 不变）。端到端的两个暂时的写法：第 3 节第 18 条。
+- 测试：结构的 `TestMigrationsGoUpDownAndUpAgain`（20 个迁移）、`TestIssueChecksRejectCounterexamples`（三种存储值通过；别的值、`blocking`、`start_before`、自己关联自己被拒绝）、`TestIssueUniqueKeys`（一对一条：反方向、别的类型都被拒绝；软删除之后空出来）；单元的删除和连带的步骤；存储的 `TestTheRelationsOfADeletedSubtreeAreDeletedBothWays`、`TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`（a、b、c 的 `id` 升序，反着插入，表或任一端的索引都先扫到 c；另一个事务删除并持着 b：语句持着 a 等 b，还没碰到 c；提交之后删 a、c，b 留着那次删除）、`TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays`、`TestRowWaitsSeesALockThatConflicts`；组合的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（关联的两个外键下各一行和一条早已删除的）、`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（Ops 的 Blocker 到 Web 的 Seeded 是 Ops 的行，不在 Web 下面，按目录的删除读不到它：删除 Web 时它也在 Web 的删除时刻删除）、按目录的删除项目、工作区（`seedIssues` 的关联）、取锁形状、删除与修改的交错。
+
+### 2.11 关联：领域和存储（Task 9；3.7、3.10、3.13、4.6）
+
+- `issue/domain/relation.go`（新）：`RelationType` 的四种和 `Reversed()`；`MaxRelatedIssues`（20）；`CheckNewRelations(t, ids)`（类型是四种之一、1–20 个、各一次，在任何读之前，一个 422）；`RelatedNotAllowed(i)`、`RelatedAlready(i)`（`issue_ids[i]` 的 `not_allowed`、`duplicate`，各一句固定的文字）；`Relation`（如存的）、`NewRelation`（`blocking` 存为对方的 `blocked_by`，那一行是对方的项目的）、`TypeFrom(id)`、`Other(id)`；`RelationAdded`（第 20、21 行）。
+- `queries/relations.sql`（新）：`RelatedIssues`（给的工作项中与它已有未删除的关联的，任何类型、任一个方向；在两端的项目的锁下读）、`InsertRelations`（一条语句，`unnest` 各列）、`MarkChanged`（`:execrows`，两端的最后修改，只写未删除的）；`relations.go`：几条不是一个工作区、一个账户、一个时刻的是错误，什么都不写；`MarkChanged` 写的行数不对是错误（第 3 节第 14 条）。`issue/app/rows.go` 的 `ChangedRows`。
+- 测试：领域的 `TestRelationTypeReversed`、`TestCheckNewRelations`、`TestNewRelation`、`TestRelationAdded`；存储的 `TestRelated`、`TestInsertRelations`（每组拒绝的都与单独写下的 `alone` 并列，所以拒绝的是这一条守卫，不是一对的键）、`TestMarkChanged`。
+
+### 2.12 加关联：用例和跨项目的取锁（Task 10；3.4、3.5 约定七、3.7、3.8、3.10、3.13）
+
+- `issue/app/lock.go`：`write.reach`（跨项目的写到达的别的工作项，每个以 `issue.read` 判定；判定拒绝的不是这个写的回答，而是"没到达"）；`held.reached`；`precheck` 交回 `scope`；`run` 以 `scope` 的项目一次进写闸门；`lockAndDecide(ctx, actor, w, s)` 经 `lockProjects` 锁住，跨项目时锁下再到达。
+- `issue/app/lock_across.go`（新）：`scope{projects, reached}`（项目各一次、`id` 升序，写自己的在其中）；`end{issue, project, grant, ok}`；`lockProjects`（一个项目的写 `Lock`；跨项目的写 `LockMany`，即使只有一个项目）；`reachAll`（预检：每个读、判定，没到达的不锁、不进闸门）；`reachUnder`（锁下：预检到达的再读、再判定；项目等锁期间被删除、不在锁住的里的，不算到达）；`reach`（工作项在、未删除、不是它自己、同一个工作区、调用者以 `issue.read` 看得到，访客规则在先）。`parents.go` 的 `refOf(p LockedProject, i)`（别的项目的工作项按它自己的项目的标识）。
+- `issue/app/create_relations.go`（新）：`IssueRelation{ID, Type, Issue, CreatedAt}`；`CreateIssueRelations.Execute(ctx, id, t, ids)`：`CheckNewRelations` 在任何读之前；`Locks.run` 的 `write{issue: &id, action: issue.update, reach: ids}`；锁下项目已归档 409 → 工作项已归档 409 `issue.archived` → `check`（每个都到达、未归档、它的项目未归档、与它还没有关联；问题按位置一次报出）→ 时刻 → `write`（按对方的 `id` 的次序；一条语句插入；两端按 `id` 的次序改最后修改；每条两行动态，各在自己的项目）→ `answer`（对方在事务里读回，少了是错误；按调用者在各项目的 `Grant` 数子工作项）。
+- 测试：单元的 `TestCreateIssueRelationsRelatesTheWorkItemToOthers`（alice 以 `blocking` 问 ops 的 far、web 的 near：各存为对方的 `blocked_by`、对方的行；每条两行动态，各在自己的项目，按标识；far 按 alice 在 ops 的 `Grant`（她是只看自己的访客）数）、`TestCreateIssueRelationsRefusals`、`TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`（锁之前没到达的：不在的、它自己、别的工作区的、看不到项目的、不能读的、访客规则隐藏的；锁下：已归档的、在已归档的项目里的、等锁期间被删除的、项目等锁期间被删除的、不再看得到的；已有关联的 `duplicate`）、`TestCreateIssueRelationsStopsAtAFailingPort`、`TestCreateIssueRelationsErrsOnWhatCannotBe`；`lock_test.go` 的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`（预检之后、事务之外一次进 web、ops 的闸门（`id` 升序），一次锁住同样的项目、同样的次序，事务结束之后最后离开；预检没到达的不取锁、不进闸门）。
+
+### 2.13 加关联：接口、组合、矩阵（Task 11；3.5、3.10、5.1、5.2、9.2、9.3）
+
+- 契约：`createIssueRelations`（体 `IssueRelationsCreate{relation_type, issue_ids}`，1–20 个，`additionalProperties: false`；201 `IssueRelationCollection{data}`；`[validation_failed, issue.not_found, forbidden, project.archived, issue.archived, server_busy]`）；模式 `IssueRelationType`（四种）、`IssueRelation{id, relation_type, issue, created_at}`。HTTP 的 `relations.go`（新）。端到端：`createIssueRelations` 的夹具；`furnishIssueRows` 再建一个工作项，第一个阻塞它；`assert/project.ts`、`assert/workspace.ts` 去掉 Task 8 的 `withoutRows`。
+- 组合：`TestWorkItemsAreRelatedAcrossProjects`（bob 以 `blocking` 把 Web 的 Near 关联到 Web 的 Mid 和 Ops 的 Far：回答按 `id` 的次序；各存为对方的 `blocked_by`、对方的项目的行；三个工作项同一时刻由 bob 最后修改；每条关联两行动态，各在自己的项目；再关联各 422 `duplicate`）、`TestWhatAWorkItemMayNotBeRelatedTo`（Near 自己、已删除的、没有的、已归档的、bob 是成员的已归档的项目的、bob 不是成员的项目的、别的工作区的：各在自己的位置、同一个 422、什么都不写；别的工作区的对看得到它的 alice 也被拒绝；不给工作项、给两次 Up、给 21 次 Up 各 422；已归档的工作项、已归档的项目的工作项不能加关联，409）、`TestTheGuestRuleHoldsForRelations`（Hers 在它的位置被拒绝，回答与不存在的逐值相同；walt 加 Mine 的回答里 Mine 数他看得到的 1 个子工作项；alice 的 Up 对 walt 是与不存在的逐值相同的 404）、`TestARelationLocksNoProjectItDoesNotReach`（第 3 节第 7 条）；取锁形状的一行；一个连接的池（`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`）的跨项目的一条关联（两个项目一次锁住，锁、读、写都在事务的连接上）；写闸门的两行（Web 的工作项的关联；Ops 的工作项到 Web 的：Ops 的位置空着也被拒绝，它先进 Web 的闸门）和第二段（跨项目的写放回它占的每个位置：通过的从 Ops 来的关联之后，Ops 里照样建得了工作项；Ops 忙时，从 Web 的工作项到 Ops 的关联先占 Web 的位置、在 Ops 的闸门立刻被拒绝，之后 Web 的写照常通过）；矩阵的 6 行；HTTP 的 `TestCreateIssueRelations`、`TestCreateIssueRelationsHoldsTheBodyToItsStructure`、`TestCreateIssueRelationsRefusals`。
+
+### 2.14 `listIssueRelations`（Task 12；3.4、3.8、3.10、5.1、5.2、6.5、9.2）
+
+- 契约：`listIssueRelations`（200 `IssueRelationCollection`，`[issue.not_found, forbidden]`）。`project` 的 `ArchivedIssueProjects`（给的项目中未删除、已归档的）；`issue/app` 的 `RelationLister`、`ArchivedProjects`；`seen.go` 的 `Locks.seeEach`（不加锁：每个项目以 `issue.read` 判定一次，再对每个工作项执行访客规则，交回各项目的 `Grant`）；`lock_across.go` 的 `ascending`（`reachAll` 和 `projectsBut` 共用）；`list_relations.go`（新）：`Locks.see` → 读关联（`IssueRelations`：两个方向、未删除、`created_at, id` 的次序）→ 读对方 → 问它们的项目（这个工作项的项目除外）是否已归档 → 去掉已归档的和在已归档的别的项目里的 → `seeEach` → 按 `Grant` 数 → 照关联的次序回答（第 3 节第 10 条）。
+- 矩阵的种子带关联（`permission_matrix_seed_relations_test.go`（新）：Blocked、Guest's、Member's、Admin guest's、Secret，各是关联的列表的一种情形；`seededRelationRows` 读回核对）。
+- 测试：单元的 `TestListIssueRelationsListsWhatTheCallerSees`（mine 按 alice 在 ops 的样子数；near 的项目 web 已归档，但它是这个工作项自己的项目；已归档的、别的已归档的项目的、访客规则隐藏的、看不到的项目的都不在其中）、`TestListIssueRelationsRefusals`；存储的 `TestRelations`、`TestArchivedIssueProjects`；HTTP 的 `TestListIssueRelations`、`TestIssueRelationsRefusals`；组合的 `TestIssueProjectsConvertsArchivedProjects`、`TestARelationListShowsWhatTheCallerSees`（看不到 Lab 的 bob 只列出 Far、Mid；已归档的 Shelved、已删除的 Gone 不在，Shelved 恢复之后又在；Ops 归档之后，Far 不在 Near 的列表里，Far 自己的列表照样列出 Near、Beside）、`TestTheGuestRuleHoldsForRelations` 的列表（walt 只列出 Mine，数 1 个子工作项，虽然排在前面的是同在 Web、他看不到的 Hers；alice 列出 Hers、Mine，Mine 数 2 个）；矩阵的 2 行。
+
+### 2.15 删除关联：两端任一个的判定（Task 13；3.5、3.7、3.10、3.13）
+
+- `issue/domain`：`ErrRelationNotFound`（404 `issue.relation_not_found`，"The relation does not exist, or you cannot see either of its work items."）；`VerbDeleted`；`RelationRemoved`（第 22、23 行）。
+- `issue/app/lock.go`：`write.instead`（两端任一个的写的另一端）；`held.instead`。`lock_either.go`（新）：`both`（读两端，存为 `issue_id` 的在先）、`eitherOf`（预检：读两端、判定，交回两个项目的 `scope`）、`eitherUnder`（锁下：重读两端；任一端的项目不在锁住的里先答 `w.notFound`，在任何判定之前；再判定）、`decideEither`（第 3 节第 8 条）。`lockProjects`：两端任一个的写也用 `LockMany`。
+- `issue/app/delete_relation.go`（新）：不加锁地读关联（没有、已删除是 `issue.relation_not_found`）→ `Locks.run` 的 `write{issue: &r.IssueID, instead: &r.RelatedID, action: issue.update, notFound: ErrRelationNotFound}` → 锁下：重读关联 → 任一端的项目已归档 409 → 任一端已归档 409 `issue.archived` → 时刻；软删除这一行；两端按 `id` 的次序改最后修改；各一行动态，各在自己的项目，存为 `issue_id` 的一端在先。存储：`GetRelation`（未删除的这一条）、`DeleteRelation`（`:execrows`，没写到一行是错误）。
+- 测试：领域的 `TestRelationRemoved`；单元的 `TestDeleteIssueRelationDeletesItOnEitherWorkItem`（存为 `issue_id` 的 far 先判定，不能改它时（角色不允许，或 ops 里访客规则隐藏 far）判定 near）、`TestDeleteIssueRelationRefusals`（锁之前、锁下的每种拒绝；每个回答整个比较：两端都看不到的关联与不存在的是同一个回答）、`TestDeleteIssueRelationStopsAtAFailingPort`；`lock_test.go` 的 `TestAWriteOnEitherWorkItemTakesBothProjects`（不论判定放行的是哪一端，都取两端的项目；同一个项目的两端只取一次）；存储的 `TestGetRelation`、`TestDeleteRelation`。
+
+### 2.16 删除关联：接口、组合、矩阵和交错（Task 14；3.5、3.6、3.10、5.1、9.2、9.3）
+
+- 契约：`deleteIssueRelation`（204，`[issue.relation_not_found, forbidden, project.archived, issue.archived, server_busy]`），参数 `RelationID`。前端（约束 4）：`issue.relation_not_found` 的文案（en "The relation does not exist, or you cannot see either of its work items."，zh-CN "关联不存在，或者它的两个工作项你都看不到。"）。HTTP 的 `DeleteIssueRelation`。
+- 组合：`TestARelationIsDeletedFromEitherWorkItem`（bob 不是 Ops 的成员：先判定 Far（看得到、不能改），再判定 Near：204；关联由 bob 在两端最后修改的时刻删除，各一行动态；谁都不再列出它，再删 404）、`TestWhoMayNotDeleteARelation`（walt 403；olga 404；walt 看不到 Lab 的两个工作项的关联 404，都与不存在的逐值相同；已归档的 Shelved 的关联从两端删都 409，已归档的项目 Old 的工作项的关联 409）、`TestTheGuestRuleHoldsForDeletingARelation`；取锁形状、写闸门的一行；一个连接的池（`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`）的删除一条关联；矩阵的 4 行（`{relation_id}` 的目标是每一列的项目里种下的关联，`cellRelationNotFound`）；HTTP 的 `TestDeleteIssueRelation`、`TestDeleteIssueRelationRefusals`；前端的 `error-messages.test.ts`、`check:sync`。
+- 交错的帮手扩展、不复制（第 3 节第 16 条）：`interleaving_test.go` 的 `serializeOnTable`（`serializeOn` 是它在 `projects` 上），`issue_interleaving_test.go` 的 `serializeAt`、`inBothOrdersAt`。
+
+| 交错 | 测试 | 断言 |
+|---|---|---|
+| 9 | `TestTwoMovesThatWouldMakeALoopSerialize`（Task 3，新文件 `issue_interleaving_hierarchy_test.go`，两种顺序） | alice 把 A 移到 B 下、bob 把 B 移到 A 下：第二个等 Web 的行，锁下读到祖先链里有它自己，422 `parent_id`，什么都不写；只有第一个写了第 5 行 |
+| 13 | `TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize`（Task 6） | alice 删除 Up、bob 把 Part 放到它下面：先删，加在锁下找不到 Up，404，Part 照旧；先加，删除等 Web 的行，锁下读子树、Part 在其中，两个和它们的七行（含 bob 的第 5 行）由 alice 在同一时刻删除，不早于加的提交 |
+| 10 | `TestOppositeRelationsOfTwoWorkItemsSerialize`（Task 14，新文件 `issue_interleaving_relations_test.go`） | alice 把 Near 关联为阻塞 Far、bob 把 Far 关联为阻塞 Near：两个都一次锁住 Web、Ops，第二个在锁下读到第一个的关联，422 `duplicate`，什么都不写 |
+| 11 | `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize` | bob 删除他的 Near、alice 删除 Ops：各锁自己的项目，再按 `id` 升序锁要删的关联行；第二个等第一个的关联行，提交之后读到已删除、跳过：每条只删一次，是先删的那一个的时刻和删除者 |
+| 23 | `TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize` | bob 关联 Near 到 Far、alice 删除 Ops：先删，关联在锁下读到 Ops 已删除，Far 没到达，422，什么都不写；先关联，删除等 Ops 的行，再在它的时刻删除那条关联（Ops 的行）和 Far 的那行动态；Near 的那行留着，没有指向已删除的工作项的未删除的关联 |
+| 加关联与删除工作区（P1a 的交接） | `TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize` | bob 关联 Near、Far，alice 删除 acme：先删，关联在锁下读到自己的项目已删除，404，什么都不写；先关联，删除在 acme 的时刻删除它和别的每一行 |
+| 两个删除同一条关联 | `TestTwoDeletionsOfARelationSerialize` | alice、bob 各删除 Near 到 Far 的关联：第二个等第一个的项目的行，锁下再读关联、已删除，404 `issue.relation_not_found`，什么都不写；关联只删一次，是第一个的删除者，两端各一行"删除"的动态，在同一时刻 |
+| 21 加的一条 | `TestARelationLocksNoProjectItDoesNotReach`（Task 11，`issue_relation_locks_test.go`） | 第 3 节第 7 条 |
+
+两种顺序的交错都等在第一个持的行上（`pgtest.WaitForLockWaitBehind`），都有期限。`-race -count=5`：附录 A.4。
+
+### 2.17 端到端（Task 15；第 2 节 I8、I9、I15、I17）
+
+- 夹具：`e2e/fixtures/issues.ts` 的 `issueRead`、`subIssuesAdded`、`issueRelationsCreated`、`issueRelationsListed`、`issueRelationDeleted`（各回答状态和回答的体，或问题的码）；`assert/issue.ts` 的 `ItemRef`、`itemRef`，一种动态的行一个构造（`parentRow`、`relatedRow`、`unrelatedRow`），`activityOf` 读出 `old_identifier`、`new_identifier` 指名的工作项的名字，`CreatedIssue`、`UpdatedIssue` 加 `parent`，`expectIssueDeleted` 去掉 Task 8 的 `unwritten`；`assert/relation.ts`（新）的 `expectRelations`（存下的关联的行：两端、项目、存储的类型、谁、何时，删除的也在）。
+- I8：放到一个下面（按 `id` 的次序回答，各一行第 5 行；再放一次什么都不写）；另一个成员修改把一个移到别的工作项下，原值是它原来所在的；拿出；每个工作项数它直接下面的；成环的 422；已归档的不能加（409）、不能当父工作项（422）。I9：阻塞本项目的另一个和另一个项目的一个，各存为对方的 `blocked_by`、对方的项目的行，每条两行动态各在自己的项目、按各自读的类型；已有关联的一对（任一个方向）、看不到的项目的工作项一次 422；列表里没有调用者看不到的对方；不是 Ops 的成员的 bob 按他能改的一端删除跨项目的关联。I17：别人的 403、访客的 403、离开私有项目的创建者 404；成员删除她自己的：它下面两层（下面一层已归档），与另一个项目的两个工作项各一条关联（各存在一端）：它、它下面的每一行在那一刻由她删除（`expectIssueDeleted`）。I15 加上：恢复之后在它下面放一个工作项、两个方向各关联一个；再归档之后加子工作项、加关联、删除它的两条关联都 409，关联留着；管理员删除它时它的子工作项和关联随它删除。I1、I2 的存下的工作项 `parent: null`。`make e2e` 126 个（新的是 I8、I9、I17）。
+
+### 2.18 文档（Task 16；3.23）
+
+总体设计 3.4（集合型的列表加上一个工作项的子工作项、关联、链接、表情）、3.6（第二个例外：关联内嵌对方工作项的列表行）、4.2（约定五的例外加上跨项目的关联行；约定七）；差异清单第二节 `issue_relations` 的四行，第三节关联字段的例外，第四节"访客只看自己的工作项""已归档的工作项""删除工作区"三行的 P3 部分和"删除工作项""父工作项""加子工作项的动态""子工作项数""关联""关联的动态"六行；两份交接（M2 收尾第 3、4 节，M3 收尾第 2、3、4 节）写下"处理结果（M4/P3）"，`status` 照旧 `open`（第 7 节）。
+
+## 3. 与设计的差异和补充
+
+第 1 条是重新切分（设计 12 节允许，不停下）；第 2–23 条是本 spec 对设计交给 P3 的事的决定和补充；第 1–23 条都待控制者裁定，每条写明建议；第 24 条是承接条目的落点。
+
+1. **重新切分**（待裁定；建议照本条）。设计 12 节 P3 的十一个草稿任务与 plan 的 16 个 Task：草稿 4（子树的删除）先做，是 Task 1：之后的 Task 一加父工作项，删除一个工作项就不会留下指向它的未删除的子工作项，按目录的删除测试也从 Task 1 起不开豁免；草稿 2 拆成 Task 2（创建带父工作项）、Task 3（修改移动工作项、不成环、交错 9）和 Task 4（`sub_issues_count`）；草稿 3 拆成 Task 5（领域、用例、端口、存储）和 Task 6（接口、组合、矩阵、交错 13）；草稿 5 拆成 Task 7（`LockMany` 和多个键的写闸门，先各自钉住）、Task 9（关联的领域和存储）、Task 10（`Locks.run` 的跨项目的形式和加关联的用例）和 Task 11（接口、组合、矩阵）；草稿 1 是 Task 8（迁移和三处连带的关联行），它的 `furnishIssueRows` 一项要 `createIssueRelations` 的接口，随 Task 11；草稿 6 拆成 Task 12（`listIssueRelations`）、Task 13（两端任一个的判定、用例、存储）和 Task 14（接口、组合、矩阵）；草稿 7（归档的交互）随各个操作（Task 2–6、10–14），没有自己的 Task；草稿 8 的交错随它们的写：9 在 Task 3，13 在 Task 6，21 加的一条在 Task 11，10、11、23 和 P1a 交给 P3 的"加关联与删除工作区"在 Task 14（它们要关联的增删都有接口）；草稿 9（矩阵、整程序测试）随每个加操作的 Task（6、11、12、14），`apitest.Main` 两个方向随契约；草稿 10、11 是 Task 15、16（review 在实施之后）。原型做的时候切过两次（附录 A.1）：先是 14 个 Task，修改父工作项连同创建（2,063 行的块）、删除关联连同接口（1,724 行）各超出约 1,500 行，按功能和按层各拆成两个；之后关联的领域、存储和用例在一个 Task 里约 1,740 行（plan），拆成领域和存储（Task 9）与用例（Task 10），删除关联的接口和交错并成 Task 14。设计里"P3 的任务 n"一类的引用仍指 12 节的草稿列表，不改；本提交照切分改设计的三处：12 节 P3 的标题（"后端，16 个任务"）、"规模"一句（257 个任务、后端 137 个，加一句 P3 在实施之前重新切成 16 个）和第 15 节的一行。每个 Task 在 plan 里的行数见附录 A.1。
+2. **多个项目的锁和写闸门**（待裁定；建议照本条；P1b spec 第 3 节第 10 条的交接：`WriteGate` 取多个项目，按 `id` 升序一次取齐、失败时放回，进第二个闸门时不持连接、不持锁，只持着前一个闸门的位置）。P1b 那一条留了两种做法（在 `Keyed` 上，或在 `bootstrap/gate.go` 的 `writeGate` 里按 `id` 升序逐个进入、失败时倒序离开）；本条取前者：`platform/gate` 的 `Keyed.Enter(ctx, keys...)` 按给的次序一个一个进，一个 `MaxWait` 的期限从开始算起管全部的键（各等一个 `MaxWait` 会让跨项目的写等到 n 倍），等一个键时只持着已进的键的位置，任一个失败（队列满、到了期限、`ctx` 结束）时离开已进的、什么都不持，`leave` 离开全部、只一次；`writeGate` 照给的次序交给它，只做码的转换（503 只在 `bootstrap/gate.go` 一处，P1b 的约定）。次序由调用者给：`Locks.run` 的 `scope` 是涉及的项目各一次、`id` 升序。放在 `Keyed` 上，队列、期限和放回在同一个锁下算，由 `platform/gate` 的单元测试直接钉住（`keys_test.go`），`bootstrap` 的 `TestTheWriteGateAnswersItsRefusalsAsServerBusy` 的 `across` 再经 `writeGate` 核对一次放回（先进的别的项目的位置在后一个被拒绝之后空出），组合的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 的第二段经接口核对：跨项目的写不论通过还是被拒绝，都放回它占的每个位置（变异 T7.2、T7.3、T7.7 在那里被发现）。等的时候不持连接、不持锁：闸门在预检之后、取连接之前进入（设计 11.11），不成环的论证在第 3 条。`ProjectGate.LockMany(ctx, projectIDs)`：一条语句、`ORDER BY id FOR NO KEY UPDATE`（S5 的 E4：按排好的行取锁），不回答已删除的，等锁期间被删除的也不（`TestLockIssueProjectsLeavesOutAProjectDeletedWhileItWaited`），回答与 `Lock` 同样的列。`Lock` 留着：一个项目的写照旧（设计 3.3、6.5 列出 `Find`、`Lock`、`LockMany`）；跨项目的写和两端任一个的写即使只涉及一个项目也用 `LockMany`（`lockProjects`，一条路径的两种形式）。闸门按升序进只在单元一层钉住（第 20 条）。
+3. **死锁的重推**（待裁定；建议照本条；设计 12 节约束 3 和 P2 spec 第 5 节的 P3 一行要 P3 重推 P2 spec 第 3 节第 7 条的论证）。把闸门的位置也算作资源，资源的次序是：闸门的位置（项目 `id` 升序）→ 连接 → 工作区行 → 项目行 N（`id` 升序，一条语句）→ 工作项一侧的行（一次一张表、全局的表序：工作项 → 负责人 → 标签 → 关联（`id` 升序）→ 关注 → 动态）。HEAD 的每个写：
+   - **一个项目里的工作项的写**（创建、修改（含移动）、删除（含子树）、归档、恢复、加子工作项）：这个项目的闸门位置 → 连接 → N → 这个项目的工作项一侧的行。父子都在一个项目里（3.9），祖先链和子树在 N 之下读。
+   - **加关联**：工作项自己的项目和每个到达的对方的项目，各一次、`id` 升序，一次进闸门 → 连接 → 同样的项目一条语句锁住（约定七）→ 锁下读、写：已有的关联（在两端的项目的锁下读）、插入新的行、两端工作项的最后修改、两端的动态。两个写同一对工作项的事务都要持两端的项目，在项目行上排队，不会等在一对的唯一索引上（交错 10）。
+   - **删除关联**：两端的项目，同样一次进闸门、一次锁住，然后写一行关联、两端的工作项和动态。
+   - **删除工作项（子树和它的关联）、删除项目和工作区（连带的每一批）**：持自己的项目（删除工作区先持工作区行，再按 `id` 升序持它的每个项目，P1a），写自己的项目的行；关联行是唯一一种别的项目的写不持这个项目的锁也写得到的行，它们按 `id` 升序先锁（第 4 条）。
+   - **M3 的项目级的写**（成员、状态、标签，含 `DetachLabel`）：一个项目的 N，然后它自己的行；`users` 改邮箱只持它那一行。
+   
+   论证：(a) 闸门：每个写一次进齐它的键、`id` 升序，等一个键时只持着更小的键，所以闸门的位置之间没有等待环；持闸门位置的写可能等连接、等行锁，而持连接或行锁的事务从不等闸门（闸门在取连接之前进入），所以闸门与连接、锁之间也没有环。(b) 连接：等连接的写只持闸门的位置，持连接的写只等行锁。(c) 行锁：项目行总是 `id` 升序、一条语句地取（`Lock` 是一个，`LockMany` 是排好的几个，删除工作区是 `LockWorkspaceProjects`，同样的次序），持项目行的事务只在之后等工作项一侧的行；同一个项目的工作项一侧的行，写它的事务都持这个项目的 N（第 4 条的关联行除外），所以持 N 的事务不会等另一个写持的这个项目的行（那个写也得先持 N）；关联行：持一个项目的 N 的事务（删除工作项、删除另一端的项目）在别的项目的写者也会写的关联行上相遇，各按 `id` 升序取（一条语句；项目的连带一批一条，批按 `id` 的键集递增），在这之前它们只持自己的项目的行，在这之后只写自己的关注、动态，所以它们之间只有按同一个次序取的一种资源，没有环；加关联、删除关联持两端的项目，与这样一个删除在一端的项目行上排队，不在关联行上相遇。外键：插入的外键取的 `FOR KEY SHARE`（工作项、项目、工作区、账户的行）与 `FOR NO KEY UPDATE` 不冲突（S5 的 E3），软删除不改键、不取外键的锁；只有 `users` 改邮箱的 `FOR UPDATE` 挡得住它，那个写除了这一行不持别的锁、不等任何别的写。(d) 交错 23 与删除工作区：加关联与删除另一端的项目、与删除整个工作区都在项目行上按 `id` 升序排队（`TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize`、`TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize`，两种顺序），删除工作区的 `LockWorkspaceProjects` 的 `id` 升序从 P3 起承重（P1a 第 5 节）；跨项目的写只锁自己的项目时（变异 T10.7），交错 23 的两种顺序的第二个都不再排队，它在那里被发现。(e) 看不到的项目不进闸门、不上锁（第 7 条），所以加关联不会等在它上面。所以没有新的等待环；万一有，`lock_timeout`（`issue.write_lock_timeout`，5 秒）和闸门的 `max_wait` 让它答 503，不是挂住。附录 A.4：P3 的交错和 P2、P1b、P1a、M3 的交错、竞争、取锁形状、闸门和连接池的测试 `-race -count=5`，没有 40P01。
+4. **关联行按 `id` 先锁，在关联表的位置**（待裁定；建议照本条；设计 3.5 的"约定五的例外延伸到关联行"，M3 交接第 2 节的逐个核对）。`DeleteIssueRelationRows`（删除工作项：子树的关联行，两个方向）是一条 `UPDATE … WHERE id IN (SELECT … ORDER BY id FOR NO KEY UPDATE)`；`DeleteProjectRelationRows`（删除项目、工作区的一批）同样，取这个项目的行和 `related_issue_id` 是这个项目的工作项的别的项目的行：工作项的一批已先删了这个项目的工作项，所以"这个项目的工作项"含已删除的。等锁之后 Postgres 在最新的版本上重新判断 `deleted_at IS NULL`，已被别人删除的行跳过、留着那次删除（交错 11：每条只删一次，是先删的那一个的时刻和删除者）。锁的一步在全局表序里关联表的位置（标签之后、关注之前；P7 的链接在它之后），不提前（设计 3.5，对抗性评审 M13）。别的 P3 的批量写都在项目 N 之下，不落在例外里：`SetParents`（一条语句、一个项目）、删除子树的五条语句、`MarkChanged`（持两端的项目）；`InsertRelations` 按对方的 `id` 的次序插入（约定五的后一半）；`DeleteRelation` 按主键写一行。钉住它的：存储的 `TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`（另一个事务持着中间的一行时，语句持着前面的、还没有取后面的；表和两端的索引都先扫到后面的，按扫描的次序取会先取它）、组合的交错 11。
+5. **子树的删除**（待裁定；建议照本条；P2 spec 第 5 节的 P3 一行，第 3 节第 14 条的裁定：两处豁免是有约束力的交接）。`deleteIssue` 在锁下、项目已归档的 409 之后读子树（`IssueSubtree`，在 N 之下：每个写父工作项的写都持它，读的时候子树不变），之后读时刻：子树的每个工作项和它们的每一行同一时刻、同一个删除者（一个改变一个时刻）。已归档的照样删除（3.8 的"除恢复和删除之外"）。语句不分批，每张表一条、按 `issue_id = ANY (子树)`：约定五逐条成立（这些行的每个写者都持 N，关联行除外，第 4 条）。`UNION` 让数据库里造出的环也会结束（经接口造不出，第 6 条）。按目录的删除测试和 `expectIssueDeleted` 都去掉 `subItems` 的豁免（Task 1、15），I17 用 `expectIssueDeleted`。大小：一个下面是整个项目的工作项的删除与删除项目的同步连带一样大（第 6 节）。
+6. **不成环**（待裁定；建议照本条；设计 3.9）。修改的父工作项和加的子工作项都在 N 之下读祖先链（`Ancestry`：`WITH RECURSIVE … UNION`，已删除、已归档的也在，各一次），含工作项本身的不行（`domain.Loops`，两处共用）；同一个项目里改父工作项的写都持 N，读的时候祖先链不变。交错 9（`TestTwoMovesThatWouldMakeALoopSerialize`）：两个各自不成环、合起来成环的移动在 N 上排队，第二个在锁下读到第一个的移动，422。加子工作项的组合测试里祖先链有两层以上（Root 在 Base 下），只读父工作项的父工作项的写法分得出（附录 A.2）。
+7. **加关联的另一端的预检**（待裁定；建议照本条；M3 交接第 2 节的预检一项，设计 3.5"加关联"一行）。`reachAll` 在第一把锁之前读每个对方、按它的项目判定 `issue.read`、再照访客规则；看不到、不能读、不在、是它自己、在别的工作区的都是"没到达"：它的项目不进闸门、不上锁，它在它的位置答 `issue_ids[i]` `not_allowed`（与不存在的工作项同一个答复），与锁下查到的问题在同一个 422 里；锁下对到达的再读、再判定（锁下的判定是最终的）。工作项自己的项目总是锁住（422 在它的锁下答，与修改的 422 同一个位置）。设计 3.5、9.3 说"加关联指向一个看不到的项目时不锁它"是交错 21（取锁形状）的同一个测试：本 spec 把它写成自己的测试 `TestARelationLocksNoProjectItDoesNotReach`（另一个事务以 `FOR UPDATE` 持着私有的 Lab 和公开的 Pub，bob 看不到 Lab、读不了 Pub 的工作项：他的关联在两个位置一次被拒绝，不等任何一个；看得到 Lab 的 alice 等它），因为取锁形状的测试锁的是表，按操作一行，造不出"看得到工作项、看不到对方的项目"；取锁形状的测试另有 `createIssueRelations`、`deleteIssueRelation` 两行（看不到、不能写的账户不取行锁、不写）。
+8. **两端任一个的判定**（待裁定；建议照本条；设计 3.10 的删除关联）。先以 `issue.update` 判定存为 `issue_id` 的一端，拒绝时（看不到，或不能改）判定另一端，各在自己的项目、访客规则在先；两个都拒绝时，两个都看不到答 `issue.relation_not_found`（与不存在的关联逐值相同，8.4），否则答第一个看得到的那一端的拒绝（角色的 403）。两端都读、两个项目都进闸门、都锁上，不论放行的是哪一端（写两端的行：最后修改、动态）。锁下：任一端的项目不在锁住的里（等锁期间被删除）先答 `issue.relation_not_found`，在任何判定之前（`eitherUnder` 的项目的核对）；任一端等锁期间被删除、关联等锁期间被删除也是。这一条与第 19 条一起：设计 3.10 的"任一端的项目已删除（它的删除任务还没软删除这一行）时也是 404"在 P3 由同步的连带直接成立（项目的删除在它的事务里删除这一行），预检不另读项目。
+9. **访客规则在列表、计数和回答里**（待裁定；建议照本条；M3 交接第 3 节"工作项列表的访客规则"，`listSubIssues`、`listIssueRelations` 是第一批工作项的列表）。`listSubIssues` 在 `OwnOnly` 时只读调用者建的（`SubIssues` 带账户）；`listIssueRelations` 对每个对方的项目判定一次 `issue.read`、再对每个对方执行访客规则（`seeEach`）；`sub_issues_count` 在每个回答里按调用者在那个工作项的项目的 `Grant` 数（`All` 或 `Own`），读、什么都不改的修改、再归档、再恢复、列表的每一行、关联内嵌的 `Issue`（按他在对方的项目的 `Grant`）都是；创建回答 0（新的工作项没有子工作项，不读）。在项目里是访客的工作区管理员过了项目的规则（管理员），`OwnOnly` 仍为真，只数、只列他自己的（`TestEachAnswerCountsTheSubItemsTheCallerSees` 的 walt）。看不到的工作项作为加子工作项、加关联、父工作项的目标，它的拒绝与不存在的逐值相同（`reflect.DeepEqual` 比较整个回答，或同一个固定文字的字段错误）；看不到两端的关联的 404 与不存在的关联逐值相同。列表和写的回答里的数在访客规则的组合测试里由 walt 和 alice 各核对一次（加子工作项、子工作项的列表：`TestTheGuestRuleHoldsForSubItems`；加关联、关联的列表：`TestTheGuestRuleHoldsForRelations`；变异 T5.23、T5.24、T10.21、T12.18，以不带访客规则的授权数）；关联的列表对每个项目判定一次，不拿它的第一个工作项去判定（排在前面、他看不到的工作项不让同一个项目的别的工作项也看不到：变异 T12.7）。动态的读不在 P3（第 22 条）。
+10. **关联的列表不含别的已归档的项目里的对方**（待裁定；建议照本条；设计 3.8"跨项目的列表（…跨项目关联的对方）不含已归档的项目里的工作项"）。设计 6.5 的 `VisibleProjects`（未归档的、调用者是成员的项目）是 P5 的端口；P3 的列表逐个项目判定（`seeEach`），判定不知道项目是否已归档，所以加一个不加锁的窄端口 `ArchivedProjects.Archived(projectIDs)`（`project` 的 `ArchivedIssueProjects`），只问这个工作项的项目之外的对方的项目：这个工作项自己的项目已归档时，项目的列表照样回答它的工作项（3.8），它的关联的同一个项目的对方照样列出。另一种写法是 P3 先加 `VisibleProjects`：那是 P5 的列表引擎的端口（带 `guest_view_all_features`），P3 只有一个读者，提前加它要先定 P5 的形状。交给 P5：`VisibleProjects` 来了之后，`seeEach` 和 `Archived` 可以换成它，`Archived` 没有别的读者时删去（第 5 节）。
+11. **归档的交互和拒绝的次序**（待裁定；建议照本条；设计 3.8、3.9、3.10，P2 spec 第 3 节第 5 条的次序）。加子工作项：项目已归档 409 → 父工作项已归档 409 `issue.archived` → 一个 422（每个不能放的在它的位置：已归档的、别的项目的、看不到的、它自己、它的祖先、不存在的）。创建、修改的父工作项已归档：422 `parent_id`（父工作项是另一个工作项，不是这个写的目标）。加关联：项目已归档 409 → 工作项已归档 409 → 一个 422（对方已归档、在已归档的项目里 `not_allowed`，已有关联 `duplicate`）。删除关联：任一端的项目已归档 409 → 任一端已归档 409 `issue.archived`（存为 `issue_id` 的一端已归档或另一端已归档都是）。这些都在判定之后。已归档的子工作项不在列表和计数里，已归档的对方不在关联的列表里，恢复之后重新出现（`TestARelationListShowsWhatTheCallerSees` 的 Shelved）；归档不改父子和关联（3.8）；再归档 200、什么都不写（P2）照旧。钉住次序的：单元的拒绝表；矩阵的"已归档的项目里已归档的工作项"三行（项目的 409 在先）和"已归档的工作项"三行；I15 的三个 409（删除关联的两条，存在它这一端的、存在对方那一端的，附录 A.2）。
+12. **动态**（待裁定；建议照本条；设计 3.13 第 5、20–23 行）。第 5 行：`parent`、`updated`，原来和新的父工作项的标识（没有是 `""`），它们的 `id` 是 `old_identifier`、`new_identifier`；修改和加子工作项写它，创建带父工作项时不写（3.13 的第 5 行是改父工作项的一行；Plane 的创建也只写"created the issue"和负责人的行，`bgtasks/issue_activities_task.py:557-591`）。第 20–23 行：类型作为 `field`（按各自的工作项读的类型），加是 `updated`、`""` 到对方的标识（对方的 `id` 是 `new_identifier`），删是 `deleted`、对方的标识到 `""`（`old_identifier`），各在自己的项目（`project_id` 是那个工作项的项目，Plane 的反向行是本项目，`:1317`）。标识在锁下读：`LockIssueProject`、`LockIssueProjects` 回答项目的标识，`refOf(p LockedProject, i)` 按锁住的那个项目的标识。`comment`：关联照 Plane（"added blocking relation" 一类）；第 5 行是 "updated the parent work item to"（Plane 的是 "updated the parent issue to"，`bgtasks/issue_activities_task.py:152`）：同 P2 的归档、恢复两行（P2 spec 第 3 节第 8 条的裁定：Nerve 说 work item），差异清单的"加子工作项的动态"一行写上（Task 16）。
+13. **子工作项的列表和加入的回答**（待裁定；建议照本条；设计 3.9）。列表按 `created_at, id`（建的次序；设计 3.9 没有定次序，关联的列表按行的 `(created_at, id)`，3.10，同一个写法）；加入的回答是动了的子工作项，按 `id` 的次序（写的次序，约定五的后一半），读回、按调用者的规则数过；已在它下面的不动、不写、不在回答里；都已在它下面时回答空的，不读时刻、不写（与"什么都不改的修改"同一个规则）。原来的父工作项在锁下按 `id` 读，它不在是错误（删除工作项连带它下面的，父工作项不会先于子工作项删除）。
+14. **关联的存储**（待裁定；建议照本条；设计 3.10、4.6）。`InsertRelations` 一条语句（`unnest` 各列）插入一次加的几条：它们是一个工作区、一个账户、一个时刻的，不是的是错误、什么都不写（存储测试的每组拒绝都与单独写下的一条并列，分得出是这一条守卫而不是一对的键）；`MarkChanged` 一条语句写两端的最后修改，写的行数不是给的个数时是错误。行的 `project_id` 是存为 `issue_id` 的一端的项目；`blocking` 存为对方的 `blocked_by`（那一行是对方的项目的）；一对工作项至多一条，不论类型和方向（`issue_relations_pair_key`）。`relation_type` 的存储值只有三种（`CHECK`），接口的类型是四种（`IssueRelationType`）。
+15. **契约**（待裁定；建议照本条）。`Issue` 模式在 P3 加入：它的第一个读者是 `listSubIssues`、`addSubIssues` 的 `IssueCollection` 和 `IssueRelation.issue`（P1a spec 第 3 节第 7 条说 `Issue` 随它的第一个读者加入，那时以为是 P5 的列表）；P3 时它与 `IssueDetail` 的字段相同（`description_html` 在 P4 只进 `IssueDetail`，设计 5.2），HTTP 的 `issueCollection` 经 `issueDetail` 转换，两者形状相同由编译钉住，`apitest` 的"`IssueDetail` 是 `Issue` 加一个字段"的核对在 P4。`IssueCollection{data}`、`IssueRelationCollection{data}` 没有分页（集合型，3.16 末尾）。三个删除的描述写上关联；`deleteIssueRelation` 的描述不写"任一端的项目已删除、它的任务还没删这一行"（P9 的窗口，第 19 条）。新码 `issue.relation_not_found` 带前端文案（约束 4）。
+16. **共用、扩展的测试帮手**（待裁定；建议照本条；brief 的"扩展已有的测试帮手"）。交错的帮手扩展、不复制：`serializeOnTable`（`serializeOn` 是它在 `projects` 上）、`serializeAt`、`inBothOrdersAt`（`serialize`、`inBothOrders` 是它们在 `projects` 上），让交错 11 等在关联表的行上；名字找工作项用 Task 3 的 `workItemNamed`（原型里交错 11 另写过一个 `itemNamed`，清扫之后去掉，附录 A.2）；`pgtest.RowWaits` 取代 `project` 的 `demote_test.go` 手写的 `rowWaits`（含一个手写的 `55P03`），四个测试文件共用；`issueWorld`（`newWorkItemIn`、`doneWorkItem`、`workItemStamps`）、`wroteNothing`、矩阵的帮手和 `matrixRow.prepare`，端到端的 `changed`、`byId`、`createdFor`、`expectIssueArchival`、`keysBelow` 都扩展；一种动态的行一个构造（`parentRow`、`relatedRow`、`unrelatedRow`）。
+17. **矩阵**（待裁定；建议照本条；设计 9.2，M3 交接第 3 节）。P3 的五个操作不加规则、不加操作名（`issue.read`、`issue.update`），完整性测试不变；矩阵加 19 行：`permission_matrix_sub_issues_test.go` 7 行，`permission_matrix_relations_test.go` 12 行（每个操作在工作项表上一行、在已归档的项目上一行；三个写另加已归档的项目里已归档的工作项一行和已归档的工作项一行；加子工作项、加关联另加另一个项目的工作项一行；加关联再加已归档的项目的工作项一行）。加子工作项、加关联的格子的另一个工作项是同一个项目里可加的（`otherItemOf`）；关联的种子在每个格子的种子里（Blocked、Guest's、Member's、Admin guest's、Secret、Others'、Shelved、Gone，各是列表或删除的一种情形，读回核对）；`{relation_id}` 的目标是每一列的项目里种下的关联（`relationOf`），看不到两端的列答 `issue.relation_not_found`（`cellRelationNotFound`）。
+18. **端到端**（待裁定；建议照本条；P2 spec 第 3 节第 14 条的交接）。`CreatedIssue`、`UpdatedIssue` 加 `parent`（存下的父工作项的名字，P2 的日期同样这样加）；两个暂时的写法：Task 8 起删除项目、工作区的断言暂时不要关联表的行（`withoutRows`，故事还建不了关联），Task 11 `furnishIssueRows` 建了关联之后去掉；`expectIssueDeleted` 暂时不要 `issues.parent_id` 和关联的两个外键下的行（`unwritten`，取代 P2 的 `subItems`），Task 15 去掉：没有豁免，每个外键下都要有一行，I15、I17 都经它。`make e2e` 从 123 个到 126 个（I8、I9、I17）。
+19. **`DeletedAt` 只在 P9**（待裁定；建议照本条；P1a spec 第 3 节第 5 条说"`DeletedAt`（P3、P9）"）。设计 3.5 的 `ProjectGate.DeletedAt` 是为决策点 7 的 A：删除项目、工作区的工作项一侧由任务完成，任务做完之前关联行仍是"活的"，删除工作项要跳过属于更早删除的那一端的行。P1–P8 的连带是同步的（3.6 的过渡）：项目的删除在它的事务里删除这个项目的每一条关联（两个方向），所以 P3 里一条关联行的另一端的项目已删除时，这一行已删除，`DeletedAt` 没有可跳过的；加关联对已删除的项目的工作项到达不了（`LockMany` 不回答它）。设计 12 节 P9 的第 10 个任务就是它；P3 不加没有读者的端口（P1a 第 3 节第 5 条的理由），交给 P9（第 5 节）。
+20. **按性质只在单元一层的**（待裁定；建议照本条）。附录 A.3 逐条列出；与锁有关的三类：闸门按 `id` 升序进（组合一层的两个项目的写闸门看不出次序：一个写拒绝在先进的闸门还是后进的，答复相同）、`eitherUnder` 在判定之前核对两个项目都锁住了（经接口，锁下读不到的项目已删除，同一个 404）、`platform/gate` 的一个期限（几个键共用一个 `MaxWait`：组合一层的写闸门不排队，看不到等待的长短）。放回原来也在这里，清扫之后在组合一层（第 2 条）。
+21. **map 型、递归的结构：没有用到**（待裁定；建议照本条；M2 交接第 4 节）。P3 的请求体（`SubIssuesAdd`、`IssueRelationsCreate`，`IssueCreate`、`IssueUpdate` 加的 `parent_id`）都是封闭的对象，数组的元素是 `uuid` 的字符串，代价由 P2 加进 `TestCheckCostsAboutTheBody` 的字符串的数组守住；回答里的 `IssueRelation.issue` 是 `Issue` 的引用，不递归。`closedObject` 不改；M2 交接第 4 节的这一项写明"M4/P3 没有用到"（Task 16），状态照旧 `open`。
+22. **动态的读是 P4 的**（待裁定；建议照本条）。第 21、23 行写在对方的工作项上、按标识指名这个工作项：调用者读得到对方的动态而看不到这个工作项时，标识会透露它在。P3 没有读动态的接口（`listIssueActivities` 在 P4），所以 P3 里动态的行不透露任何看不到的工作项；P4 的动态列表要对指名别的工作项的行执行访客规则（第 5 节）。
+23. **文件的大小**（待裁定；建议照本条）。三个基点已在约 400 行的测试文件，本 Phase 各加几行：`bootstrap/permission_matrix_test.go`（410 行，基点 406 行：矩阵的种子带上关联）、`bootstrap/issue_interleaving_test.go`（407 行，基点 393 行：`serializeAt`、`inBothOrdersAt` 与原来的两个帮手共用一份）、`server/migrations/schema_test.go`（401 行，基点 400 行：迁移的个数）。拆它们要搬动与 P3 无关的代码；P2 的 `permission_matrix_test.go`（406 行）同样留着（P2 spec 第 3 节第 15 条）。契约按模块一个文件（`api/modules/issue.yaml` 848 行）、关键词守卫的规则表照旧不受这一条约束。本 Phase 改的其余代码文件都在约 400 行以内。
+24. **承接的条目**：
+
+    | 来处 | 条目 | 落点 |
+    |---|---|---|
+    | P1a spec 第 3 节第 5 条、第 5 节 P3 一行 | `LockMany`（约定七） | 2.9、第 2 条 |
+    | 同上 | `DeletedAt` | 第 19 条（P9） |
+    | 同上 | 关联进删除的语句 | 2.10、第 4 条 |
+    | 同上 | 加关联与删除工作区的交错（两种顺序）；`LockWorkspaceProjects` 的 `id` 升序从此承重 | 2.16、第 3 条 |
+    | P1b spec 第 3 节第 10 条、第 5 节 P3 一行 | `WriteGate` 取多个项目：升序、一次取齐、失败时放回，等的时候不持连接、不持锁 | 2.9、第 2、3 条 |
+    | 同上 | `parent_id` 进 `IssuePatch` | 2.5 |
+    | P2 spec 第 5 节 P3 一行 | 子树的删除；`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt` 和 `expectIssueDeleted` 去掉 `subItems` 的豁免；I17 用 `expectIssueDeleted` | 2.3、2.17、第 5、18 条 |
+    | 同上 | 已归档的父工作项、关联的两端 409 `issue.archived`，已归档的不能成为父工作项、关联的对方 | 第 11 条 |
+    | 同上 | 交错 11、13 重推 P2 spec 第 3 节第 7 条的死锁论证，关联行按 `id` 升序 | 第 3、4 条 |
+    | M3 收尾交接第 2 节 | 加关联的另一端的预检 | 第 7 条 |
+    | 同上 | P3 的批量写逐个按约定五核对 | 第 4 条 |
+    | M3 收尾交接第 3 节 | 规则表、操作名、矩阵、完整性测试、`apitest.Main`；访客规则在列表上（`listSubIssues`、`listIssueRelations` 是第一批工作项的列表） | 第 9、17 条 |
+    | M3 收尾交接第 4 节 | `expectIssueDeleted` 中子工作项的豁免 | 第 18 条 |
+    | M2 收尾交接第 3 节 | P3 的用例用时钟写 `updated_at`、`deleted_at` | 2.3、2.7、2.12、2.15（单元测试的 `clockAt`，存储测试断言交给它的时刻） |
+    | M2 收尾交接第 4 节 | map 型、递归的结构 | 第 21 条（没有用到） |
+    | P1a、P1b、P2 的教训（brief） | 数据分不出性质、逐值比较 404、"只在单元一层"的说法、比代码宽的句子、扩展测试帮手、计时按条件 | 附录 A.2、A.6 |
+
+## 4. 验收标准（完成线，M4 设计 12 节 P3）
+
+- [ ] I8、I9 的接口版本和 I17 的接口版本（子树和它的负责人、标签、关联（两个方向）、关注、动态同一时刻删除，创建者的规则）、I15 的子工作项和关联的 409 通过；`make e2e` 126 个：此前的 123 个，加 I8、I9、I17。
+- [ ] 交错 9、10、11、13、23，加关联与删除工作区，两个删除同一条关联，两种顺序 `-count=5 -race` 通过，没有 40P01；P2、P1b、P1a、M3 的交错照旧通过（附录 A.4）。
+- [ ] 加关联指向看不到的项目时不取锁、不进闸门（`TestARelationLocksNoProjectItDoesNotReach`，单元的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`）。
+- [ ] 一个看不到工作项的调用者在每个列表、数目、内嵌的 `Issue` 里都看不到它，作为目标时它的拒绝与不存在的逐值相同：矩阵的"访客·别人""管理员·访客"两列（五个新操作），`TestTheGuestRuleHoldsForSubItems`、`TestTheGuestRuleHoldsForRelations`（两个都核对列表和写的回答里的数）、`TestTheGuestRuleHoldsForDeletingARelation`、`TestEachAnswerCountsTheSubItemsTheCallerSees`、`TestARelationListShowsWhatTheCallerSees`。
+- [ ] 矩阵（P3 的 19 行）、按目录的删除测试（没有豁免）、完整性测试通过。
+- [ ] `make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e` 通过。
+
+## 5. 不在 P3 范围内
+
+- 链接（P7）和它在删除的连带、表序里的位置；评论、表情、提及、描述的版本（P4）；列表引擎、`VisibleProjects`、`?archived=true`（P5）；事件（P6：加、删关联，加子工作项，删除工作项发布的事件，设计 3.19）；草稿、搜索和选择器里排除父子（P8）；删除项目、工作区的任务、`DeletedAt`、窗口和交错 24、25（P9）；父子、关联的页面（P14）。
+
+**交给后面的 Phase**：
+
+| Phase | 条目 |
+|---|---|
+| P4 | 动态的列表（`listIssueActivities`）对按标识指名别的工作项的行（第 5、20–23 行）执行访客规则：调用者看不到的工作项的标识不在他读到的行里（第 3 节第 22 条）；`IssueDetail` 加 `description_html` 之后，`Issue` 与它分开，`apitest` 核对"`IssueDetail` 是 `Issue` 加一个字段"（第 3 节第 15 条） |
+| P5 | `VisibleProjects` 来了之后，`listIssueRelations` 的逐个项目的判定（`seeEach`）和已归档的项目的读（`ArchivedProjects`）可以换成它，`ArchivedProjects` 没有别的读者时删去（第 3 节第 10 条）；列表的行按调用者的规则数子工作项（同一个 `SubIssueCounts`，第 3 节第 9 条） |
+| P6 | 加关联、删除关联、加子工作项、移动、删除子树的事件（3.19） |
+| P7 | 链接的表进删除的连带，在全局表序里关联之后、关注之前 |
+| P8 | 选择器、搜索排除自己和后代（父工作项）、已有关联的（3.18） |
+| P9 | `ProjectGate.DeletedAt`：删除项目、工作区改为任务之后，删除工作项跳过另一端的项目已删除的关联行；`deleteIssueRelation` 的描述加上"任一端的项目已删除、它的任务还没删这一行时也是 `issue.relation_not_found`"（第 3 节第 8、19 条）；交错 24、25 |
+| P14 | 父子、关联的页面（I8、I9 的页面版本），选择器 |
+| 收尾 | 3.23 中 P3 的行由 Task 16 写好，收尾逐行核对；两份交接的 `status` 在 M4 收尾随 review 关闭 |
+
+## 6. 风险
+
+| 风险 | 应对 |
+|---|---|
+| 跨项目的写与别的写死锁 | 第 3 节第 3 条的论证（闸门的位置算作资源，HEAD 的每个写）；`-race -count=5` 的交错、竞争、取锁形状、闸门和连接池的测试没有 40P01（附录 A.4）；`lock_timeout` 和 `max_wait` 兜底 |
+| 两个并发的移动合起来成环 | 祖先链在 N 之下读（第 3 节第 6 条）；交错 9 |
+| 删除子树或项目时漏了一条关联，或留下指向已删除的工作项的活的关联 | 按目录的删除测试没有豁免（关联的两个外键下各有一行）；`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（别的项目的行）；交错 11、23 |
+| 看不到的工作项从列表、数目、内嵌的 `Issue` 或拒绝透露出来 | 访客规则在每个列表和计数的读里（第 3 节第 9 条）；矩阵的"访客·别人""管理员·访客"两列；组合测试逐值比较拒绝；动态的读在 P4（第 3 节第 22 条） |
+| 写闸门的位置漏放 | `Keyed.Enter` 失败时放回（单元）；`TestTheWriteGateAnswersItsRefusalsAsServerBusy` 的 `across`（经 `writeGate`）；写闸门的组合测试的跨项目的两行和第二段（通过的、被拒绝的跨项目的写都放回每个位置） |
+| 一个下面是整个项目的工作项的删除很大 | 子树的语句不分批：一个目标规模的项目（2 万个工作项、66 万行）放在一个工作项下面时，删除它与删除项目的同步连带一样（SP2：8.6 秒，请求的期限 15 秒）；P9 把删除项目、工作区改为任务时，删除工作项仍是同步的；没有量过，第 7 节 |
+| 持续集成（ubuntu）上的运行 | 原型和复现都在 macOS 上；合并之后看持续集成 |
+
+## 7. 已知的限制、交接和关闭条件
+
+- **删除子树不分批**：每张表一条语句，与 P2 删除一个工作项相同；子树可以是整个项目（第 6 节）。目标规模上没有量；需要时分批的写法与删除项目的批量相同（键集、同一个时刻），留给需要它的时候。
+- **动态的读**：P3 写的第 21、23 行按标识指名对方，P4 的动态列表要对它们执行访客规则（第 5 节）。
+- **事件**：P3 的写不发布事件，P6 加。
+
+| 交接 | P3 处理的条目 | 留下的条目 |
+|---|---|---|
+| M2 收尾交接第 3 节 | P3 的用例（改父工作项的修改、加子工作项、加关联、删除关联、删除子树）在取得全部锁之后读时钟，把这一个时刻写进它写的每一行 | P4、P7 的其余写工作项的用例；自动归档推进固定时钟的测试（P6） |
+| M2 收尾交接第 4 节 | map 型、递归的结构"M4/P3 没有用到" | 草稿发布（P8）；map 型、递归的结构（第一个用到它们的 Phase，或 M4 的 review 写明没有用到） |
+| M3 收尾交接第 2 节 | 加关联的另一端的预检（第 3 节第 7 条）；P3 的批量写逐个按约定五核对，关联行的例外（第 3 节第 4 条） | P3 之后各 Phase 的批量写（到 P9）；物理删除账户（P9） |
+| M3 收尾交接第 3 节 | 五个新操作的规则（不加规则、操作名）、矩阵的 19 行、完整性测试、`issue.relation_not_found` 的码和文案；工作项列表的访客规则（`listSubIssues`、`listIssueRelations`，`sub_issues_count`） | P3 之后各 Phase 的操作（到 P9）；个人主页的一行（P5）；其余工作项列表的访客规则（各列表的 Phase） |
+| M3 收尾交接第 4 节 | 新表的连带和按目录的删除测试的种子；`expectIssueDeleted` 中子工作项的豁免去掉 | `archive_in` 的说明（P6）；删除断言的限时轮询（P9） |
+
+两份交接的"处理结果（M4/P3）"由 Task 16 写下，`status` 照旧 `open`，在 M4 收尾随 review 关闭（P1a、P1b、P2 的做法）。P1a、P1b、P2 交给 P3 的条目不是交接文件，落点在第 3 节第 24 条。
+
+**M4 设计 13.1 的关闭条件**：落在 P3 的（M2 交接第 3 节 P3 的用例，M3 交接第 2 节中约定五的逐个核对和加关联的预检）都在上表。没有放不下的条件。
+
+## 附录 A：原型验证记录（2026-10-21）
+
+### A.1 做法和 Phase 的大小
+
+原型在 `$M4TMP/p3proto`：`f8696490`（P2 的合并提交）的一份 `git archive`（`p3tools/base-f8696490.tar`，快照 `p3snap/T0`）之上逐 Task 做，每个 Task 做完存一份源文件的快照（`p3snap/T1`…`T16`）；`node_modules` 由 `pnpm install --frozen-lockfile` 装好（不用符号链接），`bin/golangci-lint` 2.13.2；Go 1.27.1（`toolchain`）、Node 24.15.0、pnpm 11.10.0、Docker 29.7.2。基点的副本上七个门禁先跑过一次（`logs/base.*`）：生成物没有差异，`make lint-go` 两段 `0 issues.`，`make test` 47 个 `ok`，`make lint-web`、`make knip`、`make test-web` 通过，`make e2e` 123 个中 120 个通过（失败的三个见 A.4）。plan 的代码块由脚本从相邻两份快照的差异生成（`p3tools/mkblocks.py`），每个块从基点起按顺序核对过（`problems: 0`；`planapply.mjs check`：673 个块都对）；生成的文件不进块，按 SHA-256 和行数钉住（`gensha.py`），plan 在每次生成之后有一步 `shasum -a 256` 与表核对（Task 10 没有生成物）；`compose_plan.py` 组装 plan，核对每个块放了一次、每个文件在文件表里（`filetablecheck.py`）、没有遗留的标记，并从变异的结果写出每个 Task 的变异表（被发现的层、"（Task n 起）"）；`runcheck.py` 核对每个 `Run:` 命令指名的测试在那个 Task 的树里恰好声明一次，`spectable.py` 核对本 spec 的文件表与 plan 的块一致。之后的修改（A.2）都写回拥有那个文件的 Task 的快照，从那个 Task 起每一份快照和原型都改（`p3tools/edits/` 的编辑说明，`editrange.sh`），`mkblocks.py` 重新生成全部块；最后一份快照与原型逐个文件相同（`treediff.mjs`：3,472 个文件）。逐 Task 复现（A.5）的每个 Task 之后的树与快照逐个文件比较。
+
+**切分**（第 3 节第 1 条）：设计 12 节 P3 的十一个草稿任务成为 16 个 Task。原型先做成 14 个 Task，块的行数（`plan-blocks/T<n>.md`）有两个超出约 1,500 行：修改父工作项连同创建（2,063 行）按功能拆成创建带父工作项（Task 2）与修改移动工作项（Task 3）；删除关联连同它的接口（1,724 行）按层拆成两端任一个的判定、用例和存储（Task 13）与接口、组合和矩阵，成为 16 个。之后关联的领域、存储和加关联的用例在一个 Task 里，plan 约 1,740 行，拆成领域和存储（Task 9）与用例和跨项目的取锁（Task 10），删除关联的接口（731 行的块）与交错（395 行的块）并成 Task 14，仍是 16 个。每次拆分都由脚本做：先在一份工作副本（`p3cut`）里把较早的一半建成快照（`synctree.sh`、`snapfrom.sh`、`cpfiles.sh`），在那里跑它的门禁（生成物没有差异、`make lint-go`、`make test`），再给快照和变异表重新编号（`renumber.sh`、`recut2_snaps.sh`、`recut2_tables.py`）；分开之后每个 Task 的门禁由逐 Task 复现照 plan 跑过（A.5）。
+
+**Phase 的大小**（约 16 个任务、每个约 1,500 行以内）：16 个 Task，plan 17,482 行（`wc -l`），每个 Task 都在约 1,500 行以内：最大的是 Task 12（1,531 行：`listIssueRelations` 的用例、端口、存储、接口、组合和矩阵的种子，清扫之后又加了别的已归档的项目的读，比 1,500 行多 31 行）和 Task 3（1,511 行：修改移动工作项、祖先链、动态的第 5 行和交错 9），其次 Task 5（1,374 行）、Task 8（1,366 行）。各 Task 从它的标题到下一个标题（Task 16 到文件末尾）：1 877、2 938、3 1,511、4 1,089、5 1,374、6 1,132、7 826、8 1,366、9 660、10 1,081、11 1,264、12 1,531、13 1,067、14 1,269、15 1,130、16 175，Task 1 之前（开头的约束、脚本和文件表）192 行。手写的文件 152 个（新建 58 个、修改 94 个），生成物 13 个，文档 6 个（2.1），另有本提交对设计的修改（2.1）。切分之后没有超出，没有停下。
+
+### A.2 清扫之后的修改和加强
+
+**清扫之后的修改**（变异按 Task 跑完之后复审时发现，改在拥有那个文件的 Task 的快照上，从那个 Task 起每一份快照和原型都改；`p3tools/edits/R*.txt` 的编辑说明逐条记下，文件名里的 Task 号是写它时的编号，下面写的是最终的编号；受影响的变异重跑；没有改产品代码的行为，只有 R6 加了一个读）：
+
+- 隐藏的工作项的拒绝逐值比较（brief 的风险 4；清扫 61）：原型的组合测试只比较码。加子工作项、加关联把看不到的工作项与不存在的一起在 422 里答，删除关联把看不到两端的关联与不存在的一起答 404：组合的 `TestTheGuestRuleHoldsForSubItems`（Task 6，R1）、`TestTheGuestRuleHoldsForRelations`（Task 11，R2）、`TestTheGuestRuleHoldsForDeletingARelation`、`TestWhoMayNotDeleteARelation`（Task 14，R3）改为与一个随机的不存在的 id 的回答整个比较，单元的 `TestDeleteIssueRelationRefusals`（Task 13）用 `reflect.DeepEqual`。`SubIssueNotAllowed`、`RelatedNotAllowed` 各只有一句固定的文字（核对过）。
+- 设计的缺口（清扫 24）：关联的列表原来不去掉别的已归档的项目里的对方（设计 3.8）：Task 12 加不加锁的 `ArchivedProjects.Archived` 和 `project` 的 `ArchivedIssueProjects`，单元、存储、组合各加一层（R6；`ascending` 随它从 Task 13 提前到 Task 12，R6b），第 3 节第 10 条；新变异 T12.1–T12.3、T12.12–T12.16。
+- 数据分不出的性质（清扫 51、57）：`TestWhatAWorkItemMayNotBeRelatedTo` 的别的工作区的工作项对看得到它的 alice 也被拒绝（Task 11，R7：原来只对看不到它的 bob，同一个"看不到"也会拒绝）；它的已归档的项目原来 bob 不是成员（他本来就看不到，"项目没归档"的规则分不出），改为他是成员的（R18，T10.9 从 Task 11 起在组合一层被发现）；存储的 `TestInsertRelations` 加两个工作区的一组（R8），每组拒绝的与单独写下的一条并列、加一条正例（R9：原来拒绝的几条用的是已存下的一对，不论守卫在不在都被一对的键拒绝），新变异 T9.13、T9.14（两个时刻、两个账户）；`create_relations_test.go` 的"已归档的项目"一例也归档工作项（R10）；矩阵的三个写各加"已归档的项目里已归档的工作项"一行（R11：项目的 409 在先，T5.20、T10.13、T13.12 从各自的接口 Task 起在矩阵被发现）；`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（Task 8，R12：按目录的删除测试读不到别的项目里指向这个项目的工作项的行，T8.8 原来只在存储一层）；`TestWorkItemsArePutUnderAWorkItem` 的 Root 原来就在 Top 的上一层，只读两层祖先链的写法也拒绝它：alice 把 Root 放到 Base 下，Base 也在被拒绝之列（Task 6，R16：T3.2 在修改的组合测试之外，Task 6 起也在加子工作项的组合测试被发现）；I15 原来只删除存在它这一端的关联，删除另一端的照样被只看一端的写法拒绝：两条都删（Task 15，R19：T13.11 在 I15 被发现）；I9 的跨项目的关联原来是 `relates_to`（对称、存在发起的一端），反过来存的项目和对方读的类型都分不出：改为 `blocking`（存为对方的 `blocked_by`、Ops 的行），bob 按他能改的一端删除它（Task 15，R21：T9.3、T13.15 在 I9 被发现，也走了两端任一个的第二个判定）。
+- 复制的测试帮手（清扫 52、58）：交错 11 的 `itemNamed` 与 Task 3 的 `workItemNamed` 是同一件事：`workItemNamed` 改为"世界里叫这个名字的唯一的工作项，不论项目"，`itemNamed` 去掉（Task 3、14，R13）；`delete_relations_test.go` 原来从 `project` 的 `demote_test.go` 复制了 `rowWaits`（带一个手写的 `55P03`）：改为新的 `pgtest.RowWaits` 和它的测试，四个文件共用（Task 8，R14；新变异 T8.14）。
+- 写闸门（清扫 9）：P3 的写进闸门原来只在单元一层钉住：`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 加子工作项（Task 6）、加关联（Web 的、从 Ops 到 Web 的，Task 11）、删除关联（Task 14）的行（R15）；新变异 T10.8（跨项目的写只进它自己的项目的闸门）、T13.23（两端任一个的写不进闸门），都在组合一层被发现。它的说明原来说从 Ops 到 Web 的关联"放回 Ops 的位置"：它先进 Web 的闸门、在那里被拒绝，从没进 Ops 的（R17，只改说明）；放回由 `platform/gate` 的单元测试和 `TestTheWriteGateAnswersItsRefusalsAsServerBusy` 的 `across` 核对（T7.2 的层，第 3 节第 20 条）。
+- 说得比代码宽、或在任务结束时为假的句子（清扫 6、53、59）：`RelatedIssues`、`GetRelation` 的说明原来说关联的每个写持"它两端的项目"的锁（删除工作项、删除项目只持一端的）：改为"至少持一端的项目的锁"（Task 9、13，R4、R5，生成的 `relations.sql.go` 的注释随之）；三个删除的契约描述加上关联（`fix_wording.py`，Task 8 起，生成的打包结果和 `schema.gen.ts` 随之）；M3 收尾交接的处理结果说矩阵加 16 行，实为 19 行（Task 16，R20）；差异清单的"加子工作项的动态"一行加上 `comment` 的不同（Task 16，R22，第 3 节第 12 条）。
+- 变异本身（清扫 56）：13 个原来编译不过（`fixbuild1.py`、`fixbuild2.py`：T3.1、T3.13、T4.4、T4.8、T4.9、T5.1、T5.6、T5.22、T7.2、T9.4、T10.11、T12.1、T12.14），改写成编译得过的同一个缺陷；T3.3 原来被 sqlc 拒绝（"column reference id is ambiguous"），改写；T5.4 原来在 `issue/app` 一层分不出（用例和领域都用 `SubIssueNotAllowed`），改在 `issue/domain` 一层，另加 T5.22（用例把每个问题都写在第一个位置）；"（Task n 起）"的层核对过它真的分得出：T3.2 的交错 9（两项的环与祖先链的长短无关）、T5.15 的矩阵（矩阵的列表没有子工作项）、T8.8 的交错 23 和删除项目、工作区的两个故事（它们的关联都是一个项目里的行）、T7.2 的写闸门的组合测试（见上）去掉，T13.19 的"Task 14 起"从拒绝的测试换成再删一次的 `TestARelationIsDeletedFromEitherWorkItem`；新加 T5.21、T6.4、T9.7、T10.20、T11.5、T13.22（读子工作项的失败、体的多余字段、动态的原值、读关联的失败、体的多余字段、写最后修改的失败）。交错 23 在 T8.8 的那一层去掉之后没有发现它的变异（`checkkills.py`）：T10.7（跨项目的写只锁自己的项目）加上它为一层（Task 14 起），两种顺序的第二个都不再等 Ops 的行，在那里被发现。
+- 清点（清扫 62：brief 说"只在单元一层"的说法常常是错的）：只在一层被发现的变异逐个核对（A.3），组合一层的数据本可以展示的加了数据。父工作项的组合测试加"在不存在的工作项下、带不存在的标签建的，两个问题一次报出"（Task 2、3，R25、R26：T2.8）、"再从没有父工作项拿出一次，什么都不写"（R26：T3.9）和"Low 与 Part 之间的 Mid 已归档"（R26：祖先链在已归档的工作项停下时 Part 放得到 Low 下而成环，T3.4 原来只在存储一层，按性质的说法是错的）；加子工作项的组合测试加"放 A 和 E 只回答 E、不写 A"和"不给工作项、给两次、给 101 次"（Task 6，R27：T5.10、T5.2、T5.3）；加关联的加"不给工作项、给两次、给 21 次"（Task 11，R29：T9.5、T9.6；不在四种里的类型在组合一层发不出，测试的每个请求都按契约核对，R29 原来发的 `start_before` 被核对拒绝，改掉（R29b），T9.4 留在 A.3），T11.3 的层加上 `TestWorkItemsAreRelatedAcrossProjects`（它核对每条关联的 `created_at` 是建的时刻）；访客规则的两个组合测试核对列表和写的回答里的数（Mine 下有 alice 的 Low、walt 的 Below：walt 数 1、alice 数 2；Task 6、11、12，R28、R30、R24）：回答不数的 T5.18 原来只在单元一层，新变异 T5.23、T5.24、T10.21、T12.18 以不带访客规则的授权数（访客会从数里知道他看不到的子工作项有几个），T5.24 在单元一层原来活着，加了 `TestAddSubIssuesCountsTheSubItemsTheCallerSees`（Task 5，R32）；关联的列表里 walt 先看到 alice 的 Hers（同在 Web、他看不到）：拿第一个工作项去判定它的项目的 T12.7 原来只在单元一层；测试的帮手 `countedIssue`（`storedIssue` 加数）、`counts`、`othersOf`，`listedIn`、`answeredRelation` 用它；写闸门的组合测试加第二段（Task 11，R23：通过的、被拒绝的跨项目的写都放回它占的每个位置；T7.2、T7.3、T7.7 原来只在 `platform/gate` 或 `writeGate` 的测试）；新的交错 `TestTwoDeletionsOfARelationSerialize`（Task 14，R31：锁下不再读关联的 T13.9 原来只在单元一层）。
+- 语句在事务的连接上（清扫 8）：一个连接的池的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection` 原来只有 P1a、P1b、P2 的写，P3 的写都不在其中：加上在第一个工作项下建 Part（Task 2，R33a）、把 Part 移到第二个下（Task 3，R33b）、把 Low 放到 Part 下（Task 6，R33c）、以 `blocking` 把第一个关联到 Ops 的 Far（两个项目一次锁住，Task 11，R33d）、删除那条关联（Task 14，R33e）；新变异 T1.10、T3.15、T5.25、T7.9、T9.15、T13.24（子树、祖先链、`SetParents`、`LockMany`、`InsertRelations`、`DeleteRelation` 的语句经连接池发出），都在组合一层被发现（A.3）。
+
+**清扫之后的加强**都在上面（数据、逐值比较、帮手、闸门、清点、连接）：每处改了测试或补上更高一层的检查，只有 R6 加了产品代码（一个读和它的接线）。改过的测试在它的 Task 的树上先不带变异跑过（全部通过：`cutcheck.sh`、`cutcheck2.sh`、`r15check.sh`、`cutcheck3.sh`、`cutcheck3b.sh`、`cutcheck4.sh`），以它为一层的变异在它的 Task、"Task n 起"的和最终的树上重跑（`passA.sh`、`passB.sh`、`rerunR16.sh`、`rerunR23.sh`、`rerunR32.sh`、`rerunILV23.sh`），全部被发现。
+
+### A.3 只在一层被发现的变异
+
+清扫之后逐个核对了只在一层被发现的变异（清扫 62：brief 说"只在单元一层"的说法常常是错的）。组合一层的数据本可以展示的加了数据（A.2 的清点），剩下的每一个写明为什么只在那一层。
+
+**只在单元一层被发现的（按性质，19 个）**：
+
+- 端口的失败（清扫 2）7 个：T1.7（读子树失败，当作没有子树、什么都不删）、T2.9（读父工作项失败，当作没有）、T5.7（读祖先链失败，当作上面没有）、T5.21（读子工作项失败，当作没有）、T10.20（读已有的关联失败，当作还没有）、T12.3（读项目的归档失败，当作都没归档）、T13.22（写两端的最后修改失败，略过）。同 P1a、P1b、P2：组合出的 app 里真实的存储在这些读写上不失败，存储方法自己的失败在存储一层核对（清扫 19）；失败的语句让 Postgres 中止事务，吞掉它的用例之后的语句和提交也都失败。
+- 端口的回答对不上（清扫 22）3 个：T3.13（原来的父工作项读不到，当作没有）：删除工作项同一时刻删除它下面的每一个（第 3 节第 5 条），经接口一个未删除的工作项的父工作项总在。T5.17、T10.19（读回的少了一个，照样回答）：写和读回在同一个事务里、在锁下，读回的总是写下的那些。
+- 时刻 1 个：T1.6（删除工作项先读时钟、再读子树）：两步都在锁下，子树在锁下不变，时刻都在请求之内、在写之前；经接口分不出先后。
+- 表序的约定 1 个：T8.12（删除工作项先删关联、再删标签）。同 P2 的 T4.8：工作项一侧的行的每个写者都先持它的项目的 N；跨项目的写与别的写共有的只有关联行（关联的两行动态各在自己的项目），两张以上的表上没有共有的行，表的次序等不起来；全局的表序是约定（第 3 节第 4 条），由单元的调用次序钉住。
+- 闸门的次序 1 个：T10.4（跨项目的写按到达的次序进闸门、取锁）。锁的次序不受它影响：`LockMany` 在一条语句里按 `id` 取锁，不论给的次序。闸门的次序只在两个跨项目的写按相反的次序排进对方的队列时显出（各持一个位置、等另一个，到 `max_wait` 答 503，不是挂住）：组合一层要让两个请求按指定的次序进各自的队列，造不确定（P1b 的 `platform/gate` 内部的次序同理）；单元的假闸门记下进的键和次序。写闸门的组合测试的一个跨项目的写被拒绝在先进的闸门还是后进的，答复相同（第 3 节第 20 条）。
+- 两端任一个的锁下核对 1 个：T13.4（等锁期间一端的项目被删除，删除照样往下走）：P1–P8 里删除项目同步连带删除它的工作项和关联行，锁下再读关联读不到，同一个 404；P9 把删除项目改为任务之后才分得出（第 5 节 P9 一行）。
+- 契约 2 个：T6.4、T11.5（加子工作项、加关联的体收下没有声明的字段）。同 P1b 的 T6.2：体的形状由生成的 `bodyshape` 在用例之前检查，HTTP 的测试驱动的就是生成的路由和真实的处理函数，这条路上没有替身。
+- 契约外的输入 1 个：T9.4（加关联的类型不在四种里也收下）。`relation_type` 在契约里是枚举，组合的测试的每个请求都按契约核对（`CheckRequest`），发不出不在四种里的类型（R29 原来发了 `start_before`，被核对拒绝，A.2）；`bodyshape` 不查枚举，HTTP 的测试把它照原样交给用例，领域的 `CheckNewRelations` 拒绝它（`TestCheckNewRelations`）。
+- `platform/gate` 1 个：T7.1（几个键各等一个 `MaxWait`）：闸门的测试驱动的就是真实的组件（真实的 goroutine、`context` 和计时）；组合一层的写闸门的测试不排队（`max_queue` 0），看不到等待的长短。同 P1b 的 `platform/gate` 的内部。
+- 文案 1 个：T14.3（页面没有 `issue.relation_not_found` 的文案）：`error-messages.test.ts` 读的是真实的文案表，显示关联的页面在 P14（同 P2 的 T7.12）；中文的一份缺这个键由 `check:sync` 发现（T14.4，守卫）。
+
+原来只在单元一层的 33 个中 14 个（T2.8、T3.9、T5.2、T5.3、T5.10、T5.18、T7.2、T7.3、T7.7、T9.5、T9.6、T11.3、T12.7、T13.9）、只在存储一层的 18 个中 1 个（T3.4）加了数据之后也在组合一层被发现（A.2 的清点）。
+
+**只在存储一层被发现的（按性质，17 个；都在真实的数据库上）**：
+
+- 子树 3 个：T1.2（递归穿过已删除的工作项）、T1.4（读已删除的工作项的子树）：删除工作项同一时刻删除它下面的每一个，已删除的工作项下面没有未删除的；已删除的工作项在预检就是 404，子树的语句碰不到它。T1.3（`UNION ALL`：成环的线读不完）：经接口造不出环（第 3 节第 6 条，交错 9），存储测试在数据库里造环。
+- 写的守卫（清扫 1、55）8 个：T5.11（`SetParents` 也写已删除的工作项）、T9.10（`MarkChanged` 也写已删除的）、T13.21（`DeleteRelation` 再删一次已删除的关联）：锁下读到的都是未删除的，它们在锁下不会被删除。T9.11（`MarkChanged` 把没写的当作写了）、T13.20（`DeleteRelation` 把没删的当作删了）：行数的核对，锁下读到的在写之前不会消失。T9.12、T9.13、T9.14（`InsertRelations` 一条语句收下两个工作区、两个时刻、两个账户的关联）：一次加关联是一个工作区、一个时刻、一个调用者的。
+- 锁的次序 3 个：T7.4（`LockMany` 按行来的次序取锁，不按 `id`）、T8.6（删除工作项按扫描的次序锁关联行，不先按 `id`）：经接口，Postgres 对这些表的扫描恰好按 `id`（主键的扫描，或插入的次序：`id` 是 v7，随时间递增），两个写按相反次序取同两行的情形造不出来；存储测试直接看等锁的次序（`pgtest.RowWaits`）。T8.14（`pgtest.RowWaits` 把别的事务持着的行读成空的）：测试的设施，它自己的测试和用它的存储测试发现它。
+- `LockMany` 1 个：T7.5（也锁已删除的项目）：已删除的项目的工作项都已删除，预检和锁下的重读都读不到它们，同一个 404。
+- 读 2 个：T12.10（关联按 `id` 排，不按 `created_at, id`）：关联的 `id` 在锁下、读时钟之后生成（v7，单调），同一个工作项的关联的写在它的项目的锁下排队，`id` 的次序就是建的次序。T12.13（已删除的已归档的项目读作已归档）：已删除的项目的工作项和关联都已删除，列表读不到它们。
+
+**只在模式一层被发现的（4 个）**：T8.1–T8.4（`issue_relations` 的检查和键：一对工作项两条关联、工作项关联到自己、存成 `blocking`、已删除的关联占着一对）。用例在锁下先拒绝这些（已关联的 422 `duplicate`，它自己 422 `not_allowed`，`blocking` 反过来存，键只看未删除的），约束是最后一道；`migrations` 的测试直接写违反它们的行。
+
+**只在守卫一层被发现的（1 个）**：T14.4（中文的一份没有 `issue_relation_not_found`）：`check:sync`（同 P2 的 T7.13）。
+
+**只在组合一层被发现的（7 个）**：T8.13（运行时的角色不能写关联表）：`TestTheGrantsFileCoversEveryRelationAndFunction` 读的是真实的授权文件。T1.10、T3.15、T5.25、T7.9、T9.15、T13.24（子树、祖先链、`SetParents`、`LockMany`、`InsertRelations`、`DeleteRelation` 的语句经连接池发出，清扫 8）：同 P2 的 T4.20、T7.16、T7.17，只有一个连接的池（`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`）看得到语句不在事务的连接上：单元的假实现没有连接；存储的测试看语句的结果和 `LockMany` 等锁的次序，经池发出的语句在别的连接上结果相同。T7.9 也在交错 10 被发现（锁随语句结束放开，两个相反的关联不再排队）。
+
+**只在端到端一层被发现的**：没有：端到端发现的 39 个变异每个另在 Go 的一层被发现（`e2ealso.py`；T2.10 不在单元、存储一层，在组合一层）。
+
+### A.4 最终的原型、矩阵和交错
+
+**最终的原型**（`gates.sh`，2026-10-21，清扫之后的修改都做完之后：七个门禁在最终的树上，`logs/final-*.log`、`final.summary`）：`make gen` 之后生成物没有差异；`make lint-go` 两段 `0 issues.`；`make test` 47 个 `ok`；`make lint-web`（关键词守卫 72 条规则、23 个例外、没有命中，54 个任务）；`make knip`；`make test-web`（17 个任务）；`make e2e` 126 个中 123 个通过，I8、I9、I15、I17 在其中；失败的三个与 P3 无关：S3 因原型不是仓库的检出、构建没有提交号而失败（M3/P4b 的 F4），A4 的两个 firefox 测试因为机器上没有 Firefox（基点的副本上是同样的三个）。
+
+**矩阵**（`matrixcount.sh`、`matrixops.py`，`logs/matrix.log`）：`TestPermissionMatrix` 的 1,455 个叶子全部通过：模板的 `prepare` 一个，格子 1,454 个，其中 P3 的五个操作 196 格（`listSubIssues` 20、`addSubIssues` 52、`createIssueRelations` 64、`listIssueRelations` 20、`deleteIssueRelation` 40），P1a–P2 的工作项的操作 393 格，其余 865 格是 M3 的；顶层 1.55 秒。
+
+**交错和竞争**（`race.sh`，`logs/race-final.log`，清扫之后的修改都做完之后）：`bootstrap` 的 76 个交错、竞争、取锁形状、连接池和写闸门的测试（`racenames.py`：文件名带 interleaving、race、locks 或 issue_pool 的每个测试，和 `gate_test.go` 的：P3 的写跨项目进几个闸门；M3、P1a、P1b、P2 的，和 P3 的交错 9、10、11、13、23、加关联与删除工作区、两个删除同一条关联、加关联不锁它到不了的项目）各 `-race -count=5`，380 次顶层全部通过，560 秒，没有 40P01、没有死锁、没有数据竞争。交错的 Task 做完时（`logs/race-T12.log`，当时的编号，499 秒）跑过一次，70 个测试、350 次顶层全部通过，同样没有。plan 的 Task 14 跑其中工作项一侧的 23 个（P3 的七个交错和加关联不锁它到不了的项目，P2、P1b、P1a 的工作项的交错，`TestTwoWritesOnAProjectSerialize`，闸门和连接池的两个，取锁形状），逐 Task 复现里同样通过（A.5）。
+
+### A.5 逐 Task 复现
+
+**逐 Task 复现**（本提交的 plan，2026-10-21；`replay-all.sh`、`replay.py`，日志在 `p3tools/replay-logs`、`logs/replay-all.log`，`replaysum.py`）：`f8696490` 的一份新的副本（`base-f8696490.tar`），本提交的 spec、plan 和设计照它们在 worktree 里的样子放进去，`pnpm install --frozen-lockfile`，`bin/golangci-lint` 取原型的（2.13.2；`make tools` 会下载它）。先在基点的快照（`p3snap/T0`）上 `planapply.mjs check`：673 个块按顺序都对。按 plan 的顺序应用 16 个 Task 的 673 个块，照原样运行各 Task 的 131 个 `Run:` 命令（其中 13 个是提交之后的 `make gen-check`），16 个 Task 一共 2,305 秒（连同准备 2,330 秒），没有重跑，没有起不来的容器。Task 1–14 之后 `make lint-go` 两段 `0 issues.`；Task 1–14 和 16 之后 `make test` 47 个 `ok`；`make gen-go`（Task 5、7、9、13）和 `make gen`（Task 1、2、3、4、6、8、11、12、14）之后，生成物的每个 SHA-256 和行数与 plan 的表相同，十三次提交之后的 gen-same 都没有差异（Task 10 没有生成物）；`make lint-web` 在 Task 1、2、3、4、6、8、11、12、14、15、16 通过（关键词守卫 72 条规则、23 个例外、没有命中），`make knip`、`make test-web` 在 Task 1、2、3、4、6、8、11、12、14、15 通过；Task 14 的 `-race -count=5`（工作项一侧的 23 个测试）134 秒，没有 40P01、死锁和数据竞争；`make e2e` 在 Task 1、4、8、11 是 123 个中 120 个通过，在 Task 15 是 126 个中 123 个通过（I8、I9、I15、I17 在其中），失败的只有 S3（F4）和 A4 的两个 firefox 测试（机器上没有 Firefox）；Task 16 的 `doclinks.py` 没有断的链接。每个 Task 之后的树存成快照（`p3replay-snaps/T1`…`T16`），与 `p3snap` 的十六份逐个文件相同（`snapcmp.py`）。最后 `treediff` 比较复现的树与原型：3,474 个文件对 3,472 个，差的只有本提交的三份文档（spec 和 plan 只在复现里；设计差本提交改的三处）。复现的副本不是 git 检出：`make gen-check` 由 gen-same 代替（`make gen` 前后生成物逐字节相同），`make lint-web` 的关键词守卫经 `kwreal.py` 列出文件（复现的副本里有本提交的三份文档，守卫也读它们）。
+
+**复现之后**：plan 和设计与复现读的逐字节相同；spec 在复现读过之后只改了本节（复现读的是写着"复现做完之后写入"的一版）。spec 和 plan 的相对链接（`doclinks.py`）都在；M4 设计里指向 M5–M8 的 `handoffs/M4-closeout.md` 的四个链接在本提交之前就有，那些文件由 M4 的收尾写下。
+
+### A.6 清扫和变异表
+
+**六十三类清扫**（P2 的六十类（P2 spec 附录 A.6）和 brief 加的三类（61–63）；每个变异在一份新的副本里（`p3mut/<id>`），Go 以外的文件（契约、迁移、故事、文案）也在副本里改，契约的变异在副本里 `make gen` 之后再跑；`mut.py` 在变异写的每一层各跑一次：单元（`issue` 的 `app`、`domain`、`adapter/http`，`platform/gate`，`bootstrap` 的转换和写闸门的接线，Web 的 `error-messages.test.ts`）、存储（`issue`、`project` 的 `adapter/postgres`，`pgtest`）、模式（`migrations` 的测试）、组合（`bootstrap`）、端到端（单独运行的故事 I8、I9、I15、I17 和删除项目、工作区的两个故事）、守卫（`check:sync`）；每个变异在它的 Task 的快照上跑（Pass A），后面的 Task 才有的检查在那个 Task 的快照上跑（"（Task n 起）"，Pass B），全部的 Go 一层在最终的树上再跑一次（Pass C）；"层"是它在最终的树上被发现的每一层（端到端在 Task 15 的树上：Task 16 只改文档）；构建失败、崩溃不算发现，端到端和文案测试的发现由 `e2ekills.py` 核对是断言失败，不是崩溃或超时）：
+
+| 清扫 | 大小 | 结果 | 层 |
+|---|---|---|---|
+| 1 每个 SQL 谓词 | 子树（`IssueSubtree`）的未删除、递归、`UNION`（T1.2–T1.4）；删除的语句按 `issue_ids` 写子树的每一个（T1.8、T1.9）；祖先链（`Ancestry`）的递归、它自己、穿过已归档的（T3.2–T3.4）；`SubIssueCounts` 的未归档、未删除、自己的（T4.1–T4.3）；`SubIssues` 的未归档、访客规则（T5.13、T5.14）；`SetParents`、`GetIssues`、`MarkChanged` 的未删除（T5.11、T5.16、T9.10）；`LockIssueProjects` 的未删除（T7.5）；删除工作项、项目的关联行的两个方向和更早删除的（T8.5、T8.7–T8.9）；`RelatedIssues`、`IssueRelations` 的两个方向、未删除、两端（T9.8、T12.8、T12.9、T12.11）；`ArchivedIssueProjects` 的所问、未删除、已归档（T12.12–T12.15）；`GetRelation`、`DeleteRelation` 的未删除（T13.19、T13.21）。每个都改成不限制（`OR TRUE`，保留 `sqlc.arg` 让生成的代码照样编译）或去掉 | 全部被发现，都在存储一层；多数也在组合一层（按目录的删除、父子和关联的组合测试、关联的列表）或端到端；T1.2、T1.4、T5.11、T7.5、T9.10、T12.13、T13.21 只在存储一层（按性质，A.3） | 存储；组合；端到端 |
+| 2 端口调用的错误 | 用例吞掉端口的失败：读子树（T1.7）、父工作项（T2.9）、祖先链（T5.7）、子工作项（T5.21）、已有的关联（T10.20）、项目的归档（T12.3）、写两端的最后修改（T13.22）；用例的失败表（`TestDeleteIssueStopsAtAFailingPort`、`TestAParentsFailingReadEndsTheWrite`、`TestAddSubIssuesStopsAtAFailingPort`、`TestListSubIssuesRefusals`、`TestCreateIssueRelationsStopsAtAFailingPort`、`TestListIssueRelationsRefusals`、`TestDeleteIssueRelationStopsAtAFailingPort` 的每个端口） | 七个都只在单元一层（按性质，A.3） | 单元 |
+| 3 写不动的行 | 删除子树的存储测试比较别的工作项和更早删除的行的每一列；`SetParents`、`MarkChanged`、`DeleteRelation` 的存储测试比较没有指名的、已删除的；`TestInsertRelations` 的拒绝与单独写下的一条并列（A.2）；按目录的删除比较同一个项目另一个工作项下的每一行；删除项目连同别的项目里指向它的关联行（`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`）；加子工作项时已在它下面的不写（单元，和组合的"放 A 和 E 只回答 E、不写 A"）；交错 23 的 Near 的那行动态留着 | T5.10 在加子工作项的组合测试（A.2）、T8.7 在按目录的删除、T8.8 在删除项目的组合测试和交错 11；T5.11、T9.10、T13.21 只在存储一层（A.3） | 存储；组合 |
+| 4 组合根的接线 | `bootstrap` 的 `LockMany`、`Archived` 的转换（T7.8、T12.16）；`LockIssueProject` 回答的标识（T3.8）；HTTP 的映射和路由（T2.7、T3.10、T4.11、T6.1、T6.2、T11.1–T11.3、T12.17、T14.1） | 都在组合一层（父子、子工作项、关联、关联的列表和删除的组合测试），多数也在端到端（I8、I9） | 单元；组合；端到端 |
+| 5 安全性质在真实环境上 | 访客规则在父工作项（T2.3、T2.4）、子工作项的列表和加（T5.5、T5.14、T5.15）、计数（T4.3、T4.4、T4.10、T5.18、T5.23、T5.24、T10.21、T12.18）、关联的到达（T10.1、T10.3）和列表（T12.5–T12.7）、删除关联（T13.3）里；看不到的对方不进闸门、不上锁（T10.2）；两端任一个的判定（T13.1、T13.2）；锁下再判定两端（T13.8） | 都在组合一层（访客规则的四个组合测试、计数的组合测试、矩阵、`TestARelationLocksNoProjectItDoesNotReach`、删除关联的组合测试）；原来只在单元一层的 T5.18、T12.7 加了数据之后也在组合一层，T5.23、T5.24、T10.21、T12.18 是清点时加的（A.2） | 单元；组合；端到端 |
+| 6 每句文档 | 每句说明、契约描述、故事标题对照代码；`prophecy.py` 列出每个 Task 加的往后看、计数的注释（36 行，逐行读过：说 P4、P5、P7、P9、P13、P14 的都是设计的交接，"until"是锁持到提交的条件，"yet"是"还没有"的条件；Task 8 的两句"还没有故事建关联"是暂时的写法，Task 11 照计划去掉） | 改了几处（A.2）：`RelatedIssues`、`GetRelation` 的"两端的项目"、三个删除的契约描述加上关联、写闸门的测试说明的"放回 Ops 的位置"、M3 收尾交接的矩阵行数、差异清单的 `comment`；连接测试说"每个写"，原来没有 P3 的写（R33） | 审阅 |
+| 7 反例里没有随机 | P3 的测试 | 表都是切片；"没有的工作项""没有的标签"和逐值比较的"不存在的"用随机的 id，是不存在的 id，不是取样 | 审阅 |
+| 8 决定所依赖的读在调用者的事务里 | 锁下的重读、判定、祖先链、子树、对方的重读、读回、计数都在事务的连接上；连接测试原来只有 P1a、P1b、P2 的写，加上在父工作项下建、移动、加子工作项、跨项目的关联、删除关联（A.2，R33）；列表是读，不进事务 | T1.10、T3.15、T5.25、T7.9、T9.15、T13.24（语句经连接池）在组合一层（一个连接的池：`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`；T7.9 也在交错 10） | 组合 |
+| 9 锁顺序在真实环境上 | P3 的写最先锁项目（取锁形状的三行：`addSubIssues` 等 `issues`，`SHARE`；`createIssueRelations` 等 `issue_relations`，`ACCESS EXCLUSIVE`；`deleteIssueRelation` 等 `issue_relations`，`SHARE`）；`LockMany` 按 `id` 升序（T7.4）；关联行按 `id` 先锁（T8.6）；闸门按 `id` 升序进（T10.4）；关联行的一步在全局表序里（T8.12）；P3 的写进它涉及的每个项目的闸门、放回每个位置（T7.2、T7.3、T7.7、T10.8、T13.23） | T7.2、T7.3、T7.7、T10.8、T13.23 在组合一层（写闸门的组合测试，A.2）；T7.4、T8.6 只在存储一层，T8.12、T10.4 只在单元一层（按性质，A.3） | 单元；存储；组合 |
+| 10 承重的种子行有前提 | 矩阵的关联种子（`seededRelationRows` 经 `GetRelation` 读回每一条，Gone 的已删除）；按目录的删除的子工作项和关联由测试直接写下（`underWorkItem`、`relate`：不依赖 issue 模块已有哪些写），每条核对写下的行数，缺了就 `t.Fatalf`；交错的 `nearAndFar`、`projectWith`；`wroteNothing` 先核对准备的行数（含关联行） | 都读回核对 | 审阅；组合 |
+| 11 每条拒绝路径 | 预检（404、403）、锁下（404、403、409 `project.archived`、`issue.archived`，422 `parent_id`、`sub_issue_ids[i]`、`issue_ids[i]` 的 `not_allowed` 和 `duplicate`，404 `issue.relation_not_found`）、体的 400 `bad_request` | 单元的拒绝表；矩阵的 P3 行（已归档的项目、已归档的项目里已归档的工作项、已归档的工作项、别的项目的工作项）；交错 9、10、13、23 和两个删除同一条关联；访客规则的组合测试；I8、I9、I15、I17 | 审阅 |
+| 12 与结束、删除的竞争（组合） | 删除工作项与加子工作项（交错 13）、删除相关的工作项与对方的项目（交错 11）、加关联与删除对方的项目（交错 23）、加关联与删除工作区（P1a 的交接）、两个删除同一条关联、两个移动（交错 9）、相反的两个关联（交错 10），都两种顺序 | 都答对；T1.1、T3.1、T5.1、T7.9、T8.8、T8.10、T8.11、T10.7、T10.11、T13.9 在这些交错里被发现 | 组合 |
+| 13 锁强度在组合一层看得到 | 取锁形状的测试的 `waits`、`mode`（P3 的三行，清扫 9）；跨项目的锁一次取齐、持到提交（交错 10、23） | P3 没有改一个项目的取锁一步；跨项目的写只锁自己的项目（T10.7）、经连接池锁、锁随语句放开（T7.9）在交错 23、10 被发现 | 组合 |
+| 14 每个"由谁"可以失败 | 删除子树、关联行的语句由 bob 写在 alice 写过的行上（存储）；`SetParents`、`MarkChanged`、`InsertRelations`、`DeleteRelation` 由 bob（存储）；按目录的删除由 alice 删 bob 写的行（`noRowLastWrittenBy`）；交错 11 和两个删除同一条关联读出先删的那一个；两端由加关联、删除关联的人最后修改 | T9.14 只在存储一层（A.3）；T10.14、T13.13 在组合一层和 I9 | 存储；组合；端到端 |
+| 15 标题的每个说法都有展示 | I8、I9、I17 的标题逐句，I15 加的句子；组合测试的说明逐句 | 每个说法一步 | 审阅 |
+| 16 单元假对象的回答顺序 | 假的 `GetIssues` 按 `id` 回答（与存储相同），用例自己按 `id` 排要动的；假的 `LockMany` 回答 map，不靠次序；假的 `SubIssues`、`Relations` 照给的回答，次序由存储钉住 | 次序在存储一层（T12.10 只在存储一层，A.3）和组合一层（回答按 `id` 的次序） | 审阅；存储；组合 |
+| 17 判定之前的代价有界 | 每个写的预检先读、判定工作项本身；加关联的体先限 1–20 个（`CheckNewRelations`，在任何读之前），判定工作项之后读每个对方、各判定一次；删除关联读关联和两端，至多两次判定；列子工作项、关联先判定工作项，之后才读 | 有界 | 审阅 |
+| 18 契约描述只说代码做的 | 五个新操作的描述；三个删除的描述加上关联（A.2）；`x-problem-codes`（T6.3、T11.4、T14.2） | 码由 `apitest.Main` 两个方向核对，组合的测试按契约核对每个回答：T6.3、T11.4、T14.2 在单元、组合两层；体的形状（T6.4、T11.5）只在单元一层（按性质，A.3） | 单元；组合 |
+| 19 每个新的存储方法有失败测试 | `Subtree`、删除的语句（含关联行，取消的 `context`）、`Ancestry`、`SubIssueCounts`、`SubIssues`、`GetIssues`、`SetParents`、`Related`、`InsertRelations`、`MarkChanged`、`Relations`、`GetRelation`、`DeleteRelation`；删除项目的关联行一批（`delete_rows_test.go`）；`project` 的 `LockIssueProjects`、`ArchivedIssueProjects`（`failures_test.go`） | 都有 | 存储 |
+| 20 相关谓词的集合形式、"别的"算进自己 | 删除的语句一次按 `issue_ids` 写子树的行；`GetIssues`、`SetParents`、`MarkChanged`、`InsertRelations`、`LockIssueProjects`、`ArchivedIssueProjects` 一次读、写一组 | 存储测试的别的工作项、别的项目（`TestArchivedIssueProjects` 的没问的已归档的项目，T12.14） | 存储 |
+| 21 拒绝和失败钉住第一个 `*shared.Error` | 单元的拒绝表用 `errors.Is` 比较码；隐藏的 404 用 `reflect.DeepEqual`（A.2）；HTTP 的拒绝表按码；矩阵按格子的码 | 审阅 | 审阅 |
+| 22 端口的回答对得上所问 | 原来的父工作项读不到是错误（T3.13）；读回少了一个是错误（T5.17、T10.19）；`LockMany` 不回答已删除的项目，对方的项目不在锁住的里面时不到达（`reachUnder`）；`ArchivedIssueProjects` 只回答所问的（T12.14） | T3.13、T5.17、T10.19 只在单元一层（A.3）；T12.14 在存储和组合一层 | 单元；存储；组合 |
+| 23 组合的夹具跨第二个工作区、第二个项目 | 关联跨 Web、Ops 和别的工作区 beta 的工作项（`TestWhatAWorkItemMayNotBeRelatedTo`）；父子和子工作项的 Ops 的工作项；矩阵的各项目；按目录的删除的另一个工作项和别的项目的关联行 | T10.5（别的工作区）在组合一层，对看得到它的 alice 也被拒绝（A.2）；T8.8 在删除项目的组合测试（A.2） | 组合 |
+| 24 每条规则的每一半在组合一层有反例 | 父工作项的规则（同一个项目、看得到、没归档、不是它自己、不在它下面）；子工作项的规则；关联的规则（同一个工作区、看得到、没归档、项目没归档、还没有关联、不是它自己）；列表的过滤（已归档的、别的已归档的项目的、访客规则、看不到的项目）；删除关联的两端任一个；计数的三条（未删除、未归档、自己的） | 都在组合一层或矩阵；加了数据的几处（A.2）：别的工作区的对看得到它的 alice（T10.5）、bob 是成员的已归档的项目（T10.9）、两层之上的 Root（T3.2）、祖先链上已归档的 Mid（T3.4）、个数和重复（T5.2、T5.3、T9.5、T9.6） | 单元；组合；端到端 |
+| 25 判定和执行在同一把锁下 | 每个写在锁下再判定（`held.grant`，T2.4、T4.10）；跨项目的写在锁下重读、再判定每个对方（`reachUnder`）；两端任一个的写在锁下重读两端（T13.8）；时刻在锁下、在子树之后读（T1.6） | T2.4、T4.10、T13.8 在组合一层；T1.6 只在单元一层（A.3） | 单元；组合 |
+| 26 "不变"用不会碰巧得出的值 | 存储测试的行一小时前由 alice 写，被测的写在一秒之后、由 bob（`later`）；`SetParents` 的时刻（T5.12）；关联的 `created_at` 是建的时刻（T11.3，A.2） | 逐列比较 | 存储；组合 |
+| 27 故事里的"不动"在动作之前读、之后核对 | I15 的三个 409（加子工作项、加关联、删除关联）各在前后核对；I8 的已归档的工作项不收子工作项、不作父工作项；I9 的已有的一对、看不到的项目的工作项 | 都有 | 审阅 |
+| 28 只在端到端被发现的性质另有 Go 的测试 | 变异表里只在端到端失败的 | 没有：端到端发现的 39 个变异每个另在 Go 的一层被发现（`e2ealso.py`） | 审阅 |
+| 29 每个能等锁的等待都有期限 | P3 的写都经 `Locks.run`：闸门的一个 `max_wait` 管全部的键（T7.1）、事务里每次等锁的 `issue.write_lock_timeout`；测试一侧：交错的 context、`pgtest.RowWaits` 和探测的期限 | 没有不设期限的等待 | 审阅 |
+| 30 每个输出、问题的细节和补救对每个收到它的调用者都成立 | `parent_id`、`sub_issue_ids[i]`、`issue_ids[i]` 的 `not_allowed` 各一句固定的文字，说可以要什么，不说哪一条规则拒绝了它（看不到的与不存在的同一个答复）；`duplicate`（已有关联）只给看得到对方的人；`issue.archived`（先恢复）给能改它的人；`issue.relation_not_found` 写明"或者它的两个工作项你都看不到" | 成立 | 审阅 |
+| 31 检查和执行之间的 gate 在检查的事务之外 | 交错照用 P1b 的 `inBothOrders`、`serializeOn`，扩展为 `inBothOrdersAt`、`serializeAt`、`serializeOnTable`（第二个写等的是给的表的一行） | 扩展，不另写 | 组合 |
+| 32 每个探针有反例 | 新的 `pgtest.RowWaits`（别的事务持着、与之冲突的行）有它自己的测试（`TestRowWaitsSeesALockThatConflicts`）；`pgtest.WaitForLockWaitBehind` 照旧 | T8.14 在它的测试和用它的存储测试被发现 | 存储 |
+| 33 goroutine 上不调用 `t.Fatal` | 交错的写只发请求、送回回答；写闸门的组合测试的后台请求（`sendInBackground`、`receiveWithin`） | 照 P1b | 审阅 |
+| 34 "没有替身"、"完成"的说法全包 grep | `issueWrites` 与契约中工作项一侧的写一一对应（加子工作项、加关联、删除关联各一行）；矩阵覆盖每个操作（`TestThePermissionMatrixCoversEveryOperation`）；`apitest.Main` 两个方向；连接测试的"每个写"（A.2） | 都核对 | 单元；组合 |
+| 35 "由 X 写"的种子是规则允许的 | 矩阵的关联种子经存储写下，每条的两端都是建它的账户看得到的；Gone 的关联在它的工作区删除之前建；按目录的删除的关联是 from 的项目的一行、`relates_to`，子工作项在同一个项目里 | 规则到得了的状态 | 审阅 |
+| 36 别的操作或两步到达同样的结果 | 再从没有父工作项拿出（不写）；加已在它下面的子工作项（不写）；反方向、别的类型的再加都是 `duplicate`；再删同一条关联 404；删除已归档的工作项连同子树（I15、I17） | 都有 | 组合；端到端 |
+| 37 归档项目、删除的工作区、停用的调用者 | 已归档的项目 409（矩阵的 P3 行，已归档的项目里已归档的工作项也是项目的 409，A.2）；对方或对方的项目已归档（加 422，删 409）；删除的工作区的关联（矩阵的 Gone）；停用的调用者由认证在请求之前拒绝 | T5.20、T10.13、T13.12 在矩阵（A.2）；T10.9、T10.10、T13.10、T13.11 在组合一层 | 组合 |
+| 38 故事的每个拒绝之前先读 | I15 的三个 409；I8 的 422、409；I9 的 422；I17 的 403、404 | 之前一步的核对，之后再核对 | 审阅 |
+| 39 测试里的排序与排序规则无关 | 按目录的删除按 `r::text` 比较；`storedRelations` 在 Go 里排（字节序）；动态的行按 `id` | 与排序规则无关 | 审阅 |
+| 40 每个交错的结果写明每个结束由谁 | 交错 11：每条关联由先删的那一个在它的时刻删除；交错 13：两个工作项和它们的七行由 alice；交错 23：那条关联和 Far 的那行由 alice，Near 的那行留着；两个删除同一条关联：第一个的删除者；交错 9、10：只有第一个写了 | 结果读出写者 | 审阅 |
+| 41 每个写多行的语句与同一些行的其他写者 | 子树的删除语句、`SetParents`、`MarkChanged`（两端，可在两个项目）、`InsertRelations`、关联行的删除（第 3 节第 3、4 条） | 工作项一侧的行都在它的项目的 N 之下；关联行是例外，按 `id` 先锁（约定五的例外） | 审阅 |
+| 42 锁语句之后的写只写锁住的行 | 删除工作项、项目、工作区先按 `id` 锁关联行，再只写锁住的、仍未删除的；跨项目的写只写锁住的项目里的工作项（`reachUnder` 要对方的项目在锁住的里面） | 交错 11 的第二个读到已删除的、跳过 | 组合 |
+| 43 每个"由 X"可以失败 | 同清扫 14 | 同上 | 存储；组合；端到端 |
+| 44 "保留"、"还有"读状态 | 更早删除的关联保留它的删除（T8.7）；子树里已归档的照样删除（I17）；已归档的工作项照样列出它下面的、保留它的关联（加子工作项的组合测试、I15） | 都被发现 | 存储；组合；端到端 |
+| 45 没有不会失败的断言 | P3 的断言 | 原型的每个新的 Go 测试至少被一个变异弄失败（`checkkills.py`：92 个）；交错 23 原来没有，T10.7 加上它为一层（A.2） | 审阅 |
+| 46 测试一侧的等待都有期限 | 种子、读回、持有事务时的语句、后台的请求 | 都在 `pgtest.Soon`、context 或测试自己的期限上（`receiveWithin`） | 审阅 |
+| 47 连续的探测在同一张表上要指名 | 每个交错一次探测；写闸门的组合测试两段各一次，第一段的行放开之后才有第二段 | 没有连续的同表探测 | 审阅 |
+| 48 堆序或索引序的夹具有前提 | 子树、祖先链的查询没有次序（集合）；`GetIssues`、`LockIssueProjects`、关联的列表、删除的锁按 `id` 或 `created_at, id`；等锁的次序由 `pgtest.RowWaits` 直接看（T7.4、T8.6：经接口 Postgres 的扫描恰好按 `id`，A.3） | 没有依赖堆序的断言 | 审阅 |
+| 49 组合的夹具看得到过宽的写 | 按目录的删除的另一个工作项（它下面也有 Part 和关联）；删除项目时别的项目的行；父工作项的拒绝什么都不写；加子工作项的 A 不写（A.2） | T5.10、T8.7、T8.8 在组合一层 | 组合 |
+| 50 每句注释和文档对照它说的代码 | 每个 Task 末尾 | 见清扫 6、15、59 | 审阅 |
+| 51 数据分不出性质 | 每个谓词、次序、过滤的测试数据里有变异会错拿的行 | 改了几处（A.2）：`TestInsertRelations` 的拒绝原来用已存下的一对（R9）；别的工作区原来只对看不到它的 bob（R7）；已归档的项目原来 bob 不是成员（R18）；Root 原来就在 Top 上一层（R16）；删除项目的按目录测试读不到别的项目的行（R12）；I15 原来只删一端的关联（R19）；I9 的跨项目的关联原来是 `relates_to`（R21）；访客规则的组合测试原来不核对数（R24、R28、R30）；祖先链上原来没有已归档的工作项（R26） | 存储；组合；端到端 |
+| 52 复制的测试辅助 | 扩展已有的：`issueWorld`（`adminGuest`、`newWorkItemBy`）、`serializeOnTable`、`inBothOrdersAt`、`issueWrites`、矩阵的帮手、`callLog.fail`、`workItemNamed` | 复制的 `itemNamed`、`rowWaits` 去掉（R13、R14，A.2） | 审阅 |
+| 53 任务结束时为假的注释和文档 | `prophecy.py` 列出的每一行 | 见清扫 6 | 审阅 |
+| 54 文案给出没人能做的补救 | `issue.relation_not_found`、`issue.archived` 和三种 `not_allowed` 的文字 | 见清扫 30 | 审阅 |
+| 55 新的存储查询的谓词没有钉住 | P3 的每个 `WHERE` | 每个有一个存储测试的变异（清扫 1） | 存储 |
+| 56 只从后面的 Task 才被发现的变异；容器起不来不算 | "（Task n 起）"的行在那个 Task 的树上跑；构建失败、崩溃不算发现（`mut.py`），端到端的发现核对是断言失败（`e2ekills.py`） | 见变异表和各 Task 的表；原来编译不过的 13 个、sqlc 拒绝的 1 个变异改写（A.2） | 审阅 |
+| 57 数据分不出性质（brief） | 同清扫 51 | 同上 | 存储；组合；端到端 |
+| 58 复制的测试帮手（brief：扩展，不重写） | 同清扫 52 | 同上 | 审阅 |
+| 59 比代码宽的句子（brief） | 每句说明、描述、标题 | 见清扫 6（A.2） | 审阅 |
+| 60 计时按条件（brief） | 交错按探测到的等锁、请求的回答；写闸门的组合测试按探测到的等锁，再断言拒绝在 1 秒之内（锁超时 3 秒）；没有固定的睡眠 | 没有按固定时间的等待 | 审阅 |
+| 61 隐藏的工作项逐值比较（brief） | 看不到的工作项作为目标、对方、父工作项时的拒绝与不存在的比较：组合的 `TestTheGuestRuleHoldsForSubItems`、`TestTheGuestRuleHoldsForRelations`、`TestTheGuestRuleHoldsForDeletingARelation`、`TestWhoMayNotDeleteARelation` 整个回答与一个随机的不存在的 id 的相同，`TestTheGuestRuleHoldsForAParent` 的问题连同文字相同；单元的 `TestDeleteIssueRelationRefusals` 用 `reflect.DeepEqual`；三种 `not_allowed` 各一句固定的文字 | 原来只比较码，改为逐值（A.2，R1–R3）；T13.3（看不到两端时答第一个的 404）、T2.10 在组合一层 | 单元；组合 |
+| 62 "只在单元一层"的说法逐条核对（brief） | 只在一层被发现的每个变异 | 原来只在单元一层的 33 个中 14 个、只在存储一层的 18 个中 1 个加了数据之后也在组合一层（A.2 的清点）；剩下的按性质（A.3） | 审阅；组合 |
+| 63 管理员·访客过了项目的规则（brief） | walt 是 acme 的管理员、Web 的访客（`adminGuest`）：项目的规则让他过，访客规则只让他看自己的（`OwnOnly`）；父工作项、子工作项、关联、删除关联的访客规则的组合测试和计数的组合测试都用他；矩阵的"管理员·访客"一列 | T2.3、T2.4、T4.4、T4.10、T5.5、T5.14、T5.15、T5.18、T5.23、T5.24、T10.1、T10.3、T10.21、T12.7、T12.18、T13.3 在组合一层被发现 | 组合 |
+
+**变异表（按缺陷类别）**：变异的定义在 `$M4TMP/p3tools/mutants_p3.py`（186 个，按 Task 分在 `mutants_p3_a.py`（Task 1–4）、`mutants_p3_b.py`（Task 5–8）、`mutants_p3_c.py`（Task 9–11）、`mutants_p3_d.py`（Task 12–14），层在 `mutants_common.py`；中文描述在 `mutants_zh_p3.py`），结果在 `mut-results-a.json`（各自的 Task 的树）、`mut-results-b.json`（"Task n 起"）、`mut-results-c.json`（最终的树），每次运行的日志在 `mut-logs-a`、`mut-logs-b/T<n>`、`mut-logs-c`；清扫之后的修改（A.2）改过的测试，以它为一层的变异在改过的快照上重跑，结果按层并进同样的文件，表从它们写出（`classtable.py`）。186 个变异都被发现，没有等价的；跑过而没有发现的层没有。在最终的原型上（端到端一层在 Task 15 的树上），组合一层的检查发现 145 个，单元 125 个，存储 48 个，端到端 39 个，模式 4 个，守卫 1 个（一个变异可以在几层被发现）。只有一层发现的：单元 19 个、存储 17 个、模式 4 个、守卫 1 个、组合 7 个（都在 A.3），端到端没有。有"（Task n 起）"一层的 99 个：Task 3 起 3 个、Task 4 起 1 个、Task 6 起 25 个、Task 11 起 33 个、Task 14 起 27 个、Task 15 起 39 个（端到端）。端到端的 41 次发现（T1.1 在 I17 和 I15、T8.11 在删除项目和工作区的两个故事各一次）和 `error-messages.test.ts` 的 1 次由 `e2ekills.py` 核对都是断言失败。原型上 P3 新加的 92 个 Go 测试每个至少被一个变异弄失败（`checkkills.py`）。
+
+| 缺陷类别 | 变异 | 结果 | 失败的检查 | 层 |
+|---|---|---|---|---|
+| 子树的删除（3.6、3.9：同一时刻，不论多深，已归档的也在，第 3 节第 5 条） | T1.1、T1.2、T1.3、T1.4、T1.5 | 5/5 | `TestTheSubtreeOfAWorkItem`、`TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`、`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize`、I17、I15、`TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows` | 单元；存储；组合；端到端 |
+| 删除的语句写子树的每一个工作项的行 | T1.8、T1.9 | 2/2 | `TestTheStatementsOfADeletedSubtreeDeleteItsRows`、`TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`、I17 | 存储；组合；端到端 |
+| 清扫 25：时刻在锁下、在读之后读 | T1.6、T5.12 | 2/2 | `TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows`、`TestSetParents`、`TestWorkItemsArePutUnderAWorkItem` | 单元；存储；组合 |
+| 父工作项的规则和存下（3.9） | T2.1、T2.5、T2.11、T3.12 | 4/4 | `TestCreateIssueRefusesAParentItMayNotHave`、`TestUpdateIssueRefusesAParentItMayNotHave`、`TestAddSubIssuesRefusals`、`TestAWorkItemIsPutUnderAnother`、`TestCreateIssueUnderAParent`、I8、`TestCheckNewIssueAccepts`、等 2 个 | 单元；组合；端到端 |
+| 不成环（3.9，第 3 节第 6 条） | T3.1、T3.2、T3.3、T3.4、T5.1、T5.6 | 6/6 | `TestUpdateIssueRefusesAParentItMayNotHave`、`TestAWorkItemIsPutUnderAnother`、`TestTwoMovesThatWouldMakeALoopSerialize`、`TestAWorkItemsAncestry`、`TestWorkItemsArePutUnderAWorkItem`、`TestLoops`、`TestAddSubIssuesRefusals` | 单元；存储；组合 |
+| `sub_issues_count` 数的子工作项（3.9） | T4.1、T4.2 | 2/2 | `TestSubIssueCounts`、`TestEachAnswerCountsTheSubItemsTheCallerSees` | 存储；组合 |
+| 访客规则在父工作项、列表、计数、关联里（3.4，第 3 节第 9 条） | T2.3、T2.4、T4.3、T4.4、T4.10、T5.14、T5.15、T5.23、T5.24、T10.21、T12.5、T12.6、T12.7、T12.18、T13.3 | 15/15 | `TestCreateIssueRefusesAParentItMayNotHave`、`TestUpdateIssueRefusesAParentItMayNotHave`、`TestAddSubIssuesRefusals`、`TestTheGuestRuleHoldsForAParent`、`TestTheGuestRuleHoldsForSubItems`、`TestAWritesAnswerCountsTheSubItemsTheCallerSees`、`TestEachAnswerCountsTheSubItemsTheCallerSees`、等 14 个 | 单元；存储；组合 |
+| 归档的交互和拒绝的次序（3.8，第 3 节第 11 条） | T2.2、T5.13、T5.19、T5.20、T10.9、T10.10、T10.12、T10.13、T12.1、T12.2、T12.4、T13.10、T13.11、T13.12 | 14/14 | `TestCreateIssueRefusesAParentItMayNotHave`、`TestUpdateIssueRefusesAParentItMayNotHave`、`TestAddSubIssuesRefusals`、`TestAWorkItemIsPutUnderAnother`、I8、`TestSubIssues`、`TestWorkItemsArePutUnderAWorkItem`、等 10 个 | 单元；存储；组合；端到端 |
+| 加关联的到达：预检和锁下（第 3 节第 7 条） | T5.5、T10.1、T10.3、T10.5、T10.6 | 5/5 | `TestAddSubIssuesRefusals`、`TestWorkItemsArePutUnderAWorkItem`、`TestTheGuestRuleHoldsForSubItems`、`TestPermissionMatrix`、`TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`、`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`、`TestTheGuestRuleHoldsForRelations`、等 1 个 | 单元；组合 |
+| 两端任一个的判定（第 3 节第 8 条） | T13.1、T13.2、T13.7、T13.8 | 4/4 | `TestDeleteIssueRelationDeletesItOnEitherWorkItem`、`TestDeleteIssueRelationRefusals`、`TestAWriteOnEitherWorkItemTakesBothProjects`、`TestARelationIsDeletedFromEitherWorkItem`、`TestDeleteIssueRelationStopsAtAFailingPort` | 单元；组合 |
+| 清扫 9：写闸门取多个项目（第 3 节第 2 条） | T7.1、T7.2、T7.3、T7.7、T10.8、T13.23 | 6/6 | `TestACallerWaitsMaxWaitInAll`、`TestACallerWhoDoesNotGetEachKeyHoldsNone`、`TestTheWriteGateAnswersItsRefusalsAsServerBusy`、`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`、`TestACallerHoldsEachKeyHeEnters`、`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`、`TestAWriteOnEitherWorkItemTakesBothProjects` | 单元；组合 |
+| 清扫 9：多个项目的锁、锁的次序、关联行按 `id` 先锁（约定七，第 3 节第 2、4 条） | T7.4、T7.5、T7.6、T7.8、T8.6、T8.14、T10.2、T10.4、T10.7、T13.4、T13.5、T13.6 | 12/12 | `TestLockIssueProjectsLocksInIDOrder`、`TestLockIssueProjects`、`TestLockIssueProjectsLeavesOutAProjectDeletedWhileItWaited`、`TestWorkItemsAreRelatedAcrossProjects`、`TestIssueProjectsConvertsProjectsAnswers`、`TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`、`TestRowWaitsSeesALockThatConflicts`、等 22 个 | 单元；存储；组合 |
+| 删除工作项、项目、工作区连带关联行（两个方向，3.6） | T8.5、T8.7、T8.8、T8.9、T8.10、T8.11 | 6/6 | `TestTheRelationsOfADeletedSubtreeAreDeletedBothWays`、`TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`、`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`、I17、`TestTheStatementsOfADeletedSubtreeDeleteItsRows`、`TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays`、`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`、等 10 个 | 单元；存储；组合；端到端 |
+| 关联行的一步在全局表序里的位置 | T8.12 | 1/1 | `TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows` | 单元 |
+| `issue_relations` 的检查和键（4.6） | T8.1、T8.2、T8.3、T8.4 | 4/4 | `TestIssueUniqueKeys`、`TestIssueChecksRejectCounterexamples`、`TestConstraintAndIndexNames` | schema |
+| 运行时的权限 | T8.13 | 1/1 | `TestTheGrantsFileCoversEveryRelationAndFunction` | 组合 |
+| 关联的类型（`blocking` 反过来存，3.10） | T9.1、T9.2、T9.3 | 3/3 | `TestRelationTypeReversed`、`TestNewRelation`、`TestWorkItemsAreRelatedAcrossProjects`、I9 | 单元；组合；端到端 |
+| 一对工作项一条关联（`duplicate`） | T10.11 | 1/1 | `TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`、`TestWorkItemsAreRelatedAcrossProjects`、`TestOppositeRelationsOfTwoWorkItemsSerialize` | 单元；组合 |
+| 清扫 14：两端的最后修改 | T10.14、T13.13 | 2/2 | `TestCreateIssueRelationsRelatesTheWorkItemToOthers`、`TestWorkItemsAreRelatedAcrossProjects`、I9、`TestDeleteIssueRelationDeletesItOnEitherWorkItem`、`TestARelationIsDeletedFromEitherWorkItem` | 单元；组合；端到端 |
+| 等锁期间被删除的关联 | T13.9 | 1/1 | `TestDeleteIssueRelationDeletesItOnEitherWorkItem`、`TestDeleteIssueRelationRefusals`、`TestTwoDeletionsOfARelationSerialize` | 单元；组合 |
+| 动态的第 5、20–23 行（3.13，第 3 节第 12 条） | T3.5、T3.6、T3.7、T3.8、T3.14、T5.9、T9.7、T10.15、T10.16、T10.17、T13.14、T13.15、T13.16、T13.17、T13.18 | 15/15 | `TestUpdateActivity`、`TestUpdateIssueMovesTheWorkItem`、`TestAWorkItemIsPutUnderAnother`、I8、`TestCreateIssueRelationsRelatesTheWorkItemToOthers`、`TestDeleteIssueRelationDeletesItOnEitherWorkItem`、`TestAddSubIssuesPutsTheWorkItemsUnderIt`、等 7 个 | 单元；存储；组合；端到端 |
+| 什么都不改时不写 | T3.9、T5.8、T5.10 | 3/3 | `TestChangesOf`、`TestUpdateIssueRefusesAParentItMayNotHave`、`TestAWorkItemIsPutUnderAnother`、`TestAddSubIssuesPutsTheWorkItemsUnderIt`、`TestAddingSubItemsUnderItAlreadyWritesNothing`、`TestAddSubIssuesStopsAtAFailingPort`、`TestWorkItemsArePutUnderAWorkItem` | 单元；组合 |
+| 请求的检查：个数、重复、类型 | T5.2、T5.3、T9.4、T9.5、T9.6 | 5/5 | `TestCheckSubIssueIDs`、`TestWorkItemsArePutUnderAWorkItem`、`TestCheckNewRelations`、`TestWhatAWorkItemMayNotBeRelatedTo` | 单元；组合 |
+| 问题一次报出 | T2.8 | 1/1 | `TestCreateIssueRefusesAParentItMayNotHave`、`TestAWorkItemIsPutUnderAnother` | 单元；组合 |
+| 回答：读回、计数、位置、类型 | T2.10、T4.6、T4.7、T4.8、T4.9、T5.4、T5.17、T5.18、T5.22、T10.18、T10.19 | 11/11 | `TestTheGuestRuleHoldsForAParent`、`TestAWorkItemIsPutUnderAnother`、I8、`TestUpdateIssueRefusesAParentItMayNotHave`、`TestAWritesAnswerCountsTheSubItemsTheCallerSees`、`TestUpdateIssueThatChangesNothingWritesNothing`、`TestEachAnswerCountsTheSubItemsTheCallerSees`、等 17 个 | 单元；组合；端到端 |
+| 清扫 1、55：新语句的谓词和存储的守卫 | T2.6、T3.11、T4.5、T5.11、T5.16、T9.8、T9.9、T9.10、T9.11、T9.12、T9.13、T9.14、T12.8、T12.9、T12.10、T12.11、T12.12、T12.13、T12.14、T12.15、T13.19、T13.20、T13.21 | 23/23 | `TestAWorkItemsParentIsWritten`、`TestAWorkItemIsPutUnderAnother`、`TestSubIssueCounts`、`TestEachAnswerCountsTheSubItemsTheCallerSees`、`TestSetParents`、`TestGetIssues`、`TestWorkItemsArePutUnderAWorkItem`、等 11 个 | 存储；组合；端到端 |
+| 清扫 8：写的每条语句在它的事务的连接上 | T1.10、T3.15、T5.25、T7.9、T9.15、T13.24 | 6/6 | `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`、`TestOppositeRelationsOfTwoWorkItemsSerialize` | 组合 |
+| HTTP 的映射（`parent_id`、`sub_issues_count`） | T2.7、T3.10、T4.11 | 3/3 | `TestCreateIssue`、`TestAWorkItemIsPutUnderAnother`、I8、`TestUpdateIssue`、`TestArchiveAndUnarchiveIssue`、`TestGetIssueByIdentifier`、`TestGetIssue`、等 5 个 | 单元；组合；端到端 |
+| 清扫 4：接口和组合根的接线 | T6.1、T6.2、T11.1、T11.2、T11.3、T12.16、T12.17、T14.1 | 8/8 | `TestListSubIssues`、`TestAddSubIssues`、`TestWorkItemsArePutUnderAWorkItem`、`TestCreateIssueRelations`、`TestWorkItemsAreRelatedAcrossProjects`、`TestListIssueRelations`、I9、等 5 个 | 单元；组合；端到端 |
+| 清扫 18：契约声明的码和体的形状 | T6.3、T6.4、T11.4、T11.5、T14.2 | 5/5 | `TestSubIssuesRefusals`、`TestWorkItemsArePutUnderAWorkItem`、`TestAddSubIssuesHoldsTheBodyToItsStructure`、`TestIssueRelationsRefusals`、`TestWhatAWorkItemMayNotBeRelatedTo`、`TestCreateIssueRelationsHoldsTheBodyToItsStructure`、`TestDeleteIssueRelationRefusals`、等 1 个 | 单元；组合 |
+| 清扫 2、22：端口的失败照原样传出 | T1.7、T2.9、T3.13、T5.7、T5.21、T10.20、T12.3、T13.22 | 8/8 | `TestDeleteIssueStopsAtAFailingPort`、`TestAParentsFailingReadEndsTheWrite`、`TestAddSubIssuesStopsAtAFailingPort`、`TestListSubIssuesRefusals`、`TestCreateIssueRelationsStopsAtAFailingPort`、`TestListIssueRelationsRefusals`、`TestDeleteIssueRelationStopsAtAFailingPort` | 单元 |
+| 错误码的文案（约束 4） | T14.3、T14.4 | 2/2 | `error-messages.test.ts`、`check:sync` | 单元；守卫 |
