@@ -26,6 +26,12 @@ func counts(id uuid.UUID) map[uuid.UUID]app.SubIssueCount {
 	return map[uuid.UUID]app.SubIssueCount{id: {All: 3, Own: 1}, uuid.NewV7(): {All: 5, Own: 5}}
 }
 
+// adminGuest is the grant of a workspace admin who is only a guest of web,
+// which does not show its guests every work item: as an admin he passes
+// each of its rules (Grant.ProjectAdmin), and as its guest he sees only
+// his own work items (Grant.OwnOnly).
+var adminGuest = shared.Grant{ProjectRole: shared.RoleGuest, ProjectAdmin: true, OwnOnly: true}
+
 // A read of a work item, getIssue's and getIssueByIdentifier's, answers the
 // number of its sub-items the caller sees (M4 design 3.4, 3.9), counted
 // after the decision, outside any transaction, by its grant: every one,
@@ -98,7 +104,6 @@ func TestAnAnswerNamesTheParentTheCallerSees(t *testing.T) {
 	_, w, id := newUpdate()
 	w.issues.issue.By, w.issues.issue.ParentID = alice, &parent
 	w.issues.others = map[uuid.UUID]domain.Issue{parent: {ID: parent, WorkspaceID: acme, ProjectID: web, CreatedByID: &carol}}
-	adminGuest := shared.Grant{ProjectRole: shared.RoleGuest, ProjectAdmin: true, OwnOnly: true}
 	w.auth.grants = []shared.Grant{adminGuest, adminGuest}
 	got, err := updateOver(w).Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")})
 	if calls := w.log.calls[len(w.log.calls)-2:]; err != nil || got.ParentID != nil || !slices.Equal(calls, []string{counted(id), read}) {
@@ -120,7 +125,8 @@ func TestAnAnswerNamesTheParentTheCallerSees(t *testing.T) {
 // decision when the write writes nothing: alice's own work item 7 changed,
 // changed in nothing, archived, archived again, unarchived, unarchived
 // again. Every one as an admin of web, or only her own as the guest rule
-// has it for a workspace admin who is only a guest of web.
+// has it for a workspace admin who is only a guest of web (adminGuest). A
+// count that fails is each write's failure, as itself, and its last call.
 func TestAWritesAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -155,8 +161,7 @@ func TestAWritesAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 			name  string
 			grant shared.Grant
 			want  int
-		}{{"an admin", shared.Grant{ProjectRole: shared.RoleAdmin}, 3},
-			{"an admin who is a guest", shared.Grant{ProjectRole: shared.RoleGuest, ProjectAdmin: true, OwnOnly: true}, 1}} {
+		}{{"an admin", shared.Grant{ProjectRole: shared.RoleAdmin}, 3}, {"an admin who is a guest", adminGuest, 1}} {
 			t.Run(tt.name+", "+view.name, func(t *testing.T) {
 				_, w, id := newUpdate()
 				w.issues.issue.By, w.issues.counts = alice, counts(id)
@@ -178,5 +183,12 @@ func TestAWritesAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 				}
 			})
 		}
+		t.Run(tt.name+", the count failing", func(t *testing.T) {
+			_, w, id := newUpdate()
+			w.log.fail = "SubIssueCounts"
+			tt.prepare(w)
+			_, err := tt.write(w, id)
+			wantStoppedAt(t, w, err, "SubIssueCounts")
+		})
 	}
 }

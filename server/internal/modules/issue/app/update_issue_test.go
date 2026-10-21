@@ -289,16 +289,17 @@ func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 
 // A port that fails ends the update with its failure, as itself, and no
 // call after it runs, the read and the decision under the lock too once
-// the precheck's have passed: the transaction rolls back whatever was
-// written. What cannot be is an error too, before any write: a work item
-// whose state is not its project's; a label it is removed from that is not
-// its project's; an account without a display name, before the activity;
-// and a work item not there to read back after its write.
+// the precheck's have passed, and the count of its answer's sub-items,
+// the last: the transaction rolls back whatever was written. What cannot
+// be is an error too, before any write: a work item whose state is not
+// its project's; a label it is removed from that is not its project's; an
+// account without a display name, before the activity; and a work item
+// not there to read back after its write.
 func TestUpdateIssueStopsAtAFailingPort(t *testing.T) {
 	low := domain.PriorityLow
 	p := domain.IssuePatch{Name: name("Mend"), StateID: &done.ID, Priority: &low, AssigneeIDs: set(out, carol), LabelIDs: set(ui)}
 	for _, port := range []string{"GetIssue", "Authorize", "Lock", "States", "Roles", "Labels", "UpdateIssue", "RemoveAssignees",
-		"InsertAssignees", "RemoveLabels", "InsertLabels", "InsertSubscribers", "DisplayNames", "InsertActivities"} {
+		"InsertAssignees", "RemoveLabels", "InsertLabels", "InsertSubscribers", "DisplayNames", "InsertActivities", "SubIssueCounts"} {
 		t.Run(port, func(t *testing.T) {
 			uc, w, id := newUpdate()
 			w.log.fail = port

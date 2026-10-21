@@ -24,14 +24,15 @@ func subItems(t *testing.T, answer string) int {
 // Each answer of a work item shows the number of its sub-items the caller
 // sees (M4 design 3.4, 3.9), as bootstrap wires it: its undeleted,
 // unarchived direct sub-items, those he created when the guest rule hides
-// others' from him. walt, acme's admin and Web's guest (adminGuest), makes
-// His; alice puts hers, Part, under it, walt his, Mine, and alice an
-// archived one and a deleted one; Low, under Part, is not His. At each
-// step walt, then alice, reads His, by its id and by its identifier,
-// changes it, changes it in nothing, moves it into Done, archives it twice
-// and unarchives it twice, the second of a step finding it done: each
-// answer shows walt 1 sub-item, Mine, and alice, who sees them all, 2. A
-// new work item has none.
+// others' from him, whoever changed them last. walt, acme's admin and
+// Web's guest (adminGuest), makes His; alice puts hers, Part, under it,
+// walt his, Mine, which alice renames, and alice an archived one and a
+// deleted one; Low, under Part, is not His. At each step walt, then alice,
+// reads His, by its id and by its identifier, changes it, changes it in
+// nothing, moves it into Done, archives it twice and unarchives it twice,
+// the second of a step finding it done: each answer shows walt 1 sub-item,
+// Mine, his though alice changed it last, and alice, who sees them all, 2.
+// A new work item has none.
 func TestEachAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 	w := newIssueWorld(t)
 	w.adminGuest(t)
@@ -44,7 +45,8 @@ func TestEachAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 	his := created.ID
 	part := w.newWorkItemIn(t, w.web, underParent("Part", his))
 	w.newWorkItemIn(t, w.web, underParent("Low", part))
-	w.newWorkItemBy(t, "walt", w.web, underParent("Mine", his))
+	mine := w.newWorkItemBy(t, "walt", w.web, underParent("Mine", his))
+	w.send(t, "alice", http.MethodPatch, "/api/v0/issues/"+mine.String(), `{"name":"Mine, renamed"}`, http.StatusOK)
 	shelved := w.newWorkItemIn(t, w.web, `{"name":"Shelved","state_id":"`+w.done.String()+`","parent_id":"`+his.String()+`"}`)
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/archive", "", http.StatusOK)
 	gone := w.newWorkItemIn(t, w.web, underParent("Gone", his))

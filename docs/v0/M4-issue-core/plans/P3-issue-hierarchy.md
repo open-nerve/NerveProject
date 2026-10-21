@@ -3648,17 +3648,17 @@ Expected: 通过。
 
 **Interfaces:**（spec 2.6、第 3 节第 9 条；M4 设计 3.4、3.9、5.2，12 节约束 5）
 - 契约：`IssueDetail.sub_issues_count`（必有，整数）：未删除、没归档的直接子工作项中调用者看得到的个数（只看自己的访客只数他建的）。
-- `issue/domain`：`Issue.SubIssuesCount`（调用者看到的个数，读的时候填）。
+- `issue/domain`：`Issue.SubIssuesCount`（调用者按他在项目上的 `Grant` 看到的个数：存储的读留 0，建回答的时候数（`Locks.seen`）；新建的回答 0，新的工作项没有子工作项）。
 - `issue/adapter/postgres`：`queries/sub_issues.sql`（新）的 `SubIssueCounts`（给的每个有子工作项的工作项一行：全部的个数和给的账户建的个数，`issues_parent_id_idx`）；`sub_issues.go`（新）：`SubIssueCounts(ctx, actor, ids) (map[uuid.UUID]app.SubIssueCount, error)`；`queries/issues.sql` 的 `GetIssues`（给的 `id` 中未删除的，已归档的也在，与 `GetIssue` 同样的列，`id` 的次序；不加锁，或在写的事务里、项目的锁下读）、`issues.go` 的 `issueOf`（两个读共用的转换）和 `GetIssues`。
-- `issue/app`：`IssueReader.SubIssueCounts`、`IssueReader.GetIssues`、`SubIssueCount{All, Own}`；`seen.go`（新）：`grants`（按项目的 `Grant`）、`Locks.seen(ctx, actor, g, items...)`（一次数完，`OwnOnly` 的项目用 `Own`；工作项的项目在 `g` 里没有 `Grant` 是错误：每个回答都先判定）、`Locks.hideParents`（`OwnOnly` 的项目里有父工作项的那些，在数的同一处、同一个连接上一次读出它们的父工作项（`GetIssues`，去重、按 `id`），访客规则的那一个谓词 `domain.Issue.HiddenFrom` 藏起的、读不到的答成 `null`；别的 `Grant` 什么都不多读；读失败是回答的错误）、`Locks.seenOne`；`Locks.see` 多交回判定的 `Grant`。`getIssue`、`getIssueByIdentifier` 在判定之后、事务之外数和读父工作项；`updateIssue`、`archiveIssue`、`unarchiveIssue` 在锁下判定的 `Grant` 上、事务里最后数（读回之后，或什么都不写时在判定之后）；`createIssue` 回答 0（新的工作项没有子工作项，不数）。以后每个回答都经 `seen`（spec 第 3 节第 9 条：回答里 `parent_id` 指名调用者看不到的工作项时为 `null`）。
+- `issue/app`：`IssueReader.SubIssueCounts`、`IssueReader.GetIssues`、`SubIssueCount{All, Own}`；`seen.go`（新）：`grants`（按项目的 `Grant`）、`Locks.seen(ctx, actor, g, items...)`（一次数完，`OwnOnly` 的项目用 `Own`；工作项的项目在 `g` 里没有 `Grant` 是错误：每个回答都先判定）、`Locks.hideParents`（`OwnOnly` 的项目里有父工作项的那些，在数的同一处、同一个连接上一次读出它们的父工作项（`GetIssues`，去重、按 `id`），访客规则的那一个谓词 `domain.Issue.HiddenFrom` 藏起的、读不到的答成 `null`；别的 `Grant` 什么都不多读；读失败是回答的错误）、`Locks.seenOne`；`Locks.see` 多交回判定的 `Grant`。`getIssue`、`getIssueByIdentifier` 在判定之后、事务之外数和读父工作项；`updateIssue`、`archiveIssue`、`unarchiveIssue` 在锁下判定的 `Grant` 上、事务里最后数（读回之后，或什么都不写时在判定之后）；`createIssue` 回答 0（新的工作项没有子工作项，不数）。数失败是回答的错误，照原样，哪条回答的路都不吞掉它。以后每个回答都经 `seen`（spec 第 3 节第 9 条：回答里 `parent_id` 指名调用者看不到的工作项时为 `null`）。
 - 测试的帮手：`fakes_parents_test.go` 的 `fakeIssues.SubIssueCounts`（从假的工作项数）、`fakeIssues.GetIssues`（假的工作项里有的，按 `id`）；`fakes_test.go` 的 `fakeIssues.read`（`GetIssue` 和多个的读共用：它的别的工作项，或它留着的那个）；各用例的单元测试的期望的调用加上计数的一行（`counted`），读计数失败的回答。
 - HTTP：`issueDetail` 映射 `sub_issues_count`。
 
 **Tests:**
-- 单元：`TestAReadCountsTheSubItemsTheCallerSees`（读：判定之后、事务之外按 `Grant` 数：全部，或"只看自己"时只数他自己的；项目"可见全部"时全部）、`TestAWritesAnswerCountsTheSubItemsTheCallerSees`（改、什么都不改、归档、再归档、恢复、再恢复：按锁下判定的 `Grant`、在事务里最后数；管理员数全部，只是项目访客的工作区管理员只数自己的）、`TestAnAnswerNamesTheParentTheCallerSees`（只看自己的访客：别人的父工作项答 `null`，她自己的照答，读不到的答 `null`，都在计数之后、事务之外一次读；看得到每个工作项的 `Grant` 照答、不多读；只是项目访客的工作区管理员改她的工作项时在事务里、计数之后读；读父工作项失败是回答的错误）；读、写的单元测试（`TestGetIssueReadsTheWorkItem`、`TestGetIssueRefusals`、`TestGetIssueByIdentifierReadsTheWorkItem`、归档、修改、日期、父工作项、访客规则、写闸门的测试）的期望的调用照改，拒绝的表加读计数失败的一行。
-- 存储：`TestSubIssueCounts`（p 的 a、b 是 alice 的，c、d 是 bob 的、d 已归档，e 已删除；a 下的 g 不算 p 的；对 alice p 有 3 个、2 个是她的，对 bob p 有 3 个、1 个是他的；没有子工作项的、没有的工作项不回答）、`TestGetIssues`（未删除的，已归档的也在，`id` 的次序，不论给的次序；`newFamily` 造的一家，Task 5 的存储测试也用它）。
+- 单元：`TestAReadCountsTheSubItemsTheCallerSees`（读：判定之后、事务之外按 `Grant` 数：全部，或"只看自己"时只数他自己的；项目"可见全部"时全部）、`TestAWritesAnswerCountsTheSubItemsTheCallerSees`（改、什么都不改、归档、再归档、恢复、再恢复：按锁下判定的 `Grant`、在事务里最后数；管理员数全部，只是项目访客的工作区管理员（`adminGuest`）只数自己的；每个写数失败时答它的失败，照原样，是它最后的调用）、`TestAnAnswerNamesTheParentTheCallerSees`（只看自己的访客：别人的父工作项答 `null`，她自己的照答，读不到的答 `null`，都在计数之后、事务之外一次读；看得到每个工作项的 `Grant` 照答、不多读；只是项目访客的工作区管理员改她的工作项时在事务里、计数之后读；读父工作项失败是回答的错误）；读、写的单元测试（`TestGetIssueReadsTheWorkItem`、`TestGetIssueRefusals`、`TestGetIssueByIdentifierReadsTheWorkItem`、归档、修改、日期、父工作项、访客规则、写闸门的测试）的期望的调用照改；数失败照原样是回答的错误：`TestGetIssueRefusals`、`TestGetIssueByIdentifierRefusals`、`TestArchiveIssueRefusals` 各有数失败的一行，`TestUpdateIssueStopsAtAFailingPort` 的端口表有 `SubIssueCounts`。
+- 存储：`TestSubIssueCounts`（按建的人数，不论谁最后改的：p 的 a、b 是 alice 的，c、d 是 bob 的、c 最后由 alice 改、d 已归档，e 已删除；a 下的 g 不算 p 的；对 alice p 有 3 个、2 个是她的，对 bob p 有 3 个、1 个是他的；没有子工作项的、没有的工作项不回答）、`TestGetIssues`（未删除的，已归档的也在，`id` 的次序，不论给的、存的次序：`id` 最小的 a 在别的存好之后移到 q 下，它的行在表里、在 `(project_id, state_id)` 的索引里都到了最后，没有 `ORDER BY` 的读不论扫表还是读那个索引都把它答在最后；`newFamily` 造的一家，Task 5 的存储测试也用它）。
 - HTTP：`issues_test.go` 的工作项和回答的 JSON 带 `sub_issues_count`（2；新建的 0），读、改、建的测试都比较它。
-- 组合：`TestEachAnswerCountsTheSubItemsTheCallerSees`（walt 是 acme 的管理员、Web 的访客，建 His；alice 在它下面放她的 Part，walt 放他的 Mine，alice 放一个已归档的和一个已删除的，Part 下的 Low 不是 His 的；每一步 walt 和 alice 按 `id`、按编号读 His，改它、什么都不改、移到 Done、归档两次、恢复两次：每个回答 walt 是 1（Mine），alice 是 2；新建的是 0）、`TestAHiddenParentIsNotInTheAnswer`（alice 把 walt 的 His 放到她的 Up 下，walt 读 Up 是 404；walt 按 `id`、按编号读 His 和改它的名字，每个回答与 alice 此刻读到的整个相同，只是 `parent_id` 为 `null`；他自己的 Mine 下的 Below 照答 Mine；看得到每个工作项的 bob 读到 His 在 Up 下）。
+- 组合：`TestEachAnswerCountsTheSubItemsTheCallerSees`（walt 是 acme 的管理员、Web 的访客，建 His；alice 在它下面放她的 Part，walt 放他的 Mine（alice 改了它的名字：最后改它的是 alice，它仍是 walt 的），alice 放一个已归档的和一个已删除的，Part 下的 Low 不是 His 的；每一步 walt 和 alice 按 `id`、按编号读 His，改它、什么都不改、移到 Done、归档两次、恢复两次：每个回答 walt 是 1（Mine），alice 是 2；新建的是 0）、`TestAHiddenParentIsNotInTheAnswer`（alice 把 walt 的 His 放到她的 Up 下，walt 读 Up 是 404；walt 按 `id`、按编号读 His 和改它的名字，每个回答与 alice 此刻读到的整个相同，只是 `parent_id` 为 `null`；他自己的 Mine 下的 Below 照答 Mine；看得到每个工作项的 bob 读到 His 在 Up 下）。
 
 - [ ] **Step 1: 契约和查询，生成**
 
@@ -4008,13 +4008,43 @@ func (f *fakeIssues) read(id uuid.UUID) (domain.Issue, bool) {
 	return u.d.Locks.seenOne(ctx, actor.UserID, grant, i)
 ````
 
-`server/internal/modules/issue/app/get_issue_by_identifier_test.go`（修改，1 处）：
+`server/internal/modules/issue/app/get_issue_by_identifier_test.go`（修改，5 处）：
 
 ````old server/internal/modules/issue/app/get_issue_by_identifier_test.go
 		if calls := identified(7, id); !slices.Equal(b.log.calls, calls) {
 ````
 ````new server/internal/modules/issue/app/get_issue_by_identifier_test.go
 		if calls := append(identified(7, id), counted(id)+" outside tx"); !slices.Equal(b.log.calls, calls) {
+````
+````old server/internal/modules/issue/app/get_issue_by_identifier_test.go
+// role that may not read it, forbidden. A read or a decision that fails,
+// its failure as itself; a request without a caller, unauthenticated
+// before any read. Each answer is compared whole, not by its code alone.
+````
+````new server/internal/modules/issue/app/get_issue_by_identifier_test.go
+// role that may not read it, forbidden. A read, a decision or the count of
+// the answer's sub-items that fails, its failure as itself; a request
+// without a caller, unauthenticated before any read. Each answer is
+// compared whole, not by its code alone.
+````
+````old server/internal/modules/issue/app/get_issue_by_identifier_test.go
+		calls      int // of identified's
+````
+````new server/internal/modules/issue/app/get_issue_by_identifier_test.go
+		calls      int // of identified's, then the count's
+````
+````old server/internal/modules/issue/app/get_issue_by_identifier_test.go
+		{"the work item's read fails", func(b byIdentifier) { b.log.fail = "GetIssue" }, as(alice), "acme", "WEB-7", errDisk, 5},
+````
+````new server/internal/modules/issue/app/get_issue_by_identifier_test.go
+		{"the work item's read fails", func(b byIdentifier) { b.log.fail = "GetIssue" }, as(alice), "acme", "WEB-7", errDisk, 5},
+		{"the count fails", func(b byIdentifier) { b.log.fail = "SubIssueCounts" }, as(alice), "acme", "WEB-7", errDisk, 7},
+````
+````old server/internal/modules/issue/app/get_issue_by_identifier_test.go
+			calls := identified(number, id)[:tt.calls]
+````
+````new server/internal/modules/issue/app/get_issue_by_identifier_test.go
+			calls := append(identified(number, id), counted(id)+" outside tx")[:tt.calls]
 ````
 
 `server/internal/modules/issue/app/get_issue_test.go`（修改，7 处）：
@@ -4327,7 +4357,7 @@ func (l Locks) seenOne(ctx context.Context, actor uuid.UUID, grant shared.Grant,
 }
 ````
 
-`server/internal/modules/issue/app/seen_test.go`（新文件，182 行）：
+`server/internal/modules/issue/app/seen_test.go`（新文件，194 行）：
 
 ````file server/internal/modules/issue/app/seen_test.go
 package app_test
@@ -4357,6 +4387,12 @@ func counted(ids ...uuid.UUID) string {
 func counts(id uuid.UUID) map[uuid.UUID]app.SubIssueCount {
 	return map[uuid.UUID]app.SubIssueCount{id: {All: 3, Own: 1}, uuid.NewV7(): {All: 5, Own: 5}}
 }
+
+// adminGuest is the grant of a workspace admin who is only a guest of web,
+// which does not show its guests every work item: as an admin he passes
+// each of its rules (Grant.ProjectAdmin), and as its guest he sees only
+// his own work items (Grant.OwnOnly).
+var adminGuest = shared.Grant{ProjectRole: shared.RoleGuest, ProjectAdmin: true, OwnOnly: true}
 
 // A read of a work item, getIssue's and getIssueByIdentifier's, answers the
 // number of its sub-items the caller sees (M4 design 3.4, 3.9), counted
@@ -4430,7 +4466,6 @@ func TestAnAnswerNamesTheParentTheCallerSees(t *testing.T) {
 	_, w, id := newUpdate()
 	w.issues.issue.By, w.issues.issue.ParentID = alice, &parent
 	w.issues.others = map[uuid.UUID]domain.Issue{parent: {ID: parent, WorkspaceID: acme, ProjectID: web, CreatedByID: &carol}}
-	adminGuest := shared.Grant{ProjectRole: shared.RoleGuest, ProjectAdmin: true, OwnOnly: true}
 	w.auth.grants = []shared.Grant{adminGuest, adminGuest}
 	got, err := updateOver(w).Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")})
 	if calls := w.log.calls[len(w.log.calls)-2:]; err != nil || got.ParentID != nil || !slices.Equal(calls, []string{counted(id), read}) {
@@ -4452,7 +4487,8 @@ func TestAnAnswerNamesTheParentTheCallerSees(t *testing.T) {
 // decision when the write writes nothing: alice's own work item 7 changed,
 // changed in nothing, archived, archived again, unarchived, unarchived
 // again. Every one as an admin of web, or only her own as the guest rule
-// has it for a workspace admin who is only a guest of web.
+// has it for a workspace admin who is only a guest of web (adminGuest). A
+// count that fails is each write's failure, as itself, and its last call.
 func TestAWritesAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -4487,8 +4523,7 @@ func TestAWritesAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 			name  string
 			grant shared.Grant
 			want  int
-		}{{"an admin", shared.Grant{ProjectRole: shared.RoleAdmin}, 3},
-			{"an admin who is a guest", shared.Grant{ProjectRole: shared.RoleGuest, ProjectAdmin: true, OwnOnly: true}, 1}} {
+		}{{"an admin", shared.Grant{ProjectRole: shared.RoleAdmin}, 3}, {"an admin who is a guest", adminGuest, 1}} {
 			t.Run(tt.name+", "+view.name, func(t *testing.T) {
 				_, w, id := newUpdate()
 				w.issues.issue.By, w.issues.counts = alice, counts(id)
@@ -4510,6 +4545,13 @@ func TestAWritesAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 				}
 			})
 		}
+		t.Run(tt.name+", the count failing", func(t *testing.T) {
+			_, w, id := newUpdate()
+			w.log.fail = "SubIssueCounts"
+			tt.prepare(w)
+			_, err := tt.write(w, id)
+			wantStoppedAt(t, w, err, "SubIssueCounts")
+		})
 	}
 }
 ````
@@ -4541,7 +4583,7 @@ func TestAWritesAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 		updated, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, updated)
 ````
 
-`server/internal/modules/issue/app/update_issue_test.go`（修改，6 处）：
+`server/internal/modules/issue/app/update_issue_test.go`（修改，8 处）：
 
 ````old server/internal/modules/issue/app/update_issue_test.go
 	uc := app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
@@ -4611,6 +4653,27 @@ func updateOver(w *world) *app.UpdateIssue {
 ````new server/internal/modules/issue/app/update_issue_test.go
 			if calls := append(locked(id), counted(id)); !slices.Equal(w.log.calls, calls) || w.issues.changed != nil {
 ````
+````old server/internal/modules/issue/app/update_issue_test.go
+// the precheck's have passed: the transaction rolls back whatever was
+// written. What cannot be is an error too, before any write: a work item
+// whose state is not its project's; a label it is removed from that is not
+// its project's; an account without a display name, before the activity;
+// and a work item not there to read back after its write.
+````
+````new server/internal/modules/issue/app/update_issue_test.go
+// the precheck's have passed, and the count of its answer's sub-items,
+// the last: the transaction rolls back whatever was written. What cannot
+// be is an error too, before any write: a work item whose state is not
+// its project's; a label it is removed from that is not its project's; an
+// account without a display name, before the activity; and a work item
+// not there to read back after its write.
+````
+````old server/internal/modules/issue/app/update_issue_test.go
+		"InsertAssignees", "RemoveLabels", "InsertLabels", "InsertSubscribers", "DisplayNames", "InsertActivities"} {
+````
+````new server/internal/modules/issue/app/update_issue_test.go
+		"InsertAssignees", "RemoveLabels", "InsertLabels", "InsertSubscribers", "DisplayNames", "InsertActivities", "SubIssueCounts"} {
+````
 
 `server/internal/modules/issue/domain/issue.go`（修改，2 处）：
 
@@ -4629,9 +4692,10 @@ func updateOver(w *world) *app.UpdateIssue {
 ````new server/internal/modules/issue/domain/issue.go
 	UpdatedAt   time.Time
 	// The caller's view (M4 design 3.9): the number of its undeleted,
-	// unarchived direct sub-items that he sees. A read of the store leaves
-	// it 0; the use case that answers the work item counts it, by the
-	// caller's grant on its project.
+	// unarchived direct sub-items that he sees, by his grant on its
+	// project. A read of the store leaves it 0; it is counted when an
+	// answer is built (the app's Locks.seen), and a creation answers 0, a
+	// new work item having none.
 	SubIssuesCount int
 ````
 
@@ -4737,7 +4801,7 @@ func (s *Store) SubIssueCounts(ctx context.Context, actor uuid.UUID, ids []uuid.
 }
 ````
 
-`server/internal/modules/issue/adapter/postgres/sub_issues_test.go`（新文件，139 行）：
+`server/internal/modules/issue/adapter/postgres/sub_issues_test.go`（新文件，146 行）：
 
 ````file server/internal/modules/issue/adapter/postgres/sub_issues_test.go
 package postgresadapter_test
@@ -4760,11 +4824,12 @@ import (
 
 // A work item's sub-items as SubIssueCounts counts them (M4 design 3.9):
 // its undeleted, unarchived direct sub-items, all of them and those the
-// account given created. In web, p has a and b, alice's, c, bob's, d,
-// bob's, archived, and e, alice's, deleted; a has g under it, which is not
-// p's. q has r, bob's; s has none. For alice, p has 3, 2 of them hers, and
-// q 1, none hers; for bob, p has 3, 1 his, and q 1, his. s, and a work item
-// not there, have none, and no count.
+// account given created, whoever changed them last. In web, p has a and
+// b, alice's, c, bob's, changed last by alice, d, bob's, archived, and e,
+// alice's, deleted; a has g under it, which is not p's. q has r, bob's; s
+// has none. For alice, p has 3, 2 of them hers, and q 1, none hers; for
+// bob, p has 3, 1 his, and q 1, his. s, and a work item not there, have
+// none, and no count.
 func TestSubIssueCounts(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -4782,6 +4847,7 @@ func TestSubIssueCounts(t *testing.T) {
 	}
 	exec(t, pool, "UPDATE issues SET archived_at = $2 WHERE id = $1", d, now)
 	exec(t, pool, "UPDATE issues SET deleted_at = $2 WHERE id = $1", e, now)
+	exec(t, pool, "UPDATE issues SET updated_by_id = $2 WHERE id = $1", c, alice)
 
 	ctx := context.Background()
 	asked := []uuid.UUID{p, q, sub, uuid.NewV7()}
@@ -4854,12 +4920,17 @@ func read(t *testing.T, s *postgresadapter.Store, ids ...uuid.UUID) []domain.Iss
 
 // The work items GetIssues reads (M4 design 3.9): the undeleted ones among
 // the ids given, archived ones too, each as GetIssue reads it, in id
-// order, whatever the order given; none for none.
+// order, whatever the order given or stored; none for none. a, the first
+// of them by id, moves under q after the others are stored, which gives
+// its row a new place, the last of them both in the table and in the
+// index on (project_id, state_id): a read without its ORDER BY answers it
+// last whether the database scans the table or reads that index.
 func TestGetIssues(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
 	f := newFamily(t, s, pool, web, alice, bob)
+	exec(t, pool, "UPDATE issues SET parent_id = $2 WHERE id = $1", f.a, f.q)
 	ctx := context.Background()
 	for _, tt := range []struct {
 		name string
@@ -4954,7 +5025,7 @@ func TestAHiddenParentIsNotInTheAnswer(t *testing.T) {
 
 ````
 
-`server/internal/bootstrap/issue_sub_issue_count_test.go`（新文件，79 行）：
+`server/internal/bootstrap/issue_sub_issue_count_test.go`（新文件，81 行）：
 
 ````file server/internal/bootstrap/issue_sub_issue_count_test.go
 package bootstrap
@@ -4983,14 +5054,15 @@ func subItems(t *testing.T, answer string) int {
 // Each answer of a work item shows the number of its sub-items the caller
 // sees (M4 design 3.4, 3.9), as bootstrap wires it: its undeleted,
 // unarchived direct sub-items, those he created when the guest rule hides
-// others' from him. walt, acme's admin and Web's guest (adminGuest), makes
-// His; alice puts hers, Part, under it, walt his, Mine, and alice an
-// archived one and a deleted one; Low, under Part, is not His. At each
-// step walt, then alice, reads His, by its id and by its identifier,
-// changes it, changes it in nothing, moves it into Done, archives it twice
-// and unarchives it twice, the second of a step finding it done: each
-// answer shows walt 1 sub-item, Mine, and alice, who sees them all, 2. A
-// new work item has none.
+// others' from him, whoever changed them last. walt, acme's admin and
+// Web's guest (adminGuest), makes His; alice puts hers, Part, under it,
+// walt his, Mine, which alice renames, and alice an archived one and a
+// deleted one; Low, under Part, is not His. At each step walt, then alice,
+// reads His, by its id and by its identifier, changes it, changes it in
+// nothing, moves it into Done, archives it twice and unarchives it twice,
+// the second of a step finding it done: each answer shows walt 1 sub-item,
+// Mine, his though alice changed it last, and alice, who sees them all, 2.
+// A new work item has none.
 func TestEachAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 	w := newIssueWorld(t)
 	w.adminGuest(t)
@@ -5003,7 +5075,8 @@ func TestEachAnswerCountsTheSubItemsTheCallerSees(t *testing.T) {
 	his := created.ID
 	part := w.newWorkItemIn(t, w.web, underParent("Part", his))
 	w.newWorkItemIn(t, w.web, underParent("Low", part))
-	w.newWorkItemBy(t, "walt", w.web, underParent("Mine", his))
+	mine := w.newWorkItemBy(t, "walt", w.web, underParent("Mine", his))
+	w.send(t, "alice", http.MethodPatch, "/api/v0/issues/"+mine.String(), `{"name":"Mine, renamed"}`, http.StatusOK)
 	shelved := w.newWorkItemIn(t, w.web, `{"name":"Shelved","state_id":"`+w.done.String()+`","parent_id":"`+his.String()+`"}`)
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/archive", "", http.StatusOK)
 	gone := w.newWorkItemIn(t, w.web, underParent("Gone", his))
@@ -5105,6 +5178,12 @@ Expected: 通过。
 | `T4.12` | 回答给只看自己的访客他看不到的父工作项的 id | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAHiddenParentIsNotInTheAnswer`（`make test`）、`internal/bootstrap` 的 `TestARelationListShowsWhatTheCallerSees`（`make test`）（Task 12 起） | 单元；组合 |
 | `T4.13` | 看得到每个工作项的授权下也遮住别人建的父工作项 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAHiddenParentIsNotInTheAnswer`（`make test`） | 单元；组合 |
 | `T4.14` | `GetIssues` 也读已删除的工作项 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsArePutUnderAWorkItem`（`make test`）（Task 6 起） | 存储；组合 |
+| `T4.15` | 修改的回答数子工作项失败时略过：答一个空的工作项 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T4.16` | `getIssueByIdentifier` 的回答数子工作项失败时略过：答一个空的工作项 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T4.17` | `GetIssues` 照数据库读到行的次序回答，不按 `id` 的次序 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
+| `T4.18` | 最后修改子工作项的账户算作它的"自己的"，而不是建它的账户 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachAnswerCountsTheSubItemsTheCallerSees`（`make test`） | 存储；组合 |
+| `T4.19` | 什么都没改的修改的回答数子工作项失败时略过：答一个空的工作项 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T4.20` | 什么都没改的归档、恢复的回答数子工作项失败时略过：答一个空的工作项 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T2.4`（列在各自的 Task 的表里，标"（Task 4 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=4`）。
 

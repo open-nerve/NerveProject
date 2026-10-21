@@ -18,11 +18,12 @@ import (
 
 // A work item's sub-items as SubIssueCounts counts them (M4 design 3.9):
 // its undeleted, unarchived direct sub-items, all of them and those the
-// account given created. In web, p has a and b, alice's, c, bob's, d,
-// bob's, archived, and e, alice's, deleted; a has g under it, which is not
-// p's. q has r, bob's; s has none. For alice, p has 3, 2 of them hers, and
-// q 1, none hers; for bob, p has 3, 1 his, and q 1, his. s, and a work item
-// not there, have none, and no count.
+// account given created, whoever changed them last. In web, p has a and
+// b, alice's, c, bob's, changed last by alice, d, bob's, archived, and e,
+// alice's, deleted; a has g under it, which is not p's. q has r, bob's; s
+// has none. For alice, p has 3, 2 of them hers, and q 1, none hers; for
+// bob, p has 3, 1 his, and q 1, his. s, and a work item not there, have
+// none, and no count.
 func TestSubIssueCounts(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -40,6 +41,7 @@ func TestSubIssueCounts(t *testing.T) {
 	}
 	exec(t, pool, "UPDATE issues SET archived_at = $2 WHERE id = $1", d, now)
 	exec(t, pool, "UPDATE issues SET deleted_at = $2 WHERE id = $1", e, now)
+	exec(t, pool, "UPDATE issues SET updated_by_id = $2 WHERE id = $1", c, alice)
 
 	ctx := context.Background()
 	asked := []uuid.UUID{p, q, sub, uuid.NewV7()}
@@ -112,12 +114,17 @@ func read(t *testing.T, s *postgresadapter.Store, ids ...uuid.UUID) []domain.Iss
 
 // The work items GetIssues reads (M4 design 3.9): the undeleted ones among
 // the ids given, archived ones too, each as GetIssue reads it, in id
-// order, whatever the order given; none for none.
+// order, whatever the order given or stored; none for none. a, the first
+// of them by id, moves under q after the others are stored, which gives
+// its row a new place, the last of them both in the table and in the
+// index on (project_id, state_id): a read without its ORDER BY answers it
+// last whether the database scans the table or reads that index.
 func TestGetIssues(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
 	f := newFamily(t, s, pool, web, alice, bob)
+	exec(t, pool, "UPDATE issues SET parent_id = $2 WHERE id = $1", f.a, f.q)
 	ctx := context.Background()
 	for _, tt := range []struct {
 		name string
