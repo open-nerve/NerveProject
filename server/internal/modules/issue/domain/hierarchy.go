@@ -36,8 +36,7 @@ type Ref struct {
 // ParentActivity is the row of a work item put under another parent, or
 // under none (row 5 of M4 design 3.13): parent, updated, from the old
 // parent's identifier to the new one's, "" for none, their ids the old and
-// the new identifier, nil for none. An update writes it (UpdateActivity),
-// and so does an addition of sub-items for each one it moves.
+// the new identifier, nil for none. An update writes it (UpdateActivity).
 func ParentActivity(c Changed[*Ref]) Activity {
 	a := Activity{Field: ptr("parent"), Verb: VerbUpdated, OldValue: ptr(refText(c.Old)), NewValue: ptr(refText(c.New)),
 		Comment: "updated the parent work item to"}
