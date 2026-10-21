@@ -84,3 +84,15 @@ func (f *fakeIssues) SetParents(ctx context.Context, r app.ParentRows) error {
 	}
 	return nil
 }
+
+// lose loses the work items the activity rows name, so that they are not
+// there to read back (fakeIssues' lost): each of the fake's others named,
+// and the work item it keeps when it is named.
+func (f *fakeIssues) lose(rows []app.ActivityRow) {
+	for _, r := range rows {
+		delete(f.others, r.IssueID)
+		if f.issue != nil && f.issue.ID == r.IssueID {
+			f.issue = nil
+		}
+	}
+}

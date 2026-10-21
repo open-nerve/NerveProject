@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"slices"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -39,10 +40,8 @@ func parentOf(ctx context.Context, issues IssueReader, h held, actor, projectID,
 // the work item's activity writes it (row 5 of M4 design 3.13). A new
 // parent may be one (parentOf) that is neither the work item nor a work
 // item under it, the work item not in its ancestry (domain.Loops); ok is
-// false otherwise.
-// The old parent, when there is one, is read under the lock: an undeleted
-// work item of the project, since deleting a work item deletes those under
-// it (3.6), so one not there is an error.
+// false otherwise. The old parent is the work item's parent before
+// (parentsBefore).
 func parentChange(ctx context.Context, issues IssueUpdater, h held, actor uuid.UUID, to *uuid.UUID) (c domain.Changed[*domain.Ref], ok bool,
 	err error) {
 	i := h.issue
@@ -57,17 +56,47 @@ func parentChange(ctx context.Context, issues IssueUpdater, h held, actor uuid.U
 		}
 		c.New = refOf(h, parent)
 	}
-	if i.ParentID != nil {
-		old, found, err := issues.GetIssue(ctx, *i.ParentID)
-		switch {
-		case err != nil:
-			return domain.Changed[*domain.Ref]{}, false, err
-		case !found:
-			return domain.Changed[*domain.Ref]{}, false, fmt.Errorf("work item %s is under %s, which is not there", i.ID, *i.ParentID)
-		}
-		c.Old = refOf(h, old)
+	before, err := parentsBefore(ctx, issues, h, []domain.Issue{i})
+	if err != nil {
+		return domain.Changed[*domain.Ref]{}, false, err
 	}
+	c.Old = before[0]
 	return c, true, nil
+}
+
+// parentsBefore reads the parents that the work items items, of the
+// project h holds locked, are under before a write takes them from there
+// (M4 design 3.9, 3.13): under the lock, each parent once, in id order,
+// and none when no work item is under one. It answers each work item's as
+// its activity names it, by its identifier (refOf), nil for none. A parent
+// before that is not there is an error: deleting a work item deletes those
+// under it (3.6).
+func parentsBefore(ctx context.Context, issues IssueReader, h held, items []domain.Issue) ([]*domain.Ref, error) {
+	var ids []uuid.UUID
+	for _, i := range items {
+		if i.ParentID != nil && !slices.Contains(ids, *i.ParentID) {
+			ids = append(ids, *i.ParentID)
+		}
+	}
+	before := make([]*domain.Ref, len(items))
+	if len(ids) == 0 {
+		return before, nil
+	}
+	parents, err := issues.GetIssues(ctx, slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare))
+	if err != nil {
+		return nil, err
+	}
+	for n, i := range items {
+		if i.ParentID == nil {
+			continue
+		}
+		at := slices.IndexFunc(parents, func(p domain.Issue) bool { return p.ID == *i.ParentID })
+		if at < 0 {
+			return nil, fmt.Errorf("work item %s is under %s, which is not there", i.ID, *i.ParentID)
+		}
+		before[n] = refOf(h, parents[at])
+	}
+	return before, nil
 }
 
 // refOf is the work item i, of the project h holds locked, as an activity

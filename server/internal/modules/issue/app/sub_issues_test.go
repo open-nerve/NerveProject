@@ -1,7 +1,6 @@
 package app_test
 
 import (
-	"context"
 	"errors"
 	"reflect"
 	"slices"
@@ -289,21 +288,10 @@ func TestAddSubIssuesStopsAtAFailingPort(t *testing.T) {
 	}
 }
 
-// losing is a store that loses the work items whose activity it writes,
-// so that they are not there to read back.
-type losing struct{ *fakeIssues }
-
-func (l losing) InsertActivities(ctx context.Context, rows []app.ActivityRow) error {
-	for _, r := range rows {
-		delete(l.others, r.IssueID)
-	}
-	return l.fakeIssues.InsertActivities(ctx, rows)
-}
-
 // What cannot be is an error, not a refusal: a work item under one that is
 // not there, before the clock, since deleting a work item deletes those
 // under it (M4 design 3.6); a work item moved that is not there to read
-// back after its write.
+// back after its write (fakeIssues' lost).
 func TestAddSubIssuesErrsOnWhatCannotBe(t *testing.T) {
 	var se *shared.Error
 	_, w, id := newUpdate()
@@ -315,8 +303,8 @@ func TestAddSubIssuesErrsOnWhatCannotBe(t *testing.T) {
 	}
 	_, w, id = newUpdate()
 	k = withKin(w)
-	add := app.NewAddSubIssues(app.AddSubIssuesDeps{Locks: w.locks, Issues: losing{w.issues}, Clock: clockAt{at: clockNow, log: w.log}})
-	if got, err := add.Execute(as(alice), id, []uuid.UUID{k.top.ID}); err == nil || errors.As(err, &se) || len(got) != 0 {
+	w.issues.lost = true
+	if got, err := addOver(w).Execute(as(alice), id, []uuid.UUID{k.top.ID}); err == nil || errors.As(err, &se) || len(got) != 0 {
 		t.Errorf("Execute() of a work item lost after its write = %+v, %v; want an error", got, err)
 	}
 }

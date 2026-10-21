@@ -124,7 +124,7 @@ func TestUpdateIssueMovesTheWorkItem(t *testing.T) {
 	}{
 		{"from up to top", func(k kin) *uuid.UUID { return &k.up.ID }, func(k kin) *uuid.UUID { return &k.top.ID },
 			func(k kin) []string {
-				return []string{line("GetIssue", k.top.ID), line("Ancestry", k.top.ID), line("GetIssue", k.up.ID)}
+				return []string{line("GetIssue", k.top.ID), line("Ancestry", k.top.ID), line("GetIssues", []uuid.UUID{k.up.ID})}
 			},
 			func(k kin) domain.Changed[*domain.Ref] {
 				return domain.Changed[*domain.Ref]{Old: ref(k.up, "WEB-3"), New: ref(k.top, "WEB-12")}
@@ -133,7 +133,7 @@ func TestUpdateIssueMovesTheWorkItem(t *testing.T) {
 			func(k kin) []string { return []string{line("GetIssue", k.top.ID), line("Ancestry", k.top.ID)} },
 			func(k kin) domain.Changed[*domain.Ref] { return domain.Changed[*domain.Ref]{New: ref(k.top, "WEB-12")} }},
 		{"from up to none", func(k kin) *uuid.UUID { return &k.up.ID }, func(kin) *uuid.UUID { return nil },
-			func(k kin) []string { return []string{line("GetIssue", k.up.ID)} },
+			func(k kin) []string { return []string{line("GetIssues", []uuid.UUID{k.up.ID})} },
 			func(k kin) domain.Changed[*domain.Ref] { return domain.Changed[*domain.Ref]{Old: ref(k.up, "WEB-3")} }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -235,7 +235,7 @@ func TestAParentsFailingReadEndsTheWrite(t *testing.T) {
 			k := withKin(w)
 			w.issues.issue.ParentID = &k.up.ID
 			w.log.fail = map[string]string{"new": line("GetIssue", k.top.ID), "ancestry": line("Ancestry", k.top.ID),
-				"old": line("GetIssue", k.up.ID)}[at]
+				"old": line("GetIssues", []uuid.UUID{k.up.ID})}[at]
 			_, err := uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true, ParentID: &k.top.ID})
 			wantStoppedOn(t, w, err, w.log.fail)
 		})

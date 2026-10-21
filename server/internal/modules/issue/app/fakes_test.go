@@ -213,7 +213,7 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // call logged, and answers the work item from it, its assignees and labels
 // in id order; the subscribers it checks and logs, and keeps none. greatest
 // is the greatest sort order of each state; lost, when set, loses the work
-// item once its activity is written, so that it is not there to read back.
+// items an activity names once it is written, not there to read back (lose).
 // changed is the last update's fields, nil before any: the work item's
 // last writer and moment; archival, when set, is the last archiving's or
 // unarchiving's, and its last writer and moment instead; archivedAt the
@@ -355,7 +355,7 @@ func (f *fakeIssues) InsertActivities(ctx context.Context, rows []app.ActivityRo
 	}
 	f.activities = rows
 	if f.lost {
-		f.issue = nil
+		f.lose(rows)
 	}
 	return nil
 }

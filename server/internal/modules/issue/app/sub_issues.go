@@ -150,10 +150,7 @@ type move struct {
 // undeleted work item in his reach (inReach) that is neither the work item
 // nor one above it, in its ancestry (domain.Loops). Every problem is
 // reported at once, in one 422, each at its place in ids. It answers those
-// not under the work item yet, in id order: the ones it moves, each with
-// its parent before, read under the lock too, by its identifier. A parent
-// before that is not there is an error: deleting a work item deletes those
-// under it (3.6).
+// not under the work item yet, in id order: the ones it moves (moves).
 func (u *AddSubIssues) check(ctx context.Context, h held, actor uuid.UUID, ids []uuid.UUID) ([]move, error) {
 	found, err := u.d.Issues.GetIssues(ctx, slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare))
 	if err != nil {
@@ -183,33 +180,16 @@ func (u *AddSubIssues) check(ctx context.Context, h held, actor uuid.UUID, ids [
 }
 
 // moves are the work items moving under the work item h holds, each with
-// its parent's change: from its parent before, read under the lock, to the
-// work item, each by its identifier (refOf).
+// its parent's change: from its parent before (parentsBefore) to the work
+// item, by its identifier (refOf).
 func (u *AddSubIssues) moves(ctx context.Context, h held, moving []domain.Issue) ([]move, error) {
-	var before []uuid.UUID
-	for _, i := range moving {
-		if i.ParentID != nil && !slices.Contains(before, *i.ParentID) {
-			before = append(before, *i.ParentID)
-		}
-	}
-	var parents []domain.Issue
-	if len(before) > 0 {
-		var err error
-		if parents, err = u.d.Issues.GetIssues(ctx, slices.SortedFunc(slices.Values(before), uuid.UUID.Compare)); err != nil {
-			return nil, err
-		}
+	before, err := parentsBefore(ctx, u.d.Issues, h, moving)
+	if err != nil {
+		return nil, err
 	}
 	out := make([]move, len(moving))
 	for n, i := range moving {
-		out[n] = move{item: i, parent: domain.Changed[*domain.Ref]{New: refOf(h, h.issue)}}
-		if i.ParentID == nil {
-			continue
-		}
-		at := slices.IndexFunc(parents, func(p domain.Issue) bool { return p.ID == *i.ParentID })
-		if at < 0 {
-			return nil, fmt.Errorf("work item %s is under %s, which is not there", i.ID, *i.ParentID)
-		}
-		out[n].parent.Old = refOf(h, parents[at])
+		out[n] = move{item: i, parent: domain.Changed[*domain.Ref]{Old: before[n], New: refOf(h, h.issue)}}
 	}
 	return out, nil
 }
