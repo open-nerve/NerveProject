@@ -175,11 +175,11 @@ func (q *Queries) InsertAssignees(ctx context.Context, arg InsertAssigneesParams
 }
 
 const insertIssue = `-- name: InsertIssue :exec
-INSERT INTO issues (id, workspace_id, project_id, state_id, name, priority, start_date, target_date, sequence_id, sort_order,
-                    completed_at, created_by_id, updated_by_id, created_at, updated_at)
+INSERT INTO issues (id, workspace_id, project_id, state_id, name, priority, start_date, target_date, parent_id, sequence_id,
+                    sort_order, completed_at, created_by_id, updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11,
-        $12::uuid, $12, $13::timestamptz, $13)
+        $12, $13::uuid, $13, $14::timestamptz, $14)
 `
 
 type InsertIssueParams struct {
@@ -191,6 +191,7 @@ type InsertIssueParams struct {
 	Priority    string
 	StartDate   *time.Time
 	TargetDate  *time.Time
+	ParentID    *uuid.UUID
 	SequenceID  int32
 	SortOrder   float64
 	CompletedAt *time.Time
@@ -210,6 +211,7 @@ func (q *Queries) InsertIssue(ctx context.Context, arg InsertIssueParams) error 
 		arg.Priority,
 		arg.StartDate,
 		arg.TargetDate,
+		arg.ParentID,
 		arg.SequenceID,
 		arg.SortOrder,
 		arg.CompletedAt,

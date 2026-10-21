@@ -58,6 +58,9 @@ type IssueCreate struct {
 	// Name 1–255 characters without the white space around it, which is not stored.
 	Name string `json:"name"`
 
+	// ParentID The work item it is under: one of the project's that is not archived; left out for none.
+	ParentID *uuid.UUID `json:"parent_id,omitempty"`
+
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
 

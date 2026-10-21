@@ -10,11 +10,11 @@ import (
 )
 
 // CreateIssue serves POST /api/v0/projects/{project_id}/issues: the state,
-// the priority and the dates nil and the lists empty when not given; a
-// value given goes to the use case as it came, which checks it.
+// the priority, the dates and the parent nil and the lists empty when not
+// given; a value given goes to the use case as it came, which checks it.
 func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObject) (gen.CreateIssueResponseObject, error) {
 	in := domain.NewIssue{Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
-		StartDate: req.Body.StartDate, TargetDate: req.Body.TargetDate}
+		StartDate: req.Body.StartDate, TargetDate: req.Body.TargetDate, ParentID: req.Body.ParentID}
 	if req.Body.AssigneeIds != nil {
 		in.AssigneeIDs = *req.Body.AssigneeIds
 	}

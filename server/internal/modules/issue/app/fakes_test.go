@@ -21,8 +21,9 @@ type inTxKey struct{}
 
 // callLog records the calls of the fakes that share or embed it, in order,
 // each with its arguments, and " outside tx" when it ran outside a
-// transaction. It fails the call named in fail with errDisk, after logging
-// it. inTx is set while a fakeTx's transaction runs.
+// transaction. It fails the call named in fail, or the one fail writes
+// with its arguments as line does, with errDisk, after logging it. inTx is
+// set while a fakeTx's transaction runs.
 type callLog struct {
 	calls []string
 	fail  string
@@ -31,11 +32,12 @@ type callLog struct {
 
 func (l *callLog) add(ctx context.Context, name string, args ...any) error {
 	call := line(name, args...)
+	failed := name == l.fail || call == l.fail
 	if ctx.Value(inTxKey{}) != true {
 		call += " outside tx"
 	}
 	l.calls = append(l.calls, call)
-	if name == l.fail {
+	if failed {
 		return errDisk
 	}
 	return nil
@@ -217,7 +219,8 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // unarchiving's, and its last writer and moment instead; archivedAt the
 // work item's archived_at, nil for none. subtree is the work item's
 // subtree, nil for the work item alone, and deletions are the deletion's
-// calls' arguments, one a table, in order (fakes_deletion_test.go).
+// calls' arguments, one a table, in order (fakes_deletion_test.go). others
+// are the store's other work items, answered as they are.
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
@@ -230,6 +233,7 @@ type fakeIssues struct {
 	activities []app.ActivityRow
 	subtree    []uuid.UUID
 	deletions  []app.IssueDeletion
+	others     map[uuid.UUID]domain.Issue
 	lost       bool
 }
 
@@ -350,13 +354,19 @@ func (f *fakeIssues) InsertActivities(ctx context.Context, rows []app.ActivityRo
 }
 
 func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool, error) {
-	if err := f.log.add(ctx, "GetIssue", id); err != nil || f.issue == nil || f.issue.ID != id {
+	if err := f.log.add(ctx, "GetIssue", id); err != nil {
 		return domain.Issue{}, false, err
+	}
+	if o, ok := f.others[id]; ok {
+		return o, true, nil
+	}
+	if f.issue == nil || f.issue.ID != id {
+		return domain.Issue{}, false, nil
 	}
 	r := f.issue
 	by, at := f.writer()
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
-		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, SortOrder: r.SortOrder,
+		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, ParentID: r.ParentID, SortOrder: r.SortOrder,
 		CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
 			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil

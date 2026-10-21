@@ -51,11 +51,15 @@ type write struct {
 	notFound error
 }
 
-// held is what a write holds under its lock: its project, locked, and the
-// work item it names, read under the lock; zero for a write on a project.
+// held is what a write holds under its lock: its project, locked; the
+// work item it names, read under the lock, zero for a write on a project;
+// and the caller's grant on the project, as decided under the lock, whose
+// OwnOnly says whether the guest rule hides others' work items from him
+// (M4 design 3.4).
 type held struct {
 	project LockedProject
 	issue   domain.Issue
+	grant   shared.Grant
 }
 
 // run takes w's precheck, before any lock and outside any transaction;
@@ -108,17 +112,19 @@ func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write
 	case !found:
 		return write{}, w.notFound
 	}
-	return w, l.decide(ctx, actor, w.action, workspaceID, w.project, nil, w.notFound)
+	_, err = l.decide(ctx, actor, w.action, workspaceID, w.project, nil, w.notFound)
+	return w, err
 }
 
 // lockAndDecide takes w's lock and decides w's action under it, in the
 // transaction ctx carries: the project's row FOR NO KEY UPDATE; the work
 // item w names read again; then the decision on the locked project, and on
-// the work item as read again. It answers what they hold. A project
-// deleted while the lock waited is w.notFound, and so is a work item
-// deleted meanwhile, or no longer in the project, a project no longer
-// visible to actor, and a work item the guest rule now hides from him; a
-// role the rule no longer allows is the Authorizer's shared.Forbidden.
+// the work item as read again. It answers what they hold, the decision's
+// grant too. A project deleted while the lock waited is w.notFound, and so
+// is a work item deleted meanwhile, or no longer in the project, a project
+// no longer visible to actor, and a work item the guest rule now hides from
+// him; a role the rule no longer allows is the Authorizer's
+// shared.Forbidden.
 func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (held, error) {
 	p, found, err := l.projects.Lock(ctx, w.project)
 	switch {
@@ -139,7 +145,7 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (
 		}
 		h.issue, on = i, &i
 	}
-	if err := l.decide(ctx, actor, w.action, p.WorkspaceID, w.project, on, w.notFound); err != nil {
+	if h.grant, err = l.decide(ctx, actor, w.action, p.WorkspaceID, w.project, on, w.notFound); err != nil {
 		return held{}, err
 	}
 	return h, nil
@@ -158,7 +164,7 @@ func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action
 	case !found:
 		return domain.Issue{}, domain.ErrIssueNotFound
 	}
-	if err := l.decide(ctx, actor, action, i.WorkspaceID, i.ProjectID, &i, domain.ErrIssueNotFound); err != nil {
+	if _, err := l.decide(ctx, actor, action, i.WorkspaceID, i.ProjectID, &i, domain.ErrIssueNotFound); err != nil {
 		return domain.Issue{}, err
 	}
 	return i, nil
@@ -169,7 +175,8 @@ func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action
 // active member, or deleted, is workspace.not_found; a role the rule does
 // not allow is the Authorizer's shared.Forbidden.
 func (l Locks) seeWorkspace(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID uuid.UUID) error {
-	return l.decide(ctx, actor, action, workspaceID, uuid.UUID{}, nil, domain.ErrWorkspaceNotFound)
+	_, err := l.decide(ctx, actor, action, workspaceID, uuid.UUID{}, nil, domain.ErrWorkspaceNotFound)
+	return err
 }
 
 // decide asks the Authorizer for action on the project projectID of the
@@ -182,9 +189,10 @@ func (l Locks) seeWorkspace(ctx context.Context, actor shared.Actor, action shar
 // (Grant.OwnOnly), a workspace admin among them, does not see one another
 // created, before what the rule says of his role, so another's work item
 // is as unknown to him as one that is not there (8.4). i is nil for an
-// action on the project or in the workspace.
+// action on the project or in the workspace. It answers the Authorizer's
+// grant, which a write keeps (held).
 func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Action, workspaceID, projectID uuid.UUID, i *domain.Issue,
-	notFound error) error {
+	notFound error) (shared.Grant, error) {
 	target := shared.Target{WorkspaceID: workspaceID, ProjectID: projectID}
 	if i != nil && i.CreatedByID != nil {
 		target.CreatorID = *i.CreatedByID
@@ -192,9 +200,9 @@ func (l Locks) decide(ctx context.Context, actor shared.Actor, action shared.Act
 	grant, err := l.auth.Authorize(ctx, actor, action, target)
 	switch {
 	case errors.Is(err, shared.ErrNotVisible):
-		return notFound
+		return shared.Grant{}, notFound
 	case i != nil && i.HiddenFrom(actor.UserID, grant.OwnOnly):
-		return notFound
+		return shared.Grant{}, notFound
 	}
-	return err
+	return grant, err
 }

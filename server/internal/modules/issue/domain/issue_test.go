@@ -21,11 +21,12 @@ func ids(n int) []uuid.UUID {
 }
 
 // A name of one character and of 255, each priority, none given, a hundred
-// assignees and labels, the dates in order, on the same day, or one alone:
-// accepted, and returned as stored: the name without its surrounding white
-// space, the priority none when none is given, the dates as given.
+// assignees and labels, the dates in order, on the same day, or one alone,
+// a parent: accepted, and returned as stored: the name without its
+// surrounding white space, the priority none when none is given, the dates
+// and the parent as given.
 func TestCheckNewIssueAccepts(t *testing.T) {
-	state := uuid.NewV7()
+	state, parent := uuid.NewV7(), uuid.NewV7()
 	tests := []struct {
 		name string
 		in   NewIssue
@@ -35,8 +36,9 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 		{"255 characters", NewIssue{Name: strings.Repeat("é", 255), Priority: ptr(PriorityLow)},
 			NewIssue{Name: strings.Repeat("é", 255), Priority: ptr(PriorityLow)}},
 		{"everything", NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent), AssigneeIDs: ids(100), LabelIDs: ids(100),
-			StartDate: october(12), TargetDate: october(19)},
-			NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent), StartDate: october(12), TargetDate: october(19)}},
+			StartDate: october(12), TargetDate: october(19), ParentID: &parent},
+			NewIssue{Name: "Fix", StateID: &state, Priority: ptr(PriorityUrgent), StartDate: october(12), TargetDate: october(19),
+				ParentID: &parent}},
 		{"the same day", NewIssue{Name: "a", StartDate: october(19), TargetDate: october(19)},
 			NewIssue{Name: "a", Priority: ptr(PriorityNone), StartDate: october(19), TargetDate: october(19)}},
 		{"a start date alone", NewIssue{Name: "a", StartDate: october(30)}, NewIssue{Name: "a", Priority: ptr(PriorityNone), StartDate: october(30)}},

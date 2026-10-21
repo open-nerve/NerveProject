@@ -20,6 +20,7 @@ type IssueRow struct {
 	Priority    domain.Priority
 	StartDate   *shared.Date
 	TargetDate  *shared.Date
+	ParentID    *uuid.UUID
 	SortOrder   float64
 	CompletedAt *time.Time
 	By          uuid.UUID

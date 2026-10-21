@@ -88,7 +88,8 @@ func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
 // NewIssue is what the caller asks for when creating a work item (M4
 // design 5.2, IssueCreate without the fields of later phases): StateID nil
 // for the project's default state, Priority nil for none, a date nil for
-// none. A field given is checked as given, a priority given empty too.
+// none, ParentID nil for no parent. A field given is checked as given, a
+// priority given empty too.
 type NewIssue struct {
 	Name        string
 	StateID     *uuid.UUID
@@ -97,6 +98,7 @@ type NewIssue struct {
 	LabelIDs    []uuid.UUID
 	StartDate   *shared.Date
 	TargetDate  *shared.Date
+	ParentID    *uuid.UUID
 }
 
 // maxName is the length of issues.name, varchar(255), in characters.
@@ -124,8 +126,8 @@ const (
 // MaxLabels labels, each named once; the start date not after the target
 // date, as the request gives both (at target_date). Every problem is
 // reported at once, in one 422 validation_failed; whether the state, each
-// assignee and each label may be is the use case's, under the project's
-// lock.
+// assignee, each label and the parent may be is the use case's, under the
+// project's lock.
 func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	n.Name = strings.TrimSpace(n.Name)
 	if n.Priority == nil {

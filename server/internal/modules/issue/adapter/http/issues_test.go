@@ -51,10 +51,10 @@ var (
 )
 
 // POST goes to the use case for the caller and the path's project, with
-// the body's fields: the state, the priority and the dates nil and the
-// lists empty when not given; the answer is 201 with the work item the use
-// case answers, every field of it, null for each it has none of, [] for a
-// list without ids.
+// the body's fields: the state, the priority, the dates and the parent nil
+// and the lists empty when not given; the answer is 201 with the work item
+// the use case answers, every field of it, null for each it has none of,
+// [] for a list without ids.
 func TestCreateIssue(t *testing.T) {
 	path := "/api/v0/projects/" + webID.String() + "/issues"
 	high := domain.PriorityHigh
@@ -66,9 +66,9 @@ func TestCreateIssue(t *testing.T) {
 	}{
 		{`{"name":" Fix the login ","state_id":"0199a2b4-0000-7000-8000-0000000000c1","priority":"high",` +
 			`"assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"],` +
-			`"start_date":"2026-10-12","target_date":"2026-10-19"}`,
+			`"start_date":"2026-10-12","target_date":"2026-10-19","parent_id":"0199a2b4-0000-7000-8000-0000000000e6"}`,
 			domain.NewIssue{Name: " Fix the login ", StateID: &stateID, Priority: &high, AssigneeIDs: []uuid.UUID{bobID},
-				LabelIDs: []uuid.UUID{bugID}, StartDate: &startDay, TargetDate: &targetDay}, webSeven, webSevenJSON},
+				LabelIDs: []uuid.UUID{bugID}, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID}, webSeven, webSevenJSON},
 		{`{"name":"Fix"}`, domain.NewIssue{Name: "Fix"}, webEight, webEightJSON},
 		{`{"name":"Fix","assignee_ids":[],"label_ids":[]}`, domain.NewIssue{Name: "Fix", AssigneeIDs: []uuid.UUID{}, LabelIDs: []uuid.UUID{}},
 			webEight, webEightJSON},

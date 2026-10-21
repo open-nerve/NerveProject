@@ -11,11 +11,11 @@ LIMIT 1;
 -- name: InsertIssue :exec
 -- createIssue's work item (M4 design 3.5), under the project's FOR NO KEY UPDATE; created and last changed at the
 -- moment and by the account given. The fields of later phases keep their defaults.
-INSERT INTO issues (id, workspace_id, project_id, state_id, name, priority, start_date, target_date, sequence_id, sort_order,
-                    completed_at, created_by_id, updated_by_id, created_at, updated_at)
+INSERT INTO issues (id, workspace_id, project_id, state_id, name, priority, start_date, target_date, parent_id, sequence_id,
+                    sort_order, completed_at, created_by_id, updated_by_id, created_at, updated_at)
 VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(state_id), sqlc.arg(name), sqlc.arg(priority),
-        sqlc.narg(start_date), sqlc.narg(target_date), sqlc.arg(sequence_id), sqlc.arg(sort_order), sqlc.narg(completed_at),
-        sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at));
+        sqlc.narg(start_date), sqlc.narg(target_date), sqlc.narg(parent_id), sqlc.arg(sequence_id), sqlc.arg(sort_order),
+        sqlc.narg(completed_at), sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at));
 
 -- name: InsertAssignees :exec
 -- A work item's new assignees' rows, one statement: ids[i] the row of assignee_ids[i], in the order given (the

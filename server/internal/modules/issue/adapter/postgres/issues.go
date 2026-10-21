@@ -35,8 +35,8 @@ func (s *Store) GreatestSortOrder(ctx context.Context, projectID, stateID uuid.U
 func (s *Store) InsertIssue(ctx context.Context, r app.IssueRow) error {
 	err := s.queries(ctx).InsertIssue(ctx, gen.InsertIssueParams{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, StateID: r.StateID, Name: r.Name, Priority: string(r.Priority),
-		StartDate: timeOf(r.StartDate), TargetDate: timeOf(r.TargetDate), SequenceID: int32(r.SequenceID), SortOrder: r.SortOrder,
-		CompletedAt: r.CompletedAt, By: &r.By, At: r.At,
+		StartDate: timeOf(r.StartDate), TargetDate: timeOf(r.TargetDate), ParentID: r.ParentID, SequenceID: int32(r.SequenceID),
+		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, By: &r.By, At: r.At,
 	})
 	if err != nil {
 		return fmt.Errorf("insert work item %s: %w", r.ID, err)

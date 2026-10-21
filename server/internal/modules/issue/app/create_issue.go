@@ -35,11 +35,12 @@ func NewCreateIssue(d CreateIssueDeps) *CreateIssue {
 
 // checked is what createIssue's checks of the dependent rows found, under
 // the project's lock: the state, the accounts the work item is assigned
-// to and its labels, each in id order.
+// to and its labels, each in id order, and its parent, nil for none.
 type checked struct {
 	state     StateRef
 	assignees []uuid.UUID
 	labels    []uuid.UUID
+	parent    *uuid.UUID
 }
 
 // Execute checks in (domain.CheckNewIssue), before any read; then Locks
@@ -50,11 +51,12 @@ type checked struct {
 // this order: an archived project refuses it (409 project.archived); the
 // dependent rows (check), every problem in one 422; the project's next
 // number; the clock; the sort order after the greatest of the state's work
-// items; the work item; its assignees, the default one too; its labels;
-// its subscribers, the caller and the assignees, in id order; its
-// activity: the creation, then each assignee by his display name
-// (domain.CreationActivity). All of it is the caller's at that moment. The
-// answer is the work item as stored, read back in the transaction.
+// items; the work item, under its parent when it has one; its assignees,
+// the default one too; its labels; its subscribers, the caller and the
+// assignees, in id order; its activity: the creation, then each assignee
+// by his display name (domain.CreationActivity), and no row of its parent
+// (3.13). All of it is the caller's at that moment. The answer is the work
+// item as stored, read back in the transaction.
 func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domain.NewIssue) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -70,7 +72,7 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 		if project.Archived {
 			return domain.ErrProjectArchived
 		}
-		c, err := u.check(ctx, projectID, project, in)
+		c, err := u.check(ctx, h, actor.UserID, projectID, in)
 		if err != nil {
 			return err
 		}
@@ -84,7 +86,7 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 			return err
 		}
 		row := IssueRow{ID: uuid.NewV7(), WorkspaceID: project.WorkspaceID, ProjectID: projectID, SequenceID: sequence, Name: in.Name,
-			StateID: c.state.ID, Priority: *in.Priority, StartDate: in.StartDate, TargetDate: in.TargetDate,
+			StateID: c.state.ID, Priority: *in.Priority, StartDate: in.StartDate, TargetDate: in.TargetDate, ParentID: c.parent,
 			SortOrder: domain.SortOrderAfter(greatest), CompletedAt: domain.CompletedAt(c.state.Group, now), By: actor.UserID, At: now}
 		if err := u.write(ctx, row, c); err != nil {
 			return err
@@ -98,13 +100,15 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 	return created, nil
 }
 
-// check checks the dependent rows of in under the project's lock (M4
-// design 3.7): the state asked for is the project's and not its triage
-// state, or the project's default state when none is; the assignees by
-// domain.Assignees, from the roles of the accounts asked for, or of the
-// project's default assignee when none is; each label asked for is the
-// project's. Every problem is reported at once, in one 422.
-func (u *CreateIssue) check(ctx context.Context, projectID uuid.UUID, p LockedProject, in domain.NewIssue) (checked, error) {
+// check checks the dependent rows of in, by the caller actor, under h, his
+// write's lock on the project (M4 design 3.7, 3.9): the state asked for is
+// the project's and not its triage state, or the project's default state
+// when none is; the assignees by domain.Assignees, from the roles of the
+// accounts asked for, or of the project's default assignee when none is;
+// each label asked for is the project's; the parent asked for may be one
+// (parentOf). Every problem is reported at once, in one 422.
+func (u *CreateIssue) check(ctx context.Context, h held, actor, projectID uuid.UUID, in domain.NewIssue) (checked, error) {
+	p := h.project
 	var c checked
 	var problems []shared.FieldError
 	states, err := u.d.States.States(ctx, projectID)
@@ -143,6 +147,16 @@ func (u *CreateIssue) check(ctx context.Context, projectID uuid.UUID, p LockedPr
 			}
 		}
 		c.labels = slices.SortedFunc(slices.Values(in.LabelIDs), uuid.UUID.Compare)
+	}
+	if in.ParentID != nil {
+		_, ok, err := parentOf(ctx, u.d.Issues, h, actor, projectID, *in.ParentID)
+		if err != nil {
+			return checked{}, err
+		}
+		if !ok {
+			problems = append(problems, domain.ParentNotAllowed())
+		}
+		c.parent = in.ParentID
 	}
 	if len(problems) > 0 {
 		return checked{}, shared.Invalid(problems...)

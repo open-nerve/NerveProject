@@ -65,7 +65,8 @@ func linkLine(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, p project, issue, 
 // createWebIssue inserts web's work item 7 through the store, by alice at
 // now, high, in web's default state, from the 12th to the 19th of October,
 // at 75535, completed at an hour before: every column createIssue writes,
-// none at its default.
+// none at its default, but its parent, which TestAWorkItemsParentIsWritten
+// writes.
 func createWebIssue(t *testing.T, s *postgresadapter.Store, web project, id, alice uuid.UUID) app.IssueRow {
 	t.Helper()
 	done := now.Add(-time.Hour)
