@@ -126,7 +126,7 @@ func (u *AddSubIssues) Execute(ctx context.Context, id uuid.UUID, ids []uuid.UUI
 		case err != nil:
 			return err
 		case len(stored) != len(movedIDs):
-			return fmt.Errorf("work items %v are not all there after their write", movedIDs)
+			return fmt.Errorf("only %d of %d work items are there after their write", len(stored), len(movedIDs))
 		}
 		added, err = u.d.Locks.seen(ctx, actor.UserID, grants{h.issue.ProjectID: h.grant}, stored...)
 		return err

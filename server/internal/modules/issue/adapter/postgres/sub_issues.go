@@ -48,9 +48,9 @@ func (s *Store) SetParents(ctx context.Context, r app.ParentRows) error {
 	n, err := s.queries(ctx).SetParents(ctx, gen.SetParentsParams{ParentID: r.ParentID, By: r.By, At: r.At, Ids: r.IDs})
 	switch {
 	case err != nil:
-		return fmt.Errorf("put work items %v under %s: %w", r.IDs, r.ParentID, err)
+		return fmt.Errorf("put %d work items under %s: %w", len(r.IDs), r.ParentID, err)
 	case n != int64(len(r.IDs)):
-		return fmt.Errorf("put %d of work items %v under %s", n, r.IDs, r.ParentID)
+		return fmt.Errorf("put %d of %d work items under %s", n, len(r.IDs), r.ParentID)
 	}
 	return nil
 }

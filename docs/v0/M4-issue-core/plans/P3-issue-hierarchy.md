@@ -5240,9 +5240,9 @@ Expected: 通过。
 
 **Interfaces:**（spec 2.7、第 3 节第 6、9、11、12、13 条；M4 设计 3.4、3.5、3.8、3.9、3.13、5.1）
 - `issue/domain/hierarchy.go`：`Loops(id, ancestry)`（`parentChange` 和加子工作项共用）；`MaxSubIssues`（100）；`CheckSubIssueIDs(ids)`（至少一个、至多 100 个、各一次，在任何读之前，一个 422）；`SubIssueNotAllowed(i)`（`sub_issue_ids[i]` 的 `not_allowed`，一句固定的文字）。
-- `issue/adapter/postgres`：`queries/sub_issues.sql` 的 `SubIssues`（直接的、未删除、没归档的子工作项，给了账户时只要他建的，按建的次序 `created_at, id`）和 `SetParents`（`:execrows`，未删除的放到父工作项下，各自的最后修改者和时刻）；`sub_issues.go` 照写（`SetParents` 写的行数不是给的个数时是错误）。所问的工作项和父工作项用 Task 4 的 `GetIssues` 读。
+- `issue/adapter/postgres`：`queries/sub_issues.sql` 的 `SubIssues`（直接的、未删除、没归档的子工作项，给了账户时只要他建的，按建的次序 `created_at, id`）和 `SetParents`（`:execrows`，未删除的放到父工作项下，各自的最后修改者和时刻）；`sub_issues.go` 照写（`SetParents` 写的行数不是给的个数时是错误；它的两个错误只说几个工作项，不列出每个 `id`）。所问的工作项和父工作项用 Task 4 的 `GetIssues` 读。
 - `issue/app`：`ports.go` 的 `SubIssueLister`（`SubIssues`）、`SubIssueAdder`（`Ancestry`、`SetParents`、`InsertActivities`，嵌入 `IssueReader`，`GetIssues` 在它里面）；`rows.go` 的 `ParentRows{IDs, ParentID, By, At}`；`parents.go` 的 `inReach(h, actor, projectID, i)`（这个项目的、没归档、调用者看得到：父工作项和子工作项共用这一条），`parentOf` 用它，`parentChange` 用 `domain.Loops`。
-- `issue/app/sub_issues.go`（新）：`ListSubIssues`、`NewListSubIssues(locks, issues)`、`Execute(ctx, id)`：与 `getIssue` 同一个读和判定（`Locks.see`），然后读子工作项（`Grant.OwnOnly` 时只要他建的），按他的 `Grant` 数它们的子工作项（`Locks.seen`）。`AddSubIssues`、`AddSubIssuesDeps{Locks, Issues, Clock}`、`NewAddSubIssues`、`Execute(ctx, id, ids)`：`CheckSubIssueIDs` 在任何读之前；`Locks.run` 的 `write{issue: &id, action: issue.update}`；锁下项目已归档 409 → 父工作项已归档 409 `issue.archived` → `check`（按 `id` 的次序读所问的工作项和父工作项的祖先链；每个都要在调用者能放的范围里（`inReach`）、不是父工作项、不在它的祖先链里，问题按它在请求里的位置一次报出）→ 已在它下面的不动；要动的按 `id` 的次序、锁下读它们原来的父工作项（不在是错误）→ 有要动的才读时刻 → `SetParents` → 每个一行第 5 行的动态（原来的父工作项按标识到这个）→ 读回（少了是错误），按调用者的 `Grant` 数子工作项；都已在它下面时什么都不写、回答空的。
+- `issue/app/sub_issues.go`（新）：`ListSubIssues`、`NewListSubIssues(locks, issues)`、`Execute(ctx, id)`：与 `getIssue` 同一个读和判定（`Locks.see`），然后读子工作项（`Grant.OwnOnly` 时只要他建的），按他的 `Grant` 数它们的子工作项（`Locks.seen`）。`AddSubIssues`、`AddSubIssuesDeps{Locks, Issues, Clock}`、`NewAddSubIssues`、`Execute(ctx, id, ids)`：`CheckSubIssueIDs` 在任何读之前；`Locks.run` 的 `write{issue: &id, action: issue.update}`；锁下项目已归档 409 → 父工作项已归档 409 `issue.archived` → `check`（按 `id` 的次序读所问的工作项和父工作项的祖先链；每个都要在调用者能放的范围里（`inReach`）、不是父工作项、不在它的祖先链里，问题按它在请求里的位置一次报出）→ 已在它下面的不动；要动的按 `id` 的次序、锁下读它们原来的父工作项（不在是错误）→ 有要动的才读时刻 → `SetParents` → 每个一行第 5 行的动态（原来的父工作项按标识到这个）→ 读回（少了是错误，只说读回了几个、写了几个，不列出每个 `id`），按调用者的 `Grant` 数子工作项；都已在它下面时什么都不写、回答空的。
 - 测试的帮手：`fakes_test.go` 的 `fakeIssues.subItems`（`SubIssues` 回答的）、`parented`（最后一次 `SetParents` 的行）；`fakes_parents_test.go` 的 `SubIssues`、`SetParents`。
 
 **Tests:**
@@ -5754,7 +5754,7 @@ func (u *AddSubIssues) Execute(ctx context.Context, id uuid.UUID, ids []uuid.UUI
 		case err != nil:
 			return err
 		case len(stored) != len(movedIDs):
-			return fmt.Errorf("work items %v are not all there after their write", movedIDs)
+			return fmt.Errorf("only %d of %d work items are there after their write", len(stored), len(movedIDs))
 		}
 		added, err = u.d.Locks.seen(ctx, actor.UserID, grants{h.issue.ProjectID: h.grant}, stored...)
 		return err
@@ -6218,9 +6218,9 @@ func (s *Store) SetParents(ctx context.Context, r app.ParentRows) error {
 	n, err := s.queries(ctx).SetParents(ctx, gen.SetParentsParams{ParentID: r.ParentID, By: r.By, At: r.At, Ids: r.IDs})
 	switch {
 	case err != nil:
-		return fmt.Errorf("put work items %v under %s: %w", r.IDs, r.ParentID, err)
+		return fmt.Errorf("put %d work items under %s: %w", len(r.IDs), r.ParentID, err)
 	case n != int64(len(r.IDs)):
-		return fmt.Errorf("put %d of work items %v under %s", n, r.IDs, r.ParentID)
+		return fmt.Errorf("put %d of %d work items under %s", n, len(r.IDs), r.ParentID)
 	}
 	return nil
 }
