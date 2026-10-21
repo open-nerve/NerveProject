@@ -73,6 +73,8 @@ func (g *Keyed[K]) Enter(ctx context.Context, keys ...K) (leave func(), err erro
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	// Its own copy: the leave it returns gives up the keys entered, whatever
+	// the caller does with his slice afterwards.
 	keys = slices.Clone(keys)
 	deadline := time.Now().Add(g.limits.MaxWait)
 	for n, key := range keys {
@@ -86,9 +88,11 @@ func (g *Keyed[K]) Enter(ctx context.Context, keys ...K) (leave func(), err erro
 }
 
 // enter takes key for the caller: at once when fewer than PerKey hold it
-// and no one waits for it; else it waits behind those who do until it is
-// handed the key, or gives up, as Enter says, at deadline or once ctx is
-// done, holding nothing of key and out of its queue.
+// and no one waits for it. Else it is refused at once with ErrFull when
+// MaxQueue others wait for it; when fewer do, it waits in key's queue,
+// behind them, until it is handed the key or gives up, as Enter says, at
+// deadline or once ctx is done. Refused or given up, it holds nothing of
+// key and is out of its queue.
 func (g *Keyed[K]) enter(ctx context.Context, key K, deadline time.Time) error {
 	g.mu.Lock()
 	q := g.keys[key]

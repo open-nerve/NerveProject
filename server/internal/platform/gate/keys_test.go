@@ -32,6 +32,30 @@ func TestACallerHoldsEachKeyHeEnters(t *testing.T) {
 	forgotten(t, g)
 }
 
+// A caller leaves the keys he entered, whatever he does with his slice of
+// them afterwards: one who reuses it for ops and hr, which others hold,
+// before he leaves, leaves api and web, which a caller of both then holds
+// at once; ops and hr stay held, and a caller of either waits until its
+// holder leaves. Once every caller has left, the gate keeps nothing.
+func TestACallerLeavesTheKeysHeEntered(t *testing.T) {
+	g := New[string](Limits{PerKey: 1, MaxQueue: 8, MaxWait: long})
+	ctx := context.Background()
+	ops, hr := enter(g, ctx, "ops").held(t), enter(g, ctx, "hr").held(t)
+	keys := []string{"api", "web"}
+	both := enter(g, ctx, keys...).held(t)
+	keys[0], keys[1] = "ops", "hr"
+	both.leave()
+	nextOps, nextHR := enter(g, ctx, "ops"), enter(g, ctx, "hr")
+	nextOps.waits(t)
+	nextHR.waits(t)
+	enter(g, ctx, "api", "web").held(t).leave()
+	ops.leave()
+	nextOps.held(t).leave()
+	hr.leave()
+	nextHR.held(t).leave()
+	forgotten(t, g)
+}
+
 // A caller of api and web who does not get web, its queue full, his wait
 // at MaxWait, or his context cancelled while he waits, leaves api, which a
 // caller of it then holds at once, and holds nothing; once web's holder

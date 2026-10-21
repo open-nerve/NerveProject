@@ -7819,7 +7819,7 @@ Expected: 通过。
 - Generate: `server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go`
 
 **Interfaces:**（spec 2.9、第 3 节第 2、3 条；M4 设计 3.5 约定七、6.5、9.1、11.11；P1b spec 第 3 节第 10 条和第 5 节的 P3 一行）跨项目的写（Task 10 的加关联、Task 13 的删除关联）要的两样东西，先在这里各自钉住：
-- `platform/gate/gate.go`：`Keyed.Enter(ctx, keys...)`：按给的次序一个一个进（`enter`），一个 `MaxWait` 的期限管全部的键（不是每个键一个）；等一个键时只持着已进的键，不持别的；任一个失败（队列满、到了期限、`ctx` 结束）时离开已进的键（`leave`），什么都不持；`leave` 只做一次。一个键的调用照旧。
+- `platform/gate/gate.go`：`Keyed.Enter(ctx, keys...)`：按给的次序一个一个进（`enter`），一个 `MaxWait` 的期限管全部的键（不是每个键一个）；等一个键时只持着已进的键，不持别的；任一个失败（队列满、到了期限、`ctx` 结束）时离开已进的键（`leave`），什么都不持；`leave` 只做一次，让出的是进了的键（`Enter` 留一份自己的，调用者之后改他的切片不影响）。一个键的调用照旧。
 - `platform/config/config.go`：`max_wait` 的说明写上跨项目的写在它的几个闸门上一共等这么久。
 - `issue/app/ports.go`：`ProjectGate.LockMany(ctx, projectIDs) (map[uuid.UUID]LockedProject, error)`（一条语句、`id` 升序锁住未删除的；等锁期间被删除的不在其中）；`WriteGate.Enter(ctx, projectIDs...)`（各一次、`id` 升序，按这个次序进，等的时候不持连接、不持锁，只持着前面的闸门的位置）。`ProjectGate.Lock` 留着（一个项目的写照旧，设计 3.3、6.5 列出 `Find`、`Lock`、`LockMany` 三个）。
 - `project`：`queries/issue_ports.sql` 的 `LockIssueProjects`（`WHERE id = ANY … AND deleted_at IS NULL ORDER BY id FOR NO KEY UPDATE`：按排好的行取锁，次序就是 `id` 的次序，S5 的 E4）；`issue_ports.go`；`module.go` 的 `IssueProjects.LockIssueProjects`。
@@ -7827,7 +7827,7 @@ Expected: 通过。
 - 测试的帮手：`fakes_test.go` 的 `fakeGate` 记下给的全部项目；`fakes_across_test.go`（新）：`anys`、`fakeProject.LockMany`（从 `across` 回答，记一行）。
 
 **Tests:**
-- 单元（`platform/gate`）：`TestACallerHoldsEachKeyHeEnters`（持 api、web 的调用者让两个键的别的调用者都等；第二个键被占时他持着第一个等，第一个键的新调用者排在他后面；都离开之后什么都不留）、`TestACallerWhoDoesNotGetEachKeyHoldsNone`（第二个键的队列满、到了 `MaxWait`、`ctx` 取消：放回第一个，它的调用者立刻进，他什么都不持）、`TestACallerWaitsMaxWaitInAll`（等了 api 四分之三个 `MaxWait` 的调用者在从开始算起的 `MaxWait` 放弃 web，不是再等一个 `MaxWait`；`MaxWait` 一秒，两者相隔四分之三秒，回答要在 `MaxWait` 或之后、两者的中点之前，负载重的机器上也分得出）。组合一层要两个闸门都排着、各在 `max_wait` 之内放开才分得出一个期限和每个键一个期限：Task 11 的 `TestAWriteAcrossProjectsWaitsMaxWaitInAll`。
+- 单元（`platform/gate`）：`TestACallerHoldsEachKeyHeEnters`（持 api、web 的调用者让两个键的别的调用者都等；第二个键被占时他持着第一个等，第一个键的新调用者排在他后面；都离开之后什么都不留）、`TestACallerLeavesTheKeysHeEntered`（进了 api、web 的调用者在离开之前把他的切片改成别人持着的 ops、hr：离开让出 api、web，它们的调用者立刻进；ops、hr 仍被持着，它们的调用者等）、`TestACallerWhoDoesNotGetEachKeyHoldsNone`（第二个键的队列满、到了 `MaxWait`、`ctx` 取消：放回第一个，它的调用者立刻进，他什么都不持）、`TestACallerWaitsMaxWaitInAll`（等了 api 四分之三个 `MaxWait` 的调用者在从开始算起的 `MaxWait` 放弃 web，不是再等一个 `MaxWait`；`MaxWait` 一秒，两者相隔四分之三秒，回答要在 `MaxWait` 或之后、两者的中点之前，负载重的机器上也分得出）。组合一层要两个闸门都排着、各在 `max_wait` 之内放开才分得出一个期限和每个键一个期限：Task 11 的 `TestAWriteAcrossProjectsWaitsMaxWaitInAll`。
 - 存储（`project`）：`TestLockIssueProjects`（所问的未删除的，已归档的也在，按 `id` 回答；已删除的、没有的不在；每个持 `FOR NO KEY UPDATE` 到事务结束：`FOR SHARE` 等它，外键的 `FOR KEY SHARE` 不等；没问的 Ops 和工作区的行不持）、`TestLockIssueProjectsLocksInIDOrder`（Web 的 `id` 小，但在表里和名字、标识的索引里在 Alpha 之后，又后问它；持着 Alpha 的行时，它持着 Web 等 Alpha：别的次序会先到 Alpha、什么都不持地等）、`TestLockIssueProjectsLeavesOutAProjectDeletedWhileItWaited`（等 Web 的行期间它被删除：提交之后只回答 Ops）、`TestAFailedReadIsAnErrorNotAnAnswer` 加 `LockIssueProjects` 一行。
 - 组合：`TestTheWriteGateAnswersItsRefusalsAsServerBusy` 加 `across`（同时写别的项目和这个项目的写一样答 503，什么都不持：之后别的项目的写立刻进）；`TestIssueProjectsConvertsProjectsAnswers` 加 `LockMany` 的转换。
 
@@ -7925,6 +7925,8 @@ func (g *Keyed[K]) Enter(ctx context.Context, keys ...K) (leave func(), err erro
 ````new server/internal/platform/gate/gate.go
 		return nil, err
 	}
+	// Its own copy: the leave it returns gives up the keys entered, whatever
+	// the caller does with his slice afterwards.
 	keys = slices.Clone(keys)
 	deadline := time.Now().Add(g.limits.MaxWait)
 	for n, key := range keys {
@@ -7938,9 +7940,11 @@ func (g *Keyed[K]) Enter(ctx context.Context, keys ...K) (leave func(), err erro
 }
 
 // enter takes key for the caller: at once when fewer than PerKey hold it
-// and no one waits for it; else it waits behind those who do until it is
-// handed the key, or gives up, as Enter says, at deadline or once ctx is
-// done, holding nothing of key and out of its queue.
+// and no one waits for it. Else it is refused at once with ErrFull when
+// MaxQueue others wait for it; when fewer do, it waits in key's queue,
+// behind them, until it is handed the key or gives up, as Enter says, at
+// deadline or once ctx is done. Refused or given up, it holds nothing of
+// key and is out of its queue.
 func (g *Keyed[K]) enter(ctx context.Context, key K, deadline time.Time) error {
 	g.mu.Lock()
 ````
@@ -8022,7 +8026,7 @@ func enter(g *Keyed[string], ctx context.Context, keys ...string) *entry {
 		e.leave, e.err = g.Enter(ctx, keys...)
 ````
 
-`server/internal/platform/gate/keys_test.go`（新文件，92 行）：
+`server/internal/platform/gate/keys_test.go`（新文件，116 行）：
 
 ````file server/internal/platform/gate/keys_test.go
 package gate
@@ -8056,6 +8060,30 @@ func TestACallerHoldsEachKeyHeEnters(t *testing.T) {
 	web.leave()
 	second.held(t).leave()
 	behind.held(t).leave()
+	forgotten(t, g)
+}
+
+// A caller leaves the keys he entered, whatever he does with his slice of
+// them afterwards: one who reuses it for ops and hr, which others hold,
+// before he leaves, leaves api and web, which a caller of both then holds
+// at once; ops and hr stay held, and a caller of either waits until its
+// holder leaves. Once every caller has left, the gate keeps nothing.
+func TestACallerLeavesTheKeysHeEntered(t *testing.T) {
+	g := New[string](Limits{PerKey: 1, MaxQueue: 8, MaxWait: long})
+	ctx := context.Background()
+	ops, hr := enter(g, ctx, "ops").held(t), enter(g, ctx, "hr").held(t)
+	keys := []string{"api", "web"}
+	both := enter(g, ctx, keys...).held(t)
+	keys[0], keys[1] = "ops", "hr"
+	both.leave()
+	nextOps, nextHR := enter(g, ctx, "ops"), enter(g, ctx, "hr")
+	nextOps.waits(t)
+	nextHR.waits(t)
+	enter(g, ctx, "api", "web").held(t).leave()
+	ops.leave()
+	nextOps.held(t).leave()
+	hr.leave()
+	nextHR.held(t).leave()
 	forgotten(t, g)
 }
 
@@ -8358,9 +8386,10 @@ func (g writeGate) Enter(ctx context.Context, projectID uuid.UUID) (func(), erro
 ````new server/internal/bootstrap/gate.go
 // Enter enters the projects' gates, one after another, in their order: a
 // write the gate refuses, a queue full or its wait at max_wait, or whose
-// request's deadline has passed when it comes to a gate or passes while
-// it waits, is server_busy; one whose request is cancelled keeps
-// context.Canceled, which no one waits for the answer of.
+// request's deadline has passed when it comes to the first gate or while
+// it waits at one, is server_busy; one whose request is cancelled keeps
+// context.Canceled, which no one waits for the answer of. A later gate
+// with a free place it enters at once, without looking at its request.
 func (g writeGate) Enter(ctx context.Context, projectIDs ...uuid.UUID) (func(), error) {
 	leave, err := g.gate.Enter(ctx, projectIDs...)
 ````
@@ -8636,7 +8665,8 @@ Expected: 通过。
 | `T7.6` | `LockMany` 不回答项目的标识 | `internal/modules/project/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsAreRelatedAcrossProjects`（`make test`）（Task 11 起） | 存储；组合 |
 | `T7.7` | 跨项目的写只进第一个项目的写闸门 | `internal/bootstrap` 的 `TestTheWriteGateAnswersItsRefusalsAsServerBusy`（`make test`）、`internal/bootstrap` 的 `TestAWriteAcrossProjectsGivesBackEachPlaceItTook`（`make test`）（Task 11 起） | 单元；组合 |
 | `T7.8` | `bootstrap` 交给 `issue` 的 `LockMany` 的项目是空的 | `internal/bootstrap` 的 `TestIssueProjectsConvertsProjectsAnswers`（`make test`）、`internal/bootstrap` 的 `TestWorkItemsAreRelatedAcrossProjects`（`make test`）（Task 11 起） | 单元；组合 |
-| `T7.9` | `LockMany` 经连接池锁项目，语句一结束锁就放开 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`）（Task 11 起）、`internal/bootstrap` 的 `TestOppositeRelationsOfTwoWorkItemsSerialize`（`make test`）（Task 14 起） | 组合 |
+| `T7.9` | `LockMany` 经连接池锁项目，语句一结束锁就放开 | `internal/modules/project/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`）（Task 11 起）、`internal/bootstrap` 的 `TestOppositeRelationsOfTwoWorkItemsSerialize`（`make test`）（Task 14 起） | 存储；组合 |
+| `T7.10` | `Enter` 不另存一份键，留着调用者的切片：离开时让出的是切片那时指名的键 | `internal/platform/gate` 的全部测试（`make test`） | 单元 |
 
 ---
 
