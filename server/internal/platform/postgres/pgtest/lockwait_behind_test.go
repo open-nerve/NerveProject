@@ -64,7 +64,7 @@ func TestWaitForLockWaitBehindSeesOnlyAWaitForItsHolder(t *testing.T) {
 	pool := newPool(t, url)
 	notBehind := func(holder *pgx.Conn) {
 		t.Helper()
-		failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitBehind(tb, pool, holder.PgConn(), 300*time.Millisecond) })
+		failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWaitBehind(tb, pool, holder.PgConn(), 300*time.Millisecond) })
 		if want := fmt.Sprintf("no statement waited for a lock of backend %d within 300ms", holder.PgConn().PID()); failed != want {
 			t.Errorf("WaitForLockWaitBehind(backend %d) failed with %q, want %q", holder.PgConn().PID(), failed, want)
 		}

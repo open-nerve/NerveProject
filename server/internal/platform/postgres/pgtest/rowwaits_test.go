@@ -10,9 +10,10 @@ import (
 
 // RowWaits sees a lock another transaction holds on the row that the lock
 // asked for conflicts with, and nothing else: FOR SHARE waits for the row
-// held FOR NO KEY UPDATE; not for the one held FOR KEY SHARE, with which it
-// does not conflict; not for a row nobody holds; and not for the first once
-// its holder is done.
+// held FOR NO KEY UPDATE; not for the one held FOR KEY SHARE, with which
+// it does not conflict; not for a row nobody holds; and not for the first
+// once its holder is done. A row that is not there fails the test, rather
+// than read as a row nobody holds.
 func TestRowWaitsSeesALockThatConflicts(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -51,5 +52,10 @@ func TestRowWaitsSeesALockThatConflicts(t *testing.T) {
 	}
 	if pgtest.RowWaits(t, pool, "a", held, "FOR SHARE") {
 		t.Error("RowWaits() of the held row once its holder committed = true, want false")
+	}
+	absent := uuid.NewV7()
+	failed := fatalOf(t, func(tb testing.TB) { pgtest.RowWaits(tb, pool, "a", absent, "FOR SHARE") })
+	if want := "pgtest: a has no row " + absent.String(); failed != want {
+		t.Errorf("RowWaits() of a row that is not there failed with %q, want %q", failed, want)
 	}
 }

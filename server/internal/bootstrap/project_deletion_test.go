@@ -193,12 +193,13 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 
 // Deleting a project deletes the relations of its work items either way
 // (M4 design 3.6, 3.10), each at the project's deleted_at, whichever
-// project's row it is: beside the seeded relations, Web's Seeded related
-// to Ops' Seeded, a row of Web's, and Ops' Blocker related to Web's
-// Seeded, a row of Ops', written directly (relate). The second is no row
-// under Web, which the catalog's test of the deletion reads
-// (TestDeletingAProjectLeavesNoUndeletedRowUnderIt). Ops' own relation,
-// of its Seeded to its Blocker, stays as it was.
+// project's row it is, of each stored type: beside the seeded relations
+// (blocked_by), Web's Seeded related to Ops' Seeded (duplicate), a row of
+// Web's, and Ops' Blocker related to Web's Seeded (relates_to), a row of
+// Ops', written directly (relate). The second is no row under Web, which
+// the catalog's test of the deletion reads
+// (TestDeletingAProjectLeavesNoUndeletedRowUnderIt). Ops' own relation, of
+// its Seeded to its Blocker, stays as it was.
 func TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
 	const items = "SELECT id FROM issues WHERE project_id = $1 ORDER BY sequence_id"
@@ -207,8 +208,8 @@ func TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay(t *testing.T) {
 		t.Fatalf("the work items %v of Web and %v of Ops; want Seeded and Blocker of each", webItems, opsItems)
 	}
 	seeded := webItems[0]
-	relate(t, pool, seeded, opsItems[0], aliceID)
-	relate(t, pool, opsItems[1], seeded, aliceID)
+	relate(t, pool, seeded, opsItems[0], "duplicate", aliceID)
+	relate(t, pool, opsItems[1], seeded, "relates_to", aliceID)
 	const opsOwn = `SELECT coalesce(string_agg(id::text || ' ' || coalesce(deleted_at::text, 'undeleted'), ', ' ORDER BY id), '')
 		FROM issue_relations WHERE project_id = $1 AND related_issue_id <> $2`
 	var before, after string

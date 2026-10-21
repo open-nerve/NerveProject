@@ -56,7 +56,7 @@ func aRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.U
 	t.Helper()
 	related := uuid.NewV7()
 	newIssue(t, pool, p, related, 200+n, by)
-	newRelation(t, pool, p, issue, related, id, by)
+	newRelation(t, pool, p, issue, related, id, "relates_to", by)
 }
 
 var batchStatements = []batchStatement{

@@ -18,24 +18,27 @@ import (
 // ways, whichever project holds them, locked in id order.
 
 // relationRow is a relation as the tests insert it: its id, the project
-// that holds it, its issue_id end and its related end.
+// that holds it, its issue_id end, its related end and its stored type.
 type relationRow struct {
 	id             uuid.UUID
 	p              project
 	issue, related uuid.UUID
+	kind           string
 }
 
-// The relations of a deleted subtree are deleted both ways, whichever
-// project holds the row. Web's item and sub are deleted; x is another work
-// item of web, y and z work items of ops. item relates to x (a row of web,
-// item at its issue_id end); x to sub (web's, sub at its related end);
-// ops' y to item (a row of ops, item at its related end); sub to ops' z
-// (web's, the other end in ops). x relates to y, and z to x, naming
-// neither; x's relation to item, which alice deleted an hour before,
-// shares item and x's pair. One statement names sub and item, by bob at
-// later: the first four rows are deleted at later by bob; the two naming
-// neither are as they were, and the one deleted before keeps alice's
-// deletion; every other column of every row is kept.
+// The relations of a deleted subtree are deleted both ways, of each stored
+// type, whichever project holds the row. Web's item and sub are deleted; x
+// is another work item of web, y and z work items of ops. Of each type one
+// row has item or sub at its issue_id end, and one at its related end:
+// item relates_to x (a row of web) and x relates_to sub (web's); sub is
+// blocked_by ops' z (web's, the other end in ops) and ops' y is blocked_by
+// item (a row of ops); item is a duplicate of z (web's) and y of sub
+// (ops'). x is a duplicate of y, and z is blocked_by x, naming neither;
+// x's relation to item, which alice deleted an hour before, shares item
+// and x's pair. One statement names sub and item, by bob at later: the six
+// rows that name them are deleted at later by bob; the two naming neither
+// are as they were, and the one deleted before keeps alice's deletion;
+// every other column of every row is kept.
 func TestTheRelationsOfADeletedSubtreeAreDeletedBothWays(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -49,11 +52,14 @@ func TestTheRelationsOfADeletedSubtreeAreDeletedBothWays(t *testing.T) {
 	newIssue(t, pool, ops, z, 2, alice)
 	before, later := now.Add(-time.Hour), now.Add(time.Hour)
 	xItem := uuid.NewV7()
-	newRelation(t, pool, web, x, item, xItem, alice)
+	newRelation(t, pool, web, x, item, xItem, "relates_to", alice)
 	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2, updated_at = $2, updated_by_id = $3 WHERE id = $1", xItem, before, alice)
-	named := []relationRow{{uuid.NewV7(), web, item, x}, {uuid.NewV7(), web, x, sub}, {uuid.NewV7(), ops, y, item}, {uuid.NewV7(), web, sub, z}}
-	for _, r := range append(slices.Clone(named), relationRow{uuid.NewV7(), web, x, y}, relationRow{uuid.NewV7(), ops, z, x}) {
-		newRelation(t, pool, r.p, r.issue, r.related, r.id, alice)
+	named := []relationRow{{uuid.NewV7(), web, item, x, "relates_to"}, {uuid.NewV7(), web, x, sub, "relates_to"},
+		{uuid.NewV7(), web, sub, z, "blocked_by"}, {uuid.NewV7(), ops, y, item, "blocked_by"}, {uuid.NewV7(), web, item, z, "duplicate"},
+		{uuid.NewV7(), ops, y, sub, "duplicate"}}
+	neither := []relationRow{{uuid.NewV7(), web, x, y, "duplicate"}, {uuid.NewV7(), ops, z, x, "blocked_by"}}
+	for _, r := range slices.Concat(named, neither) {
+		newRelation(t, pool, r.p, r.issue, r.related, r.id, r.kind, alice)
 	}
 	rows, stamps := rowsAsText(t, pool, "issue_relations"), audits(t, pool, "issue_relations")
 
@@ -94,9 +100,9 @@ func TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder(t *testing.T) {
 		newIssue(t, pool, web, id, n+1, alice)
 	}
 	a, b, c := uuid.NewV7(), uuid.NewV7(), uuid.NewV7() // drawn in this order: ascending ids
-	newRelation(t, pool, web, item, r, c, alice)
-	newRelation(t, pool, web, q, item, b, alice)
-	newRelation(t, pool, web, item, p, a, alice)
+	newRelation(t, pool, web, item, r, c, "relates_to", alice)
+	newRelation(t, pool, web, q, item, b, "relates_to", alice)
+	newRelation(t, pool, web, item, p, a, "relates_to", alice)
 	earlier, later := now.Add(-time.Hour), now.Add(time.Hour)
 
 	soon := pgtest.Soon(t) // ends the test's statements and the statement's wait for b
@@ -142,36 +148,45 @@ func TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder(t *testing.T) {
 }
 
 // A deleted project's batch of relations takes the rows that name one of
-// its work items at either end, whichever project holds them, the work
-// items deleted before it among them, as the work items' batches delete
-// them first. In web, w1 relates to w2 (a row of web); w2 to ops' o2
-// (web's, the other end in ops); ops' o1 to w1 (a row of ops, web's w1 at
-// its related end). w1 is deleted. ops' o1 relates to o2, naming no work
-// item of web; o2's relation to w1, which alice deleted an hour before,
-// keeps her deletion. One batch of web's, by bob at later, takes the three
-// rows naming web's work items, and only them, and deletes them.
+// its work items at either end, of each stored type, whichever project
+// holds them, the work items deleted before it among them, as the work
+// items' batches delete them first. Of each type one row is web's, a work
+// item of web at its issue_id end, and one is ops', a work item of web at
+// its related end: w1 relates_to w2 (a row of web) and ops' o1 relates_to
+// w1 (a row of ops); w2 is blocked_by ops' o2 (web's, the other end in
+// ops) and ops' o3 is blocked_by w2 (ops'); w1 is a duplicate of o3
+// (web's) and o1 of w2 (ops'). w1 is deleted. ops' o1 is blocked_by o2,
+// naming no work item of web; o2's relation to w1, which alice deleted an
+// hour before, keeps her deletion. One batch of web's, by bob at later,
+// takes and deletes the six rows naming web's work items, and only them.
 func TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	acme := newWorkspace(t, pool, "acme")
 	web, ops := newProject(t, pool, acme, "WEB"), newProject(t, pool, acme, "OPS")
-	w1, w2, o1, o2 := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	w1, w2, o1, o2, o3 := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	newIssue(t, pool, web, w1, 1, alice)
 	newIssue(t, pool, web, w2, 2, alice)
-	newIssue(t, pool, ops, o1, 1, alice)
-	newIssue(t, pool, ops, o2, 2, alice)
+	for n, id := range []uuid.UUID{o1, o2, o3} {
+		newIssue(t, pool, ops, id, n+1, alice)
+	}
 	earlier, later := now.Add(-time.Hour), now.Add(time.Hour)
 	exec(t, pool, "UPDATE issues SET deleted_at = $2 WHERE id = $1", w1, later)
-	named := []relationRow{{uuid.NewV7(), web, w1, w2}, {uuid.NewV7(), web, w2, o2}, {uuid.NewV7(), ops, o1, w1}}
+	named := []relationRow{{uuid.NewV7(), web, w1, w2, "relates_to"}, {uuid.NewV7(), ops, o1, w1, "relates_to"},
+		{uuid.NewV7(), web, w2, o2, "blocked_by"}, {uuid.NewV7(), ops, o3, w2, "blocked_by"}, {uuid.NewV7(), web, w1, o3, "duplicate"},
+		{uuid.NewV7(), ops, o1, w2, "duplicate"}}
 	gone := uuid.NewV7()
-	for _, r := range append(slices.Clone(named), relationRow{uuid.NewV7(), ops, o1, o2}, relationRow{gone, ops, o2, w1}) {
-		newRelation(t, pool, r.p, r.issue, r.related, r.id, alice)
+	for _, r := range slices.Concat(named, []relationRow{{uuid.NewV7(), ops, o1, o2, "blocked_by"}, {gone, ops, o2, w1, "relates_to"}}) {
+		newRelation(t, pool, r.p, r.issue, r.related, r.id, r.kind, alice)
 	}
 	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2, updated_at = $2, updated_by_id = $3 WHERE id = $1", gone, earlier, alice)
 	stamps := audits(t, pool, "issue_relations")
 
 	ids, err := s.DeleteProjectRelationRows(context.Background(), app.RowBatch{ProjectID: web.id, Limit: 10, By: bob, At: later})
-	want := []uuid.UUID{named[0].id, named[1].id, named[2].id}
+	var want []uuid.UUID
+	for _, r := range named {
+		want = append(want, r.id)
+	}
 	if got := slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare); err != nil || !slices.Equal(got, want) {
 		t.Errorf("web's batch = %v, %v; want %v", got, err, want)
 	}

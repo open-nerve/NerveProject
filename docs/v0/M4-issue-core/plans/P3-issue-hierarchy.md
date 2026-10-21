@@ -153,9 +153,9 @@ sys.exit(1 if broken else 0)
 | `server/migrations/sql/00020_issue_issue_relations.sql`（新）、`server/sqlc.yaml`、`deploy/runtime-grants.sql`（修改） | `issue_relations`、它的检查和索引；sqlc 的迁移列表；运行时的权限 | 8 |
 | `server/migrations/schema_test.go`、`server/migrations/issue_schema_test.go`（修改） | 迁移的个数；表、列、检查、一对工作项一行的键 | 8 |
 | `server/internal/modules/issue/adapter/postgres/queries/delete_rows.sql`、`server/internal/modules/issue/adapter/postgres/delete_rows.go`、`server/internal/modules/issue/adapter/postgres/delete_rows_test.go`（修改） | `DeleteProjectRelationRows`：删除项目的关联行，两个方向，按 `id` 先锁 | 8 |
-| `server/internal/modules/issue/adapter/postgres/delete_relations_test.go`（新）、`server/internal/modules/issue/adapter/postgres/store_test.go`（修改） | 关联行的删除语句的存储测试；`newRelation` | 8 |
+| `server/internal/modules/issue/adapter/postgres/delete_relations_test.go`（新）、`server/internal/modules/issue/adapter/postgres/store_test.go`（修改） | 关联行的删除语句的存储测试，三种存储值；`newRelation`（带存储的类型） | 8 |
 | `server/internal/modules/issue/app/delete_project_rows.go`、`server/internal/modules/issue/app/cascade_test.go`（修改） | `rowSteps` 的关联一步，在标签之后 | 8 |
-| `server/internal/platform/postgres/pgtest/rowwaits.go`、`server/internal/platform/postgres/pgtest/rowwaits_test.go`（新） | `RowWaits`：一行是否被冲突的锁挡住（`NOWAIT`），不手写 `55P03` | 8 |
+| `server/internal/platform/postgres/pgtest/rowwaits.go`、`server/internal/platform/postgres/pgtest/rowwaits_test.go`（新）、`server/internal/platform/postgres/pgtest/lockwait_test.go`、`server/internal/platform/postgres/pgtest/lockwait_behind_test.go`（修改） | `RowWaits`：一行是否被冲突的锁挡住（`NOWAIT`，`postgres.LockNotAvailable`），不手写 `55P03`；不在的行让测试失败；`fatalOf` 带上测试 | 8 |
 | `server/internal/modules/project/adapter/postgres/demote_test.go`（修改） | 用 `pgtest.RowWaits` | 8 |
 | `server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改） | `adminGuest`（Task 1，`issue_world_test.go`）；`workItemStamps`、删除的交错数关联行（Task 8） | 1、8 |
 | `server/internal/bootstrap/issue_interleaving_test.go`（修改） | `wroteNothing` 数关联行（Task 8）；`serializeAt`、`inBothOrdersAt`（Task 14） | 8、14 |
@@ -8702,23 +8702,23 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/modules/issue/adapter/postgres/delete_relations_test.go`、`server/internal/platform/postgres/pgtest/rowwaits.go`、`server/internal/platform/postgres/pgtest/rowwaits_test.go`、`server/migrations/sql/00020_issue_issue_relations.sql`
-- Modify: `api/modules/issue.yaml`、`api/modules/project.yaml`、`api/modules/workspace.yaml`、`deploy/runtime-grants.sql`、`e2e/fixtures/assert/issue.ts`、`e2e/fixtures/assert/project.ts`、`e2e/fixtures/assert/workspace.ts`、`server/internal/bootstrap/issue_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/project_deletion_test.go`、`server/internal/modules/issue/adapter/postgres/delete_issue.go`、`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`、`server/internal/modules/issue/adapter/postgres/delete_rows.go`、`server/internal/modules/issue/adapter/postgres/delete_rows_test.go`、`server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql`、`server/internal/modules/issue/adapter/postgres/queries/delete_rows.sql`、`server/internal/modules/issue/adapter/postgres/store_test.go`、`server/internal/modules/issue/app/cascade_test.go`、`server/internal/modules/issue/app/delete_issue.go`、`server/internal/modules/issue/app/delete_issue_test.go`、`server/internal/modules/issue/app/delete_project_rows.go`、`server/internal/modules/issue/app/fakes_deletion_test.go`、`server/internal/modules/project/adapter/postgres/demote_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/lock_issue_projects_test.go`、`server/migrations/issue_schema_test.go`、`server/migrations/schema_test.go`、`server/sqlc.yaml`
+- Modify: `api/modules/issue.yaml`、`api/modules/project.yaml`、`api/modules/workspace.yaml`、`deploy/runtime-grants.sql`、`e2e/fixtures/assert/issue.ts`、`e2e/fixtures/assert/project.ts`、`e2e/fixtures/assert/workspace.ts`、`server/internal/bootstrap/issue_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/project_deletion_test.go`、`server/internal/modules/issue/adapter/postgres/delete_issue.go`、`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`、`server/internal/modules/issue/adapter/postgres/delete_rows.go`、`server/internal/modules/issue/adapter/postgres/delete_rows_test.go`、`server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql`、`server/internal/modules/issue/adapter/postgres/queries/delete_rows.sql`、`server/internal/modules/issue/adapter/postgres/store_test.go`、`server/internal/modules/issue/app/cascade_test.go`、`server/internal/modules/issue/app/delete_issue.go`、`server/internal/modules/issue/app/delete_issue_test.go`、`server/internal/modules/issue/app/delete_project_rows.go`、`server/internal/modules/issue/app/fakes_deletion_test.go`、`server/internal/modules/project/adapter/postgres/demote_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/lock_issue_projects_test.go`、`server/internal/platform/postgres/pgtest/lockwait_behind_test.go`、`server/internal/platform/postgres/pgtest/lockwait_test.go`、`server/migrations/issue_schema_test.go`、`server/migrations/schema_test.go`、`server/sqlc.yaml`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go`、`server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go`、`server/internal/modules/issue/adapter/postgres/gen/models.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.10、第 3 节第 3、4、14、16、18 条；M4 设计 3.5 约定五的例外、3.6、3.10、4.6，12 节约束 8）
 - 迁移 `server/migrations/sql/00020_issue_issue_relations.sql`（新）：`issue_relations`，Plane 的 11 列（4.6）；`relation_type` 只有三种存储值（`blocked_by`、`duplicate`、`relates_to`：阻塞反过来存为对方的 `blocked_by`），不设默认；`issue_relations_not_self_check`；`issue_relations_pair_key`（`LEAST`、`GREATEST` 两端，未删除的：一对工作项至多一条，不论类型和方向）；两端、工作区、项目的索引（不带条件：两个方向的读和物理级联按它们找行）。`server/sqlc.yaml` 加它；`deploy/runtime-grants.sql` 加表的权限。
 - `issue/adapter/postgres/queries/delete_issue.sql` 的 `DeleteIssueRelationRows`：子树的关联行，两个方向（另一端在这个项目或别的项目），先按 `id` 升序 `FOR NO KEY UPDATE` 锁住再写（`UPDATE … WHERE id IN (SELECT … ORDER BY id FOR NO KEY UPDATE)`：别的项目的写不持这个项目的锁也写得到这些行，约定五的例外）；等锁期间被别人删除的行在最新的版本上重新判断、跳过，留着那次删除。`delete_rows.sql` 的 `DeleteProjectRelationRows`：删除项目的一批，`project_id` 是这个项目的行和 `related_issue_id` 是这个项目的工作项（已删除的也算：工作项的一批先删了它们）的别的项目的行，同样按 `id` 先锁、键集分批。`delete_issue.go`、`delete_rows.go` 照写。
 - `issue/app`：`IssueRowsDeleter.DeleteIssueRelationRows`，`issueRowSteps` 的关联一步在标签之后、关注之前（全局的表序：工作项 → 负责人 → 标签 → 关联 → 关注 → 动态）；`delete_project_rows.go` 的 `ProjectRowsDeleter.DeleteProjectRelationRows`，`rowSteps` 同样的位置。
-- `platform/postgres/pgtest/rowwaits.go`（新）：`RowWaits(t, pool, table, id, lock)`（`NOWAIT` 的探测：别的事务持着与 `lock` 冲突的锁时为真）；原来在 `project` 的 `demote_test.go` 里手写的 `rowWaits`（含一个手写的 `55P03`）换成它，`issue_ports_test.go`、`lock_issue_projects_test.go`、新的 `delete_relations_test.go` 共用（P1b 第 5 节：P2 起不手写 `55P03`）。
+- `platform/postgres/pgtest/rowwaits.go`（新）：`RowWaits(t, pool, table, id, lock)`（`NOWAIT` 的探测：别的事务持着与 `lock` 冲突的锁时为真，由 `postgres.LockNotAvailable` 判定；问的行不在时让测试失败：不在的行上看不到锁，不能读成没人持着）；原来在 `project` 的 `demote_test.go` 里手写的 `rowWaits`（含一个手写的 `55P03`）换成它，`issue_ports_test.go`、`lock_issue_projects_test.go`、新的 `delete_relations_test.go` 共用（P1b 第 5 节：P2 起不手写 `55P03`）。它的测试经 `lockwait_test.go` 的 `fatalOf` 看它让测试失败：`fatalOf` 带上测试，`fatalProbe` 记下 `Fatal` 并结束它的 goroutine，其余的方法是测试的（`RowWaits` 的 `Soon` 用测试的 `Context`、`Cleanup`）；`lockwait_test.go`、`lockwait_behind_test.go` 的调用随之。
 - 契约：`deleteIssue`、`deleteProject`、`deleteWorkspace` 的描述写上关联（生成的打包结果和 `schema.gen.ts` 随之，Go 不变）。
-- 测试的帮手：`store_test.go` 的 `newRelation`；`issue_world_test.go` 的 `workItemStamps` 读关联行（两个方向）；`issue_interleaving_test.go` 的 `wroteNothing`、`issue_interleaving_deletion_test.go` 的删除的行数关联表；`issue_deletion_test.go` 的 `relate`（直接写一条关联：经接口建关联在 Task 11）；`project_deletion_test.go` 的 `seedIssues` 加一个工作项 Blocker 和种下的工作项到它的一条 `blocked_by`（删除项目、工作区的按目录的测试都用它，读得到关联表的行）。
+- 测试的帮手：`store_test.go` 的 `newRelation`（带存储的类型；`delete_relations_test.go` 的 `relationRow` 也带）；`issue_world_test.go` 的 `workItemStamps` 读关联行（两个方向）；`issue_interleaving_test.go` 的 `wroteNothing`、`issue_interleaving_deletion_test.go` 的删除的行数关联表；`issue_deletion_test.go` 的 `relate`（直接写一条给定存储类型的关联：经接口建关联在 Task 11）；`project_deletion_test.go` 的 `seedIssues` 加一个工作项 Blocker 和种下的工作项到它的一条 `blocked_by`（删除项目、工作区的按目录的测试都用它，读得到关联表的行）。
 - 端到端的两个暂时的写法（第 3 节第 18 条）：`assert/project.ts`、`assert/workspace.ts` 的删除断言暂时不要关联表的行（`withoutRows`：故事还建不了关联，Task 11 去掉）；`assert/issue.ts` 的 `expectIssueDeleted` 把 P2 的 `subItems` 换成 `unwritten`（`issues.parent_id` 和关联的两个外键：故事还不写它们，Task 15 去掉）。
 
 **Tests:**
 - 结构：`TestMigrationsGoUpDownAndUpAgain`（20 个迁移）；`TestIssueChecksRejectCounterexamples`（三种存储值通过；别的值、`blocking`、Plane 的 `start_before`、自己关联自己都被拒绝）、`TestIssueUniqueKeys`（一对工作项一条：反方向、别的类型都被拒绝；共用一端的两条通过；软删除之后这一对空出来）。
 - 单元：`TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows`、`TestDeleteIssueStopsAtAFailingPort` 加关联的一步；`TestTheCascadeStopsAtAFailingBatch` 加关联的一批。
-- 存储：`TestTheRelationsOfADeletedSubtreeAreDeletedBothWays`（item、sub 被删除：四条名字里有它们的行，不论在哪一端、哪个项目的，由 bob 在 later 删除；名字里没有它们的两条和一小时前 alice 删的那条不动；每一列都不动）、`TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`（a、b、c 的 `id` 升序，反着插入，表或任一端的索引都先扫到 c；另一个事务删除并持着 b：语句持着 a 等 b（`FOR SHARE` 等 a），还没碰到 c；提交之后删 a、c，b 留着 alice 的删除）、`TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays`（web 的一批取名字里有 web 的工作项的三行，已删除的 w1 也算，只取它们）；`TestTheStatementsOfADeletedSubtreeDeleteItsRows` 加关联表；`pgtest` 的 `TestRowWaitsSeesALockThatConflicts`（`FOR SHARE` 等 `FOR NO KEY UPDATE`，不等 `FOR KEY SHARE`、没人持的、提交之后的）。
-- 组合：`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（关联的两个外键下各一行：它到 Ops 的工作项的（Web 的行）、Ops 的别的工作项到它的（Ops 的行），和一条早已删除的）；`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（Web 的 Seeded 到 Ops 的 Seeded（Web 的行）、Ops 的 Blocker 到 Web 的 Seeded（Ops 的行，不在 Web 下面，按目录的删除测试读不到它）：删除 Web 时两条都在 Web 的删除时刻删除；Ops 自己的关联不动）；`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`（`seedIssues` 的关联）；`TestEachIssueWriteLocksItsProjectFirst`、`TestDeletingAWorkItemAndChangingItSerialize`。
+- 存储：`TestTheRelationsOfADeletedSubtreeAreDeletedBothWays`（item、sub 被删除：六条名字里有它们的行，三种存储值各两条，一条它们在 `issue_id` 一端、一条在 `related_issue_id` 一端，不论哪个项目的，由 bob 在 later 删除；名字里没有它们的两条和一小时前 alice 删的那条不动；每一列都不动）、`TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`（a、b、c 的 `id` 升序，反着插入，表或任一端的索引都先扫到 c；另一个事务删除并持着 b：语句持着 a 等 b（`FOR SHARE` 等 a），还没碰到 c；提交之后删 a、c，b 留着 alice 的删除）、`TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays`（web 的一批取名字里有 web 的工作项的六行，三种存储值各一条 web 的行、一条 web 的工作项在 `related_issue_id` 一端的 ops 的行，已删除的 w1 也算，只取它们）；`TestTheStatementsOfADeletedSubtreeDeleteItsRows` 加关联表；`pgtest` 的 `TestRowWaitsSeesALockThatConflicts`（`FOR SHARE` 等 `FOR NO KEY UPDATE`，不等 `FOR KEY SHARE`、没人持的、提交之后的；不在的行让测试失败）。
+- 组合：`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（三种存储值，关联的两个外键下各一行：它到 Ops 的工作项的 `duplicate`（Web 的行）、Ops 的别的工作项到它的 `blocked_by`（Ops 的行），和一条早已删除的 `relates_to`）；`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（Web 的 Seeded 到 Ops 的 Seeded 的 `duplicate`（Web 的行）、Ops 的 Blocker 到 Web 的 Seeded 的 `relates_to`（Ops 的行，不在 Web 下面，按目录的删除测试读不到它），连同种下的 `blocked_by`，三种存储值各一条：删除 Web 时三条都在 Web 的删除时刻删除；Ops 自己的关联不动）；`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`（`seedIssues` 的关联）；`TestEachIssueWriteLocksItsProjectFirst`、`TestDeletingAWorkItemAndChangingItSerialize`。
 
 - [ ] **Step 1: 迁移、契约和语句，生成**
 
@@ -9136,40 +9136,117 @@ func rowWaits(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID, lock
 		if pgtest.RowWaits(t, pool, "workspaces", acme, "FOR UPDATE") {
 ````
 
-`server/internal/platform/postgres/pgtest/rowwaits.go`（新文件，28 行）：
+`server/internal/platform/postgres/pgtest/lockwait_behind_test.go`（修改，1 处）：
+
+````old server/internal/platform/postgres/pgtest/lockwait_behind_test.go
+		failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitBehind(tb, pool, holder.PgConn(), 300*time.Millisecond) })
+````
+````new server/internal/platform/postgres/pgtest/lockwait_behind_test.go
+		failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWaitBehind(tb, pool, holder.PgConn(), 300*time.Millisecond) })
+````
+
+`server/internal/platform/postgres/pgtest/lockwait_test.go`（修改，9 处）：
+
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+	failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWait(tb, idlePool, 300*time.Millisecond) })
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+	failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWait(tb, idlePool, 300*time.Millisecond) })
+````
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+		failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, tt.pool, tt.table, 300*time.Millisecond) })
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+		failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, tt.pool, tt.table, 300*time.Millisecond) })
+````
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+	if failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, keyPool, "a", 300*time.Millisecond) }); failed !=
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+	if failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, keyPool, "a", 300*time.Millisecond) }); failed !=
+````
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+		if failed := fatalOf(func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, pool, "a", 300*time.Millisecond) }); failed !=
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+		if failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, pool, "a", 300*time.Millisecond) }); failed !=
+````
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+	failed := fatalOf(func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, keyPool, "workspace", 10*time.Second) })
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+	failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, keyPool, "workspace", 10*time.Second) })
+````
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+	failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, pool, "workspace", 10*time.Second) })
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+	failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, pool, "workspace", 10*time.Second) })
+````
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+		go func() { failed <- fatalOf(tt.probe) }()
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+		go func() { failed <- fatalOf(t, tt.probe) }()
+````
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+// end the goroutine, as testing.T's do, without failing the test.
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+// end the goroutine, as testing.T's do, without failing the test; its
+// other methods are its test's, such as Context and Cleanup.
+````
+````old server/internal/platform/postgres/pgtest/lockwait_test.go
+// fatalOf runs f with a fatalProbe on a goroutine of its own and returns
+// what f failed with, "" when it did not fail.
+func fatalOf(f func(testing.TB)) string {
+	p := &fatalProbe{}
+````
+````new server/internal/platform/postgres/pgtest/lockwait_test.go
+// fatalOf runs f with a fatalProbe of t on a goroutine of its own and
+// returns what f failed with, "" when it did not fail.
+func fatalOf(t testing.TB, f func(testing.TB)) string {
+	p := &fatalProbe{TB: t}
+````
+
+`server/internal/platform/postgres/pgtest/rowwaits.go`（新文件，32 行）：
 
 ````file server/internal/platform/postgres/pgtest/rowwaits.go
 package pgtest
 
 import (
-	"errors"
 	"testing"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
 
 // RowWaits reports whether a statement that takes lock, such as "FOR
 // SHARE", on the row id of table, in a transaction of its own, waits for a
 // lock another transaction holds on the row: NOWAIT answers
-// lock_not_available (55P03) at once instead of waiting. Its wait for a
-// connection of pool ends soon (Soon); any other failure fails the test.
+// lock_not_available (postgres.LockNotAvailable) at once instead of
+// waiting. Its wait for a connection of pool ends soon (Soon). A row that
+// is not there fails the test, since no lock could ever be seen on it, and
+// so does any other failure.
 func RowWaits(t testing.TB, pool *pgxpool.Pool, table string, id uuid.UUID, lock string) bool {
 	t.Helper()
-	_, err := pool.Exec(Soon(t), "SELECT 1 FROM "+table+" WHERE id = $1 "+lock+" NOWAIT", id)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
+	tag, err := pool.Exec(Soon(t), "SELECT 1 FROM "+table+" WHERE id = $1 "+lock+" NOWAIT", id)
+	if postgres.LockNotAvailable(err) {
 		return true
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
+	if tag.RowsAffected() != 1 {
+		t.Fatalf("pgtest: %s has no row %s", table, id)
+	}
 	return false
 }
 ````
 
-`server/internal/platform/postgres/pgtest/rowwaits_test.go`（新文件，55 行）：
+`server/internal/platform/postgres/pgtest/rowwaits_test.go`（新文件，61 行）：
 
 ````file server/internal/platform/postgres/pgtest/rowwaits_test.go
 package pgtest_test
@@ -9184,9 +9261,10 @@ import (
 
 // RowWaits sees a lock another transaction holds on the row that the lock
 // asked for conflicts with, and nothing else: FOR SHARE waits for the row
-// held FOR NO KEY UPDATE; not for the one held FOR KEY SHARE, with which it
-// does not conflict; not for a row nobody holds; and not for the first once
-// its holder is done.
+// held FOR NO KEY UPDATE; not for the one held FOR KEY SHARE, with which
+// it does not conflict; not for a row nobody holds; and not for the first
+// once its holder is done. A row that is not there fails the test, rather
+// than read as a row nobody holds.
 func TestRowWaitsSeesALockThatConflicts(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -9226,6 +9304,11 @@ func TestRowWaitsSeesALockThatConflicts(t *testing.T) {
 	if pgtest.RowWaits(t, pool, "a", held, "FOR SHARE") {
 		t.Error("RowWaits() of the held row once its holder committed = true, want false")
 	}
+	absent := uuid.NewV7()
+	failed := fatalOf(t, func(tb testing.TB) { pgtest.RowWaits(tb, pool, "a", absent, "FOR SHARE") })
+	if want := "pgtest: a has no row " + absent.String(); failed != want {
+		t.Errorf("RowWaits() of a row that is not there failed with %q, want %q", failed, want)
+	}
 }
 ````
 
@@ -9260,7 +9343,7 @@ func (s *Store) DeleteIssueRelationRows(ctx context.Context, d app.IssueDeletion
 		{"issue_relations", (*postgresadapter.Store).DeleteIssueRelationRows},
 ````
 
-`server/internal/modules/issue/adapter/postgres/delete_relations_test.go`（新文件，184 行）：
+`server/internal/modules/issue/adapter/postgres/delete_relations_test.go`（新文件，199 行）：
 
 ````file server/internal/modules/issue/adapter/postgres/delete_relations_test.go
 package postgresadapter_test
@@ -9283,24 +9366,27 @@ import (
 // ways, whichever project holds them, locked in id order.
 
 // relationRow is a relation as the tests insert it: its id, the project
-// that holds it, its issue_id end and its related end.
+// that holds it, its issue_id end, its related end and its stored type.
 type relationRow struct {
 	id             uuid.UUID
 	p              project
 	issue, related uuid.UUID
+	kind           string
 }
 
-// The relations of a deleted subtree are deleted both ways, whichever
-// project holds the row. Web's item and sub are deleted; x is another work
-// item of web, y and z work items of ops. item relates to x (a row of web,
-// item at its issue_id end); x to sub (web's, sub at its related end);
-// ops' y to item (a row of ops, item at its related end); sub to ops' z
-// (web's, the other end in ops). x relates to y, and z to x, naming
-// neither; x's relation to item, which alice deleted an hour before,
-// shares item and x's pair. One statement names sub and item, by bob at
-// later: the first four rows are deleted at later by bob; the two naming
-// neither are as they were, and the one deleted before keeps alice's
-// deletion; every other column of every row is kept.
+// The relations of a deleted subtree are deleted both ways, of each stored
+// type, whichever project holds the row. Web's item and sub are deleted; x
+// is another work item of web, y and z work items of ops. Of each type one
+// row has item or sub at its issue_id end, and one at its related end:
+// item relates_to x (a row of web) and x relates_to sub (web's); sub is
+// blocked_by ops' z (web's, the other end in ops) and ops' y is blocked_by
+// item (a row of ops); item is a duplicate of z (web's) and y of sub
+// (ops'). x is a duplicate of y, and z is blocked_by x, naming neither;
+// x's relation to item, which alice deleted an hour before, shares item
+// and x's pair. One statement names sub and item, by bob at later: the six
+// rows that name them are deleted at later by bob; the two naming neither
+// are as they were, and the one deleted before keeps alice's deletion;
+// every other column of every row is kept.
 func TestTheRelationsOfADeletedSubtreeAreDeletedBothWays(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -9314,11 +9400,14 @@ func TestTheRelationsOfADeletedSubtreeAreDeletedBothWays(t *testing.T) {
 	newIssue(t, pool, ops, z, 2, alice)
 	before, later := now.Add(-time.Hour), now.Add(time.Hour)
 	xItem := uuid.NewV7()
-	newRelation(t, pool, web, x, item, xItem, alice)
+	newRelation(t, pool, web, x, item, xItem, "relates_to", alice)
 	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2, updated_at = $2, updated_by_id = $3 WHERE id = $1", xItem, before, alice)
-	named := []relationRow{{uuid.NewV7(), web, item, x}, {uuid.NewV7(), web, x, sub}, {uuid.NewV7(), ops, y, item}, {uuid.NewV7(), web, sub, z}}
-	for _, r := range append(slices.Clone(named), relationRow{uuid.NewV7(), web, x, y}, relationRow{uuid.NewV7(), ops, z, x}) {
-		newRelation(t, pool, r.p, r.issue, r.related, r.id, alice)
+	named := []relationRow{{uuid.NewV7(), web, item, x, "relates_to"}, {uuid.NewV7(), web, x, sub, "relates_to"},
+		{uuid.NewV7(), web, sub, z, "blocked_by"}, {uuid.NewV7(), ops, y, item, "blocked_by"}, {uuid.NewV7(), web, item, z, "duplicate"},
+		{uuid.NewV7(), ops, y, sub, "duplicate"}}
+	neither := []relationRow{{uuid.NewV7(), web, x, y, "duplicate"}, {uuid.NewV7(), ops, z, x, "blocked_by"}}
+	for _, r := range slices.Concat(named, neither) {
+		newRelation(t, pool, r.p, r.issue, r.related, r.id, r.kind, alice)
 	}
 	rows, stamps := rowsAsText(t, pool, "issue_relations"), audits(t, pool, "issue_relations")
 
@@ -9359,9 +9448,9 @@ func TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder(t *testing.T) {
 		newIssue(t, pool, web, id, n+1, alice)
 	}
 	a, b, c := uuid.NewV7(), uuid.NewV7(), uuid.NewV7() // drawn in this order: ascending ids
-	newRelation(t, pool, web, item, r, c, alice)
-	newRelation(t, pool, web, q, item, b, alice)
-	newRelation(t, pool, web, item, p, a, alice)
+	newRelation(t, pool, web, item, r, c, "relates_to", alice)
+	newRelation(t, pool, web, q, item, b, "relates_to", alice)
+	newRelation(t, pool, web, item, p, a, "relates_to", alice)
 	earlier, later := now.Add(-time.Hour), now.Add(time.Hour)
 
 	soon := pgtest.Soon(t) // ends the test's statements and the statement's wait for b
@@ -9407,36 +9496,45 @@ func TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder(t *testing.T) {
 }
 
 // A deleted project's batch of relations takes the rows that name one of
-// its work items at either end, whichever project holds them, the work
-// items deleted before it among them, as the work items' batches delete
-// them first. In web, w1 relates to w2 (a row of web); w2 to ops' o2
-// (web's, the other end in ops); ops' o1 to w1 (a row of ops, web's w1 at
-// its related end). w1 is deleted. ops' o1 relates to o2, naming no work
-// item of web; o2's relation to w1, which alice deleted an hour before,
-// keeps her deletion. One batch of web's, by bob at later, takes the three
-// rows naming web's work items, and only them, and deletes them.
+// its work items at either end, of each stored type, whichever project
+// holds them, the work items deleted before it among them, as the work
+// items' batches delete them first. Of each type one row is web's, a work
+// item of web at its issue_id end, and one is ops', a work item of web at
+// its related end: w1 relates_to w2 (a row of web) and ops' o1 relates_to
+// w1 (a row of ops); w2 is blocked_by ops' o2 (web's, the other end in
+// ops) and ops' o3 is blocked_by w2 (ops'); w1 is a duplicate of o3
+// (web's) and o1 of w2 (ops'). w1 is deleted. ops' o1 is blocked_by o2,
+// naming no work item of web; o2's relation to w1, which alice deleted an
+// hour before, keeps her deletion. One batch of web's, by bob at later,
+// takes and deletes the six rows naming web's work items, and only them.
 func TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	acme := newWorkspace(t, pool, "acme")
 	web, ops := newProject(t, pool, acme, "WEB"), newProject(t, pool, acme, "OPS")
-	w1, w2, o1, o2 := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	w1, w2, o1, o2, o3 := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	newIssue(t, pool, web, w1, 1, alice)
 	newIssue(t, pool, web, w2, 2, alice)
-	newIssue(t, pool, ops, o1, 1, alice)
-	newIssue(t, pool, ops, o2, 2, alice)
+	for n, id := range []uuid.UUID{o1, o2, o3} {
+		newIssue(t, pool, ops, id, n+1, alice)
+	}
 	earlier, later := now.Add(-time.Hour), now.Add(time.Hour)
 	exec(t, pool, "UPDATE issues SET deleted_at = $2 WHERE id = $1", w1, later)
-	named := []relationRow{{uuid.NewV7(), web, w1, w2}, {uuid.NewV7(), web, w2, o2}, {uuid.NewV7(), ops, o1, w1}}
+	named := []relationRow{{uuid.NewV7(), web, w1, w2, "relates_to"}, {uuid.NewV7(), ops, o1, w1, "relates_to"},
+		{uuid.NewV7(), web, w2, o2, "blocked_by"}, {uuid.NewV7(), ops, o3, w2, "blocked_by"}, {uuid.NewV7(), web, w1, o3, "duplicate"},
+		{uuid.NewV7(), ops, o1, w2, "duplicate"}}
 	gone := uuid.NewV7()
-	for _, r := range append(slices.Clone(named), relationRow{uuid.NewV7(), ops, o1, o2}, relationRow{gone, ops, o2, w1}) {
-		newRelation(t, pool, r.p, r.issue, r.related, r.id, alice)
+	for _, r := range slices.Concat(named, []relationRow{{uuid.NewV7(), ops, o1, o2, "blocked_by"}, {gone, ops, o2, w1, "relates_to"}}) {
+		newRelation(t, pool, r.p, r.issue, r.related, r.id, r.kind, alice)
 	}
 	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2, updated_at = $2, updated_by_id = $3 WHERE id = $1", gone, earlier, alice)
 	stamps := audits(t, pool, "issue_relations")
 
 	ids, err := s.DeleteProjectRelationRows(context.Background(), app.RowBatch{ProjectID: web.id, Limit: 10, By: bob, At: later})
-	want := []uuid.UUID{named[0].id, named[1].id, named[2].id}
+	var want []uuid.UUID
+	for _, r := range named {
+		want = append(want, r.id)
+	}
 	if got := slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare); err != nil || !slices.Equal(got, want) {
 		t.Errorf("web's batch = %v, %v; want %v", got, err, want)
 	}
@@ -9485,7 +9583,7 @@ func aRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.U
 	t.Helper()
 	related := uuid.NewV7()
 	newIssue(t, pool, p, related, 200+n, by)
-	newRelation(t, pool, p, issue, related, id, by)
+	newRelation(t, pool, p, issue, related, id, "relates_to", by)
 }
 
 var batchStatements = []batchStatement{
@@ -9510,11 +9608,12 @@ var batchStatements = []batchStatement{
 }
 
 // newRelation inserts the relation id, a row of p: p's work item issue
-// relates to the work item related, of any project, by by at now.
-func newRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, related, id, by uuid.UUID) {
+// relates to the work item related, of any project, as kind, its stored
+// type (blocked_by, duplicate or relates_to), by by at now.
+func newRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, related, id uuid.UUID, kind string, by uuid.UUID) {
 	t.Helper()
 	exec(t, pool, `INSERT INTO issue_relations (id, workspace_id, project_id, issue_id, related_issue_id, relation_type, created_by_id,
-		updated_by_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'relates_to', $6, $6, $7, $7)`, id, p.workspace, p.id, issue, related,
+		updated_by_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $8)`, id, p.workspace, p.id, issue, related, kind,
 		by, now)
 }
 
@@ -9769,14 +9868,14 @@ const unwritten = new Set(["issues.parent_id", "issue_relations.issue_id", "issu
 }
 
 // relate relates the work item from to the work item to, of any project,
-// directly, by by: a relation row of from's project, relates_to (M4 design
-// 3.10), seeded so that the test does not depend on which of the issue
-// module's writes exist.
-func relate(t testing.TB, pool *pgxpool.Pool, from, to, by uuid.UUID) {
+// directly, by by: a relation row of from's project, of the stored type
+// kind (M4 design 3.10), seeded so that the test does not depend on which
+// of the issue module's writes exist.
+func relate(t testing.TB, pool *pgxpool.Pool, from, to uuid.UUID, kind string, by uuid.UUID) {
 	t.Helper()
 	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO issue_relations (id, workspace_id, project_id, issue_id, related_issue_id,
-		relation_type, created_by_id, updated_by_id) SELECT $1, workspace_id, project_id, id, $3, 'relates_to', $4, $4 FROM issues WHERE id = $2`,
-		uuid.NewV7(), from, to, by); err != nil || tag.RowsAffected() != 1 {
+		relation_type, created_by_id, updated_by_id) SELECT $1, workspace_id, project_id, id, $3, $4, $5, $5 FROM issues WHERE id = $2`,
+		uuid.NewV7(), from, to, kind, by); err != nil || tag.RowsAffected() != 1 {
 		t.Fatalf("relating %s to %s: %d rows, %v; want 1", from, to, tag.RowsAffected(), err)
 	}
 }
@@ -9809,8 +9908,8 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to, by uuid.UUID) {
 ````
 ````new server/internal/bootstrap/issue_deletion_test.go
 	underWorkItem(t, pool, gone, made[1])
-	relate(t, pool, gone, made[2], account)
-	relate(t, pool, made[1], gone, account)
+	relate(t, pool, gone, made[2], "relates_to", account)
+	relate(t, pool, made[1], gone, "relates_to", account)
 ````
 ````old server/internal/bootstrap/issue_deletion_test.go
 // assignees and its labels one deleted before, all of bob's writing. The
@@ -9821,14 +9920,15 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to, by uuid.UUID) {
 ````
 ````new server/internal/bootstrap/issue_deletion_test.go
 // assignees and its labels one deleted before, all of bob's writing; and,
-// of his writing too, written directly (relate), its relation to a work
-// item of Ops, a row of Web's; a relation of another work item of Ops to
-// it, a row of Ops'; and its relation to another of Web's, deleted before.
-// The other work item, made and related the same way, has a row of each
-// table under it, of which only its relation to another of Web's is
-// deleted before. alice, Web's admin, deletes it: no row under it is of
-// her writing before, so a deletion that kept a row's writer would show.
-// The deleted work item is not found any more.
+// of his writing too, written directly (relate), a relation of each stored
+// type: its relation to a work item of Ops (duplicate), a row of Web's; a
+// relation of another work item of Ops to it (blocked_by), a row of Ops';
+// and its relation to another of Web's (relates_to), deleted before. The
+// other work item, made and related the same way, has a row of each table
+// under it, of which only its relation to another of Web's is deleted
+// before. alice, Web's admin, deletes it: no row under it is of her
+// writing before, so a deletion that kept a row's writer would show. The
+// deleted work item is not found any more.
 ````
 ````old server/internal/bootstrap/issue_deletion_test.go
 		underWorkItem(t, w.pool, parent, w.newWorkItemBy(t, "bob", w.web, `{"name":"Part"}`))
@@ -9838,10 +9938,10 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to, by uuid.UUID) {
 	}
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 	for _, item := range []uuid.UUID{deleted, kept} {
-		relate(t, w.pool, item, w.newWorkItemIn(t, ops, `{"name":"Far"}`), w.ids["bob"])
-		relate(t, w.pool, w.newWorkItemIn(t, ops, `{"name":"Farther"}`), item, w.ids["bob"])
+		relate(t, w.pool, item, w.newWorkItemIn(t, ops, `{"name":"Far"}`), "duplicate", w.ids["bob"])
+		relate(t, w.pool, w.newWorkItemIn(t, ops, `{"name":"Farther"}`), item, "blocked_by", w.ids["bob"])
 		near := w.newWorkItemBy(t, "bob", w.web, `{"name":"Near"}`)
-		relate(t, w.pool, item, near, w.ids["bob"])
+		relate(t, w.pool, item, near, "relates_to", w.ids["bob"])
 		if tag, err := w.pool.Exec(pgtest.Soon(t), `UPDATE issue_relations SET deleted_at = now(), updated_at = now() WHERE issue_id = $1
 			AND related_issue_id = $2`, item, near); err != nil || tag.RowsAffected() != 1 {
 			t.Fatalf("deleting the relation to Near: %d rows, %v; want 1", tag.RowsAffected(), err)
@@ -9955,12 +10055,13 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to, by uuid.UUID) {
 
 // Deleting a project deletes the relations of its work items either way
 // (M4 design 3.6, 3.10), each at the project's deleted_at, whichever
-// project's row it is: beside the seeded relations, Web's Seeded related
-// to Ops' Seeded, a row of Web's, and Ops' Blocker related to Web's
-// Seeded, a row of Ops', written directly (relate). The second is no row
-// under Web, which the catalog's test of the deletion reads
-// (TestDeletingAProjectLeavesNoUndeletedRowUnderIt). Ops' own relation,
-// of its Seeded to its Blocker, stays as it was.
+// project's row it is, of each stored type: beside the seeded relations
+// (blocked_by), Web's Seeded related to Ops' Seeded (duplicate), a row of
+// Web's, and Ops' Blocker related to Web's Seeded (relates_to), a row of
+// Ops', written directly (relate). The second is no row under Web, which
+// the catalog's test of the deletion reads
+// (TestDeletingAProjectLeavesNoUndeletedRowUnderIt). Ops' own relation, of
+// its Seeded to its Blocker, stays as it was.
 func TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
 	const items = "SELECT id FROM issues WHERE project_id = $1 ORDER BY sequence_id"
@@ -9969,8 +10070,8 @@ func TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay(t *testing.T) {
 		t.Fatalf("the work items %v of Web and %v of Ops; want Seeded and Blocker of each", webItems, opsItems)
 	}
 	seeded := webItems[0]
-	relate(t, pool, seeded, opsItems[0], aliceID)
-	relate(t, pool, opsItems[1], seeded, aliceID)
+	relate(t, pool, seeded, opsItems[0], "duplicate", aliceID)
+	relate(t, pool, opsItems[1], seeded, "relates_to", aliceID)
 	const opsOwn = `SELECT coalesce(string_agg(id::text || ' ' || coalesce(deleted_at::text, 'undeleted'), ', ' ORDER BY id), '')
 		FROM issue_relations WHERE project_id = $1 AND related_issue_id <> $2`
 	var before, after string
@@ -10025,7 +10126,7 @@ Expected: 123 个全部通过（删除项目、工作区的故事 P4、W2、W3 �
 - [ ] **Step 7: 提交**
 
 ```bash
-git add api/modules/issue.yaml api/modules/project.yaml api/modules/workspace.yaml deploy/runtime-grants.sql e2e/fixtures/assert/issue.ts e2e/fixtures/assert/project.ts e2e/fixtures/assert/workspace.ts server/internal/bootstrap/issue_deletion_test.go server/internal/bootstrap/issue_interleaving_deletion_test.go server/internal/bootstrap/issue_interleaving_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/project_deletion_test.go server/internal/modules/issue/adapter/postgres/delete_issue.go server/internal/modules/issue/adapter/postgres/delete_issue_test.go server/internal/modules/issue/adapter/postgres/delete_relations_test.go server/internal/modules/issue/adapter/postgres/delete_rows.go server/internal/modules/issue/adapter/postgres/delete_rows_test.go server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql server/internal/modules/issue/adapter/postgres/queries/delete_rows.sql server/internal/modules/issue/adapter/postgres/store_test.go server/internal/modules/issue/app/cascade_test.go server/internal/modules/issue/app/delete_issue.go server/internal/modules/issue/app/delete_issue_test.go server/internal/modules/issue/app/delete_project_rows.go server/internal/modules/issue/app/fakes_deletion_test.go server/internal/modules/project/adapter/postgres/demote_test.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/lock_issue_projects_test.go server/internal/platform/postgres/pgtest/rowwaits.go server/internal/platform/postgres/pgtest/rowwaits_test.go server/migrations/issue_schema_test.go server/migrations/schema_test.go server/migrations/sql/00020_issue_issue_relations.sql server/sqlc.yaml api/dist/openapi.yaml server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go server/internal/modules/issue/adapter/postgres/gen/models.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml api/modules/project.yaml api/modules/workspace.yaml deploy/runtime-grants.sql e2e/fixtures/assert/issue.ts e2e/fixtures/assert/project.ts e2e/fixtures/assert/workspace.ts server/internal/bootstrap/issue_deletion_test.go server/internal/bootstrap/issue_interleaving_deletion_test.go server/internal/bootstrap/issue_interleaving_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/project_deletion_test.go server/internal/modules/issue/adapter/postgres/delete_issue.go server/internal/modules/issue/adapter/postgres/delete_issue_test.go server/internal/modules/issue/adapter/postgres/delete_relations_test.go server/internal/modules/issue/adapter/postgres/delete_rows.go server/internal/modules/issue/adapter/postgres/delete_rows_test.go server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql server/internal/modules/issue/adapter/postgres/queries/delete_rows.sql server/internal/modules/issue/adapter/postgres/store_test.go server/internal/modules/issue/app/cascade_test.go server/internal/modules/issue/app/delete_issue.go server/internal/modules/issue/app/delete_issue_test.go server/internal/modules/issue/app/delete_project_rows.go server/internal/modules/issue/app/fakes_deletion_test.go server/internal/modules/project/adapter/postgres/demote_test.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/lock_issue_projects_test.go server/internal/platform/postgres/pgtest/lockwait_behind_test.go server/internal/platform/postgres/pgtest/lockwait_test.go server/internal/platform/postgres/pgtest/rowwaits.go server/internal/platform/postgres/pgtest/rowwaits_test.go server/migrations/issue_schema_test.go server/migrations/schema_test.go server/migrations/sql/00020_issue_issue_relations.sql server/sqlc.yaml api/dist/openapi.yaml server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go server/internal/modules/issue/adapter/postgres/gen/models.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): the relations' table, and the deletions take its rows both ways
@@ -10064,6 +10165,10 @@ Expected: 通过。
 | `T8.12` | 删除工作项先删关联、后删标签，不在全局顺序上 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T8.13` | 运行时的角色不能写关联 | `internal/bootstrap` 的 `TestTheGrantsFileCoversEveryRelationAndFunction`（`make test`） | 组合 |
 | `T8.14` | `pgtest.RowWaits` 把别的事务持着的行读成没人持着 | `internal/platform/postgres/pgtest` 的 `TestRowWaitsSeesALockThatConflicts`（`make test`）、`internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/modules/project/adapter/postgres` 的全部测试（`make test`） | 存储 |
+| `T8.15` | `pgtest.RowWaits` 对不存在的行答"不等"，不让测试失败 | `internal/platform/postgres/pgtest` 的 `TestRowWaitsSeesALockThatConflicts`（`make test`） | 存储 |
+| `T8.16` | 删除的工作项的关联只删 `relates_to` 的 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`）、`internal/bootstrap` 的 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（`make test`）（Task 14 起） | 存储；组合 |
+| `T8.17` | 删除的工作项的关联略过 `duplicate` 的 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`）、`internal/bootstrap` 的 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（`make test`）（Task 14 起） | 存储；组合 |
+| `T8.18` | 删除的项目的一批关联略过 `duplicate` 的 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（`make test`）、`internal/bootstrap` 的 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（`make test`）（Task 14 起） | 存储；组合 |
 
 ---
 
@@ -10486,9 +10591,9 @@ func TestRelated(t *testing.T) {
 	}
 	newIssue(t, pool, ops, o, 1, alice)
 	gone := uuid.NewV7()
-	for _, r := range []relationRow{{uuid.NewV7(), web, item, b}, {uuid.NewV7(), web, a, item}, {uuid.NewV7(), ops, o, item},
-		{gone, web, item, c}, {uuid.NewV7(), web, d, b}} {
-		newRelation(t, pool, r.p, r.issue, r.related, r.id, alice)
+	for _, r := range []relationRow{{uuid.NewV7(), web, item, b, "relates_to"}, {uuid.NewV7(), web, a, item, "relates_to"},
+		{uuid.NewV7(), ops, o, item, "relates_to"}, {gone, web, item, c, "relates_to"}, {uuid.NewV7(), web, d, b, "relates_to"}} {
+		newRelation(t, pool, r.p, r.issue, r.related, r.id, r.kind, alice)
 	}
 	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2 WHERE id = $1", gone, now)
 
@@ -14097,12 +14202,12 @@ func TestRelations(t *testing.T) {
 		if r.ProjectID == ops.id {
 			p = ops
 		}
-		newRelation(t, pool, p, r.IssueID, r.RelatedID, r.ID, *r.CreatedByID)
-		exec(t, pool, "UPDATE issue_relations SET relation_type = $2, created_at = $3 WHERE id = $1", r.ID, string(r.Type), r.CreatedAt)
+		newRelation(t, pool, p, r.IssueID, r.RelatedID, r.ID, string(r.Type), *r.CreatedByID)
+		exec(t, pool, "UPDATE issue_relations SET created_at = $2 WHERE id = $1", r.ID, r.CreatedAt)
 	}
-	newRelation(t, pool, web, item, c, gone, alice)
+	newRelation(t, pool, web, item, c, gone, "relates_to", alice)
 	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2 WHERE id = $1", gone, now)
-	newRelation(t, pool, web, d, b, uuid.NewV7(), alice)
+	newRelation(t, pool, web, d, b, uuid.NewV7(), "relates_to", alice)
 
 	if got, err := s.Relations(context.Background(), item); err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("Relations(item) = %+v, %v; want %+v", got, err, want)
@@ -15657,9 +15762,9 @@ func TestGetRelation(t *testing.T) {
 	newIssue(t, pool, ops, o, 1, alice)
 	want := domain.Relation{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops.id, IssueID: o, RelatedID: item, Type: domain.BlockedBy,
 		CreatedByID: &bob, CreatedAt: now.Add(time.Second)}
-	newRelation(t, pool, ops, o, item, want.ID, bob)
-	exec(t, pool, "UPDATE issue_relations SET relation_type = $2, created_at = $3 WHERE id = $1", want.ID, string(want.Type), want.CreatedAt)
-	newRelation(t, pool, web, item, b, gone, alice)
+	newRelation(t, pool, ops, o, item, want.ID, string(want.Type), bob)
+	exec(t, pool, "UPDATE issue_relations SET created_at = $2 WHERE id = $1", want.ID, want.CreatedAt)
+	newRelation(t, pool, web, item, b, gone, "relates_to", alice)
 	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2 WHERE id = $1", gone, now)
 
 	if got, found, err := s.GetRelation(context.Background(), want.ID); err != nil || !found || !reflect.DeepEqual(got, want) {
@@ -15690,8 +15795,8 @@ func TestDeleteRelation(t *testing.T) {
 	newIssue(t, pool, web, item, 1, alice)
 	newIssue(t, pool, web, b, 2, alice)
 	newIssue(t, pool, ops, o, 1, alice)
-	newRelation(t, pool, web, item, b, toB, alice)
-	newRelation(t, pool, web, item, o, toO, alice)
+	newRelation(t, pool, web, item, b, toB, "relates_to", alice)
+	newRelation(t, pool, web, item, o, toO, "relates_to", alice)
 	rows, stamps := rowsAsText(t, pool, "issue_relations"), audits(t, pool, "issue_relations")
 	later := now.Add(time.Hour)
 
@@ -17092,7 +17197,7 @@ Expected: 通过。
 | `T14.3` | 页面没有 `issue.relation_not_found` 的文案 | `error-messages.test.ts`（`make test-web`） | 单元 |
 | `T14.4` | 中文的语言包没有 `issue_relation_not_found` | `web/packages/i18n` 的 `check:sync`（`make lint-web`） | 守卫 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T7.9`、`T8.8`、`T8.10`、`T8.11`、`T10.7`、`T10.11`、`T12.9`、`T13.1`、`T13.2`、`T13.3`、`T13.5`、`T13.6`、`T13.7`、`T13.8`、`T13.9`、`T13.10`、`T13.11`、`T13.12`、`T13.13`、`T13.14`、`T13.15`、`T13.16`、`T13.17`、`T13.18`、`T13.19`、`T13.23`、`T13.24`、`T13.25`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=14`）。
+本 Task 的检查也发现较早的 Task 的变异 `T7.9`、`T8.8`、`T8.10`、`T8.11`、`T8.16`、`T8.17`、`T8.18`、`T10.7`、`T10.11`、`T12.9`、`T13.1`、`T13.2`、`T13.3`、`T13.5`、`T13.6`、`T13.7`、`T13.8`、`T13.9`、`T13.10`、`T13.11`、`T13.12`、`T13.13`、`T13.14`、`T13.15`、`T13.16`、`T13.17`、`T13.18`、`T13.19`、`T13.23`、`T13.24`、`T13.25`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=14`）。
 
 ---
 

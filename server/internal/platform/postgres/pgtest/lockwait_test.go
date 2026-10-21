@@ -21,7 +21,7 @@ func TestWaitForLockWaitSeesOnlyItsOwnDatabase(t *testing.T) {
 	idlePool := newPool(t, idle)
 
 	pgtest.WaitForLockWait(t, newPool(t, waiting), 10*time.Second)
-	failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWait(tb, idlePool, 300*time.Millisecond) })
+	failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWait(tb, idlePool, 300*time.Millisecond) })
 
 	if failed != "no statement waited for a lock within 300ms" {
 		t.Errorf("WaitForLockWait on the other database failed with %q, want it to fail at its deadline", failed)
@@ -70,7 +70,7 @@ func TestWaitForLockWaitOnSeesOnlyWaitsForItsTablesRows(t *testing.T) {
 		{"another table, which the waiter read", rowsPool, "b"},
 		{"an advisory lock, in another database", advisoryPool, "a"},
 	} {
-		failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, tt.pool, tt.table, 300*time.Millisecond) })
+		failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, tt.pool, tt.table, 300*time.Millisecond) })
 		if want := "no statement waited for a row lock of " + tt.table + " within 300ms"; failed != want {
 			t.Errorf("%s: WaitForLockWaitOn failed with %q, want %q", tt.name, failed, want)
 		}
@@ -105,7 +105,7 @@ func TestWaitForKeyWaitOnSeesOnlyAKeysWaitOnItsTable(t *testing.T) {
 
 	keyPool := newPool(t, key)
 	pgtest.WaitForKeyWaitOn(t, keyPool, "a", 10*time.Second)
-	if failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, keyPool, "a", 300*time.Millisecond) }); failed !=
+	if failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, keyPool, "a", 300*time.Millisecond) }); failed !=
 		"no statement waited for a row lock of a within 300ms" {
 		t.Errorf("WaitForLockWaitOn on a key's wait failed with %q, want it to fail at its deadline", failed)
 	}
@@ -116,13 +116,13 @@ func TestWaitForKeyWaitOnSeesOnlyAKeysWaitOnItsTable(t *testing.T) {
 	} {
 		pool := newPool(t, tt.url)
 		pgtest.WaitForLockWait(t, pool, 10*time.Second)
-		if failed := fatalOf(func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, pool, "a", 300*time.Millisecond) }); failed !=
+		if failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, pool, "a", 300*time.Millisecond) }); failed !=
 			"no statement waited for a key of a within 300ms" {
 			t.Errorf("%s: WaitForKeyWaitOn failed with %q, want it to fail at its deadline", tt.name, failed)
 		}
 	}
 	start := time.Now()
-	failed := fatalOf(func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, keyPool, "workspace", 10*time.Second) })
+	failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, keyPool, "workspace", 10*time.Second) })
 	if took := time.Since(start); failed != `pgtest: no table "workspace"` || took > 5*time.Second {
 		t.Errorf("WaitForKeyWaitOn(workspace) failed with %q after %v, want pgtest: no table \"workspace\" at once", failed, took)
 	}
@@ -135,7 +135,7 @@ func TestWaitForLockWaitOnFailsAtOnceForNoSuchTable(t *testing.T) {
 	t.Parallel()
 	pool := newPool(t, pgtest.NewDatabase(t))
 	start := time.Now()
-	failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, pool, "workspace", 10*time.Second) })
+	failed := fatalOf(t, func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, pool, "workspace", 10*time.Second) })
 	if took := time.Since(start); failed != `pgtest: no table "workspace"` || took > 5*time.Second {
 		t.Errorf("WaitForLockWaitOn(workspace) failed with %q after %v, want pgtest: no table \"workspace\" at once", failed, took)
 	}
@@ -178,7 +178,7 @@ func TestTheProbesFailAtTheirDeadlineOnAnExhaustedPool(t *testing.T) {
 			fmt.Sprintf("no statement waited for a lock of backend %d within 300ms", held.Conn().PgConn().PID())},
 	} {
 		failed := make(chan string, 1)
-		go func() { failed <- fatalOf(tt.probe) }()
+		go func() { failed <- fatalOf(t, tt.probe) }()
 		select {
 		case got := <-failed:
 			if got != tt.want {
@@ -308,7 +308,8 @@ func newPool(t *testing.T, url string) *pgxpool.Pool {
 }
 
 // fatalProbe is a testing.TB whose Fatal and Fatalf record the message and
-// end the goroutine, as testing.T's do, without failing the test.
+// end the goroutine, as testing.T's do, without failing the test; its
+// other methods are its test's, such as Context and Cleanup.
 type fatalProbe struct {
 	testing.TB
 	message string
@@ -326,10 +327,10 @@ func (p *fatalProbe) Fatalf(format string, args ...any) {
 	runtime.Goexit()
 }
 
-// fatalOf runs f with a fatalProbe on a goroutine of its own and returns
-// what f failed with, "" when it did not fail.
-func fatalOf(f func(testing.TB)) string {
-	p := &fatalProbe{}
+// fatalOf runs f with a fatalProbe of t on a goroutine of its own and
+// returns what f failed with, "" when it did not fail.
+func fatalOf(t testing.TB, f func(testing.TB)) string {
+	p := &fatalProbe{TB: t}
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
