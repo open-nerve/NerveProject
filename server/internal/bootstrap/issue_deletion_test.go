@@ -36,10 +36,24 @@ func underWorkItem(t testing.TB, pool *pgxpool.Pool, parent uuid.UUID, items ...
 	}
 }
 
+// relate relates the work item from to the work item to, of any project,
+// directly, by by: a relation row of from's project, relates_to (M4 design
+// 3.10), seeded so that the test does not depend on which of the issue
+// module's writes exist.
+func relate(t testing.TB, pool *pgxpool.Pool, from, to, by uuid.UUID) {
+	t.Helper()
+	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO issue_relations (id, workspace_id, project_id, issue_id, related_issue_id,
+		relation_type, created_by_id, updated_by_id) SELECT $1, workspace_id, project_id, id, $3, 'relates_to', $4, $4 FROM issues WHERE id = $2`,
+		uuid.NewV7(), from, to, by); err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("relating %s to %s: %d rows, %v; want 1", from, to, tag.RowsAffected(), err)
+	}
+}
+
 // deletedWorkItem is a work item that the caller of token, account, makes
 // in project through the API, assigned to him and labelled the project's
-// Bug, with another he makes under it (underWorkItem), and deletes through
-// the API: a row of each table under it, deleted.
+// Bug, with another he makes under it (underWorkItem) and a third, Kin; he
+// relates it to Kin and the one under it to it (relate), and deletes it
+// through the API: a row of each table under it, deleted.
 func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token string, account,
 	project uuid.UUID) uuid.UUID {
 	t.Helper()
@@ -47,9 +61,9 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 	if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM labels WHERE project_id = $1 AND name = 'Bug'", project).Scan(&bug); err != nil {
 		t.Fatal(err)
 	}
-	var made [2]uuid.UUID
+	var made [3]uuid.UUID
 	for i, body := range []string{`{"name":"Gone","assignee_ids":["` + account.String() + `"],"label_ids":["` + bug.String() + `"]}`,
-		`{"name":"Part"}`} {
+		`{"name":"Part"}`, `{"name":"Kin"}`} {
 		status, answer := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+project.String()+"/issues", token, body)
 		if status != http.StatusCreated {
 			t.Fatalf("creating the work item = %d %s, want 201", status, answer)
@@ -62,6 +76,8 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 	}
 	gone := made[0]
 	underWorkItem(t, pool, gone, made[1])
+	relate(t, pool, gone, made[2], account)
+	relate(t, pool, made[1], gone, account)
 	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/issues/"+gone.String(), token, ""); status != http.StatusNoContent {
 		t.Fatalf("deleting the work item = %d %s, want 204", status, body)
 	}
@@ -76,16 +92,31 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 // assigned to him and labelled Bug (fullIssue), whom he unassigned and
 // unlabelled, then assigned and labelled again, with a work item of his
 // under it (underWorkItem): a row of each table under it, and of its
-// assignees and its labels one deleted before, all of bob's writing. The
-// other work item, made the same way, has a row of each table under it,
-// none deleted before. alice, Web's admin, deletes it: no row under it is
-// of her writing before, so a deletion that kept a row's writer would
-// show. The deleted work item is not found any more.
+// assignees and its labels one deleted before, all of bob's writing; and,
+// of his writing too, written directly (relate), its relation to a work
+// item of Ops, a row of Web's; a relation of another work item of Ops to
+// it, a row of Ops'; and its relation to another of Web's, deleted before.
+// The other work item, made and related the same way, has a row of each
+// table under it, of which only its relation to another of Web's is
+// deleted before. alice, Web's admin, deletes it: no row under it is of
+// her writing before, so a deletion that kept a row's writer would show.
+// The deleted work item is not found any more.
 func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w := newIssueWorld(t)
 	deleted, kept := w.newWorkItemBy(t, "bob", w.web, w.fullIssue()), w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	for _, parent := range []uuid.UUID{deleted, kept} {
 		underWorkItem(t, w.pool, parent, w.newWorkItemBy(t, "bob", w.web, `{"name":"Part"}`))
+	}
+	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
+	for _, item := range []uuid.UUID{deleted, kept} {
+		relate(t, w.pool, item, w.newWorkItemIn(t, ops, `{"name":"Far"}`), w.ids["bob"])
+		relate(t, w.pool, w.newWorkItemIn(t, ops, `{"name":"Farther"}`), item, w.ids["bob"])
+		near := w.newWorkItemBy(t, "bob", w.web, `{"name":"Near"}`)
+		relate(t, w.pool, item, near, w.ids["bob"])
+		if tag, err := w.pool.Exec(pgtest.Soon(t), `UPDATE issue_relations SET deleted_at = now(), updated_at = now() WHERE issue_id = $1
+			AND related_issue_id = $2`, item, near); err != nil || tag.RowsAffected() != 1 {
+			t.Fatalf("deleting the relation to Near: %d rows, %v; want 1", tag.RowsAffected(), err)
+		}
 	}
 	for _, body := range []string{`{"assignee_ids":[],"label_ids":[]}`,
 		`{"assignee_ids":["` + w.ids["bob"].String() + `"],"label_ids":["` + w.bug.String() + `"]}`} {

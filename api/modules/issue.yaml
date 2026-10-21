@@ -153,10 +153,10 @@ paths:
         archived project cannot be deleted (project.archived); an archived
         work item is deleted as any other. The work item and each work item
         under it, however deep, archived ones too, with their assignees,
-        labels, subscribers and activity, are deleted by the caller at one
-        moment; their numbers are not used again. A project with too many
-        writes on its work items at once answers server_busy, with
-        Retry-After: try again then.
+        labels, relations, subscribers and activity, are deleted by the
+        caller at one moment; their numbers are not used again. A project
+        with too many writes on its work items at once answers server_busy,
+        with Retry-After: try again then.
       security: [{bearer: []}]
       x-problem-codes: [issue.not_found, forbidden, project.archived, server_busy]
       responses:

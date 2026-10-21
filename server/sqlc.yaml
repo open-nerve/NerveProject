@@ -85,6 +85,7 @@ sql:
       - migrations/sql/00017_issue_issue_labels.sql
       - migrations/sql/00018_issue_issue_subscribers.sql
       - migrations/sql/00019_issue_issue_activities.sql
+      - migrations/sql/00020_issue_issue_relations.sql
     queries: internal/modules/issue/adapter/postgres/queries
     gen:
       go:

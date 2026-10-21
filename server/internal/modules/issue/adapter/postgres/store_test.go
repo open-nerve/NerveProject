@@ -88,3 +88,12 @@ func newIssue(t *testing.T, pool *pgxpool.Pool, p project, id uuid.UUID, sequenc
 	exec(t, pool, `INSERT INTO issues (id, workspace_id, project_id, state_id, name, sequence_id, created_by_id, updated_by_id, created_at,
 		updated_at) VALUES ($1, $2, $3, $4, 'Work', $5, $6, $6, $7, $7)`, id, p.workspace, p.id, p.state, sequence, by, now)
 }
+
+// newRelation inserts the relation id, a row of p: p's work item issue
+// relates to the work item related, of any project, by by at now.
+func newRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, related, id, by uuid.UUID) {
+	t.Helper()
+	exec(t, pool, `INSERT INTO issue_relations (id, workspace_id, project_id, issue_id, related_issue_id, relation_type, created_by_id,
+		updated_by_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'relates_to', $6, $6, $7, $7)`, id, p.workspace, p.id, issue, related,
+		by, now)
+}

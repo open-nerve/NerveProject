@@ -151,11 +151,12 @@ func (w issueWorld) fullIssue() string {
 }
 
 // workItemStamps are the rows of the work item id in the work-item side's
-// five tables, each a line, sorted: its table, who made it and changed it
-// last, and when, when it was deleted if it was, and whose it is, for an
-// assignee, a subscriber or an activity (the account assigned, subscribed
-// or acting). An account goes by its name in the world, a moment by the
-// work item's: made, its creation, or changed, its last change.
+// six tables, its relations either way, each a line, sorted: its table,
+// who made it and changed it last, and when, when it was deleted if it
+// was, and whose it is, for an assignee, a subscriber or an activity (the
+// account assigned, subscribed or acting). An account goes by its name in
+// the world, a moment by the work item's: made, its creation, or changed,
+// its last change.
 func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 	t.Helper()
 	var made, changed time.Time
@@ -190,6 +191,8 @@ func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 			WHERE issue_id = $1
 		UNION ALL SELECT 'issue_labels', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL FROM issue_labels
 			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_relations', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL FROM issue_relations
+			WHERE issue_id = $1 OR related_issue_id = $1
 		UNION ALL SELECT 'issue_subscribers', created_by_id, created_at, updated_by_id, updated_at, deleted_at, subscriber_id
 			FROM issue_subscribers WHERE issue_id = $1
 		UNION ALL SELECT 'issue_activities', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_activities

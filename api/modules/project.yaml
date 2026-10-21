@@ -180,12 +180,12 @@ paths:
         admins; an archived project is deleted as any other. The project is
         deleted with its memberships, its members' display settings, its
         states, its labels and its work items (with their assignees, labels,
-        subscribers and activity), all at one moment: it is no longer read,
-        listed or changed, and its name and identifier are free again in the
-        workspace. A project that does not exist, is deleted, or that the
-        caller does not see answers project.not_found; one he sees but may
-        not delete, forbidden. The role is decided after the project row is
-        locked.
+        relations, subscribers and activity), all at one moment: it is no
+        longer read, listed or changed, and its name and identifier are free
+        again in the workspace. A project that does not exist, is deleted, or
+        that the caller does not see answers project.not_found; one he sees
+        but may not delete, forbidden. The role is decided after the project
+        row is locked.
       security: [{bearer: []}]
       x-problem-codes: [project.not_found, forbidden]
       responses:

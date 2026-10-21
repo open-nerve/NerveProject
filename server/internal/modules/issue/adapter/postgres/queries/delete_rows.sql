@@ -33,6 +33,22 @@ WHERE t.id IN (
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
 
+-- name: DeleteProjectRelationRows :many
+-- DeleteProjectIssueRows' batch, of the relations of the project's work items, both ways (M4 design 3.5, 3.6): the
+-- project's rows (project_id is the issue_id end's) and another project's rows whose related_issue_id is a work item
+-- of this project, deleted or not: the work items' batches have deleted them before this one. Another project's
+-- writes reach such a row without this project's lock (its deletion, deleting its end's work item); every writer of
+-- these rows takes them in id order (convention 5's exception, 3.5), as the batch's lock does.
+UPDATE issue_relations AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM issue_relations r
+    WHERE (r.project_id = sqlc.arg(project_id)
+            OR r.related_issue_id IN (SELECT i.id FROM issues i WHERE i.project_id = sqlc.arg(project_id)))
+        AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;
+
 -- name: DeleteProjectSubscriberRows :many
 -- DeleteProjectIssueRows' batch, of the work items' subscribers.
 UPDATE issue_subscribers AS t

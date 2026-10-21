@@ -452,7 +452,7 @@ paths:
       tags:
         - workspace
       summary: Delete a workspace
-      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states, labels and work items (with the work items' assignees, labels, subscribers and activity) are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings, states, labels and work items (with the work items' assignees, labels, relations, subscribers and activity) are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
       security:
         - bearer: []
       x-problem-codes:
@@ -951,7 +951,7 @@ paths:
       tags:
         - project
       summary: Delete a project
-      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings, its states, its labels and its work items (with their assignees, labels, subscribers and activity), all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings, its states, its labels and its work items (with their assignees, labels, relations, subscribers and activity), all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
       security:
         - bearer: []
       x-problem-codes:
@@ -1482,7 +1482,7 @@ paths:
       tags:
         - issue
       summary: Delete a work item
-      description: 'For the admins of its project, and for the member of it who created the work item, while he is an admin or a member of the project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but that he may not delete, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be deleted (project.archived); an archived work item is deleted as any other. The work item and each work item under it, however deep, archived ones too, with their assignees, labels, subscribers and activity, are deleted by the caller at one moment; their numbers are not used again. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'For the admins of its project, and for the member of it who created the work item, while he is an admin or a member of the project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but that he may not delete, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be deleted (project.archived); an archived work item is deleted as any other. The work item and each work item under it, however deep, archived ones too, with their assignees, labels, relations, subscribers and activity, are deleted by the caller at one moment; their numbers are not used again. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:

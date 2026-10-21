@@ -45,7 +45,7 @@ func TestLockIssueProjects(t *testing.T) {
 				t.Errorf("%s while locked: a FOR SHARE waits %v, a FOR KEY SHARE waits %v; want %v, false", name, share, keyShare, tt.held)
 			}
 		}
-		if rowWaits(t, pool, "workspaces", acme, "FOR UPDATE") {
+		if pgtest.RowWaits(t, pool, "workspaces", acme, "FOR UPDATE") {
 			t.Error("a FOR UPDATE of acme waits while the projects are locked; want the workspace's row not locked")
 		}
 		return nil

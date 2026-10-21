@@ -269,17 +269,20 @@ export async function expectIssueArchival(db: Database, issueId: string, want: A
   expect(await activityOf(db, issueId), `the activity of the work item ${issueId}`).toEqual(activity);
 }
 
-/** The key of a work item's sub-items, which come with P3, as their deletion with their parent's (M4 design 3.6, 3.9). */
-const subItems = "issues.parent_id";
+/**
+ * The keys of a work item's rows that no story writes yet: its sub-items' (M4 design 3.6, 3.9) and its relations' both
+ * ways (3.10), which come with P3 (M4 P3 spec, section 3).
+ */
+const unwritten = new Set(["issues.parent_id", "issue_relations.issue_id", "issue_relations.related_issue_id"]);
 
 /**
  * I15 (I17 from P3): the work item of issueId is deleted by the account of email, and with it, at the same moment and
  * by the same account, every row under it that was not deleted before (M4 design 3.6). A row is under it when a
  * foreign key of its table names the work item or a row under it: the catalog's graph of foreign keys is walked down
  * from issues (keysBelow, which fails on a key of more than one column), so that a row two keys below (a reaction to
- * a comment, which names the comment) is under it too. Each key of the graph has such a row, but its sub-items'
- * (subItems), which no work item has before P3; a row deleted before the work item is neither held to its deletion nor
- * checked here (that it keeps its deletion is `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).
+ * a comment, which names the comment) is under it too. Each key of the graph has such a row, but those no story writes
+ * yet (unwritten); a row deleted before the work item is neither held to its deletion nor checked here (that it keeps
+ * its deletion is `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).
  */
 export async function expectIssueDeleted(db: Database, issueId: string, email: string): Promise<void> {
   const [issue] = await db.query(
@@ -328,5 +331,5 @@ export async function expectIssueDeleted(db: Database, issueId: string, email: s
   expect(
     names.map((key) => ({ key, deletedWithIt: (counts.get(key)?.withIt ?? 0) > 0, other: counts.get(key)?.other })),
     `the rows under the work item ${issueId}`
-  ).toEqual(names.map((key) => ({ key, deletedWithIt: key !== subItems, other: 0 })));
+  ).toEqual(names.map((key) => ({ key, deletedWithIt: !unwritten.has(key), other: 0 })));
 }

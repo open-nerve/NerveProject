@@ -56,6 +56,12 @@ func (s *Store) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeletion) e
 	return deletedRows(s.queries(ctx).DeleteIssueLabelRows(ctx, gen.DeleteIssueLabelRowsParams(deletion(d))), "the labels", d)
 }
 
+// DeleteIssueRelationRows soft-deletes the work items' relations, both
+// ways, locked in id order first.
+func (s *Store) DeleteIssueRelationRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueRelationRows(ctx, gen.DeleteIssueRelationRowsParams(deletion(d))), "the relations", d)
+}
+
 // DeleteIssueSubscriberRows soft-deletes the work items' subscribers'
 // rows.
 func (s *Store) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeletion) error {

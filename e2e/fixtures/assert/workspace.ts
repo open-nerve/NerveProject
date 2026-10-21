@@ -223,9 +223,9 @@ export async function expectMembership(
  * W2, W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by
  * the same account, every row under it that was not deleted before (workspaceTables): its memberships, invitations
  * and display settings, its projects, their memberships, their members' display settings, their states, their labels
- * and their work items' rows. Each table has such a row; none is left undeleted; each table of deletedAlone, whose
- * rows the story deleted alone, has rows deleted earlier, which kept their moment, and every row of the others carries
- * the workspace's.
+ * and their work items' rows. Each table but the relations' has such a row; none is left undeleted; each table of
+ * deletedAlone but the relations', whose rows the story deleted alone, has rows deleted earlier, which kept their
+ * moment, and every row of the others carries the workspace's.
  */
 export async function expectWorkspaceDeleted(
   db: Database,
@@ -267,13 +267,16 @@ export async function expectWorkspaceDeleted(
       };
     })
   );
+  // No story relates work items yet (M4 P3 spec, section 3): the relations' table has no row to be deleted with the
+  // workspace or before it, and none left undeleted either.
+  const withoutRows = new Set(["issue_relations"]);
   expect(tables, `the rows under ${slug}`).toEqual(
     names.map((table) => ({
       table,
-      deletedWithIt: true,
+      deletedWithIt: !withoutRows.has(table),
       deletedByAnother: 0,
       undeletedOrLater: 0,
-      deletedEarlier: deletedAlone.includes(table),
+      deletedEarlier: deletedAlone.includes(table) && !withoutRows.has(table),
     }))
   );
 }

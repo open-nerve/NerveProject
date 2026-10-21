@@ -247,12 +247,12 @@ func (w issueWorld) workItems(t *testing.T) int {
 }
 
 // workItemRows counts the rows of the work-item side of projects: their
-// work items and the work items' assignees, labels, subscribers and
-// activities; the deleted ones too, unless undeleted.
+// work items and the work items' assignees, labels, relations,
+// subscribers and activities; the deleted ones too, unless undeleted.
 func (w issueWorld) workItemRows(t *testing.T, projects []uuid.UUID, undeleted bool) int {
 	t.Helper()
 	n := 0
-	for _, table := range []string{"issues", "issue_assignees", "issue_labels", "issue_subscribers", "issue_activities"} {
+	for _, table := range []string{"issues", "issue_assignees", "issue_labels", "issue_relations", "issue_subscribers", "issue_activities"} {
 		var rows int
 		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+table+" WHERE project_id = ANY ($1) AND (deleted_at IS NULL OR NOT $2)",
 			projects, undeleted).Scan(&rows); err != nil {

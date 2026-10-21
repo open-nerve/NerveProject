@@ -46,6 +46,7 @@ func (w issueWorld) deletedWith(t *testing.T, table string, id uuid.UUID, since 
 		FROM (SELECT deleted_at, updated_at, updated_by_id, created_at FROM issues WHERE project_id = $2
 			UNION ALL SELECT deleted_at, updated_at, updated_by_id, created_at FROM issue_assignees WHERE project_id = $2
 			UNION ALL SELECT deleted_at, updated_at, updated_by_id, created_at FROM issue_labels WHERE project_id = $2
+			UNION ALL SELECT deleted_at, updated_at, updated_by_id, created_at FROM issue_relations WHERE project_id = $2
 			UNION ALL SELECT deleted_at, updated_at, updated_by_id, created_at FROM issue_subscribers WHERE project_id = $2
 			UNION ALL SELECT deleted_at, updated_at, updated_by_id, created_at FROM issue_activities WHERE project_id = $2) r,
 			(SELECT deleted_at AS at FROM `+table+` WHERE id = $1) d`, id, w.web, w.ids["alice"]).Scan(&all, &hers); err != nil {

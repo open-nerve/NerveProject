@@ -100,6 +100,7 @@ func TestTheStatementsOfADeletedSubtreeDeleteItsRows(t *testing.T) {
 		{"issues", (*postgresadapter.Store).DeleteIssueRows},
 		{"issue_assignees", (*postgresadapter.Store).DeleteIssueAssigneeRows},
 		{"issue_labels", (*postgresadapter.Store).DeleteIssueLabelRows},
+		{"issue_relations", (*postgresadapter.Store).DeleteIssueRelationRows},
 		{"issue_subscribers", (*postgresadapter.Store).DeleteIssueSubscriberRows},
 		{"issue_activities", (*postgresadapter.Store).DeleteIssueActivityRows},
 	} {

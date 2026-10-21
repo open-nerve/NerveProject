@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -49,7 +50,7 @@ func TestLockIssueProject(t *testing.T) {
 			if share, keyShare := waits(t, pool, tt.id, "FOR SHARE"), waits(t, pool, tt.id, "FOR KEY SHARE"); share != tt.found || keyShare {
 				t.Errorf("%s while locked: a FOR SHARE waits %v, a FOR KEY SHARE waits %v; want %v, false", name, share, keyShare, tt.found)
 			}
-			if rowWaits(t, pool, "workspaces", acme, "FOR UPDATE") {
+			if pgtest.RowWaits(t, pool, "workspaces", acme, "FOR UPDATE") {
 				t.Errorf("%s while locked: a FOR UPDATE of acme waits; want the workspace's row not locked", name)
 			}
 			return nil
