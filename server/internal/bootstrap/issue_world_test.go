@@ -123,6 +123,19 @@ func waltsWorkItem(t *testing.T, w issueWorld) {
 	w.newWorkItemBy(t, "walt", w.web, `{"name":"Fix"}`)
 }
 
+// adminGuest makes walt, acme's member, Web's guest, then acme's admin,
+// through the API: a workspace admin who is only a guest of Web, which
+// does not show its guests every work item (M4 design 3.4, 9.2). As
+// acme's admin he passes each rule of Web (Grant.ProjectAdmin), and as
+// its guest he sees only his own work items (Grant.OwnOnly).
+func (w issueWorld) adminGuest(t *testing.T) {
+	t.Helper()
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
+		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":5}]}`, http.StatusCreated)
+	membership := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", w.acme, w.ids["walt"])[0]
+	w.send(t, "alice", http.MethodPatch, "/api/v0/workspace-members/"+membership.String(), `{"role":20}`, http.StatusOK)
+}
+
 // doneWorkItem is the id of a work item alice creates in Web's Done
 // through the API, completed at its creation.
 func (w issueWorld) doneWorkItem(t *testing.T) uuid.UUID {

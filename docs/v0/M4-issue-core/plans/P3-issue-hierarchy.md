@@ -101,7 +101,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql`、`server/internal/modules/issue/adapter/postgres/delete_issue.go`、`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`（修改） | `IssueSubtree`、`Subtree`，五条语句按工作项的集合写（`issue_ids`）（Task 1）；`DeleteIssueRelationRows`：子树的关联行，两个方向，按 `id` 先锁（Task 8） | 1、8 |
 | `server/internal/modules/issue/app/delete_issue.go`、`server/internal/modules/issue/app/delete_issue_test.go`（修改）、`server/internal/modules/issue/app/fakes_deletion_test.go`（新） | `IssueDeletion.IssueIDs`、`IssueRowsDeleter.Subtree`：删除连带子树；删除的假实现从 `fakes_test.go` 移出（Task 1）；关联行的一步在标签之后（Task 8） | 1、8 |
 | `server/internal/modules/issue/app/fakes_test.go`（修改） | 删除的假实现移出（Task 1）；`callLog.fail` 按整行、创建带父工作项（Task 2）；锁下的项目带标识、修改的父工作项（Task 3）；`SubIssueCounts`、`GetIssues` 的读（`read`）（Task 4）；`SubIssues`、`SetParents` 的读写记录（Task 5）；`LockMany`、写闸门取多个项目（Task 7） | 1、2、3、4、5、7 |
-| `server/internal/bootstrap/issue_deletion_test.go`（修改） | 子树在同一时刻删除；按目录的删除去掉 `subItems` 的豁免，`deletedWorkItem` 的工作项有子工作项（Task 1）；关联的两个外键下各有一行（Task 8） | 1、8 |
+| `server/internal/bootstrap/issue_deletion_test.go`（修改） | 子树在同一时刻删除，管理员·访客的删除连带他看不到的子工作项（`deletesAtOneMoment`）；按目录的删除去掉 `subItems` 的豁免，`deletedWorkItem` 的工作项有子工作项（Task 1）；关联的两个外键下各有一行（Task 8） | 1、8 |
 | `server/internal/bootstrap/project_deletion_test.go`（修改） | 按目录读 `keysTo(issues)`（Task 1）；删除项目连带两个方向的关联行（Task 8） | 1、8 |
 | `server/internal/modules/issue/domain/hierarchy.go`（新） | `ParentNotAllowed`（Task 2）；`ParentChange`、`Ref`、`ParentActivity`（Task 3）；`Loops`、`MaxSubIssues`、`CheckSubIssueIDs`、`SubIssueNotAllowed`（Task 5） | 2、3、5 |
 | `server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`（修改） | `NewIssue.ParentID`、`Issue.ParentID` 进创建（Task 2）；`Issue.SubIssuesCount`（Task 4） | 2、4 |
@@ -157,7 +157,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/app/delete_project_rows.go`、`server/internal/modules/issue/app/cascade_test.go`（修改） | `rowSteps` 的关联一步，在标签之后 | 8 |
 | `server/internal/platform/postgres/pgtest/rowwaits.go`、`server/internal/platform/postgres/pgtest/rowwaits_test.go`（新） | `RowWaits`：一行是否被冲突的锁挡住（`NOWAIT`），不手写 `55P03` | 8 |
 | `server/internal/modules/project/adapter/postgres/demote_test.go`（修改） | 用 `pgtest.RowWaits` | 8 |
-| `server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改） | `workItemStamps`、删除的交错数关联行 | 8 |
+| `server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改） | `adminGuest`（Task 1，`issue_world_test.go`）；`workItemStamps`、删除的交错数关联行（Task 8） | 1、8 |
 | `server/internal/bootstrap/issue_interleaving_test.go`（修改） | `wroteNothing` 数关联行（Task 8）；`serializeAt`、`inBothOrdersAt`（Task 14） | 8、14 |
 | `api/modules/project.yaml`、`api/modules/workspace.yaml`（修改） | 删除项目、工作区的描述写上关联 | 8 |
 | `e2e/fixtures/assert/issue.ts`（修改） | `expectIssueDeleted` 暂时不要 `parent_id` 和关联的两个外键下的行（Task 8）；`parent`、`ItemRef`、`parentRow`、`relatedRow`、`unrelatedRow`，`activityOf` 读出指名的工作项，暂时的豁免去掉（Task 15） | 8、15 |
@@ -195,7 +195,7 @@ sys.exit(1 if broken else 0)
 
 **Files:**
 - Create: `server/internal/modules/issue/app/fakes_deletion_test.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_deletion_test.go`、`server/internal/bootstrap/project_deletion_test.go`、`server/internal/modules/issue/adapter/postgres/delete_issue.go`、`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`、`server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql`、`server/internal/modules/issue/app/delete_issue.go`、`server/internal/modules/issue/app/delete_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`tools/keywords.json`
+- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_deletion_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/project_deletion_test.go`、`server/internal/modules/issue/adapter/postgres/delete_issue.go`、`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`、`server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql`、`server/internal/modules/issue/app/delete_issue.go`、`server/internal/modules/issue/app/delete_issue_test.go`、`server/internal/modules/issue/app/fakes_test.go`、`tools/keywords.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.3、第 3 节第 5 条；M4 设计 3.5、3.6、3.8、3.9）父子的第一个 Task 是子树的删除：之后的 Task 一加父工作项，删除一个工作项就不会留下指向它的子工作项。
@@ -204,12 +204,12 @@ sys.exit(1 if broken else 0)
 - `issue/adapter/postgres/queries/delete_issue.sql`（整个文件）：`IssueSubtree`（`WITH RECURSIVE … UNION`：未删除的工作项和它下面每个未删除的工作项，`id` 的次序；在项目 N 之下读，每个写父工作项的写都持它）；`DeleteIssueRows` 取代 P2 的 `DeleteIssueRow`，它和四张子表的语句都按 `issue_id = ANY (issue_ids)` 一条语句写子树的全部行（约定五：在项目 N 之下，不按 `id` 先锁）。`delete_issue.go`（整个文件）：`Subtree`、`deletion`、六个方法。
 - `issue/app/delete_issue.go`：`IssueDeletion.IssueIDs`（取代 `IssueID`）；`IssueRowsDeleter.Subtree`、`DeleteIssueRows`；`Execute` 在锁下、项目已归档的 409 之后读子树，然后读时刻，逐张表一条语句（`issueRowSteps`），都是调用者在那一刻的。
 - 测试的帮手：删除的假实现（`fakeIssues` 的 `Subtree`、`subtree`、删除的记录）从 `fakes_test.go` 移进新的 `fakes_deletion_test.go`（`fakes_test.go` 已近 400 行）。
-- `bootstrap`：`issue_deletion_test.go`（整个文件）：按目录读 `keysTo(t, pool, "issues")`（P2 的 `workItemKeys` 和 `subItems` 的豁免去掉），`underWorkItem` 直接把工作项放到父工作项下（不靠 Task 2 之后的写），`deletedWorkItem` 删除的工作项下有一个子工作项；`project_deletion_test.go` 同样读 `keysTo(t, pool, "issues")`。
+- `bootstrap`：`issue_deletion_test.go`（整个文件）：按目录读 `keysTo(t, pool, "issues")`（P2 的 `workItemKeys` 和 `subItems` 的豁免去掉），`underWorkItem` 直接把工作项放到父工作项下（不靠 Task 2 之后的写），`deletedWorkItem` 删除的工作项下有一个子工作项，`deletesAtOneMoment` 是两个子树的组合测试共用的核对（删除，然后子树的每个工作项和它下面的每一行在根的删除时刻由删除者删除、读不到了，给的别的工作项不动）；`project_deletion_test.go` 同样读 `keysTo(t, pool, "issues")`；`issue_world_test.go` 加 `adminGuest`（walt 成为 acme 的管理员、Web 的访客：过项目的每条规则，只看得到自己的工作项），本 Task 的管理员·访客的删除先用它，Task 2 起的访客规则的组合测试也用它（spec 第 3 节第 5 条，预检 N3）。
 
 **Tests:**
 - 单元：`TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows`（取代 P2 的 `TestDeleteIssueDeletesTheWorkItemAndItsRows`：`Locks` 的调用和两次判定，锁下读子树，时刻，逐张表写子树的每个工作项；子树里删除的那个不是第一个，只删所问的或只删子树的第一个都看得出；已归档的照样删除）、`TestDeleteIssueStopsAtAFailingPort`（子树的读也失败）。
 - 存储：`TestTheSubtreeOfAWorkItem`（它和它下面每个未删除的，不论多深，已归档的也在，`id` 的次序；已删除的工作项下面的不经它走到；另一棵树、在数据库里造的环 x、y 各读一次；`id` 的次序不是建或连的次序；已删除的、没有的工作项没有子树）、`TestTheStatementsOfADeletedSubtreeDeleteItsRows`（取代 P2 的 `TestTheStatementsOfADeletedWorkItemDeleteItsRows`：一条语句写给的每个工作项的未删除的行；更早删除的行和别的工作项的行、每一列都不动；别的工作项的 `id` 在给的几个之间，按次序取的写会碰到它）。
-- 组合：`TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`（bob 的 root 在 alice 的 p 下，root 下有 alice 的 a、bob 的 b，a 下有已归档的 c；alice 删除 root：root、a、b、c 和它们下面的每一行在 root 的删除时刻由她删除，p、s、d 不动）；`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（按目录，没有豁免：`issues.parent_id` 下也有一行）；`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`。
+- 组合：`TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`（bob 的 root 在 alice 的 p 下，root 下有 alice 的 a、bob 的 b，a 下有已归档的 c；alice 删除 root：root、a、b、c 和它们下面的每一行在 root 的删除时刻由她删除，p、s、d 不动）；`TestAnAdminGuestsDeletionTakesTheSubItemsHeDoesNotSee`（spec 第 3 节第 5 条，预检 N3：子树整个删除，删除者看不到的也在；walt 是 acme 的管理员、Web 的访客（`adminGuest`），他的 mine 下有他看不到的 alice 的 a（404），a 下有她的 b；walt 删除 mine：mine、a、b 和它们下面的每一行在 mine 的删除时刻由他删除，alice 的 k 不动）；`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（按目录，没有豁免：`issues.parent_id` 下也有一行）；`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`。
 
 - [ ] **Step 1: 关键词守卫、契约和语句，生成**
 
@@ -806,7 +806,7 @@ func TestTheStatementsOfADeletedSubtreeDeleteItsRows(t *testing.T) {
 
 - [ ] **Step 4: 按目录的删除和子树的组合测试**
 
-`server/internal/bootstrap/issue_deletion_test.go`（整个文件，184 行）：
+`server/internal/bootstrap/issue_deletion_test.go`（整个文件，217 行）：
 
 ````whole server/internal/bootstrap/issue_deletion_test.go
 package bootstrap
@@ -940,17 +940,59 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w.send(t, "alice", http.MethodGet, "/api/v0/issues/"+deleted.String(), "", http.StatusNotFound)
 }
 
+// deletesAtOneMoment has the account by delete the work item root through
+// the API, and checks that its subtree is deleted at one moment, by one
+// deleter (M4 design 3.6, 3.9): each work item of subtree, root among
+// them, by its name, is deleted, and changed last by by, at root's
+// deleted_at, and so is every row under each (workItemStamps: each changed
+// by by and deleted at the work item's last change); each is not found any
+// more, by alice, who sees every work item of Web; and each work item of
+// kept keeps every row as it was.
+func (w issueWorld) deletesAtOneMoment(t *testing.T, by string, root uuid.UUID, subtree map[string]uuid.UUID, kept ...uuid.UUID) {
+	t.Helper()
+	before := make([][]string, len(kept))
+	for i, id := range kept {
+		before[i] = w.workItemStamps(t, id)
+	}
+
+	w.send(t, by, http.MethodDelete, "/api/v0/issues/"+root.String(), "", http.StatusNoContent)
+
+	var at time.Time
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at FROM issues WHERE id = $1", root).Scan(&at); err != nil {
+		t.Fatal(err)
+	}
+	for name, id := range subtree {
+		var deletedAt, changedAt *time.Time
+		var writer *uuid.UUID
+		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at, updated_at, updated_by_id FROM issues WHERE id = $1", id).Scan(&deletedAt,
+			&changedAt, &writer); err != nil || deletedAt == nil || !deletedAt.Equal(at) || !changedAt.Equal(at) || writer == nil ||
+			*writer != w.ids[by] {
+			t.Errorf("%s: deleted at %v, changed at %v by %v, %v; want both at the root's %v, by %s", name, deletedAt, changedAt, writer, err, at,
+				by)
+		}
+		for _, line := range w.workItemStamps(t, id) {
+			if !strings.Contains(line, "changed by "+by+" changed, deleted changed") {
+				t.Errorf("%s: %s; want it changed by %s and deleted at the deletion", name, line, by)
+			}
+		}
+		w.send(t, "alice", http.MethodGet, "/api/v0/issues/"+id.String(), "", http.StatusNotFound)
+	}
+	for i, id := range kept {
+		if got := w.workItemStamps(t, id); !slices.Equal(got, before[i]) {
+			t.Errorf("the rows of %s:\n%q\nwant them as they were:\n%q", id, got, before[i])
+		}
+	}
+}
+
 // Deleting a work item through the API deletes its subtree at one moment,
-// by one deleter (M4 design 3.6, 3.9): the work item and each one under
+// by one deleter (deletesAtOneMoment): the work item and each one under
 // it, however deep, an archived one too, and every row under each. In
 // Web, bob's root, assigned and labelled (fullIssue), is under alice's p
 // and has under it alice's a, assigned and labelled too, and bob's b; a
 // has c under it, in Done, archived; alice's s has her d under it. alice
-// deletes root: root, a, b and c are deleted, and changed last by her, at
-// root's deleted_at, and so is every row under each (workItemStamps: each
-// changed by alice and deleted at the work item's last change); p, s and d
-// keep every row as it was. A deleted work item of the subtree is not
-// found any more.
+// deletes root: root, a, b and c are deleted, by her, at root's
+// deleted_at, with every row under each; p, s and d keep every row as it
+// was.
 func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 	w := newIssueWorld(t)
 	p := w.newWorkItem(t)
@@ -962,37 +1004,54 @@ func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 	underWorkItem(t, w.pool, root, a, b)
 	underWorkItem(t, w.pool, a, c)
 	underWorkItem(t, w.pool, s, d)
-	kept := map[uuid.UUID][]string{}
-	for _, id := range []uuid.UUID{p, s, d} {
-		kept[id] = w.workItemStamps(t, id)
-	}
-
-	w.send(t, "alice", http.MethodDelete, "/api/v0/issues/"+root.String(), "", http.StatusNoContent)
-
-	var at time.Time
-	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at FROM issues WHERE id = $1", root).Scan(&at); err != nil {
-		t.Fatal(err)
-	}
-	for name, id := range map[string]uuid.UUID{"root": root, "a": a, "b": b, "c": c} {
-		var deletedAt, changedAt *time.Time
-		var by *uuid.UUID
-		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at, updated_at, updated_by_id FROM issues WHERE id = $1", id).Scan(&deletedAt,
-			&changedAt, &by); err != nil || deletedAt == nil || !deletedAt.Equal(at) || !changedAt.Equal(at) || by == nil || *by != w.ids["alice"] {
-			t.Errorf("%s: deleted at %v, changed at %v by %v, %v; want both at root's %v, by alice", name, deletedAt, changedAt, by, err, at)
-		}
-		for _, line := range w.workItemStamps(t, id) {
-			if !strings.Contains(line, "changed by alice changed, deleted changed") {
-				t.Errorf("%s: %s; want it changed by alice and deleted at the deletion", name, line)
-			}
-		}
-		w.send(t, "alice", http.MethodGet, "/api/v0/issues/"+id.String(), "", http.StatusNotFound)
-	}
-	for id, rows := range kept {
-		if got := w.workItemStamps(t, id); !slices.Equal(got, rows) {
-			t.Errorf("the rows of %s:\n%q\nwant them as they were:\n%q", id, got, rows)
-		}
-	}
+	w.deletesAtOneMoment(t, "alice", root, map[string]uuid.UUID{"root": root, "a": a, "b": b, "c": c}, p, s, d)
 }
+
+// A work item's subtree is deleted whole, the work items its deleter does
+// not see among them (M4 design 3.6, 3.9: the subtree has no exception for
+// the guest rule). walt, acme's admin and Web's guest (adminGuest), may
+// delete his own work item and sees only his own. Under his mine,
+// assigned and labelled (fullIssue), is alice's a, which he does not see
+// (404), and under a is her b, both assigned and labelled too; alice's k
+// is under none. walt deletes mine (deletesAtOneMoment): mine, a and b are
+// deleted, by him, at mine's deleted_at, with every row under each; k
+// keeps every row as it was.
+func TestAnAdminGuestsDeletionTakesTheSubItemsHeDoesNotSee(t *testing.T) {
+	w := newIssueWorld(t)
+	w.adminGuest(t)
+	mine := w.newWorkItemBy(t, "walt", w.web, w.fullIssue())
+	a, b, k := w.newWorkItem(t), w.newWorkItem(t), w.newWorkItem(t)
+	underWorkItem(t, w.pool, mine, a)
+	underWorkItem(t, w.pool, a, b)
+	w.send(t, "walt", http.MethodGet, "/api/v0/issues/"+a.String(), "", http.StatusNotFound)
+	w.deletesAtOneMoment(t, "walt", mine, map[string]uuid.UUID{"mine": mine, "a": a, "b": b}, k)
+}
+````
+
+`server/internal/bootstrap/issue_world_test.go`（修改，1 处）：
+
+````old server/internal/bootstrap/issue_world_test.go
+}
+
+// doneWorkItem is the id of a work item alice creates in Web's Done
+````
+````new server/internal/bootstrap/issue_world_test.go
+}
+
+// adminGuest makes walt, acme's member, Web's guest, then acme's admin,
+// through the API: a workspace admin who is only a guest of Web, which
+// does not show its guests every work item (M4 design 3.4, 9.2). As
+// acme's admin he passes each rule of Web (Grant.ProjectAdmin), and as
+// its guest he sees only his own work items (Grant.OwnOnly).
+func (w issueWorld) adminGuest(t *testing.T) {
+	t.Helper()
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
+		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":5}]}`, http.StatusCreated)
+	membership := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", w.acme, w.ids["walt"])[0]
+	w.send(t, "alice", http.MethodPatch, "/api/v0/workspace-members/"+membership.String(), `{"role":20}`, http.StatusOK)
+}
+
+// doneWorkItem is the id of a work item alice creates in Web's Done
 ````
 
 `server/internal/bootstrap/project_deletion_test.go`（修改，1 处）：
@@ -1009,7 +1068,7 @@ func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 Run: `go -C server test -count=1 ./internal/modules/issue/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment$|TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt$|TestDeletingAProjectLeavesNoUndeletedRowUnderIt$|TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt$' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment$|TestAnAdminGuestsDeletionTakesTheSubItemsHeDoesNotSee$|TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt$|TestDeletingAProjectLeavesNoUndeletedRowUnderIt$|TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt$' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -1033,7 +1092,7 @@ Expected: 123 个全部通过（I15 删除的工作项没有子工作项，它�
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/bootstrap/issue_deletion_test.go server/internal/bootstrap/project_deletion_test.go server/internal/modules/issue/adapter/postgres/delete_issue.go server/internal/modules/issue/adapter/postgres/delete_issue_test.go server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql server/internal/modules/issue/app/delete_issue.go server/internal/modules/issue/app/delete_issue_test.go server/internal/modules/issue/app/fakes_deletion_test.go server/internal/modules/issue/app/fakes_test.go tools/keywords.json api/dist/openapi.yaml server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/bootstrap/issue_deletion_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/project_deletion_test.go server/internal/modules/issue/adapter/postgres/delete_issue.go server/internal/modules/issue/adapter/postgres/delete_issue_test.go server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql server/internal/modules/issue/app/delete_issue.go server/internal/modules/issue/app/delete_issue_test.go server/internal/modules/issue/app/fakes_deletion_test.go server/internal/modules/issue/app/fakes_test.go tools/keywords.json api/dist/openapi.yaml server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): deleteIssue deletes the work item's subtree at one moment
@@ -1795,7 +1854,7 @@ func TestAWorkItemsParentIsWritten(t *testing.T) {
 
 - [ ] **Step 4: 组合**
 
-`server/internal/bootstrap/issue_parents_test.go`（新文件，121 行）：
+`server/internal/bootstrap/issue_parents_test.go`（新文件，108 行）：
 
 ````file server/internal/bootstrap/issue_parents_test.go
 package bootstrap
@@ -1884,19 +1943,6 @@ func TestAWorkItemIsPutUnderAnother(t *testing.T) {
 		t.Errorf("a work item under one not there, with a label not there, answers %s, and Web has %d work items; want label_ids[0] and "+
 			"parent_id not_allowed at once, and %d", got, w.workItems(t), count)
 	}
-}
-
-// adminGuest makes walt, acme's member, Web's guest, then acme's admin,
-// through the API: a workspace admin who is only a guest of Web, which
-// does not show its guests every work item (M4 design 3.4, 9.2). As
-// acme's admin he passes each rule of Web (Grant.ProjectAdmin), and as
-// its guest he sees only his own work items (Grant.OwnOnly).
-func (w issueWorld) adminGuest(t *testing.T) {
-	t.Helper()
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":5}]}`, http.StatusCreated)
-	membership := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", w.acme, w.ids["walt"])[0]
-	w.send(t, "alice", http.MethodPatch, "/api/v0/workspace-members/"+membership.String(), `{"role":20}`, http.StatusOK)
 }
 
 // The guest rule holds for a parent (M4 design 3.4, 3.9): walt, acme's
@@ -2003,6 +2049,7 @@ Expected: 通过。
 | `T2.9` | 读父工作项失败当作它不存在 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T2.10` | 父工作项的拒绝写在 `parent` 而不是 `parent_id` | `internal/bootstrap` 的 `TestTheGuestRuleHoldsForAParent`（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`）（Task 3 起）、故事 `i8-sub-issues`（Task 15 起） | 组合；端到端 |
 | `T2.11` | `CheckNewIssue` 丢掉要的父工作项 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestAWorkItemIsPutUnderAnother`（`make test`） | 单元；组合 |
+| `T2.12` | 删除者只看自己的工作项时，子树去掉他看不到的子工作项 | `internal/bootstrap` 的 `TestAnAdminGuestsDeletionTakesTheSubItemsHeDoesNotSee`（`make test`） | 组合 |
 
 ---
 

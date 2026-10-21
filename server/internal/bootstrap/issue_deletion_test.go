@@ -129,17 +129,59 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	w.send(t, "alice", http.MethodGet, "/api/v0/issues/"+deleted.String(), "", http.StatusNotFound)
 }
 
+// deletesAtOneMoment has the account by delete the work item root through
+// the API, and checks that its subtree is deleted at one moment, by one
+// deleter (M4 design 3.6, 3.9): each work item of subtree, root among
+// them, by its name, is deleted, and changed last by by, at root's
+// deleted_at, and so is every row under each (workItemStamps: each changed
+// by by and deleted at the work item's last change); each is not found any
+// more, by alice, who sees every work item of Web; and each work item of
+// kept keeps every row as it was.
+func (w issueWorld) deletesAtOneMoment(t *testing.T, by string, root uuid.UUID, subtree map[string]uuid.UUID, kept ...uuid.UUID) {
+	t.Helper()
+	before := make([][]string, len(kept))
+	for i, id := range kept {
+		before[i] = w.workItemStamps(t, id)
+	}
+
+	w.send(t, by, http.MethodDelete, "/api/v0/issues/"+root.String(), "", http.StatusNoContent)
+
+	var at time.Time
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at FROM issues WHERE id = $1", root).Scan(&at); err != nil {
+		t.Fatal(err)
+	}
+	for name, id := range subtree {
+		var deletedAt, changedAt *time.Time
+		var writer *uuid.UUID
+		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at, updated_at, updated_by_id FROM issues WHERE id = $1", id).Scan(&deletedAt,
+			&changedAt, &writer); err != nil || deletedAt == nil || !deletedAt.Equal(at) || !changedAt.Equal(at) || writer == nil ||
+			*writer != w.ids[by] {
+			t.Errorf("%s: deleted at %v, changed at %v by %v, %v; want both at the root's %v, by %s", name, deletedAt, changedAt, writer, err, at,
+				by)
+		}
+		for _, line := range w.workItemStamps(t, id) {
+			if !strings.Contains(line, "changed by "+by+" changed, deleted changed") {
+				t.Errorf("%s: %s; want it changed by %s and deleted at the deletion", name, line, by)
+			}
+		}
+		w.send(t, "alice", http.MethodGet, "/api/v0/issues/"+id.String(), "", http.StatusNotFound)
+	}
+	for i, id := range kept {
+		if got := w.workItemStamps(t, id); !slices.Equal(got, before[i]) {
+			t.Errorf("the rows of %s:\n%q\nwant them as they were:\n%q", id, got, before[i])
+		}
+	}
+}
+
 // Deleting a work item through the API deletes its subtree at one moment,
-// by one deleter (M4 design 3.6, 3.9): the work item and each one under
+// by one deleter (deletesAtOneMoment): the work item and each one under
 // it, however deep, an archived one too, and every row under each. In
 // Web, bob's root, assigned and labelled (fullIssue), is under alice's p
 // and has under it alice's a, assigned and labelled too, and bob's b; a
 // has c under it, in Done, archived; alice's s has her d under it. alice
-// deletes root: root, a, b and c are deleted, and changed last by her, at
-// root's deleted_at, and so is every row under each (workItemStamps: each
-// changed by alice and deleted at the work item's last change); p, s and d
-// keep every row as it was. A deleted work item of the subtree is not
-// found any more.
+// deletes root: root, a, b and c are deleted, by her, at root's
+// deleted_at, with every row under each; p, s and d keep every row as it
+// was.
 func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 	w := newIssueWorld(t)
 	p := w.newWorkItem(t)
@@ -151,34 +193,25 @@ func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 	underWorkItem(t, w.pool, root, a, b)
 	underWorkItem(t, w.pool, a, c)
 	underWorkItem(t, w.pool, s, d)
-	kept := map[uuid.UUID][]string{}
-	for _, id := range []uuid.UUID{p, s, d} {
-		kept[id] = w.workItemStamps(t, id)
-	}
+	w.deletesAtOneMoment(t, "alice", root, map[string]uuid.UUID{"root": root, "a": a, "b": b, "c": c}, p, s, d)
+}
 
-	w.send(t, "alice", http.MethodDelete, "/api/v0/issues/"+root.String(), "", http.StatusNoContent)
-
-	var at time.Time
-	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at FROM issues WHERE id = $1", root).Scan(&at); err != nil {
-		t.Fatal(err)
-	}
-	for name, id := range map[string]uuid.UUID{"root": root, "a": a, "b": b, "c": c} {
-		var deletedAt, changedAt *time.Time
-		var by *uuid.UUID
-		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT deleted_at, updated_at, updated_by_id FROM issues WHERE id = $1", id).Scan(&deletedAt,
-			&changedAt, &by); err != nil || deletedAt == nil || !deletedAt.Equal(at) || !changedAt.Equal(at) || by == nil || *by != w.ids["alice"] {
-			t.Errorf("%s: deleted at %v, changed at %v by %v, %v; want both at root's %v, by alice", name, deletedAt, changedAt, by, err, at)
-		}
-		for _, line := range w.workItemStamps(t, id) {
-			if !strings.Contains(line, "changed by alice changed, deleted changed") {
-				t.Errorf("%s: %s; want it changed by alice and deleted at the deletion", name, line)
-			}
-		}
-		w.send(t, "alice", http.MethodGet, "/api/v0/issues/"+id.String(), "", http.StatusNotFound)
-	}
-	for id, rows := range kept {
-		if got := w.workItemStamps(t, id); !slices.Equal(got, rows) {
-			t.Errorf("the rows of %s:\n%q\nwant them as they were:\n%q", id, got, rows)
-		}
-	}
+// A work item's subtree is deleted whole, the work items its deleter does
+// not see among them (M4 design 3.6, 3.9: the subtree has no exception for
+// the guest rule). walt, acme's admin and Web's guest (adminGuest), may
+// delete his own work item and sees only his own. Under his mine,
+// assigned and labelled (fullIssue), is alice's a, which he does not see
+// (404), and under a is her b, both assigned and labelled too; alice's k
+// is under none. walt deletes mine (deletesAtOneMoment): mine, a and b are
+// deleted, by him, at mine's deleted_at, with every row under each; k
+// keeps every row as it was.
+func TestAnAdminGuestsDeletionTakesTheSubItemsHeDoesNotSee(t *testing.T) {
+	w := newIssueWorld(t)
+	w.adminGuest(t)
+	mine := w.newWorkItemBy(t, "walt", w.web, w.fullIssue())
+	a, b, k := w.newWorkItem(t), w.newWorkItem(t), w.newWorkItem(t)
+	underWorkItem(t, w.pool, mine, a)
+	underWorkItem(t, w.pool, a, b)
+	w.send(t, "walt", http.MethodGet, "/api/v0/issues/"+a.String(), "", http.StatusNotFound)
+	w.deletesAtOneMoment(t, "walt", mine, map[string]uuid.UUID{"mine": mine, "a": a, "b": b}, k)
 }
