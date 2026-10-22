@@ -67,6 +67,15 @@ type ParentRows struct {
 	At       time.Time
 }
 
+// ChangedRows are the work items a write changes last without a field of
+// theirs (M4 design 3.7): the ends of a relation it adds or removes, IDs,
+// in id order, each last changed at the moment and by the account given.
+type ChangedRows struct {
+	IDs []uuid.UUID
+	By  uuid.UUID
+	At  time.Time
+}
+
 // IssueArchival is a work item's archiving or unarchiving as it is written
 // (M4 design 3.8): its archived_at, the moment, or nil for none, and the
 // moment and the account that change it last.
