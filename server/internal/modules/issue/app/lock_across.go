@@ -38,6 +38,13 @@ type end struct {
 	ok      bool
 }
 
+// own is the work item h's write names as an end of it: the work item and
+// its project, as the lock holds them, and the caller's grant on the
+// project, as decided under it; it is reached.
+func (h held) own() end {
+	return end{issue: h.issue, project: h.project, grant: h.grant, ok: true}
+}
+
 // lockProjects locks s's projects in the transaction ctx carries and
 // answers those it locked, by id: a write on one project its row FOR NO
 // KEY UPDATE (ProjectGate.Lock); a write across projects each of s's, all

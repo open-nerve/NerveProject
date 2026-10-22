@@ -202,7 +202,9 @@ func wantNothingWritten(t *testing.T, w *world, rel *fakeRelations) {
 // whose project she does not see, one she may not read, or another's when
 // the guest rule hides others' from her in its project; under the locks,
 // one archived, of an archived project, deleted while the locks waited,
-// whose project was deleted while they waited, or no longer seen. Under
+// whose project was deleted while they waited, or no longer seen. One not
+// reached before the locks is not reached under them either, though she
+// sees it there (M4 design 3.5): near, hidden from her before them. Under
 // them too, one that relates to the work item already is a duplicate.
 // Every problem is reported at once, each at its place: far's and near's
 // both, when both are refused.
@@ -228,6 +230,8 @@ func TestCreateIssueRelationsRefusesWhatItMayNotRelateTo(t *testing.T) {
 		{"deleted while the locks waited", func(c *relateCase) { c.project.waited = func() { delete(c.issues.others, farID) } }, notAllowed},
 		{"its project deleted while the locks waited", func(c *relateCase) { delete(c.project.across, ops) }, notAllowed},
 		{"no longer seen", func(c *relateCase) { c.auth.answers = []error{4: shared.ErrNotVisible} }, notAllowed},
+		{"near, not seen before the locks, seen under them", func(c *relateCase) { c.auth.answers = []error{2: shared.ErrNotVisible} },
+			shared.Invalid(domain.RelatedNotAllowed(1))},
 		{"related already", func(c *relateCase) { c.rel.related = []uuid.UUID{farID} }, already},
 		{"both refused", func(c *relateCase) { c.far.ArchivedAt, c.rel.related = &earlier, []uuid.UUID{nearID} },
 			shared.Invalid(domain.RelatedNotAllowed(0), domain.RelatedAlready(1))},
@@ -256,7 +260,12 @@ type relateCase struct {
 }
 
 // A port that fails ends the addition with its failure, as itself, and no
-// call after it runs: the transaction rolls back whatever was written.
+// call after it runs: the transaction rolls back whatever was written. It
+// fails, at its first call, the work item's read and its decision, far's
+// read and its decision before the locks, the lock, the read of the
+// relations there already, the three writes, the read back and the count;
+// and, once the precheck's calls have passed, far's read and its decision
+// again under the locks (reachUnder), after reaching's calls up to it.
 func TestCreateIssueRelationsStopsAtAFailingPort(t *testing.T) {
 	for _, port := range []string{"GetIssue", "Authorize", line("GetIssue", farID), line("Authorize", alice, domain.ActionRead, acme, ops),
 		"LockMany", "Related", "InsertRelations", "MarkChanged", "InsertActivities", "GetIssues", "SubIssueCounts"} {
@@ -265,6 +274,20 @@ func TestCreateIssueRelationsStopsAtAFailingPort(t *testing.T) {
 			w.log.fail = port
 			_, err := uc.Execute(as(alice), id, domain.RelatesTo, []uuid.UUID{farID, nearID})
 			wantStoppedAt(t, w, err, port)
+		})
+	}
+	for _, tt := range []struct {
+		name, port string
+		calls      int // of reaching's, the port's the last
+	}{
+		{"far read again under the locks", line("GetIssue", farID), 11},
+		{"far decided on again under the locks", line("Authorize", alice, domain.ActionRead, acme, ops), 12},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			uc, w, _, id, r := newRelate()
+			w.project.waited = func() { w.log.fail = tt.port }
+			_, err := uc.Execute(as(alice), id, domain.RelatesTo, []uuid.UUID{farID, nearID})
+			wantStopped(t, w, err, tt.port, slices.Equal(w.log.calls, reaching(id, r)[:tt.calls]))
 		})
 	}
 }

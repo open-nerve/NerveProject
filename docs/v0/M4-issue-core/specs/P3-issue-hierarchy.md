@@ -127,9 +127,9 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 ### 2.12 加关联：用例和跨项目的取锁（Task 10；3.4、3.5 约定七、3.7、3.8、3.10、3.13）
 
 - `issue/app/lock.go`：`write.reach`（跨项目的写到达的别的工作项，每个以 `issue.read` 判定；判定拒绝的不是这个写的回答，而是"没到达"）；`held.reached`；`precheck` 交回 `scope`；`run` 以 `scope` 的项目一次进写闸门；`lockAndDecide(ctx, actor, w, s)` 经 `lockProjects` 锁住，跨项目时锁下再到达。
-- `issue/app/lock_across.go`（新）：`scope{projects, reached}`（项目各一次、`id` 升序，写自己的在其中）；`end{issue, project, grant, ok}`；`lockProjects`（一个项目的写 `Lock`；跨项目的写 `LockMany`，即使只有一个项目）；`reachAll`（预检：每个读、判定，没到达的不锁、不进闸门）；`reachUnder`（锁下：预检到达的再读、再判定；项目等锁期间被删除、不在锁住的里的，不算到达）；`reach`（工作项在、未删除、不是它自己、同一个工作区、调用者以 `issue.read` 看得到，访客规则在先）。`parents.go` 的 `refOf(p LockedProject, i)`（别的项目的工作项按它自己的项目的标识）。
+- `issue/app/lock_across.go`（新）：`scope{projects, reached}`（项目各一次、`id` 升序，写自己的在其中）；`end{issue, project, grant, ok}`；`held.own()`（写自己的工作项作为它的一端，`ok` 为真）；`lockProjects`（一个项目的写 `Lock`；跨项目的写 `LockMany`，即使只有一个项目）；`reachAll`（预检：每个读、判定，没到达的不锁、不进闸门）；`reachUnder`（锁下：预检到达的再读、再判定；预检没到达的，锁下看得到也不算到达；项目等锁期间被删除、不在锁住的里的，不算到达；读、判定失败是错误）；`reach`（工作项在、未删除、不是它自己、同一个工作区、调用者以 `issue.read` 看得到，访客规则在先）。`parents.go` 的 `refOf(p LockedProject, i)`（别的项目的工作项按它自己的项目的标识）。
 - `issue/app/create_relations.go`（新）：`IssueRelation{ID, Type, Issue, CreatedAt}`；`CreateIssueRelations.Execute(ctx, id, t, ids)`：`CheckNewRelations` 在任何读之前；`Locks.run` 的 `write{issue: &id, action: issue.update, reach: ids}`；锁下项目已归档 409 → 工作项已归档 409 `issue.archived` → `check`（每个都到达、未归档、它的项目未归档、与它还没有关联；问题按位置一次报出）→ 时刻 → `write`（按对方的 `id` 的次序；一条语句插入；两端按 `id` 的次序改最后修改；每条两行动态，各在自己的项目）→ `answer`（对方在事务里读回，少了是错误；按调用者在各项目的 `Grant` 数子工作项）。
-- 测试：单元的 `TestCreateIssueRelationsRelatesTheWorkItemToOthers`（alice 以 `blocking`、再以 `blocked_by` 问 ops 的 far、web 的 near：`blocking` 各存为对方的 `blocked_by`、对方的行，`blocked_by` 照问的存、工作项的行；每条两行动态，各在自己的项目，按标识，对方的写对方读到的类型；far 按 alice 在 ops 的 `Grant`（她是只看自己的访客）数）、`TestCreateIssueRelationsRefusals`、`TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`（锁之前没到达的：不在的、它自己、别的工作区的、看不到项目的、不能读的、访客规则隐藏的；锁下：已归档的、在已归档的项目里的、等锁期间被删除的、项目等锁期间被删除的、不再看得到的；已有关联的 `duplicate`）、`TestCreateIssueRelationsStopsAtAFailingPort`、`TestCreateIssueRelationsErrsOnWhatCannotBe`；`lock_test.go` 的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`（预检之后、事务之外一次进 web、ops 的闸门（`id` 升序，写自己的项目较大时也一样），一次锁住同样的项目、同样的次序，事务结束之后最后离开；预检没到达的不取锁、不进闸门）。
+- 测试：单元的 `TestCreateIssueRelationsRelatesTheWorkItemToOthers`（alice 以 `blocking`、再以 `blocked_by` 问 ops 的 far、web 的 near：`blocking` 各存为对方的 `blocked_by`、对方的行，`blocked_by` 照问的存、工作项的行；每条两行动态，各在自己的项目，按标识，对方的写对方读到的类型；far 按 alice 在 ops 的 `Grant`（她是只看自己的访客）数）、`TestCreateIssueRelationsRefusals`、`TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`（锁之前没到达的：不在的、它自己、别的工作区的、看不到项目的、不能读的、访客规则隐藏的；锁下：已归档的、在已归档的项目里的、等锁期间被删除的、项目等锁期间被删除的、不再看得到的；预检没到达的，锁下看得到也不算；已有关联的 `duplicate`）、`TestCreateIssueRelationsStopsAtAFailingPort`（各端口的第一次调用失败，和预检之后锁下 far 的再读、再判定失败：都答这个失败）、`TestCreateIssueRelationsErrsOnWhatCannotBe`；`lock_test.go` 的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`（预检之后、事务之外一次进 web、ops 的闸门（`id` 升序，写自己的项目较大时也一样），一次锁住同样的项目、同样的次序，事务结束之后最后离开；预检没到达的不取锁、不进闸门）。
 
 ### 2.13 加关联：接口、组合、矩阵（Task 11；3.5、3.10、5.1、5.2、9.2、9.3）
 
@@ -337,14 +337,15 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 
 清扫之后逐个核对了只在一层被发现的变异（清扫 62：brief 说"只在单元一层"的说法常常是错的）。组合一层的数据本可以展示的加了数据（A.2 的清点），剩下的每一个写明为什么只在那一层。
 
-**只在单元一层被发现的（按性质，18 个）**：
+**只在单元一层被发现的（按性质，21 个）**：
 
-- 端口的失败（清扫 2）7 个：T1.7（读子树失败，当作没有子树、什么都不删）、T2.9（读父工作项失败，当作没有）、T5.7（读祖先链失败，当作上面没有）、T5.21（读子工作项失败，当作没有）、T10.20（读已有的关联失败，当作还没有）、T12.3（读项目的归档失败，当作都没归档）、T13.22（写两端的最后修改失败，略过）。同 P1a、P1b、P2：组合出的 app 里真实的存储在这些读写上不失败，存储方法自己的失败在存储一层核对（清扫 19）；失败的语句让 Postgres 中止事务，吞掉它的用例之后的语句和提交也都失败。
+- 端口的失败（清扫 2）9 个：T1.7（读子树失败，当作没有子树、什么都不删）、T2.9（读父工作项失败，当作没有）、T5.7（读祖先链失败，当作上面没有）、T5.21（读子工作项失败，当作没有）、T10.20（读已有的关联失败，当作还没有）、T10.25（锁下读、判定另一个工作项失败，当作没到达）、T10.26（锁下再到达失败，略过）、T12.3（读项目的归档失败，当作都没归档）、T13.22（写两端的最后修改失败，略过）。同 P1a、P1b、P2：组合出的 app 里真实的存储在这些读写上不失败，存储方法自己的失败在存储一层核对（清扫 19）；失败的语句让 Postgres 中止事务，吞掉它的用例之后的语句和提交也都失败。
 - 端口的回答对不上（清扫 22）3 个：T3.13（原来的父工作项读不到，当作没有）：删除工作项同一时刻删除它下面的每一个（第 3 节第 5 条），经接口一个未删除的工作项的父工作项总在。T5.17、T10.19（读回的少了一个，照样回答）：写和读回在同一个事务里、在锁下，读回的总是写下的那些。
 - 时刻 1 个：T1.6（删除工作项先读时钟、再读子树）：两步都在锁下，子树在锁下不变，时刻都在请求之内、在写之前；经接口分不出先后。
 - 表序的约定 1 个：T8.12（删除工作项先删关联、再删标签）。同 P2 的 T4.8：工作项一侧的行的每个写者都先持它的项目的 N；跨项目的写与别的写共有的只有关联行（关联的两行动态各在自己的项目），两张以上的表上没有共有的行，表的次序等不起来；全局的表序是约定（第 3 节第 4 条），由单元的调用次序钉住。
 - 闸门的次序 1 个：T10.4（跨项目的写按到达的次序进闸门、取锁）。锁的次序不受它影响：`LockMany` 在一条语句里按 `id` 取锁，不论给的次序。闸门的次序只在两个跨项目的写按相反的次序排进对方的队列时显出（各持一个位置、等另一个，到 `max_wait` 答 503，不是挂住）：组合一层要让两个请求按指定的次序进各自的队列，造不确定（P1b 的 `platform/gate` 内部的次序同理）；单元的假闸门记下进的键和次序。写闸门的组合测试的一个跨项目的写被拒绝在先进的闸门还是后进的，答复相同（第 3 节第 20 条）。预检在组合一层跑过同样的变异（全部闸门按 `id` 降序进），整个组合一层都通过，接受。
 - 两端任一个的锁下核对 1 个：T13.4（等锁期间一端的项目被删除，删除照样往下走）：P1–P8 里删除项目同步连带删除它的工作项和关联行，锁下再读关联读不到，同一个 404；预检在组合一层跑过同样的变异，同样；P9 把删除项目改为任务之后才分得出，第 5 节 P9 一行写上它的组合测试。
+- 预检的拒绝 1 个：T10.27（预检没到达的工作项，锁下的判定放过就到达）：预检的拒绝是最终的（设计 3.5）；要分出它，调用者看得到什么得在预检和锁之间变化，组合一层只能在请求等锁的时候改他的角色，与锁的队列赛跑，造不确定；单元的假授权按调用的次序回答，预检看不到、锁下看得到。
 - 契约 2 个：T6.4、T11.5（加子工作项、加关联的体收下没有声明的字段）。同 P1b 的 T6.2：体的形状由生成的 `bodyshape` 在用例之前检查，HTTP 的测试驱动的就是生成的路由和真实的处理函数，这条路上没有替身。
 - 契约外的输入 1 个：T9.4（加关联的类型不在四种里也收下）。`relation_type` 在契约里是枚举，组合的测试的每个请求都按契约核对（`CheckRequest`），发不出不在四种里的类型（R29 原来发了 `start_before`，被核对拒绝，A.2）；`bodyshape` 不查枚举，HTTP 的测试把它照原样交给用例，领域的 `CheckNewRelations` 拒绝它（`TestCheckNewRelations`）。
 - 文案 1 个：T14.3（页面没有 `issue.relation_not_found` 的文案）：`error-messages.test.ts` 读的是真实的文案表，显示关联的页面在 P14（同 P2 的 T7.12）；中文的一份缺这个键由 `check:sync` 发现（T14.4，守卫）。

@@ -164,7 +164,7 @@ sys.exit(1 if broken else 0)
 | `e2e/fixtures/assert/project.ts`、`e2e/fixtures/assert/workspace.ts`（修改） | 删除的断言暂时不要关联表的行（Task 8）；去掉（Task 11） | 8、11 |
 | `server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`（新） | `RelatedIssues`、`InsertRelations`、`MarkChanged`（Task 9）；`IssueRelations`、`relationOf`（Task 12）；`GetRelation`、`DeleteRelation`（Task 13） | 9、12、13 |
 | `server/internal/modules/issue/domain/relation.go`、`server/internal/modules/issue/domain/relation_test.go`（新） | 关联的类型、`CheckNewRelations`、`Relation`、`NewRelation`、动态第 20、21 行（Task 9）；第 22、23 行（Task 13） | 9、13 |
-| `server/internal/modules/issue/app/lock_across.go`（新） | `scope`、`end`、`lockProjects`、`reachAll`、`reachUnder`、`reach`（Task 10）；`ascending`（Task 12）；两端任一个的锁（Task 13） | 10、12、13 |
+| `server/internal/modules/issue/app/lock_across.go`（新） | `scope`、`end`、`held.own()`、`lockProjects`、`reachAll`、`reachUnder`、`reach`（Task 10）；`ascending`（Task 12）；两端任一个的锁（Task 13） | 10、12、13 |
 | `server/internal/modules/issue/app/create_relations.go`、`server/internal/modules/issue/app/create_relations_test.go`（新） | `CreateIssueRelations` 和单元测试（Task 10）；说明写上它的路由（Task 11，`create_relations.go`） | 10、11 |
 | `server/internal/modules/issue/app/fakes_relations_test.go`（新） | 关联的假存储（Task 10）；`Relations`（Task 12）；`GetRelation`、`DeleteRelation`（Task 13） | 10、12、13 |
 | `server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`（新） | `CreateIssueRelations`（Task 11）；`ListIssueRelations`（Task 12）；`DeleteIssueRelation`（Task 14） | 11、12、14 |
@@ -10937,14 +10937,14 @@ Expected: 通过。
 
 **Interfaces:**（spec 2.12、第 3 节第 2、3、7、9、11、12 条；M4 设计 3.4、3.5 约定七、3.7、3.8、3.10、3.13、11.11）`Locks.run` 的跨项目的形式和它的第一个使用者；一条取锁路径，不另写：
 - `issue/app/lock.go`：`write.reach`（跨项目的写到达的别的工作项，每个以 `issue.read` 判定；判定拒绝的不是这个写的回答，而是"没到达"）；`held.reached`（锁下到达的，按 `write.reach` 的次序）；`precheck` 交回 `scope`（它放进锁的项目）；`run` 以 `scope` 的项目一次进写闸门（`WriteGate.Enter(ctx, s.projects...)`）；`lockAndDecide(ctx, actor, w, s)` 经 `lockProjects` 锁住，跨项目时锁下再到达（`reachUnder`）。
-- `issue/app/lock_across.go`（新）：`scope{projects, reached}`（项目各一次、`id` 升序，写自己的在其中）；`end{issue, project, grant, ok}`；`lockProjects`（一个项目的写 `ProjectGate.Lock`；跨项目的写 `LockMany`，即使只有一个项目）；`reachAll`（预检：每个读、判定，没到达的不锁、不进闸门）；`reachUnder`（锁下：预检到达的再读、再判定；项目等锁期间被删除、不在锁住的里的，不算到达）；`reach`（工作项在、未删除、不是它自己、同一个工作区、调用者以 `issue.read` 看得到（访客规则在先）：否则 `ok` 为假，判定的拒绝在这里不是错误）。
+- `issue/app/lock_across.go`（新）：`scope{projects, reached}`（项目各一次、`id` 升序，写自己的在其中）；`end{issue, project, grant, ok}`；`held.own()`（写自己的工作项作为它的一端：工作项、它的项目、调用者的授权，都按锁下的，`ok` 为真；加关联写动态时用它）；`lockProjects`（一个项目的写 `ProjectGate.Lock`；跨项目的写 `LockMany`，即使只有一个项目）；`reachAll`（预检：每个读、判定，没到达的不锁、不进闸门）；`reachUnder`（锁下：预检到达的再读、再判定；预检没到达的，锁下看得到也不算到达；项目等锁期间被删除、不在锁住的里的，不算到达；读、判定失败是它的错误）；`reach`（工作项在、未删除、不是它自己、同一个工作区、调用者以 `issue.read` 看得到（访客规则在先）：否则 `ok` 为假，判定的拒绝在这里不是错误）。
 - `issue/app/parents.go`：`refOf(p LockedProject, i)`（按锁住的那个项目的标识：别的项目的工作项也按它自己的项目写）；`parents.go`、`sub_issues.go` 的调用照改。
 - `issue/app/ports.go`：`RelationCreator`（`Related`、`InsertRelations`、`MarkChanged`、`InsertActivities`，嵌入 `IssueReader`，`GetIssues` 在它里面）。
 - `issue/app/create_relations.go`（新）：`IssueRelation{ID, Type, Issue, CreatedAt}`（关联作为它的一个工作项读到的）；`CreateIssueRelationsDeps{Locks, Relations, Clock}`、`NewCreateIssueRelations`、`Execute(ctx, id, t, ids)`：`CheckNewRelations` 在任何读之前；`Locks.run` 的 `write{issue: &id, action: issue.update, reach: ids}`；锁下项目已归档 409 → 工作项已归档 409 `issue.archived` → `check`（每个都到达、没归档、它的项目没归档、与它还没有关联（`Related`，在两端的项目的锁下读）；问题按它在 `issue_ids` 里的位置一次报出：没到达的、已归档的 `not_allowed`，已有关联的 `duplicate`）→ 时刻 → `write`（按对方的 `id` 的次序：`NewRelation`；`InsertRelations` 一条语句；`MarkChanged` 两端，`id` 的次序；每条关联两行动态，各在自己的项目：它的工作项读到的类型、对方的标识）→ `answer`（对方在事务里读回，少了是错误；按调用者在各项目的 `Grant` 数子工作项：`grants` 带上每个对方的项目）。
 - 测试的帮手：`fakes_relations_test.go`（新）：`fakeRelations`（嵌入 `*fakeIssues`：`Related`、`InsertRelations`、`MarkChanged` 的记录）；`create_relations_test.go`（新）：`nearID`、`farID`、`newRelate`、`relateOver`、`reaching`、`relateCase`、`wantNothingWritten`（加关联什么都没写：两个拒绝的测试共用，不各写一份）；`create_issue_test.go` 的 `wantRefused`（`wantRefusal` 对错误的核对拆出，`wantRefusal` 经它；加关联的拒绝不另写一份）。动态用 `create_issue_test.go` 的 `wantActivityRows` 核对，读回少了用假实现的 `lost`（`fakeRelations` 经嵌入的 `*fakeIssues` 用它），都不另写。
 
 **Tests:**
-- 单元：`TestCreateIssueRelationsRelatesTheWorkItemToOthers`（3.5、3.10 的次序：跨项目的 `Locks` 的调用（`reaching`）；已有的关联；时刻；关联；两端按 `id` 的次序改最后修改；动态；读回、数过。alice 以 `blocking`、再以 `blocked_by` 问 ops 的 far、web 的 near，两种各自写明：`blocking` 各存为对方的 `blocked_by`，对方的行、对方的项目；`blocked_by` 照问的存，工作项的行、web；都是 near 的在先；每条两行动态，各在自己的项目，按标识：工作项的写问的类型，对方的写对方读到的（`blocked_by`、`blocking`）；回答按工作项读的，即问的类型，far 按 alice 在 ops 的 `Grant`（她是只看自己的访客）数，near 按 web 的）、`TestCreateIssueRelationsRefusals`（锁之前：`CheckNewRelations` 拒绝的、不在的、看不到项目的 404、不能改的 403，在读别的工作项之前；锁下：项目、工作项等锁期间被删除 404，不能再改 403，已归档的项目 409（工作项也已归档），然后已归档的工作项 409，都在检查别的工作项之前；都不写）、`TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`（锁之前没到达的：不在的、它自己、别的工作区的、看不到项目的、不能读的、访客规则隐藏的；锁下：已归档的、在已归档的项目里的、等锁期间被删除的、项目等锁期间被删除的、不再看得到的；已有关联的 `duplicate`；两个都被拒绝时各在自己的位置）、`TestCreateIssueRelationsStopsAtAFailingPort`、`TestCreateIssueRelationsErrsOnWhatCannotBe`（读回少了（假实现的 `lost`）是错误，不是拒绝）；`lock_test.go` 的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`（预检之后、事务之外一次进 web、ops 的闸门（`id` 升序），一次锁住同样的项目、同样的次序（`LockMany`），事务结束之后最后离开；写自己的项目也按 `id` 排，不在最前：工作项移到 ops（较大的，web 的 `id` 先取）时同样先 web 后 ops；预检没到达的（看不到的 far、没有的 far）不取锁、不进闸门，422 只在 web 的锁下答）。
+- 单元：`TestCreateIssueRelationsRelatesTheWorkItemToOthers`（3.5、3.10 的次序：跨项目的 `Locks` 的调用（`reaching`）；已有的关联；时刻；关联；两端按 `id` 的次序改最后修改；动态；读回、数过。alice 以 `blocking`、再以 `blocked_by` 问 ops 的 far、web 的 near，两种各自写明：`blocking` 各存为对方的 `blocked_by`，对方的行、对方的项目；`blocked_by` 照问的存，工作项的行、web；都是 near 的在先；每条两行动态，各在自己的项目，按标识：工作项的写问的类型，对方的写对方读到的（`blocked_by`、`blocking`）；回答按工作项读的，即问的类型，far 按 alice 在 ops 的 `Grant`（她是只看自己的访客）数，near 按 web 的）、`TestCreateIssueRelationsRefusals`（锁之前：`CheckNewRelations` 拒绝的、不在的、看不到项目的 404、不能改的 403，在读别的工作项之前；锁下：项目、工作项等锁期间被删除 404，不能再改 403，已归档的项目 409（工作项也已归档），然后已归档的工作项 409，都在检查别的工作项之前；都不写）、`TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`（锁之前没到达的：不在的、它自己、别的工作区的、看不到项目的、不能读的、访客规则隐藏的；锁下：已归档的、在已归档的项目里的、等锁期间被删除的、项目等锁期间被删除的、不再看得到的；预检没到达的，锁下看得到也不算到达（预检看不到的 near）；已有关联的 `duplicate`；两个都被拒绝时各在自己的位置）、`TestCreateIssueRelationsStopsAtAFailingPort`（各端口的第一次调用失败：工作项和 far 在预检的读和判定、锁、读已有的关联、三个写、读回、数；预检之后，锁下 far 的再读和再判定失败（`reachUnder`），调用到它为止是 `reaching` 的；都答这个失败，之后不再调用）、`TestCreateIssueRelationsErrsOnWhatCannotBe`（读回少了（假实现的 `lost`）是错误，不是拒绝）；`lock_test.go` 的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`（预检之后、事务之外一次进 web、ops 的闸门（`id` 升序），一次锁住同样的项目、同样的次序（`LockMany`），事务结束之后最后离开；写自己的项目也按 `id` 排，不在最前：工作项移到 ops（较大的，web 的 `id` 先取）时同样先 web 后 ops；预检没到达的（看不到的 far、没有的 far）不取锁、不进闸门，422 只在 web 的锁下答）。
 
 - [ ] **Step 1: 跨项目的取锁**
 
@@ -11131,7 +11131,7 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write, s
 		}
 ````
 
-`server/internal/modules/issue/app/lock_across.go`（新文件，127 行）：
+`server/internal/modules/issue/app/lock_across.go`（新文件，134 行）：
 
 ````file server/internal/modules/issue/app/lock_across.go
 package app
@@ -11172,6 +11172,13 @@ type end struct {
 	project LockedProject
 	grant   shared.Grant
 	ok      bool
+}
+
+// own is the work item h's write names as an end of it: the work item and
+// its project, as the lock holds them, and the caller's grant on the
+// project, as decided under it; it is reached.
+func (h held) own() end {
+	return end{issue: h.issue, project: h.project, grant: h.grant, ok: true}
 }
 
 // lockProjects locks s's projects in the transaction ctx carries and
@@ -11512,7 +11519,7 @@ func (u *CreateIssueRelations) check(ctx context.Context, h held) ([]end, error)
 func (u *CreateIssueRelations) write(ctx context.Context, h held, by uuid.UUID, t domain.RelationType, others []end) ([]domain.Relation,
 	error) {
 	at := u.d.Clock.Now()
-	from := end{issue: h.issue, project: h.project}
+	from := h.own()
 	relations := make([]domain.Relation, len(others))
 	changed := []uuid.UUID{h.issue.ID}
 	var rows []ActivityRow
@@ -11542,7 +11549,7 @@ func (u *CreateIssueRelations) write(ctx context.Context, h held, by uuid.UUID, 
 // locks.
 func (u *CreateIssueRelations) answer(ctx context.Context, actor uuid.UUID, h held, relations []domain.Relation, others []end) (
 	[]IssueRelation, error) {
-	ids, g := make([]uuid.UUID, len(others)), grants{h.issue.ProjectID: h.grant}
+	ids, g := make([]uuid.UUID, len(others)), make(grants, len(others))
 	for n, o := range others {
 		ids[n], g[o.issue.ProjectID] = o.issue.ID, o.grant
 	}
@@ -11571,7 +11578,7 @@ func (e end) stamp(by uuid.UUID, at time.Time) stamp {
 }
 ````
 
-`server/internal/modules/issue/app/create_relations_test.go`（新文件，283 行）：
+`server/internal/modules/issue/app/create_relations_test.go`（新文件，306 行）：
 
 ````file server/internal/modules/issue/app/create_relations_test.go
 package app_test
@@ -11778,7 +11785,9 @@ func wantNothingWritten(t *testing.T, w *world, rel *fakeRelations) {
 // whose project she does not see, one she may not read, or another's when
 // the guest rule hides others' from her in its project; under the locks,
 // one archived, of an archived project, deleted while the locks waited,
-// whose project was deleted while they waited, or no longer seen. Under
+// whose project was deleted while they waited, or no longer seen. One not
+// reached before the locks is not reached under them either, though she
+// sees it there (M4 design 3.5): near, hidden from her before them. Under
 // them too, one that relates to the work item already is a duplicate.
 // Every problem is reported at once, each at its place: far's and near's
 // both, when both are refused.
@@ -11804,6 +11813,8 @@ func TestCreateIssueRelationsRefusesWhatItMayNotRelateTo(t *testing.T) {
 		{"deleted while the locks waited", func(c *relateCase) { c.project.waited = func() { delete(c.issues.others, farID) } }, notAllowed},
 		{"its project deleted while the locks waited", func(c *relateCase) { delete(c.project.across, ops) }, notAllowed},
 		{"no longer seen", func(c *relateCase) { c.auth.answers = []error{4: shared.ErrNotVisible} }, notAllowed},
+		{"near, not seen before the locks, seen under them", func(c *relateCase) { c.auth.answers = []error{2: shared.ErrNotVisible} },
+			shared.Invalid(domain.RelatedNotAllowed(1))},
 		{"related already", func(c *relateCase) { c.rel.related = []uuid.UUID{farID} }, already},
 		{"both refused", func(c *relateCase) { c.far.ArchivedAt, c.rel.related = &earlier, []uuid.UUID{nearID} },
 			shared.Invalid(domain.RelatedNotAllowed(0), domain.RelatedAlready(1))},
@@ -11832,7 +11843,12 @@ type relateCase struct {
 }
 
 // A port that fails ends the addition with its failure, as itself, and no
-// call after it runs: the transaction rolls back whatever was written.
+// call after it runs: the transaction rolls back whatever was written. It
+// fails, at its first call, the work item's read and its decision, far's
+// read and its decision before the locks, the lock, the read of the
+// relations there already, the three writes, the read back and the count;
+// and, once the precheck's calls have passed, far's read and its decision
+// again under the locks (reachUnder), after reaching's calls up to it.
 func TestCreateIssueRelationsStopsAtAFailingPort(t *testing.T) {
 	for _, port := range []string{"GetIssue", "Authorize", line("GetIssue", farID), line("Authorize", alice, domain.ActionRead, acme, ops),
 		"LockMany", "Related", "InsertRelations", "MarkChanged", "InsertActivities", "GetIssues", "SubIssueCounts"} {
@@ -11841,6 +11857,20 @@ func TestCreateIssueRelationsStopsAtAFailingPort(t *testing.T) {
 			w.log.fail = port
 			_, err := uc.Execute(as(alice), id, domain.RelatesTo, []uuid.UUID{farID, nearID})
 			wantStoppedAt(t, w, err, port)
+		})
+	}
+	for _, tt := range []struct {
+		name, port string
+		calls      int // of reaching's, the port's the last
+	}{
+		{"far read again under the locks", line("GetIssue", farID), 11},
+		{"far decided on again under the locks", line("Authorize", alice, domain.ActionRead, acme, ops), 12},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			uc, w, _, id, r := newRelate()
+			w.project.waited = func() { w.log.fail = tt.port }
+			_, err := uc.Execute(as(alice), id, domain.RelatesTo, []uuid.UUID{farID, nearID})
+			wantStopped(t, w, err, tt.port, slices.Equal(w.log.calls, reaching(id, r)[:tt.calls]))
 		})
 	}
 }
@@ -12033,6 +12063,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T10.22` | 加关联在锁下、闸门之后才核对类型和 1–20 个工作项，而不是在任何读之前 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`（`make test`）（Task 11 起） | 单元；组合 |
 | `T10.23` | 跨项目的写把它自己的项目放在最前，只把别的项目按 `id` 升序排 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T10.24` | 对方的那行动态写关联存储的类型，不是对方读到的类型 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T10.25` | 锁下读、判定另一个工作项失败时当作没到达，答 `not_allowed`，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T10.26` | 跨项目的写丢掉锁下再到达的失败：`lockAndDecide` 不理 `reachUnder` 的错误 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T10.27` | 预检没到达的工作项在锁下再读、再判定，判定放过就算到达：预检的拒绝不是最终的 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 
 ---
 

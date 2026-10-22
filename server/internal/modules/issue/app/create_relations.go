@@ -143,7 +143,7 @@ func (u *CreateIssueRelations) check(ctx context.Context, h held) ([]end, error)
 func (u *CreateIssueRelations) write(ctx context.Context, h held, by uuid.UUID, t domain.RelationType, others []end) ([]domain.Relation,
 	error) {
 	at := u.d.Clock.Now()
-	from := end{issue: h.issue, project: h.project}
+	from := h.own()
 	relations := make([]domain.Relation, len(others))
 	changed := []uuid.UUID{h.issue.ID}
 	var rows []ActivityRow
@@ -173,7 +173,7 @@ func (u *CreateIssueRelations) write(ctx context.Context, h held, by uuid.UUID, 
 // locks.
 func (u *CreateIssueRelations) answer(ctx context.Context, actor uuid.UUID, h held, relations []domain.Relation, others []end) (
 	[]IssueRelation, error) {
-	ids, g := make([]uuid.UUID, len(others)), grants{h.issue.ProjectID: h.grant}
+	ids, g := make([]uuid.UUID, len(others)), make(grants, len(others))
 	for n, o := range others {
 		ids[n], g[o.issue.ProjectID] = o.issue.ID, o.grant
 	}
