@@ -29,7 +29,7 @@ func TestRelationTypeReversed(t *testing.T) {
 // every problem in one 422.
 func TestCheckNewRelations(t *testing.T) {
 	a, b := uuid.NewV7(), uuid.NewV7()
-	for _, kind := range relationTypes {
+	for _, kind := range []RelationType{RelatesTo, Duplicate, BlockedBy, Blocking} {
 		if err := CheckNewRelations(kind, []uuid.UUID{a}); err != nil {
 			t.Errorf("CheckNewRelations(%s, one) = %v, want nil", kind, err)
 		}
@@ -78,7 +78,7 @@ func TestNewRelation(t *testing.T) {
 	acme, web, ops, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	from, to := Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web}, Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops}
 	at := time.Date(2026, 10, 21, 10, 0, 0, 0, time.UTC)
-	for _, kind := range relationTypes {
+	for _, kind := range []RelationType{RelatesTo, Duplicate, BlockedBy, Blocking} {
 		id := uuid.NewV7()
 		r := NewRelation(id, from, to, kind, by, at)
 		want := Relation{ID: id, WorkspaceID: acme, ProjectID: web, IssueID: from.ID, RelatedID: to.ID, Type: kind, CreatedByID: &by, CreatedAt: at}

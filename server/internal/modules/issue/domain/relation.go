@@ -58,10 +58,7 @@ func CheckNewRelations(t RelationType, ids []uuid.UUID) error {
 		found = append(found, &shared.FieldError{Field: "relation_type", Code: shared.FieldInvalidFormat,
 			Message: "must be one of relates_to, duplicate, blocked_by, blocking"})
 	}
-	if len(ids) == 0 {
-		found = append(found, &shared.FieldError{Field: "issue_ids", Code: shared.FieldTooShort, Message: "must name a work item"})
-	}
-	return invalid(append(found, checkIDs("issue_ids", ids, MaxRelatedIssues)...)...)
+	return invalid(append(found, checkSomeIDs("issue_ids", ids, MaxRelatedIssues)...)...)
 }
 
 // RelatedNotAllowed is the problem of the work item at index i of those an

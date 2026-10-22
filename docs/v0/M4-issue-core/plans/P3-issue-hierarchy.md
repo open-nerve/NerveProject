@@ -103,8 +103,8 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/app/fakes_test.go`（修改） | 删除的假实现移出（Task 1）；`callLog.fail` 按整行、创建带父工作项（Task 2）；锁下的项目带标识、修改的父工作项（Task 3）；`SubIssueCounts`、`GetIssues` 的读（`read`）（Task 4）；`SubIssues`、`SetParents` 的读写记录，`lost` 经 `lose`（Task 5）；`LockMany`、写闸门取多个项目（Task 7） | 1、2、3、4、5、7 |
 | `server/internal/bootstrap/issue_deletion_test.go`（修改） | 子树在同一时刻删除，管理员·访客的删除连带他看不到的子工作项（`deletesAtOneMoment`）；按目录的删除去掉 `subItems` 的豁免，`deletedWorkItem` 的工作项有子工作项（Task 1）；关联的两个外键下各有一行，子树里根下的 c 到子树外的关联随子树删除（Task 8） | 1、8 |
 | `server/internal/bootstrap/project_deletion_test.go`（修改） | 按目录读 `keysTo(issues)`（Task 1）；删除项目连带两个方向的关联行（Task 8） | 1、8 |
-| `server/internal/modules/issue/domain/hierarchy.go`（新） | `ParentNotAllowed`（Task 2）；`ParentChange`、`Ref`、`ParentActivity`（Task 3）；`Loops`、`MaxSubIssues`、`CheckSubIssueIDs`、`SubIssueNotAllowed`（Task 5） | 2、3、5 |
-| `server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`（修改） | `NewIssue.ParentID`、`Issue.ParentID` 进创建（Task 2）；`Issue.SubIssuesCount`（Task 4） | 2、4 |
+| `server/internal/modules/issue/domain/hierarchy.go`（新） | `ParentNotAllowed`（Task 2）；`ParentChange`、`Ref`、`ParentActivity`（Task 3）；`Loops`、`MaxSubIssues`、`CheckSubIssueIDs`、`SubIssueNotAllowed`（Task 5）；`CheckSubIssueIDs` 改用 `checkSomeIDs`（Task 9） | 2、3、5、9 |
+| `server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`（修改） | `NewIssue.ParentID`、`Issue.ParentID` 进创建（Task 2）；`Issue.SubIssuesCount`（Task 4）；`checkSomeIDs`（Task 9） | 2、4、9 |
 | `server/internal/modules/issue/app/parents.go`、`server/internal/modules/issue/app/parents_test.go`（新） | `parentOf`：创建的父工作项在锁下读、判定（Task 2）；`parentChange`、`refOf`：修改的父工作项，不成环（Task 3）；回答带计数（Task 4）；`inReach`、`parentsBefore`（修改和加子工作项共用原来的父工作项的读，测试的调用照改）（Task 5）；`refOf` 带锁住的项目（Task 10） | 2、3、4、5、10 |
 | `server/internal/modules/issue/app/lock.go`（修改） | `decide` 交回 `Grant`，`held.grant`（Task 2）；`see` 交回 `Grant`（Task 4）；跨项目的形式：`write.reach`、`held.reached`、`scope`（Task 10）；两端任一个的形式：`write.instead`、`held.instead`（Task 13） | 2、4、10、13 |
 | `server/internal/modules/issue/app/create_issue.go`（修改） | 创建带父工作项（`check`、`parentOf`）（Task 2）；回答的计数是 0（Task 4） | 2、4 |
@@ -10230,21 +10230,22 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`、`server/internal/modules/issue/domain/relation.go`、`server/internal/modules/issue/domain/relation_test.go`
-- Modify: `server/internal/modules/issue/app/rows.go`
+- Modify: `server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/domain/hierarchy.go`、`server/internal/modules/issue/domain/issue.go`
 - Generate: `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go`
 
 **Interfaces:**（spec 2.11、第 3 节第 12、14 条；M4 设计 3.7、3.10、3.13、4.6）
 - `issue/domain/relation.go`（新）：`RelationType` 和四个类型（`relates_to`、`duplicate`、`blocked_by`、`blocking`：页面的四种）；`Reversed()`（另一端读到的：`blocked_by`、`blocking` 互为反面，另两种是自己）；`MaxRelatedIssues`（20）；`CheckNewRelations(t, ids)`（类型是四种之一、至少一个、至多 20 个、各一次，在任何读之前，一个 422；Plane 的 `start_before` 页面不显示，不收）；`RelatedNotAllowed(i)`（`issue_ids[i]` 的 `not_allowed`）、`RelatedAlready(i)`（`issue_ids[i]` 的 `duplicate`），各一句固定的文字；`Relation`（如存的：工作区、`issue_id` 那一端的项目、两端、存储的类型（没有 `blocking`）、谁、何时）；`NewRelation(id, from, to, t, by, at)`（`blocking` 存为对方的 `blocked_by`，那一行是对方的项目的）；`TypeFrom(id)`、`Other(id)`；`RelationAdded(t, other)`（动态第 20、21 行：类型作为 `field`、`updated`，`""` 到对方的标识，对方的 `id` 是 `new_identifier`，`comment` 照 Plane 带上类型）。
+- `issue/domain/issue.go`：`checkSomeIDs(field, ids, limit)`（一个须指名工作项的列表的 `checkIDs`：空的被拒绝，`too_short`，那是它唯一的问题），写在 `checkIDs` 旁边；`CheckNewRelations` 和 `hierarchy.go` 的 `CheckSubIssueIDs` 都用它，空列表的规则只写一次。
 - `issue/adapter/postgres/queries/relations.sql`（新）：`RelatedIssues`（给的工作项中哪些与它已有未删除的关联，任何类型、任一个方向，`id` 的次序；在两端的项目的锁下读）、`InsertRelations`（一条语句插入几条：`unnest` 各列，一个工作区、一个账户、一个时刻）、`MarkChanged`（`:execrows`：两端的工作项的最后修改者和时刻，只写未删除的）。`relations.go`（新）：`Related`、`InsertRelations`（不是一个工作区、一个账户、一个时刻的几条是错误，什么都不写）、`MarkChanged`（写的行数不是给的个数时是错误）。
 - `issue/app/rows.go`：`ChangedRows{IDs, By, At}`（没改字段、只改了最后修改的工作项：关联的两端，`id` 的次序）。
 
 **Tests:**
-- 领域：`TestRelationTypeReversed`、`TestCheckNewRelations`（每种类型和一个、二十个通过；`start_before`、没有、二十一个、重复的各报在自己的位置，同一个 422）、`TestNewRelation`（从 Web 的工作项到 Ops 的：`relates_to`、`duplicate`、`blocked_by` 是问的那一端的、Web 的行；`blocking` 是对方的、Ops 的 `blocked_by`；每一端读到的类型和对方）、`TestRelationAdded`（四种类型各一：两行同样的列，类型照它的工作项读的）。
-- 存储：`TestRelated`（任何类型、任一个方向、任何项目的：item 与 b、a、o 的关联是 `duplicate`、`blocked_by`、`relates_to`，存储的三种各一；已删除的不算；`id` 的次序；没有关联的回答空的；取消的读是它的失败）、`TestInsertRelations`（ops 的 o 被 web 的 item 阻塞（ops 的行）、item 到 web 的 b（web 的行），每一列照给的；两个工作区、两个时刻、两个账户的几条各被拒绝、什么都不写：每组都与 `alone`（c 到 item 的，之后单独写下）并列，所以拒绝的是这一条守卫，不是一对的键；已有关联的一对（任何类型、任一个方向，`issue_relations_pair_key`）、取消的插入也是）、`TestMarkChanged`（web 的 a、ops 的 o 由 bob 在 later 改，别的列不动；没给的 b 不动；给了已删除的是错误，取消的写也是）。
+- 领域（四种类型都逐个写出，不取产品代码的类型列表）：`TestRelationTypeReversed`、`TestCheckNewRelations`（每种类型和一个、二十个通过；`start_before`、没有、二十一个、重复的各报在自己的位置，同一个 422）、`TestNewRelation`（从 Web 的工作项到 Ops 的：`relates_to`、`duplicate`、`blocked_by` 是问的那一端的、Web 的行；`blocking` 是对方的、Ops 的 `blocked_by`；每一端读到的类型和对方）、`TestRelationAdded`（四种类型各一：两行同样的列，类型照它的工作项读的）。
+- 存储：`TestRelated`（任何类型、任一个方向、任何项目的：item 与 b、a、o 的关联是 `duplicate`、`blocked_by`、`relates_to`，存储的三种各一；已删除的不算；按 `id` 倒序问，按 `id` 的次序答；没有关联的回答空的；取消的读是它的失败）、`TestInsertRelations`（ops 的 o 被 web 的 item 阻塞（ops 的行）、item 到 web 的 b（web 的行），每一列照给的；每条关联如用例那样由 `domain.NewRelation` 造，账户各是自己的指针：守卫比的是账户，不是指针；两个工作区、两个时刻、两个账户的几条各被拒绝、什么都不写：每组都与 `alone`（c 到 item 的，之后单独写下）并列，所以拒绝的是这一条守卫，不是一对的键；已有关联的一对（任何类型、任一个方向，`issue_relations_pair_key`）、取消的插入也是）、`TestMarkChanged`（web 的 a、ops 的 o 由 bob 在 later 改，别的列不动；没给的 b 不动；给了已删除的是错误，取消的写也是）。
 
 - [ ] **Step 1: 查询，生成**
 
-`server/internal/modules/issue/adapter/postgres/queries/relations.sql`（新文件，29 行）：
+`server/internal/modules/issue/adapter/postgres/queries/relations.sql`（新文件，30 行）：
 
 ````file server/internal/modules/issue/adapter/postgres/queries/relations.sql
 -- name: RelatedIssues :many
@@ -10270,9 +10271,10 @@ SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), unnest(sqlc.arg(pr
        sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at);
 
 -- name: MarkChanged :execrows
--- The work items a relation's addition changes last without a field of theirs (M4 design 3.7, 3.10): both its ends,
--- each last changed at the moment and by the account given; the undeleted ones among ids. Under the locks of their
--- projects, which every write of the projects' work items holds (3.5): one statement in scan order (convention 5).
+-- The work items a relation's addition, or its removal, changes last without a field of theirs (M4 design 3.7, 3.10):
+-- both its ends, each last changed at the moment and by the account given; the undeleted ones among ids. Under the
+-- locks of their projects, which every write of the projects' work items holds (3.5): one statement in scan order
+-- (convention 5).
 UPDATE issues
 SET updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)
 WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL;
@@ -10283,14 +10285,48 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `580f747dac78ee62e94a604455ee029b27801243cdce7a293fac3cfd89c62657` | 110 | `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go` |
+| `0dc8271c1cd786c8714ca572481893497ecaf7a36dfcec1cf2ab18066f8180d0` | 111 | `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go` |
 
 Run: `shasum -a 256 server/internal/modules/issue/adapter/postgres/gen/relations.sql.go`
 Expected: 与上表相同。
 
 - [ ] **Step 2: 领域**
 
-`server/internal/modules/issue/domain/relation.go`（新文件，132 行）：
+`server/internal/modules/issue/domain/hierarchy.go`（修改，1 处）：
+
+````old server/internal/modules/issue/domain/hierarchy.go
+	if len(ids) == 0 {
+		return shared.Invalid(shared.FieldError{Field: "sub_issue_ids", Code: shared.FieldTooShort, Message: "must name a work item"})
+	}
+	return invalid(checkIDs("sub_issue_ids", ids, MaxSubIssues)...)
+````
+````new server/internal/modules/issue/domain/hierarchy.go
+	return invalid(checkSomeIDs("sub_issue_ids", ids, MaxSubIssues)...)
+````
+
+`server/internal/modules/issue/domain/issue.go`（修改，1 处）：
+
+````old server/internal/modules/issue/domain/issue.go
+	return found
+}
+
+````
+````new server/internal/modules/issue/domain/issue.go
+	return found
+}
+
+// checkSomeIDs is checkIDs of a list of field that must name a work item:
+// an empty one is refused, as its one problem.
+func checkSomeIDs(field string, ids []uuid.UUID, limit int) []*shared.FieldError {
+	if len(ids) == 0 {
+		return []*shared.FieldError{{Field: field, Code: shared.FieldTooShort, Message: "must name a work item"}}
+	}
+	return checkIDs(field, ids, limit)
+}
+
+````
+
+`server/internal/modules/issue/domain/relation.go`（新文件，129 行）：
 
 ````file server/internal/modules/issue/domain/relation.go
 package domain
@@ -10353,10 +10389,7 @@ func CheckNewRelations(t RelationType, ids []uuid.UUID) error {
 		found = append(found, &shared.FieldError{Field: "relation_type", Code: shared.FieldInvalidFormat,
 			Message: "must be one of relates_to, duplicate, blocked_by, blocking"})
 	}
-	if len(ids) == 0 {
-		found = append(found, &shared.FieldError{Field: "issue_ids", Code: shared.FieldTooShort, Message: "must name a work item"})
-	}
-	return invalid(append(found, checkIDs("issue_ids", ids, MaxRelatedIssues)...)...)
+	return invalid(append(found, checkSomeIDs("issue_ids", ids, MaxRelatedIssues)...)...)
 }
 
 // RelatedNotAllowed is the problem of the work item at index i of those an
@@ -10461,7 +10494,7 @@ func TestRelationTypeReversed(t *testing.T) {
 // every problem in one 422.
 func TestCheckNewRelations(t *testing.T) {
 	a, b := uuid.NewV7(), uuid.NewV7()
-	for _, kind := range relationTypes {
+	for _, kind := range []RelationType{RelatesTo, Duplicate, BlockedBy, Blocking} {
 		if err := CheckNewRelations(kind, []uuid.UUID{a}); err != nil {
 			t.Errorf("CheckNewRelations(%s, one) = %v, want nil", kind, err)
 		}
@@ -10510,7 +10543,7 @@ func TestNewRelation(t *testing.T) {
 	acme, web, ops, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	from, to := Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web}, Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops}
 	at := time.Date(2026, 10, 21, 10, 0, 0, 0, time.UTC)
-	for _, kind := range relationTypes {
+	for _, kind := range []RelationType{RelatesTo, Duplicate, BlockedBy, Blocking} {
 		id := uuid.NewV7()
 		r := NewRelation(id, from, to, kind, by, at)
 		want := Relation{ID: id, WorkspaceID: acme, ProjectID: web, IssueID: from.ID, RelatedID: to.ID, Type: kind, CreatedByID: &by, CreatedAt: at}
@@ -10637,8 +10670,9 @@ import (
 // undeleted relation to it, of any type, either way, of any project. Web's
 // item is a duplicate of b, a is blocked_by it, and ops' o relates_to it;
 // its relation to c was deleted; d relates to b alone. Of a, b, c, d and
-// o, asked for in no order, a, b and o relate to it, in id order; none of
-// a work item without relations; a cancelled read is its failure.
+// o, asked for in descending id order, a, b and o relate to it, in id
+// order; none of a work item without relations; a cancelled read is its
+// failure.
 func TestRelated(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -10707,14 +10741,16 @@ func relationText(workspace, project, issue, related uuid.UUID, kind string, mad
 		madeAt.UTC().Format(time.RFC3339Nano), *written, writtenAt.UTC().Format(time.RFC3339Nano), deleted)
 }
 
-// Relations are inserted as given (M4 design 3.10, 4.6): ops' o blocked
-// by web's item, a row of ops, and item relating to web's b, a row of
-// web, by alice at the moment, in their order; every column of each row is
-// as given. Relations of more than one workspace, moment or account are
-// refused and none is written, each beside alone, c's relation to item,
-// which is written by itself after them; so is one of a pair that relates
-// already, of any type, either way (issue_relations_pair_key), and a
-// cancelled insert.
+// Relations are inserted as given (M4 design 3.10, 4.6): ops' o blocked by
+// web's item, a row of ops, and item relating to web's b, a row of web, by
+// alice at the moment, in their order; every column of each row is as
+// given. Each insert's relations hold their accounts by pointers of their
+// own, as domain.NewRelation makes them for the use case: the guard
+// compares the accounts, not the pointers. Relations of more than one
+// workspace, moment or account are refused and none is written, each
+// beside alone, c's relation to item, which is written by itself after
+// them; so is one of a pair that relates already, of any type, either way
+// (issue_relations_pair_key), and a cancelled insert.
 func TestInsertRelations(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -10725,11 +10761,10 @@ func TestInsertRelations(t *testing.T) {
 	newIssue(t, pool, web, b, 2, alice)
 	newIssue(t, pool, web, c, 3, alice)
 	newIssue(t, pool, ops, o, 1, alice)
+	workItem := func(id, p uuid.UUID) domain.Issue { return domain.Issue{ID: id, WorkspaceID: acme, ProjectID: p} }
 	at := now.Add(time.Hour)
-	rs := []domain.Relation{
-		{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops.id, IssueID: o, RelatedID: item, Type: domain.BlockedBy, CreatedByID: &alice, CreatedAt: at},
-		{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web.id, IssueID: item, RelatedID: b, Type: domain.RelatesTo, CreatedByID: &alice, CreatedAt: at},
-	}
+	rs := []domain.Relation{domain.NewRelation(uuid.NewV7(), workItem(o, ops.id), workItem(item, web.id), domain.BlockedBy, alice, at),
+		domain.NewRelation(uuid.NewV7(), workItem(item, web.id), workItem(b, web.id), domain.RelatesTo, alice, at)}
 	if err := s.InsertRelations(context.Background(), rs); err != nil {
 		t.Fatal(err)
 	}
@@ -10747,10 +10782,8 @@ func TestInsertRelations(t *testing.T) {
 	byBob.CreatedAt, byBob.CreatedByID = at, &bob
 	elsewhere := byBob
 	elsewhere.CreatedByID, elsewhere.WorkspaceID = &alice, beta
-	again := domain.Relation{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web.id, IssueID: item, RelatedID: o, Type: domain.Duplicate,
-		CreatedByID: &alice, CreatedAt: at}
-	alone := domain.Relation{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web.id, IssueID: c, RelatedID: item, Type: domain.RelatesTo,
-		CreatedByID: &alice, CreatedAt: at}
+	again := domain.NewRelation(uuid.NewV7(), workItem(item, web.id), workItem(o, ops.id), domain.Duplicate, alice, at)
+	alone := domain.NewRelation(uuid.NewV7(), workItem(c, web.id), workItem(item, web.id), domain.RelatesTo, alice, at)
 	for name, rs := range map[string][]domain.Relation{"two workspaces": {alone, elsewhere}, "two moments": {alone, later},
 		"two accounts": {alone, byBob}, "a pair related": {again}} {
 		before := storedRelations(t, pool)
@@ -10850,7 +10883,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add server/internal/modules/issue/adapter/postgres/queries/relations.sql server/internal/modules/issue/adapter/postgres/relations.go server/internal/modules/issue/adapter/postgres/relations_test.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/domain/relation.go server/internal/modules/issue/domain/relation_test.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go
+git add server/internal/modules/issue/adapter/postgres/queries/relations.sql server/internal/modules/issue/adapter/postgres/relations.go server/internal/modules/issue/adapter/postgres/relations_test.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/domain/hierarchy.go server/internal/modules/issue/domain/issue.go server/internal/modules/issue/domain/relation.go server/internal/modules/issue/domain/relation_test.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go
 ```
 ```bash
 git commit -m "feat(M4/P3): relations between work items: the domain and the store
@@ -10888,8 +10921,11 @@ Expected: 通过。
 | `T9.13` | `InsertRelations` 在一条语句里收两个时刻的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 | `T9.14` | `InsertRelations` 在一条语句里收两个账户的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 | `T9.15` | `InsertRelations` 经连接池写，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`）（Task 11 起） | 组合 |
-| `T9.16` | 只读这个工作项的 `relates_to` 一种类型的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
-| `T9.17` | 加关联的那行动态不论类型都写成 `blocking` | `internal/modules/issue/domain` 的全部测试（`make test`） | 单元 |
+| `T9.16` | 只读这个工作项的 `relates_to` 一种类型的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsAreRelatedAcrossProjects`（`make test`）（Task 11 起）、`internal/bootstrap` 的 `TestOppositeRelationsOfTwoWorkItemsSerialize`（`make test`）（Task 14 起） | 存储；组合 |
+| `T9.17` | 加关联的那行动态不论类型都写成 `blocking` | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsAreRelatedAcrossProjects`（`make test`）（Task 11 起）、`internal/bootstrap` 的 `TestARelationIsDeletedFromEitherWorkItem`（`make test`）（Task 14 起）、`internal/bootstrap` 的 `TestTwoDeletionsOfARelationSerialize`（`make test`）（Task 14 起） | 单元；组合 |
+| `T9.18` | 加子工作项、加关联都可以一个也不列 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsArePutUnderAWorkItem`（`make test`）、`internal/bootstrap` 的 `TestWhatAWorkItemMayNotBeRelatedTo`（`make test`）（Task 11 起） | 单元；组合 |
+| `T9.19` | 加关联不能给 `duplicate` 类型 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestTheGuestRuleHoldsForRelations`（`make test`）（Task 11 起） | 单元；组合 |
+| `T9.20` | `InsertRelations` 比较的是账户的指针，不是账户 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 
 ---
 
@@ -13323,7 +13359,7 @@ Expected: 通过。
 | `T11.4` | 契约没有写 `createIssueRelations` 回答 `issue.archived` | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWhatAWorkItemMayNotBeRelatedTo`（`make test`） | 单元；组合 |
 | `T11.5` | `createIssueRelations` 的请求体收它没有列出的字段 | `internal/modules/issue/adapter/http` 的全部测试（`make test`） | 单元 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T7.1`、`T7.2`、`T7.3`、`T7.6`、`T7.7`、`T7.8`、`T7.9`、`T9.1`、`T9.2`、`T9.3`、`T9.5`、`T9.6`、`T9.7`、`T9.8`、`T9.9`、`T9.15`、`T10.1`、`T10.2`、`T10.3`、`T10.5`、`T10.6`、`T10.7`、`T10.8`、`T10.9`、`T10.10`、`T10.11`、`T10.12`、`T10.13`、`T10.14`、`T10.15`、`T10.16`、`T10.17`、`T10.18`、`T10.21`、`T10.22`（列在各自的 Task 的表里，标"（Task 11 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=11`）。
+本 Task 的检查也发现较早的 Task 的变异 `T7.1`、`T7.2`、`T7.3`、`T7.6`、`T7.7`、`T7.8`、`T7.9`、`T9.1`、`T9.2`、`T9.3`、`T9.5`、`T9.6`、`T9.7`、`T9.8`、`T9.9`、`T9.15`、`T9.16`、`T9.17`、`T9.18`、`T9.19`、`T10.1`、`T10.2`、`T10.3`、`T10.5`、`T10.6`、`T10.7`、`T10.8`、`T10.9`、`T10.10`、`T10.11`、`T10.12`、`T10.13`、`T10.14`、`T10.15`、`T10.16`、`T10.17`、`T10.18`、`T10.21`、`T10.22`（列在各自的 Task 的表里，标"（Task 11 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=11`）。
 
 ---
 
@@ -13439,7 +13475,7 @@ Expected: 成功：
 |---|---|---|
 | `7d7e49381afa3793896cc968e81b9f12356080242a0d66ccbcd05f32941149ab` | 3642 | `api/dist/openapi.yaml` |
 | `8ff9b9d60519ee15ee6a752cec5817836bae6102266ce3ceaa30d673938e64c5` | 1676 | `server/internal/modules/issue/adapter/http/gen/server.gen.go` |
-| `764615799b0f8cacb9b0ca150ee257a148956f7552a77697c11150c1a7120ba4` | 160 | `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go` |
+| `3b2c9e356598aa035145301cf56054cf446cb79aa2970ca9413c478eb720a00a` | 161 | `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go` |
 | `7f5da04e66ed0249457420d4880656613ab47388c59032e4efe0f567a5f68427` | 288 | `server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go` |
 | `425b1be2279860371e177a03113ceb34d59dab3e660efeb879e2c74edbe7acfa` | 3966 | `web/packages/api-client/src/schema.gen.ts` |
 
@@ -14941,7 +14977,7 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `ca88e55bf2869dbf94d7a9369b5279158c8d373b9f413d1f18d2fa8030e810fa` | 218 | `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go` |
+| `e20111ef80fbf763c32efeb8d20b27b9347fb44a7cc01954a3d2998a7ad9b9dc` | 219 | `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go` |
 
 Run: `shasum -a 256 server/internal/modules/issue/adapter/postgres/gen/relations.sql.go`
 Expected: 与上表相同。
@@ -17258,7 +17294,7 @@ Expected: 通过。
 | `T14.3` | 页面没有 `issue.relation_not_found` 的文案 | `error-messages.test.ts`（`make test-web`） | 单元 |
 | `T14.4` | 中文的语言包没有 `issue_relation_not_found` | `web/packages/i18n` 的 `check:sync`（`make lint-web`） | 守卫 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T7.9`、`T8.8`、`T8.10`、`T8.11`、`T8.16`、`T8.17`、`T8.18`、`T10.7`、`T10.11`、`T12.9`、`T13.1`、`T13.2`、`T13.3`、`T13.5`、`T13.6`、`T13.7`、`T13.8`、`T13.9`、`T13.10`、`T13.11`、`T13.12`、`T13.13`、`T13.14`、`T13.15`、`T13.16`、`T13.17`、`T13.18`、`T13.19`、`T13.23`、`T13.24`、`T13.25`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=14`）。
+本 Task 的检查也发现较早的 Task 的变异 `T7.9`、`T8.8`、`T8.10`、`T8.11`、`T8.16`、`T8.17`、`T8.18`、`T9.16`、`T9.17`、`T10.7`、`T10.11`、`T12.9`、`T13.1`、`T13.2`、`T13.3`、`T13.5`、`T13.6`、`T13.7`、`T13.8`、`T13.9`、`T13.10`、`T13.11`、`T13.12`、`T13.13`、`T13.14`、`T13.15`、`T13.16`、`T13.17`、`T13.18`、`T13.19`、`T13.23`、`T13.24`、`T13.25`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=14`）。
 
 ---
 

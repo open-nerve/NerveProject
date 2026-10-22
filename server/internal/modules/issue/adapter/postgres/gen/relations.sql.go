@@ -60,9 +60,10 @@ type MarkChangedParams struct {
 	Ids []uuid.UUID
 }
 
-// The work items a relation's addition changes last without a field of theirs (M4 design 3.7, 3.10): both its ends,
-// each last changed at the moment and by the account given; the undeleted ones among ids. Under the locks of their
-// projects, which every write of the projects' work items holds (3.5): one statement in scan order (convention 5).
+// The work items a relation's addition, or its removal, changes last without a field of theirs (M4 design 3.7, 3.10):
+// both its ends, each last changed at the moment and by the account given; the undeleted ones among ids. Under the
+// locks of their projects, which every write of the projects' work items holds (3.5): one statement in scan order
+// (convention 5).
 func (q *Queries) MarkChanged(ctx context.Context, arg MarkChangedParams) (int64, error) {
 	result, err := q.db.Exec(ctx, markChanged, arg.By, arg.At, arg.Ids)
 	if err != nil {

@@ -46,10 +46,7 @@ const MaxSubIssues = 100
 // each may go under the work item is the use case's, under the project's
 // lock (SubIssueNotAllowed).
 func CheckSubIssueIDs(ids []uuid.UUID) error {
-	if len(ids) == 0 {
-		return shared.Invalid(shared.FieldError{Field: "sub_issue_ids", Code: shared.FieldTooShort, Message: "must name a work item"})
-	}
-	return invalid(checkIDs("sub_issue_ids", ids, MaxSubIssues)...)
+	return invalid(checkSomeIDs("sub_issue_ids", ids, MaxSubIssues)...)
 }
 
 // SubIssueNotAllowed is the problem of the work item at index i of those

@@ -21,9 +21,10 @@ SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), unnest(sqlc.arg(pr
        sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at);
 
 -- name: MarkChanged :execrows
--- The work items a relation's addition changes last without a field of theirs (M4 design 3.7, 3.10): both its ends,
--- each last changed at the moment and by the account given; the undeleted ones among ids. Under the locks of their
--- projects, which every write of the projects' work items holds (3.5): one statement in scan order (convention 5).
+-- The work items a relation's addition, or its removal, changes last without a field of theirs (M4 design 3.7, 3.10):
+-- both its ends, each last changed at the moment and by the account given; the undeleted ones among ids. Under the
+-- locks of their projects, which every write of the projects' work items holds (3.5): one statement in scan order
+-- (convention 5).
 UPDATE issues
 SET updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)
 WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL;

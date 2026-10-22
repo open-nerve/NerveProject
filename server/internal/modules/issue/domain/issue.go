@@ -282,3 +282,12 @@ func checkIDs(field string, ids []uuid.UUID, limit int) []*shared.FieldError {
 	}
 	return found
 }
+
+// checkSomeIDs is checkIDs of a list of field that must name a work item:
+// an empty one is refused, as its one problem.
+func checkSomeIDs(field string, ids []uuid.UUID, limit int) []*shared.FieldError {
+	if len(ids) == 0 {
+		return []*shared.FieldError{{Field: field, Code: shared.FieldTooShort, Message: "must name a work item"}}
+	}
+	return checkIDs(field, ids, limit)
+}

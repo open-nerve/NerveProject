@@ -20,8 +20,9 @@ import (
 // undeleted relation to it, of any type, either way, of any project. Web's
 // item is a duplicate of b, a is blocked_by it, and ops' o relates_to it;
 // its relation to c was deleted; d relates to b alone. Of a, b, c, d and
-// o, asked for in no order, a, b and o relate to it, in id order; none of
-// a work item without relations; a cancelled read is its failure.
+// o, asked for in descending id order, a, b and o relate to it, in id
+// order; none of a work item without relations; a cancelled read is its
+// failure.
 func TestRelated(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -90,14 +91,16 @@ func relationText(workspace, project, issue, related uuid.UUID, kind string, mad
 		madeAt.UTC().Format(time.RFC3339Nano), *written, writtenAt.UTC().Format(time.RFC3339Nano), deleted)
 }
 
-// Relations are inserted as given (M4 design 3.10, 4.6): ops' o blocked
-// by web's item, a row of ops, and item relating to web's b, a row of
-// web, by alice at the moment, in their order; every column of each row is
-// as given. Relations of more than one workspace, moment or account are
-// refused and none is written, each beside alone, c's relation to item,
-// which is written by itself after them; so is one of a pair that relates
-// already, of any type, either way (issue_relations_pair_key), and a
-// cancelled insert.
+// Relations are inserted as given (M4 design 3.10, 4.6): ops' o blocked by
+// web's item, a row of ops, and item relating to web's b, a row of web, by
+// alice at the moment, in their order; every column of each row is as
+// given. Each insert's relations hold their accounts by pointers of their
+// own, as domain.NewRelation makes them for the use case: the guard
+// compares the accounts, not the pointers. Relations of more than one
+// workspace, moment or account are refused and none is written, each
+// beside alone, c's relation to item, which is written by itself after
+// them; so is one of a pair that relates already, of any type, either way
+// (issue_relations_pair_key), and a cancelled insert.
 func TestInsertRelations(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -108,11 +111,10 @@ func TestInsertRelations(t *testing.T) {
 	newIssue(t, pool, web, b, 2, alice)
 	newIssue(t, pool, web, c, 3, alice)
 	newIssue(t, pool, ops, o, 1, alice)
+	workItem := func(id, p uuid.UUID) domain.Issue { return domain.Issue{ID: id, WorkspaceID: acme, ProjectID: p} }
 	at := now.Add(time.Hour)
-	rs := []domain.Relation{
-		{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops.id, IssueID: o, RelatedID: item, Type: domain.BlockedBy, CreatedByID: &alice, CreatedAt: at},
-		{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web.id, IssueID: item, RelatedID: b, Type: domain.RelatesTo, CreatedByID: &alice, CreatedAt: at},
-	}
+	rs := []domain.Relation{domain.NewRelation(uuid.NewV7(), workItem(o, ops.id), workItem(item, web.id), domain.BlockedBy, alice, at),
+		domain.NewRelation(uuid.NewV7(), workItem(item, web.id), workItem(b, web.id), domain.RelatesTo, alice, at)}
 	if err := s.InsertRelations(context.Background(), rs); err != nil {
 		t.Fatal(err)
 	}
@@ -130,10 +132,8 @@ func TestInsertRelations(t *testing.T) {
 	byBob.CreatedAt, byBob.CreatedByID = at, &bob
 	elsewhere := byBob
 	elsewhere.CreatedByID, elsewhere.WorkspaceID = &alice, beta
-	again := domain.Relation{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web.id, IssueID: item, RelatedID: o, Type: domain.Duplicate,
-		CreatedByID: &alice, CreatedAt: at}
-	alone := domain.Relation{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web.id, IssueID: c, RelatedID: item, Type: domain.RelatesTo,
-		CreatedByID: &alice, CreatedAt: at}
+	again := domain.NewRelation(uuid.NewV7(), workItem(item, web.id), workItem(o, ops.id), domain.Duplicate, alice, at)
+	alone := domain.NewRelation(uuid.NewV7(), workItem(c, web.id), workItem(item, web.id), domain.RelatesTo, alice, at)
 	for name, rs := range map[string][]domain.Relation{"two workspaces": {alone, elsewhere}, "two moments": {alone, later},
 		"two accounts": {alone, byBob}, "a pair related": {again}} {
 		before := storedRelations(t, pool)
