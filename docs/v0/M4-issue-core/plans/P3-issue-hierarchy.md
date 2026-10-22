@@ -10241,7 +10241,7 @@ Expected: 通过。
 
 **Tests:**
 - 领域（四种类型都逐个写出，不取产品代码的类型列表）：`TestRelationTypeReversed`、`TestCheckNewRelations`（每种类型和一个、二十个通过；`start_before`、没有、二十一个、重复的各报在自己的位置，同一个 422）、`TestNewRelation`（从 Web 的工作项到 Ops 的：`relates_to`、`duplicate`、`blocked_by` 是问的那一端的、Web 的行；`blocking` 是对方的、Ops 的 `blocked_by`；每一端读到的类型和对方）、`TestRelationAdded`（四种类型各一：两行同样的列，类型照它的工作项读的）。
-- 存储：`TestRelated`（任何类型、任一个方向、任何项目的：item 与 b、a、o 的关联是 `duplicate`、`blocked_by`、`relates_to`，存储的三种各一；已删除的不算；按 `id` 倒序问，按 `id` 的次序答；没有关联的回答空的；取消的读是它的失败）、`TestInsertRelations`（ops 的 o 被 web 的 item 阻塞（ops 的行）、item 到 web 的 b（web 的行），每一列照给的；每条关联如用例那样由 `domain.NewRelation` 造，账户各是自己的指针：守卫比的是账户，不是指针；两个工作区、两个时刻、两个账户的几条各被拒绝、什么都不写：每组都与 `alone`（c 到 item 的，之后单独写下）并列，所以拒绝的是这一条守卫，不是一对的键；已有关联的一对（任何类型、任一个方向，`issue_relations_pair_key`）、取消的插入也是）、`TestMarkChanged`（web 的 a、ops 的 o 由 bob 在 later 改，别的列不动；没给的 b 不动；给了已删除的是错误，取消的写也是）。
+- 存储：`TestRelated`（任何类型、任一个方向、任何项目的：item 与 b、a、o 的关联是 `duplicate`、`blocked_by`、`relates_to`，存储的三种各一；已删除的不算；按 `id` 倒序问，按 `id` 的次序答；没有关联的回答空的；取消的读是它的失败）、`TestInsertRelations`（ops 的 o 被 web 的 item 阻塞（ops 的行）、item 到 web 的 b（web 的行），每一列照给的；每次插入里的几条关联，账户各是自己的指针，如 `domain.NewRelation` 为用例造的那样：守卫比的是账户，不是指针；两个工作区、两个时刻、两个账户的几条各被拒绝、什么都不写：每组都与 `alone`（c 到 item 的，之后单独写下）并列，所以拒绝的是这一条守卫，不是一对的键；已有关联的一对（任何类型、任一个方向，`issue_relations_pair_key`）、取消的插入也是）、`TestMarkChanged`（web 的 a、ops 的 o 由 bob 在 later 改，别的列不动；没给的 b 不动；给了已删除的是错误，取消的写也是）。
 
 - [ ] **Step 1: 查询，生成**
 
