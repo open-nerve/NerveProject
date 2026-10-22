@@ -101,7 +101,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/adapter/postgres/queries/delete_issue.sql`、`server/internal/modules/issue/adapter/postgres/delete_issue.go`、`server/internal/modules/issue/adapter/postgres/delete_issue_test.go`（修改） | `IssueSubtree`、`Subtree`，五条语句按工作项的集合写（`issue_ids`）（Task 1）；`DeleteIssueRelationRows`：子树的关联行，两个方向，按 `id` 先锁（Task 8） | 1、8 |
 | `server/internal/modules/issue/app/delete_issue.go`、`server/internal/modules/issue/app/delete_issue_test.go`（修改）、`server/internal/modules/issue/app/fakes_deletion_test.go`（新） | `IssueDeletion.IssueIDs`、`IssueRowsDeleter.Subtree`：删除连带子树；删除的假实现从 `fakes_test.go` 移出（Task 1）；关联行的一步在标签之后（Task 8） | 1、8 |
 | `server/internal/modules/issue/app/fakes_test.go`（修改） | 删除的假实现移出（Task 1）；`callLog.fail` 按整行、创建带父工作项（Task 2）；锁下的项目带标识、修改的父工作项（Task 3）；`SubIssueCounts`、`GetIssues` 的读（`read`）（Task 4）；`SubIssues`、`SetParents` 的读写记录，`lost` 经 `lose`（Task 5）；`LockMany`、写闸门取多个项目（Task 7） | 1、2、3、4、5、7 |
-| `server/internal/bootstrap/issue_deletion_test.go`（修改） | 子树在同一时刻删除，管理员·访客的删除连带他看不到的子工作项（`deletesAtOneMoment`）；按目录的删除去掉 `subItems` 的豁免，`deletedWorkItem` 的工作项有子工作项（Task 1）；关联的两个外键下各有一行（Task 8） | 1、8 |
+| `server/internal/bootstrap/issue_deletion_test.go`（修改） | 子树在同一时刻删除，管理员·访客的删除连带他看不到的子工作项（`deletesAtOneMoment`）；按目录的删除去掉 `subItems` 的豁免，`deletedWorkItem` 的工作项有子工作项（Task 1）；关联的两个外键下各有一行，子树里根下的 c 到子树外的关联随子树删除（Task 8） | 1、8 |
 | `server/internal/bootstrap/project_deletion_test.go`（修改） | 按目录读 `keysTo(issues)`（Task 1）；删除项目连带两个方向的关联行（Task 8） | 1、8 |
 | `server/internal/modules/issue/domain/hierarchy.go`（新） | `ParentNotAllowed`（Task 2）；`ParentChange`、`Ref`、`ParentActivity`（Task 3）；`Loops`、`MaxSubIssues`、`CheckSubIssueIDs`、`SubIssueNotAllowed`（Task 5） | 2、3、5 |
 | `server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`（修改） | `NewIssue.ParentID`、`Issue.ParentID` 进创建（Task 2）；`Issue.SubIssuesCount`（Task 4） | 2、4 |
@@ -152,7 +152,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/project/module.go`（修改） | `IssueProjects.LockIssueProjects`（Task 7）；`ArchivedIssueProjects`（Task 12） | 7、12 |
 | `server/migrations/sql/00020_issue_issue_relations.sql`（新）、`server/sqlc.yaml`、`deploy/runtime-grants.sql`（修改） | `issue_relations`、它的检查和索引；sqlc 的迁移列表；运行时的权限 | 8 |
 | `server/migrations/schema_test.go`、`server/migrations/issue_schema_test.go`（修改） | 迁移的个数；表、列、检查、一对工作项一行的键 | 8 |
-| `server/internal/modules/issue/adapter/postgres/queries/delete_rows.sql`、`server/internal/modules/issue/adapter/postgres/delete_rows.go`、`server/internal/modules/issue/adapter/postgres/delete_rows_test.go`（修改） | `DeleteProjectRelationRows`：删除项目的关联行，两个方向，按 `id` 先锁 | 8 |
+| `server/internal/modules/issue/adapter/postgres/queries/delete_rows.sql`、`server/internal/modules/issue/adapter/postgres/delete_rows.go`、`server/internal/modules/issue/adapter/postgres/delete_rows_test.go`（修改） | `DeleteProjectRelationRows`：删除项目的关联行，两个方向（`UNION ALL` 的两支，各由一端的索引服务），按 `id` 先锁 | 8 |
 | `server/internal/modules/issue/adapter/postgres/delete_relations_test.go`（新）、`server/internal/modules/issue/adapter/postgres/store_test.go`（修改） | 关联行的删除语句的存储测试，三种存储值；`newRelation`（带存储的类型） | 8 |
 | `server/internal/modules/issue/app/delete_project_rows.go`、`server/internal/modules/issue/app/cascade_test.go`（修改） | `rowSteps` 的关联一步，在标签之后 | 8 |
 | `server/internal/platform/postgres/pgtest/rowwaits.go`、`server/internal/platform/postgres/pgtest/rowwaits_test.go`（新）、`server/internal/platform/postgres/pgtest/lockwait_test.go`、`server/internal/platform/postgres/pgtest/lockwait_behind_test.go`（修改） | `RowWaits`：一行是否被冲突的锁挡住（`NOWAIT`，`postgres.LockNotAvailable`），不手写 `55P03`；不在的行让测试失败；`fatalOf` 带上测试 | 8 |
@@ -8707,18 +8707,18 @@ Expected: 通过。
 
 **Interfaces:**（spec 2.10、第 3 节第 3、4、14、16、18 条；M4 设计 3.5 约定五的例外、3.6、3.10、4.6，12 节约束 8）
 - 迁移 `server/migrations/sql/00020_issue_issue_relations.sql`（新）：`issue_relations`，Plane 的 11 列（4.6）；`relation_type` 只有三种存储值（`blocked_by`、`duplicate`、`relates_to`：阻塞反过来存为对方的 `blocked_by`），不设默认；`issue_relations_not_self_check`；`issue_relations_pair_key`（`LEAST`、`GREATEST` 两端，未删除的：一对工作项至多一条，不论类型和方向）；两端、工作区、项目的索引（不带条件：两个方向的读和物理级联按它们找行）。`server/sqlc.yaml` 加它；`deploy/runtime-grants.sql` 加表的权限。
-- `issue/adapter/postgres/queries/delete_issue.sql` 的 `DeleteIssueRelationRows`：子树的关联行，两个方向（另一端在这个项目或别的项目），先按 `id` 升序 `FOR NO KEY UPDATE` 锁住再写（`UPDATE … WHERE id IN (SELECT … ORDER BY id FOR NO KEY UPDATE)`：别的项目的写不持这个项目的锁也写得到这些行，约定五的例外）；等锁期间被别人删除的行在最新的版本上重新判断、跳过，留着那次删除。`delete_rows.sql` 的 `DeleteProjectRelationRows`：删除项目的一批，`project_id` 是这个项目的行和 `related_issue_id` 是这个项目的工作项（已删除的也算：工作项的一批先删了它们）的别的项目的行，同样按 `id` 先锁、键集分批。`delete_issue.go`、`delete_rows.go` 照写。
+- `issue/adapter/postgres/queries/delete_issue.sql` 的 `DeleteIssueRelationRows`：子树的关联行，两个方向（另一端在这个项目或别的项目），先按 `id` 升序 `FOR NO KEY UPDATE` 锁住再写（`UPDATE … WHERE id IN (SELECT … ORDER BY id FOR NO KEY UPDATE)`：别的项目的写不持这个项目的锁也写得到这些行，约定五的例外）；等锁期间被别人删除的行在最新的版本上重新判断、跳过，留着那次删除。`delete_rows.sql` 的 `DeleteProjectRelationRows`：删除项目的一批，`project_id` 是这个项目的行和 `related_issue_id` 是这个项目的工作项（已删除的也算：工作项的一批先删了它们）的别的项目的行，同样按 `id` 先锁、键集分批；两种行是 `UNION ALL` 的两支，各由一端的索引服务（这个项目的行按 `project_id`，指向它的工作项的先按 `issues` 的 `project_id`、再按 `related_issue_id`），主键的索引按界取未删除的，排序之后按 `id` 加锁（`OR … IN (SELECT …)` 用不上 `related_issue_id` 的索引，每批按主键读整张关联表，spec 第 7 节）。`delete_issue.go`、`delete_rows.go` 照写。
 - `issue/app`：`IssueRowsDeleter.DeleteIssueRelationRows`，`issueRowSteps` 的关联一步在标签之后、关注之前（全局的表序：工作项 → 负责人 → 标签 → 关联 → 关注 → 动态）；`delete_project_rows.go` 的 `ProjectRowsDeleter.DeleteProjectRelationRows`，`rowSteps` 同样的位置。
 - `platform/postgres/pgtest/rowwaits.go`（新）：`RowWaits(t, pool, table, id, lock)`（`NOWAIT` 的探测：别的事务持着与 `lock` 冲突的锁时为真，由 `postgres.LockNotAvailable` 判定；问的行不在时让测试失败：不在的行上看不到锁，不能读成没人持着）；原来在 `project` 的 `demote_test.go` 里手写的 `rowWaits`（含一个手写的 `55P03`）换成它，`issue_ports_test.go`、`lock_issue_projects_test.go`、新的 `delete_relations_test.go` 共用（P1b 第 5 节：P2 起不手写 `55P03`）。它的测试经 `lockwait_test.go` 的 `fatalOf` 看它让测试失败：`fatalOf` 带上测试，`fatalProbe` 记下 `Fatal` 并结束它的 goroutine，其余的方法是测试的（`RowWaits` 的 `Soon` 用测试的 `Context`、`Cleanup`）；`lockwait_test.go`、`lockwait_behind_test.go` 的调用随之。
 - 契约：`deleteIssue`、`deleteProject`、`deleteWorkspace` 的描述写上关联（生成的打包结果和 `schema.gen.ts` 随之，Go 不变）。
-- 测试的帮手：`store_test.go` 的 `newRelation`（带存储的类型；`delete_relations_test.go` 的 `relationRow` 也带）；`issue_world_test.go` 的 `workItemStamps` 读关联行（两个方向）；`issue_interleaving_test.go` 的 `wroteNothing`、`issue_interleaving_deletion_test.go` 的删除的行数关联表；`issue_deletion_test.go` 的 `relate`（直接写一条给定存储类型的关联：经接口建关联在 Task 11）；`project_deletion_test.go` 的 `seedIssues` 加一个工作项 Blocker 和种下的工作项到它的一条 `blocked_by`（删除项目、工作区的按目录的测试都用它，读得到关联表的行）。
+- 测试的帮手：`store_test.go` 的 `newRelation`（带存储的类型；`delete_relations_test.go` 的 `relationRow` 也带）；`issue_world_test.go` 的 `workItemStamps` 读关联行（两个方向）；`issue_interleaving_test.go` 的 `wroteNothing`、`issue_interleaving_deletion_test.go` 的删除的行数关联表；`issue_deletion_test.go` 的 `relate`（直接写一条给定存储类型的关联：经接口建关联在 Task 11）；`project_deletion_test.go` 的 `seedIssues` 加一个工作项 Blocker 和种下的工作项到它的一条 `blocked_by`（经 `relate`；删除项目、工作区的按目录的测试都用它，读得到关联表的行）。
 - 端到端的两个暂时的写法（第 3 节第 18 条）：`assert/project.ts`、`assert/workspace.ts` 的删除断言暂时不要关联表的行（`withoutRows`：故事还建不了关联，Task 11 去掉）；`assert/issue.ts` 的 `expectIssueDeleted` 把 P2 的 `subItems` 换成 `unwritten`（`issues.parent_id` 和关联的两个外键：故事还不写它们，Task 15 去掉）。
 
 **Tests:**
 - 结构：`TestMigrationsGoUpDownAndUpAgain`（20 个迁移）；`TestIssueChecksRejectCounterexamples`（三种存储值通过；别的值、`blocking`、Plane 的 `start_before`、自己关联自己都被拒绝）、`TestIssueUniqueKeys`（一对工作项一条：反方向、别的类型都被拒绝；共用一端的两条通过；软删除之后这一对空出来）。
 - 单元：`TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows`、`TestDeleteIssueStopsAtAFailingPort` 加关联的一步；`TestTheCascadeStopsAtAFailingBatch` 加关联的一批。
 - 存储：`TestTheRelationsOfADeletedSubtreeAreDeletedBothWays`（item、sub 被删除：六条名字里有它们的行，三种存储值各两条，一条它们在 `issue_id` 一端、一条在 `related_issue_id` 一端，不论哪个项目的，由 bob 在 later 删除；名字里没有它们的两条和一小时前 alice 删的那条不动；每一列都不动）、`TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`（a、b、c 的 `id` 升序，反着插入，表或任一端的索引都先扫到 c；另一个事务删除并持着 b：语句持着 a 等 b（`FOR SHARE` 等 a），还没碰到 c；提交之后删 a、c，b 留着 alice 的删除）、`TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays`（web 的一批取名字里有 web 的工作项的六行，三种存储值各一条 web 的行、一条 web 的工作项在 `related_issue_id` 一端的 ops 的行，已删除的 w1 也算，只取它们）；`TestTheStatementsOfADeletedSubtreeDeleteItsRows` 加关联表；`pgtest` 的 `TestRowWaitsSeesALockThatConflicts`（`FOR SHARE` 等 `FOR NO KEY UPDATE`，不等 `FOR KEY SHARE`、没人持的、提交之后的；不在的行让测试失败）。
-- 组合：`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（三种存储值，关联的两个外键下各一行：它到 Ops 的工作项的 `duplicate`（Web 的行）、Ops 的别的工作项到它的 `blocked_by`（Ops 的行），和一条早已删除的 `relates_to`）；`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（Web 的 Seeded 到 Ops 的 Seeded 的 `duplicate`（Web 的行）、Ops 的 Blocker 到 Web 的 Seeded 的 `relates_to`（Ops 的行，不在 Web 下面，按目录的删除测试读不到它），连同种下的 `blocked_by`，三种存储值各一条：删除 Web 时三条都在 Web 的删除时刻删除；Ops 自己的关联不动）；`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`（`seedIssues` 的关联）；`TestEachIssueWriteLocksItsProjectFirst`、`TestDeletingAWorkItemAndChangingItSerialize`。
+- 组合：`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（三种存储值，关联的两个外键下各一行：它到 Ops 的工作项的 `duplicate`（Web 的行）、Ops 的别的工作项到它的 `blocked_by`（Ops 的行），和一条早已删除的 `relates_to`）；`TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`（bob 把根下 a 下的 c 关联到子树外的 o：这条关联只指名子树里的 c，`deletesAtOneMoment` 经 `workItemStamps` 读 c 两个方向的关联，它在根的删除时刻由删除者删除；只删子树的第一个（根）的关联看得出）；`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（Web 的 Seeded 到 Ops 的 Seeded 的 `duplicate`（Web 的行）、Ops 的 Blocker 到 Web 的 Seeded 的 `relates_to`（Ops 的行，不在 Web 下面，按目录的删除测试读不到它），连同种下的 `blocked_by`，三种存储值各一条：删除 Web 时三条都在 Web 的删除时刻删除；Ops 自己的关联不动）；`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`（`seedIssues` 的关联）；`TestEachIssueWriteLocksItsProjectFirst`、`TestDeletingAWorkItemAndChangingItSerialize`。
 
 - [ ] **Step 1: 迁移、契约和语句，生成**
 
@@ -8821,13 +8821,19 @@ RETURNING t.id;
 -- project's rows (project_id is the issue_id end's) and another project's rows whose related_issue_id is a work item
 -- of this project, deleted or not: the work items' batches have deleted them before this one. Another project's
 -- writes reach such a row without this project's lock (its deletion, deleting its end's work item); every writer of
--- these rows takes them in id order (convention 5's exception, 3.5), as the batch's lock does.
+-- these rows takes them in id order (convention 5's exception, 3.5), as the batch's lock does. The indexes of the two
+-- ends serve it, an arm of the union each: the project's rows by project_id, those toward its work items by issues'
+-- project_id, then related_issue_id; the primary key's index keeps the undeleted ones after the bound, and a sort
+-- puts them in id order for the lock. Each batch so reads all the project's relations both ways and its work items,
+-- not every project's relations (the planner reads the table only where that is cheaper).
 UPDATE issue_relations AS t
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE t.id IN (
     SELECT r.id FROM issue_relations r
-    WHERE (r.project_id = sqlc.arg(project_id)
-            OR r.related_issue_id IN (SELECT i.id FROM issues i WHERE i.project_id = sqlc.arg(project_id)))
+    WHERE r.id IN (SELECT o.id FROM issue_relations o WHERE o.project_id = sqlc.arg(project_id)
+                   UNION ALL
+                   SELECT x.id FROM issue_relations x JOIN issues i ON i.id = x.related_issue_id
+                   WHERE i.project_id = sqlc.arg(project_id))
         AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
@@ -8888,7 +8894,7 @@ Expected: 成功：
 |---|---|---|
 | `df39e8459a70f9275c4bdaf444bffb2aa3a11982faeae57844c0c50f28466d68` | 3535 | `api/dist/openapi.yaml` |
 | `46638be2f0370a7bf248a8072117272025246f4e3c6cbc8ad0f09503065a2807` | 171 | `server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go` |
-| `db23530cfa12626898abafd28a1f93c4f7c010d969ee99f89551c5f06aa8f133` | 294 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
+| `8b1e30686430af555127e4cbb9c0906e26fbc61d4c42b7e9b65b9fa46dafb600` | 300 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
 | `d4082fbdf770a5f658ce47afd4a616018b9356bdc7764efebaf2f22e5cb47c4d` | 107 | `server/internal/modules/issue/adapter/postgres/gen/models.go` |
 | `de76a3e9f5a4f54a72e4148e6ec7aec4e7aef86b8b9060ae6726ffdc2370e4a5` | 3860 | `web/packages/api-client/src/schema.gen.ts` |
 
@@ -9857,7 +9863,7 @@ const unwritten = new Set(["issues.parent_id", "issue_relations.issue_id", "issu
       deletedEarlier: deletedAlone.includes(table) && !withoutRows.has(table),
 ````
 
-`server/internal/bootstrap/issue_deletion_test.go`（修改，7 处）：
+`server/internal/bootstrap/issue_deletion_test.go`（修改，10 处）：
 
 ````old server/internal/bootstrap/issue_deletion_test.go
 }
@@ -9947,6 +9953,40 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to uuid.UUID, kind string, b
 			t.Fatalf("deleting the relation to Near: %d rows, %v; want 1", tag.RowsAffected(), err)
 		}
 ````
+````old server/internal/bootstrap/issue_deletion_test.go
+// it, however deep, an archived one too, and every row under each. In
+// Web, bob's root, assigned and labelled (fullIssue), is under alice's p
+// and has under it alice's a, assigned and labelled too, and bob's b; a
+// has c under it, in Done, archived; alice's s has her d under it. alice
+// deletes root: root, a, b and c are deleted, by her, at root's
+// deleted_at, with every row under each; p, s and d keep every row as it
+// was.
+````
+````new server/internal/bootstrap/issue_deletion_test.go
+// it, however deep, an archived one too, and every row under each, the
+// relations of each either way among them. In Web, bob's root, assigned
+// and labelled (fullIssue), is under alice's p and has under it alice's a,
+// assigned and labelled too, and bob's b; a has c under it, in Done,
+// archived, which bob relates to alice's o, outside the subtree (relate):
+// a relation that names no work item of the subtree but c, so that a
+// deletion of the relations of root alone, the subtree's first in id
+// order, shows. alice's s has her d under it. alice deletes root: root, a,
+// b and c are deleted, by her, at root's deleted_at, with every row under
+// each, c's relation to o among them; p, s and d keep every row as it was.
+````
+````old server/internal/bootstrap/issue_deletion_test.go
+	s, d := w.newWorkItem(t), w.newWorkItem(t)
+````
+````new server/internal/bootstrap/issue_deletion_test.go
+	s, d, o := w.newWorkItem(t), w.newWorkItem(t), w.newWorkItem(t)
+````
+````old server/internal/bootstrap/issue_deletion_test.go
+	underWorkItem(t, w.pool, s, d)
+````
+````new server/internal/bootstrap/issue_deletion_test.go
+	underWorkItem(t, w.pool, s, d)
+	relate(t, w.pool, c, o, "relates_to", w.ids["bob"])
+````
 
 `server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改，1 处）：
 
@@ -10016,16 +10056,16 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to uuid.UUID, kind string, b
 
 ````old server/internal/bootstrap/project_deletion_test.go
 // and its subscriber, the project's label Bug (seedLabels) on it, and its
+// activity's first row, directly: the seed does not depend on which of the
+// issue module's writes exist. Its number is the project's counter, moved
+// on, as a creation moves it.
 ````
 ````new server/internal/bootstrap/project_deletion_test.go
 // and its subscriber, the project's label Bug (seedLabels) on it, its
-// relation to another work item of the project, its blocker, and its
-````
-````old server/internal/bootstrap/project_deletion_test.go
-// issue module's writes exist. Its number is the project's counter, moved
-````
-````new server/internal/bootstrap/project_deletion_test.go
-// issue module's writes exist. Each number is the project's counter, moved
+// relation to another work item of the project, its blocker (relate), and
+// its activity's first row, directly: the seed does not depend on which of
+// the issue module's writes exist. Each number is the project's counter,
+// moved on, as a creation moves it.
 ````
 ````old server/internal/bootstrap/project_deletion_test.go
 	issue := uuid.NewV7()
@@ -10042,8 +10082,19 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to uuid.UUID, kind string, b
 		{`INSERT INTO issues (id, workspace_id, project_id, state_id, name, sequence_id, created_by_id, updated_by_id)
 			SELECT $1, workspace_id, project_id, state_id, 'Blocker', (SELECT last_issue_sequence FROM projects WHERE id = $2), $3, $3
 			FROM issues WHERE id = $4`, []any{blocker, project, by, issue}},
-		{`INSERT INTO issue_relations (id, workspace_id, project_id, issue_id, related_issue_id, relation_type, created_by_id, updated_by_id)
-			SELECT $1, workspace_id, project_id, id, $3, 'blocked_by', $4, $4 FROM issues WHERE id = $2`, []any{uuid.NewV7(), issue, blocker, by}},
+````
+````old server/internal/bootstrap/project_deletion_test.go
+			t.Fatalf("seeding the work items of %s: %s: %d rows, %v; want 1", project, stmt.sql, tag.RowsAffected(), err)
+		}
+	}
+}
+````
+````new server/internal/bootstrap/project_deletion_test.go
+			t.Fatalf("seeding the work items of %s: %s: %d rows, %v; want 1", project, stmt.sql, tag.RowsAffected(), err)
+		}
+	}
+	relate(t, pool, issue, blocker, "blocked_by", by)
+}
 ````
 ````old server/internal/bootstrap/project_deletion_test.go
 }
@@ -10169,6 +10220,7 @@ Expected: 通过。
 | `T8.16` | 删除的工作项的关联只删 `relates_to` 的 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`）、`internal/bootstrap` 的 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（`make test`）（Task 14 起） | 存储；组合 |
 | `T8.17` | 删除的工作项的关联略过 `duplicate` 的 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（`make test`）、`internal/bootstrap` 的 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（`make test`）（Task 14 起） | 存储；组合 |
 | `T8.18` | 删除的项目的一批关联略过 `duplicate` 的 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（`make test`）、`internal/bootstrap` 的 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（`make test`）（Task 14 起） | 存储；组合 |
+| `T8.19` | 删除的工作项的关联只算它子树的第一个工作项的 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`（`make test`） | 单元；组合 |
 
 ---
 

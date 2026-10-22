@@ -66,10 +66,10 @@ func seedLabels(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 // seedIssues writes a work item of project in its default state, by by,
 // and a row of each of the issue module's tables under it: by its assignee
 // and its subscriber, the project's label Bug (seedLabels) on it, its
-// relation to another work item of the project, its blocker, and its
-// activity's first row, directly: the seed does not depend on which of the
-// issue module's writes exist. Each number is the project's counter, moved
-// on, as a creation moves it.
+// relation to another work item of the project, its blocker (relate), and
+// its activity's first row, directly: the seed does not depend on which of
+// the issue module's writes exist. Each number is the project's counter,
+// moved on, as a creation moves it.
 func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	t.Helper()
 	issue, blocker := uuid.NewV7(), uuid.NewV7()
@@ -91,8 +91,6 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 		{`INSERT INTO issues (id, workspace_id, project_id, state_id, name, sequence_id, created_by_id, updated_by_id)
 			SELECT $1, workspace_id, project_id, state_id, 'Blocker', (SELECT last_issue_sequence FROM projects WHERE id = $2), $3, $3
 			FROM issues WHERE id = $4`, []any{blocker, project, by, issue}},
-		{`INSERT INTO issue_relations (id, workspace_id, project_id, issue_id, related_issue_id, relation_type, created_by_id, updated_by_id)
-			SELECT $1, workspace_id, project_id, id, $3, 'blocked_by', $4, $4 FROM issues WHERE id = $2`, []any{uuid.NewV7(), issue, blocker, by}},
 		{`INSERT INTO issue_subscribers (id, workspace_id, project_id, issue_id, subscriber_id, created_by_id, updated_by_id)
 			SELECT $1, workspace_id, project_id, id, $3, $3, $3 FROM issues WHERE id = $2`, []any{uuid.NewV7(), issue, by}},
 		{`INSERT INTO issue_activities (id, workspace_id, project_id, issue_id, comment, actor_id, created_by_id, updated_by_id)
@@ -102,6 +100,7 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 			t.Fatalf("seeding the work items of %s: %s: %d rows, %v; want 1", project, stmt.sql, tag.RowsAffected(), err)
 		}
 	}
+	relate(t, pool, issue, blocker, "blocked_by", by)
 }
 
 // noRowLastWrittenBy fails the test when a row under the parent row id, by

@@ -208,24 +208,28 @@ func (w issueWorld) deletesAtOneMoment(t *testing.T, by string, root uuid.UUID, 
 
 // Deleting a work item through the API deletes its subtree at one moment,
 // by one deleter (deletesAtOneMoment): the work item and each one under
-// it, however deep, an archived one too, and every row under each. In
-// Web, bob's root, assigned and labelled (fullIssue), is under alice's p
-// and has under it alice's a, assigned and labelled too, and bob's b; a
-// has c under it, in Done, archived; alice's s has her d under it. alice
-// deletes root: root, a, b and c are deleted, by her, at root's
-// deleted_at, with every row under each; p, s and d keep every row as it
-// was.
+// it, however deep, an archived one too, and every row under each, the
+// relations of each either way among them. In Web, bob's root, assigned
+// and labelled (fullIssue), is under alice's p and has under it alice's a,
+// assigned and labelled too, and bob's b; a has c under it, in Done,
+// archived, which bob relates to alice's o, outside the subtree (relate):
+// a relation that names no work item of the subtree but c, so that a
+// deletion of the relations of root alone, the subtree's first in id
+// order, shows. alice's s has her d under it. alice deletes root: root, a,
+// b and c are deleted, by her, at root's deleted_at, with every row under
+// each, c's relation to o among them; p, s and d keep every row as it was.
 func TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment(t *testing.T) {
 	w := newIssueWorld(t)
 	p := w.newWorkItem(t)
 	root := w.newWorkItemBy(t, "bob", w.web, w.fullIssue())
 	a, b, c := w.newWorkItem(t), w.newWorkItemBy(t, "bob", w.web, `{"name":"Fix"}`), w.doneWorkItem(t)
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+c.String()+"/archive", "", http.StatusOK)
-	s, d := w.newWorkItem(t), w.newWorkItem(t)
+	s, d, o := w.newWorkItem(t), w.newWorkItem(t), w.newWorkItem(t)
 	underWorkItem(t, w.pool, p, root)
 	underWorkItem(t, w.pool, root, a, b)
 	underWorkItem(t, w.pool, a, c)
 	underWorkItem(t, w.pool, s, d)
+	relate(t, w.pool, c, o, "relates_to", w.ids["bob"])
 	w.deletesAtOneMoment(t, "alice", root, map[string]uuid.UUID{"root": root, "a": a, "b": b, "c": c}, p, s, d)
 }
 

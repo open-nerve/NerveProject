@@ -202,8 +202,10 @@ UPDATE issue_relations AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
 WHERE t.id IN (
     SELECT r.id FROM issue_relations r
-    WHERE (r.project_id = $3
-            OR r.related_issue_id IN (SELECT i.id FROM issues i WHERE i.project_id = $3))
+    WHERE r.id IN (SELECT o.id FROM issue_relations o WHERE o.project_id = $3
+                   UNION ALL
+                   SELECT x.id FROM issue_relations x JOIN issues i ON i.id = x.related_issue_id
+                   WHERE i.project_id = $3)
         AND r.deleted_at IS NULL AND r.id > $4::uuid
     ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
 RETURNING t.id
@@ -221,7 +223,11 @@ type DeleteProjectRelationRowsParams struct {
 // project's rows (project_id is the issue_id end's) and another project's rows whose related_issue_id is a work item
 // of this project, deleted or not: the work items' batches have deleted them before this one. Another project's
 // writes reach such a row without this project's lock (its deletion, deleting its end's work item); every writer of
-// these rows takes them in id order (convention 5's exception, 3.5), as the batch's lock does.
+// these rows takes them in id order (convention 5's exception, 3.5), as the batch's lock does. The indexes of the two
+// ends serve it, an arm of the union each: the project's rows by project_id, those toward its work items by issues'
+// project_id, then related_issue_id; the primary key's index keeps the undeleted ones after the bound, and a sort
+// puts them in id order for the lock. Each batch so reads all the project's relations both ways and its work items,
+// not every project's relations (the planner reads the table only where that is cheaper).
 func (q *Queries) DeleteProjectRelationRows(ctx context.Context, arg DeleteProjectRelationRowsParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, deleteProjectRelationRows,
 		arg.At,

@@ -35,7 +35,7 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 
 ### 2.1 文件总览
 
-路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 手写的代码、测试和配置文件 154 个（新建 59 个，修改 95 个），生成物 13 个，文档 6 个（本 spec 和 plan 新建；修改的是总体设计、差异清单和两份交接），另有对 M4 设计的修改：初稿的提交改 12 节 P3 的标题和"规模"一句、第 15 节的一行（重新切分让它们不再成立，第 3 节第 1 条），修订的提交改控制者的裁定和预检让它们不再成立的句子（附录 A.2）；M4 设计与本 spec、plan 一样不在任何 Task 的块里，复现时与它们一起取。
+路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 手写的代码、测试和配置文件 156 个（新建 59 个，修改 97 个），生成物 13 个，文档 6 个（本 spec 和 plan 新建；修改的是总体设计、差异清单和两份交接），另有对 M4 设计的修改：初稿的提交改 12 节 P3 的标题和"规模"一句、第 15 节的一行（重新切分让它们不再成立，第 3 节第 1 条），修订的提交改控制者的裁定和预检让它们不再成立的句子（附录 A.2）；M4 设计与本 spec、plan 一样不在任何 Task 的块里，复现时与它们一起取。
 
 | 路径 | 内容 | Task |
 |---|---|---|
@@ -114,9 +114,9 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 ### 2.10 `issue_relations` 和连带（Task 8；3.5、3.6、3.10、4.6）
 
 - 迁移 `00020_issue_issue_relations.sql`（新）：Plane 的 11 列（4.6）；`relation_type` 只有三种存储值（`blocked_by`、`duplicate`、`relates_to`），不设默认；`issue_relations_not_self_check`；`issue_relations_pair_key`（`LEAST`、`GREATEST` 两端，未删除的：一对工作项至多一条）；两端、工作区、项目的索引。`server/sqlc.yaml`、`deploy/runtime-grants.sql` 加它。
-- `DeleteIssueRelationRows`（`delete_issue.sql`）：子树的关联行，两个方向，`UPDATE … WHERE id IN (SELECT … ORDER BY id FOR NO KEY UPDATE)`；`DeleteProjectRelationRows`（`delete_rows.sql`）：删除项目的一批，`project_id` 是这个项目的行和 `related_issue_id` 是这个项目的工作项（已删除的也算）的别的项目的行，同样按 `id` 先锁、键集分批（第 3 节第 4 条）。`issueRowSteps`、`rowSteps` 的关联一步在标签之后、关注之前。
+- `DeleteIssueRelationRows`（`delete_issue.sql`）：子树的关联行，两个方向，`UPDATE … WHERE id IN (SELECT … ORDER BY id FOR NO KEY UPDATE)`；`DeleteProjectRelationRows`（`delete_rows.sql`）：删除项目的一批，`project_id` 是这个项目的行和 `related_issue_id` 是这个项目的工作项（已删除的也算）的别的项目的行，同样按 `id` 先锁、键集分批（第 3 节第 4 条）；两种行是 `UNION ALL` 的两支，各由一端的索引服务，排序之后按 `id` 加锁（量测和代价在第 7 节）。`issueRowSteps`、`rowSteps` 的关联一步在标签之后、关注之前。
 - `pgtest.RowWaits(t, pool, table, id, lock)`（新：`NOWAIT` 的探测，由 `postgres.LockNotAvailable` 判定；问的行不在时让测试失败）取代 `project` 的 `demote_test.go` 手写的 `rowWaits`（含一个手写的 `55P03`，P1b 第 5 节的收尾一句），存储的四个测试文件共用。契约：`deleteIssue`、`deleteProject`、`deleteWorkspace` 的描述写上关联（生成的打包结果和 `schema.gen.ts` 随之，Go 不变）。端到端的两个暂时的写法：第 3 节第 18 条。
-- 测试：结构的 `TestMigrationsGoUpDownAndUpAgain`（20 个迁移）、`TestIssueChecksRejectCounterexamples`（三种存储值通过；别的值、`blocking`、`start_before`、自己关联自己被拒绝）、`TestIssueUniqueKeys`（一对一条：反方向、别的类型都被拒绝；软删除之后空出来）；单元的删除和连带的步骤；存储的 `TestTheRelationsOfADeletedSubtreeAreDeletedBothWays`（三种存储值各有一条删除的工作项在 `issue_id` 一端、一条在 `related_issue_id` 一端）、`TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`（a、b、c 的 `id` 升序，反着插入，表或任一端的索引都先扫到 c；另一个事务删除并持着 b：语句持着 a 等 b，还没碰到 c；提交之后删 a、c，b 留着那次删除）、`TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays`（三种存储值各有一条这个项目的行、一条它的工作项在 `related_issue_id` 一端的别的项目的行）、`TestRowWaitsSeesALockThatConflicts`（不在的行让测试失败）；组合的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（关联的两个外键下各一行和一条早已删除的，三种存储值各一条）、`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（Ops 的 Blocker 到 Web 的 Seeded 是 Ops 的行，不在 Web 下面，按目录的删除读不到它：删除 Web 时它也在 Web 的删除时刻删除；连同种下的，三种存储值各一条）、按目录的删除项目、工作区（`seedIssues` 的关联）、取锁形状、删除与修改的交错。
+- 测试：结构的 `TestMigrationsGoUpDownAndUpAgain`（20 个迁移）、`TestIssueChecksRejectCounterexamples`（三种存储值通过；别的值、`blocking`、`start_before`、自己关联自己被拒绝）、`TestIssueUniqueKeys`（一对一条：反方向、别的类型都被拒绝；软删除之后空出来）；单元的删除和连带的步骤；存储的 `TestTheRelationsOfADeletedSubtreeAreDeletedBothWays`（三种存储值各有一条删除的工作项在 `issue_id` 一端、一条在 `related_issue_id` 一端）、`TestTheRelationsOfADeletedSubtreeAreLockedInIDOrder`（a、b、c 的 `id` 升序，反着插入，表或任一端的索引都先扫到 c；另一个事务删除并持着 b：语句持着 a 等 b，还没碰到 c；提交之后删 a、c，b 留着那次删除）、`TestARelationsBatchTakesTheRowsOfTheProjectsWorkItemsBothWays`（三种存储值各有一条这个项目的行、一条它的工作项在 `related_issue_id` 一端的别的项目的行）、`TestRowWaitsSeesALockThatConflicts`（不在的行让测试失败）；组合的 `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`（关联的两个外键下各一行和一条早已删除的，三种存储值各一条）、`TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`（根下 a 下的 c 到子树外的 o 的关联在根的删除时刻删除：只删子树的第一个的关联看得出）、`TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay`（Ops 的 Blocker 到 Web 的 Seeded 是 Ops 的行，不在 Web 下面，按目录的删除读不到它：删除 Web 时它也在 Web 的删除时刻删除；连同种下的，三种存储值各一条）、按目录的删除项目、工作区（`seedIssues` 的关联）、取锁形状、删除与修改的交错。
 
 ### 2.11 关联：领域和存储（Task 9；3.7、3.10、3.13、4.6）
 
@@ -275,6 +275,8 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 ## 7. 已知的限制、交接和关闭条件
 
 - **删除子树不分批**：每张表一条语句，与 P2 删除一个工作项相同；子树可以是整个项目。预检量过（2026-10-21，PostgreSQL 18.6 测试容器，macOS）：每个项目 2 万个工作项、51 万行（含 1 万条跨项目的关联），整个项目挂在一个工作项下：`deleteIssue` 的请求平铺 2.58 秒、一条链 2.83 秒（回滚的连带 3.22、3.92 秒，其中动态 2.42、3.06 秒）；同样的数据上删除项目的请求 3.04、3.18 秒：都远在 15 秒之内，不分批（第 6 节）。需要时分批的写法与删除项目的批量相同（键集、同一个时刻），留给需要它的时候。
+- **删除项目的关联一批**（Task 8 执行中的评审，I2 一类）：`DeleteProjectRelationRows` 原来的 `project_id = $p OR related_issue_id IN (SELECT …)` 用不上 `related_issue_id` 的索引，每批按主键读整张关联表，每个工作区的行都读；改为 `UNION ALL` 的两支（这个项目的行按 `project_id`，指向它的工作项的先按 `issues` 的 `project_id`、再按 `related_issue_id`），主键的索引按界取未删除的，排序之后加锁（`LockRows` 在排序之上、`LIMIT` 之下）：仍是一条语句、同样的行和次序。量过（2026-10-22，PostgreSQL 18.6 容器，macOS；评审的数据：100 个工作区，各 5 个项目，每个项目 400 个工作项，关联共 266,500 条、其中 100,000 条跨项目；500 个项目上两种写法选出的行逐个相同，含已删除的工作项和关联）：一个项目的一批（733 行，200 条是别的项目的）定制计划原来 26 ms（按主键读，滤掉 265,767 行），现在 6 ms；通用计划原来 43 ms，现在 24 ms（仍按主键归并，读 187,084 行）。`plan_cache_mode = auto` 下同一个连接执行五次之后服务器换用通用计划（原来的写法一直用定制计划），所以 P5 在连接池上设 `force_custom_plan`（设计 3.16）之前，通用计划可能按主键扫描。代价：每批重读这个项目的全部关联和工作项；表不大时计划器对指向它的一支宁可读整张表。同样的库里加一个目标规模的项目（2 万个工作项，约 1.2 万条关联，13 批）：这一步原来 184 ms，现在 338 ms（每批约 26 ms；它的 `id` 都在表的末尾，原来的写法只有第一批读别的行）。`= ANY (ARRAY(SELECT …))` 的写法定制计划同样快，通用计划逐行线性比较数组（139 ms），不取。
+- **交给 P9**：通过线的量测（五个目标规模的项目的工作区，每个任务一次运行做完）包括关联的一步，库里同时有别的工作区的行。
 - **动态的读**：P3 写的第 21、23 行按标识指名对方，P4 的动态列表要对它们执行访客规则（第 5 节）。
 - **事件**：P3 的写不发布事件，P6 加。
 
