@@ -167,17 +167,24 @@ func wantActivityRows(t *testing.T, w *world, rows []app.ActivityRow) {
 	}
 }
 
-// wantRefusal checks a use case's refusal over w: err is want, of its code
-// and with its fields, and the calls are calls. Each use case's test
-// checks what its refusal leaves unwritten (refused, unchanged).
+// wantRefusal checks a use case's refusal over w: err is want
+// (wantRefused), and the calls are calls. Each use case's test checks what
+// its refusal leaves unwritten (refused, unchanged).
 func wantRefusal(t *testing.T, w *world, err, want error, calls []string) {
+	t.Helper()
+	wantRefused(t, err, want)
+	if !slices.Equal(w.log.calls, calls) {
+		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+	}
+}
+
+// wantRefused checks a use case's refusal err: it is want, of its code and
+// with its fields.
+func wantRefused(t *testing.T, err, want error) {
 	t.Helper()
 	var se, wantSE *shared.Error
 	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
 		t.Errorf("Execute() = %v, want %v", err, want)
-	}
-	if !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
 }
 

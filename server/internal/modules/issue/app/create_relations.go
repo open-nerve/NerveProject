@@ -29,8 +29,8 @@ type CreateIssueRelationsDeps struct {
 	Clock     Clock
 }
 
-// CreateIssueRelations relates a work item to others: POST
-// /api/v0/issues/{issue_id}/relations (M4 design 3.5, 3.10, 5.1).
+// CreateIssueRelations relates a work item to others (M4 design 3.5, 3.10,
+// 5.1).
 type CreateIssueRelations struct {
 	d CreateIssueRelationsDeps
 }
@@ -182,7 +182,7 @@ func (u *CreateIssueRelations) answer(ctx context.Context, actor uuid.UUID, h he
 	case err != nil:
 		return nil, err
 	case len(stored) != len(ids):
-		return nil, fmt.Errorf("work items %v are not all there after their write", ids)
+		return nil, fmt.Errorf("only %d of %d work items are there after their write", len(stored), len(ids))
 	}
 	seen, err := u.d.Locks.seen(ctx, actor, g, stored...)
 	if err != nil {

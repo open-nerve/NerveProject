@@ -1,7 +1,6 @@
 package app_test
 
 import (
-	"context"
 	"errors"
 	"reflect"
 	"slices"
@@ -113,16 +112,7 @@ func TestCreateIssueRelationsRelatesTheWorkItemToOthers(t *testing.T) {
 		{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(domain.Blocking, domain.Ref{ID: r.far.ID, Identifier: "OPS-3"})},
 		{IssueID: r.far.ID, ProjectID: ops, Activity: domain.RelationAdded(domain.BlockedBy, work)},
 	}
-	if len(w.issues.activities) != len(rows) {
-		t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(rows))
-	}
-	for n, row := range w.issues.activities {
-		want := rows[n]
-		want.ID, want.WorkspaceID, want.ActorID, want.At = row.ID, acme, alice, clockNow
-		if !reflect.DeepEqual(row, want) || n > 0 && row.ID.Compare(w.issues.activities[n-1].ID) <= 0 {
-			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", n, row, want)
-		}
-	}
+	wantActivityRows(t, w, rows)
 	var want []app.IssueRelation
 	for n, o := range []domain.Issue{r.near, r.far} {
 		o.UpdatedByID, o.UpdatedAt, o.SubIssuesCount = &alice, clockNow, []int{2, 0}[n]
@@ -222,10 +212,7 @@ func TestCreateIssueRelationsRefusesWhatItMayNotRelateTo(t *testing.T) {
 			tt.set(c)
 			w.issues.others[farID] = c.far
 			_, err := uc.Execute(as(alice), id, domain.RelatesTo, c.ask)
-			var se, wantSE *shared.Error
-			if !errors.As(err, &se) || !errors.As(tt.want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
-				t.Errorf("Execute() = %v, want %v", err, tt.want)
-			}
+			wantRefused(t, err, tt.want)
 			if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
 				t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
 			}
@@ -258,31 +245,15 @@ func TestCreateIssueRelationsStopsAtAFailingPort(t *testing.T) {
 	}
 }
 
-// What cannot be is an error, never a refusal: the others not all there
-// to read back after the write, which found each undeleted under the
-// locks.
+// What cannot be is an error, never a refusal: the others not there to
+// read back after the write (fakeIssues' lost), which found each undeleted
+// under the locks.
 func TestCreateIssueRelationsErrsOnWhatCannotBe(t *testing.T) {
-	_, w, rel, id, r := newRelate()
-	lost := losingRelations{fakeRelations: rel, gone: r.far.ID}
-	uc := app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{Locks: w.locks, Relations: lost, Clock: clockAt{at: clockNow, log: w.log}})
+	uc, _, rel, id, r := newRelate()
+	rel.lost = true
 	_, err := uc.Execute(as(alice), id, domain.RelatesTo, []uuid.UUID{r.far.ID, r.near.ID})
 	var se *shared.Error
 	if err == nil || errors.As(err, &se) {
 		t.Errorf("Execute() = %v, want an error that is no refusal", err)
 	}
-}
-
-// losingRelations loses the work item gone from the store once the
-// activity is written, so that it is not there to read back.
-type losingRelations struct {
-	*fakeRelations
-	gone uuid.UUID
-}
-
-func (l losingRelations) InsertActivities(ctx context.Context, rows []app.ActivityRow) error {
-	if err := l.fakeRelations.InsertActivities(ctx, rows); err != nil {
-		return err
-	}
-	delete(l.others, l.gone)
-	return nil
 }
