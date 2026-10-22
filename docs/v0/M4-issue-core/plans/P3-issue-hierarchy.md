@@ -10941,10 +10941,10 @@ Expected: 通过。
 - `issue/app/parents.go`：`refOf(p LockedProject, i)`（按锁住的那个项目的标识：别的项目的工作项也按它自己的项目写）；`parents.go`、`sub_issues.go` 的调用照改。
 - `issue/app/ports.go`：`RelationCreator`（`Related`、`InsertRelations`、`MarkChanged`、`InsertActivities`，嵌入 `IssueReader`，`GetIssues` 在它里面）。
 - `issue/app/create_relations.go`（新）：`IssueRelation{ID, Type, Issue, CreatedAt}`（关联作为它的一个工作项读到的）；`CreateIssueRelationsDeps{Locks, Relations, Clock}`、`NewCreateIssueRelations`、`Execute(ctx, id, t, ids)`：`CheckNewRelations` 在任何读之前；`Locks.run` 的 `write{issue: &id, action: issue.update, reach: ids}`；锁下项目已归档 409 → 工作项已归档 409 `issue.archived` → `check`（每个都到达、没归档、它的项目没归档、与它还没有关联（`Related`，在两端的项目的锁下读）；问题按它在 `issue_ids` 里的位置一次报出：没到达的、已归档的 `not_allowed`，已有关联的 `duplicate`）→ 时刻 → `write`（按对方的 `id` 的次序：`NewRelation`；`InsertRelations` 一条语句；`MarkChanged` 两端，`id` 的次序；每条关联两行动态，各在自己的项目：它的工作项读到的类型、对方的标识）→ `answer`（对方在事务里读回，少了是错误；按调用者在各项目的 `Grant` 数子工作项：`grants` 带上每个对方的项目）。
-- 测试的帮手：`fakes_relations_test.go`（新）：`fakeRelations`（嵌入 `*fakeIssues`：`Related`、`InsertRelations`、`MarkChanged` 的记录）；`create_relations_test.go`（新）：`nearID`、`farID`、`newRelate`、`relateOver`、`reaching`、`relateCase`；`create_issue_test.go` 的 `wantRefused`（`wantRefusal` 对错误的核对拆出，`wantRefusal` 经它；加关联的拒绝不另写一份）。动态用 `create_issue_test.go` 的 `wantActivityRows` 核对，读回少了用假实现的 `lost`（`fakeRelations` 经嵌入的 `*fakeIssues` 用它），都不另写。
+- 测试的帮手：`fakes_relations_test.go`（新）：`fakeRelations`（嵌入 `*fakeIssues`：`Related`、`InsertRelations`、`MarkChanged` 的记录）；`create_relations_test.go`（新）：`nearID`、`farID`、`newRelate`、`relateOver`、`reaching`、`relateCase`、`wantNothingWritten`（加关联什么都没写：两个拒绝的测试共用，不各写一份）；`create_issue_test.go` 的 `wantRefused`（`wantRefusal` 对错误的核对拆出，`wantRefusal` 经它；加关联的拒绝不另写一份）。动态用 `create_issue_test.go` 的 `wantActivityRows` 核对，读回少了用假实现的 `lost`（`fakeRelations` 经嵌入的 `*fakeIssues` 用它），都不另写。
 
 **Tests:**
-- 单元：`TestCreateIssueRelationsRelatesTheWorkItemToOthers`（3.5、3.10 的次序：跨项目的 `Locks` 的调用（`reaching`）；已有的关联；时刻；关联；两端按 `id` 的次序改最后修改；动态；读回、数过。alice 以 `blocking` 问 ops 的 far、web 的 near：各存为对方的 `blocked_by`，对方的行，near 的在先；每条两行动态，各在自己的项目，按标识；回答按工作项读的 `blocking`，far 按 alice 在 ops 的 `Grant`（她是只看自己的访客）数，near 按 web 的）、`TestCreateIssueRelationsRefusals`（锁之前：`CheckNewRelations` 拒绝的、不在的、看不到项目的 404、不能改的 403，在读别的工作项之前；锁下：项目、工作项等锁期间被删除 404，不能再改 403，已归档的项目 409（工作项也已归档），然后已归档的工作项 409，都在检查别的工作项之前；都不写）、`TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`（锁之前没到达的：不在的、它自己、别的工作区的、看不到项目的、不能读的、访客规则隐藏的；锁下：已归档的、在已归档的项目里的、等锁期间被删除的、项目等锁期间被删除的、不再看得到的；已有关联的 `duplicate`；两个都被拒绝时各在自己的位置）、`TestCreateIssueRelationsStopsAtAFailingPort`、`TestCreateIssueRelationsErrsOnWhatCannotBe`（读回少了（假实现的 `lost`）是错误，不是拒绝）；`lock_test.go` 的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`（预检之后、事务之外一次进 web、ops 的闸门（`id` 升序），一次锁住同样的项目、同样的次序（`LockMany`），事务结束之后最后离开；预检没到达的（看不到的 far、没有的 far）不取锁、不进闸门，422 只在 web 的锁下答）。
+- 单元：`TestCreateIssueRelationsRelatesTheWorkItemToOthers`（3.5、3.10 的次序：跨项目的 `Locks` 的调用（`reaching`）；已有的关联；时刻；关联；两端按 `id` 的次序改最后修改；动态；读回、数过。alice 以 `blocking`、再以 `blocked_by` 问 ops 的 far、web 的 near，两种各自写明：`blocking` 各存为对方的 `blocked_by`，对方的行、对方的项目；`blocked_by` 照问的存，工作项的行、web；都是 near 的在先；每条两行动态，各在自己的项目，按标识：工作项的写问的类型，对方的写对方读到的（`blocked_by`、`blocking`）；回答按工作项读的，即问的类型，far 按 alice 在 ops 的 `Grant`（她是只看自己的访客）数，near 按 web 的）、`TestCreateIssueRelationsRefusals`（锁之前：`CheckNewRelations` 拒绝的、不在的、看不到项目的 404、不能改的 403，在读别的工作项之前；锁下：项目、工作项等锁期间被删除 404，不能再改 403，已归档的项目 409（工作项也已归档），然后已归档的工作项 409，都在检查别的工作项之前；都不写）、`TestCreateIssueRelationsRefusesWhatItMayNotRelateTo`（锁之前没到达的：不在的、它自己、别的工作区的、看不到项目的、不能读的、访客规则隐藏的；锁下：已归档的、在已归档的项目里的、等锁期间被删除的、项目等锁期间被删除的、不再看得到的；已有关联的 `duplicate`；两个都被拒绝时各在自己的位置）、`TestCreateIssueRelationsStopsAtAFailingPort`、`TestCreateIssueRelationsErrsOnWhatCannotBe`（读回少了（假实现的 `lost`）是错误，不是拒绝）；`lock_test.go` 的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`（预检之后、事务之外一次进 web、ops 的闸门（`id` 升序），一次锁住同样的项目、同样的次序（`LockMany`），事务结束之后最后离开；写自己的项目也按 `id` 排，不在最前：工作项移到 ops（较大的，web 的 `id` 先取）时同样先 web 后 ops；预检没到达的（看不到的 far、没有的 far）不取锁、不进闸门，422 只在 web 的锁下答）。
 
 - [ ] **Step 1: 跨项目的取锁**
 
@@ -11571,7 +11571,7 @@ func (e end) stamp(by uuid.UUID, at time.Time) stamp {
 }
 ````
 
-`server/internal/modules/issue/app/create_relations_test.go`（新文件，259 行）：
+`server/internal/modules/issue/app/create_relations_test.go`（新文件，283 行）：
 
 ````file server/internal/modules/issue/app/create_relations_test.go
 package app_test
@@ -11640,62 +11640,80 @@ func reaching(id uuid.UUID, r relating) []string {
 // Locks' calls across projects (reaching); whether the others relate to
 // the work item already; the clock; the relations; the work item and the
 // others marked changed, in id order; the activity; the others read back
-// and counted. alice asks for far, of ops, then near, of web, as blocking:
-// each is stored the other way round, the other's row, its blocked_by,
-// near's first. Each writes a row of the work item's activity, blocking
-// the other by its identifier, and one of the other's, of its project,
-// blocked_by WEB-7, near's first. The answer is the relations as the work
-// item reads them, blocking, each other as stored then, alice's last
-// change, counted as she sees it in its project: every one of near's, in
-// web, and only hers of far's, in ops, where she is a guest who sees her
-// own work items alone (Grant.OwnOnly of far's decisions), far among
-// them, made by her here.
+// and counted. alice asks for far, of ops, then near, of web, as
+// blocking, then as blocked_by. As blocking, each is stored the other way
+// round, the other's row, of its project, its blocked_by; as blocked_by,
+// as asked, the work item's row, of web. Near's comes first either way.
+// Each writes a row of the work item's activity, the type asked, the other
+// by its identifier, and one of the other's, of its project, the type as
+// the other reads it, WEB-7, near's first. The answer is the relations as
+// the work item reads them, the type asked, each other as stored then,
+// alice's last change, counted as she sees it in its project: every one of
+// near's, in web, and only hers of far's, in ops, where she is a guest who
+// sees her own work items alone (Grant.OwnOnly of far's decisions), far
+// among them, made by her here.
 func TestCreateIssueRelationsRelatesTheWorkItemToOthers(t *testing.T) {
-	uc, w, rel, id, r := newRelate()
-	r.far.CreatedByID = &alice
-	w.issues.others[farID] = r.far
-	w.auth.grants = []shared.Grant{1: {OwnOnly: true}, 4: {OwnOnly: true}}
-	w.issues.counts = map[uuid.UUID]app.SubIssueCount{r.near.ID: {All: 2, Own: 1}, r.far.ID: {All: 4, Own: 0}}
-	got, err := uc.Execute(as(alice), id, domain.Blocking, []uuid.UUID{r.far.ID, r.near.ID})
-	if err != nil {
-		t.Fatal(err)
-	}
-	others := []uuid.UUID{r.near.ID, r.far.ID}
-	calls := slices.Concat(reaching(id, r), []string{line("Related", id, others), "Now", line("InsertRelations", 2),
-		line("MarkChanged", sorted([]uuid.UUID{id, r.near.ID, r.far.ID})), line("InsertActivities", 4), line("GetIssues", others),
-		counted(others...)})
-	if !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
-	}
-	if len(rel.relations) != 2 {
-		t.Fatalf("the relations %+v, want two", rel.relations)
-	}
-	for n, o := range []domain.Issue{r.near, r.far} {
-		want := domain.Relation{ID: rel.relations[n].ID, WorkspaceID: acme, ProjectID: o.ProjectID, IssueID: o.ID, RelatedID: id,
-			Type: domain.BlockedBy, CreatedByID: &alice, CreatedAt: clockNow}
-		if !reflect.DeepEqual(rel.relations[n], want) || n > 0 && rel.relations[n].ID.Compare(rel.relations[n-1].ID) <= 0 {
-			t.Errorf("relation %d: %+v, want %+v, its id after the one before", n, rel.relations[n], want)
-		}
-	}
-	marked := app.ChangedRows{IDs: sorted([]uuid.UUID{id, r.near.ID, r.far.ID}), By: alice, At: clockNow}
-	if rel.marked == nil || !reflect.DeepEqual(*rel.marked, marked) {
-		t.Errorf("marked %+v, want %+v", rel.marked, marked)
-	}
-	work := domain.Ref{ID: id, Identifier: "WEB-7"}
-	rows := []app.ActivityRow{
-		{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(domain.Blocking, domain.Ref{ID: r.near.ID, Identifier: "WEB-8"})},
-		{IssueID: r.near.ID, ProjectID: web, Activity: domain.RelationAdded(domain.BlockedBy, work)},
-		{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(domain.Blocking, domain.Ref{ID: r.far.ID, Identifier: "OPS-3"})},
-		{IssueID: r.far.ID, ProjectID: ops, Activity: domain.RelationAdded(domain.BlockedBy, work)},
-	}
-	wantActivityRows(t, w, rows)
-	var want []app.IssueRelation
-	for n, o := range []domain.Issue{r.near, r.far} {
-		o.UpdatedByID, o.UpdatedAt, o.SubIssuesCount = &alice, clockNow, []int{2, 0}[n]
-		want = append(want, app.IssueRelation{ID: rel.relations[n].ID, Type: domain.Blocking, Issue: o, CreatedAt: clockNow})
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Execute() = %+v, want %+v", got, want)
+	for _, tt := range []struct {
+		kind, back domain.RelationType                                // asked, and as each other reads it
+		stored     func(id uuid.UUID, o domain.Issue) domain.Relation // id's relation to o as stored, but its id
+	}{
+		{domain.Blocking, domain.BlockedBy, func(id uuid.UUID, o domain.Issue) domain.Relation {
+			return domain.Relation{WorkspaceID: acme, ProjectID: o.ProjectID, IssueID: o.ID, RelatedID: id, Type: domain.BlockedBy,
+				CreatedByID: &alice, CreatedAt: clockNow}
+		}},
+		{domain.BlockedBy, domain.Blocking, func(id uuid.UUID, o domain.Issue) domain.Relation {
+			return domain.Relation{WorkspaceID: acme, ProjectID: web, IssueID: id, RelatedID: o.ID, Type: domain.BlockedBy,
+				CreatedByID: &alice, CreatedAt: clockNow}
+		}},
+	} {
+		t.Run(string(tt.kind), func(t *testing.T) {
+			uc, w, rel, id, r := newRelate()
+			r.far.CreatedByID = &alice
+			w.issues.others[farID] = r.far
+			w.auth.grants = []shared.Grant{1: {OwnOnly: true}, 4: {OwnOnly: true}}
+			w.issues.counts = map[uuid.UUID]app.SubIssueCount{r.near.ID: {All: 2, Own: 1}, r.far.ID: {All: 4, Own: 0}}
+			got, err := uc.Execute(as(alice), id, tt.kind, []uuid.UUID{r.far.ID, r.near.ID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			others := []uuid.UUID{r.near.ID, r.far.ID}
+			calls := slices.Concat(reaching(id, r), []string{line("Related", id, others), "Now", line("InsertRelations", 2),
+				line("MarkChanged", sorted([]uuid.UUID{id, r.near.ID, r.far.ID})), line("InsertActivities", 4), line("GetIssues", others),
+				counted(others...)})
+			if !slices.Equal(w.log.calls, calls) {
+				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+			}
+			if len(rel.relations) != 2 {
+				t.Fatalf("the relations %+v, want two", rel.relations)
+			}
+			for n, o := range []domain.Issue{r.near, r.far} {
+				want := tt.stored(id, o)
+				want.ID = rel.relations[n].ID
+				if !reflect.DeepEqual(rel.relations[n], want) || n > 0 && rel.relations[n].ID.Compare(rel.relations[n-1].ID) <= 0 {
+					t.Errorf("relation %d: %+v, want %+v, its id after the one before", n, rel.relations[n], want)
+				}
+			}
+			marked := app.ChangedRows{IDs: sorted([]uuid.UUID{id, r.near.ID, r.far.ID}), By: alice, At: clockNow}
+			if rel.marked == nil || !reflect.DeepEqual(*rel.marked, marked) {
+				t.Errorf("marked %+v, want %+v", rel.marked, marked)
+			}
+			work := domain.Ref{ID: id, Identifier: "WEB-7"}
+			rows := []app.ActivityRow{
+				{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(tt.kind, domain.Ref{ID: r.near.ID, Identifier: "WEB-8"})},
+				{IssueID: r.near.ID, ProjectID: web, Activity: domain.RelationAdded(tt.back, work)},
+				{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(tt.kind, domain.Ref{ID: r.far.ID, Identifier: "OPS-3"})},
+				{IssueID: r.far.ID, ProjectID: ops, Activity: domain.RelationAdded(tt.back, work)},
+			}
+			wantActivityRows(t, w, rows)
+			var want []app.IssueRelation
+			for n, o := range []domain.Issue{r.near, r.far} {
+				o.UpdatedByID, o.UpdatedAt, o.SubIssuesCount = &alice, clockNow, []int{2, 0}[n]
+				want = append(want, app.IssueRelation{ID: rel.relations[n].ID, Type: tt.kind, Issue: o, CreatedAt: clockNow})
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("Execute() = %+v, want %+v", got, want)
+			}
+		})
 	}
 }
 
@@ -11738,10 +11756,18 @@ func TestCreateIssueRelationsRefusals(t *testing.T) {
 			tt.set(w, &id)
 			_, err := uc.Execute(as(alice), id, tt.kind, []uuid.UUID{r.far.ID, r.near.ID})
 			wantRefusal(t, w, err, tt.want, reaching(id, r)[:tt.calls])
-			if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
-				t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
-			}
+			wantNothingWritten(t, w, rel)
 		})
+	}
+}
+
+// wantNothingWritten checks that an addition of relations over w and rel
+// wrote nothing: no relation, no work item marked changed, no row of
+// activity.
+func wantNothingWritten(t *testing.T, w *world, rel *fakeRelations) {
+	t.Helper()
+	if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
+		t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
 	}
 }
 
@@ -11789,9 +11815,7 @@ func TestCreateIssueRelationsRefusesWhatItMayNotRelateTo(t *testing.T) {
 			w.issues.others[farID] = c.far
 			_, err := uc.Execute(as(alice), id, domain.RelatesTo, c.ask)
 			wantRefused(t, err, tt.want)
-			if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
-				t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
-			}
+			wantNothingWritten(t, w, rel)
 		})
 	}
 }
@@ -11915,10 +11939,12 @@ func (f *fakeRelations) MarkChanged(ctx context.Context, r app.ChangedRows) erro
 // outside any transaction; it locks the same projects all at once, in the
 // same order (LockMany), and leaves the gates last, once its transaction
 // has ended. alice relates web's work item 7 to far, of ops, then near, of
-// web: web and ops. A work item the precheck does not reach takes neither
-// a lock nor a place in a gate: far, which alice does not see, or which is
-// not there, leaves ops out of both, and the refusal (422) is answered
-// under web's lock alone.
+// web: web and ops. Its own project takes its place in that order like
+// the others': moved to ops, the higher (web's id is drawn first), the
+// work item takes web, then ops, too. A work item the precheck does not
+// reach takes neither a lock nor a place in a gate: far, which alice does
+// not see, or which is not there, leaves ops out of both, and the refusal
+// (422) is answered under web's lock alone.
 func TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
@@ -11926,6 +11952,7 @@ func TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches(t *testing.T) {
 		projects []uuid.UUID
 	}{
 		{"both reached", func(*world) {}, sorted([]uuid.UUID{web, ops})},
+		{"both reached from ops", func(w *world) { w.issues.issue.ProjectID = ops }, sorted([]uuid.UUID{web, ops})},
 		{"far not seen", func(w *world) { w.auth.answers = []error{1: shared.ErrNotVisible} }, []uuid.UUID{web}},
 		{"far not there", func(w *world) { delete(w.issues.others, farID) }, []uuid.UUID{web}},
 	} {
@@ -12004,6 +12031,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `T10.20` | 读已有的关联失败时略过：当作还没有关联 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T10.21` | 加关联的回答按不带访客规则的授权数另一端的子工作项 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestTheGuestRuleHoldsForRelations`（`make test`）（Task 11 起） | 单元；组合 |
 | `T10.22` | 加关联在锁下、闸门之后才核对类型和 1–20 个工作项，而不是在任何读之前 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`（`make test`）（Task 11 起） | 单元；组合 |
+| `T10.23` | 跨项目的写把它自己的项目放在最前，只把别的项目按 `id` 升序排 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T10.24` | 对方的那行动态写关联存储的类型，不是对方读到的类型 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 
 ---
 

@@ -153,10 +153,12 @@ func TestTheGateTakesOnlyWritesThePrecheckLetThrough(t *testing.T) {
 // outside any transaction; it locks the same projects all at once, in the
 // same order (LockMany), and leaves the gates last, once its transaction
 // has ended. alice relates web's work item 7 to far, of ops, then near, of
-// web: web and ops. A work item the precheck does not reach takes neither
-// a lock nor a place in a gate: far, which alice does not see, or which is
-// not there, leaves ops out of both, and the refusal (422) is answered
-// under web's lock alone.
+// web: web and ops. Its own project takes its place in that order like
+// the others': moved to ops, the higher (web's id is drawn first), the
+// work item takes web, then ops, too. A work item the precheck does not
+// reach takes neither a lock nor a place in a gate: far, which alice does
+// not see, or which is not there, leaves ops out of both, and the refusal
+// (422) is answered under web's lock alone.
 func TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
@@ -164,6 +166,7 @@ func TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches(t *testing.T) {
 		projects []uuid.UUID
 	}{
 		{"both reached", func(*world) {}, sorted([]uuid.UUID{web, ops})},
+		{"both reached from ops", func(w *world) { w.issues.issue.ProjectID = ops }, sorted([]uuid.UUID{web, ops})},
 		{"far not seen", func(w *world) { w.auth.answers = []error{1: shared.ErrNotVisible} }, []uuid.UUID{web}},
 		{"far not there", func(w *world) { delete(w.issues.others, farID) }, []uuid.UUID{web}},
 	} {

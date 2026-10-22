@@ -64,62 +64,80 @@ func reaching(id uuid.UUID, r relating) []string {
 // Locks' calls across projects (reaching); whether the others relate to
 // the work item already; the clock; the relations; the work item and the
 // others marked changed, in id order; the activity; the others read back
-// and counted. alice asks for far, of ops, then near, of web, as blocking:
-// each is stored the other way round, the other's row, its blocked_by,
-// near's first. Each writes a row of the work item's activity, blocking
-// the other by its identifier, and one of the other's, of its project,
-// blocked_by WEB-7, near's first. The answer is the relations as the work
-// item reads them, blocking, each other as stored then, alice's last
-// change, counted as she sees it in its project: every one of near's, in
-// web, and only hers of far's, in ops, where she is a guest who sees her
-// own work items alone (Grant.OwnOnly of far's decisions), far among
-// them, made by her here.
+// and counted. alice asks for far, of ops, then near, of web, as
+// blocking, then as blocked_by. As blocking, each is stored the other way
+// round, the other's row, of its project, its blocked_by; as blocked_by,
+// as asked, the work item's row, of web. Near's comes first either way.
+// Each writes a row of the work item's activity, the type asked, the other
+// by its identifier, and one of the other's, of its project, the type as
+// the other reads it, WEB-7, near's first. The answer is the relations as
+// the work item reads them, the type asked, each other as stored then,
+// alice's last change, counted as she sees it in its project: every one of
+// near's, in web, and only hers of far's, in ops, where she is a guest who
+// sees her own work items alone (Grant.OwnOnly of far's decisions), far
+// among them, made by her here.
 func TestCreateIssueRelationsRelatesTheWorkItemToOthers(t *testing.T) {
-	uc, w, rel, id, r := newRelate()
-	r.far.CreatedByID = &alice
-	w.issues.others[farID] = r.far
-	w.auth.grants = []shared.Grant{1: {OwnOnly: true}, 4: {OwnOnly: true}}
-	w.issues.counts = map[uuid.UUID]app.SubIssueCount{r.near.ID: {All: 2, Own: 1}, r.far.ID: {All: 4, Own: 0}}
-	got, err := uc.Execute(as(alice), id, domain.Blocking, []uuid.UUID{r.far.ID, r.near.ID})
-	if err != nil {
-		t.Fatal(err)
-	}
-	others := []uuid.UUID{r.near.ID, r.far.ID}
-	calls := slices.Concat(reaching(id, r), []string{line("Related", id, others), "Now", line("InsertRelations", 2),
-		line("MarkChanged", sorted([]uuid.UUID{id, r.near.ID, r.far.ID})), line("InsertActivities", 4), line("GetIssues", others),
-		counted(others...)})
-	if !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
-	}
-	if len(rel.relations) != 2 {
-		t.Fatalf("the relations %+v, want two", rel.relations)
-	}
-	for n, o := range []domain.Issue{r.near, r.far} {
-		want := domain.Relation{ID: rel.relations[n].ID, WorkspaceID: acme, ProjectID: o.ProjectID, IssueID: o.ID, RelatedID: id,
-			Type: domain.BlockedBy, CreatedByID: &alice, CreatedAt: clockNow}
-		if !reflect.DeepEqual(rel.relations[n], want) || n > 0 && rel.relations[n].ID.Compare(rel.relations[n-1].ID) <= 0 {
-			t.Errorf("relation %d: %+v, want %+v, its id after the one before", n, rel.relations[n], want)
-		}
-	}
-	marked := app.ChangedRows{IDs: sorted([]uuid.UUID{id, r.near.ID, r.far.ID}), By: alice, At: clockNow}
-	if rel.marked == nil || !reflect.DeepEqual(*rel.marked, marked) {
-		t.Errorf("marked %+v, want %+v", rel.marked, marked)
-	}
-	work := domain.Ref{ID: id, Identifier: "WEB-7"}
-	rows := []app.ActivityRow{
-		{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(domain.Blocking, domain.Ref{ID: r.near.ID, Identifier: "WEB-8"})},
-		{IssueID: r.near.ID, ProjectID: web, Activity: domain.RelationAdded(domain.BlockedBy, work)},
-		{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(domain.Blocking, domain.Ref{ID: r.far.ID, Identifier: "OPS-3"})},
-		{IssueID: r.far.ID, ProjectID: ops, Activity: domain.RelationAdded(domain.BlockedBy, work)},
-	}
-	wantActivityRows(t, w, rows)
-	var want []app.IssueRelation
-	for n, o := range []domain.Issue{r.near, r.far} {
-		o.UpdatedByID, o.UpdatedAt, o.SubIssuesCount = &alice, clockNow, []int{2, 0}[n]
-		want = append(want, app.IssueRelation{ID: rel.relations[n].ID, Type: domain.Blocking, Issue: o, CreatedAt: clockNow})
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Execute() = %+v, want %+v", got, want)
+	for _, tt := range []struct {
+		kind, back domain.RelationType                                // asked, and as each other reads it
+		stored     func(id uuid.UUID, o domain.Issue) domain.Relation // id's relation to o as stored, but its id
+	}{
+		{domain.Blocking, domain.BlockedBy, func(id uuid.UUID, o domain.Issue) domain.Relation {
+			return domain.Relation{WorkspaceID: acme, ProjectID: o.ProjectID, IssueID: o.ID, RelatedID: id, Type: domain.BlockedBy,
+				CreatedByID: &alice, CreatedAt: clockNow}
+		}},
+		{domain.BlockedBy, domain.Blocking, func(id uuid.UUID, o domain.Issue) domain.Relation {
+			return domain.Relation{WorkspaceID: acme, ProjectID: web, IssueID: id, RelatedID: o.ID, Type: domain.BlockedBy,
+				CreatedByID: &alice, CreatedAt: clockNow}
+		}},
+	} {
+		t.Run(string(tt.kind), func(t *testing.T) {
+			uc, w, rel, id, r := newRelate()
+			r.far.CreatedByID = &alice
+			w.issues.others[farID] = r.far
+			w.auth.grants = []shared.Grant{1: {OwnOnly: true}, 4: {OwnOnly: true}}
+			w.issues.counts = map[uuid.UUID]app.SubIssueCount{r.near.ID: {All: 2, Own: 1}, r.far.ID: {All: 4, Own: 0}}
+			got, err := uc.Execute(as(alice), id, tt.kind, []uuid.UUID{r.far.ID, r.near.ID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			others := []uuid.UUID{r.near.ID, r.far.ID}
+			calls := slices.Concat(reaching(id, r), []string{line("Related", id, others), "Now", line("InsertRelations", 2),
+				line("MarkChanged", sorted([]uuid.UUID{id, r.near.ID, r.far.ID})), line("InsertActivities", 4), line("GetIssues", others),
+				counted(others...)})
+			if !slices.Equal(w.log.calls, calls) {
+				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+			}
+			if len(rel.relations) != 2 {
+				t.Fatalf("the relations %+v, want two", rel.relations)
+			}
+			for n, o := range []domain.Issue{r.near, r.far} {
+				want := tt.stored(id, o)
+				want.ID = rel.relations[n].ID
+				if !reflect.DeepEqual(rel.relations[n], want) || n > 0 && rel.relations[n].ID.Compare(rel.relations[n-1].ID) <= 0 {
+					t.Errorf("relation %d: %+v, want %+v, its id after the one before", n, rel.relations[n], want)
+				}
+			}
+			marked := app.ChangedRows{IDs: sorted([]uuid.UUID{id, r.near.ID, r.far.ID}), By: alice, At: clockNow}
+			if rel.marked == nil || !reflect.DeepEqual(*rel.marked, marked) {
+				t.Errorf("marked %+v, want %+v", rel.marked, marked)
+			}
+			work := domain.Ref{ID: id, Identifier: "WEB-7"}
+			rows := []app.ActivityRow{
+				{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(tt.kind, domain.Ref{ID: r.near.ID, Identifier: "WEB-8"})},
+				{IssueID: r.near.ID, ProjectID: web, Activity: domain.RelationAdded(tt.back, work)},
+				{IssueID: id, ProjectID: web, Activity: domain.RelationAdded(tt.kind, domain.Ref{ID: r.far.ID, Identifier: "OPS-3"})},
+				{IssueID: r.far.ID, ProjectID: ops, Activity: domain.RelationAdded(tt.back, work)},
+			}
+			wantActivityRows(t, w, rows)
+			var want []app.IssueRelation
+			for n, o := range []domain.Issue{r.near, r.far} {
+				o.UpdatedByID, o.UpdatedAt, o.SubIssuesCount = &alice, clockNow, []int{2, 0}[n]
+				want = append(want, app.IssueRelation{ID: rel.relations[n].ID, Type: tt.kind, Issue: o, CreatedAt: clockNow})
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("Execute() = %+v, want %+v", got, want)
+			}
+		})
 	}
 }
 
@@ -162,10 +180,18 @@ func TestCreateIssueRelationsRefusals(t *testing.T) {
 			tt.set(w, &id)
 			_, err := uc.Execute(as(alice), id, tt.kind, []uuid.UUID{r.far.ID, r.near.ID})
 			wantRefusal(t, w, err, tt.want, reaching(id, r)[:tt.calls])
-			if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
-				t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
-			}
+			wantNothingWritten(t, w, rel)
 		})
+	}
+}
+
+// wantNothingWritten checks that an addition of relations over w and rel
+// wrote nothing: no relation, no work item marked changed, no row of
+// activity.
+func wantNothingWritten(t *testing.T, w *world, rel *fakeRelations) {
+	t.Helper()
+	if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
+		t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
 	}
 }
 
@@ -213,9 +239,7 @@ func TestCreateIssueRelationsRefusesWhatItMayNotRelateTo(t *testing.T) {
 			w.issues.others[farID] = c.far
 			_, err := uc.Execute(as(alice), id, domain.RelatesTo, c.ask)
 			wantRefused(t, err, tt.want)
-			if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
-				t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
-			}
+			wantNothingWritten(t, w, rel)
 		})
 	}
 }
