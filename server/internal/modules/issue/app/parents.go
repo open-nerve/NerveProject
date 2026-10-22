@@ -54,7 +54,7 @@ func parentChange(ctx context.Context, issues IssueUpdater, h held, actor uuid.U
 		if err != nil || domain.Loops(i.ID, ancestry) {
 			return domain.Changed[*domain.Ref]{}, false, err
 		}
-		c.New = refOf(h, parent)
+		c.New = refOf(h.project, parent)
 	}
 	before, err := parentsBefore(ctx, issues, h, []domain.Issue{i})
 	if err != nil {
@@ -94,13 +94,13 @@ func parentsBefore(ctx context.Context, issues IssueReader, h held, items []doma
 		if at < 0 {
 			return nil, fmt.Errorf("work item %s is under %s, which is not there", i.ID, *i.ParentID)
 		}
-		before[n] = refOf(h, parents[at])
+		before[n] = refOf(h.project, parents[at])
 	}
 	return before, nil
 }
 
-// refOf is the work item i, of the project h holds locked, as an activity
-// names it: by its identifier under the lock (M4 design 3.13).
-func refOf(h held, i domain.Issue) *domain.Ref {
-	return &domain.Ref{ID: i.ID, Identifier: domain.Identifier(h.project.Identifier, i.SequenceID)}
+// refOf is the work item i, of the project p, locked, as an activity names
+// it: by its identifier under the lock (M4 design 3.13).
+func refOf(p LockedProject, i domain.Issue) *domain.Ref {
+	return &domain.Ref{ID: i.ID, Identifier: domain.Identifier(p.Identifier, i.SequenceID)}
 }

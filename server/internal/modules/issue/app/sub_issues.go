@@ -189,7 +189,7 @@ func (u *AddSubIssues) moves(ctx context.Context, h held, moving []domain.Issue)
 	}
 	out := make([]move, len(moving))
 	for n, i := range moving {
-		out[n] = move{item: i, parent: domain.Changed[*domain.Ref]{Old: before[n], New: refOf(h, h.issue)}}
+		out[n] = move{item: i, parent: domain.Changed[*domain.Ref]{Old: before[n], New: refOf(h.project, h.issue)}}
 	}
 	return out, nil
 }

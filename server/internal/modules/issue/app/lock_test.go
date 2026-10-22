@@ -146,3 +146,39 @@ func TestTheGateTakesOnlyWritesThePrecheckLetThrough(t *testing.T) {
 		t.Errorf("Execute() = %v after\n%q\nwant server_busy once the gate refuses it", err, w.log.calls)
 	}
 }
+
+// A write across projects (convention 7, M4 design 3.5, 11.11) enters the
+// gates of its work item's project and of each project of the work items
+// it reaches, all at once in ascending id order, after its precheck and
+// outside any transaction; it locks the same projects all at once, in the
+// same order (LockMany), and leaves the gates last, once its transaction
+// has ended. alice relates web's work item 7 to far, of ops, then near, of
+// web: web and ops. A work item the precheck does not reach takes neither
+// a lock nor a place in a gate: far, which alice does not see, or which is
+// not there, leaves ops out of both, and the refusal (422) is answered
+// under web's lock alone.
+func TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		set      func(w *world)
+		projects []uuid.UUID
+	}{
+		{"both reached", func(*world) {}, sorted([]uuid.UUID{web, ops})},
+		{"far not seen", func(w *world) { w.auth.answers = []error{1: shared.ErrNotVisible} }, []uuid.UUID{web}},
+		{"far not there", func(w *world) { delete(w.issues.others, farID) }, []uuid.UUID{web}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, w, rel, id, _ := newRelate()
+			gated(w, nil)
+			uc := relateOver(w, rel)
+			tt.set(w)
+			_, _ = uc.Execute(as(alice), id, domain.RelatesTo, []uuid.UUID{farID, nearID})
+			enter, lock := line("Enter", anys(tt.projects)...)+" outside tx", line("LockMany", anys(tt.projects)...)
+			at := slices.Index(w.log.calls, enter)
+			if at < 0 || at+2 >= len(w.log.calls) || w.log.calls[at+1] != "Begin" || w.log.calls[at+2] != lock ||
+				w.log.calls[len(w.log.calls)-1] != line("Leave", anys(tt.projects)...) || slices.Contains(w.log.calls[:at], "Begin") {
+				t.Errorf("calls:\n%q\nwant %q after the precheck, then the transaction and %q, and the gates left last", w.log.calls, enter, lock)
+			}
+		})
+	}
+}

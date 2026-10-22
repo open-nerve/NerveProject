@@ -155,6 +155,22 @@ type SubIssueAdder interface {
 	InsertActivities(ctx context.Context, rows []ActivityRow) error
 }
 
+// RelationCreator is the work items' store as createIssueRelations writes
+// and reads them, in the transaction ctx carries (M4 design 3.5, 3.10).
+type RelationCreator interface {
+	IssueReader
+	// Related reads which of the work items ids relate to the work item
+	// id: an undeleted relation between them, of any type, either way, in
+	// id order.
+	Related(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error)
+	// InsertRelations inserts the relations in their order.
+	InsertRelations(ctx context.Context, rs []domain.Relation) error
+	// MarkChanged writes the undeleted work items r names last changed.
+	MarkChanged(ctx context.Context, r ChangedRows) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
+}
+
 // IssueArchiver is the work items' store as archiveIssue and
 // unarchiveIssue write and read them, in the transaction ctx carries (M4
 // design 3.5).
