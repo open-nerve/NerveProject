@@ -8825,7 +8825,9 @@ RETURNING t.id;
 -- ends serve it, an arm of the union each: the project's rows by project_id, those toward its work items by issues'
 -- project_id, then related_issue_id; the primary key's index keeps the undeleted ones after the bound, and a sort
 -- puts them in id order for the lock. Each batch so reads all the project's relations both ways and its work items,
--- not every project's relations (the planner reads the table only where that is cheaper).
+-- not every project's relations (a custom plan reads the whole table only where the planner estimates that cheaper).
+-- Until P5 sets plan_cache_mode = force_custom_plan (M4 design 3.16), a generic plan may instead merge against the
+-- primary key from the bound, reading every project's rows after it (P3 spec, section 7).
 UPDATE issue_relations AS t
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE t.id IN (
@@ -8894,7 +8896,7 @@ Expected: 成功：
 |---|---|---|
 | `df39e8459a70f9275c4bdaf444bffb2aa3a11982faeae57844c0c50f28466d68` | 3535 | `api/dist/openapi.yaml` |
 | `46638be2f0370a7bf248a8072117272025246f4e3c6cbc8ad0f09503065a2807` | 171 | `server/internal/modules/issue/adapter/postgres/gen/delete_issue.sql.go` |
-| `8b1e30686430af555127e4cbb9c0906e26fbc61d4c42b7e9b65b9fa46dafb600` | 300 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
+| `47522c360967cc571f99351a874398274a5a5d5c990efa93aaa9627958bc6288` | 302 | `server/internal/modules/issue/adapter/postgres/gen/delete_rows.sql.go` |
 | `d4082fbdf770a5f658ce47afd4a616018b9356bdc7764efebaf2f22e5cb47c4d` | 107 | `server/internal/modules/issue/adapter/postgres/gen/models.go` |
 | `de76a3e9f5a4f54a72e4148e6ec7aec4e7aef86b8b9060ae6726ffdc2370e4a5` | 3860 | `web/packages/api-client/src/schema.gen.ts` |
 
