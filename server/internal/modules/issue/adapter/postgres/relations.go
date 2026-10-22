@@ -18,7 +18,7 @@ import (
 func (s *Store) Related(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error) {
 	related, err := s.queries(ctx).RelatedIssues(ctx, gen.RelatedIssuesParams{ID: id, Ids: ids})
 	if err != nil {
-		return nil, fmt.Errorf("read the relations of work item %s to %v: %w", id, ids, err)
+		return nil, fmt.Errorf("read the relations of work item %s to %d work items: %w", id, len(ids), err)
 	}
 	return related, nil
 }
@@ -33,13 +33,13 @@ func (s *Store) InsertRelations(ctx context.Context, rs []domain.Relation) error
 	p := gen.InsertRelationsParams{WorkspaceID: rs[0].WorkspaceID, By: rs[0].CreatedByID, At: rs[0].CreatedAt}
 	for _, r := range rs {
 		if r.WorkspaceID != p.WorkspaceID || r.CreatedByID == nil || p.By == nil || *r.CreatedByID != *p.By || !r.CreatedAt.Equal(p.At) {
-			return fmt.Errorf("insert relations %+v: not of one workspace, account and moment", rs)
+			return fmt.Errorf("insert %d relations: not of one workspace, account and moment", len(rs))
 		}
 		p.Ids, p.ProjectIds, p.IssueIds = append(p.Ids, r.ID), append(p.ProjectIds, r.ProjectID), append(p.IssueIds, r.IssueID)
 		p.RelatedIssueIds, p.RelationTypes = append(p.RelatedIssueIds, r.RelatedID), append(p.RelationTypes, string(r.Type))
 	}
 	if err := s.queries(ctx).InsertRelations(ctx, p); err != nil {
-		return fmt.Errorf("insert relations %v: %w", p.Ids, err)
+		return fmt.Errorf("insert %d relations: %w", len(p.Ids), err)
 	}
 	return nil
 }
@@ -51,9 +51,9 @@ func (s *Store) MarkChanged(ctx context.Context, r app.ChangedRows) error {
 	n, err := s.queries(ctx).MarkChanged(ctx, gen.MarkChangedParams{By: r.By, At: r.At, Ids: r.IDs})
 	switch {
 	case err != nil:
-		return fmt.Errorf("mark work items %v changed: %w", r.IDs, err)
+		return fmt.Errorf("mark %d work items changed: %w", len(r.IDs), err)
 	case n != int64(len(r.IDs)):
-		return fmt.Errorf("marked %d of work items %v changed", n, r.IDs)
+		return fmt.Errorf("marked %d of %d work items changed", n, len(r.IDs))
 	}
 	return nil
 }

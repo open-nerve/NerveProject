@@ -97,13 +97,18 @@ func TestNewRelation(t *testing.T) {
 
 // An added relation writes a row on each of its work items, of the same
 // columns (rows 20 and 21 of M4 design 3.13): the type as the work item
-// reads it, updated, from "" to the other's identifier, the other's id
-// the new identifier, Plane's sentence with the type.
+// reads it, each of the four, updated, from "" to the other's identifier,
+// the other's id the new identifier, Plane's sentence with the type.
 func TestRelationAdded(t *testing.T) {
 	other := Ref{ID: uuid.NewV7(), Identifier: "OPS-3"}
-	want := Activity{Field: ptr("blocking"), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr("OPS-3"), NewIdentifier: &other.ID,
-		Comment: "added blocking relation"}
-	if got := RelationAdded(Blocking, other); !reflect.DeepEqual(got, want) {
+	got, want := map[RelationType]Activity{}, map[RelationType]Activity{}
+	for kind, comment := range map[RelationType]string{RelatesTo: "added relates_to relation", Duplicate: "added duplicate relation",
+		BlockedBy: "added blocked_by relation", Blocking: "added blocking relation"} {
+		got[kind] = RelationAdded(kind, other)
+		want[kind] = Activity{Field: ptr(string(kind)), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr("OPS-3"),
+			NewIdentifier: &other.ID, Comment: comment}
+	}
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("RelationAdded() = %+v, want %+v", got, want)
 	}
 }

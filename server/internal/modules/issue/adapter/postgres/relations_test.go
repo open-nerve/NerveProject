@@ -18,10 +18,10 @@ import (
 
 // Which work items relate to a work item (M4 design 3.10): those with an
 // undeleted relation to it, of any type, either way, of any project. Web's
-// item relates to b, a relates to it, and so does ops' o; its relation to
-// c was deleted; d relates to b alone. Of a, b, c, d and o, asked for in
-// no order, a, b and o relate to it, in id order; none of a work item
-// without relations; a cancelled read is its failure.
+// item is a duplicate of b, a is blocked_by it, and ops' o relates_to it;
+// its relation to c was deleted; d relates to b alone. Of a, b, c, d and
+// o, asked for in no order, a, b and o relate to it, in id order; none of
+// a work item without relations; a cancelled read is its failure.
 func TestRelated(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -33,7 +33,7 @@ func TestRelated(t *testing.T) {
 	}
 	newIssue(t, pool, ops, o, 1, alice)
 	gone := uuid.NewV7()
-	for _, r := range []relationRow{{uuid.NewV7(), web, item, b, "relates_to"}, {uuid.NewV7(), web, a, item, "relates_to"},
+	for _, r := range []relationRow{{uuid.NewV7(), web, item, b, "duplicate"}, {uuid.NewV7(), web, a, item, "blocked_by"},
 		{uuid.NewV7(), ops, o, item, "relates_to"}, {gone, web, item, c, "relates_to"}, {uuid.NewV7(), web, d, b, "relates_to"}} {
 		newRelation(t, pool, r.p, r.issue, r.related, r.id, r.kind, alice)
 	}

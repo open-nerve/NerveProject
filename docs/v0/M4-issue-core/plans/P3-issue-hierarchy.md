@@ -10239,8 +10239,8 @@ Expected: 通过。
 - `issue/app/rows.go`：`ChangedRows{IDs, By, At}`（没改字段、只改了最后修改的工作项：关联的两端，`id` 的次序）。
 
 **Tests:**
-- 领域：`TestRelationTypeReversed`、`TestCheckNewRelations`（每种类型和一个、二十个通过；`start_before`、没有、二十一个、重复的各报在自己的位置，同一个 422）、`TestNewRelation`（从 Web 的工作项到 Ops 的：`relates_to`、`duplicate`、`blocked_by` 是问的那一端的、Web 的行；`blocking` 是对方的、Ops 的 `blocked_by`；每一端读到的类型和对方）、`TestRelationAdded`（两行同样的列，类型照它的工作项读的）。
-- 存储：`TestRelated`（任何类型、任一个方向、任何项目的；已删除的不算；`id` 的次序；没有关联的回答空的；取消的读是它的失败）、`TestInsertRelations`（ops 的 o 被 web 的 item 阻塞（ops 的行）、item 到 web 的 b（web 的行），每一列照给的；两个工作区、两个时刻、两个账户的几条各被拒绝、什么都不写：每组都与 `alone`（c 到 item 的，之后单独写下）并列，所以拒绝的是这一条守卫，不是一对的键；已有关联的一对（任何类型、任一个方向，`issue_relations_pair_key`）、取消的插入也是）、`TestMarkChanged`（web 的 a、ops 的 o 由 bob 在 later 改，别的列不动；没给的 b 不动；给了已删除的是错误，取消的写也是）。
+- 领域：`TestRelationTypeReversed`、`TestCheckNewRelations`（每种类型和一个、二十个通过；`start_before`、没有、二十一个、重复的各报在自己的位置，同一个 422）、`TestNewRelation`（从 Web 的工作项到 Ops 的：`relates_to`、`duplicate`、`blocked_by` 是问的那一端的、Web 的行；`blocking` 是对方的、Ops 的 `blocked_by`；每一端读到的类型和对方）、`TestRelationAdded`（四种类型各一：两行同样的列，类型照它的工作项读的）。
+- 存储：`TestRelated`（任何类型、任一个方向、任何项目的：item 与 b、a、o 的关联是 `duplicate`、`blocked_by`、`relates_to`，存储的三种各一；已删除的不算；`id` 的次序；没有关联的回答空的；取消的读是它的失败）、`TestInsertRelations`（ops 的 o 被 web 的 item 阻塞（ops 的行）、item 到 web 的 b（web 的行），每一列照给的；两个工作区、两个时刻、两个账户的几条各被拒绝、什么都不写：每组都与 `alone`（c 到 item 的，之后单独写下）并列，所以拒绝的是这一条守卫，不是一对的键；已有关联的一对（任何类型、任一个方向，`issue_relations_pair_key`）、取消的插入也是）、`TestMarkChanged`（web 的 a、ops 的 o 由 bob 在 later 改，别的列不动；没给的 b 不动；给了已删除的是错误，取消的写也是）。
 
 - [ ] **Step 1: 查询，生成**
 
@@ -10427,7 +10427,7 @@ func RelationAdded(t RelationType, other Ref) Activity {
 }
 ````
 
-`server/internal/modules/issue/domain/relation_test.go`（新文件，109 行）：
+`server/internal/modules/issue/domain/relation_test.go`（新文件，114 行）：
 
 ````file server/internal/modules/issue/domain/relation_test.go
 package domain
@@ -10529,13 +10529,18 @@ func TestNewRelation(t *testing.T) {
 
 // An added relation writes a row on each of its work items, of the same
 // columns (rows 20 and 21 of M4 design 3.13): the type as the work item
-// reads it, updated, from "" to the other's identifier, the other's id
-// the new identifier, Plane's sentence with the type.
+// reads it, each of the four, updated, from "" to the other's identifier,
+// the other's id the new identifier, Plane's sentence with the type.
 func TestRelationAdded(t *testing.T) {
 	other := Ref{ID: uuid.NewV7(), Identifier: "OPS-3"}
-	want := Activity{Field: ptr("blocking"), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr("OPS-3"), NewIdentifier: &other.ID,
-		Comment: "added blocking relation"}
-	if got := RelationAdded(Blocking, other); !reflect.DeepEqual(got, want) {
+	got, want := map[RelationType]Activity{}, map[RelationType]Activity{}
+	for kind, comment := range map[RelationType]string{RelatesTo: "added relates_to relation", Duplicate: "added duplicate relation",
+		BlockedBy: "added blocked_by relation", Blocking: "added blocking relation"} {
+		got[kind] = RelationAdded(kind, other)
+		want[kind] = Activity{Field: ptr(string(kind)), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr("OPS-3"),
+			NewIdentifier: &other.ID, Comment: comment}
+	}
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("RelationAdded() = %+v, want %+v", got, want)
 	}
 }
@@ -10566,7 +10571,7 @@ import (
 func (s *Store) Related(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error) {
 	related, err := s.queries(ctx).RelatedIssues(ctx, gen.RelatedIssuesParams{ID: id, Ids: ids})
 	if err != nil {
-		return nil, fmt.Errorf("read the relations of work item %s to %v: %w", id, ids, err)
+		return nil, fmt.Errorf("read the relations of work item %s to %d work items: %w", id, len(ids), err)
 	}
 	return related, nil
 }
@@ -10581,13 +10586,13 @@ func (s *Store) InsertRelations(ctx context.Context, rs []domain.Relation) error
 	p := gen.InsertRelationsParams{WorkspaceID: rs[0].WorkspaceID, By: rs[0].CreatedByID, At: rs[0].CreatedAt}
 	for _, r := range rs {
 		if r.WorkspaceID != p.WorkspaceID || r.CreatedByID == nil || p.By == nil || *r.CreatedByID != *p.By || !r.CreatedAt.Equal(p.At) {
-			return fmt.Errorf("insert relations %+v: not of one workspace, account and moment", rs)
+			return fmt.Errorf("insert %d relations: not of one workspace, account and moment", len(rs))
 		}
 		p.Ids, p.ProjectIds, p.IssueIds = append(p.Ids, r.ID), append(p.ProjectIds, r.ProjectID), append(p.IssueIds, r.IssueID)
 		p.RelatedIssueIds, p.RelationTypes = append(p.RelatedIssueIds, r.RelatedID), append(p.RelationTypes, string(r.Type))
 	}
 	if err := s.queries(ctx).InsertRelations(ctx, p); err != nil {
-		return fmt.Errorf("insert relations %v: %w", p.Ids, err)
+		return fmt.Errorf("insert %d relations: %w", len(p.Ids), err)
 	}
 	return nil
 }
@@ -10599,9 +10604,9 @@ func (s *Store) MarkChanged(ctx context.Context, r app.ChangedRows) error {
 	n, err := s.queries(ctx).MarkChanged(ctx, gen.MarkChangedParams{By: r.By, At: r.At, Ids: r.IDs})
 	switch {
 	case err != nil:
-		return fmt.Errorf("mark work items %v changed: %w", r.IDs, err)
+		return fmt.Errorf("mark %d work items changed: %w", len(r.IDs), err)
 	case n != int64(len(r.IDs)):
-		return fmt.Errorf("marked %d of work items %v changed", n, r.IDs)
+		return fmt.Errorf("marked %d of %d work items changed", n, len(r.IDs))
 	}
 	return nil
 }
@@ -10630,10 +10635,10 @@ import (
 
 // Which work items relate to a work item (M4 design 3.10): those with an
 // undeleted relation to it, of any type, either way, of any project. Web's
-// item relates to b, a relates to it, and so does ops' o; its relation to
-// c was deleted; d relates to b alone. Of a, b, c, d and o, asked for in
-// no order, a, b and o relate to it, in id order; none of a work item
-// without relations; a cancelled read is its failure.
+// item is a duplicate of b, a is blocked_by it, and ops' o relates_to it;
+// its relation to c was deleted; d relates to b alone. Of a, b, c, d and
+// o, asked for in no order, a, b and o relate to it, in id order; none of
+// a work item without relations; a cancelled read is its failure.
 func TestRelated(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -10645,7 +10650,7 @@ func TestRelated(t *testing.T) {
 	}
 	newIssue(t, pool, ops, o, 1, alice)
 	gone := uuid.NewV7()
-	for _, r := range []relationRow{{uuid.NewV7(), web, item, b, "relates_to"}, {uuid.NewV7(), web, a, item, "relates_to"},
+	for _, r := range []relationRow{{uuid.NewV7(), web, item, b, "duplicate"}, {uuid.NewV7(), web, a, item, "blocked_by"},
 		{uuid.NewV7(), ops, o, item, "relates_to"}, {gone, web, item, c, "relates_to"}, {uuid.NewV7(), web, d, b, "relates_to"}} {
 		newRelation(t, pool, r.p, r.issue, r.related, r.id, r.kind, alice)
 	}
@@ -10883,6 +10888,8 @@ Expected: 通过。
 | `T9.13` | `InsertRelations` 在一条语句里收两个时刻的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 | `T9.14` | `InsertRelations` 在一条语句里收两个账户的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 | `T9.15` | `InsertRelations` 经连接池写，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`）（Task 11 起） | 组合 |
+| `T9.16` | 只读这个工作项的 `relates_to` 一种类型的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
+| `T9.17` | 加关联的那行动态不论类型都写成 `blocking` | `internal/modules/issue/domain` 的全部测试（`make test`） | 单元 |
 
 ---
 
