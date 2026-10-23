@@ -14,6 +14,7 @@ import {
   expectIssueCreated,
   expectIssueUpdated,
   itemRef,
+  madeBy,
   parentRow,
 } from "../../fixtures/assert/issue";
 import { newAccount } from "../../fixtures/auth";
@@ -63,18 +64,6 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
   const tag = await createIssue(api, ann.token, web.id, { name: "Tag the build" });
   const ship = await createIssue(api, ann.token, web.id, { name: "Ship it", state_id: done });
   const [planRef, shipRef] = [itemRef("WEB", plan), itemRef("WEB", ship)];
-  // A work item of ann's in Backlog, as it is while only the work item it is under changes.
-  const asMade = (name: string) => ({
-    name,
-    state: "Backlog",
-    priority: "none",
-    start_date: null,
-    target_date: null,
-    completed: false,
-    assignees: [],
-    labels: [],
-    subscribers: [ann.email],
-  });
   const counted = async (issueId: string, count: number) =>
     expect(await issueRead(api, ann.token, issueId)).toMatchObject({ status: 200, issue: { sub_issues_count: count } });
 
@@ -85,7 +74,7 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
     issues: [notes, tag].toSorted(byId).map(({ id }) => ({ id, parent_id: plan.id })),
   });
   const notesUnder = {
-    ...asMade("Write the notes"),
+    ...madeBy(ann.email, "Write the notes"),
     parent: "Plan the release",
     by: ann.email,
     activity: [...createdFor(), parentRow(null, planRef)],
@@ -101,7 +90,7 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
   // ann creates Draft the notice under Plan the release: under it, its activity only its creation's row.
   const draft = await createIssue(api, ann.token, web.id, { name: "Draft the notice", parent_id: plan.id });
   await expectIssueCreated(db, draft.id, {
-    ...asMade("Draft the notice"),
+    ...madeBy(ann.email, "Draft the notice"),
     sequence_id: 5,
     sort_order: draft.sort_order,
     parent: "Plan the release",
@@ -128,7 +117,7 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
   // ann takes Draft the notice from under any: its row's new value is "".
   await updateIssue(api, ann.token, draft.id, { parent_id: null });
   const draftAlone = {
-    ...asMade("Draft the notice"),
+    ...madeBy(ann.email, "Draft the notice"),
     parent: null,
     by: ann.email,
     activity: [...createdFor(), parentRow(planRef, null)],

@@ -16,15 +16,9 @@ export interface ActivityRow {
   verb: string;
   old_value: string | null;
   new_value: string | null;
-  /**
-   * What the row's new_identifier names: the account assigned, the state or the label set, the work item it is put
-   * under or related to; else null.
-   */
+  /** What new_identifier names, else null: the account assigned, state or label set, work item put under or related. */
   named: string | null;
-  /**
-   * What its old_identifier names: the account unassigned, the state left, the label taken off, the work item it was
-   * under or is related to no more; else null.
-   */
+  /** As named, of old_identifier: the account unassigned, state left, label taken off, work item left or unrelated. */
   was: string | null;
   comment: string;
 }
@@ -34,10 +28,23 @@ export function byId(a: { id: string }, b: { id: string }): number {
   return a.id < b.id ? -1 : 1;
 }
 
+/** A row of a work item's activity of verb, its field from old to now: every builder below writes its rows here. */
+function activityRow(
+  verb: string,
+  field: string | null,
+  old: string | null,
+  now: string | null,
+  comment: string,
+  named: string | null = null,
+  was: string | null = null
+): ActivityRow {
+  return { field, verb, old_value: old, new_value: now, named, was, comment };
+}
+
 /**
  * An "updated" row of a work item's activity: field changed from old to now, with its comment, Plane's but for the
- * archiving's and the restoring's rows; named and was, what its new and old identifiers name, for a state's, a
- * label's or an account's row.
+ * archiving's and the restoring's rows; named and was, what its new and old identifiers name: a state, a label, an
+ * account or a work item.
  */
 export function changed(
   field: string,
@@ -47,7 +54,7 @@ export function changed(
   named: string | null = null,
   was: string | null = null
 ): ActivityRow {
-  return { field, verb: "updated", old_value: old, new_value: now, named, was, comment };
+  return activityRow("updated", field, old, now, comment, named, was);
 }
 
 /** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
@@ -89,28 +96,12 @@ export function relatedRow(type: string, other: ItemRef): ActivityRow {
 
 /** The row of a work item's activity that relates it to the work item other no more, as relatedRow (rows 22 and 23). */
 export function unrelatedRow(type: string, other: ItemRef): ActivityRow {
-  return {
-    field: type,
-    verb: "deleted",
-    old_value: other.identifier,
-    new_value: "",
-    named: null,
-    was: other.name,
-    comment: `deleted ${type} relation`,
-  };
+  return activityRow("deleted", type, other.identifier, "", `deleted ${type} relation`, null, other.name);
 }
 
 /** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
 export function createdFor(...accounts: { id: string; email: string }[]): ActivityRow[] {
-  const creation: ActivityRow = {
-    field: null,
-    verb: "created",
-    old_value: null,
-    new_value: null,
-    named: null,
-    was: null,
-    comment: "created the work item",
-  };
+  const creation = activityRow("created", null, null, null, "created the work item");
   return [creation, ...accounts.toSorted(byId).map(({ email }) => assigned(email))];
 }
 
@@ -253,6 +244,26 @@ export interface UpdatedIssue {
   subscribers: string[];
   activity: ActivityRow[];
   wrote: number;
+}
+
+/**
+ * A work item the account of email made with nothing but its name, in the fields CreatedIssue and UpdatedIssue share
+ * but by and activity: in Backlog, of no priority, undated, under none, not completed, unassigned and unlabelled, its
+ * maker its one subscriber.
+ */
+export function madeBy(email: string, name: string): Omit<UpdatedIssue, "by" | "activity" | "wrote"> {
+  return {
+    name,
+    state: "Backlog",
+    priority: "none",
+    start_date: null,
+    target_date: null,
+    parent: null,
+    completed: false,
+    assignees: [],
+    labels: [],
+    subscribers: [email],
+  };
 }
 
 /**

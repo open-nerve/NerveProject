@@ -112,7 +112,8 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   await expectIssueArchival(db, id, restored);
 
   // Restored, it takes ann's Write the test under it, and she relates it to her Write the spec, stored from it, and
-  // blocking her Ship the fix, stored from Ship the fix as its blocked_by: a row more of its activity each.
+  // blocking her Ship the fix, stored from Ship the fix as its blocked_by: a row more of its activity for each
+  // relation.
   const part = await createIssue(api, ann.token, web.id, { name: "Write the test" });
   const spec = await createIssue(api, ann.token, web.id, { name: "Write the spec" });
   const ship = await createIssue(api, ann.token, web.id, { name: "Ship the fix" });

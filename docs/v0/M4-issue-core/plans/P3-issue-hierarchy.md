@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径：跨项目的写和两端任一个的写是它的两种形式，`lock_across.go`、`lock_either.go`，不另写第二条），每个指名工作项的判定经 `Locks.decide`（访客规则在那里），不写近似的副本；测试的帮手共用、扩展，不复制、不重写（`issue_world_test.go` 的 `issueWorld`、`newWorkItem`、`newWorkItemIn`、`workItemStamps`、`activityBy`、`idArray`、`makeMember`，`project_writes_test.go` 的 `createdProject`、`createdProjectFrom`，`issue_interleaving_test.go` 的 `itemWrite`、`wroteNothing`、`serialize`、`inBothOrders`，`interleaving_test.go` 的 `serializeOn`、`heldTx`、`holding`，矩阵的帮手和 `matrixRow.prepare`，`deleteOver`、`archiveOver`，`e2e/fixtures/assert/issue.ts` 的 `byId`、`changed`、`assigned`、`createdFor`、`expectIssueArchival`，`assert/catalog.ts` 的 `tablesUnder`、`keysBelow`；一种动态的行一个构造）。**例外**（行数都在执行之后的最终的树上量，基点在本 Phase 的基点 `f8696490` 上）：契约按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（854 行）、`api/modules/project.yaml`（1363 行）和 `api/modules/workspace.yaml`（872 行）不受约 400 行的限制；关键词守卫的规则表 `tools/keywords.json`（2670 行，数据，本 plan 只改它的 `phase`）同样；三个基点已在约 400 行的测试文件，本 plan 各加几行（spec 第 3 节第 23 条）：`bootstrap/permission_matrix_test.go`（410 行，基点 406 行：矩阵的种子带上关联）、`bootstrap/issue_interleaving_test.go`（407 行，基点 393 行：`serializeAt`、`inBothOrdersAt` 让交错等在关联表的行上，与原来的两个帮手共用一份）、`server/migrations/schema_test.go`（401 行，基点 400 行：迁移的个数）。本 plan 改的其余代码文件都在约 400 行以内：最长的是 `bootstrap/gate_test.go`（399 行）、`issue/app/fakes_test.go`（398 行）；新建的文件中最长的是 `issue/adapter/postgres/relations_test.go`（327 行）、`issue/app/sub_issues_test.go`（310 行）、`issue/app/create_relations_test.go`（306 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径：跨项目的写和两端任一个的写是它的两种形式，`lock_across.go`、`lock_either.go`，不另写第二条），每个指名工作项的判定经 `Locks.decide`（访客规则在那里），不写近似的副本；测试的帮手共用、扩展，不复制、不重写（`issue_world_test.go` 的 `issueWorld`、`newWorkItem`、`newWorkItemIn`、`workItemStamps`、`activityBy`、`idArray`、`makeMember`，`project_writes_test.go` 的 `createdProject`、`createdProjectFrom`，`issue_interleaving_test.go` 的 `itemWrite`、`wroteNothing`、`serialize`、`inBothOrders`，`interleaving_test.go` 的 `serializeOn`、`heldTx`、`holding`，矩阵的帮手和 `matrixRow.prepare`，`deleteOver`、`archiveOver`，`e2e/fixtures/assert/issue.ts` 的 `byId`、`changed`、`assigned`、`createdFor`、`madeBy`、`expectIssueArchival`，`assert/catalog.ts` 的 `tablesUnder`、`keysBelow`；一种动态的行一个构造，每一行经同一个写法）。**例外**（行数都在执行之后的最终的树上量，基点在本 Phase 的基点 `f8696490` 上）：契约按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（854 行）、`api/modules/project.yaml`（1363 行）和 `api/modules/workspace.yaml`（872 行）不受约 400 行的限制；关键词守卫的规则表 `tools/keywords.json`（2670 行，数据，本 plan 只改它的 `phase`）同样；三个基点已在约 400 行的测试文件，本 plan 各加几行（spec 第 3 节第 23 条）：`bootstrap/permission_matrix_test.go`（410 行，基点 406 行：矩阵的种子带上关联）、`bootstrap/issue_interleaving_test.go`（407 行，基点 393 行：`serializeAt`、`inBothOrdersAt` 让交错等在关联表的行上，与原来的两个帮手共用一份）、`server/migrations/schema_test.go`（401 行，基点 400 行：迁移的个数）。本 plan 改的其余代码文件都在约 400 行以内：最长的是 `bootstrap/gate_test.go`（399 行）、`issue/app/fakes_test.go`（398 行）；新建的文件中最长的是 `issue/adapter/postgres/relations_test.go`（327 行）、`issue/app/sub_issues_test.go`（310 行）、`issue/app/create_relations_test.go`（306 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。Task 1 把 `tools/keywords.json` 的 `phase` 改为 `M4/P3`，因此也执行 `make lint-web`。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；迁移和配置文件的注释、中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符（spec 附录 A 的清扫 59）。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -160,7 +160,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改） | `adminGuest`（Task 1，`issue_world_test.go`）；`workItemStamps`、删除的交错数关联行（Task 8）；`names`、`idArray`（Task 11，`issue_world_test.go`）；`makeMember`（Task 14，`issue_world_test.go`） | 1、8、11、14 |
 | `server/internal/bootstrap/issue_interleaving_test.go`（修改） | `wroteNothing` 数关联行（Task 8）；`serializeAt`、`inBothOrdersAt`（Task 14） | 8、14 |
 | `api/modules/project.yaml`、`api/modules/workspace.yaml`（修改） | 删除项目、工作区的描述写上关联 | 8 |
-| `e2e/fixtures/assert/issue.ts`（修改） | `expectIssueDeleted` 暂时不要 `parent_id` 和关联的两个外键下的行（Task 8）；`parent`、`ItemRef`、`parentRow`、`relatedRow`、`unrelatedRow`，`activityOf` 读出指名的工作项，暂时的豁免去掉（Task 15） | 8、15 |
+| `e2e/fixtures/assert/issue.ts`（修改） | `expectIssueDeleted` 暂时不要 `parent_id` 和关联的两个外键下的行（Task 8）；`parent`、`ItemRef`、`parentRow`、`relatedRow`、`unrelatedRow`（每一行经私有的 `activityRow`）、`madeBy`，`activityOf` 读出指名的工作项，暂时的豁免去掉（Task 15） | 8、15 |
 | `e2e/fixtures/assert/project.ts`、`e2e/fixtures/assert/workspace.ts`（修改） | 删除的断言暂时不要关联表的行（Task 8）；去掉（Task 11） | 8、11 |
 | `server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`（新） | `RelatedIssues`、`InsertRelations`、`MarkChanged`（Task 9）；`IssueRelations`、`relationOf`（Task 12）；`GetRelation`、`DeleteRelation`（Task 13） | 9、12、13 |
 | `server/internal/modules/issue/domain/relation.go`、`server/internal/modules/issue/domain/relation_test.go`（新） | 关联的类型、`CheckNewRelations`、`Relation`、`NewRelation`、动态第 20、21 行（Task 9）；第 22、23 行（Task 13） | 9、13 |
@@ -174,7 +174,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/permission_matrix_relations_test.go`（新） | 关联的矩阵：加（Task 11）、列（Task 12）、删（Task 14） | 11、12、14 |
 | `server/internal/bootstrap/issue_cascade_test.go`、`server/internal/bootstrap/issue_pool_test.go`（修改） | 标签的体的 id 数组是 `idArray` 的，不另写一份 | 11 |
 | `e2e/fixtures/furnish.ts`（修改） | `furnishIssueRows` 加第二个工作项和一条关联 | 11 |
-| `e2e/fixtures/issues.ts`（修改） | `createIssueRelations`（Task 11）；`issueRead`、`subIssuesAdded`、`issueRelationsCreated`、`issueRelationsListed`、`issueRelationDeleted`（Task 15） | 11、15 |
+| `e2e/fixtures/issues.ts`（修改） | `createIssueRelations`（Task 11；Task 15 起经 `issueRelationsCreated`）；`issueRead`、`subIssuesAdded`、`issueRelationsCreated`、`issueRelationDeleted`、`listIssueRelations`（Task 15） | 11、15 |
 | `server/internal/modules/issue/app/list_relations.go`、`server/internal/modules/issue/app/list_relations_test.go`（新） | `ListIssueRelations` 和单元测试 | 12 |
 | `server/internal/bootstrap/issue_relation_lists_test.go`、`server/internal/bootstrap/issue_archived_projects_test.go`（新） | 关联的列表的组合测试；`Archived` 的转换（Task 12）；`issue_relation_lists_test.go` 的项目成员经 `makeMember` 加（Task 14） | 12、14 |
 | `server/internal/bootstrap/permission_matrix_seed_relations_test.go`（新） | 矩阵的种子的关联（Task 12）；删除的关联、"别人的"（Task 14） | 12、14 |
@@ -10916,7 +10916,7 @@ Expected: 通过。
 | `T9.5` | 加关联可以列二十一个工作项 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWhatAWorkItemMayNotBeRelatedTo`（`make test`）（Task 11 起） | 单元；组合 |
 | `T9.6` | 加关联可以一个也不列，或者把一个工作项列两次 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWhatAWorkItemMayNotBeRelatedTo`（`make test`）（Task 11 起） | 单元；组合 |
 | `T9.7` | 加关联的那行动态把对方写成原值 | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsAreRelatedAcrossProjects`（`make test`）（Task 11 起）、故事 `i9-relations`（Task 15 起） | 单元；组合；端到端 |
-| `T9.8` | 只按一个方向读这个工作项的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsAreRelatedAcrossProjects`（`make test`）（Task 11 起） | 存储；组合 |
+| `T9.8` | 只按一个方向读这个工作项的关联 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsAreRelatedAcrossProjects`（`make test`）（Task 11 起）、故事 `i9-relations`（Task 15 起） | 存储；组合；端到端 |
 | `T9.9` | `InsertRelations` 把每条关联反过来存 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWorkItemsAreRelatedAcrossProjects`（`make test`）（Task 11 起）、故事 `i9-relations`（Task 15 起） | 存储；组合；端到端 |
 | `T9.10` | `MarkChanged` 也写已删除的工作项 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
 | `T9.11` | `MarkChanged` 把没写到的工作项当作写了 | `internal/modules/issue/adapter/postgres` 的全部测试（`make test`） | 存储 |
@@ -18071,20 +18071,20 @@ Expected: 通过。
 - Modify: `e2e/fixtures/assert/issue.ts`、`e2e/fixtures/issues.ts`、`e2e/stories/issue/i1-create-issue.spec.ts`、`e2e/stories/issue/i15-archive-issue.spec.ts`、`e2e/stories/issue/i2-update-issue.spec.ts`
 
 **Interfaces:**（spec 2.17、第 3 节第 18 条；M4 设计第 2 节 I8、I9、I15、I17，3.6、3.9、3.10、3.13）只改 `e2e/`，扩展共用的夹具，不复制：
-- `e2e/fixtures/issues.ts`：`createIssueRelations` 移到读写的前面（`furnish.ts` 用它）；`issueRead`（状态和工作项，或问题的码）、`subIssuesAdded`、`issueRelationsCreated`、`issueRelationsListed`、`issueRelationDeleted`（各回答状态和回答的体，或问题的码，故事断言它们）；私有的类型 `IssueRelation`、`IssueRelationsCreate`。
-- `e2e/fixtures/assert/issue.ts`：`ActivityRow` 的说明；`ItemRef`、`itemRef`；动态的行的构造 `parentRow`（第 5 行）、`relatedRow`（第 20、21 行）、`unrelatedRow`（第 22、23 行），一种行一个构造，经共用的写法；`activityOf` 读出 `old_identifier`、`new_identifier` 指名的工作项的名字（`LEFT JOIN issues`，与标签的同样）；`CreatedIssue`、`UpdatedIssue` 加 `parent`（存下的父工作项的名字，没有是 `null`；P2 的日期同样这样加）；`expectIssueDeleted` 去掉 Task 8 的 `unwritten`：每个外键下都要有一行（`issues.parent_id` 和关联的两个外键在内），说明照改。
+- `e2e/fixtures/issues.ts`：`issueRead`（状态和工作项，或问题的码）、`subIssuesAdded`、`issueRelationsCreated`、`issueRelationDeleted`（各回答状态和回答的体，或问题的码，故事断言它们）；`listIssueRelations`（看得到工作项的调用者列出的关联，回答之外的状态让故事失败）；`createIssueRelations`（Task 11，`furnish.ts` 用它）改为经 `issueRelationsCreated`；私有的类型 `IssueRelation`、`IssueRelationsCreate`。
+- `e2e/fixtures/assert/issue.ts`：`ActivityRow`、`changed` 的说明；`ItemRef`、`itemRef`；动态的行的构造 `parentRow`（第 5 行）、`relatedRow`（第 20、21 行）、`unrelatedRow`（第 22、23 行），一种行一个构造，经共用的写法：私有的 `activityRow`（取动词）写每一行，`changed`（签名不变）、`unrelatedRow` 和 `createdFor` 的创建一行（P2 的，写出的行不变）都经它；`madeBy`（一个账户只用名字建的工作项，`CreatedIssue`、`UpdatedIssue` 共有的字段，`by`、`activity` 除外；I8、I9 读它，I8 每次另给 `parent`）；`activityOf` 读出 `old_identifier`、`new_identifier` 指名的工作项的名字（`LEFT JOIN issues`，与标签的同样）；`CreatedIssue`、`UpdatedIssue` 加 `parent`（存下的父工作项的名字，没有是 `null`；P2 的日期同样这样加）；`expectIssueDeleted` 去掉 Task 8 的 `unwritten`：每个外键下都要有一行（`issues.parent_id` 和关联的两个外键在内），说明照改。
 - `e2e/fixtures/assert/relation.ts`（新）：`StoredRelation`、`expectRelations`（存下的关联的行：两端、项目、存储的类型、谁、何时，删除的也在）。
 - `i8-sub-issues.spec.ts`（新）、`i9-relations.spec.ts`（新）、`i17-delete-issue.spec.ts`（新）：I8、I9、I17 的接口版本（本 Phase 的断言）；`i15-archive-issue.spec.ts`：恢复之后在它下面放一个工作项、两个方向各关联一个；再归档之后加子工作项、加关联、删除它的两条关联（存在它这一端的、存在对方那一端的）都 409，关联留着；管理员删除它时它的子工作项和关联随它删除（`expectIssueDeleted`）；`i1-create-issue.spec.ts`、`i2-update-issue.spec.ts` 的存下的工作项 `parent: null`。
 
 **Tests:** 端到端，`make e2e` 126 个（新的是 I8、I9、I17）：
 - I8：成员把两个工作项放到一个下面（请求里不按 `id` 的次序）：按 `id` 的次序回答，各一行她的第 5 行；再放一次什么都不写；在它下面建的没有父工作项的行；另一个成员修改把一个移到别的工作项下、再放一个到那个下面，每行的原值是它原来所在的；把一个拿出到哪里都不在；每个工作项数它直接下面的；放到它下面的下面的、反过来，都 422；已归档的不能加（409）、不能当父工作项（422），都不写。
-- I9：成员把一个工作项关联为阻塞本项目的另一个和另一个项目的一个（各存为对方的 `blocked_by`、对方的项目的行）：各一行，每条关联在两端各一行动态、在各自的项目、按各自读的类型；对方列出它是 `blocked_by`；已有关联的一对（任一个方向）、看不到的项目的工作项一次 422；列表里没有调用者看不到的对方；两个项目之一的成员删除跨项目的关联（存在他不能改的那一端，按他能改的这一端删除），两端各多一行：不再列出、再删 404。
+- I9：成员把一个工作项关联为阻塞本项目的另一个和另一个项目的一个（各存为对方的 `blocked_by`、对方的项目的行）：各一行，每条关联在两端各一行动态、在各自的项目、按各自读的类型；对方列出它是 `blocked_by`；已有关联的一对（任一个方向）、看不到的项目的工作项一次 422；列表里没有调用者看不到的对方；两个项目之一的成员删除跨项目的关联（存在他不能改的那一端，按他能改的这一端删除）和一条存在他能改的一端、指向他看不到的工作项的关联（按存下的这一端删除），每条的两端各多一行：不再列出、再删 404。
 - I17：成员删不了别人的（403），访客删不了他自己的（403），离开私有项目的创建者删不了他自己的（404）；成员删除她自己的：它下面两层（下面一层已归档），与另一个项目的两个工作项各一条关联（各存在一端）：它、它下面的每一行（子工作项和两个方向的关联在其中）在那一刻由她删除；三个工作项都不再找得到（404），别的工作项不再列出关联。
 - I15（补充）：见上；I1、I2：存下的 `parent` 是 `null`。
 
 - [ ] **Step 1: 夹具**
 
-`e2e/fixtures/assert/issue.ts`（修改，19 处）：
+`e2e/fixtures/assert/issue.ts`（修改，23 处）：
 
 ````old e2e/fixtures/assert/issue.ts
  * state or a label by its name.
@@ -18096,19 +18096,52 @@ Expected: 通过。
   /** What the row's new_identifier names: the account assigned, the state or the label set; else null. */
 ````
 ````new e2e/fixtures/assert/issue.ts
-  /**
-   * What the row's new_identifier names: the account assigned, the state or the label set, the work item it is put
-   * under or related to; else null.
-   */
+  /** What new_identifier names, else null: the account assigned, state or label set, work item put under or related. */
 ````
 ````old e2e/fixtures/assert/issue.ts
   /** What its old_identifier names: the account unassigned, the state left or the label taken off; else null. */
 ````
 ````new e2e/fixtures/assert/issue.ts
-  /**
-   * What its old_identifier names: the account unassigned, the state left, the label taken off, the work item it was
-   * under or is related to no more; else null.
-   */
+  /** As named, of old_identifier: the account unassigned, state left, label taken off, work item left or unrelated. */
+````
+````old e2e/fixtures/assert/issue.ts
+  return a.id < b.id ? -1 : 1;
+}
+
+/**
+````
+````new e2e/fixtures/assert/issue.ts
+  return a.id < b.id ? -1 : 1;
+}
+
+/** A row of a work item's activity of verb, its field from old to now: every builder below writes its rows here. */
+function activityRow(
+  verb: string,
+  field: string | null,
+  old: string | null,
+  now: string | null,
+  comment: string,
+  named: string | null = null,
+  was: string | null = null
+): ActivityRow {
+  return { field, verb, old_value: old, new_value: now, named, was, comment };
+}
+
+/**
+````
+````old e2e/fixtures/assert/issue.ts
+ * archiving's and the restoring's rows; named and was, what its new and old identifiers name, for a state's, a
+ * label's or an account's row.
+````
+````new e2e/fixtures/assert/issue.ts
+ * archiving's and the restoring's rows; named and was, what its new and old identifiers name: a state, a label, an
+ * account or a work item.
+````
+````old e2e/fixtures/assert/issue.ts
+  return { field, verb: "updated", old_value: old, new_value: now, named, was, comment };
+````
+````new e2e/fixtures/assert/issue.ts
+  return activityRow("updated", field, old, now, comment, named, was);
 ````
 ````old e2e/fixtures/assert/issue.ts
 export const restoredRow = changed("archived_at", "archive", "restore", "restored the work item");
@@ -18147,17 +18180,23 @@ export function relatedRow(type: string, other: ItemRef): ActivityRow {
 
 /** The row of a work item's activity that relates it to the work item other no more, as relatedRow (rows 22 and 23). */
 export function unrelatedRow(type: string, other: ItemRef): ActivityRow {
-  return {
-    field: type,
-    verb: "deleted",
-    old_value: other.identifier,
-    new_value: "",
-    named: null,
-    was: other.name,
-    comment: `deleted ${type} relation`,
-  };
+  return activityRow("deleted", type, other.identifier, "", `deleted ${type} relation`, null, other.name);
 }
 
+````
+````old e2e/fixtures/assert/issue.ts
+  const creation: ActivityRow = {
+    field: null,
+    verb: "created",
+    old_value: null,
+    new_value: null,
+    named: null,
+    was: null,
+    comment: "created the work item",
+  };
+````
+````new e2e/fixtures/assert/issue.ts
+  const creation = activityRow("created", null, null, null, "created the work item");
 ````
 ````old e2e/fixtures/assert/issue.ts
     `SELECT a.field, a.verb, a.old_value, a.new_value, COALESCE(nu.email, ns.name, nl.name) AS named,
@@ -18260,6 +18299,26 @@ export function unrelatedRow(type: string, other: ItemRef): ActivityRow {
  * that moment: those it made, made then; those it took off, soft-deleted then; its activity, acted then.
 ````
 ````new e2e/fixtures/assert/issue.ts
+ * A work item the account of email made with nothing but its name, in the fields CreatedIssue and UpdatedIssue share
+ * but by and activity: in Backlog, of no priority, undated, under none, not completed, unassigned and unlabelled, its
+ * maker its one subscriber.
+ */
+export function madeBy(email: string, name: string): Omit<UpdatedIssue, "by" | "activity" | "wrote"> {
+  return {
+    name,
+    state: "Backlog",
+    priority: "none",
+    start_date: null,
+    target_date: null,
+    parent: null,
+    completed: false,
+    assignees: [],
+    labels: [],
+    subscribers: [email],
+  };
+}
+
+/**
  * I2 (I8, I9 from P3): the work item of issueId holds want after a change (M4 design 3.7, 3.9, 3.10, 3.13): undeleted,
  * last written by the account of want.by at a moment after its creation, completed (completed_at set) exactly when
  * want.completed, and under a work item of its project when it is under one. Its undeleted assignees, labels and
@@ -18589,7 +18648,7 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
 });
 ````
 
-`e2e/stories/issue/i8-sub-issues.spec.ts`（新文件，167 行）：
+`e2e/stories/issue/i8-sub-issues.spec.ts`（新文件，156 行）：
 
 ````file e2e/stories/issue/i8-sub-issues.spec.ts
 import {
@@ -18608,6 +18667,7 @@ import {
   expectIssueCreated,
   expectIssueUpdated,
   itemRef,
+  madeBy,
   parentRow,
 } from "../../fixtures/assert/issue";
 import { newAccount } from "../../fixtures/auth";
@@ -18657,18 +18717,6 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
   const tag = await createIssue(api, ann.token, web.id, { name: "Tag the build" });
   const ship = await createIssue(api, ann.token, web.id, { name: "Ship it", state_id: done });
   const [planRef, shipRef] = [itemRef("WEB", plan), itemRef("WEB", ship)];
-  // A work item of ann's in Backlog, as it is while only the work item it is under changes.
-  const asMade = (name: string) => ({
-    name,
-    state: "Backlog",
-    priority: "none",
-    start_date: null,
-    target_date: null,
-    completed: false,
-    assignees: [],
-    labels: [],
-    subscribers: [ann.email],
-  });
   const counted = async (issueId: string, count: number) =>
     expect(await issueRead(api, ann.token, issueId)).toMatchObject({ status: 200, issue: { sub_issues_count: count } });
 
@@ -18679,7 +18727,7 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
     issues: [notes, tag].toSorted(byId).map(({ id }) => ({ id, parent_id: plan.id })),
   });
   const notesUnder = {
-    ...asMade("Write the notes"),
+    ...madeBy(ann.email, "Write the notes"),
     parent: "Plan the release",
     by: ann.email,
     activity: [...createdFor(), parentRow(null, planRef)],
@@ -18695,7 +18743,7 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
   // ann creates Draft the notice under Plan the release: under it, its activity only its creation's row.
   const draft = await createIssue(api, ann.token, web.id, { name: "Draft the notice", parent_id: plan.id });
   await expectIssueCreated(db, draft.id, {
-    ...asMade("Draft the notice"),
+    ...madeBy(ann.email, "Draft the notice"),
     sequence_id: 5,
     sort_order: draft.sort_order,
     parent: "Plan the release",
@@ -18722,7 +18770,7 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
   // ann takes Draft the notice from under any: its row's new value is "".
   await updateIssue(api, ann.token, draft.id, { parent_id: null });
   const draftAlone = {
-    ...asMade("Draft the notice"),
+    ...madeBy(ann.email, "Draft the notice"),
     parent: null,
     by: ann.email,
     activity: [...createdFor(), parentRow(planRef, null)],
@@ -18761,7 +18809,7 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
 });
 ````
 
-`e2e/stories/issue/i9-relations.spec.ts`（新文件，173 行）：
+`e2e/stories/issue/i9-relations.spec.ts`（新文件，186 行）：
 
 ````file e2e/stories/issue/i9-relations.spec.ts
 import {
@@ -18772,7 +18820,7 @@ import {
   inviteAndAccept,
   slugFor,
 } from "../../fixtures/api";
-import { createdFor, expectIssueUpdated, itemRef, relatedRow, unrelatedRow } from "../../fixtures/assert/issue";
+import { createdFor, expectIssueUpdated, itemRef, madeBy, relatedRow, unrelatedRow } from "../../fixtures/assert/issue";
 import { expectRelations } from "../../fixtures/assert/relation";
 import { newAccount } from "../../fixtures/auth";
 import {
@@ -18789,7 +18837,7 @@ import { expect, test } from "../../fixtures/test";
 // activity, the reverse one of the other's project, the refusals, the lists, a deletion from either work item). The
 // page version is P14's.
 
-test("I9 (API): a member relates a work item blocking another of its project and one of another project, each stored as the other's blocked_by, of the other's project: one row each, and each relation a row of the activity of each work item, of the work item's project, as the work item reads it; the other work item lists it as blocked_by; a pair related already, either way, and a work item of a project she does not see are refused at once (422); a list holds no relation to a work item its caller does not see; a member of one of the two projects deletes the relation across them, a row more on each work item: it is listed no more, nor found again (404)", async ({
+test("I9 (API): a member relates a work item blocking another of its project and one of another project, each stored as the other's blocked_by, of the other's project: one row each, and each relation a row of the activity of each work item, of the work item's project, as the work item reads it; the other work item lists it as blocked_by; a pair related already, either way, and a work item of a project she does not see are refused at once (422); a list holds no relation to a work item its caller does not see; a member of one of the two projects deletes the relation across them, stored from the work item he may not change, and one stored from the work item he may change to one he does not see, a row more on each work item: neither is listed any more, nor found again (404)", async ({
   api,
   db,
 }, testInfo) => {
@@ -18818,20 +18866,8 @@ test("I9 (API): a member relates a work item blocking another of its project and
   const check = await createIssue(api, ann.token, web.id, { name: "Test the login" });
   const deploy = await createIssue(api, ann.token, ops.id, { name: "Deploy the site" });
   const probe = await createIssue(api, admin.token, lab.id, { name: "Probe the cache" });
-  const [fixRef, checkRef, deployRef] = [itemRef("WEB", fix), itemRef("WEB", check), itemRef("OPS", deploy)];
-  // A work item of ann's, as it is while only its relations change.
-  const asMade = (name: string) => ({
-    name,
-    state: "Backlog",
-    priority: "none",
-    start_date: null,
-    target_date: null,
-    parent: null,
-    completed: false,
-    assignees: [],
-    labels: [],
-    subscribers: [ann.email],
-  });
+  const [fixRef, checkRef] = [itemRef("WEB", fix), itemRef("WEB", check)];
+  const [deployRef, probeRef] = [itemRef("OPS", deploy), itemRef("LAB", probe)];
 
   // ann relates Fix the login blocking Test the login, then blocking Deploy the site: each answered as Fix the login
   // reads it, each stored as the other's blocked_by, of the other's project: Deploy the site's of Ops. Each work item
@@ -18854,20 +18890,20 @@ test("I9 (API): a member relates a work item blocking another of its project and
   ];
   await expectRelations(db, [fix.id], stored);
   const fixRelated = {
-    ...asMade("Fix the login"),
+    ...madeBy(ann.email, "Fix the login"),
     by: ann.email,
     activity: [...createdFor(), relatedRow("blocking", checkRef), relatedRow("blocking", deployRef)],
     wrote: 1,
   };
   await expectIssueUpdated(db, fix.id, fixRelated);
   await expectIssueUpdated(db, check.id, {
-    ...asMade("Test the login"),
+    ...madeBy(ann.email, "Test the login"),
     by: ann.email,
     activity: [...createdFor(), relatedRow("blocked_by", fixRef)],
     wrote: 1,
   });
   const deployRelated = {
-    ...asMade("Deploy the site"),
+    ...madeBy(ann.email, "Deploy the site"),
     by: ann.email,
     activity: [...createdFor(), relatedRow("blocked_by", fixRef)],
     wrote: 1,
@@ -18878,8 +18914,10 @@ test("I9 (API): a member relates a work item blocking another of its project and
     { relation_type: "blocked_by", issue: { id: fix.id } },
   ]);
 
-  // Probe the cache, of Lab, which ann does not see, and Test the login, which Fix the login relates to already, the
-  // other way round, are refused at once; nothing is written.
+  // ann relates Test the login to Probe the cache, of Lab, which she does not see, and to Fix the login, which relates
+  // to it already, the other way round, by the relation stored from Test the login: both are refused at once. Nor does
+  // she relate Fix the login to Deploy the site again, by another type, their relation stored from Deploy the site. No
+  // relation is written.
   expect(
     await issueRelationsCreated(api, ann.token, check.id, { relation_type: "duplicate", issue_ids: [probe.id, fix.id] })
   ).toEqual({
@@ -18890,10 +18928,20 @@ test("I9 (API): a member relates a work item blocking another of its project and
       { field: "issue_ids[1]", code: "duplicate" },
     ],
   });
+  expect(
+    await issueRelationsCreated(api, ann.token, fix.id, { relation_type: "relates_to", issue_ids: [deploy.id] })
+  ).toEqual({ status: 422, code: "validation_failed", errors: [{ field: "issue_ids[0]", code: "duplicate" }] });
   await expectRelations(db, [fix.id, check.id], stored);
 
-  // The admin relates Fix the login to Probe the cache: ann's list of Fix the login's relations holds it not, his does.
-  await createIssueRelations(api, admin.token, fix.id, { relation_type: "relates_to", issue_ids: [probe.id] });
+  // The admin relates Fix the login to Probe the cache, stored from Fix the login: ann's list of Fix the login's
+  // relations holds it not, his does.
+  const [toProbe] = await createIssueRelations(api, admin.token, fix.id, {
+    relation_type: "relates_to",
+    issue_ids: [probe.id],
+  });
+  if (!toProbe) {
+    throw new Error("relating Fix the login to Probe the cache answered no relation");
+  }
   expect(await listIssueRelations(api, ann.token, fix.id)).toMatchObject([
     { relation_type: "blocking", issue: { id: check.id } },
     { relation_type: "blocking", issue: { id: deploy.id } },
@@ -18905,22 +18953,29 @@ test("I9 (API): a member relates a work item blocking another of its project and
   ]);
 
   // bob, who is no member of Ops, deletes the relation of Fix the login and Deploy the site: stored as Deploy the
-  // site's, which he may not change, it is deleted as he may change Fix the login. The relation is deleted by him, and
-  // each work item has a row more, his, as it reads the relation, Deploy the site's of Ops. Neither lists it, and it
-  // is not found again.
+  // site's, which he may not change, it is deleted as he may change Fix the login. Then he deletes the relation of Fix
+  // the login to Probe the cache, which he does not see: stored as Fix the login's, it is deleted as he may change
+  // that. Each relation is deleted by him, and each of its work items has a row more, his, as it reads the relation, of
+  // its own project: Deploy the site's of Ops, Probe the cache's of Lab. None of the three lists them, and neither is
+  // found again.
   expect(await issueRelationDeleted(api, bob.token, across.id)).toEqual({ status: 204 });
+  expect(await issueRelationDeleted(api, bob.token, toProbe.id)).toEqual({ status: 204 });
   await expectRelations(
     db,
-    [deploy.id],
-    [{ relation: "Deploy the site blocked_by Fix the login", by: bob.email, deleted: true }]
+    [deploy.id, probe.id],
+    [
+      { relation: "Deploy the site blocked_by Fix the login", by: bob.email, deleted: true },
+      { relation: "Fix the login relates_to Probe the cache", by: bob.email, deleted: true },
+    ]
   );
   await expectIssueUpdated(db, fix.id, {
     ...fixRelated,
     by: bob.email,
     activity: [
       ...fixRelated.activity,
-      relatedRow("relates_to", itemRef("LAB", probe)),
+      relatedRow("relates_to", probeRef),
       unrelatedRow("blocking", deployRef),
+      unrelatedRow("relates_to", probeRef),
     ],
   });
   await expectIssueUpdated(db, deploy.id, {
@@ -18928,14 +18983,20 @@ test("I9 (API): a member relates a work item blocking another of its project and
     by: bob.email,
     activity: [...deployRelated.activity, unrelatedRow("blocked_by", fixRef)],
   });
+  await expectIssueUpdated(db, probe.id, {
+    ...madeBy(admin.email, "Probe the cache"),
+    by: bob.email,
+    activity: [...createdFor(), relatedRow("relates_to", fixRef), unrelatedRow("relates_to", fixRef)],
+    wrote: 1,
+  });
   expect(await listIssueRelations(api, ann.token, deploy.id)).toEqual([]);
-  expect(await listIssueRelations(api, ann.token, fix.id)).toMatchObject([
+  expect(await listIssueRelations(api, admin.token, probe.id)).toEqual([]);
+  expect(await listIssueRelations(api, admin.token, fix.id)).toMatchObject([
     { relation_type: "blocking", issue: { id: check.id } },
   ]);
-  expect(await issueRelationDeleted(api, bob.token, across.id)).toEqual({
-    status: 404,
-    code: "issue.relation_not_found",
-  });
+  const notFound = { status: 404, code: "issue.relation_not_found" };
+  expect(await issueRelationDeleted(api, bob.token, across.id)).toEqual(notFound);
+  expect(await issueRelationDeleted(api, bob.token, toProbe.id)).toEqual(notFound);
 });
 ````
 
@@ -19052,7 +19113,8 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
 ````
 ````new e2e/stories/issue/i15-archive-issue.spec.ts
   // Restored, it takes ann's Write the test under it, and she relates it to her Write the spec, stored from it, and
-  // blocking her Ship the fix, stored from Ship the fix as its blocked_by: a row more of its activity each.
+  // blocking her Ship the fix, stored from Ship the fix as its blocked_by: a row more of its activity for each
+  // relation.
   const part = await createIssue(api, ann.token, web.id, { name: "Write the test" });
   const spec = await createIssue(api, ann.token, web.id, { name: "Write the spec" });
   const ship = await createIssue(api, ann.token, web.id, { name: "Ship the fix" });
@@ -19188,9 +19250,13 @@ assertion has no exemption left.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**：本 Task 只加故事和夹具，没有自己的变异：它的故事是较早的 Task 的变异的端到端一层。
+**变异**（spec 附录 A；`mutants_p3.py` 的编号；"层"是发现它的检查所在的层：单元是假实现上的测试，或没有替身的平台、领域、转换的测试；存储是真实数据库上的存储测试；组合是 `bootstrap` 组合出的 app 上的测试；端到端是 `make e2e` 的故事；守卫是生成器（`make gen-go`）和中英文翻译键（`make lint-web`）的核对。每个变异在一份新的副本里，在本 Task 的树上、标出的较晚的 Task 的树上和最终的树上都跑过，端到端的检查只在标出的 Task 的树上）：
 
-本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.5`、`T1.9`、`T2.2`、`T2.5`、`T2.7`、`T2.10`、`T3.5`、`T3.6`、`T3.7`、`T3.10`、`T4.8`、`T4.11`、`T5.9`、`T5.19`、`T8.5`、`T8.10`、`T8.11`、`T9.1`、`T9.2`、`T9.3`、`T9.7`、`T9.9`、`T10.12`、`T10.14`、`T10.15`、`T10.16`、`T10.17`、`T10.18`、`T11.2`、`T12.8`、`T12.9`、`T13.11`、`T13.13`、`T13.14`、`T13.15`、`T13.17`、`T13.18`、`T13.26`、`T14.1`（列在各自的 Task 的表里，标"（Task 15 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=15`）。
+| 变异 | 改坏 | 必须失败的检查 | 层 |
+|---|---|---|---|
+| `T15.1` | 只有能改存为 `related_issue_id` 的那个工作项的人才能删关联 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `deleteIssueRelation` 各格（`make test`）、故事 `i9-relations` | 单元；组合；端到端 |
+
+本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.5`、`T1.9`、`T2.2`、`T2.5`、`T2.7`、`T2.10`、`T3.5`、`T3.6`、`T3.7`、`T3.10`、`T4.8`、`T4.11`、`T5.9`、`T5.19`、`T8.5`、`T8.10`、`T8.11`、`T9.1`、`T9.2`、`T9.3`、`T9.7`、`T9.8`、`T9.9`、`T10.12`、`T10.14`、`T10.15`、`T10.16`、`T10.17`、`T10.18`、`T11.2`、`T12.8`、`T12.9`、`T13.11`、`T13.13`、`T13.14`、`T13.15`、`T13.17`、`T13.18`、`T13.26`、`T14.1`（列在各自的 Task 的表里，标"（Task 15 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=15`）。
 
 ---
 

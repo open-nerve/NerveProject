@@ -6,7 +6,7 @@ import {
   inviteAndAccept,
   slugFor,
 } from "../../fixtures/api";
-import { createdFor, expectIssueUpdated, itemRef, relatedRow, unrelatedRow } from "../../fixtures/assert/issue";
+import { createdFor, expectIssueUpdated, itemRef, madeBy, relatedRow, unrelatedRow } from "../../fixtures/assert/issue";
 import { expectRelations } from "../../fixtures/assert/relation";
 import { newAccount } from "../../fixtures/auth";
 import {
@@ -23,7 +23,7 @@ import { expect, test } from "../../fixtures/test";
 // activity, the reverse one of the other's project, the refusals, the lists, a deletion from either work item). The
 // page version is P14's.
 
-test("I9 (API): a member relates a work item blocking another of its project and one of another project, each stored as the other's blocked_by, of the other's project: one row each, and each relation a row of the activity of each work item, of the work item's project, as the work item reads it; the other work item lists it as blocked_by; a pair related already, either way, and a work item of a project she does not see are refused at once (422); a list holds no relation to a work item its caller does not see; a member of one of the two projects deletes the relation across them, a row more on each work item: it is listed no more, nor found again (404)", async ({
+test("I9 (API): a member relates a work item blocking another of its project and one of another project, each stored as the other's blocked_by, of the other's project: one row each, and each relation a row of the activity of each work item, of the work item's project, as the work item reads it; the other work item lists it as blocked_by; a pair related already, either way, and a work item of a project she does not see are refused at once (422); a list holds no relation to a work item its caller does not see; a member of one of the two projects deletes the relation across them, stored from the work item he may not change, and one stored from the work item he may change to one he does not see, a row more on each work item: neither is listed any more, nor found again (404)", async ({
   api,
   db,
 }, testInfo) => {
@@ -52,20 +52,8 @@ test("I9 (API): a member relates a work item blocking another of its project and
   const check = await createIssue(api, ann.token, web.id, { name: "Test the login" });
   const deploy = await createIssue(api, ann.token, ops.id, { name: "Deploy the site" });
   const probe = await createIssue(api, admin.token, lab.id, { name: "Probe the cache" });
-  const [fixRef, checkRef, deployRef] = [itemRef("WEB", fix), itemRef("WEB", check), itemRef("OPS", deploy)];
-  // A work item of ann's, as it is while only its relations change.
-  const asMade = (name: string) => ({
-    name,
-    state: "Backlog",
-    priority: "none",
-    start_date: null,
-    target_date: null,
-    parent: null,
-    completed: false,
-    assignees: [],
-    labels: [],
-    subscribers: [ann.email],
-  });
+  const [fixRef, checkRef] = [itemRef("WEB", fix), itemRef("WEB", check)];
+  const [deployRef, probeRef] = [itemRef("OPS", deploy), itemRef("LAB", probe)];
 
   // ann relates Fix the login blocking Test the login, then blocking Deploy the site: each answered as Fix the login
   // reads it, each stored as the other's blocked_by, of the other's project: Deploy the site's of Ops. Each work item
@@ -88,20 +76,20 @@ test("I9 (API): a member relates a work item blocking another of its project and
   ];
   await expectRelations(db, [fix.id], stored);
   const fixRelated = {
-    ...asMade("Fix the login"),
+    ...madeBy(ann.email, "Fix the login"),
     by: ann.email,
     activity: [...createdFor(), relatedRow("blocking", checkRef), relatedRow("blocking", deployRef)],
     wrote: 1,
   };
   await expectIssueUpdated(db, fix.id, fixRelated);
   await expectIssueUpdated(db, check.id, {
-    ...asMade("Test the login"),
+    ...madeBy(ann.email, "Test the login"),
     by: ann.email,
     activity: [...createdFor(), relatedRow("blocked_by", fixRef)],
     wrote: 1,
   });
   const deployRelated = {
-    ...asMade("Deploy the site"),
+    ...madeBy(ann.email, "Deploy the site"),
     by: ann.email,
     activity: [...createdFor(), relatedRow("blocked_by", fixRef)],
     wrote: 1,
@@ -112,8 +100,10 @@ test("I9 (API): a member relates a work item blocking another of its project and
     { relation_type: "blocked_by", issue: { id: fix.id } },
   ]);
 
-  // Probe the cache, of Lab, which ann does not see, and Test the login, which Fix the login relates to already, the
-  // other way round, are refused at once; nothing is written.
+  // ann relates Test the login to Probe the cache, of Lab, which she does not see, and to Fix the login, which relates
+  // to it already, the other way round, by the relation stored from Test the login: both are refused at once. Nor does
+  // she relate Fix the login to Deploy the site again, by another type, their relation stored from Deploy the site. No
+  // relation is written.
   expect(
     await issueRelationsCreated(api, ann.token, check.id, { relation_type: "duplicate", issue_ids: [probe.id, fix.id] })
   ).toEqual({
@@ -124,10 +114,20 @@ test("I9 (API): a member relates a work item blocking another of its project and
       { field: "issue_ids[1]", code: "duplicate" },
     ],
   });
+  expect(
+    await issueRelationsCreated(api, ann.token, fix.id, { relation_type: "relates_to", issue_ids: [deploy.id] })
+  ).toEqual({ status: 422, code: "validation_failed", errors: [{ field: "issue_ids[0]", code: "duplicate" }] });
   await expectRelations(db, [fix.id, check.id], stored);
 
-  // The admin relates Fix the login to Probe the cache: ann's list of Fix the login's relations holds it not, his does.
-  await createIssueRelations(api, admin.token, fix.id, { relation_type: "relates_to", issue_ids: [probe.id] });
+  // The admin relates Fix the login to Probe the cache, stored from Fix the login: ann's list of Fix the login's
+  // relations holds it not, his does.
+  const [toProbe] = await createIssueRelations(api, admin.token, fix.id, {
+    relation_type: "relates_to",
+    issue_ids: [probe.id],
+  });
+  if (!toProbe) {
+    throw new Error("relating Fix the login to Probe the cache answered no relation");
+  }
   expect(await listIssueRelations(api, ann.token, fix.id)).toMatchObject([
     { relation_type: "blocking", issue: { id: check.id } },
     { relation_type: "blocking", issue: { id: deploy.id } },
@@ -139,22 +139,29 @@ test("I9 (API): a member relates a work item blocking another of its project and
   ]);
 
   // bob, who is no member of Ops, deletes the relation of Fix the login and Deploy the site: stored as Deploy the
-  // site's, which he may not change, it is deleted as he may change Fix the login. The relation is deleted by him, and
-  // each work item has a row more, his, as it reads the relation, Deploy the site's of Ops. Neither lists it, and it
-  // is not found again.
+  // site's, which he may not change, it is deleted as he may change Fix the login. Then he deletes the relation of Fix
+  // the login to Probe the cache, which he does not see: stored as Fix the login's, it is deleted as he may change
+  // that. Each relation is deleted by him, and each of its work items has a row more, his, as it reads the relation, of
+  // its own project: Deploy the site's of Ops, Probe the cache's of Lab. None of the three lists them, and neither is
+  // found again.
   expect(await issueRelationDeleted(api, bob.token, across.id)).toEqual({ status: 204 });
+  expect(await issueRelationDeleted(api, bob.token, toProbe.id)).toEqual({ status: 204 });
   await expectRelations(
     db,
-    [deploy.id],
-    [{ relation: "Deploy the site blocked_by Fix the login", by: bob.email, deleted: true }]
+    [deploy.id, probe.id],
+    [
+      { relation: "Deploy the site blocked_by Fix the login", by: bob.email, deleted: true },
+      { relation: "Fix the login relates_to Probe the cache", by: bob.email, deleted: true },
+    ]
   );
   await expectIssueUpdated(db, fix.id, {
     ...fixRelated,
     by: bob.email,
     activity: [
       ...fixRelated.activity,
-      relatedRow("relates_to", itemRef("LAB", probe)),
+      relatedRow("relates_to", probeRef),
       unrelatedRow("blocking", deployRef),
+      unrelatedRow("relates_to", probeRef),
     ],
   });
   await expectIssueUpdated(db, deploy.id, {
@@ -162,12 +169,18 @@ test("I9 (API): a member relates a work item blocking another of its project and
     by: bob.email,
     activity: [...deployRelated.activity, unrelatedRow("blocked_by", fixRef)],
   });
+  await expectIssueUpdated(db, probe.id, {
+    ...madeBy(admin.email, "Probe the cache"),
+    by: bob.email,
+    activity: [...createdFor(), relatedRow("relates_to", fixRef), unrelatedRow("relates_to", fixRef)],
+    wrote: 1,
+  });
   expect(await listIssueRelations(api, ann.token, deploy.id)).toEqual([]);
-  expect(await listIssueRelations(api, ann.token, fix.id)).toMatchObject([
+  expect(await listIssueRelations(api, admin.token, probe.id)).toEqual([]);
+  expect(await listIssueRelations(api, admin.token, fix.id)).toMatchObject([
     { relation_type: "blocking", issue: { id: check.id } },
   ]);
-  expect(await issueRelationDeleted(api, bob.token, across.id)).toEqual({
-    status: 404,
-    code: "issue.relation_not_found",
-  });
+  const notFound = { status: 404, code: "issue.relation_not_found" };
+  expect(await issueRelationDeleted(api, bob.token, across.id)).toEqual(notFound);
+  expect(await issueRelationDeleted(api, bob.token, toProbe.id)).toEqual(notFound);
 });
