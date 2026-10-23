@@ -21,7 +21,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败（容器起不来不算任何检查的失败）。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 不要启动、停止或重建，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）和留下的 testcontainers。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。不用 `cd`。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。不把副本的 `node_modules` 链接到 worktree 的。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径：跨项目的写和两端任一个的写是它的两种形式，`lock_across.go`、`lock_either.go`，不另写第二条），每个指名工作项的判定经 `Locks.decide`（访客规则在那里），不写近似的副本；测试的帮手共用、扩展，不复制、不重写（`issue_world_test.go` 的 `issueWorld`、`newWorkItem`、`newWorkItemIn`、`workItemStamps`、`activityBy`，`issue_interleaving_test.go` 的 `itemWrite`、`wroteNothing`、`serialize`、`inBothOrders`，`interleaving_test.go` 的 `serializeOn`、`heldTx`、`holding`，矩阵的帮手和 `matrixRow.prepare`，`deleteOver`、`archiveOver`，`e2e/fixtures/assert/issue.ts` 的 `byId`、`changed`、`assigned`、`createdFor`、`expectIssueArchival`，`assert/catalog.ts` 的 `tablesUnder`、`keysBelow`；一种动态的行一个构造）。**例外**：契约按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（854 行）、`api/modules/project.yaml`（1363 行）和 `api/modules/workspace.yaml`（872 行）不受约 400 行的限制；关键词守卫的规则表 `tools/keywords.json`（2670 行，数据，本 plan 只改它的 `phase`）同样；三个基点已在约 400 行的测试文件，本 plan 各加几行（spec 第 3 节第 23 条）：`bootstrap/permission_matrix_test.go`（410 行，基点 406 行：矩阵的种子带上关联）、`bootstrap/issue_interleaving_test.go`（407 行，基点 393 行：`serializeAt`、`inBothOrdersAt` 让交错等在关联表的行上，与原来的两个帮手共用一份）、`server/migrations/schema_test.go`（401 行，基点 400 行：迁移的个数）。本 plan 改的其余代码文件都在约 400 行以内（最终原型上量的）：最长的是 `issue/app/fakes_test.go`（398 行）、`bootstrap/ports_test.go`（391 行）；新建的文件中最长的是 `issue/adapter/postgres/relations_test.go`（327 行）、`issue/app/sub_issues_test.go`（310 行）、`bootstrap/issue_relations_test.go` 和 `issue/app/create_relations_test.go`（各 306 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；端口由使用方声明；角色只按集合判断，不按大小比较；不留没有使用者的代码。工作项一侧的每个写经 `issue/app/lock.go` 的 `Locks.run`（一条共用的取锁路径：跨项目的写和两端任一个的写是它的两种形式，`lock_across.go`、`lock_either.go`，不另写第二条），每个指名工作项的判定经 `Locks.decide`（访客规则在那里），不写近似的副本；测试的帮手共用、扩展，不复制、不重写（`issue_world_test.go` 的 `issueWorld`、`newWorkItem`、`newWorkItemIn`、`workItemStamps`、`activityBy`、`idArray`，`issue_interleaving_test.go` 的 `itemWrite`、`wroteNothing`、`serialize`、`inBothOrders`，`interleaving_test.go` 的 `serializeOn`、`heldTx`、`holding`，矩阵的帮手和 `matrixRow.prepare`，`deleteOver`、`archiveOver`，`e2e/fixtures/assert/issue.ts` 的 `byId`、`changed`、`assigned`、`createdFor`、`expectIssueArchival`，`assert/catalog.ts` 的 `tablesUnder`、`keysBelow`；一种动态的行一个构造）。**例外**（行数都在执行之后的最终的树上量，基点在本 Phase 的基点 `f8696490` 上）：契约按模块一个文件（M0-P3 交接 5），`api/modules/issue.yaml`（854 行）、`api/modules/project.yaml`（1363 行）和 `api/modules/workspace.yaml`（872 行）不受约 400 行的限制；关键词守卫的规则表 `tools/keywords.json`（2670 行，数据，本 plan 只改它的 `phase`）同样；三个基点已在约 400 行的测试文件，本 plan 各加几行（spec 第 3 节第 23 条）：`bootstrap/permission_matrix_test.go`（410 行，基点 406 行：矩阵的种子带上关联）、`bootstrap/issue_interleaving_test.go`（407 行，基点 393 行：`serializeAt`、`inBothOrdersAt` 让交错等在关联表的行上，与原来的两个帮手共用一份）、`server/migrations/schema_test.go`（401 行，基点 400 行：迁移的个数）。本 plan 改的其余代码文件都在约 400 行以内：最长的是 `bootstrap/gate_test.go`（399 行）、`issue/app/fakes_test.go`（398 行）；新建的文件中最长的是 `issue/adapter/postgres/relations_test.go`（327 行）、`issue/app/sub_issues_test.go`（310 行）、`issue/app/create_relations_test.go`（306 行）。
 - **关键词守卫**：72 条规则、23 个例外，没有命中。Task 1 把 `tools/keywords.json` 的 `phase` 改为 `M4/P3`，因此也执行 `make lint-web`。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；迁移和配置文件的注释、中文文档照本 plan 原样。每条注释和说明在它所在的 Task 结束时都与代码相符（spec 附录 A 的清扫 59）。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
@@ -138,8 +138,8 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/domain/hierarchy_test.go`（新） | `TestLoops`、`TestCheckSubIssueIDs` | 5 |
 | `server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/module.go`（修改） | 子工作项的两个用例（Task 6）；`CreateIssueRelations`（Task 11）；`ListIssueRelations`（Task 12）；`DeleteIssueRelation`（Task 14） | 6、11、12、14 |
 | `server/internal/modules/issue/adapter/http/sub_issues.go`、`server/internal/modules/issue/adapter/http/sub_issues_test.go`（新） | `ListSubIssues`、`AddSubIssues`、`issueCollection` 和它们的 HTTP 测试 | 6 |
-| `server/internal/bootstrap/issue_sub_issues_test.go`（新） | 加子工作项、列子工作项的组合测试；访客规则 | 6 |
-| `server/internal/bootstrap/permission_matrix_sub_issues_test.go`（新） | 子工作项的矩阵（Task 6）；`otherItemOf`、已归档的项目里已归档的工作项一行（Task 11） | 6、11 |
+| `server/internal/bootstrap/issue_sub_issues_test.go`（新） | 加子工作项、列子工作项的组合测试；访客规则（Task 6）；`subIssueIDs` 读 `idArray`（Task 11） | 6、11 |
+| `server/internal/bootstrap/permission_matrix_sub_issues_test.go`（新） | 子工作项的矩阵（Task 6）；`otherItemOf`、已归档的项目里已归档的工作项一行，`addsSubItem` 的体是 `subIssueIDs` 的（Task 11） | 6、11 |
 | `server/internal/bootstrap/permission_matrix_test.go`（修改） | 行的登记（Task 6、11）；种子的关联（Task 12）；关联的删除的行（Task 14） | 6、11、12、14 |
 | `server/internal/bootstrap/gate_test.go`（修改） | 加子工作项进项目的写闸门，形状不对的先答 422（Task 6）；`across`：取多个项目的写闸门（Task 7）；加关联进它涉及的每个项目的写闸门，形状不对的先答 422（Task 11）；删除关联（Task 14） | 6、7、11、14 |
 | `server/internal/bootstrap/issue_write_locks_test.go`（修改） | `body` 带上 `t`，`addSubIssues` 一行（Task 6）；表的列表加关联（Task 8）；`createIssueRelations` 一行（Task 11）；`deleteIssueRelation` 一行（Task 14） | 6、8、11、14 |
@@ -157,7 +157,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/app/delete_project_rows.go`、`server/internal/modules/issue/app/cascade_test.go`（修改） | `rowSteps` 的关联一步，在标签之后 | 8 |
 | `server/internal/platform/postgres/pgtest/rowwaits.go`、`server/internal/platform/postgres/pgtest/rowwaits_test.go`（新）、`server/internal/platform/postgres/pgtest/lockwait_test.go`、`server/internal/platform/postgres/pgtest/lockwait_behind_test.go`（修改） | `RowWaits`：一行是否被冲突的锁挡住（`NOWAIT`，`postgres.LockNotAvailable`），不手写 `55P03`；不在的行让测试失败；`fatalOf` 带上测试 | 8 |
 | `server/internal/modules/project/adapter/postgres/demote_test.go`（修改） | 用 `pgtest.RowWaits` | 8 |
-| `server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改） | `adminGuest`（Task 1，`issue_world_test.go`）；`workItemStamps`、删除的交错数关联行（Task 8）；`names`（Task 11，`issue_world_test.go`） | 1、8、11 |
+| `server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_interleaving_deletion_test.go`（修改） | `adminGuest`（Task 1，`issue_world_test.go`）；`workItemStamps`、删除的交错数关联行（Task 8）；`names`、`idArray`（Task 11，`issue_world_test.go`） | 1、8、11 |
 | `server/internal/bootstrap/issue_interleaving_test.go`（修改） | `wroteNothing` 数关联行（Task 8）；`serializeAt`、`inBothOrdersAt`（Task 14） | 8、14 |
 | `api/modules/project.yaml`、`api/modules/workspace.yaml`（修改） | 删除项目、工作区的描述写上关联 | 8 |
 | `e2e/fixtures/assert/issue.ts`（修改） | `expectIssueDeleted` 暂时不要 `parent_id` 和关联的两个外键下的行（Task 8）；`parent`、`ItemRef`、`parentRow`、`relatedRow`、`unrelatedRow`，`activityOf` 读出指名的工作项，暂时的豁免去掉（Task 15） | 8、15 |
@@ -172,6 +172,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/issue_relation_locks_test.go`（新） | 加关联不锁它到不了的项目；预检没到达的工作项锁下也不到达，等锁时调用者变得看得到它也一样（`relates`） | 11 |
 | `server/internal/bootstrap/gate_across_test.go`（新） | 跨项目的写在它的几个闸门上一共等 `max_wait`，通过或被拒绝都放回它占的每个位置 | 11 |
 | `server/internal/bootstrap/permission_matrix_relations_test.go`（新） | 关联的矩阵：加（Task 11）、列（Task 12）、删（Task 14） | 11、12、14 |
+| `server/internal/bootstrap/issue_cascade_test.go`、`server/internal/bootstrap/issue_pool_test.go`（修改） | 标签的体的 id 数组是 `idArray` 的，不另写一份 | 11 |
 | `e2e/fixtures/furnish.ts`（修改） | `furnishIssueRows` 加第二个工作项和一条关联 | 11 |
 | `e2e/fixtures/issues.ts`（修改） | `createIssueRelations`（Task 11）；`issueRead`、`subIssuesAdded`、`issueRelationsCreated`、`issueRelationsListed`、`issueRelationDeleted`（Task 15） | 11、15 |
 | `server/internal/modules/issue/app/list_relations.go`、`server/internal/modules/issue/app/list_relations_test.go`（新） | `ListIssueRelations` 和单元测试 | 12 |
@@ -12073,14 +12074,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `server/internal/bootstrap/gate_across_test.go`、`server/internal/bootstrap/issue_relation_locks_test.go`、`server/internal/bootstrap/issue_relations_test.go`、`server/internal/bootstrap/permission_matrix_relations_test.go`、`server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`
-- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`e2e/fixtures/assert/project.ts`、`e2e/fixtures/assert/workspace.ts`、`e2e/fixtures/furnish.ts`、`e2e/fixtures/issues.ts`、`server/internal/bootstrap/gate_test.go`、`server/internal/bootstrap/issue_parents_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/permission_matrix_sub_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/app/create_relations.go`、`server/internal/modules/issue/module.go`
+- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`e2e/fixtures/assert/project.ts`、`e2e/fixtures/assert/workspace.ts`、`e2e/fixtures/furnish.ts`、`e2e/fixtures/issues.ts`、`server/internal/bootstrap/gate_test.go`、`server/internal/bootstrap/issue_cascade_test.go`、`server/internal/bootstrap/issue_parents_test.go`、`server/internal/bootstrap/issue_pool_test.go`、`server/internal/bootstrap/issue_sub_issues_test.go`、`server/internal/bootstrap/issue_world_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/permission_matrix_sub_issues_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/app/create_relations.go`、`server/internal/modules/issue/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.13、第 3 节第 7、9、11、15、17、18 条；M4 设计 3.5、3.10、5.1、5.2、9.2、9.3，12 节约束 8）
 - 契约：`POST /api/v0/issues/{issue_id}/relations`（`createIssueRelations`，体 `IssueRelationsCreate{relation_type, issue_ids}`（1–20 个，`additionalProperties: false`），201 `IssueRelationCollection{data}`，`x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, issue.archived, server_busy]`）；模式 `IssueRelationType`（四种）、`IssueRelation{id, relation_type, issue, created_at}`（`issue` 是对方，`Issue` 的行）；`api/openapi.yaml` 的路径。描述写上谁能加（对它 `issue.update`，对每个对方 `issue.read`），对方的规则（同一个工作区、看得到、没归档、项目没归档、还没有关联），看不到的不锁，每条存一次、两行动态、两端的最后修改。
 - `issue/adapter/http`：`handler.go` 的 `CreateIssueRelationsUseCase`、`UseCases.CreateIssueRelations`；`relations.go`（新）：`CreateIssueRelations`（201）、`issueRelationCollection`。`issue/module.go` 接上，说明写上它。
 - `issue/app/create_relations.go`：`CreateIssueRelations` 的说明写上它的路由 `POST /api/v0/issues/{issue_id}/relations`（本 Task 加的），如 `GetIssue`、`UpdateIssue`、`DeleteIssue` 的说明写上它们的。
-- `bootstrap`：`issue_relations_test.go`（新：`relationsOf`、`relating`、`answeredRelation`（对方是 `countedIssue`）、`othersOf`、`storedRelations`、`relationRows`；关联的列表用 Task 6 的 `listIn[answeredRelation]`，不另写一份）；`gate_across_test.go`（新：跨项目的写在闸门上的两个组合测试 `TestAWriteAcrossProjectsWaitsMaxWaitInAll`、`TestAWriteAcrossProjectsGivesBackEachPlaceItTook`；放进 `gate_test.go` 它会超过 400 行）；`issue_relation_locks_test.go`（新：`relates`，交错里加关联的写，名字找工作项用 Task 3 的 `workItemNamed`）；`issue_world_test.go` 的 `names`（世界的账号的名字，按 `id`：`storedRelations`、`relationRows` 读它，`workItemStamps` 和 `issue_parents_test.go` 的 `parentRows` 也改为读它，不各写一份）；`issue_write_locks_test.go` 的 `createIssueRelations` 一行（对方是 Far；锁下读的第一张预检没读的表是 `issue_relations`，`ACCESS EXCLUSIVE`）；`permission_matrix_relations_test.go`（新：`relatesTo`、`beforesItem`、`archivedItem`、`relatedTo`（回答用 Task 6 的 `listIn[answeredRelation]` 读））并在 `permission_matrix_test.go` 登记；`permission_matrix_sub_issues_test.go` 的 `subItemOf` 改名 `otherItemOf`（两个操作共用）、已归档的项目里已归档的工作项一行用它；`gate_test.go` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`：说明写上跨项目的写进它到达的每个项目的闸门，加两行（Web 的工作项的关联；Ops 的工作项到 Web 的工作项的关联：Ops 的位置空着也被拒绝：它先进 Web 的闸门，在那里被拒绝），形状不对的请求加一行（列了 21 个工作项的加关联：Web 唯一的位置被占着时立刻 422 `issue_ids` `too_long`，不是 503）；`issue_writes_test.go` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：alice 建 Ops 和它的 Far，以 `blocking` 把第一个工作项关联到 Far。
+- `bootstrap`：`issue_relations_test.go`（新：`relationsOf`、`relating`（`issue_ids` 是 `idArray` 的）、`answeredRelation`（对方是 `countedIssue`）、`othersOf`、`storedRelations`、`relationRows`；关联的列表用 Task 6 的 `listIn[answeredRelation]`，不另写一份）；`gate_across_test.go`（新：跨项目的写在闸门上的两个组合测试 `TestAWriteAcrossProjectsWaitsMaxWaitInAll`、`TestAWriteAcrossProjectsGivesBackEachPlaceItTook`；放进 `gate_test.go` 它会超过 400 行）；`issue_relation_locks_test.go`（新：`relates`，交错里加关联的写，名字找工作项用 Task 3 的 `workItemNamed`）；`issue_world_test.go` 的 `names`（世界的账号的名字，按 `id`：`storedRelations`、`relationRows` 读它，`workItemStamps` 和 `issue_parents_test.go` 的 `parentRows` 也改为读它，不各写一份）和 `idArray`（id 的 JSON 数组：`relating`、Task 6 的 `subIssueIDs`（空的体是 `subIssueIDs()`）和 `issue_cascade_test.go`、`issue_pool_test.go` 的标签的体读它，不各写一份）；`issue_write_locks_test.go` 的 `createIssueRelations` 一行（对方是 Far；锁下读的第一张预检没读的表是 `issue_relations`，`ACCESS EXCLUSIVE`）；`permission_matrix_relations_test.go`（新：`relatesTo`（体是 `relating` 的）、`beforesItem`、`archivedItem`、`relatedTo`（回答用 Task 6 的 `listIn[answeredRelation]` 读）；第一行的格子 `relateCells`）并在 `permission_matrix_test.go` 登记；`permission_matrix_sub_issues_test.go` 的 `subItemOf` 改名 `otherItemOf`（两个操作共用）、已归档的项目里已归档的工作项一行用它，`addsSubItem` 的体是 `subIssueIDs` 的；`gate_test.go` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`：说明写上跨项目的写进它到达的每个项目的闸门，加两行（Web 的工作项的关联；Ops 的工作项到 Web 的工作项的关联：Ops 的位置空着也被拒绝：它先进 Web 的闸门，在那里被拒绝），形状不对的请求加一行（列了 21 个工作项的加关联：Web 唯一的位置被占着时立刻 422 `issue_ids` `too_long`，不是 503）；`issue_writes_test.go` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：alice 建 Ops 和它的 Far，以 `blocking` 把第一个工作项关联到 Far。
 - 端到端：`e2e/fixtures/issues.ts` 的 `createIssueRelations`；`furnish.ts` 的 `furnishIssueRows` 再建一个工作项，第一个阻塞它（两个工作项、一条关联、各一行动态）；`assert/project.ts`、`assert/workspace.ts` 去掉 Task 8 的 `withoutRows`（删除项目、工作区的故事读得到关联表的行了）。
 
 **Tests:**
@@ -12668,6 +12669,26 @@ func TestAWriteAcrossProjectsGivesBackEachPlaceItTook(t *testing.T) {
 			"issue_ids too_long"},
 ````
 
+`server/internal/bootstrap/issue_cascade_test.go`（修改，2 处）：
+
+````old server/internal/bootstrap/issue_cascade_test.go
+	"slices"
+	"strings"
+````
+````new server/internal/bootstrap/issue_cascade_test.go
+	"slices"
+````
+````old server/internal/bootstrap/issue_cascade_test.go
+		quoted := make([]string, len(labels))
+		for i, id := range labels {
+			quoted[i] = `"` + id.String() + `"`
+		}
+		w.send(t, "bob", http.MethodPost, web+"/issues", `{"name":"Fix","label_ids":[`+strings.Join(quoted, ",")+`]}`, http.StatusCreated)
+````
+````new server/internal/bootstrap/issue_cascade_test.go
+		w.send(t, "bob", http.MethodPost, web+"/issues", `{"name":"Fix","label_ids":`+idArray(labels...)+`}`, http.StatusCreated)
+````
+
 `server/internal/bootstrap/issue_parents_test.go`（修改，1 处）：
 
 ````old server/internal/bootstrap/issue_parents_test.go
@@ -12678,6 +12699,27 @@ func TestAWriteAcrossProjectsGivesBackEachPlaceItTook(t *testing.T) {
 ````
 ````new server/internal/bootstrap/issue_parents_test.go
 	names := w.names()
+````
+
+`server/internal/bootstrap/issue_pool_test.go`（修改，3 处）：
+
+````old server/internal/bootstrap/issue_pool_test.go
+		var ids []string
+````
+````new server/internal/bootstrap/issue_pool_test.go
+		var ids []uuid.UUID
+````
+````old server/internal/bootstrap/issue_pool_test.go
+			ids = append(ids, `"`+label.ID.String()+`"`)
+````
+````new server/internal/bootstrap/issue_pool_test.go
+			ids = append(ids, label.ID)
+````
+````old server/internal/bootstrap/issue_pool_test.go
+		labelled[i] = `{"label_ids":[` + strings.Join(ids, ",") + `]}`
+````
+````new server/internal/bootstrap/issue_pool_test.go
+		labelled[i] = `{"label_ids":` + idArray(ids...) + `}`
 ````
 
 `server/internal/bootstrap/issue_relation_locks_test.go`（新文件，100 行）：
@@ -12785,7 +12827,7 @@ func TestAWorkItemTheCallerComesToSeeWhileHisRelationWaitsIsRefused(t *testing.T
 }
 ````
 
-`server/internal/bootstrap/issue_relations_test.go`（新文件，295 行）：
+`server/internal/bootstrap/issue_relations_test.go`（新文件，291 行）：
 
 ````file server/internal/bootstrap/issue_relations_test.go
 package bootstrap
@@ -12811,11 +12853,7 @@ func relationsOf(id uuid.UUID) string {
 // relating is the body that relates a work item, as kind, to the work
 // items ids, in their order.
 func relating(kind string, ids ...uuid.UUID) string {
-	quoted := make([]string, len(ids))
-	for n, id := range ids {
-		quoted[n] = `"` + id.String() + `"`
-	}
-	return `{"relation_type":"` + kind + `","issue_ids":[` + strings.Join(quoted, ",") + `]}`
+	return `{"relation_type":"` + kind + `","issue_ids":` + idArray(ids...) + `}`
 }
 
 // answeredRelation is a relation as an answer has it.
@@ -13085,14 +13123,50 @@ func TestTheGuestRuleHoldsForRelations(t *testing.T) {
 }
 ````
 
-`server/internal/bootstrap/issue_world_test.go`（修改，2 处）：
+`server/internal/bootstrap/issue_sub_issues_test.go`（修改，2 处）：
 
+````old server/internal/bootstrap/issue_sub_issues_test.go
+	quoted := make([]string, len(ids))
+	for n, id := range ids {
+		quoted[n] = `"` + id.String() + `"`
+	}
+	return `{"sub_issue_ids":[` + strings.Join(quoted, ",") + `]}`
+````
+````new server/internal/bootstrap/issue_sub_issues_test.go
+	return `{"sub_issue_ids":` + idArray(ids...) + `}`
+````
+````old server/internal/bootstrap/issue_sub_issues_test.go
+	for body, refusal := range map[string]string{`{"sub_issue_ids":[]}`: "sub_issue_ids too_short", subIssueIDs(up, up): "sub_issue_ids[1] duplicate",
+````
+````new server/internal/bootstrap/issue_sub_issues_test.go
+	for body, refusal := range map[string]string{subIssueIDs(): "sub_issue_ids too_short", subIssueIDs(up, up): "sub_issue_ids[1] duplicate",
+````
+
+`server/internal/bootstrap/issue_world_test.go`（修改，3 处）：
+
+````old server/internal/bootstrap/issue_world_test.go
+	"slices"
+````
+````new server/internal/bootstrap/issue_world_test.go
+	"slices"
+	"strings"
+````
 ````old server/internal/bootstrap/issue_world_test.go
 }
 
 // workItemStamps are the rows of the work item id in the work-item side's
 ````
 ````new server/internal/bootstrap/issue_world_test.go
+}
+
+// idArray is the JSON array of the ids, in their order, as a body names
+// work items or labels.
+func idArray(ids ...uuid.UUID) string {
+	quoted := make([]string, len(ids))
+	for n, id := range ids {
+		quoted[n] = `"` + id.String() + `"`
+	}
+	return "[" + strings.Join(quoted, ",") + "]"
 }
 
 // names are the world's accounts' names, by their ids.
@@ -13187,7 +13261,7 @@ import (
 // column's work item to the one other gives, as blocking it.
 func relatesTo(other func(c caller, s seeded) uuid.UUID) func(caller, seeded) (string, string, string) {
 	return func(c caller, s seeded) (string, string, string) {
-		return toWorkItem(http.MethodPost, "/relations", `{"relation_type":"blocking","issue_ids":["`+other(c, s).String()+`"]}`)(c, s)
+		return toWorkItem(http.MethodPost, "/relations", relating("blocking", other(c, s)))(c, s)
 	}
 }
 
@@ -13210,12 +13284,12 @@ func relationMatrixRows() []matrixRow {
 	// own work item, as its admin (Grant.ProjectAdmin), but not to PM's,
 	// which the guest rule hides from him: refused at its place (M4 design
 	// 3.4).
-	relates := onAWorkItem(cellCreated, cellCreated, cellCreated, cellForbidden)
-	relates[callerAdminGuestOwn] = cellValidationFailed
+	relateCells := onAWorkItem(cellCreated, cellCreated, cellCreated, cellForbidden)
+	relateCells[callerAdminGuestOwn] = cellValidationFailed
 	return []matrixRow{
 		// The project's admins and members, the member who made it too, not
 		// its guests, as updateIssue (M4 design 3.4, 9.2).
-		{op: "createIssueRelations", write: true, columns: issueColumns, request: relatesTo(otherItemOf), cells: relates,
+		{op: "createIssueRelations", write: true, columns: issueColumns, request: relatesTo(otherItemOf), cells: relateCells,
 			refusal: "issue_ids[0] not_allowed", check: relatedTo(otherItemOf)},
 		// An archived project's work items relate to none (M4 design 3.8),
 		// after the decision.
@@ -13256,7 +13330,7 @@ func relatedTo(other func(c caller, s seeded) uuid.UUID) func(t *testing.T, c ca
 }
 ````
 
-`server/internal/bootstrap/permission_matrix_sub_issues_test.go`（修改，9 处）：
+`server/internal/bootstrap/permission_matrix_sub_issues_test.go`（修改，10 处）：
 
 ````old server/internal/bootstrap/permission_matrix_sub_issues_test.go
 // subItemOf is the work item a column's cells put under their column's
@@ -13278,6 +13352,12 @@ func otherItemOf(c caller, s seeded) uuid.UUID {
 ````
 ````new server/internal/bootstrap/permission_matrix_sub_issues_test.go
 // under their column's work item: otherItemOf, or the one item gives.
+````
+````old server/internal/bootstrap/permission_matrix_sub_issues_test.go
+		return toWorkItem(http.MethodPost, "/sub-issues", `{"sub_issue_ids":["`+item(c, s).String()+`"]}`)(c, s)
+````
+````new server/internal/bootstrap/permission_matrix_sub_issues_test.go
+		return toWorkItem(http.MethodPost, "/sub-issues", subIssueIDs(item(c, s)))(c, s)
 ````
 ````old server/internal/bootstrap/permission_matrix_sub_issues_test.go
 		{op: "addSubIssues", write: true, columns: issueColumns, request: addsSubItem(subItemOf), cells: adds,
@@ -13489,7 +13569,7 @@ Expected: 123 个全部通过（删除项目、工作区的故事删除 `furnish
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/issue.yaml api/openapi.yaml e2e/fixtures/assert/project.ts e2e/fixtures/assert/workspace.ts e2e/fixtures/furnish.ts e2e/fixtures/issues.ts server/internal/bootstrap/gate_across_test.go server/internal/bootstrap/gate_test.go server/internal/bootstrap/issue_parents_test.go server/internal/bootstrap/issue_relation_locks_test.go server/internal/bootstrap/issue_relations_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/permission_matrix_relations_test.go server/internal/bootstrap/permission_matrix_sub_issues_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/relations.go server/internal/modules/issue/adapter/http/relations_test.go server/internal/modules/issue/app/create_relations.go server/internal/modules/issue/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml api/openapi.yaml e2e/fixtures/assert/project.ts e2e/fixtures/assert/workspace.ts e2e/fixtures/furnish.ts e2e/fixtures/issues.ts server/internal/bootstrap/gate_across_test.go server/internal/bootstrap/gate_test.go server/internal/bootstrap/issue_cascade_test.go server/internal/bootstrap/issue_parents_test.go server/internal/bootstrap/issue_pool_test.go server/internal/bootstrap/issue_relation_locks_test.go server/internal/bootstrap/issue_relations_test.go server/internal/bootstrap/issue_sub_issues_test.go server/internal/bootstrap/issue_world_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/permission_matrix_relations_test.go server/internal/bootstrap/permission_matrix_sub_issues_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/relations.go server/internal/modules/issue/adapter/http/relations_test.go server/internal/modules/issue/app/create_relations.go server/internal/modules/issue/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/bodyshape.gen.go server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): createIssueRelations through the API, the matrix, and the e2e furnishing
@@ -14727,11 +14807,11 @@ func TestARelationListShowsWhatTheCallerSees(t *testing.T) {
 	"slices"
 ````
 ````old server/internal/bootstrap/permission_matrix_relations_test.go
-	relates[callerAdminGuestOwn] = cellValidationFailed
+	relateCells[callerAdminGuestOwn] = cellValidationFailed
 	return []matrixRow{
 ````
 ````new server/internal/bootstrap/permission_matrix_relations_test.go
-	relates[callerAdminGuestOwn] = cellValidationFailed
+	relateCells[callerAdminGuestOwn] = cellValidationFailed
 	list := toWorkItem(http.MethodGet, "/relations", "")
 	return []matrixRow{
 		// Whom getIssue answers the work item (M4 design 3.4, 9.2): its
@@ -16161,13 +16241,13 @@ Expected: 通过。
 - 契约：`DELETE /api/v0/issue-relations/{relation_id}`（`deleteIssueRelation`，204，`x-problem-codes: [issue.relation_not_found, forbidden, project.archived, issue.archived, server_busy]`），参数 `RelationID`；描述写上两端任一个的判定、看不到两端是 404、两端的归档、两行动态、两端的最后修改；`api/openapi.yaml` 的路径。
 - 前端（约束 4）：`issue.relation_not_found` 的文案进 `error-messages.ts` 的 `PROBLEM_MESSAGES` 和两份 `errors.json`（en "The relation does not exist, or you cannot see either of its work items."，zh-CN "关联不存在，或者它的两个工作项你都看不到。"）。
 - `issue/adapter/http`：`handler.go` 的 `DeleteIssueRelationUseCase`；`relations.go` 的 `DeleteIssueRelation`（204）；`handler_test.go` 的测试的用例集。`issue/module.go` 接上，说明写上它。
-- `bootstrap`：`issue_relation_deletes_test.go`（新：`relationPath`、`relationDeletion`）；交错的帮手扩展、不复制（第 3 节第 16 条）：`interleaving_test.go` 的 `serializeOnTable`（第二个写等的是给的表的一行；`serializeOn` 是它在 `projects` 上），`issue_interleaving_test.go` 的 `serializeAt`、`inBothOrdersAt`（`serialize`、`inBothOrders` 是它们在 `projects` 上），`issue_interleaving_relations_test.go`（新：`nearAndFar`、`projectWith`、`deletedAt`、`relationRowOf`、`unrelates`、`deletesOps`，加关联用 Task 11 的 `relates`，名字找工作项用 Task 3 的 `workItemNamed`，删除工作项用 Task 6 的 `deletesNamed`）；`issue_write_locks_test.go` 的 `deleteIssueRelation` 一行（锁下第一个写的表 `issue_relations`，`SHARE`）；`gate_test.go` 的关联的删除一行；`issue_writes_test.go` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：alice 删除她建的关联；矩阵：`permission_matrix_seed_relations_test.go`（整个文件：加"别人的"（Others'：公开项目的 `matrixIssue` 与"管理员·访客"的）、已归档的 Shelved、已删除的工作区的 Gone，`relatedItems` 是 Gone 的第二个工作项，`relationOf` 是每一列的格子删除的那一条），`permission_matrix_seed_issues_test.go` 种下 `relatedItems`，`permission_matrix_targets_test.go` 的 `{relation_id}` 目标（`relationOf`，它的列的项目里种下的），`permission_matrix_relations_test.go` 的 `deleteIssueRelation` 四行（`cellRelationNotFound`、`relationRows`、`toRelation`、`onARelation`）和列表的格子多了"别人的"、Shelved，`permission_matrix_test.go` 的种子说明。
+- `bootstrap`：`issue_relation_deletes_test.go`（新：`relationPath`、`relationDeletion`）；交错的帮手扩展、不复制（第 3 节第 16 条）：`interleaving_test.go` 的 `serializeOnTable`（第二个写等的是给的表的一行；`serializeOn` 是它在 `projects` 上），`issue_interleaving_test.go` 的 `serializeAt`、`inBothOrdersAt`（`serialize`、`inBothOrders` 是它们在 `projects` 上），`issue_interleaving_relations_test.go`（新：`nearAndFar`、`projectWith`、`deletedAt`、`relationRowOf`、`unrelates`、`deletesOps`，加关联用 Task 11 的 `relates`，名字找工作项用 Task 3 的 `workItemNamed`，删除工作项用 Task 6 的 `deletesNamed`）；`issue_write_locks_test.go` 的 `deleteIssueRelation` 一行（锁下第一个写的表 `issue_relations`，`SHARE`）；`gate_test.go` 的关联的删除一行；`issue_writes_test.go` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：alice 删除她建的关联；矩阵：`permission_matrix_seed_relations_test.go`（整个文件：加"别人的"（Others'：公开项目的 `matrixIssue` 与"管理员·访客"的）、已归档的 Shelved、已删除的工作区的 Gone，`relatedItems` 是 Gone 的第二个工作项，`relationOf` 是每一列的格子删除的那一条），`permission_matrix_seed_issues_test.go` 种下 `relatedItems`，`permission_matrix_targets_test.go` 的 `{relation_id}` 目标（`relationOf`，它的列的项目里种下的），`permission_matrix_relations_test.go` 的 `deleteIssueRelation` 四行（`cellRelationNotFound`、`relationRows`、`toRelation`、`onARelation`）、列表的格子多了"别人的"、Shelved，说明写上删除的行按 `id` 指名关联（`relationOf`），`permission_matrix_test.go` 的种子说明。
 
 **Tests:**
 - HTTP（`apitest.Main` 两个方向）：`TestDeleteIssueRelation`（204，没有体）、`TestDeleteIssueRelationRefusals`。
 - 组合：`TestARelationIsDeletedFromEitherWorkItem`（bob 不是 Ops 的成员：他的删除先判定 Far（看得到、不能改），再判定 Near（能改）：204；关联由 bob 在两端最后修改的时刻删除，各一行动态（在自己的项目、按自己读的类型、对方的标识），谁都不再列出它，再删 404）、`TestWhoMayNotDeleteARelation`（walt 是 acme 的成员、不是 Web 的：看得到 Near、Up 而都不能改 403；不是 acme 成员的 olga 看不到两端 404；walt 看不到 Lab 的两个工作项的关联 404，都与不存在的逐值相同；已归档的 Shelved 的关联从两端删都 409，已归档的项目 Old 的工作项的关联 409；都不写）、`TestTheGuestRuleHoldsForDeletingARelation`（walt 删 Hers 到 His 的关联：先判定访客规则隐藏的 Hers，再判定 His，204；Up 与 Hers 的关联对他是与不存在的逐值相同的 404）；交错（两种顺序，第二个都等在第一个持的行上，都有期限）：10 `TestOppositeRelationsOfTwoWorkItemsSerialize`（alice 把 Near 关联为阻塞 Far、bob 把 Far 关联为阻塞 Near：两个都一次锁住 Web、Ops，第二个在锁下读到第一个的关联，422 `duplicate`，什么都不写）、11 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（bob 删除他的 Near、alice 删除 Ops：各锁自己的项目，再按 `id` 升序锁要删的关联行；第二个等第一个的关联行，提交之后读到已删除、跳过：每条只删一次，是先删的那一个的时刻和删除者）、23 `TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize`（bob 关联 Near 到 Far、alice 删除 Ops：先删，关联在锁下读到 Ops 已删除，Far 没到达，422，什么都不写；先关联，删除等 Ops 的行，再在它的时刻删除那条关联（Ops 的行）和 Far 的那行动态；Near 的那行留着，没有指向已删除的工作项的未删除的关联）、`TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize`（P1a 的交接：bob 关联 Near、Far，alice 删除 acme：先删，关联在锁下读到自己的项目已删除，404，什么都不写；先关联，删除在 acme 的时刻删除它和别的每一行）、`TestTwoDeletionsOfARelationSerialize`（alice、bob 各删除 Near 到 Far 的关联：第二个等第一个的项目的行，锁下再读关联、已删除，404 `issue.relation_not_found`，什么都不写；关联只删一次，是第一个的删除者，两端各一行"删除"的动态，在同一时刻）、26 `TestDeletingARelationAndItsOtherEndSerialize`（bob 删除他做的 Near 到 Far 的关联（判定在 Near 上放行）、alice 删除 Far：关联的删除不论在哪一端判定都锁两端的项目，第二个等在 Ops 的行上；先删关联，Far 的删除读到它已删除、留着 bob 删的样子；先删 Far，关联的删除在锁下再读，它已随 Far 由 alice 在 Far 的时刻删除，404 `issue.relation_not_found`，什么都不写）；`TestEachIssueWriteLocksItsProjectFirst`、`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 的一行；`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 删除她建的关联，锁下的读和写都在它的事务的连接上）；`TestPermissionMatrix`（`deleteIssueRelation` 四行：照常（两端任一个的判定；看不到两端的列 `issue.relation_not_found`）、已归档的项目、已归档的项目里已归档的工作项、已归档的工作项）、`TestThePermissionMatrixCoversEveryOperation`。
 - 前端：`error-messages.test.ts`（文案表有每个码），`check:sync`（中文的键）。
-- `-race -count=5`：P3 的交错（9 的两对、10、11、13、23、26、加关联与删除工作区、两个删除同一条关联）、加关联不锁它到不了的项目、P2、P1b、P1a 的工作项一侧的交错、写闸门的组合测试（拒绝答 `server_busy`、事务等锁到期、项目太忙、每个写进闸门、请求在闸门上到期、跨项目的写一共等 `max_wait`、跨项目的写放回它占的每个位置）、连接池的测试（交错 20 的两个、写在事务的连接上）、取锁形状，没有 40P01；`platform/gate` 的单元测试同样五遍。
+- `-race -count=5`：P3 的交错（9 的两对、10、11、13、23、26、加关联与删除工作区、两个删除同一条关联）、加关联不锁它到不了的项目、预检没到达的锁下也不到达（`TestAWorkItemTheCallerComesToSeeWhileHisRelationWaitsIsRefused`，Task 11）、P2、P1b、P1a 的工作项一侧的交错、写闸门的组合测试（拒绝答 `server_busy`、事务等锁到期、项目太忙、每个写进闸门、请求在闸门上到期、跨项目的写一共等 `max_wait`、跨项目的写放回它占的每个位置）、连接池的测试（交错 20 的两个、写在事务的连接上）、取锁形状，没有 40P01；`platform/gate` 的单元测试同样五遍。
 
 - [ ] **Step 1: 契约，生成**
 
@@ -16676,8 +16756,27 @@ func TestTheGuestRuleHoldsForDeletingARelation(t *testing.T) {
 	route.answerWithin(t, w.contract, http.MethodDelete, relationPath(related[0].ID), alice, "", http.StatusNoContent)
 ````
 
-`server/internal/bootstrap/permission_matrix_relations_test.go`（修改，4 处）：
+`server/internal/bootstrap/permission_matrix_relations_test.go`（修改，5 处）：
 
+````old server/internal/bootstrap/permission_matrix_relations_test.go
+// The rows of the permission matrix of a work item's relations (M4 design
+// 3.10, 9.2), naming the work item by its id: its column's work item
+// (issueOf). A row of 9.2's table has the issue table's columns, and so
+// has a variant on an archived work item, which each cell's prepare
+// archives on its copy (inDone); the other variants, the project level's,
+// as updateIssue's (permission_matrix_issue_updates_test.go), or the
+// archived project's.
+````
+````new server/internal/bootstrap/permission_matrix_relations_test.go
+// The rows of the permission matrix of a work item's relations (M4 design
+// 3.10, 9.2), naming the work item by its id, its column's work item
+// (issueOf), or, to delete one, the relation by its id, its column's
+// relation (relationOf). A row of 9.2's table has the issue table's
+// columns, and so has a variant on an archived work item, which each
+// cell's prepare archives on its copy (inDone); the other variants, the
+// project level's, as updateIssue's
+// (permission_matrix_issue_updates_test.go), or the archived project's.
+````
 ````old server/internal/bootstrap/permission_matrix_relations_test.go
 			cells: issueRows.of(cellValidationFailed, cellValidationFailed, cellIssueNotFound, cellValidationFailed, cellForbidden, cellForbidden)},
 	}
@@ -17389,7 +17488,7 @@ Expected: 全部 `ok`。
 Run: `go -C server test -count=1 -run 'TestARelationIsDeletedFromEitherWorkItem$|TestWhoMayNotDeleteARelation$|TestTheGuestRuleHoldsForDeletingARelation$|TestOppositeRelationsOfTwoWorkItemsSerialize$|TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize$|TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize$|TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize$|TestTwoDeletionsOfARelationSerialize$|TestDeletingARelationAndItsOtherEndSerialize$|TestEachIssueWriteLocksItsProjectFirst$|TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy$|TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection$|TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$' ./internal/bootstrap/`
 Expected: `ok`。
 
-Run: `go -C server test -count=5 -race -timeout 30m -run 'TestTwoMovesThatWouldMakeALoopSerialize$|TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize$|TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize$|TestOppositeRelationsOfTwoWorkItemsSerialize$|TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize$|TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize$|TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize$|TestTwoDeletionsOfARelationSerialize$|TestDeletingARelationAndItsOtherEndSerialize$|TestARelationLocksNoProjectItDoesNotReach$|TestArchivingAWorkItemAndMovingItSerialize$|TestDeletingAWorkItemAndChangingItSerialize$|TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused$|TestTwoCreationsOnAProjectSerialize$|TestTwoChangesOfAWorkItemSerialize$|TestAWorkItemGoneWhileItsChangeWaitsIsNotFound$|TestArchivingAProjectAndCreatingAWorkItemSerialize$|TestRemovingTheDefaultAssigneeAndCreatingAWorkItemSerialize$|TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize$|TestDeletingAStateAndPuttingAWorkItemInItSerialize$|TestDeletingALabelAndLabellingAWorkItemWithItSerialize$|TestTwoWritesOnAProjectSerialize$|TestChainedWorkItemWritesHoldOffNoWorkspaceWrite$|TestAHotProjectHoldsUpNoReadOfAnother$|TestEachIssueWriteLocksItsProjectFirst$|TestTheWriteGateAnswersItsRefusalsAsServerBusy$|TestABusyTransactionIsServerBusy$|TestAProjectTooBusyForAWriteAnswersServerBusy$|TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy$|TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy$|TestAWriteAcrossProjectsWaitsMaxWaitInAll$|TestAWriteAcrossProjectsGivesBackEachPlaceItTook$|TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection$' ./internal/bootstrap/`
+Run: `go -C server test -count=5 -race -timeout 30m -run 'TestTwoMovesThatWouldMakeALoopSerialize$|TestAddingSubItemsAndAMoveThatWouldMakeALoopSerialize$|TestDeletingAWorkItemAndPuttingAnotherUnderItSerialize$|TestOppositeRelationsOfTwoWorkItemsSerialize$|TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize$|TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize$|TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize$|TestTwoDeletionsOfARelationSerialize$|TestDeletingARelationAndItsOtherEndSerialize$|TestARelationLocksNoProjectItDoesNotReach$|TestAWorkItemTheCallerComesToSeeWhileHisRelationWaitsIsRefused$|TestArchivingAWorkItemAndMovingItSerialize$|TestDeletingAWorkItemAndChangingItSerialize$|TestACallerRemovedOrDemotedWhileHisWriteWaitsIsRefused$|TestTwoCreationsOnAProjectSerialize$|TestTwoChangesOfAWorkItemSerialize$|TestAWorkItemGoneWhileItsChangeWaitsIsNotFound$|TestArchivingAProjectAndCreatingAWorkItemSerialize$|TestRemovingTheDefaultAssigneeAndCreatingAWorkItemSerialize$|TestAWorkItemsWriteAndDeletingItsProjectOrWorkspaceSerialize$|TestDeletingAStateAndPuttingAWorkItemInItSerialize$|TestDeletingALabelAndLabellingAWorkItemWithItSerialize$|TestTwoWritesOnAProjectSerialize$|TestChainedWorkItemWritesHoldOffNoWorkspaceWrite$|TestAHotProjectHoldsUpNoReadOfAnother$|TestEachIssueWriteLocksItsProjectFirst$|TestTheWriteGateAnswersItsRefusalsAsServerBusy$|TestABusyTransactionIsServerBusy$|TestAProjectTooBusyForAWriteAnswersServerBusy$|TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy$|TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy$|TestAWriteAcrossProjectsWaitsMaxWaitInAll$|TestAWriteAcrossProjectsGivesBackEachPlaceItTook$|TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection$' ./internal/bootstrap/`
 Expected: `ok`；输出中没有 `40P01`、`deadlock detected`、`DATA RACE`（工作项一侧的每个交错、闸门和连接池的测试、取锁形状，各五遍）。
 
 Run: `go -C server test -count=5 -race ./internal/platform/gate/`

@@ -17,11 +17,7 @@ func subIssues(id uuid.UUID) string {
 
 // subIssueIDs is the body that names the work items ids, in their order.
 func subIssueIDs(ids ...uuid.UUID) string {
-	quoted := make([]string, len(ids))
-	for n, id := range ids {
-		quoted[n] = `"` + id.String() + `"`
-	}
-	return `{"sub_issue_ids":[` + strings.Join(quoted, ",") + `]}`
+	return `{"sub_issue_ids":` + idArray(ids...) + `}`
 }
 
 // countedIssue is a work item as a list answers it: its fields
@@ -128,7 +124,7 @@ func TestWorkItemsArePutUnderAWorkItem(t *testing.T) {
 		t.Errorf("A put under Top again is changed last by %s at %v, with %d rows of its parent; want as before, one row", who, at,
 			len(w.parentRows(t, a)))
 	}
-	for body, refusal := range map[string]string{`{"sub_issue_ids":[]}`: "sub_issue_ids too_short", subIssueIDs(up, up): "sub_issue_ids[1] duplicate",
+	for body, refusal := range map[string]string{subIssueIDs(): "sub_issue_ids too_short", subIssueIDs(up, up): "sub_issue_ids[1] duplicate",
 		subIssueIDs(slices.Repeat([]uuid.UUID{up}, 101)...): "sub_issue_ids too_long"} {
 		answer := w.send(t, "bob", http.MethodPost, subIssues(top), body, http.StatusUnprocessableEntity)
 		if got := refusalOf(t, []byte(answer), false); got != "validation_failed "+refusal || w.parentOf(t, up) != nil {

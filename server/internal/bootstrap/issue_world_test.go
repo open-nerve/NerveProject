@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -148,6 +149,16 @@ func (w issueWorld) doneWorkItem(t *testing.T) uuid.UUID {
 func (w issueWorld) fullIssue() string {
 	return `{"name":"Fix","state_id":"` + w.todo.String() + `","assignee_ids":["` + w.ids["bob"].String() + `"],"label_ids":["` +
 		w.bug.String() + `"]}`
+}
+
+// idArray is the JSON array of the ids, in their order, as a body names
+// work items or labels.
+func idArray(ids ...uuid.UUID) string {
+	quoted := make([]string, len(ids))
+	for n, id := range ids {
+		quoted[n] = `"` + id.String() + `"`
+	}
+	return "[" + strings.Join(quoted, ",") + "]"
 }
 
 // names are the world's accounts' names, by their ids.

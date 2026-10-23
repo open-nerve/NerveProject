@@ -21,11 +21,7 @@ func relationsOf(id uuid.UUID) string {
 // relating is the body that relates a work item, as kind, to the work
 // items ids, in their order.
 func relating(kind string, ids ...uuid.UUID) string {
-	quoted := make([]string, len(ids))
-	for n, id := range ids {
-		quoted[n] = `"` + id.String() + `"`
-	}
-	return `{"relation_type":"` + kind + `","issue_ids":[` + strings.Join(quoted, ",") + `]}`
+	return `{"relation_type":"` + kind + `","issue_ids":` + idArray(ids...) + `}`
 }
 
 // answeredRelation is a relation as an answer has it.

@@ -19,7 +19,7 @@ import (
 // column's work item to the one other gives, as blocking it.
 func relatesTo(other func(c caller, s seeded) uuid.UUID) func(caller, seeded) (string, string, string) {
 	return func(c caller, s seeded) (string, string, string) {
-		return toWorkItem(http.MethodPost, "/relations", `{"relation_type":"blocking","issue_ids":["`+other(c, s).String()+`"]}`)(c, s)
+		return toWorkItem(http.MethodPost, "/relations", relating("blocking", other(c, s)))(c, s)
 	}
 }
 
@@ -42,12 +42,12 @@ func relationMatrixRows() []matrixRow {
 	// own work item, as its admin (Grant.ProjectAdmin), but not to PM's,
 	// which the guest rule hides from him: refused at its place (M4 design
 	// 3.4).
-	relates := onAWorkItem(cellCreated, cellCreated, cellCreated, cellForbidden)
-	relates[callerAdminGuestOwn] = cellValidationFailed
+	relateCells := onAWorkItem(cellCreated, cellCreated, cellCreated, cellForbidden)
+	relateCells[callerAdminGuestOwn] = cellValidationFailed
 	return []matrixRow{
 		// The project's admins and members, the member who made it too, not
 		// its guests, as updateIssue (M4 design 3.4, 9.2).
-		{op: "createIssueRelations", write: true, columns: issueColumns, request: relatesTo(otherItemOf), cells: relates,
+		{op: "createIssueRelations", write: true, columns: issueColumns, request: relatesTo(otherItemOf), cells: relateCells,
 			refusal: "issue_ids[0] not_allowed", check: relatedTo(otherItemOf)},
 		// An archived project's work items relate to none (M4 design 3.8),
 		// after the decision.

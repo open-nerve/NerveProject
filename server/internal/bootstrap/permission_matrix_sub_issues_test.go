@@ -32,7 +32,7 @@ func otherItemOf(c caller, s seeded) uuid.UUID {
 // under their column's work item: otherItemOf, or the one item gives.
 func addsSubItem(item func(c caller, s seeded) uuid.UUID) func(caller, seeded) (string, string, string) {
 	return func(c caller, s seeded) (string, string, string) {
-		return toWorkItem(http.MethodPost, "/sub-issues", `{"sub_issue_ids":["`+item(c, s).String()+`"]}`)(c, s)
+		return toWorkItem(http.MethodPost, "/sub-issues", subIssueIDs(item(c, s)))(c, s)
 	}
 }
 
