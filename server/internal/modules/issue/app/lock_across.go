@@ -27,11 +27,13 @@ type scope struct {
 	reached  []bool
 }
 
-// end is a work item a write across projects reaches, or the other of a
-// write on either of two work items, as its lock holds it: the work item
-// and its project, read under the lock, and the caller's grant on the
-// project, as decided under it, zero when none was; ok is false for a work
-// item the write does not reach, and the rest is zero then.
+// end is a work item a write across projects reaches, or one of the two
+// of a write on either of them, as its lock holds it: the work item and
+// its project, read under the lock, and a grant: of a work item reached,
+// the caller's on its project, as decided under the lock; of the work item
+// a write names, held's (held.own); of the other of a write on either of
+// two work items, none (held.instead). ok is false for a work item the
+// write does not reach, and the rest is zero then.
 type end struct {
 	issue   domain.Issue
 	project LockedProject
@@ -40,8 +42,8 @@ type end struct {
 }
 
 // own is the work item h's write names as an end of it: the work item and
-// its project, as the lock holds them, and the caller's grant on the
-// project, as decided under it; it is reached.
+// its project, as the lock holds them, and h's grant (held.grant); it is
+// reached.
 func (h held) own() end {
 	return end{issue: h.issue, project: h.project, grant: h.grant, ok: true}
 }

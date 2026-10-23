@@ -165,8 +165,8 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`（新） | `RelatedIssues`、`InsertRelations`、`MarkChanged`（Task 9）；`IssueRelations`、`relationOf`（Task 12）；`GetRelation`、`DeleteRelation`（Task 13） | 9、12、13 |
 | `server/internal/modules/issue/domain/relation.go`、`server/internal/modules/issue/domain/relation_test.go`（新） | 关联的类型、`CheckNewRelations`、`Relation`、`NewRelation`、动态第 20、21 行（Task 9）；第 22、23 行（Task 13） | 9、13 |
 | `server/internal/modules/issue/app/lock_across.go`（新） | `scope`、`end`、`held.own()`、`lockProjects`、`reachAll`、`reachUnder`、`reach`（Task 10）；`ascending`（Task 12）；两端任一个的锁（Task 13） | 10、12、13 |
-| `server/internal/modules/issue/app/create_relations.go`、`server/internal/modules/issue/app/create_relations_test.go`（新） | `CreateIssueRelations` 和单元测试（Task 10）；说明写上它的路由（Task 11，`create_relations.go`） | 10、11 |
-| `server/internal/modules/issue/app/fakes_relations_test.go`（新） | 关联的假存储（Task 10）；`Relations`（Task 12）；`GetRelation`、`DeleteRelation`（Task 13） | 10、12、13 |
+| `server/internal/modules/issue/app/create_relations.go`、`server/internal/modules/issue/app/create_relations_test.go`（新） | `CreateIssueRelations` 和单元测试（Task 10）；说明写上它的路由（Task 11，`create_relations.go`）；`wantNothingWritten` 也核对删除的关联，加关联的测试读假存储的 `inserted`（Task 13，`create_relations_test.go`） | 10、11、13 |
+| `server/internal/modules/issue/app/fakes_relations_test.go`（新） | 关联的假存储（Task 10）；`Relations`（Task 12）；`GetRelation`、`DeleteRelation`，插入的关联记在 `inserted`（Task 13） | 10、12、13 |
 | `server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`（新） | `CreateIssueRelations`（Task 11）；`ListIssueRelations`（Task 12）；`DeleteIssueRelation`（Task 14） | 11、12、14 |
 | `server/internal/bootstrap/issue_relations_test.go`（新） | 加关联的组合测试、访客规则（Task 11）；访客规则下列出关联、数子工作项（Task 12） | 11、12 |
 | `server/internal/bootstrap/issue_relation_locks_test.go`（新） | 加关联不锁它到不了的项目；预检没到达的工作项锁下也不到达，等锁时调用者变得看得到它也一样（`relates`）（Task 11）；私有的 Lab 由 `createdProjectFrom` 建（Task 12） | 11、12 |
@@ -180,7 +180,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/permission_matrix_seed_relations_test.go`（新） | 矩阵的种子的关联（Task 12）；删除的关联、"别人的"（Task 14） | 12、14 |
 | `server/internal/bootstrap/permission_matrix_seeded_test.go`（修改） | `seeded.relations`、`relation`；`keyOfRow`：按行的 `id` 找它的键，`projectOfRow`、`seeded.workspaceOfRow`、`listsRelations` 读它 | 12 |
 | `server/internal/bootstrap/project_writes_test.go`、`server/internal/bootstrap/issue_identifier_test.go`、`server/internal/bootstrap/ending_world_test.go`、`server/internal/bootstrap/demotion_test.go`、`server/internal/bootstrap/project_wiring_test.go`（修改） | `createdProjectFrom`：由体建项目、回答它的 `id`，`createdProject` 读它；私有的 Sec、M3 的三处 Web 由它建 | 12 |
-| `server/internal/modules/issue/app/delete_relation.go`、`server/internal/modules/issue/app/delete_relation_test.go`、`server/internal/modules/issue/app/lock_either.go`（新） | `DeleteIssueRelation` 和单元测试；`both`、`eitherOf`、`eitherUnder`、`decideEither` | 13 |
+| `server/internal/modules/issue/app/delete_relation.go`、`server/internal/modules/issue/app/delete_relation_test.go`、`server/internal/modules/issue/app/lock_either.go`（新） | `DeleteIssueRelation` 和单元测试；`both`、`eitherOf`、`eitherUnder`、`decideEither`（Task 13）；说明写上它的路由（Task 14，`delete_relation.go`） | 13、14 |
 | `server/internal/modules/issue/domain/errors.go`（修改） | `ErrRelationNotFound` | 13 |
 | `server/internal/bootstrap/issue_relation_deletes_test.go`（新） | 删除关联的组合测试、访客规则 | 14 |
 | `server/internal/bootstrap/issue_interleaving_relations_test.go`（新）、`server/internal/bootstrap/interleaving_test.go`（修改） | 交错 10、11、23、26 和加关联与删除工作区；`serializeOnTable` | 14 |
@@ -15384,21 +15384,21 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/modules/issue/app/delete_relation.go`、`server/internal/modules/issue/app/delete_relation_test.go`、`server/internal/modules/issue/app/lock_either.go`
-- Modify: `server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`、`server/internal/modules/issue/app/fakes_relations_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/lock_across.go`、`server/internal/modules/issue/app/lock_test.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/issue/domain/relation.go`、`server/internal/modules/issue/domain/relation_test.go`
+- Modify: `server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`、`server/internal/modules/issue/app/create_relations_test.go`、`server/internal/modules/issue/app/fakes_relations_test.go`、`server/internal/modules/issue/app/lock.go`、`server/internal/modules/issue/app/lock_across.go`、`server/internal/modules/issue/app/lock_test.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/rows.go`、`server/internal/modules/issue/domain/activity.go`、`server/internal/modules/issue/domain/errors.go`、`server/internal/modules/issue/domain/relation.go`、`server/internal/modules/issue/domain/relation_test.go`
 - Generate: `server/internal/modules/issue/adapter/postgres/gen/relations.sql.go`
 
 **Interfaces:**（spec 2.15、第 3 节第 2、3、8、9、11、12 条；M4 设计 3.5 约定七、3.7、3.10、3.13）`Locks.run` 的第二种新形式：两端任一个的写，也是一条取锁路径：
 - `issue/domain`：`ErrRelationNotFound`（404 `issue.relation_not_found`，"The relation does not exist, or you cannot see either of its work items."）；`VerbDeleted`；`RelationRemoved(t, other)`（动态第 22、23 行：类型、`deleted`，对方的标识到 `""`，对方的 `id` 是 `old_identifier`）。
-- `issue/app/lock.go`：`write.instead`（两端任一个的写的另一端：先以动作判定 `issue`，拒绝时再判定 `instead`，各在自己的项目；两个都拒绝才拒绝；两端都读、两个项目都锁在事务里，不论判定的是哪一个：组合一层由 Task 14 的交错 26 钉住，变异 T13.25）；`held.instead`（锁下读的另一端和它的项目）；`precheck` 和 `lockAndDecide` 转给它。`lock_across.go` 的 `lockProjects`：两端任一个的写也用 `LockMany`。
-- `issue/app/lock_either.go`（新）：`both`（读两端，`issue` 的在先；不在是 `w.notFound`）、`eitherOf`（预检：读两端、判定，交回两个项目的 `scope`）、`eitherUnder`（锁下：重读两端；任一端的项目不在锁住的里（等锁期间被删除）先答 `w.notFound`，在任何判定之前；再判定）、`decideEither`（先判定第一个，拒绝时判定第二个，都在访客规则之后；两个都拒绝时：两个都看不到是 `w.notFound`，否则是第一个看得到的那个的拒绝（角色的 403）；判定的失败是错误）。
-- `issue/app/ports.go`：`RelationDeleter`（`GetRelation`、`DeleteRelation`、`MarkChanged`、`InsertActivities`，嵌入 `IssueReader`）；`rows.go` 的 `RelationDeletion{ID, By, At}`。
-- `issue/app/delete_relation.go`（新）：`DeleteIssueRelationDeps{Locks, Relations, Clock}`、`NewDeleteIssueRelation`、`Execute(ctx, id)`：不加锁地读关联（没有、已删除是 `issue.relation_not_found`）→ `Locks.run` 的 `write{issue: &r.IssueID, instead: &r.RelatedID, action: issue.update, notFound: ErrRelationNotFound}` → 锁下：重读关联（等锁期间被删除 `issue.relation_not_found`）→ 任一端的项目已归档 409 → 任一端已归档 409 `issue.archived` → `delete`（时刻；软删除这一行；两端按 `id` 的次序改最后修改；各一行动态，各在自己的项目，存为 `issue_id` 的那一端在先，类型按它读的，对方按标识）。
+- `issue/app/lock.go`：`write.instead`（两端任一个的写的另一端：先以动作判定 `issue`，拒绝时再判定 `instead`，各在自己的项目；两个都拒绝才拒绝；两端都读、两个项目都锁在事务里，不论判定的是哪一个：组合一层由 Task 14 的交错 26 钉住，变异 T13.25）；`held.instead`（锁下读的另一端和它的项目）；`precheck` 和 `lockAndDecide` 转给它。`lock_across.go` 的 `lockProjects`：两端任一个的写也用 `LockMany`；`end`、`held.own()`（Task 10）的说明写上两端任一个的写的两端各带的 `Grant`：`held.own()` 带 `held.grant`（放行这个写的判定的，在任一端的项目），`held.instead` 不带。
+- `issue/app/lock_either.go`（新）：`both`（读两端，`issue` 的在先；不在是 `w.notFound`）、`eitherOf`（预检：读两端、判定，交回两个项目的 `scope`，经 Task 12 的 `ascending`：升序、各一次）、`eitherUnder`（锁下：重读两端；任一端的项目不在锁住的里（等锁期间被删除）先答 `w.notFound`，在任何判定之前；再判定）、`decideEither`（先判定第一个，拒绝时判定第二个，都在访客规则之后；两个都拒绝时：两个都看不到是 `w.notFound`，否则是第一个看得到的那个的拒绝（角色的 403）；判定的失败是错误）。
+- `issue/app/ports.go`：`RelationDeleter`（`GetRelation`、`DeleteRelation`、`MarkChanged`、`InsertActivities`；两端由 `Locks` 读，它不嵌入 `IssueReader`）；`rows.go` 的 `RelationDeletion{ID, By, At}`。
+- `issue/app/delete_relation.go`（新）：`DeleteIssueRelationDeps{Locks, Relations, Clock}`、`NewDeleteIssueRelation`、`Execute(ctx, id)`：不加锁地读关联（没有、已删除是 `issue.relation_not_found`）→ `Locks.run` 的 `write{issue: &r.IssueID, instead: &r.RelatedID, action: issue.update, notFound: ErrRelationNotFound}` → 锁下：重读关联（等锁期间被删除 `issue.relation_not_found`）→ 任一端的项目已归档 409 → 任一端已归档 409 `issue.archived` → `delete`（时刻；软删除这一行；两端是 `held.own()` 和 `held.instead`，按 `id` 的次序（`ascending`）改最后修改；各一行动态，各在自己的项目，存为 `issue_id` 的那一端在先，类型按它读的，对方按标识）。
 - `issue/adapter/postgres`：`queries/relations.sql` 的 `GetRelation`（未删除的这一条，与 `IssueRelations` 同样的列）、`DeleteRelation`（`:execrows`，按键软删除一行）；`relations.go`（`GetRelation` 把行转成 `IssueRelationsRow` 共用 `relationOf`；`DeleteRelation` 没写到一行是错误）。
-- 测试的帮手：`fakes_relations_test.go` 的 `GetRelation`、`DeleteRelation`、`deleted`；`delete_relation_test.go`（新）：`relationID`、`newUnrelate`（near 与 far 的关联，存为 far 的 `blocked_by`）、`unrelating`、`through`、`archived`。
+- 测试的帮手：`fakes_relations_test.go` 的 `GetRelation`、`DeleteRelation`、`deleted`，`InsertRelations` 写下的关联记在 `inserted`（`relations` 只是读回答的：删除的世界里存着要删的那一条）；`create_relations_test.go` 的 `wantNothingWritten` 核对假存储记下的关联的每个写（插入的、删除的关联，改了最后修改的工作项，动态），加关联、删除关联的拒绝都用它，加关联的测试读 `inserted`；`delete_relation_test.go`（新）：`relationID`、`newUnrelate`（near 与 far 的关联，存为 far 的 `blocked_by`）、`unrelating`、`through`、`archived`；动态由 `wantActivityRows` 核对，端口的失败由 `wantStoppedAt`、`wantStopped` 核对，不另写一份。
 
 **Tests:**
-- 领域：`TestRelationRemoved`。
-- 单元：`TestDeleteIssueRelationDeletesItOnEitherWorkItem`（3.5、3.10 的次序：两端任一个的 `Locks` 的调用（`unrelating`）；时刻；删除关联；两端按 `id` 的次序改最后修改；动态。调用者能改任一端：存为 `issue_id` 的 far 先判定，不能改它时（角色不允许，或 ops 里访客规则隐藏 far）判定 near；far 的一行在先（ops 的，它的 `blocked_by WEB-8` 删除），然后 near 的（web 的，`blocking OPS-3` 删除））、`TestDeleteIssueRelationRefusals`（锁之前：没有关联、一端不在 `issue.relation_not_found`；两端都看不到（项目或访客规则）也是，看得到一端而两端都不能改 403；锁下：任一端的项目等锁期间被删除（在任何判定之前）、任一端等锁期间被删除、关联被删除、两端都不再看得到 `issue.relation_not_found`，都不能再改 403，任一端的项目已归档 409，然后任一端已归档 409；每个回答整个比较：两端都看不到的关联与不存在的是同一个回答，细节都一样（8.4）；都不写）、`TestDeleteIssueRelationStopsAtAFailingPort`；`lock_test.go` 的 `TestAWriteOnEitherWorkItemTakesBothProjects`（像跨项目的写那样取两端的项目，不论判定放行的是哪一端：far 的 ops，或 near 的 web；同一个项目的两端只取一次它的闸门和锁）、`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches` 共用 `wantAllAtOnce`。
+- 领域：`TestRelationRemoved`（四种类型，各写出 Plane 的句子，同 `TestRelationAdded`）。
+- 单元：`TestDeleteIssueRelationDeletesItOnEitherWorkItem`（3.5、3.10 的次序：两端任一个的 `Locks` 的调用（`unrelating`）；时刻；删除关联；两端按 `id` 的次序改最后修改；动态。调用者能改任一端：存为 `issue_id` 的 far 先判定，不能改它时（角色不允许，或 ops 里访客规则隐藏 far）判定 near；far 的一行在先（ops 的，它的 `blocked_by WEB-8` 删除），然后 near 的（web 的，`blocking OPS-3` 删除））、`TestDeleteIssueRelationRefusals`（锁之前：没有关联、一端不在 `issue.relation_not_found`；两端都看不到（项目或访客规则）也是，看得到一端而两端都不能改 403；锁下：任一端的项目等锁期间被删除（在任何判定之前）、任一端等锁期间被删除、关联被删除、两端都不再看得到 `issue.relation_not_found`，都不能再改 403，任一端的项目已归档 409，然后任一端已归档 409；每个回答整个比较：两端都看不到的关联与不存在的是同一个回答，细节都一样（8.4）；都不写（`wantNothingWritten`））、`TestDeleteIssueRelationStopsAtAFailingPort`（各端口的第一次调用失败，far 被拒绝时预检对 near 的判定失败；预检之后锁下 far、near 的再读、对 far 的再判定、far 在锁下被拒绝时对 near 的判定和关联的再读失败（同 Task 10 对 `reachUnder` 的）：都答这个失败，它之后没有调用）；`lock_test.go` 的 `TestAWriteOnEitherWorkItemTakesBothProjects`（像跨项目的写那样取两端的项目，不论判定放行的是哪一端：far 的 ops，或 near 的 web；同一个项目的两端只取一次它的闸门和锁）、`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches` 共用 `wantAllAtOnce`。
 - 存储：`TestGetRelation`（按 `id` 读出如存的每一列；已删除的、没有的读不到；取消的读是它的失败）、`TestDeleteRelation`（在给的时刻由给的账户软删除，别的列和别的关联不动；已删除的、没有的不写，是错误；取消的写也是）。
 
 - [ ] **Step 1: 查询，生成**
@@ -15502,13 +15502,18 @@ func RelationRemoved(t RelationType, other Ref) Activity {
 
 // A deleted relation writes a row on each of its work items, of the same
 // columns (rows 22 and 23 of M4 design 3.13): the type as the work item
-// reads it, deleted, from the other's identifier to "", the other's id the
-// old identifier, Plane's sentence with the type.
+// reads it, each of the four, deleted, from the other's identifier to "",
+// the other's id the old identifier, Plane's sentence with the type.
 func TestRelationRemoved(t *testing.T) {
 	other := Ref{ID: uuid.NewV7(), Identifier: "OPS-3"}
-	want := Activity{Field: ptr("blocked_by"), Verb: VerbDeleted, OldValue: ptr("OPS-3"), NewValue: ptr(""), OldIdentifier: &other.ID,
-		Comment: "deleted blocked_by relation"}
-	if got := RelationRemoved(BlockedBy, other); !reflect.DeepEqual(got, want) {
+	got, want := map[RelationType]Activity{}, map[RelationType]Activity{}
+	for kind, comment := range map[RelationType]string{RelatesTo: "deleted relates_to relation", Duplicate: "deleted duplicate relation",
+		BlockedBy: "deleted blocked_by relation", Blocking: "deleted blocking relation"} {
+		got[kind] = RelationRemoved(kind, other)
+		want[kind] = Activity{Field: ptr(string(kind)), Verb: VerbDeleted, OldValue: ptr("OPS-3"), NewValue: ptr(""),
+			OldIdentifier: &other.ID, Comment: comment}
+	}
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("RelationRemoved() = %+v, want %+v", got, want)
 	}
 }
@@ -15517,7 +15522,7 @@ func TestRelationRemoved(t *testing.T) {
 
 - [ ] **Step 3: 两端任一个的取锁**
 
-`server/internal/modules/issue/app/lock.go`（修改，7 处）：
+`server/internal/modules/issue/app/lock.go`（修改，8 处）：
 
 ````old server/internal/modules/issue/app/lock.go
 // (createIssueRelations' other ends).
@@ -15553,6 +15558,21 @@ func TestRelationRemoved(t *testing.T) {
 ````new server/internal/modules/issue/app/lock.go
 	reached []end
 	instead end
+````
+````old server/internal/modules/issue/app/lock.go
+// the work items it reaches, all at once in ascending id order; then in
+// one transaction w's lock and decision, and runs fn in it with what they
+// hold (M4 design 3.5, 11.11): w's whole write. It leaves the gates once
+// the transaction has ended, on every path, a panic's too. A refusal of the
+// precheck, the gate or the decision is its answer, and fn does not run.
+````
+````new server/internal/modules/issue/app/lock.go
+// the work items it reaches, or, on either of two work items, those of
+// both, all at once in ascending id order; then in one transaction w's
+// lock and decision, and runs fn in it with what they hold (M4 design 3.5,
+// 11.11): w's whole write. It leaves the gates once the transaction has
+// ended, on every path, a panic's too. A refusal of the precheck, the gate
+// or the decision is its answer, and fn does not run.
 ````
 ````old server/internal/modules/issue/app/lock.go
 // transaction (M4 design 3.5), and answers w on its project, with what it
@@ -15605,7 +15625,7 @@ func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write
 		return l.eitherUnder(ctx, actor, w, locked)
 ````
 
-`server/internal/modules/issue/app/lock_across.go`（修改，3 处）：
+`server/internal/modules/issue/app/lock_across.go`（修改，4 处）：
 
 ````old server/internal/modules/issue/app/lock_across.go
 // end is a work item a write across projects reaches, as its lock holds
@@ -15614,11 +15634,21 @@ func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write
 // the write does not reach, and the rest is zero then.
 ````
 ````new server/internal/modules/issue/app/lock_across.go
-// end is a work item a write across projects reaches, or the other of a
-// write on either of two work items, as its lock holds it: the work item
-// and its project, read under the lock, and the caller's grant on the
-// project, as decided under it, zero when none was; ok is false for a work
-// item the write does not reach, and the rest is zero then.
+// end is a work item a write across projects reaches, or one of the two
+// of a write on either of them, as its lock holds it: the work item and
+// its project, read under the lock, and a grant: of a work item reached,
+// the caller's on its project, as decided under the lock; of the work item
+// a write names, held's (held.own); of the other of a write on either of
+// two work items, none (held.instead). ok is false for a work item the
+// write does not reach, and the rest is zero then.
+````
+````old server/internal/modules/issue/app/lock_across.go
+// its project, as the lock holds them, and the caller's grant on the
+// project, as decided under it; it is reached.
+````
+````new server/internal/modules/issue/app/lock_across.go
+// its project, as the lock holds them, and h's grant (held.grant); it is
+// reached.
 ````
 ````old server/internal/modules/issue/app/lock_across.go
 // KEY UPDATE (ProjectGate.Lock); a write across projects each of s's, all
@@ -15862,7 +15892,52 @@ type RelationDeletion struct {
 
 - [ ] **Step 4: 用例和它的测试**
 
-`server/internal/modules/issue/app/delete_relation.go`（新文件，96 行）：
+`server/internal/modules/issue/app/create_relations_test.go`（修改，5 处）：
+
+````old server/internal/modules/issue/app/create_relations_test.go
+			if len(rel.relations) != 2 {
+				t.Fatalf("the relations %+v, want two", rel.relations)
+````
+````new server/internal/modules/issue/app/create_relations_test.go
+			if len(rel.inserted) != 2 {
+				t.Fatalf("the relations %+v, want two", rel.inserted)
+````
+````old server/internal/modules/issue/app/create_relations_test.go
+				want.ID = rel.relations[n].ID
+				if !reflect.DeepEqual(rel.relations[n], want) || n > 0 && rel.relations[n].ID.Compare(rel.relations[n-1].ID) <= 0 {
+					t.Errorf("relation %d: %+v, want %+v, its id after the one before", n, rel.relations[n], want)
+````
+````new server/internal/modules/issue/app/create_relations_test.go
+				want.ID = rel.inserted[n].ID
+				if !reflect.DeepEqual(rel.inserted[n], want) || n > 0 && rel.inserted[n].ID.Compare(rel.inserted[n-1].ID) <= 0 {
+					t.Errorf("relation %d: %+v, want %+v, its id after the one before", n, rel.inserted[n], want)
+````
+````old server/internal/modules/issue/app/create_relations_test.go
+				want = append(want, app.IssueRelation{ID: rel.relations[n].ID, Type: tt.kind, Issue: o, CreatedAt: clockNow})
+````
+````new server/internal/modules/issue/app/create_relations_test.go
+				want = append(want, app.IssueRelation{ID: rel.inserted[n].ID, Type: tt.kind, Issue: o, CreatedAt: clockNow})
+````
+````old server/internal/modules/issue/app/create_relations_test.go
+// wantNothingWritten checks that an addition of relations over w and rel
+// wrote nothing: no relation, no work item marked changed, no row of
+// activity.
+````
+````new server/internal/modules/issue/app/create_relations_test.go
+// wantNothingWritten checks that a write of relations over w and rel wrote
+// nothing: no relation inserted or deleted, no work item marked changed,
+// no row of activity.
+````
+````old server/internal/modules/issue/app/create_relations_test.go
+	if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
+		t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
+````
+````new server/internal/modules/issue/app/create_relations_test.go
+	if rel.inserted != nil || rel.deleted != nil || rel.marked != nil || w.issues.activities != nil {
+		t.Errorf("wrote %+v, %+v, %+v, %+v; want nothing", rel.inserted, rel.deleted, rel.marked, w.issues.activities)
+````
+
+`server/internal/modules/issue/app/delete_relation.go`（新文件，95 行）：
 
 ````file server/internal/modules/issue/app/delete_relation.go
 package app
@@ -15884,8 +15959,7 @@ type DeleteIssueRelationDeps struct {
 	Clock     Clock
 }
 
-// DeleteIssueRelation deletes a relation: DELETE
-// /api/v0/issue-relations/{relation_id} (M4 design 3.5, 3.10, 5.1).
+// DeleteIssueRelation deletes a relation (M4 design 3.5, 3.10, 5.1).
 type DeleteIssueRelation struct {
 	d DeleteIssueRelationDeps
 }
@@ -15951,7 +16025,7 @@ func (u *DeleteIssueRelation) delete(ctx context.Context, h held, r domain.Relat
 	if err := u.d.Relations.DeleteRelation(ctx, RelationDeletion{ID: r.ID, By: by, At: at}); err != nil {
 		return err
 	}
-	first, second := end{issue: h.issue, project: h.project}, h.instead
+	first, second := h.own(), h.instead
 	changed := ascending([]uuid.UUID{first.issue.ID, second.issue.ID})
 	if err := u.d.Relations.MarkChanged(ctx, ChangedRows{IDs: changed, By: by, At: at}); err != nil {
 		return err
@@ -15963,7 +16037,7 @@ func (u *DeleteIssueRelation) delete(ctx context.Context, h held, r domain.Relat
 }
 ````
 
-`server/internal/modules/issue/app/delete_relation_test.go`（新文件，214 行）：
+`server/internal/modules/issue/app/delete_relation_test.go`（新文件，233 行）：
 
 ````file server/internal/modules/issue/app/delete_relation_test.go
 package app_test
@@ -16070,20 +16144,10 @@ func TestDeleteIssueRelationDeletesItOnEitherWorkItem(t *testing.T) {
 			if want := (app.ChangedRows{IDs: changed, By: alice, At: clockNow}); rel.marked == nil || !reflect.DeepEqual(*rel.marked, want) {
 				t.Errorf("marked %+v, want %+v", rel.marked, want)
 			}
-			rows := []app.ActivityRow{
+			wantActivityRows(t, w, []app.ActivityRow{
 				{IssueID: farID, ProjectID: ops, Activity: domain.RelationRemoved(domain.BlockedBy, domain.Ref{ID: nearID, Identifier: "WEB-8"})},
 				{IssueID: nearID, ProjectID: web, Activity: domain.RelationRemoved(domain.Blocking, domain.Ref{ID: farID, Identifier: "OPS-3"})},
-			}
-			if len(w.issues.activities) != len(rows) {
-				t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(rows))
-			}
-			for n, row := range w.issues.activities {
-				want := rows[n]
-				want.ID, want.WorkspaceID, want.ActorID, want.At = row.ID, acme, alice, clockNow
-				if !reflect.DeepEqual(row, want) || n > 0 && row.ID.Compare(w.issues.activities[n-1].ID) <= 0 {
-					t.Errorf("activity row %d: %+v, want %+v, its id after the row before", n, row, want)
-				}
-			}
+			})
 		})
 	}
 }
@@ -16161,28 +16225,57 @@ func TestDeleteIssueRelationRefusals(t *testing.T) {
 			if !reflect.DeepEqual(err, tt.want) {
 				t.Errorf("Execute() = %#v, want %#v whole", err, tt.want)
 			}
-			if rel.deleted != nil || rel.marked != nil || w.issues.activities != nil {
-				t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.deleted, rel.marked, w.issues.activities)
-			}
+			wantNothingWritten(t, w, rel)
 		})
 	}
 }
 
 // A port that fails ends the deletion with its failure, as itself, and no
-// call after it runs: the transaction rolls back whatever was written.
+// call after it runs: the transaction rolls back whatever was written. It
+// fails, at its first call, the relation's read, far's and near's reads
+// and the decision on far before the locks, the decision on near there
+// when far is refused, the lock and the three writes; and, once the
+// precheck's calls have passed, far's and near's reads and the decision on
+// far again under the locks (eitherUnder), the decision on near there when
+// far is refused there, and the relation's read again, after unrelating's
+// calls up to it.
 func TestDeleteIssueRelationStopsAtAFailingPort(t *testing.T) {
-	for _, port := range []string{"GetRelation", "GetIssue", line("GetIssue", nearID), "Authorize", "LockMany", "DeleteRelation", "MarkChanged",
-		"InsertActivities"} {
-		t.Run(port, func(t *testing.T) {
+	far, near := line("Authorize", alice, domain.ActionUpdate, acme, ops), line("Authorize", alice, domain.ActionUpdate, acme, web)
+	for _, tt := range []struct {
+		port    string
+		answers []error // the Authorizer's
+	}{
+		{"GetRelation", nil}, {"GetIssue", nil}, {line("GetIssue", nearID), nil}, {"Authorize", nil}, {near, []error{shared.Forbidden()}},
+		{"LockMany", nil}, {"DeleteRelation", nil}, {"MarkChanged", nil}, {"InsertActivities", nil},
+	} {
+		t.Run(tt.port, func(t *testing.T) {
 			uc, w, _ := newUnrelate()
-			w.log.fail = port
-			wantStoppedAt(t, w, uc.Execute(as(alice), relationID), port)
+			w.log.fail, w.auth.answers = tt.port, tt.answers
+			wantStoppedAt(t, w, uc.Execute(as(alice), relationID), tt.port)
+		})
+	}
+	for _, tt := range []struct {
+		name, port string
+		answers    []error  // the Authorizer's
+		calls      []string // of unrelating's, the port's the last
+	}{
+		{"far read again under the locks", line("GetIssue", farID), nil, unrelating(1, 1)[:7]},
+		{"near read again under the locks", line("GetIssue", nearID), nil, unrelating(1, 1)[:8]},
+		{"far decided on again under the locks", far, nil, unrelating(1, 1)[:9]},
+		{"near decided on under the locks, far refused there", near, []error{1: shared.Forbidden()}, unrelating(1, 2)[:10]},
+		{"the relation read again under the locks", line("GetRelation", relationID), nil, unrelating(1, 1)},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			uc, w, _ := newUnrelate()
+			w.auth.answers = tt.answers
+			w.project.waited = func() { w.log.fail = tt.port }
+			wantStopped(t, w, uc.Execute(as(alice), relationID), tt.port, slices.Equal(w.log.calls, tt.calls))
 		})
 	}
 }
 ````
 
-`server/internal/modules/issue/app/fakes_relations_test.go`（修改，2 处）：
+`server/internal/modules/issue/app/fakes_relations_test.go`（修改，4 处）：
 
 ````old server/internal/modules/issue/app/fakes_relations_test.go
 // (app.RelationCreator, app.RelationLister), each call logged: related
@@ -16194,13 +16287,17 @@ func TestDeleteIssueRelationStopsAtAFailingPort(t *testing.T) {
 // (app.RelationCreator, app.RelationLister, app.RelationDeleter), each
 // call logged: related are the work items that relate to the work item
 // asked about already, whichever it is; relations the relations a read
-// answers, and the last insert's; marked the last work items marked
-// changed; deleted the last relation deleted.
+// answers; and the writes it keeps: inserted the last insert's relations,
+// marked the last work items marked changed, deleted the last relation
+// deleted.
 ````
 ````old server/internal/modules/issue/app/fakes_relations_test.go
+	relations []domain.Relation
 	marked    *app.ChangedRows
 ````
 ````new server/internal/modules/issue/app/fakes_relations_test.go
+	relations []domain.Relation
+	inserted  []domain.Relation
 	marked    *app.ChangedRows
 	deleted   *app.RelationDeletion
 }
@@ -16225,6 +16322,19 @@ func (f *fakeRelations) DeleteRelation(ctx context.Context, d app.RelationDeleti
 	}
 	f.deleted = &d
 	return nil
+````
+````old server/internal/modules/issue/app/fakes_relations_test.go
+// InsertRelations logs the insert, of how many, and keeps the relations.
+````
+````new server/internal/modules/issue/app/fakes_relations_test.go
+// InsertRelations logs the insert, of how many, and keeps the relations
+// (inserted).
+````
+````old server/internal/modules/issue/app/fakes_relations_test.go
+	f.relations = rs
+````
+````new server/internal/modules/issue/app/fakes_relations_test.go
+	f.inserted = rs
 ````
 
 - [ ] **Step 5: 存储**
@@ -16397,7 +16507,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 7: 提交**
 
 ```bash
-git add server/internal/modules/issue/adapter/postgres/queries/relations.sql server/internal/modules/issue/adapter/postgres/relations.go server/internal/modules/issue/adapter/postgres/relations_test.go server/internal/modules/issue/app/delete_relation.go server/internal/modules/issue/app/delete_relation_test.go server/internal/modules/issue/app/fakes_relations_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/lock_across.go server/internal/modules/issue/app/lock_either.go server/internal/modules/issue/app/lock_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/domain/activity.go server/internal/modules/issue/domain/errors.go server/internal/modules/issue/domain/relation.go server/internal/modules/issue/domain/relation_test.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go
+git add server/internal/modules/issue/adapter/postgres/queries/relations.sql server/internal/modules/issue/adapter/postgres/relations.go server/internal/modules/issue/adapter/postgres/relations_test.go server/internal/modules/issue/app/create_relations_test.go server/internal/modules/issue/app/delete_relation.go server/internal/modules/issue/app/delete_relation_test.go server/internal/modules/issue/app/fakes_relations_test.go server/internal/modules/issue/app/lock.go server/internal/modules/issue/app/lock_across.go server/internal/modules/issue/app/lock_either.go server/internal/modules/issue/app/lock_test.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/rows.go server/internal/modules/issue/domain/activity.go server/internal/modules/issue/domain/errors.go server/internal/modules/issue/domain/relation.go server/internal/modules/issue/domain/relation_test.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go
 ```
 ```bash
 git commit -m "feat(M4/P3): deleteIssueRelation's use case, on either of the relation's work items
@@ -16445,6 +16555,11 @@ Expected: 通过。
 | `T13.23` | 两个工作项任一个上的写不进任何闸门 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy`（`make test`）（Task 14 起） | 单元；组合 |
 | `T13.24` | `DeleteRelation` 经连接池写，不在它的事务的连接上 | `internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`）（Task 14 起） | 组合 |
 | `T13.25` | 两个工作项任一个上的写只锁住一端的项目（id 较小的，交错 26 里即通过判定的那一端）：另一端的项目经连接池读、锁随即放开 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestDeletingARelationAndItsOtherEndSerialize`（`make test`）（Task 14 起）、`internal/bootstrap` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（`make test`）（Task 14 起） | 单元；组合 |
+| `T13.26` | 删除关联的那行动态不论类型都写成 `blocked_by` | `internal/modules/issue/domain` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestARelationIsDeletedFromEitherWorkItem`（`make test`）（Task 14 起）、`internal/bootstrap` 的 `TestTwoDeletionsOfARelationSerialize`（`make test`）（Task 14 起）、故事 `i9-relations`（Task 15 起） | 单元；组合；端到端 |
+| `T13.27` | 锁下再读两个工作项失败时答"关联不存在"，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T13.28` | 锁下再读关联失败时答"关联不存在"，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T13.29` | 第一个工作项被拒绝之后，对第二个的判定失败时答第一个的拒绝，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T13.30` | 锁下的判定失败时答"关联不存在"，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 
 ---
 
@@ -16452,13 +16567,14 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_interleaving_relations_test.go`、`server/internal/bootstrap/issue_relation_deletes_test.go`
-- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/gate_test.go`、`server/internal/bootstrap/interleaving_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/permission_matrix_relations_test.go`、`server/internal/bootstrap/permission_matrix_seed_issues_test.go`、`server/internal/bootstrap/permission_matrix_seed_relations_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`、`server/internal/modules/issue/module.go`、`web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`
+- Modify: `api/modules/issue.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/gate_test.go`、`server/internal/bootstrap/interleaving_test.go`、`server/internal/bootstrap/issue_interleaving_test.go`、`server/internal/bootstrap/issue_write_locks_test.go`、`server/internal/bootstrap/issue_writes_test.go`、`server/internal/bootstrap/permission_matrix_relations_test.go`、`server/internal/bootstrap/permission_matrix_seed_issues_test.go`、`server/internal/bootstrap/permission_matrix_seed_relations_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/handler_test.go`、`server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`、`server/internal/modules/issue/app/delete_relation.go`、`server/internal/modules/issue/module.go`、`web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/en/errors.json`、`web/packages/i18n/src/locales/zh-CN/errors.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.16、第 3 节第 3、4、8、9、15、16、17 条；M4 设计 3.5、3.6、3.10、5.1、9.2、9.3，12 节约束 4）
 - 契约：`DELETE /api/v0/issue-relations/{relation_id}`（`deleteIssueRelation`，204，`x-problem-codes: [issue.relation_not_found, forbidden, project.archived, issue.archived, server_busy]`），参数 `RelationID`；描述写上两端任一个的判定、看不到两端是 404、两端的归档、两行动态、两端的最后修改；`api/openapi.yaml` 的路径。
 - 前端（约束 4）：`issue.relation_not_found` 的文案进 `error-messages.ts` 的 `PROBLEM_MESSAGES` 和两份 `errors.json`（en "The relation does not exist, or you cannot see either of its work items."，zh-CN "关联不存在，或者它的两个工作项你都看不到。"）。
 - `issue/adapter/http`：`handler.go` 的 `DeleteIssueRelationUseCase`；`relations.go` 的 `DeleteIssueRelation`（204）；`handler_test.go` 的测试的用例集。`issue/module.go` 接上，说明写上它。
+- `issue/app/delete_relation.go`：`DeleteIssueRelation` 的说明写上它的路由 `DELETE /api/v0/issue-relations/{relation_id}`（本 Task 加的），如 `GetIssue`、`UpdateIssue`、`DeleteIssue`、`CreateIssueRelations` 的说明写上它们的。
 - `bootstrap`：`issue_relation_deletes_test.go`（新：`relationPath`、`relationDeletion`；私有的 Lab 由 Task 12 的 `createdProjectFrom` 建）；交错的帮手扩展、不复制（第 3 节第 16 条）：`interleaving_test.go` 的 `serializeOnTable`（第二个写等的是给的表的一行；`serializeOn` 是它在 `projects` 上），`issue_interleaving_test.go` 的 `serializeAt`、`inBothOrdersAt`（`serialize`、`inBothOrders` 是它们在 `projects` 上），`issue_interleaving_relations_test.go`（新：`nearAndFar`、`projectWith`、`deletedAt`、`relationRowOf`、`unrelates`、`deletesOps`，加关联用 Task 11 的 `relates`，名字找工作项用 Task 3 的 `workItemNamed`，删除工作项用 Task 6 的 `deletesNamed`）；`issue_write_locks_test.go` 的 `deleteIssueRelation` 一行（锁下第一个写的表 `issue_relations`，`SHARE`）；`gate_test.go` 的关联的删除一行；`issue_writes_test.go` 的 `TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`：alice 删除她建的关联；矩阵：`permission_matrix_seed_relations_test.go`（整个文件：加"别人的"（Others'：公开项目的 `matrixIssue` 与"管理员·访客"的）、已归档的 Shelved、已删除的工作区的 Gone，`relatedItems` 是 Gone 的第二个工作项，`relationOf` 是每一列的格子删除的那一条），`permission_matrix_seed_issues_test.go` 种下 `relatedItems`，`permission_matrix_targets_test.go` 的 `{relation_id}` 目标（`relationOf`，它的列的项目里种下的），`permission_matrix_relations_test.go` 的 `deleteIssueRelation` 四行（`cellRelationNotFound`、`relationRows`、`toRelation`、`onARelation`）、列表的格子多了"别人的"、Shelved，说明写上删除的行按 `id` 指名关联（`relationOf`），`permission_matrix_test.go` 的种子说明。
 
 **Tests:**
@@ -16670,6 +16786,16 @@ func TestDeleteIssueRelationRefusals(t *testing.T) {
 	}
 }
 
+````
+
+`server/internal/modules/issue/app/delete_relation.go`（修改，1 处）：
+
+````old server/internal/modules/issue/app/delete_relation.go
+// DeleteIssueRelation deletes a relation (M4 design 3.5, 3.10, 5.1).
+````
+````new server/internal/modules/issue/app/delete_relation.go
+// DeleteIssueRelation deletes a relation: DELETE
+// /api/v0/issue-relations/{relation_id} (M4 design 3.5, 3.10, 5.1).
 ````
 
 `server/internal/modules/issue/module.go`（修改，2 处）：
@@ -17726,7 +17852,7 @@ Expected: 通过。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/issue.yaml api/openapi.yaml server/internal/bootstrap/gate_test.go server/internal/bootstrap/interleaving_test.go server/internal/bootstrap/issue_interleaving_relations_test.go server/internal/bootstrap/issue_interleaving_test.go server/internal/bootstrap/issue_relation_deletes_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/permission_matrix_relations_test.go server/internal/bootstrap/permission_matrix_seed_issues_test.go server/internal/bootstrap/permission_matrix_seed_relations_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/handler_test.go server/internal/modules/issue/adapter/http/relations.go server/internal/modules/issue/adapter/http/relations_test.go server/internal/modules/issue/module.go web/apps/web/core/lib/error-messages.ts web/packages/i18n/src/locales/en/errors.json web/packages/i18n/src/locales/zh-CN/errors.json api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml api/openapi.yaml server/internal/bootstrap/gate_test.go server/internal/bootstrap/interleaving_test.go server/internal/bootstrap/issue_interleaving_relations_test.go server/internal/bootstrap/issue_interleaving_test.go server/internal/bootstrap/issue_relation_deletes_test.go server/internal/bootstrap/issue_write_locks_test.go server/internal/bootstrap/issue_writes_test.go server/internal/bootstrap/permission_matrix_relations_test.go server/internal/bootstrap/permission_matrix_seed_issues_test.go server/internal/bootstrap/permission_matrix_seed_relations_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/handler_test.go server/internal/modules/issue/adapter/http/relations.go server/internal/modules/issue/adapter/http/relations_test.go server/internal/modules/issue/app/delete_relation.go server/internal/modules/issue/module.go web/apps/web/core/lib/error-messages.ts web/packages/i18n/src/locales/en/errors.json web/packages/i18n/src/locales/zh-CN/errors.json api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): deleteIssueRelation through the API, the matrix, and the relations' interleavings
@@ -17757,7 +17883,7 @@ Expected: 通过。
 | `T14.3` | 页面没有 `issue.relation_not_found` 的文案 | `error-messages.test.ts`（`make test-web`） | 单元 |
 | `T14.4` | 中文的语言包没有 `issue_relation_not_found` | `web/packages/i18n` 的 `check:sync`（`make lint-web`） | 守卫 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T7.9`、`T8.8`、`T8.10`、`T8.11`、`T8.16`、`T8.17`、`T8.18`、`T9.16`、`T9.17`、`T10.7`、`T10.11`、`T12.9`、`T13.1`、`T13.2`、`T13.3`、`T13.5`、`T13.6`、`T13.7`、`T13.8`、`T13.9`、`T13.10`、`T13.11`、`T13.12`、`T13.13`、`T13.14`、`T13.15`、`T13.16`、`T13.17`、`T13.18`、`T13.19`、`T13.23`、`T13.24`、`T13.25`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=14`）。
+本 Task 的检查也发现较早的 Task 的变异 `T7.9`、`T8.8`、`T8.10`、`T8.11`、`T8.16`、`T8.17`、`T8.18`、`T9.16`、`T9.17`、`T10.7`、`T10.11`、`T12.9`、`T13.1`、`T13.2`、`T13.3`、`T13.5`、`T13.6`、`T13.7`、`T13.8`、`T13.9`、`T13.10`、`T13.11`、`T13.12`、`T13.13`、`T13.14`、`T13.15`、`T13.16`、`T13.17`、`T13.18`、`T13.19`、`T13.23`、`T13.24`、`T13.25`、`T13.26`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=14`）。
 
 ---
 
@@ -18887,7 +19013,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **变异**：本 Task 只加故事和夹具，没有自己的变异：它的故事是较早的 Task 的变异的端到端一层。
 
-本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.5`、`T1.9`、`T2.2`、`T2.5`、`T2.7`、`T2.10`、`T3.5`、`T3.6`、`T3.7`、`T3.10`、`T4.8`、`T4.11`、`T5.9`、`T5.19`、`T8.5`、`T8.10`、`T8.11`、`T9.1`、`T9.2`、`T9.3`、`T9.7`、`T9.9`、`T10.12`、`T10.14`、`T10.15`、`T10.16`、`T10.17`、`T10.18`、`T11.2`、`T12.8`、`T12.9`、`T13.11`、`T13.13`、`T13.14`、`T13.15`、`T13.17`、`T13.18`、`T14.1`（列在各自的 Task 的表里，标"（Task 15 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=15`）。
+本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.5`、`T1.9`、`T2.2`、`T2.5`、`T2.7`、`T2.10`、`T3.5`、`T3.6`、`T3.7`、`T3.10`、`T4.8`、`T4.11`、`T5.9`、`T5.19`、`T8.5`、`T8.10`、`T8.11`、`T9.1`、`T9.2`、`T9.3`、`T9.7`、`T9.9`、`T10.12`、`T10.14`、`T10.15`、`T10.16`、`T10.17`、`T10.18`、`T11.2`、`T12.8`、`T12.9`、`T13.11`、`T13.13`、`T13.14`、`T13.15`、`T13.17`、`T13.18`、`T13.26`、`T14.1`（列在各自的 Task 的表里，标"（Task 15 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=15`）。
 
 ---
 

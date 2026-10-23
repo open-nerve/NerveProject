@@ -107,14 +107,14 @@ func TestCreateIssueRelationsRelatesTheWorkItemToOthers(t *testing.T) {
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
-			if len(rel.relations) != 2 {
-				t.Fatalf("the relations %+v, want two", rel.relations)
+			if len(rel.inserted) != 2 {
+				t.Fatalf("the relations %+v, want two", rel.inserted)
 			}
 			for n, o := range []domain.Issue{r.near, r.far} {
 				want := tt.stored(id, o)
-				want.ID = rel.relations[n].ID
-				if !reflect.DeepEqual(rel.relations[n], want) || n > 0 && rel.relations[n].ID.Compare(rel.relations[n-1].ID) <= 0 {
-					t.Errorf("relation %d: %+v, want %+v, its id after the one before", n, rel.relations[n], want)
+				want.ID = rel.inserted[n].ID
+				if !reflect.DeepEqual(rel.inserted[n], want) || n > 0 && rel.inserted[n].ID.Compare(rel.inserted[n-1].ID) <= 0 {
+					t.Errorf("relation %d: %+v, want %+v, its id after the one before", n, rel.inserted[n], want)
 				}
 			}
 			marked := app.ChangedRows{IDs: sorted([]uuid.UUID{id, r.near.ID, r.far.ID}), By: alice, At: clockNow}
@@ -132,7 +132,7 @@ func TestCreateIssueRelationsRelatesTheWorkItemToOthers(t *testing.T) {
 			var want []app.IssueRelation
 			for n, o := range []domain.Issue{r.near, r.far} {
 				o.UpdatedByID, o.UpdatedAt, o.SubIssuesCount = &alice, clockNow, []int{2, 0}[n]
-				want = append(want, app.IssueRelation{ID: rel.relations[n].ID, Type: tt.kind, Issue: o, CreatedAt: clockNow})
+				want = append(want, app.IssueRelation{ID: rel.inserted[n].ID, Type: tt.kind, Issue: o, CreatedAt: clockNow})
 			}
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("Execute() = %+v, want %+v", got, want)
@@ -185,13 +185,13 @@ func TestCreateIssueRelationsRefusals(t *testing.T) {
 	}
 }
 
-// wantNothingWritten checks that an addition of relations over w and rel
-// wrote nothing: no relation, no work item marked changed, no row of
-// activity.
+// wantNothingWritten checks that a write of relations over w and rel wrote
+// nothing: no relation inserted or deleted, no work item marked changed,
+// no row of activity.
 func wantNothingWritten(t *testing.T, w *world, rel *fakeRelations) {
 	t.Helper()
-	if rel.relations != nil || rel.marked != nil || w.issues.activities != nil {
-		t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.relations, rel.marked, w.issues.activities)
+	if rel.inserted != nil || rel.deleted != nil || rel.marked != nil || w.issues.activities != nil {
+		t.Errorf("wrote %+v, %+v, %+v, %+v; want nothing", rel.inserted, rel.deleted, rel.marked, w.issues.activities)
 	}
 }
 

@@ -81,11 +81,12 @@ type held struct {
 
 // run takes w's precheck, before any lock and outside any transaction;
 // then the write gates of its projects, w's and, across projects, those of
-// the work items it reaches, all at once in ascending id order; then in
-// one transaction w's lock and decision, and runs fn in it with what they
-// hold (M4 design 3.5, 11.11): w's whole write. It leaves the gates once
-// the transaction has ended, on every path, a panic's too. A refusal of the
-// precheck, the gate or the decision is its answer, and fn does not run.
+// the work items it reaches, or, on either of two work items, those of
+// both, all at once in ascending id order; then in one transaction w's
+// lock and decision, and runs fn in it with what they hold (M4 design 3.5,
+// 11.11): w's whole write. It leaves the gates once the transaction has
+// ended, on every path, a panic's too. A refusal of the precheck, the gate
+// or the decision is its answer, and fn does not run.
 func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx context.Context, h held) error) error {
 	w, s, err := l.precheck(ctx, actor, w)
 	if err != nil {

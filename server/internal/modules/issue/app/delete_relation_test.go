@@ -102,20 +102,10 @@ func TestDeleteIssueRelationDeletesItOnEitherWorkItem(t *testing.T) {
 			if want := (app.ChangedRows{IDs: changed, By: alice, At: clockNow}); rel.marked == nil || !reflect.DeepEqual(*rel.marked, want) {
 				t.Errorf("marked %+v, want %+v", rel.marked, want)
 			}
-			rows := []app.ActivityRow{
+			wantActivityRows(t, w, []app.ActivityRow{
 				{IssueID: farID, ProjectID: ops, Activity: domain.RelationRemoved(domain.BlockedBy, domain.Ref{ID: nearID, Identifier: "WEB-8"})},
 				{IssueID: nearID, ProjectID: web, Activity: domain.RelationRemoved(domain.Blocking, domain.Ref{ID: farID, Identifier: "OPS-3"})},
-			}
-			if len(w.issues.activities) != len(rows) {
-				t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(rows))
-			}
-			for n, row := range w.issues.activities {
-				want := rows[n]
-				want.ID, want.WorkspaceID, want.ActorID, want.At = row.ID, acme, alice, clockNow
-				if !reflect.DeepEqual(row, want) || n > 0 && row.ID.Compare(w.issues.activities[n-1].ID) <= 0 {
-					t.Errorf("activity row %d: %+v, want %+v, its id after the row before", n, row, want)
-				}
-			}
+			})
 		})
 	}
 }
@@ -193,22 +183,51 @@ func TestDeleteIssueRelationRefusals(t *testing.T) {
 			if !reflect.DeepEqual(err, tt.want) {
 				t.Errorf("Execute() = %#v, want %#v whole", err, tt.want)
 			}
-			if rel.deleted != nil || rel.marked != nil || w.issues.activities != nil {
-				t.Errorf("wrote %+v, %+v, %+v; want nothing", rel.deleted, rel.marked, w.issues.activities)
-			}
+			wantNothingWritten(t, w, rel)
 		})
 	}
 }
 
 // A port that fails ends the deletion with its failure, as itself, and no
-// call after it runs: the transaction rolls back whatever was written.
+// call after it runs: the transaction rolls back whatever was written. It
+// fails, at its first call, the relation's read, far's and near's reads
+// and the decision on far before the locks, the decision on near there
+// when far is refused, the lock and the three writes; and, once the
+// precheck's calls have passed, far's and near's reads and the decision on
+// far again under the locks (eitherUnder), the decision on near there when
+// far is refused there, and the relation's read again, after unrelating's
+// calls up to it.
 func TestDeleteIssueRelationStopsAtAFailingPort(t *testing.T) {
-	for _, port := range []string{"GetRelation", "GetIssue", line("GetIssue", nearID), "Authorize", "LockMany", "DeleteRelation", "MarkChanged",
-		"InsertActivities"} {
-		t.Run(port, func(t *testing.T) {
+	far, near := line("Authorize", alice, domain.ActionUpdate, acme, ops), line("Authorize", alice, domain.ActionUpdate, acme, web)
+	for _, tt := range []struct {
+		port    string
+		answers []error // the Authorizer's
+	}{
+		{"GetRelation", nil}, {"GetIssue", nil}, {line("GetIssue", nearID), nil}, {"Authorize", nil}, {near, []error{shared.Forbidden()}},
+		{"LockMany", nil}, {"DeleteRelation", nil}, {"MarkChanged", nil}, {"InsertActivities", nil},
+	} {
+		t.Run(tt.port, func(t *testing.T) {
 			uc, w, _ := newUnrelate()
-			w.log.fail = port
-			wantStoppedAt(t, w, uc.Execute(as(alice), relationID), port)
+			w.log.fail, w.auth.answers = tt.port, tt.answers
+			wantStoppedAt(t, w, uc.Execute(as(alice), relationID), tt.port)
+		})
+	}
+	for _, tt := range []struct {
+		name, port string
+		answers    []error  // the Authorizer's
+		calls      []string // of unrelating's, the port's the last
+	}{
+		{"far read again under the locks", line("GetIssue", farID), nil, unrelating(1, 1)[:7]},
+		{"near read again under the locks", line("GetIssue", nearID), nil, unrelating(1, 1)[:8]},
+		{"far decided on again under the locks", far, nil, unrelating(1, 1)[:9]},
+		{"near decided on under the locks, far refused there", near, []error{1: shared.Forbidden()}, unrelating(1, 2)[:10]},
+		{"the relation read again under the locks", line("GetRelation", relationID), nil, unrelating(1, 1)},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			uc, w, _ := newUnrelate()
+			w.auth.answers = tt.answers
+			w.project.waited = func() { w.log.fail = tt.port }
+			wantStopped(t, w, uc.Execute(as(alice), relationID), tt.port, slices.Equal(w.log.calls, tt.calls))
 		})
 	}
 }

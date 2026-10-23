@@ -115,13 +115,18 @@ func TestRelationAdded(t *testing.T) {
 
 // A deleted relation writes a row on each of its work items, of the same
 // columns (rows 22 and 23 of M4 design 3.13): the type as the work item
-// reads it, deleted, from the other's identifier to "", the other's id the
-// old identifier, Plane's sentence with the type.
+// reads it, each of the four, deleted, from the other's identifier to "",
+// the other's id the old identifier, Plane's sentence with the type.
 func TestRelationRemoved(t *testing.T) {
 	other := Ref{ID: uuid.NewV7(), Identifier: "OPS-3"}
-	want := Activity{Field: ptr("blocked_by"), Verb: VerbDeleted, OldValue: ptr("OPS-3"), NewValue: ptr(""), OldIdentifier: &other.ID,
-		Comment: "deleted blocked_by relation"}
-	if got := RelationRemoved(BlockedBy, other); !reflect.DeepEqual(got, want) {
+	got, want := map[RelationType]Activity{}, map[RelationType]Activity{}
+	for kind, comment := range map[RelationType]string{RelatesTo: "deleted relates_to relation", Duplicate: "deleted duplicate relation",
+		BlockedBy: "deleted blocked_by relation", Blocking: "deleted blocking relation"} {
+		got[kind] = RelationRemoved(kind, other)
+		want[kind] = Activity{Field: ptr(string(kind)), Verb: VerbDeleted, OldValue: ptr("OPS-3"), NewValue: ptr(""),
+			OldIdentifier: &other.ID, Comment: comment}
+	}
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("RelationRemoved() = %+v, want %+v", got, want)
 	}
 }

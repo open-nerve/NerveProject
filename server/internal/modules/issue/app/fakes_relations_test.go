@@ -13,12 +13,14 @@ import (
 // (app.RelationCreator, app.RelationLister, app.RelationDeleter), each
 // call logged: related are the work items that relate to the work item
 // asked about already, whichever it is; relations the relations a read
-// answers, and the last insert's; marked the last work items marked
-// changed; deleted the last relation deleted.
+// answers; and the writes it keeps: inserted the last insert's relations,
+// marked the last work items marked changed, deleted the last relation
+// deleted.
 type fakeRelations struct {
 	*fakeIssues
 	related   []uuid.UUID
 	relations []domain.Relation
+	inserted  []domain.Relation
 	marked    *app.ChangedRows
 	deleted   *app.RelationDeletion
 }
@@ -63,12 +65,13 @@ func (f *fakeRelations) Related(ctx context.Context, id uuid.UUID, ids []uuid.UU
 	return slices.DeleteFunc(slices.Clone(ids), func(i uuid.UUID) bool { return !slices.Contains(f.related, i) }), nil
 }
 
-// InsertRelations logs the insert, of how many, and keeps the relations.
+// InsertRelations logs the insert, of how many, and keeps the relations
+// (inserted).
 func (f *fakeRelations) InsertRelations(ctx context.Context, rs []domain.Relation) error {
 	if err := f.log.add(ctx, "InsertRelations", len(rs)); err != nil {
 		return err
 	}
-	f.relations = rs
+	f.inserted = rs
 	return nil
 }
 

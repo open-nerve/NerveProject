@@ -17,8 +17,7 @@ type DeleteIssueRelationDeps struct {
 	Clock     Clock
 }
 
-// DeleteIssueRelation deletes a relation: DELETE
-// /api/v0/issue-relations/{relation_id} (M4 design 3.5, 3.10, 5.1).
+// DeleteIssueRelation deletes a relation (M4 design 3.5, 3.10, 5.1).
 type DeleteIssueRelation struct {
 	d DeleteIssueRelationDeps
 }
@@ -84,7 +83,7 @@ func (u *DeleteIssueRelation) delete(ctx context.Context, h held, r domain.Relat
 	if err := u.d.Relations.DeleteRelation(ctx, RelationDeletion{ID: r.ID, By: by, At: at}); err != nil {
 		return err
 	}
-	first, second := end{issue: h.issue, project: h.project}, h.instead
+	first, second := h.own(), h.instead
 	changed := ascending([]uuid.UUID{first.issue.ID, second.issue.ID})
 	if err := u.d.Relations.MarkChanged(ctx, ChangedRows{IDs: changed, By: by, At: at}); err != nil {
 		return err
