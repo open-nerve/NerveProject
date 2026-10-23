@@ -110,16 +110,16 @@ func TestChainedWorkItemWritesHoldOffNoWorkspaceWrite(t *testing.T) {
 	labelled := make([]string, len(projects))
 	for i, p := range projects {
 		items[i] = w.newWorkItemIn(t, p, `{"name":"Fix"}`)
-		var ids []string
+		var ids []uuid.UUID
 		for n := range 20 {
 			var label struct {
 				ID uuid.UUID `json:"id"`
 			}
 			decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+p.String()+"/labels", `{"name":"L`+strconv.Itoa(n)+`"}`,
 				http.StatusCreated), &label)
-			ids = append(ids, `"`+label.ID.String()+`"`)
+			ids = append(ids, label.ID)
 		}
-		labelled[i] = `{"label_ids":[` + strings.Join(ids, ",") + `]}`
+		labelled[i] = `{"label_ids":` + idArray(ids...) + `}`
 	}
 	walt := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", w.acme, w.ids["walt"])[0]
 

@@ -21,9 +21,10 @@ import (
 // issueWorld's real database: each write through its module's route, as
 // bootstrap wires it. The first write's transaction is held open past its
 // writes (heldTx); the second is sent once it is held, and the gate opens
-// once the second waits for Web's row of projects, which each of the two
-// takes FOR NO KEY UPDATE (M4 design 3.5, M3 design 3.6). Every wait has a
-// deadline.
+// once the second waits for a row the first holds: a project's, Web's or
+// another's, which each of the two takes FOR NO KEY UPDATE (M4 design 3.5,
+// M3 design 3.6), or one of a table both write (serializeAt). Every wait
+// has a deadline.
 
 // heldTx holds the one transaction its write runs open past its writes:
 // once fn has done them, before the commit, it waits at its gate. A second
@@ -176,30 +177,43 @@ var (
 	demotesBob  = aliceOnWeb(http.MethodPatch, bobsMembership, `{"role":5}`)
 )
 
-// serialize sends first, through a route whose transaction a gate holds
-// open past its writes, then, once it is held, second; once the second
-// waits for a row of projects, Web's, it opens the gate, at a's released
-// (serializeOn). Each answers into its exchange within 10 seconds.
+// serialize is serializeAt on projects: the second write waits for a
+// project's row, Web's or another's.
 func (w issueWorld) serialize(t *testing.T, first, second racingWrite, a, b *exchange) {
+	t.Helper()
+	w.serializeAt(t, "projects", first, second, a, b)
+}
+
+// serializeAt sends first, through a route whose transaction a gate holds
+// open past its writes, then, once it is held, second; once the second
+// waits for a row of table, it opens the gate, at a's released
+// (serializeOnTable). Each answers into its exchange within 10 seconds.
+func (w issueWorld) serializeAt(t *testing.T, table string, first, second racingWrite, a, b *exchange) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	g := newGate()
 	firstWrite, secondWrite := first(t, w, heldTx{postgres.NewTxManager(w.pool, 2*time.Second), g}, a), second(t, w,
 		postgres.NewTxManager(w.pool, 2*time.Second), b)
-	opened, firstErr, secondErr := serializeOn(t, ctx, w.pool, g, firstWrite, secondWrite)
+	opened, firstErr, secondErr := serializeOnTable(t, ctx, w.pool, g, table, firstWrite, secondWrite)
 	if err := errors.Join(firstErr, secondErr); err != nil {
 		t.Fatal(err)
 	}
 	a.released = opened
 }
 
-// inBothOrders runs a, then b, and b, then a, each on a world of its own
-// that prepare, when given, prepares first (serialize), and checks each
-// order's answers with check. aName and bName name the writes in the
-// subtests' names.
+// inBothOrders is inBothOrdersAt on projects.
 func inBothOrders(t *testing.T, prepare func(t *testing.T, w issueWorld), aName string, a racingWrite, bName string, b racingWrite,
 	check func(t *testing.T, w issueWorld, aFirst bool, ea, eb exchange)) {
+	inBothOrdersAt(t, "projects", prepare, aName, a, bName, b, check)
+}
+
+// inBothOrdersAt runs a, then b, and b, then a, each on a world of its own
+// that prepare, when given, prepares first, the second waiting for a row
+// of table (serializeAt), and checks each order's answers with check.
+// aName and bName name the writes in the subtests' names.
+func inBothOrdersAt(t *testing.T, table string, prepare func(t *testing.T, w issueWorld), aName string, a racingWrite, bName string,
+	b racingWrite, check func(t *testing.T, w issueWorld, aFirst bool, ea, eb exchange)) {
 	for _, aFirst := range []bool{true, false} {
 		t.Run(map[bool]string{true: aName, false: bName}[aFirst]+" first", func(t *testing.T) {
 			w := newIssueWorld(t)
@@ -208,9 +222,9 @@ func inBothOrders(t *testing.T, prepare func(t *testing.T, w issueWorld), aName 
 			}
 			var ea, eb exchange
 			if aFirst {
-				w.serialize(t, a, b, &ea, &eb)
+				w.serializeAt(t, table, a, b, &ea, &eb)
 			} else {
-				w.serialize(t, b, a, &eb, &ea)
+				w.serializeAt(t, table, b, a, &eb, &ea)
 			}
 			check(t, w, aFirst, ea, eb)
 		})
@@ -247,12 +261,12 @@ func (w issueWorld) workItems(t *testing.T) int {
 }
 
 // workItemRows counts the rows of the work-item side of projects: their
-// work items and the work items' assignees, labels, subscribers and
-// activities; the deleted ones too, unless undeleted.
+// work items and the work items' assignees, labels, relations,
+// subscribers and activities; the deleted ones too, unless undeleted.
 func (w issueWorld) workItemRows(t *testing.T, projects []uuid.UUID, undeleted bool) int {
 	t.Helper()
 	n := 0
-	for _, table := range []string{"issues", "issue_assignees", "issue_labels", "issue_subscribers", "issue_activities"} {
+	for _, table := range []string{"issues", "issue_assignees", "issue_labels", "issue_relations", "issue_subscribers", "issue_activities"} {
 		var rows int
 		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+table+" WHERE project_id = ANY ($1) AND (deleted_at IS NULL OR NOT $2)",
 			projects, undeleted).Scan(&rows); err != nil {

@@ -47,6 +47,84 @@ func (e IssuePriority) Valid() bool {
 	}
 }
 
+// Defines values for IssueRelationType.
+const (
+	IssueRelationTypeBlockedBy IssueRelationType = "blocked_by"
+	IssueRelationTypeBlocking  IssueRelationType = "blocking"
+	IssueRelationTypeDuplicate IssueRelationType = "duplicate"
+	IssueRelationTypeRelatesTo IssueRelationType = "relates_to"
+)
+
+// Valid indicates whether the value is a known member of the IssueRelationType enum.
+func (e IssueRelationType) Valid() bool {
+	switch e {
+	case IssueRelationTypeBlockedBy:
+		return true
+	case IssueRelationTypeBlocking:
+		return true
+	case IssueRelationTypeDuplicate:
+		return true
+	case IssueRelationTypeRelatesTo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Issue A work item of a project, as a list shows it.
+type Issue struct {
+	// ArchivedAt When it was archived; null when it is not.
+	ArchivedAt nullable.Nullable[time.Time] `json:"archived_at"`
+
+	// AssigneeIds The accounts it is assigned to, by id; one who has left the project since is still one.
+	AssigneeIds []uuid.UUID `json:"assignee_ids"`
+
+	// CompletedAt When it was put in a state of the completed group; null in any other state.
+	CompletedAt nullable.Nullable[time.Time] `json:"completed_at"`
+	CreatedAt   time.Time                    `json:"created_at"`
+
+	// CreatedByID The account that created it; null for none.
+	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
+	ID          uuid.UUID                    `json:"id"`
+
+	// LabelIds Its labels, by id.
+	LabelIds []uuid.UUID `json:"label_ids"`
+	Name     string      `json:"name"`
+
+	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
+
+	// Priority A work item's priority, from the most to the least urgent.
+	Priority  IssuePriority `json:"priority"`
+	ProjectID uuid.UUID     `json:"project_id"`
+
+	// SequenceID Its number in its project, from 1; with the project's identifier, as in WEB-12.
+	SequenceID int `json:"sequence_id"`
+
+	// SortOrder Its place among its state's work items, the lowest first.
+	SortOrder float64 `json:"sort_order"`
+
+	// StartDate The day it starts; null for none.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
+	StateID   uuid.UUID                      `json:"state_id"`
+
+	// SubIssuesCount The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.
+	SubIssuesCount int `json:"sub_issues_count"`
+
+	// TargetDate The day it is due, not before its start date; null for none.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date"`
+	UpdatedAt  time.Time                      `json:"updated_at"`
+
+	// UpdatedByID The account that changed it last; null for none.
+	UpdatedByID nullable.Nullable[uuid.UUID] `json:"updated_by_id"`
+	WorkspaceID uuid.UUID                    `json:"workspace_id"`
+}
+
+// IssueCollection Work items, all of them, without pages.
+type IssueCollection struct {
+	Data []Issue `json:"data"`
+}
+
 // IssueCreate defines model for IssueCreate.
 type IssueCreate struct {
 	// AssigneeIds At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for the project's default assignee while he is one, else no one.
@@ -57,6 +135,9 @@ type IssueCreate struct {
 
 	// Name 1–255 characters without the white space around it, which is not stored.
 	Name string `json:"name"`
+
+	// ParentID The work item it is under: one of the project's that is not archived; left out for none.
+	ParentID *uuid.UUID `json:"parent_id,omitempty"`
 
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
@@ -91,7 +172,7 @@ type IssueDetail struct {
 	LabelIds []uuid.UUID `json:"label_ids"`
 	Name     string      `json:"name"`
 
-	// ParentID The work item it is under, in the same project; null for none.
+	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
 
 	// Priority A work item's priority, from the most to the least urgent.
@@ -108,6 +189,9 @@ type IssueDetail struct {
 	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
 	StateID   uuid.UUID                      `json:"state_id"`
 
+	// SubIssuesCount The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.
+	SubIssuesCount int `json:"sub_issues_count"`
+
 	// TargetDate The day it is due, not before its start date; null for none.
 	TargetDate nullable.Nullable[shared.Date] `json:"target_date"`
 	UpdatedAt  time.Time                      `json:"updated_at"`
@@ -120,6 +204,35 @@ type IssueDetail struct {
 // IssuePriority A work item's priority, from the most to the least urgent.
 type IssuePriority string
 
+// IssueRelation A relation of a work item to another, as the work item reads it; issue is the other, as a list shows it.
+type IssueRelation struct {
+	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+
+	// Issue A work item of a project, as a list shows it.
+	Issue Issue `json:"issue"`
+
+	// RelationType A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
+	RelationType IssueRelationType `json:"relation_type"`
+}
+
+// IssueRelationCollection Relations of a work item, all of them, without pages.
+type IssueRelationCollection struct {
+	Data []IssueRelation `json:"data"`
+}
+
+// IssueRelationType A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
+type IssueRelationType string
+
+// IssueRelationsCreate defines model for IssueRelationsCreate.
+type IssueRelationsCreate struct {
+	// IssueIds 1–20 work items of the workspace, each named once, to relate the work item to.
+	IssueIds []uuid.UUID `json:"issue_ids"`
+
+	// RelationType A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
+	RelationType IssueRelationType `json:"relation_type"`
+}
+
 // IssueUpdate Changes the fields it names; a field left out keeps its value.
 type IssueUpdate struct {
 	// AssigneeIds The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest.
@@ -130,6 +243,9 @@ type IssueUpdate struct {
 
 	// Name 1–255 characters without the white space around it, which is not stored.
 	Name *string `json:"name,omitempty"`
+
+	// ParentID The work item it is under, null for none: one of the project's that the caller sees, not archived, and neither this work item nor one under it. It is compared with the parent the caller is answered, a parent he does not see counting as none: sending back the null he was answered changes nothing, and naming a work item he does not see is refused as naming one not there.
+	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id,omitempty"`
 
 	// Priority A work item's priority, from the most to the least urgent.
 	Priority *IssuePriority `json:"priority,omitempty"`
@@ -144,6 +260,12 @@ type IssueUpdate struct {
 	TargetDate nullable.Nullable[shared.Date] `json:"target_date,omitempty"`
 }
 
+// SubIssuesAdd defines model for SubIssuesAdd.
+type SubIssuesAdd struct {
+	// SubIssueIds 1–100 work items of the project, each named once, to put under the work item.
+	SubIssueIds []uuid.UUID `json:"sub_issue_ids"`
+}
+
 // IssueID defines model for IssueID.
 type IssueID = uuid.UUID
 
@@ -152,6 +274,9 @@ type IssueIdentifier = string
 
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
+
+// RelationID defines model for RelationID.
+type RelationID = uuid.UUID
 
 // Slug defines model for Slug.
 type Slug = string
@@ -162,11 +287,20 @@ type Problem = externalRef0.Problem
 // UpdateIssueJSONRequestBody defines body for UpdateIssue for application/json ContentType.
 type UpdateIssueJSONRequestBody = IssueUpdate
 
+// CreateIssueRelationsJSONRequestBody defines body for CreateIssueRelations for application/json ContentType.
+type CreateIssueRelationsJSONRequestBody = IssueRelationsCreate
+
+// AddSubIssuesJSONRequestBody defines body for AddSubIssues for application/json ContentType.
+type AddSubIssuesJSONRequestBody = SubIssuesAdd
+
 // CreateIssueJSONRequestBody defines body for CreateIssue for application/json ContentType.
 type CreateIssueJSONRequestBody = IssueCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteIssueRelation Delete a relation
+	// (DELETE /api/v0/issue-relations/{relation_id})
+	DeleteIssueRelation(w http.ResponseWriter, r *http.Request, relationID RelationID)
 	// DeleteIssue Delete a work item
 	// (DELETE /api/v0/issues/{issue_id})
 	DeleteIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -179,6 +313,18 @@ type ServerInterface interface {
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ListIssueRelations List a work item's relations
+	// (GET /api/v0/issues/{issue_id}/relations)
+	ListIssueRelations(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// CreateIssueRelations Relate a work item to others
+	// (POST /api/v0/issues/{issue_id}/relations)
+	CreateIssueRelations(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ListSubIssues List the work items under a work item
+	// (GET /api/v0/issues/{issue_id}/sub-issues)
+	ListSubIssues(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// AddSubIssues Put work items under a work item
+	// (POST /api/v0/issues/{issue_id}/sub-issues)
+	AddSubIssues(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// UnarchiveIssue Unarchive a work item
 	// (POST /api/v0/issues/{issue_id}/unarchive)
 	UnarchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -198,6 +344,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteIssueRelation operation middleware
+func (siw *ServerInterfaceWrapper) DeleteIssueRelation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "relation_id" -------------
+	var relationID RelationID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "relation_id", r.PathValue("relation_id"), &relationID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relation_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteIssueRelation(w, r, relationID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteIssue operation middleware
 func (siw *ServerInterfaceWrapper) DeleteIssue(w http.ResponseWriter, r *http.Request) {
@@ -294,6 +466,110 @@ func (siw *ServerInterfaceWrapper) ArchiveIssue(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ArchiveIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIssueRelations operation middleware
+func (siw *ServerInterfaceWrapper) ListIssueRelations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIssueRelations(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateIssueRelations operation middleware
+func (siw *ServerInterfaceWrapper) CreateIssueRelations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateIssueRelations(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSubIssues operation middleware
+func (siw *ServerInterfaceWrapper) ListSubIssues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSubIssues(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddSubIssues operation middleware
+func (siw *ServerInterfaceWrapper) AddSubIssues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddSubIssues(w, r, issueID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -516,6 +792,11 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.UpdateIssue)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/archive", wrapper.ArchiveIssue)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/unarchive", wrapper.UnarchiveIssue)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/sub-issues", wrapper.ListSubIssues)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/sub-issues", wrapper.AddSubIssues)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/relations", wrapper.ListIssueRelations)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/relations", wrapper.CreateIssueRelations)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-relations/{relation_id}", wrapper.DeleteIssueRelation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issues/{identifier}", wrapper.GetIssueByIdentifier)
 
 	return m
@@ -529,6 +810,46 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteIssueRelationRequestObject struct {
+	RelationID RelationID `json:"relation_id"`
+}
+
+type DeleteIssueRelationResponseObject interface {
+	VisitDeleteIssueRelationResponse(w http.ResponseWriter) error
+}
+
+type DeleteIssueRelation204Response struct {
+}
+
+func (response DeleteIssueRelation204Response) VisitDeleteIssueRelationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteIssueRelationdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteIssueRelationdefaultApplicationProblemPlusJSONResponse) VisitDeleteIssueRelationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type DeleteIssueRequestObject struct {
@@ -710,6 +1031,192 @@ func (response ArchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitArchi
 	return err
 }
 
+type ListIssueRelationsRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type ListIssueRelationsResponseObject interface {
+	VisitListIssueRelationsResponse(w http.ResponseWriter) error
+}
+
+type ListIssueRelations200JSONResponse IssueRelationCollection
+
+func (response ListIssueRelations200JSONResponse) VisitListIssueRelationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIssueRelationsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListIssueRelationsdefaultApplicationProblemPlusJSONResponse) VisitListIssueRelationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIssueRelationsRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Body    *CreateIssueRelationsJSONRequestBody
+}
+
+type CreateIssueRelationsResponseObject interface {
+	VisitCreateIssueRelationsResponse(w http.ResponseWriter) error
+}
+
+type CreateIssueRelations201JSONResponse IssueRelationCollection
+
+func (response CreateIssueRelations201JSONResponse) VisitCreateIssueRelationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIssueRelationsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateIssueRelationsdefaultApplicationProblemPlusJSONResponse) VisitCreateIssueRelationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSubIssuesRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type ListSubIssuesResponseObject interface {
+	VisitListSubIssuesResponse(w http.ResponseWriter) error
+}
+
+type ListSubIssues200JSONResponse IssueCollection
+
+func (response ListSubIssues200JSONResponse) VisitListSubIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSubIssuesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListSubIssuesdefaultApplicationProblemPlusJSONResponse) VisitListSubIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddSubIssuesRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Body    *AddSubIssuesJSONRequestBody
+}
+
+type AddSubIssuesResponseObject interface {
+	VisitAddSubIssuesResponse(w http.ResponseWriter) error
+}
+
+type AddSubIssues200JSONResponse IssueCollection
+
+func (response AddSubIssues200JSONResponse) VisitAddSubIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddSubIssuesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response AddSubIssuesdefaultApplicationProblemPlusJSONResponse) VisitAddSubIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UnarchiveIssueRequestObject struct {
 	IssueID IssueID `json:"issue_id"`
 }
@@ -852,6 +1359,9 @@ func (response GetIssueByIdentifierdefaultApplicationProblemPlusJSONResponse) Vi
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteIssueRelation Delete a relation
+	// (DELETE /api/v0/issue-relations/{relation_id})
+	DeleteIssueRelation(ctx context.Context, request DeleteIssueRelationRequestObject) (DeleteIssueRelationResponseObject, error)
 	// DeleteIssue Delete a work item
 	// (DELETE /api/v0/issues/{issue_id})
 	DeleteIssue(ctx context.Context, request DeleteIssueRequestObject) (DeleteIssueResponseObject, error)
@@ -864,6 +1374,18 @@ type StrictServerInterface interface {
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(ctx context.Context, request ArchiveIssueRequestObject) (ArchiveIssueResponseObject, error)
+	// ListIssueRelations List a work item's relations
+	// (GET /api/v0/issues/{issue_id}/relations)
+	ListIssueRelations(ctx context.Context, request ListIssueRelationsRequestObject) (ListIssueRelationsResponseObject, error)
+	// CreateIssueRelations Relate a work item to others
+	// (POST /api/v0/issues/{issue_id}/relations)
+	CreateIssueRelations(ctx context.Context, request CreateIssueRelationsRequestObject) (CreateIssueRelationsResponseObject, error)
+	// ListSubIssues List the work items under a work item
+	// (GET /api/v0/issues/{issue_id}/sub-issues)
+	ListSubIssues(ctx context.Context, request ListSubIssuesRequestObject) (ListSubIssuesResponseObject, error)
+	// AddSubIssues Put work items under a work item
+	// (POST /api/v0/issues/{issue_id}/sub-issues)
+	AddSubIssues(ctx context.Context, request AddSubIssuesRequestObject) (AddSubIssuesResponseObject, error)
 	// UnarchiveIssue Unarchive a work item
 	// (POST /api/v0/issues/{issue_id}/unarchive)
 	UnarchiveIssue(ctx context.Context, request UnarchiveIssueRequestObject) (UnarchiveIssueResponseObject, error)
@@ -912,6 +1434,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteIssueRelation operation middleware
+func (sh *strictHandler) DeleteIssueRelation(w http.ResponseWriter, r *http.Request, relationID RelationID) {
+	var request DeleteIssueRelationRequestObject
+
+	request.RelationID = relationID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteIssueRelation(ctx, request.(DeleteIssueRelationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteIssueRelation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteIssueRelationResponseObject); ok {
+		if err := validResponse.VisitDeleteIssueRelationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // DeleteIssue operation middleware
@@ -1018,6 +1566,124 @@ func (sh *strictHandler) ArchiveIssue(w http.ResponseWriter, r *http.Request, is
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ArchiveIssueResponseObject); ok {
 		if err := validResponse.VisitArchiveIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIssueRelations operation middleware
+func (sh *strictHandler) ListIssueRelations(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request ListIssueRelationsRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIssueRelations(ctx, request.(ListIssueRelationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIssueRelations")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIssueRelationsResponseObject); ok {
+		if err := validResponse.VisitListIssueRelationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateIssueRelations operation middleware
+func (sh *strictHandler) CreateIssueRelations(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request CreateIssueRelationsRequestObject
+
+	request.IssueID = issueID
+
+	var body CreateIssueRelationsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateIssueRelations(ctx, request.(CreateIssueRelationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateIssueRelations")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateIssueRelationsResponseObject); ok {
+		if err := validResponse.VisitCreateIssueRelationsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSubIssues operation middleware
+func (sh *strictHandler) ListSubIssues(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request ListSubIssuesRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSubIssues(ctx, request.(ListSubIssuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSubIssues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSubIssuesResponseObject); ok {
+		if err := validResponse.VisitListSubIssuesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddSubIssues operation middleware
+func (sh *strictHandler) AddSubIssues(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request AddSubIssuesRequestObject
+
+	request.IssueID = issueID
+
+	var body AddSubIssuesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddSubIssues(ctx, request.(AddSubIssuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddSubIssues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddSubIssuesResponseObject); ok {
+		if err := validResponse.VisitAddSubIssuesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -98,10 +98,18 @@ func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) module
 // who sees Web, is refused before the lock (403). She changes the first:
 // into Done, assigned to herself instead of bob, without Bug; then its name
 // as it is, which writes nothing; then with a label no project has (422),
-// and walt is refused (403); and she reads it, without a transaction. She
-// archives it, in Done, and unarchives it; she deletes the second. With
-// Web archived, her creation and her change are refused under the lock
-// (409).
+// and walt is refused (403); and she reads it, without a transaction. walt,
+// made acme's admin and Web's guest (adminGuest), changes His, his own,
+// which she has put under the first, hidden from him: the first is read
+// under the lock with the count of the answer's sub-items, both on the
+// transaction's connection, and the answer names no parent. She makes Part
+// under the first, its parent read under the lock, then moves Part
+// under the second, the second's ancestry read under it, and puts Low
+// under Part. She relates the first to Far, of Ops, as blocking it, both
+// projects locked at once, and deletes the relation. She archives the
+// first, in Done, and unarchives it; she deletes the second, and Part and
+// Low under it. With Web archived, her creation and her change are
+// refused under the lock (409).
 func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	w := newIssueWorld(t)
 	one := poolOfOne(t, w.pool.Config().ConnString())
@@ -146,6 +154,31 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	change(alice, `{"label_ids":["`+uuid.NewV7().String()+`"]}`, http.StatusUnprocessableEntity)
 	change(w.ids["walt"], `{"name":"Mend"}`, http.StatusForbidden)
 	route.answerWithin(t, w.contract, http.MethodGet, "/api/v0/issues/"+first.ID.String(), alice, "", http.StatusOK)
+	w.adminGuest(t)
+	var his storedIssue
+	decodeAnswer(t, send(w.ids["walt"], `{"name":"His"}`, http.StatusCreated), &his)
+	hisPath := "/api/v0/issues/" + his.ID.String()
+	route.answerWithin(t, w.contract, http.MethodPatch, hisPath, alice, `{"parent_id":"`+first.ID.String()+`"}`, http.StatusOK)
+	var mended storedIssue
+	if decodeAnswer(t, route.answerWithin(t, w.contract, http.MethodPatch, hisPath, w.ids["walt"], `{"name":"Mended"}`, http.StatusOK),
+		&mended); mended.ParentID != nil {
+		t.Errorf("walt's His, under the first, is answered under %s; want no parent, the first being hidden from him", mended.ParentID)
+	}
+	var part struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, send(alice, `{"name":"Part","parent_id":"`+first.ID.String()+`"}`, http.StatusCreated), &part)
+	route.answerWithin(t, w.contract, http.MethodPatch, "/api/v0/issues/"+part.ID.String(), alice, `{"parent_id":"`+defaulted.ID.String()+`"}`,
+		http.StatusOK)
+	var low struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, send(alice, `{"name":"Low"}`, http.StatusCreated), &low)
+	route.answerWithin(t, w.contract, http.MethodPost, subIssues(part.ID), alice, subIssueIDs(low.ID), http.StatusOK)
+	far := w.newWorkItemIn(t, createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS"), `{"name":"Far"}`)
+	related := listIn[answeredRelation](t, route.answerWithin(t, w.contract, http.MethodPost, relationsOf(first.ID), alice, relating("blocking", far),
+		http.StatusCreated))
+	route.answerWithin(t, w.contract, http.MethodDelete, relationPath(related[0].ID), alice, "", http.StatusNoContent)
 	for _, verb := range []string{"archive", "unarchive"} {
 		route.answerWithin(t, w.contract, http.MethodPost, "/api/v0/issues/"+first.ID.String()+"/"+verb, alice, "", http.StatusOK)
 	}

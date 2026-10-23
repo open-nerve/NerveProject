@@ -31,10 +31,10 @@ var (
 	clockNow                    = time.Date(2026, 10, 17, 10, 0, 0, 123456789, time.UTC)
 )
 
-// world is web as the use cases' ports see it: its states, the greatest
-// sort order of Done's work items 85535, its labels, its last number 6,
-// its members' roles and display names; an Authorizer that allows each
-// call it is not told to refuse; and the locks over them.
+// world is web as the use cases' ports see it: its identifier WEB, its
+// states, the greatest sort order of Done's work items 85535, its labels,
+// its last number 6, its members' roles and display names; an Authorizer
+// that allows each call it is not told to refuse; and the locks over them.
 type world struct {
 	log      *callLog
 	project  *fakeProject
@@ -47,8 +47,8 @@ type world struct {
 func newCreate() (*app.CreateIssue, *world) {
 	log := &callLog{}
 	w := &world{log: log}
-	w.project = &fakeProject{log: log, id: web, workspace: acme, found: true, locked: &app.LockedProject{WorkspaceID: acme}, last: 6,
-		states: []app.StateRef{backlog, done, triage}, labels: []app.LabelRef{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}},
+	w.project = &fakeProject{log: log, id: web, workspace: acme, found: true, locked: &app.LockedProject{WorkspaceID: acme, Identifier: "WEB"},
+		last: 6, states: []app.StateRef{backlog, done, triage}, labels: []app.LabelRef{{ID: bug, Name: "Bug"}, {ID: ui, Name: "UI"}},
 		roles: map[uuid.UUID]shared.Role{alice: shared.RoleAdmin, bob: shared.RoleMember, carol: shared.RoleAdmin, gus: shared.RoleGuest}}
 	w.issues = &fakeIssues{log: log, greatest: map[uuid.UUID]float64{done.ID: 85535}}
 	w.auth = &fakeAuthorizer{log: log}
@@ -140,32 +140,51 @@ func TestCreateIssueWritesTheWorkItemAndItsRows(t *testing.T) {
 }
 
 // wantActivity checks the activity w's store was given: a row of web's
-// work item id for each of activities, in their order, alice's at the
-// clock's moment, each id after the row's before.
+// work item id for each of activities, in their order (wantActivityRows).
 func wantActivity(t *testing.T, w *world, id uuid.UUID, activities []domain.Activity) {
 	t.Helper()
-	if len(w.issues.activities) != len(activities) {
-		t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(activities))
+	rows := make([]app.ActivityRow, len(activities))
+	for i, a := range activities {
+		rows[i] = app.ActivityRow{ProjectID: web, IssueID: id, Activity: a}
+	}
+	wantActivityRows(t, w, rows)
+}
+
+// wantActivityRows checks the activity w's store was given: the rows, in
+// their order, each of its work item and project with its activity, in
+// acme, alice's at the clock's moment, each id after the row's before.
+func wantActivityRows(t *testing.T, w *world, rows []app.ActivityRow) {
+	t.Helper()
+	if len(w.issues.activities) != len(rows) {
+		t.Fatalf("the activity %+v, want %d rows", w.issues.activities, len(rows))
 	}
 	for i, r := range w.issues.activities {
-		wantRow := app.ActivityRow{ID: r.ID, WorkspaceID: acme, ProjectID: web, IssueID: id, Activity: activities[i], ActorID: alice, At: clockNow}
-		if !reflect.DeepEqual(r, wantRow) || i > 0 && r.ID.Compare(w.issues.activities[i-1].ID) <= 0 {
-			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", i, r, wantRow)
+		want := rows[i]
+		want.ID, want.WorkspaceID, want.ActorID, want.At = r.ID, acme, alice, clockNow
+		if !reflect.DeepEqual(r, want) || i > 0 && r.ID.Compare(w.issues.activities[i-1].ID) <= 0 {
+			t.Errorf("activity row %d: %+v, want %+v, its id after the row before", i, r, want)
 		}
 	}
 }
 
-// wantRefusal checks a use case's refusal over w: err is want, of its code
-// and with its fields, and the calls are calls. Each use case's test
-// checks what its refusal leaves unwritten (refused, unchanged).
+// wantRefusal checks a use case's refusal over w: err is want
+// (wantRefused), and the calls are calls. Each use case's test checks what
+// its refusal leaves unwritten (refused, unchanged).
 func wantRefusal(t *testing.T, w *world, err, want error, calls []string) {
+	t.Helper()
+	wantRefused(t, err, want)
+	if !slices.Equal(w.log.calls, calls) {
+		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+	}
+}
+
+// wantRefused checks a use case's refusal err: it is want, of its code and
+// with its fields.
+func wantRefused(t *testing.T, err, want error) {
 	t.Helper()
 	var se, wantSE *shared.Error
 	if !errors.As(err, &se) || !errors.As(want, &wantSE) || se.Code != wantSE.Code || !reflect.DeepEqual(se.Fields, wantSE.Fields) {
 		t.Errorf("Execute() = %v, want %v", err, want)
-	}
-	if !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
 }
 
@@ -173,9 +192,26 @@ func wantRefusal(t *testing.T, w *world, err, want error, calls []string) {
 // the failure, errDisk, as itself, and the port's first call is its last.
 func wantStoppedAt(t *testing.T, w *world, err error, port string) {
 	t.Helper()
-	last := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
-	if !errors.Is(err, errDisk) || last != len(w.log.calls)-1 {
-		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, port)
+	first := slices.IndexFunc(w.log.calls, func(c string) bool { return strings.HasPrefix(c, port+" ") })
+	wantStopped(t, w, err, port, first == len(w.log.calls)-1)
+}
+
+// wantStoppedOn checks a use case over w that failed on call, a port's
+// call with its arguments as line writes it (callLog.fail): its answer is
+// the failure, errDisk, as itself, and call is its last.
+func wantStoppedOn(t *testing.T, w *world, err error, call string) {
+	t.Helper()
+	n := len(w.log.calls)
+	wantStopped(t, w, err, call, n > 0 && w.log.calls[n-1] == call)
+}
+
+// wantStopped is the check of wantStoppedAt and wantStoppedOn: err is the
+// failure, errDisk, as itself, and the call named is the last of w's
+// calls, as last says.
+func wantStopped(t *testing.T, w *world, err error, named string, last bool) {
+	t.Helper()
+	if !errors.Is(err, errDisk) || !last {
+		t.Errorf("Execute() = %v after the calls\n%q\nwant %v, %s the last call", err, w.log.calls, errDisk, named)
 	}
 }
 

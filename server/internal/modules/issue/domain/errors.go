@@ -29,4 +29,9 @@ var (
 	// neither the completed nor the cancelled group (M4 design 3.8).
 	ErrNotArchivable = shared.NewError(shared.KindConflict, "issue.not_archivable",
 		"Only a completed or cancelled work item can be archived; move it to such a state first.")
+	// ErrRelationNotFound answers a relation that does not exist or is
+	// deleted, and one neither of whose work items the caller sees, all
+	// with this one value (M4 design 3.10, 5.3).
+	ErrRelationNotFound = shared.NewError(shared.KindNotFound, "issue.relation_not_found",
+		"The relation does not exist, or you cannot see either of its work items.")
 )

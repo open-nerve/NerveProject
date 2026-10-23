@@ -48,7 +48,8 @@ type seededItem struct {
 }
 
 // seededItems are the work items issueSeed stores, in order: each
-// project's matrixIssue, by its workspace's admin, then ownIssues.
+// project's matrixIssue, by its workspace's admin, then ownIssues, then
+// relatedItems.
 func seededItems() []seededItem {
 	var items []seededItem
 	for _, p := range matrixProjects {
@@ -58,7 +59,7 @@ func seededItems() []seededItem {
 	for _, o := range ownIssues {
 		items = append(items, seededItem{projectOf(o.c), o.name, accountOf(o.c)})
 	}
-	return items
+	return append(items, relatedItems...)
 }
 
 // numberOf is the number of the seeded work item name of the project key,

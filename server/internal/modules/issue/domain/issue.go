@@ -52,8 +52,9 @@ func Archivable(group StateGroup) bool {
 
 // Issue is a work item as stored and as the API shows it (M4 design 5.2),
 // with the accounts of its undeleted assignees' rows and the labels of its
-// undeleted labels' rows, in the accounts' and the labels' id order. The
-// fields of later phases come with them (M4 design 12, constraint 5).
+// undeleted labels' rows, in the accounts' and the labels' id order, and
+// the caller's view of it. The fields of later phases come with them (M4
+// design 12, constraint 5).
 type Issue struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
@@ -74,6 +75,12 @@ type Issue struct {
 	UpdatedByID *uuid.UUID
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	// The caller's view (M4 design 3.9): the number of its undeleted,
+	// unarchived direct sub-items that he sees, by his grant on its
+	// project. A read of the store leaves it 0; it is counted when an
+	// answer is built (the app's Locks.seen), and a creation answers 0, a
+	// new work item having none.
+	SubIssuesCount int
 }
 
 // HiddenFrom reports whether the guest rule hides i from the account actor,
@@ -88,7 +95,8 @@ func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
 // NewIssue is what the caller asks for when creating a work item (M4
 // design 5.2, IssueCreate without the fields of later phases): StateID nil
 // for the project's default state, Priority nil for none, a date nil for
-// none. A field given is checked as given, a priority given empty too.
+// none, ParentID nil for no parent. A field given is checked as given, a
+// priority given empty too.
 type NewIssue struct {
 	Name        string
 	StateID     *uuid.UUID
@@ -97,6 +105,7 @@ type NewIssue struct {
 	LabelIDs    []uuid.UUID
 	StartDate   *shared.Date
 	TargetDate  *shared.Date
+	ParentID    *uuid.UUID
 }
 
 // maxName is the length of issues.name, varchar(255), in characters.
@@ -124,8 +133,8 @@ const (
 // MaxLabels labels, each named once; the start date not after the target
 // date, as the request gives both (at target_date). Every problem is
 // reported at once, in one 422 validation_failed; whether the state, each
-// assignee and each label may be is the use case's, under the project's
-// lock.
+// assignee, each label and the parent may be is the use case's, under the
+// project's lock.
 func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	n.Name = strings.TrimSpace(n.Name)
 	if n.Priority == nil {
@@ -272,4 +281,13 @@ func checkIDs(field string, ids []uuid.UUID, limit int) []*shared.FieldError {
 		named[id] = true
 	}
 	return found
+}
+
+// checkSomeIDs is checkIDs of a list of field that must name a work item:
+// an empty one is refused, as its one problem.
+func checkSomeIDs(field string, ids []uuid.UUID, limit int) []*shared.FieldError {
+	if len(ids) == 0 {
+		return []*shared.FieldError{{Field: field, Code: shared.FieldTooShort, Message: "must name a work item"}}
+	}
+	return checkIDs(field, ids, limit)
 }

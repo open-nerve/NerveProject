@@ -187,18 +187,25 @@ func result(t *testing.T, ctx context.Context, done <-chan error, what string) e
 	}
 }
 
-// serializeOn runs first, a write that waits at g holding its locks, then
-// second, once the first is held there; once the second waits for a row
-// lock of projects on pool's database (pgtest.WaitForLockWaitOn), it opens
-// g. It answers the moment g opened, and each write's error. Every wait
-// has a deadline: ctx's, g's or the probe's.
+// serializeOn is serializeOnTable on projects.
 func serializeOn(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, first, second func() error) (opened time.Time,
 	firstErr, secondErr error) {
+	t.Helper()
+	return serializeOnTable(t, ctx, pool, g, "projects", first, second)
+}
+
+// serializeOnTable runs first, a write that waits at g holding its locks,
+// then second, once the first is held there; once the second waits for a
+// row lock of table on pool's database (pgtest.WaitForLockWaitOn), it
+// opens g. It answers the moment g opened, and each write's error. Every
+// wait has a deadline: ctx's, g's or the probe's.
+func serializeOnTable(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table string, first, second func() error) (
+	opened time.Time, firstErr, secondErr error) {
 	t.Helper()
 	done := run(first)
 	held(t, ctx, g, done, "the first write")
 	answered := run(second)
-	pgtest.WaitForLockWaitOn(t, pool, "projects", 5*time.Second)
+	pgtest.WaitForLockWaitOn(t, pool, table, 5*time.Second)
 	opened = time.Now().Truncate(time.Microsecond)
 	close(g.open)
 	firstErr = result(t, ctx, done, "the first write")

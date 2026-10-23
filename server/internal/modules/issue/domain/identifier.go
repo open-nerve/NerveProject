@@ -10,6 +10,13 @@ import (
 // folded (foldIdentifier), so that one asked for in any case, Turkish
 // letters too, finds its project.
 
+// Identifier is the identifier of the work item of the number in the
+// project whose identifier is project: WEB-12, as ParseIdentifier reads it
+// and as an activity names a work item (M4 design 3.13).
+func Identifier(project string, number int) string {
+	return project + "-" + strconv.Itoa(number)
+}
+
 // ParseIdentifier splits the identifier s of a work item into its
 // project's identifier and its number: at its last hyphen, the project's
 // identifier not empty, the number in decimal digits without a sign or a

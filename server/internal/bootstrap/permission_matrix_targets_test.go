@@ -41,7 +41,8 @@ func ofAProjectTable(c caller) bool {
 // id, by their parameter: what each is called, and the seeded rows among
 // which it must be, keyed by their project's key; and, when set, the one
 // row of them a column's cells may name, and its name: a work item is its
-// column's (issueOf), whose maker the column's case may be about.
+// column's (issueOf), whose maker the column's case may be about, and a
+// relation its column's (relationOf), whose other work item it may be.
 var underProject = map[string]struct {
 	what string
 	rows func(s seeded) map[string]uuid.UUID
@@ -53,6 +54,9 @@ var underProject = map[string]struct {
 	"{issue_id}": {"work item", func(s seeded) map[string]uuid.UUID { return s.issues }, func(c caller, s seeded) (string, uuid.UUID) {
 		return issueOf(c), s.issue(projectOf(c), issueOf(c))
 	}},
+	"{relation_id}": {"relation", func(s seeded) map[string]uuid.UUID { return s.relations }, func(c caller, s seeded) (string, uuid.UUID) {
+		return relationOf(c), s.relation(projectOf(c), relationOf(c))
+	}},
 }
 
 // targetViolation is what is wrong with where path, a path of pattern that
@@ -60,11 +64,12 @@ var underProject = map[string]struct {
 // by its slug ({slug} right after workspaces) must be workspaceOf(c). A
 // project named by its id ({project_id}) must be projectOf(c)'s, and a row
 // under a project (underProject: a project membership, a state, a label, a
-// work item) one seeded in projectOf(c), a work item the column's own
-// (issueOf), as must a work item named by its identifier ({identifier}
-// right after issues: identifierOf), each from a column of a project table
-// (projectTables): a project's operation in a workspace-level row, or the
-// only admin's, would leave the project level's own columns unasked.
+// work item, a relation) one seeded in projectOf(c), a work item and a
+// relation the column's own (issueOf, relationOf), as must a work item
+// named by its identifier ({identifier} right after issues:
+// identifierOf), each from a column of a project table (projectTables): a
+// project's operation in a workspace-level row, or the only admin's, would
+// leave the project level's own columns unasked.
 // Any other row named by its id (a parameter ending in _id) must be a row
 // of s under workspaceOf(c): a cell of the deleted workspace's column that
 // named acme would get the 404 of a workspace its caller is not in, and

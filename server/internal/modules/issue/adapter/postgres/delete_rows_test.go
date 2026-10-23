@@ -50,12 +50,22 @@ func aLabel(t *testing.T, pool *pgxpool.Pool, p project, n int) uuid.UUID {
 	return newLabel(t, pool, p, fmt.Sprint("L", n))
 }
 
+// aRelation inserts the relation id of the work item issue of p to a work
+// item of p of its own for the n-th row, numbered 200 + n.
+func aRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
+	t.Helper()
+	related := uuid.NewV7()
+	newIssue(t, pool, p, related, 200+n, by)
+	newRelation(t, pool, p, issue, related, id, "relates_to", by)
+}
+
 var batchStatements = []batchStatement{
 	{"issues", (*postgresadapter.Store).DeleteProjectIssueRows, func(t *testing.T, pool *pgxpool.Pool, p project, _, id, by uuid.UUID, n int) {
 		newIssue(t, pool, p, id, 100+n, by)
 	}},
 	{"issue_assignees", (*postgresadapter.Store).DeleteProjectAssigneeRows, child("issue_assignees", "assignee_id", anAccount)},
 	{"issue_labels", (*postgresadapter.Store).DeleteProjectLabelRows, child("issue_labels", "label_id", aLabel)},
+	{"issue_relations", (*postgresadapter.Store).DeleteProjectRelationRows, aRelation},
 	{"issue_subscribers", (*postgresadapter.Store).DeleteProjectSubscriberRows, child("issue_subscribers", "subscriber_id", anAccount)},
 	{"issue_activities", (*postgresadapter.Store).DeleteProjectActivityRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id,
 		by uuid.UUID, _ int) {

@@ -216,7 +216,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows())
+		labelMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), subIssueMatrixRows(), relationMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -256,16 +256,18 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // projects, project memberships, states and labels of matrixProjects,
 // matrixProjectMembers, matrixStates and matrixLabels; through the issue
 // store, the work items of seededItems, once guestViewAll shows its guests
-// every one (issueSeed); through the project store, acme's archived project
-// archived. Through both stores, the removed member's removal; then,
-// through the workspace store, the invitations of matrixInvitations.
-// Through the project store, the memberships P5b's writes end (endings);
-// through SQL, the membership states no store makes alone (partingStates).
-// Through the API, gone deleted by its admin, which soft-deletes its
-// memberships and its project, with its states, labels and work item, with
-// it; then the checks that the rows the cells rest on are there
-// (preconditions), the states, the labels and the work items among them
-// (seededStates, seededLabels, seededIssues).
+// every one (issueSeed), and the relations of seededRelations; through the
+// project store, acme's archived project archived. Through both stores,
+// the removed member's removal; then, through the workspace store, the
+// invitations of matrixInvitations. Through the project store, the
+// memberships P5b's writes end (endings); through SQL, the membership
+// states no store makes alone (partingStates). Through the API, gone
+// deleted by its admin, which soft-deletes its memberships and its
+// project, with its states, labels, work items and relation, with it;
+// then the checks that the rows the cells rest on are there
+// (preconditions), the states, the labels, the work items and the
+// relations among them (seededStates, seededLabels, seededIssues,
+// seededRelationRows).
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.
@@ -307,6 +309,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		projects.labels(s)
 		issues := issueSeed{projectSeed: projects, store: issuepg.New(pool)}
 		issues.issues(s)
+		issues.relations(s)
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {
@@ -326,6 +329,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		projects.seededStates(pool)
 		projects.seededLabels(pool, s)
 		issues.seededIssues(s)
+		issues.seededRelationRows(s)
 	})
 	if !prepared {
 		t.FailNow()

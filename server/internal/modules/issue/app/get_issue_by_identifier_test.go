@@ -99,7 +99,7 @@ func TestGetIssueByIdentifierReadsTheWorkItem(t *testing.T) {
 		if want := readIssue(id); err != nil || !reflect.DeepEqual(got, want) {
 			t.Errorf("Execute(%s) = %+v, %v; want %+v", tt.identifier, got, err, want)
 		}
-		if calls := identified(7, id); !slices.Equal(b.log.calls, calls) {
+		if calls := append(identified(7, id), counted(id)+" outside tx"); !slices.Equal(b.log.calls, calls) {
 			t.Errorf("%s: calls:\n%q\nwant\n%q", tt.identifier, b.log.calls, calls)
 		}
 	}
@@ -111,9 +111,10 @@ func TestGetIssueByIdentifierReadsTheWorkItem(t *testing.T) {
 // project of acme, of a number no work item of web has, of a work item
 // whose project the caller does not see, or that the guest rule hides
 // from him, is issue.not_found, one answer for each, detail and all; a
-// role that may not read it, forbidden. A read or a decision that fails,
-// its failure as itself; a request without a caller, unauthenticated
-// before any read. Each answer is compared whole, not by its code alone.
+// role that may not read it, forbidden. A read, a decision or the count of
+// the answer's sub-items that fails, its failure as itself; a request
+// without a caller, unauthenticated before any read. Each answer is
+// compared whole, not by its code alone.
 func TestGetIssueByIdentifierRefusals(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
@@ -122,7 +123,7 @@ func TestGetIssueByIdentifierRefusals(t *testing.T) {
 		slug       string
 		identifier string
 		want       error
-		calls      int // of identified's
+		calls      int // of identified's, then the count's
 	}{
 		{"no workspace", func(byIdentifier) {}, as(alice), "acne", "WEB-7", domain.ErrWorkspaceNotFound, 1},
 		{"a workspace he is no member of", func(b byIdentifier) { b.auth.answers = []error{shared.ErrNotVisible} }, as(alice), "acme", "WEB-7",
@@ -143,6 +144,7 @@ func TestGetIssueByIdentifierRefusals(t *testing.T) {
 		{"the identifiers' read fails", func(b byIdentifier) { b.log.fail = "Identifiers" }, as(alice), "acme", "WEB-7", errDisk, 3},
 		{"the number's read fails", func(b byIdentifier) { b.log.fail = "IssueByNumber" }, as(alice), "acme", "WEB-7", errDisk, 4},
 		{"the work item's read fails", func(b byIdentifier) { b.log.fail = "GetIssue" }, as(alice), "acme", "WEB-7", errDisk, 5},
+		{"the count fails", func(b byIdentifier) { b.log.fail = "SubIssueCounts" }, as(alice), "acme", "WEB-7", errDisk, 7},
 		{"no caller", func(byIdentifier) {}, context.Background(), "acme", "WEB-7", shared.Unauthenticated(), 0},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -156,7 +158,7 @@ func TestGetIssueByIdentifierRefusals(t *testing.T) {
 			if tt.identifier == "WEB-8" {
 				number = 8
 			}
-			calls := identified(number, id)[:tt.calls]
+			calls := append(identified(number, id), counted(id)+" outside tx")[:tt.calls]
 			if tt.calls > 0 {
 				calls[0] = line("WorkspaceBySlug", tt.slug, "outside tx")
 			}

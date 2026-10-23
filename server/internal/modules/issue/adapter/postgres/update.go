@@ -9,13 +9,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 )
 
-// UpdateIssue writes the work item's fields f (M4 design 3.7). The use
-// case read it under the project's lock and checked every value, so any
-// violation is a bug: an internal error (500), not a domain error.
+// UpdateIssue writes the work item's fields f (M4 design 3.7, 3.9). The
+// use case read it under the project's lock and checked every value, so
+// any violation is a bug: an internal error (500), not a domain error.
 func (s *Store) UpdateIssue(ctx context.Context, f app.IssueFields) error {
 	err := s.queries(ctx).UpdateIssue(ctx, gen.UpdateIssueParams{
 		ID: f.ID, Name: f.Name, StateID: f.StateID, Priority: string(f.Priority), StartDate: timeOf(f.StartDate),
-		TargetDate: timeOf(f.TargetDate), CompletedAt: f.CompletedAt, By: f.By, At: f.At,
+		TargetDate: timeOf(f.TargetDate), ParentID: f.ParentID, CompletedAt: f.CompletedAt, By: f.By, At: f.At,
 	})
 	if err != nil {
 		return fmt.Errorf("update work item %s: %w", f.ID, err)

@@ -63,16 +63,9 @@ func newEndingWorld(t *testing.T) endingWorld {
 		answerInvitation(t, contract, w.base, w.tokens[m.name], "accept", invite(t, contract, w.base, w.tokens["alice"], m.slug, m.name+"@example.com"),
 			http.StatusOK)
 	}
-	status, body := call(t, contract, http.MethodPost, w.base+"/api/v0/workspaces/acme/projects", w.tokens["alice"],
+	w.web = createdProjectFrom(t, contract, w.base, w.tokens["alice"], "acme",
 		`{"name":"Web","identifier":"WEB","project_lead_id":"`+w.ids["bob"].String()+`"}`)
-	var web struct {
-		ID uuid.UUID `json:"id"`
-	}
-	if status != http.StatusCreated {
-		t.Fatalf("creating Web = %d %s", status, body)
-	}
-	decodeAnswer(t, body, &web)
-	w.web, w.ops = web.ID, createdProject(t, contract, w.base, w.tokens["bob"], "acme", "Ops", "OPS")
+	w.ops = createdProject(t, contract, w.base, w.tokens["bob"], "acme", "Ops", "OPS")
 	w.solo = createdProject(t, contract, w.base, w.tokens["bob"], "acme", "Solo", "SOLO")
 	w.lab = createdProject(t, contract, w.base, w.tokens["bob"], "beta", "Lab", "LAB")
 	for _, step := range []struct{ token, path, body string }{

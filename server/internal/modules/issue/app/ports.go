@@ -26,28 +26,39 @@ type ProjectGate interface {
 	// found is false when there is none, also when it was deleted while the
 	// lock waited.
 	Lock(ctx context.Context, projectID uuid.UUID) (p LockedProject, found bool, err error)
+	// LockMany locks the undeleted projects among projectIDs, each named
+	// once, in ascending id order, as Lock does, in that order, in one
+	// statement, and answers them by id: a write across projects takes
+	// them so (convention 7, M4 design 3.5). One that is not there, also
+	// one deleted while the lock waited, is not among them.
+	LockMany(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]LockedProject, error)
 }
 
 // LockedProject is a project as ProjectGate's lock answers it: its
-// workspace, whether it is archived, and its default assignee, nil for
-// none.
+// workspace, whether it is archived, its default assignee, nil for none,
+// and its identifier, which names its work items in their activity (M4
+// design 3.13).
 type LockedProject struct {
 	WorkspaceID       uuid.UUID
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
+	Identifier        string
 }
 
 // WriteGate bounds the writes on one project's work items that hold a
 // connection at once, in this process (M4 design 3.5, 11.11):
 // bootstrap/gate.go's, over platform/gate.
 type WriteGate interface {
-	// Enter returns once a write on the project's work items may begin
-	// its transaction, with the function that leaves the gate, which the
-	// write calls once its transaction has ended. It waits holding no
-	// connection and no lock. A write that may wait no longer is refused
-	// (503 server_busy); one whose request is cancelled while it waits
-	// ends with context.Canceled. Either holds nothing.
-	Enter(ctx context.Context, projectID uuid.UUID) (leave func(), err error)
+	// Enter returns once a write on the projects' work items may begin its
+	// transaction, with the function that leaves their gates, which the
+	// write calls once its transaction has ended. A write across projects
+	// names each once, in ascending id order (convention 7), and enters
+	// their gates in that order, waiting for each holding no connection
+	// and no lock, only its places in the gates before. A write that may
+	// wait no longer is refused (503 server_busy); one whose request is
+	// cancelled while it waits ends with context.Canceled. Either holds
+	// nothing.
+	Enter(ctx context.Context, projectIDs ...uuid.UUID) (leave func(), err error)
 }
 
 // Sequences numbers a project's work items (M4 design 3.7, 6.5):
@@ -102,12 +113,88 @@ type PublicProfiles interface {
 	DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
 }
 
-// IssueReader reads a work item, in the transaction ctx carries, or
+// IssueReader reads work items, in the transaction ctx carries, or
 // without one (M4 design 3.5, 5.2).
 type IssueReader interface {
 	// GetIssue reads the undeleted work item, archived or not, with its
 	// assignees and labels; found is false when there is none.
 	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
+	// GetIssues reads the undeleted work items among ids, archived or
+	// not, each as GetIssue reads it, in id order.
+	GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue, error)
+	// SubIssueCounts counts the undeleted, unarchived direct sub-items of
+	// each of the work items ids that has any (M4 design 3.9).
+	SubIssueCounts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]SubIssueCount, error)
+}
+
+// SubIssueCount is a work item's number of undeleted, unarchived direct
+// sub-items, as IssueReader counts them for an account: All of them, and
+// Own, those the account created.
+type SubIssueCount struct {
+	All, Own int
+}
+
+// SubIssueLister reads the sub-items of a work item (M4 design 3.9).
+type SubIssueLister interface {
+	// SubIssues reads the undeleted, unarchived work items directly under
+	// the work item parent, with their assignees and labels, those the
+	// account by created when by is not nil, in the order of their
+	// creation, (created_at, id), without a lock.
+	SubIssues(ctx context.Context, parent uuid.UUID, by *uuid.UUID) ([]domain.Issue, error)
+}
+
+// SubIssueAdder is the work items' store as addSubIssues writes and reads
+// them, in the transaction ctx carries (M4 design 3.5, 3.9).
+type SubIssueAdder interface {
+	IssueReader
+	// Ancestry reads the work item and those above it, as IssueUpdater's.
+	Ancestry(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error)
+	// SetParents puts the undeleted work items r names under its parent.
+	SetParents(ctx context.Context, r ParentRows) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
+}
+
+// RelationCreator is the work items' store as createIssueRelations writes
+// and reads them, in the transaction ctx carries (M4 design 3.5, 3.10).
+type RelationCreator interface {
+	IssueReader
+	// Related reads which of the work items ids relate to the work item
+	// id: an undeleted relation between them, of any type, either way, in
+	// id order.
+	Related(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]uuid.UUID, error)
+	// InsertRelations inserts the relations in their order.
+	InsertRelations(ctx context.Context, rs []domain.Relation) error
+	// MarkChanged writes the undeleted work items r names last changed.
+	MarkChanged(ctx context.Context, r ChangedRows) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
+}
+
+// RelationLister is the relations' store as listIssueRelations reads it,
+// without a lock (M4 design 3.10).
+type RelationLister interface {
+	// Relations reads the undeleted relations of the work item id, either
+	// way, each as stored, in the order they were made, (created_at, id).
+	Relations(ctx context.Context, id uuid.UUID) ([]domain.Relation, error)
+	// GetIssues reads the undeleted work items among ids, as
+	// IssueReader's.
+	GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue, error)
+}
+
+// RelationDeleter is the relations' store as deleteIssueRelation reads
+// and writes it, without a lock first, then in the transaction ctx
+// carries (M4 design 3.5, 3.10).
+type RelationDeleter interface {
+	// GetRelation reads the undeleted relation id, as stored; found is
+	// false when there is none.
+	GetRelation(ctx context.Context, id uuid.UUID) (r domain.Relation, found bool, err error)
+	// DeleteRelation soft-deletes the undeleted relation d names.
+	DeleteRelation(ctx context.Context, d RelationDeletion) error
+	// MarkChanged writes the undeleted work items r names last changed.
+	MarkChanged(ctx context.Context, r ChangedRows) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
 }
 
 // IssueArchiver is the work items' store as archiveIssue and
@@ -147,6 +234,15 @@ type ProjectIdentifier struct {
 	Identifier string
 }
 
+// ArchivedProjects reads which projects are archived, for a list across
+// projects, which leaves out the work items of an archived project (M4
+// design 3.8): project.Provide's, converted (bootstrap/ports.go).
+type ArchivedProjects interface {
+	// Archived reads those of projectIDs that are undeleted, archived
+	// projects, each true, without a lock.
+	Archived(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]bool, error)
+}
+
 // IssueNumbers finds a work item by its number in its project (M4 design
 // 3.7).
 type IssueNumbers interface {
@@ -177,6 +273,10 @@ type IssueCreator interface {
 // them, in the transaction ctx carries (M4 design 3.5).
 type IssueUpdater interface {
 	IssueReader
+	// Ancestry reads the work item and those above it, its parent, its
+	// parent's parent and so on, each once, in no order: a work item that
+	// is in it may not be put under it (M4 design 3.9).
+	Ancestry(ctx context.Context, id uuid.UUID) ([]uuid.UUID, error)
 	// UpdateIssue writes the work item's fields.
 	UpdateIssue(ctx context.Context, f IssueFields) error
 	InsertAssignees(ctx context.Context, r LinkRows) error

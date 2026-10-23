@@ -65,13 +65,14 @@ func seedLabels(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 
 // seedIssues writes a work item of project in its default state, by by,
 // and a row of each of the issue module's tables under it: by its assignee
-// and its subscriber, the project's label Bug (seedLabels) on it, and its
-// activity's first row, directly: the seed does not depend on which of the
-// issue module's writes exist. Its number is the project's counter, moved
-// on, as a creation moves it.
+// and its subscriber, the project's label Bug (seedLabels) on it, its
+// relation to another work item of the project, its blocker (relate), and
+// its activity's first row, directly: the seed does not depend on which of
+// the issue module's writes exist. Each number is the project's counter,
+// moved on, as a creation moves it.
 func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	t.Helper()
-	issue := uuid.NewV7()
+	issue, blocker := uuid.NewV7(), uuid.NewV7()
 	for _, stmt := range []struct {
 		sql  string
 		args []any
@@ -86,6 +87,10 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 		{`INSERT INTO issue_labels (id, workspace_id, project_id, issue_id, label_id, created_by_id, updated_by_id)
 			SELECT $1, i.workspace_id, i.project_id, i.id, l.id, $3, $3 FROM issues i JOIN labels l ON l.project_id = i.project_id AND l.name = 'Bug'
 			WHERE i.id = $2`, []any{uuid.NewV7(), issue, by}},
+		{`UPDATE projects SET last_issue_sequence = last_issue_sequence + 1 WHERE id = $1`, []any{project}},
+		{`INSERT INTO issues (id, workspace_id, project_id, state_id, name, sequence_id, created_by_id, updated_by_id)
+			SELECT $1, workspace_id, project_id, state_id, 'Blocker', (SELECT last_issue_sequence FROM projects WHERE id = $2), $3, $3
+			FROM issues WHERE id = $4`, []any{blocker, project, by, issue}},
 		{`INSERT INTO issue_subscribers (id, workspace_id, project_id, issue_id, subscriber_id, created_by_id, updated_by_id)
 			SELECT $1, workspace_id, project_id, id, $3, $3, $3 FROM issues WHERE id = $2`, []any{uuid.NewV7(), issue, by}},
 		{`INSERT INTO issue_activities (id, workspace_id, project_id, issue_id, comment, actor_id, created_by_id, updated_by_id)
@@ -95,6 +100,7 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 			t.Fatalf("seeding the work items of %s: %s: %d rows, %v; want 1", project, stmt.sql, tag.RowsAffected(), err)
 		}
 	}
+	relate(t, pool, issue, blocker, "blocked_by", by)
 }
 
 // noRowLastWrittenBy fails the test when a row under the parent row id, by
@@ -127,7 +133,7 @@ func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, keys []foreignKey, id,
 func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
 	gone := deletedWorkItem(t, contract, base, pool, alice, aliceID, web)
-	goneKeys := workItemKeys(t, pool)
+	goneKeys := keysTo(t, pool, "issues")
 	goneRows := make([]string, len(goneKeys))
 	for i, k := range goneKeys {
 		if goneRows[i] = k.rows(t, pool, gone); goneRows[i] == "" {
@@ -181,6 +187,47 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	}
 	if status, body := call(t, contract, http.MethodGet, base+"/api/v0/projects/"+web.String(), alice, ""); status != http.StatusNotFound {
 		t.Errorf("reading Web deleted = %d %s, want 404", status, body)
+	}
+}
+
+// Deleting a project deletes the relations of its work items either way
+// (M4 design 3.6, 3.10), each at the project's deleted_at, whichever
+// project's row it is, of each stored type: beside the seeded relations
+// (blocked_by), Web's Seeded related to Ops' Seeded (duplicate), a row of
+// Web's, and Ops' Blocker related to Web's Seeded (relates_to), a row of
+// Ops', written directly (relate). The second is no row under Web, which
+// the catalog's test of the deletion reads
+// (TestDeletingAProjectLeavesNoUndeletedRowUnderIt). Ops' own relation, of
+// its Seeded to its Blocker, stays as it was.
+func TestDeletingAProjectDeletesItsWorkItemsRelationsEitherWay(t *testing.T) {
+	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
+	const items = "SELECT id FROM issues WHERE project_id = $1 ORDER BY sequence_id"
+	webItems, opsItems := queryIDs(t, pool, items, web), queryIDs(t, pool, items, ops)
+	if len(webItems) != 2 || len(opsItems) != 2 {
+		t.Fatalf("the work items %v of Web and %v of Ops; want Seeded and Blocker of each", webItems, opsItems)
+	}
+	seeded := webItems[0]
+	relate(t, pool, seeded, opsItems[0], "duplicate", aliceID)
+	relate(t, pool, opsItems[1], seeded, "relates_to", aliceID)
+	const opsOwn = `SELECT coalesce(string_agg(id::text || ' ' || coalesce(deleted_at::text, 'undeleted'), ', ' ORDER BY id), '')
+		FROM issue_relations WHERE project_id = $1 AND related_issue_id <> $2`
+	var before, after string
+	if err := pool.QueryRow(pgtest.Soon(t), opsOwn, ops, seeded).Scan(&before); err != nil || before == "" {
+		t.Fatalf("Ops' own relations: %q, %v; want its seeded one", before, err)
+	}
+
+	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), alice, ""); status != http.StatusNoContent {
+		t.Fatalf("deleting Web = %d %s, want 204", status, body)
+	}
+
+	var left, all int
+	if err := pool.QueryRow(pgtest.Soon(t), `SELECT count(*) FILTER (WHERE r.deleted_at IS DISTINCT FROM p.deleted_at), count(*)
+		FROM issue_relations r, projects p WHERE p.id = $1 AND $2 IN (r.issue_id, r.related_issue_id)`, web, seeded).Scan(&left, &all); err != nil ||
+		left != 0 || all != 3 {
+		t.Errorf("Web's Seeded's relations: %d of %d not deleted at Web's deleted_at, %v; want none of 3", left, all, err)
+	}
+	if err := pool.QueryRow(pgtest.Soon(t), opsOwn, ops, seeded).Scan(&after); err != nil || after != before {
+		t.Errorf("Ops' own relations: %q, %v; want them as they were: %q", after, err, before)
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"slices"
-	"strings"
 	"testing"
 	"uuid"
 
@@ -74,11 +73,7 @@ func TestDeletingALabelTakesItOffTheWorkItems(t *testing.T) {
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, web+"/labels", `{"name":"UI","parent_id":"`+w.bug.String()+`"}`, http.StatusCreated), &ui)
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, web+"/labels", `{"name":"Feature"}`, http.StatusCreated), &feature)
 	for _, labels := range [][]uuid.UUID{{w.bug, feature.ID}, {ui.ID}} {
-		quoted := make([]string, len(labels))
-		for i, id := range labels {
-			quoted[i] = `"` + id.String() + `"`
-		}
-		w.send(t, "bob", http.MethodPost, web+"/issues", `{"name":"Fix","label_ids":[`+strings.Join(quoted, ",")+`]}`, http.StatusCreated)
+		w.send(t, "bob", http.MethodPost, web+"/issues", `{"name":"Fix","label_ids":`+idArray(labels...)+`}`, http.StatusCreated)
 	}
 	tag, err := w.pool.Exec(pgtest.Soon(t), `UPDATE issues SET archived_at = now()
 		WHERE id = (SELECT issue_id FROM issue_labels WHERE label_id = $1)`, w.bug)

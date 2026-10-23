@@ -9,16 +9,16 @@ import { keysBelow } from "./catalog";
 
 /**
  * A row of a work item's activity as the assertions read it: what its identifiers name, an account by its address, a
- * state or a label by its name.
+ * state, a label or a work item by its name.
  */
 export interface ActivityRow {
   field: string | null;
   verb: string;
   old_value: string | null;
   new_value: string | null;
-  /** What the row's new_identifier names: the account assigned, the state or the label set; else null. */
+  /** What new_identifier names, else null: the account assigned, state or label set, work item put under or related. */
   named: string | null;
-  /** What its old_identifier names: the account unassigned, the state left or the label taken off; else null. */
+  /** As named, of old_identifier: the account unassigned, state left, label taken off, work item left or unrelated. */
   was: string | null;
   comment: string;
 }
@@ -28,10 +28,23 @@ export function byId(a: { id: string }, b: { id: string }): number {
   return a.id < b.id ? -1 : 1;
 }
 
+/** A row of a work item's activity of verb, its field from old to now: every builder below writes its rows here. */
+function activityRow(
+  verb: string,
+  field: string | null,
+  old: string | null,
+  now: string | null,
+  comment: string,
+  named: string | null = null,
+  was: string | null = null
+): ActivityRow {
+  return { field, verb, old_value: old, new_value: now, named, was, comment };
+}
+
 /**
  * An "updated" row of a work item's activity: field changed from old to now, with its comment, Plane's but for the
- * archiving's and the restoring's rows; named and was, what its new and old identifiers name, for a state's, a
- * label's or an account's row.
+ * archiving's and the restoring's rows; named and was, what its new and old identifiers name: a state, a label, an
+ * account or a work item.
  */
 export function changed(
   field: string,
@@ -41,7 +54,7 @@ export function changed(
   named: string | null = null,
   was: string | null = null
 ): ActivityRow {
-  return { field, verb: "updated", old_value: old, new_value: now, named, was, comment };
+  return activityRow("updated", field, old, now, comment, named, was);
 }
 
 /** The row of a work item's activity that assigns it to the account of email, by the display name nerve gave him. */
@@ -53,30 +66,55 @@ export function assigned(email: string): ActivityRow {
 export const archivedRow = changed("archived_at", null, "manual_archive", "archived the work item");
 export const restoredRow = changed("archived_at", "archive", "restore", "restored the work item");
 
+/** A work item as a row of activity names it: its identifier, as WEB-1, and its name. */
+export interface ItemRef {
+  identifier: string;
+  name: string;
+}
+
+/** The work item issue, of the project whose identifier is identifier, as a row of activity names it. */
+export function itemRef(identifier: string, issue: { sequence_id: number; name: string }): ItemRef {
+  return { identifier: `${identifier}-${issue.sequence_id}`, name: issue.name };
+}
+
+/**
+ * The row of a work item's activity that moves it from under the work item from to under the work item to, either
+ * null for none (M4 design 3.13, row 5): their identifiers its values, "" for none.
+ */
+export function parentRow(from: ItemRef | null, to: ItemRef | null): ActivityRow {
+  const [was, now] = [from?.identifier ?? "", to?.identifier ?? ""];
+  return changed("parent", was, now, "updated the parent work item to", to?.name ?? null, from?.name ?? null);
+}
+
+/**
+ * The row of a work item's activity that relates it to the work item other, of type as the work item reads it (M4
+ * design 3.13, rows 20 and 21).
+ */
+export function relatedRow(type: string, other: ItemRef): ActivityRow {
+  return changed(type, "", other.identifier, `added ${type} relation`, other.name);
+}
+
+/** The row of a work item's activity that relates it to the work item other no more, as relatedRow (rows 22 and 23). */
+export function unrelatedRow(type: string, other: ItemRef): ActivityRow {
+  return activityRow("deleted", type, other.identifier, "", `deleted ${type} relation`, null, other.name);
+}
+
 /** The first rows of a work item's activity: its creation, and its assignment to each of accounts, in id order. */
 export function createdFor(...accounts: { id: string; email: string }[]): ActivityRow[] {
-  const creation: ActivityRow = {
-    field: null,
-    verb: "created",
-    old_value: null,
-    new_value: null,
-    named: null,
-    was: null,
-    comment: "created the work item",
-  };
+  const creation = activityRow("created", null, null, null, "created the work item");
   return [creation, ...accounts.toSorted(byId).map(({ email }) => assigned(email))];
 }
 
 /** The activity of the work item of issueId, in its order. */
 async function activityOf(db: Database, issueId: string): Promise<ActivityRow[]> {
   return db.query<ActivityRow>(
-    `SELECT a.field, a.verb, a.old_value, a.new_value, COALESCE(nu.email, ns.name, nl.name) AS named,
-            COALESCE(ou.email, os.name, ol.name) AS was, a.comment
+    `SELECT a.field, a.verb, a.old_value, a.new_value, COALESCE(nu.email, ns.name, nl.name, ni.name) AS named,
+            COALESCE(ou.email, os.name, ol.name, oi.name) AS was, a.comment
        FROM issue_activities a
        LEFT JOIN users nu ON nu.id = a.new_identifier LEFT JOIN states ns ON ns.id = a.new_identifier
-       LEFT JOIN labels nl ON nl.id = a.new_identifier
+       LEFT JOIN labels nl ON nl.id = a.new_identifier LEFT JOIN issues ni ON ni.id = a.new_identifier
        LEFT JOIN users ou ON ou.id = a.old_identifier LEFT JOIN states os ON os.id = a.old_identifier
-       LEFT JOIN labels ol ON ol.id = a.old_identifier
+       LEFT JOIN labels ol ON ol.id = a.old_identifier LEFT JOIN issues oi ON oi.id = a.old_identifier
       WHERE a.issue_id = $1 ORDER BY a.created_at, a.id`,
     [issueId]
   );
@@ -115,8 +153,9 @@ const rowStamps = `
 
 /**
  * A work item as created: its number, name, state (by name), priority, dates (YYYY-MM-DD, null for none) and sort
- * order; whether it is completed; the address of the account that created it; its assignees and subscribers by
- * address, its labels by name, each in order; and its activity, in its order.
+ * order; the name of the work item it is under, null for none; whether it is completed; the address of the account
+ * that created it; its assignees and subscribers by address, its labels by name, each in order; and its activity, in
+ * its order.
  */
 export interface CreatedIssue {
   sequence_id: number;
@@ -126,6 +165,7 @@ export interface CreatedIssue {
   start_date: string | null;
   target_date: string | null;
   sort_order: number;
+  parent: string | null;
   completed: boolean;
   by: string;
   assignees: string[];
@@ -135,20 +175,21 @@ export interface CreatedIssue {
 }
 
 /**
- * I1: the work item of issueId holds want, as created (M4 design 3.7, 3.13): undeleted, not archived, numbered
- * want.sequence_id, which its project's last_issue_sequence is now. It and every row of its assignees, labels,
- * subscribers and activity are of its project and workspace, made and last written by the account of want.by, the
- * activity's actor too, at one moment.
+ * I1 (I8 from P3): the work item of issueId holds want, as created (M4 design 3.7, 3.9, 3.13): undeleted, not
+ * archived, numbered want.sequence_id, which its project's last_issue_sequence is now, and under a work item of its
+ * project when it is under one. It and every row of its assignees, labels, subscribers and activity are of its project
+ * and workspace, made and last written by the account of want.by, the activity's actor too, at one moment.
  */
 export async function expectIssueCreated(db: Database, issueId: string, want: CreatedIssue): Promise<void> {
   const [issue] = await db.query(
     `SELECT i.sequence_id, i.name, s.name AS state, i.priority, to_char(i.start_date, 'YYYY-MM-DD') AS start_date,
-            to_char(i.target_date, 'YYYY-MM-DD') AS target_date, i.sort_order, i.completed_at IS NOT NULL AS completed,
-            c.email AS by, p.last_issue_sequence,
+            to_char(i.target_date, 'YYYY-MM-DD') AS target_date, i.sort_order, up.name AS parent,
+            i.completed_at IS NOT NULL AS completed, c.email AS by, p.last_issue_sequence,
             i.workspace_id = p.workspace_id AND i.updated_by_id = i.created_by_id AND i.updated_at = i.created_at
-              AND i.deleted_at IS NULL AND i.archived_at IS NULL AS as_created
+              AND i.deleted_at IS NULL AND i.archived_at IS NULL AND (up.id IS NULL OR up.project_id = i.project_id)
+              AS as_created
        FROM issues i JOIN projects p ON p.id = i.project_id JOIN states s ON s.id = i.state_id
-       JOIN users c ON c.id = i.created_by_id
+       JOIN users c ON c.id = i.created_by_id LEFT JOIN issues up ON up.id = i.parent_id
       WHERE i.id = $1`,
     [issueId]
   );
@@ -183,10 +224,11 @@ export async function expectIssueCreated(db: Database, issueId: string, want: Cr
 }
 
 /**
- * A work item as changed: its name, state (by name), priority and dates (YYYY-MM-DD, null for none); whether it is
- * completed; the address of the account that changed it last; its undeleted assignees and subscribers by address, its
- * undeleted labels by name, each in order; its activity, in its order; and how many rows of its assignees, labels,
- * subscribers and activity its last change wrote, those it took off among them.
+ * A work item as changed: its name, state (by name), priority and dates (YYYY-MM-DD, null for none); the name of the
+ * work item it is under, null for none; whether it is completed; the address of the account that changed it last; its
+ * undeleted assignees and subscribers by address, its undeleted labels by name, each in order; its activity, in its
+ * order; and how many rows of its assignees, labels, subscribers and activity its last change wrote, those it took off
+ * among them.
  */
 export interface UpdatedIssue {
   name: string;
@@ -194,6 +236,7 @@ export interface UpdatedIssue {
   priority: string;
   start_date: string | null;
   target_date: string | null;
+  parent: string | null;
   completed: boolean;
   by: string;
   assignees: string[];
@@ -204,18 +247,42 @@ export interface UpdatedIssue {
 }
 
 /**
- * I2: the work item of issueId holds want after a change (M4 design 3.7, 3.13): undeleted, last written by the
- * account of want.by at a moment after its creation, completed (completed_at set) exactly when want.completed. Its
- * undeleted assignees, labels and subscribers and its activity are want's. The rows its last change wrote, those
- * last written at the work item's updated_at, want.wrote of them, are of its project and workspace and want.by's at
- * that moment: those it made, made then; those it took off, soft-deleted then; its activity, acted then.
+ * A work item the account of email made with nothing but its name, in the fields CreatedIssue and UpdatedIssue share
+ * but by and activity: in Backlog, of no priority, undated, under none, not completed, unassigned and unlabelled, its
+ * maker its one subscriber.
+ */
+export function madeBy(email: string, name: string): Omit<UpdatedIssue, "by" | "activity" | "wrote"> {
+  return {
+    name,
+    state: "Backlog",
+    priority: "none",
+    start_date: null,
+    target_date: null,
+    parent: null,
+    completed: false,
+    assignees: [],
+    labels: [],
+    subscribers: [email],
+  };
+}
+
+/**
+ * I2 (I8, I9 from P3): the work item of issueId holds want after a change (M4 design 3.7, 3.9, 3.10, 3.13): undeleted,
+ * last written by the account of want.by at a moment after its creation, completed (completed_at set) exactly when
+ * want.completed, and under a work item of its project when it is under one. Its undeleted assignees, labels and
+ * subscribers and its activity are want's. The rows its last change wrote, those last written at the work item's
+ * updated_at, want.wrote of them, are of its project and workspace and want.by's at that moment: those it made, made
+ * then; those it took off, soft-deleted then; its activity, acted then.
  */
 export async function expectIssueUpdated(db: Database, issueId: string, want: UpdatedIssue): Promise<void> {
   const [issue] = await db.query(
     `SELECT i.name, s.name AS state, i.priority, to_char(i.start_date, 'YYYY-MM-DD') AS start_date,
-            to_char(i.target_date, 'YYYY-MM-DD') AS target_date, i.completed_at IS NOT NULL AS completed, u.email AS by,
-            i.updated_at > i.created_at AND i.deleted_at IS NULL AS as_changed
+            to_char(i.target_date, 'YYYY-MM-DD') AS target_date, up.name AS parent,
+            i.completed_at IS NOT NULL AS completed, u.email AS by,
+            i.updated_at > i.created_at AND i.deleted_at IS NULL AND (up.id IS NULL OR up.project_id = i.project_id)
+              AS as_changed
        FROM issues i JOIN states s ON s.id = i.state_id JOIN users u ON u.id = i.updated_by_id
+       LEFT JOIN issues up ON up.id = i.parent_id
       WHERE i.id = $1`,
     [issueId]
   );
@@ -269,17 +336,15 @@ export async function expectIssueArchival(db: Database, issueId: string, want: A
   expect(await activityOf(db, issueId), `the activity of the work item ${issueId}`).toEqual(activity);
 }
 
-/** The key of a work item's sub-items, which come with P3, as their deletion with their parent's (M4 design 3.6, 3.9). */
-const subItems = "issues.parent_id";
-
 /**
- * I15 (I17 from P3): the work item of issueId is deleted by the account of email, and with it, at the same moment and
- * by the same account, every row under it that was not deleted before (M4 design 3.6). A row is under it when a
- * foreign key of its table names the work item or a row under it: the catalog's graph of foreign keys is walked down
- * from issues (keysBelow, which fails on a key of more than one column), so that a row two keys below (a reaction to
- * a comment, which names the comment) is under it too. Each key of the graph has such a row, but its sub-items'
- * (subItems), which no work item has before P3; a row deleted before the work item is neither held to its deletion nor
- * checked here (that it keeps its deletion is `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).
+ * I15, I17: the work item of issueId is deleted by the account of email, and with it, at the same moment and by the
+ * same account, every row under it that was not deleted before (M4 design 3.6). A row is under it when a foreign key
+ * of its table names the work item or a row under it: the catalog's graph of foreign keys is walked down from issues
+ * (keysBelow, which fails on a key of more than one column), so that a row two keys below (a reaction to a comment,
+ * which names the comment, or the work item under a work item under it) is under it too. Each key of the graph has
+ * such a row, its sub-items' and its relations' either way among them; a row deleted before the work item is neither
+ * held to its deletion nor checked here (that it keeps its deletion is
+ * `TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`'s).
  */
 export async function expectIssueDeleted(db: Database, issueId: string, email: string): Promise<void> {
   const [issue] = await db.query(
@@ -328,5 +393,5 @@ export async function expectIssueDeleted(db: Database, issueId: string, email: s
   expect(
     names.map((key) => ({ key, deletedWithIt: (counts.get(key)?.withIt ?? 0) > 0, other: counts.get(key)?.other })),
     `the rows under the work item ${issueId}`
-  ).toEqual(names.map((key) => ({ key, deletedWithIt: key !== subItems, other: 0 })));
+  ).toEqual(names.map((key) => ({ key, deletedWithIt: true, other: 0 })));
 }

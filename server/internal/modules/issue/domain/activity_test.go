@@ -43,17 +43,23 @@ func TestCreationActivity(t *testing.T) {
 
 // An update writes a row for each field it changes, in the order of M4
 // design 3.13's table, whatever else it changes: the name (row 3), the
-// priority (row 6), the state by its names and ids (row 7), the start and
-// the target dates as YYYY-MM-DD, "" for none (rows 8, 9), each label added
-// and removed by its name and id (rows 10, 11), each account assigned and
-// unassigned by his display name and id (rows 12, 13), each list in the
-// order given; Plane's sentences go with them, the start date's with its
-// space. A field left as it is writes none.
+// parent by the identifiers and ids of the old and the new one, "" and
+// none for none (row 5), the priority (row 6), the state by its names and
+// ids (row 7), the start and the target dates as YYYY-MM-DD, "" for none
+// (rows 8, 9), each label added and removed by its name and id (rows 10,
+// 11), each account assigned and unassigned by his display name and id
+// (rows 12, 13), each list in the order given; Plane's sentences go with
+// them, the start date's with its space, the parent's of a work item. A
+// field left as it is writes none.
 func TestUpdateActivity(t *testing.T) {
 	todo, done, bug, ui, ann, ben := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	up, top := uuid.NewV7(), uuid.NewV7()
 	row := func(field string, oldValue, newValue string, oldID, newID *uuid.UUID, comment string) Activity {
 		return Activity{Field: &field, Verb: "updated", OldValue: &oldValue, NewValue: &newValue, OldIdentifier: oldID, NewIdentifier: newID,
 			Comment: comment}
+	}
+	parented := func(oldValue, newValue string, oldID, newID *uuid.UUID) Activity {
+		return row("parent", oldValue, newValue, oldID, newID, "updated the parent work item to")
 	}
 	name := row("name", "Fix", "Mend", nil, nil, "updated the name to")
 	priority := row("priority", "high", "none", nil, nil, "updated the priority to")
@@ -74,9 +80,15 @@ func TestUpdateActivity(t *testing.T) {
 			LabelsRemoved: []Named{{ID: ui, Name: "UI"}}, LabelsAdded: []Named{{ID: bug, Name: "Bug"}},
 			TargetDate: &Changed[*shared.Date]{New: october(19)}, StartDate: &Changed[*shared.Date]{Old: october(12)},
 			State:    &Changed[Named]{Old: Named{ID: todo, Name: "Todo"}, New: Named{ID: done, Name: "Done"}},
-			Priority: &Changed[Priority]{Old: PriorityHigh, New: PriorityNone}, Name: &Changed[string]{Old: "Fix", New: "Mend"},
-		}, []Activity{name, priority, state, start, target, labelled(bug, "Bug"), unlabelled(ui, "UI"), assigned(ann, "Ann L."),
-			unassigned(ben, "ben")}},
+			Priority: &Changed[Priority]{Old: PriorityHigh, New: PriorityNone},
+			Parent:   &Changed[*Ref]{Old: &Ref{ID: up, Identifier: "WEB-3"}, New: &Ref{ID: top, Identifier: "WEB-12"}},
+			Name:     &Changed[string]{Old: "Fix", New: "Mend"},
+		}, []Activity{name, parented("WEB-3", "WEB-12", &up, &top), priority, state, start, target, labelled(bug, "Bug"),
+			unlabelled(ui, "UI"), assigned(ann, "Ann L."), unassigned(ben, "ben")}},
+		{"a parent set", Update{Parent: &Changed[*Ref]{New: &Ref{ID: top, Identifier: "WEB-12"}}},
+			[]Activity{parented("", "WEB-12", nil, &top)}},
+		{"the parent taken away", Update{Parent: &Changed[*Ref]{Old: &Ref{ID: up, Identifier: "WEB-3"}}},
+			[]Activity{parented("WEB-3", "", &up, nil)}},
 		{"a start date set, the target date moved", Update{StartDate: &Changed[*shared.Date]{New: october(19)},
 			TargetDate: &Changed[*shared.Date]{Old: october(19), New: october(26)}}, []Activity{
 			row("start_date", "", "2026-10-19", nil, nil, "updated the start date to "),

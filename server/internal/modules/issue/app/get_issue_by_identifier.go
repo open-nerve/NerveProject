@@ -37,7 +37,8 @@ func NewGetIssueByIdentifier(d GetIssueByIdentifierDeps) *GetIssueByIdentifier {
 // project, or a number no undeleted work item of it has, is
 // issue.not_found as one whose project the caller does not see, or that
 // the guest rule hides from him, with the same answer; a role that may
-// not read it, forbidden. An archived work item is read as any other.
+// not read it, forbidden. An archived work item is read as any other. The
+// answer is the work item as he sees it (Locks.seen).
 func (u *GetIssueByIdentifier) Execute(ctx context.Context, slug, identifier string) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -57,7 +58,11 @@ func (u *GetIssueByIdentifier) Execute(ctx context.Context, slug, identifier str
 	if err != nil {
 		return domain.Issue{}, err
 	}
-	return u.d.Locks.see(ctx, actor, id, domain.ActionRead)
+	i, grant, err := u.d.Locks.see(ctx, actor, id, domain.ActionRead)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	return u.d.Locks.seenOne(ctx, actor.UserID, grant, i)
 }
 
 // find is the id of the undeleted work item identifier names among the

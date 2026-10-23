@@ -35,8 +35,8 @@ func (s *Store) GreatestSortOrder(ctx context.Context, projectID, stateID uuid.U
 func (s *Store) InsertIssue(ctx context.Context, r app.IssueRow) error {
 	err := s.queries(ctx).InsertIssue(ctx, gen.InsertIssueParams{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, StateID: r.StateID, Name: r.Name, Priority: string(r.Priority),
-		StartDate: timeOf(r.StartDate), TargetDate: timeOf(r.TargetDate), SequenceID: int32(r.SequenceID), SortOrder: r.SortOrder,
-		CompletedAt: r.CompletedAt, By: &r.By, At: r.At,
+		StartDate: timeOf(r.StartDate), TargetDate: timeOf(r.TargetDate), ParentID: r.ParentID, SequenceID: int32(r.SequenceID),
+		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, By: &r.By, At: r.At,
 	})
 	if err != nil {
 		return fmt.Errorf("insert work item %s: %w", r.ID, err)
@@ -120,12 +120,32 @@ func (s *Store) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool,
 	case err != nil:
 		return domain.Issue{}, false, fmt.Errorf("read work item %s: %w", id, err)
 	}
+	return issueOf(r), true, nil
+}
+
+// GetIssues reads the undeleted work items among ids, archived or not,
+// each as GetIssue reads it, in id order (M4 design 3.9).
+func (s *Store) GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue, error) {
+	rows, err := s.queries(ctx).GetIssues(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("read %d work items: %w", len(ids), err)
+	}
+	issues := make([]domain.Issue, len(rows))
+	for n, r := range rows {
+		issues[n] = issueOf(gen.GetIssueRow(r))
+	}
+	return issues, nil
+}
+
+// issueOf is the work item a read answers as r: each read of work items
+// has GetIssue's columns.
+func issueOf(r gen.GetIssueRow) domain.Issue {
 	return domain.Issue{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: int(r.SequenceID), Name: r.Name, StateID: r.StateID,
 		Priority: domain.Priority(r.Priority), StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), ParentID: r.ParentID,
 		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt, AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds,
 		CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
-	}, true, nil
+	}
 }
 
 // dayOf is the day of a date column as pgx reads it, midnight UTC; nil for

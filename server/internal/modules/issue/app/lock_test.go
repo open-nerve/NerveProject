@@ -47,7 +47,7 @@ func TestAWriteEntersItsProjectsGateBetweenItsPrecheckAndItsTransaction(t *testi
 		t.Fatal(err)
 	}
 	want := slices.Concat(locked(id)[:2], []string{line("Enter", web, "outside tx")}, locked(id)[2:], []string{"Now", line("UpdateIssue", id),
-		line("InsertActivities", 1), line("GetIssue", id), line("Leave", web)})
+		line("InsertActivities", 1), line("GetIssue", id), counted(id), line("Leave", web)})
 	if !slices.Equal(w.log.calls, want) {
 		t.Errorf("an update's calls:\n%q\nwant\n%q", w.log.calls, want)
 	}
@@ -144,5 +144,89 @@ func TestTheGateTakesOnlyWritesThePrecheckLetThrough(t *testing.T) {
 	if _, err := update.Execute(as(alice), id, domain.IssuePatch{Name: name("Mend")}); !errors.Is(err, busy) ||
 		!slices.Equal(w.log.calls, append(locked(id)[:2], line("Enter", web, "outside tx"))) {
 		t.Errorf("Execute() = %v after\n%q\nwant server_busy once the gate refuses it", err, w.log.calls)
+	}
+}
+
+// A write across projects (convention 7, M4 design 3.5, 11.11) enters the
+// gates of its work item's project and of each project of the work items
+// it reaches, all at once in ascending id order, after its precheck and
+// outside any transaction; it locks the same projects all at once, in the
+// same order (LockMany), and leaves the gates last, once its transaction
+// has ended. alice relates web's work item 7 to far, of ops, then near, of
+// web: web and ops. Its own project takes its place in that order like
+// the others': moved to ops, the higher (web's id is drawn first), the
+// work item takes web, then ops, too. A work item the precheck does not
+// reach takes neither a lock nor a place in a gate: far, which alice does
+// not see, or which is not there, leaves ops out of both, and the refusal
+// (422) is answered under web's lock alone.
+func TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		set      func(w *world)
+		projects []uuid.UUID
+	}{
+		{"both reached", func(*world) {}, sorted([]uuid.UUID{web, ops})},
+		{"both reached from ops", func(w *world) { w.issues.issue.ProjectID = ops }, sorted([]uuid.UUID{web, ops})},
+		{"far not seen", func(w *world) { w.auth.answers = []error{1: shared.ErrNotVisible} }, []uuid.UUID{web}},
+		{"far not there", func(w *world) { delete(w.issues.others, farID) }, []uuid.UUID{web}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, w, rel, id, _ := newRelate()
+			gated(w, nil)
+			uc := relateOver(w, rel)
+			tt.set(w)
+			_, _ = uc.Execute(as(alice), id, domain.RelatesTo, []uuid.UUID{farID, nearID})
+			wantAllAtOnce(t, w, tt.projects)
+		})
+	}
+}
+
+// A write on either of two work items (deleteIssueRelation's, M4 design
+// 3.10, convention 7) takes the projects of both as a write across
+// projects does (TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches),
+// in ascending id order, whichever work item the decision let it through
+// on: far's, of ops, or near's, of web, and whichever the relation is
+// stored from: far, or near (fromNear), the smaller id of the smaller
+// project. Two work items of one project take its gate and its lock once.
+func TestAWriteOnEitherWorkItemTakesBothProjects(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		set      func(w *world, rel *fakeRelations)
+		projects []uuid.UUID
+	}{
+		{"decided on far", func(*world, *fakeRelations) {}, sorted([]uuid.UUID{web, ops})},
+		{"decided on near", func(w *world, _ *fakeRelations) {
+			w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()}
+		}, sorted([]uuid.UUID{web, ops})},
+		{"stored from near, decided on near", fromNear, sorted([]uuid.UUID{web, ops})},
+		{"both of web", func(w *world, _ *fakeRelations) {
+			far := w.issues.others[farID]
+			far.ProjectID = web
+			w.issues.others[farID] = far
+		}, []uuid.UUID{web}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, w, rel := newUnrelate()
+			gated(w, nil)
+			tt.set(w, rel)
+			if err := unrelateOver(w, rel).Execute(as(alice), relationID); err != nil {
+				t.Fatal(err)
+			}
+			wantAllAtOnce(t, w, tt.projects)
+		})
+	}
+}
+
+// wantAllAtOnce checks the calls of a write over w that takes projects all
+// at once, in their order: it enters their gates after its precheck,
+// outside any transaction, then begins it and locks them (LockMany), and
+// leaves the gates last, once it has ended.
+func wantAllAtOnce(t *testing.T, w *world, projects []uuid.UUID) {
+	t.Helper()
+	enter, lock := line("Enter", anys(projects)...)+" outside tx", line("LockMany", anys(projects)...)
+	at := slices.Index(w.log.calls, enter)
+	if at < 0 || at+2 >= len(w.log.calls) || w.log.calls[at+1] != "Begin" || w.log.calls[at+2] != lock ||
+		w.log.calls[len(w.log.calls)-1] != line("Leave", anys(projects)...) || slices.Contains(w.log.calls[:at], "Begin") {
+		t.Errorf("calls:\n%q\nwant %q after the precheck, then the transaction and %q, and the gates left last", w.log.calls, enter, lock)
 	}
 }

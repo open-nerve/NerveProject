@@ -33,13 +33,14 @@ func newWriteGate(c config.WriteGateConfig) writeGate {
 	return writeGate{gate: platformgate.New[uuid.UUID](limits)}
 }
 
-// Enter enters the project's gate: a write the gate refuses, its queue
-// full or its wait at max_wait, or whose request's deadline has passed
-// when it comes to the gate or passes while it waits, is server_busy; one
-// whose request is cancelled keeps context.Canceled, which no one waits
-// for the answer of.
-func (g writeGate) Enter(ctx context.Context, projectID uuid.UUID) (func(), error) {
-	leave, err := g.gate.Enter(ctx, projectID)
+// Enter enters the projects' gates, one after another, in their order: a
+// write the gate refuses, a queue full or its wait at max_wait, or whose
+// request's deadline has passed when it comes to the first gate or while
+// it waits at one, is server_busy; one whose request is cancelled keeps
+// context.Canceled, which no one waits for the answer of. A later gate
+// with a free place it enters at once, without looking at its request.
+func (g writeGate) Enter(ctx context.Context, projectIDs ...uuid.UUID) (func(), error) {
+	leave, err := g.gate.Enter(ctx, projectIDs...)
 	if errors.Is(err, platformgate.ErrFull) || errors.Is(err, platformgate.ErrTimeout) || errors.Is(err, context.DeadlineExceeded) {
 		return nil, shared.ServerBusy(busyRetry)
 	}

@@ -9,6 +9,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 )
@@ -43,6 +44,31 @@ type ArchiveIssueUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.Issue, error)
 }
 
+// ListSubIssuesUseCase is app.ListSubIssues.
+type ListSubIssuesUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) ([]domain.Issue, error)
+}
+
+// AddSubIssuesUseCase is app.AddSubIssues.
+type AddSubIssuesUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]domain.Issue, error)
+}
+
+// ListIssueRelationsUseCase is app.ListIssueRelations.
+type ListIssueRelationsUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) ([]app.IssueRelation, error)
+}
+
+// CreateIssueRelationsUseCase is app.CreateIssueRelations.
+type CreateIssueRelationsUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, t domain.RelationType, ids []uuid.UUID) ([]app.IssueRelation, error)
+}
+
+// DeleteIssueRelationUseCase is app.DeleteIssueRelation.
+type DeleteIssueRelationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	CreateIssue          CreateIssueUseCase
@@ -52,6 +78,11 @@ type UseCases struct {
 	DeleteIssue          DeleteIssueUseCase
 	ArchiveIssue         ArchiveIssueUseCase
 	UnarchiveIssue       ArchiveIssueUseCase
+	ListSubIssues        ListSubIssuesUseCase
+	AddSubIssues         AddSubIssuesUseCase
+	ListIssueRelations   ListIssueRelationsUseCase
+	CreateIssueRelations CreateIssueRelationsUseCase
+	DeleteIssueRelation  DeleteIssueRelationUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

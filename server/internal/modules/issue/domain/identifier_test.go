@@ -41,7 +41,8 @@ func TestMatchIdentifierFindsWhatTheSamplesSay(t *testing.T) {
 // A work item's identifier is its project's identifier, a hyphen and its
 // number, split at the last hyphen; the number is decimal digits without a
 // sign or a leading zero, from 1 to the greatest number a work item may
-// have. Anything else is no identifier.
+// have. Anything else is no identifier. Identifier writes each identifier
+// it reads as it was.
 func TestParseIdentifier(t *testing.T) {
 	for _, tt := range []struct {
 		s       string
@@ -69,6 +70,9 @@ func TestParseIdentifier(t *testing.T) {
 		project, number, ok := ParseIdentifier(tt.s)
 		if project != tt.project || number != tt.number || ok != tt.ok {
 			t.Errorf("ParseIdentifier(%q) = %q, %d, %v; want %q, %d, %v", tt.s, project, number, ok, tt.project, tt.number, tt.ok)
+		}
+		if ok && Identifier(project, number) != tt.s {
+			t.Errorf("Identifier(%q, %d) = %q, want %q", project, number, Identifier(project, number), tt.s)
 		}
 	}
 }

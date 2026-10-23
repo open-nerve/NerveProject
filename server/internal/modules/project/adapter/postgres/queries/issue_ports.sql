@@ -2,10 +2,21 @@
 -- ProjectGate.Lock, what project.Provide offers the issue module (M4 design 6.5): the first lock of a write on the
 -- work-item side (3.5, decision point 1: B), the project's row FOR NO KEY UPDATE, its workspace's row not locked.
 -- After a wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile
--- reads no row.
-SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id
+-- reads no row. The identifier names the project's work items in their activity (3.13), as it is under the lock.
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
 FROM projects
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR NO KEY UPDATE;
+
+-- name: LockIssueProjects :many
+-- ProjectGate.LockMany (M4 design 6.5): the first locks of a write across projects (convention 7, 3.5), the undeleted
+-- projects among ids FOR NO KEY UPDATE, as LockIssueProject, in one statement, in id order. The lock is taken as the
+-- sorted rows come, so the order is the ids' (S5 E4). After a wait, Postgres evaluates deleted_at IS NULL again on the
+-- row's newest version: a project deleted meanwhile is left out.
+SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
+FROM projects
+WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL
+ORDER BY id
 FOR NO KEY UPDATE;
 
 -- name: NextIssueSequence :one
@@ -41,6 +52,14 @@ SELECT id, identifier
 FROM projects
 WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL
 ORDER BY id;
+
+-- name: ArchivedIssueProjects :many
+-- ArchivedProjects (M4 design 3.8): those among ids that are undeleted, archived projects, read without a lock. A list
+-- across projects leaves out the work items of an archived project: listIssueRelations, the other work items of a
+-- project other than the listed one's.
+SELECT id
+FROM projects
+WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL AND archived_at IS NOT NULL;
 
 -- name: ActiveRoles :many
 -- ProjectMembers (M4 design 6.5): the active memberships of the project of those of the accounts ids that have one,

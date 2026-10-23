@@ -130,9 +130,10 @@ func emailOf(c caller) string {
 // workspace's slug and the column; each invitation, by the workspace's
 // slug and the address; each project, by its key; each project membership,
 // by the project's key and the column; each state, each label and each
-// work item, by the project's key and its name; and each account, by its
-// name in matrixAccounts, which prepareMatrix registers. t is the test
-// that asks for them (in).
+// work item, by the project's key and its name; each relation, by the key
+// of its row's project and its name; and each account, by its name in
+// matrixAccounts, which prepareMatrix registers. t is the test that asks
+// for them (in).
 type seeded struct {
 	t              testing.TB
 	workspaces     map[string]uuid.UUID
@@ -143,19 +144,21 @@ type seeded struct {
 	states         map[string]uuid.UUID
 	labels         map[string]uuid.UUID
 	issues         map[string]uuid.UUID
+	relations      map[string]uuid.UUID
 	accounts       map[caller]uuid.UUID
 }
 
 // newSeeded names an id for each workspace of matrixMemberships, each of
 // matrixMemberships, each of matrixInvitations, each of matrixProjects, each
 // of matrixProjectMembers, each of matrixStates and matrixLabels in each
-// project, and each work item of seededItems, before prepareMatrix writes
-// them, so that matrixViolations, without a database, sees the keys and
-// the targets the cells will.
+// project, each work item of seededItems and each relation of
+// seededRelations, in its order, before prepareMatrix writes them, so that
+// matrixViolations, without a database, sees the keys and the targets the
+// cells will.
 func newSeeded() seeded {
 	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
 		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{},
-		issues: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
+		issues: map[string]uuid.UUID{}, relations: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, m := range matrixMemberships {
 		if _, named := s.workspaces[m.slug]; !named {
 			s.workspaces[m.slug] = uuid.NewV7()
@@ -176,6 +179,9 @@ func newSeeded() seeded {
 	}
 	for _, i := range seededItems() {
 		s.issues[i.key+"|"+i.name] = uuid.NewV7()
+	}
+	for _, r := range seededRelations {
+		s.relations[r.fromKey+"|"+r.name] = uuid.NewV7()
 	}
 	for _, pm := range matrixProjectMembers {
 		s.projectMembers[pm.key+"|"+string(pm.c)] = uuid.NewV7()
@@ -278,16 +284,34 @@ func (s seeded) issue(key, name string) uuid.UUID {
 	return id
 }
 
-// projectOfRow is the key of the project of id, a row of rows, which are
-// keyed by the project's key, then "|": false for an id none of rows has.
-func projectOfRow(rows map[string]uuid.UUID, id uuid.UUID) (string, bool) {
+// relation is the id of the relation name of the project key, its row's;
+// one never seeded fails the test at once, as issue's does.
+func (s seeded) relation(key, name string) uuid.UUID {
+	id, ok := s.relations[key+"|"+name]
+	if !ok {
+		s.t.Helper()
+		s.t.Fatalf("no relation %s of %s is seeded", name, key)
+	}
+	return id
+}
+
+// keyOfRow is the key of id, a row of rows: false for an id none of rows
+// has.
+func keyOfRow(rows map[string]uuid.UUID, id uuid.UUID) (string, bool) {
 	for key, seededID := range rows {
 		if seededID == id {
-			project, _, _ := strings.Cut(key, "|")
-			return project, true
+			return key, true
 		}
 	}
 	return "", false
+}
+
+// projectOfRow is the key of the project of id, a row of rows, which are
+// keyed by the project's key, then "|": false for an id none of rows has.
+func projectOfRow(rows map[string]uuid.UUID, id uuid.UUID) (string, bool) {
+	key, ok := keyOfRow(rows, id)
+	project, _, _ := strings.Cut(key, "|")
+	return project, ok
 }
 
 // account is the id of the account of matrixAccounts c, which prepareMatrix
@@ -335,11 +359,9 @@ func (p *fatalProbe) Fatalf(format string, args ...any) {
 // false for an id no seeded row has.
 func (s seeded) workspaceOfRow(id uuid.UUID) (string, bool) {
 	for _, rows := range []map[string]uuid.UUID{s.memberships, s.invitations} {
-		for key, seededID := range rows {
-			if seededID == id {
-				slug, _, _ := strings.Cut(key, "/")
-				return slug, true
-			}
+		if key, ok := keyOfRow(rows, id); ok {
+			slug, _, _ := strings.Cut(key, "/")
+			return slug, true
 		}
 	}
 	return "", false

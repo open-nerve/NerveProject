@@ -1,8 +1,10 @@
 package bootstrap
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -64,8 +66,7 @@ func newIssueWorldWith(t *testing.T, configure func(cfg *config.Config)) issueWo
 	for name, role := range map[string]shared.Role{"bob": shared.RoleMember, "walt": shared.RoleMember, "wanda": shared.RoleAdmin} {
 		inWorkspaceOf(t, w.pool, w.web, w.ids[name], w.ids["alice"], role)
 	}
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["bob"].String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "bob", w.web, shared.RoleMember)
 	w.todo, w.done = stateID(t, w.pool, w.web, "Todo"), stateID(t, w.pool, w.web, "Done")
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/labels", `{"name":"Bug"}`, http.StatusCreated),
 		&created)
@@ -82,6 +83,14 @@ func (w issueWorld) send(t *testing.T, name, method, path, body string, want int
 		t.Fatalf("%s %s as %s = %d %s, want %d", method, path, name, status, answer, want)
 	}
 	return answer
+}
+
+// makeMember has alice make the account name a member of project, of
+// role, through the API (addProjectMembers).
+func (w issueWorld) makeMember(t *testing.T, name string, project uuid.UUID, role shared.Role) {
+	t.Helper()
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/members",
+		fmt.Sprintf(`{"members":[{"member_id":"%s","role":%d}]}`, w.ids[name], role), http.StatusCreated)
 }
 
 // newWorkItem is the id of a work item alice creates in Web through the
@@ -118,9 +127,20 @@ func bobsWorkItem(t *testing.T, w issueWorld) {
 // an id after his, once alice has made him a member of Web: three rows,
 // his.
 func waltsWorkItem(t *testing.T, w issueWorld) {
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "walt", w.web, shared.RoleMember)
 	w.newWorkItemBy(t, "walt", w.web, `{"name":"Fix"}`)
+}
+
+// adminGuest makes walt, acme's member, Web's guest, then acme's admin,
+// through the API: a workspace admin who is only a guest of Web, which
+// does not show its guests every work item (M4 design 3.4, 9.2). As
+// acme's admin he passes each rule of Web (Grant.ProjectAdmin), and as
+// its guest he sees only his own work items (Grant.OwnOnly).
+func (w issueWorld) adminGuest(t *testing.T) {
+	t.Helper()
+	w.makeMember(t, "walt", w.web, shared.RoleGuest)
+	membership := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", w.acme, w.ids["walt"])[0]
+	w.send(t, "alice", http.MethodPatch, "/api/v0/workspace-members/"+membership.String(), `{"role":20}`, http.StatusOK)
 }
 
 // doneWorkItem is the id of a work item alice creates in Web's Done
@@ -137,12 +157,32 @@ func (w issueWorld) fullIssue() string {
 		w.bug.String() + `"]}`
 }
 
+// idArray is the JSON array of the ids, in their order, as a body names
+// work items or labels.
+func idArray(ids ...uuid.UUID) string {
+	quoted := make([]string, len(ids))
+	for n, id := range ids {
+		quoted[n] = `"` + id.String() + `"`
+	}
+	return "[" + strings.Join(quoted, ",") + "]"
+}
+
+// names are the world's accounts' names, by their ids.
+func (w issueWorld) names() map[uuid.UUID]string {
+	names := make(map[uuid.UUID]string, len(w.ids))
+	for name, account := range w.ids {
+		names[account] = name
+	}
+	return names
+}
+
 // workItemStamps are the rows of the work item id in the work-item side's
-// five tables, each a line, sorted: its table, who made it and changed it
-// last, and when, when it was deleted if it was, and whose it is, for an
-// assignee, a subscriber or an activity (the account assigned, subscribed
-// or acting). An account goes by its name in the world, a moment by the
-// work item's: made, its creation, or changed, its last change.
+// six tables, its relations either way, each a line, sorted: its table,
+// who made it and changed it last, and when, when it was deleted if it
+// was, and whose it is, for an assignee, a subscriber or an activity (the
+// account assigned, subscribed or acting). An account goes by its name in
+// the world, a moment by the work item's: made, its creation, or changed,
+// its last change.
 func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 	t.Helper()
 	var made, changed time.Time
@@ -158,10 +198,7 @@ func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 		}
 		return at.String()
 	}
-	names := make(map[uuid.UUID]string, len(w.ids))
-	for name, account := range w.ids {
-		names[account] = name
-	}
+	names := w.names()
 	who := func(account *uuid.UUID) string {
 		if account == nil {
 			return "no one"
@@ -177,6 +214,8 @@ func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 			WHERE issue_id = $1
 		UNION ALL SELECT 'issue_labels', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL FROM issue_labels
 			WHERE issue_id = $1
+		UNION ALL SELECT 'issue_relations', created_by_id, created_at, updated_by_id, updated_at, deleted_at, NULL FROM issue_relations
+			WHERE issue_id = $1 OR related_issue_id = $1
 		UNION ALL SELECT 'issue_subscribers', created_by_id, created_at, updated_by_id, updated_at, deleted_at, subscriber_id
 			FROM issue_subscribers WHERE issue_id = $1
 		UNION ALL SELECT 'issue_activities', created_by_id, created_at, updated_by_id, updated_at, deleted_at, actor_id FROM issue_activities

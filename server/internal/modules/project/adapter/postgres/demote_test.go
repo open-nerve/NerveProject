@@ -2,14 +2,12 @@ package postgresadapter_test
 
 import (
 	"context"
-	"errors"
 	"maps"
 	"slices"
 	"testing"
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -27,27 +25,10 @@ func seedMember(t *testing.T, pool *pgxpool.Pool, workspace, project, user uuid.
 }
 
 // waits reports whether a statement of another transaction on project's
-// row, lock, waits for a lock held on it (rowWaits on projects).
+// row, lock, waits for a lock held on it (pgtest.RowWaits on projects).
 func waits(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, lock string) bool {
 	t.Helper()
-	return rowWaits(t, pool, "projects", project, lock)
-}
-
-// rowWaits reports whether a statement of another transaction on the row
-// id of table, lock, waits for a lock held on it: NOWAIT answers
-// lock_not_available (55P03) at once instead of waiting. Its wait for a
-// connection of the pool ends soon (pgtest.Soon).
-func rowWaits(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID, lock string) bool {
-	t.Helper()
-	_, err := pool.Exec(pgtest.Soon(t), "SELECT 1 FROM "+table+" WHERE id = $1 "+lock+" NOWAIT", id)
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
-		return true
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	return false
+	return pgtest.RowWaits(t, pool, "projects", project, lock)
 }
 
 // DemoteToGuest's two steps in one transaction (M3 design 3.3, 3.6). The

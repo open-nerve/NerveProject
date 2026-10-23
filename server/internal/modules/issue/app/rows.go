@@ -20,6 +20,7 @@ type IssueRow struct {
 	Priority    domain.Priority
 	StartDate   *shared.Date
 	TargetDate  *shared.Date
+	ParentID    *uuid.UUID
 	SortOrder   float64
 	CompletedAt *time.Time
 	By          uuid.UUID
@@ -41,8 +42,8 @@ type LinkRows struct {
 }
 
 // IssueFields are a work item's fields as an update writes them (M4 design
-// 3.7): those it changes and the others as they are, and the moment and
-// the account that change it last.
+// 3.7, 3.9): those it changes and the others as they are, and the moment
+// and the account that change it last.
 type IssueFields struct {
 	ID          uuid.UUID
 	Name        string
@@ -50,9 +51,38 @@ type IssueFields struct {
 	Priority    domain.Priority
 	StartDate   *shared.Date
 	TargetDate  *shared.Date
+	ParentID    *uuid.UUID
 	CompletedAt *time.Time
 	By          uuid.UUID
 	At          time.Time
+}
+
+// ParentRows are the work items an addition of sub-items puts under a
+// work item (M4 design 3.9): IDs, in id order, under ParentID, each last
+// changed at the moment and by the account given.
+type ParentRows struct {
+	IDs      []uuid.UUID
+	ParentID uuid.UUID
+	By       uuid.UUID
+	At       time.Time
+}
+
+// ChangedRows are the work items a write changes last without a field of
+// theirs (M4 design 3.7): the ends of a relation it adds or removes, IDs,
+// in id order, each last changed at the moment and by the account given.
+type ChangedRows struct {
+	IDs []uuid.UUID
+	By  uuid.UUID
+	At  time.Time
+}
+
+// RelationDeletion is a relation's deletion as it is written (M4 design
+// 3.10): the relation ID, soft-deleted at the moment and by the account
+// given.
+type RelationDeletion struct {
+	ID uuid.UUID
+	By uuid.UUID
+	At time.Time
 }
 
 // IssueArchival is a work item's archiving or unarchiving as it is written

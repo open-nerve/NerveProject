@@ -50,6 +50,35 @@ func (q *Queries) ActiveRoles(ctx context.Context, arg ActiveRolesParams) ([]Act
 	return items, nil
 }
 
+const archivedIssueProjects = `-- name: ArchivedIssueProjects :many
+SELECT id
+FROM projects
+WHERE id = ANY ($1::uuid[]) AND deleted_at IS NULL AND archived_at IS NOT NULL
+`
+
+// ArchivedProjects (M4 design 3.8): those among ids that are undeleted, archived projects, read without a lock. A list
+// across projects leaves out the work items of an archived project: listIssueRelations, the other work items of a
+// project other than the listed one's.
+func (q *Queries) ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, archivedIssueProjects, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const issueLabels = `-- name: IssueLabels :many
 SELECT id, name
 FROM labels
@@ -132,7 +161,7 @@ func (q *Queries) IssueStates(ctx context.Context, projectID uuid.UUID) ([]Issue
 }
 
 const lockIssueProject = `-- name: LockIssueProject :one
-SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
 FROM projects
 WHERE id = $1 AND deleted_at IS NULL
 FOR NO KEY UPDATE
@@ -142,17 +171,69 @@ type LockIssueProjectRow struct {
 	WorkspaceID       uuid.UUID
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
+	Identifier        string
 }
 
 // ProjectGate.Lock, what project.Provide offers the issue module (M4 design 6.5): the first lock of a write on the
 // work-item side (3.5, decision point 1: B), the project's row FOR NO KEY UPDATE, its workspace's row not locked.
 // After a wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile
-// reads no row.
+// reads no row. The identifier names the project's work items in their activity (3.13), as it is under the lock.
 func (q *Queries) LockIssueProject(ctx context.Context, id uuid.UUID) (LockIssueProjectRow, error) {
 	row := q.db.QueryRow(ctx, lockIssueProject, id)
 	var i LockIssueProjectRow
-	err := row.Scan(&i.WorkspaceID, &i.Archived, &i.DefaultAssigneeID)
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.Archived,
+		&i.DefaultAssigneeID,
+		&i.Identifier,
+	)
 	return i, err
+}
+
+const lockIssueProjects = `-- name: LockIssueProjects :many
+SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier
+FROM projects
+WHERE id = ANY ($1::uuid[]) AND deleted_at IS NULL
+ORDER BY id
+FOR NO KEY UPDATE
+`
+
+type LockIssueProjectsRow struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	Archived          bool
+	DefaultAssigneeID *uuid.UUID
+	Identifier        string
+}
+
+// ProjectGate.LockMany (M4 design 6.5): the first locks of a write across projects (convention 7, 3.5), the undeleted
+// projects among ids FOR NO KEY UPDATE, as LockIssueProject, in one statement, in id order. The lock is taken as the
+// sorted rows come, so the order is the ids' (S5 E4). After a wait, Postgres evaluates deleted_at IS NULL again on the
+// row's newest version: a project deleted meanwhile is left out.
+func (q *Queries) LockIssueProjects(ctx context.Context, ids []uuid.UUID) ([]LockIssueProjectsRow, error) {
+	rows, err := q.db.Query(ctx, lockIssueProjects, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LockIssueProjectsRow
+	for rows.Next() {
+		var i LockIssueProjectsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Archived,
+			&i.DefaultAssigneeID,
+			&i.Identifier,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const nextIssueSequence = `-- name: NextIssueSequence :one

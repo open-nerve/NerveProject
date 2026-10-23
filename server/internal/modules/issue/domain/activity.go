@@ -14,6 +14,7 @@ type Verb string
 const (
 	VerbCreated Verb = "created"
 	VerbUpdated Verb = "updated"
+	VerbDeleted Verb = "deleted"
 )
 
 // Activity is a row of a work item's activity as M4 design 3.13's table
@@ -72,11 +73,12 @@ type Changed[T any] struct {
 }
 
 // Update is what an update of a work item changes, as its activity names
-// it (M4 design 3.13): its name, its priority, its state and its dates,
-// each nil when it is left as it is; the labels and the accounts it adds
-// and removes, each in id order.
+// it (M4 design 3.13): its name, its parent, its priority, its state and
+// its dates, each nil when it is left as it is; the labels and the
+// accounts it adds and removes, each in id order.
 type Update struct {
 	Name             *Changed[string]
+	Parent           *Changed[*Ref]
 	Priority         *Changed[Priority]
 	State            *Changed[Named]
 	StartDate        *Changed[*shared.Date]
@@ -88,17 +90,21 @@ type Update struct {
 }
 
 // UpdateActivity is the rows an update writes, in the order of M4 design
-// 3.13's table: row 3, the name; row 6, the priority; row 7, the state, by
-// its names and its ids; rows 8 and 9, the start and the target dates, as
-// YYYY-MM-DD or "" for none; then each label added (row 10) and removed
-// (row 11), by its name and its id; then each account assigned (row 12)
-// and unassigned (row 13), by his display name and his id; each list in
-// the order given. A field left as it is writes no row (Plane the same).
+// 3.13's table: row 3, the name; row 5, the parent (ParentActivity); row 6,
+// the priority; row 7, the state, by its names and its ids; rows 8 and 9,
+// the start and the target dates, as YYYY-MM-DD or "" for none; then each
+// label added (row 10) and removed (row 11), by its name and its id; then
+// each account assigned (row 12) and unassigned (row 13), by his display
+// name and his id; each list in the order given. A field left as it is
+// writes no row (Plane the same).
 func UpdateActivity(u Update) []Activity {
 	var rows []Activity
 	if u.Name != nil {
 		rows = append(rows, Activity{Field: ptr("name"), Verb: VerbUpdated, OldValue: ptr(u.Name.Old), NewValue: ptr(u.Name.New),
 			Comment: "updated the name to"})
+	}
+	if u.Parent != nil {
+		rows = append(rows, ParentActivity(*u.Parent))
 	}
 	if u.Priority != nil {
 		rows = append(rows, Activity{Field: ptr("priority"), Verb: VerbUpdated, OldValue: ptr(string(u.Priority.Old)),

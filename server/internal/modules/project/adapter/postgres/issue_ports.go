@@ -26,7 +26,27 @@ func (s *Store) LockIssueProject(ctx context.Context, id uuid.UUID) (p app.Issue
 	case err != nil:
 		return app.IssueProject{}, false, fmt.Errorf("lock project %s for its work items: %w", id, err)
 	}
-	return app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID}, true, nil
+	return app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID, Identifier: r.Identifier},
+		true, nil
+}
+
+// LockIssueProjects locks the undeleted projects among ids as
+// LockIssueProject does, in one statement, in id order, and answers them
+// by id: the first locks of a write across projects (M4 design 3.5,
+// convention 7). One that is not there or is deleted, also one deleted
+// while the lock waited, is not among them. It locks in the transaction
+// ctx carries.
+func (s *Store) LockIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]app.IssueProject, error) {
+	rows, err := s.queries(ctx).LockIssueProjects(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("lock %d projects for their work items: %w", len(ids), err)
+	}
+	locked := make(map[uuid.UUID]app.IssueProject, len(rows))
+	for _, r := range rows {
+		locked[r.ID] = app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID,
+			Identifier: r.Identifier}
+	}
+	return locked, nil
 }
 
 // NextIssueSequence takes the undeleted project id's next work-item number
@@ -81,6 +101,20 @@ func (s *Store) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) (
 		out[i] = app.IssueProjectIdentifier{ID: r.ID, Identifier: r.Identifier}
 	}
 	return out, nil
+}
+
+// ArchivedIssueProjects reads those of ids that are undeleted, archived
+// projects, each true, without a lock (M4 design 3.8).
+func (s *Store) ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
+	rows, err := s.queries(ctx).ArchivedIssueProjects(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("read which of %d projects are archived: %w", len(ids), err)
+	}
+	archived := make(map[uuid.UUID]bool, len(rows))
+	for _, id := range rows {
+		archived[id] = true
+	}
+	return archived, nil
 }
 
 // ActiveRoles reads the project roles of those of the accounts ids that

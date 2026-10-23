@@ -162,7 +162,8 @@ type IssueConfig struct {
 // WriteGateConfig is the work items' write gate (platform/gate): at most
 // PerProject writes on a project's work items hold a connection at once in
 // this process, at most MaxQueue others wait for it, holding none, each at
-// most MaxWait; a write beyond answers 503 server_busy.
+// most MaxWait, a write across projects for their gates in all; a write
+// beyond answers 503 server_busy.
 type WriteGateConfig struct {
 	PerProject int           `koanf:"per_project"`
 	MaxWait    time.Duration `koanf:"max_wait"`

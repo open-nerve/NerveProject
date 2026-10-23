@@ -28,10 +28,7 @@ func withBobLeadingWeb(t *testing.T, contract *apitest.Contract, base, alice, bo
 		t.Fatalf("creating %s = %d %s", slug, status, body)
 	}
 	answerInvitation(t, contract, base, bob, "accept", invite(t, contract, base, alice, slug, "bob@example.com"), http.StatusOK)
-	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/"+slug+"/projects", alice,
-		`{"name":"Web","identifier":"WEB","project_lead_id":"`+bobID.String()+`"}`); status != http.StatusCreated {
-		t.Fatalf("creating %s's project = %d %s", slug, status, body)
-	}
+	createdProjectFrom(t, contract, base, alice, slug, `{"name":"Web","identifier":"WEB","project_lead_id":"`+bobID.String()+`"}`)
 }
 
 // rolesOf are member's roles in each workspace and in its project, each

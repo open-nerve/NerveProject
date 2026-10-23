@@ -37,9 +37,13 @@ func newUpdate() (*app.UpdateIssue, *world, uuid.UUID) {
 	w.issues.assignees, w.issues.labels = []uuid.UUID{bob, out}, []uuid.UUID{bug}
 	w.profiles.names[out] = "out"
 	w.project.roles[dave], w.profiles.names[dave] = shared.RoleMember, "dave"
-	uc := app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
+	return updateOver(w), w, id
+}
+
+// updateOver is updateIssue over w's ports.
+func updateOver(w *world) *app.UpdateIssue {
+	return app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
 		Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})
-	return uc, w, id
 }
 
 // name is a patch's name.
@@ -67,21 +71,21 @@ func lockedAs(action shared.Action, id uuid.UUID) []string {
 		line("GetIssue", id), line("Authorize", alice, action, acme, web)}
 }
 
-// An update, in the order of M4 design 3.5 and 6.7: Locks' calls
-// (locked); then the new state, the roles of the accounts added and the
-// labels added and removed, checked or named; the clock; the work item's
-// fields; the assignees removed and added, the labels the same, each in id
-// order; the accounts added subscribed; the display names of the accounts
-// added and removed; the activity: the name, the priority, the state by
-// its names, each label added and removed, each account added and removed
+// An update, in the order of M4 design 3.5 and 6.7: Locks' calls (locked);
+// then the new state, the roles of the accounts added and the labels added
+// and removed, checked or named; the clock; the work item's fields; the
+// assignees removed and added, the labels the same, each in id order; the
+// accounts added subscribed; the display names of the accounts added and
+// removed; the activity: the name, the priority, the state by its names,
+// each label added and removed, each account added and removed
 // (domain.UpdateActivity), all of it alice's at the moment; the answer is
-// the work item read back. The name is stored without its surrounding
-// space; in Done the work item is completed at the moment. out, who is no
-// member of web, stays assigned: only the accounts added, carol and dave,
-// are checked, and each of them, not only the first, is assigned,
-// subscribed and in the activity. Docs, which the work item has and
-// keeps, is neither read nor written again (M4 design 3.7): Bug's row
-// alone is removed and UI's alone added.
+// the work item read back, its sub-items counted (Locks.seen). The name is
+// stored without its surrounding space; in Done the work item is completed
+// at the moment. out, who is no member of web, stays assigned: only the
+// accounts added, carol and dave, are checked, and each of them, not only
+// the first, is assigned, subscribed and in the activity. Docs, which the
+// work item has and keeps, is neither read nor written again (M4 design
+// 3.7): Bug's row alone is removed and UI's alone added.
 func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 	uc, w, id := newUpdate()
 	w.project.labels = append(w.project.labels, app.LabelRef{ID: docs, Name: "Docs"})
@@ -98,7 +102,7 @@ func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 	calls := append(locked(id), line("States", web), line("Roles", web, []uuid.UUID{carol, dave}), line("Labels", web, []uuid.UUID{bug, ui}), "Now",
 		line("UpdateIssue", id), line("RemoveAssignees", []uuid.UUID{bob}), line("InsertAssignees", []uuid.UUID{carol, dave}),
 		line("RemoveLabels", []uuid.UUID{bug}), line("InsertLabels", []uuid.UUID{ui}), line("InsertSubscribers", []uuid.UUID{carol, dave}),
-		line("DisplayNames", []uuid.UUID{carol, dave, bob}), line("InsertActivities", 8), line("GetIssue", id))
+		line("DisplayNames", []uuid.UUID{carol, dave, bob}), line("InsertActivities", 8), line("GetIssue", id), counted(id))
 	if !slices.Equal(w.log.calls, calls) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
@@ -120,7 +124,7 @@ func TestUpdateIssueWritesTheChangesAndTheirRows(t *testing.T) {
 // item has them, none. The precheck, the lock and the decisions run as for
 // any update; nothing is written, not even the clock read, and the answer
 // is the work item as read under the lock, its last writer and moment as
-// they were.
+// they were, its sub-items counted.
 func TestUpdateIssueThatChangesNothingWritesNothing(t *testing.T) {
 	high := domain.PriorityHigh
 	for what, p := range map[string]domain.IssuePatch{
@@ -137,7 +141,7 @@ func TestUpdateIssueThatChangesNothingWritesNothing(t *testing.T) {
 			if err != nil || !reflect.DeepEqual(got, want) {
 				t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
 			}
-			if calls := locked(id); !slices.Equal(w.log.calls, calls) || w.issues.changed != nil {
+			if calls := append(locked(id), counted(id)); !slices.Equal(w.log.calls, calls) || w.issues.changed != nil {
 				t.Errorf("calls:\n%q\nwant\n%q; the fields written %+v, want none", w.log.calls, calls, w.issues.changed)
 			}
 		})
@@ -285,16 +289,17 @@ func TestUpdateIssueRefusesUnderTheLock(t *testing.T) {
 
 // A port that fails ends the update with its failure, as itself, and no
 // call after it runs, the read and the decision under the lock too once
-// the precheck's have passed: the transaction rolls back whatever was
-// written. What cannot be is an error too, before any write: a work item
-// whose state is not its project's; a label it is removed from that is not
-// its project's; an account without a display name, before the activity;
-// and a work item not there to read back after its write.
+// the precheck's have passed, and the count of its answer's sub-items,
+// the last: the transaction rolls back whatever was written. What cannot
+// be is an error too, before any write: a work item whose state is not
+// its project's; a label it is removed from that is not its project's; an
+// account without a display name, before the activity; and a work item
+// not there to read back after its write.
 func TestUpdateIssueStopsAtAFailingPort(t *testing.T) {
 	low := domain.PriorityLow
 	p := domain.IssuePatch{Name: name("Mend"), StateID: &done.ID, Priority: &low, AssigneeIDs: set(out, carol), LabelIDs: set(ui)}
 	for _, port := range []string{"GetIssue", "Authorize", "Lock", "States", "Roles", "Labels", "UpdateIssue", "RemoveAssignees",
-		"InsertAssignees", "RemoveLabels", "InsertLabels", "InsertSubscribers", "DisplayNames", "InsertActivities"} {
+		"InsertAssignees", "RemoveLabels", "InsertLabels", "InsertSubscribers", "DisplayNames", "InsertActivities", "SubIssueCounts"} {
 		t.Run(port, func(t *testing.T) {
 			uc, w, id := newUpdate()
 			w.log.fail = port

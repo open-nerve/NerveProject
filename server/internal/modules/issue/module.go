@@ -1,9 +1,11 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
 // work items' tables and brings creating, reading, by id or by identifier,
-// changing, archiving, unarchiving and deleting a work item. For the
-// project module's deletions (its IssueCascade port) it soft-deletes a
-// deleted project's rows of them, tells whether work items are in a state,
-// and takes deleted labels off them.
+// changing, archiving, unarchiving and deleting a work item, listing the
+// work items under one and putting work items under it, and listing a
+// work item's relations, relating it to others and deleting a relation.
+// For the project module's deletions (its IssueCascade port) it
+// soft-deletes a deleted project's rows of them, tells whether work items
+// are in a state, and takes deleted labels off them.
 package issue
 
 import (
@@ -58,7 +60,8 @@ func Provide(pool *pgxpool.Pool) Provided {
 
 // ProjectPorts are what the module asks of a project (M4 design 6.5): its
 // gate, its numbers, its states', labels' and members' catalogs, for its
-// writes; a workspace's projects' identifiers, for a read by identifier.
+// writes; a workspace's projects' identifiers, for a read by identifier;
+// which projects are archived, for a list across projects (3.8).
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.ProjectGate
@@ -67,6 +70,7 @@ type ProjectPorts interface {
 	app.LabelCatalog
 	app.ProjectMembers
 	app.ProjectIdentifiers
+	app.ArchivedProjects
 }
 
 // LockedProject, StateRef and its StateGroup, LabelRef and
@@ -122,9 +126,18 @@ func New(d Deps) *Module {
 		UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{
 			Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock,
 		}),
-		DeleteIssue:    app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Rows: store, Clock: d.Clock}),
-		ArchiveIssue:   app.NewArchiveIssue(archive),
-		UnarchiveIssue: app.NewUnarchiveIssue(archive),
+		DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Rows: store, Clock: d.Clock}),
+		ArchiveIssue:       app.NewArchiveIssue(archive),
+		UnarchiveIssue:     app.NewUnarchiveIssue(archive),
+		ListSubIssues:      app.NewListSubIssues(locks, store),
+		AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Locks: locks, Issues: store, Clock: d.Clock}),
+		ListIssueRelations: app.NewListIssueRelations(locks, store, d.Projects),
+		CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{
+			Locks: locks, Relations: store, Clock: d.Clock,
+		}),
+		DeleteIssueRelation: app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{
+			Locks: locks, Relations: store, Clock: d.Clock,
+		}),
 	}}
 }
 

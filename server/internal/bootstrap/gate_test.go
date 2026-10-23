@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -21,9 +22,13 @@ import (
 // second write on the project is refused at once when the queue is full,
 // and when it has waited max_wait; one whose request reaches its deadline
 // while it waits is server_busy too, and one whose request is cancelled
-// keeps context.Canceled. A write on another project meanwhile enters at
-// once: each project has places of its own (11.11). Once the first leaves,
-// a write enters.
+// keeps context.Canceled. A write on another project and this one is
+// answered so too, and holds neither: a write on the other enters at once
+// after it. A write on another project meanwhile enters at once: each
+// project has places of its own (11.11). Once the first leaves, a write
+// enters. Last, one on another project and this one, waiting for this one,
+// holds the other's place, entered first: a write on the other is
+// server_busy at its deadline.
 func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 	project := uuid.NewV7()
 	waiting := func(limit time.Duration, cancelled bool) func() (context.Context, context.CancelFunc) {
@@ -58,6 +63,17 @@ func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 			t.Errorf("%s: the second write: %v", tt.name, err)
 		}
 		cancel()
+		across := uuid.NewV7()
+		ctx, cancel = tt.ctx()
+		if _, err := g.Enter(ctx, across, project); !tt.wants(err) {
+			t.Errorf("%s: a write on another project and this one: %v", tt.name, err)
+		}
+		cancel()
+		if left, err := g.Enter(context.Background(), across); err != nil {
+			t.Fatalf("%s: a write on the other project after it: %v, want it in at once", tt.name, err)
+		} else {
+			left()
+		}
 		if other, err := g.Enter(context.Background(), uuid.NewV7()); err != nil {
 			t.Fatalf("%s: a write on another project: %v, want it in at once", tt.name, err)
 		} else {
@@ -68,6 +84,24 @@ func TestTheWriteGateAnswersItsRefusalsAsServerBusy(t *testing.T) {
 			t.Errorf("%s: a write after the first left: %v, want it in", tt.name, err)
 		} else {
 			leave()
+		}
+	}
+	g := newWriteGate(config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute, MaxQueue: 1})
+	first, err := g.Enter(context.Background(), project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writing, stop := context.WithCancel(context.Background())
+	across, done := uuid.NewV7(), make(chan struct{})
+	go func() { defer close(done); _, _ = g.Enter(writing, across, project) }()
+	t.Cleanup(func() { stop(); <-done; first() })
+	for begun := time.Now(); ; {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		left, err := g.Enter(ctx, across)
+		if cancel(); isBusy(err) {
+			break
+		} else if left(); time.Since(begun) > 5*time.Second {
+			t.Fatal("a write on the other project entered for 5s while one on it and this one waited for this one; want it busy")
 		}
 	}
 }
@@ -207,16 +241,23 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 	w.send(t, "bob", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", `{"name":"Fix"}`, http.StatusCreated)
 }
 
-// Each write P2 adds on a work item enters its project's write gate, as a
-// change does (TestAProjectTooBusyForAWriteAnswersServerBusy; M4 design
-// 3.5, 11.11): while a write holds Web's one place, each of them on a work
-// item of Web is refused at once, the queue full, 503 server_busy with
+// Each write on a work item enters its project's write gate, as a change
+// does (TestAProjectTooBusyForAWriteAnswersServerBusy; M4 design 3.5,
+// 11.11): while a write holds Web's one place, each of them on a work item
+// of Web is refused at once, the queue full, 503 server_busy with
 // Retry-After: 1, before a wait for Web's row could have ended, at the
 // lock timeout at the earliest. In an app that lets one write a project in
 // at once, queues none and ends a write's wait for a lock at three
 // seconds: a transaction holds Web's row, and alice's change of a work
-// item of Web enters the gate and waits for the row. Once the row is free,
-// her change goes through, and so does each write refused.
+// item of Web enters the gate and waits for the row. A write across
+// projects enters the gate of each project it reaches: her relation of a
+// work item of Ops to one of Web is refused so too, though Ops' place is
+// free. A write refused for the shape of its body takes no place at all:
+// an addition of sub-items naming a work item twice, and one of relations
+// naming 21 work items, are each refused 422 at once, though Web's one
+// place is taken. Once the row is free, her change goes through, and so do
+// the writes the gate refused. That a write across projects gives back
+// each place it took is TestAWriteAcrossProjectsGivesBackEachPlaceItTook.
 func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
@@ -224,13 +265,21 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	})
 	item, archived := w.newWorkItem(t), w.doneWorkItem(t)
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.String()+"/archive", "", http.StatusOK)
+	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 	writes := []struct {
-		name, method, path string
-		want               int // its answer once Web's row is free
+		name, method, path, body string
+		want                     int // its answer once Web's row is free
 	}{
-		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), http.StatusNoContent},
-		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", http.StatusOK},
-		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", http.StatusOK},
+		{"a deletion", http.MethodDelete, "/api/v0/issues/" + w.newWorkItem(t).String(), "", http.StatusNoContent},
+		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", "", http.StatusOK},
+		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", "", http.StatusOK},
+		{"an addition of sub-items", http.MethodPost, subIssues(w.newWorkItem(t)), subIssueIDs(w.newWorkItem(t)), http.StatusOK},
+		{"an addition of relations", http.MethodPost, relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)),
+			http.StatusCreated},
+		{"an addition of relations from Ops", http.MethodPost, relationsOf(w.newWorkItemIn(t, ops, `{"name":"Far"}`)),
+			relating("relates_to", w.newWorkItem(t)), http.StatusCreated},
+		{"a deletion of a relation", http.MethodDelete, relationPath(listIn[answeredRelation](t, w.send(t, "alice", http.MethodPost,
+			relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)), http.StatusCreated))[0].ID), "", http.StatusNoContent},
 	}
 	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], []byte(`{"name":"Mend"}`))
 	w.contract.CheckRequest(t, change)
@@ -239,7 +288,11 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	changed := sendInBackground(change)
 	pgtest.WaitForLockWaitBehind(t, w.pool, held.Conn().PgConn(), 5*time.Second)
 	for _, write := range writes {
-		req := newRequest(t, write.method, w.base+write.path, w.tokens["alice"], nil)
+		var body []byte
+		if write.body != "" {
+			body = []byte(write.body)
+		}
+		req := newRequest(t, write.method, w.base+write.path, w.tokens["alice"], body)
 		w.contract.CheckRequest(t, req)
 		begun := time.Now()
 		a := receiveWithin(t, sendInBackground(req), 5*time.Second, "answer to "+write.name)
@@ -251,6 +304,16 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		}
 		w.wantBusy(t, write.name, req, a.res, a.body)
 	}
+	for _, shape := range []struct{ name, path, body, want string }{
+		{"an addition of sub-items naming one twice", subIssues(item), subIssueIDs(archived, archived), "sub_issue_ids[1] duplicate"},
+		{"an addition of relations naming 21", relationsOf(item), relating("relates_to", slices.Repeat([]uuid.UUID{archived}, 21)...),
+			"issue_ids too_long"},
+	} {
+		answer := w.send(t, "alice", http.MethodPost, shape.path, shape.body, http.StatusUnprocessableEntity)
+		if got := refusalOf(t, []byte(answer), false); got != "validation_failed "+shape.want {
+			t.Errorf("%s answers %s while Web's one place is taken; want %s at once, before the gate", shape.name, got, shape.want)
+		}
+	}
 
 	release(t, held)
 	a := receiveWithin(t, changed, 4*time.Second, "answer to alice's change")
@@ -261,7 +324,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		t.Errorf("alice's change = %d %s, want 200 once Web's row is free", a.res.StatusCode, a.body)
 	}
 	for _, write := range writes {
-		w.send(t, "alice", write.method, write.path, "", write.want)
+		w.send(t, "alice", write.method, write.path, write.body, write.want)
 	}
 }
 

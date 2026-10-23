@@ -10,14 +10,15 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The issue module's lock of a project (M4 design 3.5, 6.5). It answers
-// the undeleted project's workspace, whether it is archived, and its
-// default assignee, an archived one too, none for a deleted one. Until the
-// transaction ends the project is held FOR NO KEY UPDATE, which a FOR SHARE
-// waits for and a foreign key's FOR KEY SHARE does not, and its
+// The issue module's lock of a project (M4 design 3.5, 6.5). It answers the
+// undeleted project's workspace, whether it is archived, its default
+// assignee and its identifier, an archived one too, none for a deleted one.
+// Until the transaction ends the project is held FOR NO KEY UPDATE, which a
+// FOR SHARE waits for and a foreign key's FOR KEY SHARE does not, and its
 // workspace's row is not locked at all: a FOR UPDATE of it does not wait.
 func TestLockIssueProject(t *testing.T) {
 	s, pool := newStore(t)
@@ -34,8 +35,8 @@ func TestLockIssueProject(t *testing.T) {
 		want  app.IssueProject
 		found bool
 	}{
-		"Web":  {web, app.IssueProject{WorkspaceID: acme, DefaultAssigneeID: &alice}, true},
-		"Arch": {arch, app.IssueProject{WorkspaceID: acme, Archived: true}, true},
+		"Web":  {web, app.IssueProject{WorkspaceID: acme, DefaultAssigneeID: &alice, Identifier: "WEB"}, true},
+		"Arch": {arch, app.IssueProject{WorkspaceID: acme, Archived: true, Identifier: "ARCH"}, true},
 		"Gone": {gone, app.IssueProject{}, false},
 	} {
 		err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
@@ -49,7 +50,7 @@ func TestLockIssueProject(t *testing.T) {
 			if share, keyShare := waits(t, pool, tt.id, "FOR SHARE"), waits(t, pool, tt.id, "FOR KEY SHARE"); share != tt.found || keyShare {
 				t.Errorf("%s while locked: a FOR SHARE waits %v, a FOR KEY SHARE waits %v; want %v, false", name, share, keyShare, tt.found)
 			}
-			if rowWaits(t, pool, "workspaces", acme, "FOR UPDATE") {
+			if pgtest.RowWaits(t, pool, "workspaces", acme, "FOR UPDATE") {
 				t.Errorf("%s while locked: a FOR UPDATE of acme waits; want the workspace's row not locked", name)
 			}
 			return nil
@@ -109,6 +110,26 @@ func TestProjectIdentifiers(t *testing.T) {
 	slices.SortFunc(want, func(a, b app.IssueProjectIdentifier) int { return a.ID.Compare(b.ID) })
 	if err != nil || !slices.Equal(got, want) {
 		t.Errorf("ProjectIdentifiers(acme) = %+v, %v; want %+v", got, err, want)
+	}
+}
+
+// Which projects are archived, for the issue module's lists across
+// projects (M4 design 3.8): those asked for that are undeleted and
+// archived, Arch; not Web, nor Gone, archived and deleted, nor one that is
+// not there, nor Old, archived but not asked for.
+func TestArchivedIssueProjects(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, arch, gone, old := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Arch", "ARCH", alice), newProject(t, s, acme,
+		"Gone", "GONE", alice), newProject(t, s, acme, "Old", "OLD", alice)
+	for _, p := range []uuid.UUID{arch, gone, old} {
+		exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", p, now)
+	}
+	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", gone, now)
+	got, err := s.ArchivedIssueProjects(context.Background(), []uuid.UUID{web, arch, gone, uuid.NewV7()})
+	if want := map[uuid.UUID]bool{arch: true}; err != nil || !maps.Equal(got, want) {
+		t.Errorf("ArchivedIssueProjects() = %v, %v; want Arch (%s) alone", got, err, arch)
 	}
 }
 

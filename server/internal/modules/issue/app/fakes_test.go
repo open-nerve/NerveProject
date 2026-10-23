@@ -21,8 +21,9 @@ type inTxKey struct{}
 
 // callLog records the calls of the fakes that share or embed it, in order,
 // each with its arguments, and " outside tx" when it ran outside a
-// transaction. It fails the call named in fail with errDisk, after logging
-// it. inTx is set while a fakeTx's transaction runs.
+// transaction. It fails the call named in fail, or the one fail writes
+// with its arguments as line does, with errDisk, after logging it. inTx is
+// set while a fakeTx's transaction runs.
 type callLog struct {
 	calls []string
 	fail  string
@@ -31,11 +32,12 @@ type callLog struct {
 
 func (l *callLog) add(ctx context.Context, name string, args ...any) error {
 	call := line(name, args...)
+	failed := name == l.fail || call == l.fail
 	if ctx.Value(inTxKey{}) != true {
 		call += " outside tx"
 	}
 	l.calls = append(l.calls, call)
-	if name == l.fail {
+	if failed {
 		return errDisk
 	}
 	return nil
@@ -60,18 +62,18 @@ type fakeGate struct {
 	refuse error
 }
 
-func (f fakeGate) Enter(ctx context.Context, projectID uuid.UUID) (func(), error) {
+func (f fakeGate) Enter(ctx context.Context, projectIDs ...uuid.UUID) (func(), error) {
 	if f.log == nil {
 		return func() {}, nil
 	}
-	if err := f.log.add(ctx, "Enter", projectID); err != nil {
+	if err := f.log.add(ctx, "Enter", anys(projectIDs)...); err != nil {
 		return nil, err
 	}
 	if f.refuse != nil {
 		return nil, f.refuse
 	}
 	return func() {
-		call := line("Leave", projectID)
+		call := line("Leave", anys(projectIDs)...)
 		if f.log.inTx {
 			call += " in tx"
 		}
@@ -121,14 +123,16 @@ func (f *fakeAuthorizer) Authorize(ctx context.Context, actor shared.Actor, acti
 
 // fakeProject is a project's side of the issue module's ports: its gate,
 // its numbers and its catalogs, each call logged. found is whether Find
-// answers it, locked what Lock answers, nil for none; waited, when set,
-// runs as Lock waits, before it answers: what commits meanwhile.
+// answers it, locked what Lock answers, nil for none, and across the
+// other projects LockMany answers; waited, when set, runs as a lock waits,
+// before it answers: what commits meanwhile.
 type fakeProject struct {
 	log       *callLog
 	id        uuid.UUID
 	workspace uuid.UUID
 	found     bool
 	locked    *app.LockedProject
+	across    map[uuid.UUID]app.LockedProject
 	waited    func()
 	last      int
 	states    []app.StateRef
@@ -211,12 +215,17 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // call logged, and answers the work item from it, its assignees and labels
 // in id order; the subscribers it checks and logs, and keeps none. greatest
 // is the greatest sort order of each state; lost, when set, loses the work
-// item once its activity is written, so that it is not there to read back.
+// items an activity names once it is written, not there to read back (lose).
 // changed is the last update's fields, nil before any: the work item's
 // last writer and moment; archival, when set, is the last archiving's or
 // unarchiving's, and its last writer and moment instead; archivedAt the
-// work item's archived_at, nil for none. deletions are the deletion's
-// calls' arguments, one a table, in order.
+// work item's archived_at, nil for none. subtree is the work item's
+// subtree, nil for the work item alone, and deletions are the deletion's
+// calls' arguments, one a table, in order (fakes_deletion_test.go). others
+// are the store's other work items, answered as they are, ancestry their
+// ancestries, counts the work items' numbers of sub-items, subItems the
+// sub-items it answers, and parented the last addition of sub-items' rows
+// (fakes_parents_test.go).
 type fakeIssues struct {
 	log        *callLog
 	greatest   map[uuid.UUID]float64
@@ -227,7 +236,13 @@ type fakeIssues struct {
 	assignees  []uuid.UUID
 	labels     []uuid.UUID
 	activities []app.ActivityRow
+	subtree    []uuid.UUID
 	deletions  []app.IssueDeletion
+	others     map[uuid.UUID]domain.Issue
+	ancestry   map[uuid.UUID][]uuid.UUID
+	counts     map[uuid.UUID]app.SubIssueCount
+	subItems   []domain.Issue
+	parented   *app.ParentRows
 	lost       bool
 }
 
@@ -269,7 +284,7 @@ func (f *fakeIssues) UpdateIssue(ctx context.Context, r app.IssueFields) error {
 		return fmt.Errorf("UpdateIssue: %+v is not the work item %+v", r, f.issue)
 	}
 	f.issue.Name, f.issue.StateID, f.issue.Priority, f.issue.CompletedAt = r.Name, r.StateID, r.Priority, r.CompletedAt
-	f.issue.StartDate, f.issue.TargetDate = r.StartDate, r.TargetDate
+	f.issue.StartDate, f.issue.TargetDate, f.issue.ParentID = r.StartDate, r.TargetDate, r.ParentID
 	f.changed = &r
 	return nil
 }
@@ -342,52 +357,35 @@ func (f *fakeIssues) InsertActivities(ctx context.Context, rows []app.ActivityRo
 	}
 	f.activities = rows
 	if f.lost {
-		f.issue = nil
+		f.lose(rows)
 	}
 	return nil
-}
-
-// deleteRows logs a deletion of name's rows, d's work item's, and keeps d,
-// or answers the failure.
-func (f *fakeIssues) deleteRows(ctx context.Context, name string, d app.IssueDeletion) error {
-	if err := f.log.add(ctx, name, d.IssueID); err != nil {
-		return err
-	}
-	f.deletions = append(f.deletions, d)
-	return nil
-}
-
-func (f *fakeIssues) DeleteIssueRow(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueRow", d)
-}
-
-func (f *fakeIssues) DeleteIssueAssigneeRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueAssigneeRows", d)
-}
-
-func (f *fakeIssues) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueLabelRows", d)
-}
-
-func (f *fakeIssues) DeleteIssueSubscriberRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueSubscriberRows", d)
-}
-
-func (f *fakeIssues) DeleteIssueActivityRows(ctx context.Context, d app.IssueDeletion) error {
-	return f.deleteRows(ctx, "DeleteIssueActivityRows", d)
 }
 
 func (f *fakeIssues) GetIssue(ctx context.Context, id uuid.UUID) (domain.Issue, bool, error) {
-	if err := f.log.add(ctx, "GetIssue", id); err != nil || f.issue == nil || f.issue.ID != id {
+	if err := f.log.add(ctx, "GetIssue", id); err != nil {
 		return domain.Issue{}, false, err
+	}
+	i, found := f.read(id)
+	return i, found, nil
+}
+
+// read is the work item id as the fake has it: one of its others, or the
+// work item it keeps; found is false when it has none.
+func (f *fakeIssues) read(id uuid.UUID) (domain.Issue, bool) {
+	if o, ok := f.others[id]; ok {
+		return o, true
+	}
+	if f.issue == nil || f.issue.ID != id {
+		return domain.Issue{}, false
 	}
 	r := f.issue
 	by, at := f.writer()
 	return domain.Issue{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
-		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, SortOrder: r.SortOrder,
+		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, ParentID: r.ParentID, SortOrder: r.SortOrder,
 		CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
-			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true, nil
+			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true
 }
 
 // creatorOf is a stored work item's creator as a read answers it: none for

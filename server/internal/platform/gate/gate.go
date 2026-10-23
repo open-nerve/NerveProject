@@ -1,8 +1,9 @@
 // Package gate bounds how many callers hold a key at once, within this
-// process (M4 design 3.5, 11.11): a caller enters a key's gate, waits in
-// the key's queue, first come first served, while as many others hold it
-// as its bound allows, and leaves it once. A key nobody holds or waits for
-// takes no memory. It uses only the standard library.
+// process (M4 design 3.5, 11.11): a caller enters a key's gate, or several
+// keys' one after another, waits in each key's queue, first come first
+// served, while as many others hold it as its bound allows, and leaves
+// them once. A key nobody holds or waits for takes no memory. It uses only
+// the standard library.
 package gate
 
 import (
@@ -56,17 +57,44 @@ func New[K comparable](l Limits) *Keyed[K] {
 	return &Keyed[K]{limits: l, keys: map[K]*queue{}}
 }
 
-// Enter returns once the caller holds key, with the function that leaves
-// it, which the caller calls once on every path, and which does nothing
-// when called again. While PerKey callers hold key, or others wait for it
-// already, the caller waits behind them, holding nothing; it is refused at
-// once with ErrFull when MaxQueue others wait, and gives up with
-// ErrTimeout after MaxWait, or with ctx's error once ctx is done, before
-// or while it waits: then it holds nothing and leaves the queue.
-func (g *Keyed[K]) Enter(ctx context.Context, key K) (leave func(), err error) {
+// Enter returns once the caller holds each of keys, which it enters one
+// after another, in their order, with the function that leaves them all,
+// which the caller calls once on every path, and which does nothing when
+// called again. While PerKey callers hold a key, or others wait for it
+// already, the caller waits behind them, holding only the keys it entered
+// before it; it is refused at once with ErrFull when MaxQueue others wait,
+// and gives up with ErrTimeout once it has waited MaxWait in all, or with
+// ctx's error once ctx is done as it begins or while it waits: then it
+// leaves the keys it entered, and holds nothing. A later key with a free
+// place it enters at once, without looking at ctx. Callers that enter
+// several keys enter them in one order, each once (the write gate: by
+// project id, M4 design 11.11), so that none waits for a key whose holder
+// waits for one it holds.
+func (g *Keyed[K]) Enter(ctx context.Context, keys ...K) (leave func(), err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	// Its own copy: the leave it returns gives up the keys entered, whatever
+	// the caller does with his slice afterwards.
+	keys = slices.Clone(keys)
+	deadline := time.Now().Add(g.limits.MaxWait)
+	for n, key := range keys {
+		if err := g.enter(ctx, key, deadline); err != nil {
+			g.leave(keys[:n])
+			return nil, err
+		}
+	}
+	var once sync.Once
+	return func() { once.Do(func() { g.leave(keys) }) }, nil
+}
+
+// enter takes key for the caller: at once when fewer than PerKey hold it
+// and no one waits for it. Else it is refused at once with ErrFull when
+// MaxQueue others wait for it; when fewer do, it waits in key's queue,
+// behind them, until it is handed the key or gives up, as Enter says, at
+// deadline or once ctx is done. Refused or given up, it holds nothing of
+// key and is out of its queue.
+func (g *Keyed[K]) enter(ctx context.Context, key K, deadline time.Time) error {
 	g.mu.Lock()
 	q := g.keys[key]
 	if q == nil {
@@ -76,21 +104,22 @@ func (g *Keyed[K]) Enter(ctx context.Context, key K) (leave func(), err error) {
 	if q.holders < g.limits.PerKey && len(q.waiting) == 0 {
 		q.holders++
 		g.mu.Unlock()
-		return g.leaver(key), nil
+		return nil
 	}
 	if len(q.waiting) >= g.limits.MaxQueue {
 		g.mu.Unlock()
-		return nil, ErrFull
+		return ErrFull
 	}
 	w := &waiter{ready: make(chan struct{})}
 	q.waiting = append(q.waiting, w)
 	g.mu.Unlock()
 
-	timer := time.NewTimer(g.limits.MaxWait)
+	timer := time.NewTimer(time.Until(deadline))
 	defer timer.Stop()
+	var err error
 	select {
 	case <-w.ready:
-		return g.leaver(key), nil
+		return nil
 	case <-timer.C:
 		err = ErrTimeout
 	case <-ctx.Done():
@@ -101,17 +130,18 @@ func (g *Keyed[K]) Enter(ctx context.Context, key K) (leave func(), err error) {
 		// Handed the key as it gave up: it passes the key on.
 		g.mu.Unlock()
 		g.release(key)
-		return nil, err
+		return err
 	}
 	q.waiting = slices.DeleteFunc(q.waiting, func(other *waiter) bool { return other == w })
 	g.mu.Unlock()
-	return nil, err
+	return err
 }
 
-// leaver is the function that leaves key once.
-func (g *Keyed[K]) leaver(key K) func() {
-	var once sync.Once
-	return func() { once.Do(func() { g.release(key) }) }
+// leave gives up each of keys (release).
+func (g *Keyed[K]) leave(keys []K) {
+	for _, key := range keys {
+		g.release(key)
+	}
 }
 
 // release gives key up: to the first caller waiting for it, who then holds

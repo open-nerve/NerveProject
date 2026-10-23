@@ -12,8 +12,8 @@ import (
 )
 
 // issueNames are the constraints and indexes of the issue module's tables
-// (M4 design 4.2–4.5, 4.11), as TestConstraintAndIndexNames reads them: the
-// part of its want that the migrations 00015–00019 add.
+// (M4 design 4.2–4.6, 4.11), as TestConstraintAndIndexNames reads them: the
+// part of its want that the migrations 00015–00020 add.
 var issueNames = []string{
 	"issue_activities_actor_id_fkey f n",
 	"issue_activities_created_by_id_fkey f n",
@@ -53,6 +53,21 @@ var issueNames = []string{
 	"issue_labels_updated_by_id_fkey f n",
 	"issue_labels_workspace_id_fkey f c",
 	"issue_labels_workspace_id_idx i",
+	"issue_relations_created_by_id_fkey f n",
+	"issue_relations_issue_id_fkey f c",
+	"issue_relations_issue_id_idx i",
+	"issue_relations_not_self_check c",
+	"issue_relations_pair_key iuw",
+	"issue_relations_pkey iu",
+	"issue_relations_pkey p",
+	"issue_relations_project_id_fkey f c",
+	"issue_relations_project_id_idx i",
+	"issue_relations_related_issue_id_fkey f c",
+	"issue_relations_related_issue_id_idx i",
+	"issue_relations_relation_type_check c",
+	"issue_relations_updated_by_id_fkey f n",
+	"issue_relations_workspace_id_fkey f c",
+	"issue_relations_workspace_id_idx i",
 	"issue_subscribers_created_by_id_fkey f n",
 	"issue_subscribers_issue_id_fkey f c",
 	"issue_subscribers_issue_id_idx i",
@@ -104,7 +119,8 @@ const (
 )
 
 // newIssueDatabase is a database with the rows of the ids above, each work
-// item numbered 1, and an activity row of web's.
+// item numbered 1, an activity row of web's, and web's work item related
+// to ops'.
 func newIssueDatabase(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -120,6 +136,7 @@ func newIssueDatabase(t *testing.T) *pgxpool.Pool {
 			issueWeb + ", " + webState + ", 'Work', 1), (" + opsIssue + ", " + issueAcme + ", " + issueOps + ", " + opsState + ", 'Work', 1)",
 		"INSERT INTO issue_activities (id, workspace_id, project_id, issue_id) VALUES (gen_random_uuid(), " + issueAcme + ", " + issueWeb +
 			", " + webIssue + ")",
+		relationOf(issueWeb, webIssue, opsIssue, "relates_to"),
 	} {
 		if _, err := pool.Exec(context.Background(), stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -128,12 +145,21 @@ func newIssueDatabase(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
+// relationOf is the insertion of a relation of the work item issue, of the
+// project project, to the work item related, of the type kind.
+func relationOf(project, issue, related, kind string) string {
+	return "INSERT INTO issue_relations (id, workspace_id, project_id, issue_id, related_issue_id, relation_type) VALUES (gen_random_uuid(), " +
+		issueAcme + ", " + project + ", " + issue + ", " + related + ", '" + kind + "')"
+}
+
 // The issue tables' CHECKs accept what the domain writes and reject what
-// bypasses it (M4 design 4.2, 4.11): every priority and verb, a start on
-// its target date or with no target, a top-level work item, the number 1;
-// and refuse an empty title, a priority outside the five, in another case
-// too, the number 0, a work item its own parent, a start after its target,
-// a verb outside the three.
+// bypasses it (M4 design 4.2, 4.6, 4.11): every priority, verb and stored
+// relation type, a start on its target date or with no target, a top-level
+// work item, the number 1; and refuse an empty title, a priority outside
+// the five, in another case too, the number 0, a work item its own parent,
+// a start after its target, a verb outside the three, a relation type
+// outside the three stored ones (blocking, which is stored reversed, and
+// Plane's start_before among them), a work item related to itself.
 func TestIssueChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newIssueDatabase(t)
@@ -144,7 +170,8 @@ func TestIssueChecksRejectCounterexamples(t *testing.T) {
 		"UPDATE issues SET start_date = '2026-10-18', target_date = NULL",
 		"UPDATE issues SET parent_id = NULL", "UPDATE issues SET sequence_id = 1",
 		"UPDATE issue_activities SET verb = 'updated'", "UPDATE issue_activities SET verb = 'deleted'",
-		"UPDATE issue_activities SET verb = 'created'",
+		"UPDATE issue_activities SET verb = 'created'", "UPDATE issue_relations SET relation_type = 'blocked_by'",
+		"UPDATE issue_relations SET relation_type = 'duplicate'", "UPDATE issue_relations SET relation_type = 'relates_to'",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Errorf("%s: %v, want it accepted", stmt, err)
@@ -158,6 +185,9 @@ func TestIssueChecksRejectCounterexamples(t *testing.T) {
 		{"its own parent", "UPDATE issues SET parent_id = id", "issues_not_own_parent_check"},
 		{"a start after the target", "UPDATE issues SET start_date = '2026-10-18', target_date = '2026-10-17'", "issues_dates_check"},
 		{"unknown verb", "UPDATE issue_activities SET verb = 'commented'", "issue_activities_verb_check"},
+		{"blocking stored", "UPDATE issue_relations SET relation_type = 'blocking'", "issue_relations_relation_type_check"},
+		{"Plane's start_before", "UPDATE issue_relations SET relation_type = 'start_before'", "issue_relations_relation_type_check"},
+		{"related to itself", "UPDATE issue_relations SET related_issue_id = issue_id", "issue_relations_not_self_check"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, tt.stmt)
@@ -175,7 +205,13 @@ func TestIssueChecksRejectCounterexamples(t *testing.T) {
 // project holds its own 1. The assignees', labels' and subscribers' keys
 // hold among undeleted rows only (4.3–4.5): a second undeleted row of the
 // pair is refused, and soft-deleting the first frees the pair; another
-// work item holds the same pair of its own.
+// work item holds the same pair of its own. A pair of work items has at
+// most one undeleted relation, whatever its type and direction (3.10,
+// 4.6): beside web's work item related to ops', ops' is refused a relation
+// to web's of another type, and web's one to ops' of another type; web's
+// relation to another work item of web, and that one's to ops' work item,
+// each sharing one end with the first, are accepted; soft-deleting the
+// first frees the pair for ops' relation to web's.
 func TestIssueUniqueKeys(t *testing.T) {
 	ctx := context.Background()
 	pool := newIssueDatabase(t)
@@ -219,4 +255,21 @@ func TestIssueUniqueKeys(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("issue_relations", func(t *testing.T) {
+		other := "'0199a2b4-0000-7000-8000-00000000000b'"
+		refused(t, relationOf(issueOps, opsIssue, webIssue, "blocked_by"), "issue_relations_pair_key")
+		refused(t, relationOf(issueWeb, webIssue, opsIssue, "duplicate"), "issue_relations_pair_key")
+		for _, stmt := range []string{
+			"INSERT INTO issues (id, workspace_id, project_id, state_id, name, sequence_id) VALUES (" + other + ", " + issueAcme + ", " + issueWeb +
+				", " + webState + ", 'Other', 2)",
+			relationOf(issueWeb, webIssue, other, "relates_to"), relationOf(issueWeb, other, opsIssue, "blocked_by"),
+			"UPDATE issue_relations SET deleted_at = now() WHERE issue_id = " + webIssue + " AND related_issue_id = " + opsIssue,
+			relationOf(issueOps, opsIssue, webIssue, "blocked_by"),
+		} {
+			if _, err := pool.Exec(ctx, stmt); err != nil {
+				t.Errorf("%s: %v, want it accepted", stmt, err)
+			}
+		}
+	})
 }

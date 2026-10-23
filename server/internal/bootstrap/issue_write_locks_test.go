@@ -21,18 +21,19 @@ import (
 // sends, a path of that pattern (pathOf), to Web of the world or to a row
 // made in Web for it, made anew for each of alice's sends, before any lock
 // is held, so that a write that ends what it names finds it there; body,
-// its body, which names the world's rows; the answer it gets; waits, the
-// table it waits for under its lock before any write of its own: the
-// first it reads there that its precheck did not (held ACCESS EXCLUSIVE),
-// or, when it reads none, the first it writes (held SHARE, which its
-// precheck's plain read does not wait for); and mode, the lock another
-// transaction holds of that table: ACCESS EXCLUSIVE, which a plain read
-// waits for too, or SHARE, which a write waits for and a plain read does
-// not, so that the write waits there and its precheck does not.
+// its body, which names the world's rows, read as the test sends it, with
+// a plain read, which no lock the test holds stops; the answer it gets;
+// waits, the table it waits for under its lock before any write of its
+// own: the first it reads there that its precheck did not (held ACCESS
+// EXCLUSIVE), or, when it reads none, the first it writes (held SHARE,
+// which its precheck's plain read does not wait for); and mode, the lock
+// another transaction holds of that table: ACCESS EXCLUSIVE, which a plain
+// read waits for too, or SHARE, which a write waits for and a plain read
+// does not, so that the write waits there and its precheck does not.
 type issueWrite struct {
 	op, method, path string
 	target           func(t *testing.T, w issueWorld) string
-	body             func(w issueWorld) string
+	body             func(t *testing.T, w issueWorld) string
 	want             int
 	waits, mode      string
 }
@@ -42,26 +43,26 @@ type issueWrite struct {
 var issueWrites = []issueWrite{
 	{op: "createIssue", method: http.MethodPost, path: "/api/v0/projects/{project_id}/issues",
 		target: func(_ *testing.T, w issueWorld) string { return "/api/v0/projects/" + w.web.String() + "/issues" },
-		body:   func(w issueWorld) string { return w.fullIssue() }, want: http.StatusCreated, waits: "states", mode: "ACCESS EXCLUSIVE"},
+		body:   func(_ *testing.T, w issueWorld) string { return w.fullIssue() }, want: http.StatusCreated, waits: "states", mode: "ACCESS EXCLUSIVE"},
 	// A work item in Todo, which the send moves to Done: a change of
 	// state, so the states are read under the lock.
 	{op: "updateIssue", method: http.MethodPatch, path: "/api/v0/issues/{issue_id}",
 		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
-		body:   func(w issueWorld) string { return `{"state_id":"` + w.done.String() + `"}` }, want: http.StatusOK, waits: "states",
-		mode: "ACCESS EXCLUSIVE"},
+		body:   func(_ *testing.T, w issueWorld) string { return `{"state_id":"` + w.done.String() + `"}` }, want: http.StatusOK,
+		waits: "states", mode: "ACCESS EXCLUSIVE"},
 	// A work item the send deletes: it reads nothing under the lock that
 	// its precheck did not, so it waits for the work items' table, which
 	// it writes first.
 	{op: "deleteIssue", method: http.MethodDelete, path: "/api/v0/issues/{issue_id}",
 		target: func(t *testing.T, w issueWorld) string { return "/api/v0/issues/" + w.newWorkItem(t).String() },
-		body:   func(issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
+		body:   func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
 	// A work item in Done, which the send archives: its state is read
 	// under the lock.
 	{op: "archiveIssue", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/archive",
 		target: func(t *testing.T, w issueWorld) string {
 			return "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive"
 		},
-		body: func(issueWorld) string { return "" }, want: http.StatusOK, waits: "states", mode: "ACCESS EXCLUSIVE"},
+		body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusOK, waits: "states", mode: "ACCESS EXCLUSIVE"},
 	// An archived work item, which the send unarchives: it reads nothing
 	// under the lock that its precheck did not, so it waits for the work
 	// items' table, which it writes first.
@@ -71,7 +72,43 @@ var issueWrites = []issueWrite{
 			w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+id.String()+"/archive", "", http.StatusOK)
 			return "/api/v0/issues/" + id.String() + "/unarchive"
 		},
-		body: func(issueWorld) string { return "" }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
+		body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusOK, waits: "issues", mode: "SHARE"},
+	// A new work item, which the send puts Part under: Web's one work item
+	// named so, made with the first target; each send moves it under the
+	// next. It reads nothing under the lock that its precheck did not, so it
+	// waits for the work items' table, which it writes first.
+	{op: "addSubIssues", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/sub-issues",
+		target: func(t *testing.T, w issueWorld) string {
+			if len(queryIDs(t, w.pool, "SELECT id FROM issues WHERE project_id = $1 AND name = 'Part'", w.web)) == 0 {
+				w.newWorkItemIn(t, w.web, `{"name":"Part"}`)
+			}
+			return subIssues(w.newWorkItem(t))
+		},
+		body: func(t *testing.T, w issueWorld) string { return subIssueIDs(w.workItemNamed(t, "Part")) }, want: http.StatusOK,
+		waits: "issues", mode: "SHARE"},
+	// A new work item, which the send relates to Far: Web's one work item
+	// named so, made with the first target. Its precheck reads no relation,
+	// so it waits for the relations' table, which it reads first under
+	// the lock.
+	{op: "createIssueRelations", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/relations",
+		target: func(t *testing.T, w issueWorld) string {
+			if len(queryIDs(t, w.pool, "SELECT id FROM issues WHERE project_id = $1 AND name = 'Far'", w.web)) == 0 {
+				w.newWorkItemIn(t, w.web, `{"name":"Far"}`)
+			}
+			return relationsOf(w.newWorkItem(t))
+		},
+		body: func(t *testing.T, w issueWorld) string { return relating("relates_to", w.workItemNamed(t, "Far")) }, want: http.StatusCreated,
+		waits: "issue_relations", mode: "ACCESS EXCLUSIVE"},
+	// A relation of two new work items, which the send deletes: it reads
+	// nothing under the lock that its precheck did not, so it waits for the
+	// relations' table, which it writes first.
+	{op: "deleteIssueRelation", method: http.MethodDelete, path: "/api/v0/issue-relations/{relation_id}",
+		target: func(t *testing.T, w issueWorld) string {
+			related := listIn[answeredRelation](t, w.send(t, "alice", http.MethodPost, relationsOf(w.newWorkItem(t)),
+				relating("relates_to", w.newWorkItem(t)), http.StatusCreated))
+			return relationPath(related[0].ID)
+		},
+		body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issue_relations", mode: "SHARE"},
 }
 
 // issueTables are the tables a write on the work-item side reads or
@@ -80,7 +117,7 @@ var issueWrites = []issueWrite{
 // memberships its decision reads, the states and labels it checks, and
 // the work-item side's own.
 const issueTables = "workspaces, workspace_members, projects, project_members, states, labels, issues, issue_assignees, issue_labels, " +
-	"issue_subscribers, issue_activities"
+	"issue_relations, issue_subscribers, issue_activities"
 
 // writesOnIssues lists the operations of ops tagged issue, but GET, sorted.
 func writesOnIssues(ops []apitest.Operation) []string {
@@ -158,7 +195,7 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 					target = targets[alices]
 					alices++
 				}
-				req := newRequest(t, iw.method, w.base+target, w.tokens[name], []byte(iw.body(w)))
+				req := newRequest(t, iw.method, w.base+target, w.tokens[name], []byte(iw.body(t, w)))
 				w.contract.CheckRequest(t, req)
 				return sendInBackground(req)
 			}

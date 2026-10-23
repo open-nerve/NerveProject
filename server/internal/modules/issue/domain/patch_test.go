@@ -36,7 +36,7 @@ func TestCheckIssuePatchAccepts(t *testing.T) {
 			IssuePatch{SetStartDate: true, StartDate: october(20), SetTargetDate: true, TargetDate: october(19)}},
 		{"both dates cleared", IssuePatch{SetStartDate: true, SetTargetDate: true}, IssuePatch{SetStartDate: true, SetTargetDate: true}},
 	}
-	for _, p := range priorities {
+	for _, p := range []Priority{PriorityUrgent, PriorityHigh, PriorityMedium, PriorityLow, PriorityNone} {
 		tests = append(tests, struct {
 			name string
 			in   IssuePatch
@@ -91,21 +91,22 @@ func TestCheckIssuePatchReportsEveryProblem(t *testing.T) {
 }
 
 // What a patch changes in a work item, Fix in Todo, high, from the 12th
-// with no target date, assigned to ann and ben, labelled Bug and UI (M4
-// design 3.7): a field not given, or given as it is, changes nothing, a
-// date the same day or none again too; a date given another day, or
-// cleared, is the new one; a set given is the new set, whose difference
-// with the work item's is added and removed, each in id order, whatever the
-// order given; a set not given leaves the work item's as it is, its
-// accounts and labels too.
+// with no target date, under up, assigned to ann and ben, labelled Bug and
+// UI (M4 design 3.7, 3.9): a field not given, or given as it is, changes
+// nothing, a date the same day or none again too, the parent the same
+// work item, or none again; a date given another day, or cleared, is the
+// new one, and so is a parent given another work item, or none; a set
+// given is the new set, whose difference with the work item's is added
+// and removed, each in id order, whatever the order given; a set not given
+// leaves the work item's as it is, its accounts and labels too.
 func TestChangesOf(t *testing.T) {
 	// In id order: ann, ben, cat, dan; bug, ui, ux.
 	people, tags := ids(4), ids(3)
 	ann, ben, cat, dan := people[0], people[1], people[2], people[3]
 	bug, ui, ux := tags[0], tags[1], tags[2]
-	todo, done := uuid.NewV7(), uuid.NewV7()
-	i := Issue{Name: "Fix", StateID: todo, Priority: PriorityHigh, StartDate: october(12), AssigneeIDs: []uuid.UUID{ann, ben},
-		LabelIDs: []uuid.UUID{bug, ui}}
+	todo, done, up, top := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	i := Issue{Name: "Fix", StateID: todo, Priority: PriorityHigh, StartDate: october(12), ParentID: ptr(up),
+		AssigneeIDs: []uuid.UUID{ann, ben}, LabelIDs: []uuid.UUID{bug, ui}}
 	set := func(ids ...uuid.UUID) *[]uuid.UUID { return &ids }
 	tests := []struct {
 		name string
@@ -114,7 +115,10 @@ func TestChangesOf(t *testing.T) {
 	}{
 		{"nothing given", IssuePatch{}, Changes{}},
 		{"each given as it is", IssuePatch{Name: ptr("Fix"), StateID: &todo, Priority: ptr(PriorityHigh), SetStartDate: true,
-			StartDate: october(12), SetTargetDate: true, AssigneeIDs: set(ben, ann), LabelIDs: set(ui, bug)}, Changes{}},
+			StartDate: october(12), SetTargetDate: true, SetParentID: true, ParentID: ptr(up), AssigneeIDs: set(ben, ann),
+			LabelIDs: set(ui, bug)}, Changes{}},
+		{"another parent", IssuePatch{SetParentID: true, ParentID: &top}, Changes{Parent: &ParentChange{To: &top}}},
+		{"the parent taken away", IssuePatch{SetParentID: true}, Changes{Parent: &ParentChange{}}},
 		{"the name", IssuePatch{Name: ptr("Mend")}, Changes{Name: ptr("Mend")}},
 		{"the priority", IssuePatch{Priority: ptr(PriorityNone)}, Changes{Priority: ptr(PriorityNone)}},
 		{"the state", IssuePatch{StateID: &done}, Changes{StateID: &done}},
@@ -132,6 +136,14 @@ func TestChangesOf(t *testing.T) {
 		if got := ChangesOf(i, tt.p); !reflect.DeepEqual(got, tt.want) {
 			t.Errorf("%s: ChangesOf() = %+v, want %+v", tt.name, got, tt.want)
 		}
+	}
+	orphan := Issue{Name: "Fix", StateID: todo}
+	if got := ChangesOf(orphan, IssuePatch{SetParentID: true}); !reflect.DeepEqual(got, Changes{}) {
+		t.Errorf("no parent taken away from a work item under none: ChangesOf() = %+v, want nothing", got)
+	}
+	if got, want := ChangesOf(orphan, IssuePatch{SetParentID: true, ParentID: &up}), (Changes{Parent: &ParentChange{To: &up}}); !reflect.DeepEqual(got,
+		want) {
+		t.Errorf("a parent for a work item under none: ChangesOf() = %+v, want %+v", got, want)
 	}
 }
 
@@ -176,6 +188,7 @@ func TestChangesNone(t *testing.T) {
 	for name, c := range map[string]Changes{
 		"the name": {Name: ptr("x")}, "the priority": {Priority: ptr(PriorityLow)}, "the state": {StateID: &id},
 		"the start date cleared": {StartDate: &DateChange{}}, "a target date": {TargetDate: &DateChange{To: october(19)}},
+		"the parent taken away": {Parent: &ParentChange{}}, "a parent": {Parent: &ParentChange{To: &id}},
 		"an account added": {Assignees: Diff{Added: one}}, "an account removed": {Assignees: Diff{Removed: one}},
 		"a label added": {Labels: Diff{Added: one}}, "a label removed": {Labels: Diff{Removed: one}},
 	} {
