@@ -184,18 +184,22 @@ func TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches(t *testing.T) {
 // A write on either of two work items (deleteIssueRelation's, M4 design
 // 3.10, convention 7) takes the projects of both as a write across
 // projects does (TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches),
-// whichever work item the decision let it through on: far's, of ops, or
-// near's, of web. Two work items of one project take its gate and its
-// lock once.
+// in ascending id order, whichever work item the decision let it through
+// on: far's, of ops, or near's, of web, and whichever the relation is
+// stored from: far, or near (fromNear), the smaller id of the smaller
+// project. Two work items of one project take its gate and its lock once.
 func TestAWriteOnEitherWorkItemTakesBothProjects(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
-		set      func(w *world)
+		set      func(w *world, rel *fakeRelations)
 		projects []uuid.UUID
 	}{
-		{"decided on far", func(*world) {}, sorted([]uuid.UUID{web, ops})},
-		{"decided on near", func(w *world) { w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()} }, sorted([]uuid.UUID{web, ops})},
-		{"both of web", func(w *world) {
+		{"decided on far", func(*world, *fakeRelations) {}, sorted([]uuid.UUID{web, ops})},
+		{"decided on near", func(w *world, _ *fakeRelations) {
+			w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()}
+		}, sorted([]uuid.UUID{web, ops})},
+		{"stored from near, decided on near", fromNear, sorted([]uuid.UUID{web, ops})},
+		{"both of web", func(w *world, _ *fakeRelations) {
 			far := w.issues.others[farID]
 			far.ProjectID = web
 			w.issues.others[farID] = far
@@ -204,7 +208,7 @@ func TestAWriteOnEitherWorkItemTakesBothProjects(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, w, rel := newUnrelate()
 			gated(w, nil)
-			tt.set(w)
+			tt.set(w, rel)
 			if err := unrelateOver(w, rel).Execute(as(alice), relationID); err != nil {
 				t.Fatal(err)
 			}

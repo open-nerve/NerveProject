@@ -15394,11 +15394,11 @@ Expected: 通过。
 - `issue/app/ports.go`：`RelationDeleter`（`GetRelation`、`DeleteRelation`、`MarkChanged`、`InsertActivities`；两端由 `Locks` 读，它不嵌入 `IssueReader`）；`rows.go` 的 `RelationDeletion{ID, By, At}`。
 - `issue/app/delete_relation.go`（新）：`DeleteIssueRelationDeps{Locks, Relations, Clock}`、`NewDeleteIssueRelation`、`Execute(ctx, id)`：不加锁地读关联（没有、已删除是 `issue.relation_not_found`）→ `Locks.run` 的 `write{issue: &r.IssueID, instead: &r.RelatedID, action: issue.update, notFound: ErrRelationNotFound}` → 锁下：重读关联（等锁期间被删除 `issue.relation_not_found`）→ 任一端的项目已归档 409 → 任一端已归档 409 `issue.archived` → `delete`（时刻；软删除这一行；两端是 `held.own()` 和 `held.instead`，按 `id` 的次序（`ascending`）改最后修改；各一行动态，各在自己的项目，存为 `issue_id` 的那一端在先，类型按它读的，对方按标识）。
 - `issue/adapter/postgres`：`queries/relations.sql` 的 `GetRelation`（未删除的这一条，与 `IssueRelations` 同样的列）、`DeleteRelation`（`:execrows`，按键软删除一行）；`relations.go`（`GetRelation` 把行转成 `IssueRelationsRow` 共用 `relationOf`；`DeleteRelation` 没写到一行是错误）。
-- 测试的帮手：`fakes_relations_test.go` 的 `GetRelation`、`DeleteRelation`、`deleted`，`InsertRelations` 写下的关联记在 `inserted`（`relations` 只是读回答的：删除的世界里存着要删的那一条）；`create_relations_test.go` 的 `wantNothingWritten` 核对假存储记下的关联的每个写（插入的、删除的关联，改了最后修改的工作项，动态），加关联、删除关联的拒绝都用它，加关联的测试读 `inserted`；`delete_relation_test.go`（新）：`relationID`、`newUnrelate`（near 与 far 的关联，存为 far 的 `blocked_by`）、`unrelating`、`through`、`archived`；动态由 `wantActivityRows` 核对，端口的失败由 `wantStoppedAt`、`wantStopped` 核对，不另写一份。
+- 测试的帮手：`fakes_relations_test.go` 的 `GetRelation`、`DeleteRelation`、`deleted`，`InsertRelations` 写下的关联记在 `inserted`（`relations` 只是读回答的：删除的世界里存着要删的那一条）；`create_relations_test.go` 的 `wantNothingWritten` 核对假存储记下的关联的每个写（插入的、删除的关联，改了最后修改的工作项，动态），加关联、删除关联的拒绝都用它，加关联的测试读 `inserted`；`delete_relation_test.go`（新）：`relationID`、`newUnrelate`（near 与 far 的关联，存为 far 的 `blocked_by`）、`fromNear`（同一条关联改存为 near 的 `blocked_by`：较小的 `id`、较小的项目）、`unrelating`（按存为 `issue_id` 的一端）、`through`、`archived`；动态由 `wantActivityRows` 核对，端口的失败由 `wantStoppedAt`、`wantStopped` 核对，不另写一份。
 
 **Tests:**
 - 领域：`TestRelationRemoved`（四种类型，各写出 Plane 的句子，同 `TestRelationAdded`）。
-- 单元：`TestDeleteIssueRelationDeletesItOnEitherWorkItem`（3.5、3.10 的次序：两端任一个的 `Locks` 的调用（`unrelating`）；时刻；删除关联；两端按 `id` 的次序改最后修改；动态。调用者能改任一端：存为 `issue_id` 的 far 先判定，不能改它时（角色不允许，或 ops 里访客规则隐藏 far）判定 near；far 的一行在先（ops 的，它的 `blocked_by WEB-8` 删除），然后 near 的（web 的，`blocking OPS-3` 删除））、`TestDeleteIssueRelationRefusals`（锁之前：没有关联、一端不在 `issue.relation_not_found`；两端都看不到（项目或访客规则）也是，看得到一端而两端都不能改 403；锁下：任一端的项目等锁期间被删除（在任何判定之前）、任一端等锁期间被删除、关联被删除、两端都不再看得到 `issue.relation_not_found`，都不能再改 403，任一端的项目已归档 409，然后任一端已归档 409；每个回答整个比较：两端都看不到的关联与不存在的是同一个回答，细节都一样（8.4）；都不写（`wantNothingWritten`））、`TestDeleteIssueRelationStopsAtAFailingPort`（各端口的第一次调用失败，far 被拒绝时预检对 near 的判定失败；预检之后锁下 far、near 的再读、对 far 的再判定、far 在锁下被拒绝时对 near 的判定和关联的再读失败（同 Task 10 对 `reachUnder` 的）：都答这个失败，它之后没有调用）；`lock_test.go` 的 `TestAWriteOnEitherWorkItemTakesBothProjects`（像跨项目的写那样取两端的项目，不论判定放行的是哪一端：far 的 ops，或 near 的 web；同一个项目的两端只取一次它的闸门和锁）、`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches` 共用 `wantAllAtOnce`。
+- 单元：`TestDeleteIssueRelationDeletesItOnEitherWorkItem`（3.5、3.10 的次序：两端任一个的 `Locks` 的调用（`unrelating`）；时刻；删除关联；两端按 `id` 的次序改最后修改；动态。调用者能改任一端：存为 `issue_id` 的 far 先判定，不能改它时（角色不允许，或 ops 里访客规则隐藏 far）判定 near；far 的一行在先（ops 的，它的 `blocked_by WEB-8` 删除），然后 near 的（web 的，`blocking OPS-3` 删除）；关联存为 near 的（`fromNear`）时先判定 near，near 的一行在先（web 的，`blocked_by OPS-3` 删除），然后 far 的（ops 的，`blocking WEB-8` 删除），项目仍按 `id` 升序锁、两端仍按 `id` 的次序改最后修改）、`TestDeleteIssueRelationRefusals`（锁之前：没有关联、一端不在 `issue.relation_not_found`；两端都看不到（项目或访客规则）也是，看得到一端而两端都不能改 403；锁下：任一端的项目等锁期间被删除（在任何判定之前）、任一端等锁期间被删除、关联被删除、两端都不再看得到 `issue.relation_not_found`，都不能再改 403，任一端的项目已归档 409，然后任一端已归档 409；每个回答整个比较：两端都看不到的关联与不存在的是同一个回答，细节都一样（8.4）；都不写（`wantNothingWritten`））、`TestDeleteIssueRelationStopsAtAFailingPort`（各端口的第一次调用失败，far 被拒绝时预检对 near 的判定失败；预检之后锁下 far、near 的再读、对 far 的再判定、far 在锁下被拒绝时对 near 的判定和关联的再读失败（同 Task 10 对 `reachUnder` 的）：都答这个失败，它之后没有调用）；`lock_test.go` 的 `TestAWriteOnEitherWorkItemTakesBothProjects`（像跨项目的写那样按 `id` 升序取两端的项目，不论判定放行的是哪一端：far 的 ops，或 near 的 web，也不论关联存为哪一端：far，或 near（`fromNear`）；同一个项目的两端只取一次它的闸门和锁）、`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches` 共用 `wantAllAtOnce`。
 - 存储：`TestGetRelation`（按 `id` 读出如存的每一列；已删除的、没有的读不到；取消的读是它的失败）、`TestDeleteRelation`（在给的时刻由给的账户软删除，别的列和别的关联不动；已删除的、没有的不写，是错误；取消的写也是）。
 
 - [ ] **Step 1: 查询，生成**
@@ -15795,18 +15795,22 @@ func (l Locks) decideEither(ctx context.Context, actor shared.Actor, w write, it
 // A write on either of two work items (deleteIssueRelation's, M4 design
 // 3.10, convention 7) takes the projects of both as a write across
 // projects does (TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches),
-// whichever work item the decision let it through on: far's, of ops, or
-// near's, of web. Two work items of one project take its gate and its
-// lock once.
+// in ascending id order, whichever work item the decision let it through
+// on: far's, of ops, or near's, of web, and whichever the relation is
+// stored from: far, or near (fromNear), the smaller id of the smaller
+// project. Two work items of one project take its gate and its lock once.
 func TestAWriteOnEitherWorkItemTakesBothProjects(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
-		set      func(w *world)
+		set      func(w *world, rel *fakeRelations)
 		projects []uuid.UUID
 	}{
-		{"decided on far", func(*world) {}, sorted([]uuid.UUID{web, ops})},
-		{"decided on near", func(w *world) { w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()} }, sorted([]uuid.UUID{web, ops})},
-		{"both of web", func(w *world) {
+		{"decided on far", func(*world, *fakeRelations) {}, sorted([]uuid.UUID{web, ops})},
+		{"decided on near", func(w *world, _ *fakeRelations) {
+			w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()}
+		}, sorted([]uuid.UUID{web, ops})},
+		{"stored from near, decided on near", fromNear, sorted([]uuid.UUID{web, ops})},
+		{"both of web", func(w *world, _ *fakeRelations) {
 			far := w.issues.others[farID]
 			far.ProjectID = web
 			w.issues.others[farID] = far
@@ -15815,7 +15819,7 @@ func TestAWriteOnEitherWorkItemTakesBothProjects(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, w, rel := newUnrelate()
 			gated(w, nil)
-			tt.set(w)
+			tt.set(w, rel)
 			if err := unrelateOver(w, rel).Execute(as(alice), relationID); err != nil {
 				t.Fatal(err)
 			}
@@ -16037,7 +16041,7 @@ func (u *DeleteIssueRelation) delete(ctx context.Context, h held, r domain.Relat
 }
 ````
 
-`server/internal/modules/issue/app/delete_relation_test.go`（新文件，233 行）：
+`server/internal/modules/issue/app/delete_relation_test.go`（新文件，263 行）：
 
 ````file server/internal/modules/issue/app/delete_relation_test.go
 package app_test
@@ -16071,17 +16075,32 @@ func unrelateOver(w *world, rel *fakeRelations) *app.DeleteIssueRelation {
 	return app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{Locks: w.locks, Relations: rel, Clock: clockAt{at: clockNow, log: w.log}})
 }
 
-// unrelating are the calls of alice's deletion of newUnrelate's relation,
-// as Locks takes them on either work item (M4 design 3.5, 3.10): before
-// any lock and outside the transaction, the relation read, both work items
-// read, far first, stored as issue_id, then near, and the decision on far,
-// in ops, then, when that refuses, on near, in web, before of them; in the
-// transaction, web and ops locked at once, in id order, both work items
-// read again, the decisions again, under of them, and the relation read
-// again.
-func unrelating(before, under int) []string {
-	reads := []string{line("GetIssue", farID), line("GetIssue", nearID)}
-	decisions := []string{line("Authorize", alice, domain.ActionUpdate, acme, ops), line("Authorize", alice, domain.ActionUpdate, acme, web)}
+// fromNear stores newUnrelate's relation from near instead, the smaller id,
+// of web, the smaller project: near blocked by far.
+func fromNear(_ *world, rel *fakeRelations) {
+	r := &rel.relations[0]
+	r.ProjectID, r.IssueID, r.RelatedID = web, nearID, farID
+}
+
+// unrelating are the calls of alice's deletion of a relation of near and
+// far stored from the work item from (newUnrelate's from far, fromNear's
+// from near), as Locks takes them on either work item (M4 design 3.5,
+// 3.10): before any lock and outside the transaction, the relation read,
+// both work items read, from first, then the other, and the decision on
+// from, in its project, then, when that refuses, on the other, in its,
+// before of them; in the transaction, web and ops locked at once, in id
+// order, both work items read again, the decisions again, under of them,
+// and the relation read again.
+func unrelating(from uuid.UUID, before, under int) []string {
+	ends := []struct{ item, project uuid.UUID }{{farID, ops}, {nearID, web}}
+	if from == nearID {
+		slices.Reverse(ends)
+	}
+	var reads, decisions []string
+	for _, e := range ends {
+		reads = append(reads, line("GetIssue", e.item))
+		decisions = append(decisions, line("Authorize", alice, domain.ActionUpdate, acme, e.project))
+	}
 	var outside []string
 	for _, c := range slices.Concat([]string{line("GetRelation", relationID)}, reads, decisions[:before]) {
 		outside = append(outside, c+" outside tx")
@@ -16113,28 +16132,46 @@ func archived(w *world, id uuid.UUID) {
 // role may not, or the guest rule hides far from him in ops. Each writes
 // a row of far's activity first, of ops, its blocked_by WEB-8 deleted,
 // then one of near's, of web, its blocking OPS-3 deleted, both alice's at
-// the clock's moment.
+// the clock's moment. Stored from near (fromNear), the smaller id of the
+// smaller project, the relation is decided on near first, and writes
+// near's row first, its blocked_by OPS-3 deleted, then far's, its blocking
+// WEB-8 deleted; the projects are locked, and the work items marked
+// changed, in id order still.
 func TestDeleteIssueRelationDeletesItOnEitherWorkItem(t *testing.T) {
+	rows := map[uuid.UUID][]app.ActivityRow{ // by the work item stored as issue_id
+		farID: {
+			{IssueID: farID, ProjectID: ops, Activity: domain.RelationRemoved(domain.BlockedBy, domain.Ref{ID: nearID, Identifier: "WEB-8"})},
+			{IssueID: nearID, ProjectID: web, Activity: domain.RelationRemoved(domain.Blocking, domain.Ref{ID: farID, Identifier: "OPS-3"})},
+		},
+		nearID: {
+			{IssueID: nearID, ProjectID: web, Activity: domain.RelationRemoved(domain.BlockedBy, domain.Ref{ID: farID, Identifier: "OPS-3"})},
+			{IssueID: farID, ProjectID: ops, Activity: domain.RelationRemoved(domain.Blocking, domain.Ref{ID: nearID, Identifier: "WEB-8"})},
+		},
+	}
 	for _, tt := range []struct {
 		name          string
-		set           func(w *world)
+		set           func(w *world, rel *fakeRelations)
+		from          uuid.UUID // the work item stored as issue_id
 		before, under int
 	}{
-		{"decided on far", func(*world) {}, 1, 1},
-		{"far not allowed, decided on near", func(w *world) { w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()} }, 2, 2},
-		{"far hidden by the guest rule, decided on near", func(w *world) {
+		{"decided on far", func(*world, *fakeRelations) {}, farID, 1, 1},
+		{"far not allowed, decided on near", func(w *world, _ *fakeRelations) {
+			w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()}
+		}, farID, 2, 2},
+		{"far hidden by the guest rule, decided on near", func(w *world, _ *fakeRelations) {
 			w.auth.grants = []shared.Grant{0: {OwnOnly: true}, 2: {OwnOnly: true}}
-		}, 2, 2},
+		}, farID, 2, 2},
+		{"stored from near, decided on near", fromNear, nearID, 1, 1},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, w, rel := newUnrelate()
-			tt.set(w)
+			tt.set(w, rel)
 			if err := uc.Execute(as(alice), relationID); err != nil {
 				t.Fatal(err)
 			}
 			changed := sorted([]uuid.UUID{nearID, farID})
-			calls := slices.Concat(unrelating(tt.before, tt.under), []string{"Now", line("DeleteRelation", relationID), line("MarkChanged", changed),
-				line("InsertActivities", 2)})
+			calls := slices.Concat(unrelating(tt.from, tt.before, tt.under), []string{"Now", line("DeleteRelation", relationID),
+				line("MarkChanged", changed), line("InsertActivities", 2)})
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
@@ -16144,10 +16181,7 @@ func TestDeleteIssueRelationDeletesItOnEitherWorkItem(t *testing.T) {
 			if want := (app.ChangedRows{IDs: changed, By: alice, At: clockNow}); rel.marked == nil || !reflect.DeepEqual(*rel.marked, want) {
 				t.Errorf("marked %+v, want %+v", rel.marked, want)
 			}
-			wantActivityRows(t, w, []app.ActivityRow{
-				{IssueID: farID, ProjectID: ops, Activity: domain.RelationRemoved(domain.BlockedBy, domain.Ref{ID: nearID, Identifier: "WEB-8"})},
-				{IssueID: nearID, ProjectID: web, Activity: domain.RelationRemoved(domain.Blocking, domain.Ref{ID: farID, Identifier: "OPS-3"})},
-			})
+			wantActivityRows(t, w, rows[tt.from])
 		})
 	}
 }
@@ -16221,7 +16255,7 @@ func TestDeleteIssueRelationRefusals(t *testing.T) {
 			uc, w, rel := newUnrelate()
 			tt.set(w, rel)
 			err := uc.Execute(as(alice), relationID)
-			wantRefusal(t, w, err, tt.want, through(unrelating(tt.before, tt.under), tt.last))
+			wantRefusal(t, w, err, tt.want, through(unrelating(farID, tt.before, tt.under), tt.last))
 			if !reflect.DeepEqual(err, tt.want) {
 				t.Errorf("Execute() = %#v, want %#v whole", err, tt.want)
 			}
@@ -16259,11 +16293,11 @@ func TestDeleteIssueRelationStopsAtAFailingPort(t *testing.T) {
 		answers    []error  // the Authorizer's
 		calls      []string // of unrelating's, the port's the last
 	}{
-		{"far read again under the locks", line("GetIssue", farID), nil, unrelating(1, 1)[:7]},
-		{"near read again under the locks", line("GetIssue", nearID), nil, unrelating(1, 1)[:8]},
-		{"far decided on again under the locks", far, nil, unrelating(1, 1)[:9]},
-		{"near decided on under the locks, far refused there", near, []error{1: shared.Forbidden()}, unrelating(1, 2)[:10]},
-		{"the relation read again under the locks", line("GetRelation", relationID), nil, unrelating(1, 1)},
+		{"far read again under the locks", line("GetIssue", farID), nil, unrelating(farID, 1, 1)[:7]},
+		{"near read again under the locks", line("GetIssue", nearID), nil, unrelating(farID, 1, 1)[:8]},
+		{"far decided on again under the locks", far, nil, unrelating(farID, 1, 1)[:9]},
+		{"near decided on under the locks, far refused there", near, []error{1: shared.Forbidden()}, unrelating(farID, 1, 2)[:10]},
+		{"the relation read again under the locks", line("GetRelation", relationID), nil, unrelating(farID, 1, 1)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, w, _ := newUnrelate()
@@ -16560,6 +16594,8 @@ Expected: 通过。
 | `T13.28` | 锁下再读关联失败时答"关联不存在"，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T13.29` | 第一个工作项被拒绝之后，对第二个的判定失败时答第一个的拒绝，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T13.30` | 锁下的判定失败时答"关联不存在"，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T13.31` | 两个工作项任一个上的写先进第二个工作项的项目的闸门、取它的锁，再第一个的，不按 `id` 排序 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T13.32` | 删除关联先把第二个工作项、再把第一个改为最后修改，不按 `id` 排序 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 
 ---
 

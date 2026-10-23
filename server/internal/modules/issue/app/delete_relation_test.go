@@ -29,17 +29,32 @@ func unrelateOver(w *world, rel *fakeRelations) *app.DeleteIssueRelation {
 	return app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{Locks: w.locks, Relations: rel, Clock: clockAt{at: clockNow, log: w.log}})
 }
 
-// unrelating are the calls of alice's deletion of newUnrelate's relation,
-// as Locks takes them on either work item (M4 design 3.5, 3.10): before
-// any lock and outside the transaction, the relation read, both work items
-// read, far first, stored as issue_id, then near, and the decision on far,
-// in ops, then, when that refuses, on near, in web, before of them; in the
-// transaction, web and ops locked at once, in id order, both work items
-// read again, the decisions again, under of them, and the relation read
-// again.
-func unrelating(before, under int) []string {
-	reads := []string{line("GetIssue", farID), line("GetIssue", nearID)}
-	decisions := []string{line("Authorize", alice, domain.ActionUpdate, acme, ops), line("Authorize", alice, domain.ActionUpdate, acme, web)}
+// fromNear stores newUnrelate's relation from near instead, the smaller id,
+// of web, the smaller project: near blocked by far.
+func fromNear(_ *world, rel *fakeRelations) {
+	r := &rel.relations[0]
+	r.ProjectID, r.IssueID, r.RelatedID = web, nearID, farID
+}
+
+// unrelating are the calls of alice's deletion of a relation of near and
+// far stored from the work item from (newUnrelate's from far, fromNear's
+// from near), as Locks takes them on either work item (M4 design 3.5,
+// 3.10): before any lock and outside the transaction, the relation read,
+// both work items read, from first, then the other, and the decision on
+// from, in its project, then, when that refuses, on the other, in its,
+// before of them; in the transaction, web and ops locked at once, in id
+// order, both work items read again, the decisions again, under of them,
+// and the relation read again.
+func unrelating(from uuid.UUID, before, under int) []string {
+	ends := []struct{ item, project uuid.UUID }{{farID, ops}, {nearID, web}}
+	if from == nearID {
+		slices.Reverse(ends)
+	}
+	var reads, decisions []string
+	for _, e := range ends {
+		reads = append(reads, line("GetIssue", e.item))
+		decisions = append(decisions, line("Authorize", alice, domain.ActionUpdate, acme, e.project))
+	}
 	var outside []string
 	for _, c := range slices.Concat([]string{line("GetRelation", relationID)}, reads, decisions[:before]) {
 		outside = append(outside, c+" outside tx")
@@ -71,28 +86,46 @@ func archived(w *world, id uuid.UUID) {
 // role may not, or the guest rule hides far from him in ops. Each writes
 // a row of far's activity first, of ops, its blocked_by WEB-8 deleted,
 // then one of near's, of web, its blocking OPS-3 deleted, both alice's at
-// the clock's moment.
+// the clock's moment. Stored from near (fromNear), the smaller id of the
+// smaller project, the relation is decided on near first, and writes
+// near's row first, its blocked_by OPS-3 deleted, then far's, its blocking
+// WEB-8 deleted; the projects are locked, and the work items marked
+// changed, in id order still.
 func TestDeleteIssueRelationDeletesItOnEitherWorkItem(t *testing.T) {
+	rows := map[uuid.UUID][]app.ActivityRow{ // by the work item stored as issue_id
+		farID: {
+			{IssueID: farID, ProjectID: ops, Activity: domain.RelationRemoved(domain.BlockedBy, domain.Ref{ID: nearID, Identifier: "WEB-8"})},
+			{IssueID: nearID, ProjectID: web, Activity: domain.RelationRemoved(domain.Blocking, domain.Ref{ID: farID, Identifier: "OPS-3"})},
+		},
+		nearID: {
+			{IssueID: nearID, ProjectID: web, Activity: domain.RelationRemoved(domain.BlockedBy, domain.Ref{ID: farID, Identifier: "OPS-3"})},
+			{IssueID: farID, ProjectID: ops, Activity: domain.RelationRemoved(domain.Blocking, domain.Ref{ID: nearID, Identifier: "WEB-8"})},
+		},
+	}
 	for _, tt := range []struct {
 		name          string
-		set           func(w *world)
+		set           func(w *world, rel *fakeRelations)
+		from          uuid.UUID // the work item stored as issue_id
 		before, under int
 	}{
-		{"decided on far", func(*world) {}, 1, 1},
-		{"far not allowed, decided on near", func(w *world) { w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()} }, 2, 2},
-		{"far hidden by the guest rule, decided on near", func(w *world) {
+		{"decided on far", func(*world, *fakeRelations) {}, farID, 1, 1},
+		{"far not allowed, decided on near", func(w *world, _ *fakeRelations) {
+			w.auth.answers = []error{0: shared.Forbidden(), 2: shared.Forbidden()}
+		}, farID, 2, 2},
+		{"far hidden by the guest rule, decided on near", func(w *world, _ *fakeRelations) {
 			w.auth.grants = []shared.Grant{0: {OwnOnly: true}, 2: {OwnOnly: true}}
-		}, 2, 2},
+		}, farID, 2, 2},
+		{"stored from near, decided on near", fromNear, nearID, 1, 1},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, w, rel := newUnrelate()
-			tt.set(w)
+			tt.set(w, rel)
 			if err := uc.Execute(as(alice), relationID); err != nil {
 				t.Fatal(err)
 			}
 			changed := sorted([]uuid.UUID{nearID, farID})
-			calls := slices.Concat(unrelating(tt.before, tt.under), []string{"Now", line("DeleteRelation", relationID), line("MarkChanged", changed),
-				line("InsertActivities", 2)})
+			calls := slices.Concat(unrelating(tt.from, tt.before, tt.under), []string{"Now", line("DeleteRelation", relationID),
+				line("MarkChanged", changed), line("InsertActivities", 2)})
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
@@ -102,10 +135,7 @@ func TestDeleteIssueRelationDeletesItOnEitherWorkItem(t *testing.T) {
 			if want := (app.ChangedRows{IDs: changed, By: alice, At: clockNow}); rel.marked == nil || !reflect.DeepEqual(*rel.marked, want) {
 				t.Errorf("marked %+v, want %+v", rel.marked, want)
 			}
-			wantActivityRows(t, w, []app.ActivityRow{
-				{IssueID: farID, ProjectID: ops, Activity: domain.RelationRemoved(domain.BlockedBy, domain.Ref{ID: nearID, Identifier: "WEB-8"})},
-				{IssueID: nearID, ProjectID: web, Activity: domain.RelationRemoved(domain.Blocking, domain.Ref{ID: farID, Identifier: "OPS-3"})},
-			})
+			wantActivityRows(t, w, rows[tt.from])
 		})
 	}
 }
@@ -179,7 +209,7 @@ func TestDeleteIssueRelationRefusals(t *testing.T) {
 			uc, w, rel := newUnrelate()
 			tt.set(w, rel)
 			err := uc.Execute(as(alice), relationID)
-			wantRefusal(t, w, err, tt.want, through(unrelating(tt.before, tt.under), tt.last))
+			wantRefusal(t, w, err, tt.want, through(unrelating(farID, tt.before, tt.under), tt.last))
 			if !reflect.DeepEqual(err, tt.want) {
 				t.Errorf("Execute() = %#v, want %#v whole", err, tt.want)
 			}
@@ -217,11 +247,11 @@ func TestDeleteIssueRelationStopsAtAFailingPort(t *testing.T) {
 		answers    []error  // the Authorizer's
 		calls      []string // of unrelating's, the port's the last
 	}{
-		{"far read again under the locks", line("GetIssue", farID), nil, unrelating(1, 1)[:7]},
-		{"near read again under the locks", line("GetIssue", nearID), nil, unrelating(1, 1)[:8]},
-		{"far decided on again under the locks", far, nil, unrelating(1, 1)[:9]},
-		{"near decided on under the locks, far refused there", near, []error{1: shared.Forbidden()}, unrelating(1, 2)[:10]},
-		{"the relation read again under the locks", line("GetRelation", relationID), nil, unrelating(1, 1)},
+		{"far read again under the locks", line("GetIssue", farID), nil, unrelating(farID, 1, 1)[:7]},
+		{"near read again under the locks", line("GetIssue", nearID), nil, unrelating(farID, 1, 1)[:8]},
+		{"far decided on again under the locks", far, nil, unrelating(farID, 1, 1)[:9]},
+		{"near decided on under the locks, far refused there", near, []error{1: shared.Forbidden()}, unrelating(farID, 1, 2)[:10]},
+		{"the relation read again under the locks", line("GetRelation", relationID), nil, unrelating(farID, 1, 1)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, w, _ := newUnrelate()
