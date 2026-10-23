@@ -100,9 +100,10 @@ func TestARelationIsDeletedFromEitherWorkItem(t *testing.T) {
 // not there. Then a relation of an archived work item, Shelved, from
 // either end, and one of a work item of an archived project, Old's, are
 // not deleted (409), the archived one's end stored as issue_id or not;
-// nor is the relation of Old's work item to Shelved, stored from Old's,
-// the archived project, Old, answered before the archived work item,
-// Shelved, of the other end (409 project.archived).
+// nor are those of Old's work item to Shelved, stored from Old's, and of
+// Shelved to Old's second, stored from Shelved: the archived project,
+// Old, is answered before the archived work item, Shelved, whichever end
+// each is (409 project.archived).
 func TestWhoMayNotDeleteARelation(t *testing.T) {
 	w := newIssueWorld(t)
 	lab := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Lab","identifier":"LAB","network":0}`)
@@ -110,14 +111,14 @@ func TestWhoMayNotDeleteARelation(t *testing.T) {
 	near, up := w.newWorkItemIn(t, w.web, `{"name":"Near"}`), w.newWorkItemIn(t, w.web, `{"name":"Up"}`)
 	shelved := w.newWorkItemIn(t, w.web, `{"name":"Shelved","state_id":"`+w.done.String()+`"}`)
 	labs, lab2 := w.newWorkItemIn(t, lab, `{"name":"Lab's"}`), w.newWorkItemIn(t, lab, `{"name":"Lab's too"}`)
-	olds := w.newWorkItemIn(t, old, `{"name":"Old's"}`)
+	olds, old2 := w.newWorkItemIn(t, old, `{"name":"Old's"}`), w.newWorkItemIn(t, old, `{"name":"Old's too"}`)
 	related := func(from, to uuid.UUID, kind string) uuid.UUID {
 		return listIn[answeredRelation](t, w.send(t, "alice", http.MethodPost, relationsOf(from), relating(kind, to), http.StatusCreated))[0].ID
 	}
 	ofUp, ofLab := related(near, up, "relates_to"), related(labs, lab2, "relates_to")
 	toShelved, fromShelved := related(near, shelved, "relates_to"), related(shelved, up, "relates_to")
 	toOld, fromOld := related(up, olds, "relates_to"), related(olds, near, "relates_to")
-	fromOldToShelved := related(olds, shelved, "relates_to")
+	fromOldToShelved, fromShelvedToOld := related(olds, shelved, "relates_to"), related(shelved, old2, "relates_to")
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/archive", "", http.StatusOK)
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+old.String()+"/archive", "", http.StatusOK)
 	before := w.relationRows(t, near, time.Time{})
@@ -136,6 +137,7 @@ func TestWhoMayNotDeleteARelation(t *testing.T) {
 		{"alice", toOld, http.StatusConflict, "project.archived"},
 		{"alice", fromOld, http.StatusConflict, "project.archived"},
 		{"alice", fromOldToShelved, http.StatusConflict, "project.archived"},
+		{"alice", fromShelvedToOld, http.StatusConflict, "project.archived"},
 	} {
 		answer := w.send(t, tt.name, http.MethodDelete, relationPath(tt.relation), "", tt.status)
 		if got := refusalOf(t, []byte(answer), false); got != tt.code || w.relationDeletion(t, tt.relation, time.Time{}) != "undeleted" {
