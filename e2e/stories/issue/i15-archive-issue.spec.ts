@@ -14,15 +14,21 @@ import {
   createdFor,
   expectIssueArchival,
   expectIssueDeleted,
+  itemRef,
+  relatedRow,
   restoredRow,
 } from "../../fixtures/assert/issue";
 import { newAccount } from "../../fixtures/auth";
 import {
   createIssue,
+  createIssueRelations,
   issueArchived,
   issueDeleted,
+  issueRelationDeleted,
+  issueRelationsCreated,
   issueUnarchived,
   issueUpdated,
+  subIssuesAdded,
   updateIssue,
 } from "../../fixtures/issues";
 import { stateIds } from "../../fixtures/states";
@@ -30,10 +36,12 @@ import { expect, test } from "../../fixtures/test";
 
 // I15, archiving and restoring a work item (M4 design 2, 3.8, 3.13): the API version, with P2's assertions (archiving
 // and restoring, their two rows of activity, issue.not_archivable, an archived work item not changed, a guest
-// refused). The archived list is P5's, the page version P13's. The archived work item's deletion at the end is P2's
-// deleteIssue (3.6), whose rows expectIssueDeleted reads from the catalog.
+// refused) and P3's (an archived work item takes no work item under it, relates to none and keeps its relations). The
+// archived list is P5's, the page version P13's. The archived work item's deletion at the end is P2's deleteIssue
+// (3.6), whose rows expectIssueDeleted reads from the catalog: the work item under it and its relations either way
+// among them, from P3.
 
-test("I15 (API): a member's work item in a started state is not archived (409); moved to a completed state, she archives it, and archiving it again writes nothing; it is not changed while it is archived (409); a guest who sees it neither restores nor archives it (403); she restores it, and restoring it again writes nothing; each archiving and restoring one row of its activity, hers at its moment; archived again, the admin deletes it, with every row under it, at one moment", async ({
+test("I15 (API): a member's work item in a started state is not archived (409); moved to a completed state, she archives it, and archiving it again writes nothing; it is not changed while it is archived (409); a guest who sees it neither restores nor archives it (403); she restores it, and restoring it again writes nothing; each archiving and restoring one row of its activity, hers at its moment; restored, a work item is put under it and it is related to two others, either way; archived again, it takes no work item under it, relates to none and keeps its relations (409), and the admin deletes it, with every row under it, at one moment", async ({
   api,
   db,
 }, testInfo) => {
@@ -103,10 +111,51 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   expect(await issueArchived(api, gus.token, id)).toEqual({ status: 403, code: "forbidden" });
   await expectIssueArchival(db, id, restored);
 
-  // Archived again, one row more, hers at its moment, it is deleted as any other: the admin deletes it, and with it
-  // every row under it.
+  // Restored, it takes ann's Write the test under it, and she relates it to her Write the spec, stored from it, and
+  // blocking her Ship the fix, stored from Ship the fix as its blocked_by: a row more of its activity each.
+  const part = await createIssue(api, ann.token, web.id, { name: "Write the test" });
+  const spec = await createIssue(api, ann.token, web.id, { name: "Write the spec" });
+  const ship = await createIssue(api, ann.token, web.id, { name: "Ship the fix" });
+  expect(await subIssuesAdded(api, ann.token, id, [part.id])).toMatchObject({ status: 200, issues: [{ id: part.id }] });
+  const [toSpec] = await createIssueRelations(api, ann.token, id, {
+    relation_type: "relates_to",
+    issue_ids: [spec.id],
+  });
+  if (!toSpec) {
+    throw new Error("relating Fix the login to Write the spec answered no relation");
+  }
+  const [toShip] = await createIssueRelations(api, ann.token, id, { relation_type: "blocking", issue_ids: [ship.id] });
+  if (!toShip) {
+    throw new Error("relating Fix the login to Ship the fix answered no relation");
+  }
+  const related = {
+    ...restored,
+    activity: [
+      ...restored.activity,
+      relatedRow("relates_to", itemRef("WEB", spec)),
+      relatedRow("blocking", itemRef("WEB", ship)),
+    ],
+  };
+  await expectIssueArchival(db, id, related);
+
+  // Archived again, one row more, hers at its moment: it takes Fix the logout under it no more, relates to it no more,
+  // and neither of its relations is deleted (409 issue.archived), the one stored from it nor the one stored from Ship
+  // the fix; none of the four writes anything.
   expect((await issueArchived(api, ann.token, id)).status).toBe(200);
-  await expectIssueArchival(db, id, { archived: true, by: ann.email, activity: [...restored.activity, archivedRow] });
+  const archivedAgain = { archived: true, by: ann.email, activity: [...related.activity, archivedRow] };
+  await expectIssueArchival(db, id, archivedAgain);
+  const logout = await createIssue(api, ann.token, web.id, { name: "Fix the logout" });
+  const refused = { status: 409, code: "issue.archived" };
+  expect(await subIssuesAdded(api, ann.token, id, [logout.id])).toEqual(refused);
+  expect(
+    await issueRelationsCreated(api, ann.token, id, { relation_type: "relates_to", issue_ids: [logout.id] })
+  ).toEqual(refused);
+  expect(await issueRelationDeleted(api, ann.token, toSpec.id)).toEqual(refused);
+  expect(await issueRelationDeleted(api, ann.token, toShip.id)).toEqual(refused);
+  await expectIssueArchival(db, id, archivedAgain);
+
+  // It is deleted as any other: the admin deletes it, and with it every row under it, Write the test and its relations
+  // either way among them.
   expect(await issueDeleted(api, admin.token, id)).toEqual({ status: 204 });
   await expectIssueDeleted(db, id, admin.email);
 });
