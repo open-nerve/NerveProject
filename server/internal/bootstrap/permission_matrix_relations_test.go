@@ -9,9 +9,11 @@ import (
 
 // The rows of the permission matrix of a work item's relations (M4 design
 // 3.10, 9.2), naming the work item by its id: its column's work item
-// (issueOf). A row of 9.2's table has the issue table's columns; a variant
-// that asks what is checked after the decision, the project level's, as
-// updateIssue's; one on the archived project, its table's.
+// (issueOf). A row of 9.2's table has the issue table's columns, and so
+// has a variant on an archived work item, which each cell's prepare
+// archives on its copy (inDone); the other variants, the project level's,
+// as updateIssue's (permission_matrix_issue_updates_test.go), or the
+// archived project's.
 
 // relatesTo is the request of a row whose callers each relate their
 // column's work item to the one other gives, as blocking it.
@@ -77,19 +79,9 @@ func relationMatrixRows() []matrixRow {
 // item changed last by the caller.
 func relatedTo(other func(c caller, s seeded) uuid.UUID) func(t *testing.T, c caller, s seeded, answer string) {
 	return func(t *testing.T, c caller, s seeded, answer string) {
-		var got struct {
-			Data []struct {
-				RelationType string `json:"relation_type"`
-				Issue        struct {
-					ID          uuid.UUID  `json:"id"`
-					UpdatedByID *uuid.UUID `json:"updated_by_id"`
-				} `json:"issue"`
-			} `json:"data"`
-		}
-		decodeAnswer(t, answer, &got)
-		me := s.account(accountOf(c))
-		if len(got.Data) != 1 || got.Data[0].RelationType != "blocking" || got.Data[0].Issue.ID != other(c, s) ||
-			!reflect.DeepEqual(got.Data[0].Issue.UpdatedByID, &me) {
+		got, me := listIn[answeredRelation](t, answer), s.account(accountOf(c))
+		if len(got) != 1 || got[0].RelationType != "blocking" || got[0].Issue.ID != other(c, s) ||
+			!reflect.DeepEqual(got[0].Issue.UpdatedByID, &me) {
 			t.Errorf("%s relates %s; want blocking %s alone, changed last by the caller", c, answer, other(c, s))
 		}
 	}

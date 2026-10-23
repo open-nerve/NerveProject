@@ -113,15 +113,6 @@ func (w issueWorld) relationRows(t *testing.T, item uuid.UUID, at time.Time) []s
 	return said
 }
 
-// names are the world's accounts' names, by their ids.
-func (w issueWorld) names() map[uuid.UUID]string {
-	names := make(map[uuid.UUID]string, len(w.ids))
-	for name, account := range w.ids {
-		names[account] = name
-	}
-	return names
-}
-
 // Relations as bootstrap wires them (M4 design 3.5, 3.7, 3.10, 3.13).
 // alice makes Ops, of acme, with bob its member, then Near and Mid in Web,
 // Far in Ops. bob relates Near to Far and Mid, blocking them: the answer
@@ -131,7 +122,11 @@ func (w issueWorld) names() map[uuid.UUID]string {
 // Far are changed last by bob then, and each relation is a row of Near's
 // activity and one of the other's, in each one's project, the type as it
 // reads it. Mid relating to Near, of any type, and Near to Far again, are
-// refused as related already, at their places, nothing written.
+// refused as related already, at their places, nothing written. Then bob
+// relates Far, of Ops, to Mid, of Web, as blocked by it, at another
+// moment: the answer is blocked_by Mid; the relation is stored as asked,
+// Far's blocked_by, a row of Ops, and is a row of Far's activity,
+// blocked_by, and one of Mid's, blocking.
 func TestWorkItemsAreRelatedAcrossProjects(t *testing.T) {
 	w := newIssueWorld(t)
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -153,26 +148,9 @@ func TestWorkItemsAreRelatedAcrossProjects(t *testing.T) {
 			t.Errorf("relation %d is %+v; want blocking %s, changed last by bob, at %v", n, r, want, at)
 		}
 	}
-	if got, want := w.storedRelations(t, at), []string{"Far blocked_by Near, in OPS, by bob, bob at the moment",
-		"Mid blocked_by Near, in WEB, by bob, bob at the moment"}; !slices.Equal(got, want) {
-		t.Errorf("the relations stored:\n%q\nwant\n%q", got, want)
-	}
 	for _, item := range []uuid.UUID{near, mid, far} {
 		if _, changed, by := archivalOf(t, w, item); !changed.Equal(at) || by != w.ids["bob"] {
 			t.Errorf("the work item %s is changed last by %s at %v, want by bob at %v", item, by, changed, at)
-		}
-	}
-	for _, tt := range []struct {
-		item uuid.UUID
-		want []string
-	}{
-		{near, []string{"bob: updated blocking  → WEB-2, none → Mid, in WEB, added blocking relation at the moment",
-			"bob: updated blocking  → OPS-1, none → Far, in WEB, added blocking relation at the moment"}},
-		{mid, []string{"bob: updated blocked_by  → WEB-1, none → Near, in WEB, added blocked_by relation at the moment"}},
-		{far, []string{"bob: updated blocked_by  → WEB-1, none → Near, in OPS, added blocked_by relation at the moment"}},
-	} {
-		if got := w.relationRows(t, tt.item, at); !slices.Equal(got, tt.want) {
-			t.Errorf("the rows of %s's relations:\n%q\nwant\n%q", tt.item, got, tt.want)
 		}
 	}
 
@@ -184,6 +162,31 @@ func TestWorkItemsAreRelatedAcrossProjects(t *testing.T) {
 		if got, want := refusalOf(t, []byte(answer), false), "validation_failed issue_ids[0] duplicate"; got != want ||
 			len(w.storedRelations(t, at)) != 2 || len(w.relationRows(t, near, at)) != 2 {
 			t.Errorf("%s answers %s, with %d relations; want %s, and the two", tt.body, got, len(w.storedRelations(t, at)), want)
+		}
+	}
+
+	back := listIn[answeredRelation](t, w.send(t, "bob", http.MethodPost, relationsOf(far), relating("blocked_by", mid), http.StatusCreated))
+	if len(back) != 1 || back[0].RelationType != "blocked_by" || back[0].Issue.ID != mid {
+		t.Fatalf("Far's relation to Mid is %+v; want blocked_by Mid alone", back)
+	}
+	if got, want := w.storedRelations(t, at), []string{"Far blocked_by Mid, in OPS, by bob, bob at another moment",
+		"Far blocked_by Near, in OPS, by bob, bob at the moment",
+		"Mid blocked_by Near, in WEB, by bob, bob at the moment"}; !slices.Equal(got, want) {
+		t.Errorf("the relations stored:\n%q\nwant\n%q", got, want)
+	}
+	for _, tt := range []struct {
+		item uuid.UUID
+		want []string
+	}{
+		{near, []string{"bob: updated blocking  → WEB-2, none → Mid, in WEB, added blocking relation at the moment",
+			"bob: updated blocking  → OPS-1, none → Far, in WEB, added blocking relation at the moment"}},
+		{mid, []string{"bob: updated blocked_by  → WEB-1, none → Near, in WEB, added blocked_by relation at the moment",
+			"bob: updated blocking  → OPS-1, none → Far, in WEB, added blocking relation"}},
+		{far, []string{"bob: updated blocked_by  → WEB-1, none → Near, in OPS, added blocked_by relation at the moment",
+			"bob: updated blocked_by  → WEB-2, none → Mid, in OPS, added blocked_by relation"}},
+	} {
+		if got := w.relationRows(t, tt.item, at); !slices.Equal(got, tt.want) {
+			t.Errorf("the rows of %s's relations:\n%q\nwant\n%q", tt.item, got, tt.want)
 		}
 	}
 }

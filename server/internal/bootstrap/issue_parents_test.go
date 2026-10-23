@@ -40,10 +40,7 @@ func (w issueWorld) parentRows(t *testing.T, item uuid.UUID) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	names := make(map[uuid.UUID]string, len(w.ids))
-	for name, account := range w.ids {
-		names[account] = name
-	}
+	names := w.names()
 	said, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (string, error) {
 		var actor uuid.UUID
 		var oldValue, newValue, oldID, newID string

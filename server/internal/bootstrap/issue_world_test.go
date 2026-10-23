@@ -150,6 +150,15 @@ func (w issueWorld) fullIssue() string {
 		w.bug.String() + `"]}`
 }
 
+// names are the world's accounts' names, by their ids.
+func (w issueWorld) names() map[uuid.UUID]string {
+	names := make(map[uuid.UUID]string, len(w.ids))
+	for name, account := range w.ids {
+		names[account] = name
+	}
+	return names
+}
+
 // workItemStamps are the rows of the work item id in the work-item side's
 // six tables, its relations either way, each a line, sorted: its table,
 // who made it and changed it last, and when, when it was deleted if it
@@ -172,10 +181,7 @@ func (w issueWorld) workItemStamps(t *testing.T, id uuid.UUID) []string {
 		}
 		return at.String()
 	}
-	names := make(map[uuid.UUID]string, len(w.ids))
-	for name, account := range w.ids {
-		names[account] = name
-	}
+	names := w.names()
 	who := func(account *uuid.UUID) string {
 		if account == nil {
 			return "no one"
