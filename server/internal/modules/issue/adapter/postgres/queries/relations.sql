@@ -37,3 +37,18 @@ SELECT r.id, r.workspace_id, r.project_id, r.issue_id, r.related_issue_id, r.rel
 FROM issue_relations r
 WHERE (r.issue_id = sqlc.arg(id)::uuid OR r.related_issue_id = sqlc.arg(id)::uuid) AND r.deleted_at IS NULL
 ORDER BY r.created_at, r.id;
+
+-- name: GetRelation :one
+-- The undeleted relation id, as stored, of the same columns as IssueRelations (M4 design 3.10): deleteIssueRelation's,
+-- read without a lock first, then again under the locks of both its work items' projects, one of which every write of
+-- it holds at least (3.5, convention 7).
+SELECT r.id, r.workspace_id, r.project_id, r.issue_id, r.related_issue_id, r.relation_type, r.created_by_id, r.created_at
+FROM issue_relations r
+WHERE r.id = sqlc.arg(id)::uuid AND r.deleted_at IS NULL;
+
+-- name: DeleteRelation :execrows
+-- deleteIssueRelation's soft deletion of the undeleted relation id, at the moment and by the account given (M4 design
+-- 3.10), under the locks of both its work items' projects: one row, by its key.
+UPDATE issue_relations
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+WHERE id = sqlc.arg(id)::uuid AND deleted_at IS NULL;

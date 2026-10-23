@@ -10,15 +10,39 @@ import (
 )
 
 // fakeRelations is the relations' store over the work items' fake
-// (app.RelationCreator, app.RelationLister), each call logged: related
-// are the work items that relate to the work item asked about already,
-// whichever it is; relations the relations a read answers, and the last
-// insert's; marked the last work items marked changed.
+// (app.RelationCreator, app.RelationLister, app.RelationDeleter), each
+// call logged: related are the work items that relate to the work item
+// asked about already, whichever it is; relations the relations a read
+// answers, and the last insert's; marked the last work items marked
+// changed; deleted the last relation deleted.
 type fakeRelations struct {
 	*fakeIssues
 	related   []uuid.UUID
 	relations []domain.Relation
 	marked    *app.ChangedRows
+	deleted   *app.RelationDeletion
+}
+
+// GetRelation logs the read and answers the fake's relation id, as it is;
+// found is false when it has none.
+func (f *fakeRelations) GetRelation(ctx context.Context, id uuid.UUID) (domain.Relation, bool, error) {
+	if err := f.log.add(ctx, "GetRelation", id); err != nil {
+		return domain.Relation{}, false, err
+	}
+	at := slices.IndexFunc(f.relations, func(r domain.Relation) bool { return r.ID == id })
+	if at < 0 {
+		return domain.Relation{}, false, nil
+	}
+	return f.relations[at], true, nil
+}
+
+// DeleteRelation logs the deletion, of which relation, and keeps it.
+func (f *fakeRelations) DeleteRelation(ctx context.Context, d app.RelationDeletion) error {
+	if err := f.log.add(ctx, "DeleteRelation", d.ID); err != nil {
+		return err
+	}
+	f.deleted = &d
+	return nil
 }
 
 // Relations logs the read and answers the fake's relations, as they are,

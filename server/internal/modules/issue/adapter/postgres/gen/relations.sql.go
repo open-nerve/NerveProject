@@ -12,6 +12,64 @@ import (
 	"uuid"
 )
 
+const deleteRelation = `-- name: DeleteRelation :execrows
+UPDATE issue_relations
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE id = $3::uuid AND deleted_at IS NULL
+`
+
+type DeleteRelationParams struct {
+	At time.Time
+	By uuid.UUID
+	ID uuid.UUID
+}
+
+// deleteIssueRelation's soft deletion of the undeleted relation id, at the moment and by the account given (M4 design
+// 3.10), under the locks of both its work items' projects: one row, by its key.
+func (q *Queries) DeleteRelation(ctx context.Context, arg DeleteRelationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteRelation, arg.At, arg.By, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const getRelation = `-- name: GetRelation :one
+SELECT r.id, r.workspace_id, r.project_id, r.issue_id, r.related_issue_id, r.relation_type, r.created_by_id, r.created_at
+FROM issue_relations r
+WHERE r.id = $1::uuid AND r.deleted_at IS NULL
+`
+
+type GetRelationRow struct {
+	ID             uuid.UUID
+	WorkspaceID    uuid.UUID
+	ProjectID      uuid.UUID
+	IssueID        uuid.UUID
+	RelatedIssueID uuid.UUID
+	RelationType   string
+	CreatedByID    *uuid.UUID
+	CreatedAt      time.Time
+}
+
+// The undeleted relation id, as stored, of the same columns as IssueRelations (M4 design 3.10): deleteIssueRelation's,
+// read without a lock first, then again under the locks of both its work items' projects, one of which every write of
+// it holds at least (3.5, convention 7).
+func (q *Queries) GetRelation(ctx context.Context, id uuid.UUID) (GetRelationRow, error) {
+	row := q.db.QueryRow(ctx, getRelation, id)
+	var i GetRelationRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ProjectID,
+		&i.IssueID,
+		&i.RelatedIssueID,
+		&i.RelationType,
+		&i.CreatedByID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const insertRelations = `-- name: InsertRelations :exec
 INSERT INTO issue_relations (id, workspace_id, project_id, issue_id, related_issue_id, relation_type, created_by_id, updated_by_id,
                              created_at, updated_at)

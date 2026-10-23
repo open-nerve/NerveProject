@@ -76,6 +76,15 @@ type ChangedRows struct {
 	At  time.Time
 }
 
+// RelationDeletion is a relation's deletion as it is written (M4 design
+// 3.10): the relation ID, soft-deleted at the moment and by the account
+// given.
+type RelationDeletion struct {
+	ID uuid.UUID
+	By uuid.UUID
+	At time.Time
+}
+
 // IssueArchival is a work item's archiving or unarchiving as it is written
 // (M4 design 3.8): its archived_at, the moment, or nil for none, and the
 // moment and the account that change it last.

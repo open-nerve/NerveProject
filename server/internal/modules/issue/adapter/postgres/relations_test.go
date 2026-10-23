@@ -245,3 +245,83 @@ func TestRelations(t *testing.T) {
 		t.Errorf("Relations() on a cancelled context = %v; want context.Canceled", err)
 	}
 }
+
+// A relation is read by its id as stored (M4 design 3.10): ops' o blocked
+// by web's item, made by bob a second after the moment, every field as
+// stored. One deleted, item's relation to b, or one not there, is not
+// found; a cancelled read is its failure.
+func TestGetRelation(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, ops := newProject(t, pool, acme, "WEB"), newProject(t, pool, acme, "OPS")
+	item, b, o, gone := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	newIssue(t, pool, web, item, 1, alice)
+	newIssue(t, pool, web, b, 2, alice)
+	newIssue(t, pool, ops, o, 1, alice)
+	want := domain.Relation{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops.id, IssueID: o, RelatedID: item, Type: domain.BlockedBy,
+		CreatedByID: &bob, CreatedAt: now.Add(time.Second)}
+	newRelation(t, pool, ops, o, item, want.ID, string(want.Type), bob)
+	exec(t, pool, "UPDATE issue_relations SET created_at = $2 WHERE id = $1", want.ID, want.CreatedAt)
+	newRelation(t, pool, web, item, b, gone, "relates_to", alice)
+	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2 WHERE id = $1", gone, now)
+
+	if got, found, err := s.GetRelation(context.Background(), want.ID); err != nil || !found || !reflect.DeepEqual(got, want) {
+		t.Errorf("GetRelation() = %+v, %v, %v; want %+v", got, found, err, want)
+	}
+	for _, id := range []uuid.UUID{gone, uuid.NewV7()} {
+		if got, found, err := s.GetRelation(context.Background(), id); err != nil || found {
+			t.Errorf("GetRelation(%s) = %+v, %v, %v; want none", id, got, found, err)
+		}
+	}
+	cancelled, stop := context.WithCancel(context.Background())
+	stop()
+	if _, _, err := s.GetRelation(cancelled, want.ID); !errors.Is(err, context.Canceled) {
+		t.Errorf("GetRelation() on a cancelled context = %v; want context.Canceled", err)
+	}
+}
+
+// A relation is soft-deleted at the moment and by the account given (M4
+// design 3.10), every other column as it was: item's relation to b, by bob
+// at later; its relation to o is as it was. One deleted already, or one
+// not there, is not written, and is an error; so is a cancelled write.
+func TestDeleteRelation(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, ops := newProject(t, pool, acme, "WEB"), newProject(t, pool, acme, "OPS")
+	item, b, o, toB, toO := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	newIssue(t, pool, web, item, 1, alice)
+	newIssue(t, pool, web, b, 2, alice)
+	newIssue(t, pool, ops, o, 1, alice)
+	newRelation(t, pool, web, item, b, toB, "relates_to", alice)
+	newRelation(t, pool, web, item, o, toO, "relates_to", alice)
+	rows, stamps := rowsAsText(t, pool, "issue_relations"), audits(t, pool, "issue_relations")
+	later := now.Add(time.Hour)
+
+	if err := s.DeleteRelation(context.Background(), app.RelationDeletion{ID: toB, By: bob, At: later}); err != nil {
+		t.Fatal(err)
+	}
+
+	if after := rowsAsText(t, pool, "issue_relations"); !maps.Equal(after, rows) {
+		t.Errorf("the relations but their audit columns:\n%v\nwant them as they were:\n%v", after, rows)
+	}
+	at := later.UTC().Format(time.RFC3339Nano)
+	stamps[toB] = fmt.Sprintf("deleted at %s, written at %s by %s", at, at, bob)
+	if after := audits(t, pool, "issue_relations"); !maps.Equal(after, stamps) {
+		t.Errorf("the audit columns:\n%v\nwant\n%v", after, stamps)
+	}
+	for _, id := range []uuid.UUID{toB, uuid.NewV7()} {
+		if err := s.DeleteRelation(context.Background(), app.RelationDeletion{ID: id, By: alice, At: later.Add(time.Hour)}); err == nil {
+			t.Errorf("DeleteRelation(%s) = nil, want an error", id)
+		}
+		if after := audits(t, pool, "issue_relations"); !maps.Equal(after, stamps) {
+			t.Errorf("DeleteRelation(%s): the audit columns:\n%v\nwant them as they were:\n%v", id, after, stamps)
+		}
+	}
+	cancelled, stop := context.WithCancel(context.Background())
+	stop()
+	if err := s.DeleteRelation(cancelled, app.RelationDeletion{ID: toO, By: bob, At: later}); !errors.Is(err, context.Canceled) {
+		t.Errorf("DeleteRelation() on a cancelled context = %v; want context.Canceled", err)
+	}
+}

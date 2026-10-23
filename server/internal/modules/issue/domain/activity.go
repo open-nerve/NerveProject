@@ -14,6 +14,7 @@ type Verb string
 const (
 	VerbCreated Verb = "created"
 	VerbUpdated Verb = "updated"
+	VerbDeleted Verb = "deleted"
 )
 
 // Activity is a row of a work item's activity as M4 design 3.13's table

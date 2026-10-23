@@ -112,3 +112,16 @@ func TestRelationAdded(t *testing.T) {
 		t.Errorf("RelationAdded() = %+v, want %+v", got, want)
 	}
 }
+
+// A deleted relation writes a row on each of its work items, of the same
+// columns (rows 22 and 23 of M4 design 3.13): the type as the work item
+// reads it, deleted, from the other's identifier to "", the other's id the
+// old identifier, Plane's sentence with the type.
+func TestRelationRemoved(t *testing.T) {
+	other := Ref{ID: uuid.NewV7(), Identifier: "OPS-3"}
+	want := Activity{Field: ptr("blocked_by"), Verb: VerbDeleted, OldValue: ptr("OPS-3"), NewValue: ptr(""), OldIdentifier: &other.ID,
+		Comment: "deleted blocked_by relation"}
+	if got := RelationRemoved(BlockedBy, other); !reflect.DeepEqual(got, want) {
+		t.Errorf("RelationRemoved() = %+v, want %+v", got, want)
+	}
+}

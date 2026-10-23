@@ -48,10 +48,15 @@ func NewLocks(projects ProjectGate, issues IssueReader, auth shared.Authorizer, 
 // items besides issue, each of its project, issue's or another of the
 // workspace: reach, each decided on issue.read, a refusal of which leaves
 // the work item unreached rather than answering the write
-// (createIssueRelations' other ends).
+// (createIssueRelations' other ends). A write on either of two work items
+// (deleteIssueRelation's, 3.10) names the other too, instead: its action
+// is decided on issue, then, when that refuses, on instead, each on its
+// own project; only both refusing refuse it, and both work items are read
+// and both projects locked, whichever was decided on (lock_either.go).
 type write struct {
 	project  uuid.UUID
 	issue    *uuid.UUID
+	instead  *uuid.UUID
 	action   shared.Action
 	notFound error
 	reach    []uuid.UUID
@@ -61,13 +66,17 @@ type write struct {
 // work item it names, read under the lock, zero for a write on a project;
 // the caller's grant on the project, as decided under the lock, whose
 // OwnOnly says whether the guest rule hides others' work items from him
-// (M4 design 3.4); and, for a write across projects, the work items of
-// write.reach, in its order, as reached under the lock (reachUnder).
+// (M4 design 3.4); for a write across projects, the work items of
+// write.reach, in its order, as reached under the lock (reachUnder); and,
+// for a write on either of two work items, the other, write.instead's, as
+// read under the lock (eitherUnder), and the grant the decision that let
+// the write through answered, on either work item's project.
 type held struct {
 	project LockedProject
 	issue   domain.Issue
 	grant   shared.Grant
 	reached []end
+	instead end
 }
 
 // run takes w's precheck, before any lock and outside any transaction;
@@ -97,17 +106,23 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 }
 
 // precheck decides w's action for actor before any lock and outside any
-// transaction (M4 design 3.5), and answers w on its project, with what it
-// lets through to the lock (scope). For a write that names a work item:
-// the work item read without a lock and the decision on it (see); a work
-// item that is not there, whose project actor does not see, or that the
-// guest rule hides from him, is issue.not_found; across projects, then,
-// each work item it reaches (reachAll). For one on a project: the project
-// read without a lock and the decision on it; a project that is not there,
-// or not visible to actor, is w.notFound. A role the rule does not allow
-// is the Authorizer's shared.Forbidden. What it lets through,
-// lockAndDecide decides again.
+// transaction (M4 design 3.5), and answers w, on its project unless it is
+// on either of two work items, with what it lets through to the lock
+// (scope). For a write that names a work item: the work item read without
+// a lock and the decision on it (see); a work item that is not there,
+// whose project actor does not see, or that the guest rule hides from
+// him, is issue.not_found; across projects, then, each work item it
+// reaches (reachAll). For one on either of two work items: both read
+// without a lock, and the decisions on them (eitherOf).
+// For one on a project: the project read without a lock and the decision
+// on it; a project that is not there, or not visible to actor, is
+// w.notFound. A role the rule does not allow is the Authorizer's
+// shared.Forbidden. What it lets through, lockAndDecide decides again.
 func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write, scope, error) {
+	if w.instead != nil {
+		s, err := l.eitherOf(ctx, actor, w)
+		return w, s, err
+	}
 	if w.issue != nil {
 		i, _, err := l.see(ctx, actor, *w.issue, w.action)
 		if err != nil {
@@ -135,7 +150,8 @@ func (l Locks) precheck(ctx context.Context, actor shared.Actor, w write) (write
 // transaction ctx carries: the project's row FOR NO KEY UPDATE, or across
 // projects s's rows (lockProjects); the work item w names read again; then
 // the decision on the locked project, and on the work item as read again;
-// across projects, then, each work item it reaches (reachUnder). It
+// across projects, then, each work item it reaches (reachUnder); on either
+// of two work items, both read and decided on again (eitherUnder). It
 // answers what they hold, the decision's grant too. A project deleted
 // while the lock waited is w.notFound, and so is a work item deleted
 // meanwhile, or no longer in the project, a project no longer visible to
@@ -145,6 +161,9 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write, s
 	locked, err := l.lockProjects(ctx, w, s)
 	if err != nil {
 		return held{}, err
+	}
+	if w.instead != nil {
+		return l.eitherUnder(ctx, actor, w, locked)
 	}
 	p, found := locked[w.project]
 	if !found {

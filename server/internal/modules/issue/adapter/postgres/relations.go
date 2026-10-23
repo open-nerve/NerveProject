@@ -2,8 +2,11 @@ package postgresadapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"uuid"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
@@ -58,10 +61,39 @@ func (s *Store) Relations(ctx context.Context, id uuid.UUID) ([]domain.Relation,
 	return out, nil
 }
 
-// relationOf is a relation's row as the domain has it.
+// GetRelation reads the undeleted relation id, as stored; found is false
+// when there is none.
+func (s *Store) GetRelation(ctx context.Context, id uuid.UUID) (domain.Relation, bool, error) {
+	r, err := s.queries(ctx).GetRelation(ctx, id)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return domain.Relation{}, false, nil
+	case err != nil:
+		return domain.Relation{}, false, fmt.Errorf("read relation %s: %w", id, err)
+	}
+	return relationOf(gen.IssueRelationsRow(r)), true, nil
+}
+
+// relationOf is a relation's row as the domain has it: IssueRelations'
+// row, and GetRelation's, of the same columns, converted.
 func relationOf(r gen.IssueRelationsRow) domain.Relation {
 	return domain.Relation{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, IssueID: r.IssueID, RelatedID: r.RelatedIssueID,
 		Type: domain.RelationType(r.RelationType), CreatedByID: r.CreatedByID, CreatedAt: r.CreatedAt}
+}
+
+// DeleteRelation soft-deletes the undeleted relation d names, at its
+// moment and by its account (M4 design 3.10). The use case read it
+// undeleted under the locks of its work items' projects, so a relation
+// not written is an error.
+func (s *Store) DeleteRelation(ctx context.Context, d app.RelationDeletion) error {
+	n, err := s.queries(ctx).DeleteRelation(ctx, gen.DeleteRelationParams{ID: d.ID, By: d.By, At: d.At})
+	switch {
+	case err != nil:
+		return fmt.Errorf("delete relation %s: %w", d.ID, err)
+	case n != 1:
+		return fmt.Errorf("deleted %d rows of relation %s", n, d.ID)
+	}
+	return nil
 }
 
 // MarkChanged writes the work items r names last changed at its moment and

@@ -127,3 +127,12 @@ func RelationAdded(t RelationType, other Ref) Activity {
 	return Activity{Field: ptr(string(t)), Verb: VerbUpdated, OldValue: ptr(""), NewValue: ptr(other.Identifier), NewIdentifier: &other.ID,
 		Comment: "added " + string(t) + " relation"}
 }
+
+// RelationRemoved is the row of a deleted relation on one of its work
+// items (rows 22 and 23 of M4 design 3.13, of the same columns): its type
+// as the work item reads it, deleted, from the other work item's
+// identifier to "", the other's id the old identifier.
+func RelationRemoved(t RelationType, other Ref) Activity {
+	return Activity{Field: ptr(string(t)), Verb: VerbDeleted, OldValue: ptr(other.Identifier), NewValue: ptr(""), OldIdentifier: &other.ID,
+		Comment: "deleted " + string(t) + " relation"}
+}

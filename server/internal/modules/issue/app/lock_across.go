@@ -27,10 +27,11 @@ type scope struct {
 	reached  []bool
 }
 
-// end is a work item a write across projects reaches, as its lock holds
-// it: the work item and its project, read under the lock, and the caller's
-// grant on the project, as decided under it; ok is false for a work item
-// the write does not reach, and the rest is zero then.
+// end is a work item a write across projects reaches, or the other of a
+// write on either of two work items, as its lock holds it: the work item
+// and its project, read under the lock, and the caller's grant on the
+// project, as decided under it, zero when none was; ok is false for a work
+// item the write does not reach, and the rest is zero then.
 type end struct {
 	issue   domain.Issue
 	project LockedProject
@@ -58,11 +59,12 @@ func ascending(ids []uuid.UUID) []uuid.UUID {
 
 // lockProjects locks s's projects in the transaction ctx carries and
 // answers those it locked, by id: a write on one project its row FOR NO
-// KEY UPDATE (ProjectGate.Lock); a write across projects each of s's, all
-// at once in ascending id order (ProjectGate.LockMany), even when they are
-// one. A project deleted while the lock waited is not among them.
+// KEY UPDATE (ProjectGate.Lock); a write across projects, or on either of
+// two work items, each of s's, all at once in ascending id order
+// (ProjectGate.LockMany), even when they are one. A project deleted while
+// the lock waited is not among them.
 func (l Locks) lockProjects(ctx context.Context, w write, s scope) (map[uuid.UUID]LockedProject, error) {
-	if w.reach != nil {
+	if w.reach != nil || w.instead != nil {
 		return l.projects.LockMany(ctx, s.projects)
 	}
 	p, found, err := l.projects.Lock(ctx, w.project)

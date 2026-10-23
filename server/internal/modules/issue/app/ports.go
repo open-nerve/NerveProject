@@ -182,6 +182,21 @@ type RelationLister interface {
 	GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue, error)
 }
 
+// RelationDeleter is the relations' store as deleteIssueRelation reads
+// and writes it, without a lock first, then in the transaction ctx
+// carries (M4 design 3.5, 3.10).
+type RelationDeleter interface {
+	// GetRelation reads the undeleted relation id, as stored; found is
+	// false when there is none.
+	GetRelation(ctx context.Context, id uuid.UUID) (r domain.Relation, found bool, err error)
+	// DeleteRelation soft-deletes the undeleted relation d names.
+	DeleteRelation(ctx context.Context, d RelationDeletion) error
+	// MarkChanged writes the undeleted work items r names last changed.
+	MarkChanged(ctx context.Context, r ChangedRows) error
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
+}
+
 // IssueArchiver is the work items' store as archiveIssue and
 // unarchiveIssue write and read them, in the transaction ctx carries (M4
 // design 3.5).
