@@ -13,8 +13,10 @@ import {
   changed,
   createdFor,
   expectIssueArchival,
+  expectIssueCreated,
   expectIssueDeleted,
   itemRef,
+  madeBy,
   relatedRow,
   restoredRow,
 } from "../../fixtures/assert/issue";
@@ -154,6 +156,13 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   expect(await issueRelationDeleted(api, ann.token, toSpec.id)).toEqual(refused);
   expect(await issueRelationDeleted(api, ann.token, toShip.id)).toEqual(refused);
   await expectIssueArchival(db, id, archivedAgain);
+  await expectIssueCreated(db, logout.id, {
+    ...madeBy(ann.email, "Fix the logout"),
+    sequence_id: 5,
+    sort_order: logout.sort_order,
+    by: ann.email,
+    activity: createdFor(),
+  });
 
   // It is deleted as any other: the admin deletes it, and with it every row under it, Write the test and its relations
   // either way among them.

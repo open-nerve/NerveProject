@@ -100,7 +100,8 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
   await counted(plan.id, 3);
 
   // bob moves Write the notes under Ship it by changing it, and puts Tag the build under Ship it: each a row of his,
-  // from under Plan the release (Plane wrote the work item moved as the one it was under) to under Ship it.
+  // from under Plan the release to under Ship it. Tag the build's is the row of a work item put under another, which
+  // Plane wrote with the work item moved as the one it was under.
   expect(await updateIssue(api, bob.token, notes.id, { parent_id: ship.id })).toMatchObject({ parent_id: ship.id });
   const notesMoved = {
     ...notesUnder,

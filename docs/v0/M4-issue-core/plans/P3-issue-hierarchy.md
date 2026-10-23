@@ -16570,7 +16570,7 @@ Expected: 通过。
 
 | 变异 | 改坏 | 必须失败的检查 | 层 |
 |---|---|---|---|
-| `T13.1` | 只有能改存为 `issue_id` 的那个工作项的人才能删关联 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestARelationIsDeletedFromEitherWorkItem`（`make test`）（Task 14 起） | 单元；组合 |
+| `T13.1` | 只有能改存为 `issue_id` 的那个工作项的人才能删关联 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestARelationIsDeletedFromEitherWorkItem`（`make test`）（Task 14 起）、故事 `i9-relations`（Task 15 起） | 单元；组合；端到端 |
 | `T13.2` | 第一个工作项的拒绝就是删除的回答，不看另一个的判定 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestARelationIsDeletedFromEitherWorkItem`（`make test`）（Task 14 起） | 单元；组合 |
 | `T13.3` | 两个工作项都看不到的关联答第一个的 404，而不是关联的 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWhoMayNotDeleteARelation`（`make test`）（Task 14 起）、`internal/bootstrap` 的 `TestTheGuestRuleHoldsForDeletingARelation`（`make test`）（Task 14 起）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `deleteIssueRelation` 各格（`make test`）（Task 14 起） | 单元；组合 |
 | `T13.4` | 锁等待期间一个工作项的项目被删除，删除照样进行 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
@@ -18074,7 +18074,7 @@ Expected: 通过。
 - `e2e/fixtures/issues.ts`：`issueRead`（状态和工作项，或问题的码）、`subIssuesAdded`、`issueRelationsCreated`、`issueRelationDeleted`（各回答状态和回答的体，或问题的码，故事断言它们）；`listIssueRelations`（看得到工作项的调用者列出的关联，回答之外的状态让故事失败）；`createIssueRelations`（Task 11，`furnish.ts` 用它）改为经 `issueRelationsCreated`；私有的类型 `IssueRelation`、`IssueRelationsCreate`。
 - `e2e/fixtures/assert/issue.ts`：`ActivityRow`、`changed` 的说明；`ItemRef`、`itemRef`；动态的行的构造 `parentRow`（第 5 行）、`relatedRow`（第 20、21 行）、`unrelatedRow`（第 22、23 行），一种行一个构造，经共用的写法：私有的 `activityRow`（取动词）写每一行，`changed`（签名不变）、`unrelatedRow` 和 `createdFor` 的创建一行（P2 的，写出的行不变）都经它；`madeBy`（一个账户只用名字建的工作项，`CreatedIssue`、`UpdatedIssue` 共有的字段，`by`、`activity` 除外；I8、I9 读它，I8 每次另给 `parent`）；`activityOf` 读出 `old_identifier`、`new_identifier` 指名的工作项的名字（`LEFT JOIN issues`，与标签的同样）；`CreatedIssue`、`UpdatedIssue` 加 `parent`（存下的父工作项的名字，没有是 `null`；P2 的日期同样这样加）；`expectIssueDeleted` 去掉 Task 8 的 `unwritten`：每个外键下都要有一行（`issues.parent_id` 和关联的两个外键在内），说明照改。
 - `e2e/fixtures/assert/relation.ts`（新）：`StoredRelation`、`expectRelations`（存下的关联的行：两端、项目、存储的类型、谁、何时，删除的也在）。
-- `i8-sub-issues.spec.ts`（新）、`i9-relations.spec.ts`（新）、`i17-delete-issue.spec.ts`（新）：I8、I9、I17 的接口版本（本 Phase 的断言）；`i15-archive-issue.spec.ts`：恢复之后在它下面放一个工作项、两个方向各关联一个；再归档之后加子工作项、加关联、删除它的两条关联（存在它这一端的、存在对方那一端的）都 409，关联留着；管理员删除它时它的子工作项和关联随它删除（`expectIssueDeleted`）；`i1-create-issue.spec.ts`、`i2-update-issue.spec.ts` 的存下的工作项 `parent: null`。
+- `i8-sub-issues.spec.ts`（新）、`i9-relations.spec.ts`（新）、`i17-delete-issue.spec.ts`（新）：I8、I9、I17 的接口版本（本 Phase 的断言）；`i15-archive-issue.spec.ts`：恢复之后在它下面放一个工作项、两个方向各关联一个；再归档之后加子工作项、加关联、删除它的两条关联（存在它这一端的、存在对方那一端的）都 409，什么都不写：关联留着，要放到它下面的工作项照建好时的样子（`expectIssueCreated`）；管理员删除它时它的子工作项和关联随它删除（`expectIssueDeleted`）；`i1-create-issue.spec.ts`、`i2-update-issue.spec.ts` 的存下的工作项 `parent: null`。
 
 **Tests:** 端到端，`make e2e` 126 个（新的是 I8、I9、I17）：
 - I8：成员把两个工作项放到一个下面（请求里不按 `id` 的次序）：按 `id` 的次序回答，各一行她的第 5 行；再放一次什么都不写；在它下面建的没有父工作项的行；另一个成员修改把一个移到别的工作项下、再放一个到那个下面，每行的原值是它原来所在的；把一个拿出到哪里都不在；每个工作项数它直接下面的；放到它下面的下面的、反过来，都 422；已归档的不能加（409）、不能当父工作项（422），都不写。
@@ -18648,7 +18648,7 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
 });
 ````
 
-`e2e/stories/issue/i8-sub-issues.spec.ts`（新文件，156 行）：
+`e2e/stories/issue/i8-sub-issues.spec.ts`（新文件，157 行）：
 
 ````file e2e/stories/issue/i8-sub-issues.spec.ts
 import {
@@ -18753,7 +18753,8 @@ test("I8 (API): a member puts two work items under one, named out of their ids' 
   await counted(plan.id, 3);
 
   // bob moves Write the notes under Ship it by changing it, and puts Tag the build under Ship it: each a row of his,
-  // from under Plan the release (Plane wrote the work item moved as the one it was under) to under Ship it.
+  // from under Plan the release to under Ship it. Tag the build's is the row of a work item put under another, which
+  // Plane wrote with the work item moved as the one it was under.
   expect(await updateIssue(api, bob.token, notes.id, { parent_id: ship.id })).toMatchObject({ parent_id: ship.id });
   const notesMoved = {
     ...notesUnder,
@@ -19062,11 +19063,15 @@ test("I9 (API): a member relates a work item blocking another of its project and
 `e2e/stories/issue/i15-archive-issue.spec.ts`（修改，8 处）：
 
 ````old e2e/stories/issue/i15-archive-issue.spec.ts
+  expectIssueArchival,
   expectIssueDeleted,
 ````
 ````new e2e/stories/issue/i15-archive-issue.spec.ts
+  expectIssueArchival,
+  expectIssueCreated,
   expectIssueDeleted,
   itemRef,
+  madeBy,
   relatedRow,
 ````
 ````old e2e/stories/issue/i15-archive-issue.spec.ts
@@ -19159,6 +19164,13 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   expect(await issueRelationDeleted(api, ann.token, toSpec.id)).toEqual(refused);
   expect(await issueRelationDeleted(api, ann.token, toShip.id)).toEqual(refused);
   await expectIssueArchival(db, id, archivedAgain);
+  await expectIssueCreated(db, logout.id, {
+    ...madeBy(ann.email, "Fix the logout"),
+    sequence_id: 5,
+    sort_order: logout.sort_order,
+    by: ann.email,
+    activity: createdFor(),
+  });
 
   // It is deleted as any other: the admin deletes it, and with it every row under it, Write the test and its relations
   // either way among them.
@@ -19256,7 +19268,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 |---|---|---|---|
 | `T15.1` | 只有能改存为 `related_issue_id` 的那个工作项的人才能删关联 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestPermissionMatrix` 的 `deleteIssueRelation` 各格（`make test`）、故事 `i9-relations` | 单元；组合；端到端 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.5`、`T1.9`、`T2.2`、`T2.5`、`T2.7`、`T2.10`、`T3.5`、`T3.6`、`T3.7`、`T3.10`、`T4.8`、`T4.11`、`T5.9`、`T5.19`、`T8.5`、`T8.10`、`T8.11`、`T9.1`、`T9.2`、`T9.3`、`T9.7`、`T9.8`、`T9.9`、`T10.12`、`T10.14`、`T10.15`、`T10.16`、`T10.17`、`T10.18`、`T11.2`、`T12.8`、`T12.9`、`T13.11`、`T13.13`、`T13.14`、`T13.15`、`T13.17`、`T13.18`、`T13.26`、`T14.1`（列在各自的 Task 的表里，标"（Task 15 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=15`）。
+本 Task 的检查也发现较早的 Task 的变异 `T1.1`、`T1.5`、`T1.9`、`T2.2`、`T2.5`、`T2.7`、`T2.10`、`T3.5`、`T3.6`、`T3.7`、`T3.10`、`T4.8`、`T4.11`、`T5.9`、`T5.19`、`T8.5`、`T8.10`、`T8.11`、`T9.1`、`T9.2`、`T9.3`、`T9.7`、`T9.8`、`T9.9`、`T10.12`、`T10.14`、`T10.15`、`T10.16`、`T10.17`、`T10.18`、`T11.2`、`T12.8`、`T12.9`、`T13.1`、`T13.11`、`T13.13`、`T13.14`、`T13.15`、`T13.17`、`T13.18`、`T13.26`、`T14.1`（列在各自的 Task 的表里，标"（Task 15 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=15`）。
 
 ---
 
