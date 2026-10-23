@@ -15398,7 +15398,7 @@ Expected: 通过。
 
 **Tests:**
 - 领域：`TestRelationRemoved`（四种类型，各写出 Plane 的句子，同 `TestRelationAdded`）。
-- 单元：`TestDeleteIssueRelationDeletesItOnEitherWorkItem`（3.5、3.10 的次序：两端任一个的 `Locks` 的调用（`unrelating`）；时刻；删除关联；两端按 `id` 的次序改最后修改；动态。调用者能改任一端：存为 `issue_id` 的 far 先判定，不能改它时（角色不允许，或 ops 里访客规则隐藏 far）判定 near；far 的一行在先（ops 的，它的 `blocked_by WEB-8` 删除），然后 near 的（web 的，`blocking OPS-3` 删除）；关联存为 near 的（`fromNear`）时先判定 near，near 的一行在先（web 的，`blocked_by OPS-3` 删除），然后 far 的（ops 的，`blocking WEB-8` 删除），项目仍按 `id` 升序锁、两端仍按 `id` 的次序改最后修改）、`TestDeleteIssueRelationRefusals`（锁之前：没有关联、一端不在 `issue.relation_not_found`；两端都看不到（项目或访客规则）也是，看得到一端而两端都不能改 403；锁下：任一端的项目等锁期间被删除（在任何判定之前）、任一端等锁期间被删除、关联被删除、两端都不再看得到 `issue.relation_not_found`，都不能再改 403，任一端的项目已归档 409，然后任一端已归档 409；每个回答整个比较：两端都看不到的关联与不存在的是同一个回答，细节都一样（8.4）；都不写（`wantNothingWritten`））、`TestDeleteIssueRelationStopsAtAFailingPort`（各端口的第一次调用失败，far 被拒绝时预检对 near 的判定失败；预检之后锁下 far、near 的再读、对 far 的再判定、far 在锁下被拒绝时对 near 的判定和关联的再读失败（同 Task 10 对 `reachUnder` 的）：都答这个失败，它之后没有调用）；`lock_test.go` 的 `TestAWriteOnEitherWorkItemTakesBothProjects`（像跨项目的写那样按 `id` 升序取两端的项目，不论判定放行的是哪一端：far 的 ops，或 near 的 web，也不论关联存为哪一端：far，或 near（`fromNear`）；同一个项目的两端只取一次它的闸门和锁）、`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches` 共用 `wantAllAtOnce`。
+- 单元：`TestDeleteIssueRelationDeletesItOnEitherWorkItem`（3.5、3.10 的次序：两端任一个的 `Locks` 的调用（`unrelating`）；时刻；删除关联；两端按 `id` 的次序改最后修改；动态。调用者能改任一端：存为 `issue_id` 的 far 先判定，不能改它时（角色不允许，或 ops 里访客规则隐藏 far）判定 near；far 的一行在先（ops 的，它的 `blocked_by WEB-8` 删除），然后 near 的（web 的，`blocking OPS-3` 删除）；关联存为 near 的（`fromNear`）时先判定 near，near 的一行在先（web 的，`blocked_by OPS-3` 删除），然后 far 的（ops 的，`blocking WEB-8` 删除），项目仍按 `id` 升序锁、两端仍按 `id` 的次序改最后修改）、`TestDeleteIssueRelationRefusals`（锁之前：没有关联、一端不在 `issue.relation_not_found`；两端都看不到（项目或访客规则）也是，看得到一端而两端都不能改 403；锁下：任一端的项目等锁期间被删除（在任何判定之前）、任一端等锁期间被删除、关联被删除、两端都不再看得到 `issue.relation_not_found`，都不能再改 403，任一端的项目已归档 409，然后任一端已归档 409（两个交叉方向：web 的项目与 far、ops 的项目与 near 都已归档，都答项目的 409）；每个回答整个比较：两端都看不到的关联与不存在的是同一个回答，细节都一样（8.4）；都不写（`wantNothingWritten`））、`TestDeleteIssueRelationStopsAtAFailingPort`（各端口的第一次调用失败，far 被拒绝时预检对 near 的判定失败；预检之后锁下 far、near 的再读、对 far 的再判定、far 在锁下被拒绝时对 near 的判定和关联的再读失败（同 Task 10 对 `reachUnder` 的）：都答这个失败，它之后没有调用）；`lock_test.go` 的 `TestAWriteOnEitherWorkItemTakesBothProjects`（像跨项目的写那样按 `id` 升序取两端的项目，不论判定放行的是哪一端：far 的 ops，或 near 的 web，也不论关联存为哪一端：far，或 near（`fromNear`）；同一个项目的两端只取一次它的闸门和锁）、`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches` 共用 `wantAllAtOnce`。
 - 存储：`TestGetRelation`（按 `id` 读出如存的每一列；已删除的、没有的读不到；取消的读是它的失败）、`TestDeleteRelation`（在给的时刻由给的账户软删除，别的列和别的关联不动；已删除的、没有的不写，是错误；取消的写也是）。
 
 - [ ] **Step 1: 查询，生成**
@@ -16041,7 +16041,7 @@ func (u *DeleteIssueRelation) delete(ctx context.Context, h held, r domain.Relat
 }
 ````
 
-`server/internal/modules/issue/app/delete_relation_test.go`（新文件，263 行）：
+`server/internal/modules/issue/app/delete_relation_test.go`（新文件，268 行）：
 
 ````file server/internal/modules/issue/app/delete_relation_test.go
 package app_test
@@ -16195,10 +16195,11 @@ func TestDeleteIssueRelationDeletesItOnEitherWorkItem(t *testing.T) {
 // waited, before any decision, either work item deleted meanwhile, or the
 // relation, or neither seen any more, issue.relation_not_found; neither to
 // be changed any more, forbidden; either work item of an archived project
-// 409 project.archived, then either archived work item 409 issue.archived.
-// Each answer is compared whole: a relation neither of whose work items
-// the caller sees is the very issue.relation_not_found of one not there,
-// detail and all (8.4).
+// 409 project.archived, then either archived work item 409 issue.archived:
+// an archived project answers first, whichever end it and the archived
+// work item are of. Each answer is compared whole: a relation neither of
+// whose work items the caller sees is the very issue.relation_not_found of
+// one not there, detail and all (8.4).
 func TestDeleteIssueRelationRefusals(t *testing.T) {
 	notFound, forbidden, hidden := domain.ErrRelationNotFound, shared.Forbidden(), shared.ErrNotVisible
 	update := func(project uuid.UUID) string { return line("Authorize", alice, domain.ActionUpdate, acme, project) }
@@ -16249,6 +16250,10 @@ func TestDeleteIssueRelationRefusals(t *testing.T) {
 		{"web archived, far archived too", func(w *world, _ *fakeRelations) {
 			w.project.locked.Archived = true
 			archived(w, farID)
+		}, domain.ErrProjectArchived, 1, 1, ""},
+		{"ops archived, near archived too", func(w *world, _ *fakeRelations) {
+			w.project.across[ops] = app.LockedProject{WorkspaceID: acme, Archived: true, Identifier: "OPS"}
+			archived(w, nearID)
 		}, domain.ErrProjectArchived, 1, 1, ""},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -16596,6 +16601,7 @@ Expected: 通过。
 | `T13.30` | 锁下的判定失败时答"关联不存在"，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T13.31` | 两个工作项任一个上的写先进第二个工作项的项目的闸门、取它的锁，再第一个的，不按 `id` 排序 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T13.32` | 删除关联先把第二个工作项、再把第一个改为最后修改，不按 `id` 排序 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T13.33` | 逐端核对归档，另一端在先：另一端已归档的工作项先于第一端已归档的项目被拒绝，答"工作项已归档" | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 
 ---
 

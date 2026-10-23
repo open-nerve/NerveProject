@@ -149,10 +149,11 @@ func TestDeleteIssueRelationDeletesItOnEitherWorkItem(t *testing.T) {
 // waited, before any decision, either work item deleted meanwhile, or the
 // relation, or neither seen any more, issue.relation_not_found; neither to
 // be changed any more, forbidden; either work item of an archived project
-// 409 project.archived, then either archived work item 409 issue.archived.
-// Each answer is compared whole: a relation neither of whose work items
-// the caller sees is the very issue.relation_not_found of one not there,
-// detail and all (8.4).
+// 409 project.archived, then either archived work item 409 issue.archived:
+// an archived project answers first, whichever end it and the archived
+// work item are of. Each answer is compared whole: a relation neither of
+// whose work items the caller sees is the very issue.relation_not_found of
+// one not there, detail and all (8.4).
 func TestDeleteIssueRelationRefusals(t *testing.T) {
 	notFound, forbidden, hidden := domain.ErrRelationNotFound, shared.Forbidden(), shared.ErrNotVisible
 	update := func(project uuid.UUID) string { return line("Authorize", alice, domain.ActionUpdate, acme, project) }
@@ -203,6 +204,10 @@ func TestDeleteIssueRelationRefusals(t *testing.T) {
 		{"web archived, far archived too", func(w *world, _ *fakeRelations) {
 			w.project.locked.Archived = true
 			archived(w, farID)
+		}, domain.ErrProjectArchived, 1, 1, ""},
+		{"ops archived, near archived too", func(w *world, _ *fakeRelations) {
+			w.project.across[ops] = app.LockedProject{WorkspaceID: acme, Archived: true, Identifier: "OPS"}
+			archived(w, nearID)
 		}, domain.ErrProjectArchived, 1, 1, ""},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
