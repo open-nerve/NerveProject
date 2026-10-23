@@ -90,8 +90,8 @@ func issueUpdateMatrixRows() []matrixRow {
 		// place (M4 design 3.6, 3.7).
 		{op: "updateIssue", variant: "a guest assigned", write: true, columns: projectColumns,
 			request: toIssue(func(_ caller, s seeded) string {
-				return `{"assignee_ids":["` + s.account(callerProjectMember).String() + `","` + s.account(callerRemoved).String() + `","` +
-					s.account(accountOf(callerProjectGuest)).String() + `"]}`
+				return `{"assignee_ids":` + idArray(s.account(callerProjectMember), s.account(callerRemoved),
+					s.account(accountOf(callerProjectGuest))) + `}`
 			}),
 			cells: refused, refusal: "assignee_ids[2] not_allowed"},
 		// Dates out of order, checked after the decision with the dependent

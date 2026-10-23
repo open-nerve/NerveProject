@@ -44,7 +44,7 @@ func TestCheckNewIssueAccepts(t *testing.T) {
 		{"a start date alone", NewIssue{Name: "a", StartDate: october(30)}, NewIssue{Name: "a", Priority: ptr(PriorityNone), StartDate: october(30)}},
 		{"a target date alone", NewIssue{Name: "a", TargetDate: october(1)}, NewIssue{Name: "a", Priority: ptr(PriorityNone), TargetDate: october(1)}},
 	}
-	for _, p := range priorities {
+	for _, p := range []Priority{PriorityUrgent, PriorityHigh, PriorityMedium, PriorityLow, PriorityNone} {
 		tests = append(tests, struct {
 			name string
 			in   NewIssue

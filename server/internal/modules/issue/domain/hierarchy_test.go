@@ -57,7 +57,7 @@ func TestCheckSubIssueIDs(t *testing.T) {
 		}
 	}
 	if got, want := SubIssueNotAllowed(4), (shared.FieldError{Field: "sub_issue_ids[4]", Code: "not_allowed",
-		Message: "must be a work item of the project that is not archived, and neither this one nor above it"}); got != want {
+		Message: "must be a work item of the project that you see, not archived, and neither this one nor above it"}); got != want {
 		t.Errorf("SubIssueNotAllowed(4) = %+v, want %+v", got, want)
 	}
 }

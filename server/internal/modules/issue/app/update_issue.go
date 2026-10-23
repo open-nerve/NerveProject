@@ -53,10 +53,11 @@ type named struct {
 // the decision again, and under them, in this order: an archived project
 // refuses it (409 project.archived), then an archived work item (409
 // issue.archived), a change of nothing too; what p changes in the work item
-// (domain.ChangesOf), and when it changes nothing, nothing is written and
-// the answer is the work item as read; the dependent rows it adds, the
-// order of the dates it leaves and the parent it sets (check), every
-// problem in one 422; the clock; the work item's fields, its completion by
+// as the caller is answered it, a parent he does not see counted as none
+// (asAnswered, domain.ChangesOf), and when it changes nothing, nothing is
+// written and the answer is the work item as read; the dependent rows it
+// adds, the order of the dates it leaves and the parent it sets (check),
+// every problem in one 422; the clock; the work item's fields, its completion by
 // its new state's group when its state changes (domain.CompletedAt); the
 // accounts and the labels it removes and adds, in id order; the accounts
 // it adds subscribed; its activity (domain.UpdateActivity), each account
@@ -81,12 +82,16 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 		case h.issue.ArchivedAt != nil:
 			return domain.ErrIssueArchived
 		}
-		c := domain.ChangesOf(h.issue, p)
+		answered, old, err := asAnswered(ctx, u.d.Issues, h, actor.UserID, p)
+		if err != nil {
+			return err
+		}
+		c := domain.ChangesOf(answered, p)
 		if c.None() {
 			updated, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, h.issue)
 			return err
 		}
-		n, err := u.check(ctx, h, actor.UserID, p, c)
+		n, err := u.check(ctx, h, actor.UserID, p, c, old)
 		if err != nil {
 			return err
 		}
@@ -117,9 +122,10 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 // takes it off every work item (DetachLabel). Then the dates p leaves the
 // work item with are in order, merged with those it keeps
 // (domain.DatesOutOfOrder); then the parent c sets may be the work item's
-// (parentChange). Every problem is reported at once, in one 422, each at
-// its place in p.
-func (u *UpdateIssue) check(ctx context.Context, h held, actor uuid.UUID, p domain.IssuePatch, c domain.Changes) (named, error) {
+// (parentChange), from its parent before, old when the comparison read it
+// (asAnswered). Every problem is reported at once, in one 422, each at its
+// place in p.
+func (u *UpdateIssue) check(ctx context.Context, h held, actor uuid.UUID, p domain.IssuePatch, c domain.Changes, old *domain.Ref) (named, error) {
 	i := h.issue
 	var n named
 	var problems []shared.FieldError
@@ -163,7 +169,7 @@ func (u *UpdateIssue) check(ctx context.Context, h held, actor uuid.UUID, p doma
 		problems = append(problems, *f)
 	}
 	if c.Parent != nil {
-		parent, ok, err := parentChange(ctx, u.d.Issues, h, actor, c.Parent.To)
+		parent, ok, err := parentChange(ctx, u.d.Issues, h, actor, c.Parent.To, old)
 		if err != nil {
 			return named{}, err
 		}

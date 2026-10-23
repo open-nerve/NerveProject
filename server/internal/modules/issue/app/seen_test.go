@@ -26,12 +26,6 @@ func counts(id uuid.UUID) map[uuid.UUID]app.SubIssueCount {
 	return map[uuid.UUID]app.SubIssueCount{id: {All: 3, Own: 1}, uuid.NewV7(): {All: 5, Own: 5}}
 }
 
-// adminGuest is the grant of a workspace admin who is only a guest of web,
-// which does not show its guests every work item: as an admin he passes
-// each of its rules (Grant.ProjectAdmin), and as its guest he sees only
-// his own work items (Grant.OwnOnly).
-var adminGuest = shared.Grant{ProjectRole: shared.RoleGuest, ProjectAdmin: true, OwnOnly: true}
-
 // A read of a work item, getIssue's and getIssueByIdentifier's, answers the
 // number of its sub-items the caller sees (M4 design 3.4, 3.9), counted
 // after the decision, outside any transaction, by its grant: every one,

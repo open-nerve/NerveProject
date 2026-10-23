@@ -36,7 +36,7 @@ func TestCheckIssuePatchAccepts(t *testing.T) {
 			IssuePatch{SetStartDate: true, StartDate: october(20), SetTargetDate: true, TargetDate: october(19)}},
 		{"both dates cleared", IssuePatch{SetStartDate: true, SetTargetDate: true}, IssuePatch{SetStartDate: true, SetTargetDate: true}},
 	}
-	for _, p := range priorities {
+	for _, p := range []Priority{PriorityUrgent, PriorityHigh, PriorityMedium, PriorityLow, PriorityNone} {
 		tests = append(tests, struct {
 			name string
 			in   IssuePatch

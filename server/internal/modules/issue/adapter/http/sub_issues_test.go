@@ -139,8 +139,8 @@ func TestSubIssuesRefusals(t *testing.T) {
 				`"errors":[{"field":"sub_issue_ids","code":"too_short","message":"must name a work item"}]}`},
 		{"a work item refused", post, shared.Invalid(domain.SubIssueNotAllowed(1)), http.StatusUnprocessableEntity,
 			`{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
-				`"errors":[{"field":"sub_issue_ids[1]","code":"not_allowed","message":"must be a work item of the project that is not archived, ` +
-				`and neither this one nor above it"}]}`},
+				`"errors":[{"field":"sub_issue_ids[1]","code":"not_allowed","message":"must be a work item of the project that you see, not ` +
+				`archived, and neither this one nor above it"}]}`},
 		{"no work item", both, domain.ErrIssueNotFound, http.StatusNotFound,
 			`{"status":404,"code":"issue.not_found","title":"Not Found","detail":"The work item does not exist, or you cannot see it."}`},
 		{"a project guest", both, shared.Forbidden(), http.StatusForbidden,

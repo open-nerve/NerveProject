@@ -1971,7 +1971,7 @@ export interface components {
             target_date?: string | null;
             /**
              * Format: uuid
-             * @description The work item it is under, null for none: one of the project's that is not archived, and neither this work item nor one under it.
+             * @description The work item it is under, null for none: one of the project's that the caller sees, not archived, and neither this work item nor one under it. It is compared with the parent the caller is answered, a parent he does not see counting as none: sending back the null he was answered changes nothing, and naming a work item he does not see is refused as naming one not there.
              */
             parent_id?: string | null;
         };

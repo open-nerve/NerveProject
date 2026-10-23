@@ -24,6 +24,11 @@ var (
 	// everyItem is the same guest's when web shows its guests every work
 	// item.
 	everyItem = shared.Grant{WorkspaceRole: shared.RoleMember, ProjectRole: shared.RoleGuest}
+	// adminGuest is the grant of a workspace admin who is only a guest of
+	// web, which does not show its guests every work item: as an admin he
+	// passes each of its rules (Grant.ProjectAdmin), and as its guest he
+	// sees only his own work items (Grant.OwnOnly).
+	adminGuest = shared.Grant{ProjectRole: shared.RoleGuest, ProjectAdmin: true, OwnOnly: true}
 )
 
 // A guest who sees only his own work items reads his own, and not

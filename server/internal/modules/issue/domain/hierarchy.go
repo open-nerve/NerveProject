@@ -33,7 +33,7 @@ func Loops(id uuid.UUID, ancestry []uuid.UUID) bool {
 // the work item's (M4 design 3.9).
 func ParentNotAllowed() shared.FieldError {
 	return shared.FieldError{Field: "parent_id", Code: shared.FieldNotAllowed,
-		Message: "must be a work item of the project that is not archived, and neither this one nor under it"}
+		Message: "must be a work item of the project that you see, not archived, and neither this one nor under it"}
 }
 
 // MaxSubIssues is how many work items an addition of sub-items names at
@@ -54,7 +54,7 @@ func CheckSubIssueIDs(ids []uuid.UUID) error {
 // design 3.9).
 func SubIssueNotAllowed(i int) shared.FieldError {
 	return shared.FieldError{Field: fmt.Sprintf("sub_issue_ids[%d]", i), Code: shared.FieldNotAllowed,
-		Message: "must be a work item of the project that is not archived, and neither this one nor above it"}
+		Message: "must be a work item of the project that you see, not archived, and neither this one nor above it"}
 }
 
 // Ref is a work item as an activity names it (M4 design 3.13): its id, and

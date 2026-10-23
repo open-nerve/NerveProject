@@ -15,8 +15,8 @@ import (
 
 // parentNotAllowed is the refusal of a parent a work item may not have, as
 // refusalOf writes it with its messages (M4 design 3.9).
-const parentNotAllowed = "validation_failed parent_id not_allowed: must be a work item of the project that is not archived, and neither " +
-	"this one nor under it"
+const parentNotAllowed = "validation_failed parent_id not_allowed: must be a work item of the project that you see, not archived, and " +
+	"neither this one nor under it"
 
 // parentOf is the parent of the work item id as the database has it, nil
 // for none.
@@ -231,5 +231,43 @@ func TestAHiddenParentIsNotInTheAnswer(t *testing.T) {
 		if !reflect.DeepEqual(got.ParentID, tt.want) {
 			t.Errorf("%s's read of %s names its parent %v, want %v", tt.by, tt.item, got.ParentID, tt.want)
 		}
+	}
+}
+
+// A parent the guest rule hides from the caller counts as none in his
+// change (M4 design 3.4, 3.9; the owner's ruling A, 2026-10-24): walt,
+// acme's admin and Web's guest (adminGuest), is answered His, under
+// alice's Up, under none. His change naming Up is refused as one naming a
+// work item not there, 422 at parent_id, the two answers the same, and
+// nothing is written. His change to none, as he was answered, changes
+// nothing: answered 200 under none, while alice still reads His under Up,
+// changed last as before. Under Mine, his own, he moves it: stored under
+// Mine, its row his, from Up as stored, WEB-1, to WEB-3.
+func TestAHiddenParentCountsAsNoneInAChange(t *testing.T) {
+	w := newIssueWorld(t)
+	w.adminGuest(t)
+	up := w.newWorkItemIn(t, w.web, `{"name":"Up"}`)
+	his := w.newWorkItemBy(t, "walt", w.web, `{"name":"His"}`)
+	mine := w.newWorkItemBy(t, "walt", w.web, `{"name":"Mine"}`)
+	path := "/api/v0/issues/" + his.String()
+	w.send(t, "alice", http.MethodPatch, path, `{"parent_id":"`+up.String()+`"}`, http.StatusOK)
+	_, changed, by := archivalOf(t, w, his)
+	hidden := w.send(t, "walt", http.MethodPatch, path, `{"parent_id":"`+up.String()+`"}`, http.StatusUnprocessableEntity)
+	absent := w.send(t, "walt", http.MethodPatch, path, `{"parent_id":"`+uuid.NewV7().String()+`"}`, http.StatusUnprocessableEntity)
+	if refusalOf(t, []byte(hidden), true) != parentNotAllowed || hidden != absent {
+		t.Errorf("walt's His under Up answers %s; want %s, as under one not there: %s", hidden, parentNotAllowed, absent)
+	}
+	var kept, read storedIssue
+	decodeAnswer(t, w.send(t, "walt", http.MethodPatch, path, `{"parent_id":null}`, http.StatusOK), &kept)
+	decodeAnswer(t, w.send(t, "alice", http.MethodGet, path, "", http.StatusOK), &read)
+	if _, at, who := archivalOf(t, w, his); kept.ParentID != nil || !reflect.DeepEqual(read.ParentID, &up) || !at.Equal(changed) || who != by {
+		t.Errorf("walt's His under none is answered under %v, and alice reads it under %v, changed last by %s at %v; want none, Up, %s, "+
+			"by %s at %v", kept.ParentID, read.ParentID, who, at, up, by, changed)
+	}
+	w.send(t, "walt", http.MethodPatch, path, `{"parent_id":"`+mine.String()+`"}`, http.StatusOK)
+	said, want := w.parentRows(t, his), []string{"alice:  → WEB-1, none → " + up.String(), "walt: WEB-1 → WEB-3, " + up.String() + " → " +
+		mine.String()}
+	if !reflect.DeepEqual(w.parentOf(t, his), &mine) || !slices.Equal(said, want) {
+		t.Errorf("His is under %v, its rows of its parent %q; want under Mine, %s, and %q", w.parentOf(t, his), said, mine, want)
 	}
 }

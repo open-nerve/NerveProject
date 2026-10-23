@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"slices"
 	"testing"
-	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
@@ -42,13 +41,24 @@ func deletingRows(ids []uuid.UUID) []string {
 // The subtree holds two work items under the one deleted, which is not its
 // first, so that a deletion of the work item asked for alone, or of the
 // subtree's first alone, shows. An archived work item is deleted as any
-// other (M4 design 3.8).
+// other (M4 design 3.8). So is the subtree of alice's own work item when
+// she is a workspace admin who is only a guest of web (adminGuest): the
+// guest rule hides carol's work item under it from her, and it goes with
+// the subtree, as her own one does (3.6).
 func TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows(t *testing.T) {
-	for what, archivedAt := range map[string]*time.Time{"a work item": nil, "an archived work item": &earlier} {
+	for what, prepare := range map[string]func(w *world, subtree []uuid.UUID){
+		"a work item":           func(*world, []uuid.UUID) {},
+		"an archived work item": func(w *world, _ []uuid.UUID) { w.issues.archivedAt = &earlier },
+		"an admin who is a guest's own work item": func(w *world, subtree []uuid.UUID) {
+			w.issues.issue.By, w.auth.grants = alice, []shared.Grant{adminGuest, adminGuest}
+			w.issues.others = map[uuid.UUID]domain.Issue{subtree[0]: {ID: subtree[0], WorkspaceID: acme, ProjectID: web, CreatedByID: &carol},
+				subtree[2]: {ID: subtree[2], WorkspaceID: acme, ProjectID: web, CreatedByID: &alice}}
+		},
+	} {
 		t.Run(what, func(t *testing.T) {
 			uc, w, id := newDelete()
-			w.issues.archivedAt = archivedAt
 			subtree := []uuid.UUID{uuid.NewV7(), id, uuid.NewV7()}
+			prepare(w, subtree)
 			w.issues.subtree = subtree
 			if err := uc.Execute(as(alice), id); err != nil {
 				t.Fatal(err)

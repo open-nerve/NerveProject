@@ -218,11 +218,65 @@ func TestUpdateIssueRefusesAParentItMayNotHave(t *testing.T) {
 	}
 }
 
+// An update compares the parent it sets with the parent its caller is
+// answered (M4 design 3.4, 3.9; the owner's ruling A, 2026-10-24): alice,
+// a workspace admin who is only a guest of web (adminGuest), sees only her
+// own work items there, and her work item 7 is under up, bob's, which she
+// does not see, so she is answered it under none. Naming up is a change to
+// a work item she does not see, refused as naming one not there is, 422 at
+// parent_id, the two refusals equal, nothing written. None, as she was
+// answered, changes nothing: up is read under the lock, nothing written,
+// not even the clock read, and she is answered the work item as it is,
+// under none. Under mine, her own, it moves from up, as stored: its row
+// names up, WEB-3, and mine, WEB-10, up read once.
+func TestUpdateIssueComparesTheParentAsItsCallerIsAnswered(t *testing.T) {
+	underUp := func() (*app.UpdateIssue, *world, uuid.UUID, kin) {
+		uc, w, id := newUpdate()
+		k := withKin(w)
+		w.issues.issue.By, w.issues.issue.ParentID, w.auth.grants = alice, &k.up.ID, []shared.Grant{adminGuest, adminGuest}
+		return uc, w, id, k
+	}
+	// up read under the lock, the parent before, and the answer's read of
+	// its parent (Locks.seen)
+	before := func(k kin) string { return line("GetIssues", []uuid.UUID{k.up.ID}) }
+	shown := func(parent uuid.UUID) string { return line("GetIssues", []uuid.UUID{parent}) }
+	var refusals []error
+	for _, named := range []func(k kin) uuid.UUID{func(k kin) uuid.UUID { return k.up.ID }, func(kin) uuid.UUID { return uuid.NewV7() }} {
+		uc, w, id, k := underUp()
+		parent := named(k)
+		_, err := uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true, ParentID: &parent})
+		unchanged(t, w, err, shared.Invalid(domain.ParentNotAllowed()), append(locked(id), before(k), line("GetIssue", parent)))
+		refusals = append(refusals, err)
+	}
+	if !reflect.DeepEqual(refusals[0], refusals[1]) {
+		t.Errorf("up named: %v; want the refusal of a work item not there, %v", refusals[0], refusals[1])
+	}
+
+	uc, w, id, k := underUp()
+	got, err := uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true})
+	if calls := append(locked(id), before(k), counted(id), shown(k.up.ID)); err != nil || got.ParentID != nil || w.issues.changed != nil ||
+		!slices.Equal(w.log.calls, calls) {
+		t.Errorf("none: Execute() = %v, %v after\n%q; want under none, nothing written, after\n%q", got.ParentID, err, w.log.calls, calls)
+	}
+
+	uc, w, id, k = underUp()
+	got, err = uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true, ParentID: &k.mine.ID})
+	calls := slices.Concat(locked(id), []string{before(k), line("GetIssue", k.mine.ID), line("Ancestry", k.mine.ID), "Now", line("UpdateIssue", id),
+		line("InsertActivities", 1), line("GetIssue", id), counted(id), shown(k.mine.ID)})
+	if err != nil || !reflect.DeepEqual(got.ParentID, &k.mine.ID) || !slices.Equal(w.log.calls, calls) {
+		t.Errorf("under mine: Execute() = %v, %v after\n%q; want under mine after\n%q", got.ParentID, err, w.log.calls, calls)
+	}
+	wantActivity(t, w, id, []domain.Activity{domain.ParentActivity(domain.Changed[*domain.Ref]{Old: &domain.Ref{ID: k.up.ID, Identifier: "WEB-3"},
+		New: &domain.Ref{ID: k.mine.ID, Identifier: "WEB-10"}})})
+}
+
 // A failing read of a parent ends the write with its failure, as itself,
 // and no call after it runs (M4 design 3.5): the parent a creation asks
-// for; the new parent an update asks for, its ancestry, the old one. An
-// old parent not there is an error too, before the clock: deleting a work
-// item deletes those under it (3.6).
+// for; the new parent an update asks for, its ancestry, the old one, and
+// the old one read, once, to compare with the parent its caller is
+// answered, as for a workspace admin who is only a guest of web
+// (adminGuest). An old parent not there is an error too, before the clock:
+// deleting a work item deletes those under it (3.6).
 func TestAParentsFailingReadEndsTheWrite(t *testing.T) {
 	create, w := newCreate()
 	k := withKin(w)
@@ -241,6 +295,14 @@ func TestAParentsFailingReadEndsTheWrite(t *testing.T) {
 		})
 	}
 	uc, w, id := newUpdate()
+	k = withKin(w)
+	w.issues.issue.By, w.issues.issue.ParentID, w.auth.grants = alice, &k.up.ID, []shared.Grant{adminGuest, adminGuest}
+	w.log.fail = line("GetIssues", []uuid.UUID{k.up.ID})
+	_, err = uc.Execute(as(alice), id, domain.IssuePatch{SetParentID: true})
+	if calls := append(locked(id), w.log.fail); !errors.Is(err, errDisk) || !slices.Equal(w.log.calls, calls) {
+		t.Errorf("Execute() = %v after the calls\n%q\nwant %v after\n%q", err, w.log.calls, errDisk, calls)
+	}
+	uc, w, id = newUpdate()
 	k = withKin(w)
 	gone := uuid.NewV7()
 	w.issues.issue.ParentID = &gone

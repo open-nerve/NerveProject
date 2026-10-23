@@ -168,10 +168,11 @@ func TestWorkItemsArePutUnderAWorkItem(t *testing.T) {
 // Low and walt Below. walt puts Mine under His, answered with the one
 // sub-item he sees; Hers, which he does not see, is refused at its place
 // with the very answer of a work item not there, and stays under none;
-// alice puts it there. walt lists Mine alone under His, with its one
-// sub-item, and alice and bob Hers and Mine, with its two; Up, alice's,
-// walt finds neither to list nor to put a work item under: the very 404
-// of a work item not there.
+// alice puts it there, and changes Mine last. walt lists Mine alone under
+// His, his own though another changed it last, with its one sub-item, and
+// alice and bob Hers and Mine, with its two; Up, alice's, walt finds
+// neither to list nor to put a work item under: the very 404 of a work
+// item not there.
 func TestTheGuestRuleHoldsForSubItems(t *testing.T) {
 	w := newIssueWorld(t)
 	w.adminGuest(t)
@@ -193,6 +194,7 @@ func TestTheGuestRuleHoldsForSubItems(t *testing.T) {
 			answer, w.parentOf(t, hers), notThere)
 	}
 	w.send(t, "alice", http.MethodPost, subIssues(his), subIssueIDs(hers), http.StatusOK)
+	w.send(t, "alice", http.MethodPatch, "/api/v0/issues/"+mine.String(), `{"priority":"medium"}`, http.StatusOK)
 	for _, tt := range []struct {
 		name string
 		want []string

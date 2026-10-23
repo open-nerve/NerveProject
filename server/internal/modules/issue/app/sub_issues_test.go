@@ -36,28 +36,35 @@ func sorted(ids []uuid.UUID) []uuid.UUID {
 
 // A list of sub-items, outside any transaction and without a lock (M4
 // design 3.4, 3.9): web's work item 7, alice's, read and issue.read
-// decided on it, as getIssue does; then its sub-items, anyone's for web's
-// admin, only hers for a guest who sees only her own, and for an admin who
-// is only web's guest (adminGuest); then their sub-items counted, as she
-// sees them: every one, or only hers. The answer is the sub-items as the
-// store answers them, each with its count.
+// decided on it, as getIssue does, archived or not (3.8); then its
+// sub-items, anyone's for web's admin, only hers for a guest who sees only
+// her own, and for an admin who is only web's guest (adminGuest); then
+// their sub-items counted, as she sees them: every one, or only hers. The
+// answer is the sub-items as the store answers them, each with its count.
 func TestListSubIssuesReadsTheSubItemsTheCallerSees(t *testing.T) {
 	for _, tt := range []struct {
-		name  string
-		grant shared.Grant
-		whose string
-		items func(k kin) []domain.Issue // as the store answers them
-		want  []int                      // their counts
+		name     string
+		grant    shared.Grant
+		archived bool
+		whose    string
+		items    func(k kin) []domain.Issue // as the store answers them
+		want     []int                      // their counts
 	}{
-		{"an admin", shared.Grant{ProjectRole: shared.RoleAdmin}, "anyone's", func(k kin) []domain.Issue { return []domain.Issue{k.top, k.up} },
-			[]int{3, 2}},
-		{"a guest who sees her own", ownOnly, alice.String() + "'s", func(k kin) []domain.Issue { return []domain.Issue{k.mine} }, []int{1}},
-		{"an admin who is a guest", adminGuest, alice.String() + "'s", func(k kin) []domain.Issue { return []domain.Issue{k.mine} }, []int{1}},
+		{"an admin", shared.Grant{ProjectRole: shared.RoleAdmin}, false, "anyone's",
+			func(k kin) []domain.Issue { return []domain.Issue{k.top, k.up} }, []int{3, 2}},
+		{"an admin, of an archived work item", shared.Grant{ProjectRole: shared.RoleAdmin}, true, "anyone's",
+			func(k kin) []domain.Issue { return []domain.Issue{k.top, k.up} }, []int{3, 2}},
+		{"a guest who sees her own", ownOnly, false, alice.String() + "'s", func(k kin) []domain.Issue { return []domain.Issue{k.mine} }, []int{1}},
+		{"an admin who is a guest", adminGuest, false, alice.String() + "'s", func(k kin) []domain.Issue { return []domain.Issue{k.mine} },
+			[]int{1}},
 	} {
 		_, w, id := newUpdate()
 		k := withKin(w)
 		items := tt.items(k)
 		w.issues.issue.By, w.auth.grants, w.issues.subItems = alice, []shared.Grant{tt.grant}, items
+		if tt.archived {
+			w.issues.archivedAt = &earlier
+		}
 		w.issues.counts = map[uuid.UUID]app.SubIssueCount{k.top.ID: {All: 3}, k.up.ID: {All: 2, Own: 2}, k.mine.ID: {All: 4, Own: 1}}
 		got, err := listOver(w).Execute(as(alice), id)
 		want, ids := slices.Clone(items), []uuid.UUID{}

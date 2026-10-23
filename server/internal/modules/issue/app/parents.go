@@ -35,15 +35,41 @@ func parentOf(ctx context.Context, issues IssueReader, h held, actor, projectID,
 	return p, true, nil
 }
 
+// asAnswered is the work item h holds as the caller actor is answered it
+// (Locks.seen), which his update p is compared with (domain.ChangesOf; M4
+// design 3.4, 3.9, the owner's ruling A of 2026-10-24): when p sets a
+// parent and his grant hides others' work items from him (Grant.OwnOnly),
+// the work item's parent is read under h (parentsOf), and one the guest
+// rule hides from him (domain.Issue.HiddenFrom) counts as none. So none,
+// as he was answered, changes nothing, and naming that parent is a change
+// to a work item he does not see. It answers the parent it read as the
+// change's activity names it (refOf), nil when it read none; otherwise the
+// work item is as stored, and nothing is read.
+func asAnswered(ctx context.Context, issues IssueReader, h held, actor uuid.UUID, p domain.IssuePatch) (domain.Issue, *domain.Ref, error) {
+	i := h.issue
+	if !p.SetParentID || !h.grant.OwnOnly || i.ParentID == nil {
+		return i, nil, nil
+	}
+	parents, err := parentsOf(ctx, issues, []domain.Issue{i})
+	if err != nil {
+		return domain.Issue{}, nil, err
+	}
+	if parents[0].HiddenFrom(actor, h.grant.OwnOnly) {
+		i.ParentID = nil
+	}
+	return i, refOf(h.project, *parents[0]), nil
+}
+
 // parentChange checks the parent to, nil for none, that the caller actor's
 // update sets on the work item h holds, under h, and names the change as
 // the work item's activity writes it (row 5 of M4 design 3.13). A new
 // parent may be one (parentOf) that is neither the work item nor a work
 // item under it, the work item not in its ancestry (domain.Loops); ok is
-// false otherwise. The old parent is the work item's parent before
+// false otherwise. The old parent is the work item's parent before, as
+// stored: old, when the update has read it (asAnswered), else read here
 // (parentsBefore).
-func parentChange(ctx context.Context, issues IssueUpdater, h held, actor uuid.UUID, to *uuid.UUID) (c domain.Changed[*domain.Ref], ok bool,
-	err error) {
+func parentChange(ctx context.Context, issues IssueUpdater, h held, actor uuid.UUID, to *uuid.UUID, old *domain.Ref) (c domain.Changed[*domain.Ref],
+	ok bool, err error) {
 	i := h.issue
 	if to != nil {
 		parent, ok, err := parentOf(ctx, issues, h, actor, i.ProjectID, *to)
@@ -56,33 +82,54 @@ func parentChange(ctx context.Context, issues IssueUpdater, h held, actor uuid.U
 		}
 		c.New = refOf(h.project, parent)
 	}
-	before, err := parentsBefore(ctx, issues, h, []domain.Issue{i})
-	if err != nil {
-		return domain.Changed[*domain.Ref]{}, false, err
+	if old == nil {
+		before, err := parentsBefore(ctx, issues, h, []domain.Issue{i})
+		if err != nil {
+			return domain.Changed[*domain.Ref]{}, false, err
+		}
+		old = before[0]
 	}
-	c.Old = before[0]
+	c.Old = old
 	return c, true, nil
 }
 
 // parentsBefore reads the parents that the work items items, of the
 // project h holds locked, are under before a write takes them from there
-// (M4 design 3.9, 3.13): under the lock, each parent once, in id order,
-// and none when no work item is under one. It answers each work item's as
-// its activity names it, by its identifier (refOf), nil for none. A parent
-// before that is not there is an error: deleting a work item deletes those
-// under it (3.6).
+// (M4 design 3.9, 3.13), under the lock (parentsOf), and answers each work
+// item's as its activity names it, by its identifier (refOf), nil for
+// none.
 func parentsBefore(ctx context.Context, issues IssueReader, h held, items []domain.Issue) ([]*domain.Ref, error) {
+	parents, err := parentsOf(ctx, issues, items)
+	if err != nil {
+		return nil, err
+	}
+	before := make([]*domain.Ref, len(items))
+	for n, p := range parents {
+		if p != nil {
+			before[n] = refOf(h.project, *p)
+		}
+	}
+	return before, nil
+}
+
+// parentsOf reads the parents that the work items items are under, under
+// the lock of their project, which every write of a parent holds (M4
+// design 3.5, 3.9): each parent once, in one read in id order, none when
+// no work item is under one. It answers each work item's parent as read,
+// nil for none. A parent that is not there is an error: deleting a work
+// item deletes those under it (3.6).
+func parentsOf(ctx context.Context, issues IssueReader, items []domain.Issue) ([]*domain.Issue, error) {
 	var ids []uuid.UUID
 	for _, i := range items {
-		if i.ParentID != nil && !slices.Contains(ids, *i.ParentID) {
+		if i.ParentID != nil {
 			ids = append(ids, *i.ParentID)
 		}
 	}
-	before := make([]*domain.Ref, len(items))
+	parents := make([]*domain.Issue, len(items))
 	if len(ids) == 0 {
-		return before, nil
+		return parents, nil
 	}
-	parents, err := issues.GetIssues(ctx, slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare))
+	read, err := issues.GetIssues(ctx, ascending(ids))
 	if err != nil {
 		return nil, err
 	}
@@ -90,13 +137,13 @@ func parentsBefore(ctx context.Context, issues IssueReader, h held, items []doma
 		if i.ParentID == nil {
 			continue
 		}
-		at := slices.IndexFunc(parents, func(p domain.Issue) bool { return p.ID == *i.ParentID })
+		at := slices.IndexFunc(read, func(p domain.Issue) bool { return p.ID == *i.ParentID })
 		if at < 0 {
 			return nil, fmt.Errorf("work item %s is under %s, which is not there", i.ID, *i.ParentID)
 		}
-		before[n] = refOf(h.project, parents[at])
+		parents[n] = &read[at]
 	}
-	return before, nil
+	return parents, nil
 }
 
 // refOf is the work item i, of the project p, locked, as an activity names
