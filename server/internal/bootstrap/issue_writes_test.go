@@ -106,10 +106,10 @@ func newIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) module
 // under the first, its parent read under the lock, then moves Part
 // under the second, the second's ancestry read under it, and puts Low
 // under Part. She relates the first to Far, of Ops, as blocking it, both
-// projects locked at once. She archives the first, in Done, and
-// unarchives it; she deletes the second, and Part and Low under it. With
-// Web archived, her creation and her change are refused under the lock
-// (409).
+// projects locked at once, and deletes the relation. She archives the
+// first, in Done, and unarchives it; she deletes the second, and Part and
+// Low under it. With Web archived, her creation and her change are
+// refused under the lock (409).
 func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	w := newIssueWorld(t)
 	one := poolOfOne(t, w.pool.Config().ConnString())
@@ -176,7 +176,9 @@ func TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection(t *testing.T) {
 	decodeAnswer(t, send(alice, `{"name":"Low"}`, http.StatusCreated), &low)
 	route.answerWithin(t, w.contract, http.MethodPost, subIssues(part.ID), alice, subIssueIDs(low.ID), http.StatusOK)
 	far := w.newWorkItemIn(t, createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS"), `{"name":"Far"}`)
-	route.answerWithin(t, w.contract, http.MethodPost, relationsOf(first.ID), alice, relating("blocking", far), http.StatusCreated)
+	related := listIn[answeredRelation](t, route.answerWithin(t, w.contract, http.MethodPost, relationsOf(first.ID), alice, relating("blocking", far),
+		http.StatusCreated))
+	route.answerWithin(t, w.contract, http.MethodDelete, relationPath(related[0].ID), alice, "", http.StatusNoContent)
 	for _, verb := range []string{"archive", "unarchive"} {
 		route.answerWithin(t, w.contract, http.MethodPost, "/api/v0/issues/"+first.ID.String()+"/"+verb, alice, "", http.StatusOK)
 	}

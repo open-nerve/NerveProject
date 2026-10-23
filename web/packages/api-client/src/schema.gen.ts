@@ -1071,6 +1071,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issue-relations/{relation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A relation's id (IssueRelation.id). */
+                relation_id: components["parameters"]["RelationID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a relation
+         * @description For whoever may change either of its work items, as updateIssue: the admins and members of the project of one of them, each work item decided on its own project, the guest rule first. A relation that does not exist, is deleted, or neither of whose work items the caller sees answers issue.relation_not_found, whatever his role may do; one of which he sees a work item but may change neither, forbidden. Both are answered before any project is locked. Then the projects of both work items are locked together, and his role is decided again. Either work item of an archived project answers project.archived; then either archived work item, issue.archived. Both work items are changed last by the caller, and the activity of each says it no longer relates to the other, with the type it read. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        delete: operations["deleteIssueRelation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspaces/{slug}/issues/{identifier}": {
         parameters: {
             query?: never;
@@ -2102,6 +2125,8 @@ export interface components {
         LabelID: string;
         /** @description A work item's id (IssueDetail.id). */
         IssueID: string;
+        /** @description A relation's id (IssueRelation.id). */
+        RelationID: string;
         /** @description A work item's identifier: its project's identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12. */
         IssueIdentifier: string;
     };
@@ -2206,6 +2231,7 @@ export type ParameterProjectMemberId = components['parameters']['ProjectMemberID
 export type ParameterStateId = components['parameters']['StateID'];
 export type ParameterLabelId = components['parameters']['LabelID'];
 export type ParameterIssueId = components['parameters']['IssueID'];
+export type ParameterRelationId = components['parameters']['RelationID'];
 export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
 export type $defs = Record<string, never>;
 export interface operations {
@@ -3881,6 +3907,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IssueRelationCollection"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteIssueRelation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A relation's id (IssueRelation.id). */
+                relation_id: components["parameters"]["RelationID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The relation is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

@@ -30,6 +30,15 @@ func (h handler) CreateIssueRelations(ctx context.Context, req gen.CreateIssueRe
 	return gen.CreateIssueRelations201JSONResponse(issueRelationCollection(relations)), nil
 }
 
+// DeleteIssueRelation serves DELETE /api/v0/issue-relations/{relation_id}.
+func (h handler) DeleteIssueRelation(ctx context.Context, req gen.DeleteIssueRelationRequestObject) (gen.DeleteIssueRelationResponseObject,
+	error) {
+	if err := h.uc.DeleteIssueRelation.Execute(ctx, req.RelationID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteIssueRelation204Response{}, nil
+}
+
 // issueRelationCollection is relations as the API lists them, in their
 // order, [] for none: each with its type as its work item reads it, and
 // the other work item as a list shows it (issueCollection).

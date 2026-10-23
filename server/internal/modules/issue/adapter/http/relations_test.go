@@ -182,3 +182,47 @@ func TestIssueRelationsRefusals(t *testing.T) {
 		}
 	}
 }
+
+// relationPath is the path of WEB-6's relation to WEB-8 (relatedAnswers).
+var relationPath = "/api/v0/issue-relations/0199a2b4-0000-7000-8000-0000000000f1"
+
+// DELETE goes to the use case for the caller and the path's relation; the
+// answer is 204, without a body.
+func TestDeleteIssueRelation(t *testing.T) {
+	deletion := &fakeDelete{}
+	res, body := do(t, newServer(t, httpadapter.UseCases{DeleteIssueRelation: deletion}), request(http.MethodDelete, relationPath, "alice", ""))
+	if res.StatusCode != http.StatusNoContent || body != "" {
+		t.Errorf("DELETE = %d %q, want 204 without a body", res.StatusCode, body)
+	}
+	if want := []string{aliceID.String() + " 0199a2b4-0000-7000-8000-0000000000f1"}; !slices.Equal(deletion.calls, want) {
+		t.Errorf("calls %q, want %q", deletion.calls, want)
+	}
+}
+
+// The use case's refusals, as the contract declares them, and its failure.
+func TestDeleteIssueRelationRefusals(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		err    error
+		status int
+		want   string
+	}{
+		{"no relation", domain.ErrRelationNotFound, http.StatusNotFound, `{"status":404,"code":"issue.relation_not_found","title":"Not Found",` +
+			`"detail":"The relation does not exist, or you cannot see either of its work items."}`},
+		{"a project guest of both", shared.Forbidden(), http.StatusForbidden,
+			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{"an archived project", domain.ErrProjectArchived, http.StatusConflict,
+			`{"status":409,"code":"project.archived","title":"Conflict","detail":"The project is archived; unarchive it to change it."}`},
+		{"an archived work item", domain.ErrIssueArchived, http.StatusConflict,
+			`{"status":409,"code":"issue.archived","title":"Conflict","detail":"The work item is archived; unarchive it to change it."}`},
+		{"a busy project", shared.ServerBusy(time.Second), http.StatusServiceUnavailable, busy},
+		{"a failure", errGone, http.StatusInternalServerError, `{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
+	} {
+		h := newServer(t, httpadapter.UseCases{DeleteIssueRelation: &fakeDelete{err: tt.err}})
+		res, body := do(t, h, request(http.MethodDelete, relationPath, "alice", ""))
+		if res.StatusCode != tt.status || body != tt.want+"\n" || tt.want == busy && res.Header.Get("Retry-After") != "1" {
+			t.Errorf("%s: DELETE = %d %s, Retry-After %q; want %d %s", tt.name, res.StatusCode, body, res.Header.Get("Retry-After"), tt.status,
+				tt.want)
+		}
+	}
+}

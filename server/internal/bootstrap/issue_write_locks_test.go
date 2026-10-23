@@ -99,6 +99,16 @@ var issueWrites = []issueWrite{
 		},
 		body: func(t *testing.T, w issueWorld) string { return relating("relates_to", w.workItemNamed(t, "Far")) }, want: http.StatusCreated,
 		waits: "issue_relations", mode: "ACCESS EXCLUSIVE"},
+	// A relation of two new work items, which the send deletes: it reads
+	// nothing under the lock that its precheck did not, so it waits for the
+	// relations' table, which it writes first.
+	{op: "deleteIssueRelation", method: http.MethodDelete, path: "/api/v0/issue-relations/{relation_id}",
+		target: func(t *testing.T, w issueWorld) string {
+			related := listIn[answeredRelation](t, w.send(t, "alice", http.MethodPost, relationsOf(w.newWorkItem(t)),
+				relating("relates_to", w.newWorkItem(t)), http.StatusCreated))
+			return relationPath(related[0].ID)
+		},
+		body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issue_relations", mode: "SHARE"},
 }
 
 // issueTables are the tables a write on the work-item side reads or

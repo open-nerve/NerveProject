@@ -17,7 +17,8 @@ type DeleteIssueRelationDeps struct {
 	Clock     Clock
 }
 
-// DeleteIssueRelation deletes a relation (M4 design 3.5, 3.10, 5.1).
+// DeleteIssueRelation deletes a relation: DELETE
+// /api/v0/issue-relations/{relation_id} (M4 design 3.5, 3.10, 5.1).
 type DeleteIssueRelation struct {
 	d DeleteIssueRelationDeps
 }

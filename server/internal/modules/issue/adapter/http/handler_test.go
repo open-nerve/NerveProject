@@ -114,8 +114,8 @@ func (f *fakeUpdate) Execute(ctx context.Context, id uuid.UUID, p domain.IssuePa
 	return f.answer, f.err
 }
 
-// fakeDelete is deleteIssue: each call is recorded as "caller work item";
-// it answers err.
+// fakeDelete is deleteIssue, or deleteIssueRelation: each call is
+// recorded as "caller work item", or "caller relation"; it answers err.
 type fakeDelete struct {
 	calls []string
 	err   error

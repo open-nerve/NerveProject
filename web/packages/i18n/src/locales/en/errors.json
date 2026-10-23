@@ -41,6 +41,7 @@
     "issue_not_found": "The work item does not exist, or you cannot see it.",
     "issue_archived": "The work item is archived. Restore it to change it.",
     "issue_not_archivable": "Only a completed or cancelled work item can be archived. Move it to such a state first.",
+    "issue_relation_not_found": "The relation does not exist, or you cannot see either of its work items.",
     "unreachable": "Cannot reach the server for now. Please try again.",
     "unknown": "Something went wrong. Please try again.",
     "field": {

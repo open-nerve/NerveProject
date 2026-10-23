@@ -2,10 +2,10 @@
 // work items' tables and brings creating, reading, by id or by identifier,
 // changing, archiving, unarchiving and deleting a work item, listing the
 // work items under one and putting work items under it, and listing a
-// work item's relations and relating it to others. For the
-// project module's deletions (its IssueCascade port) it soft-deletes a
-// deleted project's rows of them, tells whether work items are in a state,
-// and takes deleted labels off them.
+// work item's relations, relating it to others and deleting a relation.
+// For the project module's deletions (its IssueCascade port) it
+// soft-deletes a deleted project's rows of them, tells whether work items
+// are in a state, and takes deleted labels off them.
 package issue
 
 import (
@@ -133,6 +133,9 @@ func New(d Deps) *Module {
 		AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Locks: locks, Issues: store, Clock: d.Clock}),
 		ListIssueRelations: app.NewListIssueRelations(locks, store, d.Projects),
 		CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{
+			Locks: locks, Relations: store, Clock: d.Clock,
+		}),
+		DeleteIssueRelation: app.NewDeleteIssueRelation(app.DeleteIssueRelationDeps{
 			Locks: locks, Relations: store, Clock: d.Clock,
 		}),
 	}}

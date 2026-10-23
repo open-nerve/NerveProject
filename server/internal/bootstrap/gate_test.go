@@ -278,6 +278,8 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 			http.StatusCreated},
 		{"an addition of relations from Ops", http.MethodPost, relationsOf(w.newWorkItemIn(t, ops, `{"name":"Far"}`)),
 			relating("relates_to", w.newWorkItem(t)), http.StatusCreated},
+		{"a deletion of a relation", http.MethodDelete, relationPath(listIn[answeredRelation](t, w.send(t, "alice", http.MethodPost,
+			relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)), http.StatusCreated))[0].ID), "", http.StatusNoContent},
 	}
 	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], []byte(`{"name":"Mend"}`))
 	w.contract.CheckRequest(t, change)

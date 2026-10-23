@@ -64,6 +64,11 @@ type CreateIssueRelationsUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, t domain.RelationType, ids []uuid.UUID) ([]app.IssueRelation, error)
 }
 
+// DeleteIssueRelationUseCase is app.DeleteIssueRelation.
+type DeleteIssueRelationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	CreateIssue          CreateIssueUseCase
@@ -77,6 +82,7 @@ type UseCases struct {
 	AddSubIssues         AddSubIssuesUseCase
 	ListIssueRelations   ListIssueRelationsUseCase
 	CreateIssueRelations CreateIssueRelationsUseCase
+	DeleteIssueRelation  DeleteIssueRelationUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

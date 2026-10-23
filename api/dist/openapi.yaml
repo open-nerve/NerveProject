@@ -1652,6 +1652,28 @@ paths:
                 $ref: '#/components/schemas/IssueRelationCollection'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issue-relations/{relation_id}:
+    parameters:
+      - $ref: '#/components/parameters/RelationID'
+    delete:
+      operationId: deleteIssueRelation
+      tags:
+        - issue
+      summary: Delete a relation
+      description: 'For whoever may change either of its work items, as updateIssue: the admins and members of the project of one of them, each work item decided on its own project, the guest rule first. A relation that does not exist, is deleted, or neither of whose work items the caller sees answers issue.relation_not_found, whatever his role may do; one of which he sees a work item but may change neither, forbidden. Both are answered before any project is locked. Then the projects of both work items are locked together, and his role is decided again. Either work item of an archived project answers project.archived; then either archived work item, issue.archived. Both work items are changed last by the caller, and the activity of each says it no longer relates to the other, with the type it read. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.relation_not_found
+        - forbidden
+        - project.archived
+        - issue.archived
+        - server_busy
+      responses:
+        '204':
+          description: The relation is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/issues/{identifier}:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -3625,6 +3647,14 @@ components:
       in: path
       required: true
       description: A work item's id (IssueDetail.id).
+      schema:
+        type: string
+        format: uuid
+    RelationID:
+      name: relation_id
+      in: path
+      required: true
+      description: A relation's id (IssueRelation.id).
       schema:
         type: string
         format: uuid

@@ -263,10 +263,11 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // memberships P5b's writes end (endings); through SQL, the membership
 // states no store makes alone (partingStates). Through the API, gone
 // deleted by its admin, which soft-deletes its memberships and its
-// project, with its states, labels and work item, with it; then the checks
-// that the rows the cells rest on are there (preconditions), the states,
-// the labels, the work items and the relations among them (seededStates,
-// seededLabels, seededIssues, seededRelationRows).
+// project, with its states, labels, work items and relation, with it;
+// then the checks that the rows the cells rest on are there
+// (preconditions), the states, the labels, the work items and the
+// relations among them (seededStates, seededLabels, seededIssues,
+// seededRelationRows).
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.
