@@ -9,6 +9,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // updateIssue as bootstrap wires it stamps every row it writes at one
@@ -30,8 +31,7 @@ import (
 func TestUpdatingAWorkItemStampsItsRows(t *testing.T) {
 	w := newIssueWorld(t)
 	alice, bob, walt := w.ids["alice"], w.ids["bob"], w.ids["walt"]
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
-		`{"members":[{"member_id":"`+walt.String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "walt", w.web, shared.RoleMember)
 	item := w.newWorkItemIn(t, w.web, `{"name":"Fix","state_id":"`+w.todo.String()+`","assignee_ids":["`+alice.String()+`"],"label_ids":["`+
 		w.bug.String()+`"]}`)
 	before := time.Now().Truncate(time.Microsecond)

@@ -6,6 +6,8 @@ import (
 	"slices"
 	"testing"
 	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // listedRelations are the relations the account name lists of the work
@@ -47,8 +49,7 @@ type relationList struct {
 func TestARelationListShowsWhatTheCallerSees(t *testing.T) {
 	w := newIssueWorld(t)
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+ops.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["bob"].String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "bob", ops, shared.RoleMember)
 	lab := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Lab","identifier":"LAB","network":0}`)
 	near := w.newWorkItemIn(t, w.web, `{"name":"Near"}`)
 	mid := w.newWorkItemIn(t, w.web, `{"name":"Mid"}`)

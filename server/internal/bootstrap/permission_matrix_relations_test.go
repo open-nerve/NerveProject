@@ -107,16 +107,20 @@ var relationRows = rowsByID{path: "issue-relations", notFound: cellRelationNotFo
 
 // relationOf is the name of the relation of its project (projectOf) that a
 // column's cells delete, one of whose work items is the column's own
-// (issueOf): the one whose other work item the column sees as it sees its
-// own, so that its cells answer as on its own, but the guest's and the
-// workspace admin who is a guest's, on another's, who see neither. PA, PM,
-// PM+WA, WA-, WM-公, WG- and X, Blocked, whose other work item is the
-// private project's; the member who made one, his own (Member's); the
-// guest who sees every work item, WM-私 and P-前, the private project's
-// Secret; the guest on his own, and the workspace admin who is a guest on
-// another's, the guest's own (Guest's); the guest on another's, Others';
-// the workspace admin who is a guest on his own, his (Admin guest's); the
-// archived project's columns, Shelved; and the deleted workspace's, Gone.
+// (issueOf). Its other work item leaves each cell as it is on the
+// column's own: seen as the column's own is, or behind the refusal on it.
+// The guest on his own, from whom the guest rule hides the public
+// project's matrixIssue, and WM-公 and the archived project's member, the
+// workspace's member, whose membership of the private project
+// partingStates deleted, see only their own, and are refused it
+// (forbidden). PA, PM, PM+WA, WA-, WM-公, WG-, never a member and removed,
+// Blocked, whose other work item is the private project's; the member who
+// made one, his own (Member's); the guest who sees every work item, WM-私
+// and P-前, the private project's Secret; the guest on his own, and the
+// workspace admin who is a guest on another's, the guest's own (Guest's);
+// the guest on another's, Others'; the workspace admin who is a guest on
+// his own, his (Admin guest's); the archived project's columns, Shelved;
+// and the deleted workspace's, Gone.
 func relationOf(c caller) string {
 	switch c {
 	case callerCreator:

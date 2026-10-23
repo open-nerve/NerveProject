@@ -20,8 +20,7 @@ import (
 // relations.
 func nearAndFar(t *testing.T, w issueWorld) {
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+ops.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["bob"].String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "bob", ops, shared.RoleMember)
 	w.newWorkItemBy(t, "bob", w.web, `{"name":"Near"}`)
 	w.newWorkItemIn(t, ops, `{"name":"Far"}`)
 }
@@ -270,9 +269,10 @@ func TestTwoDeletionsOfARelationSerialize(t *testing.T) {
 // item it is decided on, since it writes on both. Relation deleted first:
 // Far's deletion waits for Ops' row, then finds the relation deleted and
 // leaves it as bob deleted it. Far deleted first: the relation's deletion,
-// which passed its precheck, waits for Ops' row, then reads the relation
-// again under its locks, finds it deleted with Far, by alice at Far's
-// moment, and is refused, 404 issue.relation_not_found, writing nothing.
+// which passed its precheck, waits for Ops' row, then reads Far again
+// under its locks, finds it deleted, and is refused, 404
+// issue.relation_not_found, writing nothing: the relation was deleted with
+// Far, by alice at Far's moment.
 func TestDeletingARelationAndItsOtherEndSerialize(t *testing.T) {
 	prepare := func(t *testing.T, w issueWorld) {
 		nearAndFar(t, w)

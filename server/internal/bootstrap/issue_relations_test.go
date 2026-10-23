@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // relationsOf is the path of the relations of the work item id.
@@ -126,8 +127,7 @@ func (w issueWorld) relationRows(t *testing.T, item uuid.UUID, at time.Time) []s
 func TestWorkItemsAreRelatedAcrossProjects(t *testing.T) {
 	w := newIssueWorld(t)
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+ops.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["bob"].String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "bob", ops, shared.RoleMember)
 	near := w.newWorkItemIn(t, w.web, `{"name":"Near"}`)
 	mid := w.newWorkItemIn(t, w.web, `{"name":"Mid"}`)
 	far := w.newWorkItemIn(t, ops, `{"name":"Far"}`)
@@ -205,8 +205,7 @@ func TestWhatAWorkItemMayNotBeRelatedTo(t *testing.T) {
 	shelved := w.doneWorkItem(t)
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/archive", "", http.StatusOK)
 	old := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Old", "OLD")
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+old.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["bob"].String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "bob", old, shared.RoleMember)
 	olds := w.newWorkItemIn(t, old, `{"name":"Old's"}`)
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+old.String()+"/archive", "", http.StatusOK)
 	labs := w.newWorkItemIn(t, createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Lab", "LAB"), `{"name":"Lab's"}`)

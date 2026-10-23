@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -65,8 +66,7 @@ func newIssueWorldWith(t *testing.T, configure func(cfg *config.Config)) issueWo
 	for name, role := range map[string]shared.Role{"bob": shared.RoleMember, "walt": shared.RoleMember, "wanda": shared.RoleAdmin} {
 		inWorkspaceOf(t, w.pool, w.web, w.ids[name], w.ids["alice"], role)
 	}
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["bob"].String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "bob", w.web, shared.RoleMember)
 	w.todo, w.done = stateID(t, w.pool, w.web, "Todo"), stateID(t, w.pool, w.web, "Done")
 	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/labels", `{"name":"Bug"}`, http.StatusCreated),
 		&created)
@@ -83,6 +83,14 @@ func (w issueWorld) send(t *testing.T, name, method, path, body string, want int
 		t.Fatalf("%s %s as %s = %d %s, want %d", method, path, name, status, answer, want)
 	}
 	return answer
+}
+
+// makeMember has alice make the account name a member of project, of
+// role, through the API (addProjectMembers).
+func (w issueWorld) makeMember(t *testing.T, name string, project uuid.UUID, role shared.Role) {
+	t.Helper()
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+project.String()+"/members",
+		fmt.Sprintf(`{"members":[{"member_id":"%s","role":%d}]}`, w.ids[name], role), http.StatusCreated)
 }
 
 // newWorkItem is the id of a work item alice creates in Web through the
@@ -119,8 +127,7 @@ func bobsWorkItem(t *testing.T, w issueWorld) {
 // an id after his, once alice has made him a member of Web: three rows,
 // his.
 func waltsWorkItem(t *testing.T, w issueWorld) {
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":15}]}`, http.StatusCreated)
+	w.makeMember(t, "walt", w.web, shared.RoleMember)
 	w.newWorkItemBy(t, "walt", w.web, `{"name":"Fix"}`)
 }
 
@@ -131,8 +138,7 @@ func waltsWorkItem(t *testing.T, w issueWorld) {
 // its guest he sees only his own work items (Grant.OwnOnly).
 func (w issueWorld) adminGuest(t *testing.T) {
 	t.Helper()
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":5}]}`, http.StatusCreated)
+	w.makeMember(t, "walt", w.web, shared.RoleGuest)
 	membership := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", w.acme, w.ids["walt"])[0]
 	w.send(t, "alice", http.MethodPatch, "/api/v0/workspace-members/"+membership.String(), `{"role":20}`, http.StatusOK)
 }

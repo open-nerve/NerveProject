@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // getIssueByIdentifier as bootstrap wires it (M4 design 3.7). In acme of
@@ -51,8 +53,7 @@ func TestAWorkItemIsFoundByItsIdentifier(t *testing.T) {
 		web3, w.done); err != nil {
 		t.Fatal(err)
 	}
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/members",
-		`{"members":[{"member_id":"`+w.ids["walt"].String()+`","role":5}]}`, http.StatusCreated)
+	w.makeMember(t, "walt", w.web, shared.RoleGuest)
 	w.send(t, "alice", http.MethodPost, "/api/v0/workspaces", `{"name":"Beta","slug":"beta"}`, http.StatusCreated)
 	betaOne := w.newWorkItemIn(t, createdProject(t, w.contract, w.base, w.tokens["alice"], "beta", "Web", "WEB"), `{"name":"Fix"}`)
 	betaDotted := w.newWorkItemIn(t, createdProject(t, w.contract, w.base, w.tokens["alice"], "beta", "Dotted", "İŞ"), `{"name":"Fix"}`)
