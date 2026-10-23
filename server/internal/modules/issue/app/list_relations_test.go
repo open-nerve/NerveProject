@@ -13,24 +13,24 @@ import (
 )
 
 // listing is newRelate's world with more work items: shelved, bob's,
-// archived, of web; mine, alice's, of ops; hidden, carol's, of lab, a
-// project alice does not see; boxed, alice's, of attic, an archived
-// project. web, the work item's own project, is archived too. ops shows
-// alice, its guest, only her own work items (Grant.OwnOnly): mine, not
-// carol's far. relations are the work item's relations as the store
-// answers them, in the order they were made, which is not the others' id
-// order: far's duplicate of it; its blocked_by mine; its relates_to
-// shelved; near's blocked_by it; hidden's relates_to it; boxed's
-// duplicate of it.
+// archived, of web; mine, alice's, of ops; hidden, carol's, and unseen,
+// bob's, of lab, a project alice does not see; boxed, alice's, of attic,
+// an archived project. web, the work item's own project, is archived too.
+// ops shows alice, its guest, only her own work items (Grant.OwnOnly):
+// mine, not carol's far. relations are the work item's relations as the
+// store answers them, in the order they were made, which is not the
+// others' id order: far's duplicate of it; its blocked_by mine; its
+// relates_to shelved; near's blocked_by it; hidden's relates_to it;
+// boxed's duplicate of it; its duplicate of unseen.
 type listing struct {
 	relating
-	shelved, mine, hidden, boxed domain.Issue
-	lab, attic                   uuid.UUID
-	relations                    []domain.Relation
+	shelved, mine, hidden, boxed, unseen domain.Issue
+	lab, attic                           uuid.UUID
+	relations                            []domain.Relation
 }
 
-// newListing is listIssueRelations over newListing's world, web's work
-// item 7, carol's, its work item.
+// newListing is listIssueRelations over listing's world, web's work item
+// 7, carol's, its work item.
 func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, listing) {
 	_, w, rel, id, r := newRelate()
 	l := listing{relating: r, lab: uuid.NewV7(), attic: uuid.NewV7()}
@@ -39,7 +39,8 @@ func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, l
 	l.mine = domain.Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops, SequenceID: 4, Name: "Mine", CreatedByID: &alice}
 	l.hidden = domain.Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: l.lab, SequenceID: 1, Name: "Hidden", CreatedByID: &carol}
 	l.boxed = domain.Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: l.attic, SequenceID: 2, Name: "Boxed", CreatedByID: &alice}
-	for _, o := range []domain.Issue{l.shelved, l.mine, l.hidden, l.boxed} {
+	l.unseen = domain.Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: l.lab, SequenceID: 2, Name: "Unseen", CreatedByID: &bob}
+	for _, o := range []domain.Issue{l.shelved, l.mine, l.hidden, l.boxed, l.unseen} {
 		w.issues.others[o.ID] = o
 	}
 	w.project.locked.Archived = true
@@ -50,10 +51,12 @@ func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, l
 	}
 	l.relations = []domain.Relation{made(0, ops, r.far.ID, id, domain.Duplicate), made(1, web, id, l.mine.ID, domain.BlockedBy),
 		made(2, web, id, l.shelved.ID, domain.RelatesTo), made(3, web, r.near.ID, id, domain.BlockedBy),
-		made(4, l.lab, l.hidden.ID, id, domain.RelatesTo), made(5, l.attic, l.boxed.ID, id, domain.Duplicate)}
+		made(4, l.lab, l.hidden.ID, id, domain.RelatesTo), made(5, l.attic, l.boxed.ID, id, domain.Duplicate),
+		made(6, web, id, l.unseen.ID, domain.Duplicate)}
 	rel.relations = l.relations
 	// The decisions: the work item's, then near's project, far's and lab's,
-	// as the others are read, in id order, each project once.
+	// as the others are read, in id order, each project once: lab's for
+	// hidden, not again for unseen.
 	w.auth.answers, w.auth.grants = []error{3: shared.ErrNotVisible}, []shared.Grant{2: ownOnly}
 	w.issues.counts = map[uuid.UUID]app.SubIssueCount{r.near.ID: {All: 2, Own: 1}, l.mine.ID: {All: 4, Own: 3}}
 	return app.NewListIssueRelations(w.locks, rel, w.project), w, rel, id, l
@@ -66,11 +69,11 @@ func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, l
 // the others' projects but web, the work item's own, are archived, in id
 // order: ops, lab and attic, of which attic is; issue.read decided on the
 // others' projects, each once, in the others' id order, shelved, archived,
-// and boxed, of attic, left out: web, ops, lab; then the others she sees
-// counted.
+// and boxed, of attic, left out: web, ops, lab, refused for hidden and so
+// not decided again for unseen; then the others she sees counted.
 func listed(id uuid.UUID, l listing) []string {
 	calls := []string{line("GetIssue", id), line("Authorize", alice, domain.ActionRead, acme, web), line("Relations", id),
-		line("GetIssues", []uuid.UUID{l.far.ID, l.mine.ID, l.shelved.ID, l.near.ID, l.hidden.ID, l.boxed.ID}),
+		line("GetIssues", []uuid.UUID{l.far.ID, l.mine.ID, l.shelved.ID, l.near.ID, l.hidden.ID, l.boxed.ID, l.unseen.ID}),
 		line("Archived", anys(sorted([]uuid.UUID{ops, l.lab, l.attic}))...)}
 	for _, p := range []uuid.UUID{web, ops, l.lab} {
 		calls = append(calls, line("Authorize", alice, domain.ActionRead, acme, p))
@@ -89,20 +92,29 @@ func listed(id uuid.UUID, l listing) []string {
 // in ops, her own sub-items; then near, which it blocks, every one of its
 // sub-items in web, which is archived but the work item's own. Shelved,
 // archived, is not shown, nor boxed, of another archived project, nor
-// far, which the guest rule hides from her in ops, nor hidden, of a
-// project she does not see.
+// far, which the guest rule hides from her in ops, nor hidden or unseen,
+// of a project she does not see. An archived work item's relations are
+// listed as any other's: the same answer, the same calls.
 func TestListIssueRelationsListsWhatTheCallerSees(t *testing.T) {
-	uc, w, _, id, l := newListing()
-	got, err := uc.Execute(as(alice), id)
-	mine, near := l.mine, l.near
-	mine.SubIssuesCount, near.SubIssuesCount = 3, 2
-	want := []app.IssueRelation{{ID: l.relations[1].ID, Type: domain.BlockedBy, Issue: mine, CreatedAt: l.relations[1].CreatedAt},
-		{ID: l.relations[3].ID, Type: domain.Blocking, Issue: near, CreatedAt: l.relations[3].CreatedAt}}
-	if err != nil || !reflect.DeepEqual(got, want) {
-		t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
-	}
-	if calls := listed(id, l); !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+	for _, tt := range []struct {
+		name     string
+		archived *time.Time // the work item's archiving
+	}{{"a work item", nil}, {"an archived work item", &earlier}} {
+		t.Run(tt.name, func(t *testing.T) {
+			uc, w, _, id, l := newListing()
+			w.issues.archivedAt = tt.archived
+			got, err := uc.Execute(as(alice), id)
+			mine, near := l.mine, l.near
+			mine.SubIssuesCount, near.SubIssuesCount = 3, 2
+			want := []app.IssueRelation{{ID: l.relations[1].ID, Type: domain.BlockedBy, Issue: mine, CreatedAt: l.relations[1].CreatedAt},
+				{ID: l.relations[3].ID, Type: domain.Blocking, Issue: near, CreatedAt: l.relations[3].CreatedAt}}
+			if err != nil || !reflect.DeepEqual(got, want) {
+				t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
+			}
+			if calls := listed(id, l); !slices.Equal(w.log.calls, calls) {
+				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+			}
+		})
 	}
 }
 

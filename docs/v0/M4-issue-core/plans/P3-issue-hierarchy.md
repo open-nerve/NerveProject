@@ -178,8 +178,8 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/app/list_relations.go`、`server/internal/modules/issue/app/list_relations_test.go`（新） | `ListIssueRelations` 和单元测试 | 12 |
 | `server/internal/bootstrap/issue_relation_lists_test.go`、`server/internal/bootstrap/issue_archived_projects_test.go`（新） | 关联的列表的组合测试；`Archived` 的转换 | 12 |
 | `server/internal/bootstrap/permission_matrix_seed_relations_test.go`（新） | 矩阵的种子的关联（Task 12）；删除的关联、"别人的"（Task 14） | 12、14 |
-| `server/internal/bootstrap/permission_matrix_seeded_test.go`（修改） | `seeded.relations`、`relation` | 12 |
-| `server/internal/bootstrap/project_writes_test.go`、`server/internal/bootstrap/issue_identifier_test.go`（修改） | `createdProjectFrom`：由体建项目、回答它的 `id`，`createdProject` 读它；私有的 Sec 由它建 | 12 |
+| `server/internal/bootstrap/permission_matrix_seeded_test.go`（修改） | `seeded.relations`、`relation`；`keyOfRow`：按行的 `id` 找它的键，`projectOfRow`、`seeded.workspaceOfRow`、`listsRelations` 读它 | 12 |
+| `server/internal/bootstrap/project_writes_test.go`、`server/internal/bootstrap/issue_identifier_test.go`、`server/internal/bootstrap/ending_world_test.go`、`server/internal/bootstrap/demotion_test.go`、`server/internal/bootstrap/project_wiring_test.go`（修改） | `createdProjectFrom`：由体建项目、回答它的 `id`，`createdProject` 读它；私有的 Sec、M3 的三处 Web 由它建 | 12 |
 | `server/internal/modules/issue/app/delete_relation.go`、`server/internal/modules/issue/app/delete_relation_test.go`、`server/internal/modules/issue/app/lock_either.go`（新） | `DeleteIssueRelation` 和单元测试；`both`、`eitherOf`、`eitherUnder`、`decideEither` | 13 |
 | `server/internal/modules/issue/domain/errors.go`（修改） | `ErrRelationNotFound` | 13 |
 | `server/internal/bootstrap/issue_relation_deletes_test.go`（新） | 删除关联的组合测试、访客规则 | 14 |
@@ -13607,7 +13607,7 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_archived_projects_test.go`、`server/internal/bootstrap/issue_relation_lists_test.go`、`server/internal/bootstrap/permission_matrix_seed_relations_test.go`、`server/internal/modules/issue/app/list_relations.go`、`server/internal/modules/issue/app/list_relations_test.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/issue_identifier_test.go`、`server/internal/bootstrap/issue_relation_locks_test.go`、`server/internal/bootstrap/issue_relations_test.go`、`server/internal/bootstrap/permission_matrix_relations_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/ports.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`、`server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`、`server/internal/modules/issue/app/fakes_across_test.go`、`server/internal/modules/issue/app/fakes_relations_test.go`、`server/internal/modules/issue/app/lock_across.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/seen.go`、`server/internal/modules/issue/module.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/module.go`
+- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/demotion_test.go`、`server/internal/bootstrap/ending_world_test.go`、`server/internal/bootstrap/issue_identifier_test.go`、`server/internal/bootstrap/issue_relation_locks_test.go`、`server/internal/bootstrap/issue_relations_test.go`、`server/internal/bootstrap/permission_matrix_relations_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/ports.go`、`server/internal/bootstrap/project_wiring_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`、`server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`、`server/internal/modules/issue/app/fakes_across_test.go`、`server/internal/modules/issue/app/fakes_relations_test.go`、`server/internal/modules/issue/app/lock_across.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/seen.go`、`server/internal/modules/issue/module.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`server/internal/modules/issue/adapter/postgres/gen/relations.sql.go`、`server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.14、第 3 节第 9、10、15、17 条；M4 设计 3.4、3.8、3.10、5.1、5.2、6.5、9.2）
@@ -13616,14 +13616,14 @@ Expected: 通过。
 - `issue/app`：`ports.go` 的 `RelationLister`（`Relations`、`GetIssues`（同 `IssueReader` 的））、`ArchivedProjects`（`Archived(ctx, projectIDs) (map[uuid.UUID]bool, error)`，嵌入 `ProjectPorts`）；`seen.go` 的 `Locks.seeEach(ctx, actor, items)`（不加锁：每个项目以 `issue.read` 判定一次（列表在它的项目上的判定，`issue.read` 不认创建者），再对每个工作项执行访客规则；看不到的项目、读不了的、访客规则隐藏的不在其中；交回各项目的 `Grant`）；`lock_across.go` 的 `ascending`（升序、各一次：`reachAll` 原来就地排序去重，`projectsBut` 是第二个使用者）；`list_relations.go`（新）：`ListIssueRelations`、`NewListIssueRelations(locks, relations, projects)`、`Execute(ctx, id)`：`Locks.see`（`issue.read`），读关联，读对方（`GetIssues`），问它们的项目（这个工作项的项目除外，`projectsBut`）是否已归档，去掉已归档的和在已归档的别的项目里的，`seeEach`，按 `Grant` 数（`seen`），照关联的次序回答。
 - `issue/adapter/postgres`：`queries/relations.sql` 的 `IssueRelations`（两个方向、未删除、如存的、`created_at, id` 的次序）；`relations.go` 的 `Relations`、`relationOf`。
 - `issue/adapter/http`：`handler.go` 的 `ListIssueRelationsUseCase`；`relations.go` 的 `ListIssueRelations`；`relations_test.go` 的拒绝合成 `TestIssueRelationsRefusals`（两个操作）。`issue/module.go` 接上（`d.Projects` 是它的 `ArchivedProjects`）。
-- `bootstrap`：`ports.go` 的 `issueProjects.Archived`；`issue_archived_projects_test.go`（新）；`issue_relation_lists_test.go`（新）；`issue_relations_test.go` 的 `TestTheGuestRuleHoldsForRelations` 加列表；矩阵：`permission_matrix_seed_relations_test.go`（新：`seededRelation`、`seededRelations` 的五条：Blocked、Guest's、Member's、Admin guest's、Secret，各是关联的列表的一种情形；`relationsOf`、`relations`、`seededRelationRows`），`permission_matrix_seeded_test.go` 的 `seeded.relations`、`relation`，`permission_matrix_test.go` 的 `prepareMatrix` 种下、读回它们；`permission_matrix_relations_test.go` 的 `listIssueRelations` 两行（`relationsListed`、`listsRelations`（回答用 Task 6 的 `listIn[answeredRelation]` 读））；`project_writes_test.go` 的 `createdProjectFrom`（由体建项目、回答它的 `id`：`createdProject` 读它；本 Task 的 Lab、Task 11 的 `issue_relation_locks_test.go` 的 Lab、P2 的 `issue_identifier_test.go` 的 Sec 这几个私有的项目都由它建，不各写一份）。
+- `bootstrap`：`ports.go` 的 `issueProjects.Archived`；`issue_archived_projects_test.go`（新）；`issue_relation_lists_test.go`（新）；`issue_relations_test.go` 的 `TestTheGuestRuleHoldsForRelations` 加列表；矩阵：`permission_matrix_seed_relations_test.go`（新：`seededRelation`、`seededRelations` 的五条：Blocked、Guest's、Member's、Admin guest's、Secret，各是关联的列表的一种情形；`relationsOf`、`relations`、`seededRelationRows`），`permission_matrix_seeded_test.go` 的 `seeded.relations`、`relation`，`permission_matrix_test.go` 的 `prepareMatrix` 种下、读回它们；`permission_matrix_relations_test.go` 的 `listIssueRelations` 两行（`relationsListed`、`listsRelations`（回答用 Task 6 的 `listIn[answeredRelation]` 读；对方的种子的键由 `permission_matrix_seeded_test.go` 的 `keyOfRow` 按行的 `id` 找，`projectOfRow`、`seeded.workspaceOfRow` 也读它，签名不变））；`project_writes_test.go` 的 `createdProjectFrom`（由体建项目、回答它的 `id`：`createdProject` 读它；本 Task 的 Lab、Task 11 的 `issue_relation_locks_test.go` 的 Lab、P2 的 `issue_identifier_test.go` 的 Sec 这几个私有的项目都由它建，不各写一份；M3 的 `ending_world_test.go`、`demotion_test.go` 的 Web 也由它建，体照旧（带 `project_lead_id`；`demotion_test.go` 不要它的 `id`），`project_wiring_test.go` 的 Web 由 `createdProject` 建（体就是它建的那个，计时的窗口照旧包着它））。
 - 测试的帮手：`fakes_relations_test.go` 的 `Relations`；`fakes_across_test.go` 的 `Archived`（从 `across` 和锁住的项目回答）。
 
 **Tests:**
-- 单元：`TestListIssueRelationsListsWhatTheCallerSees`（`listed` 的调用；mine（它被它阻塞，按 alice 在 ops 的样子数：只数她自己的子工作项）、near（它阻塞的，在 web：web 已归档，但它是这个工作项自己的项目）；已归档的 shelved、别的已归档的项目的 boxed、ops 里访客规则隐藏的 far、她看不到的项目的 hidden 都不在其中）、`TestListIssueRelationsRefusals`（与 `getIssue` 同样的拒绝，在读关联之前；读、判定、数、项目的读失败；没有关联的回答空的）。
+- 单元：`TestListIssueRelationsListsWhatTheCallerSees`（`listed` 的调用；mine（它被它阻塞，按 alice 在 ops 的样子数：只数她自己的子工作项）、near（它阻塞的，在 web：web 已归档，但它是这个工作项自己的项目）；已归档的 shelved、别的已归档的项目的 boxed、ops 里访客规则隐藏的 far、她看不到的项目 lab 的 hidden、unseen 都不在其中（lab 只判定一次：hidden 被拒之后 unseen 不再判定）；这个工作项已归档时回答和调用都相同：已归档的工作项的关联照样列出）、`TestListIssueRelationsRefusals`（与 `getIssue` 同样的拒绝，在读关联之前；读、判定、数、项目的读失败；没有关联的回答空的）。
 - 存储：`TestRelations`（两个方向、如存的、`(created_at, id)` 的次序；已删除的、别的工作项的不在；取消的读是它的失败）；`project` 的 `TestArchivedIssueProjects`（所问的未删除、已归档的；没问的、已删除的、没有的不在）、`TestAFailedReadIsAnErrorNotAnAnswer` 加一行。
 - HTTP：`TestListIssueRelations`、`TestIssueRelationsRefusals`。
-- 组合：`TestIssueProjectsConvertsArchivedProjects`；`TestARelationListShowsWhatTheCallerSees`（alice 列出 Near 的 Far、Mid（阻塞它）、Lab 的，按建的次序、各按 Near 读的类型；看不到 Lab 的 bob 只列出 Far、Mid；Far 列出 Near、Beside，Mid 列出 Near（它阻塞的）；已归档的 Shelved、已删除的 Gone 不在，Shelved 恢复之后又在；Ops 归档之后，Far（不是 Near 的项目的）不在 Near 的列表里，Far 自己的列表照样列出 Near、Beside（Far 自己的项目的）；只看自己的 walt（acme 的管理员、Web 的访客）把他的 His 关联到他的 Other，alice 把 Other 放到她的 Up 下：walt 列出的这条关联与 alice 列出的整个相同，只是内嵌的 Other 的 `parent_id` 为 `null`（Up 对他隐藏，Task 4 的 `seen`））；`TestTheGuestRuleHoldsForRelations`（walt 列出 His 的关联：只有 Mine，数 1 个子工作项，虽然排在前面的是同在 Web 的 Hers（每个项目判定一次，不以第一个工作项判定）；alice 列出 Hers、Mine，Mine 数 2 个）；`TestPermissionMatrix`（两行；种子的关联在每个格子的种子里，读回核对）、`TestThePermissionMatrixCoversEveryOperation`。
+- 组合：`TestIssueProjectsConvertsArchivedProjects`；`TestARelationListShowsWhatTheCallerSees`（alice 列出 Near 的 Far、Mid（阻塞它）、Lab 的，按建的次序、各按 Near 读的类型；看不到 Lab 的 bob 只列出 Far、Mid；Far 列出 Near、Beside，Mid 列出 Near（它阻塞的）；已归档的 Shelved、已删除的 Gone 不在，Shelved 自己的列表照样列出 Near（它是 Near 的 duplicate），Shelved 恢复之后又在；Ops 归档之后，Far（不是 Near 的项目的）不在 Near 的列表里，Far 自己的列表照样列出 Near、Beside（Far 自己的项目的）；只看自己的 walt（acme 的管理员、Web 的访客）把他的 His 关联到他的 Other，alice 把 Other 放到她的 Up 下：walt 列出的这条关联与 alice 列出的整个相同，只是内嵌的 Other 的 `parent_id` 为 `null`（Up 对他隐藏，Task 4 的 `seen`））；`TestTheGuestRuleHoldsForRelations`（walt 列出 His 的关联：只有 Mine，数 1 个子工作项，虽然排在前面的是同在 Web 的 Hers（每个项目判定一次，不以第一个工作项判定）；alice 列出 Hers、Mine，Mine 数 2 个）；`TestPermissionMatrix`（两行；种子的关联在每个格子的种子里，读回核对）、`TestThePermissionMatrixCoversEveryOperation`。
 
 - [ ] **Step 1: 契约和查询，生成**
 
@@ -13985,7 +13985,7 @@ func projectsBut(project uuid.UUID, items []domain.Issue) []uuid.UUID {
 }
 ````
 
-`server/internal/modules/issue/app/list_relations_test.go`（新文件，159 行）：
+`server/internal/modules/issue/app/list_relations_test.go`（新文件，171 行）：
 
 ````file server/internal/modules/issue/app/list_relations_test.go
 package app_test
@@ -14003,24 +14003,24 @@ import (
 )
 
 // listing is newRelate's world with more work items: shelved, bob's,
-// archived, of web; mine, alice's, of ops; hidden, carol's, of lab, a
-// project alice does not see; boxed, alice's, of attic, an archived
-// project. web, the work item's own project, is archived too. ops shows
-// alice, its guest, only her own work items (Grant.OwnOnly): mine, not
-// carol's far. relations are the work item's relations as the store
-// answers them, in the order they were made, which is not the others' id
-// order: far's duplicate of it; its blocked_by mine; its relates_to
-// shelved; near's blocked_by it; hidden's relates_to it; boxed's
-// duplicate of it.
+// archived, of web; mine, alice's, of ops; hidden, carol's, and unseen,
+// bob's, of lab, a project alice does not see; boxed, alice's, of attic,
+// an archived project. web, the work item's own project, is archived too.
+// ops shows alice, its guest, only her own work items (Grant.OwnOnly):
+// mine, not carol's far. relations are the work item's relations as the
+// store answers them, in the order they were made, which is not the
+// others' id order: far's duplicate of it; its blocked_by mine; its
+// relates_to shelved; near's blocked_by it; hidden's relates_to it;
+// boxed's duplicate of it; its duplicate of unseen.
 type listing struct {
 	relating
-	shelved, mine, hidden, boxed domain.Issue
-	lab, attic                   uuid.UUID
-	relations                    []domain.Relation
+	shelved, mine, hidden, boxed, unseen domain.Issue
+	lab, attic                           uuid.UUID
+	relations                            []domain.Relation
 }
 
-// newListing is listIssueRelations over newListing's world, web's work
-// item 7, carol's, its work item.
+// newListing is listIssueRelations over listing's world, web's work item
+// 7, carol's, its work item.
 func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, listing) {
 	_, w, rel, id, r := newRelate()
 	l := listing{relating: r, lab: uuid.NewV7(), attic: uuid.NewV7()}
@@ -14029,7 +14029,8 @@ func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, l
 	l.mine = domain.Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops, SequenceID: 4, Name: "Mine", CreatedByID: &alice}
 	l.hidden = domain.Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: l.lab, SequenceID: 1, Name: "Hidden", CreatedByID: &carol}
 	l.boxed = domain.Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: l.attic, SequenceID: 2, Name: "Boxed", CreatedByID: &alice}
-	for _, o := range []domain.Issue{l.shelved, l.mine, l.hidden, l.boxed} {
+	l.unseen = domain.Issue{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: l.lab, SequenceID: 2, Name: "Unseen", CreatedByID: &bob}
+	for _, o := range []domain.Issue{l.shelved, l.mine, l.hidden, l.boxed, l.unseen} {
 		w.issues.others[o.ID] = o
 	}
 	w.project.locked.Archived = true
@@ -14040,10 +14041,12 @@ func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, l
 	}
 	l.relations = []domain.Relation{made(0, ops, r.far.ID, id, domain.Duplicate), made(1, web, id, l.mine.ID, domain.BlockedBy),
 		made(2, web, id, l.shelved.ID, domain.RelatesTo), made(3, web, r.near.ID, id, domain.BlockedBy),
-		made(4, l.lab, l.hidden.ID, id, domain.RelatesTo), made(5, l.attic, l.boxed.ID, id, domain.Duplicate)}
+		made(4, l.lab, l.hidden.ID, id, domain.RelatesTo), made(5, l.attic, l.boxed.ID, id, domain.Duplicate),
+		made(6, web, id, l.unseen.ID, domain.Duplicate)}
 	rel.relations = l.relations
 	// The decisions: the work item's, then near's project, far's and lab's,
-	// as the others are read, in id order, each project once.
+	// as the others are read, in id order, each project once: lab's for
+	// hidden, not again for unseen.
 	w.auth.answers, w.auth.grants = []error{3: shared.ErrNotVisible}, []shared.Grant{2: ownOnly}
 	w.issues.counts = map[uuid.UUID]app.SubIssueCount{r.near.ID: {All: 2, Own: 1}, l.mine.ID: {All: 4, Own: 3}}
 	return app.NewListIssueRelations(w.locks, rel, w.project), w, rel, id, l
@@ -14056,11 +14059,11 @@ func newListing() (*app.ListIssueRelations, *world, *fakeRelations, uuid.UUID, l
 // the others' projects but web, the work item's own, are archived, in id
 // order: ops, lab and attic, of which attic is; issue.read decided on the
 // others' projects, each once, in the others' id order, shelved, archived,
-// and boxed, of attic, left out: web, ops, lab; then the others she sees
-// counted.
+// and boxed, of attic, left out: web, ops, lab, refused for hidden and so
+// not decided again for unseen; then the others she sees counted.
 func listed(id uuid.UUID, l listing) []string {
 	calls := []string{line("GetIssue", id), line("Authorize", alice, domain.ActionRead, acme, web), line("Relations", id),
-		line("GetIssues", []uuid.UUID{l.far.ID, l.mine.ID, l.shelved.ID, l.near.ID, l.hidden.ID, l.boxed.ID}),
+		line("GetIssues", []uuid.UUID{l.far.ID, l.mine.ID, l.shelved.ID, l.near.ID, l.hidden.ID, l.boxed.ID, l.unseen.ID}),
 		line("Archived", anys(sorted([]uuid.UUID{ops, l.lab, l.attic}))...)}
 	for _, p := range []uuid.UUID{web, ops, l.lab} {
 		calls = append(calls, line("Authorize", alice, domain.ActionRead, acme, p))
@@ -14079,20 +14082,29 @@ func listed(id uuid.UUID, l listing) []string {
 // in ops, her own sub-items; then near, which it blocks, every one of its
 // sub-items in web, which is archived but the work item's own. Shelved,
 // archived, is not shown, nor boxed, of another archived project, nor
-// far, which the guest rule hides from her in ops, nor hidden, of a
-// project she does not see.
+// far, which the guest rule hides from her in ops, nor hidden or unseen,
+// of a project she does not see. An archived work item's relations are
+// listed as any other's: the same answer, the same calls.
 func TestListIssueRelationsListsWhatTheCallerSees(t *testing.T) {
-	uc, w, _, id, l := newListing()
-	got, err := uc.Execute(as(alice), id)
-	mine, near := l.mine, l.near
-	mine.SubIssuesCount, near.SubIssuesCount = 3, 2
-	want := []app.IssueRelation{{ID: l.relations[1].ID, Type: domain.BlockedBy, Issue: mine, CreatedAt: l.relations[1].CreatedAt},
-		{ID: l.relations[3].ID, Type: domain.Blocking, Issue: near, CreatedAt: l.relations[3].CreatedAt}}
-	if err != nil || !reflect.DeepEqual(got, want) {
-		t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
-	}
-	if calls := listed(id, l); !slices.Equal(w.log.calls, calls) {
-		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+	for _, tt := range []struct {
+		name     string
+		archived *time.Time // the work item's archiving
+	}{{"a work item", nil}, {"an archived work item", &earlier}} {
+		t.Run(tt.name, func(t *testing.T) {
+			uc, w, _, id, l := newListing()
+			w.issues.archivedAt = tt.archived
+			got, err := uc.Execute(as(alice), id)
+			mine, near := l.mine, l.near
+			mine.SubIssuesCount, near.SubIssuesCount = 3, 2
+			want := []app.IssueRelation{{ID: l.relations[1].ID, Type: domain.BlockedBy, Issue: mine, CreatedAt: l.relations[1].CreatedAt},
+				{ID: l.relations[3].ID, Type: domain.Blocking, Issue: near, CreatedAt: l.relations[3].CreatedAt}}
+			if err != nil || !reflect.DeepEqual(got, want) {
+				t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
+			}
+			if calls := listed(id, l); !slices.Equal(w.log.calls, calls) {
+				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+			}
+		})
 	}
 }
 
@@ -14603,6 +14615,40 @@ func TestRelations(t *testing.T) {
 
 - [ ] **Step 5: 组合和矩阵的种子**
 
+`server/internal/bootstrap/demotion_test.go`（修改，1 处）：
+
+````old server/internal/bootstrap/demotion_test.go
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/"+slug+"/projects", alice,
+		`{"name":"Web","identifier":"WEB","project_lead_id":"`+bobID.String()+`"}`); status != http.StatusCreated {
+		t.Fatalf("creating %s's project = %d %s", slug, status, body)
+	}
+````
+````new server/internal/bootstrap/demotion_test.go
+	createdProjectFrom(t, contract, base, alice, slug, `{"name":"Web","identifier":"WEB","project_lead_id":"`+bobID.String()+`"}`)
+````
+
+`server/internal/bootstrap/ending_world_test.go`（修改，2 处）：
+
+````old server/internal/bootstrap/ending_world_test.go
+	status, body := call(t, contract, http.MethodPost, w.base+"/api/v0/workspaces/acme/projects", w.tokens["alice"],
+````
+````new server/internal/bootstrap/ending_world_test.go
+	w.web = createdProjectFrom(t, contract, w.base, w.tokens["alice"], "acme",
+````
+````old server/internal/bootstrap/ending_world_test.go
+	var web struct {
+		ID uuid.UUID `json:"id"`
+	}
+	if status != http.StatusCreated {
+		t.Fatalf("creating Web = %d %s", status, body)
+	}
+	decodeAnswer(t, body, &web)
+	w.web, w.ops = web.ID, createdProject(t, contract, w.base, w.tokens["bob"], "acme", "Ops", "OPS")
+````
+````new server/internal/bootstrap/ending_world_test.go
+	w.ops = createdProject(t, contract, w.base, w.tokens["bob"], "acme", "Ops", "OPS")
+````
+
 `server/internal/bootstrap/issue_archived_projects_test.go`（新文件，44 行）：
 
 ````file server/internal/bootstrap/issue_archived_projects_test.go
@@ -14671,7 +14717,7 @@ func TestIssueProjectsConvertsArchivedProjects(t *testing.T) {
 	secOne := w.newWorkItemIn(t, sec, `{"name":"Fix"}`)
 ````
 
-`server/internal/bootstrap/issue_relation_lists_test.go`（新文件，105 行）：
+`server/internal/bootstrap/issue_relation_lists_test.go`（新文件，106 行）：
 
 ````file server/internal/bootstrap/issue_relation_lists_test.go
 package bootstrap
@@ -14712,13 +14758,14 @@ type relationList struct {
 // relations in the order they were made, each as Near reads it: Far, Mid,
 // which blocks it, and Lab's; bob, who does not see Lab, lists Far and
 // Mid alone. Far lists Near and Beside, and Mid Near, which it blocks.
-// Shelved unarchived shows again. Once Ops is archived, Far, of a project
-// other than Near's, is no longer in Near's list, but Far's own list
-// still shows Near and Beside, of Far's own project. walt, acme's admin
-// and Web's guest (adminGuest), who sees only his own work items in Web,
-// relates his His to his Other, which alice puts under her Up: he lists
-// the relation as alice does, compared whole, but with Other under none,
-// since Up is hidden from him.
+// Archived, Shelved is in no other's list, but its own still shows Near,
+// whose duplicate it is. Unarchived, it shows again. Once Ops is
+// archived, Far, of a project other than Near's, is no longer in Near's
+// list, but Far's own list still shows Near and Beside, of Far's own
+// project. walt, acme's admin and Web's guest (adminGuest), who sees only
+// his own work items in Web, relates his His to his Other, which alice
+// puts under her Up: he lists the relation as alice does, compared whole,
+// but with Other under none, since Up is hidden from him.
 func TestARelationListShowsWhatTheCallerSees(t *testing.T) {
 	w := newIssueWorld(t)
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -14750,7 +14797,7 @@ func TestARelationListShowsWhatTheCallerSees(t *testing.T) {
 	lists("at first", relationList{"alice", near, []string{"relates_to Far", "blocked_by Mid", "duplicate Lab's"}},
 		relationList{"bob", near, []string{"relates_to Far", "blocked_by Mid"}},
 		relationList{"bob", far, []string{"relates_to Near", "relates_to Beside"}},
-		relationList{"bob", mid, []string{"blocking Near"}})
+		relationList{"bob", mid, []string{"blocking Near"}}, relationList{"alice", shelved, []string{"duplicate Near"}})
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/unarchive", "", http.StatusOK)
 	lists("Shelved unarchived", relationList{"bob", near, []string{"relates_to Far", "blocked_by Mid", "duplicate Shelved"}})
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+ops.String()+"/archive", "", http.StatusOK)
@@ -14899,15 +14946,14 @@ var relationsListed = map[caller][]string{
 }
 
 // listsRelations: the relations of the column's work item it sees, as
-// relationsListed has them.
+// relationsListed has them, each other work item by its seeded row's key
+// (keyOfRow), or by its id when no seeded row is it.
 func listsRelations(t *testing.T, c caller, s seeded, answer string) {
 	listed := []string{}
 	for _, r := range listIn[answeredRelation](t, answer) {
-		other := r.Issue.ID.String()
-		for key, id := range s.issues {
-			if id == r.Issue.ID {
-				other = key
-			}
+		other, ok := keyOfRow(s.issues, r.Issue.ID)
+		if !ok {
+			other = r.Issue.ID.String()
 		}
 		listed = append(listed, r.RelationType+" "+other)
 	}
@@ -15003,7 +15049,7 @@ func (s issueSeed) seededRelationRows(sd seeded) {
 }
 ````
 
-`server/internal/bootstrap/permission_matrix_seeded_test.go`（修改，6 处）：
+`server/internal/bootstrap/permission_matrix_seeded_test.go`（修改，8 处）：
 
 ````old server/internal/bootstrap/permission_matrix_seeded_test.go
 // work item, by the project's key and its name; and each account, by its
@@ -15068,7 +15114,44 @@ func (s seeded) relation(key, name string) uuid.UUID {
 	return id
 }
 
+// keyOfRow is the key of id, a row of rows: false for an id none of rows
+// has.
+func keyOfRow(rows map[string]uuid.UUID, id uuid.UUID) (string, bool) {
+	for key, seededID := range rows {
+		if seededID == id {
+			return key, true
+		}
+	}
+	return "", false
+}
+
 // projectOfRow is the key of the project of id, a row of rows, which are
+````
+````old server/internal/bootstrap/permission_matrix_seeded_test.go
+	for key, seededID := range rows {
+		if seededID == id {
+			project, _, _ := strings.Cut(key, "|")
+			return project, true
+		}
+	}
+	return "", false
+````
+````new server/internal/bootstrap/permission_matrix_seeded_test.go
+	key, ok := keyOfRow(rows, id)
+	project, _, _ := strings.Cut(key, "|")
+	return project, ok
+````
+````old server/internal/bootstrap/permission_matrix_seeded_test.go
+		for key, seededID := range rows {
+			if seededID == id {
+				slug, _, _ := strings.Cut(key, "/")
+				return slug, true
+			}
+````
+````new server/internal/bootstrap/permission_matrix_seeded_test.go
+		if key, ok := keyOfRow(rows, id); ok {
+			slug, _, _ := strings.Cut(key, "/")
+			return slug, true
 ````
 
 `server/internal/bootstrap/permission_matrix_test.go`（修改，3 处）：
@@ -15130,6 +15213,43 @@ func (p issueProjects) Archived(ctx context.Context, ids []uuid.UUID) (map[uuid.
 // issueWorkspaces is workspace's WorkspaceDirectory as issue's: the same
 ````
 
+`server/internal/bootstrap/project_wiring_test.go`（修改，4 处）：
+
+````old server/internal/bootstrap/project_wiring_test.go
+	"time"
+	"uuid"
+````
+````new server/internal/bootstrap/project_wiring_test.go
+	"time"
+````
+````old server/internal/bootstrap/project_wiring_test.go
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Web","identifier":"WEB"}`)
+	after := time.Now()
+	if status != http.StatusCreated {
+		t.Fatalf("creating Web = %d %s", status, body)
+	}
+	var web struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, body, &web)
+````
+````new server/internal/bootstrap/project_wiring_test.go
+	web := createdProject(t, contract, base, alice, "acme", "Web", "WEB")
+	after := time.Now()
+````
+````old server/internal/bootstrap/project_wiring_test.go
+	if err := pool.QueryRow(context.Background(), "SELECT created_at FROM projects WHERE id = $1", web.ID).Scan(&createdAt); err != nil {
+````
+````new server/internal/bootstrap/project_wiring_test.go
+	if err := pool.QueryRow(context.Background(), "SELECT created_at FROM projects WHERE id = $1", web).Scan(&createdAt); err != nil {
+````
+````old server/internal/bootstrap/project_wiring_test.go
+	status, body = call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Ops","identifier":"OPS"}`)
+````
+````new server/internal/bootstrap/project_wiring_test.go
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Ops","identifier":"OPS"}`)
+````
+
 `server/internal/bootstrap/project_writes_test.go`（修改，4 处）：
 
 ````old server/internal/bootstrap/project_writes_test.go
@@ -15171,7 +15291,7 @@ func createdProjectFrom(t *testing.T, contract *apitest.Contract, base, token, s
 Run: `go -C server test -count=1 ./internal/modules/issue/... ./internal/modules/project/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestARelationListShowsWhatTheCallerSees$|TestTheGuestRuleHoldsForRelations$|TestARelationLocksNoProjectItDoesNotReach$|TestAWorkItemIsFoundByItsIdentifier$|TestIssueProjectsConvertsArchivedProjects$|TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestARelationListShowsWhatTheCallerSees$|TestTheGuestRuleHoldsForRelations$|TestARelationLocksNoProjectItDoesNotReach$|TestAWorkItemIsFoundByItsIdentifier$|TestCreateProjectRunsOnTheWiredClockAndTransaction$|TestDemotingToGuestDemotesInTheWorkspacesProjects$|TestAnEndingEndsTheMembershipsAndLeavesNoInvitation$|TestIssueProjectsConvertsArchivedProjects$|TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -15192,7 +15312,7 @@ Expected: 通过。
 - [ ] **Step 7: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/bootstrap/issue_archived_projects_test.go server/internal/bootstrap/issue_identifier_test.go server/internal/bootstrap/issue_relation_lists_test.go server/internal/bootstrap/issue_relation_locks_test.go server/internal/bootstrap/issue_relations_test.go server/internal/bootstrap/permission_matrix_relations_test.go server/internal/bootstrap/permission_matrix_seed_relations_test.go server/internal/bootstrap/permission_matrix_seeded_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/project_writes_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/relations.go server/internal/modules/issue/adapter/http/relations_test.go server/internal/modules/issue/adapter/postgres/queries/relations.sql server/internal/modules/issue/adapter/postgres/relations.go server/internal/modules/issue/adapter/postgres/relations_test.go server/internal/modules/issue/app/fakes_across_test.go server/internal/modules/issue/app/fakes_relations_test.go server/internal/modules/issue/app/list_relations.go server/internal/modules/issue/app/list_relations_test.go server/internal/modules/issue/app/lock_across.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/seen.go server/internal/modules/issue/module.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/issue_ports.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/queries/issue_ports.sql server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/bootstrap/demotion_test.go server/internal/bootstrap/ending_world_test.go server/internal/bootstrap/issue_archived_projects_test.go server/internal/bootstrap/issue_identifier_test.go server/internal/bootstrap/issue_relation_lists_test.go server/internal/bootstrap/issue_relation_locks_test.go server/internal/bootstrap/issue_relations_test.go server/internal/bootstrap/permission_matrix_relations_test.go server/internal/bootstrap/permission_matrix_seed_relations_test.go server/internal/bootstrap/permission_matrix_seeded_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/project_wiring_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/relations.go server/internal/modules/issue/adapter/http/relations_test.go server/internal/modules/issue/adapter/postgres/queries/relations.sql server/internal/modules/issue/adapter/postgres/relations.go server/internal/modules/issue/adapter/postgres/relations_test.go server/internal/modules/issue/app/fakes_across_test.go server/internal/modules/issue/app/fakes_relations_test.go server/internal/modules/issue/app/list_relations.go server/internal/modules/issue/app/list_relations_test.go server/internal/modules/issue/app/lock_across.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/seen.go server/internal/modules/issue/module.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/issue_ports.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/queries/issue_ports.sql server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): listIssueRelations shows the relations whose other work item the caller sees
@@ -15232,6 +15352,8 @@ Expected: 通过。
 | `T12.16` | `bootstrap` 交给 `issue` 的已归档项目是空的 | `internal/bootstrap` 的 `TestIssueProjectsConvertsArchivedProjects`（`make test`）、`internal/bootstrap` 的 `TestARelationListShowsWhatTheCallerSees`（`make test`） | 单元；组合 |
 | `T12.17` | `GET` 回答没有关联 | `internal/modules/issue/adapter/http` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestARelationListShowsWhatTheCallerSees`（`make test`） | 单元；组合 |
 | `T12.18` | 关联的列表按不带访客规则的授权数另一端的子工作项 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestTheGuestRuleHoldsForRelations`（`make test`） | 单元；组合 |
+| `T12.19` | 已归档的工作项的关联列表答成空的 | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestARelationListShowsWhatTheCallerSees`（`make test`） | 单元；组合 |
+| `T12.20` | `seeEach` 对被拒的项目里的每个工作项都再判定一次 `issue.read` | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 
 本 Task 的检查也发现较早的 Task 的变异 `T4.12`（列在各自的 Task 的表里，标"（Task 12 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=12`）。
 

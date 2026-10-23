@@ -36,13 +36,14 @@ type relationList struct {
 // relations in the order they were made, each as Near reads it: Far, Mid,
 // which blocks it, and Lab's; bob, who does not see Lab, lists Far and
 // Mid alone. Far lists Near and Beside, and Mid Near, which it blocks.
-// Shelved unarchived shows again. Once Ops is archived, Far, of a project
-// other than Near's, is no longer in Near's list, but Far's own list
-// still shows Near and Beside, of Far's own project. walt, acme's admin
-// and Web's guest (adminGuest), who sees only his own work items in Web,
-// relates his His to his Other, which alice puts under her Up: he lists
-// the relation as alice does, compared whole, but with Other under none,
-// since Up is hidden from him.
+// Archived, Shelved is in no other's list, but its own still shows Near,
+// whose duplicate it is. Unarchived, it shows again. Once Ops is
+// archived, Far, of a project other than Near's, is no longer in Near's
+// list, but Far's own list still shows Near and Beside, of Far's own
+// project. walt, acme's admin and Web's guest (adminGuest), who sees only
+// his own work items in Web, relates his His to his Other, which alice
+// puts under her Up: he lists the relation as alice does, compared whole,
+// but with Other under none, since Up is hidden from him.
 func TestARelationListShowsWhatTheCallerSees(t *testing.T) {
 	w := newIssueWorld(t)
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -74,7 +75,7 @@ func TestARelationListShowsWhatTheCallerSees(t *testing.T) {
 	lists("at first", relationList{"alice", near, []string{"relates_to Far", "blocked_by Mid", "duplicate Lab's"}},
 		relationList{"bob", near, []string{"relates_to Far", "blocked_by Mid"}},
 		relationList{"bob", far, []string{"relates_to Near", "relates_to Beside"}},
-		relationList{"bob", mid, []string{"blocking Near"}})
+		relationList{"bob", mid, []string{"blocking Near"}}, relationList{"alice", shelved, []string{"duplicate Near"}})
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/unarchive", "", http.StatusOK)
 	lists("Shelved unarchived", relationList{"bob", near, []string{"relates_to Far", "blocked_by Mid", "duplicate Shelved"}})
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+ops.String()+"/archive", "", http.StatusOK)

@@ -295,16 +295,23 @@ func (s seeded) relation(key, name string) uuid.UUID {
 	return id
 }
 
-// projectOfRow is the key of the project of id, a row of rows, which are
-// keyed by the project's key, then "|": false for an id none of rows has.
-func projectOfRow(rows map[string]uuid.UUID, id uuid.UUID) (string, bool) {
+// keyOfRow is the key of id, a row of rows: false for an id none of rows
+// has.
+func keyOfRow(rows map[string]uuid.UUID, id uuid.UUID) (string, bool) {
 	for key, seededID := range rows {
 		if seededID == id {
-			project, _, _ := strings.Cut(key, "|")
-			return project, true
+			return key, true
 		}
 	}
 	return "", false
+}
+
+// projectOfRow is the key of the project of id, a row of rows, which are
+// keyed by the project's key, then "|": false for an id none of rows has.
+func projectOfRow(rows map[string]uuid.UUID, id uuid.UUID) (string, bool) {
+	key, ok := keyOfRow(rows, id)
+	project, _, _ := strings.Cut(key, "|")
+	return project, ok
 }
 
 // account is the id of the account of matrixAccounts c, which prepareMatrix
@@ -352,11 +359,9 @@ func (p *fatalProbe) Fatalf(format string, args ...any) {
 // false for an id no seeded row has.
 func (s seeded) workspaceOfRow(id uuid.UUID) (string, bool) {
 	for _, rows := range []map[string]uuid.UUID{s.memberships, s.invitations} {
-		for key, seededID := range rows {
-			if seededID == id {
-				slug, _, _ := strings.Cut(key, "/")
-				return slug, true
-			}
+		if key, ok := keyOfRow(rows, id); ok {
+			slug, _, _ := strings.Cut(key, "/")
+			return slug, true
 		}
 	}
 	return "", false

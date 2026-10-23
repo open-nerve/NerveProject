@@ -103,15 +103,14 @@ var relationsListed = map[caller][]string{
 }
 
 // listsRelations: the relations of the column's work item it sees, as
-// relationsListed has them.
+// relationsListed has them, each other work item by its seeded row's key
+// (keyOfRow), or by its id when no seeded row is it.
 func listsRelations(t *testing.T, c caller, s seeded, answer string) {
 	listed := []string{}
 	for _, r := range listIn[answeredRelation](t, answer) {
-		other := r.Issue.ID.String()
-		for key, id := range s.issues {
-			if id == r.Issue.ID {
-				other = key
-			}
+		other, ok := keyOfRow(s.issues, r.Issue.ID)
+		if !ok {
+			other = r.Issue.ID.String()
 		}
 		listed = append(listed, r.RelationType+" "+other)
 	}

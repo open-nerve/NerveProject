@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"testing"
 	"time"
-	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -28,17 +27,10 @@ func TestCreateProjectRunsOnTheWiredClockAndTransaction(t *testing.T) {
 		t.Fatalf("creating acme = %d %s", status, body)
 	}
 	before := time.Now().Truncate(time.Microsecond)
-	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Web","identifier":"WEB"}`)
+	web := createdProject(t, contract, base, alice, "acme", "Web", "WEB")
 	after := time.Now()
-	if status != http.StatusCreated {
-		t.Fatalf("creating Web = %d %s", status, body)
-	}
-	var web struct {
-		ID uuid.UUID `json:"id"`
-	}
-	decodeAnswer(t, body, &web)
 	var createdAt time.Time
-	if err := pool.QueryRow(context.Background(), "SELECT created_at FROM projects WHERE id = $1", web.ID).Scan(&createdAt); err != nil {
+	if err := pool.QueryRow(context.Background(), "SELECT created_at FROM projects WHERE id = $1", web).Scan(&createdAt); err != nil {
 		t.Fatal(err)
 	}
 	if createdAt.Before(before) || createdAt.After(after) {
@@ -58,7 +50,7 @@ func TestCreateProjectRunsOnTheWiredClockAndTransaction(t *testing.T) {
 	if _, err := pool.Exec(context.Background(), "ALTER TABLE states ADD CONSTRAINT no_states CHECK (false) NOT VALID"); err != nil {
 		t.Fatal(err)
 	}
-	status, body = call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Ops","identifier":"OPS"}`)
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Ops","identifier":"OPS"}`)
 	if got := rows(); status != http.StatusInternalServerError || got != want {
 		t.Errorf("creating Ops while the states fail = %d %s, rows %s; want 500 and the rows as they were, %s", status, body, got, want)
 	}
