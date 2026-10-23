@@ -172,6 +172,10 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `issue_labels` | 10 列照搬（M4/P1a，`00017_issue_issue_labels.sql`）；主键名 `issue_labels_pkey`（Plane 是 `issue_label_pkey`） | M4 设计 4.4 |
 | `issue_labels` | `workspace_id`、`project_id`、`issue_id`、`label_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 二·全局（模型的 `on_delete`） |
 | `issue_labels` | **新增**部分唯一索引 `issue_labels_issue_id_label_id_key ON (issue_id, label_id) WHERE deleted_at IS NULL`；外键列的索引只留不带条件的 `issue_labels_issue_id_idx`、`issue_labels_label_id_idx`、`issue_labels_workspace_id_idx`、`issue_labels_project_id_idx` | Plane 在数据库层没有这个约束，同一个标签可以挂两次（M4 设计 4.4）；物理级联要不带条件的索引，标签的也是 |
+| `issue_relations` | 11 列照搬（M4/P3，`00020_issue_issue_relations.sql`） | M4 设计 4.6 |
+| `issue_relations` | `workspace_id`、`project_id`、`issue_id`、`related_issue_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局）；`project_id` 是存储的 `issue_id` 那一端的项目 | 二·全局（模型的 `on_delete`）；Plane 写请求路径里的项目（M4 设计 3.10） |
+| `issue_relations` | `relation_type`：不设默认值（Plane 的模型默认 `blocked_by`），新加 `CHECK (relation_type IN ('blocked_by', 'duplicate', 'relates_to'))`；新加 `issue_relations_not_self_check CHECK (issue_id <> related_issue_id)` | 只有页面的四种类型，阻塞反过来存为对方的 `blocked_by`；工作项不能关联自己（M4 设计 3.10、4.6） |
+| `issue_relations` | 部分唯一索引 `issue_relation_unique_issue_related_issue_when_deleted_at_null ON (issue_id, related_issue_id)` 改为不分方向的 `issue_relations_pair_key ON (LEAST(issue_id, related_issue_id), GREATEST(issue_id, related_issue_id)) WHERE deleted_at IS NULL`，去掉 `(issue_id, related_issue_id, deleted_at)` 的唯一约束（二·全局）；外键列的索引只留不带条件的 `issue_relations_issue_id_idx`、`issue_relations_related_issue_id_idx`、`issue_relations_workspace_id_idx`、`issue_relations_project_id_idx` | 一对工作项之间至多一条关联，不论类型和方向（Plane 的键有方向，A 被 B 阻塞和 B 被 A 阻塞可以并存）；两个方向的读取和物理级联按两列找行（M4 设计 3.10、4.6） |
 | `issue_subscribers` | 10 列照搬（M4/P1a，`00018_issue_issue_subscribers.sql`） | M4 设计 4.5 |
 | `issue_subscribers` | `workspace_id`、`project_id`、`issue_id`、`subscriber_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 二·全局（模型的 `on_delete`）；v0 不物理删除账户，`subscriber_id` 的 `CASCADE` 不会触发 |
 | `issue_subscribers` | 部分唯一索引照搬，改名为 `issue_subscribers_issue_id_subscriber_id_key ON (issue_id, subscriber_id) WHERE deleted_at IS NULL`（Plane 是 `issue_subscriber_unique_issue_subscriber_when_deleted_at_null`），去掉 `(issue_id, subscriber_id, deleted_at)` 的唯一约束（二·全局）；新加 `issue_subscribers_subscriber_id_idx ON (subscriber_id) WHERE deleted_at IS NULL`，外键列的索引只留不带条件的 `issue_subscribers_issue_id_idx`、`issue_subscribers_workspace_id_idx`、`issue_subscribers_project_id_idx` | "已关注"、按关注者筛选；物理级联要不带条件的索引（M4 设计 4.5） |
@@ -202,7 +206,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 筛选 | JSON 筛选树和 25 种旧查询参数并存 | 普通查询参数 |
 | 分页 | `每页条数:页码:是否上一页` 形式的偏移游标 | 不透明游标 |
 | 集合型的列表（工作区、成员、项目等） | 一次返回全部，响应是裸数组 | 同样一次返回全部、不分页，响应是 `{"data": [...]}` 封套，每个列表写明顺序（M3 设计 3.12） |
-| 关联字段 | 名字不带 `_id`（`workspace`、`member`、`project_lead`），有的内嵌对象 | 只给 id，名字带 `_id`（`WorkspaceMember.workspace_id`）；唯一的例外是工作区成员内嵌成员的公开资料 `member`（`MemberUser`，v0-design 3.6；M3 设计 5.2） |
+| 关联字段 | 名字不带 `_id`（`workspace`、`member`、`project_lead`），有的内嵌对象 | 只给 id，名字带 `_id`（`WorkspaceMember.workspace_id`）；例外有两个：工作区成员内嵌成员的公开资料 `member`（`MemberUser`，v0-design 3.6；M3 设计 5.2），关联内嵌对方工作项的列表行 `issue`（`IssueRelation.issue`，M4/P3；M4 设计 3.10） |
 | 工作区的显示设置的路径 | `/api/workspaces/{slug}/user-properties/`（与工作项的筛选合在一起） | `GET`、`PATCH /api/v0/me/workspaces/{slug}/preferences`，只有项目导航的两项（M3 设计 3.18）；没有 `/sidebar-preferences/` |
 | 迭代和模块归属 | 通过单独的接口设置 | 作为工作项字段，用 PATCH 修改 |
 | 错误 | `{"error": "..."}`、DRF 字段错误、认证错误码三种格式混用 | 统一使用 RFC 9457 |
@@ -235,11 +239,17 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 删除状态 | 有工作项时 400 | 有工作项在它里面（已归档的也算）时 409 `project.state_in_use`，这一检查在默认状态的检查之前（M4 设计 3.6） |
 | 工作项的起止日期 | 两个都在请求里才检查开始不晚于截止 | 按合并之后的值检查：只给一个日期时与存着的另一个比较，开始晚于截止 422 `not_allowed`（在 `target_date`，只给了 `start_date` 时在 `start_date`）；同一天允许；数据库另有 `issues_dates_check`（M4 设计 3.7） |
 | 工作项的创建者的权限 | 只看工作区成员关系，已离开项目也能读、改、删 | 创建者只在删除上另有权限（`issue.delete` 的 `AllowCreator`）：他须仍是项目的有效成员、角色不低于成员；离开项目或成了访客之后不能再凭它删（没有别的权限的，看不到项目时 404，看得到时 403）（M4 设计 3.4） |
-| 访客只看自己的工作项 | 只在约 6 处执行 | 项目没开 `guest_view_all_features` 时，它的访客（按项目角色算，工作区管理员在项目里是访客时同样）只看得到自己创建的工作项：取、按编号取、修改、删除、归档、恢复别人的都答 404 `issue.not_found`；读在判定之后执行这条规则，写在不加锁的预检和锁下的判定中各执行一次（M4 设计 3.4；列表、子资源在各自的 Phase） |
+| 访客只看自己的工作项 | 只在约 6 处执行 | 项目没开 `guest_view_all_features` 时，它的访客（按项目角色算，工作区管理员在项目里是访客时同样）只看得到自己创建的工作项：取、按编号取、修改、删除、归档、恢复别人的都答 404 `issue.not_found`；子工作项的列表和 `sub_issues_count`、关联的列表只含他看得到的工作项，回答里的 `parent_id` 指名他看不到的工作项时为 `null`（M4/P3）；读在判定之后执行这条规则，写在不加锁的预检和锁下的判定中各执行一次（M4 设计 3.4；其余的列表、子资源在各自的 Phase） |
 | 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403 `forbidden`（工作区管理员是项目的有效成员时不论项目角色都通过项目的每条规则，总体设计 6.5 的约定；所以只是项目访客的工作区管理员删得了自己建的，204，不是凭 `AllowCreator`）（M4 设计 3.4） |
-| 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是；恢复、删除照常；在已归档的项目里先答 409 `project.archived`（M4 设计 3.8；子资源的写、成为父工作项和关联的对方在 M4 的各自的 Phase） |
+| 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是；恢复、删除照常；在已归档的项目里先答 409 `project.archived`；往它下面加子工作项、从它加关联、删除它的关联（任一端已归档）409 `issue.archived`；不能被改成别的工作项的父工作项、被加到别的工作项下面、成为关联的对方（422 `not_allowed`）；已归档的子工作项、对方不在子工作项和关联的列表、`sub_issues_count` 里，恢复之后重新出现（M4/P3）（M4 设计 3.8、3.9、3.10；评论、链接、表情的写在 M4 的各自的 Phase） |
 | 工作项的归档、恢复 | 归档答 `{archived_at}`，恢复 204；再归档、恢复没归档的 404；状态不在"已完成""已取消"组时 400 | 都答 `IssueDetail`；已归档的再归档、未归档的再恢复不写、200；状态不在"已完成""已取消"组时 409 `issue.not_archivable`；各写一条动态（`archived_at` 的 `manual_archive`、`restore`），动态的 `comment` 不同（M4 设计 3.8、3.13） |
 | 按编号取工作项 | 格式不对 400，不是成员 403 | `GET /api/v0/workspaces/{slug}/issues/{identifier}`：不是工作区的有效成员 404 `workspace.not_found`；之后格式不对、项目或编号不存在、看不到、访客规则都是同一个 404 `issue.not_found`；看得到项目而不是它的有效成员的（工作区管理员；项目公开时，工作区成员）403 `forbidden`，与取工作项相同；标识经同一个折叠比较（`identifier-fold.json`，`i`、`ı`、`I`、`İ` 一样）（M4 设计 3.7） |
+| 删除工作项 | 动态保留，另写一条"已删除"的动态；确认框不提子工作项 | 工作项和它下面每一层的工作项（已归档的、删除者看不到的也算）连同它们的负责人、标签、关联（两个方向，另一端在别的项目里的也算）、关注、动态，同一时刻、同一个删除者软删除；不写"已删除"的动态（M4 设计 3.6、3.9、3.13；确认框写明子树在 M4 的 P14） |
+| 父工作项 | 不检查自己、不检查成环 | 父工作项要是同一个项目里调用者看得到、未归档的工作项，不是它自己、不是它下面的（创建、修改 422 `parent_id`，加子工作项 422 `sub_issue_ids[i]`，`not_allowed`）；同一个项目里改父工作项的写在项目的 N 之下一个接一个，两个并发的移动不会合起来成环（M4 设计 3.9） |
+| 加子工作项的动态 | `old_value` 是子工作项自己的编号；`comment` 是 "updated the parent issue to" | 是它原来的父工作项的编号（没有时为空），`old_identifier` 是原来的父工作项（M4 设计 3.13 第 5 行）；`comment` 是 "updated the parent work item to"，修改父工作项的一行同样（Nerve 说 work item，同 M4/P2 的归档、恢复两行） |
+| 子工作项数 | 数全部的直接子工作项 | `sub_issues_count` 数未删除、未归档的直接子工作项中调用者看得到的：项目里"只看自己"的访客只数自己建的（M4 设计 3.9；按它排序在 M4 的 P5） |
+| 关联 | 六种类型，不检查类型和自己；一对工作项可有两条；显示看不到的项目里的工作项；删除不存在的 500 | 页面的四种（`relates_to`、`duplicate`、`blocked_by`、`blocking`，阻塞反过来存为对方的 `blocked_by`），别的类型 422 `relation_type` `invalid_format`；一对工作项至多一条，不论类型和方向（422 `issue_ids[i]` `duplicate`）；对方要是同一个工作区里调用者看得到、未归档、所在项目未归档的别的工作项（422 `not_allowed`），列表只含这样的对方；按关联的 `id` 删除，能改两端任一个的即可，不存在、已删除、两端都看不到的 404 `issue.relation_not_found`（M4 设计 3.10） |
+| 关联的动态 | 对方 id 在 `old_identifier`；反向行的 `project_id` 是本项目；删除的反向行用正向的类型 | 增、删各两条：正向的写在本工作项上、反向的写在对方上，各用从自己看的类型，各在自己的项目里；加的一条对方 id 在 `new_identifier`，删的一条在 `old_identifier`（M4 设计 3.13 第 20–23 行） |
 | 草稿发布 | 专门的转换逻辑 | 与"创建工作项"走同一代码路径 |
 | 归档 | 工作项、迭代、模块、项目的归档与恢复，以及项目级自动归档 | 规则一致（见 v0-design 5.5）；归档和恢复改为 `POST .../archive` 和 `POST .../unarchive` 两个动作接口；列表通过 `?archived=true` 查询已归档的对象 |
 | 自动关闭 | 项目设置 `close_in` 后，长期未更新的未完成工作项会被自动关闭 | v0 不做 |
@@ -268,7 +278,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 建工作区之后 | 投递 `workspace_seed`：建一个名为 "Plane" 的机器人账户做管理员，再建演示项目、状态、标签和工作项 | 什么都不投递，没有演示数据（M3 设计 3.11） |
 | 关闭创建工作区时 | 实例管理员在管理后台为自己建工作区 | 服务器管理员用 `nerve workspaces create --slug --name --admin-email` 建，不受开关限制，`--admin-email` 的账户是它的管理员（M3 设计 3.11） |
 | 工作区的显示设置 | `GET` 时 `get_or_create`：读取就建行 | `GET` 不写库，没有行时返回默认值（`ACCORDION`、10）；第一次修改时经部分唯一索引 `INSERT … ON CONFLICT` 建行（M3 设计 3.18） |
-| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置，项目和它们的成员关系、成员在项目里的显示设置、状态和标签，项目的工作项和它们的负责人、标签、关注、动态（M4/P1a 起），在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用 |
+| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置，项目和它们的成员关系、成员在项目里的显示设置、状态和标签，项目的工作项和它们的负责人、标签、关注、动态（M4/P1a 起）、关联（M4/P3 起），在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用 |
 | 邀请的列出、创建、修改、删除 | 工作区管理员和成员；修改不限制角色，成员能把邀请改成管理员 | 只有工作区管理员（M3 设计决策点 4）；邀请的角色因此不高于邀请人（M3 设计 3.8） |
 | 邀请令牌 | JWT，原文存库；公开的查看不要令牌，返回被邀请的邮箱；关闭注册时，有任何一份未删除的邀请的邮箱就能注册 | 由签名密钥派生的 MAC（`nrv_inv_` 加 22 个字符），不存库，管理员列出时重新算出；公开的查看要令牌、不返回邮箱；关闭注册时要有效的令牌、且注册邮箱与邀请的相同（M3 设计 3.8、决策点 1） |
 | 邀请的链接 | `/workspace-invitations/?invitation_id=…&slug=…&token=…`；另有系统内的接受：`/invitations` 页和新手引导的"加入工作区"一步按账户的邮箱列出发给他的邀请，批量接受 | 只有链接一条路：`/workspace-invitations?invitation_id=…&token=…`；接受要登录，账户的邮箱须与邀请的相同（M3 设计 3.8、决策点 2）（页面在 M3/P9；`/invitations` 页和新手引导的一步在 M3/P8a 删除） |

@@ -126,3 +126,12 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 仍未处理，状态保持 `open`：第 3 节其余写工作项的用例（M4 的 P3、P4、P7）和自动归档推进固定时钟的测试（M4 的 P6）；第 4 节的草稿发布（M4 的 P8）、map 型对象和递归的请求体 schema（第一个用到它们的 Phase，或 M4 的 review 写明没有用到）；第 1、2、5–13 节，按 M4 设计 13.1 的落点。
 
 来源：[M4/P2 spec](../specs/P2-issue-access.md) 第 7 节。
+
+## 处理结果（M4/P3）
+
+- **第 3 节，`updated_at`**（P3 的写完成）：改父工作项的 `updateIssue`，`addSubIssues`、`createIssueRelations`、`deleteIssueRelation` 和删除子树的 `deleteIssue` 在取得全部锁之后读用例的时钟（跨项目的写在涉及的每个项目的 N 之下），把这一个时刻写进它写的每一行：移动的子工作项的 `updated_at`、`updated_by_id` 和它的一行动态；关联行的 `created_at`、`updated_at`（删除时 `deleted_at`、`updated_at`），两端工作项的 `updated_at`、`updated_by_id` 和各自的一行动态；子树里每个工作项和它们的负责人、标签、关联、关注、动态的 `deleted_at`、`updated_at`。用例的测试用固定的时钟（`clockAt`）断言交给仓储的时刻等于它，仓储的测试断言这些列等于交给它的时刻；组合的测试断言一次写的每一行是同一个时刻、是写它的人（`TestWorkItemsArePutUnderAWorkItem`、`TestWorkItemsAreRelatedAcrossProjects`、`TestARelationIsDeletedFromEitherWorkItem`、`TestDeletingAWorkItemDeletesItsSubtreeAtOneMoment`）；端到端的 I8、I9 断言一次写在工作项下的行（`expectIssueUpdated` 的 `wrote`：P3 的每次写是它的一行动态）是工作项的 `updated_at`、是写它的人的，关联行由 `expectRelations` 断言是做它的人做的、删除它的人最后写的，I15、I17 断言删除的每一行同一时刻、同一个删除者（`expectIssueDeleted`）。
+- **第 4 节，map 型对象和递归的请求体 schema**：M4/P3 没有用到。P3 的请求体（`SubIssuesAdd`、`IssueRelationsCreate`，`IssueCreate`、`IssueUpdate` 加的 `parent_id`）都是封闭的对象，数组的元素是 `uuid` 的字符串，代价由 P2 加进 `TestCheckCostsAboutTheBody` 的 uuid 数组守住；`closedObject` 不改。
+
+仍未处理，状态保持 `open`：第 3 节其余写工作项的用例（M4 的 P4、P7）和自动归档推进固定时钟的测试（M4 的 P6）；第 4 节的草稿发布（M4 的 P8）、map 型对象和递归的请求体 schema（第一个用到它们的 Phase，或 M4 的 review 写明没有用到）；第 1、2、5–13 节，按 M4 设计 13.1 的落点。
+
+来源：[M4/P3 spec](../specs/P3-issue-hierarchy.md) 第 7 节。
