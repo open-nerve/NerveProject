@@ -105,17 +105,8 @@ var relationsListed = map[caller][]string{
 // listsRelations: the relations of the column's work item it sees, as
 // relationsListed has them.
 func listsRelations(t *testing.T, c caller, s seeded, answer string) {
-	var got struct {
-		Data []struct {
-			RelationType string `json:"relation_type"`
-			Issue        struct {
-				ID uuid.UUID `json:"id"`
-			} `json:"issue"`
-		} `json:"data"`
-	}
-	decodeAnswer(t, answer, &got)
 	listed := []string{}
-	for _, r := range got.Data {
+	for _, r := range listIn[answeredRelation](t, answer) {
 		other := r.Issue.ID.String()
 		for key, id := range s.issues {
 			if id == r.Issue.ID {
@@ -124,7 +115,7 @@ func listsRelations(t *testing.T, c caller, s seeded, answer string) {
 		}
 		listed = append(listed, r.RelationType+" "+other)
 	}
-	if got.Data == nil || !slices.Equal(listed, relationsListed[c]) {
+	if !slices.Equal(listed, relationsListed[c]) {
 		t.Errorf("%s lists %s, that is %q; want %q", c, answer, listed, relationsListed[c])
 	}
 }

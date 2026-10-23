@@ -108,7 +108,7 @@ func (s *Store) ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) (
 func (s *Store) ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
 	rows, err := s.queries(ctx).ArchivedIssueProjects(ctx, ids)
 	if err != nil {
-		return nil, fmt.Errorf("read which of projects %v are archived: %w", ids, err)
+		return nil, fmt.Errorf("read which of %d projects are archived: %w", len(ids), err)
 	}
 	archived := make(map[uuid.UUID]bool, len(rows))
 	for _, id := range rows {

@@ -231,18 +231,25 @@ func stampsOf(t *testing.T, pool *pgxpool.Pool, sql string, web, alice uuid.UUID
 }
 
 // createdProject creates the project name with identifier in the workspace
-// slug through the API, by the caller of token, and returns its id.
+// slug through the API, by the caller of token, and returns its id
+// (createdProjectFrom).
 func createdProject(t *testing.T, contract *apitest.Contract, base, token, slug, name, identifier string) uuid.UUID {
 	t.Helper()
-	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/"+slug+"/projects", token,
-		`{"name":"`+name+`","identifier":"`+identifier+`"}`)
+	return createdProjectFrom(t, contract, base, token, slug, `{"name":"`+name+`","identifier":"`+identifier+`"}`)
+}
+
+// createdProjectFrom creates the project body describes in the workspace
+// slug through the API, by the caller of token, and returns its id.
+func createdProjectFrom(t *testing.T, contract *apitest.Contract, base, token, slug, body string) uuid.UUID {
+	t.Helper()
+	status, answer := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/"+slug+"/projects", token, body)
 	if status != http.StatusCreated {
-		t.Fatalf("creating %s in %s = %d %s", name, slug, status, body)
+		t.Fatalf("creating %s in %s = %d %s", body, slug, status, answer)
 	}
 	var p struct {
 		ID uuid.UUID `json:"id"`
 	}
-	decodeAnswer(t, body, &p)
+	decodeAnswer(t, answer, &p)
 	return p.ID
 }
 

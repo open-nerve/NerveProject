@@ -5,7 +5,6 @@ import (
 	"slices"
 	"testing"
 	"time"
-	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -21,15 +20,11 @@ import (
 // write locks the projects it reaches; released, she relates them.
 func TestARelationLocksNoProjectItDoesNotReach(t *testing.T) {
 	w := newIssueWorld(t)
-	var lab struct {
-		ID uuid.UUID `json:"id"`
-	}
-	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/workspaces/acme/projects", `{"name":"Lab","identifier":"LAB","network":0}`,
-		http.StatusCreated), &lab)
+	lab := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Lab","identifier":"LAB","network":0}`)
 	pub := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Pub", "PUB")
-	labs, pubs := w.newWorkItemIn(t, lab.ID, `{"name":"Lab's"}`), w.newWorkItemIn(t, pub, `{"name":"Pub's"}`)
+	labs, pubs := w.newWorkItemIn(t, lab, `{"name":"Lab's"}`), w.newWorkItemIn(t, pub, `{"name":"Pub's"}`)
 	near := w.newWorkItemIn(t, w.web, `{"name":"Near"}`)
-	labHeld := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", lab.ID)
+	labHeld := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", lab)
 	pubHeld := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", pub)
 
 	sent := func(name, body string) (*http.Request, <-chan answer) {

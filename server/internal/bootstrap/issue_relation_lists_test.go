@@ -48,16 +48,12 @@ func TestARelationListShowsWhatTheCallerSees(t *testing.T) {
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+ops.String()+"/members",
 		`{"members":[{"member_id":"`+w.ids["bob"].String()+`","role":15}]}`, http.StatusCreated)
-	var lab struct {
-		ID uuid.UUID `json:"id"`
-	}
-	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/workspaces/acme/projects", `{"name":"Lab","identifier":"LAB","network":0}`,
-		http.StatusCreated), &lab)
+	lab := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Lab","identifier":"LAB","network":0}`)
 	near := w.newWorkItemIn(t, w.web, `{"name":"Near"}`)
 	mid := w.newWorkItemIn(t, w.web, `{"name":"Mid"}`)
 	far := w.newWorkItemIn(t, ops, `{"name":"Far"}`)
 	beside := w.newWorkItemIn(t, ops, `{"name":"Beside"}`)
-	labs := w.newWorkItemIn(t, lab.ID, `{"name":"Lab's"}`)
+	labs := w.newWorkItemIn(t, lab, `{"name":"Lab's"}`)
 	shelved := w.newWorkItemIn(t, w.web, `{"name":"Shelved","state_id":"`+w.done.String()+`"}`)
 	gone := w.newWorkItemIn(t, w.web, `{"name":"Gone"}`)
 	w.send(t, "alice", http.MethodPost, relationsOf(near), relating("relates_to", far), http.StatusCreated)

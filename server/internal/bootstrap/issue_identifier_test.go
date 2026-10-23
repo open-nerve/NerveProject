@@ -40,14 +40,10 @@ func TestAWorkItemIsFoundByItsIdentifier(t *testing.T) {
 	shi := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Shi", "ŞI")
 	gone := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Shi dotted", "Şİ")
 	w.send(t, "alice", http.MethodDelete, "/api/v0/projects/"+gone.String(), "", http.StatusNoContent)
-	var created struct {
-		ID uuid.UUID `json:"id"`
-	}
-	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/workspaces/acme/projects", `{"name":"Sec","identifier":"SEC","network":0}`,
-		http.StatusCreated), &created)
+	sec := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Sec","identifier":"SEC","network":0}`)
 	web1, web2, web3 := w.newWorkItem(t), w.newWorkItem(t), w.newWorkItem(t)
 	isOne, dottedOne := w.newWorkItemIn(t, is, `{"name":"Fix"}`), w.newWorkItemIn(t, dotted, `{"name":"Fix"}`)
-	secOne := w.newWorkItemIn(t, created.ID, `{"name":"Fix"}`)
+	secOne := w.newWorkItemIn(t, sec, `{"name":"Fix"}`)
 	dotFirstOne, dotLastOne := w.newWorkItemIn(t, dotFirst, `{"name":"Fix"}`), w.newWorkItemIn(t, dotLast, `{"name":"Fix"}`)
 	shiOne := w.newWorkItemIn(t, shi, `{"name":"Fix"}`)
 	w.send(t, "alice", http.MethodDelete, "/api/v0/issues/"+web2.String(), "", http.StatusNoContent)
