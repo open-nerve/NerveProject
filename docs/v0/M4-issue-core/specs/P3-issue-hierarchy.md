@@ -237,12 +237,12 @@ P3 是 M4 加锁约定的第二段（设计 12 节约束 3：P1a 起步，P1b �
 
 ## 4. 验收标准（完成线，M4 设计 12 节 P3）
 
-- [ ] I8、I9 的接口版本和 I17 的接口版本（子树和它的负责人、标签、关联（两个方向）、关注、动态同一时刻删除，创建者的规则）、I15 的子工作项和关联的 409 通过；`make e2e` 126 个：此前的 123 个，加 I8、I9、I17。
-- [ ] 交错 9（两次移动；加子工作项与移动）、10、11、13、23、26，加关联与删除工作区，两个删除同一条关联，两种顺序 `-count=5 -race` 通过，没有 40P01；加关联不锁它到不了的项目、预检没到达的锁下也不到达（`TestAWorkItemTheCallerComesToSeeWhileHisRelationWaitsIsRefused`）、写闸门、连接池的测试和 `platform/gate` 的单元测试同样五遍；P2、P1b、P1a、M3 的交错照旧通过（附录 A.4）。
-- [ ] 加关联指向看不到的项目时不取锁、不进闸门（`TestARelationLocksNoProjectItDoesNotReach`，单元的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`）。
-- [ ] 一个看不到工作项的调用者在每个列表、数目、内嵌的 `Issue` 里都看不到它，作为目标时它的拒绝与不存在的逐值相同：矩阵的"访客·别人""管理员·访客"两列（五个新操作），`TestTheGuestRuleHoldsForSubItems`、`TestTheGuestRuleHoldsForRelations`（两个都核对列表和写的回答里的数）、`TestTheGuestRuleHoldsForDeletingARelation`、`TestEachAnswerCountsTheSubItemsTheCallerSees`、`TestAHiddenParentIsNotInTheAnswer`、`TestARelationListShowsWhatTheCallerSees`。
-- [ ] 矩阵（P3 的 19 行）、按目录的删除测试（没有豁免）、完整性测试通过。
-- [ ] `make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e` 通过。
+- [x] I8、I9 的接口版本和 I17 的接口版本（子树和它的负责人、标签、关联（两个方向）、关注、动态同一时刻删除，创建者的规则）、I15 的子工作项和关联的 409 通过；`make e2e` 126 个：此前的 123 个，加 I8、I9、I17。
+- [x] 交错 9（两次移动；加子工作项与移动）、10、11、13、23、26，加关联与删除工作区，两个删除同一条关联，两种顺序 `-count=5 -race` 通过，没有 40P01；加关联不锁它到不了的项目、预检没到达的锁下也不到达（`TestAWorkItemTheCallerComesToSeeWhileHisRelationWaitsIsRefused`）、写闸门、连接池的测试和 `platform/gate` 的单元测试同样五遍；P2、P1b、P1a、M3 的交错照旧通过（附录 A.4）。
+- [x] 加关联指向看不到的项目时不取锁、不进闸门（`TestARelationLocksNoProjectItDoesNotReach`，单元的 `TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`）。
+- [x] 一个看不到工作项的调用者在每个列表、数目、内嵌的 `Issue` 里都看不到它，作为目标时它的拒绝与不存在的逐值相同：矩阵的"访客·别人""管理员·访客"两列（五个新操作），`TestTheGuestRuleHoldsForSubItems`、`TestTheGuestRuleHoldsForRelations`（两个都核对列表和写的回答里的数）、`TestTheGuestRuleHoldsForDeletingARelation`、`TestEachAnswerCountsTheSubItemsTheCallerSees`、`TestAHiddenParentIsNotInTheAnswer`、`TestARelationListShowsWhatTheCallerSees`。
+- [x] 矩阵（P3 的 19 行）、按目录的删除测试（没有豁免）、完整性测试通过。
+- [x] `make gen-check`、`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e` 通过。
 
 ## 5. 不在 P3 范围内
 

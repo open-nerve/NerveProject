@@ -2516,7 +2516,7 @@ M3 的校准：组内改动的行数估得准（估 9,550、实 9,879）；组�
 | P1a `issues` | 工作项的表、项目行的锁、创建与连带（后端，15）；设计中的 P1 由控制者按决策点 2 的预先批准拆出（2026-10-17，第 12 节） | 已完成：[spec](specs/P1a-issues.md)、[plan](plans/P1a-issues.md)、[评审](reviews/P1a-issues-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P1b `issue-update` | 工作项的取、改与写闸门（后端，12）；同上 | 已完成：[spec](specs/P1b-issue-update.md)、[plan](plans/P1b-issue-update.md)、[评审](reviews/P1b-issue-update-review.md)（执行时 15 个 Task；整分支评审之后一个修复轮） |
 | P2 `issue-access` | 访客规则、创建者、删除、按编号取、归档、起止日期（后端，14） | 已完成：[spec](specs/P2-issue-access.md)、[plan](plans/P2-issue-access.md)、[评审](reviews/P2-issue-access-review.md)（执行时 14 个 Task；整分支评审之后一个修复轮） |
-| P3 `issue-hierarchy` | 父子与关联（后端，16） | 进行中：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)（16 个 Task） |
+| P3 `issue-hierarchy` | 父子与关联（后端，16） | 已完成：[spec](specs/P3-issue-hierarchy.md)、[plan](plans/P3-issue-hierarchy.md)、[评审](reviews/P3-issue-hierarchy-review.md)（执行时 16 个 Task；整分支评审之后一个修复轮） |
 | P4 `issue-collaboration` | 描述、清洗、提及、版本、评论、表情、动态的列表（后端，16） | 未开始 |
 | P5 `issue-list` | 列表引擎与显示设置（后端，15） | 未开始 |
 | P6 `issue-events` | 领域事件、只投递的客户端、自动归档与测试的时钟（后端，11） | 未开始 |
