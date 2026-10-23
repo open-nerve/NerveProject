@@ -10,15 +10,24 @@ import (
 )
 
 // fakeRelations is the relations' store over the work items' fake
-// (app.RelationCreator), each call logged: related are the work items
-// that relate to the work item asked about already, whichever it is;
-// relations the last insert's relations, marked the last work items
-// marked changed.
+// (app.RelationCreator, app.RelationLister), each call logged: related
+// are the work items that relate to the work item asked about already,
+// whichever it is; relations the relations a read answers, and the last
+// insert's; marked the last work items marked changed.
 type fakeRelations struct {
 	*fakeIssues
 	related   []uuid.UUID
 	relations []domain.Relation
 	marked    *app.ChangedRows
+}
+
+// Relations logs the read and answers the fake's relations, as they are,
+// whichever work item is asked about.
+func (f *fakeRelations) Relations(ctx context.Context, id uuid.UUID) ([]domain.Relation, error) {
+	if err := f.log.add(ctx, "Relations", id); err != nil {
+		return nil, err
+	}
+	return f.relations, nil
 }
 
 // Related logs the read and answers those of ids that the fake's related

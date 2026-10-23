@@ -44,6 +44,26 @@ func (s *Store) InsertRelations(ctx context.Context, rs []domain.Relation) error
 	return nil
 }
 
+// Relations reads the undeleted relations of the work item id, either way,
+// each as stored, in the order they were made, (created_at, id).
+func (s *Store) Relations(ctx context.Context, id uuid.UUID) ([]domain.Relation, error) {
+	rows, err := s.queries(ctx).IssueRelations(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("read the relations of work item %s: %w", id, err)
+	}
+	out := make([]domain.Relation, len(rows))
+	for n, r := range rows {
+		out[n] = relationOf(r)
+	}
+	return out, nil
+}
+
+// relationOf is a relation's row as the domain has it.
+func relationOf(r gen.IssueRelationsRow) domain.Relation {
+	return domain.Relation{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, IssueID: r.IssueID, RelatedID: r.RelatedIssueID,
+		Type: domain.RelationType(r.RelationType), CreatedByID: r.CreatedByID, CreatedAt: r.CreatedAt}
+}
+
 // MarkChanged writes the work items r names last changed at its moment and
 // by its account (M4 design 3.7). The use case read each of them undeleted
 // under its project's lock, so one not written is an error.

@@ -93,12 +93,13 @@ type ProjectMembershipCounts interface {
 // IssueProjects is what the issue module asks of a project (M4 design
 // 6.5): its gate (ProjectGate's Find, Lock and LockMany), its work items'
 // numbers (Sequences), and its states', labels' and members' catalogs
-// (StateCatalog, LabelCatalog, ProjectMembers), for its writes; and a
+// (StateCatalog, LabelCatalog, ProjectMembers), for its writes; a
 // workspace's projects' identifiers (ProjectIdentifiers), for a read by
-// identifier. Each reads, or locks, in the transaction ctx carries; the
-// catalogs are read under the project's lock, which every write of a
-// state, a label or a membership holds too, so they stay as read until the
-// write commits (M4 design 3.5).
+// identifier; and which projects are archived (ArchivedProjects), for a
+// list across projects. Each reads, or locks, in the transaction ctx
+// carries; the catalogs are read under the project's lock, which every
+// write of a state, a label or a membership holds too, so they stay as
+// read until the write commits (M4 design 3.5).
 type IssueProjects interface {
 	// ProjectWorkspace is the workspace of the undeleted project id,
 	// archived or not, read without a lock; found is false when there is
@@ -126,6 +127,9 @@ type IssueProjects interface {
 	// ProjectIdentifiers reads the workspace's undeleted projects, archived
 	// or not, each with its identifier, in id order, without a lock.
 	ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) ([]IssueProjectIdentifier, error)
+	// ArchivedIssueProjects reads those of ids that are undeleted,
+	// archived projects, each true, without a lock.
+	ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error)
 }
 
 // IssueProject, IssueState, IssueLabel and IssueProjectIdentifier are the

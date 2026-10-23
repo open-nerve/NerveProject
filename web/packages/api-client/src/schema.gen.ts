@@ -1054,7 +1054,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a work item's relations
+         * @description For the admins, members and guests of its project, as getIssue, which answers the same refusals: issue.not_found, forbidden. Its relations, all of them, without pages, in the order they were made, the first first, each as this work item reads it, whose other work item the caller sees, as getIssue would answer it, of any project of the workspace, and is not archived, nor of an archived project other than this work item's: one left out so shows again once it, or its project, is unarchived. An archived work item's are listed too, as are those of a work item of an archived project.
+         */
+        get: operations["listIssueRelations"];
         put?: never;
         /**
          * Relate a work item to others
@@ -2023,11 +2027,6 @@ export interface components {
          * @enum {string}
          */
         IssueRelationType: "relates_to" | "duplicate" | "blocked_by" | "blocking";
-        IssueRelationsCreate: {
-            relation_type: components["schemas"]["IssueRelationType"];
-            /** @description 1–20 work items of the workspace, each named once, to relate the work item to. */
-            issue_ids: string[];
-        };
         /** @description A relation of a work item to another, as the work item reads it; issue is the other, as a list shows it. */
         IssueRelation: {
             /** Format: uuid */
@@ -2040,6 +2039,11 @@ export interface components {
         /** @description Relations of a work item, all of them, without pages. */
         IssueRelationCollection: {
             data: components["schemas"]["IssueRelation"][];
+        };
+        IssueRelationsCreate: {
+            relation_type: components["schemas"]["IssueRelationType"];
+            /** @description 1–20 work items of the workspace, each named once, to relate the work item to. */
+            issue_ids: string[];
         };
         /**
          * @description A tab of a project's header.
@@ -2185,9 +2189,9 @@ export type Issue = components['schemas']['Issue'];
 export type IssueCollection = components['schemas']['IssueCollection'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
-export type IssueRelationsCreate = components['schemas']['IssueRelationsCreate'];
 export type IssueRelation = components['schemas']['IssueRelation'];
 export type IssueRelationCollection = components['schemas']['IssueRelationCollection'];
+export type IssueRelationsCreate = components['schemas']['IssueRelationsCreate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -3824,6 +3828,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssueRelations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The relations, as this work item reads them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueRelationCollection"];
                 };
             };
             default: components["responses"]["Problem"];

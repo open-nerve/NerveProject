@@ -28,3 +28,12 @@ SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), unnest(sqlc.arg(pr
 UPDATE issues
 SET updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)
 WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: IssueRelations :many
+-- The undeleted relations of the work item id, either way, each as stored, in the order they were made, (created_at,
+-- id) (M4 design 3.10): listIssueRelations', read without a lock. The indexes on issue_id and on related_issue_id
+-- serve it.
+SELECT r.id, r.workspace_id, r.project_id, r.issue_id, r.related_issue_id, r.relation_type, r.created_by_id, r.created_at
+FROM issue_relations r
+WHERE (r.issue_id = sqlc.arg(id)::uuid OR r.related_issue_id = sqlc.arg(id)::uuid) AND r.deleted_at IS NULL
+ORDER BY r.created_at, r.id;

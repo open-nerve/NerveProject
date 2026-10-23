@@ -8,6 +8,16 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
 
+// ListIssueRelations serves GET /api/v0/issues/{issue_id}/relations.
+func (h handler) ListIssueRelations(ctx context.Context, req gen.ListIssueRelationsRequestObject) (gen.ListIssueRelationsResponseObject,
+	error) {
+	relations, err := h.uc.ListIssueRelations.Execute(ctx, req.IssueID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListIssueRelations200JSONResponse(issueRelationCollection(relations)), nil
+}
+
 // CreateIssueRelations serves POST /api/v0/issues/{issue_id}/relations:
 // the type and the work items go to the use case as they came, which
 // checks them.

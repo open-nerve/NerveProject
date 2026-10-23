@@ -53,6 +53,14 @@ FROM projects
 WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL
 ORDER BY id;
 
+-- name: ArchivedIssueProjects :many
+-- ArchivedProjects (M4 design 3.8): those among ids that are undeleted, archived projects, read without a lock. A list
+-- across projects leaves out the work items of an archived project: listIssueRelations, the other work items of a
+-- project other than the listed one's.
+SELECT id
+FROM projects
+WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL AND archived_at IS NOT NULL;
+
 -- name: ActiveRoles :many
 -- ProjectMembers (M4 design 6.5): the active memberships of the project of those of the accounts ids that have one,
 -- and their roles; stable under the project's FOR NO KEY UPDATE, as IssueStates.

@@ -171,6 +171,17 @@ type RelationCreator interface {
 	InsertActivities(ctx context.Context, rows []ActivityRow) error
 }
 
+// RelationLister is the relations' store as listIssueRelations reads it,
+// without a lock (M4 design 3.10).
+type RelationLister interface {
+	// Relations reads the undeleted relations of the work item id, either
+	// way, each as stored, in the order they were made, (created_at, id).
+	Relations(ctx context.Context, id uuid.UUID) ([]domain.Relation, error)
+	// GetIssues reads the undeleted work items among ids, as
+	// IssueReader's.
+	GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue, error)
+}
+
 // IssueArchiver is the work items' store as archiveIssue and
 // unarchiveIssue write and read them, in the transaction ctx carries (M4
 // design 3.5).
@@ -206,6 +217,15 @@ type ProjectIdentifiers interface {
 type ProjectIdentifier struct {
 	ID         uuid.UUID
 	Identifier string
+}
+
+// ArchivedProjects reads which projects are archived, for a list across
+// projects, which leaves out the work items of an archived project (M4
+// design 3.8): project.Provide's, converted (bootstrap/ports.go).
+type ArchivedProjects interface {
+	// Archived reads those of projectIDs that are undeleted, archived
+	// projects, each true, without a lock.
+	Archived(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]bool, error)
 }
 
 // IssueNumbers finds a work item by its number in its project (M4 design

@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"net/http"
 	"reflect"
+	"slices"
 	"testing"
 	"uuid"
 )
@@ -44,7 +45,15 @@ func relationMatrixRows() []matrixRow {
 	// 3.4).
 	relateCells := onAWorkItem(cellCreated, cellCreated, cellCreated, cellForbidden)
 	relateCells[callerAdminGuestOwn] = cellValidationFailed
+	list := toWorkItem(http.MethodGet, "/relations", "")
 	return []matrixRow{
+		// Whom getIssue answers the work item (M4 design 3.4, 9.2): its
+		// project's admins, members and the guests who see it.
+		{op: "listIssueRelations", columns: issueColumns, request: list, cells: onAWorkItem(cellOK, cellOK, cellOK, cellOK),
+			check: listsRelations},
+		// An archived project's work items' are listed as any other's.
+		{op: "listIssueRelations", variant: "archived", columns: archivedColumns, request: list, cells: issueRows.ofArchived(cellOK, cellForbidden),
+			check: listsRelations},
 		// The project's admins and members, the member who made it too, not
 		// its guests, as updateIssue (M4 design 3.4, 9.2).
 		{op: "createIssueRelations", write: true, columns: issueColumns, request: relatesTo(otherItemOf), cells: relateCells,
@@ -70,6 +79,53 @@ func relationMatrixRows() []matrixRow {
 		{op: "createIssueRelations", variant: "an archived project's work item", write: true, columns: projectColumns,
 			request: relatesTo(archivedItem), refusal: "issue_ids[0] not_allowed",
 			cells: issueRows.of(cellValidationFailed, cellValidationFailed, cellIssueNotFound, cellValidationFailed, cellForbidden, cellForbidden)},
+	}
+}
+
+// relationsListed are the seeded relations (seededRelations) a column
+// lists of its work item (issueOf), each as "<its type as the work item
+// reads it> <the other's project key>|<the other's name>", in the order
+// they were made. PA, PM and PM+WA, members of acme's public and private
+// projects, list both of the public project's matrixIssue; the member who
+// made one, his own's; the guest who sees every work item, of the private
+// project's matrixIssue, the member before's alone: the public project's
+// guest rule hides its matrixIssue and the workspace admin's own from
+// him. Every other column lists none: the guest's own's other end the
+// guest rule hides from him, the workspace admin who is a guest's own's is
+// in a project he is none of, and no seeded relation is of the archived
+// project's work item.
+var relationsListed = map[caller][]string{
+	callerProjectAdmin:   {"blocked_by acme/private|" + matrixIssue, "relates_to acme/public|" + issueOf(callerGuestOwn)},
+	callerProjectMember:  {"blocked_by acme/private|" + matrixIssue, "relates_to acme/public|" + issueOf(callerGuestOwn)},
+	callerMemberAndAdmin: {"blocked_by acme/private|" + matrixIssue, "relates_to acme/public|" + issueOf(callerGuestOwn)},
+	callerCreator:        {"duplicate acme/private|" + issueOf(callerBefore)},
+	callerGuestAll:       {"blocking acme/private|" + issueOf(callerBefore)},
+}
+
+// listsRelations: the relations of the column's work item it sees, as
+// relationsListed has them.
+func listsRelations(t *testing.T, c caller, s seeded, answer string) {
+	var got struct {
+		Data []struct {
+			RelationType string `json:"relation_type"`
+			Issue        struct {
+				ID uuid.UUID `json:"id"`
+			} `json:"issue"`
+		} `json:"data"`
+	}
+	decodeAnswer(t, answer, &got)
+	listed := []string{}
+	for _, r := range got.Data {
+		other := r.Issue.ID.String()
+		for key, id := range s.issues {
+			if id == r.Issue.ID {
+				other = key
+			}
+		}
+		listed = append(listed, r.RelationType+" "+other)
+	}
+	if got.Data == nil || !slices.Equal(listed, relationsListed[c]) {
+		t.Errorf("%s lists %s, that is %q; want %q", c, answer, listed, relationsListed[c])
 	}
 }
 

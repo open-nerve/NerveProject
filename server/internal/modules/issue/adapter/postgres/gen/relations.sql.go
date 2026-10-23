@@ -48,6 +48,56 @@ func (q *Queries) InsertRelations(ctx context.Context, arg InsertRelationsParams
 	return err
 }
 
+const issueRelations = `-- name: IssueRelations :many
+SELECT r.id, r.workspace_id, r.project_id, r.issue_id, r.related_issue_id, r.relation_type, r.created_by_id, r.created_at
+FROM issue_relations r
+WHERE (r.issue_id = $1::uuid OR r.related_issue_id = $1::uuid) AND r.deleted_at IS NULL
+ORDER BY r.created_at, r.id
+`
+
+type IssueRelationsRow struct {
+	ID             uuid.UUID
+	WorkspaceID    uuid.UUID
+	ProjectID      uuid.UUID
+	IssueID        uuid.UUID
+	RelatedIssueID uuid.UUID
+	RelationType   string
+	CreatedByID    *uuid.UUID
+	CreatedAt      time.Time
+}
+
+// The undeleted relations of the work item id, either way, each as stored, in the order they were made, (created_at,
+// id) (M4 design 3.10): listIssueRelations', read without a lock. The indexes on issue_id and on related_issue_id
+// serve it.
+func (q *Queries) IssueRelations(ctx context.Context, id uuid.UUID) ([]IssueRelationsRow, error) {
+	rows, err := q.db.Query(ctx, issueRelations, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []IssueRelationsRow
+	for rows.Next() {
+		var i IssueRelationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.IssueID,
+			&i.RelatedIssueID,
+			&i.RelationType,
+			&i.CreatedByID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markChanged = `-- name: MarkChanged :execrows
 UPDATE issues
 SET updated_by_id = $1::uuid, updated_at = $2

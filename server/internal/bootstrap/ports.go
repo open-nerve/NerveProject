@@ -153,6 +153,10 @@ func (p issueProjects) Identifiers(ctx context.Context, workspaceID uuid.UUID) (
 	return out, nil
 }
 
+func (p issueProjects) Archived(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
+	return p.projects.ArchivedIssueProjects(ctx, ids)
+}
+
 // issueWorkspaces is workspace's WorkspaceDirectory as issue's: the same
 // read without a lock, the workspace's id alone.
 type issueWorkspaces struct {

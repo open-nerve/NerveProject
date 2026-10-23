@@ -45,6 +45,11 @@ func (h held) own() end {
 	return end{issue: h.issue, project: h.project, grant: h.grant, ok: true}
 }
 
+// ascending is ids in ascending order, each once.
+func ascending(ids []uuid.UUID) []uuid.UUID {
+	return slices.Compact(slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare))
+}
+
 // lockProjects locks s's projects in the transaction ctx carries and
 // answers those it locked, by id: a write on one project its row FOR NO
 // KEY UPDATE (ProjectGate.Lock); a write across projects each of s's, all
@@ -79,8 +84,7 @@ func (l Locks) reachAll(ctx context.Context, actor shared.Actor, from domain.Iss
 			s.projects = append(s.projects, e.issue.ProjectID)
 		}
 	}
-	slices.SortFunc(s.projects, uuid.UUID.Compare)
-	s.projects = slices.Compact(s.projects)
+	s.projects = ascending(s.projects)
 	return s, nil
 }
 

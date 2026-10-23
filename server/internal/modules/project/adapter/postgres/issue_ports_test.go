@@ -113,6 +113,26 @@ func TestProjectIdentifiers(t *testing.T) {
 	}
 }
 
+// Which projects are archived, for the issue module's lists across
+// projects (M4 design 3.8): those asked for that are undeleted and
+// archived, Arch; not Web, nor Gone, archived and deleted, nor one that is
+// not there, nor Old, archived but not asked for.
+func TestArchivedIssueProjects(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, arch, gone, old := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Arch", "ARCH", alice), newProject(t, s, acme,
+		"Gone", "GONE", alice), newProject(t, s, acme, "Old", "OLD", alice)
+	for _, p := range []uuid.UUID{arch, gone, old} {
+		exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", p, now)
+	}
+	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", gone, now)
+	got, err := s.ArchivedIssueProjects(context.Background(), []uuid.UUID{web, arch, gone, uuid.NewV7()})
+	if want := map[uuid.UUID]bool{arch: true}; err != nil || !maps.Equal(got, want) {
+		t.Errorf("ArchivedIssueProjects() = %v, %v; want Arch (%s) alone", got, err, arch)
+	}
+}
+
 // The catalogs of a project for the issue module (M4 design 6.5): its
 // undeleted states, its triage state too, in id order, with their names,
 // their groups and the default; those of the labels asked for that are its

@@ -50,6 +50,35 @@ func (q *Queries) ActiveRoles(ctx context.Context, arg ActiveRolesParams) ([]Act
 	return items, nil
 }
 
+const archivedIssueProjects = `-- name: ArchivedIssueProjects :many
+SELECT id
+FROM projects
+WHERE id = ANY ($1::uuid[]) AND deleted_at IS NULL AND archived_at IS NOT NULL
+`
+
+// ArchivedProjects (M4 design 3.8): those among ids that are undeleted, archived projects, read without a lock. A list
+// across projects leaves out the work items of an archived project: listIssueRelations, the other work items of a
+// project other than the listed one's.
+func (q *Queries) ArchivedIssueProjects(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, archivedIssueProjects, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const issueLabels = `-- name: IssueLabels :many
 SELECT id, name
 FROM labels

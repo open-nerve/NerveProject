@@ -54,6 +54,11 @@ type AddSubIssuesUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]domain.Issue, error)
 }
 
+// ListIssueRelationsUseCase is app.ListIssueRelations.
+type ListIssueRelationsUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) ([]app.IssueRelation, error)
+}
+
 // CreateIssueRelationsUseCase is app.CreateIssueRelations.
 type CreateIssueRelationsUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, t domain.RelationType, ids []uuid.UUID) ([]app.IssueRelation, error)
@@ -70,6 +75,7 @@ type UseCases struct {
 	UnarchiveIssue       ArchiveIssueUseCase
 	ListSubIssues        ListSubIssuesUseCase
 	AddSubIssues         AddSubIssuesUseCase
+	ListIssueRelations   ListIssueRelationsUseCase
 	CreateIssueRelations CreateIssueRelationsUseCase
 }
 

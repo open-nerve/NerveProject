@@ -255,8 +255,10 @@ func TestWhatAWorkItemMayNotBeRelatedTo(t *testing.T) {
 // Low and walt Below. walt relates His to Mine and Hers, which he does
 // not see, refused at its place with the very answer of a work item not
 // there: nothing written. alice relates Hers to His; then walt His to Mine
-// alone, answered with the one sub-item of Mine he sees. Up, alice's,
-// walt finds not to relate: the very 404 of a work item not there.
+// alone, answered with the one sub-item of Mine he sees. walt lists His's
+// relations: Mine alone, with its one sub-item, though Hers, of Web too,
+// comes first; alice lists Hers and Mine, with its two. Up, alice's, walt
+// finds not to relate: the very 404 of a work item not there.
 func TestTheGuestRuleHoldsForRelations(t *testing.T) {
 	w := newIssueWorld(t)
 	w.adminGuest(t)
@@ -282,6 +284,15 @@ func TestTheGuestRuleHoldsForRelations(t *testing.T) {
 	if got, want := w.storedRelations(t, made[0].CreatedAt), []string{"Hers duplicate His, in WEB, by alice, alice at another moment",
 		"His relates_to Mine, in WEB, by walt, walt at the moment"}; !slices.Equal(got, want) {
 		t.Errorf("the relations stored:\n%q\nwant\n%q", got, want)
+	}
+	for _, tt := range []struct {
+		name string
+		want []string
+	}{{"walt", []string{"Mine 1"}}, {"alice", []string{"Hers 0", "Mine 2"}}} {
+		listed := listIn[answeredRelation](t, w.send(t, tt.name, http.MethodGet, relationsOf(his), "", http.StatusOK))
+		if got := counts(othersOf(listed)); !slices.Equal(got, tt.want) {
+			t.Errorf("%s lists His's relations to %q, want %q", tt.name, got, tt.want)
+		}
 	}
 	hidden := w.send(t, "walt", http.MethodPost, relationsOf(up), relating("relates_to", mine), http.StatusNotFound)
 	absent := w.send(t, "walt", http.MethodPost, relationsOf(uuid.NewV7()), relating("relates_to", mine), http.StatusNotFound)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -193,5 +194,54 @@ func TestMarkChanged(t *testing.T) {
 	stop()
 	if err := s.MarkChanged(cancelled, app.ChangedRows{IDs: []uuid.UUID{b}, By: bob, At: later}); !errors.Is(err, context.Canceled) {
 		t.Errorf("MarkChanged() on a cancelled context = %v; want context.Canceled", err)
+	}
+}
+
+// A work item's relations are read either way, each as stored, in the
+// order they were made, (created_at, id) (M4 design 3.10): of web's item,
+// a's blocked_by it, made first by bob; ops' o's duplicate of it and
+// item's relates_to b, made a second later by alice, o's id drawn before,
+// so first. Its relation to c was deleted; d's to b is not its. A work
+// item without relations has none; a cancelled read is its failure.
+func TestRelations(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, ops := newProject(t, pool, acme, "WEB"), newProject(t, pool, acme, "OPS")
+	item, a, b, c, d, o := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	for n, id := range []uuid.UUID{item, a, b, c, d} {
+		newIssue(t, pool, web, id, n+1, alice)
+	}
+	newIssue(t, pool, ops, o, 1, alice)
+	ofO, ofItem, ofA, gone := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	later := now.Add(time.Second)
+	want := []domain.Relation{
+		{ID: ofA, WorkspaceID: acme, ProjectID: web.id, IssueID: a, RelatedID: item, Type: domain.BlockedBy, CreatedByID: &bob, CreatedAt: now},
+		{ID: ofO, WorkspaceID: acme, ProjectID: ops.id, IssueID: o, RelatedID: item, Type: domain.Duplicate, CreatedByID: &alice, CreatedAt: later},
+		{ID: ofItem, WorkspaceID: acme, ProjectID: web.id, IssueID: item, RelatedID: b, Type: domain.RelatesTo, CreatedByID: &alice,
+			CreatedAt: later},
+	}
+	for _, r := range []domain.Relation{want[2], want[0], want[1]} {
+		p := web
+		if r.ProjectID == ops.id {
+			p = ops
+		}
+		newRelation(t, pool, p, r.IssueID, r.RelatedID, r.ID, string(r.Type), *r.CreatedByID)
+		exec(t, pool, "UPDATE issue_relations SET created_at = $2 WHERE id = $1", r.ID, r.CreatedAt)
+	}
+	newRelation(t, pool, web, item, c, gone, "relates_to", alice)
+	exec(t, pool, "UPDATE issue_relations SET deleted_at = $2 WHERE id = $1", gone, now)
+	newRelation(t, pool, web, d, b, uuid.NewV7(), "relates_to", alice)
+
+	if got, err := s.Relations(context.Background(), item); err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Relations(item) = %+v, %v; want %+v", got, err, want)
+	}
+	if got, err := s.Relations(context.Background(), c); err != nil || len(got) != 0 {
+		t.Errorf("Relations(c) = %+v, %v; want none", got, err)
+	}
+	cancelled, stop := context.WithCancel(context.Background())
+	stop()
+	if _, err := s.Relations(cancelled, item); !errors.Is(err, context.Canceled) {
+		t.Errorf("Relations() on a cancelled context = %v; want context.Canceled", err)
 	}
 }

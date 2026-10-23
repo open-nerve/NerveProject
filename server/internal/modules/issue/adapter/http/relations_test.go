@@ -16,6 +16,23 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
+// fakeRelations is listIssueRelations: each call is recorded as "caller
+// work item"; it answers answer, or err.
+type fakeRelations struct {
+	calls  []string
+	answer []app.IssueRelation
+	err    error
+}
+
+func (f *fakeRelations) Execute(ctx context.Context, id uuid.UUID) ([]app.IssueRelation, error) {
+	actor, err := shared.RequireActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	f.calls = append(f.calls, actor.UserID.String()+" "+id.String())
+	return f.answer, f.err
+}
+
 // fakeRelate is createIssueRelations: each call is recorded as "caller
 // work item type", with the work items it got; it answers answer, or err.
 type fakeRelate struct {
@@ -55,6 +72,21 @@ var (
 		{nil, `{"data":[]}`},
 	}
 )
+
+// GET goes to the use case for the caller and the path's work item; the
+// answer is 200 with the relations it answers, in its order, [] for none.
+func TestListIssueRelations(t *testing.T) {
+	for _, answer := range relatedAnswers {
+		list := &fakeRelations{answer: answer.relations}
+		res, body := do(t, newServer(t, httpadapter.UseCases{ListIssueRelations: list}), request(http.MethodGet, relationsPath, "alice", ""))
+		if res.StatusCode != http.StatusOK || body != answer.json+"\n" {
+			t.Errorf("GET = %d %s, want 200 %s", res.StatusCode, body, answer.json)
+		}
+		if want := []string{aliceID.String() + " " + webSixID.String()}; !slices.Equal(list.calls, want) {
+			t.Errorf("calls %q, want %q", list.calls, want)
+		}
+	}
+}
 
 // POST goes to the use case for the caller and the path's work item, with
 // the body's type and work items as they came: a type that is none of the
@@ -105,39 +137,48 @@ func TestCreateIssueRelationsHoldsTheBodyToItsStructure(t *testing.T) {
 	}
 }
 
-// The use case's refusals, as the contract declares them, and its
-// failure.
-func TestCreateIssueRelationsRefusals(t *testing.T) {
+// The use cases' refusals, as the contract declares them, and their
+// failure: listIssueRelations' are getIssue's; createIssueRelations'
+// updateIssue's, and its own.
+func TestIssueRelationsRefusals(t *testing.T) {
+	post, both := []string{http.MethodPost}, []string{http.MethodGet, http.MethodPost}
 	invalid := `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.","errors":[`
 	for _, tt := range []struct {
-		name   string
-		err    error
-		status int
-		want   string
+		name    string
+		methods []string
+		err     error
+		status  int
+		want    string
 	}{
-		{"a type of none of the four, and none named", domain.CheckNewRelations("start_before", nil), http.StatusUnprocessableEntity,
+		{"a type of none of the four, and none named", post, domain.CheckNewRelations("start_before", nil), http.StatusUnprocessableEntity,
 			invalid + `{"field":"relation_type","code":"invalid_format","message":"must be one of relates_to, duplicate, blocked_by, blocking"},` +
 				`{"field":"issue_ids","code":"too_short","message":"must name a work item"}]}`},
-		{"a work item refused, and one related already", shared.Invalid(domain.RelatedNotAllowed(1), domain.RelatedAlready(2)),
+		{"a work item refused, and one related already", post, shared.Invalid(domain.RelatedNotAllowed(1), domain.RelatedAlready(2)),
 			http.StatusUnprocessableEntity, invalid + `{"field":"issue_ids[1]","code":"not_allowed","message":"must be another work item of ` +
 				`the workspace that you see, not archived, in a project that is not archived"},` +
 				`{"field":"issue_ids[2]","code":"duplicate","message":"relates to this work item already"}]}`},
-		{"no work item", domain.ErrIssueNotFound, http.StatusNotFound,
+		{"no work item", both, domain.ErrIssueNotFound, http.StatusNotFound,
 			`{"status":404,"code":"issue.not_found","title":"Not Found","detail":"The work item does not exist, or you cannot see it."}`},
-		{"a project guest", shared.Forbidden(), http.StatusForbidden,
+		{"a project guest", both, shared.Forbidden(), http.StatusForbidden,
 			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
-		{"an archived project", domain.ErrProjectArchived, http.StatusConflict,
+		{"an archived project", post, domain.ErrProjectArchived, http.StatusConflict,
 			`{"status":409,"code":"project.archived","title":"Conflict","detail":"The project is archived; unarchive it to change it."}`},
-		{"an archived work item", domain.ErrIssueArchived, http.StatusConflict,
+		{"an archived work item", post, domain.ErrIssueArchived, http.StatusConflict,
 			`{"status":409,"code":"issue.archived","title":"Conflict","detail":"The work item is archived; unarchive it to change it."}`},
-		{"a busy project", shared.ServerBusy(time.Second), http.StatusServiceUnavailable, busy},
-		{"a failure", errGone, http.StatusInternalServerError, `{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
+		{"a busy project", post, shared.ServerBusy(time.Second), http.StatusServiceUnavailable, busy},
+		{"a failure", both, errGone, http.StatusInternalServerError, `{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	} {
-		h := newServer(t, httpadapter.UseCases{CreateIssueRelations: &fakeRelate{err: tt.err}})
-		body := `{"relation_type":"blocking","issue_ids":["0199a2b4-0000-7000-8000-0000000000e8"]}`
-		res, got := do(t, h, request(http.MethodPost, relationsPath, "alice", body))
-		if res.StatusCode != tt.status || got != tt.want+"\n" || tt.want == busy && res.Header.Get("Retry-After") != "1" {
-			t.Errorf("%s: POST = %d %s, Retry-After %q; want %d %s", tt.name, res.StatusCode, got, res.Header.Get("Retry-After"), tt.status, tt.want)
+		for _, method := range tt.methods {
+			h := newServer(t, httpadapter.UseCases{ListIssueRelations: &fakeRelations{err: tt.err}, CreateIssueRelations: &fakeRelate{err: tt.err}})
+			body := ""
+			if method == http.MethodPost {
+				body = `{"relation_type":"blocking","issue_ids":["0199a2b4-0000-7000-8000-0000000000e8"]}`
+			}
+			res, got := do(t, h, request(method, relationsPath, "alice", body))
+			if res.StatusCode != tt.status || got != tt.want+"\n" || tt.want == busy && res.Header.Get("Retry-After") != "1" {
+				t.Errorf("%s: %s = %d %s, Retry-After %q; want %d %s", tt.name, method, res.StatusCode, got, res.Header.Get("Retry-After"),
+					tt.status, tt.want)
+			}
 		}
 	}
 }
