@@ -1,7 +1,8 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
 // work items' tables and brings creating, reading, by id or by identifier,
-// changing, archiving, unarchiving and deleting a work item, and listing
-// the work items under one and putting work items under it. For the
+// changing, archiving, unarchiving and deleting a work item, listing the
+// work items under one and putting work items under it, and relating a
+// work item to others. For the
 // project module's deletions (its IssueCascade port) it soft-deletes a
 // deleted project's rows of them, tells whether work items are in a state,
 // and takes deleted labels off them.
@@ -128,6 +129,9 @@ func New(d Deps) *Module {
 		UnarchiveIssue: app.NewUnarchiveIssue(archive),
 		ListSubIssues:  app.NewListSubIssues(locks, store),
 		AddSubIssues:   app.NewAddSubIssues(app.AddSubIssuesDeps{Locks: locks, Issues: store, Clock: d.Clock}),
+		CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{
+			Locks: locks, Relations: store, Clock: d.Clock,
+		}),
 	}}
 }
 

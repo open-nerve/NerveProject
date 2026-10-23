@@ -1044,6 +1044,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Relate a work item to others
+         * @description For the admins and members of its project. Refused from the request alone, before the work item is looked at (validation_failed): a type that is none of the four (relation_type invalid_format), no work item or more than 20 (issue_ids too_short, too_long; more than 20 is the one problem of issue_ids named), and a work item named twice (issue_ids[i] duplicate). A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden. Both are answered before any project is locked, and so is whether he sees each work item named: one he does not takes no lock, and is refused below. Then the work item's project and those of the work items named are locked together, and his role is decided again. A work item of an archived project relates to none (project.archived), nor then an archived work item (issue.archived). Each work item named is another work item of the workspace, of any of its projects, that the caller sees, as getIssue would answer it, not archived, of a project not archived (issue_ids[i] not_allowed), and that does not relate to this one yet, of any type, either way (issue_ids[i] duplicate): every problem at once. Two work items have one relation at most. A work item blocking another is stored the other way round, as the other's blocked_by, and reads as blocking from this one alone. Both work items of each relation are changed last by the caller, and the activity of each says it relates to the other, with the type it reads. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        post: operations["createIssueRelations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspaces/{slug}/issues/{identifier}": {
         parameters: {
             query?: never;
@@ -1996,6 +2019,29 @@ export interface components {
             sub_issue_ids: string[];
         };
         /**
+         * @description A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
+         * @enum {string}
+         */
+        IssueRelationType: "relates_to" | "duplicate" | "blocked_by" | "blocking";
+        IssueRelationsCreate: {
+            relation_type: components["schemas"]["IssueRelationType"];
+            /** @description 1–20 work items of the workspace, each named once, to relate the work item to. */
+            issue_ids: string[];
+        };
+        /** @description A relation of a work item to another, as the work item reads it; issue is the other, as a list shows it. */
+        IssueRelation: {
+            /** Format: uuid */
+            id: string;
+            relation_type: components["schemas"]["IssueRelationType"];
+            issue: components["schemas"]["Issue"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Relations of a work item, all of them, without pages. */
+        IssueRelationCollection: {
+            data: components["schemas"]["IssueRelation"][];
+        };
+        /**
          * @description A tab of a project's header.
          * @enum {string}
          */
@@ -2138,6 +2184,10 @@ export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type Issue = components['schemas']['Issue'];
 export type IssueCollection = components['schemas']['IssueCollection'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
+export type IssueRelationType = components['schemas']['IssueRelationType'];
+export type IssueRelationsCreate = components['schemas']['IssueRelationsCreate'];
+export type IssueRelation = components['schemas']['IssueRelation'];
+export type IssueRelationCollection = components['schemas']['IssueRelationCollection'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -3774,6 +3824,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createIssueRelations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueRelationsCreate"];
+            };
+        };
+        responses: {
+            /** @description The relations made, as this work item reads them, in the order of the other work items' ids. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueRelationCollection"];
                 };
             };
             default: components["responses"]["Problem"];

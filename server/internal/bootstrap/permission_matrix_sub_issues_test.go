@@ -15,11 +15,12 @@ import (
 // as updateIssue's (permission_matrix_issue_updates_test.go), or the
 // archived project's.
 
-// subItemOf is the work item a column's cells put under their column's
-// work item: acme's public project's work item of PM, the member who made
-// it, or, for his own column, whose work item that is, the project's
-// matrixIssue, acme's admin's. Only the public project's cells weigh it.
-func subItemOf(c caller, s seeded) uuid.UUID {
+// otherItemOf is the work item a column's cells put under their column's
+// work item, or relate it to (relationMatrixRows): acme's public project's
+// work item of PM, the member who made it, or, for his own column, whose
+// work item that is, the project's matrixIssue, acme's admin's. Only the
+// public project's cells weigh it.
+func otherItemOf(c caller, s seeded) uuid.UUID {
 	name := issueOf(callerCreator)
 	if c == callerCreator {
 		name = matrixIssue
@@ -28,7 +29,7 @@ func subItemOf(c caller, s seeded) uuid.UUID {
 }
 
 // addsSubItem is the request of a row whose callers each put a work item
-// under their column's work item: subItemOf, or the one item gives.
+// under their column's work item: otherItemOf, or the one item gives.
 func addsSubItem(item func(c caller, s seeded) uuid.UUID) func(caller, seeded) (string, string, string) {
 	return func(c caller, s seeded) (string, string, string) {
 		return toWorkItem(http.MethodPost, "/sub-issues", `{"sub_issue_ids":["`+item(c, s).String()+`"]}`)(c, s)
@@ -53,19 +54,19 @@ func subIssueMatrixRows() []matrixRow {
 			check: listsNone},
 		// The project's admins and members, the member who made it too, not
 		// its guests, as updateIssue (M4 design 3.4, 9.2).
-		{op: "addSubIssues", write: true, columns: issueColumns, request: addsSubItem(subItemOf), cells: adds,
+		{op: "addSubIssues", write: true, columns: issueColumns, request: addsSubItem(otherItemOf), cells: adds,
 			refusal: "sub_issue_ids[0] not_allowed", check: putsUnder},
 		// An archived project's work items take none under them (M4 design
 		// 3.8), after the decision.
-		{op: "addSubIssues", variant: "archived", write: true, columns: archivedColumns, request: addsSubItem(subItemOf),
+		{op: "addSubIssues", variant: "archived", write: true, columns: archivedColumns, request: addsSubItem(otherItemOf),
 			cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// Nor do its archived work items: the project's 409 comes first.
 		{op: "addSubIssues", variant: "archived, its work item archived", write: true, columns: archivedColumns, prepare: inDone(true),
-			request: addsSubItem(subItemOf), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
+			request: addsSubItem(otherItemOf), cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// Nor does an archived work item, after the decision, before the
 		// work items asked for are looked at.
 		{op: "addSubIssues", variant: "archived work item", write: true, columns: issueColumns, prepare: inDone(true),
-			request: addsSubItem(subItemOf), cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellForbidden)},
+			request: addsSubItem(otherItemOf), cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellForbidden)},
 		// The archived project's work item, another project's of the same
 		// workspace: the work items asked for are checked after the
 		// decision.
@@ -82,13 +83,13 @@ func listsNone(t *testing.T, c caller, _ seeded, answer string) {
 	}
 }
 
-// putsUnder: the column's sub-item (subItemOf) alone, under the column's
-// work item, changed last by the caller.
+// putsUnder: the column's other work item (otherItemOf) alone, under the
+// column's work item, changed last by the caller.
 func putsUnder(t *testing.T, c caller, s seeded, answer string) {
 	got := listIn[storedIssue](t, answer)
 	parent, me := s.issue(projectOf(c), issueOf(c)), s.account(accountOf(c))
-	if len(got) != 1 || got[0].ID != subItemOf(c, s) || !reflect.DeepEqual(got[0].ParentID, &parent) ||
+	if len(got) != 1 || got[0].ID != otherItemOf(c, s) || !reflect.DeepEqual(got[0].ParentID, &parent) ||
 		!reflect.DeepEqual(got[0].UpdatedByID, &me) {
-		t.Errorf("%s puts %s; want %s alone, under %s, changed last by the caller", c, answer, subItemOf(c, s), parent)
+		t.Errorf("%s puts %s; want %s alone, under %s, changed last by the caller", c, answer, otherItemOf(c, s), parent)
 	}
 }

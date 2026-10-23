@@ -29,8 +29,8 @@ type CreateIssueRelationsDeps struct {
 	Clock     Clock
 }
 
-// CreateIssueRelations relates a work item to others (M4 design 3.5, 3.10,
-// 5.1).
+// CreateIssueRelations relates a work item to others: POST
+// /api/v0/issues/{issue_id}/relations (M4 design 3.5, 3.10, 5.1).
 type CreateIssueRelations struct {
 	d CreateIssueRelationsDeps
 }

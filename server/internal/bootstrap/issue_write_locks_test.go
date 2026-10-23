@@ -86,6 +86,19 @@ var issueWrites = []issueWrite{
 		},
 		body: func(t *testing.T, w issueWorld) string { return subIssueIDs(w.workItemNamed(t, "Part")) }, want: http.StatusOK,
 		waits: "issues", mode: "SHARE"},
+	// A new work item, which the send relates to Far: Web's one work item
+	// named so, made with the first target. Its precheck reads no relation,
+	// so it waits for the relations' table, which it reads first under
+	// the lock.
+	{op: "createIssueRelations", method: http.MethodPost, path: "/api/v0/issues/{issue_id}/relations",
+		target: func(t *testing.T, w issueWorld) string {
+			if len(queryIDs(t, w.pool, "SELECT id FROM issues WHERE project_id = $1 AND name = 'Far'", w.web)) == 0 {
+				w.newWorkItemIn(t, w.web, `{"name":"Far"}`)
+			}
+			return relationsOf(w.newWorkItem(t))
+		},
+		body: func(t *testing.T, w issueWorld) string { return relating("relates_to", w.workItemNamed(t, "Far")) }, want: http.StatusCreated,
+		waits: "issue_relations", mode: "ACCESS EXCLUSIVE"},
 }
 
 // issueTables are the tables a write on the work-item side reads or

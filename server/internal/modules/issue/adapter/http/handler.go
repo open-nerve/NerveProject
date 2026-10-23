@@ -9,6 +9,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 )
@@ -53,6 +54,11 @@ type AddSubIssuesUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]domain.Issue, error)
 }
 
+// CreateIssueRelationsUseCase is app.CreateIssueRelations.
+type CreateIssueRelationsUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, t domain.RelationType, ids []uuid.UUID) ([]app.IssueRelation, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	CreateIssue          CreateIssueUseCase
@@ -64,6 +70,7 @@ type UseCases struct {
 	UnarchiveIssue       ArchiveIssueUseCase
 	ListSubIssues        ListSubIssuesUseCase
 	AddSubIssues         AddSubIssuesUseCase
+	CreateIssueRelations CreateIssueRelationsUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

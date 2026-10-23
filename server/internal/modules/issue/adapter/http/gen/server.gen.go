@@ -47,6 +47,30 @@ func (e IssuePriority) Valid() bool {
 	}
 }
 
+// Defines values for IssueRelationType.
+const (
+	IssueRelationTypeBlockedBy IssueRelationType = "blocked_by"
+	IssueRelationTypeBlocking  IssueRelationType = "blocking"
+	IssueRelationTypeDuplicate IssueRelationType = "duplicate"
+	IssueRelationTypeRelatesTo IssueRelationType = "relates_to"
+)
+
+// Valid indicates whether the value is a known member of the IssueRelationType enum.
+func (e IssueRelationType) Valid() bool {
+	switch e {
+	case IssueRelationTypeBlockedBy:
+		return true
+	case IssueRelationTypeBlocking:
+		return true
+	case IssueRelationTypeDuplicate:
+		return true
+	case IssueRelationTypeRelatesTo:
+		return true
+	default:
+		return false
+	}
+}
+
 // Issue A work item of a project, as a list shows it.
 type Issue struct {
 	// ArchivedAt When it was archived; null when it is not.
@@ -180,6 +204,35 @@ type IssueDetail struct {
 // IssuePriority A work item's priority, from the most to the least urgent.
 type IssuePriority string
 
+// IssueRelation A relation of a work item to another, as the work item reads it; issue is the other, as a list shows it.
+type IssueRelation struct {
+	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+
+	// Issue A work item of a project, as a list shows it.
+	Issue Issue `json:"issue"`
+
+	// RelationType A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
+	RelationType IssueRelationType `json:"relation_type"`
+}
+
+// IssueRelationCollection Relations of a work item, all of them, without pages.
+type IssueRelationCollection struct {
+	Data []IssueRelation `json:"data"`
+}
+
+// IssueRelationType A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
+type IssueRelationType string
+
+// IssueRelationsCreate defines model for IssueRelationsCreate.
+type IssueRelationsCreate struct {
+	// IssueIds 1–20 work items of the workspace, each named once, to relate the work item to.
+	IssueIds []uuid.UUID `json:"issue_ids"`
+
+	// RelationType A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
+	RelationType IssueRelationType `json:"relation_type"`
+}
+
 // IssueUpdate Changes the fields it names; a field left out keeps its value.
 type IssueUpdate struct {
 	// AssigneeIds The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest.
@@ -231,6 +284,9 @@ type Problem = externalRef0.Problem
 // UpdateIssueJSONRequestBody defines body for UpdateIssue for application/json ContentType.
 type UpdateIssueJSONRequestBody = IssueUpdate
 
+// CreateIssueRelationsJSONRequestBody defines body for CreateIssueRelations for application/json ContentType.
+type CreateIssueRelationsJSONRequestBody = IssueRelationsCreate
+
 // AddSubIssuesJSONRequestBody defines body for AddSubIssues for application/json ContentType.
 type AddSubIssuesJSONRequestBody = SubIssuesAdd
 
@@ -251,6 +307,9 @@ type ServerInterface interface {
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// CreateIssueRelations Relate a work item to others
+	// (POST /api/v0/issues/{issue_id}/relations)
+	CreateIssueRelations(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// ListSubIssues List the work items under a work item
 	// (GET /api/v0/issues/{issue_id}/sub-issues)
 	ListSubIssues(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -372,6 +431,32 @@ func (siw *ServerInterfaceWrapper) ArchiveIssue(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ArchiveIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateIssueRelations operation middleware
+func (siw *ServerInterfaceWrapper) CreateIssueRelations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateIssueRelations(w, r, issueID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -648,6 +733,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/unarchive", wrapper.UnarchiveIssue)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/sub-issues", wrapper.ListSubIssues)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/sub-issues", wrapper.AddSubIssues)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/relations", wrapper.CreateIssueRelations)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issues/{identifier}", wrapper.GetIssueByIdentifier)
 
 	return m
@@ -825,6 +911,53 @@ type ArchiveIssuedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response ArchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitArchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIssueRelationsRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Body    *CreateIssueRelationsJSONRequestBody
+}
+
+type CreateIssueRelationsResponseObject interface {
+	VisitCreateIssueRelationsResponse(w http.ResponseWriter) error
+}
+
+type CreateIssueRelations201JSONResponse IssueRelationCollection
+
+func (response CreateIssueRelations201JSONResponse) VisitCreateIssueRelationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateIssueRelationsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateIssueRelationsdefaultApplicationProblemPlusJSONResponse) VisitCreateIssueRelationsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1089,6 +1222,9 @@ type StrictServerInterface interface {
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(ctx context.Context, request ArchiveIssueRequestObject) (ArchiveIssueResponseObject, error)
+	// CreateIssueRelations Relate a work item to others
+	// (POST /api/v0/issues/{issue_id}/relations)
+	CreateIssueRelations(ctx context.Context, request CreateIssueRelationsRequestObject) (CreateIssueRelationsResponseObject, error)
 	// ListSubIssues List the work items under a work item
 	// (GET /api/v0/issues/{issue_id}/sub-issues)
 	ListSubIssues(ctx context.Context, request ListSubIssuesRequestObject) (ListSubIssuesResponseObject, error)
@@ -1249,6 +1385,39 @@ func (sh *strictHandler) ArchiveIssue(w http.ResponseWriter, r *http.Request, is
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ArchiveIssueResponseObject); ok {
 		if err := validResponse.VisitArchiveIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateIssueRelations operation middleware
+func (sh *strictHandler) CreateIssueRelations(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request CreateIssueRelationsRequestObject
+
+	request.IssueID = issueID
+
+	var body CreateIssueRelationsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateIssueRelations(ctx, request.(CreateIssueRelationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateIssueRelations")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateIssueRelationsResponseObject); ok {
+		if err := validResponse.VisitCreateIssueRelationsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

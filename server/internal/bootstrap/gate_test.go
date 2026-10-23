@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -248,11 +249,15 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // lock timeout at the earliest. In an app that lets one write a project in
 // at once, queues none and ends a write's wait for a lock at three
 // seconds: a transaction holds Web's row, and alice's change of a work
-// item of Web enters the gate and waits for the row. A write refused for
-// the shape of its body takes no place at all: an addition of sub-items
-// naming a work item twice is refused 422 at once, though Web's one place
-// is taken. Once the row is free, her change goes through, and so do the
-// writes the gate refused.
+// item of Web enters the gate and waits for the row. A write across
+// projects enters the gate of each project it reaches: her relation of a
+// work item of Ops to one of Web is refused so too, though Ops' place is
+// free. A write refused for the shape of its body takes no place at all:
+// an addition of sub-items naming a work item twice, and one of relations
+// naming 21 work items, are each refused 422 at once, though Web's one
+// place is taken. Once the row is free, her change goes through, and so do
+// the writes the gate refused. That a write across projects gives back
+// each place it took is TestAWriteAcrossProjectsGivesBackEachPlaceItTook.
 func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Issue = config.IssueConfig{WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},
@@ -260,6 +265,7 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	})
 	item, archived := w.newWorkItem(t), w.doneWorkItem(t)
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.String()+"/archive", "", http.StatusOK)
+	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 	writes := []struct {
 		name, method, path, body string
 		want                     int // its answer once Web's row is free
@@ -268,6 +274,10 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		{"an archiving", http.MethodPost, "/api/v0/issues/" + w.doneWorkItem(t).String() + "/archive", "", http.StatusOK},
 		{"an unarchiving", http.MethodPost, "/api/v0/issues/" + archived.String() + "/unarchive", "", http.StatusOK},
 		{"an addition of sub-items", http.MethodPost, subIssues(w.newWorkItem(t)), subIssueIDs(w.newWorkItem(t)), http.StatusOK},
+		{"an addition of relations", http.MethodPost, relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)),
+			http.StatusCreated},
+		{"an addition of relations from Ops", http.MethodPost, relationsOf(w.newWorkItemIn(t, ops, `{"name":"Far"}`)),
+			relating("relates_to", w.newWorkItem(t)), http.StatusCreated},
 	}
 	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], []byte(`{"name":"Mend"}`))
 	w.contract.CheckRequest(t, change)
@@ -294,6 +304,8 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	}
 	for _, shape := range []struct{ name, path, body, want string }{
 		{"an addition of sub-items naming one twice", subIssues(item), subIssueIDs(archived, archived), "sub_issue_ids[1] duplicate"},
+		{"an addition of relations naming 21", relationsOf(item), relating("relates_to", slices.Repeat([]uuid.UUID{archived}, 21)...),
+			"issue_ids too_long"},
 	} {
 		answer := w.send(t, "alice", http.MethodPost, shape.path, shape.body, http.StatusUnprocessableEntity)
 		if got := refusalOf(t, []byte(answer), false); got != "validation_failed "+shape.want {

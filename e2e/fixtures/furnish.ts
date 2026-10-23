@@ -1,6 +1,6 @@
 import { changeWorkspacePreferences, createLabel, createProject, invite, inviteAndAccept, type Api } from "./api";
 import { accountId } from "./auth";
-import { createIssue } from "./issues";
+import { createIssue, createIssueRelations } from "./issues";
 
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
 // table to write (expectWorkspaceDeleted, expectProjectDeleted).
@@ -9,7 +9,8 @@ import { createIssue } from "./issues";
  * Gives the project of projectId a row of each of the work items' tables: a work item that the caller of token, a
  * member of it, creates, assigned to the account of assigneeId, a member of it who is not its guest, and labelled the
  * label of labelId, one of its labels; the creator and the assignee its subscribers, and its activity the creation
- * and the assignee.
+ * and the assignee; and a second work item, which the first blocks: their relation, and a row of each one's activity
+ * on it.
  */
 export async function furnishIssueRows(
   api: Api,
@@ -18,11 +19,13 @@ export async function furnishIssueRows(
   assigneeId: string,
   labelId: string
 ): Promise<void> {
-  await createIssue(api, token, projectId, {
+  const fix = await createIssue(api, token, projectId, {
     name: "Fix the login",
     assignee_ids: [assigneeId],
     label_ids: [labelId],
   });
+  const test = await createIssue(api, token, projectId, { name: "Test the login" });
+  await createIssueRelations(api, token, fix.id, { relation_type: "blocking", issue_ids: [test.id] });
 }
 
 /**

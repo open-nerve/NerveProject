@@ -85,3 +85,25 @@ export async function issueDeleted(api: Api, token: string, issueId: string) {
   });
   return answer(response, error);
 }
+
+/**
+ * Relates the work item of issueId with the bearer token given, a member's of its project, to the work items body
+ * names, as its type, and returns the relations made, as the work item reads them.
+ */
+export async function createIssueRelations(
+  api: Api,
+  token: string,
+  issueId: string,
+  body: components["schemas"]["IssueRelationsCreate"]
+): Promise<components["schemas"]["IssueRelation"][]> {
+  const { data, error, response } = await api.POST("/api/v0/issues/{issue_id}/relations", {
+    params: { path: { issue_id: issueId } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `relate the work item ${issueId}: ${JSON.stringify(error)}`).toBe(201);
+  if (!data) {
+    throw new Error(`createIssueRelations ${issueId} answered 201 without the relations`);
+  }
+  return data.data;
+}
