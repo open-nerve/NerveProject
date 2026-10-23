@@ -107,7 +107,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/modules/issue/domain/issue.go`、`server/internal/modules/issue/domain/issue_test.go`（修改） | `NewIssue.ParentID`、`Issue.ParentID` 进创建（Task 2）；`Issue.SubIssuesCount`（Task 4）；`checkSomeIDs`（Task 9） | 2、4、9 |
 | `server/internal/modules/issue/app/parents.go`、`server/internal/modules/issue/app/parents_test.go`（新） | `parentOf`：创建的父工作项在锁下读、判定（Task 2）；`parentChange`、`refOf`：修改的父工作项，不成环（Task 3）；回答带计数（Task 4）；`inReach`、`parentsBefore`（修改和加子工作项共用原来的父工作项的读，测试的调用照改）（Task 5）；`refOf` 带锁住的项目（Task 10） | 2、3、4、5、10 |
 | `server/internal/modules/issue/app/lock.go`（修改） | `decide` 交回 `Grant`，`held.grant`（Task 2）；`see` 交回 `Grant`（Task 4）；跨项目的形式：`write.reach`、`held.reached`、`scope`（Task 10）；两端任一个的形式：`write.instead`、`held.instead`（Task 13） | 2、4、10、13 |
-| `server/internal/modules/issue/app/create_issue.go`（修改） | 创建带父工作项（`check`、`parentOf`）（Task 2）；回答的计数是 0（Task 4） | 2、4 |
+| `server/internal/modules/issue/app/create_issue.go`（修改） | 创建带父工作项（`check`、`parentOf`）（Task 2）；回答的计数是 0（Task 4）；订阅者由 `ascending` 排序去重（Task 12） | 2、4、12 |
 | `server/internal/modules/issue/app/rows.go`（修改） | `IssueRow.ParentID`（Task 2）；`IssueFields.ParentID`（Task 3）；`ParentRows`（Task 5）；`ChangedRows`（Task 9）；`RelationDeletion`（Task 13） | 2、3、5、9、13 |
 | `server/internal/modules/issue/adapter/postgres/queries/issues.sql`、`server/internal/modules/issue/adapter/postgres/issues.go`（修改） | `InsertIssue` 写 `parent_id`（Task 2）；`GetIssues`、`issueOf`（Task 4） | 2、4 |
 | `server/internal/modules/issue/adapter/postgres/issues_test.go`（修改） | 创建写下父工作项 | 2 |
@@ -129,7 +129,7 @@ sys.exit(1 if broken else 0)
 | `server/internal/bootstrap/ports_test.go`（修改） | 标识的转换（Task 3）；`LockMany` 的转换（Task 7） | 3、7 |
 | `server/internal/modules/issue/adapter/http/update_test.go`（修改） | 修改的 `parent_id`、体的形状 | 3 |
 | `server/internal/bootstrap/issue_interleaving_hierarchy_test.go`（新） | 交错 9 的两次移动（Task 3）；交错 13、交错 9 的加子工作项与移动，三个交错共用的准备和成环之后的核对（`webWorkItems`、`firstUnderTheOther`）（Task 6） | 3、6 |
-| `server/internal/modules/issue/app/seen.go`、`server/internal/modules/issue/app/seen_test.go`（新） | `grants`、`seen`、`seenOne`、`hideParents`：回答按调用者的规则数子工作项，只看自己的访客看不到的父工作项回答为 `null`（Task 4）；`seeEach`（Task 12，`seen.go`） | 4、12 |
+| `server/internal/modules/issue/app/seen.go`、`server/internal/modules/issue/app/seen_test.go`（新） | `grants`、`seen`、`seenOne`、`hideParents`：回答按调用者的规则数子工作项，只看自己的访客看不到的父工作项回答为 `null`（Task 4）；`seeEach`，`hideParents` 改用 `ascending`（Task 12，`seen.go`） | 4、12 |
 | `server/internal/modules/issue/adapter/postgres/queries/sub_issues.sql`、`server/internal/modules/issue/adapter/postgres/sub_issues.go`、`server/internal/modules/issue/adapter/postgres/sub_issues_test.go`（新） | `SubIssueCounts`、`GetIssues` 的存储测试（Task 4）；`SubIssues`、`SetParents`（Task 5）；已归档的工作项的子工作项（Task 6，`sub_issues_test.go`） | 4、5、6 |
 | `server/internal/modules/issue/app/get_issue.go`、`server/internal/modules/issue/app/get_issue_by_identifier.go`、`server/internal/modules/issue/app/archive_issue.go`（修改） | 回答按调用者的规则数子工作项 | 4 |
 | `server/internal/modules/issue/app/get_issue_test.go`、`server/internal/modules/issue/app/get_issue_by_identifier_test.go`、`server/internal/modules/issue/app/archive_issue_test.go`、`server/internal/modules/issue/app/update_issue_test.go`、`server/internal/modules/issue/app/dates_test.go`、`server/internal/modules/issue/app/guest_rule_test.go`、`server/internal/modules/issue/app/lock_test.go`（修改） | 回答的计数、读计数失败时的回答（Task 4）；`TestAWriteAcrossProjectsTakesOnlyTheProjectsItReaches`（Task 10，`lock_test.go`）；`TestAWriteOnEitherWorkItemTakesBothProjects`（Task 13，`lock_test.go`） | 4、10、13 |
@@ -13607,13 +13607,13 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/issue_archived_projects_test.go`、`server/internal/bootstrap/issue_relation_lists_test.go`、`server/internal/bootstrap/permission_matrix_seed_relations_test.go`、`server/internal/modules/issue/app/list_relations.go`、`server/internal/modules/issue/app/list_relations_test.go`
-- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/demotion_test.go`、`server/internal/bootstrap/ending_world_test.go`、`server/internal/bootstrap/issue_identifier_test.go`、`server/internal/bootstrap/issue_relation_locks_test.go`、`server/internal/bootstrap/issue_relations_test.go`、`server/internal/bootstrap/permission_matrix_relations_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/ports.go`、`server/internal/bootstrap/project_wiring_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`、`server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`、`server/internal/modules/issue/app/fakes_across_test.go`、`server/internal/modules/issue/app/fakes_relations_test.go`、`server/internal/modules/issue/app/lock_across.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/seen.go`、`server/internal/modules/issue/module.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/module.go`
+- Modify: `api/modules/issue.yaml`、`server/internal/bootstrap/demotion_test.go`、`server/internal/bootstrap/ending_world_test.go`、`server/internal/bootstrap/issue_identifier_test.go`、`server/internal/bootstrap/issue_relation_locks_test.go`、`server/internal/bootstrap/issue_relations_test.go`、`server/internal/bootstrap/permission_matrix_relations_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/ports.go`、`server/internal/bootstrap/project_wiring_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/issue/adapter/http/handler.go`、`server/internal/modules/issue/adapter/http/relations.go`、`server/internal/modules/issue/adapter/http/relations_test.go`、`server/internal/modules/issue/adapter/postgres/queries/relations.sql`、`server/internal/modules/issue/adapter/postgres/relations.go`、`server/internal/modules/issue/adapter/postgres/relations_test.go`、`server/internal/modules/issue/app/create_issue.go`、`server/internal/modules/issue/app/fakes_across_test.go`、`server/internal/modules/issue/app/fakes_relations_test.go`、`server/internal/modules/issue/app/lock_across.go`、`server/internal/modules/issue/app/ports.go`、`server/internal/modules/issue/app/seen.go`、`server/internal/modules/issue/module.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/issue_ports.go`、`server/internal/modules/project/adapter/postgres/issue_ports_test.go`、`server/internal/modules/project/adapter/postgres/queries/issue_ports.sql`、`server/internal/modules/project/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/issue/adapter/http/gen/server.gen.go`、`server/internal/modules/issue/adapter/postgres/gen/relations.sql.go`、`server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**（spec 2.14、第 3 节第 9、10、15、17 条；M4 设计 3.4、3.8、3.10、5.1、5.2、6.5、9.2）
 - 契约：`GET /api/v0/issues/{issue_id}/relations`（`listIssueRelations`，200 `IssueRelationCollection`，`x-problem-codes: [issue.not_found, forbidden]`）；描述写上：与 `getIssue` 同样的读和拒绝；未删除的关联按建的次序，各按这个工作项读的类型；对方未删除、没归档、不在这个工作项的项目之外的已归档的项目里、调用者看得到（任何项目的，访客规则在内），按他在那个项目看到的样子。
 - `project`：`queries/issue_ports.sql` 的 `ArchivedIssueProjects`（给的项目中未删除、已归档的）；`issue_ports.go`（读失败的错误只说几个项目，不列出每个 `id`）；`module.go` 的 `IssueProjects.ArchivedIssueProjects`。
-- `issue/app`：`ports.go` 的 `RelationLister`（`Relations`、`GetIssues`（同 `IssueReader` 的））、`ArchivedProjects`（`Archived(ctx, projectIDs) (map[uuid.UUID]bool, error)`，嵌入 `ProjectPorts`）；`seen.go` 的 `Locks.seeEach(ctx, actor, items)`（不加锁：每个项目以 `issue.read` 判定一次（列表在它的项目上的判定，`issue.read` 不认创建者），再对每个工作项执行访客规则；看不到的项目、读不了的、访客规则隐藏的不在其中；交回各项目的 `Grant`）；`lock_across.go` 的 `ascending`（升序、各一次：`reachAll` 原来就地排序去重，`projectsBut` 是第二个使用者）；`list_relations.go`（新）：`ListIssueRelations`、`NewListIssueRelations(locks, relations, projects)`、`Execute(ctx, id)`：`Locks.see`（`issue.read`），读关联，读对方（`GetIssues`），问它们的项目（这个工作项的项目除外，`projectsBut`）是否已归档，去掉已归档的和在已归档的别的项目里的，`seeEach`，按 `Grant` 数（`seen`），照关联的次序回答。
+- `issue/app`：`ports.go` 的 `RelationLister`（`Relations`、`GetIssues`（同 `IssueReader` 的））、`ArchivedProjects`（`Archived(ctx, projectIDs) (map[uuid.UUID]bool, error)`，嵌入 `ProjectPorts`）；`seen.go` 的 `Locks.seeEach(ctx, actor, items)`（不加锁：每个项目以 `issue.read` 判定一次（列表在它的项目上的判定，`issue.read` 不认创建者），再对每个工作项执行访客规则；看不到的项目、读不了的、访客规则隐藏的不在其中；交回各项目的 `Grant`）；`lock_across.go` 的 `ascending`（升序、各一次，不改传入的切片；`reachAll`、`projectsBut`、`seen.go` 的 `hideParents` 和 `create_issue.go` 的订阅者共用：`reachAll` 原来就地排序去重，`hideParents` 和订阅者原来各写着同一个表达式）；`list_relations.go`（新）：`ListIssueRelations`、`NewListIssueRelations(locks, relations, projects)`、`Execute(ctx, id)`：`Locks.see`（`issue.read`），读关联，读对方（`GetIssues`），问它们的项目（这个工作项的项目除外，`projectsBut`）是否已归档，去掉已归档的和在已归档的别的项目里的，`seeEach`，按 `Grant` 数（`seen`），照关联的次序回答。
 - `issue/adapter/postgres`：`queries/relations.sql` 的 `IssueRelations`（两个方向、未删除、如存的、`created_at, id` 的次序）；`relations.go` 的 `Relations`、`relationOf`。
 - `issue/adapter/http`：`handler.go` 的 `ListIssueRelationsUseCase`；`relations.go` 的 `ListIssueRelations`；`relations_test.go` 的拒绝合成 `TestIssueRelationsRefusals`（两个操作）。`issue/module.go` 接上（`d.Projects` 是它的 `ArchivedProjects`）。
 - `bootstrap`：`ports.go` 的 `issueProjects.Archived`；`issue_archived_projects_test.go`（新）；`issue_relation_lists_test.go`（新）；`issue_relations_test.go` 的 `TestTheGuestRuleHoldsForRelations` 加列表；矩阵：`permission_matrix_seed_relations_test.go`（新：`seededRelation`、`seededRelations` 的五条：Blocked、Guest's、Member's、Admin guest's、Secret，各是关联的列表的一种情形；`relationsOf`、`relations`、`seededRelationRows`），`permission_matrix_seeded_test.go` 的 `seeded.relations`、`relation`，`permission_matrix_test.go` 的 `prepareMatrix` 种下、读回它们；`permission_matrix_relations_test.go` 的 `listIssueRelations` 两行（`relationsListed`、`listsRelations`（回答用 Task 6 的 `listIn[answeredRelation]` 读；对方的种子的键由 `permission_matrix_seeded_test.go` 的 `keyOfRow` 按行的 `id` 找，`projectOfRow`、`seeded.workspaceOfRow` 也读它，签名不变））；`project_writes_test.go` 的 `createdProjectFrom`（由体建项目、回答它的 `id`：`createdProject` 读它；本 Task 的 Lab、Task 11 的 `issue_relation_locks_test.go` 的 Lab、P2 的 `issue_identifier_test.go` 的 Sec 这几个私有的项目都由它建，不各写一份；M3 的 `ending_world_test.go`、`demotion_test.go` 的 Web 也由它建，体照旧（带 `project_lead_id`；`demotion_test.go` 不要它的 `id`），`project_wiring_test.go` 的 Web 由 `createdProject` 建（体就是它建的那个，计时的窗口照旧包着它））。
@@ -13830,6 +13830,15 @@ func TestArchivedIssueProjects(t *testing.T) {
 ````
 
 - [ ] **Step 3: 用例**
+
+`server/internal/modules/issue/app/create_issue.go`（修改，1 处）：
+
+````old server/internal/modules/issue/app/create_issue.go
+	subscribers := slices.Compact(slices.SortedFunc(slices.Values(append([]uuid.UUID{row.By}, c.assignees...)), uuid.UUID.Compare))
+````
+````new server/internal/modules/issue/app/create_issue.go
+	subscribers := ascending(append([]uuid.UUID{row.By}, c.assignees...))
+````
 
 `server/internal/modules/issue/app/fakes_across_test.go`（修改，1 处）：
 
@@ -14171,7 +14180,13 @@ func TestListIssueRelationsRefusals(t *testing.T) {
 ````new server/internal/modules/issue/app/lock_across.go
 }
 
-// ascending is ids in ascending order, each once.
+// ascending is ids in ascending order, each once, in a slice of its own:
+// ids is left as it is. Its callers hand a port a set of ids in this
+// form, whatever order they gathered it in: the projects whose gates a
+// write enters and which it locks in this order (convention 7), as
+// reachAll answers them, and others, such as an answer's parents
+// (hideParents), the other projects of a list of relations
+// (projectsBut) or a new work item's subscribers (createIssue).
 func ascending(ids []uuid.UUID) []uuid.UUID {
 	return slices.Compact(slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare))
 }
@@ -14225,7 +14240,7 @@ type ArchivedProjects interface {
 	Archived(ctx context.Context, projectIDs []uuid.UUID) (map[uuid.UUID]bool, error)
 ````
 
-`server/internal/modules/issue/app/seen.go`（修改，2 处）：
+`server/internal/modules/issue/app/seen.go`（修改，3 处）：
 
 ````old server/internal/modules/issue/app/seen.go
 	"context"
@@ -14233,6 +14248,12 @@ type ArchivedProjects interface {
 ````new server/internal/modules/issue/app/seen.go
 	"context"
 	"errors"
+````
+````old server/internal/modules/issue/app/seen.go
+	parents, err := l.issues.GetIssues(ctx, slices.Compact(slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare)))
+````
+````new server/internal/modules/issue/app/seen.go
+	parents, err := l.issues.GetIssues(ctx, ascending(ids))
 ````
 ````old server/internal/modules/issue/app/seen.go
 }
@@ -15291,7 +15312,7 @@ func createdProjectFrom(t *testing.T, contract *apitest.Contract, base, token, s
 Run: `go -C server test -count=1 ./internal/modules/issue/... ./internal/modules/project/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestARelationListShowsWhatTheCallerSees$|TestTheGuestRuleHoldsForRelations$|TestARelationLocksNoProjectItDoesNotReach$|TestAWorkItemIsFoundByItsIdentifier$|TestCreateProjectRunsOnTheWiredClockAndTransaction$|TestDemotingToGuestDemotesInTheWorkspacesProjects$|TestAnEndingEndsTheMembershipsAndLeavesNoInvitation$|TestIssueProjectsConvertsArchivedProjects$|TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestARelationListShowsWhatTheCallerSees$|TestTheGuestRuleHoldsForRelations$|TestARelationLocksNoProjectItDoesNotReach$|TestAWorkItemIsFoundByItsIdentifier$|TestAHiddenParentIsNotInTheAnswer$|TestCreatingAWorkItemStampsItsRows$|TestCreateProjectRunsOnTheWiredClockAndTransaction$|TestDemotingToGuestDemotesInTheWorkspacesProjects$|TestAnEndingEndsTheMembershipsAndLeavesNoInvitation$|TestIssueProjectsConvertsArchivedProjects$|TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation$' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -15312,7 +15333,7 @@ Expected: 通过。
 - [ ] **Step 7: 提交**
 
 ```bash
-git add api/modules/issue.yaml server/internal/bootstrap/demotion_test.go server/internal/bootstrap/ending_world_test.go server/internal/bootstrap/issue_archived_projects_test.go server/internal/bootstrap/issue_identifier_test.go server/internal/bootstrap/issue_relation_lists_test.go server/internal/bootstrap/issue_relation_locks_test.go server/internal/bootstrap/issue_relations_test.go server/internal/bootstrap/permission_matrix_relations_test.go server/internal/bootstrap/permission_matrix_seed_relations_test.go server/internal/bootstrap/permission_matrix_seeded_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/project_wiring_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/relations.go server/internal/modules/issue/adapter/http/relations_test.go server/internal/modules/issue/adapter/postgres/queries/relations.sql server/internal/modules/issue/adapter/postgres/relations.go server/internal/modules/issue/adapter/postgres/relations_test.go server/internal/modules/issue/app/fakes_across_test.go server/internal/modules/issue/app/fakes_relations_test.go server/internal/modules/issue/app/list_relations.go server/internal/modules/issue/app/list_relations_test.go server/internal/modules/issue/app/lock_across.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/seen.go server/internal/modules/issue/module.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/issue_ports.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/queries/issue_ports.sql server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/issue.yaml server/internal/bootstrap/demotion_test.go server/internal/bootstrap/ending_world_test.go server/internal/bootstrap/issue_archived_projects_test.go server/internal/bootstrap/issue_identifier_test.go server/internal/bootstrap/issue_relation_lists_test.go server/internal/bootstrap/issue_relation_locks_test.go server/internal/bootstrap/issue_relations_test.go server/internal/bootstrap/permission_matrix_relations_test.go server/internal/bootstrap/permission_matrix_seed_relations_test.go server/internal/bootstrap/permission_matrix_seeded_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/project_wiring_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/issue/adapter/http/handler.go server/internal/modules/issue/adapter/http/relations.go server/internal/modules/issue/adapter/http/relations_test.go server/internal/modules/issue/adapter/postgres/queries/relations.sql server/internal/modules/issue/adapter/postgres/relations.go server/internal/modules/issue/adapter/postgres/relations_test.go server/internal/modules/issue/app/create_issue.go server/internal/modules/issue/app/fakes_across_test.go server/internal/modules/issue/app/fakes_relations_test.go server/internal/modules/issue/app/list_relations.go server/internal/modules/issue/app/list_relations_test.go server/internal/modules/issue/app/lock_across.go server/internal/modules/issue/app/ports.go server/internal/modules/issue/app/seen.go server/internal/modules/issue/module.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/issue_ports.go server/internal/modules/project/adapter/postgres/issue_ports_test.go server/internal/modules/project/adapter/postgres/queries/issue_ports.sql server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/issue/adapter/http/gen/server.gen.go server/internal/modules/issue/adapter/postgres/gen/relations.sql.go server/internal/modules/project/adapter/postgres/gen/issue_ports.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M4/P3): listIssueRelations shows the relations whose other work item the caller sees

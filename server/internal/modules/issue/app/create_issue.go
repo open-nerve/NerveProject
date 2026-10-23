@@ -183,7 +183,7 @@ func (u *CreateIssue) write(ctx context.Context, row IssueRow, c checked) error 
 			return err
 		}
 	}
-	subscribers := slices.Compact(slices.SortedFunc(slices.Values(append([]uuid.UUID{row.By}, c.assignees...)), uuid.UUID.Compare))
+	subscribers := ascending(append([]uuid.UUID{row.By}, c.assignees...))
 	if err := u.d.Issues.InsertSubscribers(ctx, s.links(subscribers)); err != nil {
 		return err
 	}

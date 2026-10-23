@@ -71,7 +71,7 @@ func (l Locks) hideParents(ctx context.Context, actor uuid.UUID, items []domain.
 	for k, n := range guarded {
 		ids[k] = *items[n].ParentID
 	}
-	parents, err := l.issues.GetIssues(ctx, slices.Compact(slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare)))
+	parents, err := l.issues.GetIssues(ctx, ascending(ids))
 	if err != nil {
 		return err
 	}
