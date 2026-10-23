@@ -16601,7 +16601,7 @@ Expected: 通过。
 | `T13.30` | 锁下的判定失败时答"关联不存在"，而不是这个失败 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T13.31` | 两个工作项任一个上的写先进第二个工作项的项目的闸门、取它的锁，再第一个的，不按 `id` 排序 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
 | `T13.32` | 删除关联先把第二个工作项、再把第一个改为最后修改，不按 `id` 排序 | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
-| `T13.33` | 逐端核对归档，另一端在先：另一端已归档的工作项先于第一端已归档的项目被拒绝，答"工作项已归档" | `internal/modules/issue/app` 的全部测试（`make test`） | 单元 |
+| `T13.33` | 逐端核对归档，另一端在先：另一端已归档的工作项先于第一端已归档的项目被拒绝，答"工作项已归档" | `internal/modules/issue/app` 的全部测试（`make test`）、`internal/bootstrap` 的 `TestWhoMayNotDeleteARelation`（`make test`）（Task 14 起） | 单元；组合 |
 
 ---
 
@@ -16621,7 +16621,7 @@ Expected: 通过。
 
 **Tests:**
 - HTTP（`apitest.Main` 两个方向）：`TestDeleteIssueRelation`（204，没有体）、`TestDeleteIssueRelationRefusals`。
-- 组合：`TestARelationIsDeletedFromEitherWorkItem`（bob 不是 Ops 的成员：他的删除先判定 Far（看得到、不能改），再判定 Near（能改）：204；关联由 bob 在两端最后修改的时刻删除，各一行动态（在自己的项目、按自己读的类型、对方的标识），谁都不再列出它，再删 404）、`TestWhoMayNotDeleteARelation`（walt 是 acme 的成员、不是 Web 的：看得到 Near、Up 而都不能改 403；不是 acme 成员的 olga 看不到两端 404；walt 看不到 Lab 的两个工作项的关联 404，都与不存在的逐值相同；已归档的 Shelved 的关联从两端删都 409，已归档的项目 Old 的工作项的关联 409；都不写）、`TestTheGuestRuleHoldsForDeletingARelation`（walt 删 Hers 到 His 的关联：先判定访客规则隐藏的 Hers，再判定 His，204；Up 与 Hers 的关联对他是与不存在的逐值相同的 404）；交错（两种顺序，第二个都等在第一个持的行上，都有期限）：10 `TestOppositeRelationsOfTwoWorkItemsSerialize`（alice 把 Near 关联为阻塞 Far、bob 把 Far 关联为阻塞 Near：两个都一次锁住 Web、Ops，第二个在锁下读到第一个的关联，422 `duplicate`，什么都不写）、11 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（bob 删除他的 Near、alice 删除 Ops：各锁自己的项目，再按 `id` 升序锁要删的关联行；第二个等第一个的关联行，提交之后读到已删除、跳过：每条只删一次，是先删的那一个的时刻和删除者）、23 `TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize`（bob 关联 Near 到 Far、alice 删除 Ops：先删，关联在锁下读到 Ops 已删除，Far 没到达，422，什么都不写；先关联，删除等 Ops 的行，再在它的时刻删除那条关联（Ops 的行）和 Far 的那行动态；Near 的那行留着，没有指向已删除的工作项的未删除的关联）、`TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize`（P1a 的交接：bob 关联 Near、Far，alice 删除 acme：先删，关联在锁下读到自己的项目已删除，404，什么都不写；先关联，删除在 acme 的时刻删除它和别的每一行）、`TestTwoDeletionsOfARelationSerialize`（alice、bob 各删除 Near 到 Far 的关联：第二个等第一个的项目的行，锁下再读关联、已删除，404 `issue.relation_not_found`，什么都不写；关联只删一次，是第一个的删除者，两端各一行"删除"的动态，在同一时刻）、26 `TestDeletingARelationAndItsOtherEndSerialize`（bob 删除他做的 Near 到 Far 的关联（判定在 Near 上放行）、alice 删除 Far：关联的删除不论在哪一端判定都锁两端的项目，第二个等在 Ops 的行上；先删关联，Far 的删除读到它已删除、留着 bob 删的样子；先删 Far，关联的删除在锁下再读，它已随 Far 由 alice 在 Far 的时刻删除，404 `issue.relation_not_found`，什么都不写）；`TestEachIssueWriteLocksItsProjectFirst`、`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 的一行；`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 删除她建的关联，锁下的读和写都在它的事务的连接上）；`TestPermissionMatrix`（`deleteIssueRelation` 四行：照常（两端任一个的判定；看不到两端的列 `issue.relation_not_found`）、已归档的项目、已归档的项目里已归档的工作项、已归档的工作项）、`TestThePermissionMatrixCoversEveryOperation`。
+- 组合：`TestARelationIsDeletedFromEitherWorkItem`（bob 不是 Ops 的成员：他的删除先判定 Far（看得到、不能改），再判定 Near（能改）：204；关联由 bob 在两端最后修改的时刻删除，各一行动态（在自己的项目、按自己读的类型、对方的标识），谁都不再列出它，再删 404）、`TestWhoMayNotDeleteARelation`（walt 是 acme 的成员、不是 Web 的：看得到 Near、Up 而都不能改 403；不是 acme 成员的 olga 看不到两端 404；walt 看不到 Lab 的两个工作项的关联 404，都与不存在的逐值相同；已归档的 Shelved 的关联从两端删都 409，已归档的项目 Old 的工作项的关联 409，Old 的工作项到 Shelved 的关联（存为 Old 的）答 `project.archived`：这一端的项目已归档先于另一端的工作项已归档；都不写）、`TestTheGuestRuleHoldsForDeletingARelation`（walt 删 Hers 到 His 的关联：先判定访客规则隐藏的 Hers，再判定 His，204；Up 与 Hers 的关联对他是与不存在的逐值相同的 404）；交错（两种顺序，第二个都等在第一个持的行上，都有期限）：10 `TestOppositeRelationsOfTwoWorkItemsSerialize`（alice 把 Near 关联为阻塞 Far、bob 把 Far 关联为阻塞 Near：两个都一次锁住 Web、Ops，第二个在锁下读到第一个的关联，422 `duplicate`，什么都不写）、11 `TestDeletingARelatedWorkItemAndTheOtherEndsProjectSerialize`（bob 删除他的 Near、alice 删除 Ops：各锁自己的项目，再按 `id` 升序锁要删的关联行；第二个等第一个的关联行，提交之后读到已删除、跳过：每条只删一次，是先删的那一个的时刻和删除者）、23 `TestRelatingAWorkItemAndDeletingTheOtherEndsProjectSerialize`（bob 关联 Near 到 Far、alice 删除 Ops：先删，关联在锁下读到 Ops 已删除，Far 没到达，422，什么都不写；先关联，删除等 Ops 的行，再在它的时刻删除那条关联（Ops 的行）和 Far 的那行动态；Near 的那行留着，没有指向已删除的工作项的未删除的关联）、`TestRelatingAcrossProjectsAndDeletingTheWorkspaceSerialize`（P1a 的交接：bob 关联 Near、Far，alice 删除 acme：先删，关联在锁下读到自己的项目已删除，404，什么都不写；先关联，删除在 acme 的时刻删除它和别的每一行）、`TestTwoDeletionsOfARelationSerialize`（alice、bob 各删除 Near 到 Far 的关联：第二个等第一个的项目的行，锁下再读关联、已删除，404 `issue.relation_not_found`，什么都不写；关联只删一次，是第一个的删除者，两端各一行"删除"的动态，在同一时刻）、26 `TestDeletingARelationAndItsOtherEndSerialize`（bob 删除他做的 Near 到 Far 的关联（判定在 Near 上放行）、alice 删除 Far：关联的删除不论在哪一端判定都锁两端的项目，第二个等在 Ops 的行上；先删关联，Far 的删除读到它已删除、留着 bob 删的样子；先删 Far，关联的删除在锁下再读，它已随 Far 由 alice 在 Far 的时刻删除，404 `issue.relation_not_found`，什么都不写）；`TestEachIssueWriteLocksItsProjectFirst`、`TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy` 的一行；`TestTheWritesOnAWorkItemRunOnTheirTransactionsConnection`（一个连接的池：alice 删除她建的关联，锁下的读和写都在它的事务的连接上）；`TestPermissionMatrix`（`deleteIssueRelation` 四行：照常（两端任一个的判定；看不到两端的列 `issue.relation_not_found`）、已归档的项目、已归档的项目里已归档的工作项、已归档的工作项）、`TestThePermissionMatrixCoversEveryOperation`。
 - 前端：`error-messages.test.ts`（文案表有每个码），`check:sync`（中文的键）。
 - `-race -count=5`：P3 的交错（9 的两对、10、11、13、23、26、加关联与删除工作区、两个删除同一条关联）、加关联不锁它到不了的项目、预检没到达的锁下也不到达（`TestAWorkItemTheCallerComesToSeeWhileHisRelationWaitsIsRefused`，Task 11）、P2、P1b、P1a 的工作项一侧的交错、写闸门的组合测试（拒绝答 `server_busy`、事务等锁到期、项目太忙、每个写进闸门、请求在闸门上到期、跨项目的写一共等 `max_wait`、跨项目的写放回它占的每个位置）、连接池的测试（交错 20 的两个、写在事务的连接上）、取锁形状，没有 40P01；`platform/gate` 的单元测试同样五遍。
 
@@ -16909,7 +16909,7 @@ func TestDeleteIssueRelationRefusals(t *testing.T) {
 			relationsOf(w.newWorkItem(t)), relating("relates_to", w.newWorkItem(t)), http.StatusCreated))[0].ID), "", http.StatusNoContent},
 ````
 
-`server/internal/bootstrap/issue_relation_deletes_test.go`（新文件，182 行）：
+`server/internal/bootstrap/issue_relation_deletes_test.go`（新文件，187 行）：
 
 ````file server/internal/bootstrap/issue_relation_deletes_test.go
 package bootstrap
@@ -17013,7 +17013,10 @@ func TestARelationIsDeletedFromEitherWorkItem(t *testing.T) {
 // Lab, a private project he is none of, each the very answer of a relation
 // not there. Then a relation of an archived work item, Shelved, from
 // either end, and one of a work item of an archived project, Old's, are
-// not deleted (409), the archived one's end stored as issue_id or not.
+// not deleted (409), the archived one's end stored as issue_id or not;
+// nor is the relation of Old's work item to Shelved, stored from Old's,
+// the archived project, Old, answered before the archived work item,
+// Shelved, of the other end (409 project.archived).
 func TestWhoMayNotDeleteARelation(t *testing.T) {
 	w := newIssueWorld(t)
 	lab := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Lab","identifier":"LAB","network":0}`)
@@ -17028,6 +17031,7 @@ func TestWhoMayNotDeleteARelation(t *testing.T) {
 	ofUp, ofLab := related(near, up, "relates_to"), related(labs, lab2, "relates_to")
 	toShelved, fromShelved := related(near, shelved, "relates_to"), related(shelved, up, "relates_to")
 	toOld, fromOld := related(up, olds, "relates_to"), related(olds, near, "relates_to")
+	fromOldToShelved := related(olds, shelved, "relates_to")
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/archive", "", http.StatusOK)
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+old.String()+"/archive", "", http.StatusOK)
 	before := w.relationRows(t, near, time.Time{})
@@ -17045,6 +17049,7 @@ func TestWhoMayNotDeleteARelation(t *testing.T) {
 		{"bob", fromShelved, http.StatusConflict, "issue.archived"},
 		{"alice", toOld, http.StatusConflict, "project.archived"},
 		{"alice", fromOld, http.StatusConflict, "project.archived"},
+		{"alice", fromOldToShelved, http.StatusConflict, "project.archived"},
 	} {
 		answer := w.send(t, tt.name, http.MethodDelete, relationPath(tt.relation), "", tt.status)
 		if got := refusalOf(t, []byte(answer), false); got != tt.code || w.relationDeletion(t, tt.relation, time.Time{}) != "undeleted" {
@@ -17925,7 +17930,7 @@ Expected: 通过。
 | `T14.3` | 页面没有 `issue.relation_not_found` 的文案 | `error-messages.test.ts`（`make test-web`） | 单元 |
 | `T14.4` | 中文的语言包没有 `issue_relation_not_found` | `web/packages/i18n` 的 `check:sync`（`make lint-web`） | 守卫 |
 
-本 Task 的检查也发现较早的 Task 的变异 `T7.9`、`T8.8`、`T8.10`、`T8.11`、`T8.16`、`T8.17`、`T8.18`、`T9.16`、`T9.17`、`T10.7`、`T10.11`、`T12.9`、`T13.1`、`T13.2`、`T13.3`、`T13.5`、`T13.6`、`T13.7`、`T13.8`、`T13.9`、`T13.10`、`T13.11`、`T13.12`、`T13.13`、`T13.14`、`T13.15`、`T13.16`、`T13.17`、`T13.18`、`T13.19`、`T13.23`、`T13.24`、`T13.25`、`T13.26`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=14`）。
+本 Task 的检查也发现较早的 Task 的变异 `T7.9`、`T8.8`、`T8.10`、`T8.11`、`T8.16`、`T8.17`、`T8.18`、`T9.16`、`T9.17`、`T10.7`、`T10.11`、`T12.9`、`T13.1`、`T13.2`、`T13.3`、`T13.5`、`T13.6`、`T13.7`、`T13.8`、`T13.9`、`T13.10`、`T13.11`、`T13.12`、`T13.13`、`T13.14`、`T13.15`、`T13.16`、`T13.17`、`T13.18`、`T13.19`、`T13.23`、`T13.24`、`T13.25`、`T13.26`、`T13.33`（列在各自的 Task 的表里，标"（Task 14 起）"）：本 Task 做完之后，在本 Task 的树上重跑它们（`mutants_p3.py`，`MUT_LATER=14`）。
 
 ---
 

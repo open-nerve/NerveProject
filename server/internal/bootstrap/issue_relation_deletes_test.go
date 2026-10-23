@@ -99,7 +99,10 @@ func TestARelationIsDeletedFromEitherWorkItem(t *testing.T) {
 // Lab, a private project he is none of, each the very answer of a relation
 // not there. Then a relation of an archived work item, Shelved, from
 // either end, and one of a work item of an archived project, Old's, are
-// not deleted (409), the archived one's end stored as issue_id or not.
+// not deleted (409), the archived one's end stored as issue_id or not;
+// nor is the relation of Old's work item to Shelved, stored from Old's,
+// the archived project, Old, answered before the archived work item,
+// Shelved, of the other end (409 project.archived).
 func TestWhoMayNotDeleteARelation(t *testing.T) {
 	w := newIssueWorld(t)
 	lab := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Lab","identifier":"LAB","network":0}`)
@@ -114,6 +117,7 @@ func TestWhoMayNotDeleteARelation(t *testing.T) {
 	ofUp, ofLab := related(near, up, "relates_to"), related(labs, lab2, "relates_to")
 	toShelved, fromShelved := related(near, shelved, "relates_to"), related(shelved, up, "relates_to")
 	toOld, fromOld := related(up, olds, "relates_to"), related(olds, near, "relates_to")
+	fromOldToShelved := related(olds, shelved, "relates_to")
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+shelved.String()+"/archive", "", http.StatusOK)
 	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+old.String()+"/archive", "", http.StatusOK)
 	before := w.relationRows(t, near, time.Time{})
@@ -131,6 +135,7 @@ func TestWhoMayNotDeleteARelation(t *testing.T) {
 		{"bob", fromShelved, http.StatusConflict, "issue.archived"},
 		{"alice", toOld, http.StatusConflict, "project.archived"},
 		{"alice", fromOld, http.StatusConflict, "project.archived"},
+		{"alice", fromOldToShelved, http.StatusConflict, "project.archived"},
 	} {
 		answer := w.send(t, tt.name, http.MethodDelete, relationPath(tt.relation), "", tt.status)
 		if got := refusalOf(t, []byte(answer), false); got != tt.code || w.relationDeletion(t, tt.relation, time.Time{}) != "undeleted" {
