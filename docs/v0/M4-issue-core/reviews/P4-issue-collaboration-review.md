@@ -156,9 +156,17 @@ T10已完成两项修正，独立报告task-10-review.md逐项确认M1/M2均为A
 
 独立报告task-10-review.md审查2a24ba87..8dc2ed01，规格通过、质量Approved，Critical/Important/Minor均为0，T9 M1/M2均ADDRESSED。评审定点核对seeAs隐藏优先顺序、生产ReadTx独立注入和M1 latest辅助查询。差异外边界由推进者闭合：T1清洗、T2游标和快照底层、T8窗口纯规则、T9普通PATCH还原及删除链沿既有验收；Locks、platform、project模块、gate、生产组合、shared、架构守卫与依赖在本Task范围无改动，最终完整Go与原始日志已核对。GET无requestBody与本次不适用E2E的边界已明确；阶段剩余任务和Claude终审不在本次Approved内。
 
-### 2.12 尚未完成的 P4 验收
+### 2.12 T11 实施与验证（待独立评审）
 
-历史目录与动态读取、跨资源权限矩阵增量、交错 14/15、接口故事、目录驱动删除增量、其他关键性质的实际变异、阶段完整门禁与 Claude 整分支终审尚未完成。M4 设计 §14 不新增勾选；P4 不标已完成。
+历史项目目录已提交为`80d76256`，基线`990428bd`，11个代码/测试/生成文件。issue/app声明只含Historical的小端口，project只查询自有projects/project_members，bootstrap转换值并原样传播错误。查询限定workspace、actor和is_active，按项目id排序；不看项目/成员软删除或归档，OwnOnly只由项目guest角色与guest_view_all_features决定。T12消费目录过滤引用；没有改变目标工作项授权、ArchivedProjects或添加普通目录方法。
+
+先取得存储及转换/真实组合的可编译业务红，再实现转绿。数据覆盖私有/公开、项目和成员分别软删、归档、退出、跨工作区、其他actor、无成员关系、id顺序、普通guest和管理员兼guest。四项实际SQL变异分别增加软删过滤、漏is_active、漏workspace、错误置OwnOnly=false；前三由存储测试、最后一项由真实管理员兼guest组合断言检出，均以业务FAIL退出1。每项SQL经gen-go生成，最终恢复原SQL并重新生成，两组定位测试均恢复通过。
+
+推进者核对task-11-report.md和原始日志：Go lint两段0 issues，唯一一次完整Go通过（server63包及tools，bootstrap106.601s），提交后gen-check通过，工作树干净、主目录仍干净main。所有容器命令串行等自然退出，无容器/Docker操作；本Task无HTTP/Web/迁移/E2E furnish/故事变化，不适用对应门禁。首轮组合夹具尝试直接把workspace管理员作为project guest加入被既有API拒绝422，改为正常创建后在隔离测试库构造历史窄角色，再取得真实目录业务红；该前置失败不计变异。独立评审待执行。
+
+### 2.13 尚未完成的 P4 验收
+
+T11独立评审、动态读取、跨资源权限矩阵增量、交错 14/15、接口故事、目录驱动删除增量、其他关键性质的实际变异、阶段完整门禁与 Claude 整分支终审尚未完成。M4 设计 §14 不新增勾选；P4 不标已完成。
 
 ## 3. 准备阶段的决定与裁定记录
 
