@@ -329,15 +329,15 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** `ListDescriptionVersions.Execute(ctx context.Context,issueID uuid.UUID,limit *int,cursor *string)(DescriptionVersionPage,error)`；`GetDescriptionVersion.Execute(ctx context.Context,versionID uuid.UUID)(domain.DescriptionVersion,error)`。List Deps `Locks, Versions DescriptionVersionLister, ReadTx`；Get Deps `Locks, Versions DescriptionVersionReader`。Reader的`GetDescriptionVersion(ctx context.Context,id uuid.UUID)(domain.DescriptionVersion,bool,error)`，Lister的`DescriptionVersions(ctx context.Context,issueID uuid.UUID,after *domain.DescriptionVersionCursor,limit int)([]domain.DescriptionVersion,error)`。List以limit+1查询，DESC键集为`(last_saved_at,id) < (...)`。
 
-- [ ] **Step 1 红测试。** `TestDescriptionVersionPages`相同saved_at逆id、1/50/100、空页、满页无更多cursor=null，其他issue和软删不进页，改他人位置不能扩结果；`TestDescriptionVersionVisibility`guest自己403、别人404，adminGuest自己成功/别人404，归档可读；单version隐藏与不存在整个Problem相同，新码issue.description_version_not_found。
+- [x] **Step 1 红测试。** `TestDescriptionVersionPages`相同saved_at逆id、1/50/100、空页、满页无更多cursor=null，其他issue和软删不进页，改他人位置不能扩结果；`TestDescriptionVersionVisibility`guest自己403、别人404，adminGuest自己成功/别人404，归档可读；单version隐藏与不存在整个Problem相同，新码issue.description_version_not_found。
   ```go
   if !slices.Equal(ids(page.Data), wantDescendingIDs) { t.Fatal("version order") }
   if !reflect.DeepEqual(hiddenVersionReply, missingVersionReply) { t.Fatal("version leak") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'TestDescriptionVersion(Pages|Visibility)' -count=1`。
-- [ ] **Step 3 实现。** 新action=issue_description_version.read，角色Admin/Member；seeAs先HiddenFrom再角色。Get先读version定位issue，经seeAs统一子资源404，不吞其他存储错误；无写事务。List首次see和全部查询在独立ReadTx内；不能先see再进入快照或在写事务里嵌套“升级”。HTTP列表不带HTML，详情带HTML，路径设计5.1；还原无路由，使用普通PATCH（可能按600秒政策合并版本）。
-- [ ] **Step 4 绿/变异。** 原命令、HTTP全包、`go -C server test ./internal/bootstrap -run TestDescriptionVersions -count=1`；实际反向tuple、漏issue/软删条件、guest放宽、隐藏404错误映射各失败；错误文案同Task。T9 M1须先断言latest确为同owner的过期版本，再断言新ID；实际移除600秒上限、保留owner条件后仅跑此组合测试，业务失败并恢复。M2同步列表映射与请求字段的旧注释，由HTTP整包覆盖既有行为。
-- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 按权限和游标读取描述版本`。
+- [x] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'TestDescriptionVersion(Pages|Visibility)' -count=1`。
+- [x] **Step 3 实现。** 新action=issue_description_version.read，角色Admin/Member；seeAs先HiddenFrom再角色。Get先读version定位issue，经seeAs统一子资源404，不吞其他存储错误；无写事务。List首次see和全部查询在独立ReadTx内；不能先see再进入快照或在写事务里嵌套“升级”。HTTP列表不带HTML，详情带HTML，路径设计5.1；还原无路由，使用普通PATCH（可能按600秒政策合并版本）。
+- [x] **Step 4 绿/变异。** 原命令、HTTP全包、`go -C server test ./internal/bootstrap -run TestDescriptionVersions -count=1`；实际反向tuple、漏issue/软删条件、guest放宽、隐藏404错误映射各失败；错误文案同Task。T9 M1须先断言latest确为同owner的过期版本，再断言新ID；实际移除600秒上限、保留owner条件后仅跑此组合测试，业务失败并恢复。M2同步列表映射与请求字段的旧注释，由HTTP整包覆盖既有行为。
+- [x] **Step 5 H/G评审提交。** `feat(M4/P4): 按权限和游标读取描述版本`。
 
 ### Task 11: 活动态引用使用的历史项目目录
 
