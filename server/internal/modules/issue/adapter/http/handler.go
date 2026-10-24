@@ -119,8 +119,14 @@ type GetDescriptionVersionUseCase interface {
 	Execute(context.Context, uuid.UUID) (domain.DescriptionVersion, error)
 }
 
+// ListIssueActivitiesUseCase reads a page with historical reference visibility.
+type ListIssueActivitiesUseCase interface {
+	Execute(context.Context, uuid.UUID, *int, *string) (app.ActivityPage, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	ListIssueActivities     ListIssueActivitiesUseCase
 	ListDescriptionVersions ListDescriptionVersionsUseCase
 	GetDescriptionVersion   GetDescriptionVersionUseCase
 	AddCommentReaction      AddCommentReactionUseCase

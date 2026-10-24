@@ -15,6 +15,9 @@ func (s issueSeed) comments(sd seeded) {
 	for _, i := range seededItems() {
 		slug, _, _ := strings.Cut(i.key, "/")
 		by := s.ids[i.by]
+		if err := s.store.InsertActivities(context.Background(), []issueapp.ActivityRow{{ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[i.key], IssueID: sd.issue(i.key, i.name), ActorID: by, At: s.now, Activity: issuedomain.Activity{Verb: "created"}}}); err != nil {
+			s.t.Fatal(err)
+		}
 		c := issuedomain.Comment{ID: sd.comment(i.key, i.name), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[i.key], IssueID: sd.issue(i.key, i.name), ActorID: by, HTML: "<p>Seeded comment</p>", Text: "Seeded comment"}
 		v := issuedomain.DescriptionVersion{ID: sd.descriptionVersion(i.key, i.name), WorkspaceID: c.WorkspaceID, ProjectID: c.ProjectID, IssueID: c.IssueID, OwnedByID: by, CreatedByID: by, UpdatedByID: by, HTML: "<p>Seeded description</p>", Text: "Seeded description", LastSavedAt: s.now, CreatedAt: s.now, UpdatedAt: s.now}
 		if err := s.store.InsertDescriptionVersion(context.Background(), v); err != nil {

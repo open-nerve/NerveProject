@@ -1166,6 +1166,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a work item's visible activity
+         * @description Uses issue.read, after the work item guest visibility rule. Hidden or missing work items answer issue.not_found before forbidden. Archived projects and work items remain readable. Visibility and page reads share one independent read snapshot. Activities are ordered by (created_at,id) ascending; a cursor is only a position and cannot expand the target's rows. For parent and relation fields, each nonnull identifier must name an existing issue in an active historical membership, respecting that project's guest scope. Soft deletion and archival of references and their projects do not hide history. Hidden or physically missing references remove the entire row before pagination. Only the eleven activity fields are returned.
+         */
+        get: operations["listIssueActivities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/description-versions": {
         parameters: {
             query?: never;
@@ -2294,6 +2317,30 @@ export interface components {
         IssueReactionCollection: {
             data: components["schemas"]["IssueReaction"][];
         };
+        IssueActivity: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            project_id: string;
+            verb: string;
+            field: string | null;
+            old_value: string | null;
+            new_value: string | null;
+            /** Format: uuid */
+            old_identifier: string | null;
+            /** Format: uuid */
+            new_identifier: string | null;
+            /** Format: uuid */
+            actor_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        IssueActivityPage: {
+            data: components["schemas"]["IssueActivity"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
         DescriptionVersion: {
             /** Format: uuid */
             id: string;
@@ -2501,6 +2548,8 @@ export type IssueComment = components['schemas']['IssueComment'];
 export type ReactionCreate = components['schemas']['ReactionCreate'];
 export type IssueReaction = components['schemas']['IssueReaction'];
 export type IssueReactionCollection = components['schemas']['IssueReactionCollection'];
+export type IssueActivity = components['schemas']['IssueActivity'];
+export type IssueActivityPage = components['schemas']['IssueActivityPage'];
 export type DescriptionVersion = components['schemas']['DescriptionVersion'];
 export type DescriptionVersionPage = components['schemas']['DescriptionVersionPage'];
 export type DescriptionVersionDetail = components['schemas']['DescriptionVersionDetail'];
@@ -4319,6 +4368,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listIssueActivities: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible activity, with null next_cursor on the last page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueActivityPage"];
+                };
             };
             default: components["responses"]["Problem"];
         };

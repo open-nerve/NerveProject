@@ -126,6 +126,7 @@ func New(d Deps) *Module {
 	sanitizer := content.NewSanitizer()
 	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
+		ListIssueActivities:     app.NewListIssueActivities(app.ListIssueActivitiesDeps{Locks: locks, Activities: store, Projects: d.Projects, ReadTx: d.ReadTx}),
 		ListDescriptionVersions: app.NewListDescriptionVersions(app.ListDescriptionVersionsDeps{Locks: locks, Versions: store, ReadTx: d.ReadTx}),
 		GetDescriptionVersion:   app.NewGetDescriptionVersion(app.GetDescriptionVersionDeps{Locks: locks, Versions: store}),
 		AddCommentReaction:      app.NewAddCommentReaction(app.AddCommentReactionDeps{Locks: locks, Comments: store, Reactions: store, Clock: d.Clock}),

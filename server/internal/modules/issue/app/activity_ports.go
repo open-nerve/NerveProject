@@ -29,3 +29,8 @@ type DescriptionActivityStore interface {
 	LatestActivity(ctx context.Context, issueID uuid.UUID) (ActivityRecord, bool, error)
 	MergeDescriptionActivity(ctx context.Context, m DescriptionActivityMerge) error
 }
+
+// ActivityLister filters historical references before selecting a keyset page.
+type ActivityLister interface {
+	Activities(context.Context, uuid.UUID, uuid.UUID, []VisibleProject, *domain.ActivityCursor, int) ([]ActivityRecord, error)
+}

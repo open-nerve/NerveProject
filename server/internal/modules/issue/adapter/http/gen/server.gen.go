@@ -157,6 +157,29 @@ type Issue struct {
 	WorkspaceID uuid.UUID                    `json:"workspace_id"`
 }
 
+// IssueActivity defines model for IssueActivity.
+type IssueActivity struct {
+	ActorID       nullable.Nullable[uuid.UUID] `json:"actor_id"`
+	CreatedAt     time.Time                    `json:"created_at"`
+	Field         nullable.Nullable[string]    `json:"field"`
+	ID            uuid.UUID                    `json:"id"`
+	IssueID       uuid.UUID                    `json:"issue_id"`
+	NewIdentifier nullable.Nullable[uuid.UUID] `json:"new_identifier"`
+	NewValue      nullable.Nullable[string]    `json:"new_value"`
+	OldIdentifier nullable.Nullable[uuid.UUID] `json:"old_identifier"`
+	OldValue      nullable.Nullable[string]    `json:"old_value"`
+	ProjectID     uuid.UUID                    `json:"project_id"`
+	Verb          string                       `json:"verb"`
+}
+
+// IssueActivityPage defines model for IssueActivityPage.
+type IssueActivityPage struct {
+	Data []IssueActivity `json:"data"`
+
+	// NextCursor The cursor of the next page; null on the last page.
+	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
+}
+
 // IssueCollection Work items, all of them, without pages.
 type IssueCollection struct {
 	Data []Issue `json:"data"`
@@ -377,6 +400,15 @@ type Slug = string
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// ListIssueActivitiesParams defines parameters for ListIssueActivities.
+type ListIssueActivitiesParams struct {
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ListIssueCommentsParams defines parameters for ListIssueComments.
 type ListIssueCommentsParams struct {
 	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
@@ -448,6 +480,9 @@ type ServerInterface interface {
 	// UpdateIssue Change a work item
 	// (PATCH /api/v0/issues/{issue_id})
 	UpdateIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ListIssueActivities List a work item's visible activity
+	// (GET /api/v0/issues/{issue_id}/activities)
+	ListIssueActivities(w http.ResponseWriter, r *http.Request, issueID IssueID, params ListIssueActivitiesParams)
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -735,6 +770,61 @@ func (siw *ServerInterfaceWrapper) UpdateIssue(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListIssueActivities operation middleware
+func (siw *ServerInterfaceWrapper) ListIssueActivities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListIssueActivitiesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIssueActivities(w, r, issueID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1325,6 +1415,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.CreateIssueComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.DeleteIssueComment)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.UpdateIssueComment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/activities", wrapper.ListIssueActivities)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/description-versions", wrapper.ListDescriptionVersions)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issue-description-versions/{version_id}", wrapper.GetDescriptionVersion)
 
@@ -1718,6 +1809,53 @@ type UpdateIssuedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateIssuedefaultApplicationProblemPlusJSONResponse) VisitUpdateIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIssueActivitiesRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Params  ListIssueActivitiesParams
+}
+
+type ListIssueActivitiesResponseObject interface {
+	VisitListIssueActivitiesResponse(w http.ResponseWriter) error
+}
+
+type ListIssueActivities200JSONResponse IssueActivityPage
+
+func (response ListIssueActivities200JSONResponse) VisitListIssueActivitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIssueActivitiesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListIssueActivitiesdefaultApplicationProblemPlusJSONResponse) VisitListIssueActivitiesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2411,6 +2549,9 @@ type StrictServerInterface interface {
 	// UpdateIssue Change a work item
 	// (PATCH /api/v0/issues/{issue_id})
 	UpdateIssue(ctx context.Context, request UpdateIssueRequestObject) (UpdateIssueResponseObject, error)
+	// ListIssueActivities List a work item's visible activity
+	// (GET /api/v0/issues/{issue_id}/activities)
+	ListIssueActivities(ctx context.Context, request ListIssueActivitiesRequestObject) (ListIssueActivitiesResponseObject, error)
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(ctx context.Context, request ArchiveIssueRequestObject) (ArchiveIssueResponseObject, error)
@@ -2743,6 +2884,33 @@ func (sh *strictHandler) UpdateIssue(w http.ResponseWriter, r *http.Request, iss
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateIssueResponseObject); ok {
 		if err := validResponse.VisitUpdateIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListIssueActivities operation middleware
+func (sh *strictHandler) ListIssueActivities(w http.ResponseWriter, r *http.Request, issueID IssueID, params ListIssueActivitiesParams) {
+	var request ListIssueActivitiesRequestObject
+
+	request.IssueID = issueID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIssueActivities(ctx, request.(ListIssueActivitiesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIssueActivities")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIssueActivitiesResponseObject); ok {
+		if err := validResponse.VisitListIssueActivitiesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -699,6 +699,39 @@ paths:
           description: The comment was deleted.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/activities:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listIssueActivities
+      tags: [issue]
+      summary: List a work item's visible activity
+      description: >-
+        Uses issue.read,
+        after the work item guest visibility rule. Hidden or missing work items
+        answer issue.not_found before forbidden. Archived projects and work items
+        remain readable. Visibility and page reads share one independent read
+        snapshot. Activities are ordered by (created_at,id) ascending; a cursor
+        is only a position and cannot expand the target's rows. For parent and
+        relation fields, each nonnull identifier must name an existing issue in
+        an active historical membership, respecting that project's guest scope.
+        Soft deletion and archival of references and their projects do not hide
+        history. Hidden or physically missing references remove the entire row
+        before pagination. Only the eleven activity fields are returned.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.not_found, forbidden]
+      parameters:
+        - $ref: '../common.yaml#/components/parameters/Limit'
+        - $ref: '../common.yaml#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Visible activity, with null next_cursor on the last page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueActivityPage'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}/description-versions:
     parameters:
       - $ref: '#/components/parameters/IssueID'
@@ -1286,6 +1319,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IssueComment'
+        next_cursor:
+          $ref: '../common.yaml#/components/schemas/NextCursor'
+    IssueActivity:
+      type: object
+      additionalProperties: false
+      required: [id, issue_id, project_id, verb, field, old_value, new_value, old_identifier, new_identifier, actor_id, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        verb:
+          type: string
+        field:
+          type: [string, 'null']
+        old_value:
+          type: [string, 'null']
+        new_value:
+          type: [string, 'null']
+        old_identifier:
+          type: [string, 'null']
+          format: uuid
+        new_identifier:
+          type: [string, 'null']
+          format: uuid
+        actor_id:
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    IssueActivityPage:
+      type: object
+      additionalProperties: false
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueActivity'
         next_cursor:
           $ref: '../common.yaml#/components/schemas/NextCursor'
     DescriptionVersion:

@@ -45,6 +45,13 @@ func collaborationMatrixRows() []matrixRow {
 		}
 	}
 	rows = append(rows,
+		matrixRow{op: "listIssueActivities", columns: issueColumns, request: toWorkItem(http.MethodGet, "/activities", ""), cells: onAWorkItem(cellOK, cellOK, cellOK, cellOK), check: func(t *testing.T, c caller, s seeded, answer string) {
+			got := listIn[answeredActivity](t, answer)
+			if len(got) != 1 || got[0].IssueID != s.issue(projectOf(c), issueOf(c)) || got[0].Verb != "created" {
+				t.Fatal(answer)
+			}
+		}},
+		matrixRow{op: "listIssueActivities", variant: "archived", columns: archivedColumns, request: toWorkItem(http.MethodGet, "/activities", ""), cells: issueRows.ofArchived(cellOK, cellForbidden)},
 		matrixRow{op: "listDescriptionVersions", columns: issueColumns, request: listVersions, cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden), check: func(t *testing.T, c caller, s seeded, answer string) {
 			got := listIn[answeredVersion](t, answer)
 			if len(got) != 1 || got[0].ID != s.descriptionVersion(projectOf(c), issueOf(c)) || got[0].IssueID != s.issue(projectOf(c), issueOf(c)) {
