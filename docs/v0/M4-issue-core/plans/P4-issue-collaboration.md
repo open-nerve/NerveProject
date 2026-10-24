@@ -212,16 +212,16 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** Consumes T1/T2。Produces `CreateIssueComment.Execute(ctx context.Context, issueID uuid.UUID, html string) (domain.Comment,error)`，`ListIssueComments.Execute(ctx context.Context, issueID uuid.UUID, limit *int, cursor *string) (CommentPage,error)`。Deps：Create的`Locks, Comments CommentCreator, Members ProjectMembers, Sanitizer HTMLSanitizer, Clock Clock`；List的`Locks, Comments CommentLister, ReadTx shared.TxManager`。CommentCreator消费InsertComment及既有`InsertSubscribers(ctx,LinkRows)error`、`MarkChanged(ctx,ChangedRows)error`；CommentLister消费`Comments(ctx context.Context, issueID uuid.UUID, after *domain.CommentCursor, limit int) ([]domain.Comment,error)`。共享`GetComment(ctx context.Context,id uuid.UUID)(domain.Comment,bool,error)`、`InsertComment(ctx context.Context,w CommentWrite)error`。ProjectMembers新增`MentionMembers(ctx context.Context,projectID uuid.UUID,ids []uuid.UUID)([]MemberVisibility,error)`；project对应`IssueMentionMembers`返回自己的`IssueMemberVisibility`值，bootstrap转换，不改Lock返回值。此Task由`module.New`构造T1的content.NewSanitizer并注入CreateIssueComment；后续UpdateIssueComment/CreateIssue/UpdateIssue复用同一只读实例。
 
-- [ ] **Step 1 红测试。** `TestCreateComment`：空白/仅script清洗后422 comment_html/required、mention/image-only允许、500000字符允许/500001拒绝；调用者+能读被提及者关注，隐藏guest只不关注；无mentions/动态行，所有新行同刻；随机成员重复提及只插一次，现有关注id/戳不变。`TestListComments`：ASC同刻逆id、limit1/50/100、坏cursor400优先坏limit422、其他issue/已删不进页、他人合法cursor不改变target权限。
+- [x] **Step 1 红测试。** `TestCreateComment`：空白/仅script清洗后422 comment_html/required、mention/image-only允许、500000字符允许/500001拒绝；调用者+能读被提及者关注，隐藏guest只不关注；无mentions/动态行，所有新行同刻；随机成员重复提及只插一次，现有关注id/戳不变。`TestListComments`：ASC同刻逆id、limit1/50/100、坏cursor400优先坏limit422、其他issue/已删不进页、他人合法cursor不改变target权限。
   ```go
   if got.EditedAt != nil || got.HTML != clean.HTML { t.Fatal("creation shape") }
   if !slices.Equal(subscribers, wantVisibleSortedIDs) { t.Fatal("subscription visibility") }
   if page.NextCursor == "" || len(page.Data) != 1 { t.Fatal("limit+1 page") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CreateComment|ListComments)' -count=1`；`go -C server test ./internal/modules/project/adapter/postgres -run TestIssueMentionMembers -count=1`（新增于issue_ports_test.go）。
-- [ ] **Step 3 实现。** 评论请求body只含必填comment_html，创建201/list200；CommentReaction纯类型/schema在T3定义，实际表/读写到T6，当前返回[]。project同一查询读有效成员角色和project guest标志，角色为guest且标志关则OwnOnly；issue用HiddenFrom逐候选过滤订阅，排序后InsertSubscribers。写序MarkChanged→subscribers→comments，不写动态/mentions。列表ReadTx内see→Comments(limit+1)，游标仅位置，bad cursor/limit先校验；M的00021同步删除/furnish。新增issue_comment.create规则与action，list使用issue.read。
-- [ ] **Step 4 绿/变异。** 跑原红命令、HTTP全包、`go -C server test ./internal/bootstrap -run 'Test(Comments|IssueMentionMembers|PermissionMatrix|EachIssueWriteLocksItsProjectFirst)' -count=1`；实际删成员过滤/guest OwnOnly/issue_id/deleted_at谓词、改变写序；安全项需组合层失败。端口errDisk原样返回且后续零调用。
-- [ ] **Step 5 M/H/G、评审、提交。** 00021/furnish无豁免；`feat(M4/P4): 创建工作项评论并提供分页`。
+- [x] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CreateComment|ListComments)' -count=1`；`go -C server test ./internal/modules/project/adapter/postgres -run TestIssueMentionMembers -count=1`（新增于issue_ports_test.go）。
+- [x] **Step 3 实现。** 评论请求body只含必填comment_html，创建201/list200；CommentReaction纯类型/schema在T3定义，实际表/读写到T6，当前返回[]。project同一查询读有效成员角色和project guest标志，角色为guest且标志关则OwnOnly；issue用HiddenFrom逐候选过滤订阅，排序后InsertSubscribers。写序MarkChanged→subscribers→comments，不写动态/mentions。列表ReadTx内see→Comments(limit+1)，游标仅位置，bad cursor/limit先校验；M的00021同步删除/furnish。新增issue_comment.create规则与action，list使用issue.read。
+- [x] **Step 4 绿/变异。** 跑原红命令、HTTP全包、`go -C server test ./internal/bootstrap -run 'Test(Comments|IssueMentionMembers|PermissionMatrix|EachIssueWriteLocksItsProjectFirst)' -count=1`；实际删成员过滤/guest OwnOnly/issue_id/deleted_at谓词、改变写序；安全项需组合层失败。端口errDisk原样返回且后续零调用。
+- [x] **Step 5 M/H/G、评审、提交。** 00021/furnish无豁免；`feat(M4/P4): 创建工作项评论并提供分页`。
 
 ### Task 4: 评论相对权限与同一路径的子资源检查
 
