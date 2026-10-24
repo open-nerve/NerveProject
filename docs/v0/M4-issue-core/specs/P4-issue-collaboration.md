@@ -2,7 +2,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 状态 | 独立预检及六项局部修订复核通过；A1已于2026-10-25获负责人批准；T1含F1修正、T2–T5实施及独立评审完成；T6起后续任务和阶段验收待执行 |
+| 状态 | 独立预检及六项局部修订复核通过；A1已于2026-10-25获负责人批准；T1含F1修正、T2–T5实施及独立评审完成；T6实施待独立评审，T7起后续任务和阶段验收待执行 |
 | 日期 | 2026-10-25 |
 | 代码基线 | `56d575fb8ff6575880d1edef65219728a81f2b12`；P3 已合并；P4 启动提交已把关键词 phase 改为 `M4/P4` |
 | 工作树 | `.codex/worktress/codex/m4-p4`，分支 `codex/m4-p4`；主目录保持 `main` |
@@ -91,7 +91,7 @@ POST/DELETE `/api/v0/issue-comments/{comment_id}/reactions[/{reaction}]`；与�
 
 `domain.NewIssue`/`IssuePatch`/`Issue` 增加描述信息；创建默认 `<p></p>`；长度按 Unicode 字符而非字节 ≤500000，请求体仍限 1 MiB。`IssuePatch.SkipActivity *bool` 保留字段是否出现；只要出现（包括 false），就必须同时有 description_html 且无其他 patch 字段，否则 422 `skip_activity/not_allowed`。纯 HTML 相同且无 skip 的普通保存不算修改；skip=true 的保存总写清洗后 HTML；skip=false 是普通保存，清洗后HTML相同则不写（Write=false、Changed=false）。
 
-Task 7 同时闭合app/create_issue、app/update_issue和postgres/update的值传递：创建IssueRow显式默认HTML为`<p></p>`、stripped为空，普通PATCH的IssueFields从锁下旧Issue透传两列；存储/组合回归验证旧API默认和非默认描述保持、邻居不变。Task 7 只准备内部类型、已有两列存储与规则测试，HTTP 字段在 Task 9 连同提及/版本一起出现。给后来消费者明确接口，不能把尚未接上的内部行为标作已交付接口。`GetIssue/GetIssues` 和子项/关联读取的映射一致；Task 9 后全部详情回答仍经 `seen`，列表 `Issue` 不含 description_html。
+Task 7 同时闭合app/create_issue、app/update_issue和postgres/update的值传递：创建IssueRow显式默认HTML为`<p></p>`、stripped指向空字符串（非nil），普通PATCH的IssueFields从锁下旧Issue透传两列。`description_stripped`沿既有数据库可空列用`*string`映射，保留旧NULL与明确空字符串的区别；不做COALESCE，不改迁移。存储/组合回归验证旧API默认、非默认文本、NULL和空字符串分别保持，邻居不变。Task 7 只准备内部类型、已有两列存储与规则测试，HTTP 字段在 Task 9 连同提及/版本一起出现。给后来消费者明确接口，不能把尚未接上的内部行为标作已交付接口。`GetIssue/GetIssues` 和子项/关联读取的映射一致；Task 9 后全部详情回答仍经 `seen`，列表 `Issue` 不含 description_html。
 
 ### 2.10 描述动态和版本合并决策（Task 8）
 

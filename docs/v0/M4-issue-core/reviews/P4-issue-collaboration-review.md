@@ -96,7 +96,15 @@ T1 已交付清洗适配器、领域纯值、共享编辑器往返样例，以�
 
 独立报告`task-5-review.md`审查`0eb813d9..f8883581`，规格通过、质量Approved，Critical/Important/Minor均无，T4注释Minor确认闭合。差异外边界由推进者核对日志和执行过程；生产`bootstrap/app.go`的独立ReadOnlySnapshot注入未变，新列表的消费已在差异中确认，主目录保持干净main。T6的评论表情及二层外键明确留后续，没有提前建表或省略本Task已有表的验证。
 
-### 2.7 尚未完成的 P4 验收
+### 2.7 T6 实施证据（待独立评审）
+
+评论表情、页内批读及两种PATCH完整响应已提交为`a422cd91`，基线为`900f4c33`。目标检查复用同一Locks预检/锁下再判，反应不要求评论作者，只写自己的表情行，不改工作项/评论审计、动态或关注。评论列表在原ReadTx中批读本页，PATCH在原写事务中读回活表情，读取失败保持原错误并回滚改动。
+
+迁移00023、授权、删除步骤、HTTP契约、权限矩阵、锁形状、503及公共/I15/I17接口前置一并落地。二层目录守卫核实实际外键列端点，未知链仍拒绝。二层软删变异首次存活，暴露workItemStamps未枚举新表；补齐后同一变异被子树删除戳断言检出。另七项实际变异覆盖父审计、评论范围、软删过滤、物理二层FK、PATCH两分支及HTTP映射；八项均为可编译的业务失败并恢复绿，不把首次存活或夹具panic计入杀死。
+
+`make gen`、Go lint两段0 issues、全量Go（bootstrap102.754s及tools）、Web lint54/54（4缓存）、knip、Web test17/17（10缓存）及提交后gen-check通过。E2E为124通过/2项已知A4 Firefox可执行文件缺失，I15/I17通过，没有新增业务失败。首轮端点反例误调用fatalProbe未实现的Fatal及两处goimports均已修正并保留原日志；端点反例实际拒绝断言通过。完整报告`task-6-report.md`与`logs/task-6-*`已由推进者逐项核对；尚待独立规格与质量结论，未勾选Task 6完成。
+
+### 2.8 尚未完成的 P4 验收
 
 描述/提及/版本、评论/表情/动态、权限矩阵增量、交错 14/15、接口故事、目录驱动删除增量、其他关键性质的实际变异、阶段完整门禁与 Claude 整分支终审尚未完成。M4 设计 §14 不新增勾选；P4 不标已完成。
 
@@ -195,6 +203,14 @@ M同时覆盖公共furnish及已有故事独立构造的目录行。T3首轮端�
 M中“漏二层comment外键”的实际变异明确属于T6的`comment_reactions→issue_comments→issues`，该表未建出的T5不提前创建它或重复变异已有comments。每张新表仍同步本表外键、授权、目录与实际漏删/删宽反例；T5自己的两个删除步骤和grants均已实际变异。此为计划测试范围消歧，不改变数据库规则或降低守卫。
 
 T6准备时确认：T5的共享表情错误文案当前限定“on the work item”，对现有消费者正确；新增评论消费者时统一改成资源中性的“You already have this reaction.”与“You do not have this reaction.”并同步中英，保持同一业务码/状态。避免为同一语义新增错误码，或让评论错误指向工作项；这是局部文案适配，待T6验证。
+
+### T6 二层目录与测试职责
+
+新迁移约束测试独立为`server/migrations/comment_reaction_schema_test.go`，复用现有基础设施，避免扩大原约370行的文件。目录守卫只精确支持设计点名的comment_reactions→issue_comments→issues实际FK列端点，行本身参与全部删除/戳/邻居断言，保留未知链和错误端点反例；这是既定二层表的完整接线，没有豁免。首次变异存活促成workItemStamps同样补齐，过程证据保留。
+
+### T7 旧可空列的值保持（后续实施要求）
+
+预核对发现00015的description_stripped为可空text，P1–P3 INSERT省略该列，旧行实际为NULL。原T7的string映射会在普通字段PATCH透传时把NULL改成空串，违背保存两列原值。局部裁定：domain.Issue及app.IssueRow/IssueFields用`*string`保留NULL；新增创建/明确描述保存写已知文本，普通PATCH从锁下旧值原样透传。DescriptionWrite.Text与RichText.Text仍是string，不用COALESCE、不改迁移或公开API。新增NULL/空串分别保留的真实回归和归一化变异；skip结构检查同时覆盖可清空字段的存在性bool。spec、plan与T7/T9简报同步，待T7实施验证。
 
 ## 4. 整分支评审的发现与处理
 
