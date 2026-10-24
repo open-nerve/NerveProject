@@ -60,7 +60,7 @@
 
 **每Task收口步骤G：** 先完成自身红绿定位命令；改server执行`make lint-go`、`make test`；改契约执行`make gen`，仅SQL执行`make gen-go`；改契约/web/e2e另跑`make lint-web`、`make knip`、`make test-web`；迁移/furnish/故事执行`make e2e`。预期lint-go两段0 issues，测试业务断言通过；环境失败单独记，不能当性质通过。代码/SQL注释英文，文档中文。变异恢复后再跑所属定位测试；独立评审/修复后只`git add`本Task精确文件并提交所列消息，生成物提交后`make gen-check`预期无差异。不得自动合并。
 
-**有API的Task执行H：** 修改`api/modules/issue.yaml`、`api/openapi.yaml`（新增路径的根转引）、`I/adapter/http/handler.go`、`I/module.go`；测试和矩阵在该Task就加入（不是等T14）。HTTP的`TestMain`会检查全模块x-problem-codes，故HTTP定位命令用整个包`go -C server test ./internal/modules/issue/adapter/http -count=1`，不用-run漏掉别的码。所有请求security/bearer，闭合body；空数组[]、cursor空为null；错误/错误码文案同Task修改`web/apps/web/core/lib/error-messages.ts`及`web/packages/i18n/src/locales/en/errors.json`、`zh-CN/errors.json`。每个新写当Task加入`B/issue_write_locks_test.go`的issueWrites、`B/issue_writes_test.go`的事务连接测试，以及`B/gate_test.go`的503枚举；矩阵加入`B/permission_matrix_collaboration_test.go`（T3创建，后续扩展）和种子文件。每个声明的project/workspace码也用HTTP假端口走到。
+**有API的Task执行H：** 修改`api/modules/issue.yaml`、`api/openapi.yaml`（新增路径的根转引）、`I/adapter/http/handler.go`、`I/module.go`；测试和矩阵在该Task就加入（不是等T14）。HTTP的`TestMain`会检查全模块x-problem-codes，故HTTP定位命令用整个包`go -C server test ./internal/modules/issue/adapter/http -count=1`，不用-run漏掉别的码。所有请求security/bearer；声明requestBody的操作闭合body，无schema的GET沿既有平台语义；空数组[]、cursor空为null；错误/错误码文案同Task修改`web/apps/web/core/lib/error-messages.ts`及`web/packages/i18n/src/locales/en/errors.json`、`zh-CN/errors.json`。每个新写当Task加入`B/issue_write_locks_test.go`的issueWrites、`B/issue_writes_test.go`的事务连接测试，以及`B/gate_test.go`的503枚举；矩阵加入`B/permission_matrix_collaboration_test.go`（T3创建，后续扩展）和种子文件。每个声明的project/workspace码也用HTTP假端口走到。
 
 **有迁移的Task执行M：** 每张表同时修改`server/sqlc.yaml`、`deploy/runtime-grants.sql`、`server/migrations/{schema,issue_schema}_test.go`；扩`I/app/{delete_issue,delete_project_rows}.go`的接口和step列表、`I/adapter/postgres/{delete_issue,delete_rows}.go`及对应`queries/*.sql`；扩对应删除单元/存储测试、`B/issue_deletion_test.go`与`e2e/fixtures/furnish.ts`；已有故事若独立构造目录行，同Task补其API前置，必要的窄夹具共用方法一并加入（T3为`e2e/fixtures/comments.ts`及I15/I17故事）。新增接口按下表；项目删除沿`RowBatch`的`id > After`、1000行键集，不能重扫或OFFSET。工作项删除沿IssueDeletion.IssueIDs；comment_reactions经comments连到issue。每表CASCADE的索引/部分唯一/CHECK/nullable依设计§4，UUIDv7只由应用给。目录夹具同Task经API造新表数据，没有临时豁免。
 
@@ -325,18 +325,18 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 ### Task 10: 描述版本列表与详情
 
-**Files:** Create `I/app/{description_versions.go,description_versions_test.go}`、`I/adapter/http/{description_versions.go,description_versions_test.go}`、`B/issue_description_versions_test.go`；Modify `I/app/description_ports.go`、T9存储/SQL、actions/errors/access规则；H。
+**Files:** Create `I/app/{description_versions.go,description_versions_test.go}`、`I/adapter/http/{description_versions.go,description_versions_test.go}`、`B/issue_description_versions_test.go`；Modify `I/app/description_ports.go`、T9存储/SQL、actions/errors/access规则及其tableCells；H的矩阵种子、version_id归属登记。承接T9两项Minor：修改`B/issue_description_atomic_test.go`的超时前提，及`I/adapter/http/{sub_issues.go,issues_test.go,update_test.go}`的旧注释；保留通用守卫规则，不加豁免。
 
 **Interfaces:** `ListDescriptionVersions.Execute(ctx context.Context,issueID uuid.UUID,limit *int,cursor *string)(DescriptionVersionPage,error)`；`GetDescriptionVersion.Execute(ctx context.Context,versionID uuid.UUID)(domain.DescriptionVersion,error)`。List Deps `Locks, Versions DescriptionVersionLister, ReadTx`；Get Deps `Locks, Versions DescriptionVersionReader`。Reader的`GetDescriptionVersion(ctx context.Context,id uuid.UUID)(domain.DescriptionVersion,bool,error)`，Lister的`DescriptionVersions(ctx context.Context,issueID uuid.UUID,after *domain.DescriptionVersionCursor,limit int)([]domain.DescriptionVersion,error)`。List以limit+1查询，DESC键集为`(last_saved_at,id) < (...)`。
 
-- [ ] **Step 1 红测试。** `TestDescriptionVersionPages`相同saved_at逆id、1/50/100、空页、满页无更多cursor=null，其他issue和软删不进页，改他人位置不能扩结果；`TestDescriptionVersionVisibility`guest自己403、别人404，adminGuest自己成功/别人404，归档可读；单version隐藏与不存在整个Problem相同，新码version_not_found。
+- [ ] **Step 1 红测试。** `TestDescriptionVersionPages`相同saved_at逆id、1/50/100、空页、满页无更多cursor=null，其他issue和软删不进页，改他人位置不能扩结果；`TestDescriptionVersionVisibility`guest自己403、别人404，adminGuest自己成功/别人404，归档可读；单version隐藏与不存在整个Problem相同，新码issue.description_version_not_found。
   ```go
   if !slices.Equal(ids(page.Data), wantDescendingIDs) { t.Fatal("version order") }
   if !reflect.DeepEqual(hiddenVersionReply, missingVersionReply) { t.Fatal("version leak") }
   ```
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'TestDescriptionVersion(Pages|Visibility)' -count=1`。
 - [ ] **Step 3 实现。** 新action=issue_description_version.read，角色Admin/Member；seeAs先HiddenFrom再角色。Get先读version定位issue，经seeAs统一子资源404，不吞其他存储错误；无写事务。List首次see和全部查询在独立ReadTx内；不能先see再进入快照或在写事务里嵌套“升级”。HTTP列表不带HTML，详情带HTML，路径设计5.1；还原无路由，使用普通PATCH（可能按600秒政策合并版本）。
-- [ ] **Step 4 绿/变异。** 原命令、HTTP全包、`go -C server test ./internal/bootstrap -run TestDescriptionVersions -count=1`；实际反向tuple、漏issue/软删条件、guest放宽、隐藏404错误映射各失败；错误文案同Task。
+- [ ] **Step 4 绿/变异。** 原命令、HTTP全包、`go -C server test ./internal/bootstrap -run TestDescriptionVersions -count=1`；实际反向tuple、漏issue/软删条件、guest放宽、隐藏404错误映射各失败；错误文案同Task。T9 M1须先断言latest确为同owner的过期版本，再断言新ID；实际移除600秒上限、保留owner条件后仅跑此组合测试，业务失败并恢复。M2同步列表映射与请求字段的旧注释，由HTTP整包覆盖既有行为。
 - [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 按权限和游标读取描述版本`。
 
 ### Task 11: 活动态引用使用的历史项目目录
