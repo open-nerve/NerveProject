@@ -26,10 +26,8 @@ func (h handler) AddSubIssues(ctx context.Context, req gen.AddSubIssuesRequestOb
 	return gen.AddSubIssues200JSONResponse(issueCollection(items)), nil
 }
 
-// issueCollection is items as the API lists them, in their order, [] for
-// none: each as issueDetail shows it, a list's Issue having IssueDetail's
-// fields (M4 design 5.2), so that the conversion stops compiling once the
-// two part.
+// issueCollection lists items in order, using [] for none. Each explicit Issue
+// mapping omits description_html, which only the detail contract exposes.
 func issueCollection(items []domain.Issue) gen.IssueCollection {
 	data := make([]gen.Issue, len(items))
 	for n, i := range items {

@@ -12,6 +12,87 @@ import (
 	"uuid"
 )
 
+const descriptionVersions = `-- name: DescriptionVersions :many
+SELECT id, workspace_id, project_id, issue_id, description_html, description_stripped, last_saved_at, owned_by_id, created_by_id, updated_by_id, created_at, updated_at, deleted_at FROM issue_description_versions
+WHERE issue_id = $1 AND deleted_at IS NULL
+ AND (NOT $2::boolean OR (last_saved_at, id) < ($3::timestamptz, $4::uuid))
+ORDER BY last_saved_at DESC, id DESC LIMIT $5
+`
+
+type DescriptionVersionsParams struct {
+	IssueID   uuid.UUID
+	HasAfter  bool
+	AfterAt   time.Time
+	AfterID   uuid.UUID
+	PageLimit int32
+}
+
+func (q *Queries) DescriptionVersions(ctx context.Context, arg DescriptionVersionsParams) ([]IssueDescriptionVersion, error) {
+	rows, err := q.db.Query(ctx, descriptionVersions,
+		arg.IssueID,
+		arg.HasAfter,
+		arg.AfterAt,
+		arg.AfterID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []IssueDescriptionVersion
+	for rows.Next() {
+		var i IssueDescriptionVersion
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.IssueID,
+			&i.DescriptionHtml,
+			&i.DescriptionStripped,
+			&i.LastSavedAt,
+			&i.OwnedByID,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDescriptionVersion = `-- name: GetDescriptionVersion :one
+SELECT id, workspace_id, project_id, issue_id, description_html, description_stripped, last_saved_at, owned_by_id, created_by_id, updated_by_id, created_at, updated_at, deleted_at FROM issue_description_versions
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetDescriptionVersion(ctx context.Context, id uuid.UUID) (IssueDescriptionVersion, error) {
+	row := q.db.QueryRow(ctx, getDescriptionVersion, id)
+	var i IssueDescriptionVersion
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ProjectID,
+		&i.IssueID,
+		&i.DescriptionHtml,
+		&i.DescriptionStripped,
+		&i.LastSavedAt,
+		&i.OwnedByID,
+		&i.CreatedByID,
+		&i.UpdatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const insertDescriptionVersion = `-- name: InsertDescriptionVersion :exec
 INSERT INTO issue_description_versions (id,workspace_id,project_id,issue_id,description_html,description_stripped,last_saved_at,owned_by_id,created_by_id,updated_by_id,created_at,updated_at)
 VALUES ($1,$2,$3,$4,$5,$6::text,$7,$8,$9::uuid,$10::uuid,$11,$12)

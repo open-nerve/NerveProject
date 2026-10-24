@@ -123,6 +123,10 @@ paths:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1reactions'
   /api/v0/issues/{issue_id}/reactions/{reaction}:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1reactions~1{reaction}'
+  /api/v0/issues/{issue_id}/description-versions:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1description-versions'
+  /api/v0/issue-description-versions/{version_id}:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issue-description-versions~1{version_id}'
   /api/v0/issues/{issue_id}/comments:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1comments'
   /api/v0/issues/{issue_id}/relations:

@@ -109,29 +109,41 @@ type ListIssueReactionsUseCase interface {
 	Execute(context.Context, uuid.UUID) ([]domain.IssueReaction, error)
 }
 
+// ListDescriptionVersionsUseCase retains optional page query values.
+type ListDescriptionVersionsUseCase interface {
+	Execute(context.Context, uuid.UUID, *int, *string) (app.DescriptionVersionPage, error)
+}
+
+// GetDescriptionVersionUseCase reads one saved description.
+type GetDescriptionVersionUseCase interface {
+	Execute(context.Context, uuid.UUID) (domain.DescriptionVersion, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	AddCommentReaction    AddCommentReactionUseCase
-	RemoveCommentReaction RemoveIssueReactionUseCase
-	AddIssueReaction      AddIssueReactionUseCase
-	RemoveIssueReaction   RemoveIssueReactionUseCase
-	ListIssueReactions    ListIssueReactionsUseCase
-	UpdateIssueComment    UpdateIssueCommentUseCase
-	DeleteIssueComment    DeleteIssueCommentUseCase
-	CreateIssueComment    CreateIssueCommentUseCase
-	ListIssueComments     ListIssueCommentsUseCase
-	CreateIssue           CreateIssueUseCase
-	GetIssue              GetIssueUseCase
-	GetIssueByIdentifier  GetIssueByIdentifierUseCase
-	UpdateIssue           UpdateIssueUseCase
-	DeleteIssue           DeleteIssueUseCase
-	ArchiveIssue          ArchiveIssueUseCase
-	UnarchiveIssue        ArchiveIssueUseCase
-	ListSubIssues         ListSubIssuesUseCase
-	AddSubIssues          AddSubIssuesUseCase
-	ListIssueRelations    ListIssueRelationsUseCase
-	CreateIssueRelations  CreateIssueRelationsUseCase
-	DeleteIssueRelation   DeleteIssueRelationUseCase
+	ListDescriptionVersions ListDescriptionVersionsUseCase
+	GetDescriptionVersion   GetDescriptionVersionUseCase
+	AddCommentReaction      AddCommentReactionUseCase
+	RemoveCommentReaction   RemoveIssueReactionUseCase
+	AddIssueReaction        AddIssueReactionUseCase
+	RemoveIssueReaction     RemoveIssueReactionUseCase
+	ListIssueReactions      ListIssueReactionsUseCase
+	UpdateIssueComment      UpdateIssueCommentUseCase
+	DeleteIssueComment      DeleteIssueCommentUseCase
+	CreateIssueComment      CreateIssueCommentUseCase
+	ListIssueComments       ListIssueCommentsUseCase
+	CreateIssue             CreateIssueUseCase
+	GetIssue                GetIssueUseCase
+	GetIssueByIdentifier    GetIssueByIdentifierUseCase
+	UpdateIssue             UpdateIssueUseCase
+	DeleteIssue             DeleteIssueUseCase
+	ArchiveIssue            ArchiveIssueUseCase
+	UnarchiveIssue          ArchiveIssueUseCase
+	ListSubIssues           ListSubIssuesUseCase
+	AddSubIssues            AddSubIssuesUseCase
+	ListIssueRelations      ListIssueRelationsUseCase
+	CreateIssueRelations    CreateIssueRelationsUseCase
+	DeleteIssueRelation     DeleteIssueRelationUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

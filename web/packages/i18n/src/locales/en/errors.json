@@ -38,6 +38,7 @@
     "project_state_in_use": "Work items are in this state, archived ones too, so it cannot be deleted. Restore the archived ones and move them all to another state first.",
     "project_label_name_taken": "A label of this project already has this name, in this case or another.",
     "project_label_not_found": "The label does not exist, or you cannot see its project.",
+    "issue_description_version_not_found": "The description version does not exist, or you cannot see it.",
     "issue_comment_not_found": "The comment does not exist, or you cannot see it.",
     "issue_reaction_exists": "You already have this reaction.",
     "issue_reaction_not_found": "You do not have this reaction.",

@@ -139,7 +139,8 @@ var rules = map[shared.Action]Rule{
 	"issue_comment.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	"issue.read":           {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// As issue.create (M4 design 3.4).
-	"issue.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	"issue_description_version.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	"issue.update":                   {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	// The project's admins, and the work item's creator while he is a member
 	// or an admin of the project, not a guest who created it (M4 design 3.4).
 	"issue.delete": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}, AllowCreator: true},

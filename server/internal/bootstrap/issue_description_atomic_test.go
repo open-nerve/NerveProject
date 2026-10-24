@@ -160,6 +160,14 @@ func TestIssueDescriptionVersionsSlideFromLastSave(t *testing.T) {
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issue_description_versions SET last_saved_at=$2 WHERE id=$1", other.ID, time.Now().Add(-601*time.Second)); err != nil {
 		t.Fatal(err)
 	}
+	// Keep Bob's expired row latest: an owner-only policy must fail this case.
+	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issue_description_versions SET last_saved_at=$2 WHERE issue_id=$1 AND id<>$3", id, time.Now().Add(-time.Hour), other.ID); err != nil {
+		t.Fatal(err)
+	}
+	latest := savedVersion(t, w, id)
+	if latest.ID != other.ID || latest.OwnedByID != w.ids["bob"] || time.Since(latest.LastSavedAt) <= 600*time.Second {
+		t.Fatal("window test requires Bob's own expired version to be latest", latest)
+	}
 	patchDescription(t, w, "bob", id, "<p>Outside window</p>", false)
 	if got := savedVersion(t, w, id); got.ID == other.ID {
 		t.Fatal("expired version merged")

@@ -103,6 +103,8 @@ var tableCells = map[shared.Action][]outcome{
 	"issue.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// As issue.create (M4 design 3.4).
+	"issue_description_version.read": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	"issue.update": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// As project.update for a caller who did not create the work item;

@@ -49,11 +49,10 @@ func TestUpdateIssue(t *testing.T) {
 	}
 }
 
-// A body with a field it may not have (a number, which the project gives;
-// a sort order, a description, which IssueUpdate has not in P3: M4 design
-// 12, constraint 5), null for a field that is not nullable, a field of
-// another type, an id that is no id, or a date that is no day or has a
-// time: refused as bad_request before the use case.
+// A body with a generated number or sort order, null for a nonnullable
+// field (including description_html), a value of the wrong type, an invalid
+// id, or a date that is no day or includes a time is refused as bad_request
+// before the use case.
 func TestUpdateIssueHoldsTheBodyToItsStructure(t *testing.T) {
 	update := &fakeUpdate{}
 	h := newServer(t, httpadapter.UseCases{UpdateIssue: update})

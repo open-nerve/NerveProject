@@ -7,6 +7,8 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 // a workspace the workspace module's code for the workspace, which they
 // declare too (M4 design 5.1), with those modules' details.
 var (
+	// ErrDescriptionVersionNotFound conceals missing versions and hidden parent issues.
+	ErrDescriptionVersionNotFound = shared.NewError(shared.KindNotFound, "issue.description_version_not_found", "The description version does not exist, or you cannot see it.")
 	// ErrReactionExists answers a duplicate live reaction of the caller.
 	ErrReactionExists = shared.NewError(shared.KindConflict, "issue.reaction_exists", "You already have this reaction.")
 	// ErrReactionNotFound answers a missing live reaction of the caller.

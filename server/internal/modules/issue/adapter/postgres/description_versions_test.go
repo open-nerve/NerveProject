@@ -75,8 +75,30 @@ func TestDescriptionVersions(t *testing.T) {
 	if got, _, err := s.LatestDescriptionVersion(ctx, id); err != nil || got.ID != higher.ID {
 		t.Fatal("deleted or neighbor version selected", got, err)
 	}
+	if got, found, err := s.GetDescriptionVersion(ctx, base.ID); err != nil || !found || !reflect.DeepEqual(got, merged) {
+		t.Fatal("detail mapping", got, found, err)
+	}
+	if _, found, err := s.GetDescriptionVersion(ctx, gone.ID); err != nil || found {
+		t.Fatal("deleted detail", found, err)
+	}
+	if _, found, err := s.GetDescriptionVersion(ctx, uuid.NewV7()); err != nil || found {
+		t.Fatal("missing detail", found, err)
+	}
+	exec(t, pool, "UPDATE issue_description_versions SET description_stripped=NULL,created_by_id=NULL,updated_by_id=NULL WHERE id=$1", base.ID)
+	nullable, found, err := s.GetDescriptionVersion(ctx, base.ID)
+	if err != nil || !found || nullable.Text != "" || nullable.CreatedByID != (uuid.UUID{}) || nullable.UpdatedByID != (uuid.UUID{}) || !nullable.LastSavedAt.Equal(merged.LastSavedAt) || !nullable.CreatedAt.Equal(base.CreatedAt) {
+		t.Fatal("nullable legacy audit mapping", nullable, err)
+	}
+
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
+	if _, _, err := s.GetDescriptionVersion(cancelled, id); !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+	if _, err := s.DescriptionVersions(cancelled, id, nil, 10); !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+
 	if _, _, err := s.LatestDescriptionVersion(cancelled, id); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}

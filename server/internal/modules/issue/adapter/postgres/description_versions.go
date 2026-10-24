@@ -20,6 +20,10 @@ func (s *Store) LatestDescriptionVersion(ctx context.Context, id uuid.UUID) (dom
 	if err != nil {
 		return domain.DescriptionVersion{}, false, err
 	}
+	return descriptionVersion(r), true, nil
+}
+
+func descriptionVersion(r gen.IssueDescriptionVersion) domain.DescriptionVersion {
 	v := domain.DescriptionVersion{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, IssueID: r.IssueID, OwnedByID: r.OwnedByID,
 		HTML: r.DescriptionHtml, LastSavedAt: r.LastSavedAt, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt}
 	if r.DescriptionStripped != nil {
@@ -31,7 +35,38 @@ func (s *Store) LatestDescriptionVersion(ctx context.Context, id uuid.UUID) (dom
 	if r.UpdatedByID != nil {
 		v.UpdatedByID = *r.UpdatedByID
 	}
-	return v, true, nil
+	return v
+}
+
+// GetDescriptionVersion reads a live version without locking its row.
+func (s *Store) GetDescriptionVersion(ctx context.Context, id uuid.UUID) (domain.DescriptionVersion, bool, error) {
+	r, err := s.queries(ctx).GetDescriptionVersion(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.DescriptionVersion{}, false, nil
+	}
+	if err != nil {
+		return domain.DescriptionVersion{}, false, err
+	}
+	return descriptionVersion(r), true, nil
+}
+
+// DescriptionVersions reads a descending keyset page in the caller's snapshot.
+func (s *Store) DescriptionVersions(ctx context.Context, id uuid.UUID, after *domain.DescriptionVersionCursor, limit int) ([]domain.DescriptionVersion, error) {
+	p := gen.DescriptionVersionsParams{IssueID: id, PageLimit: int32(limit)}
+	if after != nil {
+		p.HasAfter = true
+		p.AfterAt = after.LastSavedAt
+		p.AfterID = after.ID
+	}
+	rows, err := s.queries(ctx).DescriptionVersions(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]domain.DescriptionVersion, len(rows))
+	for n, r := range rows {
+		result[n] = descriptionVersion(r)
+	}
+	return result, nil
 }
 
 // InsertDescriptionVersion records a new version attributed to this writer.

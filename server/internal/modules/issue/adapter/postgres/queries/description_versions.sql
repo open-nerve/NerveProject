@@ -11,3 +11,13 @@ VALUES (sqlc.arg(id),sqlc.arg(workspace_id),sqlc.arg(project_id),sqlc.arg(issue_
 UPDATE issue_description_versions SET description_html=sqlc.arg(html),description_stripped=sqlc.arg(text)::text,
  last_saved_at=sqlc.arg(last_saved_at),updated_at=sqlc.arg(updated_at),updated_by_id=sqlc.arg(updated_by_id)::uuid
 WHERE id=sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: GetDescriptionVersion :one
+SELECT * FROM issue_description_versions
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: DescriptionVersions :many
+SELECT * FROM issue_description_versions
+WHERE issue_id = sqlc.arg(issue_id) AND deleted_at IS NULL
+ AND (NOT sqlc.arg(has_after)::boolean OR (last_saved_at, id) < (sqlc.arg(after_at)::timestamptz, sqlc.arg(after_id)::uuid))
+ORDER BY last_saved_at DESC, id DESC LIMIT sqlc.arg(page_limit);

@@ -114,8 +114,8 @@ func TestCreateIssueTakesAnEmptyPriorityAsGiven(t *testing.T) {
 }
 
 // A body without its name, with a field it may not have (a number or a
-// sort order, which the project gives: M4 design 3.7; a description, which
-// comes in P4), null for a field that is not nullable (a date left out for
+// sort order, which the project gives: M4 design 3.7), null for a field
+// that is not nullable (including description_html, or a date left out for
 // none), a field of another type, an id that is no id, or a date that is
 // no day or has a time: refused as bad_request before the use case.
 func TestCreateIssueHoldsTheBodyToItsStructure(t *testing.T) {

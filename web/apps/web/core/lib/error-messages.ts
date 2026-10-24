@@ -52,6 +52,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "project.state_in_use": "errors.project_state_in_use",
   "project.label_name_taken": "errors.project_label_name_taken",
   "project.label_not_found": "errors.project_label_not_found",
+  "issue.description_version_not_found": "errors.issue_description_version_not_found",
   "issue.comment_not_found": "errors.issue_comment_not_found",
   "issue.reaction_exists": "errors.issue_reaction_exists",
   "issue.reaction_not_found": "errors.issue_reaction_not_found",

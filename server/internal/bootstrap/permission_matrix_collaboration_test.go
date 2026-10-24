@@ -28,6 +28,40 @@ func collaborationMatrixRows() []matrixRow {
 		{op: "createIssueComment", variant: "both archived", write: true, columns: archivedColumns, prepare: inDone(true), request: create, cells: issueRows.ofArchived(cellProjectArchived, cellForbidden)},
 		{op: "createIssueComment", variant: "archived work item", write: true, columns: issueColumns, prepare: inDone(true), request: create, cells: onAWorkItem(cellIssueArchived, cellIssueArchived, cellIssueArchived, cellIssueArchived)},
 	}
+	listVersions := toWorkItem(http.MethodGet, "/description-versions", "")
+	getVersion := func(c caller, s seeded) (string, string, string) {
+		return http.MethodGet, versionPath(s.descriptionVersion(projectOf(c), issueOf(c))), ""
+	}
+	detailCells := onAWorkItem(cellOK, cellOK, cellOK, cellForbidden)
+	for c, v := range detailCells {
+		if v == cellIssueNotFound {
+			detailCells[c] = cell{http.StatusNotFound, "issue.description_version_not_found"}
+		}
+	}
+	archivedDetail := issueRows.ofArchived(cellOK, cellForbidden)
+	for c, v := range archivedDetail {
+		if v == cellIssueNotFound {
+			archivedDetail[c] = cell{http.StatusNotFound, "issue.description_version_not_found"}
+		}
+	}
+	rows = append(rows,
+		matrixRow{op: "listDescriptionVersions", columns: issueColumns, request: listVersions, cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden), check: func(t *testing.T, c caller, s seeded, answer string) {
+			got := listIn[answeredVersion](t, answer)
+			if len(got) != 1 || got[0].ID != s.descriptionVersion(projectOf(c), issueOf(c)) || got[0].IssueID != s.issue(projectOf(c), issueOf(c)) {
+				t.Fatal(answer)
+			}
+		}},
+		matrixRow{op: "listDescriptionVersions", variant: "archived", columns: archivedColumns, request: listVersions, cells: issueRows.ofArchived(cellOK, cellForbidden)},
+		matrixRow{op: "getDescriptionVersion", columns: issueColumns, request: getVersion, cells: detailCells, check: func(t *testing.T, c caller, s seeded, answer string) {
+			var got answeredVersion
+			decodeAnswer(t, answer, &got)
+			if got.ID != s.descriptionVersion(projectOf(c), issueOf(c)) || got.HTML != "<p>Seeded description</p>" {
+				t.Fatal(answer)
+			}
+		}},
+		matrixRow{op: "getDescriptionVersion", variant: "archived", columns: archivedColumns, request: getVersion, cells: archivedDetail},
+	)
+
 	notAuthor := cell{http.StatusForbidden, "issue.not_author"}
 	editCells := commentCells(onAWorkItem(notAuthor, notAuthor, cellOK, notAuthor))
 	editCells[callerGuestOwn], editCells[callerAdminGuestOwn] = cellOK, cellOK

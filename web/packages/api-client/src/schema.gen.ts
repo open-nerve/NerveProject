@@ -1166,6 +1166,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/description-versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a work item's saved descriptions
+         * @description Uses issue_description_version.read for project admins and members, after the work item guest visibility rule. Hidden or missing work items answer issue.not_found before forbidden. Archived projects and work items remain readable. Visibility and page reads share one independent read snapshot. Versions are ordered by (last_saved_at,id) descending; a cursor is only a position and cannot expand the target's rows. No HTML is listed.
+         */
+        get: operations["listDescriptionVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issue-description-versions/{version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read one saved description
+         * @description Uses the same role and guest visibility rules as listDescriptionVersions. Missing, deleted and hidden versions or parents answer the identical issue.description_version_not_found problem before role refusal. Archived resources remain readable. To restore the HTML, use the ordinary issue PATCH, including its archive refusal and 600-second version merge policy.
+         */
+        get: operations["getDescriptionVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/comments": {
         parameters: {
             query?: never;
@@ -2249,6 +2294,35 @@ export interface components {
         IssueReactionCollection: {
             data: components["schemas"]["IssueReaction"][];
         };
+        DescriptionVersion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            owned_by_id: string;
+            /** Format: date-time */
+            last_saved_at: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        DescriptionVersionPage: {
+            data: components["schemas"]["DescriptionVersion"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        DescriptionVersionDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            issue_id: string;
+            /** Format: uuid */
+            owned_by_id: string;
+            /** Format: date-time */
+            last_saved_at: string;
+            /** Format: date-time */
+            created_at: string;
+            description_html: string;
+        };
         IssueCommentPage: {
             data: components["schemas"]["IssueComment"][];
             next_cursor: components["schemas"]["NextCursor"];
@@ -2427,6 +2501,9 @@ export type IssueComment = components['schemas']['IssueComment'];
 export type ReactionCreate = components['schemas']['ReactionCreate'];
 export type IssueReaction = components['schemas']['IssueReaction'];
 export type IssueReactionCollection = components['schemas']['IssueReactionCollection'];
+export type DescriptionVersion = components['schemas']['DescriptionVersion'];
+export type DescriptionVersionPage = components['schemas']['DescriptionVersionPage'];
+export type DescriptionVersionDetail = components['schemas']['DescriptionVersionDetail'];
 export type IssueCommentPage = components['schemas']['IssueCommentPage'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
@@ -4242,6 +4319,58 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listDescriptionVersions: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Saved descriptions, with null next_cursor on the last page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescriptionVersionPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDescriptionVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The saved description including its HTML. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DescriptionVersionDetail"];
+                };
             };
             default: components["responses"]["Problem"];
         };

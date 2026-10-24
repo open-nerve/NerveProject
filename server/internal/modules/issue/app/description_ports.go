@@ -20,3 +20,13 @@ type DescriptionVersions interface {
 	InsertDescriptionVersion(context.Context, domain.DescriptionVersion) error
 	UpdateDescriptionVersion(context.Context, domain.DescriptionVersion) error
 }
+
+// DescriptionVersionReader locates one live version.
+type DescriptionVersionReader interface {
+	GetDescriptionVersion(context.Context, uuid.UUID) (domain.DescriptionVersion, bool, error)
+}
+
+// DescriptionVersionLister reads live versions in descending save order.
+type DescriptionVersionLister interface {
+	DescriptionVersions(context.Context, uuid.UUID, *domain.DescriptionVersionCursor, int) ([]domain.DescriptionVersion, error)
+}

@@ -81,6 +81,33 @@ type CommentReaction struct {
 	Reaction  string    `json:"reaction"`
 }
 
+// DescriptionVersion defines model for DescriptionVersion.
+type DescriptionVersion struct {
+	CreatedAt   time.Time `json:"created_at"`
+	ID          uuid.UUID `json:"id"`
+	IssueID     uuid.UUID `json:"issue_id"`
+	LastSavedAt time.Time `json:"last_saved_at"`
+	OwnedByID   uuid.UUID `json:"owned_by_id"`
+}
+
+// DescriptionVersionDetail defines model for DescriptionVersionDetail.
+type DescriptionVersionDetail struct {
+	CreatedAt       time.Time `json:"created_at"`
+	DescriptionHTML string    `json:"description_html"`
+	ID              uuid.UUID `json:"id"`
+	IssueID         uuid.UUID `json:"issue_id"`
+	LastSavedAt     time.Time `json:"last_saved_at"`
+	OwnedByID       uuid.UUID `json:"owned_by_id"`
+}
+
+// DescriptionVersionPage defines model for DescriptionVersionPage.
+type DescriptionVersionPage struct {
+	Data []DescriptionVersion `json:"data"`
+
+	// NextCursor The cursor of the next page; null on the last page.
+	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
+}
+
 // Issue A work item of a project, as a list shows it.
 type Issue struct {
 	// ArchivedAt When it was archived; null when it is not.
@@ -359,6 +386,15 @@ type ListIssueCommentsParams struct {
 	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// ListDescriptionVersionsParams defines parameters for ListDescriptionVersions.
+type ListDescriptionVersionsParams struct {
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // UpdateIssueCommentJSONRequestBody defines body for UpdateIssueComment for application/json ContentType.
 type UpdateIssueCommentJSONRequestBody = IssueCommentCreate
 
@@ -397,6 +433,9 @@ type ServerInterface interface {
 	// RemoveCommentReaction Remove the caller's reaction
 	// (DELETE /api/v0/issue-comments/{comment_id}/reactions/{reaction})
 	RemoveCommentReaction(w http.ResponseWriter, r *http.Request, commentID uuid.UUID, reaction string)
+	// GetDescriptionVersion Read one saved description
+	// (GET /api/v0/issue-description-versions/{version_id})
+	GetDescriptionVersion(w http.ResponseWriter, r *http.Request, versionID uuid.UUID)
 	// DeleteIssueRelation Delete a relation
 	// (DELETE /api/v0/issue-relations/{relation_id})
 	DeleteIssueRelation(w http.ResponseWriter, r *http.Request, relationID RelationID)
@@ -418,6 +457,9 @@ type ServerInterface interface {
 	// CreateIssueComment Create a comment on a visible work item
 	// (POST /api/v0/issues/{issue_id}/comments)
 	CreateIssueComment(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ListDescriptionVersions List a work item's saved descriptions
+	// (GET /api/v0/issues/{issue_id}/description-versions)
+	ListDescriptionVersions(w http.ResponseWriter, r *http.Request, issueID IssueID, params ListDescriptionVersionsParams)
 	// ListIssueReactions List reactions on a visible work item
 	// (GET /api/v0/issues/{issue_id}/reactions)
 	ListIssueReactions(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -563,6 +605,32 @@ func (siw *ServerInterfaceWrapper) RemoveCommentReaction(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RemoveCommentReaction(w, r, commentID, reaction)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDescriptionVersion operation middleware
+func (siw *ServerInterfaceWrapper) GetDescriptionVersion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "version_id" -------------
+	var versionID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "version_id", r.PathValue("version_id"), &versionID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "version_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDescriptionVersion(w, r, versionID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -774,6 +842,61 @@ func (siw *ServerInterfaceWrapper) CreateIssueComment(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateIssueComment(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDescriptionVersions operation middleware
+func (siw *ServerInterfaceWrapper) ListDescriptionVersions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDescriptionVersionsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDescriptionVersions(w, r, issueID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1202,6 +1325,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.CreateIssueComment)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.DeleteIssueComment)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.UpdateIssueComment)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/description-versions", wrapper.ListDescriptionVersions)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issue-description-versions/{version_id}", wrapper.GetDescriptionVersion)
 
 	return m
 }
@@ -1374,6 +1499,52 @@ type RemoveCommentReactiondefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response RemoveCommentReactiondefaultApplicationProblemPlusJSONResponse) VisitRemoveCommentReactionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDescriptionVersionRequestObject struct {
+	VersionID uuid.UUID `json:"version_id"`
+}
+
+type GetDescriptionVersionResponseObject interface {
+	VisitGetDescriptionVersionResponse(w http.ResponseWriter) error
+}
+
+type GetDescriptionVersion200JSONResponse DescriptionVersionDetail
+
+func (response GetDescriptionVersion200JSONResponse) VisitGetDescriptionVersionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDescriptionVersiondefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetDescriptionVersiondefaultApplicationProblemPlusJSONResponse) VisitGetDescriptionVersionResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1687,6 +1858,53 @@ type CreateIssueCommentdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response CreateIssueCommentdefaultApplicationProblemPlusJSONResponse) VisitCreateIssueCommentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDescriptionVersionsRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Params  ListDescriptionVersionsParams
+}
+
+type ListDescriptionVersionsResponseObject interface {
+	VisitListDescriptionVersionsResponse(w http.ResponseWriter) error
+}
+
+type ListDescriptionVersions200JSONResponse DescriptionVersionPage
+
+func (response ListDescriptionVersions200JSONResponse) VisitListDescriptionVersionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDescriptionVersionsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListDescriptionVersionsdefaultApplicationProblemPlusJSONResponse) VisitListDescriptionVersionsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2178,6 +2396,9 @@ type StrictServerInterface interface {
 	// RemoveCommentReaction Remove the caller's reaction
 	// (DELETE /api/v0/issue-comments/{comment_id}/reactions/{reaction})
 	RemoveCommentReaction(ctx context.Context, request RemoveCommentReactionRequestObject) (RemoveCommentReactionResponseObject, error)
+	// GetDescriptionVersion Read one saved description
+	// (GET /api/v0/issue-description-versions/{version_id})
+	GetDescriptionVersion(ctx context.Context, request GetDescriptionVersionRequestObject) (GetDescriptionVersionResponseObject, error)
 	// DeleteIssueRelation Delete a relation
 	// (DELETE /api/v0/issue-relations/{relation_id})
 	DeleteIssueRelation(ctx context.Context, request DeleteIssueRelationRequestObject) (DeleteIssueRelationResponseObject, error)
@@ -2199,6 +2420,9 @@ type StrictServerInterface interface {
 	// CreateIssueComment Create a comment on a visible work item
 	// (POST /api/v0/issues/{issue_id}/comments)
 	CreateIssueComment(ctx context.Context, request CreateIssueCommentRequestObject) (CreateIssueCommentResponseObject, error)
+	// ListDescriptionVersions List a work item's saved descriptions
+	// (GET /api/v0/issues/{issue_id}/description-versions)
+	ListDescriptionVersions(ctx context.Context, request ListDescriptionVersionsRequestObject) (ListDescriptionVersionsResponseObject, error)
 	// ListIssueReactions List reactions on a visible work item
 	// (GET /api/v0/issues/{issue_id}/reactions)
 	ListIssueReactions(ctx context.Context, request ListIssueReactionsRequestObject) (ListIssueReactionsResponseObject, error)
@@ -2382,6 +2606,32 @@ func (sh *strictHandler) RemoveCommentReaction(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(RemoveCommentReactionResponseObject); ok {
 		if err := validResponse.VisitRemoveCommentReactionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDescriptionVersion operation middleware
+func (sh *strictHandler) GetDescriptionVersion(w http.ResponseWriter, r *http.Request, versionID uuid.UUID) {
+	var request GetDescriptionVersionRequestObject
+
+	request.VersionID = versionID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDescriptionVersion(ctx, request.(GetDescriptionVersionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDescriptionVersion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDescriptionVersionResponseObject); ok {
+		if err := validResponse.VisitGetDescriptionVersionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2579,6 +2829,33 @@ func (sh *strictHandler) CreateIssueComment(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateIssueCommentResponseObject); ok {
 		if err := validResponse.VisitCreateIssueCommentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDescriptionVersions operation middleware
+func (sh *strictHandler) ListDescriptionVersions(w http.ResponseWriter, r *http.Request, issueID IssueID, params ListDescriptionVersionsParams) {
+	var request ListDescriptionVersionsRequestObject
+
+	request.IssueID = issueID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDescriptionVersions(ctx, request.(ListDescriptionVersionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDescriptionVersions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDescriptionVersionsResponseObject); ok {
+		if err := validResponse.VisitListDescriptionVersionsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

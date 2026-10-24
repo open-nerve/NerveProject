@@ -1818,6 +1818,61 @@ paths:
           description: The caller's reaction was removed.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/description-versions:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    get:
+      operationId: listDescriptionVersions
+      tags:
+        - issue
+      summary: List a work item's saved descriptions
+      description: Uses issue_description_version.read for project admins and members, after the work item guest visibility rule. Hidden or missing work items answer issue.not_found before forbidden. Archived projects and work items remain readable. Visibility and page reads share one independent read snapshot. Versions are ordered by (last_saved_at,id) descending; a cursor is only a position and cannot expand the target's rows. No HTML is listed.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Saved descriptions, with null next_cursor on the last page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescriptionVersionPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issue-description-versions/{version_id}:
+    parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getDescriptionVersion
+      tags:
+        - issue
+      summary: Read one saved description
+      description: Uses the same role and guest visibility rules as listDescriptionVersions. Missing, deleted and hidden versions or parents answer the identical issue.description_version_not_found problem before role refusal. Archived resources remain readable. To restore the HTML, use the ordinary issue PATCH, including its archive refusal and 600-second version merge policy.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - issue.description_version_not_found
+        - forbidden
+      responses:
+        '200':
+          description: The saved description including its HTML.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DescriptionVersionDetail'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}/comments:
     parameters:
       - $ref: '#/components/parameters/IssueID'
@@ -3868,6 +3923,72 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IssueReaction'
+    DescriptionVersion:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - owned_by_id
+        - last_saved_at
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        owned_by_id:
+          type: string
+          format: uuid
+        last_saved_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    DescriptionVersionPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DescriptionVersion'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+    DescriptionVersionDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - issue_id
+        - owned_by_id
+        - last_saved_at
+        - created_at
+        - description_html
+      properties:
+        id:
+          type: string
+          format: uuid
+        issue_id:
+          type: string
+          format: uuid
+        owned_by_id:
+          type: string
+          format: uuid
+        last_saved_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        description_html:
+          type: string
     IssueCommentPage:
       type: object
       additionalProperties: false
