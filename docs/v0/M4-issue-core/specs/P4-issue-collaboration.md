@@ -2,7 +2,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 状态 | 细化完成待独立预检；A1已于2026-10-25获负责人批准；实现和验收待执行 |
+| 状态 | 独立预检及六项局部修订复核通过；A1已于2026-10-25获负责人批准；实现和验收待执行 |
 | 日期 | 2026-10-25 |
 | 代码基线 | `56d575fb8ff6575880d1edef65219728a81f2b12`；P3 已合并；P4 启动提交已把关键词 phase 改为 `M4/P4` |
 | 工作树 | `.codex/worktress/codex/m4-p4`，分支 `codex/m4-p4`；主目录保持 `main` |
@@ -13,7 +13,7 @@
 
 ## 1. 目标
 
-**A1已批准（2026-10-25）：** “清洗放到 issue/adapter/content，app 声明小接口，domain 保持纯净，不放宽架构守卫。同步修订设计、spec 和 plan 后继续 P4，完成后先别合并，我安排 Claude 做整分支终审。”据此清洗由 `adapter/content` 实现，`app.HTMLSanitizer` 声明端口，domain只保留纯值与规则，module.New组合；本规格与plan已按该决定细化，预检与实现结果仍待执行。
+**A1已批准（2026-10-25）：** “清洗放到 issue/adapter/content，app 声明小接口，domain 保持纯净，不放宽架构守卫。同步修订设计、spec 和 plan 后继续 P4，完成后先别合并，我安排 Claude 做整分支终审。”据此清洗由 `adapter/content` 实现，`app.HTMLSanitizer` 声明端口，domain只保留纯值与规则，module.New组合；本规格与plan已按该决定细化，独立预检及修订复核已完成，实现结果仍待执行。
 
 完整交付设计 §12/P4：描述及清洗、内容标识与 `skip_activity`、提及的集合同步和自动关注、描述版本及其读取、评论的增删改与分页、工作项和评论的表情、动态的分页与历史引用过滤。增加 12 个操作；修改创建/修改/详情的描述契约；不增加回复、快照、事件或版本保留任务。
 
@@ -33,7 +33,7 @@ P4 的完成线是 I11–I13 接口故事、I1/I2/I15/I17 的增量断言、交�
 | 清洗适配器 | `server/internal/modules/issue/adapter/content/{sanitize,policy,projection}.go`及测试；`issue/app/content.go` | bluemonday与x/net/html只在适配器；app.HTMLSanitizer小接口，module.New组合（A1已批准） |
 | 用例 | `server/internal/modules/issue/app/{comments,comment_writes,reactions,comment_reactions,description,description_activity,description_versions,activities,mentions,visible_projects}.go及各自小端口/写入值文件`；现有 create/update/lock/删除文件 | 小端口、同一加锁路径、订阅资格、描述写入协调、分页 |
 | 存储 | `server/internal/modules/issue/adapter/postgres/{comments,reactions,comment_reactions,description,description_versions,mentions,activities}.go` 及对应 `queries/*.sql` | 只访问 issue 模块表，经事务 context/sqlc；分页先过滤再截断 |
-| 迁移 | `server/migrations/00021_issue_issue_comments.sql` 至 `00025_issue_issue_description_versions.sql` | 五表，设计 §4.7、4.9、4.10、4.12、4.14 原样；各在首个可用接口的 Task 建出 |
+| 迁移 | `server/migrations/sql/00021_issue_issue_comments.sql` 至 `00025_issue_issue_description_versions.sql` | 五表，设计 §4.7、4.9、4.10、4.12、4.14 原样；各在首个可用接口的 Task 建出 |
 | 平台/成员目录 | `server/internal/shared/page.go`；`server/internal/platform/postgres/tx.go`；project 的 `app/issue_ports.go`、`adapter/postgres/issue_ports.go` 和 `queries/issue_ports.sql` | 共享页大小、只读快照、提及成员目录、历史项目目录 |
 | 边界与组合 | `api/modules/issue.yaml`；issue `adapter/http`、`module.go`；`server/internal/bootstrap/{ports,app}.go` 和plan列出的评论/描述/活动、矩阵及 `issue_collaboration_*_test.go` | 闭合请求体、生成类型、错误码、唯一组合根、矩阵与真实库测试 |
 | 模式/授权/生成 | `server/sqlc.yaml`、`deploy/runtime-grants.sql`、`server/migrations/issue_schema_test.go`；`api/dist`、issue/project 的 `gen`、TS schema | 每张新表同时纳入授权/删除；生成物只由生成器产出 |
@@ -53,7 +53,7 @@ P4 的完成线是 I11–I13 接口故事、I1/I2/I15/I17 的增量断言、交�
 
 纯文本由清洗后 HTML 经 StrictPolicy、实体解码和空白规整得到。内容标识是纯文本、按出现顺序（保留重复）的 user mention UUID、`a[href]`、每个 `input` 的 checked 布尔；集合去重只发生在关系写入，不发生在内容标识。非 UUID/非 user mention 不参与成员同步。`image-component` 在放行表，但图片 src 的内容标识等 M5，见 §5。
 
-S3 以真实 `CoreEditorExtensions` 生成每种保留节点/mark 的 HTML，不手写一个“看起来像 editor”的替身。块 id 采用固定测试值。API HTML 至少有无块 id 的列表、标题、嵌套 mark；样例保留 raw、sanitized、editorReserialized、再次 sanitized 及预期内容标识。只改链接、只改 checked 的两个样例必须判为普通修改。恶意输入与 Unicode/实体/空白分开测；样例未实际往返前不得填“已通过”。固定sanitized期望并检查保留节点/属性，CSS分号等合法规范化不当作格式丢失，宽松DOM比较也不能掩盖属性丢失；真实schema的node/mark增长必须触发样例覆盖检查。
+S3 以真实 `CoreEditorExtensions` 生成每种保留节点/mark 的 HTML，不手写一个“看起来像 editor”的替身。块 id 采用固定测试值。API HTML 至少有无块 id 的列表、标题、嵌套 mark；样例保留 raw、sanitized、editorReserialized、再次 sanitized 及预期内容标识。只改链接、只改 checked 的两个样例必须判为普通修改。恶意输入与 Unicode/实体/空白分开测；样例未实际往返前不得填“已通过”。固定sanitized期望并检查保留节点/属性，CSS分号等合法规范化不当作格式丢失，宽松DOM比较也不能掩盖属性丢失；真实schema的node/mark增长必须触发样例覆盖检查。callout既有Markdown出口对img src/alt与icon正文作局部上下文转义，优先复用已有可访问的能力，否则仅在extension-config.ts内添加私有小函数，不新增通用包/依赖；URL语义仍由清洗适配器校验。跨语言夹具含data-emoji-unicode编码引号/属性与data-icon-name编码闭标签/标签，sanitized HTML进入真实editor后调用实际Markdown serialize，断言不能多出属性/标签且保留合法emoji/icon；仅getHTML稳定不算该出口安全证据。
 
 ### 2.4 页大小、载荷与读快照（Task 2）
 
@@ -77,17 +77,17 @@ S3 以真实 `CoreEditorExtensions` 生成每种保留节点/mark 的 HTML，不
 
 ### 2.7 工作项表情（Task 5；迁移 00022）
 
-GET/POST `/api/v0/issues/{issue_id}/reactions`；DELETE 同路径加 `/{reaction}`。值 `^[0-9]{1,7}(-[0-9]{1,7}){0,15}$` 且 ≤128 字符，接口和数据库同一约束；不是 Unicode Emoji 名录校验。重复自己的同值 409 `issue.reaction_exists`；删除只找自己的活行，无该行 404 `issue.reaction_not_found`，不能拿其他 actor 的行顶替。集合 `(created_at,id)` 升序，不分页。加/去成功都先 MarkChanged，再写 reaction，无动态、不自动关注。迁移同时扩展删除与 furnish。
+GET/POST `/api/v0/issues/{issue_id}/reactions`；DELETE 同路径加 `/{reaction}`。值 `^[0-9]{1,7}(-[0-9]{1,7}){0,15}$` 且 ≤128 字符，接口和数据库同一约束；不是 Unicode Emoji 名录校验。重复自己的同值 409 `issue.reaction_exists`；删除只找自己的活行，无该行 404 `issue.reaction_not_found`，不能拿其他 actor 的行顶替。集合 `(created_at,id)` 升序，不分页；HTTP为 `IssueReactionCollection={data:[…]}`，空集合 `{data:[]}`，用例slice由mapper封装。加/去成功都先 MarkChanged，再写 reaction，无动态、不自动关注。迁移同时扩展删除与 furnish。
 
 ### 2.8 评论表情（Task 6；迁移 00023）
 
-POST/DELETE `/api/v0/issue-comments/{comment_id}/reactions[/{reaction}]`；与工作项表情同格式、重复和只删自己规则。目标隐藏/不存在答 `issue.comment_not_found`。不改工作项、评论的 updated_at/updated_by_id/edited_at；没有独立列表，在评论分页中批量读取对应页的活 reaction，按 `(created_at,id)` 排序。删除评论连带其全部 actor 的活表情；该删除与工作项/项目/工作区删除保持表序、同一时刻/删除者。迁移同时扩展目录断言和 furnish，不跨 issue 模块 JOIN。
+POST/DELETE `/api/v0/issue-comments/{comment_id}/reactions[/{reaction}]`；与工作项表情同格式、重复和只删自己规则。目标隐藏/不存在答 `issue.comment_not_found`。不改工作项、评论的 updated_at/updated_by_id/edited_at；没有独立列表，在评论分页中批量读取对应页的活 reaction，按 `(created_at,id)` 排序。T6同时扩T4的CommentUpdater与module接线/假实现：复用CommentReactions窄读接口，在当前写事务内组装更新后及同HTML无改动的完整单评论应答；两种PATCH都保留多个actor的活表情，软删不出现。列表仍批读不N+1，创建新评论可确定返回[]。删除评论连带其全部 actor 的活表情；该删除与工作项/项目/工作区删除保持表序、同一时刻/删除者。迁移同时扩展目录断言和 furnish，不跨 issue 模块 JOIN。
 
 ### 2.9 描述模型及现有列读写（Task 7）
 
-`domain.NewIssue`/`IssuePatch`/`Issue` 增加描述信息；创建默认 `<p></p>`；长度按 Unicode 字符而非字节 ≤500000，请求体仍限 1 MiB。`IssuePatch.SkipActivity *bool` 保留字段是否出现；只要出现（包括 false），就必须同时有 description_html 且无其他 patch 字段，否则 422 `skip_activity/not_allowed`。纯 HTML 相同且无 skip 的普通保存不算修改；带 skip 的保存总写清洗后 HTML。
+`domain.NewIssue`/`IssuePatch`/`Issue` 增加描述信息；创建默认 `<p></p>`；长度按 Unicode 字符而非字节 ≤500000，请求体仍限 1 MiB。`IssuePatch.SkipActivity *bool` 保留字段是否出现；只要出现（包括 false），就必须同时有 description_html 且无其他 patch 字段，否则 422 `skip_activity/not_allowed`。纯 HTML 相同且无 skip 的普通保存不算修改；skip=true 的保存总写清洗后 HTML；skip=false 是普通保存，清洗后HTML相同则不写（Write=false、Changed=false）。
 
-Task 7 只准备内部类型、已有两列存储与规则测试，HTTP 字段在 Task 9 连同提及/版本一起出现。给后来消费者明确接口，不能把尚未接上的内部行为标作已交付接口。`GetIssue/GetIssues` 和子项/关联读取的映射一致；Task 9 后全部详情回答仍经 `seen`，列表 `Issue` 不含 description_html。
+Task 7 同时闭合app/create_issue、app/update_issue和postgres/update的值传递：创建IssueRow显式默认HTML为`<p></p>`、stripped为空，普通PATCH的IssueFields从锁下旧Issue透传两列；存储/组合回归验证旧API默认和非默认描述保持、邻居不变。Task 7 只准备内部类型、已有两列存储与规则测试，HTTP 字段在 Task 9 连同提及/版本一起出现。给后来消费者明确接口，不能把尚未接上的内部行为标作已交付接口。`GetIssue/GetIssues` 和子项/关联读取的映射一致；Task 9 后全部详情回答仍经 `seen`，列表 `Issue` 不含 description_html。
 
 ### 2.10 描述动态和版本合并决策（Task 8）
 
@@ -137,7 +137,7 @@ I11 评论与两类表情；I12 评论/动态翻页与增量新增；I13 历史�
 
 **A1（负责人已批准，2026-10-25）：清洗在适配器层。** 原设计点名domain/sanitize与纯层守卫冲突；最终按负责人原话采用`issue/adapter/content`、`app.HTMLSanitizer`、纯domain，保留`server/internal/archtest/rules_test.go`和`purity_test.go`的直接/间接依赖检查。基线提交573e8eb6记录了暂停，当前恢复只修改文档，不代表新实现验证通过。
 
-以下是局部工程裁定，尚待独立预检；新增端口与实现均未验证。A1之外不改变负责人已批准的产品/架构决定。
+以下局部工程裁定已完成独立预检与修订复核；新增端口与实现仍未验证。A1之外不改变负责人已批准的产品/架构决定。
 
 1. **裁定：不做整段原型/逐字代码重放，采用接口、文件、测试、命令驱动的紧凑 plan。** 依据交接02 §3，这两项属于可调整做法。保留独立预检、TDD、逐Task独立评审、关键性质实际变异与负责人安排的Claude终审；代价是没有原型快照可逐字比较，执行中必须把接口变化同步回plan，不能把未运行预期当结果。
 2. **裁定：迁移按首个可用API分批交付。** T3=00021，T5=00022，T6=00023，T9=00024–00025；每批同Task扩展删除及接口fixture，避免目录豁免。设计任务映射：原1→T1；原2→T3/5/6/9；原3→T2；原4→T7/8/9；原5/6→T9（政策准备T1/3/8）；原7→T10；原8→T3；原9→T4/6；原10→T5；原11→T6；原12→T11/12；原13→T13；原14→T14并随每个API长矩阵；原15→T15并随迁移长fixture；原16→T16。T7/8内部准备由T9消费，终态不得留无使用者。
@@ -219,7 +219,7 @@ I11 评论与两类表情；I12 评论/动态翻页与增量新增；I13 历史�
 | 单元/存储/组合/契约/故事门禁 | 待执行 | 每Task日志与提交SHA |
 | 交错14/15、锁形状、快照一致性 | 待执行 | -race重复结果、条件等待证据 |
 | 关键变异 | 待执行 | 变异定义、基线绿、变异红的具体断言、恢复后绿；不得填假hash |
-| 独立预检与Claude终审 | 待安排/待执行 | review§1/3/4及分诊台账 |
+| 独立预检与Claude终审 | 预检及修订复核完成；Claude终审待实施完成后由负责人安排 | review§1/3/4及分诊台账 |
 | 全量CI与合并清理 | CI待执行；合并/清理等待负责人另行批准 | 实际run链接及结论 |
 
 ### A.3 变异最低集合

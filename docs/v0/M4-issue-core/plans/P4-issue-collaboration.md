@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - 工作树`.codex/worktress/codex/m4-p4`、分支`codex/m4-p4`；主目录保持main。不用stash/clean/reset --hard，不动plane/refer、不在其中git，不操作已有容器，不全局安装。
-- 启动提交已把keywords phase改为M4/P4，不重复。未来提交按本次明确指令使用英文`feat(M4/P4): ...`；push用`/usr/bin/git`。草案作者不提交，由主任务统一核对并保存准备工作。
+- 启动提交已把keywords phase改为M4/P4，不重复。按当前会话较新的AGENTS指令，后续提交保留`feat(M4/P4):`等前缀、说明使用中文，必要时多行解释背景/改动/原因；已有英文提交不重写；push用`/usr/bin/git`。草案作者不提交，由主任务统一核对并保存准备工作。
 - TDD、关键性质实际变异、独立预检、逐Task独立评审保留；Claude整分支终审由负责人安排。接口/文件/测试/命令驱动的紧凑plan替代原型和代码逐字重放（交接02§3允许），不得伪造通过数字、哈希、生成物或杀死率。
 - 预检404/403不取事务/锁/闸门；Locks.run下再读/再判，访客404先于角色/作者403；项目归档→工作项归档→无改动→依赖检查→时钟→写。新写声明503，只有bootstrap/gate映射server_busy。
 - 全局表序：issues→assignees→labels→relations→links→subscribers→mentions→comments→issue_reactions→comment_reactions→activities→description_versions。同次改动同一锁下时刻、同一写者；业务描述里的“先评论后updated_at”不意味着SQL逆序。
@@ -50,7 +50,7 @@
 | 7 | 描述内部模型和已有两列SQL | 1 |
 | 8 | description_activity、版本纯合并政策 | 7 |
 | 9 | 描述API、mentions/versions、00024–25、删除/furnish | 3、6、7、8 |
-| 10 | description_versions读API | 2、9 |
+| 10 | description_versions读API | 2、4、9 |
 | 11 | 历史项目目录 | 2 |
 | 12 | activities可见分页 | 8、11 |
 | 13 | 交错14/15、锁后时钟 | 9、12 |
@@ -88,7 +88,7 @@ M的签名沿现有删除端口：工作项方法`(ctx context.Context, d IssueD
 | 4 | DELETE /issue-comments/{comment_id} | DeleteIssueComment(comment_id) | 204 |
 | 5 | POST /issues/{issue_id}/reactions | AddIssueReaction(issue_id, body.reaction) | 201 IssueReaction |
 | 5 | DELETE /issues/{issue_id}/reactions/{reaction} | RemoveIssueReaction(issue_id, reaction) | 204 |
-| 5 | GET /issues/{issue_id}/reactions | ListIssueReactions(issue_id) | 200 array |
+| 5 | GET /issues/{issue_id}/reactions | ListIssueReactions(issue_id) | 200 IssueReactionCollection |
 | 6 | POST /issue-comments/{comment_id}/reactions | AddCommentReaction(comment_id, body.reaction) | 201 CommentReaction |
 | 6 | DELETE /issue-comments/{comment_id}/reactions/{reaction} | RemoveCommentReaction(comment_id, reaction) | 204 |
 | 10 | GET /issues/{issue_id}/description-versions | ListDescriptionVersions(issue_id, limit, cursor) | 200 DescriptionVersionPage |
@@ -170,11 +170,11 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 ### Task 1: 清洗适配器、内容标识和S3真实往返
 
-**Files:** Create `server/internal/modules/issue/domain/rich_text.go`、`rich_text_test.go`，`server/internal/modules/issue/app/content.go`，`server/internal/modules/issue/adapter/content/{sanitize,policy,projection}.go`及各自`_test.go`，`api/testdata/issue-richtext.json`，`web/packages/editor/src/sanitization-roundtrip.test.ts`；Modify `server/go.mod`/`go.sum`。
+**Files:** Create `server/internal/modules/issue/domain/rich_text.go`、`rich_text_test.go`，`server/internal/modules/issue/app/content.go`，`server/internal/modules/issue/adapter/content/{sanitize,policy,projection}.go`及各自`_test.go`，`api/testdata/issue-richtext.json`，`web/packages/editor/src/sanitization-roundtrip.test.ts`；Modify `server/go.mod`/`go.sum`、`web/packages/editor/src/extensions/callout/extension-config.ts`。
 
-**Interfaces:** Produces公共值表T1全部接口；`content.NewSanitizer() *Sanitizer`实现`app.HTMLSanitizer`。构造时建policy，Clean不修改policy；并发调用只读。T1以编译期接口满足断言连接adapter与app；T3首个消费者到来时才由`module.New`构造一次并注入，T9复用，不引入无人消费的字段、空调用、全局singleton或init。当前库实读版本v1.0.27：`AllowAttrs`、`AllowStyles`、`AllowURLSchemes`、`RequireParseableURLs`、`Sanitize`可用；不得用AllowUnsafe或全属性放行。
+**Interfaces:** Produces公共值表T1全部接口；`content.NewSanitizer() *Sanitizer`实现`app.HTMLSanitizer`。构造时建policy，Clean不修改policy；并发调用只读。T1以编译期接口满足断言连接adapter与app；T3首个消费者到来时才由`module.New`构造一次并注入，T9复用，不引入无人消费的字段、空调用、全局singleton或init。当前库实读版本v1.0.27：`AllowAttrs`、`AllowStyles`、`AllowURLSchemes`、`RequireParseableURLs`、`Sanitize`可用；不得用AllowUnsafe或全属性放行。callout现有Markdown serialize出口需转义属性/文本上下文：优先复用已有可访问的转义；当前utils的sanitizeHTML是私有函数，不为此扩公共API，若实施时仍无可复用出口，则在extension-config.ts内加私有`escapeCalloutHTML(value: string | null | undefined): string`，空值成空串，按顺序转义&、<、>、双/单引号。用于img的src/alt和icon正文，不新增通用包/依赖；URL语义校验仍归服务端适配器。
 
-- [ ] **Step 1 写红测试。** `TestCleanEditorHTML`、`TestCleanUnsafeHTML`、`TestContentIdentity`；editor测试通过真实CoreEditorExtensions，复用现有editor-interaction测试的file/mention handler配置。JSON每例保存`input,sanitized,reserialized,resanitized,expected_text,expected_mentions,expected_links,expected_checked`；raw API无块id、editor固定块id和只读模式分别有例，不由手写HTML冒充editor输出。按真实schema枚举每个node/mark，新增schema项使覆盖测试失败；固定sanitized期望，并逐节点/属性断言保留。CSS末尾分号等合法序列化规范化单独列明，不以字节差异直接断言格式丢失，也不以宽松DOM比较掩盖属性丢失。
+- [ ] **Step 1 写红测试。** `TestCleanEditorHTML`、`TestCleanUnsafeHTML`、`TestContentIdentity`；editor测试通过真实CoreEditorExtensions，复用现有editor-interaction测试的file/mention handler配置。JSON每例保存`input,sanitized,reserialized,resanitized,expected_text,expected_mentions,expected_links,expected_checked`，callout例另存`expected_markdown`；逐边检查Go Clean(input)=sanitized、真实editor(sanitized)的getHTML=reserialized与Markdown=expected_markdown、Go Clean(reserialized)=resanitized及内容投影，不能只读固定样例互相比；raw API无块id、editor固定块id和只读模式分别有例，不由手写HTML冒充editor输出。另用sanitized构造真实editor并调用`editor.storage.markdown.getMarkdown()`走callout的实际serialize（不是仅getHTML，也不是只测独立转义函数）；data-emoji-unicode含编码引号/属性、data-icon-name含编码闭标签/标签的恶意例不得产生额外属性/标签，合法emoji/icon和安全URL须保留。把Markdown中的预期HTML片段解析后精确比较标签、属性集合及值，并固定导出文本。按真实schema枚举每个node/mark，新增schema项使覆盖测试失败；固定sanitized期望，并逐节点/属性断言保留。CSS末尾分号等合法序列化规范化单独列明，不以字节差异直接断言格式丢失，也不以宽松DOM比较掩盖属性丢失。
   ```go
   // TestContentIdentity的独立断言；夹具为保存HTML与同一内容的块id/列表重序列化。
   if !before.Identity.Equal(withIDs.Identity) { t.Fatal("block ids changed identity") }
@@ -183,9 +183,9 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
   // 另断言重复mention保持顺序，纯格式允许相同，空p.Text==""。
   ```
 - [ ] **Step 2 运行确认红。** `go -C server test ./internal/modules/issue/domain ./internal/modules/issue/adapter/content -run 'Test(Clean|ContentIdentity|RichText)' -count=1`；`pnpm --filter @nerve/editor exec vitest run src/sanitization-roundtrip.test.ts`。预期缺实现或确切往返/安全断言失败；新包不存在的红只说明尚未实现，补出接口后还须看到业务红。
-- [ ] **Step 3 实现。** 实现阶段执行`go -C server get github.com/microcosm-cc/bluemonday@v1.0.27 golang.org/x/net@v0.60.0`，核对实际go.mod/go.sum差异。x/net v0.60.0与现有crypto.57/sys.48/term.46/text.42相容；v0.61会牵动四个既有版本，故本次不用latest。预期另新增douceur v0.2.0、gorilla/css v1.0.1；若解析结果不同先核对，不无故升级/降级无关依赖。policy照Plane表枚举保留标签/属性，显式限制实际editor CSS，URL协议仅http/https/mailto/tel；自定义image-component[src]和callout[data-emoji-url]复用唯一URL值检查/规整，覆盖协议、空白/控制、危险scheme、引号/实体，并保留安全https值；后者会进入editor导出Markdown的img src，不能因属性名不是src就跳过。x/net/html在adapter中解析清洗结果，StrictPolicy纯文本实体解码并规整空白，提及仅user_mention且UUID有效；投影保留顺序/重复。Clean对任意HTML都返回安全内容，不拒绝请求。
-- [ ] **Step 4 绿与变异。** 同命令全绿，并`go -C server test ./internal/archtest -run 'Test(RepositoryFollowsArchitectureRules|PureLayersReachNoInfrastructure)' -count=1`；实际变异分别放行onerror、javascript链接、自定义src、callout的data-emoji-url、危险CSS，删href/checked投影；每个被具体断言杀死后恢复绿。保持每种保留节点/mark往返，图片标签保留不等于开启上传。
-- [ ] **Step 5 G、独立评审及提交。** G的server/Web门禁；提交`feat(M4/P4): sanitize rich text through a content adapter`。样例需记实际来源/日期，未通过S3不能进入T3/T7。
+- [ ] **Step 3 实现。** 实现阶段执行`go -C server get github.com/microcosm-cc/bluemonday@v1.0.27 golang.org/x/net@v0.60.0`，核对实际go.mod/go.sum差异。x/net v0.60.0与现有crypto.57/sys.48/term.46/text.42相容；v0.61会牵动四个既有版本，故本次不用latest。预期另新增douceur v0.2.0、gorilla/css v1.0.1；若解析结果不同先核对，不无故升级/降级无关依赖。policy照Plane表枚举保留标签/属性，显式限制实际editor CSS，URL协议仅http/https/mailto/tel；自定义image-component[src]和callout[data-emoji-url]复用唯一URL值检查/规整，覆盖协议、空白/控制、危险scheme、引号/实体，并保留安全https值；后者会进入editor导出Markdown的img src，不能因属性名不是src就跳过。x/net/html在adapter中解析清洗结果，StrictPolicy纯文本实体解码并规整空白，提及仅user_mention且UUID有效；投影保留顺序/重复。Clean对任意HTML都返回安全内容，不拒绝请求。同时在callout已有serialize按上述上下文转义src/alt/icon，保留其原有合法输出语义；不把URL清洗与输出转义互相替代。
+- [ ] **Step 4 绿与变异。** 同命令全绿，并`go -C server test ./internal/archtest -run 'Test(RepositoryFollowsArchitectureRules|PureLayersReachNoInfrastructure)' -count=1`；实际变异分别放行onerror、javascript链接、自定义src、callout的data-emoji-url、危险CSS，删href/checked投影；另分别将callout的alt、icon、src转义改为原字符串（保持可编译），必须被真实Markdown导出断言杀死；每个被具体断言杀死后恢复绿。保持每种保留节点/mark往返，图片标签保留不等于开启上传。
+- [ ] **Step 5 G、独立评审及提交。** G的server/Web门禁；提交`feat(M4/P4): 通过内容适配器清洗富文本并保护导出`。样例需记实际来源/日期，未通过S3不能进入T3/T7。
 
 ### Task 2: 页大小、各自载荷与可组合的只读快照
 
@@ -202,11 +202,11 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 跑红。** `go -C server test ./internal/shared ./internal/modules/identity/domain ./internal/modules/identity/app ./internal/modules/issue/domain -count=1`；`go -C server test ./internal/platform/postgres -run TestReadOnlySnapshot -count=1`（真实库）。
 - [ ] **Step 3 实现。** 移动PageSize并删identity副本；Options保存配置，NewTxManager在所有Option应用后组合最终BeginQuery，含READ ONLY/REPEATABLE READ/SET LOCAL lock_timeout，避免后Option覆盖前Option；写事务无ReadOnlySnapshot时保持旧语义。bootstrap构造ReadTx并注入所有issue.New测试组合。列表在独立ReadTx内完成首次目标读取、授权、所有目录和SQL；WithinTx嵌套不提升既有写事务隔离，不从写事务调用这些列表用例。
 - [ ] **Step 4 绿/变异。** 同命令绿；实际去掉隔离、只读、配置组合各变异必须业务失败；PAT既有分页/篡改测试保持通过。不要把写被拒绝的事务继续拿来做后续成功读取断言，应回滚再开新事务。
-- [ ] **Step 5 G评审/提交。** `feat(M4/P4): share page limits and repeatable read snapshots`；移交P5复用此接缝，不重复实现。
+- [ ] **Step 5 G评审/提交。** `feat(M4/P4): 共享分页限制并支持可重复读快照`；移交P5复用此接缝，不重复实现。
 
 ### Task 3: 评论创建和分页、成员可见性与00021
 
-**Files:** Create `server/migrations/00021_issue_issue_comments.sql`；`I/domain/{comment.go,comment_test.go}`，`I/app/{comments.go,comments_test.go,comment_ports.go,comment_rows.go,mentions.go,fakes_comments_test.go}`；`I/adapter/postgres/{comments.go,comments_test.go,queries/comments.sql}`；`I/adapter/http/{comments.go,comments_test.go}`；`B/{issue_comments_test.go,permission_matrix_collaboration_test.go,permission_matrix_seed_collaboration_test.go}`；Modify `I/app/ports.go`、`P/app/issue_ports.go`、`P/adapter/postgres/issue_ports.go`及`queries/issue_ports.sql`、`P/module.go`、`B/ports.go`、`B/ports_test.go`、`I/app/fakes_test.go`、`I/module.go`；执行M/H。
+**Files:** Create `server/migrations/sql/00021_issue_issue_comments.sql`；`I/domain/{comment.go,comment_test.go}`，`I/app/{comments.go,comments_test.go,comment_ports.go,comment_rows.go,mentions.go,fakes_comments_test.go}`；`I/adapter/postgres/{comments.go,comments_test.go,queries/comments.sql}`；`I/adapter/http/{comments.go,comments_test.go}`；`B/{issue_comments_test.go,permission_matrix_collaboration_test.go,permission_matrix_seed_collaboration_test.go}`；Modify `I/app/ports.go`、`P/app/issue_ports.go`、`P/adapter/postgres/issue_ports.go`及`queries/issue_ports.sql`、`P/module.go`、`B/ports.go`、`B/ports_test.go`、`I/app/fakes_test.go`、`I/module.go`；执行M/H。
 
 **Interfaces:** Consumes T1/T2。Produces `CreateIssueComment.Execute(ctx context.Context, issueID uuid.UUID, html string) (domain.Comment,error)`，`ListIssueComments.Execute(ctx context.Context, issueID uuid.UUID, limit *int, cursor *string) (CommentPage,error)`。Deps：Create的`Locks, Comments CommentCreator, Members ProjectMembers, Sanitizer HTMLSanitizer, Clock Clock`；List的`Locks, Comments CommentLister, ReadTx shared.TxManager`。CommentCreator消费InsertComment及既有`InsertSubscribers(ctx,LinkRows)error`、`MarkChanged(ctx,ChangedRows)error`；CommentLister消费`Comments(ctx context.Context, issueID uuid.UUID, after *domain.CommentCursor, limit int) ([]domain.Comment,error)`。共享`GetComment(ctx context.Context,id uuid.UUID)(domain.Comment,bool,error)`、`InsertComment(ctx context.Context,w CommentWrite)error`。ProjectMembers新增`MentionMembers(ctx context.Context,projectID uuid.UUID,ids []uuid.UUID)([]MemberVisibility,error)`；project对应`IssueMentionMembers`返回自己的`IssueMemberVisibility`值，bootstrap转换，不改Lock返回值。此Task由`module.New`构造T1的content.NewSanitizer并注入CreateIssueComment；后续UpdateIssueComment/CreateIssue/UpdateIssue复用同一只读实例。
 
@@ -219,7 +219,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CreateComment|ListComments)' -count=1`；`go -C server test ./internal/modules/project/adapter/postgres -run TestIssueMentionMembers -count=1`（新增于issue_ports_test.go）。
 - [ ] **Step 3 实现。** 评论请求body只含必填comment_html，创建201/list200；CommentReaction纯类型/schema在T3定义，实际表/读写到T6，当前返回[]。project同一查询读有效成员角色和project guest标志，角色为guest且标志关则OwnOnly；issue用HiddenFrom逐候选过滤订阅，排序后InsertSubscribers。写序MarkChanged→subscribers→comments，不写动态/mentions。列表ReadTx内see→Comments(limit+1)，游标仅位置，bad cursor/limit先校验；M的00021同步删除/furnish。新增issue_comment.create规则与action，list使用issue.read。
 - [ ] **Step 4 绿/变异。** 跑原红命令、HTTP全包、`go -C server test ./internal/bootstrap -run 'Test(Comments|IssueMentionMembers|PermissionMatrix|EachIssueWriteLocksItsProjectFirst)' -count=1`；实际删成员过滤/guest OwnOnly/issue_id/deleted_at谓词、改变写序；安全项需组合层失败。端口errDisk原样返回且后续零调用。
-- [ ] **Step 5 M/H/G、评审、提交。** 00021/furnish无豁免；`feat(M4/P4): create and page issue comments`。
+- [ ] **Step 5 M/H/G、评审、提交。** 00021/furnish无豁免；`feat(M4/P4): 创建工作项评论并提供分页`。
 
 ### Task 4: 评论相对权限与同一路径的子资源检查
 
@@ -235,11 +235,11 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CommentWrite|UnchangedComment|Locks)' -count=1`；`go -C server test ./internal/bootstrap -run TestCommentPermissions -count=1`。
 - [ ] **Step 3 实现。** 不加锁GetComment定位issue；run的check在seeAs/decide成功之后、gate之前执行一次，在锁下decide之后再执行一次。check每次GetComment确认未删且IssueID相同，作者/ProjectAdmin规则在其中；捕获当前评论给本次回调（同请求顺序执行）。先404后作者403再归档；普通端口错误原样透出。编辑先issue→新订阅→comment，删除先issue→comment，T6扩连带。编辑时新增可见提及者关注，删提及不退订。新码comment_not_found/not_author同Task文案。
 - [ ] **Step 4 绿/变异。** 原红命令及HTTP全包绿；变异允许管理员编辑、只在gate后验作者、忘记锁下重读、子资源映射漏掉隐藏issue、同HTML改edited_at分别失败。用真实组合验证预检持外部项目锁时仍即时拒绝，不能只看fake调用日志。
-- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): enforce comment authorship before locking`。
+- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 在取锁前校验评论作者权限`。
 
 ### Task 5: 工作项表情与00022
 
-**Files:** Create `server/migrations/00022_issue_issue_reactions.sql`；`I/domain/{reaction.go,reaction_test.go}`、`I/app/{reactions.go,reactions_test.go,reaction_ports.go,reaction_rows.go,fakes_reactions_test.go}`；`I/adapter/postgres/{reactions.go,reactions_test.go,queries/reactions.sql}`、`I/adapter/http/{reactions.go,reactions_test.go}`、`B/issue_reactions_test.go`；Modify actions/errors/access规则，M/H。
+**Files:** Create `server/migrations/sql/00022_issue_issue_reactions.sql`；`I/domain/{reaction.go,reaction_test.go}`、`I/app/{reactions.go,reactions_test.go,reaction_ports.go,reaction_rows.go,fakes_reactions_test.go}`；`I/adapter/postgres/{reactions.go,reactions_test.go,queries/reactions.sql}`、`I/adapter/http/{reactions.go,reactions_test.go}`、`B/issue_reactions_test.go`；Modify actions/errors/access规则，M/H。
 
 **Interfaces:** `AddIssueReaction.Execute(ctx context.Context,issueID uuid.UUID,reaction string)(domain.IssueReaction,error)`；`RemoveIssueReaction.Execute(ctx context.Context,issueID uuid.UUID,reaction string)error`；`ListIssueReactions.Execute(ctx context.Context,issueID uuid.UUID)([]domain.IssueReaction,error)`。Add/Remove Deps为`Locks, Reactions IssueReactionWriter, Clock`，List为`Locks, Reactions IssueReactionLister, ReadTx`。Writer的`IssueReaction(ctx context.Context,key ReactionKey)(domain.IssueReaction,bool,error)`、`InsertIssueReaction(ctx context.Context,w IssueReactionWrite)error`、`DeleteIssueReaction(ctx context.Context,d ReactionDeletion)error`及MarkChanged；Lister的`IssueReactions(ctx context.Context,issueID uuid.UUID)([]domain.IssueReaction,error)`；domain `CheckReaction(reaction string)error`给字段reaction的422。
 
@@ -249,42 +249,44 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
   if !issue.UpdatedAt.Equal(at) || issue.UpdatedByID == nil || *issue.UpdatedByID != caller { t.Fatal("audit") }
   ```
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain ./internal/modules/issue/app -run 'Test(CheckReaction|IssueReactions)' -count=1`。
-- [ ] **Step 3 实现。** 正则`^[0-9]{1,7}(-[0-9]{1,7}){0,15}$`与128字符上限在domain/OpenAPI/CHECK一致；不验证emoji名录。锁下先project/issue归档，再检查活reaction存在，成功先MarkChanged后insert/delete；查询/删除绑定issue_id、actor_id、reaction、deleted_at IS NULL。新action issue_reaction.write允许Admin/Member/Guest；list用issue.read。三个API按设计路径/201/204/200，新增reaction_exists/reaction_not_found及文案。M加00022及furnish。
+- [ ] **Step 3 实现。** 正则`^[0-9]{1,7}(-[0-9]{1,7}){0,15}$`与128字符上限在domain/OpenAPI/CHECK一致；不验证emoji名录。锁下先project/issue归档，再检查活reaction存在，成功先MarkChanged后insert/delete；查询/删除绑定issue_id、actor_id、reaction、deleted_at IS NULL。新action issue_reaction.write允许Admin/Member/Guest；list用issue.read。三个API按设计路径/201/204/200，列表mapper将用例slice映射`IssueReactionCollection={data:[…]}`，空集合必须`{data:[]}`而非裸数组；HTTP契约同时断言空/非空封套，新增reaction_exists/reaction_not_found及文案。M加00022及furnish。
 - [ ] **Step 4 绿/变异。** 目标、存储和`go -C server test ./internal/bootstrap -run TestIssueReactions -count=1`绿；去掉actor谓词、部分唯一/CHECK、漏MarkChanged、已删仍算存在各实际失败；HTTP全包与M。
-- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): add work item reactions`。
+- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 增加工作项表情及删除连带`。
 
 ### Task 6: 评论表情、页内嵌入和00023
 
-**Files:** Create `server/migrations/00023_issue_comment_reactions.sql`，`I/app/{comment_reactions.go,comment_reactions_test.go}`、`I/adapter/postgres/{comment_reactions.go,comment_reactions_test.go,queries/comment_reactions.sql}`、`I/adapter/http/{comment_reactions.go,comment_reactions_test.go}`、`B/issue_comment_reactions_test.go`；Modify T3–5 ports/rows/comments读取与删除，M/H。
+**Files:** Create `server/migrations/sql/00023_issue_comment_reactions.sql`，`I/app/{comment_reactions.go,comment_reactions_test.go}`、`I/adapter/postgres/{comment_reactions.go,comment_reactions_test.go,queries/comment_reactions.sql}`、`I/adapter/http/{comment_reactions.go,comment_reactions_test.go}`、`B/issue_comment_reactions_test.go`；Modify `I/app/{comment_ports.go,comment_writes.go,comment_writes_test.go,fakes_comments_test.go,comments.go}`、`I/module.go`、`I/adapter/http/comment_writes_test.go`、`B/issue_comments_test.go`及T3–5 rows/comments读取与删除，M/H。
 
-**Interfaces:** `AddCommentReaction.Execute(ctx context.Context,commentID uuid.UUID,reaction string)(domain.CommentReaction,error)`、`RemoveCommentReaction.Execute(ctx context.Context,commentID uuid.UUID,reaction string)error`；Deps `Locks, Comments CommentReader, Reactions CommentReactionWriter, Clock`。CommentReader仅GetComment。Writer的方法：`CommentReaction(ctx context.Context,key ReactionKey)(domain.CommentReaction,bool,error)`、`InsertCommentReaction(ctx context.Context,w CommentReactionWrite)error`、`DeleteCommentReaction(ctx context.Context,d ReactionDeletion)error`。T3 CommentLister扩`CommentReactions(ctx context.Context,commentIDs []uuid.UUID)([]domain.CommentReaction,error)`；T4 Deleter扩`DeleteCommentReactionRows(ctx context.Context,d CommentDeletion)error`。
+**Interfaces:** `AddCommentReaction.Execute(ctx context.Context,commentID uuid.UUID,reaction string)(domain.CommentReaction,error)`、`RemoveCommentReaction.Execute(ctx context.Context,commentID uuid.UUID,reaction string)error`；Deps `Locks, Comments CommentReader, Reactions CommentReactionWriter, Clock`。CommentReader仅GetComment。Writer的方法：`CommentReaction(ctx context.Context,key ReactionKey)(domain.CommentReaction,bool,error)`、`InsertCommentReaction(ctx context.Context,w CommentReactionWrite)error`、`DeleteCommentReaction(ctx context.Context,d ReactionDeletion)error`。新增窄`CommentReactionReader`仅含`CommentReactions(ctx context.Context,commentIDs []uuid.UUID)([]domain.CommentReaction,error)`，T3 CommentLister与T4 CommentUpdater均嵌入它；module.New向两者注入同一存储，更新相应假实现/调用日志；T4 Deleter扩`DeleteCommentReactionRows(ctx context.Context,d CommentDeletion)error`。
 
-- [ ] **Step 1 红测试。** `TestCommentReactions`复用值表但核对issue/comment的updated_at/updated_by/edited_at全部不变、无动态；隐藏comment404；重复409/只删自己同T5。`TestCommentPageIncludesReactions`两comment、多个actor、软删行、页外comment反例。`TestDeletingCommentReactions`删除评论只连带自身活表情，别人评论和旧删除戳不变。
+- [ ] **Step 1 红测试。** `TestCommentReactions`复用值表但核对issue/comment的updated_at/updated_by/edited_at全部不变、无动态；隐藏comment404；重复409/只删自己同T5。`TestCommentPageIncludesReactions`两comment、多个actor、软删行、页外comment反例。`TestCommentPatchIncludesReactions`为同一评论先造两个actor的活表情和一条软删表情，分别PATCH同HTML与改HTML，均返回准确活表情/排序；同HTML仍零写/零审计变化、改HTML正常审计；不能以未知状态回答[]。`TestDeletingCommentReactions`删除评论只连带自身活表情，别人评论和旧删除戳不变。
   ```go
   if !reflect.DeepEqual(beforeIssue, afterIssue) || !reflect.DeepEqual(beforeCommentAudit, afterCommentAudit) { t.Fatal("reaction touched parent audit") }
   if len(firstPage.Data[0].Reactions) != 2 { t.Fatal("embedded reactions") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CommentReactions|CommentPageIncludesReactions|DeletingCommentReactions)' -count=1`。
-- [ ] **Step 3 实现。** 目标定位及check复用T4的同一机制，但check仅确认comment活且归属一致，不要求作者；Authorize action=issue_reaction.write。写仅comment_reactions；删除评论实际序issues→comments→comment_reactions。ListComments在同一ReadTx取本页commentIDs后批读活reactions按created_at/id排序并分组，空页不查询，不能N+1；不新增单独GET表情接口。M的二层FK删除必须经comments，不错用反应表不存在的issue_id。
-- [ ] **Step 4 绿/变异。** 原红命令、`go -C server test ./internal/bootstrap -run 'Test(CommentReactions|CommentPageIncludesReactions|DeletingCommentReactions)' -count=1`、HTTP全包/M绿；误改父审计、漏comment范围、漏已删过滤、漏二层删除各被业务断言杀死。分页读取夹具在目录/查询间更改表情，证明同快照（T14扩整程序）。
-- [ ] **Step 5 M/H/G评审提交。** furnish在新建评论上加一表情；`feat(M4/P4): embed and maintain comment reactions`。
+- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(CommentReactions|CommentPageIncludesReactions|CommentPatchIncludesReactions|DeletingCommentReactions)' -count=1`。
+- [ ] **Step 3 实现。** 目标定位及check复用T4的同一机制，但check仅确认comment活且归属一致，不要求作者；Authorize action=issue_reaction.write。写仅comment_reactions；删除评论实际序issues→comments→comment_reactions。ListComments在同一ReadTx取本页commentIDs后批读活reactions按created_at/id排序并分组，空页不查询，不能N+1；T4更新和无改动分支均在当前Locks.run写事务内用单个commentID调用同一窄读取接口，组装完整Comment后再返回，不能在无改动早退时漏组装，也不另开ReadTx。创建的新评论确定没有表情仍返回[]。不新增单独GET表情接口。M的二层FK删除必须经comments，不错用反应表不存在的issue_id。
+- [ ] **Step 4 绿/变异。** 原红命令、`go -C server test ./internal/bootstrap -run 'Test(CommentReactions|CommentPageIncludesReactions|CommentPatchIncludesReactions|DeletingCommentReactions)' -count=1`、HTTP全包/M绿；误改父审计、漏comment范围、漏已删过滤、漏二层删除各被业务断言杀死；分别将同HTML、改HTML应答的Reactions清空，两个PATCH组合/HTTP断言均须失败；读取错误原样传播，改HTML分支回滚写入。分页读取夹具在目录/查询间更改表情，证明同快照（T14扩整程序）。
+- [ ] **Step 5 M/H/G评审提交。** furnish在新建评论上加一表情；`feat(M4/P4): 维护评论表情并补齐内嵌响应`。
 
 ### Task 7: 描述纯模型、存在性和已有列存储
 
-**Files:** Create `I/domain/{description.go,description_test.go}`、`I/app/description_rows.go`、`I/adapter/postgres/{description.go,description_test.go,queries/description.sql}`；Modify `I/domain/{issue.go,patch.go}`及测试、`I/app/rows.go`、`I/adapter/postgres/{issues.go,sub_issues.go}`及`queries/{issues,update,sub_issues}.sql`；HTTP契约不变。
+**Files:** Create `I/domain/{description.go,description_test.go}`、`I/app/description_rows.go`、`I/adapter/postgres/{description.go,description_test.go,queries/description.sql}`；Modify `I/domain/{issue.go,patch.go}`及测试、`I/app/{rows.go,create_issue.go,update_issue.go}`、`I/adapter/postgres/{issues.go,update.go,sub_issues.go}`及`queries/{issues,update,sub_issues}.sql`；Create `B/issue_description_preservation_test.go`；HTTP契约不变。
 
-**Interfaces:** domain.Issue增加`DescriptionHTML,DescriptionStripped string`；domain.NewIssue/IssuePatch增加`DescriptionHTML *string`，IssuePatch加`SkipActivity *bool`保留存在性。公共CompareDescription产出Write（要保存HTML）/Changed（普通审计变化）。app.DescriptionWrite及存储`WriteDescription(ctx context.Context,w DescriptionWrite)error`只改两列；IssueRow/IssueFields加描述字段，插入/更新主查询能保留当前值。T9前create/update不消费新增HTTP输入，现有请求行为维持默认描述。
+**Interfaces:** domain.Issue增加`DescriptionHTML,DescriptionStripped string`；domain.NewIssue/IssuePatch增加`DescriptionHTML *string`，IssuePatch加`SkipActivity *bool`保留存在性。公共CompareDescription产出Write（要保存HTML）/Changed（普通审计变化）。app.DescriptionWrite及存储`WriteDescription(ctx context.Context,w DescriptionWrite)error`只改两列；IssueRow/IssueFields加描述字段，app.create_issue构造IssueRow时显式给`DescriptionHTML="<p></p>",DescriptionStripped=""`；app.update_issue构造IssueFields从本次锁下旧Issue透传两列；postgres.update映射到对应sqlc参数，插入/更新主查询保持这些值。T9前create/update不消费新增HTTP输入，现有请求行为维持默认描述。
 
-- [ ] **Step 1 红测试。** `TestDescriptionChanges`：默认p、空串合法、500000 Unicode字符/500001；skip出现时无description或伴随name/assignee/date/parent等任意字段→422 skip_activity/not_allowed，包括skip=false。比较clean HTML普通相同无写、普通不同有写/审计；skip=true标识相同Write=true/Changed=false，文本/mention顺序/href/checked任一不同Changed=true。`TestWriteDescriptionPreservesAudit`存储邻居/issue审计不动。
+- [ ] **Step 1 红测试。** `TestDescriptionChanges`：默认p、空串合法、500000 Unicode字符/500001；skip出现时无description或伴随name/assignee/date/parent等任意字段→422 skip_activity/not_allowed，包括skip=false。比较clean HTML普通相同无写（显式skip=false同样Write=false/Changed=false）、普通不同有写/审计；skip=true标识相同Write=true/Changed=false，文本/mention顺序/href/checked任一不同Changed=true。`TestWriteDescriptionPreservesAudit`存储邻居/issue审计不动。`TestExistingIssueWritesPreserveDescription`在T7末态验证旧API创建存默认两列；通过仓储准备目标与邻居的不同非默认描述，调用既有普通字段PATCH，目标两列保持、邻居完整不变。该回归不等待T9公开字段。
   ```go
   c := domain.CompareDescription(old, withIDs, true)
   if !c.Write || c.Changed { t.Fatal("migration update was audited or lost") }
   if !domain.CompareDescription(old, changedHref, true).Changed { t.Fatal("href hidden") }
+  same := domain.CompareDescription(old, old, false)
+  if same.Write || same.Changed { t.Fatal("unchanged ordinary save wrote") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain -run 'Test(DescriptionChanges|CheckIssuePatch)' -count=1`；`go -C server test ./internal/modules/issue/adapter/postgres -run TestWriteDescriptionPreservesAudit -count=1`。
-- [ ] **Step 3 实现。** 领域只消费RichText，adapter负责解析；长度检查按utf8.RuneCountInString。NewIssue缺省描述在实际create绑定时取p，IssuePatch的skip结构校验与既有CheckIssuePatch聚合字段问题。读取GetIssue/GetIssues/SubIssues及readBack映射不丢描述；常规字段PATCH在T9前后都保存现有描述。公开字段到T9完整副作用就绪才进入契约。
-- [ ] **Step 4 绿/变异。** 原命令及原create/update/读取回归绿；按字节数长度、忽略false存在、漏一个可选字段的组合拒绝、WriteDescription碰updated_at各失败；生成go及G。T7的内部新接口由T9消费，不添加无人使用的兼容路由。
-- [ ] **Step 5 评审/提交。** `feat(M4/P4): model description changes without exposing partial writes`。
+- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain -run 'Test(DescriptionChanges|CheckIssuePatch)' -count=1`；`go -C server test ./internal/modules/issue/adapter/postgres -run TestWriteDescriptionPreservesAudit -count=1`；`go -C server test ./internal/bootstrap -run TestExistingIssueWritesPreserveDescription -count=1`。
+- [ ] **Step 3 实现。** 领域只消费RichText，adapter负责解析；长度检查按utf8.RuneCountInString。T7同时接app.create_issue的显式默认、app.update_issue从锁下旧值透传、postgres.update的参数映射，主INSERT扩列后不能依赖被显式零值遮蔽的数据库默认；IssuePatch的skip结构校验与既有CheckIssuePatch聚合字段问题。读取GetIssue/GetIssues/SubIssues及readBack映射不丢描述；常规字段PATCH在T9前后都保存现有描述。公开字段到T9完整副作用就绪才进入契约。
+- [ ] **Step 4 绿/变异。** 原命令及`go -C server test ./internal/bootstrap -run TestExistingIssueWritesPreserveDescription -count=1`、原create/update/读取回归绿；新增组合测试也须先见业务红（若直接绿，用可编译变异确认后恢复）；按字节数长度、忽略false存在、漏一个可选字段的组合拒绝、WriteDescription碰updated_at各失败；把create描述改零值、普通PATCH两列改零值、漏update adapter映射分别被默认/保留值回归杀死；生成go及G。T7的内部新接口由T9消费，不添加无人使用的兼容路由。
+- [ ] **Step 5 评审/提交。** `feat(M4/P4): 建立描述模型并保持既有写入值`。
 
 ### Task 8: 最新描述动态合并与600秒版本决策
 
@@ -300,11 +302,11 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain ./internal/modules/issue/app -run 'TestDescription(ActivityMerge|VersionMergeWindow)' -count=1`；存储同名TestLatestActivity在description_activity_test.go。
 - [ ] **Step 3 实现。** LatestActivity WHERE issue_id与deleted_at IS NULL，ORDER BY created_at DESC,id DESC LIMIT1，不能WHERE field=description提前筛。WriteDescriptionActivity仅写描述行；T9协调标题行先入库，再调用它，再写后续字段行，避免同PATCH标题被合并跨过。版本纯函数独立于动态，found=false由T9走新建；不用“最新动态”决定版本合并。
 - [ ] **Step 4 绿/变异。** 原命令加`go -C server test ./internal/modules/issue/adapter/postgres -run TestLatestActivity -count=1`；改成最近description、比较created_at、600改<、不更新new_value、去id tie-breaker各被对应业务断言杀死。普通UpdateActivity顺序回归通过；T9补组合和回滚证据。
-- [ ] **Step 5 G评审提交。** `feat(M4/P4): coalesce description activity and define version windows`。
+- [ ] **Step 5 G评审提交。** `feat(M4/P4): 合并描述动态并定义版本窗口`。
 
 ### Task 9: 描述API、提及和版本原子写入及00024–00025
 
-**Files:** Create `server/migrations/00024_issue_issue_mentions.sql`、`00025_issue_issue_description_versions.sql`；`I/app/{description.go,description_test.go,description_ports.go,fakes_description_test.go}`；`I/adapter/postgres/{mentions.go,mentions_test.go,description_versions.go,description_versions_test.go,queries/mentions.sql,queries/description_versions.sql}`；`B/issue_descriptions_test.go`、`server/internal/platform/httpserver/apitest/issue_shapes_test.go`；Modify `I/app/{create_issue,update_issue,ports,mentions}.go`、`I/domain/patch.go`、HTTP issues映射/测试及module，M/H。
+**Files:** Create `server/migrations/sql/00024_issue_issue_mentions.sql`、`server/migrations/sql/00025_issue_issue_description_versions.sql`；`I/app/{description.go,description_test.go,description_ports.go,fakes_description_test.go}`；`I/adapter/postgres/{mentions.go,mentions_test.go,description_versions.go,description_versions_test.go,queries/mentions.sql,queries/description_versions.sql}`；`B/issue_descriptions_test.go`、`server/internal/platform/httpserver/apitest/issue_shapes_test.go`；Modify `I/app/{create_issue,update_issue,ports,mentions}.go`、`I/domain/patch.go`、HTTP issues映射/测试及module，M/H。
 
 **Interfaces:** CreateIssueDeps/UpdateIssueDeps增加`Sanitizer HTMLSanitizer`；各自Issues消费既有小接口中实际用到的描述方法，Members仍为T3 ProjectMembers。新增方法：`MentionIDs(ctx context.Context,issueID uuid.UUID)([]uuid.UUID,error)`、`InsertMentions(ctx context.Context,rows LinkRows)error`、`RemoveMentions(ctx context.Context,rows UnlinkRows)error`；`LatestDescriptionVersion(ctx context.Context,issueID uuid.UUID)(domain.DescriptionVersion,bool,error)`、`InsertDescriptionVersion(ctx context.Context,v domain.DescriptionVersion)error`、`UpdateDescriptionVersion(ctx context.Context,v domain.DescriptionVersion)error`。消费T7 WriteDescription、T8 DescriptionActivityStore。公共use case Execute签名保持现有NewIssue/IssuePatch。domain.Changes加`Description *DescriptionChange`；应用层清洗比较后设置它，None仅在所有普通字段无变化且Description为nil或Write=false时为真；内容不变的skip仍需进入写分支，但不走更新审计的普通分支。
 
@@ -317,7 +319,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(DescriptionWriteIsAtomic|SkipDescriptionPreservesAudit)' -count=1`；`go -C server test ./internal/bootstrap -run TestIssueDescriptionAnswers -count=1`（description尚未入契约时HTTP请求应失败，不能只靠编译红）。
 - [ ] **Step 3 实现。** 两表同Task建出并M全接。Create：清洗一次→项目N下资格→一个clock→issue含描述→assignees→labels→关注并集→mentions→创建动态→初版。Update：重读后清洗旧/新（无description时完全不读提及目录、不触碰mentions/版本），应用CompareDescription；skip同内容专用分支只WriteDescription与关系同步，正常分支先主issue+字段关系再subscribers/mentions/活动/版本。新增关注目标与实际新负责人合并去重排序，按顺序写全局表序。最新版本ORDER BY last_saved_at DESC,id DESC，活行过滤；600秒内同owner原位更新，保留id/created_at/created_by，其他情况新UUIDv7。旧工作项没有版本不伪造初版，首次实际修改时新建一版；skip同内容不新建。
 - [ ] **Step 4 公开完整契约并验证。** 同Task加IssueCreate/IssueUpdate/IssueDetail.description_html、IssueUpdate.skip_activity；Detail和Issue显式各映射（不再强转），apitest比较properties及required精确差一字段；create/get/by-identifier/update/archive/unarchive仍seen，子项/关联Issue不含description。定位：`go -C server test ./internal/platform/httpserver/apitest -run TestIssueDetailShape -count=1`、HTTP全包、`go -C server test ./internal/modules/issue/adapter/postgres -run 'Test(Mentions|DescriptionVersions)' -count=1`、`go -C server test ./internal/bootstrap -run 'Test(IssueDescription|DescriptionWrite|SkipDescription)' -count=1`。fixture经创建或PATCH造mentions/versions，不临时写SQL。
-- [ ] **Step 5 变异/G/评审提交。** 实际删mentions差集/角色过滤、skip审计保护、version写入、回滚、seen调用各由组合断言失败；另把version条件按created_at算验证滑动。M/H/G全过，独立评审这个原子交付；`feat(M4/P4): save descriptions with mentions and version history`。如评审判断体量不可控，先按D2重切，不提前公开缺少提及/版本的描述接口。
+- [ ] **Step 5 变异/G/评审提交。** 实际删mentions差集/角色过滤、skip审计保护、version写入、回滚、seen调用各由组合断言失败；另把version条件按created_at算验证滑动。M/H/G全过，独立评审这个原子交付；`feat(M4/P4): 原子保存描述提及与版本历史`。如评审判断体量不可控，先按D2重切，不提前公开缺少提及/版本的描述接口。
 
 ### Task 10: 描述版本列表与详情
 
@@ -333,7 +335,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'TestDescriptionVersion(Pages|Visibility)' -count=1`。
 - [ ] **Step 3 实现。** 新action=issue_description_version.read，角色Admin/Member；seeAs先HiddenFrom再角色。Get先读version定位issue，经seeAs统一子资源404，不吞其他存储错误；无写事务。List首次see和全部查询在独立ReadTx内；不能先see再进入快照或在写事务里嵌套“升级”。HTTP列表不带HTML，详情带HTML，路径设计5.1；还原无路由，使用普通PATCH（可能按600秒政策合并版本）。
 - [ ] **Step 4 绿/变异。** 原命令、HTTP全包、`go -C server test ./internal/bootstrap -run TestDescriptionVersions -count=1`；实际反向tuple、漏issue/软删条件、guest放宽、隐藏404错误映射各失败；错误文案同Task。
-- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): read description versions with scoped cursors`。
+- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 按权限和游标读取描述版本`。
 
 ### Task 11: 活动态引用使用的历史项目目录
 
@@ -349,7 +351,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/project/adapter/postgres -run TestHistoricalIssueProjects -count=1`；`go -C server test ./internal/bootstrap -run TestHistoricalProjects -count=1`。
 - [ ] **Step 3 实现。** project SQL仅JOIN自己projects/project_members，绑定workspaceID/actorID/is_active，不加任何两表deleted_at或archived条件；issue引用表的deleted_at由T12同样不检查。目录不用于放宽目标issue授权，目标仍按正常read规则。不是P3 ArchivedProjects或seeEach/GetIssues的替身，那些过滤软删除会改变历史语义。
 - [ ] **Step 4 绿/变异。** 目标绿，实际加deleted_at过滤/删is_active/漏workspace/OwnOnly按workspace角色算分别失败；make gen-go与G；目录只读，值转换在B，不跨模块import。
-- [ ] **Step 5 评审/提交。** `feat(M4/P4): expose historical membership visibility for activity`。
+- [ ] **Step 5 评审/提交。** `feat(M4/P4): 为动态提供历史成员可见性目录`。
 
 ### Task 12: 按可见引用分页列出动态
 
@@ -365,7 +367,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/app -run 'Test(ActivityReferenceVisibility|ActivityPagesFilterBeforeLimit)' -count=1`；`go -C server test ./internal/modules/issue/adapter/postgres -run TestActivityVisibilityQuery -count=1`。
 - [ ] **Step 3 实现。** 独立ReadTx包第一次see→Historical→Activities；SQL只JOINissue模块表，所有引用条件在WHERE里先于ORDER/LIMIT，活的activity自身deleted_at仍过滤。引用issue只要求存在/目录项目可读/OwnOnly匹配CreatedBy，不看它deleted_at和archived_at；两个非NULL标识均须满足。ASC keyset>，limit+1仅为判断更多；cursor用已返回最后一行。响应严格设计字段、不含comment或detail。
 - [ ] **Step 4 绿/变异。** HTTP全包、原命令、`go -C server test ./internal/bootstrap -run 'Test(ActivityReferences|ActivityPages|ActivityIncremental)' -count=1`；增量从最后一页请求cursor（不是null next）再取，新增和description合并行按id重排；实际漏一端引用过滤/用GetIssues软删口径/过滤在limit后/以cursor授权各失败。
-- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): page activities after historical visibility filtering`。
+- [ ] **Step 5 H/G评审提交。** `feat(M4/P4): 按历史引用可见性过滤动态分页`。
 
 ### Task 13: 交错14/15和最后一把锁后的时钟
 
@@ -382,7 +384,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 运行定位。** `go -C server test ./internal/bootstrap -run 'Test(CommentAndIssueDeletionSerialize|DescriptionSavesSerialize|CollaborationReadsClockUnderLock|ActivityCreatedAtDoesNotGoBack)' -count=1`。若前序实现已使新增测试直接绿，先做针对性质可编译变异确认业务红再恢复，记录真实经过，不伪造首次红。
 - [ ] **Step 3 完善交错夹具/必要根因修复。** 先探测请求确实等在持者项目锁之后，再推进固定clock并释放；每次条件等待有截止期限，后台请求错误/取消可收回，不sleep同步。两个并发写的连接和事务分开；后写时钟与所有副表戳一致，不能仅断言最后HTTP状态。
 - [ ] **Step 4 强化验证。** 上一命令改`-race -count=5`；无40P01/业务失败。实际把clock移到Locks.run前、跳过锁下重读、用初版时间判断窗口各须触发具体断言失败；基础设施/超时不当杀死，恢复后定向绿。
-- [ ] **Step 5 G/独立评审/提交。** 重推HEAD全部写的gate→连接→项目N→各表锁关系，无反向边；`feat(M4/P4): verify collaboration interleavings and clocks`。
+- [ ] **Step 5 G/独立评审/提交。** 重推HEAD全部写的gate→连接→项目N→各表锁关系，无反向边；`feat(M4/P4): 验证协作写入交错与锁后时钟`。
 
 ### Task 14: 逐操作矩阵、整程序快照与安全补证
 
@@ -390,7 +392,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** Consumes T3–12的12个新API；矩阵行在各Task已存在，T14补跨操作性质。复用已有matrixRow/issueWorld、事务/授权fake的失败注入能力；真实ReadTx从第一次目标读取开始，不能利用已有写事务嵌套来假装repeatable read（WithinTx嵌套不会改变隔离）。
 
-- [ ] **Step 1 断言与夹具。** `TestCollaborationSecurity`目标隐藏/随机不存在整份状态+Problem+稳定头一致；非作者update/非admin delete的403不占gate/连接；project+issue归档同时存在先project，归档相同comment也拒绝。adminGuest自己issue有管理员相对权限，别人404；普通guest仅可见评论/表情、version403。`TestCollaborationSnapshot`分别覆盖评论页+表情批读、活动目标+历史目录+查询、版本目标+列表：首读后外连接改权限/行，当前页同快照、下一请求新状态。
+- [ ] **Step 1 断言与夹具。** `TestCollaborationSecurity`目标隐藏/随机不存在整份状态+Problem+稳定头一致；非作者update/非admin delete的403不占gate、不取得写事务连接（预检只读查询仍可短暂借用池连接）；project+issue归档同时存在先project，归档相同comment也拒绝。adminGuest自己issue有管理员相对权限，别人404；普通guest仅可见评论/表情、version403。`TestCollaborationSnapshot`分别覆盖评论页+表情批读、活动目标+历史目录+查询、版本目标+列表：首读后外连接改权限/行，当前页同快照、下一请求新状态。
   ```go
   if !reflect.DeepEqual(hiddenReply, absentReply) { t.Fatal("not-found differs") }
   if !reflect.DeepEqual(firstSnapshotRows, stillSameSnapshotRows) { t.Fatal("mixed snapshots") }
@@ -399,7 +401,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 定位。** `go -C server test ./internal/bootstrap -run 'Test(PermissionMatrix|ThePermissionMatrixCoversEveryOperation|EachIssueWriteLocksItsProjectFirst|EachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy|TheWritesOnAWorkItemRunOnTheirTransactionsConnection|CollaborationSecurity|CollaborationSnapshot)' -count=1`。覆盖的写操作集合应与契约相等，不能用空表/无匹配通过。
 - [ ] **Step 3 补根因与错误边界。** 每个新写都经项目N/gate/事务context，故障每个端口都回滚、错误原值；新body非法结构400、HTML/反应业务422、limit422/cursor400都经真实HTTP。删除反应合法不存在404只针对自己，不借其他人的reaction泄漏；目标归档与不存在的顺序照spec。别端修改/删除旧评论不承诺增量即时更新。
 - [ ] **Step 4 实际变异矩阵。** 至少运行：漏一个operation矩阵行、作者校验移gate后、主查询用pool非tx、ReadTx包晚于see、历史过滤只看一端、把cursor当scope、跳过自定义src清洗、漏新表删除。每个记录业务失败测试/层；安全/锁只有fake单元结果则补组合结果，不能靠“已覆盖”措辞。
-- [ ] **Step 5 G评审提交。** 对照全部12操作与5新表自查，`feat(M4/P4): verify collaboration access and snapshot boundaries`。
+- [ ] **Step 5 G评审提交。** 对照全部12操作与5新表自查，`feat(M4/P4): 验证协作权限与快照边界`。
 
 ### Task 15: I11–I13接口故事与旧故事增长
 
@@ -407,7 +409,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** Consumes真实12 APIs与create/update描述，使用既有api fixture、activityRow/byId/madeBy/expectIssueDeleted；新增动态断言经已有activityRow，不另写一套shape。故事准备只能API，库仅用于事后断言。跨600秒边界由T8/T9固定clock测试，不在故事SQL造时间或等待600秒。
 
-- [ ] **Step 1 写业务断言。** I11发/改/删评论、自己的和别人的反应、管理员删别人但不能编辑；I12完整分页后保留产生末页的请求cursor，新增评论及描述合并后按id重排/覆盖，无遗漏；I13版本列表/detail、普通PATCH还原、归档拒绝。I1描述/提及/初版，I2普通描述动态/版本合并、skip块id及href/checked普通审计；I15评论409；I17父/两层子树五新表同删除者时刻、邻居/旧删戳保留。
+- [ ] **Step 1 写业务断言。** I11发/改/删评论、自己的和别人的反应、管理员删别人但不能编辑；检查工作项表情data封套、已有多actor表情的同HTML/改HTML PATCH均保留内嵌活表情；I12完整分页后保留产生末页的请求cursor，新增评论及描述合并后按id重排/覆盖，无遗漏；I13版本列表/detail、普通PATCH还原、归档拒绝。I1描述/提及/初版，I2普通描述动态/版本合并、skip块id及href/checked普通审计；I15评论409；I17父/两层子树五新表同删除者时刻、邻居/旧删戳保留。
   ```ts
   expect(merged.map(row => row.id)).toEqual(expectedOrderedIds);
   expect(new Set(merged.map(row => row.id)).size).toBe(merged.length);
@@ -416,7 +418,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 定位运行。** `make build`，`pnpm exec playwright test e2e/stories/issue --project=chromium`。若新增断言直接绿，按对应skip/过滤/删除变异确认业务红后恢复；不能用构建失败充当业务失败。
 - [ ] **Step 3 补fixture/实现。** 每项目furnish的每新表已在各迁移Task进入，这里补子树和两actor反例。I13用不同作者制造独立版本，普通还原按600秒合并政策断言，不盲数“必加一版”。一次同时写标题/描述的动态顺序也由I2抽样。
 - [ ] **Step 4 变异和全量门禁。** 实际故事断言至少杀死skip审计、href/checked、活动隐藏引用、删除漏一表四类；恢复绿。G的web门禁、`make e2e`串行；缺Firefox或既有W11偶发分别如实记录，不能说全绿。W11按负责人交接06，不擅修无关功能。
-- [ ] **Step 5 独立评审提交。** `feat(M4/P4): cover collaboration API stories`。不计未经运行的故事数量。
+- [ ] **Step 5 独立评审提交。** `feat(M4/P4): 覆盖评论动态和描述历史接口故事`。不计未经运行的故事数量。
 
 ### Task 16: 文档、交接与交给Claude终审
 
@@ -428,10 +430,10 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 - [ ] **Step 2 更新上级。** 按设计3.23/P4：无回复、仅描述历史、44表/无issue_versions、20版保留交P9、PageSize共享；五表逐列差异、500000上限、skip内容标识/审计代价、空评论、表情格式、作者权限、动态分页/过滤/增量限制。未做保留任务不能写为正在运行。
 - [ ] **Step 3 移交。** 五份handoff追加“处理结果（M4/P4）”与余项，status仍open；P5复用ReadOnlySnapshot/历史目录，P6事件且skip相同不发布，P9保留/清理，P11新DTO/地址及comment_json，P14撤销重做/isMigrationUpdate，P15末页cursor重取，M5图片src投影经收尾交接；没有遗漏原spec§5/7。
 - [ ] **Step 4 核验/预备终审。** `git diff --check`，`make lint-web`；已通过G全量门禁的日志集中列出，新增修复只按影响复测，未有完整门禁则补齐。检查文档相对链接和新文件名。根任务给负责人分支、基线、spec/plan/review和变异台账，等待负责人安排Claude整分支终审；终审发现按一个修复轮处理、必要时复审。
-- [ ] **Step 5 提交与停止。** `docs(M4/P4): record collaboration verification and handoffs`。**负责人2026-10-25明确要求完成后先别合并；不得merge、push main或清理本分支。** Claude终审前进度写实现/验证完成待终审，不冒称Phase已最终完成。
+- [ ] **Step 5 提交与停止。** `docs(M4/P4): 记录协作验收证据与后续交接`。**负责人2026-10-25明确要求完成后先别合并；不得merge、push main或清理本分支。** Claude终审前进度写实现/验证完成待终审，不冒称Phase已最终完成。
 
 ## 自检结果与大小
 
 16个任务与设计原任务映射在spec§3.2；12个新操作/五表全部有拥有Task，表与fixture同批交付。Task7/8内部准备由Task9消费，不提前公开描述字段；Task11历史目录由Task12消费。公共类型与方法按上面的公共表和各Interfaces定义，不依赖代码转录。Review Focus五项分别绑定实际测试和变异。作者自检报告保存于工作树的`.superpowers/sdd/P4-issue-collaboration/plan-author-report.md`（过程记录，不作为已完成测试证据）。
 
-原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检、S3、所有P4测试/变异/门禁尚未运行；不写虚构哈希或通过率。
+原plan当前基线行数实测见spec附录；本plan紧凑文本行数不等于实现工作量。T3/T9密度最高，预检重点看是否可一次独立评审；预留修复增长5–10%，若实测超过约16Task或单Task约1500行plan，先重切，仍超按已批准D2拆段并更新设计15/16，不能删scope。独立预检和六项局部修订复核已完成，结论可进入T1；S3、所有P4测试/变异/门禁尚未运行，不写虚构哈希或通过率。
