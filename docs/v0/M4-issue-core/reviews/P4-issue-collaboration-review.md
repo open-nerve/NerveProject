@@ -14,7 +14,7 @@
 
 - 按[交接入口](../../claude_to_gpt/README.md)的顺序读取 01、03、02、04、05、06，核对 M4 设计的 P4–收尾、完成标准、进度表，以及 P3 的 spec、plan、review 样板和此前交给 P4 的事项。
 - 依交接 02 §3 调整计划产出方式：保留文件、接口、验收、执行命令与关键性质的变异计划，不把尚未运行的原型或逐块重放写成已验证。架构子任务负责 spec/plan 草案，主任务核对既有代码与基线。暂停时保存了 spec 和 16 个任务纲要（`573e8eb6`）；负责人批准 A1 后恢复计划细化与预检。
-- 在准备 Task 1 时发现 A1，曾停止进入预检和产品实现；负责人已批准推荐方案，现恢复推进。T1 已完成独立 Task 评审、F1 修正与定向复核，T2–T6 独立评审通过；后续 Task 与 Claude 整分支终审待执行。下表保留起步基线和架构放置探针，不与 T1 结果混淆。
+- 在准备 Task 1 时发现 A1，曾停止进入预检和产品实现；负责人已批准推荐方案，现恢复推进。T1 已完成独立 Task 评审、F1 修正与定向复核，T2–T7 独立评审通过；后续 Task 与 Claude 整分支终审待执行。下表保留起步基线和架构放置探针，不与 T1 结果混淆。
 
 ## 2. 验收标准核对
 
@@ -108,13 +108,15 @@ T1 已交付清洗适配器、领域纯值、共享编辑器往返样例，以�
 
 定向报告`task-6-fix-1-review.md`审查`132da60e..48bb532c`，确认I1已解决、无新增Critical/Important/Minor，两个反例只改各自临时副本。Task 6规格与质量门由首审和定向复审共同闭合，无遗留发现。差异外边界由推进者核对：既有Locks/HiddenFrom/角色集合、gate唯一映射和独立ReadOnlySnapshot未变；创建评论显式空表情、HTTP映射及两个locale key仍正确消费；实际日志、只读Plane、串行容器与主目录main状态均有执行证据。阶段尚未到Claude终审。
 
-### 2.8 T7 实施证据（待独立评审）
+### 2.8 T7 验收与独立评审（已完成）
 
 描述纯模型、字段存在性和已有列读写已提交为`2eb31d8c`，基线为`5e8edee4`，共25个生产/测试/生成文件。内部Issue/IssueRow/IssueFields以指针保留stripped的NULL，创建明确保存默认HTML与空文本；普通字段PATCH从锁下旧值透传两列。仅描述写入只改两列，不动审计。GetIssue/GetIssues/SubIssues共享完整映射；HTTP字段、迁移与完整描述副作用留待T9。
 
 领域、存储和真实旧API回归都有业务红绿；八项实际变异覆盖Unicode误按字节、忽略skip=false出现、漏可清空字段、误改审计、创建零值、普通PATCH丢值、适配器漏映射、NULL归一化，均触发业务断言并恢复。锁下再读回归也检出了PATCH零值变异；邻居和三种真实持久值均有保持断言。完整证据为`task-7-report.md`与`logs/task-7-*`，推进者已核对。
 
-最终gen-go、Go lint两段0 issues、全Go（server63包、bootstrap98.351s、tools）及提交后gen-check通过；没有适用的Web/E2E业务改动。首个临时Postgres端口映射异常及一次仅进程API1.44诊断单独保存，原环境1.55重跑取得业务红、随后定位与全量通过，未改Docker配置或已有容器。全量命令在各包结束后曾较久未退出，只读确认无测试子进程，等待自然退出0，没有杀进程或清理缓存。尚待独立规格与质量结论，不勾选Task 7完成。
+最终gen-go、Go lint两段0 issues、全Go（server63包、bootstrap98.351s、tools）及提交后gen-check通过；没有适用的Web/E2E业务改动。首个临时Postgres端口映射异常及一次仅进程API1.44诊断单独保存，原环境1.55重跑取得业务红、随后定位与全量通过，未改Docker配置或已有容器。全量命令在各包结束后曾较久未退出，只读确认无测试子进程，等待自然退出0，没有杀进程或清理缓存。独立审查结论如下。
+
+独立报告`task-7-review.md`审查`5e8edee4..046e04c8`，规格通过、质量Approved，Critical/Important/Minor均无。对SubIssues、readBack、fake读取复用及锁下write函数作具名聚焦核对，确认新值没有在这些接缝丢失。差异外边界由推进者闭合：Locks、角色集合、gate、生产ReadOnlySnapshot和1 MiB请求体配置/接线均未改；T1清洗与内容标识已独立验收，T9简报明确先清洗后比较/写入。原始执行日志、主目录干净main、工作树整洁、串行临时资源与生成过程均已核对。T7没有公开HTTP描述编辑功能，后续边界不算本任务遗漏。
 
 ### 2.9 尚未完成的 P4 验收
 
@@ -222,7 +224,7 @@ T6准备时确认：T5的共享表情错误文案当前限定“on the work item
 
 ### T7 旧可空列的值保持（后续实施要求）
 
-预核对发现00015的description_stripped为可空text，P1–P3 INSERT省略该列，旧行实际为NULL。原T7的string映射会在普通字段PATCH透传时把NULL改成空串，违背保存两列原值。局部裁定：domain.Issue及app.IssueRow/IssueFields用`*string`保留NULL；新增创建/明确描述保存写已知文本，普通PATCH从锁下旧值原样透传。DescriptionWrite.Text与RichText.Text仍是string，不用COALESCE、不改迁移或公开API。新增NULL/空串分别保留的真实回归和归一化变异；skip结构检查同时覆盖可清空字段的存在性bool。spec、plan与T7/T9简报同步；T7实现已有真实NULL/空串回归及变异，待独立评审核对。SubIssues既有Go转换直接复用扩展后的GetIssueRow/issueOf，因此本Task改查询与生成类型并验证实际读取，无需为原计划文件枚举制造无效Go差异；文件清单同步实际职责。
+预核对发现00015的description_stripped为可空text，P1–P3 INSERT省略该列，旧行实际为NULL。原T7的string映射会在普通字段PATCH透传时把NULL改成空串，违背保存两列原值。局部裁定：domain.Issue及app.IssueRow/IssueFields用`*string`保留NULL；新增创建/明确描述保存写已知文本，普通PATCH从锁下旧值原样透传。DescriptionWrite.Text与RichText.Text仍是string，不用COALESCE、不改迁移或公开API。新增NULL/空串分别保留的真实回归和归一化变异；skip结构检查同时覆盖可清空字段的存在性bool。spec、plan与T7/T9简报同步；T7实现已有真实NULL/空串回归及变异，独立评审已确认。SubIssues既有Go转换直接复用扩展后的GetIssueRow/issueOf，因此本Task改查询与生成类型并验证实际读取，无需为原计划文件枚举制造无效Go差异；文件清单同步实际职责。
 
 ## 4. 整分支评审的发现与处理
 
@@ -234,9 +236,9 @@ T1实施中增加了CustomColor既有解析的局部根因修复，以及颜色�
 
 ## 6. 移交事项
 
-- **恢复 P4：** A1 已记录批准；设计/spec/plan已同步，独立预检及修订复核通过；T1–T6已完成独立评审，继续Task 7。不能把本文的基线检查算成 P4 的验收结果。
+- **恢复 P4：** A1 已记录批准；设计/spec/plan已同步，独立预检及修订复核通过；T1–T7已完成独立评审，继续Task 8。不能把本文的基线检查算成 P4 的验收结果。
 - **P5：** 若采用前移方案，复用 P4 落地的 `ReadOnlySnapshot`，不要重复实现；其验证结果在实际完成后补入正式交接。
-- **Claude：** 本分支已完成T1–T6，T7起后续任务待推进，尚未到阶段终审节点；T4一项注释Minor已由T5独立审查确认闭合。
+- **Claude：** 本分支已完成T1–T7，T8起后续任务待推进，尚未到阶段终审节点；T4一项注释Minor已由T5独立审查确认闭合。
 - M4 的各份交接维持当前状态，不因计划覆盖而提前关闭；M5–M8 的 M4 收尾交接尚未产生。
 
 ## 7. 已知限制

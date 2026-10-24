@@ -277,7 +277,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** domain.Issue增加`DescriptionHTML string`、`DescriptionStripped *string`（保留既有NULL）；domain.NewIssue/IssuePatch增加`DescriptionHTML *string`，IssuePatch加`SkipActivity *bool`保留存在性。公共CompareDescription产出Write（要保存HTML）/Changed（普通审计变化）。app.DescriptionWrite及存储`WriteDescription(ctx context.Context,w DescriptionWrite)error`只改两列；IssueRow/IssueFields同样用`DescriptionHTML string`和`DescriptionStripped *string`保留SQL可空性；app.create_issue构造IssueRow时显式给HTML为`<p></p>`、stripped指向空字符串（非nil）；app.update_issue构造IssueFields从本次锁下旧Issue透传两列；postgres.update映射到对应sqlc参数，插入/更新主查询保持这些值。T9前create/update不消费新增HTTP输入，现有请求行为维持默认描述。
 
-- [ ] **Step 1 红测试。** `TestDescriptionChanges`：默认p、空串合法、500000 Unicode字符/500001；skip出现时无description或伴随name/assignee/date/parent等任意字段→422 skip_activity/not_allowed，包括skip=false。比较clean HTML普通相同无写（显式skip=false同样Write=false/Changed=false）、普通不同有写/审计；skip=true标识相同Write=true/Changed=false，文本/mention顺序/href/checked任一不同Changed=true。`TestWriteDescriptionPreservesAudit`存储邻居/issue审计不动。`TestExistingIssueWritesPreserveDescription`在T7末态验证旧API创建存默认两列；通过仓储准备目标与邻居的不同非默认描述，调用既有普通字段PATCH，目标两列保持、邻居完整不变。同一回归另用旧NULL与明确空字符串区分两种持久值，普通PATCH后分别原样保留；不等待T9公开字段。
+- [x] **Step 1 红测试。** `TestDescriptionChanges`：默认p、空串合法、500000 Unicode字符/500001；skip出现时无description或伴随name/assignee/date/parent等任意字段→422 skip_activity/not_allowed，包括skip=false。比较clean HTML普通相同无写（显式skip=false同样Write=false/Changed=false）、普通不同有写/审计；skip=true标识相同Write=true/Changed=false，文本/mention顺序/href/checked任一不同Changed=true。`TestWriteDescriptionPreservesAudit`存储邻居/issue审计不动。`TestExistingIssueWritesPreserveDescription`在T7末态验证旧API创建存默认两列；通过仓储准备目标与邻居的不同非默认描述，调用既有普通字段PATCH，目标两列保持、邻居完整不变。同一回归另用旧NULL与明确空字符串区分两种持久值，普通PATCH后分别原样保留；不等待T9公开字段。
   ```go
   c := domain.CompareDescription(old, withIDs, true)
   if !c.Write || c.Changed { t.Fatal("migration update was audited or lost") }
@@ -285,10 +285,10 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
   same := domain.CompareDescription(old, old, false)
   if same.Write || same.Changed { t.Fatal("unchanged ordinary save wrote") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain -run 'Test(DescriptionChanges|CheckIssuePatch)' -count=1`；`go -C server test ./internal/modules/issue/adapter/postgres -run TestWriteDescriptionPreservesAudit -count=1`；`go -C server test ./internal/bootstrap -run TestExistingIssueWritesPreserveDescription -count=1`。
-- [ ] **Step 3 实现。** 领域只消费RichText，adapter负责解析；长度检查按utf8.RuneCountInString。T7同时接app.create_issue的显式默认、app.update_issue从锁下旧值透传、postgres.update的参数映射，主INSERT扩列后不能依赖被显式零值遮蔽的数据库默认；IssuePatch的skip结构校验与既有CheckIssuePatch聚合字段问题。读取GetIssue/GetIssues/SubIssues及readBack映射不丢描述；常规字段PATCH在T9前后都保存现有描述。公开字段到T9完整副作用就绪才进入契约。既有description_stripped可空，不用COALESCE抹平NULL/空串、不改迁移；DescriptionWrite.Text与RichText.Text仍是明确的string。skip组合校验按SetStartDate/SetTargetDate/SetParentID判断字段出现（含显式null），并覆盖其余五个普通指针字段。
-- [ ] **Step 4 绿/变异。** 原命令及`go -C server test ./internal/bootstrap -run TestExistingIssueWritesPreserveDescription -count=1`、原create/update/读取回归绿；新增组合测试也须先见业务红（若直接绿，用可编译变异确认后恢复）；按字节数长度、忽略false存在、漏一个可选字段的组合拒绝、WriteDescription碰updated_at各失败；把create描述改零值、普通PATCH两列改零值、漏update adapter映射分别被默认/保留值回归杀死；把NULL映射成空串也须被真实持久值断言杀死；生成go及G。T7的内部新接口由T9消费，不添加无人使用的兼容路由。
-- [ ] **Step 5 评审/提交。** `feat(M4/P4): 建立描述模型并保持既有写入值`。
+- [x] **Step 2 跑红。** `go -C server test ./internal/modules/issue/domain -run 'Test(DescriptionChanges|CheckIssuePatch)' -count=1`；`go -C server test ./internal/modules/issue/adapter/postgres -run TestWriteDescriptionPreservesAudit -count=1`；`go -C server test ./internal/bootstrap -run TestExistingIssueWritesPreserveDescription -count=1`。
+- [x] **Step 3 实现。** 领域只消费RichText，adapter负责解析；长度检查按utf8.RuneCountInString。T7同时接app.create_issue的显式默认、app.update_issue从锁下旧值透传、postgres.update的参数映射，主INSERT扩列后不能依赖被显式零值遮蔽的数据库默认；IssuePatch的skip结构校验与既有CheckIssuePatch聚合字段问题。读取GetIssue/GetIssues/SubIssues及readBack映射不丢描述；常规字段PATCH在T9前后都保存现有描述。公开字段到T9完整副作用就绪才进入契约。既有description_stripped可空，不用COALESCE抹平NULL/空串、不改迁移；DescriptionWrite.Text与RichText.Text仍是明确的string。skip组合校验按SetStartDate/SetTargetDate/SetParentID判断字段出现（含显式null），并覆盖其余五个普通指针字段。
+- [x] **Step 4 绿/变异。** 原命令及`go -C server test ./internal/bootstrap -run TestExistingIssueWritesPreserveDescription -count=1`、原create/update/读取回归绿；新增组合测试也须先见业务红（若直接绿，用可编译变异确认后恢复）；按字节数长度、忽略false存在、漏一个可选字段的组合拒绝、WriteDescription碰updated_at各失败；把create描述改零值、普通PATCH两列改零值、漏update adapter映射分别被默认/保留值回归杀死；把NULL映射成空串也须被真实持久值断言杀死；生成go及G。T7的内部新接口由T9消费，不添加无人使用的兼容路由。
+- [x] **Step 5 评审/提交。** `feat(M4/P4): 建立描述模型并保持既有写入值`。
 
 ### Task 8: 最新描述动态合并与600秒版本决策
 
