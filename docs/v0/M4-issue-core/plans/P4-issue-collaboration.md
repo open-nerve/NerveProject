@@ -357,7 +357,7 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 ### Task 12: 按可见引用分页列出动态
 
-**Files:** Create `I/app/{activities.go,activities_test.go}`、`I/adapter/postgres/{activities.go,activities_test.go,queries/activities.sql}`、`I/adapter/http/{activities.go,activities_test.go}`、`B/issue_activities_test.go`；Modify `I/app/activity_ports.go`、H。
+**Files:** Create `I/app/{activities.go,activities_test.go}`、`I/adapter/postgres/{activities.go,activities_test.go,queries/activities.sql}`、`I/adapter/http/{activities.go,activities_test.go}`、`B/issue_activities_test.go`（引用/项目删除）、`B/issue_activity_pages_test.go`（分页/增量/快照）；Modify `I/app/activity_ports.go`、H。
 
 **Interfaces:** `ListIssueActivities.Execute(ctx context.Context,issueID uuid.UUID,limit *int,cursor *string)(ActivityPage,error)`；Deps `Locks, Activities ActivityLister, Projects VisibleProjects, ReadTx`。Lister的`Activities(ctx context.Context,issueID,actorID uuid.UUID,projects []VisibleProject,after *domain.ActivityCursor,limit int)([]ActivityRecord,error)`；存储把目录拆为全可见projectIDs/ownOnlyProjectIDs两数组，nil规范为空数组；每次请求重新从目录生成，不从cursor读项目范围。
 
