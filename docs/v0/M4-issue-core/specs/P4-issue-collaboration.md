@@ -35,10 +35,10 @@ P4 的完成线是 I11–I13 接口故事、I1/I2/I15/I17 的增量断言、交�
 | 存储 | `server/internal/modules/issue/adapter/postgres/{comments,reactions,comment_reactions,description,description_versions,mentions,activities}.go` 及对应 `queries/*.sql` | 只访问 issue 模块表，经事务 context/sqlc；分页先过滤再截断 |
 | 迁移 | `server/migrations/sql/00021_issue_issue_comments.sql` 至 `00025_issue_issue_description_versions.sql` | 五表，设计 §4.7、4.9、4.10、4.12、4.14 原样；各在首个可用接口的 Task 建出 |
 | 平台/成员目录 | `server/internal/shared/page.go`；`server/internal/platform/postgres/tx.go`；project 的 `app/issue_ports.go`、`adapter/postgres/issue_ports.go` 和 `queries/issue_ports.sql` | 共享页大小、只读快照、提及成员目录、历史项目目录 |
-| 边界与组合 | `api/modules/issue.yaml`；issue `adapter/http`、`module.go`；`server/internal/bootstrap/{ports,app}.go` 和plan列出的评论/描述/活动、矩阵及 `issue_collaboration_*_test.go` | 闭合请求体、生成类型、错误码、唯一组合根、矩阵与真实库测试 |
+| 边界与组合 | `api/modules/issue.yaml`、`api/openapi.yaml` 的路径转引；issue `adapter/http`、`module.go`；`server/internal/bootstrap/{ports,app}.go` 和plan列出的评论/描述/活动、矩阵、`gate_test.go` 及 `issue_collaboration_*_test.go` | 闭合请求体、生成类型、错误码、唯一组合根、矩阵、逐写503与真实库测试 |
 | 模式/授权/生成 | `server/sqlc.yaml`、`deploy/runtime-grants.sql`、`server/migrations/issue_schema_test.go`；`api/dist`、issue/project 的 `gen`、TS schema | 每张新表同时纳入授权/删除；生成物只由生成器产出 |
 | S3 | `api/testdata/issue-richtext.json`；`web/packages/editor/src/sanitization-roundtrip.test.ts`；`server/internal/modules/issue/adapter/content/sanitize_test.go` | 同一个样例集由 Go 与真实 TipTap editor 消费，覆盖编辑器输出与 API 输入往返 |
-| 故事 | `e2e/fixtures/{furnish.ts,assert/issue.ts}`；`e2e/stories/issue/i{1,2,11,12,13,15,17}-*.spec.ts` | 前置数据经接口；不为新表增加目录断言豁免 |
+| 故事 | `e2e/fixtures/{furnish.ts,comments.ts,assert/issue.ts}`；`e2e/stories/issue/i{1,2,11,12,13,15,17}-*.spec.ts` | 前置数据经接口；新表同Task补公共夹具与已有故事独立构造的目录行，不为新表增加目录断言豁免 |
 | 文案/文档 | `web/apps/web/core/lib/error-messages.ts`、两份 `errors.json`；总体设计/M2设计/差异清单/相关交接/P4 review | 新码与实现同 Task；交接只写已证实的处理结果 |
 
 ### 2.2 接口与依赖约定
