@@ -328,6 +328,9 @@ type ListIssueCommentsParams struct {
 	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// UpdateIssueCommentJSONRequestBody defines body for UpdateIssueComment for application/json ContentType.
+type UpdateIssueCommentJSONRequestBody = IssueCommentCreate
+
 // UpdateIssueJSONRequestBody defines body for UpdateIssue for application/json ContentType.
 type UpdateIssueJSONRequestBody = IssueUpdate
 
@@ -345,6 +348,12 @@ type CreateIssueJSONRequestBody = IssueCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteIssueComment Delete a comment as its author or project administrator
+	// (DELETE /api/v0/issue-comments/{comment_id})
+	DeleteIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
+	// UpdateIssueComment Edit a comment as its author
+	// (PATCH /api/v0/issue-comments/{comment_id})
+	UpdateIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
 	// DeleteIssueRelation Delete a relation
 	// (DELETE /api/v0/issue-relations/{relation_id})
 	DeleteIssueRelation(w http.ResponseWriter, r *http.Request, relationID RelationID)
@@ -397,6 +406,58 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteIssueComment operation middleware
+func (siw *ServerInterfaceWrapper) DeleteIssueComment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "comment_id" -------------
+	var commentID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "comment_id", r.PathValue("comment_id"), &commentID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "comment_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteIssueComment(w, r, commentID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateIssueComment operation middleware
+func (siw *ServerInterfaceWrapper) UpdateIssueComment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "comment_id" -------------
+	var commentID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "comment_id", r.PathValue("comment_id"), &commentID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "comment_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateIssueComment(w, r, commentID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteIssueRelation operation middleware
 func (siw *ServerInterfaceWrapper) DeleteIssueRelation(w http.ResponseWriter, r *http.Request) {
@@ -934,6 +995,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issues/{identifier}", wrapper.GetIssueByIdentifier)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.ListIssueComments)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/comments", wrapper.CreateIssueComment)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.DeleteIssueComment)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}", wrapper.UpdateIssueComment)
 
 	return m
 }
@@ -946,6 +1009,93 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteIssueCommentRequestObject struct {
+	CommentID uuid.UUID `json:"comment_id"`
+}
+
+type DeleteIssueCommentResponseObject interface {
+	VisitDeleteIssueCommentResponse(w http.ResponseWriter) error
+}
+
+type DeleteIssueComment204Response struct {
+}
+
+func (response DeleteIssueComment204Response) VisitDeleteIssueCommentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteIssueCommentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteIssueCommentdefaultApplicationProblemPlusJSONResponse) VisitDeleteIssueCommentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIssueCommentRequestObject struct {
+	CommentID uuid.UUID `json:"comment_id"`
+	Body      *UpdateIssueCommentJSONRequestBody
+}
+
+type UpdateIssueCommentResponseObject interface {
+	VisitUpdateIssueCommentResponse(w http.ResponseWriter) error
+}
+
+type UpdateIssueComment200JSONResponse IssueComment
+
+func (response UpdateIssueComment200JSONResponse) VisitUpdateIssueCommentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIssueCommentdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateIssueCommentdefaultApplicationProblemPlusJSONResponse) VisitUpdateIssueCommentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type DeleteIssueRelationRequestObject struct {
@@ -1589,6 +1739,12 @@ func (response GetIssueByIdentifierdefaultApplicationProblemPlusJSONResponse) Vi
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteIssueComment Delete a comment as its author or project administrator
+	// (DELETE /api/v0/issue-comments/{comment_id})
+	DeleteIssueComment(ctx context.Context, request DeleteIssueCommentRequestObject) (DeleteIssueCommentResponseObject, error)
+	// UpdateIssueComment Edit a comment as its author
+	// (PATCH /api/v0/issue-comments/{comment_id})
+	UpdateIssueComment(ctx context.Context, request UpdateIssueCommentRequestObject) (UpdateIssueCommentResponseObject, error)
 	// DeleteIssueRelation Delete a relation
 	// (DELETE /api/v0/issue-relations/{relation_id})
 	DeleteIssueRelation(ctx context.Context, request DeleteIssueRelationRequestObject) (DeleteIssueRelationResponseObject, error)
@@ -1670,6 +1826,65 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteIssueComment operation middleware
+func (sh *strictHandler) DeleteIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID) {
+	var request DeleteIssueCommentRequestObject
+
+	request.CommentID = commentID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteIssueComment(ctx, request.(DeleteIssueCommentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteIssueComment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteIssueCommentResponseObject); ok {
+		if err := validResponse.VisitDeleteIssueCommentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateIssueComment operation middleware
+func (sh *strictHandler) UpdateIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID) {
+	var request UpdateIssueCommentRequestObject
+
+	request.CommentID = commentID
+
+	var body UpdateIssueCommentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateIssueComment(ctx, request.(UpdateIssueCommentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateIssueComment")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateIssueCommentResponseObject); ok {
+		if err := validResponse.VisitUpdateIssueCommentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // DeleteIssueRelation operation middleware

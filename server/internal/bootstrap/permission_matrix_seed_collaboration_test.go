@@ -15,7 +15,7 @@ func (s issueSeed) comments(sd seeded) {
 	for _, i := range seededItems() {
 		slug, _, _ := strings.Cut(i.key, "/")
 		by := s.ids[i.by]
-		c := issuedomain.Comment{ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[i.key], IssueID: sd.issue(i.key, i.name), ActorID: by, HTML: "<p>Seeded comment</p>", Text: "Seeded comment"}
+		c := issuedomain.Comment{ID: sd.comment(i.key, i.name), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[i.key], IssueID: sd.issue(i.key, i.name), ActorID: by, HTML: "<p>Seeded comment</p>", Text: "Seeded comment"}
 		if err := s.store.InsertComment(context.Background(), issueapp.CommentWrite{Comment: c, By: by, At: s.now}); err != nil {
 			s.t.Fatal(err)
 		}
@@ -29,4 +29,14 @@ func (s issueSeed) seededCommentRows(sd seeded) {
 			s.t.Fatalf("seeded comment %s/%s: %+v, %v", i.key, i.name, got, err)
 		}
 	}
+}
+
+// comment is the live comment on the named seeded issue.
+func (s seeded) comment(key, name string) uuid.UUID {
+	id, ok := s.comments[key+"|"+name]
+	if !ok {
+		s.t.Helper()
+		s.t.Fatalf("no comment on %s/%s is seeded", key, name)
+	}
+	return id
 }

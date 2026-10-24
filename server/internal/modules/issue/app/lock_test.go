@@ -230,3 +230,28 @@ func wantAllAtOnce(t *testing.T, w *world, projects []uuid.UUID) {
 		t.Errorf("calls:\n%q\nwant %q after the precheck, then the transaction and %q, and the gates left last", w.log.calls, enter, lock)
 	}
 }
+
+func TestLocksCommentUsesResourceNotFoundUnderTheLock(t *testing.T) {
+	for _, edit := range []bool{true, false} {
+		for _, kind := range []string{"project deleted", "issue deleted", "issue moved"} {
+			t.Run(line("edit", edit, kind), func(t *testing.T) {
+				u, d, w, f := newCommentWrites()
+				w.project.waited = func() {
+					switch kind {
+					case "project deleted":
+						w.project.locked = nil
+					case "issue deleted":
+						w.issues.issue = nil
+					case "issue moved":
+						w.issues.issue.ProjectID = ops
+					}
+				}
+				err := executeCommentWrite(edit, u, d, f.current.ID)
+				wantRefused(t, err, domain.ErrCommentNotFound)
+				if f.updated != nil || f.deleted != nil || slices.Contains(w.log.calls, "Now") {
+					t.Fatal("refused write", w.log.calls)
+				}
+			})
+		}
+	}
+}

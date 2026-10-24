@@ -14,3 +14,12 @@ ORDER BY created_at, id LIMIT sqlc.arg(page_limit);
 -- name: GetComment :one
 SELECT id, workspace_id, project_id, issue_id, actor_id, comment_html, comment_stripped, edited_at, created_at, updated_at
 FROM issue_comments WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: UpdateComment :exec
+UPDATE issue_comments SET comment_html=sqlc.arg(comment_html), comment_stripped=sqlc.arg(comment_stripped),
+    edited_at=sqlc.arg(at)::timestamptz, updated_at=sqlc.arg(at), updated_by_id=sqlc.arg(by)::uuid
+WHERE id=sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: DeleteComment :exec
+UPDATE issue_comments SET deleted_at=sqlc.arg(at)::timestamptz, updated_at=sqlc.arg(at), updated_by_id=sqlc.arg(by)::uuid
+WHERE id=sqlc.arg(id) AND deleted_at IS NULL;

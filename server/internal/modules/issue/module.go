@@ -123,6 +123,8 @@ func New(d Deps) *Module {
 	sanitizer := content.NewSanitizer()
 	archive := app.ArchiveIssueDeps{Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	return &Module{uc: httpadapter.UseCases{
+		UpdateIssueComment: app.NewUpdateIssueComment(app.UpdateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
+		DeleteIssueComment: app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Locks: locks, Comments: store, Clock: d.Clock}),
 		CreateIssueComment: app.NewCreateIssueComment(app.CreateIssueCommentDeps{Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
 		ListIssueComments:  app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
 		CreateIssue: app.NewCreateIssue(app.CreateIssueDeps{

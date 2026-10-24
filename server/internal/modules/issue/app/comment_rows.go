@@ -27,3 +27,9 @@ type CommentPage struct {
 	Data       []domain.Comment
 	NextCursor string
 }
+
+// CommentDeletion identifies the comment and its deletion audit stamp.
+type CommentDeletion struct {
+	ID, By uuid.UUID
+	At     time.Time
+}

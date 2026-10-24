@@ -54,3 +54,21 @@ func (s *Store) GetComment(ctx context.Context, id uuid.UUID) (domain.Comment, b
 func commentOf(r gen.CommentsRow) domain.Comment {
 	return domain.Comment{ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, IssueID: r.IssueID, ActorID: r.ActorID, HTML: r.CommentHtml, Text: r.CommentStripped, EditedAt: r.EditedAt, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, Reactions: []domain.CommentReaction{}}
 }
+
+// UpdateComment updates only mutable content and edit audit fields.
+func (s *Store) UpdateComment(ctx context.Context, w app.CommentWrite) error {
+	err := s.queries(ctx).UpdateComment(ctx, gen.UpdateCommentParams{ID: w.Comment.ID, CommentHtml: w.Comment.HTML, CommentStripped: w.Comment.Text, By: w.By, At: w.At})
+	if err != nil {
+		return fmt.Errorf("update comment %s: %w", w.Comment.ID, err)
+	}
+	return nil
+}
+
+// DeleteComment preserves existing deletion stamps by updating only live rows.
+func (s *Store) DeleteComment(ctx context.Context, d app.CommentDeletion) error {
+	err := s.queries(ctx).DeleteComment(ctx, gen.DeleteCommentParams{ID: d.ID, By: d.By, At: d.At})
+	if err != nil {
+		return fmt.Errorf("delete comment %s: %w", d.ID, err)
+	}
+	return nil
+}

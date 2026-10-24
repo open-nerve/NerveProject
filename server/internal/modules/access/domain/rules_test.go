@@ -95,6 +95,7 @@ var tableCells = map[shared.Action][]outcome{
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// As project_member.list: every active member of the project, the guest
 	// rule the issue module's (M4 design 3.4).
+	"issue_comment.write": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	"issue_comment.create": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// Reading uses the same project roles as creating a comment.

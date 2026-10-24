@@ -79,8 +79,20 @@ type ListIssueCommentsUseCase interface {
 	Execute(context.Context, uuid.UUID, *int, *string) (app.CommentPage, error)
 }
 
+// UpdateIssueCommentUseCase edits a comment.
+type UpdateIssueCommentUseCase interface {
+	Execute(context.Context, uuid.UUID, string) (domain.Comment, error)
+}
+
+// DeleteIssueCommentUseCase deletes a comment.
+type DeleteIssueCommentUseCase interface {
+	Execute(context.Context, uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	UpdateIssueComment   UpdateIssueCommentUseCase
+	DeleteIssueComment   DeleteIssueCommentUseCase
 	CreateIssueComment   CreateIssueCommentUseCase
 	ListIssueComments    ListIssueCommentsUseCase
 	CreateIssue          CreateIssueUseCase

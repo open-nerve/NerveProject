@@ -7,6 +7,8 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 const (
 	// ActionCreateComment creates a comment on a visible work item.
 	ActionCreateComment shared.Action = "issue_comment.create"
+	// ActionWriteComment gates edits and deletions before relative author checks.
+	ActionWriteComment shared.Action = "issue_comment.write"
 	// ActionCreate is creating a work item in a project.
 	ActionCreate shared.Action = "issue.create"
 	// ActionRead is reading a work item of a project.
@@ -25,5 +27,5 @@ const (
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
-	return []shared.Action{ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment}
+	return []shared.Action{ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment, ActionWriteComment}
 }

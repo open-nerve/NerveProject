@@ -78,6 +78,22 @@ func (q *Queries) Comments(ctx context.Context, arg CommentsParams) ([]CommentsR
 	return items, nil
 }
 
+const deleteComment = `-- name: DeleteComment :exec
+UPDATE issue_comments SET deleted_at=$1::timestamptz, updated_at=$1, updated_by_id=$2::uuid
+WHERE id=$3 AND deleted_at IS NULL
+`
+
+type DeleteCommentParams struct {
+	At time.Time
+	By uuid.UUID
+	ID uuid.UUID
+}
+
+func (q *Queries) DeleteComment(ctx context.Context, arg DeleteCommentParams) error {
+	_, err := q.db.Exec(ctx, deleteComment, arg.At, arg.By, arg.ID)
+	return err
+}
+
 const getComment = `-- name: GetComment :one
 SELECT id, workspace_id, project_id, issue_id, actor_id, comment_html, comment_stripped, edited_at, created_at, updated_at
 FROM issue_comments WHERE id = $1 AND deleted_at IS NULL
@@ -144,6 +160,31 @@ func (q *Queries) InsertComment(ctx context.Context, arg InsertCommentParams) er
 		arg.CommentStripped,
 		arg.By,
 		arg.At,
+	)
+	return err
+}
+
+const updateComment = `-- name: UpdateComment :exec
+UPDATE issue_comments SET comment_html=$1, comment_stripped=$2,
+    edited_at=$3::timestamptz, updated_at=$3, updated_by_id=$4::uuid
+WHERE id=$5 AND deleted_at IS NULL
+`
+
+type UpdateCommentParams struct {
+	CommentHtml     string
+	CommentStripped string
+	At              time.Time
+	By              uuid.UUID
+	ID              uuid.UUID
+}
+
+func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) error {
+	_, err := q.db.Exec(ctx, updateComment,
+		arg.CommentHtml,
+		arg.CommentStripped,
+		arg.At,
+		arg.By,
+		arg.ID,
 	)
 	return err
 }

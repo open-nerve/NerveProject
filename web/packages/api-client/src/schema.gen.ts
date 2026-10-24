@@ -1044,6 +1044,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issue-comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a comment as its author or project administrator
+         * @description Uses issue_comment.write then checks author or ProjectAdmin, before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Project archiving refuses before issue archiving. Soft-deletes only the live comment, updates its parent work item using the same writer and moment, and creates no activity. Busy projects answer 503 server_busy with Retry-After.
+         */
+        delete: operations["deleteIssueComment"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a comment as its author
+         * @description Uses issue_comment.write for project admins, members and guests, then checks the comment author before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Only the comment author can edit, even for project admins. Project archiving refuses before issue archiving, and both refuse before unchanged sanitized HTML. Identical sanitized HTML writes nothing and preserves edited_at. Changed HTML sets edited_at and updated_at together, updates the work item and subscribes newly mentioned visible members without removing subscriptions. No activity is created. Busy projects answer 503 with Retry-After.
+         */
+        patch: operations["updateIssueComment"];
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/comments": {
         parameters: {
             query?: never;
@@ -2072,6 +2098,9 @@ export interface components {
             /** @description 1–100 work items of the project, each named once, to put under the work item. */
             sub_issue_ids: string[];
         };
+        IssueCommentCreate: {
+            comment_html: string;
+        };
         CommentReaction: {
             /** Format: uuid */
             id: string;
@@ -2102,9 +2131,6 @@ export interface components {
         IssueCommentPage: {
             data: components["schemas"]["IssueComment"][];
             next_cursor: components["schemas"]["NextCursor"];
-        };
-        IssueCommentCreate: {
-            comment_html: string;
         };
         /**
          * @description A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
@@ -2274,10 +2300,10 @@ export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type Issue = components['schemas']['Issue'];
 export type IssueCollection = components['schemas']['IssueCollection'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
+export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
 export type CommentReaction = components['schemas']['CommentReaction'];
 export type IssueComment = components['schemas']['IssueComment'];
 export type IssueCommentPage = components['schemas']['IssueCommentPage'];
-export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
 export type IssueRelationCollection = components['schemas']['IssueRelationCollection'];
@@ -3919,6 +3945,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteIssueComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The comment was deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateIssueComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCommentCreate"];
+            };
+        };
+        responses: {
+            /** @description The edited or unchanged comment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueComment"];
                 };
             };
             default: components["responses"]["Problem"];
