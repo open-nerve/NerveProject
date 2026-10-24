@@ -14,7 +14,7 @@
 
 - 按[交接入口](../../claude_to_gpt/README.md)的顺序读取 01、03、02、04、05、06，核对 M4 设计的 P4–收尾、完成标准、进度表，以及 P3 的 spec、plan、review 样板和此前交给 P4 的事项。
 - 依交接 02 §3 调整计划产出方式：保留文件、接口、验收、执行命令与关键性质的变异计划，不把尚未运行的原型或逐块重放写成已验证。架构子任务负责 spec/plan 草案，主任务核对既有代码与基线。暂停时保存了 spec 和 16 个任务纲要（`573e8eb6`）；负责人批准 A1 后恢复计划细化与预检。
-- 在准备 Task 1 时发现 A1，曾停止进入预检和产品实现；负责人已批准推荐方案，现恢复推进。当前 T1 已实施并执行验证；首轮独立评审后，推进者核验差异外证据确认 F1 基础标签缺失，已进入第1轮修正并等待定向复审；后续 Task 与 Claude 整分支终审待执行。下表保留起步基线和架构放置探针，不与 T1 结果混淆。
+- 在准备 Task 1 时发现 A1，曾停止进入预检和产品实现；负责人已批准推荐方案，现恢复推进。T1 已完成独立 Task 评审、F1 修正与定向复核；后续 Task 与 Claude 整分支终审待执行。下表保留起步基线和架构放置探针，不与 T1 结果混淆。
 
 ## 2. 验收标准核对
 
@@ -30,9 +30,19 @@
 | 架构放置合成图探针 | domain 放置失败；adapter 放置通过 | §3/A1；只验证依赖方向，未安装或运行 bluemonday |
 | 移除临时探针后 `go -C server test -count=1 ./internal/archtest` | 退出 0；1.481s | 现有架构守卫未改动 |
 
-### 2.2 T1 执行进度（F1 修正待定向复审）
+### 2.2 T1 验收与独立评审（已完成）
 
-T1 已实施清洗适配器、领域纯值、共享编辑器往返样例，以及本节下方记录的局部解析/导出修复。已执行定位红绿、清洗/投影/序列化的可编译变异、纯层架构检查、并发清洗 race 检查及适用的 Go/Web 完整门禁；详细命令、首次失败与最终结果保存在工作树的 `.superpowers/sdd/P4-issue-collaboration/task-1-report.md`。此处记录执行进度，独立评审结论和精确提交范围随后补入。
+T1 已交付清洗适配器、领域纯值、共享编辑器往返样例，以及局部解析/导出修复。实施范围为 `cbe0a9fc..18381d56`（主实现 `6cd23ca4`、F1 修正 `18381d56`）。独立评审的规格与质量结论通过；随后推进者确认的 F1 已由同一评审者定向复核为 ADDRESSED，修正未引入新问题，当前无遗留发现。过程报告分别为工作树 `.superpowers/sdd/P4-issue-collaboration/task-1-report.md` 与 `task-1-review.md`。
+
+| T1 证据 | 实际结果与边界 |
+|---|---|
+| 共享样例与真实编辑器 | 14 例，实际 CoreEditorExtensions 的 22 个 node / 8 个 mark；Go 清洗、真实 HTML/Markdown 重序列化、再次清洗及独立投影断言通过；空 TextStyle 的规范化单独断言 |
+| 默认标签 | 锁定上游 75 个默认标签加 4 个自定义标签；独立合法上下文/空元素/表结构断言，非允许标签删除；见 F1 |
+| 实际可编译变异 | 首轮 14 项，加 F1 移除 ruby 共 15 项，均被业务断言发现并恢复绿；未把构建失败算作检出 |
+| 首轮完整门禁 | `make lint-go` 两段 0 issues；`make test`（含 archtest）通过；`make lint-web` 54/54（33 缓存）、`make knip` 退出 0、`make test-web` 17/17（15 缓存） |
+| 修正后定向门禁 | domain/content 全包、content 全包 race、lint-go 两段 0 issues、真实 Editor 5 tests 通过；未重跑不受影响的容器全套 |
+
+原始日志在 `/tmp/nerve-p4-t1-logs/` 及其 `fix-1/` 子目录；代码和测试固定在上述提交，日志只佐证实际运行。T3 才由 module.New 接入首个 API 消费者，描述及 skip_activity 的接口行为仍由 T9/T15 验证；T1 完成不等于 P4 完成。
 
 #### T1 / F1：锁定上游基础标签遗漏（Important，第1轮修正）
 
@@ -40,7 +50,7 @@ T1 已实施清洗适配器、领域纯值、共享编辑器往返样例，以�
 
 只读来源链为 Plane `requirements/base.txt:75` 的 nh3==0.2.18、`content_validator.py:71–82` 的默认标签与四个自定义标签合并；[nh3 v0.2.18 源码](https://raw.githubusercontent.com/messense/nh3/v0.2.18/src/lib.rs)第232–234行从 ammonia 默认 Builder 导出标签，[其 Cargo.lock](https://raw.githubusercontent.com/messense/nh3/v0.2.18/Cargo.lock)锁定 ammonia 4.0.0，[ammonia v4.0.0 默认表](https://raw.githubusercontent.com/rust-ammonia/ammonia/v4.0.0/src/lib.rs)第359–369行定义75个标签。以该表加四个自定义标签修复；`tfoot`没有真实编辑器必需证据，按裁定移除。本轮只对齐基础标签集合；属性、CSS和值校验仍沿 Nerve 已批准的较窄策略，不宣称与 Plane 任意属性逐字全等。保留原URL约束，不引入 nh3/ammonia 依赖或修改守卫。
 
-新增独立行为回归按合法父子上下文、空元素和表结构逐项覆盖默认标签，并固定 unknown/script/tfoot 删除断言。先看到标签丢失及 tfoot 留存的业务红，再补齐；另明确允许 area/bdo/data/map/rtc 的无属性形式，避免 bluemonday 隐式集合仍丢标签。删除 ruby 的实际可编译变异被 `TestCleanPlaneDefaultTags/ruby` 检出，恢复后 domain/content（含既有 S3 与恶意样例）、content race、lint-go、真实 Editor S3 均通过；具体命令和原始日志在 `task-1-report.md` 的“F1 修正第1轮”追加节。本轮未重跑无关容器全套。F1 修复已实施，独立定向复审及 T1 验收仍待推进者记录。
+新增独立行为回归按合法父子上下文、空元素和表结构逐项覆盖默认标签，并固定 unknown/script/tfoot 删除断言。先看到标签丢失及 tfoot 留存的业务红，再补齐；另明确允许 area/bdo/data/map/rtc 的无属性形式，避免 bluemonday 隐式集合仍丢标签。删除 ruby 的实际可编译变异被 `TestCleanPlaneDefaultTags/ruby` 检出，恢复后 domain/content（含既有 S3 与恶意样例）、content race、lint-go、真实 Editor S3 均通过；具体命令和原始日志在 `task-1-report.md` 的“F1 修正第1轮”追加节。本轮未重跑无关容器全套。原独立评审者复核 `6cd23ca4..18381d56`，确认 F1 ADDRESSED，规格通过、质量 Approved，无新增或范围外发现。
 
 ### 2.3 尚未完成的 P4 验收
 
@@ -116,9 +126,9 @@ proposed_adapter_placement: PASS
 
 ### S3中的局部编辑器解析修复
 
-Task 1 的真实编辑器测试发现：CustomColor 的 `getAttrs` 在缺属性时返回 `null`（表示接受），会把 emoji 的 span 当作颜色；带 style 的颜色 span 又被优先级 101 的通用 TextStyle 先消费，丢掉颜色属性。推进者核对当前源码及锁定版本后裁定：只接受自身非空颜色属性，优先级设为 102，测试分别证明 emoji、文字色和背景色保留并实际变异。范围只增加 `custom-color.ts` 的局部解析修复，不改第三方库或架构。当前没有持久属性的空 TextStyle 可按原生规则归一化，但须单列样例、断言 schema 属性为空并保留文字；未来新增属性不得静默忽略。该项已进入T1实现及验证，待独立 Task 评审。
+Task 1 的真实编辑器测试发现：CustomColor 的 `getAttrs` 在缺属性时返回 `null`（表示接受），会把 emoji 的 span 当作颜色；带 style 的颜色 span 又被优先级 101 的通用 TextStyle 先消费，丢掉颜色属性。推进者核对当前源码及锁定版本后裁定：只接受自身非空颜色属性，优先级设为 102，测试分别证明 emoji、文字色和背景色保留并实际变异。范围只增加 `custom-color.ts` 的局部解析修复，不改第三方库或架构。当前没有持久属性的空 TextStyle 可按原生规则归一化，但须单列样例、断言 schema 属性为空并保留文字；未来新增属性不得静默忽略。该项已在T1实现、验证并通过独立 Task 评审。
 
-同一 S3 测试还实际复现了颜色属性的再解释：`data-text-color` / `data-background-color` 保存带分号的值后，editor 会生成额外的 `position`、`background-image` 声明；表格颜色属性有同类入口。这是输出 CSS 的证据，没有宣称脚本执行或网络请求。推进者裁定在适配器现有唯一属性过滤边界验证这些颜色值，保留真实调色板键和合法 CSS 颜色、拒绝注入值，复用颜色校验避免策略漂移；共享真实往返和移除校验变异须证明修复。不改架构、不新增依赖、不放宽 style，T1已执行修复和定位验证，独立评审结果待记。
+同一 S3 测试还实际复现了颜色属性的再解释：`data-text-color` / `data-background-color` 保存带分号的值后，editor 会生成额外的 `position`、`background-image` 声明；表格颜色属性有同类入口。这是输出 CSS 的证据，没有宣称脚本执行或网络请求。推进者裁定在适配器现有唯一属性过滤边界验证这些颜色值，保留真实调色板键和合法 CSS 颜色、拒绝注入值，复用颜色校验避免策略漂移；共享真实往返和移除校验变异须证明修复。不改架构、不新增依赖、不放宽 style，T1已完成修复、定位验证和独立评审，结果见§2.2。
 
 T1 共享金样 `api/testdata/issue-richtext.json` 单列文件规模例外：它保存同一条 Go/TS 往返链的固定输入、真实 editor 文档与逐节点/属性期望，是数据契约而非逻辑大文件。保留可读排版和完整证据，避免为压行数压缩或把一份跨语言约束拆散；具体行数以实际提交报告为准，其他逻辑文件仍遵守约 400 行约束。
 
@@ -132,9 +142,9 @@ T1实施中增加了CustomColor既有解析的局部根因修复，以及颜色�
 
 ## 6. 移交事项
 
-- **恢复 P4：** A1 已记录批准；设计/spec/plan已同步，独立预检及修订复核通过；T1完成独立评审后继续Task 2。不能把本文的基线检查算成 P4 的验收结果。
+- **恢复 P4：** A1 已记录批准；设计/spec/plan已同步，独立预检及修订复核通过；T1已完成独立评审与修正复核，继续Task 2。不能把本文的基线检查算成 P4 的验收结果。
 - **P5：** 若采用前移方案，复用 P4 落地的 `ReadOnlySnapshot`，不要重复实现；其验证结果在实际完成后补入正式交接。
-- **Claude：** 本分支处于T1实现/验证阶段，尚未到阶段终审节点。
+- **Claude：** 本分支已完成T1，T2起后续任务待推进，尚未到阶段终审节点。
 - M4 的各份交接维持当前状态，不因计划覆盖而提前关闭；M5–M8 的 M4 收尾交接尚未产生。
 
 ## 7. 已知限制
