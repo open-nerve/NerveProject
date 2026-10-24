@@ -345,15 +345,15 @@ type VisibleProject struct { ID uuid.UUID; Role shared.Role; OwnOnly bool }
 
 **Interfaces:** issue的消费端口`VisibleProjects.Historical(ctx context.Context,workspaceID,actorID uuid.UUID)([]VisibleProject,error)`。project提供`HistoricalIssueProjects(ctx context.Context,workspaceID,actorID uuid.UUID)([]app.HistoricalIssueProject,error)`，值`ID uuid.UUID;Role shared.Role;OwnOnly bool`；bootstrap转issue值（经issue模块公开别名），I.ProjectPorts嵌入VisibleProjects；T12消费，P5再加普通目录方法。不把shared.Actor复制给其他用户逐个授权。
 
-- [ ] **Step 1 红测试。** `TestHistoricalIssueProjects`：目标workspace内active成员项目（私有/公开）均可，project/member软删或归档仍可；is_active=false、另workspace、没有membership都排除；guest_view_all关闭的普通guest/adminGuest均OwnOnly；项目不是guest则false；结果id排序；端口失败转换后errors.Is原值。
+- [x] **Step 1 红测试。** `TestHistoricalIssueProjects`：目标workspace内active成员项目（私有/公开）均可，project/member软删或归档仍可；is_active=false、另workspace、没有membership都排除；guest_view_all关闭的普通guest/adminGuest均OwnOnly；项目不是guest则false；结果id排序；端口失败转换后errors.Is原值。
   ```go
   if !slices.Equal(ids(got), []uuid.UUID{deletedProject, liveProject}) { t.Fatal("historical scope") }
   if !gotGuest.OwnOnly || gotMember.OwnOnly { t.Fatal("project role visibility") }
   ```
-- [ ] **Step 2 跑红。** `go -C server test ./internal/modules/project/adapter/postgres -run TestHistoricalIssueProjects -count=1`；`go -C server test ./internal/bootstrap -run TestHistoricalProjects -count=1`。
-- [ ] **Step 3 实现。** project SQL仅JOIN自己projects/project_members，绑定workspaceID/actorID/is_active，不加任何两表deleted_at或archived条件；issue引用表的deleted_at由T12同样不检查。目录不用于放宽目标issue授权，目标仍按正常read规则。不是P3 ArchivedProjects或seeEach/GetIssues的替身，那些过滤软删除会改变历史语义。
-- [ ] **Step 4 绿/变异。** 目标绿，实际加deleted_at过滤/删is_active/漏workspace/把guest OwnOnly错误置false分别失败，最后一项由真实管理员兼guest组合用例检出，不为变异增加workspace角色依赖；make gen-go与G；目录只读，值转换在B，不跨模块import。
-- [ ] **Step 5 评审/提交。** `feat(M4/P4): 为动态提供历史成员可见性目录`。
+- [x] **Step 2 跑红。** `go -C server test ./internal/modules/project/adapter/postgres -run TestHistoricalIssueProjects -count=1`；`go -C server test ./internal/bootstrap -run TestHistoricalProjects -count=1`。
+- [x] **Step 3 实现。** project SQL仅JOIN自己projects/project_members，绑定workspaceID/actorID/is_active，不加任何两表deleted_at或archived条件；issue引用表的deleted_at由T12同样不检查。目录不用于放宽目标issue授权，目标仍按正常read规则。不是P3 ArchivedProjects或seeEach/GetIssues的替身，那些过滤软删除会改变历史语义。
+- [x] **Step 4 绿/变异。** 目标绿，实际加deleted_at过滤/删is_active/漏workspace/把guest OwnOnly错误置false分别失败，最后一项由真实管理员兼guest组合用例检出，不为变异增加workspace角色依赖；make gen-go与G；目录只读，值转换在B，不跨模块import。
+- [x] **Step 5 评审/提交。** `feat(M4/P4): 为动态提供历史成员可见性目录`。
 
 ### Task 12: 按可见引用分页列出动态
 
